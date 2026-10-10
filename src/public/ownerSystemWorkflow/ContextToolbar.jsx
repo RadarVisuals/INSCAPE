@@ -39,5 +39,5 @@ export function ContextToolContent({ target, label, available = true, children }
     }
   });
   return enabled && context.host
-    ? createPortal(<section ref={content} onFocusCapture={event => { focused.current = event.target; }} aria-label={`${label} tools`}>{children}</section>, context.host) : null;
+    ? createPortal(<section ref={content} data-workbench-inspection-target={target} onFocusCapture={event => { focused.current = event.target; }} aria-label={`${label} tools`}>{children}</section>, context.host) : null;
 }

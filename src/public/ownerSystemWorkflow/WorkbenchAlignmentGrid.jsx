@@ -13,7 +13,7 @@ export default function WorkbenchAlignmentGrid({ color, mode }) {
 
 export function WorkbenchGridPattern({ color, mode, offset, scale, subscribeCameraPaint }) {
   const node = useRef(null);
-  const current = useRef(null), repaint = useRef(null);
+  const current = useRef(null), repaint = useRef(null), ink = useRef(null);
   current.current = { mode, offset, scale };
   const visible = mode !== 'NONE';
   useLayoutEffect(() => {
@@ -45,21 +45,22 @@ export function WorkbenchGridPattern({ color, mode, offset, scale, subscribeCame
         return values;
       };
       const xs = coordinates(offset.x, lowX, highX), ys = coordinates(offset.y, lowY, highY);
-      const ink = getComputedStyle(canvas).color;
       context.save();
       context.beginPath(); context.rect(lowX * density, lowY * density, (highX - lowX) * density, (highY - lowY) * density); context.clip();
       if (mode === 'DOTS') {
         // Rasterize each column once, then copy that small bitmap per row.
         // No SVG instance tree or per-dot rendering across the whole viewport.
         const radius = Math.ceil(density);
-        row.width = w; row.height = radius * 2;
+        if (row.width !== w) row.width = w;
+        if (row.height !== radius * 2) row.height = radius * 2;
         const dots = row.getContext('2d');
-        dots.fillStyle = ink; dots.beginPath();
+        dots.clearRect(0, 0, row.width, row.height);
+        dots.fillStyle = ink.current; dots.beginPath();
         for (const x of xs) { dots.moveTo(x + density, radius); dots.arc(x, radius, density, 0, Math.PI * 2); }
         dots.fill();
         for (const y of ys) context.drawImage(row, 0, y - radius);
       } else {
-        context.strokeStyle = ink; context.lineWidth = 1; context.beginPath();
+        context.strokeStyle = ink.current; context.lineWidth = 1; context.beginPath();
         for (const x of xs) { context.moveTo(x, lowY * density); context.lineTo(x, highY * density); }
         for (const y of ys) { context.moveTo(lowX * density, y); context.lineTo(highX * density, y); }
         context.stroke();
@@ -75,6 +76,8 @@ export function WorkbenchGridPattern({ color, mode, offset, scale, subscribeCame
     observer.observe(canvas);
     return () => { observer.disconnect(); repaint.current = null; };
   }, [visible]);
+  // Resolve theme ink only when it changes; camera frames perform no style reads.
+  useLayoutEffect(() => { if (node.current) ink.current = getComputedStyle(node.current).color; }, [color, visible]);
   useLayoutEffect(() => { repaint.current?.(); }, [color, mode, offset, scale]);
   useLayoutEffect(() => subscribeCameraPaint?.(camera => {
     current.current = { ...current.current, ...camera }; repaint.current?.();

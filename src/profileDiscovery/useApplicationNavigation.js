@@ -14,10 +14,10 @@ export default function useApplicationNavigation(authority) {
   const background = route.kind === 'discover' ? route.returnTo : route;
   const content = background ? resolveApplicationDestination(background, authority) : null;
 
-  const navigate = useCallback((next, { replace = false } = {}) => {
+  const navigate = useCallback((next, { replace = false, receptionParent = null } = {}) => {
     current.current = next;
     window.history[replace ? 'replaceState' : 'pushState'](
-      { inscapeReturnRoute: next.kind === 'discover' ? next.returnTo : null }, '',
+      { inscapeReturnRoute: next.kind === 'discover' ? next.returnTo : null, inscapeReceptionParent: receptionParent }, '',
       applicationRouteUrl(window.location, next));
     setRoute(next);
   }, []);
@@ -46,6 +46,26 @@ export default function useApplicationNavigation(authority) {
     navigate(returnToConnectedProfile && normalized === authority.profileAddress?.toLowerCase()
       ? { kind: 'home', fallbackAddress: null } : { kind: 'profile', address: normalized });
   }, [authority.profileAddress, navigate]);
+  const openCanvas = useCallback((address, target) => {
+    const normalized = normalizeProfileAddress(address);
+    if (normalized) navigate({ kind: 'profile', address: normalized, canvas: true, ...(current.current.reception ? { reception: true } : {}), ...(target ? { target } : {}) });
+  }, [navigate]);
+  const openWork = useCallback((address, target) => {
+    const normalized = normalizeProfileAddress(address);
+    if (!normalized || !target?.moduleId) return;
+    navigate({ kind: 'profile', address: normalized, target, ...(current.current.reception ? { reception: true } : {}) },
+      { receptionParent: normalized });
+  }, [navigate]);
+  const closeWork = useCallback((address) => {
+    const normalized = normalizeProfileAddress(address);
+    if (!normalized) return;
+    if (window.history.state?.inscapeReceptionParent === normalized) window.history.back();
+    else navigate({ kind: 'profile', address: normalized, ...(current.current.reception ? { reception: true } : {}) }, { replace: true });
+  }, [navigate]);
+  const openOverview = useCallback((address) => {
+    const normalized = normalizeProfileAddress(address);
+    if (normalized) navigate({ kind: 'profile', address: normalized, ...(current.current.reception ? { reception: true } : {}) });
+  }, [navigate]);
   const openDiscover = useCallback((trigger) => {
     returnFocus.current = trigger || document.activeElement;
     navigate({ kind: 'discover', returnTo: current.current.kind === 'discover' ? current.current.returnTo : current.current });
@@ -73,5 +93,5 @@ export default function useApplicationNavigation(authority) {
       if (success && current.current === origin && next !== origin) navigate(next, { replace: true });
     };
   }, [authority, navigate]);
-  return { route, destination, content, visitProfile, openDiscover, closeDiscover, beginSignIn, completeSignIn, beginDisconnect };
+  return { route, destination, content, visitProfile, openCanvas, openWork, closeWork, openOverview, openDiscover, closeDiscover, beginSignIn, completeSignIn, beginDisconnect };
 }

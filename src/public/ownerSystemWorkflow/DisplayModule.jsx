@@ -1,4 +1,4 @@
-import { useWorkbenchView } from './WorkbenchViewContext.js';
+import { useWorkbenchView, useWorkbenchActions, useWorkbenchInspectionAction } from './WorkbenchViewContext.js';
 import ModuleSurfaceControls from './ModuleSurfaceControls.jsx';
 import DisplayCanvasControls from './DisplayCanvasControls.jsx';
 import { useSharedTextTools } from '../../text/SharedTextTools.jsx';
@@ -28,6 +28,7 @@ export default forwardRef(function DisplayModule({ assetsById, controller, autho
   onAuthoringLockToggle, registerAssetDimensions, resolveAssetDimensions, menuSurface,
   reducedMotion, workspaceSurfaceColor, windowProps, placementTargetRef, shortcutTargetRef, workspaceRef }, ref) {
   const authoringLocked = editingLocked || Boolean(useWorkbenchView().presentationTransforms?.[controller.moduleId || PRIMARY_DISPLAY_ID]);
+  const { focusModules } = useWorkbenchActions();
   const tools = useSharedDisplayTools();
   const textTools = useSharedTextTools();
   const targetId = controller.moduleId;
@@ -95,6 +96,17 @@ export default forwardRef(function DisplayModule({ assetsById, controller, autho
   const crop = useOwnerSystemWorkflowCrop({ assetsById, controller });
   const viewer = useOwnerSystemWorkflowFocusViewer({ assetsById, controller,
     onOpen: onInspect, resolveAssetDimensions });
+  const inspectionPlacement = controller.selectedPlacements.length === 1 ? controller.selectedPlacements[0] : null;
+  const inspectDisabled = inactive || panelOccupied || playingGrids || liftMoving || playbackState.moving || playbackState.offset
+    || Boolean(viewer.placementId || crop.cropSession || editingText || sizeDialog);
+  const inspectArtwork = source => {
+    const id = source?.closest?.('[data-system-workflow-placement-id]')?.dataset.systemWorkflowPlacementId || inspectionPlacement?.id;
+    const placement = controller.selectedGrid?.placements.find(item => item.id === id);
+    if (inspectDisabled || !placement || placement.kind === 'text' || controller.hiddenPlacementIds?.has(id)) return false;
+    return viewer.open(id, undefined, { inspectionMode: 'LIFT' });
+  };
+  useWorkbenchInspectionAction(targetId, inspectArtwork);
+  const canInspect = !inspectDisabled && inspectionPlacement && inspectionPlacement.kind !== 'text' && !controller.hiddenPlacementIds?.has(inspectionPlacement.id);
   const metadataPlacement = controller.selectedPlacements.length === 1 && controller.selectedPlacements[0].kind !== 'text' ? controller.selectedPlacements[0] : null;
   const metadataEntry = useMemo(() => metadataPlacement
     ? createOwnerSystemWorkflowMetadataViewModel(metadataPlacement, assetsById.get(metadataPlacement?.stableAssetId))
@@ -163,6 +175,7 @@ export default forwardRef(function DisplayModule({ assetsById, controller, autho
   return <><PresentationBoard {...windowProps} onContextMenu={openModuleMenu}
       reducedMotion={reducedMotion} onLiftInspectionChange={setLiftInspection} onLiftTransitionChange={setLiftMoving}
       onLiftReturn={viewer.close}
+      onInspect={() => inspectArtwork()} inspectDisabled={!canInspect}
       liftDisabled={inactive || panelOccupied || Boolean(crop.cropSession || editingText || sizeDialog)}
       moduleCommands={moduleCommands} moduleSubmenu={moduleSubmenu} onModuleCommand={moduleCommand}
       shortcutTargetRef={shortcutTargetRef} assetsById={assetsById} authoringLocked={authoringLocked}
@@ -185,16 +198,23 @@ export default forwardRef(function DisplayModule({ assetsById, controller, autho
         editingTextId={editingText?.gridId === controller.selectedGridId ? editingText.id : null} onEditText={liftInspection ? undefined : editText}
         playingGrids={playingGrids} onPauseGrids={pauseGrids} onPlaybackStateChange={setPlaybackState}
         onAssetDimensions={registerAssetDimensions} onChangeGrid={changeGrid}
-        suspended={inactive} interactionDisabled={inactive || panelOccupied || liftMoving || Boolean(viewer.placementId)} onOpenViewer={(placement) => tools.state.metadata && !liftInspection ? controller.replaceSelection([placement.id]) : viewer.open(placement.id)}
+        suspended={inactive} interactionDisabled={inactive || panelOccupied || liftMoving || Boolean(viewer.placementId)} onOpenViewer={(placement) => {
+          if (tools.state.metadata && !liftInspection) controller.replaceSelection([placement.id]);
+          else if (focusModules && !liftInspection) {
+            controller.replaceSelection([placement.id]);
+            focusModules([targetId]);
+          }
+          else viewer.open(placement.id);
+        }}
         onPlacementRef={viewer.registerPlacement} reducedMotion={reducedMotion}
         resolveAssetDimensions={resolveAssetDimensions} viewerPlacementId={viewer.sourcePlacementId} inspectionActive={liftMoving || Boolean(viewer.placementId)} />
     </PresentationBoard>
       <OwnerSystemWorkflowSelectionInspector key={controller.selectedGridId} assetsById={assetsById}
         toolLabel={toolScope} available={toolAvailable && !suspended && !liftInspection && !viewer.placementId}
         authoringLocked={authoringLocked || playingGrids || playbackState.moving} controller={controller} crop={crop}
-        onBeginCrop={crop.beginCrop} onEditText={editText}
+        onBeginCrop={crop.beginCrop} onEditText={editText} onInspect={canInspect ? () => inspectArtwork() : undefined}
         onArtworkInfo={event => { onRevealInstruments(); tools.command('metadata', true, event.currentTarget, targetId); }} />
-    <SharedDisplayToolContent id="metadata" targetId={targetId} label={`${toolScope} / ${selectionLabel}`} available={toolAvailable}>
+    <SharedDisplayToolContent id="metadata" targetId={targetId} label={`${toolScope} / ${selectionLabel}`} available={toolAvailable && !suspended && Boolean(metadataEntry?.dossier)}>
       <OwnerSystemWorkflowMetadataContent dossier={metadataEntry?.dossier || null} />
     </SharedDisplayToolContent>
 

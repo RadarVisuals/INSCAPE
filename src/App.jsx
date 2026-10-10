@@ -217,7 +217,11 @@ function App() {
             onDisconnect={disconnectStandalone} onEnterMyWorld={enterConnectedWorld}
             onRetry={retryPublishedProfile}
             returnProfileAddress={verifiedOwnerProfileAddress}
-            onOpenDiscover={navigation.openDiscover} onVisitProfile={visitProfile} />}
+            onOpenDiscover={navigation.openDiscover} onVisitProfile={visitProfile}
+            entry={{ surface: content.canvas ? 'canvas' : 'overview', target: content.target, reception: content.reception }}
+            onOpenWork={target => navigation.openWork(viewedProfileAddress, target)} onCloseWork={() => navigation.closeWork(viewedProfileAddress)}
+            onOpenCanvas={target => navigation.openCanvas(viewedProfileAddress, target)}
+            onOpenOverview={() => navigation.openOverview(viewedProfileAddress)} />}
         </div>
         {!standaloneSignInActive && !publicEntryPortal && ['entry', 'discover'].includes(destination.kind) && <Suspense fallback={<div className="mode-loading">Opening Discover...</div>}>
           <PublicEntryPortal embedded mode={destination.kind === 'discover' ? 'explore' : 'landing'}

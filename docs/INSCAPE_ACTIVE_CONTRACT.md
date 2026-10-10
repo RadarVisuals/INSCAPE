@@ -32,7 +32,7 @@ the dark stripe formed by compressing dark artwork. The rotating faces retain
 their backface culling; the resting artwork remains fully opaque.
 Each face retains its authored crop; the rotating plane can extend beyond the
 resting canvas instead of being clipped again by its stationary rectangle.
-Clicking the image opens the existing Display Lift renderer, revealing its
+The explicit Inspect action opens the existing Display Lift renderer, revealing its
 full media from the cropped rectangle. Return or Escape restores that crop.
 Reduced-motion users get immediate side changes and inspection transitions.
 
@@ -61,8 +61,9 @@ stay reachable while their marks identify the canvas edges. Redundant handles ar
 omitted on tiny canvases.
 Resize focus fills the small visible handle mark instead of outlining the larger
 transparent pointer target. Keyboard resizing retains visible focus.
-The artwork itself is the move surface: clicking inspects it; dragging beyond
-five screen pixels moves its window and never inspects on release. Movement is
+The artwork itself is the move surface. During the 2026-10-09 focus trial,
+clicking focuses its Workbench module instead of lifting it; dragging beyond
+five screen pixels moves its window and never focuses on release. Movement is
 temporary until release; Escape, lost capture or blur cancels it. Crop retains
 its own pan gesture. The separate floating title strip is removed. Close and a
 small Next arrow appear on hover or keyboard focus, and remain available on
@@ -972,6 +973,20 @@ are not part of that visitor experience. Module chrome is not Stage content.
   30 work pixels per canvas unit, bounded by 960×720 before viewport fitting.
   Viewport bounds still apply; existing saved windows are not rewritten on read.
   Metadata is a shared Workbench tool and is not an authored Add-menu module.
+  The owner creation toolbar sits at bottom center above the existing dock;
+  the dock and its Tools launcher remain available. It offers Select (V), Hand
+  (H), Text (T), rectangular Shapes (R), Artwork Library, contextual Layers and
+  Artwork info, searchable Actions (Ctrl/Cmd+K), and Add. Actions and Add reuse
+  the existing module commands and limits. Select, Hand and creation modes are
+  temporary Workbench interaction state, never saved document data. Hand pans
+  over module artwork through the existing camera; Space-drag remains available.
+  Text clicks target the actual unlocked Display under the pointer or create a
+  standalone Text on empty Workbench space. Rectangle clicks retain the existing
+  default size; drawing sets its initial size in Workbench coordinates. Escape,
+  lost input, preview or a changed target cancel pending placement. The toolbar
+  does not add ellipses or lines. Inspector buttons require available content;
+  camera controls remain separate above the toolbar and responsive wrapping
+  reserves enough space for both.
   Library stays anchored to the Workbench's left edge above ordinary module
   windows and shortcuts. Its existing drag-to-hide behavior exposes drop targets.
   Opening or resizing it never reserves space or shifts modules or shortcuts,
@@ -1215,20 +1230,27 @@ gesture but never receives its draft store or changes module transforms. Pan
 updates do not notify scale-only module editors. This separation does not change
 stored layouts, publication data or storage keys.
 On 2026-10-06 the founder authorized continuing the spatial implementation.
-An explicit **Explore** toggle enables primary-pointer panning from empty
-Workbench space in owner and Visitor views. It is session-only and off by default;
-with it off, background drag retains marquee selection. Module interaction and
-native Text/tool scrolling retain their own input. Space-drag remains available
-in either mode; only Explore adds release momentum.
+The **Hand** tool consolidates Hand and Explore in owner and Visitor views.
+It pans from empty Workbench space, artwork, module titles and resize handles,
+with Explore's release momentum. Module and placement movement, resizing and
+keyboard nudging are blocked while Hand is active. Stationary Image artwork clicks
+focus their module during the 2026-10-09 focus trial; completed drags suppress that click. Native Text/tool inputs
+and scrolling retain their own behavior. Hand is session-only and off by default;
+Select restores ordinary authoring and marquee selection. Owner uses the Hand
+tool in the creation toolbar; Visitor exposes the same tool beside camera controls.
+Space-drag remains available in either mode, without momentum in Select.
 
 Pan gestures now use the same live-surface projection lifetime as Focus travel.
 Pointer samples paint the camera without a React state commit per sample; release
-commits the settled camera. Explore measures at most twelve recent samples, ignores
+commits the settled camera. Hand measures at most twelve recent samples, ignores
 paused releases, caps screen velocity and integrates exponential decay by elapsed
 time for at most 700 ms. It never enters authored layout or Back history. Reduced
 motion omits inertia. Escape cancels an active drag to its exact start, or stops
 coasting before any Back action. New input, locks, suspension, resize, blur and
 disposal stop active motion through the existing navigation owner.
+At unchanged camera scale, projected surfaces share one physical-pixel translation
+so release momentum cannot filter gaps between adjoining Image surfaces. The
+precise camera offset and authored geometry remain independent of this painting.
 
 Artwork visibility is owned by the shared artwork layer. Its observer defers
 unloading during a temporary camera projection and rechecks settled clipping
@@ -1237,15 +1259,18 @@ SVG document; artwork that remains offscreen still releases its document.
 
 Workbench destination navigation starts with explicit **Focus selection** and
 **Back** controls shared by owner and Visitor. Focus frames the selected live
-module instances using their logical geometry, available space above the dock
-and camera controls, and visible floating instruments. Camera scale remains
+module instances using their logical geometry and a centred rectangle above
+the measured bottom camera controls (including creation-toolbar clearance).
+Floating instruments never shift the destination to one side. The selection
+count sits above the rail without affecting its wrapping, so clearing selection
+on arrival does not change that centre. Camera scale remains
 between 25% and 200%; the work area does not clamp travel. Focus changes only the camera; it does
 not group, move, resize, remount or save modules. Selection clears on arrival so
 the content can be used. Back restores the preceding camera and surviving
 selection, then returns keyboard focus to that selection or the Workbench.
 Return viewport measurements exclude selection-driven toolbar wrapping so
 restoring selection cannot shift the saved camera position. Destination fitting
-still reserves the currently visible controls and instruments.
+reserves the currently visible bottom controls, without avoiding floating windows.
 The session keeps at most 50 return contexts and clears them on Workbench
 disposal, profile replacement, Preview suspension or Reset view.
 Navigation decisions and return contexts are separate from the cancellable
@@ -1255,11 +1280,51 @@ pointer or keyboard editing, manual camera input, viewport changes,
 inspection locks, window blur and hidden-document transitions stop it at its
 current position. Missing or changed destination geometry invalidates pending
 travel. Interrupted Back remains available until the return completes.
+Pure camera zoom travel uses paused native scale/translation effects on the
+already prepared module surfaces. The existing camera clock samples their
+progress; they never run independently of the logical camera or input geometry.
+Every effect is cancelled when its projection ends, including interruption and
+disposal. Constant-scale pan/coasting retain shared physical-pixel translation;
+group morphs retain their per-module geometry path. This avoids rewriting every
+module's CSS transform on every Focus frame without changing travel duration,
+easing, native artwork resolution or saved layout. The grid resolves its colour
+when that input changes and reuses its dot-row canvas allocation; the zoom
+readout changes its text only when the displayed percentage changes.
+Focus still prepares and paints the whole live Workbench, whereas artwork Lift
+prepares one artwork. A first zoom can incur browser rasterization work even
+when React does not render per frame; measure first-use and repeated journeys
+separately before claiming that all stutter is eliminated.
 Escape first retains existing editor, inspector, gesture and selection behavior;
 with none of those active, it returns to the preceding Workbench view. Image
 and Display inspection keep their own input lock and source-return behavior.
-This step does not change click-to-inspect, dragging, wheel ownership, schemas
-or publication data. Named Workbench groups extend this same navigation path with
+On 2026-10-09 the founder requested a reversible interaction trial: plain **F**
+focuses the current Workbench selection through the same destination command as
+the button. Typing, IME composition, modifiers, menus, dialogs and inspection
+locks retain their own keys; holding F cannot restart or interrupt the journey.
+Image artwork activation (pointer or Enter) now focuses its module rather than
+opening Lift. Ordinary Display artwork inspection requests focus the owning
+Display; authoring selection and metadata selection retain their existing paths.
+Owner and Visitor share this behavior, including Hand's stationary Image click.
+Focus and Lift coexist as distinct actions. Plain **I** and the module's visible
+Inspect control open Lift for the current Image side or selected/focused Display
+artwork. Image and Display contextual artwork tools expose the same action;
+quiet Image controls and the Display header keep it reachable for Visitor/touch.
+The Workbench routes I to one selected or active live module; multi-module
+selection, typing, modifiers, composition, menus, dialogs and active gestures
+do not open inspection. Each module owns eligibility, current artwork and media
+readiness. Registrations retire with the module, and closed/hidden targets reject
+inspection. No global renderer or second camera is introduced.
+Explicit Inspect requests Lift without changing a Display placement's authored
+inspection mode. Escape closes Lift back to the same camera and crop; Back then
+uses the existing Focus history to return to the overview. Inspection never adds
+a camera-history entry or rewrites saved geometry. Escape during an Image move
+or resize belongs to that gesture and cannot also consume Workbench Back.
+The existing explicit Enlarge Display action and inspection inside that enlarged
+surface remain available. Standalone renderers without a Workbench retain their
+inspection fallback. This is a current UX trial, not removal of the inspection
+renderer. No preference, schema, authored geometry or publication data changes.
+Back/Escape retain the existing return history. Dragging and wheel ownership
+remain unchanged. Named Workbench groups extend this same navigation path with
 temporary spreading and item reading, as specified in their section above.
 Existing Workbench fields carry Text window sizes through publication and restore;
 no schema, storage key, default or old-data interpretation changes. Previously
@@ -1706,14 +1771,20 @@ internal compatibility names during this migration; do not broadly rename them.
 - Layers follows the explicitly active Display and its current Grid. Its content
   and actions still belong to that Display session. Metadata follows the selected
   artwork in the targeted Display; its title identifies Display, Grid and artwork.
-  A missing or minimized target shows an empty prompt, never another Display's
-  content. These windows do not own or duplicate authored content.
+  A missing or minimized target hides its window; Metadata also stays hidden
+  without one valid artwork selection. A valid empty Grid can expose its Layers
+  list and creation controls. Tools never show another Display's content as a
+  fallback and do not own or duplicate authored content.
 - Display appearance also uses one shared window, opened through the Display's
   Appearance command. Selecting another open, unlocked Display replaces its
-  controls in place. Closed, locked or unavailable targets expose a selection
-  prompt; they never leave the previous Display editable through the window.
+  controls in place. Closed, locked or unavailable targets hide the window; they
+  never leave the previous Display editable through it.
 - Owner tool state survives reload in the profile-local layout record; visitor
   Metadata state stays session-local. Old open sidecars migrate to shared windows.
+  Unavailable targets retain their tool's open preference and window geometry,
+  so a valid target can restore it without creating an empty inspector first.
+  The existing Metadata command can enable in-scene selection cues before an
+  artwork is selected; its window appears when that selection supplies content.
 - Workbench and Display context menus expose Tools → Layers / Metadata; Visitor
   exposes Metadata only. Display menu actions explicitly target that Display.
   A keyboard-accessible Tools launcher in the owner and Visitor docks provides
@@ -1993,8 +2064,40 @@ drafts retain their schemas and content.
   title, biography or field cannot grant it; it is not serialized in
   the creator-authored card. It grants no wallet or authoring authority.
 
-- Direct world links enter the targeted world automatically through Startveil,
-  without a separate Enter button. The bare INSCAPE URL retains the public
+- Desktop profile links enter a published profile overview through Startveil.
+  The first overview derives an About card and up to four composition, Image or
+  Text destinations from the verified publication, plus Explore canvas. It does
+  not read owner drafts or inventory, introduce a second content editor, or add
+  saved overview settings. Existing publications need no migration. Composition
+  previews reuse the read-only Stage renderer and mount near the viewport;
+  reading content loads on explicit card entry; Workbench runtimes mount only on canvas entry. Missing destinations recover to
+  the overview with an explanation.
+  A profile URL uses the existing view address; canvas=1 enters the canvas,
+  optionally with module and grid identifiers resolved only against public
+  content. A targeted visit temporarily opens its module, selects its Grid and
+  uses shared canvas focus. Browser Back/Forward, reload and the Profile overview
+  link retain explicit destinations. Owner editing and the existing phone entry
+  remain unchanged. Overview customization and wraparound camera motion are
+  separate later work.
+  On 2026-10-10 the founder accepted evolving this reception into a bounded
+  reading experience inspired by Cargo's template previews. Desktop cards open
+  an inset native modal over the blurred reception. Its vertical sequence uses
+  the shared read-only Stage, Image artwork projection and Article reader from
+  the verified publication. Nearby scenes mount media; the page geometry stays
+  stable. An index and previous/next controls navigate published destinations.
+  Information overlays retain the current work beneath them and identify source
+  artwork separately from the publishing profile. Controls and the index reuse
+  the creation toolbar's tactile material, circular controls, recessed active
+  states and orange accent, without active-control underlines. Artwork retains
+  its authored appearance. Close/Escape and browser Back restore the reception;
+  no draft, published document or Workbench layout is rewritten. Browser links
+  may carry module/grid targets without canvas=1 to enter the reader directly.
+  reception=1 explicitly requests the public view even for its connected owner;
+  it grants no authority and does not disconnect or change the owner draft.
+  Explore canvas and explicit canvas links retain their existing behavior.
+  This first desktop pass does not add saved customization, autoplay, independent
+  scrolling columns or wraparound movement; the phone entrance remains unchanged.
+  Direct canvas links enter their destination without an extra Enter button. The bare INSCAPE URL retains the public
   Explore/Connect entrance. Its featured world is explicitly selected as
   `0xf3C189819Fd5b042f692983bFbFD57ab607ee709`, independent of directory ordering.
 - Startveil remains visible until the destination interface or its recovery
@@ -2022,9 +2125,9 @@ drafts retain their schemas and content.
 
 The entry and card transition above retain the existing presentation baseline.
 Discover's eventual presentation of published Workbenches is not yet designed.
-Do not infer a final Discover layout from the current screen. Exact module-link
-URLs, optional Grid links, and their interaction with the maker's starting
-arrangement remain to be specified when implementing public Workbench entry.
+Do not infer a final Discover layout from the current screen. The desktop
+overview and direct canvas/module/Grid entry behavior are specified above;
+the initial overview does not introduce a saved curation or layout schema.
 
 ## Editing, public inspection, and publication
 
@@ -2168,11 +2271,114 @@ takes priority over the horizontal grid candidate; the other dimension follows
 the ratio. Artwork placement inside Display retains its own rules.
 Visitor window movement remains free and does not acquire owner preferences.
 
-INSCAPE is flat, technical, spatial, and deliberately bounded. It must not drift
-into generic dashboard, marketplace, or AI-generated interface styling.
+INSCAPE is technical, spatial, and deliberately bounded. Its accepted tactile
+interface reference below guides new chrome work; artwork remains the focus.
+
+### Tactile interface reference (2026-10-09)
+
+The founder selected dark neumorphism for the creation toolbar and accepted it
+as the reference for subsequent interface work. The visual reference is
+https://www.pinterest.com/pin/156711262029400027/ (original share:
+https://pin.it/6DMS4XcSc). Interpret its compact, physical controls: softly raised
+keys, recessed active surfaces, thin lit rims and restrained depth. Preserve
+INSCAPE's spatial hierarchy and density. The subsequent annotated creation-bar
+refinement below specifies its typography and geometry.
+
+The first implementation covers the owner creation toolbar and its Actions,
+Add and Shapes popups. It is deliberately dark even on a light Workbench or
+with a light window theme. Existing appearance preferences and saved artwork
+are unchanged. Other surfaces retain their current rendering until explicitly
+migrated; this reference does not authorize a simultaneous application redesign.
+
+The founder refined the creation bar through browser annotations on 2026-10-09
+and selected the compact icon-only layout at every viewport width on 2026-10-10.
+The bar fits its contents, with minimum height 54, shell radius 35, border 1 pixel,
+padding 5 on every side, column gap 3 and row gap 0, with space-evenly alignment.
+The final padding annotation supersedes the intermediate 10-pixel setting.
+Creation-bar button radii are 30 pixels for Select, 20 for Hand and 25 for Text,
+Shapes, Artwork, Layers, Info, Actions and Add. Full square input targets retain
+no inline padding. Tool names remain available through accessible labels and
+native tooltips. These are bar-specific geometry tokens; popup shells, utility
+buttons and command rows retain their own geometry.
+
+The bar uses locally bundled **Inter Variable**, with Arial and sans-serif
+fallbacks, through `--font-creation-toolbar`. Other interface typography and
+the toolbar popups retain their existing fonts. The font face remains centralized
+in `inscapeTokens.css` and loads only when used; no remote font request is needed.
+The font and SIL license live in `public/assets/fonts/Inter`.
+The full variable face, license and provenance add 357,042 bytes to packaged
+public assets. The production font allowlist requires these exact files, and
+the public-asset budget accounts for this measured addition with the previous
+headroom retained (rounded up by less than 3 kB); JavaScript budgets are unchanged.
+
+The icon bar uses content width at every viewport size, capped to the available
+viewport. At 520 pixels and below it retains the two centred rows with an
+8-pixel row gap so touch targets and outer focus rings remain separated. The
+5-pixel padding and annotated shell/button radii apply at every width. Height is
+a minimum: coarse-pointer controls grow the single row to 56 pixels, and wrapping
+grows it further. The owner toolbar is raised 75 pixels above its prior dock-relative
+position at every viewport size; this is the final spacing annotation, superseding
+150 pixels. Workbench owns the shared offset in its layout CSS. The toolbar wrapper
+uses it for positioning, menu height accounts for it, and the camera controls keep
+their existing clearance above the toolbar. The gap remains usable Workbench space.
+
+Material ownership and reuse:
+
+- `workflowTactile.css` is the authoritative material and button-state recipe.
+  Import it and opt a surface into `data-workflow-material="tactile"`.
+  Add `workflow-tactile-control` to native buttons; use its `--quiet` modifier
+  for command rows. Do not copy the shadows or introduce another palette.
+- `--tactile-*` variables name surface, ink, muted/disabled ink, accent, rim,
+  edge, raised/hover/well fills, shell/raised/inset shadows, radii and motion.
+  Base colours reuse `inscapeTokens.css`; the warm amber accent reuses
+  `--color-focus`. Component geometry belongs to component CSS.
+- The toolbar owns `--toolbar-*` dimensions, spacing and shell radii in
+  `workbenchToolbar.css`. Creation cursors/hints/previews belong to
+  `workbenchCreation.css`; the shared vertical offset and camera-control clearance
+  belong to `workbenchView.css`. A ResizeObserver measures the actual toolbar height
+  into `--workbench-toolbar-clearance`, including touch/wrapped layouts.
+  It is temporary layout information, cleaned up when the toolbar is hidden.
+
+Interaction and visual grammar:
+
+- Resting keys are raised subtly by a top highlight and short lower shadow.
+  Light comes from above/left. Shell depth is stronger than control depth.
+  Command rows stay quiet until interaction so the menu remains readable.
+- Hover lightens an available key. Pointer press recesses it without changing
+  bounds. Selected/open creation-bar tools remain recessed on hover, with amber
+  ink and no underline; inset material supplies the second visual cue. Shared
+  command rows retain their existing selection marks.
+  Use existing `aria-pressed` / `aria-expanded` state, not duplicate CSS state.
+  The Shapes trigger also reflects the existing active creation tool.
+- Keyboard focus adds a separate two-pixel ring outside the control. It remains
+  distinct from selection; padding contains it within bars and scroll regions.
+  Disabled controls are quiet and cannot acquire hover/press depth.
+- Minimum control size is 40 screen pixels, 44 for coarse pointers. Accessible
+  icon controls apply at every width; at 520 pixels and below the five creation
+  keys and four inspection/action keys form two centred rows.
+  Changes to tool count must revisit this grouping and its layout checks.
+- Popups stay inside the viewport and scroll internally. Search uses a recessed
+  field with a full focus ring. Touch search uses 16-pixel type. Keep native
+  keyboard navigation, focus return, accessible names and disabled reasons.
+- No blur, backdrop filters, image textures, continuously animated lighting or
+  layout-moving pressed effects. The only transition is brief ink colour;
+  reduced motion removes it. Forced colours use system colours, visible borders,
+  focus rings and system-highlight fills on active creation-bar buttons even
+  when shadows/gradients disappear. Shared command rows retain selection marks.
+
+Before adopting this reference elsewhere, inspect the component's actual purpose
+and reuse these material/control recipes while retaining its layout and ownership.
+Verify wide/narrow and touch layouts, default/hover/pressed/selected/focus/disabled
+states, reduced motion, forced colours, popup overflow and readable contrast on
+both dark and light surroundings. The production toolbar, not a detached mock,
+is the reference. Its browser checks are in
+`browser-tests/workbench-toolbar.browser.mjs` and its isolated fixture is
+`browser-tests/workbench-toolbar-fixture.html`.
 
 ### Typography
 
+- The creation bar uses **Inter Variable** as explicitly approved in the
+  tactile reference. This is scoped to that bar, not a global font migration.
 - Use **Inscape Sora** for primary navigation, headings, controls, body copy,
   human-facing labels, and concise identity labels. Normal UI weights are
   approximately 400–500; heavier weight requires an established reference.
@@ -2194,7 +2400,7 @@ into generic dashboard, marketplace, or AI-generated interface styling.
   existing detached-window shell for compatible module windows. Keep content
   layout and Stage-specific clipping separate; do not copy a module's chrome
   into a new stylesheet merely to recreate the same appearance.
-- Default interface geometry is square and structural: zero corner radius,
+- Outside the accepted tactile interface reference, existing geometry is square and structural: zero corner radius,
   one-pixel borders, contiguous faceplates, clipped overflow, and deliberate
   alignment. Circular geometry is reserved for avatars, identity marks, status
   indicators, and controls that are already circular.
@@ -2210,7 +2416,7 @@ into generic dashboard, marketplace, or AI-generated interface styling.
 
 ### Selection and interaction
 
-- Active navigation and selected commands use the established high-contrast
+- Outside the tactile controls described above, active navigation and selected commands use the established high-contrast
   edge-selector grammar: horizontal on horizontal rails and vertical on
   vertical lists. Do not rely on an unrelated fill colour alone.
 - Hover, focus, pressed, selected, disabled, and loading states must occupy the

@@ -8,6 +8,14 @@ export const WorkbenchActions = createContext({});
 export const useWorkbenchView = () => useContext(WorkbenchView);
 export const useWorkbenchActions = () => useContext(WorkbenchActions);
 
+// Modules retain inspection state and media readiness. The Workbench only routes
+// the shortcut to a mounted module; callback refs follow its current content.
+export function useWorkbenchInspectionAction(id, inspect) {
+  const { registerInspection } = useWorkbenchActions();
+  const current = useRef(inspect); current.current = inspect;
+  useLayoutEffect(() => registerInspection?.(id, current), [id, registerInspection]);
+}
+
 export function workbenchModuleTransform(view, id) {
   const local = view.presentationTransforms?.[id] || view.transforms[id] || identityWorkbenchTransform;
   return { scale: view.scale * local.scale, x: view.scale * local.x, y: view.scale * local.y, frame: local.frame, presented: Boolean(view.presentationTransforms?.[id]) };

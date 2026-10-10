@@ -62,6 +62,38 @@ test('Shape creation, duplication, order, colour and dimensions survive undo and
   assert.equal(store.getDraft().workbench.shapes.length, 2);
 });
 
+test('drawn rectangles save their size and clamped position together without changing default shapes', () => {
+  const { store, storage } = fixture(), before = store.getDraft();
+  const id = addShape(store, profile, { position: { left: 3900, top: -10 }, size: { width: 450.5, height: 120.25 } });
+  const rectangle = store.getDraft().workbench.shapes.find(item => item.id === id);
+  assert.deepEqual(rectangle.window, { left: 3541.5, top: 8, width: 450.5, height: 120.25 });
+  assert.ok(store.undo()); assert.deepEqual(store.getDraft(), before);
+  assert.ok(store.redo());
+  assert.deepEqual(createSystemWorkflowDraftStore({ profileAddress: profile, storage }).getDraft(), store.getDraft());
+  const published = build(store.getDraft());
+  assert.deepEqual(published.workbench.shapes[0].window, rectangle.window);
+  const defaultId = addShape(store, profile);
+  assert.deepEqual(store.getDraft().workbench.shapes.find(item => item.id === defaultId).window,
+    { left: 120, top: 120, width: 288, height: 288 });
+  const source = store.getDraft().shapes.find(item => item.id === id);
+  const duplicateId = addShape(store, profile, { size: { width: 20, height: 20 } }, source);
+  const duplicate = store.getDraft().workbench.shapes.find(item => item.id === duplicateId).window;
+  assert.equal(duplicate.width, rectangle.window.width);
+  assert.equal(duplicate.height, rectangle.window.height);
+});
+
+test('drawn rectangle size validation and failed creation never commit a partial shape', () => {
+  const f = fixture(), before = f.store.getDraft();
+  for (const size of [{ width: 0, height: 40 }, { width: 40, height: 7 }, { width: 3985, height: 40 },
+    { width: 40, height: Infinity }, { width: NaN, height: 40 }, { width: '40', height: 40 }]) {
+    assert.throws(() => addShape(f.store, profile, { position: { left: 40, top: 50 }, size }));
+    assert.deepEqual(f.store.getDraft(), before);
+  }
+  f.fail(true);
+  assert.throws(() => addShape(f.store, profile, { position: { left: 40, top: 50 }, size: { width: 300, height: 80 } }));
+  assert.deepEqual(f.store.getDraft(), before);
+});
+
 test('Shape publication retains order and geometry, excludes private shapes, and restores old documents safely', () => {
   const { store } = fixture(), old = build(store.getDraft());
   addShape(store, profile); addShape(store, profile); addShape(store, profile);

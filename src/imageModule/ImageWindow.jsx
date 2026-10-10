@@ -48,9 +48,14 @@ export default function ImageWindow({ id, title, position, size, fitScale, fitSi
     if (active.target.hasPointerCapture(active.id)) active.target.releasePointerCapture(active.id);
   };
   useEffect(() => {
-    const cancel = event => { if (event.type === 'blur' || event.key === 'Escape') finish(true); };
-    addEventListener('blur', cancel); addEventListener('keydown', cancel);
-    return () => { removeEventListener('blur', cancel); removeEventListener('keydown', cancel); finish(true); };
+    const cancel = event => {
+      if (!gesture.current || event.type !== 'blur' && event.key !== 'Escape') return;
+      // This Escape belongs to the drag/resize, before Workbench Back sees it.
+      if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); }
+      finish(true);
+    };
+    addEventListener('blur', cancel); addEventListener('keydown', cancel, true);
+    return () => { removeEventListener('blur', cancel); removeEventListener('keydown', cancel, true); finish(true); };
   }, []);
   useEffect(() => { finish(true); }, [position.left, position.top, size.width, size.height, camera.scale, camera.x, camera.y, offset.x, offset.y, fitScale, suspended, movable, editable, resizeTarget?.expected]);
   const begin = (event, kind, edge) => {
@@ -109,14 +114,14 @@ export default function ImageWindow({ id, title, position, size, fitScale, fitSi
   // physical pixels to CSS pixels without a second fractional layout rounding.
   const paint = imagePaintGeometry(screen, density);
   // Tiny or thin canvases must remain available for direct dragging. Put their
-  // two action targets outside, beyond the screen-sized resize handles.
+  // action targets outside, beyond the screen-sized resize handles.
   const outsideControls = screen.width < 80 || screen.height < 80;
   const controlsAbove = screen.top + screen.height + 56 > innerHeight && screen.top >= 56;
   const controlsTop = controlsAbove ? -56 : paint.height / density + 28;
-  const controlsLeft = Math.max(0, Math.min(innerWidth - 56, paint.left / density)) - paint.left / density;
+  const controlsLeft = Math.max(0, Math.min(innerWidth - 84, paint.left / density)) - paint.left / density;
   return <section ref={node} className="image-module__window" aria-label={`Image — ${title}`} data-workbench-view-id={id}
-    data-workbench-selectable={movable && !suspended || undefined} tabIndex={0} aria-keyshortcuts="Shift+Enter"
-    aria-description="Click artwork to inspect. Drag to move. Arrow keys move the window; Shift+Enter toggles Workbench selection."
+    data-workbench-selectable={movable && !suspended || undefined} tabIndex={0} aria-keyshortcuts="Shift+Enter I"
+    aria-description="Click artwork to focus its module. Press I to inspect. Drag to move. Arrow keys move the window; Shift+Enter toggles Workbench selection."
     {...pointer('move')} onKeyDown={event => key(event, 'move')}
     onClickCapture={event => { if (suppressClick.current && event.detail !== 0) { suppressClick.current = false; event.preventDefault(); event.stopPropagation(); } }}
     data-moving={gesture.current?.dragged || undefined}

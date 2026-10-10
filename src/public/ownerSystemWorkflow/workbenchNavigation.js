@@ -13,27 +13,11 @@ export function workbenchDestinationCamera(bounds, viewport, minimumScale = .25)
   } };
 }
 
-// Floating instruments keep their own positions. Find usable space around the
-// visible instruments, retaining a bounded set of candidate rectangles.
-export function workbenchNavigationViewport(viewport, obstacles) {
-  let candidates = [{ left: 0, top: 0, ...viewport }];
-  for (const obstacle of obstacles) {
-    candidates = candidates.flatMap(rect => {
-      const left = Math.max(rect.left, obstacle.left), top = Math.max(rect.top, obstacle.top);
-      const right = Math.min(rect.left + rect.width, obstacle.left + obstacle.width);
-      const bottom = Math.min(rect.top + rect.height, obstacle.top + obstacle.height);
-      if (right <= left || bottom <= top) return [rect];
-      return [
-        { ...rect, width: left - rect.left },
-        { ...rect, left: right, width: rect.left + rect.width - right },
-        { ...rect, height: top - rect.top },
-        { ...rect, top: bottom, height: rect.top + rect.height - bottom },
-      ].filter(next => next.width >= Math.min(240, viewport.width / 2)
-        && next.height >= Math.min(180, viewport.height / 2));
-    }).sort((a, b) => b.width * b.height - a.width * a.height).slice(0, 32);
-    if (!candidates.length) return { left: 0, top: 0, ...viewport };
-  }
-  return candidates[0];
+// One centred Workbench rectangle above the measured bottom controls. Tool
+// windows stay where the user put them and never push the camera sideways.
+export function workbenchNavigationViewport(viewport, controlsTop) {
+  return { left: 0, top: 0, width: viewport.width,
+    height: Number.isFinite(controlsTop) ? Math.max(0, Math.min(viewport.height, controlsTop - 8)) : viewport.height };
 }
 
 export function interpolateWorkbenchCamera(start, end, progress) {

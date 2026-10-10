@@ -49,10 +49,13 @@ test('shared Layers and Artwork info preserve Display geometry and independent w
     await resize.focus(); await page.keyboard.press('ArrowLeft'); await settle(page);
     const resized = await board.boundingBox(); assert.ok(resized.width < before.width);
     await activate(page, board.getByRole('button', { name: 'Minimize Display Module to shortcut', exact: true }));
+    await layers.waitFor({ state: 'detached' });
+    await metadata.waitFor({ state: 'detached' });
     await activate(page, page.locator('.system-workflow__desktop-shortcut'));
     assert.deepEqual(await board.boundingBox(), resized);
     await board.getByLabel(/Move Display Module:/).focus();
     assert.equal(await layers.count(), 1); assert.equal(await metadata.count(), 1);
+    assert.deepEqual(await infoWindow.boundingBox(), moved, 'restoring the target retains inspector geometry');
     assert.equal(await page.evaluate(() => window.__instrumentWrites), 0);
     assert.deepEqual(errors, []);
   } finally { await browser.close(); }
@@ -94,6 +97,9 @@ test('shared metadata stays bounded and scrollable across viewport changes witho
   const browser = await launch();
   try {
     const { page, board, errors } = await setup(browser);
+    await openDisplayTool(page, board, 'LAYERS');
+    await page.locator('[data-shared-tool="layers"]').getByRole('button', { name: 'MOUNTAIN SIGNAL II', exact: true }).click();
+    await page.getByRole('button', { name: 'Close Layers', exact: true }).click();
     await openDisplayTool(page, board, 'METADATA');
     const metadata = page.locator('[data-shared-tool="metadata"]');
     const infoWindow = metadata.locator('xpath=ancestor::aside');

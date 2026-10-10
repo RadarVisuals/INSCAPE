@@ -7,7 +7,7 @@ import './moduleSurface.css';
 import { cloneElement, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { commitWorkbenchSelectionResize, prepareWindowResize } from '../../systemWorkflow/resizeWorkbenchSelection.js';
 import {
-  Lock, LockKeyhole, Minus, Pause, Expand, Shrink,
+  Lock, LockKeyhole, Minus, Pause, Expand, Shrink, ZoomIn,
 } from 'lucide-react';
 import './workbenchWindowChrome.css';
 import PresentationBoardShortcut from './PresentationBoardShortcut.jsx';
@@ -24,8 +24,10 @@ import { presentationBoardResponsiveMetrics, projectPresentationBoardView,
   resizePresentationBoardFromCorner, resizePresentationBoardView, setContinuousPresentationBoardScale } from './presentationBoardGeometry.js';
 
 const corners = ['nw', 'ne', 'sw', 'se'];
-function BoardWindowControls({ disabled, liftDisabled, enlarged, onLift, onMinimize }) {
+function BoardWindowControls({ disabled, liftDisabled, enlarged, onLift, onMinimize, onInspect, inspectDisabled }) {
   return <span className="system-workflow__board-window-controls">
+    {onInspect && <button aria-label="Inspect artwork" aria-keyshortcuts="I" title="Inspect artwork (I)" className="system-workflow__overlay-icon"
+      disabled={disabled || inspectDisabled} onClick={onInspect} type="button"><ZoomIn /></button>}
     <button aria-label={enlarged ? 'Restore Display' : 'Enlarge Display'} title={enlarged ? 'Restore Display' : 'Enlarge Display'} className="system-workflow__overlay-icon"
       disabled={liftDisabled} onClick={onLift} type="button">{enlarged ? <Shrink /> : <Expand />}</button>
     {!enlarged && <button aria-label="Minimize Display Module to shortcut" className="system-workflow__overlay-icon"
@@ -38,7 +40,7 @@ function BoardWorkspaceControls({ playing, onTogglePlayback }) {
 }
 export default function PresentationBoardDefinitive({ assetsById = new Map(), children, documentGeometry = { columns: 32, rows: 18 },
   authoringLocked = false, displaySurface, moduleAppearance, inspectionAtmosphere = false,
-  layoutMode = 'wide', onAuthoringLockToggle, onContextMenu,
+  layoutMode = 'wide', onAuthoringLockToggle, onContextMenu, onInspect, inspectDisabled = false,
   onDelete, moduleCommands, moduleSubmenu, onModuleCommand,
   onMinimize, onRestore,
   playing = false, onTogglePlayback, reducedMotion = false, liftDisabled = false, onLiftInspectionChange, onLiftTransitionChange, onLiftReturn,
@@ -268,7 +270,7 @@ export default function PresentationBoardDefinitive({ assetsById = new Map(), ch
               aria-pressed={authoringLocked} className="system-workflow__overlay-icon system-workflow__composition-lock"
               onClick={onAuthoringLockToggle} type="button">{authoringLocked ? <LockKeyhole /> : <Lock />}</button>
           </span>}
-          <BoardWindowControls disabled={inspectionActive} enlarged={liftActive}
+          <BoardWindowControls disabled={Boolean(renderInspection) || liftMoving} enlarged={liftActive} onInspect={onInspect} inspectDisabled={inspectDisabled}
             liftDisabled={liftActive ? lift.phase === 'closing' : Boolean(renderInspection) || liftDisabled || cameraLocked}
             onLift={event => liftActive ? returnLift()
               : setLift({ scope: liftScope, trigger: event.currentTarget, phase: 'opening' })} onMinimize={minimizeToShortcut} />

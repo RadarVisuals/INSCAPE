@@ -8,7 +8,7 @@ const camera = page => page.locator('main.system-workflow').first().evaluate(nod
   x: Number(node.dataset.workbenchCameraX || 0), y: Number(node.dataset.workbenchCameraY || 0) }));
 const arrived = page => page.waitForFunction(() => !document.querySelector('[data-workbench-travelling]'));
 
-test('Explore pans live owner and Visitor scenes without per-frame React commits or authored changes', { timeout: 90000 }, async () => {
+test('Hand pans live owner and Visitor scenes without per-frame React commits or authored changes', { timeout: 90000 }, async () => {
   const browser = await chromium.launch({ executablePath: 'C:/Program Files (x86)/Google/Chrome/Application/chrome.exe', headless: true });
   try {
     for (const visitor of [false, true]) {
@@ -17,7 +17,7 @@ test('Explore pans live owner and Visitor scenes without per-frame React commits
       page.on('console', message => { if (/flushSync was called|Maximum update depth|unmounted component/.test(message.text())) errors.push(message.text()); });
       await mountGridMotionFixture(page, { origin, visitor, heavy: true, count: 3, textModes: true, displayWidth: 600 });
       await page.evaluate(() => import('/src/lattice/rendering/latticeMenuSurface.css'));
-      const toggle = page.getByRole('button', { name: 'Explore Workbench', exact: true }); await toggle.waitFor();
+      const toggle = page.getByRole('button', { name: 'Hand tool', exact: true }); await toggle.waitFor();
       await page.waitForFunction(() => document.querySelectorAll('[data-workbench-view-id^="text:"]').length === 3);
       await page.evaluate(() => document.fonts.ready); await settle(page);
       const host = page.locator('main.system-workflow').first();
@@ -65,7 +65,7 @@ test('Explore pans live owner and Visitor scenes without per-frame React commits
       assert.equal(await page.evaluate(() => window.exploreNodes.every(node => node.isConnected)), true);
       await page.getByRole('button', { name: 'Reset Workbench position', exact: true }).click(); await settle(page);
       assert.deepEqual(await camera(page), { scale: 1, x: 0, y: 0 });
-      // Explore claims empty space only. A long reader keeps native wheel scroll.
+      // Hand preserves module positions. A long reader keeps native wheel scroll.
       const textWindow = page.locator('[data-workbench-view-id="text:overflow"]');
       if (await textWindow.count()) {
         const beforeReading = await camera(page);
@@ -89,7 +89,7 @@ test('reduced motion and paused releases omit inertia, and input cancels a new c
   try {
     const page = await browser.newPage({ viewport: { width: 390, height: 1000 }, reducedMotion: 'reduce' });
     await mountGridMotionFixture(page, { origin, count: 1, displayWidth: 320 });
-    const toggle = page.getByRole('button', { name: 'Explore Workbench', exact: true }); await toggle.click();
+    const toggle = page.getByRole('button', { name: 'Hand tool', exact: true }); await toggle.click();
     const host = page.locator('main.system-workflow').first();
     await host.dispatchEvent('wheel', { deltaX: 5000, deltaY: 5000, bubbles: true, cancelable: true }); await settle(page);
     const drag = async pause => {

@@ -10,7 +10,7 @@ import { ownerSystemWorkflowAssetDimensions } from './ownerSystemWorkflowAssetDi
 import { displayTextLabel } from '../../systemWorkflow/domain/displayText.js';
 import { addArticleToDisplay } from '../../text/textTransfer.js';
 import {
-  ChevronDown, ChevronUp, ChevronsDown, ChevronsUp, Copy, Crop, Eye, EyeOff, Lock, Trash2,
+  ChevronDown, ChevronUp, ChevronsDown, ChevronsUp, Copy, Crop, ZoomIn, Eye, EyeOff, Lock, Trash2,
 } from 'lucide-react';
 import {
   SYSTEM_WORKFLOW_LAYER_OPERATIONS,
@@ -33,7 +33,7 @@ function reorderBlock(ids, selectedIds, direction) {
 }
 
 export default function OwnerSystemWorkflowSelectionInspector({ assetsById, authoringLocked = false,
-  controller, crop, onBeginCrop, onEditText, onArtworkInfo, toolLabel = 'Display', available = true }) {
+  controller, crop, onBeginCrop, onEditText, onInspect, onArtworkInfo, toolLabel = 'Display', available = true }) {
   const [removeCandidateId, setRemoveCandidateId] = useState(null);
   const [gutter, setGutter] = useState('1');
   const [gutterMessage, setGutterMessage] = useState('');
@@ -144,6 +144,7 @@ export default function OwnerSystemWorkflowSelectionInspector({ assetsById, auth
   </div>;
 
   const toolbar = <nav aria-label="Selection actions" className="system-workflow__selection-actions">
+      {!textPlacement && <button aria-label="Inspect artwork" aria-keyshortcuts="I" title="Inspect artwork (I)" disabled={!onInspect} onClick={onInspect} type="button"><ZoomIn size={15} /></button>}
       {!textPlacement && <ArtworkTransformTools disabled={!editable} onTransform={transform} />}
       <button aria-label="Duplicate" disabled={!editable} onClick={duplicate} title="Duplicate" type="button"><Copy size={15} /></button>
       <button aria-label="Send to back" disabled={authoringLocked || !availability.BACK} onClick={() => moveLayer(SYSTEM_WORKFLOW_LAYER_OPERATIONS.BACK)} title="Send to back" type="button"><ChevronsDown size={15} /></button>

@@ -53,6 +53,9 @@ test('whole Display inspection retains live content and authored layout in owner
         window.liftIdentity = Math.random(); window.ticks = 0;
         function tick() { window.ticks++; requestAnimationFrame(tick); } tick();
       });
+      // Attachment and media readiness can precede the nested SVG viewport's
+      // first layout. Compare two painted viewports, not its initial zero size.
+      await runtime.waitForFunction(() => innerWidth > 0 && innerHeight > 0);
       const identity = await runtime.evaluate(() => ({ id: window.liftIdentity, ticks: window.ticks, width: innerWidth, height: innerHeight }));
       if (!visitor) {
         // Establish a real undoable edit. Inspection must not allow Ctrl+Z to

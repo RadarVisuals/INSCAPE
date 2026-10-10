@@ -46,7 +46,7 @@ export default function useDisplayInspection(options) {
       if (!ready || !next.getEntry(id) || !mounted.current || operation !== request.current || scope !== next.scope
         || !source.isConnected || !next.items.some(item => item.id === id)) return false;
       next.onOpen?.(id, interaction);
-      update({ scope, placementId: id, originRectangle, cue: interaction.cue || null,
+      update({ scope, placementId: id, originRectangle, inspectionMode: interaction.inspectionMode, cue: interaction.cue || null,
         cueMetadataOpen: Boolean(interaction.cue) });
       return true;
     };
@@ -69,7 +69,7 @@ export default function useDisplayInspection(options) {
     if (placementId && (!entry || !rectangle(options.getElement(placementId)))) close();
   }, [placementId, items, entry, close]);
   return {
-    placementId, entry, position, total: available.length,
+    placementId, entry, inspectionMode: active?.inspectionMode, position, total: available.length,
     cue: active?.cue || null,
     cueMetadataOpen: Boolean(active?.cueMetadataOpen), setCueMetadataOpen,
     getElement: options.getElement,

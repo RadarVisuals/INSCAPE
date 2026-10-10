@@ -20,10 +20,12 @@ test('all production CSS excludes every retired interface font', () => {
   assert.doesNotMatch(css, /(?:PP Monument|Geist(?: Sans| Mono)?|IBM Plex Mono|Space Mono|Bahnschrift|system-ui|\bmonospace\b)/iu);
 });
 
-test('the two approved font faces and tokens remain centralized', () => {
-  assert.equal((tokens.match(/@font-face/gu) || []).length, 2);
+test('approved font faces and role tokens remain centralized', () => {
+  assert.equal((tokens.match(/@font-face/gu) || []).length, 3);
   assert.match(tokens, /font-family:\s*"Inscape Sora";[\s\S]*Sora-VariableFont_wght\.ttf/);
   assert.match(tokens, /font-family:\s*"Inscape IBM Plex Sans Condensed";[\s\S]*IBMPlexSansCondensed-Regular\.ttf/);
+  assert.match(tokens, /font-family:\s*"Inter Variable";[\s\S]*InterVariable\.woff2/);
+  assert.match(tokens, /--font-creation-toolbar:\s*"Inter Variable", Arial, sans-serif/);
   assert.match(tokens, /--font-interface:\s*"Inscape Sora", sans-serif/);
   assert.match(tokens, /--font-body:\s*"Inscape Sora", sans-serif/);
   assert.match(tokens, /--font-technical:\s*"Inscape IBM Plex Sans Condensed", sans-serif/);
@@ -41,9 +43,10 @@ test('narrow public states keep state and compact support copy on the technical 
   assert.match(supportStyles, /\.alpha-support p,[\s\S]*\.alpha-support small \{[^}]*font-family: "Inscape IBM Plex Sans Condensed"/s);
 });
 
-test('active typography authorities approve only Sora and IBM Plex Sans Condensed', () => {
+test('active typography authorities retain existing fonts and the scoped Inter exception', () => {
   const typography = activeContract.match(/### Typography([\s\S]*?)### Geometry and surfaces/u)?.[1] || '';
   assert.match(typography, /Inscape Sora/);
+  assert.match(typography, /creation bar uses \*\*Inter Variable/);
   assert.match(typography, /Inscape IBM Plex Sans Condensed/);
   assert.doesNotMatch(typography, /Geist|IBM Plex Mono|Space Mono|PP Monument|monospace/iu);
   assert.match(projectInstructions, /Use Inscape Sora for human interface copy and Inscape\s+IBM Plex Sans Condensed for technical and dense secondary copy/u);

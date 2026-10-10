@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useWorkbenchCamera } from './WorkbenchCamera.jsx';
-import useWorkbenchPan from './useWorkbenchPan.js';
+import useWorkbenchPan, { isWorkbenchHandSurface } from './useWorkbenchPan.js';
 import { zoomWorkbenchCamera } from './workbenchViewScale.js';
 import useWorkbenchCameraMotion from './useWorkbenchCameraMotion.js';
 import { restoreWorkbenchCamera, workbenchDestinationCamera, workbenchNavigationViewport } from './workbenchNavigation.js';
@@ -20,23 +20,37 @@ function hasNativeWheelScroll(target, host, dx, dy) {
 // Navigation never receives a draft store or module transforms. Editing owns
 // its gestures and exposes only cancellation and input-ownership callbacks.
 export default function useWorkbenchNavigation({ hostRef, controlsRef, disabled, dockVisible, onControlsTopChange,
+  interactionTool = 'select', setInteractionTool,
   isEditing, cancelEditing, releaseAbandonedGesture, captureContext, restoreContext, returnTargets, resetPresentation, entries }) {
   const camera = useWorkbenchCamera();
   const { offset, locked, getCamera, updateCamera } = camera;
   const interaction = useRef(null);
   interaction.current = { isEditing, cancelEditing, releaseAbandonedGesture, captureContext, restoreContext, returnTargets, resetPresentation };
   const [history, setHistory] = useState([]);
-  const [exploring, setExploring] = useState(false);
+  const hand = interactionTool === 'hand';
   const historyRef = useRef(history);
   const remember = useCallback(next => { historyRef.current = next; setHistory(next); }, []);
   const measuredViewport = useRef(null);
+  const captureCheck = useRef(null);
+  const hasCapturedPointer = useCallback(() => captureCheck.current?.() || false, []);
   const { start: travel, stop: stopTravel, moving, beginPan, panTo: previewPan, releasePan } = useWorkbenchCameraMotion(camera, hostRef, entries);
   const getOffset = useCallback(() => getCamera().offset, [getCamera]);
   const panTo = useCallback(next => { stopTravel(); updateCamera({ ...getCamera(), offset: next }); }, [stopTravel, updateCamera, getCamera]);
   const beforePan = useCallback(() => { interaction.current.cancelEditing(); beginPan(); }, [beginPan]);
-  const afterPan = useCallback(velocity => releasePan(exploring ? velocity : null), [releasePan, exploring]);
-  const pan = useWorkbenchPan(hostRef, disabled || locked, { getOffset, update: previewPan, onBegin: beforePan, onEnd: afterPan, explore: exploring });
-  const toggleExplore = useCallback(() => { stopTravel(true); pan.cancel(); interaction.current.cancelEditing(); setExploring(value => !value); }, [stopTravel, pan.cancel]);
+  const afterPan = useCallback(velocity => releasePan(hand ? velocity : null), [releasePan, hand]);
+  const pan = useWorkbenchPan(hostRef, disabled || locked, { getOffset, update: previewPan, onBegin: beforePan, onEnd: afterPan, hand });
+  const toggleHand = useCallback(() => { stopTravel(true); pan.cancel(); interaction.current.cancelEditing(); setInteractionTool?.(hand ? 'select' : 'hand'); }, [stopTravel, pan.cancel, hand, setInteractionTool]);
+  useLayoutEffect(() => {
+    stopTravel(); pan.cancel(true); interaction.current.cancelEditing();
+  }, [interactionTool, stopTravel, pan.cancel]);
+  useEffect(() => {
+    const reset = () => { pan.cancel(true); setInteractionTool?.('select'); };
+    const hidden = () => { if (document.hidden) reset(); };
+    globalThis.addEventListener('blur', reset);
+    document.addEventListener('visibilitychange', hidden);
+    return () => { globalThis.removeEventListener('blur', reset); document.removeEventListener('visibilitychange', hidden); };
+  }, [pan.cancel, setInteractionTool]);
+  useLayoutEffect(() => { if (disabled) setInteractionTool?.('select'); }, [disabled, setInteractionTool]);
   const isPanning = useCallback(() => Boolean(pan.active.current), [pan.active]);
   const readViewport = useCallback(() => {
     const host = hostRef.current;
@@ -56,14 +70,11 @@ export default function useWorkbenchNavigation({ hostRef, controlsRef, disabled,
     const bounds = destination.getBounds();
     if (!bounds) return unavailable();
     const hostRect = host.getBoundingClientRect();
-    const obstacles = [...host.querySelectorAll('[data-detached-window]:not([data-workbench-view-id]), [data-workbench-navigation-obstacle]')]
-      .filter(node => node.getClientRects().length && getComputedStyle(node).visibility !== 'hidden')
-      .map(node => {
-        const rect = node.getBoundingClientRect();
-        return { left: rect.left - hostRect.left, top: rect.top - hostRect.top, width: rect.width, height: rect.height };
-      });
-    const available = workbenchNavigationViewport({ ...viewport,
-      height: viewport.height - (controlsRef.current?.offsetHeight || 32) - 16 }, obstacles);
+    // Focus has a predictable centre. Floating instruments do not choose a
+    // different destination; the actual bottom rail includes toolbar clearance.
+    const controlsTop = controlsRef.current?.getBoundingClientRect().top;
+    const available = workbenchNavigationViewport(viewport,
+      Number.isFinite(controlsTop) ? controlsTop - hostRect.top : undefined);
     const camera = getCamera();
     const end = workbenchDestinationCamera(bounds, available);
     if (!end) return unavailable();
@@ -109,9 +120,9 @@ export default function useWorkbenchNavigation({ hostRef, controlsRef, disabled,
   }, [hostRef, offset, getCamera]);
   useLayoutEffect(() => {
     const host = hostRef.current;
-    host?.toggleAttribute('data-workbench-exploring', exploring && !disabled && !locked);
-    return () => host?.removeAttribute('data-workbench-exploring');
-  }, [hostRef, exploring, disabled, locked]);
+    host?.toggleAttribute('data-workbench-hand', interactionTool === 'hand' && !disabled && !locked);
+    return () => host?.removeAttribute('data-workbench-hand');
+  }, [hostRef, interactionTool, disabled, locked]);
   useLayoutEffect(() => {
     const host = hostRef.current;
     host?.toggleAttribute('data-workbench-travelling', moving);
@@ -175,23 +186,38 @@ export default function useWorkbenchNavigation({ hostRef, controlsRef, disabled,
   useEffect(() => {
     const host = hostRef.current;
     if (!host || disabled) return;
-    // Native colour pickers can leave WheelEvent.buttons set after release.
-    // Only pointer presses observed in this Workbench block camera input.
-    const pressedPointers = new Set();
+    // A missed release from browser/native UI must not latch wheel input off.
+    // Remember possible capture owners, then consult live pointer capture;
+    // neither an old pointerdown nor WheelEvent.buttons proves a live drag.
+    const pressedPointers = new Map();
     const press = event => {
       pressedPointers.delete(event.pointerId);
       if (host.contains(event.target)) {
-        pressedPointers.add(event.pointerId);
+        pressedPointers.set(event.pointerId, event.target);
         if (!isPanning()) stopTravel(true);
       }
     };
     const release = event => pressedPointers.delete(event.pointerId);
+    const capture = event => { if (host.contains(event.target)) pressedPointers.set(event.pointerId, event.target); };
+    const checkCapture = () => {
+      for (const [id, target] of pressedPointers) {
+        let captured = host.hasPointerCapture(id);
+        // pointerdown runs before a module chooses its capture target. Check
+        // that target's ancestors too, even before gotpointercapture arrives.
+        for (let node = target; !captured && node && host.contains(node); node = node.parentElement) captured = node.hasPointerCapture(id);
+        if (!captured) pressedPointers.delete(id);
+      }
+      return pressedPointers.size > 0;
+    };
+    captureCheck.current = checkCapture;
     const move = event => { if (!event.buttons) release(event); };
     const clear = () => { pressedPointers.clear(); stopTravel(); };
     const hidden = () => { if (document.hidden) clear(); };
     const wheel = event => {
+      pan.releaseAbandonedGesture();
       const released = interaction.current.releaseAbandonedGesture();
       if (released !== null) pressedPointers.delete(released);
+      const pointerHeld = hasCapturedPointer();
       if (locked) {
         if (event.ctrlKey || !hasNativeWheelScroll(event.target, host, event.deltaX, event.deltaY)) {
           event.preventDefault(); event.stopPropagation();
@@ -205,7 +231,7 @@ export default function useWorkbenchNavigation({ hostRef, controlsRef, disabled,
         const dy = event.shiftKey ? 0 : event.deltaY * unitY;
         if (!dx && !dy || hasNativeWheelScroll(event.target, host, dx, dy)) return;
         event.preventDefault(); event.stopPropagation();
-        if (!interaction.current.isEditing() && !isPanning() && !pressedPointers.size) {
+        if (!interaction.current.isEditing() && !isPanning() && !pointerHeld) {
           const current = getCamera().offset;
           panTo({ x: current.x - dx, y: current.y - dy });
         }
@@ -213,15 +239,25 @@ export default function useWorkbenchNavigation({ hostRef, controlsRef, disabled,
       }
       if (!event.ctrlKey || !event.deltaY || event.target.closest?.('[data-immersive]')) return;
       event.preventDefault(); event.stopPropagation();
-      if (interaction.current.isEditing() || pressedPointers.size) return;
+      if (interaction.current.isEditing() || pointerHeld) return;
       const delta = event.deltaY * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? host.clientHeight : 1);
       zoom({ x: event.clientX, y: event.clientY }, Math.exp(-Math.max(-120, Math.min(120, delta)) * .003));
     };
     const key = event => {
+      // Focus selection owns this key, including repeated keydown events. Its
+      // command replaces active travel; holding F must not interrupt arrival.
+      if (event.key.toLowerCase() === 'f' && !event.ctrlKey && !event.metaKey && !event.altKey
+        && !event.target.closest?.('input, textarea, select, [contenteditable]:not([contenteditable="false"]), [role="textbox"]')) return;
       // Stop before a module's keyboard editing or inspection handler runs.
       if (!event.target.closest?.('.workbench-view-controls') && !['Shift', 'Control', 'Alt', 'Meta', 'Tab'].includes(event.key)) {
         const stopped = stopTravel(true);
         if (event.key === 'Escape' && stopped === 'coast') { event.preventDefault(); event.stopPropagation(); return; }
+      }
+      // Hand owns pointer and keyboard movement. Readers, inputs and controls
+      // keep native keys; module and placement geometry stay put.
+      if (hand && !locked && isWorkbenchHandSurface(event.target, host)
+        && (event.key.startsWith('Arrow') || ['Delete', 'Backspace'].includes(event.key) || event.shiftKey && event.key === 'Enter')) {
+        event.preventDefault(); event.stopPropagation(); return;
       }
       if (!(event.ctrlKey || event.metaKey) || event.key !== '0') return;
       if (locked) { event.preventDefault(); event.stopPropagation(); return; }
@@ -230,24 +266,27 @@ export default function useWorkbenchNavigation({ hostRef, controlsRef, disabled,
       interaction.current.cancelEditing(); resetZoom();
     };
     globalThis.addEventListener('pointerdown', press, true);
+    globalThis.addEventListener('gotpointercapture', capture, true);
     globalThis.addEventListener('pointermove', move, true);
-    for (const name of ['pointerup', 'pointercancel', 'click']) globalThis.addEventListener(name, release, true);
+    for (const name of ['pointerup', 'pointercancel', 'lostpointercapture', 'click']) globalThis.addEventListener(name, release, true);
     globalThis.addEventListener('blur', clear);
     document.addEventListener('visibilitychange', hidden);
     host.addEventListener('wheel', wheel, { passive: false, capture: true });
     host.addEventListener('keydown', key, true);
     return () => {
+      if (captureCheck.current === checkCapture) captureCheck.current = null;
       clear();
       globalThis.removeEventListener('pointerdown', press, true);
+      globalThis.removeEventListener('gotpointercapture', capture, true);
       globalThis.removeEventListener('pointermove', move, true);
-      for (const name of ['pointerup', 'pointercancel', 'click']) globalThis.removeEventListener(name, release, true);
+      for (const name of ['pointerup', 'pointercancel', 'lostpointercapture', 'click']) globalThis.removeEventListener(name, release, true);
       globalThis.removeEventListener('blur', clear);
       document.removeEventListener('visibilitychange', hidden);
       host.removeEventListener('wheel', wheel, true);
       host.removeEventListener('keydown', key, true);
     };
-  }, [hostRef, disabled, locked, getCamera, isPanning, panTo, zoom, resetZoom, stopTravel]);
+  }, [hostRef, disabled, locked, hand, getCamera, isPanning, pan.releaseAbandonedGesture, panTo, zoom, resetZoom, stopTravel]);
 
-  return { offset, locked, getCamera, isPanning, resetView, resetZoom, moving, exploring, toggleExplore,
+  return { offset, locked, getCamera, isPanning, hasCapturedPointer, resetView, resetZoom, moving, hand, toggleHand,
     focusDestination, goBack, canGoBack: history.length > 0, stopTravel };
 }

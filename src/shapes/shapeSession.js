@@ -18,6 +18,12 @@ export function addShape(store, profile, placed, source = null) {
   const layout = placed?.workbench || draft.workbench || createDefaultWorkbenchPresentation();
   const original = source && layout.shapes?.find(item => item.id === source.id);
   const presentation = original ? { ...structuredClone(original), id: record.id, open: true } : createShapePresentation(record.id);
+  if (!original && placed?.size) {
+    const { width, height } = placed.size;
+    if (![width, height].every(value => Number.isFinite(value) && value >= 8 && value <= 3984))
+      throw new Error('Choose a rectangle size inside the Workbench.');
+    presentation.window = { ...presentation.window, width, height };
+  }
   const position = original ? { left: original.window.left + 24, top: original.window.top + 24 } : placed?.position || presentation.window;
   presentation.window = { ...presentation.window, ...clampWorkbenchPosition(position, presentation.window) };
   commit(store, profile, { ...draft, shapes: [...(draft.shapes || []), record],

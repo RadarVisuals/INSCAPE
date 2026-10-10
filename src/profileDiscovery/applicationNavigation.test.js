@@ -50,3 +50,14 @@ test('explicit disconnect drops the private return route but retains public visi
   const publicOverlay = { kind: 'discover', returnTo: publicRoute };
   assert.equal(disconnectRoute(publicOverlay, resolveApplicationDestination(publicRoute, owner)), publicOverlay);
 });
+
+test('reception links stay public for a connected owner and retain focused destinations', () => {
+  const expected = { kind: 'profile', address: A, reception: true, target: { moduleId: 'display:primary', gridId: 'grid:one' } };
+  const href = applicationRouteUrl({ href: 'https://example.test/?keep=1' }, expected);
+  assert.deepEqual(readApplicationRoute(new URL(href, 'https://example.test')), expected);
+  assert.deepEqual(resolveApplicationDestination(expected, owner), { kind: 'public', address: A, reception: true, target: expected.target });
+  assert.deepEqual(readApplicationRoute({ search: '?discover' }, { inscapeReturnRoute: expected }).returnTo, expected);
+  assert.equal(resolveApplicationDestination({ kind: 'profile', address: A }, owner).kind, 'workbench');
+  const home = applicationRouteUrl({ href: 'https://example.test' + href }, { kind: 'home' });
+  assert.equal(home, '/?keep=1');
+});

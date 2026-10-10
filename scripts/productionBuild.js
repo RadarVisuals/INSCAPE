@@ -167,9 +167,11 @@ export const PRODUCTION_BUDGETS = Object.freeze({
   // reader and local draft integration. Measured aggregate: 2,435,393 / 755,647.
   // Initial and owner-static limits remain unchanged; keep bounded build margin.
   coreJavaScript: Object.freeze({ raw: 2_480_000, gzip: 770_000 }),
-  // Three approved, locally served article fonts and their OFL licenses.
-  // Measured copied assets: 17,454,360 bytes; fonts load only when selected.
-  publicAssets: Object.freeze({ raw: 17_600_000 }),
+  // Approved local article fonts plus the creation bar's Inter variable face.
+  // Inter and its license/provenance add 357,042 bytes; measured copied assets:
+  // 17,811,402 bytes. Retain the previous margin, rounded up by less than 3 kB.
+  // Fonts load only when used; JavaScript budgets are unchanged.
+  publicAssets: Object.freeze({ raw: 17_960_000 }),
   largestPublicAsset: Object.freeze({ raw: 2_700_000 })
 });
 
@@ -182,6 +184,9 @@ const PRODUCTION_FONT_FILES = Object.freeze([
   'assets/fonts/IBM_Plex_Mono/OFL.txt',
   'assets/fonts/IBM_Plex_Sans_Condensed/IBMPlexSansCondensed-Regular.ttf',
   'assets/fonts/IBM_Plex_Sans_Condensed/OFL.txt',
+  'assets/fonts/Inter/InterVariable.woff2',
+  'assets/fonts/Inter/OFL.txt',
+  'assets/fonts/Inter/SOURCE.txt',
   'assets/fonts/Literata/Literata.ttf',
   'assets/fonts/Literata/OFL.txt',
   'assets/fonts/Sora/OFL.txt',
@@ -258,6 +263,7 @@ export async function assertProductionFontContract(outputDirectory) {
   const css = (await Promise.all(cssFiles.map((file) => readFile(resolve(outputDirectory, file), 'utf8')))).join('\n');
   if (LEGACY_FONT_PATTERN.test(css)) throw new Error('Production font contract failed: a CSS chunk contains a legacy font');
   for (const [family, fontPath] of [
+    ['Inter Variable', '/assets/fonts/Inter/InterVariable.woff2'],
     ['Inscape Sora', '/assets/fonts/Sora/Sora-VariableFont_wght.ttf'],
     ['Inscape IBM Plex Sans Condensed', '/assets/fonts/IBM_Plex_Sans_Condensed/IBMPlexSansCondensed-Regular.ttf'],
   ]) {

@@ -12,7 +12,7 @@ export default function DisplayFocusViewer({ scene, controlsContainer, viewer })
   const closingRef = useRef(false);
   const [closing, setClosing] = useState(false);
   const reducedMotion = globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-  const lift = resolveInspectionMode(viewer.entry?.placement) === 'LIFT';
+  const lift = (viewer.inspectionMode || resolveInspectionMode(viewer.entry?.placement)) === 'LIFT';
 
   useLayoutEffect(() => {
     const source = viewer.returnFocus;

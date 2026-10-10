@@ -29,7 +29,7 @@ const ArticleEditor = lazy(() => import('./ArticleEditor.jsx'));
 const textValue = record => record;
 const saveText = (store, scope, expected, next, options) => saveTextModuleResult(store, scope.profile, expected, next, options);
 
-function TextInstance({ record, index, store, profileAddress, assets, registerTarget, placementTargets, initialPresentation, onPresentationChange, suspended, active, onActivate, windowSnap, initialView, onViewChange }) {
+function TextInstance({ record, index, store, profileAddress, assets, registerTarget, placementTargets, initialPresentation, onPresentationChange, suspended, active, onActivate, windowSnap, initialView, onViewChange, initiallyOpenId }) {
   const tools = useSharedTextTools();
   const workbenchView = useWorkbenchView();
   const view = workbenchModuleTransform(workbenchView, record.id);
@@ -37,7 +37,7 @@ function TextInstance({ record, index, store, profileAddress, assets, registerTa
   const scope = textRecoveryScope(profileAddress, record.id);
   const { value: working, failed, error, reason, session: edit } = useTextEditSession({ store, scope, record, valueOf: textValue, saveRecord: saveText });
   const { save: change, setError } = edit;
-  const [presentation, setPresentation] = useState(() => initialPresentation || createTextPresentation(record.id, index));
+  const [presentation, setPresentation] = useState(() => ({ ...(initialPresentation || createTextPresentation(record.id, index)), ...(initiallyOpenId === record.id ? { open: true } : {}) }));
   const linked = Boolean(presentation.frames?.length);
   const [flowEditor, setFlowEditor] = useState(null);
   const savedFrames = store?.getSnapshot().workbench?.texts?.find(item => item.id === record.id)?.frames;
@@ -253,9 +253,9 @@ function IsolatedTextWorkbench(props) {
     <SharedTextToolsWindow hidden={props.suspended} /><TextInstances {...props} />
   </SharedTextToolsProvider>;
 }
-function TextInstances({ records, presentations, store, profileAddress, assets = [], registerTarget, placementTargets, onPresentationChange, suspended = false, windowSnap = false, views, onViewChange }) {
+function TextInstances({ records, presentations, store, profileAddress, assets = [], registerTarget, placementTargets, onPresentationChange, suspended = false, windowSnap = false, views, onViewChange, initiallyOpenId }) {
   const tools = useSharedTextTools();
   const [active, setActive] = useState(null);
   return records.map((record, index) => <TextInstance key={`${profileAddress}:${record.id}`} {...{ record, index, store, profileAddress, assets, registerTarget, placementTargets, onPresentationChange, suspended, windowSnap }}
-    initialView={views?.[record.id]} onViewChange={onViewChange} initialPresentation={presentations?.find(p => p.id === record.id)} active={(tools ? tools.activeModuleId : active) === record.id} onActivate={() => tools ? tools.activate(record.id) : setActive(record.id)} />);
+    initiallyOpenId={initiallyOpenId} initialView={views?.[record.id]} onViewChange={onViewChange} initialPresentation={presentations?.find(p => p.id === record.id)} active={(tools ? tools.activeModuleId : active) === record.id} onActivate={() => tools ? tools.activate(record.id) : setActive(record.id)} />);
 }

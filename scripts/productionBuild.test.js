@@ -76,7 +76,7 @@ test('measured production allowances retain exact budget boundaries with the laz
     initialCss: { raw: 51_807, gzip: 10_301 },
     ownerCss: { raw: 143_870, gzip: 21_140 },
     coreJavaScript: { raw: 2_480_000, gzip: 770_000 },
-    publicAssets: { raw: 17_600_000 },
+    publicAssets: { raw: 17_960_000 },
     largestPublicAsset: { raw: 2_700_000 },
   });
 
@@ -226,7 +226,8 @@ test('production pruning excludes unused font sources without removing active bu
     'assets/fonts/IBM_Plex_Sans_Condensed/IBMPlexSansCondensed-Medium.ttf']) {
     assert.ok(UNUSED_PUBLIC_PATHS.includes(path), path);
   }
-  for (const path of ['assets/fonts/Sora/Sora-VariableFont_wght.ttf',
+  for (const path of ['assets/fonts/Inter/InterVariable.woff2',
+    'assets/fonts/Sora/Sora-VariableFont_wght.ttf',
     'assets/fonts/IBM_Plex_Sans_Condensed/IBMPlexSansCondensed-Regular.ttf']) {
     assert.ok(!UNUSED_PUBLIC_PATHS.includes(path), path);
   }
@@ -257,17 +258,24 @@ test('production font assets include approved article fonts while interface font
   try {
     await mkdir(resolve(root, 'assets/fonts/Sora'), { recursive: true });
     await mkdir(resolve(root, 'assets/fonts/IBM_Plex_Sans_Condensed'), { recursive: true });
-    for (const [directory, file] of [['Cormorant', 'Cormorant.ttf'], ['Literata', 'Literata.ttf'], ['IBM_Plex_Mono', 'IBMPlexMono-Regular.ttf']]) {
+    for (const [directory, file] of [['Inter', 'InterVariable.woff2'], ['Cormorant', 'Cormorant.ttf'], ['Literata', 'Literata.ttf'], ['IBM_Plex_Mono', 'IBMPlexMono-Regular.ttf']]) {
       await mkdir(resolve(root, 'assets/fonts', directory), { recursive: true });
       await writeFile(resolve(root, 'assets/fonts', directory, file), 'fixture');
       await writeFile(resolve(root, 'assets/fonts', directory, 'OFL.txt'), 'fixture');
     }
-    await writeFile(resolve(root, 'assets/index.css'), '@font-face{font-family:"Inscape Sora";src:url("/assets/fonts/Sora/Sora-VariableFont_wght.ttf")}@font-face{font-family:"Inscape IBM Plex Sans Condensed";src:url("/assets/fonts/IBM_Plex_Sans_Condensed/IBMPlexSansCondensed-Regular.ttf")}');
+    await writeFile(resolve(root, 'assets/fonts/Inter/SOURCE.txt'), 'fixture');
+    const toolbarFace = '@font-face{font-family:"Inter Variable";src:url("/assets/fonts/Inter/InterVariable.woff2")}';
+    await writeFile(resolve(root, 'assets/index.css'), toolbarFace + '@font-face{font-family:"Inscape Sora";src:url("/assets/fonts/Sora/Sora-VariableFont_wght.ttf")}@font-face{font-family:"Inscape IBM Plex Sans Condensed";src:url("/assets/fonts/IBM_Plex_Sans_Condensed/IBMPlexSansCondensed-Regular.ttf")}');
     for (const file of ['assets/fonts/Sora/OFL.txt', 'assets/fonts/Sora/Sora-VariableFont_wght.ttf',
       'assets/fonts/IBM_Plex_Sans_Condensed/OFL.txt', 'assets/fonts/IBM_Plex_Sans_Condensed/IBMPlexSansCondensed-Regular.ttf']) {
       await writeFile(resolve(root, file), 'fixture');
     }
     assert.equal(await assertProductionFontContract(root), true);
+    const cssPath = resolve(root, 'assets/index.css');
+    const bundledCss = await readFile(cssPath, 'utf8');
+    await writeFile(cssPath, bundledCss.replace(toolbarFace, ''));
+    await assert.rejects(() => assertProductionFontContract(root), /missing Inter Variable/);
+    await writeFile(cssPath, bundledCss);
     await writeFile(resolve(root, 'assets/legacy.css'), '.legacy{font-family:Geist,system-ui}');
     await assert.rejects(() => assertProductionFontContract(root), /legacy font/);
   } finally { await removeTree(root); }

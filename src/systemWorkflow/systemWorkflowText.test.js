@@ -77,3 +77,35 @@ test('text edits remain scoped to their Display and reject unknown attributes an
   const bad = f.store.getDraft(); bad.grids.find(g => g.id === f.gridId).placements[0].stableAssetId = 'fabricated';
   assert.equal(validateSystemWorkflowDraft(bad).valid, false);
 });
+
+test('toolbar text placement preserves the old default and commits explicit geometry as one undoable edit', () => {
+  const f = fixture();
+  addArticleToDisplay(f.store, profile, { gridId: f.gridId });
+  const geometryOf = ({ column, row, columnSpan, rowSpan }) => ({ column, row, columnSpan, rowSpan });
+  assert.deepEqual(geometryOf(f.current()), { column: 2, row: 2, columnSpan: 16, rowSpan: 6 });
+  const before = f.store.getDraft();
+  const destination = { column: 4 + 1 / 9, row: 8, columnSpan: 12, rowSpan: 5 };
+  const id = addArticleToDisplay(f.store, profile, { gridId: f.gridId, destination });
+  const placed = f.store.getDraft().grids.find(grid => grid.id === f.gridId).placements.find(item => item.id === id);
+  assert.deepEqual(geometryOf(placed), destination);
+  assert.equal(placed.kind, 'text');
+  assert.ok(f.store.undo());
+  assert.deepEqual(f.store.getDraft(), before);
+  assert.ok(f.store.redo());
+  assert.equal(f.store.getDraft().grids.find(grid => grid.id === f.gridId).placements.length, 2);
+});
+
+test('invalid or stale toolbar Text destinations and failed writes leave saved work intact', () => {
+  const f = fixture(), before = f.store.getDraft();
+  const destination = { column: 4, row: 3, columnSpan: 12, rowSpan: 5 };
+  for (const request of [
+    { gridId: f.gridId, destination: { ...destination, columnSpan: 0 } },
+    { gridId: f.gridId, destination: { ...destination, column: Infinity } },
+    { gridId: 'grid:removed', destination },
+  ]) assert.throws(() => addArticleToDisplay(f.store, profile, request));
+  assert.throws(() => addArticleToDisplay(f.store, '0x' + '2'.repeat(40), { gridId: f.gridId, destination }));
+  assert.deepEqual(f.store.getDraft(), before);
+  f.fail();
+  assert.throws(() => addArticleToDisplay(f.store, profile, { gridId: f.gridId, destination }));
+  assert.deepEqual(f.store.getDraft(), before);
+});

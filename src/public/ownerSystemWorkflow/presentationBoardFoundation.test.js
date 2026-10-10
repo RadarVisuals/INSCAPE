@@ -46,7 +46,8 @@ test('owner Display Module reuses the existing interactive canvas inside one cli
   // source spelling differs while Display Lift owns pointer input.
   assert.match(board, /beginBoardDrag[\s\S]*setBoardPosition/);
   assert.match(display, /OwnerSystemWorkflowMetadataModule/);
-  assert.match(runtime, /label: 'ADD'[\s\S]*label: 'DISPLAY MODULE'/);
+  assert.match(runtime, /const addCommands = \[[\s\S]*id: 'presentation-board', label: 'DISPLAY MODULE'/);
+  assert.match(runtime, /<OwnerWorkbenchToolbar[\s\S]*commands=\{addCommands\} onCommand=\{runCommand\}/);
   assert.match(display, /useOwnerSystemWorkflowFocusViewer/);
   assert.match(display, /<DisplayFocusViewer/);
   assert.match(display, /renderInspection=\{viewer\.placementId \? \(container, controlsContainer, scene\) => <DisplayFocusViewer[\s\S]*container=\{container\} controlsContainer=\{controlsContainer\}/);

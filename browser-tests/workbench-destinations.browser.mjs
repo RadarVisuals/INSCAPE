@@ -33,7 +33,7 @@ async function arrived(page) {
   await settle(page);
 }
 
-test('owner and Visitor focus live modules, inspect them and return without changing the saved arrangement', { timeout: 120000 }, async () => {
+test('owner and Visitor focus live modules, activate them idempotently and return without changing the saved arrangement', { timeout: 120000 }, async () => {
   await mkdir('.browser-test-runtime', { recursive: true });
   const browser = await launch();
   try {
@@ -101,11 +101,8 @@ test('owner and Visitor focus live modules, inspect them and return without chan
       await page.screenshot({ path: `.browser-test-runtime/destination-${visitor}-${width}.png` });
       const source = page.locator('.image-module__canvas').first();
       await source.focus(); await source.press('Enter');
-      await page.getByRole('button', { name: 'Return to Image', exact: true }).waitFor();
-      assert.equal(await back(page).isDisabled(), true, 'inspection owns the camera until return finishes');
-      sameCamera(await camera(page), first);
-      await page.keyboard.press('Escape');
-      await page.locator('.image-lift').waitFor({ state: 'detached' });
+      await arrived(page);
+      assert.equal(await page.locator('.image-lift').count(), 0, 'artwork activation focuses without lifting');
       assert.equal(await back(page).isEnabled(), true);
       sameCamera(await camera(page), first);
 
@@ -237,7 +234,8 @@ test('camera journeys retarget, retain interrupted Back, and stop for input, loc
       else await page.setViewportSize({ width: 1000, height: 760 });
       await advance(page, 32);
       const stopped = await read(page); await advance(page);
-      sameCamera(await read(page), stopped);
+      const afterStopped = await read(page);
+      assert.deepEqual(afterStopped, stopped, `${reason} stops camera travel`);
       assert.equal(await page.locator('[data-workbench-travelling]').count(), 0);
       if (reason === 'lock') {
         assert.equal(await back(page).isDisabled(), true);

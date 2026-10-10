@@ -22,15 +22,15 @@ test('focus retains camera limits and rejects absent or invalid destinations', (
   assert.equal(workbenchDestinationCamera({ left: 0, top: 0, width: 40, height: 20 }, { ...viewport, height: 0 }), null);
 });
 
-test('visible instruments reserve space while offscreen instruments do not', () => {
-  const viewport = { width: 1440, height: 860 };
-  const obstacles = [{ left: 16, top: 30, width: 326, height: 620 }, { left: 24, top: 680, width: 320, height: 160 }];
-  const free = workbenchNavigationViewport(viewport, obstacles);
-  for (const obstacle of obstacles) assert.ok(free.left >= obstacle.left + obstacle.width
-    || free.top >= obstacle.top + obstacle.height || free.left + free.width <= obstacle.left || free.top + free.height <= obstacle.top);
-  assert.ok(free.width >= 1000 && free.height >= 650);
-  assert.deepEqual(workbenchNavigationViewport(viewport, [{ left: 2000, top: 0, width: 320, height: 400 }]), { left: 0, top: 0, ...viewport });
-  assert.deepEqual(workbenchNavigationViewport(viewport, [{ left: 0, top: 0, ...viewport }]), { left: 0, top: 0, ...viewport });
+test('focus uses the full Workbench width and the actual bottom controls boundary', () => {
+  for (const viewport of [{ width: 1440, height: 860 }, { width: 390, height: 800 }]) {
+    const controlsTop = viewport.height - 130;
+    assert.deepEqual(workbenchNavigationViewport(viewport, controlsTop),
+      { left: 0, top: 0, width: viewport.width, height: controlsTop - 8 });
+    assert.deepEqual(workbenchNavigationViewport(viewport), { left: 0, top: 0, ...viewport });
+    assert.deepEqual(workbenchNavigationViewport(viewport, 2000), { left: 0, top: 0, ...viewport });
+    assert.equal(workbenchNavigationViewport(viewport, 4).height, 0);
+  }
 });
 
 test('camera interpolation reaches exact endpoints without changing either saved context', () => {

@@ -45,14 +45,14 @@ function PublishedStatusSurface({ state, onRetry, onOpenDirectory, onReturn }) {
 }
 
 export default function PublishedProfileBoundary({
-  address, resolution, onRetry, returnProfileAddress, onVisitProfile, onOpenDiscover, onConnect,
+  address, resolution, onRetry, returnProfileAddress, onVisitProfile, onOpenDiscover, onConnect, entry, onOpenCanvas, onOpenOverview, onOpenWork, onCloseWork,
 }) {
   const visibleDocument = [PUBLISHED_PROFILE_STATUS.RESOLVED, PUBLISHED_PROFILE_STATUS.STALE].includes(resolution?.status) ? resolution.document : null;
   const canReturn = Boolean(returnProfileAddress && returnProfileAddress.toLowerCase() !== String(address || '').toLowerCase());
   const returnHome = canReturn ? () => onVisitProfile?.(returnProfileAddress, { returnToConnectedProfile: true }) : null;
   const content = !visibleDocument
     ? <PublishedStatusSurface state={resolution} onRetry={onRetry} onOpenDirectory={onOpenDiscover} onReturn={returnHome} />
-    : <><PublishedProfileDocumentPreview document={visibleDocument}
+    : <><PublishedProfileDocumentPreview document={visibleDocument} entry={entry} onOpenCanvas={onOpenCanvas} onOpenOverview={onOpenOverview} onOpenWork={onOpenWork} onCloseWork={onCloseWork}
       onOpenDirectory={onOpenDiscover} onReturn={returnHome} onConnect={onConnect} />
     {resolution.status === PUBLISHED_PROFILE_STATUS.STALE && <div className="published-profile-stale" role="status" aria-busy={resolution.busy}>Showing the last verified document while {resolution.busy ? 'checking the network.' : 'the network is unavailable.'} <RetryButton state={resolution} onRetry={onRetry} /></div>}
     </>;

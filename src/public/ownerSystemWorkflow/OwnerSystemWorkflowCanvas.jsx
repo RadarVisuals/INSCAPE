@@ -11,7 +11,8 @@ import { projectLatticePixelRectangle } from '../../lattice/rendering/latticePix
 import { createSystemWorkflowDropGeometry } from '../../systemWorkflow/systemWorkflowPlacement.js';
 import { isSystemWorkflowWorldCoverGrid, systemWorkflowSnapStep, systemWorkflowPlacementSnapStep, quantizeSystemWorkflowGridCoordinate } from '../../systemWorkflow/domain/systemWorkflowDraft.js';
 import { displayGuideMode } from '../../systemWorkflow/domain/displayAppearance.js';
-import { attachTextToDisplay } from '../../text/textTransfer.js';
+import { addArticleToDisplay, attachTextToDisplay } from '../../text/textTransfer.js';
+import { displayTextDestinationAt } from './displayTextPlacement.js';
 import { displayTextLabel } from '../../systemWorkflow/domain/displayText.js';
 import DisplayArticleEditor from '../../text/DisplayArticleEditor.jsx';
 import { adjacentSystemWorkflowGridIdInOrder } from '../../systemWorkflow/domain/systemWorkflowNavigation.js';
@@ -117,7 +118,7 @@ export default function OwnerSystemWorkflowCanvas({ assetsById, authoringLocked 
     adjacentGrid: (id, direction) => adjacentSystemWorkflowGridIdInOrder(gridOrder, id, direction),
     gridId: grid?.id, nextGridId: adjacentGrid('next'), canvasRef, trackRef, viewScale: pointerScale, reducedMotion,
     onPause: onPauseGrids || (() => {}), onAdvance: onChangeGrid });
-  const placementContext = useMemo(() => ({}), [grid?.id, controller.draft.profileAddress, authoringLocked, interactionDisabled, playingGrids, playback.swipe]);
+  const placementContext = useMemo(() => ({}), [grid?.id, controller.draft.profileAddress, authoringLocked, interactionDisabled, playingGrids, playback.swipe, suspended, viewerOpen, cropSession]);
   const currentPlacementContext = useRef(placementContext);
   currentPlacementContext.current = placementContext;
   const reportRejectedDrop = () => {
@@ -133,6 +134,18 @@ export default function OwnerSystemWorkflowCanvas({ assetsById, authoringLocked 
       id: controller.moduleId,
       get label() { return `${canvasRef.current?.closest('.system-workflow__presentation-board')?.querySelector('.system-workflow__board-title')?.textContent || 'Display'} / ${grid?.title || 'Untitled Grid'}`; },
       get node() { return canvasRef.current; },
+      createTextAt: point => {
+        const canvas = canvasRef.current;
+        if (!isCurrent() || suspended || viewerOpen || cropSession || grid?.visibility !== 'PUBLIC'
+          || !canvas.contains(document.elementFromPoint(point.x, point.y))) return false;
+        const field = createOwnerSystemWorkflowProjectedField(canvas, snapStep, viewScale, artboardMode, sceneRef.current, worldViewport, pointerScale);
+        const destination = displayTextDestinationAt(point, field);
+        if (!destination) return false;
+        const id = controller.run(() => addArticleToDisplay(controller.store, controller.draft.profileAddress,
+          { moduleId: controller.moduleId, gridId: grid.id, destination }));
+        if (id) { controller.replaceSelection([id]); onEditText?.(id); }
+        return id;
+      },
       previewTextAt: (point, rectangle, explicit = false) => {
         const canvas = canvasRef.current;
         if (!isCurrent() || !grid || grid.visibility !== 'PUBLIC' || !explicit && !canvas.contains(document.elementFromPoint(point.x, point.y))) return null;

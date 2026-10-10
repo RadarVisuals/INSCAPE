@@ -76,10 +76,11 @@ export function detachTextFromDisplay(store, profile, { moduleId = PRIMARY_DISPL
   return id;
 }
 
-export function addArticleToDisplay(store, profile, { moduleId = PRIMARY_DISPLAY_ID, gridId }) {
+export function addArticleToDisplay(store, profile, { moduleId = PRIMARY_DISPLAY_ID, gridId, destination }) {
   const { generation, draft, grid } = context(store, profile, moduleId, gridId);
+  const geometry = assertSystemWorkflowDropGeometry(destination ?? { column: 2, row: 2, columnSpan: 16, rowSpan: 6 });
   const id = createSystemWorkflowPlacementId(new Set(grid.placements.map(item => item.id)));
-  grid.placements.push({ id, kind: 'text', text: { article: createArticle() }, column: 2, row: 2, columnSpan: 16, rowSpan: 6,
+  grid.placements.push({ id, kind: 'text', text: { article: createArticle() }, ...geometry,
     layer: Math.max(-1, ...grid.placements.map(item => item.layer)) + 1,
     navigationOrder: Math.max(-1, ...grid.placements.map(item => item.navigationOrder)) + 1,
     visibility: 'PUBLIC', locked: false, transform: { quarterTurns: 0, mirrorX: false, mirrorY: false } });

@@ -48,6 +48,7 @@ import { loadWorkbenchPreferences, saveWorkbenchPreferences } from './workbenchP
 import { createDefaultWorkbenchPresentation } from '../../profileDocument/domain/workbenchPresentation.js';
 import { captureWorkbenchPresentation } from './workbenchPresentationCapture.js';
 import WorkbenchCommandMenu from './WorkbenchCommandMenu.jsx';
+import OwnerWorkbenchToolbar from './OwnerWorkbenchToolbar.jsx';
 import {
   decodeOwnerSystemWorkflowAssetDimensions,
   ownerSystemWorkflowDecodedAsset,
@@ -152,7 +153,7 @@ function WorkbenchSession({ connectedProfile, getWalletPublicationContext, onCon
   const dismissHostNotice = useCallback(() => setNoticeState(current => current === notice ? null : current), [notice]);
   const previewSession = useWorkbenchPreview(workbenchController.store, setNotice);
   const { preview, close: closePreview, returnFocus: previewReturnFocus } = previewSession;
-  useDraftUndo(workbenchController.store, Boolean(preview), setNotice, pendingText.length ? TEXT_RECOVERY_MESSAGE : null);
+  const performHistory = useDraftUndo(workbenchController.store, Boolean(preview), setNotice, pendingText.length ? TEXT_RECOVERY_MESSAGE : null);
   const [identityOpen, setIdentityOpen] = useState(() => {
     const mode = loadIdentityShortcut(profileAddress)?.mode;
     return mode ? mode !== 'closed' : Boolean(initialWorkbench.current?.identity.open);
@@ -411,7 +412,48 @@ function WorkbenchSession({ connectedProfile, getWalletPublicationContext, onCon
       requestAnimationFrame(() => workspaceRef.current?.focus());
     } catch (error) { setNotice(error.message || 'Could not delete this Display'); }
   };
-  return <><ContextToolbarProvider target={activeModuleId}><SharedDisplayToolsProvider value={sharedTools} onChange={setSharedTools} targetId={activeModuleId} onTargetChange={setActiveModuleId}><SharedTextToolsProvider menuSurface={menuSurface} activeModuleId={activeModuleId} onActivate={setActiveModuleId} open={textToolsOpen} onOpenChange={setTextToolsOpen}><WorkbenchViewProvider key={profileAddress} store={workbenchController.store} profileAddress={profileAddress} presentation={workbench}><WorkbenchPlacement hostRef={workspaceRef} enabled={workbenchPreferences.edgeSnap && !preview} gridEnabled={workbenchPreferences.shortcutSnap && !preview} gap={workbenchPreferences.moduleGap}><main tabIndex={-1} ref={workspaceRef} aria-hidden={preview || undefined} className="system-workflow" data-canvas-context="canvas" data-layout={layout.mode}
+  // One creation menu/dispatcher serves both the context menu and toolbar.
+  const addCommands = [
+    { disabled: !moduleAvailability.presentationBoard, id: 'presentation-board', label: 'DISPLAY MODULE' },
+    { disabled: (workbenchController.draft.miniApps?.length || 0) >= MAX_MINI_APPS, id: 'mini-app', label: 'MINI APP' },
+    { disabled: (workbenchController.draft.texts?.length || 0) >= MAX_TEXT_MODULES, id: 'text', label: 'TEXT' },
+    { disabled: (workbenchController.draft.imageModules?.length || 0) >= MAX_IMAGE_MODULES, id: 'image', label: 'IMAGE' },
+    { disabled: (workbenchController.draft.shapes?.length || 0) >= MAX_SHAPES, id: 'shape', label: 'SHAPE' },
+    { disabled: (workbenchController.draft.keeperDocks?.length || 0) >= MAX_KEEPER_DOCKS, id: 'keeper', label: 'KEEPER DOCK' },
+    { id: 'mobile', label: workbenchController.draft.mobile ? 'OPEN MOBILE' : 'MOBILE MODULE' },
+  ].map(command => command.id === 'presentation-board'
+    ? { ...command, children: [
+    { disabled: !moduleAvailability.presentationBoard, id: 'add-display-horizontal', label: 'HORIZONTAL 16:9' },
+    { disabled: !moduleAvailability.presentationBoard, id: 'add-display-vertical', label: 'VERTICAL 9:16' },
+    { disabled: !moduleAvailability.presentationBoard, id: 'add-display-custom', label: 'CUSTOM SIZE…' },
+  ] } : command);
+  const runCommand = (id, placement) => {
+    if (id === 'tool-layers' || id === 'tool-metadata') { revealInstruments(); setSharedTools(current => ({ ...current, [id.slice(5)]: true })); }
+    if (id === 'library') toggleLibrary();
+    if (id === 'identity') openIdentity(workspaceRef.current);
+    if (id === 'discover') openDockPanel('discover', workspaceRef.current);
+    if (id === 'preview') openPreview(workspaceRef.current);
+    if (id === 'publish') togglePublication(workspaceRef.current);
+    if (id === 'mini-app') { try { addMiniApp(workbenchController.store, profileAddress); } catch (error) { setNotice(error.message); } }
+    if (id === 'text') { try { setActiveModuleId(addTextModule(workbenchController.store, profileAddress, placement)); setTextToolsOpen(true); } catch (error) { setNotice(error.message); } }
+    if (id === 'shape') { try { setActiveModuleId(addShape(workbenchController.store, profileAddress, placement)); } catch (error) { setNotice(error.message); } }
+    if (id === 'keeper') { try { setActiveModuleId(addKeeperDock(workbenchController.store, profileAddress, placement)); } catch (error) { setNotice(error.message); } }
+    if (id.startsWith('shape:')) setActiveModuleId(id);
+    if (id === 'image') { try { setActiveModuleId(addImageModule(workbenchController.store, profileAddress)); } catch (error) { setNotice(error.message); } }
+    if (id === 'mobile') { try { openMobileModule(workbenchController.store); } catch (error) { setNotice(error.message); } }
+    if (id === 'toggle-dock') {
+      setWorkbenchPreferences(current => ({ ...current, dockVisible: !current.dockVisible }));
+      requestAnimationFrame(() => workspaceRef.current?.focus());
+    }
+    if (id === 'add-display-horizontal' || id === 'add-display-vertical') {
+      const added = workbenchController.addDisplay(id === 'add-display-vertical' ? 'PORTRAIT' : 'LANDSCAPE');
+      if (added) setActiveModuleId(added);
+    }
+    if (id === 'add-display-custom') { workbenchController.clearError(); setCreateDisplay(true); }
+    setWorkspaceMenu(null);
+  };
+  const toolbarHidden = Boolean(preview) || instrumentsObscured || createDisplay;
+  return <><ContextToolbarProvider target={activeModuleId}><SharedDisplayToolsProvider value={sharedTools} onChange={setSharedTools} targetId={activeModuleId} onTargetChange={setActiveModuleId}><SharedTextToolsProvider menuSurface={menuSurface} activeModuleId={activeModuleId} onActivate={setActiveModuleId} open={textToolsOpen} onOpenChange={setTextToolsOpen}><WorkbenchViewProvider key={profileAddress} store={workbenchController.store} profileAddress={profileAddress} presentation={workbench}><WorkbenchPlacement hostRef={workspaceRef} enabled={workbenchPreferences.edgeSnap && !preview} gridEnabled={workbenchPreferences.shortcutSnap && !preview} gap={workbenchPreferences.moduleGap}><main tabIndex={-1} ref={workspaceRef} aria-hidden={preview || undefined} className="system-workflow" data-creation-toolbar={!toolbarHidden || undefined} data-canvas-context="canvas" data-layout={layout.mode}
     onPointerDownCapture={event => {
       if (event.target === event.currentTarget && event.button === 0) {
         for (const display of displayIds.map(id => instanceRecords[id]?.controller).filter(Boolean)) {
@@ -431,7 +473,12 @@ function WorkbenchSession({ connectedProfile, getWalletPublicationContext, onCon
     data-lattice-menu-surface data-menu-surface={menuSurface} data-reduced-motion={layout.reducedMotion || undefined}
     data-surface={workbenchPreferences.surfaceId} data-previewing={preview ? true : undefined}
     inert={preview ? '' : undefined}>
-    <WorkbenchViewControls hostRef={workspaceRef} disabled={Boolean(preview)} dockVisible={workbenchPreferences.dockVisible} historyBlocked={pendingText.length ? TEXT_RECOVERY_MESSAGE : null} />
+    <WorkbenchViewControls hostRef={workspaceRef} showHandTool={false} disabled={Boolean(preview)} dockVisible={workbenchPreferences.dockVisible} historyBlocked={pendingText.length ? TEXT_RECOVERY_MESSAGE : null} />
+    <OwnerWorkbenchToolbar hostRef={workspaceRef} placementTargets={allPlacementTargetsRef}
+      commands={addCommands} onCommand={runCommand} onOpenLibrary={toggleLibrary} libraryOpen={libraryOpen}
+      preferences={workbenchPreferences} onPreferencesChange={change => setWorkbenchPreferences(current => ({ ...current, ...change }))}
+      hidden={toolbarHidden} onHistory={performHistory} history={workbenchController.store.getHistory()}
+      historyBlocked={pendingText.length ? TEXT_RECOVERY_MESSAGE : null} onNotice={setNotice} />
     <WorkbenchImageDropTarget targetRef={workbenchImageTargetRef} hostRef={workspaceRef}
       suspended={Boolean(preview)} onCreated={setActiveModuleId} onError={setNotice} />
     <SharedDisplayToolWindows fallbackFocus={workspaceRef} menuSurface={menuSurface} hidden={Boolean(preview) || instrumentsObscured} />
@@ -511,45 +558,11 @@ function WorkbenchSession({ connectedProfile, getWalletPublicationContext, onCon
       commands={[{ id: 'tools', label: 'TOOLS' }, { id: 'add', label: 'ADD' }, ...(workbenchController.draft.shapes?.length ? [{ id: 'shapes', label: 'SHAPES' }] : []), { id: 'identity', label: 'IDENTITY' }, { id: 'library', label: 'LIBRARY' },
         { id: 'discover', label: 'DISCOVER' }, { id: 'preview', label: 'PREVIEW' }, { id: 'publish', label: 'PUBLISH' },
         { id: 'toggle-dock', label: workbenchPreferences.dockVisible ? 'HIDE DOCK' : 'SHOW DOCK' }]}
-      getSubmenuCommands={(id) => id === 'tools' ? displayToolCommands() : id === 'add' ? [
-        { disabled: !moduleAvailability.presentationBoard, id: 'presentation-board', label: 'DISPLAY MODULE' },
-        { disabled: (workbenchController.draft.miniApps?.length || 0) >= MAX_MINI_APPS, id: 'mini-app', label: 'MINI APP' },
-        { disabled: (workbenchController.draft.texts?.length || 0) >= MAX_TEXT_MODULES, id: 'text', label: 'TEXT' },
-        { disabled: (workbenchController.draft.imageModules?.length || 0) >= MAX_IMAGE_MODULES, id: 'image', label: 'IMAGE' },
-        { disabled: (workbenchController.draft.shapes?.length || 0) >= MAX_SHAPES, id: 'shape', label: 'SHAPE' },
-        { disabled: (workbenchController.draft.keeperDocks?.length || 0) >= MAX_KEEPER_DOCKS, id: 'keeper', label: 'KEEPER DOCK' },
-        { id: 'mobile', label: workbenchController.draft.mobile ? 'OPEN MOBILE' : 'MOBILE MODULE' },
-      ] : id === 'shapes' ? [...(workbenchController.draft.shapes || [])].reverse().map(shape => ({ id: shape.id, label: shape.name })) : id === 'presentation-board' ? [
-        { disabled: !moduleAvailability.presentationBoard, id: 'add-display-horizontal', label: 'HORIZONTAL 16:9' },
-        { disabled: !moduleAvailability.presentationBoard, id: 'add-display-vertical', label: 'VERTICAL 9:16' },
-        { disabled: !moduleAvailability.presentationBoard, id: 'add-display-custom', label: 'CUSTOM SIZE…' },
-      ] : []}
+      getSubmenuCommands={id => id === 'tools' ? displayToolCommands() : id === 'add' ? addCommands
+        : id === 'shapes' ? [...(workbenchController.draft.shapes || [])].reverse().map(shape => ({ id: shape.id, label: shape.name }))
+          : addCommands.find(command => command.id === id)?.children || []}
       label="Workbench commands" menuSurfaceId={menuSurface} returnFocus={workspaceRef.current} onClose={() => setWorkspaceMenu(null)}
-      onCommand={(id, placement) => {
-        if (id === 'tool-layers' || id === 'tool-metadata') { revealInstruments(); setSharedTools(current => ({ ...current, [id.slice(5)]: true })); }
-        if (id === 'library') toggleLibrary();
-        if (id === 'identity') openIdentity(workspaceRef.current);
-        if (id === 'discover') openDockPanel('discover', workspaceRef.current);
-        if (id === 'preview') openPreview(workspaceRef.current);
-        if (id === 'publish') togglePublication(workspaceRef.current);
-        if (id === 'mini-app') { try { addMiniApp(workbenchController.store, profileAddress); } catch (error) { setNotice(error.message); } }
-        if (id === 'text') { try { setActiveModuleId(addTextModule(workbenchController.store, profileAddress, placement)); setTextToolsOpen(true); } catch (error) { setNotice(error.message); } }
-        if (id === 'shape') { try { setActiveModuleId(addShape(workbenchController.store, profileAddress, placement)); } catch (error) { setNotice(error.message); } }
-        if (id === 'keeper') { try { setActiveModuleId(addKeeperDock(workbenchController.store, profileAddress, placement)); } catch (error) { setNotice(error.message); } }
-        if (id.startsWith('shape:')) setActiveModuleId(id);
-        if (id === 'image') { try { setActiveModuleId(addImageModule(workbenchController.store, profileAddress)); } catch (error) { setNotice(error.message); } }
-        if (id === 'mobile') { try { openMobileModule(workbenchController.store); } catch (error) { setNotice(error.message); } }
-        if (id === 'toggle-dock') {
-          setWorkbenchPreferences(current => ({ ...current, dockVisible: !current.dockVisible }));
-          requestAnimationFrame(() => workspaceRef.current?.focus());
-        }
-        if (id === 'add-display-horizontal' || id === 'add-display-vertical') {
-          const added = workbenchController.addDisplay(id === 'add-display-vertical' ? 'PORTRAIT' : 'LANDSCAPE');
-          if (added) setActiveModuleId(added);
-        }
-        if (id === 'add-display-custom') { workbenchController.clearError(); setCreateDisplay(true); }
-        setWorkspaceMenu(null);
-      }}
+      onCommand={runCommand}
       systemWorkflowOverlay />, document.body)}
     {createDisplay && !preview && <DisplaySizeDialog creating appearance={workbenchController.draft.appearance} menuSurface={menuSurface} returnFocus={workspaceRef.current}
       error={workbenchController.error} onClose={() => setCreateDisplay(false)} onConfirm={(size, appearance) => {
