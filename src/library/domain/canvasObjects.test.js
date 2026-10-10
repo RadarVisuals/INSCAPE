@@ -10,7 +10,7 @@ const input = (id, asset = ASSET_A) => ({ id, kind: CANVAS_OBJECT_KIND.FRAMED_AR
 
 test('controlled registry normalizes only framed-artwork presentation values', () => {
   assert.equal(getCanvasObjectDefinition('remote-component'), null);
-  assert.deepEqual(normalizeCanvasObjectPresentation('framed-artwork', { fit: 'cover', frame: 'javascript', mat: 'light', background: 'neutral' }), { fit: 'cover', frame: 'thin', mat: 'light', background: 'neutral' });
+  assert.deepEqual(normalizeCanvasObjectPresentation('framed-artwork', { fit: 'cover', frame: 'javascript', mat: 'light', background: 'neutral' }), { fit: 'cover', frame: 'thin', background: 'neutral' });
   assert.equal(normalizeCanvasObjectPresentation('framed-artwork', { background: 'transparent' }).background, 'transparent');
   assert.equal(normalizeCanvasObjectPresentation('remote-component', {}), null);
 });
@@ -35,7 +35,7 @@ test('normalization clamps spans and placement and strips uncontrolled fields', 
   const object = normalizeCanvasObject({ ...input('canvas:artwork:bounded'), visitorVisible: true, placement: { column: 999, row: -4 }, span: { columns: 999, rows: 0 }, presentationOrder: 999,
     presentation: { fit: 'bad', frame: 'heavy', mat: 'bad', background: 'light' }, renderer: '/remote.jsx', shaderSource: 'void main(){}' });
   assert.deepEqual(object.span, { columns: 12, rows: 2 }); assert.deepEqual(object.placement, { column: 244, row: -4 });
-  assert.deepEqual(object.presentation, { fit: 'contain', frame: 'heavy', mat: 'none', background: 'light' }); assert.equal('renderer' in object, false);
+  assert.deepEqual(object.presentation, { fit: 'contain', frame: 'heavy', background: 'light' }); assert.equal('renderer' in object, false);
 });
 
 test('geometry, replacement, presentation, removal, and bounded stacking never mutate library ownership', () => {

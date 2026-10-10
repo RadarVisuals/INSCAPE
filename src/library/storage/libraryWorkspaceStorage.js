@@ -13,6 +13,7 @@ const WORKSPACE_KEY_PREFIXES = [
   'os-underneath.library-workspace.v6:',
   'inscape.library-workspace.v7:',
   'inscape.library-workspace.v8:',
+  'inscape.library-workspace.v9:',
 ];
 
 export function libraryWorkspaceKey(profileAddress, version = LIBRARY_WORKSPACE_VERSION) {
@@ -25,7 +26,7 @@ export function libraryWorkspaceKey(profileAddress, version = LIBRARY_WORKSPACE_
 export function normalizeWorkspace(candidate, profileAddress) {
   const profile = normalizeProfileAddress(profileAddress);
   const empty = createEmptyWorkspace(profile);
-  if (!profile || !candidate || ![1, 2, 3, 4, 5, 6, 7, LIBRARY_WORKSPACE_VERSION].includes(candidate.version) || normalizeProfileAddress(candidate.profileAddress) !== profile) return empty;
+  if (!profile || !candidate || ![1, 2, 3, 4, 5, 6, 7, 8, LIBRARY_WORKSPACE_VERSION].includes(candidate.version) || normalizeProfileAddress(candidate.profileAddress) !== profile) return empty;
   const favorites = [...new Set((Array.isArray(candidate.favorites) ? candidate.favorites : []).filter((id) => typeof id === 'string' && id.length <= 300))];
   const legacyPublicFolderIds = new Set((candidate.version < 7 && Array.isArray(candidate.canvas?.launchers) ? candidate.canvas.launchers : [])
     .filter((launcher) => launcher?.viewType === 'folder' && (candidate.version === 2 || launcher.visitorVisible === true))
@@ -41,7 +42,25 @@ export function normalizeWorkspace(candidate, profileAddress) {
   });
   const objects = candidate.version >= 6 ? normalizeCanvasObjects(candidate.canvas?.objects) : [];
   const placements = candidate.version >= 8 ? normalizeTablePlacements(candidate.tables?.placements) : [];
-  return { version: LIBRARY_WORKSPACE_VERSION, profileAddress: profile, favorites, folders, canvas: { launchers: [], objects }, tables: { placements } };
+  const validCategoryIds = new Set(folders.map(({ id }) => id)); const organized = new Set(); const sectionIds = new Set();
+  const sections = (candidate.version >= 9 && Array.isArray(candidate.categoryOrganization?.sections)
+    ? candidate.categoryOrganization.sections : []).flatMap((section) => {
+    if (!section || typeof section.id !== 'string' || !section.id || section.id.length > 200 || sectionIds.has(section.id)) return [];
+    const name = typeof section.name === 'string' ? section.name.trim().slice(0, 80) : '';
+    if (!name) return [];
+    sectionIds.add(section.id);
+    const categoryIds = (Array.isArray(section.categoryIds) ? section.categoryIds : []).filter((id) => {
+      if (!validCategoryIds.has(id) || organized.has(id)) return false; organized.add(id); return true;
+    });
+    return [{ id: section.id, name, categoryIds }];
+  });
+  const rootCategoryIds = (candidate.version >= 9 && Array.isArray(candidate.categoryOrganization?.rootCategoryIds)
+    ? candidate.categoryOrganization.rootCategoryIds : folders.map(({ id }) => id)).filter((id) => {
+    if (!validCategoryIds.has(id) || organized.has(id)) return false; organized.add(id); return true;
+  });
+  for (const { id } of folders) if (!organized.has(id)) rootCategoryIds.push(id);
+  return { version: LIBRARY_WORKSPACE_VERSION, profileAddress: profile, favorites, folders,
+    categoryOrganization: { rootCategoryIds, sections }, canvas: { launchers: [], objects }, tables: { placements } };
 }
 
 export function loadLibraryWorkspace(storage, profileAddress) {
@@ -52,6 +71,7 @@ export function loadLibraryWorkspace(storage, profileAddress) {
       try { return normalizeWorkspace(JSON.parse(current), profileAddress); }
       catch { /* Fall through to the intact Phase 1 record when available. */ }
     }
+    const phaseEight = storage.getItem(libraryWorkspaceKey(profileAddress, 8));
     const phaseSeven = storage.getItem(libraryWorkspaceKey(profileAddress, 7));
     const phaseSix = storage.getItem(libraryWorkspaceKey(profileAddress, 6));
     const phaseFive = storage.getItem(libraryWorkspaceKey(profileAddress, 5));
@@ -59,7 +79,7 @@ export function loadLibraryWorkspace(storage, profileAddress) {
     const phaseThree = storage.getItem(libraryWorkspaceKey(profileAddress, 3));
     const phaseTwo = storage.getItem(libraryWorkspaceKey(profileAddress, 2));
     const phaseOne = storage.getItem(libraryWorkspaceKey(profileAddress, 1));
-    const legacy = phaseSeven || phaseSix || phaseFive || phaseFour || phaseThree || phaseTwo || phaseOne;
+    const legacy = phaseEight || phaseSeven || phaseSix || phaseFive || phaseFour || phaseThree || phaseTwo || phaseOne;
     if (!legacy) return createEmptyWorkspace(normalizeProfileAddress(profileAddress));
     const migrated = normalizeWorkspace(JSON.parse(legacy), profileAddress);
     saveLibraryWorkspace(storage, migrated);
@@ -76,11 +96,11 @@ export function inspectLibraryWorkspaceRecord(storage, profileAddress) {
       try {
         const parsed = JSON.parse(current);
         const valid = normalizeProfileAddress(parsed?.profileAddress) === profile
-          && [1, 2, 3, 4, 5, 6, 7, LIBRARY_WORKSPACE_VERSION].includes(parsed?.version);
+          && [1, 2, 3, 4, 5, 6, 7, 8, LIBRARY_WORKSPACE_VERSION].includes(parsed?.version);
         return { presence: valid ? 'current' : 'invalid', profileAddress: profile };
       } catch { return { presence: 'invalid', profileAddress: profile }; }
     }
-    for (const version of [7, 6, 5, 4, 3, 2, 1]) {
+    for (const version of [8, 7, 6, 5, 4, 3, 2, 1]) {
       if (storage.getItem(libraryWorkspaceKey(profile, version)) !== null) {
         return { presence: 'legacy', profileAddress: profile, version };
       }

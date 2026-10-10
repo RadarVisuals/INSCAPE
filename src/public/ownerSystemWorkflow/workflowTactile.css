@@ -1,0 +1,119 @@
+/* Shared dark material. Opt in on the surface; add workflow-tactile-control
+   to native buttons. Geometry stays with the consuming component.
+   Reference and state contract: INSCAPE_ACTIVE_CONTRACT.md, Tactile interface. */
+[data-workflow-material="tactile"] {
+  color-scheme: dark;
+  --tactile-surface: var(--color-surface-subtle);
+  --tactile-ink: var(--color-text-warm);
+  --tactile-muted: var(--color-text-secondary);
+  --tactile-disabled: var(--color-text-disabled);
+  --tactile-accent: var(--color-focus);
+  --tactile-edge: rgb(0 0 0 / 48%);
+  --tactile-rim: rgb(255 255 255 / 10%);
+  --tactile-face: linear-gradient(165deg,
+    color-mix(in srgb, white 9%, var(--tactile-surface)), var(--tactile-surface));
+  --tactile-raised: linear-gradient(165deg,
+    color-mix(in srgb, white 10%, var(--tactile-surface)),
+    color-mix(in srgb, white 3%, var(--tactile-surface)));
+  --tactile-hover: linear-gradient(165deg,
+    color-mix(in srgb, white 15%, var(--tactile-surface)),
+    color-mix(in srgb, white 6%, var(--tactile-surface)));
+  --tactile-well: color-mix(in srgb, black 20%, var(--tactile-surface));
+  --tactile-shadow-shell: inset 0 1px 0 var(--tactile-rim),
+    inset 0 -1px 0 rgb(0 0 0 / 24%), 0 2px 4px rgb(0 0 0 / 28%), 0 8px 20px rgb(0 0 0 / 20%);
+  --tactile-shadow-raised: inset 0 1px 0 rgb(255 255 255 / 13%),
+    inset 0 -1px 0 rgb(0 0 0 / 28%), 0 1px 2px rgb(0 0 0 / 48%);
+  --tactile-shadow-inset: inset 0 2px 4px rgb(0 0 0 / 48%),
+    inset 0 -1px 0 rgb(255 255 255 / 8%);
+  --tactile-radius-control: 999px;
+  --tactile-radius-row: 8px;
+  --tactile-motion: 120ms;
+  color: var(--tactile-ink);
+}
+
+/* :where keeps state precedence explicit, without escalating specificity. */
+[data-workflow-material="tactile"] .workflow-tactile-control {
+  position: relative;
+  appearance: none;
+  border: 1px solid var(--tactile-edge);
+  border-radius: var(--tactile-radius-control);
+  color: var(--tactile-ink);
+  background: var(--tactile-raised);
+  box-shadow: var(--tactile-shadow-raised);
+  font: inherit;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: color var(--tactile-motion) ease-out;
+}
+[data-workflow-material="tactile"] .workflow-tactile-control::after {
+  content: '';
+  position: absolute;
+  width: 12px;
+  height: 2px;
+  bottom: 4px;
+  left: calc(50% - 6px);
+  border-radius: 1px;
+  background: currentColor;
+  opacity: 0;
+  pointer-events: none;
+}
+[data-workflow-material="tactile"] .workflow-tactile-control--quiet {
+  border-color: transparent;
+  border-radius: var(--tactile-radius-row);
+  background: transparent;
+  box-shadow: none;
+}
+[data-workflow-material="tactile"] .workflow-tactile-control--quiet::after {
+  left: 3px;
+  top: calc(50% - 6px);
+  width: 2px;
+  height: 12px;
+}
+@media (hover: hover) {
+  [data-workflow-material="tactile"] .workflow-tactile-control:where(:not(:disabled):hover) { background: var(--tactile-hover); }
+}
+[data-workflow-material="tactile"] .workflow-tactile-control:where(:not(:disabled):is(:active, [aria-pressed="true"], [aria-expanded="true"], [data-active])) {
+  background: var(--tactile-well);
+  box-shadow: var(--tactile-shadow-inset);
+}
+[data-workflow-material="tactile"] .workflow-tactile-control:where(:not(:disabled):is([aria-pressed="true"], [aria-expanded="true"], [data-active])) { color: var(--tactile-accent); }
+[data-workflow-material="tactile"] .workflow-tactile-control:where(:is([aria-pressed="true"], [aria-expanded="true"], [data-active]))::after { opacity: 1; }
+[data-workflow-material="tactile"] .workflow-tactile-control:focus-visible { outline: 2px solid var(--tactile-accent); outline-offset: 2px; }
+[data-workflow-material="tactile"] .workflow-tactile-control:where(:disabled) {
+  color: var(--tactile-disabled);
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+  cursor: default;
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-workflow-material="tactile"] { --tactile-motion: 0ms; }
+}
+/* Keep geometry and native system colours when material shadows disappear. */
+@media (forced-colors: active) {
+  [data-workflow-material="tactile"] {
+    --tactile-ink: ButtonText;
+    --tactile-muted: CanvasText;
+    --tactile-disabled: GrayText;
+    --tactile-accent: Highlight;
+    --tactile-edge: ButtonText;
+    --tactile-rim: ButtonText;
+    --tactile-surface: Canvas;
+    --tactile-face: Canvas;
+    --tactile-raised: ButtonFace;
+    --tactile-hover: ButtonFace;
+    --tactile-well: ButtonFace;
+  }
+  [data-workflow-material="tactile"] .workflow-tactile-control:where(:disabled) { border-color: GrayText; }
+  [data-workflow-material="tactile"] .workflow-tactile-control::after {
+    background: none;
+    height: 0;
+    border-bottom: 2px solid currentColor;
+  }
+  [data-workflow-material="tactile"] .workflow-tactile-control--quiet::after {
+    width: 0;
+    height: 12px;
+    border-bottom: 0;
+    border-left: 2px solid currentColor;
+  }
+}

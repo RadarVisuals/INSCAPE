@@ -25,7 +25,6 @@ export function presentationPatchForCommand(command, presentation = {}) {
   if (command === 'presentation-framed') return { background: presentation.background === 'transparent' ? 'dark' : presentation.background || 'dark' };
   if (command.startsWith('image-fit-')) return { fit: command.slice(10) };
   if (command.startsWith('frame-')) return { frame: command.slice(6) };
-  if (command.startsWith('mat-')) return { mat: command.slice(4) };
   if (command.startsWith('background-')) return { background: command.slice(11) };
   return null;
 }
@@ -67,7 +66,6 @@ export function contextMenuCommands({ target, editMode, launcher, canvasObject, 
     { id: 'menu-presentation', label: 'Presentation >' },
     { id: 'menu-image-fit', label: 'Image Fit >' },
     { id: 'menu-frame', label: 'Frame >' },
-    { id: 'menu-mat', label: 'Mat >' },
     { id: 'menu-background', label: 'Background >' }
   ];
   if (target?.type === 'gallery-object' && menu === 'presentation') return [
@@ -83,10 +81,6 @@ export function contextMenuCommands({ target, editMode, launcher, canvasObject, 
   if (target?.type === 'gallery-object' && menu === 'frame') return [
     { id: 'menu-appearance', label: '< Back' },
     ...['none', 'thin', 'heavy'].map((value) => ({ id: `frame-${value}`, label: `${canvasObject?.presentation?.frame === value ? '✓ ' : ''}${value[0].toUpperCase()}${value.slice(1)}` }))
-  ];
-  if (target?.type === 'gallery-object' && menu === 'mat') return [
-    { id: 'menu-appearance', label: '< Back' },
-    ...['none', 'light', 'dark'].map((value) => ({ id: `mat-${value}`, label: `${canvasObject?.presentation?.mat === value ? '✓ ' : ''}${value[0].toUpperCase()}${value.slice(1)}` }))
   ];
   if (target?.type === 'gallery-object' && menu === 'background') return [
     { id: 'menu-appearance', label: '< Back' },

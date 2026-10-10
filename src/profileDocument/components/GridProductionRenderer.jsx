@@ -1,0 +1,161 @@
+import { useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { DisplayStageSizeContext } from '../../public/ownerSystemWorkflow/DisplayStageSizeContext.js';
+import { createLatticeProductionLayerRanks } from '../../lattice/rendering/latticeProductionLayerOrder.js';
+import LatticePixelGrid from '../../lattice/rendering/LatticePixelGrid.jsx';
+import {
+  projectLatticeProductionArtwork,
+} from '../../lattice/rendering/latticeProductionProjection.js';
+import { projectSystemWorkflowViewport } from '../../systemWorkflow/systemWorkflowViewportProjection.js';
+import DisplayTextContent from '../../public/ownerSystemWorkflow/DisplayTextContent.jsx';
+import DisplayArtworkSurface from '../../public/ownerSystemWorkflow/DisplayArtworkSurface.jsx';
+import { projectDisplayPlacementRectangle, projectDisplayStageViewport } from '../../lattice/rendering/displayPaintGeometry.js';
+import { systemWorkflowSnapStep } from '../../systemWorkflow/domain/systemWorkflowDraft.js';
+import { displayGuideMode } from '../../systemWorkflow/domain/displayAppearance.js';
+import { adaptProfileDocumentV9Media, PROFILE_DOCUMENT_V9_MEDIA_STATUS } from './profileDocumentV9Media.js';
+import { resolveProfileDocumentV9ContentReference } from '../domain/profileDocumentV9ContentReferenceResolver.js';
+import '../../lattice/rendering/latticeProductionTableRenderer.css';
+import useArtworkPicking from '../../public/ownerSystemWorkflow/useArtworkPicking.js';
+
+export const GRID_PRODUCTION_EAGER_MEDIA_RETRY_DELAY = 4_000;
+export const GRID_PRODUCTION_EAGER_MEDIA_ATTEMPTS = 3;
+const rectangleStyle = ({ left, top, width, height }) => ({ left, top, width, height });
+const viewportOf = (node, bottomInset = 0) => {
+  const style = node ? getComputedStyle(node) : null;
+  return {
+    width: Math.max(0, parseFloat(style?.width) || 0),
+    height: Math.max(0, (parseFloat(style?.height) || 0) - bottomInset),
+  };
+};
+
+function GridPlacement({ field, imageLoading, layerRank, onMediaState, onPlacementActivate, onPointerActivate, placement, gridId, viewerSourceHidden }) {
+  const reference = placement.asset?.media?.reference || null;
+  const referenceKey = reference
+    ? `${placement.asset.stableAssetId}:${reference.verification.method}:${reference.verification.data}` : null;
+  const [referenceResolution, setReferenceResolution] = useState(() => ({ key: referenceKey, complete: false, url: null }));
+  useEffect(() => {
+    if (!referenceKey) { setReferenceResolution({ key: null, complete: true, url: null }); return undefined; }
+    const controller = new AbortController();
+    setReferenceResolution({ key: referenceKey, complete: false, url: null });
+    resolveProfileDocumentV9ContentReference(placement.asset, { signal: controller.signal })
+      .then((resolved) => { if (!controller.signal.aborted) setReferenceResolution({
+        key: referenceKey, complete: true, url: resolved?.src || null,
+      }); });
+    return () => controller.abort();
+  }, [placement.asset, referenceKey]);
+  const activeResolution = referenceResolution.key === referenceKey ? referenceResolution : { complete: false, url: null };
+  const media = useMemo(() => adaptProfileDocumentV9Media(placement.asset, {
+    resolvedUrl: activeResolution.url, resolutionComplete: !referenceKey || activeResolution.complete,
+  }), [activeResolution.complete, activeResolution.url, placement.asset, referenceKey]);
+  const [loadState, setLoadState] = useState(() => ({ src: media.src, status: 'loading', dimensions: null, attempt: 0 }));
+  useEffect(() => setLoadState({ src: media.src, status: 'loading', dimensions: null, attempt: 0 }), [media.src]);
+  useEffect(() => {
+    if (media.status !== PROFILE_DOCUMENT_V9_MEDIA_STATUS.READY || imageLoading !== 'eager'
+      || loadState.src !== media.src || loadState.status !== 'loading') return undefined;
+    const timer = setTimeout(() => setLoadState((current) => {
+      if (current.src !== media.src || current.status !== 'loading') return current;
+      return current.attempt + 1 < GRID_PRODUCTION_EAGER_MEDIA_ATTEMPTS
+        ? { ...current, attempt: current.attempt + 1 }
+        : { ...current, status: 'failed', dimensions: null };
+    }), GRID_PRODUCTION_EAGER_MEDIA_RETRY_DELAY);
+    return () => clearTimeout(timer);
+  }, [imageLoading, loadState.attempt, loadState.src, loadState.status, media.src, media.status]);
+  const decodedDimensions = loadState.src === media.src && loadState.status === 'loaded' ? loadState.dimensions : null;
+  const dimensions = decodedDimensions || media.dimensions;
+  const artwork = projectLatticeProductionArtwork(placement, field, dimensions, 1);
+  const ready = media.status === PROFILE_DOCUMENT_V9_MEDIA_STATUS.READY;
+  const loaded = ready && loadState.src === media.src && loadState.status === 'loaded';
+  const failed = !ready && media.status !== PROFILE_DOCUMENT_V9_MEDIA_STATUS.RESOLVING
+    || loadState.src === media.src && loadState.status === 'failed';
+  useEffect(() => onMediaState?.({
+    dimensions: loaded ? dimensions : null, media, placementId: placement.id,
+    status: failed ? 'failed' : loaded ? 'ready' : 'loading', gridId,
+  }), [dimensions?.height, dimensions?.width, failed, gridId, loaded, media, onMediaState, placement.id]);
+  const activatable = Boolean(onPlacementActivate && loaded && dimensions);
+  const activate = (event) => activatable && onPlacementActivate({ element: event.currentTarget, placement, gridId });
+  const mediaStyle = artwork.imageRenderRectangle ? {
+    ...rectangleStyle({ left: artwork.imageRenderRectangle.left - artwork.mediaOpeningRectangle.left,
+      top: artwork.imageRenderRectangle.top - artwork.mediaOpeningRectangle.top, width: artwork.imageRenderRectangle.width,
+      height: artwork.imageRenderRectangle.height }), transform: artwork.imageTransform, transformOrigin: 'center',
+  } : undefined;
+  const fallbackMedia = ready && <img alt={media.label} className={loaded && artwork.imageRectangle ? 'is-ready' : ''} decoding="async"
+    draggable="false" key={`${media.src}:${loadState.attempt}`} loading={imageLoading}
+    onError={() => setLoadState((current) => current.src !== media.src ? current
+      : imageLoading === 'eager' && current.attempt + 1 < GRID_PRODUCTION_EAGER_MEDIA_ATTEMPTS
+        ? { ...current, attempt: current.attempt + 1 } : { ...current, status: 'failed', dimensions: null })}
+    onLoad={(event) => { const { naturalHeight: height, naturalWidth: width } = event.currentTarget;
+      if (width && height) setLoadState((current) => current.src === media.src
+        ? { ...current, status: 'loaded', dimensions: { width, height } } : current); }}
+    referrerPolicy="no-referrer" src={media.src} style={mediaStyle} />;
+  return <figure aria-label={media.label} className="lattice-production-placement"
+    data-media-state={failed ? media.status === 'ready' ? 'failed' : media.status : loaded ? 'ready' : 'loading'}
+    data-placement-id={placement.id} data-placement-activatable={activatable || undefined}
+    data-artwork-context-id={loaded && !viewerSourceHidden ? `${gridId}:${placement.id}:${placement.asset.stableAssetId}` : undefined}
+    data-artwork-context-title={media.label || 'Untitled artwork'}
+    data-artwork-context-src={media.src}
+    data-artwork-context-asset={placement.asset.stableAssetId}
+    data-artwork-context-standard={placement.asset.tokenStandard}
+    data-viewer-source-hidden={viewerSourceHidden || undefined}
+    style={{ ...rectangleStyle(artwork.footprint), zIndex: layerRank }} onClick={event => event.detail === 0 ? activate(event) : onPointerActivate(event)}
+    onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); activate(event); } }} tabIndex={activatable ? 0 : -1}>
+    <span className="lattice-production-placement__opening" style={{
+      ...rectangleStyle({ left: artwork.mediaOpeningRectangle.left - artwork.footprint.left,
+        top: artwork.mediaOpeningRectangle.top - artwork.footprint.top, width: artwork.mediaOpeningRectangle.width,
+        height: artwork.mediaOpeningRectangle.height }),
+    }}>
+      <DisplayArtworkSurface src={media.src} onReady={() => setLoadState(current => current.src === media.src
+        ? { ...current, status: 'loaded', dimensions } : current)}
+        width={artwork.mediaOpeningRectangle.width} height={artwork.mediaOpeningRectangle.height} dimensions={dimensions} mediaStyle={mediaStyle}>
+        {fallbackMedia}
+      </DisplayArtworkSurface>
+      {!loaded && <span className="lattice-production-placement__status">{failed ? 'Artwork unavailable' : 'Loading artwork'}</span>}
+    </span>
+  </figure>;
+}
+
+export default function GridProductionRenderer({ document, grid, imageLoading = 'lazy', onMediaState, onPlacementActivate,
+  projectionBottomInset = 0, viewerPlacementId = null }) {
+  const rootRef = useRef(null);
+  const picking = useArtworkPicking(rootRef, grid);
+  const activatePointer = event => {
+    const element = picking.pick(event, event.currentTarget.parentElement);
+    if (!element?.hasAttribute('data-placement-activatable')) return;
+    const placement = grid.placements.find(item => item.id === element.dataset.placementId);
+    if (placement) onPlacementActivate?.({ element, placement, gridId: grid.id });
+  };
+  const [measuredViewport, setViewport] = useState({ width: 0, height: 0 });
+  const stageSize = useContext(DisplayStageSizeContext);
+  const viewport = stageSize ? { width: stageSize.width, height: Math.max(0, stageSize.height - projectionBottomInset) } : measuredViewport;
+  useEffect(() => { const node = rootRef.current; if (!node || stageSize) return undefined;
+    const update = () => setViewport(viewportOf(node, projectionBottomInset)); update(); const observer = new ResizeObserver(update); observer.observe(node);
+    return () => observer.disconnect(); }, [projectionBottomInset, Boolean(stageSize)]);
+  const model = useMemo(() => ({ geometry: document.geometry }), [document.geometry]);
+  const projected = viewport.width > 0 && viewport.height > 0
+    ? (stageSize && !projectionBottomInset ? projectDisplayStageViewport : projectSystemWorkflowViewport)(model.geometry, viewport) : null;
+  const layerRanks = useMemo(() => createLatticeProductionLayerRanks(grid.placements), [grid.placements]);
+  const title = grid.title.trim();
+  return <section aria-label={title || `INSCAPE ${grid.id}`} className="lattice-production-table visitor-grid-renderer"
+    data-grid-id={grid.id} data-guide-mode={displayGuideMode(document.appearance)}
+    data-surface={document.appearance.surfaceId} ref={rootRef} onLoadCapture={picking.onLoadCapture}
+    style={{ backgroundColor: document.appearance.backgroundColor || undefined, ...(projected ? {
+      '--lattice-production-guide-color': document.appearance.guideColor,
+      '--lattice-production-cell-size': `${projected.cellSize}px`,
+      '--lattice-production-grid-origin-x': `${projected.left}px`,
+      '--lattice-production-grid-origin-y': `${projected.top}px`,
+    } : {}) }}>
+    {projected && <><LatticePixelGrid color={document.appearance.guideColor} field={projected}
+      guideInterval={systemWorkflowSnapStep(document.appearance.guideSize)} height={projected.height}
+      mode={displayGuideMode(document.appearance)} width={projected.width} />
+      <span aria-hidden="true" className="lattice-production-table__authored-plane" style={rectangleStyle(projected)} />
+      <div className="visitor-grid-renderer__artwork-plane">{grid.placements.map((placement) => {
+        const rectangle = placement.kind === 'text' ? projectDisplayPlacementRectangle(placement, projected) : null;
+        return placement.kind === 'text'
+        ? <div key={placement.id} className="display-text-placement" data-text-placement-id={placement.id}
+            style={{ ...rectangle, zIndex: layerRanks.get(placement.id) }}>
+            <DisplayTextContent placement={placement} cellSize={projected.cellSize} width={rectangle.width} height={rectangle.height} /></div>
+        : <GridPlacement field={projected} gridId={grid.id} imageLoading={imageLoading}
+        key={placement.id} layerRank={layerRanks.get(placement.id)} onMediaState={onMediaState}
+        onPlacementActivate={onPlacementActivate} onPointerActivate={activatePointer} placement={placement} viewerSourceHidden={placement.id === viewerPlacementId} />;
+      })}</div>
+    </>}
+  </section>;
+}

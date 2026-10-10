@@ -1,6 +1,11 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { resolveOwnerAuthoringEnabled, runOwnerAuthoringMutation, selectLiveCanvasContent, selectPublicProfileRoute } from './publicAccess.js';
+import {
+  resolveOwnerAuthoringEnabled,
+  runOwnerAuthoringMutation,
+  selectLiveCanvasContent,
+  selectPublicProfileRoute
+} from './publicAccess.js';
 
 const PROFILE_A = '0x1111111111111111111111111111111111111111';
 const PROFILE_B = '0x2222222222222222222222222222222222222222';

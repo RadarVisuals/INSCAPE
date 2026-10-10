@@ -29,7 +29,7 @@ test('gallery creation commands stay room-specific and Home has no folder shortc
   assert.equal(galleryObject.find((command) => command.id === 'toggle-artwork-lock').label, 'Unlock');
   assert.equal(galleryObject.some((command) => command.id === 'edit-artwork'), false);
   const appearance = contextMenuCommands({ target: { type: 'gallery-object', id: 'canvas:artwork:one' }, menu: 'appearance', ownerAuthoringEnabled: true });
-  assert.deepEqual(appearance.map((command) => command.id), ['menu-root', 'menu-presentation', 'menu-image-fit', 'menu-frame', 'menu-mat', 'menu-background']);
+  assert.deepEqual(appearance.map((command) => command.id), ['menu-root', 'menu-presentation', 'menu-image-fit', 'menu-frame', 'menu-background']);
   const presentation = contextMenuCommands({ target: { type: 'gallery-object', id: 'canvas:artwork:one' }, menu: 'presentation', canvasObject: { presentation: { background: 'transparent' } }, ownerAuthoringEnabled: true });
   assert.equal(presentation.find((command) => command.id === 'presentation-transparent').label, '✓ Transparent');
   const frame = contextMenuCommands({ target: { type: 'gallery-object', id: 'canvas:artwork:one' }, menu: 'frame', canvasObject: { presentation: { frame: 'thin' } }, ownerAuthoringEnabled: true });
@@ -54,7 +54,7 @@ test('appearance commands resolve to temporary or committed presentation patches
   assert.deepEqual(presentationPatchForCommand('presentation-framed', { background: 'transparent' }), { background: 'dark' });
   assert.deepEqual(presentationPatchForCommand('image-fit-cover'), { fit: 'cover' });
   assert.deepEqual(presentationPatchForCommand('frame-heavy'), { frame: 'heavy' });
-  assert.deepEqual(presentationPatchForCommand('mat-light'), { mat: 'light' });
+  assert.equal(presentationPatchForCommand('mat-light'), null);
   assert.deepEqual(presentationPatchForCommand('background-neutral'), { background: 'neutral' });
   assert.equal(presentationPatchForCommand('replace-artwork'), null);
 });

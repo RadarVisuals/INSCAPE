@@ -11,37 +11,36 @@ import { getProfileIdentityCache, primeProfileIdentities } from '../../profileId
 const profileAddress = resolveWorkspaceProfile(useWalletStore.getState().hostProfileAddress);
 export const REACTION_IDENTITY_WAIT_MS = 450;
 let signalStorage = typeof window === 'undefined' ? null : window.localStorage;
-let saveTimer = null;
-function persist(document) {
-  if (saveTimer) clearTimeout(saveTimer);
-  saveTimer = setTimeout(() => saveSignalDocument(signalStorage, document), 100);
-}
 function initialDocument(profile) { return loadSignalDocument(signalStorage, profile); }
 
 export const useSignalStore = create((set, get) => {
   const document = initialDocument(profileAddress);
+  // These bounded records are written synchronously: an authored setting or read
+  // marker becomes visible only after storage accepts it. No pending copy can
+  // outlive an account change or overwrite a restored document.
+  const persist = (next, message = 'Change not saved. Previous values were kept. Try the change again.') => {
+    const saved = saveSignalDocument(signalStorage, next);
+    set({ persistenceError: saved ? null : message });
+    return saved;
+  };
   return {
     profileAddress, document, history: document.history, settings: document.settings,
-    status: 'idle', sourceMode: null, error: null, partialError: null, syncGeneration: 0,
+    status: 'idle', sourceMode: null, error: null, partialError: null, persistenceError: null, syncGeneration: 0,
     queue: [], currentReaction: null, cooldownUntil: 0,
 
     setProfileAddress(nextProfileAddress) {
       const profile = normalizeProfileAddress(nextProfileAddress);
       if (!profile) return false;
       if (profile === get().profileAddress) return true;
-      if (saveTimer) {
-        clearTimeout(saveTimer);
-        saveTimer = null;
-        if (get().document?.profileAddress) saveSignalDocument(signalStorage, get().document);
-      }
       const document = loadSignalDocument(signalStorage, profile);
       set({ profileAddress: profile, document, history: document.history, settings: document.settings,
-        status: 'idle', sourceMode: null, error: null, partialError: null, syncGeneration: get().syncGeneration + 1,
+        status: 'idle', sourceMode: null, error: null, partialError: null, persistenceError: null, syncGeneration: get().syncGeneration + 1,
         queue: [], currentReaction: null, cooldownUntil: 0 });
       return true;
     },
 
-    async synchronize({ mode = 'LIVE', explicitReplay = false } = {}) {
+    async synchronize({ mode = 'LIVE', explicitReplay = false, expectedProfile = get().profileAddress } = {}) {
+      if (normalizeProfileAddress(expectedProfile) !== get().profileAddress) return;
       if (get().status === 'loading') return;
       const generation = get().syncGeneration + 1;
       set({ syncGeneration: generation, status: 'loading', sourceMode: mode, error: null, partialError: null });
@@ -50,36 +49,45 @@ export const useSignalStore = create((set, get) => {
         const result = await repository.loadRecentActivity(get().profileAddress);
         if (get().syncGeneration !== generation) return;
         const merged = mergeSignalSnapshot(get().document, result.signals, { explicitReplay });
+        if (!persist(merged.document, 'New activity could not be saved on this device. Retry to refresh it.')) {
+          set({ status: 'error', error: null });
+          return;
+        }
         primeProfileIdentities(result.signals, repository.source);
         const notifications = merged.document.settings.notifications;
         const queue = notifications ? addReactionsToQueue(get().queue, merged.reactions) : get().queue;
         set({ document: merged.document, history: merged.document.history, settings: merged.document.settings,
           queue, status: result.partialError ? 'partial' : 'ready', sourceMode: repository.source,
           partialError: result.partialError || null, error: null });
-        persist(merged.document);
       } catch (error) {
         if (get().syncGeneration === generation) set({ status: 'error', error: error instanceof Error ? error.message : String(error) });
       }
     },
-    markSeen(id = null) {
+    markSeen(id = null, expectedProfile = get().profileAddress) {
+      if (normalizeProfileAddress(expectedProfile) !== get().profileAddress) return false;
       const history = get().history.map((signal) => !id || signal.id === id ? { ...signal, seen: true, read: true } : signal);
-      const document = { ...get().document, history }; set({ history, document }); persist(document);
+      const document = { ...get().document, history };
+      if (!persist(document)) return false;
+      set({ history, document });
+      return true;
     },
-    updateSetting(key, value) {
-      if (!Object.hasOwn(get().settings, key) || typeof value !== 'boolean') return;
+    updateSetting(key, value, expectedProfile = get().profileAddress) {
+      if (normalizeProfileAddress(expectedProfile) !== get().profileAddress) return false;
+      if (!Object.hasOwn(get().settings, key) || typeof value !== 'boolean') return false;
       const settings = { ...get().settings, [key]: value }; const document = { ...get().document, settings };
+      if (!persist(document)) return false;
       set({ settings, document, queue: key === 'notifications' && !value ? [] : get().queue,
-      currentReaction: key === 'notifications' && !value ? null : get().currentReaction }); persist(document);
+      currentReaction: key === 'notifications' && !value ? null : get().currentReaction });
+      return true;
     },
     replaceSettings(settings, { persist: shouldPersist = true } = {}) {
       const next = Object.fromEntries(Object.keys(get().settings).map((key) => [key, typeof settings?.[key] === 'boolean' ? settings[key] : get().settings[key]]));
       const document = { ...get().document, settings: next };
-      if (shouldPersist && !saveSignalDocument(signalStorage, document)) return false;
-      if (shouldPersist && saveTimer) clearTimeout(saveTimer);
-      if (shouldPersist) saveTimer = null;
+      if (shouldPersist && !persist(document)) return false;
       set({ settings: next, document, queue: next.notifications ? get().queue : [], currentReaction: next.notifications ? get().currentReaction : null });
       return true;
     },
+    flushDocument() { return persist(get().document, 'Activity could not be saved on this device. Try again.'); },
     replay(signal) {
       if (!signal || !get().settings.notifications) return;
       getProfileIdentityCache(signal.sourceMode).resolve(signal.counterparty).catch(() => {});
@@ -105,14 +113,13 @@ export const useSignalStore = create((set, get) => {
 });
 
 export function resetSignalStoreForTests(nextProfileAddress, nextStorage) {
-  signalStorage = nextStorage; if (saveTimer) clearTimeout(saveTimer); saveTimer = null;
+  signalStorage = nextStorage;
   const document = loadSignalDocument(nextStorage, nextProfileAddress);
   useSignalStore.setState({ profileAddress: nextProfileAddress, document, history: document.history, settings: document.settings,
-    status: 'idle', sourceMode: null, error: null, partialError: null, queue: [], currentReaction: null, cooldownUntil: 0 });
+    status: 'idle', sourceMode: null, error: null, partialError: null, persistenceError: null,
+    syncGeneration: useSignalStore.getState().syncGeneration + 1, queue: [], currentReaction: null, cooldownUntil: 0 });
 }
 
 export function flushSignalDocument() {
-  if (saveTimer) clearTimeout(saveTimer);
-  saveTimer = null;
-  return saveSignalDocument(signalStorage, useSignalStore.getState().document);
+  return useSignalStore.getState().flushDocument();
 }

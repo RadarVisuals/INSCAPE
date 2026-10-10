@@ -30,21 +30,8 @@
   outline-offset: 4px;
 }
 
-.lattice-placement-backplate,
-.lattice-placement-media,
-.lattice-placement-aperture {
+.lattice-placement-media {
   position: absolute;
-}
-
-.lattice-placement-backplate {
-  inset: 0;
-  background-color: var(--lattice-mat-color);
-  background-image: linear-gradient(
-    135deg,
-    color-mix(in srgb, var(--lattice-mat-color) 98.5%, white),
-    color-mix(in srgb, var(--lattice-mat-color) 98%, black)
-  );
-  pointer-events: none;
 }
 
 .lattice-placement-media {
@@ -52,10 +39,6 @@
   overflow: visible;
   background: transparent;
   z-index: 1;
-}
-
-.lattice-placement-media.is-opaque {
-  background: #d8d4ca;
 }
 
 .lattice-placement-media.is-cropped {
@@ -67,16 +50,6 @@
   display: block;
   max-width: none;
   max-height: none;
-}
-
-.lattice-placement-aperture {
-  box-sizing: border-box;
-  z-index: 2;
-  pointer-events: none;
-  box-shadow:
-    inset 0 0 0 1px rgba(0, 0, 0, 0.46),
-    inset 3px 3px 7px rgba(0, 0, 0, 0.22),
-    inset -1px -1px 2px rgba(255, 255, 255, 0.1);
 }
 
 .lattice-placement-selection-overlay {

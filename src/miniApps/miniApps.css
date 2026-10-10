@@ -1,0 +1,25 @@
+.mini-app-workbench { color: var(--workflow-ink); font: var(--workflow-type-control); }
+.mini-app-workbench .system-workflow__instrument-window { z-index: var(--mini-app-z); }
+.mini-app-workbench .system-workflow__instrument-content { display: flex; flex-direction: column; padding: 0; overflow: hidden; }
+.mini-app-content { display: flex; flex-direction: column; min-height: 0; flex: 1; }
+.mini-app-frame { border: 0; width: 100%; min-height: 0; flex: 1; background: var(--workflow-panel); }
+.mini-app-toolbar { display: flex; flex-wrap: wrap; align-items: stretch; border-bottom: 1px solid var(--workflow-border); }
+.mini-app-toolbar > a { display: flex; gap: 6px; align-items: center; flex: 1; min-width: 100px; padding: 8px; color: var(--workflow-muted); text-decoration: none; font: var(--workflow-type-micro); }
+.mini-app-toolbar > a > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mini-app-workbench button:not(.system-workflow__round-control), .mini-app-settings input { color: inherit; background: var(--workflow-panel); font: inherit; border: 1px solid var(--workflow-border); }
+.mini-app-toolbar > button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 32px; padding: 6px 10px; position: relative; border-block: 0 !important; border-right: 0 !important; }
+.mini-app-toolbar > button[aria-pressed="true"]::before { content: ''; position: absolute; inset: 0 0 auto; height: 2px; background: currentColor; }
+.mini-app-workbench button:hover:not(:disabled) { background: var(--workflow-hover); }
+.mini-app-workbench button:disabled { opacity: .45; cursor: not-allowed; }
+.mini-app-workbench :is(button, input, a):focus-visible { outline: 1px solid var(--workflow-ink); outline-offset: -3px; }
+.mini-app-status { padding: 10px; color: var(--workflow-muted); font: var(--workflow-type-micro); overflow-wrap: anywhere; }
+.mini-app-settings { display: grid; gap: 14px; padding: 14px; overflow: auto; }
+.mini-app-settings > label { display: grid; gap: 6px; }
+.mini-app-settings input:not([type="checkbox"]) { min-width: 0; width: 100%; box-sizing: border-box; padding: 8px; }
+.mini-app-settings > .mini-app-settings__visibility { display: flex; align-items: center; gap: 8px; }
+.mini-app-settings p { margin: 0; color: var(--workflow-muted); font: var(--workflow-type-micro); }
+.mini-app-settings__actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.mini-app-settings__actions > button { padding: 8px 12px; }
+.mini-app-settings__actions > button:last-child { margin-left: auto; }
+.mini-app-shortcut { position: fixed; z-index: var(--mini-app-z); right: 24px; bottom: var(--mini-app-shortcut-bottom); max-width: calc(100vw - 48px); display: flex; align-items: center; gap: 8px; padding: 8px 12px; }
+.mini-app-shortcut > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

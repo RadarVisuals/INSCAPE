@@ -1,11 +1,18 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { createEmptyLatticeProductionIdentityPresentation } from '../../lattice/domain/latticeProductionDraft.js';
 import { createProfileContractFacts, errorContractFact, resolvedContractFact } from '../../profileIdentity/domain/profileContractFacts.js';
 import { normalizeLsp3Identity } from '../../profileIdentity/domain/profileIdentity.js';
 import { createProductionIdentityDossierViewModel } from './productionIdentityDossierViewModel.js';
 
 const ADDRESS = '0x1234567890abcdef1234567890abcdef12345678';
+const createIdentityPresentation = () => ({
+  alias: '',
+  avatar: { mode: 'official', stableAssetId: null, shape: 'square' },
+  bio: { mode: 'official', customText: '' },
+  tags: { includeOfficial: true, additional: [] },
+  dossierSurface: 'paper',
+  visibility: { links: true, network: true, counts: true, publicationDate: true },
+});
 const facts = (overrides = {}) => createProfileContractFacts(ADDRESS, {
   chain: resolvedContractFact(42), isUniversalProfile: resolvedContractFact(true),
   receivedAssetContracts: resolvedContractFact(0), issuedAssetContracts: resolvedContractFact(3), ...overrides
@@ -17,9 +24,23 @@ const identity = () => normalizeLsp3Identity(ADDRESS, {
   links: [{ title: 'Authored site', url: 'https://example.com/profile' }]
 }, { ipfsGateway: 'https://gw.test/ipfs/', source: 'LIVE' });
 
+test('INSCAPE founder designation is bound to its mainnet profile, never authored labels', () => {
+  const founder = '0x001048331cd14cef40dd5da644a738e7324fe691';
+  const presentation = { ...createIdentityPresentation(), alias: 'Founder',
+    card: { version: 1, background: { type: 'plain', color: null, speed: 1 }, fields: [] } };
+  assert.equal(createProductionIdentityDossierViewModel({ identity: identity(), contractFacts: facts(), identityPresentation: presentation }).designation, null);
+  for (const [chain, expected] of [[resolvedContractFact(42), 'Founder'], [resolvedContractFact(4201), null], [errorContractFact(), null]]) {
+    const model = createProductionIdentityDossierViewModel({
+      identity: normalizeLsp3Identity(founder, { name: 'residentzero' }),
+      contractFacts: createProfileContractFacts(founder, { chain }), identityPresentation: createIdentityPresentation(),
+    });
+    assert.equal(model.designation?.label || null, expected);
+  }
+});
+
 test('projects authoritative identity, canonical URLs, exact counts, and no social verification claim', () => {
   const model = createProductionIdentityDossierViewModel({
-    identity: identity(), contractFacts: facts(), identityPresentation: createEmptyLatticeProductionIdentityPresentation(),
+    identity: identity(), contractFacts: facts(), identityPresentation: createIdentityPresentation(),
     locationLike: { href: 'https://inscape.test/?profile=wallet#fragment' },
     publishedResolution: { status: 'RESOLVED', document: { exportedAt: '2026-07-29T12:00:00.000Z' } }
   });
@@ -30,7 +51,7 @@ test('projects authoritative identity, canonical URLs, exact counts, and no soci
   assert.equal(model.links[0].verificationStatus, 'AUTHORED_NOT_VERIFIED');
   assert.equal(model.links[0].kind, 'AUTHORED');
   assert.equal(model.links.find((entry) => entry.id === 'universal-everything').kind, 'SYSTEM');
-  assert.equal(model.links.find((entry) => entry.id === 'inscape-profile').url, `https://inscape.test/?view=${ADDRESS}`);
+  assert.equal(model.links.some((entry) => entry.id === 'inscape-profile'), false);
   assert.equal(model.links.find((entry) => entry.id === 'explorer').verificationStatus, 'CANONICAL_ROUTE');
   assert.equal(model.technical.find((entry) => entry.id === 'received').value, '0');
   assert.equal(model.technical.find((entry) => entry.id === 'issued').label, 'ISSUED ASSET CONTRACTS');
@@ -41,7 +62,7 @@ test('projects authoritative identity, canonical URLs, exact counts, and no soci
 });
 
 test('applies active draft overlays with provenance and redacts every inactive private value', () => {
-  const presentation = createEmptyLatticeProductionIdentityPresentation();
+  const presentation = createIdentityPresentation();
   presentation.alias = 'DRAFT ALIAS';
   presentation.avatar = { mode: 'official', stableAssetId: '42:0xprivate:0x01', shape: 'round' };
   presentation.bio = { mode: 'official', customText: 'PRIVATE INACTIVE BIO' };
@@ -54,6 +75,12 @@ test('applies active draft overlays with provenance and redacts every inactive p
   const model = JSON.parse(serialized);
   assert.equal(model.profile.displayName, 'DRAFT ALIAS');
   assert.equal(model.profile.nameProvenance, 'INSCAPE_DRAFT_ALIAS');
+  assert.equal(model.officialProfile.name, 'OFFICIAL');
+  assert.equal(model.authoredProfile.title, 'DRAFT ALIAS');
+  assert.equal(model.authoredProfile.description, null);
+  assert.equal(model.officialProfile.description, 'First paragraph.\n\nSecond paragraph.');
+  assert.equal(model.officialProfile.avatarUrl, 'https://gw.test/ipfs/official');
+  assert.equal(model.officialProfile.url, `https://universaleverything.io/${ADDRESS}`);
   assert.equal(model.profile.avatarUrl, 'https://gw.test/ipfs/official');
   assert.equal(model.profile.description, 'First paragraph.\n\nSecond paragraph.');
   assert.deepEqual(model.profile.tags, ['draft']);
@@ -66,7 +93,7 @@ test('omits unresolved facts and the runtime epoch placeholder instead of emitti
   const model = createProductionIdentityDossierViewModel({
     identity: identity(),
     contractFacts: facts({ chain: errorContractFact(), receivedAssetContracts: errorContractFact(), issuedAssetContracts: errorContractFact() }),
-    identityPresentation: createEmptyLatticeProductionIdentityPresentation(),
+    identityPresentation: createIdentityPresentation(),
     publishedResolution: { status: 'RESOLVED', document: { exportedAt: '1970-01-01T00:00:00.000Z' } },
     locationLike: { href: 'https://inscape.test/' }
   });
@@ -77,7 +104,7 @@ test('omits unresolved facts and the runtime epoch placeholder instead of emitti
 });
 
 test('uses active INSCAPE avatar and bio while respecting visibility projections', () => {
-  const presentation = createEmptyLatticeProductionIdentityPresentation();
+  const presentation = createIdentityPresentation();
   presentation.avatar = { mode: 'inscape', stableAssetId: 'asset-1', shape: 'square' };
   presentation.bio = { mode: 'inscape', customText: 'Projected bio' };
   presentation.visibility = { links: false, network: false, counts: false, publicationDate: false };

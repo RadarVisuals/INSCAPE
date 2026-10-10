@@ -14,8 +14,8 @@ function publishedAvatarAsset(identityPresentation) {
 }
 
 export function createPublishedIdentityRackViewModel({ contractFacts, document, identity, locationLike = globalThis.location } = {}) {
-  if (!document?.lattice?.identityPresentation) return null;
-  const publishedPresentation = document.lattice.identityPresentation;
+  const publishedPresentation = document?.identityPresentation || document?.lattice?.identityPresentation;
+  if (!publishedPresentation) return null;
   const identityPresentation = {
     ...publishedPresentation,
     avatar: {

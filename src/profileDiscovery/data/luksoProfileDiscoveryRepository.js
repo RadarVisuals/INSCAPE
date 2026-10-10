@@ -1,6 +1,7 @@
 import { LUKSO_INDEXER_URL, normalizeProfileAddress } from '../../library/config.js';
 import { selectProfileAvatar } from '../../profileIdentity/domain/profileIdentity.js';
-import { isPublishedProfilePointerValue, OS_UNDERNEATH_PROFILE_DOCUMENT_KEY } from '../../profileDocument/storage/luksoPublishedProfileRepository.js';
+import { isPublishedProfilePointerValue } from '../../profileDocument/storage/luksoPublishedProfileRepository.js';
+import { INSCAPE_PROFILE_DOCUMENT_KEY } from '../../profileDocument/domain/inscapeProfileDocumentKey.js';
 
 // DataChanged is the indexed ERC725Y publication event. The emitter address is
 // the Universal Profile; custom keys are not populated in the profile_id field.
@@ -47,7 +48,7 @@ function normalizeIndexerProfile(profile) {
 }
 
 export function createLuksoProfileDiscoveryRepository({ endpoint = LUKSO_INDEXER_URL, fetchImpl = globalThis.fetch,
-  directoryPageSize = 200, maximumDirectoryPages = 50 } = {}) {
+  directoryPageSize = 200, maximumDirectoryPages = 50, cacheTtlMs = 60_000, now = () => Date.now() } = {}) {
   const request = async (query, variables, signal) => {
     const response = await fetchImpl(endpoint, { method: 'POST', signal, headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ query, variables }) });
@@ -56,11 +57,13 @@ export function createLuksoProfileDiscoveryRepository({ endpoint = LUKSO_INDEXER
     if (payload.errors?.length) throw new Error(payload.errors[0]?.message || 'INSCAPE directory failed');
     return payload.data;
   };
+  let cachedProfiles = null; let cachedAt = 0;
   return { source: 'LUKSO Envio Indexer', async list({ signal } = {}) {
+    if (cachedProfiles && now() - cachedAt < cacheTtlMs) return cachedProfiles.map((profile) => ({ ...profile }));
     const indexedPublications = [];
     for (let page = 0; page < maximumDirectoryPages; page += 1) {
       const directory = await request(PROFILE_DIRECTORY_QUERY,
-        { key: OS_UNDERNEATH_PROFILE_DOCUMENT_KEY, limit: directoryPageSize, offset: page * directoryPageSize }, signal);
+        { key: INSCAPE_PROFILE_DOCUMENT_KEY, limit: directoryPageSize, offset: page * directoryPageSize }, signal);
       if (!Array.isArray(directory?.DataChanged)) throw new Error('Invalid INSCAPE directory response');
       indexedPublications.push(...directory.DataChanged);
       if (directory.DataChanged.length < directoryPageSize) break;
@@ -79,11 +82,13 @@ export function createLuksoProfileDiscoveryRepository({ endpoint = LUKSO_INDEXER
     }
     const byAddress = new Map(indexedProfiles.map(normalizeIndexerProfile).filter(Boolean)
       .map((profile) => [profile.address, profile]));
-    return publications.map((event) => {
+    const profiles = publications.map((event) => {
       const address = normalizeProfileAddress(event.address); const profile = byAddress.get(address);
       return profile ? { ...profile, publicationBlock: Number(event.blockNumber) || null,
         publicationTransactionHash: clean(event.transactionHash, 66) || null } : null;
     }).filter(Boolean).sort((a, b) => (b.publicationBlock || 0) - (a.publicationBlock || 0));
+    cachedProfiles = profiles.map((profile) => ({ ...profile })); cachedAt = now();
+    return profiles;
   } };
 }
 

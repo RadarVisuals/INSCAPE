@@ -1,38 +1,23 @@
 import { useEffect, useState } from 'react';
-import { projectLatticeProductionArtwork } from './latticeProductionProjection.js';
+import { renderedSystemWorkflowCssTransform } from '../../systemWorkflow/systemWorkflowTransform.js';
+import { projectLatticeProductionFocusMediaMotion } from './latticeProductionFocusArtworkMotion.js';
 import './latticeProductionFocusArtwork.css';
+import DisplayArtworkSurface from '../../public/ownerSystemWorkflow/DisplayArtworkSurface.jsx';
+import useSvgArtwork from '../../artwork/useSvgArtwork.js';
 
-const percentRectangle = (rectangle, footprint) => ({
-  left: `${((rectangle.left - footprint.left) / footprint.width) * 100}%`,
-  top: `${((rectangle.top - footprint.top) / footprint.height) * 100}%`,
-  width: `${(rectangle.width / footprint.width) * 100}%`,
-  height: `${(rectangle.height / footprint.height) * 100}%`,
-});
-
-export default function LatticeProductionFocusArtwork({ entry, focused, phase }) {
+export default function LatticeProductionFocusArtwork({ entry, motion, displayOpening = false, onArtworkReady }) {
   const [failed, setFailed] = useState(false);
   useEffect(() => setFailed(false), [entry.media.src]);
   const dimensions = entry.focusDimensions;
-  const field = { left: 0, top: 0, cellSize: 100 };
-  const artwork = projectLatticeProductionArtwork(entry.placement, field, dimensions);
-  const background = entry.placement.backing.enabled ? entry.placement.backing.color
-    : entry.placement.transparencyMode === 'OPAQUE' ? '#d8d4ca' : 'transparent';
-  return <div className="lattice-production-focus-artwork" data-focused={focused || undefined} data-phase={phase}>
-    <div className="lattice-production-focus-artwork__authored">
-      {artwork.backplateRectangle && <span className="lattice-production-focus-artwork__mat" style={{ backgroundColor: artwork.mat.color }} />}
-      <span className="lattice-production-focus-artwork__opening" style={{
-        ...percentRectangle(artwork.mediaOpeningRectangle, artwork.footprint), backgroundColor: background,
-      }}>
-        <img alt="" draggable="false" src={entry.media.src} style={{
-          ...percentRectangle(artwork.imageRenderRectangle, artwork.mediaOpeningRectangle),
-          transform: artwork.imageTransform,
-          transformOrigin: 'center',
-        }} />
-      </span>
-    </div>
-    <div className="lattice-production-focus-artwork__native">
-      {!failed && <img alt={entry.accessibleLabel} decoding="async" draggable="false" onError={() => setFailed(true)} referrerPolicy="no-referrer" src={entry.media.src} />}
-      {failed && <span role="status">ARTWORK UNAVAILABLE</span>}
-    </div>
+  const svg = useSvgArtwork(entry.media.src);
+  const mediaMotion = projectLatticeProductionFocusMediaMotion(entry.placement, dimensions, motion);
+  const mediaStyle = { ...mediaMotion.rectangle, transform: renderedSystemWorkflowCssTransform(mediaMotion) };
+  const fallbackMedia = !failed && <img alt={entry.accessibleLabel} className="lattice-production-focus-artwork__media" onError={() => setFailed(true)} referrerPolicy="no-referrer" src={entry.media.src} style={mediaStyle} />;
+  return <div className="lattice-production-focus-artwork">
+    <span className="lattice-production-focus-artwork__opening" style={{ inset: 0 }}>
+      {displayOpening || svg ? <DisplayArtworkSurface src={entry.media.src} onReady={onArtworkReady} width={motion.currentRectangle.width} height={motion.currentRectangle.height}
+        dimensions={dimensions} mediaStyle={mediaStyle}>{fallbackMedia}</DisplayArtworkSurface> : fallbackMedia}
+    </span>
+    {failed && !svg && <span className="lattice-production-focus-artwork__unavailable">Artwork unavailable</span>}
   </div>;
 }

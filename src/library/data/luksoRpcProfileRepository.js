@@ -1,10 +1,13 @@
+import { fetchMetadataJson } from './fetchMetadataJson.js';
 import { ERC725, decodeDataSourceWithHash } from '@erc725/erc725.js';
+import { metadataImages as collectMetadataImages } from './metadataImages.js';
 import { createPublicClient, fallback, getAddress, http } from 'viem';
 import { lukso } from 'viem/chains';
 import { IPFS_GATEWAY_URL, LIBRARY_PAGE_SIZE, LUKSO_RPC_FALLBACK_URLS, LUKSO_RPC_URL,
   normalizeProfileAddress } from '../config.js';
 import { createStableAssetId, normalizeProfileAsset } from '../domain/normalizeProfileAsset.js';
 import { resolveContentUrl } from './resolveContentUrl.js';
+import { decodeVerifiedOnchainJsonDataUri } from './onchainDataUri.js';
 
 const LSP5_RECEIVED_ASSETS_SCHEMA = [{
   name: 'LSP5ReceivedAssets[]',
@@ -74,6 +77,7 @@ function resultValue(result) {
 
 async function discoverOwnedTokens(profileAddress, contracts, client, signal) {
   const holdings = [];
+  let failures = 0;
   const collectionPageSize = 12;
   for (let offset = 0; offset < contracts.length; offset += collectionPageSize) {
     throwIfAborted(signal);
@@ -85,26 +89,36 @@ async function discoverOwnedTokens(profileAddress, contracts, client, signal) {
     throwIfAborted(signal);
     const ownershipCalls = []; const ownershipMeta = [];
     page.forEach((address, index) => {
-      if (resultValue(interfaceResults[index * 2]) === true) {
+      const supportsLsp8 = resultValue(interfaceResults[index * 2]);
+      const supportsLsp7 = resultValue(interfaceResults[index * 2 + 1]);
+      if (supportsLsp8 === true) {
         ownershipMeta.push({ address, standard: 'LSP8' });
         ownershipCalls.push({ address: getAddress(address), abi: LSP8_ABI, functionName: 'tokenIdsOf', args: [getAddress(profileAddress)] });
-      } else if (resultValue(interfaceResults[index * 2 + 1]) === true) {
+      } else if (supportsLsp8 === false && supportsLsp7 === true) {
         ownershipMeta.push({ address, standard: 'LSP7' });
         ownershipCalls.push({ address: getAddress(address), abi: LSP7_ABI, functionName: 'balanceOf', args: [getAddress(profileAddress)] });
+      } else if (supportsLsp8 !== false || supportsLsp7 !== false) {
+        // Only two confirmed negatives establish an unsupported contract.
+        // A failed/missing read must not become an empty holding inventory.
+        failures += 1;
       }
     });
     if (!ownershipCalls.length) continue;
     const ownershipResults = await client.multicall({ allowFailure: true, contracts: ownershipCalls });
-    ownershipResults.forEach((result, index) => {
-      const meta = ownershipMeta[index]; const value = resultValue(result);
-      if (meta.standard === 'LSP8' && Array.isArray(value)) {
+    throwIfAborted(signal);
+    ownershipMeta.forEach((meta, index) => {
+      const value = resultValue(ownershipResults[index]);
+      if (meta.standard === 'LSP8' && Array.isArray(value)
+        && value.every((tokenId) => typeof tokenId === 'string' && /^0x[0-9a-f]{64}$/iu.test(tokenId))) {
         value.forEach((tokenId) => holdings.push({ ...meta, tokenId: String(tokenId).toLowerCase() }));
-      } else if (meta.standard === 'LSP7' && typeof value === 'bigint' && value > 0n) {
-        holdings.push({ ...meta, tokenId: null, balance: value.toString() });
+      } else if (meta.standard === 'LSP7' && typeof value === 'bigint' && value >= 0n) {
+        if (value > 0n) holdings.push({ ...meta, tokenId: null, balance: value.toString() });
+      } else {
+        failures += 1;
       }
     });
   }
-  return holdings;
+  return { holdings, failures };
 }
 
 function prioritizeHoldings(holdings, priorityAssetIds) {
@@ -120,29 +134,17 @@ function prioritizeHoldings(holdings, priorityAssetIds) {
     }).map((entry) => entry.holding);
 }
 
-function decodeMetadataUri(value) {
+function decodeMetadataPointer(value) {
   if (!value || value === '0x') return null;
-  try { return decodeDataSourceWithHash(value)?.url || null; } catch { return null; }
-}
-
-function flattenMedia(value, output = []) {
-  if (Array.isArray(value)) value.forEach((entry) => flattenMedia(entry, output));
-  else if (value && typeof value === 'object' && (value.url || value.src)) output.push(value);
-  return output;
+  try {
+    const pointer = decodeDataSourceWithHash(value);
+    return pointer?.url ? pointer : null;
+  } catch { return null; }
 }
 
 function metadataRoot(document) { return document?.LSP4Metadata || document || {}; }
 
-function metadataImages(document) {
-  const root = metadataRoot(document);
-  const images = flattenMedia(root.images);
-  if (images.length) return images;
-  const image = flattenMedia(root.image);
-  if (image.length) return image;
-  const icon = flattenMedia(root.icon);
-  if (icon.length) return icon;
-  return flattenMedia(root.assets).filter((entry) => !entry.fileType || String(entry.fileType).startsWith('image/'));
-}
+function metadataImages(document) { return collectMetadataImages(metadataRoot(document)); }
 
 function metadataAttributes(document) {
   const attributes = metadataRoot(document)?.attributes;
@@ -214,41 +216,29 @@ async function readContractFacts(address, client) {
   };
 }
 
-async function fetchMetadataDocument(uri, { fetchImpl, ipfsGateway, signal, metadataResponseMs = METADATA_RESPONSE_TIMEOUT_MS }) {
+async function fetchMetadataDocument(pointer, { fetchImpl, ipfsGateway, signal, metadataResponseMs = METADATA_RESPONSE_TIMEOUT_MS }) {
+  const uri = pointer?.url;
+  if (/^data:/iu.test(uri || '')) return decodeVerifiedOnchainJsonDataUri(uri, pointer.verification);
   const url = resolveContentUrl(uri, { ipfsGateway });
   if (!url) return null;
   throwIfAborted(signal);
-  const requestController = new AbortController();
-  const abortRequest = () => requestController.abort(signal?.reason);
-  signal?.addEventListener('abort', abortRequest, { once: true });
-  const timeout = setTimeout(() => requestController.abort(), metadataResponseMs);
-  try {
-    const response = await fetchImpl(url, { signal: requestController.signal,
-      headers: { accept: 'application/json,image/*;q=0.8,*/*;q=0.2' } });
-    if (!response.ok) throw new Error(`ASSET METADATA RESPONDED ${response.status}`);
-    const contentType = response.headers?.get?.('content-type') || '';
-    if (contentType.startsWith('image/')) return { image: [{ url: uri, fileType: contentType }] };
-    return response.json();
-  } finally {
-    clearTimeout(timeout);
-    signal?.removeEventListener('abort', abortRequest);
-  }
+  return fetchMetadataJson(url, { fetchImpl, signal, timeoutMs: metadataResponseMs, imageUrl: uri });
 }
 
 async function readCollectionMetadata(address, client, context) {
   const value = await client.readContract({ address: getAddress(address), abi: ERC725Y_ABI,
     functionName: 'getData', args: [LSP4_METADATA_KEY] });
-  const uri = decodeMetadataUri(value);
-  return uri ? fetchMetadataDocument(uri, context) : null;
+  const pointer = decodeMetadataPointer(value);
+  return pointer ? fetchMetadataDocument(pointer, context) : null;
 }
 
 async function readTokenMetadata(holding, client, context, globalTokenIdFormat) {
   if (holding.standard === 'LSP7') return null;
   const directValue = await client.readContract({ address: getAddress(holding.address), abi: LSP8_ABI,
     functionName: 'getDataForTokenId', args: [holding.tokenId, LSP4_METADATA_KEY] }).catch(() => null);
-  let uri = decodeMetadataUri(directValue);
-  let source = uri ? 'LSP4MetadataForTokenId' : null;
-  if (!uri) {
+  let pointer = decodeMetadataPointer(directValue);
+  let source = pointer ? 'LSP4MetadataForTokenId' : null;
+  if (!pointer) {
     let tokenIdFormat = globalTokenIdFormat;
     if (tokenIdFormat != null && tokenIdFormat >= 100) {
       const tokenFormatValue = await client.readContract({ address: getAddress(holding.address), abi: LSP8_ABI,
@@ -261,15 +251,15 @@ async function readTokenMetadata(holding, client, context, globalTokenIdFormat) 
       : await client.readContract({ address: getAddress(holding.address), abi: ERC725Y_ABI,
         functionName: 'getData', args: [LSP8_METADATA_BASE_URI_KEY] }).catch(() => null);
     const baseValue = tokenBaseValue && tokenBaseValue !== '0x' ? tokenBaseValue : globalBaseValue;
-    const baseUri = decodeMetadataUri(baseValue);
+    const baseUri = decodeMetadataPointer(baseValue)?.url || null;
     if (baseUri) {
       const decodedTokenId = decodeTokenIdForMetadata(String(holding.tokenId).toLowerCase(), tokenIdFormat);
-      uri = decodedTokenId == null ? null : `${baseUri}${decodedTokenId}`;
+      pointer = decodedTokenId == null ? null : { url: `${baseUri}${decodedTokenId}`, verification: null };
       source = tokenBaseValue && tokenBaseValue !== '0x' ? 'LSP8TokenMetadataBaseURIForTokenId' : 'LSP8TokenMetadataBaseURI';
     }
   }
-  const document = uri ? await fetchMetadataDocument(uri, context) : null;
-  return document ? { document, source } : null;
+  const document = pointer ? await fetchMetadataDocument(pointer, context) : null;
+  return document ? { document, pointer, source } : null;
 }
 
 function toNormalizedAsset(holding, ownerAddress, tokenDocument, collectionDocument, contractFacts, options) {
@@ -291,7 +281,16 @@ function toNormalizedAsset(holding, ownerAddress, tokenDocument, collectionDocum
       attributes: metadataAttributes(tokenDocument?.document), asset: contractMetadata,
       metadataSource: tokenDocument?.source || 'LSP4MetadataForTokenId' }
   } : { id: `rpc:${holding.address}`, balance: holding.balance, asset_id: holding.address, asset: contractMetadata };
-  return normalizeProfileAsset(rawHolding, ownerAddress, options);
+  const normalized = normalizeProfileAsset(rawHolding, ownerAddress, options);
+  const verification = tokenDocument?.pointer?.verification;
+  const compactOnchainReference = normalized?.imageUrl?.startsWith('data:image/svg+xml;base64,')
+    && tokenDocument?.pointer?.url?.startsWith('data:application/json')
+    && typeof verification?.method === 'string' && /^0x[0-9a-f]{64}$/iu.test(verification?.data || '')
+    ? {
+      protocol: 'erc725y', scope: 'tokenId', dataKey: LSP4_METADATA_KEY,
+      verification: { method: verification.method, data: verification.data.toLowerCase() },
+    } : null;
+  return compactOnchainReference ? { ...normalized, contentReference: compactOnchainReference } : normalized;
 }
 
 async function mapConcurrent(items, concurrency, mapper) {
@@ -320,7 +319,7 @@ export function createLuksoRpcProfileRepository({
       if (!profile) throw new TypeError('A valid Universal Profile address is required');
       const contracts = await discoverContracts(profile, { rpcUrls, signal });
       throwIfAborted(signal);
-      const discoveredHoldings = await discoverOwnedTokens(profile, contracts, publicClient, signal);
+      const { holdings: discoveredHoldings, failures: discoveryFailures } = await discoverOwnedTokens(profile, contracts, publicClient, signal);
       const requested = Array.isArray(requestedAssetIds) && requestedAssetIds.length
         ? new Set(requestedAssetIds.map((id) => String(id).toLowerCase())) : null;
       const selectedHoldings = requested ? discoveredHoldings.filter((holding) => requested.has(
@@ -350,16 +349,20 @@ export function createLuksoRpcProfileRepository({
             { fetchImpl, ipfsGateway, signal, metadataResponseMs }, facts.tokenIdFormat).catch(() => null);
           return toNormalizedAsset(holding, profile, tokenDocument, collectionDocument, facts, { ipfsGateway });
         });
+        throwIfAborted(signal);
         const assets = []; let batchFailures = 0;
         outcomes.forEach((outcome) => {
           if (outcome?.error || !outcome?.imageUrl) batchFailures += 1;
           else assets.push(outcome);
         });
         resolved += page.length;
-        yield { assets, resolved, total: holdings.length, failures: batchFailures,
-          complete: resolved >= holdings.length };
+        yield { assets, resolved, total: holdings.length, failures: batchFailures + (offset === 0 ? discoveryFailures : 0),
+          complete: !discoveryFailures && resolved >= holdings.length };
       }
-      if (!holdings.length) yield { assets: [], resolved: 0, total: 0, failures: 0, complete: true };
+      if (!holdings.length) yield { assets: [], resolved: 0, total: 0, failures: discoveryFailures, complete: !discoveryFailures };
+      if (discoveryFailures) {
+        throw new Error(`Some asset holdings could not be verified (${discoveryFailures} contract${discoveryFailures === 1 ? '' : 's'}). Retry to refresh.`);
+      }
     }
   };
 }

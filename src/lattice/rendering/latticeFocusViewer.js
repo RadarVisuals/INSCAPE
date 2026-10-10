@@ -64,6 +64,15 @@ export function focusViewerEntryRectangle(originRectangle, focusDimensions) {
     : origin;
 }
 
+export function focusViewerPresentationDimensions(entry) {
+  const dimensions = entry?.focusDimensions;
+  if (!(dimensions?.width > 0 && dimensions?.height > 0)) return dimensions;
+  const quarterTurns = entry?.placement?.transform?.quarterTurns || 0;
+  return quarterTurns % 2 === 1
+    ? Object.freeze({ width: dimensions.height, height: dimensions.width })
+    : dimensions;
+}
+
 export function focusedViewerRectangle(originRectangle, viewport, config = DEFAULT_LATTICE_FOCUS_VIEWER_CONFIG) {
   const origin = normalizeViewerRectangle(originRectangle, 'originRectangle');
   const viewportWidth = finitePositive(Number(viewport?.width), 'viewport.width');
@@ -251,7 +260,9 @@ export function focusViewerRackLayout(originRectangle, viewport, rackOpen, confi
   const margin = compact ? 16 : Math.max(32, Number(config.horizontalMargin));
   const verticalMargin = compact ? 28 : Math.max(32, Number(config.verticalMargin));
   const gap = compact ? 64 : 56;
-  const rackWidth = compact ? Math.max(1, size.width - (margin * 2)) : Math.min(380, size.width * 0.3);
+  const rackWidth = compact
+    ? Math.max(1, size.width - (margin * 2))
+    : Math.min(430, Math.max(380, size.width * 0.34));
   const navigationClearance = 84;
 
   if (compact) {
@@ -293,6 +304,27 @@ export function focusViewerRackLayout(originRectangle, viewport, rackOpen, confi
     inspectionRack: rectangle(groupLeft + artworkWidth + gap, rackTop, rackWidth, rackHeight),
     inspectionFrame: rectangle(Math.max(0, artwork.left - 28), Math.max(0, artwork.top - 28),
       artwork.width + 56, artwork.height + 56),
+    contentHeight: size.height,
+  });
+}
+
+export function focusViewerIsolatedLayout(originRectangle, viewport, config = DEFAULT_LATTICE_FOCUS_VIEWER_CONFIG) {
+  const origin = normalizeViewerRectangle(originRectangle, 'originRectangle');
+  const size = viewerViewport(viewport);
+  const margin = size.width < 640 ? 16 : Math.max(32, Number(config.horizontalMargin));
+  const topMargin = size.width < 640 ? 20 : Math.max(32, Number(config.verticalMargin));
+  const navigationClearance = Math.max(0, Number(config.isolatedNavigationClearance ?? 76));
+  const availableWidth = Math.max(1, size.width - (margin * 2));
+  const availableHeight = Math.max(1, size.height - (topMargin * 2) - navigationClearance);
+  const scale = Math.min(availableWidth / origin.width, availableHeight / origin.height);
+  const width = origin.width * scale;
+  const height = origin.height * scale;
+  const artwork = rectangle((size.width - width) / 2,
+    topMargin + ((availableHeight - height) / 2), width, height);
+  return Object.freeze({
+    mode: 'isolated',
+    artwork,
+    inspectionFrame: rectangle(artwork.left, artwork.top, artwork.width, artwork.height),
     contentHeight: size.height,
   });
 }

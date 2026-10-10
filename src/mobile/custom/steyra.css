@@ -1,0 +1,53 @@
+﻿.steyra-artwork{
+ --steyra-idle-duration:12s;
+ --steyra-sway-x:3%;
+ --steyra-sway-y:-2%;
+ --steyra-depth:22px;
+ --steyra-perspective:1000px;
+ position:relative;width:100%;height:100%;
+ animation:steyra-idle var(--steyra-idle-duration) linear infinite;
+ animation-play-state:paused;transform-origin:50% 50%;
+}
+/* Sample a closed ellipse uniformly. The axes turn at different times, so
+   the character never brakes to a complete stop at an intermediate keyframe.
+   Tune the variables above; these points describe only the path. */
+@keyframes steyra-idle{
+ 0%{transform:perspective(var(--steyra-perspective)) translate3d(calc(var(--steyra-sway-x) * 0),calc(var(--steyra-sway-y) * 0),calc(var(--steyra-depth) * 0))}
+ 3.125%{transform:perspective(var(--steyra-perspective)) translate3d(calc(var(--steyra-sway-x) * 0.19509),calc(var(--steyra-sway-y) * 0.009607),calc(var(--steyra-depth) * 0.009607))}
+ 6.25%{transform:perspective(var(--steyra-perspective)) translate3d(calc(var(--steyra-sway-x) * 0.382683),calc(var(--steyra-sway-y) * 0.03806),calc(var(--steyra-depth) * 0.03806))}
+ 9.375%{transform:perspective(var(--steyra-perspective)) translate3d(calc(var(--steyra-sway-x) * 0.55557),calc(var(--steyra-sway-y) * 0.084265),calc(var(--steyra-depth) * 0.084265))}
+ 12.5%{transform:perspective(var(--steyra-perspective)) translate3d(calc(var(--steyra-sway-x) * 0.707107),calc(var(--steyra-sway-y) * 0.146447),calc(var(--steyra-depth) * 0.146447))}
+ 15.625%{transform:perspective(var(--steyra-perspective)) translate3d(calc(var(--steyra-sway-x) * 0.83147),calc(var(--steyra-sway-y) * 0.222215),calc(var(--steyra-depth) * 0.222215))}
+ 18.75%{transform:perspective(var(--steyra-perspective)) translate3d(calc(var(--steyra-sway-x) * 0.92388),calc(var(--steyra-sway-y) * 0.308658),calc(var(--steyra-depth) * 0.308658))}
+ 21.875%{transform:perspective(var(--steyra-perspective)) translate3d(calc(var(--steyra-sway-x) * 0.980785),calc(var(--steyra-sway-y) * 0.402455),calc(var(--steyra-depth) * 0.402455))}
+ 25%{transform:perspective(var(--steyra-perspective)) translate3d(calc(var(--steyra-sway-x) * 1),calc(var(--steyra-sway-y) * 0.5),calc(var(--steyra-depth) * 0.5))}
+ 28.125%{transform:perspective(var(--steyra-perspective)) translate3d(calc(var(--steyra-sway-x) * 0.980785),calc(var(--steyra-sway-y) * 0.597545),calc(var(--steyra-depth) * 0.597545))}
+ 31.25%{transform:perspective(var(--steyra-perspective)) translate3d(calc(var(--steyra-sway-x) * 0.92388),calc(var(--steyra-sway-y) * 0.691342),calc(var(--steyra-depth) * 0.691342))}
+ 34.375%{transform:perspective(var(--steyra-perspective)) translate3d(calc(var(--steyra-sway-x) * 0.83147),calc(var(--steyra-sway-y) * 0.777785),calc(var(--steyra-depth) * 0.777785))}
+ 37.5%{transform:perspective(var(--steyra-perspective)) translate3d(calc(var(--steyra-sway-x) * 0.707107),calc(var(--steyra-sway-y) * 0.853553),calc(var(--steyra-depth) * 0.853553))}
+ 40.625%{transform:perspective(var(--steyra-perspective)) translate3d(calc(var(--steyra-sway-x) * 0.55557),calc(var(--steyra-sway-y) * 0.915735),calc(var(--steyra-depth) * 0.915735))}
+ 43.75%{transform:perspective(var(--steyra-perspective)) translate3d(calc(var(--steyra-sway-x) * 0.382683),calc(var(--steyra-sway-y) * 0.96194),calc(var(--steyra-depth) * 0.96194))}
+ 46.875%{transform:perspective(var(--steyra-perspective)) translate3d(calc(var(--steyra-sway-x) * 0.19509),calc(var(--steyra-sway-y) * 0.990393),calc(var(--steyra-depth) * 0.990393))}
+ 50%{transform:perspective(var(--steyra-perspective)) translate3d(calc(var(--steyra-sway-x) * 0),calc(var(--steyra-sway-y) * 1),calc(var(--steyra-depth) * 1))}
+ 53.125%{transform:perspective(var(--steyra-perspective)) translate3d(calc(var(--steyra-sway-x) * -0.19509),calc(var(--steyra-sway-y) * 0.990393),calc(var(--steyra-depth) * 0.990393))}
+ 56.25%{transform:perspective(var(--steyra-perspective)) translate3d(calc(var(--steyra-sway-x) * -0.382683),calc(var(--steyra-sway-y) * 0.96194),calc(var(--steyra-depth) * 0.96194))}
+ 59.375%{transform:perspective(var(--steyra-perspective)) translate3d(calc(var(--steyra-sway-x) * -0.55557),calc(var(--steyra-sway-y) * 0.915735),calc(var(--steyra-depth) * 0.915735))}
+ 62.5%{transform:perspective(var(--steyra-perspective)) translate3d(calc(var(--steyra-sway-x) * -0.707107),calc(var(--steyra-sway-y) * 0.853553),calc(var(--steyra-depth) * 0.853553))}
+ 65.625%{transform:perspective(var(--steyra-perspective)) translate3d(calc(var(--steyra-sway-x) * -0.83147),calc(var(--steyra-sway-y) * 0.777785),calc(var(--steyra-depth) * 0.777785))}
+ 68.75%{transform:perspective(var(--steyra-perspective)) translate3d(calc(var(--steyra-sway-x) * -0.92388),calc(var(--steyra-sway-y) * 0.691342),calc(var(--steyra-depth) * 0.691342))}
+ 71.875%{transform:perspective(var(--steyra-perspective)) translate3d(calc(var(--steyra-sway-x) * -0.980785),calc(var(--steyra-sway-y) * 0.597545),calc(var(--steyra-depth) * 0.597545))}
+ 75%{transform:perspective(var(--steyra-perspective)) translate3d(calc(var(--steyra-sway-x) * -1),calc(var(--steyra-sway-y) * 0.5),calc(var(--steyra-depth) * 0.5))}
+ 78.125%{transform:perspective(var(--steyra-perspective)) translate3d(calc(var(--steyra-sway-x) * -0.980785),calc(var(--steyra-sway-y) * 0.402455),calc(var(--steyra-depth) * 0.402455))}
+ 81.25%{transform:perspective(var(--steyra-perspective)) translate3d(calc(var(--steyra-sway-x) * -0.92388),calc(var(--steyra-sway-y) * 0.308658),calc(var(--steyra-depth) * 0.308658))}
+ 84.375%{transform:perspective(var(--steyra-perspective)) translate3d(calc(var(--steyra-sway-x) * -0.83147),calc(var(--steyra-sway-y) * 0.222215),calc(var(--steyra-depth) * 0.222215))}
+ 87.5%{transform:perspective(var(--steyra-perspective)) translate3d(calc(var(--steyra-sway-x) * -0.707107),calc(var(--steyra-sway-y) * 0.146447),calc(var(--steyra-depth) * 0.146447))}
+ 90.625%{transform:perspective(var(--steyra-perspective)) translate3d(calc(var(--steyra-sway-x) * -0.55557),calc(var(--steyra-sway-y) * 0.084265),calc(var(--steyra-depth) * 0.084265))}
+ 93.75%{transform:perspective(var(--steyra-perspective)) translate3d(calc(var(--steyra-sway-x) * -0.382683),calc(var(--steyra-sway-y) * 0.03806),calc(var(--steyra-depth) * 0.03806))}
+ 96.875%{transform:perspective(var(--steyra-perspective)) translate3d(calc(var(--steyra-sway-x) * -0.19509),calc(var(--steyra-sway-y) * 0.009607),calc(var(--steyra-depth) * 0.009607))}
+ 100%{transform:perspective(var(--steyra-perspective)) translate3d(calc(var(--steyra-sway-x) * 0),calc(var(--steyra-sway-y) * 0),calc(var(--steyra-depth) * 0))}
+}
+@media(prefers-reduced-motion:reduce){.steyra-artwork{animation:none;transform:none}}
+.steyra-vector{position:absolute;inset:0;pointer-events:none}
+.steyra-vector>svg{display:block;width:100%;height:100%;transform:scale(.85)}
+.intro-art .steyra-body{position:absolute;inset:0;filter:none;pointer-events:none}
+.steyra-recovery{position:absolute;left:0;right:0;bottom:20%;display:flex;align-items:center;justify-content:center;flex-wrap:wrap;font-size:13px;gap:8px}

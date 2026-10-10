@@ -29,6 +29,7 @@ export function loadSignalDocument(storage, profileAddress) {
   try { return decodeSignalDocument(storage?.getItem(signalStorageKey(profileAddress)), profileAddress); } catch { return createEmptySignalDocument(profileAddress); }
 }
 export function saveSignalDocument(storage, document) {
+  if (typeof storage?.setItem !== 'function') return false;
   const normalized = decodeSignalDocument(document, document.profileAddress);
-  try { storage?.setItem(signalStorageKey(document.profileAddress), JSON.stringify(normalized)); return true; } catch { return false; }
+  try { storage.setItem(signalStorageKey(document.profileAddress), JSON.stringify(normalized)); return true; } catch { return false; }
 }

@@ -1,0 +1,52 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { createSystemWorkflowDraftStore } from './systemWorkflowDraftStore.js';
+import { createWorkbenchSession } from './workbenchSession.js';
+import { createDisplayModuleSession, addDisplayModule } from './displayModuleSession.js';
+import { PRIMARY_DISPLAY_ID } from './domain/displayModules.js';
+import { createDefaultWorkbenchPresentation } from '../profileDocument/domain/workbenchPresentation.js';
+const profile = `0x${'1'.repeat(40)}`;
+test('Workbench window theme owns the root field and preserves Display content, undo and stale guards', () => {
+  const entries = new Map(); let broken = false;
+  const storage = { getItem: key => entries.get(key) ?? null, setItem: (key, value) => { if (broken) throw Error('full'); entries.set(key, value); } };
+  const store = createSystemWorkflowDraftStore({ profileAddress: profile, storage });
+  addDisplayModule(store);
+  const host = createWorkbenchSession({ store }), before = store.getSnapshot();
+  const expected = before.appearance.menuSurfaceId, theme = expected === 'paper' ? 'carbon' : 'paper';
+  assert.equal(host.setMenuSurface({ expected, menuSurfaceId: theme }), true);
+  assert.equal(store.getSnapshot().appearance.menuSurfaceId, theme);
+  assert.equal(store.getSnapshot().displays, before.displays);
+  assert.equal(store.getSnapshot().grids, before.grids);
+  assert.throws(() => host.setMenuSurface({ expected, menuSurfaceId: 'slate' }), /theme changed/);
+  assert.ok(store.undo()); assert.deepEqual(store.getSnapshot(), before);
+  assert.ok(store.redo()); assert.equal(store.getSnapshot().appearance.menuSurfaceId, theme);
+  broken = true;
+  assert.throws(() => host.setMenuSurface({ expected: theme, menuSurfaceId: expected }), /could not be saved/);
+  assert.equal(store.getSnapshot().appearance.menuSurfaceId, theme);
+  broken = false;
+  assert.throws(() => host.setMenuSurface({ expected: theme, menuSurfaceId: 'invented' }));
+  const withoutPrimary = store.getDraft(); withoutPrimary.grids = [];
+  assert.ok(store.commitCompletedOperation(withoutPrimary, { expectedGeneration: store.getGeneration() }));
+  assert.ok(host.setMenuSurface({ expected: theme, menuSurfaceId: expected }));
+  store.setProfileAddress(`0x${'2'.repeat(40)}`);
+  assert.throws(() => host.setMenuSurface({ expected, menuSurfaceId: theme }), /no longer active/);
+});
+test('both Display sessions expose only Display actions and host capture needs no primary Display', () => {
+  const values = new Map(), storage = { getItem: k => values.get(k) ?? null, setItem: (k, v) => values.set(k, v) };
+  const store = createSystemWorkflowDraftStore({ profileAddress: profile, storage });
+  const secondary = addDisplayModule(store);
+  for (const id of [PRIMARY_DISPLAY_ID, secondary]) {
+    const session = createDisplayModuleSession(store, id);
+    assert.equal(session.saveWorkbench, undefined); assert.equal(session.setIdentityConfiguration, undefined);
+    assert.equal(session.getState().draft.displays, undefined);
+    session.createGrid();
+  }
+  const draft = store.getDraft(); draft.grids = [];
+  store.commitCompletedOperation(draft, { expectedGeneration: store.getGeneration() });
+  const history = store.getHistory();
+  assert.equal(createWorkbenchSession({ store }).saveWorkbench(createDefaultWorkbenchPresentation()), true);
+  assert.deepEqual(store.getDraft().displays, draft.displays); assert.deepEqual(store.getHistory(), history);
+  const oldHost = createWorkbenchSession({ store });
+  store.setProfileAddress(`0x${'2'.repeat(40)}`);
+  assert.throws(() => oldHost.saveWorkbench(createDefaultWorkbenchPresentation()), /no longer active/);
+});
