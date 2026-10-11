@@ -4,6 +4,7 @@ export const LUKSO_INDEXER_URL = import.meta.env?.VITE_LUKSO_INDEXER_URL
 export const CHILLWHALES_INDEXER_URL = import.meta.env?.VITE_CHILLWHALES_INDEXER_URL
   || 'https://indexer.chillwhales.dev/v1/graphql';
 const DEFAULT_IPFS_GATEWAY_URL = 'https://api.universalprofile.cloud/ipfs/';
+const DEFAULT_IPFS_GATEWAY_FALLBACK_URLS = 'https://ipfs.io/ipfs/,https://dweb.link/ipfs/';
 
 export function normalizePublicHttpsEndpoint(value) {
   const candidate = String(value || '').trim();
@@ -29,6 +30,9 @@ export function normalizePublicHttpsEndpointList(value) {
 
 export const IPFS_GATEWAY_URL = normalizePublicHttpsEndpoint(import.meta.env?.VITE_IPFS_GATEWAY_URL)
   || DEFAULT_IPFS_GATEWAY_URL;
+export const IPFS_GATEWAY_FALLBACK_URLS = normalizePublicHttpsEndpointList(
+  import.meta.env?.VITE_IPFS_GATEWAY_FALLBACK_URLS || DEFAULT_IPFS_GATEWAY_FALLBACK_URLS
+);
 export const PROFILE_DOCUMENT_IPFS_GATEWAY_URL = normalizePublicHttpsEndpoint(
   import.meta.env?.VITE_PROFILE_DOCUMENT_IPFS_GATEWAY_URL
 ) || IPFS_GATEWAY_URL;

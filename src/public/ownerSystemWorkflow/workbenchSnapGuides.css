@@ -1,0 +1,9 @@
+.workbench-snap-guides { position: absolute; inset: 0; z-index: 78; overflow: hidden; pointer-events: none; color: var(--workflow-ink); }
+.workbench-snap-guides path { fill: none; stroke: currentColor; stroke-width: 1; shape-rendering: crispEdges; }
+.workbench-snap-guides .workbench-snap-guides__underlay { stroke: var(--workflow-panel); stroke-width: 3; }
+.workbench-snap-guides [data-snap-kind="grid"] path { stroke-dasharray: 3 3; }
+.workbench-snap-guides rect { fill: var(--workflow-panel); stroke: var(--workflow-border-strong); stroke-width: 1; }
+.workbench-snap-guides text { fill: currentColor; text-anchor: middle; font: 400 10px "Inscape IBM Plex Sans Condensed", sans-serif; }
+.system-workflow__settings .workbench-gap-preview { display: block; width: 100%; height: 64px; margin: 4px 0 8px; color: var(--workflow-ink); }
+.workbench-gap-preview rect, .workbench-gap-preview path { fill: none; stroke: currentColor; stroke-width: 1; }
+.workbench-gap-preview text { fill: currentColor; text-anchor: middle; font: 400 10px "Inscape IBM Plex Sans Condensed", sans-serif; }

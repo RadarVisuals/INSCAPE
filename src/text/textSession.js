@@ -1,0 +1,109 @@
+import { createArticle, MAX_TEXT_MODULES, validTextModules } from './domain/article.js';
+import { createDefaultWorkbenchPresentation, createTextPresentation } from '../profileDocument/domain/workbenchPresentation.js';
+import { clampWorkbenchPosition } from '../public/ownerSystemWorkflow/workbenchSpace.js';
+
+export function prepareTextResize(draft, { expected }) {
+  if (JSON.stringify(draft.texts?.find(item => item.id === expected.id)) !== JSON.stringify(expected))
+    throw new Error('Text changed during resizing. Save your text and try again.');
+  return draft;
+}
+
+export function changeTextFrames(store, profile, expected, presentation, frames, workbench) {
+  if (store.getProfileAddress() !== profile) throw new Error('This profile is no longer active.');
+  const draft = store.getDraft(), generation = store.getGeneration();
+  prepareTextResize(draft, { expected });
+  if (expected.sceneLink || expected.pagination) throw new Error('Unlink Follow Display and turn off Read as pages before adding linked frames.');
+  const next = { ...presentation };
+  if (frames.length) next.frames = frames; else delete next.frames;
+  const layout = workbench || draft.workbench || createDefaultWorkbenchPresentation();
+  const texts = [...(layout.texts || []).filter(item => item.id !== expected.id), next];
+  if (!store.commitCompletedOperation({ ...draft, workbench: { ...layout, texts } }, {
+    expectedGeneration: generation, historyLabel: frames.length > (presentation.frames?.length || 0) ? 'Add linked Text frame' : 'Remove linked Text frame',
+  })) throw new Error('The linked frames could not be saved. Your text and saved layout are unchanged.');
+  return next;
+}
+
+// Unlink is explicit and atomic. Legacy passages become private standalone
+// Texts so their distinct typography and content are never flattened or lost.
+export function unlinkTextModuleResult(store, profile, expected) {
+  if (store.getProfileAddress() !== profile) return textSaveFailure('profile');
+  const draft = store.getDraft(), generation = store.getGeneration();
+  const current = draft.texts?.find(item => item.id === expected.id);
+  if (!current) return textSaveFailure('missing');
+  if (JSON.stringify(current) !== JSON.stringify(expected)) return textSaveFailure('conflict');
+  if (!current.sceneLink) return { saved: true, record: current };
+  const { sceneLink, ...record } = current;
+  const passages = sceneLink.mode === 'sections' ? [] : sceneLink.passages;
+  if (draft.texts.length + passages.length > MAX_TEXT_MODULES) return { saved: false, reason: 'capacity',
+    message: `Unlinking needs ${passages.length} additional Text windows to preserve all passages. The Workbench limit is ${MAX_TEXT_MODULES}. Nothing was changed.` };
+  try {
+    const extras = passages.map(({ article }) => ({ ...record, id: `text:${crypto.randomUUID()}`, article: structuredClone(article), visibility: 'PRIVATE' }));
+    const texts = [...draft.texts.map(item => item.id === record.id ? record : item), ...extras];
+    const workbench = draft.workbench || createDefaultWorkbenchPresentation();
+    const next = { ...draft, texts, ...(extras.length ? { workbench: { ...workbench,
+      texts: [...(workbench.texts || []), ...extras.map((item, index) => createTextPresentation(item.id, draft.texts.length + index))] } } : {}) };
+    const saved = store.commitCompletedOperation(next, { expectedGeneration: generation, historyLabel: 'Unlink Text from Display' });
+    return saved ? { saved: true, record: store.getDraft().texts.find(item => item.id === record.id) }
+      : textSaveFailure(store.getLastCommitFailure?.() || 'write_failed');
+  } catch (error) { return { saved: false, reason: 'invalid', message: error.message }; }
+}
+export function addTextModule(store, profile, placed = null) {
+  if (store.getProfileAddress() !== profile) throw new Error('This profile is no longer active.');
+  const draft = store.getDraft(), generation = store.getGeneration();
+  if ((draft.texts?.length || 0) >= MAX_TEXT_MODULES) throw new Error(`At most ${MAX_TEXT_MODULES} Text modules are supported.`);
+  const item = { id: `text:${crypto.randomUUID()}`, article: createArticle(), visibility: 'PRIVATE' };
+  const next = { ...draft, texts: [...(draft.texts || []), item] };
+  if (placed) {
+    const presentation = createTextPresentation(item.id, draft.texts?.length || 0);
+    presentation.window = { ...presentation.window, ...clampWorkbenchPosition(placed.position, presentation.window) };
+    const workbench = placed.workbench || draft.workbench || createDefaultWorkbenchPresentation();
+    next.workbench = { ...workbench, texts: [...(workbench.texts || []), presentation] };
+  }
+  if (!store.commitCompletedOperation(next, { expectedGeneration: generation, historyLabel: 'Add Text' })) throw new Error('Text module could not be saved.');
+  return item.id;
+}
+export function saveTextModule(store, profile, expected, next) {
+  return saveTextModuleResult(store, profile, expected, next).saved;
+}
+
+const messages = {
+  profile: 'This profile is no longer active. Your unsaved text is still here.',
+  conflict: 'This Text was changed elsewhere. Your edits are still here. Retry checks the latest saved version.',
+  missing: 'This Text was removed from the saved draft. Your unsaved text is still here.',
+  changed: 'The saved draft changed elsewhere. Retry will preserve unrelated changes.',
+  stale: 'The draft changed while saving. Retry checks the latest version.',
+  invalid: 'The draft could not be validated. Your unsaved text is still here.',
+  corrupt: 'The saved draft could not be read safely. It has not been overwritten.',
+  read_failed: 'Browser storage could not be read. Your unsaved text is still here.',
+  write_failed: 'Browser storage could not save your changes. It may be full or blocked. Your unsaved text is still here.',
+};
+export const textSaveFailure = code => ({ saved: false, reason: code, message: messages[code] || messages.write_failed });
+export function saveTextModuleResult(store, profile, expected, next, { retry = false, replace = false } = {}) {
+  let reason;
+  const failed = textSaveFailure;
+  if (store.getProfileAddress() !== profile) return failed('profile');
+  const generation = store.getGeneration();
+  const candidate = draft => {
+    const current = draft.texts?.find(item => item.id === expected.id);
+    if (!current) { reason = 'missing'; return null; }
+    const value = { ...current };
+    for (const key of ['article', 'visibility', 'sceneLink', 'pagination']) {
+      if (JSON.stringify(expected[key]) === JSON.stringify(next[key])) continue;
+      if (JSON.stringify(current[key]) !== JSON.stringify(expected[key]) && JSON.stringify(current[key]) !== JSON.stringify(next[key]) && !replace) {
+        reason = 'conflict'; return null;
+      }
+      value[key] = next[key];
+    }
+    if (!retry && JSON.stringify(current) !== JSON.stringify(expected)) { reason = 'conflict'; return null; }
+    const texts = draft.texts.map(item => item.id === current.id ? value : item);
+    if (!validTextModules(texts)) { reason = 'invalid'; return null; }
+    return { ...draft, texts };
+  };
+  try {
+    const options = { expectedGeneration: generation, historyLabel: 'Edit Text' };
+    const nextDraft = retry ? null : candidate(store.getDraft());
+    const saved = retry ? store.retryCompletedOperation(candidate, options) : nextDraft && store.commitCompletedOperation(nextDraft, options);
+    return saved ? { saved: true, record: store.getDraft().texts.find(item => item.id === expected.id) }
+      : failed(reason || store.getLastCommitFailure?.() || 'write_failed');
+  } catch (error) { return { saved: false, reason: 'invalid', message: error.message }; }
+}

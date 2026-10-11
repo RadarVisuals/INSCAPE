@@ -1,0 +1,143 @@
+@import './fonts.css';
+@import './textTools.css';
+.text-scene-viewport { flex: 1; min-height: 0; overflow: hidden; position: relative; }
+.text-scene-track, .text-scene-page, .text-authoring-viewport, .text-paged-reader { height: 100%; min-height: 0; display: flex; flex-direction: column; }
+.text-authoring-viewport[hidden] { display: none; }
+.text-scene-track { position: relative; }
+.text-scene-page { width: 100%; flex-shrink: 0; }
+.text-scene-incoming { position: absolute; top: 0; }
+.text-page-viewport { flex: 1; min-height: 0; overflow: hidden; perspective: 1000px; }
+.text-page-turn { height: 100%; transform-origin: left center; }
+.text-page-turn[data-turn] { animation: text-page-turn 220ms ease-out; }
+.text-page-turn[data-direction='previous'] { transform-origin: right center; }
+.text-page-track > article.text-document { box-sizing: border-box; width: var(--text-page-width); height: var(--text-page-height); max-width: none; margin: 0; column-count: 1; column-gap: var(--text-page-gap); column-fill: auto; }
+.text-page-track .text-page-break { break-before: column; }
+.text-page-track :is(p, li) { orphans: 2; widows: 2; }
+.text-page-track :is(figure, h1, h2, h3) { break-inside: avoid; }
+.text-page-navigation { display: flex; align-items: center; justify-content: center; flex-shrink: 0; gap: 8px; height: 30px; font: 12px 'Inscape IBM Plex Sans Condensed'; }
+.text-module-body .text-page-navigation button { border: 0; background: transparent; padding: 0 8px; min-width: 30px; }
+.text-editor-content .text-page-break { border-top: 1px dashed currentColor; margin: 12px 0; }
+.text-editor-content .text-page-break::after { content: 'Page break'; font: 11px 'Inscape IBM Plex Sans Condensed'; }
+.text-page-viewport:focus-visible { outline: 1px solid currentColor; outline-offset: -1px; }
+@keyframes text-page-turn { from { opacity: .25; transform: rotateY(-90deg); } to { opacity: 1; transform: rotateY(0); } }
+@media (prefers-reduced-motion: reduce) { .text-page-turn[data-turn] { animation: none; } .text-scene-viewport[data-settling] .text-scene-track { transition: none; } }
+.text-workbench { color: var(--workflow-ink); font: var(--workflow-type-control); }
+.text-workbench .system-workflow__instrument-window { z-index: var(--text-z, 46); }
+.text-workbench .system-workflow__instrument-window > .system-workflow__instrument-content { display: flex; flex-direction: column; overflow: hidden; padding: 0; }
+.text-module-body { position: relative; min-height: 0; height: 100%; display: flex; flex-direction: column; }
+.text-window > [data-content-move] { cursor: grab; }
+.text-window > [data-content-move]:active { cursor: grabbing; }
+.text-window .text-scene-viewport, .text-window .text-module-body > .text-status { zoom: var(--workbench-content-scale, 1); }
+.text-window .text-scene-viewport { width: var(--workbench-content-width); }
+/* Containment alone still permits the browser's elastic edge movement. */
+.text-module-scroll { overflow: auto; min-height: 0; flex: 1; overscroll-behavior: none; }
+.text-module-content { display: flow-root; }
+.text-window .text-module-content { width: var(--workbench-content-width, auto); }
+.text-module-content > .text-document:not(.text-document--compact), .text-module-content .text-editor-page:not(.text-document--compact) { padding-bottom: var(--text-viewport-bottom-padding, var(--text-automatic-padding)); }
+.text-workbench :is(.text-module-scroll, .text-settings, textarea) { scrollbar-width: none; }
+.text-workbench :is(.text-module-scroll, .text-settings, textarea)::-webkit-scrollbar { display: none; width: 0; height: 0; }
+.text-module-scroll:focus-visible { outline: 1px solid var(--workflow-border); outline-offset: -1px; }
+.text-module-rail { display: flex; gap: 0; flex-wrap: wrap; border-bottom: 1px solid var(--workflow-border); flex-shrink: 0; }
+.text-module-body :is(button, input, select, textarea), .text-shortcut { font: var(--workflow-type-control); color: inherit; background: var(--workflow-panel); border: 1px solid var(--workflow-border); border-radius: 0; min-height: 30px; padding: 5px 8px; max-width: 100%; }
+.text-workbench button { cursor: pointer; }
+.text-workbench button:disabled { opacity: .5; cursor: default; }
+.text-workbench button:hover:not(:disabled) { color: var(--workflow-ink); background: var(--workflow-panel-raised, var(--workflow-panel)); }
+.text-workbench button[aria-pressed='true'] { box-shadow: inset 0 -2px 0 currentColor; }
+.text-workbench :is(button, input, select, summary):focus-visible { outline: 2px solid var(--workflow-ink); outline-offset: -2px; }
+.text-module-rail > button { border-width: 0 1px 0 0; }
+.text-document, .text-editor-page { --text-automatic-padding: 24px; max-width: 66ch; margin: 0 auto; padding: var(--text-automatic-padding); font-size: 16px; line-height: var(--text-line-height, 1.65); overflow-wrap: anywhere; font-variant-ligatures: none; font-feature-settings: "liga" 0; }
+.text-editor-page .text-document { padding: 0; max-width: inherit; font-family: inherit; font-size: inherit; }
+.text-document-body { column-count: var(--text-columns, auto); column-gap: var(--text-column-gap, 24px); column-fill: balance; }
+/* A composition frame fills down, then across. Focus writing and the page
+   reader remain continuous views of the same complete article. */
+/* Hidden keeps read-only flex articles painted in Chromium. The body itself
+   clips continuation columns, so the frame has no horizontal scroll range. */
+[data-text-frame] { position: relative; overflow: hidden; }
+[data-text-frame] :is(.text-editor-page, article.text-document) { height: var(--text-frame-height); min-height: 0; display: flex; flex-direction: column; }
+[data-text-frame] .text-document-title { flex-shrink: 0; }
+[data-text-frame] .text-editor-body, [data-text-frame] article > .text-document-body { flex: 1; min-height: 0; }
+[data-text-frame] .text-editor-body > div { height: 100%; }
+[data-text-frame] .text-editor-content { height: 100%; min-height: 0; }
+[data-text-frame] .text-document-body { column-fill: auto; overflow: clip; }
+.text-frame-overflow { position: absolute; right: 4px; bottom: 4px; z-index: 1; padding: 4px 6px; border: 1px solid var(--workflow-ink); color: var(--workflow-ink); background: rgb(from var(--workflow-panel) r g b / 1); font: 12px/1.3 'Inscape IBM Plex Sans Condensed', sans-serif; pointer-events: none; white-space: normal; }
+.text-linked-content, .text-flow-visible { height: 100%; min-height: 0; }
+/* Keep the visible article's paint separate from the hidden measuring copy. */
+.text-flow-visible { isolation: isolate; }
+.text-flow-selection { background: Highlight; color: HighlightText; }
+.text-flow-measure { position: absolute; inset: 0; visibility: hidden; pointer-events: none; }
+.text-flow-links { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 45; overflow: visible; color: var(--workflow-ink); }
+.text-flow-links line { stroke: currentColor; stroke-width: 1; opacity: .6; }
+.text-flow-links rect { fill: var(--workflow-panel); stroke: currentColor; stroke-width: 1; }
+.text-document-body :is(figure, .text-artwork-editor) { break-inside: avoid; }
+.text-document :is(p, h1, h2, h3, blockquote, figure, ul, ol) { margin: 0 0 1em; }
+.text-document :is(p, h1, h2, h3, figcaption) { white-space: break-spaces; }
+.text-editor-content > :last-child, .text-document > div > :last-child { margin-bottom: 0; }
+.text-document :is(h1, h2, h3) { line-height: 1.3; font-weight: 500; }
+.text-document h1 { font-size: 1.65em; } .text-document h2 { font-size: 1.35em; } .text-document h3 { font-size: 1.15em; }
+.text-document blockquote { border-left: 2px solid var(--workflow-border); padding-left: 16px; margin-left: 0; }
+.text-document a { color: inherit; text-decoration: underline; }
+.text-document img { display: block; max-width: 100%; max-height: 480px; object-fit: contain; margin: 0 auto; }
+.text-document figcaption { font-size: .85em; margin-top: 8px; }
+.text-document .text-document-title, .text-editor-page .text-document-title { font: inherit; font-size: 28px; line-height: 1.3; font-weight: 500; white-space: pre-wrap; width: 100%; margin: 0 0 20px; padding: 0; border: 0; background: transparent; }
+.text-workbench textarea.text-document-title { display: block; box-sizing: border-box; field-sizing: content; resize: none; min-height: 1.3em; }
+.text-workbench textarea.text-document-title::placeholder { color: inherit; opacity: .45; }
+.text-editor-content { min-height: 1lh; outline: none; white-space: pre-wrap; }
+.text-editor-body { position: relative; }
+/* Editing guides use the same light/dark edges as module bounds, independently of authored ink and background. */
+.text-editor-content:focus-visible, .text-editor-body--empty .text-editor-content { outline: 1px solid #fff; outline-offset: 1px; box-shadow: 0 0 0 1px #111313; }
+.text-editor-body--empty .text-editor-content { min-height: 64px; }
+.text-editor-placeholder { position: absolute; top: 0; left: 0; max-width: 100%; box-sizing: border-box; padding: 6px 8px; font: var(--workflow-type-control); color: var(--workflow-ink); background: var(--workflow-panel); pointer-events: none; }
+.text-editor-body:focus-within .text-editor-placeholder { visibility: hidden; }
+.text-document p:empty::before { content: '\00a0'; }
+.text-status { flex-shrink: 0; border-top: 1px solid var(--workflow-border); padding: 6px 10px; margin: 0; font-family: 'Inscape IBM Plex Sans Condensed'; font-size: 12px; overflow-wrap: anywhere; }
+.text-artwork-editor { border: 0; padding: 0; margin: 0; }
+.text-artwork-editor.ProseMirror-selectednode { outline: 2px solid var(--workflow-ink); }
+.text-artwork-editor label { font: 12px/1.4 'Inscape IBM Plex Sans Condensed'; margin-top: 6px; }
+.text-shortcut { position: fixed; left: 24px; bottom: var(--text-shortcut-bottom); z-index: 40; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.text-workbench .text-window--read { grid-template-rows: minmax(0, 1fr); }
+.text-window--read > .system-workflow__instrument-content { height: 100%; flex: 1; }
+.text-workbench .workbench-window--external-controls[data-window-chrome] > .system-workflow__detached-window-titlebar {
+  position: absolute; inset: auto auto calc(100% + 28px) 0; z-index: 5; box-sizing: border-box; width: max-content;
+  height: 28px; min-height: 0; padding: 0; gap: 0; border: 1px solid var(--workflow-border); border-radius: 0;
+  color: var(--workflow-ink); background: var(--workflow-panel); opacity: 0; pointer-events: none; zoom: var(--workbench-control-scale, 1);
+}
+/* Bridge the 28px gap plus the toolbar border, overlapping the frame edge so
+   fractional zoom and pointer rounding cannot break the hover path. */
+.text-workbench .workbench-window--external-controls[data-window-chrome] > .system-workflow__detached-window-titlebar::after { content: ''; position: absolute; inset: 100% -1px auto; height: 30px; }
+.text-workbench .workbench-window--external-controls[data-window-chrome] > .system-workflow__detached-window-titlebar[data-controls-below] { bottom: auto; top: calc(100% + 28px); }
+.text-workbench .workbench-window--external-controls[data-window-chrome] > .system-workflow__detached-window-titlebar[data-controls-below]::after { top: auto; bottom: 100%; }
+.text-workbench .workbench-window--external-controls:is(:hover, :focus-within)[data-window-chrome] > .system-workflow__detached-window-titlebar,
+.text-workbench[data-text-tools-open] > .text-window > .system-workflow__detached-window-titlebar { opacity: 1; pointer-events: auto; }
+.text-window-grip { padding: 0 12px; font: var(--workflow-type-control); cursor: move; }
+.text-window .system-workflow__detached-window-controls { gap: 0; }
+.text-window .text-window-control { display: grid; place-items: center; width: 32px; height: 26px; padding: 0; border: 0; border-left: 1px solid var(--workflow-border); border-radius: 0; color: inherit; background: transparent; }
+.text-window .text-window-control svg { width: 15px; height: 15px; }
+.text-window .text-window-control[aria-expanded='true'] { box-shadow: inset 0 -2px 0 currentColor; }
+.text-window-bounds { position: absolute; inset: 0; z-index: 4; pointer-events: none; border: 1px solid #fff; box-shadow: inset 0 0 0 1px #111313; opacity: 0; zoom: var(--workbench-control-scale, 1); }
+.text-window[data-window-active] > .text-window-bounds { opacity: 1; }
+@media (hover: none) { .text-workbench .workbench-window--external-controls[data-window-chrome] > .system-workflow__detached-window-titlebar { opacity: 1; pointer-events: auto; } }
+@media (max-width: 600px) { .text-document, .text-editor-page { --text-automatic-padding: 16px; padding: var(--text-automatic-padding); } }
+.text-workbench .text-window[data-window-chrome] { --detached-window-gutter: 0px; border: 0; background: transparent; box-shadow: none; border-radius: 0; }
+.text-workbench .text-window[data-window-chrome] > .system-workflow__instrument-content { border-radius: inherit; }
+.text-workbench .text-window[data-window-chrome]::before, .text-workbench .text-window[data-window-chrome]::after { display: none; }
+.text-workbench .text-window[data-window-chrome]:has(.text-save-error) > .system-workflow__detached-window-titlebar { opacity: 1; pointer-events: auto; }
+.text-save-error { border: 1px solid currentColor; background: var(--workflow-panel); color: var(--workflow-ink); }
+.text-move-handle { touch-action: none; cursor: grab; }
+.text-transfer-preview { position: fixed; z-index: 10000; pointer-events: none; border: 1px dashed #ffffff; box-shadow: 0 0 0 1px #101111; box-sizing: border-box; }
+.text-transfer-preview span { position: absolute; left: 0; top: 0; color: #ffffff; background: #101111; padding: 4px 8px; font: 12px 'Inscape IBM Plex Sans Condensed'; }
+.display-text-content--article { white-space: normal; }
+.display-text-edit-actions { position: absolute; right: 2px; top: 2px; z-index: 5; display: flex; gap: calc(3px * var(--workbench-content-scale, 1)); }
+.display-text-edit-actions > * { zoom: var(--workbench-content-scale, 1); }
+.display-text-authoring { position: absolute; inset: 0; }
+.display-text-authoring .text-editor-page { cursor: text; }
+.system-workflow__placement .text-document img { position: static; max-width: 100%; max-height: 480px; object-fit: contain; }
+.text-document--compact { padding: 0; line-height: var(--text-line-height, 1.2); max-width: none; }
+.text-document--compact .text-document { line-height: inherit; max-width: none; }
+.text-document--compact p { margin: 0; }
+
+/* Shared role defaults project identically into Write, Read and Visitor.
+   Inline marks and block attributes retain their more specific overrides. */
+.text-document .text-document-body h1, .text-editor-content h1 { font-family: var(--text-h1-fontFamily, inherit); font-size: var(--text-h1-fontSize, 1.65em); color: var(--text-h1-color, inherit); line-height: var(--text-h1-lineHeight, 1.3); letter-spacing: var(--text-h1-letterSpacing, inherit); }
+.text-document .text-document-body h2, .text-editor-content h2 { font-family: var(--text-h2-fontFamily, inherit); font-size: var(--text-h2-fontSize, 1.35em); color: var(--text-h2-color, inherit); line-height: var(--text-h2-lineHeight, 1.3); letter-spacing: var(--text-h2-letterSpacing, inherit); }
+.text-document .text-document-body h3, .text-editor-content h3 { font-family: var(--text-h3-fontFamily, inherit); font-size: var(--text-h3-fontSize, 1.15em); color: var(--text-h3-color, inherit); line-height: var(--text-h3-lineHeight, 1.3); letter-spacing: var(--text-h3-letterSpacing, inherit); }
+.text-document .text-document-body figcaption, .text-editor-content figcaption { font-family: var(--text-caption-fontFamily, inherit); font-size: var(--text-caption-fontSize, .85em); color: var(--text-caption-color, inherit); line-height: var(--text-caption-lineHeight, inherit); letter-spacing: var(--text-caption-letterSpacing, inherit); }

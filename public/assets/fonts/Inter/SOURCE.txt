@@ -1,0 +1,6 @@
+Inter Variable — normal variable face, weights 100–900.
+Downloaded 2026-10-09 from the author's official distribution:
+https://rsms.me/inter/font-files/InterVariable.woff2
+License: https://github.com/rsms/inter/blob/master/LICENSE.txt (included as OFL.txt).
+Unmodified SHA-256: 693b77d4f32ee9b8bfc995589b5fad5e99adf2832738661f5402f9978429a8e3
+Used only by --font-creation-toolbar. Browser fallback: Arial, sans-serif.

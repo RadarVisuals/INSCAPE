@@ -78,22 +78,6 @@ html, body {
   transition: none;
 }
 
-.application-root[data-application-mode="atelier"] .application-interface[data-visible] {
-  pointer-events: none;
-}
-
-.atelier-experience {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-}
-
-.atelier-experience .mode-switch--atelier,
-.atelier-controls-toggle,
-.atelier-controls-panel {
-  pointer-events: auto;
-}
-
 @media (prefers-reduced-motion: reduce) {
   .application-world,
   .application-interface { transition-duration: 160ms; }

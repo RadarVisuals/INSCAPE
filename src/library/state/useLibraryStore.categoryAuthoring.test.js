@@ -67,6 +67,25 @@ test('membership add/remove is stable-ID based and repeated commands perform no 
   assert.equal(commands.setCategoryAsset(categoryId, ASSET_ID, false), false);
 });
 
+test('section commands persist profile-scoped category organization and return categories to root on delete', () => {
+  const storage = memoryStorage();
+  resetLibraryStoreForTests(PROFILE, storage);
+  const commands = createOwnerLatticeCategoryCommands(PROFILE);
+  const firstId = commands.createCategory('First'); const secondId = commands.createCategory('Second');
+  const archiveId = commands.createSection('Archive'); const currentId = commands.createSection('Current');
+  assert.ok(archiveId); assert.ok(currentId);
+  assert.equal(commands.moveCategory(secondId, archiveId), true);
+  assert.equal(commands.moveCategory(firstId, archiveId, secondId), true);
+  assert.equal(commands.renameSection(archiveId, 'Past'), true);
+  assert.equal(commands.moveSection(currentId, archiveId), true);
+  assert.equal(commands.deleteSection(archiveId), true);
+  assert.equal(flushLibraryWorkspace(), true);
+  assert.deepEqual(loadLibraryWorkspace(storage, PROFILE).categoryOrganization, {
+    rootCategoryIds: [firstId, secondId],
+    sections: [{ id: currentId, name: 'Current', categoryIds: [] }],
+  });
+});
+
 test('invalid input, cancellation, and stale captured callbacks produce zero writes', async () => {
   const storage = memoryStorage();
   resetLibraryStoreForTests(PROFILE, storage);
@@ -80,6 +99,7 @@ test('invalid input, cancellation, and stale captured callbacks produce zero wri
   storage.writes.length = 0;
   assert.equal(captured.createCategory('Must not cross profiles'), null);
   assert.equal(captured.setCategoryAsset('missing', ASSET_ID, true), false);
+  assert.equal(captured.createSection('Must not cross profiles'), null);
   await delay(220);
   assert.deepEqual(storage.writes, []);
   assert.deepEqual(useLibraryStore.getState().workspace.folders, []);
@@ -102,4 +122,15 @@ test('bulk category membership validates the canonical asset set and schedules o
   assert.equal(commands.setCategoryAssets(categoryId, [ASSET_ID, 'missing'], false), false);
   await delay(220);
   assert.deepEqual(storage.writes, []);
+});
+
+test('bulk category membership accepts a created-only stable ID explicitly supplied by the relationship projection', () => {
+  const storage = memoryStorage();
+  resetLibraryStoreForTests(PROFILE, storage);
+  useLibraryStore.setState({ assets: [{ id: ASSET_ID }] });
+  const commands = createOwnerLatticeCategoryCommands(PROFILE);
+  const categoryId = commands.createCategory('Created works');
+  assert.equal(commands.setCategoryAssets(categoryId, [SECOND_ASSET_ID], true, [SECOND_ASSET_ID]), true);
+  assert.deepEqual(useLibraryStore.getState().workspace.folders[0].assetIds, [SECOND_ASSET_ID]);
+  assert.equal(commands.setCategoryAssets(categoryId, ['not-canonical'], true, [SECOND_ASSET_ID]), false);
 });

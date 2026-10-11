@@ -1,4 +1,5 @@
 import { PROFILE_DOCUMENT_IPFS_GATEWAY_URL } from '../../library/config.js';
+import { isSafeOnchainSvgDataUri } from '../../library/data/onchainDataUri.js';
 import { isValidCid } from './cidValidation.js';
 
 const FORBIDDEN = /[\s\u0000-\u001f\u007f\\<>"']/u;
@@ -12,8 +13,11 @@ function parseHttps(value) {
 }
 
 export function parsePublishedAssetUrl(value) {
-  if (typeof value !== 'string' || !value || value.length > 2048 || value !== value.trim()
-    || FORBIDDEN.test(value) || ENCODED_CONTROL.test(value) || value.startsWith('//')) return null;
+  if (typeof value !== 'string' || !value || value !== value.trim()) return null;
+  if (/^data:/iu.test(value)) {
+    return isSafeOnchainSvgDataUri(value) ? { scheme: 'data', value } : null;
+  }
+  if (value.length > 2048 || FORBIDDEN.test(value) || ENCODED_CONTROL.test(value) || value.startsWith('//')) return null;
   if (/^ipfs:\/\//iu.test(value)) {
     const reference = value.slice(7);
     const [cid, ...parts] = reference.split('/');
@@ -30,7 +34,7 @@ export function isValidPublishedAssetUrl(value) { return Boolean(parsePublishedA
 export function resolvePublishedAssetUrl(value, { ipfsGateway = PROFILE_DOCUMENT_IPFS_GATEWAY_URL } = {}) {
   const parsed = parsePublishedAssetUrl(value);
   if (!parsed) return null;
-  if (parsed.scheme === 'https') return parsed.value;
+  if (parsed.scheme === 'https' || parsed.scheme === 'data') return parsed.value;
   const gateway = parseHttps(String(ipfsGateway || ''));
   if (!gateway) return null;
   const target = new URL(gateway);

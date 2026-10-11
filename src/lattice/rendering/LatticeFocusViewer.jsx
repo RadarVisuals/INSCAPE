@@ -1,39 +1,71 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { ChevronLeft, ChevronRight, X } from 'lucide-react';
 
 import LatticeFocusInspection from './LatticeFocusInspection.jsx';
 import { LatticeArtworkPresentation } from './LatticePlacementRenderer.jsx';
 import {
   DEFAULT_LATTICE_FOCUS_VIEWER_CONFIG,
   focusViewerEntryRectangle,
+  focusViewerIsolatedLayout,
   focusViewerLayout,
+  focusViewerPresentationDimensions,
   focusViewerRackLayout,
   normalizeViewerRectangle,
   shouldContainViewerScroll,
 } from './latticeFocusViewer.js';
+import {
+  interpolateLatticeProductionFocusRectangle,
+  LATTICE_PRODUCTION_FOCUS_LANDING_MS,
+  LATTICE_PRODUCTION_FOCUS_OPENING_MS,
+  LATTICE_PRODUCTION_FOCUS_TRANSITION_MS,
+  latticeProductionFocusOpeningProgress,
+  latticeProductionFocusTransitionProgress,
+} from './latticeProductionFocusArtworkMotion.js';
 import './latticeMenuSurface.css';
 import './latticeFocusViewer.css';
 
 const FOCUSABLE_SELECTOR = 'button:not([disabled]),a[href],[tabindex]:not([tabindex="-1"])';
+const POINTER_FOCUS_RETURN_ATTRIBUTE = 'data-lattice-pointer-focus-return';
 
-const viewportSize = () => ({
-  width: Math.max(1, window.innerWidth),
-  height: Math.max(1, window.innerHeight),
-});
+const markPointerFocusReturn = (node) => {
+  node.setAttribute(POINTER_FOCUS_RETURN_ATTRIBUTE, '');
+  const clear = () => {
+    node.removeAttribute(POINTER_FOCUS_RETURN_ATTRIBUTE);
+    node.removeEventListener('blur', clear);
+    globalThis.removeEventListener?.('keydown', clear, true);
+  };
+  node.addEventListener('blur', clear, { once: true });
+  globalThis.addEventListener?.('keydown', clear, { capture: true, once: true });
+};
+
+const viewportSize = (portalTarget, contained) => contained && portalTarget
+  ? { width: Math.max(1, portalTarget.clientWidth), height: Math.max(1, portalTarget.clientHeight) }
+  : { width: Math.max(1, window.innerWidth), height: Math.max(1, window.innerHeight) };
 
 export default function LatticeFocusViewer({
+  contained = false,
+  controlsTarget = null,
   dossier,
   entry,
   getReturnRectangle,
   gridVariables,
   gridVisible,
+  inspectionFrameGridVisible = true,
   inspectionVariant = 'paired',
+  inlineRackClose = false,
   onClosed,
+  onClosing,
+  onReturnLanding,
   onNavigate,
   originRectangle,
   menuSurfaceId,
+  navigationPlacement = 'viewport',
+  navigationViewportBottom = 18,
   overlayInk,
+  portalTarget = document.body,
   position,
+  recenterArtworkWhenInspectionClosed = false,
   renderArtwork,
   returnFocus,
   surfaceColor,
@@ -43,37 +75,66 @@ export default function LatticeFocusViewer({
   const artworkRef = useRef(null);
   const closeRef = useRef(null);
   const returnFocusRef = useRef(returnFocus);
+  const returnLandingRef = useRef(onReturnLanding);
+  const closeInputRef = useRef('programmatic');
   const previousLayerRef = useRef({ entry, originRectangle });
   const suppressArtworkClickRef = useRef(false);
   const swipeRef = useRef(null);
   const wheelRef = useRef({ accumulated: 0, blockedUntil: 0 });
   const wheelResetRef = useRef(null);
+  const closeCompletedRef = useRef(false);
   const origin = useMemo(() => normalizeViewerRectangle(originRectangle, 'originRectangle'), [originRectangle]);
   const [phase, setPhase] = useState('starting');
+  const [motionProgress, setMotionProgress] = useState(0);
   const [navigationLocked, setNavigationLocked] = useState(false);
   const [dossiersOpen, setDossiersOpen] = useState(true);
   const [activeDossier, setActiveDossier] = useState('narrative');
   const [outgoingLayer, setOutgoingLayer] = useState(null);
-  const [viewport, setViewport] = useState(viewportSize);
+  const [viewport, setViewport] = useState(() => viewportSize(portalTarget, contained));
   const [returnRectangle, setReturnRectangle] = useState(origin);
+  const [returnLanding, setReturnLanding] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(
     () => globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true,
   );
-  const layoutOrigin = focusViewerEntryRectangle(origin, entry.focusDimensions);
+  const presentationDimensions = focusViewerPresentationDimensions(entry);
+  const layoutOrigin = focusViewerEntryRectangle(origin, presentationDimensions);
   const rackInspection = inspectionVariant === 'rack';
-  const createLayout = (rectangle, size) => rackInspection
-    ? focusViewerRackLayout(rectangle, size, dossiersOpen)
-    : focusViewerLayout(rectangle, size, dossiersOpen);
+  const isolatedInspection = inspectionVariant === 'none';
+  const createLayout = (rectangle, size) => {
+    const nextLayout = isolatedInspection
+      ? focusViewerIsolatedLayout(rectangle, size, controlsTarget
+        ? { ...DEFAULT_LATTICE_FOCUS_VIEWER_CONFIG, isolatedNavigationClearance: 0 }
+        : DEFAULT_LATTICE_FOCUS_VIEWER_CONFIG)
+      : rackInspection
+      ? focusViewerRackLayout(rectangle, size, dossiersOpen)
+      : focusViewerLayout(rectangle, size, dossiersOpen);
+    if (!rackInspection || !recenterArtworkWhenInspectionClosed || dossiersOpen || nextLayout.mode !== 'rack') {
+      return nextLayout;
+    }
+    return {
+      ...nextLayout,
+      artwork: {
+        ...nextLayout.artwork,
+        left: (size.width - nextLayout.artwork.width) / 2,
+      },
+    };
+  };
   const layout = createLayout(layoutOrigin, viewport);
   const focusedRectangle = layout.artwork;
   const collapsedRectangle = phase === 'closing' ? returnRectangle : origin;
-  const collapsedTransform = {
-    x: collapsedRectangle.left - focusedRectangle.left,
-    y: collapsedRectangle.top - focusedRectangle.top,
-    scaleX: collapsedRectangle.width / focusedRectangle.width,
-    scaleY: collapsedRectangle.height / focusedRectangle.height,
-  };
+  const artworkRectangle = interpolateLatticeProductionFocusRectangle(
+    collapsedRectangle,
+    focusedRectangle,
+    motionProgress,
+  );
   returnFocusRef.current = returnFocus;
+  returnLandingRef.current = onReturnLanding;
+
+  const finishClose = useCallback(() => {
+    if (closeCompletedRef.current) return;
+    closeCompletedRef.current = true;
+    onClosed();
+  }, [onClosed]);
 
   useLayoutEffect(() => {
     const previous = previousLayerRef.current;
@@ -84,6 +145,7 @@ export default function LatticeFocusViewer({
 
   useLayoutEffect(() => {
     if (reducedMotion) {
+      setMotionProgress(1);
       setPhase('open');
       return undefined;
     }
@@ -98,10 +160,52 @@ export default function LatticeFocusViewer({
   }, [reducedMotion]);
 
   useEffect(() => {
-    const resize = () => setViewport(viewportSize());
+    if (phase !== 'opening' && phase !== 'closing') return undefined;
+    const opening = phase === 'opening';
+    const duration = opening ? LATTICE_PRODUCTION_FOCUS_OPENING_MS : LATTICE_PRODUCTION_FOCUS_TRANSITION_MS;
+    const startedAt = performance.now();
+    let frame = null;
+    const advance = (time) => {
+      const elapsed = Math.min(1, Math.max(0,
+        (time - startedAt) / duration));
+      const eased = opening
+        ? latticeProductionFocusOpeningProgress(elapsed)
+        : latticeProductionFocusTransitionProgress(elapsed);
+      setMotionProgress(opening ? eased : 1 - eased);
+      if (elapsed < 1) {
+        frame = requestAnimationFrame(advance);
+      } else {
+        // Commit the exact endpoint for one real paint before changing the
+        // lifecycle phase. Combining both updates in one render can leave the
+        // final animated sample fractionally short of its target and produce
+        // a one-device-pixel handoff at viewport-dependent coordinates.
+        setMotionProgress(opening ? 1 : 0);
+        frame = requestAnimationFrame(() => {
+          if (opening) setPhase('open');
+          else {
+            returnLandingRef.current?.();
+            setReturnLanding(true);
+          }
+        });
+      }
+    };
+    frame = requestAnimationFrame(advance);
+    return () => cancelAnimationFrame(frame);
+  }, [phase]);
+
+  useEffect(() => {
+    if (!returnLanding) return undefined;
+    const fallback = window.setTimeout(finishClose, LATTICE_PRODUCTION_FOCUS_LANDING_MS + 80);
+    return () => window.clearTimeout(fallback);
+  }, [finishClose, returnLanding]);
+
+  useEffect(() => {
+    const resize = () => setViewport(viewportSize(portalTarget, contained));
+    const observer = contained && typeof ResizeObserver === 'function' ? new ResizeObserver(resize) : null;
+    observer?.observe(portalTarget);
     window.addEventListener('resize', resize);
-    return () => window.removeEventListener('resize', resize);
-  }, []);
+    return () => { observer?.disconnect(); window.removeEventListener('resize', resize); };
+  }, [contained, portalTarget]);
 
   useEffect(() => {
     const query = globalThis.matchMedia?.('(prefers-reduced-motion: reduce)');
@@ -125,19 +229,25 @@ export default function LatticeFocusViewer({
   useEffect(() => {
     const root = rootRef.current;
     if (!root) return undefined;
+    const restoreFocus = () => {
+      if (!returnFocusRef.current?.isConnected) return;
+      if (closeInputRef.current === 'pointer') markPointerFocusReturn(returnFocusRef.current);
+      returnFocusRef.current.focus({ preventScroll: true });
+    };
+    closeRef.current?.focus({ preventScroll: true });
+    if (contained) return restoreFocus;
     const isolated = [...document.body.children]
       .filter((node) => node !== root)
       .map((node) => ({ node, hadInert: node.hasAttribute('inert'), inertValue: node.inert }));
     isolated.forEach(({ node }) => { node.inert = true; });
-    closeRef.current?.focus({ preventScroll: true });
     return () => {
       isolated.forEach(({ node, hadInert, inertValue }) => {
         if (hadInert) node.inert = inertValue;
         else node.removeAttribute('inert');
       });
-      if (returnFocusRef.current?.isConnected) returnFocusRef.current.focus({ preventScroll: true });
+      restoreFocus();
     };
-  }, []);
+  }, [contained]);
 
   const requestNavigation = useCallback((direction) => {
     if (phase !== 'open' || navigationLocked || total < 2) return;
@@ -145,16 +255,19 @@ export default function LatticeFocusViewer({
     onNavigate(direction);
   }, [navigationLocked, onNavigate, phase, total]);
 
-  const requestClose = useCallback(() => {
-    if (phase !== 'open' || navigationLocked) return;
+  const requestClose = useCallback((input = 'programmatic') => {
+    if (phase === 'closing' || navigationLocked) return;
+    if (phase !== 'open') return finishClose();
+    closeInputRef.current = input;
+    onClosing?.();
     const liveRectangle = getReturnRectangle?.();
     if (reducedMotion) {
-      onClosed();
+      finishClose();
       return;
     }
     setReturnRectangle(liveRectangle ? normalizeViewerRectangle(liveRectangle, 'returnRectangle') : origin);
     setPhase('closing');
-  }, [getReturnRectangle, navigationLocked, onClosed, origin, phase, reducedMotion]);
+  }, [finishClose, getReturnRectangle, navigationLocked, onClosing, origin, phase, reducedMotion]);
 
   const cycleArtworkViewer = useCallback(() => {
     if (suppressArtworkClickRef.current) {
@@ -162,15 +275,19 @@ export default function LatticeFocusViewer({
       return;
     }
     if (phase !== 'open' || navigationLocked) return;
+    if (isolatedInspection) {
+      requestNavigation(1);
+      return;
+    }
     setDossiersOpen((current) => !current);
-  }, [navigationLocked, phase]);
+  }, [isolatedInspection, navigationLocked, phase, requestNavigation]);
 
   useEffect(() => {
     const closeOnEscape = (event) => {
       if (event.key !== 'Escape') return;
       event.preventDefault();
       event.stopPropagation();
-      requestClose();
+      requestClose('keyboard');
     };
     window.addEventListener('keydown', closeOnEscape, true);
     return () => window.removeEventListener('keydown', closeOnEscape, true);
@@ -195,12 +312,6 @@ export default function LatticeFocusViewer({
       event.preventDefault();
       first.focus();
     }
-  };
-
-  const handleTransitionEnd = (event) => {
-    if (event.target !== event.currentTarget || event.propertyName !== 'transform') return;
-    if (phase === 'opening') setPhase('open');
-    else if (phase === 'closing') onClosed();
   };
 
   const handleWheel = (event) => {
@@ -257,7 +368,7 @@ export default function LatticeFocusViewer({
   const outgoingRectangle = outgoingLayer
     ? createLayout(focusViewerEntryRectangle(
       outgoingLayer.originRectangle,
-      outgoingLayer.entry.focusDimensions,
+      focusViewerPresentationDimensions(outgoingLayer.entry),
     ), viewport).artwork
     : null;
   const artworkLayer = (layerEntry, context) => renderArtwork
@@ -269,14 +380,19 @@ export default function LatticeFocusViewer({
       aria-label={`${entry.media.accessibleLabel || 'Artwork'} focus viewer`}
       aria-modal="true"
       className="lattice-focus-viewer"
+      data-contained={contained || undefined}
+      data-adaptive-rack-presentation={rackInspection
+        && (recenterArtworkWhenInspectionClosed || navigationPlacement === 'artwork') || undefined}
       data-lattice-focus-viewer
       data-layout={layout.mode}
       data-grid-visible={gridVisible}
+      data-inspection-frame-grid-visible={inspectionFrameGridVisible}
       data-menu-surface={menuSurfaceId}
       data-phase={phase}
+      data-return-landing={returnLanding || undefined}
       onKeyDown={handleKeyDown}
       onPointerDown={(event) => {
-        if (event.target === event.currentTarget) requestClose();
+        if (event.target === event.currentTarget) requestClose('pointer');
       }}
       onWheel={handleWheel}
       ref={rootRef}
@@ -285,12 +401,13 @@ export default function LatticeFocusViewer({
         ...gridVariables,
         '--lattice-viewer-browse-duration': `${DEFAULT_LATTICE_FOCUS_VIEWER_CONFIG.browseDuration}ms`,
         '--lattice-viewer-content-height': `${layout.contentHeight}px`,
+        '--lattice-viewer-landing-duration': `${LATTICE_PRODUCTION_FOCUS_LANDING_MS}ms`,
         '--lattice-overlay-ink': overlayInk,
         '--lattice-inspection-surface': surfaceColor,
       }}
     >
-      <div aria-hidden="true" className="lattice-focus-viewer__surface" />
-      <div aria-hidden="true" className="lattice-focus-viewer__content-spacer" />
+      <div className="lattice-focus-viewer__surface" />
+      <div className="lattice-focus-viewer__content-spacer" />
       {outgoingLayer && outgoingRectangle && (
         <div
           aria-hidden="true"
@@ -307,56 +424,76 @@ export default function LatticeFocusViewer({
             height: outgoingRectangle.height,
           }}
         >
-          {artworkLayer(outgoingLayer.entry, { phase: 'outgoing', focused: true })}
+          {artworkLayer(outgoingLayer.entry, {
+            phase: 'outgoing',
+            focused: true,
+            motion: {
+              currentRectangle: outgoingRectangle,
+              focusedRectangle: outgoingRectangle,
+              progress: 1,
+              sourceRectangle: outgoingRectangle,
+            },
+          })}
         </div>
       )}
       <div
         className="lattice-focus-viewer__artwork"
-        data-browsing={outgoingLayer ? true : undefined}
         onClick={cycleArtworkViewer}
         onPointerCancel={cancelSwipe}
         onPointerDown={beginSwipe}
+        onTransitionEnd={(event) => {
+          if (returnLanding && event.target === event.currentTarget && event.propertyName === 'opacity') finishClose();
+        }}
         onPointerUp={finishSwipe}
-        onTransitionEnd={handleTransitionEnd}
         ref={artworkRef}
         style={{
-          '--lattice-viewer-collapse-x': `${collapsedTransform.x}px`,
-          '--lattice-viewer-collapse-y': `${collapsedTransform.y}px`,
-          '--lattice-viewer-collapse-scale-x': collapsedTransform.scaleX,
-          '--lattice-viewer-collapse-scale-y': collapsedTransform.scaleY,
-          left: focusedRectangle.left,
-          top: focusedRectangle.top,
-          width: focusedRectangle.width,
-          height: focusedRectangle.height,
+          left: artworkRectangle.left,
+          top: artworkRectangle.top,
+          width: artworkRectangle.width,
+          height: artworkRectangle.height,
         }}
       >
-        {artworkLayer(entry, { phase, focused: phase === 'open' || phase === 'opening' })}
+        {artworkLayer(entry, {
+          phase,
+          focused: phase === 'open' || phase === 'opening',
+          motion: {
+            currentRectangle: artworkRectangle,
+            focusedRectangle,
+            progress: motionProgress,
+            sourceRectangle: collapsedRectangle,
+          },
+        })}
       </div>
-      <LatticeFocusInspection
+      {!isolatedInspection && <LatticeFocusInspection
         activeSection={activeDossier}
+        closeButtonRef={inlineRackClose ? closeRef : undefined}
         dossier={dossier}
         layout={layout}
+        onClose={inlineRackClose ? (event) => requestClose(event.detail === 0 ? 'keyboard' : 'pointer') : undefined}
         onSectionChange={setActiveDossier}
         open={dossiersOpen}
         variant={inspectionVariant}
-      />
-      <nav
+      />}
+      {!controlsTarget && <nav
         aria-label="Artwork viewer navigation"
         className="lattice-focus-viewer__navigation"
         style={rackInspection ? {
-          left: layout.artwork.left + (layout.artwork.width / 2),
-          ...(layout.mode === 'rack-compact' ? { bottom: 'auto', top: layout.artwork.top + layout.artwork.height + 18 } : {}),
+          left: navigationPlacement === 'artwork'
+            ? layout.artwork.left + (layout.artwork.width / 2)
+            : '50%',
+          ...(layout.mode === 'rack-compact' || navigationPlacement === 'artwork'
+            ? { bottom: 'auto', top: layout.artwork.top + layout.artwork.height + 18 }
+            : { bottom: navigationViewportBottom }),
         } : undefined}
       >
-        <button aria-disabled={navigationLocked || total < 2} aria-label="Previous artwork" onClick={() => requestNavigation(-1)} type="button">‹</button>
+        <button aria-disabled={navigationLocked || total < 2} aria-label="Previous artwork" onClick={() => requestNavigation(-1)} type="button"><ChevronLeft aria-hidden="true" /></button>
         <span>{String(position + 1).padStart(2, '0')} / {String(total).padStart(2, '0')}</span>
-        <button aria-disabled={navigationLocked || total < 2} aria-label="Next artwork" onClick={() => requestNavigation(1)} type="button">›</button>
-      </nav>
-      <div
+        <button aria-disabled={navigationLocked || total < 2} aria-label="Next artwork" onClick={() => requestNavigation(1)} type="button"><ChevronRight aria-hidden="true" /></button>
+      </nav>}
+      {!controlsTarget && !inlineRackClose && <div
         className="lattice-focus-viewer__close-control"
-        data-disabled={phase !== 'open' || navigationLocked || undefined}
         style={{
-          ...(rackInspection ? { left: 'auto', right: 18, top: 18, transform: 'none' } : {
+          ...((rackInspection || isolatedInspection) ? { left: 'auto', right: 18, top: 18, transform: 'none' } : {
             left: layout.inspectionFrame.left + (layout.inspectionFrame.width / 2),
             top: Math.max(16, layout.inspectionFrame.top - 118),
           }),
@@ -366,13 +503,26 @@ export default function LatticeFocusViewer({
           aria-label="Close artwork viewer"
           aria-disabled={phase !== 'open' || navigationLocked}
           className="lattice-focus-viewer__close"
-          onClick={requestClose}
+          onClick={(event) => requestClose(event.detail === 0 ? 'keyboard' : 'pointer')}
           ref={closeRef}
           type="button"
-        >×</button>
-        <span>CLOSE INSPECTION</span>
-      </div>
+        ><X aria-hidden="true" /></button>
+        <span>Close inspection</span>
+      </div>}
+      {controlsTarget && createPortal(<div className="lattice-focus-viewer__board-controls" data-phase={phase}>
+        <strong>INSPECT</strong>
+        {total > 1 && <>
+          <button aria-disabled={navigationLocked} aria-label="Previous artwork"
+            className="is-previous" onClick={() => requestNavigation(-1)} type="button"><ChevronLeft aria-hidden="true" /></button>
+          <span>{String(position + 1).padStart(2, '0')} / {String(total).padStart(2, '0')}</span>
+          <button aria-disabled={navigationLocked} aria-label="Next artwork"
+            className="is-next" onClick={() => requestNavigation(1)} type="button"><ChevronRight aria-hidden="true" /></button>
+        </>}
+        <button aria-disabled={phase !== 'open' || navigationLocked} aria-label="Close artwork viewer"
+          className="is-close" onClick={(event) => requestClose(event.detail === 0 ? 'keyboard' : 'pointer')}
+          ref={closeRef} type="button"><X aria-hidden="true" /></button>
+      </div>, controlsTarget)}
     </section>,
-    document.body,
+    portalTarget,
   );
 }

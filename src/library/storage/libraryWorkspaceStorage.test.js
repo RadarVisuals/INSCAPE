@@ -24,7 +24,7 @@ test('malformed and wrong-profile storage recovers to an empty workspace', () =>
   assert.deepEqual(wrong.favorites, []);
 });
 
-test('v8 table placements persist while v7 migration starts with empty tables', () => {
+test('v8 table placements migrate to v9 while v7 migration starts with empty tables', () => {
   const storage = memoryStorage();
   const current = normalizeWorkspace({
     version: 8,
@@ -39,6 +39,7 @@ test('v8 table placements persist while v7 migration starts with empty tables', 
   }, profile);
   assert.equal(saveLibraryWorkspace(storage, current), true);
   assert.deepEqual(loadLibraryWorkspace(storage, profile).tables, current.tables);
+  assert.deepEqual(loadLibraryWorkspace(storage, profile).categoryOrganization, { rootCategoryIds: [], sections: [] });
 
   const legacyStorage = memoryStorage({
     [libraryWorkspaceKey(profile, 7)]: JSON.stringify({
@@ -48,7 +49,7 @@ test('v8 table placements persist while v7 migration starts with empty tables', 
   assert.deepEqual(loadLibraryWorkspace(legacyStorage, profile).tables, { placements: [] });
 });
 
-test('Phase 1 data migrates to v8 without changing favorites, folder names, or multi-folder memberships', () => {
+test('Phase 1 data migrates to v9 without changing favorites, folder names, or multi-folder memberships', () => {
   const phaseOne = { version: 1, profileAddress: profile, favorites: ['asset-a', 'asset-b'], folders: [
     { id: 'one', name: 'One / Ones', assetIds: ['asset-a', 'asset-c'], createdAt: 1, updatedAt: 2 },
     { id: 'friends', name: 'Works by Friends', assetIds: ['asset-a', 'asset-d'], createdAt: 3, updatedAt: 4 }
@@ -56,12 +57,13 @@ test('Phase 1 data migrates to v8 without changing favorites, folder names, or m
   const storage = memoryStorage({ [libraryWorkspaceKey(profile, 1)]: JSON.stringify(phaseOne) });
   const migrated = loadLibraryWorkspace(storage, profile);
 
-  assert.equal(migrated.version, 8);
+  assert.equal(migrated.version, 9);
   assert.deepEqual(migrated.favorites, phaseOne.favorites);
   assert.deepEqual(migrated.folders, phaseOne.folders.map((folder) => ({ ...folder, public: false })));
   assert.deepEqual(migrated.canvas.launchers, []);
   assert.deepEqual(migrated.canvas.objects, []);
   assert.deepEqual(migrated.tables.placements, []);
+  assert.deepEqual(migrated.categoryOrganization, { rootCategoryIds: ['one', 'friends'], sections: [] });
   assert.ok(storage.values.has(libraryWorkspaceKey(profile)));
 });
 
@@ -81,7 +83,7 @@ test('v2 pinned spaces migrate folder publication before launcher records are di
   ], canvas: { launchers: [{ id: 'ignored', viewType: 'folder', folderId: 'existing', position: { column: 3, row: 4 }, windowPosition: null }] } };
   const storage = memoryStorage({ [libraryWorkspaceKey(profile, 2)]: JSON.stringify(phaseTwo) });
   const migrated = loadLibraryWorkspace(storage, profile);
-  assert.equal(migrated.version, 8);
+  assert.equal(migrated.version, 9);
   assert.equal(migrated.folders[0].public, true);
   assert.deepEqual(migrated.canvas.launchers, []);
   assert.ok(storage.values.has(libraryWorkspaceKey(profile)));
@@ -95,14 +97,37 @@ test('v4 and v5 launcher presentation is retired without affecting folders', () 
   assert.deepEqual(current.canvas.launchers, []);
 });
 
-test('v5 workspaces migrate purely to an empty canvas-object collection and v6 objects normalize into v8', () => {
+test('v5 workspaces migrate purely to an empty canvas-object collection and v6 objects normalize into v9', () => {
   const v5 = { version: 5, profileAddress: profile, favorites: ['kept'], folders: [], canvas: { launchers: [] } };
   const migrated = normalizeWorkspace(v5, profile);
-  assert.equal(migrated.version, 8); assert.deepEqual(migrated.favorites, ['kept']); assert.deepEqual(migrated.canvas.objects, []);
+  assert.equal(migrated.version, 9); assert.deepEqual(migrated.favorites, ['kept']); assert.deepEqual(migrated.canvas.objects, []);
   const current = normalizeWorkspace({ ...v5, version: 6, canvas: { launchers: [], objects: [{
     id: 'canvas:artwork:one', kind: 'framed-artwork', stableAssetId: '42:0x1111111111111111111111111111111111111111:0x01', visitorVisible: true, locked: true,
     placement: { column: 4, row: 5 }, span: { columns: 4, rows: 4 }, presentationOrder: 99,
     presentation: { fit: 'cover', frame: 'heavy', mat: 'light', background: 'neutral' }
   }] } }, profile);
   assert.equal(current.canvas.objects.length, 1); assert.equal(current.canvas.objects[0].presentationOrder, 0); assert.equal(current.canvas.objects[0].locked, true);
+});
+
+test('v9 category organization removes malformed references and assigns unmentioned categories to root', () => {
+  const current = normalizeWorkspace({
+    version: 9, profileAddress: profile, favorites: [],
+    folders: [
+      { id: 'one', name: 'One', assetIds: [], createdAt: 1, updatedAt: 1 },
+      { id: 'two', name: 'Two', assetIds: [], createdAt: 1, updatedAt: 1 },
+      { id: 'three', name: 'Three', assetIds: [], createdAt: 1, updatedAt: 1 },
+    ],
+    categoryOrganization: {
+      rootCategoryIds: ['one', 'missing', 'one'],
+      sections: [
+        { id: 'archive', name: ' Archive ', categoryIds: ['two', 'missing', 'two'] },
+        { id: 'archive', name: 'Duplicate', categoryIds: ['three'] },
+      ],
+    },
+    canvas: { launchers: [], objects: [] }, tables: { placements: [] },
+  }, profile);
+  assert.deepEqual(current.categoryOrganization, {
+    rootCategoryIds: ['one', 'three'],
+    sections: [{ id: 'archive', name: 'Archive', categoryIds: ['two'] }],
+  });
 });

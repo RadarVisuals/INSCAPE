@@ -5,9 +5,8 @@ import { readFileSync } from 'node:fs';
 import { CANONICAL_LATTICE_ARTBOARD, FRAME_IDS, TRANSPARENCY_MODES } from '../domain/latticeProfile.js';
 import {
   projectTableMediaPlacements,
-  resolvedTransparencyMode,
 } from './latticePlacement.js';
-import { ARTWORK_MAT_PRESET_IDS, resolveArtworkMatPreset } from './latticeMat.js';
+
 
 const ASSET_A = '42:0x1111111111111111111111111111111111111111:0x01';
 const ASSET_B = '42:0x2222222222222222222222222222222222222222:0x02';
@@ -37,12 +36,6 @@ test('each render projection contains only placements owned by its authored tabl
   assert.deepEqual(projectTableMediaPlacements({ ...input, table: second }).map(({ placement: item, tableId }) => [item.id, tableId]), [
     ['placement-b', 'table-06'],
   ]);
-});
-
-test('AUTO and PRESERVE_ALPHA resolve to the exact same deterministic presentation mode', () => {
-  assert.equal(resolvedTransparencyMode(TRANSPARENCY_MODES.AUTO), TRANSPARENCY_MODES.PRESERVE_ALPHA);
-  assert.equal(resolvedTransparencyMode(TRANSPARENCY_MODES.PRESERVE_ALPHA), TRANSPARENCY_MODES.PRESERVE_ALPHA);
-  assert.equal(resolvedTransparencyMode(TRANSPARENCY_MODES.OPAQUE), TRANSPARENCY_MODES.OPAQUE);
 });
 
 test('cover framing offset projects the complete owned composition with the table', () => {
@@ -104,84 +97,9 @@ test('Arrange exposes navigation-ordered focus while native hit testing uses vis
   assert.match(styles, /\.lattice-placement-layer\.is-arranging \.lattice-placement\s*\{[^}]*pointer-events: auto/s);
 });
 
-test('one generic mat controls the complete selection and four-sided media opening', () => {
-  const mat = { enabled: true, color: '#123456', inset: { top: 0.1, right: 0.2, bottom: 0.3, left: 0.4 } };
-  const [entry] = projectTableMediaPlacements({
-    artworkMatsByPlacementId: { 'placement-a': mat },
-    assetsByStableId: media,
-    artboard: CANONICAL_LATTICE_ARTBOARD,
-    table: table('table-05', { x: 0, y: 0 }, [placement({ crop: { x: 0.5, y: 0.5, zoom: 1 } })]),
-    viewport: { width: 1600, height: 900 },
-  });
-  assert.deepEqual(entry.backplateRectangle, { left: 0, top: 0, width: 800, height: 450 });
-  assert.deepEqual(entry.selectionRectangle, entry.backplateRectangle);
-  assert.deepEqual({ ...entry.mediaRectangle, height: Math.round(entry.mediaRectangle.height) }, { left: 320, top: 45, width: 320, height: 270 });
-  assert.deepEqual(entry.mat, mat);
-});
-
-test('mat color and transparency mode remain independent projection values', () => {
-  const mat = resolveArtworkMatPreset(ARTWORK_MAT_PRESET_IDS.DOSSIER);
-  const [entry] = projectTableMediaPlacements({
-    artworkMatsByPlacementId: { 'placement-a': mat },
-    assetsByStableId: media,
-    artboard: CANONICAL_LATTICE_ARTBOARD,
-    table: table('table-05', { x: 0, y: 0 }, [placement({
-      transparencyMode: TRANSPARENCY_MODES.OPAQUE,
-    })]),
-    viewport: { width: 1600, height: 900 },
-  });
-  assert.equal(entry.mat.color, '#d8d4ca');
-  assert.equal(entry.transparencyMode, TRANSPARENCY_MODES.OPAQUE);
-});
-
-test('transparent artwork backing remains independent from mat and transparency values', () => {
-  const [entry] = projectTableMediaPlacements({
-    artworkBackingsByPlacementId: { 'placement-a': { enabled: true, color: '#102030' } },
-    artworkMatsByPlacementId: { 'placement-a': resolveArtworkMatPreset(ARTWORK_MAT_PRESET_IDS.DOSSIER) },
-    assetsByStableId: media,
-    artboard: CANONICAL_LATTICE_ARTBOARD,
-    table: table('table-05', { x: 0, y: 0 }, [placement({ transparencyMode: TRANSPARENCY_MODES.PRESERVE_ALPHA })]),
-    viewport: { width: 1600, height: 900 },
-  });
-  assert.deepEqual(entry.backing, { enabled: true, color: '#102030' });
-  assert.equal(entry.mat.color, '#d8d4ca');
-  assert.equal(entry.transparencyMode, TRANSPARENCY_MODES.PRESERVE_ALPHA);
-});
-
-test('renderer uses one continuous borderless backplate beneath transparent media', () => {
+test('artwork media has no synthetic backing or transparency override', () => {
   const source = readFileSync(new URL('./LatticePlacementRenderer.jsx', import.meta.url), 'utf8');
-  const styles = readFileSync(new URL('./latticePlacementRenderer.css', import.meta.url), 'utf8');
-  assert.match(source, /className="lattice-placement-backplate"[\s\S]*'--lattice-mat-color': mat\.color/);
-  assert.match(source, /selectedEntry\.selectionRectangle/);
-  assert.match(styles, /\.lattice-placement-backplate\s*\{[^}]*inset: 0;[^}]*background-color: var\(--lattice-mat-color\);/s);
-  assert.match(styles, /color-mix\(in srgb, var\(--lattice-mat-color\)/);
-  const backplateRule = styles.match(/\.lattice-placement-backplate\s*\{([^}]*)\}/)?.[1] || '';
-  assert.doesNotMatch(backplateRule, /border|outline|stroke/);
-  assert.match(styles, /\.lattice-placement-media\s*\{[^}]*background: transparent;[^}]*z-index: 1;/s);
-  assert.doesNotMatch(source, /frameId ===|is-dossier|is-caption|frameBar/);
-});
-
-test('renderer-owned aperture overlaps the artwork perimeter without owning input or authoring state', () => {
-  const source = readFileSync(new URL('./LatticePlacementRenderer.jsx', import.meta.url), 'utf8');
-  const styles = readFileSync(new URL('./latticePlacementRenderer.css', import.meta.url), 'utf8');
-  const mediaIndex = source.indexOf('className={`lattice-placement-media');
-  const apertureIndex = source.indexOf('className="lattice-placement-aperture"');
-  assert.ok(mediaIndex >= 0 && apertureIndex > mediaIndex);
-  assert.match(source, /className="lattice-placement-aperture"[\s\S]*percentage\(mediaRectangle\.left - selectionRectangle\.left, selectionRectangle\.width\)/);
-  const apertureRuleStart = styles.lastIndexOf('.lattice-placement-aperture {');
-  const apertureRule = styles.slice(apertureRuleStart, styles.indexOf('}', apertureRuleStart));
-  assert.match(apertureRule, /z-index: 2/);
-  assert.match(apertureRule, /pointer-events: none/);
-  assert.match(apertureRule, /inset 0 0 0 1px rgba\(0, 0, 0/);
-  assert.match(apertureRule, /inset 3px 3px 7px rgba\(0, 0, 0/);
-  assert.match(apertureRule, /inset -1px -1px 2px rgba\(255, 255, 255/);
-  assert.doesNotMatch(apertureRule, /(?:^|\s)(?:border|filter|opacity|transform)\s*:/);
-  assert.doesNotMatch(source, /shadowControl|bevelControl|textureControl|depthControl/);
-});
-
-test('optional artwork background colors only the media opening beneath alpha artwork', () => {
-  const source = readFileSync(new URL('./LatticePlacementRenderer.jsx', import.meta.url), 'utf8');
-  assert.match(source, /backgroundColor: backing\.enabled \? backing\.color : undefined/);
+  assert.doesNotMatch(source, /backgroundColor|backing|is-opaque|data-transparency-mode/);
   assert.match(source, /left: percentage\(mediaRectangle\.left - selectionRectangle\.left, selectionRectangle\.width\)/);
   assert.doesNotMatch(source, /backplate[^\n]*backing\.color/);
 });
@@ -216,7 +134,7 @@ test('crop masking is explicit, transparent by default, and hides resize handles
   assert.match(styles, /\.lattice-placement-selection-overlay\.is-crop-editing\s*\{[^}]*pointer-events: auto/s);
 });
 
-test('OPAQUE background is bounded by the fitted native-media rectangle, never the cell footprint', () => {
+test('native media remains fitted within the cell footprint without an opaque background', () => {
   const source = readFileSync(new URL('./LatticePlacementRenderer.jsx', import.meta.url), 'utf8');
   const styles = readFileSync(new URL('./latticePlacementRenderer.css', import.meta.url), 'utf8');
   const [entry] = projectTableMediaPlacements({
@@ -228,7 +146,7 @@ test('OPAQUE background is bounded by the fitted native-media rectangle, never t
   assert.deepEqual(entry.mediaRectangle, { left: 0, top: 25, width: 800, height: 400 });
   assert.match(source, /left: percentage\(mediaRectangle\.left/);
   assert.match(source, /width: percentage\(mediaRectangle\.width/);
-  assert.match(styles, /\.lattice-placement-media\.is-opaque\s*\{[^}]*background:/s);
+  assert.doesNotMatch(styles, /\.lattice-placement-media\.is-opaque/);
   assert.doesNotMatch(styles, /\.lattice-placement-layer\s*\{[^}]*background:/s);
 });
 

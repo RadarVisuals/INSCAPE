@@ -1,0 +1,12 @@
+.system-workflow__display-size-dialog { position: fixed; inset: 0; margin: auto; padding: 0; width: min(360px, calc(100vw - 32px)); height: fit-content; max-height: calc(100dvh - 32px); overflow: auto; border: 0; color: var(--workflow-ink); background: var(--workflow-panel); pointer-events: auto; }
+.system-workflow__display-size-dialog:not([open]) { display: none; }
+.system-workflow__display-size-dialog::backdrop { background: transparent; }
+.system-workflow__display-size-dialog form { width: 100%; box-sizing: border-box; }
+.system-workflow__display-size-dialog header { padding: 12px 14px; border-bottom: 1px solid var(--workflow-border); font: var(--workflow-type-panel-heading); }
+.display-size-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.display-size-fields label { min-width: 0; }
+.display-size-fields input { width: 100%; min-width: 0; box-sizing: border-box; color: inherit; font: var(--workflow-type-control); border-radius: 0; }
+.system-workflow__display-size-dialog p { min-height: 0; padding: 0 14px 12px; font: var(--workflow-type-panel-body); letter-spacing: normal; }
+.system-workflow__display-size-dialog button { color: inherit; min-height: 38px; cursor: pointer; }
+.system-workflow__display-size-dialog button:hover { background: var(--workflow-hover); }
+.system-workflow__display-size-dialog :focus-visible { outline: 1px solid var(--workflow-ink); outline-offset: -2px; }

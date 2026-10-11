@@ -1,34 +1,16 @@
 export const STARTVEIL_SESSION_KEY = 'inscape.startveil.seen.v1';
 
 export const STARTVEIL_STATES = Object.freeze({
-  LOADING: 'loading', DORMANT: 'dormant', ENTERING: 'entering', BOOTING: 'booting',
-  BLACK_HANDOFF: 'black-handoff',
-  REVEALING_WORLD: 'revealing-world', REVEALING_RESIDENT: 'revealing-resident',
+  LOADING: 'loading', DORMANT: 'dormant',
   REVEALING_INTERFACE: 'revealing-interface', COMPLETE: 'complete'
 });
 
 const NEXT_STATE = Object.freeze({
-  [STARTVEIL_STATES.ENTERING]: STARTVEIL_STATES.BOOTING,
-  [STARTVEIL_STATES.BOOTING]: STARTVEIL_STATES.BLACK_HANDOFF,
-  [STARTVEIL_STATES.BLACK_HANDOFF]: STARTVEIL_STATES.REVEALING_WORLD,
-  [STARTVEIL_STATES.REVEALING_WORLD]: STARTVEIL_STATES.REVEALING_RESIDENT,
-  [STARTVEIL_STATES.REVEALING_RESIDENT]: STARTVEIL_STATES.REVEALING_INTERFACE,
   [STARTVEIL_STATES.REVEALING_INTERFACE]: STARTVEIL_STATES.COMPLETE
 });
 
-const FULL_SEQUENCE_MS = Object.freeze({
-  [STARTVEIL_STATES.ENTERING]: 260, [STARTVEIL_STATES.BOOTING]: 600,
-  [STARTVEIL_STATES.BLACK_HANDOFF]: 150,
-  [STARTVEIL_STATES.REVEALING_WORLD]: 350, [STARTVEIL_STATES.REVEALING_RESIDENT]: 350,
-  [STARTVEIL_STATES.REVEALING_INTERFACE]: 1260
-});
-
-const SHORT_SEQUENCE_MS = Object.freeze({
-  [STARTVEIL_STATES.ENTERING]: 160, [STARTVEIL_STATES.BOOTING]: 100,
-  [STARTVEIL_STATES.BLACK_HANDOFF]: 80,
-  [STARTVEIL_STATES.REVEALING_WORLD]: 140, [STARTVEIL_STATES.REVEALING_RESIDENT]: 160,
-  [STARTVEIL_STATES.REVEALING_INTERFACE]: 140
-});
+export const STARTVEIL_REVEAL_MS = 200;
+export const STARTVEIL_RETURN_REVEAL_MS = 120;
 
 export function createStartveilState(ready = false) {
   return ready ? STARTVEIL_STATES.DORMANT : STARTVEIL_STATES.LOADING;
@@ -36,13 +18,14 @@ export function createStartveilState(ready = false) {
 
 export function transitionStartveil(state, event) {
   if (event === 'READY' && state === STARTVEIL_STATES.LOADING) return STARTVEIL_STATES.DORMANT;
-  if (event === 'ENTER' && state === STARTVEIL_STATES.DORMANT) return STARTVEIL_STATES.ENTERING;
+  if (event === 'ENTER' && state === STARTVEIL_STATES.DORMANT) return STARTVEIL_STATES.REVEALING_INTERFACE;
   if (event === 'ADVANCE') return NEXT_STATE[state] ?? state;
   return state;
 }
 
-export function getStartveilStateDuration(state, shortened = false) {
-  return (shortened ? SHORT_SEQUENCE_MS : FULL_SEQUENCE_MS)[state] ?? null;
+export function getStartveilStateDuration(state, shortened = false, reducedMotion = false) {
+  if (state !== STARTVEIL_STATES.REVEALING_INTERFACE) return null;
+  return reducedMotion ? 0 : shortened ? STARTVEIL_RETURN_REVEAL_MS : STARTVEIL_REVEAL_MS;
 }
 
 export function isStartveilRunning(state) {
