@@ -1,10 +1,10 @@
 // All rectangles are in Workbench coordinates or host-local screen coordinates,
 // as specified by the caller. None of these calculations change module geometry.
-export function workbenchDestinationCamera(bounds, viewport, minimumScale = .25) {
+export function workbenchDestinationCamera(bounds, viewport, minimumScale = .25, padding = 32) {
   if (!bounds || !viewport || ![bounds.left, bounds.top, bounds.width, bounds.height,
     viewport.left, viewport.top, viewport.width, viewport.height].every(Number.isFinite)
     || bounds.width <= 0 || bounds.height <= 0 || viewport.width <= 0 || viewport.height <= 0) return null;
-  const margin = Math.min(32, viewport.width / 4, viewport.height / 4);
+  const margin = Math.min(Math.max(0, padding), viewport.width / 4, viewport.height / 4);
   const scale = Math.max(minimumScale, Math.min(2,
     (viewport.width - margin * 2) / bounds.width, (viewport.height - margin * 2) / bounds.height));
   return { scale, offset: {

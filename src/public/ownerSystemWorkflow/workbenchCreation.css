@@ -3,7 +3,7 @@
 .system-workflow[data-creation-tool="text"] .system-workflow__presentation-board:not([data-authoring-locked]):not([data-inspecting]) :is(.system-workflow__canvas, .system-workflow__placement) {
   cursor: text;
 }
-.system-workflow[data-creation-tool="shape"] { cursor: crosshair; }
+.system-workflow:is([data-creation-tool="shape"], [data-creation-tool="shape-grid"]) { cursor: crosshair; }
 .workbench-creation-hint {
   position: fixed;
   z-index: 83;

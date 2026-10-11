@@ -26,7 +26,7 @@ test('Workbench preferences remain profile-scoped local editor state', () => {
   }, storage);
 
   assert.deepEqual(saved, {
-    edgeSnap: true, moduleGap: 0, chromeNoise: false, compositionLocked: true, dockVisible: true, gridColor: '#aabbcc', gridMode: 'DOTS', shortcutSnap: false, surfaceId: 'carbon',
+    gridSpacing: 24, edgeSnap: true, moduleGap: 0, chromeNoise: false, compositionLocked: true, dockVisible: true, gridColor: '#aabbcc', gridMode: 'DOTS', shortcutSnap: false, surfaceId: 'carbon',
   });
   assert.deepEqual(loadWorkbenchPreferences(profile, 'paper', storage), saved);
   assert.equal(storage.values.size, 1);
@@ -84,4 +84,14 @@ test('Workbench preferences reject malformed local values and inherit the curren
     surfaceId: 'paper',
   });
   assert.equal(workbenchGridColorPreview('carbon'), '#1d1e1d');
+});
+
+test('cell size persists, invalid spacing is rejected, and only fresh workspaces begin without guides', () => {
+  const storage = memoryStorage();
+  assert.equal(loadWorkbenchPreferences('fresh', 'mist', storage, true).gridMode, 'NONE');
+  assert.equal(loadWorkbenchPreferences('existing', 'mist', storage, false).gridMode, 'LINES');
+  saveWorkbenchPreferences('fresh', { gridMode: 'DOTS', gridSpacing: 37.5 }, storage);
+  assert.equal(loadWorkbenchPreferences('fresh', 'mist', storage, true).gridMode, 'DOTS');
+  assert.equal(loadWorkbenchPreferences('fresh', 'mist', storage, true).gridSpacing, 37.5);
+  for (const gridSpacing of [0, 7, 513, NaN, '24']) assert.equal(normalizeWorkbenchPreferences({ gridSpacing }).gridSpacing, 24);
 });

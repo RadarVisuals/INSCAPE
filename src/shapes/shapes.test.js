@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { addShape, editShape, reorderShape, prepareShapeResize } from './shapeSession.js';
-import { validShapes } from './shapes.js';
+import { validShapes, createShapePresentation, isShapeCommand } from './shapes.js';
 import { createSystemWorkflowDraftStore } from '../systemWorkflow/systemWorkflowDraftStore.js';
 import { buildProfileDocumentV9 } from '../profileDocument/domain/profileDocumentV9Builder.js';
 import { reconcileSystemWorkflowDraftFromProfileDocumentV9 } from '../profileDocument/domain/profileDocumentV9Reconciliation.js';
@@ -16,7 +16,80 @@ function fixture() {
   const storage = { getItem: key => entries.get(key) ?? null, setItem: (key, value) => { if (fail) throw Error('full'); entries.set(key, value); } };
   return { store: createSystemWorkflowDraftStore({ profileAddress: profile, storage }), storage, fail: value => { fail = value; } };
 }
+function addLegacyTexture(store, placed = {}) {
+  const draft = store.getDraft(), id = `shape:${crypto.randomUUID()}`;
+  const record = { id, kind: 'texture', texture: { scale: 1 }, color: '#ffffff', opacity: .25, visibility: 'PUBLIC', name: 'Legacy texture' };
+  const presentation = createShapePresentation(id);
+  presentation.window = { ...presentation.window, ...placed.position, ...placed.size };
+  assert.ok(store.commitCompletedOperation({ ...draft, shapes: [...(draft.shapes || []), record],
+    workbench: { ...draft.workbench, shapes: [...(draft.workbench?.shapes || []), presentation] } }, { expectedGeneration: store.getGeneration() }));
+  return id;
+}
 const build = draft => buildProfileDocumentV9({ profileAddress: profile, systemWorkflowDraft: draft, assetRecords: [] });
+
+test('Grid and noise Texture retain transparent-pattern settings through editing, duplication, resize, undo, reload and publication', () => {
+  const { store, storage } = fixture();
+  addShape(store, profile);
+  const legacy = store.getDraft(), oldDocument = build(legacy);
+  for (const kind of ['grid', 'texture']) {
+    const before = store.getDraft();
+    const placed = { kind, position: { left: 480, top: 240 }, size: { width: 600, height: 400 } };
+    const id = kind === 'texture' ? addLegacyTexture(store, placed) : addShape(store, profile, placed);
+    let record = store.getDraft().shapes.find(item => item.id === id);
+    assert.equal(record.kind, kind);
+    assert.ok(store.undo()); assert.deepEqual(store.getDraft(), before); assert.ok(store.redo());
+    const settings = kind === 'grid' ? { grid: { spacing: 40, lineWidth: 1.5 } } : { texture: { scale: 2.5 } };
+    editShape(store, profile, record, { ...settings, color: '#84aabb', opacity: .65 });
+    record = store.getDraft().shapes.find(item => item.id === id);
+    const copyId = addShape(store, profile, null, record);
+    const copy = store.getDraft().shapes.find(item => item.id === copyId);
+    assert.deepEqual(copy[kind], settings[kind]); assert.equal(copy.opacity, .65);
+    assert.ok(commitWorkbenchSelectionResize([{ store, profileAddress: profile, expected: copy, id: copyId,
+      layoutKey: 'shapes', prepare: prepareShapeResize, left: 100, top: 200, width: 1200, height: 800 }]));
+    assert.deepEqual(store.getDraft().shapes.find(item => item.id === copyId)[kind], settings[kind], 'resizing keeps pattern measurements');
+    reorderShape(store, profile, copyId, 'back');
+    assert.equal(store.getDraft().shapes[0].id, copyId);
+    assert.ok(store.undo()); assert.ok(store.redo());
+  }
+  const draft = store.getDraft(), published = build(draft);
+  assert.equal(validateProfileDocumentV9(published).valid, true);
+  assert.deepEqual(createSystemWorkflowDraftStore({ profileAddress: profile, storage }).getDraft(), draft);
+  assert.deepEqual(reconcileSystemWorkflowDraftFromProfileDocumentV9(published, draft).shapes, draft.shapes);
+  assert.deepEqual(reconcileSystemWorkflowDraftFromProfileDocumentV9(oldDocument).shapes, legacy.shapes);
+  assert.deepEqual(draft.shapes.find(item => item.id === legacy.shapes[0].id), legacy.shapes[0], 'legacy rectangle is never rewritten');
+  const restoredOld = reconcileSystemWorkflowDraftFromProfileDocumentV9(oldDocument, draft);
+  assert.ok(restoredOld.shapes.filter(item => item.kind).every(item => item.visibility === 'PRIVATE'));
+  const privateGrid = draft.shapes.find(item => item.kind === 'grid');
+  editShape(store, profile, privateGrid, { visibility: 'PRIVATE' });
+  const publicOnly = build(store.getDraft());
+  assert.ok(!publicOnly.shapes.some(item => item.id === privateGrid.id));
+  assert.ok(!publicOnly.workbench.shapes.some(item => item.id === privateGrid.id));
+});
+
+test('Pattern validation rejects unknown variants, mixed settings and invalid ranges without saving partial changes', () => {
+  const f = fixture();
+  assert.throws(() => addShape(f.store, profile, { kind: 'unknown' }));
+  const id = addShape(f.store, profile, { kind: 'grid' });
+  const before = f.store.getDraft(), expected = before.shapes.find(item => item.id === id);
+  const changes = [{ kind: null }, { kind: 'rectangle' }, { kind: 'unknown' }, { grain: .5 }, { texture: { scale: 1 } },
+    { grid: null }, { grid: { spacing: 7, lineWidth: 1 } }, { grid: { spacing: 513, lineWidth: 1 } },
+    { grid: { spacing: '32', lineWidth: 1 } }, { grid: { spacing: 32, lineWidth: NaN } },
+    { grid: { spacing: 32, lineWidth: 0 } }, { grid: { spacing: 32, lineWidth: 4.1 } },
+    { grid: { spacing: 32, lineWidth: 1, extra: true } }];
+  for (const change of changes) {
+    assert.throws(() => editShape(f.store, profile, expected, change));
+    assert.deepEqual(f.store.getDraft(), before);
+    const published = build(before); Object.assign(published.shapes[0], change);
+    assert.equal(validateProfileDocumentV9(published).valid, false);
+  }
+  const textureId = addLegacyTexture(f.store);
+  const texture = f.store.getDraft().shapes.find(item => item.id === textureId);
+  for (const scale of [0, .24, 8.01, null, '1', Infinity]) assert.throws(() => editShape(f.store, profile, texture, { texture: { scale } }));
+  f.fail(true); const saved = f.store.getDraft();
+  assert.throws(() => addShape(f.store, profile, { kind: 'texture' }));
+  assert.throws(() => editShape(f.store, profile, texture, { texture: { scale: 2 } }));
+  assert.deepEqual(f.store.getDraft(), saved);
+});
 
 test('Optional Shape grain preserves old flat records and survives edit, undo, duplicate, reload and publication', () => {
   const { store, storage } = fixture(); addShape(store, profile);
@@ -131,4 +204,34 @@ test('Live shape layouts are captured once and removed membership cannot return 
   assert.ok(saveWorkbenchLayout(profile, draft, layout, {}, storage));
   assert.deepEqual(loadWorkbenchLayout(profile, draft, storage).layout.shapes, [live]);
   assert.deepEqual(loadWorkbenchLayout(profile, { ...draft, shapes: [] }, storage).layout.shapes, []);
+});
+
+test('Texture is retired from creation, legacy records survive, and multi-selection scaling scales grid cells', () => {
+  const { store } = fixture();
+  assert.equal(isShapeCommand('shape-texture'), false);
+  assert.throws(() => addShape(store, profile, { kind: 'texture' }));
+  const id = addShape(store, profile, { kind: 'grid' });
+  const expected = store.getDraft().shapes.find(item => item.id === id);
+  assert.ok(commitWorkbenchSelectionResize([{ store, profileAddress: profile, expected, id, layoutKey: 'shapes',
+    prepare: prepareShapeResize, gridScale: 1.5, left: 200, top: 200, width: 432, height: 432 }]));
+  assert.equal(store.getDraft().shapes.find(item => item.id === id).grid.spacing, 36);
+  assert.ok(store.undo()); assert.equal(store.getDraft().shapes.find(item => item.id === id).grid.spacing, 24);
+  editShape(store, profile, store.getDraft().shapes.find(item => item.id === id), { grid: { spacing: 24, lineWidth: 1, snap: false } });
+  assert.equal(build(store.getDraft()).shapes.find(item => item.id === id).grid.snap, false);
+});
+
+
+test('new grids and spacing edits complete cells atomically while existing partial layouts survive reload', () => {
+  const { store, storage } = fixture();
+  const id = addShape(store, profile, { kind: 'grid', size: { width: 340, height: 420 } });
+  assert.deepEqual(store.getDraft().workbench.shapes[0].window, { left: 120, top: 120, width: 360, height: 432 });
+  const old = store.getDraft(); old.workbench.shapes[0].window.width = 341;
+  assert.ok(store.commitCompletedOperation(old, { expectedGeneration: store.getGeneration() }));
+  assert.equal(createSystemWorkflowDraftStore({ profileAddress: profile, storage }).getDraft().workbench.shapes[0].window.width, 341);
+  editShape(store, profile, store.getDraft().shapes[0], { grid: { spacing: 25, lineWidth: 1 } });
+  assert.deepEqual(store.getDraft().workbench.shapes[0].window, { left: 120, top: 120, width: 350, height: 450 });
+  assert.ok(store.undo()); assert.deepEqual(store.getDraft(), old);
+  assert.ok(store.redo());
+  assert.ok(validateProfileDocumentV9(build(store.getDraft())).valid);
+  assert.equal(store.getDraft().shapes[0].id, id);
 });

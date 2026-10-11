@@ -7,10 +7,12 @@ import { useWorkbenchCamera } from './WorkbenchCamera.jsx';
 import { useSharedDisplayTools } from './SharedDisplayTools.jsx';
 import { sameCreationCamera, workbenchCreationPlacement } from './workbenchCreationGeometry.js';
 import { isWorkbenchBackground } from './useWorkbenchPan.js';
+import { isShapeCommand, SHAPE_COMMAND_KINDS } from '../../shapes/shapes.js';
 
-const ICONS = { 'presentation-board': Monitor, 'mini-app': AppWindow, text: Type, image: Image, shape: Square, keeper: Folder, mobile: Smartphone };
-const LABELS = { 'presentation-board': 'Display', 'mini-app': 'Mini app', text: 'Text', image: 'Image', shape: 'Rectangle', keeper: 'Keeper dock', mobile: 'Mobile',
-  'add-display-horizontal': 'Horizontal · 16:9', 'add-display-vertical': 'Vertical · 9:16', 'add-display-custom': 'Custom size…' };
+const ICONS = { 'workbench-index': Folder, 'presentation-board': Monitor, 'mini-app': AppWindow, text: Type, image: Image, shape: Square, 'shape-grid': Grid3X3, keeper: Folder, mobile: Smartphone };
+const LABELS = { 'workbench-index': 'Index', 'presentation-board': 'Display', 'mini-app': 'Mini app', text: 'Text', image: 'Image', shape: 'Rectangle', keeper: 'Keeper dock', mobile: 'Mobile',
+  'shape-grid': 'Grid', 'add-display-horizontal': 'Horizontal · 16:9', 'add-display-vertical': 'Vertical · 9:16', 'add-display-custom': 'Custom size…' };
+const isCreationTool = tool => tool === 'text' || isShapeCommand(tool);
 const EDITING = 'input,textarea,select,[contenteditable=true],[role=textbox],[role=slider],[role=dialog],[role=menu],iframe,[data-mini-app-id],[data-immersive]';
 const OVERLAYS = '[data-workbench-toolbar],[data-system-workflow-overlay],[data-system-workflow-panel],[data-shared-display-tools],[data-shared-text-tools],[data-context-tools],.workbench-view-controls,[data-workbench-group-tools],[data-workbench-selection-tools]';
 const CREATION_CONTROLS = `${EDITING},button,a,summary,[role=separator]`;
@@ -61,7 +63,7 @@ export default function OwnerWorkbenchToolbar({ hostRef, placementTargets, comma
     const visibility = () => { if (document.hidden) blur(); };
     const down = event => {
       const current = latest.current, tool = current.view.interactionTool;
-      if (gesture.current || !['text', 'shape'].includes(tool) || current.hidden || current.camera.locked || space.current
+      if (gesture.current || !isCreationTool(tool) || current.hidden || current.camera.locked || space.current
         || host.hasAttribute('data-workbench-pan-ready') || event.button !== 0 || event.isPrimary === false
         || event.ctrlKey || event.metaKey || event.altKey || event.target.closest(`${OVERLAYS},${CREATION_CONTROLS}`)) return;
       const point = { x: event.clientX, y: event.clientY };
@@ -83,7 +85,7 @@ export default function OwnerWorkbenchToolbar({ hostRef, placementTargets, comma
       if (!(event.buttons & 1) || !sameCreationCamera(active.camera, latest.current.camera.getCamera())
         || active.target && !active.target.isCurrent()) { cancel(); return; }
       event.preventDefault(); event.stopPropagation();
-      if (active.tool === 'shape') setGhost({ left: Math.min(active.start.x, event.clientX), top: Math.min(active.start.y, event.clientY),
+      if (isShapeCommand(active.tool)) setGhost({ left: Math.min(active.start.x, event.clientX), top: Math.min(active.start.y, event.clientY),
         width: Math.abs(event.clientX - active.start.x), height: Math.abs(event.clientY - active.start.y) });
     };
     const finish = event => {
@@ -93,7 +95,7 @@ export default function OwnerWorkbenchToolbar({ hostRef, placementTargets, comma
       const current = latest.current;
       if (current.hidden || current.camera.locked || active.tool !== current.view.interactionTool || !sameCreationCamera(active.camera, current.camera.getCamera())) return;
       const point = { x: event.clientX, y: event.clientY }, hit = document.elementFromPoint(point.x, point.y);
-      const placed = workbenchCreationPlacement(active.start, point, active.camera, active.tool === 'shape');
+      const placed = workbenchCreationPlacement(active.start, point, active.camera, isShapeCommand(active.tool));
       if (!placed || !host.contains(hit) || hit?.closest(`${OVERLAYS},${CREATION_CONTROLS}`)) return;
       if (active.target) {
         const currentTarget = placementTargets.current?.targetAt(point);
@@ -103,7 +105,7 @@ export default function OwnerWorkbenchToolbar({ hostRef, placementTargets, comma
         if (!active.target.createTextAt(point)) return;
       } else {
         if (active.tool === 'text' && !isWorkbenchBackground(hit, host)) return;
-        current.onCommand(active.tool === 'shape' ? 'shape' : 'text', { ...placed, workbench: current.view.getPresentation() });
+        current.onCommand(active.tool, { ...placed, workbench: current.view.getPresentation() });
       }
       current.view.setInteractionTool('select');
     };
@@ -143,11 +145,12 @@ export default function OwnerWorkbenchToolbar({ hostRef, placementTargets, comma
   const adapt = command => ({ ...command, label: LABELS[command.id] || command.label, icon: ICONS[command.id],
     reason: command.disabled ? 'Module limit reached.' : undefined,
     children: command.children?.map(adapt), onSelect: () => {
-      if (['text', 'shape'].includes(command.id)) chooseTool(command.id);
+      if (isCreationTool(command.id)) chooseTool(command.id);
       else { chooseTool('select'); onCommand(command.id); }
     } });
   const addCommands = commands.map(adapt);
-  const shape = addCommands.find(command => command.id === 'shape');
+  const shapeCommands = addCommands.filter(command => isShapeCommand(command.id))
+    .map(command => command.id === 'shape' ? { ...command, shortcut: 'R' } : command);
   const actions = [
     { id: 'layers', label: 'Layers', icon: Layers, group: 'Selection', disabled: !layers.enabled, reason: layers.reason, selected: layers.open, onSelect: layers.onToggle },
     { id: 'metadata', label: 'Artwork info', icon: Info, group: 'Selection', disabled: !info.enabled, reason: info.reason, selected: info.open, onSelect: info.onToggle },
@@ -160,13 +163,13 @@ export default function OwnerWorkbenchToolbar({ hostRef, placementTargets, comma
     { id: 'identity', label: 'Identity', icon: User, group: 'Open', onSelect: () => onCommand('identity') },
     ...addCommands.map(command => ({ ...command, group: 'Add' })),
   ];
-  const creating = ['text', 'shape'].includes(view.interactionTool);
+  const creating = isCreationTool(view.interactionTool);
   return <>
     <WorkbenchToolbar activeTool={view.interactionTool} onToolChange={chooseTool} actions={actions} addCommands={addCommands}
-      shapeCommands={shape ? [{ ...shape, shortcut: 'R' }] : []} layers={layers} info={info}
+      shapeCommands={shapeCommands} layers={layers} info={info}
       onOpenLibrary={() => { chooseTool('select'); onOpenLibrary(); }} libraryOpen={libraryOpen} hidden={hidden} actionRequest={actionRequest} />
     {!hidden && creating && <p className="workbench-creation-hint" role="status" data-system-workflow-overlay>
-      {view.interactionTool === 'text' ? 'Click the Workbench or an unlocked Display to add Text.' : 'Click or drag on the Workbench to draw a rectangle.'} <kbd>Esc</kbd> to cancel
+      {view.interactionTool === 'text' ? 'Click the Workbench or an unlocked Display to add Text.' : `Click or drag on the Workbench to draw a ${SHAPE_COMMAND_KINDS[view.interactionTool]}.`} <kbd>Esc</kbd> to cancel
     </p>}
     {!hidden && ghost && <div className="workbench-creation-ghost" style={ghost} aria-hidden="true" />}
   </>;

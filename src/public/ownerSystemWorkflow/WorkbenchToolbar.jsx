@@ -2,6 +2,7 @@ import { createElement, isValidElement, useEffect, useId, useLayoutEffect, useRe
 import { ArrowLeft, ChevronDown, ChevronRight, Command, Hand, Image, Info, Layers, MousePointer2, Plus, Search, Shapes, Type, X } from 'lucide-react';
 import './workflowTactile.css';
 import './workbenchToolbar.css';
+import { isShapeCommand } from '../../shapes/shapes.js';
 
 const EMPTY_COMMANDS = [];
 const POPUP_LABELS = { actions: 'Actions', add: 'Add module', shapes: 'Shapes' };
@@ -173,7 +174,7 @@ export default function WorkbenchToolbar({
           title={id === 'hand' ? 'Hand · H — Drag to explore with momentum. Click artwork to focus its module; module positions stay fixed.' : `${label} · ${key}`} aria-pressed={activeTool === id} onClick={() => { close(); onToolChange?.(id); }}>
           <Icon aria-hidden="true" /><span>{label}</span>
         </button>)}
-      {menuButton('shapes', Shapes, 'Shapes', { 'data-active': activeTool === 'shape' || undefined })}
+      {menuButton('shapes', Shapes, 'Shapes', { 'data-active': isShapeCommand(activeTool) || undefined })}
       <button type="button" className="workbench-toolbar__button workflow-tactile-control" aria-label="Artwork library" title="Artwork library" aria-pressed={libraryOpen}
         onClick={() => { close(); onOpenLibrary?.(); }}><Image aria-hidden="true" /><span>Artwork</span></button>
       <span className="workbench-toolbar__separator" aria-hidden="true" />

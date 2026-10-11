@@ -1,11 +1,29 @@
 import { createContext, useContext, useLayoutEffect, useMemo, useRef } from 'react';
-import { gridEdgeMatch, moduleEdgeMatch, modulePositionMatch } from './workbenchEdgeSnap.js';
+import { moduleEdgeMatch, modulePositionMatch } from './workbenchEdgeSnap.js';
 import WorkbenchSnapGuides from './WorkbenchSnapGuides.jsx';
 import { WORKBENCH_GRID_STEP } from './workbenchGrid.js';
 import { useWorkbenchCamera } from './WorkbenchCamera.jsx';
 import { useWorkbenchView, workbenchModuleTransform } from './WorkbenchViewContext.js';
 import { scaleWorkbenchRectangle, workbenchSelectionBounds } from './workbenchViewScale.js';
+import { resolveWorkbenchGrid, workbenchGridMatch, limitWorkbenchEdge } from './workbenchPatchSnap.js';
 const Placement = createContext(null);
+function activeGrid(host, point, nodes) {
+  const options = host.options.current;
+  if (!options.gridEnabled) return null;
+  const origin = options.hostRef?.current?.getBoundingClientRect();
+  const content = options.view.store?.getSnapshot() || options.view.groupContent;
+  const patches = (content?.shapes || []).filter(record => record.kind === 'grid' && record.grid.snap !== false).flatMap(record => {
+    const node = options.view.entries.get(record.id);
+    if (!node?.isConnected || nodes.includes(node) || node.hasAttribute('data-workbench-group-hidden')) return [];
+    const rect = exactRectangle(host, node);
+    if (!rect) return [];
+    return [{ ...rect, id: record.id, patch: true, cellSize: record.grid.spacing,
+      step: record.grid.spacing * workbenchModuleTransform(options.view, record.id).scale }];
+  });
+  const fallback = { id: 'workbench', left: (origin?.left || 0) + options.offset.x,
+    top: (origin?.top || 0) + options.offset.y, step: options.gridSpacing * options.scale };
+  return resolveWorkbenchGrid(point, patches, fallback, host.active?.matches.x?.gridId || host.active?.matches.y?.gridId);
+}
 const rectangle = nodes => {
   const boxes = nodes.filter(node => node?.isConnected).map(node => node.getBoundingClientRect());
   if (!boxes.length) return null;
@@ -34,11 +52,13 @@ function positionMatch(host, rect, nodes, scale, bypass, edges = true) {
   const previous = host.active?.matches || {};
   const result = host.options.current.enabled && edges
     ? modulePositionMatch(rect, targets(host, nodes), host.options.current.gap * scale, previous) : { position: {}, matches: {} };
-  const origin = host.options.current.hostRef?.current?.getBoundingClientRect();
-  if (host.options.current.gridEnabled) for (const [axis, side] of [['x', 'left'], ['y', 'top']]) {
-    if (result.matches[axis]) continue;
-    const match = gridEdgeMatch(axis, side, rect[side], (origin?.[side] || 0) + host.options.current.offset[axis], WORKBENCH_GRID_STEP * host.options.current.scale, previous[axis]);
-    result.position[side] = match.value; result.matches[axis] = match;
+  const grid = activeGrid(host, { x: rect.left, y: rect.top }, nodes);
+  for (const [axis, side] of [['x', 'left'], ['y', 'top']]) {
+    if (grid?.patch || !limitWorkbenchEdge(result.matches[axis], grid)) {
+      delete result.matches[axis]; delete result.position[side];
+      const match = workbenchGridMatch(grid, axis, side, rect[side], previous[axis]);
+      if (match) { result.position[side] = match.value; result.matches[axis] = match; }
+    }
   }
   host.report(nodes, { x: result.matches.x || null, y: result.matches.y || null });
   return { ...rect, ...result.position };
@@ -50,6 +70,10 @@ export function useWorkbenchMovementSnap() {
   const snap = (rect, excluded, scale, bypass) => positionMatch(host, rect, excluded, scale, bypass);
   snap.begin = (event, nodes) => host?.begin(event, nodes);
   snap.finish = () => host?.clear();
+  snap.step = nodes => {
+    const rect = host && movementRectangle(host, nodes);
+    return rect ? activeGrid(host, { x: rect.left, y: rect.top }, nodes)?.step || 1 : 1;
+  };
   snap.rectangle = nodes => movementRectangle(host, nodes);
   // Snap the moving outer edges of a proportional selection. One match chooses
   // one factor for every member; selected modules never become snap targets.
@@ -57,14 +81,14 @@ export function useWorkbenchMovementSnap() {
     if (bypass) { host?.clearMatches(); return factor; }
     if (!host) return factor;
     const options = host.options.current, previous = host.active?.matches || {};
-    const origin = options.hostRef?.current?.getBoundingClientRect();
     const candidate = scaleWorkbenchRectangle(rectangle, factor, anchor);
+    const gridSource = activeGrid(host, { x: edgeValue(candidate, corner.includes('w') ? 'left' : 'right'),
+      y: edgeValue(candidate, corner.includes('n') ? 'top' : 'bottom') }, nodes);
     const others = targets(host, nodes), matches = [];
     for (const [axis, side] of [['x', corner.includes('w') ? 'left' : 'right'], ['y', corner.includes('n') ? 'top' : 'bottom']]) {
       const value = edgeValue(candidate, side);
-      const module = options.enabled ? moduleEdgeMatch(candidate, others, axis, side, value, options.gap * scale, previous[axis]) : null;
-      const grid = options.gridEnabled ? gridEdgeMatch(axis, side, value,
-        (origin?.[axis === 'x' ? 'left' : 'top'] || 0) + options.offset[axis], WORKBENCH_GRID_STEP * options.scale, previous[axis]) : null;
+      const module = options.enabled && !gridSource?.patch ? limitWorkbenchEdge(moduleEdgeMatch(candidate, others, axis, side, value, options.gap * scale, previous[axis]), gridSource) : null;
+      const grid = workbenchGridMatch(gridSource, axis, side, value, previous[axis]);
       for (const match of [module, grid].filter(Boolean)) {
         const next = (match.value - anchor[axis]) / (edgeValue(rectangle, side) - anchor[axis]);
         if (next < minimum || next > maximum || !Number.isFinite(next)) continue;
@@ -87,11 +111,11 @@ export function useWorkbenchMovementSnap() {
   };
   return snap;
 }
-export function WorkbenchPlacement({ children, enabled, gap, gridEnabled = false, hostRef }) {
+export function WorkbenchPlacement({ children, enabled, gap, gridEnabled = false, gridSpacing = WORKBENCH_GRID_STEP, hostRef }) {
   const { offset } = useWorkbenchCamera();
   const view = useWorkbenchView(), { scale } = view;
-  const entries = useRef(new Map()), options = useRef({ enabled, gap, gridEnabled, hostRef });
-  options.current = { enabled, gap, gridEnabled, hostRef, offset, scale, view };
+  const entries = useRef(new Map()), options = useRef({ enabled, gap, gridEnabled, gridSpacing, hostRef });
+  options.current = { enabled, gap, gridEnabled, gridSpacing, hostRef, offset, scale, view };
   const host = useMemo(() => {
     const listeners = new Set();
     const state = { entries: entries.current, geometry: new Map(), options, active: null, frame: null, guides: [],
@@ -136,7 +160,7 @@ export function WorkbenchPlacement({ children, enabled, gap, gridEnabled = false
     };
     return state;
   }, []);
-  useLayoutEffect(() => { host.clear(); }, [host, enabled, gap, gridEnabled, scale, offset]);
+  useLayoutEffect(() => { host.clear(); }, [host, enabled, gap, gridEnabled, gridSpacing, scale, offset]);
   useLayoutEffect(() => {
     const finish = event => {
       if (event.type === 'blur' && event.target !== globalThis) return;
@@ -177,14 +201,20 @@ export function useWorkbenchPlacement(node, enabled = true, scale = 1, register 
     if (bypass) { host.clearMatches(); return null; }
     const delta = axis === 'x' ? bounds.left - current.left * scale : bounds.top - current.top * scale;
     const previous = host.active?.matches[axis];
-    const origin = host.options.current.hostRef?.current?.getBoundingClientRect();
-    const match = (host.options.current.enabled && register && edges
-      ? moduleEdgeMatch(bounds, targets(host, [node.current]), axis, side, value * scale + delta, host.options.current.gap * scale, previous) : null)
-      || (host.options.current.gridEnabled ? gridEdgeMatch(axis, side, value * scale + delta, ((axis === 'x' ? origin?.left : origin?.top) || 0) + host.options.current.offset[axis], WORKBENCH_GRID_STEP * host.options.current.scale, previous) : null);
+    const screenValue = value * scale + delta;
+    const grid = activeGrid(host, { x: axis === 'x' ? screenValue : bounds.left,
+      y: axis === 'y' ? screenValue : bounds.top }, [node.current]);
+    const match = (!grid?.patch && host.options.current.enabled && register && edges
+      ? limitWorkbenchEdge(moduleEdgeMatch(bounds, targets(host, [node.current]), axis, side, screenValue, host.options.current.gap * scale, previous), grid) : null)
+      || workbenchGridMatch(grid, axis, side, screenValue, previous);
     host.report([node.current], { [axis]: match });
     return match ? { ...match, value: (match.value - delta) / scale } : null;
   };
   return {
+    step: () => {
+      const rect = host && exactRectangle(host, node.current);
+      return rect ? (activeGrid(host, { x: rect.left, y: rect.top }, [node.current])?.step || 0) / scale : 0;
+    },
     begin: event => { if (enabled) host?.begin(event, [node.current]); },
     finish: () => { if (host?.active?.nodes.includes(node.current)) host.clear(); },
     position(candidate, current, fallback, bypass) {

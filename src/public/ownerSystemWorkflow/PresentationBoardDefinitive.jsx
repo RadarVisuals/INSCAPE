@@ -199,7 +199,7 @@ export default function PresentationBoardDefinitive({ assetsById = new Map(), ch
     event.preventDefault(); event.stopPropagation();
     placement.begin(event);
     const snapping = windowSnap && !readOnly && !event.altKey;
-    const step = snapping || event.shiftKey ? WORKBENCH_GRID_STEP : 8;
+    const step = snapping ? placement.step() || WORKBENCH_GRID_STEP : event.shiftKey ? WORKBENCH_GRID_STEP : 8;
     const resized = resizePresentationBoardFromCorner(view, windowFrame, corner, {
       x: event.key === 'ArrowLeft' ? -step : event.key === 'ArrowRight' ? step : 0,
       y: event.key === 'ArrowUp' ? -step : event.key === 'ArrowDown' ? step : 0,
@@ -257,7 +257,7 @@ export default function PresentationBoardDefinitive({ assetsById = new Map(), ch
           if (viewTransform.presented || inspectionActive) return;
           placement.begin(event);
           const snapping = windowSnap && !readOnly && !event.altKey;
-          const step = snapping || event.shiftKey ? WORKBENCH_GRID_STEP : 8;
+          const step = snapping ? placement.step() || WORKBENCH_GRID_STEP : event.shiftKey ? WORKBENCH_GRID_STEP : 8;
           setBoardPosition(placedPosition({ left: renderedPosition.left + (event.key === 'ArrowRight' ? step : event.key === 'ArrowLeft' ? -step : 0),
             top: renderedPosition.top + (event.key === 'ArrowDown' ? step : event.key === 'ArrowUp' ? -step : 0) }, event.altKey));
         }} onPointerCancel={stopBoardDrag} onLostPointerCapture={stopBoardDrag} onPointerDown={beginBoardDrag}

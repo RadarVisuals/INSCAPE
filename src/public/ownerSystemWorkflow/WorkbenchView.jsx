@@ -1,3 +1,5 @@
+import useWorkbenchObjectPicker from './useWorkbenchObjectPicker.jsx';
+import WorkbenchArea from './WorkbenchArea.jsx';
 import { WorkbenchView, WorkbenchActions, useWorkbenchView, workbenchModuleTransform } from './WorkbenchViewContext.js';
 export { useWorkbenchView, useWorkbenchActions, workbenchModuleTransform, useWorkbenchViewRegistration } from './WorkbenchViewContext.js';
 import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
@@ -7,10 +9,12 @@ import './workbenchView.css';
 import { moveWorkbenchGroup } from '../../systemWorkflow/moveWorkbenchGroup.js';
 import { workbenchMemberIds } from '../../systemWorkflow/domain/workbenchGroups.js';
 const WorkbenchGroups = lazy(() => import('./WorkbenchGroups.jsx'));
+const WorkbenchIndex = lazy(() => import('./WorkbenchIndex.jsx'));
 const PublishedWorkbenchGroups = lazy(() => import('./PublishedWorkbenchGroups.jsx'));
 import { useWorkbenchMovementSnap } from './WorkbenchPlacement.jsx';
 import useWorkbenchNavigation from './useWorkbenchNavigation.js';
-import { projectWorkbenchBounds } from './workbenchSpace.js';
+import { projectWorkbenchBounds, WORKBENCH_BOUNDS } from './workbenchSpace.js';
+import { marqueeContains } from './workbenchGrid.js';
 import { workbenchPaintGeometry } from './workbenchPaintGeometry.js';
 const GridSeamProbe = import.meta.env.DEV ? lazy(() => import('./GridSeamProbe.jsx')) : null;
 
@@ -81,7 +85,7 @@ function WorkbenchZoomControl({ disabled, onClick }) {
     title="Zoom to 100% around the current view (Ctrl+0)" onClick={onClick} />;
 }
 
-export function WorkbenchViewControls({ hostRef, disabled = false, dockVisible = true, historyBlocked = null, showHandTool = true }) {
+export function WorkbenchViewControls({ hostRef, disabled = false, dockVisible = true, historyBlocked = null, showHandTool = true, entryTarget = null }) {
   const view = useWorkbenchView();
   const snapMovement = useWorkbenchMovementSnap();
   const { scale, transforms, setTransforms, selection = [], setSelection, entries } = view;
@@ -133,6 +137,7 @@ export function WorkbenchViewControls({ hostRef, disabled = false, dockVisible =
     onControlsTopChange: view.setToolViewportBottom,
     isEditing, cancelEditing: cancelGesture, releaseAbandonedGesture, captureContext, restoreContext, returnTargets: context => groupScene.current?.returnTargets(context?.group), resetPresentation: () => groupScene.current?.restore(null), entries });
   const { locked } = navigation;
+  const objectPicker = useWorkbenchObjectPicker({ hostRef, view, disabled, locked, isBusy: () => gesture.current || navigation.isPanning() });
   const focusModules = useCallback(moduleIds => {
     const ids = [...new Set(moduleIds)].filter(id => {
       const node = latest.current.entries.get(id);
@@ -168,7 +173,12 @@ export function WorkbenchViewControls({ hostRef, disabled = false, dockVisible =
   useLayoutEffect(() => { if (disabled || locked) cancelGesture(); }, [disabled, locked, cancelGesture]);
   useLayoutEffect(() => {
     if (navigation.moving) return;
-    const next = workbenchSelectionBounds(selected.map(id => entries.get(id).getBoundingClientRect()));
+    // Registration can change between render and this layout effect (including
+    // module replacement); stale selections must not dereference removed nodes.
+    const next = workbenchSelectionBounds(selected.flatMap(id => {
+      const node = entries.get(id);
+      return node?.isConnected ? [node.getBoundingClientRect()] : [];
+    }));
     setBounds(current => JSON.stringify(current) === JSON.stringify(next) ? current : next);
   }, [scale, transforms, selection, revision, navigation.offset, navigation.moving]);
   // During camera travel the authored rectangles are stable and already known.
@@ -309,8 +319,9 @@ export function WorkbenchViewControls({ hostRef, disabled = false, dockVisible =
       [(editor.minimumWidth ?? editor.minimumSize) * current.scale / originals[i].width,
         (editor.minimumHeight ?? editor.minimumSize) * current.scale / originals[i].height,
         (editor.minimumScale ?? 0) / (current.transforms[ids[i]]?.scale || 1)])) : Math.min(1, .25 / Math.min(...scales));
-    const maximum = Math.max(0, Math.min(upper, availableX / rectangle.width, availableY / rectangle.height));
-    const minimum = Math.min(maximum, lower);
+    const gridSizes = ids.length > 1 ? editors.flatMap(editor => editor?.expected?.kind === 'grid' ? [editor.expected.grid.spacing] : []) : [];
+    const maximum = Math.max(0, Math.min(upper, availableX / rectangle.width, availableY / rectangle.height, ...gridSizes.map(size => 512 / size)));
+    const minimum = Math.min(maximum, Math.max(lower, ...gridSizes.map(size => 8 / size)));
     const cameraOffset = navigation.getCamera().offset;
     const worldAnchor = { x: (anchor.x - cameraOffset.x) / current.scale,
       y: (anchor.y - cameraOffset.y) / current.scale };
@@ -325,6 +336,10 @@ export function WorkbenchViewControls({ hostRef, disabled = false, dockVisible =
       return { left, top, width: continuous ? frame.width / current.scale * factor : round(edge(frame.left + frame.width, 'x') - left),
         height: continuous ? frame.height / current.scale * factor : round(edge(frame.top + frame.height, 'y') - top) };
     };
+    const frameFor = (frame, factor, i) => {
+      const next = resizedFrame(frame, factor, editors[i]?.continuousGeometry);
+      return ids.length === 1 && editors[i]?.constrainFrame ? editors[i].constrainFrame(next, { edge: corner, bounds: WORKBENCH_BOUNDS }) : next;
+    };
     let appliedFactor = null;
     return { nodes, vector, authored, maximumScale: Math.max(...scales), commit: () => {
       if (!authored || appliedFactor === null) return true;
@@ -332,7 +347,7 @@ export function WorkbenchViewControls({ hostRef, disabled = false, dockVisible =
       // Round common world endpoints around the same anchor, never each width
       // independently. Joined images retain their shared edge with whole sizes.
       const changes = originals.map((frame, i) => ({ ...editors[i], id: ids[i],
-        getPresentation: current.getPresentation, ...resizedFrame(frame, appliedFactor, editors[i].continuousGeometry) }));
+        gridScale: ids.length > 1 ? appliedFactor : undefined, getPresentation: current.getPresentation, ...frameFor(frame, appliedFactor, i) }));
       if (!editors[0].commit(changes)) return false;
       changes.forEach(change => change.applyFrame({ left: change.left, top: change.top, width: change.width, height: change.height }));
       setTransforms(values => {
@@ -345,7 +360,7 @@ export function WorkbenchViewControls({ hostRef, disabled = false, dockVisible =
       appliedFactor = factor;
       setTransforms({ ...current.transforms, ...Object.fromEntries(ids.map((id, i) => {
         if (editors[i]?.reflow) {
-          return [id, { ...identityWorkbenchTransform, frame: resizedFrame(originals[i], factor, editors[i].continuousGeometry) }];
+          return [id, { ...identityWorkbenchTransform, gridScale: ids.length > 1 ? factor : 1, frame: frameFor(originals[i], factor, i) }];
         }
         return [id, scaleWorkbenchTransform(current.transforms[id] || identityWorkbenchTransform, factor, worldAnchor)];
       })) });
@@ -455,13 +470,14 @@ export function WorkbenchViewControls({ hostRef, disabled = false, dockVisible =
     // capture handler above still owns selection and active editing gestures.
     const backKey = event => {
       if (event.key !== 'Escape' || event.defaultPrevented || !host.contains(event.target)
-        || event.target.closest?.('input, textarea, select, [contenteditable="true"]')) return;
+        || event.target.closest?.('input, textarea, select, [contenteditable="true"], [data-workbench-selection-tools]')) return;
       if (navigation.goBack()) { event.preventDefault(); event.stopPropagation(); }
     };
     const pointer = event => {
       if (locked || latest.current.interactionTool !== 'select' || event.target.closest?.('[data-workbench-selection-tools], [data-workbench-toolbar]')) return;
       if (event.button === 0 && gesture.current?.pointerId === event.pointerId) cancelGesture();
       if (event.button !== 0 || gesture.current || event.target.closest?.('[data-immersive]')) return;
+      if (objectPicker.pick(event)) return;
       // Resolve Shift-click through the selection overlay to the module's own
       // selectable surface: a window header or Image's artwork surface.
       const target = event.shiftKey && event.target.matches?.('.workbench-selection')
@@ -481,6 +497,7 @@ export function WorkbenchViewControls({ hostRef, disabled = false, dockVisible =
         return;
       }
       if (!event.target.closest?.('.workbench-selection, .workbench-view-controls, [data-workbench-group-tools], [data-workbench-toolbar]') && !event.shiftKey) setSelection([]);
+      if (module && target.closest('[data-workbench-select-on-pointer]') && entries.has(module.dataset.workbenchViewId)) setSelection([module.dataset.workbenchViewId]);
       if (module && target.closest('header[data-workbench-selectable]') && !target.closest('button, a') && entries.has(module.dataset.workbenchViewId)) {
         const id = module.dataset.workbenchViewId, transform = workbenchModuleTransform(latest.current, id);
         if (transform.scale !== 1 || transform.x || transform.y) { beginMove(event, [id]); return; }
@@ -495,7 +512,7 @@ export function WorkbenchViewControls({ hostRef, disabled = false, dockVisible =
         const hits = [...entries].filter(([, node]) => {
           if (node.hasAttribute('data-workbench-group-hidden') || latest.current.presentationTransforms[node.dataset.workbenchViewId]) return false;
           const b = node.getBoundingClientRect();
-          return b.right > rectangle.left && b.left < rectangle.left + rectangle.width && b.bottom > rectangle.top && b.top < rectangle.top + rectangle.height;
+          return marqueeContains(rectangle, b);
         }).map(([id]) => id);
         setSelection([...new Set([...previous, ...hits])]);
       }, finish: pointer => { if (pointer.pointerId === event.pointerId) cancelGesture(false); }, cancel: () => cancelGesture() };
@@ -518,9 +535,11 @@ export function WorkbenchViewControls({ hostRef, disabled = false, dockVisible =
       globalThis.removeEventListener('keydown', backKey);
       host.removeEventListener('pointerdown', pointer, true);
     };
-  }, [hostRef, disabled, locked, cancelGesture, setSelection, entries, navigation.goBack, focusModules]);
+  }, [hostRef, disabled, locked, cancelGesture, setSelection, entries, navigation.goBack, focusModules, objectPicker.pick]);
   if (disabled) return null;
   return <>
+    <WorkbenchArea hostRef={hostRef} />
+    {objectPicker.element}
     {moveError && <p className="workbench-move-error" role="alert" onClick={() => setMoveError('')}>{moveError}</p>}
     {marquee && <div className="workbench-marquee" style={marquee} />}
     {!locked && view.interactionTool === 'select' && bounds && selected.length > 0 && <div className="workbench-selection" style={travellingBounds || bounds} role="group" tabIndex={0}
@@ -528,7 +547,7 @@ export function WorkbenchViewControls({ hostRef, disabled = false, dockVisible =
       onPointerDown={event => { if (event.target === event.currentTarget) beginMove(event); }} onKeyDown={event => {
         if (event.target !== event.currentTarget || gesture.current || !['ArrowUp', 'ArrowRight', 'ArrowDown', 'ArrowLeft'].includes(event.key)) return;
         event.preventDefault(); event.stopPropagation();
-        const step = event.shiftKey ? 10 : 1;
+        const step = (event.altKey ? 1 : snapMovement.step(selected.map(id => entries.get(id)))) * (event.shiftKey ? 10 : 1);
         snapMovement.begin(event, selected.map(id => entries.get(id)));
         const current = latest.current;
         const moved = translate(current, selected, snapMovement.rectangle(selected.map(id => entries.get(id))), { x: event.key === 'ArrowRight' ? step : event.key === 'ArrowLeft' ? -step : 0,
@@ -551,6 +570,7 @@ export function WorkbenchViewControls({ hostRef, disabled = false, dockVisible =
       <WorkbenchZoomControl disabled={locked} onClick={navigation.resetZoom} />
       {view.store && <Suspense fallback={null}><WorkbenchGroups view={view} hostRef={hostRef} locked={locked} dropRef={groupDrop} historyBlocked={historyBlocked} navigation={navigation} sceneRef={groupScene} disabled={disabled} /></Suspense>}
       {!view.store && view.groupContent?.workbenchGroups?.length > 0 && <Suspense fallback={null}><PublishedWorkbenchGroups view={view} content={view.groupContent} hostRef={hostRef} navigation={navigation} sceneRef={groupScene} disabled={disabled} locked={locked} /></Suspense>}
+      {(view.store?.getSnapshot().workbenchIndex || view.groupContent?.workbenchIndex) && <Suspense fallback={null}><WorkbenchIndex hostRef={hostRef} navigation={navigation} sceneRef={groupScene} entryTarget={entryTarget} /></Suspense>}
       {GridSeamProbe && <Suspense fallback={null}><GridSeamProbe hostRef={hostRef} scale={scale} offset={navigation.offset} /></Suspense>}
     </div>
   </>;

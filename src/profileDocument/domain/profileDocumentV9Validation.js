@@ -1,3 +1,4 @@
+import { validWorkbenchIndex } from '../../systemWorkflow/domain/workbenchIndex.js';
 import { validPublishedWorkbenchGroups } from './publishedWorkbenchGroups.js';
 import { validPlacementGroups } from '../../systemWorkflow/domain/placementGroups.js';
 import { DISPLAY_CANVAS_APPEARANCE_KEYS, validDisplayCanvasAppearance } from '../../systemWorkflow/domain/displayAppearance.js';
@@ -204,7 +205,7 @@ export function validateProfileDocumentV9(input, { rawSize } = {}) {
   try { measuredSize ??= new TextEncoder().encode(JSON.stringify(input)).byteLength; } catch { measuredSize = Infinity; }
   if (measuredSize > SYSTEM_WORKFLOW_LIMITS.maxJsonBytes) fail('$', 'document_too_large', `Document exceeds ${SYSTEM_WORKFLOW_LIMITS.maxJsonBytes} bytes`);
   if (depth(input) > SYSTEM_WORKFLOW_LIMITS.maxDepth) fail('$', 'excessive_depth', 'Document nesting is too deep');
-  if (!allowedKeys(input, DOCUMENT_KEYS, ['workbench', 'displays', 'mobile', 'miniApps', 'texts', 'imageModules', 'shapes', 'keeperDocks', 'workbenchGroups'])) {
+  if (!allowedKeys(input, DOCUMENT_KEYS, ['workbench', 'displays', 'mobile', 'miniApps', 'texts', 'imageModules', 'shapes', 'keeperDocks', 'workbenchGroups', 'workbenchIndex'])) {
     fail('$', 'unexpected_fields', 'Document contains unexpected or missing fields');
     return { valid: false, errors, value: null, size: measuredSize };
   }
@@ -272,7 +273,7 @@ export function validateProfileDocumentV9(input, { rawSize } = {}) {
       fail('displays', 'invalid_display_count', 'Invalid Display count');
     } else {
       const ids = new Set([PRIMARY_DISPLAY_ID]);
-      const { displays: _displays, workbench: _workbench, mobile: _mobile, miniApps: _miniApps, texts: _texts, imageModules: _images, shapes: _shapes, keeperDocks: _keepers, workbenchGroups: _groups, ...shared } = input;
+      const { displays: _displays, workbench: _workbench, mobile: _mobile, miniApps: _miniApps, texts: _texts, imageModules: _images, shapes: _shapes, keeperDocks: _keepers, workbenchGroups: _groups, workbenchIndex: _index, ...shared } = input;
       for (const module of input.displays) {
         if (!exactKeys(module, ['id', ...DISPLAY_CONTENT_KEYS]) || !/^display:[A-Za-z0-9_-]{1,80}$/u.test(module?.id) || ids.has(module.id)) {
           fail('displays', 'invalid_display', 'Invalid or duplicate Display'); continue;
@@ -287,6 +288,7 @@ export function validateProfileDocumentV9(input, { rawSize } = {}) {
       if (input.workbench?.displays?.some(module => !ids.has(module.id))) fail('workbench.displays', 'unknown_display', 'Window refers to an unavailable Display');
     }
   } else if (input.workbench?.displays?.length) fail('workbench.displays', 'unknown_display', 'Window refers to an unavailable Display');
+  if (Object.hasOwn(input, 'workbenchIndex') && !validWorkbenchIndex(input.workbenchIndex, input, true)) fail('workbenchIndex', 'invalid_workbench_index', 'Invalid published Workbench Index');
   if (Object.hasOwn(input, 'workbenchGroups') && !validPublishedWorkbenchGroups(input.workbenchGroups, input)) fail('workbenchGroups', 'invalid_workbench_groups', 'Invalid public Workbench groups or unavailable members');
   if (Object.hasOwn(input, 'workbench') && !isValidWorkbenchPresentation(input.workbench)) fail('workbench', 'invalid_workbench', 'Invalid public Workbench configuration');
   if (!Array.isArray(input.grids) || input.grids.length > SYSTEM_WORKFLOW_LIMITS.maxGrids) {

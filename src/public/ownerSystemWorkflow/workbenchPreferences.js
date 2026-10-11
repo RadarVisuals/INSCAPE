@@ -8,6 +8,7 @@ export const DEFAULT_WORKBENCH_PREFERENCES = Object.freeze({
   compositionLocked: false,
   dockVisible: true,
   gridColor: null,
+  gridSpacing: 24,
   gridMode: 'LINES',
   shortcutSnap: true,
   edgeSnap: true,
@@ -37,6 +38,7 @@ export function normalizeWorkbenchPreferences(value, fallbackSurfaceId = DEFAULT
     chromeNoise: typeof source.chromeNoise === 'boolean' ? source.chromeNoise : true,
     compositionLocked: typeof source.compositionLocked === 'boolean' ? source.compositionLocked : false,
     dockVisible: typeof source.dockVisible === 'boolean' ? source.dockVisible : true,
+    gridSpacing: Number.isFinite(source.gridSpacing) && source.gridSpacing >= 8 && source.gridSpacing <= 512 ? source.gridSpacing : 24,
     gridColor: validHexColor(source.gridColor) ? source.gridColor.toLowerCase() : null,
     gridMode: SYSTEM_WORKFLOW_GUIDE_MODES.includes(source.gridMode) ? source.gridMode : DEFAULT_WORKBENCH_PREFERENCES.gridMode,
     shortcutSnap: typeof source.shortcutSnap === 'boolean' ? source.shortcutSnap : DEFAULT_WORKBENCH_PREFERENCES.shortcutSnap,
@@ -44,10 +46,10 @@ export function normalizeWorkbenchPreferences(value, fallbackSurfaceId = DEFAULT
   });
 }
 
-export function loadWorkbenchPreferences(profileAddress, fallbackSurfaceId, storage = globalThis.localStorage) {
+export function loadWorkbenchPreferences(profileAddress, fallbackSurfaceId, storage = globalThis.localStorage, fresh = false) {
   try {
     const stored = storage?.getItem(workbenchPreferencesStorageKey(profileAddress));
-    return normalizeWorkbenchPreferences(stored ? JSON.parse(stored) : null, fallbackSurfaceId);
+    return normalizeWorkbenchPreferences(stored ? JSON.parse(stored) : fresh ? { gridMode: 'NONE' } : null, fallbackSurfaceId);
   } catch {
     return normalizeWorkbenchPreferences(null, fallbackSurfaceId);
   }

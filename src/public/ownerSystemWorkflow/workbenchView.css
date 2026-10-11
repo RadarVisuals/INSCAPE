@@ -39,3 +39,7 @@
 
 .system-workflow[data-workbench-hand],
 .system-workflow[data-workbench-hand] :is(.system-workflow__workbench, .system-workflow__display-instance, [data-workbench-view-id], [data-workbench-module], .system-workflow__canvas, .image-module__canvas, [data-workbench-selectable], .system-workflow__resize-handle, .image-module__resize) { cursor: grab; }
+
+.workbench-object-preview { position: fixed; z-index: 89; pointer-events: none; box-sizing: border-box; border: 1px solid #fff; outline: 1px solid #111313; }
+.workbench-object-menu { max-height: calc(100dvh - 16px); overflow-y: auto; overscroll-behavior: contain; }
+.workbench-object-menu button span { overflow-wrap: anywhere; }

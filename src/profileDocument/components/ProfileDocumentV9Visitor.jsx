@@ -316,7 +316,7 @@ function ProfileDocumentV9Session({ document, onExit, onOpenDirectory, onReturn,
     data-surface={document.appearance.surfaceId}
     data-grid-dragging={gridDragging || undefined} data-grid-swipe-settling={gridSwipe?.settling || undefined}
     onKeyDown={handleKeyDown} ref={rootRef} tabIndex="-1">
-    {!embedded && <WorkbenchViewControls hostRef={rootRef} />}
+    {!embedded && <WorkbenchViewControls entryTarget={entryTarget} hostRef={rootRef} />}
     {hasDisplay && <PresentationBoard readOnly instanceId={instanceId} initialPresentation={displayPresentation} layoutMode={layout.mode}
       onLiftInspectionChange={setLiftInspection} onLiftTransitionChange={setLiftMoving}
       onLiftReturn={viewer.close}

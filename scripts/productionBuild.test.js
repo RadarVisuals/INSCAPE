@@ -75,7 +75,7 @@ test('measured production allowances retain exact budget boundaries with the laz
     standaloneWalletJavaScript: { raw: 4_600_000, gzip: 1_225_000 },
     initialCss: { raw: 51_807, gzip: 10_301 },
     ownerCss: { raw: 143_870, gzip: 21_140 },
-    coreJavaScript: { raw: 2_480_000, gzip: 770_000 },
+    coreJavaScript: { raw: 2_480_000, gzip: 780_000 },
     publicAssets: { raw: 17_960_000 },
     largestPublicAsset: { raw: 2_700_000 },
   });

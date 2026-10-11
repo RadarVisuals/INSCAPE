@@ -159,6 +159,40 @@ grain texture, scale and strength control. Grain blends within the shape's fill,
 follows its opacity and cannot intercept input. Duplication, undo, publication
 and restore retain the authored strength; setting it to zero removes the texture.
 
+On 2026-10-11 the founder retained Rectangle and Grid in Shapes and retired
+Texture creation: rectangles already have a grain slider. Previously saved
+Texture records remain readable, editable, duplicable and publishable.
+Grid is a transparent patch with colour, opacity, spacing (8–512 work pixels),
+line width (0.25–4 work pixels) and optional `grid.snap` (omission means enabled).
+Each enabled patch supplies its own origin and spacing while the owner's Grid
+snapping preference is on. Its SVG pattern has a one-device-pixel minimum stroke
+so it remains visible down to 25% zoom; cell coordinates never change with zoom.
+Creating or resizing a patch alone uses complete rows and columns, rounding the
+requested extent up to the next cell. At a bounded resize edge it stops at the
+last full cell that fits; the opposite edge stays anchored. Numeric dimensions
+and cell-spacing edits use the same rule, and spacing plus size save together.
+Existing partial-cell patches retain their old dimensions until an explicit
+size/spacing edit. Their saved schemas and loading behavior remain compatible.
+The pattern draws a closing outline on the right and bottom edges.
+Scaling a mixed selection scales its
+grid cell size with the composition, in the same completed undo operation.
+Grid patches are visual material and optional alignment guides, not containers:
+overlap does not assign group membership or constrain where content can exist.
+Grid interiors pass pointer input to the artwork beneath, including their lines.
+Their screen-sized perimeter selects the grid and reveals its bounds; very small
+patches retain an interior hit area. Selected objects use the shared Workbench
+movement/resize overlay above the paint without changing authored layer order.
+In Select mode, owner Ctrl/Cmd-click cycles through registered Workbench modules
+beneath the pointer. Right-click offers Select object here, ordered front to back,
+with hover outlines and keyboard selection. This applies to shapes, Images,
+Text, Displays and other registered content modules. Hidden/group-suppressed
+members, instruments, immersive views and editing controls are excluded. Selecting
+only changes temporary selection and the target module's tools, never publication
+or geometry. Grid snapping remains active when pointer input passes through.
+Decorative patches may opt out of snapping. Old rectangle and Texture records
+are read unchanged; optional shape settings retain v4/v9 compatibility.
+
+
 ## Text authoring
 
 The Text module is a simple Tiptap editor with formatting, local saving and a
@@ -1135,8 +1169,9 @@ storage keys, draft/public schemas and authored positions retain their meaning.
 Reading or reloading older 8,000-area arrangements does not move outlying modules;
 free camera navigation and Focus can still reach them beyond the visible grid.
 
-Dragging empty Workbench space marquee-selects open Display and standalone Text
-windows. Shift-drag adds to the selection; Shift-click a window header toggles it.
+Dragging empty Workbench space marquee-selects fully enclosed registered content
+windows: shapes, images, Displays, Text, Keeper docks and other registered modules.
+An intersecting background is not selected unless its entire bounds are enclosed. Shift-drag adds to the selection; Shift-click a window header toggles it.
 Focused window headers also toggle selection with Shift+Enter.
 The selection's corner handles scale its windows proportionally around the
 opposite corner. Text boxes resize and reflow without scaling their letters,
@@ -1144,7 +1179,8 @@ including during the drag preview. Escape cancels a gesture or clears selection.
 Dragging anywhere inside the selection moves the selected modules together,
 including over artwork, text, headers and gaps. This temporarily takes priority
 over module interactions. Clicking outside clears selection. The focused selection
-also moves with arrow keys (one screen pixel, or ten with Shift). Group movement
+also moves with arrow keys (one active grid cell while snapping, otherwise one
+screen pixel; Shift multiplies the step by ten and Alt bypasses snapping). Group movement
 uses temporary view state during interaction; Escape cancels an active
 drag and restores its starting position.
 Completing owner group movement, including keyboard movement or moving an
@@ -1256,6 +1292,36 @@ Artwork visibility is owned by the shared artwork layer. Its observer defers
 unloading during a temporary camera projection and rechecks settled clipping
 geometry afterward. This prevents a brief offscreen crossing from restarting an
 SVG document; artwork that remains offscreen still releases its document.
+
+On 2026-10-11 the founder approved named saved camera destinations and a
+Workbench Index. Add > Index creates one optional navigation instrument. It can
+remain pinned to the screen or travel with the canvas. Its window uses the shared
+Workbench host; navigation tools are not composition/group members. Owner moves
+and resizes commit once at gesture completion. Visitors may browse/close it
+without writing the maker's layout.
+`workbenchIndex` is optional in draft v4 and public v9: `open`, `pinned`, `window`,
+up to 32 ordered `destinations`, and nullable `landingId`. Each destination stores
+an id, name and authored Workbench view rectangle. Owner records also contain
+visibility; public records omit it. Saving/renaming/updating/reordering/deleting
+destinations uses completed draft operations and undo. No screenshot or artwork
+copy is stored. Camera travel uses the existing controller and Back history,
+with zero extra padding for saved views so repeated visits do not zoom out.
+Different viewport shapes fit the saved region around the same centre.
+Optional Follow group retains framing relative to a stable member anchor (or
+the group's authored stack location). Moving the group translates the view;
+resizing members does not automatically refit it. Missing groups or anchors
+fall back to the saved region with a reconnect message in the owner editor.
+Following never opens the group's spread presentation or rearranges content.
+Public projection excludes private destinations and links to unavailable or
+private groups/members, and clears an omitted landing destination. Restoration
+preserves unpublished local entries as private and rejects capacity overflow.
+The chosen public starting view runs on visitor entry unless an explicit artwork
+entry target takes precedence. Old documents without an Index keep their entry.
+
+The 4,000 by 4,000 work area is outlined against a darker exterior. A fresh
+workspace without saved preferences starts without the global guide; existing
+guide preferences remain unchanged. Free camera travel still reaches old
+outlying artwork. Area appearance never changes document geometry.
 
 Workbench destination navigation starts with explicit **Focus selection** and
 **Back** controls shared by owner and Visitor. Focus frames the selected live
@@ -2241,20 +2307,25 @@ Guides reflect the final bounded window, disappear when the interaction ends,
 and never enter saved layouts or publication. Module edges capture within 10
 screen pixels and retain their target until pulled beyond 18 screen pixels;
 Alt immediately releases snapping and its guides. Grid guides use the visible
-24-work-pixel Workbench lattice projected through camera pan and zoom, including
+Workbench lattice (24 work pixels by default, editable from 8–512 in Settings)
+projected through camera pan and zoom, including
 when a module is temporarily scaled.
 Settings calls the existing gap preference “Space between modules” and shows
 a two-window spacing preview. Existing preference keys and values are retained.
-Nearby visible module edges take priority over grid snapping, including top and
-bottom alignment. Zero gap permits flush joins. Alt bypasses both kinds of snapping;
+An enabled local patch takes priority under the moving top-left anchor, or
+resizing corner. The frontmost patch wins overlaps; a small boundary hysteresis
+prevents flicker. Selected patches cannot snap their own moving selection.
+Outside patches, nearby module edges can take priority over the global grid;
+their capture distance is capped relative to projected cell size at low zoom. Zero gap permits flush joins. Alt bypasses both kinds of snapping;
 Workbench area bounds still win. Display resize retains its ratio and opposite corner.
 Only open content windows participate; instruments, shortcuts, enlarged inspection
 windows and other Workbenches are excluded. Changing preferences does not rearrange
 windows. Publication captures the resulting layout through its existing flow;
 snapping preferences remain local and Visitor movement remains temporary.
 
-Workbench Grid snapping uses the existing 24-pixel guide spacing when moving or resizing
-owner Display and standalone Text windows, as well as Display shortcuts.
+Workbench Grid snapping uses the active patch or configured global spacing
+through the shared movement and resize host, including owner content windows
+and Display shortcuts. A highlighted patch identifies the active local lattice.
 Workbench selection, movement and group-resize gestures capture their pointer
 on the host and release it on completion. Lost capture, blur or a hidden document
 cancels temporary state. Input showing that the mouse has already been released
@@ -2266,9 +2337,9 @@ keys. Workbench area limits take priority at edges. The existing profile-local
 older values retain their meaning for shortcuts and also control these windows.
 Toggling snapping or changing guide visibility does not rearrange existing
 windows. Text snaps its moving edges. Display projects pointer movement onto its
-fixed Stage ratio, retaining the opposite corner. A module edge on either axis
-takes priority over the horizontal grid candidate; the other dimension follows
-the ratio. Artwork placement inside Display retains its own rules.
+fixed Stage ratio, retaining the opposite corner. Outside local patches, an eligible module edge on either axis
+takes priority over the horizontal global-grid candidate; the other dimension
+follows the ratio. Artwork placement inside Display retains its own rules.
 Visitor window movement remains free and does not acquire owner preferences.
 
 INSCAPE is technical, spatial, and deliberately bounded. Its accepted tactile

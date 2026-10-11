@@ -1,3 +1,4 @@
+import { openWorkbenchIndex } from '../../systemWorkflow/workbenchIndexSession.js';
 import { SceneNavigationProvider } from '../../text/SceneNavigation.jsx';
 import { WorkbenchPlacement } from './WorkbenchPlacement.jsx';
 import { WorkbenchViewProvider, WorkbenchViewControls } from './WorkbenchView.jsx';
@@ -23,7 +24,7 @@ import { addTextModule } from '../../text/textSession.js';
 import { MAX_TEXT_MODULES } from '../../text/domain/article.js';
 import { addImageModule } from '../../imageModule/imageModuleSession.js';
 import { MAX_IMAGE_MODULES } from '../../imageModule/imageModule.js';
-import { MAX_SHAPES } from '../../shapes/shapes.js';
+import { MAX_SHAPES, isShapeCommand, SHAPE_COMMAND_KINDS } from '../../shapes/shapes.js';
 import { addShape } from '../../shapes/shapeSession.js';
 import { MAX_KEEPER_DOCKS } from '../../keeper/keeper.js';
 import { addKeeperDock } from '../../keeper/keeperSession.js';
@@ -145,7 +146,7 @@ function WorkbenchSession({ connectedProfile, getWalletPublicationContext, onCon
   const initialPrimary = useRef(true);
   if (!hasPrimaryDisplay) initialPrimary.current = false;
   const [workbenchPreferences, setWorkbenchPreferences] = useState(() => loadWorkbenchPreferences(
-    profileAddress, workbenchController.draft?.appearance.surfaceId,
+    profileAddress, workbenchController.draft?.appearance.surfaceId, globalThis.localStorage, workbenchController.store.getRecordState().status === 'absent',
   ));
   const [publicationOpen, setPublicationOpen] = useState(false);
   const [notice, setNoticeState] = useState(null);
@@ -298,7 +299,7 @@ function WorkbenchSession({ connectedProfile, getWalletPublicationContext, onCon
   useEffect(() => {
     if (workbenchPreferencesProfileRef.current !== profileAddress) {
       workbenchPreferencesProfileRef.current = profileAddress;
-      setWorkbenchPreferences(loadWorkbenchPreferences(profileAddress, workbenchController.draft?.appearance.surfaceId));
+      setWorkbenchPreferences(loadWorkbenchPreferences(profileAddress, workbenchController.draft?.appearance.surfaceId, globalThis.localStorage, workbenchController.store.getRecordState().status === 'absent'));
       return;
     }
     saveWorkbenchPreferences(profileAddress, workbenchPreferences);
@@ -414,11 +415,13 @@ function WorkbenchSession({ connectedProfile, getWalletPublicationContext, onCon
   };
   // One creation menu/dispatcher serves both the context menu and toolbar.
   const addCommands = [
+    { id: 'workbench-index', label: workbenchController.draft.workbenchIndex ? 'OPEN INDEX' : 'INDEX' },
     { disabled: !moduleAvailability.presentationBoard, id: 'presentation-board', label: 'DISPLAY MODULE' },
     { disabled: (workbenchController.draft.miniApps?.length || 0) >= MAX_MINI_APPS, id: 'mini-app', label: 'MINI APP' },
     { disabled: (workbenchController.draft.texts?.length || 0) >= MAX_TEXT_MODULES, id: 'text', label: 'TEXT' },
     { disabled: (workbenchController.draft.imageModules?.length || 0) >= MAX_IMAGE_MODULES, id: 'image', label: 'IMAGE' },
     { disabled: (workbenchController.draft.shapes?.length || 0) >= MAX_SHAPES, id: 'shape', label: 'SHAPE' },
+    { disabled: (workbenchController.draft.shapes?.length || 0) >= MAX_SHAPES, id: 'shape-grid', label: 'GRID SHAPE' },
     { disabled: (workbenchController.draft.keeperDocks?.length || 0) >= MAX_KEEPER_DOCKS, id: 'keeper', label: 'KEEPER DOCK' },
     { id: 'mobile', label: workbenchController.draft.mobile ? 'OPEN MOBILE' : 'MOBILE MODULE' },
   ].map(command => command.id === 'presentation-board'
@@ -428,6 +431,7 @@ function WorkbenchSession({ connectedProfile, getWalletPublicationContext, onCon
     { disabled: !moduleAvailability.presentationBoard, id: 'add-display-custom', label: 'CUSTOM SIZE…' },
   ] } : command);
   const runCommand = (id, placement) => {
+    if (id === 'workbench-index') { try { openWorkbenchIndex(workbenchController.store, profileAddress); } catch (error) { setNotice(error.message); } }
     if (id === 'tool-layers' || id === 'tool-metadata') { revealInstruments(); setSharedTools(current => ({ ...current, [id.slice(5)]: true })); }
     if (id === 'library') toggleLibrary();
     if (id === 'identity') openIdentity(workspaceRef.current);
@@ -436,7 +440,7 @@ function WorkbenchSession({ connectedProfile, getWalletPublicationContext, onCon
     if (id === 'publish') togglePublication(workspaceRef.current);
     if (id === 'mini-app') { try { addMiniApp(workbenchController.store, profileAddress); } catch (error) { setNotice(error.message); } }
     if (id === 'text') { try { setActiveModuleId(addTextModule(workbenchController.store, profileAddress, placement)); setTextToolsOpen(true); } catch (error) { setNotice(error.message); } }
-    if (id === 'shape') { try { setActiveModuleId(addShape(workbenchController.store, profileAddress, placement)); } catch (error) { setNotice(error.message); } }
+    if (isShapeCommand(id)) { try { setActiveModuleId(addShape(workbenchController.store, profileAddress, { ...placement, kind: SHAPE_COMMAND_KINDS[id] })); } catch (error) { setNotice(error.message); } }
     if (id === 'keeper') { try { setActiveModuleId(addKeeperDock(workbenchController.store, profileAddress, placement)); } catch (error) { setNotice(error.message); } }
     if (id.startsWith('shape:')) setActiveModuleId(id);
     if (id === 'image') { try { setActiveModuleId(addImageModule(workbenchController.store, profileAddress)); } catch (error) { setNotice(error.message); } }
@@ -453,7 +457,7 @@ function WorkbenchSession({ connectedProfile, getWalletPublicationContext, onCon
     setWorkspaceMenu(null);
   };
   const toolbarHidden = Boolean(preview) || instrumentsObscured || createDisplay;
-  return <><ContextToolbarProvider target={activeModuleId}><SharedDisplayToolsProvider value={sharedTools} onChange={setSharedTools} targetId={activeModuleId} onTargetChange={setActiveModuleId}><SharedTextToolsProvider menuSurface={menuSurface} activeModuleId={activeModuleId} onActivate={setActiveModuleId} open={textToolsOpen} onOpenChange={setTextToolsOpen}><WorkbenchViewProvider key={profileAddress} store={workbenchController.store} profileAddress={profileAddress} presentation={workbench}><WorkbenchPlacement hostRef={workspaceRef} enabled={workbenchPreferences.edgeSnap && !preview} gridEnabled={workbenchPreferences.shortcutSnap && !preview} gap={workbenchPreferences.moduleGap}><main tabIndex={-1} ref={workspaceRef} aria-hidden={preview || undefined} className="system-workflow" data-creation-toolbar={!toolbarHidden || undefined} data-canvas-context="canvas" data-layout={layout.mode}
+  return <><ContextToolbarProvider target={activeModuleId}><SharedDisplayToolsProvider value={sharedTools} onChange={setSharedTools} targetId={activeModuleId} onTargetChange={setActiveModuleId}><SharedTextToolsProvider menuSurface={menuSurface} activeModuleId={activeModuleId} onActivate={setActiveModuleId} open={textToolsOpen} onOpenChange={setTextToolsOpen}><WorkbenchViewProvider key={profileAddress} store={workbenchController.store} profileAddress={profileAddress} presentation={workbench}><WorkbenchPlacement hostRef={workspaceRef} enabled={workbenchPreferences.edgeSnap && !preview} gridEnabled={workbenchPreferences.shortcutSnap && !preview} gridSpacing={workbenchPreferences.gridSpacing} gap={workbenchPreferences.moduleGap}><main tabIndex={-1} ref={workspaceRef} aria-hidden={preview || undefined} className="system-workflow" data-creation-toolbar={!toolbarHidden || undefined} data-canvas-context="canvas" data-layout={layout.mode}
     onPointerDownCapture={event => {
       if (event.target === event.currentTarget && event.button === 0) {
         for (const display of displayIds.map(id => instanceRecords[id]?.controller).filter(Boolean)) {
@@ -484,7 +488,7 @@ function WorkbenchSession({ connectedProfile, getWalletPublicationContext, onCon
     <SharedDisplayToolWindows fallbackFocus={workspaceRef} menuSurface={menuSurface} hidden={Boolean(preview) || instrumentsObscured} />
     <ContextToolbar menuSurface={menuSurface} hidden={Boolean(preview) || instrumentsObscured} />
     <SharedTextToolsWindow hidden={Boolean(preview) || instrumentsObscured} />
-    <WorkbenchAlignmentGrid color={workbenchPreferences.gridColor} mode={workbenchPreferences.gridMode} />
+    <WorkbenchAlignmentGrid spacing={workbenchPreferences.gridSpacing} color={workbenchPreferences.gridColor} mode={workbenchPreferences.gridMode} />
     {displayIds.map(id => <OwnerDisplayInstance key={id} id={id} index={id === PRIMARY_DISPLAY_ID ? 0 : workbenchController.draft.displays.findIndex(module => module.id === id) + 1}
       initialView={{ ...(id === PRIMARY_DISPLAY_ID ? { locked: workbenchPreferences.compositionLocked } : {}), ...restoredWorkspace.views[id] }}
       onLockChange={id === PRIMARY_DISPLAY_ID ? locked => setWorkbenchPreferences(current => ({ ...current, compositionLocked: locked })) : undefined}

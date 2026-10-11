@@ -60,6 +60,16 @@ export default function useWorkbenchNavigation({ hostRef, controlsRef, disabled,
     // toolbar wrapping. Only destination fitting reserves the camera controls.
     return { width: host.clientWidth, height: host.clientHeight - dock };
   }, [hostRef]);
+  const captureView = useCallback(() => {
+    const host = hostRef.current, viewport = readViewport();
+    if (!host || !viewport || moving || locked || interaction.current.isEditing() || isPanning()) return null;
+    const top = controlsRef.current?.getBoundingClientRect().top;
+    const available = workbenchNavigationViewport(viewport, Number.isFinite(top) ? top - host.getBoundingClientRect().top : undefined);
+    const camera = getCamera();
+    return { left: (available.left - camera.offset.x) / camera.scale,
+      top: (available.top - camera.offset.y) / camera.scale,
+      width: available.width / camera.scale, height: available.height / camera.scale };
+  }, [hostRef, controlsRef, readViewport, getCamera, moving, locked, isPanning]);
   const focusDestination = useCallback(destination => {
     if (disabled || locked || interaction.current.isEditing() || isPanning()) return false;
     const host = hostRef.current, viewport = readViewport();
@@ -76,7 +86,7 @@ export default function useWorkbenchNavigation({ hostRef, controlsRef, disabled,
     const available = workbenchNavigationViewport(viewport,
       Number.isFinite(controlsTop) ? controlsTop - hostRect.top : undefined);
     const camera = getCamera();
-    const end = workbenchDestinationCamera(bounds, available);
+    const end = workbenchDestinationCamera(bounds, available, .25, destination.padding ?? 32);
     if (!end) return unavailable();
     if (!destination.remember && Math.abs(end.scale - camera.scale) < 1e-7 && Math.abs(end.offset.x - camera.offset.x) < 1e-7
       && Math.abs(end.offset.y - camera.offset.y) < 1e-7) {
@@ -288,5 +298,5 @@ export default function useWorkbenchNavigation({ hostRef, controlsRef, disabled,
   }, [hostRef, disabled, locked, hand, getCamera, isPanning, pan.releaseAbandonedGesture, panTo, zoom, resetZoom, stopTravel]);
 
   return { offset, locked, getCamera, isPanning, hasCapturedPointer, resetView, resetZoom, moving, hand, toggleHand,
-    focusDestination, goBack, canGoBack: history.length > 0, stopTravel };
+    captureView, focusDestination, goBack, canGoBack: history.length > 0, stopTravel };
 }

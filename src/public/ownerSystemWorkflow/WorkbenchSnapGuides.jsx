@@ -19,7 +19,7 @@ export default function WorkbenchSnapGuides({ host, hostRef }) {
     const value = match.value - offset;
     const line = (a, b, c, d) => horizontal ? `M${a},${b}L${c},${d}` : `M${b},${a}L${d},${c}`;
     let d = line(value, start, value, end);
-    let label = kind === 'grid' ? 'Grid' : 'Edge';
+    let label = kind === 'grid' ? match.patch ? `${Math.round(match.cellSize * 100) / 100} px grid` : 'Grid' : 'Edge';
     let labelX = horizontal ? value + 8 : end - 20, labelY = horizontal ? start + 12 : value - 8;
     if (kind === 'gap') {
       const other = match.targetEdge - offset;
@@ -34,6 +34,8 @@ export default function WorkbenchSnapGuides({ host, hostRef }) {
     labelX = Math.max(textWidth / 2 + 4, Math.min(viewport.width - textWidth / 2 - 4, labelX));
     labelY = Math.max(16, Math.min(viewport.height - 16, labelY));
     return <g key={axis} data-snap-axis={axis} data-snap-kind={kind}>
+      {axis === 'x' && match.patch && <rect style={{ fill: 'none', strokeDasharray: '4 3' }}
+        x={match.patch.left - viewport.left} y={match.patch.top - viewport.top} width={match.patch.width} height={match.patch.height} />}
       <path className="workbench-snap-guides__underlay" d={d} />
       <path d={d} />
       <rect x={labelX - textWidth / 2} y={labelY - 11} width={textWidth} height={16} />

@@ -166,7 +166,10 @@ export const PRODUCTION_BUDGETS = Object.freeze({
   // Text adds the on-demand Tiptap editor (416 kB raw / 131 kB gzip), its
   // reader and local draft integration. Measured aggregate: 2,435,393 / 755,647.
   // Initial and owner-static limits remain unchanged; keep bounded build margin.
-  coreJavaScript: Object.freeze({ raw: 2_480_000, gzip: 770_000 }),
+  // Local grid snapping and the optional saved-view Index add validation,
+  // publication filtering and a lazy editor. Measured aggregate gzip: 776,432.
+  // Keep raw, initial-entry, owner-static and wallet limits unchanged.
+  coreJavaScript: Object.freeze({ raw: 2_480_000, gzip: 780_000 }),
   // Approved local article fonts plus the creation bar's Inter variable face.
   // Inter and its license/provenance add 357,042 bytes; measured copied assets:
   // 17,811,402 bytes. Retain the previous margin, rounded up by less than 3 kB.

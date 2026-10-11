@@ -12,7 +12,7 @@ import { clampOwnerSystemWorkflowWindowPosition, resizeWorkbenchWindow, workbenc
 
 // The host owns gestures and temporary geometry. A module's resize target owns
 // validation and persistence; companion tools retain only their screen layout.
-export function WorkbenchWindow({ children, background, compact, chrome, menuSurface, className = '', label, controls, title, titleContent, width = 320, resizable = true, resizableWidth = false, initialHeight = 420, minimumHeight = 180, minimumWidth = 240, initialX = 18, initialY = 72, fitContent = false, fitContentFromTop = false, onLayoutChange, snapToGrid = false, placementModule = false, viewId, active, surfaceStyle, resizeTarget, committedFrame, externalControls = false, moveFromContent = false }) {
+export function WorkbenchWindow({ children, background, compact, chrome, menuSurface, className = '', label, controls, title, titleContent, width = 320, resizable = true, resizableWidth = false, initialHeight = 420, minimumHeight = 180, minimumWidth = 240, initialX = 18, initialY = 72, fitContent = false, fitContentFromTop = false, onLayoutChange, snapToGrid = false, placementModule = false, viewId, active, surfaceStyle, resizeTarget, committedFrame, externalControls = false, moveFromContent = false, registerView = true, onLayoutCommit }) {
   const view = useWorkbenchView();
   const { offset } = useWorkbenchCamera();
   const transformed = Boolean(viewId) && !compact;
@@ -41,7 +41,7 @@ export function WorkbenchWindow({ children, background, compact, chrome, menuSur
   const paint = workbenchPaintGeometry(screen, density);
   const painted = Object.fromEntries(Object.entries(paint).map(([key, value]) => [key, value / density]));
   const placement = useWorkbenchPlacement(node, placementModule && !compact, camera.scale, true, screen);
-  useWorkbenchViewRegistration(viewId, node, !compact, base, resizeTarget,
+  useWorkbenchViewRegistration(viewId, node, registerView && !compact, base, resizeTarget,
     position => setFrame(current => ({ ...current, ...position })));
   const canResize = !camera.presented && resizable && !fitContent && !compact && (!resizeTarget?.store || resizeTarget.enabled);
   const local = transformed ? view.transforms[viewId] : null;
@@ -61,7 +61,7 @@ export function WorkbenchWindow({ children, background, compact, chrome, menuSur
       view.setTransforms(values => { const nextTransforms = { ...values }; delete nextTransforms[viewId]; return nextTransforms; });
       resizeTarget.applyFrame(authored);
       setFrame(authored);
-    } else setFrame(next);
+    } else { if (onLayoutCommit?.(next) === false) return false; setFrame(next); }
     return true;
   };
   const finish = (cancelled = false) => {
@@ -73,9 +73,9 @@ export function WorkbenchWindow({ children, background, compact, chrome, menuSur
       if (!cancelled && drag.next) commitResize(drag.next);
       setPreview(null);
     } else if (drag.kind === 'content-move') {
-      if (!cancelled && drag.next) setFrame(drag.next);
+      if (!cancelled && drag.next && onLayoutCommit?.(drag.next) !== false) setFrame(drag.next);
       setPreview(null);
-    } else if (cancelled) setFrame(drag.frame);
+    } else if (cancelled || drag.next && onLayoutCommit?.(drag.next) === false) setFrame(drag.frame);
     if (drag.element.hasPointerCapture?.(drag.id)) drag.element.releasePointerCapture(drag.id);
     if (!drag.element.isConnected) queueMicrotask(() => node.current?.querySelector('header')?.focus());
   };
@@ -137,10 +137,12 @@ export function WorkbenchWindow({ children, background, compact, chrome, menuSur
       { width: viewport.width, height: toolViewportBottom });
     return { ...base, left: position.x, top: position.y };
   };
-  const moveTo = (candidate, altKey) => setFrame(positionFor(candidate, altKey));
-  const resizeTo = (origin, edge, delta, altKey) => resizeWorkbenchWindow(origin, edge, delta,
-    { width: minimumWidth, height: minimumHeight }, bounds,
-    (axis, side, value) => placement.edge(axis, side, value, current, altKey) ?? snapWorkbenchCoordinate(value, snapToGrid && !altKey));
+  const resizeTo = (origin, edge, delta, altKey) => {
+    const next = resizeWorkbenchWindow(origin, edge, delta,
+      { width: resizeTarget?.minimumWidth ?? minimumWidth, height: resizeTarget?.minimumHeight ?? minimumHeight }, bounds,
+      resizeTarget?.constrainFrame ? undefined : (axis, side, value) => placement.edge(axis, side, value, current, altKey) ?? snapWorkbenchCoordinate(value, snapToGrid && !altKey));
+    return resizeTarget?.constrainFrame?.(next, { edge, bounds }) || next;
+  };
   const begin = (event, kind, edge) => {
     if (camera.presented || event.button !== 0 || kind !== 'resize' && event.target.closest('button, a, input, select, textarea')) return;
     event.preventDefault(); event.stopPropagation();
@@ -158,23 +160,24 @@ export function WorkbenchWindow({ children, background, compact, chrome, menuSur
       if (!drag.next && Math.hypot(event.clientX - drag.x, event.clientY - drag.y) < 5) return;
       drag.next = positionFor({ left: drag.frame.left + delta.x, top: drag.frame.top + delta.y }, event.altKey);
       setPreview(drag.next);
-    } else if (drag.kind === 'move') moveTo({ left: drag.frame.left + delta.x, top: drag.frame.top + delta.y }, event.altKey);
+    } else if (drag.kind === 'move') { drag.next = positionFor({ left: drag.frame.left + delta.x, top: drag.frame.top + delta.y }, event.altKey); setFrame(drag.next); }
     else { drag.next = resizeTo(drag.frame, drag.edge, delta, event.altKey); setPreview(drag.next); }
   };
   const key = (event, edge) => {
     if (camera.presented || event.target !== event.currentTarget || !event.key.startsWith('Arrow')) return;
     event.preventDefault(); event.stopPropagation(); placement.begin(event);
-    const step = (snapToGrid && !event.altKey) || event.shiftKey ? WORKBENCH_GRID_STEP : 8;
+    const step = edge && resizeTarget?.resizeStep ? resizeTarget.resizeStep * (event.shiftKey ? 10 : 1)
+      : snapToGrid && !event.altKey ? placement.step() || WORKBENCH_GRID_STEP : event.shiftKey ? WORKBENCH_GRID_STEP : 8;
     const delta = { x: event.key === 'ArrowRight' ? step : event.key === 'ArrowLeft' ? -step : 0,
       y: event.key === 'ArrowDown' ? step : event.key === 'ArrowUp' ? -step : 0 };
     if (edge) commitResize(resizeTo(base, edge, delta, event.altKey));
-    else moveTo({ left: base.left + delta.x, top: base.top + delta.y }, event.altKey);
+    else { const next = positionFor({ left: base.left + delta.x, top: base.top + delta.y }, event.altKey); if (onLayoutCommit?.(next) !== false) setFrame(next); }
     placement.finish();
   };
   const pointerProps = { onPointerMove: move, onPointerUp: () => finish(), onPointerCancel: () => finish(true), onLostPointerCapture: () => finish(true) };
   return <OwnerSystemWorkflowDetachedWindow ariaLabel={`${label} — ${title}`} ref={node} viewId={viewId} active={active} workbenchPan={Boolean(viewId) && !compact}
     className={`system-workflow__instrument-window ${externalControls ? 'workbench-window--external-controls' : ''} ${className}`} title={`${label} · ${title}`}
-    headerPointerProps={{ 'aria-label': `Move ${label} window`, 'data-workbench-selectable': viewId ? true : undefined,
+    headerPointerProps={{ 'aria-label': `Move ${label} window`, 'data-workbench-selectable': registerView && viewId ? true : undefined,
       'data-controls-below': externalControls && painted.top < 56 || undefined, 'aria-keyshortcuts': viewId ? 'Shift+Enter' : undefined,
       tabIndex: 0, onKeyDown: event => key(event), onPointerDown: event => begin(event, 'move'), ...pointerProps }}
     controls={controls} titleContent={titleContent} background={background} compactContent={compact?.content} chrome={chrome} menuSurface={menuSurface}

@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { gridShapeFrame } from './gridShapeGeometry.js';
+import { useCallback, useEffect, useMemo, useState, useId } from 'react';
 import { WorkbenchWindow } from '../public/ownerSystemWorkflow/DisplayInstrumentWindow.jsx';
 import { ContextToolContent, useContextToolTarget } from '../public/ownerSystemWorkflow/ContextToolbar.jsx';
-import { useWorkbenchView } from '../public/ownerSystemWorkflow/WorkbenchViewContext.js';
+import { useWorkbenchView, workbenchModuleTransform } from '../public/ownerSystemWorkflow/WorkbenchViewContext.js';
 import { commitWorkbenchSelectionResize } from '../systemWorkflow/resizeWorkbenchSelection.js';
 import { removeWorkbenchModule } from '../systemWorkflow/removeWorkbenchModule.js';
 import { ModuleGrainControl } from '../public/ownerSystemWorkflow/ModuleSurfaceControls.jsx';
@@ -11,10 +12,32 @@ import { addShape, editShape, reorderShape, prepareShapeResize } from './shapeSe
 import '../public/ownerSystemWorkflow/displayInstruments.css';
 import './shapes.css';
 
+function PatternNumber({ label, value, min, max, step = 1, onChange }) {
+  return <label>{label}<input key={value} aria-label={label} type="number" min={min} max={max} step={step} defaultValue={value}
+    onBlur={event => {
+      if (event.target.value === '' || !event.target.validity.valid) { event.target.value = value; return; }
+      const next = Number(event.target.value); if (next !== value) onChange(next);
+    }} onKeyDown={event => { if (event.key === 'Enter') event.currentTarget.blur(); }} /></label>;
+}
+
+function GridPaint({ record }) {
+  const id = useId().replace(/:/g, '');
+  const view = useWorkbenchView();
+  const scale = workbenchModuleTransform(view, record.id).scale * (globalThis.devicePixelRatio || 1);
+  const spacing = record.grid.spacing * scale * (view.transforms?.[record.id]?.gridScale || 1), line = Math.max(1, record.grid.lineWidth * scale);
+  return <svg className="shape-grid-paint" aria-hidden="true" width="100%" height="100%">
+    <defs><pattern id={id} width={spacing} height={spacing} patternUnits="userSpaceOnUse">
+      <path d={`M0,${spacing}V0H${spacing}`} fill="none" stroke="currentColor" strokeWidth={line * 2} />
+    </pattern></defs><rect width="100%" height="100%" fill={`url(#${id})`} />
+    <rect width="100%" height="100%" fill="none" stroke="currentColor" strokeWidth={line * 2} />
+  </svg>;
+}
+
 function ShapeInstance({ record, records, index, initialPresentation, store, profileAddress, onPresentationChange, onActivate, suspended, windowSnap }) {
   const [presentation, setPresentation] = useState(() => initialPresentation || createShapePresentation(record.id, index));
   const [committedFrame, setCommittedFrame] = useState(null), [error, setError] = useState('');
   const active = useContextToolTarget() === record.id;
+  const kind = record.kind || 'rectangle';
   const view = useWorkbenchView();
   const editable = Boolean(store) && !suspended && !view.presentationTransforms?.[record.id];
   const layout = useCallback(window => setPresentation(current => JSON.stringify(current.window) === JSON.stringify(window) ? current : { ...current, window }), []);
@@ -22,33 +45,44 @@ function ShapeInstance({ record, records, index, initialPresentation, store, pro
   const resizeTarget = useMemo(() => ({ enabled: editable, reflow: true, continuousGeometry: true,
     expected: record, store, profileAddress, layoutKey: 'shapes', commit: commitWorkbenchSelectionResize,
     prepare: prepareShapeResize, applyFrame, reportError: setError,
-    minimumWidth: 8, minimumHeight: 8, maximumWidth: 7992, maximumHeight: 7992,
+    minimumWidth: kind === 'grid' ? record.grid.spacing : 8, minimumHeight: kind === 'grid' ? record.grid.spacing : 8,
+    maximumWidth: 7992, maximumHeight: 7992,
+    resizeStep: kind === 'grid' ? record.grid.spacing : undefined,
+    constrainFrame: kind === 'grid' ? (frame, options) => gridShapeFrame(frame, record.grid.spacing, options) : undefined,
   }), [editable, record, store, profileAddress, applyFrame]);
   useEffect(() => { onPresentationChange?.(record.id, presentation); }, [record.id, presentation, onPresentationChange]);
   useEffect(() => () => onPresentationChange?.(record.id, null), [record.id, onPresentationChange]);
   const run = action => { if (!editable) return; try { action(); setError(''); } catch (failure) { setError(failure.message); } };
-  const change = changes => run(() => editShape(store, profileAddress, record, changes));
+  const change = changes => run(() => editShape(store, profileAddress, record, changes, view.getPresentation()));
   const select = id => { onActivate?.(id); view.setSelection?.([id]); };
   const resize = (width, height) => {
     if (![width, height].every(value => Number.isFinite(value) && value >= 8 && value <= 7992)) { setError('Choose dimensions from 8 to 7992 pixels.'); return; }
     const frame = view.getPresentation()?.shapes?.find(item => item.id === record.id)?.window || presentation.window;
-    if (commitWorkbenchSelectionResize([{ ...resizeTarget, id: record.id, ...frame, width, height, getPresentation: view.getPresentation }])) {
+    const next = resizeTarget.constrainFrame?.({ ...frame, width, height }) || { ...frame, width, height };
+    if (commitWorkbenchSelectionResize([{ ...resizeTarget, id: record.id, ...next, getPresentation: view.getPresentation }])) {
       view.setTransforms(values => { const next = { ...values }; delete next[record.id]; return next; });
-      applyFrame({ ...frame, width, height });
+      applyFrame(next);
     }
   };
   return <>
-    <div className="shape-instance" data-editable={editable || undefined} data-active={active || undefined}
-      onPointerDownCapture={() => editable && onActivate?.(record.id)} onFocusCapture={() => editable && onActivate?.(record.id)}>
+    <div className="shape-instance" data-shape-kind={kind} data-grid-selected={kind === 'grid' && view.selection?.includes(record.id) || undefined} data-workbench-select-on-pointer={editable || undefined} data-editable={editable || undefined} data-active={active || undefined}
+      onPointerDownCapture={event => editable && event.button === 0 && onActivate?.(record.id)} onFocusCapture={() => editable && onActivate?.(record.id)}>
       {presentation.open && <WorkbenchWindow label="Shape" title={record.name} className="shape-window" chrome="bevel"
         viewId={record.id} active={active} placementModule={editable} snapToGrid={editable && windowSnap} moveFromContent={editable}
         minimumWidth={8} minimumHeight={8} resizableWidth resizable={editable}
         width={presentation.window.width} initialHeight={presentation.window.height} initialX={presentation.window.left} initialY={presentation.window.top}
         onLayoutChange={layout} resizeTarget={resizeTarget} committedFrame={committedFrame}
         surfaceStyle={{ zIndex: index + 1 }}>
-        <div className="shape-fill" style={{ backgroundColor: record.color, opacity: record.opacity, ...moduleGrainStyle(record.grain) }}>
-          {record.grain > 0 && <span aria-hidden="true" className="module-surface-grain" />}
+        <div className="shape-fill" data-shape-kind={kind} style={{ backgroundColor: kind === 'grid' ? 'transparent' : record.color,
+          color: record.color, opacity: record.opacity, ...moduleGrainStyle(record.grain),
+          ...(record.grid ? { '--shape-grid-spacing': `${record.grid.spacing}px`, '--shape-grid-line': `${record.grid.lineWidth}px` } : {}),
+          ...(record.texture ? { '--shape-noise-scale': record.texture.scale } : {}) }}>
+          {kind === 'grid' && <GridPaint record={record} />}
+          {kind === 'rectangle' && record.grain > 0 && <span aria-hidden="true" className="module-surface-grain" />}
         </div>
+        {kind === 'grid' && editable && <div className="shape-grid-border" aria-hidden="true">
+          {['n', 'e', 's', 'w'].map(edge => <span key={edge} className={`is-${edge}`} />)}
+        </div>}
       </WorkbenchWindow>}
     </div>
     {editable && <ContextToolContent target={record.id} label={record.name}>
@@ -61,11 +95,19 @@ function ShapeInstance({ record, records, index, initialPresentation, store, pro
           onKeyDown={event => { if (event.key === 'Enter') event.currentTarget.blur(); }} /></label>
         <div className="shape-tools-row">
           <label>Colour<input type="color" aria-label="Shape colour" value={record.color} onChange={event => change({ color: event.target.value })} /></label>
-          <label>Opacity<input key={record.opacity} type="number" min="0" max="100" aria-label="Shape opacity" defaultValue={Math.round(record.opacity * 100)}
+          <label>{kind === 'texture' ? 'Noise strength (%)' : 'Opacity (%)'}<input key={record.opacity} type="number" min="0" max="100" aria-label={kind === 'texture' ? 'Noise strength' : 'Shape opacity'} defaultValue={Math.round(record.opacity * 100)}
             onBlur={event => { if (event.target.value !== '' && event.target.validity.valid) change({ opacity: Number(event.target.value) / 100 }); }}
             onKeyDown={event => { if (event.key === 'Enter') event.currentTarget.blur(); }} /></label>
         </div>
-        <ModuleGrainControl value={record.grain} onChange={grain => change({ grain })} />
+        {kind === 'rectangle' && <ModuleGrainControl value={record.grain} onChange={grain => change({ grain })} />}
+        {kind === 'grid' && <><label className="shape-check"><input type="checkbox" checked={record.grid.snap !== false} onChange={event => change({ grid: { ...record.grid, snap: event.target.checked } })} />Snap to this grid</label><div className="shape-tools-row">
+          <PatternNumber label="Grid spacing" value={record.grid.spacing} min={8} max={512} step="any"
+            onChange={spacing => change({ grid: { ...record.grid, spacing } })} />
+          <PatternNumber label="Line width" value={record.grid.lineWidth} min={.25} max={4} step={.25}
+            onChange={lineWidth => change({ grid: { ...record.grid, lineWidth } })} />
+        </div></>}
+        {kind === 'texture' && <PatternNumber label="Noise scale" value={record.texture.scale} min={.25} max={8} step={.25}
+          onChange={scale => change({ texture: { scale } })} />}
         <form key={`${presentation.window.width}:${presentation.window.height}`} onSubmit={event => {
           event.preventDefault(); const values = new FormData(event.currentTarget); resize(Number(values.get('width')), Number(values.get('height')));
         }}>

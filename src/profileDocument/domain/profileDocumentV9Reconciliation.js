@@ -1,3 +1,4 @@
+import { restoreWorkbenchIndex } from '../../systemWorkflow/domain/workbenchIndex.js';
 import { restorePublishedWorkbenchGroups } from './publishedWorkbenchGroups.js';
 import { reconcileRemovedWorkbenchMembers } from '../../systemWorkflow/domain/workbenchGroups.js';
 import {
@@ -148,6 +149,8 @@ export function reconcileSystemWorkflowDraftFromProfileDocumentV9(documentInput,
   };
   const workbenchGroups = restorePublishedWorkbenchGroups(document, currentDraftInput, restored);
   if (workbenchGroups) restored.workbenchGroups = workbenchGroups;
+  const workbenchIndex = restoreWorkbenchIndex(document.workbenchIndex, currentDraftInput?.workbenchIndex);
+  if (workbenchIndex) restored.workbenchIndex = workbenchIndex;
   return assertValidSystemWorkflowDraft(reconcileRemovedWorkbenchMembers(currentDraftInput, restored));
 }
 

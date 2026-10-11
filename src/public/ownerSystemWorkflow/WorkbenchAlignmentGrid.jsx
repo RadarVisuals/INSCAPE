@@ -5,16 +5,16 @@ import { WORKBENCH_GRID_STEP } from './workbenchGrid.js';
 import { projectWorkbenchBounds } from './workbenchSpace.js';
 import { workbenchPaintGeometry } from './workbenchPaintGeometry.js';
 
-export default function WorkbenchAlignmentGrid({ color, mode }) {
+export default function WorkbenchAlignmentGrid({ color, mode, spacing = WORKBENCH_GRID_STEP }) {
   const { offset, subscribeCameraPaint } = useWorkbenchCamera();
   const { scale } = useWorkbenchView();
-  return <WorkbenchGridPattern color={color} mode={mode} offset={offset} scale={scale} subscribeCameraPaint={subscribeCameraPaint} />;
+  return <WorkbenchGridPattern cellSize={spacing} color={color} mode={mode} offset={offset} scale={scale} subscribeCameraPaint={subscribeCameraPaint} />;
 }
 
-export function WorkbenchGridPattern({ color, mode, offset, scale, subscribeCameraPaint }) {
+export function WorkbenchGridPattern({ color, mode, offset, scale, subscribeCameraPaint, cellSize = WORKBENCH_GRID_STEP }) {
   const node = useRef(null);
   const current = useRef(null), repaint = useRef(null), ink = useRef(null);
-  current.current = { mode, offset, scale };
+  current.current = { mode, offset, scale, cellSize };
   const visible = mode !== 'NONE';
   useLayoutEffect(() => {
     const canvas = node.current;
@@ -24,7 +24,7 @@ export function WorkbenchGridPattern({ color, mode, offset, scale, subscribeCame
     // at mount/resize only, rather than forcing layout on every camera commit.
     let { width, height } = canvas.getBoundingClientRect();
     const paint = () => {
-      const { mode, offset, scale } = current.current;
+      const { mode, offset, scale, cellSize } = current.current;
       const density = globalThis.devicePixelRatio || 1;
       const w = Math.round(width * density), h = Math.round(height * density);
       if (canvas.width !== w) canvas.width = w;
@@ -33,7 +33,7 @@ export function WorkbenchGridPattern({ color, mode, offset, scale, subscribeCame
       context.clearRect(0, 0, w, h);
       if (!w || !h) return;
       const bounds = projectWorkbenchBounds(scale, offset);
-      const spacing = WORKBENCH_GRID_STEP * scale;
+      const spacing = cellSize * scale;
       const lowX = Math.max(0, bounds.left), highX = Math.min(width, bounds.right);
       const lowY = Math.max(0, bounds.top), highY = Math.min(height, bounds.bottom);
       if (lowX > highX || lowY > highY) return;
@@ -78,11 +78,11 @@ export function WorkbenchGridPattern({ color, mode, offset, scale, subscribeCame
   }, [visible]);
   // Resolve theme ink only when it changes; camera frames perform no style reads.
   useLayoutEffect(() => { if (node.current) ink.current = getComputedStyle(node.current).color; }, [color, visible]);
-  useLayoutEffect(() => { repaint.current?.(); }, [color, mode, offset, scale]);
+  useLayoutEffect(() => { repaint.current?.(); }, [color, mode, offset, scale, cellSize]);
   useLayoutEffect(() => subscribeCameraPaint?.(camera => {
     current.current = { ...current.current, ...camera }; repaint.current?.();
   }), [subscribeCameraPaint]);
   if (mode === 'NONE') return null;
-  return <canvas ref={node} aria-hidden="true" className="lattice-pixel-grid" data-guide-spacing={WORKBENCH_GRID_STEP * scale}
+  return <canvas ref={node} aria-hidden="true" className="lattice-pixel-grid" data-guide-spacing={cellSize * scale}
     style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', zIndex: 0, display: 'block', pointerEvents: 'none', color: color || 'var(--study-grid)' }} />;
 }

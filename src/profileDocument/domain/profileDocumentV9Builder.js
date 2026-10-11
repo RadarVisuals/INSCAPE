@@ -1,3 +1,4 @@
+import { projectWorkbenchIndex } from '../../systemWorkflow/domain/workbenchIndex.js';
 import { projectPublishedWorkbenchGroups } from './publishedWorkbenchGroups.js';
 import { normalizeProfileAddress } from '../../library/config.js';
 import {
@@ -159,6 +160,7 @@ export function buildProfileDocumentV9({
   if (publicWorkbench?.displays) publicWorkbench.displays = publicWorkbench.displays.filter(module => displays?.some(content => content.id === module.id));
   const grids = projectSystemWorkflowPublicGrids(draft, assetRecords);
   const workbenchGroups = projectPublishedWorkbenchGroups(draft.workbenchGroups, { grids, displays, texts, imageModules, shapes, keeperDocks });
+  const workbenchIndex = projectWorkbenchIndex(draft.workbenchIndex, { workbench: publicWorkbench, workbenchGroups, grids, displays, texts, imageModules, shapes, keeperDocks });
   return assertValidProfileDocumentV9({
     documentType: INSCAPE_PROFILE_DOCUMENT_TYPE,
     version: INSCAPE_PROFILE_DOCUMENT_VERSION,
@@ -185,6 +187,7 @@ export function buildProfileDocumentV9({
     },
     grids,
     ...(workbenchGroups.length ? { workbenchGroups } : {}),
+    ...(workbenchIndex ? { workbenchIndex } : {}),
     metadata: worldCover ? { worldCover } : {},
     ...(displays ? { displays } : {}),
     ...(miniApps?.length ? { miniApps } : {}),
