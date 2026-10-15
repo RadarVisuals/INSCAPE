@@ -17,7 +17,7 @@ const svgProjection = (entry, geometry, progress) => {
 
 // Presentation-only geometry in the Stage's local coordinates, including when
 // its containing window is scaled. Authored placement geometry never changes.
-export default function DisplayLiftArtwork({ scene, source, entry, closing, reducedMotion, onCloseComplete, dimmingTarget }) {
+export default function DisplayLiftArtwork({ scene, source, entry, closing, reducedMotion, onCloseComplete, dimmingTarget, destination }) {
   const host = scene?.parentElement;
   // Display fades only the inspected Grid's artwork plane. Image keeps its
   // overlay backdrop on the host. Neither needs to restyle neighboring Grids.
@@ -55,7 +55,13 @@ export default function DisplayLiftArtwork({ scene, source, entry, closing, redu
       const scaleY = height / bounds.height;
       const sourceRectangle = { left: (origin.left - bounds.left) * scaleX,
         top: (origin.top - bounds.top) * scaleY, width: origin.width * scaleX, height: origin.height * scaleY };
-      const next = { viewport: { width, height }, sourceRectangle, focusedRectangle: displayLiftRectangle(entry, { width, height }) };
+      // A bounded reception reserves a media slot beside its controls/details.
+      // Hosts supply that slot; the artwork still owns the same Lift projection.
+      const target = destination?.getBoundingClientRect();
+      const focusedRectangle = target ? { left: (target.left - bounds.left) * scaleX,
+        top: (target.top - bounds.top) * scaleY, width: target.width * scaleX, height: target.height * scaleY }
+        : displayLiftRectangle(entry, { width, height });
+      const next = { viewport: { width, height }, sourceRectangle, focusedRectangle };
       setGeometry(previous => previous && Object.keys(next).every(key =>
         Object.keys(next[key]).every(axis => next[key][axis] === previous[key][axis])) ? previous : next);
     };
@@ -63,8 +69,13 @@ export default function DisplayLiftArtwork({ scene, source, entry, closing, redu
     const observer = new ResizeObserver(measure);
     observer.observe(host);
     observer.observe(source);
+    if (destination) {
+      observer.observe(destination);
+      // A contain-fitted slot can move without changing its own dimensions.
+      observer.observe(destination.parentElement);
+    }
     return () => observer.disconnect();
-  }, [host, source, entry]);
+  }, [host, source, entry, destination]);
 
   const hasGeometry = Boolean(geometry);
   const sourceMedia = liveSvg && geometry ? svgProjection(entry, geometry, 0).mediaStyle : null;
@@ -86,6 +97,7 @@ export default function DisplayLiftArtwork({ scene, source, entry, closing, redu
   }, [hasGeometry, liveSvg, source, host]);
   useLayoutEffect(() => {
     if (!hasGeometry || !liveSvg) return undefined;
+    setReady(false);
     return liveSvg.prepare(artworkRef.current, () => setReady(true), prepareSvgImages);
   }, [hasGeometry, liveSvg, prepareSvgImages]);
   useLayoutEffect(() => {

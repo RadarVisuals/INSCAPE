@@ -1,9 +1,12 @@
+import { lazy, Suspense, useState } from 'react';
 import { StartupDestinationReady } from '../../startveil/StartupDestinationContext.jsx';
 import PublishedProfileDocumentPreview from './PublishedProfileDocumentPreview.jsx';
 import { PUBLISHED_PROFILE_STATUS } from '../storage/luksoPublishedProfileRepository.js';
 import './publishedProfileStatus.css';
+import '../../public/ownerSystemWorkflow/workflowTactile.css';
 import AlphaSupportPanel from '../../support/AlphaSupportPanel.jsx';
 import { ALPHA_SUPPORT_CODES } from '../../support/alphaSupport.js';
+const OwnerReceptionEditor = lazy(() => import('./OwnerReceptionEditor.jsx'));
 
 
 const STATUS_COPY = Object.freeze({
@@ -19,7 +22,7 @@ function RetryButton({ state, onRetry }) {
     aria-disabled={state?.busy} aria-busy={state?.busy}>{state?.busy ? 'RETRYING…' : 'RETRY'}</button>;
 }
 
-function PublishedStatusSurface({ state, onRetry, onOpenDirectory, onReturn }) {
+function PublishedStatusSurface({ state, onRetry, onOpenDirectory, onReturn, returnLabel = 'RETURN' }) {
   const [title, message] = STATUS_COPY[state?.status] || STATUS_COPY.ERROR;
   const supportRequired = [PUBLISHED_PROFILE_STATUS.INVALID, PUBLISHED_PROFILE_STATUS.ERROR].includes(state?.status);
   return <main className="published-profile-status" data-lattice-menu-surface data-menu-surface="mist"
@@ -30,7 +33,7 @@ function PublishedStatusSurface({ state, onRetry, onOpenDirectory, onReturn }) {
       <div className="published-profile-status__body">
         <p>{message}</p><code>{state?.address}</code>
         <div className="published-profile-actions">{onOpenDirectory && <button type="button" onClick={onOpenDirectory}>DISCOVER</button>}
-          {onReturn && <button type="button" onClick={onReturn}>RETURN</button>}
+          {onReturn && <button type="button" onClick={onReturn}>{returnLabel}</button>}
           {state?.status !== PUBLISHED_PROFILE_STATUS.LOADING && state?.status !== 'CONTEXT_REQUIRED' && <RetryButton state={state} onRetry={onRetry} />}</div>
         {supportRequired && <AlphaSupportPanel
           code={state.status === PUBLISHED_PROFILE_STATUS.INVALID
@@ -45,15 +48,26 @@ function PublishedStatusSurface({ state, onRetry, onOpenDirectory, onReturn }) {
 }
 
 export default function PublishedProfileBoundary({
-  address, resolution, onRetry, returnProfileAddress, onVisitProfile, onOpenDiscover, onConnect, entry, onOpenCanvas, onOpenOverview, onOpenWork, onCloseWork,
+  address, resolution, onRetry, returnProfileAddress, onReturnToWorkbench, onVisitProfile, onOpenDiscover, onConnect, entry, onOpenCanvas, onOpenOverview, onOpenWork, onCloseWork,
 }) {
   const visibleDocument = [PUBLISHED_PROFILE_STATUS.RESOLVED, PUBLISHED_PROFILE_STATUS.STALE].includes(resolution?.status) ? resolution.document : null;
-  const canReturn = Boolean(returnProfileAddress && returnProfileAddress.toLowerCase() !== String(address || '').toLowerCase());
+  const [editingScope, setEditingScope] = useState(null);
+  const ownProfile = Boolean(returnProfileAddress && returnProfileAddress.toLowerCase() === String(address || '').toLowerCase());
+  const returnToWorkbench = ownProfile ? onReturnToWorkbench : null;
+  const scope = visibleDocument ? `${address}:${visibleDocument.documentId}:${visibleDocument.revision}` : null;
+  const editing = Boolean(returnToWorkbench && entry?.surface !== 'canvas' && scope && editingScope === scope);
+  const canReturn = Boolean(returnProfileAddress && !ownProfile);
   const returnHome = canReturn ? () => onVisitProfile?.(returnProfileAddress, { returnToConnectedProfile: true }) : null;
   const content = !visibleDocument
-    ? <PublishedStatusSurface state={resolution} onRetry={onRetry} onOpenDirectory={onOpenDiscover} onReturn={returnHome} />
-    : <><PublishedProfileDocumentPreview document={visibleDocument} entry={entry} onOpenCanvas={onOpenCanvas} onOpenOverview={onOpenOverview} onOpenWork={onOpenWork} onCloseWork={onCloseWork}
-      onOpenDirectory={onOpenDiscover} onReturn={returnHome} onConnect={onConnect} />
+    ? <PublishedStatusSurface state={resolution} onRetry={onRetry} onOpenDirectory={onOpenDiscover}
+      onReturn={returnToWorkbench || returnHome} returnLabel={returnToWorkbench ? "Back to my Workbench" : "RETURN"} />
+    : <>{returnToWorkbench && <nav className="published-profile-owner-navigation" aria-label="My profile navigation" data-workflow-material="tactile">
+      {!editing && entry?.surface !== 'canvas' && <button className="workflow-tactile-control" type="button" onClick={() => setEditingScope(scope)}>Edit reception</button>}
+      <button className="workflow-tactile-control" type="button" onClick={returnToWorkbench}>Back to my Workbench</button>
+    </nav>}{editing ? <Suspense fallback={<main className="public-shell" role="status">Opening reception editor…</main>}>
+      <OwnerReceptionEditor key={scope} document={visibleDocument} onDone={() => setEditingScope(null)} />
+    </Suspense> : <PublishedProfileDocumentPreview document={visibleDocument} entry={entry} onOpenCanvas={onOpenCanvas} onOpenOverview={onOpenOverview} onOpenWork={onOpenWork} onCloseWork={onCloseWork}
+      onOpenDirectory={onOpenDiscover} onReturn={returnHome} onConnect={onConnect} />}
     {resolution.status === PUBLISHED_PROFILE_STATUS.STALE && <div className="published-profile-stale" role="status" aria-busy={resolution.busy}>Showing the last verified document while {resolution.busy ? 'checking the network.' : 'the network is unavailable.'} <RetryButton state={resolution} onRetry={onRetry} /></div>}
     </>;
   return content;

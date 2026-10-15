@@ -73,9 +73,8 @@ test('System Workflow production shell preserves the Phase 3 authority and isola
   assert.match(globalBar, /aria-label="Inscape"/);
   assert.match(styles, /\.system-workflow__grid-rename button \{[^}]*border: 0;[^}]*border-left: 1px solid var\(--workflow-border\)/s);
   assert.match(styles, /\.system-workflow__presentation-controls > footer button \+ button \{ border-left: 0; \}/);
-  assert.match(styles, /\.system-workflow__crop-controls footer button \+ button \{ border-left: 0; \}/);
   assert.match(styles, /\.system-workflow__canvas \{[^}]*box-shadow: none/s);
-  assert.match(styles, /\.system-workflow__global-bar \{[^}]*border-top: 1px solid var\(--workflow-border\);[^}]*box-shadow: none/s);
+  assert.match(styles, /\.system-workflow__global-bar \{[^}]*border-top: 1px solid var\(--tactile-edge\);[^}]*box-shadow: var\(--tactile-shadow-shell\)/s);
 });
 
 test('System Workflow dock tools cannot expand into the INSCAPE wordmark', async () => {
@@ -92,14 +91,12 @@ test('System Workflow dock tools cannot expand into the INSCAPE wordmark', async
   assert.match(styles, /\.system-workflow__global-bar \.system-workflow__dock-tools > button \{[^}]*width: var\(--workflow-dock-tool-size\);[^}]*min-width: var\(--workflow-dock-tool-size\);[^}]*padding: 0;[^}]*display: grid;/s,
     'dock tools retain their bounded footprint instead of inheriting the 104px navigation-button width');
   assert.match(styles, /\.system-workflow__dock-tools > button > svg \{[^}]*width: 17px;[^}]*height: 17px;/s);
-  assert.match(styles, /\.system-workflow__global-bar \.system-workflow__dock-tools > button:is\(:hover, :focus-visible\) \{[^}]*color: var\(--workflow-muted\);[^}]*background: transparent;/s);
-  assert.match(styles, /\.system-workflow__global-bar \.system-workflow__dock-tools > button\[aria-expanded="true"\] \{[^}]*color: var\(--workflow-ink\);[^}]*background: transparent;/s,
-    'dock tools use color alone to communicate an open panel');
+  assert.match(globalBar, /data-workflow-material="tactile"/);
+  assert.match(globalBar, /workflow-tactile-control--quiet/,
+    'dock controls share the tactile hover, active and focus states');
   assert.match(styles, /\.system-workflow \.system-workflow__layers-trigger > svg \{[^}]*color: currentColor;[^}]*stroke: currentColor;/s,
     'the Layers glyph follows its muted trigger color instead of forcing ink directly');
   assert.doesNotMatch(styles, /\.system-workflow \.system-workflow__layers-trigger > svg \{[^}]*var\(--workflow-ink\)/s);
-  assert.match(styles, /\.system-workflow__global-bar nav button:is\(\[aria-pressed="true"\], \[aria-expanded="true"\]\)::before/,
-    'the horizontal navigation marker does not apply to dock tools');
   assert.match(styles, /\.system-workflow__select-popover button, \.system-workflow__filter-options > button \{[^}]*font: 400 10px\/1\.2 "Inscape Sora", sans-serif;[^}]*font-variation-settings: "wght" 400;[^}]*letter-spacing: 0;/s,
     'dropdown options reuse the Library asset-title typography');
   assert.doesNotMatch(styles, /\.system-workflow__select-popover (?:header|button)[^}]*Inscape Bahnschrift/s,
@@ -110,7 +107,7 @@ test('System Workflow dock tools cannot expand into the INSCAPE wordmark', async
     'Layers no longer behaves like a global INSCAPE dock tool');
   assert.doesNotMatch(board, /data-instrument-trigger=/,
     'shared tools are reached through menus, not Display toolbar icons');
-  assert.match(globalBar, /SharedDisplayToolsLauncher/);
+  assert.doesNotMatch(globalBar, /SharedDisplayToolsLauncher|panelButton\('library'/, 'creation tools are not duplicated in the app dock');
   assert.match(await read('./ownerSystemWorkflow/OwnerSystemWorkflowSelectionInspector.jsx'), /<SharedDisplayToolContent id="layers"/);
   assert.doesNotMatch(board, /onToggleToolbar|MetadataDirectionControls/,
     'placement tools and properties use independent Workbench hosts');

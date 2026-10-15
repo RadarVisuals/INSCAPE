@@ -72,6 +72,6 @@ export default function DisplayInspectionCues({ host, items, viewer, editable = 
       host={host} bounds={layout} position={row} offset={row.offset} rectangle={row.rect} editable={editable}
       label={`Read metadata for ${row.label}`} onActivate={() => onSelect?.(row.id)}
       onMove={value => setOffsets(current => ({ ...current, [row.id]: { x: clamp(value.x, -.1, 1.1), y: clamp(value.y, -.1, 1.1) } }))}
-      onReset={() => setOffsets(current => { const next = { ...current }; delete next[row.id]; return next; })}><Plus /></DisplayInspectionCueButton>)}
+      onReset={() => setOffsets(current => { const next = { ...current }; delete next[row.id]; return next; })}><Plus size={16} strokeWidth={1.6} /></DisplayInspectionCueButton>)}
   </div>, host);
 }

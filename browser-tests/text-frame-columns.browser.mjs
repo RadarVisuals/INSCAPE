@@ -1,3 +1,4 @@
+import { openTextToolSection } from './fixtures/text-tool-sections.mjs';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { mkdir } from 'node:fs/promises';
@@ -147,7 +148,7 @@ test('narrow three-column frames support scaling, full-content Focus writing and
     assert.deepEqual(await page.evaluate(() => window.savedDraft().workbench), geometry);
     await page.locator('.text-window .text-frame-overflow').waitFor();
     const tools = page.locator('.text-tools-window');
-    await tools.getByRole('tab', { name: 'Layout', exact: true }).click();
+    await openTextToolSection(tools, 'Text box layout');
     await tools.getByLabel('Text columns', { exact: true }).selectOption('1'); await settle(page);
     assert.equal(await page.locator('.text-window [data-text-frame]').count(), 0);
     assert.equal(await page.locator('.text-window .text-frame-overflow').count(), 0);

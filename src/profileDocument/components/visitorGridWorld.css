@@ -17,20 +17,12 @@
 .visitor-grid-world[data-surface="ash"] { --visitor-grid-surface: #b2b2b2; --visitor-grid-ink: #111313; }
 .visitor-grid-world[data-surface="mist"] { --visitor-grid-surface: #c9c6bd; --visitor-grid-ink: #111313; }
 .visitor-grid-world[data-surface="paper"] { --visitor-grid-surface: #d8d4ca; --visitor-grid-ink: #111313; }
-.visitor-grid-world__viewport { position: absolute; inset: 0; overflow: hidden; touch-action: none; }
-.visitor-grid-world[data-workbench] .system-workflow__workbench { position: absolute; inset: 0 0 var(--visitor-dock-height); }
-.visitor-grid-world[data-grid-dragging] .visitor-grid-world__viewport { cursor: grabbing; }
-/* Scene clips share the moving rail; no per-scene blend compensation. */
-.visitor-grid-world__grid-plane { position: absolute; z-index: 0; inset: 0 auto 0 0; width: 100%; overflow: hidden; }
-.visitor-grid-world__grid-track {
-  position: absolute;
-  inset: 0;
-  isolation: isolate;
-  /* Keep the same 2D rail through movement, Pause and landing. */
-  transform: translateX(var(--visitor-grid-swipe-x, 0px));
-}
-.visitor-grid-renderer { position: absolute; inset: 0; }
-.visitor-grid-world__grid-plane .visitor-grid-renderer__artwork-plane { overflow: visible; }
+.visitor-grid-world > .published-display { position: absolute; inset: 0; pointer-events: none; }
+.visitor-grid-world > .published-display .system-workflow__workbench { position: absolute; inset: 0 0 var(--visitor-dock-height); pointer-events: none; }
+.visitor-grid-world > .published-display .system-workflow__presentation-board,
+.visitor-grid-world > .published-display .system-workflow__desktop-shortcut { pointer-events: auto; }
+.visitor-grid-world > .published-display[data-active-display] .system-workflow__presentation-board { z-index: 3; }
+.visitor-grid-world__display-navigation { display: flex; }
 .visitor-grid-world > .lattice-profile-rail[data-identity-only] { top: auto; bottom: calc(var(--visitor-dock-height) + 12px); left: 12px; }
 /* Match the owner dock layer so independent module windows cannot cover navigation. */
 .visitor-grid-world__dock { position: fixed; z-index: 100; inset: auto 0 0; height: var(--visitor-dock-height); display: grid; grid-template-columns: minmax(0, 1fr) 112px; overflow: hidden; border-top: 1px solid var(--lattice-menu-line); color: var(--lattice-menu-ink); background: var(--lattice-menu-panel); }
@@ -68,9 +60,3 @@
   .visitor-grid-world[data-workbench] .visitor-grid-world__navigation span { flex: 1; min-width: 0; }
   .visitor-grid-world[data-workbench] .visitor-grid-world__actions { flex: 0 0 100%; height: 42px; justify-content: flex-end; box-sizing: border-box; border-top: 1px solid var(--lattice-menu-line); }
 }
-.visitor-grid-world[data-embedded-display] { position: absolute; inset: 0; background: transparent; pointer-events: none; }
-.visitor-grid-world[data-embedded-display] > .system-workflow__workbench { background: transparent; pointer-events: none; }
-.visitor-grid-world[data-embedded-display] .system-workflow__presentation-board { pointer-events: auto; }
-.visitor-grid-world[data-embedded-display] .system-workflow__desktop-shortcut { pointer-events: auto; }
-.visitor-grid-world[data-embedded-display] { z-index: auto; }
-.visitor-grid-world[data-active-display] > .system-workflow__workbench > .system-workflow__presentation-board { z-index: 3; }

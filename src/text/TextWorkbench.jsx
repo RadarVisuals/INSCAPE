@@ -1,8 +1,9 @@
-import { useSceneNavigation, useSceneProgress } from './SceneNavigation.jsx';
-import { passageArticle, editPassage, textDisplays } from './scenePassages.js';
-import PagedArticle from './PagedArticle.jsx';
+import { useWorkbenchArea } from '../public/ownerSystemWorkflow/WorkbenchAreaContext.jsx';
+import { useSceneNavigation } from './SceneNavigation.jsx';
+import { editPassage, textDisplays } from './scenePassages.js';
+import { useTextScene, SceneTextViewport, TextContentPage } from './SceneTextContent.jsx';
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { X, Settings, Eye, Pencil, Plus } from '../public/InscapeIcons.jsx';
+import { X, Settings2 as Settings, Eye, Pencil, Plus } from 'lucide-react';
 import { WorkbenchWindow } from '../public/ownerSystemWorkflow/DisplayInstrumentWindow.jsx';
 import { useWorkbenchView, workbenchModuleTransform } from '../public/ownerSystemWorkflow/WorkbenchViewContext.js';
 import { useWorkbenchCamera } from '../public/ownerSystemWorkflow/WorkbenchCamera.jsx';
@@ -17,8 +18,6 @@ import TextTools from './TextTools.jsx';
 import { SharedTextToolsProvider, SharedTextToolsWindow, useSharedTextTools } from './SharedTextTools.jsx';
 import { restoreTextToolsView } from './sharedTextToolsState.js';
 import TextMoveHandle from './TextMoveHandle.jsx';
-import ArticleView from './ArticleView.jsx';
-import TextViewport from './TextViewport.jsx';
 import LinkedTextWindow, { TextFrameLinks } from './LinkedTextFrames.jsx';
 import { useArticleFlow } from './TextFrame.jsx';
 import { textRecoveryScope } from './textEditRecovery.js';
@@ -30,6 +29,7 @@ const textValue = record => record;
 const saveText = (store, scope, expected, next, options) => saveTextModuleResult(store, scope.profile, expected, next, options);
 
 function TextInstance({ record, index, store, profileAddress, assets, registerTarget, placementTargets, initialPresentation, onPresentationChange, suspended, active, onActivate, windowSnap, initialView, onViewChange, initiallyOpenId }) {
+  const { bounds: areaBounds } = useWorkbenchArea();
   const tools = useSharedTextTools();
   const workbenchView = useWorkbenchView();
   const view = workbenchModuleTransform(workbenchView, record.id);
@@ -60,20 +60,12 @@ function TextInstance({ record, index, store, profileAddress, assets, registerTa
   useEffect(() => { onViewChange?.(record.id, { mode: editingMode }); }, [record.id, editingMode, onViewChange]);
   useEffect(() => () => onViewChange?.(record.id, null), [record.id, onViewChange]);
   const surface = useRef(null), editor = useRef(null), shortcut = useRef(null);
-  const scene = working.sceneLink ? scenes[working.sceneLink.displayId] : null;
-  const sectionLink = working.sceneLink?.mode === 'sections';
-  const sectionRead = sectionLink && mode === 'read';
-  const paginated = !sectionLink && working.pagination === 'pages';
-  const sceneTrack = useRef(null);
-  useSceneProgress(sectionLink && mode === 'write' ? null : scene, sceneTrack, presentation.open);
-  const gridId = scene?.gridId || working.sceneLink?.gridId;
-  const article = sectionLink && mode === 'write' ? working.article : passageArticle(working, gridId, scene?.gridOrder);
+  const sceneState = useTextScene(working, mode);
+  const { scene, sectionLink, sectionRead, paginated, gridId, article, unavailable, swiping } = sceneState;
   const appearance = textAppearance(article);
   const flow = useArticleFlow(article, [record.id, ...(presentation.frames || []).map(frame => frame.id)]);
   const paintScale = view.scale * (globalThis.devicePixelRatio || 1);
-  const unavailable = Boolean(working.sceneLink && !scene);
   const missingDisplay = Boolean(store && working.sceneLink && !displays.some(display => display.id === working.sceneLink.displayId));
-  const swiping = Boolean(scene?.targetGridId) && (!sectionLink || sectionRead);
   const editBlocked = view.presented || suspended || (!sectionLink && (unavailable || swiping));
   const changeArticle = value => {
     if (!editBlocked) change(editPassage(edit.getSnapshot().value, gridId, value));
@@ -122,7 +114,7 @@ function TextInstance({ record, index, store, profileAddress, assets, registerTa
     const frames = presentation.frames || [], index = frames.findIndex(frame => frame.id === after);
     if (frames.length >= 7) return;
     const previous = index < 0 ? presentation.window : frames[index].window;
-    const window = { ...previous, ...clampWorkbenchPosition({ left: previous.left + previous.width + 24, top: previous.top }, previous) };
+    const window = { ...previous, ...clampWorkbenchPosition({ left: previous.left + previous.width + 24, top: previous.top }, previous, areaBounds) };
     const next = [...frames]; next.splice(index + 1, 0, { id: `text-frame:${crypto.randomUUID()}`, window });
     changeFrames(next);
   };
@@ -165,26 +157,14 @@ function TextInstance({ record, index, store, profileAddress, assets, registerTa
         <button type="button" className="text-window-control" aria-label={`Close ${name}`} onClick={close}><X /></button></>}>
       <div className="text-module-body" ref={surface} style={textOutputStyle(article, view.frame || presentation.window)}>
         {unavailable && <p className="text-status" role="status">{missingDisplay ? 'The linked Display was removed. Your text is preserved. Open Text tools to unlink it.' : sectionLink ? 'Open the linked Display to read its current section. You can still edit the full article in Write.' : 'Open the linked Display to read or edit its passage.'}</p>}
-        <div className="text-scene-viewport" style={unavailable && (!sectionLink || sectionRead) ? { visibility: 'hidden' } : undefined} data-settling={swiping && scene?.settling || undefined}>
-          <div className="text-scene-track" ref={sceneTrack}>
-            <div className="text-scene-page">
-              <div className="text-authoring-viewport" hidden={mode === 'read' && paginated}>
-                <TextViewport article={article} flow={linked ? flow : null} showOverflow={Boolean(store)} resetKey={sectionRead ? gridId : null} automaticPadding={!article.appearance?.padding && !article.appearance?.compact} mode={mode}>
+        <SceneTextViewport record={working} state={sceneState} open={presentation.open} mode={mode}>
+          <TextContentPage article={article} paginated={paginated} mode={mode} flow={linked ? flow : null}
+            showOverflow={Boolean(store)} resetKey={sectionRead || paginated ? gridId : null}>
                   {store && <div hidden={mode !== 'write'}><Suspense fallback={<p role="status">Opening editor…</p>}><ArticleEditor key={sectionLink ? 'article' : gridId || 'article'} article={sectionLink ? working.article : article}
                     onChange={changeArticle} onEditor={setEditor} onFlowEditor={setFlowEditor} flowRange={linked ? flow.ranges[0] : null} controlsHost={controlsHost} disabled={editBlocked || mode !== 'write'} saveError={error}
                     onFindRequest={() => { if (!editBlocked && mode === 'write') setSettings(true); }} /></Suspense></div>}
-                  {mode === 'read' && !paginated && !linked && <ArticleView article={article} />}
-                </TextViewport>
-              </div>
-              {mode === 'read' && paginated && <PagedArticle key={gridId || 'article'} article={article} />}
-            </div>
-            {swiping && <div className="text-scene-page text-scene-incoming" aria-hidden="true" inert="" style={{ left: scene.direction === 'next' ? '100%' : '-100%' }}>
-              {sectionLink ? <TextViewport article={passageArticle(working, scene.targetGridId, scene.gridOrder)} automaticPadding={!article.appearance?.padding && !article.appearance?.compact} mode="read">
-                <ArticleView article={passageArticle(working, scene.targetGridId, scene.gridOrder)} />
-              </TextViewport> : <PagedArticle key={scene.targetGridId} article={passageArticle(working, scene.targetGridId)} />}
-            </div>}
-          </div>
-        </div>
+          </TextContentPage>
+        </SceneTextViewport>
       </div>
     </WorkbenchWindow>}
     {presentation.open && presentation.frames?.map((frame, index) => <LinkedTextWindow key={frame.id} {...{ frame, article, flow, active, store, resizeTarget, windowSnap, mode, flowEditor }} registerTarget={!editBlocked ? registerTarget : null} acceptImage={acceptImage}

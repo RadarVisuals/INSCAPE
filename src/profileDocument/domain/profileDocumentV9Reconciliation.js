@@ -9,7 +9,6 @@ import {
   createEmptySystemWorkflowWorldCoverGrid,
 } from '../../systemWorkflow/domain/systemWorkflowDraft.js';
 import { assertValidProfileDocumentV9 } from './profileDocumentV9Validation.js';
-import { restoreMobilePresentation } from '../../mobile/domain/mobilePresentation.js';
 import { restoreMiniApps } from '../../miniApps/domain/miniApps.js';
 import { restoreImageModules } from '../../imageModule/imageModule.js';
 import { restoreShapes } from '../../shapes/shapes.js';
@@ -135,6 +134,7 @@ export function reconcileSystemWorkflowDraftFromProfileDocumentV9(documentInput,
     geometry: { ...document.geometry },
     appearance: { ...document.appearance },
     identityPresentation: restoredIdentity(document.identityPresentation),
+    ...(document.reception ? { reception: structuredClone(document.reception) } : {}),
     ...(workbench ? { workbench } : {}),
     ...((document.miniApps || currentDraftInput?.miniApps) ? { miniApps } : {}),
     ...((document.shapes || currentDraftInput?.shapes) ? { shapes } : {}),
@@ -142,8 +142,6 @@ export function reconcileSystemWorkflowDraftFromProfileDocumentV9(documentInput,
     ...((document.imageModules || currentDraftInput?.imageModules) ? { imageModules } : {}),
     ...((document.texts || currentDraftInput?.texts) ? { texts } : {}),
     ...((document.displays || currentDraftInput?.displays) ? { displays: [...publishedDisplays, ...structuredClone(privateDisplays)] } : {}),
-    ...(document.mobile ? { mobile: restoreMobilePresentation(document.mobile, currentDraftInput?.mobile) }
-      : currentDraftInput?.mobile ? { mobile: { ...structuredClone(currentDraftInput.mobile), visibility: 'PRIVATE' } } : {}),
     grids: document.grids.length || privateGrids.length
       ? [...document.grids.map(restoredPublicGrid), ...privateGrids, worldCover] : [],
   };

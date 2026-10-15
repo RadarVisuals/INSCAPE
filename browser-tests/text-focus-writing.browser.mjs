@@ -9,7 +9,7 @@ const origin = process.env.INSCAPE_TEXT_ROOT || 'http://127.0.0.1:5173';
 const settle = page => page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
 const saved = page => page.evaluate(() => window.savedDraft());
 const bodyIn = owner => owner.getByRole('textbox', { name: 'Article text', exact: true });
-const launch = () => chromium.launch({ executablePath: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', headless: true });
+const launch = () => chromium.launch({ executablePath: process.env.INSCAPE_BROWSER_EXECUTABLE || 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', headless: true });
 const focusedTitle = 'Writing in a quieter room — illustrated field notes about the changing light, the shapes we remember, and the stories hidden between them';
 
 async function seedLongArticle(page) {

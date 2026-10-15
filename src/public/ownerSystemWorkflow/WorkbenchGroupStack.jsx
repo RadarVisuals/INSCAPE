@@ -1,3 +1,4 @@
+import { useWorkbenchArea } from './WorkbenchAreaContext.jsx';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useWorkbenchCamera } from './WorkbenchCamera.jsx';
 import { WORKBENCH_GROUP_STACK_SIZE } from '../../systemWorkflow/domain/workbenchGroups.js';
@@ -6,6 +7,7 @@ import { clampWorkbenchPosition } from './workbenchSpace.js';
 // Browsing is shared. Only an owner-supplied position action installs authoring
 // gestures; this component has no draft store or persistence authority.
 export default function WorkbenchGroupStack({ group, previews, scene, locked, dropTarget, onManage, onPosition }) {
+  const { bounds: areaBounds } = useWorkbenchArea();
   const { scale, offset } = useWorkbenchCamera();
   const drag = useRef(null), node = useRef(null), [preview, setPreview] = useState(null);
   const positionAction = useRef(onPosition); positionAction.current = onPosition;
@@ -31,7 +33,7 @@ export default function WorkbenchGroupStack({ group, previews, scene, locked, dr
   }, [Boolean(onPosition), finish]);
   useEffect(() => { finish(true); }, [group, scale, offset.x, offset.y, locked, finish]);
   const position = preview || group.position, heading = <><strong>{group.name}</strong><span>{group.memberIds.length}</span></>;
-  const move = next => onPosition?.(group, clampWorkbenchPosition(next, WORKBENCH_GROUP_STACK_SIZE));
+  const move = next => onPosition?.(group, clampWorkbenchPosition(next, WORKBENCH_GROUP_STACK_SIZE, areaBounds));
   const available = Boolean(scene.bounds(group));
   return <section className="workbench-group-stack" data-workbench-group-tools data-workbench-stack={group.id} data-workbench-group-drop={onPosition ? group.id : undefined}
     data-workbench-camera-decoration data-muted={Boolean(scene.active) || undefined} data-drop-target={dropTarget === group.id || undefined} aria-label={group.name + ' group stack'}
@@ -47,7 +49,7 @@ export default function WorkbenchGroupStack({ group, previews, scene, locked, dr
         const start = drag.current;
         if (start?.id !== event.pointerId) return;
         start.next = clampWorkbenchPosition({ left: start.group.position.left + (event.clientX - start.x) / scale,
-          top: start.group.position.top + (event.clientY - start.y) / scale }, WORKBENCH_GROUP_STACK_SIZE);
+          top: start.group.position.top + (event.clientY - start.y) / scale }, WORKBENCH_GROUP_STACK_SIZE, areaBounds);
         setPreview(start.next);
       }}
       onPointerUp={() => finish(false)} onPointerCancel={() => finish(true)} onLostPointerCapture={() => finish(true)}

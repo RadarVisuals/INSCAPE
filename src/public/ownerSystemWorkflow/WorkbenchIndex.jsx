@@ -1,3 +1,4 @@
+import { useWorkbenchArea } from './WorkbenchAreaContext.jsx';
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
 import { WorkbenchWindow } from './DisplayInstrumentWindow.jsx';
@@ -5,12 +6,14 @@ import { useWorkbenchView } from './WorkbenchViewContext.js';
 import { editWorkbenchIndex } from '../../systemWorkflow/workbenchIndexSession.js';
 import { MAX_WORKBENCH_DESTINATIONS, resolveWorkbenchDestination, workbenchDestinationAnchor } from '../../systemWorkflow/domain/workbenchIndex.js';
 import { workbenchGroupWindowIds } from '../../systemWorkflow/domain/workbenchGroups.js';
+import { clampWorkbenchPosition, unprojectWorkbenchPosition } from './workbenchSpace.js';
 import './workbenchIndex.css';
 
 const empty = Object.freeze({});
 const noSubscribe = () => () => {};
 
 export default function WorkbenchIndex({ hostRef, navigation, sceneRef, entryTarget }) {
+  const { bounds: areaBounds } = useWorkbenchArea();
   const view = useWorkbenchView(), owner = Boolean(view.store);
   const content = useSyncExternalStore(view.store?.subscribe || noSubscribe,
     view.store?.getSnapshot || (() => view.groupContent || empty));
@@ -71,13 +74,12 @@ export default function WorkbenchIndex({ hostRef, navigation, sceneRef, entryTar
   const pin = pinned => {
     const { scale, offset } = navigation.getCamera(), frame = index.window;
     const window = pinned ? { ...frame, left: Math.max(8, frame.left * scale + offset.x), top: Math.max(8, frame.top * scale + offset.y) }
-      : { ...frame, left: Math.max(8, Math.min(3992 - frame.width, (frame.left - offset.x) / scale)),
-        top: Math.max(8, Math.min(3992 - frame.height, (frame.top - offset.y) / scale)) };
+      : { ...frame, ...clampWorkbenchPosition(unprojectWorkbenchPosition(frame, scale, offset), frame, areaBounds) };
     save({ ...index, pinned, window }, 'Pin Index');
   };
   const panel = open && hostRef.current && createPortal(<div className="workbench-index" data-system-workflow-panel="index" data-workbench-index="true">
     <WorkbenchWindow key={`${index.pinned}:${owner}`} label="Index" title="Destinations" chrome="bevel"
-      viewId={index.pinned ? undefined : 'workbench:index'} registerView={false}
+      viewId={index.pinned ? undefined : 'workbench:index'} registerView={false} screenSized
       width={index.window.width} initialHeight={index.window.height} initialX={index.window.left} initialY={index.window.top}
       minimumWidth={240} minimumHeight={180} resizableWidth resizable={owner} committedFrame={index.window}
       onLayoutCommit={owner ? window => save({ ...index, window }, 'Move or resize Index') : undefined}
@@ -125,5 +127,5 @@ export default function WorkbenchIndex({ hostRef, navigation, sceneRef, entryTar
       {error && <p role="alert">{error}</p>}
     </WorkbenchWindow>
   </div>, hostRef.current);
-  return <><button type="button" aria-label="Toggle Index" aria-expanded={open} disabled={navigation.locked} onClick={toggle}>Index</button>{panel}</>;
+  return <><button className="workflow-tactile-control" type="button" aria-label="Toggle Index" aria-expanded={open} disabled={navigation.locked} onClick={toggle}>Index</button>{panel}</>;
 }

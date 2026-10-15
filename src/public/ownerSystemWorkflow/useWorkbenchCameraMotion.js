@@ -44,7 +44,15 @@ export default function useWorkbenchCameraMotion(camera, hostRef, entries) {
     prepare(motion);
     const tick = time => {
       if (active.current !== motion) return;
-      if (!motion.surface.isCurrent() || motion.isCurrent && !motion.isCurrent()) { stop(); return; }
+      if (motion.isCurrent && !motion.isCurrent()) { stop(); return; }
+      if (!motion.surface.isCurrent()) {
+        // Late modules join the same camera journey and clock. A valid saved
+        // destination must not stop halfway merely because artwork loaded.
+        // Group morphs retain their geometry-specific cancellation boundary.
+        if (motion.origins || motion.destinations) { stop(); return; }
+        prepare(motion);
+        if (active.current !== motion) return;
+      }
       if (preference?.matches) { if (motion.kind === 'coast') stop(); else finish(motion); return; }
       motion.started ??= time;
       const elapsed = Math.min(motion.duration, time - motion.started);

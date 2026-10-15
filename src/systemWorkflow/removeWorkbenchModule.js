@@ -4,7 +4,7 @@ import { createDefaultWorkbenchPresentation } from '../profileDocument/domain/wo
 // Deletion is one authored operation; assets in Library and publications are untouched.
 export function removeWorkbenchModule(store, profile, kind, expected) {
   if (store.getProfileAddress() !== profile || !expected) return false;
-  const keys = { display: 'displays', mobile: 'mobile', 'mini-app': 'miniApps', text: 'texts', image: 'imageModules', shape: 'shapes', keeper: 'keeperDocks' };
+  const keys = { display: 'displays', 'mini-app': 'miniApps', text: 'texts', image: 'imageModules', shape: 'shapes', keeper: 'keeperDocks' };
   const key = keys[kind];
   if (!key) return false;
   const draft = store.getDraft(), generation = store.getGeneration();
@@ -14,13 +14,11 @@ export function removeWorkbenchModule(store, profile, kind, expected) {
       ...(draft.workbench ? { workbench: { ...draft.workbench, display: createDefaultWorkbenchPresentation().display } } : {}),
     }, { expectedGeneration: generation, historyLabel: 'Delete Display' });
   }
-  const current = kind === 'mobile' ? draft.mobile : draft[key]?.find(item => item.id === expected.id);
+  const current = draft[key]?.find(item => item.id === expected.id);
   if (!current || JSON.stringify(current) !== JSON.stringify(expected)) return false;
   const next = { ...draft };
-  if (kind === 'mobile') delete next.mobile;
-  else next[key] = draft[key].filter(item => item.id !== expected.id);
-  const layoutKey = kind === 'mobile' ? null : key;
-  if (layoutKey && draft.workbench?.[layoutKey]) next.workbench = { ...draft.workbench,
-    [layoutKey]: draft.workbench[layoutKey].filter(item => item.id !== expected.id) };
+  next[key] = draft[key].filter(item => item.id !== expected.id);
+  if (draft.workbench?.[key]) next.workbench = { ...draft.workbench,
+    [key]: draft.workbench[key].filter(item => item.id !== expected.id) };
   return store.commitCompletedOperation(next, { expectedGeneration: generation, historyLabel: `Delete · ${kind}` });
 }

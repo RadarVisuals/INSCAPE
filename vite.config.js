@@ -18,7 +18,15 @@ export default defineConfig(({ mode }) => {
     define: { __INSCAPE_RELEASE_COMMIT__: JSON.stringify(resolveReleaseCommit({ ...process.env, ...productionEnvironment })) },
     plugins: [keeperChatgptPlugin(), artworkDocumentHostPlugin(), diagnosticsEnvironmentPlugin(), react(), excludeUnsupportedWalletConnectorsPlugin(),
       ownerRuntimeIsolationPlugin(), productionBuildHygienePlugin()],
-    build: { manifest: true, rollupOptions: { input: { app: 'index.html', miniAppHost: 'mini-app-host.html' } } },
+    build: { manifest: true, rollupOptions: {
+      input: { app: 'index.html', miniAppHost: 'mini-app-host.html' },
+      output: {
+        // One shared icon family should not become dozens of tiny shared files.
+        // Keep module/editor dependencies in their existing lazy boundaries.
+        onlyExplicitManualChunks: true,
+        manualChunks: id => id.replaceAll('\\', '/').includes('/node_modules/lucide-react/') ? 'interface-icons' : undefined,
+      },
+    } },
     // Audit exports and browser runtime artifacts are not application entries.
     optimizeDeps: { entries: ['index.html', 'mini-app-host.html', 'browser-tests/*.html'] },
     preview: { headers: productionResponseSecurityHeaders(productionEnvironment) },

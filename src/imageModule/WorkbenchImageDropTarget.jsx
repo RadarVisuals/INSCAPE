@@ -1,3 +1,4 @@
+import { useWorkbenchArea } from '../public/ownerSystemWorkflow/WorkbenchAreaContext.jsx';
 import { useLayoutEffect, useRef } from 'react';
 import { useWorkbenchView } from '../public/ownerSystemWorkflow/WorkbenchViewContext.js';
 import { useWorkbenchCamera } from '../public/ownerSystemWorkflow/WorkbenchCamera.jsx';
@@ -9,9 +10,10 @@ import { addImageModule } from './imageModuleSession.js';
 // A scoped fallback destination. Existing module targets keep priority; the
 // Workbench supplies camera/layout inputs while Image owns creation and media.
 export default function WorkbenchImageDropTarget({ targetRef, hostRef, suspended, onCreated, onError }) {
+  const { bounds: areaBounds } = useWorkbenchArea();
   const view = useWorkbenchView(), camera = useWorkbenchCamera();
   const latest = useRef(null);
-  latest.current = { view, camera, suspended, onCreated, onError };
+  latest.current = { view, camera, suspended, onCreated, onError, areaBounds };
   useLayoutEffect(() => {
     let live = true, request = 0;
     const target = {
@@ -25,7 +27,7 @@ export default function WorkbenchImageDropTarget({ targetRef, hostRef, suspended
         if (!target.targetAt(point)) return null;
         const { view, camera } = latest.current;
         const host = hostRef.current;
-        const preview = imageDropGeometry(dimensions, point, host.getBoundingClientRect(), view.scale, camera.offset, devicePixelRatio || 1);
+        const preview = imageDropGeometry(dimensions, point, host.getBoundingClientRect(), view.scale, camera.offset, devicePixelRatio || 1, latest.current.areaBounds);
         return preview && { ...preview, kind: 'workbench-image', target };
       },
       async placeAsset(input, dimensions, destination, isCurrent) {

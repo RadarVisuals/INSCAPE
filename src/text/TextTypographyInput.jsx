@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { X } from '../public/InscapeIcons.jsx';
+import { X } from 'lucide-react';
 
 // Valid values apply immediately. Keep incomplete input local while typing;
 // Escape restores the formatting captured before this field was edited.
@@ -40,7 +40,7 @@ export default function TextTypographyInput({ label, accessibleLabel = label, va
           setInput(restored == null ? '' : String(restored));
         }
       }} /></label>
-    <button type="button" aria-label={resetLabel} title={resetLabel} disabled={disabled || !hasOverride}
+    <button className="workflow-tactile-control" type="button" aria-label={resetLabel} title={resetLabel} disabled={disabled || !hasOverride}
       onMouseDown={event => event.preventDefault()} onClick={() => { editing.current = null; setInput(''); onChange(null); onReturn?.(); }}><X /></button>
   </div>;
 }

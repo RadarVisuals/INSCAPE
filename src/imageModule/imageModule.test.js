@@ -33,7 +33,7 @@ test('Image duplication preserves every crop, transform, source and size through
   assert.ok(saveImageModule(f.store, profile, empty, original));
   const before = f.store.getDraft();
   const workbench = { ...createDefaultWorkbenchPresentation(), imageModules: [
-    { id: original.id, open: true, position: { left: 1300.25, top: 2100.5 } },
+    { id: original.id, open: true, position: { left: 700.25, top: 2100.5 } },
   ] };
   const id = duplicateImageModule(f.store, profile, original, { workbench });
   const after = f.store.getDraft(), copy = after.imageModules[1];
@@ -45,7 +45,7 @@ test('Image duplication preserves every crop, transform, source and size through
   assert.equal(new Set([...copy.sides, ...original.sides].map(side => side.id)).size, 4);
   for (let i = 0; i < copy.sides.length; i++) assert.deepEqual({ ...copy.sides[i], id: original.sides[i].id }, original.sides[i]);
   assert.deepEqual(after.workbench.imageModules, [...workbench.imageModules,
-    { id, open: true, position: { left: 1324.25, top: 2124.5 } }]);
+    { id, open: true, position: { left: 724.25, top: 2124.5 } }]);
   assert.equal(f.store.getHistory().undo, 'Duplicate Image');
   assert.ok(f.store.undo()); assert.deepEqual(f.store.getDraft(), before);
   assert.ok(f.store.redo()); assert.deepEqual(f.store.getDraft(), after);
@@ -71,7 +71,7 @@ test('Image duplication rejects stale, wrong-profile and failed saves without a 
   const id = duplicateImageModule(f.store, profile, record, { position: { left: 7990, top: 7990 } });
   const after = f.store.getDraft(), copy = after.imageModules.find(item => item.id === id);
   assert.equal(copy.visibility, 'PRIVATE'); assert.deepEqual(copy.sides, []);
-  assert.deepEqual(after.workbench.imageModules[0].position, { left: 3992 - copy.width, top: 3992 - copy.height });
+  assert.deepEqual(after.workbench.imageModules[0].position, { left: 1992 - copy.width, top: 3992 - copy.height });
 });
 
 test('Image duplication respects the existing sixteen-module limit', () => {

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { ARTICLE_STYLE_ROLES, ARTICLE_FONTS, ARTICLE_FONT_SIZE, ARTICLE_LINE_HEIGHT, ARTICLE_TRACKING } from './domain/article.js';
 import TextTypographyInput from './TextTypographyInput.jsx';
-import { X } from '../public/InscapeIcons.jsx';
+import { X } from 'lucide-react';
 
 export default function TextStyleControls({ appearance, onChange, disabled }) {
   const [role, setRole] = useState('h1');
@@ -33,7 +33,7 @@ export default function TextStyleControls({ appearance, onChange, disabled }) {
       onChange={value => update('letterSpacing', value)} resetLabel="Use automatic style tracking" />
     <div className="text-selection-colour"><label>Colour<input aria-label="Style colour" type="color" disabled={disabled} value={style.color || appearance.color}
       onChange={event => update('color', event.target.value)} /></label>
-      <button type="button" aria-label="Use document style colour" title="Use document colour" disabled={disabled || !style.color} onClick={() => update('color', null)}><X /></button>
+      <button className="workflow-tactile-control" type="button" aria-label="Use document style colour" title="Use document colour" disabled={disabled || !style.color} onClick={() => update('color', null)}><X /></button>
     </div>
   </details>;
 }

@@ -1,18 +1,18 @@
 // Placement coordinates retain their existing origin and storage meaning.
-// The fixed area guides placement and grid painting, never camera movement.
-export const WORKBENCH_SIZE = 4000;
-export const WORKBENCH_BOUNDS = Object.freeze({ left: 8, top: 8, right: WORKBENCH_SIZE - 8, bottom: WORKBENCH_SIZE - 8 });
+// The authored area guides placement and grid painting, never camera movement.
+import { WORKBENCH_BOUNDS } from '../../systemWorkflow/domain/workbenchArea.js';
+export { WORKBENCH_BOUNDS, WORKBENCH_WIDTH, WORKBENCH_HEIGHT } from '../../systemWorkflow/domain/workbenchArea.js';
 
-export function clampWorkbenchPosition(position, size) {
+export function clampWorkbenchPosition(position, size, bounds = WORKBENCH_BOUNDS) {
   return {
-    left: Math.max(WORKBENCH_BOUNDS.left, Math.min(WORKBENCH_BOUNDS.right - size.width, position.left)),
-    top: Math.max(WORKBENCH_BOUNDS.top, Math.min(WORKBENCH_BOUNDS.bottom - size.height, position.top)),
+    left: Math.max(bounds.left, Math.min(bounds.right - size.width, position.left)),
+    top: Math.max(bounds.top, Math.min(bounds.bottom - size.height, position.top)),
   };
 }
 
-export function projectWorkbenchBounds(scale = 1, offset = { x: 0, y: 0 }) {
-  return { left: WORKBENCH_BOUNDS.left * scale + offset.x, top: WORKBENCH_BOUNDS.top * scale + offset.y,
-    right: WORKBENCH_BOUNDS.right * scale + offset.x, bottom: WORKBENCH_BOUNDS.bottom * scale + offset.y };
+export function projectWorkbenchBounds(scale = 1, offset = { x: 0, y: 0 }, bounds = WORKBENCH_BOUNDS) {
+  return { left: bounds.left * scale + offset.x, top: bounds.top * scale + offset.y,
+    right: bounds.right * scale + offset.x, bottom: bounds.bottom * scale + offset.y };
 }
 
 // Screen input becomes authored position only after removing the temporary

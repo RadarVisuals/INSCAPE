@@ -13,8 +13,8 @@ const libraryPreferences = { assetSize: 150, hideLabels: false, sidebarWidth: 17
 const ownerLibraryPreviewRecords = new Map();
 
 export default function OwnerSystemWorkflowLibraryWorkspace({ authoringLocked = false, categoryCommands, placementScope, data, menuSurface, onClose, phase,
-  resolveAssetDimensions, workbenchImageTargetRef, moduleAssetTargetRef, placementTargetRef, shortcutTargetRef, workspaceRef }) {
-  const workspace = useBrowserWorkspace(data, ownerLibraryPreviewRecords, libraryPreferences);
+  navigationHost = null, preferences = libraryPreferences, previewRecords = ownerLibraryPreviewRecords, resolveAssetDimensions, workbenchImageTargetRef, moduleAssetTargetRef, placementTargetRef, shortcutTargetRef, workspaceRef }) {
+  const workspace = useBrowserWorkspace(data, previewRecords, preferences);
   const resolveDimensions = resolveAssetDimensions || decodeOwnerSystemWorkflowAssetDimensions;
   const [dragPreview, setDragPreview] = useState(null);
   const [categoryDrag, setCategoryDrag] = useState(null);
@@ -37,10 +37,10 @@ export default function OwnerSystemWorkflowLibraryWorkspace({ authoringLocked = 
     if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
   };
   useEffect(() => {
-    libraryPreferences.assetSize = workspace.assetSize;
-    libraryPreferences.hideLabels = workspace.hideLabels;
-    libraryPreferences.sidebarWidth = workspace.sidebarWidth;
-  }, [workspace.assetSize, workspace.hideLabels, workspace.sidebarWidth]);
+    preferences.assetSize = workspace.assetSize;
+    preferences.hideLabels = workspace.hideLabels;
+    preferences.sidebarWidth = workspace.sidebarWidth;
+  }, [preferences, workspace.assetSize, workspace.hideLabels, workspace.sidebarWidth]);
   const place = async (asset) => {
     if (authoringLocked || libraryClosed) return false;
     // Registry wrappers follow selection. Retain the receiving module/Grid
@@ -80,7 +80,7 @@ export default function OwnerSystemWorkflowLibraryWorkspace({ authoringLocked = 
       pointerId: event.pointerId, moved: false, source: event.currentTarget };
     const library = event.currentTarget.closest('.system-workflow__library');
     const overLibraryNavigation = (pointerEvent) => {
-      const bounds = library?.querySelector('.lattice-browser-sidebar')?.getBoundingClientRect();
+      const bounds = (navigationHost || library)?.querySelector('.lattice-browser-sidebar')?.getBoundingClientRect();
       return bounds && pointerEvent.clientX >= bounds.left && pointerEvent.clientX <= bounds.right
         && pointerEvent.clientY >= bounds.top && pointerEvent.clientY <= bounds.bottom;
     };
@@ -223,7 +223,7 @@ export default function OwnerSystemWorkflowLibraryWorkspace({ authoringLocked = 
     placing={Boolean(dragPreview)} rail={<OwnerSystemWorkflowWorkspaceRail menuSurface={menuSurface} onClose={onClose} workspace={workspace} />}
     sidebarCollapsed={workspace.sidebarWidth <= 72}>
     <OwnerSystemWorkflowLibraryPresenter key={data.ownerContext} categoryCommands={categoryCommands} data={data}
-      categoryDrag={categoryDrag} dropFeedback={dropFeedback}
+      navigationHost={navigationHost} categoryDrag={categoryDrag} dropFeedback={dropFeedback}
       menuSurfaceId={menuSurface} onAssetActivate={(_event, asset) => asset.isCollection && asset.collectionRole !== 'cover'
         ? data.onOpenCollection?.(asset.assetRecord)
         : asset.placeable && workspace.isAssetRenderable(asset.stableAssetId || asset.id) && place(asset)}

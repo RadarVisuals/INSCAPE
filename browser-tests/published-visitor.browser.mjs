@@ -129,11 +129,6 @@ async function navigate(address = profileA, runtime = 'grid') {
     lifecycleDiagnostic('bootstrap:document-loaded');
     await waitFor(`document.querySelector('[data-browser-fixture]')?.dataset.profileAddress === ${JSON.stringify(address)} && window.__fixture?.ready === true && window.__fixture?.runtime === ${JSON.stringify(runtime)}`, 'published fixture');
     lifecycleDiagnostic('bootstrap:fixture-mounted');
-    if (activeViewport.touch && activeViewport.width < 768) {
-      await page.getByRole('button', { name: 'Open desktop experience', exact: true }).waitFor();
-      await page.screenshot({ path: '.browser-test-runtime/mobile-entry-' + activeViewport.width + '.png' });
-      await page.getByRole('button', { name: 'Open desktop experience', exact: true }).click();
-    }
     await waitFor(`document.querySelector('.visitor-grid-world') && window.__fixture`, 'v9 published visitor world');
     lifecycleDiagnostic('bootstrap:published-ready');
   } catch (error) {
@@ -463,7 +458,7 @@ test('an actual CSP response header blocks disallowed canonical media and expose
   assert.equal(imageRequests.some((url) => url.startsWith('https://csp-blocked.invalid/')), false, 'CSP stopped media before an outbound request');
 });
 
-test('narrow mobile entry offers the desktop experience with Directory and Return reachable', async () => {
+test('narrow touch entry opens the ordinary visitor with Directory and Return reachable', async () => {
   await viewport(390, 844, true); await navigate(profileB);
   const commands = await evaluate(`[...document.querySelectorAll('.visitor-grid-world__actions button')].map((button)=>({text:button.textContent.trim(),rect:button.getBoundingClientRect().toJSON()}))`);
   assert.equal(commands.length, 2);
@@ -485,7 +480,7 @@ test('narrow mobile entry offers the desktop experience with Directory and Retur
   assert.equal(await evaluate(`document.querySelectorAll('[data-resize-control]').length`), 0, 'narrow mode exposes no desktop resize control');
 });
 
-test('390px desktop opt-in exposes no misleading resize control', async () => {
+test('390px visitor exposes no misleading resize control', async () => {
   await viewport(390, 844, true); await navigate();
   assert.equal(await evaluate(`document.querySelectorAll('[data-resize-control]').length`), 0);
   const tree = await pageCdp.send('Accessibility.getFullAXTree');

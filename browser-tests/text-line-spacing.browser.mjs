@@ -1,3 +1,4 @@
+import { openTextToolSection } from './fixtures/text-tool-sections.mjs';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { chromium } from 'playwright-core';
@@ -27,16 +28,15 @@ for (const width of [1440, 390]) test(`line spacing and long illustrated text re
     await mountTextToolsFixture(page, origin);
     const tools = page.locator('.text-tools-window'), win = page.locator('.text-window');
     const body = win.getByRole('textbox', { name: 'Article text', exact: true });
-    const scope = name => tools.getByRole('group', { name: 'Formatting target' }).getByRole('button', { name, exact: true });
     const setNumber = async (name, value) => { const field = tools.getByRole('spinbutton', { name, exact: true }); await field.fill(String(value)); await field.press('Enter'); await settle(page); };
     const line = node => node.evaluate(n => getComputedStyle(n).lineHeight);
-    await scope('Document').click(); await setNumber('Document line spacing', 2);
+    await openTextToolSection(tools, 'Default text style'); await setNumber('Document line spacing', 2);
     assert.equal(await line(body.locator('p').first()), '32px');
     const titleLineHeight = await line(win.getByLabel('Article title', { exact: true }));
     await setNumber('Document line spacing', 2.1);
     assert.equal(await line(win.getByLabel('Article title', { exact: true })), titleLineHeight, 'body spacing leaves title leading alone');
     await setNumber('Document line spacing', 2);
-    await scope('Selection').click();
+
     await tools.locator('.text-inspector-advanced summary').click();
     await body.focus(); await body.locator('p').first().evaluate(node => {
       const range = document.createRange(); range.selectNodeContents(node);
@@ -59,7 +59,7 @@ for (const width of [1440, 390]) test(`line spacing and long illustrated text re
     assert.equal(await line(body.locator('p').nth(1)), '32px');
     await tools.getByRole('button', { name: 'Use inherited paragraph line spacing', exact: true }).click();
     assert.equal(await line(body.locator('p').first()), '32px');
-    await scope('Document').click(); await tools.getByRole('button', { name: 'Use default document line spacing', exact: true }).click();
+    await openTextToolSection(tools, 'Default text style'); await tools.getByRole('button', { name: 'Use default document line spacing', exact: true }).click();
     assert.equal(await line(body.locator('p').first()), '26.4px');
     await setNumber('Document line spacing', 1.9);
     const savedArticle = await page.evaluate(() => window.savedDraft().texts[0].article);

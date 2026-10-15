@@ -26,18 +26,19 @@ function CommandIcon({ icon }) {
 export default function WorkbenchToolbar({
   activeTool = 'select', onToolChange, onOpenLibrary, libraryOpen = false,
   actions = EMPTY_COMMANDS, addCommands = EMPTY_COMMANDS, shapeCommands = EMPTY_COMMANDS,
-  layers, info, hidden = false, actionRequest = 0,
+  layers, info, hidden = false, actionRequest = 0, minimalPopups = false,
 }) {
   const rootRef = useRef(null), barRef = useRef(null), popupRef = useRef(null), searchRef = useRef(null);
   const triggerRef = useRef(null), actionsRef = useRef(null), requestRef = useRef(actionRequest);
   const [popup, setPopup] = useState(null), [path, setPath] = useState([]), [query, setQuery] = useState('');
   const popupId = useId();
   const roots = popup === 'add' ? addCommands : popup === 'shapes' ? shapeCommands : actions;
-  let commands = roots, title = POPUP_LABELS[popup];
+  let commands = roots, title = POPUP_LABELS[popup], parentTitle = title;
   for (const id of path) {
     const parent = commands.find(command => command.id === id);
     if (!parent?.children) break;
     commands = parent.children;
+    parentTitle = title;
     title = parent.label;
   }
   const normalizedQuery = query.trim().toLocaleLowerCase();
@@ -58,12 +59,19 @@ export default function WorkbenchToolbar({
     const host = rootRef.current?.closest('.system-workflow'), bar = barRef.current;
     if (!host || !bar) return;
     const previous = host.style.getPropertyValue('--workbench-toolbar-clearance');
-    const measure = () => host.style.setProperty('--workbench-toolbar-clearance', `${Math.ceil(bar.getBoundingClientRect().height)}px`);
+    const previousWidth = host.style.getPropertyValue('--workbench-toolbar-width');
+    const measure = () => {
+      const rectangle = bar.getBoundingClientRect();
+      host.style.setProperty('--workbench-toolbar-clearance', `${Math.ceil(rectangle.height)}px`);
+      host.style.setProperty('--workbench-toolbar-width', `${Math.ceil(rectangle.width)}px`);
+    };
     measure();
     const observer = new ResizeObserver(measure);
     observer.observe(bar);
     return () => {
       observer.disconnect();
+      if (previousWidth) host.style.setProperty('--workbench-toolbar-width', previousWidth);
+      else host.style.removeProperty('--workbench-toolbar-width');
       if (previous) host.style.setProperty('--workbench-toolbar-clearance', previous);
       else host.style.removeProperty('--workbench-toolbar-clearance');
     };
@@ -116,7 +124,9 @@ export default function WorkbenchToolbar({
     if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) return;
     if (event.target.tagName === 'INPUT' && ['Home', 'End'].includes(event.key)) return;
     event.preventDefault(); event.stopPropagation();
-    const buttons = [...popupRef.current.querySelectorAll('[data-toolbar-command]:not(:disabled)')];
+    const buttons = [...popupRef.current.querySelectorAll(minimalPopups
+      ? '[data-toolbar-command]:not(:disabled), [data-toolbar-back]'
+      : '[data-toolbar-command]:not(:disabled)')];
     if (!buttons.length) return;
     const current = buttons.indexOf(document.activeElement);
     const next = event.key === 'Home' ? 0 : event.key === 'End' ? buttons.length - 1
@@ -149,12 +159,17 @@ export default function WorkbenchToolbar({
         <Search aria-hidden="true" /><input ref={searchRef} aria-label="Search actions" placeholder="Search actions…" value={query}
           autoComplete="off" spellCheck={false} onChange={event => setQuery(event.target.value)}
           onKeyDown={event => { if (event.key === 'Enter') { const command = visibleCommands.find(item => !item.disabled); if (command) { event.preventDefault(); choose(command); } } }} />
-        <button type="button" className="workbench-toolbar__utility workflow-tactile-control" aria-label="Close Actions" title="Close Actions" onClick={() => close(true)}><X aria-hidden="true" /></button>
-      </div> : <header className="workbench-toolbar__popup-header">
+        {!minimalPopups && <button type="button" className="workbench-toolbar__utility workflow-tactile-control" aria-label="Close Actions" title="Close Actions" onClick={() => close(true)}><X aria-hidden="true" /></button>}
+      </div> : !minimalPopups && <header className="workbench-toolbar__popup-header">
         {path.length > 0 && <button type="button" className="workbench-toolbar__utility workflow-tactile-control" data-toolbar-back aria-label="Back to module types" onClick={() => setPath(current => current.slice(0, -1))}><ArrowLeft aria-hidden="true" /></button>}
         <strong>{title}</strong><button type="button" className="workbench-toolbar__utility workflow-tactile-control" aria-label={`Close ${POPUP_LABELS[popup]}`} onClick={() => close(true)}><X aria-hidden="true" /></button>
       </header>}
       <div className="workbench-toolbar__commands">
+        {minimalPopups && path.length > 0 && <button type="button" data-toolbar-back
+          className="workbench-toolbar__back workflow-tactile-control workflow-tactile-control--quiet"
+          aria-label={`Back to ${parentTitle}`} onClick={() => { setPath(current => current.slice(0, -1)); setQuery(''); }}>
+          <ArrowLeft aria-hidden="true" /><span>{parentTitle}</span>
+        </button>}
         {visibleCommands.map((command, index) => <div key={command.id}>
           {command.group && command.group !== visibleCommands[index - 1]?.group && <div className="workbench-toolbar__group">{command.group}</div>}
           <button type="button" data-toolbar-command className="workbench-toolbar__command workflow-tactile-control workflow-tactile-control--quiet" disabled={command.disabled}

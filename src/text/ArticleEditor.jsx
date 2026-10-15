@@ -17,7 +17,7 @@ import ArticleFocusWriting from './ArticleFocusWriting.jsx';
 import { ArticleSearchExtension, setArticleSearch } from './articleSearch.js';
 import { ArticleFlowFocus, createArticleFlowEditor } from './articleFlowEditor.js';
 import { insertArticleArtwork, moveArticleArtwork } from './articleArtworkEditing.js';
-import { Bold, Italic, Underline, Quote, List, ListOrdered, Link, Undo, Redo, AlignLeft, AlignCenter, AlignRight, X } from '../public/InscapeIcons.jsx';
+import { Bold, Italic, Underline, Quote, List, ListOrdered, Link, Undo2 as Undo, Redo2 as Redo, AlignLeft, AlignCenter, AlignRight, X } from 'lucide-react';
 const formattingIcons = { Bold, Italic, Underline, Quote, Bullets: List, Numbered: ListOrdered, Link, Undo, Redo, 'Align left': AlignLeft, 'Align center': AlignCenter, 'Align right': AlignRight };
 
 export function ContinuationEditor({ controller, article, range, index }) {
@@ -49,12 +49,12 @@ const PageBreak = Node.create({ name: 'pageBreak', group: 'block', atom: true,
   parseHTML: () => [{ tag: 'div[data-text-page-break]' }],
   renderHTML: () => ['div', { 'data-text-page-break': '', class: 'text-page-break' }],
 });
-export default function ArticleEditor({ article, onChange, onEditor, onFindRequest, saveError, disabled, controlsHost, flowRange, onFlowEditor }) {
+export default function ArticleEditor({ article, onChange, onEditor, onFindRequest, saveError, saveStatus, focusClassName, disabled, controlsHost, flowRange, onFlowEditor }) {
   const [flowBridge] = useState(createArticleFlowEditor);
   const latest = useRef({ article, onChange }); latest.current = { article, onChange };
   const searchHost = useRef(controlsHost); searchHost.current = controlsHost;
   const findRequest = useRef(onFindRequest); findRequest.current = onFindRequest;
-  const pendingFind = useRef(false);
+  const pendingFind = useRef(false), writingTools = useRef(null);
   const [searchFocusRequest, requestSearchFocus] = useState(0);
   const [focusWriting, setFocusWriting] = useState(false), focusTrigger = useRef(null);
   flowBridge.configure(Boolean(flowRange), focusWriting);
@@ -75,7 +75,7 @@ export default function ArticleEditor({ article, onChange, onEditor, onFindReque
           event.preventDefault();
           if (focusWritingRef.current) { pendingFind.current = true; setFocusWriting(false); return true; }
           if (!searchHost.current) { pendingFind.current = true; findRequest.current(); return true; }
-          searchHost.current.dispatchEvent(new CustomEvent('inscape:text-find', { bubbles: true }));
+          if (writingTools.current) writingTools.current.open = true;
           setArticleSearch(editor, { open: true }); requestSearchFocus(value => value + 1);
           return true;
         }
@@ -116,7 +116,7 @@ export default function ArticleEditor({ article, onChange, onEditor, onFindReque
     if (disabled) pendingFind.current = false;
     if (editor && !editor.isDestroyed && controlsHost && !disabled && !focusWriting && pendingFind.current) {
       pendingFind.current = false;
-      controlsHost.dispatchEvent(new CustomEvent('inscape:text-find', { bubbles: true }));
+      if (writingTools.current) writingTools.current.open = true;
       setArticleSearch(editor, { open: true }); requestSearchFocus(value => value + 1);
     }
   }, [editor, disabled, controlsHost, focusWriting]);
@@ -128,7 +128,7 @@ export default function ArticleEditor({ article, onChange, onEditor, onFindReque
   const justification = ['justify-left', 'justify-center', 'justify-right', 'justify-all'].find(alignmentActive) || '';
   const command = (name, action, active = false) => {
     const Icon = formattingIcons[name];
-    return <button type="button" key={name} aria-label={name} title={name} aria-pressed={['Undo', 'Redo'].includes(name) ? undefined : active}
+    return <button className="workflow-tactile-control workflow-tactile-control--quiet" type="button" key={name} aria-label={name} title={name} aria-pressed={['Undo', 'Redo'].includes(name) ? undefined : active}
       disabled={disabled || name === 'Undo' && !editor.can().undo() || name === 'Redo' && !editor.can().redo()}
       onMouseDown={e => e.preventDefault()} onClick={action}><Icon /></button>;
   };
@@ -136,12 +136,14 @@ export default function ArticleEditor({ article, onChange, onEditor, onFindReque
   return <>
     {controlsHost && createPortal(<>
     <div className="text-toolbar" role="toolbar" aria-label="Text formatting">
-      <button ref={focusTrigger} type="button" disabled={disabled} onMouseDown={event => event.preventDefault()}
-        onClick={() => { setArticleSearch(editor, { close: true }); setFocusWriting(true); }}>Focus writing</button>
+      <div className="text-formatting-heading"><strong>Text formatting</strong>
+      <button className="workflow-tactile-control workflow-tactile-control--quiet" ref={focusTrigger} type="button" disabled={disabled} onMouseDown={event => event.preventDefault()}
+        onClick={() => { setArticleSearch(editor, { close: true }); setFocusWriting(true); }}>Focus writing</button></div>
+      <p className="text-inspector-context">Applies at your cursor or to selected text.</p>
       <div className="text-toolbar-font">
       <select aria-label="Selected text font" disabled={disabled} value={editor.getAttributes('textStyle').fontFamily || ''}
         onChange={e => e.target.value ? editor.chain().focus().setFontFamily(e.target.value).run() : editor.chain().focus().unsetFontFamily().run()}>
-        <option value="">Document font</option>{ARTICLE_FONTS.map(f => <option key={f.id} value={f.family}>{f.label}</option>)}
+        <option value="">Use default font</option>{ARTICLE_FONTS.map(f => <option key={f.id} value={f.family}>{f.label}</option>)}
       </select>
       <div className="text-selection-size" role="group" aria-label="Selected text typography">
         <TextTypographyInput key={`size:${editor.state.selection.from}:${editor.state.selection.to}`} label="" accessibleLabel="Selected text size"
@@ -172,12 +174,11 @@ export default function ArticleEditor({ article, onChange, onEditor, onFindReque
           <label>Colour<input aria-label="Selected text colour" type="color" disabled={disabled}
             value={editor.getAttributes('textStyle').color || appearance.color}
             onChange={event => editor.chain().focus().setColor(event.target.value).run()} /></label>
-          <button type="button" aria-label="Use document text colour" title="Use document text colour" disabled={disabled || !editor.getAttributes('textStyle').color}
+          <button className="workflow-tactile-control" type="button" aria-label="Use document text colour" title="Use document text colour" disabled={disabled || !editor.getAttributes('textStyle').color}
             onMouseDown={event => event.preventDefault()} onClick={() => editor.chain().focus().unsetColor().run()}><X /></button>
         </div>
       </div>
-      <ArticleOutline editor={editor} disabled={disabled} />
-      <ArticleSearch editor={editor} article={article} disabled={disabled} focusRequest={searchFocusRequest} />
+      <button className="workflow-tactile-control workflow-tactile-control--quiet text-insert-break" type="button" aria-label="Insert page break" title="Insert page break" disabled={disabled} onMouseDown={e => e.preventDefault()} onClick={() => editor.chain().focus().insertContent({ type: 'pageBreak' }).run()}>Insert page break</button>
       <details className="text-inspector-advanced"><summary>Spacing &amp; alignment</summary>
       <TextTypographyInput key={`lineHeight:${editor.state.selection.from}:${editor.state.selection.to}`} label="Line spacing (×)" accessibleLabel="Paragraph line spacing"
         {...selectedBlockSpacing(editor, 'lineHeight')} limits={ARTICLE_LINE_HEIGHT}
@@ -201,7 +202,7 @@ export default function ArticleEditor({ article, onChange, onEditor, onFindReque
       <div role="group" aria-label="Paragraph spacing">
         {articleLineToSeparate(editor.state.selection) && <div className="text-paragraph-line">
           <p>This line shares a paragraph.</p>
-          <button type="button" disabled={disabled} onMouseDown={event => event.preventDefault()}
+          <button className="workflow-tactile-control" type="button" disabled={disabled} onMouseDown={event => event.preventDefault()}
             onClick={() => editor.chain().focus().separateArticleLine().run()}>Separate this line</button>
         </div>}
         {['Before', 'After'].map(side => {
@@ -215,15 +216,20 @@ export default function ArticleEditor({ article, onChange, onEditor, onFindReque
         })}
       </div>
       </details>
-      <button className="text-insert-break" type="button" aria-label="Insert page break" title="Insert page break" disabled={disabled} onMouseDown={e => e.preventDefault()} onClick={() => editor.chain().focus().insertContent({ type: 'pageBreak' }).run()}>Insert page break</button>
+      <details className="text-writing-tools" ref={writingTools} onToggle={event => {
+        if (!event.currentTarget.open) setArticleSearch(editor, { close: true });
+      }}><summary>Writing tools</summary>
+      <ArticleOutline editor={editor} disabled={disabled} />
+      <ArticleSearch editor={editor} article={article} disabled={disabled} focusRequest={searchFocusRequest} />
+      </details>
     </div>
     {link !== null && <form className="text-inline-form" onSubmit={e => { e.preventDefault();
       if (link && !safeArticleLink(link)) { setLinkError('Use an HTTPS or mailto link.'); return; }
       if (link) editor.chain().focus().extendMarkRange('link').setLink({ href: link }).run(); else editor.chain().focus().unsetLink().run(); setLink(null);
     }}><label>Link URL<input autoFocus value={link} maxLength={2048} onChange={e => setLink(e.target.value)} /></label>
-      <button type="submit">Apply link</button><button type="button" onClick={() => { setLink(null); editor.commands.focus(); }}>Cancel</button>{linkError && <p role="alert">{linkError}</p>}</form>}
+      <button className="workflow-tactile-control" type="submit">Apply link</button><button className="workflow-tactile-control" type="button" onClick={() => { setLink(null); editor.commands.focus(); }}>Cancel</button>{linkError && <p role="alert">{linkError}</p>}</form>}
     {editor.isActive('artwork') && <section className="text-inline-form" aria-label="Selected artwork">
-      {[-1, 1].map(direction => <button type="button" key={direction}
+      {[-1, 1].map(direction => <button className="workflow-tactile-control" type="button" key={direction}
         disabled={disabled || !editor.can().command(moveArticleArtwork(direction))}
         onMouseDown={event => event.preventDefault()}
         onClick={() => { editor.commands.command(moveArticleArtwork(direction)); editor.commands.focus(); }}>
@@ -231,11 +237,11 @@ export default function ArticleEditor({ article, onChange, onEditor, onFindReque
       </button>)}
       <label>Caption<input value={editor.getAttributes('artwork').caption} maxLength={2000} disabled={disabled} onChange={e => editor.commands.updateAttributes('artwork', { caption: e.target.value })} /></label>
       <label>Alternative text<input value={editor.getAttributes('artwork').alt} maxLength={1000} disabled={disabled} onChange={e => editor.commands.updateAttributes('artwork', { alt: e.target.value })} /></label>
-      <button type="button" disabled={disabled} onClick={() => editor.chain().focus().deleteSelection().run()}>Remove artwork</button>
+      <button className="workflow-tactile-control" type="button" disabled={disabled} onClick={() => editor.chain().focus().deleteSelection().run()}>Remove artwork</button>
     </section>}
     </>, controlsHost)}
     <ArticleFocusWriting active={focusWriting} onClose={() => setFocusWriting(false)} editor={editor} returnFocus={focusTrigger}
-      title={article.title} background={article.appearance?.background} saveError={saveError}>
+      title={article.title} background={article.appearance?.background} saveError={saveError} saveStatus={saveStatus} className={focusClassName}>
     <div className={`text-editor-page${appearance.compact ? ' text-document--compact' : ''}`} style={textContentStyle(article)}>
       {(article.title || !disabled) && <textarea className="text-document-title" aria-label="Article title" placeholder="Title" rows={1}
         spellCheck={false} autoCorrect="off" autoCapitalize="off" maxLength={160} disabled={disabled}

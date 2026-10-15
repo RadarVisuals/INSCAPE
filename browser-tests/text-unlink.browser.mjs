@@ -1,3 +1,4 @@
+import { openTextToolSection } from './fixtures/text-tool-sections.mjs';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { chromium } from 'playwright-core';
@@ -62,6 +63,7 @@ test('Text can unlink after its Display was deleted, reload independently, and r
       });
       await page.reload(); await mount();
       const primary = page.locator('.text-tools-window');
+      await openTextToolSection(primary, 'Display connection');
       await primary.getByRole('combobox', { name: 'Follow Display', exact: true }).selectOption('display:primary');
       await primary.getByRole('button', { name: 'Link Text to Display', exact: true }).click();
       await page.waitForFunction(() => window.readUnlinkDraft().texts[0].sceneLink?.displayId === 'display:primary');

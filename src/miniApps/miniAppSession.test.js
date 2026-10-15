@@ -88,3 +88,28 @@ test('new HTTPS apps save and publish without domain configuration; loopback sta
     assert.equal(miniAppUrl(local, { published: true }), null);
   }
 });
+
+test('HTML artwork uses existing draft history and publication without changing older mini apps', () => {
+  const { store, storage } = fixture(); addMiniApp(store, profile);
+  const original = store.getDraft().miniApps[0];
+  const artwork = { ...original, name: 'Nomad', url: 'https://art.example/NOMAD.html', surface: 'artwork', visibility: 'PUBLIC' };
+  assert.ok(saveMiniApp(store, profile, original, artwork));
+  const reopened = createSystemWorkflowDraftStore({ profileAddress: profile, storage });
+  assert.deepEqual(reopened.getDraft().miniApps[0], artwork);
+  const doc = buildProfileDocumentV9({ profileAddress: profile, systemWorkflowDraft: store.getDraft(), assetRecords: [] });
+  assert.equal(assertValidProfileDocumentV9(doc).miniApps[0].surface, 'artwork');
+  assert.equal(reconcileSystemWorkflowDraftFromProfileDocumentV9(doc, fixture().store.getDraft()).miniApps[0].surface, 'artwork');
+  assert.ok(store.undo()); assert.deepEqual(store.getDraft().miniApps[0], original);
+  assert.ok(store.redo()); assert.deepEqual(store.getDraft().miniApps[0], artwork);
+  for (const surface of [null, '', false, 'html', 'wallet', {}, []]) assert.equal(validMiniApps([{ ...artwork, surface }]), false);
+});
+
+test('same-origin local artwork is sandbox-only development input and cannot be published', () => {
+  const local = 'http://127.0.0.1:5173/artwork-experiments/NOMAD.html';
+  const options = { hostOrigin: 'http://127.0.0.1:5173', allowLocal: true };
+  assert.equal(miniAppUrl(local, options), null);
+  assert.ok(miniAppUrl(local, { ...options, artwork: true }));
+  assert.equal(miniAppUrl(local, { ...options, artwork: true, published: true }), null);
+  assert.equal(miniAppUrl(local, { ...options, artwork: true, allowLocal: false }), null);
+  assert.equal(miniAppUrl('https://inscape.test/art.html', { hostOrigin: 'https://inscape.test', artwork: true }), null);
+});

@@ -112,10 +112,14 @@ not require a separate audit or approval round for every edit.
 - Reuse established tokens, line weights, selector grammar, spacing, and
   responsive patterns. Use Inscape Sora for human interface copy and Inscape
   IBM Plex Sans Condensed for technical and dense secondary copy. Do not invent
-  an adjacent design system or approve another interface font.
-- Never substitute generic rounded cards, pills, gradients, glass effects,
-  oversized spacing, arbitrary shadows, or decorative grids for INSCAPE's flat,
-  bounded, structural language.
+  an adjacent design system or approve another interface font. The founder
+  explicitly approved Inter Variable for the creation bar; use its scoped token
+  as documented in the active contract, without changing other font roles.
+- The creation toolbar is the accepted dark tactile reference; follow the
+  active contract's Tactile interface section and reuse its material/control
+  recipes for requested migrations. Preserve existing surfaces until migrated.
+  Do not invent unrelated palettes, glass effects, oversized spacing, arbitrary
+  shadows, or decorative grids. Keep artwork and authored geometry independent.
 - Visual grids must control alignment or interaction; they are not decoration.
 - Preserve owner, Visitor, Discover, and public-presentation parity where they
   share a component. Do not solve one mode with an unrelated visual variant.

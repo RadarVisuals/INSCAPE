@@ -1,3 +1,4 @@
+import { openTextToolSection } from './fixtures/text-tool-sections.mjs';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { chromium } from 'playwright-core';
@@ -104,6 +105,7 @@ for (const [width, scale, method] of [[1600, 1, 'keyboard'], [1600, .5, 'drag'],
       if (method === 'keyboard') {
         const bounds = await stage.boundingBox();
         expectedScreen = { left: bounds.x + bounds.width + 12, top: bounds.y };
+        await openTextToolSection(page.locator('.text-tools-window'), 'Display connection');
         await page.getByRole('button', { name: 'Move onto Workbench', exact: true }).focus();
         await page.keyboard.press('Enter');
       } else {

@@ -6,7 +6,7 @@ import { chromium } from 'playwright-core';
 test('Library retains cached cards after failed RPC discovery and Retry assets recovers through the actual presenter', { timeout: 60000 }, async () => {
   const root = process.env.INSCAPE_SYSTEM_WORKFLOW_ROOT || 'http://127.0.0.1:5173';
   await mkdir('.browser-test-runtime', { recursive: true });
-  const browser = await chromium.launch({ executablePath: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', headless: true });
+  const browser = await chromium.launch({ executablePath: process.env.INSCAPE_BROWSER_EXECUTABLE || 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', headless: true });
   try {
     for (const width of [1440, 700]) {
       const page = await browser.newPage({ viewport: { width, height: 900 } });

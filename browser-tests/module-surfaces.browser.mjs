@@ -1,3 +1,4 @@
+import { openTextToolSection } from './fixtures/text-tool-sections.mjs';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { chromium } from 'playwright-core';
@@ -54,7 +55,7 @@ test('module edges, appearance, keyboard controls and public rendering', async (
     });
     const text = page.locator('.text-window'), board = page.getByRole('article', { name: 'Display Module', exact: true });
     const tools = page.getByRole('complementary', { name: /Text tools/ });
-    await tools.getByRole('tab', { name: 'Appearance', exact: true }).click();
+    await openTextToolSection(tools, 'Background & edges');
     await tools.getByLabel('Module corners', { exact: true }).selectOption('custom');
     await tools.getByLabel('Top left corner radius', { exact: true }).fill('12');
     await tools.getByLabel('Bottom left corner radius', { exact: true }).fill('12');

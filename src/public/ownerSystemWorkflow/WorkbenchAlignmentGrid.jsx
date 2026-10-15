@@ -1,3 +1,4 @@
+import { useWorkbenchArea } from './WorkbenchAreaContext.jsx';
 import { useLayoutEffect, useRef } from 'react';
 import { useWorkbenchCamera } from './WorkbenchCamera.jsx';
 import { useWorkbenchView } from './WorkbenchViewContext.js';
@@ -12,9 +13,10 @@ export default function WorkbenchAlignmentGrid({ color, mode, spacing = WORKBENC
 }
 
 export function WorkbenchGridPattern({ color, mode, offset, scale, subscribeCameraPaint, cellSize = WORKBENCH_GRID_STEP }) {
+  const { bounds: areaBounds } = useWorkbenchArea();
   const node = useRef(null);
   const current = useRef(null), repaint = useRef(null), ink = useRef(null);
-  current.current = { mode, offset, scale, cellSize };
+  current.current = { mode, offset, scale, cellSize, areaBounds };
   const visible = mode !== 'NONE';
   useLayoutEffect(() => {
     const canvas = node.current;
@@ -24,7 +26,7 @@ export function WorkbenchGridPattern({ color, mode, offset, scale, subscribeCame
     // at mount/resize only, rather than forcing layout on every camera commit.
     let { width, height } = canvas.getBoundingClientRect();
     const paint = () => {
-      const { mode, offset, scale, cellSize } = current.current;
+      const { mode, offset, scale, cellSize, areaBounds } = current.current;
       const density = globalThis.devicePixelRatio || 1;
       const w = Math.round(width * density), h = Math.round(height * density);
       if (canvas.width !== w) canvas.width = w;
@@ -32,7 +34,7 @@ export function WorkbenchGridPattern({ color, mode, offset, scale, subscribeCame
       const context = canvas.getContext('2d');
       context.clearRect(0, 0, w, h);
       if (!w || !h) return;
-      const bounds = projectWorkbenchBounds(scale, offset);
+      const bounds = projectWorkbenchBounds(scale, offset, areaBounds);
       const spacing = cellSize * scale;
       const lowX = Math.max(0, bounds.left), highX = Math.min(width, bounds.right);
       const lowY = Math.max(0, bounds.top), highY = Math.min(height, bounds.bottom);
@@ -78,7 +80,7 @@ export function WorkbenchGridPattern({ color, mode, offset, scale, subscribeCame
   }, [visible]);
   // Resolve theme ink only when it changes; camera frames perform no style reads.
   useLayoutEffect(() => { if (node.current) ink.current = getComputedStyle(node.current).color; }, [color, visible]);
-  useLayoutEffect(() => { repaint.current?.(); }, [color, mode, offset, scale, cellSize]);
+  useLayoutEffect(() => { repaint.current?.(); }, [color, mode, offset, scale, cellSize, areaBounds]);
   useLayoutEffect(() => subscribeCameraPaint?.(camera => {
     current.current = { ...current.current, ...camera }; repaint.current?.();
   }), [subscribeCameraPaint]);

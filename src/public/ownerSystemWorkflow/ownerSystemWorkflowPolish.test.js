@@ -121,7 +121,7 @@ test('Publish exposes one dock-attached control while preserving every canonical
 
 test('Owner and Visitor share in-scene inspection without an extra artwork renderer', () => {
   const runtime = read('./OwnerSystemWorkflowRuntime.jsx');
-  const visitor = read('../../profileDocument/components/ProfileDocumentV9Visitor.jsx');
+  const visitor = read('../../profileDocument/components/PublishedDisplayModule.jsx');
   const profile = read('./OwnerSystemWorkflowProfile.jsx');
   assert.match(runtime, /<OwnerDisplayInstance/);
   assert.match(read('./DisplayModule.jsx'), /useOwnerSystemWorkflowFocusViewer/);

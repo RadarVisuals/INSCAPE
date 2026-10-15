@@ -1,7 +1,10 @@
 import { useEffect, useLayoutEffect, useRef } from 'react';
 import { useWorkbenchCamera } from './WorkbenchCamera.jsx';
+import { useWorkbenchArea } from './WorkbenchAreaContext.jsx';
 
 export default function WorkbenchArea({ hostRef }) {
+  const { area } = useWorkbenchArea();
+  const currentArea = useRef(area); currentArea.current = area;
   const node = useRef(null), repaint = useRef(null);
   const { getCamera, subscribeCameraPaint, scale, offset } = useWorkbenchCamera();
   useEffect(() => {
@@ -16,10 +19,10 @@ export default function WorkbenchArea({ hostRef }) {
       const ctx = canvas.getContext('2d');
       ctx.setTransform(density, 0, 0, density, 0, 0); ctx.clearRect(0, 0, width, height);
       ctx.beginPath(); ctx.rect(0, 0, width, height);
-      ctx.rect(offset.x, offset.y, 4000 * scale, 4000 * scale);
+      ctx.rect(offset.x, offset.y, currentArea.current.width * scale, currentArea.current.height * scale);
       ctx.fillStyle = '#242626'; ctx.fill('evenodd');
       ctx.strokeStyle = '#888b88'; ctx.lineWidth = 1 / density;
-      ctx.strokeRect(offset.x, offset.y, 4000 * scale, 4000 * scale);
+      ctx.strokeRect(offset.x, offset.y, currentArea.current.width * scale, currentArea.current.height * scale);
     };
     repaint.current = paint;
     const observer = new ResizeObserver(() => { width = host.clientWidth; height = host.clientHeight; paint(getCamera()); });
@@ -27,6 +30,6 @@ export default function WorkbenchArea({ hostRef }) {
     const unsubscribe = subscribeCameraPaint(paint);
     return () => { observer.disconnect(); unsubscribe(); repaint.current = null; };
   }, [hostRef, getCamera, subscribeCameraPaint]);
-  useLayoutEffect(() => { repaint.current?.(getCamera()); }, [getCamera, scale, offset]);
-  return <canvas ref={node} data-workbench-area="4000" aria-hidden="true" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 0 }} />;
+  useLayoutEffect(() => { repaint.current?.(getCamera()); }, [getCamera, scale, offset, area.width, area.height]);
+  return <canvas ref={node} data-workbench-area={`${area.width}x${area.height}`} aria-hidden="true" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 0 }} />;
 }

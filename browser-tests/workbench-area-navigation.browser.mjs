@@ -120,7 +120,7 @@ test('owner and Visitor have free camera movement without custom-frame controls,
   } finally { await browser.close(); }
 });
 
-test('retired frame settings do not clip the 4000 grid or relocate older outlying artwork', { timeout: 90000 }, async () => {
+test('retired frame settings do not clip the 2000 by 4000 grid or relocate older outlying artwork', { timeout: 90000 }, async () => {
   const browser = await launch();
   try {
     const page = await browser.newPage({ viewport: { width: 1440, height: 1200 }, reducedMotion: 'reduce' });
@@ -176,13 +176,13 @@ test('retired frame settings do not clip the 4000 grid or relocate older outlyin
         let inside = 0, outside = 0, beyondOldFrame = 0;
         for (let y = 0; y < canvas.height; y++) for (let x = 0; x < canvas.width; x++) {
           if (!data[(y * canvas.width + x) * 4 + 3]) continue;
-          if (x < 81 || x > 1079 || y < 61 || y > 1059) outside++;
-          else { inside++; if (x > 900 && y > 900) beyondOldFrame++; }
+          if (x < 81 || x > 579 || y < 61 || y > 1059) outside++;
+          else { inside++; if (x > 400 && y > 900) beyondOldFrame++; }
         }
         return { inside, outside, beyondOldFrame, width: canvas.width, height: canvas.height };
       });
       assert.ok(coverage.inside > 1000 && coverage.beyondOldFrame > 100);
-      assert.equal(coverage.outside, 0, `${mode} is clipped only to the fixed 4000 area`);
+      assert.equal(coverage.outside, 0, `${mode} is clipped only to the fixed 2000 by 4000 area`);
       assert.equal(coverage.width, 1440); assert.equal(coverage.height, 1200, 'canvas stays viewport-sized');
       await page.screenshot({ path: `.browser-test-runtime/workbench-area-grid-${mode}.png` });
     }

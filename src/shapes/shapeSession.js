@@ -1,3 +1,4 @@
+import { workbenchArea, workbenchAreaBounds } from '../systemWorkflow/domain/workbenchArea.js';
 import { gridShapeFrame } from './gridShapeGeometry.js';
 import { MAX_SHAPES, validShapes, createShapePresentation } from './shapes.js';
 import { createDefaultWorkbenchPresentation } from '../profileDocument/domain/workbenchPresentation.js';
@@ -33,7 +34,7 @@ export function addShape(store, profile, placed, source = null) {
   }
   if (!original && record.kind === 'grid') presentation.window = gridShapeFrame(presentation.window, record.grid.spacing, { bounds: { right: presentation.window.left + 3984, bottom: presentation.window.top + 3984 } });
   const position = original ? { left: original.window.left + 24, top: original.window.top + 24 } : placed?.position || presentation.window;
-  presentation.window = { ...presentation.window, ...clampWorkbenchPosition(position, presentation.window) };
+  presentation.window = { ...presentation.window, ...clampWorkbenchPosition(position, presentation.window, workbenchAreaBounds(workbenchArea(layout))) };
   commit(store, profile, { ...draft, shapes: [...(draft.shapes || []), record],
     workbench: { ...layout, shapes: [...(layout.shapes || []), presentation] } }, source ? 'Duplicate Shape' : 'Add Shape');
   return record.id;

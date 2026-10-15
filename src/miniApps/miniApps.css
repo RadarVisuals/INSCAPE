@@ -23,3 +23,28 @@
 .mini-app-settings__actions > button:last-child { margin-left: auto; }
 .mini-app-shortcut { position: fixed; z-index: var(--mini-app-z); right: 24px; bottom: var(--mini-app-shortcut-bottom); max-width: calc(100vw - 48px); display: flex; align-items: center; gap: 8px; padding: 8px 12px; }
 .mini-app-shortcut > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Artwork removes the host's material, retaining the existing movable header
+   and resize semantics. Controls appear on hover/focus and remain on touch. */
+.mini-app-workbench .mini-app-artwork-window {
+  --detached-window-gutter: 0px;
+  border: 0; border-radius: 0; background: transparent; box-shadow: none;
+}
+.mini-app-workbench .mini-app-artwork-window::after,
+.mini-app-workbench .mini-app-artwork-window > .system-workflow__instrument-content::before { display: none; }
+.mini-app-workbench .mini-app-artwork-window > .system-workflow__instrument-content {
+  width: 100%; margin: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none;
+}
+.mini-app-artwork-window > header { opacity: 0; }
+.mini-app-artwork-window:is(:hover, :focus-within) > header { opacity: 1; background: var(--workflow-panel); border-radius: var(--workflow-board-radius); }
+.mini-app-artwork-window [role="separator"] { opacity: 0; }
+.mini-app-artwork-window:is(:hover, :focus-within) [role="separator"] { opacity: 1; }
+.html-artwork-viewport { position: relative; display: flex; flex: 1; min-height: 0; width: 100%; background: transparent; }
+/* Match the neutral embedded document; inheriting the host theme can force an opaque browser canvas. */
+.html-artwork-frame { display: block; border: 0; width: 100%; height: 100%; background: transparent; color-scheme: normal; }
+.html-artwork-status { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); max-width: 100%; padding: 10px; border-radius: 8px; background: var(--workflow-panel); }
+.html-artwork-status button { margin-left: 8px; padding: 6px 12px; }
+@media (hover: none) {
+  .mini-app-artwork-window > header { opacity: 1; background: var(--workflow-panel); }
+  .mini-app-artwork-window [role="separator"] { opacity: 1; }
+}

@@ -1,3 +1,4 @@
+import { Copy, Trash2, ChevronDown, ChevronUp, ChevronsDown, ChevronsUp } from 'lucide-react';
 import { gridShapeFrame } from './gridShapeGeometry.js';
 import { useCallback, useEffect, useMemo, useState, useId } from 'react';
 import { WorkbenchWindow } from '../public/ownerSystemWorkflow/DisplayInstrumentWindow.jsx';
@@ -87,6 +88,16 @@ function ShapeInstance({ record, records, index, initialPresentation, store, pro
     </div>
     {editable && <ContextToolContent target={record.id} label={record.name}>
       <div className="shape-tools">
+        <nav aria-label="Shape actions" className="system-workflow__selection-actions system-workflow__selection-actions--six"><button className="workflow-tactile-control" type="button" disabled={records.length >= MAX_SHAPES} onClick={() => run(() => select(addShape(store, profileAddress, { workbench: view.getPresentation() }, record)))} aria-label="Duplicate shape" title="Duplicate shape"><Copy /></button>
+
+          {[['back', 'Send to back', ChevronsDown], ['backward', 'Move backward', ChevronDown], ['forward', 'Move forward', ChevronUp], ['front', 'Bring to front', ChevronsUp]].map(([direction, label, Icon]) =>
+            <button className="workflow-tactile-control" type="button" key={direction} aria-label={label} title={label} disabled={['back', 'backward'].includes(direction) ? index === 0 : index === records.length - 1}
+              onClick={() => run(() => reorderShape(store, profileAddress, record.id, direction))}><Icon /></button>)}
+          <button className="workflow-tactile-control" type="button" onClick={() => run(() => {
+            if (!removeWorkbenchModule(store, profileAddress, 'shape', record)) throw new Error('The shape could not be deleted. Try again.');
+            onActivate?.(records.find(item => item.id !== record.id)?.id || null);
+          })} aria-label="Delete shape" title="Delete shape"><Trash2 /></button></nav>
+
         <label>Shape<select aria-label="Choose shape" value={record.id} onChange={event => select(event.target.value)}>
           {[...records].reverse().map(item => <option key={item.id} value={item.id}>{item.name}</option>)}
         </select></label>
@@ -108,6 +119,7 @@ function ShapeInstance({ record, records, index, initialPresentation, store, pro
         </div></>}
         {kind === 'texture' && <PatternNumber label="Noise scale" value={record.texture.scale} min={.25} max={8} step={.25}
           onChange={scale => change({ texture: { scale } })} />}
+        <details className="workbench-dimensions"><summary>Dimensions…</summary>
         <form key={`${presentation.window.width}:${presentation.window.height}`} onSubmit={event => {
           event.preventDefault(); const values = new FormData(event.currentTarget); resize(Number(values.get('width')), Number(values.get('height')));
         }}>
@@ -115,21 +127,10 @@ function ShapeInstance({ record, records, index, initialPresentation, store, pro
             <label>Width<input aria-label="Shape width" name="width" type="number" min="8" max="7992" step="any" required defaultValue={presentation.window.width} /></label>
             <label>Height<input aria-label="Shape height" name="height" type="number" min="8" max="7992" step="any" required defaultValue={presentation.window.height} /></label>
           </div>
-          <div className="shape-tools-row"><button type="submit">Apply size</button><button type="button" onClick={() => resize(presentation.window.width, presentation.window.width)}>Make square</button></div>
-        </form>
-        <div className="shape-layer-label">Layer {index + 1} / {records.length} · below modules</div>
-        <div className="shape-tools-row shape-order">
-          {[['back', 'To back'], ['backward', 'Lower'], ['forward', 'Raise'], ['front', 'To front']].map(([direction, label]) =>
-            <button type="button" key={direction} disabled={['back', 'backward'].includes(direction) ? index === 0 : index === records.length - 1}
-              onClick={() => run(() => reorderShape(store, profileAddress, record.id, direction))}>{label}</button>)}
-        </div>
+          <div className="shape-tools-row"><button className="workflow-tactile-control" type="submit">Apply size</button><button className="workflow-tactile-control" type="button" onClick={() => resize(presentation.window.width, presentation.window.width)}>Make square</button></div>
+        </form></details>
         <label className="shape-check"><input type="checkbox" checked={presentation.open} onChange={event => setPresentation(p => ({ ...p, open: event.target.checked }))} />Show shape</label>
         <label className="shape-check"><input type="checkbox" checked={record.visibility === 'PUBLIC'} onChange={event => change({ visibility: event.target.checked ? 'PUBLIC' : 'PRIVATE' })} />Include in publication</label>
-        <div className="shape-tools-row"><button type="button" disabled={records.length >= MAX_SHAPES} onClick={() => run(() => select(addShape(store, profileAddress, { workbench: view.getPresentation() }, record)))}>Duplicate</button>
-          <button type="button" onClick={() => run(() => {
-            if (!removeWorkbenchModule(store, profileAddress, 'shape', record)) throw new Error('The shape could not be deleted. Try again.');
-            onActivate?.(records.find(item => item.id !== record.id)?.id || null);
-          })}>Delete shape</button></div>
         {error && <p role="alert">{error}</p>}
       </div>
     </ContextToolContent>}

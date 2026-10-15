@@ -1,3 +1,4 @@
+import { useWorkbenchArea } from '../ownerSystemWorkflow/WorkbenchAreaContext.jsx';
 import { useEffect, useRef, useState } from 'react';
 import { clampWorkbenchPosition } from '../ownerSystemWorkflow/workbenchSpace.js';
 
@@ -14,19 +15,20 @@ export function loadIdentityShortcut(address) {
       mode: ['window', 'minimized', 'closed'].includes(value.mode) ? value.mode : null };
   } catch { return null; }
 }
-const clamp = value => {
-  const position = clampWorkbenchPosition({ left: value.x, top: value.y }, { width: value.size, height: value.size });
+const clamp = (value, bounds) => {
+  const position = clampWorkbenchPosition({ left: value.x, top: value.y }, { width: value.size, height: value.size }, bounds);
   return { ...value, x: position.left, y: position.top };
 };
 
 // Local presentation only. Visitors never read or write the owner's preferences.
 export default function useIdentityShortcut(address, owner) {
+  const { bounds: areaBounds } = useWorkbenchArea();
   const [position, setPosition] = useState(() => {
     const saved = owner ? loadIdentityShortcut(address) : null;
     return clamp({ size: Object.values(IDENTITY_SHORTCUT_SIZES).includes(saved?.size) ? saved.size : 128,
       shape: saved?.shape || 'circle', mode: saved?.mode === 'minimized' ? 'minimized' : 'window',
       x: Number.isFinite(saved?.x) ? saved.x : window.innerWidth - 152,
-      y: Number.isFinite(saved?.y) ? saved.y : 24 });
+      y: Number.isFinite(saved?.y) ? saved.y : 24 }, areaBounds);
   });
   const current = useRef(position); current.current = position;
   const gesture = useRef(null);
@@ -34,7 +36,7 @@ export default function useIdentityShortcut(address, owner) {
   const persist = value => {
     if (owner) saveIdentityShortcut(address, value);
   };
-  const change = value => { const next = clamp(value); current.current = next; setPosition(next); return next; };
+  const change = value => { const next = clamp(value, areaBounds); current.current = next; setPosition(next); return next; };
   useEffect(() => { persist(current.current); }, []);
   return {
     position, suppressClick,

@@ -1,3 +1,4 @@
+import { openTextToolSection } from './fixtures/text-tool-sections.mjs';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { mkdir } from 'node:fs/promises';
@@ -22,8 +23,7 @@ async function selectText(page, body, text) {
 }
 async function setNumber(page, name, value) {
   const tools = page.locator('.text-tools-window');
-  await tools.getByRole('tab', { name: 'Text', exact: true }).click();
-  await tools.getByRole('group', { name: 'Formatting target' }).getByRole('button', { name: name.startsWith('Title') ? 'Title' : 'Selection', exact: true }).click();
+  if (name.startsWith('Title')) await openTextToolSection(tools, 'Title');
   if (name.startsWith('Paragraph') || name === 'Selected text tracking') {
     const advanced = tools.locator('.text-inspector-advanced');
     if (!await advanced.getAttribute('open').then(value => value !== null)) await advanced.locator('summary').click();
@@ -90,7 +90,7 @@ test('clicking a small sub-label preserves the target and joined lines can be se
           await separate.scrollIntoViewIfNeeded(); await separate.focus();
           const tools = page.locator('.text-tools-window'), box = await tools.boundingBox();
           assert.ok(box.x >= 0 && box.x + box.width <= 390.5);
-          assert.equal(await tools.locator('.text-controls-body').evaluate(n => n.scrollWidth <= n.clientWidth + 1), true);
+          assert.equal(await tools.locator('.system-workflow__instrument-content').evaluate(n => n.scrollWidth <= n.clientWidth + 1), true);
           await page.screenshot({ path: '.browser-test-runtime/text-line-shared-narrow.png' });
           await page.getByRole('button', { name: 'Redo', exact: true }).click();
           await page.getByRole('button', { name: 'Redo', exact: true }).click();
@@ -195,7 +195,7 @@ test('selected size and tracking author a sub-label, preserve other text, undo, 
     await page.setViewportSize({ width: 390, height: 844 }); await settle(page);
     const tools = page.locator('.text-tools-window'), box = await tools.boundingBox();
     assert.ok(box.x >= 0 && box.x + box.width <= 390.5);
-    assert.equal(await tools.locator('.text-controls-body').evaluate(node => node.scrollWidth <= node.clientWidth + 1), true);
+    assert.equal(await tools.locator('.system-workflow__instrument-content').evaluate(node => node.scrollWidth <= node.clientWidth + 1), true);
     await field.scrollIntoViewIfNeeded(); await field.fill('30'); await settle(page);
     assert.equal((await styleOf(label))[0], '30px');
     assert.equal(await field.evaluate(node => node === document.activeElement), true);
@@ -313,7 +313,7 @@ test('title and paragraph gaps control the Nomad layout, undo, reset and persist
     await control.scrollIntoViewIfNeeded(); await control.focus();
     const tools = page.locator('.text-tools-window'), box = await tools.boundingBox();
     assert.ok(box.x >= 0 && box.x + box.width <= 390.5);
-    assert.equal(await tools.locator('.text-controls-body').evaluate(n => n.scrollWidth <= n.clientWidth + 1), true);
+    assert.equal(await tools.locator('.system-workflow__instrument-content').evaluate(n => n.scrollWidth <= n.clientWidth + 1), true);
     await page.screenshot({ path: '.browser-test-runtime/text-spacing-narrow.png' });
     await page.setViewportSize({ width: 1440, height: 1100 }); await settle(page);
     await page.getByRole('button', { name: 'Read', exact: true }).focus(); await page.keyboard.press('Enter');

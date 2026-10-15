@@ -1,3 +1,4 @@
+import { openTextToolSection } from './fixtures/text-tool-sections.mjs';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { chromium } from 'playwright-core';
@@ -32,8 +33,7 @@ for (const viewScale of [1, .5]) test(`Text tools, save recovery and drag into a
     await output.getByRole('textbox', { name: 'Article title', exact: true }).fill('Arrival');
     const body = output.getByRole('textbox', { name: 'Article text', exact: true });
     await body.fill('The landscape remembers.'); await page.keyboard.press('Control+A');
-    await page.locator('.text-tools-window').getByRole('tab', { name: 'Text', exact: true }).click();
-    await page.locator('.text-tools-window').getByRole('group', { name: 'Formatting target' }).getByRole('button', { name: 'Selection', exact: true }).click();
+
     await tools.getByRole('button', { name: 'Bold', exact: true }).click();
     assert.equal(await output.getByRole('toolbar').count(), 0);
     const writeBounds = await body.locator('p').boundingBox();
@@ -41,11 +41,11 @@ for (const viewScale of [1, .5]) test(`Text tools, save recovery and drag into a
     const readBounds = await output.locator('article p').boundingBox();
     assert.ok(Math.abs(writeBounds.y - readBounds.y) < 1, 'Read does not move text');
     await output.getByRole('button', { name: 'Write', exact: true }).click();
-    await page.locator('.text-tools-window').getByRole('tab', { name: 'Appearance', exact: true }).click();
+    await openTextToolSection(page.locator('.text-tools-window'), 'Background & edges');
     await tools.getByRole('combobox', { name: 'Text background', exact: true }).selectOption('colour');
     await tools.getByRole('checkbox', { name: 'Show border', exact: true }).check();
     assert.notEqual(await output.evaluate(node => getComputedStyle(node).backgroundColor), 'rgba(0, 0, 0, 0)');
-    await page.locator('.text-tools-window').getByRole('tab', { name: 'Appearance', exact: true }).click();
+    await openTextToolSection(page.locator('.text-tools-window'), 'Background & edges');
     await tools.getByRole('combobox', { name: 'Text background', exact: true }).selectOption('none');
     await tools.getByRole('checkbox', { name: 'Show border', exact: true }).uncheck();
     // Simulate another writer updating unrelated saved data.
@@ -56,10 +56,9 @@ for (const viewScale of [1, .5]) test(`Text tools, save recovery and drag into a
     assert.equal(await page.evaluate(() => window.readDraft().identityPresentation.alias), 'Other tab');
     assert.equal(await page.evaluate(() => window.readDraft().texts[0].article.content.content[0].content[0].text), 'Unsaved but recoverable.');
     await body.fill('The landscape remembers.'); await page.keyboard.press('Control+A');
-    await page.locator('.text-tools-window').getByRole('tab', { name: 'Text', exact: true }).click();
-    await page.locator('.text-tools-window').getByRole('group', { name: 'Formatting target' }).getByRole('button', { name: 'Selection', exact: true }).click();
+
     if (!await body.locator('strong').count()) await tools.getByRole('button', { name: 'Bold', exact: true }).click();
-    await tools.locator('.text-controls-body').evaluate(node => { node.scrollTop = 0; });
+    await tools.locator('.system-workflow__instrument-content').evaluate(node => { node.scrollTop = 0; });
     await page.screenshot({ path: '.browser-test-runtime/text-tools-wide.png' });
     await tools.getByRole('button', { name: 'Close Text tools' }).click();
     if (viewScale === .5) await setWorkbenchZoom(page, .5);

@@ -20,7 +20,7 @@ export function KeeperSwimControls({ value, onChange, snake = false }) {
         }} />
     </label>)}
     <p>Lower times respond faster. {snake ? 'Spread opens body spacing with speed; gather closes it on stopping.' : 'Stagger delays each tentacle after the head.'} Press Enter or leave a field to apply while swimming.</p>
-    <button type="button" disabled={fields.every(([key]) => value[key] === KEEPER_SWIM_DEFAULTS[key])}
+    <button className="workflow-tactile-control" type="button" disabled={fields.every(([key]) => value[key] === KEEPER_SWIM_DEFAULTS[key])}
       onClick={() => onChange({ ...value, ...Object.fromEntries(fields.map(([key]) => [key, KEEPER_SWIM_DEFAULTS[key]])) })}>Reset swim tuning</button>
   </fieldset>;
 }

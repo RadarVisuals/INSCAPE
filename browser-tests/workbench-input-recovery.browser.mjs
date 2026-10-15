@@ -1,3 +1,4 @@
+import { openTextToolSection } from './fixtures/text-tool-sections.mjs';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { chromium } from 'playwright-core';
@@ -24,7 +25,7 @@ test('Workbench pan and zoom recover from a missing selection release after edit
     const body = page.getByRole('textbox', { name: 'Article text', exact: true });
     await body.fill('The workbench remains usable after writing. '.repeat(20));
     await body.press('Control+A'); await page.getByRole('button', { name: 'Bold', exact: true }).click();
-    await page.getByRole('tab', { name: 'Layout', exact: true }).click();
+    await openTextToolSection(page, 'Text box layout');
     await page.getByLabel('Text columns', { exact: true }).selectOption('2');
     await page.getByRole('button', { name: 'Close Text tools', exact: true }).click();
     const saved = await page.evaluate(() => window.savedDraft());

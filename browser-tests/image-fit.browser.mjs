@@ -23,16 +23,16 @@ test('captured native-fit seams can be filled without moving frames; Image resiz
       const refresh = (await import('/@react-refresh')).default;
       refresh.injectIntoGlobalHook(window); window.$RefreshReg$ = () => {}; window.$RefreshSig$ = () => type => type; window.__vite_plugin_react_preamble_installed__ = true;
       (await import('/browser-tests/image-fit-fixture.jsx')).mount();
-      // Keep the historical seam geometry inside the current 4000px Workbench.
+      // Keep the historical seam geometry inside the current 2000-wide Workbench.
       // Translate the camera by the opposite amount below, preserving its pixels.
       const draft = imageFitFixture.store.getDraft();
-      draft.workbench.imageModules.forEach(module => { module.position.left -= 2016; });
+      draft.workbench.imageModules.forEach(module => { module.position.left -= 3552; });
       imageFitFixture.store.commitCompletedOperation(draft, { expectedGeneration: imageFitFixture.store.getGeneration() });
     });
     const dock = page.locator('[data-context-tools]');
     await dock.getByRole('button', { name: 'Fill canvas', exact: true }).waitFor();
     await page.evaluate(async () => { const image = new Image(); image.src = 'https://image.fit.test/source.png'; await image.decode(); });
-    const scale = 1.0976232973106559, offset = { x: -3541.289770546675 + 2016 * scale, y: -1519.0376733143444 };
+    const scale = 1.0976232973106559, offset = { x: -3541.289770546675 + 3552 * scale, y: -1519.0376733143444 };
     await page.evaluate(({ scale, offset }) => imageFitFixture.camera(scale, offset), { scale, offset }); await settle(page);
     const initial = await page.evaluate(() => imageFitFixture.store.getDraft());
     await page.getByRole('button', { name: 'Meet Grid-naad', exact: true }).click();

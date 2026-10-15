@@ -1,10 +1,30 @@
 .system-workflow__instrument-window.context-toolbar { z-index: 80; max-width: calc(100dvw - 16px); }
-.context-toolbar .system-workflow__instrument-content { padding: 8px; font: var(--workflow-type-control); }
-.context-toolbar .system-workflow__selection-actions { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); border: 1px solid var(--workflow-border); }
-.context-toolbar .system-workflow__selection-actions > button { width: 100%; min-width: 0; height: 38px; padding: 6px; border: 0; color: var(--workflow-ink); background: transparent; }
-.context-toolbar .system-workflow__selection-actions > button:disabled { opacity: .3; }
-.context-toolbar .system-workflow__selection-actions > button:focus-visible { outline: 1px solid var(--workflow-ink); outline-offset: -3px; }
-.context-toolbar footer { display: flex; }
-.context-toolbar footer button { flex: 1; min-height: 32px; border: 1px solid var(--workflow-border); color: var(--workflow-ink); background: transparent; font: var(--workflow-type-control); cursor: pointer; }
-.context-toolbar footer button:hover { background: var(--workflow-hover); }
-.context-toolbar footer button:focus-visible { outline: 1px solid var(--workflow-ink); outline-offset: -3px; }
+.context-toolbar .system-workflow__selection-actions {
+  display: grid;
+  grid-template-columns: repeat(var(--selection-action-columns, 5), minmax(0, 1fr));
+  gap: 5px;
+  margin-bottom: 8px;
+}
+.context-toolbar .system-workflow__selection-actions--six { --selection-action-columns: 6; }
+.context-toolbar .system-workflow__selection-actions > button {
+  display: grid;
+  place-items: center;
+  justify-self: center;
+  width: var(--tool-action-target, 40px);
+  min-width: 0;
+  height: var(--tool-action-target, 40px);
+  padding: 6px;
+  border-radius: 999px;
+}
+.context-toolbar .system-workflow__placement-actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px; }
+.context-toolbar footer { display: flex; gap: 5px; }
+.context-toolbar footer button { flex: 1; }
+.context-toolbar [data-workbench-inspection-target] { display: grid; gap: 8px; min-width: 0; }
+@media (pointer: coarse), (max-width: 520px) {
+  .context-toolbar .system-workflow__selection-actions {
+    grid-template-columns: repeat(auto-fit, minmax(var(--tool-action-target, 44px), 1fr));
+  }
+  .context-toolbar .system-workflow__selection-actions--six {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}

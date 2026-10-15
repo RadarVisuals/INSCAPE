@@ -15,8 +15,8 @@ export const useContextToolTarget = () => useContext(Context)?.target;
 export function ContextToolbar({ hidden, menuSurface }) {
   const context = useContext(Context);
   return <div data-context-tools hidden={hidden || !context?.label}>
-    <WorkbenchWindow label="Artwork tools" title={context?.label || 'Selection'} width={320} initialHeight={132} minimumHeight={64}
-      initialX={24} initialY={Math.max(8, globalThis.innerHeight - 220)} fitContent chrome="bevel" menuSurface={menuSurface} className="context-toolbar">
+    <WorkbenchWindow label="Properties" title={context?.label || 'Selection'} width={320} initialHeight={132} minimumHeight={64}
+      initialX={Math.max(8, globalThis.innerWidth - 336)} initialY={24} fitContent fitContentFromTop resizable={false} chrome="tactile" menuSurface={menuSurface} className="context-toolbar workbench-tool-window">
       <div ref={context?.setHost} />
     </WorkbenchWindow>
   </div>;

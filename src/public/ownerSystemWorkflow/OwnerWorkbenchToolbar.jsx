@@ -1,5 +1,6 @@
+import { useWorkbenchArea } from './WorkbenchAreaContext.jsx';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Grid3X3, Image, Info, Layers, Monitor, Redo2, Settings2, Smartphone, Square, Type, Undo2, User, AppWindow, Folder } from 'lucide-react';
+import { Grid3X3, Image, Info, Layers, Monitor, Redo2, Settings2, Square, Type, Undo2, User, AppWindow, Folder } from 'lucide-react';
 import WorkbenchToolbar from './WorkbenchToolbar.jsx';
 import './workbenchCreation.css';
 import { useWorkbenchView } from './WorkbenchViewContext.js';
@@ -9,8 +10,8 @@ import { sameCreationCamera, workbenchCreationPlacement } from './workbenchCreat
 import { isWorkbenchBackground } from './useWorkbenchPan.js';
 import { isShapeCommand, SHAPE_COMMAND_KINDS } from '../../shapes/shapes.js';
 
-const ICONS = { 'workbench-index': Folder, 'presentation-board': Monitor, 'mini-app': AppWindow, text: Type, image: Image, shape: Square, 'shape-grid': Grid3X3, keeper: Folder, mobile: Smartphone };
-const LABELS = { 'workbench-index': 'Index', 'presentation-board': 'Display', 'mini-app': 'Mini app', text: 'Text', image: 'Image', shape: 'Rectangle', keeper: 'Keeper dock', mobile: 'Mobile',
+const ICONS = { 'workbench-index': Folder, 'presentation-board': Monitor, 'mini-app': AppWindow, text: Type, image: Image, shape: Square, 'shape-grid': Grid3X3, keeper: Folder };
+const LABELS = { 'workbench-index': 'Index', 'presentation-board': 'Display', 'mini-app': 'Mini app', text: 'Text', image: 'Image', shape: 'Rectangle', keeper: 'Keeper dock',
   'shape-grid': 'Grid', 'add-display-horizontal': 'Horizontal · 16:9', 'add-display-vertical': 'Vertical · 9:16', 'add-display-custom': 'Custom size…' };
 const isCreationTool = tool => tool === 'text' || isShapeCommand(tool);
 const EDITING = 'input,textarea,select,[contenteditable=true],[role=textbox],[role=slider],[role=dialog],[role=menu],iframe,[data-mini-app-id],[data-immersive]';
@@ -21,10 +22,11 @@ const CREATION_CONTROLS = `${EDITING},button,a,summary,[role=separator]`;
 // camera state, tool windows, or a second command/persistence implementation.
 export default function OwnerWorkbenchToolbar({ hostRef, placementTargets, commands, onCommand, onOpenLibrary, libraryOpen,
   preferences, onPreferencesChange, hidden, onHistory, history, historyBlocked, onNotice }) {
+  const { bounds: areaBounds } = useWorkbenchArea();
   const view = useWorkbenchView(), camera = useWorkbenchCamera(), tools = useSharedDisplayTools();
   const [actionRequest, setActionRequest] = useState(0), [ghost, setGhost] = useState(null);
   const gesture = useRef(null), space = useRef(false), latest = useRef(null), suppressedPointer = useRef(null);
-  latest.current = { view, camera, hidden, onCommand, onNotice };
+  latest.current = { view, camera, hidden, onCommand, onNotice, areaBounds };
   const cancel = useCallback(() => {
     const active = gesture.current;
     gesture.current = null;
@@ -95,7 +97,7 @@ export default function OwnerWorkbenchToolbar({ hostRef, placementTargets, comma
       const current = latest.current;
       if (current.hidden || current.camera.locked || active.tool !== current.view.interactionTool || !sameCreationCamera(active.camera, current.camera.getCamera())) return;
       const point = { x: event.clientX, y: event.clientY }, hit = document.elementFromPoint(point.x, point.y);
-      const placed = workbenchCreationPlacement(active.start, point, active.camera, isShapeCommand(active.tool));
+      const placed = workbenchCreationPlacement(active.start, point, active.camera, isShapeCommand(active.tool), current.areaBounds);
       if (!placed || !host.contains(hit) || hit?.closest(`${OVERLAYS},${CREATION_CONTROLS}`)) return;
       if (active.target) {
         const currentTarget = placementTargets.current?.targetAt(point);

@@ -11,6 +11,7 @@ export const imageCropForResize = (crop, before, after) => before.width === afte
 export const IMAGE_MODULE_ID = /^image:[A-Za-z0-9_-]{1,80}$/u;
 const exact = (v, keys) => v && typeof v === 'object' && !Array.isArray(v) && Object.keys(v).length === keys.length && keys.every(k => Object.hasOwn(v, k));
 const number = (v, min, max) => Number.isFinite(v) && v >= min && v <= max;
+const validCrop = crop => crop === null || exact(crop, ['x', 'y', 'zoom']) && number(crop.x, 0, 1) && number(crop.y, 0, 1) && number(crop.zoom, 1, 4);
 export const imageSize = v => Number.isInteger(v) && number(v, 32, 4096);
 export function validImageModules(items, published = false) {
   if (!Array.isArray(items) || items.length > MAX_IMAGE_MODULES) return false;
@@ -25,11 +26,11 @@ export function validImageModules(items, published = false) {
     ids.add(item.id);
     const sides = new Set();
     return item.sides.every(side => {
-      if (!exact(side, ['id', 'asset', 'crop', 'transform']) || !/^side:[A-Za-z0-9_-]{1,80}$/u.test(side.id) || sides.has(side.id)
+      if (!exact(side, ['id', 'asset', 'crop', 'transform', ...(Object.hasOwn(side || {}, 'receptionCrop') ? ['receptionCrop'] : [])]) || !/^side:[A-Za-z0-9_-]{1,80}$/u.test(side.id) || sides.has(side.id)
         || !validateProfileDocumentV9Asset(side.asset) || side.asset.media.type !== 'image' || !side.asset.media.url
         || !Number.isSafeInteger(side.asset.media.width) || side.asset.media.width <= 0
         || !Number.isSafeInteger(side.asset.media.height) || side.asset.media.height <= 0
-        || !(side.crop === null || exact(side.crop, ['x', 'y', 'zoom']) && number(side.crop.x, 0, 1) && number(side.crop.y, 0, 1) && number(side.crop.zoom, 1, 4))
+        || !validCrop(side.crop) || Object.hasOwn(side, 'receptionCrop') && !validCrop(side.receptionCrop)
         || !exact(side.transform, ['quarterTurns', 'mirrorX', 'mirrorY'])
         || !Number.isInteger(side.transform.quarterTurns) || !number(side.transform.quarterTurns, 0, 3)
         || typeof side.transform.mirrorX !== 'boolean' || typeof side.transform.mirrorY !== 'boolean') return false;

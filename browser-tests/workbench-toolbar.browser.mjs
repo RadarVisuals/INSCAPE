@@ -48,7 +48,8 @@ for (const [width, height, touch] of [[1576, 1244, false], [1440, 900, false], [
         assert.ok(box.x >= bar.x && box.x + box.width <= bar.x + bar.width + .5 && box.y >= bar.y && box.y + box.height <= bar.y + bar.height + .5, 'keys stay inside their shell');
       }
       const camera = await page.getByRole('group', { name: 'Workbench zoom' }).boundingBox();
-      assert.ok(camera.y + camera.height <= bar.y - 7, 'measured clearance keeps camera controls above the bar');
+      if (width >= 1100) assert.ok(camera.x >= bar.x + bar.width + 7, 'wide camera rail sits beside creation');
+      else assert.ok(camera.y + camera.height <= bar.y - 7, 'measured clearance keeps camera controls above the bar');
       if (width <= 520) {
         const boxes = await buttons.evaluateAll(nodes => nodes.map(node => { const b = node.getBoundingClientRect(); return { x: b.x, y: b.y, width: b.width }; }));
         assert.equal(new Set(boxes.slice(0, 5).map(b => b.y)).size, 1, 'creation row');
@@ -114,7 +115,7 @@ test('Tactile states preserve selection, focus, creation and readable contrast',
     const action = page.getByRole('button', { name: 'Actions', exact: true });
     assert.equal((await appearance(action)).outline, '2px', 'keyboard focus remains visible after closing');
     // Measure text/accent contrast against the brightest material stop.
-    const contrast = await page.locator('[data-workflow-material]').evaluate(node => {
+    const contrast = await page.locator('.workbench-toolbar[data-workflow-material]').evaluate(node => {
       const s = getComputedStyle(node), canvas = document.createElement('canvas'), ctx = canvas.getContext('2d');
       const rgb = color => { ctx.clearRect(0, 0, 1, 1); ctx.fillStyle = color; ctx.fillRect(0, 0, 1, 1); return [...ctx.getImageData(0, 0, 1, 1).data].slice(0, 3); };
       const surface = rgb(s.getPropertyValue('--tactile-surface').trim());

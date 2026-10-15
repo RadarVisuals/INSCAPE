@@ -248,7 +248,8 @@ test('published rendering sources cannot access local workspace, signals, runtim
   const preview = readFileSync(new URL('../components/PublishedProfileDocumentPreview.jsx', import.meta.url), 'utf8');
   const visitor = readFileSync(new URL('../components/ProfileDocumentV9Visitor.jsx', import.meta.url), 'utf8');
   const renderer = readFileSync(new URL('../components/GridProductionRenderer.jsx', import.meta.url), 'utf8');
-  const sources = `${boundary}\n${preview}\n${visitor}\n${renderer}`;
+  const display = readFileSync(new URL('../components/PublishedDisplayModule.jsx', import.meta.url), 'utf8');
+  const sources = `${boundary}\n${preview}\n${visitor}\n${renderer}\n${display}`;
   for (const forbidden of ['useLibraryStore', 'useSignalStore', 'localStorage', 'runtimeWindow', 'profileDocumentStorage', 'ModuleGridShell']) {
     assert.equal(sources.includes(forbidden), false, forbidden);
   }

@@ -3,7 +3,7 @@ import test from 'node:test';
 import { createEmptySystemWorkflowDraft } from '../../systemWorkflow/domain/systemWorkflowDraft.js';
 import { buildProfileDocumentV9 } from '../domain/profileDocumentV9Builder.js';
 import { createArticle } from '../../text/domain/article.js';
-import { publicCanvasItems, resolvePublicCanvasTarget, articleExcerpt, publicReadingPages } from './profileOverviewModel.js';
+import { publicDisplayModules, publicCanvasItems, resolvePublicCanvasTarget, articleExcerpt, publicReadingPages } from './profileOverviewModel.js';
 import { readApplicationRoute, applicationRouteUrl, resolveApplicationDestination } from '../../profileDiscovery/applicationNavigation.js';
 
 const address = `0x${'1'.repeat(40)}`;
@@ -19,7 +19,7 @@ function publication() {
 test('overview derives only published destinations, without mutating older documents', () => {
   const doc = publication(), before = JSON.stringify(doc);
   const items = publicCanvasItems(doc);
-  assert.deepEqual(items.map(item => item.title), [doc.grids[0].title, 'An essay']);
+  assert.deepEqual(items.map(item => item.title), ['DISPLAY MODULE', 'An essay']);
   assert.equal(items.some(item => item.title === 'Private notes'), false);
   assert.equal(resolvePublicCanvasTarget(doc, { moduleId: 'text:private' }), null);
   assert.equal(resolvePublicCanvasTarget(doc, { moduleId: 'display:primary', gridId: 'grid:private' }), null);
@@ -59,9 +59,8 @@ test('canvas links round-trip with targets, Discover return context, and authori
 test('reading pages retain published sources and article appearance without mutation', () => {
   const doc = publication(), before = JSON.stringify(doc);
   const pages = publicReadingPages(doc);
-  assert.equal(pages.length, 2);
-  assert.equal(pages[0].grid, doc.grids[0]);
-  assert.equal(pages[1].article, doc.texts[0].article);
+  assert.equal(pages.length, 1);
+  assert.equal(pages[0].article, doc.texts[0].article);
   assert.equal(pages.some(p => p.title === 'Private notes'), false);
   assert.equal(JSON.stringify(doc), before);
   assert.equal(publicReadingPages({ ...doc, grids: [], texts: [] }).length, 0);
@@ -74,6 +73,25 @@ test('multi-sided images and scene-linked writing retain every published entry',
   const pages = publicReadingPages(doc);
   assert.equal(pages.filter(p => p.kind === 'image').length, 2);
   assert.equal(pages.find(p => p.title === 'Sides · 2').side, doc.imageModules[0].sides[1]);
-  assert.equal(pages.find(p => p.title === 'Second passage').article, doc.texts[0].sceneLink.passages[0].article);
+  assert.equal(pages.some(p => p.kind === 'text'), false, 'scene-linked Text stays connected to its Display');
+  assert.equal(publicCanvasItems(doc).find(p => p.kind === 'text').record, doc.texts[0]);
+  assert.equal(publicReadingPages(doc, 'image:one').length, 2);
   assert.equal(new Set(pages.map(p => p.key)).size, pages.length);
+});
+
+test('Displays stay whole with distinct presentation, grids and scoped targets', () => {
+  const doc = publication();
+  doc.grids.push({ ...doc.grids[0], id: 'grid:next', title: 'Next' });
+  doc.displays = [{ id: 'display:second', geometry: { ...doc.geometry }, appearance: { ...doc.appearance }, grids: [{ ...doc.grids[0], id: 'grid:other' }] }];
+  doc.workbench = { display: { name: 'First', shortcut: {} }, displays: [{ id: 'display:second', name: 'Second', shortcut: {} }] };
+  const before = JSON.stringify(doc), modules = publicDisplayModules(doc);
+  assert.equal(modules.length, 2);
+  assert.equal(modules[0].document.grids, doc.grids);
+  assert.equal(modules[1].document.grids, doc.displays[0].grids);
+  assert.equal(modules[1].document.workbench.display.name, 'Second');
+  assert.equal(modules[1].document.texts, undefined);
+  assert.deepEqual(resolvePublicCanvasTarget(doc, { moduleId: 'display:primary', gridId: 'grid:next' }), { moduleId: 'display:primary', gridId: 'grid:next' });
+  assert.equal(resolvePublicCanvasTarget(doc, { moduleId: 'display:second', gridId: 'grid:next' }), null);
+  assert.equal(publicReadingPages(doc).some(item => item.kind === 'display' || item.kind === 'composition'), false);
+  assert.equal(JSON.stringify(doc), before);
 });

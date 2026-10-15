@@ -36,7 +36,8 @@ export function searchBrowserCategoryAssets(assets, query = '') {
 }
 
 export function categoryDialogInitialName(dialog) {
-  return dialog?.type === 'rename' ? String(dialog?.category?.name || '') : '';
+  return ['rename', 'rename-category', 'rename-section'].includes(dialog?.type)
+    ? String((dialog.type === 'rename-section' ? dialog.section : dialog.category)?.name || '') : '';
 }
 
 export const BROWSER_VIEW_KINDS = Object.freeze({

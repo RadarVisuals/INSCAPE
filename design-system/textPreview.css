@@ -1,0 +1,171 @@
+.ds-studio-text-canvas {
+  width: min(90cqw, 390px);
+  height: 270px;
+  overflow: auto;
+  background: #d4d1c8;
+  transform-origin: center;
+}
+.ds-studio-text-canvas[hidden],
+.ds-text-editor-sample[hidden],
+.ds-text-tools[hidden] {
+  display: none !important;
+}
+.ds-text-editor-sample {
+  min-height: 100%;
+  --workflow-panel: #d4d1c8;
+  --workflow-ink: #232c26;
+  --workflow-border: #232c2650;
+  position: relative;
+  isolation: isolate;
+  --workflow-window-chrome-shadow: 0 4px 12px #0003;
+}
+.ds-text-editor-sample .text-editor-page {
+  max-width: none;
+}
+.ds-layer-editor-host .text-editor-placeholder {
+  display: none;
+}
+.ds-layer-editor-host .text-editor-body--empty .text-editor-content {
+  min-height: 1lh;
+}
+.ds-text-editor-sample .text-document-title {
+  color: inherit;
+}
+.ds-studio
+  .ds-text-editor-sample
+  :is(.text-document-title, .text-editor-content):focus-visible {
+  outline-color: currentColor;
+}
+.ds-text-tools {
+  --workflow-ink: var(--tactile-ink);
+  --workflow-muted: var(--tactile-muted);
+  --workflow-border: var(--tactile-edge);
+  --workflow-panel: var(--tactile-face);
+  --workflow-panel-raised: var(--tactile-hover);
+  font: var(--ds-text-small)/1.5 var(--font-interface);
+}
+.ds-studio .ds-text-tools .text-toolbar-icons .workflow-tactile-control,
+.ds-studio
+  .ds-text-tools
+  :is(.text-selection-number, .text-selection-colour, .text-title-alignment)
+  .workflow-tactile-control {
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+}
+.ds-flat-preview .ds-studio-inspector .ds-text-tools button[aria-pressed='true'] {
+  background: var(--tactile-hover);
+  color: var(--tactile-ink);
+  box-shadow: inset 0 -2px currentColor;
+}
+.ds-flat-preview .ds-studio-inspector .ds-text-tools button[aria-pressed='true']::after {
+  display: none;
+}
+.ds-studio .ds-text-tools button {
+  font-size: var(--ds-text-small);
+}
+.ds-text-tools .text-toolbar-icons svg,
+.ds-text-tools .text-title-alignment svg {
+  width: 17px;
+  height: 17px;
+}
+.ds-text-tools .text-tools-footer {
+  position: static;
+  background: transparent;
+}
+.ds-studio .ds-text-tools .text-settings {
+  margin: 0;
+}
+.ds-studio .ds-text-tools .text-selection-size .text-selection-number label {
+  display: block;
+}
+.ds-studio .ds-text-tools .text-selection-colour label {
+  display: flex;
+}
+.ds-studio .ds-text-tools input[type='color'] {
+  width: 36px;
+  min-width: 36px;
+  height: 28px;
+}
+.ds-studio .ds-text-tools input[type='checkbox'] {
+  width: 14px;
+  min-height: 14px;
+  height: 14px;
+}
+.ds-studio .ds-text-tools :is(.text-visibility, .module-surface-check) {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--space-2);
+}
+.ds-studio .ds-text-tools .text-settings .text-selection-number input {
+  width: 80px;
+  flex-basis: 80px;
+}
+.ds-studio .ds-text-tools input[type='file'] {
+  white-space: normal;
+}
+.ds-studio .ds-text-tools :is(.text-backup-controls, .text-backup-preview) > p {
+  font: var(--ds-text-small)/1.5 var(--font-technical);
+  color: var(--tactile-muted);
+}
+.ds-text-focus .text-focus-header {
+  background: var(--lattice-menu-panel);
+  color: var(--lattice-menu-ink);
+}
+.ds-text-focus .text-focus-header button {
+  border-radius: var(--ds-control-radius);
+  box-shadow: none;
+}
+@container (max-width: 420px) {
+  .ds-studio-text-canvas {
+    height: 190px;
+  }
+  .ds-text-tools .text-toolbar-font {
+    grid-template-columns: minmax(0, 1fr) 92px;
+  }
+  .ds-text-tools .text-block-row {
+    grid-template-columns: minmax(0, 1fr) 95px;
+  }
+}
+@media (max-width: 520px), (pointer: coarse) {
+  .ds-studio .ds-text-tools button {
+    min-height: var(--ds-target-touch);
+  }
+  .ds-studio .ds-text-tools .text-toolbar-icons {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+  .ds-studio .ds-text-tools .text-selection-number button {
+    min-width: 26px;
+    width: 26px;
+  }
+  .ds-studio .ds-text-tools .text-selection-number input {
+    width: 75px;
+    flex-basis: 75px;
+  }
+}
+
+.ds-studio .ds-text-tools details {
+  margin-block: 0;
+}
+.ds-studio .ds-text-tools summary {
+  min-height: 32px;
+  padding-block: 7px;
+}
+@media (max-width: 520px), (pointer: coarse) {
+  .ds-studio .ds-text-tools summary {
+    min-height: var(--ds-target-touch);
+  }
+}
+
+.ds-studio .ds-text-tools .text-selection-colour button {
+  display: grid;
+  place-items: center;
+}
+.ds-studio .ds-text-tools .text-selection-colour button svg {
+  width: 14px;
+  height: 14px;
+}
+.ds-studio .ds-text-tools input[type='range'] {
+  margin-inline: 0;
+}

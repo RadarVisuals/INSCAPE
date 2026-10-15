@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { WorkbenchWindow } from '../public/ownerSystemWorkflow/DisplayInstrumentWindow.jsx';
-import { X } from '../public/InscapeIcons.jsx';
+import { X } from 'lucide-react';
 import './text.css';
 
 const Context = createContext(null);
@@ -28,11 +28,11 @@ export function SharedTextToolsWindow({ hidden = false }) {
   const anchor = initialAnchor.current;
   const width = Math.min(326, globalThis.innerWidth - 16);
   const left = anchor.right + 12 + width <= globalThis.innerWidth - 8 ? anchor.right + 12 : Math.max(8, anchor.left - width - 12);
-  return <div className="text-workbench" data-shared-text-tools style={{ '--text-z': 80 }}>
-    <WorkbenchWindow label="Text tools" title={source?.label || 'Select Text'} chrome="bevel" className="text-tools-window" width={326} initialHeight={620} minimumHeight={320}
+  return <div data-shared-text-tools>
+    <WorkbenchWindow label="Text tools" title={source?.label || 'Select Text'} chrome="tactile" className="text-tools-window" width={326} initialHeight={620} minimumHeight={160}
       titleContent={<div className="text-inspector-heading"><strong>Text</strong><span title={source?.label}>{source?.label || 'Select Text'}</span></div>}
       fitContent fitContentFromTop resizable={false} initialX={frame.current?.left ?? left} initialY={frame.current?.top ?? anchor.top} onLayoutChange={value => { frame.current = value; }}
-      controls={<button type="button" className="system-workflow__window-cap" aria-label="Close Text tools" onClick={() => {
+      controls={<button type="button" className="workflow-tactile-control system-workflow__window-cap" aria-label="Close Text tools" onClick={() => {
         if (source?.close() !== false) tools.setOpen(false);
       }}><X /></button>}>
       <div className="text-tools-content" ref={tools.setHost} />

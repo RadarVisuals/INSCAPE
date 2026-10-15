@@ -226,7 +226,7 @@ Focus writing temporarily presents the same article editor in a full-viewport
 native modal with its title, confirmed local-save status and Return to composition.
 The same editor DOM, selection and undo history move between the composition
 and the focused viewport; there is no second article copy or saved layout change.
-The mode is available through Selection in Text tools for standalone and Display
+The mode is available directly in Text tools for standalone and Display
 Text. Existing article typography is retained while content reflows to the wider
 reading area. A transparent article gets a temporary backing chosen for contrast
 with its existing body ink; authored appearance is unchanged.
@@ -251,29 +251,30 @@ Conflicting text requires an explicit replacement choice. Failed recovery never
 resets the draft or reports an unconfirmed save as successful.
 New Text starts with its dark background colour enabled and remains frameless. Background colour/opacity and the
 frame are independent authored settings; older articles retain their appearance.
-On 2026-09-29 the founder accepted the compact vertical Text inspector proposal,
-with freedom to depart from the other instruments' visual chrome. Text tools
-uses Text, Layout and Appearance tabs and explicit Document, Selection and Title
-formatting targets. Selection controls keep the originating Tiptap editor and
-history mounted when another target or tab is shown. The tool has a 326-pixel
-width, no resize handles and quiet opaque surfaces; it retains the bundled interface
-fonts. Text tools and Focus writing controls follow the selected system window
-theme, including their selection and focus colours, rather than a separate
-green palette or operating-system light/dark preference. Authored article
-colours remain independent. Height follows its content,
-and overflow scrolls inside the panel. It opens beside the module's visible
-screen rectangle, preferring the right side, without resizing or moving the
-article. The target title remains visible in the movable tool header. The module
-action strip remains reachable while tools are open. Typography and formatting
-use compact rows. Display connection stays available below every tab: Follow
-Display is directly visible and Move into Display remains an explicit separate
-action. Read as pages belongs to Layout. Publication inclusion and confirmed
-save/recovery status remain below the settings. Edges, texture and background
-belong to Appearance; columns and inner spacing belong to Layout. Tabs and
-formatting targets are temporary UI state, with no article schema or storage-key
-change. This redesign does not introduce automatic cloud draft sync or linked
-text-frame flow. The founder intends Text to support illustrated articles and
-artbook composition; additional authoring capabilities require concrete workflows.
+On 2026-10-12 the founder requested a simpler Text inspector after finding the
+Text/Layout/Appearance tabs combined with Document/Selection/Title targets
+confusing. The independent 326-pixel tool window now has one continuous panel:
+current text formatting is immediately visible; spacing, writing tools, default
+text style, title, text box layout, background/edges, Display connection and
+article backup use named disclosures. Current formatting explicitly applies at
+the cursor or to selected text. Default text style supplies inherited article
+styles and preserves individual overrides; Title keeps its independent controls.
+Writing tools contains Outline, Find and replace and Insert page break. Ctrl+F
+opens that section and focuses search directly; closing it clears search marks.
+Native disclosures retain all controls and the originating editor/history while
+closed. They are temporary UI state, never article data.
+The tool has no resize handles and uses the shared dark tactile material,
+quiet formatting buttons and Lucide icons. Only the outer window surface scrolls;
+outline, settings and save feedback do not introduce nested scrolling regions.
+Confirmed save/recovery status remains at the bottom, with a sticky footer.
+Height follows content within available space above the Workbench toolbars.
+It opens beside the module without moving or resizing the authored article.
+The target title remains visible in the movable header. Focus writing retains
+its existing system window theme. Authored article colours remain independent.
+Follow Display and Move into Display remain explicit separate actions within
+Display connection. Read as pages belongs to Text box layout. Publication
+inclusion stays below the settings. All editor, transfer, persistence and recovery
+responsibilities remain module-owned; no schema, identifier or storage key changes.
 Library artwork enters through direct drag
 into the text; there is no separate artwork-selection dropdown.
 The Library passes the release point to the receiving module. Text resolves it
@@ -437,7 +438,7 @@ Text windows remain fixed-size, resizable viewports with contained scrolling;
 this change does not introduce automatic window growth or linked text frames.
 
 The article editor also supports reusable heading and artwork-caption defaults
-under Text → Document → Heading & caption styles. Optional
+under Default text style → Heading & caption styles. Optional
 `appearance.textStyles` contains only `h1`, `h2`, `h3` and `caption` roles. Each
 role may specify a bundled `fontFamily`, `fontSize` (8–300), six-digit hex `color`,
 `lineHeight` (1–3), or `letterSpacing` (-0.1–1 em). Body defaults remain owned
@@ -814,110 +815,28 @@ Dangling, overlapping, nested, private-member and partially locked groups are in
 The founder removed the Mirror animation module on 2026-09-17. Its runtime,
 creation controls, demo and `animations` draft/publication field are removed.
 The founder confirmed that no saved compositions require Mirror compatibility.
-Display and Mobile image-flipping controls are independent and remain available.
+Display image-flipping controls are independent and remain available.
 
-## Mobile entrance and Index
+## Removed Mobile presentation and module
 
-The isolated mobile prototype establishes a two-sided artwork-led entrance.
-Tapping the front reveals the profile metadata on its reverse; tapping the
-reverse returns to the front. Every turn continues in the same direction.
-Works is a separate action on the reverse, with a compact preview of the first
-authored entries. There is no extra About dialog. The reverse presents the existing
-Identity bio, tags, links and nonempty authored fields. The founder approved
-profile and publication integration on 2026-09-12. The original standalone
-projects remain preserved as visual and interaction references.
+On 2026-10-12 the founder removed the separate mobile experience, Mobile
+Workbench module, custom mobile renderers and standalone mobile prototypes.
+Creation, editing, asset resolution and new publication no longer include Mobile.
+Visitors use the ordinary profile overview and Workbench routes at every viewport
+size; there is no device-based mobile entrance or desktop opt-in gate. Existing
+narrow-screen layouts and touch support in retained modules remain in scope.
 
-The integrated Mobile module owns one presentation per profile. Owner opens its
-portrait editor through Workbench Add. Editing happens directly on its output;
-Layers and Settings occupy a separate, movable companion window that can close
-and reopen but does not dock into the portrait. Display retains its existing
-attached/detached behaviour and its frame feature is outside this change.
-Mobile authoring uses the existing profile
-draft store and publication action, with no separate metadata or storage owner.
-The optional draft `mobile` field starts private. Explicit inclusion projects a
-validated presentation into the optional v9 publication `mobile` field.
-Version 1 remains readable without changing its appearance. The next authored
-edit upgrades it to version 2, adding neutral rotation and mirror settings for
-the three fixed roles. Editor open/close does not upgrade content.
-Older drafts and publications without Mobile remain valid; restoring a document
-without Mobile preserves any local Mobile composition as private.
-
-The standard design canvas is 1080 by 1920 (9:16). Foreground artwork, alpha mask
-and controls share that canvas and fit without viewport cropping. The background
-fills the screen and may crop. Standard Library compositions fit horizontally
-centred and bottom-aligned, so taller screens add background above the composition,
-not a strip below its artwork. Existing saved coordinates, masks and scales stay
-unchanged; this rendering correction applies to existing drafts and publications
-without rewriting them. Deliberate artwork scaling, positioning and cover-fit
-cropping still apply. The custom Steyra depth study retains its centred canvas.
-The editor provides the resolution, a downloadable
-SVG guide. Placement snaps invisibly to 12 design-pixel increments; no snapping
-grid is drawn. Background, artwork and mask
-come from Library; image fit, scale, position, background colour and an optional
-thin mask border are authored settings. Identity and functional icons can move,
-but their text and meaning remain owned by INSCAPE and the profile. The official
-username appears on the front. The reverse matches Desktop Identity: the authored
-title appears as a small uppercase label above the prominent official username,
-omitted when identical to the username. A title never replaces the
-official username in Mobile.
-
-Mobile has three fixed image roles, not an arbitrary layer stack. Each supports
-quarter-turn rotation and horizontal/vertical mirroring. Artwork can move and
-scale inside the mask, with contain/cover crop settings. Duplicate, frame and
-layer stacking-order controls are not included. The window shell and transform
-buttons are shared with Display; each module retains its own state and actions.
-Locking and hiding elements are temporary editor aids. Edit mode selects and
-manipulates content; Preview restores visitor interactions. Gallery headings and
-introductory copy are edited in place and tiles reorder directly. Collection
-names matching a work's fallback name are not repeated as tile captions.
-
-Draft asset references retain stable asset IDs and media selection. Publication
-resolves the selected assets using the existing canonical metadata projection;
-published metadata is a snapshot refreshed by explicit publication. There is no
-second title, description or attribution editor. Missing sources must remain
-unavailable rather than becoming fabricated content or successful empty reads.
-
-Owner preview and Mobile Visitor use the same renderer. Phone visitors enter the
-Mobile presentation without loading the desktop Workbench; desktop visitors do
-not load the Mobile renderer or editor. A profile without a published Mobile
-presentation has an explicit unavailable state and an optional desktop action.
-Both Mobile entry surfaces own pointer input within the application shell.
-Theme persists across the card, Index and viewer. The founder's Steyra renderer
-and separate Through the Eye / seven-layer experiment are curated custom work,
-not a default template for other profiles. Executable imported themes, LSP8
-template packaging, paid accounts and a general shader editor are deferred.
-
-The active standalone mobile preview is `Mobile/INSCAPE final/inscape-profile-card`.
-Its entrance flips to a flat profile reverse, with a separate Index action that
-opens the staggered image tiles. The entrance eye is not a navigation target;
-tapping it flips the card like the rest of the artwork. Through the Eye and the
-seven-layer interaction remain in the artwork viewer for The world inside.
-The entrance retains the depth study's recessed animated Steyra and inward
-foreground wordmark and identity. Its eye journey and room-wall metadata remain
-separate experiments in `Mobile/inscape-profile-card/depth-study`; the active
-preview uses the flat profile reverse instead.
-
-Index is an explicitly authored table of contents, not a wallet inventory.
-The maker chooses published destinations and their order inside INSCAPE.
-Entries have a title, an optional cover derived from existing content unless
-overridden, and a destination to a work, composition or experience. Unsupported
-mobile destinations require an explicit desktop treatment rather than a
-silently broken embedded desktop. The integrated first format supports explicitly
-chosen Library images, reordered in the Mobile editor, with an authored Index
-heading and introduction. Its staggered tiles open the shared image viewer;
-counts and navigation order are derived from the selected entries. Additional
-destination types must be explicitly supported before they can be authored.
-
-The prototype prepares read-only presentation fields and distinguishes
-unconnected content from successfully loaded empty content. Its hardcoded
-gallery and bio are not public profile data. The existing Through the Eye
-portal and seven-layer hold-to-separate experiment remain available together
-as an explicitly identified experiment, outside the published Index entries.
+The founder explicitly confirmed that Inscape is still in design, that there are
+no saved compositions to preserve and that Mobile compatibility is not wanted.
+The optional mobile field is removed from draft v4 and public document v9; strict
+validation rejects it as unsupported. There is no legacy reader, migration,
+restoration or publication path for Mobile. No wallet action, publication pointer,
+storage-key or document-version change is part of removal.
 
 ## Authoring undo
 
 Completed profile-draft edits share one chronological undo/redo history across
-Display instances, Identity and Mobile. Ctrl/Cmd+Z undoes; Ctrl/Cmd+Shift+Z
+Display instances, Identity and the other retained modules. Ctrl/Cmd+Z undoes; Ctrl/Cmd+Shift+Z
 or Ctrl+Y redoes. Text-entry controls retain native text undo. Pointer gestures
 group continuous updates into one step. New edits discard redo, and failures to
 save leave both history and the draft unchanged. History is bounded, temporary
@@ -1100,7 +1019,7 @@ On 2026-10-06 the founder authorized continuing the grouping implementation,
 with code quality and ownership separation checked throughout. Groups now offer
 Stack and Unstack. Optional group `position: { left, top }` records the compact
 stack's Workbench anchor; omission preserves the original module arrangement.
-The 180 by 160 work-pixel stack stays inside the existing 4,000 work area.
+New stack placement uses the current canvas bounds; shrinking the canvas preserves existing stack positions, including outliers.
 Dragging its grip or using arrow keys saves only that anchor as one undoable
 operation. Escape, cancellation and focus loss restore the prior anchor. Stacking,
 moving, membership drops and unstacking never move the camera or rewrite members.
@@ -1147,14 +1066,28 @@ cannot cover or intercept reading and artwork interactions.
 At narrow desktop widths, Visitor profile-routing actions occupy a separate
 dock row when present. Discover, Return and Exit stay reachable without
 horizontal scrolling. The camera reserves the resulting dock height; long Grid
-titles shrink within their own row. Mobile entry still requires the explicit
-desktop action before opening this Workbench.
+titles shrink within their own row. These same routes are available at narrow
+widths without a separate mobile entrance.
 
-On 2026-10-05 the founder removed the custom reference frame and chose a fixed
-4,000 × 4,000 work-pixel area. There is no Frame toggle, width/height setup,
-reference outline or Fit frame action. The alignment grid uses the shared work
-area bounds; its line/dot/hidden mode, colour and snapping remain independent
-preferences. Module-owned grids and authored canvas dimensions are unchanged.
+On 2026-10-12 the founder retained the existing spatial composition and Text
+behavior and chose an adjustable Workbench canvas: drag its right edge, bottom
+edge or bottom-right corner, with a Fit canvas to content action. Canvas size
+in the camera rail reveals these controls. The origin remains fixed; resizing
+never moves or scales existing content or changes the camera. Fit uses open
+registered content and collapsed group stacks with 48 work pixels of trailing
+margin, without rearranging anything. An explicit Find resize corner action
+uses existing camera navigation and Back when the edge is outside the viewport.
+
+The default remains 2,000 wide × 4,000 high work pixels. Whole-pixel dimensions
+from 256 to 16,384 are saved as optional `workbench.area: { width, height }`
+through the existing draft operation, undo, publication and restore paths. Old
+layouts without this field use the default without rewriting positions.
+A drag preview is temporary; release commits once, while Escape, lost capture,
+blur, hidden document, changed draft or disposal cancels it. Arrow keys resize
+by 10 pixels, Shift by 100 and Alt by 1. Failed saves restore the saved boundary.
+The alignment grid and placement bounds derive from the same per-Workbench
+area. Its line/dot/hidden mode, colour and snapping remain independent
+preferences. Module-owned grids and authored module dimensions are unchanged.
 
 Owner and Visitor start at 100% with zero camera offset. Camera movement is free
 in both axes, including when the whole work area fits on screen; manual zoom
@@ -1165,7 +1098,7 @@ restores zero pan while retaining zoom. The percentage button and Ctrl/Cmd+0
 restore 100% zoom around the view. Existing inspection locks remain authoritative.
 
 Old reference-frame preference fields are ignored. Other local preferences,
-storage keys, draft/public schemas and authored positions retain their meaning.
+storage keys and authored positions retain their meaning; the optional canvas area is the only schema extension here.
 Reading or reloading older 8,000-area arrangements does not move outlying modules;
 free camera navigation and Focus can still reach them beyond the visible grid.
 
@@ -1189,7 +1122,7 @@ The existing local workspace layout then saves the same positions shown on
 screen. Temporary translations do not remain a second owner of placement.
 Movement never chooses new dimensions or artwork fitting; Visitor movement
 remains temporary and cannot write the maker's arrangement.
-Group movement and corner resizing respect the 4,000 by 4,000 Workbench area,
+Group movement and corner resizing respect the current Workbench canvas area,
 projected through the current view scale and pan. Moving a zoomed module
 individually uses those same bounds. Group movement keeps
 relative spacing intact at the boundary.
@@ -1299,6 +1232,12 @@ remain pinned to the screen or travel with the canvas. Its window uses the share
 Workbench host; navigation tools are not composition/group members. Owner moves
 and resizes commit once at gesture completion. Visitors may browse/close it
 without writing the maker's layout.
+The Index retains readable screen-pixel dimensions and controls at every zoom.
+When unpinned, only its position follows the canvas through the shared camera's
+live paint subscription; it is not artwork and never joins composition selection
+or raster projection. Dragging converts screen movement to canvas position;
+resizing retains screen-pixel dimensions. Existing saved window values load
+unchanged, without rewriting destinations, schemas or storage keys.
 `workbenchIndex` is optional in draft v4 and public v9: `open`, `pinned`, `window`,
 up to 32 ordered `destinations`, and nullable `landingId`. Each destination stores
 an id, name and authored Workbench view rectangle. Owner records also contain
@@ -1318,7 +1257,7 @@ preserves unpublished local entries as private and rejects capacity overflow.
 The chosen public starting view runs on visitor entry unless an explicit artwork
 entry target takes precedence. Old documents without an Index keep their entry.
 
-The 4,000 by 4,000 work area is outlined against a darker exterior. A fresh
+The authored work area is outlined against a darker exterior. A fresh
 workspace without saved preferences starts without the global guide; existing
 guide preferences remain unchanged. Free camera travel still reaches old
 outlying artwork. Area appearance never changes document geometry.
@@ -1346,6 +1285,10 @@ pointer or keyboard editing, manual camera input, viewport changes,
 inspection locks, window blur and hidden-document transitions stop it at its
 current position. Missing or changed destination geometry invalidates pending
 travel. Interrupted Back remains available until the return completes.
+For ordinary camera journeys, late module registration renews the live surface
+projection on the same travel clock while the destination remains valid. It does
+not add history or restart a journey cancelled by input, inspection or disposal.
+Geometry-specific group morphs retain their existing cancellation boundary.
 Pure camera zoom travel uses paused native scale/translation effects on the
 already prepared module surfaces. The existing camera clock samples their
 progress; they never run independently of the logical camera or input geometry.
@@ -1493,12 +1436,12 @@ gesture. This change retains the current visual design.
 Image and Display Lift inspection dimming follows the artwork's shared animation
 progress in both directions, including interrupted opening and reduced motion.
 
-The fixed 4,000 by 4,000 work-pixel placement area extends right and down from
-the existing coordinate origin, replacing the earlier 8,000-area size. Content
+The adjustable work-pixel placement area extends right and down from
+the existing coordinate origin; its default is 2,000 by 4,000. Content
 windows, instruments and movable shortcuts can leave the visible viewport;
 movement and resizing use the shared area bounds with an eight-pixel inset.
 The alignment grid is visible only inside those same placement bounds. Panning
-or zooming beyond them reveals plain background, with no extra border or overlay.
+or zooming beyond them reveals the darker exterior. Resize handles appear only while Canvas size is open.
 Reset view is always visible in the Workbench controls. It resets the temporary
 pan, not the saved arrangement. Browser resizing and reload never pull saved
 positions back into the viewport. Existing Display/Image viewport size fitting
@@ -1506,7 +1449,7 @@ remain separate from window placement.
 The v9 storage redesign is explicitly deferred: existing positive window
 coordinates already support the area, with no schema, storage-key or origin
 change. Older outlying layouts remain readable without rewriting their positions.
-The work area is not a 4,000-pixel render target and adds no module instances.
+The work area is not a full-size render target and adds no module instances.
 
 The owner's local arrangement also survives reload independently of publication.
 A profile-scoped `inscape:workbench:layout:v1` record stores module geometry,
@@ -1565,8 +1508,8 @@ Display when absent before allocating another instance.
 `workbench.displays` retains additional window and shortcut arrangements when
 Prepare Publication captures the Workbench. Closing minimizes to the shortcut;
 it does not delete content. Visitor window changes remain session-local.
-Owner shortcuts offer right-click Delete for every created Display,
-Mobile and mini app. Deletion removes authored module content and its saved
+Owner shortcuts offer right-click Delete for every created Display
+and mini app. Deletion removes authored module content and its saved
 arrangement through one undoable draft operation. A desktop with no created
 modules is valid and survives reload and publication. Identity remains accessible
 through Profile; removing modules does not delete Library assets or change an
@@ -1624,6 +1567,29 @@ determine compatibility; working on Universal Everything is not a guarantee
 that every app works unchanged here. Grid/LSP28 import and synchronization,
 app-to-app audio sharing, and a marketplace are not implemented by this host.
 See [mini app hosting](MINI_APP_HOSTING.md) for the boundaries and checks.
+
+### Self-contained HTML artwork (2026-10-14)
+
+The founder requested a floating Nomad HTML artwork with its animation and
+hideable controls embedded in the file. Mini App settings now offer Transparent
+HTML artwork through optional `surface: 'artwork'`. Missing fields preserve
+ordinary Mini App behavior; draft v4 and public v9 use the same optional field.
+Artwork shares Mini App window positions, lifecycle, undo and publication rules.
+Its frame is transparent and sandboxed with scripts only, with no wallet bridge,
+same-origin access, microphone delegation, forms, popups or top navigation.
+The file owns animation and controls; the Workbench does not interpret cloth or
+character parts. Closing, preview suspension and going offscreen dispose its
+document. Window controls remain available on hover, keyboard focus and touch.
+The frame is still rectangular for input; alpha does not forward clicks through
+to other modules. This adds URL-based HTML hosting, not an NFT import pipeline
+or local file-upload system. External hosting must permit embedding.
+
+The initial Nomad trial retains its SVG source in the HTML and prepares textures
+once for the existing WebGL mesh animation. It is not a live SVG filter renderer;
+detail remains bounded by texture resolution. Local artwork URLs run only in
+development, stay private, and cannot enter a published document. Files under
+public/artwork-experiments are excluded from production builds. Publication of
+an artwork requires a separately hosted public HTTPS URL and explicit action.
 
 ## Removed artwork presentation panel
 
@@ -2130,39 +2096,97 @@ drafts retain their schemas and content.
   title, biography or field cannot grant it; it is not serialized in
   the creator-authored card. It grants no wallet or authoring authority.
 
-- Desktop profile links enter a published profile overview through Startveil.
-  The first overview derives an About card and up to four composition, Image or
-  Text destinations from the verified publication, plus Explore canvas. It does
-  not read owner drafts or inventory, introduce a second content editor, or add
-  saved overview settings. Existing publications need no migration. Composition
-  previews reuse the read-only Stage renderer and mount near the viewport;
-  reading content loads on explicit card entry; Workbench runtimes mount only on canvas entry. Missing destinations recover to
-  the overview with an explanation.
-  A profile URL uses the existing view address; canvas=1 enters the canvas,
-  optionally with module and grid identifiers resolved only against public
-  content. A targeted visit temporarily opens its module, selects its Grid and
-  uses shared canvas focus. Browser Back/Forward, reload and the Profile overview
-  link retain explicit destinations. Owner editing and the existing phone entry
-  remain unchanged. Overview customization and wraparound camera motion are
-  separate later work.
-  On 2026-10-10 the founder accepted evolving this reception into a bounded
-  reading experience inspired by Cargo's template previews. Desktop cards open
-  an inset native modal over the blurred reception. Its vertical sequence uses
-  the shared read-only Stage, Image artwork projection and Article reader from
-  the verified publication. Nearby scenes mount media; the page geometry stays
-  stable. An index and previous/next controls navigate published destinations.
-  Information overlays retain the current work beneath them and identify source
-  artwork separately from the publishing profile. Controls and the index reuse
-  the creation toolbar's tactile material, circular controls, recessed active
-  states and orange accent, without active-control underlines. Artwork retains
-  its authored appearance. Close/Escape and browser Back restore the reception;
-  no draft, published document or Workbench layout is rewritten. Browser links
-  may carry module/grid targets without canvas=1 to enter the reader directly.
-  reception=1 explicitly requests the public view even for its connected owner;
-  it grants no authority and does not disconnect or change the owner draft.
-  Explore canvas and explicit canvas links retain their existing behavior.
-  This first desktop pass does not add saved customization, autoplay, independent
-  scrolling columns or wraparound movement; the phone entrance remains unchanged.
+- Desktop profile links enter the reception through Startveil. On 2026-10-10
+  the founder clarified that its bento is another host for the same modules as
+  canvas. Display Grids remain scenes inside their Display; they are never
+  independent reception cards or pages in a combined Workbench reader.
+  The first implementation reuses one public Display session in both hosts,
+  including authored Stage proportions, placed Text/artwork, swipe motion,
+  autoplay/pause, keyboard navigation, metadata and artwork inspection. Canvas
+  retains its window/camera/lift host. The bento provides a bounded Stage and
+  compact controls using the creation toolbar's tactile material. Controls
+  overlay the lower edge inside the Display surface and reserve no gap below
+  it. The reception omits an app-wide navigation header, editorial
+  heading and footer. Image cards show the artwork without a type/title
+  caption bar; their accessible names and in-stage opening remain available.
+  On 2026-10-11 the founder replaced the tall About tile and wrapping overview
+  with one centred, bounded frame on the existing ash surround. A compact
+  nameplate, shared Identity address/copy/QR controls and Canvas link sit above
+  it. The nameplate is presentation; routes remain address-based. The upper
+  portion reuses the canvas Identity card body, including its authored portrait,
+  background shader, official name, authored introduction, links and fields.
+  Its window, shortcut and authoring controls remain with the canvas host.
+  The lower portion is a horizontally draggable artwork carousel. Portraits
+  occupy tall cells and landscape previews occupy stacked cells; complete live
+  Displays and linked Text remain modules, after the independent Images.
+  More artwork expands upward over the profile; More info reveals the existing
+  Identity fields downward into the strip's space. These modes are exclusive,
+  preserve the outer frame, and leave module sessions mounted. Covered content
+  is inert. Mouse dragging coasts using the existing bounded velocity/decay;
+  touch uses native scrolling. Buttons and arrow keys provide equivalent access.
+  Dragging suppresses accidental inspection, respects Display scene gestures,
+  and cancels on interruption, closure or disposal. Reduced motion skips coasting
+  and section transitions. Expansion, scrolling and side selection are temporary.
+  On 2026-10-11 the founder additionally requested a larger card, compact
+  chevron controls with hover descriptions, a grounded portrait and naturally
+  sized profile fields without a visible inner scrollbar. The artwork sheet
+  slides across the complete inner card over 460 ms; its cells and artwork
+  retain their final dimensions throughout. The shader remains behind a
+  translucent, blurred sheet backing; the artwork itself stays sharp. This is
+  an explicit reception-only exception to the no-backdrop-filter chrome rule.
+  Preserve retained SVG Lift stacking and the card's fixed outer clip.
+  The verified owner can explicitly enter Edit reception to choose/reorder
+  public modules and frame each Image side independently for this surface.
+  These edits use the existing profile draft store and undo history. Optional
+  `reception: { version: 1, items: [...] }` stores ordered public module IDs;
+  optional Image-side `receptionCrop` uses the existing normalized crop shape.
+  Missing fields preserve older documents' automatic selection and full-image
+  previews. An explicit empty selection stays empty. Publication filters stale
+  or private module IDs; no artwork assets are copied. Canvas crops, original
+  media and orientation remain authoritative and unchanged. Explicit links to
+  other public modules still work regardless of reception selection.
+  Scene-linked standalone Text shares the canvas reading surface and follows
+  the connected Display's live motion, including page-break sections and
+  per-Grid passages. Display remains the sole navigation authority; Text never
+  writes playback state. Write/Read changes retain the editor session. Further
+  composition authoring and layout customization are later work.
+  Image/article readers are scoped to their selected module.
+  The complete reception bento is one persistent, bounded presentation stage.
+  The current resting composition determines its responsive outer rectangle.
+  Image and independent Text cards expand from their own position in a layer
+  inside that rectangle and close back into the same card. Opening, closing
+  and their animation never move or grow the stage or surrounding page.
+  The underlying module sessions stay mounted; unrelated card navigation does
+  not reset Display or its scene-linked Text. Expanded images initially reveal
+  the full source, with authored orientation retained and a temporary contain
+  fit after reserving controls, padding and a separately scrolling detail panel.
+  Solo Image inspection uses the same readiness-gated 460 ms artwork Lift and
+  return curve as the canvas. Only artwork travels; the bounded viewer, toolbar
+  and metadata retain their layout. The card and inspector share the retained
+  SVG document and temporary side selection. Interrupted opening returns from
+  the current pose, and reduced motion completes without animation.
+  This does not change a saved crop or allow scrolling into another module.
+  Later complete compositions will share the same stage, with full-size layers
+  revealed by clipping. Composition authoring, transitions between arrangements,
+  module-wide Display expansion and any GSAP migration are separate work.
+  The ordinary reception reads only the verified publication, with no draft or
+  inventory reads. The explicit owner editor is loaded on demand, reads only
+  that owner's draft, labels its preview as Draft and saves crops/selection
+  locally. Visitors receive them through the existing explicit Workbench
+  publication action; opening or leaving reception never publishes. Display
+  media retains a bounded scene neighborhood, and offscreen
+  autoplay pauses its work. A profile URL retains its view address; canvas=1
+  enters the canvas. Module/grid targets resolve against published content and
+  select the actual Display scene in either host. Missing targets recover to
+  the overview with an explanation. Back/Forward and Profile overview retain
+  explicit destinations. reception=1 explicitly requests the public view even
+  for a connected owner; it grants no authority or draft access. The owner's
+  Profile menu offers View my reception through this explicit route, keeping
+  the wallet connected. Back to my Workbench returns the verified owner from
+  their reception or public canvas to editing; it is also available when that
+  publication is loading, missing or unavailable. These actions read the
+  publication without editing or publishing the private draft. The phone
+  entrance remains unchanged by this desktop reception pass.
   Direct canvas links enter their destination without an extra Enter button. The bare INSCAPE URL retains the public
   Explore/Connect entrance. Its featured world is explicitly selected as
   `0xf3C189819Fd5b042f692983bFbFD57ab607ee709`, independent of directory ordering.
@@ -2237,6 +2261,11 @@ the initial overview does not introduce a saved curation or layout schema.
   force until an explicit, tested migration replaces them.
 
 ## Visual language
+
+The implementation reference is [INSCAPE design system](design-system/README.md).
+It maps these accepted decisions to the existing production tokens, components,
+patterns and checks. It is derived guidance; this contract remains the sole
+product-direction authority. The local reference opens at `/design-system.html`.
 
 Module selection outlines and resize marks follow explicit activation by click
 or keyboard focus, never pointer hover. Selecting another module clears the
@@ -2345,6 +2374,120 @@ Visitor window movement remains free and does not acquire owner preferences.
 INSCAPE is technical, spatial, and deliberately bounded. Its accepted tactile
 interface reference below guides new chrome work; artwork remains the focus.
 
+### Simplified toolbar direction (2026-10-14)
+
+The founder requested a smaller, flatter toolbar with rectangular buttons and
+a clear selected control, replacing the raised/recessed visual emphasis. Buttons
+use 5 px corner radii; the surrounding bar uses 9 px (5 px plus its 4 px inset),
+derived from the same preview tokens at wide and narrow widths. Popup fields
+and menu rows also use 5 px radii inside 9 px containers. Their 1 px border plus
+3 px padding matches the toolbar's 4 px inset. Carbon
+and Mist are the two theme directions. The founder corrected the reference on
+2026-10-15: Carbon previews dark controls and Mist light controls, including
+Library and text menus. Interface Lucide icons use one 1.5-screen-pixel stroke,
+independent of glyph size; navigation icons share an 18 px size. Artwork SVG
+strokes remain authored content. In the design-system reference, the active creation tool uses an
+inverted fill; open panels use a softer fill with a small state mark. Neutral
+accents replace orange throughout the reference, and search focus uses a quiet
+neutral border, retaining a system-colour focus outline in forced colours. Reference
+popups omit redundant title and close rows: Shapes and Add start with choices,
+and Actions uses a full-width search field without a divider. Nested levels
+retain a Back row; the popup retains its accessible name, trigger-toggle,
+outside dismissal, Escape and focus return. This minimal presentation is enabled
+in Overview and Components. Add belongs inside the same toolbar with matching
+spacing. Both sections reuse the real toolbar and one scoped preview recipe.
+Foundations documents the refined geometry and neutral focus; Build with it owns
+the design principles. The overview contains the toolbar, theme choices and a
+short preview caption. Components keeps retained production windows collapsed
+as migration references. The review follow-up makes selected labels expand for
+enlarged text, strengthens Mist supporting text in the reference, and separates
+Agreed, Needs review and In the app labels. A flat Properties shell and a
+two-theme button state sheet are proposals for review, not accepted production
+migrations. Properties reuses the existing shell and native controls, with local
+example values, close/reopen focus return and field validation. The founder subsequently requested complete Properties coverage: Image, Display artwork and Shape retain their existing controls in separate reference specimens, including crop, selection/grouping, locked/empty states, Grid and retained Texture. Reference adapters reuse shared controls and compare their inventories against running production fixtures; they do not replace module editing or saving logic. Production controls, theme selectors and stored surface IDs retain their
+current behavior pending review and migration. The founder's Properties review
+removes the redundant visible Fit label and permanent borders around action-row
+icons. Solid selected Fit/Inspect choices have no underline; native fields use
+neutral, centered dropdowns and finer number-stepper chevrons. Grain uses a compact
+row with a shorter slider, preserving usable input targets. These refinements
+remain scoped to the reference. The tactile description below
+documents that existing implementation, not the requested future toolbar style.
+
+### Shared creative workspace direction (2026-10-14)
+
+The founder requested an Affinity-familiar organization in the design-system
+preview: one compact panel with Color, Layers, Shape, Image, Display, Transform
+and FX tabs, retaining Text authoring as well. Shared settings follow the visible
+selection; selecting an object does not silently change the active tab. Module
+tabs retain their specific settings. A selection-action bar sits close above the
+creation bar, with a related inspection/placement bar for eligible content.
+Navigator/minimap and zoom belong at lower right, alongside the existing Keeper
+dock pattern. Keep the approved Carbon/Mist materials, icons and 5/9 px geometry.
+
+The founder clarified the intended eventual panel behavior: each tool tab can
+be detached into its own panel and joined into a tab group again, with multiple
+groups visible together. The reference screenshot shows Color above Layers and
+Transform in another group. The current all-in-one preview is one possible
+configuration, not a permanent restriction or a requirement to keep Layers
+separate. This is accepted future direction; tab detaching/regrouping is not
+implemented or requested as the next change in this pass.
+
+The founder prefers identifying the selection through the canvas and Layers.
+The tabbed panel starts directly with its tabs, without an extra object-name
+header or nonfunctional drag grip. Navigator and Keeper retain their compact
+identifying titles; locked selection still has an explanation in the tools.
+
+The reference Navigator supports live navigation while holding and dragging
+its view frame, using the same temporary preview camera state as zoom and
+keyboard navigation. This remains a design-system interaction preview.
+
+The reference Color tab uses one colour selector: a hue ring surrounding a centred
+equilateral triangle for mixing that hue with white and black. Both support live
+pointer dragging and keyboard input. An editable hex field accepts three or six
+digits; invalid values do not change the selection. The native browser colour
+popup is removed from this tab. The swatch is a preview, not a second picker.
+Opacity and precise saturation/lightness fields edit the same selected colour.
+This remains reference-only; existing module/article appearance owns the value.
+
+The reference composition stays on the canvas while changing inspector tabs.
+Artwork silhouettes, layer geometry and order come from the same composition
+renderer throughout. Selected Display text is edited in its own frame using
+the existing article editor; rendered text retains its authored formatting.
+Color follows the editor's selected words or insertion point. The plain-text
+article title has its existing independent title colour; no rich-title schema
+is introduced. With no active text range/cursor, the default text colour remains
+available and is labelled as such. A wheel gesture preserves mixed text marks
+on cancel and commits as one undoable editor operation.
+
+Layer dragging shows a line above or below the target row. The actual insertion
+matches that edge; groups move together and cannot be split by a drop. Overflow
+in the reference canvas and tool panel scrolls, with page scrolling available
+at the edge. These fixes remain scoped to disposable design-system examples.
+
+Layer-row removal in the reference uses an inline confirmation: clicking the
+trash icon replaces the same row with a question at the start, a cancel icon
+and a confirmation checkmark in the trash icon's original position. The row
+keeps its height; multiple removal states the number of affected layers.
+Cancel or Escape restores the normal row and keyboard focus.
+
+This authorizes reference exploration, not a production migration. The layout
+study uses disposable example objects; existing Properties specimens remain as
+control-coverage references. The eyedropper, shared FX
+including blur, Navigator behavior and side-management presentation still need
+review. Fit/Cover are the current example choices; an additional Fill command
+needs a distinct agreed purpose. Library, publishing, account and settings stay
+separate. No saved content, application state or access boundaries change.
+
+The founder requested a navigation-sidebar exploration in the same prototype
+(2026-10-15), replacing the proposed global navigation dock. The sidebar carries
+Workbench, Display-scoped Grids and Library navigation; creation tools and the
+inspector remain independent. Library reuses its existing category tree beside
+the asset browser without duplicating browsing state. Collapse and reopening
+preserve the selected artwork, inspector tab, camera and Library filters.
+Narrow containers stack the panels. Account, discovery and sharing destinations
+are shown as unavailable in this reference; this does not authorize routing,
+publication or a production dock migration.
+
 ### Tactile interface reference (2026-10-09)
 
 The founder selected dark neumorphism for the creation toolbar and accepted it
@@ -2360,6 +2503,50 @@ Add and Shapes popups. It is deliberately dark even on a light Workbench or
 with a light window theme. Existing appearance preferences and saved artwork
 are unchanged. Other surfaces retain their current rendering until explicitly
 migrated; this reference does not authorize a simultaneous application redesign.
+
+On 2026-10-12 the founder approved the following owner-tool consolidation:
+- Properties combines the former artwork action bar and the selection properties
+  previously housed under Layers. Display artwork, standalone Image and Shape
+  supply their own context-specific controls; their actions and storage remain
+  module-owned. Layer-order icons share the top action grid without a separate
+  group or divider. Exact dimensions are available through a collapsed
+  Dimensions disclosure; authored resize handles remain the primary sizing tool.
+- Layers remains a structural list with composition spacing. Artwork info and
+  Library remain separate surfaces. Properties, Layers, Artwork info and Display
+  appearance use fixed-width, movable tool windows with content-driven height,
+  bounded internal scrolling and no resize handles.
+- Text remains a separate, complete inspector with all editor functions. The
+  subsequent refinement described in Text authoring replaces the confusing two
+  navigation rows with directly available formatting and named disclosures. Its
+  material and icons align with creation; editor and save/recovery ownership stay
+  outside Properties.
+- Keeper settings open from an icon on the Keeper dock, independently of the
+  current artwork or Text selection. Release/return and conversations remain
+  Keeper-owned. Its settings window has no resize handles.
+- The camera rail uses compact icons beside the creation toolbar on wide screens
+  and above it on narrow screens. Both rails bound tool-window height. Library
+  and the owner Tools launcher are removed from the global app dock because
+  creation already provides those routes; general navigation stays in the dock.
+These migrated surfaces reuse workflowTactile.css for material and control
+states. workbenchToolChrome.css owns shared tool-window geometry. Superseded
+per-panel material and detached-selection styles are removed at their source.
+
+Companion-tool refinement keeps Text's existing editor density. The explicit
+`workbench-tool-window` sizing class shares control and header dimensions for
+Properties, Layers, Artwork info, Display appearance and Keeper settings;
+Keeper's dock uses the same icon target. Coarse pointers and widths at or below
+520 pixels use 44-pixel action/header targets and 16-pixel field text. Six-action
+Properties grids form two equal rows there. Camera controls use 40-pixel targets,
+44 on narrow/coarse layouts. Size only Lucide icons, not arbitrary module SVGs,
+and use component classes rather than accessible names as style selectors.
+
+The outer companion surface is the only scroll owner. Layers and Shape content
+must not introduce a second scroll region. Content fitting measures titlebar,
+borders and padding independently of the current frame height so a previously
+hidden Properties window fits correctly on first opening. Tool windows retain
+no resize handles; authored artwork handles are unaffected. The isolated
+`browser-tests/tool-chrome-fixture.html` provides disposable Layers, Shape,
+Image and Keeper scenes for wide/narrow visual checks without user storage.
 
 The founder refined the creation bar through browser annotations on 2026-10-09
 and selected the compact icon-only layout at every viewport width on 2026-10-10.

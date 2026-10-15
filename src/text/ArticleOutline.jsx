@@ -9,7 +9,7 @@ export default function ArticleOutline({ editor, disabled }) {
   const active = headings.findLast(heading => heading.pos < cursor)?.pos;
   return <details className="text-article-outline">
     <summary>Outline <span>{headings.length}</span></summary>
-    {headings.length ? <nav aria-label="Article outline">{headings.map(heading => <button type="button" key={heading.pos}
+    {headings.length ? <nav aria-label="Article outline">{headings.map(heading => <button className="workflow-tactile-control" type="button" key={heading.pos}
       style={{ paddingInlineStart: 6 + (heading.level - 1) * 12 }} disabled={disabled}
       aria-current={heading.pos === active ? 'location' : undefined} title={heading.label}
       onMouseDown={event => event.preventDefault()}

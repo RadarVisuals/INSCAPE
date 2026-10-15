@@ -17,6 +17,13 @@ function hasNativeWheelScroll(target, host, dx, dy) {
   return false;
 }
 
+// Both rails reserve screen space, whether they sit beside or above each other.
+function controlsTop(host, controls) {
+  const top = Math.min(controls?.getBoundingClientRect().top ?? Infinity,
+    host?.querySelector('[data-workbench-toolbar]')?.getBoundingClientRect().top ?? Infinity);
+  return Number.isFinite(top) ? top : undefined;
+}
+
 // Navigation never receives a draft store or module transforms. Editing owns
 // its gestures and exposes only cancellation and input-ownership callbacks.
 export default function useWorkbenchNavigation({ hostRef, controlsRef, disabled, dockVisible, onControlsTopChange,
@@ -63,7 +70,7 @@ export default function useWorkbenchNavigation({ hostRef, controlsRef, disabled,
   const captureView = useCallback(() => {
     const host = hostRef.current, viewport = readViewport();
     if (!host || !viewport || moving || locked || interaction.current.isEditing() || isPanning()) return null;
-    const top = controlsRef.current?.getBoundingClientRect().top;
+    const top = controlsTop(hostRef.current, controlsRef.current);
     const available = workbenchNavigationViewport(viewport, Number.isFinite(top) ? top - host.getBoundingClientRect().top : undefined);
     const camera = getCamera();
     return { left: (available.left - camera.offset.x) / camera.scale,
@@ -82,9 +89,9 @@ export default function useWorkbenchNavigation({ hostRef, controlsRef, disabled,
     const hostRect = host.getBoundingClientRect();
     // Focus has a predictable centre. Floating instruments do not choose a
     // different destination; the actual bottom rail includes toolbar clearance.
-    const controlsTop = controlsRef.current?.getBoundingClientRect().top;
+    const chromeTop = controlsTop(hostRef.current, controlsRef.current);
     const available = workbenchNavigationViewport(viewport,
-      Number.isFinite(controlsTop) ? controlsTop - hostRect.top : undefined);
+      Number.isFinite(chromeTop) ? chromeTop - hostRect.top : undefined);
     const camera = getCamera();
     const end = workbenchDestinationCamera(bounds, available, .25, destination.padding ?? 32);
     if (!end) return unavailable();
@@ -153,7 +160,7 @@ export default function useWorkbenchNavigation({ hostRef, controlsRef, disabled,
     const measure = () => {
       // The same live chrome measurement also bounds companion tools. Their
       // screen space must account for wrapping controls and the current dock.
-      onControlsTopChange?.(controls?.getBoundingClientRect().top ?? null);
+      onControlsTopChange?.(controlsTop(host, controls) ?? null);
       const previous = measuredViewport.current;
       const viewport = readViewport();
       if (!viewport || viewport.width <= 0 || viewport.height <= 0) return;
@@ -168,6 +175,8 @@ export default function useWorkbenchNavigation({ hostRef, controlsRef, disabled,
     const observer = new ResizeObserver(measure);
     observer.observe(host);
     if (controls) observer.observe(controls);
+    const toolbar = host.querySelector('[data-workbench-toolbar]');
+    if (toolbar) observer.observe(toolbar);
     return () => observer.disconnect();
   }, [hostRef, controlsRef, dockVisible, disabled, locked, readViewport, stopTravel, onControlsTopChange]);
 

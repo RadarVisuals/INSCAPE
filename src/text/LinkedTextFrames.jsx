@@ -4,7 +4,7 @@ import { TextFrameOverflow, useTextFrame, useLinkedFrameLayout } from './TextFra
 import { WorkbenchWindow } from '../public/ownerSystemWorkflow/DisplayInstrumentWindow.jsx';
 import { useWorkbenchView, workbenchModuleTransform } from '../public/ownerSystemWorkflow/WorkbenchViewContext.js';
 import { textAppearance, textOutputStyle, textWindowStyle } from './domain/article.js';
-import { Plus, Pencil, Settings, X } from '../public/InscapeIcons.jsx';
+import { Plus, Pencil, Settings2 as Settings, X } from 'lucide-react';
 import { useWorkbenchCamera } from '../public/ownerSystemWorkflow/WorkbenchCamera.jsx';
 
 const ContinuationEditor = lazy(() => import('./ArticleEditor.jsx').then(module => ({ default: module.ContinuationEditor })));

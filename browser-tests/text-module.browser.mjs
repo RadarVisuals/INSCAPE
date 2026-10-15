@@ -1,3 +1,4 @@
+import { openTextToolSection } from './fixtures/text-tool-sections.mjs';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { chromium } from 'playwright-core';
@@ -45,8 +46,7 @@ test('Text module authors, reloads, renders and contains content at wide/narrow 
     await text.getByRole('textbox', { name: 'Article title', exact: true }).fill('Notes from the Lunar Desert');
     const content = text.getByRole('textbox', { name: 'Article text', exact: true });
     await content.fill(sampleText);
-    await page.locator('.text-tools-window').getByRole('tab', { name: 'Text', exact: true }).click();
-    await page.locator('.text-tools-window').getByRole('group', { name: 'Formatting target' }).getByRole('button', { name: 'Selection', exact: true }).click();
+
     await content.press('Control+A'); await tools.getByRole('button', { name: 'Bold', exact: true }).click();
     assert.equal(await content.locator('strong').innerText(), sampleText);
     await text.getByRole('button', { name: 'Read', exact: true }).click();
@@ -65,8 +65,7 @@ test('Text module authors, reloads, renders and contains content at wide/narrow 
     assert.equal(await content.locator('strong').count(), 0, 'can undo formatting from before Read');
     await tools.getByRole('button', { name: 'Redo', exact: true }).click();
     assert.equal(await content.locator('strong').innerText(), sampleText);
-    await page.locator('.text-tools-window').getByRole('tab', { name: 'Text', exact: true }).click();
-    await page.locator('.text-tools-window').getByRole('group', { name: 'Formatting target' }).getByRole('button', { name: 'Selection', exact: true }).click();
+
     assert.equal(await tools.getByRole('button', { name: 'Bold', exact: true }).innerText(), '');
     for (const ending of ['left', 'center', 'right', 'all']) {
       if (await page.locator('.text-inspector-advanced').getAttribute('open') === null) await page.locator('.text-inspector-advanced summary').click();
@@ -97,8 +96,7 @@ test('Text module authors, reloads, renders and contains content at wide/narrow 
     await text.getByRole('button', { name: 'Read', exact: true }).click();
 
     await text.getByRole('button', { name: 'Text tools', exact: true }).click();
-    await page.locator('.text-tools-window').getByRole('tab', { name: 'Text', exact: true }).click();
-    await page.locator('.text-tools-window').getByRole('group', { name: 'Formatting target' }).getByRole('button', { name: 'Document', exact: true }).click();
+    await openTextToolSection(page.locator('.text-tools-window'), 'Default text style');
     await tools.getByRole('combobox', { name: 'Document font', exact: true }).selectOption('literata');
     await tools.getByRole('checkbox', { name: 'Include in Workbench publication' }).check();
     await text.getByRole('button', { name: 'Read', exact: true }).click();
@@ -108,8 +106,7 @@ test('Text module authors, reloads, renders and contains content at wide/narrow 
     assert.equal(await content.locator('strong').innerText(), sampleText);
 
     assert.equal(await content.locator('p').first().evaluate(n => getComputedStyle(n).textAlignLast), 'center', 'alignment survives reload');
-    await page.locator('.text-tools-window').getByRole('tab', { name: 'Text', exact: true }).click();
-    await page.locator('.text-tools-window').getByRole('group', { name: 'Formatting target' }).getByRole('button', { name: 'Document', exact: true }).click();
+    await openTextToolSection(page.locator('.text-tools-window'), 'Default text style');
     assert.equal(await tools.getByRole('combobox', { name: 'Document font', exact: true }).inputValue(), 'literata');
     await tools.getByRole('button', { name: 'Close Text tools', exact: true }).click();
     await content.focus(); await page.keyboard.press('Control+End'); await page.keyboard.press('ArrowRight');

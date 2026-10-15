@@ -1,0 +1,320 @@
+.ds-studio-workbench {
+  position: relative;
+  isolation: isolate;
+}
+.ds-library-preview {
+  position: absolute;
+  inset: 0 auto auto 0;
+  display: flex;
+  flex-direction: column;
+  width: min(620px, 100%);
+  height: 540px;
+  max-height: 100%;
+  min-height: 354px;
+  overflow: hidden;
+  border: 1px solid var(--tactile-edge);
+  border-radius: var(--ds-shell-radius);
+  background: var(--tactile-face);
+  color: var(--tactile-ink);
+  font: var(--ds-text-small)/1.5 var(--font-interface);
+  z-index: var(--ds-layer-library);
+}
+:is(.ds-library-preview, .ds-library-navigation) {
+  --workflow-panel: var(--tactile-face);
+  --workflow-panel-raised: var(--tactile-well);
+  --workflow-ink: var(--tactile-ink);
+  --workflow-muted: var(--tactile-muted);
+  --workflow-faint: var(--tactile-muted);
+  --workflow-border: var(--tactile-edge);
+  --workflow-border-strong: var(--tactile-edge);
+  --workflow-hover: var(--tactile-hover);
+  --workflow-selection: var(--tactile-hover);
+  --workflow-row-height: 34px;
+  --workflow-rail-height: auto;
+  --workflow-type-sidebar: 11px/1.4 var(--font-interface);
+  --workflow-type-browser-rail: 11px/1.4 var(--font-interface);
+  --workflow-type-micro: 11px/1.4 var(--font-technical);
+  --workflow-active-vertical: inset 2px 0 var(--tactile-ink);
+  --lattice-browser-frame: var(--tactile-face);
+  --lattice-browser-ink: var(--tactile-ink);
+  --lattice-browser-muted: var(--tactile-muted);
+  --lattice-browser-faint: var(--tactile-muted);
+  --lattice-browser-line: var(--tactile-edge);
+  --lattice-browser-line-strong: var(--tactile-edge);
+  --lattice-browser-label-ink: var(--tactile-ink);
+  --lattice-browser-results-tone: var(--tactile-face);
+  --lattice-browser-faceplate-tone: var(--tactile-face);
+  --lattice-browser-card-tone: transparent;
+  --lattice-browser-selected-tone: var(--tactile-hover);
+  --lattice-browser-hover-tone: var(--tactile-hover);
+  --lattice-chrome-padding: 8px;
+}
+.ds-library-preview[hidden] {
+  display: none;
+}
+.ds-library-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-2) 10px;
+  border-bottom: 1px solid var(--tactile-edge);
+}
+.ds-library-heading strong {
+  font-size: var(--ds-text-base);
+  font-weight: 500;
+}
+.ds-library-heading span {
+  color: var(--tactile-muted);
+  font-family: var(--font-technical);
+}
+:is(.ds-library-preview, .ds-library-navigation) .system-workflow__workspace-window {
+  position: relative;
+  inset: auto;
+  width: 100%;
+  height: auto;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  border: 0;
+  box-shadow: none;
+  background: var(--tactile-face);
+  color: var(--tactile-ink);
+  transform: none;
+  box-sizing: border-box;
+  min-width: 0;
+  max-width: 100%;
+}
+:is(.ds-library-preview, .ds-library-navigation) .system-workflow__browser-body {
+  flex: 1;
+  min-height: 0;
+}
+:is(.ds-library-preview, .ds-library-navigation) .lattice-browser-panel {
+  grid-template-columns: minmax(48px, min(var(--lattice-browser-sidebar-width), 44%)) 1px minmax(
+      0,
+      1fr
+    );
+  width: 100%;
+  margin: 0;
+}
+:is(.ds-library-preview, .ds-library-navigation) .lattice-browser-sidebar {
+  overflow: auto;
+  scrollbar-width: thin;
+}
+:is(.ds-library-preview, .ds-library-navigation) .lattice-browser-category-list {
+  flex: 0 0 auto;
+  overflow: visible;
+}
+:is(.ds-library-preview, .ds-library-navigation) .lattice-browser-results {
+  padding: var(--space-2);
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+}
+:is(.ds-library-preview, .ds-library-navigation) .lattice-browser-assets {
+  grid-template-columns: repeat(
+    auto-fill,
+    minmax(min(100%, var(--lattice-browser-asset-min)), 1fr)
+  );
+  gap: var(--space-2);
+  padding: 0;
+}
+:is(.ds-library-preview, .ds-library-navigation) .lattice-browser-asset {
+  border: 1px solid transparent;
+  border-radius: var(--ds-control-radius);
+  box-shadow: none;
+  background: transparent;
+  color: var(--tactile-ink);
+}
+:is(.ds-library-preview, .ds-library-navigation) .lattice-browser-asset[data-selected] {
+  border-color: var(--tactile-ink);
+  background: var(--tactile-hover);
+}
+:is(.ds-library-preview, .ds-library-navigation) .lattice-browser-asset__media {
+  background: var(--tactile-well);
+}
+:is(.ds-library-preview, .ds-library-navigation) .lattice-browser-asset__media img {
+  object-fit: contain;
+}
+:is(.ds-library-preview, .ds-library-navigation) .lattice-browser-asset__record {
+  padding: 7px 3px;
+}
+:is(.ds-library-preview, .ds-library-navigation) .lattice-browser-asset__record strong {
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+:is(.ds-library-preview, .ds-library-navigation) .lattice-browser-asset__relationships small {
+  padding: 0;
+  font-size: 9px;
+  background: transparent;
+}
+:is(.ds-library-preview, .ds-library-navigation) .lattice-browser-sidebar button {
+  min-height: 34px;
+  letter-spacing: 0;
+  text-transform: none;
+}
+:is(.ds-library-preview, .ds-library-navigation) .lattice-browser-sidebar button:focus-visible {
+  outline: 2px solid var(--tactile-ink);
+  outline-offset: -3px;
+}
+:is(.ds-library-preview, .ds-library-navigation) .system-workflow__library-resize {
+  display: none;
+}
+:is(.ds-library-preview, .ds-library-navigation) .system-workflow__local-rail {
+  flex: none;
+  overflow: visible;
+  padding: var(--space-1);
+}
+:is(.ds-library-preview, .ds-library-navigation) .system-workflow__workspace-rail-controls {
+  height: auto;
+  gap: var(--space-1);
+  grid-template-columns: minmax(0, 1fr) 80px 64px;
+}
+:is(.ds-library-preview, .ds-library-navigation) .system-workflow__workspace-rail-controls > :is(label, button) {
+  min-height: 32px;
+  border-radius: var(--ds-control-radius);
+  font: var(--ds-text-small)/1.4 var(--font-interface);
+  letter-spacing: 0;
+}
+:is(.ds-library-preview, .ds-library-navigation) .system-workflow__workspace-search {
+  grid-column: 1/3;
+  padding: 0 var(--space-2);
+  border: 1px solid var(--tactile-edge) !important;
+  background: var(--tactile-well) !important;
+}
+:is(.ds-library-preview, .ds-library-navigation) .system-workflow__workspace-search input {
+  font: inherit;
+  min-width: 0;
+  padding: 0;
+  outline: 0;
+  box-shadow: none;
+}
+:is(.ds-library-preview, .ds-library-navigation) .system-workflow__workspace-search:focus-within {
+  border-color: var(--tactile-ink) !important;
+  box-shadow: none;
+}
+:is(.ds-library-preview, .ds-library-navigation) .system-workflow__workspace-close {
+  grid-area: 1/3;
+  width: 32px;
+  justify-self: end;
+}
+:is(.ds-library-preview, .ds-library-navigation) .system-workflow__workspace-labels {
+  grid-area: 2/1;
+  justify-content: start;
+  padding: 0 var(--space-2);
+}
+.ds-library-preview input {
+  accent-color: var(--tactile-ink);
+}
+:is(.ds-library-preview, .ds-library-navigation) .system-workflow__workspace-size {
+  grid-area: 3/1/4/4;
+  padding: 0 var(--space-2);
+  grid-template-columns: auto minmax(60px, 96px);
+  justify-content: start;
+  gap: 10px;
+}
+:is(.ds-library-preview, .ds-library-navigation) .system-workflow__workspace-size input {
+  width: 100%;
+}
+:is(.ds-library-preview, .ds-library-navigation) .system-workflow__rail-select {
+  padding: 0 6px;
+  justify-content: center;
+  grid-row: 2;
+}
+:is(.ds-library-preview, .ds-library-navigation) .system-workflow__rail-select:nth-of-type(2) {
+  grid-column: 3;
+}
+.ds-library-caption {
+  flex: none;
+  margin: 0;
+  padding: 6px 10px;
+  border-top: 1px solid var(--tactile-edge);
+  color: var(--tactile-muted);
+  font: var(--ds-text-small)/1.4 var(--font-technical);
+  max-width: none;
+  width: 100%;
+}
+:is(.ds-library-preview, .ds-library-navigation) .system-workflow__sidebar-editor input {
+  border-radius: var(--ds-control-radius);
+  color: var(--tactile-ink);
+  background: var(--tactile-well);
+  outline-offset: -2px;
+}
+:is(.ds-library-preview, .ds-library-navigation) .system-workflow__sidebar-delete {
+  color: var(--tactile-ink);
+  background: var(--tactile-hover);
+}
+body:has(.ds-library-preview:not([hidden]))
+  :is(
+    .system-workflow__select-popover,
+    .system-workflow__filter-popover,
+    .rack-menu-command-surface
+  ) {
+  border-radius: var(--ds-shell-radius);
+  padding: 3px;
+  box-shadow: none;
+}
+body:has(.ds-library-preview:not([hidden]))
+  :is(
+    .system-workflow__select-popover,
+    .system-workflow__filter-popover,
+    .rack-menu-command-surface
+  )
+  button {
+  border-radius: var(--ds-control-radius);
+}
+@media (max-width: 520px), (pointer: coarse) {
+  :is(.ds-library-preview, .ds-library-navigation) .lattice-browser-sidebar button,
+  :is(.ds-library-preview, .ds-library-navigation) .system-workflow__workspace-rail-controls > :is(label, button) {
+    min-height: var(--ds-target-touch);
+  }
+  :is(.ds-library-preview, .ds-library-navigation) .system-workflow__workspace-rail-controls {
+    grid-template-columns: minmax(0, 1fr) 80px 64px;
+  }
+  :is(.ds-library-preview, .ds-library-navigation) .system-workflow__workspace-search input {
+    font-size: 16px;
+  }
+  :is(.ds-library-preview, .ds-library-navigation) .system-workflow__library-images-trigger {
+    width: 36px;
+    height: 36px;
+  }
+}
+
+/* Contain the production drawer inside this reference's Workbench. */
+:is(.ds-library-preview, .ds-library-navigation) .system-workflow__workspace-labels input {
+  appearance: auto;
+  border-radius: 2px;
+  background: none;
+}
+
+:is(.ds-library-preview, .ds-library-navigation) .system-workflow__workspace-search input:focus-visible {
+  outline: none;
+}
+@container (max-width:520px) {
+  :is(.ds-library-preview, .ds-library-navigation) .system-workflow__library-create-row {
+    grid-template-columns: 1fr;
+  }
+  :is(.ds-library-preview, .ds-library-navigation) .system-workflow__library-create-row .lattice-browser-sidebar__create > span {
+    display: inline;
+  }
+  .ds-library-preview
+    .system-workflow__library-create-row
+    > .lattice-browser-sidebar__create
+    + .lattice-browser-sidebar__create {
+    border-left: 0;
+    border-top: 1px solid var(--tactile-edge);
+  }
+}
+
+:is(.ds-library-preview, .ds-library-navigation) .system-workflow__library-create-row {
+  display: grid;
+  flex: 0 0 auto;
+  height: auto;
+}
+@media (max-width: 520px), (pointer: coarse) {
+  :is(.ds-library-preview, .ds-library-navigation) .system-workflow__workspace-close {
+    width: var(--ds-target-touch);
+  }
+}

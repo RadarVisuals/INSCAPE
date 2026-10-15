@@ -145,7 +145,7 @@ export default function GridSeamProbe({ hostRef, scale, offset }) {
   const artworkCount = report?.displays.flatMap(display => display.grids).reduce((count, grid) => count + grid.artwork.length, 0) || 0;
   const close = () => { setReport(null); trigger.current?.focus({ preventScroll: true }); };
   return <>
-    <button ref={trigger} type="button" onClick={() => { setStatus(''); setReport(measure(hostRef.current, scale, offset)); }}>Meet Grid-naad</button>
+    <button className="workflow-tactile-control" ref={trigger} type="button" onClick={() => { setStatus(''); setReport(measure(hostRef.current, scale, offset)); }}>Meet Grid-naad</button>
     {report && createPortal(<dialog ref={dialog} onClose={close} aria-label="Grid-naad meting"
       style={{ width: 'min(640px, 90vw)', maxHeight: '85vh', overflow: 'auto', padding: 16,
         background: 'var(--workflow-panel, #171717)', color: 'var(--workflow-ink, #eee)',

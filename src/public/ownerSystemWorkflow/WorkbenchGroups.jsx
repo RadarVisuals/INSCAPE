@@ -1,3 +1,4 @@
+import { useWorkbenchArea } from './WorkbenchAreaContext.jsx';
 import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
 import { clampWorkbenchPosition } from './workbenchSpace.js';
@@ -12,6 +13,7 @@ import { useWorkbenchGroupScene, WorkbenchGroupStacks } from './WorkbenchGroupSc
 // This owner tool edits membership through the draft store. Selecting a saved
 // group only selects its live windows; navigation remains an explicit action.
 export default function WorkbenchGroups({ view, hostRef, locked, dropRef, historyBlocked, navigation, sceneRef, disabled }) {
+  const { bounds: areaBounds } = useWorkbenchArea();
   const { store, profileAddress, selection, setSelection, entries } = view;
   const draft = useSyncExternalStore(store.subscribe, store.getSnapshot);
   const [open, setOpen] = useState(false), [activeId, setActiveId] = useState(null);
@@ -36,7 +38,7 @@ export default function WorkbenchGroups({ view, hostRef, locked, dropRef, histor
   const stack = group => {
     const rect = scene.authoredBounds(group), camera = navigation.getCamera();
     const position = clampWorkbenchPosition(rect || { left: (innerWidth / 2 - camera.offset.x) / camera.scale,
-      top: (innerHeight / 2 - camera.offset.y) / camera.scale }, WORKBENCH_GROUP_STACK_SIZE);
+      top: (innerHeight / 2 - camera.offset.y) / camera.scale }, WORKBENCH_GROUP_STACK_SIZE, areaBounds);
     if (positionGroup(group, position)) { setSelection([]); scene.close(); }
   };
   const create = memberIds => {
@@ -77,7 +79,7 @@ export default function WorkbenchGroups({ view, hostRef, locked, dropRef, histor
   return <>
     <WorkbenchGroupStacks content={draft} {...{ hostRef, scene, locked, dropTarget }} onManage={group => { setActiveId(group.id); setOpen(true); }} onPosition={positionGroup} />
     {error && !open && <p className="workbench-move-error" role="alert">{error}</p>}
-    <button ref={trigger} type="button" disabled={locked} aria-expanded={open} aria-label="Workbench groups" onClick={() => setOpen(value => !value)}>Groups</button>
+    <button className="workflow-tactile-control" ref={trigger} type="button" disabled={locked} aria-expanded={open} aria-label="Workbench groups" onClick={() => setOpen(value => !value)}>Groups</button>
     {open && !locked && hostRef.current && createPortal(<div data-workbench-group-tools onKeyDown={event => {
       if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); close(); }
     }}>

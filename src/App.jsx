@@ -202,6 +202,7 @@ function App() {
             viewedProfileAddress={viewedProfileAddress}
             onVisitProfile={visitProfile}
             onOpenDiscover={navigation.openDiscover}
+            onOpenReception={() => navigation.openReception(viewedProfileAddress)}
             connectedProfile={connectedProfile}
             onConnect={requestStandaloneSignIn}
             onDisconnect={disconnectStandalone}
@@ -217,6 +218,7 @@ function App() {
             onDisconnect={disconnectStandalone} onEnterMyWorld={enterConnectedWorld}
             onRetry={retryPublishedProfile}
             returnProfileAddress={verifiedOwnerProfileAddress}
+            onReturnToWorkbench={ownershipVerified && authorityLifecycleStatus === 'complete' ? enterConnectedWorld : undefined}
             onOpenDiscover={navigation.openDiscover} onVisitProfile={visitProfile}
             entry={{ surface: content.canvas ? 'canvas' : 'overview', target: content.target, reception: content.reception }}
             onOpenWork={target => navigation.openWork(viewedProfileAddress, target)} onCloseWork={() => navigation.closeWork(viewedProfileAddress)}

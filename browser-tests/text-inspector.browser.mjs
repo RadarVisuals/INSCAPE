@@ -1,3 +1,4 @@
+import { openTextToolSection } from './fixtures/text-tool-sections.mjs';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { mkdir } from 'node:fs/promises';
@@ -13,8 +14,8 @@ for (const width of [1440, 390]) test(`Text inspector preserves editing, documen
     const errors = []; page.on('pageerror', error => errors.push(error.message));
     await mountTextToolsFixture(page, origin);
     const tools = page.locator('.text-tools-window'), body = page.getByRole('textbox', { name: 'Article text', exact: true });
-    const scope = name => tools.getByRole('group', { name: 'Formatting target' }).getByRole('button', { name, exact: true });
-    const section = name => tools.getByRole('tab', { name, exact: true });
+    const material = await tools.evaluate(node => { const s = getComputedStyle(node); return [s.backgroundImage, s.color, s.borderTopColor]; });
+    assert.equal(await tools.getByRole('tab').count(), 0, 'formatting has no competing navigation rows');
     const originalEditor = await body.elementHandle();
     const originalTexts = await page.evaluate(() => window.savedDraft().texts);
     await mkdir('.browser-test-runtime', { recursive: true });
@@ -31,12 +32,8 @@ for (const width of [1440, 390]) test(`Text inspector preserves editing, documen
         const style = getComputedStyle(probe), colours = [style.backgroundColor, style.color, style.borderTopColor];
         probe.remove(); return colours;
       });
-      assert.deepEqual(await tools.evaluate(node => { const s = getComputedStyle(node); return [s.backgroundColor, s.color, s.borderTopColor]; }), expected, 'Text tools follow the selected system window theme');
-      assert.equal(await tools.evaluate(node => {
-        const context = document.createElement('canvas').getContext('2d');
-        context.fillStyle = getComputedStyle(node).backgroundColor; context.fillRect(0, 0, 1, 1);
-        return context.getImageData(0, 0, 1, 1).data[3];
-      }), 255, 'article content cannot show through the tool surface');
+      assert.deepEqual(await tools.evaluate(node => { const s = getComputedStyle(node); return [s.backgroundImage, s.color, s.borderTopColor]; }), material, 'Text tools retain the accepted tactile material across system themes');
+      assert.equal(await tools.getAttribute('data-workflow-material'), 'tactile');
       assert.equal(await body.evaluate((node, original) => node === original, originalEditor), true, 'theme changes preserve the editor');
       assert.deepEqual(await page.evaluate(() => window.savedDraft().texts), originalTexts, 'system themes never author article colours or content');
       await tools.screenshot({ path: `.browser-test-runtime/text-system-theme-${theme.toLowerCase()}-${width}.png` });
@@ -51,6 +48,7 @@ for (const width of [1440, 390]) test(`Text inspector preserves editing, documen
         await dialog.waitFor({ state: 'detached' });
       }
     }
+    await openTextToolSection(tools, 'Display connection');
     assert.equal(await tools.getByRole('combobox', { name: 'Follow Display', exact: true }).isVisible(), true);
     await body.fill('An illustrated article deserves careful typography.'); await body.press('Control+A');
     await tools.getByRole('button', { name: 'Bold', exact: true }).click();
@@ -59,18 +57,19 @@ for (const width of [1440, 390]) test(`Text inspector preserves editing, documen
     const tracking = tools.getByRole('spinbutton', { name: 'Selected text tracking', exact: true });
     await tracking.fill('.08'); await tracking.press('Enter');
     assert.equal(await body.locator('span').first().evaluate(n => n.style.letterSpacing), '0.08em');
-    await section('Layout').click();
+    await openTextToolSection(tools, 'Text box layout');
+    await openTextToolSection(tools, 'Display connection');
     assert.equal(await tools.getByRole('combobox', { name: 'Follow Display', exact: true }).isVisible(), true);
     assert.equal(await tools.getByRole('spinbutton', { name: 'Text column gap', exact: true }).count(), 0);
     await tools.getByRole('combobox', { name: 'Text columns', exact: true }).selectOption('2');
     await tools.getByRole('spinbutton', { name: 'Text column gap', exact: true }).fill('32');
     await tools.getByRole('combobox', { name: 'Text inner spacing', exact: true }).selectOption('custom');
     await tools.getByRole('spinbutton', { name: 'Text padding left', exact: true }).fill('10');
-    await section('Appearance').click();
+    await openTextToolSection(tools, 'Background & edges');
     await tools.getByRole('combobox', { name: 'Text background', exact: true }).selectOption('none');
-    await section('Text').click(); await scope('Document').click();
+    await openTextToolSection(tools, 'Default text style');
     await tools.getByRole('spinbutton', { name: 'Text size', exact: true }).fill('18');
-    await scope('Title').click();
+    await openTextToolSection(tools, 'Title');
     await tools.getByRole('spinbutton', { name: 'Title size', exact: true }).fill('36');
     const draft = await page.evaluate(() => window.savedDraft());
     assert.equal(draft.texts[0].article.appearance.fontSize, 18);
@@ -79,17 +78,24 @@ for (const width of [1440, 390]) test(`Text inspector preserves editing, documen
     assert.equal(draft.texts[0].article.appearance.columnGap, 32);
     assert.equal(draft.texts[0].article.appearance.padding.left, 10);
     assert.equal(draft.texts[0].article.appearance.background, null);
-    await section('Layout').focus(); await page.keyboard.press('ArrowRight');
-    assert.equal(await section('Appearance').getAttribute('aria-selected'), 'true');
-    assert.equal(await section('Appearance').evaluate(n => document.activeElement === n), true);
-    await section('Text').click(); await scope('Selection').click();
+    const titleSection = tools.locator('summary').filter({ hasText: /^Title$/ });
+    await titleSection.focus(); await page.keyboard.press('Enter');
+    assert.equal(await titleSection.evaluate(node => node.parentElement.open), false);
+    await page.keyboard.press('Enter');
+    assert.equal(await titleSection.evaluate(node => node.parentElement.open), true);
+    assert.equal(await body.evaluate((node, original) => node === original, originalEditor), true, 'disclosures preserve the originating editor');
+    await body.focus(); await body.press('Control+f');
+    assert.equal(await tools.getByRole('textbox', { name: 'Find in article', exact: true }).evaluate(node => document.activeElement === node), true);
+    await tools.getByRole('button', { name: 'Close search', exact: true }).click();
+    await tools.locator('summary').filter({ hasText: /^Writing tools$/ }).click();
     await tools.locator('summary').filter({ hasText: 'Spacing & alignment' }).click();
-    await tools.locator('.text-controls-body').evaluate(n => { n.scrollTop = 0; });
+    await tools.locator('.system-workflow__instrument-content').evaluate(n => { n.scrollTop = 0; });
     await mkdir('.browser-test-runtime', { recursive: true });
     await tools.screenshot({ path: `.browser-test-runtime/text-inspector-${width}.png` });
-    const overflow = await tools.locator('.text-controls-body').evaluate(n => n.scrollWidth - n.clientWidth);
+    const overflow = await tools.locator('.system-workflow__instrument-content').evaluate(n => n.scrollWidth - n.clientWidth);
     assert.ok(overflow <= 1, 'no horizontal clipping');
-    // Changing tabs must not destroy the original Tiptap history or selection.
+    assert.deepEqual(await tools.evaluate(node => [...node.querySelectorAll('*')].filter(element => element.clientHeight > 0 && element.scrollHeight > element.clientHeight + 1 && ['auto', 'scroll'].includes(getComputedStyle(element).overflowY)).map(element => element.className)), ['system-workflow__detached-window-surface system-workflow__instrument-content'], 'one scrolling region contains all settings');
+    // Opening and closing settings must preserve the original editing history.
     assert.equal(await tools.getByRole('button', { name: 'Undo', exact: true }).isEnabled(), true);
     const follow = tools.getByRole('combobox', { name: 'Follow Display', exact: true });
     const target = await follow.locator('option').nth(1).getAttribute('value');
@@ -98,7 +104,7 @@ for (const width of [1440, 390]) test(`Text inspector preserves editing, documen
     await tools.getByRole('button', { name: 'Unlink Text from Display', exact: true }).click();
     assert.equal((await page.evaluate(() => window.savedDraft())).texts[0].sceneLink, undefined);
     await mountTextToolsFixture(page, origin);
-    await section('Text').click(); await scope('Document').click();
+    await openTextToolSection(tools, 'Default text style');
     assert.equal(await tools.getByRole('spinbutton', { name: 'Text size', exact: true }).inputValue(), '18');
     assert.equal(await body.locator('strong').innerText(), 'An illustrated article deserves careful typography.');
     assert.deepEqual(errors, []);

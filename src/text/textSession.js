@@ -1,3 +1,4 @@
+import { workbenchArea, workbenchAreaBounds } from '../systemWorkflow/domain/workbenchArea.js';
 import { createArticle, MAX_TEXT_MODULES, validTextModules } from './domain/article.js';
 import { createDefaultWorkbenchPresentation, createTextPresentation } from '../profileDocument/domain/workbenchPresentation.js';
 import { clampWorkbenchPosition } from '../public/ownerSystemWorkflow/workbenchSpace.js';
@@ -55,7 +56,7 @@ export function addTextModule(store, profile, placed = null) {
   const next = { ...draft, texts: [...(draft.texts || []), item] };
   if (placed) {
     const presentation = createTextPresentation(item.id, draft.texts?.length || 0);
-    presentation.window = { ...presentation.window, ...clampWorkbenchPosition(placed.position, presentation.window) };
+    presentation.window = { ...presentation.window, ...clampWorkbenchPosition(placed.position, presentation.window, workbenchAreaBounds(workbenchArea(draft.workbench))) };
     const workbench = placed.workbench || draft.workbench || createDefaultWorkbenchPresentation();
     next.workbench = { ...workbench, texts: [...(workbench.texts || []), presentation] };
   }

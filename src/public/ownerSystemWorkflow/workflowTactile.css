@@ -72,12 +72,12 @@
 @media (hover: hover) {
   [data-workflow-material="tactile"] .workflow-tactile-control:where(:not(:disabled):hover) { background: var(--tactile-hover); }
 }
-[data-workflow-material="tactile"] .workflow-tactile-control:where(:not(:disabled):is(:active, [aria-pressed="true"], [aria-expanded="true"], [data-active])) {
+[data-workflow-material="tactile"] .workflow-tactile-control:where(:not(:disabled):is(:active, [aria-pressed="true"], [aria-expanded="true"], [aria-selected="true"], [data-active])) {
   background: var(--tactile-well);
   box-shadow: var(--tactile-shadow-inset);
 }
-[data-workflow-material="tactile"] .workflow-tactile-control:where(:not(:disabled):is([aria-pressed="true"], [aria-expanded="true"], [data-active])) { color: var(--tactile-accent); }
-[data-workflow-material="tactile"] .workflow-tactile-control:where(:is([aria-pressed="true"], [aria-expanded="true"], [data-active]))::after { opacity: 1; }
+[data-workflow-material="tactile"] .workflow-tactile-control:where(:not(:disabled):is([aria-pressed="true"], [aria-expanded="true"], [aria-selected="true"], [data-active])) { color: var(--tactile-accent); }
+[data-workflow-material="tactile"] .workflow-tactile-control:where(:is([aria-pressed="true"], [aria-expanded="true"], [aria-selected="true"], [data-active]))::after { opacity: 1; }
 [data-workflow-material="tactile"] .workflow-tactile-control:focus-visible { outline: 2px solid var(--tactile-accent); outline-offset: 2px; }
 [data-workflow-material="tactile"] .workflow-tactile-control:where(:disabled) {
   color: var(--tactile-disabled);

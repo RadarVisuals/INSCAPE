@@ -1,3 +1,4 @@
+import { openTextToolSection } from './fixtures/text-tool-sections.mjs';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { chromium } from 'playwright-core';
@@ -27,8 +28,7 @@ test('one Text tool follows selection, retains its position, scopes edits and pr
     }
     await body(first).click();
     assert.equal(await first.locator('.text-window-bounds').evaluate(node => getComputedStyle(node).opacity), '1');
-    await page.locator('.text-tools-window').getByRole('tab', { name: 'Text', exact: true }).click();
-    await page.locator('.text-tools-window').getByRole('group', { name: 'Formatting target' }).getByRole('button', { name: 'Document', exact: true }).click();
+    await openTextToolSection(page.locator('.text-tools-window'), 'Default text style');
     await tools.getByRole('spinbutton', { name: 'Text size', exact: true }).fill('18');
     const grip = tools.getByLabel('Move Text tools window', { exact: true }), start = await grip.boundingBox();
     await page.mouse.move(start.x + 80, start.y + 15); await page.mouse.down();
@@ -42,15 +42,12 @@ test('one Text tool follows selection, retains its position, scopes edits and pr
     assert.equal(await second.locator('.text-window-bounds').evaluate(node => getComputedStyle(node).opacity), '1');
     const afterSwitch = await tools.boundingBox();
     assert.equal(afterSwitch.x, beforeSwitch.x); assert.equal(afterSwitch.y, beforeSwitch.y);
-    await page.locator('.text-tools-window').getByRole('tab', { name: 'Text', exact: true }).click();
-    await page.locator('.text-tools-window').getByRole('group', { name: 'Formatting target' }).getByRole('button', { name: 'Document', exact: true }).click();
+    await openTextToolSection(page.locator('.text-tools-window'), 'Default text style');
     assert.equal(await tools.getByRole('spinbutton', { name: 'Text size', exact: true }).inputValue(), '16');
-    await page.locator('.text-tools-window').getByRole('tab', { name: 'Text', exact: true }).click();
-    await page.locator('.text-tools-window').getByRole('group', { name: 'Formatting target' }).getByRole('button', { name: 'Document', exact: true }).click();
+    await openTextToolSection(page.locator('.text-tools-window'), 'Default text style');
     await tools.getByRole('spinbutton', { name: 'Text size', exact: true }).fill('22');
     await body(second).fill('Second article stays independent.'); await page.keyboard.press('Control+A');
-    await page.locator('.text-tools-window').getByRole('tab', { name: 'Text', exact: true }).click();
-    await page.locator('.text-tools-window').getByRole('group', { name: 'Formatting target' }).getByRole('button', { name: 'Selection', exact: true }).click();
+
     await tools.getByRole('button', { name: 'Bold', exact: true }).click();
     assert.equal(await body(second).locator('strong').innerText(), 'Second article stays independent.');
     assert.equal(await body(first).locator('strong').count(), 0);
@@ -106,16 +103,20 @@ test('Text tools switch between standalone articles and selected Text layers in 
     await first.focus(); await page.keyboard.press('Enter'); await tools.waitFor();
     assert.equal(await tools.count(), 1); assert.match(await tools.getAttribute('aria-label'), /Display article 1/);
     await first.getByRole('textbox', { name: 'Article text', exact: true }).fill('First embedded article.');
-    await page.locator('.text-tools-window').getByRole('tab', { name: 'Text', exact: true }).click();
-    await page.locator('.text-tools-window').getByRole('group', { name: 'Formatting target' }).getByRole('button', { name: 'Document', exact: true }).click();
+    await openTextToolSection(page.locator('.text-tools-window'), 'Default text style');
     await tools.getByRole('spinbutton', { name: 'Text size', exact: true }).fill('19');
     await second.click();
     await second.getByRole('textbox', { name: 'Article text', exact: true }).waitFor();
     assert.equal(await tools.count(), 1); assert.match(await tools.getAttribute('aria-label'), /Display article 2/);
-    await page.locator('.text-tools-window').getByRole('tab', { name: 'Text', exact: true }).click();
-    await page.locator('.text-tools-window').getByRole('group', { name: 'Formatting target' }).getByRole('button', { name: 'Document', exact: true }).click();
+    await openTextToolSection(page.locator('.text-tools-window'), 'Default text style');
     assert.equal(await tools.getByRole('spinbutton', { name: 'Text size', exact: true }).inputValue(), '16');
     await second.getByRole('textbox', { name: 'Article text', exact: true }).fill('Second embedded article.');
+    for (const width of [390, 1600]) {
+      await page.setViewportSize({ width, height: 900 });
+      await second.getByRole('textbox', { name: 'Article text', exact: true }).waitFor();
+      assert.equal(await second.getByRole('textbox', { name: 'Article text', exact: true }).innerText(), 'Second embedded article.', 'responsive hosting preserves Display Text while its ancestor ref reattaches');
+      assert.equal(await tools.count(), 1);
+    }
     await standalone.getByRole('textbox', { name: 'Article text', exact: true }).click();
     assert.equal(await tools.count(), 1); assert.match(await tools.getAttribute('aria-label'), /Titel kan rechtstreeks/);
     const saved = await page.evaluate(() => savedDraft());

@@ -2,7 +2,7 @@ import { UserRound } from 'lucide-react';
 import { useMemo } from 'react';
 const compactAddress = (address) => address?.length > 18 ? `${address.slice(0, 10)}…${address.slice(-6)}` : address;
 
-export default function OwnerSystemWorkflowProfile({ identity, model, onDisconnect, onOpenIdentity, phase }) {
+export default function OwnerSystemWorkflowProfile({ identity, model, onDisconnect, onOpenIdentity, onOpenReception, phase }) {
   const sourceIdentity = useMemo(() => ({
     avatarUrl: model?.officialProfile.avatarUrl || identity?.avatarUrl || null,
     displayName: model?.officialProfile.name || identity?.name || 'UNNAMED PROFILE',
@@ -18,7 +18,8 @@ export default function OwnerSystemWorkflowProfile({ identity, model, onDisconne
         </span>
         <span><b>{sourceIdentity.displayName}</b><small>{sourceIdentity.secondaryLabel}</small></span>
       </button>
-      {onDisconnect && <button className="system-workflow__profile-disconnect" onClick={onDisconnect} type="button">Disconnect</button>}
+      {onOpenReception && <button className="system-workflow__profile-action" onClick={onOpenReception} type="button">View my reception</button>}
+      {onDisconnect && <button className="system-workflow__profile-action" onClick={onDisconnect} type="button">Disconnect</button>}
     </aside>
   </>;
 }

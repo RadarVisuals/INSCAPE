@@ -1,3 +1,4 @@
+import { validReception } from '../../profileDocument/domain/receptionPresentation.js';
 import { validWorkbenchIndex } from './workbenchIndex.js';
 import { validWorkbenchGroups } from './workbenchGroups.js';
 import { validPlacementGroups } from './placementGroups.js';
@@ -16,8 +17,6 @@ import { validTextModules } from '../../text/domain/article.js';
 import { validShapes } from '../../shapes/shapes.js';
 import { validKeeperDocks, keeperReferenceCount } from '../../keeper/keeper.js';
 import { DISPLAY_TEXT_KEYS, isTextPlacement, validDisplayText } from './displayText.js';
-import { validMobilePresentation, mobileReferenceCount } from '../../mobile/domain/mobilePresentation.js';
-import { canUseMobileRenderer } from '../../mobile/domain/customPresentation.js';
 
 export const SYSTEM_WORKFLOW_DRAFT_VERSION = 4;
 export const resolveInspectionMode = placement => placement?.inspectionMode || 'LIFT';
@@ -264,7 +263,7 @@ function validatePlacement(value, path, fail) {
 export function validateSystemWorkflowDraft(input) {
   const errors = [];
   const fail = (path, code, message) => errors.push({ path, code, message });
-  const allowedKeys = [...DRAFT_KEYS, 'workbench', 'displays', 'mobile', 'miniApps', 'texts', 'imageModules', 'shapes', 'keeperDocks', 'workbenchGroups', 'workbenchIndex'];
+  const allowedKeys = [...DRAFT_KEYS, 'workbench', 'displays', 'miniApps', 'texts', 'imageModules', 'shapes', 'keeperDocks', 'workbenchGroups', 'workbenchIndex', 'reception'];
   if (!exactKeys(input, allowedKeys.filter(key => DRAFT_KEYS.includes(key) || Object.hasOwn(input || {}, key)))) {
     const missing = DRAFT_KEYS.filter(key => !Object.hasOwn(input || {}, key));
     const unexpected = record(input) ? Object.keys(input).filter(key => !allowedKeys.includes(key)) : [];
@@ -287,6 +286,7 @@ export function validateSystemWorkflowDraft(input) {
     || input.appearance.guideSize > SYSTEM_WORKFLOW_GRID_DENSITY.maximum
     || !HEX_COLOR.test(input.appearance?.guideColor || '')) fail('appearance', 'invalid_appearance', 'Invalid appearance');
   validateIdentity(input.identityPresentation, fail);
+  if (Object.hasOwn(input, 'reception') && !validReception(input.reception)) fail('reception', 'invalid_reception', 'Invalid reception selection');
   if (Object.hasOwn(input, 'workbenchIndex') && !validWorkbenchIndex(input.workbenchIndex, input)) fail('workbenchIndex', 'invalid_workbench_index', 'Invalid Workbench Index');
   if (Object.hasOwn(input, 'workbenchGroups') && !validWorkbenchGroups(input.workbenchGroups, input)) fail('workbenchGroups', 'invalid_workbench_groups', 'Invalid Workbench groups');
   if (Object.hasOwn(input, 'keeperDocks') && !validKeeperDocks(input.keeperDocks)) fail('keeperDocks', 'invalid_keepers', 'Invalid Keeper dock');
@@ -300,7 +300,6 @@ export function validateSystemWorkflowDraft(input) {
   if (Object.hasOwn(input, 'miniApps') && !validMiniApps(input.miniApps)) fail('miniApps', 'invalid_mini_apps', 'Invalid mini app configuration');
   if (Array.isArray(input.workbench?.miniApps) && input.workbench.miniApps.some(item => !Array.isArray(input.miniApps)
     || !input.miniApps.some(app => app?.id === item?.id))) fail('workbench.miniApps', 'unknown_mini_app', 'Window refers to an unavailable mini app');
-  if (Object.hasOwn(input, 'mobile') && (!validMobilePresentation(input.mobile) || !canUseMobileRenderer(input.mobile, input.profileAddress))) fail('mobile', 'invalid_mobile', 'Invalid Mobile presentation');
   if (Object.hasOwn(input, 'displays')) {
     if (!Array.isArray(input.displays) || input.displays.length > MAX_DISPLAY_MODULES - 1) {
       fail('displays', 'invalid_display_count', 'At most eight Display Modules are supported');
@@ -322,7 +321,7 @@ export function validateSystemWorkflowDraft(input) {
     }
   }
   if (Object.hasOwn(input, 'workbench') && !isValidWorkbenchPresentation(input.workbench)) fail('workbench', 'invalid_workbench', 'Invalid Workbench configuration');
-  const allReferences = keeperReferenceCount(input.keeperDocks) + imageReferenceCount(input.imageModules) + mobileReferenceCount(input.mobile) + (Array.isArray(input.grids) ? input.grids : []).reduce((sum, grid) => sum + (grid?.placements?.length || 0), 0)
+  const allReferences = keeperReferenceCount(input.keeperDocks) + imageReferenceCount(input.imageModules) + (Array.isArray(input.grids) ? input.grids : []).reduce((sum, grid) => sum + (grid?.placements?.length || 0), 0)
     + (Array.isArray(input.displays) ? input.displays : []).reduce((sum, module) => sum + (Array.isArray(module?.grids) ? module.grids : []).reduce((count, grid) => count + (grid?.placements?.length || 0), 0), 0)
     + (input.identityPresentation?.avatar?.stableAssetId ? 1 : 0) + (input.workbench?.display?.shortcut?.icon ? 1 : 0)
     + (input.workbench?.displays || []).filter(item => item?.shortcut?.icon).length;

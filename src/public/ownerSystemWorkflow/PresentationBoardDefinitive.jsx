@@ -1,7 +1,8 @@
+import { useWorkbenchArea } from './WorkbenchAreaContext.jsx';
 import { useWorkbenchPlacement } from './WorkbenchPlacement.jsx';
 import { useWorkbenchView, workbenchModuleTransform, useWorkbenchViewRegistration } from './WorkbenchViewContext.js';
 import { useWorkbenchCamera } from './WorkbenchCamera.jsx';
-import { clampWorkbenchPosition, WORKBENCH_BOUNDS } from './workbenchSpace.js';
+import { clampWorkbenchPosition } from './workbenchSpace.js';
 import { moduleEdgeStyle } from '../../systemWorkflow/domain/moduleSurfaceAppearance.js';
 import './moduleSurface.css';
 import { cloneElement, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
@@ -47,6 +48,7 @@ export default function PresentationBoardDefinitive({ assetsById = new Map(), ch
   instanceState = PRESENTATION_BOARD_INSTANCE_STATE.WINDOW,
   menuSurface = null, profileAddress, instanceId, renderInspection, renderCues,
   shortcutTargetRef, shortcutSnap = true, windowSnap = false, initialPresentation, onWindowChange, onShortcutChange, readOnly = false }) {
+  const { bounds: areaBounds } = useWorkbenchArea();
   const localShortcutRef = useRef(null);
   const [toolbarOpen, setToolbarOpen] = useState(false);
   const [lift, setLift] = useState(null);
@@ -129,7 +131,7 @@ export default function PresentationBoardDefinitive({ assetsById = new Map(), ch
   useLayoutEffect(() => {
     if (view) setBoardPosition(current => current || { left: view.frame.board.left, top: defaultTop });
   }, [view, defaultTop]);
-  const clampPosition = (position, frame = view?.frame.board) => clampWorkbenchPosition(position, frame);
+  const clampPosition = (position, frame = view?.frame.board) => clampWorkbenchPosition(position, frame, areaBounds);
   const renderedPosition = view ? boardPosition || { left: view.frame.board.left, top: defaultTop } : null;
   const windowFrame = view && renderedPosition ? { ...view.frame.board, ...renderedPosition } : null;
   const resizeTarget = useMemo(() => ({ enabled: Boolean(workbenchView.store && view) && !readOnly && !inspectionActive,
@@ -161,7 +163,7 @@ export default function PresentationBoardDefinitive({ assetsById = new Map(), ch
   const placedPosition = (candidate, bypass) => clampPosition(placement.position(candidate, renderedPosition,
     snapWorkbenchPosition(candidate, windowSnap && !readOnly && !bypass), bypass));
   const edgeSnapper = (bypass, edges = true) => (axis, side, value) => placement.edgeMatch(axis, side, value, renderedPosition, bypass, edges);
-  const resizeBounds = () => WORKBENCH_BOUNDS;
+  const resizeBounds = () => areaBounds;
   const beginBoardDrag = (event) => {
     if (viewTransform.presented || inspectionActive || event.button !== 0 || !renderedPosition || event.target.closest('button')) return;
     placement.begin(event);

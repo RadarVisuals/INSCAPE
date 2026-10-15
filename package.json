@@ -8,6 +8,11 @@
   },
   "scripts": {
     "dev": "vite",
+    "design-system": "vite --host 127.0.0.1 --open /design-system.html",
+    "design-system:tokens": "node scripts/designSystemInventory.js",
+    "design-system:check": "node scripts/designSystemInventory.js --check",
+    "test:design-system": "node --test scripts/designSystemInventory.test.js scripts/buildDesignSystem.test.js design-system/colourModel.test.js design-system/workspaceLayers.test.js",
+    "test:browser:design-system": "node --test browser-tests/design-system.browser.mjs browser-tests/design-system-workspace.browser.mjs browser-tests/design-system-library.browser.mjs browser-tests/design-system-colour.browser.mjs browser-tests/design-system-interactions.browser.mjs",
     "build": "vite build",
     "build:check": "node scripts/checkProductionBuild.js",
     "test": "node --test",
@@ -19,7 +24,8 @@
     "test:browser:alpha-support": "node --test browser-tests/alpha-support-preview.browser.mjs",
     "test:browser:system-workflow-phase4b": "node --test browser-tests/owner-system-workflow-publication.browser.mjs",
     "test:browser:system-workflow-production": "node --test browser-tests/owner-system-workflow-production.browser.mjs",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "design-system:build": "node scripts/buildDesignSystem.js"
   },
   "dependencies": {
     "@erc725/erc725.js": "^0.28.2",
@@ -43,6 +49,7 @@
     "@vitejs/plugin-react": "^4.2.1",
     "jose": "^6.2.4",
     "playwright-core": "1.61.1",
+    "postcss": "8.5.28",
     "vite": "^6.4.3"
   }
 }

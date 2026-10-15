@@ -3,7 +3,7 @@ import test from 'node:test';
 import { chromium } from 'playwright-core';
 
 test('Library reports failed storage, preserves the form, saves before reload and rejects an external overwrite', { timeout: 45000 }, async () => {
-  const browser = await chromium.launch({ executablePath: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', headless: true });
+  const browser = await chromium.launch({ executablePath: process.env.INSCAPE_BROWSER_EXECUTABLE || 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', headless: true });
   try {
     for (const width of [1440, 700]) {
       const page = await browser.newPage({ viewport: { width, height: 900 } });

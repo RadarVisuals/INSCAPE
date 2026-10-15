@@ -1,3 +1,4 @@
+import { openTextToolSection } from './fixtures/text-tool-sections.mjs';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { chromium } from 'playwright-core';
@@ -76,6 +77,7 @@ for (const sections of [false, true]) test(sections ? 'article sections link fro
       assert.match(await text.locator('.text-page-navigation span').innerText(), /^2 \/ /);
       const original = await page.evaluate(() => JSON.parse(localStorage.getItem(window.__sceneDraftKey)).texts[0].article);
       await text.getByRole('button', { name: 'Text tools', exact: true }).click();
+      await openTextToolSection(tools, 'Display connection');
       await tools.getByRole('combobox', { name: 'Follow Display', exact: true }).selectOption('display:primary');
       await tools.getByRole('button', { name: 'Link Text to Display', exact: true }).click();
       await text.getByRole('button', { name: 'Read', exact: true }).click();
@@ -129,6 +131,7 @@ for (const sections of [false, true]) test(sections ? 'article sections link fro
     const passage = 'There is a low pressure somewhere inside my head. Not a sound exactly. More like something running underneath one. ';
     await editor.fill(passage.repeat(20));
     await editor.press('Control+End');
+    await openTextToolSection(tools, 'Writing tools');
     await tools.getByRole('button', { name: 'Insert page break', exact: true }).click();
     await page.keyboard.type('I stop breathing for a moment.');
     await text.getByRole('button', { name: 'Read', exact: true }).click();

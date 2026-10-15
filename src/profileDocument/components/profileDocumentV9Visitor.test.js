@@ -7,6 +7,7 @@ const app = readFileSync(new URL('../../App.jsx', import.meta.url), 'utf8');
 const boundary = readFileSync(new URL('./PublishedProfileBoundary.jsx', import.meta.url), 'utf8');
 const preview = readFileSync(new URL('./ProfileDocumentV9Preview.jsx', import.meta.url), 'utf8');
 const visitor = readFileSync(new URL('./ProfileDocumentV9Visitor.jsx', import.meta.url), 'utf8');
+const display = readFileSync(new URL('./PublishedDisplayModule.jsx', import.meta.url), 'utf8');
 const renderer = readFileSync(new URL('./GridProductionRenderer.jsx', import.meta.url), 'utf8');
 const rendererCss = readFileSync(new URL('../../lattice/rendering/latticeProductionTableRenderer.css', import.meta.url), 'utf8');
 const visitorCss = readFileSync(new URL('./visitorGridWorld.css', import.meta.url), 'utf8');
@@ -57,25 +58,25 @@ test('v9 Visitor retains media state, retry/recovery, focus, identity, input own
   assert.match(renderer, /naturalHeight: height, naturalWidth: width/);
   // Neighbor readiness and retained media at arrival are exercised with actual
   // owner/Visitor navigation in browser-tests/grid-motion.browser.mjs.
-  assert.match(visitor, /DisplayFocusViewer/);
+  assert.match(display, /DisplayFocusViewer/);
   assert.doesNotMatch(visitor, /LatticeFocusViewer|inspectionVariant="rack"/);
   assert.doesNotMatch(visitor, /gridVisible=\{document\.appearance\.guideMode !== 'NONE'\}/);
   assert.match(renderer, /data-viewer-source-hidden/);
-  assert.match(visitor, /projectionBottomInset=\{0\}/);
-  assert.match(visitor, /createDefaultWorkbenchPresentation/);
+  assert.match(display, /projectionBottomInset=\{0\}/);
+  assert.match(display, /createDefaultWorkbenchPresentation/);
   assert.match(visitor, /IdentityModule/);
   assert.match(visitor, /identityOnly/);
   assert.match(visitor, /identityControlRef=\{identityControlRef\}/);
   assert.match(visitor, /profileDockControlRef/);
   assert.match(visitor, /returnFocus/);
-  assert.match(visitor, /ArrowRight/);
+  assert.match(display, /ArrowRight/);
   // Continuous drag, wrapping, and Text synchronization are exercised through
   // the shared camera in grid-motion/grid-transition.browser.mjs.
-  assert.match(visitor, /suppressPlacementClickRef/);
-  assert.match(visitor, /visitor-grid-world__grid-plane--current/);
-  assert.match(visitor, /visitor-grid-world__grid-plane--adjacent/);
-  assert.match(visitor, /Previous Grid/);
-  assert.match(visitor, /Next Grid/);
+  assert.match(display, /suppressPlacementClickRef/);
+  assert.match(display, /visitor-grid-world__grid-plane--current/);
+  assert.match(display, /visitor-grid-world__grid-plane--adjacent/);
+  assert.match(display, /Previous Grid/);
+  assert.match(display, /Next Grid/);
   assert.match(visitor, /onOpenDirectory \|\| onReturn \|\| onExit/);
   assert.match(visitor, /onReturn && <button onClick=\{onReturn\} type="button">RETURN<\/button>/);
   assert.match(visitorCss, /@media \(max-width: 640px\)[\s\S]*\.visitor-grid-world__dock button \{[^}]*width: 64px;[^}]*min-width: 64px;[^}]*flex-basis: 64px;/);

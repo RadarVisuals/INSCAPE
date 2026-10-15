@@ -114,7 +114,7 @@ function contextAnchor(event) {
 }
 
 export default function OwnerSystemWorkflowLibraryPresenter({ categoryCommands, categoryDrag, data, dropFeedback, menuSurfaceId,
-  onAssetActivate, onAssetPointerDown, onImageActivate, workspace }) {
+  navigationHost = null, onAssetActivate, onAssetPointerDown, onImageActivate, workspace }) {
   // Temporary browsing state, retained across filtering and closing the drawer.
   // The workspace keys this presenter by profile; no authored data is changed.
   const [expandedImageIds, setExpandedImageIds] = useState(() => new Set());
@@ -255,19 +255,13 @@ export default function OwnerSystemWorkflowLibraryPresenter({ categoryCommands, 
         unresolved={category.assetIds.filter((id) => !renderableIds.has(id)).length} />}
     </div>;
   };
-  const emptyLabel = data.collectionContext && data.status === 'loading' ? 'Loading collection tokens'
+  const emptyLabel = data.status === 'loading' ? (data.collectionContext ? 'Loading collection tokens' : 'Loading assets')
     : data.collectionContext && data.status === 'error' ? 'Collection tokens unavailable'
       : workspace.hasActiveFilters && workspace.viewAssetCount
         ? `${workspace.viewAssetCount} assets are in this view / none match the active search or filters`
         : relationshipView === 'created' && data.createdStatus === 'loading' ? 'Loading creator-attributed works'
           : relationshipView === 'created' && data.createdStatus === 'error' ? 'Created source unavailable' : 'No assets in this view';
-  return <div className="system-workflow__library-presenter" onKeyDown={(event) => {
-    if (event.key !== 'Escape') return;
-    if (workspace.dialog) { event.stopPropagation(); closeDialog(); }
-    else if (contextMenu) { event.stopPropagation(); closeContextMenu(); }
-    else if (workspace.selectedAssetIds.length) { event.stopPropagation(); workspace.clearSelection(); }
-  }}>
-    <div className="lattice-browser-panel" style={{ '--lattice-browser-sidebar-width': `${workspace.sidebarWidth}px` }}>
+  const navigation = (
       <nav aria-label="Browser navigation" className="lattice-browser-sidebar">
         {data.collectionContext ? <>
           <LibraryNavigationButton count={null} icon={ArrowLeft} label="Back to Created"
@@ -336,11 +330,20 @@ export default function OwnerSystemWorkflowLibraryPresenter({ categoryCommands, 
         </div>
         </>}
       </nav>
-      <button aria-label="Resize Browser navigation" className="lattice-browser-sidebar-resize"
+  );
+  return <div className="system-workflow__library-presenter" onKeyDown={(event) => {
+    if (event.key !== 'Escape') return;
+    if (workspace.dialog) { event.stopPropagation(); closeDialog(); }
+    else if (contextMenu) { event.stopPropagation(); closeContextMenu(); }
+    else if (workspace.selectedAssetIds.length) { event.stopPropagation(); workspace.clearSelection(); }
+  }}>
+    <div className="lattice-browser-panel" style={{ '--lattice-browser-sidebar-width': `${workspace.sidebarWidth}px` }}>
+      {navigationHost ? createPortal(navigation, navigationHost) : navigation}
+      {!navigationHost && <button aria-label="Resize Browser navigation" className="lattice-browser-sidebar-resize"
         disabled={Boolean(workspace.dialog)}
         onLostPointerCapture={workspace.sidebarResize.finish} onPointerCancel={workspace.sidebarResize.finish}
         onPointerDown={workspace.sidebarResize.begin} onPointerMove={workspace.sidebarResize.update}
-        onPointerUp={workspace.sidebarResize.finish} title="Resize Browser navigation" type="button" />
+        onPointerUp={workspace.sidebarResize.finish} title="Resize Browser navigation" type="button" />}
       <main className="lattice-browser-results">
         {dropFeedback && <div className="lattice-browser-notice" data-error role="status">{dropFeedback}</div>}
         {data.persistenceError && <div className="lattice-browser-notice" data-error role="alert">{data.persistenceError}</div>}

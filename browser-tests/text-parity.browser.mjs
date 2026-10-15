@@ -1,3 +1,4 @@
+import { openTextToolSection } from './fixtures/text-tool-sections.mjs';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { chromium } from 'playwright-core';
@@ -134,10 +135,10 @@ test('selection colour and title alignment/colour persist, undo and render after
     assert.equal(await body.locator('span').innerText(), 'Colour');
     await page.getByRole('button', { name: 'Undo', exact: true }).click(); assert.equal(await body.locator('span').count(), 0);
     await page.getByRole('button', { name: 'Redo', exact: true }).click();
-    await page.locator('.text-tools-window').getByRole('group', { name: 'Formatting target' }).getByRole('button', { name: 'Title', exact: true }).click();
+    await openTextToolSection(page.locator('.text-tools-window'), 'Title');
     await page.getByRole('button', { name: 'Align title right', exact: true }).click();
     await page.getByLabel('Title colour', { exact: true }).fill('#9876ff');
-    await page.locator('.text-tools-window').getByRole('tab', { name: 'Layout', exact: true }).click();
+    await openTextToolSection(page.locator('.text-tools-window'), 'Text box layout');
     await page.getByLabel('Text columns', { exact: true }).selectOption('2');
     await page.getByLabel('Text column gap', { exact: true }).fill('32');
     const check = async write => {
@@ -151,14 +152,13 @@ test('selection colour and title alignment/colour persist, undo and render after
     assert.equal(article.appearance.titleAlignment, 'right'); assert.equal(article.appearance.titleColor, '#9876ff');
     assert.equal(article.appearance.columns, 2); assert.equal(article.appearance.columnGap, 32);
     await page.getByRole('button', { name: 'Write', exact: true }).focus(); await page.keyboard.press('Enter');
-    await page.locator('.text-tools-window').getByRole('group', { name: 'Formatting target' }).getByRole('button', { name: 'Title', exact: true }).click();
+    await openTextToolSection(page.locator('.text-tools-window'), 'Title');
     await page.getByRole('button', { name: 'Use document title colour', exact: true }).click();
     assert.equal(await page.getByLabel('Article title', { exact: true }).evaluate(n => getComputedStyle(n).color), 'rgb(255, 255, 255)');
     await body.focus(); await body.press('Control+Home'); await body.press('ArrowRight');
     await body.evaluate(node => { const range = document.createRange(); range.selectNodeContents(node.querySelector('span')); const selection = getSelection(); selection.removeAllRanges(); selection.addRange(range); });
     await settle(page);
-    await page.locator('.text-tools-window').getByRole('tab', { name: 'Text', exact: true }).click();
-    await page.locator('.text-tools-window').getByRole('group', { name: 'Formatting target' }).getByRole('button', { name: 'Selection', exact: true }).click();
+
     await page.getByRole('button', { name: 'Use document text colour', exact: true }).click();
     assert.equal(await body.locator('span').count(), 0);
     assert.deepEqual(errors, []);
@@ -180,7 +180,7 @@ test('column text remains reachable when Read as pages is enabled', { timeout: 9
       localStorage.setItem(systemWorkflowDraftKey(d.profileAddress), JSON.stringify(d));
     });
     await mountTextToolsFixture(page, origin);
-    await page.locator('.text-tools-window').getByRole('tab', { name: 'Layout', exact: true }).click();
+    await openTextToolSection(page.locator('.text-tools-window'), 'Text box layout');
     await page.getByRole('checkbox', { name: 'Read as pages', exact: true }).check();
     await page.getByRole('button', { name: 'Read', exact: true }).click(); await settle(page);
     const seen = new Set(); let pageCount = 0;

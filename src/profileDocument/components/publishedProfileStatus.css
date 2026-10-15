@@ -1,3 +1,19 @@
+.published-profile-owner-navigation {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 300;
+  max-width: calc(100vw - 40px);
+  pointer-events: auto;
+  font: 500 12px/1.2 var(--font-interface);
+  display: flex;
+  gap: 8px;
+}
+.published-profile-owner-navigation button { min-height: 40px; padding: 10px 16px; }
+@media (pointer: coarse) {
+  .published-profile-owner-navigation button { min-height: 44px; }
+}
+
 .published-profile-status {
   --lattice-menu-panel: rgb(215 211 202 / .98);
   --lattice-menu-ink: #111313;

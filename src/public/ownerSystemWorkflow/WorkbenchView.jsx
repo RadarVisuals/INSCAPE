@@ -1,5 +1,9 @@
+import { useWorkbenchArea } from './WorkbenchAreaContext.jsx';
+import { ArrowLeft, Scan, RotateCcw, Hand } from 'lucide-react';
+import './workflowTactile.css';
 import useWorkbenchObjectPicker from './useWorkbenchObjectPicker.jsx';
 import WorkbenchArea from './WorkbenchArea.jsx';
+import { WorkbenchAreaProvider } from './WorkbenchAreaContext.jsx';
 import { WorkbenchView, WorkbenchActions, useWorkbenchView, workbenchModuleTransform } from './WorkbenchViewContext.js';
 export { useWorkbenchView, useWorkbenchActions, workbenchModuleTransform, useWorkbenchViewRegistration } from './WorkbenchViewContext.js';
 import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
@@ -8,19 +12,20 @@ import { WorkbenchCameraProvider, useWorkbenchCamera, useWorkbenchCameraScale } 
 import './workbenchView.css';
 import { moveWorkbenchGroup } from '../../systemWorkflow/moveWorkbenchGroup.js';
 import { workbenchMemberIds } from '../../systemWorkflow/domain/workbenchGroups.js';
+const WorkbenchCanvasControls = lazy(() => import('./WorkbenchCanvasControls.jsx'));
 const WorkbenchGroups = lazy(() => import('./WorkbenchGroups.jsx'));
 const WorkbenchIndex = lazy(() => import('./WorkbenchIndex.jsx'));
 const PublishedWorkbenchGroups = lazy(() => import('./PublishedWorkbenchGroups.jsx'));
 import { useWorkbenchMovementSnap } from './WorkbenchPlacement.jsx';
 import useWorkbenchNavigation from './useWorkbenchNavigation.js';
-import { projectWorkbenchBounds, WORKBENCH_BOUNDS } from './workbenchSpace.js';
+import { projectWorkbenchBounds } from './workbenchSpace.js';
 import { marqueeContains } from './workbenchGrid.js';
 import { workbenchPaintGeometry } from './workbenchPaintGeometry.js';
 const GridSeamProbe = import.meta.env.DEV ? lazy(() => import('./GridSeamProbe.jsx')) : null;
 
 // Session-only view transforms, never module content or publication geometry.
 export function WorkbenchViewProvider(props) {
-  return <WorkbenchCameraProvider><WorkbenchViewStateProvider {...props} /></WorkbenchCameraProvider>;
+  return <WorkbenchCameraProvider><WorkbenchAreaProvider store={props.store} groupContent={props.groupContent}><WorkbenchViewStateProvider {...props} /></WorkbenchAreaProvider></WorkbenchCameraProvider>;
 }
 
 function WorkbenchViewStateProvider({ children, store, profileAddress, presentation, groupContent }) {
@@ -81,11 +86,12 @@ function WorkbenchZoomControl({ disabled, onClick }) {
   // during projection, never the temporarily prepared artwork resolution.
   useLayoutEffect(() => { paint(getCamera()); });
   useLayoutEffect(() => subscribeCameraPaint(paint), [subscribeCameraPaint, paint]);
-  return <button ref={node} type="button" disabled={disabled} aria-label="Reset Workbench zoom to 100%"
+  return <button className="workflow-tactile-control workbench-view-controls__zoom" ref={node} type="button" disabled={disabled} aria-label="Reset Workbench zoom to 100%"
     title="Zoom to 100% around the current view (Ctrl+0)" onClick={onClick} />;
 }
 
 export function WorkbenchViewControls({ hostRef, disabled = false, dockVisible = true, historyBlocked = null, showHandTool = true, entryTarget = null }) {
+  const { bounds: areaBounds } = useWorkbenchArea();
   const view = useWorkbenchView();
   const snapMovement = useWorkbenchMovementSnap();
   const { scale, transforms, setTransforms, selection = [], setSelection, entries } = view;
@@ -218,9 +224,10 @@ export function WorkbenchViewControls({ hostRef, disabled = false, dockVisible =
     active.host.addEventListener('lostpointercapture', active.lost);
     active.host.setPointerCapture(active.pointerId);
   };
+  const currentAreaBounds = useRef(areaBounds); currentAreaBounds.current = areaBounds;
   const workspaceBounds = () => {
     const camera = navigation.getCamera();
-    return projectWorkbenchBounds(camera.scale, camera.offset);
+    return projectWorkbenchBounds(camera.scale, camera.offset, currentAreaBounds.current);
   };
   const finishMove = (current, ids, transforms) => {
     if (!current.store) return;
@@ -338,7 +345,7 @@ export function WorkbenchViewControls({ hostRef, disabled = false, dockVisible =
     };
     const frameFor = (frame, factor, i) => {
       const next = resizedFrame(frame, factor, editors[i]?.continuousGeometry);
-      return ids.length === 1 && editors[i]?.constrainFrame ? editors[i].constrainFrame(next, { edge: corner, bounds: WORKBENCH_BOUNDS }) : next;
+      return ids.length === 1 && editors[i]?.constrainFrame ? editors[i].constrainFrame(next, { edge: corner, bounds: currentAreaBounds.current }) : next;
     };
     let appliedFactor = null;
     return { nodes, vector, authored, maximumScale: Math.max(...scales), commit: () => {
@@ -558,16 +565,17 @@ export function WorkbenchViewControls({ hostRef, disabled = false, dockVisible =
         aria-label={`Scale selected modules from ${corner}`} onPointerDown={event => beginResize(event, corner)}
         onKeyDown={event => resizeByKey(event, corner)} />)}
     </div>}
-    <div ref={controlsRef} className="workbench-view-controls" role="group" aria-label="Workbench zoom">
-      {showHandTool && <button type="button" disabled={locked} aria-pressed={navigation.hand} aria-label="Hand tool"
-        title="Drag to explore with momentum. Click artwork to focus its module; module positions stay fixed." onClick={navigation.toggleHand}>Hand</button>}
-      <button type="button" disabled={locked || !navigation.canGoBack} aria-label="Back to previous Workbench view"
-        title="Return to the view before focusing (Escape after clearing selection)" onClick={navigation.goBack}>Back</button>
-      <button type="button" disabled={locked || !selected.length} aria-label="Focus selected Workbench modules"
-        aria-keyshortcuts="F" title="Center the selected modules (F)" onClick={focusSelection}>Focus selection</button>
-      <button type="button" disabled={locked} aria-label="Reset Workbench position" title="Return to the starting view" onClick={navigation.resetView}>Reset view</button>
+    <div ref={controlsRef} className="workbench-view-controls" data-workflow-material="tactile" role="group" aria-label="Workbench zoom">
+      {showHandTool && <button className="workflow-tactile-control" type="button" disabled={locked} aria-pressed={navigation.hand} aria-label="Hand tool"
+        title="Drag to explore with momentum. Click artwork to focus its module; module positions stay fixed." onClick={navigation.toggleHand}><Hand /></button>}
+      <button className="workflow-tactile-control" type="button" disabled={locked || !navigation.canGoBack} aria-label="Back to previous Workbench view"
+        title="Return to the view before focusing (Escape after clearing selection)" onClick={navigation.goBack}><ArrowLeft /></button>
+      <button className="workflow-tactile-control" type="button" disabled={locked || !selected.length} aria-label="Focus selected Workbench modules"
+        aria-keyshortcuts="F" title="Center the selected modules (F)" onClick={focusSelection}><Scan /></button>
+      <button className="workflow-tactile-control" type="button" disabled={locked} aria-label="Reset Workbench position" title="Return to the starting view" onClick={navigation.resetView}><RotateCcw /></button>
       {selected.length > 0 && <span className="workbench-view-controls__selection-count">{selected.length} selected</span>}
       <WorkbenchZoomControl disabled={locked} onClick={navigation.resetZoom} />
+      {view.store && <Suspense fallback={null}><WorkbenchCanvasControls hostRef={hostRef} navigation={navigation} historyBlocked={historyBlocked} /></Suspense>}
       {view.store && <Suspense fallback={null}><WorkbenchGroups view={view} hostRef={hostRef} locked={locked} dropRef={groupDrop} historyBlocked={historyBlocked} navigation={navigation} sceneRef={groupScene} disabled={disabled} /></Suspense>}
       {!view.store && view.groupContent?.workbenchGroups?.length > 0 && <Suspense fallback={null}><PublishedWorkbenchGroups view={view} content={view.groupContent} hostRef={hostRef} navigation={navigation} sceneRef={groupScene} disabled={disabled} locked={locked} /></Suspense>}
       {(view.store?.getSnapshot().workbenchIndex || view.groupContent?.workbenchIndex) && <Suspense fallback={null}><WorkbenchIndex hostRef={hostRef} navigation={navigation} sceneRef={groupScene} entryTarget={entryTarget} /></Suspense>}

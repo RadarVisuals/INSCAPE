@@ -1,3 +1,4 @@
+import { useWorkbenchArea } from './WorkbenchAreaContext.jsx';
 import { useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
@@ -38,6 +39,7 @@ const shortcutPresentationStyle = (presentation) => ({
 export default function PresentationBoardShortcut({ assetsById, host, instanceState, menuSurface,
   onDelete, onRestore, profileAddress, shortcutSnap, shortcutTargetRef, name: shortcutName, onNameChange, initialShortcut, onShortcutChange, instanceId, readOnly = false,
   moduleCommands = [], moduleSubmenu, onModuleCommand }) {
+  const { bounds: areaBounds } = useWorkbenchArea();
   const storedShortcut = useMemo(() => initialShortcut || (readOnly ? null : loadPresentationBoardShortcut(profileAddress, undefined, instanceId)), [profileAddress, instanceId]);
   const [shortcutPosition, setShortcutPosition] = useState(storedShortcut?.position || { left: 24, top: 72 });
   const [shortcutIconId, setShortcutIconId] = useState(storedShortcut?.iconAssetId || null);
@@ -84,7 +86,7 @@ export default function PresentationBoardShortcut({ assetsById, host, instanceSt
   const currentShortcutBounds = shortcutBounds(shortcutIconPresentation);
   const clampShortcut = (position, snapping = shortcutSnap) => clampWorkbenchPosition({
     left: snap(position.left, snapping), top: snap(position.top, snapping),
-  }, currentShortcutBounds);
+  }, currentShortcutBounds, areaBounds);
   const beginShortcutDrag = (event) => {
     if (event.button !== 0 || renaming) return;
     placement.begin(event);

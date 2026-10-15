@@ -1,3 +1,4 @@
+import { workbenchArea, workbenchAreaBounds } from '../systemWorkflow/domain/workbenchArea.js';
 import { MAX_IMAGE_MODULES, validImageModules, imageCropForResize, createImagePresentation } from './imageModule.js';
 import { createDefaultWorkbenchPresentation } from '../profileDocument/domain/workbenchPresentation.js';
 import { clampWorkbenchPosition } from '../public/ownerSystemWorkflow/workbenchSpace.js';
@@ -38,7 +39,7 @@ export function duplicateImageModule(store, profile, expected, { workbench, posi
   const origin = position || layout.imageModules?.find(item => item.id === expected.id)?.position
     || createImagePresentation(expected.id, index).position;
   const presentation = { id: record.id, open: true,
-    position: clampWorkbenchPosition({ left: origin.left + 24, top: origin.top + 24 }, record) };
+    position: clampWorkbenchPosition({ left: origin.left + 24, top: origin.top + 24 }, record, workbenchAreaBounds(workbenchArea(layout))) };
   const imageModules = [...draft.imageModules, record];
   if (!validImageModules(imageModules)) throw new Error('The Image could not be duplicated.');
   const next = { ...draft, imageModules,

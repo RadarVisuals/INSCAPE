@@ -1,3 +1,4 @@
+import { useWorkbenchArea } from '../public/ownerSystemWorkflow/WorkbenchAreaContext.jsx';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { X } from 'lucide-react';
 import { useWorkbenchView, workbenchModuleTransform, useWorkbenchViewRegistration } from '../public/ownerSystemWorkflow/WorkbenchViewContext.js';
@@ -11,6 +12,7 @@ import { clampWorkbenchPosition } from '../public/ownerSystemWorkflow/workbenchS
 // and snapping. No instrument-window sizing, chrome or content gutter is used.
 export default function ImageWindow({ id, title, position, size, fitScale, fitSize, editable, active, suspended, movable = true, placementModule,
   onPosition, onResize, onClose, resizeTarget, children }) {
+  const { bounds: areaBounds } = useWorkbenchArea();
   const node = useRef(null), gesture = useRef(null), suppressClick = useRef(false);
   const [preview, setPreview] = useState(null);
   const view = useWorkbenchView();
@@ -72,13 +74,13 @@ export default function ImageWindow({ id, title, position, size, fitScale, fitSi
     target.setPointerCapture(event.pointerId);
   };
   const placedPosition = (candidate, bypass) => {
-    const bounded = clampWorkbenchPosition(candidate, { width, height });
+    const bounded = clampWorkbenchPosition(candidate, { width, height }, areaBounds);
     const projected = imageWindowGeometry(bounded, { width, height }, camera, offset);
     const snapped = placementModule ? snapMovement(projected, [node.current], camera.scale, bypass) : projected;
-    return clampWorkbenchPosition(imageWindowPosition(snapped, camera, offset), { width, height });
+    return clampWorkbenchPosition(imageWindowPosition(snapped, camera, offset), { width, height }, areaBounds);
   };
   const resizeTo = (start, edge, delta, bypass) => resizeImageGeometry(start.position, start.size, fitScale, edge, delta,
-    (axis, side, value) => placement.edge(axis, side, value, currentPosition, bypass), fitSize);
+    (axis, side, value) => placement.edge(axis, side, value, currentPosition, bypass), fitSize, areaBounds);
   const move = event => {
     const active = gesture.current;
     if (active?.id !== event.pointerId) return;

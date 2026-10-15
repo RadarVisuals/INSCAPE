@@ -96,7 +96,7 @@ for (const width of [1440, 390]) test(`article search and replacement preserve c
     await query.fill('moon'); await settle(page);
     await mkdir('.browser-test-runtime', { recursive: true });
     await tools.screenshot({ path: `.browser-test-runtime/text-search-${width}.png` });
-    assert.equal(await tools.locator('.text-controls-body').evaluate(node => node.scrollWidth <= node.clientWidth + 1), true);
+    assert.equal(await tools.locator('.system-workflow__instrument-content').evaluate(node => node.scrollWidth <= node.clientWidth + 1), true);
     await win.getByRole('button', { name: 'Read', exact: true }).focus(); await page.keyboard.press('Enter'); await settle(page);
     assert.deepEqual(await article(page), baseline, 'Read never changes saved content');
     assert.equal(await page.locator('.text-search-match:visible').count(), 0, 'search decorations do not leak into Read');

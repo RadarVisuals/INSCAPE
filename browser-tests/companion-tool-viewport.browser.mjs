@@ -13,7 +13,7 @@ const hit = node => {
 };
 
 for (const width of [1440, 700, 390]) test(`Companion tools reserve live camera controls through dock and viewport changes (${width}px)`, { timeout: 60000 }, async () => {
-  const browser = await chromium.launch({ executablePath: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', headless: true });
+  const browser = await chromium.launch({ executablePath: process.env.INSCAPE_BROWSER_EXECUTABLE || 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', headless: true });
   try {
     const page = await browser.newPage({ viewport: { width, height: 1000 }, reducedMotion: 'reduce' });
     const errors = []; page.on('pageerror', error => errors.push(error.message));
@@ -47,7 +47,7 @@ for (const width of [1440, 700, 390]) test(`Companion tools reserve live camera 
     assert.ok((await controls.boundingBox()).y > withDock + 30, 'hiding the dock frees its screen space');
     await page.setViewportSize({ width, height: 620 });
     await clearControls();
-    assert.ok(await tools.locator('.text-controls-body').evaluate(node => node.clientHeight >= 32 && node.scrollHeight > node.clientHeight), 'long tools retain a usable body scroller');
+    assert.ok(await tools.locator('.system-workflow__instrument-content').evaluate(node => node.clientHeight >= 32 && node.scrollHeight > node.clientHeight), 'long tools retain a usable body scroller');
     await toggleDock('SHOW DOCK');
     assert.equal(await tools.locator('.text-tools-footer').evaluate(hit), true, 'the footer remains visible above the camera controls');
     const short = await tools.boundingBox();
@@ -58,7 +58,7 @@ for (const width of [1440, 700, 390]) test(`Companion tools reserve live camera 
     await clearControls();
     await page.setViewportSize({ width, height: 620 });
     await clearControls();
-    assert.ok(await tools.locator('.text-controls-body').evaluate(node => node.clientHeight >= 32), 'viewport shrink leaves at least one control row visible');
+    assert.ok(await tools.locator('.system-workflow__instrument-content').evaluate(node => node.clientHeight >= 32), 'viewport shrink leaves at least one control row visible');
     assert.equal(await tools.locator('.text-tools-footer').evaluate(hit), true, 'the footer stays reachable after viewport recovery');
     await mkdir(output, { recursive: true });
     await page.screenshot({ path: join(output, `companion-tool-viewport-${width}.png`) });

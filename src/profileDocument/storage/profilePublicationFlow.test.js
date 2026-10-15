@@ -5,7 +5,7 @@ import { createArticle } from '../../text/domain/article.js';
 import { buildProfileDocumentV9 } from '../domain/profileDocumentV9Builder.js';
 import { createCanonicalPublication, publicationContentFingerprint } from '../domain/profileDocumentPublication.js';
 import { INSCAPE_PROFILE_DOCUMENT_KEY } from '../domain/inscapeProfileDocumentKey.js';
-import { publicReadingPages } from '../components/profileOverviewModel.js';
+import { publicReadingPages, publicDisplayModules } from '../components/profileOverviewModel.js';
 import { uploadProfileDocument } from './profileDocumentUploadClient.js';
 import { createProfileDocumentPublisher } from './profileDocumentPublisher.js';
 import { createLuksoPublishedProfileRepository } from './luksoPublishedProfileRepository.js';
@@ -80,7 +80,8 @@ test('current mixed modules pass the deployed upload handler, CID verification, 
   assert.equal(published.result.status, 'RESOLVED');
   assert.deepEqual(published.result.document, document);
   const pages = publicReadingPages(published.result.document);
-  assert.equal(pages.filter(page => page.kind === 'composition').length, 2);
+  assert.equal(publicDisplayModules(published.result.document).flatMap(module => module.document.grids).length, 2);
+  assert.equal(pages.some(page => page.kind === 'composition'), false);
   assert.equal(pages.filter(page => page.kind === 'image').length, 2);
   assert.equal(pages.filter(page => page.kind === 'text').length, 1);
   assert.deepEqual(draft, before, 'publication does not mutate the authored draft');

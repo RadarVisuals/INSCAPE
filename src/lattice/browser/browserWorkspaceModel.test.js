@@ -38,6 +38,9 @@ test('category dialogs reset create text and always use the current rename targe
   assert.equal(categoryDialogInitialName({ category: categoryA, type: 'rename' }), 'Category A');
   assert.equal(categoryDialogInitialName({ type: 'create' }), '');
   assert.equal(categoryDialogInitialName({ category: categoryB, type: 'rename' }), 'Category B');
+  assert.equal(categoryDialogInitialName({ category: categoryA, type: 'rename-category' }), 'Category A');
+  assert.equal(categoryDialogInitialName({ section: { name: 'Current project' }, type: 'rename-section' }), 'Current project');
+  assert.equal(categoryDialogInitialName({ section: { name: 'Current project' }, type: 'create-section' }), '');
 });
 
 test('Categories asset search never inherits legacy Index-only filing', () => {

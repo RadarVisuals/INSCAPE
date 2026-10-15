@@ -6,6 +6,7 @@ import { createMiniAppPresentation } from '../profileDocument/domain/workbenchPr
 import { miniAppUrl } from './domain/miniApps.js';
 import { saveMiniApp } from './miniAppSession.js';
 import MiniAppFrame from './MiniAppFrame.jsx';
+import HtmlArtworkFrame from './HtmlArtworkFrame.jsx';
 import '../public/ownerSystemWorkflow/displayInstruments.css';
 import './miniApps.css';
 
@@ -14,19 +15,22 @@ function MiniAppSettings({ record, onSave, onCancel, onRemove }) {
   const [name, setName] = useState(record.name), [url, setUrl] = useState(record.url);
   const [isPublic, setPublic] = useState(record.visibility === 'PUBLIC');
   const [error, setError] = useState('');
+  const [artwork, setArtwork] = useState(record.surface === 'artwork');
   const submit = event => {
     event.preventDefault();
-    const destination = miniAppUrl(url.trim(), { hostOrigin: location.origin, published: isPublic, allowLocal: import.meta.env.DEV });
+    const destination = miniAppUrl(url.trim(), { hostOrigin: location.origin, published: isPublic, allowLocal: import.meta.env.DEV, artwork });
     if (!destination) { setError('Enter an HTTPS URL for an external app.'); return; }
-    if (!onSave(original, { ...original, name: name.trim(), url: destination.href, visibility: isPublic ? 'PUBLIC' : 'PRIVATE' })) {
+    const { surface: _surface, ...base } = original;
+    if (!onSave(original, { ...base, ...(artwork ? { surface: 'artwork' } : {}), name: name.trim(), url: destination.href, visibility: isPublic ? 'PUBLIC' : 'PRIVATE' })) {
       setError('Changes could not be saved. The app or profile may have changed. Reopen settings before trying again.');
     }
   };
   return <form className="mini-app-settings" onSubmit={submit}>
     <label>Name<input autoFocus required maxLength={48} value={name} onChange={e => setName(e.target.value)} /></label>
     <label>App URL<input type="url" required maxLength={2048} placeholder="https://radar725.netlify.app/" value={url} onChange={e => setUrl(e.target.value)} /></label>
+    <label className="mini-app-settings__visibility"><input type="checkbox" checked={artwork} onChange={e => setArtwork(e.target.checked)} />Transparent HTML artwork</label>
     <label className="mini-app-settings__visibility"><input type="checkbox" checked={isPublic} onChange={e => setPublic(e.target.checked)} />Include in publication</label>
-    <p>The app runs from its own website. Including it in publication shares its name and URL with visitors.</p>
+    <p>{artwork ? 'The HTML file owns its animation and controls. It runs in an isolated transparent frame without wallet access.' : 'The app runs from its own website.'} Including it in publication shares its name and URL with visitors.</p>
     <div className="mini-app-settings__actions"><button type="submit">Save</button><button type="button" onClick={onCancel}>Cancel</button>
       <button type="button" onClick={() => { if (!onRemove(original)) setError('The app could not be removed. Reopen settings before trying again.'); }}>Remove app</button></div>
     {error && <p role="alert">{error}</p>}
@@ -54,14 +58,15 @@ function MiniAppInstance({ record, initialPresentation, index, store, profileAdd
     return true;
   };
   const shortcutMenu = useModuleShortcutMenu({ store, profileAddress, kind: 'mini-app', record: record });
-  const url = miniAppUrl(record.url, { hostOrigin: location.origin, allowLocal: import.meta.env.DEV });
+  const artwork = record.surface === 'artwork';
+  const url = miniAppUrl(record.url, { hostOrigin: location.origin, allowLocal: import.meta.env.DEV, artwork });
   return <div className="mini-app-workbench" data-workbench-module="mini-app" data-mini-app-id={record.id}
     style={{ '--mini-app-z': active ? 49 : 45, '--mini-app-shortcut-bottom': `${64 + index * 38}px` }} onPointerDownCapture={onActivate} onFocusCapture={onActivate}>
     {shortcutMenu.content}
     {!presentation.open && <button data-workbench-pan ref={shortcut} className="mini-app-shortcut" onContextMenu={shortcutMenu.onContextMenu} onKeyDown={shortcutMenu.onKeyDown} type="button" onClick={() => {
       setPresentation(current => ({ ...current, open: true })); onActivate();
     }}><AppWindow size={18} /><span>{record.name}</span></button>}
-    {presentation.open && <WorkbenchWindow label="Mini app" title={record.name} width={presentation.window.width} resizableWidth
+    {presentation.open && <WorkbenchWindow label={artwork ? "Artwork" : "Mini app"} className={artwork && !editing ? "mini-app-artwork-window" : ""} title={record.name} width={presentation.window.width} resizableWidth
       initialX={presentation.window.left} initialY={presentation.window.top} initialHeight={presentation.window.height}
       onLayoutChange={changeLayout} controls={<>
         {store && <button ref={settingsTrigger} type="button" className="system-workflow__round-control" aria-label={`Settings for ${record.name}`}
@@ -71,6 +76,7 @@ function MiniAppInstance({ record, initialPresentation, index, store, profileAdd
       {editing && store ? <MiniAppSettings record={record} onSave={save} onCancel={finishEditing} onRemove={expected => save(expected, null)} />
         : !url ? <div className="mini-app-status">Set this app’s URL in Settings to open it.</div>
           : suspended ? <div className="mini-app-status">App paused during preview.</div>
+            : artwork ? <HtmlArtworkFrame url={url} name={record.name} />
             : <MiniAppFrame key={`${record.url}:${microphone}:${reload}`} {...{ url, profileAddress, microphone, onConnect }} name={record.name}
               onMicrophoneChange={setMicrophone} onReload={() => { setMicrophone(false); setReload(current => current + 1); }} />}
     </WorkbenchWindow>}

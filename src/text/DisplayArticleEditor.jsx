@@ -1,5 +1,6 @@
+import { useWorkbenchArea } from '../public/ownerSystemWorkflow/WorkbenchAreaContext.jsx';
 import { lazy, Suspense, useLayoutEffect, useRef, useState } from 'react';
-import { Eye } from '../public/InscapeIcons.jsx';
+import { Eye } from 'lucide-react';
 import DisplayTextContent from '../public/ownerSystemWorkflow/DisplayTextContent.jsx';
 import { displayTextArticle } from '../systemWorkflow/domain/displayText.js';
 import { detachTextFromDisplay, saveDisplayArticleResult } from './textTransfer.js';
@@ -17,6 +18,7 @@ const saveArticle = (store, scope, expected, article, options) => saveDisplayArt
   { moduleId: scope.moduleId, gridId: scope.gridId, expected, article }, options);
 
 export default function DisplayArticleEditor({ placement, controller, cellSize, width, height, screenCellSize, canvasRef, onClose, suspended = false }) {
+  const { bounds: areaBounds } = useWorkbenchArea();
   const tools = useSharedTextTools();
   const { scale: standaloneScale } = useWorkbenchView();
   const { offset } = useWorkbenchCamera();
@@ -26,15 +28,20 @@ export default function DisplayArticleEditor({ placement, controller, cellSize, 
   const [host, setHost] = useState(null);
   const root = useRef(null), [actions, setActions] = useState({ top: 56, right: 8 });
   useLayoutEffect(() => {
-    const bounds = root.current.getBoundingClientRect(), canvas = canvasRef.current.getBoundingClientRect();
-    const board = canvasRef.current.closest('.system-workflow__presentation-board')?.getBoundingClientRect() || canvas;
+    // Responsive hosting can mount this child before the ancestor's ref attaches.
+    // Its own DOM ancestry already identifies the same canvas at this point.
+    const element = root.current;
+    const canvasElement = element?.closest('[data-system-workflow-artboard]') || canvasRef.current;
+    if (!element || !canvasElement) return;
+    const bounds = element.getBoundingClientRect(), canvas = canvasElement.getBoundingClientRect();
+    const board = canvasElement.closest('.system-workflow__presentation-board')?.getBoundingClientRect() || canvas;
     const scale = screenCellSize / cellSize;
     setActions({ top: Math.max(8, (Math.max(board.top + 56, canvas.top + 8) - bounds.top) / scale), right: Math.max(8, (bounds.right - canvas.right + 8) / scale) });
   }, [placement.column, placement.row, placement.columnSpan, placement.rowSpan, screenCellSize, cellSize]);
   const detach = rectangle => {
     if (!save(edit.getSnapshot().value)) return;
     const size = { width: Math.max(240, rectangle.width / standaloneScale), height: Math.max(180, rectangle.height / standaloneScale) };
-    const position = clampWorkbenchPosition(unprojectWorkbenchPosition(rectangle, standaloneScale, offset), size);
+    const position = clampWorkbenchPosition(unprojectWorkbenchPosition(rectangle, standaloneScale, offset), size, areaBounds);
     const id = detachTextFromDisplay(controller.store, controller.draft.profileAddress, { moduleId: controller.moduleId, gridId: controller.selectedGridId,
       expected: edit.getSnapshot().record, cellSize: screenCellSize / standaloneScale, window: { ...position, ...size } });
     tools?.activate(id); tools?.setOpen(true);

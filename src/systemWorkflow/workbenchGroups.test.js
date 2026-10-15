@@ -113,12 +113,12 @@ test('linked Text windows resolve to one module membership and reselect all of i
 
 test('stack location is optional, bounded, undoable and independent of every member layout', () => {
   const f = fixture(); f.create(); const before = f.store.getDraft();
-  f.edit('position', { position: { left: 1500, top: 1300 } });
+  f.edit('position', { position: { left: 1812, top: 3832 } });
   const stacked = f.store.getDraft();
   assert.deepEqual(stacked.workbench, before.workbench);
   assert.deepEqual(stacked.shapes, before.shapes);
   assert.deepEqual(newStore(f).getDraft(), stacked);
-  for (const position of [{ left: NaN, top: 8 }, { left: 8, top: -1 }, { left: 4000, top: 8 }, { left: 8, top: 8, extra: 1 }]) {
+  for (const position of [{ left: NaN, top: 8 }, { left: 8, top: -1 }, { left: 1813, top: 8 }, { left: 8, top: 3833 }, { left: 8, top: 8, extra: 1 }]) {
     assert.throws(() => f.edit('position', { position }));
     assert.deepEqual(f.store.getDraft(), stacked);
   }

@@ -1,3 +1,4 @@
+import { projectReception } from './receptionPresentation.js';
 import { projectWorkbenchIndex } from '../../systemWorkflow/domain/workbenchIndex.js';
 import { projectPublishedWorkbenchGroups } from './publishedWorkbenchGroups.js';
 import { normalizeProfileAddress } from '../../library/config.js';
@@ -17,7 +18,6 @@ import { createProfileDocumentV9AssetResolver } from './profileDocumentV9Asset.j
 import { assertValidProfileDocumentV9 } from './profileDocumentV9Validation.js';
 import { projectIdentityCard } from '../../profileIdentity/domain/identityCard.js';
 import { projectDisplayDraft } from '../../systemWorkflow/domain/displayModules.js';
-import { projectMobilePresentation, mobileReferenceCount } from '../../mobile/domain/mobilePresentation.js';
 import { projectMiniApps } from '../../miniApps/domain/miniApps.js';
 import { projectImageModules, imageReferenceCount } from '../../imageModule/imageModule.js';
 import { projectShapes } from '../../shapes/shapes.js';
@@ -188,6 +188,7 @@ export function buildProfileDocumentV9({
     grids,
     ...(workbenchGroups.length ? { workbenchGroups } : {}),
     ...(workbenchIndex ? { workbenchIndex } : {}),
+    ...(draft.reception ? { reception: projectReception(draft.reception, { grids, displays, texts, imageModules }) } : {}),
     metadata: worldCover ? { worldCover } : {},
     ...(displays ? { displays } : {}),
     ...(miniApps?.length ? { miniApps } : {}),
@@ -195,7 +196,6 @@ export function buildProfileDocumentV9({
     ...(keeperDocks?.length ? { keeperDocks } : {}),
     ...(imageModules?.length ? { imageModules } : {}),
     ...(texts?.length ? { texts } : {}),
-    ...(draft.mobile?.visibility === 'PUBLIC' ? { mobile: projectMobilePresentation(draft.mobile, assetRecords) } : {}),
     ...(publicWorkbench ? { workbench: publicWorkbench } : {}),
   });
 }
@@ -208,5 +208,5 @@ export function countProfileDocumentV9Assets(document) {
     + (value.workbench?.display.shortcut.icon ? 1 : 0)
     + (value.displays || []).reduce((sum, module) => sum + module.grids.reduce((count, grid) => count + grid.placements.length, 0), 0)
     + (value.workbench?.displays || []).filter(module => module.shortcut.icon).length
-    + keeperReferenceCount(value.keeperDocks) + imageReferenceCount(value.imageModules) + mobileReferenceCount(value.mobile);
+    + keeperReferenceCount(value.keeperDocks) + imageReferenceCount(value.imageModules);
 }

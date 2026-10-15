@@ -297,7 +297,7 @@ for (const visitor of [false, true]) test(`${visitor ? 'Visitor' : 'Owner'} sepa
       await page.mouse.move(beforeCancel.board.x + 50, beforeCancel.board.y + 50); await page.mouse.down();
       await page.mouse.move(beforeCancel.board.x + 50 + dx, beforeCancel.board.y + 50 + dy); await settle(page);
       const edge = await selection.boundingBox();
-      assert.ok(edge.x >= 0 && edge.y >= 0 && edge.x + edge.width <= 4000 && edge.y + edge.height <= 4000, 'entire group stays inside the 4000-pixel Workbench area');
+      assert.ok(edge.x >= 0 && edge.y >= 0 && edge.x + edge.width <= 2000 && edge.y + edge.height <= 4000, 'entire group stays inside the 2000 by 4000 Workbench area');
       const edgeModules = await measure(page);
       closeTo(edgeModules.board.x - edgeModules.text.x, beforeCancel.board.x - beforeCancel.text.x, 'boundary retains composition');
       await page.keyboard.press('Escape'); await page.mouse.up(); await settle(page);

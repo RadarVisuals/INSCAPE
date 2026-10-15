@@ -16,6 +16,6 @@ test('click keeps existing rectangle size; Text drag cancels rather than creatin
 test('shape stays inside Workbench bounds and changed cameras invalidate gestures', () => {
   const camera = { scale: .25, offset: { x: 0, y: 0 } };
   assert.deepEqual(workbenchCreationPlacement({ x: -10, y: -20 }, { x: 2000, y: 2000 }, camera, true),
-    { position: { left: 8, top: 8 }, size: { width: 3984, height: 3984 } });
+    { position: { left: 8, top: 8 }, size: { width: 1984, height: 3984 } });
   assert.equal(sameCreationCamera(camera, { ...camera, offset: { x: 1, y: 0 } }), false);
 });

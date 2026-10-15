@@ -41,14 +41,14 @@ export default function TextBackupControls({ article, onChange, disabled, recove
   return <details className="text-backup-controls text-settings-wide">
     <summary>Article backup</summary>
     <p>Save a file of this article, including edits waiting to be saved. Artwork links are included; image files and Display connections are not.</p>
-    <button type="button" onClick={download}>Download article backup</button>
+    <button className="workflow-tactile-control" type="button" onClick={download}>Download article backup</button>
     <label>Open article backup<input aria-label="Open article backup" type="file" accept=".json,application/json" disabled={disabled || recoveryPending}
       onChange={event => { const file = event.target.files[0]; event.target.value = ''; if (file) void read(file); }} /></label>
     {reading && <p role="status">Opening backup…</p>}
     {pending && <div className="text-backup-preview">
       <p>Replace this article’s text and appearance with “{pending.article.title || 'Untitled article'}”? Its Display connection and publication setting stay in place.</p>
-      <button type="button" disabled={disabled || recoveryPending} onClick={replace}>Replace article with backup</button>
-      <button type="button" onClick={() => { request.current++; setPending(null); setMessage(''); }}>Cancel backup</button>
+      <button className="workflow-tactile-control" type="button" disabled={disabled || recoveryPending} onClick={replace}>Replace article with backup</button>
+      <button className="workflow-tactile-control" type="button" onClick={() => { request.current++; setPending(null); setMessage(''); }}>Cancel backup</button>
     </div>}
     {recoveryPending && <p>Retry saving your edits before replacing this article.</p>}
     {message && <p role="status">{message}</p>}

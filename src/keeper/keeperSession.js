@@ -1,3 +1,4 @@
+import { workbenchArea, workbenchAreaBounds } from '../systemWorkflow/domain/workbenchArea.js';
 import { MAX_KEEPER_DOCKS, KEEPER_DOCK_SIZE, KEEPER_SIZE, validKeeperDocks, createKeeperPresentation } from './keeper.js';
 import { createDefaultWorkbenchPresentation } from '../profileDocument/domain/workbenchPresentation.js';
 import { clampWorkbenchPosition } from '../public/ownerSystemWorkflow/workbenchSpace.js';
@@ -8,7 +9,7 @@ export function addKeeperDock(store, profile, placed = null) {
   if (items.length >= MAX_KEEPER_DOCKS) throw new Error('At most four Keeper docks are supported.');
   const record = { id: `keeper:${crypto.randomUUID()}`, name: `Keeper ${items.length + 1}`, asset: null, faces: 'right', size: KEEPER_SIZE.default, visibility: 'PRIVATE' };
   const presentation = createKeeperPresentation(record.id, items.length);
-  presentation.position = clampWorkbenchPosition(placed?.position || presentation.position, KEEPER_DOCK_SIZE);
+  presentation.position = clampWorkbenchPosition(placed?.position || presentation.position, KEEPER_DOCK_SIZE, workbenchAreaBounds(workbenchArea(draft.workbench)));
   const layout = placed?.workbench || draft.workbench || createDefaultWorkbenchPresentation();
   if (!store.commitCompletedOperation({ ...draft, keeperDocks: [...items, record],
     workbench: { ...layout, keeperDocks: [...(layout.keeperDocks || []), presentation] } },

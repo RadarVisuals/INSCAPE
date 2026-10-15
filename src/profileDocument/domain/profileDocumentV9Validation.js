@@ -1,3 +1,4 @@
+import { validReception, receptionModuleIds } from './receptionPresentation.js';
 import { validWorkbenchIndex } from '../../systemWorkflow/domain/workbenchIndex.js';
 import { validPublishedWorkbenchGroups } from './publishedWorkbenchGroups.js';
 import { validPlacementGroups } from '../../systemWorkflow/domain/placementGroups.js';
@@ -31,8 +32,6 @@ import { validShapes } from '../../shapes/shapes.js';
 import { validKeeperDocks, keeperReferenceCount } from '../../keeper/keeper.js';
 import { validTextModules, assertArticle, ARTICLE_TYPE } from '../../text/domain/article.js';
 import { DISPLAY_TEXT_KEYS, isTextPlacement, validDisplayText } from '../../systemWorkflow/domain/displayText.js';
-import { validMobilePresentation, mobileReferenceCount } from '../../mobile/domain/mobilePresentation.js';
-import { canUseMobileRenderer } from '../../mobile/domain/customPresentation.js';
 
 const DOCUMENT_KEYS = [
   'documentType', 'version', 'documentId', 'revision', 'createdAt', 'exportedAt',
@@ -205,7 +204,7 @@ export function validateProfileDocumentV9(input, { rawSize } = {}) {
   try { measuredSize ??= new TextEncoder().encode(JSON.stringify(input)).byteLength; } catch { measuredSize = Infinity; }
   if (measuredSize > SYSTEM_WORKFLOW_LIMITS.maxJsonBytes) fail('$', 'document_too_large', `Document exceeds ${SYSTEM_WORKFLOW_LIMITS.maxJsonBytes} bytes`);
   if (depth(input) > SYSTEM_WORKFLOW_LIMITS.maxDepth) fail('$', 'excessive_depth', 'Document nesting is too deep');
-  if (!allowedKeys(input, DOCUMENT_KEYS, ['workbench', 'displays', 'mobile', 'miniApps', 'texts', 'imageModules', 'shapes', 'keeperDocks', 'workbenchGroups', 'workbenchIndex'])) {
+  if (!allowedKeys(input, DOCUMENT_KEYS, ['workbench', 'displays', 'miniApps', 'texts', 'imageModules', 'shapes', 'keeperDocks', 'workbenchGroups', 'workbenchIndex', 'reception'])) {
     fail('$', 'unexpected_fields', 'Document contains unexpected or missing fields');
     return { valid: false, errors, value: null, size: measuredSize };
   }
@@ -243,6 +242,7 @@ export function validateProfileDocumentV9(input, { rawSize } = {}) {
     || input.appearance.guideSize > SYSTEM_WORKFLOW_GRID_DENSITY.maximum
     || !HEX_COLOR.test(input.appearance.guideColor || '')) fail('appearance', 'invalid_appearance', 'Invalid public appearance');
   validateIdentity(input.identityPresentation, fail);
+  if (Object.hasOwn(input, 'reception') && (!validReception(input.reception) || !input.reception.items.every(id => receptionModuleIds(input).includes(id)))) fail('reception', 'invalid_reception', 'Invalid published reception selection');
   if (Object.hasOwn(input, 'keeperDocks') && !validKeeperDocks(input.keeperDocks, true)) fail('keeperDocks', 'invalid_keepers', 'Invalid published Keeper dock');
   if (Array.isArray(input.workbench?.keeperDocks) && input.workbench.keeperDocks.some(item => !Array.isArray(input.keeperDocks) || !input.keeperDocks.some(keeper => keeper?.id === item?.id))) fail('workbench.keeperDocks', 'unknown_keeper', 'Dock refers to an unavailable Keeper');
   if (Object.hasOwn(input, 'miniApps') && !validMiniApps(input.miniApps, true)) fail('miniApps', 'invalid_mini_apps', 'Invalid published mini app');
@@ -266,14 +266,13 @@ export function validateProfileDocumentV9(input, { rawSize } = {}) {
   if (Array.isArray(input.workbench?.texts) && input.workbench.texts.some(item => !Array.isArray(input.texts) || !input.texts.some(text => text?.id === item?.id))) fail('workbench.texts', 'unknown_text', 'Window refers to an unavailable Text module');
   if (Array.isArray(input.workbench?.miniApps) && input.workbench.miniApps.some(item => !Array.isArray(input.miniApps)
     || !input.miniApps.some(app => app?.id === item?.id))) fail('workbench.miniApps', 'unknown_mini_app', 'Window refers to an unavailable mini app');
-  if (Object.hasOwn(input, 'mobile') && (!validMobilePresentation(input.mobile, true) || !canUseMobileRenderer(input.mobile, input.profile?.address))) fail('mobile', 'invalid_mobile', 'Invalid published Mobile presentation');
   let moduleReferences = 0;
   if (Object.hasOwn(input, 'displays')) {
     if (!Array.isArray(input.displays) || input.displays.length > MAX_DISPLAY_MODULES - 1) {
       fail('displays', 'invalid_display_count', 'Invalid Display count');
     } else {
       const ids = new Set([PRIMARY_DISPLAY_ID]);
-      const { displays: _displays, workbench: _workbench, mobile: _mobile, miniApps: _miniApps, texts: _texts, imageModules: _images, shapes: _shapes, keeperDocks: _keepers, workbenchGroups: _groups, workbenchIndex: _index, ...shared } = input;
+      const { displays: _displays, workbench: _workbench, miniApps: _miniApps, texts: _texts, imageModules: _images, shapes: _shapes, keeperDocks: _keepers, workbenchGroups: _groups, workbenchIndex: _index, reception: _reception, ...shared } = input;
       for (const module of input.displays) {
         if (!exactKeys(module, ['id', ...DISPLAY_CONTENT_KEYS]) || !/^display:[A-Za-z0-9_-]{1,80}$/u.test(module?.id) || ids.has(module.id)) {
           fail('displays', 'invalid_display', 'Invalid or duplicate Display'); continue;
@@ -346,7 +345,7 @@ export function validateProfileDocumentV9(input, { rawSize } = {}) {
   const documentAssetReferences = (input.grids || []).reduce((total, grid) => total + (grid?.placements?.length || 0), 0)
     + worldCoverAssetReferences + (input.identityPresentation?.avatar?.asset ? 1 : 0) + moduleReferences
     + (input.workbench?.display?.shortcut?.icon ? 1 : 0) + (input.workbench?.displays || []).filter(module => module.shortcut?.icon).length
-    + keeperReferenceCount(input.keeperDocks) + imageReferenceCount(input.imageModules) + mobileReferenceCount(input.mobile);
+    + keeperReferenceCount(input.keeperDocks) + imageReferenceCount(input.imageModules);
   if (documentAssetReferences > SYSTEM_WORKFLOW_LIMITS.maxTotalAssetReferences) {
     fail('metadata.worldCover', 'too_many_asset_references', 'Too many total asset references');
   }

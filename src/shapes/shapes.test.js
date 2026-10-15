@@ -139,7 +139,7 @@ test('drawn rectangles save their size and clamped position together without cha
   const { store, storage } = fixture(), before = store.getDraft();
   const id = addShape(store, profile, { position: { left: 3900, top: -10 }, size: { width: 450.5, height: 120.25 } });
   const rectangle = store.getDraft().workbench.shapes.find(item => item.id === id);
-  assert.deepEqual(rectangle.window, { left: 3541.5, top: 8, width: 450.5, height: 120.25 });
+  assert.deepEqual(rectangle.window, { left: 1541.5, top: 8, width: 450.5, height: 120.25 });
   assert.ok(store.undo()); assert.deepEqual(store.getDraft(), before);
   assert.ok(store.redo());
   assert.deepEqual(createSystemWorkflowDraftStore({ profileAddress: profile, storage }).getDraft(), store.getDraft());

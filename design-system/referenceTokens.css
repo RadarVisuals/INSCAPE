@@ -1,0 +1,18 @@
+/* Reference-only interface values. Loaded once by the reference entry point.
+   Root scope also reaches Library menus and the Text focus dialog rendered in portals.
+   Sample artwork colours, proportions and effects remain authored example values. */
+:root {
+  --ds-control-radius: 5px;
+  --ds-icon-size: 18px;
+  --ds-icon-stroke: 1.5px;
+  --ds-control-inset: var(--space-1);
+  --ds-shell-radius: calc(var(--ds-control-radius) + var(--ds-control-inset));
+  --ds-text-micro: 10px;
+  --ds-text-small: 11px;
+  --ds-text-base: 12px;
+  --ds-text-body: 13px;
+  --ds-target-compact: 32px;
+  --ds-target-touch: 44px;
+  /* Local stacking context inside the example Workbench, below production portal menus. */
+  --ds-layer-library: 200;
+}

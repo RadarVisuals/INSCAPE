@@ -1,7 +1,6 @@
-import { useCallback, useId, useLayoutEffect, useState } from 'react';
 import ModuleSurfaceControls from '../public/ownerSystemWorkflow/ModuleSurfaceControls.jsx';
 import { SharedTextToolsContent } from './SharedTextTools.jsx';
-import { X, AlignLeft, AlignCenter, AlignRight } from '../public/InscapeIcons.jsx';
+import { X, AlignLeft, AlignCenter, AlignRight } from 'lucide-react';
 import { ARTICLE_FONTS, ARTICLE_TRACKING, ARTICLE_BLOCK_SPACING, ARTICLE_LINE_HEIGHT, textAppearance } from './domain/article.js';
 import TextTypographyInput from './TextTypographyInput.jsx';
 import TextStyleControls from './TextStyleControls.jsx';
@@ -10,39 +9,16 @@ import './text.css';
 
 export default function TextTools({ targetId, available = true, article, onChange, controlsRef, onClose, disabled, children, connection, readOptions, publication, footer, anchor, backupScope = targetId, recoveryPending = false }) {
   const appearance = textAppearance(article);
-  const [scope, setScope] = useState('selection');
-  const [tab, setTab] = useState('text');
-  const [editorControls, setEditorControls] = useState(null);
-  const attachEditorControls = useCallback(node => { setEditorControls(node); controlsRef?.(node); }, [controlsRef]);
-  useLayoutEffect(() => {
-    if (!editorControls) return;
-    const showSearch = () => { setTab('text'); setScope('selection'); };
-    editorControls.addEventListener('inscape:text-find', showSearch);
-    return () => editorControls.removeEventListener('inscape:text-find', showSearch);
-  }, [editorControls]);
-  const id = useId();
   const changeAppearance = patch => onChange({ ...article, appearance: { ...appearance, ...patch } });
   return <SharedTextToolsContent targetId={targetId} available={available} label={article.title || 'Untitled text'} anchor={anchor} onClose={onClose}>
-    <nav className="text-inspector-tabs" aria-label="Text tools sections" role="tablist">
-      {['text', 'layout', 'appearance'].map(value => <button key={value} type="button" role="tab" id={`${id}-${value}-tab`}
-        aria-controls={`${id}-${value}`} aria-selected={tab === value} onClick={() => setTab(value)}
-        onKeyDown={event => {
-          const tabs = ['text', 'layout', 'appearance'];
-          if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
-          event.preventDefault();
-          const next = event.key === 'Home' ? 0 : event.key === 'End' ? 2 : (tabs.indexOf(value) + (event.key === 'ArrowRight' ? 1 : 2)) % 3;
-          setTab(tabs[next]); event.currentTarget.parentElement.children[next].focus();
-        }}>{value[0].toUpperCase() + value.slice(1)}</button>)}
-    </nav>
     <div className="text-controls-body">
-      <section id={`${id}-text`} role="tabpanel" aria-labelledby={`${id}-text-tab`} hidden={tab !== 'text'}>
-        <div className="text-inspector-scope" role="group" aria-label="Formatting target">
-          {['document', 'selection', 'title'].map(value => <button type="button" key={value} aria-pressed={scope === value}
-            onClick={() => setScope(value)}>{value[0].toUpperCase() + value.slice(1)}</button>)}
-        </div>
-        <p className="text-inspector-context">{scope === 'document' ? 'Default style for the article' : scope === 'title' ? 'Independent title appearance' : 'Selected text or current paragraph'}</p>
-        <div ref={attachEditorControls} hidden={scope !== 'selection'} />
-        <div className="text-settings text-settings--type" aria-label="Document typography" hidden={scope !== 'document'}>
+      <section aria-label="Current text formatting">
+        <div ref={controlsRef} />
+      </section>
+      <details className="text-inspector-section">
+        <summary>Default text style</summary>
+        <p className="text-inspector-context">Used throughout this article. Individually formatted text keeps its overrides.</p>
+        <div className="text-settings text-settings--type" aria-label="Document typography">
           <label className="text-settings-wide">Font<select aria-label="Document font" disabled={disabled} value={article.font} onChange={e => onChange({ ...article, font: e.target.value })}>{ARTICLE_FONTS.map(font => <option key={font.id} value={font.id}>{font.label}</option>)}</select></label>
           <label>Text size<input aria-label="Text size" type="number" min={8} max={300} value={appearance.fontSize} disabled={disabled} onChange={e => { const value = Number(e.target.value); if (value >= 8 && value <= 300) changeAppearance({ fontSize: value, scale: 1 }); }} /></label>
           <label>Text colour<input aria-label="Text colour" type="color" disabled={disabled} value={appearance.color} onChange={e => changeAppearance({ color: e.target.value })} /></label>
@@ -55,10 +31,12 @@ export default function TextTools({ targetId, available = true, article, onChang
               }} />
           </div>
           <TextStyleControls appearance={appearance} disabled={disabled} onChange={value => onChange({ ...article, appearance: value })} />
-          <TextBackupControls key={backupScope} article={article} onChange={onChange} disabled={disabled || !available} recoveryPending={recoveryPending} />
         </div>
-        <div className="text-settings text-settings--type" hidden={scope !== 'title'}>
-          {!article.title && <p className="text-tools-hint">Add a title from Selection, then edit it directly in the document.</p>}
+      </details>
+      <details className="text-inspector-section">
+        <summary>Title</summary>
+        <div className="text-settings text-settings--type">
+          {!article.title && <p className="text-tools-hint">Type a title above the article body, then set its appearance here.</p>}
           <label className="text-settings-wide">Title size<input aria-label="Title size" type="number" min={8} max={300} value={appearance.titleFontSize ?? 28} disabled={disabled || !article.title} onChange={e => { const value = e.target.valueAsNumber; if (Number.isFinite(value) && value >= 8 && value <= 300) changeAppearance({ titleFontSize: value }); }} /></label>
           <div className="text-title-controls text-settings-wide" role="group" aria-label="Title appearance">
             <TextTypographyInput label="Title gap (px)" accessibleLabel="Title gap" value={appearance.titleGap}
@@ -71,16 +49,17 @@ export default function TextTools({ targetId, available = true, article, onChang
                 else changeAppearance({ titleLetterSpacing: value }); }} />
             <span>Title alignment</span>
             <div className="text-title-alignment">{[['left', AlignLeft], ['center', AlignCenter], ['right', AlignRight]].map(([value, Icon]) =>
-              <button type="button" key={value} aria-label={`Align title ${value}`} title={`Align title ${value}`} disabled={disabled}
+              <button className="workflow-tactile-control" type="button" key={value} aria-label={`Align title ${value}`} title={`Align title ${value}`} disabled={disabled}
                 aria-pressed={(appearance.titleAlignment || 'left') === value} onClick={() => changeAppearance({ titleAlignment: value })}><Icon /></button>)}</div>
             <div className="text-selection-colour"><label>Title colour<input aria-label="Title colour" type="color" disabled={disabled}
               value={appearance.titleColor || appearance.color} onChange={event => changeAppearance({ titleColor: event.target.value })} /></label>
-              <button type="button" aria-label="Use document title colour" title="Use document text colour" disabled={disabled || !appearance.titleColor}
+              <button className="workflow-tactile-control" type="button" aria-label="Use document title colour" title="Use document text colour" disabled={disabled || !appearance.titleColor}
                 onClick={() => { const { titleColor, ...rest } = appearance; onChange({ ...article, appearance: rest }); }}><X /></button></div>
           </div>
         </div>
-      </section>
-      <section id={`${id}-layout`} role="tabpanel" aria-labelledby={`${id}-layout-tab`} hidden={tab !== 'layout'}>
+      </details>
+      <details className="text-inspector-section">
+        <summary>Text box layout</summary>
         <div className="text-settings text-settings--appearance">
           <label>Columns<select aria-label="Text columns" disabled={disabled} value={appearance.columns || 1} onChange={event => changeAppearance({ columns: Number(event.target.value) })}>
             <option value={1}>1</option><option value={2}>2</option><option value={3}>3</option></select></label>
@@ -102,8 +81,9 @@ export default function TextTools({ targetId, available = true, article, onChang
           </div>}
           {readOptions}
         </div>
-      </section>
-      <section id={`${id}-appearance`} role="tabpanel" aria-labelledby={`${id}-appearance-tab`} hidden={tab !== 'appearance'}>
+      </details>
+      <details className="text-inspector-section">
+        <summary>Background &amp; edges</summary>
         <div className="text-settings text-settings--appearance">
           <label>Background<select aria-label="Text background" disabled={disabled} value={appearance.background === null ? 'none' : 'colour'} onChange={e => changeAppearance({ background: e.target.value === 'none' ? null : '#101111' })}><option value="none">None</option><option value="colour">Colour</option></select></label>
           {appearance.background !== null && <>
@@ -112,12 +92,13 @@ export default function TextTools({ targetId, available = true, article, onChang
           </>}
           <ModuleSurfaceControls value={appearance.edges} onChange={edges => changeAppearance({ edges })} frame={appearance.frame} onFrameChange={frame => changeAppearance({ frame })} disabled={disabled} />
         </div>
-      </section>
-      <section className="text-inspector-connections" aria-label="Display connection">
-        <h3>Display connection</h3>
+      </details>
+      {(connection || children) && <details className="text-inspector-section text-inspector-connections">
+        <summary>Display connection</summary>
         {connection && <div className="text-settings text-settings--connection">{connection}</div>}
         {children && <div className="text-settings text-settings--options">{children}</div>}
-      </section>
+      </details>}
+      <TextBackupControls key={backupScope} article={article} onChange={onChange} disabled={disabled || !available} recoveryPending={recoveryPending} />
     </div>
     {publication && <div className="text-inspector-publication">{publication}</div>}
     {footer && <footer className="text-tools-footer">{footer}</footer>}

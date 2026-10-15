@@ -1,3 +1,4 @@
+import { openTextToolSection } from './fixtures/text-tool-sections.mjs';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { chromium } from 'playwright-core';
@@ -56,7 +57,7 @@ for (const width of [1440, 390]) test(`Text columns, inline title and module res
     assert.equal(await page.getByRole('combobox', { name: 'Insert Library artwork' }).count(), 0);
     const layout = await tools.boundingBox();
     assert.ok(layout.x >= 0 && layout.x + layout.width <= width);
-    const settings = tools.locator('.text-controls-body');
+    const settings = tools.locator('.system-workflow__instrument-content');
     const overflow = await settings.evaluate(n => ({ x: n.scrollWidth - n.clientWidth, y: n.scrollHeight - n.clientHeight,
       overflowY: getComputedStyle(n).overflowY, bottom: n.getBoundingClientRect().bottom }));
     assert.ok(overflow.x <= 1, 'both settings columns fit without horizontal clipping');
@@ -67,19 +68,20 @@ for (const width of [1440, 390]) test(`Text columns, inline title and module res
       assert.ok(await settings.evaluate(n => n.scrollTop > 0), 'the lower settings are reachable');
     }
     assert.equal(await tools.getByRole('separator').count(), 0, 'tools have no resize handles');
-    assert.equal(await tools.getByRole('tab').count(), 3, 'settings have three explicit sections');
+    assert.equal(await tools.getByRole('tab').count(), 0, 'settings use direct formatting and named disclosures');
     assert.equal(await tools.getByRole('textbox', { name: 'Article title', exact: true }).count(), 0, 'title is edited in the document');
+    await openTextToolSection(tools, 'Display connection');
     assert.equal(await page.getByRole('combobox', { name: 'Follow Display', exact: true }).isVisible(), true);
     const follow = page.getByRole('combobox', { name: 'Follow Display', exact: true });
     await follow.scrollIntoViewIfNeeded();
     assert.equal(await follow.evaluate(n => { const r = n.getBoundingClientRect(); return n.contains(document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2)); }), true, 'lower settings receive pointer input after contained scrolling');
     await page.screenshot({ path: `.browser-test-runtime/text-tools-${width}.png` });
-    await page.locator('.text-tools-window').getByRole('tab', { name: 'Appearance', exact: true }).click();
+    await openTextToolSection(page.locator('.text-tools-window'), 'Background & edges');
     assert.equal(await page.getByRole('combobox', { name: 'Text background', exact: true }).inputValue(), 'colour');
-    await page.locator('.text-tools-window').getByRole('tab', { name: 'Appearance', exact: true }).click();
+    await openTextToolSection(page.locator('.text-tools-window'), 'Background & edges');
     await page.getByRole('combobox', { name: 'Text background', exact: true }).selectOption('none');
     assert.equal((await saved(page)).texts[0].article.appearance.background, null);
-    await page.locator('.text-tools-window').getByRole('tab', { name: 'Appearance', exact: true }).click();
+    await openTextToolSection(page.locator('.text-tools-window'), 'Background & edges');
     await page.getByRole('combobox', { name: 'Text background', exact: true }).selectOption('colour');
     await page.screenshot({ path: `.browser-test-runtime/text-appearance-${width}.png` });
     await tools.getByRole('button', { name: 'Close Text tools', exact: true }).click();

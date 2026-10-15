@@ -5,7 +5,6 @@ import { removeWorkbenchModule } from './removeWorkbenchModule.js';
 import { addDisplayModule } from './displayModuleSession.js';
 import { PRIMARY_DISPLAY_ID, displayModuleIds } from './domain/displayModules.js';
 import { addMiniApp } from '../miniApps/miniAppSession.js';
-import { openMobileModule } from '../mobile/mobileSession.js';
 import { buildProfileDocumentV9 } from '../profileDocument/domain/profileDocumentV9Builder.js';
 import { reconcileSystemWorkflowDraftFromProfileDocumentV9 } from '../profileDocument/domain/profileDocumentV9Reconciliation.js';
 import { ownerSystemWorkflowPreviewEntryMediaUrls } from '../public/ownerSystemWorkflowPreviewDocument.js';
@@ -19,12 +18,12 @@ function fixture() {
 test('delete every module, undo, persist empty desktop and recreate original Display', () => {
   const { store, storage } = fixture();
   const original = store.getDraft();
-  addDisplayModule(store); addMiniApp(store, profile); openMobileModule(store);
-  for (const [kind,key] of [['display','displays'],['mini-app','miniApps'],['mobile','mobile']]) {
+  addDisplayModule(store); addMiniApp(store, profile);
+  for (const [kind,key] of [['display','displays'],['mini-app','miniApps']]) {
     const before = store.getDraft();
-    const record = kind === 'mobile' ? before.mobile : before[key][0];
+    const record = before[key][0];
     assert.equal(removeWorkbenchModule(store, profile, kind, record), true);
-    assert.ok(kind === 'mobile' ? !store.getDraft().mobile : !store.getDraft()[key].length);
+    assert.ok(!store.getDraft()[key].length);
     store.undo(); assert.deepEqual(store.getDraft(), before); store.redo();
   }
   assert.equal(removeWorkbenchModule(store, profile, 'display', { id: PRIMARY_DISPLAY_ID, grids: original.grids }), true);

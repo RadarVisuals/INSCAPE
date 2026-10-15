@@ -1,3 +1,4 @@
+import { validWorkbenchArea } from '../../systemWorkflow/domain/workbenchArea.js';
 import { validateProfileDocumentV9Asset } from './profileDocumentV9Asset.js';
 import { MAX_MINI_APPS, MINI_APP_ID } from '../../miniApps/domain/miniApps.js';
 import { MAX_TEXT_MODULES, TEXT_ID } from '../../text/domain/article.js';
@@ -17,7 +18,8 @@ const windowFrame = (value, height, minimumWidth = 180, minimumHeight = 100) => 
 // The currently implemented modules only. Content remains owned by their existing
 // validated Grid/Identity envelopes; this describes their public starting layout.
 export function isValidWorkbenchPresentation(value) {
-  if (!exact(value, ['version', 'display', 'identity', ...['displays', 'miniApps', 'texts', 'imageModules', 'shapes', 'keeperDocks'].filter(key => Object.hasOwn(value || {}, key))]) || value.version !== 1) return false;
+  if (!exact(value, ['version', 'display', 'identity', ...['area', 'displays', 'miniApps', 'texts', 'imageModules', 'shapes', 'keeperDocks'].filter(key => Object.hasOwn(value || {}, key))]) || value.version !== 1) return false;
+  if (Object.hasOwn(value, 'area') && !validWorkbenchArea(value.area)) return false;
   if (Object.hasOwn(value, 'keeperDocks')) {
     if (!Array.isArray(value.keeperDocks) || value.keeperDocks.length > MAX_KEEPER_DOCKS) return false;
     const ids = new Set();

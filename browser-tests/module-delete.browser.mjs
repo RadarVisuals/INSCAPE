@@ -74,26 +74,21 @@ try {
   await page.getByRole('menuitem',{name:'DELETE',exact:true}).click();
   await page.waitForFunction(()=>instances.getDraft().grids.length===0);
 
-  for (const [label,close,shortcut,key] of [
-    ['MINI APP','Close Mini App','.mini-app-shortcut','miniApps'],
-    ['MOBILE MODULE','Close Mobile editor','.mobile-editor-reopen','mobile']
-  ]) {
+  for (const [label,shortcut,key] of [['MINI APP','.mini-app-shortcut','miniApps']]) {
     await page.mouse.click(15,15,{button:'right'});
     await page.getByRole('menuitem',{name:'ADD',exact:true}).hover();
     await page.getByRole('menuitem',{name:label,exact:true}).click();
-    if(key==='miniApps') await page.locator('[data-mini-app-id] button[aria-label^="Close "]').click();
-    else await page.getByRole('button',{name:close,exact:true}).click();
-    if (key === 'mobile') await page.setViewportSize({width:390,height:844});
+    await page.locator('[data-mini-app-id] button[aria-label^="Close "]').click();
     await page.locator(shortcut).focus();
     await page.keyboard.press('Shift+F10');
     await page.screenshot({path:'output/module-delete-'+key+'-menu.png'});
     await page.getByRole('menuitem',{name:'DELETE',exact:true}).click();
-    await page.waitForFunction(key=>key==='mobile'?!instances.getDraft().mobile:instances.getDraft()[key].length===0,key);
+    await page.waitForFunction(key=>instances.getDraft()[key].length===0,key);
     await page.keyboard.press('Control+z');
-    await page.waitForFunction(key=>key==='mobile'?!!instances.getDraft().mobile:instances.getDraft()[key].length===1,key);
+    await page.waitForFunction(key=>instances.getDraft()[key].length===1,key);
     await page.locator('main.system-workflow').focus();
     await page.keyboard.press('Control+Shift+z');
-    await page.waitForFunction(key=>key==='mobile'?!instances.getDraft().mobile:instances.getDraft()[key].length===0,key);
+    await page.waitForFunction(key=>instances.getDraft()[key].length===0,key);
   }
   await page.setViewportSize({width:1440,height:1000});
   await page.screenshot({path:'output/module-delete-empty-wide.png'});

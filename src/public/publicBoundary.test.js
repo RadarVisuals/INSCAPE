@@ -82,7 +82,7 @@ test('System Workflow routing contains no legacy Gallery destination controls', 
 });
 
 test('published navigation follows ordered v9 Grids without a spatial-world handoff', () => {
-  const visitorSource = readFileSync(new URL('../profileDocument/components/ProfileDocumentV9Visitor.jsx', import.meta.url), 'utf8');
+  const visitorSource = readFileSync(new URL('../profileDocument/components/PublishedDisplayModule.jsx', import.meta.url), 'utf8');
   assert.match(visitorSource, /const \[activeIndex, setActiveIndex\] = useState\(entryGridIndex\)/u);
   assert.match(visitorSource, /document\.grids\[activeIndex\]/u);
   assert.match(visitorSource, /aria-label="Next Grid"/u);

@@ -6,3 +6,5 @@ dist/
 .edge-*/
 .browser-test-profile*/
 .browser-test-runtime*/
+
+dist-design-system/

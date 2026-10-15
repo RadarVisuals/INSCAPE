@@ -11,7 +11,7 @@ const contrast = (first, second) => (Math.max(first, second) + 0.05) / (Math.min
 
 // A stable portal target keeps the article, EditorContent and node views mounted.
 // Only its DOM location changes; no second editor or document copy is created.
-export default function ArticleFocusWriting({ children, active, onClose, editor, returnFocus, title, background, saveError }) {
+export default function ArticleFocusWriting({ children, active, onClose, editor, returnFocus, title, background, saveError, saveStatus = 'Saved in this browser', className = '' }) {
   const menuSurface = useSharedTextTools()?.menuSurface;
   const [mount] = useState(() => {
     const element = document.createElement('div');
@@ -45,7 +45,7 @@ export default function ArticleFocusWriting({ children, active, onClose, editor,
   useLayoutEffect(() => () => { mount.remove(); }, [mount]);
   return <>
     <div ref={slot} className="text-focus-slot" />
-    {createPortal(<dialog ref={dialog} className="text-focus-dialog text-workbench system-workflow__token-scope" role="dialog" aria-modal="true" aria-label="Focus writing"
+    {createPortal(<dialog ref={dialog} className={'text-focus-dialog text-workbench system-workflow__token-scope '+className} role="dialog" aria-modal="true" aria-label="Focus writing"
       data-lattice-menu-surface data-menu-surface={menuSurface}
       onClick={event => event.stopPropagation()} onDoubleClick={event => event.stopPropagation()}
       onPointerDown={event => event.stopPropagation()} onPointerUp={event => event.stopPropagation()}
@@ -67,7 +67,7 @@ export default function ArticleFocusWriting({ children, active, onClose, editor,
       </header>
       <div className="text-focus-save">
         {saveError ? <p role="alert">{saveError} Return to composition to recover your edits.</p>
-          : <p role="status">Saved in this browser</p>}
+          : <p role="status">{saveStatus}</p>}
       </div>
       <div ref={scroll} className="text-focus-scroll" tabIndex={0} role="region" aria-label="Focused article" />
     </dialog>, document.body)}

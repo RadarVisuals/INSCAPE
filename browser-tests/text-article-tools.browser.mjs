@@ -1,3 +1,4 @@
+import { openTextToolSection } from './fixtures/text-tool-sections.mjs';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { readFile } from 'node:fs/promises';
@@ -15,7 +16,7 @@ test('a delayed backup read is discarded when Text tools switch articles', { tim
     // Focus activation is the same keyboard path used to target a second Text.
     await windows.first().getByRole('button', { name: 'Text tools', exact: true }).focus();
     if (!await tools.count()) await page.keyboard.press('Enter');
-    await tools.getByRole('group', { name: 'Formatting target' }).getByRole('button', { name: 'Document', exact: true }).click();
+    await openTextToolSection(tools, 'Default text style');
     await tools.locator('.text-backup-controls summary').click();
     const before = await page.evaluate(() => window.savedDraft().texts);
     await page.evaluate(() => {
@@ -61,10 +62,9 @@ for (const width of [1440, 390]) test(`article styles, outline and portable reco
     await mountTextToolsFixture(page, origin);
     const tools = page.locator('.text-tools-window'), win = page.locator('.text-window');
     const body = win.getByRole('textbox', { name: 'Article text', exact: true });
-    const scope = name => tools.getByRole('group', { name: 'Formatting target' }).getByRole('button', { name, exact: true });
     const number = async (name, value) => { const field = tools.getByRole('spinbutton', { name, exact: true }); await field.fill(String(value)); await field.press('Enter'); await settle(page); };
     const style = (locator, property) => locator.evaluate((node, property) => getComputedStyle(node)[property], property);
-    await scope('Document').click(); await tools.locator('.text-style-controls summary').click();
+    await openTextToolSection(tools, 'Default text style'); await tools.locator('.text-style-controls summary').click();
     await tools.getByLabel('Article style', { exact: true }).selectOption('h2');
     await number('Style text size', 32); await number('Style line spacing', 1.5); await number('Style tracking', .02);
     await tools.getByLabel('Style font', { exact: true }).selectOption('Inscape Article Literata');
@@ -81,7 +81,8 @@ for (const width of [1440, 390]) test(`article styles, outline and portable reco
     await tools.getByRole('button', { name: 'Use automatic style size', exact: true }).click();
     assert.equal(await style(body.locator('h2').first(), 'fontSize'), '21.6px'); await number('Style text size', 32);
     await page.screenshot({ path: `.browser-test-runtime/text-article-styles-${width}.png` });
-    await scope('Selection').click(); await tools.locator('.text-article-outline summary').click();
+    await openTextToolSection(tools, 'Writing tools');
+    await tools.locator('.text-article-outline summary').click();
     const outline = tools.getByRole('navigation', { name: 'Article outline', exact: true });
     const frame = await win.boundingBox();
     await outline.getByRole('button', { name: 'Last study', exact: true }).click(); await settle(page);
@@ -98,7 +99,7 @@ for (const width of [1440, 390]) test(`article styles, outline and portable reco
     await tools.getByRole('button', { name: 'Undo', exact: true }).click(); await settle(page);
     assert.equal(await outline.getByRole('button', { name: 'Last study', exact: true }).count(), 1);
     await page.screenshot({ path: `.browser-test-runtime/text-article-outline-${width}.png` });
-    await scope('Document').click(); await tools.locator('.text-style-controls summary').click();
+    await openTextToolSection(tools, 'Default text style'); await tools.locator('.text-style-controls summary').click();
     await tools.locator('.text-backup-controls summary').click();
     const saved = await page.evaluate(() => window.savedDraft().texts[0]);
     const downloading = page.waitForEvent('download'); await tools.getByRole('button', { name: 'Download article backup', exact: true }).click();

@@ -11,7 +11,7 @@ const ownerViewer = read('../../public/ownerSystemWorkflow/DisplayFocusViewer.js
 const ownerDisplay = read('../../public/ownerSystemWorkflow/DisplayModule.jsx');
 const ownerViewerState = read('../../public/ownerSystemWorkflow/useOwnerSystemWorkflowFocusViewer.js');
 const ownerMetadata = read('../../public/ownerSystemWorkflow/OwnerSystemWorkflowMetadataModule.jsx');
-const visitor = read('../../profileDocument/components/ProfileDocumentV9Visitor.jsx');
+const visitor = read('../../profileDocument/components/PublishedDisplayModule.jsx');
 
 test('focus return lands at its exact endpoint before the overlay copy fades', () => {
   assert.equal(LATTICE_PRODUCTION_FOCUS_LANDING_MS, 150);

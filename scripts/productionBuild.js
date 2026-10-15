@@ -12,6 +12,7 @@ export const GENERATED_BUILD_FILES = Object.freeze([BUILD_REPORT_FILE, 'owner-ru
 export const UNUSED_PUBLIC_PATHS = Object.freeze([
   // Local recovery materials remain in public/ for development only.
   'recovery',
+  'artwork-experiments', // Local self-contained HTML trials; never shipped as app assets.
   'assets/PFP',
   'assets/patterns',
   'assets/palettes',
@@ -169,7 +170,11 @@ export const PRODUCTION_BUDGETS = Object.freeze({
   // Local grid snapping and the optional saved-view Index add validation,
   // publication filtering and a lazy editor. Measured aggregate gzip: 776,432.
   // Keep raw, initial-entry, owner-static and wallet limits unchanged.
-  coreJavaScript: Object.freeze({ raw: 2_480_000, gzip: 780_000 }),
+  // Reception adds an explicitly opened owner crop/selection editor and optional
+  // compatibility fields. Measured before: 778,922 gzip; first complete editor:
+  // 784,180 gzip (+5,258 bytes). Bound that feature plus a small build margin;
+  // raw, initial-entry, owner-static and wallet limits remain unchanged.
+  coreJavaScript: Object.freeze({ raw: 2_480_000, gzip: 786_000 }),
   // Approved local article fonts plus the creation bar's Inter variable face.
   // Inter and its license/provenance add 357,042 bytes; measured copied assets:
   // 17,811,402 bytes. Retain the previous margin, rounded up by less than 3 kB.

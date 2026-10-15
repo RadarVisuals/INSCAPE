@@ -47,11 +47,11 @@ export default function DisplayMetadataCard({ dossier, collapseControl, collapse
           const Icon = tabIcons[value];
           return <button key={value} type="button" role="tab" id={`${id}-${value}-tab`} aria-label={value} title={value}
             aria-selected={!settingsOpen && value === tab} aria-controls={`${id}-${value}`} tabIndex={value === tab ? 0 : -1}
-            ref={node => { buttons.current[value] = node; }} onClick={() => switchTab(value)} onKeyDown={navigateTabs}><Icon /></button>;
+            ref={node => { buttons.current[value] = node; }} onClick={() => switchTab(value)} onKeyDown={navigateTabs}><Icon size={16} strokeWidth={1.6} /></button>;
         })}
       </nav>
       {settings && <button type="button" aria-label="Metadata cue settings" aria-expanded={settingsOpen}
-        title="Cue settings" aria-controls={`${id}-settings`} onClick={() => setSettingsOpen(value => !value)}><Settings /></button>}
+        title="Cue settings" aria-controls={`${id}-settings`} onClick={() => setSettingsOpen(value => !value)}><Settings size={16} strokeWidth={1.6} /></button>}
     </header>
     <div className="display-metadata__body" key={settingsOpen ? 'settings' : tab}>
       {settings && settingsOpen && <section className="display-metadata__settings" aria-label="Cue settings" id={`${id}-settings`}>{settings}</section>}

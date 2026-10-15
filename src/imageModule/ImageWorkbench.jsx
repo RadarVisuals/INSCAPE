@@ -149,7 +149,7 @@ function ImageInstance({ record, index, store, profileAddress, registerTarget, i
   return <div className="image-module" data-workbench-module="image" data-image-module={record.id}
     onPointerDownCapture={() => onActivate?.(record.id)} onFocusCapture={() => onActivate?.(record.id)}>
     {shortcutMenu.content}
-    {!presentation.open && <button data-workbench-pan ref={shortcut} className="image-module__shortcut" style={{ bottom: 64 + index * 38 }} onContextMenu={shortcutMenu.onContextMenu} onKeyDown={shortcutMenu.onKeyDown}
+    {!presentation.open && <button data-workbench-pan ref={shortcut} className="workflow-tactile-control image-module__shortcut" style={{ bottom: 64 + index * 38 }} onContextMenu={shortcutMenu.onContextMenu} onKeyDown={shortcutMenu.onKeyDown}
       onClick={() => setPresentation(p => ({ ...p, open: true }))}>{record.name}</button>}
     {presentation.open && <ImageWindow id={record.id} title={record.name} position={presentation.position}
       size={record} fitScale={scale} fitSize={fitSize} editable={editable && !crop && !inspect && !flip} suspended={suspended || inspect}
@@ -159,7 +159,7 @@ function ImageInstance({ record, index, store, profileAddress, registerTarget, i
       resizeTarget={resizeTarget}
       onClose={() => { setPresentation(p => ({ ...p, open: false })); queueMicrotask(() => shortcut.current?.focus()); }}>
       {renderRectangle => <>
-      <button type="button" ref={source} className="image-module__canvas" aria-label={crop ? 'Drag to crop Image' : side ? `${focusModules ? 'Focus' : 'Inspect'} ${side.asset.name || 'Image'}` : store ? 'Drop Library artwork into Image' : 'Image is empty'}
+      <button type="button" ref={source} className="workflow-tactile-control image-module__canvas" aria-label={crop ? 'Drag to crop Image' : side ? `${focusModules ? 'Focus' : 'Inspect'} ${side.asset.name || 'Image'}` : store ? 'Drop Library artwork into Image' : 'Image is empty'}
         data-artwork-context-id={!inactive && !inspect && !flip && side ? `${record.id}:${side.id}:${side.asset.stableAssetId}` : undefined}
         data-artwork-context-title={side?.asset.name || 'Untitled artwork'}
         data-artwork-context-src={liftEntry?.media.src}
@@ -204,10 +204,10 @@ function ImageInstance({ record, index, store, profileAddress, registerTarget, i
             crop={crop?.previewCrop ?? imageCropForResize(side.crop, record, renderRectangle)}
             onComplete={id => { setSideId(id); setFlip(null); }} onCancel={() => setFlip(null)} />}
       </button>
-      {!crop && <button type="button" className="image-module__inspect" aria-label="Inspect Image" aria-keyshortcuts="I"
+      {!crop && <button type="button" className="workflow-tactile-control image-module__inspect" aria-label="Inspect Image" aria-keyshortcuts="I"
         title="Inspect Image (I)" disabled={!side || Boolean(flip || inspect || suspended)} onClick={inspectArtwork}
         onPointerEnter={prepareInspection} onFocus={prepareInspection} onPointerLeave={releaseInspection} onBlur={releaseInspection}><ZoomIn size={14} /></button>}
-      {record.sides.length > 1 && !crop && <button type="button" className="image-module__next" aria-label="Next Image side"
+      {record.sides.length > 1 && !crop && <button type="button" className="workflow-tactile-control image-module__next" aria-label="Next Image side"
         aria-description={`Side ${sideIndex + 1} of ${record.sides.length}`} title={`Next side · ${sideIndex + 1} of ${record.sides.length}`}
         disabled={Boolean(flip || inspect || suspended)} onClick={next}><ChevronRight size={14} /></button>}
       </>}
@@ -217,37 +217,37 @@ function ImageInstance({ record, index, store, profileAddress, registerTarget, i
         <div><strong>Crop / drag image</strong><output>{Math.round(visualCrop.crop.zoom * 100)}%</output></div>
         <input type="range" aria-label="Crop zoom" min="1" max="4" step="0.05" value={visualCrop.crop.zoom}
           onChange={event => updateVisualCrop(setSystemWorkflowCropZoom(visualCrop.crop, { ...crop.media, ...visualCrop.dimensions }, rectangle, Number(event.target.value)))} />
-        <footer><button type="button" onClick={() => applyCrop(null)}>Native fit</button><button type="button" onClick={cancelCrop}>Cancel</button><button type="button" onClick={() => applyCrop(crop.previewCrop)}>Done</button></footer>
+        <footer><button className="workflow-tactile-control" type="button" onClick={() => applyCrop(null)}>Native fit</button><button className="workflow-tactile-control" type="button" onClick={cancelCrop}>Cancel</button><button className="workflow-tactile-control" type="button" onClick={() => applyCrop(crop.previewCrop)}>Done</button></footer>
       </div> : <>
-        <nav className="system-workflow__selection-actions" aria-label="Image actions">
-          <button type="button" aria-label="Inspect Image" aria-keyshortcuts="I" title="Inspect Image (I)" disabled={!side || Boolean(flip)} onClick={inspectArtwork}
-            onPointerEnter={prepareInspection} onFocus={prepareInspection} onPointerLeave={releaseInspection} onBlur={releaseInspection}><ZoomIn size={15} /></button>
+        <nav className="system-workflow__selection-actions system-workflow__selection-actions--six" aria-label="Image actions">
+          <button className="workflow-tactile-control" type="button" aria-label="Inspect Image" aria-keyshortcuts="I" title="Inspect Image (I)" disabled={!side || Boolean(flip)} onClick={inspectArtwork}
+            onPointerEnter={prepareInspection} onFocus={prepareInspection} onPointerLeave={releaseInspection} onBlur={releaseInspection}><ZoomIn size={18} strokeWidth={1.6} /></button>
           <ArtworkTransformTools disabled={!side || Boolean(flip)} onTransform={operation => changeSide({ transform: transformArtwork(side.transform, operation) })} />
-          <button type="button" aria-label="Crop" title="Crop" disabled={!side || Boolean(flip)} onClick={beginCrop}><Crop size={15} /></button>
-          <button type="button" aria-label="Duplicate" title={canDuplicate ? 'Duplicate Image, keeping all sides and crops' : 'At most sixteen Image modules are supported'} disabled={!canDuplicate || Boolean(flip)} onClick={duplicate}><Copy size={15} /></button>
+          <button className="workflow-tactile-control" type="button" aria-label="Crop" title="Crop" disabled={!side || Boolean(flip)} onClick={beginCrop}><Crop size={18} strokeWidth={1.6} /></button>
+          <button className="workflow-tactile-control" type="button" aria-label="Duplicate" title={canDuplicate ? 'Duplicate Image, keeping all sides and crops' : 'At most sixteen Image modules are supported'} disabled={!canDuplicate || Boolean(flip)} onClick={duplicate}><Copy size={18} strokeWidth={1.6} /></button>
         </nav>
         <div className="system-workflow__inspection-selector" role="group" aria-label="Image fit">
           <span>Fit</span>
-          <button type="button" disabled={!side || Boolean(flip)} aria-pressed={Boolean(side && side.crop === null)}
+          <button className="workflow-tactile-control" type="button" disabled={!side || Boolean(flip)} aria-pressed={Boolean(side && side.crop === null)}
             title="Show the complete image. Different proportions leave space inside the canvas."
             onClick={() => changeSide({ crop: null })}>Fit inside</button>
-          <button type="button" disabled={!side || Boolean(flip)} aria-pressed={Boolean(side?.crop)}
+          <button className="workflow-tactile-control" type="button" disabled={!side || Boolean(flip)} aria-pressed={Boolean(side?.crop)}
             title="Fill the canvas with a centred crop, keeping the image proportions. Edges may be cropped."
             onClick={() => changeSide({ crop: { ...IMAGE_FILL_CROP } })}>Fill canvas</button>
         </div>
-        <form className="image-module__size" onSubmit={applySize}>
+        <details className="workbench-dimensions"><summary>Dimensions…</summary><form className="image-module__size" onSubmit={applySize}>
           {['width', 'height'].map(key => <label key={key}>{key === 'width' ? 'Width' : 'Height'}<input aria-label={`Image ${key}`} type="number" min="32" max="4096" step="1" value={sizeFields[key]} onChange={event => setSizeFields(fields => ({ ...fields, [key]: event.target.value }))} /></label>)}
-          <button type="submit">Set size</button>
-        </form>
+          <button className="workflow-tactile-control" type="submit">Set size</button>
+        </form></details>
         <div className="image-module__side-tools">
           <label>Library drop<select aria-label="Image drop action" value={dropMode} onChange={event => setDropMode(event.target.value)}><option value="append">Add side</option><option value="replace">Replace side</option></select></label>
-          <button type="button" aria-label="Remove Image side" title="Remove current side" disabled={!side || Boolean(flip)} onClick={() => save({ ...record, sides: record.sides.filter(item => item.id !== side.id) })}><Trash2 size={14} /></button>
+          <button className="workflow-tactile-control" type="button" aria-label="Remove Image side" title="Remove current side" disabled={!side || Boolean(flip)} onClick={() => save({ ...record, sides: record.sides.filter(item => item.id !== side.id) })}><Trash2 size={14} /></button>
         </div>
         <label className="image-module__publication"><input type="checkbox" checked={record.visibility === 'PUBLIC'} onChange={event => save({ ...record, visibility: event.target.checked ? 'PUBLIC' : 'PRIVATE' })} />Include Image in publication</label>
       </>}
       {error && <p role="alert" className="image-module__error">{error}</p>}
     </ContextToolContent>}
-    {error && activeTarget !== record.id && <button type="button" className="system-workflow__notice" role="alert" onClick={() => onActivate?.(record.id)}>{error}</button>}
+    {error && activeTarget !== record.id && <button type="button" className="workflow-tactile-control system-workflow__notice" role="alert" onClick={() => onActivate?.(record.id)}>{error}</button>}
     {inspect && side && !inactive && <ImageLift source={source.current} entry={liftEntry} reducedMotion={reducedMotion} onClose={() => setInspect(false)} />}
   </div>;
 }

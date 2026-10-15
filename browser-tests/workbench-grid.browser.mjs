@@ -4,7 +4,7 @@ import { chromium } from 'playwright-core';
 
 const origin = process.env.INSCAPE_TEXT_ROOT || 'http://127.0.0.1:5173';
 
-test('Workbench grid paints viewport-sized canvases with correct world phase and 4000px bounds', { timeout: 90000 }, async () => {
+test('Workbench grid paints viewport-sized canvases with correct world phase and 2000 by 4000 bounds', { timeout: 90000 }, async () => {
   const browser = await chromium.launch({ executablePath: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', headless: true });
   try {
     for (const density of [1, 1.25, 2]) {
@@ -31,7 +31,7 @@ test('Workbench grid paints viewport-sized canvases with correct world phase and
           const density = devicePixelRatio, ctx = canvas.getContext('2d');
           const image = ctx.getImageData(0, 0, canvas.width, canvas.height);
           const bounds = { left: (8 * scale + offset.x) * density, top: (8 * scale + offset.y) * density,
-            right: (3992 * scale + offset.x) * density, bottom: (3992 * scale + offset.y) * density };
+            right: (1992 * scale + offset.x) * density, bottom: (3992 * scale + offset.y) * density };
           let outside = 0, ink = 0;
           for (let y = 0; y < canvas.height; y++) for (let x = 0; x < canvas.width; x++) {
             if (!image.data[(y * canvas.width + x) * 4 + 3]) continue;
