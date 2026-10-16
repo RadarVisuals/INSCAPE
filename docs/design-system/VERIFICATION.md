@@ -611,3 +611,36 @@ reference toolbar recipes were removed; reference CSS retains hosting rules.
 Checks ran locally. This is a component migration, not a production deployment
 or a claim that the rest of the application has been migrated. The full release
 suite was not run for this scoped change.
+
+
+## Shared camera rail migration — 2026-10-16
+
+Starting checkpoint: 84555c1. The camera rail and owner canvas-size popover now
+opt into workflowFlat.css and the existing foundation geometry/icon tokens.
+The old camera shell radius, icon stroke and popup radii were replaced at their
+existing selectors. Selection handles, projection CSS, navigation handlers,
+authored canvas dimensions, Groups/Index windows and dock behavior are unchanged.
+
+The canvas popover previously started at y=-59 on an 844×390 touch viewport.
+Its max-height now derives from the existing toolViewportBottom measurement;
+native overflow keeps commands reachable without panning the artwork. No extra
+observer, camera state or persisted value was added. Camera and creation rails
+share their lower edge on wide screens and remain separated on narrow screens.
+
+- Baseline: three companion-window cases and the retired-frame case passed.
+  One existing navigation case expected the absolute-positioned selection badge
+  to wrap the rail. The expectation was corrected to its current non-reflowing
+  behavior; Focus/Back and saved-data assertions remain in place and pass.
+- Final browser coverage: nine camera/theme/overflow/Visitor cases, thirteen
+  creation-toolbar cases, three companion-viewport and two area-navigation
+  cases passed (27 unique cases). The initial new-camera test read absent paint
+  attributes as NaN; it now reads the existing initial-scale/CSS fallback,
+  matching the established navigation harness. All nine cases then passed.
+- Fourteen inventory/export-boundary/navigation/scale unit checks passed.
+- Production build and build:check passed; 822,422 initial JS bytes. Existing
+  dependency/chunk warnings remain. The full release suite was not run.
+- Carbon/Mist wide and narrow screenshots inspected, including the bounded,
+  scrolled canvas menu in phone landscape and keyboard focus on its last action.
+
+This is a local component migration. No production or private Site deployment
+was performed in this step.

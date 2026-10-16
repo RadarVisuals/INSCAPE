@@ -1,11 +1,11 @@
-.workbench-canvas-tools { position: absolute; right: 0; bottom: calc(100% + 8px); box-sizing: border-box; width: min(280px, calc(100dvw - 24px)); padding: 10px; display: grid; gap: 8px; border: 1px solid var(--tactile-edge); border-radius: 12px; background: var(--tactile-face); color: var(--tactile-ink); box-shadow: var(--tactile-shadow-shell); }
+.workbench-canvas-tools { position: absolute; right: 0; bottom: calc(100% + 8px); box-sizing: border-box; width: min(280px, calc(100dvw - 24px)); padding: 10px; display: grid; gap: 8px; border: 1px solid var(--tactile-edge); border-radius: var(--control-shell-radius); background: var(--tactile-face); color: var(--tactile-ink); max-height: max(0px, calc(var(--view-controls-top, 100dvh) - 16px)); overflow-y: auto; overscroll-behavior: contain; }
 .workbench-canvas-tools__heading { display: flex; align-items: center; gap: 8px; }
 .workbench-canvas-tools__heading strong { flex: 1; }
 .workbench-canvas-tools__heading output { font: var(--workflow-type-control); font-variant-numeric: tabular-nums; }
-.workbench-canvas-tools__heading button { width: 32px; height: 32px; padding: 6px; }
+.workbench-canvas-tools__heading button { width: var(--view-control-target); height: var(--view-control-target); padding: 6px; }
 .workbench-canvas-tools p { margin: 0; color: var(--tactile-muted); font: var(--workflow-type-control); }
 .workbench-canvas-tools p[role="alert"] { color: var(--tactile-ink); }
-.workbench-canvas-tools > button { display: flex; align-items: center; gap: 8px; min-height: 36px; padding: 6px 10px; border-radius: 8px; text-align: left; font: inherit; }
+.workbench-canvas-tools > button { display: flex; align-items: center; gap: 8px; min-height: var(--view-control-target); padding: 6px 10px; border-radius: var(--control-radius); text-align: left; font: inherit; }
 .workbench-canvas-edge { position: fixed; z-index: 81; padding: 0; border: 0; border-radius: 0; background: transparent; touch-action: none; }
 .workbench-canvas-edge::before { content: ''; position: absolute; background: var(--workflow-ink); pointer-events: none; }
 .workbench-canvas-edge::after { content: ''; position: absolute; left: 50%; top: 50%; width: 8px; height: 8px; box-sizing: border-box; transform: translate(-50%, -50%); border: 1px solid #fff; background: #111313; pointer-events: none; }
@@ -16,7 +16,3 @@
 .workbench-canvas-edge.is-se { width: 28px; height: 28px; transform: translate(-50%, -50%); cursor: nwse-resize; }
 .workbench-canvas-edge:focus-visible { outline: none; }
 .workbench-canvas-edge:focus-visible::after { outline: 2px solid var(--workflow-ink); outline-offset: 2px; background: #fff; }
-@media (pointer: coarse), (max-width: 520px) {
-  .workbench-canvas-tools button { min-height: 44px; }
-  .workbench-canvas-tools__heading button { width: 44px; }
-}

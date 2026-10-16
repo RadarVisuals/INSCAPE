@@ -304,11 +304,11 @@ export const components = [
     id: 'canvas',
     name: 'Canvas controls',
     kind: 'Navigation',
-    material: 'Dark tactile',
+    material: 'Flat Carbon / Mist',
     source: owner + 'WorkbenchCanvasControls.jsx',
     contract:
-      'Explicit canvas resize and Fit canvas to content. Camera navigation and authored dimensions are different operations.',
-    evidence: 'browser-tests/workbench-area-navigation.browser.mjs',
+      'Explicit canvas resize and Fit canvas to content. The flat popover scrolls within measured camera clearance; navigation and authored dimensions remain different operations.',
+    evidence: 'browser-tests/camera-controls.browser.mjs',
     status: 'Production',
   },
   {

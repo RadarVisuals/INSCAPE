@@ -54,7 +54,7 @@ The current design-system preview offers **Carbon** and **Mist**. Overview and C
 
 Do not combine an ink from one theme with a panel from another. Semi-transparent surfaces also require a known underlying surface. The menu panel values are distinct from similarly named authored Workbench/Stage surface presets.
 
-The migrated creation toolbar uses dark Carbon and light Mist chrome; legacy ash/paper IDs also map to its light material. Other production tactile tools remain dark on all six surroundings. This is one fixed material context, not a broken light-theme implementation. Bevel windows adapt to their supplied menu surface. Reception's authored content and its ash surround retain their own existing boundaries.
+The migrated creation toolbar and camera rail use dark Carbon and light Mist chrome; legacy ash/paper IDs also map to its light material. Other production tactile tools remain dark on all six surroundings. This is one fixed material context, not a broken light-theme implementation. Bevel windows adapt to their supplied menu surface. Reception's authored content and its ash surround retain their own existing boundaries.
 
 ## Typography
 
@@ -86,7 +86,7 @@ Global spacing is 4, 8, 12, 16, 20 and 24 px through `--space-1` … `--space-6`
 | Companion control / header icon | 32 px desktop; 44 px narrow/coarse |
 | Companion action key | 40 px desktop; 44 px narrow/coarse |
 | Companion narrow/coarse titlebar | 52 px; fields use 16 px text |
-| Camera action | 40 px, 44 px narrow/coarse |
+| Camera action | 36 px, 44 px narrow/coarse; shared 5/9 px controls and shell |
 | Authored resize target | 28 screen px; visible mark can be smaller |
 | Retained bevel cap | 26 px; review touch access in its actual context |
 
@@ -102,7 +102,7 @@ The following interface families coexist during migration:
 | --- | --- | --- |
 | Structural | Square edges, one-pixel lines, contiguous rails, directional selectors | Library, structural menus and retained system panels |
 | Bevel | Thin edge/highlight, theme-aware overlay and raised caps | Identity and compatible shared windows |
-| Flat | Neutral Carbon/Mist fills, inverted active tools, 5/9 px geometry | Creation toolbar and its menus |
+| Flat | Neutral Carbon/Mist fills, inverted active tools, 5/9 px geometry | Creation toolbar, camera rail and their menus |
 | Dark tactile | Raised keys, recessed active wells, thin rims, restrained shadows | Properties, Layers, Artwork info, appearance, Text tools and Keeper settings |
 
 Observed implementation difference: the current application dock also opts into tactile material and quiet controls while retaining its structural rail layout. The active contract still describes the dock's retained structural baseline. This reference records the difference; it does not silently amend accepted product direction or migrate the dock again.

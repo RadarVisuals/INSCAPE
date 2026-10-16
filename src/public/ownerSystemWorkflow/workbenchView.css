@@ -1,17 +1,21 @@
 .system-workflow[data-creation-toolbar] { --workbench-toolbar-clearance: 60px; --workbench-toolbar-offset: 75px; }
-.workbench-view-controls { position: fixed; z-index: 82; right: 12px; bottom: calc(var(--workflow-dock-height, 40px) + 8px); display: flex; gap: 4px; flex-wrap: wrap; max-width: calc(100% - 24px); padding: 5px; border: 1px solid var(--tactile-edge); border-radius: 24px; background: var(--tactile-face); color: var(--tactile-ink); box-shadow: var(--tactile-shadow-shell); font: var(--workflow-type-control); }
+.workbench-view-controls { position: fixed; z-index: 82; right: 12px; bottom: calc(var(--workflow-dock-height, 40px) + 8px); display: flex; gap: 2px; flex-wrap: wrap; max-width: calc(100% - 24px); padding: calc(var(--control-inset) - 1px); border: 1px solid var(--tactile-edge); border-radius: var(--control-shell-radius); background: var(--tactile-face); color: var(--tactile-ink); font: var(--workflow-type-control);
+  --view-control-target: var(--control-target-toolbar);
+  box-sizing: border-box; }
 .system-workflow[data-creation-toolbar] > .workbench-view-controls { bottom: calc(var(--workflow-dock-height, 42px) + var(--workbench-toolbar-offset) + var(--workbench-toolbar-clearance) + 16px); }
-.workbench-view-controls > .workflow-tactile-control { display: grid; place-items: center; min-width: var(--view-control-target, 40px); min-height: var(--view-control-target, 40px); padding: 4px 8px; font: inherit; }
-.workbench-view-controls svg:where(.lucide) { width: 18px; height: 18px; stroke-width: 1.6; }
+.workbench-view-controls > .workflow-tactile-control { display: grid; place-items: center; min-width: var(--view-control-target); min-height: var(--view-control-target); padding: 4px 8px; font: inherit;
+  box-sizing: border-box;
+  border-color: transparent; }
+.workbench-view-controls svg:where(.lucide) { width: var(--icon-size-interface); height: var(--icon-size-interface); }
 .workbench-view-controls .workbench-view-controls__zoom { min-width: 56px; }
-.workbench-view-controls__selection-count { position: absolute; right: 8px; bottom: calc(100% + 4px); padding: 3px 7px; white-space: nowrap; background: var(--tactile-surface); color: var(--tactile-muted); border-radius: 6px; font: var(--workflow-type-control); }
+.workbench-view-controls__selection-count { position: absolute; right: 8px; bottom: calc(100% + 4px); padding: 3px 7px; white-space: nowrap; background: var(--tactile-surface); color: var(--tactile-muted); border-radius: var(--control-radius); font: var(--workflow-type-control); }
 @media (pointer: coarse), (max-width: 520px) {
-  .workbench-view-controls { --view-control-target: 44px; }
+  .workbench-view-controls { --view-control-target: var(--control-target-touch); }
 }
 @media (min-width: 1100px) {
   .system-workflow[data-creation-toolbar] > .workbench-view-controls {
     left: calc(50% + var(--workbench-toolbar-width, 430px) / 2 + 10px); right: auto;
-    bottom: calc(var(--workflow-dock-height, 42px) + var(--workbench-toolbar-offset) + 12px);
+    bottom: calc(var(--workflow-dock-height, 42px) + var(--workbench-toolbar-offset) + 8px);
     max-width: calc((100dvw - var(--workbench-toolbar-width, 430px)) / 2 - 24px);
   }
 }
@@ -45,3 +49,19 @@
 .workbench-object-preview { position: fixed; z-index: 89; pointer-events: none; box-sizing: border-box; border: 1px solid #fff; outline: 1px solid #111313; }
 .workbench-object-menu { max-height: calc(100dvh - 16px); overflow-y: auto; overscroll-behavior: contain; }
 .workbench-object-menu button span { overflow-wrap: anywhere; }
+.workbench-view-controls > .workflow-tactile-control:where(:not(:disabled):is([aria-pressed='true'], [aria-expanded='true'])) {
+  background: color-mix(in srgb, var(--tactile-ink) 14%, var(--tactile-face));
+}
+.workbench-view-controls > .workbench-view-controls__hand[aria-pressed='true'] {
+  color: var(--tactile-face);
+  background: var(--tactile-ink);
+}
+.workbench-view-controls > .workbench-view-controls__hand[aria-pressed='true']::after { display: none; }
+@media (forced-colors: active) {
+  .workbench-view-controls > .workflow-tactile-control { border-color: ButtonText; }
+  .workbench-view-controls > .workflow-tactile-control:is([aria-pressed='true'], [aria-expanded='true']):not(:disabled) {
+    forced-color-adjust: none;
+    color: HighlightText;
+    background: Highlight;
+  }
+}

@@ -98,8 +98,8 @@ test('owner and Visitor have free camera movement without custom-frame controls,
         await page.screenshot({ path: `.browser-test-runtime/workbench-area-${visitor}-${width}.png` });
         await wheel({ deltaX: -beforeResize.x, deltaY: -beforeResize.y });
       }
-      // Production has no development probe button. On a narrow screen, the selection
-      // count can then wrap the controls onto another row and must not drift Back.
+      // Production has no development probe. The selection badge sits outside the
+      // rail, so focusing must preserve its layout as well as the return camera.
       await page.setViewportSize({ width: 390, height: 900 });
       await page.getByRole('button', { name: 'Meet Grid-naad', exact: true }).evaluate(button => { button.style.display = 'none'; });
       const compactWidth = await page.locator('.workbench-view-controls').evaluate(controls => Math.ceil(
@@ -110,9 +110,9 @@ test('owner and Visitor have free camera movement without custom-frame controls,
       const narrowStart = await camera(page);
       const selectedHeight = (await page.locator('.workbench-view-controls').boundingBox()).height;
       await page.getByRole('button', { name: 'Focus selected Workbench modules', exact: true }).click(); await arrived(page);
-      assert.ok((await page.locator('.workbench-view-controls').boundingBox()).height < selectedHeight, 'exercise selection-driven toolbar wrapping');
+      assert.equal((await page.locator('.workbench-view-controls').boundingBox()).height, selectedHeight, 'selection badge does not reflow the camera rail');
       await page.getByRole('button', { name: 'Back to previous Workbench view', exact: true }).click(); await arrived(page);
-      assert.deepEqual(await camera(page), narrowStart, 'selection-driven toolbar wrapping cannot change the return position');
+      assert.deepEqual(await camera(page), narrowStart, 'clearing selection cannot change the return position');
       assert.equal(await page.evaluate(() => localStorage.getItem(window.__motionKey)), saved);
       assert.deepEqual(errors, []);
       await page.close();

@@ -5,7 +5,7 @@
   "note": "Generated from production and design-system reference CSS. Reference roles are preview-only. Values remain CSS expressions, with selector and media scopes; this is not a DTCG interchange file. Runtime custom properties and local overrides are included and are not automatically public design tokens.",
   "counts": {
     "files": 68,
-    "definitions": 557,
+    "definitions": 558,
     "names": 295
   },
   "sources": [
@@ -5125,14 +5125,17 @@
     {
       "path": "src/public/ownerSystemWorkflow/workbenchCanvasControls.css",
       "role": "Local",
-      "sha256": "0e69c436a9c96d03c16f448f72ad585af76809cf58e0a2ce0bb43fdd6a76dbbb",
+      "sha256": "341046068f7ce3b37666c90067672e0a70c6f97183ce81e498859495585dd76a",
       "definitions": [],
       "references": [
+        "--control-radius",
+        "--control-shell-radius",
         "--tactile-edge",
         "--tactile-face",
         "--tactile-ink",
         "--tactile-muted",
-        "--tactile-shadow-shell",
+        "--view-control-target",
+        "--view-controls-top",
         "--workflow-ink",
         "--workflow-type-control"
       ]
@@ -5632,7 +5635,7 @@
     {
       "path": "src/public/ownerSystemWorkflow/workbenchView.css",
       "role": "Host",
-      "sha256": "13c4a5f2e5683f6c740c7901c61003207807819f656c96fcb2027e6c6ec71e42",
+      "sha256": "29c5d7054fd24d4ee608d05b78836f8dee9a7d5bf87e663e411851d014d1d8f7",
       "definitions": [
         {
           "name": "--workbench-toolbar-clearance",
@@ -5654,21 +5657,39 @@
         },
         {
           "name": "--view-control-target",
-          "value": "44px",
+          "value": "var(--control-target-toolbar)",
+          "scope": [
+            ".workbench-view-controls"
+          ],
+          "line": 3,
+          "references": [
+            "--control-target-toolbar"
+          ]
+        },
+        {
+          "name": "--view-control-target",
+          "value": "var(--control-target-touch)",
           "scope": [
             "@media (pointer: coarse), (max-width: 520px)",
             ".workbench-view-controls"
           ],
-          "line": 9,
-          "references": []
+          "line": 13,
+          "references": [
+            "--control-target-touch"
+          ]
         }
       ],
       "references": [
+        "--control-inset",
+        "--control-radius",
+        "--control-shell-radius",
+        "--control-target-toolbar",
+        "--control-target-touch",
+        "--icon-size-interface",
         "--tactile-edge",
         "--tactile-face",
         "--tactile-ink",
         "--tactile-muted",
-        "--tactile-shadow-shell",
         "--tactile-surface",
         "--view-control-target",
         "--workbench-camera-transform",

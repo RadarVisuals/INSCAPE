@@ -2435,6 +2435,22 @@ measured camera/menu clearance. The reference owns only its demonstration
 placement and bounded popup height. Other production instruments remain on
 their existing treatment until separately migrated.
 
+### Camera styling migration (2026-10-16)
+
+The next scoped migration applies the approved flat material to the shared
+Workbench camera rail and its owner-only canvas-size popover. Owner and Visitor
+reuse the same component and existing navigation handlers. Carbon/Mist, 5 px
+controls, 9 px shells, 36/44 px targets and 1.5 px interface strokes reuse the
+foundation tokens and workflowFlat.css. The two rails align at their lower edge
+on wide screens; measured wrapping and companion-window clearance remain live.
+Groups/Index windows, the app dock and artwork resize handles retain their owners.
+
+The canvas popover uses the existing measured toolViewportBottom to bound its
+height above the rail, with native internal scrolling on short screens. This
+fixes its prior off-screen overflow without introducing another measurement
+observer, camera state, saved field or navigation implementation. Canvas resize
+and Fit remain explicit owner actions; styling does not execute those actions.
+
 ### Shared creative workspace direction (2026-10-14)
 
 The founder requested an Affinity-familiar organization in the design-system

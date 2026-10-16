@@ -1,6 +1,7 @@
 import { useWorkbenchArea } from './WorkbenchAreaContext.jsx';
 import { ArrowLeft, Scan, RotateCcw, Hand } from 'lucide-react';
 import './workflowTactile.css';
+import './workflowFlat.css';
 import useWorkbenchObjectPicker from './useWorkbenchObjectPicker.jsx';
 import WorkbenchArea from './WorkbenchArea.jsx';
 import { WorkbenchAreaProvider } from './WorkbenchAreaContext.jsx';
@@ -565,8 +566,9 @@ export function WorkbenchViewControls({ hostRef, disabled = false, dockVisible =
         aria-label={`Scale selected modules from ${corner}`} onPointerDown={event => beginResize(event, corner)}
         onKeyDown={event => resizeByKey(event, corner)} />)}
     </div>}
-    <div ref={controlsRef} className="workbench-view-controls" data-workflow-material="tactile" role="group" aria-label="Workbench zoom">
-      {showHandTool && <button className="workflow-tactile-control" type="button" disabled={locked} aria-pressed={navigation.hand} aria-label="Hand tool"
+    <div ref={controlsRef} className="workbench-view-controls" data-workflow-material="tactile" data-workflow-finish="flat"
+      style={{ '--view-controls-top': view.toolViewportBottom == null ? undefined : `${view.toolViewportBottom}px` }} role="group" aria-label="Workbench zoom">
+      {showHandTool && <button className="workflow-tactile-control workbench-view-controls__hand" type="button" disabled={locked} aria-pressed={navigation.hand} aria-label="Hand tool"
         title="Drag to explore with momentum. Click artwork to focus its module; module positions stay fixed." onClick={navigation.toggleHand}><Hand /></button>}
       <button className="workflow-tactile-control" type="button" disabled={locked || !navigation.canGoBack} aria-label="Back to previous Workbench view"
         title="Return to the view before focusing (Escape after clearing selection)" onClick={navigation.goBack}><ArrowLeft /></button>

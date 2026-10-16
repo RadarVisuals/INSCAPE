@@ -160,7 +160,7 @@ for (const theme of ['carbon', 'mist']) for (const width of [1440, 390]) {
         return { scheme: s.colorScheme, face: s.getPropertyValue('--tactile-face').trim(), radius: key.borderRadius, shellRadius: shell.borderRadius, stroke: icon.strokeWidth, vector: icon.vectorEffect };
       });
       assert.deepEqual(recipe, { scheme: theme === 'mist' ? 'light' : 'dark', face: theme === 'mist' ? '#ebece7' : '#191b1b', radius: '5px', shellRadius: '9px', stroke: '1.5px', vector: 'non-scaling-stroke' });
-      assert.equal(await page.locator('main.system-workflow [data-workflow-finish="flat"]').count(), 1, 'only the creation toolbar migrates in the real app');
+      assert.deepEqual(await page.locator('main.system-workflow [data-workflow-finish="flat"]').evaluateAll(nodes => nodes.map(node => node.className).sort()), ['workbench-toolbar', 'workbench-view-controls'], 'flat production styling is limited to the two migrated rails');
       const select = page.getByRole('button', { name: 'Select tool', exact: true });
       await select.focus(); await page.keyboard.press('ArrowRight');
       assert.equal(await page.getByRole('button', { name: 'Hand tool', exact: true }).evaluate(node => node === document.activeElement), true);
