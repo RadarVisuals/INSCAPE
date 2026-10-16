@@ -13,6 +13,4 @@
   --ds-text-body: 13px;
   --ds-target-compact: 32px;
   --ds-target-touch: 44px;
-  /* Local stacking context inside the example Workbench, below production portal menus. */
-  --ds-layer-library: 200;
 }

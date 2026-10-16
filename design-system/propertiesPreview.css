@@ -1,0 +1,412 @@
+/* Properties specimens: shell, fields, action rows and responsive states. */
+
+.ds-properties-review {
+  margin-top: 36px;
+}
+.ds-properties-stage {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  min-width: 0;
+  place-items: center;
+  padding: var(--space-6);
+  background: var(--lattice-menu-panel);
+  color: var(--lattice-menu-ink);
+  border: 1px solid var(--lattice-menu-line-strong);
+}
+.ds-flat-preview .ds-properties-window[data-window-chrome='tactile'] {
+  --tool-control-height: var(--ds-target-compact);
+  --tool-icon-target: var(--ds-target-compact);
+  --detached-window-titlebar-height: 40px;
+  --detached-window-titlebar-padding: 3px;
+  --ds-field-edge: color-mix(in srgb, var(--tactile-ink) 55%, var(--tactile-face));
+  --ds-error-ink: var(--color-destructive);
+  width: 320px;
+  max-width: 100%;
+  margin: 0;
+  border-radius: var(--ds-shell-radius);
+  font: 400 var(--ds-text-base)/1.5 var(--font-interface);
+}
+.ds-flat-preview:where([data-menu-surface='mist'])
+  .ds-properties-window[data-window-chrome='tactile'] {
+  --ds-error-ink: color-mix(in srgb, var(--color-destructive) 55%, var(--tactile-ink));
+}
+.ds-properties-window > .system-workflow__detached-window-titlebar {
+  padding: 3px;
+  min-height: 40px;
+  height: auto;
+}
+.ds-properties-window > .system-workflow__detached-window-titlebar > strong {
+  padding-left: 9px;
+  font-size: var(--ds-text-base);
+}
+.ds-properties-window .system-workflow__detached-window-controls > button {
+  border-radius: var(--ds-control-radius);
+}
+.ds-properties-window > .system-workflow__detached-window-surface {
+  padding: var(--space-2) var(--space-3) var(--space-3);
+  scrollbar-gutter: auto;
+}
+.ds-flat-preview
+  .ds-properties-window
+  :is(input:not([type='checkbox']):not([type='radio']):not([type='range']), select) {
+  border-radius: var(--ds-control-radius);
+  border-color: var(--ds-field-edge);
+  box-shadow: none;
+}
+.ds-properties-window .workflow-tactile-control {
+  border-radius: var(--ds-control-radius);
+}
+/* Native fields retain their labels, validation and keyboard/step behavior. */
+.ds-flat-preview .ds-properties-window select {
+  height: var(--tool-control-height);
+  padding: 0 10px;
+  line-height: 1.5;
+  color: var(--tactile-ink);
+  accent-color: var(--tactile-ink);
+}
+.ds-properties-window select option {
+  color: var(--tactile-ink);
+  background: var(--tactile-face);
+}
+/* Progressive enhancement: browsers without base-select retain their native picker. */
+@supports (appearance: base-select) {
+  .ds-flat-preview .ds-properties-window select,
+  .ds-flat-preview .ds-properties-window select::picker(select) {
+    appearance: base-select;
+  }
+  .ds-flat-preview .ds-properties-window select {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+  }
+  .ds-properties-window select::picker(select) {
+    padding: 3px;
+    margin-block: var(--space-1);
+    border: 1px solid var(--ds-field-edge);
+    border-radius: var(--ds-shell-radius);
+    color: var(--tactile-ink);
+    background: var(--tactile-face);
+    box-shadow: none;
+    font: inherit;
+  }
+  .ds-properties-window select::picker-icon {
+    content: '';
+    flex: 0 0 14px;
+    width: 14px;
+    height: 14px;
+    background: currentColor;
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='m6 9 6 6 6-6' fill='none' stroke='black' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")
+      center / contain no-repeat;
+  }
+  .ds-properties-window select option {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-height: var(--tool-control-height);
+    padding: 6px 10px;
+    border: 0;
+    border-radius: var(--ds-control-radius);
+    font: inherit;
+  }
+  .ds-properties-window select option:where(:hover, :focus) {
+    background: var(--tactile-hover);
+  }
+  .ds-properties-window select option:checked {
+    color: var(--tactile-face);
+    background: var(--tactile-ink);
+  }
+  .ds-properties-window select option:focus-visible {
+    outline: 1px solid currentColor;
+    outline-offset: -3px;
+  }
+  .ds-properties-window select option::checkmark {
+    order: 1;
+    margin-left: auto;
+  }
+}
+.ds-properties-window input[type='number'] {
+  font-variant-numeric: tabular-nums;
+}
+/* Refine the browser's existing stepper, preserving pointer and arrow-key stepping. */
+.ds-properties-window input[type='number']::-webkit-inner-spin-button {
+  appearance: none;
+  opacity: 1;
+  width: 20px;
+  height: 24px;
+  cursor: pointer;
+  background: var(--tactile-muted);
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 24'%3E%3Cpath d='m5 8 3-3 3 3m-6 8 3 3 3-3' fill='none' stroke='black' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")
+    center / 16px 24px no-repeat;
+}
+@media (forced-colors: active) {
+  .ds-properties-window select option:checked {
+    color: HighlightText;
+    background: Highlight;
+    forced-color-adjust: none;
+  }
+  .ds-properties-window select::picker-icon,
+  .ds-properties-window input[type='number']::-webkit-inner-spin-button {
+    background: ButtonText;
+    forced-color-adjust: none;
+  }
+}
+.ds-properties-frame {
+  width: 320px;
+  max-width: 100%;
+  min-width: 0;
+}
+.ds-properties-frame[hidden] {
+  display: none;
+}
+.ds-properties-switcher {
+  display: flex;
+  gap: var(--space-3);
+  align-items: end;
+  flex-wrap: wrap;
+  margin: var(--space-4) 0;
+}
+.ds-properties-switcher label {
+  min-width: 0;
+  flex: 1 1 180px;
+  display: grid;
+  gap: 6px;
+  color: var(--color-text-secondary);
+  font-family: var(--font-technical);
+}
+.ds-properties-switcher select {
+  width: 100%;
+  min-height: 40px;
+  padding: var(--space-2);
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-subtle);
+}
+.ds-properties-feedback {
+  margin: var(--space-3) 0;
+  color: var(--color-text-secondary);
+  font: var(--ds-text-base)/1.5 var(--font-technical);
+}
+.ds-properties-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-5);
+}
+.ds-properties-window .system-workflow__selection-actions {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: var(--space-1);
+  margin: 0 0 var(--space-3);
+}
+.ds-properties-window .system-workflow__selection-actions--six {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+.ds-properties-window .system-workflow__selection-actions > button {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  min-height: 40px;
+  padding: var(--space-1);
+}
+.ds-flat-preview .ds-properties-window .system-workflow__selection-actions > button {
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+}
+@media (hover: hover) {
+  .ds-flat-preview
+    .ds-properties-window
+    .system-workflow__selection-actions
+    > button:where(:not(:disabled):hover) {
+    background: var(--tactile-hover);
+  }
+}
+.ds-flat-preview
+  .ds-properties-window
+  .system-workflow__selection-actions
+  > button:where(:not(:disabled):active) {
+  background: var(--tactile-well);
+}
+.ds-properties-window .system-workflow__selection-actions svg {
+  width: var(--ds-icon-size);
+  height: var(--ds-icon-size);
+}
+.ds-properties-window .system-workflow__inspection-selector {
+  margin-block: var(--space-2);
+}
+.ds-properties-window .ds-fit-choices {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.ds-properties-window .system-workflow__inspection-selector > span {
+  padding-left: 0;
+  color: var(--tactile-muted);
+}
+.ds-properties-window .system-workflow__inspection-selector > button {
+  min-height: var(--tool-control-height);
+  font: inherit;
+}
+.ds-flat-preview .ds-properties-window button[aria-pressed='true'] {
+  background: var(--tactile-ink);
+  color: var(--tactile-face);
+  border-color: transparent;
+}
+/* A solid selected choice is complete on its own; the toolbar panel marker stays scoped to the toolbar. */
+.ds-flat-preview .ds-properties-window button[aria-pressed='true']::after {
+  display: none;
+}
+.ds-flat-preview .ds-properties-window button[aria-pressed='true']:disabled {
+  color: var(--tactile-disabled);
+  background: transparent;
+  border-color: var(--tactile-edge);
+}
+.ds-properties-window details {
+  margin-block: var(--space-2);
+  border-top: 1px solid var(--tactile-edge);
+}
+.ds-properties-window summary {
+  min-height: var(--tool-control-height);
+}
+.ds-properties-window .image-module__size {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: end;
+}
+.ds-properties-window .image-module__size > button {
+  grid-column: 1 / -1;
+}
+.ds-properties-window .image-module__side-tools {
+  grid-template-columns: minmax(0, 1fr) var(--tool-control-height);
+  align-items: end;
+}
+.ds-properties-window .image-module__side-tools > button {
+  display: grid;
+  place-items: center;
+  min-width: var(--tool-control-height);
+  height: var(--tool-control-height);
+  padding: 0;
+}
+.ds-properties-window :is(.image-module__size, .image-module__side-tools) label {
+  display: grid;
+  gap: var(--space-1);
+  font: inherit;
+}
+.ds-properties-window :is(.image-module__size, .image-module__side-tools) input,
+.ds-properties-window .image-module__side-tools select {
+  font: inherit;
+}
+.ds-properties-window .image-module__publication,
+.ds-properties-window .shape-check {
+  min-height: var(--tool-control-height);
+  font: inherit;
+  gap: var(--space-2);
+}
+.ds-properties-window :is(.image-module__publication, .shape-check) input {
+  flex: 0 0 auto;
+}
+.ds-properties-window .shape-tools {
+  gap: 10px;
+}
+.ds-properties-window .shape-tools label {
+  gap: 5px;
+}
+.ds-properties-window .shape-tools :is(input, select, button) {
+  font: inherit;
+}
+.ds-properties-window .shape-tools-row {
+  gap: var(--space-2);
+}
+.ds-properties-window input[type='range'] {
+  min-height: var(--tool-control-height);
+}
+.ds-properties-window .shape-tools .module-grain-control {
+  grid-template-columns: minmax(min-content, 1fr) minmax(48px, 96px) 4ch;
+  align-items: center;
+  gap: 0 var(--space-2);
+}
+.ds-properties-window .module-grain-control input[type='range'] {
+  grid-area: 1 / 2;
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+}
+.ds-properties-window .module-grain-control input[type='range']::-webkit-slider-runnable-track {
+  background: var(--ds-field-edge);
+}
+.ds-properties-window .module-grain-control input[type='range']::-moz-range-track {
+  background: var(--ds-field-edge);
+}
+.ds-properties-window .module-grain-control output {
+  grid-area: 1 / 3;
+  text-align: right;
+  color: var(--tactile-muted);
+  font-variant-numeric: tabular-nums;
+}
+.ds-properties-window .system-workflow__crop-controls {
+  display: grid;
+  gap: var(--space-3);
+}
+.ds-properties-window .system-workflow__crop-controls > div {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+.ds-properties-window .system-workflow__crop-controls footer {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.ds-properties-window .system-workflow__crop-controls footer > button {
+  flex: 1 0 auto;
+  white-space: nowrap;
+}
+.ds-properties-window .system-workflow__placement-actions {
+  display: grid;
+  gap: 6px;
+}
+.ds-properties-window .system-workflow__layer-controls {
+  gap: 10px;
+}
+.ds-properties-window :is(.system-workflow__layer-hint, .system-workflow__placement-size) {
+  font: inherit;
+}
+.ds-properties-window .system-workflow__placement-size {
+  padding: var(--space-2) 0;
+  border: 0;
+}
+.ds-properties-window [role='alert'] {
+  color: var(--ds-error-ink);
+}
+@media (max-width: 520px), (pointer: coarse) {
+  .ds-properties-window .system-workflow__selection-actions {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .ds-properties-window .system-workflow__selection-actions > button {
+    min-height: var(--ds-target-touch);
+  }
+  .ds-properties-switcher :is(select, button) {
+    min-height: var(--ds-target-touch);
+  }
+}
+@media (forced-colors: active) {
+  .ds-flat-preview .ds-properties-window button[aria-pressed='true'] {
+    color: HighlightText;
+    background: Highlight;
+    forced-color-adjust: none;
+  }
+}
+@media (max-width: 520px), (pointer: coarse) {
+  .ds-flat-preview .ds-properties-window[data-window-chrome='tactile'] {
+    --tool-control-height: var(--ds-target-touch);
+    --tool-icon-target: var(--ds-target-touch);
+    --detached-window-titlebar-height: 52px;
+  }
+}
+@media (max-width: 520px) {
+  .ds-properties-stage {
+    padding: var(--space-4);
+  }
+}
+@media (forced-colors: active) {
+  .ds-properties-window {
+    --ds-field-edge: ButtonText !important;
+    --ds-error-ink: CanvasText !important;
+  }
+}

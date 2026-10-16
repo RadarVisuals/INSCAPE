@@ -4,9 +4,9 @@
   "systemVersion": "1.0.0",
   "note": "Generated from production and design-system reference CSS. Reference roles are preview-only. Values remain CSS expressions, with selector and media scopes; this is not a DTCG interchange file. Runtime custom properties and local overrides are included and are not automatically public design tokens.",
   "counts": {
-    "files": 64,
-    "definitions": 563,
-    "names": 288
+    "files": 67,
+    "definitions": 562,
+    "names": 287
   },
   "sources": [
     {
@@ -22,6 +22,29 @@
         "--space-3",
         "--tactile-ink",
         "--tool-control-height"
+      ]
+    },
+    {
+      "path": "design-system/controlStates.css",
+      "role": "Reference local",
+      "sha256": "3c6ae390d0b477ab07e2bb9c339408e32eab9d14aefafff7afb9e88e21145e3e",
+      "definitions": [],
+      "references": [
+        "--ds-shell-radius",
+        "--ds-target-touch",
+        "--ds-text-base",
+        "--font-technical",
+        "--space-2",
+        "--space-4",
+        "--space-5",
+        "--space-6",
+        "--tactile-accent",
+        "--tactile-edge",
+        "--tactile-face",
+        "--tactile-hover",
+        "--tactile-ink",
+        "--tactile-muted",
+        "--tactile-well"
       ]
     },
     {
@@ -51,7 +74,7 @@
     {
       "path": "design-system/libraryPreview.css",
       "role": "Reference local",
-      "sha256": "7a50583d409122e158bf12bc788e8a2d207716454ca3c7e24f7dfa89c3d12633",
+      "sha256": "f5a428caa8ba0dd4520346546b3e58ad9bd570e72e5b7cab868b4493b61a4bdc",
       "definitions": [
         {
           "name": "--workflow-panel",
@@ -59,7 +82,7 @@
           "scope": [
             ":is(.ds-library-preview, .ds-library-navigation)"
           ],
-          "line": 23,
+          "line": 25,
           "references": [
             "--tactile-face"
           ]
@@ -70,7 +93,7 @@
           "scope": [
             ":is(.ds-library-preview, .ds-library-navigation)"
           ],
-          "line": 24,
+          "line": 26,
           "references": [
             "--tactile-well"
           ]
@@ -81,7 +104,7 @@
           "scope": [
             ":is(.ds-library-preview, .ds-library-navigation)"
           ],
-          "line": 25,
+          "line": 27,
           "references": [
             "--tactile-ink"
           ]
@@ -92,7 +115,7 @@
           "scope": [
             ":is(.ds-library-preview, .ds-library-navigation)"
           ],
-          "line": 26,
+          "line": 28,
           "references": [
             "--tactile-muted"
           ]
@@ -103,7 +126,7 @@
           "scope": [
             ":is(.ds-library-preview, .ds-library-navigation)"
           ],
-          "line": 27,
+          "line": 29,
           "references": [
             "--tactile-muted"
           ]
@@ -114,7 +137,7 @@
           "scope": [
             ":is(.ds-library-preview, .ds-library-navigation)"
           ],
-          "line": 28,
+          "line": 30,
           "references": [
             "--tactile-edge"
           ]
@@ -125,7 +148,7 @@
           "scope": [
             ":is(.ds-library-preview, .ds-library-navigation)"
           ],
-          "line": 29,
+          "line": 31,
           "references": [
             "--tactile-edge"
           ]
@@ -136,7 +159,7 @@
           "scope": [
             ":is(.ds-library-preview, .ds-library-navigation)"
           ],
-          "line": 30,
+          "line": 32,
           "references": [
             "--tactile-hover"
           ]
@@ -147,7 +170,7 @@
           "scope": [
             ":is(.ds-library-preview, .ds-library-navigation)"
           ],
-          "line": 31,
+          "line": 33,
           "references": [
             "--tactile-hover"
           ]
@@ -158,7 +181,7 @@
           "scope": [
             ":is(.ds-library-preview, .ds-library-navigation)"
           ],
-          "line": 32,
+          "line": 34,
           "references": []
         },
         {
@@ -167,39 +190,42 @@
           "scope": [
             ":is(.ds-library-preview, .ds-library-navigation)"
           ],
-          "line": 33,
+          "line": 35,
           "references": []
         },
         {
           "name": "--workflow-type-sidebar",
-          "value": "11px/1.4 var(--font-interface)",
-          "scope": [
-            ":is(.ds-library-preview, .ds-library-navigation)"
-          ],
-          "line": 34,
-          "references": [
-            "--font-interface"
-          ]
-        },
-        {
-          "name": "--workflow-type-browser-rail",
-          "value": "11px/1.4 var(--font-interface)",
-          "scope": [
-            ":is(.ds-library-preview, .ds-library-navigation)"
-          ],
-          "line": 35,
-          "references": [
-            "--font-interface"
-          ]
-        },
-        {
-          "name": "--workflow-type-micro",
-          "value": "11px/1.4 var(--font-technical)",
+          "value": "var(--ds-text-small)/1.4 var(--font-interface)",
           "scope": [
             ":is(.ds-library-preview, .ds-library-navigation)"
           ],
           "line": 36,
           "references": [
+            "--ds-text-small",
+            "--font-interface"
+          ]
+        },
+        {
+          "name": "--workflow-type-browser-rail",
+          "value": "var(--ds-text-small)/1.4 var(--font-interface)",
+          "scope": [
+            ":is(.ds-library-preview, .ds-library-navigation)"
+          ],
+          "line": 37,
+          "references": [
+            "--ds-text-small",
+            "--font-interface"
+          ]
+        },
+        {
+          "name": "--workflow-type-micro",
+          "value": "var(--ds-text-small)/1.4 var(--font-technical)",
+          "scope": [
+            ":is(.ds-library-preview, .ds-library-navigation)"
+          ],
+          "line": 38,
+          "references": [
+            "--ds-text-small",
             "--font-technical"
           ]
         },
@@ -209,7 +235,7 @@
           "scope": [
             ":is(.ds-library-preview, .ds-library-navigation)"
           ],
-          "line": 37,
+          "line": 39,
           "references": [
             "--tactile-ink"
           ]
@@ -220,7 +246,7 @@
           "scope": [
             ":is(.ds-library-preview, .ds-library-navigation)"
           ],
-          "line": 38,
+          "line": 40,
           "references": [
             "--tactile-face"
           ]
@@ -231,7 +257,7 @@
           "scope": [
             ":is(.ds-library-preview, .ds-library-navigation)"
           ],
-          "line": 39,
+          "line": 41,
           "references": [
             "--tactile-ink"
           ]
@@ -242,7 +268,7 @@
           "scope": [
             ":is(.ds-library-preview, .ds-library-navigation)"
           ],
-          "line": 40,
+          "line": 42,
           "references": [
             "--tactile-muted"
           ]
@@ -253,7 +279,7 @@
           "scope": [
             ":is(.ds-library-preview, .ds-library-navigation)"
           ],
-          "line": 41,
+          "line": 43,
           "references": [
             "--tactile-muted"
           ]
@@ -264,7 +290,7 @@
           "scope": [
             ":is(.ds-library-preview, .ds-library-navigation)"
           ],
-          "line": 42,
+          "line": 44,
           "references": [
             "--tactile-edge"
           ]
@@ -275,7 +301,7 @@
           "scope": [
             ":is(.ds-library-preview, .ds-library-navigation)"
           ],
-          "line": 43,
+          "line": 45,
           "references": [
             "--tactile-edge"
           ]
@@ -286,7 +312,7 @@
           "scope": [
             ":is(.ds-library-preview, .ds-library-navigation)"
           ],
-          "line": 44,
+          "line": 46,
           "references": [
             "--tactile-ink"
           ]
@@ -297,7 +323,7 @@
           "scope": [
             ":is(.ds-library-preview, .ds-library-navigation)"
           ],
-          "line": 45,
+          "line": 47,
           "references": [
             "--tactile-face"
           ]
@@ -308,7 +334,7 @@
           "scope": [
             ":is(.ds-library-preview, .ds-library-navigation)"
           ],
-          "line": 46,
+          "line": 48,
           "references": [
             "--tactile-face"
           ]
@@ -319,7 +345,7 @@
           "scope": [
             ":is(.ds-library-preview, .ds-library-navigation)"
           ],
-          "line": 47,
+          "line": 49,
           "references": []
         },
         {
@@ -328,7 +354,7 @@
           "scope": [
             ":is(.ds-library-preview, .ds-library-navigation)"
           ],
-          "line": 48,
+          "line": 50,
           "references": [
             "--tactile-hover"
           ]
@@ -339,7 +365,7 @@
           "scope": [
             ":is(.ds-library-preview, .ds-library-navigation)"
           ],
-          "line": 49,
+          "line": 51,
           "references": [
             "--tactile-hover"
           ]
@@ -350,21 +376,20 @@
           "scope": [
             ":is(.ds-library-preview, .ds-library-navigation)"
           ],
-          "line": 50,
+          "line": 52,
           "references": []
         }
       ],
       "references": [
         "--ds-control-radius",
-        "--ds-layer-library",
         "--ds-shell-radius",
+        "--ds-target-compact",
         "--ds-target-touch",
         "--ds-text-base",
         "--ds-text-small",
         "--font-interface",
         "--font-technical",
         "--lattice-browser-asset-min",
-        "--lattice-browser-sidebar-width",
         "--space-1",
         "--space-2",
         "--tactile-edge",
@@ -378,7 +403,7 @@
     {
       "path": "design-system/navigationPreview.css",
       "role": "Reference local",
-      "sha256": "8fc3fa13b5f291cc57e7a916c6d8818b3794095e10d5cdb21e1da46810b01cbf",
+      "sha256": "b7b036fee8f84e110462292fca96b76a5b41c14a2890cd57a892e70b91ad4d8a",
       "definitions": [
         {
           "name": "--ds-navigation-width",
@@ -405,6 +430,7 @@
         "--ds-icon-size",
         "--ds-navigation-width",
         "--ds-shell-radius",
+        "--ds-target-compact",
         "--ds-target-touch",
         "--ds-text-base",
         "--ds-text-micro",
@@ -424,172 +450,17 @@
       ]
     },
     {
-      "path": "design-system/reference.css",
+      "path": "design-system/propertiesPreview.css",
       "role": "Reference local",
-      "sha256": "0a5f472cfe306049a01993873092c674bdffc03774badca31e149879112d889d",
+      "sha256": "2dabf071294f6d4ac7fec3ceae3486f25959f7a92499eeaa23c23252c6af930f",
       "definitions": [
-        {
-          "name": "--color-focus",
-          "value": "var(--color-text-primary)",
-          "scope": [
-            ".ds-reference,\n.ds-source-page"
-          ],
-          "line": 86,
-          "references": [
-            "--color-text-primary"
-          ]
-        },
-        {
-          "name": "--toolbar-target",
-          "value": "36px",
-          "scope": [
-            ".ds-flat-preview .workbench-toolbar"
-          ],
-          "line": 271,
-          "references": []
-        },
-        {
-          "name": "--toolbar-height",
-          "value": "44px",
-          "scope": [
-            ".ds-flat-preview .workbench-toolbar"
-          ],
-          "line": 272,
-          "references": []
-        },
-        {
-          "name": "--toolbar-column-gap",
-          "value": "2px",
-          "scope": [
-            ".ds-flat-preview .workbench-toolbar"
-          ],
-          "line": 273,
-          "references": []
-        },
-        {
-          "name": "--toolbar-padding-block",
-          "value": "var(--ds-control-inset)",
-          "scope": [
-            ".ds-flat-preview .workbench-toolbar"
-          ],
-          "line": 274,
-          "references": [
-            "--ds-control-inset"
-          ]
-        },
-        {
-          "name": "--toolbar-padding-inline",
-          "value": "var(--ds-control-inset)",
-          "scope": [
-            ".ds-flat-preview .workbench-toolbar"
-          ],
-          "line": 275,
-          "references": [
-            "--ds-control-inset"
-          ]
-        },
-        {
-          "name": "--toolbar-key-radius",
-          "value": "var(--ds-control-radius)",
-          "scope": [
-            ".ds-flat-preview .workbench-toolbar"
-          ],
-          "line": 276,
-          "references": [
-            "--ds-control-radius"
-          ]
-        },
-        {
-          "name": "--toolbar-radius",
-          "value": "var(--ds-shell-radius)",
-          "scope": [
-            ".ds-flat-preview .workbench-toolbar"
-          ],
-          "line": 278,
-          "references": [
-            "--ds-shell-radius"
-          ]
-        },
-        {
-          "name": "--toolbar-popup-radius",
-          "value": "var(--toolbar-radius)",
-          "scope": [
-            ".ds-flat-preview .workbench-toolbar"
-          ],
-          "line": 279,
-          "references": [
-            "--toolbar-radius"
-          ]
-        },
-        {
-          "name": "--toolbar-popup-border",
-          "value": "1px",
-          "scope": [
-            ".ds-flat-preview .workbench-toolbar"
-          ],
-          "line": 281,
-          "references": []
-        },
-        {
-          "name": "--toolbar-popup-padding-block",
-          "value": "calc(var(--toolbar-padding-block) - var(--toolbar-popup-border))",
-          "scope": [
-            ".ds-flat-preview .workbench-toolbar"
-          ],
-          "line": 282,
-          "references": [
-            "--toolbar-padding-block",
-            "--toolbar-popup-border"
-          ]
-        },
-        {
-          "name": "--toolbar-popup-padding-inline",
-          "value": "calc(var(--toolbar-padding-inline) - var(--toolbar-popup-border))",
-          "scope": [
-            ".ds-flat-preview .workbench-toolbar"
-          ],
-          "line": 283,
-          "references": [
-            "--toolbar-padding-inline",
-            "--toolbar-popup-border"
-          ]
-        },
-        {
-          "name": "--tactile-radius-row",
-          "value": "var(--toolbar-key-radius)",
-          "scope": [
-            ".ds-flat-preview .workbench-toolbar"
-          ],
-          "line": 284,
-          "references": [
-            "--toolbar-key-radius"
-          ]
-        },
-        {
-          "name": "--toolbar-row-gap",
-          "value": "4px",
-          "scope": [
-            ".ds-flat-preview .workbench-toolbar"
-          ],
-          "line": 285,
-          "references": []
-        },
-        {
-          "name": "--lattice-menu-muted",
-          "value": "rgb(17 19 19 / 66%)",
-          "scope": [
-            ".ds-reference [data-lattice-menu-surface][data-menu-surface='mist']"
-          ],
-          "line": 552,
-          "references": []
-        },
         {
           "name": "--tool-control-height",
           "value": "var(--ds-target-compact)",
           "scope": [
             ".ds-flat-preview .ds-properties-window[data-window-chrome='tactile']"
           ],
-          "line": 1056,
+          "line": 17,
           "references": [
             "--ds-target-compact"
           ]
@@ -600,7 +471,7 @@
           "scope": [
             ".ds-flat-preview .ds-properties-window[data-window-chrome='tactile']"
           ],
-          "line": 1057,
+          "line": 18,
           "references": [
             "--ds-target-compact"
           ]
@@ -611,7 +482,7 @@
           "scope": [
             ".ds-flat-preview .ds-properties-window[data-window-chrome='tactile']"
           ],
-          "line": 1058,
+          "line": 19,
           "references": []
         },
         {
@@ -620,7 +491,7 @@
           "scope": [
             ".ds-flat-preview .ds-properties-window[data-window-chrome='tactile']"
           ],
-          "line": 1059,
+          "line": 20,
           "references": []
         },
         {
@@ -629,7 +500,7 @@
           "scope": [
             ".ds-flat-preview .ds-properties-window[data-window-chrome='tactile']"
           ],
-          "line": 1060,
+          "line": 21,
           "references": [
             "--tactile-ink",
             "--tactile-face"
@@ -641,7 +512,7 @@
           "scope": [
             ".ds-flat-preview .ds-properties-window[data-window-chrome='tactile']"
           ],
-          "line": 1061,
+          "line": 22,
           "references": [
             "--color-destructive"
           ]
@@ -652,7 +523,7 @@
           "scope": [
             ".ds-flat-preview:where([data-menu-surface='mist'])\n  .ds-properties-window[data-window-chrome='tactile']"
           ],
-          "line": 1070,
+          "line": 31,
           "references": [
             "--color-destructive",
             "--tactile-ink"
@@ -665,7 +536,7 @@
             "@media (max-width: 520px), (pointer: coarse)",
             ".ds-flat-preview .ds-properties-window[data-window-chrome='tactile']"
           ],
-          "line": 1518,
+          "line": 397,
           "references": [
             "--ds-target-touch"
           ]
@@ -677,7 +548,7 @@
             "@media (max-width: 520px), (pointer: coarse)",
             ".ds-flat-preview .ds-properties-window[data-window-chrome='tactile']"
           ],
-          "line": 1519,
+          "line": 398,
           "references": [
             "--ds-target-touch"
           ]
@@ -689,7 +560,7 @@
             "@media (max-width: 520px), (pointer: coarse)",
             ".ds-flat-preview .ds-properties-window[data-window-chrome='tactile']"
           ],
-          "line": 1520,
+          "line": 399,
           "references": []
         },
         {
@@ -699,7 +570,7 @@
             "@media (forced-colors: active)",
             ".ds-properties-window"
           ],
-          "line": 1539,
+          "line": 409,
           "references": []
         },
         {
@@ -709,27 +580,68 @@
             "@media (forced-colors: active)",
             ".ds-properties-window"
           ],
-          "line": 1540,
+          "line": 410,
           "references": []
+        }
+      ],
+      "references": [
+        "--color-border",
+        "--color-destructive",
+        "--color-surface-subtle",
+        "--color-text-primary",
+        "--color-text-secondary",
+        "--ds-control-radius",
+        "--ds-error-ink",
+        "--ds-field-edge",
+        "--ds-icon-size",
+        "--ds-shell-radius",
+        "--ds-target-compact",
+        "--ds-target-touch",
+        "--ds-text-base",
+        "--font-interface",
+        "--font-technical",
+        "--lattice-menu-ink",
+        "--lattice-menu-line-strong",
+        "--lattice-menu-panel",
+        "--space-1",
+        "--space-2",
+        "--space-3",
+        "--space-4",
+        "--space-5",
+        "--space-6",
+        "--tactile-disabled",
+        "--tactile-edge",
+        "--tactile-face",
+        "--tactile-hover",
+        "--tactile-ink",
+        "--tactile-muted",
+        "--tactile-well",
+        "--tool-control-height"
+      ]
+    },
+    {
+      "path": "design-system/reference.css",
+      "role": "Reference local",
+      "sha256": "d64222576d788a960ba092c9110da42627bcd85a6c30bfee61b636cfdc4cdcf4",
+      "definitions": [
+        {
+          "name": "--color-focus",
+          "value": "var(--color-text-primary)",
+          "scope": [
+            ".ds-reference,\n.ds-source-page"
+          ],
+          "line": 87,
+          "references": [
+            "--color-text-primary"
+          ]
         },
         {
-          "name": "--toolbar-target",
-          "value": "44px",
+          "name": "--lattice-menu-muted",
+          "value": "rgb(17 19 19 / 66%)",
           "scope": [
-            "@media (max-width: 520px)",
-            ".ds-flat-preview .workbench-toolbar"
+            ".ds-reference [data-lattice-menu-surface][data-menu-surface='mist']"
           ],
-          "line": 1627,
-          "references": []
-        },
-        {
-          "name": "--toolbar-target",
-          "value": "44px",
-          "scope": [
-            "@media (pointer: coarse)",
-            ".ds-flat-preview .workbench-toolbar"
-          ],
-          "line": 1711,
+          "line": 393,
           "references": []
         },
         {
@@ -739,7 +651,7 @@
             "@media (forced-colors: active)",
             ".ds-reference"
           ],
-          "line": 1716,
+          "line": 1013,
           "references": []
         }
       ],
@@ -747,7 +659,6 @@
         "--color-border",
         "--color-border-strong",
         "--color-border-subtle",
-        "--color-destructive",
         "--color-focus",
         "--color-hover",
         "--color-selected",
@@ -762,10 +673,7 @@
         "--color-world",
         "--ds-control-inset",
         "--ds-control-radius",
-        "--ds-error-ink",
-        "--ds-field-edge",
         "--ds-shell-radius",
-        "--ds-target-compact",
         "--ds-target-touch",
         "--ds-text-base",
         "--ds-text-body",
@@ -782,25 +690,10 @@
         "--space-4",
         "--space-5",
         "--space-6",
-        "--tactile-accent",
-        "--tactile-disabled",
-        "--tactile-edge",
         "--tactile-face",
-        "--tactile-hover",
         "--tactile-ink",
         "--tactile-muted",
-        "--tactile-well",
         "--tool-action-target",
-        "--tool-control-height",
-        "--toolbar-key-radius",
-        "--toolbar-padding-block",
-        "--toolbar-padding-inline",
-        "--toolbar-popup-border",
-        "--toolbar-popup-padding-block",
-        "--toolbar-popup-padding-inline",
-        "--toolbar-popup-radius",
-        "--toolbar-radius",
-        "--toolbar-target",
         "--workflow-ink",
         "--workflow-type-body",
         "--workflow-type-display",
@@ -1109,7 +1002,7 @@
     {
       "path": "design-system/referenceTokens.css",
       "role": "Reference",
-      "sha256": "bf7aee9e37b779712d72981cdf7e79fe42f6b9c4173149c59bcb849931044366",
+      "sha256": "37c661fce2a8089b2502a94ddc8877b3e0693569c01140c8059bd451e493280e",
       "definitions": [
         {
           "name": "--ds-control-radius",
@@ -1214,15 +1107,6 @@
           ],
           "line": 15,
           "references": []
-        },
-        {
-          "name": "--ds-layer-library",
-          "value": "200",
-          "scope": [
-            ":root"
-          ],
-          "line": 17,
-          "references": []
         }
       ],
       "references": [
@@ -1234,7 +1118,7 @@
     {
       "path": "design-system/textPreview.css",
       "role": "Reference local",
-      "sha256": "9d6c52c13a4aac38468fa96cefe5d2006c71a30973dbd23e4b193fe89d9f96a0",
+      "sha256": "6cf83683f05166df8298dd17124fdd4206f346f930b4d566e936f2179a10616f",
       "definitions": [
         {
           "name": "--workflow-panel",
@@ -1330,6 +1214,7 @@
       ],
       "references": [
         "--ds-control-radius",
+        "--ds-target-compact",
         "--ds-target-touch",
         "--ds-text-small",
         "--font-interface",
@@ -1345,9 +1230,196 @@
       ]
     },
     {
+      "path": "design-system/toolbarPreview.css",
+      "role": "Reference local",
+      "sha256": "2ec11e6ad0e7c1845f046fe0d325f78599082f84b655ea2d6ff87d1b87a61a82",
+      "definitions": [
+        {
+          "name": "--toolbar-target",
+          "value": "36px",
+          "scope": [
+            ".ds-flat-preview .workbench-toolbar"
+          ],
+          "line": 4,
+          "references": []
+        },
+        {
+          "name": "--toolbar-height",
+          "value": "44px",
+          "scope": [
+            ".ds-flat-preview .workbench-toolbar"
+          ],
+          "line": 5,
+          "references": []
+        },
+        {
+          "name": "--toolbar-column-gap",
+          "value": "2px",
+          "scope": [
+            ".ds-flat-preview .workbench-toolbar"
+          ],
+          "line": 6,
+          "references": []
+        },
+        {
+          "name": "--toolbar-padding-block",
+          "value": "var(--ds-control-inset)",
+          "scope": [
+            ".ds-flat-preview .workbench-toolbar"
+          ],
+          "line": 7,
+          "references": [
+            "--ds-control-inset"
+          ]
+        },
+        {
+          "name": "--toolbar-padding-inline",
+          "value": "var(--ds-control-inset)",
+          "scope": [
+            ".ds-flat-preview .workbench-toolbar"
+          ],
+          "line": 8,
+          "references": [
+            "--ds-control-inset"
+          ]
+        },
+        {
+          "name": "--toolbar-key-radius",
+          "value": "var(--ds-control-radius)",
+          "scope": [
+            ".ds-flat-preview .workbench-toolbar"
+          ],
+          "line": 9,
+          "references": [
+            "--ds-control-radius"
+          ]
+        },
+        {
+          "name": "--toolbar-radius",
+          "value": "var(--ds-shell-radius)",
+          "scope": [
+            ".ds-flat-preview .workbench-toolbar"
+          ],
+          "line": 11,
+          "references": [
+            "--ds-shell-radius"
+          ]
+        },
+        {
+          "name": "--toolbar-popup-radius",
+          "value": "var(--toolbar-radius)",
+          "scope": [
+            ".ds-flat-preview .workbench-toolbar"
+          ],
+          "line": 12,
+          "references": [
+            "--toolbar-radius"
+          ]
+        },
+        {
+          "name": "--toolbar-popup-border",
+          "value": "1px",
+          "scope": [
+            ".ds-flat-preview .workbench-toolbar"
+          ],
+          "line": 14,
+          "references": []
+        },
+        {
+          "name": "--toolbar-popup-padding-block",
+          "value": "calc(var(--toolbar-padding-block) - var(--toolbar-popup-border))",
+          "scope": [
+            ".ds-flat-preview .workbench-toolbar"
+          ],
+          "line": 15,
+          "references": [
+            "--toolbar-padding-block",
+            "--toolbar-popup-border"
+          ]
+        },
+        {
+          "name": "--toolbar-popup-padding-inline",
+          "value": "calc(var(--toolbar-padding-inline) - var(--toolbar-popup-border))",
+          "scope": [
+            ".ds-flat-preview .workbench-toolbar"
+          ],
+          "line": 16,
+          "references": [
+            "--toolbar-padding-inline",
+            "--toolbar-popup-border"
+          ]
+        },
+        {
+          "name": "--tactile-radius-row",
+          "value": "var(--toolbar-key-radius)",
+          "scope": [
+            ".ds-flat-preview .workbench-toolbar"
+          ],
+          "line": 17,
+          "references": [
+            "--toolbar-key-radius"
+          ]
+        },
+        {
+          "name": "--toolbar-row-gap",
+          "value": "4px",
+          "scope": [
+            ".ds-flat-preview .workbench-toolbar"
+          ],
+          "line": 18,
+          "references": []
+        },
+        {
+          "name": "--toolbar-target",
+          "value": "var(--ds-target-touch)",
+          "scope": [
+            "@media (max-width: 520px)",
+            ".ds-flat-preview .workbench-toolbar"
+          ],
+          "line": 169,
+          "references": [
+            "--ds-target-touch"
+          ]
+        },
+        {
+          "name": "--toolbar-target",
+          "value": "var(--ds-target-touch)",
+          "scope": [
+            "@media (pointer: coarse)",
+            ".ds-flat-preview .workbench-toolbar"
+          ],
+          "line": 193,
+          "references": [
+            "--ds-target-touch"
+          ]
+        }
+      ],
+      "references": [
+        "--ds-control-inset",
+        "--ds-control-radius",
+        "--ds-shell-radius",
+        "--ds-target-touch",
+        "--ds-text-base",
+        "--space-3",
+        "--tactile-edge",
+        "--tactile-face",
+        "--tactile-ink",
+        "--tactile-muted",
+        "--toolbar-key-radius",
+        "--toolbar-padding-block",
+        "--toolbar-padding-inline",
+        "--toolbar-popup-border",
+        "--toolbar-popup-padding-block",
+        "--toolbar-popup-padding-inline",
+        "--toolbar-popup-radius",
+        "--toolbar-radius",
+        "--toolbar-target"
+      ]
+    },
+    {
       "path": "design-system/workspacePreview.css",
       "role": "Reference local",
-      "sha256": "c01b40e4132541b17d1b4d107c3326ba73d771bd1bf2b7bcaf57b3e484ebceff",
+      "sha256": "1773f886d8710a379928be44eb935c9dbf3b7af42a0a56fd4ea5a6285c84ab87",
       "definitions": [
         {
           "name": "--tool-control-height",

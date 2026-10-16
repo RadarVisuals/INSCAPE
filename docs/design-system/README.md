@@ -95,7 +95,12 @@ The reference does not own authored geometry, cropping, asset sources, article c
 The reference uses React JavaScript and ordinary CSS. It introduces no Tailwind
 or TypeScript migration. Shared preview values are in `referenceTokens.css`;
 `referenceMaterial.css` adapts the existing control recipes to the agreed flat
-material. The token inventory includes production and reference CSS separately.
+material. `reference.css` owns the reference page and documentation layout;
+`toolbarPreview.css`, `propertiesPreview.css` and `controlStates.css` own their
+component recipes, including responsive and forced-colour rules. The Library
+column geometry belongs to `libraryPreview.css`; navigation owns its surrounding
+workspace grid. Existing tokens supply repeated interface sizes without changing
+authored example geometry. The token inventory includes production and reference CSS separately.
 Portal menus and focus writing inherit the reference tokens from this entry
 point, so their corners cannot drift away from the toolbar's 5/9 px relationship.
 

@@ -160,7 +160,7 @@
   .workflow-tactile-control {
   display: grid;
   place-items: center;
-  height: 32px;
+  height: var(--ds-target-compact);
   min-width: 30px;
   padding: var(--space-1) 6px;
   border-color: transparent;
@@ -306,7 +306,7 @@
 .ds-studio-panel .workflow-tactile-control,
 .ds-studio-utilities .workflow-tactile-control {
   padding: 6px var(--space-2);
-  min-height: 32px;
+  min-height: var(--ds-target-compact);
   border-radius: var(--ds-control-radius);
 }
 .ds-studio-field-row {

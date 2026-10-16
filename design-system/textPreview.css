@@ -149,7 +149,7 @@
   margin-block: 0;
 }
 .ds-studio .ds-text-tools summary {
-  min-height: 32px;
+  min-height: var(--ds-target-compact);
   padding-block: 7px;
 }
 @media (max-width: 520px), (pointer: coarse) {

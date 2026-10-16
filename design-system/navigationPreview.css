@@ -151,8 +151,8 @@
 .ds-navigation-utilities button {
   display: grid;
   place-items: center;
-  width: 32px;
-  height: 32px;
+  width: var(--ds-target-compact);
+  height: var(--ds-target-compact);
   border: 0;
   background: none;
   color: var(--tactile-muted);
@@ -178,18 +178,6 @@
   flex-direction: column;
   align-items: center;
 }
-.ds-studio-content > .ds-library-preview {
-  position: relative;
-  inset: auto;
-  width: 100%;
-  height: 700px;
-  max-height: none;
-  min-height: 0;
-  z-index: auto;
-}
-.ds-studio-content > .ds-library-preview .lattice-browser-panel {
-  grid-template-columns: minmax(0, 1fr);
-}
 .ds-library-navigation .lattice-browser-sidebar {
   width: 100%;
   min-width: 0;
@@ -200,7 +188,7 @@
 }
 .ds-library-navigation .lattice-browser-sidebar button {
   border-radius: var(--ds-control-radius);
-  min-height: 32px;
+  min-height: var(--ds-target-compact);
   font-size: var(--ds-text-small);
 }
 .ds-library-navigation .lattice-browser-sidebar button:is(:hover, [data-active]) {
@@ -221,9 +209,6 @@
 @container studio-body (max-width: 620px) {
   .ds-studio-shell[data-library-open] .ds-studio-content {
     grid-template-columns: minmax(0, 1fr);
-  }
-  .ds-studio-content > .ds-library-preview {
-    height: 400px;
   }
 }
 @container (max-width: 620px) {
@@ -278,8 +263,13 @@
 }
 
 /* Keep navigation glyphs on one size, with separate small disclosure arrows. */
-.ds-navigation :is(.ds-navigation-link > svg:first-child, .ds-navigation-identity > svg,
-  .ds-navigation-filter > svg, .ds-navigation-utilities svg),
+.ds-navigation
+  :is(
+    .ds-navigation-link > svg:first-child,
+    .ds-navigation-identity > svg,
+    .ds-navigation-filter > svg,
+    .ds-navigation-utilities svg
+  ),
 .ds-library-navigation .lattice-browser-sidebar button > span > svg {
   width: var(--ds-icon-size);
   height: var(--ds-icon-size);

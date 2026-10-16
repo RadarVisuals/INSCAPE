@@ -35,6 +35,9 @@ import '../src/public/ownerSystemWorkflow/ownerSystemWorkflow.css';
 import './referenceTokens.css';
 import './referenceMaterial.css';
 import './reference.css';
+import './toolbarPreview.css';
+import './propertiesPreview.css';
+import './controlStates.css';
 import {
   Source,
   SourcePreview,
@@ -423,7 +426,7 @@ function ComponentExamples({ theme }) {
             Unavailable example: choose artwork first. Disabled controls retain a quiet, unchanged
             appearance.
           </p>
-          <Source path="design-system/reference.css" />
+          <Source path="design-system/controlStates.css" />
         </section>
       </div>
       <p className="ds-example-status" role="status" aria-live="polite">

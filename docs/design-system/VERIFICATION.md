@@ -556,3 +556,28 @@ case expects raw development source links, intentionally excluded from this
 export; rerunning that case on the local reference passed. Four inventory/export
 unit checks and the visual export build passed. The compiled visual artifact is
 published to the existing private Site; app edits remain local and uncommitted.
+
+
+### Styling ownership cleanup (2026-10-16)
+
+Reference-only CSS cleanup: toolbar and popup recipes, Properties specimens and
+control-state specimens now have separate stylesheets, each retaining its media,
+container and forced-colour rules. reference.css retains documentation layout
+and shared page utilities (1,751 to 1,027 lines). Fourteen existing literal
+interface sizes now use the already established type, target and icon tokens.
+Library column geometry is owned by libraryPreview.css; the obsolete overlay
+geometry and its stacking token have been removed. Navigation retains the host
+grid. No application component, editing behavior or persistence changed.
+
+All 15 existing general-reference and Library browser cases passed on the local
+development reference before and after the CSS changes. All 27 screenshot pairs
+were pixel-identical, covering Carbon/Mist, 1440/390/320 widths, collapsed/open
+Library, toolbar popups and forced colours. Desktop Carbon/Mist and narrow
+Library screenshots were also inspected. The source caption was subsequently
+updated to the new controlStates.css owner. Four inventory/export unit checks
+passed. Evidence is in the chat workspace's styling-cleanup folder.
+The final static export built successfully and passed all 14 applicable general
+reference/Library browser cases; the development-only raw-source case was covered
+by the local run. The export retains its no-source/no-internal-documents boundary.
+Application CSS/source edits remain local and uncommitted; only the generated
+visual artifact is published through the existing owner-private Site workflow.
