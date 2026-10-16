@@ -14,7 +14,7 @@ This release establishes the complete reference structure for the current produc
 
 ## Reference direction, 2026-10-14
 
-The founder requested a smaller, flatter toolbar and reduced the theme direction to Carbon and Mist. Overview and Components preview that treatment on the existing WorkbenchToolbar component, with rectangular buttons using 5 px corners and a 9 px outer bar radius (5 px plus the 4 px inset), matching 5 px fields/menu rows inside 9 px popups with the same 4 px inset, an inverted active tool, quieter open-panel fills with a small state mark, Add inside the same toolbar with matching spacing, and two rows of 44-pixel targets on narrow screens. Carbon previews dark chrome and Mist light chrome, including Library and text menus. The reference uses neutral accents; search focus is a quiet neutral border, with system focus retained in forced colours. Both previews enable the toolbar's minimal popup presentation: no title/close rows, full-width Actions search without a divider, and a Back row for nested menus. Its CSS is shared within the reference. Components demonstrates flat control states, complete Image, Display artwork and Shape Properties specimens with conditional states and a two-theme state sheet. The retained bevel shell remains collapsed as a migration reference. Build with it separates Agreed, Needs review and In the app. Source links open a read-only source viewer instead of loading test files as application scripts. Principles live in Build with it; the overview contains only the toolbar, themes and a brief preview caption. The live application still uses its production treatment. All preview actions remain in memory. Production theme choices, saved values and authored surfaces have not been migrated in this review pass.
+The founder requested a smaller, flatter toolbar and reduced the theme direction to Carbon and Mist. Overview and Components preview that treatment on the existing WorkbenchToolbar component, with rectangular buttons using 5 px corners and a 9 px outer bar radius (5 px plus the 4 px inset), matching 5 px fields/menu rows inside 9 px popups with the same 4 px inset, an inverted active tool, quieter open-panel fills with a small state mark, Add inside the same toolbar with matching spacing, and two rows of 44-pixel targets on narrow screens. Carbon previews dark chrome and Mist light chrome, including Library and text menus. The reference uses neutral accents; search focus is a quiet neutral border, with system focus retained in forced colours. The shared toolbar uses minimal popup presentation: no title/close rows, full-width Actions search without a divider, and a Back row for nested menus. Its CSS is shared by the reference and application. Components demonstrates flat control states, complete Image, Display artwork and Shape Properties specimens with conditional states and a two-theme state sheet. The retained bevel shell remains collapsed as a migration reference. Build with it separates Agreed, Needs review and In the app. Source links open a read-only source viewer instead of loading test files as application scripts. Principles live in Build with it; the overview contains only the toolbar, themes and a brief preview caption. The creation toolbar and its menus now share the approved recipe with the application (2026-10-16); other production instruments retain their existing treatment. All preview actions remain in memory. Production theme choices, saved values and authored surfaces have not been migrated in this review pass.
 
 ## Start here
 
@@ -93,11 +93,14 @@ The reference does not own authored geometry, cropping, asset sources, article c
 ## Reference implementation and visual export
 
 The reference uses React JavaScript and ordinary CSS. It introduces no Tailwind
-or TypeScript migration. Shared preview values are in `referenceTokens.css`;
-`referenceMaterial.css` adapts the existing control recipes to the agreed flat
-material. `reference.css` owns the reference page and documentation layout;
-`toolbarPreview.css`, `propertiesPreview.css` and `controlStates.css` own their
-component recipes, including responsive and forced-colour rules. The Library
+or TypeScript migration. Shared geometry lives in `src/inscapeTokens.css`; `referenceTokens.css` aliases
+it and adds preview-only values. `workflowFlat.css` supplies the opt-in flat
+material to the real creation toolbar and reference instruments. Other app
+surfaces keep their current material. `referenceMaterial.css` styles reference
+icons outside those instruments. `reference.css` owns the reference page and documentation layout;
+`workbenchToolbar.css` owns toolbar geometry, responsive states and menus for
+both hosts. `toolbarPreview.css` contains only demonstration placement and popup
+height. `propertiesPreview.css` and `controlStates.css` retain their preview recipes. The Library
 column geometry belongs to `libraryPreview.css`; navigation owns its surrounding
 workspace grid. Existing tokens supply repeated interface sizes without changing
 authored example geometry. The token inventory includes production and reference CSS separately.

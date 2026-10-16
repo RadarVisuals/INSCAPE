@@ -141,7 +141,7 @@ export default function LibraryPreview({ open, theme, scenario, onScenarioChange
       ref={root}
       className="ds-library-preview"
       hidden={!open}
-      data-workflow-material="tactile"
+      data-workflow-material="tactile" data-workflow-finish="flat"
       onKeyDown={(event) => {
         if (event.key === 'Escape' && !event.defaultPrevented) {
           event.preventDefault();

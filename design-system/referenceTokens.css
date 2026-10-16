@@ -1,16 +1,16 @@
-/* Reference-only interface values. Loaded once by the reference entry point.
+/* Reference aliases and preview-only interface values. Loaded once by the reference entry point.
    Root scope also reaches Library menus and the Text focus dialog rendered in portals.
    Sample artwork colours, proportions and effects remain authored example values. */
 :root {
-  --ds-control-radius: 5px;
-  --ds-icon-size: 18px;
-  --ds-icon-stroke: 1.5px;
-  --ds-control-inset: var(--space-1);
-  --ds-shell-radius: calc(var(--ds-control-radius) + var(--ds-control-inset));
+  --ds-control-radius: var(--control-radius);
+  --ds-icon-size: var(--icon-size-interface);
+  --ds-icon-stroke: var(--icon-stroke-interface);
+  --ds-control-inset: var(--control-inset);
+  --ds-shell-radius: var(--control-shell-radius);
   --ds-text-micro: 10px;
   --ds-text-small: 11px;
-  --ds-text-base: 12px;
+  --ds-text-base: var(--font-size-control);
   --ds-text-body: 13px;
   --ds-target-compact: 32px;
-  --ds-target-touch: 44px;
+  --ds-target-touch: var(--control-target-touch);
 }

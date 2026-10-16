@@ -12,8 +12,8 @@ export const designDecisions = [
   {
     id: 'toolbar',
     name: 'Creation toolbar',
-    status: 'agreed',
-    detail: 'Flat controls, 5 px corners, a 4 px inset and headerless menus. Preview only.',
+    status: 'app',
+    detail: 'The app and reference share flat controls, 5 px corners, a 4 px inset and headerless menus.',
   },
   {
     id: 'typography',
@@ -54,12 +54,12 @@ export const tokenSources = [
     path: 'design-system/referenceTokens.css',
     role: 'Reference',
     purpose:
-      'Shared preview-only geometry, type sizes and input targets, including portalled controls.',
+      'Aliases to shared interface geometry, with preview-only type sizes and targets for portalled controls.',
   },
   {
-    path: 'design-system/referenceMaterial.css',
-    role: 'Reference material',
-    purpose: 'One scoped flat-material adapter for Carbon, Mist and forced colours.',
+    path: 'src/public/ownerSystemWorkflow/workflowFlat.css',
+    role: 'Flat material',
+    purpose: 'Opt-in Carbon/Mist material shared by the production creation toolbar and reference instruments.',
   },
   {
     path: 'src/inscapeTokens.css',
@@ -172,7 +172,7 @@ export const components = [
     id: 'toolbar',
     name: 'Creation toolbar',
     kind: 'Component',
-    material: 'Dark tactile',
+    material: 'Flat Carbon / Mist',
     source: owner + 'WorkbenchToolbar.jsx',
     contract:
       'Nine labelled icon controls. Commands, eligibility and tool state arrive as props. Search, nested popup navigation and focus return are local.',

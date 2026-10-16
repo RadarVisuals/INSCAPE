@@ -48,7 +48,7 @@ export default function NavigationPreview({
   return (
     <aside
       className="ds-navigation"
-      data-workflow-material="tactile"
+      data-workflow-material="tactile" data-workflow-finish="flat"
       data-collapsed={collapsed || undefined}
       aria-label="Workspace sidebar"
     >

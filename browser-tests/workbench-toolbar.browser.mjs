@@ -7,11 +7,11 @@ const origin = process.env.INSCAPE_TEXT_ROOT || 'http://127.0.0.1:5217';
 const executablePath = process.env.INSCAPE_BROWSER_EXECUTABLE || 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe';
 const output = process.env.INSCAPE_BROWSER_OUTPUT || '.browser-test-runtime';
 const settle = page => page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
-async function mount(page) {
+async function mount(page, theme = 'carbon') {
   const errors = [];
   page.on('pageerror', error => errors.push(error.message));
   await page.route('**/*', route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
-  await page.goto(`${origin}/browser-tests/workbench-toolbar-fixture.html`);
+  await page.goto(`${origin}/browser-tests/workbench-toolbar-fixture.html?theme=${theme}`);
   await page.getByRole('toolbar', { name: 'Creation tools' }).waitFor();
   await page.evaluate(() => document.fonts.ready);
   await settle(page);
@@ -26,7 +26,7 @@ const appearance = locator => locator.evaluate(node => {
 });
 
 for (const [width, height, touch] of [[1576, 1244, false], [1440, 900, false], [961, 900, false], [960, 900, false], [520, 800, false], [390, 844, true], [320, 568, true], [844, 390, true]]) {
-  test(`Tactile toolbar and menus remain usable at ${width}×${height}${touch ? ' touch' : ''}`, { timeout: 60000 }, async () => {
+  test(`Flat toolbar and menus remain usable at ${width}×${height}${touch ? ' touch' : ''}`, { timeout: 60000 }, async () => {
     await mkdir(output, { recursive: true });
     const browser = await chromium.launch({ executablePath, headless: true });
     try {
@@ -39,12 +39,15 @@ for (const [width, height, touch] of [[1576, 1244, false], [1440, 900, false], [
       assert.equal(await toolbar.evaluate(node => getComputedStyle(node).fontFamily), '"Inter Variable", Arial, sans-serif');
       if (width > 520) {
         assert.ok(bar.width < 500, 'icon toolbar stays compact on wide and narrow screens');
-        assert.equal(bar.height, touch ? 56 : 54, 'single-row height includes padding around full input targets');
+        assert.equal(bar.height, touch ? 52 : 44, 'single-row height includes padding around full input targets');
       }
       for (const button of await buttons.all()) {
         const box = await button.boundingBox(); within(box, width, height, await button.getAttribute('aria-label'));
-        assert.equal(box.width, touch ? 44 : 40, 'icon-only key retains its full input width');
-        assert.ok(box.height >= (touch ? 44 : 40), 'full input height');
+        const expanded = width > 520 && await button.getAttribute('aria-pressed') === 'true';
+        const target = touch || width <= 520 ? 44 : 36;
+        if (expanded) assert.ok(box.width >= 82, 'selected persistent tool shows its label');
+        else assert.equal(box.width, target, 'icon key retains its full input width');
+        assert.ok(box.height >= target, 'full input height');
         assert.ok(box.x >= bar.x && box.x + box.width <= bar.x + bar.width + .5 && box.y >= bar.y && box.y + box.height <= bar.y + bar.height + .5, 'keys stay inside their shell');
       }
       const camera = await page.getByRole('group', { name: 'Workbench zoom' }).boundingBox();
@@ -79,7 +82,7 @@ for (const [width, height, touch] of [[1576, 1244, false], [1440, 900, false], [
   });
 }
 
-test('Tactile states preserve selection, focus, creation and readable contrast', { timeout: 60000 }, async () => {
+test('Flat states preserve selection, focus, creation and readable contrast', { timeout: 60000 }, async () => {
   await mkdir(output, { recursive: true });
   const browser = await chromium.launch({ executablePath, headless: true });
   try {
@@ -91,7 +94,7 @@ test('Tactile states preserve selection, focus, creation and readable contrast',
     await hand.hover();
     assert.notEqual((await appearance(hand)).background, resting.background, 'available controls respond to hover');
     await page.mouse.down();
-    assert.notEqual((await appearance(hand)).shadow, resting.shadow, 'physical press recesses the key');
+    assert.notEqual((await appearance(hand)).background, resting.background, 'press has a visible flat fill');
     assert.deepEqual(await hand.boundingBox(), before, 'press never shifts the hit target');
     await page.mouse.up();
     assert.equal(await hand.getAttribute('aria-pressed'), 'true');
@@ -100,7 +103,8 @@ test('Tactile states preserve selection, focus, creation and readable contrast',
     await hand.hover(); await page.waitForTimeout(150);
     assert.deepEqual(await appearance(hand), selected, 'hover preserves the selected material');
     assert.equal(selected.marker, 'none', 'active toolbar icons have no underline');
-    assert.notEqual(selected.shadow, resting.shadow, 'recessed material identifies the active tool');
+    assert.equal(selected.shadow, 'none', 'flat controls have no relief shadow');
+    assert.notEqual(selected.background, resting.background, 'inverted fill identifies the active tool');
     await disabled.hover(); assert.deepEqual(await appearance(disabled), unavailable, 'disabled control never gains hover depth');
     // Escape and the creation shortcuts still use the real owner adapter.
     await page.locator('main.system-workflow').focus(); await page.keyboard.press('t');
@@ -114,17 +118,17 @@ test('Tactile states preserve selection, focus, creation and readable contrast',
     await page.keyboard.press('Escape');
     const action = page.getByRole('button', { name: 'Actions', exact: true });
     assert.equal((await appearance(action)).outline, '2px', 'keyboard focus remains visible after closing');
-    // Measure text/accent contrast against the brightest material stop.
+    // Measure text/accent contrast against the actual flat surface.
     const contrast = await page.locator('.workbench-toolbar[data-workflow-material]').evaluate(node => {
       const s = getComputedStyle(node), canvas = document.createElement('canvas'), ctx = canvas.getContext('2d');
       const rgb = color => { ctx.clearRect(0, 0, 1, 1); ctx.fillStyle = color; ctx.fillRect(0, 0, 1, 1); return [...ctx.getImageData(0, 0, 1, 1).data].slice(0, 3); };
       const surface = rgb(s.getPropertyValue('--tactile-surface').trim());
-      const brightest = surface.map(value => value * .85 + 255 * .15);
+      const brightest = surface;
       const luminance = values => values.map(value => { const c = value / 255; return c <= .04045 ? c / 12.92 : ((c + .055) / 1.055) ** 2.4; }).reduce((sum, value, i) => sum + value * [.2126, .7152, .0722][i], 0);
       return ['--tactile-ink', '--tactile-muted', '--tactile-accent'].map(token => {
         const color = rgb(s.getPropertyValue(token).trim()), a = ctx.getImageData(0, 0, 1, 1).data[3] / 255;
         const opaque = color.map((value, i) => value * a + brightest[i] * (1 - a));
-        return [token, (luminance(opaque) + .05) / (luminance(brightest) + .05)];
+        return [token, (Math.max(luminance(opaque), luminance(brightest)) + .05) / (Math.min(luminance(opaque), luminance(brightest)) + .05)];
       });
     });
     for (const [token, ratio] of contrast) assert.ok(ratio >= 4.5, `${token}: ${ratio.toFixed(2)} contrast`);
@@ -140,3 +144,62 @@ test('Tactile states preserve selection, focus, creation and readable contrast',
     assert.deepEqual(errors, []);
   } finally { await browser.close(); }
 });
+
+for (const theme of ['carbon', 'mist']) for (const width of [1440, 390]) {
+  test(`production toolbar uses the shared flat recipe and real nested actions (${theme}, ${width})`, { timeout: 60000 }, async () => {
+    await mkdir(output, { recursive: true });
+    const browser = await chromium.launch({ executablePath, headless: true });
+    try {
+      const page = await browser.newPage({ viewport: { width, height: 900 }, hasTouch: width < 520 });
+      const errors = await mount(page, theme);
+      assert.equal(await page.locator('main.system-workflow').getAttribute('data-menu-surface'), theme, 'theme comes from the real saved appearance boundary');
+      const root = page.locator('[data-workbench-toolbar]');
+      const recipe = await root.evaluate(node => {
+        const s = getComputedStyle(node), key = getComputedStyle(node.querySelector('button')), shell = getComputedStyle(node.querySelector('[role="toolbar"]'), '::before');
+        const icon = getComputedStyle(node.querySelector('svg.lucide > *'));
+        return { scheme: s.colorScheme, face: s.getPropertyValue('--tactile-face').trim(), radius: key.borderRadius, shellRadius: shell.borderRadius, stroke: icon.strokeWidth, vector: icon.vectorEffect };
+      });
+      assert.deepEqual(recipe, { scheme: theme === 'mist' ? 'light' : 'dark', face: theme === 'mist' ? '#ebece7' : '#191b1b', radius: '5px', shellRadius: '9px', stroke: '1.5px', vector: 'non-scaling-stroke' });
+      assert.equal(await page.locator('main.system-workflow [data-workflow-finish="flat"]').count(), 1, 'only the creation toolbar migrates in the real app');
+      const select = page.getByRole('button', { name: 'Select tool', exact: true });
+      await select.focus(); await page.keyboard.press('ArrowRight');
+      assert.equal(await page.getByRole('button', { name: 'Hand tool', exact: true }).evaluate(node => node === document.activeElement), true);
+      await page.keyboard.press('End');
+      const add = page.getByRole('button', { name: 'Add module', exact: true });
+      assert.equal(await add.evaluate(node => node === document.activeElement), true);
+      await page.keyboard.press('Enter');
+      let dialog = page.getByRole('dialog', { name: 'Add module', exact: true });
+      assert.equal(await dialog.locator('header').count(), 0);
+      assert.equal(await dialog.getByRole('button', { name: /Close/ }).count(), 0);
+      await dialog.getByRole('button', { name: 'Display', exact: true }).click();
+      dialog = page.getByRole('dialog', { name: 'Display', exact: true });
+      const back = dialog.getByRole('button', { name: 'Back to Add module', exact: true });
+      await back.click();
+      await page.getByRole('dialog', { name: 'Add module', exact: true }).getByRole('button', { name: 'Display', exact: true }).click();
+      await page.keyboard.press('Home');
+      assert.equal(await back.evaluate(node => node === document.activeElement), true, 'Back participates in keyboard navigation');
+      await page.keyboard.press('ArrowLeft');
+      await page.getByRole('dialog', { name: 'Add module', exact: true }).waitFor();
+      await add.click();
+      assert.equal(await root.getByRole('dialog').count(), 0, 'trigger toggles the menu closed');
+      await add.click(); await page.mouse.click(width - 12, 12);
+      assert.equal(await root.getByRole('dialog').count(), 0, 'outside dismissal');
+      const actions = page.getByRole('button', { name: 'Actions', exact: true });
+      await actions.click();
+      const search = page.getByRole('textbox', { name: 'Search actions' });
+      const inset = await search.evaluate(node => { const a = node.getBoundingClientRect(), b = node.closest('[role="dialog"]').getBoundingClientRect(); return [a.left - b.left, b.right - a.right]; });
+      assert.deepEqual(inset, [4, 4]);
+      await page.screenshot({ path: `${output}/toolbar-${theme}-${width}.png` });
+      await search.fill('Workbench grid');
+      const grid = root.getByRole('button', { name: 'Workbench grid', exact: true });
+      const selected = await grid.getAttribute('aria-pressed');
+      await page.keyboard.press('Enter');
+      assert.equal(await root.getByRole('dialog').count(), 0);
+      await actions.click(); await search.fill('Workbench grid');
+      assert.notEqual(await grid.getAttribute('aria-pressed'), selected, 'real preference callback still changes the grid');
+      await page.keyboard.press('Escape');
+      assert.equal(await actions.evaluate(node => node === document.activeElement), true);
+      assert.deepEqual(errors, []);
+    } finally { await browser.close(); }
+  });
+}

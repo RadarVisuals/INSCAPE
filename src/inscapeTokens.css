@@ -88,6 +88,15 @@
   --space-4: 16px;
   --space-5: 20px;
   --space-6: 24px;
+  /* Approved flat interface geometry; only opted-in instruments consume it. */
+  --control-radius: 5px;
+  --control-inset: var(--space-1);
+  --control-shell-radius: calc(var(--control-radius) + var(--control-inset));
+  --control-target-toolbar: 36px;
+  --control-target-touch: 44px;
+  --icon-size-interface: 18px;
+  --icon-stroke-interface: 1.5px;
+  --font-size-control: 12px;
   --control-height-sm: 28px;
   --control-height-md: 34px;
   --control-height-lg: 38px;

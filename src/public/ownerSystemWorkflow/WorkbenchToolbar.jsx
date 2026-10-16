@@ -1,6 +1,7 @@
 import { createElement, isValidElement, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
-import { ArrowLeft, ChevronDown, ChevronRight, Command, Hand, Image, Info, Layers, MousePointer2, Plus, Search, Shapes, Type, X } from 'lucide-react';
+import { ArrowLeft, ChevronDown, ChevronRight, Command, Hand, Image, Info, Layers, MousePointer2, Plus, Search, Shapes, Type } from 'lucide-react';
 import './workflowTactile.css';
+import './workflowFlat.css';
 import './workbenchToolbar.css';
 import { isShapeCommand } from '../../shapes/shapes.js';
 
@@ -26,7 +27,7 @@ function CommandIcon({ icon }) {
 export default function WorkbenchToolbar({
   activeTool = 'select', onToolChange, onOpenLibrary, libraryOpen = false,
   actions = EMPTY_COMMANDS, addCommands = EMPTY_COMMANDS, shapeCommands = EMPTY_COMMANDS,
-  layers, info, hidden = false, actionRequest = 0, minimalPopups = false,
+  layers, info, hidden = false, actionRequest = 0,
 }) {
   const rootRef = useRef(null), barRef = useRef(null), popupRef = useRef(null), searchRef = useRef(null);
   const triggerRef = useRef(null), actionsRef = useRef(null), requestRef = useRef(actionRequest);
@@ -124,9 +125,7 @@ export default function WorkbenchToolbar({
     if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) return;
     if (event.target.tagName === 'INPUT' && ['Home', 'End'].includes(event.key)) return;
     event.preventDefault(); event.stopPropagation();
-    const buttons = [...popupRef.current.querySelectorAll(minimalPopups
-      ? '[data-toolbar-command]:not(:disabled), [data-toolbar-back]'
-      : '[data-toolbar-command]:not(:disabled)')];
+    const buttons = [...popupRef.current.querySelectorAll('[data-toolbar-command]:not(:disabled), [data-toolbar-back]')];
     if (!buttons.length) return;
     const current = buttons.indexOf(document.activeElement);
     const next = event.key === 'Home' ? 0 : event.key === 'End' ? buttons.length - 1
@@ -153,19 +152,15 @@ export default function WorkbenchToolbar({
 
   if (hidden) return null;
   return <div ref={rootRef} className="workbench-toolbar" data-workbench-toolbar data-system-workflow-overlay
-    data-workflow-material="tactile">
+    data-workflow-material="tactile" data-workflow-finish="flat">
     {popup && <section ref={popupRef} id={popupId} className="workbench-toolbar__popup" role="dialog" aria-label={title} onKeyDown={navigatePopup}>
-      {popup === 'actions' ? <div className="workbench-toolbar__search">
+      {popup === 'actions' && <div className="workbench-toolbar__search">
         <Search aria-hidden="true" /><input ref={searchRef} aria-label="Search actions" placeholder="Search actions…" value={query}
           autoComplete="off" spellCheck={false} onChange={event => setQuery(event.target.value)}
           onKeyDown={event => { if (event.key === 'Enter') { const command = visibleCommands.find(item => !item.disabled); if (command) { event.preventDefault(); choose(command); } } }} />
-        {!minimalPopups && <button type="button" className="workbench-toolbar__utility workflow-tactile-control" aria-label="Close Actions" title="Close Actions" onClick={() => close(true)}><X aria-hidden="true" /></button>}
-      </div> : !minimalPopups && <header className="workbench-toolbar__popup-header">
-        {path.length > 0 && <button type="button" className="workbench-toolbar__utility workflow-tactile-control" data-toolbar-back aria-label="Back to module types" onClick={() => setPath(current => current.slice(0, -1))}><ArrowLeft aria-hidden="true" /></button>}
-        <strong>{title}</strong><button type="button" className="workbench-toolbar__utility workflow-tactile-control" aria-label={`Close ${POPUP_LABELS[popup]}`} onClick={() => close(true)}><X aria-hidden="true" /></button>
-      </header>}
+      </div>}
       <div className="workbench-toolbar__commands">
-        {minimalPopups && path.length > 0 && <button type="button" data-toolbar-back
+        {path.length > 0 && <button type="button" data-toolbar-back
           className="workbench-toolbar__back workflow-tactile-control workflow-tactile-control--quiet"
           aria-label={`Back to ${parentTitle}`} onClick={() => { setPath(current => current.slice(0, -1)); setQuery(''); }}>
           <ArrowLeft aria-hidden="true" /><span>{parentTitle}</span>
@@ -192,12 +187,10 @@ export default function WorkbenchToolbar({
       {menuButton('shapes', Shapes, 'Shapes', { 'data-active': isShapeCommand(activeTool) || undefined })}
       <button type="button" className="workbench-toolbar__button workflow-tactile-control" aria-label="Artwork library" title="Artwork library" aria-pressed={libraryOpen}
         onClick={() => { close(); onOpenLibrary?.(); }}><Image aria-hidden="true" /><span>Artwork</span></button>
-      <span className="workbench-toolbar__separator" aria-hidden="true" />
       {[['Layers', Layers, layers], ['Artwork info', Info, info]].map(([label, Icon, inspector]) =>
         <button key={label} type="button" className="workbench-toolbar__button workflow-tactile-control" aria-label={label} title={inspector?.reason || label}
           disabled={!inspector?.enabled} aria-pressed={Boolean(inspector?.open)}
           onClick={() => { close(); inspector?.onToggle?.(); }}><Icon aria-hidden="true" /><span>{label === 'Artwork info' ? 'Info' : label}</span></button>)}
-      <span className="workbench-toolbar__separator" aria-hidden="true" />
       {menuButton('actions', Command, 'Actions', { ref: actionsRef, title: 'Actions · Ctrl / ⌘ K', 'aria-keyshortcuts': 'Control+k Meta+k' })}
       {menuButton('add', Plus, 'Add')}
     </div>

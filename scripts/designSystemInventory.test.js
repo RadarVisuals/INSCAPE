@@ -31,7 +31,7 @@ test('reference values and production defaults remain separately scoped and disc
   assert.ok(
     reference.definitions.some(
       (token) =>
-        token.name === '--ds-shell-radius' && token.references.includes('--ds-control-radius'),
+        token.name === '--ds-shell-radius' && token.references.includes('--control-shell-radius'),
     ),
   );
   assert.ok(
@@ -40,6 +40,11 @@ test('reference values and production defaults remain separately scoped and disc
         source.path === 'design-system/libraryPreview.css' && source.role === 'Reference local',
     ),
   );
+  const foundation = inventory.sources.find(source => source.path === 'src/inscapeTokens.css');
+  assert.ok(foundation.definitions.some(token => token.name === '--control-shell-radius' && token.references.includes('--control-radius')));
+  const flat = inventory.sources.find(source => source.path.endsWith('/workflowFlat.css'));
+  assert.equal(flat.role, 'Flat material');
+  assert.ok(flat.definitions.every(token => token.scope.some(scope => scope.includes('[data-workflow-finish='))));
   const focus = inventory.sources.flatMap((source) =>
     source.definitions
       .filter((token) => token.name === '--color-focus')

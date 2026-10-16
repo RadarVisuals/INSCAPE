@@ -4,9 +4,9 @@
   "systemVersion": "1.0.0",
   "note": "Generated from production and design-system reference CSS. Reference roles are preview-only. Values remain CSS expressions, with selector and media scopes; this is not a DTCG interchange file. Runtime custom properties and local overrides are included and are not automatically public design tokens.",
   "counts": {
-    "files": 67,
-    "definitions": 562,
-    "names": 287
+    "files": 68,
+    "definitions": 557,
+    "names": 295
   },
   "sources": [
     {
@@ -703,355 +703,71 @@
     },
     {
       "path": "design-system/referenceMaterial.css",
-      "role": "Reference material",
-      "sha256": "40829c2f56e39f6a465e42c9b06add75debeda43847c5fc46e50f7a6f42baf4f",
-      "definitions": [
-        {
-          "name": "--tactile-face",
-          "value": "var(--color-surface-subtle)",
-          "scope": [
-            ".ds-flat-preview [data-workflow-material='tactile']"
-          ],
-          "line": 6,
-          "references": [
-            "--color-surface-subtle"
-          ]
-        },
-        {
-          "name": "--tactile-ink",
-          "value": "var(--color-text-primary)",
-          "scope": [
-            ".ds-flat-preview [data-workflow-material='tactile']"
-          ],
-          "line": 7,
-          "references": [
-            "--color-text-primary"
-          ]
-        },
-        {
-          "name": "--tactile-muted",
-          "value": "color-mix(in srgb, var(--tactile-ink) 70%, var(--tactile-face))",
-          "scope": [
-            ".ds-flat-preview [data-workflow-material='tactile']"
-          ],
-          "line": 8,
-          "references": [
-            "--tactile-ink",
-            "--tactile-face"
-          ]
-        },
-        {
-          "name": "--tactile-disabled",
-          "value": "color-mix(in srgb, var(--tactile-ink) 35%, var(--tactile-face))",
-          "scope": [
-            ".ds-flat-preview [data-workflow-material='tactile']"
-          ],
-          "line": 9,
-          "references": [
-            "--tactile-ink",
-            "--tactile-face"
-          ]
-        },
-        {
-          "name": "--tactile-accent",
-          "value": "var(--tactile-ink)",
-          "scope": [
-            ".ds-flat-preview [data-workflow-material='tactile']"
-          ],
-          "line": 10,
-          "references": [
-            "--tactile-ink"
-          ]
-        },
-        {
-          "name": "--tactile-edge",
-          "value": "color-mix(in srgb, var(--tactile-ink) 18%, var(--tactile-face))",
-          "scope": [
-            ".ds-flat-preview [data-workflow-material='tactile']"
-          ],
-          "line": 11,
-          "references": [
-            "--tactile-ink",
-            "--tactile-face"
-          ]
-        },
-        {
-          "name": "--tactile-raised",
-          "value": "transparent",
-          "scope": [
-            ".ds-flat-preview [data-workflow-material='tactile']"
-          ],
-          "line": 12,
-          "references": []
-        },
-        {
-          "name": "--tactile-hover",
-          "value": "color-mix(in srgb, var(--tactile-ink) 8%, var(--tactile-face))",
-          "scope": [
-            ".ds-flat-preview [data-workflow-material='tactile']"
-          ],
-          "line": 13,
-          "references": [
-            "--tactile-ink",
-            "--tactile-face"
-          ]
-        },
-        {
-          "name": "--tactile-well",
-          "value": "color-mix(in srgb, var(--tactile-ink) 5%, var(--tactile-face))",
-          "scope": [
-            ".ds-flat-preview [data-workflow-material='tactile']"
-          ],
-          "line": 14,
-          "references": [
-            "--tactile-ink",
-            "--tactile-face"
-          ]
-        },
-        {
-          "name": "--tactile-shadow-shell",
-          "value": "none",
-          "scope": [
-            ".ds-flat-preview [data-workflow-material='tactile']"
-          ],
-          "line": 15,
-          "references": []
-        },
-        {
-          "name": "--tactile-shadow-raised",
-          "value": "none",
-          "scope": [
-            ".ds-flat-preview [data-workflow-material='tactile']"
-          ],
-          "line": 16,
-          "references": []
-        },
-        {
-          "name": "--tactile-shadow-inset",
-          "value": "none",
-          "scope": [
-            ".ds-flat-preview [data-workflow-material='tactile']"
-          ],
-          "line": 17,
-          "references": []
-        },
-        {
-          "name": "--tactile-surface",
-          "value": "var(--tactile-face)",
-          "scope": [
-            ".ds-flat-preview [data-workflow-material='tactile']"
-          ],
-          "line": 18,
-          "references": [
-            "--tactile-face"
-          ]
-        },
-        {
-          "name": "--tactile-radius-control",
-          "value": "var(--ds-control-radius)",
-          "scope": [
-            ".ds-flat-preview [data-workflow-material='tactile']"
-          ],
-          "line": 19,
-          "references": [
-            "--ds-control-radius"
-          ]
-        },
-        {
-          "name": "--tactile-radius-row",
-          "value": "var(--ds-control-radius)",
-          "scope": [
-            ".ds-flat-preview [data-workflow-material='tactile']"
-          ],
-          "line": 20,
-          "references": [
-            "--ds-control-radius"
-          ]
-        },
-        {
-          "name": "--tactile-motion",
-          "value": "0ms",
-          "scope": [
-            ".ds-flat-preview [data-workflow-material='tactile']"
-          ],
-          "line": 21,
-          "references": []
-        },
-        {
-          "name": "--tactile-face",
-          "value": "var(--color-text-primary)",
-          "scope": [
-            ".ds-flat-preview:where([data-menu-surface='mist']) [data-workflow-material='tactile']"
-          ],
-          "line": 25,
-          "references": [
-            "--color-text-primary"
-          ]
-        },
-        {
-          "name": "--tactile-ink",
-          "value": "var(--color-surface-subtle)",
-          "scope": [
-            ".ds-flat-preview:where([data-menu-surface='mist']) [data-workflow-material='tactile']"
-          ],
-          "line": 26,
-          "references": [
-            "--color-surface-subtle"
-          ]
-        },
-        {
-          "name": "--tactile-face",
-          "value": "Canvas",
-          "scope": [
-            "@media (forced-colors: active)",
-            ".ds-flat-preview [data-workflow-material='tactile']"
-          ],
-          "line": 30,
-          "references": []
-        },
-        {
-          "name": "--tactile-ink",
-          "value": "ButtonText",
-          "scope": [
-            "@media (forced-colors: active)",
-            ".ds-flat-preview [data-workflow-material='tactile']"
-          ],
-          "line": 31,
-          "references": []
-        },
-        {
-          "name": "--tactile-muted",
-          "value": "CanvasText",
-          "scope": [
-            "@media (forced-colors: active)",
-            ".ds-flat-preview [data-workflow-material='tactile']"
-          ],
-          "line": 32,
-          "references": []
-        },
-        {
-          "name": "--tactile-disabled",
-          "value": "GrayText",
-          "scope": [
-            "@media (forced-colors: active)",
-            ".ds-flat-preview [data-workflow-material='tactile']"
-          ],
-          "line": 33,
-          "references": []
-        },
-        {
-          "name": "--tactile-accent",
-          "value": "Highlight",
-          "scope": [
-            "@media (forced-colors: active)",
-            ".ds-flat-preview [data-workflow-material='tactile']"
-          ],
-          "line": 34,
-          "references": []
-        },
-        {
-          "name": "--tactile-edge",
-          "value": "ButtonText",
-          "scope": [
-            "@media (forced-colors: active)",
-            ".ds-flat-preview [data-workflow-material='tactile']"
-          ],
-          "line": 35,
-          "references": []
-        },
-        {
-          "name": "--tactile-raised",
-          "value": "ButtonFace",
-          "scope": [
-            "@media (forced-colors: active)",
-            ".ds-flat-preview [data-workflow-material='tactile']"
-          ],
-          "line": 36,
-          "references": []
-        },
-        {
-          "name": "--tactile-hover",
-          "value": "ButtonFace",
-          "scope": [
-            "@media (forced-colors: active)",
-            ".ds-flat-preview [data-workflow-material='tactile']"
-          ],
-          "line": 37,
-          "references": []
-        },
-        {
-          "name": "--tactile-well",
-          "value": "ButtonFace",
-          "scope": [
-            "@media (forced-colors: active)",
-            ".ds-flat-preview [data-workflow-material='tactile']"
-          ],
-          "line": 38,
-          "references": []
-        }
-      ],
+      "role": "Reference local",
+      "sha256": "ba17b9a78ef78b6e4fae4c80a5a1330c67bfe3102e2eab8c29440afc111f8021",
+      "definitions": [],
       "references": [
-        "--color-surface-subtle",
-        "--color-text-primary",
-        "--ds-control-radius",
-        "--ds-icon-stroke",
-        "--tactile-face",
-        "--tactile-ink"
+        "--ds-icon-stroke"
       ]
     },
     {
       "path": "design-system/referenceTokens.css",
       "role": "Reference",
-      "sha256": "37c661fce2a8089b2502a94ddc8877b3e0693569c01140c8059bd451e493280e",
+      "sha256": "235ae2361a52fcf2d3a56a79d37c58a7f201406befab7547bd722d409d5b5bda",
       "definitions": [
         {
           "name": "--ds-control-radius",
-          "value": "5px",
+          "value": "var(--control-radius)",
           "scope": [
             ":root"
           ],
           "line": 5,
-          "references": []
+          "references": [
+            "--control-radius"
+          ]
         },
         {
           "name": "--ds-icon-size",
-          "value": "18px",
+          "value": "var(--icon-size-interface)",
           "scope": [
             ":root"
           ],
           "line": 6,
-          "references": []
+          "references": [
+            "--icon-size-interface"
+          ]
         },
         {
           "name": "--ds-icon-stroke",
-          "value": "1.5px",
+          "value": "var(--icon-stroke-interface)",
           "scope": [
             ":root"
           ],
           "line": 7,
-          "references": []
+          "references": [
+            "--icon-stroke-interface"
+          ]
         },
         {
           "name": "--ds-control-inset",
-          "value": "var(--space-1)",
+          "value": "var(--control-inset)",
           "scope": [
             ":root"
           ],
           "line": 8,
           "references": [
-            "--space-1"
+            "--control-inset"
           ]
         },
         {
           "name": "--ds-shell-radius",
-          "value": "calc(var(--ds-control-radius) + var(--ds-control-inset))",
+          "value": "var(--control-shell-radius)",
           "scope": [
             ":root"
           ],
           "line": 9,
           "references": [
-            "--ds-control-radius",
-            "--ds-control-inset"
+            "--control-shell-radius"
           ]
         },
         {
@@ -1074,12 +790,14 @@
         },
         {
           "name": "--ds-text-base",
-          "value": "12px",
+          "value": "var(--font-size-control)",
           "scope": [
             ":root"
           ],
           "line": 12,
-          "references": []
+          "references": [
+            "--font-size-control"
+          ]
         },
         {
           "name": "--ds-text-body",
@@ -1101,18 +819,24 @@
         },
         {
           "name": "--ds-target-touch",
-          "value": "44px",
+          "value": "var(--control-target-touch)",
           "scope": [
             ":root"
           ],
           "line": 15,
-          "references": []
+          "references": [
+            "--control-target-touch"
+          ]
         }
       ],
       "references": [
-        "--ds-control-inset",
-        "--ds-control-radius",
-        "--space-1"
+        "--control-inset",
+        "--control-radius",
+        "--control-shell-radius",
+        "--control-target-touch",
+        "--font-size-control",
+        "--icon-size-interface",
+        "--icon-stroke-interface"
       ]
     },
     {
@@ -1232,194 +956,14 @@
     {
       "path": "design-system/toolbarPreview.css",
       "role": "Reference local",
-      "sha256": "2ec11e6ad0e7c1845f046fe0d325f78599082f84b655ea2d6ff87d1b87a61a82",
-      "definitions": [
-        {
-          "name": "--toolbar-target",
-          "value": "36px",
-          "scope": [
-            ".ds-flat-preview .workbench-toolbar"
-          ],
-          "line": 4,
-          "references": []
-        },
-        {
-          "name": "--toolbar-height",
-          "value": "44px",
-          "scope": [
-            ".ds-flat-preview .workbench-toolbar"
-          ],
-          "line": 5,
-          "references": []
-        },
-        {
-          "name": "--toolbar-column-gap",
-          "value": "2px",
-          "scope": [
-            ".ds-flat-preview .workbench-toolbar"
-          ],
-          "line": 6,
-          "references": []
-        },
-        {
-          "name": "--toolbar-padding-block",
-          "value": "var(--ds-control-inset)",
-          "scope": [
-            ".ds-flat-preview .workbench-toolbar"
-          ],
-          "line": 7,
-          "references": [
-            "--ds-control-inset"
-          ]
-        },
-        {
-          "name": "--toolbar-padding-inline",
-          "value": "var(--ds-control-inset)",
-          "scope": [
-            ".ds-flat-preview .workbench-toolbar"
-          ],
-          "line": 8,
-          "references": [
-            "--ds-control-inset"
-          ]
-        },
-        {
-          "name": "--toolbar-key-radius",
-          "value": "var(--ds-control-radius)",
-          "scope": [
-            ".ds-flat-preview .workbench-toolbar"
-          ],
-          "line": 9,
-          "references": [
-            "--ds-control-radius"
-          ]
-        },
-        {
-          "name": "--toolbar-radius",
-          "value": "var(--ds-shell-radius)",
-          "scope": [
-            ".ds-flat-preview .workbench-toolbar"
-          ],
-          "line": 11,
-          "references": [
-            "--ds-shell-radius"
-          ]
-        },
-        {
-          "name": "--toolbar-popup-radius",
-          "value": "var(--toolbar-radius)",
-          "scope": [
-            ".ds-flat-preview .workbench-toolbar"
-          ],
-          "line": 12,
-          "references": [
-            "--toolbar-radius"
-          ]
-        },
-        {
-          "name": "--toolbar-popup-border",
-          "value": "1px",
-          "scope": [
-            ".ds-flat-preview .workbench-toolbar"
-          ],
-          "line": 14,
-          "references": []
-        },
-        {
-          "name": "--toolbar-popup-padding-block",
-          "value": "calc(var(--toolbar-padding-block) - var(--toolbar-popup-border))",
-          "scope": [
-            ".ds-flat-preview .workbench-toolbar"
-          ],
-          "line": 15,
-          "references": [
-            "--toolbar-padding-block",
-            "--toolbar-popup-border"
-          ]
-        },
-        {
-          "name": "--toolbar-popup-padding-inline",
-          "value": "calc(var(--toolbar-padding-inline) - var(--toolbar-popup-border))",
-          "scope": [
-            ".ds-flat-preview .workbench-toolbar"
-          ],
-          "line": 16,
-          "references": [
-            "--toolbar-padding-inline",
-            "--toolbar-popup-border"
-          ]
-        },
-        {
-          "name": "--tactile-radius-row",
-          "value": "var(--toolbar-key-radius)",
-          "scope": [
-            ".ds-flat-preview .workbench-toolbar"
-          ],
-          "line": 17,
-          "references": [
-            "--toolbar-key-radius"
-          ]
-        },
-        {
-          "name": "--toolbar-row-gap",
-          "value": "4px",
-          "scope": [
-            ".ds-flat-preview .workbench-toolbar"
-          ],
-          "line": 18,
-          "references": []
-        },
-        {
-          "name": "--toolbar-target",
-          "value": "var(--ds-target-touch)",
-          "scope": [
-            "@media (max-width: 520px)",
-            ".ds-flat-preview .workbench-toolbar"
-          ],
-          "line": 169,
-          "references": [
-            "--ds-target-touch"
-          ]
-        },
-        {
-          "name": "--toolbar-target",
-          "value": "var(--ds-target-touch)",
-          "scope": [
-            "@media (pointer: coarse)",
-            ".ds-flat-preview .workbench-toolbar"
-          ],
-          "line": 193,
-          "references": [
-            "--ds-target-touch"
-          ]
-        }
-      ],
-      "references": [
-        "--ds-control-inset",
-        "--ds-control-radius",
-        "--ds-shell-radius",
-        "--ds-target-touch",
-        "--ds-text-base",
-        "--space-3",
-        "--tactile-edge",
-        "--tactile-face",
-        "--tactile-ink",
-        "--tactile-muted",
-        "--toolbar-key-radius",
-        "--toolbar-padding-block",
-        "--toolbar-padding-inline",
-        "--toolbar-popup-border",
-        "--toolbar-popup-padding-block",
-        "--toolbar-popup-padding-inline",
-        "--toolbar-popup-radius",
-        "--toolbar-radius",
-        "--toolbar-target"
-      ]
+      "sha256": "9aa709312823a7c0ac4504426e4f14880189008388774f5877866e93dc7aeaae",
+      "definitions": [],
+      "references": []
     },
     {
       "path": "design-system/workspacePreview.css",
       "role": "Reference local",
-      "sha256": "1773f886d8710a379928be44eb935c9dbf3b7af42a0a56fd4ea5a6285c84ab87",
+      "sha256": "976309d38cb3987b0a8d9947a18992c6f1f157efc220949c06a86cc0f29829b0",
       "definitions": [
         {
           "name": "--tool-control-height",
@@ -1427,7 +971,7 @@
           "scope": [
             ".ds-studio .ds-studio-inspector,\n.ds-studio-utilities > section"
           ],
-          "line": 230,
+          "line": 217,
           "references": [
             "--ds-target-compact"
           ]
@@ -1438,7 +982,7 @@
           "scope": [
             ".ds-studio .ds-studio-inspector,\n.ds-studio-utilities > section"
           ],
-          "line": 231,
+          "line": 218,
           "references": [
             "--tactile-ink",
             "--tactile-face"
@@ -1451,7 +995,7 @@
             "@media (max-width: 520px), (pointer: coarse)",
             ".ds-studio .ds-studio-inspector"
           ],
-          "line": 514,
+          "line": 501,
           "references": [
             "--ds-target-touch"
           ]
@@ -1490,8 +1034,7 @@
         "--tactile-ink",
         "--tactile-muted",
         "--tactile-well",
-        "--tool-control-height",
-        "--toolbar-target"
+        "--tool-control-height"
       ]
     },
     {
@@ -1559,7 +1102,7 @@
     {
       "path": "src/inscapeTokens.css",
       "role": "Foundation",
-      "sha256": "1665f3174d93a0f019987f0409f41a633d8e8b20d375dcc33586f5309e89cfc3",
+      "sha256": "12eb836efebd08d388d71c27a47fc99f5d51aa0f5378ed869979b2346ca972d0",
       "definitions": [
         {
           "name": "--font-creation-toolbar",
@@ -2141,12 +1684,89 @@
           "references": []
         },
         {
+          "name": "--control-radius",
+          "value": "5px",
+          "scope": [
+            ":root"
+          ],
+          "line": 92,
+          "references": []
+        },
+        {
+          "name": "--control-inset",
+          "value": "var(--space-1)",
+          "scope": [
+            ":root"
+          ],
+          "line": 93,
+          "references": [
+            "--space-1"
+          ]
+        },
+        {
+          "name": "--control-shell-radius",
+          "value": "calc(var(--control-radius) + var(--control-inset))",
+          "scope": [
+            ":root"
+          ],
+          "line": 94,
+          "references": [
+            "--control-radius",
+            "--control-inset"
+          ]
+        },
+        {
+          "name": "--control-target-toolbar",
+          "value": "36px",
+          "scope": [
+            ":root"
+          ],
+          "line": 95,
+          "references": []
+        },
+        {
+          "name": "--control-target-touch",
+          "value": "44px",
+          "scope": [
+            ":root"
+          ],
+          "line": 96,
+          "references": []
+        },
+        {
+          "name": "--icon-size-interface",
+          "value": "18px",
+          "scope": [
+            ":root"
+          ],
+          "line": 97,
+          "references": []
+        },
+        {
+          "name": "--icon-stroke-interface",
+          "value": "1.5px",
+          "scope": [
+            ":root"
+          ],
+          "line": 98,
+          "references": []
+        },
+        {
+          "name": "--font-size-control",
+          "value": "12px",
+          "scope": [
+            ":root"
+          ],
+          "line": 99,
+          "references": []
+        },
+        {
           "name": "--control-height-sm",
           "value": "28px",
           "scope": [
             ":root"
           ],
-          "line": 91,
+          "line": 100,
           "references": []
         },
         {
@@ -2155,7 +1775,7 @@
           "scope": [
             ":root"
           ],
-          "line": 92,
+          "line": 101,
           "references": []
         },
         {
@@ -2164,7 +1784,7 @@
           "scope": [
             ":root"
           ],
-          "line": 93,
+          "line": 102,
           "references": []
         },
         {
@@ -2173,7 +1793,7 @@
           "scope": [
             ":root"
           ],
-          "line": 94,
+          "line": 103,
           "references": []
         },
         {
@@ -2182,7 +1802,7 @@
           "scope": [
             ":root"
           ],
-          "line": 95,
+          "line": 104,
           "references": []
         },
         {
@@ -2191,7 +1811,7 @@
           "scope": [
             ":root"
           ],
-          "line": 96,
+          "line": 105,
           "references": []
         },
         {
@@ -2200,7 +1820,7 @@
           "scope": [
             ":root"
           ],
-          "line": 97,
+          "line": 106,
           "references": []
         },
         {
@@ -2209,7 +1829,7 @@
           "scope": [
             ":root"
           ],
-          "line": 98,
+          "line": 107,
           "references": []
         },
         {
@@ -2218,7 +1838,7 @@
           "scope": [
             ":root"
           ],
-          "line": 99,
+          "line": 108,
           "references": []
         },
         {
@@ -2227,7 +1847,7 @@
           "scope": [
             ":root"
           ],
-          "line": 100,
+          "line": 109,
           "references": []
         },
         {
@@ -2236,7 +1856,7 @@
           "scope": [
             ":root"
           ],
-          "line": 101,
+          "line": 110,
           "references": []
         },
         {
@@ -2245,7 +1865,7 @@
           "scope": [
             ":root"
           ],
-          "line": 102,
+          "line": 111,
           "references": []
         },
         {
@@ -2254,7 +1874,7 @@
           "scope": [
             ":root"
           ],
-          "line": 103,
+          "line": 112,
           "references": []
         },
         {
@@ -2263,7 +1883,7 @@
           "scope": [
             ":root"
           ],
-          "line": 104,
+          "line": 113,
           "references": []
         },
         {
@@ -2272,7 +1892,7 @@
           "scope": [
             ":root"
           ],
-          "line": 105,
+          "line": 114,
           "references": []
         },
         {
@@ -2281,7 +1901,7 @@
           "scope": [
             ":root"
           ],
-          "line": 106,
+          "line": 115,
           "references": []
         },
         {
@@ -2290,7 +1910,7 @@
           "scope": [
             ":root"
           ],
-          "line": 107,
+          "line": 116,
           "references": []
         },
         {
@@ -2299,7 +1919,7 @@
           "scope": [
             ":root"
           ],
-          "line": 108,
+          "line": 117,
           "references": []
         },
         {
@@ -2308,7 +1928,7 @@
           "scope": [
             ":root"
           ],
-          "line": 109,
+          "line": 118,
           "references": []
         },
         {
@@ -2317,7 +1937,7 @@
           "scope": [
             ":root"
           ],
-          "line": 111,
+          "line": 120,
           "references": []
         },
         {
@@ -2326,7 +1946,7 @@
           "scope": [
             ":root"
           ],
-          "line": 112,
+          "line": 121,
           "references": []
         },
         {
@@ -2335,7 +1955,7 @@
           "scope": [
             ":root"
           ],
-          "line": 113,
+          "line": 122,
           "references": []
         },
         {
@@ -2344,7 +1964,7 @@
           "scope": [
             ":root"
           ],
-          "line": 114,
+          "line": 123,
           "references": []
         },
         {
@@ -2353,7 +1973,7 @@
           "scope": [
             ":root"
           ],
-          "line": 115,
+          "line": 124,
           "references": []
         },
         {
@@ -2362,7 +1982,7 @@
           "scope": [
             "[data-spatial-theme=\"light\"]"
           ],
-          "line": 120,
+          "line": 129,
           "references": []
         },
         {
@@ -2371,7 +1991,7 @@
           "scope": [
             "[data-spatial-theme=\"light\"]"
           ],
-          "line": 121,
+          "line": 130,
           "references": []
         },
         {
@@ -2380,7 +2000,7 @@
           "scope": [
             "[data-spatial-theme=\"light\"]"
           ],
-          "line": 122,
+          "line": 131,
           "references": []
         },
         {
@@ -2389,7 +2009,7 @@
           "scope": [
             "[data-spatial-theme=\"light\"]"
           ],
-          "line": 123,
+          "line": 132,
           "references": []
         },
         {
@@ -2398,7 +2018,7 @@
           "scope": [
             "[data-spatial-theme=\"light\"]"
           ],
-          "line": 124,
+          "line": 133,
           "references": []
         },
         {
@@ -2408,7 +2028,7 @@
             "@media (prefers-reduced-motion: reduce)",
             ":root"
           ],
-          "line": 143,
+          "line": 152,
           "references": []
         },
         {
@@ -2418,7 +2038,7 @@
             "@media (prefers-reduced-motion: reduce)",
             ":root"
           ],
-          "line": 143,
+          "line": 152,
           "references": []
         },
         {
@@ -2428,7 +2048,7 @@
             "@media (prefers-reduced-motion: reduce)",
             ":root"
           ],
-          "line": 143,
+          "line": 152,
           "references": []
         }
       ],
@@ -2444,10 +2064,13 @@
         "--color-text-muted",
         "--color-text-primary",
         "--color-world",
+        "--control-inset",
+        "--control-radius",
         "--font-body",
         "--font-interface",
         "--font-technical",
-        "--line-height-body"
+        "--line-height-body",
+        "--space-1"
       ]
     },
     {
@@ -5781,29 +5404,33 @@
     {
       "path": "src/public/ownerSystemWorkflow/workbenchToolbar.css",
       "role": "Creation",
-      "sha256": "8318b9ff5d0544f3f144b4560de4b518b7256bcf4942651cde8809b3947884db",
+      "sha256": "4dc3dc4b4e83bbb94a0c4c150837ea6d7bf2fec2515cf49d730501745f41b48e",
       "definitions": [
         {
           "name": "--toolbar-target",
-          "value": "40px",
+          "value": "var(--control-target-toolbar)",
           "scope": [
             ".workbench-toolbar"
           ],
           "line": 3,
-          "references": []
+          "references": [
+            "--control-target-toolbar"
+          ]
         },
         {
           "name": "--toolbar-icon",
-          "value": "18px",
+          "value": "var(--icon-size-interface)",
           "scope": [
             ".workbench-toolbar"
           ],
           "line": 4,
-          "references": []
+          "references": [
+            "--icon-size-interface"
+          ]
         },
         {
           "name": "--toolbar-height",
-          "value": "54px",
+          "value": "44px",
           "scope": [
             ".workbench-toolbar"
           ],
@@ -5812,7 +5439,7 @@
         },
         {
           "name": "--toolbar-column-gap",
-          "value": "3px",
+          "value": "2px",
           "scope": [
             ".workbench-toolbar"
           ],
@@ -5821,7 +5448,7 @@
         },
         {
           "name": "--toolbar-row-gap",
-          "value": "0px",
+          "value": "4px",
           "scope": [
             ".workbench-toolbar"
           ],
@@ -5830,48 +5457,102 @@
         },
         {
           "name": "--toolbar-padding-block",
-          "value": "5px",
+          "value": "var(--control-inset)",
           "scope": [
             ".workbench-toolbar"
           ],
           "line": 8,
-          "references": []
+          "references": [
+            "--control-inset"
+          ]
         },
         {
           "name": "--toolbar-padding-inline",
-          "value": "5px",
+          "value": "var(--control-inset)",
           "scope": [
             ".workbench-toolbar"
           ],
           "line": 9,
-          "references": []
+          "references": [
+            "--control-inset"
+          ]
         },
         {
           "name": "--toolbar-radius",
-          "value": "35px",
+          "value": "var(--control-shell-radius)",
           "scope": [
             ".workbench-toolbar"
           ],
           "line": 10,
-          "references": []
+          "references": [
+            "--control-shell-radius"
+          ]
         },
         {
           "name": "--toolbar-key-radius",
-          "value": "25px",
+          "value": "var(--control-radius)",
           "scope": [
             ".workbench-toolbar"
           ],
           "line": 11,
-          "references": []
+          "references": [
+            "--control-radius"
+          ]
         },
         {
           "name": "--toolbar-popup-radius",
-          "value": "18px",
+          "value": "var(--toolbar-radius)",
           "scope": [
             ".workbench-toolbar"
           ],
           "line": 12,
+          "references": [
+            "--toolbar-radius"
+          ]
+        },
+        {
+          "name": "--toolbar-popup-border",
+          "value": "1px",
+          "scope": [
+            ".workbench-toolbar"
+          ],
+          "line": 21,
           "references": []
+        },
+        {
+          "name": "--toolbar-popup-padding-block",
+          "value": "calc(var(--toolbar-padding-block) - var(--toolbar-popup-border))",
+          "scope": [
+            ".workbench-toolbar"
+          ],
+          "line": 22,
+          "references": [
+            "--toolbar-padding-block",
+            "--toolbar-popup-border"
+          ]
+        },
+        {
+          "name": "--toolbar-popup-padding-inline",
+          "value": "calc(var(--toolbar-padding-inline) - var(--toolbar-popup-border))",
+          "scope": [
+            ".workbench-toolbar"
+          ],
+          "line": 23,
+          "references": [
+            "--toolbar-padding-inline",
+            "--toolbar-popup-border"
+          ]
+        },
+        {
+          "name": "--tactile-radius-row",
+          "value": "var(--toolbar-key-radius)",
+          "scope": [
+            ".workbench-toolbar"
+          ],
+          "line": 24,
+          "references": [
+            "--toolbar-key-radius"
+          ]
         },
         {
           "name": "--tactile-radius-control",
@@ -5879,59 +5560,51 @@
           "scope": [
             ".workbench-toolbar__bar"
           ],
-          "line": 30,
+          "line": 41,
           "references": [
             "--toolbar-key-radius"
           ]
         },
         {
-          "name": "--tactile-radius-control",
-          "value": "30px",
-          "scope": [
-            ".workbench-toolbar__button--select"
-          ],
-          "line": 55,
-          "references": []
-        },
-        {
-          "name": "--tactile-radius-control",
-          "value": "20px",
-          "scope": [
-            ".workbench-toolbar__button--hand"
-          ],
-          "line": 56,
-          "references": []
-        },
-        {
-          "name": "--toolbar-row-gap",
-          "value": "8px",
+          "name": "--toolbar-target",
+          "value": "var(--control-target-touch)",
           "scope": [
             "@media (max-width: 520px)",
             ".workbench-toolbar"
           ],
-          "line": 125,
-          "references": []
+          "line": 271,
+          "references": [
+            "--control-target-touch"
+          ]
         },
         {
           "name": "--toolbar-target",
-          "value": "44px",
+          "value": "var(--control-target-touch)",
           "scope": [
             "@media (pointer: coarse)",
             ".workbench-toolbar"
           ],
-          "line": 132,
-          "references": []
+          "line": 309,
+          "references": [
+            "--control-target-touch"
+          ]
         }
       ],
       "references": [
+        "--control-inset",
+        "--control-radius",
+        "--control-shell-radius",
+        "--control-target-toolbar",
+        "--control-target-touch",
         "--font-creation-toolbar",
+        "--font-size-control",
+        "--icon-size-interface",
+        "--space-3",
         "--tactile-accent",
         "--tactile-edge",
         "--tactile-face",
         "--tactile-ink",
         "--tactile-muted",
-        "--tactile-radius-control",
-        "--tactile-rim",
         "--tactile-shadow-inset",
         "--tactile-shadow-shell",
         "--tactile-surface",
@@ -5942,6 +5615,9 @@
         "--toolbar-key-radius",
         "--toolbar-padding-block",
         "--toolbar-padding-inline",
+        "--toolbar-popup-border",
+        "--toolbar-popup-padding-block",
+        "--toolbar-popup-padding-inline",
         "--toolbar-popup-radius",
         "--toolbar-radius",
         "--toolbar-row-gap",
@@ -6316,6 +5992,304 @@
         "--workflow-window-edge-top",
         "--workflow-window-overlay",
         "--workflow-window-selector"
+      ]
+    },
+    {
+      "path": "src/public/ownerSystemWorkflow/workflowFlat.css",
+      "role": "Flat material",
+      "sha256": "e56d9d5e995db7545c4f4905ba2ae71fde7d341c142ff4a113af6fdd382a8564",
+      "definitions": [
+        {
+          "name": "--tactile-face",
+          "value": "var(--color-surface-subtle)",
+          "scope": [
+            "[data-workflow-material='tactile'][data-workflow-finish='flat']"
+          ],
+          "line": 5,
+          "references": [
+            "--color-surface-subtle"
+          ]
+        },
+        {
+          "name": "--tactile-ink",
+          "value": "var(--color-text-primary)",
+          "scope": [
+            "[data-workflow-material='tactile'][data-workflow-finish='flat']"
+          ],
+          "line": 6,
+          "references": [
+            "--color-text-primary"
+          ]
+        },
+        {
+          "name": "--tactile-muted",
+          "value": "color-mix(in srgb, var(--tactile-ink) 70%, var(--tactile-face))",
+          "scope": [
+            "[data-workflow-material='tactile'][data-workflow-finish='flat']"
+          ],
+          "line": 7,
+          "references": [
+            "--tactile-ink",
+            "--tactile-face"
+          ]
+        },
+        {
+          "name": "--tactile-disabled",
+          "value": "color-mix(in srgb, var(--tactile-ink) 35%, var(--tactile-face))",
+          "scope": [
+            "[data-workflow-material='tactile'][data-workflow-finish='flat']"
+          ],
+          "line": 8,
+          "references": [
+            "--tactile-ink",
+            "--tactile-face"
+          ]
+        },
+        {
+          "name": "--tactile-accent",
+          "value": "var(--tactile-ink)",
+          "scope": [
+            "[data-workflow-material='tactile'][data-workflow-finish='flat']"
+          ],
+          "line": 9,
+          "references": [
+            "--tactile-ink"
+          ]
+        },
+        {
+          "name": "--tactile-edge",
+          "value": "color-mix(in srgb, var(--tactile-ink) 18%, var(--tactile-face))",
+          "scope": [
+            "[data-workflow-material='tactile'][data-workflow-finish='flat']"
+          ],
+          "line": 10,
+          "references": [
+            "--tactile-ink",
+            "--tactile-face"
+          ]
+        },
+        {
+          "name": "--tactile-raised",
+          "value": "transparent",
+          "scope": [
+            "[data-workflow-material='tactile'][data-workflow-finish='flat']"
+          ],
+          "line": 11,
+          "references": []
+        },
+        {
+          "name": "--tactile-hover",
+          "value": "color-mix(in srgb, var(--tactile-ink) 8%, var(--tactile-face))",
+          "scope": [
+            "[data-workflow-material='tactile'][data-workflow-finish='flat']"
+          ],
+          "line": 12,
+          "references": [
+            "--tactile-ink",
+            "--tactile-face"
+          ]
+        },
+        {
+          "name": "--tactile-well",
+          "value": "color-mix(in srgb, var(--tactile-ink) 5%, var(--tactile-face))",
+          "scope": [
+            "[data-workflow-material='tactile'][data-workflow-finish='flat']"
+          ],
+          "line": 13,
+          "references": [
+            "--tactile-ink",
+            "--tactile-face"
+          ]
+        },
+        {
+          "name": "--tactile-shadow-shell",
+          "value": "none",
+          "scope": [
+            "[data-workflow-material='tactile'][data-workflow-finish='flat']"
+          ],
+          "line": 14,
+          "references": []
+        },
+        {
+          "name": "--tactile-shadow-raised",
+          "value": "none",
+          "scope": [
+            "[data-workflow-material='tactile'][data-workflow-finish='flat']"
+          ],
+          "line": 15,
+          "references": []
+        },
+        {
+          "name": "--tactile-shadow-inset",
+          "value": "none",
+          "scope": [
+            "[data-workflow-material='tactile'][data-workflow-finish='flat']"
+          ],
+          "line": 16,
+          "references": []
+        },
+        {
+          "name": "--tactile-surface",
+          "value": "var(--tactile-face)",
+          "scope": [
+            "[data-workflow-material='tactile'][data-workflow-finish='flat']"
+          ],
+          "line": 17,
+          "references": [
+            "--tactile-face"
+          ]
+        },
+        {
+          "name": "--tactile-radius-control",
+          "value": "var(--control-radius)",
+          "scope": [
+            "[data-workflow-material='tactile'][data-workflow-finish='flat']"
+          ],
+          "line": 18,
+          "references": [
+            "--control-radius"
+          ]
+        },
+        {
+          "name": "--tactile-radius-row",
+          "value": "var(--control-radius)",
+          "scope": [
+            "[data-workflow-material='tactile'][data-workflow-finish='flat']"
+          ],
+          "line": 19,
+          "references": [
+            "--control-radius"
+          ]
+        },
+        {
+          "name": "--tactile-motion",
+          "value": "0ms",
+          "scope": [
+            "[data-workflow-material='tactile'][data-workflow-finish='flat']"
+          ],
+          "line": 20,
+          "references": []
+        },
+        {
+          "name": "--tactile-face",
+          "value": "var(--color-text-primary)",
+          "scope": [
+            ":where([data-menu-surface='mist'], [data-menu-surface='ash'], [data-menu-surface='paper'])\n  [data-workflow-material='tactile'][data-workflow-finish='flat'],\n[data-workflow-material='tactile'][data-workflow-finish='flat']:where(\n    [data-menu-surface='mist'],\n    [data-menu-surface='ash'],\n    [data-menu-surface='paper']\n  )"
+          ],
+          "line": 30,
+          "references": [
+            "--color-text-primary"
+          ]
+        },
+        {
+          "name": "--tactile-ink",
+          "value": "var(--color-surface-subtle)",
+          "scope": [
+            ":where([data-menu-surface='mist'], [data-menu-surface='ash'], [data-menu-surface='paper'])\n  [data-workflow-material='tactile'][data-workflow-finish='flat'],\n[data-workflow-material='tactile'][data-workflow-finish='flat']:where(\n    [data-menu-surface='mist'],\n    [data-menu-surface='ash'],\n    [data-menu-surface='paper']\n  )"
+          ],
+          "line": 31,
+          "references": [
+            "--color-surface-subtle"
+          ]
+        },
+        {
+          "name": "--tactile-face",
+          "value": "Canvas",
+          "scope": [
+            "@media (forced-colors: active)",
+            "[data-workflow-material='tactile'][data-workflow-finish='flat']"
+          ],
+          "line": 35,
+          "references": []
+        },
+        {
+          "name": "--tactile-ink",
+          "value": "ButtonText",
+          "scope": [
+            "@media (forced-colors: active)",
+            "[data-workflow-material='tactile'][data-workflow-finish='flat']"
+          ],
+          "line": 36,
+          "references": []
+        },
+        {
+          "name": "--tactile-muted",
+          "value": "CanvasText",
+          "scope": [
+            "@media (forced-colors: active)",
+            "[data-workflow-material='tactile'][data-workflow-finish='flat']"
+          ],
+          "line": 37,
+          "references": []
+        },
+        {
+          "name": "--tactile-disabled",
+          "value": "GrayText",
+          "scope": [
+            "@media (forced-colors: active)",
+            "[data-workflow-material='tactile'][data-workflow-finish='flat']"
+          ],
+          "line": 38,
+          "references": []
+        },
+        {
+          "name": "--tactile-accent",
+          "value": "Highlight",
+          "scope": [
+            "@media (forced-colors: active)",
+            "[data-workflow-material='tactile'][data-workflow-finish='flat']"
+          ],
+          "line": 39,
+          "references": []
+        },
+        {
+          "name": "--tactile-edge",
+          "value": "ButtonText",
+          "scope": [
+            "@media (forced-colors: active)",
+            "[data-workflow-material='tactile'][data-workflow-finish='flat']"
+          ],
+          "line": 40,
+          "references": []
+        },
+        {
+          "name": "--tactile-raised",
+          "value": "ButtonFace",
+          "scope": [
+            "@media (forced-colors: active)",
+            "[data-workflow-material='tactile'][data-workflow-finish='flat']"
+          ],
+          "line": 41,
+          "references": []
+        },
+        {
+          "name": "--tactile-hover",
+          "value": "ButtonFace",
+          "scope": [
+            "@media (forced-colors: active)",
+            "[data-workflow-material='tactile'][data-workflow-finish='flat']"
+          ],
+          "line": 42,
+          "references": []
+        },
+        {
+          "name": "--tactile-well",
+          "value": "ButtonFace",
+          "scope": [
+            "@media (forced-colors: active)",
+            "[data-workflow-material='tactile'][data-workflow-finish='flat']"
+          ],
+          "line": 43,
+          "references": []
+        }
+      ],
+      "references": [
+        "--color-surface-subtle",
+        "--color-text-primary",
+        "--control-radius",
+        "--icon-stroke-interface",
+        "--tactile-face",
+        "--tactile-ink"
       ]
     },
     {

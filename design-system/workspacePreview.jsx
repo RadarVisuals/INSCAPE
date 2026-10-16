@@ -652,7 +652,7 @@ export default function WorkspacePreview({ theme, onAction, status }) {
               </div>
             </div>
           </div>
-          <div className="ds-studio-bars" data-workflow-material="tactile">
+          <div className="ds-studio-bars" data-workflow-material="tactile" data-workflow-finish="flat">
             {image && (
               <div
                 className="ds-studio-inspection"
@@ -810,7 +810,6 @@ export default function WorkspacePreview({ theme, onAction, status }) {
               </div>
             )}
             <WorkbenchToolbar
-              minimalPopups
               activeTool={tool}
               onToolChange={(value) => {
                 setTool(value);
@@ -920,7 +919,7 @@ export default function WorkspacePreview({ theme, onAction, status }) {
         <div className="ds-studio-instruments">
           <section
             className="ds-studio-inspector ds-properties-window"
-            data-workflow-material="tactile"
+            data-workflow-material="tactile" data-workflow-finish="flat"
             aria-label="Tabbed tools preview"
           >
             <div className="ds-studio-tabs" role="tablist" aria-label="Tool panels">
@@ -999,7 +998,7 @@ export default function WorkspacePreview({ theme, onAction, status }) {
           <div className="ds-studio-utilities">
             <section
               className="ds-studio-minimap"
-              data-workflow-material="tactile"
+              data-workflow-material="tactile" data-workflow-finish="flat"
               aria-label="Minimap preview"
             >
               <header>
@@ -1029,7 +1028,7 @@ export default function WorkspacePreview({ theme, onAction, status }) {
             </section>
             <section
               className="ds-studio-keeper"
-              data-workflow-material="tactile"
+              data-workflow-material="tactile" data-workflow-finish="flat"
               aria-label="Keeper dock preview"
             >
               <header>

@@ -16,6 +16,8 @@ const profileAddress = '0x9999999999999999999999999999999999999999';
 const assets = OWNER_SYSTEM_WORKFLOW_REVIEW_ASSETS.map(asset => ({ ...asset, imageUrl: asset.src, thumbnailUrl: asset.src, originalImageUrl: asset.src }));
 const store = createSystemWorkflowDraftStore({ profileAddress, storage });
 const session = createSystemWorkflowAuthoringSession({ store });
+const theme = new URLSearchParams(location.search).get('theme') === 'mist' ? 'mist' : 'carbon';
+session.setAppearance({ expectedAppearance: session.getState().draft.appearance, appearance: { menuSurfaceId: theme } });
 session.placeAsset({ gridId: session.getState().selectedGridId, stableAssetId: assets[0].id,
   destination: { column: 10, row: 4, columnSpan: 9, rowSpan: 9 } });
 createRoot(document.getElementById('root')).render(<Runtime profileAddress={profileAddress} reviewStorage={storage} reviewAssets={assets}

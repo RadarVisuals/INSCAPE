@@ -2413,6 +2413,28 @@ row with a shorter slider, preserving usable input targets. These refinements
 remain scoped to the reference. The tactile description below
 documents that existing implementation, not the requested future toolbar style.
 
+### First production styling migration (2026-10-16)
+
+The founder authorized a controlled migration beginning with the creation toolbar
+and its Shapes, Actions and Add menus. This supersedes the older creation-bar
+geometry and tactile treatment below for this component only. The application
+and reference now use the same WorkbenchToolbar markup and workbenchToolbar.css:
+36 px desktop targets, 44 px narrow/coarse targets, 5 px keys, a 4 px inset and
+9 px shells. Persistent tools use an inverted fill and an expanding desktop label;
+open panels use a softer fill and state mark. The menus are headerless with a
+full-width search and a keyboard-accessible Back row for nested choices.
+
+workflowFlat.css provides the shared flat material through explicit
+data-workflow-finish="flat" opt-in. inscapeTokens.css owns its geometry and icon
+values; referenceTokens.css aliases them. Carbon is dark, Mist is light, and
+older light surface IDs retain light chrome without changing saved values.
+Icons use a 1.5 px non-scaling stroke. Existing tool commands, owner adapters,
+keyboard shortcuts, creation behavior, saved preferences and data boundaries
+remain authoritative. Workbench retains its dock-relative positioning and
+measured camera/menu clearance. The reference owns only its demonstration
+placement and bounded popup height. Other production instruments remain on
+their existing treatment until separately migrated.
+
 ### Shared creative workspace direction (2026-10-14)
 
 The founder requested an Affinity-familiar organization in the design-system

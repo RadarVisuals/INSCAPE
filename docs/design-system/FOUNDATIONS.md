@@ -21,9 +21,9 @@ The generated inventory includes all custom-property definitions in `src/**/*.cs
 
 ## Reference geometry and focus
 
-`design-system/referenceTokens.css` owns shared preview geometry and type sizes; `referenceMaterial.css` owns the scoped flat material shared by Overview and Components. `reference.css` owns reference page layout. `toolbarPreview.css`, `propertiesPreview.css` and `controlStates.css` own the respective component adapters and their responsive/accessibility rules. Controls, fields and menu rows use `--ds-control-radius: 5px`. Their 4 px inset derives `--ds-shell-radius: 9px`; popup borders count toward the inset. Creation targets are 36 px desktop and 44 px at widths ≤520 px or with coarse pointers.
+`src/inscapeTokens.css` owns the shared flat geometry. `design-system/referenceTokens.css` aliases it and adds preview-only type sizes; `workflowFlat.css` owns the explicitly opted-in material shared by the production creation toolbar and reference instruments. `reference.css` owns reference page layout. `workbenchToolbar.css` owns the toolbar and menu recipe; `toolbarPreview.css` only places it in the demonstration. Properties and control states retain their preview adapters. Controls, fields and menu rows use `--control-radius: 5px`. Their 4 px inset derives `--control-shell-radius: 9px`; popup borders count toward the inset. Creation targets are 36 px desktop and 44 px at widths ≤520 px or with coarse pointers.
 
-Carbon uses dark instruments and Mist light instruments. The active tool uses an inverted fill; secondary selection uses a softer fill and a state mark. Reference-wide keyboard focus uses neutral ink, with system Highlight in forced colours. Search retains a quiet neutral focus border. Mist supporting copy uses 66% dark ink in the reference so small text remains readable. Selected toolbar labels may grow beyond their normal 82 px minimum. Properties is a review proposal using 5 px field corners, a 9 px shell, and 12 px inner form padding for reading space; its close control retains the 4 px edge inset. These overrides do not alter production tokens or stored themes.
+Carbon uses dark instruments and Mist light instruments. The active tool uses an inverted fill; secondary selection uses a softer fill and a state mark. Reference-wide keyboard focus uses neutral ink, with system Highlight in forced colours. Search retains a quiet neutral focus border. Mist supporting copy uses 66% dark ink in the reference so small text remains readable. Selected toolbar labels may grow beyond their normal 82 px minimum. Properties is a review proposal using 5 px field corners, a 9 px shell, and 12 px inner form padding for reading space; its close control retains the 4 px edge inset. Properties remains a reference proposal. Stored theme IDs are unchanged by the toolbar migration.
 
 ## Production colour inventory
 
@@ -54,7 +54,7 @@ The current design-system preview offers **Carbon** and **Mist**. Overview and C
 
 Do not combine an ink from one theme with a panel from another. Semi-transparent surfaces also require a known underlying surface. The menu panel values are distinct from similarly named authored Workbench/Stage surface presets.
 
-Current production tactile tools remain dark on all six surroundings. This is one fixed material context, not a broken light-theme implementation. Bevel windows adapt to their supplied menu surface. Reception's authored content and its ash surround retain their own existing boundaries.
+The migrated creation toolbar uses dark Carbon and light Mist chrome; legacy ash/paper IDs also map to its light material. Other production tactile tools remain dark on all six surroundings. This is one fixed material context, not a broken light-theme implementation. Bevel windows adapt to their supplied menu surface. Reception's authored content and its ash surround retain their own existing boundaries.
 
 ## Typography
 
@@ -79,10 +79,10 @@ Global spacing is 4, 8, 12, 16, 20 and 24 px through `--space-1` … `--space-6`
 
 | Context | Existing target or geometry |
 | --- | --- |
-| Creation key | 40 px; 44 px coarse pointer |
-| Creation shell | Minimum 54 px high, 5 px padding, 3 px column gap, radius 35 px |
-| Creation keys by role | Select radius 30, Hand 20, remaining keys 25 px |
-| Creation at ≤520 px | Five keys then four, centred rows, 8 px row gap |
+| Creation key | 36 px; 44 px narrow/coarse pointer |
+| Creation shell | Minimum 44 px high, 4 px padding, 2 px column gap, radius 9 px |
+| Creation keys | 5 px radius; active Select/Hand/Text label expands on desktop |
+| Creation at ≤520 px | Five keys then four, centred rows, 4 px row gap |
 | Companion control / header icon | 32 px desktop; 44 px narrow/coarse |
 | Companion action key | 40 px desktop; 44 px narrow/coarse |
 | Companion narrow/coarse titlebar | 52 px; fields use 16 px text |
@@ -96,17 +96,20 @@ The Workbench's 24-work-pixel default grid, Display canvas units and article tex
 
 ## Shape, material and elevation
 
-Three existing interface families coexist deliberately:
+The following interface families coexist during migration:
 
 | Family | Surface grammar | Use |
 | --- | --- | --- |
 | Structural | Square edges, one-pixel lines, contiguous rails, directional selectors | Library, structural menus and retained system panels |
 | Bevel | Thin edge/highlight, theme-aware overlay and raised caps | Identity and compatible shared windows |
-| Dark tactile | Raised keys, recessed active wells, thin rims, restrained shadows | Creation, Properties, Layers, Artwork info, appearance, Text tools and Keeper settings |
+| Flat | Neutral Carbon/Mist fills, inverted active tools, 5/9 px geometry | Creation toolbar and its menus |
+| Dark tactile | Raised keys, recessed active wells, thin rims, restrained shadows | Properties, Layers, Artwork info, appearance, Text tools and Keeper settings |
 
 Observed implementation difference: the current application dock also opts into tactile material and quiet controls while retaining its structural rail layout. The active contract still describes the dock's retained structural baseline. This reference records the difference; it does not silently amend accepted product direction or migrate the dock again.
 
-The tactile recipe is `workflowTactile.css`; opt in with `data-workflow-material="tactile"`. It alone owns the material palette, gradient fills and raised/inset shadows. Component CSS owns geometry. Shell depth is stronger than control depth. Quiet command rows have no resting shadow.
+For the migrated toolbar, import `workflowFlat.css` after the native-control recipe and add `data-workflow-finish="flat"` on its material surface. Its palette and radii reuse foundation tokens. Other components do not acquire that finish implicitly.
+
+The retained tactile recipe is `workflowTactile.css`; opt in with `data-workflow-material="tactile"`. It alone owns the material palette, gradient fills and raised/inset shadows. Component CSS owns geometry. Shell depth is stronger than control depth. Quiet command rows have no resting shadow.
 
 Tactile press does not move bounds. Retained bevel caps currently translate by one pixel; that is an existing local recipe, not permission to apply moving press effects to tactile controls.
 
@@ -114,7 +117,7 @@ Grain belongs only where accepted. Tactile tools do not acquire an image noise t
 
 ## Iconography and media
 
-Use the existing tree-shakable Lucide icons. Tactile action icons generally render at 18 px with 1.6 stroke; overlay/window contexts retain their established 16/17 px and stroke recipes. Size `.lucide` or an explicit component class, never all SVG artwork in a module.
+Use the existing tree-shakable Lucide icons. The creation toolbar uses 18 px icons with a 1.5-screen-pixel non-scaling stroke. Retained tactile action icons generally render at 18 px with 1.6 stroke; overlay/window contexts retain their established 16/17 px and stroke recipes. Size `.lucide` or an explicit component class, never all SVG artwork in a module.
 
 Names describe actions: “Rotate”, “Mirror horizontal”, “Inspect artwork”, “Close Text tools”. Decorative icons are hidden from assistive technology. The control supplies its name. A tooltip supplements that name rather than replacing it.
 

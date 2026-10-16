@@ -33,6 +33,7 @@ import '../src/inscapeTokens.css';
 import '../src/lattice/rendering/latticeMenuSurface.css';
 import '../src/public/ownerSystemWorkflow/ownerSystemWorkflow.css';
 import './referenceTokens.css';
+import '../src/public/ownerSystemWorkflow/workflowFlat.css';
 import './referenceMaterial.css';
 import './reference.css';
 import './toolbarPreview.css';
@@ -100,7 +101,6 @@ function CreationToolbarExample({ onAction }) {
     [infoOpen, setInfoOpen] = useState(false);
   return (
     <WorkbenchToolbar
-      minimalPopups
       activeTool={tool}
       onToolChange={(value) => {
         setTool(value);
@@ -259,7 +259,7 @@ function Foundations() {
             <strong>{theme}</strong>
             <span>Primary information</span>
             <small>Supporting information</small>
-            <div className="ds-theme-instrument" data-workflow-material="tactile">
+            <div className="ds-theme-instrument" data-workflow-material="tactile" data-workflow-finish="flat">
               <span>Selected tool</span>
               <small>Instrument surface</small>
             </div>
@@ -387,7 +387,7 @@ function ComponentExamples({ theme }) {
       <div className="ds-flat-preview" data-menu-surface={theme}>
         <section
           className="ds-card ds-control-examples ds-live-controls"
-          data-workflow-material="tactile"
+          data-workflow-material="tactile" data-workflow-finish="flat"
         >
           <h2>Control states</h2>
           <p>
@@ -833,7 +833,7 @@ function Guidance() {
         </Card>
       </div>
       <h2>Current production control API</h2>
-      <pre>{`import '../public/ownerSystemWorkflow/workflowTactile.css';\n\n<div data-workflow-material="tactile">\n  <button type="button" className="workflow-tactile-control"\n    aria-pressed={selected} onClick={onSelect}>\n    Select\n  </button>\n</div>`}</pre>
+      <pre>{`import '../public/ownerSystemWorkflow/workflowTactile.css';\nimport '../public/ownerSystemWorkflow/workflowFlat.css';\n\n<div data-workflow-material="tactile" data-workflow-finish="flat">\n  <button type="button" className="workflow-tactile-control"\n    aria-pressed={selected} onClick={onSelect}>\n    Select\n  </button>\n</div>`}</pre>
       <p>
         Provide geometry in the consuming component. A CSS class supplies material, not keyboard
         behavior or a save operation. Prefer an existing complete component whenever its semantics

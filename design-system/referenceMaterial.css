@@ -1,46 +1,4 @@
-/* One flat-material adapter over the existing production control recipes.
-   Overview, Properties, workspace, Text and Library share this scope. */
-
-.ds-flat-preview [data-workflow-material='tactile'] {
-  color-scheme: dark;
-  --tactile-face: var(--color-surface-subtle);
-  --tactile-ink: var(--color-text-primary);
-  --tactile-muted: color-mix(in srgb, var(--tactile-ink) 70%, var(--tactile-face));
-  --tactile-disabled: color-mix(in srgb, var(--tactile-ink) 35%, var(--tactile-face));
-  --tactile-accent: var(--tactile-ink);
-  --tactile-edge: color-mix(in srgb, var(--tactile-ink) 18%, var(--tactile-face));
-  --tactile-raised: transparent;
-  --tactile-hover: color-mix(in srgb, var(--tactile-ink) 8%, var(--tactile-face));
-  --tactile-well: color-mix(in srgb, var(--tactile-ink) 5%, var(--tactile-face));
-  --tactile-shadow-shell: none;
-  --tactile-shadow-raised: none;
-  --tactile-shadow-inset: none;
-  --tactile-surface: var(--tactile-face);
-  --tactile-radius-control: var(--ds-control-radius);
-  --tactile-radius-row: var(--ds-control-radius);
-  --tactile-motion: 0ms;
-}
-.ds-flat-preview:where([data-menu-surface='mist']) [data-workflow-material='tactile'] {
-  color-scheme: light;
-  --tactile-face: var(--color-text-primary);
-  --tactile-ink: var(--color-surface-subtle);
-}
-@media (forced-colors: active) {
-  .ds-flat-preview [data-workflow-material='tactile'] {
-    --tactile-face: Canvas;
-    --tactile-ink: ButtonText;
-    --tactile-muted: CanvasText;
-    --tactile-disabled: GrayText;
-    --tactile-accent: Highlight;
-    --tactile-edge: ButtonText;
-    --tactile-raised: ButtonFace;
-    --tactile-hover: ButtonFace;
-    --tactile-well: ButtonFace;
-  }
-}
-
-/* One physical stroke weight across differently sized Lucide glyphs, including
-   portal menus. Only interface icons opt in; artwork SVGs keep their own strokes. */
+/* Reference icons outside opted-in flat instruments. Material lives in workflowFlat.css. */
 body:has(.ds-reference) svg.lucide > :is(path, line, polyline, polygon, circle, rect, ellipse) {
   stroke-width: var(--ds-icon-stroke);
   vector-effect: non-scaling-stroke;

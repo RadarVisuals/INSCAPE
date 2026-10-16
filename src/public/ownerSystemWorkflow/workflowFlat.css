@@ -1,0 +1,54 @@
+/* Flat material for explicitly migrated instruments. Native states stay in workflowTactile.css. */
+
+[data-workflow-material='tactile'][data-workflow-finish='flat'] {
+  color-scheme: dark;
+  --tactile-face: var(--color-surface-subtle);
+  --tactile-ink: var(--color-text-primary);
+  --tactile-muted: color-mix(in srgb, var(--tactile-ink) 70%, var(--tactile-face));
+  --tactile-disabled: color-mix(in srgb, var(--tactile-ink) 35%, var(--tactile-face));
+  --tactile-accent: var(--tactile-ink);
+  --tactile-edge: color-mix(in srgb, var(--tactile-ink) 18%, var(--tactile-face));
+  --tactile-raised: transparent;
+  --tactile-hover: color-mix(in srgb, var(--tactile-ink) 8%, var(--tactile-face));
+  --tactile-well: color-mix(in srgb, var(--tactile-ink) 5%, var(--tactile-face));
+  --tactile-shadow-shell: none;
+  --tactile-shadow-raised: none;
+  --tactile-shadow-inset: none;
+  --tactile-surface: var(--tactile-face);
+  --tactile-radius-control: var(--control-radius);
+  --tactile-radius-row: var(--control-radius);
+  --tactile-motion: 0ms;
+}
+:where([data-menu-surface='mist'], [data-menu-surface='ash'], [data-menu-surface='paper'])
+  [data-workflow-material='tactile'][data-workflow-finish='flat'],
+[data-workflow-material='tactile'][data-workflow-finish='flat']:where(
+    [data-menu-surface='mist'],
+    [data-menu-surface='ash'],
+    [data-menu-surface='paper']
+  ) {
+  color-scheme: light;
+  --tactile-face: var(--color-text-primary);
+  --tactile-ink: var(--color-surface-subtle);
+}
+@media (forced-colors: active) {
+  [data-workflow-material='tactile'][data-workflow-finish='flat'] {
+    --tactile-face: Canvas;
+    --tactile-ink: ButtonText;
+    --tactile-muted: CanvasText;
+    --tactile-disabled: GrayText;
+    --tactile-accent: Highlight;
+    --tactile-edge: ButtonText;
+    --tactile-raised: ButtonFace;
+    --tactile-hover: ButtonFace;
+    --tactile-well: ButtonFace;
+  }
+}
+
+/* One physical stroke weight for interface icons; artwork SVGs keep their own strokes. */
+
+[data-workflow-finish='flat']
+  svg.lucide
+  > :is(path, line, polyline, polygon, circle, rect, ellipse) {
+  stroke-width: var(--icon-stroke-interface);
+  vector-effect: non-scaling-stroke;
+}

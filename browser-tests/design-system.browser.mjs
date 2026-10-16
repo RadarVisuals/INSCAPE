@@ -120,7 +120,7 @@ test('token explorer finds aliases, preserves scoped overrides and recovers from
     assert.ok((await rows.allTextContents()).some(text => text.includes('var(--color-surface-subtle)')));
     assert.ok((await rows.allTextContents()).some(text => text.includes('Canvas')));
     await search.fill('--ds-shell-radius');
-    assert.ok((await rows.allTextContents()).some(text => text.includes('var(--ds-control-radius)') && text.includes('Reference')), 'preview geometry is discoverable as a scoped reference token');
+    assert.ok((await rows.allTextContents()).some(text => text.includes('var(--control-shell-radius)') && text.includes('Reference')), 'preview geometry is discoverable as a scoped reference token');
     await search.fill('no-such-inscape-token');
     await page.getByText('No tokens match.', { exact: false }).waitFor();
     await search.fill('--font-creation-toolbar');

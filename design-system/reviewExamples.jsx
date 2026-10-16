@@ -29,7 +29,7 @@ export function ControlStatesSheet({ onAction, status }) {
             key={theme}
             aria-label={`${theme} button states`}
           >
-            <div className="ds-control-examples ds-state-material" data-workflow-material="tactile">
+            <div className="ds-control-examples ds-state-material" data-workflow-material="tactile" data-workflow-finish="flat">
               <h3>{theme === 'carbon' ? 'Carbon' : 'Mist'}</h3>
               <div className="ds-state-grid">
                 {states.map(([label, state]) => (

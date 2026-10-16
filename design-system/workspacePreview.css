@@ -195,19 +195,6 @@
   width: max-content;
   max-width: 100%;
 }
-.ds-studio .ds-studio-bars .workbench-toolbar__button {
-  height: var(--toolbar-target);
-  min-width: var(--toolbar-target);
-  padding: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.ds-studio .ds-studio-bars .workbench-toolbar__button--select[aria-pressed='true'],
-.ds-studio .ds-studio-bars .workbench-toolbar__button--hand[aria-pressed='true'],
-.ds-studio .ds-studio-bars .workbench-toolbar__button--text[aria-pressed='true'] {
-  padding-inline: 10px;
-}
 .ds-studio-auxiliary {
   display: flex;
   align-items: center;

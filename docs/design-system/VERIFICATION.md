@@ -581,3 +581,33 @@ reference/Library browser cases; the development-only raw-source case was covere
 by the local run. The export retains its no-source/no-internal-documents boundary.
 Application CSS/source edits remain local and uncommitted; only the generated
 visual artifact is published through the existing owner-private Site workflow.
+
+
+## Creation toolbar migration — 2026-10-16
+
+Recovery checkpoint: 4d5e4aa (approved reference CSS cleanup). This migration
+covers only the production creation toolbar and its menus. The real owner
+adapter, callbacks, creation gestures and saved data schemas are unchanged.
+The app and reference share WorkbenchToolbar, workbenchToolbar.css and the
+explicit workflowFlat.css finish. The former minimalPopups variant and duplicate
+reference toolbar recipes were removed; reference CSS retains hosting rules.
+
+- Baseline: 9 existing production-toolbar cases and 11 reference cases passed.
+- Final focused coverage: 13 production-toolbar, 11 general reference,
+  4 Library/sidebar, 10 workspace and 5 interaction browser cases passed (43).
+  Includes eight screen sizes, 320 px touch and landscape, Carbon/Mist,
+  nested Back, arrow navigation, search/real grid action, trigger/outside/Escape
+  dismissal, focus restoration, overflow, reduced motion and forced colours.
+- Seven inventory/export-boundary/creation-geometry unit checks passed.
+- npm run build and npm run build:check passed; initial JS 822,422 bytes.
+- Standalone design-system export and token freshness check passed.
+  Inventory: 68 CSS files, 557 definitions, 295 custom-property names.
+- Wide Carbon/Mist and narrow production screenshots inspected. All 12 captured
+  reference popup screenshots remained pixel-identical to the approved baseline.
+  Reference status text now identifies the toolbar as implemented in the app.
+- Existing Rollup annotation, dynamic/static import and chunk-size warnings
+  remain. No package, runtime, storage, publication or access changes were made.
+
+Checks ran locally. This is a component migration, not a production deployment
+or a claim that the rest of the application has been migrated. The full release
+suite was not run for this scoped change.
