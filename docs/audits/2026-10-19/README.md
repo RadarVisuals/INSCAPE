@@ -36,6 +36,11 @@ Local path roots in shared logs are redacted; counts and test outcomes are intac
 
 ## Remaining boundaries
 
+**Latest accepted resize behavior:** [free Image and Shape corners](free-corners.md).
+The founder clarified that width and height must change independently at every
+corner while the source artwork remains undistorted. This supersedes the
+proportional-Image-corner interpretation in the earlier two repair records.
+
 The subsequent [resize-controls repair](resize-controls.md) records the founder's
 proportional-corner decision, physical-pixel handle alignment, before/after
 regressions and the new verification results. Its counts describe the packaged

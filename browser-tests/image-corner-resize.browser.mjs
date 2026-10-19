@@ -9,7 +9,7 @@ const output = process.env.INSCAPE_BROWSER_OUTPUT || '.browser-test-runtime/imag
 const settle = page => page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
 const near = (actual, expected, label) => assert.ok(Math.abs(actual - expected) <= 1.1, `${label}: ${actual} vs ${expected}`);
 
-for (const [width, density] of [[1440, 1], [390, 1.25]]) test(`Image corner resizing preserves frame, artwork and undo at ${width}px / DPR ${density}`, { timeout: 120000 }, async () => {
+for (const [width, density] of [[1440, 1], [390, 1.25]]) test(`Image corners resize width and height freely without stretching artwork at ${width}px / DPR ${density}`, { timeout: 120000 }, async () => {
   await mkdir(output, { recursive: true });
   const browser = await chromium.launch({ headless: true });
   try {
@@ -55,23 +55,24 @@ for (const [width, density] of [[1440, 1], [390, 1.25]]) test(`Image corner resi
     };
     const measurements = [];
     for (const scale of [.55, .9, 1]) for (const corner of ['nw', 'ne', 'sw', 'se']) {
-      for (const axis of ['horizontal', 'vertical', 'diagonal']) for (const factor of [.8, 1.2]) {
+      for (const axis of ['horizontal', 'vertical', 'diagonal', 'mixed']) for (const factor of [.8, 1.2]) {
         await reset(scale);
         const before = await draft(), rect = await surface.boundingBox();
-        const dx = axis === 'vertical' ? 0 : (corner.includes('w') ? -1 : 1) * 240 * scale * (factor - 1);
-        const dy = axis === 'horizontal' ? 0 : (corner.includes('n') ? -1 : 1) * 180 * scale * (factor - 1);
+        const fx = axis === 'vertical' ? 1 : factor, fy = axis === 'horizontal' ? 1 : axis === 'mixed' ? 2-factor : factor;
+        const dx = (corner.includes('w') ? -1 : 1) * 240 * scale * (fx - 1);
+        const dy = (corner.includes('n') ? -1 : 1) * 180 * scale * (fy - 1);
         await start(`.image-module__resize.is-${corner}`, dx, dy);
         assert.deepEqual(await draft(), before, 'pointer preview does not write storage');
         const preview = await surface.boundingBox(), media = await artwork();
-        near(preview.width, 240 * scale * factor, `${corner} ${axis} width`);
-        near(preview.height, 180 * scale * factor, `${corner} ${axis} height`);
+        near(preview.width, 240 * scale * fx, `${corner} ${axis} width`);
+        near(preview.height, 180 * scale * fy, `${corner} ${axis} height`);
         near(preview.x + (corner.includes('w') ? preview.width : 0), rect.x + (corner.includes('w') ? rect.width : 0), 'fixed opposite x');
         near(preview.y + (corner.includes('n') ? preview.height : 0), rect.y + (corner.includes('n') ? rect.height : 0), 'fixed opposite y');
         assert.ok(Math.abs(media.width / media.height - 2560 / 1440) < 1e-9, 'media retains source aspect ratio');
         await page.mouse.up(); await settle(page);
         const after = await draft();
-        assert.equal(after.imageModules[0].width, Math.round(240 * factor));
-        assert.equal(after.imageModules[0].height, Math.round(180 * factor));
+        assert.equal(after.imageModules[0].width, Math.round(240 * fx));
+        assert.equal(after.imageModules[0].height, Math.round(180 * fy));
         assert.deepEqual(after.imageModules[0].sides, before.imageModules[0].sides, 'source, fit and transforms are untouched');
         assert.deepEqual(await surface.boundingBox(), preview, 'no release jump');
         await page.evaluate(() => imageFitFixture.store.undo()); await settle(page);
@@ -83,11 +84,12 @@ for (const [width, density] of [[1440, 1], [390, 1.25]]) test(`Image corner resi
     }
     // Custom crop is retained, and both cancellation and storage failure restore
     // the complete rendered frame as well as its saved content.
-    for (const outcome of ['cancel', 'save-failure', 'commit']) {
+    for (const selected of [false, true]) for (const outcome of ['cancel', 'save-failure', 'commit']) {
       await reset(.9, { x: .3, y: .7, zoom: 1.4 });
+      if (selected) { await page.evaluate(() => imageFitFixture.selection([imageFitFixture.store.getDraft().imageModules[0].id])); await settle(page); }
       const before = await draft(), rect = await surface.boundingBox();
       if (outcome === 'save-failure') await page.evaluate(() => { imageFitFixture.failSave = true; });
-      await start('.image-module__resize.is-se', 43.2, 0);
+      await start(selected ? '.workbench-selection .is-se' : '.image-module__resize.is-se', 43.2, 0);
       if (outcome === 'cancel') await page.keyboard.press('Escape');
       await page.mouse.up(); await settle(page);
       if (outcome === 'commit') {
@@ -95,12 +97,11 @@ for (const [width, density] of [[1440, 1], [390, 1.25]]) test(`Image corner resi
         await page.screenshot({ path: join(output, `corner-horizontal-${width}.png`) });
       } else { assert.deepEqual(await draft(), before); assert.deepEqual(await surface.boundingBox(), rect); }
     }
-    // Keyboard corner controls share the proportional path; side handles still
-    // change one canvas dimension. Selection handles use the same pointer rule.
+    // Keyboard and single-Image selection corners use the same free dimensions.
     await reset();
     await page.locator('.image-module__resize.is-se').focus(); await page.keyboard.press('Shift+ArrowRight'); await settle(page);
     assert.equal((await draft()).imageModules[0].width, 250);
-    assert.equal((await draft()).imageModules[0].height, 188);
+    assert.equal((await draft()).imageModules[0].height, 180);
     await reset(); await start('.image-module__resize.is-e', 24, 0); await page.mouse.up(); await settle(page);
     assert.equal((await draft()).imageModules[0].width, 264); assert.equal((await draft()).imageModules[0].height, 180);
     for (const axis of ['horizontal', 'vertical']) {
@@ -108,10 +109,23 @@ for (const [width, density] of [[1440, 1], [390, 1.25]]) test(`Image corner resi
       await page.evaluate(() => imageFitFixture.selection([imageFitFixture.store.getDraft().imageModules[0].id])); await settle(page);
       await start('.workbench-selection .is-se', axis === 'horizontal' ? 48 : 0, axis === 'vertical' ? 36 : 0);
       await page.mouse.up(); await settle(page);
-      assert.equal((await draft()).imageModules[0].width, 288); assert.equal((await draft()).imageModules[0].height, 216);
+      assert.equal((await draft()).imageModules[0].width, axis === 'horizontal' ? 288 : 240);
+      assert.equal((await draft()).imageModules[0].height, axis === 'vertical' ? 216 : 180);
       assert.deepEqual((await draft()).imageModules[0].sides, before.imageModules[0].sides);
       await page.evaluate(() => imageFitFixture.store.undo()); assert.deepEqual(await draft(), before);
     }
+    await reset();
+    const beforeKeyboardSelection = await draft();
+    await page.evaluate(() => imageFitFixture.selection([imageFitFixture.store.getDraft().imageModules[0].id])); await settle(page);
+    await page.locator('.workbench-selection .is-nw').focus();
+    await page.keyboard.press('Shift+ArrowLeft'); await settle(page);
+    assert.equal((await draft()).imageModules[0].width, 250);
+    assert.equal((await draft()).imageModules[0].height, 180);
+    await page.keyboard.press('ArrowUp'); await settle(page);
+    assert.equal((await draft()).imageModules[0].width, 250);
+    assert.equal((await draft()).imageModules[0].height, 181);
+    await page.evaluate(() => { imageFitFixture.store.undo(); imageFitFixture.store.undo(); }); await settle(page);
+    assert.deepEqual(await draft(), beforeKeyboardSelection, 'keyboard selection resize uses independent axes and undo');
     await writeFile(join(output, `corners-${width}.json`), JSON.stringify(measurements, null, 2));
     assert.deepEqual(errors, []);
   } finally { await browser.close(); }

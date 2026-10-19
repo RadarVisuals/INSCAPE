@@ -1,5 +1,5 @@
 import { workbenchArea, workbenchAreaBounds } from '../systemWorkflow/domain/workbenchArea.js';
-import { MAX_IMAGE_MODULES, validImageModules, imageCropForResize, createImagePresentation } from './imageModule.js';
+import { MAX_IMAGE_MODULES, validImageModules, createImagePresentation } from './imageModule.js';
 import { createDefaultWorkbenchPresentation } from '../profileDocument/domain/workbenchPresentation.js';
 import { clampWorkbenchPosition } from '../public/ownerSystemWorkflow/workbenchSpace.js';
 
@@ -61,8 +61,7 @@ export function saveImageModule(store, profile, expected, next) {
 export function prepareImageResize(draft, { expected, width, height }) {
   if (JSON.stringify(draft.imageModules?.find(item => item.id === expected.id)) !== JSON.stringify(expected))
     throw new Error('An Image changed during resizing. Try the selection again.');
-  const imageModules = draft.imageModules.map(item => item.id === expected.id ? { ...item, width, height,
-    sides: item.sides.map(side => ({ ...side, crop: imageCropForResize(side.crop, item, { width, height }) })) } : item);
+  const imageModules = draft.imageModules.map(item => item.id === expected.id ? { ...item, width, height } : item);
   if (!validImageModules(imageModules)) throw new Error('Image dimensions are outside the supported range.');
   return { ...draft, imageModules };
 }

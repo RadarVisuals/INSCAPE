@@ -2,6 +2,7 @@ import { Copy, Trash2, ChevronDown, ChevronUp, ChevronsDown, ChevronsUp } from '
 import { gridShapeFrame } from './gridShapeGeometry.js';
 import { useCallback, useEffect, useMemo, useState, useId } from 'react';
 import { WorkbenchWindow } from '../public/ownerSystemWorkflow/DisplayInstrumentWindow.jsx';
+import { resizeWorkbenchWindow } from '../public/ownerSystemWorkflow/ownerSystemWorkflowWindowGeometry.js';
 import { ContextToolContent, useContextToolTarget } from '../public/ownerSystemWorkflow/ContextToolbar.jsx';
 import { useWorkbenchView, workbenchModuleTransform } from '../public/ownerSystemWorkflow/WorkbenchViewContext.js';
 import { commitWorkbenchSelectionResize } from '../systemWorkflow/resizeWorkbenchSelection.js';
@@ -45,7 +46,7 @@ function ShapeInstance({ record, records, index, initialPresentation, store, pro
   const applyFrame = useCallback(frame => { setCommittedFrame(frame); layout(frame); }, [layout]);
   const resizeTarget = useMemo(() => ({ enabled: editable, reflow: true, continuousGeometry: true,
     expected: record, store, profileAddress, layoutKey: 'shapes', commit: commitWorkbenchSelectionResize,
-    prepare: prepareShapeResize, applyFrame, reportError: setError,
+    prepare: prepareShapeResize, applyFrame, reportError: setError, resizeCorner: resizeWorkbenchWindow,
     minimumWidth: kind === 'grid' ? record.grid.spacing : 8, minimumHeight: kind === 'grid' ? record.grid.spacing : 8,
     maximumWidth: 7992, maximumHeight: 7992,
     resizeStep: kind === 'grid' ? record.grid.spacing : undefined,

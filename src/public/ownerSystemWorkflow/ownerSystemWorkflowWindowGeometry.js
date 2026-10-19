@@ -36,6 +36,7 @@ export function resizeWorkbenchWindow(frame, edge, delta, minimum, bounds, snap)
   for (const [axis, key, start, end, before, after] of [
     ['x', 'width', 'left', 'right', 'w', 'e'], ['y', 'height', 'top', 'bottom', 'n', 's'],
   ]) {
+    if (!delta[axis]) continue;
     const reverse = edge.includes(before);
     if (!reverse && !edge.includes(after)) continue;
     const anchor = frame[start] + (reverse ? frame[key] : 0);

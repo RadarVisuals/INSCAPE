@@ -1,5 +1,9 @@
 # Resize controls — 19 October 2026
 
+**Superseded interaction:** the founder subsequently clarified that Image
+corners must change width and height independently. See [free corners](free-corners.md)
+for current behavior. The physical-pixel handle correction below is retained.
+
 **Follow-up:** these initial corner cases covered small frames. The subsequent
 [large-Image repair](image-world-size.md) removes viewport fitting that still
 canceled proportional growth for larger frames. Read both records for the

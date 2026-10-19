@@ -1,5 +1,9 @@
 # Large Image corner resize — 19 October 2026
 
+**Subsequent clarification:** [free corners](free-corners.md) supersedes the
+fixed Image ratio described here. Authored world dimensions and the Properties
+layout-loop repair remain; width and height now resize independently.
+
 The initial corner repair was incomplete. Small Images reacted to horizontal,
 vertical and diagonal dragging, but per-Image viewport fitting canceled the
 visible proportional growth of large Images. Selection resizing also inherited

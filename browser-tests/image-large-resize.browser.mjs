@@ -74,19 +74,20 @@ for (const [width, density] of [[1440, 1], [390, 1.25]]) test(`large Image corne
     for (const size of [{ width: 239, height: 1053 }, { width: width === 390 ? 1200 : 1800, height: 400 }]) {
       for (const corner of ['se','ne','sw','nw']) for (const axis of ['horizontal','vertical','diagonal']) for (const factor of [.9,1.1]) {
         await reset(size); const before = await draft(), rect = await frame.boundingBox();
+        const fx = axis === 'vertical' ? 1 : factor, fy = axis === 'horizontal' ? 1 : factor;
         const dx = axis === 'vertical' ? 0 : (corner.includes('w') ? -1 : 1)*size.width*.25*(factor-1);
         const dy = axis === 'horizontal' ? 0 : (corner.includes('n') ? -1 : 1)*size.height*.25*(factor-1);
         await drag(`.image-module__resize.is-${corner}`, dx, dy);
         const preview = await frame.boundingBox();
-        near(preview.width, size.width*.25*factor, `${corner} ${axis} visible width must follow the resize`);
-        near(preview.height, size.height*.25*factor, `${corner} ${axis} visible height must follow the resize`);
+        near(preview.width, size.width*.25*fx, `${corner} ${axis} visible width must follow the resize`);
+        near(preview.height, size.height*.25*fy, `${corner} ${axis} visible height must follow the resize`);
         near(preview.x+(corner.includes('w') ? preview.width : 0), rect.x+(corner.includes('w') ? rect.width : 0), 'opposite x');
         near(preview.y+(corner.includes('n') ? preview.height : 0), rect.y+(corner.includes('n') ? rect.height : 0), 'opposite y');
         assert.deepEqual(await draft(), before, 'preview remains unsaved');
         await page.mouse.up(); await settle(page);
         const after = await draft();
-        assert.equal(after.imageModules[0].width, Math.round(size.width*factor));
-        assert.equal(after.imageModules[0].height, Math.round(size.height*factor));
+        assert.equal(after.imageModules[0].width, Math.round(size.width*fx));
+        assert.equal(after.imageModules[0].height, Math.round(size.height*fy));
         assert.deepEqual(after.imageModules[0].sides, before.imageModules[0].sides, 'source, crop and transforms unchanged');
         assert.deepEqual(await frame.boundingBox(), preview, 'release keeps the preview');
         await page.evaluate(() => imageFitFixture.store.undo()); await settle(page); assert.deepEqual(await draft(), before);
@@ -98,7 +99,7 @@ for (const [width, density] of [[1440, 1], [390, 1.25]]) test(`large Image corne
     await page.evaluate(() => imageFitFixture.selection([imageFitFixture.store.getDraft().imageModules[0].id])); await settle(page);
     await drag('.workbench-selection .is-se', 23.9, 0); await page.mouse.up(); await settle(page);
     const saved = await draft(), savedFrame = await frame.boundingBox();
-    assert.equal(saved.imageModules[0].width, 335); assert.equal(saved.imageModules[0].height, 1474);
+    assert.equal(saved.imageModules[0].width, 335); assert.equal(saved.imageModules[0].height, 1053);
     assert.equal(saved.imageModules[0].sides[0].crop, null);
     await page.screenshot({ path: join(output, `large-before-reload-${width}.png`) });
     // Reload the actual page and hydrate the real store from browser storage.

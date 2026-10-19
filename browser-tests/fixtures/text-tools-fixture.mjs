@@ -1,4 +1,4 @@
-export async function mountTextToolsFixture(page, origin, { visitor = false, textCount = 1, surfaces = false, displayTextCount = 0, beforeImports } = {}) {
+export async function mountTextToolsFixture(page, origin, { visitor = false, textCount = 1, surfaces = false, displayTextCount = 0, beforeImports, waitForText = true } = {}) {
   await page.route('**/*', route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
   await page.route('https://raw.githubusercontent.com/RadarVisuals/INSCAPE/**', async route => {
     const path = new URL(route.request().url()).pathname.split('/public/')[1];
@@ -75,7 +75,7 @@ export async function mountTextToolsFixture(page, origin, { visitor = false, tex
     } else createRoot(document.getElementById('root')).render(React.createElement(Runtime, { profileAddress, reviewStorage: storage, reviewAssets: fixture.OWNER_SYSTEM_WORKFLOW_REVIEW_ASSETS,
       reviewCategories: [], reviewActivity: [], reviewDiscovery: [], reviewProfile: { name: 'Text tools review' } }));
   }, { visitor, textCount, surfaces, displayTextCount });
-  await page.locator('.text-window').first().waitFor();
+  if (waitForText) await page.locator('.text-window').first().waitFor();
   if (await page.getByRole('button', { name: 'Read', exact: true }).count())
     await page.getByRole('textbox', { name: 'Article text', exact: true }).first().waitFor();
   await page.evaluate(() => document.fonts.ready);

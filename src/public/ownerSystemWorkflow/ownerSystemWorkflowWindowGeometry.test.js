@@ -36,6 +36,19 @@ test('each resize edge preserves its opposite edge and enforces minimum dimensio
   assert.deepEqual(resizeWorkbenchWindow(frame, 'nw', { x: -9999, y: -9999 }, minimum, bounds), { left: 8, top: 8, width: 472, height: 592 });
 });
 
+test('a free corner never snaps an axis the pointer did not move', () => {
+  const frame = { left: 19, top: 31, width: 107, height: 163 };
+  const bounds = { left: 0, top: 0, right: 1000, bottom: 1000 };
+  for (const edge of ['nw', 'ne', 'sw', 'se']) for (const axis of ['x', 'y']) {
+    const calls = [];
+    const resized = resizeWorkbenchWindow(frame, edge, { x: axis === 'x' ? 10 : 0, y: axis === 'y' ? 10 : 0 },
+      { width: 8, height: 8 }, bounds, (a, side, value) => { calls.push(a); return Math.round(value / 24) * 24; });
+    assert.deepEqual(calls, [axis]);
+    assert.equal(resized[axis === 'x' ? 'height' : 'width'], frame[axis === 'x' ? 'height' : 'width']);
+    assert.equal(resized[axis === 'x' ? 'top' : 'left'], frame[axis === 'x' ? 'top' : 'left']);
+  }
+});
+
 test('odd-size resize marks align to physical pixels without moving hit targets or authored edges', () => {
   const viewport = { width: 1440, height: 900 };
   for (const density of [1, 1.25, 1.5, 2]) for (const screen of [

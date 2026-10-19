@@ -320,6 +320,23 @@ export function WorkbenchViewControls({ hostRef, disabled = false, dockVisible =
     // Owner authoring must not silently fall back to an unsaved group scale.
     if (current.store && !authored) return null;
     const originals = nodes.map(node => snapMovement.rectangle([node]));
+    if (authored && ids.length === 1 && editors[0].resizeCorner) {
+      const editor = editors[0], id = ids[0], offset = navigation.getCamera().offset;
+      const original = { left: (rectangle.left - offset.x) / current.scale, top: (rectangle.top - offset.y) / current.scale,
+        width: rectangle.width / current.scale, height: rectangle.height / current.scale };
+      let next = null;
+      return { nodes, authored, step: editor.resizeStep ?? 1, applyDelta: (delta, bypass) => {
+        next = editor.resizeCorner(original, corner, { x: delta.x / current.scale, y: delta.y / current.scale }, bypass);
+        setTransforms({ ...current.transforms, [id]: { ...identityWorkbenchTransform, frame: next } });
+      }, commit: () => {
+        if (!next) return true;
+        if (current.resizeTargets.get(id)?.current !== editor) return false;
+        if (!editor.commit([{ ...editor, id, getPresentation: current.getPresentation, ...next }])) return false;
+        editor.applyFrame(next);
+        setTransforms(values => { const restored = { ...values }; delete restored[id]; return restored; });
+        return true;
+      } };
+    }
     const limits = workspaceBounds();
     const availableX = corner.includes('w') ? anchor.x - limits.left : limits.right - anchor.x;
     const availableY = corner.includes('n') ? anchor.y - limits.top : limits.bottom - anchor.y;
@@ -393,8 +410,9 @@ export function WorkbenchViewControls({ hostRef, disabled = false, dockVisible =
         if (pointer.pointerId !== event.pointerId) return;
         pointer.preventDefault(); pointer.stopPropagation();
         if (ids.some(id => !latest.current.entries.has(id))) { cancelGesture(); return; }
-        const { factor } = proportionalCornerResize(vector, { x: pointer.clientX - origin.x, y: pointer.clientY - origin.y });
-        resize.apply(factor, pointer.altKey);
+        const delta = { x: pointer.clientX - origin.x, y: pointer.clientY - origin.y };
+        if (resize.applyDelta) resize.applyDelta(delta, pointer.altKey);
+        else resize.apply(proportionalCornerResize(vector, delta).factor, pointer.altKey);
       },
       finish: pointer => { if (pointer.pointerId === event.pointerId) cancelGesture(!resize.commit()); },
       cancel: () => cancelGesture(),
@@ -406,6 +424,14 @@ export function WorkbenchViewControls({ hostRef, disabled = false, dockVisible =
     const current = latest.current, ids = current.selection.filter(id => current.entries.has(id));
     const resize = selectionResize(current, ids, corner);
     if (!resize) return;
+    if (resize.applyDelta) {
+      const step = resize.step * (event.shiftKey ? 10 : 1) * current.scale;
+      snapMovement.begin(event, resize.nodes);
+      resize.applyDelta({ x: event.key === 'ArrowRight' ? step : event.key === 'ArrowLeft' ? -step : 0,
+        y: event.key === 'ArrowDown' ? step : event.key === 'ArrowUp' ? -step : 0 }, event.altKey);
+      if (!resize.commit()) setTransforms(current.transforms);
+      return;
+    }
     const direction = ['ArrowUp', 'ArrowRight'].includes(event.key) ? 1 : -1;
     const nextScale = resize.authored ? resize.maximumScale * (1 + direction * (event.shiftKey ? .25 : .1))
       : stepWorkbenchViewScale(resize.maximumScale, direction);

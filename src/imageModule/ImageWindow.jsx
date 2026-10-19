@@ -34,9 +34,18 @@ export default function ImageWindow({ id, title, position, size, viewport = { wi
   const density = globalThis.devicePixelRatio || 1;
   const screen = imageWindowGeometry(currentPosition, { width, height }, camera, offset);
   const placement = useWorkbenchPlacement(node, placementModule, camera.scale, true, screen);
-  useWorkbenchViewRegistration(id, node, true, { ...position, width: size.width, height: size.height }, resizeTarget, onPosition);
   const latest = useRef(null);
-  latest.current = { onPosition, placement };
+  latest.current = { onPosition, placement, areaBounds };
+  // A single selected Image delegates its corner geometry back to Image. The
+  // Workbench still owns selection preview and the shared atomic commit.
+  const registeredResizeTarget = useMemo(() => resizeTarget && { ...resizeTarget,
+    resizeCorner: (frame, edge, delta, bypass) => {
+      const next = resizeImageGeometry(frame, frame, edge, delta,
+        (axis, side, value) => latest.current.placement.edge(axis, side, value, frame, bypass), latest.current.areaBounds);
+      return { ...next.position, ...next.size };
+    },
+  }, [resizeTarget]);
+  useWorkbenchViewRegistration(id, node, true, { ...position, width: size.width, height: size.height }, registeredResizeTarget, onPosition);
   const finish = (cancelled = false) => {
     const active = gesture.current;
     if (!active) return;

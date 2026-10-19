@@ -92,7 +92,7 @@ test('captured native-fit seams can be filled without moving frames; Image resiz
       const frame = node.getBoundingClientRect(), media = node.querySelector('image').getBoundingClientRect();
       return media.left <= frame.left + .01 && media.top <= frame.top + .01 && media.right >= frame.right - .01 && media.bottom >= frame.bottom - .01;
     });
-    assert.ok(await covers(), 'resizing a native-fitted image fills the live preview automatically');
+    assert.equal(await covers(), false, 'resizing retains Fit inside in the live preview');
     assert.deepEqual(await page.evaluate(() => imageFitFixture.store.getDraft()), beforeResize, 'preview has not saved anything');
     await page.keyboard.press('Escape'); await page.mouse.up(); await settle(page);
     assert.equal((await geometry())[0].right, edge, 'Escape restores the original frame');
@@ -102,15 +102,15 @@ test('captured native-fit seams can be filled without moving frames; Image resiz
     await page.mouse.move(handle.x + handle.width / 2 + target - edge, handle.y + handle.height / 2, { steps: 6 }); await settle(page);
     await page.mouse.up(); await settle(page);
     assert.equal((await geometry())[0].right, Math.round(target), 'release preserves the snapped edge');
-    assert.ok(await covers(), 'committed resize retains its filled preview');
-    assert.deepEqual((await page.evaluate(() => imageFitFixture.store.getDraft())).imageModules[0].sides[0].crop, { x:.5, y:.5, zoom:1 });
+    assert.equal(await covers(), false, 'committed resize retains its Fit inside preview');
+    assert.equal((await page.evaluate(() => imageFitFixture.store.getDraft())).imageModules[0].sides[0].crop, null);
     await page.screenshot({ path: `${process.env.INSCAPE_BROWSER_OUTPUT || '.browser-test-runtime'}/image-fit-resize-grid.png` });
     await page.evaluate(() => imageFitFixture.store.undo()); await settle(page);
     assert.deepEqual(await page.evaluate(() => imageFitFixture.store.getDraft()), beforeResize, 'undo restores dimensions, layout and legacy native fitting together');
     await dock.locator('summary').filter({ hasText: 'Dimensions' }).click();
     await dock.getByRole('spinbutton', { name: 'Image width', exact: true }).fill('1008');
     await dock.getByRole('button', { name: 'Set size', exact: true }).click(); await settle(page);
-    assert.ok(await covers(), 'numeric resizing uses the same automatic filling behavior');
+    assert.equal(await covers(), false, 'numeric resizing also retains the chosen Fit inside mode');
     assert.equal((await page.evaluate(() => imageFitFixture.store.getDraft())).imageModules[0].width, 1008);
     await page.evaluate(() => imageFitFixture.store.undo()); await settle(page);
     assert.deepEqual(await page.evaluate(() => imageFitFixture.store.getDraft()), beforeResize, 'numeric size and fitting form one undo step');

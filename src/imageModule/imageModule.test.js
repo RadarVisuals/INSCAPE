@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { validImageModules, createImagePresentation, imageFocusEntry, nextImageSide, imageCropForResize } from './imageModule.js';
+import { validImageModules, createImagePresentation, imageFocusEntry, nextImageSide } from './imageModule.js';
 import { addImageModule, saveImageModule, prepareImageResize, duplicateImageModule } from './imageModuleSession.js';
 import { commitWorkbenchSelectionResize } from '../systemWorkflow/resizeWorkbenchSelection.js';
 import { createSystemWorkflowDraftStore, systemWorkflowDraftKey } from '../systemWorkflow/systemWorkflowDraftStore.js';
@@ -120,15 +120,13 @@ test('Image uses existing draft storage, rejects stale/profile/failed edits, and
   assert.ok(f.entries.has(systemWorkflowDraftKey(profile)));
   assert.deepEqual(createSystemWorkflowDraftStore({ profileAddress: profile, storage: f.storage }).getDraft(), f.store.getDraft());
 });
-test('changing an Image canvas ratio fills it atomically, retains authored crops and supports undo', () => {
+test('changing an Image canvas ratio preserves Fit inside and authored crops through save and undo', () => {
   const f = fixture(); addImageModule(f.store, profile);
   const empty = f.store.getDraft().imageModules[0];
   const fitted = { ...empty, width: 984, height: 552, sides: [{ ...side('native'), crop: null }, side('cropped')] };
   assert.ok(saveImageModule(f.store, profile, empty, fitted));
   const before = f.store.getDraft();
   assert.equal(createSystemWorkflowDraftStore({ profileAddress: profile, storage: f.storage }).getDraft().imageModules[0].sides[0].crop, null, 'loading preserves older fitting');
-  assert.equal(imageCropForResize(null, fitted, fitted), null, 'a no-op resize retains native fit');
-  assert.deepEqual(imageCropForResize(null, fitted, { width: 978, height: 552 }), { x: .5, y: .5, zoom: 1 }, 'live resizing fills the preview');
   const change = { id: fitted.id, expected: fitted, width: 978, height: 552, left: 3576, top: 1392,
     store: f.store, profileAddress: profile, layoutKey: 'imageModules', prepare: prepareImageResize };
   f.fail(true);
@@ -137,7 +135,7 @@ test('changing an Image canvas ratio fills it atomically, retains authored crops
   f.fail(false);
   assert.ok(commitWorkbenchSelectionResize([change]));
   const after = f.store.getDraft(), resized = after.imageModules[0];
-  assert.deepEqual(resized.sides[0], { ...fitted.sides[0], crop: { x: .5, y: .5, zoom: 1 } });
+  assert.deepEqual(resized.sides[0], fitted.sides[0], 'the selected Fit inside mode remains selected');
   assert.deepEqual(resized.sides[1], fitted.sides[1], 'custom crop and transforms remain authored');
   assert.equal(resized.width, 978);
   assert.equal(resized.height, 552);
@@ -154,7 +152,6 @@ test('proportional Image resizing preserves native fitting, crop, source and tra
   const before = f.store.getDraft();
   const change = { id: fitted.id, expected: fitted, width: 241, height: 361, left: 3576, top: 1392,
     store: f.store, profileAddress: profile, layoutKey: 'imageModules', prepare: prepareImageResize };
-  assert.equal(imageCropForResize(null, fitted, change), null, 'rounded uniform scaling preserves Fit inside');
   assert.ok(commitWorkbenchSelectionResize([change]));
   assert.deepEqual(f.store.getDraft().imageModules[0].sides, fitted.sides);
   assert.equal(f.store.getDraft().imageModules[0].width, 241);

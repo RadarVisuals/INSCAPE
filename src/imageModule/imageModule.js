@@ -4,11 +4,6 @@ import { resolvePublishedAssetUrl } from '../profileDocument/domain/publishedAss
 export const MAX_IMAGE_MODULES = 16;
 export const MAX_IMAGE_SIDES = 32;
 export const IMAGE_FILL_CROP = Object.freeze({ x: .5, y: .5, zoom: 1 });
-// Uniform scaling keeps the fitting choice. Allow the half-pixel rounding of
-// each authored dimension. A changed canvas ratio fills a native-fitted side;
-// existing crops remain authoritative in either case.
-export const imageCropForResize = (crop, before, after) => Math.abs(after.width * before.height - after.height * before.width) <= (before.width + before.height) / 2 + 1e-7
-  ? crop : crop ?? { ...IMAGE_FILL_CROP };
 export const IMAGE_MODULE_ID = /^image:[A-Za-z0-9_-]{1,80}$/u;
 const exact = (v, keys) => v && typeof v === 'object' && !Array.isArray(v) && Object.keys(v).length === keys.length && keys.every(k => Object.hasOwn(v, k));
 const number = (v, min, max) => Number.isFinite(v) && v >= min && v <= max;

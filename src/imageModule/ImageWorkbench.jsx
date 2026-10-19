@@ -8,7 +8,7 @@ import useModuleShortcutMenu from '../public/ownerSystemWorkflow/useModuleShortc
 import { resolveImageLibrarySide } from './imageLibrarySide.js';
 import { createSystemWorkflowCropSession, createSystemWorkflowCropPanGesture, updateSystemWorkflowCropPanGesture, setSystemWorkflowCropZoom, nudgeSystemWorkflowCrop } from '../systemWorkflow/systemWorkflowCrop.js';
 import { projectSystemWorkflowTransform, unprojectSystemWorkflowCrop, transformArtwork } from '../systemWorkflow/systemWorkflowTransform.js';
-import { createImagePresentation, imageFocusEntry, imageSize, MAX_IMAGE_MODULES, MAX_IMAGE_SIDES, nextImageSide, IMAGE_FILL_CROP, imageCropForResize } from './imageModule.js';
+import { createImagePresentation, imageFocusEntry, imageSize, MAX_IMAGE_MODULES, MAX_IMAGE_SIDES, nextImageSide, IMAGE_FILL_CROP } from './imageModule.js';
 import { saveImageModule, prepareImageResize, duplicateImageModule } from './imageModuleSession.js';
 import { commitWorkbenchSelectionResize } from '../systemWorkflow/resizeWorkbenchSelection.js';
 import { useWorkbenchActions, useWorkbenchView, useWorkbenchInspectionAction } from '../public/ownerSystemWorkflow/WorkbenchViewContext.js';
@@ -215,7 +215,7 @@ const ImageInstance = memo(function ImageInstance({ record, index, store, profil
         onLostPointerCapture={() => { drag.current = null; }}>
         {!side ? <span className="image-module__empty">{store ? 'Drop artwork from Library' : 'No artwork'}</span>
           : <ImageSides side={side} nextSide={record.sides.find(item => item.id === flip)} rectangle={renderRectangle}
-            crop={crop?.previewCrop ?? imageCropForResize(side.crop, record, renderRectangle)}
+            crop={crop?.previewCrop ?? side.crop}
             onComplete={id => { setSideId(id); setFlip(null); }} onCancel={() => setFlip(null)} />}
       </button>
       {!crop && <button type="button" data-workbench-recovery-control className="workflow-tactile-control image-module__inspect" aria-label="Inspect Image" aria-keyshortcuts="I"

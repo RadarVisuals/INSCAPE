@@ -1,6 +1,6 @@
 import { avoidWorkbenchControl } from './avoidWorkbenchControl.js';
 import { useWorkbenchArea } from './WorkbenchAreaContext.jsx';
-import { useLayoutEffect, useRef, useState } from 'react';
+import { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { X } from 'lucide-react';
 import { useWorkbenchPlacement } from './WorkbenchPlacement.jsx';
 import { useWorkbenchView, workbenchModuleTransform, useWorkbenchViewRegistration } from './WorkbenchViewContext.js';
@@ -45,7 +45,12 @@ export function WorkbenchWindow({ avoidControls, children, background, compact, 
   const paint = workbenchPaintGeometry(screen, density);
   const painted = Object.fromEntries(Object.entries(paint).map(([key, value]) => [key, value / density]));
   const placement = useWorkbenchPlacement(node, placementModule && !compact, camera.scale, true, screen);
-  useWorkbenchViewRegistration(viewId, node, registerView && !compact, base, resizeTarget,
+  // A module can opt into the same free-corner geometry for its selection.
+  // Keep snapping, constraints and camera conversion in this existing host.
+  const registeredResizeTarget = useMemo(() => resizeTarget?.resizeCorner ? {
+    ...resizeTarget, resizeCorner: (...args) => latest.current.resizeTo(...args),
+  } : resizeTarget, [resizeTarget]);
+  useWorkbenchViewRegistration(viewId, node, registerView && !compact, base, registeredResizeTarget,
     position => setFrame(current => ({ ...current, ...position })));
   const canResize = !camera.presented && resizable && !fitContent && !compact && (!resizeTarget?.store || resizeTarget.enabled);
   const local = transformed ? view.transforms[viewId] : null;
@@ -97,7 +102,7 @@ export function WorkbenchWindow({ avoidControls, children, background, compact, 
     if (drag.element.hasPointerCapture?.(drag.id)) drag.element.releasePointerCapture(drag.id);
     if (!drag.element.isConnected) queueMicrotask(() => node.current?.querySelector('header')?.focus());
   };
-  latest.current = { finish };
+  latest.current = { finish, resizeTo: (...args) => resizeTo(...args) };
   useLayoutEffect(() => {
     const cancel = () => latest.current.finish(true);
     const escape = event => {
@@ -184,9 +189,9 @@ export function WorkbenchWindow({ avoidControls, children, background, compact, 
   };
   const resizeTo = (origin, edge, delta, altKey) => {
     const sizeScale = anchored ? camera.scale : 1;
-    const next = resizeWorkbenchWindow({ ...origin, width: origin.width / sizeScale, height: origin.height / sizeScale }, edge, delta,
+    const next = (resizeTarget?.resizeCorner || resizeWorkbenchWindow)({ ...origin, width: origin.width / sizeScale, height: origin.height / sizeScale }, edge, delta,
       { width: (resizeTarget?.minimumWidth ?? minimumWidth) / sizeScale, height: (resizeTarget?.minimumHeight ?? minimumHeight) / sizeScale }, bounds,
-      resizeTarget?.constrainFrame ? undefined : (axis, side, value) => placement.edge(axis, side, value, current, altKey) ?? snapWorkbenchCoordinate(value, snapToGrid && !altKey));
+      resizeTarget?.constrainFrame ? undefined : (axis, side, value) => placement.edge(axis, side, value, origin, altKey) ?? snapWorkbenchCoordinate(value, snapToGrid && !altKey));
     return resizeTarget?.constrainFrame?.(next, { edge, bounds }) || { ...next, width: next.width * sizeScale, height: next.height * sizeScale };
   };
   const begin = (event, kind, edge) => {

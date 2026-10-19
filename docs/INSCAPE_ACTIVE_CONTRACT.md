@@ -292,26 +292,31 @@ dimensions, shared rotate/mirror actions, crop pan/zoom and Native fit.
 New artwork fills the canvas through a centred crop. Library drops append a
 side by default; Replace side retains its position in the sequence and starts
 the new artwork at its default crop/transform. Remove side is undoable.
-Image corner resizing keeps the canvas and artwork proportions together without
-requiring Shift. Horizontal, vertical and diagonal pointer movement all scale
-both dimensions around the opposite corner; the stronger relative axis drives
-the scale and snapping. Workbench selection corners use the same pointer rule.
+As explicitly clarified on 2026-10-19, Image corners resize width and height
+independently: horizontal movement changes only width, vertical movement only
+height, and diagonal movement changes both freely around the opposite corner.
+The earlier interpretation that locked the canvas ratio is superseded. The
+source artwork always retains its own proportions through the chosen Fit inside
+or Fill canvas projection. Individual Image handles and selection of one Image
+share this module-owned geometry, including keyboard input and per-axis snapping.
+Multi-module selection retains its existing proportional group scaling.
 Authored Image dimensions retain whole-pixel rounding and size/area limits.
 The Image frame uses its authored Workbench dimensions directly. Browser width
 or height must not apply a second per-Image fit or a resize limit: that would
-cancel proportional growth and reinterpret the frame after reload. Workbench
+cancel visible growth and reinterpret the frame after reload. Workbench
 camera zoom/focus owns fitting the view. Owner and Visitor use the same geometry;
 browser size only affects control reachability, not the saved or visible world
 dimensions. Existing Image size limits and authored Workbench area still apply.
 Side handles still change one canvas dimension; the canvas edges remain the
-resize and snap targets. Uniform resizing retains Fit inside or the existing
-crop. A changed canvas ratio gives a native-fitted side a centred filling crop;
-existing crops retain their focus and zoom. Pointer, keyboard, selection and
+resize and snap targets. Resizing preserves the chosen Fit inside or Fill canvas
+mode and existing crop focus/zoom, including when the canvas ratio changes.
+Pointer, keyboard, selection and
 numeric size edits use the same authored resize operation. Cancel restores the
 previous fit; undo restores fit, dimensions and position together. Older saved
 native-fit sides remain unchanged when opened or moved. Fit inside and Fill
 canvas expose the existing fitting choices directly in Image tools; Fit inside
-shows the full source and may leave space until the canvas ratio changes.
+shows the full source and may leave space. Fill canvas covers the canvas through
+an aspect-preserving crop. Neither mode stretches the artwork.
 The first implementation supports up to sixteen modules and 32 sides each.
 Image tools offer Duplicate, creating an independent Image beside the original.
 It retains authored dimensions, publication inclusion, every side's source,
@@ -365,6 +370,11 @@ Make square, duplication, deletion and publication inclusion. Its shape selector
 and the Workbench Shapes menu keep fully covered or hidden shapes reachable.
 Dimensions range from 8 to 7992 work pixels and up to 32 shapes are supported.
 The owner drags directly on a shape and resizes with the existing handles.
+As clarified on 2026-10-19, all four corners change width and height independently,
+both immediately after creation and after selection or repeated resizing. A
+single-Shape selection uses the same window geometry, snapping and constraints
+as the Shape's own handles; a mixed or multi-module selection still scales
+proportionally. Grid shapes retain their complete-cell sizing and cell size.
 Visitor uses the same paint and camera projection without shape editing input.
 
 Optional `shapes` extends draft v4 and public document v9. Name, colour, opacity
@@ -1342,8 +1352,9 @@ Dragging empty Workbench space marquee-selects fully enclosed registered content
 windows: shapes, images, Displays, Text, Keeper docks and other registered modules.
 An intersecting background is not selected unless its entire bounds are enclosed. Shift-drag adds to the selection; Shift-click a window header toggles it.
 Focused window headers also toggle selection with Shift+Enter.
-The selection's corner handles scale its windows proportionally around the
-opposite corner. Text boxes resize and reflow without scaling their letters,
+The selection's corner handles scale multiple windows proportionally around the
+opposite corner. A single Image or Shape instead delegates its corners to its
+own independent width/height resize behavior. Text boxes resize and reflow without scaling their letters,
 including during the drag preview. Escape cancels a gesture or clears selection.
 Dragging anywhere inside the selection moves the selected modules together,
 including over artwork, text, headers and gaps. This temporarily takes priority
