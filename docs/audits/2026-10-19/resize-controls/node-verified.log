@@ -116,36 +116,36 @@ Production budgets passed; owner and standalone wallet runtimes remain outside t
 ✔ evidence detects changed bytes and new files, independent of generated output (54.0952ms)
 ✔ verification rejects unrecorded local environment configuration (6.4683ms)
 ✔ TAP gate rejects missing totals, zero tests, failures, cancellations, skips and todo (1.0743ms)
-Verifying test; log: C:\Users\Hidden Swarm\AppData\Local\Temp\inscape-release-mMwLq2\.verification\pass\test.log
-Verifying build; log: C:\Users\Hidden Swarm\AppData\Local\Temp\inscape-release-mMwLq2\.verification\pass\build.log
-Verification passed: C:\Users\Hidden Swarm\AppData\Local\Temp\inscape-release-mMwLq2\.verification\pass\verification.json
+Verifying test; log: <temporary-test-directory>\inscape-release-mMwLq2\.verification\pass\test.log
+Verifying build; log: <temporary-test-directory>\inscape-release-mMwLq2\.verification\pass\build.log
+Verification passed: <temporary-test-directory>\inscape-release-mMwLq2\.verification\pass\verification.json
 ✔ successful child checks bind source, lockfile and built artifact bytes (311.9056ms)
-Verifying broken; log: C:\Users\Hidden Swarm\AppData\Local\Temp\inscape-release-9LoGjL\.verification\fail\broken.log
+Verifying broken; log: <temporary-test-directory>\inscape-release-9LoGjL\.verification\fail\broken.log
 broken failed (7)
-Verification failed: C:\Users\Hidden Swarm\AppData\Local\Temp\inscape-release-9LoGjL\.verification\fail\verification.json
+Verification failed: <temporary-test-directory>\inscape-release-9LoGjL\.verification\fail\verification.json
 ✔ failed exit blocks later steps and successful artifact evidence (300.2655ms)
-Verifying skipped; log: C:\Users\Hidden Swarm\AppData\Local\Temp\inscape-release-v1jd71\.verification\fail\skipped.log
+Verifying skipped; log: <temporary-test-directory>\inscape-release-v1jd71\.verification\fail\skipped.log
 Incomplete test run: {"tests":1,"pass":1,"fail":0,"cancelled":0,"skipped":1,"todo":0}
-Verification failed: C:\Users\Hidden Swarm\AppData\Local\Temp\inscape-release-v1jd71\.verification\fail\verification.json
+Verification failed: <temporary-test-directory>\inscape-release-v1jd71\.verification\fail\verification.json
 ✔ skipped test with exit zero blocks later steps and successful artifact evidence (164.5562ms)
-Verifying missing; log: C:\Users\Hidden Swarm\AppData\Local\Temp\inscape-release-FnZWWx\.verification\fail\missing.log
+Verifying missing; log: <temporary-test-directory>\inscape-release-FnZWWx\.verification\fail\missing.log
 Missing or ambiguous TAP total: tests
-Verification failed: C:\Users\Hidden Swarm\AppData\Local\Temp\inscape-release-FnZWWx\.verification\fail\verification.json
+Verification failed: <temporary-test-directory>\inscape-release-FnZWWx\.verification\fail\verification.json
 ✔ missing TAP with exit zero blocks later steps and successful artifact evidence (155.1615ms)
-Verifying terminated; log: C:\Users\Hidden Swarm\AppData\Local\Temp\inscape-release-ZvyMDB\.verification\fail\terminated.log
+Verifying terminated; log: <temporary-test-directory>\inscape-release-ZvyMDB\.verification\fail\terminated.log
 terminated failed (1)
-Verification failed: C:\Users\Hidden Swarm\AppData\Local\Temp\inscape-release-ZvyMDB\.verification\fail\verification.json
+Verification failed: <temporary-test-directory>\inscape-release-ZvyMDB\.verification\fail\verification.json
 ✔ terminated child blocks later steps and successful artifact evidence (153.4964ms)
-Verifying build; log: C:\Users\Hidden Swarm\AppData\Local\Temp\inscape-release-JP6yAd\.verification\changed\build.log
-Verifying mutate; log: C:\Users\Hidden Swarm\AppData\Local\Temp\inscape-release-JP6yAd\.verification\changed\mutate.log
+Verifying build; log: <temporary-test-directory>\inscape-release-JP6yAd\.verification\changed\build.log
+Verifying mutate; log: <temporary-test-directory>\inscape-release-JP6yAd\.verification\changed\mutate.log
 Source changed during verification; run again on a stable checkout
-Verification failed: C:\Users\Hidden Swarm\AppData\Local\Temp\inscape-release-JP6yAd\.verification\changed\verification.json
+Verification failed: <temporary-test-directory>\inscape-release-JP6yAd\.verification\changed\verification.json
 ✔ source edits during otherwise green checks invalidate the final result (206.1725ms)
 CI requires a clean checkout of GITHUB_SHA
-Verification failed: C:\Users\Hidden Swarm\AppData\Local\Temp\inscape-release-9Cs9yu\.verification\ci\verification.json
+Verification failed: <temporary-test-directory>\inscape-release-9Cs9yu\.verification\ci\verification.json
 ✔ CI refuses to label a source copy as the requested Git commit (66.7647ms)
 Node 0.0.0 required; found 24.20.0
-Verification failed: C:\Users\Hidden Swarm\AppData\Local\Temp\inscape-release-UB88GN\.verification\node\verification.json
+Verification failed: <temporary-test-directory>\inscape-release-UB88GN\.verification\node\verification.json
 ✔ wrong Node version fails before any verification step (13.6992ms)
 ✔ production build excludes only the unsupported Base Account dependency (1.8431ms)
 ✔ query uses creator relationships and never Hold as its data source (1.4445ms)
