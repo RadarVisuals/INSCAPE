@@ -50,12 +50,17 @@ UI rather than claiming that its build is the clean commit.
 `.github/workflows/verify.yml` runs the same command on pushes, pull requests and
 manual dispatch. It uses read-only repository access, fixed action SHAs and no
 application secrets. Failed runs retain available logs; only successful runs retain
-the build artifact. No deployment is configured here. To make it a merge requirement,
-enable the `Source, tests and production build` required status check in the relevant
-branch rules after its first successful hosted run. Repository rules and hosting
-settings are separate from this checked-in workflow. Netlify's existing build command
-does not enforce this workflow; a future deployment must explicitly consume the
-verified artifact or require a matching successful check before rebuilding.
+the build artifact. No deployment is configured here. On 19 October 2026, the
+`main` branch was configured to require `Source, tests and production build`
+from the GitHub Actions app (15368), with up-to-date source and enforcement for
+administrators. The setting was read back through GitHub's API. A fork or another
+branch does not inherit this protection from the workflow file. See the
+[hosted verification repair and merge gate](audits/2026-10-19/hosted-verification.md).
+Repository rules and hosting settings are separate. Netlify's existing preview
+build command does not enforce this workflow; a successful preview is not release
+approval. Production deployment must explicitly consume the verified artifact or
+require a matching successful check before rebuilding. Branch protection gates
+updates to main, not manual hosting deployments or a host-side rebuild's exact bytes.
 
 `npm run test:browser` owns an isolated localhost Vite server on a free port and
 runs the suites listed in `scripts/runBrowserTests.mjs` sequentially. It closes
@@ -94,6 +99,9 @@ real network latency or exercise a live wallet.
 When changing CSS, regenerate `npm run design-system:tokens` and review the
 generated inventory diff before running `verify`. The inventory records source
 locations as well as token values; a source-line change can require regeneration.
+The generator normalizes CRLF to LF before parsing, so multiline values and
+selectors produce the same inventory on Windows and Linux. Source/artifact
+evidence continues to hash exact bytes, including checkout line endings.
 
 Keep the current product contract separate from test history. Display remains
 experimental and absent from ordinary creation. For Image, an ordinary click

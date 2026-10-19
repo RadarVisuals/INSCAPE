@@ -36,6 +36,13 @@ Local path roots in shared logs are redacted; counts and test outcomes are intac
 
 ## Remaining boundaries
 
+**Hosted verification follow-up:** [platform-independent inventory and required
+main check](hosted-verification.md). The first inspected Linux run failed on the
+CSS inventory despite a successful Netlify preview. Its failure is preserved;
+the repair has a reproducing regression test and the main check is now required.
+Use the Actions result for the exact current head; older local totals below do
+not certify a later commit.
+
 **Latest accepted resize behavior:** [free Image and Shape corners](free-corners.md).
 The founder clarified that width and height must change independently at every
 corner while the source artwork remains undistorted. This supersedes the
@@ -60,8 +67,9 @@ checks, and documents a related Properties layout-loop fix and test limitations.
 - Upstream dependency advisories, heavy-input/first-activation outliers and the
   real user's browser remain bounded by their earlier measurements, not solved
   by a green regression run. No blanket performance or security certification.
-- Branch protection and release gating must be configured separately; successful
-  Netlify builds alone do not establish passing tests.
+- Main now requires the GitHub Actions verification check, including for admins.
+  Successful Netlify previews alone do not establish passing tests; the hosting
+  artifact and real publication boundaries remain separate from this merge gate.
 - Layers and detachable tools are accepted future direction, deferred until the
   current audit agenda is finished. This checkpoint does not implement them.
 
