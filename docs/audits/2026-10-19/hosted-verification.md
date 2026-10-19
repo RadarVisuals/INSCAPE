@@ -27,6 +27,38 @@ new push/PR revision. Consult the
 for the exact head and its successful evidence/build artifacts; PR runs record
 the synthetic merge SHA, while push runs record the branch head.
 
+## Browser follow-up from the first complete Linux runs
+
+On the documentation head `bdcaff4015b29709d8d157246782294573b6bb88`, both
+Linux runs passed all 1,241 Node tests. The
+[push run](https://github.com/RadarVisuals/INSCAPE/actions/runs/39306200530)
+passed 200/202 browser cases; the
+[PR run](https://github.com/RadarVisuals/INSCAPE/actions/runs/39306211273)
+passed 199/202, across all 53 maintained suites. Neither run proceeded to the
+later build stages. These red results are retained, not counted as success.
+
+Both runs failed carousel momentum and narrow Display inspection readiness.
+The carousel test now installs the browser clock before application startup and
+advances the intended 20ms input samples and 150ms coast explicitly. Real runner
+delays can otherwise turn the intended moving release into a stationary one.
+The inspection test likewise installs its clock before startup and waits for
+the decoded raster replacement to become visible before advancing the opening
+animation. Media decoding is asynchronous outside that emulated animation
+clock. Existing momentum, exact opening progress, source geometry, storage and
+input-lock expectations remain. This follows
+[Playwright's clock requirements](https://playwright.dev/docs/clock).
+
+The PR run additionally exposed a real focus race after closing Metadata in
+Visitor mode: the shared tool window's deferred focus recovery could overwrite
+a newer focus choice. A deterministic regression reproduced it locally in both
+Visitor widths (the two Owner cases already passed). Recovery now captures its
+original return target and yields when focus has moved elsewhere. It still
+restores focus on ordinary close and does not focus a disconnected target.
+The existing shared tool host owns this repair; no new focus framework or saved
+state was introduced. All eight targeted browser cases pass locally, including
+ordinary close and the deliberately interleaved focus choice. Online results
+for the subsequent commit remain authoritative for the full chain.
+
 ## Required main check
 
 Before this round, GitHub returned `Branch not protected` and an empty ruleset

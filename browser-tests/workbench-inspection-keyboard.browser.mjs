@@ -80,8 +80,20 @@ for (const visitor of [false, true]) for (const width of [1440, 390]) {
           await mkdir(output, { recursive: true });
           await page.screenshot({ path: join(output, `inspection-keyboard-${visitor ? 'visitor' : 'owner'}-${width}.png`) });
         }
-        await page.getByRole('button', { name: 'Close Artwork info', exact: true }).click();
+        if (key === 'Shift+F10') {
+          await page.getByRole('button', { name: 'Close Artwork info', exact: true }).click();
+        } else {
+          // A user can choose a new focus target before deferred close recovery.
+          // Keep both actions in one frame to reproduce that race deterministically.
+          await page.evaluate(([close, target]) => { close.click(); target.focus(); }, [
+            await page.getByRole('button', { name: 'Close Artwork info', exact: true }).elementHandle(),
+            await header.elementHandle(),
+          ]);
+        }
         await metadata.waitFor({ state: 'detached' });
+        await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+        if (key === 'Shift+F10') assert.equal(await page.evaluate(() => document.activeElement !== document.body && document.activeElement.isConnected), true, 'ordinary close restores focus');
+        else assert.equal(await header.evaluate(node => node === document.activeElement), true, 'close recovery preserves a newer focus choice');
       }
       await header.focus(); await page.keyboard.press('Escape');
       await inspection.waitFor({ state: 'detached' });

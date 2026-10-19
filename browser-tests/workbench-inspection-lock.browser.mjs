@@ -12,6 +12,7 @@ test('Image and Display inspection retain their source and camera through return
     await mkdir('.browser-test-runtime', { recursive: true });
     for (const visitor of [false, true]) for (const width of [1600, 390]) for (const kind of ['display', 'image']) {
       const page = await browser.newPage({ viewport: { width, height: 1000 }, deviceScaleFactor: 1.25 });
+      await page.clock.install();
       const label = `${visitor ? 'Visitor' : 'Owner'} ${width} ${kind}`;
       const errors = []; page.on('pageerror', e => errors.push(e.message));
       await mountGridMotionFixture(page, { origin: process.env.INSCAPE_TEXT_ROOT || 'http://127.0.0.1:5207', visitor, count: 3, displayWidth: 600, seamReview: true });
@@ -30,7 +31,7 @@ test('Image and Display inspection retain their source and camera through return
       });
       const before = await state();
       const saved = await page.evaluate(() => localStorage.getItem(window.__motionKey));
-      await page.clock.install(); await page.clock.pauseAt(await page.evaluate(() => Date.now() + 100));
+      await page.clock.pauseAt(await page.evaluate(() => Date.now() + 100));
       if (kind === 'image') { await source.focus(); await page.keyboard.press('i'); }
       else await source.dispatchEvent('keydown', { key: 'i', bubbles: true, cancelable: true });
       await page.getByRole('button', { name: 'Reset Workbench position', exact: true }).waitFor();
@@ -47,6 +48,9 @@ test('Image and Display inspection retain their source and camera through return
         assert.equal(await page.evaluate(() => localStorage.getItem(window.__motionKey)), saved, `${label} ${phase} persisted data`);
       };
       await inputs('opening');
+      // Decoding completes outside the emulated animation clock. The raster
+      // replacement becomes visible only when ready; the lift starts then.
+      await page.locator('.system-workflow__lift-artwork').waitFor({ state: 'visible' });
       await page.clock.runFor(1000);
       assert.equal(await page.locator('.system-workflow__lift-artwork').count(), 1, `${label} is inspecting`);
       assert.equal(await page.locator('.system-workflow__lift-artwork').evaluate((n, kind) => Number(getComputedStyle(kind === 'image' ? n.parentElement : document.querySelector('[data-inspection-context="selected"]')).getPropertyValue('--inspection-lift-progress')), kind), 1, `${label} fully open`);

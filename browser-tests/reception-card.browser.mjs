@@ -63,22 +63,28 @@ test('mouse carousel drag coasts, suppresses activation and cancels when expansi
   const browser = await chromium.launch({ executablePath: browserPath, headless: true });
   try {
     const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+    await page.clock.install();
     await page.route('**/*', routeFixture);
     await page.goto(url);
     const rail = page.getByRole('region', { name: 'Published artwork carousel', includeHidden: true });
     await rail.waitFor();
+    await page.locator('.profile-overview__work--image').first().locator('[data-media-state="ready"]').waitFor();
+    // A fixed gesture timeline distinguishes moving release from a real pause;
+    // runner scheduling must not turn these 20ms samples into stale movement.
+    await page.clock.pauseAt(await page.evaluate(() => Date.now() + 100));
     const rect = await rail.boundingBox();
     const y = rect.y + 60, x = rect.x + rect.width * .7;
     await page.mouse.move(x, y); await page.mouse.down();
-    await page.waitForTimeout(20); await page.mouse.move(x - 30, y);
-    await page.waitForTimeout(20); await page.mouse.move(x - 60, y);
-    await page.waitForTimeout(20); await page.mouse.move(x - 90, y);
+    await page.clock.runFor(20); await page.mouse.move(x - 30, y);
+    await page.clock.runFor(20); await page.mouse.move(x - 60, y);
+    await page.clock.runFor(20); await page.mouse.move(x - 90, y);
     await page.mouse.up();
     const release = await rail.evaluate(node => node.scrollLeft);
-    await page.waitForTimeout(150);
+    await page.clock.runFor(150);
     const coast = await rail.evaluate(node => ({ left: node.scrollLeft, maximum: node.scrollWidth - node.clientWidth }));
     assert.ok(coast.left > release + 10, `release retains momentum: ${release} -> ${coast.left} (max ${coast.maximum})`);
     assert.equal(await page.getByRole('dialog', { name: 'Expanded work' }).count(), 0, 'drag never opens a card');
+    await page.clock.resume();
     await page.getByRole('button', { name: 'Expand INSCAPE details', exact: true }).click();
     await page.waitForTimeout(500);
     assert.equal(await rail.getAttribute('data-dragging'), null);

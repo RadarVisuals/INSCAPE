@@ -62,7 +62,17 @@ function ToolWindow({ id, menuSurface, fallbackFocus }) {
   const layout = useCallback(value => tools.setState(current => JSON.stringify(current.windows[id]) === JSON.stringify(value) ? current : { ...current, windows: { ...current.windows, [id]: value } }), [id, tools.setState]);
   return <DisplayInstrumentWindow instrument={id} menuSurface={menuSurface} layout={tools.state.windows[id]} onLayoutChange={layout}
     title={tools.getTool(id)?.label}
-    onClose={() => { tools.command(id, false); requestAnimationFrame(() => { const trigger = tools.triggers.current[id]; (trigger?.isConnected ? trigger : fallbackFocus?.current)?.focus({ preventScroll: true }); }); }}>
+    onClose={() => {
+      const focused = document.activeElement;
+      const trigger = tools.triggers.current[id];
+      const target = trigger?.isConnected ? trigger : fallbackFocus?.current;
+      tools.command(id, false);
+      requestAnimationFrame(() => {
+        // Closing must not steal a newer keyboard/pointer focus choice.
+        if (document.activeElement !== document.body && document.activeElement !== focused) return;
+        if (target?.isConnected) target.focus({ preventScroll: true });
+      });
+    }}>
     <div ref={host} data-shared-tool={id} />
   </DisplayInstrumentWindow>;
 }
