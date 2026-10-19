@@ -11,6 +11,8 @@ const slash = (value) => value.replaceAll('\\', '/');
 const hash = (value) => createHash('sha256').update(value.replaceAll('\r\n', '\n')).digest('hex');
 
 export function inspectCss(css, path, role = 'Local') {
+  // Normalize before parsing: multiline values and selectors retain line endings.
+  css = css.replaceAll('\r\n', '\n');
   const definitions = [];
   const references = new Set();
   postcss.parse(css, { from: path }).walkDecls((declaration) => {

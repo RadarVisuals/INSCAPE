@@ -4131,7 +4131,7 @@
           "name": "--workflow-window-inset",
           "value": "18px",
           "scope": [
-            ".system-workflow,\r\n.system-workflow__token-scope"
+            ".system-workflow,\n.system-workflow__token-scope"
           ],
           "line": 7,
           "references": []
@@ -4140,7 +4140,7 @@
           "name": "--workflow-dock-height",
           "value": "42px",
           "scope": [
-            ".system-workflow,\r\n.system-workflow__token-scope"
+            ".system-workflow,\n.system-workflow__token-scope"
           ],
           "line": 8,
           "references": []
@@ -4149,7 +4149,7 @@
           "name": "--workflow-dock-clearance",
           "value": "12px",
           "scope": [
-            ".system-workflow,\r\n.system-workflow__token-scope"
+            ".system-workflow,\n.system-workflow__token-scope"
           ],
           "line": 9,
           "references": []
@@ -4158,7 +4158,7 @@
           "name": "--workflow-rail-height",
           "value": "38px",
           "scope": [
-            ".system-workflow,\r\n.system-workflow__token-scope"
+            ".system-workflow,\n.system-workflow__token-scope"
           ],
           "line": 10,
           "references": []
@@ -4167,7 +4167,7 @@
           "name": "--workflow-row-height",
           "value": "38px",
           "scope": [
-            ".system-workflow,\r\n.system-workflow__token-scope"
+            ".system-workflow,\n.system-workflow__token-scope"
           ],
           "line": 11,
           "references": []
@@ -4176,7 +4176,7 @@
           "name": "--workflow-panel-padding",
           "value": "12px",
           "scope": [
-            ".system-workflow,\r\n.system-workflow__token-scope"
+            ".system-workflow,\n.system-workflow__token-scope"
           ],
           "line": 12,
           "references": []
@@ -4185,7 +4185,7 @@
           "name": "--workflow-content-padding",
           "value": "10px",
           "scope": [
-            ".system-workflow,\r\n.system-workflow__token-scope"
+            ".system-workflow,\n.system-workflow__token-scope"
           ],
           "line": 13,
           "references": []
@@ -4194,7 +4194,7 @@
           "name": "--workflow-gap-small",
           "value": "6px",
           "scope": [
-            ".system-workflow,\r\n.system-workflow__token-scope"
+            ".system-workflow,\n.system-workflow__token-scope"
           ],
           "line": 14,
           "references": []
@@ -4203,7 +4203,7 @@
           "name": "--workflow-gap-medium",
           "value": "10px",
           "scope": [
-            ".system-workflow,\r\n.system-workflow__token-scope"
+            ".system-workflow,\n.system-workflow__token-scope"
           ],
           "line": 15,
           "references": []
@@ -4212,7 +4212,7 @@
           "name": "--workflow-window-chrome-radius",
           "value": "10px",
           "scope": [
-            ".system-workflow,\r\n.system-workflow__token-scope"
+            ".system-workflow,\n.system-workflow__token-scope"
           ],
           "line": 17,
           "references": []
@@ -4221,7 +4221,7 @@
           "name": "--workflow-window-chrome-gutter",
           "value": "6px",
           "scope": [
-            ".system-workflow,\r\n.system-workflow__token-scope"
+            ".system-workflow,\n.system-workflow__token-scope"
           ],
           "line": 18,
           "references": []
@@ -4230,7 +4230,7 @@
           "name": "--workflow-window-chrome-shadow-inset",
           "value": "6px",
           "scope": [
-            ".system-workflow,\r\n.system-workflow__token-scope"
+            ".system-workflow,\n.system-workflow__token-scope"
           ],
           "line": 19,
           "references": []
@@ -4239,7 +4239,7 @@
           "name": "--workflow-window-chrome-shadow-height",
           "value": "90px",
           "scope": [
-            ".system-workflow,\r\n.system-workflow__token-scope"
+            ".system-workflow,\n.system-workflow__token-scope"
           ],
           "line": 20,
           "references": []
@@ -4248,7 +4248,7 @@
           "name": "--workflow-window-chrome-shadow",
           "value": "4px 6px 14px rgb(17 19 19 / 14%)",
           "scope": [
-            ".system-workflow,\r\n.system-workflow__token-scope"
+            ".system-workflow,\n.system-workflow__token-scope"
           ],
           "line": 21,
           "references": []
@@ -4257,7 +4257,7 @@
           "name": "--workflow-window-chrome-noise-size",
           "value": "128px",
           "scope": [
-            ".system-workflow,\r\n.system-workflow__token-scope"
+            ".system-workflow,\n.system-workflow__token-scope"
           ],
           "line": 22,
           "references": []
@@ -4266,7 +4266,7 @@
           "name": "--workflow-window-chrome-noise-opacity",
           "value": "30%",
           "scope": [
-            ".system-workflow,\r\n.system-workflow__token-scope"
+            ".system-workflow,\n.system-workflow__token-scope"
           ],
           "line": 23,
           "references": []
@@ -4275,7 +4275,7 @@
           "name": "--workflow-border",
           "value": "var(--lattice-menu-line)",
           "scope": [
-            ".system-workflow,\r\n.system-workflow__token-scope"
+            ".system-workflow,\n.system-workflow__token-scope"
           ],
           "line": 24,
           "references": [
@@ -4286,7 +4286,7 @@
           "name": "--workflow-border-strong",
           "value": "var(--workflow-border)",
           "scope": [
-            ".system-workflow,\r\n.system-workflow__token-scope"
+            ".system-workflow,\n.system-workflow__token-scope"
           ],
           "line": 25,
           "references": [
@@ -4297,7 +4297,7 @@
           "name": "--workflow-muted",
           "value": "var(--lattice-menu-muted)",
           "scope": [
-            ".system-workflow,\r\n.system-workflow__token-scope"
+            ".system-workflow,\n.system-workflow__token-scope"
           ],
           "line": 26,
           "references": [
@@ -4308,7 +4308,7 @@
           "name": "--workflow-ink",
           "value": "var(--lattice-menu-ink)",
           "scope": [
-            ".system-workflow,\r\n.system-workflow__token-scope"
+            ".system-workflow,\n.system-workflow__token-scope"
           ],
           "line": 27,
           "references": [
@@ -4319,7 +4319,7 @@
           "name": "--workflow-panel",
           "value": "var(--lattice-menu-panel)",
           "scope": [
-            ".system-workflow,\r\n.system-workflow__token-scope"
+            ".system-workflow,\n.system-workflow__token-scope"
           ],
           "line": 28,
           "references": [
@@ -4330,7 +4330,7 @@
           "name": "--workflow-selection",
           "value": "color-mix(in srgb, var(--workflow-ink) 12%, var(--workflow-panel))",
           "scope": [
-            ".system-workflow,\r\n.system-workflow__token-scope"
+            ".system-workflow,\n.system-workflow__token-scope"
           ],
           "line": 29,
           "references": [
@@ -4342,7 +4342,7 @@
           "name": "--workflow-hover",
           "value": "color-mix(in srgb, var(--workflow-ink) 7%, transparent)",
           "scope": [
-            ".system-workflow,\r\n.system-workflow__token-scope"
+            ".system-workflow,\n.system-workflow__token-scope"
           ],
           "line": 30,
           "references": [
@@ -4353,7 +4353,7 @@
           "name": "--workflow-active-vertical",
           "value": "inset 4px 0 0 var(--workflow-ink)",
           "scope": [
-            ".system-workflow,\r\n.system-workflow__token-scope"
+            ".system-workflow,\n.system-workflow__token-scope"
           ],
           "line": 31,
           "references": [
@@ -4364,7 +4364,7 @@
           "name": "--workflow-active-horizontal",
           "value": "inset 0 4px 0 var(--workflow-ink)",
           "scope": [
-            ".system-workflow,\r\n.system-workflow__token-scope"
+            ".system-workflow,\n.system-workflow__token-scope"
           ],
           "line": 32,
           "references": [
@@ -4375,7 +4375,7 @@
           "name": "--workflow-shadow-panel",
           "value": "none",
           "scope": [
-            ".system-workflow,\r\n.system-workflow__token-scope"
+            ".system-workflow,\n.system-workflow__token-scope"
           ],
           "line": 33,
           "references": []
@@ -4384,7 +4384,7 @@
           "name": "--workflow-shadow-workspace",
           "value": "none",
           "scope": [
-            ".system-workflow,\r\n.system-workflow__token-scope"
+            ".system-workflow,\n.system-workflow__token-scope"
           ],
           "line": 34,
           "references": []
@@ -4393,7 +4393,7 @@
           "name": "--workflow-motion-in",
           "value": "180ms",
           "scope": [
-            ".system-workflow,\r\n.system-workflow__token-scope"
+            ".system-workflow,\n.system-workflow__token-scope"
           ],
           "line": 35,
           "references": []
@@ -4402,7 +4402,7 @@
           "name": "--workflow-motion-out",
           "value": "140ms",
           "scope": [
-            ".system-workflow,\r\n.system-workflow__token-scope"
+            ".system-workflow,\n.system-workflow__token-scope"
           ],
           "line": 36,
           "references": []
@@ -4411,7 +4411,7 @@
           "name": "--workflow-ease",
           "value": "cubic-bezier(.2, .72, .2, 1)",
           "scope": [
-            ".system-workflow,\r\n.system-workflow__token-scope"
+            ".system-workflow,\n.system-workflow__token-scope"
           ],
           "line": 37,
           "references": []
@@ -4420,7 +4420,7 @@
           "name": "--workflow-type-display",
           "value": "600 28px/1.08 \"Inscape Sora\", sans-serif",
           "scope": [
-            ".system-workflow,\r\n.system-workflow__token-scope"
+            ".system-workflow,\n.system-workflow__token-scope"
           ],
           "line": 38,
           "references": []
@@ -4429,7 +4429,7 @@
           "name": "--workflow-type-title",
           "value": "600 18px/1.15 \"Inscape Sora\", sans-serif",
           "scope": [
-            ".system-workflow,\r\n.system-workflow__token-scope"
+            ".system-workflow,\n.system-workflow__token-scope"
           ],
           "line": 39,
           "references": []
@@ -4438,7 +4438,7 @@
           "name": "--workflow-type-section",
           "value": "600 15px/1.2 \"Inscape Sora\", sans-serif",
           "scope": [
-            ".system-workflow,\r\n.system-workflow__token-scope"
+            ".system-workflow,\n.system-workflow__token-scope"
           ],
           "line": 40,
           "references": []
@@ -4447,7 +4447,7 @@
           "name": "--workflow-type-body",
           "value": "400 14px/1.5 \"Inscape Sora\", sans-serif",
           "scope": [
-            ".system-workflow,\r\n.system-workflow__token-scope"
+            ".system-workflow,\n.system-workflow__token-scope"
           ],
           "line": 41,
           "references": []
@@ -4456,7 +4456,7 @@
           "name": "--workflow-type-control",
           "value": "400 11px/1.2 \"Inscape Sora\", sans-serif",
           "scope": [
-            ".system-workflow,\r\n.system-workflow__token-scope"
+            ".system-workflow,\n.system-workflow__token-scope"
           ],
           "line": 42,
           "references": []
@@ -4465,7 +4465,7 @@
           "name": "--workflow-type-sidebar",
           "value": "450 11px/1.1 \"Inscape Sora\", sans-serif",
           "scope": [
-            ".system-workflow,\r\n.system-workflow__token-scope"
+            ".system-workflow,\n.system-workflow__token-scope"
           ],
           "line": 43,
           "references": []
@@ -4474,7 +4474,7 @@
           "name": "--workflow-type-browser-rail",
           "value": "400 10px/1 \"Inscape IBM Plex Sans Condensed\", \"Arial Narrow\", sans-serif",
           "scope": [
-            ".system-workflow,\r\n.system-workflow__token-scope"
+            ".system-workflow,\n.system-workflow__token-scope"
           ],
           "line": 44,
           "references": []
@@ -4483,7 +4483,7 @@
           "name": "--workflow-type-panel-heading",
           "value": "500 11px/1.15 \"Inscape Sora\", sans-serif",
           "scope": [
-            ".system-workflow,\r\n.system-workflow__token-scope"
+            ".system-workflow,\n.system-workflow__token-scope"
           ],
           "line": 45,
           "references": []
@@ -4492,7 +4492,7 @@
           "name": "--workflow-type-panel-body",
           "value": "400 11px/1.5 \"Inscape IBM Plex Sans Condensed\", \"Arial Narrow\", sans-serif",
           "scope": [
-            ".system-workflow,\r\n.system-workflow__token-scope"
+            ".system-workflow,\n.system-workflow__token-scope"
           ],
           "line": 46,
           "references": []
@@ -4501,7 +4501,7 @@
           "name": "--workflow-type-panel-rail",
           "value": "400 11px/1 \"Inscape IBM Plex Sans Condensed\", \"Arial Narrow\", sans-serif",
           "scope": [
-            ".system-workflow,\r\n.system-workflow__token-scope"
+            ".system-workflow,\n.system-workflow__token-scope"
           ],
           "line": 47,
           "references": []
@@ -4510,7 +4510,7 @@
           "name": "--workflow-type-label",
           "value": "500 10px/1.25 \"Inscape IBM Plex Sans Condensed\", \"Arial Narrow\", sans-serif",
           "scope": [
-            ".system-workflow,\r\n.system-workflow__token-scope"
+            ".system-workflow,\n.system-workflow__token-scope"
           ],
           "line": 48,
           "references": []
@@ -4519,7 +4519,7 @@
           "name": "--workflow-type-micro",
           "value": "400 10px/1.35 \"Inscape IBM Plex Sans Condensed\", \"Arial Narrow\", sans-serif",
           "scope": [
-            ".system-workflow,\r\n.system-workflow__token-scope"
+            ".system-workflow,\n.system-workflow__token-scope"
           ],
           "line": 49,
           "references": []
@@ -4528,7 +4528,7 @@
           "name": "--workflow-type-technical",
           "value": "400 10px/1.35 \"Inscape IBM Plex Sans Condensed\", \"Arial Narrow\", sans-serif",
           "scope": [
-            ".system-workflow,\r\n.system-workflow__token-scope"
+            ".system-workflow,\n.system-workflow__token-scope"
           ],
           "line": 50,
           "references": []
@@ -5038,7 +5038,7 @@
           "name": "--detached-window-shadow-height",
           "value": "45px",
           "scope": [
-            ".system-workflow:is([data-menu-surface=\"ash\"], [data-menu-surface=\"mist\"], [data-menu-surface=\"paper\"])\r\n  :is(.system-workflow__detached-window-surface, .system-workflow__metadata-projection .system-workflow__metadata-module-content),\r\n.visitor-grid-world:is([data-menu-surface=\"ash\"], [data-menu-surface=\"mist\"], [data-menu-surface=\"paper\"])\r\n  :is(.system-workflow__detached-window-surface, .system-workflow__metadata-projection .system-workflow__metadata-module-content)"
+            ".system-workflow:is([data-menu-surface=\"ash\"], [data-menu-surface=\"mist\"], [data-menu-surface=\"paper\"])\n  :is(.system-workflow__detached-window-surface, .system-workflow__metadata-projection .system-workflow__metadata-module-content),\n.visitor-grid-world:is([data-menu-surface=\"ash\"], [data-menu-surface=\"mist\"], [data-menu-surface=\"paper\"])\n  :is(.system-workflow__detached-window-surface, .system-workflow__metadata-projection .system-workflow__metadata-module-content)"
           ],
           "line": 989,
           "references": []
@@ -5047,7 +5047,7 @@
           "name": "--workflow-window-inner-shadow-opacity",
           "value": "18%",
           "scope": [
-            ".system-workflow:is([data-menu-surface=\"ash\"], [data-menu-surface=\"mist\"], [data-menu-surface=\"paper\"])\r\n  :is(.system-workflow__detached-window-surface, .system-workflow__metadata-projection .system-workflow__metadata-module-content),\r\n.visitor-grid-world:is([data-menu-surface=\"ash\"], [data-menu-surface=\"mist\"], [data-menu-surface=\"paper\"])\r\n  :is(.system-workflow__detached-window-surface, .system-workflow__metadata-projection .system-workflow__metadata-module-content)"
+            ".system-workflow:is([data-menu-surface=\"ash\"], [data-menu-surface=\"mist\"], [data-menu-surface=\"paper\"])\n  :is(.system-workflow__detached-window-surface, .system-workflow__metadata-projection .system-workflow__metadata-module-content),\n.visitor-grid-world:is([data-menu-surface=\"ash\"], [data-menu-surface=\"mist\"], [data-menu-surface=\"paper\"])\n  :is(.system-workflow__detached-window-surface, .system-workflow__metadata-projection .system-workflow__metadata-module-content)"
           ],
           "line": 990,
           "references": []
@@ -5056,7 +5056,7 @@
           "name": "--workflow-dock-height",
           "value": "52px",
           "scope": [
-            ".system-workflow[data-layout=\"compact\"],\r\n.system-workflow[data-layout=\"narrow\"]"
+            ".system-workflow[data-layout=\"compact\"],\n.system-workflow[data-layout=\"narrow\"]"
           ],
           "line": 1265,
           "references": []
@@ -6426,7 +6426,7 @@
         },
         {
           "name": "--tactile-face",
-          "value": "linear-gradient(165deg,\r\n    color-mix(in srgb, white 9%, var(--tactile-surface)), var(--tactile-surface))",
+          "value": "linear-gradient(165deg,\n    color-mix(in srgb, white 9%, var(--tactile-surface)), var(--tactile-surface))",
           "scope": [
             "[data-workflow-material=\"tactile\"]"
           ],
@@ -6438,7 +6438,7 @@
         },
         {
           "name": "--tactile-raised",
-          "value": "linear-gradient(165deg,\r\n    color-mix(in srgb, white 10%, var(--tactile-surface)),\r\n    color-mix(in srgb, white 3%, var(--tactile-surface)))",
+          "value": "linear-gradient(165deg,\n    color-mix(in srgb, white 10%, var(--tactile-surface)),\n    color-mix(in srgb, white 3%, var(--tactile-surface)))",
           "scope": [
             "[data-workflow-material=\"tactile\"]"
           ],
@@ -6450,7 +6450,7 @@
         },
         {
           "name": "--tactile-hover",
-          "value": "linear-gradient(165deg,\r\n    color-mix(in srgb, white 15%, var(--tactile-surface)),\r\n    color-mix(in srgb, white 6%, var(--tactile-surface)))",
+          "value": "linear-gradient(165deg,\n    color-mix(in srgb, white 15%, var(--tactile-surface)),\n    color-mix(in srgb, white 6%, var(--tactile-surface)))",
           "scope": [
             "[data-workflow-material=\"tactile\"]"
           ],
@@ -6473,7 +6473,7 @@
         },
         {
           "name": "--tactile-shadow-shell",
-          "value": "inset 0 1px 0 var(--tactile-rim),\r\n    inset 0 -1px 0 rgb(0 0 0 / 24%), 0 2px 4px rgb(0 0 0 / 28%), 0 8px 20px rgb(0 0 0 / 20%)",
+          "value": "inset 0 1px 0 var(--tactile-rim),\n    inset 0 -1px 0 rgb(0 0 0 / 24%), 0 2px 4px rgb(0 0 0 / 28%), 0 8px 20px rgb(0 0 0 / 20%)",
           "scope": [
             "[data-workflow-material=\"tactile\"]"
           ],
@@ -6484,7 +6484,7 @@
         },
         {
           "name": "--tactile-shadow-raised",
-          "value": "inset 0 1px 0 rgb(255 255 255 / 13%),\r\n    inset 0 -1px 0 rgb(0 0 0 / 28%), 0 1px 2px rgb(0 0 0 / 48%)",
+          "value": "inset 0 1px 0 rgb(255 255 255 / 13%),\n    inset 0 -1px 0 rgb(0 0 0 / 28%), 0 1px 2px rgb(0 0 0 / 48%)",
           "scope": [
             "[data-workflow-material=\"tactile\"]"
           ],
@@ -6493,7 +6493,7 @@
         },
         {
           "name": "--tactile-shadow-inset",
-          "value": "inset 0 2px 4px rgb(0 0 0 / 48%),\r\n    inset 0 -1px 0 rgb(255 255 255 / 8%)",
+          "value": "inset 0 2px 4px rgb(0 0 0 / 48%),\n    inset 0 -1px 0 rgb(255 255 255 / 8%)",
           "scope": [
             "[data-workflow-material=\"tactile\"]"
           ],

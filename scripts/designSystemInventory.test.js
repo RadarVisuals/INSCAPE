@@ -2,6 +2,23 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { inspectCss, checkInventory, createInventory } from './designSystemInventory.js';
 
+test('inventory is identical for Windows and Linux multiline CSS', () => {
+  const css = `:root {
+    --shadow:
+      0 1px 2px black,
+      0 0 3px var(--surface);
+  }
+  @media (forced-colors: active) {
+    .first,
+    .second { --shadow: none; }
+  }`;
+  const linux = inspectCss(css, 'sample.css', 'Material');
+  const windows = inspectCss(css.replaceAll('\n', '\r\n'), 'sample.css', 'Material');
+  assert.deepEqual(windows, linux);
+  assert.equal(linux.definitions[0].line, 2);
+  assert.deepEqual(linux.definitions[0].references, ['--surface']);
+});
+
 test('inventory retains cascade scope, aliases, media modes and complex CSS values', () => {
   const css =
     ':root { --surface: #191b1b; --face: linear-gradient(165deg, white, var(--surface)); }\n@media (forced-colors: active) { [data-material] { --surface: Canvas; --face: var(--surface); } }';
