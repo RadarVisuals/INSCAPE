@@ -20,7 +20,8 @@ const read = page => page.evaluate(() => {
     registered: fixture.view.entries.has('workbench:index'), travelling: Boolean(document.querySelector('[data-workbench-travelling]')) };
 });
 
-async function mount(page, { visitor = false, pinned = false, entryTarget = null } = {}) {
+async function mount(page, { visitor = false, pinned = false, entryTarget = null, clocked = false } = {}) {
+  if (clocked) await page.clock.install({ time: new Date('2026-01-01T00:00:00Z') });
   const errors = [];
   page.on('pageerror', error => errors.push(error.message));
   page.on('console', message => { if (/flushSync was called|Maximum update depth|unmounted component/.test(message.text())) errors.push(message.text()); });
@@ -81,7 +82,7 @@ async function mount(page, { visitor = false, pinned = false, entryTarget = null
 }
 
 async function clock(page) {
-  await page.clock.install(); await page.clock.pauseAt(await page.evaluate(() => Date.now() + 100));
+  await page.clock.pauseAt(new Date('2026-01-01T01:00:00Z'));
 }
 async function zoomAtIndex(page, scale) {
   await page.evaluate(scale => {
@@ -196,7 +197,7 @@ for (const visitor of [false, true]) {
     const browser = await launch();
     try {
       const page = await browser.newPage({ viewport: { width: 1200, height: 900 }, reducedMotion: 'no-preference' });
-      const errors = await mount(page, { visitor }); await clock(page);
+      const errors = await mount(page, { visitor, clocked: true }); await clock(page);
       const original = await read(page);
       if (visitor) await page.evaluate(() => window.__indexFixture.land()); else await go(page).dispatchEvent('click');
       await page.clock.runFor(180);
@@ -225,7 +226,7 @@ test('late loading never resumes a journey cancelled by the visitor', { timeout:
   const browser = await launch();
   try {
     const page = await browser.newPage({ viewport: { width: 1200, height: 900 } });
-    const errors = await mount(page, { visitor: true }); await clock(page);
+    const errors = await mount(page, { visitor: true, clocked: true }); await clock(page);
     await page.evaluate(() => window.__indexFixture.land()); await page.clock.runFor(180);
     await page.locator('main').dispatchEvent('wheel', { deltaX: 15, deltaY: 20, bubbles: true, cancelable: true });
     await page.clock.runFor(32); const stopped = (await read(page)).camera;
@@ -248,7 +249,7 @@ test('explicit artwork entry suppresses the saved landing and reduced motion arr
   const browser = await launch();
   try {
     const page = await browser.newPage({ viewport: { width: 1200, height: 900 }, reducedMotion: 'reduce' });
-    const errors = await mount(page, { visitor: true, entryTarget: { moduleId: 'a' } }); await clock(page);
+    const errors = await mount(page, { visitor: true, entryTarget: { moduleId: 'a' }, clocked: true }); await clock(page);
     await page.evaluate(() => window.__indexFixture.land()); await page.clock.runFor(100);
     assert.deepEqual((await read(page)).camera, { scale: 1, offset: { x: 0, y: 0 } });
     await go(page).dispatchEvent('click'); await page.clock.runFor(32);
@@ -262,7 +263,7 @@ test('ordinary Focus still cancels when its destination is removed, and clears n
   const browser = await launch();
   try {
     const page = await browser.newPage({ viewport: { width: 1200, height: 900 } });
-    const errors = await mount(page); await clock(page);
+    const errors = await mount(page, { clocked: true }); await clock(page);
     await page.evaluate(() => window.__indexFixture.view.setSelection(['a']));
     await page.getByRole('button', { name: 'Focus selected Workbench modules', exact: true }).dispatchEvent('click');
     await page.clock.runFor(180);

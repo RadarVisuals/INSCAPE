@@ -70,9 +70,12 @@ requested only 100ms ahead had already passed when the command arrived, and a
 Metadata submenu disappeared during keyboard navigation. Both outcomes remain
 part of the evidence; the green PR did not erase the red push.
 
-The two clocked fixtures now install a fixed epoch and pause an hour ahead,
+The affected clocked fixtures now install a fixed epoch and pause an hour ahead,
 well beyond their whole test timeout, before advancing the same gesture/animation
-durations. No short inter-process scheduling margin is assumed.
+durations. No short inter-process scheduling margin is assumed. The remaining
+same pattern in the maintained Index suite was reconciled too: its five clocked
+cases install before mounting, while its ordinary cases retain their native
+clock. Historical suites outside the maintained selection were not rewritten.
 The disappearing submenu was reproduced locally in all four Owner/Visitor and
 wide/narrow cases: leaving with the pointer cleared the menu branch even while
 its expanded trigger held keyboard focus. The existing DesktopMenu now retains
