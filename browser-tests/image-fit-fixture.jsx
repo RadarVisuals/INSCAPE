@@ -5,7 +5,7 @@ import { WorkbenchViewProvider, WorkbenchViewControls, useWorkbenchView } from '
 import { useWorkbenchCamera } from '../src/public/ownerSystemWorkflow/WorkbenchCamera.jsx';
 import { WorkbenchPlacement } from '../src/public/ownerSystemWorkflow/WorkbenchPlacement.jsx';
 import Grid from '../src/public/ownerSystemWorkflow/WorkbenchAlignmentGrid.jsx';
-import { ContextToolbar, ContextToolbarProvider } from '../src/public/ownerSystemWorkflow/ContextToolbar.jsx';
+import { ContextActionBars, ContextToolbar, ContextToolbarProvider } from '../src/public/ownerSystemWorkflow/ContextToolbar.jsx';
 import { createSystemWorkflowDraftStore } from '../src/systemWorkflow/systemWorkflowDraftStore.js';
 import { buildProfileDocumentV9Asset } from '../src/profileDocument/domain/profileDocumentV9Asset.js';
 import { OWNER_SYSTEM_WORKFLOW_REVIEW_ASSETS } from '../src/public/ownerSystemWorkflow/ownerSystemWorkflowDevelopmentFixture.js';
@@ -52,7 +52,7 @@ export function mount() {
         <Grid mode="DOTS" color="#111313" /><WorkbenchViewControls hostRef={hostRef} />
         <ImageWorkbench records={single ? draft.imageModules.slice(0, 1) : draft.imageModules} presentations={draft.workbench.imageModules}
           store={owner ? store : null} profileAddress={profileAddress} onActivate={setTarget} />
-        {owner && <ContextToolbar menuSurface="carbon" />}
+        {owner && <><div style={{ position: 'fixed', bottom: 16, left: 16, maxWidth: 'calc(100% - 32px)' }}><ContextActionBars /></div><ContextToolbar menuSurface="carbon" /></>}
       </main>
     </WorkbenchPlacement></ContextToolbarProvider>;
   }

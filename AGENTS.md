@@ -53,10 +53,11 @@ not require a separate audit or approval round for every edit.
 - Give each fact one authoritative owner. Derive secondary views instead of
   maintaining synchronized copies. Document the purpose and invalidation of
   caches; a cache must not silently become a second source of truth.
-- Treat saved drafts and published documents as compatibility boundaries.
-  Changes to schemas, defaults, identifiers, or storage keys must explain how
-  existing data is read or migrated and include representative old-data checks.
-  Never reset or overwrite a user's work merely to make new code load.
+- Follow the active contract's development-data policy: backward compatibility
+  is not required unless the founder explicitly requests it. There are no active
+  users or authored compositions to preserve. Do not add migration code, legacy
+  adapters, old-data tests or retention paths for hypothetical existing work.
+  Keep current behavior and persistence correct within the agreed task scope.
 - Bind asynchronous results and interactions to their originating profile,
   module, and request where relevant. Ignore or cancel obsolete work after
   navigation, account changes, closure, or disposal. Clean up listeners, timers,

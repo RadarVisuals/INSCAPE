@@ -179,7 +179,7 @@ const PublishedDisplayModule = forwardRef(function PublishedDisplayModule({ docu
   const inspectArtwork = source => {
     const id = source?.closest?.('[data-placement-id]')?.dataset.placementId || viewerEntry?.placement.id;
     if (!displayOpen || !hasDisplay || playing || liftMoving || gridDragging || gridSwipe?.moving || gridSwipe?.offset || viewer.placementId || !entriesById.has(id)) return false;
-    return viewer.open(id, undefined, { inspectionMode: 'LIFT' });
+    return viewer.open(id);
   };
   useImperativeHandle(ref, () => ({ inspect: inspectArtwork }));
   const openPlacementViewer = ({ element, placement, gridId }) => {

@@ -31,7 +31,7 @@ test('layer eye is temporary editor state and preserves Preview, selection, and 
     await bay.getByRole('button', { name: 'Hide MOUNTAIN SIGNAL II in editor', exact: true }).click();
     assert.equal(await placements.count(), initialCount - 1);
     assert.equal(await asset.isDisabled(), true);
-    assert.equal(await page.locator('[data-context-tools]').getByRole('button', { name: 'Rotate', exact: true }).count(), 0, 'hidden selection has no authoring actions');
+    assert.equal(await page.locator('[data-context-tools], [data-context-action-bars]').getByRole('button', { name: 'Rotate', exact: true }).count(), 0, 'hidden selection has no authoring actions');
     assert.equal(await bay.getByRole('button', { name: 'Show MOUNTAIN SIGNAL II in editor', exact: true }).getAttribute('aria-pressed'), 'true');
     assert.equal(await page.evaluate(() => window.__eyeWrites), 0);
     await page.screenshot({ path: '.browser-test-runtime/layer-eye-wide.png' });

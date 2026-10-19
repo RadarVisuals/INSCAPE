@@ -165,12 +165,12 @@ test('Text creation saves its requested Workbench position atomically and retain
   const id = addTextModule(f.store, profile, { position: { left: 1300.5, top: 930.25 }, workbench });
   const draft = f.store.getDraft();
   assert.deepEqual(draft.workbench.texts[0], workbench.texts[0], 'existing live layout survives creation');
-  assert.deepEqual(draft.workbench.texts[1], { id, open: true, window: { left: 1300.5, top: 930.25, width: 720, height: 680 } });
+  assert.deepEqual(draft.workbench.texts[1], { id, open: true, window: { left: 1272, top: 930.25, width: 720, height: 680 } });
   assert.equal(draft.texts[1].visibility, 'PRIVATE');
   assert.deepEqual(createSystemWorkflowDraftStore({ profileAddress: profile, storage: f.storage }).getDraft().workbench, draft.workbench);
   const edge = addTextModule(f.store, profile, { position: { left: 7990, top: -100 } });
   assert.deepEqual(f.store.getDraft().workbench.texts.find(text => text.id === edge).window,
-    { left: 3272, top: 8, width: 720, height: 680 });
+    { left: 1272, top: 8, width: 720, height: 680 });
   const saved = f.store.getDraft(); f.fail();
   assert.throws(() => addTextModule(f.store, profile, { position: { left: 1000, top: 1000 } }), /could not be saved/);
   assert.deepEqual(f.store.getDraft(), saved, 'failed creation adds neither content nor a window');

@@ -33,10 +33,29 @@ for (const visitor of [false, true]) for (const width of [1440, 390]) {
       const drag = async target => {
         const box = await target.boundingBox(); assert.ok(box, 'visible drag surface');
         const before = await camera(page);
-        const hit = await page.evaluate(box => document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2)?.outerHTML.slice(0, 450), box);
-        await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2); await page.mouse.down();
+        // Floating Properties can cover the centre on narrow screens. Exercise
+        // a genuinely exposed point on the intended surface, not the panel.
+        const point = await target.evaluate(node => {
+          const rect = node.getBoundingClientRect();
+          // Display may place its input layer beside the painted canvas.
+          const surface = node.matches('.system-workflow__canvas, .visitor-grid-world__viewport')
+            ? node.closest('[data-workbench-view-id]') : node;
+          const hits = [];
+          for (const yRatio of [.5, .1, .9]) for (const xRatio of [.5, .1, .9]) {
+            const x = rect.x + rect.width * xRatio, y = rect.y + rect.height * yRatio;
+            const hit = document.elementFromPoint(x, y);
+            const childControl = hit?.closest('button, input, textarea, select, a, summary, [role="slider"]');
+            if (hit && surface?.contains(hit) && (!childControl || childControl === node))
+              return { x, y, hit: hit.outerHTML.slice(0, 450) };
+            hits.push({ x, y, hit: hit?.outerHTML.slice(0, 180) });
+          }
+          return { hits };
+        });
+        assert.ok(Number.isFinite(point.x), `intended drag surface has an unobstructed hit target: ${JSON.stringify(point)}`);
+        const hit = point.hit;
+        await page.mouse.move(point.x, point.y); await page.mouse.down();
         for (let i = 1; i <= 8; i++) {
-          await page.mouse.move(box.x + box.width / 2 + i * 4, box.y + box.height / 2 + i * 2);
+          await page.mouse.move(point.x + i * 4, point.y + i * 2);
           if (i < 8) await page.waitForTimeout(12);
         }
         await page.mouse.up();
@@ -55,8 +74,11 @@ for (const visitor of [false, true]) for (const width of [1440, 390]) {
       await drag(firstImage.locator('.image-module__canvas'));
       const after = await firstImage.boundingBox();
       assert.deepEqual(after, bounds, 'reset restores the same Image bounds, including Visitor temporary positions');
-      // Stationary Image clicks focus, even after a drag; Back retains Hand.
-      await firstImage.locator('.image-module__canvas').click();
+      // Stationary Image double-clicks focus, even after a drag; Back retains Hand.
+      const beforeClick = await camera(page);
+      await firstImage.locator('.image-module__canvas').click(); await settle(page);
+      assert.deepEqual(await camera(page), beforeClick, 'one stationary click does not zoom in Hand mode');
+      await firstImage.locator('.image-module__canvas').dblclick();
       await page.waitForFunction(() => !document.querySelector('[data-workbench-travelling]'));
       assert.equal(await page.locator('.image-lift').count(), 0);
       await page.getByRole('button', { name: 'Back to previous Workbench view', exact: true }).click();
@@ -84,6 +106,8 @@ for (const visitor of [false, true]) for (const width of [1440, 390]) {
       const canvas = page.locator(visitor ? '.visitor-grid-world__viewport' : '.system-workflow__canvas').first();
       await drag(canvas);
       const title = page.locator('[data-workbench-view-id="text:fit"] [data-workbench-selectable]').first();
+      // The quiet title strip is pointer-inert until hover or keyboard focus.
+      await title.focus(); await settle(page);
       const titleBounds = await title.boundingBox();
       await drag(title);
       assert.deepEqual(await title.boundingBox(), titleBounds, 'Text title drag never moves its window');

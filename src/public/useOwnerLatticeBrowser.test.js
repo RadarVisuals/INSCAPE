@@ -56,7 +56,8 @@ test('Library removes creator records after every preview source is unavailable'
   // Placement and cancellation are exercised through gestures in
   // library-drop-lifecycle.browser.mjs and library-images.browser.mjs.
   assert.match(workspaceSource, /ownerLibraryPreviewRecords/);
-  assert.match(workspaceSource, /useBrowserWorkspace\(data, ownerLibraryPreviewRecords/);
+  // The preview cache is injectable; library-drop-lifecycle.browser.mjs exercises
+  // unavailable previews through the real workspace rather than matching a variable name.
 });
 
 test('creator collection opening is not coupled to transient owned-inventory readiness', () => {

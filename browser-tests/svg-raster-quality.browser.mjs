@@ -8,7 +8,7 @@ const grey = await readFile(new URL('./fixtures/keeper-layered.svg', import.meta
 const purple = await readFile(new URL('./fixtures/keeper-octopus.svg', import.meta.url), 'utf8');
 const launch = () => chromium.launch({ executablePath: 'C:/Program Files (x86)/Google/Chrome/Application/chrome.exe', headless: true });
 
-test('embedded WebP thumbnails stay filtered on hover and retain original pixels for Lift', { timeout: 60000 }, async () => {
+test('embedded WebP thumbnails stay filtered while Inspect prepares original pixels for Lift', { timeout: 60000 }, async () => {
   const browser = await launch();
   try {
     for (const [width, deviceScaleFactor] of [[1440, 1], [390, 2]]) {
@@ -28,11 +28,14 @@ test('embedded WebP thumbnails stay filtered on hover and retain original pixels
         window.prepared = false;
         addEventListener('message', event => { if (event.data?.type === 'inscape:artwork-prepared') window.prepared = true; });
       });
-      // The populated fixture's floating tools can cover this thumbnail. Send
-      // the same pointer-over event directly to exercise its hover handler.
+      // Workbench thumbnail hover does not prepare inspection; the explicit
+      // Inspect control does. Both must preserve the visible filtered sources.
       await source.dispatchEvent('pointerover', { pointerType: 'mouse', buttons: 0 });
+      await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+      assert.equal(await page.evaluate(() => window.prepared), false);
+      await source.locator('..').getByRole('button', { name: 'Inspect Image', exact: true }).dispatchEvent('pointerover', { pointerType: 'mouse', buttons: 0 });
       await page.waitForFunction(() => window.prepared);
-      assert.deepEqual(await runtime.evaluate(() => [...document.querySelectorAll('image')].map(n => n.href.baseVal)), before, 'hover warming never replaces the visible filtered sources');
+      assert.deepEqual(await runtime.evaluate(() => [...document.querySelectorAll('image')].map(n => n.href.baseVal)), before, 'Inspect warming never replaces the visible filtered sources');
       await mkdir('.browser-test-runtime', { recursive: true });
       await source.screenshot({ path: `.browser-test-runtime/svg-quality-hover-${width}.png` });
       const board = page.locator('main.system-workflow').first();
@@ -71,7 +74,7 @@ test('embedded WebP thumbnails stay filtered on hover and retain original pixels
       await page.getByRole('button', { name: 'Back to previous Workbench view', exact: true }).click();
       await page.waitForFunction(() => !document.querySelector('[data-workbench-travelling]'));
       await filtered();
-      await source.focus(); await page.keyboard.press('Enter');
+      await source.focus(); await page.keyboard.press('i');
       await runtime.waitForFunction(() => [...document.querySelectorAll('image')].every(n => n.href.baseVal.startsWith('data:')));
       await page.waitForFunction(() => document.querySelector('.image-lift')?.style.getPropertyValue('--inspection-lift-progress') === '1');
       assert.equal(await source.locator('iframe').evaluate((node, original) => node === original, iframe), true);
@@ -209,8 +212,8 @@ test('Focus, Return and subsequent zoom update Image and Display pixels without 
         await zoom(1);
         await board.focus(); await page.keyboard.press('Escape');
         await source.focus();
-        if (kind === 'image') await page.keyboard.press('Enter');
-        else await source.dispatchEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true });
+        if (kind === 'image') await page.keyboard.press('i');
+        else await source.dispatchEvent('keydown', { key: 'i', bubbles: true, cancelable: true });
         await runtime.waitForFunction(() => [...document.querySelectorAll('image')].every(node => node.href.baseVal.startsWith('data:')));
         await page.waitForFunction(kind => {
           const target = kind === 'image' ? document.querySelector('.image-lift') : document.querySelector('[data-inspection-context="selected"]')?.parentElement;

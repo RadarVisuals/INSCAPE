@@ -157,7 +157,7 @@ test('one shared Layers and Metadata window follow explicit Display targets with
     // Selection actions have their own host and survive closing Layers.
     await primary.getByLabel(/Move Display Module:/).focus();
     await layers.getByRole('button', { name: 'MOON PURPLE', exact: true }).click();
-    const dock = page.locator('[data-context-tools]');
+    const dock = page.locator('[data-context-tools], [data-context-action-bars]');
     assert.equal(await layers.getByRole('button', { name: 'Rotate', exact: true }).count(), 0);
     await page.getByRole('button', { name: 'Close Layers', exact: true }).click();
     assert.equal(await layers.count(), 0);

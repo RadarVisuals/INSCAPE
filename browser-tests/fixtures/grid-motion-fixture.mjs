@@ -135,6 +135,11 @@ export async function mountGridMotionFixture(page, { origin, visitor = false, he
     await import('/src/index.css');
     await import('/src/inscapeTokens.css');
     await import('/src/public/ownerSystemWorkflow/ownerSystemWorkflow.css');
+    if (!visitor) {
+      const { acquireProfileEditor } = await import('/src/systemWorkflow/profileEditorLease.js');
+      window.__motionEditorLease = acquireProfileEditor(profile);
+      if (await window.__motionEditorLease.ready !== 'editing') throw new Error('Motion fixture could not acquire its editor');
+    }
     const Component = visitor ? (await import('/src/profileDocument/components/ProfileDocumentV9Visitor.jsx')).default
       : (await import('/src/public/ownerSystemWorkflow/OwnerSystemWorkflowRuntime.jsx')).default;
     const props = visitor ? { document: (await import('/src/profileDocument/domain/profileDocumentV9Builder.js')).buildProfileDocumentV9({ systemWorkflowDraft: draft, profileAddress: profile, assetRecords: assets }) }

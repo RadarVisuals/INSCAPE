@@ -41,7 +41,7 @@ test('independent Image: Library drop, free size, dock crop, wraparound flip, Li
     await page.getByRole('menuitem', { name: 'ADD', exact: true }).click();
     await page.getByRole('menuitem', { name: 'IMAGE', exact: true }).click();
     const module = page.locator('[data-image-module]'), canvas = module.locator('.image-module__canvas');
-    const dock = page.locator('[data-context-tools]');
+    const dock = page.locator('[data-context-tools], [data-context-action-bars]');
     await canvas.waitFor();
     const grip = module.locator('.image-module__window');
     const gripBounds = await grip.boundingBox();

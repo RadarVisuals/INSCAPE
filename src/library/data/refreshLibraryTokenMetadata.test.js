@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { refreshLibraryTokenMetadata } from './refreshLibraryTokenMetadata.js';
+import { metadataImages } from './metadataImages.js';
+import { normalizeOwnedToken } from './chillwhalesProfileRepository.js';
 
 const contract = '0x1111111111111111111111111111111111111111';
 const token = (n) => ({ id: '42:' + contract + ':0x' + n.toString(16).padStart(64, '0'),
@@ -10,6 +12,30 @@ const token = (n) => ({ id: '42:' + contract + ':0x' + n.toString(16).padStart(6
 const metadata = { name: 'Zero', description: 'Resident Zero', attributes: [],
   metadataSource: 'LSP4MetadataForTokenId (DIRECT LUKSO RPC)',
   images: [0, 1, 2, 3].map(index => ({ index, url: 'https://example.test/image-' + index + '.webp', width: 2000, height: 2000 })) };
+
+test('an updated SVG with a spaced filename stays available through direct refresh and indexed metadata', async () => {
+  const asset = { ...token(1), imageGroups: [{ index: 1, imageUrl: 'https://example.test/old-NOMAD.svg' }] };
+  const before = structuredClone(asset);
+  const attachment = { url: 'ipfs://QmbvP5gorFdpn2S67a8o74tUyFx73zJwk3u7PcuvwrwAh7/images-6-NOMAD-animated (3).svg', fileType: 'image/svg+xml' };
+  const images = metadataImages({ images: [[{ url: 'https://example.test/cover.webp', width: 640 }]], assets: [attachment] });
+  const resolver = { resolve: async () => new Map([[asset.tokenId, { ...metadata, images }]]) };
+  const batches = [];
+  for await (const batch of refreshLibraryTokenMetadata([asset], { resolver })) batches.push(batch);
+  const fresh = batches[0].assets[0];
+  assert.equal(batches[0].failures, 0);
+  assert.equal(fresh.imageGroups.length, 2, 'the updated attachment must not silently disappear');
+  assert.equal(fresh.imageGroups[1].imageUrl, 'https://api.universalprofile.cloud/ipfs/QmbvP5gorFdpn2S67a8o74tUyFx73zJwk3u7PcuvwrwAh7/images-6-NOMAD-animated%20(3).svg');
+  assert.equal(fresh.id, asset.id);
+  assert.equal(fresh.ownerAddress, asset.ownerAddress);
+  assert.deepEqual(fresh.creators, asset.creators);
+  assert.deepEqual(asset, before, 'refresh must not rewrite an existing placement or cached input');
+  const indexed = normalizeOwnedToken({ address: contract, token_id: asset.tokenId,
+    digitalAsset: { address: contract, lsp4TokenType: { value: 'COLLECTION' } },
+    nft: { lsp4Metadata: { images: [{ image_index: 0, url: 'https://example.test/cover.webp', width: 640 }],
+      assets: [{ url: attachment.url, file_type: attachment.fileType }] } },
+  }, asset.ownerAddress);
+  assert.deepEqual(indexed.imageGroups, fresh.imageGroups, 'both metadata paths use the same URL interpretation');
+});
 
 test('refresh replaces stale collection fallback with cover and all four token images, preserving authority', async () => {
   const asset = token(1); const before = structuredClone(asset);

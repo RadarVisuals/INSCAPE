@@ -6,9 +6,9 @@ import { mkdir, writeFile } from 'node:fs/promises';
 // Regression coverage for module-scoped interaction, media failure and small controls.
 const origin = process.env.INSCAPE_IMAGE_ROOT || 'http://127.0.0.1:5189';
 test('Image audit: independent commits, unavailable media and minimum-size controls', { timeout: 60000 }, async () => {
-  const browser = await chromium.launch({ executablePath: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', headless: true });
+  const browser = await chromium.launch({ executablePath: process.env.INSCAPE_BROWSER_EXECUTABLE || 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', headless: true });
   const results = {};
-  const output = process.env.INSCAPE_SYSTEM_WORKFLOW_SCREENSHOT_DIR || '.browser-test-runtime/image-audit';
+  const output = process.env.INSCAPE_SYSTEM_WORKFLOW_SCREENSHOT_DIR || `${process.env.INSCAPE_BROWSER_OUTPUT || '.browser-test-runtime'}/image-audit`;
   await mkdir(output, { recursive: true });
   try {
     const page = await browser.newPage({ viewport: { width: 1200, height: 800 }, reducedMotion: 'reduce' });
@@ -28,7 +28,7 @@ test('Image audit: independent commits, unavailable media and minimum-size contr
       const { OWNER_SYSTEM_WORKFLOW_REVIEW_ASSETS: assets } = await import('/src/public/ownerSystemWorkflow/ownerSystemWorkflowDevelopmentFixture.js');
       const ImageWorkbench = (await import('/src/imageModule/ImageWorkbench.jsx')).default;
       const { WorkbenchViewProvider, useWorkbenchView } = await import('/src/public/ownerSystemWorkflow/WorkbenchView.jsx');
-      const { ContextToolbarProvider, ContextToolbar } = await import('/src/public/ownerSystemWorkflow/ContextToolbar.jsx');
+      const { ContextToolbarProvider, ContextToolbar, ContextActionBars } = await import('/src/public/ownerSystemWorkflow/ContextToolbar.jsx');
       await import('/src/inscapeTokens.css');
       await import('/src/public/ownerSystemWorkflow/ownerSystemWorkflow.css');
       const profile = `0x${'1'.repeat(40)}`;
@@ -51,13 +51,13 @@ test('Image audit: independent commits, unavailable media and minimum-size contr
           React.createElement(CameraProbe),
           React.createElement(ContextToolbarProvider, { target: id },
             React.createElement(ImageWorkbench, { records: d.imageModules.slice(0, 1), store, profileAddress: profile }),
-            React.createElement(ContextToolbar)));
+            React.createElement(ContextActionBars), React.createElement(ContextToolbar)));
       }
       createRoot(document.getElementById('root')).render(React.createElement(Fixture));
     });
     const module = page.locator('[data-image-module]').first();
     const canvas = module.locator('.image-module__canvas');
-    const dock = page.locator('[data-context-tools]');
+    const dock = page.locator('[data-context-tools], [data-context-action-bars]');
     await dock.getByRole('button', { name: 'Crop', exact: true }).click();
     await dock.getByRole('slider').fill('2');
     assert.equal(await canvas.getAttribute('data-cropping'), 'true');

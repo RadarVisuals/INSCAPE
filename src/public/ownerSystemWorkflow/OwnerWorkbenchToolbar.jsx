@@ -1,7 +1,8 @@
 import { useWorkbenchArea } from './WorkbenchAreaContext.jsx';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Grid3X3, Image, Info, Layers, Monitor, Redo2, Settings2, Square, Type, Undo2, User, AppWindow, Folder } from 'lucide-react';
+import { Grid3X3, Image, Info, Layers, Redo2, Settings2, Square, Type, Undo2, User, AppWindow, Folder } from 'lucide-react';
 import WorkbenchToolbar from './WorkbenchToolbar.jsx';
+import { ContextActionBars } from './ContextToolbar.jsx';
 import './workbenchCreation.css';
 import { useWorkbenchView } from './WorkbenchViewContext.js';
 import { useWorkbenchCamera } from './WorkbenchCamera.jsx';
@@ -10,9 +11,9 @@ import { sameCreationCamera, workbenchCreationPlacement } from './workbenchCreat
 import { isWorkbenchBackground } from './useWorkbenchPan.js';
 import { isShapeCommand, SHAPE_COMMAND_KINDS } from '../../shapes/shapes.js';
 
-const ICONS = { 'workbench-index': Folder, 'presentation-board': Monitor, 'mini-app': AppWindow, text: Type, image: Image, shape: Square, 'shape-grid': Grid3X3, keeper: Folder };
-const LABELS = { 'workbench-index': 'Index', 'presentation-board': 'Display', 'mini-app': 'Mini app', text: 'Text', image: 'Image', shape: 'Rectangle', keeper: 'Keeper dock',
-  'shape-grid': 'Grid', 'add-display-horizontal': 'Horizontal · 16:9', 'add-display-vertical': 'Vertical · 9:16', 'add-display-custom': 'Custom size…' };
+const ICONS = { 'workbench-index': Folder, 'mini-app': AppWindow, text: Type, image: Image, shape: Square, 'shape-grid': Grid3X3, keeper: Folder };
+const LABELS = { 'workbench-index': 'Index', 'mini-app': 'Mini app', text: 'Text', image: 'Image', shape: 'Rectangle', keeper: 'Keeper dock',
+  'shape-grid': 'Grid' };
 const isCreationTool = tool => tool === 'text' || isShapeCommand(tool);
 const EDITING = 'input,textarea,select,[contenteditable=true],[role=textbox],[role=slider],[role=dialog],[role=menu],iframe,[data-mini-app-id],[data-immersive]';
 const OVERLAYS = '[data-workbench-toolbar],[data-system-workflow-overlay],[data-system-workflow-panel],[data-shared-display-tools],[data-shared-text-tools],[data-context-tools],.workbench-view-controls,[data-workbench-group-tools],[data-workbench-selection-tools]';
@@ -168,8 +169,8 @@ export default function OwnerWorkbenchToolbar({ hostRef, placementTargets, comma
   const creating = isCreationTool(view.interactionTool);
   return <>
     <WorkbenchToolbar activeTool={view.interactionTool} onToolChange={chooseTool} actions={actions} addCommands={addCommands}
-      shapeCommands={shapeCommands} layers={layers} info={info}
-      onOpenLibrary={() => { chooseTool('select'); onOpenLibrary(); }} libraryOpen={libraryOpen} hidden={hidden} actionRequest={actionRequest} />
+      shapeCommands={shapeCommands} layers={layers} info={info} before={<ContextActionBars />}
+      onOpenLibrary={trigger => { chooseTool('select'); onOpenLibrary(trigger); }} libraryOpen={libraryOpen} hidden={hidden} actionRequest={actionRequest} />
     {!hidden && creating && <p className="workbench-creation-hint" role="status" data-system-workflow-overlay>
       {view.interactionTool === 'text' ? 'Click the Workbench or an unlocked Display to add Text.' : `Click or drag on the Workbench to draw a ${SHAPE_COMMAND_KINDS[view.interactionTool]}.`} <kbd>Esc</kbd> to cancel
     </p>}

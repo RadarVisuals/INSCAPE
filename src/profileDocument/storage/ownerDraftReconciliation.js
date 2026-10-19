@@ -79,7 +79,7 @@ export function reconcileOwnerDraftWithPublishedProfile({ document: documentInpu
 }
 
 export function reconcileStoredOwnerDraftWithPublishedProfile({ document, profileAddress, storage }) {
-  const store = createSystemWorkflowDraftStore({ profileAddress, storage });
+  const store = createSystemWorkflowDraftStore({ profileAddress, storage, requireEditor: true });
   return reconcileOwnerDraftWithPublishedProfile({ document, profileAddress, storage, store });
 }
 

@@ -8,8 +8,8 @@ test('Image first raster reports failure and recovers on reopen without authorin
   const browser = await chromium.launch({ executablePath: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', headless: true });
   await mkdir('.browser-test-runtime', { recursive: true });
   try {
-    for (const width of [1440, 390]) for (const owner of [true, false]) {
-      const page = await browser.newPage({ viewport: { width, height: 1000 }, reducedMotion: 'reduce' });
+    for (const width of [1440, 640, 390]) for (const owner of [true, false]) for (const touch of [false, true]) {
+      const page = await browser.newPage({ viewport: { width, height: 1000 }, hasTouch: touch, reducedMotion: 'reduce' });
       page.setDefaultTimeout(6000);
       const errors = []; page.on('pageerror', error => errors.push(error.message));
       let fail = true, requests = 0;
@@ -53,8 +53,10 @@ test('Image first raster reports failure and recovers on reopen without authorin
       assert.ok(requests > 0, 'the original saved URL was requested');
       await page.screenshot({ path: `.browser-test-runtime/image-load-failed-${owner ? 'owner' : 'visitor'}-${width}.png` });
       const beforeRetry = requests; fail = false;
-      await page.locator('.image-module__window').focus();
-      await page.getByRole('button', { name: 'Close Loading test', exact: true }).click();
+      await page.locator('.image-module__canvas').focus();
+      const close = page.getByRole('button', { name: 'Close Loading test', exact: true });
+      if (owner) await page.locator('[data-context-tools] .context-toolbar').waitFor({ state: 'visible' });
+      if (touch) await close.tap(); else await close.click();
       await page.getByRole('button', { name: 'Loading test', exact: true }).focus();
       await page.keyboard.press('Enter');
       await page.locator('.image-module__artwork[data-media-state="ready"]').waitFor();

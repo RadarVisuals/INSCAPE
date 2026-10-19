@@ -25,6 +25,7 @@ const browserCandidates = [process.env.BROWSER_PATH,
   'C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe',
   'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe'].filter(Boolean);
 const resources = {}; const browserProblems = []; const diagnostic = createLifecycleDiagnostics();
+const pendingLocalRequests = new Map();
 let cleanupBrowserTest; let setupAbortController; let baseUrl; let page;
 
 async function availablePort() {
@@ -111,10 +112,13 @@ async function waitForOwnerShell(label) {
         hostProfileAddress: wallet.hostProfileAddress,
         isHostProfileOwner: wallet.isHostProfileOwner,
         isWalletConnected: wallet.isWalletConnected,
-        body: document.body.textContent?.slice(0, 800)
+        body: document.body.textContent?.slice(0, 800),
+        root: document.querySelector('#root')?.innerHTML.slice(0, 4000)
       };
     });
-    throw new Error(`${label}: ${JSON.stringify(state)}`, { cause: error });
+    throw new Error(`${label}: ${JSON.stringify({ ...state,
+      browserProblems: browserProblems.filter(problem => /Page error|Route handler|loopback/.test(problem)),
+      pendingLocalRequests: [...pendingLocalRequests.values()] })}`, { cause: error });
   }
 }
 
@@ -126,7 +130,9 @@ describe('owner/viewed-profile routing through the real App', { concurrency: fal
     resources.vite = await createViteServer({ root, logLevel: 'error', server: { host: '127.0.0.1', port, strictPort: true } });
     await withinDeadline(resources.vite.listen(), BROWSER_LIFECYCLE_TIMEOUTS.resourceCloseMs, 'Routing Vite listen deadline exceeded');
     await waitForVite(baseUrl, setupAbortController.signal);
-    const routeController = createPlaywrightRouteController({ loopbackOrigin: baseUrl, knownOrigins: [],
+    // Vite serves the owner graph as many separate source modules. This bound
+    // accommodates its import burst; handler failures still fail the suite.
+    const routeController = createPlaywrightRouteController({ loopbackOrigin: baseUrl, knownOrigins: [], maxOutstanding: 512,
       decideKnown: async () => ({ action: 'abort' }), onUnexpected: () => {} });
     await launchPlaywrightEdge({ edgePath: browserPath, runtimePath: runtimeDir, workspaceRoot: root,
       loopbackOrigin: baseUrl, routeController, resources, diagnostic,
@@ -135,6 +141,12 @@ describe('owner/viewed-profile routing through the real App', { concurrency: fal
         cleanupBrowserTest = createBrowserTestCleanup({ rootPid, processTree, runtimePath: runtimeDir, workspaceRoot: root, diagnostic });
       } });
     page = resources.page; page.setDefaultTimeout(10_000); await page.emulateMedia({ reducedMotion: 'reduce' });
+    page.on('request', request => {
+      const url = new URL(request.url());
+      if (url.origin === baseUrl) pendingLocalRequests.set(request, url.pathname);
+    });
+    page.on('requestfinished', request => pendingLocalRequests.delete(request));
+    page.on('requestfailed', request => pendingLocalRequests.delete(request));
     await page.addInitScript(() => {
       window.__routingStorageOperations = [];
       for (const method of ['getItem', 'setItem', 'removeItem']) {
@@ -157,7 +169,7 @@ describe('owner/viewed-profile routing through the real App', { concurrency: fal
     const failures = [];
     try { cleanupBrowserTest ||= createBrowserTestCleanup({ runtimePath: runtimeDir, workspaceRoot: root, diagnostic });
       await cleanupBrowserTest(resources); } catch (error) { failures.push(error); }
-    const actionable = browserProblems.filter((problem) => /Page error/iu.test(problem));
+    const actionable = browserProblems.filter((problem) => /Page error|Route handler/iu.test(problem));
     if (actionable.length) failures.push(new Error(actionable.join('\n')));
     if (failures.length) throw new AggregateError(failures, 'Routing browser cleanup failed');
   });
@@ -286,16 +298,16 @@ describe('owner/viewed-profile routing through the real App', { concurrency: fal
       await page.keyboard.press('Enter');
       await page.locator('.profile-overview').waitFor();
       const navigationBounds = await back().boundingBox();
-      const receptionBounds = await page.locator('.profile-overview').boundingBox();
+      const receptionBounds = await page.locator('.profile-overview__inner').boundingBox();
       assert.ok(receptionBounds.y >= navigationBounds.y + navigationBounds.height,
-        'Reception content reserves space for the owner return control');
+        `Reception content reserves space for the owner return control: ${JSON.stringify({ width, navigationBounds, receptionBounds })}`);
       assert.equal(await back().count(), 1);
       await back().focus();
       if (process.env.INSCAPE_RECEPTION_CAPTURE_DIR) await page.screenshot({ path: resolve(process.env.INSCAPE_RECEPTION_CAPTURE_DIR, `reception-${width}.png`) });
       const box = await back().boundingBox();
       assert.ok(box.x >= 0 && box.y >= 0 && box.x + box.width <= width && box.y + box.height <= 900);
       await page.evaluate(() => { window.__routingStorageOperations.length = 0; });
-      await page.getByRole('link', { name: /Explore canvas/ }).click();
+      await page.getByRole('link', { name: 'Canvas', exact: true }).click();
       await page.locator('.visitor-grid-world').waitFor();
       assert.match(page.url(), /[?&]canvas=1/);
       assert.match(page.url(), /[?&]reception=1/);

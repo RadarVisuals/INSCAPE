@@ -114,7 +114,7 @@ test('Flat states preserve selection, focus, creation and readable contrast', { 
     assert.equal(await page.getByRole('button', { name: 'Select tool', exact: true }).getAttribute('aria-pressed'), 'true');
     await page.getByRole('button', { name: 'Actions', exact: true }).click();
     await page.getByRole('textbox', { name: 'Search actions' }).fill('Horizontal');
-    assert.equal(await page.locator('.workbench-toolbar__command').count(), 1, 'nested commands remain searchable');
+    assert.equal(await page.locator('.workbench-toolbar__command').count(), 0, 'experimental Display creation is absent from search');
     await page.keyboard.press('Escape');
     const action = page.getByRole('button', { name: 'Actions', exact: true });
     assert.equal((await appearance(action)).outline, '2px', 'keyboard focus remains visible after closing');
@@ -146,7 +146,7 @@ test('Flat states preserve selection, focus, creation and readable contrast', { 
 });
 
 for (const theme of ['carbon', 'mist']) for (const width of [1440, 390]) {
-  test(`production toolbar uses the shared flat recipe and real nested actions (${theme}, ${width})`, { timeout: 60000 }, async () => {
+  test(`production toolbar uses the shared flat recipe with Display creation parked (${theme}, ${width})`, { timeout: 60000 }, async () => {
     await mkdir(output, { recursive: true });
     const browser = await chromium.launch({ executablePath, headless: true });
     try {
@@ -155,7 +155,7 @@ for (const theme of ['carbon', 'mist']) for (const width of [1440, 390]) {
       assert.equal(await page.locator('main.system-workflow').getAttribute('data-menu-surface'), theme, 'theme comes from the real saved appearance boundary');
       const root = page.locator('[data-workbench-toolbar]');
       const recipe = await root.evaluate(node => {
-        const s = getComputedStyle(node), key = getComputedStyle(node.querySelector('button')), shell = getComputedStyle(node.querySelector('[role="toolbar"]'), '::before');
+        const s = getComputedStyle(node), key = getComputedStyle(node.querySelector('button')), shell = getComputedStyle(node.querySelector('[aria-label="Creation tools"]'), '::before');
         const icon = getComputedStyle(node.querySelector('svg.lucide > *'));
         return { scheme: s.colorScheme, face: s.getPropertyValue('--tactile-face').trim(), radius: key.borderRadius, shellRadius: shell.borderRadius, stroke: icon.strokeWidth, vector: icon.vectorEffect };
       });
@@ -171,15 +171,12 @@ for (const theme of ['carbon', 'mist']) for (const width of [1440, 390]) {
       let dialog = page.getByRole('dialog', { name: 'Add module', exact: true });
       assert.equal(await dialog.locator('header').count(), 0);
       assert.equal(await dialog.getByRole('button', { name: /Close/ }).count(), 0);
-      await dialog.getByRole('button', { name: 'Display', exact: true }).click();
-      dialog = page.getByRole('dialog', { name: 'Display', exact: true });
-      const back = dialog.getByRole('button', { name: 'Back to Add module', exact: true });
-      await back.click();
-      await page.getByRole('dialog', { name: 'Add module', exact: true }).getByRole('button', { name: 'Display', exact: true }).click();
-      await page.keyboard.press('Home');
-      assert.equal(await back.evaluate(node => node === document.activeElement), true, 'Back participates in keyboard navigation');
-      await page.keyboard.press('ArrowLeft');
-      await page.getByRole('dialog', { name: 'Add module', exact: true }).waitFor();
+      assert.equal(await dialog.getByRole('button', { name: /Display|Horizontal|Vertical|Custom size/i }).count(), 0, 'Display is absent rather than disabled');
+      for (const name of ['Image', 'Text', 'Rectangle', 'Grid']) {
+        assert.equal(await dialog.getByRole('button', { name, exact: true }).isEnabled(), true, `${name} remains available`);
+      }
+      assert.equal(await page.locator('[data-display-instance]').count(), 1, 'an existing Display remains mounted');
+      await page.screenshot({ path: `${output}/add-modules-${theme}-${width}.png` });
       await add.click();
       assert.equal(await root.getByRole('dialog').count(), 0, 'trigger toggles the menu closed');
       await add.click(); await page.mouse.click(width - 12, 12);
@@ -199,6 +196,14 @@ for (const theme of ['carbon', 'mist']) for (const width of [1440, 390]) {
       assert.notEqual(await grid.getAttribute('aria-pressed'), selected, 'real preference callback still changes the grid');
       await page.keyboard.press('Escape');
       assert.equal(await actions.evaluate(node => node === document.activeElement), true);
+      const workspace = page.locator('main.system-workflow');
+      await workspace.focus(); await page.keyboard.press('Shift+F10');
+      const commands = page.getByRole('menu', { name: 'Workbench commands', exact: true });
+      await commands.getByRole('menuitem', { name: 'ADD', exact: true }).click();
+      assert.equal(await commands.getByRole('menuitem', { name: /DISPLAY|HORIZONTAL|VERTICAL|CUSTOM SIZE/ }).count(), 0, 'context menu shares the same creation choices');
+      await commands.getByRole('menuitem', { name: 'IMAGE', exact: true }).click();
+      await page.locator('[data-image-module] .image-module__canvas').waitFor();
+      assert.equal(await page.locator('[data-display-instance]').count(), 1, 'creating an Image does not replace an existing Display');
       assert.deepEqual(errors, []);
     } finally { await browser.close(); }
   });

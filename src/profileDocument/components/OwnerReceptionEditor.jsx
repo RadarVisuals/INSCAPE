@@ -126,11 +126,17 @@ function SelectionEditor({ items, initial, onSave, onClose }) {
 
 // Mounted only by an explicit action from the verified owner. The normal public
 // reception never creates a draft store or reads owner storage.
-export default function OwnerReceptionEditor({ document: publication, onDone, store: suppliedStore }) {
+export default function OwnerReceptionEditor(props) {
+  return <ProfileEditingBoundary profileAddress={props.document.profile.address} onView={props.onDone}>
+    <ReceptionEditorSession {...props} />
+  </ProfileEditingBoundary>;
+}
+
+function ReceptionEditorSession({ document: publication, onDone, store: suppliedStore }) {
   const profile = publication.profile.address;
   const [source] = useState(() => {
     try {
-      const store = suppliedStore || createSystemWorkflowDraftStore({ profileAddress: profile, storage: localStorage });
+      const store = suppliedStore || createSystemWorkflowDraftStore({ profileAddress: profile, storage: localStorage, requireEditor: true });
       if (store.getProfileAddress() !== profile) throw new Error('Profile mismatch');
       if (store.getRecordState().status === 'absent') return { error: 'Open this profile in Workbench first to load its published content before editing reception.' };
       store.getSnapshot(); return { store };
@@ -175,3 +181,4 @@ export default function OwnerReceptionEditor({ document: publication, onDone, st
     }} />}
   </>;
 }
+import ProfileEditingBoundary from '../../systemWorkflow/ProfileEditingBoundary.jsx';

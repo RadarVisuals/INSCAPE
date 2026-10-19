@@ -10,6 +10,10 @@
   --toolbar-radius: var(--control-shell-radius);
   --toolbar-key-radius: var(--control-radius);
   --toolbar-popup-radius: var(--toolbar-radius);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
   position: fixed;
   z-index: 84;
   left: 50%;
@@ -40,6 +44,8 @@
 .workbench-toolbar__bar {
   --tactile-radius-control: var(--toolbar-key-radius);
   min-height: var(--toolbar-height);
+  width: max-content;
+  max-width: 100%;
   font-family: var(--font-creation-toolbar);
   display: flex;
   flex-wrap: wrap;

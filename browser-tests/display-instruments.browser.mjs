@@ -68,7 +68,7 @@ test('Layers selection uses the shared authoring dock and Library remains an ove
     await openDisplayTool(page, board, 'LAYERS');
     const layers = page.locator('[data-shared-tool="layers"]');
     await layers.getByRole('button', { name: 'MOUNTAIN SIGNAL II', exact: true }).click();
-    const dock = page.locator('[data-context-tools]');
+    const dock = page.locator('[data-context-tools], [data-context-action-bars]');
     await dock.getByRole('button', { name: 'Duplicate', exact: true }).click();
     assert.equal(await board.locator('[data-system-workflow-placement-id]').count(), 3);
     assert.equal(await page.evaluate(() => window.__instrumentWrites), 1);

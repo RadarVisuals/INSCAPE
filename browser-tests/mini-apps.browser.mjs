@@ -135,7 +135,11 @@ try {
 
   await first.getByRole('button', { name: 'Start microphone' }).click();
   await first.getByText('Microphone unavailable', { exact: true }).waitFor();
+  // Changing this permission replaces the complete host. Wait for the old
+  // client to leave before finding and clicking the new client's controls.
+  const enabledReload = page.waitForEvent('framedetached', frame => frame === first);
   await page.getByRole('button', { name: 'Enable mini app microphone' }).click();
+  await enabledReload;
   first = await clientFrame();
   await first.getByRole('button', { name: 'Start microphone' }).click();
   await first.getByText('Microphone active', { exact: true }).waitFor();
@@ -145,7 +149,9 @@ try {
   await second.getByText('Microphone unavailable', { exact: true }).waitFor();
   assert.equal(await first.evaluate(() => miniAppFixture.stream.getAudioTracks()[0].readyState), 'live');
   await page.getByRole('button', { name: 'Close Second app', exact: true }).click();
+  const disabledReload = page.waitForEvent('framedetached', frame => frame === first);
   await page.getByRole('button', { name: 'Disable mini app microphone' }).click();
+  await disabledReload;
   first = await clientFrame();
   await first.getByRole('button', { name: 'Start microphone' }).click();
   await first.getByText('Microphone unavailable', { exact: true }).waitFor();

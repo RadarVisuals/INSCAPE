@@ -81,8 +81,16 @@ test('owner groups preserve the camera and artwork through editing, undo, moveme
       assert.deepEqual((await groups(page))[1].memberIds, []);
       await choose(page, ['image:motion-3', 'image:motion-4']);
       if (width > 1000) {
-        const bounds = await selection.boundingBox(), target = await panel.locator('[data-workbench-group-drop]').nth(1).boundingBox();
-        const start = { x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height / 2 };
+        const target = await panel.locator('[data-workbench-group-drop]').nth(1).boundingBox();
+        // The toolbar can legitimately cover the selection's geometric centre.
+        // Start a real pointer gesture on the visible selection surface.
+        const start = await selection.evaluate(node => {
+          const bounds = node.getBoundingClientRect();
+          for (let y = Math.max(20, bounds.top + 20); y < Math.min(innerHeight, bounds.bottom) - 15; y += 8)
+            for (let x = Math.max(20, bounds.left + 20); x < Math.min(innerWidth, bounds.right) - 15; x += 8)
+              if (document.elementFromPoint(x, y) === node) return { x, y };
+          throw new Error('The selection has no visible drag surface');
+        });
         const end = { x: target.x + target.width / 2, y: target.y + target.height / 2 };
         const saved = await draft(page);
         await page.mouse.move(start.x, start.y); await page.mouse.down(); await page.mouse.move(end.x, end.y, { steps: 8 });

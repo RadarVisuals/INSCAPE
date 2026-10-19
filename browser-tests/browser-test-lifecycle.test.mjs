@@ -144,6 +144,20 @@ describe('Playwright browser lifecycle', () => {
     assert.deepEqual(unexpected, ['https://unknown.invalid']);
   });
 
+  test('route ledger overflow aborts the excess request and drains accepted work', async () => {
+    let release;
+    const pending = new Promise(resolvePending => { release = resolvePending; });
+    const accepted = [], excess = [];
+    const controller = createPlaywrightRouteController({ loopbackOrigin: 'http://127.0.0.1:5174',
+      knownOrigins: [], maxOutstanding: 1, decideKnown: async () => ({ action: 'abort' }) });
+    const first = controller.handle(routeFor('http://127.0.0.1:5174/first.js', accepted, pending));
+    await assert.rejects(controller.handle(routeFor('http://127.0.0.1:5174/second.js', excess)),
+      error => error.code === 'ROUTE_LEDGER_LIMIT');
+    assert.deepEqual(excess, [['abort', 'failed']]);
+    release(); await first; await controller.close();
+    assert.deepEqual(accepted, ['continue']); assert.equal(controller.outstandingCount(), 0);
+  });
+
   test('every Playwright route object resolves exactly once', async () => {
     const calls = []; const controller = createPlaywrightRouteController({ loopbackOrigin: 'http://127.0.0.1:5174', knownOrigins: [], decideKnown: async () => ({ action: 'abort' }) });
     const route = routeFor('http://127.0.0.1:5174/fixture', calls); await controller.handle(route);

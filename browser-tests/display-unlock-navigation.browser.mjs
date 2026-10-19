@@ -102,7 +102,7 @@ test('Layers and direct editing retain an offset Grid through unlock, crop and n
       const otherGrids = draft => draft.grids.filter(g => g.id !== 'grid:motion-0');
       assert.deepEqual(otherGrids(await page.evaluate(() => JSON.parse(localStorage.getItem(window.__motionKey)))), otherGrids(before),
         'editing targets only the selected Grid, not its visible neighbor');
-      const toolbar = page.locator('[data-context-tools]');
+      const toolbar = page.locator('[data-context-tools], [data-context-action-bars]');
       await toolbar.getByRole('button', { name: 'Crop', exact: true }).click();
       const zoom = toolbar.getByRole('slider', { name: 'Crop zoom' });
       await zoom.fill('1.2');

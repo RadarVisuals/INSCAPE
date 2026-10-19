@@ -121,7 +121,7 @@
   border: 0;
   border-left: 1px solid var(--lattice-menu-line);
   background: transparent;
-  color: var(--lattice-menu-muted);
+  color: var(--lattice-menu-ink);
   cursor: pointer;
   font: 450 11px/1 "Inscape Sora", sans-serif;
   letter-spacing: .035em;

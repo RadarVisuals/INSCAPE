@@ -117,7 +117,8 @@ export default function OwnerSystemWorkflowSelectionInspector({ assetsById, auth
     controller.run((session) => session.reorderPlacementLayers({ gridId: grid.id, expectedPlacements: systemWorkflowLayerTopologySnapshot(grid), orderedPlacementIds: ids }));
   };
 
-  const dock = content => <ContextToolContent target={controller.moduleId} label={toolLabel} available={available && selected.length > 0}>{content}</ContextToolContent>;
+  const dock = content => <ContextToolContent target={controller.moduleId} label={toolLabel} available={available && selected.length > 0}
+    actions={!cropTools && toolbar} inspection={cropTools || inspectionTools}>{content}</ContextToolContent>;
   const renderPanel = (content, surfaceClassName, tools) => <>{dock(tools)}<SharedDisplayToolContent id="layers" targetId={controller.moduleId} label={toolLabel} available={available}><section
     aria-label="Layers inspector" className={`system-workflow__instrument-layers ${surfaceClassName}`}
     data-authoring-locked={authoringLocked || undefined}>{content}</section></SharedDisplayToolContent></>;
@@ -154,6 +155,12 @@ export default function OwnerSystemWorkflowSelectionInspector({ assetsById, auth
       <button className="workflow-tactile-control" aria-label="Bring to front" disabled={authoringLocked || !availability.FRONT} onClick={() => moveLayer(SYSTEM_WORKFLOW_LAYER_OPERATIONS.FRONT)} title="Bring to front" type="button"><ChevronsUp size={18} strokeWidth={1.6} /></button>
       {!textPlacement && <button className="workflow-tactile-control" aria-label="Crop" disabled={authoringLocked || !primary} onClick={() => onBeginCrop?.(primary)} title="Crop artwork" type="button"><Crop size={18} strokeWidth={1.6} /></button>}
     </nav>;
+  const inspectionTools = inspectPlacement && <>{inspectionSelector}{primary && !textPlacement && <nav aria-label="Artwork placement" className="system-workflow__placement-actions">
+        {[['fit', 'Fit', 'Fit inside Display'], ['cover', 'Cover', 'Cover Display'], ['centre', 'Centre', 'Centre']].map(([mode, label, description]) => <button className="workflow-tactile-control" key={mode} type="button" aria-label={description} title={description} disabled={!editable || !primary || Boolean(crop?.cropSession)} onClick={() => controller.run(session => {
+          const dimensions = ownerSystemWorkflowAssetDimensions(assetForPlacement(assetsById.get(primary.stableAssetId), primary));
+          return session.arrangePlacement({ gridId: grid.id, placementId: primary.id, expectedPlacement: primary, mode, aspectRatio: dimensions ? dimensions.width / dimensions.height : null });
+        })}>{label}</button>)}
+      </nav>}</>;
   const properties = selected.length > 0 ? <section className="system-workflow__layer-controls" aria-label="Selection properties">
 
       {(group || selected.length > 1) && <button className="workflow-tactile-control system-workflow__add-text" type="button" disabled={!editable || (!group && (selected.length < 2 || selected.some(item => item.kind === 'text' || placementGroup(grid, item.id))))}
@@ -161,14 +168,8 @@ export default function OwnerSystemWorkflowSelectionInspector({ assetsById, auth
       {group && <p className="system-workflow__layer-hint">Moves and animates together. Ungroup to edit individual layers. Ungroup removes group effects and restores individual effects.</p>}
       {selected.length === 1 && <details className="workbench-dimensions"><summary>Dimensions…</summary><PlacementSizeControls placement={selected[0]} controller={controller} disabled={!editable} /></details>}
 
-      {inspectPlacement && inspectionSelector}
       {primary && !textPlacement && onArtworkInfo && <button type="button" className="workflow-tactile-control system-workflow__add-text" onClick={onArtworkInfo}>Artwork info</button>}
-      {primary && !textPlacement && <nav aria-label="Artwork placement" className="system-workflow__placement-actions">
-        {[['fit', 'Fit inside Display'], ['cover', 'Cover Display'], ['centre', 'Centre']].map(([mode, label]) => <button className="workflow-tactile-control" key={mode} type="button" disabled={!editable || !primary || Boolean(crop?.cropSession)} onClick={() => controller.run(session => {
-          const dimensions = ownerSystemWorkflowAssetDimensions(assetForPlacement(assetsById.get(primary.stableAssetId), primary));
-          return session.arrangePlacement({ gridId: grid.id, placementId: primary.id, expectedPlacement: primary, mode, aspectRatio: dimensions ? dimensions.width / dimensions.height : null });
-        })}>{label}</button>)}
-      </nav>}
+
       {textPlacement && <button className="workflow-tactile-control system-workflow__add-text" type="button" disabled={authoringLocked || textPlacement.locked} onClick={() => onEditText?.(textPlacement.id)}>Edit Text</button>}
 
     </section> : <p className="system-workflow__layer-hint">Select a layer to edit its properties.</p>;
@@ -201,5 +202,5 @@ export default function OwnerSystemWorkflowSelectionInspector({ assetsById, auth
       {gutterMessage && <p className="system-workflow__gutter-message" role="status">{gutterMessage}</p>}
 
     </details>
-  </>, 'system-workflow__layers', cropTools || <>{selected.length > 0 && toolbar}{properties}</>);
+  </>, 'system-workflow__layers', cropTools ? null : properties);
 }

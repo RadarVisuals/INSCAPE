@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Copy, Crop, Trash2, ChevronRight, ZoomIn } from 'lucide-react';
 import ImageWindow from './ImageWindow.jsx';
 import ImageSides from './ImageSides.jsx';
@@ -17,7 +17,7 @@ import { projectedSvgArtworkFor } from '../artwork/ProjectedSvgArtwork.jsx';
 import '../public/ownerSystemWorkflow/displayInstruments.css';
 import './imageModule.css';
 
-function ImageInstance({ record, index, store, profileAddress, registerTarget, initialPresentation, onPresentationChange, onActivate, suspended, viewport, reducedMotion, canDuplicate, onDuplicated, initialSideIndex = 0, focusOnMount = false, initiallyOpenId }) {
+const ImageInstance = memo(function ImageInstance({ record, index, store, profileAddress, registerTarget, initialPresentation, onPresentationChange, onActivate, suspended, viewport, reducedMotion, canDuplicate, onDuplicated, initialSideIndex = 0, focusOnMount = false, initiallyOpenId }) {
   const [presentation, setPresentation] = useState(() => ({ ...(initialPresentation || createImagePresentation(record.id, index)), ...(initiallyOpenId === record.id ? { open: true } : {}) }));
   const [sideId, setSideId] = useState(record.sides[initialSideIndex]?.id), [flipTarget, setFlip] = useState(null);
   const [cropState, setCrop] = useState(null), [inspect, setInspect] = useState(false), [error, setError] = useState('');
@@ -25,6 +25,7 @@ function ImageInstance({ record, index, store, profileAddress, registerTarget, i
   const [sizeFields, setSizeFields] = useState({ width: String(record.width), height: String(record.height) });
   const source = useRef(null), drag = useRef(null), shortcut = useRef(null), latest = useRef(record), live = useRef(true);
   const imageRequest = useRef(0);
+  const pointerFocus = useRef(false);
   latest.current = record;
   const activeTarget = useContextToolTarget();
   const { getPresentation, setSelection, focusModules } = useWorkbenchActions();
@@ -147,7 +148,18 @@ function ImageInstance({ record, index, store, profileAddress, registerTarget, i
     if (reducedMotion) setSideId(target); else setFlip(target);
   };
   return <div className="image-module" data-workbench-module="image" data-image-module={record.id}
-    onPointerDownCapture={() => onActivate?.(record.id)} onFocusCapture={() => onActivate?.(record.id)}>
+    onPointerDownCapture={event => {
+      // Finish native focus before activation mounts the companion tools.
+      // Otherwise the nested focus event flushes their pending React layout
+      // while the pointer gesture is still starting.
+      if (event.button === 0 && !suspended && !presented && !crop && !inspect && !flip
+        && source.current && event.target.closest('.image-module__canvas') === source.current) {
+        pointerFocus.current = true;
+        try { source.current.closest('.image-module__window')?.focus({ preventScroll: true }); }
+        finally { pointerFocus.current = false; }
+      }
+      onActivate?.(record.id);
+    }} onFocusCapture={() => { if (!pointerFocus.current) onActivate?.(record.id); }}>
     {shortcutMenu.content}
     {!presentation.open && <button data-workbench-pan ref={shortcut} className="workflow-tactile-control image-module__shortcut" style={{ bottom: 64 + index * 38 }} onContextMenu={shortcutMenu.onContextMenu} onKeyDown={shortcutMenu.onKeyDown}
       onClick={() => setPresentation(p => ({ ...p, open: true }))}>{record.name}</button>}
@@ -170,11 +182,15 @@ function ImageInstance({ record, index, store, profileAddress, registerTarget, i
         onPointerEnter={event => { if (!focusModules && !event.buttons) prepareInspection(); }}
         onPointerLeave={() => { if (!source.current?.matches(':focus-visible')) releaseInspection(); }}
         onFocus={event => { if (!focusModules && event.currentTarget.matches(':focus-visible')) prepareInspection(); }} onBlur={releaseInspection}
-        onClick={() => {
+        onClick={event => {
           if (!side || crop || flip) return;
-          // Trial: Workbench activation uses its shared camera destination.
-          // Standalone renderers retain their existing inspection fallback.
-          if (focusModules) focusModules([record.id]); else inspectArtwork();
+          // Pointer activation already selects this Image and its tools. Only
+          // the second click of a double-click requests camera Focus; ordinary
+          // repeat clicks keep the current view. Keyboard activation stays direct.
+          // Using click detail keeps ImageWindow's drag/cancel suppression in charge.
+          if (focusModules) {
+            if (event.detail === 0 || event.detail === 2) focusModules([record.id]);
+          } else inspectArtwork();
         }}
         onKeyDown={event => {
           if (!crop) return;
@@ -204,29 +220,28 @@ function ImageInstance({ record, index, store, profileAddress, registerTarget, i
             crop={crop?.previewCrop ?? imageCropForResize(side.crop, record, renderRectangle)}
             onComplete={id => { setSideId(id); setFlip(null); }} onCancel={() => setFlip(null)} />}
       </button>
-      {!crop && <button type="button" className="workflow-tactile-control image-module__inspect" aria-label="Inspect Image" aria-keyshortcuts="I"
+      {!crop && <button type="button" data-workbench-recovery-control className="workflow-tactile-control image-module__inspect" aria-label="Inspect Image" aria-keyshortcuts="I"
         title="Inspect Image (I)" disabled={!side || Boolean(flip || inspect || suspended)} onClick={inspectArtwork}
         onPointerEnter={prepareInspection} onFocus={prepareInspection} onPointerLeave={releaseInspection} onBlur={releaseInspection}><ZoomIn size={14} /></button>}
-      {record.sides.length > 1 && !crop && <button type="button" className="workflow-tactile-control image-module__next" aria-label="Next Image side"
+      {record.sides.length > 1 && !crop && <button type="button" data-workbench-recovery-control className="workflow-tactile-control image-module__next" aria-label="Next Image side"
         aria-description={`Side ${sideIndex + 1} of ${record.sides.length}`} title={`Next side · ${sideIndex + 1} of ${record.sides.length}`}
         disabled={Boolean(flip || inspect || suspended)} onClick={next}><ChevronRight size={14} /></button>}
       </>}
     </ImageWindow>}
-    {editable && <ContextToolContent target={record.id} label={`${record.name} / ${side ? `Side ${sideIndex + 1}` : 'Empty'}`} available={presentation.open && !inspect}>
-      {crop ? <div className="system-workflow__crop-controls" onKeyDown={event => { if (event.key === 'Escape') { event.preventDefault(); cancelCrop(); } }}>
-        <div><strong>Crop / drag image</strong><output>{Math.round(visualCrop.crop.zoom * 100)}%</output></div>
-        <input type="range" aria-label="Crop zoom" min="1" max="4" step="0.05" value={visualCrop.crop.zoom}
-          onChange={event => updateVisualCrop(setSystemWorkflowCropZoom(visualCrop.crop, { ...crop.media, ...visualCrop.dimensions }, rectangle, Number(event.target.value)))} />
-        <footer><button className="workflow-tactile-control" type="button" onClick={() => applyCrop(null)}>Native fit</button><button className="workflow-tactile-control" type="button" onClick={cancelCrop}>Cancel</button><button className="workflow-tactile-control" type="button" onClick={() => applyCrop(crop.previewCrop)}>Done</button></footer>
-      </div> : <>
-        <nav className="system-workflow__selection-actions system-workflow__selection-actions--six" aria-label="Image actions">
+    {editable && <ContextToolContent target={record.id} label={`${record.name} / ${side ? `Side ${sideIndex + 1}` : 'Empty'}`} available={presentation.open && !inspect}
+      actions={!crop && (<nav className="system-workflow__selection-actions" aria-label="Image actions">
           <button className="workflow-tactile-control" type="button" aria-label="Inspect Image" aria-keyshortcuts="I" title="Inspect Image (I)" disabled={!side || Boolean(flip)} onClick={inspectArtwork}
             onPointerEnter={prepareInspection} onFocus={prepareInspection} onPointerLeave={releaseInspection} onBlur={releaseInspection}><ZoomIn size={18} strokeWidth={1.6} /></button>
           <ArtworkTransformTools disabled={!side || Boolean(flip)} onTransform={operation => changeSide({ transform: transformArtwork(side.transform, operation) })} />
           <button className="workflow-tactile-control" type="button" aria-label="Crop" title="Crop" disabled={!side || Boolean(flip)} onClick={beginCrop}><Crop size={18} strokeWidth={1.6} /></button>
           <button className="workflow-tactile-control" type="button" aria-label="Duplicate" title={canDuplicate ? 'Duplicate Image, keeping all sides and crops' : 'At most sixteen Image modules are supported'} disabled={!canDuplicate || Boolean(flip)} onClick={duplicate}><Copy size={18} strokeWidth={1.6} /></button>
-        </nav>
-        <div className="system-workflow__inspection-selector" role="group" aria-label="Image fit">
+        </nav>)}
+      inspection={crop ? (<div className="system-workflow__crop-controls" onKeyDown={event => { if (event.key === 'Escape') { event.preventDefault(); cancelCrop(); } }}>
+        <div><strong>Crop / drag image</strong><output>{Math.round(visualCrop.crop.zoom * 100)}%</output></div>
+        <input type="range" aria-label="Crop zoom" min="1" max="4" step="0.05" value={visualCrop.crop.zoom}
+          onChange={event => updateVisualCrop(setSystemWorkflowCropZoom(visualCrop.crop, { ...crop.media, ...visualCrop.dimensions }, rectangle, Number(event.target.value)))} />
+        <footer><button className="workflow-tactile-control" type="button" onClick={() => applyCrop(null)}>Native fit</button><button className="workflow-tactile-control" type="button" onClick={cancelCrop}>Cancel</button><button className="workflow-tactile-control" type="button" onClick={() => applyCrop(crop.previewCrop)}>Done</button></footer>
+      </div>) : (<div className="system-workflow__inspection-selector" role="group" aria-label="Image fit">
           <span>Fit</span>
           <button className="workflow-tactile-control" type="button" disabled={!side || Boolean(flip)} aria-pressed={Boolean(side && side.crop === null)}
             title="Show the complete image. Different proportions leave space inside the canvas."
@@ -234,7 +249,8 @@ function ImageInstance({ record, index, store, profileAddress, registerTarget, i
           <button className="workflow-tactile-control" type="button" disabled={!side || Boolean(flip)} aria-pressed={Boolean(side?.crop)}
             title="Fill the canvas with a centred crop, keeping the image proportions. Edges may be cropped."
             onClick={() => changeSide({ crop: { ...IMAGE_FILL_CROP } })}>Fill canvas</button>
-        </div>
+        </div>)}>
+      {crop ? error && <p role="alert" className="image-module__error">{error}</p> : <>
         <details className="workbench-dimensions"><summary>Dimensions…</summary><form className="image-module__size" onSubmit={applySize}>
           {['width', 'height'].map(key => <label key={key}>{key === 'width' ? 'Width' : 'Height'}<input aria-label={`Image ${key}`} type="number" min="32" max="4096" step="1" value={sizeFields[key]} onChange={event => setSizeFields(fields => ({ ...fields, [key]: event.target.value }))} /></label>)}
           <button className="workflow-tactile-control" type="submit">Set size</button>
@@ -244,16 +260,17 @@ function ImageInstance({ record, index, store, profileAddress, registerTarget, i
           <button className="workflow-tactile-control" type="button" aria-label="Remove Image side" title="Remove current side" disabled={!side || Boolean(flip)} onClick={() => save({ ...record, sides: record.sides.filter(item => item.id !== side.id) })}><Trash2 size={14} /></button>
         </div>
         <label className="image-module__publication"><input type="checkbox" checked={record.visibility === 'PUBLIC'} onChange={event => save({ ...record, visibility: event.target.checked ? 'PUBLIC' : 'PRIVATE' })} />Include Image in publication</label>
-      </>}
       {error && <p role="alert" className="image-module__error">{error}</p>}
+      </>}
     </ContextToolContent>}
     {error && activeTarget !== record.id && <button type="button" className="workflow-tactile-control system-workflow__notice" role="alert" onClick={() => onActivate?.(record.id)}>{error}</button>}
     {inspect && side && !inactive && <ImageLift source={source.current} entry={liftEntry} reducedMotion={reducedMotion} onClose={() => setInspect(false)} />}
   </div>;
-}
+});
 
 export default function ImageWorkbench({ records, presentations, ...props }) {
   const [duplicated, setDuplicated] = useState(null);
+  const onDuplicated = useCallback((id, sideIndex) => setDuplicated({ id, sideIndex, profileAddress: props.profileAddress }), [props.profileAddress]);
   const duplicateTarget = duplicated?.profileAddress === props.profileAddress ? duplicated : null;
   const [viewport, setViewport] = useState(() => ({ width: innerWidth, height: innerHeight }));
   const [reducedMotion, setReducedMotion] = useState(() => matchMedia('(prefers-reduced-motion: reduce)').matches);
@@ -263,8 +280,11 @@ export default function ImageWorkbench({ records, presentations, ...props }) {
     addEventListener('resize', resize); media.addEventListener('change', motion);
     return () => { removeEventListener('resize', resize); media.removeEventListener('change', motion); };
   }, []);
+  // Geometry-only history changes must still reach the window's existing
+  // saved-frame reconciliation, even when this Image record is unchanged.
   return records.map((record, index) => <ImageInstance key={`${props.profileAddress}:${record.id}`} {...props} record={record} index={index} viewport={viewport} reducedMotion={reducedMotion}
-    canDuplicate={records.length < MAX_IMAGE_MODULES} onDuplicated={(id, sideIndex) => setDuplicated({ id, sideIndex, profileAddress: props.profileAddress })}
+    savedLayout={props.store?.getSnapshot().workbench}
+    canDuplicate={records.length < MAX_IMAGE_MODULES} onDuplicated={onDuplicated}
     initialSideIndex={duplicateTarget?.id === record.id ? duplicateTarget.sideIndex : 0} focusOnMount={duplicateTarget?.id === record.id}
     initialPresentation={presentations?.find(item => item.id === record.id)} />);
 }

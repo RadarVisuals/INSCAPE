@@ -55,7 +55,12 @@ function KeeperDock({ record, index, initialPresentation, store, profileAddress,
     try {
       if (!saveKeeperDock(store, profileAddress, expected, changes)) throw new Error('The Keeper dock was not saved. Try again.');
       setError(''); return true;
-    } catch (failure) { setError(failure.message); return false; }
+    } catch (failure) {
+      setError(failure.message);
+      // Drop failures must be visible even when settings were never opened.
+      setSettings(current => current || dock.current?.getBoundingClientRect() || { right: 8, top: 24 });
+      return false;
+    }
   }, [editable, store, profileAddress]);
   const acceptImage = useCallback(async input => {
     if (!editable || !live.current) return false;

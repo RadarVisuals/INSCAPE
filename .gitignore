@@ -8,3 +8,4 @@ dist/
 .browser-test-runtime*/
 
 dist-design-system/
+.verification/

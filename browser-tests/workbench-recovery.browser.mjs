@@ -80,17 +80,16 @@ test('reload restores local arrangement; failed Text survives editor disposal an
     await page.getByRole('button', { name: /Open DISPLAY MODULE/ }).dblclick();
     near(await text.boundingBox(), before.text); near(await board.boundingBox(), before.board);
     // Saving can fail independently from closing the Display's embedded editor.
-    await page.getByRole('button', { name: 'Tools', exact: true }).click();
-    await page.getByRole('menuitem', { name: 'LAYERS', exact: true }).click();
+    await page.getByRole('button', { name: 'Layers', exact: true }).click();
     await page.getByRole('button', { name: 'Add text', exact: true }).click();
     const editor = page.getByRole('textbox', { name: 'Article text', exact: true });
     await editor.fill('Saved sentence.');
     await page.locator('.display-text-authoring').getByRole('textbox', { name: 'Article title', exact: true }).fill('// ARRIVAL');
-    await page.getByRole('group', { name: 'Formatting target', exact: true }).getByRole('button', { name: 'Title', exact: true }).click();
+    await page.locator('.text-tools-window summary').filter({ hasText: /^Title$/ }).click();
     assert.equal(await page.getByLabel('Title size', { exact: true }).inputValue(), '28');
     await page.getByLabel('Title size', { exact: true }).fill('64');
     assert.equal(await page.locator('.display-text-authoring .text-document-title').evaluate(node => getComputedStyle(node).fontSize), '64px');
-    await page.getByRole('group', { name: 'Formatting target', exact: true }).getByRole('button', { name: 'Document', exact: true }).click();
+    await page.locator('.text-tools-window summary').filter({ hasText: /^Default text style$/ }).click();
     await page.getByLabel('Document font', { exact: true }).selectOption('literata');
     assert.match(await editor.evaluate(node => getComputedStyle(node).fontFamily), /Literata/);
     assert.match(await page.locator('.display-text-authoring .text-document-title').evaluate(node => getComputedStyle(node).fontFamily), /Literata/);

@@ -62,6 +62,8 @@ for (const width of [1440, 390]) test(`focused writing preserves editor identity
     await title.fill(focusedTitle);
     assert.equal(await title.evaluate(node => node.scrollHeight <= node.clientHeight + 1), true, 'long title wraps without hidden lines');
     await title.press('Enter');
+    // Tiptap deliberately transfers focus on the next animation frame.
+    await page.waitForFunction(node => node === document.activeElement, originalBody);
     assert.equal(await body.evaluate(node => node === document.activeElement), true);
     await body.press('Control+End'); await page.keyboard.type(' Added in focus mode.'); await settle(page);
     assert.equal((await saved(page)).texts[0].article.title, focusedTitle);

@@ -127,9 +127,12 @@ for (const [width, scale, method] of [[1600, 1, 'keyboard'], [1600, .5, 'drag'],
       const text = page.locator(`[data-text-id="${record.id}"] .text-window`);
       await text.waitFor(); await settle(page);
       const actual = await text.boundingBox();
-      near(frame.left, (expectedScreen.left - camera.x) / scale, 'saved Workbench x');
-      near(frame.top, (expectedScreen.top - camera.y) / scale, 'saved Workbench y');
-      near(actual.x, expectedScreen.left, 'visible x'); near(actual.y, expectedScreen.top, 'visible y');
+      const expectedLeft = Math.max(8, Math.min(2000 - 8 - frame.width, (expectedScreen.left - camera.x) / scale));
+      const expectedTop = Math.max(8, Math.min(4000 - 8 - frame.height, (expectedScreen.top - camera.y) / scale));
+      near(frame.left, expectedLeft, 'saved Workbench x stays inside the current canvas');
+      near(frame.top, expectedTop, 'saved Workbench y stays inside the current canvas');
+      near(actual.x, expectedLeft * scale + camera.x, 'visible x');
+      near(actual.y, expectedTop * scale + camera.y, 'visible y');
       assert.deepEqual(record.article.content, original.text.article.content);
       assert.equal(after.grids.flatMap(grid => grid.placements).some(item => item.id === original.id), false, 'Text has one owner after moving');
       await page.getByRole('button', { name: 'Close Text tools', exact: true }).click();

@@ -3,7 +3,6 @@ import { normalizeProfileAddress } from '../../library/config.js';
 import { resolveIdentityCard } from '../../profileIdentity/domain/identityCard.js';
 import { createSystemWorkflowDraftStore } from '../../systemWorkflow/systemWorkflowDraftStore.js';
 import { createWorkbenchSession } from '../../systemWorkflow/workbenchSession.js';
-import { addDisplayModule } from '../../systemWorkflow/displayModuleSession.js';
 import { bindWorkbenchTextRecovery } from '../../text/textEditRecovery.js';
 
 function browserStorage() { try { return globalThis.localStorage; } catch { return null; } }
@@ -11,7 +10,7 @@ function browserStorage() { try { return globalThis.localStorage; } catch { retu
 export default function useWorkbenchController(profileAddress, { storage } = {}) {
   const profile = normalizeProfileAddress(profileAddress), selectedStorage = storage ?? browserStorage();
   const authority = useMemo(() => {
-    const store = createSystemWorkflowDraftStore({ profileAddress: profile, storage: selectedStorage });
+    const store = createSystemWorkflowDraftStore({ profileAddress: profile, storage: selectedStorage, requireEditor: true });
     bindWorkbenchTextRecovery(store);
     return { store, session: createWorkbenchSession({ store }) };
   }, [profile, selectedStorage]);
@@ -30,7 +29,6 @@ export default function useWorkbenchController(profileAddress, { storage } = {})
   // not clone every sibling module or invalidate their content identities.
   const draft = authority.store.getSnapshot();
   return { draft, store: authority.store, storage: selectedStorage, run, clearError, error: failure?.authority === authority ? failure.message : null,
-    addDisplay: (orientation, appearance) => run(() => addDisplayModule(authority.store, orientation, appearance)),
     saveWorkbench: workbench => run(session => session.saveWorkbench(workbench)),
     setMenuSurface: menuSurfaceId => run(session => session.setMenuSurface({ expected: draft.appearance.menuSurfaceId, menuSurfaceId })),
     saveIdentity: ({ profile: values, card, avatar }) => run(session => {

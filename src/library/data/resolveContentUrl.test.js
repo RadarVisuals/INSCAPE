@@ -16,6 +16,24 @@ test('resolves IPFS and web URLs while rejecting unsafe schemes', () => {
   assert.equal(resolveContentUrl(SVG_URI, { verification: SVG_VERIFICATION }), SVG_URI);
 });
 
+test('encodes spaces in updated IPFS filenames without changing existing escapes or literal plus signs', () => {
+  const gateway = { ipfsGateway: 'https://gateway.test/ipfs/' };
+  for (const [path, expected] of [
+    ['QmArtwork/images-6-NOMAD-animated (3).svg', 'QmArtwork/images-6-NOMAD-animated%20(3).svg'],
+    ['QmArtwork/my folder/pose 2.svg', 'QmArtwork/my%20folder/pose%202.svg'],
+    ['QmArtwork/pose%20(3).svg', 'QmArtwork/pose%20(3).svg'],
+    ['QmArtwork/pose+(3).svg', 'QmArtwork/pose+(3).svg'],
+  ]) {
+    assert.equal(resolveContentUrl(`ipfs://${path}`, gateway), `${gateway.ipfsGateway}${expected}`);
+  }
+  assert.deepEqual(resolveContentUrls('ipfs://QmArtwork/pose (3).svg', {
+    ...gateway, ipfsGatewayFallbackUrls: 'https://fallback.test/ipfs/',
+  }), ['https://gateway.test/ipfs/QmArtwork/pose%20(3).svg', 'https://fallback.test/ipfs/QmArtwork/pose%20(3).svg']);
+  for (const unsafe of ['bad\nname.svg', 'bad\tname.svg', '<svg>.svg', 'bad"name.svg', "bad'name.svg"]) {
+    assert.equal(resolveContentUrl(`ipfs://QmArtwork/${unsafe}`, gateway), null);
+  }
+});
+
 test('selects a modest thumbnail and the largest preview', () => {
   const urls = selectImageUrls([
     { src: 'https://example.test/small.png', width: 120 },

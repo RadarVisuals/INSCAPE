@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useLayoutEffect, useRef, useState } from 'react';
+import { createContext, useCallback, useContext, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { WorkbenchWindow } from '../public/ownerSystemWorkflow/DisplayInstrumentWindow.jsx';
 import { X } from 'lucide-react';
@@ -15,7 +15,9 @@ export function SharedTextToolsProvider({ activeModuleId, onActivate, open, onOp
     setSource(value);
     return () => setSource(current => current?.token === value.token ? null : current);
   }, []);
-  return <Context.Provider value={{ activeModuleId, activate: onActivate, open, setOpen: onOpenChange, menuSurface, host, setHost, source, report }}>{children}</Context.Provider>;
+  const value = useMemo(() => ({ activeModuleId, activate: onActivate, open, setOpen: onOpenChange, menuSurface, host, setHost, source, report }),
+    [activeModuleId, onActivate, open, onOpenChange, menuSurface, host, source, report]);
+  return <Context.Provider value={value}>{children}</Context.Provider>;
 }
 
 export function SharedTextToolsWindow({ hidden = false }) {

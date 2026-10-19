@@ -86,9 +86,7 @@ function ShapeInstance({ record, records, index, initialPresentation, store, pro
         </div>}
       </WorkbenchWindow>}
     </div>
-    {editable && <ContextToolContent target={record.id} label={record.name}>
-      <div className="shape-tools">
-        <nav aria-label="Shape actions" className="system-workflow__selection-actions system-workflow__selection-actions--six"><button className="workflow-tactile-control" type="button" disabled={records.length >= MAX_SHAPES} onClick={() => run(() => select(addShape(store, profileAddress, { workbench: view.getPresentation() }, record)))} aria-label="Duplicate shape" title="Duplicate shape"><Copy /></button>
+    {editable && <ContextToolContent target={record.id} label={record.name} actions={<nav aria-label="Shape actions" className="system-workflow__selection-actions"><button className="workflow-tactile-control" type="button" disabled={records.length >= MAX_SHAPES} onClick={() => run(() => select(addShape(store, profileAddress, { workbench: view.getPresentation() }, record)))} aria-label="Duplicate shape" title="Duplicate shape"><Copy /></button>
 
           {[['back', 'Send to back', ChevronsDown], ['backward', 'Move backward', ChevronDown], ['forward', 'Move forward', ChevronUp], ['front', 'Bring to front', ChevronsUp]].map(([direction, label, Icon]) =>
             <button className="workflow-tactile-control" type="button" key={direction} aria-label={label} title={label} disabled={['back', 'backward'].includes(direction) ? index === 0 : index === records.length - 1}
@@ -96,7 +94,9 @@ function ShapeInstance({ record, records, index, initialPresentation, store, pro
           <button className="workflow-tactile-control" type="button" onClick={() => run(() => {
             if (!removeWorkbenchModule(store, profileAddress, 'shape', record)) throw new Error('The shape could not be deleted. Try again.');
             onActivate?.(records.find(item => item.id !== record.id)?.id || null);
-          })} aria-label="Delete shape" title="Delete shape"><Trash2 /></button></nav>
+          })} aria-label="Delete shape" title="Delete shape"><Trash2 /></button></nav>}>
+      <div className="shape-tools">
+
 
         <label>Shape<select aria-label="Choose shape" value={record.id} onChange={event => select(event.target.value)}>
           {[...records].reverse().map(item => <option key={item.id} value={item.id}>{item.name}</option>)}

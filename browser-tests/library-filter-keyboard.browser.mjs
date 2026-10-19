@@ -16,7 +16,7 @@ for (const width of [1440, 390]) test(`Library Filter consumes Escape before Lib
       const asset = new URL(route.request().url()).pathname.split('/public/')[1]; await route.fulfill({ path: `public/${asset}` });
     });
     await page.goto(`${origin}/development/owner/system-workflow`);
-    const libraryTrigger = page.getByRole('button', { name: 'Library', exact: true });
+    const libraryTrigger = page.getByRole('button', { name: 'Artwork library', exact: true });
     await libraryTrigger.click();
     const library = page.getByRole('region', { name: 'Library workspace' });
     await library.waitFor();
@@ -30,6 +30,7 @@ for (const width of [1440, 390]) test(`Library Filter consumes Escape before Lib
     assert.equal(await filter.getAttribute('aria-expanded'), 'false');
     await page.keyboard.press('Enter'); await popup.waitFor();
     const selected = popup.getByRole('radio', { checked: true });
+    await page.waitForFunction(() => document.activeElement?.matches('[role="radio"][aria-checked="true"]'));
     assert.equal(await selected.evaluate(node => node === document.activeElement), true, 'opening focuses the chosen collection');
     const other = popup.getByRole('radio').nth(1);
     await other.click(); const selectedName = await other.innerText();
@@ -37,6 +38,7 @@ for (const width of [1440, 390]) test(`Library Filter consumes Escape before Lib
     assert.equal(await library.isVisible(), true);
     await filter.focus(); await page.keyboard.press('Enter'); await popup.waitFor();
     assert.equal(await popup.getByRole('radio', { checked: true }).innerText(), selectedName, 'the collection choice survives closing and reopening');
+    await page.waitForFunction(() => document.activeElement?.matches('[role="radio"][aria-checked="true"]'));
     assert.equal(await popup.getByRole('radio', { checked: true }).evaluate(node => node === document.activeElement), true);
     await mkdir(output, { recursive: true }); await page.screenshot({ path: join(output, `library-filter-${width}.png`) });
     await page.keyboard.press('Escape'); await popup.waitFor({ state: 'detached' });
@@ -55,7 +57,7 @@ for (const width of [1440, 390]) test(`Library Filter consumes Escape before Lib
     assert.equal(await library.isVisible(), true);
     await filter.focus();
     await page.keyboard.press('Escape'); await library.waitFor({ state: 'hidden' });
-    await page.waitForFunction(() => document.activeElement?.getAttribute('aria-label') === 'Library');
+    await page.waitForFunction(() => document.activeElement?.getAttribute('aria-label') === 'Artwork library');
     assert.equal(await popup.count(), 0, 'closing Library leaves no orphaned Filter portal');
     assert.equal(await page.evaluate(() => window.filterDraftWrites), 0);
     assert.deepEqual(errors, []);

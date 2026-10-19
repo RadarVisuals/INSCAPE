@@ -16,7 +16,7 @@ export default function useOwnerSystemWorkflowController(profileAddress, { stora
   const selectedStorage = storage ?? browserStorage();
   const authority = useMemo(() => {
     if (!profile) return null;
-    const store = sharedStore || createSystemWorkflowDraftStore({ profileAddress: profile, storage: selectedStorage });
+    const store = sharedStore || createSystemWorkflowDraftStore({ profileAddress: profile, storage: selectedStorage, requireEditor: true });
     const session = createDisplayModuleSession(store, moduleId);
     if (initialGridId && session.getState().draft.grids.some(grid => grid.id === initialGridId)) session.selectGrid(initialGridId);
     let snapshot;

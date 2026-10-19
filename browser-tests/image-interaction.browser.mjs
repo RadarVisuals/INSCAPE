@@ -37,18 +37,27 @@ test('Image body distinguishes inspection, movement, cancellation, flip, crop an
     const initial = await rectangle(), draft = await page.evaluate(() => imageFitFixture.store.getDraft());
     assert.ok(initial.x >= 0 && initial.right <= 1440 && initial.y >= 0 && initial.bottom <= 1000, JSON.stringify(initial));
     await page.screenshot({ path: '.browser-test-runtime/image-interaction-initial.png' });
-    // Pointer jitter stays a click; keyboard inspection retains normal button semantics.
+    // Pointer jitter stays a selection click, without camera travel or inspection.
     await page.mouse.move(initial.x + 70, initial.y + 90); await page.mouse.down();
+    assert.equal(await first.evaluate(node => node === document.activeElement), true, 'first pointer activation focuses the same Image window');
+    assert.equal(await first.getAttribute('data-active'), 'true', 'first pointer activation still selects the Image');
     await page.mouse.move(initial.x + 72, initial.y + 91); await page.mouse.up();
-    await dialog.waitFor(); await page.keyboard.press('Escape'); await dialog.waitFor({ state: 'detached' });
+    assert.equal(await dialog.count(), 0, 'ordinary click selects without inspecting');
+    assert.equal(await page.getByRole('button', { name: 'Back to previous Workbench view', exact: true }).isDisabled(), true, 'ordinary click adds no camera history');
+    await settle(page);
     assert.deepEqual(await rectangle(), initial);
-    await canvas.focus(); await page.keyboard.press('Enter'); await dialog.waitFor();
+    await canvas.focus(); await page.keyboard.press('i'); await dialog.waitFor();
     await page.keyboard.press('Escape'); await dialog.waitFor({ state: 'detached' });
 
     for (const ending of ['Escape', 'pointercancel', 'blur', 'commit']) {
+      await windows.nth(1).locator('.image-module__canvas').focus();
+      assert.equal(await first.getAttribute('data-active'), null, 'keyboard focus activates the other Image');
       const before = await rectangle();
       await page.keyboard.down('Alt');
       await page.mouse.move(before.x + 70, before.y + 90); await page.mouse.down();
+      assert.equal(await first.evaluate(node => node === document.activeElement), true, 'pointer retargets focus before movement');
+      assert.equal(await first.getAttribute('data-active'), 'true');
+      assert.equal(await windows.nth(1).getAttribute('data-active'), null, 'activation does not stay with the preceding Image');
       await page.mouse.move(before.x + 130, before.y + 130, { steps: 6 }); await settle(page);
       assert.equal((await rectangle()).x, before.x + 60, 'artwork follows the pointer');
       if (ending === 'Escape') await page.keyboard.press('Escape');
@@ -72,7 +81,7 @@ test('Image body distinguishes inspection, movement, cancellation, flip, crop an
     assert.equal(await canvas.getAttribute('data-side-id'), firstSide, 'keyboard flipping wraps');
     await page.screenshot({ path: '.browser-test-runtime/image-interaction-wide.png' });
     // Crop owns its drag; closing it restores the ordinary body interaction.
-    const dock = page.locator('[data-context-tools]');
+    const dock = page.locator('[data-context-tools], [data-context-action-bars]');
     await dock.getByRole('button', { name: 'Crop', exact: true }).click();
     await dock.getByRole('slider', { name: 'Crop zoom' }).fill('2');
     const projection = () => canvas.locator('image').getAttribute('transform'), beforeCrop = await projection();
@@ -108,7 +117,7 @@ test('Image body distinguishes inspection, movement, cancellation, flip, crop an
     await page.mouse.move(visitorStart.x + 60, visitorStart.y + 70); await page.mouse.down();
     await page.mouse.move(visitorStart.x + 90, visitorStart.y + 100, { steps: 5 }); await page.mouse.up(); await settle(page);
     assert.equal((await rectangle()).x, visitorStart.x + 30); assert.equal(await dialog.count(), 0);
-    await canvas.click(); await dialog.waitFor(); await page.keyboard.press('Escape'); await dialog.waitFor({ state: 'detached' });
+    await canvas.focus(); await page.keyboard.press('i'); await dialog.waitFor(); await page.keyboard.press('Escape'); await dialog.waitFor({ state: 'detached' });
     assert.deepEqual(await page.evaluate(() => imageFitFixture.store.getDraft()), draft);
     await page.evaluate(() => imageFitFixture.camera(1, { x: -100, y: 0 }));
     await page.setViewportSize({ width: 390, height: 844 }); await canvas.hover();
@@ -121,6 +130,9 @@ test('Image body distinguishes inspection, movement, cancellation, flip, crop an
     // Minimum-size artwork retains a real drag/inspection target. Hover controls
     // sit outside both it and the resize targets, and stay reachable on narrow screens.
     await page.evaluate(() => {
+      // This minimal fixture has no Runtime background-activation handler.
+      // Start the isolated hit-target check without the previous Properties window.
+      imageFitFixture.select(null);
       imageFitFixture.owner(true);
       const store = imageFitFixture.store, draft = store.getDraft();
       draft.imageModules[0] = { ...draft.imageModules[0], width: 32, height: 32 };

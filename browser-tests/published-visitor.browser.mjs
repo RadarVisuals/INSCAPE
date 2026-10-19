@@ -327,7 +327,8 @@ test('Directory visits a published workspace, Close remains Close, and Return re
 test('canonical Grid placement opens the shared inspector, hides its decoded lift source, and restores exact focus', async () => {
   await viewport(1280, 720, false); await navigate();
   await waitFor(`document.querySelector('.visitor-grid-world__grid-plane--current [data-placement-id="art:Alpha:https"]')?.dataset.mediaState === 'ready'`, 'canonical placement media');
-  await click('.visitor-grid-world__grid-plane--current [data-placement-id="art:Alpha:https"]');
+  await page.locator('.visitor-grid-world__grid-plane--current [data-placement-id="art:Alpha:https"]').focus();
+  await page.keyboard.press('i');
   const inspector = page.getByRole('group', { name: 'Artwork inspection', exact: true });
   await inspector.waitFor();
   await waitFor(`document.querySelector('.system-workflow__inspection-scene')?.dataset.inspectionPhase === 'active'`, 'shared inspection is active');
@@ -397,7 +398,7 @@ test('semantic controls, keyboard and reduced-motion Display drags navigate orde
     await viewport(1280, 720, false); await navigate();
     const active = id => waitFor(`document.querySelector('[data-active-grid-id]')?.dataset.activeGridId === '${id}'`, 'ordered Grid ' + id);
     await click('[aria-label="Next Grid"]'); await active('grid:alpha-archive');
-    await evaluate(`document.querySelector('.visitor-grid-world').focus()`); await pressKey('ArrowLeft');
+    await page.locator('.published-display[data-active-display]').focus(); await pressKey('ArrowLeft');
     await active('grid:alpha-home');
     for (const direction of [-1, 1]) {
       const target = await point('.visitor-grid-world__viewport', direction < 0 ? .72 : .28, .5);

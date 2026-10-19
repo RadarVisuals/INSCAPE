@@ -31,8 +31,8 @@ test('Image and Display inspection retain their source and camera through return
       const before = await state();
       const saved = await page.evaluate(() => localStorage.getItem(window.__motionKey));
       await page.clock.install(); await page.clock.pauseAt(await page.evaluate(() => Date.now() + 100));
-      if (kind === 'image') { await source.focus(); await page.keyboard.press('Enter'); }
-      else await source.dispatchEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true });
+      if (kind === 'image') { await source.focus(); await page.keyboard.press('i'); }
+      else await source.dispatchEvent('keydown', { key: 'i', bubbles: true, cancelable: true });
       await page.getByRole('button', { name: 'Reset Workbench position', exact: true }).waitFor();
       assert.equal(await page.getByRole('button', { name: 'Reset Workbench position', exact: true }).isDisabled(), true, label);
       const inputs = async phase => {

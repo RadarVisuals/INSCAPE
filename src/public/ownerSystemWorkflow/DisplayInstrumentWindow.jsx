@@ -1,3 +1,4 @@
+import { avoidWorkbenchControl } from './avoidWorkbenchControl.js';
 import { useWorkbenchArea } from './WorkbenchAreaContext.jsx';
 import { useLayoutEffect, useRef, useState } from 'react';
 import { X } from 'lucide-react';
@@ -13,7 +14,7 @@ import { clampOwnerSystemWorkflowWindowPosition, resizeWorkbenchWindow, workbenc
 
 // The host owns gestures and temporary geometry. A module's resize target owns
 // validation and persistence; companion tools retain only their screen layout.
-export function WorkbenchWindow({ children, background, compact, chrome, menuSurface, className = '', label, controls, title, titleContent, width = 320, resizable = true, resizableWidth = false, initialHeight = 420, minimumHeight = 180, minimumWidth = 240, initialX = 18, initialY = 72, fitContent = false, fitContentFromTop = false, onLayoutChange, snapToGrid = false, placementModule = false, viewId, active, surfaceStyle, resizeTarget, committedFrame, externalControls = false, moveFromContent = false, registerView = true, screenSized = false, onLayoutCommit }) {
+export function WorkbenchWindow({ avoidControls, children, background, compact, chrome, menuSurface, className = '', label, controls, title, titleContent, width = 320, resizable = true, resizableWidth = false, initialHeight = 420, minimumHeight = 180, minimumWidth = 240, initialX = 18, initialY = 72, fitContent = false, fitContentFromTop = false, onLayoutChange, snapToGrid = false, placementModule = false, viewId, active, surfaceStyle, resizeTarget, committedFrame, externalControls = false, moveFromContent = false, registerView = true, screenSized = false, onLayoutCommit }) {
   const { bounds: areaBounds } = useWorkbenchArea();
   const view = useWorkbenchView();
   const { offset, getCamera, subscribeCameraPaint } = useWorkbenchCamera();
@@ -152,6 +153,24 @@ export function WorkbenchWindow({ children, background, compact, chrome, menuSur
     globalThis.addEventListener('resize', measure); measure();
     return () => { observer.disconnect(); globalThis.removeEventListener('resize', measure); };
   }, [fitContent, Boolean(compact), minimumHeight, toolMaximumHeight]);
+  useLayoutEffect(() => {
+    if (!avoidControls?.length || viewId || compact || gesture.current || !node.current?.getClientRects().length) return;
+    // Resolve at layout/selection changes, without adding React work to each
+    // projected camera frame. This changes only the companion window.
+    const rectangle = node.current.getBoundingClientRect();
+    const controls = [...avoidControls].filter(node => node.isConnected).map(node => node.getBoundingClientRect());
+    if (!rectangle.height || !controls.length) return;
+    const controlBounds = { left: Math.min(...controls.map(rect => rect.left)), right: Math.max(...controls.map(rect => rect.right)),
+      top: Math.min(...controls.map(rect => rect.top)), bottom: Math.max(...controls.map(rect => rect.bottom)) };
+    const next = avoidWorkbenchControl({ left: rectangle.left, top: rectangle.top, width: rectangle.width, height: rectangle.height },
+      controlBounds, { left: 8, top: 8, right: viewport.width - 8, bottom: toolViewportBottom - 8 }, 8, minimumHeight);
+    if (next.left !== rectangle.left || next.top !== rectangle.top || next.height !== rectangle.height)
+      // DOM layout can round a fractional recovery-control edge. Compare the
+      // requested logical frame too, or the same subpixel correction repeats
+      // forever even though React already holds that exact position.
+      setFrame(current => current.left === next.left && current.top === next.top && current.height === next.height
+        ? current : { ...current, left: next.left, top: next.top, height: next.height });
+  });
   const positionFor = (candidate, altKey) => {
     const snapping = snapToGrid && !altKey;
     const placed = placement.position(candidate, current, {

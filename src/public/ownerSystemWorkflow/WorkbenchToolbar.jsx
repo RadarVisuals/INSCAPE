@@ -27,7 +27,7 @@ function CommandIcon({ icon }) {
 export default function WorkbenchToolbar({
   activeTool = 'select', onToolChange, onOpenLibrary, libraryOpen = false,
   actions = EMPTY_COMMANDS, addCommands = EMPTY_COMMANDS, shapeCommands = EMPTY_COMMANDS,
-  layers, info, hidden = false, actionRequest = 0,
+  layers, info, hidden = false, actionRequest = 0, before,
 }) {
   const rootRef = useRef(null), barRef = useRef(null), popupRef = useRef(null), searchRef = useRef(null);
   const triggerRef = useRef(null), actionsRef = useRef(null), requestRef = useRef(actionRequest);
@@ -57,24 +57,24 @@ export default function WorkbenchToolbar({
 
   useLayoutEffect(() => {
     if (hidden) return;
-    const host = rootRef.current?.closest('.system-workflow'), bar = barRef.current;
-    if (!host || !bar) return;
-    const previous = host.style.getPropertyValue('--workbench-toolbar-clearance');
-    const previousWidth = host.style.getPropertyValue('--workbench-toolbar-width');
+    const bar = rootRef.current;
+    if (!bar) return;
+    // Popup clearance belongs to this toolbar. Writing inherited geometry on
+    // the entire Workbench invalidates every article when action rows change.
+    const previous = bar.style.getPropertyValue('--workbench-toolbar-clearance');
     const measure = () => {
       const rectangle = bar.getBoundingClientRect();
-      host.style.setProperty('--workbench-toolbar-clearance', `${Math.ceil(rectangle.height)}px`);
-      host.style.setProperty('--workbench-toolbar-width', `${Math.ceil(rectangle.width)}px`);
+      const clearance = `${Math.ceil(rectangle.height)}px`;
+      if (bar.style.getPropertyValue('--workbench-toolbar-clearance') !== clearance)
+        bar.style.setProperty('--workbench-toolbar-clearance', clearance);
     };
     measure();
     const observer = new ResizeObserver(measure);
     observer.observe(bar);
     return () => {
       observer.disconnect();
-      if (previousWidth) host.style.setProperty('--workbench-toolbar-width', previousWidth);
-      else host.style.removeProperty('--workbench-toolbar-width');
-      if (previous) host.style.setProperty('--workbench-toolbar-clearance', previous);
-      else host.style.removeProperty('--workbench-toolbar-clearance');
+      if (previous) bar.style.setProperty('--workbench-toolbar-clearance', previous);
+      else bar.style.removeProperty('--workbench-toolbar-clearance');
     };
   }, [hidden]);
 
@@ -178,6 +178,7 @@ export default function WorkbenchToolbar({
         {!visibleCommands.length && <p className="workbench-toolbar__empty">{normalizedQuery ? 'No matching actions.' : 'No commands available.'}</p>}
       </div>
     </section>}
+    {before}
     <div ref={barRef} className="workbench-toolbar__bar" role="toolbar" aria-label="Creation tools" onKeyDown={navigateToolbar}>
       {[['select', 'Select', 'V', MousePointer2], ['hand', 'Hand', 'H', Hand], ['text', 'Text', 'T', Type]].map(([id, label, key, Icon]) =>
         <button key={id} type="button" className={`workbench-toolbar__button workbench-toolbar__button--${id} workflow-tactile-control`} aria-label={`${label} tool`} aria-keyshortcuts={key}
@@ -186,7 +187,7 @@ export default function WorkbenchToolbar({
         </button>)}
       {menuButton('shapes', Shapes, 'Shapes', { 'data-active': isShapeCommand(activeTool) || undefined })}
       <button type="button" className="workbench-toolbar__button workflow-tactile-control" aria-label="Artwork library" title="Artwork library" aria-pressed={libraryOpen}
-        onClick={() => { close(); onOpenLibrary?.(); }}><Image aria-hidden="true" /><span>Artwork</span></button>
+        onClick={event => { close(); onOpenLibrary?.(event.currentTarget); }}><Image aria-hidden="true" /><span>Artwork</span></button>
       {[['Layers', Layers, layers], ['Artwork info', Info, info]].map(([label, Icon, inspector]) =>
         <button key={label} type="button" className="workbench-toolbar__button workflow-tactile-control" aria-label={label} title={inspector?.reason || label}
           disabled={!inspector?.enabled} aria-pressed={Boolean(inspector?.open)}

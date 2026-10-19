@@ -11,6 +11,7 @@ import { PUBLISHED_PROFILE_STATUS } from './profileDocument/storage/luksoPublish
 import { reportControlledError } from './diagnostics.js';
 import AlphaSupportPanel from './support/AlphaSupportPanel.jsx';
 import { ALPHA_SUPPORT_CODES } from './support/alphaSupport.js';
+import { createStandaloneWalletLoader, hasPersistedStandaloneConnection } from './wallet/standaloneWalletLoader.js';
 
 const PublicEntryPortal = lazy(() => import('./startveil/PublicEntryPortal.jsx'));
 const CreepsMetadataRecoveryPanel = import.meta.env.DEV
@@ -78,36 +79,30 @@ function App() {
       return () => scheduleWalletRelease();
     }
 
-    let acquisition = null;
-    let cancelled = false;
-    const setup = import('./wallet/standaloneWalletSession.js')
-      .then(({ acquireStandaloneWalletSession }) => {
-        acquisition = acquireStandaloneWalletSession({
+    const loader = createStandaloneWalletLoader({
           initializeWallet: initWallet,
           disposeWallet: () => useWalletStore.getState().disposeWallet(),
           beginWalletTransition,
           onSignInClose: () => setStandaloneSignInActive(false),
           onError: (error) => reportControlledError('standalone-wallet-connect', error)
-        });
-        if (cancelled) {
-          acquisition.release();
-          return null;
-        }
-        standaloneWalletSessionRef.current = acquisition.session;
-        return acquisition.session;
-      })
-      .catch((error) => {
+    });
+    standaloneWalletSessionRef.current = loader;
+    if (hasPersistedStandaloneConnection()) {
+      void loader.getSession().catch((error) => {
+        if (standaloneWalletSessionRef.current !== loader) return;
+        useWalletStore.getState().disposeWallet();
         reportControlledError('standalone-wallet-setup', error);
-        return null;
       });
-    standaloneWalletSessionRef.current = setup;
+    } else {
+      // Fresh visitors can enter without downloading a connector runtime.
+      useWalletStore.getState().disposeWallet();
+    }
 
     return () => {
-      cancelled = true;
-      if (standaloneWalletSessionRef.current === setup || standaloneWalletSessionRef.current === acquisition?.session) {
+      if (standaloneWalletSessionRef.current === loader) {
         standaloneWalletSessionRef.current = null;
       }
-      acquisition?.release();
+      loader.release();
     };
   }, [beginWalletTransition, initWallet, scheduleWalletRelease]);
 
@@ -122,11 +117,11 @@ function App() {
 
   const requestStandaloneSignIn = useCallback(() => {
     if (window.parent !== window) return;
-    const sessionOrPromise = standaloneWalletSessionRef.current;
-    if (!sessionOrPromise) return;
+    const loader = standaloneWalletSessionRef.current;
+    if (!loader) return;
     navigation.beginSignIn();
     setStandaloneSignInActive(true);
-    void Promise.resolve(sessionOrPromise).then((session) => {
+    void loader.getSession().then((session) => {
       if (!session) { setStandaloneSignInActive(false); return null; }
       return session.showSignIn();
     }).catch((error) => {
@@ -143,9 +138,9 @@ function App() {
       finish(true);
       return;
     }
-    const sessionOrPromise = standaloneWalletSessionRef.current;
-    if (!sessionOrPromise) { finish(false); return; }
-    void Promise.resolve(sessionOrPromise).then(async (session) => {
+    const loader = standaloneWalletSessionRef.current;
+    if (!loader) { finish(false); return; }
+    void loader.getSession().then(async (session) => {
       if (!session) { finish(false); return; }
       await session.disconnect();
       finish(true);

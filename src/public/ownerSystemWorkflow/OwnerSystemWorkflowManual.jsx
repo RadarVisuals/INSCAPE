@@ -7,7 +7,7 @@ const chapters = [
     ['Windows and shortcuts', 'Drag a window by its header to move it. Minimize Display to its shortcut, then double-click the shortcut to reopen it. Closing Identity keeps its content; open it again from your profile controls.'],
     ['Your tools', 'Library, Layers and Activity belong to your private workspace. Discover lets you visit other profiles. Settings includes local Workbench preferences and the Display appearance used in your presentation.'],
   ] },
-  { id: 'display', label: 'Display', summary: 'Compose artwork across Grids inside the Display Module.', sections: [
+  { id: 'display', label: 'Display · Experimental', summary: 'Experimental composition module. Creating new Displays is currently unavailable.', sections: [
     ['Grids', 'Use Grids to create, name and order scenes within Display. Mark each Grid public or private. Visitors can navigate the public scenes.'],
     ['Arrange artwork', 'Drag an asset from Library onto the Stage. Select a placement to move or resize it. Shift-click or drag a selection rectangle to select several. Crop adjusts the visible area of the artwork.'],
     ['Layers', 'Open Layers from Display to reorder, duplicate, lock or remove placements. Removing a placement leaves the source asset in your Library.'],

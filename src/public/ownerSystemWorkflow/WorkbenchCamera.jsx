@@ -59,7 +59,9 @@ export function WorkbenchCameraProvider({ children }) {
     setLocks(current => new Set(current).add(token));
     return () => setLocks(current => { const next = new Set(current); next.delete(token); return next; });
   }, []);
-  return <Camera.Provider value={{ ...camera, getCamera, updateCamera, prepareCamera, projectCamera, previewCamera, subscribeCameraPaint, setOffset, locked: locks.size > 0, lock }}>
+  const value = useMemo(() => ({ ...camera, getCamera, updateCamera, prepareCamera, projectCamera, previewCamera, subscribeCameraPaint, setOffset, locked: locks.size > 0, lock }),
+    [camera, getCamera, updateCamera, prepareCamera, projectCamera, previewCamera, subscribeCameraPaint, setOffset, locks.size, lock]);
+  return <Camera.Provider value={value}>
     <CameraScale.Provider value={scale}><ArtworkGeometry.Provider value={artworkGeometry}>{children}</ArtworkGeometry.Provider></CameraScale.Provider>
   </Camera.Provider>;
 }

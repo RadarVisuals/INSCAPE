@@ -23,8 +23,9 @@ test('System Workflow persistence uses the profile-isolated draft v4 store', () 
 });
 
 test('owner entry reconciles its origin-scoped draft before mounting the Keeper-free runtime', () => {
-  assert.match(reconciliationSource, /reconcileStoredOwnerDraftWithPublishedProfile/u);
-  assert.match(reconciliationSource, /publishedDocument \? 'LOADING' : 'READY'/u);
+  assert.match(reconciliationSource, /reconcileOwnerDraftWithPublishedProfile/u);
+  assert.match(reconciliationSource, /ProfileEditingBoundary/u);
+  assert.match(reconciliationSource, /getRecordState/u);
   assert.match(reconciliationSource, /<OwnerSystemWorkflowRuntime/u);
   assert.match(runtimeSource, /recordOwnerPublicationBaseline/u);
   assert.match(appSource, /Resolving owner workspace/u);

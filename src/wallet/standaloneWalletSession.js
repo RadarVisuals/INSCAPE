@@ -2,6 +2,7 @@ import { disconnect as disconnectWagmi, getConnection, reconnect, watchConnectio
 import { setupLuksoConnector } from '@lukso/up-modal';
 import { resolveStandaloneUniversalProfile } from '../store/universalProfileValidation.js';
 import { ensureUniversalProfileExtensionConnector } from './universalProfileExtensionReadiness.js';
+import { STANDALONE_WALLET_STORAGE_KEY } from './standaloneWalletLoader.js';
 
 export const isEmbeddedApplication = () => typeof window !== 'undefined' && window.parent !== window;
 
@@ -14,7 +15,7 @@ export async function createStandaloneWalletSession({ initializeWallet, disposeW
     theme: 'light',
     chains: { defaultChainId: 42 },
     connectors: { eoa: false },
-    storage: { key: 'inscape-up' },
+    storage: { key: STANDALONE_WALLET_STORAGE_KEY },
     onClose: () => onSignInClose?.(),
     onError: (event) => onError?.(event?.detail || new Error('Universal Profile connection failed.'))
   });

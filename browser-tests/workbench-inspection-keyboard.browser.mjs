@@ -55,7 +55,7 @@ for (const visitor of [false, true]) for (const width of [1440, 390]) {
       const source = visitor ? board.locator('.visitor-grid-world__grid-plane--current [data-placement-id="placement-abyssal"]')
         : board.getByRole('button', { name: /Select ABYSSAL STUDY/ });
       const original = await board.boundingBox();
-      await source.focus(); await page.keyboard.press('Enter');
+      await source.focus(); await page.keyboard.press('i');
       const inspection = page.getByRole('group', { name: 'Artwork inspection', exact: true });
       await inspection.waitFor();
       const inspecting = await board.boundingBox();

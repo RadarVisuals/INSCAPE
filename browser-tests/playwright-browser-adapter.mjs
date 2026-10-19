@@ -39,7 +39,12 @@ export function createPlaywrightRouteController({
     if (handled.has(route)) throw Object.assign(new Error('Playwright route was delivered more than once'), { code: 'DUPLICATE_ROUTE' });
     handled.add(route);
     if (closed) throw Object.assign(new Error('Playwright route arrived after routing closed'), { code: 'ROUTING_CLOSED' });
-    if (active.size >= maxOutstanding) throw Object.assign(new Error(`Playwright route ledger exceeded ${maxOutstanding}`), { code: 'ROUTE_LEDGER_LIMIT' });
+    if (active.size >= maxOutstanding) {
+      // Reject the request as well as the handler. Otherwise the browser can
+      // wait forever for a module whose intercepted request was abandoned.
+      await withinDeadline(route.abort('failed'), timeoutMs, 'Overflow route abort deadline exceeded');
+      throw Object.assign(new Error(`Playwright route ledger exceeded ${maxOutstanding}`), { code: 'ROUTE_LEDGER_LIMIT' });
+    }
     const request = route.request(); let parsed;
     try { parsed = new URL(request.url()); } catch { parsed = null; }
     const origin = parsed?.origin || 'invalid'; const id = ++sequence;

@@ -24,9 +24,9 @@ export const designDecisions = [
   {
     id: 'workspace',
     name: 'Shared creative workspace',
-    status: 'review',
+    status: 'agreed',
     detail:
-      'Classic Affinity-inspired tabs, three coordinated toolbars, Navigator and Keeper placement. Reference-only layout study.',
+      'Chosen by the founder on 2026-10-19: shared dockable tools, Workbench artwork layers and Layers-based removal. Production migration is pending; the preview still uses disposable Display layers.',
   },
   {
     id: 'properties',
@@ -95,7 +95,7 @@ export const tokenSources = [
     path: 'src/public/ownerSystemWorkflow/workbenchToolbar.css',
     role: 'Creation',
     purpose:
-      'Current production creation-bar geometry and popup layouts; the flat direction is still a reference preview.',
+      'Production flat creation-bar geometry, contextual stack hosting and popup layouts.',
   },
   {
     path: 'src/public/ownerSystemWorkflow/workbenchView.css',
@@ -165,7 +165,7 @@ export const components = [
     source: owner + 'ArtworkTransformTools.jsx',
     contract:
       'Rotate and horizontal/vertical mirror emit named operations through onTransform. The caller owns history, target and persistence.',
-    evidence: 'browser-tests/shared-module-tools.browser.mjs',
+    evidence: 'browser-tests/context-action-bars.browser.mjs',
     status: 'Production',
   },
   {
@@ -203,12 +203,12 @@ export const components = [
   },
   {
     id: 'properties',
-    name: 'Properties',
+    name: 'Properties and context actions',
     kind: 'Instrument',
-    material: 'Dark tactile',
+    material: 'Contextual',
     source: owner + 'ContextToolbar.jsx',
     contract:
-      'One contextual window. Display, Image and Shape supply their actions. Dimensions is a disclosure. Text retains its separate inspector.',
+      'Module fields stay in Properties; Display, Image and Shape supply flat inspection and selection rows above creation. Dimensions remains a disclosure. Text retains its separate inspector.',
     evidence: 'browser-tests/shared-module-tools.browser.mjs',
     status: 'Production',
   },
@@ -385,7 +385,7 @@ export const components = [
     source: 'src/miniApps/MiniAppsWorkbench.jsx',
     contract:
       'Host controls surround an isolated document. Remote content owns its interface. Transparent HTML artwork does not receive wallet privileges.',
-    evidence: 'browser-tests/html-artwork-fixture.html',
+    evidence: 'src/miniApps/miniAppSession.test.js',
     status: 'Production',
   },
   {

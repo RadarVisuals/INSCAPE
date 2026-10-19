@@ -4,13 +4,16 @@ Status: required product-meaning context
 
 Established: 2026-09-02
 Clarified with the founder: 2026-09-06
+Scope aligned with the active contract: 2026-10-19
 
 Authority: this document explains why INSCAPE exists and how its concepts must
 be interpreted. It is not an implementation roadmap and does not authorize
 future systems to be built early. `docs/INSCAPE_ACTIVE_CONTRACT.md` remains the
-sole authority for accepted product direction and current scope. If the two
-documents appear to conflict, stop and resolve the ambiguity with the product
-owner rather than silently choosing one.
+sole authority for accepted product direction and current scope. Apply its
+explicit dated scope and removal decisions to the examples here. Display is
+experimental, and the former Mobile, Mirror and Animation modules are removed;
+these pages do not reactivate them. Ask the product owner when a real choice
+remains unresolved, rather than treating an older example as new approval.
 
 ## Founder's intent
 
@@ -82,21 +85,29 @@ away the creator, collection, token scope, provenance, or story of its parts.
 
 ## Current product focus
 
-The present focus is deliberately narrow:
+Apply this creative intent through the ordinary Workbench and its retained
+independent modules. The [current product map](INSCAPE_ACTIVE_CONTRACT.md#current-product-map-2026-10-19)
+records their scope and acceptance entry points.
 
-1. Fine-tune the Display Module authoring workflow.
-2. Fine-tune selection and Metadata so the source and story of each placed
-   asset remain accessible.
-3. Make it genuinely pleasurable for the founder to experiment with real,
-   transparent assets and construct scenes and sequences.
-4. Preserve the architectural seams required by the broader intent without
-   implementing the broader system prematurely.
+1. Make it pleasurable to compose with real, transparent and attributable
+   artwork, articles and other supported material on the Workbench.
+2. Keep source identity and the meaning of each contribution accessible without
+   flattening the composition into an inventory view.
+3. Keep authoring, temporary visitor interaction and explicit publication
+   distinct, with reliable current-format saving and recovery.
+4. Preserve useful seams for later modules without building them prematurely.
 
-The first success condition is not the number of supported modules. It is that
-an artist can open the Library, drag prepared assets into the canonical Stage,
-compose and layer them, move between Grids, add narrative meaning, and inspect
-the identity of every component without reducing the result to a flattened
-inventory view.
+Display is no longer the immediate authoring priority. The founder parked it
+on 16 October while reconsidering its role beside the Workbench. On 19 October
+they explained that choosing between Display and solo Workbench Images had
+become confusing and blocked their composition workflow, while layering was
+needed. The chosen future direction uses the existing design-system workspace:
+artwork layers on the Workbench, removal through Layers and shared tools such
+as Color, docked together with the option to detach, rejoin or hide panels.
+This is accepted direction, not completed production behavior or the current
+audit work item. Finish the existing audit agenda before starting this redesign. Display may
+return, but its role is undecided. Its Stage, Grids and Layers remain the
+composition experiment described below, not a required route for every artist.
 
 ## Product hierarchy
 
@@ -105,24 +116,29 @@ Use the canonical hierarchy in the active contract:
 1. **INSCAPE Workbench**: the containing desktop and experimental space, with
    an authored public experience as well as the owner's workspace.
 2. **Module instance**: a creative application with its own content and behavior.
-3. **Display Module**: the current composition module type; its Stage is the
-   canonical clipped output with dimensions chosen by the artist, and its Grids
-   are scenes within that output. The active contract distinguishes accepted
-   canvas-sizing direction from the currently implemented formats.
+3. **Module-owned content**: each module interprets its own material. The
+   experimental Display uses a clipped Stage and Grids as scenes; Image and
+   Text have their own content models. The active contract governs which
+   modules and routes are currently available.
 4. **Assets and authored primitives**: material interpreted by compatible modules.
 
-Do not use `Grid` to mean a marketplace thumbnail grid. In INSCAPE, a Grid is
-an authored scene: a spatial relationship among independently meaningful
-objects. It may be sparse, cinematic, narrative, photographic, absurd, or
+In the Display examples here, `Grid` means an authored scene, not a marketplace
+thumbnail grid: a spatial relationship among independently meaningful objects.
+Workbench alignment grids and Grid Shapes have separate meanings in the
+active contract. It may be sparse, cinematic, narrative, photographic, absurd, or
 mixed-media.
 
-The Workbench hosts separate creative modules. The Display Module is the first
-composition module, not a synonym for the entire product. Multiple instances
-can organize chapters or separate bodies of work. Other module types need not
-use Grids or the Display canvas formats. This is accepted direction, not evidence that the
+The Workbench hosts separate creative modules. Display was the original
+composition proving ground and is now experimental, not a synonym for the
+product. Its multiple instances illustrate chapters or separate bodies of work.
+Other module types need not use Grids or Display canvas formats. This is accepted direction, not evidence that the
 current application already implements that full model.
 
 ## Display Module
+
+**Creative reference for the parked experiment.** The following describes what
+Display was intended to make possible. Its ordinary creation is currently
+removed; this example does not supersede that decision or authorize new work.
 
 The Display Module is where an artist shapes a scene and, across multiple
 Grids, can shape a story.
@@ -181,6 +197,11 @@ Detailed editing controls belong with Layers, where their scope and effect are
 visible.
 
 ## Metadata is part of the experience
+
+The scopes below explain creative meaning, using the Display/Grid example.
+They do not require every Workbench module to acquire Display placements or
+a new composition-metadata schema. The active contract and existing module
+boundaries determine what is implemented.
 
 Metadata is not merely a technical inspector attached to an image editor. It is
 how a visitor discovers that a visible component has an identity, origin, and
@@ -246,6 +267,11 @@ behavior. The token's flattened preview is a fallback representation, not the
 complete meaning of the asset.
 
 ## Living entities and the Workbench
+
+The studies below remain broader creative possibilities. The active contract
+now describes a bounded Keeper implementation and isolated artwork hosting;
+those concrete capabilities neither implement this whole vision nor restore
+the removed general Animation module.
 
 The founder has previously developed living-entity experiments. Those studies
 do not establish an implemented INSCAPE runtime or prescribe a single place
@@ -365,7 +391,8 @@ should still have a safe canonical preview or cover.
 ## Future modules
 
 The Workbench is intended to host additional modules such as music and video
-players, identity presentations, and different animation instruments. Assets from the
+players and different animation instruments. Identity and the other retained
+modules have their current scope in the active contract. Assets from the
 shared Library may be dragged into compatible modules: an audio representation
 into a music player, for example, or a prepared visual package into an animation
 instrument.
@@ -436,8 +463,8 @@ When interpreting or modifying INSCAPE:
 9. Do not make Pixi the application shell or universal module runtime.
 10. Prepare seams for future modules without implementing them before they are
     accepted into active scope.
-11. Treat the current Display Module and Metadata workflow as the immediate
-    proving ground for the wider idea.
+11. Use the ordinary Workbench and retained modules as the current proving
+    ground; respect Display's experimental status and explicit removals.
 12. When visual hierarchy is uncertain, prioritize the artwork and the act of
     composition over application chrome.
 

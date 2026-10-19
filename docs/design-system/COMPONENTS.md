@@ -209,11 +209,11 @@ Disclosures organize secondary controls. Closing one must not destroy an editor'
 | `layers`, `info` | `{ enabled, open, reason, onToggle }` for the current inspector context |
 | `hidden` | Hide the toolbar and end its popup state |
 | `actionRequest` | Existing request mechanism for opening Actions |
-| `minimalPopups` | Optional headerless presentation, currently enabled only by reference previews |
+| `before` | Module-owned contextual bars hosted directly above creation |
 
 Search includes nested commands and their parent context. Disabled commands show a meaningful reason. Arrow keys and Home/End move through eligible commands; Escape closes and returns focus. Popup opening, outside interaction and disposal clean up listeners. The production toolbar currently retains its native Tab stops alongside arrow navigation; do not describe it as a fully implemented one-tab-stop roving toolbar without further work.
 
-Toolbar measurement supplies temporary `--workbench-toolbar-clearance` and width to the host. The host owns the dock-relative offset and camera placement. Fixed guesses must not replace that measurement.
+Toolbar measurement covers the complete stack and supplies temporary `--workbench-toolbar-clearance` and width to the host. The host owns the dock-relative offset and camera placement. Fixed guesses must not replace that measurement.
 
 ### Window shell and host
 
@@ -225,7 +225,9 @@ One outer companion surface owns vertical scrolling. Avoid nested scroll contain
 
 ### Selection, Properties, Layers and Artwork info
 
-Properties is one contextual tool window with module-provided controls. Display artwork, standalone Image and Shape retain separate action owners. Layer-order actions share the current action grid; exact dimensions are secondary. Text uses its own inspector.
+Properties is one contextual window for module fields and dimensions. `ContextActionBars` hosts inspection/placement and selection rows immediately above creation. `ContextToolContent` accepts `inspection`, `actions` and property children; its portals preserve the original module owners and callbacks. Display supplies In place/Lift, placement and selection actions; Image supplies fit/crop and image actions; Shape supplies its existing selection actions. Crop temporarily replaces the inspection row and hides selection actions. Text keeps its separate inspector.
+
+`contextToolbar.css` supplies the same row geometry to production and the workspace reference. The production stack inherits the shared flat finish. Rows use native horizontal overflow, 36/44 px targets and 18 px icons with 1.5 px physical strokes. Arrow keys and Home/End move among enabled buttons; sliders retain native keys. The existing toolbar observer measures the whole stack for popup, camera and companion-window clearance. No parallel save, history or viewport state was introduced.
 
 The reference's Properties selector presents the complete control inventory for each of those contexts:
 

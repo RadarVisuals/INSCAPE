@@ -54,8 +54,11 @@ export default function useWorkbenchCameraMotion(camera, hostRef, entries) {
         if (active.current !== motion) return;
       }
       if (preference?.matches) { if (motion.kind === 'coast') stop(); else finish(motion); return; }
-      motion.started ??= time;
-      const elapsed = Math.min(motion.duration, time - motion.started);
+      // A frame timestamp can precede the expensive preparation that just ran.
+      // Start at the actual ready time, so the next paint does not skip the
+      // beginning of the easing curve to catch up with that stale timestamp.
+      motion.started ??= performance.now();
+      const elapsed = Math.max(0, Math.min(motion.duration, time - motion.started));
       if (elapsed === motion.duration) { finish(motion); return; }
       const progress = latticeProductionFocusOpeningProgress(elapsed / motion.duration);
       previewCamera(motion.at ? motion.at(elapsed) : interpolateWorkbenchCamera(motion.start, motion.end, progress), progress);

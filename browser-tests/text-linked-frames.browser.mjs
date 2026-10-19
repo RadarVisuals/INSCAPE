@@ -149,7 +149,7 @@ test('a Library drop into a continuation uses that frame and preserves the compl
     await page.getByRole('button',{name:'Close Text tools',exact:true}).click();
     const editor=page.getByRole('textbox',{name:'Article text',exact:true}), second=page.getByRole('textbox',{name:'Article text in frame 2',exact:true});
     const firstText=await visibleText(editor), before=await editor.evaluate(n=>n.editor.state.doc.textContent);
-    await page.getByRole('button',{name:'Library',exact:true}).click();
+    await page.getByRole('button',{name:'Artwork library',exact:true}).click();
     const card=page.getByRole('region',{name:'Library workspace'}).getByRole('button',{name:'ABYSSAL STUDY / INSCAPE STUDIES',exact:true});
     await card.scrollIntoViewIfNeeded(); const source=await card.boundingBox(),target=await second.boundingBox();
     await page.mouse.move(source.x+source.width/2,source.y+35);await page.mouse.down();
@@ -158,7 +158,7 @@ test('a Library drop into a continuation uses that frame and preserves the compl
     assert.equal(await editor.evaluate(n=>n.editor.state.doc.textContent),before);
     const position=await editor.evaluate(n=>{let result;n.editor.state.doc.descendants((node,pos)=>{if(node.type.name==='artwork')result=pos;});return result;});
     assert.ok(position>=firstText.length && position<before.length,'artwork was inserted near the beginning of frame 2, not appended at the article end');
-    await page.getByRole('button',{name:'Library',exact:true}).click();
+    await page.getByRole('button',{name:'Artwork library',exact:true}).click();
     await second.focus();await page.keyboard.press('Control+z');await settle(page);
     assert.equal(await editor.evaluate(n=>n.editor.state.doc.textContent),before);
     assert.equal(await page.evaluate(()=>window.savedDraft().texts[0].article.content.content.some(n=>n.type==='artwork')),false);

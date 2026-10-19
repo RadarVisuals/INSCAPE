@@ -1,5 +1,5 @@
 import { workbenchArea, workbenchAreaBounds } from '../systemWorkflow/domain/workbenchArea.js';
-import { createArticle, MAX_TEXT_MODULES, validTextModules } from './domain/article.js';
+import { createArticle, MAX_TEXT_MODULES } from './domain/article.js';
 import { createDefaultWorkbenchPresentation, createTextPresentation } from '../profileDocument/domain/workbenchPresentation.js';
 import { clampWorkbenchPosition } from '../public/ownerSystemWorkflow/workbenchSpace.js';
 
@@ -68,6 +68,7 @@ export function saveTextModule(store, profile, expected, next) {
 }
 
 const messages = {
+  editor_unavailable: 'This tab no longer has editing access. Your unsaved text is still here.',
   profile: 'This profile is no longer active. Your unsaved text is still here.',
   conflict: 'This Text was changed elsewhere. Your edits are still here. Retry checks the latest saved version.',
   missing: 'This Text was removed from the saved draft. Your unsaved text is still here.',
@@ -97,14 +98,17 @@ export function saveTextModuleResult(store, profile, expected, next, { retry = f
     }
     if (!retry && JSON.stringify(current) !== JSON.stringify(expected)) { reason = 'conflict'; return null; }
     const texts = draft.texts.map(item => item.id === current.id ? value : item);
-    if (!validTextModules(texts)) { reason = 'invalid'; return null; }
+    // The draft store validates this collection with the complete candidate.
+    // Revalidating every sibling article here duplicated that work per keypress.
     return { ...draft, texts };
   };
   try {
     const options = { expectedGeneration: generation, historyLabel: 'Edit Text' };
-    const nextDraft = retry ? null : candidate(store.getDraft());
+    // This transformation reads the accepted immutable snapshot and copies only
+    // the edited record. The store still validates and detaches before accepting.
+    const nextDraft = retry ? null : candidate(store.getSnapshot());
     const saved = retry ? store.retryCompletedOperation(candidate, options) : nextDraft && store.commitCompletedOperation(nextDraft, options);
-    return saved ? { saved: true, record: store.getDraft().texts.find(item => item.id === expected.id) }
+    return saved ? { saved: true, record: structuredClone(store.getSnapshot().texts.find(item => item.id === expected.id)) }
       : failed(reason || store.getLastCommitFailure?.() || 'write_failed');
   } catch (error) { return { saved: false, reason: 'invalid', message: error.message }; }
 }

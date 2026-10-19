@@ -142,41 +142,7 @@
   gap: 6px;
   padding-top: 24px;
 }
-.ds-studio-bars :is(.ds-studio-actions, .ds-studio-inspection, .ds-studio-crop) {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-wrap: wrap;
-  max-width: 100%;
-  gap: 2px;
-  padding: 3px;
-  border: 1px solid var(--tactile-edge);
-  border-radius: var(--ds-shell-radius);
-  background: var(--tactile-face);
-  color: var(--tactile-ink);
-}
-.ds-studio-bars
-  > :is(.ds-studio-actions, .ds-studio-inspection, .ds-studio-crop)
-  .workflow-tactile-control {
-  display: grid;
-  place-items: center;
-  height: var(--ds-target-compact);
-  min-width: 30px;
-  padding: var(--space-1) 6px;
-  border-color: transparent;
-  border-radius: var(--ds-control-radius);
-  font-size: var(--ds-text-small);
-}
-.ds-studio-bars .workflow-tactile-control[aria-pressed='true'] {
-  color: var(--tactile-face);
-  background: var(--tactile-ink);
-}
-.ds-studio-bars .workflow-tactile-control[aria-pressed='true']::after {
-  display: none;
-}
-.ds-studio-bars .ds-studio-inspection {
-  margin-bottom: var(--space-1);
-}
+.ds-studio-bars .context-action-bar { flex-wrap: wrap; justify-content: center; }
 .ds-studio-inspection > span:first-child,
 .ds-studio-crop > span {
   padding-inline: 7px;

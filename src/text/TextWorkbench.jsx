@@ -2,7 +2,7 @@ import { useWorkbenchArea } from '../public/ownerSystemWorkflow/WorkbenchAreaCon
 import { useSceneNavigation } from './SceneNavigation.jsx';
 import { editPassage, textDisplays } from './scenePassages.js';
 import { useTextScene, SceneTextViewport, TextContentPage } from './SceneTextContent.jsx';
-import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { lazy, memo, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { X, Settings2 as Settings, Eye, Pencil, Plus } from 'lucide-react';
 import { WorkbenchWindow } from '../public/ownerSystemWorkflow/DisplayInstrumentWindow.jsx';
 import { useWorkbenchView, workbenchModuleTransform } from '../public/ownerSystemWorkflow/WorkbenchViewContext.js';
@@ -28,9 +28,9 @@ const ArticleEditor = lazy(() => import('./ArticleEditor.jsx'));
 const textValue = record => record;
 const saveText = (store, scope, expected, next, options) => saveTextModuleResult(store, scope.profile, expected, next, options);
 
-function TextInstance({ record, index, store, profileAddress, assets, registerTarget, placementTargets, initialPresentation, onPresentationChange, suspended, active, onActivate, windowSnap, initialView, onViewChange, initiallyOpenId }) {
+const TextInstance = memo(function TextInstance({ record, index, store, profileAddress, assets, registerTarget, placementTargets, destinations = [], initialPresentation, onPresentationChange, suspended, active, activateModule, toolsOpen, setToolsOpen, displays, savedLayout, windowSnap, initialView, onViewChange, initiallyOpenId }) {
+  const onActivate = useCallback(() => activateModule(record.id), [activateModule, record.id]);
   const { bounds: areaBounds } = useWorkbenchArea();
-  const tools = useSharedTextTools();
   const workbenchView = useWorkbenchView();
   const view = workbenchModuleTransform(workbenchView, record.id);
   const { offset } = useWorkbenchCamera();
@@ -40,7 +40,7 @@ function TextInstance({ record, index, store, profileAddress, assets, registerTa
   const [presentation, setPresentation] = useState(() => ({ ...(initialPresentation || createTextPresentation(record.id, index)), ...(initiallyOpenId === record.id ? { open: true } : {}) }));
   const linked = Boolean(presentation.frames?.length);
   const [flowEditor, setFlowEditor] = useState(null);
-  const savedFrames = store?.getSnapshot().workbench?.texts?.find(item => item.id === record.id)?.frames;
+  const savedFrames = savedLayout?.texts?.find(item => item.id === record.id)?.frames;
   const savedFramesKey = JSON.stringify(savedFrames || []), previousFramesKey = useRef(savedFramesKey);
   useEffect(() => {
     if (previousFramesKey.current === savedFramesKey) return;
@@ -49,14 +49,12 @@ function TextInstance({ record, index, store, profileAddress, assets, registerTa
   }, [savedFramesKey]);
   const [editingMode, setMode] = useState(store ? initialView?.mode || 'write' : 'read');
   const mode = view.presented ? 'read' : editingMode;
-  const settings = Boolean(store && tools?.open && active);
-  const setSettings = open => { onActivate(); tools?.setOpen(open); };
+  const settings = Boolean(store && toolsOpen && active);
+  const setSettings = open => { onActivate(); setToolsOpen?.(open); };
   const [controlsHost, setControlsHost] = useState(null), [destination, setDestination] = useState('');
   const toolsTrigger = useRef(null);
   const scenes = useSceneNavigation();
   const [linkTarget, setLinkTarget] = useState('');
-  const draft = store?.getSnapshot();
-  const displays = useMemo(() => draft ? textDisplays(draft) : [], [draft]);
   useEffect(() => { onViewChange?.(record.id, { mode: editingMode }); }, [record.id, editingMode, onViewChange]);
   useEffect(() => () => onViewChange?.(record.id, null), [record.id, onViewChange]);
   const surface = useRef(null), editor = useRef(null), shortcut = useRef(null);
@@ -126,7 +124,6 @@ function TextInstance({ record, index, store, profileAddress, assets, registerTa
     if (!change(edit.getSnapshot().value, { retry: true })) return;
     preview.target.attachText(edit.getSnapshot().record, { ...preview, cellSize: preview.cellSize / view.scale });
   };
-  const destinations = placementTargets?.current?.textTargets?.() || [];
   const unlink = () => {
     if (suspended || failed) return;
     const result = unlinkTextModuleResult(store, profileAddress, edit.getSnapshot().record);
@@ -218,7 +215,7 @@ function TextInstance({ record, index, store, profileAddress, assets, registerTa
         }}>Move into Display</button></details>}
     </TextTools>}
   </div>;
-}
+});
 export default function TextWorkbench(props) {
   const tools = useSharedTextTools();
   // Isolated Workbench mounts use the same host; the production owner supplies
@@ -236,6 +233,17 @@ function IsolatedTextWorkbench(props) {
 function TextInstances({ records, presentations, store, profileAddress, assets = [], registerTarget, placementTargets, onPresentationChange, suspended = false, windowSnap = false, views, onViewChange, initiallyOpenId }) {
   const tools = useSharedTextTools();
   const [active, setActive] = useState(null);
+  const draft = store?.getSnapshot();
+  // Other articles changing must not render every editor. Explicitly retain the
+  // cross-module inputs: Display choices and saved geometry (including undo).
+  const displays = useMemo(() => draft ? textDisplays(draft) : [], [draft?.grids, draft?.displays, draft?.workbench]);
+  const activeId = tools ? tools.activeModuleId : active;
+  // Targets can become unavailable without changing a saved article (locking,
+  // opening or closing a Display). Refresh the active transfer menu from live
+  // host refs on every host render without waking unrelated editors.
+  const destinations = placementTargets?.current?.textTargets?.() || [];
   return records.map((record, index) => <TextInstance key={`${profileAddress}:${record.id}`} {...{ record, index, store, profileAddress, assets, registerTarget, placementTargets, onPresentationChange, suspended, windowSnap }}
-    initiallyOpenId={initiallyOpenId} initialView={views?.[record.id]} onViewChange={onViewChange} initialPresentation={presentations?.find(p => p.id === record.id)} active={(tools ? tools.activeModuleId : active) === record.id} onActivate={() => tools ? tools.activate(record.id) : setActive(record.id)} />);
+    displays={displays} savedLayout={draft?.workbench} activateModule={tools ? tools.activate : setActive} toolsOpen={tools?.open} setToolsOpen={tools?.setOpen}
+    destinations={activeId === record.id ? destinations : undefined}
+    initiallyOpenId={initiallyOpenId} initialView={views?.[record.id]} onViewChange={onViewChange} initialPresentation={presentations?.find(p => p.id === record.id)} active={activeId === record.id} />);
 }

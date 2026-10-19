@@ -17,7 +17,7 @@ function PanelPresence({ children, id, panels, retained = false }) {
 
 export default function OwnerSystemWorkflowPanelLayer({ workbenchImageTargetRef, moduleAssetTargetRef, placementTargetRef, shortcutTargetRef, workspaceRef, activity, assets, assetsById, authoringLocked = false, categoryCommands, browser, connectedProfile, controller, discoveryCommands, discoveryGroups, layout, libraryData,
   profileAddress, onMenuSurfaceChange, menuSurface, onChangeGrid, onClose, onConnect, onDisconnect, onOpenIdentity, onOpenReception, onEnterMyWorld, onVisitProfile, panelOccupied, panels, profileIdentity, profileModel,
-  resolveAssetDimensions, reviewDiscovery, workspaceSurfaceColor, workbenchPreferences, onWorkbenchPreferencesChange }) {
+  resolveAssetDimensions, reviewDiscovery, workspaceSurfaceColor, workbenchPreferences, onWorkbenchPreferencesChange, backupControls }) {
   const show = (id) => panels.presence[id];
   const libraryMounted = useRef(false);
   if (show('library').present) libraryMounted.current = true;
@@ -48,6 +48,6 @@ export default function OwnerSystemWorkflowPanelLayer({ workbenchImageTargetRef,
     {show('settings').present && <PanelPresence id="settings" panels={panels}>
       <OwnerSystemWorkflowSettings profileAddress={profileAddress} onMenuSurfaceChange={onMenuSurfaceChange} menuSurface={menuSurface}
         onClose={onClose} onWorkbenchPreferencesChange={onWorkbenchPreferencesChange}
-        phase={show('settings').phase} workbenchPreferences={workbenchPreferences} /></PanelPresence>}
+        phase={show('settings').phase} workbenchPreferences={workbenchPreferences} backupControls={backupControls} /></PanelPresence>}
   </>;
 }

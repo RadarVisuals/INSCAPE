@@ -4,6 +4,7 @@ import './artworkSvg.css';
 
 export default function ArtworkSvgDocument({ src, title = 'Interactive artwork', className = '', stretch = false, paintOnly = false, onReady }) {
   const frame = useRef(null);
+  const loading = useRef(null);
   const inspection = useRef(null), nextRequest = useRef(0);
   const readyCallback = useRef(onReady); readyCallback.current = onReady;
   const [hostReady, setHostReady] = useState(false);
@@ -20,14 +21,26 @@ export default function ArtworkSvgDocument({ src, title = 'Interactive artwork',
   useEffect(() => releaseInspection, [src, attempt]);
   useEffect(() => {
     const controller = new AbortController();
-    let disposed = false;
+    const request = { failed: false, sent: false };
+    loading.current = request;
     setStatus('loading'); setDocument(null);
-    const timer = setTimeout(() => controller.abort(), 15000);
+    const fail = () => {
+      if (loading.current !== request) return;
+      request.failed = true;
+      controller.abort(); clearTimeout(request.timer);
+      setStatus('failed');
+    };
+    // Bound the complete attempt, including a host iframe that never loads.
+    // Fetch completion alone does not mean the isolated artwork is ready.
+    request.timer = setTimeout(fail, 15000);
     readSvgArtwork(src, controller.signal).then(svg => {
       if (stretch) { svg.setAttribute('width', '100%'); svg.setAttribute('height', '100%'); svg.setAttribute('preserveAspectRatio', 'none'); }
-      if (!disposed) setDocument({ src, text: new XMLSerializer().serializeToString(svg) });
-    }).catch(() => { if (!disposed) setStatus('failed'); }).finally(() => clearTimeout(timer));
-    return () => { disposed = true; controller.abort(); clearTimeout(timer); };
+      if (loading.current === request && !request.failed) setDocument({ src, text: new XMLSerializer().serializeToString(svg) });
+    }).catch(fail);
+    return () => {
+      if (loading.current === request) loading.current = null;
+      controller.abort(); clearTimeout(request.timer);
+    };
   }, [src, attempt, stretch]);
   useEffect(() => {
     const loaded = event => {
@@ -38,6 +51,9 @@ export default function ArtworkSvgDocument({ src, title = 'Interactive artwork',
           clearTimeout(current.timer); current.resolve(true);
         }
       } else if (event.data?.type === 'inscape:artwork-loaded') {
+        const request = loading.current;
+        if (!request?.sent || request.failed) return;
+        clearTimeout(request.timer);
         const window = event.source;
         setStatus('ready');
         readyCallback.current?.({
@@ -64,9 +80,10 @@ export default function ArtworkSvgDocument({ src, title = 'Interactive artwork',
   }, []);
   useEffect(() => {
     if (!hostReady || document?.src !== src) return undefined;
+    const request = loading.current;
+    if (!request || request.failed) return undefined;
+    request.sent = true;
     frame.current.contentWindow.postMessage({ type: 'inscape:artwork-source', svg: document.text }, '*');
-    const timer = setTimeout(() => setStatus(current => current === 'loading' ? 'failed' : current), 15000);
-    return () => clearTimeout(timer);
   }, [hostReady, document, src]);
   return <>
     <iframe key={attempt} ref={frame} className={`artwork-svg-document ${className}`} tabIndex={paintOnly ? -1 : undefined}

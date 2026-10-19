@@ -24,9 +24,15 @@ or an outstanding decision. **In the app** means existing implemented behavior,
 not approval of that material as the new direction. Implementation cards all
 describe current application code; the decision list describes the new direction.
 
-The toolbar and two themes are agreed. Properties/fields and the button-state
-sheet are review proposals. Loading, empty and failure-message designs remain
-open. No label implies whole-product accessibility certification.
+The toolbar and two themes are agreed; the toolbar is already in the app.
+On 19 October the founder selected the shared creative workspace as the design
+basis for Workbench layering, Layers removal and shared dockable/hideable tools.
+Its status is Agreed, with production migration pending. Separate Properties/field
+coverage and button-state specimens remain references to evaluate in that real
+workflow; unimplemented effects or feedback behavior are not approved merely
+by appearing in it. Loading, empty and failure-message designs remain open.
+No label implies whole-product accessibility certification. See the
+[dated decision](../INSCAPE_ACTIVE_CONTRACT.md#workbench-composition-direction-2026-10-19).
 
 ## Source of truth and drift
 
@@ -67,13 +73,17 @@ Migrate one meaningful surface at a time after its review decision. Shared previ
 
 Do not apply a global radius, font, button reset, grain or colour migration across artwork, embedded documents and authored article content. Do not replace a known shape with a generic card component. A visual migration must leave saved drafts and published byte interpretation unchanged unless a separate explicit data change is required and tested.
 
-The registry's material columns describe the existing app, while the reference decision list tracks the new direction. Current production creation and companion tools are still tactile. Identity and compatible windows keep bevel. Library, menus and retained system panels keep structural treatment. The dock currently uses tactile material in its rail layout, although the contract still describes its structural baseline; this observed difference is recorded rather than resolved by a new redesign. Module media remains authored. Distinct material families must not be reported as a failed partial migration.
+The registry's material columns describe the existing app, while the reference decision list tracks the new direction. The production creation toolbar, camera rail and context action bars have
+received the recorded flat migrations. Other companion instruments retain
+their existing material until their own migration. Identity and compatible windows keep bevel. Library, menus and retained system panels keep structural treatment. The dock currently uses tactile material in its rail layout, although the contract still describes its structural baseline; this observed difference is recorded rather than resolved by a new redesign. Module media remains authored. Distinct material families must not be reported as a failed partial migration.
 
 ## Versioning
 
 `system.version` identifies this reference release, not the application's draft or publication schema. Use patch releases for corrections, minor releases for compatible additions, and major releases for a removed/renamed public reuse contract or an intentional broad visual contract change. A version bump never authorizes a product change by itself.
 
-Deprecation needs a replacement, affected-consumer list and verified migration. Keep compatibility aliases until their consumers are updated. Do not rename longstanding `PresentationBoard` implementation/storage identifiers just to align them with the Display label.
+Deprecation needs a defined replacement and affected-consumer checks. Update
+current consumers together; do not keep aliases solely for hypothetical older
+data when the active contract's development-data policy does not require it. Do not rename longstanding `PresentationBoard` implementation/storage identifiers just to align them with the Display label.
 
 ## Evidence and known limits
 

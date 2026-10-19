@@ -66,8 +66,8 @@ test('SVG Lift scales a stable document in Image and owner/Visitor Display', { t
         });
         const before = await source.screenshot({ path: `output/svg-lift-review/${kind}-${visitor}-${width}-before.png` });
         await page.evaluate(() => { window.svgSizes = []; });
-        if (kind === 'image') { await source.focus(); await page.keyboard.press('Enter'); }
-        else await source.dispatchEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true });
+        if (kind === 'image') { await source.focus(); await page.keyboard.press('i'); }
+        else await source.dispatchEvent('keydown', { key: 'i', bubbles: true, cancelable: true });
         await page.locator('.system-workflow__lift-artwork').waitFor();
         const samples = await page.evaluate(async ({ frame, kind }) => {
           const samples = [];
@@ -125,10 +125,10 @@ test('SVG Lift scales a stable document in Image and owner/Visitor Display', { t
         assert.equal(await source.getAttribute('data-lift-source'), null);
       }
       // Closing while the SVG is loading or opening must restore the source.
-      await image.focus(); await page.keyboard.press('Enter');
+      await image.focus(); await page.keyboard.press('i');
       await page.locator('.image-lift').waitFor(); await page.keyboard.press('Escape');
       await page.locator('.image-lift').waitFor({ state: 'detached' });
-      await image.focus(); await page.keyboard.press('Enter');
+      await image.focus(); await page.keyboard.press('i');
       await page.waitForFunction(() => {
         const progress = Number(document.querySelector('.image-lift')?.style.getPropertyValue('--inspection-lift-progress'));
         return progress > .2 && progress < .8;
@@ -141,11 +141,11 @@ test('SVG Lift scales a stable document in Image and owner/Visitor Display', { t
       assert.ok(interruptedProgress < .8, 'Return during opening does not jump to full size');
       await page.locator('.image-lift').waitFor({ state: 'detached' });
       await page.emulateMedia({ reducedMotion: 'reduce' });
-      await image.focus(); await page.keyboard.press('Enter');
+      await image.focus(); await page.keyboard.press('i');
       await page.waitForFunction(() => document.querySelector('.image-lift')?.style.getPropertyValue('--inspection-lift-progress') === '1');
       await page.keyboard.press('Escape'); await page.locator('.image-lift').waitFor({ state: 'detached' });
       assert.equal(await page.evaluate(() => localStorage.getItem(window.__motionKey)), await page.evaluate(() => window.__motionSaved), 'Inspection does not save layout changes');
-      await image.focus(); await page.keyboard.press('Enter');
+      await image.focus(); await page.keyboard.press('i');
       await page.locator('.system-workflow__lift-artwork').waitFor();
       const borrowedDocument = await image.locator('iframe').elementHandle();
       await page.evaluate(() => window.__motionRoot.unmount());

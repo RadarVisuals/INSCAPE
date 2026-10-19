@@ -103,7 +103,7 @@ export default forwardRef(function DisplayModule({ assetsById, controller, autho
     const id = source?.closest?.('[data-system-workflow-placement-id]')?.dataset.systemWorkflowPlacementId || inspectionPlacement?.id;
     const placement = controller.selectedGrid?.placements.find(item => item.id === id);
     if (inspectDisabled || !placement || placement.kind === 'text' || controller.hiddenPlacementIds?.has(id)) return false;
-    return viewer.open(id, undefined, { inspectionMode: 'LIFT' });
+    return viewer.open(id);
   };
   useWorkbenchInspectionAction(targetId, inspectArtwork);
   const canInspect = !inspectDisabled && inspectionPlacement && inspectionPlacement.kind !== 'text' && !controller.hiddenPlacementIds?.has(inspectionPlacement.id);

@@ -12,6 +12,24 @@ The [active contract](../INSCAPE_ACTIVE_CONTRACT.md) remains the sole product-di
 
 This release establishes the complete reference structure for the current product: foundations, material families, component inventory, workflow patterns, accessibility, language, ownership, maintenance and verification. It preserves the existing production UI. It is not a claim that every local CSS value has been converted into a shared token or that every retained surface has been migrated to tactile controls.
 
+## Chosen workspace direction, 2026-10-19
+
+The founder identifies the existing creative-workspace layout as the intended
+design for the next composition workflow. Shared Layers, Color and the other
+tools belong together, with panels that can detach, rejoin the dock or hide.
+Standalone Workbench artwork needs deliberate layer ordering and removal via
+Layers, replacing the artwork hover-close/minimize pattern. Display remains
+experimental because choosing between it and solo Workbench Images made the
+workflow confusing. Its return is undecided.
+
+This is an accepted design direction, not a completed application migration.
+The current workspace preview uses disposable values and a Display-scoped layer
+adapter; it does not yet prove Workbench Image ordering, saved tool docking or
+publication of artwork order. See the [authoritative clarification](../INSCAPE_ACTIVE_CONTRACT.md#workbench-composition-direction-2026-10-19).
+The following dated section records earlier reference development; its old
+workspace-review wording is superseded by this clarification. Individual
+unimplemented capabilities still need defined scope and verification.
+
 ## Reference direction, 2026-10-14
 
 The founder requested a smaller, flatter toolbar and reduced the theme direction to Carbon and Mist. Overview and Components preview that treatment on the existing WorkbenchToolbar component, with rectangular buttons using 5 px corners and a 9 px outer bar radius (5 px plus the 4 px inset), matching 5 px fields/menu rows inside 9 px popups with the same 4 px inset, an inverted active tool, quieter open-panel fills with a small state mark, Add inside the same toolbar with matching spacing, and two rows of 44-pixel targets on narrow screens. Carbon previews dark chrome and Mist light chrome, including Library and text menus. The reference uses neutral accents; search focus is a quiet neutral border, with system focus retained in forced colours. The shared toolbar uses minimal popup presentation: no title/close rows, full-width Actions search without a divider, and a Back row for nested menus. Its CSS is shared by the reference and application. Components demonstrates flat control states, complete Image, Display artwork and Shape Properties specimens with conditional states and a two-theme state sheet. The retained bevel shell remains collapsed as a migration reference. Build with it separates Agreed, Needs review and In the app. Source links open a read-only source viewer instead of loading test files as application scripts. Principles live in Build with it; the overview contains only the toolbar, themes and a brief preview caption. The creation toolbar, camera rail and their menus now use the approved shared material in the application (2026-10-16); other production instruments retain their existing treatment. All preview actions remain in memory. Production theme choices, saved values and authored surfaces have not been migrated in this review pass.
@@ -46,7 +64,7 @@ The reference is a development entry. It is outside `public/` and is not include
 3. **One fact has one owner.** CSS owns visual values; modules own creative behavior; the host owns windows and navigation. Secondary views derive from those facts.
 4. **Interaction is legible.** Selection, focus, press, loading and disabled states remain distinguishable. Precision does not require tiny or hidden input targets.
 5. **Experience is continuous.** Owner, Visitor, reception and inspection share module rendering. Different capabilities do not justify unrelated visual systems.
-6. **Change follows evidence.** Start from production references, exercise real states, and retain compatibility with saved work.
+6. **Change follows evidence.** Start from production references and exercise real states. Preserve current content and recovery guarantees; follow the active contract's development-data policy instead of adding hypothetical legacy compatibility.
 
 ## System architecture
 

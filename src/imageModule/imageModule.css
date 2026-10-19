@@ -36,6 +36,8 @@
 @keyframes image-side-turn { to { transform: rotateY(-180deg); } }
 @keyframes image-side-edge { 0%, 45%, 55%, 100% { opacity: 1; } 50% { opacity: 0; } }
 .image-module__flip-status { position: absolute; left: 6px; bottom: 6px; max-width: calc(100% - 52px); padding: 4px 6px; font: var(--workflow-type-control); text-align: left; color: var(--workflow-ink); background: var(--workflow-panel); pointer-events: none; }
+/* Leave the internal Inspect/Next row free while loading or reporting failure. */
+.image-module__window:not([data-controls-outside]) .image-module__flip-status { bottom: calc(40px * var(--image-density, 1)); }
 .image-module__inspect, .image-module__next, .image-module__close { position: absolute; right: 6px; z-index: 5; display: grid; place-items: center; box-sizing: border-box; width: 28px; height: 28px; padding: 0; border: 1px solid var(--workflow-border); background: var(--workflow-panel); color: var(--workflow-ink); cursor: pointer; opacity: 0; pointer-events: none; }
 .image-module__next { bottom: 6px; }
 .image-module__inspect { bottom: 6px; left: 6px; right: auto; }

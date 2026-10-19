@@ -23,7 +23,7 @@ test('System Workflow production shell preserves the Phase 3 authority and isola
   assert.match(productionBuild, /src\/public\/OwnerSystemWorkflowShell\.jsx/);
   assert.match(main, /import\.meta\.env\.DEV[\s\S]*\/development\/owner\/system-workflow/);
   assert.match(shell, /OwnerSystemWorkflowReconciliationBoundary/);
-  const reconciliationBoundary = productionSources.find((source) => source.includes('reconcileStoredOwnerDraftWithPublishedProfile'));
+  const reconciliationBoundary = await read('./ownerSystemWorkflow/OwnerSystemWorkflowReconciliationBoundary.jsx');
   assert.match(reconciliationBoundary, /lazy\(\(\) => import\('\.\/OwnerSystemWorkflowRuntime\.jsx'\)\)/);
   assert.match(runtime, /buildOwnerSystemWorkflowPreviewDocument/);
   assert.match(runtime, /ProfileDocumentV9Preview/);

@@ -1,4 +1,4 @@
-import { createContext, useContext, useMemo, useState, useSyncExternalStore } from 'react';
+import { createContext, useCallback, useContext, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { DEFAULT_WORKBENCH_AREA, WORKBENCH_BOUNDS, workbenchArea, workbenchAreaBounds } from '../../systemWorkflow/domain/workbenchArea.js';
 
 const Area = createContext({ area: DEFAULT_WORKBENCH_AREA, bounds: WORKBENCH_BOUNDS });
@@ -13,5 +13,8 @@ export function WorkbenchAreaProvider({ children, store, groupContent }) {
   const [preview, setPreview] = useState(null);
   const area = preview?.draft === draft ? preview.area : saved;
   const bounds = useMemo(() => workbenchAreaBounds(area), [area.width, area.height]);
-  return <Area.Provider value={{ area, bounds, setPreview: area => setPreview(area ? { area, draft } : null) }}>{children}</Area.Provider>;
+  const latestDraft = useRef(draft); latestDraft.current = draft;
+  const previewArea = useCallback(area => setPreview(area ? { area, draft: latestDraft.current } : null), []);
+  const value = useMemo(() => ({ area, bounds, setPreview: previewArea }), [area, bounds, previewArea]);
+  return <Area.Provider value={value}>{children}</Area.Provider>;
 }

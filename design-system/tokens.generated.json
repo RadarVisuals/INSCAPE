@@ -4,8 +4,8 @@
   "systemVersion": "1.0.0",
   "note": "Generated from production and design-system reference CSS. Reference roles are preview-only. Values remain CSS expressions, with selector and media scopes; this is not a DTCG interchange file. Runtime custom properties and local overrides are included and are not automatically public design tokens.",
   "counts": {
-    "files": 68,
-    "definitions": 558,
+    "files": 69,
+    "definitions": 560,
     "names": 295
   },
   "sources": [
@@ -963,7 +963,7 @@
     {
       "path": "design-system/workspacePreview.css",
       "role": "Reference local",
-      "sha256": "976309d38cb3987b0a8d9947a18992c6f1f157efc220949c06a86cc0f29829b0",
+      "sha256": "0c79b9129ad892a789742f619639cd4e105fb96ca7a2d7b549830a6bf672e6f3",
       "definitions": [
         {
           "name": "--tool-control-height",
@@ -971,7 +971,7 @@
           "scope": [
             ".ds-studio .ds-studio-inspector,\n.ds-studio-utilities > section"
           ],
-          "line": 217,
+          "line": 183,
           "references": [
             "--ds-target-compact"
           ]
@@ -982,7 +982,7 @@
           "scope": [
             ".ds-studio .ds-studio-inspector,\n.ds-studio-utilities > section"
           ],
-          "line": 218,
+          "line": 184,
           "references": [
             "--tactile-ink",
             "--tactile-face"
@@ -995,7 +995,7 @@
             "@media (max-width: 520px), (pointer: coarse)",
             ".ds-studio .ds-studio-inspector"
           ],
-          "line": 501,
+          "line": 467,
           "references": [
             "--ds-target-touch"
           ]
@@ -1021,7 +1021,6 @@
         "--lattice-menu-line-strong",
         "--lattice-menu-panel",
         "--preview-scale",
-        "--space-1",
         "--space-2",
         "--space-3",
         "--space-4",
@@ -1051,7 +1050,7 @@
     {
       "path": "src/imageModule/imageModule.css",
       "role": "Local",
-      "sha256": "edee9d95975400aa44b07f7ea33b9815772dc03138c668511815f4baa9f1b6cd",
+      "sha256": "d7cc954c6aca79d7faa9849f4c80f89708d937b4082fc8d87a75e8a4fb537112",
       "definitions": [
         {
           "name": "--image-turn-duration",
@@ -1069,7 +1068,7 @@
             "@media (prefers-reduced-motion: reduce)",
             ".image-module__turn[data-flipping]"
           ],
-          "line": 61,
+          "line": 63,
           "references": []
         }
       ],
@@ -2076,7 +2075,7 @@
     {
       "path": "src/keeper/keeper.css",
       "role": "Local",
-      "sha256": "8a761d3cae965267f2536244c09116289dba08b186d4d8a6fe159b8ea5d9b340",
+      "sha256": "4b596d17669dae61f86543ee9d5053cbcf70294df3f41d316efdaa016a142728",
       "definitions": [
         {
           "name": "--detached-window-gutter",
@@ -3455,7 +3454,7 @@
     {
       "path": "src/profileDocument/components/publishedProfileStatus.css",
       "role": "Local",
-      "sha256": "8c705c0c32ddb58e1e2a63a0668ed07ec2c44f3b05475e70189daacaf044255f",
+      "sha256": "6c4dd18940e864f3190dc1dd7b73066d6f3980aba87c70472942b6c76cbafb63",
       "definitions": [
         {
           "name": "--lattice-menu-panel",
@@ -3463,7 +3462,7 @@
           "scope": [
             ".published-profile-status"
           ],
-          "line": 18,
+          "line": 21,
           "references": []
         },
         {
@@ -3472,7 +3471,7 @@
           "scope": [
             ".published-profile-status"
           ],
-          "line": 19,
+          "line": 22,
           "references": []
         },
         {
@@ -3481,7 +3480,7 @@
           "scope": [
             ".published-profile-status"
           ],
-          "line": 20,
+          "line": 23,
           "references": []
         },
         {
@@ -3490,7 +3489,7 @@
           "scope": [
             ".published-profile-status"
           ],
-          "line": 21,
+          "line": 24,
           "references": []
         },
         {
@@ -3499,7 +3498,7 @@
           "scope": [
             ".published-profile-status"
           ],
-          "line": 22,
+          "line": 25,
           "references": []
         },
         {
@@ -3508,7 +3507,7 @@
           "scope": [
             ".published-profile-status"
           ],
-          "line": 23,
+          "line": 26,
           "references": []
         }
       ],
@@ -3924,21 +3923,55 @@
     {
       "path": "src/public/ownerSystemWorkflow/contextToolbar.css",
       "role": "Local",
-      "sha256": "7070adb881916c7d24365220b1483ceb81adc97c198aba9e713153928b7cb7e6",
+      "sha256": "4ca86c6d7656cd6d8ae944189d51fe228390219a7a7988202a6e4dabac5d3c3b",
       "definitions": [
         {
-          "name": "--selection-action-columns",
-          "value": "6",
+          "name": "--context-action-target",
+          "value": "var(--control-target-toolbar)",
           "scope": [
-            ".context-toolbar .system-workflow__selection-actions--six"
+            ".context-action-bar"
           ],
-          "line": 8,
+          "line": 11,
+          "references": [
+            "--control-target-toolbar"
+          ]
+        },
+        {
+          "name": "--context-action-target",
+          "value": "var(--control-target-touch)",
+          "scope": [
+            "@media (pointer: coarse), (max-width: 520px)",
+            ".context-action-bar"
+          ],
+          "line": 48,
+          "references": [
+            "--control-target-touch"
+          ]
+        },
+        {
+          "name": "--workbench-toolbar-offset",
+          "value": "0px",
+          "scope": [
+            "@media (max-height: 540px)",
+            ".system-workflow[data-creation-toolbar]:has(.context-action-bars:not([hidden]))"
+          ],
+          "line": 51,
           "references": []
         }
       ],
       "references": [
-        "--selection-action-columns",
-        "--tool-action-target"
+        "--context-action-target",
+        "--control-inset",
+        "--control-radius",
+        "--control-shell-radius",
+        "--control-target-toolbar",
+        "--control-target-touch",
+        "--icon-size-interface",
+        "--tactile-edge",
+        "--tactile-face",
+        "--tactile-ink",
+        "--tactile-muted",
+        "--workflow-type-control"
       ]
     },
     {
@@ -5407,7 +5440,7 @@
     {
       "path": "src/public/ownerSystemWorkflow/workbenchToolbar.css",
       "role": "Creation",
-      "sha256": "4dc3dc4b4e83bbb94a0c4c150837ea6d7bf2fec2515cf49d730501745f41b48e",
+      "sha256": "c276a718e99bc7a441b01b17536885f1026908573aab4412152baf0a7c68706b",
       "definitions": [
         {
           "name": "--toolbar-target",
@@ -5519,7 +5552,7 @@
           "scope": [
             ".workbench-toolbar"
           ],
-          "line": 21,
+          "line": 25,
           "references": []
         },
         {
@@ -5528,7 +5561,7 @@
           "scope": [
             ".workbench-toolbar"
           ],
-          "line": 22,
+          "line": 26,
           "references": [
             "--toolbar-padding-block",
             "--toolbar-popup-border"
@@ -5540,7 +5573,7 @@
           "scope": [
             ".workbench-toolbar"
           ],
-          "line": 23,
+          "line": 27,
           "references": [
             "--toolbar-padding-inline",
             "--toolbar-popup-border"
@@ -5552,7 +5585,7 @@
           "scope": [
             ".workbench-toolbar"
           ],
-          "line": 24,
+          "line": 28,
           "references": [
             "--toolbar-key-radius"
           ]
@@ -5563,7 +5596,7 @@
           "scope": [
             ".workbench-toolbar__bar"
           ],
-          "line": 41,
+          "line": 45,
           "references": [
             "--toolbar-key-radius"
           ]
@@ -5575,7 +5608,7 @@
             "@media (max-width: 520px)",
             ".workbench-toolbar"
           ],
-          "line": 271,
+          "line": 277,
           "references": [
             "--control-target-touch"
           ]
@@ -5587,7 +5620,7 @@
             "@media (pointer: coarse)",
             ".workbench-toolbar"
           ],
-          "line": 309,
+          "line": 315,
           "references": [
             "--control-target-touch"
           ]
@@ -6684,7 +6717,7 @@
     {
       "path": "src/startveil/publicEntryPortal.css",
       "role": "Local",
-      "sha256": "8bd2d38ed00acca561aaee41efdcdd98975f039b8bc4a33714794e3d2acbfec4",
+      "sha256": "83760f27e569922baf966261856e7905e3d9674919ccbea79d826aa9a8b08934",
       "definitions": [
         {
           "name": "--up-modal-font-family",
@@ -6840,6 +6873,21 @@
         "--lattice-menu-line-strong",
         "--lattice-menu-muted",
         "--lattice-menu-selected"
+      ]
+    },
+    {
+      "path": "src/systemWorkflow/workbenchBackup.css",
+      "role": "Local",
+      "sha256": "7f31e63494755f886667d2e55ae096c6bef5b9cc6ac5cef0f417bf39a2bb1d26",
+      "definitions": [],
+      "references": [
+        "--font-interface",
+        "--lattice-menu-ink",
+        "--lattice-menu-line-strong",
+        "--lattice-menu-panel",
+        "--workflow-border-strong",
+        "--workflow-ink",
+        "--workflow-panel"
       ]
     },
     {

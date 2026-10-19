@@ -35,6 +35,7 @@ test('Shapes create at cursor, resize, layer beneath content, recover covered sh
     await page.waitForFunction(() => !Object.hasOwn(window.savedDraft().shapes[0], 'grain'));
     assert.equal(await shape.locator('.module-surface-grain').count(), 0);
     await page.keyboard.press('Control+Shift+z'); await shape.locator('.module-surface-grain').waitFor();
+    await tools.getByText('Dimensions…', { exact: true }).click();
     await tools.getByLabel('Shape width', { exact: true }).fill('700');
     await tools.getByLabel('Shape height', { exact: true }).fill('450');
     await tools.getByRole('button', { name: 'Apply size', exact: true }).click(); await settle(page);
@@ -47,15 +48,25 @@ test('Shapes create at cursor, resize, layer beneath content, recover covered sh
     await page.keyboard.down('Alt'); await page.mouse.move(600, 280); await page.mouse.down();
     await page.mouse.move(140, 320, { steps: 8 }); await page.mouse.up(); await page.keyboard.up('Alt'); await settle(page);
     const moved = await shape.boundingBox(); near(moved.x, 100); near(moved.y, 280);
-    assert.ok(await page.evaluate(() => Boolean(document.elementFromPoint(200, 400)?.closest('.text-window'))), 'Text stays above the selected shape');
-    await tools.getByRole('button', { name: 'Duplicate', exact: true }).click();
+    // Workbench selection owns its drag overlay; inspect the content stack
+    // after leaving that temporary interaction, as a reader would.
+    await page.locator('main.system-workflow').focus(); await page.keyboard.press('Escape');
+    await page.locator('.workbench-selection').waitFor({ state: 'detached' });
+    const overlap = await page.evaluate(() => ({ hit: document.elementFromPoint(200, 400)?.outerHTML.slice(0, 600),
+      text: document.querySelector('.text-window')?.getBoundingClientRect().toJSON(),
+      above: Boolean(document.elementFromPoint(200, 400)?.closest('.text-window')) }));
+    assert.ok(overlap.above, `Text stays above the selected shape: ${JSON.stringify(overlap)}`);
+    await page.getByRole('button', { name: 'Duplicate shape', exact: true }).click();
     await page.waitForFunction(() => window.savedDraft().shapes.length === 2);
     const duplicate = await page.evaluate(() => window.savedDraft().shapes[1].id);
     assert.equal(await page.evaluate(() => window.savedDraft().shapes[1].grain), 1, 'duplication retains grain');
     await tools.getByLabel('Shape colour').fill('#0055ff');
-    await tools.getByRole('button', { name: 'To back', exact: true }).click();
+    await page.getByRole('button', { name: 'Send to back', exact: true }).click();
     await page.waitForFunction(id => window.savedDraft().shapes[0].id === id, duplicate);
+    await page.locator('main.system-workflow').focus(); await page.keyboard.press('Escape');
+    await page.locator('.workbench-selection').waitFor({ state: 'detached' });
     assert.equal(await page.evaluate(() => document.elementFromPoint(500, 400)?.closest('[data-workbench-view-id]')?.dataset.workbenchViewId), id);
+    await tools.getByText('Dimensions…', { exact: true }).click();
     await tools.getByRole('button', { name: 'Make square', exact: true }).click();
     await page.waitForFunction(id => { const w = window.savedDraft().workbench.shapes.find(s => s.id === id).window; return w.width === w.height; }, duplicate);
     // Dimensions follow pointer resize, not only numeric fields.

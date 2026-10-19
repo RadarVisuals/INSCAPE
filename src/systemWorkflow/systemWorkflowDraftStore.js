@@ -1,4 +1,5 @@
 import { reconcileRemovedWorkbenchMembers } from './domain/workbenchGroups.js';
+import { captureProfileDraftWriteAccess } from './profileEditorLease.js';
 import { keccak256, stringToHex } from 'viem';
 import { normalizeProfileAddress } from '../library/config.js';
 import { draftChanges, applyDraftChanges, draftChangeLabel } from './draftHistory.js';
@@ -33,7 +34,7 @@ export function systemWorkflowDraftKey(profileAddress) {
 }
 
 function deepFreeze(value, seen = new WeakSet()) {
-  if (!value || typeof value !== 'object' || seen.has(value)) return value;
+  if (!value || typeof value !== 'object' || Object.isFrozen(value) || seen.has(value)) return value;
   seen.add(value);
   Reflect.ownKeys(value).forEach((key) => deepFreeze(value[key], seen));
   return Object.freeze(value);
@@ -77,8 +78,10 @@ export function createSystemWorkflowDraftStore({
   generateGridId,
   profileAddress,
   storage,
+  requireEditor = false,
 } = {}) {
   let activeProfileAddress = requireProfileAddress(profileAddress);
+  let writeAccess = requireEditor ? captureProfileDraftWriteAccess(activeProfileAddress, storage) : () => true;
   let generation = 0;
   let currentDraft = null;
   let recordState = null;
@@ -86,6 +89,13 @@ export function createSystemWorkflowDraftStore({
   let lastCommitFailure = null;
   const listeners = new Set();
   const histories = new Map();
+  // Derived size of each session-only history entry. Invalidate only when a
+  // grouped gesture replaces its changes; discarded entries are weakly held.
+  const historySizes = new WeakMap();
+  const historySize = entries => 2 + Math.max(0, entries.length - 1) + entries.reduce((size, entry) => {
+    if (!historySizes.has(entry)) historySizes.set(entry, JSON.stringify(entry).length);
+    return size + historySizes.get(entry);
+  }, 0);
   let historyGroup = null;
   const history = () => {
     if (!histories.has(activeProfileAddress)) histories.set(activeProfileAddress, { undo: [], redo: [] });
@@ -166,6 +176,7 @@ export function createSystemWorkflowDraftStore({
   };
 
   const api = {
+    hasWriteAccess() { return writeAccess(); },
     beginHistoryGroup() { if (!historyGroup && currentDraft) historyGroup = { before: currentDraft, entry: null }; },
     endHistoryGroup() { historyGroup = null; },
     getHistory() { const h = history(); return { undo: h.undo.at(-1)?.label || null, redo: h.redo.at(-1)?.label || null }; },
@@ -211,7 +222,7 @@ export function createSystemWorkflowDraftStore({
     },
 
     resetCorruptDraft({ expectedFingerprint, profileAddress: confirmedProfileAddress } = {}) {
-      if (recordState.status !== SYSTEM_WORKFLOW_RECORD_STATUS.CORRUPT
+      if (!writeAccess() || recordState.status !== SYSTEM_WORKFLOW_RECORD_STATUS.CORRUPT
         || confirmedProfileAddress !== activeProfileAddress
         || expectedFingerprint !== recordState.fingerprint
         || !storage?.removeItem || !storageStillCurrent()) return false;
@@ -240,6 +251,7 @@ export function createSystemWorkflowDraftStore({
       const returningHistory = histories.get(next);
       if (returningHistory && returningHistory.acceptedRaw !== loaded.raw) histories.delete(next);
       activeProfileAddress = next;
+      writeAccess = requireEditor ? captureProfileDraftWriteAccess(activeProfileAddress, storage) : () => true;
       acceptLoaded(loaded);
       generation += 1;
       listeners.forEach(listener => listener());
@@ -247,6 +259,11 @@ export function createSystemWorkflowDraftStore({
     },
 
     getLastCommitFailure() { return lastCommitFailure; },
+    restoreBackup(candidate, { expectedGeneration, expectedFingerprint } = {}) {
+      if (recordState.status === SYSTEM_WORKFLOW_RECORD_STATUS.UNAVAILABLE
+        || (recordState.status === SYSTEM_WORKFLOW_RECORD_STATUS.CORRUPT && expectedFingerprint !== recordState.fingerprint)) return false;
+      return commit(candidate, { expectedGeneration, recordHistory: false }, null, true);
+    },
     retryCompletedOperation(createCandidate, options = {}) {
       const loaded = load(activeProfileAddress);
       if (!loaded.draft) {
@@ -259,11 +276,13 @@ export function createSystemWorkflowDraftStore({
     },
     commitCompletedOperation(candidate, options = {}) { return commit(candidate, options); },
   };
-  function commit(candidate, { expectedGeneration, historyLabel, recordHistory = true } = {}, recovered = null) {
+  function commit(candidate, { expectedGeneration, historyLabel, recordHistory = true } = {}, recovered = null, restore = false) {
       const reject = reason => { lastCommitFailure = reason; return false; };
-      if (expectedGeneration !== generation || !currentDraft) return reject('stale');
-      const draft = validateStoredDraft(reconcileRemovedWorkbenchMembers(recovered?.draft || currentDraft, candidate), activeProfileAddress).value;
-      if (!draft) return reject('invalid');
+      if (!writeAccess()) return reject('editor_unavailable');
+      if (expectedGeneration !== generation || (!currentDraft && !restore)) return reject('stale');
+      const validated = validateStoredDraft(restore ? candidate : reconcileRemovedWorkbenchMembers(recovered?.draft || currentDraft, candidate), activeProfileAddress).value;
+      if (!validated) return reject('invalid');
+      const draft = reuseUnchanged(currentDraft, validated);
       if (!storage?.setItem) return reject('write_failed');
       try {
         if (storage.getItem(systemWorkflowDraftKey(activeProfileAddress)) !== (recovered ? recovered.raw : acceptedRaw)) return reject('changed');
@@ -272,21 +291,23 @@ export function createSystemWorkflowDraftStore({
       const changes = recordHistory ? draftChanges(recovered?.draft || currentDraft, draft) : [];
       try { storage.setItem(systemWorkflowDraftKey(activeProfileAddress), raw); }
       catch { return reject('write_failed'); }
+      if (restore) { histories.delete(activeProfileAddress); historyGroup = null; }
       // External edits invalidate local history only after a successful recovery.
       if (recovered && recovered.raw !== acceptedRaw) { histories.delete(activeProfileAddress); historyGroup = null; }
       if (changes.length) {
         const h = history(); h.redo = [];
         if (historyGroup?.entry && h.undo.at(-1) === historyGroup.entry) {
           historyGroup.entry.changes = draftChanges(historyGroup.before, draft);
+          historySizes.delete(historyGroup.entry);
           if (!historyGroup.entry.changes.length) { h.undo.pop(); historyGroup.entry = null; }
         } else {
           const entry = { changes, label: historyLabel || draftChangeLabel(changes) };
           h.undo.push(entry); if (historyGroup) historyGroup.entry = entry;
         }
-        while (h.undo.length > 50 || h.undo.length > 1 && JSON.stringify(h.undo).length > 4_000_000) h.undo.shift();
+        while (h.undo.length > 50 || h.undo.length > 1 && historySize(h.undo) > 4_000_000) h.undo.shift();
       }
       acceptedRaw = raw;
-      currentDraft = deepFreeze(reuseUnchanged(currentDraft, draft));
+      currentDraft = deepFreeze(draft);
       recordState = Object.freeze({ status: SYSTEM_WORKFLOW_RECORD_STATUS.VALID });
       generation += 1;
       lastCommitFailure = null;

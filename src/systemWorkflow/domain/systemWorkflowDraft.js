@@ -151,12 +151,14 @@ export function createEmptySystemWorkflowWorldCoverGrid() {
 }
 
 export function ensureSystemWorkflowWorldCoverGrid(draftInput) {
-  const draft = structuredClone(draftInput);
-  if (!draft || typeof draft !== 'object' || !Array.isArray(draft.grids)) return draft;
-  if (draft.grids.length && !draft.grids.some(isSystemWorkflowWorldCoverGrid)) {
-    draft.grids.push(createEmptySystemWorkflowWorldCoverGrid());
+  // Normalization only adds the missing Grid. The validator below owns the
+  // detached result; copying every article here discarded immutable identity
+  // before validation and copied the complete document a second time.
+  if (draftInput?.grids?.length && Array.isArray(draftInput.grids)
+    && !draftInput.grids.some(isSystemWorkflowWorldCoverGrid)) {
+    return { ...draftInput, grids: [...draftInput.grids, createEmptySystemWorkflowWorldCoverGrid()] };
   }
-  return draft;
+  return draftInput;
 }
 
 export function createEmptySystemWorkflowDraft(profileAddress, options = {}) {

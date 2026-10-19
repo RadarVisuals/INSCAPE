@@ -26,7 +26,7 @@ function controlsTop(host, controls) {
 
 // Navigation never receives a draft store or module transforms. Editing owns
 // its gestures and exposes only cancellation and input-ownership callbacks.
-export default function useWorkbenchNavigation({ hostRef, controlsRef, disabled, dockVisible, onControlsTopChange,
+export default function useWorkbenchNavigation({ hostRef, controlsRef, disabled, dockVisible, creationToolbarVisible, onControlsTopChange,
   interactionTool = 'select', setInteractionTool,
   isEditing, cancelEditing, releaseAbandonedGesture, captureContext, restoreContext, returnTargets, resetPresentation, entries }) {
   const camera = useWorkbenchCamera();
@@ -77,8 +77,24 @@ export default function useWorkbenchNavigation({ hostRef, controlsRef, disabled,
       top: (available.top - camera.offset.y) / camera.scale,
       width: available.width / camera.scale, height: available.height / camera.scale };
   }, [hostRef, controlsRef, readViewport, getCamera, moving, locked, isPanning]);
+  const goBack = useCallback(() => {
+    if (disabled || locked || interaction.current.isEditing() || isPanning()) return false;
+    const previous = historyRef.current.at(-1);
+    if (!previous) return false;
+    const end = restoreWorkbenchCamera(previous.camera, previous.viewport, readViewport());
+    hostRef.current?.focus({ preventScroll: true });
+    travel(end, { destinations: interaction.current.returnTargets?.(previous.context), onComplete: () => {
+      // An interrupted Back must remain available until its return completes.
+      if (historyRef.current.at(-1) === previous) remember(historyRef.current.slice(0, -1));
+      interaction.current.restoreContext?.(previous.context);
+    } });
+    return true;
+  }, [disabled, locked, isPanning, remember, readViewport, travel, hostRef]);
   const focusDestination = useCallback(destination => {
     if (disabled || locked || interaction.current.isEditing() || isPanning()) return false;
+    // Destination identity lives with its existing return context, never in a
+    // separate toggle flag. Explicit Focus clicks remain idempotent.
+    if (destination.toggle && destination.key && historyRef.current.at(-1)?.destinationKey === destination.key) return goBack();
     const host = hostRef.current, viewport = readViewport();
     if (!host || !viewport) return false;
     const context = interaction.current.captureContext?.();
@@ -101,24 +117,11 @@ export default function useWorkbenchNavigation({ hostRef, controlsRef, disabled,
     }
     const originalBounds = JSON.stringify(bounds);
     const isCurrent = () => JSON.stringify(destination.getBounds()) === originalBounds;
-    if (!destination.replaceHistory || !historyRef.current.length) remember([...historyRef.current, { camera, viewport, context }].slice(-50));
+    if (!destination.replaceHistory || !historyRef.current.length) remember([...historyRef.current, { camera, viewport, context, destinationKey: destination.key }].slice(-50));
     travel(end, { isCurrent, onComplete: destination.onArrive, origins: destination.origins });
     host.focus({ preventScroll: true });
     return true;
-  }, [disabled, locked, isPanning, hostRef, controlsRef, readViewport, getCamera, remember, travel, stopTravel]);
-  const goBack = useCallback(() => {
-    if (disabled || locked || interaction.current.isEditing() || isPanning()) return false;
-    const previous = historyRef.current.at(-1);
-    if (!previous) return false;
-    const end = restoreWorkbenchCamera(previous.camera, previous.viewport, readViewport());
-    hostRef.current?.focus({ preventScroll: true });
-    travel(end, { destinations: interaction.current.returnTargets?.(previous.context), onComplete: () => {
-      // An interrupted Back must remain available until its return completes.
-      if (historyRef.current.at(-1) === previous) remember(historyRef.current.slice(0, -1));
-      interaction.current.restoreContext?.(previous.context);
-    } });
-    return true;
-  }, [disabled, locked, isPanning, remember, readViewport, travel, hostRef]);
+  }, [disabled, locked, isPanning, hostRef, controlsRef, readViewport, getCamera, remember, travel, stopTravel, goBack]);
   useLayoutEffect(() => {
     if (disabled || locked) stopTravel();
     if (disabled) remember([]);
@@ -157,7 +160,19 @@ export default function useWorkbenchNavigation({ hostRef, controlsRef, disabled,
   useEffect(() => {
     const host = hostRef.current, controls = controlsRef.current;
     if (!host || disabled) { onControlsTopChange?.(null); return; }
+    const toolbar = host.querySelector('[data-workbench-toolbar]');
+    const properties = ['--workbench-toolbar-clearance', '--workbench-toolbar-width'];
+    const previousProperties = properties.map(name => controls?.style.getPropertyValue(name));
     const measure = () => {
+      // The camera rail owns its placement beside/above the creation toolbar.
+      // Keep measured CSS values on that rail, outside authored module trees.
+      const rectangle = toolbar?.getBoundingClientRect();
+      if (controls && rectangle) {
+        for (const [index, value] of [rectangle.height, rectangle.width].entries()) {
+          const pixels = `${Math.ceil(value)}px`, property = properties[index];
+          if (controls.style.getPropertyValue(property) !== pixels) controls.style.setProperty(property, pixels);
+        }
+      }
       // The same live chrome measurement also bounds companion tools. Their
       // screen space must account for wrapping controls and the current dock.
       onControlsTopChange?.(controlsTop(host, controls) ?? null);
@@ -175,10 +190,15 @@ export default function useWorkbenchNavigation({ hostRef, controlsRef, disabled,
     const observer = new ResizeObserver(measure);
     observer.observe(host);
     if (controls) observer.observe(controls);
-    const toolbar = host.querySelector('[data-workbench-toolbar]');
     if (toolbar) observer.observe(toolbar);
-    return () => observer.disconnect();
-  }, [hostRef, controlsRef, dockVisible, disabled, locked, readViewport, stopTravel, onControlsTopChange]);
+    return () => {
+      observer.disconnect();
+      properties.forEach((property, index) => {
+        if (previousProperties[index]) controls?.style.setProperty(property, previousProperties[index]);
+        else controls?.style.removeProperty(property);
+      });
+    };
+  }, [hostRef, controlsRef, dockVisible, creationToolbarVisible, disabled, locked, readViewport, stopTravel, onControlsTopChange]);
 
   const zoom = useCallback((point, factor) => {
     if (disabled || locked || interaction.current.isEditing() || isPanning()) return;

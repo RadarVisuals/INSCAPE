@@ -24,6 +24,17 @@ const memoryStorage = () => {
 const originalIndexer = chillwhalesProfileRepository.loadProfileAssets;
 const originalRpc = luksoRpcProfileRepository.loadProfileAssets;
 
+const repairedAsset = (suffix = '2') => ({ ...knownAsset(),
+  id: `42:0x${suffix.repeat(40)}:contract`, contractAddress: `0x${suffix.repeat(40)}`,
+  name: `Recovered ${suffix}`, imageUrl: `https://assets.example/recovered-${suffix}.webp`,
+});
+function indexedMissing(assets, missing) {
+  chillwhalesProfileRepository.loadProfileAssets = async function* () {
+    yield { assets, unresolvedAssetIds: missing.map(({ id }) => id), failures: missing.length,
+      resolved: assets.length + missing.length, total: assets.length + missing.length, complete: true };
+  };
+}
+
 beforeEach(() => {
   chillwhalesProfileRepository.loadProfileAssets = async function* () { throw new Error('Indexer unavailable'); };
 });
@@ -152,4 +163,97 @@ test('a late failed RPC response cannot change either profile inventory after a 
   assert.deepEqual(useLibraryStore.getState().assets, [other]);
   assert.deepEqual(loadLibraryAssetCache(storage, PROFILE), [known]);
   assert.deepEqual(loadLibraryAssetCache(storage, OTHER_PROFILE), [other]);
+});
+
+test('complete targeted repair clears the warning and replaces retained inventory only after all missing assets recover', async () => {
+  const storage = memoryStorage(), old = seedKnownInventory(storage);
+  const indexed = repairedAsset('2'), repaired = repairedAsset('3');
+  indexedMissing([indexed], [repaired]);
+  let release; const gate = new Promise(resolve => { release = resolve; });
+  let started; const repairing = new Promise(resolve => { started = resolve; });
+  luksoRpcProfileRepository.loadProfileAssets = async function* (_profile, options) {
+    assert.deepEqual(options.requestedAssetIds, [repaired.id]);
+    started(); await gate;
+    yield { assets: [repaired], failures: 0, resolved: 1, total: 1, complete: true };
+  };
+  const pending = useLibraryStore.getState().load(); await repairing;
+  assert.deepEqual(useLibraryStore.getState().assets, [old, indexed]);
+  assert.equal(useLibraryStore.getState().status, 'partial');
+  assert.match(useLibraryStore.getState().liveError, /assets could not be loaded/u);
+  release(); await pending;
+  const result = useLibraryStore.getState();
+  assert.equal(result.status, 'ready');
+  assert.equal(result.liveError, null);
+  assert.equal(result.error, null);
+  assert.deepEqual(result.progress, { resolved: 2, total: 2, failures: 0 });
+  assert.deepEqual(result.assets, [indexed, repaired], 'complete recovered inventory can replace an old cached card');
+  assert.deepEqual(loadLibraryAssetCache(storage, PROFILE), [indexed, repaired]);
+});
+
+for (const outcome of ['partial', 'empty', 'unrelated', 'unfinished']) {
+  test(`targeted repair remains partial when its result is ${outcome}`, async () => {
+    const storage = memoryStorage(), old = seedKnownInventory(storage);
+    const first = repairedAsset('2'), second = repairedAsset('3');
+    indexedMissing([], [first, second]);
+    luksoRpcProfileRepository.loadProfileAssets = async function* () {
+      yield { assets: outcome === 'partial' ? [first] : outcome === 'unrelated' ? [repairedAsset('4')]
+        : outcome === 'unfinished' ? [first, second] : [], failures: outcome === 'partial' ? 1 : 0,
+        resolved: 2, total: 2, complete: outcome !== 'unfinished' };
+    };
+    await useLibraryStore.getState().load();
+    const result = useLibraryStore.getState();
+    assert.equal(result.status, 'partial');
+    assert.match(result.liveError, /assets could not be loaded/u);
+    assert.equal(result.progress.failures, outcome === 'partial' || outcome === 'unfinished' ? 1 : 2);
+    assert.ok(result.assets.some(({ id }) => id === old.id), 'incomplete evidence cannot remove retained cards');
+    assert.deepEqual(loadLibraryAssetCache(storage, PROFILE), result.assets);
+  });
+}
+
+test('a successful repair arriving after a profile switch cannot clear or replace the next profile inventory', async () => {
+  const storage = memoryStorage(); seedKnownInventory(storage);
+  const next = knownAsset(OTHER_PROFILE), repaired = repairedAsset();
+  saveLibraryAssetCache(storage, OTHER_PROFILE, [next]);
+  indexedMissing([], [repaired]);
+  let release; const gate = new Promise(resolve => { release = resolve; });
+  let started; const repairing = new Promise(resolve => { started = resolve; });
+  luksoRpcProfileRepository.loadProfileAssets = async function* () {
+    started(); await gate;
+    yield { assets: [repaired], failures: 0, resolved: 1, total: 1, complete: true };
+  };
+  const pending = useLibraryStore.getState().load(); await repairing;
+  useLibraryStore.getState().setProfileAddress(OTHER_PROFILE);
+  release(); await pending;
+  assert.equal(useLibraryStore.getState().status, 'idle');
+  assert.equal(useLibraryStore.getState().liveError, null);
+  assert.deepEqual(useLibraryStore.getState().assets, [next]);
+  assert.deepEqual(loadLibraryAssetCache(storage, OTHER_PROFILE), [next]);
+});
+
+test('completing targeted repair retains already enriched indexed attributes and reports a separate token refresh failure', async () => {
+  const { luksoEnvioAttributeRepository } = await import('../data/luksoEnvioAttributeRepository.js');
+  const { lsp8CollectionMetadataResolver } = await import('../data/lsp8TokenMetadataResolver.js');
+  const originalEnrich = luksoEnvioAttributeRepository.enrich;
+  const originalResolve = lsp8CollectionMetadataResolver.resolve;
+  const storage = memoryStorage(); seedKnownInventory(storage);
+  const tokenId = `0x${'0'.repeat(63)}1`, repaired = repairedAsset('3');
+  const indexed = { ...repairedAsset(), standard: 'LSP8', tokenId,
+    id: `42:0x${'2'.repeat(40)}:${tokenId}`, attributes: [] };
+  indexedMissing([indexed], [repaired]);
+  luksoEnvioAttributeRepository.enrich = async () => [{ id: indexed.id, attributes: [{ key: 'Rank', value: '281', type: 'number' }] }];
+  lsp8CollectionMetadataResolver.resolve = async () => new Map();
+  luksoRpcProfileRepository.loadProfileAssets = async function* () {
+    yield { assets: [repaired], failures: 0, resolved: 1, total: 1, complete: true };
+  };
+  try {
+    await useLibraryStore.getState().load();
+    const result = useLibraryStore.getState();
+    assert.deepEqual(result.assets.find(({ id }) => id === indexed.id).attributes, [{ key: 'Rank', value: '281', type: 'number' }]);
+    assert.equal(result.status, 'partial');
+    assert.match(result.liveError, /token metadata could not be refreshed/u);
+    assert.deepEqual(loadLibraryAssetCache(storage, PROFILE), result.assets);
+  } finally {
+    luksoEnvioAttributeRepository.enrich = originalEnrich;
+    lsp8CollectionMetadataResolver.resolve = originalResolve;
+  }
 });

@@ -148,7 +148,6 @@ function CreationToolbarExample({ onAction }) {
       ]}
       addCommands={[
         { id: 'image', label: 'Image', icon: Image, onSelect: () => onAction('Add Image') },
-        { id: 'display', label: 'Display', icon: Layers, onSelect: () => onAction('Add Display') },
         { id: 'text', label: 'Text', icon: Type, onSelect: () => onAction('Add Text') },
       ]}
       shapeCommands={[

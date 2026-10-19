@@ -1,4 +1,5 @@
 import { Check, X } from 'lucide-react';
+import { cloneElement } from 'react';
 import { useSignalStore } from '../../signals/state/useSignalStore.js';
 import { SYSTEM_WORKFLOW_SURFACE_IDS } from '../../systemWorkflow/domain/systemWorkflowDraft.js';
 import { OwnerSystemWorkflowSelectMenu } from './OwnerSystemWorkflowWorkspaceControls.jsx';
@@ -18,7 +19,7 @@ function CheckControl({ checked, disabled = false, label, onChange }) {
 }
 
 export default function OwnerSystemWorkflowSettings({ profileAddress: profile, onMenuSurfaceChange, menuSurface, onClose,
-  onWorkbenchPreferencesChange, phase, workbenchPreferences }) {
+  onWorkbenchPreferencesChange, phase, workbenchPreferences, backupControls }) {
   const signalSettings = useSignalStore((state) => state.settings);
   const signalProfile = useSignalStore((state) => state.profileAddress);
   const signalPersistenceError = useSignalStore((state) => state.persistenceError);
@@ -56,6 +57,7 @@ export default function OwnerSystemWorkflowSettings({ profileAddress: profile, o
       <CheckControl checked={workbenchPreferences.chromeNoise} label="Chrome noise"
         onChange={(chromeNoise) => onWorkbenchPreferencesChange({ chromeNoise })} />
     </section>
+    {backupControls && cloneElement(backupControls, { disabled: phase === 'closing' })}
     <button aria-label="Close Settings" className="system-workflow__settings-close" onClick={onClose} title="Close Settings" type="button"><X size={14} /></button>
   </aside>;
 }

@@ -33,6 +33,7 @@ const INDEXER_SOURCE_TIMEOUT_MS = 8000;
 const ENVIO_ENRICHMENT_TIMEOUT_MS = 12000;
 const RPC_REPAIR_TIMEOUT_MS = 60000;
 const RPC_SOURCE_TIMEOUT_MS = 240000;
+const INCOMPLETE_ASSETS_MESSAGE = 'Some Library assets could not be loaded. The Library may be incomplete. Retry to refresh.';
 
 function commitWorkspace(set, get, workspace, extra = {}) {
   if (workspace === get().workspace) return false;
@@ -117,7 +118,7 @@ export const useLibraryStore = create((set, get) => ({
     set({ loadGeneration: generation, sourceMode: 'INDEXER', status: 'loading',
       error: null, liveError: null, progress: { resolved: 0, total: 0, failures: 0 } });
     const consume = async (repository, signal, options = {}) => {
-      const unresolvedAssetIds = []; let sourceAssets = []; let sourceFailures = 0;
+      const unresolvedAssetIds = []; let sourceAssets = []; let sourceFailures = 0; let sourceComplete = false;
       const replaceOnComplete = options.replaceOnComplete ?? !options.preserveProgress;
       for await (const batch of repository.loadProfileAssets(requestedProfileAddress,
         { signal, requestedAssetIds: options.requestedAssetIds })) {
@@ -138,17 +139,19 @@ export const useLibraryStore = create((set, get) => ({
         unresolvedAssetIds.push(...(Array.isArray(batch.unresolvedAssetIds) ? batch.unresolvedAssetIds : []));
         sourceAssets = uniqueAssets(sourceAssets, batch.assets);
         sourceFailures += batch.failures;
+        sourceComplete = Boolean(batch.complete);
         set((state) => ({
           assets: batch.complete && !sourceFailures && replaceOnComplete ? sourceAssets : uniqueAssets(state.assets, batch.assets),
           sourceMode: options.sourceMode || repository.source,
           status: options.preserveProgress ? state.status : batch.complete ? sourceFailures ? 'partial' : 'ready' : 'loading',
           ...(batch.complete && !options.preserveProgress ? { liveError: sourceFailures
-            ? 'Some Library assets could not be loaded. The Library may be incomplete. Retry to refresh.' : null } : {}),
-          progress: options.preserveProgress ? { ...state.progress, failures: sourceFailures }
+            ? INCOMPLETE_ASSETS_MESSAGE : null } : {}),
+          progress: options.preserveProgress ? state.progress
             : { resolved: batch.resolved, total: batch.total, failures: (state.progress.failures || 0) + batch.failures } }));
         saveLibraryAssetCache(workspaceStorage, requestedProfileAddress, get().assets);
       }
-      return [...new Set(unresolvedAssetIds)];
+      return { unresolvedAssetIds: [...new Set(unresolvedAssetIds)], assets: sourceAssets,
+        failures: sourceFailures, complete: sourceComplete };
     };
     const consumeWithTimeout = async (repository, timeoutMs, options = {}) => {
       const sourceController = new AbortController(); let timedOut = false;
@@ -178,7 +181,9 @@ export const useLibraryStore = create((set, get) => ({
     };
     try {
       try {
-        const unresolvedAssetIds = await consumeWithTimeout(chillwhalesProfileRepository, INDEXER_SOURCE_TIMEOUT_MS);
+        const indexed = await consumeWithTimeout(chillwhalesProfileRepository, INDEXER_SOURCE_TIMEOUT_MS);
+        if (controller.signal.aborted || get().loadGeneration !== generation) return;
+        const { unresolvedAssetIds } = indexed;
         const tokenAssetIds = get().assets.filter((asset) => asset.standard === 'LSP8' && asset.tokenId).map((asset) => asset.id);
         if (tokenAssetIds.length) {
           developmentLog('[asset-index] enriching indexed token attributes through Envio', {
@@ -216,9 +221,25 @@ export const useLibraryStore = create((set, get) => ({
             assets: unresolvedAssetIds.length, generation, profileAddress: requestedProfileAddress
           });
           try {
-            await consumeWithTimeout(luksoRpcProfileRepository, RPC_REPAIR_TIMEOUT_MS,
+            const repaired = await consumeWithTimeout(luksoRpcProfileRepository, RPC_REPAIR_TIMEOUT_MS,
               { requestedAssetIds: unresolvedAssetIds,
                 sourceMode: tokenAssetIds.length ? 'INDEXER+ENVIO+RPC' : 'INDEXER+RPC', preserveProgress: true });
+            if (controller.signal.aborted || get().loadGeneration !== generation) return;
+            const requested = new Set(unresolvedAssetIds);
+            const recovered = repaired.assets.filter(asset => requested.has(asset.id) && asset.imageUrl);
+            const failures = Math.max(indexed.failures - recovered.length, repaired.failures,
+              indexed.complete && repaired.complete ? 0 : 1);
+            // A repair finishes the indexed inventory only when every missing
+            // asset was returned and both sources completed without failures.
+            // An empty or unrelated response cannot establish recovery.
+            const complete = failures === 0;
+            set(state => {
+              const current = new Map(state.assets.map(asset => [asset.id, asset]));
+              return { assets: complete ? uniqueAssets(indexed.assets, recovered).map(asset => current.get(asset.id) || asset) : state.assets,
+                status: complete ? 'ready' : 'partial', liveError: complete ? null : INCOMPLETE_ASSETS_MESSAGE,
+                progress: { ...state.progress, failures } };
+            });
+            saveLibraryAssetCache(workspaceStorage, requestedProfileAddress, get().assets);
           } catch (repairError) {
             if (controller.signal.aborted || get().loadGeneration !== generation) throw repairError;
             developmentLog('[asset-index] RPC metadata repair incomplete', {

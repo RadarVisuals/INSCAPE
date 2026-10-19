@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import WorkbenchToolbar from '../src/public/ownerSystemWorkflow/WorkbenchToolbar.jsx';
 import ArtworkTransformTools from '../src/public/ownerSystemWorkflow/ArtworkTransformTools.jsx';
+import '../src/public/ownerSystemWorkflow/contextToolbar.css';
 import './workspacePreview.css';
 import NavigationPreview from './navigationPreview.jsx';
 import { IconKey, keyClass } from './previewControls.jsx';
@@ -655,7 +656,7 @@ export default function WorkspacePreview({ theme, onAction, status }) {
           <div className="ds-studio-bars" data-workflow-material="tactile" data-workflow-finish="flat">
             {image && (
               <div
-                className="ds-studio-inspection"
+                className="ds-studio-inspection context-action-bar"
                 role="group"
                 aria-label="Inspection and placement"
               >
@@ -705,7 +706,7 @@ export default function WorkspacePreview({ theme, onAction, status }) {
             )}
             {item && (
               <div
-                className="ds-studio-actions"
+                className="ds-studio-actions context-action-bar"
                 role="group"
                 aria-label="Selection actions preview"
               >
@@ -771,7 +772,7 @@ export default function WorkspacePreview({ theme, onAction, status }) {
             )}
             {crop !== null && (
               <div
-                className="ds-studio-crop"
+                className="ds-studio-crop context-action-bar"
                 role="group"
                 aria-label="Crop example"
                 onKeyDown={(event) => {
@@ -879,16 +880,6 @@ export default function WorkspacePreview({ theme, onAction, status }) {
                     selectSample('image');
                     setTab('Image');
                     report('Add Image');
-                  },
-                },
-                {
-                  id: 'display',
-                  label: 'Display',
-                  icon: Layers,
-                  onSelect: () => {
-                    selectSample('display');
-                    setTab('Display');
-                    report('Add Display');
                   },
                 },
                 {
@@ -1069,9 +1060,9 @@ export default function WorkspacePreview({ theme, onAction, status }) {
         {notice}
       </p>
       <p className="ds-caption">
-        Layout study · shared colour and effects, side management and the Navigator are
-        proposals. Layers uses a disposable Display composition. Existing control references
-        remain below.
+        Chosen workspace direction · production migration is pending. Layers still uses a
+        disposable Display composition; Workbench artwork ordering and detachable tool panels
+        are not implemented here. Existing control references remain below.
       </p>
     </section>
   );

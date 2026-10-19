@@ -644,3 +644,94 @@ share their lower edge on wide screens and remain separated on narrow screens.
 
 This is a local component migration. No production or private Site deployment
 was performed in this step.
+
+
+## Context inspection and selection rows — 2026-10-16
+
+Starting checkpoint: adadd07. Display, Image and Shape now portal their existing
+inspection/placement and selection controls into two flat rows above creation.
+Properties retains module fields. Actions, crop state, validation, persistence,
+undo and access checks remain module-owned. The existing toolbar observer measures
+the whole stack; no new viewport observer, saved field or command was introduced.
+Old Properties action-grid rules and duplicate workspace-reference row recipes
+were removed. contextToolbar.css is shared by production and reference.
+
+- Seven new context-row cases passed: Display/Image/Shape switching, locked-layer
+  eligibility, actual Cover geometry, fit, rotation, duplicate/delete, undo,
+  crop preview/cancel/commit, focus recovery, interrupted crop and slider keys.
+  Five visual cases cover Carbon/Mist and 1440, 390, 320 and 844×390 touch.
+  The first pass found a real arrow-navigation defect caused by React portal
+  event bubbling; handlers now live on the portalled section and all cases pass.
+- Thirteen creation-toolbar, nine camera, three companion-viewport, ten workspace,
+  five reference-interaction and one Image duplicate/failed-save/Visitor case
+  passed: 48 unique passing browser cases including the seven new cases.
+  Existing test locators now cover the Properties and action destinations;
+  the creation-shell assertion explicitly targets Creation tools.
+- Four inventory/export-boundary unit checks, token freshness, production build
+  and build:check passed. Inventory: 68 CSS files, 560 definitions, 295 names.
+  Initial JS remains 822,422 bytes. Existing dependency annotation, mixed-import
+  and chunk-size warnings remain. Node 24.19.0 was used; the package declares
+  >=24.20.0. No package or runtime changes were made.
+- Desktop Carbon/Mist, narrow phone and phone-landscape screenshots inspected.
+  Overflow uses a horizontal scrollbar and keyboard focus reveals the last key.
+
+Two older Image cases remain failing. Both were reproduced against adadd07 with
+a temporary loopback Vite server serving the original source and original tests
+(read-only Git snapshots; only browser executable and screenshot paths adapted):
+image-audit-probes cannot find Crop in its standalone fixture; image-fit expects
+an edge at 3203 but receives the viewport-bounded 2544. The migration produces the
+same failures. They are recorded as existing limits, not silently skipped or
+claimed green. Initial extra test runs also hit incorrect working-directory asset
+paths and unavailable Edge; corrected runs used repository cwd and Chrome.
+
+This is local, uncommitted work. No deployment or full release suite was run.
+The remaining Properties styling and the rest of the app still need separate
+migrations; this step does not claim that they are finished.
+
+
+## Inspect follows In place / Lift — 2026-10-16
+
+The migrated choice persisted correctly, but the explicit Display Inspect action
+still forced LIFT in both owner and published adapters. At the founder's request,
+those two overrides were removed. The existing shared viewer now resolves each
+placement's authored mode, including its existing missing-mode Lift default.
+The magnifier, Display header and I share that action; choosing the mode alone
+still only saves the setting. Image keeps its existing Lift behavior.
+
+The new regression cases failed on the original defect at desktop and phone
+widths, then passed after the fix. All 14 context-bar and Workbench-inspection
+browser cases passed. Coverage includes both chosen modes through button and I,
+real foreground fading, unchanged source geometry and camera, visible Lift
+enlargement, Escape cleanup/focus return, saved-data equality, owner/Visitor
+parity, animation/reduced motion, and live Image SVG identity. Wide and narrow
+screenshots were inspected. The two mode cases were rerun successfully after
+strengthening the computed-opacity check.
+
+Production build and build:check passed (822,422 initial JS bytes); existing
+bundle/dependency warnings remain. No CSS, schema, dependency or additional
+inspection renderer was introduced. This is local uncommitted work; no release
+suite or deployment was performed.
+
+
+## Display creation parked as experimental — 2026-10-16
+
+Removed Display from the shared owner Add command list and both design-system
+creation examples. Removed the unreachable owner creation handlers, creation
+dialog state/import and controller forwarding method, plus their toolbar labels
+and icon mapping. The manual marks Display Experimental. The core Display API,
+format editor and existing renderers remain; no CSS, new flags, storage keys or
+schema changes were introduced.
+
+All 13 toolbar browser cases passed (nine in the initial run and four after
+correcting a new assertion to wait for the visible Image canvas rather than its
+display-contents wrapper). Coverage includes absence from Add, action search and
+context-menu Add; Image creation; retained existing Display; keyboard/focus,
+Carbon/Mist, and wide/narrow layouts. Add-menu screenshots were inspected at
+1440 and 390 pixels. Production build and build:check passed with 822,040 initial
+JS bytes. Existing bundle warnings remain.
+
+Scope: this parks ordinary creation access, not every Display entry point.
+Existing Displays and their tools remain visible. The legacy empty-draft
+initializer still creates its initial Display; changing that default and hiding
+existing Displays are not included in this menu change. No user data was altered.
+The work is local and uncommitted; no deployment or full release suite was run.

@@ -6,8 +6,8 @@ import { mkdir } from 'node:fs/promises';
 const origin = process.env.INSCAPE_IMAGE_ROOT || 'http://127.0.0.1:5197';
 const settle = page => page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
 test('captured native-fit seams can be filled without moving frames; Image resizing reaches the visible grid', { timeout: 120000 }, async () => {
-  await mkdir('.browser-test-runtime', { recursive: true });
-  const browser = await chromium.launch({ executablePath: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', headless: true });
+  await mkdir(process.env.INSCAPE_BROWSER_OUTPUT || '.browser-test-runtime', { recursive: true });
+  const browser = await chromium.launch({ executablePath: process.env.INSCAPE_BROWSER_EXECUTABLE || 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', headless: true });
   try {
     const page = await browser.newPage({ viewport: { width: 2560, height: 1440 }, reducedMotion: 'reduce' });
     page.setDefaultTimeout(12000);
@@ -29,7 +29,7 @@ test('captured native-fit seams can be filled without moving frames; Image resiz
       draft.workbench.imageModules.forEach(module => { module.position.left -= 3552; });
       imageFitFixture.store.commitCompletedOperation(draft, { expectedGeneration: imageFitFixture.store.getGeneration() });
     });
-    const dock = page.locator('[data-context-tools]');
+    const dock = page.locator('[data-context-tools], [data-context-action-bars]');
     await dock.getByRole('button', { name: 'Fill canvas', exact: true }).waitFor();
     await page.evaluate(async () => { const image = new Image(); image.src = 'https://image.fit.test/source.png'; await image.decode(); });
     const scale = 1.0976232973106559, offset = { x: -3541.289770546675 + 3552 * scale, y: -1519.0376733143444 };
@@ -42,7 +42,7 @@ test('captured native-fit seams can be filled without moving frames; Image resiz
     await page.getByRole('button', { name: 'Sluiten', exact: true }).click();
     const geometry = () => page.locator('.image-module__window').evaluateAll(nodes => nodes.map(node => node.getBoundingClientRect().toJSON()));
     const beforeFrames = await geometry();
-    await page.screenshot({ path: '.browser-test-runtime/image-fit-before.png' });
+    await page.screenshot({ path: `${process.env.INSCAPE_BROWSER_OUTPUT || '.browser-test-runtime'}/image-fit-before.png` });
     for (const module of initial.imageModules) {
       await page.evaluate(id => imageFitFixture.select(id), module.id);
       await dock.getByRole('button', { name: 'Fill canvas', exact: true }).click(); await settle(page);
@@ -57,7 +57,7 @@ test('captured native-fit seams can be filled without moving frames; Image resiz
     }
     await page.evaluate(() => imageFitFixture.select('image:one')); await settle(page);
     const clean = await page.addStyleTag({ content: '.image-module__close,.image-module__bounds,.image-module__resize {visibility:hidden!important;}' });
-    const screenshot = await page.screenshot({ path: '.browser-test-runtime/image-fit-after.png' });
+    const screenshot = await page.screenshot({ path: `${process.env.INSCAPE_BROWSER_OUTPUT || '.browser-test-runtime'}/image-fit-after.png` });
     const pixels = await page.evaluate(async png => {
       const image = new Image(); image.src = `data:image/png;base64,${png}`; await image.decode();
       const canvas = document.createElement('canvas'); canvas.width = image.width; canvas.height = image.height;
@@ -103,7 +103,7 @@ test('captured native-fit seams can be filled without moving frames; Image resiz
     assert.equal((await geometry())[0].right, Math.round(target), 'release preserves the snapped edge');
     assert.ok(await covers(), 'committed resize retains its filled preview');
     assert.deepEqual((await page.evaluate(() => imageFitFixture.store.getDraft())).imageModules[0].sides[0].crop, { x:.5, y:.5, zoom:1 });
-    await page.screenshot({ path: '.browser-test-runtime/image-fit-resize-grid.png' });
+    await page.screenshot({ path: `${process.env.INSCAPE_BROWSER_OUTPUT || '.browser-test-runtime'}/image-fit-resize-grid.png` });
     await page.evaluate(() => imageFitFixture.store.undo()); await settle(page);
     assert.deepEqual(await page.evaluate(() => imageFitFixture.store.getDraft()), beforeResize, 'undo restores dimensions, layout and legacy native fitting together');
     await dock.getByRole('spinbutton', { name: 'Image width', exact: true }).fill('1008');
@@ -142,7 +142,7 @@ test('captured native-fit seams can be filled without moving frames; Image resiz
     await page.setViewportSize({ width: 390, height: 844 });
     await page.evaluate(() => imageFitFixture.camera(1, { x:-1552, y:-1312 })); await settle(page);
     await dock.getByRole('button', { name: 'Fill canvas', exact: true }).scrollIntoViewIfNeeded();
-    await page.screenshot({ path: '.browser-test-runtime/image-fit-tools-narrow.png' });
+    await page.screenshot({ path: `${process.env.INSCAPE_BROWSER_OUTPUT || '.browser-test-runtime'}/image-fit-tools-narrow.png` });
     assert.ok(await dock.getByRole('button', { name: 'Fit inside', exact: true }).isVisible());
     await page.evaluate(() => imageFitFixture.owner(false)); await settle(page);
     assert.equal(await page.getByRole('button', { name: 'Fill canvas', exact: true }).count(), 0, 'Visitor has no fitting authoring control');

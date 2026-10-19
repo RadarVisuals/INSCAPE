@@ -14,10 +14,10 @@ const saved = page => page.evaluate(() => ({ draft: localStorage.getItem(window.
   .filter(key => key.startsWith('inscape:workbench:layout:')).map(key => [key, JSON.parse(localStorage.getItem(key)).layout])) }));
 
 for (const visitor of [false, true]) for (const width of [1440, 390]) {
-  test(`Focus and explicit Lift have independent return paths (${visitor ? 'Visitor' : 'owner'}, ${width}px)`, { timeout: 90000 }, async () => {
+  test(`Focus and authored inspection have independent return paths (${visitor ? 'Visitor' : 'owner'}, ${width}px)`, { timeout: 90000 }, async () => {
     const browser = await chromium.launch({ executablePath: 'C:/Program Files (x86)/Google/Chrome/Application/chrome.exe', headless: true });
     try {
-      await mkdir('.browser-test-runtime', { recursive: true });
+      await mkdir(process.env.INSCAPE_BROWSER_OUTPUT || '.browser-test-runtime', { recursive: true });
       const page = await browser.newPage({ viewport: { width, height: 1100 }, hasTouch: width === 390, reducedMotion: width === 390 ? 'reduce' : 'no-preference' });
       page.setDefaultTimeout(10000);
       const errors = []; page.on('pageerror', error => errors.push(error.message));
@@ -28,11 +28,11 @@ for (const visitor of [false, true]) for (const width of [1440, 390]) {
       await page.evaluate(() => document.fonts.ready); await settled(page);
       const initial = await camera(page), before = await saved(page);
       if (width === 390) { await source.press('Shift+Enter'); await page.keyboard.press('f'); }
-      else await source.click();
+      else await source.dblclick();
       await settled(page);
       const focused = await camera(page), imageRect = await source.boundingBox();
       assert.notDeepEqual(focused, initial);
-      assert.equal(await page.locator('.image-lift').count(), 0, 'click remains camera Focus');
+      assert.equal(await page.locator('.image-lift').count(), 0, 'double-click remains camera Focus');
       await page.mouse.move(imageRect.x + imageRect.width / 2, imageRect.y + imageRect.height / 2);
       await page.mouse.down(); await page.mouse.move(imageRect.x + imageRect.width / 2 + 20, imageRect.y + imageRect.height / 2 + 12);
       await page.keyboard.press('i');
@@ -40,7 +40,7 @@ for (const visitor of [false, true]) for (const width of [1440, 390]) {
       await page.keyboard.press('Escape'); await page.mouse.up(); await settled(page);
       assert.deepEqual(await camera(page), focused, 'cancelling the drag cannot also consume Focus history');
       await source.focus();
-      await page.screenshot({ path: `.browser-test-runtime/inspect-image-${visitor ? 'visitor' : 'owner'}-${width}.png` });
+      await page.screenshot({ path: `${process.env.INSCAPE_BROWSER_OUTPUT || '.browser-test-runtime'}/inspect-image-${visitor ? 'visitor' : 'owner'}-${width}.png` });
       await page.keyboard.press('i');
       await page.getByRole('dialog', { name: 'Inspect Image', exact: true }).waitFor();
       await page.waitForFunction(() => document.querySelector('.image-module__canvas[data-lift-source]'));
@@ -55,7 +55,7 @@ for (const visitor of [false, true]) for (const width of [1440, 390]) {
       // Both the owner contextual dock and the shared quiet Image controls call
       // the same action; narrow/Visitor use the in-module control.
       const inspect = !visitor && width === 1440
-        ? page.locator('[data-context-tools]').getByRole('button', { name: 'Inspect Image', exact: true })
+        ? page.locator('[data-context-tools], [data-context-action-bars]').getByRole('button', { name: 'Inspect Image', exact: true })
         : image.getByRole('button', { name: 'Inspect Image', exact: true });
       await inspect.click();
       await page.getByRole('dialog', { name: 'Inspect Image', exact: true }).waitFor();
@@ -101,15 +101,16 @@ for (const visitor of [false, true]) for (const width of [1440, 390]) {
       assert.equal(await page.locator('.display-focus-viewer').count(), 0);
       await page.keyboard.press('i');
       await page.getByRole('button', { name: 'Close artwork viewer', exact: true }).waitFor();
-      await page.waitForFunction(() => document.querySelector('[data-inspection-context="selected"][data-lift-source]'));
-      assert.deepEqual(await camera(page), displayFocus, 'explicit Inspect lifts even an authored In-place placement without moving the camera');
+      await page.waitForFunction(() => document.querySelector('[data-inspection-context="selected"]'));
+      assert.equal(await page.locator('.system-workflow__lift-artwork, [data-lift-source]').count(), 0, 'Display Inspect respects the authored In-place mode');
+      assert.deepEqual(await camera(page), displayFocus, 'In-place inspection keeps the focused camera');
       await page.keyboard.press('Escape');
       await page.getByRole('button', { name: 'Close artwork viewer', exact: true }).waitFor({ state: 'detached' }); await settled(page);
       assert.deepEqual(await camera(page), displayFocus);
       const board = page.locator('[data-workbench-view-id="display:primary"]');
       if (width === 390) await board.getByRole('button', { name: 'Show Display controls', exact: true }).tap();
       else await board.locator(':scope > header').hover({ position: { x: 150, y: 2 } });
-      await page.screenshot({ path: `.browser-test-runtime/inspect-controls-${visitor ? 'visitor' : 'owner'}-${width}.png` });
+      await page.screenshot({ path: `${process.env.INSCAPE_BROWSER_OUTPUT || '.browser-test-runtime'}/inspect-controls-${visitor ? 'visitor' : 'owner'}-${width}.png` });
       if (width === 390) await board.getByRole('button', { name: 'Inspect artwork', exact: true }).tap();
       else await board.getByRole('button', { name: 'Inspect artwork', exact: true }).click();
       await page.getByRole('button', { name: 'Close artwork viewer', exact: true }).waitFor();

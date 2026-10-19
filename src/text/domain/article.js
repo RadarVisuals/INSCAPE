@@ -114,7 +114,24 @@ function validMark(mark) {
     && [undefined, null, 'noopener noreferrer nofollow', 'noopener noreferrer'].includes(mark.attrs.rel)
     && [undefined, null].includes(mark.attrs.class) && [undefined, null].includes(mark.attrs.title);
 }
+// Only successfully validated, recursively immutable data can reuse a result.
+// A frozen outer object with mutable children or accessors is deliberately not
+// eligible. Weak ownership retains neither discarded drafts nor another value.
+const validatedImmutableArticles = new WeakSet();
+function deeplyFrozenData(value, seen = new WeakSet()) {
+  if (!value || typeof value !== 'object') return true;
+  if (!Object.isFrozen(value)) return false;
+  const prototype = Object.getPrototypeOf(value);
+  if (prototype !== null && prototype !== Object.prototype && prototype !== Array.prototype) return false;
+  if (seen.has(value)) return true;
+  seen.add(value);
+  return Reflect.ownKeys(value).every(key => {
+    const descriptor = Object.getOwnPropertyDescriptor(value, key);
+    return Object.hasOwn(descriptor, 'value') && deeplyFrozenData(descriptor.value, seen);
+  });
+}
 export function assertArticle(article) {
+  if (validatedImmutableArticles.has(article)) return article;
   if (!exact(article, ['documentType', 'version', 'title', 'font', 'content'], ['appearance']) || article.documentType !== ARTICLE_TYPE
     || article.version !== 1 || !string(article.title, 160) || !ARTICLE_FONTS.some(f => f.id === article.font)) throw new Error('Unsupported article format. The source has not been changed.');
   if (article.appearance !== undefined) {
@@ -185,6 +202,7 @@ export function assertArticle(article) {
   }
   visit(article.content, null, 0);
   if (new TextEncoder().encode(JSON.stringify(article)).length > ARTICLE_MAX_BYTES) throw new Error('Article exceeds 192 KiB.');
+  if (deeplyFrozenData(article)) validatedImmutableArticles.add(article);
   return article;
 }
 export function createArticle(title = '') {

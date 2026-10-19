@@ -20,12 +20,18 @@ export function OwnerSystemWorkflowSelectMenu({ compact = false, defaultValue, l
 
 export function OwnerSystemWorkflowFilterMenu({ menuSurface, onChange, options, value }) {
   const [open, setOpen] = useState(false); const [position, setPosition] = useState(null); const triggerRef = useRef(null); const menuRef = useRef(null);
+  const focusFrame = useRef(0);
+  const cancelFocusReturn = () => { cancelAnimationFrame(focusFrame.current); focusFrame.current = 0; };
+  useEffect(() => cancelFocusReturn, []);
   const active = value !== 'all'; const selected = options.find((option) => option.value === value)?.label || 'All';
-  const close = (focus = false) => { setOpen(false); if (focus) requestAnimationFrame(() => triggerRef.current?.focus()); };
+  const close = (focus = false) => {
+    cancelFocusReturn(); setOpen(false);
+    if (focus) focusFrame.current = requestAnimationFrame(() => { focusFrame.current = 0; triggerRef.current?.focus(); });
+  };
   const leave = event => { if (!triggerRef.current?.contains(event.relatedTarget) && !menuRef.current?.contains(event.relatedTarget)) close(); };
   const keyDown = event => { if (open && event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); close(true); } };
   const locate = () => { const rect = triggerRef.current?.getBoundingClientRect(); if (!rect) return; const workspaceTop = triggerRef.current?.closest('.system-workflow__workspace-window')?.getBoundingClientRect().top ?? 0; const width = Math.min(252, innerWidth - 24); setPosition({ bottom: innerHeight - rect.top + 6, left: Math.max(12, Math.min(rect.right - width, innerWidth - width - 12)), maxHeight: Math.max(36, rect.top - workspaceTop - 24), width }); };
-  const show = () => { locate(); setOpen(true); };
+  const show = () => { cancelFocusReturn(); locate(); setOpen(true); };
   useLayoutEffect(() => { if (open) menuRef.current?.querySelector('[aria-checked="true"]')?.focus({ preventScroll: true }); }, [open]);
   useLayoutEffect(() => { if (open) menuRef.current?.querySelector('[aria-checked="true"]')?.scrollIntoView({ block: 'nearest' }); }, [open, position?.maxHeight]);
   useEffect(() => { if (!open) return undefined; addEventListener('resize', locate); return () => removeEventListener('resize', locate); }, [open]);

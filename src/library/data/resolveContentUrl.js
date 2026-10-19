@@ -13,7 +13,9 @@ export function resolveContentUrl(value, {
   if (!source) return null;
   if (allowRelative && /^\/(?!\/)/u.test(source) && !/[\s<>"']/u.test(source)) return source;
   if (/^ipfs:\/\//i.test(source)) {
-    const path = source.replace(/^ipfs:\/\/(ipfs\/)?/i, '').replace(/^\/+/, '');
+    // Uploaded filenames may contain spaces. Encode them for transport without
+    // double-encoding existing escapes or treating a literal + as a space.
+    const path = source.replace(/^ipfs:\/\/(ipfs\/)?/i, '').replace(/^\/+/, '').replace(/ /g, '%20');
     if (!path || /[\s<>"']/u.test(path)) return null;
     return `${gatewayBase(ipfsGateway)}${path}`;
   }
