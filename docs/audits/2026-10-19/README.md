@@ -36,6 +36,10 @@ Local path roots in shared logs are redacted; counts and test outcomes are intac
 
 ## Remaining boundaries
 
+**Grid resize release (20 October):** [observed crash, targeted guard and pending
+user retest](../2026-10-20/grid-resize-release.md). Local checks pass; the original
+composition's crash is not yet conclusively resolved.
+
 **Hosted verification follow-up:** [platform-independent inventory and required
 main check](hosted-verification.md). The first inspected Linux run failed on the
 CSS inventory despite a successful Netlify preview. Its failure is preserved;

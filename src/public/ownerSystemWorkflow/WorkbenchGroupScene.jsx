@@ -6,6 +6,8 @@ import { workbenchSelectionBounds } from './workbenchViewScale.js';
 import { workbenchGroupLayout, compactWorkbenchGroupRectangles } from './workbenchGroupLayout.js';
 import { resolvePublishedAssetUrl } from '../../profileDocument/domain/publishedAssetUrl.js';
 
+const EMPTY_GROUPS = Object.freeze([]);
+
 // Group browsing owns temporary presentation geometry and visibility. Registered modules stay mounted, keep
 // their authored frames, and continue to own their content and editing state.
 export function useWorkbenchGroupScene({ view, content, hostRef, navigation, sceneRef, disabled }) {
@@ -14,7 +16,7 @@ export function useWorkbenchGroupScene({ view, content, hostRef, navigation, sce
   const latest = useRef(null);
   const [viewportWidth, setViewportWidth] = useState(innerWidth);
   useEffect(() => { const resize = () => setViewportWidth(innerWidth); addEventListener('resize', resize); return () => removeEventListener('resize', resize); }, []);
-  const groups = content.workbenchGroups || [];
+  const groups = content.workbenchGroups || EMPTY_GROUPS;
   const active = groups.find(group => group.id === openId) || null;
   const ids = group => workbenchGroupWindowIds(content, group).filter(id => view.entries.has(id));
   const authoredRectangles = group => Object.fromEntries(ids(group).flatMap(id => {
@@ -29,7 +31,9 @@ export function useWorkbenchGroupScene({ view, content, hostRef, navigation, sce
   const bounds = group => layout(group).bounds;
   const spread = active && !disabled ? layout(active) : { transforms: {}, rectangles: {} };
   const spreadKey = JSON.stringify(spread.transforms);
-  useLayoutEffect(() => { view.setPresentationTransforms(current => JSON.stringify(current) === spreadKey ? current : spread.transforms); }, [spreadKey, view.setPresentationTransforms]);
+  useLayoutEffect(() => {
+    if (JSON.stringify(view.presentationTransforms) !== spreadKey) view.setPresentationTransforms(spread.transforms);
+  }, [spreadKey, view.presentationTransforms, view.setPresentationTransforms]);
   useLayoutEffect(() => () => { view.setPresentationTransforms({}); view.setHiddenModuleIds([]); }, [view.setPresentationTransforms, view.setHiddenModuleIds]);
   latest.current = { groups, active, ids, bounds, authoredBounds, authoredRectangles, spread, focusedId, navigation, view, disabled };
   useLayoutEffect(() => {
@@ -56,10 +60,14 @@ export function useWorkbenchGroupScene({ view, content, hostRef, navigation, sce
   }, [disabled, openId, active, focusedId, revision]);
   useLayoutEffect(() => {
     const hidden = new Set(disabled ? [] : groups.filter(group => group.position && group.id !== active?.id).flatMap(ids));
-    view.setHiddenModuleIds(current => JSON.stringify(current) === JSON.stringify([...hidden]) ? current : [...hidden]);
+    const hiddenIds = [...hidden];
+    // Geometry notifications can arrive during a resize commit. Even a state
+    // updater returning its old value can schedule another synchronous render
+    // while the provider has pending work. Do not dispatch unchanged state.
+    if (JSON.stringify(view.hiddenModuleIds) !== JSON.stringify(hiddenIds)) view.setHiddenModuleIds(hiddenIds);
     // Membership drops can hide the current selection without using Stack.
     // Remove it at the visibility boundary so tools and Keeper receive the same truth.
-    view.setSelection(current => current.some(id => hidden.has(id)) ? current.filter(id => !hidden.has(id)) : current);
+    if (view.selection.some(id => hidden.has(id))) view.setSelection(current => current.filter(id => !hidden.has(id)));
     const focused = new Set(active ? ids(active) : []), nodes = [...view.entries];
     for (const [id, node] of nodes) {
       node.toggleAttribute('data-workbench-group-presented', !disabled && focused.has(id));
@@ -73,7 +81,7 @@ export function useWorkbenchGroupScene({ view, content, hostRef, navigation, sce
       node.removeAttribute('data-workbench-group-presented'); node.removeAttribute('data-workbench-group-hidden'); node.removeAttribute('data-workbench-group-muted');
       if (node.hasAttribute('data-group-owns-inert')) { node.inert = false; delete node.dataset.groupOwnsInert; }
     } };
-  }, [groups, active, revision, disabled, view.entries, view.selection, view.setSelection]);
+  }, [groups, active, revision, disabled, view.entries, view.hiddenModuleIds, view.setHiddenModuleIds, view.selection, view.setSelection]);
   const open = useCallback(group => {
     const current = latest.current, target = current.groups.find(item => item.id === group.id);
     if (!target || current.disabled || !current.bounds(target)) return false;
