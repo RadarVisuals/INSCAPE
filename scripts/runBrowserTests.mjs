@@ -9,7 +9,7 @@ import { passingTap } from './releaseEvidence.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const defaults = ['artwork-document', 'svg-lifecycle', 'camera-controls', 'context-action-bars', 'image-activation', 'image-click', 'image-duplicate', 'image-interaction', 'image-flip',
-  'image-load-recovery', 'image-recovery-owner', 'image-resize-focus', 'keeper', 'keeper-dialogue', 'keeper-selection', 'library-drop-lifecycle',
+  'image-load-recovery', 'image-recovery-owner', 'image-resize-focus', 'resize-mark-pixels', 'image-corner-resize', 'image-fit', 'keeper', 'keeper-dialogue', 'keeper-selection', 'library-drop-lifecycle',
   'library-filter-keyboard', 'library-storage', 'library-recovery', 'mini-apps', 'owner-profile-routing', 'published-visitor',
   'published-workbench-groups', 'reception-card', 'shapes', 'text-focus-writing', 'text-linked-frames',
   'text-recovery-position', 'text-window-edges', 'workbench-area-navigation', 'workbench-groups', 'workbench-index',

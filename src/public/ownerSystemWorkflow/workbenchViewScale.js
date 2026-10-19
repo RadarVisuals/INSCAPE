@@ -22,6 +22,13 @@ export function workbenchViewStyle(scale, left, top, width, height, x = 0, y = 0
 }
 
 export const identityWorkbenchTransform = Object.freeze({ scale: 1, x: 0, y: 0 });
+// A corner follows the stronger relative movement, so a horizontal or vertical
+// drag can scale the whole frame without having to track its diagonal.
+export function proportionalCornerResize(vector, delta) {
+  const x = delta.x / vector.x, y = delta.y / vector.y;
+  const axis = Math.abs(x) >= Math.abs(y) ? 'x' : 'y';
+  return { axis, factor: 1 + (axis === 'x' ? x : y) };
+}
 export function clampWorkbenchMove(rect, delta, viewport) {
   const axis = (start, size, change, min, max) => Math.max(min - start, Math.min(Math.max(min, max - size) - start, change));
   return { x: axis(rect.left, rect.width, delta.x, viewport.left, viewport.right),

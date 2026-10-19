@@ -139,7 +139,7 @@ export default function ImageWindow({ id, title, position, size, fitScale, fitSi
       ? !edge.includes('w') || screen.width >= 56
       : (edge === 'n' || edge === 's' ? screen.width : screen.height) >= 56)).map(([edge, label]) =>
       <div key={edge} className={`image-module__resize is-${edge}`} role="separator"
-        style={workbenchResizeControl(edge, { left: paint.left / density, top: paint.top / density, width: paint.width / density, height: paint.height / density }, { width: innerWidth, height: innerHeight })}
+        style={workbenchResizeControl(edge, { left: paint.left / density, top: paint.top / density, width: paint.width / density, height: paint.height / density }, { width: innerWidth, height: innerHeight }, density)}
         aria-label={label ? `Resize Image ${label}` : 'Resize Image window'}
         aria-orientation={edge === 'e' || edge === 'w' ? 'vertical' : 'horizontal'}
         aria-valuetext={`${currentSize.width} by ${currentSize.height} pixels`} aria-valuenow={edge === 'e' || edge === 'w' ? currentSize.width : currentSize.height} tabIndex={0}

@@ -83,7 +83,8 @@ test('captured native-fit seams can be filled without moving frames; Image resiz
     const grip = page.locator('.image-module__resize.is-e');
     const handle = await grip.boundingBox();
     await page.mouse.move(handle.x + handle.width / 2, handle.y + handle.height / 2); await page.mouse.down();
-    const target = 2592 * scale + offset.x;
+    // Stay on a visible grid line inside the current 2000-wide Workbench.
+    const target = 1296 * scale + offset.x;
     const edge = (await geometry())[0].right;
     await page.mouse.move(handle.x + handle.width / 2 + target - edge, handle.y + handle.height / 2, { steps: 6 }); await settle(page);
     assert.equal((await geometry())[0].right, Math.round(target), 'live right edge reaches the same rounded coordinate as the visible grid');
@@ -106,6 +107,7 @@ test('captured native-fit seams can be filled without moving frames; Image resiz
     await page.screenshot({ path: `${process.env.INSCAPE_BROWSER_OUTPUT || '.browser-test-runtime'}/image-fit-resize-grid.png` });
     await page.evaluate(() => imageFitFixture.store.undo()); await settle(page);
     assert.deepEqual(await page.evaluate(() => imageFitFixture.store.getDraft()), beforeResize, 'undo restores dimensions, layout and legacy native fitting together');
+    await dock.locator('summary').filter({ hasText: 'Dimensions' }).click();
     await dock.getByRole('spinbutton', { name: 'Image width', exact: true }).fill('1008');
     await dock.getByRole('button', { name: 'Set size', exact: true }).click(); await settle(page);
     assert.ok(await covers(), 'numeric resizing uses the same automatic filling behavior');
@@ -124,7 +126,7 @@ test('captured native-fit seams can be filled without moving frames; Image resiz
       await page.mouse.move(handle.x + handle.width / 2 + 48, handle.y + handle.height / 2 + 64, { steps:6 }); await settle(page);
     };
     await beginGroupResize();
-    assert.ok(await covers(), 'selection resizing fills native artwork during the preview');
+    assert.equal(await covers(), false, 'proportional selection resizing preserves native fitting during the preview');
     assert.deepEqual(await page.evaluate(() => imageFitFixture.store.getDraft()), beforeResize, 'selection preview has not saved');
     await page.keyboard.press('Escape'); await page.mouse.up(); await settle(page);
     assert.deepEqual(await geometry(), beforeGroupFrames, 'cancel restores every selected frame');
@@ -134,7 +136,8 @@ test('captured native-fit seams can be filled without moving frames; Image resiz
     assert.equal(groupPreview[0].bottom, groupPreview[1].top, 'selected images retain their shared edge during resize');
     await page.mouse.up(); await settle(page);
     assert.deepEqual(await geometry(), groupPreview, 'selection preview and commit paint exactly the same frames');
-    assert.ok(await covers(), 'selection commit retains its filled preview');
+    assert.equal(await covers(), false, 'selection commit retains its native-fit preview');
+    assert.equal((await page.evaluate(() => imageFitFixture.store.getDraft())).imageModules[0].sides[0].crop, null);
     await page.evaluate(() => imageFitFixture.store.undo()); await settle(page);
     assert.deepEqual(await page.evaluate(() => imageFitFixture.store.getDraft()), beforeResize, 'one undo restores the entire resized selection and its fitting');
     assert.deepEqual(await geometry(), beforeGroupFrames);

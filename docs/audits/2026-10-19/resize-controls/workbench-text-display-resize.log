@@ -1,0 +1,46 @@
+TAP version 13
+# Subtest: Text/primary Display group resize preserves joins through preview, save and camera changes at DPR 1
+ok 1 - Text/primary Display group resize preserves joins through preview, save and camera changes at DPR 1
+  ---
+  duration_ms: 6925.967
+  type: 'test'
+  ...
+# Subtest: Text/primary Display group resize preserves joins through preview, save and camera changes at DPR 1.25
+ok 2 - Text/primary Display group resize preserves joins through preview, save and camera changes at DPR 1.25
+  ---
+  duration_ms: 6526.578
+  type: 'test'
+  ...
+# Subtest: Text/primary Display group resize preserves joins through preview, save and camera changes at DPR 2
+ok 3 - Text/primary Display group resize preserves joins through preview, save and camera changes at DPR 2
+  ---
+  duration_ms: 7664.1129
+  type: 'test'
+  ...
+# Subtest: Text/additional Display group resize preserves joins through preview, save and camera changes at DPR 1
+ok 4 - Text/additional Display group resize preserves joins through preview, save and camera changes at DPR 1
+  ---
+  duration_ms: 4993.6899
+  type: 'test'
+  ...
+# Subtest: Text/additional Display group resize preserves joins through preview, save and camera changes at DPR 1.25
+ok 5 - Text/additional Display group resize preserves joins through preview, save and camera changes at DPR 1.25
+  ---
+  duration_ms: 5706.27
+  type: 'test'
+  ...
+# Subtest: Text/additional Display group resize preserves joins through preview, save and camera changes at DPR 2
+ok 6 - Text/additional Display group resize preserves joins through preview, save and camera changes at DPR 2
+  ---
+  duration_ms: 8416.5476
+  type: 'test'
+  ...
+1..6
+# tests 6
+# suites 0
+# pass 6
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 40782.0358

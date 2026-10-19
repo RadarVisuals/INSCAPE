@@ -90,7 +90,9 @@ test('placement, drawing, image drops and resizing use the new per-axis boundary
   const drop = imageDropGeometry({ width: 100, height: 100 }, { x: 3000, y: 500 }, { left: 0, top: 0, width: 5000, height: 1200 }, 1, { x: 0, y: 0 }, 1, bounds);
   assert.equal(drop.destination.position.left, 2950);
   const resized = resizeImageGeometry({ left: 3000, top: 100 }, { width: 100, height: 100 }, 1, 'se', { x: 3000, y: 2000 }, undefined, undefined, bounds);
-  assert.deepEqual(resized.size, { width: 1992, height: 1092 });
+  assert.deepEqual(resized.size, { width: 1092, height: 1092 }, 'the tighter area edge limits both corner dimensions');
+  const widened = resizeImageGeometry({ left: 3000, top: 100 }, { width: 100, height: 100 }, 1, 'e', { x: 3000, y: 0 }, undefined, undefined, bounds);
+  assert.deepEqual(widened.size, { width: 1992, height: 100 }, 'the side handle still reaches the independent width boundary');
 });
 
 test('new modules and stacks can use an expanded canvas and respect a smaller height', () => {

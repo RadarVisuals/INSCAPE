@@ -1,0 +1,82 @@
+TAP version 13
+# Subtest: Image, Shape and Text marks stay pixel-aligned at density 1
+not ok 1 - Image, Shape and Text marks stay pixel-aligned at density 1
+  ---
+  duration_ms: 1258.3761
+  type: 'test'
+  location: '<local-audit>\\remediation-2026-10-19-shared-checkpoint\\work\\browser-tests\\resize-mark-pixels.browser.mjs:11:42'
+  failureType: 'testCodeFailure'
+  error: 'Image 0.55 image-module__resize is-e: physical edge 195.5'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (file:///C:/Users/Hidden%20Swarm/Documents/ChatGPT/inscape/remediation-2026-10-19-shared-checkpoint/work/browser-tests/resize-mark-pixels.browser.mjs:41:18)
+    async Test.run (node:internal/test_runner/test:1404:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3)
+  ...
+# Subtest: Image, Shape and Text marks stay pixel-aligned at density 1.25
+not ok 2 - Image, Shape and Text marks stay pixel-aligned at density 1.25
+  ---
+  duration_ms: 1215.7234
+  type: 'test'
+  location: '<local-audit>\\remediation-2026-10-19-shared-checkpoint\\work\\browser-tests\\resize-mark-pixels.browser.mjs:11:42'
+  failureType: 'testCodeFailure'
+  error: 'Image 0.55 image-module__resize is-n: physical edge 141.49999618530273'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (file:///C:/Users/Hidden%20Swarm/Documents/ChatGPT/inscape/remediation-2026-10-19-shared-checkpoint/work/browser-tests/resize-mark-pixels.browser.mjs:41:18)
+    async Test.run (node:internal/test_runner/test:1404:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:969:7)
+  ...
+# Subtest: Image, Shape and Text marks stay pixel-aligned at density 1.5
+not ok 3 - Image, Shape and Text marks stay pixel-aligned at density 1.5
+  ---
+  duration_ms: 2265.0412
+  type: 'test'
+  location: '<local-audit>\\remediation-2026-10-19-shared-checkpoint\\work\\browser-tests\\resize-mark-pixels.browser.mjs:11:42'
+  failureType: 'testCodeFailure'
+  error: 'Image 0.55 image-module__resize is-n: physical edge 169.5'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (file:///C:/Users/Hidden%20Swarm/Documents/ChatGPT/inscape/remediation-2026-10-19-shared-checkpoint/work/browser-tests/resize-mark-pixels.browser.mjs:41:18)
+    async Test.run (node:internal/test_runner/test:1404:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:969:7)
+  ...
+# Subtest: Image, Shape and Text marks stay pixel-aligned at density 2
+not ok 4 - Image, Shape and Text marks stay pixel-aligned at density 2
+  ---
+  duration_ms: 2312.8458
+  type: 'test'
+  location: '<local-audit>\\remediation-2026-10-19-shared-checkpoint\\work\\browser-tests\\resize-mark-pixels.browser.mjs:11:42'
+  failureType: 'testCodeFailure'
+  error: 'Image 0.9 image-module__resize is-n: physical edge 293.5'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (file:///C:/Users/Hidden%20Swarm/Documents/ChatGPT/inscape/remediation-2026-10-19-shared-checkpoint/work/browser-tests/resize-mark-pixels.browser.mjs:41:18)
+    async Test.run (node:internal/test_runner/test:1404:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:969:7)
+  ...
+1..4
+# tests 4
+# suites 0
+# pass 0
+# fail 4
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 7394.4473

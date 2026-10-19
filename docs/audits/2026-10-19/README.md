@@ -36,6 +36,11 @@ Local path roots in shared logs are redacted; counts and test outcomes are intac
 
 ## Remaining boundaries
 
+The subsequent [resize-controls repair](resize-controls.md) records the founder's
+proportional-corner decision, physical-pixel handle alignment, before/after
+regressions and the new verification results. Its counts describe the packaged
+checkout rather than the historical full local-tree run above.
+
 - Public upload admission, identity quotas and abuse/replay protection remain
   unresolved before an open paid-upload service. Existing same-origin checks and
   per-IP limits are not uploader authentication.

@@ -240,7 +240,7 @@ export function WorkbenchWindow({ avoidControls, children, background, compact, 
         role="separator" tabIndex={0} aria-orientation={['w', 'e'].includes(edge) ? 'vertical' : 'horizontal'}
         aria-valuenow={Math.round(['w', 'e'].includes(edge) ? current.width : current.height)}
         aria-valuetext={`${Math.round(current.width)} by ${Math.round(current.height)} pixels`}
-        style={workbenchResizeControl(edge, painted, viewport)} onKeyDown={event => key(event, edge)}
+        style={workbenchResizeControl(edge, painted, viewport, globalThis.devicePixelRatio || 1)} onKeyDown={event => key(event, edge)}
         onPointerDown={event => begin(event, 'resize', edge)} {...pointerProps} />)}
     surfaceClassName="system-workflow__instrument-content">
     {fitContent ? <div ref={measuredContent}>{children}</div> : children}

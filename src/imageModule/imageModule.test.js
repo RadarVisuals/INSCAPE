@@ -120,7 +120,7 @@ test('Image uses existing draft storage, rejects stale/profile/failed edits, and
   assert.ok(f.entries.has(systemWorkflowDraftKey(profile)));
   assert.deepEqual(createSystemWorkflowDraftStore({ profileAddress: profile, storage: f.storage }).getDraft(), f.store.getDraft());
 });
-test('resizing a legacy fitted Image fills its new canvas atomically, retains authored crops and supports undo', () => {
+test('changing an Image canvas ratio fills it atomically, retains authored crops and supports undo', () => {
   const f = fixture(); addImageModule(f.store, profile);
   const empty = f.store.getDraft().imageModules[0];
   const fitted = { ...empty, width: 984, height: 552, sides: [{ ...side('native'), crop: null }, side('cropped')] };
@@ -144,6 +144,22 @@ test('resizing a legacy fitted Image fills its new canvas atomically, retains au
   assert.deepEqual(after.workbench.imageModules[0].position, { left: 3576, top: 1392 });
   assert.ok(f.store.undo()); assert.deepEqual(f.store.getDraft(), before);
   assert.ok(f.store.redo()); assert.deepEqual(f.store.getDraft(), after);
+});
+
+test('proportional Image resizing preserves native fitting, crop, source and transforms through save and undo', () => {
+  const f = fixture(); addImageModule(f.store, profile);
+  const empty = f.store.getDraft().imageModules[0];
+  const fitted = { ...empty, width: 193, height: 289, sides: [{ ...side('native'), crop: null }, side('cropped')] };
+  assert.ok(saveImageModule(f.store, profile, empty, fitted));
+  const before = f.store.getDraft();
+  const change = { id: fitted.id, expected: fitted, width: 241, height: 361, left: 3576, top: 1392,
+    store: f.store, profileAddress: profile, layoutKey: 'imageModules', prepare: prepareImageResize };
+  assert.equal(imageCropForResize(null, fitted, change), null, 'rounded uniform scaling preserves Fit inside');
+  assert.ok(commitWorkbenchSelectionResize([change]));
+  assert.deepEqual(f.store.getDraft().imageModules[0].sides, fitted.sides);
+  assert.equal(f.store.getDraft().imageModules[0].width, 241);
+  assert.equal(f.store.getDraft().imageModules[0].height, 361);
+  assert.ok(f.store.undo()); assert.deepEqual(f.store.getDraft(), before);
 });
 
 test('public Image preserves crop, transforms and provenance; older publication restore retains local modules as private', () => {

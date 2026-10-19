@@ -6,7 +6,7 @@ export const WORKBENCH_RESIZE_EDGES = [['nw', 'top left'], ['n', 'top'], ['ne', 
 // Centre screen-sized targets on their visible marks. On tiny surfaces, leave
 // the middle available for movement while keeping the entire mark clickable.
 // Targets may move inward at a viewport boundary; offscreen edges stay offscreen.
-export function workbenchResizeControl(edge, screen, viewport) {
+export function workbenchResizeControl(edge, screen, viewport, density = 1) {
   const x = edge.includes('w') ? 0 : edge.includes('e') ? screen.width : screen.width / 2;
   const y = edge.includes('n') ? 0 : edge.includes('s') ? screen.height : screen.height / 2;
   const inset = span => Math.min(14, Math.max(4, span / 4));
@@ -15,7 +15,20 @@ export function workbenchResizeControl(edge, screen, viewport) {
   const reachable = (point, outside, limit) => point < 0 || point > limit ? point - outside : Math.max(0, Math.min(limit - 28, point - outside));
   const left = reachable(screen.left + x, outsideX, viewport.width) - screen.left;
   const top = reachable(screen.top + y, outsideY, viewport.height) - screen.top;
-  return { left, top, '--resize-mark-x': `${x - left - 4}px`, '--resize-mark-y': `${y - top - 4}px` };
+  // Snap only the painted mark to physical pixels. Odd projected dimensions
+  // put midpoint anchors on half pixels; moving the authored edge or the hit
+  // target to compensate would alter geometry or pointer reachability.
+  const mark = (origin, anchor, target) => {
+    const offset = anchor - target - 4;
+    let physical = Math.round((origin + anchor - 4) * density);
+    // Tiny surfaces place the mark at the hit area's edge. Choose the nearest
+    // pixel inside that area; retain existing partial clipping at the viewport.
+    if (offset >= 0 && offset <= 20) physical = Math.max(Math.ceil((origin + target) * density),
+      Math.min(Math.floor((origin + target + 20) * density), physical));
+    return `${physical / density - origin - target}px`;
+  };
+  return { left, top,
+    '--resize-mark-x': mark(screen.left, x, left), '--resize-mark-y': mark(screen.top, y, top) };
 }
 
 export function resizeWorkbenchWindow(frame, edge, delta, minimum, bounds, snap) {

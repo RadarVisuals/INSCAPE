@@ -1,6 +1,17 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { clampWorkbenchMove, identityWorkbenchTransform, scaleWorkbenchTransform, stepWorkbenchViewScale, workbenchSelectionBounds, workbenchViewStyle, zoomWorkbenchCamera } from './workbenchViewScale.js';
+import { clampWorkbenchMove, identityWorkbenchTransform, proportionalCornerResize, scaleWorkbenchTransform, stepWorkbenchViewScale, workbenchSelectionBounds, workbenchViewStyle, zoomWorkbenchCamera } from './workbenchViewScale.js';
+
+test('proportional corners follow either axis instead of projecting movement onto the diagonal', () => {
+  for (const x of [-320, 320]) for (const y of [-240, 240]) {
+    for (const factor of [-.5, 0, .25, 1]) {
+      for (const delta of [{ x: x * factor, y: 0 }, { x: 0, y: y * factor }, { x: x * factor, y: y * factor }])
+        assert.equal(proportionalCornerResize({ x, y }, delta).factor, 1 + factor);
+    }
+    assert.deepEqual(proportionalCornerResize({ x, y }, { x: x * .5, y: y * -.2 }), { axis: 'x', factor: 1.5 });
+    assert.deepEqual(proportionalCornerResize({ x, y }, { x: x * -.2, y: y * -.5 }), { axis: 'y', factor: .5 });
+  }
+});
 
 test('camera zoom preserves the world point beneath the cursor through reversal and limits', () => {
   const origin = { x: -1200, y: 341 }, anchor = { x: 713, y: 208 };

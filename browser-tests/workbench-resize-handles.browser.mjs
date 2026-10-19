@@ -43,7 +43,11 @@ for (const [width, density] of [[1440, 1], [390, 1.25]]) test(`every resize grip
         const dy = edge.includes('n') ? -12 : edge.includes('s') ? 12 : 0;
         await page.mouse.move(x + dx, y + dy, { steps: 4 }); await page.mouse.up(); await settle(page);
         const after = await surface.boundingBox();
-        if (kind !== 'Display') {
+        if (kind === 'Image' && edge.length === 2) {
+          const factor = 1 + Math.max(Math.abs(dx) / before.width, Math.abs(dy) / before.height);
+          near(after.width, before.width * factor, `${kind} ${scale} ${edge} proportional width`);
+          near(after.height, before.height * factor, `${kind} ${scale} ${edge} proportional height`);
+        } else if (kind !== 'Display') {
           near(after.width, before.width + Math.abs(dx), `${kind} ${scale} ${edge} width`);
           near(after.height, before.height + Math.abs(dy), `${kind} ${scale} ${edge} height`);
         } else assert.ok(after.width > before.width && after.height > before.height, 'Display resizes proportionally');

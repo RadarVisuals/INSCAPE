@@ -37,17 +37,48 @@ test('Image corners and edges preserve their opposite anchors through viewport f
   }
 });
 
-test('Image resize snapping uses the moving edge, with bounds winning over a snapped target', () => {
+test('Image corner snapping follows its driving edge proportionally; side handles retain independent sizing', () => {
   const position = { left: 100.5, top: 200.5 }, size = { width: 200, height: 80 };
   const edges = [];
   const next = resizeImageGeometry(position, size, 1, 'nw', { x: -50, y: -50 }, (axis, edge, value) => {
     edges.push([axis, edge, value]); return edge === 'left' ? -30 : 180.5;
   });
-  assert.deepEqual(edges, [['x', 'left', 50.5], ['y', 'top', 150.5]]);
-  assert.deepEqual(next, { position: { left: 8.5, top: 180.5 }, size: { width: 292, height: 100 } });
+  assert.deepEqual(edges, [['y', 'top', 150.5]]);
+  assert.deepEqual(next, { position: { left: 50.5, top: 180.5 }, size: { width: 250, height: 100 } });
+  const side = resizeImageGeometry(position, size, 1, 'w', { x: -50, y: -50 }, () => -30);
+  assert.deepEqual(side, { position: { left: 8.5, top: 200.5 }, size: { width: 292, height: 80 } }, 'world boundary wins over side snapping');
   const large = resizeImageGeometry({ left: 1900, top: 3900 }, size, .47, 'se', { x: 9999, y: 9999 });
   assert.ok(large.position.left + large.size.width * .47 <= 1992);
   assert.ok(large.position.top + large.size.height * .47 <= 3992);
+});
+
+test('every Image corner responds fully to horizontal, vertical and diagonal movement without changing its ratio', () => {
+  const bounds = { left: 0, top: 0, right: 10000, bottom: 10000 };
+  for (const size of [{ width: 320, height: 240 }, { width: 193, height: 289 }]) {
+    for (const fit of [1, .47]) for (const edge of ['nw', 'ne', 'sw', 'se']) {
+      const sx = edge.includes('w') ? -1 : 1, sy = edge.includes('n') ? -1 : 1;
+      for (const factor of [.5, 1.25, 2]) for (const axis of ['x', 'y', 'both']) {
+        const position = { left: 3000.3, top: 3000.7 };
+        const delta = { x: axis === 'y' ? 0 : sx * size.width * fit * (factor - 1),
+          y: axis === 'x' ? 0 : sy * size.height * fit * (factor - 1) };
+        const next = resizeImageGeometry(position, size, fit, edge, delta, null, null, bounds);
+        assert.deepEqual(next.size, { width: Math.round(size.width * factor), height: Math.round(size.height * factor) });
+        assert.ok(Math.abs(next.position.left + (sx < 0 ? next.size.width * fit : 0) - position.left - (sx < 0 ? size.width * fit : 0)) < 1e-9);
+        assert.ok(Math.abs(next.position.top + (sy < 0 ? next.size.height * fit : 0) - position.top - (sy < 0 ? size.height * fit : 0)) < 1e-9);
+      }
+    }
+  }
+});
+
+test('corner limits constrain both dimensions together, including the non-driving world edge', () => {
+  const position = { left: 100, top: 100 }, size = { width: 320, height: 240 };
+  const bounds = { left: 0, top: 0, right: 10000, bottom: 700 };
+  const grown = resizeImageGeometry(position, size, 1, 'se', { x: 9000, y: 0 }, null, null, bounds);
+  assert.deepEqual(grown, { position, size: { width: 800, height: 600 } });
+  const shrunk = resizeImageGeometry(position, size, 1, 'se', { x: -9000, y: 0 }, null, null, bounds);
+  assert.deepEqual(shrunk.size, { width: 43, height: 32 });
+  const maximum = resizeImageGeometry(position, size, 1, 'se', { x: 9000, y: 0 }, null, null, { ...bounds, bottom: 10000 });
+  assert.deepEqual(maximum.size, { width: 4096, height: 3072 });
 });
 
 test('a viewport-fitted Image previews the committed fit without moving its opposite corner', () => {

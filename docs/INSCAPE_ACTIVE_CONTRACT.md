@@ -292,15 +292,20 @@ dimensions, shared rotate/mirror actions, crop pan/zoom and Native fit.
 New artwork fills the canvas through a centred crop. Library drops append a
 side by default; Replace side retains its position in the sequence and starts
 the new artwork at its default crop/transform. Remove side is undoable.
-Image resizing keeps the artwork proportions while filling the changing canvas;
-the canvas edges remain the resize and snap targets. Previously native-fitted
-sides acquire a centred filling crop during a changed-size preview and commit.
-Existing crops retain their focus and zoom. Pointer, keyboard, selection and
+Image corner resizing keeps the canvas and artwork proportions together without
+requiring Shift. Horizontal, vertical and diagonal pointer movement all scale
+both dimensions around the opposite corner; the stronger relative axis drives
+the scale and snapping. Workbench selection corners use the same pointer rule.
+Authored Image dimensions retain whole-pixel rounding and size/area limits.
+Side handles still change one canvas dimension; the canvas edges remain the
+resize and snap targets. Uniform resizing retains Fit inside or the existing
+crop. A changed canvas ratio gives a native-fitted side a centred filling crop;
+existing crops retain their focus and zoom. Pointer, keyboard, selection and
 numeric size edits use the same authored resize operation. Cancel restores the
 previous fit; undo restores fit, dimensions and position together. Older saved
 native-fit sides remain unchanged when opened or moved. Fit inside and Fill
 canvas expose the existing fitting choices directly in Image tools; Fit inside
-shows the full source and may leave space until the next authored resize.
+shows the full source and may leave space until the canvas ratio changes.
 The first implementation supports up to sixteen modules and 32 sides each.
 Image tools offer Duplicate, creating an independent Image beside the original.
 It retains authored dimensions, publication inclusion, every side's source,
@@ -2534,6 +2539,9 @@ Display window corner targets also straddle their real corners and retain a
 28-screen-pixel hit area through camera zoom. Workbench group
 and Display artwork handles retain their centred geometry. Keyboard focus fills
 the small handle mark; the larger transparent hit target never gains an outline.
+Image, Text, Shape and tool-window handle marks align their painted origins to
+physical pixels independently of the hit target and authored frame. This avoids
+half-pixel midpoint marks at odd canvas sizes without changing saved geometry.
 
 Selected artwork uses 28-pixel resize targets with contrasting corner marks.
 Single selections also have midpoint handles: left/right changes width only;

@@ -36,6 +36,27 @@ test('each resize edge preserves its opposite edge and enforces minimum dimensio
   assert.deepEqual(resizeWorkbenchWindow(frame, 'nw', { x: -9999, y: -9999 }, minimum, bounds), { left: 8, top: 8, width: 472, height: 592 });
 });
 
+test('odd-size resize marks align to physical pixels without moving hit targets or authored edges', () => {
+  const viewport = { width: 1440, height: 900 };
+  for (const density of [1, 1.25, 1.5, 2]) for (const screen of [
+    { left: 1279, top: 500, width: 173, height: 260 },
+    { left: 100.3, top: 110.7, width: 177.6, height: 189.6 },
+    { left: 8.8, top: 9.6, width: 8.8, height: 9.6 },
+  ]) for (const edge of ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w']) {
+    const original = structuredClone(screen);
+    const control = workbenchResizeControl(edge, screen, viewport, density);
+    const baseline = workbenchResizeControl(edge, screen, viewport, 1);
+    assert.deepEqual([control.left, control.top], [baseline.left, baseline.top], 'hit target stays at the actual resize anchor');
+    const mark = { x: parseFloat(control['--resize-mark-x']), y: parseFloat(control['--resize-mark-y']) };
+    for (const [axis, start] of [['x', 'left'], ['y', 'top']]) {
+      const physical = (screen[start] + control[start] + mark[axis]) * density;
+      assert.ok(Math.abs(physical - Math.round(physical)) < 1e-9, `${density}, ${edge}: ${axis} mark starts on a physical pixel`);
+      assert.ok(mark[axis] >= -1e-9 && mark[axis] + 8 <= 28 + 1e-9, `${density}, ${edge}, ${axis}: painted mark ${mark[axis]} remains inside the hit target`);
+    }
+    assert.deepEqual(screen, original, 'painting never mutates the authored rectangle');
+  }
+});
+
 test('detached Workbench windows reclamp from wide to narrow using their measured size', () => {
   assert.deepEqual(clampOwnerSystemWorkflowWindowPosition(
     { x: 1122, y: 72 }, { width: 286, height: 187 }, { width: 390, height: 668 },

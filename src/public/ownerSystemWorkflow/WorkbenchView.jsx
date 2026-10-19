@@ -8,7 +8,7 @@ import { WorkbenchAreaProvider } from './WorkbenchAreaContext.jsx';
 import { WorkbenchView, WorkbenchActions, useWorkbenchView, workbenchModuleTransform } from './WorkbenchViewContext.js';
 export { useWorkbenchView, useWorkbenchActions, workbenchModuleTransform, useWorkbenchViewRegistration } from './WorkbenchViewContext.js';
 import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
-import { clampWorkbenchMove, identityWorkbenchTransform, scaleWorkbenchTransform, stepWorkbenchViewScale, workbenchSelectionBounds } from './workbenchViewScale.js';
+import { clampWorkbenchMove, identityWorkbenchTransform, proportionalCornerResize, scaleWorkbenchTransform, stepWorkbenchViewScale, workbenchSelectionBounds } from './workbenchViewScale.js';
 import { WorkbenchCameraProvider, useWorkbenchCamera, useWorkbenchCameraScale } from './WorkbenchCamera.jsx';
 import './workbenchView.css';
 import { moveWorkbenchGroup } from '../../systemWorkflow/moveWorkbenchGroup.js';
@@ -393,8 +393,8 @@ export function WorkbenchViewControls({ hostRef, disabled = false, dockVisible =
         if (pointer.pointerId !== event.pointerId) return;
         pointer.preventDefault(); pointer.stopPropagation();
         if (ids.some(id => !latest.current.entries.has(id))) { cancelGesture(); return; }
-        const projected = 1 + ((pointer.clientX - origin.x) * vector.x + (pointer.clientY - origin.y) * vector.y) / (vector.x ** 2 + vector.y ** 2);
-        resize.apply(projected, pointer.altKey);
+        const { factor } = proportionalCornerResize(vector, { x: pointer.clientX - origin.x, y: pointer.clientY - origin.y });
+        resize.apply(factor, pointer.altKey);
       },
       finish: pointer => { if (pointer.pointerId === event.pointerId) cancelGesture(!resize.commit()); },
       cancel: () => cancelGesture(),

@@ -1,5 +1,6 @@
 export { workbenchPaintGeometry as imagePaintGeometry } from '../public/ownerSystemWorkflow/workbenchPaintGeometry.js';
 import { WORKBENCH_BOUNDS, clampWorkbenchPosition } from '../public/ownerSystemWorkflow/workbenchSpace.js';
+import { proportionalCornerResize } from '../public/ownerSystemWorkflow/workbenchViewScale.js';
 
 // Exact projection: interaction never reads rounded paint geometry back into
 // the saved Workbench position. Shared world edges stay shared at every zoom.
@@ -21,7 +22,27 @@ export function imageWindowPosition(rectangle, camera, offset) {
 // are exact Workbench coordinates; fitting affects presentation, not saved size.
 export function resizeImageGeometry(position, size, fitScale, edge, delta, snap, fitSize, bounds = WORKBENCH_BOUNDS) {
   const next = { position: { ...position }, size: { width: size.width, height: size.height } };
-  for (const [axis, key, start, end, before, after] of [
+  if (edge.length === 2) {
+    const vector = { x: (edge.includes('w') ? -1 : 1) * size.width * fitScale,
+      y: (edge.includes('n') ? -1 : 1) * size.height * fitScale };
+    const anchor = { x: position.left + (edge.includes('w') ? size.width * fitScale : 0),
+      y: position.top + (edge.includes('n') ? size.height * fitScale : 0) };
+    const { axis, factor } = proportionalCornerResize(vector, delta);
+    const side = axis === 'x' ? (edge.includes('w') ? 'left' : 'right') : (edge.includes('n') ? 'top' : 'bottom');
+    const moving = anchor[axis] + vector[axis] * factor;
+    // Snap only the driving edge. The other dimension follows the same factor;
+    // independently snapping both axes would change the artwork's proportions.
+    const snapped = snap?.(axis, side, moving);
+    const requested = snapped == null || snapped === moving ? factor : (snapped - anchor[axis]) / vector[axis];
+    const availableWidth = (edge.includes('w') ? anchor.x - bounds.left : bounds.right - anchor.x) / fitScale;
+    const availableHeight = (edge.includes('n') ? anchor.y - bounds.top : bounds.bottom - anchor.y) / fitScale;
+    const minimum = Math.max(32 / size.width, 32 / size.height);
+    const maximum = Math.min(4096 / size.width, 4096 / size.height,
+      Math.floor(availableWidth + 1e-7) / size.width, Math.floor(availableHeight + 1e-7) / size.height);
+    const bounded = Math.max(minimum, Math.min(maximum, requested));
+    const round = value => Math.round(Math.round(value * 1e7) / 1e7);
+    next.size = { width: round(size.width * bounded), height: round(size.height * bounded) };
+  } else for (const [axis, key, start, end, before, after] of [
     ['x', 'width', 'left', 'right', 'w', 'e'], ['y', 'height', 'top', 'bottom', 'n', 's'],
   ]) {
     const reverse = edge.includes(before);
