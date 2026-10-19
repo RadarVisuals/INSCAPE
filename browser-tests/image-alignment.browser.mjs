@@ -28,7 +28,7 @@ test('Image world joins survive repeated grabs, pan and continuous zoom', { time
           window.camera=(zoom,x,y)=>{view.setScale(zoom);pan.setOffset({x,y});};
           window.configure=zoom=>{view.setScale(zoom);setPositions([{left:100.3,top:100.7},{left:110.3,top:510.7}]);};
           return React.createElement('div',{ref:host,style:{position:'fixed',inset:0}},React.createElement(WorkbenchPlacement,{enabled:true,gap:0,hostRef:host},
-            positions.map((position,i)=>React.createElement(ImageWindow,{key:i,id:`image:${i}`,title:`Image ${i}`,position,size:{width:317,height:193},fitScale:1,editable:true,placementModule:true,
+            positions.map((position,i)=>React.createElement(ImageWindow,{key:i,id:`image:${i}`,title:`Image ${i}`,position,size:{width:317,height:193},editable:true,placementModule:true,
               onPosition:p=>setPositions(current=>current.map((v,j)=>i===j?p:v)),onResize:()=>{},onClose:()=>{}},rectangle=>React.createElement(ImageArtwork,{rectangle,
                 side:{asset:{media:{url:'https://image.test/source.png',width:1920,height:1080}},crop:{x:.41,y:.53,zoom:1.4},transform:{quarterTurns:0,mirrorX:false,mirrorY:i===1}}})))));
         }

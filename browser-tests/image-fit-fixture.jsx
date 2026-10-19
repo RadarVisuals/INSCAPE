@@ -6,7 +6,7 @@ import { useWorkbenchCamera } from '../src/public/ownerSystemWorkflow/WorkbenchC
 import { WorkbenchPlacement } from '../src/public/ownerSystemWorkflow/WorkbenchPlacement.jsx';
 import Grid from '../src/public/ownerSystemWorkflow/WorkbenchAlignmentGrid.jsx';
 import { ContextActionBars, ContextToolbar, ContextToolbarProvider } from '../src/public/ownerSystemWorkflow/ContextToolbar.jsx';
-import { createSystemWorkflowDraftStore } from '../src/systemWorkflow/systemWorkflowDraftStore.js';
+import { createSystemWorkflowDraftStore, systemWorkflowDraftKey } from '../src/systemWorkflow/systemWorkflowDraftStore.js';
 import { buildProfileDocumentV9Asset } from '../src/profileDocument/domain/profileDocumentV9Asset.js';
 import { OWNER_SYSTEM_WORKFLOW_REVIEW_ASSETS } from '../src/public/ownerSystemWorkflow/ownerSystemWorkflowDevelopmentFixture.js';
 import { createDefaultWorkbenchPresentation } from '../src/profileDocument/domain/workbenchPresentation.js';
@@ -15,12 +15,13 @@ import '../src/inscapeTokens.css';
 import '../src/public/ownerSystemWorkflow/ownerSystemWorkflow.css';
 import '../src/lattice/rendering/latticeMenuSurface.css';
 
-export function mount() {
+export function mount({ persistent = false } = {}) {
   const profileAddress = `0x${'1'.repeat(40)}`, values = new Map();
+  const restored = persistent && localStorage.getItem(systemWorkflowDraftKey(profileAddress)) !== null;
   const api = { failSave: false };
   const store = createSystemWorkflowDraftStore({ profileAddress, storage: {
-    getItem: key => values.get(key) ?? null,
-    setItem: (key, value) => { if (api.failSave) throw Error('Storage full'); values.set(key, value); },
+    getItem: key => persistent ? localStorage.getItem(key) : values.get(key) ?? null,
+    setItem: (key, value) => { if (api.failSave) throw Error('Storage full'); if (persistent) localStorage.setItem(key, value); else values.set(key, value); },
   } });
   const asset = buildProfileDocumentV9Asset(OWNER_SYSTEM_WORKFLOW_REVIEW_ASSETS[0], OWNER_SYSTEM_WORKFLOW_REVIEW_ASSETS[0].id);
   const bitmap = document.createElement('canvas'); bitmap.width = 2560; bitmap.height = 1440;
@@ -36,7 +37,7 @@ export function mount() {
   draft.workbench = { ...createDefaultWorkbenchPresentation(), imageModules: draft.imageModules.map((image, index) => ({
     id: image.id, open: true, position: { left: index < 2 ? 3576 : 4560, top: index % 2 ? 1944 : 1392 },
   })) };
-  store.commitCompletedOperation(draft, { expectedGeneration: store.getGeneration() });
+  if (!restored) store.commitCompletedOperation(draft, { expectedGeneration: store.getGeneration() });
   api.store = store;
   function Scene({ draft, owner }) {
     const hostRef = useRef(null), view = useWorkbenchView(), camera = useWorkbenchCamera();

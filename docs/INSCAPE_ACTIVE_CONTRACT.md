@@ -297,6 +297,12 @@ requiring Shift. Horizontal, vertical and diagonal pointer movement all scale
 both dimensions around the opposite corner; the stronger relative axis drives
 the scale and snapping. Workbench selection corners use the same pointer rule.
 Authored Image dimensions retain whole-pixel rounding and size/area limits.
+The Image frame uses its authored Workbench dimensions directly. Browser width
+or height must not apply a second per-Image fit or a resize limit: that would
+cancel proportional growth and reinterpret the frame after reload. Workbench
+camera zoom/focus owns fitting the view. Owner and Visitor use the same geometry;
+browser size only affects control reachability, not the saved or visible world
+dimensions. Existing Image size limits and authored Workbench area still apply.
 Side handles still change one canvas dimension; the canvas edges remain the
 resize and snap targets. Uniform resizing retains Fit inside or the existing
 crop. A changed canvas ratio gives a native-fitted side a centred filling crop;

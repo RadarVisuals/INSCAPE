@@ -41,6 +41,11 @@ proportional-corner decision, physical-pixel handle alignment, before/after
 regressions and the new verification results. Its counts describe the packaged
 checkout rather than the historical full local-tree run above.
 
+The [large-Image follow-up](image-world-size.md) corrects a coverage gap in that
+repair: per-Image viewport fitting canceled visible proportional resizing.
+It removes the redundant fit, records 96 additional corner drags plus reload
+checks, and documents a related Properties layout-loop fix and test limitations.
+
 - Public upload admission, identity quotas and abuse/replay protection remain
   unresolved before an open paid-upload service. Existing same-origin checks and
   per-IP limits are not uploader authentication.

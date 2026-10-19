@@ -26,7 +26,7 @@ for (const [width, density] of [[1440, 1], [390, 1.25]]) test(`Image resize focu
         return React.createElement(WorkbenchViewProvider, null,
           React.createElement('main', { className: 'system-workflow', 'data-surface': 'slate', 'data-lattice-menu-surface': '', 'data-menu-surface': 'carbon', style: { position: 'fixed', inset: 0 } },
             React.createElement(ImageWindow, { id: 'image:focus-test', title: 'Resize sample', position: { left: 48, top: 96 }, size,
-              fitScale: 1, editable: true, active: true, onPosition() {}, onResize: setSize, onClose() {} },
+              editable: true, active: true, onPosition() {}, onResize: setSize, onClose() {} },
               () => React.createElement('div', { className: 'image-module__canvas', style: { background: '#383f43' } },
                 React.createElement('svg', { width: '100%', height: '100%', viewBox: '0 0 240 180' },
                   React.createElement('circle', { cx: 120, cy: 90, r: 58, fill: '#aab6b7' }))))));

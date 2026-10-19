@@ -10,7 +10,7 @@ import { clampWorkbenchPosition } from '../public/ownerSystemWorkflow/workbenchS
 
 // Image owns a borderless surface. Workbench owns the camera, placement bounds
 // and snapping. No instrument-window sizing, chrome or content gutter is used.
-export default function ImageWindow({ id, title, position, size, fitScale, fitSize, editable, active, suspended, movable = true, placementModule,
+export default function ImageWindow({ id, title, position, size, viewport = { width: innerWidth, height: innerHeight }, editable, active, suspended, movable = true, placementModule,
   onPosition, onResize, onClose, resizeTarget, children }) {
   const { bounds: areaBounds } = useWorkbenchArea();
   const node = useRef(null), gesture = useRef(null), suppressClick = useRef(false);
@@ -28,12 +28,13 @@ export default function ImageWindow({ id, title, position, size, fitScale, fitSi
   // event handlers only change when the module or authored rectangle changes.
   const content = useMemo(() => children({ left: 0, top: 0, width: currentSize.width, height: currentSize.height }),
     [children, currentSize.width, currentSize.height]);
-  const currentFit = fitSize?.(currentSize) ?? fitScale;
-  const width = currentSize.width * currentFit, height = currentSize.height * currentFit;
+  // Image dimensions are Workbench dimensions. Only the Workbench camera scales
+  // them: fitting each Image to the viewport would cancel proportional resizing.
+  const { width, height } = currentSize;
   const density = globalThis.devicePixelRatio || 1;
   const screen = imageWindowGeometry(currentPosition, { width, height }, camera, offset);
   const placement = useWorkbenchPlacement(node, placementModule, camera.scale, true, screen);
-  useWorkbenchViewRegistration(id, node, true, { ...position, width: size.width * fitScale, height: size.height * fitScale }, resizeTarget, onPosition);
+  useWorkbenchViewRegistration(id, node, true, { ...position, width: size.width, height: size.height }, resizeTarget, onPosition);
   const latest = useRef(null);
   latest.current = { onPosition, placement };
   const finish = (cancelled = false) => {
@@ -59,7 +60,7 @@ export default function ImageWindow({ id, title, position, size, fitScale, fitSi
     addEventListener('blur', cancel); addEventListener('keydown', cancel, true);
     return () => { removeEventListener('blur', cancel); removeEventListener('keydown', cancel, true); finish(true); };
   }, []);
-  useEffect(() => { finish(true); }, [position.left, position.top, size.width, size.height, camera.scale, camera.x, camera.y, offset.x, offset.y, fitScale, suspended, movable, editable, resizeTarget?.expected]);
+  useEffect(() => { finish(true); }, [position.left, position.top, size.width, size.height, camera.scale, camera.x, camera.y, offset.x, offset.y, viewport.width, viewport.height, suspended, movable, editable, resizeTarget?.expected]);
   const begin = (event, kind, edge) => {
     suppressClick.current = false;
     if (suspended || event.button !== 0 || kind === 'move' && !movable
@@ -79,8 +80,8 @@ export default function ImageWindow({ id, title, position, size, fitScale, fitSi
     const snapped = placementModule ? snapMovement(projected, [node.current], camera.scale, bypass) : projected;
     return clampWorkbenchPosition(imageWindowPosition(snapped, camera, offset), { width, height }, areaBounds);
   };
-  const resizeTo = (start, edge, delta, bypass) => resizeImageGeometry(start.position, start.size, fitScale, edge, delta,
-    (axis, side, value) => placement.edge(axis, side, value, currentPosition, bypass), fitSize, areaBounds);
+  const resizeTo = (start, edge, delta, bypass) => resizeImageGeometry(start.position, start.size, edge, delta,
+    (axis, side, value) => placement.edge(axis, side, value, currentPosition, bypass), areaBounds);
   const move = event => {
     const active = gesture.current;
     if (active?.id !== event.pointerId) return;
@@ -107,7 +108,7 @@ export default function ImageWindow({ id, title, position, size, fitScale, fitSi
     placement.begin(event);
     if (kind === 'move') onPosition(placedPosition({ left: position.left + dx / camera.scale, top: position.top + dy / camera.scale }, event.altKey));
     else {
-      const next = resizeTo({ position, size }, edge, { x: dx * fitScale, y: dy * fitScale }, event.altKey);
+      const next = resizeTo({ position, size }, edge, { x: dx, y: dy }, event.altKey);
       onResize(next.size, next.position);
     }
     placement.finish();
@@ -118,9 +119,9 @@ export default function ImageWindow({ id, title, position, size, fitScale, fitSi
   // Tiny or thin canvases must remain available for direct dragging. Put their
   // action targets outside, beyond the screen-sized resize handles.
   const outsideControls = screen.width < 80 || screen.height < 80;
-  const controlsAbove = screen.top + screen.height + 56 > innerHeight && screen.top >= 56;
+  const controlsAbove = screen.top + screen.height + 56 > viewport.height && screen.top >= 56;
   const controlsTop = controlsAbove ? -56 : paint.height / density + 28;
-  const controlsLeft = Math.max(0, Math.min(innerWidth - 84, paint.left / density)) - paint.left / density;
+  const controlsLeft = Math.max(0, Math.min(viewport.width - 84, paint.left / density)) - paint.left / density;
   return <section ref={node} className="image-module__window" aria-label={`Image — ${title}`} data-workbench-view-id={id}
     data-workbench-selectable={movable && !suspended || undefined} tabIndex={0} aria-keyshortcuts="Shift+Enter I"
     aria-description="Click artwork to select it. Press F to focus it and F again to return. Double-click or press Enter on the artwork also zooms to its module. Press I to inspect. Drag to move. Arrow keys move the window; Shift+Enter toggles Workbench selection."
@@ -139,7 +140,7 @@ export default function ImageWindow({ id, title, position, size, fitScale, fitSi
       ? !edge.includes('w') || screen.width >= 56
       : (edge === 'n' || edge === 's' ? screen.width : screen.height) >= 56)).map(([edge, label]) =>
       <div key={edge} className={`image-module__resize is-${edge}`} role="separator"
-        style={workbenchResizeControl(edge, { left: paint.left / density, top: paint.top / density, width: paint.width / density, height: paint.height / density }, { width: innerWidth, height: innerHeight }, density)}
+        style={workbenchResizeControl(edge, { left: paint.left / density, top: paint.top / density, width: paint.width / density, height: paint.height / density }, viewport, density)}
         aria-label={label ? `Resize Image ${label}` : 'Resize Image window'}
         aria-orientation={edge === 'e' || edge === 'w' ? 'vertical' : 'horizontal'}
         aria-valuetext={`${currentSize.width} by ${currentSize.height} pixels`} aria-valuenow={edge === 'e' || edge === 'w' ? currentSize.width : currentSize.height} tabIndex={0}

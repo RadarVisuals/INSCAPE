@@ -1,5 +1,10 @@
 # Resize controls — 19 October 2026
 
+**Follow-up:** these initial corner cases covered small frames. The subsequent
+[large-Image repair](image-world-size.md) removes viewport fitting that still
+canceled proportional growth for larger frames. Read both records for the
+current implementation and its verification scope.
+
 The founder chose proportional corner resizing: the Image frame and artwork
 keep their ratio together, with no Shift modifier. Horizontal, vertical and
 diagonal drags all work; the opposite corner stays fixed. Side handles continue

@@ -35,8 +35,6 @@ const ImageInstance = memo(function ImageInstance({ record, index, store, profil
   const sideIndex = record.sides.indexOf(side);
   const presented = Boolean(useWorkbenchView().presentationTransforms?.[record.id]);
   const editable = Boolean(store) && !suspended && !presented;
-  const fitSize = size => Math.min(1, (viewport.width - 16) / size.width, (viewport.height - 70) / size.height);
-  const scale = fitSize(record);
   const rectangle = crop?.mask || { left: 0, top: 0, width: record.width, height: record.height };
   const liftEntry = useMemo(() => side ? imageFocusEntry(side) : null, [side]);
   const inactive = suspended || !presentation.open;
@@ -134,8 +132,8 @@ const ImageInstance = memo(function ImageInstance({ record, index, store, profil
   const resizeTarget = useMemo(() => ({ enabled: editable && !crop && !inspect && !flip,
     reflow: editable,
     expected: record, store, profileAddress, layoutKey: 'imageModules', commit: commitWorkbenchSelectionResize, prepare: prepareImageResize, applyFrame: layout, reportError: setError,
-    minimumSize: 32, maximumWidth: Math.min(4096, viewport.width - 16), maximumHeight: Math.min(4096, viewport.height - 70),
-  }), [editable, Boolean(crop), inspect, flip, record, store, profileAddress, layout, viewport.width, viewport.height]);
+    minimumSize: 32, maximumWidth: 4096, maximumHeight: 4096,
+  }), [editable, Boolean(crop), inspect, flip, record, store, profileAddress, layout]);
   const applySize = event => {
     event.preventDefault();
     const width = Number(sizeFields.width), height = Number(sizeFields.height);
@@ -164,7 +162,7 @@ const ImageInstance = memo(function ImageInstance({ record, index, store, profil
     {!presentation.open && <button data-workbench-pan ref={shortcut} className="workflow-tactile-control image-module__shortcut" style={{ bottom: 64 + index * 38 }} onContextMenu={shortcutMenu.onContextMenu} onKeyDown={shortcutMenu.onKeyDown}
       onClick={() => setPresentation(p => ({ ...p, open: true }))}>{record.name}</button>}
     {presentation.open && <ImageWindow id={record.id} title={record.name} position={presentation.position}
-      size={record} fitScale={scale} fitSize={fitSize} editable={editable && !crop && !inspect && !flip} suspended={suspended || inspect}
+      size={record} viewport={viewport} editable={editable && !crop && !inspect && !flip} suspended={suspended || inspect}
       movable={!crop && !flip}
       active={activeTarget === record.id}
       placementModule={Boolean(store)} onPosition={layout} onResize={resize}

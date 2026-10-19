@@ -33,7 +33,7 @@ async function mount(page, scale) {
       React.useLayoutEffect(() => { view.setScale(scale); camera.setOffset({ x: .37, y: -.23 }); }, []);
       return React.createElement('main', { ref: host, tabIndex: -1, style: { position: 'fixed', inset: 0 } },
         React.createElement(WorkbenchViewControls, { hostRef: host }),
-        positions.map((position, i) => React.createElement(ImageWindow, { key: i, id: `image:${i}`, title: `Image ${i}`, position, size: { width: 180, height: 130 }, fitScale: 1,
+        positions.map((position, i) => React.createElement(ImageWindow, { key: i, id: `image:${i}`, title: `Image ${i}`, position, size: { width: 180, height: 130 },
           editable: false, onPosition: () => { throw Error('camera wrote a module position'); }, onClose: () => {} },
         rectangle => React.createElement(ImageArtwork, { rectangle, side }))));
     }

@@ -164,12 +164,12 @@ export function WorkbenchWindow({ avoidControls, children, background, compact, 
       top: Math.min(...controls.map(rect => rect.top)), bottom: Math.max(...controls.map(rect => rect.bottom)) };
     const next = avoidWorkbenchControl({ left: rectangle.left, top: rectangle.top, width: rectangle.width, height: rectangle.height },
       controlBounds, { left: 8, top: 8, right: viewport.width - 8, bottom: toolViewportBottom - 8 }, 8, minimumHeight);
-    if (next.left !== rectangle.left || next.top !== rectangle.top || next.height !== rectangle.height)
-      // DOM layout can round a fractional recovery-control edge. Compare the
-      // requested logical frame too, or the same subpixel correction repeats
-      // forever even though React already holds that exact position.
-      setFrame(current => current.left === next.left && current.top === next.top && current.height === next.height
-        ? current : { ...current, left: next.left, top: next.top, height: next.height });
+    // DOM layout can round a fractional recovery-control edge. Do not schedule
+    // another layout update when React already holds the requested position:
+    // even a no-op updater can re-enter this effect while other updates commit.
+    if ((next.left !== rectangle.left || next.top !== rectangle.top || next.height !== rectangle.height)
+      && (frame.left !== next.left || frame.top !== next.top || frame.height !== next.height))
+      setFrame({ ...frame, left: next.left, top: next.top, height: next.height });
   });
   const positionFor = (candidate, altKey) => {
     const snapping = snapToGrid && !altKey;

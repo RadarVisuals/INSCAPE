@@ -32,7 +32,7 @@ test('Workbench capture preserves exact Image grid positions across repeated gra
         return React.createElement('main', { ref: host, tabIndex: -1, style: { position: 'fixed', inset: 0 } },
           React.createElement(WorkbenchPlacement, { hostRef: host, enabled: true, gridEnabled: true, gap: 0 },
             React.createElement(WorkbenchViewControls, { hostRef: host }),
-            React.createElement(ImageWindow, { id: 'image:test', title: 'Test', position, size: { width: 317, height: 193 }, fitScale: 1,
+            React.createElement(ImageWindow, { id: 'image:test', title: 'Test', position, size: { width: 317, height: 193 },
               editable: true, placementModule: true, onPosition: setPosition, onResize: () => {}, onClose: () => {} }, () => null)));
       }
       createRoot(document.getElementById('root')).render(React.createElement(WorkbenchViewProvider, null, React.createElement(Fixture)));
