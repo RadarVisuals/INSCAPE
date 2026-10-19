@@ -12,7 +12,7 @@ test('Image and Display inspection retain their source and camera through return
     await mkdir('.browser-test-runtime', { recursive: true });
     for (const visitor of [false, true]) for (const width of [1600, 390]) for (const kind of ['display', 'image']) {
       const page = await browser.newPage({ viewport: { width, height: 1000 }, deviceScaleFactor: 1.25 });
-      await page.clock.install();
+      await page.clock.install({ time: new Date('2026-01-01T00:00:00Z') });
       const label = `${visitor ? 'Visitor' : 'Owner'} ${width} ${kind}`;
       const errors = []; page.on('pageerror', e => errors.push(e.message));
       await mountGridMotionFixture(page, { origin: process.env.INSCAPE_TEXT_ROOT || 'http://127.0.0.1:5207', visitor, count: 3, displayWidth: 600, seamReview: true });
@@ -31,7 +31,7 @@ test('Image and Display inspection retain their source and camera through return
       });
       const before = await state();
       const saved = await page.evaluate(() => localStorage.getItem(window.__motionKey));
-      await page.clock.pauseAt(await page.evaluate(() => Date.now() + 100));
+      await page.clock.pauseAt(new Date('2026-01-01T01:00:00Z'));
       if (kind === 'image') { await source.focus(); await page.keyboard.press('i'); }
       else await source.dispatchEvent('keydown', { key: 'i', bubbles: true, cancelable: true });
       await page.getByRole('button', { name: 'Reset Workbench position', exact: true }).waitFor();

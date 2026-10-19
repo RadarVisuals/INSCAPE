@@ -59,6 +59,28 @@ state was introduced. All eight targeted browser cases pass locally, including
 ordinary close and the deliberately interleaved focus choice. Online results
 for the subsequent commit remain authoritative for the full chain.
 
+### Remaining difference between the next two hosted runs
+
+On head `3d3d1786b769abf5b26007de5b89685223096aab`, the
+[PR run](https://github.com/RadarVisuals/INSCAPE/actions/runs/39309068134)
+passed the complete verification, while the
+[push run](https://github.com/RadarVisuals/INSCAPE/actions/runs/39309057503)
+still failed 2/202 browser cases. These were different failures: a clock pause
+requested only 100ms ahead had already passed when the command arrived, and a
+Metadata submenu disappeared during keyboard navigation. Both outcomes remain
+part of the evidence; the green PR did not erase the red push.
+
+The two clocked fixtures now install a fixed epoch and pause an hour ahead,
+well beyond their whole test timeout, before advancing the same gesture/animation
+durations. No short inter-process scheduling margin is assumed.
+The disappearing submenu was reproduced locally in all four Owner/Visitor and
+wide/narrow cases: leaving with the pointer cleared the menu branch even while
+its expanded trigger held keyboard focus. The existing DesktopMenu now retains
+an expanded focused branch (or focus inside its flyout) on pointer departure.
+Unfocused hover branches still close; outside clicks and Escape retain their
+existing close paths. No new saved state, input-mode flag or parallel menu was
+introduced. The strengthened browser test explicitly checks this transition.
+
 ## Required main check
 
 Before this round, GitHub returned `Branch not protected` and an empty ruleset

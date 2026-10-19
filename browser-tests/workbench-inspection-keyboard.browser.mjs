@@ -70,7 +70,21 @@ for (const visitor of [false, true]) for (const width of [1440, 390]) {
         await header.focus(); await page.keyboard.press(key);
         const menu = page.getByRole('menu', { name: visitor ? 'Display commands' : 'Display Module commands', exact: true });
         await menu.waitFor();
-        await menu.getByRole('menuitem', { name: 'TOOLS', exact: true }).press('Enter');
+        const tools = menu.getByRole('menuitem', { name: 'TOOLS', exact: true });
+        // Visitor inspection can leave TOOLS as the only enabled menu item.
+        // Put focus outside the menu to exercise an unfocused hover branch.
+        await header.focus();
+        await tools.hover();
+        await page.getByRole('menuitem', { name: 'METADATA', exact: true }).waitFor();
+        await page.mouse.move(width - 2, 2);
+        await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+        assert.equal(await page.getByRole('menuitem', { name: 'METADATA', exact: true }).count(), 0, 'unfocused hover branch still closes');
+        await tools.hover();
+        await tools.press('Enter');
+        await page.getByRole('menuitem', { name: 'METADATA', exact: true }).waitFor();
+        await page.mouse.move(width - 2, 2);
+        await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+        assert.equal(await page.getByRole('menuitem', { name: 'METADATA', exact: true }).count(), 1, 'pointer departure preserves the keyboard-focused submenu');
         await page.getByRole('menuitem', { name: 'METADATA', exact: true }).press('Enter');
         const metadata = page.locator('[data-shared-tool="metadata"]');
         await metadata.waitFor();

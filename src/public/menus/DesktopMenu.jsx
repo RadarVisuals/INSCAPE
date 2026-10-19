@@ -92,7 +92,14 @@ export default function DesktopMenu({ anchor, commands, label, menuSurfaceId = n
     data-lattice-menu-surface={menuSurfaceId || undefined} data-menu-surface={menuSurfaceId || undefined}
     data-system-workflow-overlay={systemWorkflowOverlay || undefined}
     role="menu" aria-label={label} style={{ left: position.x, top: position.y, ...(systemWorkflowOverlay ? { width: Math.min(SYSTEM_WORKFLOW_PANEL_WIDTH, (window.innerWidth - 20) / 2) } : {}) }} onKeyDown={onKeyDown}
-    onPointerLeave={() => { window.clearTimeout(hoverTimerRef.current); setOpenPath([]); onPreviewCommand?.(null); }}>
+    onPointerLeave={() => {
+      window.clearTimeout(hoverTimerRef.current);
+      const focused = document.activeElement;
+      // Pointer departure must not remove the branch being used by keyboard.
+      const focusedBranch = ref.current?.contains(focused) &&
+        (focused.closest('[role="menu"]') !== ref.current || focused.getAttribute('aria-expanded') === 'true');
+      if (!focusedBranch) { setOpenPath([]); onPreviewCommand?.(null); }
+    }}>
     {renderPanel(commands)}
   </div>;
 }

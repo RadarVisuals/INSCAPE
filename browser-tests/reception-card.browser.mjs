@@ -63,7 +63,7 @@ test('mouse carousel drag coasts, suppresses activation and cancels when expansi
   const browser = await chromium.launch({ executablePath: browserPath, headless: true });
   try {
     const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
-    await page.clock.install();
+    await page.clock.install({ time: new Date('2026-01-01T00:00:00Z') });
     await page.route('**/*', routeFixture);
     await page.goto(url);
     const rail = page.getByRole('region', { name: 'Published artwork carousel', includeHidden: true });
@@ -71,7 +71,9 @@ test('mouse carousel drag coasts, suppresses activation and cancels when expansi
     await page.locator('.profile-overview__work--image').first().locator('[data-media-state="ready"]').waitFor();
     // A fixed gesture timeline distinguishes moving release from a real pause;
     // runner scheduling must not turn these 20ms samples into stale movement.
-    await page.clock.pauseAt(await page.evaluate(() => Date.now() + 100));
+    // The suite timeout is shorter than this window; command transport cannot
+    // turn the requested pause into a timestamp already in the past.
+    await page.clock.pauseAt(new Date('2026-01-01T01:00:00Z'));
     const rect = await rail.boundingBox();
     const y = rect.y + 60, x = rect.x + rect.width * .7;
     await page.mouse.move(x, y); await page.mouse.down();
