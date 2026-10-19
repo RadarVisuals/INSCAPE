@@ -206,3 +206,64 @@ for (const width of [1440, 390]) test(`Inspect button and I honour the selected 
     assert.deepEqual(errors, []);
   } finally { await browser.close(); }
 });
+
+for (const interruption of ['none', 'new focus', 'new scope']) {
+  test(`inspection return waits for the closing commit (${interruption})`, { timeout: 30000 }, async () => {
+    const browser = await chromium.launch({ executablePath, headless: true });
+    try {
+      const page = await browser.newPage({ reducedMotion: 'reduce' });
+      page.setDefaultTimeout(10000);
+      const errors = []; page.on('pageerror', error => errors.push(error.message));
+      await page.route(`${origin}/__inspection_return__`, route => route.fulfill({ contentType: 'text/html', body: '<div id="root"></div>' }));
+      await page.goto(`${origin}/__inspection_return__`);
+      await page.evaluate(async () => {
+        const refresh = (await import('/@react-refresh')).default;
+        refresh.injectIntoGlobalHook(window); window.$RefreshReg$ = () => {}; window.$RefreshSig$ = () => type => type;
+        window.__vite_plugin_react_preamble_installed__ = true;
+        const React = (await import('/@id/react')).default;
+        const { createRoot } = (await import('/@id/react-dom/client')).default;
+        const useInspection = (await import('/src/public/ownerSystemWorkflow/useDisplayInspection.js')).default;
+        const Viewer = (await import('/src/public/ownerSystemWorkflow/DisplayFocusViewer.jsx')).default;
+        const api = window.inspectionReturn = { scope: 'profile-a:grid-a', hold: false, closingRendered: false };
+        api.promise = new Promise(resolve => { api.release = () => { api.hold = false; resolve(); }; });
+        function Harness() {
+          const source = React.useRef(null);
+          const [scene, setScene] = React.useState(null), [controls, setControls] = React.useState(null);
+          const viewer = useInspection({ scope: api.scope, items: [{ id: 'artwork', navigationOrder: 0 }],
+            getElement: () => source.current, getEntry: () => ({ placement: { inspectionMode: 'IN_PLACE' } }) });
+          // React can retain the old DOM while committing a closing update.
+          // Hold that commit explicitly so the test does not rely on CPU timing.
+          if (!viewer.placementId && api.hold) { api.closingRendered = true; throw api.promise; }
+          const close = (...args) => { api.hold = true; React.startTransition(() => viewer.close(...args)); };
+          return React.createElement('main', null,
+            React.createElement('button', { id: 'other-target' }, 'Other control'),
+            React.createElement('div', { 'data-inspecting': viewer.placementId ? '' : undefined },
+              React.createElement('div', { ref: setScene }, React.createElement('button', {
+                ref: source, className: 'system-workflow__placement', style: { width: 120, height: 80 },
+                onClick: () => viewer.open('artwork', source.current, { inspectionMode: 'IN_PLACE' }),
+              }, 'Source artwork')),
+              React.createElement('div', { ref: setControls }),
+              viewer.placementId && React.createElement(Viewer, { scene, controlsContainer: controls, viewer: { ...viewer, close } })));
+        }
+        createRoot(document.getElementById('root')).render(React.createElement(React.Suspense, { fallback: 'Waiting' }, React.createElement(Harness)));
+      });
+      const source = page.getByRole('button', { name: 'Source artwork', exact: true });
+      await source.click();
+      const close = button(page, 'Close artwork viewer');
+      await close.waitFor(); await close.focus(); await page.keyboard.press('Escape');
+      await page.waitForFunction(() => inspectionReturn.closingRendered);
+      await settle(page);
+      assert.equal(await close.count(), 1, 'closing DOM remains mounted while React work is held');
+      assert.equal(await source.evaluate(node => node === document.activeElement), false, 'do not focus the still-inspected source');
+      if (interruption === 'new focus') await button(page, 'Other control').focus();
+      await page.evaluate(interruption => {
+        if (interruption === 'new scope') inspectionReturn.scope = 'profile-b:grid-b';
+        inspectionReturn.release();
+      }, interruption);
+      await close.waitFor({ state: 'detached' }); await settle(page);
+      assert.equal(await source.evaluate(node => node === document.activeElement), interruption === 'none', 'return belongs to the committed inspection scope');
+      if (interruption === 'new focus') assert.equal(await button(page, 'Other control').evaluate(node => node === document.activeElement), true, 'preserve a newer focus choice');
+      assert.deepEqual(errors, []);
+    } finally { await browser.close(); }
+  });
+}

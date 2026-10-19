@@ -15,11 +15,12 @@ The empty group list is stable across renders. Group visibility remains owned
 by the scene; geometry and saves retain their existing module/store boundaries.
 No resize math, aspect-ratio behavior, persistence schema or wallet flow changed.
 
-**This is a targeted guard at the observed failure site, not a confirmed
-reproduction and repair of the original composition.** The original crash did
-not reproduce in the isolated baseline trials. The founder will retest later;
-the original report remains open until that check or a deterministic failing
-fixture establishes the result. Do not describe it as conclusively fixed.
+**The founder retested preview #5 after release 06ac24a and confirmed on
+20 October: “ja ik crash niet meer woohoo”.** The reported scenario is closed
+on that direct user evidence. The agent did not independently repeat the same
+composition. The original crash did not reproduce in isolated baseline trials,
+so the full root cause remains unconfirmed. The code is a targeted guard at the
+observed failure site, not a deterministic baseline reproduction.
 
 ## Local verification
 

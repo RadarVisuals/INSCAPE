@@ -85,6 +85,12 @@ test('a late ready message cannot clear a timed-out attempt; retry mounts a fres
 test('an unavailable SVG source fails visibly and a new attempt recovers', { timeout:20000 }, async () => {
   const { browser, page } = await open();
   let unavailable = true;
+  const requests = [], errors = [];
+  page.on('response', response => {
+    if (/svg-lifecycle-source\.svg|artwork-document/.test(response.url())) requests.push({ url:response.url(), status:response.status() });
+  });
+  page.on('requestfailed', request => requests.push({ url:request.url(), failure:request.failure() }));
+  page.on('pageerror', error => errors.push(error.message));
   try {
     await page.route('**/svg-lifecycle-source.svg', route => unavailable
       ? route.fulfill({ status:503, contentType:'text/plain', body:'Temporarily unavailable' }) : route.continue());
@@ -94,5 +100,12 @@ test('an unavailable SVG source fails visibly and a new attempt recovers', { tim
     unavailable = false;
     await plain.getByRole('button', { name:'Artwork unavailable — retry', exact:true }).click();
     await page.getByLabel('Plain host ready', { exact:true }).filter({ hasText:'Ready' }).waitFor({ timeout:10000 });
+  } catch (error) {
+    await mkdir(output, { recursive:true });
+    const state = await page.getByRole('region', { name:'Plain host', exact:true }).innerText().catch(() => null);
+    await writeFile(`${output}/source-retry-failure.json`, JSON.stringify({ error:error.message, requests, errors, state,
+      frames:page.frames().map(frame => frame.url()) }, null, 2));
+    await page.screenshot({ path:`${output}/source-retry-failure.png` }).catch(() => {});
+    throw error;
   } finally { await browser.close(); }
 });

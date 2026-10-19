@@ -48,17 +48,7 @@ export default function DisplayFocusViewer({ scene, controlsContainer, viewer })
     };
   }, [scene]);
 
-  const finishClose = () => {
-    const source = latest.current.returnFocus;
-    const restoreCueFocus = latest.current.cue?.restoreFocus;
-    latest.current.close();
-    requestAnimationFrame(() => {
-      // React must first unmount the lifted copy and reveal its source. A
-      // microtask can run before that commit, when the source cannot be focused.
-      if (restoreCueFocus) restoreCueFocus();
-      else if (source?.isConnected && !source.closest('[data-inspecting]')) source.focus({ preventScroll: true });
-    });
-  };
+  const finishClose = () => latest.current.close({ restoreFocus: true });
   const close = () => {
     if (closingRef.current) return;
     closingRef.current = true;

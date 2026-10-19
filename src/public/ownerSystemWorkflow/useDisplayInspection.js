@@ -13,13 +13,27 @@ export default function useDisplayInspection(options) {
   const request = useRef(0);
   const mounted = useRef(false);
   const sessionRef = useRef(null);
+  const pendingReturn = useRef(null);
   const [session, setSession] = useState(null);
   const update = useCallback(value => { sessionRef.current = value; setSession(value); }, []);
   useLayoutEffect(() => {
     mounted.current = true;
-    return () => { mounted.current = false; request.current += 1; sessionRef.current = null; };
+    return () => { mounted.current = false; request.current += 1; sessionRef.current = null; pendingReturn.current = null; };
   }, []);
-  useLayoutEffect(() => { request.current += 1; update(null); }, [options.scope, update]);
+  useLayoutEffect(() => { request.current += 1; pendingReturn.current = null; update(null); }, [options.scope, update]);
+  useLayoutEffect(() => {
+    if (session || !pendingReturn.current) return;
+    const returning = pendingReturn.current; pendingReturn.current = null;
+    const source = returning.source, document = source?.ownerDocument;
+    if (!mounted.current || returning.scope !== options.scope || !source?.isConnected || !document) return;
+    const focused = document.activeElement;
+    if (focused && focused !== document.body && focused !== returning.focused && focused.isConnected) return;
+    // The source is restored in this commit, including lifted-media cleanup.
+    // An animation frame alone does not guarantee React has committed close.
+    if (source.closest('[data-inspecting]')) return;
+    if (returning.restoreCueFocus) returning.restoreCueFocus();
+    else source.focus({ preventScroll: true });
+  }, [session, options.scope]);
   const items = useMemo(() => options.items.slice().sort((a, b) =>
     a.navigationOrder - b.navigationOrder || a.id.localeCompare(b.id)), [options.items]);
   const active = session?.scope === options.scope ? session : null;
@@ -28,9 +42,14 @@ export default function useDisplayInspection(options) {
   const available = active ? items.filter(item => options.getEntry(item.id) && rectangle(options.getElement(item.id))) : [];
   const position = available.findIndex(item => item.id === placementId);
   const entry = placementId ? options.getEntry(placementId) : null;
-  const close = useCallback(() => {
+  const close = useCallback((interaction = {}) => {
     request.current += 1;
     const current = sessionRef.current;
+    if (current?.scope === latest.current.scope && interaction.restoreFocus) {
+      const source = latest.current.getElement(current.placementId);
+      pendingReturn.current = { scope: current.scope, source, focused: source?.ownerDocument.activeElement,
+        restoreCueFocus: current.cue?.restoreFocus };
+    }
     update(null);
     if (current?.scope === latest.current.scope) latest.current.onClose?.();
   }, [update]);
@@ -45,6 +64,7 @@ export default function useDisplayInspection(options) {
       const next = latest.current;
       if (!ready || !next.getEntry(id) || !mounted.current || operation !== request.current || scope !== next.scope
         || !source.isConnected || !next.items.some(item => item.id === id)) return false;
+      pendingReturn.current = null;
       next.onOpen?.(id, interaction);
       update({ scope, placementId: id, originRectangle, inspectionMode: interaction.inspectionMode, cue: interaction.cue || null,
         cueMetadataOpen: Boolean(interaction.cue) });

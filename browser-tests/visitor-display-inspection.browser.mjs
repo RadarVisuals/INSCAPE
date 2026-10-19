@@ -26,7 +26,7 @@ for (const workbench of [false, true]) for (const width of [1440, 390]) {
       await board.waitFor();
       const source = board.locator('.visitor-grid-world__grid-plane--current [data-placement-id="art:Alpha:https"]');
       await page.waitForFunction(() => document.querySelector('.visitor-grid-world__grid-plane--current [data-placement-id="art:Alpha:https"]')?.dataset.mediaState === 'ready');
-      await source.focus(); await page.keyboard.press('Enter');
+      await source.focus(); await page.keyboard.press('i');
       const viewer = board.getByRole('group', { name: 'Artwork inspection', exact: true });
       await viewer.waitFor();
       await page.waitForFunction(() => document.querySelector('[data-inspection-phase="active"]'));
@@ -43,7 +43,7 @@ for (const workbench of [false, true]) for (const width of [1440, 390]) {
       assert.match(await metadata.innerText(), /Alpha Artwork 1 public fixture description/);
       assert.equal(await viewer.count(), 0);
       await page.getByRole('button', { name: 'Close Artwork info', exact: true }).click();
-      await source.focus(); await page.keyboard.press('Enter'); await viewer.waitFor();
+      await source.focus(); await page.keyboard.press('i'); await viewer.waitFor();
       await page.keyboard.press('Escape'); await viewer.waitFor({ state: 'detached' });
       await page.waitForFunction(() => document.activeElement?.dataset.placementId === 'art:Alpha:https');
       assert.equal(await source.evaluate(node => node === document.activeElement), true);
@@ -54,7 +54,7 @@ for (const workbench of [false, true]) for (const width of [1440, 390]) {
       assert.notEqual(await grid(), initial);
       await activate(page, page.getByRole('button', { name: 'Previous Grid', exact: true }));
       assert.equal(await grid(), initial);
-      await source.focus(); await page.keyboard.press('Enter'); await viewer.waitFor();
+      await source.focus(); await page.keyboard.press('i'); await viewer.waitFor();
       await page.evaluate(() => window.__fixture.visit('0x2222222222222222222222222222222222222222'));
       await page.waitForFunction(() => window.__fixture.address.startsWith('0x2222'));
       await viewer.waitFor({ state: 'detached' });

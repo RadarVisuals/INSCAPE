@@ -1,0 +1,230 @@
+{
+  "atUtc": "2026-10-19T22:40:24.272Z",
+  "baseCommit": "06ac24a5837b2cbf375687468015f46f49cfa48d",
+  "status": "local-fix-passed-hosted-pending",
+  "node": {
+    "tests": 1263,
+    "pass": 1263,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  "browser": [
+    {
+      "name": "context-action-bars",
+      "code": 0,
+      "seconds": 46.16,
+      "tests": 12,
+      "pass": 12,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0
+    },
+    {
+      "name": "workbench-inspection-keyboard",
+      "code": 0,
+      "seconds": 20.994,
+      "tests": 4,
+      "pass": 4,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0
+    },
+    {
+      "name": "workbench-inspection-lock",
+      "code": 0,
+      "seconds": 13.84,
+      "tests": 1,
+      "pass": 1,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0
+    },
+    {
+      "name": "display-inspection-session",
+      "code": 0,
+      "seconds": 16.801,
+      "tests": 12,
+      "pass": 12,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0
+    },
+    {
+      "name": "visitor-display-inspection",
+      "code": 0,
+      "seconds": 10.857,
+      "tests": 4,
+      "pass": 4,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0
+    },
+    {
+      "name": "svg-lifecycle",
+      "code": 0,
+      "seconds": 36.873,
+      "tests": 4,
+      "pass": 4,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0
+    },
+    {
+      "name": "workbench-recovery",
+      "code": 0,
+      "seconds": 4.883,
+      "tests": 1,
+      "pass": 1,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0
+    }
+  ],
+  "browserCases": 38,
+  "startup": {
+    "tests": 1,
+    "pass": 1,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  "initialJavaScriptBytes": 822884,
+  "originalHostedFailures": [
+    {
+      "runId": 39333160865,
+      "event": "pull_request",
+      "testedCommit": "13efb219c72671198b2a53a5848f98c0dd64a620",
+      "nodePassed": 1263,
+      "browserPassed": 211,
+      "browserCases": 212,
+      "failures": [
+        {
+          "name": "svg-lifecycle",
+          "code": 1,
+          "seconds": 46.337,
+          "tests": 4,
+          "pass": 3,
+          "fail": 1,
+          "cancelled": 0,
+          "skipped": 0,
+          "todo": 0,
+          "error": "Incomplete test run: {\"tests\":4,\"pass\":3,\"fail\":1,\"cancelled\":0,\"skipped\":0,\"todo\":0}"
+        }
+      ]
+    },
+    {
+      "runId": 39333153325,
+      "event": "push",
+      "testedCommit": "06ac24a5837b2cbf375687468015f46f49cfa48d",
+      "nodePassed": 1263,
+      "browserPassed": 211,
+      "browserCases": 212,
+      "failures": [
+        {
+          "name": "context-action-bars",
+          "code": 1,
+          "seconds": 27.441,
+          "tests": 9,
+          "pass": 8,
+          "fail": 1,
+          "cancelled": 0,
+          "skipped": 0,
+          "todo": 0,
+          "error": "Incomplete test run: {\"tests\":9,\"pass\":8,\"fail\":1,\"cancelled\":0,\"skipped\":0,\"todo\":0}"
+        }
+      ]
+    }
+  ],
+  "focus": {
+    "spontaneousCpuReproduction": "inspection-probe-1792449014287/probe.log",
+    "deterministicBaseline": "return-baseline/context-action-bars.log",
+    "deterministicFixed": "affected-final/context-action-bars.log",
+    "cause": "animation frame may run before the closing React commit; focus is skipped permanently",
+    "repair": "inspection session restores requested focus in its closing layout effect; newer focus/scope is preserved"
+  },
+  "svg": {
+    "cpuProbe": "svg-probe-1792449326861/probe.log",
+    "probeCounts": {
+      "tests": 10,
+      "pass": 10,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0
+    },
+    "causeConfirmed": false,
+    "runtimeChanged": false,
+    "failureDiagnosticsAdded": true
+  },
+  "recovery": {
+    "normal": {
+      "tests": 8,
+      "pass": 8,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0
+    },
+    "cpu4": {
+      "tests": 4,
+      "pass": 4,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0
+    },
+    "historicalCauseConfirmed": false
+  },
+  "historicalFixtureCorrections": "Display inspection now uses I in two additional suites; double-click/Enter are Workbench focus actions",
+  "setupCorrections": [
+    "Probe started outside repository before corrected cwd; no tests ran",
+    "New fixture import corrected to react-dom/client default export before baseline proof",
+    "Build succeeded; mistaken follow-up budget script name corrected to package.json build:check target"
+  ],
+  "files": [
+    {
+      "path": "src/public/ownerSystemWorkflow/DisplayFocusViewer.jsx",
+      "bytes": 4950,
+      "sha256": "447c927fabd3dc02527c689ff37f39600debece5798c8251f9f441fc4106029c"
+    },
+    {
+      "path": "src/public/ownerSystemWorkflow/useDisplayInspection.js",
+      "bytes": 5822,
+      "sha256": "601ee7eff471164a5942b591e8265586b883dc195fee3f4bd474b87398bd3ef7"
+    },
+    {
+      "path": "browser-tests/context-action-bars.browser.mjs",
+      "bytes": 19455,
+      "sha256": "8acd5fbb53161b345560846fb58cec10f2240dde50e8fd9a3c5f326274bd1013"
+    },
+    {
+      "path": "browser-tests/display-inspection-session.browser.mjs",
+      "bytes": 12405,
+      "sha256": "97f0fce6b5f90da5ec07e128ca3f7fb3a30801c3b866b455c7d99bd02eacb763"
+    },
+    {
+      "path": "browser-tests/visitor-display-inspection.browser.mjs",
+      "bytes": 4992,
+      "sha256": "02c52217120356702ca6690f8078541aba1ce63b508917f17e61e21a52fa37a3"
+    },
+    {
+      "path": "browser-tests/svg-lifecycle.browser.mjs",
+      "bytes": 6812,
+      "sha256": "636ae31f0e06a65a113d810566db12cf688fc2026099451f7d4d59b84e5794e1"
+    }
+  ],
+  "realUserTabChanged": false,
+  "walletRequested": false,
+  "pinataUploadAttempted": false,
+  "mainMerged": false
+}

@@ -1,5 +1,9 @@
 # Inscape audit checkpoint — 19 October 2026
 
+Latest follow-up: [online verification and inspection return, 20 October](../2026-10-20/online-verification.md).
+It records the two failed 06ac24a runs, a proven focus repair and the exact local
+rechecks. Read Actions for the repaired commit's hosted result.
+
 This checkpoint shares the current application after the local audit and sixteen
 remediation/verification rounds. It includes the existing development history;
 it is a review/deployment-preview candidate, not a production release approval.

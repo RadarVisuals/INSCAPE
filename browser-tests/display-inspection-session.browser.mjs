@@ -14,7 +14,7 @@ test('owner Display opens inspection and returns focus to the inspected artwork'
     await page.route('**/*', route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
     await page.goto(`${origin}/development/owner/system-workflow`);
     const first = page.getByRole('button', { name: /Select ABYSSAL STUDY/ });
-    await first.dblclick();
+    await first.focus(); await page.keyboard.press('i');
     await page.getByRole('group', { name: 'Artwork inspection', exact: true }).waitFor();
     assert.equal(await page.getByRole('group', { name: 'Artwork inspection', exact: true }).getByRole('button').count(), 1,
       'inspection exposes only Return to composition');
