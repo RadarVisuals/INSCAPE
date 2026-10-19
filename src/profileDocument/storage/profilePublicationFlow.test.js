@@ -10,6 +10,7 @@ import { uploadProfileDocument } from './profileDocumentUploadClient.js';
 import { createProfileDocumentPublisher } from './profileDocumentPublisher.js';
 import { createLuksoPublishedProfileRepository } from './luksoPublishedProfileRepository.js';
 import { createPinProfileDocumentHandler } from '../../../netlify/functions/pin-profile-document.mjs';
+import { memoryQuotaStore, uploadTestContext, uploadTestPolicy, uploadTestVerifier, UPLOAD_TEST_NOW } from '../../../scripts/fixtures/publicationUpload.mjs';
 
 const CID = 'QmYwAPJzv5CZsnAzt8auVZRnGi2CWF7rP3pVYdWrJwEmQw';
 const ORIGIN = 'https://publication-flow.invalid';
@@ -37,14 +38,19 @@ test('current mixed modules pass the deployed upload handler, CID verification, 
   assert.equal(document.shapes.length, 1);
 
   let uploadedBytes, uploadCalls = 0, walletCalls = 0, pointer = '0x';
-  const handler = createPinProfileDocumentHandler({ getJwt: () => 'test-only-credential', fetchImpl: async (url, init) => {
+  const uploadContext = uploadTestContext(document);
+  const store = memoryQuotaStore();
+  const handler = createPinProfileDocumentHandler({ now: () => UPLOAD_TEST_NOW, getPolicy: () => uploadTestPolicy([filledProfile]),
+    getQuotaStore: () => store, verifySignature: uploadTestVerifier(filledProfile),
+    getJwt: () => 'test-only-credential', fetchImpl: async (url, init) => {
     assert.equal(url, 'https://uploads.pinata.cloud/v3/files');
     uploadCalls += 1;
     uploadedBytes = new Uint8Array(await init.body.get('file').arrayBuffer());
     assert.deepEqual(uploadedBytes, artifact.bytes);
     return Response.json({ data: { cid: CID } }, { status: 201 });
   } });
-  const uploaded = await uploadProfileDocument(document, { fetchImpl: async (url, init) =>
+  const uploaded = await uploadProfileDocument(document, { origin: ORIGIN, now: () => UPLOAD_TEST_NOW, getContext: () => uploadContext,
+    fetchImpl: async (url, init) =>
     handler(new Request(new URL(url, ORIGIN), { ...init, headers: { ...init.headers, origin: ORIGIN } })) });
   assert.equal(uploaded.ipfsUri, `ipfs://${CID}`);
   assert.equal(uploadCalls, 1);

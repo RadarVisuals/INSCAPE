@@ -34,7 +34,7 @@ test('System Workflow production shell preserves the Phase 3 authority and isola
   assert.match(runtime, /onPublished=\{\(result\) => \{[\s\S]*recordOwnerPublicationBaseline[\s\S]*onPublicationConfirmed\?\.\(result\)/u);
   assert.match(runtime, /onSnapshotChange=\{\(\{ document \}\) => onPreviewDocumentChange\?\.\(document\)\}/);
   assert.match(globalBar, /aria-expanded=\{publicationOpen\} aria-label="Publish"/);
-  assert.match(publicationRack, /uploadProfileDocument\(snapshot\)/);
+  assert.match(publicationRack, /uploadProfileDocument\(snapshot,\s*\{/);
   assert.match(publicationRack, /publication\.verifyCid\(snapshot, uploaded\.cid/);
   assert.match(publicationRack, /publication\.publish\(\)/);
   assert.match(publicationRack, /data-lattice-menu-surface data-menu-surface=\{menuSurface\}/);

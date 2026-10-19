@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { X } from 'lucide-react';
 import { PROFILE_DOCUMENT_PUBLICATION_STATUS } from '../../profileDocument/domain/profileDocumentPublication.js';
 import { profileDocumentV9ContentFingerprint } from '../../profileDocument/domain/profileDocumentV9Serialization.js';
@@ -81,13 +81,17 @@ export default function OwnerSystemWorkflowPublicationRack({
     snapshotDraftFingerprint: snapshotDraftFingerprintRef.current,
     snapshotGeneration: snapshotGenerationRef.current,
   }), [draftFingerprint, getWalletPublicationContext, profileAddress]);
+  const uploadContextRef = useRef(getPublicationContext);
+  uploadContextRef.current = getPublicationContext;
+  const uploadControllerRef = useRef(null);
+  useEffect(() => () => uploadControllerRef.current?.abort(), []);
   const publication = useProfileDocumentPublication(
     getPublicationContext,
     `${draftGenerationRef.current.generation}:${snapshotGenerationRef.current}:${cidGenerationRef.current}:${stale}`,
   );
   const publicationBusy = ['VERIFYING_CID', 'AWAITING_WALLET', 'CONFIRMING_TRANSACTION', 'VERIFYING_PUBLICATION']
     .includes(publication.status);
-  const busy = ['PREPARING', 'UPLOADING', 'WALLET'].includes(operationPhase) || publicationBusy;
+  const busy = ['PREPARING', 'CHECKING_ACCESS', 'AUTHORIZING', 'UPLOADING', 'WALLET'].includes(operationPhase) || publicationBusy;
   const recovery = usePublicationRecovery(profileAddress, publication.status, busy);
 
   const prepareSnapshot = useCallback(() => {
@@ -122,13 +126,22 @@ export default function OwnerSystemWorkflowPublicationRack({
   }, [builderInput, draftFingerprint, draftState.error, onSaveWorkbench, onSnapshotChange, profileAddress, publication, publishedResolution, snapshot]);
 
   const uploadSnapshot = useCallback(async () => {
+    if (uploadControllerRef.current) return;
+    const controller = new AbortController();
+    uploadControllerRef.current = controller;
     try {
       setSupportIssue(null);
       if (!snapshot) throw new Error('Prepare a snapshot before uploading.');
       if (stale) throw new Error('The System Workflow changed; prepare a new snapshot.');
-      setOperationPhase('UPLOADING');
-      setMessage('Making your public presentation available…');
-      const uploaded = await uploadProfileDocument(snapshot);
+      setOperationPhase('CHECKING_ACCESS');
+      setMessage('Checking upload access…');
+      const uploaded = await uploadProfileDocument(snapshot, {
+        getContext: () => uploadContextRef.current(), signal: controller.signal,
+        onPhase: phase => {
+          setOperationPhase(phase);
+          setMessage(phase === 'AUTHORIZING' ? 'Confirm upload access in your wallet. This signature authorizes only this presentation.' : 'Making your public presentation available…');
+        },
+      });
       cidGenerationRef.current += 1;
       cidRef.current = uploaded.cid;
       const verified = await publication.verifyCid(snapshot, uploaded.cid, { stale: false });
@@ -136,11 +149,14 @@ export default function OwnerSystemWorkflowPublicationRack({
       setMessage(verified ? 'Everything is verified. Publish it to your profile when you are ready.'
         : 'The public presentation could not be verified.');
     } catch (error) {
+      if (controller.signal.aborted) return;
       const nextMessage = error?.message || 'The publication upload failed.';
       setMessage(nextMessage);
       setSupportIssue({ code: ALPHA_SUPPORT_CODES.IPFS_UPLOAD_FAILED,
         phase: 'IPFS_UPLOAD', providerCategory: 'PUBLICATION_FUNCTION', message: nextMessage });
       setOperationPhase(null);
+    } finally {
+      if (uploadControllerRef.current === controller) uploadControllerRef.current = null;
     }
   }, [publication, snapshot, stale]);
 
@@ -163,6 +179,8 @@ export default function OwnerSystemWorkflowPublicationRack({
     && Boolean(publication.verified);
   const action = !snapshot || stale ? prepareSnapshot : verifiedReady ? publish : uploadSnapshot;
   const buttonLabel = operationPhase === 'PREPARING' ? 'PREPARING…'
+    : operationPhase === 'CHECKING_ACCESS' ? 'CHECKING ACCESS…'
+      : operationPhase === 'AUTHORIZING' ? 'AUTHORIZE UPLOAD…'
     : operationPhase === 'UPLOADING' ? 'MAKING PUBLIC…'
       : operationPhase === 'WALLET' ? 'CONFIRM IN WALLET…'
         : operationPhase === 'PUBLISHED' || publication.status === PROFILE_DOCUMENT_PUBLICATION_STATUS.PUBLISHED
@@ -203,7 +221,7 @@ export default function OwnerSystemWorkflowPublicationRack({
     </section>}
     <section className="owner-lattice-publication-rack__status-copy">
       <p role="status">{!busy && recovery.blocked ? 'Resolve the previous publication before preparing another one.' : publication.error || message}</p>
-      <small>Making the presentation public stores it permanently. Publishing to your profile requires one wallet confirmation.</small>
+      <small>Making the presentation public stores it permanently. Upload access requires a wallet signature; publishing to your profile then requires a transaction confirmation.</small>
     </section>
     {showSupport && <section className="owner-lattice-publication-rack__support">
       <details><summary>HELP WITH THIS ERROR</summary><AlphaSupportPanel compact

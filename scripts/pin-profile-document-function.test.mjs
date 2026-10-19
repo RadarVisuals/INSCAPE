@@ -4,6 +4,7 @@ import { createEmptySystemWorkflowDraft } from '../src/systemWorkflow/domain/sys
 import { buildProfileDocumentV9 } from '../src/profileDocument/domain/profileDocumentV9Builder.js';
 import { canonicalSerializeProfileDocumentV9 } from '../src/profileDocument/domain/profileDocumentV9Serialization.js';
 import { createPinProfileDocumentHandler } from '../netlify/functions/pin-profile-document.mjs';
+import { memoryQuotaStore, uploadTestPolicy, uploadTestChallenge, uploadTestVerifier, UPLOAD_TEST_NOW, UPLOAD_TEST_SIGNER } from './fixtures/publicationUpload.mjs';
 
 const PROFILE = '0x1111111111111111111111111111111111111111';
 const CID = 'QmYwAPJzv5CZsnAzt8auVZRnGi2CWF7rP3pVYdWrJwEmQw';
@@ -28,12 +29,18 @@ function requestFor(body, overrides = {}) {
 
 test('Netlify publication upload accepts only canonical profile documents and returns Pinata CID', async () => {
   const body = canonicalSerializeProfileDocumentV9(publication());
+  const challenge = uploadTestChallenge(publication());
+  const signature = await UPLOAD_TEST_SIGNER.signMessage({ message: challenge.message });
   let pinataRequest;
-  const handler = createPinProfileDocumentHandler({ getJwt: () => 'server-only-jwt', fetchImpl: async (url, init) => {
+  const handler = createPinProfileDocumentHandler({ now: () => UPLOAD_TEST_NOW,
+    getPolicy: () => uploadTestPolicy([PROFILE]), getQuotaStore: () => memoryQuotaStore(), verifySignature: uploadTestVerifier(PROFILE),
+    getJwt: () => 'server-only-jwt', fetchImpl: async (url, init) => {
     pinataRequest = { url, init };
     return Response.json({ data: { cid: CID } });
   } });
-  const response = await handler(requestFor(body));
+  const response = await handler(requestFor(body, { headers: {
+    'x-inscape-upload-authorization': challenge.authorization, 'x-inscape-upload-signature': signature,
+  } }));
   assert.equal(response.status, 201);
   assert.deepEqual(await response.json(), { cid: CID });
   assert.equal(response.headers.get('cache-control'), 'no-store');
@@ -51,12 +58,14 @@ test('Netlify publication upload accepts only canonical profile documents and re
 test('Netlify publication upload rejects cross-origin, noncanonical, and unconfigured requests before Pinata', async () => {
   const body = canonicalSerializeProfileDocumentV9(publication());
   let calls = 0;
-  const handler = createPinProfileDocumentHandler({ getJwt: () => '', fetchImpl: async () => { calls += 1; } });
+  const handler = createPinProfileDocumentHandler({ getPolicy: () => uploadTestPolicy([PROFILE]), getJwt: () => '', fetchImpl: async () => { calls += 1; } });
   const crossOrigin = await handler(requestFor(body, { headers: { origin: 'https://attacker.example' } }));
   assert.equal(crossOrigin.status, 403);
   const noncanonical = await handler(requestFor(JSON.stringify(publication(), null, 2)));
   assert.equal(noncanonical.status, 422);
-  const unconfigured = await handler(requestFor(body));
+  const unconfigured = await handler(requestFor(body, { headers: {
+    'x-inscape-upload-authorization': 'fixture', 'x-inscape-upload-signature': '0xaa',
+  } }));
   assert.equal(unconfigured.status, 503);
   assert.equal(calls, 0);
 });

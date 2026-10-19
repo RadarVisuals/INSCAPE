@@ -1,0 +1,38 @@
+✔ Netlify publication upload accepts only canonical profile documents and returns Pinata CID (53.2376ms)
+✔ Netlify publication upload rejects cross-origin, noncanonical, and unconfigured requests before Pinata (4.8758ms)
+✔ Netlify publication upload rejects UTF-8 BOM-prefixed canonical JSON bytes before credentials or Pinata (2.0453ms)
+✔ Netlify publication upload rejects every v1-v8 shape before credentials or Pinata (6.6242ms)
+✔ anonymous callers and unavailable admission configuration never reach Pinata (38.2604ms)
+✔ server challenge uses its own deployment, immutable byte hash, expiry and selected profile (8.2721ms)
+✔ changed bytes, wrong origin, expired or tampered permit, and invalid controller signature fail before accounting (19.0491ms)
+✔ profile permission is checked again on each request, including a cached successful upload (12.925ms)
+✔ wrong RPC network and unavailable quota storage fail closed before upload (11.4728ms)
+[profile-publication-upload] Upstream outcome unknown
+[profile-publication-upload] Upstream rejected request { status: 403 }
+✔ concurrent function instances submit identical bytes once and retain the completed CID (45.2807ms)
+✔ concurrent distinct documents cannot exceed one atomic profile/global quota (20.2181ms)
+✔ global count and exact byte limits apply across profiles, and redeploys do not reset them (2.4151ms)
+✔ unknown upstream result stays reserved; a confirmed rejection requires a new authorization (27.4886ms)
+✔ lost completion acknowledgement is recoverable without a second upstream upload (9.248ms)
+✔ quota corruption and conditional-write conflicts do not permit a fallback upload (9.3741ms)
+✔ permits expire at the month boundary and the new month has its own bounded ledger (6.3416ms)
+✔ chunked oversize input is cancelled at the byte limit before parsing or credentials (0.9281ms)
+✔ upload client sends canonical bytes and validates the returned CID (30.8644ms)
+✔ upload client does not accept a successful response without a valid CID (5.7963ms)
+✔ plain Vite HTML fallback is identified as an unavailable publication function (3.1865ms)
+✔ upload client rejects v1-v8 and malformed payloads before the publication endpoint (0.8ms)
+✔ denied access and a non-JSON edge rate limit never open the wallet (2.8361ms)
+✔ wrong domain, profile, bytes, hash, expiry or message is rejected before signing (15.308ms)
+✔ wallet refusal, expired approval and cancellation do not post publication bytes (5.7877ms)
+✔ profile, controller, chain, draft or generation changes while signing invalidate the upload (21.5491ms)
+✔ changes during challenge or upload cannot advance the next publication step (5.915ms)
+✔ cross-deployment endpoint and stale snapshot are rejected without any request (2.8552ms)
+✔ current mixed modules pass the deployed upload handler, CID verification, publication and reader together (207.3294ms)
+ℹ tests 28
+ℹ suites 0
+ℹ pass 28
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1315.2324

@@ -58,9 +58,10 @@ repair: per-Image viewport fitting canceled visible proportional resizing.
 It removes the redundant fit, records 96 additional corner drags plus reload
 checks, and documents a related Properties layout-loop fix and test limitations.
 
-- Public upload admission, identity quotas and abuse/replay protection remain
-  unresolved before an open paid-upload service. Existing same-origin checks and
-  per-IP limits are not uploader authentication.
+- [Upload admission and durable limits](upload-admission.md) now implement
+  profile signatures, invited access, atomic profile/global quotas and bounded
+  monthly replay protection. Hosting configuration, old credential revocation
+  and real-wallet acceptance remain required before paid-upload activation.
 - Deployment-preview environment, server credentials and real UP publication
   require separate checks. No wallet signature, transaction or IPFS upload was
   performed by the automated verification.

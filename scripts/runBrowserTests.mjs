@@ -15,7 +15,7 @@ const defaults = ['artwork-document', 'svg-lifecycle', 'camera-controls', 'conte
   'text-recovery-position', 'text-window-edges', 'workbench-area-navigation', 'workbench-groups', 'workbench-index',
   'workbench-inspection-keyboard', 'workbench-inspection-lock', 'workbench-layout-reload',
   'workbench-navigation-boundary', 'workbench-focus-toggle', 'workbench-focus-motion', 'workbench-focus-start', 'workbench-recovery', 'workbench-stacks', 'workbench-toolbar', 'entry-contrast', 'wallet-lazy-startup',
-  'workbench-storage', 'text-article-tools', 'text-filled-workbench', 'workbench-activation'];
+  'workbench-storage', 'text-article-tools', 'text-filled-workbench', 'workbench-activation', 'publication-upload-admission'];
 const args = process.argv.slice(2);
 const names = args.length ? args : defaults;
 for (const name of names) if (!/^[a-z0-9-]+$/.test(name) || !fs.existsSync(path.join(root, 'browser-tests', `${name}.browser.mjs`)))
