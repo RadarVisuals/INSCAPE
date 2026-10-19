@@ -33,7 +33,7 @@ test('Netlify publication upload accepts only canonical profile documents and re
   const signature = await UPLOAD_TEST_SIGNER.signMessage({ message: challenge.message });
   let pinataRequest;
   const handler = createPinProfileDocumentHandler({ now: () => UPLOAD_TEST_NOW,
-    getPolicy: () => uploadTestPolicy([PROFILE]), getQuotaStore: () => memoryQuotaStore(), verifySignature: uploadTestVerifier(PROFILE),
+    getPolicy: () => uploadTestPolicy(), getQuotaStore: () => memoryQuotaStore(), verifySignature: uploadTestVerifier(PROFILE),
     getJwt: () => 'server-only-jwt', fetchImpl: async (url, init) => {
     pinataRequest = { url, init };
     return Response.json({ data: { cid: CID } });
@@ -58,7 +58,7 @@ test('Netlify publication upload accepts only canonical profile documents and re
 test('Netlify publication upload rejects cross-origin, noncanonical, and unconfigured requests before Pinata', async () => {
   const body = canonicalSerializeProfileDocumentV9(publication());
   let calls = 0;
-  const handler = createPinProfileDocumentHandler({ getPolicy: () => uploadTestPolicy([PROFILE]), getJwt: () => '', fetchImpl: async () => { calls += 1; } });
+  const handler = createPinProfileDocumentHandler({ getPolicy: () => uploadTestPolicy(), getJwt: () => '', fetchImpl: async () => { calls += 1; } });
   const crossOrigin = await handler(requestFor(body, { headers: { origin: 'https://attacker.example' } }));
   assert.equal(crossOrigin.status, 403);
   const noncanonical = await handler(requestFor(JSON.stringify(publication(), null, 2)));

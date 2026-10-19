@@ -70,13 +70,13 @@ test('upload client rejects v1-v8 and malformed payloads before the publication 
   assert.equal(calls, 0);
 });
 
-test('denied access and a non-JSON edge rate limit never open the wallet', async () => {
-  for (const response of [Response.json({ error: { code: 'UPLOAD_PROFILE_NOT_ALLOWED', message: 'Invited profiles only' } }, { status: 403 }),
+test('unconfigured service and a non-JSON edge rate limit never open the wallet', async () => {
+  for (const response of [Response.json({ error: { code: 'UPLOAD_NOT_CONFIGURED', message: 'Upload service not configured' } }, { status: 503 }),
     new Response('Rate limited', { status: 429, headers: { 'retry-after': '60' } })]) {
     const fixture = clientFixture();
     fixture.options.fetchImpl = async () => response;
     await assert.rejects(() => uploadProfileDocument(document, fixture.options), error => {
-      assert.ok(['UPLOAD_PROFILE_NOT_ALLOWED', 'UPLOAD_RATE_LIMITED'].includes(error.code));
+      assert.ok(['UPLOAD_NOT_CONFIGURED', 'UPLOAD_RATE_LIMITED'].includes(error.code));
       if (response.status === 429) assert.equal(error.retryAfter, '60');
       return true;
     });

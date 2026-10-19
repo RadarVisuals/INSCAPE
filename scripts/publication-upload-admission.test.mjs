@@ -16,7 +16,7 @@ const sign = challenge => UPLOAD_TEST_SIGNER.signMessage({ message: challenge.me
 function setup(overrides = {}) {
   let upstreamCalls = 0, signatureChecks = 0;
   const store = memoryQuotaStore();
-  const policy = uploadTestPolicy([PROFILE, OTHER]);
+  const policy = uploadTestPolicy();
   const verify = uploadTestVerifier(PROFILE);
   const options = { getJwt: () => 'synthetic-upstream-only', getPolicy: () => policy, getQuotaStore: () => store,
     now: () => UPLOAD_TEST_NOW, verifySignature: async (...args) => { signatureChecks++; await verify(...args); },
@@ -30,9 +30,8 @@ async function send(handler, doc = document(), challenge = uploadTestChallenge(d
 test('anonymous callers and unavailable admission configuration never reach Pinata', async () => {
   const state = setup();
   assert.equal((await state.handler(uploadRequest(document()))).status, 401);
-  for (const values of [{}, { INSCAPE_UPLOAD_ALLOWED_PROFILES: '*' },
-    { INSCAPE_UPLOAD_ALLOWED_PROFILES: PROFILE, INSCAPE_UPLOAD_AUTH_SECRET: 'short' },
-    { INSCAPE_UPLOAD_ALLOWED_PROFILES: PROFILE, INSCAPE_UPLOAD_AUTH_SECRET: '2'.repeat(64), INSCAPE_UPLOAD_MONTHLY_LIMIT: '-1' }]) {
+  for (const values of [{}, { INSCAPE_UPLOAD_AUTH_SECRET: 'short' },
+    { INSCAPE_UPLOAD_AUTH_SECRET: '2'.repeat(64), INSCAPE_UPLOAD_MONTHLY_LIMIT: '-1' }]) {
     assert.throws(() => readUploadPolicy(values), error => error.code === 'UPLOAD_NOT_CONFIGURED');
   }
   assert.equal(state.calls(), 0);
@@ -50,9 +49,32 @@ test('server challenge uses its own deployment, immutable byte hash, expiry and 
   assert.equal(returned.permit.expiresAt, UPLOAD_TEST_NOW + 300_000);
   assert.match(returned.message, /Chain ID: 42/u);
   assert.ok(returned.message.includes(challenge.permit.hash));
-  assert.equal((await state.handler(request(metadata({ ...challenge.permit, profile: `0x${'9'.repeat(40)}` })))).status, 403);
+  const other = await state.handler(request(metadata({ ...challenge.permit, profile: OTHER })));
+  assert.equal(other.status, 200, 'a new profile needs no invitation or server configuration');
+  assert.equal((await other.json()).permit.profile, OTHER);
   assert.equal((await state.handler(request(JSON.stringify({ ...challenge.permit, origin: 'https://evil.example' })))).status, 422);
   assert.equal(state.calls(), 0); assert.equal(state.store.records.size, 0, 'unauthenticated challenges do not allocate quota storage');
+});
+
+test('two independently verified Universal Profiles upload without an invitation; impersonation still fails', async () => {
+  const state = setup({ verifySignature: (permit, signature) => uploadTestVerifier(permit.profile)(permit, signature) });
+  assert.equal((await send(state.handler, document())).status, 201);
+  assert.equal((await send(state.handler, document(1, OTHER))).status, 201);
+  const foreignPermit = uploadTestChallenge(document());
+  assert.equal((await send(state.handler, document(2, OTHER), foreignPermit)).status, 401);
+  assert.equal(state.calls(), 2);
+  assert.deepEqual(new Set(state.store.records.get('month-2026-10').data.entries.map(entry => entry.profile)), new Set([PROFILE, OTHER]));
+});
+
+test('non-LSP0 or invalid ERC165 contracts fail before quota even with a valid signature', async () => {
+  for (const interfaces of [{ lsp0: false }, { erc165: false }, { invalidInterface: true }]) {
+    const state = setup({ verifySignature: uploadTestVerifier(PROFILE, interfaces) });
+    const response = await send(state.handler);
+    assert.equal(response.status, 403);
+    assert.equal((await response.json()).error.code, 'UPLOAD_PROFILE_INVALID');
+    assert.equal(state.calls(), 0);
+    assert.equal(state.store.records.size, 0);
+  }
 });
 
 test('changed bytes, wrong origin, expired or tampered permit, and invalid controller signature fail before accounting', async () => {
@@ -113,7 +135,7 @@ test('global count and exact byte limits apply across profiles, and redeploys do
   for (const type of ['count', 'bytes']) {
     const store = memoryQuotaStore(); const first = uploadTestChallenge(document()).permit;
     const second = uploadTestChallenge(document(2, OTHER)).permit;
-    const policy = uploadTestPolicy([PROFILE, OTHER], type === 'count' ? { monthlyUploads: 1 } : { monthlyBytes: first.bytes + second.bytes - 1 });
+    const policy = uploadTestPolicy(type === 'count' ? { monthlyUploads: 1 } : { monthlyBytes: first.bytes + second.bytes - 1 });
     await createUploadQuota({ store, now: () => UPLOAD_TEST_NOW }).reserve(first, policy);
     await assert.rejects(() => createUploadQuota({ store, now: () => UPLOAD_TEST_NOW }).reserve(second, policy), error => error.code === 'UPLOAD_SERVICE_QUOTA');
     assert.equal(store.records.get('month-2026-10').data.entries.length, 1);

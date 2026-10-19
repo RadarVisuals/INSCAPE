@@ -40,7 +40,7 @@ test('current mixed modules pass the deployed upload handler, CID verification, 
   let uploadedBytes, uploadCalls = 0, walletCalls = 0, pointer = '0x';
   const uploadContext = uploadTestContext(document);
   const store = memoryQuotaStore();
-  const handler = createPinProfileDocumentHandler({ now: () => UPLOAD_TEST_NOW, getPolicy: () => uploadTestPolicy([filledProfile]),
+  const handler = createPinProfileDocumentHandler({ now: () => UPLOAD_TEST_NOW, getPolicy: () => uploadTestPolicy(),
     getQuotaStore: () => store, verifySignature: uploadTestVerifier(filledProfile),
     getJwt: () => 'test-only-credential', fetchImpl: async (url, init) => {
     assert.equal(url, 'https://uploads.pinata.cloud/v3/files');

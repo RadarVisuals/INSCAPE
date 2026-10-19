@@ -2497,6 +2497,14 @@ the initial overview does not introduce a saved curation or layout schema.
 
 ## Editing, public inspection, and publication
 
+- On 19 October 2026 the founder explicitly chose publication upload access for
+  everyone with a valid Universal Profile, within the service's upload limits.
+  No invitation or operator-maintained profile list is required. The server
+  checks mainnet profile interfaces and a fresh, document-bound profile signature
+  before reserving per-profile and site-wide quotas. These are account/authority
+  checks, not proof of a unique person. Hosted secrets and service availability
+  remain operational prerequisites. Upload authorization and the later on-chain
+  Publish action stay separate; browsing and preparing do not request signatures.
 - The Library retains one canonical record and initially one cover tile per token.
   Its circular image-count button expands or folds that NFT's supported attached
   images directly in the browsing grid, labelled with their source NFT. Each NFT

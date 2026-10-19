@@ -3,6 +3,7 @@ import test from 'node:test';
 import { mkdir } from 'node:fs/promises';
 import { chromium } from 'playwright-core';
 import { createPinProfileDocumentHandler } from '../netlify/functions/pin-profile-document.mjs';
+import { readUploadPolicy } from '../netlify/lib/publicationUploadAuth.mjs';
 import { memoryQuotaStore, uploadTestPolicy, uploadTestVerifier, UPLOAD_TEST_SIGNER } from '../scripts/fixtures/publicationUpload.mjs';
 
 const origin = process.env.INSCAPE_TEST_ORIGIN || 'http://127.0.0.1:5173';
@@ -12,8 +13,8 @@ const profile = `0x${'1'.repeat(40)}`, cid = 'QmYwAPJzv5CZsnAzt8auVZRnGi2CWF7rP3
 async function fixture(page, scenario) {
   const store = memoryQuotaStore(), state = { requests: [], uploads: 0, bytes: '' };
   const handler = createPinProfileDocumentHandler({ getJwt: () => 'fixture-only', getQuotaStore: () => store,
-    getPolicy: () => uploadTestPolicy(scenario === 'denied' ? [`0x${'2'.repeat(40)}`] : [profile]),
-    verifySignature: uploadTestVerifier(profile), fetchImpl: async (_url, init) => {
+    getPolicy: () => scenario === 'unconfigured' ? readUploadPolicy({}) : uploadTestPolicy(),
+    verifySignature: uploadTestVerifier(profile, { lsp0: scenario !== 'invalid-profile' }), fetchImpl: async (_url, init) => {
       state.uploads++; state.bytes = await init.body.get('file').text();
       return Response.json({ data: { cid } });
     } });
@@ -56,8 +57,8 @@ async function fixture(page, scenario) {
   return state;
 }
 
-for (const [scenario, width] of [['accepted', 1440], ['accepted', 390], ['refused', 1440], ['denied', 390],
-  ['profile-change', 1440], ['unmount', 1440], ['quota', 390], ['wrong-cid', 1440]]) {
+for (const [scenario, width] of [['accepted', 1440], ['accepted', 390], ['refused', 1440], ['unconfigured', 390],
+  ['invalid-profile', 390], ['profile-change', 1440], ['unmount', 1440], ['quota', 390], ['wrong-cid', 1440]]) {
   test(`publication upload ${scenario}, ${width}px`, { timeout: 60_000 }, async () => {
     const browser = await chromium.launch({ headless: true });
     try {
@@ -69,8 +70,8 @@ for (const [scenario, width] of [['accepted', 1440], ['accepted', 390], ['refuse
       assert.equal(state.requests.length, 0, 'opening and preparing require no request or signature');
       assert.equal(await page.evaluate(() => window.__uploadState.signatures), 0);
       await page.getByRole('button', { name: 'MAKE PRESENTATION PUBLIC', exact: true }).click();
-      if (scenario === 'denied') {
-        await rack.getByRole('status').filter({ hasText: 'invited profiles' }).waitFor();
+      if (scenario === 'unconfigured') {
+        await rack.getByRole('status').filter({ hasText: 'not configured' }).waitFor();
         assert.equal(await page.evaluate(() => window.__uploadState.signatures), 0);
       } else {
         await page.waitForFunction(() => window.__uploadState.signatures === 1);
@@ -92,7 +93,7 @@ for (const [scenario, width] of [['accepted', 1440], ['accepted', 390], ['refuse
           assert.equal(state.uploads, 1);
           assert.equal(state.requests.length, 2);
         } else if (scenario !== 'unmount') {
-          const text = { refused: 'authorization was not completed', 'profile-change': 'profile, wallet or presentation changed', quota: 'hourly upload limit', 'wrong-cid': 'CID verification failed' }[scenario];
+          const text = { refused: 'authorization was not completed', 'invalid-profile': 'Universal Profile on LUKSO mainnet', 'profile-change': 'profile, wallet or presentation changed', quota: 'hourly upload limit', 'wrong-cid': 'CID verification failed' }[scenario];
           await rack.getByRole('status').filter({ hasText: text }).waitFor();
           assert.equal(await page.getByRole('button', { name: 'PUBLISH TO PROFILE', exact: true }).count(), 0);
         } else {
@@ -101,7 +102,8 @@ for (const [scenario, width] of [['accepted', 1440], ['accepted', 390], ['refuse
         }
       }
       if (!['accepted', 'wrong-cid'].includes(scenario)) assert.equal(state.uploads, 0);
-      if (['refused', 'denied', 'profile-change', 'unmount'].includes(scenario)) assert.equal(state.requests.length, 1);
+      if (['refused', 'unconfigured', 'profile-change', 'unmount'].includes(scenario)) assert.equal(state.requests.length, 1);
+      if (scenario === 'invalid-profile') assert.equal(state.requests.length, 2);
       assert.equal(await page.evaluate(() => window.__uploadState.writes), 0, 'no chain write before a separate explicit Publish action');
       if (scenario !== 'unmount') {
         const box = await rack.boundingBox(); assert.ok(box.x >= 0 && box.x + box.width <= width + .5 && box.y >= 0 && box.y + box.height <= 900.5);

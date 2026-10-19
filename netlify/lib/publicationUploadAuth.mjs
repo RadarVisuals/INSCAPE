@@ -1,7 +1,7 @@
 import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 import { createPublicClient, hashMessage, http } from 'viem';
 import { lukso } from 'viem/chains';
-import { LUKSO_CHAIN_ID, LUKSO_RPC_URL, normalizeProfileAddress } from '../../src/library/config.js';
+import { ERC165_ABI, LUKSO_CHAIN_ID, LUKSO_RPC_URL, LSP0_ERC165_INTERFACE_ID } from '../../src/library/config.js';
 import { assertUploadPermit, uploadAuthorizationMessage, UPLOAD_AUTH_LIFETIME_MS } from '../../src/profileDocument/domain/uploadAuthorization.js';
 
 export class UploadServiceError extends Error {
@@ -9,9 +9,8 @@ export class UploadServiceError extends Error {
 }
 
 export function readUploadPolicy(env = process.env) {
-  const profiles = String(env.INSCAPE_UPLOAD_ALLOWED_PROFILES || '').split(/[\s,]+/u).filter(Boolean).map(normalizeProfileAddress);
   const secret = String(env.INSCAPE_UPLOAD_AUTH_SECRET || '');
-  if (!profiles.length || profiles.length > 1000 || profiles.some(profile => !profile) || !/^[0-9a-f]{64}$/iu.test(secret)) {
+  if (!/^[0-9a-f]{64}$/iu.test(secret)) {
     throw new UploadServiceError('UPLOAD_NOT_CONFIGURED', 'Profile upload access is not configured for this deployment.');
   }
   const limit = (key, fallback, max) => {
@@ -20,19 +19,14 @@ export function readUploadPolicy(env = process.env) {
     if (!Number.isSafeInteger(value) || value < 1 || value > max) throw new UploadServiceError('UPLOAD_NOT_CONFIGURED', 'The upload limits need to be configured.');
     return value;
   };
-  return { profiles: new Set(profiles), secret,
+  return { secret,
     hourlyPerProfile: limit('INSCAPE_UPLOAD_HOURLY_PER_PROFILE', 12, 100),
     monthlyUploads: limit('INSCAPE_UPLOAD_MONTHLY_LIMIT', 1000, 10_000),
     monthlyBytes: limit('INSCAPE_UPLOAD_MONTHLY_BYTES', 128 * 1024 * 1024, 512 * 1024 * 1024) };
 }
 
-export function assertUploadAdmission(policy, profile) {
-  if (!policy.profiles.has(profile)) throw new UploadServiceError('UPLOAD_PROFILE_NOT_ALLOWED', 'Uploads are currently available to invited profiles only.', 403);
-}
-
 const mac = (text, secret) => createHmac('sha256', Buffer.from(secret, 'hex')).update(text).digest();
 export function createUploadChallenge({ profile, hash, bytes, origin, policy, now = Date.now(), nonce = randomBytes(16).toString('hex') }) {
-  assertUploadAdmission(policy, profile);
   // No permit survives the monthly quota boundary, including a replay.
   const date = new Date(now);
   const nextMonth = Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + 1, 1);
@@ -50,7 +44,6 @@ export function verifyUploadAuthorization(authorization, expected, policy, now =
     if (!timingSafeEqual(actual, mac(payload, policy.secret))) throw Error();
     const permit = assertUploadPermit(JSON.parse(Buffer.from(payload, 'base64url').toString('utf8')), now);
     if (Object.entries(expected).some(([key, value]) => permit[key] !== value)) throw Error();
-    assertUploadAdmission(policy, permit.profile);
     return permit;
   } catch (error) {
     if (error instanceof UploadServiceError) throw error;
@@ -67,11 +60,19 @@ export function createProfileSignatureVerifier({ client = createPublicClient({ c
       throw new UploadServiceError('UPLOAD_SIGNATURE_INVALID', 'A valid profile signature is required for this upload.', 401);
     }
     try {
-      const [chain, value] = await Promise.all([client.getChainId(), client.readContract({
+      // Interface support is a standards check, not a trusted-issuer allowlist.
+      // Site-wide quotas still bound callers who create multiple profiles.
+      const supports = interfaceId => client.readContract({ address: permit.profile,
+        abi: ERC165_ABI, functionName: 'supportsInterface', args: [interfaceId] });
+      const [chain, erc165, invalidInterface, lsp0, value] = await Promise.all([
+        client.getChainId(), supports('0x01ffc9a7'), supports('0xffffffff'), supports(LSP0_ERC165_INTERFACE_ID), client.readContract({
         address: permit.profile, abi: SIGNATURE_ABI, functionName: 'isValidSignature',
         args: [hashMessage(uploadAuthorizationMessage(permit)), signature],
       })]);
       if (chain !== LUKSO_CHAIN_ID) throw new UploadServiceError('UPLOAD_AUTH_UNAVAILABLE', 'The profile verification network is unavailable.');
+      if (erc165 !== true || invalidInterface !== false || lsp0 !== true) {
+        throw new UploadServiceError('UPLOAD_PROFILE_INVALID', 'A Universal Profile on LUKSO mainnet is required for this upload.', 403);
+      }
       if (value !== '0x1626ba7e') throw new UploadServiceError('UPLOAD_SIGNATURE_INVALID', 'The profile did not authorize this upload signature.', 401);
     } catch (error) {
       if (error instanceof UploadServiceError) throw error;

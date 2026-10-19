@@ -42,7 +42,7 @@ test('the installed Blobs SDK sends site-wide strong reads and conditional write
   const profile = `0x${'1'.repeat(40)}`;
   const quota = createUploadQuota({ store, now: () => UPLOAD_TEST_NOW });
   await assert.rejects(() => quota.reserve({ issuedAt: UPLOAD_TEST_NOW, expiresAt: UPLOAD_TEST_NOW + 1000,
-    profile, hash: `0x${'a'.repeat(64)}`, nonce: 'b'.repeat(32), bytes: 100 }, uploadTestPolicy([profile])), { code: 'UPLOAD_QUOTA_UNAVAILABLE' });
+    profile, hash: `0x${'a'.repeat(64)}`, nonce: 'b'.repeat(32), bytes: 100 }, uploadTestPolicy()), { code: 'UPLOAD_QUOTA_UNAVAILABLE' });
   assert.equal(calls.length, before + 1, '429 does not start SDK backoff or retry an uncertain write');
   const controller = new AbortController(); controller.abort();
   await assert.rejects(() => publicationQuotaStore(controller.signal).getWithMetadata('probe', { type: 'json' }));

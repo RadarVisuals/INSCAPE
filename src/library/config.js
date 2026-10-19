@@ -1,4 +1,8 @@
 export const LUKSO_CHAIN_ID = 42;
+// LSP-0-ERC725Account interface, shared by wallet admission and hosted uploads.
+export const LSP0_ERC165_INTERFACE_ID = '0x24871b3d';
+export const ERC165_ABI = [{ type: 'function', name: 'supportsInterface', stateMutability: 'view',
+  inputs: [{ name: 'interfaceId', type: 'bytes4' }], outputs: [{ name: '', type: 'bool' }] }];
 export const LUKSO_INDEXER_URL = import.meta.env?.VITE_LUKSO_INDEXER_URL
   || 'https://envio.lukso-mainnet.universal.tech/v1/graphql';
 export const CHILLWHALES_INDEXER_URL = import.meta.env?.VITE_CHILLWHALES_INDEXER_URL

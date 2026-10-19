@@ -59,9 +59,12 @@ It removes the redundant fit, records 96 additional corner drags plus reload
 checks, and documents a related Properties layout-loop fix and test limitations.
 
 - [Upload admission and durable limits](upload-admission.md) now implement
-  profile signatures, invited access, atomic profile/global quotas and bounded
+  profile signatures, atomic profile/global quotas and bounded
   monthly replay protection. Hosting configuration, old credential revocation
   and real-wallet acceptance remain required before paid-upload activation.
+- [Open profile access](upload-open-access.md) records the founder's subsequent
+  decision: all valid Universal Profiles can use uploads within those limits,
+  without invitations. Hosted activation is separate from code verification.
 - Deployment-preview environment, server credentials and real UP publication
   require separate checks. No wallet signature, transaction or IPFS upload was
   performed by the automated verification.

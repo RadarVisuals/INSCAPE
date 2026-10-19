@@ -1,5 +1,9 @@
 # Upload admission and durable limits — 19 October 2026
 
+**Follow-up:** the founder subsequently chose access for every valid Universal
+Profile. [Open profile access](upload-open-access.md) supersedes the invitation
+assumption below. The following counts remain evidence of the earlier repair.
+
 An unsigned, canonical profile document could previously reach the paid Pinata
 upload. The saved regression probe returned HTTP 201 and invoked the fake Pinata
 adapter once. After the repair the same request returns 401 and invokes it zero
