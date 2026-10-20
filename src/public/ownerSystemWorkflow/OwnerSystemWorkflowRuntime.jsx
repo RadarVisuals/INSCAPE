@@ -509,11 +509,11 @@ function WorkbenchSession({ connectedProfile, getWalletPublicationContext, onCon
       views={restoredWorkspace.views} onViewChange={registerTextView} records={workbenchController.draft.texts} store={workbenchController.store} profileAddress={profileAddress} assets={canonicalRecords} windowSnap={workbenchPreferences.shortcutSnap}
       presentations={[...(initialWorkbench.current?.texts || []), ...(workbenchController.draft.workbench?.texts || [])]} onPresentationChange={registerTextPresentation}
       registerTarget={registerModuleAssetTarget} placementTargets={allPlacementTargetsRef} suspended={Boolean(preview)} /></Suspense>}
+    </WorkbenchCanvasContent>
     {workbenchController.draft.miniApps?.length > 0 && <Suspense fallback={<p role="status">Opening mini apps…</p>}><MiniAppsWorkbench
       records={workbenchController.draft.miniApps} store={workbenchController.store} profileAddress={profileAddress}
       presentations={initialWorkbench.current?.miniApps} onPresentationChange={registerMiniAppPresentation}
       onConnect={onConnect} suspended={Boolean(preview)} /></Suspense>}
-    </WorkbenchCanvasContent>
     <OwnerSystemWorkflowPanelLayer workbenchImageTargetRef={workbenchImageTargetRef} moduleAssetTargetRef={moduleTargetsRef} placementTargetRef={allPlacementTargetsRef} shortcutTargetRef={allShortcutTargetsRef} workspaceRef={workspaceRef} activity={activity} assets={assets} assetsById={assetsById} authoringLocked={false} browser={browser}
       connectedProfile={connectedProfile} onConnect={onConnect} onDisconnect={onDisconnect} onEnterMyWorld={onEnterMyWorld}
       controller={activeController} profileAddress={profileAddress} onMenuSurfaceChange={workbenchController.setMenuSurface} layout={layout} libraryData={libraryData} menuSurface={menuSurface} onChangeGrid={changeGrid}

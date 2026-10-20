@@ -9,10 +9,12 @@
 .workbench-canvas-edge { position: fixed; z-index: 81; padding: 0; border: 0; border-radius: 0; background: transparent; touch-action: none; }
 .workbench-canvas-edge::before { content: ''; position: absolute; background: var(--workflow-ink); pointer-events: none; }
 .workbench-canvas-edge::after { content: ''; position: absolute; left: 50%; top: 50%; width: 8px; height: 8px; box-sizing: border-box; transform: translate(-50%, -50%); border: 1px solid #fff; background: #111313; pointer-events: none; }
-.workbench-canvas-edge.is-e { width: 28px; transform: translateX(-50%); cursor: ew-resize; }
-.workbench-canvas-edge.is-e::before { left: 50%; top: 0; width: 1px; height: 100%; }
-.workbench-canvas-edge.is-s { height: 28px; transform: translateY(-50%); cursor: ns-resize; }
-.workbench-canvas-edge.is-s::before { top: 50%; left: 0; height: 1px; width: 100%; }
-.workbench-canvas-edge.is-se { width: 28px; height: 28px; transform: translate(-50%, -50%); cursor: nwse-resize; }
+.workbench-canvas-edge:is(.is-w, .is-e) { width: 28px; transform: translateX(-50%); cursor: ew-resize; }
+.workbench-canvas-edge:is(.is-w, .is-e)::before { left: 50%; top: 0; width: 1px; height: 100%; }
+.workbench-canvas-edge:is(.is-n, .is-s) { height: 28px; transform: translateY(-50%); cursor: ns-resize; }
+.workbench-canvas-edge:is(.is-n, .is-s)::before { top: 50%; left: 0; height: 1px; width: 100%; }
+.workbench-canvas-edge:is(.is-nw, .is-ne, .is-sw, .is-se) { width: 28px; height: 28px; transform: translate(-50%, -50%); }
+.workbench-canvas-edge:is(.is-nw, .is-se) { cursor: nwse-resize; }
+.workbench-canvas-edge:is(.is-ne, .is-sw) { cursor: nesw-resize; }
 .workbench-canvas-edge:focus-visible { outline: none; }
 .workbench-canvas-edge:focus-visible::after { outline: 2px solid var(--workflow-ink); outline-offset: 2px; background: #fff; }

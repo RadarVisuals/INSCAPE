@@ -1335,11 +1335,19 @@ partly cropped object keeps its editing handles; Show outside canvas reveals
 its full frame. Canvas resizing remains undoable and does not create a second
 owner of module geometry or storage.
 
-Fit canvas to content includes outlying content to the right and below, within
-the maximum canvas size. Because the origin stays fixed, content above or left
-requires explicit repositioning with Show outside canvas; Fit reports this
-instead of moving the composition silently. Image source resolution, the
-16-Image limit and the media decoding path are unchanged.
+Viewport-owned Mini App windows, their settings and shortcuts, and the released
+Keeper and its conversation stay outside the canvas clipping plane. Keeper's
+authored dock remains canvas content. This preserves their existing viewport
+coordinates and control stacking in both owner and Visitor.
+
+On 20 October the founder also requested exact Fit and resizing on every side.
+Fit canvas to content now uses all four object-frame bounds, with no added
+margin. Fractional bounds round outward to the nearest whole work pixel, by
+less than one pixel per edge. Transparent margins within the source image remain
+part of its object frame; Fit does not scan alpha or rewrite media. Every canvas
+edge and all four corners are editable. The opposite edge/corner stays fixed,
+while the canvas origin may move independently of the artworks and camera.
+Image source resolution, the 16-Image limit and the media decoding path are unchanged.
 
 ### Current implemented canvas and navigation behavior
 
@@ -1350,18 +1358,20 @@ titles shrink within their own row. These same routes are available at narrow
 widths without a separate mobile entrance.
 
 On 2026-10-12 the founder retained the existing spatial composition and Text
-behavior and chose an adjustable Workbench canvas: drag its right edge, bottom
-edge or bottom-right corner, with a Fit canvas to content action. Canvas size
-in the camera rail reveals these controls. The origin remains fixed; resizing
-never moves or scales existing content or changes the camera. Fit uses open
-registered content and collapsed group stacks with 48 work pixels of trailing
-margin, without rearranging anything. An explicit Find resize corner action
+behavior and chose an adjustable Workbench canvas. The 20 October refinement
+extends resizing to all four edges and corners and removes Fit's former
+48-work-pixel margin. Canvas size in the camera rail reveals these controls.
+Resizing never moves or scales existing content or changes the camera. Fit uses
+open registered content and collapsed group stacks without rearranging anything.
+An explicit Find resize corner action
 uses existing camera navigation and Back when the edge is outside the viewport.
 
 The default remains 2,000 wide × 4,000 high work pixels. Whole-pixel dimensions
-from 256 to 16,384 are saved as optional `workbench.area: { width, height }`
-through the existing draft operation, undo, publication and restore paths. Old
-layouts without this field use the default without rewriting positions.
+from 1 to 16,384 are saved as optional `workbench.area: { width, height, left?, top? }`
+through the existing draft operation, undo, publication and restore paths.
+The former 256-pixel minimum no longer adds padding to small fitted content.
+Optional left/top default to zero; all four boundaries stay within the finite
+Workbench editing coordinates. Layouts without an area use the default.
 A drag preview is temporary; release commits once, while Escape, lost capture,
 blur, hidden document, changed draft or disposal cancels it. Arrow keys resize
 by 10 pixels, Shift by 100 and Alt by 1. Failed saves restore the saved boundary.
@@ -1740,19 +1750,20 @@ gesture. This change retains the current visual design.
 Image and Display Lift inspection dimming follows the artwork's shared animation
 progress in both directions, including interrupted opening and reduced motion.
 
-The adjustable work-pixel placement area extends right and down from
-the existing coordinate origin; its default is 2,000 by 4,000. Content
-windows, instruments and movable shortcuts can leave the visible viewport;
-movement and resizing use the shared area bounds with an eight-pixel inset.
-The alignment grid is visible only inside those same placement bounds. Panning
+The adjustable canvas defaults to 2,000 by 4,000 at world position (0, 0).
+Its origin and four boundaries can change without translating the content.
+Content windows, instruments and movable shortcuts can leave the visible viewport;
+existing content uses the independent finite editing bounds. Initial placement
+and the alignment grid use the canvas bounds with an eight-pixel inset, reduced
+when the canvas is too small for that inset. Panning
 or zooming beyond them reveals the darker exterior. Resize handles appear only while Canvas size is open.
 Reset view is always visible in the Workbench controls. It resets the temporary
 pan, not the saved arrangement. Browser resizing and reload never pull saved
 positions back into the viewport. Existing Display/Image viewport size fitting
 remain separate from window placement.
-The v9 storage redesign is explicitly deferred: existing positive window
-coordinates already support the area, with no schema, storage-key or origin
-change. Older outlying layouts remain readable without rewriting their positions.
+The broader v9 storage redesign remains deferred. Optional canvas left/top fields
+travel through the existing presentation, publication and restore paths, without
+a new document version or storage key. Canvas origin changes do not rewrite module positions.
 The work area is not a full-size render target and adds no module instances.
 
 The owner's local arrangement also survives reload independently of publication.

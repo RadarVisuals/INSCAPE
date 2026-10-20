@@ -10,6 +10,17 @@ const settle = page => page.evaluate(() => new Promise(resolve => requestAnimati
 const saved = page => page.evaluate(() => canvasSaved());
 const imageAt = (page, index) => page.locator('.image-module__window').nth(index);
 const visibleHit = (page, x, y) => page.evaluate(({ x, y }) => Boolean(document.elementFromPoint(x, y)?.closest('.image-module__window')), { x, y });
+async function mount(page, query = '') {
+  const png = await page.evaluate(() => { const c = document.createElement('canvas'); c.width = c.height = 32; const ctx = c.getContext('2d'); ctx.fillStyle = '#e83e3e'; ctx.fillRect(0, 0, 32, 32); return c.toDataURL().split(',')[1]; });
+  await page.route('**/*', route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
+  await page.route('https://assets.example/crop-proof.png', route => route.fulfill({ contentType: 'image/png', body: Buffer.from(png, 'base64') }));
+  await page.route('https://assets.example/crop-proof.svg', route => route.fulfill({ contentType: 'image/svg+xml',
+    body: '<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024"><rect width="1024" height="1024" fill="#e83e3e"/><circle cx="512" cy="512" r="300" fill="#ffd166"/></svg>' }));
+  await page.goto(`${origin}/browser-tests/workbench-canvas-crop-fixture.html${query}`);
+  await imageAt(page, 0).waitFor();
+  await page.locator('[data-media-state="ready"]').first().waitFor();
+  await imageAt(page, 0).locator('.artwork-svg-status').waitFor({ state: 'detached' });
+}
 async function overview(page) {
   const host = page.locator('main.system-workflow').first();
   for (let i = 0; i < 7; i++) await host.dispatchEvent('wheel', { ctrlKey: true, deltaY: 120, clientX: 0, clientY: 0, bubbles: true, cancelable: true });
@@ -41,15 +52,7 @@ for (const width of [1440, 390]) test(`canvas crops without loss; outside editin
   page.on('pageerror', error => errors.push(error.message));
   page.setDefaultTimeout(8000);
   try {
-    const png = await page.evaluate(() => { const c = document.createElement('canvas'); c.width = c.height = 32; const ctx = c.getContext('2d'); ctx.fillStyle = '#e83e3e'; ctx.fillRect(0, 0, 32, 32); return c.toDataURL().split(',')[1]; });
-    await page.route('**/*', route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
-    await page.route('https://assets.example/crop-proof.png', route => route.fulfill({ contentType: 'image/png', body: Buffer.from(png, 'base64') }));
-    await page.route('https://assets.example/crop-proof.svg', route => route.fulfill({ contentType: 'image/svg+xml',
-      body: '<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024"><rect width="1024" height="1024" fill="#e83e3e"/><circle cx="512" cy="512" r="300" fill="#ffd166"/></svg>' }));
-    await page.goto(`${origin}/browser-tests/workbench-canvas-crop-fixture.html`);
-    await imageAt(page, 0).waitFor();
-    await page.locator('[data-media-state="ready"]').first().waitFor();
-    await imageAt(page, 0).locator('.artwork-svg-status').waitFor({ state: 'detached' });
+    await mount(page);
     await overview(page);
     const before = await saved(page);
     assert.equal(await visibleHit(page, 90, 60), true, 'image initially extends through the future boundary');
@@ -149,5 +152,76 @@ for (const width of [1440, 390]) test(`canvas crops without loss; outside editin
     await page.screenshot({ path: join(output, `visitor-${width}.png`) });
     assert.deepEqual(errors, []);
     await writeFile(join(output, `evidence-${width}.json`), JSON.stringify({ before: before.workbench.area, after: preserved.workbench.area, images: document.imageModules.length, painted, errors }, null, 2));
+  } finally { await browser.close(); }
+});
+
+for (const width of [1440, 390]) test(`Fit has no padding; all canvas edges and corners preserve artwork (${width}px)`, { timeout: 120000 }, async () => {
+  await mkdir(output, { recursive: true });
+  const browser = await chromium.launch({ headless: true });
+  const page = await browser.newPage({ viewport: { width, height: 950 }, deviceScaleFactor: width === 390 ? 1.25 : 1, reducedMotion: 'reduce' });
+  const errors = []; page.on('pageerror', error => errors.push(error.message)); page.setDefaultTimeout(8000);
+  try {
+    await mount(page, '?edges'); await overview(page);
+    await page.locator('main.system-workflow').first().dispatchEvent('wheel', { deltaX: -40, deltaY: -120, bubbles: true, cancelable: true });
+    await settle(page);
+    const before = await saved(page);
+    const exact = { left: 60, top: 60, width: 720, height: 484 };
+    const fit = async () => {
+      await controls(page); await page.getByRole('button', { name: 'Fit canvas to content', exact: true }).click(); await settle(page);
+      assert.deepEqual((await saved(page)).workbench.area, exact, 'all four edges hug content without padding');
+    };
+    await fit();
+    assert.equal(await page.locator('.workbench-canvas-edge').count(), 8);
+    const projection = () => page.locator('.workbench-canvas-content').evaluate(node => Object.fromEntries(
+      ['left', 'top', 'width', 'height'].map(key => [key, parseFloat(node.style.getPropertyValue(`--canvas-${key}`))])));
+    assert.deepEqual(await projection(), { left: 55, top: 135, width: 180, height: 121 }, 'clip uses the authored origin and camera together');
+    await page.screenshot({ path: join(output, `fit-exact-${width}.png`) });
+    const gestures = [];
+    for (const edge of ['w', 'n', 'e', 's', 'nw', 'ne', 'sw', 'se']) {
+      const deltas = edge.length === 2 ? [[12, 0], [0, 10], [-24, -24]] : edge === 'w' || edge === 'e' ? [[12, 0]] : [[0, 10]];
+      for (const [dx, dy] of deltas) {
+        await fit();
+        const handle = page.locator(`.workbench-canvas-edge.is-${edge}`), box = await handle.boundingBox();
+        const x = box.x + box.width / 2, y = box.y + box.height / 2;
+        await page.mouse.move(x, y); await page.mouse.down(); await page.mouse.move(x + dx, y + dy, { steps: 4 });
+        assert.deepEqual((await saved(page)).workbench.area, exact, 'drag preview does not persist early');
+        await page.mouse.up(); await settle(page);
+        const area = (await saved(page)).workbench.area;
+        assert.equal(area.left, edge.includes('w') ? 60 + dx * 4 : 60, edge);
+        assert.equal(area.top, edge.includes('n') ? 60 + dy * 4 : 60, edge);
+        assert.equal(area.left + area.width, edge.includes('e') ? 780 + dx * 4 : 780, edge);
+        assert.equal(area.top + area.height, edge.includes('s') ? 544 + dy * 4 : 544, edge);
+        assert.deepEqual(await projection(), { left: 40 + area.left / 4, top: 120 + area.top / 4,
+          width: area.width / 4, height: area.height / 4 }, 'clipping follows the origin even when it crosses world zero');
+        gestures.push({ edge, dx, dy, area });
+      }
+    }
+    await fit();
+    const corner = page.locator('.workbench-canvas-edge.is-nw'), box = await corner.boundingBox();
+    await page.mouse.move(box.x + 14, box.y + 14); await page.mouse.down();
+    await page.mouse.move(box.x - 6, box.y - 6, { steps: 4 });
+    await page.keyboard.press('Escape'); await page.mouse.up(); await settle(page);
+    assert.deepEqual((await saved(page)).workbench.area, exact, 'Escape restores position as well as dimensions');
+    const leftHandle = page.getByRole('button', { name: 'Resize canvas from left', exact: true });
+    await leftHandle.focus(); await leftHandle.press('Alt+ArrowRight'); await settle(page);
+    const changed = { ...exact, left: 61, width: 719 };
+    assert.deepEqual((await saved(page)).workbench.area, changed, 'Alt permits a one-work-pixel edge adjustment');
+    await page.getByRole('button', { name: 'Close canvas size', exact: true }).click();
+    await page.keyboard.press('Control+z'); await settle(page); assert.deepEqual((await saved(page)).workbench.area, exact);
+    await page.keyboard.press('Control+Shift+z'); await settle(page); assert.deepEqual((await saved(page)).workbench.area, changed);
+    const after = await saved(page);
+    assert.deepEqual(after.imageModules, before.imageModules); assert.deepEqual(after.shapes, before.shapes);
+    assert.deepEqual(after.workbench.imageModules, before.workbench.imageModules);
+    assert.deepEqual(after.workbench.shapes, before.workbench.shapes, 'canvas edits never reposition the artwork');
+    await page.reload(); await imageAt(page, 0).waitFor(); await overview(page);
+    assert.deepEqual((await saved(page)).workbench.area, changed);
+    assert.deepEqual(await page.evaluate(() => canvasDocument().workbench.area), changed, 'public projection preserves the origin');
+    await page.goto(`${origin}/browser-tests/workbench-canvas-crop-fixture.html?edges&visitor`);
+    await imageAt(page, 0).waitFor(); await overview(page);
+    assert.deepEqual(await projection(), { left: 15.25, top: 15, width: 179.75, height: 121 }, 'Visitor restores the exact shifted boundary');
+    assert.deepEqual(await saved(page), after);
+    await page.screenshot({ path: join(output, `fit-visitor-${width}.png`) });
+    assert.deepEqual(errors, []);
+    await writeFile(join(output, `fit-edges-${width}.json`), JSON.stringify({ exact, gestures, restored: changed, errors }, null, 2));
   } finally { await browser.close(); }
 });

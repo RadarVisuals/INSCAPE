@@ -10,6 +10,8 @@ import { buildProfileDocumentV9Asset } from '../src/profileDocument/domain/profi
 import { buildProfileDocumentV9 } from '../src/profileDocument/domain/profileDocumentV9Builder.js';
 import { loadWorkbenchLayout } from '../src/public/ownerSystemWorkflow/workbenchLayoutStorage.js';
 import { editWorkbenchGroups } from '../src/systemWorkflow/workbenchGroupSession.js';
+import { removeWorkbenchModule } from '../src/systemWorkflow/removeWorkbenchModule.js';
+import { PRIMARY_DISPLAY_ID } from '../src/systemWorkflow/domain/displayModules.js';
 import '../src/index.css';
 import '../src/inscapeTokens.css';
 import '../src/public/ownerSystemWorkflow/ownerSystemWorkflow.css';
@@ -33,6 +35,8 @@ if (!store.getDraft().imageModules?.length) {
   resizeWorkbenchCanvas(store, profileAddress, store.getGeneration(), { width: 800, height: 650 });
   const id = editWorkbenchGroups(store, profileAddress, { type: 'create', name: 'Crop group', memberIds: [store.getDraft().shapes[0].id] });
   editWorkbenchGroups(store, profileAddress, { type: 'visibility', id, expected: store.getDraft().workbenchGroups[0], visibility: 'PUBLIC' });
+  if (new URLSearchParams(location.search).has('edges')) removeWorkbenchModule(store, profileAddress, 'display',
+    { id: PRIMARY_DISPLAY_ID, grids: store.getDraft().grids });
 }
 window.canvasSaved = () => JSON.parse(localStorage.getItem(systemWorkflowDraftKey(profileAddress)));
 window.canvasLayout = () => loadWorkbenchLayout(profileAddress, window.canvasSaved(), storage).layout || window.canvasSaved().workbench;

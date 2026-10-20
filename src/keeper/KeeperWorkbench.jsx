@@ -111,6 +111,8 @@ function KeeperDock({ record, index, initialPresentation, store, profileAddress,
         </button>
       </div>
     </WorkbenchWindow>
+    {/* Roaming and conversation use viewport coordinates; only the dock is canvas content. */}
+    {createPortal(<>
     {src && <div ref={actor} className="keeper-roamer" data-workbench-selection-tools hidden={phase === 'docked' || suspended}>
       {rigged ? !wrongSvg && layered.rig && <KeeperRigArtwork key={`${src}:${attempt}:${movement}`} movement={movement} rig={layered.rig} ref={rigActor} headControl={headControl} />
         : <><img key={`${src}:${attempt}`} src={src} alt="" draggable={false} /><button {...headControl} type="button" className="workflow-tactile-control keeper-head keeper-head--flip" /></>}
@@ -120,6 +122,7 @@ function KeeperDock({ record, index, initialPresentation, store, profileAddress,
       captureReaction={captureReaction} cancelReaction={cancelReaction}
       onPosition={conversationPosition}
       conversationScope={JSON.stringify([profileAddress, record.id, record.asset.stableAssetId])} />}
+    </>, hostRef.current || document.body)}
     {editable && settings && createPortal(<div data-keeper-tools data-workbench-selection-tools>
       <WorkbenchWindow label="Keeper settings" title={record.name} chrome="tactile" className="context-toolbar workbench-tool-window keeper-settings-window"
         width={300} initialHeight={320} minimumHeight={96} fitContent fitContentFromTop resizable={false}

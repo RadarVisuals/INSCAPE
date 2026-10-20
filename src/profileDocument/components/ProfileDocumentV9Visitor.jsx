@@ -141,11 +141,11 @@ function ProfileDocumentV9Session({ document, onExit, onOpenDirectory, onReturn,
     {document.texts?.length > 0 && <Suspense fallback={<p role="status">Opening Text…</p>}>
       <TextWorkbench initiallyOpenId={entryTarget?.moduleId} records={document.texts} presentations={document.workbench?.texts} profileAddress={document.profile.address} />
     </Suspense>}
+    </WorkbenchCanvasContent>
     {document.miniApps?.length > 0 && <Suspense fallback={<p role="status">Opening mini apps…</p>}>
       <MiniAppsWorkbench records={document.miniApps} presentations={document.workbench?.miniApps}
         profileAddress={document.profile.address} onConnect={onConnect} />
     </Suspense>}
 
-    </WorkbenchCanvasContent>
   </main>;
 }

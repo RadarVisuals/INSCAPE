@@ -158,7 +158,7 @@ export function WorkbenchViewControls({ hostRef, disabled = false, dockVisible =
     if (!ids.length) return false;
     if (latest.current.store && !showOutside && ids.some(id => {
       const frame = latest.current.frames.get(id)?.current;
-      return frame && (frame.left < 0 || frame.top < 0 || frame.left + frame.width > area.width || frame.top + frame.height > area.height);
+      return frame && (frame.left < area.left || frame.top < area.top || frame.left + frame.width > area.left + area.width || frame.top + frame.height > area.top + area.height);
     })) setShowOutside(true);
     const accepted = navigation.focusDestination({
       key: JSON.stringify([...ids].sort()), toggle,
@@ -178,7 +178,7 @@ export function WorkbenchViewControls({ hostRef, disabled = false, dockVisible =
     });
     if (accepted) inspectionTarget.current = ids.length === 1 ? ids[0] : null;
     return accepted;
-  }, [navigation.focusDestination, area.width, area.height, showOutside, setShowOutside]);
+  }, [navigation.focusDestination, area.left, area.top, area.width, area.height, showOutside, setShowOutside]);
   const focusSelection = () => focusModules(latest.current.selection);
   useLayoutEffect(() => {
     // Modules request navigation through stable actions; the mounted camera owns it.

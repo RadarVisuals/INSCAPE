@@ -35,8 +35,8 @@ export default function WorkbenchGroupStack({ group, previews, scene, locked, dr
   const position = preview || group.position, heading = <><strong>{group.name}</strong><span>{group.memberIds.length}</span></>;
   const move = next => onPosition?.(group, clampWorkbenchPosition(next, WORKBENCH_GROUP_STACK_SIZE, areaBounds));
   const available = Boolean(scene.bounds(group));
-  const outside = position.left >= area.width || position.top >= area.height
-    || position.left + WORKBENCH_GROUP_STACK_SIZE.width <= 0 || position.top + WORKBENCH_GROUP_STACK_SIZE.height <= 0;
+  const outside = position.left >= area.left + area.width || position.top >= area.top + area.height
+    || position.left + WORKBENCH_GROUP_STACK_SIZE.width <= area.left || position.top + WORKBENCH_GROUP_STACK_SIZE.height <= area.top;
   return <section className="workbench-group-stack" data-workbench-group-tools data-workbench-stack={group.id} data-workbench-group-drop={onPosition ? group.id : undefined}
     data-workbench-camera-decoration data-workbench-canvas-hidden={!showOutside && outside || undefined} data-muted={Boolean(scene.active) || undefined} data-drop-target={dropTarget === group.id || undefined} aria-label={group.name + ' group stack'}
     style={{ left: 0, top: 0, width: WORKBENCH_GROUP_STACK_SIZE.width * scale, height: WORKBENCH_GROUP_STACK_SIZE.height * scale,

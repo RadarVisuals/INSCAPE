@@ -5170,7 +5170,7 @@
     {
       "path": "src/public/ownerSystemWorkflow/workbenchCanvasControls.css",
       "role": "Local",
-      "sha256": "341046068f7ce3b37666c90067672e0a70c6f97183ce81e498859495585dd76a",
+      "sha256": "61dc6f09cb6dd82c899238f2b51476fce4c7bf1ef997ecd36be6ae5a560e25b0",
       "definitions": [],
       "references": [
         "--control-radius",

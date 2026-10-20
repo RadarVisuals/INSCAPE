@@ -16,8 +16,8 @@ export default function WorkbenchCanvasContent({ children }) {
   useLayoutEffect(() => {
     const element = node.current;
     const update = ({ scale, offset }) => {
-      element.style.setProperty('--canvas-left', `${offset.x}px`);
-      element.style.setProperty('--canvas-top', `${offset.y}px`);
+      element.style.setProperty('--canvas-left', `${offset.x + current.current.left * scale}px`);
+      element.style.setProperty('--canvas-top', `${offset.y + current.current.top * scale}px`);
       element.style.setProperty('--canvas-width', `${current.current.width * scale}px`);
       element.style.setProperty('--canvas-height', `${current.current.height * scale}px`);
     };
@@ -34,7 +34,8 @@ export default function WorkbenchCanvasContent({ children }) {
         const frame = transform.frame || view.frames.get(id)?.current;
         if (!frame) continue;
         const left = frame.left * transform.scale + transform.x, top = frame.top * transform.scale + transform.y;
-        const outside = left >= area.width || top >= area.height || left + frame.width * transform.scale <= 0 || top + frame.height * transform.scale <= 0;
+        const outside = left >= area.left + area.width || top >= area.top + area.height
+          || left + frame.width * transform.scale <= area.left || top + frame.height * transform.scale <= area.top;
         element.toggleAttribute('data-workbench-canvas-hidden', !showOutside && !view.presentationTransforms?.[id] && outside);
       }
     };
@@ -44,6 +45,6 @@ export default function WorkbenchCanvasContent({ children }) {
       unsubscribe();
       for (const element of view.entries.values()) if (node.current?.contains(element)) element.removeAttribute('data-workbench-canvas-hidden');
     };
-  }, [view.entries, view.frames, view.transforms, view.presentationTransforms, view.subscribe, area.width, area.height, showOutside]);
+  }, [view.entries, view.frames, view.transforms, view.presentationTransforms, view.subscribe, area.left, area.top, area.width, area.height, showOutside]);
   return <div ref={node} className="workbench-canvas-content" data-show-outside={showOutside || undefined}>{children}</div>;
 }
