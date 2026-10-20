@@ -58,7 +58,11 @@ export default function WorkbenchGroups({ view, hostRef, locked, dropRef, histor
   useLayoutEffect(() => {
     if (locked) return;
     const targetAt = pointer => {
-      const node = document.elementFromPoint(pointer.clientX, pointer.clientY)?.closest('[data-workbench-group-drop]');
+      // Selection chrome lives above the clipped artwork plane. Look through
+      // that moving overlay, while respecting the first actual surface below it.
+      const hit = document.elementsFromPoint(pointer.clientX, pointer.clientY)
+        .find(node => !node.closest('.workbench-selection'));
+      const node = hit?.closest('[data-workbench-group-drop]');
       return node && hostRef.current?.contains(node) ? groups.find(group => group.id === node.dataset.workbenchGroupDrop) : null;
     };
     dropRef.current = {

@@ -1,6 +1,7 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { SceneNavigationProvider } from '../../text/SceneNavigation.jsx';
 import { WorkbenchViewProvider, WorkbenchViewControls, useWorkbenchActions } from '../../public/ownerSystemWorkflow/WorkbenchView.jsx';
+import WorkbenchCanvasContent from '../../public/ownerSystemWorkflow/WorkbenchCanvasContent.jsx';
 import { useWorkbenchInspectionAction } from '../../public/ownerSystemWorkflow/WorkbenchViewContext.js';
 import { useStartupDestinationReady } from '../../startveil/StartupDestinationContext.jsx';
 import { useProfileContractFacts, useProfileIdentity } from '../../profileIdentity/index.js';
@@ -99,11 +100,6 @@ function ProfileDocumentV9Session({ document, onExit, onOpenDirectory, onReturn,
     aria-label="Published INSCAPE Grid visitor" data-lattice-menu-surface data-guide-mode={document.appearance.guideMode}
     data-menu-surface={document.appearance.menuSurfaceId} data-surface={document.appearance.surfaceId}>
     <WorkbenchViewControls entryTarget={entryTarget} hostRef={rootRef} />
-    {displays.map(item => <CanvasDisplay key={item.id} item={item} entryTarget={entryTarget}
-      active={activeDisplay === item.id} onActivate={() => setActiveDisplay(item.id)}
-      open={openDisplays[item.id]} onOpenChange={value => setOpen(item.id, value)}
-      navigationHost={activeDisplay === item.id ? navigationHost : null} reducedMotion={layout.reducedMotion}
-      layoutMode={layout.mode} onInspectionChange={activeDisplay === item.id ? setInspecting : undefined} />)}
     <SharedDisplayToolWindows readOnly menuSurface={document.appearance.menuSurfaceId} />
     {profileVisible && <LatticeProfileRail blocked={inspecting} identityDisabled={inspecting} collapsed entries={[]} identityControlRef={identityControlRef} identityOnly
       identityExpanded={identityOpen} officialIdentity={officialIdentity} onIdentityActivate={openIdentityRack} />}
@@ -126,6 +122,12 @@ function ProfileDocumentV9Session({ document, onExit, onOpenDirectory, onReturn,
         initialWindow={identityWindow} onWindowChange={document.workbench ? changeIdentityWindow : undefined}
         onClose={() => setIdentityOpen(false)} returnFocus={profileDockControlRef.current} />
     </Suspense></div>}
+    <WorkbenchCanvasContent>
+    {displays.map(item => <CanvasDisplay key={item.id} item={item} entryTarget={entryTarget}
+      active={activeDisplay === item.id} onActivate={() => setActiveDisplay(item.id)}
+      open={openDisplays[item.id]} onOpenChange={value => setOpen(item.id, value)}
+      navigationHost={activeDisplay === item.id ? navigationHost : null} reducedMotion={layout.reducedMotion}
+      layoutMode={layout.mode} onInspectionChange={activeDisplay === item.id ? setInspecting : undefined} />)}
     {document.keeperDocks?.length > 0 && <Suspense fallback={null}>
       <KeeperWorkbench records={document.keeperDocks} presentations={document.workbench?.keeperDocks} profileAddress={document.profile.address}
         hostRef={rootRef} reducedMotion={layout.reducedMotion} />
@@ -144,5 +146,6 @@ function ProfileDocumentV9Session({ document, onExit, onOpenDirectory, onReturn,
         profileAddress={document.profile.address} onConnect={onConnect} />
     </Suspense>}
 
+    </WorkbenchCanvasContent>
   </main>;
 }

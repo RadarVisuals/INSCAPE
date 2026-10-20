@@ -94,7 +94,7 @@ function WorkbenchZoomControl({ disabled, onClick }) {
 }
 
 export function WorkbenchViewControls({ hostRef, disabled = false, dockVisible = true, creationToolbarVisible = true, historyBlocked = null, showHandTool = true, entryTarget = null }) {
-  const { bounds: areaBounds } = useWorkbenchArea();
+  const { editingBounds: areaBounds, area, showOutside, setShowOutside } = useWorkbenchArea();
   const view = useWorkbenchView();
   const snapMovement = useWorkbenchMovementSnap();
   const { scale, transforms, setTransforms, selection = [], setSelection, entries } = view;
@@ -104,7 +104,7 @@ export function WorkbenchViewControls({ hostRef, disabled = false, dockVisible =
   const [moveError, setMoveError] = useState('');
   const controlsRef = useRef(null), inspectionTarget = useRef(null);
   const [marquee, setMarquee] = useState(null), [bounds, setBounds] = useState(null);
-  const selected = selection.filter(id => entries.has(id) && !entries.get(id).hasAttribute('data-workbench-group-hidden'));
+  const selected = selection.filter(id => entries.has(id) && !entries.get(id).matches('[data-workbench-group-hidden], [data-workbench-canvas-hidden]'));
   const cancelGesture = useCallback((restore = true) => {
     const active = gesture.current;
     if (!active) return;
@@ -156,6 +156,10 @@ export function WorkbenchViewControls({ hostRef, disabled = false, dockVisible =
     });
     const nodes = ids.map(id => latest.current.entries.get(id));
     if (!ids.length) return false;
+    if (latest.current.store && !showOutside && ids.some(id => {
+      const frame = latest.current.frames.get(id)?.current;
+      return frame && (frame.left < 0 || frame.top < 0 || frame.left + frame.width > area.width || frame.top + frame.height > area.height);
+    })) setShowOutside(true);
     const accepted = navigation.focusDestination({
       key: JSON.stringify([...ids].sort()), toggle,
       getBounds: () => {
@@ -174,7 +178,7 @@ export function WorkbenchViewControls({ hostRef, disabled = false, dockVisible =
     });
     if (accepted) inspectionTarget.current = ids.length === 1 ? ids[0] : null;
     return accepted;
-  }, [navigation.focusDestination]);
+  }, [navigation.focusDestination, area.width, area.height, showOutside, setShowOutside]);
   const focusSelection = () => focusModules(latest.current.selection);
   useLayoutEffect(() => {
     // Modules request navigation through stable actions; the mounted camera owns it.
@@ -558,7 +562,7 @@ export function WorkbenchViewControls({ hostRef, disabled = false, dockVisible =
         const rectangle = { left: Math.min(origin.x, pointer.clientX), top: Math.min(origin.y, pointer.clientY), width: Math.abs(pointer.clientX - origin.x), height: Math.abs(pointer.clientY - origin.y) };
         setMarquee(rectangle);
         const hits = [...entries].filter(([, node]) => {
-          if (node.hasAttribute('data-workbench-group-hidden') || latest.current.presentationTransforms[node.dataset.workbenchViewId]) return false;
+          if (node.matches('[data-workbench-group-hidden], [data-workbench-canvas-hidden]') || latest.current.presentationTransforms[node.dataset.workbenchViewId]) return false;
           const b = node.getBoundingClientRect();
           return marqueeContains(rectangle, b);
         }).map(([id]) => id);

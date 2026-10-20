@@ -1,4 +1,4 @@
-import { workbenchArea, workbenchAreaBounds } from './domain/workbenchArea.js';
+import { WORKBENCH_EDITING_BOUNDS } from './domain/workbenchArea.js';
 import { clampWorkbenchPosition } from '../public/ownerSystemWorkflow/workbenchSpace.js';
 import { WORKBENCH_GROUP_STACK_SIZE } from './domain/workbenchGroups.js';
 import { MAX_WORKBENCH_GROUPS, validWorkbenchGroupName, validWorkbenchGroups } from './domain/workbenchGroups.js';
@@ -28,8 +28,8 @@ export function editWorkbenchGroups(store, profileAddress, action) {
     label = 'Change Workbench group visibility';
   } else if (action.type === 'position') {
     if (action.position) {
-      const bounded = clampWorkbenchPosition(action.position, WORKBENCH_GROUP_STACK_SIZE, workbenchAreaBounds(workbenchArea(draft.workbench)));
-      if (bounded.left !== action.position.left || bounded.top !== action.position.top) throw new Error('Choose a position inside the canvas.');
+      const bounded = clampWorkbenchPosition(action.position, WORKBENCH_GROUP_STACK_SIZE, WORKBENCH_EDITING_BOUNDS);
+      if (bounded.left !== action.position.left || bounded.top !== action.position.top) throw new Error('Choose a position within the Workbench editing limits.');
     }
     groups = groups.map(group => {
       if (group !== original) return group;

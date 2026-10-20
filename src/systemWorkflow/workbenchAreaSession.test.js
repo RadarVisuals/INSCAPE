@@ -106,5 +106,25 @@ test('new modules and stacks can use an expanded canvas and respect a smaller he
   assert.equal(layout.keeperDocks[0].position.left, 4000);
   const id = editWorkbenchGroups(store, profile, { type: 'create', name: 'Group', memberIds: [shape] });
   editWorkbenchGroups(store, profile, { type: 'position', id, expected: store.getDraft().workbenchGroups[0], position: { left: 4500, top: 700 } });
-  assert.throws(() => editWorkbenchGroups(store, profile, { type: 'position', id, expected: store.getDraft().workbenchGroups[0], position: { left: 4500, top: 900 } }), /inside the canvas/);
+  editWorkbenchGroups(store, profile, { type: 'position', id, expected: store.getDraft().workbenchGroups[0], position: { left: 4500, top: 900 } });
+  assert.deepEqual(store.getDraft().workbenchGroups[0].position, { left: 4500, top: 900 }, 'an existing stack may cross the crop boundary');
+  assert.throws(() => editWorkbenchGroups(store, profile, { type: 'position', id, expected: store.getDraft().workbenchGroups[0], position: { left: 16384, top: 900 } }), /editing limits/);
+});
+
+test('negative artwork positions remain recoverable through save, publication, restore and canvas resize', () => {
+  const { store, storage } = fixture();
+  addShape(store, profile);
+  const draft = store.getDraft();
+  draft.workbench.shapes[0].window.left = -120;
+  draft.workbench.shapes[0].window.top = -80;
+  assert.ok(store.commitCompletedOperation(draft, { expectedGeneration: store.getGeneration(), historyLabel: 'Move across canvas edge' }));
+  assert.deepEqual(createSystemWorkflowDraftStore({ profileAddress: profile, storage }).getDraft().workbench, draft.workbench);
+  const doc = buildProfileDocumentV9({ profileAddress: profile, systemWorkflowDraft: store.getDraft(), assetRecords: [] });
+  assert.deepEqual(doc.workbench.shapes[0].window, draft.workbench.shapes[0].window);
+  assert.deepEqual(reconcileSystemWorkflowDraftFromProfileDocumentV9(doc, store.getDraft()).workbench.shapes, draft.workbench.shapes);
+  resize(store, { width: 256, height: 256 });
+  assert.deepEqual(store.getDraft().workbench.shapes, draft.workbench.shapes);
+  assert.throws(() => fitWorkbenchArea([draft.workbench.shapes[0].window]), /above or left/);
+  const bad = structuredClone(draft.workbench); bad.shapes[0].window.left = -16385;
+  assert.equal(isValidWorkbenchPresentation(bad), false);
 });

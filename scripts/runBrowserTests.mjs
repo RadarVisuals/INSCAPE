@@ -12,7 +12,7 @@ const defaults = ['artwork-document', 'svg-lifecycle', 'camera-controls', 'conte
   'image-load-recovery', 'image-recovery-owner', 'image-resize-focus', 'resize-mark-pixels', 'image-corner-resize', 'image-large-resize', 'image-fit', 'keeper', 'keeper-dialogue', 'keeper-selection', 'library-drop-lifecycle',
   'library-filter-keyboard', 'library-storage', 'library-recovery', 'mini-apps', 'owner-profile-routing', 'published-visitor',
   'published-workbench-groups', 'reception-card', 'shapes', 'shape-corner-resize', 'grid-resize-release', 'text-focus-writing', 'text-linked-frames',
-  'text-recovery-position', 'text-window-edges', 'workbench-area-navigation', 'workbench-groups', 'workbench-index',
+  'text-recovery-position', 'text-window-edges', 'workbench-area-navigation', 'workbench-canvas-crop', 'workbench-groups', 'workbench-index',
   'workbench-inspection-keyboard', 'workbench-inspection-lock', 'workbench-layout-reload',
   'workbench-navigation-boundary', 'workbench-focus-toggle', 'workbench-focus-motion', 'workbench-focus-start', 'workbench-recovery', 'workbench-stacks', 'workbench-toolbar', 'entry-contrast', 'wallet-lazy-startup',
   'workbench-storage', 'text-article-tools', 'text-filled-workbench', 'workbench-activation', 'publication-upload-admission', 'publication-confirmation'];

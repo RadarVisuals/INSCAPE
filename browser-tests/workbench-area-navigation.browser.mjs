@@ -120,7 +120,7 @@ test('owner and Visitor have free camera movement without custom-frame controls,
   } finally { await browser.close(); }
 });
 
-test('retired frame settings do not clip the 2000 by 4000 grid or relocate older outlying artwork', { timeout: 90000 }, async () => {
+test('the canvas clips outlying artwork without relocating it; Show outside canvas and Focus recover it', { timeout: 90000 }, async () => {
   const browser = await launch();
   try {
     const page = await browser.newPage({ viewport: { width: 1440, height: 1200 }, reducedMotion: 'reduce' });
@@ -145,8 +145,13 @@ test('retired frame settings do not clip the 2000 by 4000 grid or relocate older
       window.__motionRemount();
     });
     const image = page.locator('[data-workbench-view-id="image:motion-0"]');
-    await image.waitFor(); await settle(page);
+    await image.waitFor({ state: 'attached' }); await settle(page);
+    assert.equal(await image.isVisible(), false, 'outlying artwork is cropped in the normal composition');
     assert.deepEqual(await camera(page), { scale: 1, x: 0, y: 0 });
+    await page.getByRole('button', { name: 'Canvas size', exact: true }).click();
+    await page.getByRole('button', { name: 'Show outside canvas', exact: true }).click();
+    await page.getByRole('button', { name: 'Close canvas size', exact: true }).click();
+    await image.waitFor();
     const oldPosition = await image.boundingBox();
     near(oldPosition.x, 6200, 'old horizontal position'); near(oldPosition.y, 5100, 'old vertical position');
     const saved = await page.evaluate(() => localStorage.getItem(window.__motionKey));

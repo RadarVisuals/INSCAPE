@@ -39,7 +39,7 @@ const shortcutPresentationStyle = (presentation) => ({
 export default function PresentationBoardShortcut({ assetsById, host, instanceState, menuSurface,
   onDelete, onRestore, profileAddress, shortcutSnap, shortcutTargetRef, name: shortcutName, onNameChange, initialShortcut, onShortcutChange, instanceId, readOnly = false,
   moduleCommands = [], moduleSubmenu, onModuleCommand }) {
-  const { bounds: areaBounds } = useWorkbenchArea();
+  const { editingBounds: areaBounds } = useWorkbenchArea();
   const storedShortcut = useMemo(() => initialShortcut || (readOnly ? null : loadPresentationBoardShortcut(profileAddress, undefined, instanceId)), [profileAddress, instanceId]);
   const [shortcutPosition, setShortcutPosition] = useState(storedShortcut?.position || { left: 24, top: 72 });
   const [shortcutIconId, setShortcutIconId] = useState(storedShortcut?.iconAssetId || null);

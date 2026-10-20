@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
-import { Frame, Maximize, Scan, X } from 'lucide-react';
+import { Frame, Maximize, Scan, Eye, X } from 'lucide-react';
 import { useWorkbenchArea } from './WorkbenchAreaContext.jsx';
 import { useWorkbenchCamera } from './WorkbenchCamera.jsx';
 import { useWorkbenchView } from './WorkbenchViewContext.js';
@@ -125,7 +125,10 @@ export default function WorkbenchCanvasControls({ hostRef, navigation, historyBl
     {open && <div className="workbench-canvas-tools" data-system-workflow-overlay role="group" aria-label="Canvas size controls">
       <div className="workbench-canvas-tools__heading"><strong>Canvas</strong><output aria-label="Canvas dimensions">{area.width} × {area.height}</output>
         <button className="workflow-tactile-control" type="button" aria-label="Close canvas size" onClick={close}><X /></button></div>
-      <p>Drag the right or bottom edge.</p>
+      <p>Drag the right or bottom edge. Artwork outside is hidden, not removed.</p>
+      <button className="workflow-tactile-control" type="button" disabled={blocked}
+        aria-pressed={areaContext.showOutside} onClick={() => areaContext.setShowOutside(value => !value)}>
+        <Eye />Show outside canvas</button>
       <button className="workflow-tactile-control" type="button" disabled={blocked} onClick={fit}><Maximize />Fit canvas to content</button>
       <button className="workflow-tactile-control" type="button" disabled={blocked} onClick={() => navigation.focusDestination({
         getBounds: () => ({ left: area.width - 300, top: area.height - 200, width: 600, height: 400 }),

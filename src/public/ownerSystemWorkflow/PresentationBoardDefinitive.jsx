@@ -48,7 +48,7 @@ export default function PresentationBoardDefinitive({ assetsById = new Map(), ch
   instanceState = PRESENTATION_BOARD_INSTANCE_STATE.WINDOW,
   menuSurface = null, profileAddress, instanceId, renderInspection, renderCues,
   shortcutTargetRef, shortcutSnap = true, windowSnap = false, initialPresentation, onWindowChange, onShortcutChange, readOnly = false }) {
-  const { bounds: areaBounds } = useWorkbenchArea();
+  const { editingBounds: areaBounds } = useWorkbenchArea();
   const localShortcutRef = useRef(null);
   const [toolbarOpen, setToolbarOpen] = useState(false);
   const [lift, setLift] = useState(null);

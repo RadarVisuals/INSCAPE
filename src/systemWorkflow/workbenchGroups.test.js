@@ -118,7 +118,7 @@ test('stack location is optional, bounded, undoable and independent of every mem
   assert.deepEqual(stacked.workbench, before.workbench);
   assert.deepEqual(stacked.shapes, before.shapes);
   assert.deepEqual(newStore(f).getDraft(), stacked);
-  for (const position of [{ left: NaN, top: 8 }, { left: 8, top: -1 }, { left: 1813, top: 8 }, { left: 8, top: 3833 }, { left: 8, top: 8, extra: 1 }]) {
+  for (const position of [{ left: NaN, top: 8 }, { left: 8, top: -16385 }, { left: 16384, top: 8 }, { left: 8, top: 16384 }, { left: 8, top: 8, extra: 1 }]) {
     assert.throws(() => f.edit('position', { position }));
     assert.deepEqual(f.store.getDraft(), stacked);
   }

@@ -1,0 +1,14 @@
+.workbench-canvas-content {
+  position: absolute; inset: 0; pointer-events: none;
+  clip-path: inset(var(--canvas-top, 0px)
+    calc(100% - var(--canvas-left, 0px) - var(--canvas-width, 2000px))
+    calc(100% - var(--canvas-top, 0px) - var(--canvas-height, 4000px))
+    var(--canvas-left, 0px));
+}
+.workbench-canvas-content :is([data-workbench-view-id], [data-workbench-pan], [data-workbench-stack]) { pointer-events: auto; }
+.workbench-canvas-content[data-show-outside] { clip-path: none; }
+[data-workbench-canvas-hidden], [data-workbench-canvas-hidden] * { visibility: hidden !important; }
+/* A lifted live SVG retains its DOM and must share the inspector's stacking
+   context. Explicit group reading is also a temporary view, not a new crop. */
+.workbench-canvas-content:has([data-svg-inspection]),
+.workbench-canvas-content:has([data-workbench-group-presented]) { display: contents; }

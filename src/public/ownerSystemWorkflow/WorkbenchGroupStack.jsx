@@ -7,7 +7,7 @@ import { clampWorkbenchPosition } from './workbenchSpace.js';
 // Browsing is shared. Only an owner-supplied position action installs authoring
 // gestures; this component has no draft store or persistence authority.
 export default function WorkbenchGroupStack({ group, previews, scene, locked, dropTarget, onManage, onPosition }) {
-  const { bounds: areaBounds } = useWorkbenchArea();
+  const { editingBounds: areaBounds, area, showOutside } = useWorkbenchArea();
   const { scale, offset } = useWorkbenchCamera();
   const drag = useRef(null), node = useRef(null), [preview, setPreview] = useState(null);
   const positionAction = useRef(onPosition); positionAction.current = onPosition;
@@ -35,8 +35,10 @@ export default function WorkbenchGroupStack({ group, previews, scene, locked, dr
   const position = preview || group.position, heading = <><strong>{group.name}</strong><span>{group.memberIds.length}</span></>;
   const move = next => onPosition?.(group, clampWorkbenchPosition(next, WORKBENCH_GROUP_STACK_SIZE, areaBounds));
   const available = Boolean(scene.bounds(group));
+  const outside = position.left >= area.width || position.top >= area.height
+    || position.left + WORKBENCH_GROUP_STACK_SIZE.width <= 0 || position.top + WORKBENCH_GROUP_STACK_SIZE.height <= 0;
   return <section className="workbench-group-stack" data-workbench-group-tools data-workbench-stack={group.id} data-workbench-group-drop={onPosition ? group.id : undefined}
-    data-workbench-camera-decoration data-muted={Boolean(scene.active) || undefined} data-drop-target={dropTarget === group.id || undefined} aria-label={group.name + ' group stack'}
+    data-workbench-camera-decoration data-workbench-canvas-hidden={!showOutside && outside || undefined} data-muted={Boolean(scene.active) || undefined} data-drop-target={dropTarget === group.id || undefined} aria-label={group.name + ' group stack'}
     style={{ left: 0, top: 0, width: WORKBENCH_GROUP_STACK_SIZE.width * scale, height: WORKBENCH_GROUP_STACK_SIZE.height * scale,
       transform: 'translate(' + (position.left * scale + offset.x) + 'px,' + (position.top * scale + offset.y) + 'px)' }}>
     {onPosition ? <button ref={node} type="button" className="workbench-group-stack__grip" disabled={locked} aria-label={'Move ' + group.name + ' group'}

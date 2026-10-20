@@ -12,7 +12,7 @@ import { clampWorkbenchPosition } from '../public/ownerSystemWorkflow/workbenchS
 // and snapping. No instrument-window sizing, chrome or content gutter is used.
 export default function ImageWindow({ id, title, position, size, viewport = { width: innerWidth, height: innerHeight }, editable, active, suspended, movable = true, placementModule,
   onPosition, onResize, onClose, resizeTarget, children }) {
-  const { bounds: areaBounds } = useWorkbenchArea();
+  const { editingBounds: areaBounds } = useWorkbenchArea();
   const node = useRef(null), gesture = useRef(null), suppressClick = useRef(false);
   const [preview, setPreview] = useState(null);
   const view = useWorkbenchView();

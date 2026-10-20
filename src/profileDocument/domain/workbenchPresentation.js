@@ -10,9 +10,9 @@ import { displayFormat, displayPreset } from '../../systemWorkflow/domain/displa
 const exact = (value, keys) => value && typeof value === 'object' && !Array.isArray(value)
   && Object.keys(value).length === keys.length && keys.every(key => Object.hasOwn(value, key));
 const number = (value, min, max) => Number.isFinite(value) && value >= min && value <= max;
-const position = value => exact(value, ['left', 'top']) && number(value.left, 0, 16384) && number(value.top, 0, 16384);
+const position = value => exact(value, ['left', 'top']) && number(value.left, -16384, 16384) && number(value.top, -16384, 16384);
 const windowFrame = (value, height, minimumWidth = 180, minimumHeight = 100) => exact(value, height ? ['left', 'top', 'width', 'height'] : ['left', 'top', 'width'])
-  && number(value.left, 0, 16384) && number(value.top, 0, 16384) && number(value.width, minimumWidth, 16384)
+  && number(value.left, -16384, 16384) && number(value.top, -16384, 16384) && number(value.width, minimumWidth, 16384)
   && (!height || number(value.height, minimumHeight, 16384));
 
 // The currently implemented modules only. Content remains owned by their existing

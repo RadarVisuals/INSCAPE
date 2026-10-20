@@ -15,7 +15,7 @@ import { clampOwnerSystemWorkflowWindowPosition, resizeWorkbenchWindow, workbenc
 // The host owns gestures and temporary geometry. A module's resize target owns
 // validation and persistence; companion tools retain only their screen layout.
 export function WorkbenchWindow({ avoidControls, children, background, compact, chrome, menuSurface, className = '', label, controls, title, titleContent, width = 320, resizable = true, resizableWidth = false, initialHeight = 420, minimumHeight = 180, minimumWidth = 240, initialX = 18, initialY = 72, fitContent = false, fitContentFromTop = false, onLayoutChange, snapToGrid = false, placementModule = false, viewId, active, surfaceStyle, resizeTarget, committedFrame, externalControls = false, moveFromContent = false, registerView = true, screenSized = false, onLayoutCommit }) {
-  const { bounds: areaBounds } = useWorkbenchArea();
+  const { editingBounds: areaBounds } = useWorkbenchArea();
   const view = useWorkbenchView();
   const { offset, getCamera, subscribeCameraPaint } = useWorkbenchCamera();
   const transformed = Boolean(viewId) && !compact;

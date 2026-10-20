@@ -17,11 +17,11 @@
 .visitor-grid-world[data-surface="ash"] { --visitor-grid-surface: #b2b2b2; --visitor-grid-ink: #111313; }
 .visitor-grid-world[data-surface="mist"] { --visitor-grid-surface: #c9c6bd; --visitor-grid-ink: #111313; }
 .visitor-grid-world[data-surface="paper"] { --visitor-grid-surface: #d8d4ca; --visitor-grid-ink: #111313; }
-.visitor-grid-world > .published-display { position: absolute; inset: 0; pointer-events: none; }
-.visitor-grid-world > .published-display .system-workflow__workbench { position: absolute; inset: 0 0 var(--visitor-dock-height); pointer-events: none; }
-.visitor-grid-world > .published-display .system-workflow__presentation-board,
-.visitor-grid-world > .published-display .system-workflow__desktop-shortcut { pointer-events: auto; }
-.visitor-grid-world > .published-display[data-active-display] .system-workflow__presentation-board { z-index: 3; }
+.visitor-grid-world .published-display { position: absolute; inset: 0; pointer-events: none; }
+.visitor-grid-world .published-display .system-workflow__workbench { position: absolute; inset: 0 0 var(--visitor-dock-height); pointer-events: none; }
+.visitor-grid-world .published-display .system-workflow__presentation-board,
+.visitor-grid-world .published-display .system-workflow__desktop-shortcut { pointer-events: auto; }
+.visitor-grid-world .published-display[data-active-display] .system-workflow__presentation-board { z-index: 3; }
 .visitor-grid-world__display-navigation { display: flex; }
 .visitor-grid-world > .lattice-profile-rail[data-identity-only] { top: auto; bottom: calc(var(--visitor-dock-height) + 12px); left: 12px; }
 /* Match the owner dock layer so independent module windows cannot cover navigation. */

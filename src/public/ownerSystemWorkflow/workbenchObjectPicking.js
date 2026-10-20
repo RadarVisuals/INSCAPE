@@ -27,6 +27,12 @@ export function compareWorkbenchPaint(a, b) {
 }
 
 export function workbenchObjectsAtPoint(view, host, point) {
+  const plane = host.querySelector('.workbench-canvas-content');
+  if (plane && getComputedStyle(plane).clipPath !== 'none' && getComputedStyle(plane).display !== 'contents') {
+    const value = key => Number.parseFloat(plane.style.getPropertyValue(`--canvas-${key}`));
+    const origin = host.getBoundingClientRect();
+    if (!pointInWorkbenchFrame(point, { left: origin.left + value('left'), top: origin.top + value('top'), width: value('width'), height: value('height') })) return [];
+  }
   return [...view.entries].flatMap(([id, node]) => {
     if (!node.isConnected || !host.contains(node) || node.hasAttribute('data-workbench-group-hidden')
       || view.presentationTransforms?.[id] || node.closest('[hidden], [aria-hidden="true"], [data-immersive]')) return [];

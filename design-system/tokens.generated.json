@@ -4,7 +4,7 @@
   "systemVersion": "1.0.0",
   "note": "Generated from production and design-system reference CSS. Reference roles are preview-only. Values remain CSS expressions, with selector and media scopes; this is not a DTCG interchange file. Runtime custom properties and local overrides are included and are not automatically public design tokens.",
   "counts": {
-    "files": 70,
+    "files": 71,
     "definitions": 560,
     "names": 295
   },
@@ -3541,7 +3541,7 @@
     {
       "path": "src/profileDocument/components/visitorGridWorld.css",
       "role": "Local",
-      "sha256": "6db36cf098f891771edb948a4f4d2fbc9aa75aaac63915205954ab2709263314",
+      "sha256": "48a79ad0ffb812ddf99c1e6bc980005d376f353d7ab58a1d37b7b6ab4bd370ee",
       "definitions": [
         {
           "name": "--visitor-grid-surface",
@@ -5153,6 +5153,18 @@
         "--workflow-window-chrome-shadow-inset",
         "--workflow-window-inner-shadow-opacity",
         "--workflow-window-inset"
+      ]
+    },
+    {
+      "path": "src/public/ownerSystemWorkflow/workbenchCanvasContent.css",
+      "role": "Local",
+      "sha256": "8bbcd75ff8d023f4981762f70e4ce92ad497e4b661203b53aba5473e9c203a78",
+      "definitions": [],
+      "references": [
+        "--canvas-height",
+        "--canvas-left",
+        "--canvas-top",
+        "--canvas-width"
       ]
     },
     {

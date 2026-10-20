@@ -58,7 +58,7 @@ test('strict public validation rejects private, empty, overlapping, unknown and 
   const published = publish(f.store.getDraft()), good = published.workbenchGroups[0];
   for (const groups of [null, {}, [{ ...good, visibility: 'PRIVATE' }], [{ ...good, visibility: undefined }],
     [{ ...good, memberIds: [] }], [{ ...good, memberIds: ['shape:missing'] }], [{ ...good, memberIds: [f.a, f.a] }],
-    [good, { ...good, id: 'workbench-group:second' }], [{ ...good, position: { left: 4000, top: 2 } }], [{ ...good, privateCount: 99 }]]) {
+    [good, { ...good, id: 'workbench-group:second' }], [{ ...good, position: { left: 4000, top: -16385 } }], [{ ...good, privateCount: 99 }]]) {
     assert.equal(validateProfileDocumentV9({ ...published, workbenchGroups: groups }).valid, false);
   }
   assert.equal(validateProfileDocumentV9({ ...published, workbenchGroups: [] }).valid, true);

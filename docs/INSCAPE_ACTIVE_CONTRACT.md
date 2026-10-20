@@ -1309,6 +1309,40 @@ cannot cover or intercept reading and artwork interactions.
 
 ## Public Workbench and visitor interaction
 
+### Non-destructive canvas cropping (2026-10-20)
+
+The canvas boundary defines the visible composition. Shrinking clips authored
+content without deleting it, moving it, resizing its frames or rewriting its
+source media. Enlarging reveals the retained portions. Owner and public
+Preview/Visitor share the same camera-projected clipping plane; the tools,
+Index and navigation remain outside it. This is presentation cropping, not
+removal from the public document: public source references and complete authored
+geometry remain available to the document and explicit artwork inspection.
+
+Canvas size includes a Show outside canvas toggle. In the owner session it
+reveals dimmed, editable outside content; the setting is neither saved nor
+published and resets when that profile session is remounted. Ordinary clipped
+content cannot be clicked beyond the boundary; fully hidden modules cannot
+receive keyboard focus or marquee selection. Owner Focus on an outlying module
+reveals outside content. Explicit artwork inspection and expanded group reading
+use their existing temporary presentation; returning restores the canvas crop.
+
+Existing modules and stacks can cross all four canvas edges without being
+pushed back inside. Their editing space is bounded independently at -16,384 to
++16,384 work pixels on each axis, with each module's existing size constraints.
+Initial placement and the alignment grid still use the canvas area. A selected
+partly cropped object keeps its editing handles; Show outside canvas reveals
+its full frame. Canvas resizing remains undoable and does not create a second
+owner of module geometry or storage.
+
+Fit canvas to content includes outlying content to the right and below, within
+the maximum canvas size. Because the origin stays fixed, content above or left
+requires explicit repositioning with Show outside canvas; Fit reports this
+instead of moving the composition silently. Image source resolution, the
+16-Image limit and the media decoding path are unchanged.
+
+### Current implemented canvas and navigation behavior
+
 At narrow desktop widths, Visitor profile-routing actions occupy a separate
 dock row when present. Discover, Return and Exit stay reachable without
 horizontal scrolling. The camera reserves the resulting dock height; long Grid
@@ -1331,13 +1365,14 @@ layouts without this field use the default without rewriting positions.
 A drag preview is temporary; release commits once, while Escape, lost capture,
 blur, hidden document, changed draft or disposal cancels it. Arrow keys resize
 by 10 pixels, Shift by 100 and Alt by 1. Failed saves restore the saved boundary.
-The alignment grid and placement bounds derive from the same per-Workbench
-area. Its line/dot/hidden mode, colour and snapping remain independent
+The alignment grid and initial-placement bounds derive from the same per-Workbench
+area; subsequent movement and resizing use the independent editing bounds.
+Its line/dot/hidden mode, colour and snapping remain independent
 preferences. Module-owned grids and authored module dimensions are unchanged.
 
 Owner and Visitor start at 100% with zero camera offset. Camera movement is free
 in both axes, including when the whole work area fits on screen; manual zoom
-remains 25%–200%. The work area limits placement, not camera navigation or Focus.
+remains 25%–200%. The work area clips the composition; it does not constrain camera navigation or Focus.
 Viewport, dock and control-size changes can stop an active journey but never
 refit, clamp or recenter the camera. Reset view clears navigation history and
 restores zero pan while retaining zoom. The percentage button and Ctrl/Cmd+0
@@ -1346,7 +1381,7 @@ restore 100% zoom around the view. Existing inspection locks remain authoritativ
 Old reference-frame preference fields are ignored. Other local preferences,
 storage keys and authored positions retain their meaning; the optional canvas area is the only schema extension here.
 Reading or reloading older 8,000-area arrangements does not move outlying modules;
-free camera navigation and Focus can still reach them beyond the visible grid.
+Show outside canvas and Focus can still recover them beyond the visible grid.
 
 Dragging empty Workbench space marquee-selects fully enclosed registered content
 windows: shapes, images, Displays, Text, Keeper docks and other registered modules.
@@ -1369,9 +1404,9 @@ The existing local workspace layout then saves the same positions shown on
 screen. Temporary translations do not remain a second owner of placement.
 Movement never chooses new dimensions or artwork fitting; Visitor movement
 remains temporary and cannot write the maker's arrangement.
-Group movement and corner resizing respect the current Workbench canvas area,
+Group movement and corner resizing respect the independent Workbench editing bounds,
 projected through the current view scale and pan. Moving a zoomed module
-individually uses those same bounds. Group movement keeps
+individually uses those same bounds and can cross the canvas crop. Group movement keeps
 relative spacing intact at the boundary.
 Group resizing starts from exact module geometry, using one scale factor around
 the opposite selection corner. Moving and resizing a selection reuse Workbench
@@ -2639,7 +2674,7 @@ resizing corner. The frontmost patch wins overlaps; a small boundary hysteresis
 prevents flicker. Selected patches cannot snap their own moving selection.
 Outside patches, nearby module edges can take priority over the global grid;
 their capture distance is capped relative to projected cell size at low zoom. Zero gap permits flush joins. Alt bypasses both kinds of snapping;
-Workbench area bounds still win. Display resize retains its ratio and opposite corner.
+The independent Workbench editing bounds still win. Display resize retains its ratio and opposite corner.
 Only open content windows participate; instruments, shortcuts, enlarged inspection
 windows and other Workbenches are excluded. Changing preferences does not rearrange
 windows. Publication captures the resulting layout through its existing flow;
@@ -2654,7 +2689,7 @@ cancels temporary state. Input showing that the mouse has already been released
 clears a stale gesture instead of leaving pan and zoom blocked. This lifecycle
 belongs to the Workbench and does not change authored module content.
 Alt bypasses window snapping temporarily; focused window headers support arrow
-keys. Workbench area limits take priority at edges. The existing profile-local
+keys. The independent Workbench editing limits take priority at their outer edges. The existing profile-local
 `shortcutSnap` preference remains the storage owner, now labelled Grid snapping;
 older values retain their meaning for shortcuts and also control these windows.
 Toggling snapping or changing guide visibility does not rearrange existing

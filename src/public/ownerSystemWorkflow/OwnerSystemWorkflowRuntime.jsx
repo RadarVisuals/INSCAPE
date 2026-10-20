@@ -2,6 +2,7 @@ import { openWorkbenchIndex } from '../../systemWorkflow/workbenchIndexSession.j
 import { SceneNavigationProvider } from '../../text/SceneNavigation.jsx';
 import { WorkbenchPlacement } from './WorkbenchPlacement.jsx';
 import { WorkbenchViewProvider, WorkbenchViewControls } from './WorkbenchView.jsx';
+import WorkbenchCanvasContent from './WorkbenchCanvasContent.jsx';
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useStartupDestinationReady } from '../../startveil/StartupDestinationContext.jsx';
 import { createPortal } from 'react-dom';
@@ -476,6 +477,7 @@ function WorkbenchSession({ connectedProfile, getWalletPublicationContext, onCon
     <ContextToolbar menuSurface={menuSurface} hidden={Boolean(preview) || instrumentsObscured} />
     <SharedTextToolsWindow hidden={Boolean(preview) || instrumentsObscured} />
     <WorkbenchAlignmentGrid spacing={workbenchPreferences.gridSpacing} color={workbenchPreferences.gridColor} mode={workbenchPreferences.gridMode} />
+    <WorkbenchCanvasContent>
     {displayIds.map(id => <OwnerDisplayInstance key={id} id={id} index={id === PRIMARY_DISPLAY_ID ? 0 : workbenchController.draft.displays.findIndex(module => module.id === id) + 1}
       initialView={{ ...(id === PRIMARY_DISPLAY_ID ? { locked: workbenchPreferences.compositionLocked } : {}), ...restoredWorkspace.views[id] }}
       onLockChange={id === PRIMARY_DISPLAY_ID ? locked => setWorkbenchPreferences(current => ({ ...current, compositionLocked: locked })) : undefined}
@@ -511,6 +513,7 @@ function WorkbenchSession({ connectedProfile, getWalletPublicationContext, onCon
       records={workbenchController.draft.miniApps} store={workbenchController.store} profileAddress={profileAddress}
       presentations={initialWorkbench.current?.miniApps} onPresentationChange={registerMiniAppPresentation}
       onConnect={onConnect} suspended={Boolean(preview)} /></Suspense>}
+    </WorkbenchCanvasContent>
     <OwnerSystemWorkflowPanelLayer workbenchImageTargetRef={workbenchImageTargetRef} moduleAssetTargetRef={moduleTargetsRef} placementTargetRef={allPlacementTargetsRef} shortcutTargetRef={allShortcutTargetsRef} workspaceRef={workspaceRef} activity={activity} assets={assets} assetsById={assetsById} authoringLocked={false} browser={browser}
       connectedProfile={connectedProfile} onConnect={onConnect} onDisconnect={onDisconnect} onEnterMyWorld={onEnterMyWorld}
       controller={activeController} profileAddress={profileAddress} onMenuSurfaceChange={workbenchController.setMenuSurface} layout={layout} libraryData={libraryData} menuSurface={menuSurface} onChangeGrid={changeGrid}

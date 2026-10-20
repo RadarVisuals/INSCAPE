@@ -6,7 +6,7 @@ export const MAX_WORKBENCH_GROUPS = 32;
 export const MAX_WORKBENCH_GROUP_MEMBERS = 128;
 export const WORKBENCH_GROUP_STACK_SIZE = Object.freeze({ width: 180, height: 160 });
 export const validWorkbenchGroupPosition = position => position && Object.keys(position).length === 2
-  && ['left', 'top'].every(axis => Number.isFinite(position[axis]) && position[axis] >= 8 && position[axis] <= MAX_WORKBENCH_SIZE);
+  && ['left', 'top'].every(axis => Number.isFinite(position[axis]) && position[axis] >= -MAX_WORKBENCH_SIZE && position[axis] <= MAX_WORKBENCH_SIZE);
 const groupId = /^workbench-group:[A-Za-z0-9_-]{1,80}$/u;
 const records = value => Array.isArray(value) ? value : [];
 export const validWorkbenchGroupName = name => typeof name === 'string' && name === name.trim()

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { createPortal, flushSync } from 'react-dom';
 import WorkbenchGroupStack from './WorkbenchGroupStack.jsx';
+import { useWorkbenchArea } from './WorkbenchAreaContext.jsx';
 import { workbenchGroupWindowIds, workbenchGroupModules } from '../../systemWorkflow/domain/workbenchGroups.js';
 import { workbenchSelectionBounds } from './workbenchViewScale.js';
 import { workbenchGroupLayout, compactWorkbenchGroupRectangles } from './workbenchGroupLayout.js';
@@ -97,6 +98,7 @@ export function useWorkbenchGroupScene({ view, content, hostRef, navigation, sce
 }
 
 export function WorkbenchGroupStacks({ content, hostRef, scene, locked, dropTarget, onManage, onPosition }) {
+  const { canvasHost } = useWorkbenchArea();
   const groups = content.workbenchGroups || [], names = workbenchGroupModules(content);
   const itemIndex = scene.ids.indexOf(scene.focusedId);
   if (!hostRef.current) return null;
@@ -107,7 +109,7 @@ export function WorkbenchGroupStacks({ content, hostRef, scene, locked, dropTarg
     return asset?.media?.url ? [resolvePublishedAssetUrl(asset.media.url)] : [];
   }).slice(0, 3);
   return createPortal(<>
-    {groups.filter(group => group.position && group.id !== scene.active?.id).map(group => <WorkbenchGroupStack key={group.id} {...{ group, scene, locked, dropTarget, onManage, onPosition }} previews={previews(group)} />)}
+    {createPortal(groups.filter(group => group.position && group.id !== scene.active?.id).map(group => <WorkbenchGroupStack key={group.id} {...{ group, scene, locked, dropTarget, onManage, onPosition }} previews={previews(group)} />), canvasHost || hostRef.current)}
     {groups.length > 0 && <nav className="workbench-group-browsing" data-workbench-navigation-obstacle data-workbench-group-tools aria-label="Workbench destinations">
       <div className="workbench-group-routes" aria-label="Named groups">{groups.map(group => <button key={group.id} type="button" disabled={locked || !onManage && !scene.bounds(group)}
         aria-current={scene.active?.id === group.id ? 'location' : undefined} title={group.name} onClick={() => { if (!scene.open(group)) onManage?.(group); }}>{group.name}</button>)}</div>
