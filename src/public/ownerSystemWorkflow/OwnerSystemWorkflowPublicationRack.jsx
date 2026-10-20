@@ -172,17 +172,23 @@ export default function OwnerSystemWorkflowPublicationRack({
     }
     setOperationPhase('PUBLISHED');
     setMessage('Your public presentation is live.');
-    onPublished?.(confirmed.result);
+    onPublished?.({ ...confirmed.result, transactionHash: confirmed.receipt?.transactionHash || confirmed.transactionHash });
   }, [onPublished, publication]);
 
   const verifiedReady = publication.status === PROFILE_DOCUMENT_PUBLICATION_STATUS.CID_VERIFIED
     && Boolean(publication.verified);
+  const progressMessage = publication.status === PROFILE_DOCUMENT_PUBLICATION_STATUS.CONFIRMING_TRANSACTION
+    ? 'Transaction submitted. Waiting for confirmation…'
+    : publication.status === PROFILE_DOCUMENT_PUBLICATION_STATUS.VERIFYING_PUBLICATION
+      ? 'Transaction confirmed. Checking your public presentation…' : message;
   const action = !snapshot || stale ? prepareSnapshot : verifiedReady ? publish : uploadSnapshot;
   const buttonLabel = operationPhase === 'PREPARING' ? 'PREPARING…'
     : operationPhase === 'CHECKING_ACCESS' ? 'CHECKING ACCESS…'
       : operationPhase === 'AUTHORIZING' ? 'AUTHORIZE UPLOAD…'
     : operationPhase === 'UPLOADING' ? 'MAKING PUBLIC…'
-      : operationPhase === 'WALLET' ? 'CONFIRM IN WALLET…'
+      : operationPhase === 'WALLET' ? publication.status === PROFILE_DOCUMENT_PUBLICATION_STATUS.CONFIRMING_TRANSACTION
+        ? 'CONFIRMING TRANSACTION…' : publication.status === PROFILE_DOCUMENT_PUBLICATION_STATUS.VERIFYING_PUBLICATION
+          ? 'CHECKING PUBLICATION…' : 'CONFIRM IN WALLET…'
         : operationPhase === 'PUBLISHED' || publication.status === PROFILE_DOCUMENT_PUBLICATION_STATUS.PUBLISHED
           ? 'PUBLISHED' : !snapshot || stale ? 'PREPARE PUBLICATION'
             : verifiedReady ? 'PUBLISH TO PROFILE' : 'MAKE PRESENTATION PUBLIC';
@@ -214,13 +220,13 @@ export default function OwnerSystemWorkflowPublicationRack({
             publication.reset();
             setOperationPhase(null);
             setMessage(recovery.message);
-            if (acknowledged.result) onPublished?.(acknowledged.result);
+            if (acknowledged.result) onPublished?.({ ...acknowledged.result, transactionHash: recovery.record?.transactionHash });
           }}>ACKNOWLEDGE RESULT</button>
           : <button type="button" disabled={recovery.status === 'CHECKING'} onClick={recovery.check}>CHECK AGAIN</button>}
       </div>
     </section>}
     <section className="owner-lattice-publication-rack__status-copy">
-      <p role="status">{!busy && recovery.blocked ? 'Resolve the previous publication before preparing another one.' : publication.error || message}</p>
+      <p role="status">{!busy && recovery.blocked ? 'Resolve the previous publication before preparing another one.' : publication.error || progressMessage}</p>
       <small>Making the presentation public stores it permanently. Upload access requires a wallet signature; publishing to your profile then requires a transaction confirmation.</small>
     </section>
     {showSupport && <section className="owner-lattice-publication-rack__support">
@@ -234,7 +240,7 @@ export default function OwnerSystemWorkflowPublicationRack({
     </section>}
     <footer className="owner-lattice-publication-rack__rail">
       <button type="button" className="owner-lattice-publication-rack__publish"
-        disabled={busy || recovery.blocked || Boolean(draftState.error) || Boolean(publication.transactionHash && publication.error)}
+        disabled={busy || operationPhase === 'PUBLISHED' || recovery.blocked || Boolean(draftState.error) || Boolean(publication.transactionHash && publication.error)}
         onClick={action}>{buttonLabel}</button>
       <button type="button" aria-label="Close Publication" disabled={busy} onClick={onClose}><X aria-hidden="true" size={15} /></button>
     </footer>

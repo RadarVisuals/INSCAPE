@@ -576,6 +576,7 @@ function WorkbenchSession({ connectedProfile, getWalletPublicationContext, onCon
     onClose={closePublication}
     onMotionComplete={publicationPresence.completeTransition}
     onPublished={(result) => {
+      closePublication();
       import('../../profileDocument/storage/ownerDraftReconciliation.js').then(({ recordOwnerPublicationBaseline }) => {
         recordOwnerPublicationBaseline({
           document: result?.document,

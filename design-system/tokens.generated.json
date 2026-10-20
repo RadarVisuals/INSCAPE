@@ -4,7 +4,7 @@
   "systemVersion": "1.0.0",
   "note": "Generated from production and design-system reference CSS. Reference roles are preview-only. Values remain CSS expressions, with selector and media scopes; this is not a DTCG interchange file. Runtime custom properties and local overrides are included and are not automatically public design tokens.",
   "counts": {
-    "files": 69,
+    "files": 70,
     "definitions": 560,
     "names": 295
   },
@@ -6668,6 +6668,24 @@
         "--tactile-shadow-raised",
         "--tactile-surface",
         "--tactile-well"
+      ]
+    },
+    {
+      "path": "src/public/publicationConfirmation.css",
+      "role": "Local",
+      "sha256": "e4e4f3fc7349a67cf3205d787ce28f529c1daf55c8afd41a83d2b588920cdca7",
+      "definitions": [],
+      "references": [
+        "--workflow-border-strong",
+        "--workflow-dock-height",
+        "--workflow-ink",
+        "--workflow-muted",
+        "--workflow-panel",
+        "--workflow-selection",
+        "--workflow-type-body",
+        "--workflow-type-control",
+        "--workflow-type-section",
+        "--workflow-window-inset"
       ]
     },
     {

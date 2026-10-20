@@ -2497,6 +2497,11 @@ the initial overview does not introduce a saved curation or layout schema.
 
 ## Editing, public inspection, and publication
 
+- After a successful publication receipt and matching public read-back, show a
+  clear confirmation with links to the public reception and transaction. This
+  temporary application-session notice survives the owner's profile refresh
+  until dismissed, and clears when leaving that owner's context. Upload-only,
+  pending, failed or unmatched transactions must not display publication success.
 - On 19 October 2026 the founder explicitly chose publication upload access for
   everyone with a valid Universal Profile, within the service's upload limits.
   No invitation or operator-maintained profile list is required. The server

@@ -12,8 +12,10 @@ import { reportControlledError } from './diagnostics.js';
 import AlphaSupportPanel from './support/AlphaSupportPanel.jsx';
 import { ALPHA_SUPPORT_CODES } from './support/alphaSupport.js';
 import { createStandaloneWalletLoader, hasPersistedStandaloneConnection } from './wallet/standaloneWalletLoader.js';
+import { normalizeProfileAddress } from './library/config.js';
 
 const PublicEntryPortal = lazy(() => import('./startveil/PublicEntryPortal.jsx'));
+const PublicationConfirmation = lazy(() => import('./public/PublicationConfirmation.jsx'));
 const CreepsMetadataRecoveryPanel = import.meta.env.DEV
   ? lazy(() => import('./recovery/CreepsMetadataRecoveryPanel.jsx'))
   : null;
@@ -29,6 +31,7 @@ function App() {
   const [previewDocument, setPreviewDocument] = useState(null);
   const [standaloneSignInActive, setStandaloneSignInActive] = useState(false);
   const [galleryActive, setGalleryActive] = useState(false);
+  const [publicationConfirmation, setPublicationConfirmation] = useState(null);
   const visitorWalletConnected = useWalletStore((state) => state.isWalletConnected);
   const walletProfileMetadata = useWalletStore((state) => state.profileMetadata);
   const ownershipVerified = useWalletStore((state) => state.isHostProfileOwner);
@@ -49,6 +52,18 @@ function App() {
   const localOwnerRoute = ownerAuthoringEnabled;
   const publicEntryPortal = destination.kind === 'entry' && revealStage !== 'complete';
   const [publishedResolution, retryPublishedProfile] = usePublishedProfile(viewedProfileAddress);
+  // A confirmed publication belongs to the application session: refreshing the
+  // owner runtime must not dispose its receipt or success message.
+  const publicationProfileRef = useRef(connectedWorkspaceProfileAddress);
+  publicationProfileRef.current = connectedWorkspaceProfileAddress;
+  useEffect(() => setPublicationConfirmation(null), [connectedWorkspaceProfileAddress]);
+  const onPublicationConfirmed = (result) => {
+    const address = normalizeProfileAddress(result?.document?.profile?.address);
+    if (result?.status !== PUBLISHED_PROFILE_STATUS.RESOLVED || !address
+      || address !== connectedWorkspaceProfileAddress || address !== publicationProfileRef.current) return;
+    setPublicationConfirmation({ profileAddress: address, transactionHash: result.transactionHash });
+    retryPublishedProfile();
+  };
   const ownerSourceReady = publishedResolution?.status !== PUBLISHED_PROFILE_STATUS.LOADING;
   const connectedProfile = verifiedOwnerProfileAddress ? {
     address: verifiedOwnerProfileAddress,
@@ -207,7 +222,7 @@ function App() {
             registerWorldContextMenu={registerDesktopContextMenu}
             onGalleryOpenChange={setGalleryActive}
             publishedResolution={publishedResolution}
-            onPublicationConfirmed={retryPublishedProfile}
+            onPublicationConfirmed={onPublicationConfirmed}
           /> : <PublishedProfileBoundary address={viewedProfileAddress} resolution={publishedResolution}
             connectedProfile={connectedProfile} onConnect={requestStandaloneSignIn}
             onDisconnect={disconnectStandalone} onEnterMyWorld={enterConnectedWorld}
@@ -229,6 +244,12 @@ function App() {
         </Suspense>}
       </StartupDestinationBoundary>
       </StartupDestinationContext.Provider>
+      {publicationConfirmation?.profileAddress === connectedWorkspaceProfileAddress && <Suspense fallback={null}>
+        <PublicationConfirmation confirmation={publicationConfirmation} onClose={() => {
+          setPublicationConfirmation(null);
+          (interfaceRef.current?.querySelector('button[aria-label="Publish"]') || interfaceRef.current)?.focus({ preventScroll: true });
+        }} />
+      </Suspense>}
       </div>
       <Startveil
         connectedProfile={connectedProfile}
