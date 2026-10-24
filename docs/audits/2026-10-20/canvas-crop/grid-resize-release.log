@@ -1,0 +1,16 @@
+TAP version 13
+# Subtest: production Grid resize commits on release without a render loop
+ok 1 - production Grid resize commits on release without a render loop
+  ---
+  duration_ms: 13026.8942
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 13593.986

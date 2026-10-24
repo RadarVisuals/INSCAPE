@@ -1,0 +1,145 @@
+{
+  "atUtc": "2026-10-19T20:27:55.258Z",
+  "baseCommit": "9e74b364fe0e574fcb262fe04f5e9f6998a620ee",
+  "scope": "Local upload-admission implementation; no real wallet, Pinata or hosted Blobs I/O",
+  "node": {
+    "tests": 1261,
+    "pass": 1261,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  "browser": [
+    {
+      "name": "publication-upload-admission",
+      "code": 0,
+      "seconds": 13.032,
+      "tests": 8,
+      "pass": 8,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0
+    }
+  ],
+  "standards": {
+    "tests": 5,
+    "pass": 5,
+    "fail": 0
+  },
+  "initialJavaScriptBytes": 822709,
+  "dependencies": {
+    "addedPackages": 46,
+    "existingPackageChanges": [],
+    "advisoriesOnAddedPackages": [],
+    "totalAudit": {
+      "info": 0,
+      "low": 10,
+      "moderate": 58,
+      "high": 14,
+      "critical": 3,
+      "total": 85
+    }
+  },
+  "implementationFiles": [
+    {
+      "path": "docs/NETLIFY_PUBLIC_IPFS_PUBLICATION.md",
+      "sha256": "cf4dd60bc61156efac2d3ba9691024ae15152239cc42d4ee9680fad77ccb4d88"
+    },
+    {
+      "path": "netlify/functions/pin-profile-document.mjs",
+      "sha256": "1edd3b51b69715f64116a0b66c9420c3f68f891b029d52bd065f6b9d0bc70149"
+    },
+    {
+      "path": "package-lock.json",
+      "sha256": "209d29b36abfad4f8f31f1ecebb8ecbdc9591d291eba54abb80176416258fa1d"
+    },
+    {
+      "path": "package.json",
+      "sha256": "8b335aa53c95b0617e99ec127c15fac0784ef67de20d39c2c8c4067944d407dc"
+    },
+    {
+      "path": "scripts/pin-profile-document-function.test.mjs",
+      "sha256": "aca01ebc0458746641e9c1868c8f10afcc842c39596b6b030046cb0e2871bd99"
+    },
+    {
+      "path": "scripts/runBrowserTests.mjs",
+      "sha256": "4c6803a72748036cb630f7da74e920070fb68e8a819ef4f28672a66f9751244a"
+    },
+    {
+      "path": "src/profileDocument/phase4aPublicationCutover.test.js",
+      "sha256": "30a2323cadde5dd773f24185aaa2d04d7f3112072d72244195c805d36ecea613"
+    },
+    {
+      "path": "src/profileDocument/storage/profileDocumentUploadClient.js",
+      "sha256": "d9352a4b41df8c5504acb77767113981acde7fafc09c793f875ee95f726f7aff"
+    },
+    {
+      "path": "src/profileDocument/storage/profileDocumentUploadClient.test.js",
+      "sha256": "5acdb9eec6d1ff97212c248ce92efe119fcb2de08f07a78ccd056d0a4c480157"
+    },
+    {
+      "path": "src/profileDocument/storage/profilePublicationFlow.test.js",
+      "sha256": "fbdc36ef80270e5241ec95a862bcb991efc11ed2b381b1e6c0f9d1a0d063200d"
+    },
+    {
+      "path": "src/public/OwnerSystemWorkflowShell.test.js",
+      "sha256": "8c2f97993122e0b68d82a4257811dfbddd1895893977168c84e0e076cc35a610"
+    },
+    {
+      "path": "src/public/ownerSystemWorkflow/OwnerSystemWorkflowPublicationRack.jsx",
+      "sha256": "a245bd0e8067227ee99f72872874af1506e53f1bfbeb7f40d51ef5af2e2a9f19"
+    },
+    {
+      "path": "src/public/ownerSystemWorkflow/ownerSystemWorkflowPolish.test.js",
+      "sha256": "145d34945dfbc85409e26a7fcbfd3c684aca22735b93c513c3f46cc74ea6b374"
+    },
+    {
+      "path": "browser-tests/publication-upload-admission.browser.mjs",
+      "sha256": "2bd4df38beae000b95f48f90a6ea82dd82a7477d87093c4a784da17b4e77bc38"
+    },
+    {
+      "path": "netlify/lib/publicationUploadAuth.mjs",
+      "sha256": "4f8b444a0bcd5aceb9cd72c3554638bb98b1893662f3699a24ada1a535c0dcb0"
+    },
+    {
+      "path": "netlify/lib/publicationUploadQuota.mjs",
+      "sha256": "e22411a480f192372b5b52a5473f80124301ee03f3315037a4ce1d4be38aef2c"
+    },
+    {
+      "path": "scripts/fixtures/publicationUpload.mjs",
+      "sha256": "39bcc0dade19f1e5aa2c165c7f28e4cb6691fff0a60f7e4c9cd09d6809d56870"
+    },
+    {
+      "path": "scripts/publication-upload-admission.test.mjs",
+      "sha256": "13497660c1ae0bf27b3b5b72d01b7270f116d90a6d0078399715e020405780ce"
+    },
+    {
+      "path": "scripts/publication-upload-storage.test.mjs",
+      "sha256": "05937bfce4aecb86f571334306357c2a1d7649735ee3162b24a4806ef6deea46"
+    },
+    {
+      "path": "src/profileDocument/domain/uploadAuthorization.js",
+      "sha256": "bd957e5dafaa0eb0fca034c630c0b52e9594994fa114dbdd5177e75a25e93d5d"
+    }
+  ],
+  "logs": [
+    {
+      "name": "node-final.log",
+      "sha256": "a649147d19f05483e4ae2484bb1a61166b46d34b29581cd12911bb42afc0b41d"
+    },
+    {
+      "name": "build-final.log",
+      "sha256": "84213703113328bb602ff2e565be06cd4cae0336af8dff16ec6643e151192536"
+    },
+    {
+      "name": "build-check-final.log",
+      "sha256": "fff0bc59afd025c7420182e6d9ddd461b8ba0f067cdf1f082ec3a91943e7304b"
+    },
+    {
+      "name": "lukso-standards.log",
+      "sha256": "8db39fa7334e5513183dc65df65ba57891e0a7920f6a000016906de51e1a9075"
+    }
+  ]
+}

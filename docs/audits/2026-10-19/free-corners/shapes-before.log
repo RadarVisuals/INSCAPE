@@ -1,0 +1,50 @@
+TAP version 13
+# Subtest: Shape corners stay free after first resize and reselection at 1440px
+not ok 1 - Shape corners stay free after first resize and reselection at 1440px
+  ---
+  duration_ms: 4114.9637
+  type: 'test'
+  location: '<user>\\Documents\\ChatGPT\\inscape\\remediation-2026-10-19-shared-checkpoint\\work\\browser-tests\\shape-corner-resize.browser.mjs:11:34'
+  failureType: 'testCodeFailure'
+  error: 'width follows horizontal input: 312.5 vs 300'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    near (file:///<user>/Documents/ChatGPT/inscape/remediation-2026-10-19-shared-checkpoint/work/browser-tests/shape-corner-resize.browser.mjs:9:50)
+    drag (file:///<user>/Documents/ChatGPT/inscape/remediation-2026-10-19-shared-checkpoint/work/browser-tests/shape-corner-resize.browser.mjs:32:7)
+    async TestContext.<anonymous> (file:///<user>/Documents/ChatGPT/inscape/remediation-2026-10-19-shared-checkpoint/work/browser-tests/shape-corner-resize.browser.mjs:40:5)
+    async Test.run (node:internal/test_runner/test:1404:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3)
+  ...
+# Subtest: Shape corners stay free after first resize and reselection at 390px
+not ok 2 - Shape corners stay free after first resize and reselection at 390px
+  ---
+  duration_ms: 2339.8082
+  type: 'test'
+  location: '<user>\\Documents\\ChatGPT\\inscape\\remediation-2026-10-19-shared-checkpoint\\work\\browser-tests\\shape-corner-resize.browser.mjs:11:34'
+  failureType: 'testCodeFailure'
+  error: 'width follows horizontal input: 288 vs 300'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    near (file:///<user>/Documents/ChatGPT/inscape/remediation-2026-10-19-shared-checkpoint/work/browser-tests/shape-corner-resize.browser.mjs:9:50)
+    drag (file:///<user>/Documents/ChatGPT/inscape/remediation-2026-10-19-shared-checkpoint/work/browser-tests/shape-corner-resize.browser.mjs:32:7)
+    async TestContext.<anonymous> (file:///<user>/Documents/ChatGPT/inscape/remediation-2026-10-19-shared-checkpoint/work/browser-tests/shape-corner-resize.browser.mjs:38:5)
+    async Test.run (node:internal/test_runner/test:1404:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:969:7)
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 0
+# fail 2
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 6818.3251

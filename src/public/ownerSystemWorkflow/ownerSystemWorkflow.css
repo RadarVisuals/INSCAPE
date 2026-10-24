@@ -1,0 +1,684 @@
+@import './displayInspection.css';
+/* Accepted System Workflow presentation, promoted from the frozen study into
+   the production component namespace. Canonical geometry and state remain in
+   the production components; this layer owns only their presentation. */
+.system-workflow,
+.system-workflow__token-scope {
+  --workflow-window-inset: 18px;
+  --workflow-dock-height: 42px;
+  --workflow-dock-clearance: 12px;
+  --workflow-rail-height: 38px;
+  --workflow-row-height: 38px;
+  --workflow-panel-padding: 12px;
+  --workflow-content-padding: 10px;
+  --workflow-gap-small: 6px;
+  --workflow-gap-medium: 10px;
+  /* Shared module chrome. Content layout and Stage geometry stay module-owned. */
+  --workflow-window-chrome-radius: 10px;
+  --workflow-window-chrome-gutter: 6px;
+  --workflow-window-chrome-shadow-inset: 6px;
+  --workflow-window-chrome-shadow-height: 90px;
+  --workflow-window-chrome-shadow: 4px 6px 14px rgb(17 19 19 / 14%);
+  --workflow-window-chrome-noise-size: 128px;
+  --workflow-window-chrome-noise-opacity: 30%;
+  --workflow-border: var(--lattice-menu-line);
+  --workflow-border-strong: var(--workflow-border);
+  --workflow-muted: var(--lattice-menu-muted);
+  --workflow-ink: var(--lattice-menu-ink);
+  --workflow-panel: var(--lattice-menu-panel);
+  --workflow-selection: color-mix(in srgb, var(--workflow-ink) 12%, var(--workflow-panel));
+  --workflow-hover: color-mix(in srgb, var(--workflow-ink) 7%, transparent);
+  --workflow-active-vertical: inset 4px 0 0 var(--workflow-ink);
+  --workflow-active-horizontal: inset 0 4px 0 var(--workflow-ink);
+  --workflow-shadow-panel: none;
+  --workflow-shadow-workspace: none;
+  --workflow-motion-in: 180ms;
+  --workflow-motion-out: 140ms;
+  --workflow-ease: cubic-bezier(.2, .72, .2, 1);
+  --workflow-type-display: 600 28px/1.08 "Inscape Sora", sans-serif;
+  --workflow-type-title: 600 18px/1.15 "Inscape Sora", sans-serif;
+  --workflow-type-section: 600 15px/1.2 "Inscape Sora", sans-serif;
+  --workflow-type-body: 400 14px/1.5 "Inscape Sora", sans-serif;
+  --workflow-type-control: 400 11px/1.2 "Inscape Sora", sans-serif;
+  --workflow-type-sidebar: 450 11px/1.1 "Inscape Sora", sans-serif;
+  --workflow-type-browser-rail: 400 10px/1 "Inscape IBM Plex Sans Condensed", "Arial Narrow", sans-serif;
+  --workflow-type-panel-heading: 500 11px/1.15 "Inscape Sora", sans-serif;
+  --workflow-type-panel-body: 400 11px/1.5 "Inscape IBM Plex Sans Condensed", "Arial Narrow", sans-serif;
+  --workflow-type-panel-rail: 400 11px/1 "Inscape IBM Plex Sans Condensed", "Arial Narrow", sans-serif;
+  --workflow-type-label: 500 10px/1.25 "Inscape IBM Plex Sans Condensed", "Arial Narrow", sans-serif;
+  --workflow-type-micro: 400 10px/1.35 "Inscape IBM Plex Sans Condensed", "Arial Narrow", sans-serif;
+  --workflow-type-technical: 400 10px/1.35 "Inscape IBM Plex Sans Condensed", "Arial Narrow", sans-serif;
+}
+
+.system-workflow {
+  --study-surface: #c9c6bd;
+  --study-ink: #111313;
+  --study-grid: rgb(18 20 20 / 11%);
+  position: fixed;
+  inset: 0;
+  isolation: isolate;
+  overflow: clip;
+  outline: none;
+  pointer-events: auto;
+  color: var(--study-ink);
+  background: var(--study-surface);
+  font-family: "Inscape Sora", sans-serif;
+}
+
+:is(.system-workflow, .system-workflow__stage)[data-surface="carbon"] { --study-surface: #0b0c0c; --study-ink: #d8d7d2; --study-grid: rgb(216 213 204 / 8.5%); }
+:is(.system-workflow, .system-workflow__stage)[data-surface="graphite"] { --study-surface: #383a3a; --study-ink: #e8e7e2; --study-grid: rgb(232 231 226 / 11.5%); }
+:is(.system-workflow, .system-workflow__stage)[data-surface="slate"] { --study-surface: #7b7b7b; --study-ink: #f3f2ed; --study-grid: rgb(243 242 237 / 14%); }
+:is(.system-workflow, .system-workflow__stage)[data-surface="ash"] { --study-surface: #b2b2b2; --study-ink: #151818; --study-grid: rgb(255 255 255 / 22%); }
+:is(.system-workflow, .system-workflow__stage)[data-surface="mist"] { --study-surface: #c9c6bd; --study-ink: #111313; --study-grid: rgb(18 20 20 / 11%); }
+:is(.system-workflow, .system-workflow__stage)[data-surface="paper"] { --study-surface: #d8d4ca; --study-ink: #111313; --study-grid: rgb(34 31 27 / 9.5%); }
+.system-workflow[data-previewing] { visibility: hidden; }
+
+.system-workflow button,
+.system-workflow input,
+.system-workflow select {
+  min-height: 0;
+  border-radius: 0;
+  color: inherit;
+  font: inherit;
+}
+
+.system-workflow button:focus-visible,
+.system-workflow input:focus-visible,
+.system-workflow select:focus-visible {
+  outline: 1px solid currentColor;
+  outline-offset: -2px;
+}
+.system-workflow :is(button, input, select):focus:not(:focus-visible) { outline: 0; }
+
+.system-workflow__motion-panel {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  transform-origin: bottom center;
+  transition:
+    opacity var(--workflow-motion-in) var(--workflow-ease),
+    transform var(--workflow-motion-in) var(--workflow-ease);
+}
+
+/* Dock panels share a screen layer above camera/selection controls. Their own
+   legacy z-indices only order content within that layer. */
+.system-workflow__panel-presence { position: relative; z-index: 83; }
+/* Grids can open while Library stays visible for choosing a drop destination. */
+.system-workflow__panel-presence[data-system-workflow-panel="grids"] { z-index: 84; }
+.system-workflow__recovery-notice, .system-workflow__layout-notice { position: fixed; z-index: 110; left: 8px; right: 8px; bottom: calc(var(--workflow-dock-height) + 8px); margin: 0; padding: 8px 12px; border: 1px solid var(--workflow-border-strong); background: var(--workflow-panel); color: var(--workflow-ink); font: var(--workflow-type-control); }
+.system-workflow__recovery-notice { z-index: 80; }
+.system-workflow__recovery-notice + .system-workflow__layout-notice { bottom: calc(var(--workflow-dock-height) + 64px); }
+.system-workflow__layout-notice button { font: inherit; color: inherit; background: var(--workflow-selection); border: 1px solid var(--workflow-border); padding: 4px 8px; }
+.system-workflow__motion-panel:is([data-panel-phase="entering"], [data-panel-phase="closing"]),
+[data-panel-phase="entering"] .system-workflow__motion-panel,
+[data-panel-phase="closing"] .system-workflow__motion-panel {
+  opacity: 0;
+  transform: translateY(7px) scale(.985);
+  transition-duration: var(--workflow-motion-out);
+}
+
+.system-workflow__workbench {
+  position: absolute;
+  inset: 0 0 var(--workflow-dock-height);
+  overflow: clip;
+  background: color-mix(in srgb, var(--study-surface) 96%, var(--study-ink));
+}
+
+.system-workflow__display-instance { position: absolute; inset: 0; pointer-events: none; }
+.system-workflow__display-instance > .system-workflow__workbench { background: transparent; pointer-events: none; }
+.system-workflow__display-instance .system-workflow__presentation-board,
+.system-workflow__display-instance .system-workflow__desktop-shortcut { pointer-events: auto; }
+/* Raise the window, not its full-desktop wrapper and shortcut. Otherwise an
+   active Display's shortcut intercepts another window's header/corners. */
+.system-workflow__display-instance[data-active-display] > .system-workflow__workbench > .system-workflow__presentation-board { z-index: 3; }
+.system-workflow__display-instance:not([data-active-display]) :is(.system-workflow__canvas) { view-transition-name: none !important; }
+
+.system-workflow__presentation-board {
+  --workflow-board-frame-gap: var(--workflow-window-chrome-gutter);
+  --workflow-board-radius: var(--workflow-window-chrome-radius);
+  --workflow-board-frame-surface: var(--workflow-selection);
+  position: absolute;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: var(--workflow-identity-strip-height) minmax(0, 1fr) auto;
+  overflow: visible;
+  background: transparent;
+  box-shadow: var(--workflow-window-chrome-shadow);
+  container: presentation-board / inline-size;
+  isolation: isolate;
+}
+
+.system-workflow__presentation-board::before {
+  box-sizing: border-box;
+  position: absolute;
+  z-index: -1;
+  top: -1px;
+  right: calc(-1 * (var(--workflow-board-frame-gap) + 1px));
+  bottom: calc(-1 * (var(--workflow-board-frame-gap) + 1px));
+  left: calc(-1 * (var(--workflow-board-frame-gap) + 1px));
+  border: 1px solid var(--workflow-border-strong);
+  border-radius: var(--workflow-board-radius);
+  background: var(--workflow-board-frame-surface);
+  content: "";
+  pointer-events: none;
+  transition: right 240ms var(--workflow-ease);
+  border-color: rgb(255 255 255 / 20%);
+}
+/* One texture treatment; each surface below owns its clipping and anchoring. */
+:is(.system-workflow, .visitor-grid-world):not([data-chrome-noise="off"]) .system-workflow__presentation-board::after, :is(.system-workflow, .visitor-grid-world):not([data-chrome-noise="off"]) .system-workflow__instrument-bay[data-projection="overlay"]::after, :is(.system-workflow, .visitor-grid-world):not([data-chrome-noise="off"]) .system-workflow__detached-window:where(:not([data-window-chrome="tactile"], [data-window-chrome="flat"]))::after {
+  background-image: url("/assets/noise-samples/grain-mono.png");
+  background-size: var(--workflow-window-chrome-noise-size) var(--workflow-window-chrome-noise-size);
+  background-repeat: repeat;
+  mix-blend-mode: hard-light;
+  opacity: var(--workflow-window-chrome-noise-opacity);
+  content: "";
+  pointer-events: none;
+}
+:is(.system-workflow, .visitor-grid-world):not([data-chrome-noise="off"]) .system-workflow__presentation-board::after,
+:is(.system-workflow, .visitor-grid-world):not([data-chrome-noise="off"]) .system-workflow__instrument-bay[data-projection="overlay"]::after {
+  position: absolute;
+  z-index: -1;
+  top: 0;
+  right: calc(-1 * var(--workflow-board-frame-gap));
+  bottom: calc(-1 * var(--workflow-board-frame-gap));
+  left: calc(-1 * var(--workflow-board-frame-gap));
+  border-radius: calc(var(--workflow-board-radius) - 1px);
+  background-position: 0 0;
+  background-attachment: fixed;
+  transition: right 240ms var(--workflow-ease);
+}
+:is(.system-workflow, .visitor-grid-world):not([data-chrome-noise="off"]) .system-workflow__instrument-bay[data-projection="overlay"]::after {
+  inset: 0;
+  border-radius: inherit;
+}
+.system-workflow__presentation-board[data-metadata-sidecar]::before {
+  right: calc(-1 * (var(--workflow-metadata-width) + var(--workflow-board-frame-gap) + 1px));
+}
+:is(.system-workflow, .visitor-grid-world):not([data-chrome-noise="off"]) .system-workflow__presentation-board[data-metadata-sidecar]::after {
+  right: calc(-1 * (var(--workflow-metadata-width) + var(--workflow-board-frame-gap)));
+}
+.system-workflow__presentation-board[data-metadata-sidecar-collapsing]::before {
+  right: calc(-1 * (var(--workflow-board-frame-gap) + 1px));
+}
+:is(.system-workflow, .visitor-grid-world):not([data-chrome-noise="off"]) .system-workflow__presentation-board[data-metadata-sidecar-collapsing]::after {
+  right: calc(-1 * var(--workflow-board-frame-gap));
+}
+
+.system-workflow__board-inspection-host { position: absolute; z-index: 30; inset: var(--workflow-identity-strip-height) 0 0; overflow: hidden; border-radius: var(--workflow-board-radius); pointer-events: none; }
+/* One authored surface effect covers both composition and inspection, below controls. */
+.system-workflow__presentation-board > .module-surface-grain { z-index: 36; }
+
+.system-workflow__identity-strip {
+  box-sizing: border-box;
+  min-width: 0;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  overflow: hidden;
+  border-bottom: 0;
+  color: var(--workflow-ink);
+  background: transparent;
+  cursor: move;
+  touch-action: none;
+}
+.system-workflow__identity-strip strong { overflow: hidden; font: 500 10px/1 "Inscape Sora", sans-serif; text-overflow: ellipsis; white-space: nowrap; }
+.system-workflow__identity-strip code,
+.system-workflow__identity-strip small { color: var(--workflow-muted); font: var(--workflow-type-micro); letter-spacing: .06em; white-space: nowrap; }
+.system-workflow__board-title { min-width: 0; height: 100%; flex: 0 0 auto; display: flex; align-items: stretch; }
+.system-workflow__board-window-controls,
+.system-workflow__composition-lock-controls {
+  box-sizing: border-box;
+  height: 100%;
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 0 8px;
+}
+.system-workflow__composition-lock svg { width: 11px; height: 11px; }
+.system-workflow__presentation-board[data-authoring-locked] .system-workflow__composition-lock {
+  border-color: #ef4d55;
+  color: #ff5a62;
+  background: color-mix(in srgb, #ef4d55 18%, var(--workflow-panel));
+  box-shadow: inset 0 0 0 1px rgb(255 90 98 / 22%), 0 0 9px rgb(239 77 85 / 62%);
+}
+.system-workflow__presentation-board[data-authoring-locked] .system-workflow__composition-lock svg {
+  width: 13px;
+  height: 13px;
+  stroke-width: 2.8;
+}
+.system-workflow__board-inspection-controls-host { min-width: 0; height: 100%; display: flex; align-items: stretch; }
+:is(.system-workflow, .system-workflow__token-scope) .system-workflow__round-control { box-sizing: border-box; width: 20px; min-width: 20px; height: 20px; padding: 0; display: grid; place-items: center; overflow: hidden; border: 1px solid var(--workflow-border-strong); border-radius: 50% !important; color: var(--workflow-muted); background: var(--workflow-selection); cursor: pointer; transition: color 120ms var(--workflow-ease), background-color 120ms var(--workflow-ease), border-color 120ms var(--workflow-ease); }
+:is(.system-workflow, .system-workflow__token-scope) .system-workflow__round-control:hover { border-color: var(--workflow-muted); color: var(--workflow-ink); background: color-mix(in srgb, var(--workflow-ink) 16%, var(--workflow-panel)); }
+:is(.system-workflow, .system-workflow__token-scope) .system-workflow__round-control:focus-visible { outline: 0; border-color: var(--workflow-ink); color: var(--workflow-ink); box-shadow: inset 0 0 0 1px var(--workflow-panel); }
+:is(.system-workflow, .system-workflow__token-scope) .system-workflow__round-control[aria-pressed="true"] { border-color: var(--workflow-muted); color: var(--workflow-ink); background: color-mix(in srgb, var(--workflow-ink) 14%, var(--workflow-panel)); }
+.system-workflow__round-control:disabled { cursor: default; opacity: .35; }
+.system-workflow__round-control svg { width: 12px; height: 12px; stroke-width: 2; transition: transform 140ms var(--workflow-ease), stroke-width 140ms var(--workflow-ease); }
+.system-workflow__round-control.is-close svg { width: 14px; height: 14px; stroke-width: 2.7; }
+
+.system-workflow__board-resize-handle { position: absolute; z-index: 42; width: 28px; min-width: 0; height: 28px; min-height: 0; padding: 0; border: 0; outline: 0; background: transparent; touch-action: none; }
+.system-workflow__board-resize-handle.is-nw { top: -14px; left: -14px; cursor: nwse-resize; }
+.system-workflow__board-resize-handle.is-ne { top: -14px; right: -14px; cursor: nesw-resize; }
+.system-workflow__board-resize-handle.is-sw { bottom: -14px; left: -14px; cursor: nesw-resize; }
+.system-workflow__board-resize-handle.is-se { right: -14px; bottom: -14px; cursor: nwse-resize; }
+.system-workflow .system-workflow__board-resize-handle:focus { outline: none; }
+.system-workflow__board-resize-handle:focus-visible::after { content: ''; position: absolute; inset: 10px; box-sizing: border-box; border: 1px solid #111313; background: #fff; box-shadow: 0 0 0 1px #fff; }
+
+.system-workflow__desktop-shortcut { position: absolute; z-index: 1; width: var(--workflow-shortcut-width, 82px); min-height: var(--workflow-shortcut-height, 64px); padding: 5px; display: grid; justify-items: center; align-content: start; gap: 9px; border: 1px solid transparent; color: var(--workflow-ink); background: transparent; cursor: default; }
+.system-workflow__desktop-shortcut:is(:hover, :focus-visible) { outline: 0; border-color: var(--workflow-border-strong); background: var(--workflow-selection); }
+.system-workflow__desktop-shortcut > span { position: relative; box-sizing: border-box; width: 38px; height: 28px; display: grid; place-items: center; overflow: hidden; border: 1px solid var(--workflow-border-strong); background: var(--workflow-panel); font: var(--workflow-type-technical); letter-spacing: .06em; box-shadow: 2px 3px 5px rgb(17 19 19 / 10%); }
+.system-workflow__desktop-shortcut-icon[data-custom] { width: var(--workflow-shortcut-icon-size, 60px); height: var(--workflow-shortcut-icon-size, 60px); border: 0; background: transparent; box-shadow: none; }
+.system-workflow__desktop-shortcut-icon :is(img, .system-workflow__progressive-media),
+.system-workflow__shortcut-icon-preview :is(img, .system-workflow__progressive-media) { width: 100%; height: 100%; display: block; object-fit: contain; }
+:is(.system-workflow__desktop-shortcut-icon, .system-workflow__shortcut-icon-preview) .system-workflow__progressive-media { position: relative; inset: auto; }
+:is(.system-workflow__desktop-shortcut-icon, .system-workflow__shortcut-icon-preview) .system-workflow__progressive-media > img { inset: 0; transform-origin: center; }
+.system-workflow__desktop-shortcut-icon > img,
+.system-workflow__shortcut-icon-preview > img { transform-origin: center; }
+.system-workflow__desktop-shortcut > strong { max-width: calc(var(--workflow-shortcut-width, 82px) - 10px); overflow: hidden; font: 500 var(--workflow-shortcut-label-size, 8px)/1.25 "Inscape Sora", sans-serif; text-align: center; text-overflow: ellipsis; }
+.system-workflow__desktop-shortcut > input { box-sizing: border-box; width: 74px; height: 20px; padding: 2px 3px; border: 1px solid var(--workflow-border-strong); background: var(--workflow-panel); font: 500 8px/1.2 "Inscape Sora", sans-serif; text-align: center; }
+.system-workflow__shortcut-icon-editor { position: fixed; z-index: 70; box-sizing: border-box; width: min(252px, calc(100% - 16px)); height: 308px; display: grid; grid-template-rows: 92px minmax(0, 1fr) var(--workflow-rail-height); border: 1px solid var(--workflow-border-strong); color: var(--workflow-ink); background: var(--workflow-panel); box-shadow: var(--workflow-shadow-panel); pointer-events: auto; }
+.system-workflow__shortcut-icon-editor > footer button:is(:hover, :focus-visible) { outline: 0; background: var(--workflow-selection); }
+.system-workflow__shortcut-icon-preview { position: relative; box-sizing: border-box; width: 84px; height: 84px; margin: auto; overflow: hidden; background: transparent; }
+.system-workflow__shortcut-icon-controls { display: grid; align-content: center; padding-bottom: 8px; }
+.system-workflow__shortcut-icon-controls > label { min-height: 34px; padding: 0 9px; display: grid; grid-template-columns: 38px minmax(0, 1fr) 38px; align-items: center; gap: 7px; font: var(--workflow-type-micro); letter-spacing: .055em; }
+.system-workflow__shortcut-icon-controls output { text-align: right; font: var(--workflow-type-technical); }
+.system-workflow__shortcut-icon-controls input { min-width: 0; width: 100%; height: 14px; appearance: none; border: 0; background: transparent; }
+.system-workflow__shortcut-icon-controls input::-webkit-slider-runnable-track { height: 2px; background: var(--workflow-border-strong); }
+.system-workflow__shortcut-icon-controls input::-webkit-slider-thumb { width: 12px; height: 12px; margin-top: -5px; appearance: none; border: 1px solid var(--workflow-ink); border-radius: 50%; background: var(--workflow-ink); }
+.system-workflow__shortcut-icon-controls input::-moz-range-track { height: 2px; background: var(--workflow-border-strong); }
+.system-workflow__shortcut-icon-controls input::-moz-range-thumb { width: 12px; height: 12px; border: 1px solid var(--workflow-ink); border-radius: 50%; background: var(--workflow-ink); }
+.system-workflow__shortcut-icon-editor > footer { min-width: 0; display: flex; border-top: 1px solid var(--workflow-border); }
+.system-workflow__shortcut-icon-editor > footer button { min-width: 0; flex: 1 1 0; padding: 0 8px; border: 0; color: var(--workflow-muted); background: transparent; font: var(--workflow-type-panel-rail); letter-spacing: .055em; cursor: pointer; }
+.system-workflow__shortcut-icon-editor > footer .system-workflow__shortcut-icon-editor-close { flex: 0 0 42px; padding: 0; display: grid; place-items: center; }
+.system-workflow__shortcut-icon-editor-close svg { width: 15px; height: 15px; }
+@container presentation-board (max-width: 600px) {
+  .system-workflow__composition-lock-controls { gap: 5px; padding-inline: 6px; }
+}
+@container presentation-board (max-width: 360px) {
+}
+
+.system-workflow__stage-viewport {
+  position: relative;
+  width: 100%;
+  overflow: clip;
+  -webkit-user-select: none;
+  user-select: none;
+  border-radius: var(--workflow-board-radius);
+  /* A transformed Stage can end on a fractional device pixel while the Board
+     is resized. Composite that antialiased edge into the Board frame itself;
+     the Workbench surface must never become a visible seam around artwork. */
+  background: var(--workflow-board-frame-surface);
+}
+.system-workflow__stage-viewport img {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+.system-workflow__stage-border {
+  box-sizing: border-box;
+  position: absolute;
+  z-index: 25;
+  inset: var(--workflow-identity-strip-height) 0 0;
+  border: 1px solid rgb(255 255 255 / 15%);
+  border-radius: var(--workflow-board-radius);
+  pointer-events: none;
+}
+.system-workflow__stage {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  overflow: clip;
+  background: var(--study-surface);
+  transform-origin: top left;
+}
+
+.system-workflow__stage-content {
+  position: absolute;
+  inset: 0;
+  display: block;
+  overflow: hidden;
+}
+
+.system-workflow__canvas {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  user-select: none;
+  touch-action: none;
+  background-color: var(--study-surface);
+  box-shadow: none;
+  transition: opacity var(--workflow-motion-in) var(--workflow-ease), filter var(--workflow-motion-in) var(--workflow-ease);
+  view-transition-name: inscape-system-workflow-grid;
+}
+
+.system-workflow__grid-track {
+  position: absolute;
+  inset: 0;
+  isolation: isolate;
+  pointer-events: none;
+  /* One stable 2D rail; individual scenes never restart the moving texture. */
+  transform: translateX(var(--workflow-grid-swipe-x, 0px));
+}
+.system-workflow__grid-plane {
+  position: absolute;
+  /* Scene clips are disjoint. Keep their stacking order stable as the active
+     Grid changes, so the compositor retains one continuous painted rail. */
+  z-index: 0;
+  inset: 0 auto 0 0;
+  width: 100%;
+  overflow: hidden;
+  background-color: transparent;
+}
+.system-workflow__grid-plane--current {
+  pointer-events: none;
+}
+:is(.system-workflow__artwork-plane, .visitor-grid-renderer__artwork-plane) { position: absolute; inset: 0; overflow: hidden; pointer-events: none; transition: filter 260ms var(--workflow-ease); }
+/* On the rail, the Grid plane alone owns the scene clip. Repeating that clip
+   on its artwork plane can attenuate the same fractional edge twice. Other
+   standalone artwork planes retain their own clipping. */
+.system-workflow__grid-plane > .system-workflow__artwork-plane,
+.visitor-grid-world__grid-plane .visitor-grid-renderer__artwork-plane { overflow: visible; }
+.system-workflow__grid-plane--current > .system-workflow__artwork-plane > .system-workflow__placement,
+.visitor-grid-world__grid-plane--current .visitor-grid-renderer__artwork-plane > .lattice-production-placement { pointer-events: auto; }
+.system-workflow__presentation-board[data-inspection-atmosphere] .system-workflow__grid-plane--current > .system-workflow__artwork-plane,
+.system-workflow__presentation-board[data-inspection-atmosphere] .visitor-grid-world__grid-plane--current .visitor-grid-renderer__artwork-plane {
+  filter: grayscale(1) brightness(.18);
+}
+.system-workflow__world-cover-aperture {
+  position: absolute;
+  z-index: 18;
+  box-sizing: border-box;
+  border: calc(2px * var(--workbench-content-scale, 1)) solid var(--workflow-ink);
+  box-shadow: 0 0 0 100vmax color-mix(in srgb, var(--workflow-panel) 72%, transparent);
+  pointer-events: none;
+}
+.system-workflow__world-cover-aperture > span {
+  zoom: var(--workbench-content-scale, 1);
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: -2px;
+  padding: 4px 6px;
+  color: var(--workflow-ink);
+  background: var(--workflow-panel);
+  font: var(--workflow-type-micro);
+  letter-spacing: .08em;
+  white-space: nowrap;
+}
+.system-workflow__grid-plane--adjacent {
+  pointer-events: none;
+}
+.system-workflow__canvas[data-swiping] { cursor: grabbing; }
+
+html[data-system-workflow-grid-direction]::view-transition-old(root),
+html[data-system-workflow-grid-direction]::view-transition-new(root) { animation: none; }
+html[data-system-workflow-grid-direction] .system-workflow__selection-chrome { opacity: 0; transition: none; }
+html[data-system-workflow-grid-direction]::view-transition-group(inscape-system-workflow-grid) { overflow: clip; }
+html[data-system-workflow-grid-direction="next"]::view-transition-old(inscape-system-workflow-grid) { animation: system-workflow-grid-out-next 300ms cubic-bezier(.22, 1, .36, 1) both; }
+html[data-system-workflow-grid-direction="next"]::view-transition-new(inscape-system-workflow-grid) { animation: system-workflow-grid-in-next 300ms cubic-bezier(.22, 1, .36, 1) both; }
+html[data-system-workflow-grid-direction="previous"]::view-transition-old(inscape-system-workflow-grid) { animation: system-workflow-grid-out-previous 300ms cubic-bezier(.22, 1, .36, 1) both; }
+html[data-system-workflow-grid-direction="previous"]::view-transition-new(inscape-system-workflow-grid) { animation: system-workflow-grid-in-previous 300ms cubic-bezier(.22, 1, .36, 1) both; }
+@keyframes system-workflow-grid-out-next { to { transform: translateX(-100%); } }
+@keyframes system-workflow-grid-in-next { from { transform: translateX(100%); } }
+@keyframes system-workflow-grid-out-previous { to { transform: translateX(100%); } }
+@keyframes system-workflow-grid-in-previous { from { transform: translateX(-100%); } }
+
+.system-workflow__drop-feedback {
+  zoom: var(--workbench-content-scale, 1);
+  position: absolute;
+  z-index: 40;
+  bottom: 12px;
+  left: 50%;
+  padding: 6px 9px;
+  translate: -50% 4px;
+  border: 1px solid var(--workflow-border-strong);
+  color: var(--workflow-ink);
+  background: var(--workflow-panel);
+  font: var(--workflow-type-control);
+  letter-spacing: .07em;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 120ms linear, translate 120ms var(--workflow-ease);
+}
+.system-workflow__drop-feedback[data-visible] { opacity: 1; translate: -50% 0; }
+
+.system-workflow__canvas[data-guide="LINES"] {
+  background-image: none;
+}
+
+.system-workflow__canvas[data-guide="DOTS"] {
+  background-image: none;
+}
+
+.system-workflow__canvas[data-guide="NONE"] { background-image: none; }
+.system-workflow[data-canvas-context="workspace"] .system-workflow__canvas { opacity: 1; filter: none; }
+
+.system-workflow__canvas > h1 {
+  position: absolute;
+  z-index: 999;
+  top: 13px;
+  left: 15px;
+  margin: 0;
+  color: color-mix(in srgb, var(--study-ink) 58%, transparent);
+  font: var(--workflow-type-micro);
+  letter-spacing: .1em;
+}
+
+.system-workflow__placement {
+  position: absolute;
+  min-height: 0;
+  padding: 0;
+  overflow: visible;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  touch-action: none;
+}
+.system-workflow__placement:is(:focus, :focus-visible) { outline: none; }
+
+.system-workflow__placement > span { position: absolute; inset: 0; display: block; box-sizing: border-box; pointer-events: none; }
+.system-workflow__artwork-opening { overflow: hidden; }
+.system-workflow__placement img { position: absolute; display: block; max-width: none; max-height: none; object-fit: fill; transform-origin: center; pointer-events: none; }
+.system-workflow__placement[aria-pressed="true"] { cursor: move; }
+.system-workflow__placement[data-locked] { pointer-events: none; }
+.system-workflow__placement[data-cropped] { overflow: hidden; }
+.system-workflow__placement[data-cropping] { cursor: grab; outline: 1px solid color-mix(in srgb, var(--study-ink) 46%, transparent); outline-offset: 3px; }
+.system-workflow__placement[data-cropping]:active { cursor: grabbing; }
+.system-workflow__placement[data-viewing] { visibility: hidden; }
+.system-workflow__progressive-media { position: absolute; inset: 0; display: block; overflow: visible; }
+.system-workflow__progressive-media > img { position: absolute; }
+.system-workflow__progressive-media > img[data-resolution="high"] { opacity: 0; }
+.system-workflow__progressive-media[data-high-ready] > img[data-resolution="high"] { opacity: 1; }
+.system-workflow__selection-chrome { position: absolute; z-index: 20; inset: 0; opacity: 0; pointer-events: none; transition: opacity var(--workflow-motion-in) var(--workflow-ease); }
+.system-workflow__selection-chrome[data-selected] { opacity: 1; }
+.system-workflow__selection-chrome[aria-hidden="true"],
+.system-workflow__selection-chrome[data-viewing] { opacity: 0; }
+.system-workflow__selection-chrome[data-navigating] { opacity: 0; transition: none; }
+.system-workflow__resize-handle { position: absolute; box-sizing: border-box; width: calc(28px * var(--workbench-control-scale, 1)); min-width: 0; height: calc(28px * var(--workbench-control-scale, 1)); min-height: 0; padding: 0; translate: -50% -50%; border: 0; background: transparent; pointer-events: auto; touch-action: none; }
+.system-workflow__resize-handle::after { content: ''; position: absolute; inset: calc(9px * var(--workbench-control-scale, 1)); border: calc(1px * var(--workbench-control-scale, 1)) solid #fff; background: #111; box-shadow: 0 0 0 calc(1px * var(--workbench-control-scale, 1)) #111; }
+.system-workflow .system-workflow__resize-handle:focus { outline: none; }
+.system-workflow__resize-handle:focus-visible::after { background: #fff; border-color: #111313; }
+.system-workflow__presentation-board:has(.system-workflow__selection-chrome[data-selected]:not([aria-hidden="true"])) > .system-workflow__board-resize-handle { pointer-events: none; }
+.system-workflow__resize-handle.is-nw,
+.system-workflow__resize-handle.is-se { cursor: nwse-resize; }
+.system-workflow__resize-handle.is-ne,
+.system-workflow__resize-handle.is-sw { cursor: nesw-resize; }
+.system-workflow__selection-chrome[aria-hidden="true"] .system-workflow__resize-handle { pointer-events: none; }
+.system-workflow__marquee { position: absolute; z-index: 30; border: calc(1px * var(--workflow-board-inverse-scale, 1) * var(--workbench-content-scale, 1)) solid var(--study-ink); background: rgb(17 19 19 / 8%); pointer-events: none; }
+
+.system-workflow__grid-switcher svg,
+.system-workflow__settings svg.lucide { width: 16px; height: 16px; flex: 0 0 16px; stroke-width: 1.75; }
+.system-workflow__create-dialog { position: absolute; z-index: 120; inset: 0; display: grid; place-items: center; background: transparent; pointer-events: none; }
+.system-workflow__create-dialog form { width: min(360px, calc(100% - 32px)); border: 1px solid var(--workflow-border-strong); background: var(--workflow-panel); box-shadow: var(--workflow-shadow-workspace); pointer-events: auto; }
+.system-workflow__create-dialog label { padding: 14px; display: grid; gap: 10px; font: var(--workflow-type-label); letter-spacing: .07em; }
+.system-workflow__create-dialog input { height: 34px; padding: 0 8px; border: 1px solid var(--workflow-border-strong); background: transparent; }
+.system-workflow__create-dialog p { min-height: 64px; margin: 0; padding: 14px; display: flex; align-items: center; font: var(--workflow-type-label); letter-spacing: .07em; }
+.system-workflow__create-dialog footer { height: 38px; display: grid; grid-template-columns: 1fr 1fr; border-top: 1px solid var(--workflow-border); }
+.system-workflow__create-dialog button { border: 0; border-right: 1px solid var(--workflow-border); background: transparent; font: var(--workflow-type-control); }
+.system-workflow__settings-theme input[type="range"] { min-width: 0; width: 100%; height: 14px; appearance: none; border: 0; background: transparent; }
+.system-workflow__settings-theme input[type="range"]::-webkit-slider-runnable-track { height: 2px; background: var(--workflow-border-strong); }
+.system-workflow__settings-theme input[type="range"]::-webkit-slider-thumb { width: 12px; height: 12px; margin-top: -5px; appearance: none; border: 1px solid var(--workflow-ink); border-radius: 50%; background: var(--workflow-ink); }
+.system-workflow__settings-theme input[type="range"]::-moz-range-track { height: 2px; background: var(--workflow-border-strong); }
+.system-workflow__settings-theme input[type="range"]::-moz-range-thumb { width: 12px; height: 12px; border: 1px solid var(--workflow-ink); border-radius: 50%; background: var(--workflow-ink); }
+.lattice-browser-asset[data-workflow-dragging] { opacity: .28; }
+.system-workflow__placement-preview { position: fixed; z-index: 90; overflow: visible; outline: 1px dashed var(--workflow-ink); outline-offset: 4px; background: var(--workflow-panel); box-shadow: var(--workflow-shadow-panel); opacity: .78; pointer-events: none; }
+.system-workflow__placement-preview img { width: 100%; height: 100%; display: block; object-fit: contain; }
+.system-workflow__placement-preview span { position: absolute; right: 0; bottom: -24px; padding: 5px 7px; border: 1px solid var(--workflow-border-strong); color: var(--workflow-ink); background: var(--workflow-panel); font: var(--workflow-type-micro); letter-spacing: .05em; white-space: nowrap; }
+.system-workflow__select-popover, .system-workflow__filter-popover { --workflow-active-vertical: inset 4px 0 0 var(--lattice-menu-ink); --workflow-selection: color-mix(in srgb, var(--lattice-menu-ink) 12%, var(--lattice-menu-panel)); --workflow-shadow-panel: none; position: fixed; z-index: 80; display: grid; border: 1px solid var(--lattice-menu-line); color: var(--lattice-menu-ink); background: var(--lattice-menu-panel); box-shadow: none; font-family: "Inscape Sora", sans-serif; }
+.system-workflow__select-popover :where(code, output, [data-technical], .technical-value), .system-workflow__filter-popover :where(code, output, [data-technical], .technical-value) { font-family: "Inscape IBM Plex Sans Condensed", "Arial Narrow", sans-serif; }
+.system-workflow__select-popover header, .system-workflow__filter-popover > header { min-height: 30px; padding: 0 8px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--lattice-menu-line); color: var(--lattice-menu-muted); font: 400 10px/1.2 "Inscape Sora", sans-serif; font-variation-settings: "wght" 400; letter-spacing: 0; }
+.system-workflow__select-popover button, .system-workflow__filter-options > button { min-height: 36px; padding: 0 12px; display: grid; grid-template-columns: minmax(0, 1fr); align-items: center; border: 0; color: inherit; background: transparent; font: 400 10px/1.2 "Inscape Sora", sans-serif; font-variation-settings: "wght" 400; letter-spacing: 0; text-align: left; text-transform: none; cursor: pointer; }
+.system-workflow__select-popover button[aria-selected="true"], .system-workflow__filter-options > button[aria-checked="true"] { background: var(--workflow-selection); box-shadow: var(--workflow-active-vertical); font-weight: 500; }
+.system-workflow__select-popover button:focus-visible, .system-workflow__filter-popover button:focus-visible { outline: 1px solid var(--lattice-menu-ink); outline-offset: -2px; }
+.system-workflow__filter-popover > header button { align-self: stretch; padding: 0 10px; border: 0; border-left: 1px solid var(--lattice-menu-line); color: inherit; background: transparent; font: inherit; }
+.system-workflow__filter-popover { grid-template-rows: minmax(0, 1fr); overflow: hidden; }
+.system-workflow__filter-options { min-height: 0; padding-bottom: 5px; display: grid; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable; }
+.system-workflow__layer-row[data-selected]::before { position: absolute; z-index: 2; top: 0; bottom: 0; left: -1px; width: 4px; background: var(--workflow-ink); content: ""; pointer-events: none; }
+.system-workflow__layer-list { box-sizing: border-box; width: 100%; height: 100%; min-width: 0; min-height: 0; display: grid; grid-auto-rows: min-content; align-content: start; overflow-x: hidden; overflow-y: auto; border: 0; scrollbar-width: none; }
+.system-workflow__layer-list::-webkit-scrollbar { display: none; }
+.system-workflow__layer-row { box-sizing: border-box; width: 100%; min-width: 0; position: relative; min-height: var(--workflow-row-height); display: grid; grid-template-columns: minmax(0, 1fr) repeat(3, var(--tool-icon-target, 28px)); border: 0; background: transparent; }
+.system-workflow__layer-row:hover { background: var(--workflow-hover); }
+.system-workflow__layer-row[data-selected] { background: var(--workflow-selection); box-shadow: inset 3px 0 0 var(--workflow-ink); }
+.system-workflow__layer-select { min-width: 0; padding: 5px 4px; display: grid; grid-template-columns: 30px minmax(0, 1fr); align-items: center; gap: 8px; overflow: hidden; border: 0; color: inherit; background: transparent; text-align: left; cursor: pointer; }
+.system-workflow__layer-lock, .system-workflow__layer-remove { padding: 0; display: grid; place-items: center; opacity: .72; }
+.system-workflow__layer-row:is(:hover, [data-selected]) > :is(.system-workflow__layer-lock, .system-workflow__layer-remove) { opacity: 1; }
+.system-workflow__layer-visibility { padding: 0; display: grid; place-items: center; }
+.system-workflow__layer-row[data-hidden] .system-workflow__layer-select { opacity: .5; }
+.system-workflow__layer-row[data-confirming] > .system-workflow__layer-visibility { visibility: hidden; }
+.system-workflow__layer-row[data-confirming] > :is(.system-workflow__layer-select, .system-workflow__layer-lock, .system-workflow__layer-remove) { visibility: hidden; }
+.system-workflow__remove-confirm { position: absolute; z-index: 1; inset: 0; display: grid; grid-template-columns: 38px minmax(0, 1fr) 66px 66px; align-items: stretch; background: var(--workflow-selection); }
+.system-workflow__remove-confirm > img { align-self: center; justify-self: center; }
+.system-workflow__remove-confirm > span { padding-right: 8px; display: flex; align-items: center; font: var(--workflow-type-control); }
+.system-workflow__remove-confirm button { border: 0; border-left: 1px solid var(--workflow-border); color: inherit; background: transparent; font: var(--workflow-type-micro); cursor: pointer; }
+.system-workflow__remove-confirm button:hover { background: var(--workflow-hover); }
+.system-workflow__layer-list img { width: 30px; height: 28px; object-fit: cover; }
+.system-workflow__layer-list span { overflow: hidden; color: inherit; font: 400 10px/1.2 "Inscape Sora", sans-serif; font-variation-settings: "wght" 400; letter-spacing: .015em; text-overflow: ellipsis; text-transform: none; white-space: nowrap; }
+.system-workflow__crop-controls { display: grid; padding: 0; gap: 8px; }
+.system-workflow__crop-controls > div { display: flex; align-items: center; justify-content: space-between; }
+.system-workflow__crop-controls strong, .system-workflow__crop-controls output { font: var(--workflow-type-micro); letter-spacing: .08em; }
+.system-workflow__crop-controls input { width: 100%; accent-color: var(--workflow-ink); }
+.system-workflow__crop-controls footer { display: grid; grid-template-columns: 1fr 1fr 1fr; }
+.system-workflow__crop-controls footer button { min-height: 32px; font: var(--workflow-type-control); }
+
+.system-workflow__profile-layer { position: fixed; z-index: 81; inset: 0 0 var(--workflow-dock-height); }
+.system-workflow__notice { position: fixed; z-index: 140; top: auto; bottom: calc(var(--workflow-dock-height) + var(--workflow-window-inset)); left: 50%; padding: 9px 13px; translate: -50% 0; border: 1px solid var(--workflow-border-strong); color: var(--workflow-ink); background: var(--workflow-panel); font: var(--workflow-type-control); letter-spacing: .07em; }
+
+@media (prefers-reduced-motion: reduce) {
+  .system-workflow__motion-panel,
+  .system-workflow__canvas,
+  .system-workflow__stage-viewport { transition: none; }
+}
+
+.system-workflow[data-layout="narrow"] .system-workflow__presentation-board { box-shadow: 3px 4px 10px rgb(17 19 19 / 12%); }
+.system-workflow[data-layout="narrow"] .system-workflow__identity-strip { gap: 6px; padding-inline: 0; }
+.system-workflow[data-layout="narrow"] .system-workflow__identity-strip code { display: none; }
+.system-workflow[data-layout="narrow"] .system-workflow__board-title > small { display: none; }
+.system-workflow[data-layout="narrow"] :is( .system-workflow__composition-lock-controls, .system-workflow__board-window-controls) { gap: 3px; padding-inline: 4px; }
+.system-workflow[data-layout="narrow"] .system-workflow__presentation-board[data-metadata-sidecar] .system-workflow__board-title { margin-left: auto; }
+
+.system-workflow__detached-window {
+  --detached-window-width: 320px;
+  --detached-window-radius: var(--workflow-window-chrome-radius);
+  --detached-window-gutter: var(--workflow-window-chrome-gutter);
+  --detached-window-titlebar-height: var(--workflow-rail-height);
+  --detached-window-titlebar-padding: 12px;
+  --detached-window-content-padding: 16px;
+  --detached-window-shadow-inset: var(--workflow-window-chrome-shadow-inset);
+  --detached-window-shadow-height: var(--workflow-window-chrome-shadow-height);
+  position: absolute;
+  z-index: 26;
+  box-sizing: border-box;
+  width: var(--detached-window-width);
+  max-width: calc(100vw - 16px);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: var(--detached-window-titlebar-height) minmax(0, 1fr);
+  isolation: isolate;
+  overflow: hidden;
+  border: 1px solid var(--workflow-border-strong);
+  border-radius: var(--detached-window-radius);
+  color: var(--workflow-ink);
+  background: var(--workflow-selection);
+  box-shadow: var(--workflow-window-chrome-shadow);
+  border-color: rgb(255 255 255 / 20%);
+}
+:is(.system-workflow, .visitor-grid-world):not([data-chrome-noise="off"]) .system-workflow__detached-window:where(:not([data-window-chrome="tactile"], [data-window-chrome="flat"]))::after {
+  position: absolute;
+  z-index: 0;
+  inset: 1px;
+  border-radius: calc(var(--detached-window-radius) - 1px);
+  background-position: var(--detached-window-noise-x, 0) var(--detached-window-noise-y, 0);
+}
+.system-workflow__detached-window > :is(.system-workflow__detached-window-titlebar, .system-workflow__detached-window-surface) { position: relative; z-index: 1; }
+.system-workflow__detached-window-surface {
+  box-sizing: border-box;
+  width: calc(100% - (2 * var(--detached-window-gutter)));
+  min-height: 0;
+  min-width: 0;
+  margin: 0 0 var(--detached-window-gutter);
+  padding: var(--detached-window-content-padding);
+  justify-self: center;
+  grid-auto-rows: max-content;
+  align-content: start;
+  overflow-x: hidden;
+  overflow-y: auto;
+  border: 1px solid var(--workflow-border-strong);
+  border-radius: var(--detached-window-radius);
+  background: var(--workflow-panel);
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  position: relative;
+  isolation: isolate;
+  border-color: rgb(255 255 255 / 15%);
+}
+:where(.system-workflow__detached-window:not([data-window-chrome])) > .system-workflow__detached-window-surface::before {
+  position: absolute;
+  z-index: 0;
+  inset: var(--detached-window-shadow-inset, 5px);
+  border-radius: var(--detached-window-radius, 7px);
+  background: url("/assets/patterns/detached-window-shadow-dither.png") top center / 100% var(--detached-window-shadow-height, 90px) no-repeat;
+  opacity: var(--workflow-window-inner-shadow-opacity, 1);
+  pointer-events: none;
+  content: "";
+}
+.system-workflow__detached-window-surface {
+  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 8%);
+}
+.system-workflow:is([data-menu-surface="ash"], [data-menu-surface="mist"], [data-menu-surface="paper"])
+  .system-workflow__detached-window-surface,
+.visitor-grid-world:is([data-menu-surface="ash"], [data-menu-surface="mist"], [data-menu-surface="paper"])
+  .system-workflow__detached-window-surface {
+  --detached-window-shadow-height: 45px;
+  --workflow-window-inner-shadow-opacity: 18%;
+}
+.system-workflow__detached-window-surface > * { position: relative; z-index: 1; }
+.system-workflow__detached-window-surface::-webkit-scrollbar { width: 0; height: 0; display: none; }
+.system-workflow__detached-window-titlebar { min-width: 0; height: var(--detached-window-titlebar-height); padding-inline: var(--detached-window-titlebar-padding); display: flex; align-items: center; justify-content: space-between; gap: 7px; border: 0; background: transparent; cursor: move; touch-action: none; }
+.system-workflow__detached-window-titlebar > strong { min-width: 0; overflow: hidden; translate: 0 1px; font: 500 11px/1 "Inscape Sora", sans-serif; font-variation-settings: "wght" 500; letter-spacing: .025em; text-overflow: ellipsis; text-transform: uppercase; white-space: nowrap; }
+.system-workflow__detached-window-controls { display: flex; gap: 7px; }
+.system-workflow__instrument-window { overflow: visible; }
+.system-workflow__detached-window-resize { position: absolute; z-index: 6; width: 28px; height: 28px; padding: 0; border: 0; background: transparent; cursor: nwse-resize; touch-action: none; zoom: var(--workbench-control-scale, 1); }
+.system-workflow__detached-window-resize::after { content: ''; position: absolute; left: var(--resize-mark-x); top: var(--resize-mark-y); box-sizing: border-box; width: 8px; height: 8px; border: 1px solid #fff; background: #111313; box-shadow: 0 0 0 1px #111313; opacity: 0; }
+.system-workflow__instrument-window:not([data-workbench-view-id]):is(:hover, :focus-within) > .system-workflow__detached-window-resize::after,
+.system-workflow__instrument-window[data-window-active] > .system-workflow__detached-window-resize::after { opacity: 1; }
+.system-workflow__instrument-window[data-workbench-view-id] > .system-workflow__detached-window-resize { pointer-events: none; }
+.system-workflow__instrument-window[data-window-active] > .system-workflow__detached-window-resize { pointer-events: auto; }
+.system-workflow__detached-window-resize:is(.is-n, .is-s) { cursor: ns-resize; }
+.system-workflow__detached-window-resize:is(.is-ne, .is-sw) { cursor: nesw-resize; }
+.system-workflow__detached-window-resize:is(.is-w, .is-e) { cursor: ew-resize; }
+.system-workflow__detached-window-resize:focus { outline: none; }
+.system-workflow__detached-window-resize:focus-visible::after { background: #fff; border-color: #111313; }
+@media (hover: none) { .system-workflow__instrument-window:not([data-workbench-view-id]) > .system-workflow__detached-window-resize::after { opacity: 1; } }
+/* Panel compositions. Layout variants are selected by the runtime
+   state-machine (`data-layout`), rather than independent viewport patches. */
+.system-workflow[data-layout="narrow"] { --workflow-dock-height: 52px; }
+.system-workflow[data-reduced-motion] *,
+.system-workflow[data-reduced-motion] *::before,
+.system-workflow[data-reduced-motion] *::after { scroll-behavior: auto !important; transition-duration: 0ms !important; transition-delay: 0ms !important; animation-duration: 0ms !important; }
+.system-workflow__panel-presence[hidden] { display: none !important; }
+
+/* Keep the outer Library flush while the artwork scrolls inside an inset viewport. */

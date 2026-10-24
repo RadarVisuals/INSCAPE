@@ -1,0 +1,5 @@
+/* Reference icons outside opted-in flat instruments. Material lives in workflowFlat.css. */
+body:has(.ds-reference) svg.lucide > :is(path, line, polyline, polygon, circle, rect, ellipse) {
+  stroke-width: var(--ds-icon-stroke);
+  vector-effect: non-scaling-stroke;
+}

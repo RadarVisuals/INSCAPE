@@ -1,0 +1,38 @@
+.workbench-switcher {
+  position: absolute;
+  /* Above ordinary Workbench tools, below inspection's 200–202 layers. */
+  z-index: 90;
+  top: 12px;
+  right: 12px;
+  width: min(420px, calc(100% - 24px));
+  box-sizing: border-box;
+  padding: 8px;
+  border: 1px solid var(--tactile-edge);
+  border-radius: var(--control-shell-radius);
+  background: var(--tactile-face);
+  color: var(--tactile-ink);
+  font: 11px/1.5 var(--font-interface);
+}
+.workbench-switcher[hidden] { display: none; }
+.workbench-switcher__row { display: flex; align-items: center; gap: 6px; }
+.workbench-switcher select, .workbench-switcher input {
+  min-width: 0;
+  box-sizing: border-box;
+  color: var(--tactile-ink);
+  background: var(--tactile-well);
+  border: 1px solid var(--tactile-edge);
+  border-radius: var(--control-radius, 5px);
+  font: inherit;
+  padding: 6px;
+}
+.workbench-switcher select { flex: 1; width: 80px; text-overflow: ellipsis; }
+.workbench-switcher .workflow-tactile-control { padding: 6px 8px; white-space: nowrap; }
+.workbench-switcher small { display: block; margin-top: 5px; color: var(--tactile-muted); }
+.workbench-switcher__form { display: grid; gap: 8px; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--tactile-edge); }
+.workbench-switcher__form label { display: grid; gap: 4px; }
+.workbench-switcher__form > div { display: flex; gap: 6px; }
+.workbench-switcher p { margin: 8px 0 0; overflow-wrap: anywhere; }
+.workbench-switcher :is(input, select):focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+@media (max-width: 600px) {
+  .workbench-switcher__row > label { display: none; }
+}

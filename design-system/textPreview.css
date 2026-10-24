@@ -1,0 +1,48 @@
+.ds-studio-text-canvas {
+  width: min(90cqw, 390px);
+  height: 270px;
+  overflow: auto;
+  background: #d4d1c8;
+  transform-origin: center;
+}
+.ds-studio-text-canvas[hidden],
+.ds-text-editor-sample[hidden] {
+  display: none !important;
+}
+.ds-text-editor-sample {
+  min-height: 100%;
+  --workflow-panel: #d4d1c8;
+  --workflow-ink: #232c26;
+  --workflow-border: #232c2650;
+  position: relative;
+  isolation: isolate;
+  --workflow-window-chrome-shadow: 0 4px 12px #0003;
+}
+.ds-text-editor-sample .text-editor-page {
+  max-width: none;
+}
+.ds-layer-editor-host .text-editor-placeholder {
+  display: none;
+}
+.ds-layer-editor-host .text-editor-body--empty .text-editor-content {
+  min-height: 1lh;
+}
+.ds-text-editor-sample .text-document-title {
+  color: inherit;
+}
+.ds-studio
+  .ds-text-editor-sample
+  :is(.text-document-title, .text-editor-content):focus-visible {
+  outline-color: currentColor;
+}
+.ds-text-focus .text-focus-header {
+  background: var(--lattice-menu-panel);
+  color: var(--lattice-menu-ink);
+}
+.ds-text-focus .text-focus-header button {
+  border-radius: var(--ds-control-radius);
+  box-shadow: none;
+}
+@container (max-width: 420px) {
+  .ds-studio-text-canvas { height: 190px; }
+}

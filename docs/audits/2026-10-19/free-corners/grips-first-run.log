@@ -1,0 +1,48 @@
+TAP version 13
+# Subtest: every resize grip can be grabbed at its actual corner or midpoint at 1440px
+not ok 1 - every resize grip can be grabbed at its actual corner or midpoint at 1440px
+  ---
+  duration_ms: 1864.4855
+  type: 'test'
+  location: '<user>\\Documents\\ChatGPT\\inscape\\remediation-2026-10-19-shared-checkpoint\\work\\browser-tests\\workbench-resize-handles.browser.mjs:9:58'
+  failureType: 'testCodeFailure'
+  error: 'Image 0.25 nw proportional width: 72 vs 76'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    near (file:///<user>/Documents/ChatGPT/inscape/remediation-2026-10-19-shared-checkpoint/work/browser-tests/workbench-resize-handles.browser.mjs:7:38)
+    TestContext.<anonymous> (file:///<user>/Documents/ChatGPT/inscape/remediation-2026-10-19-shared-checkpoint/work/browser-tests/workbench-resize-handles.browser.mjs:48:11)
+    async Test.run (node:internal/test_runner/test:1404:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3)
+  ...
+# Subtest: every resize grip can be grabbed at its actual corner or midpoint at 390px
+not ok 2 - every resize grip can be grabbed at its actual corner or midpoint at 390px
+  ---
+  duration_ms: 1705.9627
+  type: 'test'
+  location: '<user>\\Documents\\ChatGPT\\inscape\\remediation-2026-10-19-shared-checkpoint\\work\\browser-tests\\workbench-resize-handles.browser.mjs:9:58'
+  failureType: 'testCodeFailure'
+  error: 'Image 0.25 nw proportional width: 72 vs 76.07142747664946'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    near (file:///<user>/Documents/ChatGPT/inscape/remediation-2026-10-19-shared-checkpoint/work/browser-tests/workbench-resize-handles.browser.mjs:7:38)
+    TestContext.<anonymous> (file:///<user>/Documents/ChatGPT/inscape/remediation-2026-10-19-shared-checkpoint/work/browser-tests/workbench-resize-handles.browser.mjs:48:11)
+    async Test.run (node:internal/test_runner/test:1404:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:969:7)
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 0
+# fail 2
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 4076.217

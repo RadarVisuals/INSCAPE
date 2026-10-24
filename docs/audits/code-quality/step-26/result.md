@@ -1,0 +1,7 @@
+# Uitvoerbaar gedrag vervangt broze bronpatroonclaims
+
+De [overdracht](../../../../../../technical-regie-2026-10-23/continuation/step-12-26-handoff.md) koppelt 102 oude bronpatroonasserties aan behouden statische grenzen of uitvoerbare vervangers. De vier nieuwe browsergevallen detecteren echte Library-unmount, verkeerd font en verkeerde Discover-emptytekst. Tijdelijke fouten maken de betreffende tests rood; onschuldige interne hernoeming en CSS-opmaak laten ze groen. De oorspronkelijke bron is na iedere proef behouden.
+
+De nieuwe suite draait standaard mee. Een cataloguscontrole detecteert expliciet het onterecht terugzetten naar targeted. De huidige catalogus telt 230 suites, waarvan 92 release. Dit is een dekkingsverbetering, geen claim dat de volledige release al slaagt.
+
+De zes toegewezen oude browserfixtures gebruiken nu actuele native bediening en echte editorbevoegdheid. De mapping verantwoordt alle 173 eerdere assertcalls: 167 exact behouden, zes aan de huidige host aangepast; geen onbeoordeelde verwijdering. De 78 pixelcombinaties behouden hun nultolerantie. Een daadwerkelijk fout hersteld Text-doel is aan de Runtime-eigenaar teruggelegd en opgelost. De geïntegreerde gerichte run slaagt 25/25 met expliciete bronwijzigingen tijdens de run. Zie de afzonderlijke bewijsmanifesten voor precieze reikwijdte; volledige stabiele broncontrole en onafhankelijke eindreview blijven onder stappen 29/30. Alles lokaal.

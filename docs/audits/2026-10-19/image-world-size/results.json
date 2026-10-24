@@ -1,0 +1,294 @@
+{
+  "atUtc": "2026-10-19T17:49:45.230Z",
+  "baselineCommit": "d5638568bce61eec2a57917da2662479f53cecd9",
+  "request": "Every Image corner responds to horizontal, vertical and diagonal drag, preserving frame and artwork proportions.",
+  "finding": "Per-Image viewport fitting canceled proportional changes for large Images; viewport-derived selection maxima reinforced the same conflict.",
+  "repair": "Authored dimensions are world dimensions. The Workbench camera alone scales their presentation; size and area constraints remain.",
+  "baselineLargeBrowser": [
+    {
+      "name": "image-large-resize",
+      "code": 1,
+      "seconds": 4.245,
+      "tests": 2,
+      "pass": 0,
+      "fail": 2,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0,
+      "error": "Incomplete test run: {\"tests\":2,\"pass\":0,\"fail\":2,\"cancelled\":0,\"skipped\":0,\"todo\":0}"
+    }
+  ],
+  "node": {
+    "pass": 1239,
+    "fail": 0,
+    "skipped": 0
+  },
+  "browserLatest": [
+    {
+      "name": "image-large-resize",
+      "code": 0,
+      "seconds": 18.582,
+      "tests": 2,
+      "pass": 2,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0,
+      "run": "panel-fixed"
+    },
+    {
+      "name": "image-corner-resize",
+      "code": 0,
+      "seconds": 29.098,
+      "tests": 2,
+      "pass": 2,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0,
+      "run": "large-final"
+    },
+    {
+      "name": "image-fit",
+      "code": 0,
+      "seconds": 3.992,
+      "tests": 1,
+      "pass": 1,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0,
+      "run": "large-final"
+    },
+    {
+      "name": "image-interaction",
+      "code": 0,
+      "seconds": 3.349,
+      "tests": 1,
+      "pass": 1,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0,
+      "run": "large-final"
+    },
+    {
+      "name": "image-resize-focus",
+      "code": 0,
+      "seconds": 3.731,
+      "tests": 2,
+      "pass": 2,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0,
+      "run": "large-final"
+    },
+    {
+      "name": "resize-mark-pixels",
+      "code": 0,
+      "seconds": 9.596,
+      "tests": 4,
+      "pass": 4,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0,
+      "run": "large-final"
+    },
+    {
+      "name": "workbench-image-joins",
+      "code": 0,
+      "seconds": 38.383,
+      "tests": 1,
+      "pass": 1,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0,
+      "run": "large-final"
+    },
+    {
+      "name": "workbench-focus-toggle",
+      "code": 0,
+      "seconds": 57.196,
+      "tests": 8,
+      "pass": 8,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0,
+      "run": "large-final"
+    },
+    {
+      "name": "image-duplicate",
+      "code": 0,
+      "seconds": 3.633,
+      "tests": 2,
+      "pass": 2,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0,
+      "run": "large-final"
+    },
+    {
+      "name": "workbench-focus-start",
+      "code": 0,
+      "seconds": 27.8,
+      "tests": 4,
+      "pass": 4,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0,
+      "run": "panel-fixed"
+    },
+    {
+      "name": "context-action-bars",
+      "code": 0,
+      "seconds": 30.172,
+      "tests": 9,
+      "pass": 9,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0,
+      "run": "context-confirmation"
+    }
+  ],
+  "browserCasesPassed": 36,
+  "largeCornerDrags": 96,
+  "viewports": [
+    {
+      "width": 1440,
+      "density": 1
+    },
+    {
+      "width": 390,
+      "density": 1.25
+    }
+  ],
+  "verified": [
+    "all four corners",
+    "horizontal/vertical/diagonal",
+    "grow/shrink",
+    "portrait/landscape",
+    "fixed opposite corner",
+    "preview without writes",
+    "commit without jump",
+    "source/crop/transform preservation",
+    "one-step undo",
+    "selection resize",
+    "real page reload and storage hydration",
+    "resize after reload",
+    "viewport width/height changes without geometry rewrite",
+    "Owner/Visitor parity",
+    "no page errors"
+  ],
+  "propertiesRepair": "Skip the layout setState call when the requested logical frame is already current; an inner no-op updater still re-entered the layout effect.",
+  "intermediateFailures": [
+    "Narrow Properties panel overlapped the north-east handle; fixture now parks the real movable panel through pointer input and checks each resize hit target.",
+    "That real movement exposed Maximum update depth exceeded at fractional CSS coordinates; captured diagnostic proves repeated identical requests, fixed at scheduling boundary.",
+    "One pre-existing Display Escape source-focus assertion failed in context-action-bars (8/9); unchanged isolated rerun passed 9/9. Cause not established; no assertion weakened or test skipped."
+  ],
+  "productionBuild": {
+    "passed": true,
+    "budgetsPassed": true,
+    "initialJavaScriptBytes": 822709
+  },
+  "activeApplied": true,
+  "activeFiles": [
+    {
+      "file": "browser-tests/image-alignment.browser.mjs",
+      "before": "0cc98c16646acd7d28f2fbc962380eeeeb059250b16d1be36e42acee37ca3e63",
+      "after": "d25c6ae5156314685617a24ecee84573b08842d2ef13c26352c945eccd1119e3"
+    },
+    {
+      "file": "browser-tests/image-fit-fixture.jsx",
+      "before": "842d8347e80453647a4dd36a9fd1d8ea765bd2f72970bc4fcb9bc066781e5453",
+      "after": "a0be19c82f7abc9f56ea888ad9b2eb9179d51482d50229c314953970110445c9"
+    },
+    {
+      "file": "browser-tests/image-resize-focus.browser.mjs",
+      "before": "07928248873fce62c371aac03b0b970c03aa4716b24334458a85f2d665f5ea99",
+      "after": "f2ff68c5a63572e666311505f404e89bbdc1b0229a1da1877c43883c6831fd53"
+    },
+    {
+      "file": "browser-tests/workbench-grab-stability.browser.mjs",
+      "before": "b035386953b8751cff6ae5767b36523ad5ab2ec1ca47f5df35e6452003105787",
+      "after": "c2803797030b01b5626d54d87762b08e69c924931771c672ca76b096726020e3"
+    },
+    {
+      "file": "browser-tests/workbench-hand-joins.browser.mjs",
+      "before": "24884cad64663f52eafef63c6030399f73402b8d7ff910bb4aec11c9f2466c04",
+      "after": "838f8d4dd73905e68a4cec9c6ddbeee15c52384c642ec5f2518c21702c6f64ec"
+    },
+    {
+      "file": "browser-tests/workbench-image-joins.browser.mjs",
+      "before": "565793efa6dcd6f9cd88a8be844765774e410372fbda24631b4289ef519f2168",
+      "after": "44cdc0fbee010998c737bb9b89f2cbac85593fee3bcdec1d278c3579c2273929"
+    },
+    {
+      "file": "browser-tests/workbench-resize-handles-fixture.jsx",
+      "before": "ccbae804ec4397e5eb806578ef16e62b5eba2ec04ac2aeebfa692ea05b3b91df",
+      "after": "5d16758402914c4264455e44131cc3193016514ee7df070d12be72fa30587e83"
+    },
+    {
+      "file": "docs/INSCAPE_ACTIVE_CONTRACT.md",
+      "before": "5b5b861ecd3afac1436963a48e65aa5c366614dfcec7a79afbb68b5555399b0e",
+      "after": "be750ddad5cb09bee55380b840845406c3ac987b7abe7d85eeaa08be041b3725"
+    },
+    {
+      "file": "scripts/runBrowserTests.mjs",
+      "before": "2ec98bf6f01d061c76455973f1b96a6964c2ca699790353a5bd668ee2e7a520f",
+      "after": "bed06418746f792922d290795f44d7b34ccf630c2b92c54036ee32a4074eb39a"
+    },
+    {
+      "file": "src/imageModule/ImageWindow.jsx",
+      "before": "b30689e0e7d349c2a07ed1e7eb788d3f754dab1f9727a851ea2a48e3b6b09fe0",
+      "after": "a2b5c4158566a7be50fabc0322b263a4241bc50c3419a8379d85deacfda8725c"
+    },
+    {
+      "file": "src/imageModule/ImageWorkbench.jsx",
+      "before": "b953a6df64e6507192433fcc1e611ac5a66b1da15dca99edc8f6a5669623623c",
+      "after": "1c74e7d632cf73a0ba812d8429924c3bdc36a1f25159c1a13a2e7ade6f17ccb4"
+    },
+    {
+      "file": "src/imageModule/imageWindowGeometry.js",
+      "before": "634f8faa7665e5e5e6b4c31a4ac8c4408400ce94aa1250fddd387d0653f6128e",
+      "after": "b6fbfc735a88ab8eb711276d036d964c913018c65cb6e37218afe93e7eb3cff2"
+    },
+    {
+      "file": "src/imageModule/imageWindowGeometry.test.js",
+      "before": "9e6624f6de80851c498ae01a1174ddb4f26ebe3bdc66f53c519d0fb119b90f5a",
+      "after": "682388b9af74deb7ca1e0b9f339c8b1e0c1fdeadb1a80e67f3ffacadc8dc13ec"
+    },
+    {
+      "file": "src/public/ownerSystemWorkflow/DisplayInstrumentWindow.jsx",
+      "before": "50f5e7edebf2471ffffd316468d174b854a9a16e8488dd6ff88d9877c4d3a24f",
+      "after": "08a6bd87f3cf00e21d5076cd49f1fd0e1594469b9fa672d32ab7f1bb6b0ba7d5"
+    },
+    {
+      "file": "src/systemWorkflow/workbenchAreaSession.test.js",
+      "before": "361fb2928ce45bcce1e092284045328d36c4c960a961311f81265514d93dfdb7",
+      "after": "85cefedbd3458fc8bce3562652de6106063d9103817d2eaf396712aebe454699"
+    },
+    {
+      "file": "browser-tests/image-large-resize.browser.mjs",
+      "before": null,
+      "after": "83af7022af41ff7fd83e6d4c867cf1a25d50e394d186b9e2e54e205a6ff17bcd"
+    }
+  ],
+  "limitations": [
+    "Synthetic browser artwork, isolated storage and Chromium only",
+    "Not a whole-browser-suite rerun",
+    "No real user composition resize in this repair",
+    "No wallet, upload or publication",
+    "Previously auto-fitted large Images now display their saved world size at the same zoom",
+    "Shared CI and deployed commit status are checked separately after push"
+  ],
+  "committed": false,
+  "pushed": false,
+  "previewVerified": false
+}

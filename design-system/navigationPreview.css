@@ -1,0 +1,55 @@
+.ds-studio-shell {
+  --workspace-navigation-width: 208px;
+  display: grid;
+  grid-template-columns: var(--workspace-navigation-width) minmax(0, 1fr);
+  align-items: start;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  background: var(--lattice-menu-panel);
+  border: 1px solid var(--color-border);
+}
+.ds-studio-shell[data-navigation-collapsed] {
+  --workspace-navigation-width: 52px;
+}
+.ds-studio-body {
+  min-width: 0;
+  container: studio-body / inline-size;
+}
+.ds-studio-content {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-3);
+  align-items: start;
+}
+.ds-studio-shell[data-library-open] .ds-studio-content {
+  grid-template-columns: 264px minmax(0, 1fr);
+}
+.ds-studio-main {
+  min-width: 0;
+  container: studio-main / inline-size;
+}
+.ds-studio-shell .ds-studio-layout {
+  border: 0;
+  padding: var(--space-2);
+  grid-template-columns: minmax(0, 1fr) 364px;
+  gap: var(--space-3);
+}
+@container studio-main (max-width: 730px) {
+  .ds-studio-shell .ds-studio-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .ds-studio-instruments {
+    width: min(100%, 364px);
+    justify-self: center;
+  }
+}
+@container studio-body (max-width: 620px) {
+  .ds-studio-shell[data-library-open] .ds-studio-content {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@container (max-width: 620px) {
+  .ds-studio-shell { grid-template-columns: minmax(0, 1fr); }
+  .ds-studio-shell .workspace-navigation { height: 480px; }
+  .ds-studio-shell .workspace-navigation[data-collapsed] { width: 52px; }
+}

@@ -17,7 +17,6 @@ export const LATTICE_SURFACES = Object.freeze([
   Object.freeze({ color: '#c9c6bd', id: 'mist', label: 'MIST 05' }),
   Object.freeze({ color: '#d8d4ca', id: 'paper', label: 'PAPER' }),
 ]);
-export const AUTO_LATTICE_OVERLAY_INK = 'auto';
 
 const SURFACE_IDS = new Set(LATTICE_SURFACES.map(({ id }) => id));
 const ANCHORS = new Set(TABLE_LABEL_ANCHORS);

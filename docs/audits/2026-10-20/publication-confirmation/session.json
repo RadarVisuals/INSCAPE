@@ -1,0 +1,82 @@
+{
+  "atUtc": "2026-10-20T07:02:13.899Z",
+  "status": "published-and-independently-verified",
+  "origin": "https://deploy-preview-5--enterinscape.netlify.app",
+  "tabId": "1227088478",
+  "lastVerifiedDeployment": "6ad6b8e17f63f72e28c10b98",
+  "lastVerifiedCommit": "4e3ccd04b9c77f3221865e51c6b5179eac868c5e",
+  "observed": {
+    "ownerWorkbenchVisible": true,
+    "publishPanelVisible": true,
+    "button": "PREPARE PUBLICATION",
+    "message": "Ready to publish your current public presentation.",
+    "previousPublicationRecoveryVisible": false
+  },
+  "agentActions": [
+    "Opened Chrome preview tab",
+    "Opened Publish panel"
+  ],
+  "snapshotPrepared": true,
+  "realSignatureConfirmed": true,
+  "realUploadConfirmed": true,
+  "quotaReservationConfirmed": false,
+  "cidVerified": true,
+  "transactionSubmitted": true,
+  "onChainPublicationVerified": true,
+  "visitorReadBackVerified": true,
+  "checkedAt": "2026-10-20T07:17:29.630Z",
+  "userReport": "ziezo complete.",
+  "signatureEvidence": "User completed the guarded upload; matching new Pinata file and publication observed. Signature bytes were not read or retained.",
+  "pinataFile": "inscape-nomad-profile-v9.json",
+  "pinataCreatedUtc": "2026-10-20T07:03:02Z",
+  "pinataCredentialAuthenticationTested": true,
+  "dedicatedCredentialAttribution": "Inferred from saved branch-only credential and the rebuilt guarded preview; the file list does not identify the signing API key.",
+  "quotaFlowExercised": true,
+  "quotaLedgerIndependentlyRead": false,
+  "cid": "ipfs://bafkreiavgvt7nykhfjykhd37jyalymif3tfyz6knatxmlym454xopv6oce",
+  "transactionHash": "0x526e37c7661508316acb59df8e9874adbc64e2ee20b098bb0c43eaac329e7fc1",
+  "transactionAtUtc": "2026-10-20T07:03:36.000Z",
+  "block": "8611939",
+  "visitorReloadVerified": true,
+  "testedContent": {
+    "shapes": 1,
+    "name": "Grid 1",
+    "images": 0,
+    "displayGrids": 0,
+    "revision": 12
+  },
+  "limitations": [
+    "No pre-publication pointer baseline captured",
+    "Hosted quota ledger and exact API-key attribution not independently read",
+    "This one-Shape publication is not a large artwork/performance test"
+  ],
+  "feedbackFix": {
+    "status": "locally-verified-awaiting-push",
+    "node": 1263,
+    "browser": [
+      {
+        "name": "publication-confirmation",
+        "tests": 2,
+        "pass": 2,
+        "fail": 0
+      },
+      {
+        "name": "publication-upload-admission",
+        "tests": 9,
+        "pass": 9,
+        "fail": 0
+      },
+      {
+        "name": "owner-profile-routing",
+        "tests": 5,
+        "pass": 5,
+        "fail": 0
+      }
+    ],
+    "buildBudget": "Production budgets passed (823811 initial JS bytes).",
+    "screenshots": [
+      "browser-visual-final/publication-confirmation/success-1440.png",
+      "browser-visual-final/publication-confirmation/success-390.png"
+    ]
+  }
+}

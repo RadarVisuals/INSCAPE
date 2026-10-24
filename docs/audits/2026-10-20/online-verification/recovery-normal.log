@@ -1,0 +1,66 @@
+TAP version 13
+# Screenshots: <audit-workspace>/remediation-2026-10-20-online-verification\\evidence\\recovery-repeat-1792448391686\\iteration-WKESlX
+# Subtest: iteration 1: reload restores local arrangement; failed Text survives editor disposal and blocks stale publication
+ok 1 - iteration 1: reload restores local arrangement; failed Text survives editor disposal and blocks stale publication
+  ---
+  duration_ms: 6262.1092
+  type: 'test'
+  ...
+# Screenshots: <audit-workspace>/remediation-2026-10-20-online-verification\\evidence\\recovery-repeat-1792448391686\\iteration-n3oKzI
+# Subtest: iteration 2: reload restores local arrangement; failed Text survives editor disposal and blocks stale publication
+ok 2 - iteration 2: reload restores local arrangement; failed Text survives editor disposal and blocks stale publication
+  ---
+  duration_ms: 5165.3905
+  type: 'test'
+  ...
+# Screenshots: <audit-workspace>/remediation-2026-10-20-online-verification\\evidence\\recovery-repeat-1792448391686\\iteration-Z2ucDt
+# Subtest: iteration 3: reload restores local arrangement; failed Text survives editor disposal and blocks stale publication
+ok 3 - iteration 3: reload restores local arrangement; failed Text survives editor disposal and blocks stale publication
+  ---
+  duration_ms: 4900.8429
+  type: 'test'
+  ...
+# Screenshots: <audit-workspace>/remediation-2026-10-20-online-verification\\evidence\\recovery-repeat-1792448391686\\iteration-FA83oZ
+# Subtest: iteration 4: reload restores local arrangement; failed Text survives editor disposal and blocks stale publication
+ok 4 - iteration 4: reload restores local arrangement; failed Text survives editor disposal and blocks stale publication
+  ---
+  duration_ms: 5057.9282
+  type: 'test'
+  ...
+# Screenshots: <audit-workspace>/remediation-2026-10-20-online-verification\\evidence\\recovery-repeat-1792448391686\\iteration-MgNggw
+# Subtest: iteration 5: reload restores local arrangement; failed Text survives editor disposal and blocks stale publication
+ok 5 - iteration 5: reload restores local arrangement; failed Text survives editor disposal and blocks stale publication
+  ---
+  duration_ms: 5156.4857
+  type: 'test'
+  ...
+# Screenshots: <audit-workspace>/remediation-2026-10-20-online-verification\\evidence\\recovery-repeat-1792448391686\\iteration-hTLMWF
+# Subtest: iteration 6: reload restores local arrangement; failed Text survives editor disposal and blocks stale publication
+ok 6 - iteration 6: reload restores local arrangement; failed Text survives editor disposal and blocks stale publication
+  ---
+  duration_ms: 5180.0043
+  type: 'test'
+  ...
+# Screenshots: <audit-workspace>/remediation-2026-10-20-online-verification\\evidence\\recovery-repeat-1792448391686\\iteration-RljPw2
+# Subtest: iteration 7: reload restores local arrangement; failed Text survives editor disposal and blocks stale publication
+ok 7 - iteration 7: reload restores local arrangement; failed Text survives editor disposal and blocks stale publication
+  ---
+  duration_ms: 5069.3261
+  type: 'test'
+  ...
+# Screenshots: <audit-workspace>/remediation-2026-10-20-online-verification\\evidence\\recovery-repeat-1792448391686\\iteration-c9OCpw
+# Subtest: iteration 8: reload restores local arrangement; failed Text survives editor disposal and blocks stale publication
+ok 8 - iteration 8: reload restores local arrangement; failed Text survives editor disposal and blocks stale publication
+  ---
+  duration_ms: 4872.8963
+  type: 'test'
+  ...
+1..8
+# tests 8
+# suites 0
+# pass 8
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 42095.3501

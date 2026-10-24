@@ -1,5 +1,9 @@
 import assert from 'node:assert/strict';
-import test from 'node:test';
+import test, { beforeEach, afterEach } from 'node:test';
+import { lsp8CollectionMetadataResolver } from '../data/lsp8TokenMetadataResolver.js';
+const originalMetadataResolve = lsp8CollectionMetadataResolver.resolve;
+beforeEach(() => { lsp8CollectionMetadataResolver.resolve = async () => new Map(); });
+afterEach(() => { lsp8CollectionMetadataResolver.resolve = originalMetadataResolve; });
 import { createEmptyWorkspace } from '../domain/libraryWorkspace.js';
 import { loadLibraryWorkspace } from '../storage/libraryWorkspaceStorage.js';
 import { chillwhalesProfileRepository } from '../data/chillwhalesProfileRepository.js';
@@ -14,7 +18,7 @@ const memoryStorage = () => {
   return { getItem: (key) => values.get(key) ?? null, setItem: (key, value) => values.set(key, value), values };
 };
 
-test('a pending Library save cannot overwrite an immediately restored workspace', async () => {
+test('a completed Library command cannot overwrite a subsequently restored workspace', async () => {
   const storage = memoryStorage();
   resetLibraryStoreForTests(PROFILE, storage);
   useLibraryStore.getState().createFolder('Pending old folder');
@@ -22,11 +26,29 @@ test('a pending Library save cannot overwrite an immediately restored workspace'
 
   assert.equal(useLibraryStore.getState().replaceWorkspace(restored), true);
   await delay(220);
-  assert.deepEqual(loadLibraryWorkspace(storage, PROFILE), restored);
+  assert.deepEqual(loadLibraryWorkspace(storage, PROFILE).workspace, restored);
   assert.deepEqual(useLibraryStore.getState().workspace, restored);
 
   resetLibraryStoreForTests(PROFILE, storage);
   assert.deepEqual(useLibraryStore.getState().workspace, restored);
+});
+
+test('category commands are durable before returning and rejected saves leave UI state unchanged', () => {
+  const storage = memoryStorage();
+  resetLibraryStoreForTests(PROFILE, storage);
+  const id = useLibraryStore.getState().commitCategoryForProfile(PROFILE, { type: 'create', name: 'Immediate' });
+  assert.ok(id);
+  assert.equal(loadLibraryWorkspace(storage, PROFILE).workspace.folders[0].id, id);
+  const before = useLibraryStore.getState().workspace;
+  const originalSave = storage.setItem;
+  storage.setItem = () => { throw new Error('quota'); };
+  assert.equal(useLibraryStore.getState().commitCategoryForProfile(PROFILE, { type: 'rename', categoryId: id, name: 'Not saved' }), false);
+  assert.equal(useLibraryStore.getState().workspace, before);
+  assert.match(useLibraryStore.getState().persistenceError, /not saved/);
+  storage.setItem = originalSave;
+  assert.equal(useLibraryStore.getState().commitCategoryForProfile(PROFILE, { type: 'rename', categoryId: id, name: 'Recovered' }), true);
+  assert.equal(useLibraryStore.getState().persistenceError, null);
+  resetLibraryStoreForTests(PROFILE, memoryStorage());
 });
 
 test('failed immediate Library persistence preserves current state', () => {
@@ -44,7 +66,7 @@ test('Library draft flushing persists the latest workspace immediately and repor
   resetLibraryStoreForTests(PROFILE, storage);
   useLibraryStore.getState().createFolder('Flush me');
   assert.equal(flushLibraryWorkspace(), true);
-  assert.equal(loadLibraryWorkspace(storage, PROFILE).folders.some((folder) => folder.name === 'Flush me'), true);
+  assert.equal(loadLibraryWorkspace(storage, PROFILE).workspace.folders.some((folder) => folder.name === 'Flush me'), true);
 
   resetLibraryStoreForTests(PROFILE, { getItem: () => null, setItem: () => { throw new Error('quota'); } });
   assert.equal(flushLibraryWorkspace(), false);
@@ -55,13 +77,11 @@ test('switching installed profiles isolates each Library workspace', () => {
   const storage = memoryStorage();
   resetLibraryStoreForTests(PROFILE, storage);
   useLibraryStore.getState().createFolder('First profile only');
-  useLibraryStore.getState().selectAsset('first-profile-asset');
 
   assert.equal(useLibraryStore.getState().setProfileAddress(OTHER_PROFILE), true);
   assert.equal(useLibraryStore.getState().profileAddress, OTHER_PROFILE);
   assert.equal(useLibraryStore.getState().workspace.profileAddress, OTHER_PROFILE);
   assert.deepEqual(useLibraryStore.getState().workspace.folders, []);
-  assert.equal(useLibraryStore.getState().selectedAssetId, null);
 
   assert.equal(useLibraryStore.getState().setProfileAddress(PROFILE), true);
   assert.equal(useLibraryStore.getState().workspace.folders[0].name, 'First profile only');
@@ -75,13 +95,11 @@ test('discarding a broken visual asset removes only its transient index record',
   useLibraryStore.setState({
     assets: [{ id: stableAssetId, ownerAddress: PROFILE,
       contractAddress: '0x1111111111111111111111111111111111111111', imageUrl: 'https://broken.example/image.webp' }],
-    selectedAssetId: stableAssetId,
     workspace
   });
 
   assert.equal(useLibraryStore.getState().discardUnavailableAsset(stableAssetId), true);
   assert.deepEqual(useLibraryStore.getState().assets, []);
-  assert.equal(useLibraryStore.getState().selectedAssetId, null);
   assert.deepEqual(useLibraryStore.getState().workspace, workspace);
 });
 
@@ -115,9 +133,72 @@ test('late asset batches cannot write the outgoing or incoming profile cache aft
     await pending;
     assert.deepEqual(useLibraryStore.getState().assets, []);
     assert.equal(operations.some(({ method, key }) => method === 'setItem'
-      && key.startsWith('inscape.library-assets.v1:')), false);
+      && key.startsWith('inscape.library-assets.v2:')), false);
   } finally {
     chillwhalesProfileRepository.loadProfileAssets = originalLoad;
+    resetLibraryStoreForTests(PROFILE, memoryStorage());
+  }
+});
+test('main Library refresh commits a consistent cover and attachments without changing identity', async () => {
+  const contract = '0x1111111111111111111111111111111111111111';
+  const tokenId = '0x' + '0'.repeat(63) + '1';
+  const asset = { id: `42:${contract}:${tokenId}`, chainId: 42, ownerAddress: PROFILE, contractAddress: contract,
+    tokenId, standard: 'LSP8', imageUrl: 'https://assets.example/collection.webp', attributes: [], rawMetadata: {} };
+  const originalLoad = chillwhalesProfileRepository.loadProfileAssets;
+  const originalEnrich = luksoEnvioAttributeRepository.enrich;
+  chillwhalesProfileRepository.loadProfileAssets = async function* () {
+    yield { assets: [asset], unresolvedAssetIds: [], resolved: 1, total: 1, failures: 0, complete: true };
+  };
+  luksoEnvioAttributeRepository.enrich = async () => [];
+  lsp8CollectionMetadataResolver.resolve = async () => new Map([[tokenId, {
+    name: 'Zero', description: 'Resident Zero', attributes: [],
+    metadataSource: 'LSP4MetadataForTokenId (DIRECT LUKSO RPC)',
+    images: [0, 1, 2, 3].map(index => ({ index, url: `https://assets.example/zero-${index}.webp`, width: 640, height: 640 })),
+  }]]);
+  try {
+    resetLibraryStoreForTests(PROFILE, memoryStorage());
+    await useLibraryStore.getState().load({ forceLive: true });
+    const state = useLibraryStore.getState();
+    assert.equal(state.status, 'ready');
+    assert.equal(state.assets.length, 1);
+    assert.equal(state.assets[0].id, asset.id);
+    assert.equal(state.assets[0].thumbnailUrl, 'https://assets.example/zero-0.webp');
+    assert.equal(state.assets[0].imageGroups.length, 4);
+  } finally {
+    chillwhalesProfileRepository.loadProfileAssets = originalLoad;
+    luksoEnvioAttributeRepository.enrich = originalEnrich;
+    resetLibraryStoreForTests(PROFILE, memoryStorage());
+  }
+});
+
+test('late direct metadata is ignored after a profile switch', async () => {
+  const contract = '0x1111111111111111111111111111111111111111';
+  const tokenId = '0x' + '0'.repeat(63) + '1';
+  const originalLoad = chillwhalesProfileRepository.loadProfileAssets;
+  const originalEnrich = luksoEnvioAttributeRepository.enrich;
+  let release; let started = false;
+  const gate = new Promise(resolve => { release = resolve; });
+  chillwhalesProfileRepository.loadProfileAssets = async function* () {
+    yield { assets: [{ id: `42:${contract}:${tokenId}`, standard: 'LSP8', contractAddress: contract, tokenId }],
+      unresolvedAssetIds: [], resolved: 1, total: 1, failures: 0, complete: true };
+  };
+  luksoEnvioAttributeRepository.enrich = async () => [];
+  lsp8CollectionMetadataResolver.resolve = async () => {
+    started = true; await gate;
+    return new Map([[tokenId, { name: 'Obsolete Zero', images: [], attributes: [] }]]);
+  };
+  try {
+    resetLibraryStoreForTests(PROFILE, memoryStorage());
+    const pending = useLibraryStore.getState().load();
+    while (!started) await delay(0);
+    useLibraryStore.getState().setProfileAddress('0x3333333333333333333333333333333333333333');
+    release(); await pending;
+    assert.deepEqual(useLibraryStore.getState().assets, []);
+    assert.equal(useLibraryStore.getState().status, 'idle');
+  } finally {
+    release?.();
+    chillwhalesProfileRepository.loadProfileAssets = originalLoad;
+    luksoEnvioAttributeRepository.enrich = originalEnrich;
     resetLibraryStoreForTests(PROFILE, memoryStorage());
   }
 });

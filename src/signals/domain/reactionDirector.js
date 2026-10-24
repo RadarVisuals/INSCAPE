@@ -15,11 +15,3 @@ export function canBeginReaction({ now, cooldownUntil = 0, interfaceReady, resid
 }
 export function completeReaction(now, cooldownMs = REACTION_COOLDOWN_MS) { return { currentReaction: null, cooldownUntil: now + cooldownMs }; }
 export function getCompletionCooldown(queue) { return queue[0]?.manualReplay === true ? MANUAL_REPLAY_COOLDOWN_MS : REACTION_COOLDOWN_MS; }
-export function getReactionPresentation(signal) {
-  if (!signal) return { duration: 0, actorReaction: null, accent: null };
-  if (signal.type === 'ASSET_RECEIVED') return { duration: 5200, actorReaction: signal.assetReference?.standard === 'LSP7' ? 'lsp7_received' : 'lsp8_received', accent: 'arrival' };
-  if (signal.type === 'ASSET_SENT') return { duration: 4400, actorReaction: null, accent: 'departure' };
-  if (signal.type === 'LYX_RECEIVED') return { duration: 4800, actorReaction: 'lyx_received', accent: 'warm' };
-  if (signal.type === 'LYX_SENT') return { duration: 3600, actorReaction: null, accent: null };
-  return { duration: 3800, actorReaction: null, accent: null };
-}

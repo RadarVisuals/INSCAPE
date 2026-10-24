@@ -1,17 +1,33 @@
 @font-face {
-  font-family: "PP Monument Extended";
-  src: url("/assets/fonts/PPMonumentExtended-Regular.woff2") format("woff2");
+  font-family: "Inscape Sora";
+  src: url("/assets/fonts/Sora/Sora-VariableFont_wght.ttf") format("truetype");
+  font-style: normal;
+  font-weight: 100 800;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Inscape IBM Plex Sans Condensed";
+  src: url("/assets/fonts/IBM_Plex_Sans_Condensed/IBMPlexSansCondensed-Regular.ttf") format("truetype");
   font-style: normal;
   font-weight: 400;
   font-display: swap;
 }
 
+@font-face {
+  font-family: "Inter Variable";
+  src: url("/assets/fonts/Inter/InterVariable.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+}
+
 :root {
   color-scheme: dark;
-  --font-brand: "PP Monument Extended", "Arial Wide", "Helvetica Neue", Arial, sans-serif;
-  --font-interface: "Bahnschrift Condensed", "Arial Narrow", "Aptos Narrow", sans-serif;
-  --font-body: "Helvetica Neue", Helvetica, Arial, sans-serif;
-  --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  --font-creation-toolbar: "Inter Variable", Arial, sans-serif;
+  --font-interface: "Inscape Sora", sans-serif;
+  --font-body: "Inscape Sora", sans-serif;
+  --font-technical: "Inscape IBM Plex Sans Condensed", sans-serif;
   --font-size-subtitle: .6875rem;
   --font-weight-regular: 400;
   --line-height-body: 1.6;
@@ -72,6 +88,15 @@
   --space-4: 16px;
   --space-5: 20px;
   --space-6: 24px;
+  /* Approved flat interface geometry; only opted-in instruments consume it. */
+  --control-radius: 5px;
+  --control-inset: var(--space-1);
+  --control-shell-radius: calc(var(--control-radius) + var(--control-inset));
+  --control-target-toolbar: 36px;
+  --control-target-touch: 44px;
+  --icon-size-interface: 18px;
+  --icon-stroke-interface: 1.5px;
+  --font-size-control: 12px;
   --control-height-sm: 28px;
   --control-height-md: 34px;
   --control-height-lg: 38px;
@@ -108,14 +133,13 @@
   --spatial-ceiling: linear-gradient(180deg, #d3d0c8, #e7e4dc);
 }
 
-:where(.public-shell, .profile-discovery, .startveil) :where(button, a[href], input, select, textarea):focus-visible {
+:where(.public-shell, .startveil) :where(button, a[href], input, select, textarea):focus-visible {
   outline: 2px solid var(--color-focus);
   outline-offset: 2px;
 }
 
-:where(.public-shell, .profile-discovery) :where(button, input, select, textarea) { font-family: var(--font-interface); }
-.nft-dossier__body > p, .profile-identity-card__details > p { font-family: var(--font-body); line-height: var(--line-height-body); }
-:where(.public-shell, .profile-discovery) :where(code, pre, [data-technical], .technical-value) { font-family: var(--font-mono); font-variant-caps: normal; text-transform: none; }
+:where(.public-shell) :where(button, input, select, textarea) { font-family: var(--font-interface); }
+:where(.public-shell) :where(code, pre, [data-technical], .technical-value) { font-family: var(--font-technical); font-variant-caps: normal; text-transform: none; }
 
 * { scrollbar-color: var(--color-border-emphasis) transparent; scrollbar-width: thin; }
 ::-webkit-scrollbar { width: 8px; height: 8px; }

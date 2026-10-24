@@ -1,0 +1,9 @@
+# Expliciete Workbench-scope
+
+De store kopieert niet langer automatisch iedere rootmethode naar een Workbench-scope. De scope heeft **25 expliciete leden**. Tien writers en de registratie van overgangsblokkades controleren zowel de oorspronkelijke activering als editorbevoegdheid. Rootlifecycle en het verkrijgen van een nieuwe scope blijven bij de rootstore.
+
+De bestaande leesbetekenis blijft behouden: profiel, Workbench-ID, snapshot/draft en generatie zijn oorsprongsgebonden; zes metadata-/collectielezers blijven de bestaande actuele root-view leveren. Dit voegt geen tweede snapshotcache, store of lease toe. Modules, switcher en backup gebruiken dezelfde publieke handelingen.
+
+**123/123 gerichte unitresultaten en 8/8 browsercontroles** slagen op de twee exact vastgelegde gewijzigde bestanden. De matrix roept elk van tien writers aan na zeven vertrekvormen, waaronder A→B→A, profielwissel, release en heracquisitie. Geldige edits, rebase, grouped Undo/Redo, herstel en vóór vertrek gequeueëde callbacks zijn apart geverifieerd. Niet iedere matrixcel heeft zelfstandig een muterende arriving-history; de onafhankelijke review legt die beperking vast. De gezamenlijke guard en aanvullende betekenisvolle succes-/weigercases dragen de conclusie.
+
+Bewijs en exacte delta: `technical-regie-2026-10-23/continuation/step-08/README.md`, `scope-change.diff`, before/after-manifesten, `unit-green-02/` en `browser-02/`. Onafhankelijke review: `continuation/reviews/step-08-review.md`, zonder blokkerende productbevinding; de oorspronkelijke rapporttelling van 24 wordt gecorrigeerd naar 25. Geen CSS, productmogelijkheid, rootlease of commit/persist-semantiek gewijzigd. De gezamenlijke build en eindverificatie blijven afzonderlijk vereist. Status: [voortgangslijst](../../2026-10-23/code-quality-progress.json).

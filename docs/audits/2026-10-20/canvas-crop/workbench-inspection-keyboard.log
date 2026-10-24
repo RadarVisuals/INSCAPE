@@ -1,0 +1,34 @@
+TAP version 13
+# Subtest: Inspection lock preserves header keyboard access (Owner, 1440px)
+ok 1 - Inspection lock preserves header keyboard access (Owner, 1440px)
+  ---
+  duration_ms: 2385.0087
+  type: 'test'
+  ...
+# Subtest: Inspection lock preserves header keyboard access (Owner, 390px)
+ok 2 - Inspection lock preserves header keyboard access (Owner, 390px)
+  ---
+  duration_ms: 2437.3202
+  type: 'test'
+  ...
+# Subtest: Inspection lock preserves header keyboard access (Visitor, 1440px)
+ok 3 - Inspection lock preserves header keyboard access (Visitor, 1440px)
+  ---
+  duration_ms: 2645.9745
+  type: 'test'
+  ...
+# Subtest: Inspection lock preserves header keyboard access (Visitor, 390px)
+ok 4 - Inspection lock preserves header keyboard access (Visitor, 390px)
+  ---
+  duration_ms: 2585.9172
+  type: 'test'
+  ...
+1..4
+# tests 4
+# suites 0
+# pass 4
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 10363.2759

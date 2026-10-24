@@ -1,0 +1,9 @@
+.system-workflow[data-workbench][data-display-lift-host] { z-index: 201; }
+.system-workflow__workbench[data-display-lift] { overflow: visible; }
+.system-workflow[data-display-lift-host] .system-workflow__workbench[data-display-lift] > .system-workflow__presentation-board[data-display-lift] {
+  z-index: 201;
+  pointer-events: auto;
+}
+.system-workflow__presentation-board[data-display-lift] > :is(.system-workflow__toolbar-reveal, .system-workflow__board-resize-handle),
+.system-workflow__presentation-board[data-display-lift] .system-workflow__selection-chrome { visibility: hidden; }
+.system-workflow__presentation-board[data-display-lift] > .system-workflow__identity-strip { cursor: default; zoom: var(--workbench-control-scale, 1); }

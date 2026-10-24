@@ -1,0 +1,26 @@
+{
+  "before": {
+    "width": 800,
+    "height": 650
+  },
+  "after": {
+    "width": 320,
+    "height": 300
+  },
+  "images": 3,
+  "painted": {
+    "svg": [
+      255,
+      209,
+      102,
+      255
+    ],
+    "outside": [
+      36,
+      38,
+      38,
+      255
+    ]
+  },
+  "errors": []
+}
