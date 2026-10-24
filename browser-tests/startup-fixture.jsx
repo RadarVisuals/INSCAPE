@@ -17,10 +17,36 @@ const pending = new Map();
 const otherAddress = '0x1111111111111111111111111111111111111111';
 const nameFor = (address) => address === FEATURED_WORLD_PROFILE_ADDRESS ? 'Featured artist' : 'Other artist';
 
+// Control only this fixture owner's acquisition, while retaining the browser's
+// real exclusive lock and the production lease's StrictMode/release lifecycle.
+const nativeLocks = navigator.locks;
+const leaseRequests = [];
+let releaseEditorLease;
+const editorLeaseGate = new Promise(resolve => { releaseEditorLease = resolve; });
+let editorAccess = parameters.get('editorAccess');
+const fixtureLocks = {
+  request: async (name, options, callback) => {
+    if (owner && name === `inscape:profile-editor:${owner.toLowerCase()}`) {
+      leaseRequests.push(name);
+      if (parameters.has('delayLease')) await editorLeaseGate;
+      if (editorAccess === 'busy') return callback(null);
+      if (editorAccess === 'unavailable') throw new Error('Fixture editing access unavailable');
+    }
+    return nativeLocks.request(name, options, callback);
+  },
+};
+if (owner && (parameters.has('delayLease') || editorAccess)) {
+  Object.defineProperty(navigator, 'locks', {
+    configurable: true, value: editorAccess === 'unsupported' ? undefined : fixtureLocks,
+  });
+}
+
 useWalletStore.setState({
   authorityLifecycleStatus: 'complete', hostProfileAddress: owner,
   isWalletConnected: Boolean(owner), isHostProfileOwner: Boolean(owner),
-  initWallet: async () => {}, initializationError: null,
+  // This fixture supplies the wallet boundary itself; startup must not clear it
+  // when the real connector's persisted account is (deliberately) absent.
+  initWallet: async () => {}, disposeWallet: () => {}, initializationError: null,
 });
 luksoProfileDiscoveryRepository.list = async () => {
   if (parameters.has('directoryError')) throw new Error('Fixture directory unavailable');
@@ -51,7 +77,12 @@ publishedProfileResolutionStore.repository = {
 };
 
 window.__startup = {
-  requests, signIns: 0,
+  requests, signIns: 0, leaseRequests, releaseEditorLease,
+  allowEditing() {
+    editorAccess = null;
+    Object.defineProperty(navigator, 'locks', { configurable: true, value: fixtureLocks });
+    releaseEditorLease();
+  },
   resolve(address, status) { pending.get(address)?.(resolution(address, status)); pending.delete(address); },
 };
 createRoot(document.getElementById('root')).render(<React.StrictMode><App /></React.StrictMode>);

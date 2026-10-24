@@ -52,6 +52,17 @@ test('a published v9 document reconstructs a valid editable owner draft', () => 
   assert.equal(draft.grids[0].placements[0].locked, false);
 });
 
+test('single-Workbench public reconciliation cannot replace any local composition in a collection', () => {
+  const storage = memoryStorage();
+  const store = createSystemWorkflowDraftStore({ profileAddress: PROFILE, storage });
+  store.createWorkbench('Private studies');
+  const before = storage.getItem(systemWorkflowDraftKey(PROFILE));
+  const result = reconcileOwnerDraftWithPublishedProfile({ document: publication(3), profileAddress: PROFILE, storage, store });
+  assert.equal(result.status, 'LOCAL_CHANGES_PRESERVED');
+  assert.equal(storage.getItem(systemWorkflowDraftKey(PROFILE)), before);
+  assert.equal(store.listWorkbenches().length, 2);
+});
+
 test('a baseline-less origin preserves its existing local draft', () => {
   const old = createEmptySystemWorkflowDraft(PROFILE, { generateId: () => 'old-home' });
   old.grids[0].title = 'OLD LOCAL';

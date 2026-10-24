@@ -7,8 +7,11 @@ const read = (path) => readFileSync(new URL(path, import.meta.url), 'utf8');
 test('owner Display Module reuses the existing interactive canvas inside one clipped Stage', () => {
   const runtime = read('./OwnerSystemWorkflowRuntime.jsx');
   const display = read('./DisplayModule.jsx');
-  assert.match(runtime, /<OwnerDisplayInstance/);
+  const modules = read('./OwnerWorkbenchModules.jsx');
+  assert.match(runtime, /<OwnerWorkbenchModules/);
+  assert.match(modules, /<OwnerDisplayInstance/);
   assert.doesNotMatch(runtime, /selectedPlacements|useOwnerSystemWorkflowCrop|useOwnerSystemWorkflowFocusViewer|transitionDisplayInstruments/);
+  assert.doesNotMatch(modules, /selectedPlacements|useOwnerSystemWorkflowCrop|useOwnerSystemWorkflowFocusViewer|transitionDisplayInstruments/);
   const canonicalExport = read('./PresentationBoard.jsx');
   const board = read('./PresentationBoardDefinitive.jsx');
   const shortcut = read('./PresentationBoardShortcut.jsx');
@@ -37,7 +40,6 @@ test('owner Display Module reuses the existing interactive canvas inside one cli
   assert.doesNotMatch(board, /aria-label="Board zoom"|Board zoom percentage|system-workflow__board-zoom[^\n]*type="range"/);
   assert.match(board, /aria-label="Minimize Display Module to shortcut"/);
   assert.doesNotMatch(board, /wheelZoom|liveScaleRendering|useDisplayImmersive|Maximize Display Module/);
-  assert.match(board, /cloneElement\(children, \{ boardScale: 1/);
   assert.match(shortcut, /instanceState === PRESENTATION_BOARD_INSTANCE_STATE\.MINIMIZED/);
   assert.match(board, /instanceState === PRESENTATION_BOARD_INSTANCE_STATE\.WINDOW/);
   assert.doesNotMatch(board, /const \[open, setOpen\]/);
@@ -48,7 +50,7 @@ test('owner Display Module reuses the existing interactive canvas inside one cli
   assert.match(display, /OwnerSystemWorkflowMetadataModule/);
   // Display is experimental and deliberately absent from ordinary creation.
   // Toolbar and context-menu behavior are covered by workbench-toolbar.browser.mjs.
-  assert.match(runtime, /<OwnerWorkbenchToolbar[\s\S]*commands=\{addCommands\} onCommand=\{runCommand\}/);
+  assert.match(runtime, /<OwnerWorkbenchToolbar[\s\S]*commands=\{addCommands\}\s+onCommand=\{runCommand\}/);
   assert.match(display, /useOwnerSystemWorkflowFocusViewer/);
   assert.match(display, /<DisplayFocusViewer/);
   assert.match(display, /renderInspection=\{viewer\.placementId \? \(container, controlsContainer, scene\) => <DisplayFocusViewer[\s\S]*container=\{container\} controlsContainer=\{controlsContainer\}/);
@@ -95,8 +97,8 @@ test('owner Display Module reuses the existing interactive canvas inside one cli
   assert.match(shortcut, /menuSurfaceId=\{menuSurface\}/);
   assert.match(shortcut, /iconPresentation: shortcutIconPresentation/);
   assert.match(shortcut, /visible: shortcutVisible/);
-  assert.match(styles, /system-workflow__metadata-projection\.is-side/);
-  assert.match(styles, /\.system-workflow__metadata-module-content \{ display: grid; \}/);
+  assert.match(display, /<SharedDisplayToolContent id="metadata"/);
+  // Info uses the shared dock; artwork-info.browser.mjs covers selection and host parity.
   assert.match(styles, /\.system-workflow__stage-viewport \{[^}]*border-radius: var\(--workflow-board-radius\);/s);
   assert.match(styles, /\.system-workflow__board-inspection-host \{[^}]*border-radius: var\(--workflow-board-radius\);/s);
   assert.doesNotMatch(styles, /\.system-workflow__board-window-controls,[\s\S]*?\.system-workflow__metadata-direction-controls \{[^}]*border-left:/s);
@@ -111,7 +113,7 @@ test('owner Display Module reuses the existing interactive canvas inside one cli
   assert.match(styles, /html\[data-system-workflow-grid-direction\] \.system-workflow__selection-chrome \{ opacity: 0; transition: none; \}/);
   assert.match(controller, /createGrid:[^\n]*setSelectedPlacementIds\(\[\]\)/);
   assert.match(controller, /deleteGrid:[^\n]*grid\.id === state\.selectedGridId[^\n]*setSelectedPlacementIds\(\[\]\)/);
-  assert.match(canvas, /devicePixelRatio/);
+  assert.match(board, /devicePixelRatio/);
   assert.doesNotMatch(`${canvas}\n${styles}`, /system-workflow__selection-outline/);
   // Handle dimensions and pointer conversion at fractional DPR are checked by
   // workbench-surface-behavior.browser.mjs on the rendered production component.
@@ -122,7 +124,6 @@ test('owner Display Module reuses the existing interactive canvas inside one cli
   assert.doesNotMatch(styles, /\.system-workflow__placement::after/);
   assert.match(styles, /\.system-workflow__stage-viewport \{[^}]*overflow: clip;[^}]*background: var\(--workflow-board-frame-surface\);/s);
   assert.doesNotMatch(styles, /\.system-workflow__stage-viewport \{\s*transition: filter/);
-  assert.match(styles, /data-sidecar[^}]*\.system-workflow__board-title \{ margin-left: auto; \}/);
   assert.doesNotMatch(styles, /\.system-workflow__metadata-direction\[aria-pressed="true"\] svg \{[^}]*transform:/);
   assert.doesNotMatch(styles, /\.system-workflow__metadata-direction\[aria-pressed="true"\]::after/);
   assert.doesNotMatch(styles, /round-control:is\([^)]*\[aria-pressed="true"\][^)]*\)[^{]*\{[^}]*outline:/s);
@@ -136,7 +137,6 @@ test('owner Display Module reuses the existing interactive canvas inside one cli
   assert.doesNotMatch(styles, /\.system-workflow__stage-viewport::before/);
   assert.doesNotMatch(styles, /\.system-workflow__stage-viewport::after/);
   assert.match(board, /className="system-workflow__stage-viewport" data-surface=\{displaySurface\}/);
-  assert.match(styles, /\.lattice-focus-viewer__board-controls/);
   assert.doesNotMatch(styles, /\[data-inspection-atmosphere\] \.system-workflow__stage-viewport \{[\s\S]*filter:/);
   assert.match(styles, /\[data-inspection-atmosphere\] \.system-workflow__grid-plane--current > \.system-workflow__artwork-plane,[^{]+\{\s*filter: grayscale\(1\) brightness\(\.18\);/);
   assert.match(display, /inspectionAtmosphere=\{viewer\.atmosphereActive\}/);
@@ -150,9 +150,6 @@ test('owner Display Module reuses the existing interactive canvas inside one cli
   assert.match(canvas, /onDoubleClick=\{\(event\) => \{[\s\S]*onOpenViewer/);
   assert.match(canvas, /\{!authoringLocked && selectionMetrics && selectionOverlayHost && createPortal/);
   assert.doesNotMatch(runtime, /panelOccupied=\{panelOccupied \|\| Boolean\(viewer\.placementId\)\}/);
-  assert.match(styles, /\.lattice-focus-viewer__board-controls > button \{[^}]*border: 1px solid var\(--workflow-border-strong\);[^}]*color: var\(--workflow-muted\);[^}]*background: var\(--workflow-selection\);/s);
-  assert.doesNotMatch(styles, /\.lattice-focus-viewer__board-controls > button:is\(:hover, :focus-visible\)[^{]*\{[^}]*outline:/s);
-  assert.match(styles, /\.lattice-focus-viewer__surface \{[\s\S]*background-color: rgb\(5 6 6 \/ 18%\);/);
   assert.doesNotMatch(styles, /system-workflow__board-zoom-slider|system-workflow__board-zoom-controls/);
   assert.doesNotMatch(`${board}\n${styles}`, /Zoom Board out|Zoom Board in|Fit Board|\bFIT\b|zoomWithWheel/);
   assert.equal((display.match(/<OwnerSystemWorkflowCanvas/g) || []).length, 1);

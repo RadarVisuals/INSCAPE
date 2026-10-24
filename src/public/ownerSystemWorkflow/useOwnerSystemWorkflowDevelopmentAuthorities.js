@@ -2,19 +2,12 @@ import { useEffect, useMemo, useState } from 'react';
 
 const cleanName = (value) => String(value || '').trim().replace(/\s+/gu, ' ').slice(0, 80);
 const createId = (prefix) => `${prefix}:${globalThis.crypto?.randomUUID?.() || Math.random().toString(36).slice(2)}`;
-const groupIdForName = (value) => cleanName(value).toLocaleLowerCase().replace(/[^a-z0-9]+/gu, '-').replace(/^-|-$/gu, '');
-const groupEntryId = (entry) => typeof entry === 'string' ? entry : entry?.id;
-const groupEntryName = (entry) => typeof entry === 'string' ? entry.replaceAll('-', ' ') : entry?.name;
 
-export default function useOwnerSystemWorkflowDevelopmentAuthorities({ categories, discovery, enabled }) {
+function useOwnerSystemWorkflowDevelopmentAuthorities({ categories, enabled }) {
   const [reviewCategories, setReviewCategories] = useState(() => categories || []);
   const [categoryOrganization, setCategoryOrganization] = useState(() => ({
     rootCategoryIds: (categories || []).map(({ id }) => id), sections: [],
   }));
-  const [reviewDiscovery, setReviewDiscovery] = useState(() => discovery || []);
-  const [reviewGroups, setReviewGroups] = useState(() => [...new Map((discovery || []).map((entry) => {
-    const name = cleanName(entry.group); const id = groupIdForName(name); return id ? [id, { id, name }] : null;
-  }).filter(Boolean)).values()]);
   useEffect(() => {
     if (!enabled) return;
     const validIds = new Set(reviewCategories.map(({ id }) => id));
@@ -100,29 +93,15 @@ export default function useOwnerSystemWorkflowDevelopmentAuthorities({ categorie
       return true;
     },
   } : null, [enabled]);
-  const discoveryCommands = useMemo(() => enabled ? {
-    createGroup(name) {
-      const value = cleanName(name); if (!value) return null;
-      const id = groupIdForName(value) || createId('review-group');
-      if (reviewGroups.some((entry) => groupEntryId(entry) === id)) return null;
-      setReviewGroups((current) => [...current, { id, name: value }]);
-      return id;
-    },
-    deleteGroup(id) {
-      setReviewGroups((current) => current.filter((entry) => groupEntryId(entry) !== id));
-      setReviewDiscovery((current) => current.map((entry) => groupIdForName(entry.group) === id ? { ...entry, group: '' } : entry));
-      return true;
-    },
-    renameGroup(id, name) {
-      const value = cleanName(name); if (!value) return null;
-      if (reviewGroups.some((entry) => groupEntryId(entry) !== id
-        && groupEntryName(entry)?.toLocaleLowerCase() === value.toLocaleLowerCase())) return null;
-      setReviewGroups((current) => current.map((entry) => groupEntryId(entry) === id
-        ? { id, name: value } : entry));
-      return id;
-    },
-  } : null, [enabled, reviewGroups]);
   return { categories: enabled ? reviewCategories : categories,
-    categoryOrganization: enabled ? categoryOrganization : null, categoryCommands,
-    discovery: enabled ? reviewDiscovery : discovery, discoveryCommands, discoveryGroups: reviewGroups };
+    categoryOrganization: enabled ? categoryOrganization : null, categoryCommands };
 }
+
+function useOwnerSystemWorkflowProductionAuthorities() {
+  return null;
+}
+
+// Review state belongs only to the development build, never to live Library authority.
+export default import.meta.env.DEV
+  ? useOwnerSystemWorkflowDevelopmentAuthorities
+  : useOwnerSystemWorkflowProductionAuthorities;

@@ -39,6 +39,7 @@ async function mount(page, { visitor = false, pinned = false, entryTarget = null
     const { useWorkbenchCamera, useWorkbenchInspectionLock } = await import('/src/public/ownerSystemWorkflow/WorkbenchCamera.jsx');
     const { WorkbenchWindow } = await import('/src/public/ownerSystemWorkflow/DisplayInstrumentWindow.jsx');
     const { createSystemWorkflowDraftStore } = await import('/src/systemWorkflow/systemWorkflowDraftStore.js');
+    const { addImageModule } = await import('/src/imageModule/imageModuleSession.js');
     const { openWorkbenchIndex, editWorkbenchIndex } = await import('/src/systemWorkflow/workbenchIndexSession.js');
     await import('/src/inscapeTokens.css'); await import('/src/public/ownerSystemWorkflow/ownerSystemWorkflow.css');
     await import('/src/lattice/rendering/latticeMenuSurface.css');
@@ -49,6 +50,9 @@ async function mount(page, { visitor = false, pinned = false, entryTarget = null
       setItem: (key, value) => { if (fixture.failSave) throw Error('Storage full'); values.set(key, value); },
     } });
     openWorkbenchIndex(store, profile);
+    // Focus targets a real module from accepted content. A registered DOM node
+    // alone does not make a missing/deleted module selectable.
+    const artworkId = fixture.artworkId = addImageModule(store, profile);
     const index = store.getSnapshot().workbenchIndex;
     editWorkbenchIndex(store, profile, index, { ...index, pinned, destinations: [
       { id: 'workbench-view:one', name: 'bottom 01', visibility: 'PUBLIC', view: { left: 100, top: 50, width: 600, height: 350 } },
@@ -63,7 +67,7 @@ async function mount(page, { visitor = false, pinned = false, entryTarget = null
       return React.createElement('main', { ref: host, className: 'system-workflow', tabIndex: -1,
         'data-menu-surface': 'carbon', 'data-lattice-menu-surface': true, style: { position: 'fixed', inset: 0 } },
         React.createElement(WorkbenchViewControls, { hostRef: host, entryTarget }), locked && React.createElement(Lock),
-        !removed && React.createElement(WorkbenchWindow, { label: 'Artwork', title: 'Existing', viewId: 'a', width: 280, initialHeight: 220,
+        !removed && React.createElement(WorkbenchWindow, { label: 'Artwork', title: 'Existing', viewId: artworkId, width: 280, initialHeight: 220,
           initialX: 650, initialY: 150 }, React.createElement('textarea', { 'aria-label': 'Existing text', defaultValue: 'Keep this content' })),
         Array.from({ length: late }, (_, i) => React.createElement(WorkbenchWindow, { key: i, label: 'Late', title: String(i),
           viewId: `late:${i}`, width: 280, initialHeight: 220, initialX: 900, initialY: 150 + i * 240 }, 'Loaded module')));
@@ -264,7 +268,7 @@ test('ordinary Focus still cancels when its destination is removed, and clears n
   try {
     const page = await browser.newPage({ viewport: { width: 1200, height: 900 } });
     const errors = await mount(page, { clocked: true }); await clock(page);
-    await page.evaluate(() => window.__indexFixture.view.setSelection(['a']));
+    await page.evaluate(() => window.__indexFixture.view.setSelection([window.__indexFixture.artworkId]));
     await page.getByRole('button', { name: 'Focus selected Workbench modules', exact: true }).dispatchEvent('click');
     await page.clock.runFor(180);
     assert.equal((await read(page)).travelling, true);

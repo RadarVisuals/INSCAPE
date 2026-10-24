@@ -13,7 +13,6 @@ import {
   createSystemWorkflowResizeGesture,
   finishSystemWorkflowGroupResizeGesture,
   finishSystemWorkflowResizeGesture,
-  systemWorkflowGroupBounds,
   updateSystemWorkflowGroupResizeGesture,
   updateSystemWorkflowResizeGesture,
 } from '../../systemWorkflow/systemWorkflowResize.js';
@@ -30,7 +29,7 @@ export default function useOwnerSystemWorkflowPlacementInteraction({ artboardMod
   canvasRef, sceneRef, canNavigateGrid = () => false, controller, cropResize = null, cropSession = null, disabled = false,
   navigation, snapStep = 1, viewScale = 1, artboardProjection = null }) {
   const projectedField = (node, step, mode, originNode) =>
-    createOwnerSystemWorkflowProjectedField(node, step, 1, mode, originNode, artboardProjection, viewScale);
+    createOwnerSystemWorkflowProjectedField(node, step, mode, originNode, artboardProjection, viewScale);
   const [previewById, setPreviewById] = useState(new Map());
   const [marquee, setMarquee] = useState(null);
   const gridSwipe = navigation.swipe;
@@ -146,9 +145,10 @@ export default function useOwnerSystemWorkflowPlacementInteraction({ artboardMod
   const beginCanvasSelection = (event, { navigationOnly = false, emptyArtworkHit = false } = {}) => {
     if (disabled || marqueeRef.current || authoringDisabled && !navigationOnly || event.button !== 0 || !grid
       || !navigationOnly && !emptyArtworkHit && event.target !== event.currentTarget) return;
+    const field = projectedField(canvasRef.current, snapStep, artboardMode, sceneRef?.current);
+    if (!field) return;
     event.preventDefault();
     if (navigationOnly) { event.stopPropagation(); navigation.beginDrag(event.clientX); }
-    const field = projectedField(canvasRef.current, snapStep, artboardMode, sceneRef?.current);
     const surface = (sceneRef?.current || canvasRef.current).getBoundingClientRect();
     const origin = { x: event.clientX, y: event.clientY };
     const move = (pointerEvent) => {

@@ -1,3 +1,4 @@
+import { openSharedTool, setTransform } from './fixtures/shared-tools.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdir } from 'node:fs/promises';
@@ -50,7 +51,7 @@ for (const width of [1440, 390]) test(`Image resize controls expose transparent,
       window.readDraft = () => JSON.parse(storage.getItem(key));
       await import('/src/index.css'); await import('/src/inscapeTokens.css'); await import('/src/public/ownerSystemWorkflow/ownerSystemWorkflow.css'); await import('/src/lattice/rendering/latticeMenuSurface.css');
       createRoot(document.getElementById('root')).render(React.createElement(Runtime, { profileAddress, reviewStorage: storage, reviewAssets: assets,
-        reviewCategories: [], reviewActivity: [], reviewDiscovery: [], reviewProfile: { name: 'Image resize review' } }));
+        reviewCategories: [], reviewActivity: [], reviewProfile: { name: 'Image resize review' } }));
     });
     const images = page.locator('.image-module__window'), first = images.nth(0), transparent = images.nth(1);
     await first.waitFor(); await transparent.waitFor();
@@ -71,9 +72,11 @@ for (const width of [1440, 390]) test(`Image resize controls expose transparent,
     }
     const before = await page.evaluate(() => window.readDraft());
     await grip.focus(); await page.mouse.move(width - 10, 900);
-    await page.getByRole('spinbutton', { name: 'Image width', exact: true }).focus();
+    const transform = await openSharedTool(page, 'Transform');
+    await transform.getByRole('spinbutton', { name: 'Transform Width', exact: true }).focus();
     assert.equal(await opacity(bounds), '1', 'active Image stays outlined while its tools have focus');
     await page.screenshot({ path: `.browser-test-runtime/image-resize-${width}-wide.png` });
+    await transform.getByRole('button', { name: 'Close Transform', exact: true }).click();
     const transparentCanvas = transparent.locator('.image-module__canvas');
     // Companion tools may cover this fixture's centre on a narrow Workbench.
     // Hover a real exposed part of the canvas; never bypass its hit testing.
@@ -117,8 +120,8 @@ for (const width of [1440, 390]) test(`Image resize controls expose transparent,
 
     // A one-cell-high canvas leaves distinct top and bottom targets, outside the art.
     await grip.focus();
-    await page.getByRole('spinbutton', { name: 'Image height', exact: true }).fill('32');
-    await page.getByRole('button', { name: 'Set size', exact: true }).click(); await settle(page);
+    await setTransform(page, 'Height', 32);
+    await transform.getByRole('button', { name: 'Close Transform', exact: true }).click(); await settle(page);
     await page.screenshot({ path: `.browser-test-runtime/image-resize-${width}-thin.png` });
     const thin = await page.evaluate(() => window.readDraft()), writes = await page.evaluate(() => window.writes);
     const top = first.getByRole('separator', { name: 'Resize Image top', exact: true });

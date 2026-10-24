@@ -6,19 +6,6 @@ export const OWNER_SYSTEM_WORKFLOW_ROWS = SYSTEM_WORKFLOW_GEOMETRY.rows;
 export const OWNER_SYSTEM_WORKFLOW_ARTBOARD_MODES = Object.freeze({ GRID: 'grid', HERO: 'hero' });
 export const OWNER_SYSTEM_WORKFLOW_HERO_MAXIMUM = Object.freeze({ width: 768, height: 432 });
 
-export function measureOwnerSystemWorkflowArtboard(availableWidth, availableHeight, scale = 1, geometry = SYSTEM_WORKFLOW_GEOMETRY) {
-  const width = Number(availableWidth);
-  const height = Number(availableHeight);
-  if (!Number.isFinite(width) || width <= 0 || !Number.isFinite(height) || height <= 0) return null;
-  if (!Number.isFinite(scale) || scale <= 0 || scale > 1) return null;
-  const projection = projectSystemWorkflowViewport(geometry, { width: width * scale, height: height * scale });
-  return Object.freeze({
-    ...projection,
-    left: projection.left + width * (1 - scale) / 2,
-    top: projection.top + height * (1 - scale) / 2,
-  });
-}
-
 export function measureOwnerSystemWorkflowHeroArtboard(availableWidth, availableHeight, contentScale = 1) {
   const width = Number(availableWidth) / contentScale;
   const height = Number(availableHeight) / contentScale;
@@ -40,23 +27,21 @@ export function measureOwnerSystemWorkflowHeroArtboard(availableWidth, available
   return Object.freeze(Object.fromEntries(Object.entries(field).map(([key, value]) => [key, value * contentScale])));
 }
 
-export function createOwnerSystemWorkflowProjectedField(node, snapStep = 1, scale = 1, mode = OWNER_SYSTEM_WORKFLOW_ARTBOARD_MODES.GRID, originNode = node, artboardProjection = null, screenScale = 1) {
+export function createOwnerSystemWorkflowProjectedField(node, snapStep = 1, mode = OWNER_SYSTEM_WORKFLOW_ARTBOARD_MODES.GRID, originNode = node, artboardProjection = null, screenScale = 1) {
   // The Display clips input; its translated active scene supplies authored
   // coordinates. Keeping those origins separate permits editing at rest offsets.
   const rectangle = node?.getBoundingClientRect?.();
+  if (!rectangle || !artboardProjection || !Number.isFinite(snapStep) || snapStep <= 0) return null;
   const origin = originNode?.getBoundingClientRect?.() || rectangle;
   const geometry = mode !== OWNER_SYSTEM_WORKFLOW_ARTBOARD_MODES.HERO && node?.dataset?.stageColumns ? { columns: Number(node.dataset.stageColumns), rows: Number(node.dataset.stageRows) } : SYSTEM_WORKFLOW_GEOMETRY;
   // Reuse the rendered logical field before applying camera zoom. Re-fitting
   // Hero's fixed margins/cap in screen pixels produces a different artboard.
-  const projection = artboardProjection ? {
+  const projection = {
     cellSize: artboardProjection.cellSize * screenScale,
     rowSize: (artboardProjection.rowSize ?? artboardProjection.cellSize) * screenScale,
     left: artboardProjection.left * screenScale,
     top: artboardProjection.top * screenScale,
-  } : rectangle && (mode === OWNER_SYSTEM_WORKFLOW_ARTBOARD_MODES.HERO
-    ? measureOwnerSystemWorkflowHeroArtboard(rectangle.width, rectangle.height)
-    : measureOwnerSystemWorkflowArtboard(rectangle.width, rectangle.height, scale, geometry));
-  if (!rectangle || !projection || !Number.isFinite(snapStep) || snapStep <= 0) return null;
+  };
   return Object.freeze({
     cellSize: projection.cellSize,
     rowSize: projection.rowSize ?? projection.cellSize,

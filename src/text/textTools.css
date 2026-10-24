@@ -1,43 +1,65 @@
 /* Text keeps its complete, independent inspector. Shared tool chrome owns material. */
-.system-workflow__instrument-window.text-tools-window { z-index: 81; }
-.text-inspector-heading { min-width: 0; display: grid; gap: 3px; }
-.text-inspector-heading strong { font: 500 13px/1.2 'Inscape Sora',sans-serif; letter-spacing: -.03em; }
-.text-inspector-heading span { font: 11px/1.2 'Inscape IBM Plex Sans Condensed',sans-serif; color: var(--workflow-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.text-tools-content { min-width: 0; font: 12px/1.5 'Inscape Sora', sans-serif; }
+.text-tools-window { --workflow-border: var(--tactile-edge); --workflow-muted: var(--tactile-muted); --workflow-ink: var(--tactile-ink); --workflow-panel: var(--tactile-face); }
+.text-inspector-heading { min-width: 0; display: flex; align-items: baseline; gap: 12px; }
+.text-inspector-heading strong { flex: none; font: inherit; }
+.text-inspector-heading span { min-width: 0; font: 11px/1.2 'Inscape IBM Plex Sans Condensed',sans-serif; color: var(--tactile-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.text-tools-content { display: flex; flex-direction: column; min-width: 0; width: 100%; padding: 12px; box-sizing: border-box; font: var(--workflow-type-control); overflow: auto; overscroll-behavior: contain; scrollbar-gutter: stable; }
 .text-tools-window [hidden] { display: none !important; }
 /* The shared window surface is the only scrolling region. Keep every editor
    control mounted when a disclosure is closed so selection and history survive. */
-.text-tools-window > .system-workflow__instrument-content { overscroll-behavior: contain; scrollbar-gutter: stable; }
-.text-tools-window .text-controls-body { min-width: 0; }
-.text-tools-window :is(button, input, select) { font: inherit; box-sizing: border-box; min-width: 0; max-width: 100%; }
+.text-tools-window .text-controls-body { min-width: 0; flex: 1 0 auto; }
+.text-tool-tabs { position: sticky; top: -12px; z-index: 2; display: grid; grid-template-columns: 1fr 1fr; margin: -12px -12px 16px; padding: 0 8px; border-bottom: 1px solid var(--tactile-edge); background: var(--tactile-face); }
+.text-tools-window .text-tool-tabs button { min-height: 42px; border: 0; border-radius: 0; background: transparent; color: var(--tactile-muted); font: 500 12px/1.3 'Inscape Sora',sans-serif; cursor: pointer; }
+.text-tools-window .text-tool-tabs [aria-selected='true'] { color: var(--tactile-ink); box-shadow: inset 0 -2px var(--tactile-ink); }
+.text-tool-tabs button:focus-visible { outline: 1px solid var(--tactile-ink); outline-offset: -3px; }
+.text-tool-scope { padding-bottom: 14px; }
+.text-tool-scope strong { font: 500 13px/1.4 'Inscape Sora',sans-serif; }
+.text-tool-scope p, .text-group-hint { margin: 4px 0 0; color: var(--tactile-muted); font: 12px/1.45 'Inscape IBM Plex Sans Condensed',sans-serif; }
+.text-tool-group { padding: 16px 0; border-top: 1px solid var(--tactile-edge); }
+.text-tools-window .text-tool-group > h3 { margin: 0 0 12px; color: var(--tactile-ink); font: 600 13px/1.3 'Inscape Sora',sans-serif; }
+.text-tool-group > .text-group-hint { margin: -6px 0 12px; }
+.text-tools-window .text-tool-group > .text-settings { padding: 0; }
+.text-tools-window .text-tool-group > details:first-of-type { border-top: 0; }
+.text-tools-window .text-tool-group > details > summary { font-weight: 400; }
+.text-tools-window .text-style-controls { margin-top: 4px; padding-left: 12px; border-top: 0; border-left: 1px solid var(--tactile-edge); }
+.text-default-preview { margin: -4px 0 4px; color: var(--tactile-muted); font: 12px/1.4 'Inscape Sora',sans-serif; }
+.text-default-settings > .text-group-hint { margin: 0 0 4px; }
+.text-tools-content :is(button, input, select) { font: inherit; box-sizing: border-box; min-width: 0; max-width: 100%; }
+.text-tools-window .text-tools-content :is(input, select) { border: 1px solid var(--tactile-edge); border-radius: var(--control-radius); background: transparent; color: inherit; accent-color: var(--tactile-ink); }
+.text-tools-content :is(input, select, summary):focus-visible { outline: 1px solid var(--tactile-ink); outline-offset: 1px; }
+.text-tools-content :is(input, select):disabled { opacity: .45; }
+.text-tools-content .workflow-tactile-control[aria-pressed='true'] { color: var(--tactile-face); background: var(--tactile-ink); box-shadow: none; }
+.text-tools-content .workflow-tactile-control[aria-pressed='true']::after { display: none; }
 .text-tools-window .text-controls-body :is(input, select) { padding: 6px 8px; min-height: 32px; }
-.text-tools-window .text-controls-body button, .text-tools-window button { min-height: 30px; padding: 5px 7px; }
-.text-inspector-context { margin: 0 0 8px; color: var(--workflow-muted); font: 12px/1.4 'Inscape IBM Plex Sans Condensed', sans-serif; }
-.text-tools-window .text-toolbar { display: flex; flex-direction: column; gap: 6px; padding: 0; border: 0; background: transparent; }
+.text-tools-content button { min-height: 30px; padding: 5px 7px; }
+.text-tools-content .workflow-tactile-control svg { width: var(--icon-size-interface); height: var(--icon-size-interface); }
+.text-tools-window .text-toolbar { display: flex; flex-direction: column; gap: 0; padding: 0; border: 0; background: transparent; }
 .text-tools-window .text-toolbar-row { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; }
 .text-tools-window .text-toolbar-font { display: grid; grid-template-columns: minmax(0,1fr) 100px; gap: 8px; align-items: center; }
-.text-tools-window .text-toolbar-font .text-selection-number { padding: 0; }
+.text-tools-window .text-toolbar-font .text-selection-number { padding: 0; align-items: flex-end; }
 .text-tools-window .text-toolbar-font .text-selection-number input { width: 100%; }
-.text-tools-window .text-toolbar-font .text-selection-number label { min-width: 0; }
+.text-tools-window .text-toolbar-font .text-selection-number label, .text-format-field { display: flex; flex-direction: column; align-items: stretch; gap: 5px; min-width: 0; color: var(--tactile-muted); font: 11px/1.4 'Inscape Sora',sans-serif; }
+.text-tools-window .text-toolbar-font :is(select, input) { color: var(--tactile-ink); }
 .text-tools-window .text-toolbar-font .text-selection-number button { width: 22px; flex-basis: 22px; }
+.text-selection-font { display: flex; align-items: flex-end; gap: 4px; min-width: 0; }
+.text-selection-font label { flex: 1; }
+.text-tools-window .text-selection-font button { display: grid; place-items: center; width: 22px; flex: 0 0 22px; padding: 3px; }
+.text-tools-window .text-selection-font button svg { width: 12px; height: 12px; }
 .text-tools-window .text-block-row { grid-template-columns: minmax(0,1fr) 110px; align-items: center; }
 .text-tools-window .text-toolbar :is(button, select) { min-height: 32px; font-size: 11px; }
-.text-tools-window .text-toolbar-icons { display: grid; grid-template-columns: repeat(6,minmax(0,1fr)); gap: 3px; padding: 2px 0; }
+.text-tools-window .text-toolbar-icons { display: grid; grid-template-columns: repeat(6,minmax(0,1fr)); gap: 3px; padding: 8px 0; }
 .text-tools-window .text-toolbar-icons button { display: grid; place-items: center; padding: 5px; }
 .text-tools-window .text-selection-number { display: flex; align-items: center; gap: 4px; padding: 3px 0; }
 .text-tools-window .text-selection-number label { flex: 1; display: flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 0; font: 12px/1.4 'Inscape IBM Plex Sans Condensed', sans-serif; }
 .text-tools-window .text-selection-number input { width: 100px; font: 12px 'Inscape Sora',sans-serif; }
 .text-tools-window .text-selection-number button { display: grid; place-items: center; width: 26px; flex: 0 0 26px; padding: 3px; }
 .text-tools-window .text-selection-number button svg { width: 12px; height: 12px; }
-.text-inspector-section, .text-inspector-advanced, .text-writing-tools { border-top: 1px solid var(--workflow-border); }
+.text-inspector-section, .text-inspector-advanced { border-top: 1px solid var(--workflow-border); }
 .text-tools-window summary { cursor: pointer; padding: 9px 0; font-size: 12px; }
 .text-formatting-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-.text-formatting-heading strong { font-weight: 500; }
-.text-tools-window .text-toolbar .text-inspector-context { margin: -4px 0 0; }
 .text-tools-window .text-inspector-section > .text-settings { padding-top: 0; }
-.text-tools-window .text-inspector-section > .text-inspector-context { margin-block: 0 8px; }
 .text-tools-window .text-inspector-section > .text-settings > .text-style-controls { margin-top: 2px; }
-.text-inspector-advanced[open], .text-writing-tools[open] { padding-bottom: 8px; }
+.text-inspector-advanced[open] { padding-bottom: 8px; }
 .text-writing-tools > .text-article-outline { border-top: 0; }
 .text-tools-window .text-selection-colour { display: flex; gap: 5px; align-items: center; padding: 0; }
 .text-tools-window .text-selection-colour label { flex: 1; display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 11px; }
@@ -80,13 +102,13 @@
 .text-tools-window .text-inline-form :is(p, button:last-child) { grid-column: 1/-1; }
 .text-tools-window .text-inline-form input { width: 100%; }
 .text-tools-window .text-paragraph-line p { font-size: 11px; }
-.text-tools-footer { position: sticky; bottom: -10px; padding: 8px 0; border-top: 1px solid var(--workflow-border); background: var(--tactile-surface); color: var(--workflow-muted); font: 12px/1.4 'Inscape IBM Plex Sans Condensed',sans-serif; overflow-wrap: anywhere; }
+.text-tools-footer { position: sticky; bottom: -12px; flex-shrink: 0; padding: 8px 0; border-top: 1px solid var(--workflow-border); background: var(--tactile-surface); color: var(--workflow-muted); font: 12px/1.4 'Inscape IBM Plex Sans Condensed',sans-serif; overflow-wrap: anywhere; }
 .text-tools-footer p { margin: 0; }
 .text-tools-footer [role=alert] { display: flex; flex-wrap: wrap; gap: 6px; }
 .text-tools-footer .text-status { position: static; border: 0; padding: 0; }
 .text-tools-window .text-tools-footer button { min-height: 30px; font: inherit; }
 @media (pointer: coarse) {
-  .text-tools-window :is(button, summary) { min-height: 44px; }
+  .text-tools-content :is(button, summary) { min-height: 44px; }
   .text-tools-window .text-tools-footer button { min-height: 44px; }
   .text-tools-window :is(input:not([type=checkbox]), select) { min-height: 40px; font-size: 16px; }
   .text-tools-window .text-toolbar-icons { grid-template-columns: repeat(5,minmax(0,1fr)); }

@@ -12,10 +12,12 @@ const camera = page => page.locator('main.system-workflow').first().evaluate(hos
 }));
 const choose = async (page, ids) => {
   await page.locator('main.system-workflow').first().focus(); await page.keyboard.press('Escape');
-  for (const id of ids) await page.locator(`[data-workbench-view-id="${id}"]`).evaluate(node => {
-    const target = node.matches('[data-workbench-selectable]') ? node : node.querySelector('[data-workbench-selectable]');
-    target.focus({ preventScroll: true }); target.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', shiftKey: true, bubbles: true, cancelable: true }));
-  });
+  for (const id of ids) {
+    const node = page.locator(`[data-workbench-view-id="${id}"]`);
+    const target = await node.getAttribute('data-workbench-selectable') !== null ? node : node.locator('[data-workbench-selectable]').first();
+    await target.focus(); await settle(page);
+    await target.press('Shift+Enter'); await settle(page);
+  }
   await settle(page);
 };
 const withoutGroups = value => { const { workbenchGroups, ...other } = value; return other; };

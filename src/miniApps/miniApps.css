@@ -33,15 +33,17 @@
 .mini-app-workbench .mini-app-artwork-window::after,
 .mini-app-workbench .mini-app-artwork-window > .system-workflow__instrument-content::before { display: none; }
 .mini-app-workbench .mini-app-artwork-window > .system-workflow__instrument-content {
-  width: 100%; margin: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none;
+  position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none;
 }
-.mini-app-artwork-window > header { opacity: 0; }
+.mini-app-artwork-window > header { position: relative; z-index: 1; opacity: 0; }
 .mini-app-artwork-window:is(:hover, :focus-within) > header { opacity: 1; background: var(--workflow-panel); border-radius: var(--workflow-board-radius); }
 .mini-app-artwork-window [role="separator"] { opacity: 0; }
 .mini-app-artwork-window:is(:hover, :focus-within) [role="separator"] { opacity: 1; }
 .html-artwork-viewport { position: relative; display: flex; flex: 1; min-height: 0; width: 100%; background: transparent; }
 /* Match the neutral embedded document; inheriting the host theme can force an opaque browser canvas. */
-.html-artwork-frame { display: block; border: 0; width: 100%; height: 100%; background: transparent; color-scheme: normal; }
+/* Keep the embedded document in authored units. Camera zoom projects its pixels
+   without resizing/reflowing the artwork's internal viewport. */
+.html-artwork-frame { position: absolute; left: 0; top: 0; display: block; border: 0; width: 100%; height: 100%; transform-origin: 0 0; transform: scale(var(--workbench-content-scale, 1)); background: transparent; color-scheme: normal; }
 .html-artwork-status { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); max-width: 100%; padding: 10px; border-radius: 8px; background: var(--workflow-panel); }
 .html-artwork-status button { margin-left: 8px; padding: 6px 12px; }
 @media (hover: none) {

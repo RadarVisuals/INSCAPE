@@ -18,8 +18,14 @@ for (const visitor of [false, true]) for (const width of [1440, 390]) {
       await mountGridMotionFixture(page, { origin, visitor, count: 2, textModes: true, displayWidth: 320 });
       await page.locator('[data-workbench-view-id="image:motion-0"] [data-media-state="ready"]').waitFor();
       await page.evaluate(() => document.fonts.ready);
+      const sidebar = page.getByRole('button', { name: 'Collapse sidebar', exact: true });
+      if (await sidebar.count()) await sidebar.click();
+      await settled(page);
       const host = page.locator('main.system-workflow').first();
       for (let i = 0; i < 3; i++) await host.dispatchEvent('wheel', { ctrlKey: true, deltaY: 120, clientX: 0, clientY: 0 });
+      // Zooming at the origin puts this disposable module behind the owner's
+      // collapsed sidebar. Pan it into view before measuring the focus journey.
+      if (!visitor && width === 1440) await host.dispatchEvent('wheel', { deltaX: -192, deltaY: 0 });
       await settled(page);
       const saved = await page.evaluate(() => localStorage.getItem(window.__motionKey));
       const first = page.locator('[data-workbench-view-id="image:motion-0"]');

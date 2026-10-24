@@ -2,16 +2,17 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { chromium } from 'playwright-core';
 import { openDisplayTool } from './fixtures/display-controls.mjs';
-import { routeOpaqueWorkflowArtwork } from './fixtures/legacy-workflow-artwork.mjs';
+import { routeOfflineWorkflowReview } from './fixtures/legacy-workflow-artwork.mjs';
 
 const EDGE = 'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe';
 const URL = process.env.INSCAPE_SYSTEM_WORKFLOW_URL || 'http://127.0.0.1:5173/development/owner/system-workflow';
+const prepare = page => routeOfflineWorkflowReview(page, new globalThis.URL(URL).origin);
 
 test('panel controller phases, dismisses and restores exact trigger focus', { timeout: 60_000 }, async () => {
   const browser = await chromium.launch({ executablePath: EDGE, headless: true });
   try {
     const page = await browser.newPage({ viewport: { width: 1440, height: 900 }, reducedMotion: 'no-preference' });
-    await routeOpaqueWorkflowArtwork(page);
+    await prepare(page);
     await page.goto(URL, { waitUntil: 'networkidle' });
     await page.getByRole('button', { name: /Select ABYSSAL STUDY/ }).click();
     const gridsTrigger = page.getByRole('button', { name: /^Grids$/i });
@@ -94,7 +95,7 @@ test('reduced motion keeps lifecycle semantics without transition delay', { time
   const browser = await chromium.launch({ executablePath: EDGE, headless: true });
   try {
     const page = await browser.newPage({ viewport: { width: 390, height: 720 }, reducedMotion: 'reduce' });
-    await routeOpaqueWorkflowArtwork(page);
+    await prepare(page);
     await page.goto(URL, { waitUntil: 'networkidle' });
     const trigger = page.getByRole('button', { name: /^Grids$/i });
     await trigger.click();
@@ -111,7 +112,7 @@ test('normal motion preserves Profile, Activity, and contained inspection source
   const browser = await chromium.launch({ executablePath: EDGE, headless: true });
   try {
     const page = await browser.newPage({ viewport: { width: 1440, height: 900 }, reducedMotion: 'no-preference' });
-    await routeOpaqueWorkflowArtwork(page);
+    await prepare(page);
     await page.goto(URL, { waitUntil: 'networkidle' });
 
     const profileTrigger = page.getByRole('button', { name: /^Profile$/i });
@@ -140,39 +141,49 @@ test('normal motion preserves Profile, Activity, and contained inspection source
 
     const placementTrigger = page.getByRole('button', { name: /Select ABYSSAL STUDY/ });
     const placement = page.locator('.system-workflow__placement').first();
+    const camera = await page.locator('main.system-workflow').evaluate(node => [node.dataset.workbenchCameraX, node.dataset.workbenchCameraY, node.dataset.workbenchCameraScale]);
+    await page.evaluate(() => {
+      window.__inspectionWrites = 0;
+      addEventListener('inscape:review-storage-write', event => { if (event.detail.key.startsWith('inscape.system-workflow-draft.')) window.__inspectionWrites++; });
+    });
     await placementTrigger.click();
-    await placementTrigger.dblclick();
+    await placement.evaluate(node => { window.__inspectionSource = node; });
+    assert.equal(await placementTrigger.evaluate(node => node === document.activeElement), true, 'click transfers keyboard focus from the sidebar to artwork');
+    assert.equal(await placementTrigger.evaluate(node => getComputedStyle(node).outlineStyle), 'none', 'pointer focus adds no keyboard outline');
+    await page.keyboard.press('i');
     const viewer = page.getByRole('group', { name: 'Artwork inspection', exact: true });
     await viewer.waitFor();
     assert.equal(await placement.getAttribute('data-inspection-context'), 'selected');
     await page.getByRole('button', { name: 'Close artwork viewer' }).click();
     await viewer.waitFor({ state: 'detached' });
+    assert.equal(await placement.evaluate(node => node === window.__inspectionSource), true, 'inspection retains the source node');
     assert.equal(await placement.getAttribute('data-inspection-context'), null);
     assert.equal(await placementTrigger.evaluate((node) => node === document.activeElement), true);
+    assert.deepEqual(await page.locator('main.system-workflow').evaluate(node => [node.dataset.workbenchCameraX, node.dataset.workbenchCameraY, node.dataset.workbenchCameraScale]), camera);
+    assert.equal(await page.evaluate(() => window.__inspectionWrites), 0, 'inspection does not write authored content');
 
   } finally {
     await browser.close();
   }
 });
 
-test('Layers remains mounted while artwork inspection is open', { timeout: 60_000 }, async () => {
+test('Display Layers suspends authoring during inspection and restores its arrangement', { timeout: 60_000 }, async () => {
   const browser = await chromium.launch({ executablePath: EDGE, headless: true });
   try {
     const page = await browser.newPage({ viewport: { width: 1440, height: 900 }, reducedMotion: 'no-preference' });
-    await routeOpaqueWorkflowArtwork(page);
+    await prepare(page);
     await page.goto(URL, { waitUntil: 'networkidle' });
     const placement = page.locator('.system-workflow__placement').first();
     await placement.click();
     await openDisplayTool(page, page.locator('.system-workflow__presentation-board'), 'LAYERS');
-    const inspector = page.getByRole('region', { name: 'Selection and layers inspector' });
+    const inspector = page.getByRole('region', { name: 'Layers inspector', exact: true });
     await inspector.waitFor();
     const window = page.locator('[data-shared-tool="layers"]').locator('xpath=ancestor::aside');
     const before = await window.boundingBox();
     const rows = await inspector.locator('.system-workflow__layer-row').allTextContents();
-    await placement.dblclick();
+    await placement.focus(); await page.keyboard.press('i');
     await page.getByRole('group', { name: 'Artwork inspection', exact: true }).waitFor();
-    assert.equal(await window.isVisible(), true, 'the shared Layers window remains open during inspection');
-    assert.deepEqual(await window.boundingBox(), before, 'inspection does not move or resize Layers');
+    assert.equal(await window.isVisible(), false, 'Display authoring tools yield to artwork inspection');
     assert.equal(await inspector.count(), 0, 'inspection suspends authoring controls');
     await page.getByRole('button', { name: 'Close artwork viewer' }).click();
     await page.getByRole('group', { name: 'Artwork inspection', exact: true }).waitFor({ state: 'detached' });

@@ -13,6 +13,7 @@ import {
   resizePresentationBoardFromCorner,
   resizePresentationBoardView,
   setPresentationBoardScale,
+  setContinuousPresentationBoardScale,
 } from './presentationBoardGeometry.js';
 
 test('custom canvases fit both viewports and explicit dimension changes retain unit scale below the resize minimum', () => {
@@ -108,6 +109,31 @@ test('viewport bounds derive the maximum and scale only Stage geometry while str
   assert.ok(maximum.frame.board.top >= options.inset);
   assert.ok(maximum.frame.board.left + maximum.frame.board.width <= viewport.width - options.inset);
   assert.ok(maximum.frame.board.top + maximum.frame.board.height <= viewport.height - options.inset);
+});
+
+test('an explicit authored window width survives narrow remeasurement and return', () => {
+  const geometry = Object.freeze({ columns: 32, rows: 18 });
+  const options = { inset: 24, identityStripHeight: 0 };
+  const wide = { width: 1440, height: 1000 };
+  const initial = projectPresentationBoardView(geometry, wide, 1, options);
+  const authored = resizePresentationBoardView(initial, wide, { ...options, width: 997.6398056944446 });
+  const narrow = resizePresentationBoardView(authored, { width: 390, height: 844 }, { ...options, width: authored.frame.stage.width });
+  const returned = resizePresentationBoardView(narrow, wide, { ...options, width: narrow.frame.stage.width });
+  for (const view of [narrow, returned]) {
+    assert.equal(view.frame.stage.width, authored.frame.stage.width);
+    assert.equal(view.frame.stage.height, authored.frame.stage.height);
+    assert.equal(view.documentGeometry, geometry);
+  }
+});
+
+test('authored native and group resize advance continuously above the viewport fit', () => {
+  const viewport = { width: 390, height: 844 }, options = { inset: 8, identityStripHeight: 0 };
+  const view = resizePresentationBoardView(projectPresentationBoardView({ columns: 32, rows: 18 }, viewport, 1, options), viewport, { ...options, width: 960 });
+  const limits = { minimumWidth: .01, minimumHeight: .01, maximumWidth: 16384, maximumHeight: 16384 };
+  const native = resizePresentationBoardFromCorner(view, { ...view.frame.board, left: 10, top: 10 }, 'se', { x: 1, y: 0 }, 0, null, null, limits);
+  assert.ok(native.view.frame.stage.width > 960 && native.view.frame.stage.width < 961, 'a one-pixel corner movement must not snap the window to screen fit');
+  const group = setContinuousPresentationBoardScale(view, 961 / view.fit.stage.width, limits);
+  assert.ok(Math.abs(group.frame.stage.width - 961) < 1e-9, 'the group adapter accepts the same authored width');
 });
 
 test('resize recomputes the safe maximum, clamps only when needed, and never mutates document geometry', () => {

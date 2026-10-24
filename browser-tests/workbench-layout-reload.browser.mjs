@@ -1,11 +1,19 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { chromium } from 'playwright-core';
-import { mkdir } from 'node:fs/promises';
+import { mkdir, writeFile } from 'node:fs/promises';
 import { setWorkbenchZoom } from './fixtures/workbench-zoom.mjs';
 import { resetCameraTestView } from './fixtures/workbench-camera-test.mjs';
 
 const origin = process.env.INSCAPE_IMAGE_ROOT || 'http://127.0.0.1:5197';
+// Window chrome may cover part of a large selection; start on an exposed surface.
+const dragPoint = target => target.evaluate(node => {
+  const box = node.getBoundingClientRect();
+  for (let y = Math.max(12, box.top + 15); y < Math.min(innerHeight - 12, box.bottom - 12); y += 24)
+    for (let x = Math.max(12, box.left + 15); x < Math.min(innerWidth - 12, box.right - 12); x += 24)
+      if (node.contains(document.elementFromPoint(x, y))) return { x, y };
+  throw Error('No exposed drag surface');
+});
 const settle = page => page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
 async function mount(page, visitor = false) {
   await page.evaluate(async visitor => {
@@ -49,7 +57,7 @@ async function mount(page, visitor = false) {
     const props = visitor ? { document:(await import('/src/profileDocument/domain/profileDocumentV9Builder.js')).buildProfileDocumentV9({
       profileAddress, systemWorkflowDraft:store.getDraft(), assetRecords:assets,
     }) } : {
-      profileAddress, reviewStorage:storage, reviewAssets:assets, reviewCategories:[], reviewActivity:[], reviewDiscovery:[], reviewProfile:{ name:'Layout reload' },
+      profileAddress, reviewStorage:storage, reviewAssets:assets, reviewCategories:[], reviewActivity:[], reviewProfile:{ name:'Layout reload' },
     };
     createRoot(document.getElementById('root')).render(React.createElement(Component, props));
   }, visitor);
@@ -75,17 +83,26 @@ test('owner module placement survives real reload after individual, zoomed and g
       .filter(node => node.matches('.image-module__window,.text-window,.system-workflow__presentation-board'))
       .map(node => [node.dataset.workbenchViewId, node.getBoundingClientRect().toJSON()])));
     const drag = async (target, dx, dy) => {
-      await target.focus(); const b = await target.boundingBox();
-      await page.keyboard.down('Alt'); await page.mouse.move(b.x+15,b.y+b.height/2); await page.mouse.down();
-      await page.mouse.move(b.x+15+dx,b.y+b.height/2+dy,{ steps:6 }); await page.mouse.up(); await page.keyboard.up('Alt'); await settle(page);
+      await target.focus(); const start = await dragPoint(target);
+      await page.keyboard.down('Alt'); await page.mouse.move(start.x,start.y); await page.mouse.down();
+      await page.mouse.move(start.x+dx,start.y+dy,{ steps:6 }); await page.mouse.up(); await page.keyboard.up('Alt'); await settle(page);
     };
     const reload = async () => { await page.reload(); await mount(page); };
     await drag(image(0), 51, -70);
     await drag(image(1), 78, 64);
     const single = await geometry();
     await reload(); assert.deepEqual(await geometry(), single, 'individually moved modules restore their arrangement');
-    for (const index of [0,1]) { await image(index).focus(); await page.keyboard.press('Shift+Enter'); }
+    await image(0).focus(); await page.keyboard.press('Shift+Enter');
+    await image(1).focus();
+    assert.equal(await page.getByRole('group', { name:'1 selected Workbench modules', exact:true }).count(), 1,
+      'visiting the next candidate preserves the explicit selection');
+    await page.keyboard.press('Shift+Enter');
     const selection = page.getByRole('group', { name:'2 selected Workbench modules', exact:true });
+    await selection.waitFor();
+    await image(1).focus(); await page.keyboard.press('Shift+Enter');
+    assert.equal(await page.getByRole('group', { name:'1 selected Workbench modules', exact:true }).count(), 1,
+      'Shift+Enter removes an existing member');
+    await page.keyboard.press('Shift+Enter'); await selection.waitFor();
     await drag(selection, -40, -130);
     const group = await geometry();
     assert.notDeepEqual(group, single);
@@ -117,9 +134,9 @@ test('owner module placement survives real reload after individual, zoomed and g
     }
     await page.waitForFunction(() => readLayout()?.layout.display.window.left === 410);
     const savedBeforeCancel = await page.evaluate(() => readLayout());
-    const handle = await mixed.boundingBox();
-    await page.mouse.move(handle.x+15,handle.y+handle.height/2); await page.mouse.down();
-    await page.mouse.move(handle.x+72,handle.y+handle.height/2+51,{ steps:6 }); await settle(page);
+    const handle = await dragPoint(mixed);
+    await page.mouse.move(handle.x,handle.y); await page.mouse.down();
+    await page.mouse.move(handle.x+57,handle.y+51,{ steps:6 }); await settle(page);
     assert.notDeepEqual(await geometry(), keyboard, 'mixed selection moves during preview');
     await page.waitForTimeout(180);
     assert.deepEqual(await page.evaluate(() => readLayout()), savedBeforeCancel, 'an unfinished group move is not saved');
@@ -173,5 +190,47 @@ test('Visitor group movement remains temporary and reload restores the published
     assert.deepEqual(await page.evaluate(() => ({ ...localStorage })), stored, 'Visitor never writes the maker layout');
     await page.reload(); await mount(page, true);
     assert.deepEqual(await geometry(), before, 'Visitor reload restores the published positions');
+  } finally { await browser.close(); }
+});
+
+test('Display fitting follows the current viewport within one layout mode without resizing its saved window', { timeout: 30000 }, async () => {
+  const browser = await chromium.launch({ executablePath: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', headless: true });
+  const output = process.env.INSCAPE_BROWSER_OUTPUT || '.browser-test-runtime';
+  try {
+    await mkdir(output, { recursive: true });
+    const page = await browser.newPage({ viewport: { width: 640, height: 900 }, reducedMotion: 'reduce' });
+    await page.route('**/*', route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
+    await page.route('https://reload.test/art.jpg', route => route.fulfill({ contentType: 'image/jpeg', path: 'browser-tests/fixtures/grid-landscape.jpg' }));
+    await page.route(`${origin}/__layout_reload__`, route => route.fulfill({ contentType: 'text/html', body: '<div id="root"></div>' }));
+    await page.goto(`${origin}/__layout_reload__`); await mount(page);
+    const measurements = [];
+    const measure = async width => {
+      await page.setViewportSize({ width, height: 900 }); await settle(page);
+      const value = await page.evaluate(async () => {
+        const geometry = await import('/src/public/ownerSystemWorkflow/presentationBoardGeometry.js');
+        const board = document.querySelector('[data-display-instance="display:primary"] .system-workflow__presentation-board');
+        const host = board.closest('[data-presentation-workbench]');
+        const viewport = { width: host.clientWidth, height: host.clientHeight };
+        const inset = geometry.presentationBoardResponsiveMetrics(viewport.width).inset;
+        const documentGeometry = readDraft().geometry;
+        const expected = geometry.fitPresentationBoard(viewport, { inset, identityStripHeight: 0, sidecarWidth: 0,
+          aspectRatio: documentGeometry.columns / documentGeometry.rows });
+        const windowWidth = parseFloat(board.style.width) / Number(board.dataset.workbenchScale);
+        return { viewport, inset, windowWidth, actualFitWidth: windowWidth / Number(board.dataset.boardScale), expectedFitWidth: expected.stage.width };
+      });
+      measurements.push(value);
+      await writeFile(`${output}/display-responsive-fit.json`, JSON.stringify(measurements, null, 2));
+      assert.ok(Math.abs(value.actualFitWidth - value.expectedFitWidth) < .01,
+        `at ${width}px the current viewport must determine fitting: ${value.actualFitWidth} vs ${value.expectedFitWidth}`);
+      return value;
+    };
+    const initial = await measure(640);
+    const sameMode = await measure(720);
+    assert.ok(Math.abs(sameMode.windowWidth - initial.windowWidth) < .01, 'more space is not a request to resize the existing window');
+    const nextMode = await measure(800);
+    assert.ok(Math.abs(nextMode.windowWidth - initial.windowWidth) < .01);
+    await page.screenshot({ path: `${output}/display-responsive-fit-800.png` });
+    await measure(600);
+    await page.screenshot({ path: `${output}/display-responsive-fit-600.png` });
   } finally { await browser.close(); }
 });

@@ -16,6 +16,8 @@ test('Library workspace exposes accepted views, stable filters and one-commit pl
     await page.goto(`${ROOT}/development/owner/system-workflow`, { waitUntil: 'networkidle' });
     await page.evaluate(() => { window.__workflowWrites = 0; addEventListener('inscape:review-storage-write', event => { if (event.detail.key.startsWith('inscape.system-workflow-draft.')) window.__workflowWrites += 1; }); });
     const compositionBefore = await page.locator('.system-workflow__presentation-board').boundingBox();
+    // Exercise Library's own tree; the expanded desktop sidebar otherwise hosts it.
+    await page.getByRole('button', { name: 'Collapse sidebar', exact: true }).click();
     const trigger = page.getByRole('button', { name: 'Library', exact: true });
     await trigger.click();
     const workspace = page.getByRole('region', { name: 'Library workspace' });
@@ -23,7 +25,8 @@ test('Library workspace exposes accepted views, stable filters and one-commit pl
     await page.waitForFunction(() => document.querySelector('[aria-label="Library workspace"]')?.closest('[data-system-workflow-panel]')?.dataset.panelPhase === 'open');
     await page.waitForFunction(() => document.querySelectorAll('.system-workflow__library .lattice-browser-asset').length === 7);
     const bounds = await workspace.boundingBox();
-    assert.equal(bounds.x, 0, 'Library is anchored to the left Workbench edge');
+    const sidebarBounds = await page.getByRole('complementary', { name: 'Workspace sidebar' }).boundingBox();
+    assert.ok(bounds.x >= sidebarBounds.x + sidebarBounds.width, 'Library leaves the workspace sidebar reachable');
     assert.ok(bounds.y >= 0 && bounds.width > 0 && bounds.width < 1440 && bounds.y + bounds.height <= 900,
       'Library is a bounded overlay with Workbench space remaining visible');
     assert.deepEqual(await page.locator('.system-workflow__presentation-board').boundingBox(), compositionBefore,
@@ -93,7 +96,7 @@ test('Library workspace exposes accepted views, stable filters and one-commit pl
     await workspace.getByRole('button', { name: 'Travel signals', exact: true }).click();
     assert.deepEqual(await workspace.getByRole('button', { name: 'Travel signals', exact: true }).evaluate((node) => {
       const marker = getComputedStyle(node.parentElement, '::before'); return [marker.left, marker.width, marker.backgroundColor];
-    }), ['0px', '4px', 'rgb(17, 19, 19)'], 'created Library categories use the shared four-pixel selection marker');
+    }), ['0px', '4px', await workspace.evaluate(node => getComputedStyle(node).color)], 'created Library categories use the active surface ink and shared four-pixel selection marker');
     await workspace.getByRole('button', { name: 'Travel signals', exact: true }).click({ button: 'right' });
     const categoryMenu = page.getByRole('menu', { name: 'Category commands' });
     assert.deepEqual(await categoryMenu.getByRole('menuitem').allTextContents(), ['Rename', 'Move / Outside sections', 'Delete'], 'Library category context exposes the canonical section move without obsolete publication visibility');
@@ -210,10 +213,10 @@ test('Library workspace exposes accepted views, stable filters and one-commit pl
     assert.equal(await workspace.locator('.system-workflow__workspace-rail-controls').evaluate((rail) => {
       const children = [...rail.children].map((node) => node.getBoundingClientRect());
       const railBox = rail.getBoundingClientRect();
-      return children.slice(1, 5).every((box) => box.top < children[0].top)
-        && Math.abs(children[5].right - railBox.right) < 1
-        && getComputedStyle(rail.children[5]).borderRightWidth === '0px';
-    }), true, 'narrow Library puts controls above search and closes flush against one outer edge');
+      return children.every(box => box.width > 0 && box.height > 0
+        && box.left >= railBox.left && box.right <= railBox.right
+        && box.top >= railBox.top && box.bottom <= railBox.bottom);
+    }), true, 'narrow Library keeps search, filters, labels, size and close inside its control area');
     if (SCREENSHOT_DIR) await page.screenshot({ path: resolve(SCREENSHOT_DIR, 'review-library-390x720.png') });
 
     await page.setViewportSize({ width: 1440, height: 900 });

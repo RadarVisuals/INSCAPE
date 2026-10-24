@@ -63,6 +63,11 @@ test('whole Display inspection retains live content and authored layout in owner
         await placement.focus(); await page.keyboard.press('Space'); await page.keyboard.press('ArrowRight');
         await page.waitForTimeout(100);
       }
+      if (!visitor) {
+        // Keep the existing floating tool dock clear of the Lift return button.
+        const closeTool = page.locator('.workbench-tool-dock').getByRole('button', { name: /^Close / });
+        while (await closeTool.count()) await closeTool.first().click();
+      }
       const before = await state(page);
       await open(page); await ready(page);
       const during = await state(page);
@@ -97,6 +102,14 @@ test('whole Display inspection retains live content and authored layout in owner
       const activeGrid = () => board.locator('[data-rendered-grid-id]:not([aria-hidden="true"])').getAttribute('data-rendered-grid-id');
       const initialGrid = await activeGrid();
       const stage = await board.boundingBox();
+      assert.ok(await board.locator('[data-presentation-stage]').evaluate((node, stage) =>
+        node.contains(document.elementFromPoint(stage.x + stage.width * .8, stage.y + stage.height * .65)), stage),
+      'the outer Stage remains reachable beyond the normal Workbench crop');
+      const restore = page.getByRole('button', { name: 'Restore Display', exact: true });
+      assert.ok(await restore.evaluate(node => {
+        const box = node.getBoundingClientRect();
+        return node.contains(document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2));
+      }), 'the Restore Display button remains reachable beyond the normal Workbench crop');
       await page.mouse.move(stage.x + stage.width * .8, stage.y + stage.height * .65);
       await page.mouse.down();
       assert.equal(await board.getAttribute('data-display-lift'), 'true', 'first pointer-down does not close the Display');
@@ -114,7 +127,7 @@ test('whole Display inspection retains live content and authored layout in owner
       const after = await state(page);
       assert.deepEqual(after, before, 'return restores exact frame, camera and saved state');
       assert.equal(await page.getByRole('button', { name: 'Enlarge Display', exact: true }).evaluate(node => document.activeElement === node), true, 'focus returns to trigger');
-      assert.equal(await page.getByRole('button', { name: 'Reset Workbench zoom to 100%' }).isEnabled(), true);
+      assert.equal(await page.getByRole('slider', { name: 'Workbench zoom', exact: true }).isEnabled(), true);
       // Interrupted opening, outside click, live viewport resize and reduced motion.
       await open(page); await close(page);
       assert.deepEqual(await state(page), before);

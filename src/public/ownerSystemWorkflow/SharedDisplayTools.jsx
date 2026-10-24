@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { createContext, useCallback, useContext, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
 import DisplayInstrumentWindow from './DisplayInstrumentWindow.jsx';
 import { defaultSharedTools } from './sharedDisplayToolsState.js';
@@ -30,10 +30,17 @@ export function SharedDisplayToolsLauncher({ menuSurface, readOnly = false, onOp
 }
 const Context = createContext(null);
 export const useSharedDisplayTools = () => useContext(Context);
-export function SharedDisplayToolsProvider({ children, value, onChange, targetId, onTargetChange }) {
+const noSubscription = () => () => {};
+const closedMetadata = () => false;
+export function SharedDisplayToolsProvider({ children, value, onChange, targetId, onTargetChange, metadataDock }) {
   const [local, setLocal] = useState(defaultSharedTools);
   const [localTarget, setLocalTarget] = useState('display:primary');
-  const state = value || local, setState = onChange || setLocal;
+  const metadataOpen = useSyncExternalStore(metadataDock?.subscribe || noSubscription, metadataDock?.infoVisible || closedMetadata);
+  // In the owner editor the dock owns Info visibility and geometry. Visitor
+  // hosts keep their existing independent window and the same module content.
+  const state = useMemo(() => metadataDock ? { ...(value || local), metadata: metadataOpen } : value || local,
+    [value, local, metadataDock, metadataOpen]);
+  const setState = onChange || setLocal;
   const target = targetId === undefined ? localTarget : targetId;
   const activate = onTargetChange || setLocalTarget;
   const triggers = useRef({});
@@ -50,16 +57,21 @@ export function SharedDisplayToolsProvider({ children, value, onChange, targetId
   const command = useCallback((id, open, trigger, target) => {
     if (trigger) triggers.current[id] = trigger;
     if (target) activate(target);
+    if (id === 'metadata' && metadataDock) {
+      metadataDock.change({ type: (open ?? !metadataOpen) ? 'open' : 'close', tab: 'Info' });
+      return;
+    }
     setState(current => ({ ...current, [id]: open === undefined ? !current[id] : open }));
-  }, [activate, setState]);
-  const context = useMemo(() => ({ state, setState, target, activate, hosts, registerHost, registerTool, getTool, isAvailable, command, triggers }),
-    [state, setState, target, activate, hosts, registerHost, registerTool, getTool, isAvailable, command]);
+  }, [activate, setState, metadataDock, metadataOpen]);
+  const context = useMemo(() => ({ state, setState, target, activate, hosts, registerHost, registerTool, getTool, isAvailable, command, triggers, dockedMetadata: Boolean(metadataDock) }),
+    [state, setState, target, activate, hosts, registerHost, registerTool, getTool, isAvailable, command, metadataDock]);
   return <Context.Provider value={context}>{children}</Context.Provider>;
 }
 function ToolWindow({ id, menuSurface, fallbackFocus }) {
   const tools = useSharedDisplayTools();
-  const host = useCallback(node => tools.registerHost(id, node), [id, tools.registerHost]);
-  const layout = useCallback(value => tools.setState(current => JSON.stringify(current.windows[id]) === JSON.stringify(value) ? current : { ...current, windows: { ...current.windows, [id]: value } }), [id, tools.setState]);
+  const { registerHost, setState } = tools;
+  const host = useCallback(node => registerHost(id, node), [id, registerHost]);
+  const layout = useCallback(value => setState(current => JSON.stringify(current.windows[id]) === JSON.stringify(value) ? current : { ...current, windows: { ...current.windows, [id]: value } }), [id, setState]);
   return <DisplayInstrumentWindow instrument={id} menuSurface={menuSurface} layout={tools.state.windows[id]} onLayoutChange={layout}
     title={tools.getTool(id)?.label}
     onClose={() => {
@@ -78,7 +90,17 @@ function ToolWindow({ id, menuSurface, fallbackFocus }) {
 }
 export function SharedDisplayToolWindows({ menuSurface, readOnly = false, hidden = false, fallbackFocus }) {
   const tools = useSharedDisplayTools();
-  return <div hidden={hidden} data-shared-display-tools>{['layers', 'metadata', 'appearance'].filter(id => tools.state[id] && tools.isAvailable(id) && (!readOnly || id === 'metadata')).map(id => <ToolWindow key={id} id={id} menuSurface={menuSurface} fallbackFocus={fallbackFocus} />)}</div>;
+  return <div hidden={hidden} data-shared-display-tools>{['layers', 'metadata', 'appearance'].filter(id => !(id === 'metadata' && tools.dockedMetadata) && tools.state[id] && tools.isAvailable(id) && (!readOnly || id === 'metadata')).map(id => <ToolWindow key={id} id={id} menuSurface={menuSurface} fallbackFocus={fallbackFocus} />)}</div>;
+}
+export function MetadataDockContent() {
+  const tools = useSharedDisplayTools();
+  const { registerHost } = tools;
+  const host = useCallback(node => registerHost('metadata', node), [registerHost]);
+  const available = tools.isAvailable('metadata');
+  return <div className="workbench-tools-body">
+    {!available && <p className="workbench-tools-empty">Select one artwork with source information.</p>}
+    <div ref={host} data-shared-tool="metadata" hidden={!available} />
+  </div>;
 }
 export function SharedDisplayToolContent({ id, targetId, label, children, available = true }) {
   const tools = useSharedDisplayTools();

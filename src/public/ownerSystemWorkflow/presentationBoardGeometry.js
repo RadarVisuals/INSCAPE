@@ -91,8 +91,7 @@ export function clampPresentationBoardScale(scale, maximumScale = 1, fallbackSca
   ));
 }
 
-function clampContinuousPresentationBoardScale(scale, maximumScale = 1, fallbackScale = 1) {
-  const minimumScale = percentageScale(PRESENTATION_BOARD_MINIMUM_PERCENTAGE);
+function clampContinuousPresentationBoardScale(scale, maximumScale = 1, fallbackScale = 1, minimumScale = percentageScale(PRESENTATION_BOARD_MINIMUM_PERCENTAGE)) {
   const numericMaximum = Number(maximumScale);
   const safeMaximum = Number.isFinite(numericMaximum) ? Math.max(minimumScale, numericMaximum) : 1;
   const numericFallback = Number(fallbackScale);
@@ -131,9 +130,10 @@ export function resizePresentationBoardView(view, viewport, options = {}) {
   const fit = fitPresentationBoard(viewport, { ...options, aspectRatio: view.documentGeometry?.columns / view.documentGeometry?.rows || options.aspectRatio });
   if (!fit) return null;
   const maximumPercentage = maximumPresentationBoardPercentage(fit, viewport, options);
-  // Available desktop space is not a request to resize the user's window.
-  // Retain its pixel width, constrained only by the new available bounds.
-  const safeScale = Math.min((options.width ?? view.frame.stage.width) / fit.stage.width, percentageScale(maximumPercentage));
+  // An explicit window width is authored geometry, independent of the screen.
+  // Callers fitting an unpositioned view may still constrain it to the viewport.
+  const requestedScale = (options.width ?? view.frame.stage.width) / fit.stage.width;
+  const safeScale = options.width == null ? Math.min(requestedScale, percentageScale(maximumPercentage)) : requestedScale;
   return Object.freeze({
     documentGeometry: view.documentGeometry,
     fit,
@@ -154,9 +154,15 @@ export function setPresentationBoardScale(view, scale) {
   return Object.freeze({ ...view, frame: projectScaledPresentationBoard(view.fit, viewport, safeScale), scale: safeScale });
 }
 
-export function setContinuousPresentationBoardScale(view, scale) {
+export function setContinuousPresentationBoardScale(view, scale, limits) {
+  // Authored windows use document limits. A fitted, unpositioned presentation
+  // can retain its viewport percentage limits without controlling authoring.
+  const maximum = limits ? Math.min(limits.maximumWidth / view.fit.stage.width,
+    (limits.maximumHeight - view.fit.identityStripHeight) / view.fit.stage.height) : percentageScale(view.maximumPercentage);
+  const minimum = limits ? Math.max(limits.minimumWidth / view.fit.stage.width,
+    (limits.minimumHeight - view.fit.identityStripHeight) / view.fit.stage.height) : percentageScale(PRESENTATION_BOARD_MINIMUM_PERCENTAGE);
   const safeScale = clampContinuousPresentationBoardScale(
-    scale, percentageScale(view.maximumPercentage), view.scale,
+    scale, maximum, view.scale, minimum,
   );
   if (safeScale === view.scale) return view;
   const viewport = {
@@ -166,7 +172,7 @@ export function setContinuousPresentationBoardScale(view, scale) {
   return Object.freeze({ ...view, frame: projectScaledPresentationBoard(view.fit, viewport, safeScale), scale: safeScale });
 }
 
-export function resizePresentationBoardFromCorner(view, frame, corner, movement, gridStep = 0, snapEdge = null, bounds = null) {
+export function resizePresentationBoardFromCorner(view, frame, corner, movement, gridStep = 0, snapEdge = null, bounds = null, limits) {
   if (!view || !frame || !['ne', 'nw', 'se', 'sw'].includes(corner)) return null;
   const deltaX = Number(movement?.x) || 0;
   const deltaY = Number(movement?.y) || 0;
@@ -206,7 +212,7 @@ export function resizePresentationBoardFromCorner(view, frame, corner, movement,
     boundedWidth = Math.max(1, Math.min(availableWidth, (availableHeight - chromeHeight) / inverseAspect));
     requestedWidth = Math.min(requestedWidth, boundedWidth);
   }
-  let nextView = setContinuousPresentationBoardScale(view, requestedWidth / view.fit.stage.width);
+  let nextView = setContinuousPresentationBoardScale(view, requestedWidth / view.fit.stage.width, limits);
   // Screen limits win over the preferred minimum size near an anchored edge.
   if (nextView.frame.board.width > boundedWidth) {
     const scale = boundedWidth / view.fit.stage.width;

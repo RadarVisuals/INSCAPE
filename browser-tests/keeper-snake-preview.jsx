@@ -103,7 +103,7 @@ async function inputChecks(event) {
 
 createRoot(document.getElementById('root')).render(<>
   <Runtime profileAddress={profile} reviewStorage={storage} reviewAssets={[]} reviewCategories={[]}
-    reviewActivity={[]} reviewDiscovery={[]} reviewProfile={{ name: 'Snake preview' }} />
+    reviewActivity={[]} reviewProfile={{ name: 'Snake preview' }} />
   <aside style={{ position: 'fixed', left: 20, right: 20, maxWidth: 560, boxSizing: 'border-box', top: 12, zIndex: 60, color: 'var(--workflow-ink, #ddd)',
     font: '12px/1.6 "Inscape Sora", sans-serif', background: 'var(--workflow-panel, #222)', padding: 8 }}>
     Snake preview · separate temporary Workbench · {variant === 'big' ? '18 broad segments' : '38 fine ribs'}<br />

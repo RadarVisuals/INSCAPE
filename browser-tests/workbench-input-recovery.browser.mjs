@@ -4,15 +4,35 @@ import test from 'node:test';
 import { chromium } from 'playwright-core';
 import { mountTextToolsFixture } from './fixtures/text-tools-fixture.mjs';
 import { resetCameraTestView } from './fixtures/workbench-camera-test.mjs';
+import { mkdir, writeFile } from 'node:fs/promises';
 
 const origin = process.env.INSCAPE_TEXT_ROOT || 'http://127.0.0.1:5198';
 const settle = page => page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
 const launch = () => chromium.launch({ executablePath: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', headless: true });
 const state = page => page.locator('main.system-workflow').evaluate(n => ({ x: n.style.getPropertyValue('--workbench-pan-x'), y: n.style.getPropertyValue('--workbench-pan-y'),
-  zoom: n.querySelector('.workbench-view-controls button[aria-label="Reset Workbench zoom to 100%"]')?.textContent }));
+  zoom: n.querySelector('.navigator-zoom output')?.textContent }));
 
 async function prepareNavigation(page) {
   await resetCameraTestView(page, false);
+}
+async function exposedMainPoint(page, name) {
+  const evidence = await page.evaluate(() => {
+    const describe = node => ({ tag: node?.tagName, className: node?.className, label: node?.getAttribute('aria-label') });
+    const legacyHit = describe(document.elementFromPoint(1360, 850));
+    for (let y = 850; y >= 250; y -= 30) for (let x = 1360; x >= 300; x -= 30) {
+      let clear = true;
+      for (let dy = 0; dy <= 100; dy += 10) for (let dx = 0; dx <= 150; dx += 10) {
+        if (!document.elementFromPoint(x - dx, y - dy)?.matches('main.system-workflow')) clear = false;
+      }
+      if (clear) return { legacyHit, point: { x, y }, hit: describe(document.elementFromPoint(x, y)),
+        navigator: document.querySelector('.workbench-navigator')?.getBoundingClientRect().toJSON() };
+    }
+    throw Error('No exposed main canvas with a clear selection and pan corridor');
+  });
+  const output = process.env.INSCAPE_BROWSER_OUTPUT || '.browser-test-runtime';
+  await mkdir(output, { recursive: true });
+  await writeFile(`${output}/input-recovery-${name}-hit.json`, JSON.stringify(evidence, null, 2));
+  return evidence.point;
 }
 
 test('Workbench pan and zoom recover from a missing selection release after editing Text', { timeout: 60000 }, async () => {
@@ -30,7 +50,7 @@ test('Workbench pan and zoom recover from a missing selection release after edit
     await page.getByRole('button', { name: 'Close Text tools', exact: true }).click();
     const saved = await page.evaluate(() => window.savedDraft());
     const host = page.locator('main.system-workflow');
-    const point = { x: 1360, y: 850 };
+    const point = await exposedMainPoint(page, 'missing-release');
     assert.ok(await page.evaluate(p => document.elementFromPoint(p.x, p.y).matches('main.system-workflow'), point));
     // Omit pointerup/cancel to model a release missed outside the browser.
     await host.dispatchEvent('pointerdown', { pointerId: 1, pointerType: 'mouse', button: 0, buttons: 1, clientX: point.x, clientY: point.y });
@@ -41,6 +61,7 @@ test('Workbench pan and zoom recover from a missing selection release after edit
     assert.notEqual((await state(page)).zoom, before.zoom, 'zoom works without Escape or reload');
     assert.deepEqual(await page.evaluate(() => window.savedDraft()), saved, 'recovery never rewrites article or layout');
     await resetCameraTestView(page, false);
+    assert.ok(await page.evaluate(p => document.elementFromPoint(p.x, p.y).matches('main.system-workflow'), point));
     await host.dispatchEvent('pointerdown', { pointerId: 1, pointerType: 'mouse', button: 0, buttons: 1, clientX: point.x, clientY: point.y });
     await host.focus(); await page.keyboard.down('Space');
     await page.mouse.move(point.x, point.y); await page.mouse.down();
@@ -58,17 +79,19 @@ test('selection captures its pointer, cancels on lost capture, and does not bloc
     await prepareNavigation(page);
     await page.getByRole('button', { name: 'Close Text tools', exact: true }).click();
     const host = page.locator('main.system-workflow');
-    await page.mouse.move(1360, 850); await page.mouse.down(); await page.mouse.move(1240, 780, { steps: 4 });
+    const point = await exposedMainPoint(page, 'lost-capture');
+    assert.ok(await page.evaluate(p => document.elementFromPoint(p.x, p.y).matches('main.system-workflow'), point));
+    await page.mouse.move(point.x, point.y); await page.mouse.down(); await page.mouse.move(point.x - 120, point.y - 70, { steps: 4 });
     assert.equal(await host.evaluate(n => n.hasPointerCapture(1)), true, 'selection owns capture across browser boundaries');
     const held = await state(page); await page.mouse.wheel(0, 100); await settle(page);
     assert.deepEqual(await state(page), held, 'wheel cannot pan during a held selection');
     assert.equal(await host.evaluate(n => n.hasPointerCapture(1)), true, 'a held pointer remains captured');
     await host.evaluate(n => n.releasePointerCapture(1));
-    await page.mouse.move(1220, 760); await settle(page);
+    await page.mouse.move(point.x - 140, point.y - 90); await settle(page);
     assert.equal(await page.locator('.workbench-marquee').count(), 0, 'lost capture cancels the transient selection');
     await page.mouse.up();
     const before = await state(page);
-    await page.mouse.move(1360, 850); await page.keyboard.down('Control'); await page.mouse.wheel(0, -120); await page.keyboard.up('Control'); await settle(page);
+    await page.mouse.move(point.x, point.y); await page.keyboard.down('Control'); await page.mouse.wheel(0, -120); await page.keyboard.up('Control'); await settle(page);
     assert.notEqual((await state(page)).zoom, before.zoom);
   } finally { await browser.close(); }
 });

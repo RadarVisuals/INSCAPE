@@ -3,7 +3,8 @@ import { validKeeperSwim } from './keeperSwim.js';
 
 export const MAX_KEEPER_DOCKS = 4;
 export const KEEPER_ID = /^keeper:[A-Za-z0-9_-]{1,80}$/u;
-export const KEEPER_DOCK_SIZE = { width: 72, height: 88 };
+// The compact Keeper surface in the design-system workspace.
+export const KEEPER_DOCK_SIZE = { width: 176, height: 188 };
 export const KEEPER_SIZE = Object.freeze({ min: 64, max: 384, default: 192, legacy: 128 });
 export const keeperSize = record => record.size ?? KEEPER_SIZE.legacy;
 // Omission is the original whole-image behavior; reading old drafts never rewrites them.
@@ -31,7 +32,6 @@ export function validKeeperDocks(items, published = false) {
   });
 }
 export const keeperReferenceCount = items => Array.isArray(items) ? items.filter(item => item?.asset).length : 0;
-export const createKeeperPresentation = (id, index = 0) => ({ id, position: { left: 24 + index * 88, top: 32 } });
 export const projectKeeperDocks = items => structuredClone(items.filter(item => item.visibility === 'PUBLIC').map(({ visibility, ...item }) => item));
 export const restoreKeeperDocks = (published = [], local = []) => structuredClone([
   ...published.map(item => ({ ...item, visibility: 'PUBLIC' })),

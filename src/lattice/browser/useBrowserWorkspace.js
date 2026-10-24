@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { defaultBrowserPreferences } from './browserPreferences.js';
 import {
   BROWSER_ASSET_SIZE,
-  BROWSER_SORTS,
   BROWSER_VIEW_KINDS,
   browserAssetId,
   browserViewAssets,
@@ -15,14 +15,17 @@ import useLatticeFloatingWindow from '../windows/useLatticeFloatingWindow.js';
 
 const clampSidebarWidth = (value) => Math.min(320, Math.max(48, Number(value) || 174));
 
-export default function useBrowserWorkspace(data, sharedPreviewRecords = null, initialPreferences = null) {
-  const [view, setView] = useState({ kind: BROWSER_VIEW_KINDS.ALL, id: null });
-  const [query, setQuery] = useState('');
-  const [collection, setCollection] = useState('all');
-  const [sort, setSort] = useState(BROWSER_SORTS.TITLE_ASC);
-  const [assetSize, setAssetSize] = useState(() => Number(initialPreferences?.assetSize) || BROWSER_ASSET_SIZE.DEFAULT);
-  const [sidebarWidth, setSidebarWidth] = useState(() => clampSidebarWidth(initialPreferences?.sidebarWidth));
-  const [hideLabels, setHideLabels] = useState(() => initialPreferences?.hideLabels === true);
+const noSubscription = () => () => {};
+const EMPTY_ITEMS = Object.freeze([]);
+export default function useBrowserWorkspace(data, sharedPreviewRecords = null, initialPreferences = null, preferenceStore = null) {
+  const [localPreferences, setLocalPreferences] = useState(() => ({ ...defaultBrowserPreferences(), ...initialPreferences }));
+  const preferences = useSyncExternalStore(preferenceStore?.subscribe || noSubscription, preferenceStore?.getSnapshot || (() => localPreferences));
+  const { view, query, collection, sort, assetSize, sidebarWidth, hideLabels, libraryWidth } = preferences;
+  const updatePreferences = preferenceStore?.update || setLocalPreferences;
+  const change = key => value => updatePreferences(current => ({ ...current, [key]: typeof value === 'function' ? value(current[key]) : value }));
+  const setView = useCallback(view => updatePreferences(current => ({ ...current, view })), [updatePreferences]);
+  const setQuery = change('query'), setCollection = change('collection'), setSort = change('sort');
+  const setAssetSize = change('assetSize'), setSidebarWidth = change('sidebarWidth'), setHideLabels = change('hideLabels');
   const [selectedAssetIds, setSelectedAssetIds] = useState([]);
   const [selectionAnchorId, setSelectionAnchorId] = useState(null);
   const [lastCategoryId, setLastCategoryId] = useState(null);
@@ -33,14 +36,16 @@ export default function useBrowserWorkspace(data, sharedPreviewRecords = null, i
   const previewRecordsRef = useRef(sharedPreviewRecords || new Map());
   const [previewVersion, setPreviewVersion] = useState(0);
 
-  const sourceAssets = Array.isArray(data?.assets) ? data.assets : [];
-  const categories = Array.isArray(data?.categories) ? data.categories : [];
+  const sourceAssets = Array.isArray(data?.assets) ? data.assets : EMPTY_ITEMS;
+  const categories = Array.isArray(data?.categories) ? data.categories : EMPTY_ITEMS;
   useEffect(() => {
     const liveIds = new Set(sourceAssets.map(browserAssetId));
     if (!sharedPreviewRecords) for (const id of previewRecordsRef.current.keys()) {
       if (!liveIds.has(id)) previewRecordsRef.current.delete(id);
     }
   }, [sharedPreviewRecords, sourceAssets]);
+  // previewVersion invalidates this projection after the existing mutable
+  // decode-record map changes; sourceAssets alone cannot observe those writes.
   const assets = useMemo(() => sourceAssets.filter((asset) => browserAssetHasPreviewCandidate(asset)
     && (!browserAssetPreviewUnavailable(previewRecordsRef.current.get(browserAssetId(asset)), asset)
       || asset.imageGroups?.length > 1)).map((asset) => {
@@ -89,10 +94,10 @@ export default function useBrowserWorkspace(data, sharedPreviewRecords = null, i
     ? categories.find((category) => category.id === view.id) || null : null;
 
   useEffect(() => {
-    if (view.kind !== BROWSER_VIEW_KINDS.CATEGORY) return;
+    if (view.kind !== BROWSER_VIEW_KINDS.CATEGORY || data?.status !== 'ready') return;
     if (categories.some(({ id }) => id === view.id)) { setLastCategoryId(view.id); return; }
     setView({ kind: BROWSER_VIEW_KINDS.ALL, id: null });
-  }, [categories, view]);
+  }, [categories, view, data?.status, setView]);
 
   useEffect(() => {
     setSelectedAssetIds((current) => {
@@ -153,6 +158,9 @@ export default function useBrowserWorkspace(data, sharedPreviewRecords = null, i
   const clearFilters = () => { setQuery(''); setCollection('all'); };
 
   return {
+    libraryWidth, setLibraryWidth: change('libraryWidth'),
+    relationshipView: preferences.relationshipView, setRelationshipView: change('relationshipView'),
+    collapsedSections: preferences.collapsedSections, setCollapsedSections: change('collapsedSections'),
     collection, collections, setCollection, assetSize,
     assetSizeBounds: BROWSER_ASSET_SIZE, setAssetSize,
     sidebarWidth, ensureSidebarWidth,

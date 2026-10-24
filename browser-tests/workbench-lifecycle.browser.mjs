@@ -1,11 +1,74 @@
 // Regression coverage for the three 2026-09-21 lifecycle audit findings.
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { holdFrames } from './fixtures/deferred-focus.mjs';
+import { pointerAction, r12Cases } from './fixtures/r12-pointer.mjs';
 import { chromium } from 'playwright-core';
-import { mkdtemp } from 'node:fs/promises';
+import { mkdir, mkdtemp } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 const origin = process.env.INSCAPE_SYSTEM_WORKFLOW_ROOT || 'http://127.0.0.1:5189';
+const output = process.env.INSCAPE_BROWSER_OUTPUT || '.browser-test-runtime';
+
+for (const { theme, width, height } of r12Cases) {
+  test(`R12 real Preview returns to its unchanged editor (${theme} ${width}x${height})`, { timeout: 45000 }, async () => {
+    const browser = await chromium.launch({ headless: true });
+    try {
+      const page = await browser.newPage({ viewport: { width, height }, reducedMotion: 'reduce' });
+      const errors = []; page.on('pageerror', error => errors.push(error.message));
+      await page.route('**/*', route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
+      await page.route(`${origin}/__r12_preview__`, route => route.fulfill({ contentType: 'text/html', body: '<div id="root"></div>' }));
+      await page.goto(`${origin}/__r12_preview__`);
+      await page.evaluate(async theme => {
+        const refresh = (await import('/@react-refresh')).default;
+        refresh.injectIntoGlobalHook(window); window.$RefreshReg$ = () => {}; window.$RefreshSig$ = () => type => type; window.__vite_plugin_react_preamble_installed__ = true;
+        const React = (await import('/@id/react')).default, { createRoot } = (await import('/@id/react-dom/client')).default;
+        const Runtime = (await import('/src/public/ownerSystemWorkflow/OwnerSystemWorkflowRuntime.jsx')).default;
+        const { createSystemWorkflowDraftStore } = await import('/src/systemWorkflow/systemWorkflowDraftStore.js');
+        const { addTextModule } = await import('/src/text/textSession.js');
+        const { createDefaultWorkbenchPresentation, createTextPresentation } = await import('/src/profileDocument/domain/workbenchPresentation.js');
+        const profileAddress = `0x${'1'.repeat(40)}`;
+        const storage = { getItem: key => localStorage.getItem(key), setItem: (key, value) => localStorage.setItem(key, value) };
+        const store = createSystemWorkflowDraftStore({ profileAddress, storage });
+        addTextModule(store, profileAddress);
+        const draft = store.getDraft();
+        draft.appearance.menuSurfaceId = theme;
+        draft.texts[0].visibility = 'PUBLIC';
+        draft.texts[0].article.content.content = [{ type: 'paragraph', content: [{ type: 'text', text: 'R12 saved public composition.' }] }];
+        draft.workbench = createDefaultWorkbenchPresentation();
+        draft.workbench.texts = [{ ...createTextPresentation(draft.texts[0].id), window: { left: 30, top: 100, width: 240, height: 150 } }];
+        if (!store.commitCompletedOperation(draft, { expectedGeneration: store.getGeneration() })) throw Error('Fixture save failed');
+        window.readR12Draft = () => createSystemWorkflowDraftStore({ profileAddress, storage }).getDraft();
+        await import('/src/inscapeTokens.css'); await import('/src/public/ownerSystemWorkflow/ownerSystemWorkflow.css'); await import('/src/lattice/rendering/latticeMenuSurface.css');
+        createRoot(document.getElementById('root')).render(React.createElement(Runtime, { profileAddress,
+          reviewStorage: storage, reviewAssets: [], reviewCategories: [], reviewActivity: [], reviewProfile: { name: 'R12 Preview' } }));
+      }, theme);
+      const trigger = page.getByRole('button', { name: 'Preview', exact: true });
+      const sidebar = page.getByRole('complementary', { name: 'Workspace sidebar', exact: true });
+      await sidebar.waitFor();
+      if (!await trigger.isVisible()) await pointerAction(page, page.getByRole('button', { name: 'Expand sidebar', exact: true }));
+      await trigger.waitFor();
+      const returnFocus = await page.locator('main.system-workflow').getAttribute('data-sidebar-menu') === 'true'
+        ? sidebar.locator('.workspace-navigation-collapse') : trigger;
+      const before = await page.evaluate(() => readR12Draft());
+      await pointerAction(page, trigger);
+      const visitor = page.locator('.visitor-grid-world');
+      await visitor.waitFor();
+      await page.locator('main.system-workflow[data-previewing]').waitFor({ state: 'attached' });
+      assert.equal(await visitor.locator('p:not([aria-hidden="true"] *):visible').filter({ hasText: /^R12 saved public composition\.$/ }).count(), 1);
+      await mkdir(output, { recursive: true });
+      await page.screenshot({ path: `${output}/r12-preview-${theme}-${width}x${height}.png` });
+      await pointerAction(page, page.getByRole('button', { name: 'RETURN', exact: true }));
+      await visitor.waitFor({ state: 'detached' });
+      await page.locator('main.system-workflow[data-previewing]').waitFor({ state: 'detached' });
+      await page.waitForFunction(node => node === document.activeElement, await returnFocus.elementHandle());
+      assert.equal(await page.getByRole('textbox', { name: 'Article text', exact: true }).innerText(), 'R12 saved public composition.');
+      assert.deepEqual(await page.evaluate(() => readR12Draft()), before);
+      assert.deepEqual(errors, []);
+    } finally { await browser.close(); }
+  });
+}
+
 test('route recovery, stale preview rejection and Display suspension share explicit lifetimes', { timeout: 90000 }, async () => {
 const browser = await chromium.launch({ executablePath: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', headless: true });
 try {
@@ -50,7 +113,7 @@ try {
     window.second = second;
     window.readDraft = () => createSystemWorkflowDraftStore({ profileAddress, storage }).getDraft();
     await import('/src/inscapeTokens.css'); await import('/src/public/ownerSystemWorkflow/ownerSystemWorkflow.css'); await import('/src/lattice/rendering/latticeMenuSurface.css');
-    const props = { profileAddress, reviewStorage: storage, reviewAssets: [], reviewCategories: [], reviewActivity: [], reviewDiscovery: [], reviewProfile: { name: 'Hygiene audit' } };
+    const props = { profileAddress, reviewStorage: storage, reviewAssets: [], reviewCategories: [], reviewActivity: [], reviewProfile: { name: 'Hygiene audit' } };
     function NavigationFixture() {
       const navigation = useNavigation({ status: 'complete', ownershipVerified: true, profileAddress });
       window.visitAuditProfile = navigation.visitProfile;
@@ -63,9 +126,17 @@ try {
   });
   const editor = page.getByRole('textbox', { name: 'Article text', exact: true });
   await editor.waitFor();
+  // This lifecycle fixture places its shortcuts at the canvas origin. Use the
+  // normal workspace command to reveal them beneath the optional sidebar.
+  await page.locator('main.system-workflow').press('Shift+F10');
+  await page.getByRole('menuitem', { name: 'HIDE SIDEBAR', exact: true }).click();
+  await page.locator('aside.workspace-navigation').waitFor({ state: 'hidden' });
   const additional = page.locator(`[data-display-instance="${await page.evaluate(() => window.second)}"]`);
-  const openDisplayMenu = () => additional.getByRole('article', { name: 'Display Module', exact: true })
-    .click({ button: 'right', position: { x: 160, y: 80 } });
+  const openDisplayMenu = async () => {
+    const header = additional.locator('.system-workflow__identity-strip');
+    await header.focus();
+    await header.press('Shift+F10');
+  };
   await page.evaluate(() => { window.failDraft = true; });
   await openDisplayMenu();
   await page.getByRole('menuitem', { name: 'INCLUDE DISPLAY IN PUBLICATION', exact: true }).click();
@@ -102,11 +173,15 @@ try {
   await page.getByRole('button', { name: 'Close Text tools', exact: true }).click();
   for (const id of ['display:primary', await page.evaluate(() => window.second)]) {
     const board = page.locator(`[data-display-instance="${id}"]`).getByRole('article', { name: 'Display Module', exact: true });
-    await board.click({ button: 'right', position: { x: 160, y: 80 } });
+    await board.locator('.system-workflow__identity-strip').focus();
+    await board.locator('.system-workflow__identity-strip').press('Shift+F10');
     await page.getByRole('menuitem', { name: 'PLAY GRIDS', exact: true }).click();
   }
   const owner = page.locator('main.system-workflow');
   assert.equal(await owner.locator('[aria-label="Pause Grids"]').count(), 2);
+  await owner.press('Shift+F10');
+  await page.getByRole('menuitem', { name: 'SHOW SIDEBAR', exact: true }).click();
+  await page.locator('aside.workspace-navigation').waitFor({ state: 'visible' });
   let releasePreview;
   let markRequested;
   const requested = new Promise(resolve => { markRequested = resolve; });
@@ -128,7 +203,8 @@ try {
   await page.locator('main.system-workflow[data-previewing]').waitFor({ state: 'attached' });
   assert.equal(await owner.locator('[aria-label="Pause Grids"]').count(), 0);
   await page.locator('.visitor-grid-world').waitFor();
-  assert.equal(await page.locator('.visitor-grid-world').getByText('Saved while preview was loading.', { exact: true }).count(), 1);
+  // Text also keeps an inert measuring copy; assert the reader-facing passage.
+  assert.equal(await page.locator('.visitor-grid-world p:not([aria-hidden="true"] *):visible').filter({ hasText: /^Saved while preview was loading\.$/ }).count(), 1);
   const secondId = await page.evaluate(() => window.second);
   const activeGrid = await owner.locator(`[data-display-instance="${secondId}"] [data-rendered-grid-id]:not([aria-hidden])`).getAttribute('data-rendered-grid-id');
   // One full playback interval: the hidden owner Display must remain paused.
@@ -141,7 +217,8 @@ try {
   // Normal motion must preserve its fractional camera position, not snap back.
   await page.emulateMedia({ reducedMotion: 'no-preference' });
   const secondBoard = owner.locator(`[data-display-instance="${secondId}"]`).getByRole('article', { name: 'Display Module', exact: true });
-  await secondBoard.click({ button: 'right', position: { x: 160, y: 80 } });
+  await secondBoard.locator('.system-workflow__identity-strip').focus();
+  await secondBoard.locator('.system-workflow__identity-strip').press('Shift+F10');
   await page.getByRole('menuitem', { name: 'PLAY GRIDS', exact: true }).click();
   const track = owner.locator(`[data-display-instance="${secondId}"] .system-workflow__grid-track`);
   await page.waitForFunction(id => {
@@ -188,6 +265,8 @@ test('Preview ignores superseded, cancelled and disposed requests and can recove
         window.closePreview = session.close;
         return React.createElement('div', null,
           React.createElement('button', null, 'Preview trigger'),
+          React.createElement('input', { 'aria-label': 'Other control' }),
+          React.createElement('input', { 'aria-label': 'Preview search' }),
           React.createElement('output', null, session.preview?.title || (session.preparing ? 'loading' : 'closed')));
       }
       window.previewRoot = createRoot(document.getElementById('root'));
@@ -208,6 +287,19 @@ test('Preview ignores superseded, cancelled and disposed requests and can recove
     await page.waitForFunction(() => window.previewErrors.length === 2);
     await page.evaluate(() => { window.beginPreview('recovered'); window.operations.recovered.resolve({ title: 'recovered' }); });
     await page.getByText('recovered', { exact: true }).waitFor();
+    await holdFrames(page);
+    await page.evaluate(() => window.closePreview());
+    const other = page.getByRole('textbox', { name: 'Other control', exact: true });
+    await other.focus(); await page.evaluate(() => window.releaseHeldFrames());
+    assert.equal(await other.evaluate(node => node === document.activeElement), true, 'a late Preview close preserves newer focus');
+    await page.evaluate(() => { window.beginPreview('first-open'); window.operations['first-open'].resolve({ title: 'first-open' }); });
+    await page.getByText('first-open', { exact: true }).waitFor();
+    const search = page.getByRole('textbox', { name: 'Preview search', exact: true });
+    await search.focus(); await holdFrames(page);
+    await page.evaluate(() => { window.closePreview(); window.beginPreview('reopened'); window.operations.reopened.resolve({ title: 'reopened' }); });
+    await page.getByText('reopened', { exact: true }).waitFor();
+    await page.evaluate(() => window.releaseHeldFrames());
+    assert.equal(await search.evaluate(node => node === document.activeElement), true, 'reopening Preview cancels the older return even when focus stays on the same node');
     await page.evaluate(() => { window.beginPreview('disposed'); window.previewRoot.unmount(); window.operations.disposed.reject(Error('obsolete failure')); });
     assert.equal(await page.evaluate(() => window.previewErrors.length), 2);
     assert.deepEqual(errors, []);

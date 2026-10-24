@@ -6,15 +6,15 @@ import OwnerSystemWorkflowWorkspaceRail from './OwnerSystemWorkflowWorkspaceCont
 import { OwnerSystemWorkflowWorkspaceShell } from './OwnerSystemWorkflowBrowserWorkspace.jsx';
 import { decodeOwnerSystemWorkflowAssetDimensions, ownerSystemWorkflowAssetDimensions } from './ownerSystemWorkflowAssetDimensions.js';
 import OwnerSystemWorkflowLibraryPresenter from './OwnerSystemWorkflowLibraryPresenter.jsx';
+import './libraryWorkspace.css';
 
 const DRAG_THRESHOLD = 6;
 const sourceFor = (asset) => asset?.previewSrc || asset?.src || asset?.imageUrl || asset?.thumbnailUrl || null;
-const libraryPreferences = { assetSize: 150, hideLabels: false, sidebarWidth: 174 };
 const ownerLibraryPreviewRecords = new Map();
 
 export default function OwnerSystemWorkflowLibraryWorkspace({ authoringLocked = false, categoryCommands, placementScope, data, menuSurface, onClose, phase,
-  navigationHost = null, preferences = libraryPreferences, previewRecords = ownerLibraryPreviewRecords, resolveAssetDimensions, workbenchImageTargetRef, moduleAssetTargetRef, placementTargetRef, shortcutTargetRef, workspaceRef }) {
-  const workspace = useBrowserWorkspace(data, previewRecords, preferences);
+  navigationHost = null, preferences, preferenceStore, previewRecords = ownerLibraryPreviewRecords, resolveAssetDimensions, workbenchImageTargetRef, moduleAssetTargetRef, placementTargetRef, shortcutTargetRef, workspaceRef }) {
+  const workspace = useBrowserWorkspace(data, previewRecords, preferences, preferenceStore);
   const resolveDimensions = resolveAssetDimensions || decodeOwnerSystemWorkflowAssetDimensions;
   const [dragPreview, setDragPreview] = useState(null);
   const [categoryDrag, setCategoryDrag] = useState(null);
@@ -24,11 +24,12 @@ export default function OwnerSystemWorkflowLibraryWorkspace({ authoringLocked = 
   const latestLibrary = useRef(null);
   latestLibrary.current = { data, categoryCommands };
   const libraryClosed = phase === 'closing' || phase === 'closed';
-  const placementContext = useMemo(() => ({}), [placementScope, data.ownerContext, authoringLocked, libraryClosed]);
+  const placementContext = useMemo(() => ({ placementScope, ownerContext: data.ownerContext, authoringLocked, libraryClosed }),
+    [placementScope, data.ownerContext, authoringLocked, libraryClosed]);
   const currentPlacementContext = useRef(placementContext);
   currentPlacementContext.current = placementContext;
   const mounted = useRef(true);
-  const [libraryWidth, setLibraryWidth] = useState(null);
+  const { libraryWidth, setLibraryWidth } = workspace;
   const resizeRef = useRef(null);
   const clampWidth = (width) => Math.min(window.innerWidth * 0.48, Math.max(300, width));
   const finishResize = (event) => {
@@ -36,11 +37,6 @@ export default function OwnerSystemWorkflowLibraryWorkspace({ authoringLocked = 
     resizeRef.current = null;
     if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
   };
-  useEffect(() => {
-    preferences.assetSize = workspace.assetSize;
-    preferences.hideLabels = workspace.hideLabels;
-    preferences.sidebarWidth = workspace.sidebarWidth;
-  }, [preferences, workspace.assetSize, workspace.hideLabels, workspace.sidebarWidth]);
   const place = async (asset) => {
     if (authoringLocked || libraryClosed) return false;
     // Registry wrappers follow selection. Retain the receiving module/Grid

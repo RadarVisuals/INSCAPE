@@ -1,4 +1,5 @@
 import { KEEPER_SWIM_DEFAULTS } from './keeperSwim.js';
+import { moveKeeperWithWalls } from './keeperCollision.js';
 
 export const KEEPER_MOTION = Object.freeze({ radius: 125, pointerGap: 105, sideOffset: 220, maxSpeed: 240, maxAcceleration: 540 });
 const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
@@ -11,6 +12,14 @@ export function keeperViewport(size, width, height) {
   const inset = renderedSize * .58 + 8;
   return { size: renderedSize, bounds: { left: Math.min(inset, width / 2), right: Math.max(width / 2, width - inset),
     top: Math.min(inset + 24, height / 2), bottom: Math.max(height / 2, height - inset - 48) } };
+}
+// Optional host rectangle is in viewport coordinates, like pointer input and
+// actor painting. Existing Workbench callers retain their screen-space bounds.
+export function keeperFlightViewport(size, rectangle, width, height) {
+  if (!rectangle || rectangle.width <= 0 || rectangle.height <= 0) return keeperViewport(size, width, height);
+  const result = keeperViewport(size, rectangle.width, rectangle.height);
+  return { size: result.size, bounds: { left: result.bounds.left + rectangle.left, right: result.bounds.right + rectangle.left,
+    top: result.bounds.top + rectangle.top, bottom: result.bounds.bottom + rectangle.top } };
 }
 export function keeperZone(pointer, bounds, size = 128) {
   const offset = Math.max(KEEPER_MOTION.sideOffset, size / 2 + 100);
@@ -48,7 +57,7 @@ export function faceKeeperPointer(state, pointer) {
 
 // A damped spring with bounded acceleration preserves velocity through pointer
 // changes and recall. Small integration steps behave alike at 30/60/120 Hz.
-function glide(state, goal, delta, returning, swim) {
+function glide(state, goal, delta, returning, swim, walls, radius) {
   let remaining = delta;
   const frequency = swim ? 5 : returning ? 4.5 : 3.6;
   const limit = swim ? swim.speed * 3 : KEEPER_MOTION.maxAcceleration;
@@ -68,20 +77,21 @@ function glide(state, goal, delta, returning, swim) {
     // Lowering the live speed control brakes instead of discarding velocity.
     const ceiling = swim ? Math.max(maximum, previousSpeed - limit * dt) : maximum;
     if (speed > ceiling) { state.vx *= ceiling / speed; state.vy *= ceiling / speed; }
-    state.x += state.vx * dt; state.y += state.vy * dt;
+    if (walls?.length) moveKeeperWithWalls(state, state.vx * dt, state.vy * dt, walls, radius);
+    else { state.x += state.vx * dt; state.y += state.vy * dt; }
   }
 }
 
 // Both character styles share flight, recall and screen-space bounds. The
 // movement choice owns destination selection, not a second animation lifecycle.
-export function stepKeeper(state, { dt, pointer, home, bounds, size = 128, random = Math.random, movement = 'flip', swim = KEEPER_SWIM_DEFAULTS, paused = false }) {
+export function stepKeeper(state, { dt, pointer, home, bounds, size = 128, random = Math.random, movement = 'flip', swim = KEEPER_SWIM_DEFAULTS, paused = false, walls = [], collisionRadius = size * .3 }) {
   const delta = clamp(dt, 0, .05);
   state.elapsed += delta;
   if (state.phase === 'docked') { Object.assign(state, home, { vx: 0, vy: 0 }); return state; }
   if (paused && state.phase === 'free') {
     if (state.steering) {
       const goal = bounded(state.destination, bounds);
-      glide(state, goal, delta, false, swim);
+      glide(state, goal, delta, false, swim, walls, collisionRadius);
       Object.assign(state, bounded(state, bounds));
       if (distance(state, goal) < 1.5 && Math.hypot(state.vx, state.vy) < 8) {
         Object.assign(state, goal, { steering: false, vx: 0, vy: 0 });
@@ -93,7 +103,7 @@ export function stepKeeper(state, { dt, pointer, home, bounds, size = 128, rando
       reaction.elapsed += delta;
       if (reaction.elapsed >= reaction.duration) stopKeeperReaction(state);
       else {
-        glide(state, bounded(reaction.goal, bounds), delta, false, { ...swim, speed: Math.min(swim.speed, 110) });
+        glide(state, bounded(reaction.goal, bounds), delta, false, { ...swim, speed: Math.min(swim.speed, 110) }, walls, collisionRadius);
         state.heading = reaction.heading;
         if (Number.isFinite(reaction.heading)) state.facing = Math.cos(reaction.heading) >= 0 ? 1 : -1;
         state.expression = { gesture: reaction.gesture, amount: Math.sin(Math.PI * reaction.elapsed / reaction.duration) };
@@ -114,7 +124,7 @@ export function stepKeeper(state, { dt, pointer, home, bounds, size = 128, rando
   }
   if (movement === 'swim') {
     const goal = bounded(state.destination || state, bounds);
-    glide(state, goal, delta, false, swim);
+    glide(state, goal, delta, false, swim, walls, collisionRadius);
     const visible = bounded(state, bounds);
     if (state.x !== visible.x) state.vx = 0;
     if (state.y !== visible.y) state.vy = 0;
@@ -139,7 +149,7 @@ export function stepKeeper(state, { dt, pointer, home, bounds, size = 128, rando
     const away = Math.atan2(nextZone.y - pointer.y, nextZone.x - pointer.x);
     goal = bounded({ x: pointer.x + Math.cos(away) * gap, y: pointer.y + Math.sin(away) * gap }, bounds);
   }
-  glide(state, goal, delta, false);
+  glide(state, goal, delta, false, null, walls, collisionRadius);
   const visible = bounded(state, bounds);
   if (state.x !== visible.x) state.vx = 0;
   if (state.y !== visible.y) state.vy = 0;

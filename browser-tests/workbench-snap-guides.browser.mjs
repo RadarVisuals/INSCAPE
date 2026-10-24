@@ -95,7 +95,7 @@ for (const width of [1440, 760]) test(`snap guides and release behavior at ${wid
     await page.evaluate(() => window.dispatchEvent(new Event('blur'))); await settle(page);
     assert.equal(await guide.count(), 0, 'blur clears guides'); await page.mouse.up();
     await page.locator('main').focus(); await page.keyboard.press('Control+0'); await settle(page);
-    await page.getByRole('button', { name: 'Reset Workbench position' }).click(); await settle(page);
+    await page.getByRole('button', { name: 'Reset Workbench view' }).click(); await settle(page);
 
     const text = page.locator('[data-workbench-view-id="text"]');
     start = await beginDrag(text); await moveTo(start, 103, 653);
@@ -123,7 +123,20 @@ for (const width of [1440, 760]) test(`snap guides and release behavior at ${wid
     await page.getByRole('img', { name: '0 pixel spacing between modules' }).waitFor();
     await gap.fill('104');
     await page.getByRole('img', { name: '104 pixel spacing between modules' }).waitFor();
-    assert.ok((await page.locator('.workbench-gap-preview').boundingBox()).height >= 60, 'spacing preview is larger than an interface icon');
+    const preview = page.locator('.workbench-gap-preview');
+    const diagram = await preview.evaluate(node => {
+      const [left, right] = [...node.querySelectorAll('rect')].map(rect => rect.getBBox());
+      const box = node.getBoundingClientRect();
+      const matrix = node.getScreenCTM(), drawing = node.getBBox();
+      const topLeft = new DOMPoint(drawing.x, drawing.y).matrixTransform(matrix);
+      const bottomRight = new DOMPoint(drawing.x + drawing.width, drawing.y + drawing.height).matrixTransform(matrix);
+      return { gap: right.x - left.x - left.width, scaleX: matrix.a, scaleY: matrix.d,
+        height: bottomRight.y - topLeft.y, contained: topLeft.x >= box.left && topLeft.y >= box.top && bottomRight.x <= box.right && bottomRight.y <= box.bottom };
+    });
+    assert.equal(diagram.gap, 104, 'the visible diagram represents the chosen module spacing');
+    near(diagram.scaleX, diagram.scaleY, 'the responsive preview scales the drawing uniformly');
+    assert.equal(diagram.contained, true, 'the complete drawing stays inside its viewport');
+    assert.ok(diagram.height > 24, 'the complete diagram remains larger than an interface icon');
     if (width === 760) await page.setViewportSize({ width: 390, height: 844 });
     await gap.scrollIntoViewIfNeeded(); await page.screenshot({ path: `.browser-test-runtime/snap-settings-${width}.png` });
     assert.equal(await page.locator('[aria-label="Settings"]').evaluate(el => el.scrollWidth > el.clientWidth), false, 'settings do not overflow horizontally');

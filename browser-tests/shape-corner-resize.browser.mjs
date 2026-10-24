@@ -16,9 +16,11 @@ for (const width of [1440, 390]) test(`Shape corners stay free after first resiz
     const errors = [], evidence = []; page.on('pageerror', error => errors.push(error.message));
     await mountTextToolsFixture(page, origin);
     await page.getByRole('button', { name: 'Close Text tools', exact: true }).click();
-    await page.locator('.text-window').getByRole('button', { name: /^Close / }).click();
+    await page.locator('.text-window').getByRole('button', { name: /^Close / }).press('Enter');
+    const collapse = page.getByRole('button', { name: 'Collapse sidebar', exact: true });
+    if (await collapse.count()) await collapse.click();
     // Create through the real owner UI; the first grip is the Shape's own grip.
-    await page.mouse.click(width === 390 ? 60 : 560, width === 390 ? 160 : 240, { button: 'right' });
+    await page.mouse.click(width === 390 ? 96 : 560, width === 390 ? 160 : 240, { button: 'right' });
     await page.getByRole('menuitem', { name: 'ADD', exact: true }).hover();
     await page.getByRole('menuitem', { name: 'SHAPE', exact: true }).click();
     const shape = page.locator('.shape-window'); await shape.waitFor();
@@ -26,6 +28,19 @@ for (const width of [1440, 390]) test(`Shape corners stay free after first resiz
     const saved = () => page.evaluate(id => window.savedDraft().workbench.shapes.find(s => s.id === id).window, id);
     const drag = async (edge, dx, dy, selected) => {
       const surface = selected ? page.locator('.workbench-selection') : shape;
+      if (width === 390) {
+        const rectangle = await surface.boundingBox();
+        const corner = edge.includes('w') ? rectangle.x : rectangle.x + rectangle.width;
+        const shift = corner < 92 ? 112 - corner : corner > width - 24 ? width - 44 - corner : 0;
+        if (shift) {
+          const authored = await saved();
+          await page.locator('main.system-workflow').focus(); await page.keyboard.down('Space');
+          await page.mouse.move(200, 750); await page.mouse.down();
+          await page.mouse.move(200 + shift, 750, { steps: 5 }); await page.mouse.up();
+          await page.keyboard.up('Space'); await settle(page);
+          assert.deepEqual(await saved(), authored, 'pan exposes the corner without changing authored geometry');
+        }
+      }
       const b = await surface.boundingBox(), x = edge.includes('w') ? b.x : b.x + b.width, y = edge.includes('n') ? b.y : b.y + b.height;
       const before = await saved();
       const hit = await page.evaluate(({ x, y }) => { const n = document.elementFromPoint(x, y); return { className: n?.className, label: n?.getAttribute('aria-label'), html: n?.outerHTML.slice(0, 240) }; }, { x, y });
@@ -42,25 +57,23 @@ for (const width of [1440, 390]) test(`Shape corners stay free after first resiz
       near(after.top + (edge.includes('n') ? after.height : 0), before.top + (edge.includes('n') ? before.height : 0), 'opposite y');
       return after;
     };
-    const movePropertiesBelow = async () => { if (width === 390) {
-      const header = await page.locator('header[aria-label="Move Properties window"]').boundingBox();
-      await page.mouse.move(header.x + header.width / 2, header.y + header.height / 2); await page.mouse.down();
-      await page.mouse.move(header.x + header.width / 2, 720, { steps: 6 }); await page.mouse.up(); await settle(page);
-    } };
-    await movePropertiesBelow();
+    const closeToolPanels = async () => {
+      for (const name of ['Close Shape', 'Close Transform', 'Close Color', 'Close Info']) {
+        const close = page.getByRole('button', { name, exact: true });
+        if (await close.count()) await close.press('Enter');
+      }
+      await settle(page);
+    };
+    await closeToolPanels();
     await drag('se', 12, 0, false);
+    // Solo handles stay module-owned. Request group handles explicitly.
+    await shape.locator('header').focus(); await page.keyboard.press('Shift+Enter'); await settle(page);
     await page.locator('.workbench-selection').waitFor();
     await drag('se', 0, 12, true);
     // Repeated use and selection changes must never switch back to ratio locking.
     for (const edge of ['nw', 'ne', 'sw', 'se']) {
       await page.locator('main.system-workflow').focus(); await page.keyboard.press('Escape');
-      if (width === 390) {
-        // The Properties panel covers the fill on a narrow screen. Reselect
-        // through the existing keyboard route rather than clicking through it.
-        await shape.locator('header').focus(); await page.keyboard.press('Shift+Enter');
-      } else {
-        const b = await shape.boundingBox(); await page.mouse.click(b.x + b.width / 2, b.y + b.height / 2);
-      }
+      await shape.locator('header').focus(); await page.keyboard.press('Shift+Enter');
       await settle(page);
       await drag(edge, edge.includes('w') ? -8 : 8, 0, true);
       await drag(edge, 0, edge.includes('n') ? 8 : -8, true);
@@ -83,7 +96,7 @@ for (const width of [1440, 390]) test(`Shape corners stay free after first resiz
     await mountTextToolsFixture(page, origin, { waitForText: false });
     const grid = page.locator(`[data-workbench-view-id="${gridId}"]`); await grid.waitFor();
     const g = await grid.boundingBox(); await page.mouse.click(g.x + g.width / 2, g.y + 1); await settle(page);
-    await movePropertiesBelow();
+    await closeToolPanels();
     if (!await page.locator('.workbench-selection').count()) {
       await grid.locator('header').focus(); await page.keyboard.press('Shift+Enter'); await settle(page);
     }

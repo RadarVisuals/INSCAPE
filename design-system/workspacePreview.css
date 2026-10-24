@@ -161,16 +161,7 @@
   width: max-content;
   max-width: 100%;
 }
-.ds-studio-auxiliary {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-2) 10px;
-  font-size: var(--ds-text-small);
-  background: var(--tactile-face);
-  color: var(--tactile-ink);
-  border-radius: var(--ds-shell-radius);
-}
+
 .ds-studio .ds-studio-inspector,
 .ds-studio-utilities > section {
   min-width: 0;
@@ -340,54 +331,14 @@
   border: 0;
   min-width: 24px;
 }
-.ds-studio-map {
-  touch-action: none;
-  user-select: none;
-  cursor: grab;
-  display: block;
-  position: relative;
-  width: calc(100% - 20px);
-  height: 85px;
-  margin: 10px;
-  padding: 0;
-  border: 1px solid var(--tactile-edge);
-  background: var(--tactile-well);
-  overflow: hidden;
-}
+
 .ds-studio-map-art {
   position: absolute;
   inset: 25% 25%;
   background: var(--tactile-muted);
   opacity: 0.35;
 }
-.ds-studio-map-view {
-  position: absolute;
-  transform: translate(-50%, -50%);
-  border: 1px solid var(--tactile-ink);
-}
-.ds-studio-zoom {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  padding: 0 10px 10px;
-  gap: 3px 6px;
-  font: var(--ds-text-micro) var(--font-technical);
-}
-.ds-studio-zoom > input {
-  grid-area: 2 / 1 / 3 / 3;
-  width: 100%;
-  min-width: 0;
-  accent-color: var(--tactile-ink);
-}
-.ds-studio-zoom > output {
-  grid-area: 1 / 2;
-}
-.ds-studio-keeper-body {
-  display: grid;
-  place-items: center;
-  padding: 14px;
-  gap: 6px;
-  font-size: var(--ds-text-small);
-}
+
 .ds-studio-feedback {
   color: var(--color-text-secondary);
   font: var(--ds-text-base)/1.5 var(--font-technical);
@@ -476,9 +427,7 @@
     font-size: 16px;
   }
   .ds-studio-range input,
-  .ds-studio-zoom input {
-    min-height: var(--ds-target-touch);
-  }
+
   .ds-studio-layer-list .workflow-tactile-control {
     min-width: 36px;
     min-height: var(--ds-target-touch);
@@ -496,24 +445,9 @@
     color: HighlightText;
     forced-color-adjust: none;
   }
-  .ds-studio-map-view {
-    border-color: CanvasText;
-  }
+
 }
 
-.ds-studio-keeper-empty {
-  display: grid;
-  place-items: center;
-  width: 46px;
-  height: 46px;
-  border: 1px dashed var(--tactile-edge);
-  border-radius: var(--ds-control-radius);
-}
-.ds-studio-keeper-body small {
-  color: var(--tactile-muted);
-  font-size: var(--ds-text-micro);
-  text-align: center;
-}
 .ds-studio-crop label {
   display: grid;
   gap: 3px;
@@ -543,8 +477,4 @@
   margin: 0 0 var(--space-3);
   color: var(--tactile-muted);
   font-size: var(--ds-text-small);
-}
-
-.ds-studio-map[data-dragging] {
-  cursor: grabbing;
 }

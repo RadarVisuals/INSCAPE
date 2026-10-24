@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ArrowUpRight } from 'lucide-react';
 import { components } from './registry.js';
 import inventory from './tokens.generated.json';

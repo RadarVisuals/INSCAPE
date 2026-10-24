@@ -38,6 +38,12 @@
 .image-module__flip-status { position: absolute; left: 6px; bottom: 6px; max-width: calc(100% - 52px); padding: 4px 6px; font: var(--workflow-type-control); text-align: left; color: var(--workflow-ink); background: var(--workflow-panel); pointer-events: none; }
 /* Leave the internal Inspect/Next row free while loading or reporting failure. */
 .image-module__window:not([data-controls-outside]) .image-module__flip-status { bottom: calc(40px * var(--image-density, 1)); }
+.image-module__recovery { display: contents; }
+.image-module__recovery-status button { zoom: var(--image-density, 1); min-height: 28px; margin-left: 6px; padding: 3px 6px; border: 1px solid var(--workflow-border); color: inherit; background: var(--workflow-panel); font: inherit; cursor: pointer; pointer-events: auto; }
+.image-module__recovery-status button:focus-visible { outline: 1px solid var(--workflow-ink); outline-offset: -2px; }
+.image-module__window[data-controls-outside] .image-module__recovery-status { zoom: var(--image-density, 1); left: var(--image-recovery-left); top: var(--image-recovery-top); bottom: auto; box-sizing: border-box; width: var(--image-recovery-width); max-width: none; }
+.image-module__window[data-controls-outside] .image-module__recovery-status button { zoom: 1; }
+.image-module__inspection-status { display: block; max-width: calc(100vw - 64px); margin-top: 4px; pointer-events: none; }
 .image-module__inspect, .image-module__next, .image-module__close { position: absolute; right: 6px; z-index: 5; display: grid; place-items: center; box-sizing: border-box; width: 28px; height: 28px; padding: 0; border: 1px solid var(--workflow-border); background: var(--workflow-panel); color: var(--workflow-ink); cursor: pointer; opacity: 0; pointer-events: none; }
 .image-module__next { bottom: 6px; }
 .image-module__inspect { bottom: 6px; left: 6px; right: auto; }
@@ -53,6 +59,12 @@
 .image-module__size button, .image-module__side-tools button { font: var(--workflow-type-control); cursor: pointer; }
 .image-module__side-tools { display: grid; grid-template-columns: 1fr 32px; gap: 8px; margin: 8px 0; }
 .image-module__publication { display: flex; align-items: center; gap: 6px; font: var(--workflow-type-control); }
+.workbench-image-tools { display: grid; gap: 12px; min-width: 0; }
+.workbench-image-tools .image-module__side-tools { align-items: end; margin: 0; }
+.workbench-image-tools .image-module__side-tools button { display: grid; place-items: center; height: var(--tool-control-height); padding: 4px; }
+.workbench-image-tools .image-module__side-tools svg { width: var(--icon-size-interface); height: var(--icon-size-interface); stroke-width: 1.6; }
+.workbench-image-tools .image-module__publication { flex-direction: row; }
+.workbench-image-tools input[type='checkbox'] { flex: none; margin: 0; accent-color: var(--tactile-ink); }
 .image-module__error { font: var(--workflow-type-control); }
 .image-module__shortcut { position: fixed; left: 24px; border: 1px solid var(--workflow-border); padding: 8px; color: var(--workflow-ink); background: var(--workflow-panel); font: var(--workflow-type-control); }
 .image-lift { position: fixed; inset: 0; z-index: 200; background: rgb(0 0 0 / calc(.65 * var(--inspection-lift-progress, 0))); }

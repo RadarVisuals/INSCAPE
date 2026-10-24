@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { verifyMiniAppWindowBoundary } from './fixtures/mini-app-window-boundary.mjs';
 import { mkdir } from 'node:fs/promises';
 import { build } from 'esbuild';
 import { chromium } from 'playwright-core';
@@ -13,8 +14,9 @@ await mkdir('output/mini-apps', { recursive: true });
 const browser = await chromium.launch({ executablePath: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', headless: true,
   args: ['--use-fake-ui-for-media-stream', '--use-fake-device-for-media-stream', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
 console.log('Browser launched');
-let testPage;
+let testPage, watchdog;
 try {
+  await verifyMiniAppWindowBoundary(browser, origin);
   const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, reducedMotion: 'reduce' });
   console.log('Browser context created');
   for (const origin of [appOrigin, secondOrigin]) await context.grantPermissions(['microphone'], { origin });
@@ -23,7 +25,7 @@ try {
   testPage = page;
   console.log('Test page created');
   page.setDefaultTimeout(15000);
-  const watchdog = setTimeout(async () => {
+  watchdog = setTimeout(async () => {
     console.error('Browser test stalled:', await page.locator('body').innerText());
     console.error('Frames:', page.frames().map(frame => frame.url()));
     await page.screenshot({ path: 'output/mini-apps/stalled.png' });
@@ -60,15 +62,14 @@ try {
     useWalletStore.setState({ provider, accounts: [account], chainId: '0x2a', isWalletConnected: true,
       authorityLifecycleStatus: 'complete', publicClient: { request: async () => '0x01' } });
     review.renderOwner = () => review.root.render(React.createElement(Runtime, { profileAddress: profile, reviewStorage: storage,
-      reviewAssets: fixture.OWNER_SYSTEM_WORKFLOW_REVIEW_ASSETS, reviewCategories: [], reviewActivity: [], reviewDiscovery: [], reviewProfile: { name: 'Mini app review' } }));
+      reviewAssets: fixture.OWNER_SYSTEM_WORKFLOW_REVIEW_ASSETS, reviewCategories: [], reviewActivity: [], reviewProfile: { name: 'Mini app review' } }));
     review.renderOwner();
   }, { profile, account });
   await page.locator('.system-workflow__presentation-board').waitFor();
   console.log('Owner Workbench mounted');
   const addApp = async (name, url) => {
-    await page.mouse.click(15, 15, { button: 'right' });
-    await page.getByRole('menuitem', { name: 'ADD', exact: true }).hover();
-    await page.getByRole('menuitem', { name: 'MINI APP', exact: true }).click();
+    await page.getByRole('button', { name: 'Add module', exact: true }).click();
+    await page.getByRole('dialog', { name: 'Add module', exact: true }).getByRole('button', { name: /^Mini app$/i }).click();
     const settings = page.locator('.mini-app-settings');
     await settings.getByLabel('Name', { exact: true }).fill(name);
     await settings.getByLabel('App URL', { exact: true }).fill(url);
@@ -166,8 +167,32 @@ try {
   const bounds = await page.locator('.mini-app-workbench .system-workflow__instrument-window').boundingBox();
   assert.ok(bounds.x >= 0 && bounds.x + bounds.width <= 391, JSON.stringify(bounds));
   await page.setViewportSize({ width: 1440, height: 1000 });
+  // The narrow viewport leaves the floating tools beside the app. Move that
+  // ordinary editor surface before testing the app's pointer controls.
+  const sidebar = page.getByRole('complementary', { name: 'Workspace sidebar' });
+  const collapseSidebar = sidebar.getByRole('button', { name: 'Collapse sidebar' });
+  if (await collapseSidebar.isVisible()) await collapseSidebar.click();
+  const settingsButton = page.getByRole('button', { name: 'Settings for RADAR test' });
+  const reachable = () => settingsButton.evaluate(node => {
+    const box = node.getBoundingClientRect();
+    return node.contains(document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2));
+  });
+  for (let moves = 0; !await reachable() && moves < 30; moves++)
+    await page.locator('.workbench-tool-dock .workbench-tool-panel-grip').first().press('Shift+ArrowRight');
+  assert.equal(await reachable(), true, 'ordinary tool movement exposes the app settings for pointer use');
+  const closeLayers = page.getByRole('button', { name: 'Close Workbench Layers', exact: true });
+  if (await closeLayers.count()) await closeLayers.click();
   await page.getByRole('button', { name: 'Settings for RADAR test' }).click();
-  await page.getByLabel('Include in publication', { exact: true }).check();
+  const inclusion = page.getByLabel('Include in publication', { exact: true });
+  const formReachable = () => page.locator('.mini-app-settings').evaluate(form =>
+    [...form.querySelectorAll('input, button')].every(node => {
+      const box = node.getBoundingClientRect();
+      return node.contains(document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2));
+    }));
+  for (let moves = 0; !await formReachable() && moves < 40; moves++)
+    await page.locator('.workbench-tool-dock .workbench-tool-panel-grip').first().press('Shift+ArrowRight');
+  assert.equal(await formReachable(), true, 'tool movement exposes the app settings form');
+  await inclusion.check();
   await page.getByRole('button', { name: 'Save', exact: true }).click();
   await page.getByRole('button', { name: 'Settings for RADAR test' }).click();
   await page.getByLabel('Name', { exact: true }).fill('Obsolete settings');
@@ -186,7 +211,7 @@ try {
   await page.route('**/api/profile-publications', route => { uploads += 1; return route.abort(); });
   await page.getByRole('button', { name: 'Publish', exact: true }).click();
   const publication = page.getByRole('complementary', { name: 'Publish profile' });
-  await publication.getByRole('button', { name: 'PREPARE PUBLICATION', exact: true }).click();
+  await publication.getByRole('button', { name: 'Prepare publication', exact: true }).click();
   await publication.getByRole('status').filter({ hasText: 'ready to be made public' }).waitFor();
   const captured = await page.evaluate(() => review.draft().workbench.miniApps);
   assert.equal(captured.length, 2);
@@ -277,4 +302,4 @@ try {
     await testPage.screenshot({ path: 'output/mini-apps/failure.png' });
   }
   throw error;
-} finally { await browser.close(); }
+} finally { clearTimeout(watchdog); await browser.close(); }

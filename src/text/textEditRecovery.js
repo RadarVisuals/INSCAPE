@@ -16,8 +16,9 @@ function syncLeaveGuard(s) {
 const emptyState = () => ({ entries: new Map(), listeners: new Set(), revision: 0 });
 export function bindWorkbenchTextRecovery(store) {
   const profile = store.getProfileAddress();
-  if (!workbenchProfiles.has(profile)) workbenchProfiles.set(profile, emptyState());
-  stores.set(store, workbenchProfiles.get(profile));
+  const context = `${profile}/${store.getWorkbenchId?.() || 'workbench:main'}`;
+  if (!workbenchProfiles.has(context)) workbenchProfiles.set(context, emptyState());
+  stores.set(store, workbenchProfiles.get(context));
 }
 function state(store) {
   if (!stores.has(store)) stores.set(store, emptyState());

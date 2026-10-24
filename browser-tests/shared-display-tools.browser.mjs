@@ -53,13 +53,15 @@ test('one shared Layers and Metadata window follow explicit Display targets with
         return buildProfileDocumentV9({ profileAddress, systemWorkflowDraft: window.readDisplayDraft(), assetRecords: fixture.OWNER_SYSTEM_WORKFLOW_REVIEW_ASSETS });
       };
       await import('/src/inscapeTokens.css'); await import('/src/public/ownerSystemWorkflow/ownerSystemWorkflow.css'); await import('/src/lattice/rendering/latticeMenuSurface.css');
+      const { acquireProfileEditor } = await import('/src/systemWorkflow/profileEditorLease.js');
+      window.displayEditorLease = acquireProfileEditor(profileAddress);
+      if (await window.displayEditorLease.ready !== 'editing') throw Error('Display fixture could not acquire its editor');
       window.reviewRoot = createRoot(document.getElementById('root'));
       window.reviewRoot.render(React.createElement(Runtime, { profileAddress, reviewStorage: localStorage, reviewAssets: fixture.OWNER_SYSTEM_WORKFLOW_REVIEW_ASSETS,
-        reviewCategories: [], reviewActivity: [], reviewDiscovery: [], reviewProfile: { name: 'Display text review' } }));
+        reviewCategories: [], reviewActivity: [], reviewProfile: { name: 'Display text review' } }));
     });
     await page.goto(`${origin}/__display_text__`); await mount();
-
-
+    await page.getByRole('button', { name: 'Collapse sidebar', exact: true }).click();
     const primary = page.locator('[data-display-instance="display:primary"]').first();
     const secondary = page.locator('.system-workflow__display-instance').nth(1);
     const clickControl = async (container, name) => {
@@ -85,6 +87,7 @@ test('one shared Layers and Metadata window follow explicit Display targets with
     await appearance.getByRole('slider', { name: 'Grain strength', exact: true }).fill('0.7');
     assert.deepEqual(await appearanceWindow.boundingBox(), appearanceBounds, 'shared appearance retains its position');
     const appearances = await page.evaluate(() => window.readDisplayDraft());
+    assert.equal(await page.locator('.system-workflow__notice').count(), 0, 'both Display edits acquired valid editor access');
     assert.equal(appearances.appearance.edges.grain, 0.25); assert.equal(appearances.displays[0].appearance.edges.grain, 0.7);
     await primary.getByLabel(/Move Display Module:/).focus();
     assert.equal(await appearance.getByRole('slider', { name: 'Grain strength', exact: true }).inputValue(), '0.25');
@@ -96,9 +99,12 @@ test('one shared Layers and Metadata window follow explicit Display targets with
     await page.getByRole('menuitem', { name: 'PLAY GRIDS', exact: true }).click();
     await clickControl(primary, 'Pause Grids');
     assert.equal(await primary.getByRole('button', { name: 'Pause Grids', exact: true }).count(), 0);
+    // Establish the empty-selection precondition through the real canvas action.
+    await page.mouse.click(1436, 996);
+    assert.equal(await page.locator('[data-system-workflow-placement-id][aria-pressed="true"]').count(), 0);
     await clickControl(primary, 'Layers');
     const layers = page.locator('[data-shared-tool="layers"]');
-    const metadata = page.locator('[data-shared-tool="metadata"]');
+    const metadata = page.locator('[data-shared-tool="metadata"]:visible');
     assert.equal(await layers.count(), 1);
     assert.ok((await layers.innerText()).includes('MOON PURPLE'));
     await clickControl(primary, 'Artwork info');
@@ -106,28 +112,31 @@ test('one shared Layers and Metadata window follow explicit Display targets with
     await layers.getByRole('button', { name: 'MOON PURPLE', exact: true }).click();
     await metadata.waitFor();
     const listBounds = await layers.locator('.system-workflow__layer-list').boundingBox();
-    const selectionBounds = await layers.getByRole('region', { name: 'Selection properties' }).boundingBox();
-    assert.ok(listBounds.y + listBounds.height <= selectionBounds.y);
+    const selectionBounds = await page.getByRole('region', { name: 'Selection properties', exact: true }).boundingBox();
+    assert.ok(listBounds.y + listBounds.height <= selectionBounds.y || selectionBounds.y + selectionBounds.height <= listBounds.y
+      || listBounds.x + listBounds.width <= selectionBounds.x || selectionBounds.x + selectionBounds.width <= listBounds.x,
+    'the layer list and independently hosted selection properties do not overlap');
     await layers.getByText('Composition spacing', { exact: true }).click();
     assert.ok(await layers.getByRole('button', { name: 'Apply to all', exact: true }).isVisible());
     await layers.getByText('Composition spacing', { exact: true }).click();
-    assert.ok((await metadata.locator('xpath=ancestor::aside').getAttribute('aria-label')).includes('MOON PURPLE'));
+    assert.ok((await metadata.getByRole('heading', { level: 3 }).innerText()).includes('MOON PURPLE'));
     await secondary.getByLabel(/Move Display Module:/).focus();
     assert.equal(await layers.count(), 1);
     await metadata.waitFor({ state: 'detached' });
     assert.ok(!(await layers.innerText()).includes('MOON PURPLE'));
     await layers.getByRole('button', { name: 'ABYSSAL STUDY', exact: true }).click();
     await metadata.waitFor();
-    assert.ok((await metadata.locator('xpath=ancestor::aside').getAttribute('aria-label')).includes('ABYSSAL STUDY'));
+    assert.ok((await metadata.getByRole('heading', { level: 3 }).innerText()).includes('ABYSSAL STUDY'));
     const before = await page.evaluate(() => window.readDisplayDraft());
-    await layers.getByRole('button', { name: 'Cover Display', exact: true }).click();
+    await page.getByRole('toolbar', { name: 'Inspection and placement', exact: true }).getByRole('button', { name: 'Cover Display', exact: true }).click();
     const after = await page.evaluate(() => window.readDisplayDraft());
     assert.deepEqual(after.grids, before.grids);
     assert.notDeepEqual(after.displays[0].grids, before.displays[0].grids);
     // Tool interactions retain selection; a primary click on empty Workbench clears every Display.
     const selectedArtwork = page.locator('[data-system-workflow-placement-id][aria-pressed="true"]');
     assert.equal(await selectedArtwork.count(), 2);
-    await page.mouse.click(20, 20);
+    assert.equal(await page.evaluate(() => Boolean(document.elementFromPoint(1436,996)?.closest('[data-system-workflow-overlay], [data-workbench-view-id]'))), false);
+    await page.mouse.click(1436, 996);
     assert.equal(await selectedArtwork.count(), 0);
     await layers.waitFor({ state: 'detached' });
     await metadata.waitFor({ state: 'detached' });
@@ -145,7 +154,7 @@ test('one shared Layers and Metadata window follow explicit Display targets with
     assert.ok((await layers.innerText()).includes('MOON PURPLE'));
     await layers.getByRole('button', { name: 'MOON PURPLE', exact: true }).click();
     await metadata.waitFor();
-    await page.getByRole('button', { name: 'Close Artwork info', exact: true }).click();
+    await page.getByRole('button', { name: 'Close Info', exact: true }).click();
     assert.equal(await metadata.count(), 0);
     assert.equal(await page.locator('.display-inspection-cue').count(), 0);
     await primary.getByRole('button', { name: 'Select MOON PURPLE', exact: true }).click();
@@ -153,7 +162,7 @@ test('one shared Layers and Metadata window follow explicit Display targets with
     assert.equal(await page.locator('.display-inspection-bubble').count(), 0);
     await page.reload(); await mount();
     await page.locator('[data-shared-tool="layers"]').waitFor();
-    assert.equal(await page.locator('[data-shared-tool="metadata"]').count(), 0);
+    assert.equal(await page.locator('[data-shared-tool="metadata"]:visible').count(), 0);
     // Selection actions have their own host and survive closing Layers.
     await primary.getByLabel(/Move Display Module:/).focus();
     await layers.getByRole('button', { name: 'MOON PURPLE', exact: true }).click();
@@ -182,14 +191,14 @@ test('one shared Layers and Metadata window follow explicit Display targets with
     await dock.getByRole('button', { name: 'Crop', exact: true }).click();
     await zoom.fill('1.5');
     await dock.getByRole('button', { name: 'Done', exact: true }).click();
-    assert.equal(await page.evaluate(() => document.activeElement?.getAttribute('aria-label')), 'Rotate', 'finishing crop restores keyboard focus inside the dock');
+    assert.equal(await page.evaluate(() => document.activeElement?.getAttribute('aria-label')), 'Inspect artwork', 'finishing crop restores keyboard focus inside the dock');
     assert.notDeepEqual((await page.evaluate(() => window.readDisplayDraft())).grids, transformed.grids);
     assert.equal(await layers.count(), 0, 'crop does not reopen Layers');
     const shots = await mkdtemp(join(tmpdir(), 'inscape-context-toolbar-'));
     console.log(`Toolbar screenshots: ${shots}`);
     await dock.getByRole('button', { name: 'Rotate', exact: true }).focus();
     await page.screenshot({ path: join(shots, 'wide.png') });
-    const moveHandle = dock.getByLabel('Move Artwork tools window', { exact: true });
+    const moveHandle = dock.getByLabel('Move Properties window', { exact: true });
     const bounds = await dock.locator('aside').boundingBox();
     await moveHandle.focus(); await page.keyboard.press('ArrowRight');
     assert.ok((await dock.locator('aside').boundingBox()).x > bounds.x, 'keyboard moves the dock');
@@ -202,14 +211,14 @@ test('one shared Layers and Metadata window follow explicit Display targets with
     assert.equal(await dock.getByRole('button', { name: /Frame and/ }).count(), 0);
     await dock.getByRole('button', { name: 'Crop', exact: true }).click();
     await page.waitForFunction(() => {
-      const surface = document.querySelector('.context-toolbar .system-workflow__instrument-content');
+      const surface = document.querySelector('[data-context-bar="inspection"]');
       return surface.scrollHeight <= surface.clientHeight + 1 && surface.getBoundingClientRect().bottom <= innerHeight - 54;
     });
     await page.screenshot({ path: join(shots, 'narrow-crop.png') });
     await dock.getByRole('button', { name: 'Cancel', exact: true }).click();
     await dock.getByRole('button', { name: 'Rotate', exact: true }).focus();
     await page.waitForFunction(() => {
-      const surface = document.querySelector('.context-toolbar .system-workflow__instrument-content');
+      const surface = document.querySelector('[data-context-bar="inspection"]');
       return surface.scrollHeight <= surface.clientHeight + 1 && surface.getBoundingClientRect().bottom <= innerHeight - 54;
     });
     await page.screenshot({ path: join(shots, 'narrow.png') });
@@ -220,9 +229,10 @@ test('one shared Layers and Metadata window follow explicit Display targets with
       window.reviewRoot.render(React.createElement(Visitor, { document: await window.buildDisplayDocument() }));
     });
     assert.equal(await dock.count(), 0, 'Visitor has no authoring dock');
-    const visitorPrimary = page.locator('main.visitor-grid-world[data-display-instance="display:primary"] > .system-workflow__workbench');
-    const visitorSecondary = page.locator('main.visitor-grid-world[data-embedded-display]');
-    await clickControl(visitorPrimary, 'Artwork info');
+    const visitorPrimary = page.locator('main.visitor-grid-world [data-display-instance="display:primary"]');
+    const visitorSecondary = page.locator('main.visitor-grid-world [data-display-instance]:not([data-display-instance="display:primary"])');
+    await page.getByRole('button', { name: 'Tools', exact: true }).click();
+    await page.getByRole('menuitem', { name: 'METADATA', exact: true }).click();
     assert.equal(await metadata.count(), 0, 'Visitor can enable metadata cues without an empty window');
     await visitorPrimary.getByRole('button', { name: /Read metadata for MOON PURPLE/ }).focus(); await page.keyboard.press('Enter');
     assert.ok((await metadata.locator('xpath=ancestor::aside').getAttribute('aria-label')).includes('MOON PURPLE'));

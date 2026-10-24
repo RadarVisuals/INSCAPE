@@ -36,7 +36,7 @@ test('owner Display and Text windows snap to the Workbench, with free movement a
       window.readSnapDraft = () => createSystemWorkflowDraftStore({ profileAddress, storage: localStorage }).getDraft();
       await import('/src/inscapeTokens.css'); await import('/src/public/ownerSystemWorkflow/ownerSystemWorkflow.css'); await import('/src/lattice/rendering/latticeMenuSurface.css');
       createRoot(document.getElementById('root')).render(React.createElement(Runtime, { profileAddress, reviewStorage: localStorage,
-        reviewAssets: fixture.OWNER_SYSTEM_WORKFLOW_REVIEW_ASSETS, reviewCategories: [], reviewActivity: [], reviewDiscovery: [], reviewProfile: { name: 'Grid snapping' } }));
+        reviewAssets: fixture.OWNER_SYSTEM_WORKFLOW_REVIEW_ASSETS, reviewCategories: [], reviewActivity: [], reviewProfile: { name: 'Grid snapping' } }));
     });
     await openTextToolSection(page.locator('.text-tools-window'), 'Text box layout');
     await page.getByLabel('Text inner spacing', { exact: true }).selectOption('custom');

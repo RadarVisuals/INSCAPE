@@ -8,14 +8,9 @@ const menuStyles = readFileSync(new URL('../lattice/rendering/latticeMenuSurface
 const tokenStyles = readFileSync(new URL('../inscapeTokens.css', import.meta.url), 'utf8');
 
 test('System Workflow owner surfaces receive the active canonical menu surface', () => {
-  assert.match(ownerSource, /data-lattice-menu-surface data-menu-surface=\{menuSurface\}/);
+  assert.match(ownerSource, /data-lattice-menu-surface\s+data-menu-surface=\{menuSurface\}/);
   assert.match(ownerSource, /<OwnerSystemWorkflowPanelLayer[\s\S]*menuSurface=\{menuSurface\}/);
   assert.match(menuStyles, /\[data-lattice-menu-surface\]/);
-});
-
-test('production browser and rack surfaces retain clean corner handles', () => {
-  assert.match(browserStyles, /\.lattice-browser-resize::after[^}]*border-right:\s*1px solid currentColor[^}]*border-bottom:\s*1px solid currentColor/s);
-  assert.doesNotMatch(browserStyles, /\.lattice-browser-resize\s*\{[^}]*linear-gradient/s);
 });
 
 test('central typography exposes only the approved interface and technical faces', () => {

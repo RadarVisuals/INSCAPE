@@ -38,7 +38,7 @@ if (new URLSearchParams(location.search).has('artwork')) {
 }
 storage.setItem(key, JSON.stringify(draft));
 createRoot(document.getElementById('root')).render(<>
-  <Runtime profileAddress={profileAddress} reviewStorage={storage} reviewAssets={[]} reviewCategories={[]} reviewActivity={[]} reviewDiscovery={[]} reviewProfile={{ name: 'Keeper AI preview' }} />
+  <Runtime profileAddress={profileAddress} reviewStorage={storage} reviewAssets={[]} reviewCategories={[]} reviewActivity={[]} reviewProfile={{ name: 'Keeper AI preview' }} />
   <aside style={{ position: 'fixed', top: 18, left: 18, right: 18, zIndex: 40, pointerEvents: 'none', color: '#555', font: '12px/1.6 "Inscape Sora", sans-serif' }}>
     Keeper AI · local preview<br />Release Octo, click his head, then choose AI chat.
   </aside>

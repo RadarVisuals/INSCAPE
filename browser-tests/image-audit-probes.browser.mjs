@@ -26,9 +26,12 @@ test('Image audit: independent commits, unavailable media and minimum-size contr
       const { addImageModule } = await import('/src/imageModule/imageModuleSession.js');
       const { createProfileDocumentV9AssetResolver } = await import('/src/profileDocument/domain/profileDocumentV9Asset.js');
       const { OWNER_SYSTEM_WORKFLOW_REVIEW_ASSETS: assets } = await import('/src/public/ownerSystemWorkflow/ownerSystemWorkflowDevelopmentFixture.js');
+      const WorkbenchToolDocks = (await import('/src/public/ownerSystemWorkflow/WorkbenchToolDocks.jsx')).default;
+      const { createToolDockLayout, createToolDockStore } = await import('/src/public/ownerSystemWorkflow/workbenchToolDockState.js');
       const ImageWorkbench = (await import('/src/imageModule/ImageWorkbench.jsx')).default;
       const { WorkbenchViewProvider, useWorkbenchView } = await import('/src/public/ownerSystemWorkflow/WorkbenchView.jsx');
       const { ContextToolbarProvider, ContextToolbar, ContextActionBars } = await import('/src/public/ownerSystemWorkflow/ContextToolbar.jsx');
+      const { SharedDisplayToolsProvider } = await import('/src/public/ownerSystemWorkflow/SharedDisplayTools.jsx');
       await import('/src/inscapeTokens.css');
       await import('/src/public/ownerSystemWorkflow/ownerSystemWorkflow.css');
       const profile = `0x${'1'.repeat(40)}`;
@@ -44,14 +47,18 @@ test('Image audit: independent commits, unavailable media and minimum-size contr
       window.auditCommit = patch => { const d = store.getDraft(); Object.assign(d.imageModules[0], patch); return store.commitCompletedOperation(d, { expectedGeneration: store.getGeneration() }); };
       window.auditUnrelated = () => addImageModule(store, profile);
       window.auditExternalChange = () => { const d = store.getDraft(); d.imageModules[1].name = 'Changed elsewhere'; storage.set(systemWorkflowDraftKey(profile), JSON.stringify(d)); };
-      function CameraProbe() { window.auditZoom = useWorkbenchView().setScale; return null; }
+      function CameraProbe() { const view = useWorkbenchView(); window.auditZoom = view.setScale; React.useEffect(() => view.selectArtwork(id), []); return null; }
       function Fixture() {
+        const hostRef = React.useRef(null);
+        const [dock] = React.useState(() => { const layout = createToolDockLayout(innerWidth); layout.hidden = ['Layers']; layout.groups[0].panes[0].active = 'Transform'; return createToolDockStore(layout); });
         const d = React.useSyncExternalStore(store.subscribe, store.getSnapshot);
-        return React.createElement(WorkbenchViewProvider, null,
+        return React.createElement(WorkbenchViewProvider, { store, profileAddress: profile, presentation: d.workbench },
           React.createElement(CameraProbe),
           React.createElement(ContextToolbarProvider, { target: id },
-            React.createElement(ImageWorkbench, { records: d.imageModules.slice(0, 1), store, profileAddress: profile }),
-            React.createElement(ContextActionBars), React.createElement(ContextToolbar)));
+            React.createElement(SharedDisplayToolsProvider, { metadataDock: dock, targetId: id },
+              React.createElement('main', { ref: hostRef, tabIndex: -1, className: 'system-workflow', 'data-surface': 'carbon', 'data-lattice-menu-surface': true, 'data-menu-surface': 'carbon', style: { position: 'fixed', inset: 0, background: '#383a3a' } },
+                React.createElement(ImageWorkbench, { records: d.imageModules.slice(0, 1), store, profileAddress: profile }),
+                React.createElement(ContextActionBars), React.createElement(ContextToolbar, { menuSurface: 'carbon' }), React.createElement(WorkbenchToolDocks, { controller: dock, hostRef, menuSurface: 'carbon' })))));
       }
       createRoot(document.getElementById('root')).render(React.createElement(Fixture));
     });
@@ -68,7 +75,7 @@ test('Image audit: independent commits, unavailable media and minimum-size contr
     assert.deepEqual(await page.evaluate(() => window.auditStore.getDraft().imageModules[0]), savedBefore);
     results.unrelatedCommit = { cropPreserved: true, authoredImageUnchanged: true };
     await dock.getByRole('button', { name: 'Cancel', exact: true }).click();
-    await canvas.click();
+    await dock.getByRole('button', { name: 'Inspect Image', exact: true }).click();
     await page.getByRole('dialog', { name: 'Inspect Image' }).waitFor();
     await page.evaluate(() => window.auditUnrelated());
     assert.equal(await page.getByRole('dialog', { name: 'Inspect Image' }).isVisible(), true,
@@ -81,7 +88,7 @@ test('Image audit: independent commits, unavailable media and minimum-size contr
     await module.getByRole('status').filter({ hasText: 'Artwork unavailable' }).waitFor();
     results.unavailable = { alerts: await module.getByRole('alert').count(), status: await module.getByRole('status').count(), label: await canvas.getAttribute('aria-label') };
     assert.equal(results.unavailable.status, 1, 'missing media is distinguished from successful loading');
-    await canvas.click();
+    await dock.getByRole('button', { name: 'Inspect Image', exact: true }).click();
     await page.getByRole('dialog', { name: 'Inspect Image' }).waitFor();
     await page.screenshot({ path: `${output}/missing-media.png` });
     results.unavailable.dialogAlerts = await page.getByRole('dialog').getByRole('alert').count();
@@ -92,8 +99,8 @@ test('Image audit: independent commits, unavailable media and minimum-size contr
     results.small = await module.evaluate(node => {
       const canvas = node.querySelector('.image-module__canvas').getBoundingClientRect();
       const next = node.querySelector('.image-module__next').getBoundingClientRect();
-      const close = node.querySelector('.image-module__close').getBoundingClientRect();
-      return { canvas: canvas.toJSON(), next: next.toJSON(), close: close.toJSON(), nextCenterHit: document.elementFromPoint(next.x + next.width/2, next.y + next.height/2)?.outerHTML.slice(0, 160) };
+      const inspect = node.querySelector('.image-module__inspect').getBoundingClientRect();
+      return { canvas: canvas.toJSON(), next: next.toJSON(), inspect: inspect.toJSON(), nextCenterHit: document.elementFromPoint(next.x + next.width/2, next.y + next.height/2)?.outerHTML.slice(0, 160) };
     });
     assert.ok(results.small.next.top >= results.small.canvas.bottom, 'minimum canvas controls leave its artwork exposed');
     await page.screenshot({ path: `${output}/minimum-canvas-wide.png` });
@@ -107,9 +114,10 @@ test('Image audit: independent commits, unavailable media and minimum-size contr
       return { width: r.width, height: r.height, accessiblePixels };
     });
     await page.evaluate(() => window.auditExternalChange());
-    await dock.getByRole('spinbutton', { name: 'Image width' }).fill('64');
-    for (let attempt = 0; attempt < 3; attempt++) await dock.getByRole('button', { name: 'Set size' }).click();
-    results.externalChange = { message: await dock.getByRole('alert').innerText(), widthAfterThreeAttempts: await page.evaluate(() => window.auditStore.getDraft().imageModules[0].width) };
+    const width = page.getByRole('spinbutton', { name: 'Transform Width' });
+    await width.fill('64');
+    for (let attempt = 0; attempt < 3; attempt++) { await width.focus(); await width.press('Enter'); }
+    results.externalChange = { message: await page.getByRole('tabpanel', { name: 'Transform', exact: true }).getByRole('alert').innerText(), widthAfterThreeAttempts: await page.evaluate(() => window.auditStore.getDraft().imageModules[0].width) };
     assert.equal(results.externalChange.widthAfterThreeAttempts, 32);
     assert.deepEqual(errors, []);
     await writeFile(`${output}/probes.json`, JSON.stringify(results, null, 2));

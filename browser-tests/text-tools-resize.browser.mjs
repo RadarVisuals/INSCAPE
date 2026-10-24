@@ -1,11 +1,16 @@
+import { setTextBackground } from './fixtures/shared-tools.mjs';
 import { openTextToolSection } from './fixtures/text-tool-sections.mjs';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { chromium } from 'playwright-core';
 import { mountTextToolsFixture } from './fixtures/text-tools-fixture.mjs';
 import { setWorkbenchZoom } from './fixtures/workbench-zoom.mjs';
+import fs from 'node:fs';
+import path from 'node:path';
 
 const origin = process.env.INSCAPE_TEXT_ROOT || 'http://127.0.0.1:5197';
+const output = process.env.INSCAPE_BROWSER_OUTPUT || '.browser-test-runtime';
+fs.mkdirSync(output, { recursive: true });
 const settle = page => page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
 const near = (actual, expected, label) => assert.ok(Math.abs(actual - expected) < 1, `${label}: ${actual} / ${expected}`);
 const saved = page => page.evaluate(() => window.savedDraft());
@@ -52,12 +57,26 @@ for (const width of [1440, 390]) test(`Text columns, inline title and module res
     const errors = []; page.on('pageerror', error => errors.push(error.message));
     await mountTextToolsFixture(page, origin);
     const tools = page.locator('.text-tools-window'), text = page.locator('.text-window');
+    // The fixture's original frame starts underneath current navigation chrome.
+    // Pan the camera through a clear canvas point, preserving authored geometry.
+    if (width === 1440) await page.getByRole('button', { name: 'Collapse sidebar', exact: true }).click();
+    const beforePan = await saved(page), beforePanFrame = await text.boundingBox();
+    await page.locator('main.system-workflow').focus();
+    const panPoint = { x: width === 1440 ? width / 2 : 16, y: 780 };
+    assert.equal(await page.evaluate(({ x, y }) => { const hit = document.elementFromPoint(x, y); return Boolean(hit?.closest('main.system-workflow')) && !hit.closest('[data-system-workflow-overlay]'); }, panPoint), true, 'camera pan starts on unobstructed canvas');
+    await page.mouse.move(panPoint.x, panPoint.y);
+    await page.keyboard.down('Space'); await page.mouse.down();
+    await page.mouse.move(panPoint.x + (width === 1440 ? 32 : 0), panPoint.y + 96, { steps: 4 });
+    await page.mouse.up(); await page.keyboard.up('Space');
+    await settle(page);
+    near((await text.boundingBox()).y, beforePanFrame.y + 96, 'camera exposes the action strip below navigation');
+    assert.deepEqual(await saved(page), beforePan, 'camera arrangement preserves saved composition');
     const body = page.getByRole('textbox', { name: 'Article text', exact: true });
     assert.equal((await saved(page)).texts[0].article.appearance.background, '#101111');
     assert.equal(await page.getByRole('combobox', { name: 'Insert Library artwork' }).count(), 0);
     const layout = await tools.boundingBox();
     assert.ok(layout.x >= 0 && layout.x + layout.width <= width);
-    const settings = tools.locator('.system-workflow__instrument-content');
+    const settings = tools.locator('.text-tools-content');
     const overflow = await settings.evaluate(n => ({ x: n.scrollWidth - n.clientWidth, y: n.scrollHeight - n.clientHeight,
       overflowY: getComputedStyle(n).overflowY, bottom: n.getBoundingClientRect().bottom }));
     assert.ok(overflow.x <= 1, 'both settings columns fit without horizontal clipping');
@@ -67,29 +86,35 @@ for (const width of [1440, 390]) test(`Text columns, inline title and module res
       await settings.evaluate(n => { n.scrollTop = n.scrollHeight; });
       assert.ok(await settings.evaluate(n => n.scrollTop > 0), 'the lower settings are reachable');
     }
-    assert.equal(await tools.getByRole('separator').count(), 0, 'tools have no resize handles');
-    assert.equal(await tools.getByRole('tab').count(), 0, 'settings use direct formatting and named disclosures');
+    assert.equal(await tools.locator('.workbench-tool-panel-resize').count(), 8, 'tools retain invisible resize edges');
+    assert.deepEqual(await tools.getByRole('tab').allTextContents(), ['Format text', 'Article settings'], 'Text retains its two accepted settings scopes');
+    assert.equal(await tools.getByRole('tab', { name: 'Format text', exact: true }).getAttribute('aria-selected'), 'true');
     assert.equal(await tools.getByRole('textbox', { name: 'Article title', exact: true }).count(), 0, 'title is edited in the document');
+    const beforeSectionChange = await saved(page);
     await openTextToolSection(tools, 'Display connection');
+    assert.equal(await tools.getByRole('tab', { name: 'Article settings', exact: true }).getAttribute('aria-selected'), 'true');
+    assert.deepEqual(await saved(page), beforeSectionChange, 'switching settings scopes does not author the article');
     assert.equal(await page.getByRole('combobox', { name: 'Follow Display', exact: true }).isVisible(), true);
     const follow = page.getByRole('combobox', { name: 'Follow Display', exact: true });
     await follow.scrollIntoViewIfNeeded();
     assert.equal(await follow.evaluate(n => { const r = n.getBoundingClientRect(); return n.contains(document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2)); }), true, 'lower settings receive pointer input after contained scrolling');
-    await page.screenshot({ path: `.browser-test-runtime/text-tools-${width}.png` });
+    await page.screenshot({ path: path.join(output, `text-tools-${width}.png`) });
     await openTextToolSection(page.locator('.text-tools-window'), 'Background & edges');
-    assert.equal(await page.getByRole('combobox', { name: 'Text background', exact: true }).inputValue(), 'colour');
+    assert.notEqual((await page.evaluate(() => window.savedDraft())).texts[0].article.appearance.background, null);
     await openTextToolSection(page.locator('.text-tools-window'), 'Background & edges');
-    await page.getByRole('combobox', { name: 'Text background', exact: true }).selectOption('none');
+    await setTextBackground(page, 'none');
     assert.equal((await saved(page)).texts[0].article.appearance.background, null);
     await openTextToolSection(page.locator('.text-tools-window'), 'Background & edges');
-    await page.getByRole('combobox', { name: 'Text background', exact: true }).selectOption('colour');
-    await page.screenshot({ path: `.browser-test-runtime/text-appearance-${width}.png` });
+    await setTextBackground(page, 'colour');
+    await page.screenshot({ path: path.join(output, `text-appearance-${width}.png`) });
     await tools.getByRole('button', { name: 'Close Text tools', exact: true }).click();
     const title = text.getByRole('textbox', { name: 'Article title', exact: true });
     await title.fill('Titel rechtstreeks in het document'); await title.press('Enter');
     assert.equal(await body.evaluate(node => node === document.activeElement), true, 'Enter continues in the body');
     const frameBeforeRead = await text.boundingBox();
-    await text.getByRole('button', { name: 'Read', exact: true }).click();
+    const read = text.getByRole('button', { name: 'Read', exact: true });
+    assert.equal(await read.evaluate(node => { const r = node.getBoundingClientRect(); return node.contains(document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2)); }), true, 'Read receives pointer input outside navigation chrome');
+    await read.click();
     assert.equal(await tools.count(), 0);
     assert.equal(await text.locator('article .text-document-title').innerText(), 'Titel rechtstreeks in het document');
     await text.getByRole('button', { name: 'Write', exact: true }).click();
@@ -124,6 +149,7 @@ for (const width of [1440, 390]) test(`Text columns, inline title and module res
     }
     const beforeCancel = await saved(page), screenBefore = await text.boundingBox();
     const top = await text.locator('.is-nw').boundingBox();
+    assert.equal(await text.locator('.is-nw').evaluate(node => { const r = node.getBoundingClientRect(); return node.contains(document.elementFromPoint(r.x + 14, r.y + 14)); }), true, 'the actual pointer resize target is unobstructed');
     await page.mouse.move(top.x + 14, top.y + 14); await page.mouse.down();
     await page.mouse.move(top.x + 42, top.y + 36, { steps: 4 }); await settle(page);
     assert.notDeepEqual(await text.boundingBox(), screenBefore, 'pointer previews resize');
@@ -145,71 +171,61 @@ for (const width of [1440, 390]) test(`Text columns, inline title and module res
       await page.keyboard.press('Control+Shift+z'); await settle(page);
       assert.deepEqual(savedFrame(await saved(page)), savedFrame(after), 'Redo restores the resize');
     }
-    await grip.focus(); await page.screenshot({ path: `.browser-test-runtime/text-controls-${width}.png` });
+    await grip.focus(); await page.screenshot({ path: path.join(output, `text-controls-${width}.png`) });
     assert.deepEqual(errors, []);
   } finally { await browser.close(); }
 });
 
-test('Layers and Metadata retain resizing; Text tools remain movable with viewport recovery', { timeout: 90000 }, async () => {
+test('Display Layers keeps content sizing; Text tools and Info recover within the viewport', { timeout: 90000 }, async () => {
   const browser = await chromium.launch({ executablePath: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', headless: true });
   try {
     const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
     await mountTextToolsFixture(page, origin);
     const before = await saved(page);
-    for (const [command, label] of [[null, 'Text tools'], ['LAYERS', 'Layers'], ['METADATA', 'Artwork info']]) {
+    for (const [command, label] of [[null, 'Text tools'], ['LAYERS', 'Layers'], ['METADATA', 'Info']]) {
       if (command) {
-        await page.getByRole('button', { name: 'Tools', exact: true }).click();
+        await page.locator('[data-display-instance="display:primary"]').getByLabel(/Move Display Module:/).focus(); await page.keyboard.press('Shift+F10');
+        await page.getByRole('menuitem', { name: 'TOOLS', exact: true }).click();
         await page.getByRole('menuitem', { name: command, exact: true }).click();
       }
-      const grip = page.getByLabel(`Move ${label} window`, { exact: true }), win = grip.locator('..');
+      const grip = page.getByLabel(`Move ${label} ${label === 'Info' ? 'panel' : 'window'}`, { exact: true });
+      const win = label === 'Text tools' ? page.locator('.text-tools-window') : label === 'Info' ? page.getByRole('region', { name: 'Info', exact: true }) : page.locator('.system-workflow__instrument-window').filter({ has: grip });
       await grip.focus(); await page.keyboard.press('ArrowRight'); await page.keyboard.press('ArrowDown');
       if (label === 'Text tools') {
-        assert.equal(await win.getByRole('separator').count(), 0);
+        assert.equal(await win.locator('.workbench-tool-panel-resize').count(), 8);
         await page.setViewportSize({ width: 390, height: 844 }); await settle(page);
         const narrow = await win.boundingBox(); assert.ok(narrow.x >= 0 && narrow.x + narrow.width <= 390 && narrow.y + narrow.height <= 796);
-        await win.getByRole('button', { name: 'Close Text tools', exact: true }).click();
+        // The shared Info dock can sit above the independent Text window after
+        // viewport fitting. Dismiss that visible window before using Text's close.
+        const closeInfo = page.getByRole('button', { name: 'Close Info', exact: true });
+        if (await closeInfo.isVisible()) await closeInfo.click();
+        const closeText = win.getByRole('button', { name: 'Close Text tools', exact: true });
+        assert.equal(await closeText.evaluate(node => { const r = node.getBoundingClientRect(); return node.contains(document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2)); }), true, 'Text close receives pointer input after dismissing Info');
+        await closeText.click();
+        assert.equal(await win.count(), 0);
+        assert.deepEqual(await saved(page), before, 'closing the stacked tool windows does not author the composition');
         await page.setViewportSize({ width: 1440, height: 1000 });
         continue;
       }
-      assert.equal(await win.getByRole('separator').count(), 8);
-      const base = await win.boundingBox();
-      await win.getByRole('separator', { name: `Resize ${label} from top left`, exact: true }).focus();
-      await page.keyboard.press('ArrowLeft'); await page.keyboard.press('ArrowUp'); await settle(page);
-      const enlarged = await win.boundingBox();
-      near(enlarged.x + enlarged.width, base.x + base.width, 'fixed right'); near(enlarged.y + enlarged.height, base.y + base.height, 'fixed bottom');
-      assert.ok(enlarged.width > base.width && enlarged.height > base.height);
-      for (const control of await win.getByRole('separator').all()) {
-        assert.equal(await control.evaluate(node => { const r = node.getBoundingClientRect(); return node.contains(document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2)); }), true, `${label} resize handles receive pointer input`);
+      if (label === 'Layers') assert.equal(await win.getByRole('separator').count(), 0, 'Display Layers retains its existing content-sized shell');
+      else {
+        assert.equal(await win.locator('.workbench-tool-panel-resize').count(), 8, 'Info uses the accepted resizable shared dock');
+        assert.equal(await win.getByRole('tab', { name: 'Info', exact: true }).getAttribute('aria-selected'), 'true');
+        assert.equal(await win.getByText('MOUNTAIN SIGNAL II', { exact: true }).isVisible(), true, 'Display Metadata still shows the selected artwork');
       }
-      const handle = await win.getByRole('separator', { name: `Resize ${label} from top`, exact: true }).boundingBox();
-      await page.mouse.move(handle.x + 14, handle.y + 14); await page.mouse.down(); await page.mouse.move(handle.x + 14, handle.y + 54);
-      await page.keyboard.press('Escape'); await page.mouse.up(); await settle(page);
-      assert.deepEqual(await win.boundingBox(), enlarged);
-      const topHandle = win.getByRole('separator', { name: `Resize ${label} from top`, exact: true });
-      for (const outcome of ['lost capture', 'pointer cancel', 'release']) {
-        const before = await win.boundingBox(), target = await topHandle.boundingBox();
-        await page.mouse.move(target.x + 14, target.y + 14); await page.mouse.down();
-        await page.mouse.move(target.x + 14, target.y + 54, { steps: 4 }); await settle(page);
-        assert.notDeepEqual(await win.boundingBox(), before, `${label} resize previews before ${outcome}`);
-        if (outcome === 'lost capture') await topHandle.evaluate(node => {
-          if (!node.hasPointerCapture(1)) throw Error('Resize does not own the pointer');
-          node.releasePointerCapture(1);
-        });
-        if (outcome === 'pointer cancel') await topHandle.dispatchEvent('pointercancel', { pointerId: 1, pointerType: 'mouse', bubbles: true });
-        await page.mouse.up(); await settle(page);
-        const after = await win.boundingBox();
-        if (outcome === 'release') {
-          near(after.y, before.y + 40, `${label} release commits top`);
-          near(after.y + after.height, before.y + before.height, `${label} release retains bottom`);
-        } else assert.deepEqual(after, before, `${label} ${outcome} cancels the frame including subsequent release`);
+      if (label === 'Layers') {
+        const artwork = win.getByRole('button', { name: 'MOUNTAIN SIGNAL II', exact: true });
+        await artwork.focus(); await artwork.press('Enter');
       }
       await page.setViewportSize({ width: 390, height: 844 }); await settle(page);
       const narrow = await win.boundingBox(); assert.ok(narrow.x >= 0 && narrow.x + narrow.width <= 390 && narrow.y + narrow.height <= 796);
-      await page.screenshot({ path: `.browser-test-runtime/${command || 'text-tools'}-resize-narrow.png` });
-      await win.getByRole('button', { name: `Close ${label}`, exact: true }).click();
+      await page.screenshot({ path: path.join(output, `${command || 'text-tools'}-resize-narrow.png`) });
+      const close = win.getByRole('button', { name: `Close ${label}`, exact: true });
+      await close.focus(); await close.press('Enter');
       await page.setViewportSize({ width: 1440, height: 1000 });
     }
-    await page.getByRole('button', { name: 'Tools', exact: true }).click();
+    await page.locator('[data-display-instance="display:primary"]').getByLabel(/Move Display Module:/).focus(); await page.keyboard.press('Shift+F10');
+        await page.getByRole('menuitem', { name: 'TOOLS', exact: true }).click();
     await page.getByRole('menuitem', { name: 'LAYERS', exact: true }).click();
     const sharedTools = page.locator('[data-shared-display-tools]');
     const layersGrip = sharedTools.getByLabel('Move Layers window', { exact: true });

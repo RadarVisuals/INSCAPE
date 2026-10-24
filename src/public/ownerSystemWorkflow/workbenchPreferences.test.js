@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   DEFAULT_WORKBENCH_PREFERENCES,
+  createWorkbenchPreferencesStore,
   loadWorkbenchPreferences,
   normalizeWorkbenchPreferences,
   saveWorkbenchPreferences,
@@ -31,6 +32,92 @@ test('Workbench preferences remain profile-scoped local editor state', () => {
   assert.deepEqual(loadWorkbenchPreferences(profile, 'paper', storage), saved);
   assert.equal(storage.values.size, 1);
   assert.ok(storage.values.has(workbenchPreferencesStorageKey(profile)));
+});
+
+test('failed writes keep the latest visible preferences and retry only their own profile record', () => {
+  const storage = memoryStorage(), write = storage.setItem;
+  storage.setItem('composition', 'unchanged');
+  const store = createWorkbenchPreferencesStore({ profile: 'alice', storage, fresh: true });
+  assert.equal(storage.values.size, 1, 'constructing the store does not write');
+  assert.equal(store.flush(), true);
+  assert.equal(store.getSnapshot().gridMode, 'NONE');
+  storage.setItem = () => { throw Error('Quota'); };
+  store.update(current => ({ ...current, gridSpacing: 41, dockVisible: false }));
+  store.update(current => ({ ...current, gridSpacing: 52 }));
+  assert.match(store.getError(), /could not be saved/);
+  assert.equal(store.getSnapshot().gridSpacing, 52);
+  assert.equal(loadWorkbenchPreferences('alice', 'mist', storage).gridSpacing, 24);
+  assert.equal(store.retry(), false);
+  storage.setItem = write;
+  assert.equal(store.retry(), true);
+  assert.equal(store.getError(), null);
+  assert.equal(loadWorkbenchPreferences('alice', 'mist', storage).gridSpacing, 52);
+  assert.equal(loadWorkbenchPreferences('alice', 'mist', storage).dockVisible, false);
+  assert.equal(storage.getItem('composition'), 'unchanged');
+  assert.equal(storage.getItem(workbenchPreferencesStorageKey('bob')), null);
+  store.dispose();
+});
+
+test('unreadable preference records remain intact until explicitly saving current settings', () => {
+  for (const corrupt of ['{broken', 'null', '[]', 'false', '"text"']) {
+    const storage = memoryStorage(), key = workbenchPreferencesStorageKey('alice');
+    storage.setItem(key, corrupt);
+    const store = createWorkbenchPreferencesStore({ profile: 'alice', storage, fallbackSurfaceId: 'carbon' });
+    assert.match(store.getError(), /could not be read/);
+    store.update(current => ({ ...current, edgeSnap: false }));
+    assert.equal(store.flush(), false);
+    assert.equal(storage.getItem(key), corrupt);
+    assert.equal(store.retry(), true);
+    assert.equal(loadWorkbenchPreferences('alice', 'mist', storage).edgeSnap, false);
+    assert.equal(loadWorkbenchPreferences('alice', 'mist', storage).surfaceId, 'carbon');
+    store.dispose();
+  }
+});
+
+test('read failures do not overwrite saved preferences when storage becomes available again', () => {
+  const storage = memoryStorage(), read = storage.getItem;
+  const original = JSON.stringify({ gridSpacing: 80 });
+  storage.setItem(workbenchPreferencesStorageKey('alice'), original);
+  storage.getItem = () => { throw Error('Denied'); };
+  const store = createWorkbenchPreferencesStore({ profile: 'alice', storage });
+  storage.getItem = read;
+  store.update(current => ({ ...current, chromeNoise: false }));
+  store.dispose();
+  assert.equal(storage.getItem(workbenchPreferencesStorageKey('alice')), original);
+  assert.match(store.getError(), /could not be read/);
+});
+
+test('external edits and lost authority block saves; disposed callbacks cannot change either profile', () => {
+  const storage = memoryStorage(); let writable = true;
+  const store = createWorkbenchPreferencesStore({ profile: 'alice', storage, canSave: () => writable });
+  store.flush();
+  storage.setItem(workbenchPreferencesStorageKey('alice'), 'external');
+  store.update(current => ({ ...current, shortcutSnap: false }));
+  assert.match(store.getError(), /another window/);
+  assert.equal(storage.getItem(workbenchPreferencesStorageKey('alice')), 'external');
+  writable = false;
+  assert.equal(store.retry(), false);
+  assert.match(store.getError(), /write access/);
+  writable = true;
+  assert.equal(store.retry(), true);
+  store.dispose();
+  const saved = storage.getItem(workbenchPreferencesStorageKey('alice'));
+  store.update(() => { throw Error('Disposed callback must not run'); });
+  assert.equal(store.retry(), false);
+  assert.equal(storage.getItem(workbenchPreferencesStorageKey('alice')), saved);
+  const other = createWorkbenchPreferencesStore({ profile: 'bob', storage });
+  assert.equal(other.getSnapshot().shortcutSnap, true);
+  other.dispose();
+});
+
+test('unavailable storage and direct storage helpers cannot report a successful save', () => {
+  const store = createWorkbenchPreferencesStore({ profile: 'alice', storage: null });
+  assert.match(store.getError(), /could not be read/);
+  assert.equal(store.retry(), false);
+  assert.match(store.getError(), /could not be saved/);
+  assert.throws(() => saveWorkbenchPreferences('alice', {}, null));
+  assert.throws(() => loadWorkbenchPreferences('alice', 'mist', null));
+  store.dispose();
 });
 
 test('old preferences show the dock; hiding it persists only for that profile', () => {

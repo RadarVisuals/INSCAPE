@@ -51,7 +51,7 @@ test('module edges, appearance, keyboard controls and public rendering', async (
       window.readSurfaceDraft = () => createSystemWorkflowDraftStore({ profileAddress, storage: localStorage }).getDraft();
       await import('/src/inscapeTokens.css'); await import('/src/public/ownerSystemWorkflow/ownerSystemWorkflow.css'); await import('/src/lattice/rendering/latticeMenuSurface.css');
       createRoot(document.getElementById('root')).render(React.createElement(Runtime, { profileAddress, reviewStorage: localStorage,
-        reviewAssets: fixture.OWNER_SYSTEM_WORKFLOW_REVIEW_ASSETS, reviewCategories: [], reviewActivity: [], reviewDiscovery: [], reviewProfile: { name: 'Module composition' } }));
+        reviewAssets: fixture.OWNER_SYSTEM_WORKFLOW_REVIEW_ASSETS, reviewCategories: [], reviewActivity: [], reviewProfile: { name: 'Module composition' } }));
     });
     const text = page.locator('.text-window'), board = page.getByRole('article', { name: 'Display Module', exact: true });
     const tools = page.getByRole('complementary', { name: /Text tools/ });

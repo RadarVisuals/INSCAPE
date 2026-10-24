@@ -14,7 +14,7 @@ import {
   ringPoint,
   pointHue,
   paintTriangle,
-} from './colourModel.js';
+} from '../src/colour/colourModel.js';
 const near = (a, b) => assert.ok(Math.abs(a - b) < 1e-8, `${a} ≈ ${b}`);
 
 test('hue ring and triangle use the same centred geometry and white/black/hue endpoints', () => {

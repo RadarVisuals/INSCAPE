@@ -129,9 +129,8 @@ test('Sidebar keeps one Library tree and preserves the canvas, camera and browsi
   assert.equal(await studio.getByRole('searchbox',{name:'Search',exact:true}).inputValue(),'moon');
   await studio.getByRole('button',{name:'Close workspace',exact:true}).click();
   assert.ok(await studio.getByRole('button',{name:'Library',exact:true}).evaluate(n=>n===document.activeElement));
-  await studio.getByRole('searchbox',{name:'Filter navigation',exact:true}).fill('lib');
-  assert.equal(await studio.getByRole('button',{name:'Workbench',exact:true}).count(),0);
-  await studio.getByRole('searchbox',{name:'Filter navigation',exact:true}).fill('');
+  assert.equal(await studio.getByRole('searchbox',{name:'Filter navigation',exact:true}).count(),0);
+  assert.equal(await studio.getByRole('button',{name:'Workbench',exact:true}).count(),1);
   await studio.getByRole('button',{name:'Reset preview view',exact:true}).click();
   const output=process.env.INSCAPE_BROWSER_OUTPUT;
   if(output){

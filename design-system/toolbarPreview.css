@@ -11,7 +11,3 @@
 .ds-flat-preview .workbench-toolbar__popup {
   max-height: 220px;
 }
-.ds-demo-stage .workbench-toolbar {
-  bottom: 24px;
-  max-width: calc(100% - 16px);
-}

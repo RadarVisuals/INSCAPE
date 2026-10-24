@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import {
   ArrowUpRight,
@@ -885,9 +885,6 @@ function Reference() {
     [theme, setTheme] = useState('carbon');
   const main = useRef(null),
     first = useRef(true);
-  const navigate = (id) => {
-    location.hash = id;
-  };
   useEffect(() => {
     const change = () => setSection(currentSection());
     addEventListener('hashchange', change);

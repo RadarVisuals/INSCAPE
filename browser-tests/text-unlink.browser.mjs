@@ -36,7 +36,7 @@ test('Text can unlink after its Display was deleted, reload independently, and r
         }
         window.readUnlinkDraft = () => createSystemWorkflowDraftStore({ profileAddress, storage: localStorage }).getDraft();
         createRoot(document.getElementById('root')).render(React.createElement(Runtime, { profileAddress, reviewStorage: localStorage,
-          reviewAssets: [], reviewCategories: [], reviewActivity: [], reviewDiscovery: [], reviewProfile: { name: 'Unlink review' } }));
+          reviewAssets: [], reviewCategories: [], reviewActivity: [], reviewProfile: { name: 'Unlink review' } }));
       }, legacy);
       await page.goto(`${origin}/__unlink__`); await mount();
       await page.getByText('The linked Display was removed.', { exact: false }).waitFor();

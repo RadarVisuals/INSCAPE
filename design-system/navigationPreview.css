@@ -1,7 +1,7 @@
 .ds-studio-shell {
-  --ds-navigation-width: 208px;
+  --workspace-navigation-width: 208px;
   display: grid;
-  grid-template-columns: var(--ds-navigation-width) minmax(0, 1fr);
+  grid-template-columns: var(--workspace-navigation-width) minmax(0, 1fr);
   align-items: start;
   gap: var(--space-3);
   padding: var(--space-3);
@@ -9,7 +9,7 @@
   border: 1px solid var(--color-border);
 }
 .ds-studio-shell[data-navigation-collapsed] {
-  --ds-navigation-width: 52px;
+  --workspace-navigation-width: 52px;
 }
 .ds-studio-body {
   min-width: 0;
@@ -34,169 +34,6 @@
   grid-template-columns: minmax(0, 1fr) 364px;
   gap: var(--space-3);
 }
-.ds-navigation {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  height: 700px;
-  padding: var(--space-2);
-  border: 1px solid var(--tactile-edge);
-  border-radius: var(--ds-shell-radius);
-  background: var(--tactile-face);
-  color: var(--tactile-ink);
-  font: var(--ds-text-small)/1.5 var(--font-interface);
-}
-.ds-navigation-identity {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  padding: 10px var(--space-2);
-  background: var(--tactile-well);
-  border-radius: var(--ds-control-radius);
-}
-.ds-navigation-identity span {
-  display: grid;
-  min-width: 0;
-}
-.ds-navigation-identity strong {
-  font-size: var(--ds-text-base);
-  font-weight: 500;
-}
-.ds-navigation-identity small {
-  color: var(--tactile-muted);
-  font: var(--ds-text-small)/1.5 var(--font-technical);
-}
-.ds-navigation-filter {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  margin-top: var(--space-2);
-  padding: var(--space-2);
-  border: 1px solid var(--tactile-edge);
-  border-radius: var(--ds-control-radius);
-}
-.ds-navigation-filter input {
-  min-width: 0;
-  width: 100%;
-  border: 0;
-  background: transparent;
-  color: inherit;
-  font: inherit;
-}
-.ds-navigation-filter:focus-within {
-  outline: 1px solid var(--tactile-ink);
-}
-.ds-navigation-filter input:focus-visible {
-  outline: none;
-}
-.ds-navigation-scroll {
-  min-height: 0;
-  overflow: auto;
-  scrollbar-width: thin;
-  flex: 1;
-  padding-block: var(--space-2);
-}
-.ds-navigation-group {
-  margin-block: var(--space-2);
-}
-.ds-navigation-group p {
-  margin: 12px var(--space-2) 5px;
-  color: var(--tactile-muted);
-  font: var(--ds-text-small)/1.5 var(--font-technical);
-}
-.ds-navigation-link {
-  display: flex;
-  align-items: center;
-  width: 100%;
-  min-height: 34px;
-  gap: var(--space-2);
-  padding: 7px var(--space-2);
-  border: 0;
-  border-radius: var(--ds-control-radius);
-  background: transparent;
-  color: inherit;
-  text-align: left;
-  font: inherit;
-  cursor: pointer;
-}
-.ds-navigation-link > span {
-  flex: 1;
-}
-.ds-navigation-link > svg {
-  flex: none;
-}
-.ds-navigation-link:is(:hover, [aria-current], [data-active]) {
-  background: var(--tactile-hover);
-}
-.ds-navigation-link:disabled {
-  color: var(--tactile-muted);
-  cursor: default;
-  background: transparent;
-}
-.ds-navigation-footer {
-  border-top: 1px solid var(--tactile-edge);
-}
-.ds-navigation-note {
-  display: block;
-  padding: 0 var(--space-2) var(--space-2);
-  color: var(--tactile-muted);
-  font: var(--ds-text-micro)/1.5 var(--font-technical);
-}
-.ds-navigation-utilities {
-  display: flex;
-  justify-content: space-around;
-  padding-block: var(--space-1);
-  border-top: 1px solid var(--tactile-edge);
-}
-.ds-navigation-utilities button {
-  display: grid;
-  place-items: center;
-  width: var(--ds-target-compact);
-  height: var(--ds-target-compact);
-  border: 0;
-  background: none;
-  color: var(--tactile-muted);
-}
-.ds-navigation[data-collapsed] {
-  padding: var(--space-1);
-}
-.ds-navigation[data-collapsed]
-  :is(
-    .ds-navigation-identity span,
-    .ds-navigation-link span,
-    .ds-navigation-link > svg:last-child:not(:first-child),
-    .ds-navigation-group p
-  ) {
-  display: none;
-}
-.ds-navigation[data-collapsed] .ds-navigation-link,
-.ds-navigation[data-collapsed] .ds-navigation-identity {
-  justify-content: center;
-  padding-inline: 0;
-}
-.ds-navigation[data-collapsed] .ds-navigation-utilities {
-  flex-direction: column;
-  align-items: center;
-}
-.ds-library-navigation .lattice-browser-sidebar {
-  width: 100%;
-  min-width: 0;
-  background: transparent;
-  border: 0;
-  overflow: visible;
-  padding: 0;
-}
-.ds-library-navigation .lattice-browser-sidebar button {
-  border-radius: var(--ds-control-radius);
-  min-height: var(--ds-target-compact);
-  font-size: var(--ds-text-small);
-}
-.ds-library-navigation .lattice-browser-sidebar button:is(:hover, [data-active]) {
-  background: var(--tactile-hover);
-}
-.ds-library-navigation .system-workflow__library-create-row {
-  margin-top: var(--space-2);
-}
 @container studio-main (max-width: 730px) {
   .ds-studio-shell .ds-studio-layout {
     grid-template-columns: minmax(0, 1fr);
@@ -212,66 +49,7 @@
   }
 }
 @container (max-width: 620px) {
-  .ds-studio-shell {
-    grid-template-columns: minmax(0, 1fr);
-  }
-  .ds-navigation {
-    height: auto;
-    max-height: 480px;
-  }
-  .ds-navigation-scroll {
-    max-height: 270px;
-  }
-  .ds-navigation[data-collapsed] {
-    flex-direction: row;
-    align-items: center;
-  }
-  .ds-navigation[data-collapsed] .ds-navigation-identity {
-    width: 40px;
-  }
-  .ds-navigation[data-collapsed] .ds-navigation-scroll {
-    flex: 1;
-    overflow: visible;
-    padding: 0;
-  }
-  .ds-navigation[data-collapsed] .ds-navigation-scroll > nav:first-child {
-    display: flex;
-  }
-  .ds-navigation[data-collapsed] .ds-navigation-group {
-    display: flex;
-    margin: 0;
-  }
-  .ds-navigation[data-collapsed] .ds-navigation-link {
-    width: 40px;
-  }
-  .ds-navigation[data-collapsed]
-    :is(.ds-navigation-utilities, .ds-navigation-footer nav, nav[aria-label='Explore navigation']) {
-    display: none;
-  }
-  .ds-navigation[data-collapsed] .ds-navigation-footer {
-    border: 0;
-  }
-}
-@media (pointer: coarse) {
-  .ds-navigation-link,
-  .ds-library-navigation .lattice-browser-sidebar button {
-    min-height: var(--ds-target-touch);
-  }
-  .ds-navigation-filter input {
-    font-size: 16px;
-  }
-}
-
-/* Keep navigation glyphs on one size, with separate small disclosure arrows. */
-.ds-navigation
-  :is(
-    .ds-navigation-link > svg:first-child,
-    .ds-navigation-identity > svg,
-    .ds-navigation-filter > svg,
-    .ds-navigation-utilities svg
-  ),
-.ds-library-navigation .lattice-browser-sidebar button > span > svg {
-  width: var(--ds-icon-size);
-  height: var(--ds-icon-size);
-  flex: 0 0 var(--ds-icon-size);
+  .ds-studio-shell { grid-template-columns: minmax(0, 1fr); }
+  .ds-studio-shell .workspace-navigation { height: 480px; }
+  .ds-studio-shell .workspace-navigation[data-collapsed] { width: 52px; }
 }

@@ -1,0 +1,432 @@
+{
+  "version": 1,
+  "plan": "code-quality-plan.md",
+  "created": "2026-10-23",
+  "scope": "Local execution authorized; preserve intended current functionality, modules, content and appearance. Evidence-backed obsolete implementation removal is authorized.",
+  "baseline": {
+    "branch": "codex/audit-checkpoint-2026-10-19",
+    "head": "32d9418843d996afc2e5203afa4552a6cd2d459a",
+    "dirty": true
+  },
+  "status_values": [
+    "pending",
+    "in_progress",
+    "implemented",
+    "verified",
+    "blocked"
+  ],
+  "steps": [
+    {
+      "id": "01",
+      "status": "verified",
+      "disposition": "checkpoint_and_restore_verified",
+      "result": "../code-quality/step-01/result.md",
+      "blockers": []
+    },
+    {
+      "id": "02",
+      "status": "implemented",
+      "disposition": "baseline_and_failure_triage_recorded",
+      "result": "../code-quality/step-02/result.md",
+      "blockers": [
+        "Individuele browserreproductie blijft vereist voor de expliciet onzekere faaloorzaken; brontriage alleen is geen gedragsbewijs."
+      ]
+    },
+    {
+      "id": "03",
+      "status": "implemented",
+      "disposition": "full_92_suite_catalog_executed_with_additional_29_suite_diagnostics",
+      "result": "../code-quality/step-03/result.md",
+      "blockers": [
+        "Final-01: 92 release-suites uitgevoerd (435/450 pass, 15 fail, 0 skip); 29 aanvullende suites (109/123 pass, 11 fail, 3 expliciet verouderde skips). Actuele fouten en testopstellingen worden gericht gecorrigeerd. CI-duur inclusief installatie binnen 30 minuten blijft onbewezen."
+      ]
+    },
+    {
+      "id": "04",
+      "status": "implemented",
+      "disposition": "nine_owner_boundaries_and_sixteen_regression_transitions_mapped",
+      "result": "../code-quality/step-04/result.md",
+      "blockers": [
+        "Gedragsgaten uit de matrix worden bij hun toegewezen stappen ingevuld."
+      ]
+    },
+    {
+      "id": "05",
+      "status": "implemented",
+      "disposition": "lint_gate_and_negative_proofs_passed_review_repairs_applied",
+      "result": "../code-quality/step-05/result.md",
+      "blockers": [
+        "Lint slaagt voor 458 bronbestanden met 93 individueel beoordeelde observaties. De laatste drie ongewijzigde hookinvarianten zijn op basis van de onafhankelijke naamreview opnieuw gebonden. Finale gezamenlijke verificatie blijft vereist."
+      ]
+    },
+    {
+      "id": "06",
+      "status": "implemented",
+      "disposition": "two_core_files_mechanically_formatted_equivalence_and_affected_source_checks_passed",
+      "result": "../code-quality/step-06/result.md",
+      "blockers": [
+        "Gezamenlijke eindrun en productie-bundelbudget nog open."
+      ]
+    },
+    {
+      "id": "07",
+      "status": "implemented",
+      "disposition": "strict_real_implementations_17_negative_calls_3_mutations_and_independent_review_passed",
+      "result": "../code-quality/step-07/result.md",
+      "blockers": [
+        "Volledige applicatie is niet integraal getypeerd; gezamenlijke releasecontrole en bundelbudget blijven open."
+      ]
+    },
+    {
+      "id": "08",
+      "status": "implemented",
+      "disposition": "explicit_scope_123_unit_and_8_browser_checks_passed_independent_review",
+      "result": "../code-quality/step-08/result.md",
+      "blockers": [
+        "Gezamenlijke productiebuild/budgetcontrole op uiteindelijke bron nog vereist."
+      ]
+    },
+    {
+      "id": "09",
+      "status": "implemented",
+      "disposition": "transaction_boundary_proved_collection_failure_codes_repaired_181_combined_tests_passed",
+      "result": "../code-quality/step-09/result.md",
+      "blockers": [
+        "Gezamenlijke productiebuild/budgetcontrole nog open."
+      ]
+    },
+    {
+      "id": "10",
+      "status": "implemented",
+      "disposition": "bounded_behavior_verified_final_integration_pending",
+      "result": "../code-quality/step-10/result.md",
+      "blockers": [
+        "Gezamenlijke definitieve broncontrole, productiebuild/budget en releasechecks nog vereist."
+      ]
+    },
+    {
+      "id": "11",
+      "status": "in_progress",
+      "disposition": "single_owner_selection_arrival_and_shift_regressions_reopened",
+      "result": "../code-quality/step-11/result.md",
+      "blockers": [
+        "Final-01 toont een dubbele Image Shift-selectieactie en het conflateren van moduleactivatie na aankomst met een gewone selectie. Behoud één selectie-owner, originele aankomstasserties en de bestaande single-Layers Focus/teller-route."
+      ]
+    },
+    {
+      "id": "12",
+      "status": "implemented",
+      "disposition": "five_module_boundaries_reviewed_and_assigned_fixture_failures_closed",
+      "result": "../code-quality/step-12/result.md",
+      "blockers": [
+        "Gezamenlijke definitieve broncontrole en onafhankelijke eindreview blijven vereist."
+      ]
+    },
+    {
+      "id": "13",
+      "status": "implemented",
+      "disposition": "single_gesture_owner_full_selection_rollback_and_crop_undo_fix_independently_reviewed",
+      "result": "../code-quality/step-13/result.md",
+      "blockers": [
+        "Gezamenlijke eindcontrole op stabiele definitieve bron en buildbudget blijven vereist."
+      ]
+    },
+    {
+      "id": "14",
+      "status": "in_progress",
+      "disposition": "full_destination_suite_exposed_arrival_semantics_and_fixture_membership_gaps",
+      "result": "../code-quality/step-14/result.md",
+      "blockers": [
+        "workbench-destinations 0/3: case 1 is een echte aankomstregressie; cases 2/3 missen contentlidmaatschap in de fixture. Camera/Back en bruikbare moduletools moeten samen behouden blijven."
+      ]
+    },
+    {
+      "id": "15",
+      "status": "implemented",
+      "disposition": "five_boundaries_reviewed_38_related_browser_checks_and_4_repaired_text_cases_passed",
+      "result": "../code-quality/step-15/result.md",
+      "blockers": [
+        "Gezamenlijke eindcontrole op definitieve bron blijft vereist."
+      ]
+    },
+    {
+      "id": "16",
+      "status": "in_progress",
+      "disposition": "local_escape_ownership_conflict_found_in_full_verification",
+      "result": "../code-quality/step-16/result.md",
+      "blockers": [
+        "Final-01: Grid-delete en acht Discover-accountmenugevallen verliezen lokale Escape aan Workbench-capture. Gerichte reparatie en volledige oorspronkelijke 17+9 cases vereist.",
+        "Gezamenlijke volledige eindcontrole blijft vereist. R12-OBS01: bij een blijvende voorkeurenopslagfout bedekt de melding op 844×390 de onderste Library-opener. De bereikbare retry en herstel na geslaagde opslag zijn bewezen; de overlap zelf is behouden en niet opgelost."
+      ]
+    },
+    {
+      "id": "17",
+      "status": "implemented",
+      "disposition": "duplicate_state_removed_incomplete_load_fixed_152_unit_26_browser_checks_and_independent_review_passed",
+      "result": "../code-quality/step-17/result.md",
+      "blockers": [
+        "Gezamenlijke build en releasecontrole nog open."
+      ]
+    },
+    {
+      "id": "18",
+      "status": "implemented",
+      "disposition": "bounded_behavior_verified_final_integration_pending",
+      "result": "../code-quality/step-18/result.md",
+      "blockers": [
+        "Gezamenlijke definitieve broncontrole, productiebuild/budget en releasechecks nog vereist."
+      ]
+    },
+    {
+      "id": "19",
+      "status": "implemented",
+      "disposition": "bounded_behavior_verified_final_integration_pending",
+      "result": "../code-quality/step-19/result.md",
+      "blockers": [
+        "Gezamenlijke definitieve broncontrole, productiebuild/budget en releasechecks nog vereist."
+      ]
+    },
+    {
+      "id": "20",
+      "status": "implemented",
+      "disposition": "runtime_boundaries_separated_publication_focus_and_presentation_build_verified",
+      "result": "../code-quality/step-20/result.md",
+      "blockers": [
+        "Gerichte controles en definitieve build/build:check slagen. Geen volledige regressiematrix of releasecontrole herhaald: founder koos één agent en beperkte verificatie."
+      ],
+      "continuation": "runtime-boundaries-2026-10-24.md"
+    },
+    {
+      "id": "21",
+      "status": "implemented",
+      "disposition": "scoped_cascade_and_window_material_cleanup_verified",
+      "result": "../code-quality/step-21/result.md",
+      "blockers": [
+        "Onafhankelijke stylingreview geslaagd; gezamenlijke definitieve broncontrole, build/budget en releasechecks nog vereist."
+      ]
+    },
+    {
+      "id": "22",
+      "status": "implemented",
+      "disposition": "existing_shared_tokens_reviewed_no_extra_token_system_required",
+      "result": "../code-quality/step-22/result.md",
+      "blockers": [
+        "Onafhankelijke stylingreview geslaagd; gezamenlijke definitieve broncontrole, build/budget en releasechecks nog vereist."
+      ]
+    },
+    {
+      "id": "23",
+      "status": "implemented",
+      "disposition": "scoped_cascade_and_window_material_cleanup_verified",
+      "result": "../code-quality/step-23/result.md",
+      "blockers": [
+        "Onafhankelijke stylingreview geslaagd; gezamenlijke definitieve broncontrole, build/budget en releasechecks nog vereist."
+      ]
+    },
+    {
+      "id": "24",
+      "status": "implemented",
+      "disposition": "scoped_cascade_and_window_material_cleanup_verified",
+      "result": "../code-quality/step-24/result.md",
+      "blockers": [
+        "Onafhankelijke stylingreview geslaagd; gezamenlijke definitieve broncontrole, build/budget en releasechecks nog vereist."
+      ]
+    },
+    {
+      "id": "25",
+      "status": "implemented",
+      "disposition": "bounded_obsolete_paths_removed_and_independently_reviewed",
+      "result": "../code-quality/step-25/result.md",
+      "blockers": [
+        "Volledige gezamenlijke eindcontrole blijft vereist. Echte productiebuild en gecorrigeerde alternate-outDir-test meten beide 809609 gzip tegenover 809500 toegestaan (+109 bytes). De meetconfiguratiedrift is opgelost; het budget is ongewijzigd en blijft rood."
+      ]
+    },
+    {
+      "id": "26",
+      "status": "implemented",
+      "disposition": "behavior_replacements_mutation_proofs_and_release_catalog_inclusion_verified",
+      "result": "../code-quality/step-26/result.md",
+      "blockers": [
+        "Gezamenlijke definitieve broncontrole en onafhankelijke eindreview blijven vereist."
+      ]
+    },
+    {
+      "id": "27",
+      "status": "in_progress",
+      "disposition": "twelve_measurements_reviewed_single_switch_trace_completed_cause_analysis_pending",
+      "result": "../code-quality/step-27/result.md",
+      "blockers": [
+        "Twaalf geldige metingen op 1302 stabiele inputs zijn onafhankelijk nagerekend. Negen gevulde switches hadden een lange taak van 133–185 ms. Eén toegestane aanvullende switch-trace is geslaagd met 268 identieke inputs en circa 150 ms lange taak; oorzaakanalyse loopt. Geen causale of verbeteringclaim vooruitlopend op die analyse."
+      ]
+    },
+    {
+      "id": "28",
+      "status": "implemented",
+      "disposition": "bounded_behavior_verified_final_integration_pending",
+      "result": "../code-quality/step-28/result.md",
+      "blockers": [
+        "Gezamenlijke definitieve broncontrole, productiebuild/budget en releasechecks nog vereist."
+      ]
+    },
+    {
+      "id": "29",
+      "status": "in_progress",
+      "disposition": "final_01_complete_stable_source_failed_gate_and_separate_diagnostics",
+      "result": "../code-quality/step-29/result.md",
+      "blockers": [
+        "Final-01 is afgerond op bron 7fcc3f3cb5f470c2839e63ed0e33a55a309f93c0bee84aefe9c45db004346562; voor/na identiek. Officiële gate faalt bij unit (1419/1420): werkelijk gzipbudget 809609 > 809500 (+109).",
+        "Afzonderlijke diagnostiek: 92 release-suites 435/450 pass, 15 fail; 29 aanvullende suites 109/123 pass, 11 fail, 3 obsolete skips. Standards 5/5, design-systeminventaris, zelfstandige design-systembuild en diagnostische productie-startup slagen. Dit is geen releasepass.",
+        "Gerichte reparaties en een nieuwe gezamenlijke verificatie van de uiteindelijke bron blijven nodig. Geen CI-bewijs op deze lokale wijzigingen."
+      ]
+    },
+    {
+      "id": "30",
+      "status": "in_progress",
+      "disposition": "final_01_evidence_recorded_current_regressions_and_budget_still_open",
+      "result": "../code-quality/step-30/result.md",
+      "blockers": [
+        "Reële bedieningsfouten, verouderde fixtures, drie obsolete skips en gzipbudget moeten worden afgehandeld vóór finale acceptatie. Performanceoorzaak en CI-duur inclusief installatie blijven open. R12-OBS01 is niet opgelost."
+      ]
+    }
+  ],
+  "followups": [
+    {
+      "id": "baseline-image-retry",
+      "status": "verified",
+      "result": "../code-quality/baseline-image-retry/result.md",
+      "scope": "Bounded owner/Visitor Image media recovery; preserve authored state and ordinary UI",
+      "blockers": [],
+      "disposition": "focused_behavior_and_v5_review_passed_with_combined_builds"
+    },
+    {
+      "id": "integration-startup-ready",
+      "status": "verified",
+      "planSteps": [
+        "02",
+        "03",
+        "19",
+        "26"
+      ],
+      "result": "../code-quality/three-scenarios/result.md",
+      "scope": "Reproduce owner readiness while runtime import is delayed; record lease/readiness sequence before changing startup behavior.",
+      "blockers": [],
+      "disposition": "25_combined_browser_checks_and_independent_review_passed_shape_test_cleanup_verified_separately"
+    },
+    {
+      "id": "integration-destination-selection",
+      "status": "verified",
+      "planSteps": [
+        "02",
+        "11",
+        "26"
+      ],
+      "result": "../code-quality/three-scenarios/result.md",
+      "scope": "Reproduce selection through separate real focus/Shift+Enter actions; preserve camera, Back and saved-state checks.",
+      "blockers": [],
+      "disposition": "25_combined_browser_checks_and_independent_review_passed_shape_test_cleanup_verified_separately"
+    },
+    {
+      "id": "integration-shape-keyboard",
+      "status": "verified",
+      "planSteps": [
+        "02",
+        "12",
+        "16",
+        "26"
+      ],
+      "result": "../code-quality/three-scenarios/result.md",
+      "scope": "Record active tab, focus and close action after each key in the narrow Shape scenario; diagnose before changing an expectation.",
+      "blockers": [],
+      "disposition": "25_combined_browser_checks_and_independent_review_passed_shape_test_cleanup_verified_separately"
+    },
+    {
+      "id": "continuation-bundle-budget",
+      "status": "in_progress",
+      "planSteps": [
+        "25",
+        "29"
+      ],
+      "scope": "Latest intermediate full-unit diagnostic:1396/1397 pass; alternate-outDir build reports coreJavaScript.gzip810259>809500 (+759). Source changed during this diagnostic. Earlier stable raw overage remains historical. Unchanged budget must pass final stable build.",
+      "result": "../code-quality/three-scenarios/result.md",
+      "blockers": [],
+      "disposition": "measured_failure_retained_budget_unchanged",
+      "evidence": "technical-regie-2026-10-23/continuation/unit-integration-03"
+    },
+    {
+      "id": "baseline-text-recovery-position",
+      "status": "verified",
+      "planSteps": [
+        "02",
+        "16",
+        "26"
+      ],
+      "scope": "Three failures reproduced as Navigator/sidebar/Info fixture obstruction; real pointer/touch/drag preserved, 8/8 passed, no production/CSS changes.",
+      "result": "../code-quality/three-scenarios/result.md",
+      "blockers": []
+    },
+    {
+      "id": "baseline-ui-expectations",
+      "status": "verified",
+      "planSteps": [
+        "02",
+        "15",
+        "26"
+      ],
+      "scope": "Five test-only updates: 34/34 cases across directed runs, then relevant consumers repeated on the stable midplan source. No production UI or CSS changed for these expectations.",
+      "result": null,
+      "evidence": "technical-regie-2026-10-23/continuation/baseline-ui-expectations/README.md",
+      "blockers": []
+    },
+    {
+      "id": "targeted-text-tools-resize",
+      "status": "verified",
+      "planSteps": [
+        "15",
+        "26"
+      ],
+      "scope": "Additional targeted preservation suite: 1/4 pass; old tab expectation and Info overlap under separate reproduction/repair.",
+      "result": null,
+      "blockers": [],
+      "disposition": "four_cases_passed_current_and_pre_step15_sources_then_normal_runner"
+    },
+    {
+      "id": "mini-app-authored-window",
+      "status": "implemented",
+      "planSteps": [
+        "10",
+        "19",
+        "29"
+      ],
+      "scope": "Viewport-clamped screen projection no longer overwrites ordinary mini-app authored window size. HTML artwork keeps its viewId behavior.",
+      "evidence": "technical-regie-2026-10-23/continuation/mini-app-window-boundary/README.md",
+      "blockers": [
+        "Gezamenlijke definitieve broncontrole en releasechecks blijven vereist."
+      ],
+      "disposition": "red_green_mini_app_html_30_units_and_companion_viewport_3_cases_passed_parent_source_review"
+    },
+    {
+      "id": "baseline-parent-four-fixtures",
+      "status": "implemented",
+      "planSteps": [
+        "02",
+        "11",
+        "13",
+        "16",
+        "26"
+      ],
+      "scope": "Nineteen scoped cases pass: Shapes, Shape corners, Grid resize release, filled Text and context-action-bars after native-control fixture corrections. Geometry/content/history/lock/crop/focus assertions retained; no full-source freeze claim.",
+      "evidence": "technical-regie-2026-10-23/continuation/remaining-fixture-repairs/README.md",
+      "blockers": [
+        "Shared final source verification remains required."
+      ]
+    }
+  ],
+  "integration": {
+    "result": "../code-quality/three-scenarios/result.md",
+    "sourceSha256": "dfda98753e34b9d96540a0b4f433bd096e9df619469210228ad5915b552d452f",
+    "fullReleaseRun": false,
+    "releaseReady": false,
+    "latestEvidence": "technical-regie-2026-10-23/continuation/midplan-01 and midplan-build-01"
+  },
+  "nextExecution": "Gerichte correcties van final-01: Image Shift, één selectie-owner met expliciete aankomstbetekenis, lokale Escape-eigenaarsgrens, aantoonbaar verouderde fixtures en Display-testbediening; daarna gerichte bewijsreview en nieuwe gezamenlijke verificatie. Geen commit/push/deployment."
+}

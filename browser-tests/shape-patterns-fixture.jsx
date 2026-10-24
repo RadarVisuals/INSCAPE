@@ -28,7 +28,7 @@ function Review() {
   return <>
     {visitor ? <Visitor key={revision} document={buildProfileDocumentV9({ profileAddress, systemWorkflowDraft: draft, assetRecords: [] })} />
       : <Runtime key={revision} profileAddress={profileAddress} reviewStorage={storage} reviewAssets={[]}
-        reviewCategories={[]} reviewActivity={[]} reviewDiscovery={[]} reviewProfile={{ name: 'Shape patterns review' }} />}
+        reviewCategories={[]} reviewActivity={[]} reviewProfile={{ name: 'Shape patterns review' }} />}
     <div style={{ position: 'fixed', zIndex: 200, top: 8, right: 8, display: 'flex', gap: 8 }}>
       <button onClick={() => setVisitor(value => !value)}>{visitor ? 'Review owner' : 'Review visitor'}</button>
       <button onClick={() => setRevision(value => value + 1)}>Reopen saved review</button>

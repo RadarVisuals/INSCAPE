@@ -133,14 +133,13 @@
   --spatial-ceiling: linear-gradient(180deg, #d3d0c8, #e7e4dc);
 }
 
-:where(.public-shell, .profile-discovery, .startveil) :where(button, a[href], input, select, textarea):focus-visible {
+:where(.public-shell, .startveil) :where(button, a[href], input, select, textarea):focus-visible {
   outline: 2px solid var(--color-focus);
   outline-offset: 2px;
 }
 
-:where(.public-shell, .profile-discovery) :where(button, input, select, textarea) { font-family: var(--font-interface); }
-.nft-dossier__body > p, .profile-identity-card__details > p { font-family: var(--font-body); line-height: var(--line-height-body); }
-:where(.public-shell, .profile-discovery) :where(code, pre, [data-technical], .technical-value) { font-family: var(--font-technical); font-variant-caps: normal; text-transform: none; }
+:where(.public-shell) :where(button, input, select, textarea) { font-family: var(--font-interface); }
+:where(.public-shell) :where(code, pre, [data-technical], .technical-value) { font-family: var(--font-technical); font-variant-caps: normal; text-transform: none; }
 
 * { scrollbar-color: var(--color-border-emphasis) transparent; scrollbar-width: thin; }
 ::-webkit-scrollbar { width: 8px; height: 8px; }

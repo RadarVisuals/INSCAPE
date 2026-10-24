@@ -127,7 +127,8 @@ test('new modules and stacks can use an expanded canvas and respect a smaller he
   const layout = store.getDraft().workbench;
   assert.equal(layout.shapes[0].window.left, 3000); assert.equal(layout.shapes[0].window.top + layout.shapes[0].window.height, 992);
   assert.equal(layout.texts[0].window.left, 3500); assert.equal(layout.texts[0].window.top + layout.texts[0].window.height, 992);
-  assert.equal(layout.keeperDocks[0].position.left, 4000);
+  assert.equal(Object.hasOwn(layout, 'keeperDocks'), false, 'Keeper is a screen utility, outside authored canvas geometry');
+  assert.equal(store.getDraft().keeperDocks.length, 1, 'the profile still owns its Keeper record');
   const id = editWorkbenchGroups(store, profile, { type: 'create', name: 'Group', memberIds: [shape] });
   editWorkbenchGroups(store, profile, { type: 'position', id, expected: store.getDraft().workbenchGroups[0], position: { left: 4500, top: 700 } });
   editWorkbenchGroups(store, profile, { type: 'position', id, expected: store.getDraft().workbenchGroups[0], position: { left: 4500, top: 900 } });

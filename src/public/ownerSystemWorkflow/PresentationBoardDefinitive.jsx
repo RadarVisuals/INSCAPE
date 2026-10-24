@@ -18,7 +18,7 @@ import { displayLiftRectangle } from './displayLiftGeometry.js';
 import { workbenchPaintStyle } from './workbenchPaintGeometry.js';
 import { snapWorkbenchPosition, WORKBENCH_GRID_STEP } from './workbenchGrid.js';
 import { loadPresentationBoardShortcut } from './presentationBoardShortcutStorage.js';
-import { defaultDisplayWindowSize } from '../../profileDocument/domain/workbenchPresentation.js';
+import { defaultDisplayWindowSize, DISPLAY_WINDOW_LIMITS } from '../../profileDocument/domain/workbenchPresentation.js';
 import { displayPreset } from '../../systemWorkflow/domain/displayModules.js';
 import { PRESENTATION_BOARD_INSTANCE_STATE } from './ownerSystemWorkflowModuleState.js';
 import { presentationBoardResponsiveMetrics, projectPresentationBoardView,
@@ -73,7 +73,7 @@ export default function PresentationBoardDefinitive({ assetsById = new Map(), ch
   const storedName = useMemo(() => initialPresentation?.name || (readOnly ? null : loadPresentationBoardShortcut(profileAddress, undefined, instanceId)?.name), [profileAddress, instanceId]);
   const [moduleName, setModuleName] = useState(null);
   const displayName = moduleName?.profile === profileAddress ? moduleName.name
-    : storedName && storedName !== 'PRESENTATION BOARD' ? storedName : 'DISPLAY MODULE';
+    : storedName || 'DISPLAY MODULE';
   const [host, setHost] = useState(null);
   const [view, setView] = useState(null);
   const [boardPosition, setBoardPosition] = useState(initialPresentation?.window ? { left: initialPresentation.window.left, top: initialPresentation.window.top } : null);
@@ -88,7 +88,7 @@ export default function PresentationBoardDefinitive({ assetsById = new Map(), ch
   const [resizeError, setResizeError] = useState('');
   const applyGroupFrame = useCallback(frame => {
     setBoardPosition({ left: frame.left, top: frame.top });
-    setView(current => current && setContinuousPresentationBoardScale(current, frame.width / current.fit.stage.width));
+    setView(current => current && setContinuousPresentationBoardScale(current, frame.width / current.fit.stage.width, DISPLAY_WINDOW_LIMITS));
   }, []);
   const boardNodeRef = useRef(null);
   const placement = useWorkbenchPlacement(boardNodeRef, Boolean(view) && !readOnly && instanceState === PRESENTATION_BOARD_INSTANCE_STATE.WINDOW, workbenchScale);
@@ -97,19 +97,18 @@ export default function PresentationBoardDefinitive({ assetsById = new Map(), ch
   const boardResizeRef = useRef(null);
   const inspectionActive = Boolean(renderInspection) || liftActive;
   const responsiveMetrics = presentationBoardResponsiveMetrics(host?.clientWidth || 390);
-  const geometryOptions = { inset: responsiveMetrics.inset,
-    identityStripHeight: 0,
-    sidecarWidth: 0 };
 
   useLayoutEffect(() => {
     if (!host) return undefined;
     const measure = () => setView((current) => {
       const viewport = { width: host.clientWidth, height: host.clientHeight };
-      let next = current && JSON.stringify(current.documentGeometry) === geometryKey ? resizePresentationBoardView(current, viewport, geometryOptions)
+      const geometryOptions = { inset: presentationBoardResponsiveMetrics(viewport.width).inset,
+        identityStripHeight: 0, sidecarWidth: 0 };
+      let next = current && JSON.stringify(current.documentGeometry) === geometryKey ? resizePresentationBoardView(current, viewport, { ...geometryOptions, width: current.frame.stage.width })
         : projectPresentationBoardView(documentGeometry, viewport, 1, geometryOptions);
       if (next && (!current || JSON.stringify(current.documentGeometry) !== geometryKey)) {
         // Preserve existing preset transitions. Custom canvas edits retain the
-        // current unit scale, bounded only by available viewing space.
+        // current unit scale; the camera owns fitting the viewing space.
         const targetSize = defaultDisplayWindowSize(documentGeometry);
         const previousGeometry = current?.documentGeometry;
         const presets = current && displayPreset(previousGeometry) !== 'CUSTOM' && displayPreset(documentGeometry) !== 'CUSTOM';
@@ -138,8 +137,7 @@ export default function PresentationBoardDefinitive({ assetsById = new Map(), ch
     continuousGeometry: true,
     store: workbenchView.store, profileAddress, layoutKey: viewId === 'display:primary' ? 'display' : 'displays',
     commit: commitWorkbenchSelectionResize, prepare: prepareWindowResize, applyFrame: applyGroupFrame, reportError: setResizeError,
-    minimumWidth: (view?.fit.stage.width || 0) * .25, minimumHeight: (view?.fit.stage.height || 0) * .25,
-    maximumWidth: view?.fit.stage.width || 1, maximumHeight: view?.fit.stage.height || 1,
+    ...DISPLAY_WINDOW_LIMITS,
   }), [workbenchView.store, view, readOnly, inspectionActive, profileAddress, viewId, applyGroupFrame]);
   useWorkbenchViewRegistration(viewId, boardNodeRef, Boolean(windowFrame) && instanceState === PRESENTATION_BOARD_INSTANCE_STATE.WINDOW, windowFrame, resizeTarget, setBoardPosition);
   useEffect(() => {
@@ -187,7 +185,7 @@ export default function PresentationBoardDefinitive({ assetsById = new Map(), ch
   const moveBoardResize = (event) => {
     const start = boardResizeRef.current; if (!start || start.id !== event.pointerId) return;
     const resized = resizePresentationBoardFromCorner(start.view, start.frame, start.corner,
-      { x: (event.clientX - start.clientX) / workbenchScale, y: (event.clientY - start.clientY) / workbenchScale }, 0, edgeSnapper(event.altKey), resizeBounds());
+      { x: (event.clientX - start.clientX) / workbenchScale, y: (event.clientY - start.clientY) / workbenchScale }, 0, edgeSnapper(event.altKey), resizeBounds(), DISPLAY_WINDOW_LIMITS);
     if (!resized) return;
     setView(resized.view); setBoardPosition(resized.position);
   };
@@ -207,7 +205,7 @@ export default function PresentationBoardDefinitive({ assetsById = new Map(), ch
       y: event.key === 'ArrowUp' ? -step : event.key === 'ArrowDown' ? step : 0,
     // A small keyboard step must not be pulled straight back by the pointer's
     // edge magnet. Grid quantization still applies when explicitly enabled.
-    }, 0, edgeSnapper(event.altKey, false), resizeBounds());
+    }, 0, edgeSnapper(event.altKey, false), resizeBounds(), DISPLAY_WINDOW_LIMITS);
     if (!resized) return;
     setView(resized.view);
     setBoardPosition(clampPosition(resized.position, resized.view.frame.board));
@@ -229,7 +227,7 @@ export default function PresentationBoardDefinitive({ assetsById = new Map(), ch
     onMinimize?.();
   };
   return <div className="system-workflow__workbench" data-presentation-workbench data-display-lift={liftActive || undefined} ref={setHost}>
-    <PresentationBoardShortcut onDelete={readOnly ? undefined : onDelete} assetsById={assetsById} host={host} instanceState={instanceState}
+    <PresentationBoardShortcut onDelete={readOnly ? undefined : onDelete} assetsById={assetsById} instanceState={instanceState}
       readOnly={readOnly} instanceId={instanceId}
       moduleCommands={moduleCommands} moduleSubmenu={moduleSubmenu} onModuleCommand={onModuleCommand}
       initialShortcut={initialPresentation?.shortcut} onShortcutChange={onShortcutChange}
@@ -287,7 +285,7 @@ export default function PresentationBoardDefinitive({ assetsById = new Map(), ch
           <div className="system-workflow__inspection-scene" ref={inspectionSceneRef}>
           <DisplayStageSizeContext.Provider value={{ width: stageWidth, height: stageHeight,
             screenScale: 1 / density, contentScale }}>
-          {cloneElement(children, { boardScale: 1, workbenchScale: presentationScale, selectionOverlayHost })}
+          {cloneElement(children, { selectionOverlayHost })}
           </DisplayStageSizeContext.Provider>
           </div>
         </div>

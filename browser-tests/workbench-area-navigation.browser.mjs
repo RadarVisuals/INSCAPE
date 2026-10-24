@@ -14,12 +14,13 @@ const camera = page => page.locator('main.system-workflow').first().evaluate(hos
 }));
 const near = (a, b, label) => assert.ok(Math.abs(a - b) < 1e-6, `${label}: ${a} vs ${b}`);
 async function select(page, id) {
-  await page.locator(`[data-workbench-view-id="${id}"]`).evaluate(node => {
-    const target = node.matches('[data-workbench-selectable]') ? node : node.querySelector('[data-workbench-selectable]');
-    target.focus({ preventScroll: true });
-    target.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', shiftKey: true, bubbles: true, cancelable: true }));
-  });
+  const target = page.locator(`[data-workbench-view-id="${id}"] [data-workbench-selectable]`).first();
+  await target.evaluate(node => node.focus({ preventScroll: true })); await settle(page);
+  // Owner keyboard focus already selects artwork; Visitor uses Shift+Enter.
+  if (await page.getByRole('button', { name: 'Focus selected Workbench modules', exact: true }).isDisabled())
+    await target.dispatchEvent('keydown', { key: 'Enter', shiftKey: true, bubbles: true, cancelable: true });
 }
+
 const arrived = async page => { await page.waitForFunction(() => !document.querySelector('[data-workbench-travelling]')); await settle(page); };
 
 test('owner and Visitor have free camera movement without custom-frame controls, refitting or constrained Focus', { timeout: 90000 }, async () => {
@@ -31,7 +32,7 @@ test('owner and Visitor have free camera movement without custom-frame controls,
       const errors = []; page.on('pageerror', error => errors.push(error.message));
       await mountGridMotionFixture(page, { origin, visitor, heavy: true, count: 3, textModes: true, displayWidth: 600 });
       await page.evaluate(() => import('/src/lattice/rendering/latticeMenuSurface.css'));
-      await page.getByRole('button', { name: 'Reset Workbench zoom to 100%', exact: true }).waitFor();
+      await page.getByRole('slider', { name: 'Workbench zoom', exact: true }).waitFor();
       await page.evaluate(() => document.fonts.ready); await settle(page);
       const host = page.locator('main.system-workflow').first();
       const wheel = async values => { await host.dispatchEvent('wheel', { bubbles: true, cancelable: true, clientX: 720, clientY: 450, ...values }); await settle(page); };
@@ -48,10 +49,10 @@ test('owner and Visitor have free camera movement without custom-frame controls,
       assert.equal((await camera(page)).scale, .25);
       const zoomed = await camera(page); await wheel({ deltaX: 87, deltaY: 53 });
       assert.deepEqual(await camera(page), { scale: .25, x: zoomed.x - 87, y: zoomed.y - 53 });
-      await page.getByRole('button', { name: 'Reset Workbench position', exact: true }).click(); await settle(page);
-      assert.deepEqual(await camera(page), { scale: .25, x: 0, y: 0 }, 'Reset restores pan without fitting or changing zoom');
-      await page.getByRole('button', { name: 'Reset Workbench zoom to 100%', exact: true }).click();
-      await page.getByRole('button', { name: 'Reset Workbench position', exact: true }).click(); await settle(page);
+      await page.getByRole('button', { name: 'Reset Workbench view', exact: true }).click(); await settle(page);
+      assert.deepEqual(await camera(page), { scale: 1, x: 0, y: 0 }, 'Home restores the starting view and 100%');
+      await page.getByRole('slider', { name: 'Workbench zoom', exact: true }).fill('100');
+      await page.getByRole('button', { name: 'Reset Workbench view', exact: true }).click(); await settle(page);
 
       // A zoomed camera far beyond the old frame can approach an actual module.
       await wheel({ deltaX: 4500, deltaY: 3700 });
@@ -87,13 +88,13 @@ test('owner and Visitor have free camera movement without custom-frame controls,
       const beforeResize = await camera(page);
       if (!visitor) {
         await host.dispatchEvent('contextmenu', { clientX: 1400, clientY: 850, bubbles: true });
-        await page.getByRole('menuitem', { name: 'HIDE DOCK', exact: true }).click(); await settle(page);
+        await page.getByRole('menuitem', { name: 'HIDE SIDEBAR', exact: true }).click(); await settle(page);
         assert.deepEqual(await camera(page), beforeResize, 'hiding the dock does not move the camera');
       }
       for (const width of [390, 1440]) {
         await page.setViewportSize({ width, height: 900 }); await settle(page);
         assert.deepEqual(await camera(page), beforeResize, 'viewport changes do not refit the camera');
-        await page.getByRole('button', { name: 'Reset Workbench position', exact: true }).focus();
+        await page.getByRole('button', { name: 'Reset Workbench view', exact: true }).focus();
         await page.keyboard.press('Enter'); await settle(page);
         await page.screenshot({ path: `.browser-test-runtime/workbench-area-${visitor}-${width}.png` });
         await wheel({ deltaX: -beforeResize.x, deltaY: -beforeResize.y });
@@ -124,6 +125,7 @@ test('the canvas clips outlying artwork without relocating it; Show outside canv
   const browser = await launch();
   try {
     const page = await browser.newPage({ viewport: { width: 1440, height: 1200 }, reducedMotion: 'reduce' });
+    page.setDefaultTimeout(10000);
     const errors = []; page.on('pageerror', error => errors.push(error.message));
     await mountGridMotionFixture(page, { origin, heavy: true, count: 2, displayWidth: 600 });
     await page.evaluate(() => import('/src/lattice/rendering/latticeMenuSurface.css'));
@@ -173,7 +175,9 @@ test('the canvas clips outlying artwork without relocating it; Show outside canv
       await page.locator('main.system-workflow > canvas.lattice-pixel-grid').waitFor(); await settle(page);
       const host = page.locator('main.system-workflow').first();
       for (let i = 0; i < 6; i++) await host.dispatchEvent('wheel', { ctrlKey: true, deltaY: 120, clientX: 0, clientY: 0, bubbles: true, cancelable: true });
-      await page.getByRole('button', { name: 'Reset Workbench position', exact: true }).click();
+      await page.getByRole('button', { name: 'Reset Workbench view', exact: true }).click();
+      // Start the clipping probe at 25% with an origin-anchored wheel zoom.
+      for (let i = 0; i < 6; i++) await host.dispatchEvent('wheel', { ctrlKey: true, deltaY: 120, clientX: 0, clientY: 0, bubbles: true, cancelable: true });
       await host.dispatchEvent('wheel', { deltaX: -80, deltaY: -60, bubbles: true, cancelable: true }); await settle(page);
       assert.deepEqual(await camera(page), { scale: .25, x: 80, y: 60 });
       const coverage = await page.locator('main.system-workflow > canvas.lattice-pixel-grid').evaluate(canvas => {

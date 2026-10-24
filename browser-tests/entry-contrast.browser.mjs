@@ -33,7 +33,7 @@ test('entry navigation has readable text, keyboard access and no narrow-screen o
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
       const seen = [];
       for (let i = 0; i < 7; i++) { await page.keyboard.press('Tab'); seen.push(await page.evaluate(() => document.activeElement.textContent.trim())); }
-      assert.ok(seen.includes('DISCOVER')); assert.ok(seen.includes('CONNECT'));
+      assert.ok(seen.includes('Discover')); assert.ok(seen.includes('Connect'));
       await mkdir(output, { recursive: true }); await page.screenshot({ path: `${output}/entry-${width}.png` });
       console.log(JSON.stringify({ width, contrast }));
       await page.close();

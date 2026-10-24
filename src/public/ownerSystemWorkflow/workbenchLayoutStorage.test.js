@@ -10,13 +10,10 @@ const storage = () => { const map = new Map(); return { getItem: k => map.get(k)
 test('local layout survives reload without mutating authored content or publication layout', () => {
   const store = storage(), draft = createEmptySystemWorkflowDraft(profile), before = structuredClone(draft);
   const layout = createDefaultWorkbenchPresentation(); layout.display.window.left = 211; layout.display.open = false;
-  const views = { 'display:primary': { gridId: draft.grids[1].id, locked: true, instruments: { active: null, layers: 'attached', metadata: 'attached' } } };
+  const views = { 'display:primary': { gridId: draft.grids[1].id, locked: true } };
   assert.deepEqual(loadWorkbenchLayout(profile, draft, store), { layout: null, views: {} });
   assert.equal(saveWorkbenchLayout(profile, draft, layout, views, store), true);
   assert.deepEqual(loadWorkbenchLayout(profile, draft, store), { layout, views });
-  views['display:primary'].instrumentWindows = { layers: { left: 120, top: 80, width: 360, height: 500 } };
-  assert.equal(saveWorkbenchLayout(profile, draft, layout, views, store), true);
-  assert.deepEqual(loadWorkbenchLayout(profile, draft, store).views, views);
   assert.deepEqual(draft, before);
   assert.equal(loadWorkbenchLayout(`0x${'2'.repeat(40)}`, draft, store).layout, null);
 });
@@ -24,7 +21,7 @@ test('removed modules never return from cached geometry; restored authored layou
   const store = storage(), draft = createEmptySystemWorkflowDraft(profile);
   draft.texts = [{ id: 'text:one', article: createArticle(), visibility: 'PRIVATE' }];
   const layout = createDefaultWorkbenchPresentation(); layout.texts = [createTextPresentation('text:one')];
-  const views = { 'text:one': { mode: 'read', settings: false } };
+  const views = { 'text:one': { mode: 'read' } };
   saveWorkbenchLayout(profile, draft, layout, views, store);
   assert.deepEqual(loadWorkbenchLayout(profile, draft, store).views, views);
   const removed = { ...draft, texts: [] };

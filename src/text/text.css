@@ -37,14 +37,12 @@
 .text-workbench :is(.text-module-scroll, .text-settings, textarea) { scrollbar-width: none; }
 .text-workbench :is(.text-module-scroll, .text-settings, textarea)::-webkit-scrollbar { display: none; width: 0; height: 0; }
 .text-module-scroll:focus-visible { outline: 1px solid var(--workflow-border); outline-offset: -1px; }
-.text-module-rail { display: flex; gap: 0; flex-wrap: wrap; border-bottom: 1px solid var(--workflow-border); flex-shrink: 0; }
 .text-module-body :is(button, input, select, textarea), .text-shortcut { font: var(--workflow-type-control); color: inherit; background: var(--workflow-panel); border: 1px solid var(--workflow-border); border-radius: 0; min-height: 30px; padding: 5px 8px; max-width: 100%; }
 .text-workbench button { cursor: pointer; }
 .text-workbench button:disabled { opacity: .5; cursor: default; }
 .text-workbench button:hover:not(:disabled) { color: var(--workflow-ink); background: var(--workflow-panel-raised, var(--workflow-panel)); }
 .text-workbench button[aria-pressed='true'] { box-shadow: inset 0 -2px 0 currentColor; }
 .text-workbench :is(button, input, select, summary):focus-visible { outline: 2px solid var(--workflow-ink); outline-offset: -2px; }
-.text-module-rail > button { border-width: 0 1px 0 0; }
 .text-document, .text-editor-page { --text-automatic-padding: 24px; max-width: 66ch; margin: 0 auto; padding: var(--text-automatic-padding); font-size: 16px; line-height: var(--text-line-height, 1.65); overflow-wrap: anywhere; font-variant-ligatures: none; font-feature-settings: "liga" 0; }
 .text-editor-page .text-document { padding: 0; max-width: inherit; font-family: inherit; font-size: inherit; }
 .text-document-body { column-count: var(--text-columns, auto); column-gap: var(--text-column-gap, 24px); column-fill: balance; }

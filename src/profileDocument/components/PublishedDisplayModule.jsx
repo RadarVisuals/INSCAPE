@@ -1,3 +1,4 @@
+import { useWorkbenchMiniature } from '../../public/ownerSystemWorkflow/workbenchMiniatures.js';
 import { forwardRef, useCallback, useDeferredValue, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useReportScene } from '../../text/SceneNavigation.jsx';
@@ -52,6 +53,7 @@ const PublishedDisplayModule = forwardRef(function PublishedDisplayModule({ docu
         ? { url: resolvePublishedAssetUrl(icon.media.url), width: icon.media.width, height: icon.media.height } : null } };
   }, [document]);
   const activeGrid = document.grids[activeIndex];
+  useWorkbenchMiniature(instanceId, useMemo(() => ({ kind: 'display', grid: activeGrid, geometry: document.geometry, appearance: document.appearance }), [activeGrid, document.geometry, document.appearance]));
   const hasDisplay = document.grids.length > 0, lastIndex = document.grids.length - 1;
   const workspaceSurfaceColor = latticeSurfaceColor(document.appearance.surfaceId);
   const viewerEntries = useMemo(() => (activeGrid?.placements || []).filter(placement => placement.kind !== 'text').map((placement) => {

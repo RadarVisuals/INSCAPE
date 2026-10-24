@@ -16,6 +16,8 @@ export default function WorkbenchCanvasControls({ hostRef, navigation, historyBl
   const [projection, setProjection] = useState(camera.getCamera);
   const [viewport, setViewport] = useState(null);
   const drag = useRef(null), trigger = useRef(null), latest = useRef(null);
+  useEffect(() => view.store?.guardWorkbenchTransition?.(() => drag.current
+    ? 'Finish or cancel resizing the canvas before switching Workbenches.' : null), [view.store]);
   latest.current = { view, areaContext, camera, historyBlocked, navigation };
   const finish = useCallback((cancel = false) => {
     const active = drag.current;

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { X } from 'lucide-react';
+import WorkbenchDestinationPanel from './WorkbenchDestinationPanel.jsx';
 import { PROFILE_DOCUMENT_PUBLICATION_STATUS } from '../../profileDocument/domain/profileDocumentPublication.js';
 import { profileDocumentV9ContentFingerprint } from '../../profileDocument/domain/profileDocumentV9Serialization.js';
 import { assertValidProfileDocumentV9 } from '../../profileDocument/domain/profileDocumentV9Validation.js';
@@ -28,7 +28,6 @@ export default function OwnerSystemWorkflowPublicationRack({
   onClose,
   onMotionComplete,
   onPublished,
-  onSnapshotChange,
   profile,
   profileAddress,
   publishedResolution,
@@ -110,7 +109,6 @@ export default function OwnerSystemWorkflowPublicationRack({
       snapshotDraftFingerprintRef.current = draftFingerprint;
       snapshotGenerationRef.current += 1;
       setSnapshot(next);
-      onSnapshotChange?.({ document: next, draftFingerprint });
       cidGenerationRef.current += 1;
       cidRef.current = '';
       publication.invalidate('A new snapshot was prepared; verify its CID before publication.');
@@ -123,7 +121,7 @@ export default function OwnerSystemWorkflowPublicationRack({
         phase: 'PUBLICATION_SNAPSHOT', providerCategory: 'LOCAL_VALIDATION', message: nextMessage });
       setOperationPhase(null);
     }
-  }, [builderInput, draftFingerprint, draftState.error, onSaveWorkbench, onSnapshotChange, profileAddress, publication, publishedResolution, snapshot]);
+  }, [builderInput, draftFingerprint, draftState.error, onSaveWorkbench, profileAddress, publication, publishedResolution, snapshot]);
 
   const uploadSnapshot = useCallback(async () => {
     if (uploadControllerRef.current) return;
@@ -182,39 +180,41 @@ export default function OwnerSystemWorkflowPublicationRack({
     : publication.status === PROFILE_DOCUMENT_PUBLICATION_STATUS.VERIFYING_PUBLICATION
       ? 'Transaction confirmed. Checking your public presentation…' : message;
   const action = !snapshot || stale ? prepareSnapshot : verifiedReady ? publish : uploadSnapshot;
-  const buttonLabel = operationPhase === 'PREPARING' ? 'PREPARING…'
-    : operationPhase === 'CHECKING_ACCESS' ? 'CHECKING ACCESS…'
-      : operationPhase === 'AUTHORIZING' ? 'AUTHORIZE UPLOAD…'
-    : operationPhase === 'UPLOADING' ? 'MAKING PUBLIC…'
+  const buttonLabel = operationPhase === 'PREPARING' ? 'Preparing…'
+    : operationPhase === 'CHECKING_ACCESS' ? 'Checking access…'
+      : operationPhase === 'AUTHORIZING' ? 'Authorize upload…'
+    : operationPhase === 'UPLOADING' ? 'Making public…'
       : operationPhase === 'WALLET' ? publication.status === PROFILE_DOCUMENT_PUBLICATION_STATUS.CONFIRMING_TRANSACTION
-        ? 'CONFIRMING TRANSACTION…' : publication.status === PROFILE_DOCUMENT_PUBLICATION_STATUS.VERIFYING_PUBLICATION
-          ? 'CHECKING PUBLICATION…' : 'CONFIRM IN WALLET…'
+        ? 'Confirming transaction…' : publication.status === PROFILE_DOCUMENT_PUBLICATION_STATUS.VERIFYING_PUBLICATION
+          ? 'Checking publication…' : 'Confirm in wallet…'
         : operationPhase === 'PUBLISHED' || publication.status === PROFILE_DOCUMENT_PUBLICATION_STATUS.PUBLISHED
-          ? 'PUBLISHED' : !snapshot || stale ? 'PREPARE PUBLICATION'
-            : verifiedReady ? 'PUBLISH TO PROFILE' : 'MAKE PRESENTATION PUBLIC';
+          ? 'Published' : !snapshot || stale ? 'Prepare publication'
+            : verifiedReady ? 'Publish to profile' : 'Make presentation public';
   const showSupport = Boolean(publication.error || supportIssue);
 
-  return <aside aria-label="Publish profile" className="owner-lattice-publication-rack system-workflow__motion-panel system-workflow__token-scope"
+  return <WorkbenchDestinationPanel title="Publish" onClose={onClose} closeLabel="Close Publication" closeDisabled={busy}
+    aria-label="Publish profile" className="owner-lattice-publication-rack"
     data-lattice-chrome data-lattice-menu-surface data-menu-surface={menuSurface} data-panel-phase={phase} onKeyDown={(event) => {
       if (event.key === 'Escape' && !busy) onClose?.();
     }} onTransitionEnd={(event) => {
       if (event.target === event.currentTarget && event.propertyName === 'opacity') onMotionComplete?.();
     }}>
+    <div className="workbench-destination-body">
     <section className="owner-lattice-publication-rack__summary">
-      <h2>WHAT GOES LIVE</h2>
-      <p>Your <strong>Public Grids</strong>, custom Identity card and prepared Workbench setup: window positions, starting open state, Display name and shortcut.</p>
-      <h2>WHAT STAYS PRIVATE</h2>
+      <h3>What goes live</h3>
+      <p>Your public Images, Text and Shapes, <strong>Public Grids</strong>, Keeper content, custom Identity card and prepared Workbench setup: window positions, starting open state, Display name and shortcut.</p>
+      <h3>What stays private</h3>
       <p>Private Grids, Library organisation, Layers tools, Activity, selections and local preferences stay private.</p>
       <small>The NFTs already exist publicly on LUKSO. Publishing only updates how your INSCAPE profile presents them.</small>
     </section>
     {draftState.error && <section><p role="alert">{draftState.error}</p></section>}
     {!busy && recovery.blocked && <section className="owner-lattice-publication-rack__recovery">
-      <h2>PREVIOUS PUBLICATION</h2>
+      <h3>Previous publication</h3>
       <p role="status">{recovery.message}</p>
       {recovery.record?.transactionHash && <small className="owner-lattice-publication-rack__hash">Transaction: {recovery.record.transactionHash}</small>}
       <div className="owner-lattice-publication-rack__rail">
         {['PUBLISHED', 'FAILED'].includes(recovery.status)
-          ? <button type="button" onClick={() => {
+          ? <button type="button" className="workbench-destination-action" onClick={() => {
             const acknowledged = recovery.acknowledge();
             if (!acknowledged) return;
             publication.reset();
@@ -222,7 +222,7 @@ export default function OwnerSystemWorkflowPublicationRack({
             setMessage(recovery.message);
             if (acknowledged.result) onPublished?.({ ...acknowledged.result, transactionHash: recovery.record?.transactionHash });
           }}>ACKNOWLEDGE RESULT</button>
-          : <button type="button" disabled={recovery.status === 'CHECKING'} onClick={recovery.check}>CHECK AGAIN</button>}
+          : <button type="button" className="workbench-destination-action" disabled={recovery.status === 'CHECKING'} onClick={recovery.check}>CHECK AGAIN</button>}
       </div>
     </section>}
     <section className="owner-lattice-publication-rack__status-copy">
@@ -230,7 +230,7 @@ export default function OwnerSystemWorkflowPublicationRack({
       <small>Making the presentation public stores it permanently. Upload access requires a wallet signature; publishing to your profile then requires a transaction confirmation.</small>
     </section>
     {showSupport && <section className="owner-lattice-publication-rack__support">
-      <details><summary>HELP WITH THIS ERROR</summary><AlphaSupportPanel compact
+      <details><summary>Help with this error</summary><AlphaSupportPanel compact
         code={publication.supportCode || supportIssue?.code || ALPHA_SUPPORT_CODES.ALPHA_SUPPORT_REQUEST}
         phase={publication.supportCode === ALPHA_SUPPORT_CODES.CID_VERIFICATION_FAILED
           ? 'CID_VERIFY' : supportIssue?.phase || 'PUBLICATION'}
@@ -238,11 +238,11 @@ export default function OwnerSystemWorkflowPublicationRack({
         profileAddress={profileAddress} routeClass="OWNER" transactionHash={publication.transactionHash}
         message={publication.error || supportIssue?.message} /></details>
     </section>}
+    </div>
     <footer className="owner-lattice-publication-rack__rail">
-      <button type="button" className="owner-lattice-publication-rack__publish"
+      <button type="button" className="owner-lattice-publication-rack__publish workbench-destination-action"
         disabled={busy || operationPhase === 'PUBLISHED' || recovery.blocked || Boolean(draftState.error) || Boolean(publication.transactionHash && publication.error)}
         onClick={action}>{buttonLabel}</button>
-      <button type="button" aria-label="Close Publication" disabled={busy} onClick={onClose}><X aria-hidden="true" size={15} /></button>
     </footer>
-  </aside>;
+  </WorkbenchDestinationPanel>;
 }

@@ -63,7 +63,7 @@ test('Hand pans live owner and Visitor scenes without per-frame React commits or
       assert.deepEqual(await camera(page), stopped);
       assert.equal(await page.evaluate(() => localStorage.getItem(window.__motionKey)), saved);
       assert.equal(await page.evaluate(() => window.exploreNodes.every(node => node.isConnected)), true);
-      await page.getByRole('button', { name: 'Reset Workbench position', exact: true }).click(); await settle(page);
+      await page.getByRole('button', { name: 'Reset Workbench view', exact: true }).click(); await settle(page);
       assert.deepEqual(await camera(page), { scale: 1, x: 0, y: 0 });
       // Hand preserves module positions. A long reader keeps native wheel scroll.
       const textWindow = page.locator('[data-workbench-view-id="text:overflow"]');
@@ -103,7 +103,7 @@ test('reduced motion and paused releases omit inertia, and input cancels a new c
     await drag(); await page.waitForTimeout(80);
     await host.dispatchEvent('wheel', { deltaX: 20, deltaY: 10, bubbles: true, cancelable: true }); await arrived(page);
     const stopped = await camera(page); await page.waitForTimeout(170); assert.deepEqual(await camera(page), stopped);
-    await page.getByRole('button', { name: 'Reset Workbench position', exact: true }).click(); await settle(page);
+    await page.getByRole('button', { name: 'Reset Workbench view', exact: true }).click(); await settle(page);
     await page.screenshot({ path: '.browser-test-runtime/workbench-explore-390.png' });
   } finally { await browser.close(); }
 });

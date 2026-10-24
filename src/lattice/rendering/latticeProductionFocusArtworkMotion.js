@@ -1,6 +1,4 @@
 export const LATTICE_PRODUCTION_FOCUS_OPENING_MS = 460;
-export const LATTICE_PRODUCTION_FOCUS_TRANSITION_MS = 420;
-export const LATTICE_PRODUCTION_FOCUS_LANDING_MS = 150;
 
 const clampUnit = (value) => Math.min(1, Math.max(0, value));
 const curve = (time, point1, point2) => {
@@ -36,12 +34,6 @@ const solveCurveTime = (progress, x1, x2) => {
   }
   return time;
 };
-
-export function latticeProductionFocusTransitionProgress(progress) {
-  const clamped = clampUnit(progress);
-  if (clamped === 0 || clamped === 1) return clamped;
-  return curve(solveCurveTime(clamped, 0.22, 0.26), 0.76, 1);
-}
 
 export function latticeProductionFocusOpeningProgress(progress) {
   const clamped = clampUnit(progress);

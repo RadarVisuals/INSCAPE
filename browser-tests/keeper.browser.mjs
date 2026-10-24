@@ -4,6 +4,7 @@ import { mkdir } from 'node:fs/promises';
 import { chromium } from 'playwright-core';
 import { mountTextToolsFixture } from './fixtures/text-tools-fixture.mjs';
 const origin = process.env.INSCAPE_TEXT_ROOT || 'http://127.0.0.1:5173';
+const output = process.env.INSCAPE_BROWSER_OUTPUT || '.browser-test-runtime';
 const settle = page => page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
 async function addDock(page) {
   await page.mouse.click(600, 280, { button: 'right' });
@@ -22,7 +23,7 @@ async function drop(page, name = 'ABYSSAL STUDY') {
 }
 
 test('Keeper dock accepts Library artwork, releases/returns, persists, undoes and shares the Visitor runtime', { timeout: 120000 }, async () => {
-  await mkdir('.browser-test-runtime', { recursive: true });
+  await mkdir(output, { recursive: true });
   const browser = await chromium.launch({ executablePath: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', headless: true });
   try {
     const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, deviceScaleFactor: 1.25 });
@@ -32,7 +33,11 @@ test('Keeper dock accepts Library artwork, releases/returns, persists, undoes an
     await page.getByRole('button', { name: 'Close Text tools', exact: true }).click();
     await addDock(page);
     const dock = page.locator('.keeper-dock-window'), instance = page.locator('.keeper-instance'), actor = page.locator('.keeper-roamer');
-    const created = await dock.boundingBox(); assert.ok(Math.abs(created.x - 600) < 1 && Math.abs(created.y - 280) < 1);
+    const created = await dock.boundingBox(); assert.ok(created.x > 1200 && created.y > 500, 'new dock opens in the screen corner');
+    const beforeMove = await page.evaluate(() => window.savedDraft());
+    await page.mouse.move(created.x + 30, created.y + 12); await page.mouse.down();
+    await page.mouse.move(630, 292, { steps: 12 }); await page.mouse.up();
+    assert.deepEqual(await page.evaluate(() => window.savedDraft()), beforeMove, 'dock dragging is temporary screen layout');
     await page.getByRole('button', { name: 'Artwork library', exact: true }).click();
     await drop(page);
     await page.getByRole('button', { name: 'Release Keeper', exact: true }).waitFor();
@@ -74,24 +79,25 @@ test('Keeper dock accepts Library artwork, releases/returns, persists, undoes an
     await page.locator('main.system-workflow').focus(); await page.keyboard.press('Control+z');
     await page.waitForFunction(() => window.savedDraft().keeperDocks[0].size === 256);
     assert.equal(await instance.getAttribute('data-keeper-phase'), 'free');
-    await page.screenshot({ path: '.browser-test-runtime/keeper-wide.png' });
+    await page.screenshot({ path: `${output}/keeper-wide.png` });
     await page.getByRole('button', { name: 'Return Keeper', exact: true }).click();
     await page.waitForFunction(() => document.querySelector('.keeper-instance')?.dataset.keeperPhase === 'docked');
     // Keyboard movement uses the existing Workbench host and its layout cache.
     const handle = dock.getByLabel('Move Keeper dock window');
     await handle.focus(); await handle.press('ArrowRight'); await settle(page);
-    const moved = await dock.boundingBox(); assert.ok(moved.x > created.x);
+    const moved = await dock.boundingBox(); assert.ok(moved.x > 600);
     await page.getByLabel('Include in publication', { exact: true }).check();
     await page.reload(); await mountTextToolsFixture(page, origin); await dock.waitFor();
     assert.equal(await instance.getAttribute('data-keeper-phase'), 'docked');
-    assert.ok(Math.abs((await dock.boundingBox()).x - moved.x) < 1);
+    const restored = await dock.boundingBox();
+    assert.ok(Math.abs(restored.x - moved.x) < 1 && Math.abs(restored.y - moved.y) < 1, 'reload restores the profile-local Keeper position without authoring canvas geometry');
     assert.equal(await page.evaluate(() => window.savedDraft().keeperDocks[0].size), 256);
     await page.getByRole('button', { name: 'Release Keeper', exact: true }).click();
     await page.getByRole('button', { name: 'Keeper settings', exact: true }).click();
     await sizeInput.fill('384'); await sizeInput.press('Enter');
     await page.setViewportSize({ width: 390, height: 844 }); await page.mouse.move(190, 430);
     await page.waitForFunction(() => { const r = document.querySelector('.keeper-roamer img')?.getBoundingClientRect(); return r && r.x >= 0 && r.right <= innerWidth && r.y >= 0 && r.bottom <= innerHeight; });
-    await page.screenshot({ path: '.browser-test-runtime/keeper-narrow.png' });
+    await page.screenshot({ path: `${output}/keeper-narrow.png` });
     assert.equal(await page.evaluate(() => window.savedDraft().keeperDocks[0].size), 384, 'narrow viewport does not rewrite size');
     assert.ok(await actor.locator('img').evaluate(node => parseFloat(getComputedStyle(node).width) < 384));
     await page.setViewportSize({ width: 1440, height: 1000 });

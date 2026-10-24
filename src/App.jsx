@@ -28,7 +28,6 @@ function App() {
   const [revealStage, setRevealStage] = useState('sealed');
   const [readyDestinationKey, setReadyDestinationKey] = useState(null);
   const interfaceRef = useRef(null);
-  const [previewDocument, setPreviewDocument] = useState(null);
   const [standaloneSignInActive, setStandaloneSignInActive] = useState(false);
   const [galleryActive, setGalleryActive] = useState(false);
   const [publicationConfirmation, setPublicationConfirmation] = useState(null);
@@ -43,7 +42,7 @@ function App() {
   const scheduleWalletRelease = useWalletStore((state) => state.scheduleWalletRelease);
   const navigation = useApplicationNavigation({ status: authorityLifecycleStatus,
     profileAddress: verifiedOwnerProfileAddress, ownershipVerified });
-  const { destination, content } = navigation;
+  const { destination, content, completeSignIn, beginSignIn, beginDisconnect } = navigation;
   const viewedProfileAddress = content?.address || null;
   const interfaceVisible = ['interface', 'complete'].includes(revealStage);
   const ownerAuthoringEnabled = content?.kind === 'workbench';
@@ -61,7 +60,7 @@ function App() {
     const address = normalizeProfileAddress(result?.document?.profile?.address);
     if (result?.status !== PUBLISHED_PROFILE_STATUS.RESOLVED || !address
       || address !== connectedWorkspaceProfileAddress || address !== publicationProfileRef.current) return;
-    setPublicationConfirmation({ profileAddress: address, transactionHash: result.transactionHash });
+    setPublicationConfirmation({ profileAddress: address, transactionHash: result.transactionHash, menuSurface: result.menuSurface });
     retryPublishedProfile();
   };
   const ownerSourceReady = publishedResolution?.status !== PUBLISHED_PROFILE_STATUS.LOADING;
@@ -83,8 +82,8 @@ function App() {
     if (!node) return;
     if (document.activeElement !== node && node.contains(document.activeElement)
       && !document.activeElement.closest('[inert]')) return;
-    const focusTarget = [...node.querySelectorAll('[data-published-focus-fallback], .visitor-grid-world, .system-workflow__global-bar button, .public-entry-portal__header-wordmark')]
-      .find((target) => !target.closest('[inert]'));
+    const focusTarget = [...node.querySelectorAll('[data-published-focus-fallback], .visitor-grid-world, .workspace-navigation button, .public-entry-portal__header-wordmark')]
+      .find((target) => !target.closest('[inert]') && target.getClientRects().length && !target.disabled);
     (focusTarget || node).focus({ preventScroll: true });
   }, [revealStage, destinationKey, readyDestinationKey]);
 
@@ -124,9 +123,9 @@ function App() {
   useEffect(() => {
     if (standaloneSignInActive && visitorWalletConnected && authorityLifecycleStatus === 'complete') {
       setStandaloneSignInActive(false);
-      navigation.completeSignIn();
+      completeSignIn();
     }
-  }, [authorityLifecycleStatus, standaloneSignInActive, visitorWalletConnected, navigation.completeSignIn]);
+  }, [authorityLifecycleStatus, standaloneSignInActive, visitorWalletConnected, completeSignIn]);
 
   const visitProfile = navigation.visitProfile;
 
@@ -134,7 +133,7 @@ function App() {
     if (window.parent !== window) return;
     const loader = standaloneWalletSessionRef.current;
     if (!loader) return;
-    navigation.beginSignIn();
+    beginSignIn();
     setStandaloneSignInActive(true);
     void loader.getSession().then((session) => {
       if (!session) { setStandaloneSignInActive(false); return null; }
@@ -143,10 +142,10 @@ function App() {
       setStandaloneSignInActive(false);
       reportControlledError('standalone-wallet-sign-in', error);
     });
-  }, [navigation.beginSignIn]);
+  }, [beginSignIn]);
 
   const disconnectStandalone = useCallback(() => {
-    const finish = navigation.beginDisconnect();
+    const finish = beginDisconnect();
     if (!finish) return;
     if (window.parent !== window) {
       useWalletStore.getState().disposeWallet();
@@ -163,7 +162,7 @@ function App() {
       finish(false);
       reportControlledError('standalone-wallet-disconnect', error);
     });
-  }, [navigation.beginDisconnect]);
+  }, [beginDisconnect]);
 
   const enterConnectedWorld = useCallback(() => {
     if (verifiedOwnerProfileAddress) visitProfile(verifiedOwnerProfileAddress, { returnToConnectedProfile: true });
@@ -218,7 +217,6 @@ function App() {
             onDisconnect={disconnectStandalone}
             onEnterMyWorld={enterConnectedWorld}
             interfaceVisible={interfaceVisible}
-            onPreviewDocumentChange={setPreviewDocument}
             registerWorldContextMenu={registerDesktopContextMenu}
             onGalleryOpenChange={setGalleryActive}
             publishedResolution={publishedResolution}
@@ -231,8 +229,6 @@ function App() {
             onReturnToWorkbench={ownershipVerified && authorityLifecycleStatus === 'complete' ? enterConnectedWorld : undefined}
             onOpenDiscover={navigation.openDiscover} onVisitProfile={visitProfile}
             entry={{ surface: content.canvas ? 'canvas' : 'overview', target: content.target, reception: content.reception }}
-            onOpenWork={target => navigation.openWork(viewedProfileAddress, target)} onCloseWork={() => navigation.closeWork(viewedProfileAddress)}
-            onOpenCanvas={target => navigation.openCanvas(viewedProfileAddress, target)}
             onOpenOverview={() => navigation.openOverview(viewedProfileAddress)} />}
         </div>
         {!standaloneSignInActive && !publicEntryPortal && ['entry', 'discover'].includes(destination.kind) && <Suspense fallback={<div className="mode-loading">Opening Discover...</div>}>

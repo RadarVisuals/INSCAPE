@@ -68,24 +68,3 @@
   text-align: center;
   text-transform: uppercase;
 }
-
-.lattice-production-table__label {
-  position: absolute;
-  z-index: 2147483000;
-  display: grid;
-  min-width: 74px;
-  max-width: min(280px, 54%);
-  gap: 3px;
-  padding: 5px 7px;
-  border: 1px solid color-mix(in srgb, currentColor 34%, transparent);
-  background: var(--lattice-production-label-surface);
-  color: var(--lattice-production-label-ink);
-  font-family: "Inscape IBM Plex Sans Condensed", "Arial Narrow", sans-serif;
-  line-height: 1.15;
-  text-transform: uppercase;
-}
-
-.lattice-production-table__label strong,
-.lattice-production-table__label span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.lattice-production-table__label strong { font-size: 10px; font-weight: 500; letter-spacing: 0.14em; }
-.lattice-production-table__label span { color: var(--lattice-production-label-muted); font-size: 8px; letter-spacing: 0.1em; }

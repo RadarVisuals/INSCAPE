@@ -1,5 +1,5 @@
 import { Source } from './referenceLinks.local.jsx';
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   X,
   Copy,
@@ -14,7 +14,6 @@ import {
 import DetachedWindow from '../src/public/ownerSystemWorkflow/OwnerSystemWorkflowDetachedWindow.jsx';
 import ArtworkTransformTools from '../src/public/ownerSystemWorkflow/ArtworkTransformTools.jsx';
 import PlacementSizeControls from '../src/public/ownerSystemWorkflow/PlacementSizeControls.jsx';
-import { ModuleGrainControl } from '../src/public/ownerSystemWorkflow/ModuleSurfaceControls.jsx';
 import '../src/public/ownerSystemWorkflow/displayInstruments.css';
 import '../src/imageModule/imageModule.css';
 import '../src/shapes/shapes.css';
@@ -232,18 +231,18 @@ function ImageSample({ example, report, setTitle }) {
       </details>
       <div className="image-module__side-tools">
         <label>
-          Library drop
+          When dropping from Library
           <select
-            aria-label="Image drop action"
+            aria-label="When dropping from Library"
             value={drop}
             onChange={(event) => setDrop(event.target.value)}
           >
-            <option value="append">Add side</option>
-            <option value="replace">Replace side</option>
+            <option value="append">Add as a new side</option>
+            <option value="replace">Replace current side</option>
           </select>
         </label>
         <IconButton
-          label="Remove Image side"
+          label="Remove current Image side"
           icon={Trash2}
           disabled={!hasSide || busy}
           onClick={() => {
@@ -593,9 +592,9 @@ function ShapeSample({ example, report, setTitle }) {
         />
       </nav>
       <label>
-        Shape
+        Selected shape
         <select
-          aria-label="Choose shape"
+          aria-label="Selected shape"
           value={selected}
           onChange={(event) => setSelected(event.target.value)}
         >
@@ -640,9 +639,6 @@ function ShapeSample({ example, report, setTitle }) {
           onChange={(value) => change({ opacity: value / 100 })}
         />
       </div>
-      {record.kind === 'rectangle' && (
-        <ModuleGrainControl value={record.grain} onChange={(grain) => change({ grain })} />
-      )}
       {record.kind === 'grid' && (
         <>
           <label className="shape-check">
@@ -724,14 +720,6 @@ function ShapeSample({ example, report, setTitle }) {
           </div>
         </form>
       </details>
-      <label className="shape-check">
-        <input
-          type="checkbox"
-          checked={record.open}
-          onChange={(event) => change({ open: event.target.checked })}
-        />
-        Show shape
-      </label>
       <label className="shape-check">
         <input
           type="checkbox"

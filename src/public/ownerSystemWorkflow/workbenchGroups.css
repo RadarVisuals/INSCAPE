@@ -1,14 +1,9 @@
 .workbench-move-error { position: fixed; z-index: 85; left: 12px; bottom: calc(var(--workflow-dock-height, 40px) + 52px); max-width: calc(100% - 24px); background: var(--workflow-panel); color: var(--workflow-ink); border: 1px solid var(--workflow-border); padding: 8px; font: var(--workflow-type-control); }
-.system-workflow__instrument-window.workbench-groups { z-index: 84; max-width: calc(100dvw - 16px); }
+.system-workflow__instrument-window.workbench-groups { z-index: 90; max-width: calc(100dvw - 16px); }
 .workbench-groups .system-workflow__instrument-content { overflow: auto; padding: 10px; font: var(--workflow-type-control); }
 .workbench-groups__body { display: grid; gap: 10px; }
 .workbench-groups form, .workbench-groups section { display: grid; gap: 8px; }
 .workbench-groups label { display: grid; gap: 4px; }
-.workbench-groups input { width: 100%; min-width: 0; box-sizing: border-box; min-height: 32px; border: 1px solid var(--workflow-border); background: transparent; color: inherit; padding: 4px 6px; font: inherit; }
-.workbench-groups button { min-height: 32px; border: 1px solid var(--workflow-border); border-radius: 0; background: transparent; color: inherit; padding: 4px 8px; font: inherit; cursor: pointer; }
-.workbench-groups button:disabled { opacity: .4; cursor: default; }
-.workbench-groups button:hover:not(:disabled) { background: var(--workflow-hover); }
-.workbench-groups button:focus-visible, .workbench-groups input:focus-visible { outline: 1px solid currentColor; outline-offset: -3px; }
 .workbench-groups p { margin: 0; }
 .workbench-groups__actions { display: flex; flex-wrap: wrap; gap: 4px; }
 .workbench-groups__actions > button { flex: 1; }
@@ -18,7 +13,7 @@
 .workbench-groups__list > button[aria-pressed="true"] { box-shadow: inset 3px 0 var(--workflow-ink); }
 .workbench-groups__list > button[data-drop-target] { outline: 2px solid var(--workflow-ink); outline-offset: -3px; background: var(--workflow-selection); }
 .workbench-groups__members { list-style: none; padding: 0; margin: 0; }
-.workbench-groups__members li { display: grid; grid-template-columns: minmax(0, 1fr) repeat(3, 32px); gap: 2px; align-items: center; padding: 2px 0; }
+.workbench-groups__members li { display: grid; grid-template-columns: minmax(0, 1fr) repeat(3, var(--tool-control-height, 32px)); gap: 2px; align-items: center; padding: 2px 0; }
 .workbench-groups footer { padding-top: 8px; border-top: 1px solid var(--workflow-border); }
 
 [data-workbench-group-hidden] { visibility: hidden !important; pointer-events: none !important; }
@@ -39,7 +34,7 @@
 .workbench-group-stack__previews img:nth-child(3) { translate: 10% 6%; }
 .workbench-group-stack__manage { position: absolute; right: 0; bottom: 0; width: 28px; height: 28px; }
 .workbench-group-stack[data-drop-target] { outline: 2px solid var(--workflow-ink); }
-.workbench-group-browsing { position: fixed; z-index: 83; top: 12px; left: 12px; max-width: calc(100% - 24px); box-sizing: border-box; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 6px; border: 1px solid var(--workflow-border); background: var(--workflow-panel); color: var(--workflow-ink); font: var(--workflow-type-control); }
+.workbench-group-browsing { position: fixed; z-index: 83; top: 12px; left: 12px; max-width: calc(100% - 24px); box-sizing: border-box; flex-wrap: wrap; align-items: center; padding: 6px; border: 1px solid var(--workflow-border); background: var(--workflow-panel); color: var(--workflow-ink); font: var(--workflow-type-control); }
 .workbench-group-browsing strong { font-weight: 400; overflow-wrap: anywhere; }
 .workbench-group-browsing button { border: 1px solid var(--workflow-border); border-radius: 0; background: transparent; color: inherit; padding: 6px 10px; font: inherit; cursor: pointer; }
 

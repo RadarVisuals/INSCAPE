@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { normalizeProfileAddress } from '../library/config.js';
 import { applicationRouteUrl, disconnectRoute, readApplicationRoute, resolveApplicationDestination } from './applicationNavigation.js';
+import useDeferredFocusReturn from '../public/useDeferredFocusReturn.js';
 
 export default function useApplicationNavigation(authority) {
   const [route, setRoute] = useState(() => readApplicationRoute(window.location, window.history.state));
@@ -10,22 +11,24 @@ export default function useApplicationNavigation(authority) {
   const previousAccount = useRef(null);
   const disconnecting = useRef(false);
   const signInOrigin = useRef(null);
+  const { restoreFocus, cancelFocusReturn } = useDeferredFocusReturn();
   const destination = resolveApplicationDestination(route, authority);
   const background = route.kind === 'discover' ? route.returnTo : route;
   const content = background ? resolveApplicationDestination(background, authority) : null;
 
   const navigate = useCallback((next, { replace = false, receptionParent = null } = {}) => {
+    cancelFocusReturn();
     current.current = next;
     window.history[replace ? 'replaceState' : 'pushState'](
       { inscapeReturnRoute: next.kind === 'discover' ? next.returnTo : null, inscapeReceptionParent: receptionParent }, '',
       applicationRouteUrl(window.location, next));
     setRoute(next);
-  }, []);
+  }, [cancelFocusReturn]);
   useEffect(() => {
-    const sync = () => { const next = readApplicationRoute(window.location, window.history.state); current.current = next; setRoute(next); };
+    const sync = () => { cancelFocusReturn(); const next = readApplicationRoute(window.location, window.history.state); current.current = next; setRoute(next); };
     window.addEventListener('popstate', sync);
     return () => window.removeEventListener('popstate', sync);
-  }, []);
+  }, [cancelFocusReturn]);
 
   // Preserve the existing implicit-owner fallback on an external wallet loss.
   // Explicit Disconnect follows disconnectRoute instead. No remembered account
@@ -76,8 +79,8 @@ export default function useApplicationNavigation(authority) {
   }, [navigate]);
   const closeDiscover = useCallback(() => {
     navigate(current.current.returnTo || { kind: 'home', fallbackAddress: null }, { replace: true });
-    requestAnimationFrame(() => { if (returnFocus.current?.isConnected) returnFocus.current.focus({ preventScroll: true }); });
-  }, [navigate]);
+    restoreFocus(returnFocus.current);
+  }, [navigate, restoreFocus]);
   const beginSignIn = useCallback(() => { signInOrigin.current = current.current; }, []);
   const completeSignIn = useCallback(() => {
     const active = current.current;

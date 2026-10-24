@@ -20,14 +20,12 @@ import useOwnerSystemWorkflowPlacementInteraction from './useOwnerSystemWorkflow
 import {
   OWNER_SYSTEM_WORKFLOW_ARTBOARD_MODES,
   createOwnerSystemWorkflowProjectedField,
-  measureOwnerSystemWorkflowArtboard,
   measureOwnerSystemWorkflowHeroArtboard,
   ownerSystemWorkflowProjectedFieldContainsPoint,
   projectOwnerSystemWorkflowPlacement,
 } from './systemWorkflowArtboardProjection.js';
 import {
   decodeOwnerSystemWorkflowAssetDimensions,
-  ownerSystemWorkflowAssetDimensions,
 } from './ownerSystemWorkflowAssetDimensions.js';
 import { markOwnerSystemWorkflowPointerFocus } from './ownerSystemWorkflowSelection.js';
 import useArtworkPicking from './useArtworkPicking.js';
@@ -50,19 +48,6 @@ const projectedSelectionOutline = (bounds, field) => {
   }, field);
   return rectangle;
 };
-const screenPixelMetrics = (rectangle, scale) => {
-  const devicePixelRatio = Number.isFinite(globalThis.devicePixelRatio) && globalThis.devicePixelRatio > 0
-    ? globalThis.devicePixelRatio : 1;
-  const snap = (value) => Math.round(value * scale * devicePixelRatio) / devicePixelRatio;
-  const left = snap(rectangle.left);
-  const top = snap(rectangle.top);
-  const right = snap(rectangle.left + rectangle.width);
-  const bottom = snap(rectangle.top + rectangle.height);
-  return {
-    rectangle: { left, top, width: Math.max(0, right - left), height: Math.max(0, bottom - top) },
-    screenPixel: 1 / devicePixelRatio,
-  };
-};
 const screenHandlePoint = (corner, rectangle, width, height, unit = 1) => {
   const left = Math.max(14 * unit, Math.min(width - 42 * unit, rectangle.left));
   const top = Math.max(14 * unit, Math.min(height - 42 * unit, rectangle.top));
@@ -74,7 +59,7 @@ const screenHandlePoint = (corner, rectangle, width, height, unit = 1) => {
   };
 };
 
-export default function OwnerSystemWorkflowCanvas({ assetsById, authoringLocked = false, boardScale = 1, workbenchScale = 1, controller, crop, interactionDisabled = false, onAssetDimensions,
+export default function OwnerSystemWorkflowCanvas({ assetsById, authoringLocked = false, controller, crop, interactionDisabled = false, onAssetDimensions,
   onChangeGrid, onOpenViewer, onPlacementRef, reducedMotion = false, resolveAssetDimensions,
   placementTargetRef, selectionOverlayHost, viewerPlacementId, inspectionActive = false, playingGrids = false, suspended = false, onPauseGrids, onPlaybackStateChange, editingTextId, onEditText }) {
   const canvasRef = useRef(null);
@@ -83,7 +68,6 @@ export default function OwnerSystemWorkflowCanvas({ assetsById, authoringLocked 
   const selectionChromeRef = useRef(null);
   const feedbackTimerRef = useRef(null);
   const [dropFeedback, setDropFeedback] = useState(null);
-  const [measuredViewport, setWorldViewport] = useState(null);
   const stageSize = useContext(DisplayStageSizeContext);
   const retainedSelection = useRef(null);
   const grid = controller.selectedGrid;
@@ -97,13 +81,12 @@ export default function OwnerSystemWorkflowCanvas({ assetsById, authoringLocked 
   const worldViewport = useMemo(() => stageSize
     ? worldCover ? measureOwnerSystemWorkflowHeroArtboard(stageSize.width, stageSize.height, stageSize.contentScale)
       : projectDisplayStageViewport(controller.draft.geometry, stageSize)
-    : measuredViewport, [stageSize?.width, stageSize?.height, stageSize?.contentScale, worldCover, controller.draft.geometry, measuredViewport]);
+    : null, [stageSize?.width, stageSize?.height, stageSize?.contentScale, worldCover, controller.draft.geometry]);
   const artboardMode = worldCover ? OWNER_SYSTEM_WORKFLOW_ARTBOARD_MODES.HERO : OWNER_SYSTEM_WORKFLOW_ARTBOARD_MODES.GRID;
   const cropSession = crop?.cropSession || null;
   const appearance = controller.draft?.appearance;
   const snapStep = systemWorkflowPlacementSnapStep(appearance);
-  const viewScale = Number.isFinite(boardScale) && boardScale > 0 ? boardScale : 1;
-  const pointerScale = stageSize?.screenScale ?? viewScale * workbenchScale;
+  const pointerScale = stageSize?.screenScale;
   const viewerOpen = inspectionActive || Boolean(viewerPlacementId);
   const gridOrder = useMemo(() => controller.draft.grids
     .filter((candidate) => !isSystemWorkflowWorldCoverGrid(candidate)).map(({ id }) => id), [controller.draft.grids]);
@@ -138,7 +121,7 @@ export default function OwnerSystemWorkflowCanvas({ assetsById, authoringLocked 
         const canvas = canvasRef.current;
         if (!isCurrent() || suspended || viewerOpen || cropSession || grid?.visibility !== 'PUBLIC'
           || !canvas.contains(document.elementFromPoint(point.x, point.y))) return false;
-        const field = createOwnerSystemWorkflowProjectedField(canvas, snapStep, viewScale, artboardMode, sceneRef.current, worldViewport, pointerScale);
+        const field = createOwnerSystemWorkflowProjectedField(canvas, snapStep, artboardMode, sceneRef.current, worldViewport, pointerScale);
         const destination = displayTextDestinationAt(point, field);
         if (!destination) return false;
         const id = controller.run(() => addArticleToDisplay(controller.store, controller.draft.profileAddress,
@@ -149,7 +132,7 @@ export default function OwnerSystemWorkflowCanvas({ assetsById, authoringLocked 
       previewTextAt: (point, rectangle, explicit = false) => {
         const canvas = canvasRef.current;
         if (!isCurrent() || !grid || grid.visibility !== 'PUBLIC' || !explicit && !canvas.contains(document.elementFromPoint(point.x, point.y))) return null;
-        const field = createOwnerSystemWorkflowProjectedField(canvas, snapStep, viewScale, artboardMode, sceneRef.current, worldViewport, pointerScale);
+        const field = createOwnerSystemWorkflowProjectedField(canvas, snapStep, artboardMode, sceneRef.current, worldViewport, pointerScale);
         if (!field || !ownerSystemWorkflowProjectedFieldContainsPoint(field, point)) return null;
         const q = quantizeSystemWorkflowGridCoordinate;
         const destination = { column: q((rectangle.left - field.left) / field.cellSize), row: q((rectangle.top - field.top) / (field.rowSize ?? field.cellSize)),
@@ -166,7 +149,7 @@ export default function OwnerSystemWorkflowCanvas({ assetsById, authoringLocked 
       previewAt: (point, dimensions, options = {}) => {
         const canvas = canvasRef.current;
         if (!isCurrent() || !dimensions || !canvas.contains(document.elementFromPoint(point.x, point.y))) return null;
-        const field = createOwnerSystemWorkflowProjectedField(canvas, snapStep, viewScale, artboardMode, sceneRef.current, worldViewport, pointerScale);
+        const field = createOwnerSystemWorkflowProjectedField(canvas, snapStep, artboardMode, sceneRef.current, worldViewport, pointerScale);
         if (!field || !ownerSystemWorkflowProjectedFieldContainsPoint(field, point)) return null;
         const destination = createSystemWorkflowDropGeometry(dimensions.width, dimensions.height, point, field, options);
         return { destination, rectangle: projectLatticePixelRectangle(destination, field) };
@@ -209,8 +192,7 @@ export default function OwnerSystemWorkflowCanvas({ assetsById, authoringLocked 
   if (selectionBounds) retainedSelection.current = { bounds: selectionBounds, primary: selected.at(-1), count: selected.length, gridId: grid.id };
   const renderedSelection = retainedSelection.current;
   const selectionMetrics = renderedSelection && worldViewport
-    ? stageSize ? { rectangle: projectedSelectionOutline(renderedSelection.bounds, worldViewport), screenPixel: 1 }
-      : screenPixelMetrics(projectedSelectionOutline(renderedSelection.bounds, worldViewport), viewScale)
+    ? { rectangle: projectedSelectionOutline(renderedSelection.bounds, worldViewport), screenPixel: 1 }
     : null;
 
   // Project selection handles from the displayed Grid without changing authored geometry.
@@ -237,23 +219,6 @@ export default function OwnerSystemWorkflowCanvas({ assetsById, authoringLocked 
     };
     follow();
   });
-
-  useLayoutEffect(() => {
-    const node = canvasRef.current;
-    if (!node || stageSize) return undefined;
-    const measure = () => {
-      const style = getComputedStyle(node);
-      const rectangle = { width: parseFloat(style.width), height: parseFloat(style.height) };
-      setWorldViewport(worldCover
-        ? measureOwnerSystemWorkflowHeroArtboard(rectangle.width, rectangle.height)
-        : measureOwnerSystemWorkflowArtboard(rectangle.width, rectangle.height, 1, controller.draft.geometry));
-    };
-    measure();
-    const observer = typeof ResizeObserver === 'function' ? new ResizeObserver(measure) : null;
-    observer?.observe(node);
-    globalThis.addEventListener?.('resize', measure);
-    return () => { observer?.disconnect(); globalThis.removeEventListener?.('resize', measure); };
-  }, [worldCover, Boolean(stageSize)]);
 
   useEffect(() => () => globalThis.clearTimeout?.(feedbackTimerRef.current), []);
 
@@ -294,7 +259,7 @@ export default function OwnerSystemWorkflowCanvas({ assetsById, authoringLocked 
 
   if (!grid) return null;
   return <section className="system-workflow__stage-content" aria-label={`${grid.title} Grid`} data-system-workflow-stage data-world-cover={worldCover || undefined}>
-    <div ref={canvasRef} data-stage-columns={controller.draft.geometry.columns} data-stage-rows={controller.draft.geometry.rows} className="system-workflow__canvas" data-guide={displayGuideMode(appearance)} data-system-workflow-artboard data-swipe-direction={interaction.gridSwipe?.direction} data-swiping={cameraMoving || undefined} data-swipe-settling={interaction.gridSwipe?.settling || undefined} style={{ '--guide-color': appearance.guideColor, '--world-cell-size': worldViewport ? `${worldViewport.cellSize}px` : undefined, '--world-origin-x': worldViewport ? `${worldViewport.left}px` : undefined, '--world-origin-y': worldViewport ? `${worldViewport.top}px` : undefined, '--workflow-board-inverse-scale': 1 / viewScale }}
+    <div ref={canvasRef} data-stage-columns={controller.draft.geometry.columns} data-stage-rows={controller.draft.geometry.rows} className="system-workflow__canvas" data-guide={displayGuideMode(appearance)} data-system-workflow-artboard data-swipe-direction={interaction.gridSwipe?.direction} data-swiping={cameraMoving || undefined} data-swipe-settling={interaction.gridSwipe?.settling || undefined} style={{ '--guide-color': appearance.guideColor, '--world-cell-size': worldViewport ? `${worldViewport.cellSize}px` : undefined, '--world-origin-x': worldViewport ? `${worldViewport.left}px` : undefined, '--world-origin-y': worldViewport ? `${worldViewport.top}px` : undefined }}
       onLoadCapture={picking.onLoadCapture}
       onClick={(event) => {
         if (cropSession || interaction.clickSuppressedRef.current || event.target.closest?.('[data-system-workflow-placement-id]')) return;
@@ -380,7 +345,10 @@ export default function OwnerSystemWorkflowCanvas({ assetsById, authoringLocked 
               return;
             }
             markOwnerSystemWorkflowPointerFocus(hit.element);
-            if (hit.element !== event.currentTarget) { event.preventDefault(); hit.element.focus({ preventScroll: true }); }
+            if (hit.element !== event.currentTarget) event.preventDefault();
+            // Movement suppresses native pointer focus even on a stationary
+            // click. Keyboard inspection must follow the artwork just chosen.
+            hit.element.focus({ preventScroll: true });
             if (authoringLocked) return;
             if (cropping) crop.beginCropDrag(event, placement.id, worldViewport.cellSize * pointerScale, (worldViewport.rowSize ?? worldViewport.cellSize) * pointerScale);
             else if (!cropSession) interaction.beginPlacementGesture(event, hit.placement);

@@ -1,5 +1,6 @@
 import { workbenchArea, workbenchAreaBounds } from '../systemWorkflow/domain/workbenchArea.js';
 import { gridShapeFrame } from './gridShapeGeometry.js';
+import { editArtworkLayers } from '../systemWorkflow/artworkLayerSession.js';
 import { MAX_SHAPES, validShapes, createShapePresentation } from './shapes.js';
 import { createDefaultWorkbenchPresentation } from '../profileDocument/domain/workbenchPresentation.js';
 import { clampWorkbenchPosition } from '../public/ownerSystemWorkflow/workbenchSpace.js';
@@ -52,13 +53,7 @@ export function editShape(store, profile, expected, changes, presentation) {
   commit(store, profile, { ...draft, shapes, ...(workbench ? { workbench } : {}) }, 'Edit Shape');
 }
 export function reorderShape(store, profile, id, direction) {
-  const draft = store.getDraft(), shapes = [...(draft.shapes || [])], index = shapes.findIndex(item => item.id === id);
-  if (index < 0) throw new Error('This shape is no longer available.');
-  const target = { back: 0, backward: Math.max(0, index - 1), forward: Math.min(shapes.length - 1, index + 1), front: shapes.length - 1 }[direction];
-  if (target === undefined) throw new Error('Choose a shape order.');
-  if (target === index) return;
-  shapes.splice(target, 0, ...shapes.splice(index, 1));
-  commit(store, profile, { ...draft, shapes }, 'Reorder Shape');
+  return editArtworkLayers(store, profile, { type: 'order', ids: [id], direction });
 }
 export function prepareShapeResize(draft, { expected, gridScale }) {
   if (!draft.shapes?.some(item => JSON.stringify(item) === JSON.stringify(expected))) throw new Error('This shape changed during resizing. Try again.');

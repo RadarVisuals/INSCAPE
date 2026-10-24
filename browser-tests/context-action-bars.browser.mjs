@@ -41,12 +41,23 @@ test('Display, Image and Shape actions follow the active module and retain undo'
   try {
     const { page, errors } = await mount(browser);
     await activate(page, 'display');
-    await button(page.getByRole('toolbar', { name: 'Creation tools' }), 'Layers').click();
+    await page.locator('.system-workflow__identity-strip').first().focus();
+    await page.keyboard.press('Shift+F10');
+    await page.getByRole('menuitem', { name: 'TOOLS', exact: true }).hover();
+    await page.getByRole('menuitem', { name: 'LAYERS', exact: true }).click();
+    const lock = button(page, 'Lock ABYSSAL STUDY');
+    const lockReachable = () => lock.evaluate(node => {
+      const r = node.getBoundingClientRect();
+      return node.contains(document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2));
+    });
+    for (let moves = 0; !await lockReachable() && moves < 30; moves++)
+      await page.getByLabel('Move Layers window', { exact: true }).press('Shift+ArrowRight');
+    assert.equal(await lockReachable(), true, 'moving the Layers window exposes the real placement lock');
     await button(page, 'Lock ABYSSAL STUDY').click();
     assert.equal(await button(selection(page), 'Rotate').isDisabled(), true);
     await button(page, 'Unlock ABYSSAL STUDY').click();
     assert.equal(await button(selection(page), 'Rotate').isEnabled(), true);
-    await button(page.getByRole('toolbar', { name: 'Creation tools' }), 'Layers').click();
+    await button(page, 'Close Layers').click();
     assert.equal(await page.locator('[data-context-tools] .system-workflow__selection-actions').count(), 0);
     assert.equal(await page.getByRole('navigation', { name: 'Selection actions', exact: true }).count(), 1);
     await button(inspection(page), 'In place').click();

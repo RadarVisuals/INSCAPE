@@ -1,6 +1,7 @@
 import { useWorkbenchArea } from './WorkbenchAreaContext.jsx';
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
+import { X } from '../InscapeIcons.jsx';
 import { WorkbenchWindow } from './DisplayInstrumentWindow.jsx';
 import { useWorkbenchView } from './WorkbenchViewContext.js';
 import { editWorkbenchIndex } from '../../systemWorkflow/workbenchIndexSession.js';
@@ -8,6 +9,7 @@ import { MAX_WORKBENCH_DESTINATIONS, resolveWorkbenchDestination, workbenchDesti
 import { workbenchGroupWindowIds } from '../../systemWorkflow/domain/workbenchGroups.js';
 import { clampWorkbenchPosition, unprojectWorkbenchPosition } from './workbenchSpace.js';
 import './workbenchIndex.css';
+import './workbenchNavigationTools.css';
 
 const empty = Object.freeze({});
 const noSubscribe = () => () => {};
@@ -15,6 +17,7 @@ const noSubscribe = () => () => {};
 export default function WorkbenchIndex({ hostRef, navigation, sceneRef, entryTarget }) {
   const { bounds: areaBounds } = useWorkbenchArea();
   const view = useWorkbenchView(), owner = Boolean(view.store);
+  const { setSelection } = view;
   const content = useSyncExternalStore(view.store?.subscribe || noSubscribe,
     view.store?.getSnapshot || (() => view.groupContent || empty));
   const index = content.workbenchIndex;
@@ -29,13 +32,13 @@ export default function WorkbenchIndex({ hostRef, navigation, sceneRef, entryTar
   };
   const visit = useCallback(id => {
     const { navigation } = current.current;
-    return navigation.focusDestination({ padding: 0, onArrive: () => view.setSelection([]),
+    return navigation.focusDestination({ padding: 0, onArrive: () => setSelection([]),
       prepare: () => sceneRef.current?.restore(null),
       getBounds: () => {
         const { index, content } = current.current;
         return resolveWorkbenchDestination(index?.destinations.find(item => item.id === id), content, getFrame);
       } });
-  }, [sceneRef, getFrame, view.setSelection]);
+  }, [sceneRef, getFrame, setSelection]);
   useEffect(() => {
     if (owner || entryTarget || started.current || !index?.landingId || navigation.locked) return;
     let second;
@@ -78,12 +81,12 @@ export default function WorkbenchIndex({ hostRef, navigation, sceneRef, entryTar
     save({ ...index, pinned, window }, 'Pin Index');
   };
   const panel = open && hostRef.current && createPortal(<div className="workbench-index" data-system-workflow-panel="index" data-workbench-index="true">
-    <WorkbenchWindow key={`${index.pinned}:${owner}`} label="Index" title="Destinations" chrome="bevel"
+    <WorkbenchWindow key={`${index.pinned}:${owner}`} label="Index" title="Destinations" titleContent={<strong>Index</strong>} viewportBottom={globalThis.innerHeight - 8} chrome="flat" className="workbench-tool-window workbench-navigation-tool"
       viewId={index.pinned ? undefined : 'workbench:index'} registerView={false} screenSized
       width={index.window.width} initialHeight={index.window.height} initialX={index.window.left} initialY={index.window.top}
       minimumWidth={240} minimumHeight={180} resizableWidth resizable={owner} committedFrame={index.window}
       onLayoutCommit={owner ? window => save({ ...index, window }, 'Move or resize Index') : undefined}
-      controls={<button type="button" aria-label="Close Index" className="system-workflow__window-cap" onClick={toggle}>×</button>}>
+      controls={<button type="button" aria-label="Close Index" className="system-workflow__window-cap" onClick={toggle}><X size={14} /></button>}>
       <nav aria-label="Workbench destinations">
         {index.destinations.length === 0 && <p>Frame a composition, then save its view here.</p>}
         <ol>{index.destinations.map((item, order) => <li key={item.id}>

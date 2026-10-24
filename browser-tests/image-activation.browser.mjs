@@ -23,6 +23,8 @@ for (const width of [1440, 390]) test(`Image activation preserves pointer/keyboa
     });
     const windows = page.locator('.image-module__window'), first = windows.first(), second = windows.nth(1);
     await first.waitFor(); await settle(page);
+    // The sidebar overlays authored geometry; expose the Image through its UI.
+    if (width === 1440) { await page.getByRole('button', { name: 'Collapse sidebar', exact: true }).click(); await settle(page); }
     const saved = await page.evaluate(() => localStorage.getItem(window.__motionKey));
     const geometry = await first.boundingBox();
     await page.mouse.move(geometry.x + 50, geometry.y + 70); await page.mouse.down();
@@ -36,11 +38,13 @@ for (const width of [1440, 390]) test(`Image activation preserves pointer/keyboa
     await second.locator('.image-module__canvas').focus(); await settle(page);
     assert.equal(await second.getAttribute('data-active'), 'true', 'keyboard focus activates the other Image');
     assert.equal(await first.getAttribute('data-active'), null);
-    assert.equal(await page.locator('[data-context-tools] [data-workbench-inspection-target]').getAttribute('data-workbench-inspection-target'), 'image:activation-1');
+    const actions = page.locator('[data-context-action-bars] [data-context-action-target]');
+    await actions.waitFor();
+    assert.equal(await actions.getAttribute('data-context-action-target'), 'image:activation-1');
     await page.mouse.click(4, 4); await settle(page);
     assert.equal(await first.getAttribute('data-active'), null);
     assert.equal(await second.getAttribute('data-active'), null);
-    assert.equal(await page.locator('[data-context-tools]').isVisible(), false, 'empty Workbench space clears tools');
+    assert.equal(await page.locator('[data-context-action-bars]').isVisible(), false, 'empty Workbench space clears tools');
     const canvas = first.locator('.image-module__canvas');
     await canvas.focus(); await settle(page);
     assert.equal(await canvas.evaluate(node => node === document.activeElement), true, 'keyboard keeps focus on its original control');

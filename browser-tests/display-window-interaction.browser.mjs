@@ -40,7 +40,7 @@ test('both Display windows remain movable and resizable after activation changes
       const props = visitor ? { document: (await import('/src/profileDocument/domain/profileDocumentV9Builder.js')).buildProfileDocumentV9({
         profileAddress, systemWorkflowDraft: store.getDraft(), assetRecords: fixture.OWNER_SYSTEM_WORKFLOW_REVIEW_ASSETS }) }
         : { profileAddress, reviewStorage: localStorage, reviewAssets: fixture.OWNER_SYSTEM_WORKFLOW_REVIEW_ASSETS,
-          reviewCategories: [], reviewActivity: [], reviewDiscovery: [], reviewProfile: { name: 'Two Displays' } };
+          reviewCategories: [], reviewActivity: [], reviewProfile: { name: 'Two Displays' } };
       createRoot(document.getElementById('root')).render(React.createElement(Component, props));
       return id;
     }, { visitor, width });

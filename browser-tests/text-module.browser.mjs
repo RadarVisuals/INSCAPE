@@ -22,13 +22,13 @@ test('Text module authors, reloads, renders and contains content at wide/narrow 
       window.__vite_plugin_react_preamble_installed__ = true;
       const React = (await import('/@id/react')).default;
       const { createRoot } = (await import('/@id/react-dom/client')).default;
-      const Runtime = (await import('/src/public/ownerSystemWorkflow/OwnerSystemWorkflowRuntime.jsx')).default;
+      const Boundary = (await import('/src/public/ownerSystemWorkflow/OwnerSystemWorkflowReconciliationBoundary.jsx')).default;
       const fixture = await import('/src/public/ownerSystemWorkflow/ownerSystemWorkflowDevelopmentFixture.js');
       await import('/src/inscapeTokens.css'); await import('/src/public/ownerSystemWorkflow/ownerSystemWorkflow.css'); await import('/src/lattice/rendering/latticeMenuSurface.css');
       window.__textRoot = createRoot(document.getElementById('root'));
-      window.__textRoot.render(React.createElement(Runtime, { profileAddress: fixture.OWNER_SYSTEM_WORKFLOW_REVIEW_PROFILE,
+      window.__textRoot.render(React.createElement(Boundary, { profileAddress: fixture.OWNER_SYSTEM_WORKFLOW_REVIEW_PROFILE,
         reviewStorage: localStorage, reviewAssets: fixture.OWNER_SYSTEM_WORKFLOW_REVIEW_ASSETS,
-        reviewCategories: [], reviewActivity: [], reviewDiscovery: [], reviewProfile: { name: 'Text review' } }));
+        reviewCategories: [], reviewActivity: [], reviewProfile: { name: 'Text review' } }));
     });
     await page.goto(`${origin}/__text_review__`); console.log('Text review page loaded');
     let importTimer;
@@ -39,8 +39,8 @@ test('Text module authors, reloads, renders and contains content at wide/narrow 
     await workspace.focus(); await page.keyboard.press('Shift+F10');
     const menu = page.getByRole('menu', { name: 'Workbench commands', exact: true });
     await menu.getByRole('menuitem', { name: 'ADD', exact: true }).click(); await menu.getByRole('menuitem', { name: 'TEXT', exact: true }).click();
-    await page.waitForTimeout(1500);
     const text = page.locator('[data-workbench-module="text"]'), tools = page.locator('.text-tools-window');
+    await text.getByRole('textbox', { name: 'Article text', exact: true }).waitFor();
     assert.equal(await text.getByRole('textbox', { name: 'Article title', exact: true }).getAttribute('placeholder'), 'Title');
     assert.equal(await text.getByRole('textbox', { name: 'Article title', exact: true }).evaluate(node => node.tagName), 'TEXTAREA');
     await text.getByRole('textbox', { name: 'Article title', exact: true }).fill('Notes from the Lunar Desert');
@@ -97,7 +97,7 @@ test('Text module authors, reloads, renders and contains content at wide/narrow 
 
     await text.getByRole('button', { name: 'Text tools', exact: true }).click();
     await openTextToolSection(page.locator('.text-tools-window'), 'Default text style');
-    await tools.getByRole('combobox', { name: 'Document font', exact: true }).selectOption('literata');
+    await tools.getByRole('combobox', { name: 'Default font', exact: true }).selectOption('literata');
     await tools.getByRole('checkbox', { name: 'Include in Workbench publication' }).check();
     await text.getByRole('button', { name: 'Read', exact: true }).click();
     await page.reload(); await mount();
@@ -107,15 +107,36 @@ test('Text module authors, reloads, renders and contains content at wide/narrow 
 
     assert.equal(await content.locator('p').first().evaluate(n => getComputedStyle(n).textAlignLast), 'center', 'alignment survives reload');
     await openTextToolSection(page.locator('.text-tools-window'), 'Default text style');
-    assert.equal(await tools.getByRole('combobox', { name: 'Document font', exact: true }).inputValue(), 'literata');
+    assert.equal(await tools.getByRole('combobox', { name: 'Default font', exact: true }).inputValue(), 'literata');
     await tools.getByRole('button', { name: 'Close Text tools', exact: true }).click();
+    // Close the other windows through their normal controls before testing a drop.
+    const displayHeader = page.locator('[data-display-instance="display:primary"] .system-workflow__identity-strip');
+    await displayHeader.focus(); await displayHeader.press('Shift+F10');
+    await page.getByRole('menuitem', { name: 'CLOSE MODULE', exact: true }).click();
+    const closeLayers = page.getByRole('button', { name: 'Close Workbench Layers', exact: true });
+    if (await closeLayers.count()) await closeLayers.click();
+    // Leave the writing surface beside the Library's current workspace panel.
+    const grip = text.getByLabel('Move Text window', { exact: true });
+    await grip.focus();
+    const start = await grip.evaluate(node => {
+      const bounds = node.getBoundingClientRect(), y = bounds.top + bounds.height / 2;
+      for (let x = bounds.left + 16; x < bounds.right - 8; x += 8) {
+        const hit = document.elementFromPoint(x, y);
+        if (hit === node || (node.contains(hit) && !hit.closest('button,input,[role="separator"]'))) return { x, y };
+      }
+      throw new Error('No unobstructed Text move surface');
+    });
+    const textBox = await text.locator('.text-window').boundingBox();
+    await page.mouse.move(start.x, start.y); await page.mouse.down();
+    await page.mouse.move(start.x + 680 - textBox.x, start.y + 180 - textBox.y, { steps: 12 }); await page.mouse.up();
     await content.focus(); await page.keyboard.press('Control+End'); await page.keyboard.press('ArrowRight');
     await page.getByRole('button', { name: 'Library', exact: true }).click();
     const card = page.getByRole('region', { name: 'Library workspace' }).getByRole('button', { name: 'ABYSSAL STUDY / INSCAPE STUDIES', exact: true });
     await card.scrollIntoViewIfNeeded();
     const from = await card.boundingBox(), target = await text.locator('.text-window').boundingBox();
+    assert.equal(await text.evaluate((node, point) => node.contains(document.elementFromPoint(point.x, point.y)), { x: target.x + target.width / 2, y: target.y + target.height / 2 }), true, 'the drop point reaches the actual Text surface');
     await page.mouse.move(from.x + from.width / 2, from.y + 35); await page.mouse.down();
-    await page.mouse.move(target.x + target.width - 40, target.y + target.height - 80, { steps: 12 }); await page.mouse.up();
+    await page.mouse.move(target.x + target.width / 2, target.y + target.height / 2, { steps: 12 }); await page.mouse.up();
     await content.locator('figure img').waitFor();
     await page.getByRole('button', { name: 'Library', exact: true }).click();
     const image = true;

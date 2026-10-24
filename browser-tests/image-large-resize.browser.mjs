@@ -31,6 +31,15 @@ for (const [width, density] of [[1440, 1], [390, 1.25]]) test(`large Image corne
         (await import('/browser-tests/image-fit-fixture.jsx')).mount({ persistent: true });
       });
       await page.locator('.image-module__window').first().waitFor();
+      // Repeat after reload: park the fixture's dock below the resize targets.
+      if (width === 390) {
+        const dock = page.locator('.workbench-tool-dock');
+        const resize = dock.locator('.workbench-tool-panel-resize[data-edge="se"]');
+        await resize.focus(); for (let i = 0; i < 10; i++) await resize.press('Shift+ArrowUp');
+        const move = dock.getByRole('button', { name: 'Move Transform, Color and Info panel', exact: true });
+        await move.focus(); for (let i = 0; i < 20; i++) await move.press('Shift+ArrowDown');
+        await settle(page);
+      }
     };
     await page.goto(`${origin}/__large_image_resize__`); await mount();
     let sequence = 0;
@@ -41,13 +50,6 @@ for (const [width, density] of [[1440, 1], [390, 1.25]]) test(`large Image corne
         api.select(api.store.getDraft().imageModules[0].id); api.camera(.25, { x: -102, y: -30 });
       });
       await settle(page);
-      // The movable Properties window can overlap a tall Image in a narrow
-      // viewport. Park it below the artwork through its real move handle.
-      const header = await page.locator('[aria-label="Move Properties window"]').boundingBox();
-      if (header && header.y < 430) {
-        await page.mouse.move(header.x+header.width/2, header.y+header.height/2); await page.mouse.down();
-        await page.mouse.move(header.x+header.width/2, 450, { steps: 4 }); await page.mouse.up(); await settle(page);
-      }
     };
     const reset = async size => {
       await page.evaluate(({ size, sequence }) => {

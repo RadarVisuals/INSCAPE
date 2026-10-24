@@ -4,14 +4,14 @@ import { chromium } from 'playwright-core';
 
 const origin = process.env.INSCAPE_TEST_ORIGIN || 'http://127.0.0.1:5173';
 const settle = page => page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
-async function fixture(run) {
+async function fixture(run, { historyControls = false } = {}) {
   const browser = await chromium.launch({ executablePath: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', headless: true });
   try {
     const page = await browser.newPage();
     const errors = []; page.on('pageerror', error => errors.push(error.message));
     await page.route(`${origin}/__crop_lifecycle__`, route => route.fulfill({ contentType: 'text/html', body: '<div id="root"></div>' }));
     await page.goto(`${origin}/__crop_lifecycle__`);
-    await page.evaluate(async () => {
+    await page.evaluate(async historyControls => {
       const refresh = (await import('/@react-refresh')).default;
       refresh.injectIntoGlobalHook(window); window.$RefreshReg$ = () => {}; window.$RefreshSig$ = () => type => type;
       window.__vite_plugin_react_preamble_installed__ = true;
@@ -19,6 +19,7 @@ async function fixture(run) {
       const { createRoot } = (await import('/@id/react-dom/client')).default;
       const useCrop = (await import('/src/public/ownerSystemWorkflow/useOwnerSystemWorkflowCrop.js')).default;
       const useController = (await import('/src/public/ownerSystemWorkflow/useOwnerSystemWorkflowController.js')).default;
+      const useDraftUndo = (await import('/src/public/ownerSystemWorkflow/useDraftUndo.js')).default;
       const { createSystemWorkflowDraftStore } = await import('/src/systemWorkflow/systemWorkflowDraftStore.js');
       const { createSystemWorkflowAuthoringSession } = await import('/src/systemWorkflow/systemWorkflowAuthoringSession.js');
       const { OWNER_SYSTEM_WORKFLOW_REVIEW_ASSETS: assets } = await import('/src/public/ownerSystemWorkflow/ownerSystemWorkflowDevelopmentFixture.js');
@@ -35,8 +36,10 @@ async function fixture(run) {
       const asset = { ...assets[0], width: 100, height: 100, imageWidth: 100, imageHeight: 100 };
       const assetsById = new Map([[asset.id, asset]]);
       const root = createRoot(document.getElementById('root')); api.unmount = () => root.unmount();
+      api.neighbourId = store.getDraft().grids[0].placements[1].id;
       function App() {
         const controller = useController(profile, { sharedStore: store });
+        useDraftUndo(store, !historyControls, () => {});
         const [media, setMedia] = React.useState(assetsById); api.setMedia = setMedia;
         const crop = useCrop({ assetsById: media, controller });
         api.controller = controller; api.crop = crop;
@@ -49,20 +52,60 @@ async function fixture(run) {
             style: { width: 80, height: 80, background: index ? 'grey' : 'green', margin: 20 },
           })),
           React.createElement('div', { className: 'system-workflow__crop-controls' },
+            historyControls && React.createElement('button', { onClick: () => {
+              const placement = controller.selectedGrid.placements[0];
+              controller.replaceSelection([placement.id]); crop.beginCrop(placement);
+            } }, 'Start crop A'),
+            historyControls && React.createElement('button', { onClick: () => {
+              const placement = controller.selectedGrid.placements.find(item => item.id === api.neighbourId);
+              controller.run(session => session.removePlacement({ gridId: controller.selectedGrid.id,
+                placementId: placement.id, expectedPlacement: placement }));
+            } }, 'Delete B'),
+            historyControls && React.createElement('button', { onClick: () => {
+              const placement = controller.selectedGrid.placements.find(item => item.id === api.neighbourId);
+              controller.run(session => session.movePlacement({ gridId: controller.selectedGrid.id,
+                placementId: placement.id, expectedStartGeometry: { column: placement.column, row: placement.row, columnSpan: placement.columnSpan, rowSpan: placement.rowSpan },
+                destination: { column: placement.column + 1, row: placement.row, columnSpan: placement.columnSpan, rowSpan: placement.rowSpan } }));
+            } }, 'Move B'),
             React.createElement('button', { onClick: crop.applyCrop }, 'Done'),
             React.createElement('button', { onClick: crop.restoreNativeFit }, 'Native fit')),
           controller.error && React.createElement('p', { role: 'alert' }, controller.error));
       }
       root.render(React.createElement(App));
-    });
+    }, historyControls);
     await page.waitForFunction(() => cropAudit.crop);
-    await page.evaluate(() => cropAudit.crop.beginCrop(cropAudit.controller.selectedGrid.placements[0])); await settle(page);
-    await page.evaluate(() => cropAudit.crop.updateCropZoom(2)); await settle(page);
+    if (!historyControls) {
+      await page.evaluate(() => cropAudit.crop.beginCrop(cropAudit.controller.selectedGrid.placements[0])); await settle(page);
+      await page.evaluate(() => cropAudit.crop.updateCropZoom(2)); await settle(page);
+    }
     await run(page);
     assert.deepEqual(errors, []);
   } finally { await browser.close(); }
 }
 const snapshot = page => page.evaluate(() => cropAudit.crop.cropSession);
+for (const scenario of ['Undo deletion', 'Undo movement', 'Redo movement']) test(`crop routing follows neighbour ${scenario} while crop A stays active`, () => fixture(async page => {
+  await page.getByRole('button', { name: scenario === 'Undo deletion' ? 'Delete B' : 'Move B', exact: true }).click(); await settle(page);
+  assert.equal(await page.getByRole('alert').count(), 0, 'the native neighbour edit was accepted');
+  if (scenario === 'Redo movement') { await page.keyboard.press('Control+z'); await settle(page); }
+  await page.getByRole('button', { name: 'Start crop A', exact: true }).click(); await settle(page);
+  const activeA = await snapshot(page);
+  assert.ok(activeA, 'native crop button starts A');
+  await page.keyboard.press(scenario === 'Redo movement' ? 'Control+Shift+z' : 'Control+z'); await settle(page);
+  assert.deepEqual(await snapshot(page), activeA, 'neighbour history does not invalidate crop A');
+  const neighbour = await page.evaluate(() => cropAudit.controller.selectedGrid.placements.find(item => item.id === cropAudit.neighbourId));
+  assert.ok(neighbour, 'history leaves a current neighbour to click');
+  assert.equal(neighbour.column, scenario === 'Redo movement' ? 11 : 10, 'the native history key changed B');
+  await page.locator(`[data-system-workflow-placement-id="${neighbour.id}"]`).click(); await settle(page);
+  const activeB = await snapshot(page);
+  assert.equal(activeB?.placementId, neighbour.id, 'clicking the current neighbour continues cropping it');
+  assert.deepEqual(activeB.expectedPlacement, neighbour, 'B starts from the current post-history snapshot');
+  assert.deepEqual(await page.evaluate(() => cropAudit.controller.selectedPlacementIds), [neighbour.id]);
+  await page.keyboard.press('Escape'); await settle(page);
+  assert.equal(await snapshot(page), null, 'Escape cancels the new session');
+  const generation = await page.evaluate(() => cropAudit.store.getGeneration());
+  await page.keyboard.press('Enter'); await settle(page);
+  assert.equal(await page.evaluate(() => cropAudit.store.getGeneration()), generation, 'closed crop has no stale Enter handler');
+}, { historyControls: true }));
 async function beginPan(page) {
   await page.evaluate(() => cropAudit.crop.beginCropDrag({ button: 0, pointerId: 9, clientX: 40, clientY: 40,
     preventDefault() {}, stopPropagation() {} }, cropAudit.crop.cropSession.placementId, 10));

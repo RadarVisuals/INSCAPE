@@ -131,6 +131,13 @@ export default function ImageWindow({ id, title, position, size, viewport = { wi
   const controlsAbove = screen.top + screen.height + 56 > viewport.height && screen.top >= 56;
   const controlsTop = controlsAbove ? -56 : paint.height / density + 28;
   const controlsLeft = Math.max(0, Math.min(viewport.width - 84, paint.left / density)) - paint.left / density;
+  // Recovery uses its own row beyond the existing action row. Keep both rows
+  // inside the viewport without changing artwork or resize-control geometry.
+  const recoveryWidth = Math.min(240, viewport.width - 16), recoveryHeight = 40;
+  const belowRecovery = controlsTop + 28 + 8;
+  const recoveryTop = controlsAbove ? controlsTop - recoveryHeight - 8
+    : screen.top + belowRecovery + recoveryHeight <= viewport.height - 8 ? belowRecovery : -recoveryHeight - 16;
+  const recoveryLeft = Math.max(8, Math.min(viewport.width - recoveryWidth - 8, paint.left / density)) - paint.left / density;
   return <section ref={node} className="image-module__window" aria-label={`Image — ${title}`} data-workbench-view-id={id}
     data-workbench-selectable={movable && !suspended || undefined} tabIndex={0} aria-keyshortcuts="Shift+Enter I"
     aria-description="Click artwork to select it. Press F to focus it and F again to return. Double-click or press Enter on the artwork also zooms to its module. Press I to inspect. Drag to move. Arrow keys move the window; Shift+Enter toggles Workbench selection."
@@ -140,11 +147,13 @@ export default function ImageWindow({ id, title, position, size, viewport = { wi
     data-controls-outside={outsideControls || undefined}
     data-editable={editable || undefined} data-active={active || undefined} data-suspended={suspended || undefined}
     style={{ '--image-density': density, '--image-controls-left': `${controlsLeft}px`, '--image-controls-top': `${controlsTop}px`,
+      '--image-recovery-left': `${recoveryLeft}px`, '--image-recovery-width': `${recoveryWidth}px`,
+      '--image-recovery-top': `${Math.max(8 - screen.top, Math.min(viewport.height - screen.top - recoveryHeight - 8, recoveryTop))}px`,
       '--image-controls-bridge': `${controlsTop + (controlsAbove ? 28 : -28)}px`, left: 0, top: 0, width: paint.width, height: paint.height,
       transformOrigin: '0 0', transform: `matrix(${1 / density},0,0,${1 / density},${paint.left / density},${paint.top / density})` }}>
     {content}
     {editable && <div className="image-module__bounds" aria-hidden="true" />}
-    <button type="button" data-workbench-recovery-control className="image-module__close" aria-label={`Close ${title}`} title="Close Image" onClick={onClose}><X size={14} /></button>
+    {!view.store && <button type="button" data-workbench-recovery-control className="image-module__close" aria-label={`Close ${title}`} title="Close Image" onClick={onClose}><X size={14} /></button>}
     {editable && WORKBENCH_RESIZE_EDGES.filter(([edge]) => gesture.current?.edge === edge || (edge.length === 2
       ? !edge.includes('w') || screen.width >= 56
       : (edge === 'n' || edge === 's' ? screen.width : screen.height) >= 56)).map(([edge, label]) =>

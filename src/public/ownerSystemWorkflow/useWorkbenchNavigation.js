@@ -31,6 +31,7 @@ export default function useWorkbenchNavigation({ hostRef, controlsRef, disabled,
   isEditing, cancelEditing, releaseAbandonedGesture, captureContext, restoreContext, returnTargets, resetPresentation, entries }) {
   const camera = useWorkbenchCamera();
   const { offset, locked, getCamera, updateCamera } = camera;
+  const navigatorGesture = useRef(null);
   const interaction = useRef(null);
   interaction.current = { isEditing, cancelEditing, releaseAbandonedGesture, captureContext, restoreContext, returnTargets, resetPresentation };
   const [history, setHistory] = useState([]);
@@ -58,7 +59,7 @@ export default function useWorkbenchNavigation({ hostRef, controlsRef, disabled,
     return () => { globalThis.removeEventListener('blur', reset); document.removeEventListener('visibilitychange', hidden); };
   }, [pan.cancel, setInteractionTool]);
   useLayoutEffect(() => { if (disabled) setInteractionTool?.('select'); }, [disabled, setInteractionTool]);
-  const isPanning = useCallback(() => Boolean(pan.active.current), [pan.active]);
+  const isPanning = useCallback(() => Boolean(pan.active.current || navigatorGesture.current), [pan.active]);
   const readViewport = useCallback(() => {
     const host = hostRef.current;
     if (!host) return null;
@@ -67,6 +68,32 @@ export default function useWorkbenchNavigation({ hostRef, controlsRef, disabled,
     // toolbar wrapping. Only destination fitting reserves the camera controls.
     return { width: host.clientWidth, height: host.clientHeight - dock };
   }, [hostRef]);
+  const navigationViewport = useCallback(() => {
+    const viewport = readViewport(), host = hostRef.current;
+    if (!viewport || !host) return null;
+    const top = controlsTop(host, controlsRef.current);
+    return workbenchNavigationViewport(viewport, Number.isFinite(top) ? top - host.getBoundingClientRect().top : undefined);
+  }, [readViewport, hostRef, controlsRef]);
+  const beginNavigator = useCallback(() => {
+    if (disabled || locked || interaction.current.isEditing() || isPanning()) return false;
+    navigatorGesture.current = getCamera(); beginPan(); return true;
+  }, [disabled, locked, isPanning, getCamera, beginPan]);
+  const moveNavigator = useCallback(point => {
+    if (!navigatorGesture.current) return;
+    const viewport = navigationViewport(), current = getCamera();
+    if (!viewport) return;
+    previewPan({ x: viewport.left + viewport.width / 2 - point.x * current.scale,
+      y: viewport.top + viewport.height / 2 - point.y * current.scale });
+  }, [navigationViewport, getCamera, previewPan]);
+  const endNavigator = useCallback(cancelled => {
+    const start = navigatorGesture.current;
+    if (!start) return;
+    navigatorGesture.current = null;
+    if (cancelled) previewPan(start.offset);
+    releasePan(null);
+  }, [previewPan, releasePan]);
+  useEffect(() => () => endNavigator(true), [endNavigator]);
+  useEffect(() => { if (disabled || locked) endNavigator(true); }, [disabled, locked, endNavigator]);
   const captureView = useCallback(() => {
     const host = hostRef.current, viewport = readViewport();
     if (!host || !viewport || moving || locked || interaction.current.isEditing() || isPanning()) return null;
@@ -222,6 +249,16 @@ export default function useWorkbenchNavigation({ hostRef, controlsRef, disabled,
     hostRef.current?.focus({ preventScroll: true });
   }, [disabled, locked, pan.cancel, panTo, hostRef, stopTravel, remember]);
 
+  const navigatorZoom = useCallback(percent => {
+    const viewport = navigationViewport(), rect = hostRef.current?.getBoundingClientRect();
+    if (!viewport || !rect) return;
+    zoom({ x: rect.left + viewport.left + viewport.width / 2, y: rect.top + viewport.top + viewport.height / 2 }, percent / 100 / getCamera().scale);
+  }, [navigationViewport, hostRef, zoom, getCamera]);
+  const navigatorHome = useCallback(() => {
+    if (disabled || locked || interaction.current.isEditing() || isPanning()) return;
+    resetView(); updateCamera({ scale: 1, offset: { x: 0, y: 0 } });
+  }, [disabled, locked, isPanning, resetView, updateCamera]);
+
   useEffect(() => {
     const host = hostRef.current;
     if (!host || disabled) return;
@@ -250,9 +287,11 @@ export default function useWorkbenchNavigation({ hostRef, controlsRef, disabled,
     };
     captureCheck.current = checkCapture;
     const move = event => { if (!event.buttons) release(event); };
-    const clear = () => { pressedPointers.clear(); stopTravel(); };
+    const clear = () => { pressedPointers.clear(); endNavigator(true); stopTravel(); };
     const hidden = () => { if (document.hidden) clear(); };
     const wheel = event => {
+      if (event.target.closest?.(".workspace-navigation")) return;
+      if (!event.ctrlKey && !event.metaKey && event.target.closest?.("[data-workbench-navigator]")) return;
       pan.releaseAbandonedGesture();
       const released = interaction.current.releaseAbandonedGesture();
       if (released !== null) pressedPointers.delete(released);
@@ -283,6 +322,7 @@ export default function useWorkbenchNavigation({ hostRef, controlsRef, disabled,
       zoom({ x: event.clientX, y: event.clientY }, Math.exp(-Math.max(-120, Math.min(120, delta)) * .003));
     };
     const key = event => {
+      if (event.target.closest?.("[data-workbench-navigator]") && !((event.ctrlKey || event.metaKey) && event.key === "0")) return;
       // Focus selection owns this key, including repeated keydown events. Its
       // command replaces active travel; holding F must not interrupt arrival.
       if (event.key.toLowerCase() === 'f' && !event.ctrlKey && !event.metaKey && !event.altKey
@@ -324,8 +364,8 @@ export default function useWorkbenchNavigation({ hostRef, controlsRef, disabled,
       host.removeEventListener('wheel', wheel, true);
       host.removeEventListener('keydown', key, true);
     };
-  }, [hostRef, disabled, locked, hand, getCamera, isPanning, pan.releaseAbandonedGesture, panTo, zoom, resetZoom, stopTravel]);
+  }, [hostRef, disabled, locked, hand, getCamera, isPanning, pan.releaseAbandonedGesture, panTo, zoom, resetZoom, stopTravel, endNavigator]);
 
-  return { offset, locked, getCamera, isPanning, hasCapturedPointer, resetView, resetZoom, moving, hand, toggleHand,
+  return { navigationViewport, beginNavigator, moveNavigator, endNavigator, navigatorZoom, navigatorHome, offset, locked, getCamera, isPanning, hasCapturedPointer, resetView, resetZoom, moving, hand, toggleHand,
     captureView, focusDestination, goBack, canGoBack: history.length > 0, stopTravel };
 }

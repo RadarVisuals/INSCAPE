@@ -52,3 +52,15 @@
   stroke-width: var(--icon-stroke-interface);
   vector-effect: non-scaling-stroke;
 }
+
+/* Portalled selectors use the same flat material as their owning window. */
+[data-workflow-menu][data-workflow-finish='flat'] {
+  --workflow-selection: var(--tactile-hover);
+  --workflow-active-vertical: inset 2px 0 0 var(--tactile-ink);
+  --lattice-menu-ink: var(--tactile-ink);
+  --lattice-menu-muted: var(--tactile-muted);
+  --lattice-menu-line: var(--tactile-edge);
+  background: var(--tactile-face); color: var(--tactile-ink); border-color: var(--tactile-edge);
+  border-radius: var(--control-shell-radius); padding: 3px; box-shadow: none;
+}
+[data-workflow-menu] button { border-radius: var(--control-radius); }

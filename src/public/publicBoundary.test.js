@@ -51,11 +51,14 @@ test('the retired Pixi stage remains outside the active application root', () =>
 
 test('selected owner workflow does not restore the legacy Gallery workspace', () => {
   const runtimeSource = readFileSync(new URL('./ownerSystemWorkflow/OwnerSystemWorkflowRuntime.jsx', import.meta.url), 'utf8');
-  assert.match(runtimeSource, /<OwnerDisplayInstance/u);
+  const modulesSource = readFileSync(new URL('./ownerSystemWorkflow/OwnerWorkbenchModules.jsx', import.meta.url), 'utf8');
+  assert.match(runtimeSource, /<OwnerWorkbenchModules/u);
+  assert.match(modulesSource, /<OwnerDisplayInstance/u);
   const displaySource = readFileSync(new URL('./ownerSystemWorkflow/DisplayModule.jsx', import.meta.url), 'utf8');
   assert.match(displaySource, /<OwnerSystemWorkflowCanvas/u);
   assert.doesNotMatch(displaySource, /GalleryWorld|CreationsBrowser|UpperWorldSurface|SpatialLevelNavigation/u);
   assert.doesNotMatch(runtimeSource, /GalleryWorld|CreationsBrowser|UpperWorldSurface|SpatialLevelNavigation/u);
+  assert.doesNotMatch(modulesSource, /GalleryWorld|CreationsBrowser|UpperWorldSurface|SpatialLevelNavigation/u);
 });
 
 test('owner inventory is profile-scoped before the Library panel opens', () => {
@@ -63,9 +66,12 @@ test('owner inventory is profile-scoped before the Library panel opens', () => {
   const browserSource = readFileSync(new URL('./useOwnerLatticeBrowser.js', import.meta.url), 'utf8');
   assert.match(browserSource, /storeProfileAddress === profile/u);
   assert.match(browserSource, /createdProfileAddress === profile/u);
-  assert.match(runtimeSource, /useOwnerLatticeBrowser\(profileAddress, libraryOpen && browserEnabled, referencedAssetIds\)/u);
-  assert.match(runtimeSource, /const records = reviewAssets \|\| browser\.records/);
+  const librarySource = readFileSync(new URL('./ownerSystemWorkflow/useOwnerWorkbenchLibrary.js', import.meta.url), 'utf8');
+  assert.match(runtimeSource, /useOwnerWorkbenchLibrary\(\{/u);
+  assert.match(librarySource, /useOwnerLatticeBrowser\(profileAddress, libraryOpen && browserEnabled, referencedAssetIds\)/u);
+  assert.match(librarySource, /const records = fixtureAssets \|\| browser\.records/);
   assert.doesNotMatch(runtimeSource, /const rawAssets = useLibraryStore/);
+  assert.doesNotMatch(librarySource, /const rawAssets = useLibraryStore/);
 });
 
 test('owner folders remain direct categories in the selected Library presenter', () => {
@@ -78,7 +84,7 @@ test('owner folders remain direct categories in the selected Library presenter',
 test('System Workflow routing contains no legacy Gallery destination controls', () => {
   const shellSource = readFileSync(new URL('./ownerSystemWorkflow/OwnerSystemWorkflowRuntime.jsx', import.meta.url), 'utf8');
   assert.doesNotMatch(shellSource, /GalleryNavigationCard|GalleryWorld|system-hud__destinations/u);
-  assert.match(shellSource, /<OwnerSystemWorkflowGlobalBar/u);
+  assert.match(shellSource, /<OwnerSystemWorkflowSidebar/u);
 });
 
 test('published navigation follows ordered v9 Grids without a spatial-world handoff', () => {

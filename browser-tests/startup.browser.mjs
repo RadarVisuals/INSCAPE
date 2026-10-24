@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdir, access } from 'node:fs/promises';
+import { mkdir, access, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { randomUUID } from 'node:crypto';
@@ -11,7 +11,7 @@ import { FEATURED_WORLD_PROFILE_ADDRESS as featured } from '../src/startveil/fea
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const other = '0x1111111111111111111111111111111111111111';
-const screenshotDir = process.env.INSCAPE_STARTUP_SCREENSHOT_DIR;
+const screenshotDir = process.env.INSCAPE_BROWSER_OUTPUT || process.env.INSCAPE_STARTUP_SCREENSHOT_DIR;
 
 test('automatic startup and the editorial landing world through the real App', { timeout: 120_000 }, async (t) => {
   const resources = {};
@@ -70,6 +70,13 @@ test('automatic startup and the editorial landing world through the real App', {
       });
       await page.screenshot({ path: resolve(screenshotDir, `${name}.png`) });
     };
+    const startupState = () => page.evaluate(() => ({
+      veil: document.querySelector('.startveil')?.getAttribute('data-state') ?? null,
+      inert: document.querySelector('.application-interface')?.getAttribute('inert'),
+      editorAccess: document.querySelector('[aria-label="Profile editing access"]')?.textContent ?? null,
+      ownerMounted: Boolean(document.querySelector('main.system-workflow')),
+      leaseRequests: window.__startup.leaseRequests.length,
+    }));
 
     await t.test('a slow direct link waits, ignores entry keys, then reveals without a click', async () => {
       await page.setViewportSize({ width: 1440, height: 900 });
@@ -82,7 +89,7 @@ test('automatic startup and the editorial landing world through the real App', {
       await capture('direct-loading-wide');
       await page.evaluate((address) => window.__startup.resolve(address), other);
       await entered();
-      await page.getByRole('group', { name: 'Published Grid navigation' }).waitFor();
+      await page.getByRole('main', { name: /reception$/ }).waitFor();
       await capture('direct-world-wide');
     });
 
@@ -90,7 +97,7 @@ test('automatic startup and the editorial landing world through the real App', {
       await page.setViewportSize({ width: 1024, height: 768 });
       await open(`?view=${other}`);
       await entered();
-      await page.getByRole('group', { name: 'Published Grid navigation' }).waitFor();
+      await page.getByRole('main', { name: /reception$/ }).waitFor();
       await capture('direct-world-small-desktop');
     });
 
@@ -102,7 +109,7 @@ test('automatic startup and the editorial landing world through the real App', {
       await page.getByRole('button', { name: 'RETRY', exact: true }).click();
       await page.waitForFunction(() => window.__startup.requests.length === 2);
       await page.evaluate((address) => window.__startup.resolve(address), other);
-      await page.getByRole('group', { name: 'Published Grid navigation' }).waitFor();
+      await page.getByRole('main', { name: /reception$/ }).waitFor();
       assert.equal(await page.locator('.startveil').count(), 0);
     });
 
@@ -110,17 +117,17 @@ test('automatic startup and the editorial landing world through the real App', {
       await open();
       const feature = page.locator('[data-variant="feature"]');
       await feature.getByRole('button', { name: 'Enter Featured artist', exact: true }).waitFor();
-      await page.getByRole('button', { name: 'CONNECT PROFILE', exact: true }).waitFor();
+      await page.getByRole('button', { name: 'Connect profile', exact: true }).waitFor();
       await capture('landing-small-desktop');
       await page.setViewportSize({ width: 1440, height: 900 });
       await capture('landing-wide');
-      await page.getByRole('button', { name: 'DISCOVER', exact: true }).first().click();
+      await page.getByRole('button', { name: 'Discover', exact: true }).first().click();
       await page.getByRole('searchbox', { name: 'Search published worlds' }).fill('Other artist');
       await page.getByRole('button', { name: 'Return to INSCAPE landing' }).click();
       await feature.getByRole('button', { name: 'Enter Featured artist', exact: true }).click();
       await entered();
       assert.equal(new URL(page.url()).searchParams.get('view'), featured);
-      await page.getByRole('group', { name: 'Published Grid navigation' }).waitFor();
+      await page.getByRole('main', { name: /reception$/ }).waitFor();
     });
 
     await t.test('directory failure does not replace or prevent resolving the featured world', async () => {
@@ -143,13 +150,13 @@ test('automatic startup and the editorial landing world through the real App', {
     await t.test('a connected owner automatically reaches their Workbench', async () => {
       await open(`?owner=${other}`);
       await entered();
-      await page.locator('.system-workflow__presentation-board').waitFor();
+      await page.locator('main.system-workflow').waitFor();
       assert.equal(await page.locator('.visitor-grid-world').count(), 0);
     });
 
     for (const mode of ['visitor', 'owner']) {
       await t.test(`${mode} keeps Startveil until delayed destination code mounts`, async () => {
-        const pattern = mode === 'visitor' ? '**/src/profileDocument/components/VisitorGridWorld.jsx'
+        const pattern = mode === 'visitor' ? '**/src/profileDocument/components/ProfileOverview.jsx'
           : '**/src/public/ownerSystemWorkflow/OwnerSystemWorkflowRuntime.jsx';
         let release;
         let requested;
@@ -158,23 +165,70 @@ test('automatic startup and the editorial landing world through the real App', {
         await resources.context.route(pattern, async (route) => { requested(); await gate; await route.continue(); });
         try {
           await page.setViewportSize({ width: mode === 'visitor' ? 1440 : 1024, height: 900 });
-          await open(`?${mode === 'visitor' ? 'view' : 'owner'}=${other}`, 'no-preference');
+          await open(`?${mode === 'visitor' ? 'view' : 'owner'}=${other}${mode === 'owner' ? '&delayLease=1' : ''}`, 'no-preference');
+          let waitingForLease;
+          if (mode === 'owner') {
+            await page.waitForFunction(() => window.__startup.leaseRequests.length > 0);
+            // Keep acquisition pending across frames and the entire reveal.
+            // Observe both gates before asserting, so a red run records the
+            // false-ready signal continuing after acquisition has completed.
+            await page.waitForTimeout(4200);
+            waitingForLease = await startupState();
+            await capture('owner-waiting-for-lease');
+            await page.evaluate(() => window.__startup.releaseEditorLease());
+          }
           await request;
           // Exceed the previous complete first-visit reveal, not just its intro.
           await page.waitForTimeout(4200);
-          assert.equal(await page.locator('.startveil').getAttribute('data-state'), 'loading');
-          assert.equal(await page.locator('.application-interface').getAttribute('inert'), '');
+          const waitingForCode = await startupState();
           await capture(`${mode}-waiting-for-code`);
+          if (mode === 'owner') {
+            const evidence = { waitingForLease, waitingForCode };
+            console.log(`Owner startup gates: ${JSON.stringify(evidence)}`);
+            if (screenshotDir) await writeFile(resolve(screenshotDir, 'owner-startup-gates.json'), JSON.stringify(evidence, null, 2));
+            assert.match(waitingForLease.editorAccess, /Checking editing access/);
+            assert.equal(waitingForLease.ownerMounted, false);
+            assert.deepEqual([waitingForLease.veil, waitingForCode.veil], ['loading', 'loading'],
+              'Transient editor acquisition must not authorize reveal before the owner runtime mounts');
+            assert.equal(waitingForLease.inert, '');
+          }
+          assert.equal(waitingForCode.veil, 'loading');
+          assert.equal(waitingForCode.inert, '');
+          assert.equal(waitingForCode.ownerMounted, false);
           release();
           await entered();
-          await page.locator(mode === 'visitor' ? '.visitor-grid-world' : '.system-workflow__presentation-board').waitFor();
+          await page.locator(mode === 'visitor' ? '.profile-overview' : 'main.system-workflow').waitFor();
           await capture(`${mode}-handoff-complete`);
-        } finally { release(); await resources.context.unroute(pattern); }
+        } finally {
+          await page.evaluate(() => window.__startup?.releaseEditorLease());
+          release(); await resources.context.unroute(pattern);
+        }
+      });
+    }
+
+    for (const access of ['busy', 'unavailable', 'unsupported', 'released']) {
+      await t.test(`owner ${access} access reveals recovery and can retry into the Workbench`, async () => {
+        await open(`?owner=${other}&${access === 'released' ? 'delayLease=1' : `editorAccess=${access}`}`);
+        if (access === 'released') {
+          await page.waitForFunction(() => window.__startup.leaseRequests.length > 0);
+          await page.evaluate(() => dispatchEvent(new PageTransitionEvent('pagehide', { persisted: true })));
+        }
+        await entered();
+        const recovery = page.getByRole('region', { name: 'Profile editing access', exact: true });
+        const expected = { busy: 'being edited in another tab', unavailable: 'could not reserve editing access',
+          unsupported: 'requires browser support', released: 'released when you left this page' };
+        assert.match(await recovery.innerText(), new RegExp(expected[access]));
+        assert.equal(await page.locator('main.system-workflow').count(), 0);
+        await capture(`owner-access-${access}`);
+        await page.evaluate(() => window.__startup.allowEditing());
+        await recovery.getByRole('button', { name: 'Try editing here', exact: true }).click();
+        await page.locator('main.system-workflow').waitFor();
+        await entered();
       });
     }
 
     for (const mode of ['visitor', 'owner']) await t.test(`a failed ${mode} renderer reveals a reload action instead of trapping startup`, async () => {
-      const pattern = mode === 'visitor' ? '**/src/profileDocument/components/VisitorGridWorld.jsx'
+      const pattern = mode === 'visitor' ? '**/src/profileDocument/components/ProfileOverview.jsx'
         : '**/src/public/ownerSystemWorkflow/OwnerSystemWorkflowRuntime.jsx';
       await resources.context.route(pattern, (route) => route.fulfill({ contentType: 'text/javascript',
         body: "throw new Error('Fixture renderer unavailable');" }));

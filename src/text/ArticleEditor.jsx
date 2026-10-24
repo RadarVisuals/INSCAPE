@@ -1,3 +1,4 @@
+import { COLOUR_PREVIEW } from './articleColourGesture.js';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { EditorContent, useEditor, NodeViewWrapper, ReactNodeViewRenderer } from '@tiptap/react';
@@ -9,10 +10,11 @@ import { ARTICLE_FONTS, ARTICLE_FONT_SIZE, ARTICLE_TRACKING, ARTICLE_BLOCK_SPACI
 import { ArticleArtwork } from './ArticleView.jsx';
 import { ArticleAlignment } from './articleAlignment.js';
 import { ArticleSpacing, articleLineToSeparate, selectedBlockSpacing, captureArticleSpacing } from './articleSpacing.js';
-import { ArticleTextStyle, ArticleTypography, selectedTypography, captureArticleTypography } from './articleTypography.js';
+import { ArticleTextStyle, ArticleTypography, selectedFont, selectedTypography, captureArticleTypography } from './articleTypography.js';
 import TextTypographyInput from './TextTypographyInput.jsx';
 import ArticleOutline from './ArticleOutline.jsx';
 import ArticleSearch from './ArticleSearch.jsx';
+import { useSharedTextTools } from './SharedTextTools.jsx';
 import ArticleFocusWriting from './ArticleFocusWriting.jsx';
 import { ArticleSearchExtension, setArticleSearch } from './articleSearch.js';
 import { ArticleFlowFocus, createArticleFlowEditor } from './articleFlowEditor.js';
@@ -49,12 +51,14 @@ const PageBreak = Node.create({ name: 'pageBreak', group: 'block', atom: true,
   parseHTML: () => [{ tag: 'div[data-text-page-break]' }],
   renderHTML: () => ['div', { 'data-text-page-break': '', class: 'text-page-break' }],
 });
-export default function ArticleEditor({ article, onChange, onEditor, onFindRequest, saveError, saveStatus, focusClassName, disabled, controlsHost, flowRange, onFlowEditor }) {
+export default function ArticleEditor({ article, onChange, onEditor, onFindRequest, saveError, saveStatus, focusClassName, disabled, controlsHost, flowRange, onFlowEditor, sharedColour = false }) {
+  const tools = useSharedTextTools();
+  const revealFormatting = useRef(null); revealFormatting.current = tools?.setSection;
   const [flowBridge] = useState(createArticleFlowEditor);
   const latest = useRef({ article, onChange }); latest.current = { article, onChange };
   const searchHost = useRef(controlsHost); searchHost.current = controlsHost;
   const findRequest = useRef(onFindRequest); findRequest.current = onFindRequest;
-  const pendingFind = useRef(false), writingTools = useRef(null);
+  const pendingFind = useRef(false);
   const [searchFocusRequest, requestSearchFocus] = useState(0);
   const [focusWriting, setFocusWriting] = useState(false), focusTrigger = useRef(null);
   flowBridge.configure(Boolean(flowRange), focusWriting);
@@ -75,7 +79,7 @@ export default function ArticleEditor({ article, onChange, onEditor, onFindReque
           event.preventDefault();
           if (focusWritingRef.current) { pendingFind.current = true; setFocusWriting(false); return true; }
           if (!searchHost.current) { pendingFind.current = true; findRequest.current(); return true; }
-          if (writingTools.current) writingTools.current.open = true;
+          revealFormatting.current?.('format');
           setArticleSearch(editor, { open: true }); requestSearchFocus(value => value + 1);
           return true;
         }
@@ -91,7 +95,7 @@ export default function ArticleEditor({ article, onChange, onEditor, onFindReque
           .insertContent(text.split(/\r\n?|\n/u).map(line => ({ type: 'paragraph', ...(line ? { content: [{ type: 'text', text: line }] } : {}) }))).run();
         return true;
       } },
-    onUpdate: ({ editor: current }) => latest.current.onChange({ ...latest.current.article, content: current.getJSON() }),
+    onUpdate: ({ editor: current, transaction }) => { if (!transaction.getMeta(COLOUR_PREVIEW)) latest.current.onChange({ ...latest.current.article, content: current.getJSON() }); },
     onSelectionUpdate: () => rerender(n => n + 1), onTransaction: () => rerender(n => n + 1),
   });
   useLayoutEffect(() => {
@@ -116,7 +120,7 @@ export default function ArticleEditor({ article, onChange, onEditor, onFindReque
     if (disabled) pendingFind.current = false;
     if (editor && !editor.isDestroyed && controlsHost && !disabled && !focusWriting && pendingFind.current) {
       pendingFind.current = false;
-      if (writingTools.current) writingTools.current.open = true;
+      revealFormatting.current?.('format');
       setArticleSearch(editor, { open: true }); requestSearchFocus(value => value + 1);
     }
   }, [editor, disabled, controlsHost, focusWriting]);
@@ -133,64 +137,77 @@ export default function ArticleEditor({ article, onChange, onEditor, onFindReque
       onMouseDown={e => e.preventDefault()} onClick={action}><Icon /></button>;
   };
   const appearance = textAppearance(article);
+  const font = selectedFont(editor, article);
   return <>
     {controlsHost && createPortal(<>
     <div className="text-toolbar" role="toolbar" aria-label="Text formatting">
-      <div className="text-formatting-heading"><strong>Text formatting</strong>
+      <div className="text-tool-scope"><div className="text-formatting-heading"><strong>{editor.state.selection.empty ? 'At the cursor' : 'Selected text'}</strong>
       <button className="workflow-tactile-control workflow-tactile-control--quiet" ref={focusTrigger} type="button" disabled={disabled} onMouseDown={event => event.preventDefault()}
         onClick={() => { setArticleSearch(editor, { close: true }); setFocusWriting(true); }}>Focus writing</button></div>
-      <p className="text-inspector-context">Applies at your cursor or to selected text.</p>
+      <p>{editor.state.selection.empty ? 'Applies to what you type next.' : 'Applies only to the selected text.'}</p></div>
+      <section className="text-tool-group" aria-label="Character formatting">
       <div className="text-toolbar-font">
-      <select aria-label="Selected text font" disabled={disabled} value={editor.getAttributes('textStyle').fontFamily || ''}
-        onChange={e => e.target.value ? editor.chain().focus().setFontFamily(e.target.value).run() : editor.chain().focus().unsetFontFamily().run()}>
-        <option value="">Use default font</option>{ARTICLE_FONTS.map(f => <option key={f.id} value={f.family}>{f.label}</option>)}
-      </select>
+      <div className="text-selection-font">
+        <label className="text-format-field">Font
+        <select aria-label="Selected text font" disabled={disabled} value={font.value}
+          onChange={e => editor.chain().focus().setFontFamily(e.target.value).run()}>
+          {!font.value && <option value="" disabled>Mixed fonts</option>}
+          {ARTICLE_FONTS.map(f => <option key={f.id} value={f.family}>{f.label}</option>)}
+        </select></label>
+        <button className="workflow-tactile-control workflow-tactile-control--quiet" type="button" aria-label={font.resetLabel} title={font.resetLabel}
+          disabled={disabled || !font.hasOverride} onMouseDown={event => event.preventDefault()}
+          onClick={() => editor.chain().focus().unsetFontFamily().run()}><X /></button>
+      </div>
       <div className="text-selection-size" role="group" aria-label="Selected text typography">
-        <TextTypographyInput key={`size:${editor.state.selection.from}:${editor.state.selection.to}`} label="" accessibleLabel="Selected text size"
+        <TextTypographyInput key={`size:${editor.state.selection.from}:${editor.state.selection.to}`} label="Size" accessibleLabel="Selected text size"
           {...selectedTypography(editor, 'fontSize')} limits={ARTICLE_FONT_SIZE} disabled={disabled}
           placeholder={String(appearance.fontSize)}
           onStart={() => captureArticleTypography(editor)}
           onChange={value => editor.commands.setArticleTypography('fontSize', value)} onReturn={() => editor.commands.focus()}
-          resetLabel="Use inherited text size" />
+          resetLabel="Use default text size" />
       </div>
       </div>
       <div className="text-toolbar-icons">
       {command('Bold', () => editor.chain().focus().toggleBold().run(), editor.isActive('bold'))}
       {command('Italic', () => editor.chain().focus().toggleItalic().run(), editor.isActive('italic'))}
       {command('Underline', () => editor.chain().focus().toggleUnderline().run(), editor.isActive('underline'))}
-      {command('Quote', () => editor.chain().focus().toggleBlockquote().run(), editor.isActive('blockquote'))}
-      {command('Bullets', () => editor.chain().focus().toggleBulletList().run(), editor.isActive('bulletList'))}
-      {command('Numbered', () => editor.chain().focus().toggleOrderedList().run(), editor.isActive('orderedList'))}
-      {['left', 'center', 'right'].map(value => command(`Align ${value}`, () => editor.chain().focus().setArticleAlignment(value).run(), alignmentActive(value)))}
       {command('Link', () => { setLink(editor.getAttributes('link').href || ''); setLinkError(''); }, editor.isActive('link'))}
       {command('Undo', () => editor.chain().focus().undo().run())}{command('Redo', () => editor.chain().focus().redo().run())}
       </div>
+      <TextTypographyInput key={`tracking:${editor.state.selection.from}:${editor.state.selection.to}`} label="Letter spacing (em)" accessibleLabel="Selected text tracking"
+        {...selectedTypography(editor, 'letterSpacing')} limits={ARTICLE_TRACKING} disabled={disabled}
+        onStart={() => captureArticleTypography(editor)}
+        onChange={value => editor.commands.setArticleTypography('letterSpacing', value)} onReturn={() => editor.commands.focus()}
+        resetLabel="Use default letter spacing" />
+      </section>
+      <section className="text-tool-group" aria-label="Paragraph formatting"><h3>Paragraph</h3>
+      <p className="text-group-hint">Applies to the paragraphs you are editing.</p>
       <div className="text-toolbar-row text-block-row">
         <select aria-label="Paragraph style" disabled={disabled} value={editor.isActive('heading') ? editor.getAttributes('heading').level : 'paragraph'}
           onChange={e => e.target.value === 'paragraph' ? editor.chain().focus().setParagraph().run() : editor.chain().focus().setHeading({ level: Number(e.target.value) }).run()}>
           <option value="paragraph">Paragraph</option>{[1, 2, 3].map(n => <option key={n} value={n}>Heading {n}</option>)}
         </select>
-        <div className="text-selection-colour">
+        {!sharedColour && <div className="text-selection-colour">
           <label>Colour<input aria-label="Selected text colour" type="color" disabled={disabled}
             value={editor.getAttributes('textStyle').color || appearance.color}
             onChange={event => editor.chain().focus().setColor(event.target.value).run()} /></label>
           <button className="workflow-tactile-control" type="button" aria-label="Use document text colour" title="Use document text colour" disabled={disabled || !editor.getAttributes('textStyle').color}
             onMouseDown={event => event.preventDefault()} onClick={() => editor.chain().focus().unsetColor().run()}><X /></button>
-        </div>
+        </div>}
       </div>
-      <button className="workflow-tactile-control workflow-tactile-control--quiet text-insert-break" type="button" aria-label="Insert page break" title="Insert page break" disabled={disabled} onMouseDown={e => e.preventDefault()} onClick={() => editor.chain().focus().insertContent({ type: 'pageBreak' }).run()}>Insert page break</button>
+      <div className="text-toolbar-icons">
+      {['left', 'center', 'right'].map(value => command(`Align ${value}`, () => editor.chain().focus().setArticleAlignment(value).run(), alignmentActive(value)))}
+      {command('Quote', () => editor.chain().focus().toggleBlockquote().run(), editor.isActive('blockquote'))}
+      {command('Bullets', () => editor.chain().focus().toggleBulletList().run(), editor.isActive('bulletList'))}
+      {command('Numbered', () => editor.chain().focus().toggleOrderedList().run(), editor.isActive('orderedList'))}
+      </div>
       <details className="text-inspector-advanced"><summary>Spacing &amp; alignment</summary>
       <TextTypographyInput key={`lineHeight:${editor.state.selection.from}:${editor.state.selection.to}`} label="Line spacing (×)" accessibleLabel="Paragraph line spacing"
         {...selectedBlockSpacing(editor, 'lineHeight')} limits={ARTICLE_LINE_HEIGHT}
         disabled={disabled || !selectedBlockSpacing(editor, 'lineHeight').available}
         onStart={() => captureArticleSpacing(editor, 'lineHeight')}
         onChange={value => editor.commands.setArticleSpacing('lineHeight', value)} onReturn={() => editor.commands.focus()}
-        resetLabel="Use inherited paragraph line spacing" />
-      <TextTypographyInput key={`tracking:${editor.state.selection.from}:${editor.state.selection.to}`} label="Letter spacing (em)" accessibleLabel="Selected text tracking"
-        {...selectedTypography(editor, 'letterSpacing')} limits={ARTICLE_TRACKING} disabled={disabled}
-        onStart={() => captureArticleTypography(editor)}
-        onChange={value => editor.commands.setArticleTypography('letterSpacing', value)} onReturn={() => editor.commands.focus()}
-        resetLabel="Use inherited text tracking" />
+        resetLabel="Use default paragraph line spacing" />
       <div className="text-toolbar-row">
       <select aria-label="Paragraph justification" title="Paragraph justification" disabled={disabled} value={justification}
         onChange={e => editor.chain().focus().setArticleAlignment(e.target.value).run()}>
@@ -216,12 +233,12 @@ export default function ArticleEditor({ article, onChange, onEditor, onFindReque
         })}
       </div>
       </details>
-      <details className="text-writing-tools" ref={writingTools} onToggle={event => {
-        if (!event.currentTarget.open) setArticleSearch(editor, { close: true });
-      }}><summary>Writing tools</summary>
+      <button className="workflow-tactile-control workflow-tactile-control--quiet text-insert-break" type="button" aria-label="Insert page break" title="Insert page break" disabled={disabled} onMouseDown={e => e.preventDefault()} onClick={() => editor.chain().focus().insertContent({ type: 'pageBreak' }).run()}>Insert page break</button>
+      </section>
+      <section className="text-tool-group text-writing-tools" aria-label="Writing tools"><h3>Writing tools</h3>
       <ArticleOutline editor={editor} disabled={disabled} />
       <ArticleSearch editor={editor} article={article} disabled={disabled} focusRequest={searchFocusRequest} />
-      </details>
+      </section>
     </div>
     {link !== null && <form className="text-inline-form" onSubmit={e => { e.preventDefault();
       if (link && !safeArticleLink(link)) { setLinkError('Use an HTTPS or mailto link.'); return; }

@@ -4,7 +4,7 @@ Status: required product-meaning context
 
 Established: 2026-09-02
 Clarified with the founder: 2026-09-06
-Scope aligned with the active contract: 2026-10-19
+Scope aligned with the active contract: 2026-10-20
 
 Authority: this document explains why INSCAPE exists and how its concepts must
 be interpreted. It is not an implementation roadmap and does not authorize
@@ -84,6 +84,14 @@ larger scene. A composition must add authorship and meaning without flattening
 away the creator, collection, token scope, provenance, or story of its parts.
 
 ## Current product focus
+
+The founder's [20 October illustrated reference packet](design-references/2026-10-20-inscape-vision/README.md)
+shows the intended relationship between a freely branded bento Reception,
+the ordinary content overview/compositions, and a separate optional personal
+exploration world. The Keeper habitat study makes the founder's wish to inhabit
+and explore reusable illustration concrete. Read the active contract's dated
+clarification before using those examples as direction. The packet does not
+claim that a world engine, collision or minting has been implemented.
 
 Apply this creative intent through the ordinary Workbench and its retained
 independent modules. The [current product map](INSCAPE_ACTIVE_CONTRACT.md#current-product-map-2026-10-19)
@@ -354,8 +362,13 @@ the published starting point remains unchanged and reload restores it. It does
 not imply access to the creator's Library organization or Layers, nor permission
 to save changes back to the creator's work.
 
-One Workbench per profile is sufficient for now. Publication includes only
-the modules and Grids the maker makes public. Private work in progress must
+The founder's 20 October direction uses multiple named Workbenches per profile,
+each an independent composition canvas. A shared Library supplies material;
+each Workbench owns its modules and composition. Visitors can browse the
+published Workbenches without seeing private work. This replaces the earlier
+single-Workbench expectation; the active contract and workflow review define
+the remaining scope and distinguish direction from current implementation.
+Publication includes only explicitly chosen public content. Private work in progress must
 remain outside the public document. Publishing an inventory indiscriminately
 would defeat the maker's ability to choose what to present and how.
 

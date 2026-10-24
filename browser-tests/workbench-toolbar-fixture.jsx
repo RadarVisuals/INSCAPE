@@ -21,4 +21,4 @@ session.setAppearance({ expectedAppearance: session.getState().draft.appearance,
 session.placeAsset({ gridId: session.getState().selectedGridId, stableAssetId: assets[0].id,
   destination: { column: 10, row: 4, columnSpan: 9, rowSpan: 9 } });
 createRoot(document.getElementById('root')).render(<Runtime profileAddress={profileAddress} reviewStorage={storage} reviewAssets={assets}
-  reviewCategories={[]} reviewActivity={[]} reviewDiscovery={[]} reviewProfile={{ name: 'Toolbar review' }} />);
+  reviewCategories={[]} reviewActivity={[]} reviewProfile={{ name: 'Toolbar review' }} />);

@@ -1,4 +1,4 @@
-import React, { useId } from 'react';
+import { useId } from 'react';
 import { LayerArtwork } from './layersPreview.jsx';
 export default function SampleArtwork({ item }) {
   const id = useId();

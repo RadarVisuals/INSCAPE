@@ -4,7 +4,7 @@ import { useArtworkGeometry } from './ArtworkGeometry.jsx';
 // A temporary camera projection may cross the viewport while preparing its
 // native endpoint. Retain the current document until that projection retires,
 // then ask the observer for a fresh result using the settled clipping geometry.
-// Genuinely offscreen artwork still releases its executable document.
+// This reports visibility only; the placement owns retention and disposal.
 export function useArtworkVisibility(viewportRef, enabled = true) {
   const [visible, setVisible] = useState(false);
   const geometry = useArtworkGeometry();

@@ -73,10 +73,15 @@ export async function mountTextToolsFixture(page, origin, { visitor = false, tex
         profileAddress, systemWorkflowDraft: draft, assetRecords: fixture.OWNER_SYSTEM_WORKFLOW_REVIEW_ASSETS,
       }) }));
     } else createRoot(document.getElementById('root')).render(React.createElement(Runtime, { profileAddress, reviewStorage: storage, reviewAssets: fixture.OWNER_SYSTEM_WORKFLOW_REVIEW_ASSETS,
-      reviewCategories: [], reviewActivity: [], reviewDiscovery: [], reviewProfile: { name: 'Text tools review' } }));
+      reviewCategories: [], reviewActivity: [], reviewProfile: { name: 'Text tools review' } }));
   }, { visitor, textCount, surfaces, displayTextCount });
   if (waitForText) await page.locator('.text-window').first().waitFor();
   if (await page.getByRole('button', { name: 'Read', exact: true }).count())
     await page.getByRole('textbox', { name: 'Article text', exact: true }).first().waitFor();
   await page.evaluate(() => document.fonts.ready);
+  // Arrange an unobstructed writing surface; suites open shared tools explicitly.
+  for (const name of ['Close Workbench Layers', 'Close Transform', 'Close Color', 'Close Image', 'Close Shape', 'Close FX']) {
+    const close = page.getByRole('button', { name, exact: true });
+    if (await close.count()) { await close.focus(); await close.press('Enter'); }
+  }
 }

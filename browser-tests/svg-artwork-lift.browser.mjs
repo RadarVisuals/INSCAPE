@@ -5,6 +5,7 @@ import { mkdir } from 'node:fs/promises';
 import { mountGridMotionFixture } from './fixtures/grid-motion-fixture.mjs';
 
 const origin = process.env.INSCAPE_TEXT_ROOT || 'http://127.0.0.1:5173';
+const output = process.env.INSCAPE_BROWSER_OUTPUT ? `${process.env.INSCAPE_BROWSER_OUTPUT}/svg-lift` : '.browser-test-runtime/svg-lift-review';
 const artwork = { url: 'https://motion.invalid/lift.svg', width: 640, height: 480 };
 // Native pixel artwork deliberately has no viewBox. Reflowing its viewport
 // moves the drawing independently of the animated frame. Its script also
@@ -37,7 +38,7 @@ async function sameDrawing(page, before, after) {
 
 test('SVG Lift scales a stable document in Image and owner/Visitor Display', { timeout: 90000 }, async () => {
   const browser = await chromium.launch({ executablePath: 'C:/Program Files (x86)/Google/Chrome/Application/chrome.exe', headless: true });
-  await mkdir('output/svg-lift-review', { recursive: true });
+  await mkdir(output, { recursive: true });
   try {
     for (const visitor of [false, true]) for (const width of [1440, 390]) {
       const page = await browser.newPage({ viewport: { width, height: 1000 } });
@@ -64,7 +65,7 @@ test('SVG Lift scales a stable document in Image and owner/Visitor Display', { t
         const sourceMatrix = await source.locator('foreignObject').evaluate(node => {
           const matrix = node.getScreenCTM(); return ['a', 'b', 'c', 'd', 'e', 'f'].map(key => matrix[key]);
         });
-        const before = await source.screenshot({ path: `output/svg-lift-review/${kind}-${visitor}-${width}-before.png` });
+        const before = await source.screenshot({ path: `${output}/${kind}-${visitor}-${width}-before.png` });
         await page.evaluate(() => { window.svgSizes = []; });
         if (kind === 'image') { await source.focus(); await page.keyboard.press('i'); }
         else await source.dispatchEvent('keydown', { key: 'i', bubbles: true, cancelable: true });
@@ -110,10 +111,10 @@ test('SVG Lift scales a stable document in Image and owner/Visitor Display', { t
         assert.equal(await source.locator('.artwork-svg-paint').evaluate((node, parent) => node.parentElement === parent, paintParent), true, `${kind}: Lift does not relocate the live paint host`);
         assert.equal(await runtime.evaluate(() => window.__liftContinuity), 'retained', `${kind}: Lift does not reload the SVG runtime`);
         assert.ok((await page.evaluate(() => window.svgSizes)).every(size => size.width === 640 && size.height === 480), `${kind}: embedded artwork never reflows`);
-        await page.screenshot({ path: `output/svg-lift-review/${kind}-${visitor}-${width}.png` });
+        await page.screenshot({ path: `${output}/${kind}-${visitor}-${width}.png` });
         await page.keyboard.press('Escape');
         await page.locator('.system-workflow__lift-artwork').waitFor({ state: 'detached' });
-        const after = await source.screenshot({ path: `output/svg-lift-review/${kind}-${visitor}-${width}-after.png` });
+        const after = await source.screenshot({ path: `${output}/${kind}-${visitor}-${width}-after.png` });
         assert.ok(await sameDrawing(page, before, after), `${kind}: Return restores the source drawing without shifting pixels`);
         const returnedMatrix = await source.locator('foreignObject').evaluate(node => {
           const matrix = node.getScreenCTM(); return ['a', 'b', 'c', 'd', 'e', 'f'].map(key => matrix[key]);

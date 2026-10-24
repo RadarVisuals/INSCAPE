@@ -2,18 +2,19 @@ import { useEffect, useRef, useState } from 'react';
 import { readSvgArtwork } from '../public/ownerSystemWorkflow/LibraryArtworkImage.jsx';
 import './artworkSvg.css';
 
-export default function ArtworkSvgDocument({ src, title = 'Interactive artwork', className = '', stretch = false, paintOnly = false, onReady }) {
+export default function ArtworkSvgDocument({ src, title = 'Interactive artwork', className = '', stretch = false, paintOnly = false, visible = true, onReady, renderStatus }) {
   const frame = useRef(null);
   const loading = useRef(null);
   const inspection = useRef(null), nextRequest = useRef(0);
   const readyCallback = useRef(onReady); readyCallback.current = onReady;
+  const visibility = useRef(visible); visibility.current = visible;
   const [hostReady, setHostReady] = useState(false);
   const [document, setDocument] = useState(null);
   const [status, setStatus] = useState('loading');
   const [attempt, setAttempt] = useState(0);
   const releaseInspection = () => {
     const current = inspection.current;
-    frame.current?.contentWindow.postMessage({ type: 'inscape:release-artwork' }, '*');
+    frame.current?.contentWindow?.postMessage({ type: 'inscape:release-artwork' }, '*');
     if (!current) return;
     inspection.current = null;
     clearTimeout(current.timer); current.resolve(false);
@@ -55,6 +56,7 @@ export default function ArtworkSvgDocument({ src, title = 'Interactive artwork',
         if (!request?.sent || request.failed) return;
         clearTimeout(request.timer);
         const window = event.source;
+        window.postMessage({ type: 'inscape:html-artwork-visibility', visible: visibility.current }, '*');
         setStatus('ready');
         readyCallback.current?.({
           releaseInspection,
@@ -83,17 +85,21 @@ export default function ArtworkSvgDocument({ src, title = 'Interactive artwork',
     const request = loading.current;
     if (!request || request.failed) return undefined;
     request.sent = true;
-    frame.current.contentWindow.postMessage({ type: 'inscape:artwork-source', svg: document.text }, '*');
+    frame.current.contentWindow.postMessage({ type: 'inscape:artwork-source', svg: document.text, visible: visibility.current }, '*');
   }, [hostReady, document, src]);
+  useEffect(() => {
+    if (hostReady) frame.current?.contentWindow?.postMessage({ type: 'inscape:html-artwork-visibility', visible }, '*');
+  }, [visible, hostReady]);
+  const statusContent = status !== 'ready' && <span className="artwork-svg-status" role="status">
+    {status === 'loading' ? 'Loading artwork…' : <button type="button" style={{ pointerEvents: 'auto' }}
+      onClick={() => { setHostReady(false); setAttempt(value => value + 1); }}>Artwork unavailable — retry</button>}
+  </span>;
   return <>
     <iframe key={attempt} ref={frame} className={`artwork-svg-document ${className}`} tabIndex={paintOnly ? -1 : undefined}
       style={paintOnly ? { pointerEvents: 'none' } : undefined}
       src="/.netlify/functions/artwork-document" title={title} onLoad={() => setHostReady(true)}
       sandbox="allow-scripts" referrerPolicy="no-referrer"
       allow="camera 'none'; microphone 'none'; geolocation 'none'; clipboard-read 'none'; clipboard-write 'none'" />
-    {status !== 'ready' && <span className="artwork-svg-status" role="status">
-      {status === 'loading' ? 'Loading artwork…' : <button type="button" style={{ pointerEvents: 'auto' }}
-        onClick={() => { setHostReady(false); setAttempt(value => value + 1); }}>Artwork unavailable — retry</button>}
-    </span>}
+    {statusContent && (renderStatus ? renderStatus(statusContent, status) : statusContent)}
   </>;
 }

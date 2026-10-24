@@ -303,8 +303,8 @@ test('Directory visits a published workspace, Close remains Close, and Return re
   await waitFor(`!!document.querySelector('.public-entry-portal[data-embedded][data-mode="explore"]')`, 'directory opens');
   const directoryStyle = await evaluate(`(()=>{const root=document.querySelector('.public-entry-portal');const rect=root.getBoundingClientRect();return{menuSurface:root.dataset.menuSurface,background:getComputedStyle(root).backgroundColor,color:getComputedStyle(root).color,pointerEvents:getComputedStyle(root).pointerEvents,hitRoot:document.elementFromPoint(innerWidth/2,innerHeight/2)?.closest('.public-entry-portal')===root,width:rect.width,height:rect.height}})()`);
   assert.equal(directoryStyle.menuSurface, 'mist');
-  assert.match(directoryStyle.background, /215, 211, 202/);
-  assert.match(directoryStyle.color, /17, 19, 19/);
+  assert.equal(directoryStyle.background, 'rgb(235, 236, 231)', 'embedded Discover uses the approved flat Mist face');
+  assert.equal(directoryStyle.color, 'rgb(25, 27, 27)', 'embedded Discover uses the approved flat Mist ink');
   assert.equal(directoryStyle.pointerEvents, 'auto');
   assert.equal(directoryStyle.hitRoot, true);
   assert.equal(directoryStyle.width, 1280);

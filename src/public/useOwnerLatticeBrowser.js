@@ -133,7 +133,7 @@ export default function useOwnerLatticeBrowser(profileAddress, inventoryEnabled 
     createdRetained: Boolean(createdProfileReady && createdError && createdAssets.length),
     createdStatus: createdProfileReady ? createdStatus : 'idle',
     onRetryCreated: retryCreated,
-  }), [adaptedData, createdAssets.length, createdError, createdProfileReady, createdProgress, createdStatus, union.assets]);
+  }), [adaptedData, createdAssets.length, createdError, createdProfileReady, createdProgress, createdStatus, retryCreated, union.assets]);
   const closeCollection = () => { cancelCollectionTokens(); setActiveCollection(null); };
   const openCollection = (collectionRecord) => {
     if (!canOpenCreatorCollection(profile, collectionRecord)) return false;

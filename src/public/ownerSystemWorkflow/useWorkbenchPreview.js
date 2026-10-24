@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import useDeferredFocusReturn from '../useDeferredFocusReturn.js';
 
 // One Workbench request owns preparation, acceptance and focus recovery. The
 // document is a temporary preview; the draft store remains authoritative.
@@ -6,19 +7,22 @@ export default function useWorkbenchPreview(store, onError) {
   const [preview, setPreview] = useState(null);
   const [preparing, setPreparing] = useState(false);
   const request = useRef(0), mounted = useRef(false), returnFocus = useRef(null);
+  const { restoreFocus: restoreTriggerFocus, cancelFocusReturn } = useDeferredFocusReturn();
   useEffect(() => {
     mounted.current = true;
     return () => { mounted.current = false; request.current++; returnFocus.current = null; };
   }, [store]);
   const close = ({ restoreFocus = true } = {}) => {
+    cancelFocusReturn();
     request.current++;
     setPreparing(false);
     setPreview(null);
     const node = returnFocus.current;
     returnFocus.current = null;
-    if (restoreFocus) requestAnimationFrame(() => node?.isConnected && node.focus({ preventScroll: true }));
+    if (restoreFocus) restoreTriggerFocus(node);
   };
   const open = async (prepare, presentationCurrent, trigger) => {
+    cancelFocusReturn();
     const operation = ++request.current;
     const generation = store.getGeneration(), profile = store.getProfileAddress();
     const ownsRequest = () => mounted.current && operation === request.current;

@@ -1,53 +1,16 @@
-.owner-lattice-publication-rack {
-  position: fixed;
-  z-index: 25;
-  left: var(--workflow-window-inset, 12px);
-  bottom: calc(var(--workflow-dock-height, 48px) + var(--workflow-window-inset, 12px));
-  width: min(540px, calc(100vw - 24px));
-  max-height: calc(100vh - var(--workflow-dock-height, 48px) - 24px);
-  overflow: auto;
-  border: 1px solid var(--workflow-border, var(--lattice-menu-line-strong));
-  background: var(--workflow-panel, var(--lattice-menu-panel));
-  box-shadow: var(--workflow-shadow-panel, 0 12px 28px rgb(0 0 0 / .2));
-  color: var(--workflow-ink, var(--lattice-menu-ink));
-  pointer-events: auto;
-}
-
-.owner-lattice-publication-rack > section {
-  padding: 15px 16px 16px;
-  display: grid;
-  gap: 8px;
-  border-bottom: 1px solid var(--workflow-border, var(--lattice-menu-line));
-}
-
-.owner-lattice-publication-rack h2 { margin: 0; color: var(--workflow-ink, var(--lattice-menu-ink)); font: var(--workflow-type-panel-heading); font-variation-settings: "wght" 500; letter-spacing: .025em; }
-.owner-lattice-publication-rack p,
-.owner-lattice-publication-rack small { margin: 0; color: var(--workflow-muted, var(--lattice-menu-muted)); font: var(--workflow-type-panel-body); letter-spacing: .03em; }
-.owner-lattice-publication-rack button:disabled { color: var(--workflow-faint, var(--lattice-menu-faint)); }
-.owner-lattice-publication-rack__summary { gap: 8px !important; background: var(--workflow-panel, var(--lattice-menu-panel)); }
-.owner-lattice-publication-rack__summary h2 + p { margin-bottom: 9px; }
-.owner-lattice-publication-rack__summary strong { color: var(--workflow-ink, var(--lattice-menu-ink)); font-weight: 500; }
-.owner-lattice-publication-rack__summary small,
-.owner-lattice-publication-rack__status-copy small { color: var(--workflow-muted, var(--lattice-menu-muted)); }
-.owner-lattice-publication-rack__summary small { margin-top: 2px; }
-.owner-lattice-publication-rack__status-copy { gap: 6px !important; border-bottom: 0 !important; background: var(--workflow-selection, var(--lattice-menu-selected)); }
-.owner-lattice-publication-rack__status-copy > p { color: var(--workflow-ink, var(--lattice-menu-ink)); font: var(--workflow-type-panel-heading); font-variation-settings: "wght" 500; letter-spacing: .01em; }
-.owner-lattice-publication-rack__support { padding: 0 !important; }
-.owner-lattice-publication-rack__support > details > summary { padding: 11px 16px; color: var(--workflow-muted, var(--lattice-menu-muted)); font: var(--workflow-type-panel-heading); font-variation-settings: "wght" 500; letter-spacing: .025em; cursor: pointer; }
-.owner-lattice-publication-rack__support .alpha-support { border: 0; border-top: 1px solid var(--workflow-border, var(--lattice-menu-line)); }
-.owner-lattice-publication-rack__support .alpha-support p { color: var(--workflow-muted, var(--lattice-menu-muted)); }
-.owner-lattice-publication-rack__support .alpha-support pre { color: var(--workflow-ink, var(--lattice-menu-ink)); }
-.owner-lattice-publication-rack__rail { min-height: var(--workflow-rail-height, 39px); display: grid; grid-template-columns: minmax(0, 1fr) 42px; border-top: 1px solid var(--workflow-border, var(--lattice-menu-line-strong)); }
-.owner-lattice-publication-rack__rail button { min-width: 0; border: 0; color: var(--workflow-muted, var(--lattice-menu-muted)); background: transparent; font: var(--workflow-type-panel-rail); letter-spacing: .055em; cursor: pointer; }
-.owner-lattice-publication-rack__rail button + button { display: grid; place-items: center; }
-.owner-lattice-publication-rack__rail button:not(:disabled):hover,
-.owner-lattice-publication-rack__rail button:not(:disabled):focus-visible { outline: 0; color: var(--workflow-ink, var(--lattice-menu-ink)); background: var(--workflow-hover, var(--lattice-menu-selected)); }
-.owner-lattice-publication-rack__rail .owner-lattice-publication-rack__publish { color: var(--workflow-ink, var(--lattice-menu-ink)); background: transparent; }
-.owner-lattice-publication-rack__rail .owner-lattice-publication-rack__publish:not(:disabled):is(:hover, :focus-visible) { color: var(--workflow-ink, var(--lattice-menu-ink)); background: var(--workflow-selection, var(--lattice-menu-selected)); }
-.owner-lattice-publication-rack__publish:disabled { opacity: .42; }
-.owner-lattice-publication-rack__status { color: var(--workflow-muted, var(--lattice-menu-muted)); }
+.owner-lattice-publication-rack { --destination-width: 460px; }
+.owner-lattice-publication-rack .workbench-destination-body > section { padding: 12px; display: grid; gap: 8px; }
+.owner-lattice-publication-rack .workbench-destination-body > section + section { border-top: 1px solid var(--tactile-edge); }
+.owner-lattice-publication-rack h3 { margin: 0; font: 500 12px/1.5 var(--font-interface); }
+.owner-lattice-publication-rack p { margin: 0; color: var(--tactile-muted); font: inherit; line-height: 1.7; }
+.owner-lattice-publication-rack small { color: var(--tactile-muted); font: 12px/1.5 var(--font-technical); }
+.owner-lattice-publication-rack strong { color: var(--tactile-ink); font-weight: 500; }
+.owner-lattice-publication-rack__summary h3:not(:first-child) { margin-top: 8px; }
+.owner-lattice-publication-rack__status-copy > p, .owner-lattice-publication-rack [role=alert] { color: var(--tactile-ink); }
+.owner-lattice-publication-rack .owner-lattice-publication-rack__publish { width: 100%; text-align: center; }
 .owner-lattice-publication-rack__hash { overflow-wrap: anywhere; }
-.owner-lattice-publication-rack__recovery .owner-lattice-publication-rack__rail { grid-template-columns: minmax(0, 1fr); }
-@media (max-width: 640px) {
-  .owner-lattice-publication-rack { left: 8px; bottom: 60px; width: calc(100vw - 16px); max-height: calc(100vh - 68px); }
-}
+.owner-lattice-publication-rack summary { padding: 8px 0; cursor: pointer; }
+.owner-lattice-publication-rack .alpha-support { max-width: none; padding: 12px 0 0; border: 0; border-top: 1px solid var(--tactile-edge); background: transparent; font: inherit; }
+.owner-lattice-publication-rack .alpha-support :is(strong, span, summary) { font: inherit; }
+.owner-lattice-publication-rack .alpha-support pre { color: var(--tactile-muted); font: 12px/1.5 var(--font-technical); }
+.owner-lattice-publication-rack .alpha-support button { min-height: var(--destination-target); border: 1px solid var(--tactile-edge); border-radius: var(--control-radius); font: inherit; }

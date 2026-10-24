@@ -49,8 +49,26 @@ async function mount(page, visitor = false) {
       root.render(React.createElement(Visitor, { document }));
     } else {
       const Runtime = (await import('/src/public/ownerSystemWorkflow/OwnerSystemWorkflowRuntime.jsx')).default;
-      root.render(React.createElement(Runtime, { profileAddress, reviewStorage: storage, reviewAssets: fixture.OWNER_SYSTEM_WORKFLOW_REVIEW_ASSETS,
-        reviewCategories: [], reviewActivity: [], reviewDiscovery: [], reviewProfile: { name: 'Canvas review' } }));
+      let revision = 0;
+      const renderOwner = () => root.render(React.createElement(Runtime, { key: ++revision, profileAddress, reviewStorage: storage, reviewAssets: fixture.OWNER_SYSTEM_WORKFLOW_REVIEW_ASSETS,
+        reviewCategories: [], reviewActivity: [], reviewProfile: { name: 'Canvas review' } }));
+      renderOwner();
+      // Display creation is a retained experiment, intentionally absent from Add.
+      // Exercise its actual dialog/store operation through this fixture-only entry.
+      const Dialog = (await import('/src/public/ownerSystemWorkflow/DisplaySizeDialog.jsx')).default;
+      const { addDisplayModule } = await import('/src/systemWorkflow/displayModuleSession.js');
+      window.canvasTest.openCreation = () => {
+        const node = document.createElement('div'); document.body.append(node);
+        const dialogRoot = createRoot(node);
+        const close = () => { dialogRoot.unmount(); node.remove(); };
+        dialogRoot.render(React.createElement(Dialog, { creating: true, appearance: canvasTest.read().appearance,
+          onClose: close, onConfirm: (size, appearance) => {
+            const current = createSystemWorkflowDraftStore({ profileAddress, storage });
+            const id = addDisplayModule(current, size, appearance);
+            if (id) renderOwner();
+            return Boolean(id);
+          } }));
+      };
     }
   }, visitor);
   await page.locator('.system-workflow__presentation-board').first().waitFor();
@@ -58,16 +76,13 @@ async function mount(page, visitor = false) {
 }
 const board = (page, index = 0) => page.locator('.system-workflow__presentation-board').nth(index);
 async function editSize(page, index = 0) {
-  await board(page, index).locator('.system-workflow__identity-strip').click({ button: 'right', force: true });
+  await board(page, index).locator('.system-workflow__identity-strip').press('Shift+F10');
   await page.getByRole('menuitem', { name: 'FORMAT', exact: true }).click();
   await page.getByRole('menuitemcheckbox', { name: 'CUSTOM SIZE…', exact: true }).click();
   await page.getByRole('dialog', { name: 'Canvas size', exact: true }).waitFor();
 }
 async function createSize(page) {
-  await page.mouse.click(12, 12, { button: 'right' });
-  await page.getByRole('menuitem', { name: 'ADD', exact: true }).click();
-  await page.getByRole('menuitem', { name: 'DISPLAY MODULE', exact: true }).click();
-  await page.getByRole('menuitem', { name: 'CUSTOM SIZE…', exact: true }).click();
+  await page.evaluate(() => window.canvasTest.openCreation());
   await page.getByRole('dialog', { name: 'Create Display', exact: true }).waitFor();
 }
 async function enterSize(page, width, height, create = false) {
@@ -103,6 +118,8 @@ test('Snap to grid controls actual Display dragging and keyboard resizing', { ti
   try {
     const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, reducedMotion: 'reduce' });
     await mount(page);
+    await page.locator('main.system-workflow').press('Shift+F10');
+    await page.getByRole('menuitem', { name: 'HIDE SIDEBAR', exact: true }).click();
     const text = board(page).getByRole('button', { name: 'Select NOMAD', exact: true });
     const readText = () => page.evaluate(() => canvasTest.read().grids[0].placements.find(p => p.kind === 'text'));
     for (const snap of [false, true]) {
@@ -110,7 +127,8 @@ test('Snap to grid controls actual Display dragging and keyboard resizing', { ti
       await controls.getByRole('checkbox', { name: 'Snap to grid', exact: true }).setChecked(snap);
       await page.getByRole('button', { name: 'Close Display appearance', exact: true }).click();
       const rect = await text.boundingBox();
-      // Below the Display title bar, which is visible while its menu trigger has focus.
+      const start = { x: rect.x + 30, y: rect.y + 90 };
+      assert.equal(await text.evaluate((node, p) => node.contains(document.elementFromPoint(p.x, p.y)), start), true, 'drag begins on the intended Text placement');
       await page.mouse.move(rect.x + 30, rect.y + 90); await page.mouse.down();
       await page.mouse.move(rect.x + 56, rect.y + 90, { steps: 6 }); await page.mouse.up();
       const moved = await readText();
@@ -273,7 +291,7 @@ test('custom creation and editing target only their Display, including narrow sc
       await enterSize(page, 18, 32);
       await shortcut.focus(); await page.keyboard.press('Enter');
       await ratio(page, 9 / 16, 1);
-      await board(page, 1).locator('.system-workflow__identity-strip').click({ button: 'right', force: true });
+      await board(page, 1).locator('.system-workflow__identity-strip').press('Shift+F10');
       await page.getByRole('menuitem', { name: 'FORMAT', exact: true }).click();
       assert.equal(await page.getByRole('menuitemcheckbox', { name: 'VERTICAL 9:16', exact: true }).getAttribute('aria-checked'), 'true');
       await page.keyboard.press('Escape');

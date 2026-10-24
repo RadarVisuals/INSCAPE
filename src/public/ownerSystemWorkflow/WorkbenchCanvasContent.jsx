@@ -3,6 +3,7 @@ import { useWorkbenchArea } from './WorkbenchAreaContext.jsx';
 import { useWorkbenchCamera } from './WorkbenchCamera.jsx';
 import { useWorkbenchView } from './WorkbenchViewContext.js';
 import './workbenchCanvasContent.css';
+import { artworkModuleId, layerIds } from '../../systemWorkflow/domain/artworkLayers.js';
 
 // One clipping plane for authored content. Its projection follows the camera
 // paint clock, without reading module rectangles or re-rendering their media.
@@ -26,6 +27,20 @@ export default function WorkbenchCanvasContent({ children }) {
     return () => { unsubscribe(); paint.current = null; setCanvasHost?.(null); };
   }, [getCamera, subscribeCameraPaint, setCanvasHost]);
   useLayoutEffect(() => { paint.current?.(getCamera()); });
+  useLayoutEffect(() => {
+    const order = layerIds(view.layers || []);
+    const update = () => {
+      for (const [id, element] of view.entries) {
+        const moduleId = artworkModuleId(view.content, id), index = order.indexOf(moduleId);
+        if (index < 0 || !node.current?.contains(element)) continue;
+        element.setAttribute('data-workbench-artwork', '');
+        // At most 64 artwork modules; host controls begin above this band.
+        element.style.setProperty('--artwork-order', String(index + 1));
+        element.toggleAttribute('data-editor-hidden', view.editorHiddenIds?.includes(moduleId));
+      }
+    };
+    update(); return view.subscribe(update);
+  }, [view.layers, view.content, view.entries, view.subscribe, view.editorHiddenIds]);
   useLayoutEffect(() => {
     const update = () => {
       for (const [id, element] of view.entries) {

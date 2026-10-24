@@ -1,4 +1,3 @@
-export const BROWSER_TABS = Object.freeze({ INDEX: 'index', CATEGORIES: 'categories' });
 export const BROWSER_FILING_FILTERS = Object.freeze({
   ALL: 'all',
   FAVORITES: 'favorites',
@@ -44,7 +43,6 @@ export const BROWSER_VIEW_KINDS = Object.freeze({
   ALL: 'all', CATEGORY: 'category', UNSORTED: 'unsorted', USED: 'used',
 });
 export const BROWSER_SORTS = Object.freeze({ TITLE_ASC: 'title-asc', TITLE_DESC: 'title-desc', COLLECTION: 'collection' });
-export const BROWSER_DISPLAY_MODES = Object.freeze({ GRID: 'grid', LIST: 'list' });
 export const BROWSER_ASSET_SIZE = Object.freeze({
   DEFAULT: 150,
   LIST: 68,

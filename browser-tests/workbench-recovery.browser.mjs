@@ -4,6 +4,8 @@ import { chromium } from 'playwright-core';
 import { mkdtemp } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { openTextToolSection } from './fixtures/text-tool-sections.mjs';
+import { hideWorkspaceSidebar } from './fixtures/workspace-sidebar.mjs';
 const origin = process.env.INSCAPE_TEXT_ROOT || 'http://127.0.0.1:5297';
 
 test('reload restores local arrangement; failed Text survives editor disposal and blocks stale publication', { timeout: 120000 }, async () => {
@@ -44,12 +46,13 @@ test('reload restores local arrangement; failed Text survives editor disposal an
       window.readLayout = () => JSON.parse(localStorage.getItem(`inscape:workbench:layout:v1:${profileAddress}`));
       await import('/src/inscapeTokens.css'); await import('/src/public/ownerSystemWorkflow/ownerSystemWorkflow.css'); await import('/src/lattice/rendering/latticeMenuSurface.css');
       window.root = createRoot(document.getElementById('root'));
-      window.root.render(React.createElement(Runtime, { profileAddress, reviewStorage: storage, reviewAssets: [], reviewCategories: [], reviewActivity: [], reviewDiscovery: [], reviewProfile: { name: 'Reload review' } }));
+      window.root.render(React.createElement(Runtime, { profileAddress, reviewStorage: storage, reviewAssets: [], reviewCategories: [], reviewActivity: [], reviewProfile: { name: 'Reload review' } }));
     });
     await page.goto(`${origin}/__recovery__`); await mount();
     const board = page.getByRole('article', { name: 'Display Module', exact: true });
     const text = page.locator('.text-window');
     await page.getByRole('button', { name: 'Close Text tools', exact: true }).click();
+    await hideWorkspaceSidebar(page);
     await page.getByRole('button', { name: 'Read', exact: true }).focus(); await page.keyboard.press('Enter');
     const drag = async (handle, dx, dy) => {
       const b = await handle.boundingBox(); await page.mouse.move(b.x + 10, b.y + b.height / 2); await page.keyboard.down('Alt');
@@ -76,31 +79,40 @@ test('reload restores local arrangement; failed Text survives editor disposal an
     await page.reload(); await mount();
     await page.getByRole('button', { name: 'Arrival', exact: true }).waitFor();
     assert.equal(await text.count(), 0); assert.equal(await board.count(), 0);
-    await page.getByRole('button', { name: 'Arrival', exact: true }).click();
+    // Reopen the underlying shortcut before Text covers it again.
     await page.getByRole('button', { name: /Open DISPLAY MODULE/ }).dblclick();
+    await page.getByRole('button', { name: 'Arrival', exact: true }).click();
     near(await text.boundingBox(), before.text); near(await board.boundingBox(), before.board);
     // Saving can fail independently from closing the Display's embedded editor.
-    await page.getByRole('button', { name: 'Layers', exact: true }).click();
+    await page.getByLabel('Move Display Module: DISPLAY MODULE', { exact: true }).click();
+    await page.locator('.system-workflow__identity-strip').first().focus();
+    await page.keyboard.press('Shift+F10');
+    await page.getByRole('menuitem', { name: 'TOOLS', exact: true }).hover();
+    await page.getByRole('menuitem', { name: 'LAYERS', exact: true }).click();
     await page.getByRole('button', { name: 'Add text', exact: true }).click();
     const editor = page.getByRole('textbox', { name: 'Article text', exact: true });
     await editor.fill('Saved sentence.');
     await page.locator('.display-text-authoring').getByRole('textbox', { name: 'Article title', exact: true }).fill('// ARRIVAL');
-    await page.locator('.text-tools-window summary').filter({ hasText: /^Title$/ }).click();
+    await openTextToolSection(page.locator('.text-tools-window'), 'Title');
     assert.equal(await page.getByLabel('Title size', { exact: true }).inputValue(), '28');
     await page.getByLabel('Title size', { exact: true }).fill('64');
     assert.equal(await page.locator('.display-text-authoring .text-document-title').evaluate(node => getComputedStyle(node).fontSize), '64px');
-    await page.locator('.text-tools-window summary').filter({ hasText: /^Default text style$/ }).click();
-    await page.getByLabel('Document font', { exact: true }).selectOption('literata');
+    await openTextToolSection(page.locator('.text-tools-window'), 'Default text style');
+    await page.getByLabel('Default font', { exact: true }).selectOption('literata');
     assert.match(await editor.evaluate(node => getComputedStyle(node).fontFamily), /Literata/);
     assert.match(await page.locator('.display-text-authoring .text-document-title').evaluate(node => getComputedStyle(node).fontFamily), /Literata/);
-    assert.equal(await page.getByLabel('Document font', { exact: true }).inputValue(), 'literata');
+    assert.equal(await page.getByLabel('Default font', { exact: true }).inputValue(), 'literata');
     await page.evaluate(() => { window.failDraft = true; });
     await editor.fill('Keep this unsaved sentence.');
     await page.getByRole('button', { name: 'Retry local save', exact: true }).waitFor();
     await page.getByRole('button', { name: 'Lock Display Module composition', exact: true }).focus(); await page.keyboard.press('Enter');
     assert.equal(await editor.count(), 0);
+    await page.locator('main.system-workflow').first().focus();
+    await page.keyboard.press('Shift+F10');
+    await page.getByRole('menuitem', { name: 'SHOW SIDEBAR', exact: true }).click();
     await page.getByRole('button', { name: 'Preview', exact: true }).click();
     assert.equal(await page.locator('.visitor-grid-world').count(), 0);
+    await hideWorkspaceSidebar(page);
     await page.getByRole('button', { name: 'Unlock Display Module composition', exact: true }).focus(); await page.keyboard.press('Enter');
     assert.equal(await editor.innerText(), 'Keep this unsaved sentence.');
     await page.evaluate(() => { window.failDraft = false; });

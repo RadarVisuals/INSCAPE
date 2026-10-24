@@ -14,36 +14,52 @@ import { clampOwnerSystemWorkflowWindowPosition, resizeWorkbenchWindow, workbenc
 
 // The host owns gestures and temporary geometry. A module's resize target owns
 // validation and persistence; companion tools retain only their screen layout.
-export function WorkbenchWindow({ avoidControls, children, background, compact, chrome, menuSurface, className = '', label, controls, title, titleContent, width = 320, resizable = true, resizableWidth = false, initialHeight = 420, minimumHeight = 180, minimumWidth = 240, initialX = 18, initialY = 72, fitContent = false, fitContentFromTop = false, onLayoutChange, snapToGrid = false, placementModule = false, viewId, active, surfaceStyle, resizeTarget, committedFrame, externalControls = false, moveFromContent = false, registerView = true, screenSized = false, onLayoutCommit }) {
-  const { editingBounds: areaBounds } = useWorkbenchArea();
+export function WorkbenchWindow({ avoidControls, children, background, compact, chrome, menuSurface, className = '', label, controls, title, titleContent, width = 320, resizable = true, resizableWidth = false, initialHeight = 420, minimumHeight = 180, minimumWidth = 240, initialX = 18, initialY = 72, fitContent = false, fitContentFromTop = false, onLayoutChange, snapToGrid = false, placementModule = false, viewId, active, surfaceStyle, resizeTarget, committedFrame, externalControls = false, moveFromContent = false, registerView = true, screenSized = false, preserveAuthoredLayout = false, onLayoutCommit, viewportBottom }) {
+  const { editingBounds: areaBounds, area, showOutside, canvasHost } = useWorkbenchArea();
   const view = useWorkbenchView();
   const { offset, getCamera, subscribeCameraPaint } = useWorkbenchCamera();
+  const isCompact = Boolean(compact);
   const transformed = Boolean(viewId) && !compact;
   const anchored = transformed && screenSized;
   const camera = transformed ? workbenchModuleTransform(view, viewId) : { scale: 1, x: 0, y: 0 };
   const node = useRef(null), measuredContent = useRef(null), gesture = useRef(null), latest = useRef(null);
   const [frame, setFrame] = useState(() => ({ left: initialX, top: initialY, width, height: initialHeight }));
   const [preview, setPreview] = useState(null);
+  const hasPreview = Boolean(preview);
   const [viewport, setViewport] = useState(() => ({ width: globalThis.innerWidth, height: globalThis.innerHeight }));
-  const toolViewportBottom = Math.min(viewport.height, view.toolViewportBottom ?? viewport.height - 48);
+  const toolViewportBottom = Math.min(viewport.height, viewportBottom ?? view.toolViewportBottom ?? viewport.height - 48);
   // An anchored inspector keeps its chosen top while content scrolls below it.
   // Other floating tools retain their existing fit-to-viewport placement.
   const contentFromTop = fitContent && fitContentFromTop && !viewId && !compact;
-  const toolTop = contentFromTop ? Math.max(8, Math.min(frame.top, toolViewportBottom - minimumHeight - 8)) : 8;
+  const screenLeft = viewId ? 8 : Math.max(8, view.navigationInset || 0);
+  const screenTop = viewId ? 8 : Math.max(8, view.navigationTop || 0);
+  const toolTop = contentFromTop ? Math.max(screenTop, Math.min(frame.top, toolViewportBottom - minimumHeight - 8)) : screenTop;
   const toolMaximumHeight = Math.max(1, toolViewportBottom - toolTop - 8);
   const base = { ...frame, width: resizableWidth ? frame.width : width };
   if ((!viewId || anchored) && !compact) {
-    if (resizableWidth) base.width = Math.min(base.width, viewport.width - 16);
+    if (resizableWidth) base.width = Math.min(base.width, viewport.width - screenLeft - 8);
     if (contentFromTop) base.top = toolTop;
     base.height = Math.min(base.height, toolMaximumHeight);
+  }
+  // A published screen-window keeps its chosen layout while fitting its pixels
+  // to the current viewport. This projection must not become module content.
+  if (preserveAuthoredLayout && !viewId && !compact) {
+    const position = clampOwnerSystemWorkflowWindowPosition({ x: base.left, y: base.top }, base,
+      { width: viewport.width, height: toolViewportBottom });
+    base.left = Math.max(screenLeft, position.x); base.top = Math.max(screenTop, position.y);
   }
   const current = camera.frame || preview || base;
   const density = transformed && !anchored ? globalThis.devicePixelRatio || 1 : 1;
   const screen = transformed ? { left: current.left * camera.scale + camera.x + offset.x,
     top: current.top * camera.scale + camera.y + offset.y, width: current.width * (anchored ? 1 : camera.scale), height: current.height * (anchored ? 1 : camera.scale) }
-    : { ...current, width: Math.min(current.width, viewport.width - 16) };
+    : { ...current, width: Math.min(current.width, viewport.width - screenLeft - 8) };
   const paint = workbenchPaintGeometry(screen, density);
   const painted = Object.fromEntries(Object.entries(paint).map(([key, value]) => [key, value / density]));
+  // External module controls must clear both the viewport and their canvas clip.
+  // Floating tools and explicitly presented artwork remain viewport-owned.
+  const clippedControls = externalControls && transformed && !anchored && !showOutside
+    && !camera.presented && canvasHost?.contains(node.current);
+  const controlsTop = clippedControls ? Math.max(0, offset.y + area.top * view.scale) : 0;
   const placement = useWorkbenchPlacement(node, placementModule && !compact, camera.scale, true, screen);
   // A module can opt into the same free-corner geometry for its selection.
   // Keep snapping, constraints and camera conversion in this existing host.
@@ -52,7 +68,7 @@ export function WorkbenchWindow({ avoidControls, children, background, compact, 
   } : resizeTarget, [resizeTarget]);
   useWorkbenchViewRegistration(viewId, node, registerView && !compact, base, registeredResizeTarget,
     position => setFrame(current => ({ ...current, ...position })));
-  const canResize = !camera.presented && resizable && !fitContent && !compact && (!resizeTarget?.store || resizeTarget.enabled);
+  const canResize = (!preserveAuthoredLayout || base.width >= minimumWidth && base.height >= minimumHeight) && !camera.presented && resizable && !fitContent && !compact && (!resizeTarget?.store || resizeTarget.enabled);
   const local = transformed ? view.transforms[viewId] : null;
   const localScale = local?.scale || 1;
   // Canvas instruments keep screen-sized controls. Only their anchor follows
@@ -74,7 +90,7 @@ export function WorkbenchWindow({ avoidControls, children, background, compact, 
     top: (areaBounds.top - (local?.y || 0)) / localScale,
     right: (areaBounds.right - (local?.x || 0)) / localScale,
     bottom: (areaBounds.bottom - (local?.y || 0)) / localScale,
-  } : { left: 8, top: 8, right: viewport.width - 8, bottom: toolViewportBottom - 8 };
+  } : { left: screenLeft, top: screenTop, right: viewport.width - 8, bottom: toolViewportBottom - 8 };
   const commitResize = next => {
     if (resizeTarget?.store) {
       if (!resizeTarget.enabled) return false;
@@ -98,7 +114,7 @@ export function WorkbenchWindow({ avoidControls, children, background, compact, 
     } else if (drag.kind === 'content-move') {
       if (!cancelled && drag.next && onLayoutCommit?.(drag.next) !== false) setFrame(drag.next);
       setPreview(null);
-    } else if (cancelled || drag.next && onLayoutCommit?.(drag.next) === false) setFrame(drag.frame);
+    } else if (cancelled || drag.next && onLayoutCommit?.(drag.next) === false) setFrame(drag.authoredFrame || drag.frame);
     if (drag.element.hasPointerCapture?.(drag.id)) drag.element.releasePointerCapture(drag.id);
     if (!drag.element.isConnected) queueMicrotask(() => node.current?.querySelector('header')?.focus());
   };
@@ -120,22 +136,31 @@ export function WorkbenchWindow({ avoidControls, children, background, compact, 
       cancel();
     };
   }, []);
-  useLayoutEffect(() => { latest.current.finish(true); }, [camera.scale, camera.x, camera.y, offset.x, offset.y, Boolean(compact), canResize, moveFromContent, resizeTarget?.expected]);
-  useLayoutEffect(() => { if (committedFrame) setFrame(committedFrame); }, [committedFrame]);
+  useLayoutEffect(() => { latest.current.finish(true); }, [camera.scale, camera.x, camera.y, offset.x, offset.y, isCompact, canResize, moveFromContent, resizeTarget?.expected]);
+  const lastCommittedFrame = useRef(committedFrame);
   // Tools belong to the viewport. Authored module positions remain in Workbench
   // coordinates and are never rewritten just because the browser got smaller.
   useLayoutEffect(() => {
-    if (viewId || compact || preview) return;
+    // Apply a new controlled layout before clamping. Clamping the old frame in
+    // this same commit otherwise overwrites responsive size/position updates.
+    if (committedFrame !== lastCommittedFrame.current) {
+      lastCommittedFrame.current = committedFrame;
+      if (committedFrame) { setFrame(committedFrame); return; }
+    }
+    if (viewId || preserveAuthoredLayout || isCompact || hasPreview) return;
     const position = clampOwnerSystemWorkflowWindowPosition({ x: base.left, y: base.top }, base,
       { width: viewport.width, height: toolViewportBottom });
-    if (position.x !== frame.left || position.y !== frame.top || base.width !== frame.width || base.height !== frame.height)
-      setFrame({ ...base, left: position.x, top: position.y });
-  }, [viewId, Boolean(compact), Boolean(preview), frame.left, frame.top, base.width, base.height, viewport.width, toolViewportBottom]);
+    const x = Math.max(screenLeft, position.x), y = Math.max(screenTop, position.y);
+    if (x !== frame.left || y !== frame.top || base.width !== frame.width || base.height !== frame.height)
+      setFrame({ ...base, left: x, top: y });
+  // Depend on geometry values, not the new derived base object on every render.
+  }, [committedFrame, viewId, preserveAuthoredLayout, isCompact, hasPreview, frame.left, frame.top, frame.width, frame.height, base.left, base.top, base.width, base.height, viewport.width, toolViewportBottom, screenLeft, screenTop]);
+  const { left: layoutLeft, top: layoutTop, width: layoutWidth, height: layoutHeight } = preserveAuthoredLayout ? frame : base;
   useLayoutEffect(() => {
-    if (!compact && !camera.frame) onLayoutChange?.(base);
-  }, [base.left, base.top, base.width, base.height, onLayoutChange, Boolean(compact), camera.frame]);
+    if (!isCompact && !camera.frame) onLayoutChange?.({ left: layoutLeft, top: layoutTop, width: layoutWidth, height: layoutHeight });
+  }, [layoutLeft, layoutTop, layoutWidth, layoutHeight, onLayoutChange, isCompact, camera.frame]);
   useLayoutEffect(() => {
-    if (!fitContent || compact) return undefined;
+    if (!fitContent || isCompact) return undefined;
     const content = measuredContent.current;
     const measure = () => {
       const style = getComputedStyle(content.parentElement);
@@ -157,7 +182,7 @@ export function WorkbenchWindow({ avoidControls, children, background, compact, 
     observer.observe(node.current.querySelector('header'));
     globalThis.addEventListener('resize', measure); measure();
     return () => { observer.disconnect(); globalThis.removeEventListener('resize', measure); };
-  }, [fitContent, Boolean(compact), minimumHeight, toolMaximumHeight]);
+  }, [fitContent, isCompact, minimumHeight, toolMaximumHeight]);
   useLayoutEffect(() => {
     if (!avoidControls?.length || viewId || compact || gesture.current || !node.current?.getClientRects().length) return;
     // Resolve at layout/selection changes, without adding React work to each
@@ -168,7 +193,7 @@ export function WorkbenchWindow({ avoidControls, children, background, compact, 
     const controlBounds = { left: Math.min(...controls.map(rect => rect.left)), right: Math.max(...controls.map(rect => rect.right)),
       top: Math.min(...controls.map(rect => rect.top)), bottom: Math.max(...controls.map(rect => rect.bottom)) };
     const next = avoidWorkbenchControl({ left: rectangle.left, top: rectangle.top, width: rectangle.width, height: rectangle.height },
-      controlBounds, { left: 8, top: 8, right: viewport.width - 8, bottom: toolViewportBottom - 8 }, 8, minimumHeight);
+      controlBounds, bounds, 8, minimumHeight);
     // DOM layout can round a fractional recovery-control edge. Do not schedule
     // another layout update when React already holds the requested position:
     // even a no-op updater can re-enter this effect while other updates commit.
@@ -185,13 +210,17 @@ export function WorkbenchWindow({ avoidControls, children, background, compact, 
     const size = contentFromTop ? { ...base, height: Math.min(base.height, minimumHeight) } : base;
     const position = clampOwnerSystemWorkflowWindowPosition({ x: placed.left, y: placed.top }, size,
       { width: viewport.width, height: toolViewportBottom });
-    return { ...base, left: position.x, top: position.y };
+    return { ...(preserveAuthoredLayout ? frame : base), left: Math.max(screenLeft, position.x), top: Math.max(screenTop, position.y) };
   };
   const resizeTo = (origin, edge, delta, altKey) => {
     const sizeScale = anchored ? camera.scale : 1;
     const next = (resizeTarget?.resizeCorner || resizeWorkbenchWindow)({ ...origin, width: origin.width / sizeScale, height: origin.height / sizeScale }, edge, delta,
       { width: (resizeTarget?.minimumWidth ?? minimumWidth) / sizeScale, height: (resizeTarget?.minimumHeight ?? minimumHeight) / sizeScale }, bounds,
       resizeTarget?.constrainFrame ? undefined : (axis, side, value) => placement.edge(axis, side, value, origin, altKey) ?? snapWorkbenchCoordinate(value, snapToGrid && !altKey));
+    if (preserveAuthoredLayout) {
+      if (!delta.x) { next.left = frame.left; next.width = frame.width; }
+      if (!delta.y) { next.top = frame.top; next.height = frame.height; }
+    }
     return resizeTarget?.constrainFrame?.(next, { edge, bounds }) || { ...next, width: next.width * sizeScale, height: next.height * sizeScale };
   };
   const begin = (event, kind, edge) => {
@@ -200,7 +229,7 @@ export function WorkbenchWindow({ avoidControls, children, background, compact, 
     if (kind === 'content-move') node.current.querySelector('header')?.focus({ preventScroll: true });
     else event.currentTarget.focus();
     placement.begin(event);
-    gesture.current = { kind, edge, id: event.pointerId, x: event.clientX, y: event.clientY, frame: base, element: event.currentTarget };
+    gesture.current = { kind, edge, id: event.pointerId, x: event.clientX, y: event.clientY, frame: base, authoredFrame: preserveAuthoredLayout ? frame : undefined, element: event.currentTarget };
     event.currentTarget.setPointerCapture(event.pointerId);
   };
   const move = event => {
@@ -229,7 +258,7 @@ export function WorkbenchWindow({ avoidControls, children, background, compact, 
   return <OwnerSystemWorkflowDetachedWindow ariaLabel={`${label} — ${title}`} ref={node} viewId={registerView ? viewId : undefined} active={active} workbenchPan={transformed && !anchored}
     className={`system-workflow__instrument-window ${externalControls ? 'workbench-window--external-controls' : ''} ${className}`} title={`${label} · ${title}`}
     headerPointerProps={{ 'aria-label': `Move ${label} window`, 'data-workbench-selectable': registerView && viewId ? true : undefined,
-      'data-controls-below': externalControls && painted.top < 56 || undefined, 'aria-keyshortcuts': registerView && viewId ? 'Shift+Enter' : undefined,
+      'data-controls-below': externalControls && painted.top < controlsTop + 56 || undefined, 'aria-keyshortcuts': registerView && viewId ? 'Shift+Enter' : undefined,
       tabIndex: 0, onKeyDown: event => key(event), onPointerDown: event => begin(event, 'move'), ...pointerProps }}
     controls={controls} titleContent={titleContent} background={background} compactContent={compact?.content} chrome={chrome} menuSurface={menuSurface}
     contentPointerProps={moveFromContent ? { 'data-content-move': true, 'data-workbench-selectable': Boolean(viewId) || undefined,

@@ -136,14 +136,14 @@ export async function mountGridMotionFixture(page, { origin, visitor = false, he
     await import('/src/inscapeTokens.css');
     await import('/src/public/ownerSystemWorkflow/ownerSystemWorkflow.css');
     if (!visitor) {
-      const { acquireProfileEditor } = await import('/src/systemWorkflow/profileEditorLease.js');
+      const { acquireProfileEditor } = await import(performance.getEntriesByType('resource').find(entry => new URL(entry.name).pathname === '/src/systemWorkflow/profileEditorLease.js')?.name || '/src/systemWorkflow/profileEditorLease.js');
       window.__motionEditorLease = acquireProfileEditor(profile);
       if (await window.__motionEditorLease.ready !== 'editing') throw new Error('Motion fixture could not acquire its editor');
     }
     const Component = visitor ? (await import('/src/profileDocument/components/ProfileDocumentV9Visitor.jsx')).default
       : (await import('/src/public/ownerSystemWorkflow/OwnerSystemWorkflowRuntime.jsx')).default;
     const props = visitor ? { document: (await import('/src/profileDocument/domain/profileDocumentV9Builder.js')).buildProfileDocumentV9({ systemWorkflowDraft: draft, profileAddress: profile, assetRecords: assets }) }
-      : { profileAddress: profile, reviewStorage: localStorage, reviewAssets: assets, reviewCategories: [], reviewActivity: [], reviewDiscovery: [], reviewProfile: { name: 'Motion measurement' } };
+      : { profileAddress: profile, reviewStorage: localStorage, reviewAssets: assets, reviewCategories: [], reviewActivity: [], reviewProfile: { name: 'Motion measurement' } };
     window.__motionDocument = props.document;
     window.__motionCommits = 0; window.__motionRenderMs = 0;
     window.__motionRoot = createRoot(document.getElementById('root'));

@@ -10,10 +10,12 @@ import { displayFormat, displayPreset } from '../../systemWorkflow/domain/displa
 const exact = (value, keys) => value && typeof value === 'object' && !Array.isArray(value)
   && Object.keys(value).length === keys.length && keys.every(key => Object.hasOwn(value, key));
 const number = (value, min, max) => Number.isFinite(value) && value >= min && value <= max;
+const maximumWindowSize = 16384;
+export const DISPLAY_WINDOW_LIMITS = Object.freeze({ minimumWidth: .01, minimumHeight: .01, maximumWidth: maximumWindowSize, maximumHeight: maximumWindowSize });
 const position = value => exact(value, ['left', 'top']) && number(value.left, -16384, 16384) && number(value.top, -16384, 16384);
 const windowFrame = (value, height, minimumWidth = 180, minimumHeight = 100) => exact(value, height ? ['left', 'top', 'width', 'height'] : ['left', 'top', 'width'])
-  && number(value.left, -16384, 16384) && number(value.top, -16384, 16384) && number(value.width, minimumWidth, 16384)
-  && (!height || number(value.height, minimumHeight, 16384));
+  && number(value.left, -16384, 16384) && number(value.top, -16384, 16384) && number(value.width, minimumWidth, maximumWindowSize)
+  && (!height || number(value.height, minimumHeight, maximumWindowSize));
 
 // The currently implemented modules only. Content remains owned by their existing
 // validated Grid/Identity envelopes; this describes their public starting layout.
@@ -87,7 +89,7 @@ export function isValidWorkbenchPresentation(value) {
   const { display, identity } = value;
   if (!exact(display, ['name', 'open', 'window', 'shortcut']) || typeof display.name !== 'string'
     || !display.name.trim() || display.name.length > 48 || /[\u0000-\u001f\u007f]/u.test(display.name)
-    || typeof display.open !== 'boolean' || !windowFrame(display.window, true, .01, .01)) return false;
+    || typeof display.open !== 'boolean' || !windowFrame(display.window, true, DISPLAY_WINDOW_LIMITS.minimumWidth, DISPLAY_WINDOW_LIMITS.minimumHeight)) return false;
   const shortcut = display.shortcut;
   if (!exact(shortcut, ['position', 'visible', 'icon', 'iconPresentation']) || !position(shortcut.position)
     || typeof shortcut.visible !== 'boolean' || !(shortcut.icon === null || validateProfileDocumentV9Asset(shortcut.icon)

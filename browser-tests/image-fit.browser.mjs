@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { chromium } from 'playwright-core';
-import { mkdir } from 'node:fs/promises';
+import { mkdir, writeFile } from 'node:fs/promises';
+import { openSharedTool } from './fixtures/shared-tools.mjs';
 
 const origin = process.env.INSCAPE_IMAGE_ROOT || 'http://127.0.0.1:5197';
 const settle = page => page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
@@ -107,9 +108,12 @@ test('captured native-fit seams can be filled without moving frames; Image resiz
     await page.screenshot({ path: `${process.env.INSCAPE_BROWSER_OUTPUT || '.browser-test-runtime'}/image-fit-resize-grid.png` });
     await page.evaluate(() => imageFitFixture.store.undo()); await settle(page);
     assert.deepEqual(await page.evaluate(() => imageFitFixture.store.getDraft()), beforeResize, 'undo restores dimensions, layout and legacy native fitting together');
-    await dock.locator('summary').filter({ hasText: 'Dimensions' }).click();
-    await dock.getByRole('spinbutton', { name: 'Image width', exact: true }).fill('1008');
-    await dock.getByRole('button', { name: 'Set size', exact: true }).click(); await settle(page);
+    // Shared Transform reads Workbench selection, not the fixture's old
+    // Properties target. Select the actual artwork before opening the tab.
+    await page.locator('.image-module__canvas').first().click(); await settle(page);
+    const transform = await openSharedTool(page, 'Transform');
+    await transform.getByRole('spinbutton', { name: 'Transform Width', exact: true }).fill('1008');
+    await transform.getByRole('spinbutton', { name: 'Transform Width', exact: true }).press('Enter'); await settle(page);
     assert.equal(await covers(), false, 'numeric resizing also retains the chosen Fit inside mode');
     assert.equal((await page.evaluate(() => imageFitFixture.store.getDraft())).imageModules[0].width, 1008);
     await page.evaluate(() => imageFitFixture.store.undo()); await settle(page);
@@ -143,7 +147,10 @@ test('captured native-fit seams can be filled without moving frames; Image resiz
     assert.deepEqual(await geometry(), beforeGroupFrames);
     await page.evaluate(() => { imageFitFixture.selection([]); imageFitFixture.single(true); });
     await page.setViewportSize({ width: 390, height: 844 });
-    await page.evaluate(() => imageFitFixture.camera(1, { x:-1552, y:-1312 })); await settle(page);
+    await page.evaluate(() => {
+      const frame = imageFitFixture.frame('image:one');
+      imageFitFixture.camera(1, { x: 160 - frame.left - frame.width, y: 440 - frame.top - frame.height });
+    }); await settle(page);
     await dock.getByRole('button', { name: 'Fill canvas', exact: true }).scrollIntoViewIfNeeded();
     await page.screenshot({ path: `${process.env.INSCAPE_BROWSER_OUTPUT || '.browser-test-runtime'}/image-fit-tools-narrow.png` });
     assert.ok(await dock.getByRole('button', { name: 'Fit inside', exact: true }).isVisible());
@@ -155,10 +162,54 @@ test('captured native-fit seams can be filled without moving frames; Image resiz
     const visitorProjection = await projection();
     const visitorWidth = (await geometry())[0].width;
     await page.evaluate(() => imageFitFixture.selection(['image:one'])); await settle(page);
+    const visitorHandle = await groupGrip.evaluate(node => {
+      const rect = node.getBoundingClientRect(), center = { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 };
+      const hit = document.elementFromPoint(center.x, center.y);
+      return { rect: rect.toJSON(), center, exposed: node.contains(hit), hit: hit?.getAttribute('aria-label') || hit?.className,
+        image: document.querySelector('.image-module__window')?.getBoundingClientRect().toJSON(),
+        navigator: document.querySelector('.workbench-navigator')?.getBoundingClientRect().toJSON(),
+        controls: document.querySelector('.workbench-view-controls')?.getBoundingClientRect().toJSON() };
+    });
+    await writeFile(`${process.env.INSCAPE_BROWSER_OUTPUT || '.browser-test-runtime'}/image-fit-visitor-handle.json`, JSON.stringify(visitorHandle, null, 2));
+    await page.screenshot({ path: `${process.env.INSCAPE_BROWSER_OUTPUT || '.browser-test-runtime'}/image-fit-visitor-handle.png` });
+    assert.equal(visitorHandle.exposed, true, 'Visitor resize handle receives the actual centre hit');
+    assert.ok(Math.abs(visitorHandle.image.right - 160) < 1 && Math.abs(visitorHandle.image.bottom - 440) < 1, 'Visitor image corner is placed at the intended screen point');
+    assert.ok(visitorHandle.rect.right < visitorHandle.navigator.left && visitorHandle.rect.bottom < visitorHandle.navigator.top, 'Visitor resize handle stays clear of Navigator');
     await groupGrip.focus(); await page.keyboard.press('ArrowLeft'); await settle(page);
     assert.ok((await geometry())[0].width < visitorWidth, 'Visitor can still scale a temporary selection');
     assert.deepEqual(await projection(), visitorProjection, 'Visitor scaling never selects a new fit or crop');
     assert.deepEqual(await page.evaluate(() => imageFitFixture.store.getDraft()), beforeResize, 'Visitor scaling never changes the saved draft');
+    assert.deepEqual(errors, []);
+  } finally { await browser.close(); }
+});
+
+test('isolated Image fixture opens and closes real Info content without changing the draft', { timeout: 60000 }, async () => {
+  const browser = await chromium.launch({ headless: true });
+  try {
+    const page = await browser.newPage({ viewport: { width: 390, height: 900 }, reducedMotion: 'reduce' });
+    const errors = []; page.on('pageerror', error => errors.push(error.message));
+    await page.route('**/*', route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
+    await page.route('https://image.fit.test/source.png', route => route.fulfill({ contentType: 'image/jpeg', path: 'browser-tests/fixtures/grid-landscape.jpg' }));
+    await page.route(`${origin}/__image_info__`, route => route.fulfill({ contentType: 'text/html', body: '<div id="root"></div>' }));
+    await page.goto(`${origin}/__image_info__`);
+    await page.evaluate(async () => {
+      const refresh = (await import('/@react-refresh')).default;
+      refresh.injectIntoGlobalHook(window); window.$RefreshReg$ = () => {}; window.$RefreshSig$ = () => type => type; window.__vite_plugin_react_preamble_installed__ = true;
+      (await import('/browser-tests/image-fit-fixture.jsx')).mount();
+    });
+    await page.locator('.image-module__window').first().waitFor();
+    await page.locator('.image-module__canvas').first().focus(); await settle(page);
+    const saved = await page.evaluate(() => imageFitFixture.store.getDraft());
+    await page.getByRole('button', { name: 'Close Transform', exact: true }).click();
+    await page.getByRole('button', { name: 'Close Color', exact: true }).click(); await settle(page);
+    assert.deepEqual(errors, [], 'activating Info has its provider context');
+    const info = page.locator('[data-shared-tool="metadata"]');
+    await info.waitFor();
+    assert.ok((await info.innerText()).includes('ABYSSAL STUDY'), 'Info renders the selected Image source information');
+    await page.getByRole('button', { name: 'Close Info', exact: true }).click(); await settle(page);
+    assert.equal(await page.getByRole('tab', { name: 'Info', exact: true }).count(), 0);
+    assert.equal(await page.locator('.image-module__window').count(), 4, 'closing Info leaves the artwork mounted');
+    assert.deepEqual(await page.evaluate(() => imageFitFixture.store.getDraft()), saved, 'opening and closing Info saves no content');
     assert.deepEqual(errors, []);
   } finally { await browser.close(); }
 });

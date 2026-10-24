@@ -1,3 +1,4 @@
+import { openSharedTool } from './fixtures/shared-tools.mjs';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { chromium } from 'playwright-core';
@@ -7,7 +8,7 @@ const origin = process.env.INSCAPE_TEXT_ROOT || 'http://127.0.0.1:5198';
 const settle = page => page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
 const camera = page => page.locator('main.system-workflow').evaluate(node => ({
   x: node.style.getPropertyValue('--workbench-pan-x'), y: node.style.getPropertyValue('--workbench-pan-y'),
-  zoom: node.querySelector('[aria-label="Reset Workbench zoom to 100%"]').textContent,
+  zoom: node.querySelector('.navigator-zoom output').textContent,
 }));
 const launch = () => chromium.launch({ executablePath: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', headless: true });
 
@@ -19,7 +20,8 @@ test('Shape colour changes leave zoom and wheel pan available despite stale whee
     await mountTextToolsFixture(page, origin, { surfaces: true });
     await page.getByRole('button', { name: 'Close Text tools', exact: true }).click();
     await page.locator('.shape-fill').click();
-    const colour = page.getByLabel('Shape colour', { exact: true });
+    const colorPanel = await openSharedTool(page, 'Color');
+    const colour = colorPanel.getByLabel('Color colour', { exact: true });
     await colour.focus(); await colour.fill('#ff6600');
     await page.waitForFunction(() => window.savedDraft().shapes[0].color === '#ff6600');
     const saved = await page.evaluate(() => window.savedDraft());

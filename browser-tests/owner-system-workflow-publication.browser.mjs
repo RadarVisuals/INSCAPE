@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { chromium } from 'playwright-core';
+import { holdFrames } from './fixtures/deferred-focus.mjs';
 
 const EDGE = 'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe';
 const URL = process.env.INSCAPE_SYSTEM_WORKFLOW_URL || 'http://127.0.0.1:5173/development/owner/system-workflow';
@@ -39,18 +40,18 @@ test('System Workflow publication opens the canonical v9 rack without external m
         transitionDuration: style.transitionDuration,
         hitInsideRack: Boolean(hit?.closest('.owner-lattice-publication-rack') === node),
         left: box.left,
-        windowInset: Number.parseFloat(getComputedStyle(document.querySelector('.system-workflow')).getPropertyValue('--workflow-window-inset')),
+        windowInset: Math.max(12, Number.parseFloat(getComputedStyle(document.querySelector('.system-workflow')).getPropertyValue('--workspace-navigation-inset')) || 0),
       };
     });
     assert.equal(presentation.position, 'fixed');
     assert.match(presentation.transitionDuration, /0\.18s/);
     assert.equal(presentation.pointerEvents, 'auto');
     assert.equal(presentation.hitInsideRack, true, 'publication rack owns pointer hit-testing above the workspace');
-    assert.ok(Math.abs(presentation.left - presentation.windowInset) < 0.5, 'publication rack opens against the left dock inset');
+    assert.ok(Math.abs(presentation.left - presentation.windowInset) < 0.5, 'publication rack uses the sidebar clearance');
     assert.notEqual(presentation.backgroundColor, 'rgba(0, 0, 0, 0)', 'publication rack has an opaque menu surface');
     assert.notEqual(presentation.color, presentation.backgroundColor, 'publication controls retain visible contrast');
     assert.doesNotMatch(await rack.innerText(), /PROFILE\s+PUBLISH/u);
-    assert.match(await rack.innerText(), /WHAT GOES LIVE[\s\S]+Public Grids[\s\S]+WHAT STAYS PRIVATE/u);
+    assert.match(await rack.innerText(), /What goes live[\s\S]+Public Grids[\s\S]+What stays private/u);
     assert.deepEqual([presentation.headingFontSize, presentation.bodyFontSize, presentation.actionFontSize], ['11px', '11px', '11px']);
     assert.equal(await trigger.getAttribute('aria-expanded'), 'true');
 
@@ -72,10 +73,10 @@ test('System Workflow publication opens the canonical v9 rack without external m
     await trigger.click();
     await rack.waitFor();
 
-    await rack.getByRole('button', { name: 'PREPARE PUBLICATION' }).click();
+    await rack.getByRole('button', { name: 'Prepare publication' }).click();
     assert.match(await rack.getByRole('status').innerText(), /ready to be made public/u);
-    assert.equal(await rack.getByRole('button', { name: 'MAKE PRESENTATION PUBLIC' }).isEnabled(), true);
-    assert.equal(await rack.getByRole('button', { name: 'PUBLISH TO PROFILE' }).count(), 0,
+    assert.equal(await rack.getByRole('button', { name: 'Make presentation public' }).isEnabled(), true);
+    assert.equal(await rack.getByRole('button', { name: 'Publish to profile' }).count(), 0,
       'the wallet action is not presented before exact-byte verification');
     assert.equal(uploadRequests, 0, 'opening and preparing publication performs no upload');
 
@@ -85,6 +86,20 @@ test('System Workflow publication opens the canonical v9 rack without external m
     await rack.waitFor({ state: 'detached' });
     await page.waitForFunction(() => document.activeElement?.getAttribute('aria-label') === 'Publish');
     assert.equal(await trigger.evaluate((node) => node === document.activeElement), true);
+    assert.equal(uploadRequests, 0);
+
+    // Closing must preserve a newer focus choice while the return frame waits.
+    await trigger.click();
+    await page.waitForFunction(() => document.querySelector('.owner-lattice-publication-rack')?.dataset.panelPhase === 'open');
+    await rack.getByRole('button', { name: 'Close Publication', exact: true }).focus();
+    await holdFrames(page);
+    await page.keyboard.press('Escape');
+    await page.waitForFunction(() => !document.querySelector('.owner-lattice-publication-rack'), null, { polling: 20 });
+    const canvas = page.locator('main.system-workflow');
+    await canvas.focus();
+    await page.evaluate(() => window.releaseHeldFrames());
+    assert.equal(await canvas.evaluate(node => node === document.activeElement), true,
+      'publication focus recovery respects a newer canvas focus');
     assert.equal(uploadRequests, 0);
   } finally {
     await browser.close();

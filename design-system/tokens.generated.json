@@ -4,26 +4,11 @@
   "systemVersion": "1.0.0",
   "note": "Generated from production and design-system reference CSS. Reference roles are preview-only. Values remain CSS expressions, with selector and media scopes; this is not a DTCG interchange file. Runtime custom properties and local overrides are included and are not automatically public design tokens.",
   "counts": {
-    "files": 71,
-    "definitions": 560,
-    "names": 295
+    "files": 79,
+    "definitions": 570,
+    "names": 290
   },
   "sources": [
-    {
-      "path": "design-system/colourPreview.css",
-      "role": "Reference local",
-      "sha256": "b815e9a8ec4665527f13754f431d79688b0eb417622471436582d6788ed39b2e",
-      "definitions": [],
-      "references": [
-        "--ds-control-radius",
-        "--ds-field-edge",
-        "--ds-text-small",
-        "--font-technical",
-        "--space-3",
-        "--tactile-ink",
-        "--tool-control-height"
-      ]
-    },
     {
       "path": "design-system/controlStates.css",
       "role": "Reference local",
@@ -74,339 +59,29 @@
     {
       "path": "design-system/libraryPreview.css",
       "role": "Reference local",
-      "sha256": "f5a428caa8ba0dd4520346546b3e58ad9bd570e72e5b7cab868b4493b61a4bdc",
-      "definitions": [
-        {
-          "name": "--workflow-panel",
-          "value": "var(--tactile-face)",
-          "scope": [
-            ":is(.ds-library-preview, .ds-library-navigation)"
-          ],
-          "line": 25,
-          "references": [
-            "--tactile-face"
-          ]
-        },
-        {
-          "name": "--workflow-panel-raised",
-          "value": "var(--tactile-well)",
-          "scope": [
-            ":is(.ds-library-preview, .ds-library-navigation)"
-          ],
-          "line": 26,
-          "references": [
-            "--tactile-well"
-          ]
-        },
-        {
-          "name": "--workflow-ink",
-          "value": "var(--tactile-ink)",
-          "scope": [
-            ":is(.ds-library-preview, .ds-library-navigation)"
-          ],
-          "line": 27,
-          "references": [
-            "--tactile-ink"
-          ]
-        },
-        {
-          "name": "--workflow-muted",
-          "value": "var(--tactile-muted)",
-          "scope": [
-            ":is(.ds-library-preview, .ds-library-navigation)"
-          ],
-          "line": 28,
-          "references": [
-            "--tactile-muted"
-          ]
-        },
-        {
-          "name": "--workflow-faint",
-          "value": "var(--tactile-muted)",
-          "scope": [
-            ":is(.ds-library-preview, .ds-library-navigation)"
-          ],
-          "line": 29,
-          "references": [
-            "--tactile-muted"
-          ]
-        },
-        {
-          "name": "--workflow-border",
-          "value": "var(--tactile-edge)",
-          "scope": [
-            ":is(.ds-library-preview, .ds-library-navigation)"
-          ],
-          "line": 30,
-          "references": [
-            "--tactile-edge"
-          ]
-        },
-        {
-          "name": "--workflow-border-strong",
-          "value": "var(--tactile-edge)",
-          "scope": [
-            ":is(.ds-library-preview, .ds-library-navigation)"
-          ],
-          "line": 31,
-          "references": [
-            "--tactile-edge"
-          ]
-        },
-        {
-          "name": "--workflow-hover",
-          "value": "var(--tactile-hover)",
-          "scope": [
-            ":is(.ds-library-preview, .ds-library-navigation)"
-          ],
-          "line": 32,
-          "references": [
-            "--tactile-hover"
-          ]
-        },
-        {
-          "name": "--workflow-selection",
-          "value": "var(--tactile-hover)",
-          "scope": [
-            ":is(.ds-library-preview, .ds-library-navigation)"
-          ],
-          "line": 33,
-          "references": [
-            "--tactile-hover"
-          ]
-        },
-        {
-          "name": "--workflow-row-height",
-          "value": "34px",
-          "scope": [
-            ":is(.ds-library-preview, .ds-library-navigation)"
-          ],
-          "line": 34,
-          "references": []
-        },
-        {
-          "name": "--workflow-rail-height",
-          "value": "auto",
-          "scope": [
-            ":is(.ds-library-preview, .ds-library-navigation)"
-          ],
-          "line": 35,
-          "references": []
-        },
-        {
-          "name": "--workflow-type-sidebar",
-          "value": "var(--ds-text-small)/1.4 var(--font-interface)",
-          "scope": [
-            ":is(.ds-library-preview, .ds-library-navigation)"
-          ],
-          "line": 36,
-          "references": [
-            "--ds-text-small",
-            "--font-interface"
-          ]
-        },
-        {
-          "name": "--workflow-type-browser-rail",
-          "value": "var(--ds-text-small)/1.4 var(--font-interface)",
-          "scope": [
-            ":is(.ds-library-preview, .ds-library-navigation)"
-          ],
-          "line": 37,
-          "references": [
-            "--ds-text-small",
-            "--font-interface"
-          ]
-        },
-        {
-          "name": "--workflow-type-micro",
-          "value": "var(--ds-text-small)/1.4 var(--font-technical)",
-          "scope": [
-            ":is(.ds-library-preview, .ds-library-navigation)"
-          ],
-          "line": 38,
-          "references": [
-            "--ds-text-small",
-            "--font-technical"
-          ]
-        },
-        {
-          "name": "--workflow-active-vertical",
-          "value": "inset 2px 0 var(--tactile-ink)",
-          "scope": [
-            ":is(.ds-library-preview, .ds-library-navigation)"
-          ],
-          "line": 39,
-          "references": [
-            "--tactile-ink"
-          ]
-        },
-        {
-          "name": "--lattice-browser-frame",
-          "value": "var(--tactile-face)",
-          "scope": [
-            ":is(.ds-library-preview, .ds-library-navigation)"
-          ],
-          "line": 40,
-          "references": [
-            "--tactile-face"
-          ]
-        },
-        {
-          "name": "--lattice-browser-ink",
-          "value": "var(--tactile-ink)",
-          "scope": [
-            ":is(.ds-library-preview, .ds-library-navigation)"
-          ],
-          "line": 41,
-          "references": [
-            "--tactile-ink"
-          ]
-        },
-        {
-          "name": "--lattice-browser-muted",
-          "value": "var(--tactile-muted)",
-          "scope": [
-            ":is(.ds-library-preview, .ds-library-navigation)"
-          ],
-          "line": 42,
-          "references": [
-            "--tactile-muted"
-          ]
-        },
-        {
-          "name": "--lattice-browser-faint",
-          "value": "var(--tactile-muted)",
-          "scope": [
-            ":is(.ds-library-preview, .ds-library-navigation)"
-          ],
-          "line": 43,
-          "references": [
-            "--tactile-muted"
-          ]
-        },
-        {
-          "name": "--lattice-browser-line",
-          "value": "var(--tactile-edge)",
-          "scope": [
-            ":is(.ds-library-preview, .ds-library-navigation)"
-          ],
-          "line": 44,
-          "references": [
-            "--tactile-edge"
-          ]
-        },
-        {
-          "name": "--lattice-browser-line-strong",
-          "value": "var(--tactile-edge)",
-          "scope": [
-            ":is(.ds-library-preview, .ds-library-navigation)"
-          ],
-          "line": 45,
-          "references": [
-            "--tactile-edge"
-          ]
-        },
-        {
-          "name": "--lattice-browser-label-ink",
-          "value": "var(--tactile-ink)",
-          "scope": [
-            ":is(.ds-library-preview, .ds-library-navigation)"
-          ],
-          "line": 46,
-          "references": [
-            "--tactile-ink"
-          ]
-        },
-        {
-          "name": "--lattice-browser-results-tone",
-          "value": "var(--tactile-face)",
-          "scope": [
-            ":is(.ds-library-preview, .ds-library-navigation)"
-          ],
-          "line": 47,
-          "references": [
-            "--tactile-face"
-          ]
-        },
-        {
-          "name": "--lattice-browser-faceplate-tone",
-          "value": "var(--tactile-face)",
-          "scope": [
-            ":is(.ds-library-preview, .ds-library-navigation)"
-          ],
-          "line": 48,
-          "references": [
-            "--tactile-face"
-          ]
-        },
-        {
-          "name": "--lattice-browser-card-tone",
-          "value": "transparent",
-          "scope": [
-            ":is(.ds-library-preview, .ds-library-navigation)"
-          ],
-          "line": 49,
-          "references": []
-        },
-        {
-          "name": "--lattice-browser-selected-tone",
-          "value": "var(--tactile-hover)",
-          "scope": [
-            ":is(.ds-library-preview, .ds-library-navigation)"
-          ],
-          "line": 50,
-          "references": [
-            "--tactile-hover"
-          ]
-        },
-        {
-          "name": "--lattice-browser-hover-tone",
-          "value": "var(--tactile-hover)",
-          "scope": [
-            ":is(.ds-library-preview, .ds-library-navigation)"
-          ],
-          "line": 51,
-          "references": [
-            "--tactile-hover"
-          ]
-        },
-        {
-          "name": "--lattice-chrome-padding",
-          "value": "8px",
-          "scope": [
-            ":is(.ds-library-preview, .ds-library-navigation)"
-          ],
-          "line": 52,
-          "references": []
-        }
-      ],
+      "sha256": "0a5ed4701b6aeb04dea288ad518001ec679addc6090cdc31542c031dbbe6c118",
+      "definitions": [],
       "references": [
-        "--ds-control-radius",
         "--ds-shell-radius",
-        "--ds-target-compact",
         "--ds-target-touch",
         "--ds-text-base",
         "--ds-text-small",
         "--font-interface",
         "--font-technical",
-        "--lattice-browser-asset-min",
-        "--space-1",
         "--space-2",
         "--tactile-edge",
         "--tactile-face",
-        "--tactile-hover",
         "--tactile-ink",
-        "--tactile-muted",
-        "--tactile-well"
+        "--tactile-muted"
       ]
     },
     {
       "path": "design-system/navigationPreview.css",
       "role": "Reference local",
-      "sha256": "b7b036fee8f84e110462292fca96b76a5b41c14a2890cd57a892e70b91ad4d8a",
+      "sha256": "648a50156371d0d8ef6cc6af9b5907af8cdc62b82c9878cbde99f588c788a719",
       "definitions": [
         {
-          "name": "--ds-navigation-width",
+          "name": "--workspace-navigation-width",
           "value": "208px",
           "scope": [
             ".ds-studio-shell"
@@ -415,7 +90,7 @@
           "references": []
         },
         {
-          "name": "--ds-navigation-width",
+          "name": "--workspace-navigation-width",
           "value": "52px",
           "scope": [
             ".ds-studio-shell[data-navigation-collapsed]"
@@ -426,33 +101,16 @@
       ],
       "references": [
         "--color-border",
-        "--ds-control-radius",
-        "--ds-icon-size",
-        "--ds-navigation-width",
-        "--ds-shell-radius",
-        "--ds-target-compact",
-        "--ds-target-touch",
-        "--ds-text-base",
-        "--ds-text-micro",
-        "--ds-text-small",
-        "--font-interface",
-        "--font-technical",
         "--lattice-menu-panel",
-        "--space-1",
         "--space-2",
         "--space-3",
-        "--tactile-edge",
-        "--tactile-face",
-        "--tactile-hover",
-        "--tactile-ink",
-        "--tactile-muted",
-        "--tactile-well"
+        "--workspace-navigation-width"
       ]
     },
     {
       "path": "design-system/propertiesPreview.css",
       "role": "Reference local",
-      "sha256": "2dabf071294f6d4ac7fec3ceae3486f25959f7a92499eeaa23c23252c6af930f",
+      "sha256": "917f34740180ae8e6bf0888601f9a5e00870831d6d11d0e82fc2690a8d176c0c",
       "definitions": [
         {
           "name": "--tool-control-height",
@@ -536,7 +194,7 @@
             "@media (max-width: 520px), (pointer: coarse)",
             ".ds-flat-preview .ds-properties-window[data-window-chrome='tactile']"
           ],
-          "line": 397,
+          "line": 405,
           "references": [
             "--ds-target-touch"
           ]
@@ -548,7 +206,7 @@
             "@media (max-width: 520px), (pointer: coarse)",
             ".ds-flat-preview .ds-properties-window[data-window-chrome='tactile']"
           ],
-          "line": 398,
+          "line": 406,
           "references": [
             "--ds-target-touch"
           ]
@@ -560,7 +218,7 @@
             "@media (max-width: 520px), (pointer: coarse)",
             ".ds-flat-preview .ds-properties-window[data-window-chrome='tactile']"
           ],
-          "line": 399,
+          "line": 407,
           "references": []
         },
         {
@@ -570,7 +228,7 @@
             "@media (forced-colors: active)",
             ".ds-properties-window"
           ],
-          "line": 409,
+          "line": 417,
           "references": []
         },
         {
@@ -580,7 +238,7 @@
             "@media (forced-colors: active)",
             ".ds-properties-window"
           ],
-          "line": 410,
+          "line": 418,
           "references": []
         }
       ],
@@ -622,7 +280,7 @@
     {
       "path": "design-system/reference.css",
       "role": "Reference local",
-      "sha256": "d64222576d788a960ba092c9110da42627bcd85a6c30bfee61b636cfdc4cdcf4",
+      "sha256": "62aa7ba4a887d5a489e835b941ee4f7414027f050b8c01531b628a40c7452930",
       "definitions": [
         {
           "name": "--color-focus",
@@ -651,7 +309,7 @@
             "@media (forced-colors: active)",
             ".ds-reference"
           ],
-          "line": 1013,
+          "line": 962,
           "references": []
         }
       ],
@@ -693,7 +351,6 @@
         "--tactile-face",
         "--tactile-ink",
         "--tactile-muted",
-        "--tool-action-target",
         "--workflow-ink",
         "--workflow-type-body",
         "--workflow-type-display",
@@ -842,7 +499,7 @@
     {
       "path": "design-system/textPreview.css",
       "role": "Reference local",
-      "sha256": "6cf83683f05166df8298dd17124fdd4206f346f930b4d566e936f2179a10616f",
+      "sha256": "05793e3e4af73d1879957190e9c8dfe8b5f39b06e57bf2f77f45d39c442dc8bf",
       "definitions": [
         {
           "name": "--workflow-panel",
@@ -850,7 +507,7 @@
           "scope": [
             ".ds-text-editor-sample"
           ],
-          "line": 15,
+          "line": 14,
           "references": []
         },
         {
@@ -859,7 +516,7 @@
           "scope": [
             ".ds-text-editor-sample"
           ],
-          "line": 16,
+          "line": 15,
           "references": []
         },
         {
@@ -868,7 +525,7 @@
           "scope": [
             ".ds-text-editor-sample"
           ],
-          "line": 17,
+          "line": 16,
           "references": []
         },
         {
@@ -877,93 +534,27 @@
           "scope": [
             ".ds-text-editor-sample"
           ],
-          "line": 20,
+          "line": 19,
           "references": []
-        },
-        {
-          "name": "--workflow-ink",
-          "value": "var(--tactile-ink)",
-          "scope": [
-            ".ds-text-tools"
-          ],
-          "line": 40,
-          "references": [
-            "--tactile-ink"
-          ]
-        },
-        {
-          "name": "--workflow-muted",
-          "value": "var(--tactile-muted)",
-          "scope": [
-            ".ds-text-tools"
-          ],
-          "line": 41,
-          "references": [
-            "--tactile-muted"
-          ]
-        },
-        {
-          "name": "--workflow-border",
-          "value": "var(--tactile-edge)",
-          "scope": [
-            ".ds-text-tools"
-          ],
-          "line": 42,
-          "references": [
-            "--tactile-edge"
-          ]
-        },
-        {
-          "name": "--workflow-panel",
-          "value": "var(--tactile-face)",
-          "scope": [
-            ".ds-text-tools"
-          ],
-          "line": 43,
-          "references": [
-            "--tactile-face"
-          ]
-        },
-        {
-          "name": "--workflow-panel-raised",
-          "value": "var(--tactile-hover)",
-          "scope": [
-            ".ds-text-tools"
-          ],
-          "line": 44,
-          "references": [
-            "--tactile-hover"
-          ]
         }
       ],
       "references": [
         "--ds-control-radius",
-        "--ds-target-compact",
-        "--ds-target-touch",
-        "--ds-text-small",
-        "--font-interface",
-        "--font-technical",
         "--lattice-menu-ink",
-        "--lattice-menu-panel",
-        "--space-2",
-        "--tactile-edge",
-        "--tactile-face",
-        "--tactile-hover",
-        "--tactile-ink",
-        "--tactile-muted"
+        "--lattice-menu-panel"
       ]
     },
     {
       "path": "design-system/toolbarPreview.css",
       "role": "Reference local",
-      "sha256": "9aa709312823a7c0ac4504426e4f14880189008388774f5877866e93dc7aeaae",
+      "sha256": "18f4065955b040d99de3004e7fe642b4db856c809c3a89b932006e90efb61718",
       "definitions": [],
       "references": []
     },
     {
       "path": "design-system/workspacePreview.css",
       "role": "Reference local",
-      "sha256": "0c79b9129ad892a789742f619639cd4e105fb96ca7a2d7b549830a6bf672e6f3",
+      "sha256": "2cd70c32d2f42b29cc49c5439cdcf9960a552b0e4ccc01b917381495d8d23f87",
       "definitions": [
         {
           "name": "--tool-control-height",
@@ -971,7 +562,7 @@
           "scope": [
             ".ds-studio .ds-studio-inspector,\n.ds-studio-utilities > section"
           ],
-          "line": 183,
+          "line": 174,
           "references": [
             "--ds-target-compact"
           ]
@@ -982,7 +573,7 @@
           "scope": [
             ".ds-studio .ds-studio-inspector,\n.ds-studio-utilities > section"
           ],
-          "line": 184,
+          "line": 175,
           "references": [
             "--tactile-ink",
             "--tactile-face"
@@ -995,7 +586,7 @@
             "@media (max-width: 520px), (pointer: coarse)",
             ".ds-studio .ds-studio-inspector"
           ],
-          "line": 467,
+          "line": 418,
           "references": [
             "--ds-target-touch"
           ]
@@ -1048,9 +639,24 @@
       ]
     },
     {
+      "path": "src/colour/colourControls.css",
+      "role": "Color",
+      "sha256": "f65060c3f72dfc55006aab6216051024df5919b15e2e27dd305c701f6cd1ba5d",
+      "definitions": [],
+      "references": [
+        "--ds-control-radius",
+        "--ds-field-edge",
+        "--ds-text-small",
+        "--font-technical",
+        "--space-3",
+        "--tactile-ink",
+        "--tool-control-height"
+      ]
+    },
+    {
       "path": "src/imageModule/imageModule.css",
       "role": "Local",
-      "sha256": "d7cc954c6aca79d7faa9849f4c80f89708d937b4082fc8d87a75e8a4fb537112",
+      "sha256": "3d65939382605f86d1c17a61697e4dc586ff5757e943f8ff14a74ff6ffd4d13c",
       "definitions": [
         {
           "name": "--image-turn-duration",
@@ -1068,19 +674,25 @@
             "@media (prefers-reduced-motion: reduce)",
             ".image-module__turn[data-flipping]"
           ],
-          "line": 63,
+          "line": 75,
           "references": []
         }
       ],
       "references": [
+        "--icon-size-interface",
         "--image-controls-bridge",
         "--image-controls-left",
         "--image-controls-top",
         "--image-density",
+        "--image-recovery-left",
+        "--image-recovery-top",
+        "--image-recovery-width",
         "--image-turn-duration",
         "--inspection-lift-progress",
         "--resize-mark-x",
         "--resize-mark-y",
+        "--tactile-ink",
+        "--tool-control-height",
         "--workflow-border",
         "--workflow-ink",
         "--workflow-panel",
@@ -1090,7 +702,7 @@
     {
       "path": "src/index.css",
       "role": "Local",
-      "sha256": "7685e6f142797cae73e7f49d2dab8730570c03827384da7ee8ae593949147312",
+      "sha256": "f9427708a929ae28ed9b6319ec3663f38ece5fe2ef9a3e194e0bdb484a57d017",
       "definitions": [],
       "references": [
         "--bg-color",
@@ -1101,7 +713,7 @@
     {
       "path": "src/inscapeTokens.css",
       "role": "Foundation",
-      "sha256": "12eb836efebd08d388d71c27a47fc99f5d51aa0f5378ed869979b2346ca972d0",
+      "sha256": "b6320b07f5dfb34ae2aab361228de3e79077f199827d074f84e487aee5df9d67",
       "definitions": [
         {
           "name": "--font-creation-toolbar",
@@ -2027,7 +1639,7 @@
             "@media (prefers-reduced-motion: reduce)",
             ":root"
           ],
-          "line": 152,
+          "line": 151,
           "references": []
         },
         {
@@ -2037,7 +1649,7 @@
             "@media (prefers-reduced-motion: reduce)",
             ":root"
           ],
-          "line": 152,
+          "line": 151,
           "references": []
         },
         {
@@ -2047,7 +1659,7 @@
             "@media (prefers-reduced-motion: reduce)",
             ":root"
           ],
-          "line": 152,
+          "line": 151,
           "references": []
         }
       ],
@@ -2068,42 +1680,21 @@
         "--font-body",
         "--font-interface",
         "--font-technical",
-        "--line-height-body",
         "--space-1"
       ]
     },
     {
       "path": "src/keeper/keeper.css",
       "role": "Local",
-      "sha256": "4b596d17669dae61f86543ee9d5053cbcf70294df3f41d316efdaa016a142728",
+      "sha256": "3843695bf5d1c7790ec27a9105e8f223b5a97a5a08ae5d7dafaf62db9b102f56",
       "definitions": [
         {
-          "name": "--detached-window-gutter",
-          "value": "0px",
+          "name": "--keeper-size",
+          "value": "84px",
           "scope": [
-            ".keeper-dock-window[data-window-chrome]"
+            ".keeper-dock-preview .keeper-rig"
           ],
-          "line": 3,
-          "references": []
-        },
-        {
-          "name": "--tool-titlebar-height",
-          "value": "calc(var(--tool-icon-target, 32px) + 4px)",
-          "scope": [
-            ".keeper-dock-window[data-window-chrome]"
-          ],
-          "line": 3,
-          "references": [
-            "--tool-icon-target"
-          ]
-        },
-        {
-          "name": "--detached-window-titlebar-padding",
-          "value": "3px",
-          "scope": [
-            ".keeper-dock-window[data-window-chrome]"
-          ],
-          "line": 3,
+          "line": 86,
           "references": []
         }
       ],
@@ -2113,8 +1704,10 @@
         "--keeper-tail-x",
         "--keeper-tail-y",
         "--keeper-tilt",
-        "--tool-icon-target",
-        "--tool-titlebar-height",
+        "--tactile-edge",
+        "--tactile-hover",
+        "--tactile-ink",
+        "--tactile-muted",
         "--workflow-border",
         "--workflow-ink",
         "--workflow-panel",
@@ -2123,241 +1716,31 @@
       ]
     },
     {
+      "path": "src/keeper/keeperDockContent.css",
+      "role": "Local",
+      "sha256": "dcc3c119099c88f978bd1d36b6c8c9263c3c3f541ae2605e75fd8614e3f2578a",
+      "definitions": [],
+      "references": [
+        "--control-radius",
+        "--tactile-edge",
+        "--tactile-ink",
+        "--tactile-muted",
+        "--workflow-type-control",
+        "--workflow-type-panel-body"
+      ]
+    },
+    {
       "path": "src/lattice/browser/browserWorkspace.css",
       "role": "Local",
-      "sha256": "8101a275823fa5897e90f990138462e083a5b3efb629b3ed663619b736d50326",
+      "sha256": "3679420cef50f4da7cb2fe1619407fad1ba068f3774b862d24e43a27248fa26a",
       "definitions": [
-        {
-          "name": "--lattice-browser-frame",
-          "value": "rgb(from var(--lattice-menu-panel) r g b)",
-          "scope": [
-            ".lattice-browser-workspace"
-          ],
-          "line": 3,
-          "references": [
-            "--lattice-menu-panel"
-          ]
-        },
-        {
-          "name": "--lattice-browser-ink",
-          "value": "var(--lattice-menu-ink)",
-          "scope": [
-            ".lattice-browser-workspace"
-          ],
-          "line": 4,
-          "references": [
-            "--lattice-menu-ink"
-          ]
-        },
-        {
-          "name": "--lattice-browser-muted",
-          "value": "var(--lattice-menu-muted)",
-          "scope": [
-            ".lattice-browser-workspace"
-          ],
-          "line": 5,
-          "references": [
-            "--lattice-menu-muted"
-          ]
-        },
-        {
-          "name": "--lattice-browser-faint",
-          "value": "var(--lattice-menu-faint)",
-          "scope": [
-            ".lattice-browser-workspace"
-          ],
-          "line": 6,
-          "references": [
-            "--lattice-menu-faint"
-          ]
-        },
-        {
-          "name": "--lattice-browser-line",
-          "value": "var(--lattice-menu-line)",
-          "scope": [
-            ".lattice-browser-workspace"
-          ],
-          "line": 7,
-          "references": [
-            "--lattice-menu-line"
-          ]
-        },
-        {
-          "name": "--lattice-browser-line-strong",
-          "value": "var(--lattice-menu-line-strong)",
-          "scope": [
-            ".lattice-browser-workspace"
-          ],
-          "line": 8,
-          "references": [
-            "--lattice-menu-line-strong"
-          ]
-        },
-        {
-          "name": "--lattice-browser-label-ink",
-          "value": "color-mix(in srgb, var(--lattice-browser-ink) 98%, var(--lattice-browser-frame))",
-          "scope": [
-            ".lattice-browser-workspace"
-          ],
-          "line": 9,
-          "references": [
-            "--lattice-browser-ink",
-            "--lattice-browser-frame"
-          ]
-        },
-        {
-          "name": "--lattice-browser-results-tone",
-          "value": "color-mix(in srgb, var(--lattice-browser-frame) 98%, var(--lattice-browser-ink))",
-          "scope": [
-            ".lattice-browser-workspace"
-          ],
-          "line": 10,
-          "references": [
-            "--lattice-browser-frame",
-            "--lattice-browser-ink"
-          ]
-        },
-        {
-          "name": "--lattice-browser-recessed-tone",
-          "value": "color-mix(in srgb, var(--lattice-browser-frame) 97%, var(--lattice-browser-ink))",
-          "scope": [
-            ".lattice-browser-workspace"
-          ],
-          "line": 11,
-          "references": [
-            "--lattice-browser-frame",
-            "--lattice-browser-ink"
-          ]
-        },
-        {
-          "name": "--lattice-browser-hover-tone",
-          "value": "color-mix(in srgb, var(--lattice-browser-frame) 90%, var(--lattice-browser-ink))",
-          "scope": [
-            ".lattice-browser-workspace"
-          ],
-          "line": 12,
-          "references": [
-            "--lattice-browser-frame",
-            "--lattice-browser-ink"
-          ]
-        },
-        {
-          "name": "--lattice-browser-section-tone",
-          "value": "color-mix(in srgb, var(--lattice-browser-frame) 82%, var(--lattice-browser-ink))",
-          "scope": [
-            ".lattice-browser-workspace"
-          ],
-          "line": 13,
-          "references": [
-            "--lattice-browser-frame",
-            "--lattice-browser-ink"
-          ]
-        },
-        {
-          "name": "--lattice-browser-action-tone",
-          "value": "color-mix(in srgb, var(--lattice-browser-frame) 68%, var(--lattice-browser-ink))",
-          "scope": [
-            ".lattice-browser-workspace"
-          ],
-          "line": 14,
-          "references": [
-            "--lattice-browser-frame",
-            "--lattice-browser-ink"
-          ]
-        },
-        {
-          "name": "--lattice-browser-faceplate-tone",
-          "value": "color-mix(in srgb, var(--lattice-browser-frame) 97%, var(--lattice-browser-ink))",
-          "scope": [
-            ".lattice-browser-workspace"
-          ],
-          "line": 15,
-          "references": [
-            "--lattice-browser-frame",
-            "--lattice-browser-ink"
-          ]
-        },
-        {
-          "name": "--lattice-browser-card-tone",
-          "value": "color-mix(in srgb, var(--lattice-browser-frame) 97%, var(--lattice-browser-ink))",
-          "scope": [
-            ".lattice-browser-workspace"
-          ],
-          "line": 16,
-          "references": [
-            "--lattice-browser-frame",
-            "--lattice-browser-ink"
-          ]
-        },
-        {
-          "name": "--lattice-browser-selected-tone",
-          "value": "color-mix(in srgb, var(--lattice-browser-frame) 95%, var(--lattice-browser-ink))",
-          "scope": [
-            ".lattice-browser-workspace"
-          ],
-          "line": 17,
-          "references": [
-            "--lattice-browser-frame",
-            "--lattice-browser-ink"
-          ]
-        },
-        {
-          "name": "--lattice-browser-multi-tone",
-          "value": "color-mix(in srgb, var(--lattice-browser-frame) 69%, var(--lattice-browser-ink))",
-          "scope": [
-            ".lattice-browser-workspace"
-          ],
-          "line": 18,
-          "references": [
-            "--lattice-browser-frame",
-            "--lattice-browser-ink"
-          ]
-        },
-        {
-          "name": "--lattice-rack-signal-browser",
-          "value": "#c316e8",
-          "scope": [
-            ".lattice-browser-workspace"
-          ],
-          "line": 19,
-          "references": []
-        },
-        {
-          "name": "--lattice-rack-signal-tools",
-          "value": "#16a7df",
-          "scope": [
-            ".lattice-browser-workspace"
-          ],
-          "line": 20,
-          "references": []
-        },
-        {
-          "name": "--lattice-rack-signal-layers",
-          "value": "#e5ad12",
-          "scope": [
-            ".lattice-browser-workspace"
-          ],
-          "line": 21,
-          "references": []
-        },
-        {
-          "name": "--lattice-chrome-scrollbar",
-          "value": "var(--lattice-browser-muted)",
-          "scope": [
-            ".lattice-browser-workspace"
-          ],
-          "line": 22,
-          "references": [
-            "--lattice-browser-muted"
-          ]
-        },
         {
           "name": "--lattice-browser-asset-min",
           "value": "150px",
           "scope": [
             ".lattice-browser-assets"
           ],
-          "line": 129,
+          "line": 46,
           "references": []
         },
         {
@@ -2366,7 +1749,7 @@
           "scope": [
             ".lattice-browser-assets"
           ],
-          "line": 129,
+          "line": 46,
           "references": []
         }
       ],
@@ -2388,129 +1771,22 @@
         "--lattice-browser-results-tone",
         "--lattice-browser-selected-tone",
         "--lattice-browser-sidebar-width",
-        "--lattice-chrome-focus-outline",
-        "--lattice-chrome-motion-duration",
-        "--lattice-chrome-motion-easing",
         "--lattice-chrome-padding",
-        "--lattice-chrome-shadow",
-        "--lattice-chrome-z-index",
-        "--lattice-menu-faint",
-        "--lattice-menu-ink",
-        "--lattice-menu-line",
-        "--lattice-menu-line-strong",
-        "--lattice-menu-muted",
-        "--lattice-menu-panel",
         "--lattice-window-type-label",
         "--lattice-window-type-module",
         "--lattice-window-type-value"
       ]
     },
     {
-      "path": "src/lattice/rendering/disclosureModule.css",
-      "role": "Local",
-      "sha256": "bf904a9ef5ec0d5c716dd233ac03a96e9706325b69213a08f7254500752bf968",
-      "definitions": [],
-      "references": [
-        "--lattice-menu-line-strong",
-        "--lattice-menu-panel"
-      ]
-    },
-    {
-      "path": "src/lattice/rendering/latticeFocusViewer.css",
-      "role": "Local",
-      "sha256": "b8f375f90c6bdb017f3f6ef71ddc52c42a2bd99d27b4efe6cef92143b0fbf1e8",
-      "definitions": [
-        {
-          "name": "--lattice-overlay-ink",
-          "value": "var(--lattice-menu-ink)",
-          "scope": [
-            ".lattice-focus-viewer"
-          ],
-          "line": 2,
-          "references": [
-            "--lattice-menu-ink"
-          ]
-        },
-        {
-          "name": "--lattice-overlay-muted",
-          "value": "color-mix(in srgb, var(--lattice-overlay-ink) 58%, transparent)",
-          "scope": [
-            ".lattice-focus-viewer"
-          ],
-          "line": 3,
-          "references": [
-            "--lattice-overlay-ink"
-          ]
-        },
-        {
-          "name": "--lattice-overlay-faint",
-          "value": "color-mix(in srgb, var(--lattice-overlay-ink) 24%, transparent)",
-          "scope": [
-            ".lattice-focus-viewer"
-          ],
-          "line": 4,
-          "references": [
-            "--lattice-overlay-ink"
-          ]
-        },
-        {
-          "name": "--lattice-overlay-grid",
-          "value": "color-mix(in srgb, var(--lattice-overlay-ink) 11%, transparent)",
-          "scope": [
-            ".lattice-focus-viewer"
-          ],
-          "line": 5,
-          "references": [
-            "--lattice-overlay-ink"
-          ]
-        },
-        {
-          "name": "--lattice-dossier-border",
-          "value": "color-mix(in srgb, var(--lattice-menu-ink) 28%, transparent)",
-          "scope": [
-            ".lattice-focus-viewer"
-          ],
-          "line": 6,
-          "references": [
-            "--lattice-menu-ink"
-          ]
-        }
-      ],
-      "references": [
-        "--lattice-dossier-border",
-        "--lattice-grid-cell-size",
-        "--lattice-grid-origin-x",
-        "--lattice-grid-origin-y",
-        "--lattice-inspection-frame-left",
-        "--lattice-inspection-frame-top",
-        "--lattice-inspection-surface",
-        "--lattice-menu-faint",
-        "--lattice-menu-ink",
-        "--lattice-menu-line",
-        "--lattice-menu-line-strong",
-        "--lattice-menu-panel",
-        "--lattice-menu-selected",
-        "--lattice-overlay-faint",
-        "--lattice-overlay-grid",
-        "--lattice-overlay-ink",
-        "--lattice-overlay-muted",
-        "--lattice-viewer-browse-duration",
-        "--lattice-viewer-content-height",
-        "--lattice-viewer-landing-duration",
-        "--lattice-window-type-body",
-        "--lattice-window-type-label"
-      ]
-    },
-    {
       "path": "src/lattice/rendering/latticeMenuSurface.css",
       "role": "Theme",
-      "sha256": "a184ea146cbdc5d8fb2421d156de4d64eb781cda2ddd9cd53b182763ce74f559",
+      "sha256": "9727761d89025066ac498c8b95f42d0233e6e00cb7d2a1ff1037502bdbb5af2d",
       "definitions": [
         {
           "name": "--lattice-menu-panel",
           "value": "rgb(16 17 17 / 0.98)",
           "scope": [
-            ":is(.lattice-engine-shell, .lattice-focus-viewer, .lattice-production-identity-viewer, .owner-lattice-shell, .visitor-lattice-world, [data-lattice-menu-surface])"
+            "[data-lattice-menu-surface]"
           ],
           "line": 2,
           "references": []
@@ -2519,7 +1795,7 @@
           "name": "--lattice-menu-ink",
           "value": "#d8d7d2",
           "scope": [
-            ":is(.lattice-engine-shell, .lattice-focus-viewer, .lattice-production-identity-viewer, .owner-lattice-shell, .visitor-lattice-world, [data-lattice-menu-surface])"
+            "[data-lattice-menu-surface]"
           ],
           "line": 3,
           "references": []
@@ -2528,7 +1804,7 @@
           "name": "--lattice-menu-muted",
           "value": "rgb(216 215 210 / 0.55)",
           "scope": [
-            ":is(.lattice-engine-shell, .lattice-focus-viewer, .lattice-production-identity-viewer, .owner-lattice-shell, .visitor-lattice-world, [data-lattice-menu-surface])"
+            "[data-lattice-menu-surface]"
           ],
           "line": 4,
           "references": []
@@ -2537,7 +1813,7 @@
           "name": "--lattice-menu-faint",
           "value": "rgb(216 215 210 / 0.32)",
           "scope": [
-            ":is(.lattice-engine-shell, .lattice-focus-viewer, .lattice-production-identity-viewer, .owner-lattice-shell, .visitor-lattice-world, [data-lattice-menu-surface])"
+            "[data-lattice-menu-surface]"
           ],
           "line": 5,
           "references": []
@@ -2546,7 +1822,7 @@
           "name": "--lattice-menu-line",
           "value": "rgb(216 215 210 / 0.12)",
           "scope": [
-            ":is(.lattice-engine-shell, .lattice-focus-viewer, .lattice-production-identity-viewer, .owner-lattice-shell, .visitor-lattice-world, [data-lattice-menu-surface])"
+            "[data-lattice-menu-surface]"
           ],
           "line": 6,
           "references": []
@@ -2555,7 +1831,7 @@
           "name": "--lattice-menu-line-strong",
           "value": "rgb(216 215 210 / 0.21)",
           "scope": [
-            ":is(.lattice-engine-shell, .lattice-focus-viewer, .lattice-production-identity-viewer, .owner-lattice-shell, .visitor-lattice-world, [data-lattice-menu-surface])"
+            "[data-lattice-menu-surface]"
           ],
           "line": 7,
           "references": []
@@ -2564,7 +1840,7 @@
           "name": "--lattice-menu-selected",
           "value": "rgb(216 215 210 / 0.055)",
           "scope": [
-            ":is(.lattice-engine-shell, .lattice-focus-viewer, .lattice-production-identity-viewer, .owner-lattice-shell, .visitor-lattice-world, [data-lattice-menu-surface])"
+            "[data-lattice-menu-surface]"
           ],
           "line": 8,
           "references": []
@@ -2573,7 +1849,7 @@
           "name": "--lattice-window-type-module",
           "value": "500 11px/1.2 var(--font-interface)",
           "scope": [
-            ":is(.lattice-engine-shell, .lattice-focus-viewer, .lattice-production-identity-viewer, .owner-lattice-shell, .visitor-lattice-world, [data-lattice-menu-surface])"
+            "[data-lattice-menu-surface]"
           ],
           "line": 9,
           "references": [
@@ -2584,7 +1860,7 @@
           "name": "--lattice-window-type-label",
           "value": "500 10px/1.25 var(--font-technical)",
           "scope": [
-            ":is(.lattice-engine-shell, .lattice-focus-viewer, .lattice-production-identity-viewer, .owner-lattice-shell, .visitor-lattice-world, [data-lattice-menu-surface])"
+            "[data-lattice-menu-surface]"
           ],
           "line": 10,
           "references": [
@@ -2595,7 +1871,7 @@
           "name": "--lattice-window-type-section",
           "value": "600 18px/1.18 var(--font-interface)",
           "scope": [
-            ":is(.lattice-engine-shell, .lattice-focus-viewer, .lattice-production-identity-viewer, .owner-lattice-shell, .visitor-lattice-world, [data-lattice-menu-surface])"
+            "[data-lattice-menu-surface]"
           ],
           "line": 11,
           "references": [
@@ -2606,7 +1882,7 @@
           "name": "--lattice-window-type-title",
           "value": "600 24px/1.15 var(--font-interface)",
           "scope": [
-            ":is(.lattice-engine-shell, .lattice-focus-viewer, .lattice-production-identity-viewer, .owner-lattice-shell, .visitor-lattice-world, [data-lattice-menu-surface])"
+            "[data-lattice-menu-surface]"
           ],
           "line": 12,
           "references": [
@@ -2617,7 +1893,7 @@
           "name": "--lattice-window-type-body",
           "value": "400 14px/1.78 var(--font-body)",
           "scope": [
-            ":is(.lattice-engine-shell, .lattice-focus-viewer, .lattice-production-identity-viewer, .owner-lattice-shell, .visitor-lattice-world, [data-lattice-menu-surface])"
+            "[data-lattice-menu-surface]"
           ],
           "line": 13,
           "references": [
@@ -2628,7 +1904,7 @@
           "name": "--lattice-window-type-value",
           "value": "400 12px/1.5 var(--font-technical)",
           "scope": [
-            ":is(.lattice-engine-shell, .lattice-focus-viewer, .lattice-production-identity-viewer, .owner-lattice-shell, .visitor-lattice-world, [data-lattice-menu-surface])"
+            "[data-lattice-menu-surface]"
           ],
           "line": 14,
           "references": [
@@ -2639,7 +1915,7 @@
           "name": "--lattice-menu-panel",
           "value": "rgb(48 50 50 / 0.98)",
           "scope": [
-            ":is(.lattice-engine-shell, .lattice-focus-viewer, .lattice-production-identity-viewer, .owner-lattice-shell, .visitor-lattice-world, [data-lattice-menu-surface])[data-menu-surface=\"graphite\"]"
+            "[data-lattice-menu-surface][data-menu-surface=\"graphite\"]"
           ],
           "line": 17,
           "references": []
@@ -2648,7 +1924,7 @@
           "name": "--lattice-menu-ink",
           "value": "#e8e7e2",
           "scope": [
-            ":is(.lattice-engine-shell, .lattice-focus-viewer, .lattice-production-identity-viewer, .owner-lattice-shell, .visitor-lattice-world, [data-lattice-menu-surface])[data-menu-surface=\"graphite\"]"
+            "[data-lattice-menu-surface][data-menu-surface=\"graphite\"]"
           ],
           "line": 17,
           "references": []
@@ -2657,7 +1933,7 @@
           "name": "--lattice-menu-muted",
           "value": "rgb(232 231 226 / 0.64)",
           "scope": [
-            ":is(.lattice-engine-shell, .lattice-focus-viewer, .lattice-production-identity-viewer, .owner-lattice-shell, .visitor-lattice-world, [data-lattice-menu-surface])[data-menu-surface=\"graphite\"]"
+            "[data-lattice-menu-surface][data-menu-surface=\"graphite\"]"
           ],
           "line": 17,
           "references": []
@@ -2666,7 +1942,7 @@
           "name": "--lattice-menu-faint",
           "value": "rgb(232 231 226 / 0.4)",
           "scope": [
-            ":is(.lattice-engine-shell, .lattice-focus-viewer, .lattice-production-identity-viewer, .owner-lattice-shell, .visitor-lattice-world, [data-lattice-menu-surface])[data-menu-surface=\"graphite\"]"
+            "[data-lattice-menu-surface][data-menu-surface=\"graphite\"]"
           ],
           "line": 17,
           "references": []
@@ -2675,7 +1951,7 @@
           "name": "--lattice-menu-line",
           "value": "rgb(232 231 226 / 0.16)",
           "scope": [
-            ":is(.lattice-engine-shell, .lattice-focus-viewer, .lattice-production-identity-viewer, .owner-lattice-shell, .visitor-lattice-world, [data-lattice-menu-surface])[data-menu-surface=\"graphite\"]"
+            "[data-lattice-menu-surface][data-menu-surface=\"graphite\"]"
           ],
           "line": 17,
           "references": []
@@ -2684,7 +1960,7 @@
           "name": "--lattice-menu-line-strong",
           "value": "rgb(232 231 226 / 0.27)",
           "scope": [
-            ":is(.lattice-engine-shell, .lattice-focus-viewer, .lattice-production-identity-viewer, .owner-lattice-shell, .visitor-lattice-world, [data-lattice-menu-surface])[data-menu-surface=\"graphite\"]"
+            "[data-lattice-menu-surface][data-menu-surface=\"graphite\"]"
           ],
           "line": 17,
           "references": []
@@ -2693,7 +1969,7 @@
           "name": "--lattice-menu-selected",
           "value": "rgb(232 231 226 / 0.075)",
           "scope": [
-            ":is(.lattice-engine-shell, .lattice-focus-viewer, .lattice-production-identity-viewer, .owner-lattice-shell, .visitor-lattice-world, [data-lattice-menu-surface])[data-menu-surface=\"graphite\"]"
+            "[data-lattice-menu-surface][data-menu-surface=\"graphite\"]"
           ],
           "line": 17,
           "references": []
@@ -2702,7 +1978,7 @@
           "name": "--lattice-menu-panel",
           "value": "rgb(103 104 104 / 0.98)",
           "scope": [
-            ":is(.lattice-engine-shell, .lattice-focus-viewer, .lattice-production-identity-viewer, .owner-lattice-shell, .visitor-lattice-world, [data-lattice-menu-surface])[data-menu-surface=\"slate\"]"
+            "[data-lattice-menu-surface][data-menu-surface=\"slate\"]"
           ],
           "line": 18,
           "references": []
@@ -2711,7 +1987,7 @@
           "name": "--lattice-menu-ink",
           "value": "#f3f2ed",
           "scope": [
-            ":is(.lattice-engine-shell, .lattice-focus-viewer, .lattice-production-identity-viewer, .owner-lattice-shell, .visitor-lattice-world, [data-lattice-menu-surface])[data-menu-surface=\"slate\"]"
+            "[data-lattice-menu-surface][data-menu-surface=\"slate\"]"
           ],
           "line": 18,
           "references": []
@@ -2720,7 +1996,7 @@
           "name": "--lattice-menu-muted",
           "value": "rgb(243 242 237 / 0.68)",
           "scope": [
-            ":is(.lattice-engine-shell, .lattice-focus-viewer, .lattice-production-identity-viewer, .owner-lattice-shell, .visitor-lattice-world, [data-lattice-menu-surface])[data-menu-surface=\"slate\"]"
+            "[data-lattice-menu-surface][data-menu-surface=\"slate\"]"
           ],
           "line": 18,
           "references": []
@@ -2729,7 +2005,7 @@
           "name": "--lattice-menu-faint",
           "value": "rgb(243 242 237 / 0.46)",
           "scope": [
-            ":is(.lattice-engine-shell, .lattice-focus-viewer, .lattice-production-identity-viewer, .owner-lattice-shell, .visitor-lattice-world, [data-lattice-menu-surface])[data-menu-surface=\"slate\"]"
+            "[data-lattice-menu-surface][data-menu-surface=\"slate\"]"
           ],
           "line": 18,
           "references": []
@@ -2738,7 +2014,7 @@
           "name": "--lattice-menu-line",
           "value": "rgb(243 242 237 / 0.18)",
           "scope": [
-            ":is(.lattice-engine-shell, .lattice-focus-viewer, .lattice-production-identity-viewer, .owner-lattice-shell, .visitor-lattice-world, [data-lattice-menu-surface])[data-menu-surface=\"slate\"]"
+            "[data-lattice-menu-surface][data-menu-surface=\"slate\"]"
           ],
           "line": 18,
           "references": []
@@ -2747,7 +2023,7 @@
           "name": "--lattice-menu-line-strong",
           "value": "rgb(243 242 237 / 0.32)",
           "scope": [
-            ":is(.lattice-engine-shell, .lattice-focus-viewer, .lattice-production-identity-viewer, .owner-lattice-shell, .visitor-lattice-world, [data-lattice-menu-surface])[data-menu-surface=\"slate\"]"
+            "[data-lattice-menu-surface][data-menu-surface=\"slate\"]"
           ],
           "line": 18,
           "references": []
@@ -2756,7 +2032,7 @@
           "name": "--lattice-menu-selected",
           "value": "rgb(243 242 237 / 0.1)",
           "scope": [
-            ":is(.lattice-engine-shell, .lattice-focus-viewer, .lattice-production-identity-viewer, .owner-lattice-shell, .visitor-lattice-world, [data-lattice-menu-surface])[data-menu-surface=\"slate\"]"
+            "[data-lattice-menu-surface][data-menu-surface=\"slate\"]"
           ],
           "line": 18,
           "references": []
@@ -2765,7 +2041,7 @@
           "name": "--lattice-menu-panel",
           "value": "rgb(221 220 214 / 0.98)",
           "scope": [
-            ":is(.lattice-engine-shell, .lattice-focus-viewer, .lattice-production-identity-viewer, .owner-lattice-shell, .visitor-lattice-world, [data-lattice-menu-surface])[data-menu-surface=\"ash\"]"
+            "[data-lattice-menu-surface][data-menu-surface=\"ash\"]"
           ],
           "line": 19,
           "references": []
@@ -2774,7 +2050,7 @@
           "name": "--lattice-menu-ink",
           "value": "#111313",
           "scope": [
-            ":is(.lattice-engine-shell, .lattice-focus-viewer, .lattice-production-identity-viewer, .owner-lattice-shell, .visitor-lattice-world, [data-lattice-menu-surface])[data-menu-surface=\"ash\"]"
+            "[data-lattice-menu-surface][data-menu-surface=\"ash\"]"
           ],
           "line": 19,
           "references": []
@@ -2783,7 +2059,7 @@
           "name": "--lattice-menu-muted",
           "value": "rgb(17 19 19 / 0.58)",
           "scope": [
-            ":is(.lattice-engine-shell, .lattice-focus-viewer, .lattice-production-identity-viewer, .owner-lattice-shell, .visitor-lattice-world, [data-lattice-menu-surface])[data-menu-surface=\"ash\"]"
+            "[data-lattice-menu-surface][data-menu-surface=\"ash\"]"
           ],
           "line": 19,
           "references": []
@@ -2792,7 +2068,7 @@
           "name": "--lattice-menu-faint",
           "value": "rgb(17 19 19 / 0.36)",
           "scope": [
-            ":is(.lattice-engine-shell, .lattice-focus-viewer, .lattice-production-identity-viewer, .owner-lattice-shell, .visitor-lattice-world, [data-lattice-menu-surface])[data-menu-surface=\"ash\"]"
+            "[data-lattice-menu-surface][data-menu-surface=\"ash\"]"
           ],
           "line": 19,
           "references": []
@@ -2801,7 +2077,7 @@
           "name": "--lattice-menu-line",
           "value": "rgb(17 19 19 / 0.18)",
           "scope": [
-            ":is(.lattice-engine-shell, .lattice-focus-viewer, .lattice-production-identity-viewer, .owner-lattice-shell, .visitor-lattice-world, [data-lattice-menu-surface])[data-menu-surface=\"ash\"]"
+            "[data-lattice-menu-surface][data-menu-surface=\"ash\"]"
           ],
           "line": 19,
           "references": []
@@ -2810,7 +2086,7 @@
           "name": "--lattice-menu-line-strong",
           "value": "rgb(17 19 19 / 0.3)",
           "scope": [
-            ":is(.lattice-engine-shell, .lattice-focus-viewer, .lattice-production-identity-viewer, .owner-lattice-shell, .visitor-lattice-world, [data-lattice-menu-surface])[data-menu-surface=\"ash\"]"
+            "[data-lattice-menu-surface][data-menu-surface=\"ash\"]"
           ],
           "line": 19,
           "references": []
@@ -2819,7 +2095,7 @@
           "name": "--lattice-menu-selected",
           "value": "rgb(17 19 19 / 0.065)",
           "scope": [
-            ":is(.lattice-engine-shell, .lattice-focus-viewer, .lattice-production-identity-viewer, .owner-lattice-shell, .visitor-lattice-world, [data-lattice-menu-surface])[data-menu-surface=\"ash\"]"
+            "[data-lattice-menu-surface][data-menu-surface=\"ash\"]"
           ],
           "line": 19,
           "references": []
@@ -2828,7 +2104,7 @@
           "name": "--lattice-menu-panel",
           "value": "rgb(215 211 202 / 0.98)",
           "scope": [
-            ":is(.lattice-engine-shell, .lattice-focus-viewer, .lattice-production-identity-viewer, .owner-lattice-shell, .visitor-lattice-world, [data-lattice-menu-surface])[data-menu-surface=\"mist\"]"
+            "[data-lattice-menu-surface][data-menu-surface=\"mist\"]"
           ],
           "line": 20,
           "references": []
@@ -2837,7 +2113,7 @@
           "name": "--lattice-menu-ink",
           "value": "#111313",
           "scope": [
-            ":is(.lattice-engine-shell, .lattice-focus-viewer, .lattice-production-identity-viewer, .owner-lattice-shell, .visitor-lattice-world, [data-lattice-menu-surface])[data-menu-surface=\"mist\"]"
+            "[data-lattice-menu-surface][data-menu-surface=\"mist\"]"
           ],
           "line": 20,
           "references": []
@@ -2846,7 +2122,7 @@
           "name": "--lattice-menu-muted",
           "value": "rgb(17 19 19 / 0.58)",
           "scope": [
-            ":is(.lattice-engine-shell, .lattice-focus-viewer, .lattice-production-identity-viewer, .owner-lattice-shell, .visitor-lattice-world, [data-lattice-menu-surface])[data-menu-surface=\"mist\"]"
+            "[data-lattice-menu-surface][data-menu-surface=\"mist\"]"
           ],
           "line": 20,
           "references": []
@@ -2855,7 +2131,7 @@
           "name": "--lattice-menu-faint",
           "value": "rgb(17 19 19 / 0.36)",
           "scope": [
-            ":is(.lattice-engine-shell, .lattice-focus-viewer, .lattice-production-identity-viewer, .owner-lattice-shell, .visitor-lattice-world, [data-lattice-menu-surface])[data-menu-surface=\"mist\"]"
+            "[data-lattice-menu-surface][data-menu-surface=\"mist\"]"
           ],
           "line": 20,
           "references": []
@@ -2864,7 +2140,7 @@
           "name": "--lattice-menu-line",
           "value": "rgb(17 19 19 / 0.18)",
           "scope": [
-            ":is(.lattice-engine-shell, .lattice-focus-viewer, .lattice-production-identity-viewer, .owner-lattice-shell, .visitor-lattice-world, [data-lattice-menu-surface])[data-menu-surface=\"mist\"]"
+            "[data-lattice-menu-surface][data-menu-surface=\"mist\"]"
           ],
           "line": 20,
           "references": []
@@ -2873,7 +2149,7 @@
           "name": "--lattice-menu-line-strong",
           "value": "rgb(17 19 19 / 0.3)",
           "scope": [
-            ":is(.lattice-engine-shell, .lattice-focus-viewer, .lattice-production-identity-viewer, .owner-lattice-shell, .visitor-lattice-world, [data-lattice-menu-surface])[data-menu-surface=\"mist\"]"
+            "[data-lattice-menu-surface][data-menu-surface=\"mist\"]"
           ],
           "line": 20,
           "references": []
@@ -2882,7 +2158,7 @@
           "name": "--lattice-menu-selected",
           "value": "rgb(17 19 19 / 0.065)",
           "scope": [
-            ":is(.lattice-engine-shell, .lattice-focus-viewer, .lattice-production-identity-viewer, .owner-lattice-shell, .visitor-lattice-world, [data-lattice-menu-surface])[data-menu-surface=\"mist\"]"
+            "[data-lattice-menu-surface][data-menu-surface=\"mist\"]"
           ],
           "line": 20,
           "references": []
@@ -2891,7 +2167,7 @@
           "name": "--lattice-menu-panel",
           "value": "rgb(239 237 230 / 0.98)",
           "scope": [
-            ":is(.lattice-engine-shell, .lattice-focus-viewer, .lattice-production-identity-viewer, .owner-lattice-shell, .visitor-lattice-world, [data-lattice-menu-surface])[data-menu-surface=\"paper\"]"
+            "[data-lattice-menu-surface][data-menu-surface=\"paper\"]"
           ],
           "line": 21,
           "references": []
@@ -2900,7 +2176,7 @@
           "name": "--lattice-menu-ink",
           "value": "#111313",
           "scope": [
-            ":is(.lattice-engine-shell, .lattice-focus-viewer, .lattice-production-identity-viewer, .owner-lattice-shell, .visitor-lattice-world, [data-lattice-menu-surface])[data-menu-surface=\"paper\"]"
+            "[data-lattice-menu-surface][data-menu-surface=\"paper\"]"
           ],
           "line": 21,
           "references": []
@@ -2909,7 +2185,7 @@
           "name": "--lattice-menu-muted",
           "value": "rgb(17 19 19 / 0.58)",
           "scope": [
-            ":is(.lattice-engine-shell, .lattice-focus-viewer, .lattice-production-identity-viewer, .owner-lattice-shell, .visitor-lattice-world, [data-lattice-menu-surface])[data-menu-surface=\"paper\"]"
+            "[data-lattice-menu-surface][data-menu-surface=\"paper\"]"
           ],
           "line": 21,
           "references": []
@@ -2918,7 +2194,7 @@
           "name": "--lattice-menu-faint",
           "value": "rgb(17 19 19 / 0.36)",
           "scope": [
-            ":is(.lattice-engine-shell, .lattice-focus-viewer, .lattice-production-identity-viewer, .owner-lattice-shell, .visitor-lattice-world, [data-lattice-menu-surface])[data-menu-surface=\"paper\"]"
+            "[data-lattice-menu-surface][data-menu-surface=\"paper\"]"
           ],
           "line": 21,
           "references": []
@@ -2927,7 +2203,7 @@
           "name": "--lattice-menu-line",
           "value": "rgb(17 19 19 / 0.18)",
           "scope": [
-            ":is(.lattice-engine-shell, .lattice-focus-viewer, .lattice-production-identity-viewer, .owner-lattice-shell, .visitor-lattice-world, [data-lattice-menu-surface])[data-menu-surface=\"paper\"]"
+            "[data-lattice-menu-surface][data-menu-surface=\"paper\"]"
           ],
           "line": 21,
           "references": []
@@ -2936,7 +2212,7 @@
           "name": "--lattice-menu-line-strong",
           "value": "rgb(17 19 19 / 0.3)",
           "scope": [
-            ":is(.lattice-engine-shell, .lattice-focus-viewer, .lattice-production-identity-viewer, .owner-lattice-shell, .visitor-lattice-world, [data-lattice-menu-surface])[data-menu-surface=\"paper\"]"
+            "[data-lattice-menu-surface][data-menu-surface=\"paper\"]"
           ],
           "line": 21,
           "references": []
@@ -2945,7 +2221,7 @@
           "name": "--lattice-menu-selected",
           "value": "rgb(17 19 19 / 0.065)",
           "scope": [
-            ":is(.lattice-engine-shell, .lattice-focus-viewer, .lattice-production-identity-viewer, .owner-lattice-shell, .visitor-lattice-world, [data-lattice-menu-surface])[data-menu-surface=\"paper\"]"
+            "[data-lattice-menu-surface][data-menu-surface=\"paper\"]"
           ],
           "line": 21,
           "references": []
@@ -2955,16 +2231,6 @@
         "--font-body",
         "--font-interface",
         "--font-technical"
-      ]
-    },
-    {
-      "path": "src/lattice/rendering/latticePlacementRenderer.css",
-      "role": "Local",
-      "sha256": "90f1038b5c55e9cf7b60ab4002b05b6c9cd27ea13a0bb960681332219abbeecf",
-      "definitions": [],
-      "references": [
-        "--lattice-menu-muted",
-        "--lattice-overlay-ink"
       ]
     },
     {
@@ -2979,7 +2245,7 @@
     {
       "path": "src/lattice/rendering/latticeProductionTableRenderer.css",
       "role": "Local",
-      "sha256": "d166d458eaf0b3ba136810499e824c2f22ad52d9564c06dd2e41eee409656f6d",
+      "sha256": "4ea131095fb828a2ca1fdc22d7d504cf0f68411170c555d35f26572ca0fa3613",
       "definitions": [
         {
           "name": "--lattice-production-surface",
@@ -3201,7 +2467,6 @@
       "references": [
         "--lattice-production-label-ink",
         "--lattice-production-label-muted",
-        "--lattice-production-label-surface",
         "--lattice-production-surface"
       ]
     },
@@ -3258,7 +2523,7 @@
     {
       "path": "src/miniApps/miniApps.css",
       "role": "Local",
-      "sha256": "9af497e5c035274b999c0ff26cd365b10bde08871913e032b370bb854b7c058c",
+      "sha256": "fa5d1ff623a15574d5913f8c9c0192de030981211d88cd29b5dd981dbbbc636b",
       "definitions": [
         {
           "name": "--detached-window-gutter",
@@ -3273,6 +2538,7 @@
       "references": [
         "--mini-app-shortcut-bottom",
         "--mini-app-z",
+        "--workbench-content-scale",
         "--workflow-board-radius",
         "--workflow-border",
         "--workflow-hover",
@@ -3284,162 +2550,24 @@
       ]
     },
     {
-      "path": "src/profileDocument/components/bentoStage.css",
-      "role": "Local",
-      "sha256": "1784e077ad0f6544f4708f97460d7e93b0a1c824e98f6f526219ee47baa603a2",
-      "definitions": [],
-      "references": [
-        "--color-focus",
-        "--color-line-hairline",
-        "--color-surface-elevated",
-        "--inspection-lift-progress",
-        "--profile-overview-card-radius"
-      ]
-    },
-    {
       "path": "src/profileDocument/components/profileOverview.css",
       "role": "Local",
-      "sha256": "a6266ec52f01220d54c4082e9dfdf12bd8fe30e8c67827718984399f742506ff",
-      "definitions": [
-        {
-          "name": "--profile-overview-card-gap",
-          "value": "4px",
-          "scope": [
-            ".profile-overview"
-          ],
-          "line": 2,
-          "references": []
-        },
-        {
-          "name": "--profile-overview-card-radius",
-          "value": "0",
-          "scope": [
-            ".profile-overview"
-          ],
-          "line": 2,
-          "references": []
-        },
-        {
-          "name": "--reception-width",
-          "value": "min(1056px, calc((100dvh - 140px) * 1.65), calc(100vw - 48px))",
-          "scope": [
-            ".profile-overview"
-          ],
-          "line": 3,
-          "references": []
-        },
-        {
-          "name": "--reception-height",
-          "value": "calc(var(--reception-width) / 1.65)",
-          "scope": [
-            ".profile-overview"
-          ],
-          "line": 4,
-          "references": [
-            "--reception-width"
-          ]
-        },
-        {
-          "name": "--reception-hero-height",
-          "value": "calc(var(--reception-height) * .66)",
-          "scope": [
-            ".profile-overview"
-          ],
-          "line": 4,
-          "references": [
-            "--reception-height"
-          ]
-        },
-        {
-          "name": "--reception-width",
-          "value": "calc(100vw - 24px)",
-          "scope": [
-            "@media (max-width: 640px)",
-            ".profile-overview"
-          ],
-          "line": 107,
-          "references": []
-        },
-        {
-          "name": "--reception-height",
-          "value": "max(540px, calc(100dvh - 112px))",
-          "scope": [
-            "@media (max-width: 640px)",
-            ".profile-overview"
-          ],
-          "line": 107,
-          "references": []
-        },
-        {
-          "name": "--reception-hero-height",
-          "value": "calc(var(--reception-height) - 170px)",
-          "scope": [
-            "@media (max-width: 640px)",
-            ".profile-overview"
-          ],
-          "line": 107,
-          "references": [
-            "--reception-height"
-          ]
-        }
-      ],
+      "sha256": "4749ce8763da6967363c5f43cde2f969cc6c38f8f4027e920d60088f314fb471",
+      "definitions": [],
       "references": [
         "--color-border",
         "--color-focus",
-        "--color-line-hairline",
-        "--color-surface",
         "--color-surface-elevated",
         "--color-text-primary",
-        "--color-text-secondary",
-        "--display-ratio",
+        "--control-radius",
+        "--control-shell-radius",
         "--font-interface",
-        "--media-ratio",
-        "--module-corners",
-        "--module-shadow",
-        "--profile-overview-card-gap",
-        "--reception-fields-height",
-        "--reception-height",
-        "--reception-hero-height",
-        "--reception-surround",
-        "--reception-width",
         "--tactile-edge",
         "--tactile-face",
-        "--tactile-shadow-raised",
-        "--tactile-shadow-shell",
-        "--workflow-border",
-        "--workflow-border-strong",
-        "--workflow-ease",
-        "--workflow-hover",
-        "--workflow-ink",
-        "--workflow-muted",
-        "--workflow-panel",
-        "--workflow-type-body",
-        "--workflow-type-technical",
-        "--workflow-window-control-fill",
-        "--workflow-window-edge",
-        "--workflow-window-edge-sides",
-        "--workflow-window-edge-top",
-        "--workflow-window-overlay"
-      ]
-    },
-    {
-      "path": "src/profileDocument/components/profileWorkViewer.css",
-      "role": "Local",
-      "sha256": "ba899e99e607b09daa9c94910d5aafd8c903dfb1063bd95a61dcda4e6ef4e97d",
-      "definitions": [],
-      "references": [
-        "--color-focus",
-        "--color-line-hairline",
-        "--color-text-primary",
-        "--color-text-secondary",
-        "--color-text-soft",
-        "--font-interface",
-        "--font-technical",
-        "--inspection-lift-progress",
-        "--media-ratio",
-        "--tactile-edge",
-        "--tactile-face",
-        "--tactile-shadow-shell"
+        "--tactile-hover",
+        "--tactile-ink",
+        "--tactile-muted",
+        "--tactile-well"
       ]
     },
     {
@@ -3519,23 +2647,6 @@
         "--lattice-menu-muted",
         "--lattice-menu-panel",
         "--lattice-menu-selected"
-      ]
-    },
-    {
-      "path": "src/profileDocument/components/receptionEditor.css",
-      "role": "Local",
-      "sha256": "160b3ed7efff83ce761a558e154db348a44bc4aaaf125e6edbb54f4894112a51",
-      "definitions": [],
-      "references": [
-        "--color-border",
-        "--color-focus",
-        "--color-surface",
-        "--color-surface-elevated",
-        "--color-text-primary",
-        "--color-text-secondary",
-        "--crop-ratio",
-        "--font-interface",
-        "--font-technical"
       ]
     },
     {
@@ -3893,37 +3004,111 @@
     },
     {
       "path": "src/public/ownerLatticePublicationRack.css",
+      "role": "Publication",
+      "sha256": "9916f74feaaa49d052b12dda39f3a262db04e5b63b8b23c3c94b375f4327ba92",
+      "definitions": [
+        {
+          "name": "--destination-width",
+          "value": "460px",
+          "scope": [
+            ".owner-lattice-publication-rack"
+          ],
+          "line": 1,
+          "references": []
+        }
+      ],
+      "references": [
+        "--control-radius",
+        "--destination-target",
+        "--font-interface",
+        "--font-technical",
+        "--tactile-edge",
+        "--tactile-ink",
+        "--tactile-muted"
+      ]
+    },
+    {
+      "path": "src/public/ownerSystemWorkflow/activity.css",
+      "role": "Activity",
+      "sha256": "7ed803abcab5781ab3b7a2e5f0b22b427974b8bd747908ade9c0e4d0f84e3b10",
+      "definitions": [
+        {
+          "name": "--activity-inset",
+          "value": "max(12px, var(--workspace-navigation-inset, 0px))",
+          "scope": [
+            ".activity-panel.workbench-tool-panel"
+          ],
+          "line": 3,
+          "references": [
+            "--workspace-navigation-inset"
+          ]
+        },
+        {
+          "name": "--activity-top",
+          "value": "max(12px, calc(var(--workspace-navigation-top, 8px) + 4px))",
+          "scope": [
+            ".activity-panel.workbench-tool-panel"
+          ],
+          "line": 4,
+          "references": [
+            "--workspace-navigation-top"
+          ]
+        },
+        {
+          "name": "--activity-target",
+          "value": "var(--control-height-sm)",
+          "scope": [
+            ".activity-panel.workbench-tool-panel"
+          ],
+          "line": 5,
+          "references": [
+            "--control-height-sm"
+          ]
+        },
+        {
+          "name": "--activity-target",
+          "value": "44px",
+          "scope": [
+            "@media (max-width: 520px), (pointer: coarse)",
+            ".activity-panel.workbench-tool-panel"
+          ],
+          "line": 47,
+          "references": []
+        }
+      ],
+      "references": [
+        "--activity-inset",
+        "--activity-target",
+        "--activity-top",
+        "--control-height-sm",
+        "--control-radius",
+        "--font-technical",
+        "--tactile-edge",
+        "--tactile-hover",
+        "--tactile-ink",
+        "--tactile-muted",
+        "--workspace-navigation-inset",
+        "--workspace-navigation-top"
+      ]
+    },
+    {
+      "path": "src/public/ownerSystemWorkflow/artworkInfo.css",
       "role": "Local",
-      "sha256": "fa2b6a10dd4781ca8080c4f3aedb9d2def3210d094d918fac683c7d0fcdd7cdc",
+      "sha256": "8cde1b53b102c14704ebf326a0dfa1604e47978cc1819d599cf346d486fe38f5",
       "definitions": [],
       "references": [
-        "--lattice-menu-faint",
-        "--lattice-menu-ink",
-        "--lattice-menu-line",
-        "--lattice-menu-line-strong",
-        "--lattice-menu-muted",
-        "--lattice-menu-panel",
-        "--lattice-menu-selected",
-        "--workflow-border",
-        "--workflow-dock-height",
-        "--workflow-faint",
-        "--workflow-hover",
-        "--workflow-ink",
-        "--workflow-muted",
-        "--workflow-panel",
-        "--workflow-rail-height",
-        "--workflow-selection",
-        "--workflow-shadow-panel",
-        "--workflow-type-panel-body",
-        "--workflow-type-panel-heading",
-        "--workflow-type-panel-rail",
-        "--workflow-window-inset"
+        "--control-radius",
+        "--font-interface",
+        "--font-technical",
+        "--tactile-edge",
+        "--tactile-ink",
+        "--tactile-muted"
       ]
     },
     {
       "path": "src/public/ownerSystemWorkflow/contextToolbar.css",
       "role": "Local",
-      "sha256": "4ca86c6d7656cd6d8ae944189d51fe228390219a7a7988202a6e4dabac5d3c3b",
+      "sha256": "a410d2d6a100584a32059910f2579d882c5e6baa809032635d1d5117d02dd033",
       "definitions": [
         {
           "name": "--context-action-target",
@@ -3953,9 +3138,9 @@
           "value": "0px",
           "scope": [
             "@media (max-height: 540px)",
-            ".system-workflow[data-creation-toolbar]:has(.context-action-bars:not([hidden]))"
+            ".system-workflow[data-creation-toolbar]"
           ],
-          "line": 51,
+          "line": 52,
           "references": []
         }
       ],
@@ -4011,7 +3196,7 @@
     {
       "path": "src/public/ownerSystemWorkflow/displayInspectionCues.css",
       "role": "Local",
-      "sha256": "a07c73c667ecfae7b9a7dc95c48edb8243a295b1cba7f6196d91be38834498c7",
+      "sha256": "eb794b2d7a90058b67c15439de7051d91d4c9d4bb9c5aac2352d4a3ad7914147",
       "definitions": [],
       "references": [
         "--workbench-content-scale",
@@ -4025,7 +3210,7 @@
     {
       "path": "src/public/ownerSystemWorkflow/displayInstruments.css",
       "role": "Local",
-      "sha256": "be48fac90db010c5b96290569c70e89cd735f643cd0f020c96c1cfc116dc0c16",
+      "sha256": "bbe2040e8d6e63156522c1fd87258935c045b0812acde8c4438d2c4e4430c12c",
       "definitions": [
         {
           "name": "--detached-window-width",
@@ -4033,7 +3218,7 @@
           "scope": [
             ".system-workflow__instrument-window"
           ],
-          "line": 47,
+          "line": 40,
           "references": []
         }
       ],
@@ -4041,31 +3226,6 @@
         "--instrument-overlay-top",
         "--workflow-board-radius",
         "--workflow-border",
-        "--workflow-ink",
-        "--workflow-muted",
-        "--workflow-panel",
-        "--workflow-type-control",
-        "--workflow-type-technical"
-      ]
-    },
-    {
-      "path": "src/public/ownerSystemWorkflow/displayMetadataCard.css",
-      "role": "Local",
-      "sha256": "7f0d5106141aa8183212ea06e78461caba546436423b248f250f91f47db66ace",
-      "definitions": [
-        {
-          "name": "--workflow-type-technical",
-          "value": "400 12px/1.6 \"Inscape Sora\", sans-serif",
-          "scope": [
-            ".display-metadata"
-          ],
-          "line": 1,
-          "references": []
-        }
-      ],
-      "references": [
-        "--workflow-border",
-        "--workflow-border-strong",
         "--workflow-ink",
         "--workflow-muted",
         "--workflow-panel",
@@ -4105,6 +3265,510 @@
       "references": []
     },
     {
+      "path": "src/public/ownerSystemWorkflow/libraryWorkspace.css",
+      "role": "Library",
+      "sha256": "fdf94cf30d2d51afa37142fcb37390b04df50797cd7ace89aa6deae0d53e9f3a",
+      "definitions": [
+        {
+          "name": "--workflow-panel",
+          "value": "var(--tactile-face)",
+          "scope": [
+            ":is([data-library-chrome], .workspace-library-navigation)"
+          ],
+          "line": 9,
+          "references": [
+            "--tactile-face"
+          ]
+        },
+        {
+          "name": "--workflow-panel-raised",
+          "value": "var(--tactile-well)",
+          "scope": [
+            ":is([data-library-chrome], .workspace-library-navigation)"
+          ],
+          "line": 10,
+          "references": [
+            "--tactile-well"
+          ]
+        },
+        {
+          "name": "--workflow-ink",
+          "value": "var(--tactile-ink)",
+          "scope": [
+            ":is([data-library-chrome], .workspace-library-navigation)"
+          ],
+          "line": 11,
+          "references": [
+            "--tactile-ink"
+          ]
+        },
+        {
+          "name": "--workflow-muted",
+          "value": "var(--tactile-muted)",
+          "scope": [
+            ":is([data-library-chrome], .workspace-library-navigation)"
+          ],
+          "line": 12,
+          "references": [
+            "--tactile-muted"
+          ]
+        },
+        {
+          "name": "--workflow-faint",
+          "value": "var(--tactile-muted)",
+          "scope": [
+            ":is([data-library-chrome], .workspace-library-navigation)"
+          ],
+          "line": 13,
+          "references": [
+            "--tactile-muted"
+          ]
+        },
+        {
+          "name": "--workflow-border",
+          "value": "var(--tactile-edge)",
+          "scope": [
+            ":is([data-library-chrome], .workspace-library-navigation)"
+          ],
+          "line": 14,
+          "references": [
+            "--tactile-edge"
+          ]
+        },
+        {
+          "name": "--workflow-border-strong",
+          "value": "var(--tactile-edge)",
+          "scope": [
+            ":is([data-library-chrome], .workspace-library-navigation)"
+          ],
+          "line": 15,
+          "references": [
+            "--tactile-edge"
+          ]
+        },
+        {
+          "name": "--workflow-hover",
+          "value": "var(--tactile-hover)",
+          "scope": [
+            ":is([data-library-chrome], .workspace-library-navigation)"
+          ],
+          "line": 16,
+          "references": [
+            "--tactile-hover"
+          ]
+        },
+        {
+          "name": "--workflow-selection",
+          "value": "var(--tactile-hover)",
+          "scope": [
+            ":is([data-library-chrome], .workspace-library-navigation)"
+          ],
+          "line": 17,
+          "references": [
+            "--tactile-hover"
+          ]
+        },
+        {
+          "name": "--workflow-row-height",
+          "value": "34px",
+          "scope": [
+            ":is([data-library-chrome], .workspace-library-navigation)"
+          ],
+          "line": 18,
+          "references": []
+        },
+        {
+          "name": "--workflow-rail-height",
+          "value": "auto",
+          "scope": [
+            ":is([data-library-chrome], .workspace-library-navigation)"
+          ],
+          "line": 19,
+          "references": []
+        },
+        {
+          "name": "--workflow-type-sidebar",
+          "value": "11px/1.4 var(--font-interface)",
+          "scope": [
+            ":is([data-library-chrome], .workspace-library-navigation)"
+          ],
+          "line": 20,
+          "references": [
+            "--font-interface"
+          ]
+        },
+        {
+          "name": "--workflow-type-browser-rail",
+          "value": "11px/1.4 var(--font-interface)",
+          "scope": [
+            ":is([data-library-chrome], .workspace-library-navigation)"
+          ],
+          "line": 21,
+          "references": [
+            "--font-interface"
+          ]
+        },
+        {
+          "name": "--workflow-type-micro",
+          "value": "11px/1.4 var(--font-technical)",
+          "scope": [
+            ":is([data-library-chrome], .workspace-library-navigation)"
+          ],
+          "line": 22,
+          "references": [
+            "--font-technical"
+          ]
+        },
+        {
+          "name": "--workflow-active-vertical",
+          "value": "inset 2px 0 var(--tactile-ink)",
+          "scope": [
+            ":is([data-library-chrome], .workspace-library-navigation)"
+          ],
+          "line": 23,
+          "references": [
+            "--tactile-ink"
+          ]
+        },
+        {
+          "name": "--lattice-browser-frame",
+          "value": "var(--tactile-face)",
+          "scope": [
+            ":is([data-library-chrome], .workspace-library-navigation)"
+          ],
+          "line": 24,
+          "references": [
+            "--tactile-face"
+          ]
+        },
+        {
+          "name": "--lattice-browser-ink",
+          "value": "var(--tactile-ink)",
+          "scope": [
+            ":is([data-library-chrome], .workspace-library-navigation)"
+          ],
+          "line": 25,
+          "references": [
+            "--tactile-ink"
+          ]
+        },
+        {
+          "name": "--lattice-browser-muted",
+          "value": "var(--tactile-muted)",
+          "scope": [
+            ":is([data-library-chrome], .workspace-library-navigation)"
+          ],
+          "line": 26,
+          "references": [
+            "--tactile-muted"
+          ]
+        },
+        {
+          "name": "--lattice-browser-faint",
+          "value": "var(--tactile-muted)",
+          "scope": [
+            ":is([data-library-chrome], .workspace-library-navigation)"
+          ],
+          "line": 27,
+          "references": [
+            "--tactile-muted"
+          ]
+        },
+        {
+          "name": "--lattice-browser-line",
+          "value": "var(--tactile-edge)",
+          "scope": [
+            ":is([data-library-chrome], .workspace-library-navigation)"
+          ],
+          "line": 28,
+          "references": [
+            "--tactile-edge"
+          ]
+        },
+        {
+          "name": "--lattice-browser-line-strong",
+          "value": "var(--tactile-edge)",
+          "scope": [
+            ":is([data-library-chrome], .workspace-library-navigation)"
+          ],
+          "line": 29,
+          "references": [
+            "--tactile-edge"
+          ]
+        },
+        {
+          "name": "--lattice-browser-label-ink",
+          "value": "var(--tactile-ink)",
+          "scope": [
+            ":is([data-library-chrome], .workspace-library-navigation)"
+          ],
+          "line": 30,
+          "references": [
+            "--tactile-ink"
+          ]
+        },
+        {
+          "name": "--lattice-browser-results-tone",
+          "value": "var(--tactile-face)",
+          "scope": [
+            ":is([data-library-chrome], .workspace-library-navigation)"
+          ],
+          "line": 31,
+          "references": [
+            "--tactile-face"
+          ]
+        },
+        {
+          "name": "--lattice-browser-faceplate-tone",
+          "value": "var(--tactile-face)",
+          "scope": [
+            ":is([data-library-chrome], .workspace-library-navigation)"
+          ],
+          "line": 32,
+          "references": [
+            "--tactile-face"
+          ]
+        },
+        {
+          "name": "--lattice-browser-card-tone",
+          "value": "transparent",
+          "scope": [
+            ":is([data-library-chrome], .workspace-library-navigation)"
+          ],
+          "line": 33,
+          "references": []
+        },
+        {
+          "name": "--lattice-browser-selected-tone",
+          "value": "var(--tactile-hover)",
+          "scope": [
+            ":is([data-library-chrome], .workspace-library-navigation)"
+          ],
+          "line": 34,
+          "references": [
+            "--tactile-hover"
+          ]
+        },
+        {
+          "name": "--lattice-browser-hover-tone",
+          "value": "var(--tactile-hover)",
+          "scope": [
+            ":is([data-library-chrome], .workspace-library-navigation)"
+          ],
+          "line": 35,
+          "references": [
+            "--tactile-hover"
+          ]
+        },
+        {
+          "name": "--lattice-chrome-padding",
+          "value": "8px",
+          "scope": [
+            ":is([data-library-chrome], .workspace-library-navigation)"
+          ],
+          "line": 36,
+          "references": []
+        },
+        {
+          "name": "--lattice-browser-frame",
+          "value": "var(--workflow-panel)",
+          "scope": [
+            ".system-workflow__browser-workspace"
+          ],
+          "line": 212,
+          "references": [
+            "--workflow-panel"
+          ]
+        },
+        {
+          "name": "--lattice-browser-ink",
+          "value": "var(--workflow-ink)",
+          "scope": [
+            ".system-workflow__browser-workspace"
+          ],
+          "line": 212,
+          "references": [
+            "--workflow-ink"
+          ]
+        },
+        {
+          "name": "--lattice-browser-muted",
+          "value": "var(--workflow-muted)",
+          "scope": [
+            ".system-workflow__browser-workspace"
+          ],
+          "line": 212,
+          "references": [
+            "--workflow-muted"
+          ]
+        },
+        {
+          "name": "--lattice-browser-faint",
+          "value": "var(--lattice-menu-faint)",
+          "scope": [
+            ".system-workflow__browser-workspace"
+          ],
+          "line": 212,
+          "references": [
+            "--lattice-menu-faint"
+          ]
+        },
+        {
+          "name": "--lattice-browser-line",
+          "value": "var(--workflow-border)",
+          "scope": [
+            ".system-workflow__browser-workspace"
+          ],
+          "line": 212,
+          "references": [
+            "--workflow-border"
+          ]
+        },
+        {
+          "name": "--lattice-browser-line-strong",
+          "value": "var(--workflow-border-strong)",
+          "scope": [
+            ".system-workflow__browser-workspace"
+          ],
+          "line": 212,
+          "references": [
+            "--workflow-border-strong"
+          ]
+        },
+        {
+          "name": "--lattice-browser-label-ink",
+          "value": "var(--workflow-ink)",
+          "scope": [
+            ".system-workflow__browser-workspace"
+          ],
+          "line": 212,
+          "references": [
+            "--workflow-ink"
+          ]
+        },
+        {
+          "name": "--lattice-browser-results-tone",
+          "value": "var(--workflow-panel)",
+          "scope": [
+            ".system-workflow__browser-workspace"
+          ],
+          "line": 212,
+          "references": [
+            "--workflow-panel"
+          ]
+        },
+        {
+          "name": "--lattice-browser-recessed-tone",
+          "value": "color-mix(in srgb, var(--workflow-panel) 96%, var(--workflow-ink))",
+          "scope": [
+            ".system-workflow__browser-workspace"
+          ],
+          "line": 212,
+          "references": [
+            "--workflow-panel",
+            "--workflow-ink"
+          ]
+        },
+        {
+          "name": "--lattice-browser-hover-tone",
+          "value": "var(--workflow-hover)",
+          "scope": [
+            ".system-workflow__browser-workspace"
+          ],
+          "line": 212,
+          "references": [
+            "--workflow-hover"
+          ]
+        },
+        {
+          "name": "--lattice-browser-faceplate-tone",
+          "value": "var(--workflow-panel)",
+          "scope": [
+            ".system-workflow__browser-workspace"
+          ],
+          "line": 212,
+          "references": [
+            "--workflow-panel"
+          ]
+        },
+        {
+          "name": "--lattice-browser-card-tone",
+          "value": "var(--workflow-panel)",
+          "scope": [
+            ".system-workflow__browser-workspace"
+          ],
+          "line": 212,
+          "references": [
+            "--workflow-panel"
+          ]
+        },
+        {
+          "name": "--lattice-browser-selected-tone",
+          "value": "var(--workflow-selection)",
+          "scope": [
+            ".system-workflow__browser-workspace"
+          ],
+          "line": 212,
+          "references": [
+            "--workflow-selection"
+          ]
+        },
+        {
+          "name": "--lattice-browser-multi-tone",
+          "value": "color-mix(in srgb, var(--workflow-selection) 74%, var(--workflow-ink))",
+          "scope": [
+            ".system-workflow__browser-workspace"
+          ],
+          "line": 212,
+          "references": [
+            "--workflow-selection",
+            "--workflow-ink"
+          ]
+        }
+      ],
+      "references": [
+        "--control-radius",
+        "--control-shell-radius",
+        "--font-interface",
+        "--font-technical",
+        "--lattice-browser-asset-min",
+        "--lattice-browser-sidebar-width",
+        "--lattice-menu-faint",
+        "--lattice-menu-ink",
+        "--lattice-menu-line",
+        "--lattice-menu-panel",
+        "--space-1",
+        "--space-2",
+        "--tactile-edge",
+        "--tactile-face",
+        "--tactile-hover",
+        "--tactile-ink",
+        "--tactile-muted",
+        "--tactile-well",
+        "--workflow-border",
+        "--workflow-border-strong",
+        "--workflow-dock-height",
+        "--workflow-ease",
+        "--workflow-faint",
+        "--workflow-gap-medium",
+        "--workflow-hover",
+        "--workflow-ink",
+        "--workflow-library-width",
+        "--workflow-motion-in",
+        "--workflow-muted",
+        "--workflow-panel",
+        "--workflow-rail-height",
+        "--workflow-row-height",
+        "--workflow-selection",
+        "--workflow-shadow-workspace",
+        "--workflow-type-browser-rail",
+        "--workflow-type-micro",
+        "--workflow-type-sidebar",
+        "--workflow-window-inset",
+        "--workspace-navigation-top"
+      ]
+    },
+    {
       "path": "src/public/ownerSystemWorkflow/moduleSurface.css",
       "role": "Local",
       "sha256": "7f06a15ae63a5875fb509885010e0f71595bed657bfe9204efb48eb86ea36237",
@@ -4123,9 +3787,26 @@
       ]
     },
     {
+      "path": "src/public/ownerSystemWorkflow/navigator.css",
+      "role": "Local",
+      "sha256": "92fea8e2a131cc7719eb2dc5e2ce4550e2d1f5230ddde363c756c673e7554e0f",
+      "definitions": [],
+      "references": [
+        "--detached-window-titlebar-height",
+        "--font-interface",
+        "--font-technical",
+        "--navigator-height",
+        "--tactile-edge",
+        "--tactile-face",
+        "--tactile-ink",
+        "--tactile-muted",
+        "--tactile-well"
+      ]
+    },
+    {
       "path": "src/public/ownerSystemWorkflow/ownerSystemWorkflow.css",
       "role": "Workflow",
-      "sha256": "5c9a9c2cf67c30dea61eb37eb7263320be68881320b361c74f36619b82f7604f",
+      "sha256": "517fc53b29094dd535c4d0e628e2f3fbf1fcfaca59d917e72a8d788fa9586108",
       "definitions": [
         {
           "name": "--workflow-window-inset",
@@ -4756,177 +4437,12 @@
           ]
         },
         {
-          "name": "--workflow-dock-tool-size",
-          "value": "28px",
-          "scope": [
-            ".system-workflow__dock-tools"
-          ],
-          "line": 622,
-          "references": []
-        },
-        {
-          "name": "--lattice-browser-frame",
-          "value": "var(--workflow-panel)",
-          "scope": [
-            ".system-workflow__browser-workspace"
-          ],
-          "line": 656,
-          "references": [
-            "--workflow-panel"
-          ]
-        },
-        {
-          "name": "--lattice-browser-ink",
-          "value": "var(--workflow-ink)",
-          "scope": [
-            ".system-workflow__browser-workspace"
-          ],
-          "line": 656,
-          "references": [
-            "--workflow-ink"
-          ]
-        },
-        {
-          "name": "--lattice-browser-muted",
-          "value": "var(--workflow-muted)",
-          "scope": [
-            ".system-workflow__browser-workspace"
-          ],
-          "line": 656,
-          "references": [
-            "--workflow-muted"
-          ]
-        },
-        {
-          "name": "--lattice-browser-faint",
-          "value": "var(--lattice-menu-faint)",
-          "scope": [
-            ".system-workflow__browser-workspace"
-          ],
-          "line": 656,
-          "references": [
-            "--lattice-menu-faint"
-          ]
-        },
-        {
-          "name": "--lattice-browser-line",
-          "value": "var(--workflow-border)",
-          "scope": [
-            ".system-workflow__browser-workspace"
-          ],
-          "line": 656,
-          "references": [
-            "--workflow-border"
-          ]
-        },
-        {
-          "name": "--lattice-browser-line-strong",
-          "value": "var(--workflow-border-strong)",
-          "scope": [
-            ".system-workflow__browser-workspace"
-          ],
-          "line": 656,
-          "references": [
-            "--workflow-border-strong"
-          ]
-        },
-        {
-          "name": "--lattice-browser-label-ink",
-          "value": "var(--workflow-ink)",
-          "scope": [
-            ".system-workflow__browser-workspace"
-          ],
-          "line": 656,
-          "references": [
-            "--workflow-ink"
-          ]
-        },
-        {
-          "name": "--lattice-browser-results-tone",
-          "value": "var(--workflow-panel)",
-          "scope": [
-            ".system-workflow__browser-workspace"
-          ],
-          "line": 656,
-          "references": [
-            "--workflow-panel"
-          ]
-        },
-        {
-          "name": "--lattice-browser-recessed-tone",
-          "value": "color-mix(in srgb, var(--workflow-panel) 96%, var(--workflow-ink))",
-          "scope": [
-            ".system-workflow__browser-workspace"
-          ],
-          "line": 656,
-          "references": [
-            "--workflow-panel",
-            "--workflow-ink"
-          ]
-        },
-        {
-          "name": "--lattice-browser-hover-tone",
-          "value": "var(--workflow-hover)",
-          "scope": [
-            ".system-workflow__browser-workspace"
-          ],
-          "line": 656,
-          "references": [
-            "--workflow-hover"
-          ]
-        },
-        {
-          "name": "--lattice-browser-faceplate-tone",
-          "value": "var(--workflow-panel)",
-          "scope": [
-            ".system-workflow__browser-workspace"
-          ],
-          "line": 656,
-          "references": [
-            "--workflow-panel"
-          ]
-        },
-        {
-          "name": "--lattice-browser-card-tone",
-          "value": "var(--workflow-panel)",
-          "scope": [
-            ".system-workflow__browser-workspace"
-          ],
-          "line": 656,
-          "references": [
-            "--workflow-panel"
-          ]
-        },
-        {
-          "name": "--lattice-browser-selected-tone",
-          "value": "var(--workflow-selection)",
-          "scope": [
-            ".system-workflow__browser-workspace"
-          ],
-          "line": 656,
-          "references": [
-            "--workflow-selection"
-          ]
-        },
-        {
-          "name": "--lattice-browser-multi-tone",
-          "value": "color-mix(in srgb, var(--workflow-selection) 74%, var(--workflow-ink))",
-          "scope": [
-            ".system-workflow__browser-workspace"
-          ],
-          "line": 656,
-          "references": [
-            "--workflow-selection",
-            "--workflow-ink"
-          ]
-        },
-        {
           "name": "--workflow-active-vertical",
           "value": "inset 4px 0 0 var(--lattice-menu-ink)",
           "scope": [
             ".system-workflow__select-popover, .system-workflow__filter-popover"
           ],
-          "line": 736,
+          "line": 530,
           "references": [
             "--lattice-menu-ink"
           ]
@@ -4937,7 +4453,7 @@
           "scope": [
             ".system-workflow__select-popover, .system-workflow__filter-popover"
           ],
-          "line": 736,
+          "line": 530,
           "references": [
             "--lattice-menu-ink",
             "--lattice-menu-panel"
@@ -4949,7 +4465,7 @@
           "scope": [
             ".system-workflow__select-popover, .system-workflow__filter-popover"
           ],
-          "line": 736,
+          "line": 530,
           "references": []
         },
         {
@@ -4958,7 +4474,7 @@
           "scope": [
             ".system-workflow__detached-window"
           ],
-          "line": 913,
+          "line": 583,
           "references": []
         },
         {
@@ -4967,7 +4483,7 @@
           "scope": [
             ".system-workflow__detached-window"
           ],
-          "line": 914,
+          "line": 584,
           "references": [
             "--workflow-window-chrome-radius"
           ]
@@ -4978,7 +4494,7 @@
           "scope": [
             ".system-workflow__detached-window"
           ],
-          "line": 915,
+          "line": 585,
           "references": [
             "--workflow-window-chrome-gutter"
           ]
@@ -4989,7 +4505,7 @@
           "scope": [
             ".system-workflow__detached-window"
           ],
-          "line": 916,
+          "line": 586,
           "references": [
             "--workflow-rail-height"
           ]
@@ -5000,7 +4516,7 @@
           "scope": [
             ".system-workflow__detached-window"
           ],
-          "line": 917,
+          "line": 587,
           "references": []
         },
         {
@@ -5009,7 +4525,7 @@
           "scope": [
             ".system-workflow__detached-window"
           ],
-          "line": 918,
+          "line": 588,
           "references": []
         },
         {
@@ -5018,7 +4534,7 @@
           "scope": [
             ".system-workflow__detached-window"
           ],
-          "line": 919,
+          "line": 589,
           "references": [
             "--workflow-window-chrome-shadow-inset"
           ]
@@ -5029,7 +4545,7 @@
           "scope": [
             ".system-workflow__detached-window"
           ],
-          "line": 920,
+          "line": 590,
           "references": [
             "--workflow-window-chrome-shadow-height"
           ]
@@ -5038,36 +4554,27 @@
           "name": "--detached-window-shadow-height",
           "value": "45px",
           "scope": [
-            ".system-workflow:is([data-menu-surface=\"ash\"], [data-menu-surface=\"mist\"], [data-menu-surface=\"paper\"])\n  :is(.system-workflow__detached-window-surface, .system-workflow__metadata-projection .system-workflow__metadata-module-content),\n.visitor-grid-world:is([data-menu-surface=\"ash\"], [data-menu-surface=\"mist\"], [data-menu-surface=\"paper\"])\n  :is(.system-workflow__detached-window-surface, .system-workflow__metadata-projection .system-workflow__metadata-module-content)"
+            ".system-workflow:is([data-menu-surface=\"ash\"], [data-menu-surface=\"mist\"], [data-menu-surface=\"paper\"])\n  .system-workflow__detached-window-surface,\n.visitor-grid-world:is([data-menu-surface=\"ash\"], [data-menu-surface=\"mist\"], [data-menu-surface=\"paper\"])\n  .system-workflow__detached-window-surface"
           ],
-          "line": 989,
+          "line": 655,
           "references": []
         },
         {
           "name": "--workflow-window-inner-shadow-opacity",
           "value": "18%",
           "scope": [
-            ".system-workflow:is([data-menu-surface=\"ash\"], [data-menu-surface=\"mist\"], [data-menu-surface=\"paper\"])\n  :is(.system-workflow__detached-window-surface, .system-workflow__metadata-projection .system-workflow__metadata-module-content),\n.visitor-grid-world:is([data-menu-surface=\"ash\"], [data-menu-surface=\"mist\"], [data-menu-surface=\"paper\"])\n  :is(.system-workflow__detached-window-surface, .system-workflow__metadata-projection .system-workflow__metadata-module-content)"
+            ".system-workflow:is([data-menu-surface=\"ash\"], [data-menu-surface=\"mist\"], [data-menu-surface=\"paper\"])\n  .system-workflow__detached-window-surface,\n.visitor-grid-world:is([data-menu-surface=\"ash\"], [data-menu-surface=\"mist\"], [data-menu-surface=\"paper\"])\n  .system-workflow__detached-window-surface"
           ],
-          "line": 990,
+          "line": 656,
           "references": []
         },
         {
           "name": "--workflow-dock-height",
           "value": "52px",
           "scope": [
-            ".system-workflow[data-layout=\"compact\"],\n.system-workflow[data-layout=\"narrow\"]"
+            ".system-workflow[data-layout=\"narrow\"]"
           ],
-          "line": 1265,
-          "references": []
-        },
-        {
-          "name": "--workflow-dock-tool-size",
-          "value": "24px",
-          "scope": [
-            ".system-workflow[data-layout=\"narrow\"] .system-workflow__dock-tools"
-          ],
-          "line": 1270,
+          "line": 678,
           "references": []
         }
       ],
@@ -5082,8 +4589,6 @@
         "--detached-window-titlebar-height",
         "--detached-window-titlebar-padding",
         "--detached-window-width",
-        "--lattice-browser-sidebar-width",
-        "--lattice-menu-faint",
         "--lattice-menu-ink",
         "--lattice-menu-line",
         "--lattice-menu-muted",
@@ -5092,14 +4597,9 @@
         "--resize-mark-y",
         "--study-ink",
         "--study-surface",
-        "--tactile-edge",
-        "--tactile-face",
-        "--tactile-ink",
-        "--tactile-shadow-shell",
         "--tool-icon-target",
         "--workbench-content-scale",
         "--workbench-control-scale",
-        "--workflow-active-horizontal",
         "--workflow-active-vertical",
         "--workflow-board-frame-gap",
         "--workflow-board-frame-surface",
@@ -5107,25 +4607,17 @@
         "--workflow-board-radius",
         "--workflow-border",
         "--workflow-border-strong",
-        "--workflow-content-padding",
-        "--workflow-dock-clearance",
         "--workflow-dock-height",
-        "--workflow-dock-tool-size",
         "--workflow-ease",
-        "--workflow-faint",
-        "--workflow-gap-medium",
-        "--workflow-gap-small",
         "--workflow-grid-swipe-x",
         "--workflow-hover",
         "--workflow-identity-strip-height",
         "--workflow-ink",
-        "--workflow-library-width",
         "--workflow-metadata-width",
         "--workflow-motion-in",
         "--workflow-motion-out",
         "--workflow-muted",
         "--workflow-panel",
-        "--workflow-panel-padding",
         "--workflow-rail-height",
         "--workflow-row-height",
         "--workflow-selection",
@@ -5135,14 +4627,10 @@
         "--workflow-shortcut-icon-size",
         "--workflow-shortcut-label-size",
         "--workflow-shortcut-width",
-        "--workflow-type-browser-rail",
         "--workflow-type-control",
         "--workflow-type-label",
         "--workflow-type-micro",
-        "--workflow-type-panel-body",
-        "--workflow-type-panel-heading",
         "--workflow-type-panel-rail",
-        "--workflow-type-sidebar",
         "--workflow-type-technical",
         "--workflow-window-chrome-gutter",
         "--workflow-window-chrome-noise-opacity",
@@ -5156,11 +4644,156 @@
       ]
     },
     {
+      "path": "src/public/ownerSystemWorkflow/settings.css",
+      "role": "Settings",
+      "sha256": "d9ed25f0a273aef6a1f7f62c932b259e50d0a2832f57f672bbcc3a5fb325582c",
+      "definitions": [
+        {
+          "name": "--workflow-panel",
+          "value": "var(--tactile-face)",
+          "scope": [
+            ".system-workflow__settings.workbench-tool-panel"
+          ],
+          "line": 3,
+          "references": [
+            "--tactile-face"
+          ]
+        },
+        {
+          "name": "--workflow-ink",
+          "value": "var(--tactile-ink)",
+          "scope": [
+            ".system-workflow__settings.workbench-tool-panel"
+          ],
+          "line": 4,
+          "references": [
+            "--tactile-ink"
+          ]
+        },
+        {
+          "name": "--workflow-muted",
+          "value": "var(--tactile-muted)",
+          "scope": [
+            ".system-workflow__settings.workbench-tool-panel"
+          ],
+          "line": 5,
+          "references": [
+            "--tactile-muted"
+          ]
+        },
+        {
+          "name": "--workflow-border",
+          "value": "var(--tactile-edge)",
+          "scope": [
+            ".system-workflow__settings.workbench-tool-panel"
+          ],
+          "line": 6,
+          "references": [
+            "--tactile-edge"
+          ]
+        },
+        {
+          "name": "--workflow-border-strong",
+          "value": "var(--tactile-edge)",
+          "scope": [
+            ".system-workflow__settings.workbench-tool-panel"
+          ],
+          "line": 7,
+          "references": [
+            "--tactile-edge"
+          ]
+        },
+        {
+          "name": "--workflow-hover",
+          "value": "var(--tactile-hover)",
+          "scope": [
+            ".system-workflow__settings.workbench-tool-panel"
+          ],
+          "line": 8,
+          "references": [
+            "--tactile-hover"
+          ]
+        },
+        {
+          "name": "--workflow-selection",
+          "value": "var(--tactile-hover)",
+          "scope": [
+            ".system-workflow__settings.workbench-tool-panel"
+          ],
+          "line": 9,
+          "references": [
+            "--tactile-hover"
+          ]
+        },
+        {
+          "name": "--settings-inset",
+          "value": "max(12px, var(--workspace-navigation-inset, 0px))",
+          "scope": [
+            ".system-workflow__settings.workbench-tool-panel"
+          ],
+          "line": 10,
+          "references": [
+            "--workspace-navigation-inset"
+          ]
+        },
+        {
+          "name": "--settings-top",
+          "value": "max(12px, calc(var(--workspace-navigation-top, 8px) + 4px))",
+          "scope": [
+            ".system-workflow__settings.workbench-tool-panel"
+          ],
+          "line": 11,
+          "references": [
+            "--workspace-navigation-top"
+          ]
+        },
+        {
+          "name": "--settings-target",
+          "value": "var(--control-height-sm)",
+          "scope": [
+            ".system-workflow__settings.workbench-tool-panel"
+          ],
+          "line": 12,
+          "references": [
+            "--control-height-sm"
+          ]
+        },
+        {
+          "name": "--settings-target",
+          "value": "44px",
+          "scope": [
+            "@media (max-width: 520px), (pointer: coarse)",
+            ".system-workflow__settings.workbench-tool-panel"
+          ],
+          "line": 66,
+          "references": []
+        }
+      ],
+      "references": [
+        "--control-height-sm",
+        "--control-radius",
+        "--font-interface",
+        "--font-technical",
+        "--settings-inset",
+        "--settings-target",
+        "--settings-top",
+        "--tactile-disabled",
+        "--tactile-edge",
+        "--tactile-face",
+        "--tactile-hover",
+        "--tactile-ink",
+        "--tactile-muted",
+        "--workspace-navigation-inset",
+        "--workspace-navigation-top"
+      ]
+    },
+    {
       "path": "src/public/ownerSystemWorkflow/workbenchCanvasContent.css",
       "role": "Local",
-      "sha256": "8bbcd75ff8d023f4981762f70e4ce92ad497e4b661203b53aba5473e9c203a78",
+      "sha256": "256198654f2b2d17c6f1579f63736363a7e149ef6b6f1dd1781af0c71f88d527",
       "definitions": [],
       "references": [
+        "--artwork-order",
         "--canvas-height",
         "--canvas-left",
         "--canvas-top",
@@ -5200,14 +4833,187 @@
       ]
     },
     {
+      "path": "src/public/ownerSystemWorkflow/workbenchDestinationPanel.css",
+      "role": "Destinations",
+      "sha256": "cd8860eaebb3b554ece44d607a1507bd08f8a2cf59f464f3b7eb5277da4733ee",
+      "definitions": [
+        {
+          "name": "--destination-inset",
+          "value": "max(12px, var(--workspace-navigation-inset, 0px))",
+          "scope": [
+            ".workbench-destination-panel.workbench-tool-panel"
+          ],
+          "line": 3,
+          "references": [
+            "--workspace-navigation-inset"
+          ]
+        },
+        {
+          "name": "--destination-top",
+          "value": "max(12px, calc(var(--workspace-navigation-top, 8px) + 4px))",
+          "scope": [
+            ".workbench-destination-panel.workbench-tool-panel"
+          ],
+          "line": 4,
+          "references": [
+            "--workspace-navigation-top"
+          ]
+        },
+        {
+          "name": "--destination-target",
+          "value": "var(--control-height-sm)",
+          "scope": [
+            ".workbench-destination-panel.workbench-tool-panel"
+          ],
+          "line": 5,
+          "references": [
+            "--control-height-sm"
+          ]
+        },
+        {
+          "name": "--workflow-panel",
+          "value": "var(--tactile-face)",
+          "scope": [
+            ".workbench-destination-panel.workbench-tool-panel"
+          ],
+          "line": 6,
+          "references": [
+            "--tactile-face"
+          ]
+        },
+        {
+          "name": "--workflow-ink",
+          "value": "var(--tactile-ink)",
+          "scope": [
+            ".workbench-destination-panel.workbench-tool-panel"
+          ],
+          "line": 7,
+          "references": [
+            "--tactile-ink"
+          ]
+        },
+        {
+          "name": "--workflow-muted",
+          "value": "var(--tactile-muted)",
+          "scope": [
+            ".workbench-destination-panel.workbench-tool-panel"
+          ],
+          "line": 8,
+          "references": [
+            "--tactile-muted"
+          ]
+        },
+        {
+          "name": "--workflow-border",
+          "value": "var(--tactile-edge)",
+          "scope": [
+            ".workbench-destination-panel.workbench-tool-panel"
+          ],
+          "line": 9,
+          "references": [
+            "--tactile-edge"
+          ]
+        },
+        {
+          "name": "--workflow-border-strong",
+          "value": "var(--tactile-edge)",
+          "scope": [
+            ".workbench-destination-panel.workbench-tool-panel"
+          ],
+          "line": 10,
+          "references": [
+            "--tactile-edge"
+          ]
+        },
+        {
+          "name": "--workflow-hover",
+          "value": "var(--tactile-hover)",
+          "scope": [
+            ".workbench-destination-panel.workbench-tool-panel"
+          ],
+          "line": 11,
+          "references": [
+            "--tactile-hover"
+          ]
+        },
+        {
+          "name": "--workflow-selection",
+          "value": "var(--tactile-hover)",
+          "scope": [
+            ".workbench-destination-panel.workbench-tool-panel"
+          ],
+          "line": 12,
+          "references": [
+            "--tactile-hover"
+          ]
+        },
+        {
+          "name": "--destination-width",
+          "value": "540px",
+          "scope": [
+            ".system-workflow__manual"
+          ],
+          "line": 36,
+          "references": []
+        },
+        {
+          "name": "--destination-width",
+          "value": "300px",
+          "scope": [
+            ".system-workflow__profile"
+          ],
+          "line": 46,
+          "references": []
+        },
+        {
+          "name": "--destination-width",
+          "value": "560px",
+          "scope": [
+            ".system-workflow__grid-switcher"
+          ],
+          "line": 59,
+          "references": []
+        },
+        {
+          "name": "--destination-target",
+          "value": "44px",
+          "scope": [
+            "@media (max-width: 520px), (pointer: coarse)",
+            ".workbench-destination-panel.workbench-tool-panel"
+          ],
+          "line": 86,
+          "references": []
+        }
+      ],
+      "references": [
+        "--control-height-sm",
+        "--control-radius",
+        "--destination-inset",
+        "--destination-target",
+        "--destination-top",
+        "--destination-width",
+        "--font-interface",
+        "--font-technical",
+        "--icon-size-interface",
+        "--tactile-disabled",
+        "--tactile-edge",
+        "--tactile-face",
+        "--tactile-hover",
+        "--tactile-ink",
+        "--tactile-muted",
+        "--workspace-navigation-inset",
+        "--workspace-navigation-top"
+      ]
+    },
+    {
       "path": "src/public/ownerSystemWorkflow/workbenchGroups.css",
       "role": "Local",
-      "sha256": "f00e8fa82f7ec668819ae336b67b8cfd041207b76b03f067ff147c12636938b3",
+      "sha256": "1eb4924e046e2afd4b04fa453e5e74b880e81b35c91f9e7f768184a2b026943a",
       "definitions": [],
       "references": [
+        "--tool-control-height",
         "--workflow-border",
         "--workflow-dock-height",
-        "--workflow-hover",
         "--workflow-ink",
         "--workflow-panel",
         "--workflow-selection",
@@ -5217,19 +5023,119 @@
     {
       "path": "src/public/ownerSystemWorkflow/workbenchIndex.css",
       "role": "Local",
-      "sha256": "6f25c635f40ddec155feb8d8af9f5864e542dacfc305bd3256eb60d37569a337",
+      "sha256": "a0ec5c3a6f8bd7fb2fb736046148cd7393b7d04a0329a7828dd60394d924a356",
       "definitions": [],
       "references": [
         "--workflow-border",
-        "--workflow-hover",
-        "--workflow-ink",
         "--workflow-type-control"
+      ]
+    },
+    {
+      "path": "src/public/ownerSystemWorkflow/workbenchLayers.css",
+      "role": "Layers",
+      "sha256": "fb09c60a30e97c44abcaa1eac8aa87a518ceea8213d4341ed76486375030842e",
+      "definitions": [],
+      "references": [
+        "--control-radius",
+        "--icon-size-interface",
+        "--tactile-edge",
+        "--tactile-face",
+        "--tactile-hover",
+        "--tactile-ink",
+        "--tactile-well",
+        "--workflow-type-control"
+      ]
+    },
+    {
+      "path": "src/public/ownerSystemWorkflow/workbenchNavigationTools.css",
+      "role": "Navigation tools",
+      "sha256": "60c959030c8bd3157ca66e95ca23adaad1ba46aad36965196d4cb7edf8afd592",
+      "definitions": [],
+      "references": [
+        "--control-radius",
+        "--control-shell-radius",
+        "--font-interface",
+        "--tactile-disabled",
+        "--tactile-edge",
+        "--tactile-hover",
+        "--tactile-ink",
+        "--tactile-muted",
+        "--tool-control-height"
+      ]
+    },
+    {
+      "path": "src/public/ownerSystemWorkflow/workbenchSharedTools.css",
+      "role": "Shared tools",
+      "sha256": "4493bf9d5ed88b75157c8a639603422706ca4b45a5c1c4c0c06c2b77b3735371",
+      "definitions": [
+        {
+          "name": "--tool-control-height",
+          "value": "var(--control-height-sm)",
+          "scope": [
+            ".workbench-tools-body"
+          ],
+          "line": 1,
+          "references": [
+            "--control-height-sm"
+          ]
+        },
+        {
+          "name": "--ds-field-edge",
+          "value": "var(--tactile-edge)",
+          "scope": [
+            ".workbench-tools-body"
+          ],
+          "line": 1,
+          "references": [
+            "--tactile-edge"
+          ]
+        },
+        {
+          "name": "--ds-control-radius",
+          "value": "var(--control-radius)",
+          "scope": [
+            ".workbench-tools-body"
+          ],
+          "line": 1,
+          "references": [
+            "--control-radius"
+          ]
+        },
+        {
+          "name": "--ds-text-small",
+          "value": "11px",
+          "scope": [
+            ".workbench-tools-body"
+          ],
+          "line": 1,
+          "references": []
+        }
+      ],
+      "references": [
+        "--control-height-sm",
+        "--control-radius",
+        "--tactile-edge",
+        "--tactile-ink",
+        "--tactile-muted",
+        "--tool-control-height"
+      ]
+    },
+    {
+      "path": "src/public/ownerSystemWorkflow/workbenchSidebar.css",
+      "role": "Local",
+      "sha256": "9520488dcaeb4250dac8a1554709e30b77fdb9dfc0e0a9f689fa10f2ed2a6c9e",
+      "definitions": [],
+      "references": [
+        "--sidebar-bottom",
+        "--tactile-edge",
+        "--workspace-navigation-inset",
+        "--workspace-navigation-top"
       ]
     },
     {
       "path": "src/public/ownerSystemWorkflow/workbenchSnapGuides.css",
       "role": "Local",
-      "sha256": "877c4bcd1547b4807b142841ecd2a4c4c8f0b87b96be3a986006cbbd74c6aa9b",
+      "sha256": "22049e954ac56d2ae55ae62880d5392a3ee9496a8d968c8e931b6fba5eb61463",
       "definitions": [],
       "references": [
         "--workflow-border-strong",
@@ -5238,64 +5144,70 @@
       ]
     },
     {
+      "path": "src/public/ownerSystemWorkflow/workbenchSwitcher.css",
+      "role": "Local",
+      "sha256": "09de235af590d916b0a68bc5b13d1b7bcc186eafae4de0164bcc3d62429e26ce",
+      "definitions": [],
+      "references": [
+        "--color-focus",
+        "--control-radius",
+        "--control-shell-radius",
+        "--font-interface",
+        "--tactile-edge",
+        "--tactile-face",
+        "--tactile-ink",
+        "--tactile-muted",
+        "--tactile-well"
+      ]
+    },
+    {
       "path": "src/public/ownerSystemWorkflow/workbenchToolChrome.css",
       "role": "Tool",
-      "sha256": "1af127aba970685ba2636879f60e7b6241dc004e89ecd2f4cdfc4095a21a0261",
+      "sha256": "b93632698c0514568c34480292b2a5129cf2acd227a6fdb1223d1c9b7f950ff2",
       "definitions": [
         {
           "name": "--detached-window-gutter",
           "value": "0px",
           "scope": [
-            ".system-workflow__detached-window[data-window-chrome=\"tactile\"]"
+            ".system-workflow__detached-window:is([data-window-chrome=\"tactile\"], [data-window-chrome=\"flat\"])"
           ],
           "line": 4,
           "references": []
         },
         {
-          "name": "--detached-window-titlebar-height",
-          "value": "var(--tool-titlebar-height, 36px)",
-          "scope": [
-            ".system-workflow__detached-window[data-window-chrome=\"tactile\"]"
-          ],
-          "line": 5,
-          "references": [
-            "--tool-titlebar-height"
-          ]
-        },
-        {
           "name": "--detached-window-titlebar-padding",
           "value": "10px",
           "scope": [
-            ".system-workflow__detached-window[data-window-chrome=\"tactile\"]"
+            ".system-workflow__detached-window:is([data-window-chrome=\"tactile\"], [data-window-chrome=\"flat\"])"
           ],
-          "line": 6,
+          "line": 5,
           "references": []
         },
         {
           "name": "--detached-window-content-padding",
           "value": "10px",
           "scope": [
-            ".system-workflow__detached-window[data-window-chrome=\"tactile\"]"
+            ".system-workflow__detached-window:is([data-window-chrome=\"tactile\"], [data-window-chrome=\"flat\"])"
           ],
-          "line": 7,
+          "line": 6,
           "references": []
         },
         {
           "name": "--tactile-radius-control",
           "value": "8px",
           "scope": [
-            ".system-workflow__detached-window[data-window-chrome=\"tactile\"]"
+            ".system-workflow__detached-window:is([data-window-chrome=\"tactile\"], [data-window-chrome=\"flat\"])"
           ],
-          "line": 8,
+          "line": 7,
           "references": []
         },
         {
           "name": "--workflow-panel",
           "value": "var(--tactile-surface)",
           "scope": [
-            ".system-workflow__detached-window[data-window-chrome=\"tactile\"]"
+            ".system-workflow__detached-window:is([data-window-chrome=\"tactile\"], [data-window-chrome=\"flat\"])"
           ],
-          "line": 9,
+          "line": 8,
           "references": [
             "--tactile-surface"
           ]
@@ -5304,9 +5216,9 @@
           "name": "--workflow-ink",
           "value": "var(--tactile-ink)",
           "scope": [
-            ".system-workflow__detached-window[data-window-chrome=\"tactile\"]"
+            ".system-workflow__detached-window:is([data-window-chrome=\"tactile\"], [data-window-chrome=\"flat\"])"
           ],
-          "line": 10,
+          "line": 9,
           "references": [
             "--tactile-ink"
           ]
@@ -5315,11 +5227,44 @@
           "name": "--workflow-muted",
           "value": "var(--tactile-muted)",
           "scope": [
-            ".system-workflow__detached-window[data-window-chrome=\"tactile\"]"
+            ".system-workflow__detached-window:is([data-window-chrome=\"tactile\"], [data-window-chrome=\"flat\"])"
+          ],
+          "line": 10,
+          "references": [
+            "--tactile-muted"
+          ]
+        },
+        {
+          "name": "--workflow-border-strong",
+          "value": "var(--tactile-edge)",
+          "scope": [
+            ".system-workflow__detached-window:is([data-window-chrome=\"tactile\"], [data-window-chrome=\"flat\"])"
           ],
           "line": 11,
           "references": [
-            "--tactile-muted"
+            "--tactile-edge"
+          ]
+        },
+        {
+          "name": "--workflow-selection",
+          "value": "var(--tactile-well)",
+          "scope": [
+            ".system-workflow__detached-window:is([data-window-chrome=\"tactile\"], [data-window-chrome=\"flat\"])"
+          ],
+          "line": 12,
+          "references": [
+            "--tactile-well"
+          ]
+        },
+        {
+          "name": "--detached-window-titlebar-height",
+          "value": "var(--tool-titlebar-height, 36px)",
+          "scope": [
+            ".system-workflow__detached-window[data-window-chrome=\"tactile\"]"
+          ],
+          "line": 19,
+          "references": [
+            "--tool-titlebar-height"
           ]
         },
         {
@@ -5328,20 +5273,9 @@
           "scope": [
             ".system-workflow__detached-window[data-window-chrome=\"tactile\"]"
           ],
-          "line": 12,
+          "line": 20,
           "references": [
             "--tactile-rim"
-          ]
-        },
-        {
-          "name": "--workflow-border-strong",
-          "value": "var(--tactile-edge)",
-          "scope": [
-            ".system-workflow__detached-window[data-window-chrome=\"tactile\"]"
-          ],
-          "line": 13,
-          "references": [
-            "--tactile-edge"
           ]
         },
         {
@@ -5350,20 +5284,62 @@
           "scope": [
             ".system-workflow__detached-window[data-window-chrome=\"tactile\"]"
           ],
-          "line": 14,
+          "line": 21,
           "references": [
             "--tactile-surface"
           ]
         },
         {
-          "name": "--workflow-selection",
-          "value": "var(--tactile-well)",
+          "name": "--tool-control-height",
+          "value": "var(--control-height-sm)",
           "scope": [
-            ".system-workflow__detached-window[data-window-chrome=\"tactile\"]"
+            ".system-workflow__detached-window[data-window-chrome=\"flat\"]"
           ],
-          "line": 15,
+          "line": 67,
           "references": [
-            "--tactile-well"
+            "--control-height-sm"
+          ]
+        },
+        {
+          "name": "--tool-icon-target",
+          "value": "28px",
+          "scope": [
+            ".system-workflow__detached-window[data-window-chrome=\"flat\"]"
+          ],
+          "line": 68,
+          "references": []
+        },
+        {
+          "name": "--detached-window-titlebar-height",
+          "value": "var(--tool-titlebar-height, 35px)",
+          "scope": [
+            ".system-workflow__detached-window[data-window-chrome=\"flat\"]"
+          ],
+          "line": 69,
+          "references": [
+            "--tool-titlebar-height"
+          ]
+        },
+        {
+          "name": "--workflow-border",
+          "value": "var(--tactile-edge)",
+          "scope": [
+            ".system-workflow__detached-window[data-window-chrome=\"flat\"]"
+          ],
+          "line": 70,
+          "references": [
+            "--tactile-edge"
+          ]
+        },
+        {
+          "name": "--workflow-hover",
+          "value": "var(--tactile-hover)",
+          "scope": [
+            ".system-workflow__detached-window[data-window-chrome=\"flat\"]"
+          ],
+          "line": 71,
+          "references": [
+            "--tactile-hover"
           ]
         },
         {
@@ -5372,7 +5348,7 @@
           "scope": [
             ".workbench-tool-window,\n.keeper-dock-window"
           ],
-          "line": 64,
+          "line": 93,
           "references": []
         },
         {
@@ -5381,7 +5357,7 @@
           "scope": [
             ".workbench-tool-window,\n.keeper-dock-window"
           ],
-          "line": 65,
+          "line": 94,
           "references": []
         },
         {
@@ -5390,7 +5366,27 @@
           "scope": [
             ".workbench-tool-window,\n.keeper-dock-window"
           ],
-          "line": 66,
+          "line": 95,
+          "references": []
+        },
+        {
+          "name": "--tool-control-height",
+          "value": "44px",
+          "scope": [
+            "@media (pointer: coarse), (max-width: 520px)",
+            ".system-workflow__detached-window[data-window-chrome=\"flat\"]"
+          ],
+          "line": 101,
+          "references": []
+        },
+        {
+          "name": "--tool-icon-target",
+          "value": "44px",
+          "scope": [
+            "@media (pointer: coarse), (max-width: 520px)",
+            ".system-workflow__detached-window[data-window-chrome=\"flat\"]"
+          ],
+          "line": 101,
           "references": []
         },
         {
@@ -5400,7 +5396,7 @@
             "@media (pointer: coarse), (max-width: 520px)",
             ".workbench-tool-window,\n  .keeper-dock-window"
           ],
-          "line": 74,
+          "line": 104,
           "references": []
         },
         {
@@ -5410,7 +5406,7 @@
             "@media (pointer: coarse), (max-width: 520px)",
             ".workbench-tool-window,\n  .keeper-dock-window"
           ],
-          "line": 75,
+          "line": 105,
           "references": []
         },
         {
@@ -5420,7 +5416,7 @@
             "@media (pointer: coarse), (max-width: 520px)",
             ".workbench-tool-window,\n  .keeper-dock-window"
           ],
-          "line": 76,
+          "line": 106,
           "references": []
         },
         {
@@ -5430,14 +5426,18 @@
             "@media (pointer: coarse), (max-width: 520px)",
             ".workbench-tool-window,\n  .keeper-dock-window"
           ],
-          "line": 77,
+          "line": 107,
           "references": []
         }
       ],
       "references": [
+        "--control-height-sm",
+        "--control-radius",
+        "--control-shell-radius",
         "--tactile-accent",
         "--tactile-edge",
         "--tactile-face",
+        "--tactile-hover",
         "--tactile-ink",
         "--tactile-muted",
         "--tactile-rim",
@@ -5446,13 +5446,46 @@
         "--tactile-well",
         "--tool-control-height",
         "--tool-icon-target",
-        "--tool-titlebar-height"
+        "--tool-titlebar-height",
+        "--workflow-type-control"
+      ]
+    },
+    {
+      "path": "src/public/ownerSystemWorkflow/workbenchToolDocks.css",
+      "role": "Tool docks",
+      "sha256": "67439e69586fcf74d31117b7d77cacd23398203ec15d8f00c62ca068202da5bb",
+      "definitions": [],
+      "references": [
+        "--control-radius",
+        "--control-shell-radius",
+        "--tactile-edge",
+        "--tactile-face",
+        "--tactile-hover",
+        "--tactile-ink",
+        "--tactile-muted",
+        "--workflow-type-control"
+      ]
+    },
+    {
+      "path": "src/public/ownerSystemWorkflow/workbenchToolPanel.css",
+      "role": "Tool panel",
+      "sha256": "54c30d316cf52c298056261da51edab0850ef13f439709f2756e169389905534",
+      "definitions": [],
+      "references": [
+        "--control-radius",
+        "--control-shell-radius",
+        "--icon-size-interface",
+        "--tactile-edge",
+        "--tactile-face",
+        "--tactile-hover",
+        "--tactile-ink",
+        "--workflow-type-control"
       ]
     },
     {
       "path": "src/public/ownerSystemWorkflow/workbenchToolbar.css",
       "role": "Creation",
-      "sha256": "c276a718e99bc7a441b01b17536885f1026908573aab4412152baf0a7c68706b",
+      "sha256": "51ce083e08c2b9261830ec6af7afe280d69980e9ee559f7d31d0aa910af753d7",
       "definitions": [
         {
           "name": "--toolbar-target",
@@ -5608,7 +5641,7 @@
           "scope": [
             ".workbench-toolbar__bar"
           ],
-          "line": 45,
+          "line": 47,
           "references": [
             "--toolbar-key-radius"
           ]
@@ -5620,7 +5653,7 @@
             "@media (max-width: 520px)",
             ".workbench-toolbar"
           ],
-          "line": 277,
+          "line": 279,
           "references": [
             "--control-target-touch"
           ]
@@ -5632,7 +5665,7 @@
             "@media (pointer: coarse)",
             ".workbench-toolbar"
           ],
-          "line": 315,
+          "line": 317,
           "references": [
             "--control-target-touch"
           ]
@@ -5680,7 +5713,7 @@
     {
       "path": "src/public/ownerSystemWorkflow/workbenchView.css",
       "role": "Host",
-      "sha256": "29c5d7054fd24d4ee608d05b78836f8dee9a7d5bf87e663e411851d014d1d8f7",
+      "sha256": "4415aa514bddcaac8bd0b9cd01af517f5efc1c2e6821ee9efdebb788cf1d6674",
       "definitions": [
         {
           "name": "--workbench-toolbar-clearance",
@@ -5718,7 +5751,7 @@
             "@media (pointer: coarse), (max-width: 520px)",
             ".workbench-view-controls"
           ],
-          "line": 13,
+          "line": 12,
           "references": [
             "--control-target-touch"
           ]
@@ -5752,7 +5785,7 @@
     {
       "path": "src/public/ownerSystemWorkflow/workbenchWindowChrome.css",
       "role": "Window",
-      "sha256": "4f75615b4432bf33b52b2972af930a0eacbc504c1901a4c2f0964372a8a18237",
+      "sha256": "a6e0cb2d4a2e219b9b6708007639ff8322d5b6cd5b15be62ccb46310cc71c8dd",
       "definitions": [
         {
           "name": "--workflow-window-edge",
@@ -5993,7 +6026,7 @@
           "scope": [
             ".system-workflow__presentation-board, .text-window"
           ],
-          "line": 68,
+          "line": 67,
           "references": [
             "--workbench-content-scale",
             "--workbench-content-scale",
@@ -6006,7 +6039,7 @@
           "scope": [
             ".system-workflow__presentation-board[data-window-chrome=\"bevel\"]"
           ],
-          "line": 71,
+          "line": 70,
           "references": [
             "--workflow-window-chrome-radius",
             "--workbench-content-scale"
@@ -6018,7 +6051,7 @@
           "scope": [
             ".system-workflow__presentation-board[data-window-chrome=\"bevel\"]"
           ],
-          "line": 72,
+          "line": 71,
           "references": []
         },
         {
@@ -6027,7 +6060,7 @@
           "scope": [
             ".system-workflow__presentation-board[data-window-chrome=\"bevel\"]"
           ],
-          "line": 73,
+          "line": 72,
           "references": [
             "--workflow-panel"
           ]
@@ -6063,7 +6096,7 @@
     {
       "path": "src/public/ownerSystemWorkflow/workflowFlat.css",
       "role": "Flat material",
-      "sha256": "e56d9d5e995db7545c4f4905ba2ae71fde7d341c142ff4a113af6fdd382a8564",
+      "sha256": "e3de8e6c907071d32f8ce2743a3f78a3a57576867220a0769dcf65296c92ccf7",
       "definitions": [
         {
           "name": "--tactile-face",
@@ -6347,15 +6380,74 @@
           ],
           "line": 43,
           "references": []
+        },
+        {
+          "name": "--workflow-selection",
+          "value": "var(--tactile-hover)",
+          "scope": [
+            "[data-workflow-menu][data-workflow-finish='flat']"
+          ],
+          "line": 58,
+          "references": [
+            "--tactile-hover"
+          ]
+        },
+        {
+          "name": "--workflow-active-vertical",
+          "value": "inset 2px 0 0 var(--tactile-ink)",
+          "scope": [
+            "[data-workflow-menu][data-workflow-finish='flat']"
+          ],
+          "line": 59,
+          "references": [
+            "--tactile-ink"
+          ]
+        },
+        {
+          "name": "--lattice-menu-ink",
+          "value": "var(--tactile-ink)",
+          "scope": [
+            "[data-workflow-menu][data-workflow-finish='flat']"
+          ],
+          "line": 60,
+          "references": [
+            "--tactile-ink"
+          ]
+        },
+        {
+          "name": "--lattice-menu-muted",
+          "value": "var(--tactile-muted)",
+          "scope": [
+            "[data-workflow-menu][data-workflow-finish='flat']"
+          ],
+          "line": 61,
+          "references": [
+            "--tactile-muted"
+          ]
+        },
+        {
+          "name": "--lattice-menu-line",
+          "value": "var(--tactile-edge)",
+          "scope": [
+            "[data-workflow-menu][data-workflow-finish='flat']"
+          ],
+          "line": 62,
+          "references": [
+            "--tactile-edge"
+          ]
         }
       ],
       "references": [
         "--color-surface-subtle",
         "--color-text-primary",
         "--control-radius",
+        "--control-shell-radius",
         "--icon-stroke-interface",
+        "--tactile-edge",
         "--tactile-face",
-        "--tactile-ink"
+        "--tactile-hover",
+        "--tactile-ink",
+        "--tactile-muted"
       ]
     },
     {
@@ -6683,21 +6775,103 @@
       ]
     },
     {
+      "path": "src/public/ownerSystemWorkflow/workspaceNavigation.css",
+      "role": "Local",
+      "sha256": "b29c0ddc8f52d1d782f154a79df052d9f85a957b80bd98e2646d0c3e66f5523d",
+      "definitions": [
+        {
+          "name": "--workflow-panel",
+          "value": "var(--tactile-face)",
+          "scope": [
+            ".workspace-navigation .workspace-library-navigation"
+          ],
+          "line": 171,
+          "references": [
+            "--tactile-face"
+          ]
+        },
+        {
+          "name": "--workflow-ink",
+          "value": "var(--tactile-ink)",
+          "scope": [
+            ".workspace-navigation .workspace-library-navigation"
+          ],
+          "line": 171,
+          "references": [
+            "--tactile-ink"
+          ]
+        },
+        {
+          "name": "--workflow-muted",
+          "value": "var(--tactile-muted)",
+          "scope": [
+            ".workspace-navigation .workspace-library-navigation"
+          ],
+          "line": 172,
+          "references": [
+            "--tactile-muted"
+          ]
+        },
+        {
+          "name": "--workflow-border",
+          "value": "var(--tactile-edge)",
+          "scope": [
+            ".workspace-navigation .workspace-library-navigation"
+          ],
+          "line": 172,
+          "references": [
+            "--tactile-edge"
+          ]
+        },
+        {
+          "name": "--workflow-border-strong",
+          "value": "var(--tactile-edge)",
+          "scope": [
+            ".workspace-navigation .workspace-library-navigation"
+          ],
+          "line": 173,
+          "references": [
+            "--tactile-edge"
+          ]
+        },
+        {
+          "name": "--workflow-selection",
+          "value": "var(--tactile-hover)",
+          "scope": [
+            ".workspace-navigation .workspace-library-navigation"
+          ],
+          "line": 173,
+          "references": [
+            "--tactile-hover"
+          ]
+        }
+      ],
+      "references": [
+        "--control-height-sm",
+        "--control-radius",
+        "--control-shell-radius",
+        "--font-interface",
+        "--font-technical",
+        "--space-1",
+        "--space-2",
+        "--space-3",
+        "--tactile-edge",
+        "--tactile-face",
+        "--tactile-hover",
+        "--tactile-ink",
+        "--tactile-muted",
+        "--tactile-well"
+      ]
+    },
+    {
       "path": "src/public/publicationConfirmation.css",
       "role": "Local",
-      "sha256": "e4e4f3fc7349a67cf3205d787ce28f529c1daf55c8afd41a83d2b588920cdca7",
+      "sha256": "37ac3ec381193f5c191f09fa6bf85c2b8f1496132dca9695c980c7aca63c27bc",
       "definitions": [],
       "references": [
-        "--workflow-border-strong",
-        "--workflow-dock-height",
-        "--workflow-ink",
-        "--workflow-muted",
-        "--workflow-panel",
-        "--workflow-selection",
-        "--workflow-type-body",
-        "--workflow-type-control",
-        "--workflow-type-section",
-        "--workflow-window-inset"
+        "--tactile-hover",
+        "--tactile-ink",
+        "--tactile-muted"
       ]
     },
     {
@@ -6713,7 +6887,7 @@
     {
       "path": "src/shapes/shapes.css",
       "role": "Local",
-      "sha256": "041967053130f19285a4de5dfd917c7dd137dbc2a634289124fd92e1caad02e3",
+      "sha256": "09bf02481e1530511ed550cbf217d9809559f0d452d2b97051c18744c5db851f",
       "definitions": [
         {
           "name": "--detached-window-gutter",
@@ -6730,7 +6904,7 @@
           "scope": [
             ".shape-window > .system-workflow__instrument-content > .shape-grid-border"
           ],
-          "line": 36,
+          "line": 32,
           "references": [
             "--workbench-density"
           ]
@@ -6739,15 +6913,15 @@
       "references": [
         "--grid-hit",
         "--shape-noise-scale",
+        "--tactile-ink",
         "--workbench-content-scale",
-        "--workbench-density",
-        "--workflow-type-control"
+        "--workbench-density"
       ]
     },
     {
       "path": "src/startveil/publicEntryPortal.css",
-      "role": "Local",
-      "sha256": "83760f27e569922baf966261856e7905e3d9674919ccbea79d826aa9a8b08934",
+      "role": "Discover",
+      "sha256": "d431d151f3143acba0724f01c8763bbee8224ae1978f2aaae5e319f86bf45a57",
       "definitions": [
         {
           "name": "--up-modal-font-family",
@@ -6830,68 +7004,47 @@
           "references": []
         },
         {
-          "name": "--portal-grid-size",
-          "value": "4.166667vw",
+          "name": "--portal-target",
+          "value": "var(--control-height-sm)",
           "scope": [
             ".public-entry-portal"
           ],
-          "line": 55,
-          "references": []
+          "line": 53,
+          "references": [
+            "--control-height-sm"
+          ]
         },
         {
-          "name": "--portal-grid-size",
-          "value": "8.333333vw",
+          "name": "--portal-target",
+          "value": "44px",
           "scope": [
-            "@media (max-width: 760px)",
-            ".startveil,\n  .public-entry-portal"
+            "@media (max-width: 520px), (pointer: coarse)",
+            ".public-entry-portal"
           ],
-          "line": 284,
-          "references": []
-        },
-        {
-          "name": "--portal-grid-size",
-          "value": "12.5vw",
-          "scope": [
-            "@media (max-width: 480px)",
-            ".startveil,\n  .public-entry-portal"
-          ],
-          "line": 303,
-          "references": []
-        },
-        {
-          "name": "--portal-grid-size",
-          "value": "3.571429vw",
-          "scope": [
-            "@media (min-width: 1920px)",
-            ".startveil, .public-entry-portal"
-          ],
-          "line": 313,
-          "references": []
-        },
-        {
-          "name": "--portal-grid-size",
-          "value": "3.125vw",
-          "scope": [
-            "@media (min-width: 2400px)",
-            ".startveil, .public-entry-portal"
-          ],
-          "line": 314,
+          "line": 159,
           "references": []
         }
       ],
       "references": [
+        "--control-height-sm",
+        "--control-inset",
+        "--control-radius",
+        "--control-shell-radius",
+        "--font-interface",
+        "--font-technical",
         "--lattice-menu-ink",
-        "--lattice-menu-line",
-        "--lattice-menu-line-strong",
         "--lattice-menu-muted",
         "--lattice-menu-panel",
         "--lattice-menu-selected",
         "--lattice-window-type-label",
-        "--portal-grid-size",
-        "--portal-preview-scale",
-        "--portal-preview-x",
-        "--portal-preview-y",
-        "--startveil-reveal-duration"
+        "--portal-target",
+        "--startveil-reveal-duration",
+        "--tactile-edge",
+        "--tactile-face",
+        "--tactile-hover",
+        "--tactile-ink",
+        "--tactile-muted",
+        "--tactile-well"
       ]
     },
     {
@@ -6930,7 +7083,7 @@
     {
       "path": "src/text/text.css",
       "role": "Local",
-      "sha256": "47c639a973586c2f9ae505b85adc23761b09774023f0498f560d6399e81a2c4d",
+      "sha256": "7cc9ce9cc48ba18e2ad819d6d302d45bb1ecaf5330b1ecfc0e2e739bc23567a9",
       "definitions": [
         {
           "name": "--text-automatic-padding",
@@ -6938,7 +7091,7 @@
           "scope": [
             ".text-document, .text-editor-page"
           ],
-          "line": 48,
+          "line": 46,
           "references": []
         },
         {
@@ -6948,7 +7101,7 @@
             "@media (max-width: 600px)",
             ".text-document, .text-editor-page"
           ],
-          "line": 119,
+          "line": 117,
           "references": []
         },
         {
@@ -6957,7 +7110,7 @@
           "scope": [
             ".text-workbench .text-window[data-window-chrome]"
           ],
-          "line": 120,
+          "line": 118,
           "references": []
         }
       ],
@@ -7018,15 +7171,67 @@
     {
       "path": "src/text/textTools.css",
       "role": "Local",
-      "sha256": "f3ca3cf5bea7915e4e1d8f24fce6f73828049dbae6627d71acc21b1fc0cb1400",
-      "definitions": [],
+      "sha256": "0f07ff31ac6e435e824d0a5c2bdd96024006e4d679b0598a2ab9f021d185f49b",
+      "definitions": [
+        {
+          "name": "--workflow-border",
+          "value": "var(--tactile-edge)",
+          "scope": [
+            ".text-tools-window"
+          ],
+          "line": 2,
+          "references": [
+            "--tactile-edge"
+          ]
+        },
+        {
+          "name": "--workflow-muted",
+          "value": "var(--tactile-muted)",
+          "scope": [
+            ".text-tools-window"
+          ],
+          "line": 2,
+          "references": [
+            "--tactile-muted"
+          ]
+        },
+        {
+          "name": "--workflow-ink",
+          "value": "var(--tactile-ink)",
+          "scope": [
+            ".text-tools-window"
+          ],
+          "line": 2,
+          "references": [
+            "--tactile-ink"
+          ]
+        },
+        {
+          "name": "--workflow-panel",
+          "value": "var(--tactile-face)",
+          "scope": [
+            ".text-tools-window"
+          ],
+          "line": 2,
+          "references": [
+            "--tactile-face"
+          ]
+        }
+      ],
       "references": [
+        "--control-radius",
+        "--icon-size-interface",
+        "--tactile-edge",
+        "--tactile-face",
+        "--tactile-ink",
+        "--tactile-muted",
         "--tactile-surface",
         "--workflow-border",
         "--workflow-ink",
         "--workflow-muted",
         "--workflow-panel",
-        "--workflow-selection"
+        "--workflow-selection",
+        "--workflow-type-control"
       ]
     }
   ]

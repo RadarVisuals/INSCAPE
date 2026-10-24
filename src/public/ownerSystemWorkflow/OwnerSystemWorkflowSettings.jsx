@@ -1,9 +1,11 @@
-import { Check, X } from 'lucide-react';
+import { X } from 'lucide-react';
 import { cloneElement } from 'react';
 import { useSignalStore } from '../../signals/state/useSignalStore.js';
 import { SYSTEM_WORKFLOW_SURFACE_IDS } from '../../systemWorkflow/domain/systemWorkflowDraft.js';
 import { OwnerSystemWorkflowSelectMenu } from './OwnerSystemWorkflowWorkspaceControls.jsx';
 import { workbenchGridColorPreview } from './workbenchPreferences.js';
+import './workbenchToolPanel.css';
+import './settings.css';
 
 const SIGNAL_OPTIONS = [
   ['notifications', 'Activity notifications'], ['speech', 'Speech'],
@@ -15,7 +17,7 @@ const guideOptions = ['LINES', 'DOTS', 'NONE'].map((value) => ({ label: titleCas
 
 function CheckControl({ checked, disabled = false, label, onChange }) {
   return <label className="system-workflow__check-control"><span>{label}</span>
-    <input checked={checked} disabled={disabled} onChange={(event) => onChange(event.target.checked)} type="checkbox" /><i aria-hidden="true">{checked && <Check size={12} />}</i></label>;
+    <input checked={checked} disabled={disabled} onChange={(event) => onChange(event.target.checked)} type="checkbox" /></label>;
 }
 
 export default function OwnerSystemWorkflowSettings({ profileAddress: profile, onMenuSurfaceChange, menuSurface, onClose,
@@ -26,15 +28,20 @@ export default function OwnerSystemWorkflowSettings({ profileAddress: profile, o
   const updateSignalSetting = useSignalStore((state) => state.updateSetting);
   const gap = workbenchPreferences.moduleGap;
   return <aside aria-hidden={phase === 'closing' || undefined} aria-label="Settings"
-    className="system-workflow__settings system-workflow__motion-panel" inert={phase === 'closing' ? '' : undefined} role="dialog">
+    data-workflow-material="tactile" data-workflow-finish="flat"
+    className="workbench-tool-panel system-workflow__settings system-workflow__motion-panel" inert={phase === 'closing' ? '' : undefined} role="dialog">
+    <header className="workbench-tool-panel-header"><h2>Settings</h2>
+      <button aria-label="Close Settings" className="workbench-tool-panel-close" onClick={onClose} title="Close Settings" type="button"><X /></button>
+    </header>
+    <div className="system-workflow__settings-body">
     <section className="system-workflow__settings-section"><header><strong>Activity</strong></header>
       <div>{SIGNAL_OPTIONS.map(([key, label]) => <CheckControl checked={signalProfile === profile && signalSettings[key]} disabled={signalProfile !== profile} key={key} label={label}
         onChange={(checked) => updateSignalSetting(key, checked, profile)} />)}</div>
       {signalProfile === profile && signalPersistenceError && <p role="alert">{signalPersistenceError}</p>}
     </section>
     <section className="system-workflow__settings-section system-workflow__settings-theme"><header><strong>Workbench</strong><span>Local to this device</span></header>
-      <label><span>Background</span><OwnerSystemWorkflowSelectMenu label="Workbench background" menuSurface={menuSurface} onChange={(surfaceId) => onWorkbenchPreferencesChange({ surfaceId })} options={themeOptions} value={workbenchPreferences.surfaceId} /></label>
-      <label><span>Grid display</span><OwnerSystemWorkflowSelectMenu label="Workbench grid display" menuSurface={menuSurface} onChange={(gridMode) => onWorkbenchPreferencesChange({ gridMode })} options={guideOptions} value={workbenchPreferences.gridMode} /></label>
+      <label><span>Background</span><OwnerSystemWorkflowSelectMenu flat label="Workbench background" menuSurface={menuSurface} onChange={(surfaceId) => onWorkbenchPreferencesChange({ surfaceId })} options={themeOptions} value={workbenchPreferences.surfaceId} /></label>
+      <label><span>Grid display</span><OwnerSystemWorkflowSelectMenu flat label="Workbench grid display" menuSurface={menuSurface} onChange={(gridMode) => onWorkbenchPreferencesChange({ gridMode })} options={guideOptions} value={workbenchPreferences.gridMode} /></label>
       <label><span>Grid color</span><span className="system-workflow__settings-color"><input aria-label="Workbench grid color" onChange={(event) => onWorkbenchPreferencesChange({ gridColor: event.target.value })} type="color" value={workbenchPreferences.gridColor || workbenchGridColorPreview(workbenchPreferences.surfaceId)} /><button disabled={!workbenchPreferences.gridColor} onClick={() => onWorkbenchPreferencesChange({ gridColor: null })} type="button">Auto</button></span></label>
       <label><span>Grid cell size</span><input key={workbenchPreferences.gridSpacing} aria-label="Workbench grid cell size" type="number" min="8" max="512" step="any" defaultValue={workbenchPreferences.gridSpacing}
         onBlur={event => { const gridSpacing = event.target.valueAsNumber; if (Number.isFinite(gridSpacing) && gridSpacing >= 8 && gridSpacing <= 512) onWorkbenchPreferencesChange({ gridSpacing }); else event.target.value = workbenchPreferences.gridSpacing; }}
@@ -53,11 +60,11 @@ export default function OwnerSystemWorkflowSettings({ profileAddress: profile, o
       <p id="workbench-gap-description">Guides show the active edge, grid line or spacing. Pull away to release a snap, or hold Alt to bypass snapping.</p>
     </section>
     <section className="system-workflow__settings-section system-workflow__settings-theme"><header><strong>Interface</strong></header>
-      <label><span>Windows</span><OwnerSystemWorkflowSelectMenu label="Menu theme" menuSurface={menuSurface} onChange={onMenuSurfaceChange} options={themeOptions} value={menuSurface} /></label>
+      <label><span>Windows</span><OwnerSystemWorkflowSelectMenu flat label="Menu theme" menuSurface={menuSurface} onChange={onMenuSurfaceChange} options={themeOptions} value={menuSurface} /></label>
       <CheckControl checked={workbenchPreferences.chromeNoise} label="Chrome noise"
         onChange={(chromeNoise) => onWorkbenchPreferencesChange({ chromeNoise })} />
     </section>
     {backupControls && cloneElement(backupControls, { disabled: phase === 'closing' })}
-    <button aria-label="Close Settings" className="system-workflow__settings-close" onClick={onClose} title="Close Settings" type="button"><X size={14} /></button>
+    </div>
   </aside>;
 }

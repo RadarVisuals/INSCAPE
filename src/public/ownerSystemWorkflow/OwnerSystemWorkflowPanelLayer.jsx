@@ -15,33 +15,33 @@ function PanelPresence({ children, id, panels, retained = false }) {
     onTransitionEnd={(event) => { if (event.propertyName === 'opacity') panels.completePanelTransition(id); }}>{children}</div>;
 }
 
-export default function OwnerSystemWorkflowPanelLayer({ workbenchImageTargetRef, moduleAssetTargetRef, placementTargetRef, shortcutTargetRef, workspaceRef, activity, assets, assetsById, authoringLocked = false, categoryCommands, browser, connectedProfile, controller, discoveryCommands, discoveryGroups, layout, libraryData,
-  profileAddress, onMenuSurfaceChange, menuSurface, onChangeGrid, onClose, onConnect, onDisconnect, onOpenIdentity, onOpenReception, onEnterMyWorld, onVisitProfile, panelOccupied, panels, profileIdentity, profileModel,
-  resolveAssetDimensions, reviewDiscovery, workspaceSurfaceColor, workbenchPreferences, onWorkbenchPreferencesChange, backupControls }) {
+export default function OwnerSystemWorkflowPanelLayer({ libraryPreferences, navigationHost, workbenchImageTargetRef, moduleAssetTargetRef, placementTargetRef, shortcutTargetRef, workspaceRef, activity, authoringLocked = false, categoryCommands, connectedProfile, controller, libraryData,
+  profileAddress, onMenuSurfaceChange, menuSurface, onChangeGrid, onClose, onConnect, onDisconnect, onOpenIdentity, onOpenReception, onEnterMyWorld, onVisitProfile, panels, profileIdentity, profileModel,
+  resolveAssetDimensions, workbenchPreferences, onWorkbenchPreferencesChange, backupControls }) {
   const show = (id) => panels.presence[id];
   const libraryMounted = useRef(false);
   if (show('library').present) libraryMounted.current = true;
   return <>
-    {show('grids').present && <PanelPresence id="grids" panels={panels}>{controller
-      ? <SystemWorkflowGridSwitcher controller={controller} data-layout={layout.mode} onSelectGrid={onChangeGrid} />
-      : <aside className="system-workflow__grid-switcher system-workflow__motion-panel" aria-label="Grids"><p role="status">Add a Display to manage its Grids.</p></aside>}</PanelPresence>}
+    {show('grids').present && <PanelPresence id="grids" panels={panels}>
+      <SystemWorkflowGridSwitcher controller={controller} onClose={onClose} onSelectGrid={onChangeGrid} />
+    </PanelPresence>}
     {show('docs').present && <PanelPresence id="docs" panels={panels}><OwnerSystemWorkflowManual onClose={onClose} /></PanelPresence>}
     {libraryMounted.current && <PanelPresence id="library" panels={panels} retained>
-      <OwnerSystemWorkflowLibraryWorkspace workbenchImageTargetRef={workbenchImageTargetRef} moduleAssetTargetRef={moduleAssetTargetRef} placementTargetRef={placementTargetRef} shortcutTargetRef={shortcutTargetRef} workspaceRef={workspaceRef}
+      <OwnerSystemWorkflowLibraryWorkspace preferenceStore={libraryPreferences} navigationHost={navigationHost} workbenchImageTargetRef={workbenchImageTargetRef} moduleAssetTargetRef={moduleAssetTargetRef} placementTargetRef={placementTargetRef} shortcutTargetRef={shortcutTargetRef} workspaceRef={workspaceRef}
         placementScope={`${profileAddress}:${controller?.moduleId || ''}:${controller?.selectedGridId || ''}`}
         authoringLocked={authoringLocked} categoryCommands={categoryCommands} data={libraryData}
         menuSurface={menuSurface} onClose={() => panels.closePanel({ panelId: 'library' })} phase={show('library').phase}
         resolveAssetDimensions={resolveAssetDimensions} /></PanelPresence>}
     {show('profile').present && <PanelPresence id="profile" panels={panels}><div className="system-workflow__profile-layer"
       onPointerDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
-      <OwnerSystemWorkflowProfile identity={profileIdentity} model={profileModel} onOpenIdentity={onOpenIdentity}
+      <OwnerSystemWorkflowProfile identity={profileIdentity} model={profileModel} onClose={onClose} onOpenIdentity={onOpenIdentity}
         onOpenReception={onOpenReception ? () => { panels.closePanel({ returnFocus: false }); onOpenReception(); } : undefined}
         onDisconnect={onDisconnect} phase={show('profile').phase} /></div></PanelPresence>}
     {show('activity').present && <PanelPresence id="activity" panels={panels}>
       <Suspense fallback={null}><OwnerSystemWorkflowActivity activity={activity} onClose={onClose}
         phase={show('activity').phase} /></Suspense></PanelPresence>}
     {show('discover').present && <PanelPresence id="discover" panels={panels}>
-      <PublicEntryPortal connectedProfile={connectedProfile || profileIdentity} embedded initialMode="explore" onClose={onClose}
+      <PublicEntryPortal connectedProfile={connectedProfile || profileIdentity} embedded initialMode="explore" onClose={onClose} menuSurface={menuSurface}
         onConnect={onConnect} onDisconnect={onDisconnect}
         onEnterMyWorld={() => { onClose(); onEnterMyWorld?.(); }}
         onVisitProfile={(address) => { panels.closePanel({ returnFocus: false }); onVisitProfile?.(address); }} /></PanelPresence>}

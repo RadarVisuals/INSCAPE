@@ -304,10 +304,9 @@ test('old draft stays unchanged; text edits save, reopen, undo and reject stale 
   f.fail(); assert.equal(saveTextModule(f.store, profile, next, original), false); assert.deepEqual(f.store.getDraft().texts[0], next);
   assert.equal(f.entries.size, 1); assert.ok(f.entries.has(systemWorkflowDraftKey(profile)));
 });
-test('publication omits excluded text and token update authority; restore retains missing local modules', () => {
+test('publication omits excluded text and editor-only fields; restore retains missing local modules', () => {
   const f = fixture(); addTextModule(f.store, profile); addTextModule(f.store, profile);
   const draft = f.store.getDraft(); draft.texts[0].visibility = 'PUBLIC';
-  draft.texts[0].target = { address: profile, tokenId: `0x${'2'.repeat(64)}`, metadataValue: '0x1234', assetIndex: 0 };
   draft.workbench = { ...createDefaultWorkbenchPresentation(), texts: draft.texts.map((t, i) => createTextPresentation(t.id, i)) };
   const doc = build(draft); assert.equal(doc.texts.length, 1); assert.equal(doc.workbench.texts.length, 1); assert.equal(Object.hasOwn(doc.texts[0], 'target'), false);
   const restored = reconcileSystemWorkflowDraftFromProfileDocumentV9(doc, draft);
@@ -330,16 +329,22 @@ test('host capture and deletion follow live membership; malformed optional field
   }
 });
 
-test('legacy bound drafts reopen and remain editable without creating new bindings', () => {
+test('unknown Text record fields are rejected without rewriting the stored draft', () => {
   const f = fixture(); addTextModule(f.store, profile);
   assert.equal(Object.hasOwn(f.store.getDraft().texts[0], 'target'), false);
   const draft = f.store.getDraft();
-  draft.texts[0].target = { address: profile, tokenId: '0x' + '2'.repeat(64), metadataValue: '0x1234', assetIndex: 0 };
-  f.storage.setItem(systemWorkflowDraftKey(profile), JSON.stringify(draft));
+  const target = { address: profile, tokenId: '0x' + '2'.repeat(64), metadataValue: '0x1234', assetIndex: 0 };
+  const item = draft.texts[0], published = { id: item.id, article: item.article };
+  assert.equal(validTextModules([item]), true); assert.equal(validTextModules([published], true), true);
+  for (const extra of [{ unknown: true }, { target }]) {
+    assert.equal(validTextModules([{ ...item, ...extra }]), false);
+    assert.equal(validTextModules([{ ...published, ...extra }], true), false);
+  }
+  draft.texts[0].target = target;
+  assert.equal(validateSystemWorkflowDraft(draft).valid, false);
+  const raw = JSON.stringify(draft), key = systemWorkflowDraftKey(profile);
+  f.storage.setItem(key, raw);
   const reopened = createSystemWorkflowDraftStore({ profileAddress: profile, storage: f.storage });
-  const old = reopened.getDraft().texts[0];
-  assert.deepEqual(old, draft.texts[0]);
-  const next = { ...old, article: articleWithText('Still editable', 'Saved article') };
-  assert.ok(saveTextModule(reopened, profile, old, next));
-  assert.deepEqual(reopened.getDraft().texts[0].article, next.article);
+  assert.equal(reopened.getRecordState().reason, 'validation_failed');
+  assert.equal(f.storage.getItem(key), raw, 'unsupported content is not silently dropped or migrated');
 });

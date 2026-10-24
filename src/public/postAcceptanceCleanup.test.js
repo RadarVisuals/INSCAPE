@@ -27,25 +27,7 @@ test('production entry and active Visitor contain no legacy runtime selection', 
 });
 
 test('Profile Document public authority is v9-only and legacy readers are absent', () => {
-  const index = source('../profileDocument/index.js');
   const constants = source('../profileDocument/domain/constants.js');
-  for (const current of [
-    'inscapeProfileDocumentKey',
-    'profileDocumentV9Builder',
-    'profileDocumentV9Reconciliation',
-    'profileDocumentV9Serialization',
-    'profileDocumentV9Validation',
-  ]) assert.match(index, new RegExp(current, 'u'));
-  for (const legacy of [
-    'profileDocumentBuilder',
-    'profileDocumentMigration',
-    'profileDocumentRestore',
-    'profileDocumentSerialization',
-    'profileDocumentValidation',
-    'profileDocumentStorage',
-  ]) {
-    assert.doesNotMatch(index, new RegExp(legacy, 'u'));
-  }
   assert.doesNotMatch(constants,
     /^export const PROFILE_DOCUMENT_(?:TYPE|VERSION|VERSION_8|PUBLICATION_VERSION)\b|OS_UNDERNEATH_PROFILE/mu);
   for (const relative of [

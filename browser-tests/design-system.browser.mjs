@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdir } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { chromium } from 'playwright-core';
+import { components } from '../design-system/registry.js';
 
 const origin = process.env.INSCAPE_TEXT_ROOT || 'http://127.0.0.1:5217';
 const executablePath = process.env.INSCAPE_BROWSER_EXECUTABLE || [
@@ -89,12 +90,12 @@ test('live examples retain real control states, theme separation, field access a
     assert.notEqual(await material.evaluate(node => getComputedStyle(node).background), light, 'reference instruments invert between Carbon and Mist');
     await page.getByRole('complementary', { name: 'Properties preview', exact: true }).getByRole('button', { name: 'Rotate', exact: true }).click();
     await page.locator('.ds-properties-feedback').filter({ hasText: 'ROTATE' }).waitFor();
-    await page.getByLabel('Image drop action').selectOption('replace');
-    assert.equal(await page.getByLabel('Image drop action').inputValue(), 'replace');
+    await page.getByRole('complementary', { name: 'Properties preview', exact: true }).getByLabel('When dropping from Library').selectOption('replace');
+    assert.equal(await page.getByRole('complementary', { name: 'Properties preview', exact: true }).getByLabel('When dropping from Library').inputValue(), 'replace');
     await page.getByRole('button', { name: 'Close example Properties' }).click();
     assert.equal(await page.getByRole('button', { name: 'Reopen example Properties' }).evaluate(node => document.activeElement === node), true);
     await page.getByRole('button', { name: 'Reopen example Properties' }).click();
-    await page.getByLabel('Image drop action').waitFor();
+    await page.getByRole('complementary', { name: 'Properties preview', exact: true }).getByLabel('When dropping from Library').waitFor();
     assert.equal(await page.getByRole('button', { name: 'Inspect Image', exact: true }).evaluate(node => document.activeElement === node), true);
     await page.emulateMedia({ reducedMotion: 'reduce' });
     assert.equal(await toggle.evaluate(node => getComputedStyle(node).transitionDuration), '0s');
@@ -226,7 +227,7 @@ test('review fixes preserve contrast, enlarged labels and readable source links'
     assert.ok(contrast >= 4.5, `Mist supporting text contrast: ${contrast}`);
     await page.goto(`${origin}/design-system.html#coverage`);
     const sources = page.locator('.ds-component-list > article > .ds-source');
-    assert.equal(await sources.count(), 27);
+    assert.equal(await sources.count(), components.length);
     assert.ok(await sources.evaluateAll(nodes => nodes.every(node => node.getBoundingClientRect().height >= 24)), 'source links have a usable target');
     for (const file of ['module-surfaces.browser.mjs', 'workbench-index.browser.mjs', 'image-module.browser.mjs']) {
       const source = await browser.newPage();
@@ -270,8 +271,8 @@ test('complete Properties examples preserve Image actions, fields, crop and loca
       const state = page.getByLabel('Properties example state');
       assert.equal(await panel.getByRole('navigation', { name: 'Image actions' }).getByRole('button').count(), 6);
       await panel.getByRole('button', { name: 'Fit inside', exact: true }).click();
-      await page.getByLabel('Image drop action').selectOption('replace');
-      await page.getByLabel('Include Image in publication').uncheck();
+      await page.getByRole('complementary', { name: 'Properties preview', exact: true }).getByLabel('When dropping from Library').selectOption('replace');
+      await page.getByRole('complementary', { name: 'Properties preview', exact: true }).getByLabel('Include Image in publication').uncheck();
       await panel.getByText('Dimensions…', { exact: true }).click();
       const size = panel.getByLabel('Image width');
       await size.fill('16');
@@ -284,8 +285,8 @@ test('complete Properties examples preserve Image actions, fields, crop and loca
       assert.ok(await reopen.evaluate(node => document.activeElement === node)); await reopen.click();
       assert.ok(await panel.getByRole('button', { name: 'Inspect Image', exact: true }).evaluate(node => document.activeElement === node));
       assert.equal(await size.inputValue(), '512');
-      assert.equal(await page.getByLabel('Image drop action').inputValue(), 'replace');
-      assert.equal(await page.getByLabel('Include Image in publication').isChecked(), false);
+      assert.equal(await page.getByRole('complementary', { name: 'Properties preview', exact: true }).getByLabel('When dropping from Library').inputValue(), 'replace');
+      assert.equal(await page.getByRole('complementary', { name: 'Properties preview', exact: true }).getByLabel('Include Image in publication').isChecked(), false);
       assert.equal(await panel.getByRole('button', { name: 'Fit inside', exact: true }).getAttribute('aria-pressed'), 'true');
       await panel.getByRole('button', { name: 'Crop', exact: true }).click();
       const zoom = page.getByRole('slider', { name: 'Crop zoom' });
@@ -297,14 +298,14 @@ test('complete Properties examples preserve Image actions, fields, crop and loca
       await panel.getByRole('button', { name: 'Done', exact: true }).click();
       assert.match(await feedback.innerText(), /105%/);
       assert.equal(await panel.getByRole('button', { name: 'Fill canvas', exact: true }).getAttribute('aria-pressed'), 'true');
-      await panel.getByRole('button', { name: 'Remove Image side' }).click();
+      await panel.getByRole('button', { name: 'Remove current Image side' }).click();
       assert.equal(await panel.getByRole('button', { name: 'Inspect Image', exact: true }).isDisabled(), true);
       assert.equal(await panel.getByRole('button', { name: 'Duplicate', exact: true }).isEnabled(), true, 'an empty module can still be duplicated');
       await state.selectOption('limit'); assert.equal(await panel.getByRole('button', { name: 'Duplicate', exact: true }).isDisabled(), true);
       await state.selectOption('busy'); assert.equal(await panel.getByRole('button', { name: 'Crop', exact: true }).isDisabled(), true);
-      await state.selectOption('empty'); assert.equal(await page.getByLabel('Include Image in publication').isChecked(), false);
+      await state.selectOption('empty'); assert.equal(await page.getByRole('complementary', { name: 'Properties preview', exact: true }).getByLabel('Include Image in publication').isChecked(), false);
       await state.selectOption('artwork'); await page.getByRole('button', { name: 'Reset example', exact: true }).click();
-      assert.equal(await page.getByLabel('Image drop action').inputValue(), 'append');
+      assert.equal(await page.getByRole('complementary', { name: 'Properties preview', exact: true }).getByLabel('When dropping from Library').inputValue(), 'append');
       assert.deepEqual(await page.evaluate(() => Object.keys(localStorage)), []); assert.deepEqual(errors, []);
       await page.close();
     }
@@ -360,15 +361,15 @@ test('Shape Properties retains rectangle, grid and legacy texture controls and d
     await page.getByLabel('Shape name', { exact: true }).fill('Reference rectangle'); await page.getByLabel('Shape name', { exact: true }).press('Tab');
     await page.getByLabel('Preview surface').selectOption('mist');
     assert.equal(await page.getByLabel('Shape name', { exact: true }).inputValue(), 'Reference rectangle');
-    await panel.getByRole('checkbox', { name: 'Show shape', exact: true }).uncheck();
+    assert.equal(await panel.getByRole('checkbox', { name: 'Show shape', exact: true }).count(), 0);
     await panel.getByRole('checkbox', { name: 'Include in publication', exact: true }).uncheck();
-    await panel.getByRole('slider', { name: 'Grain strength' }).focus(); await page.keyboard.press('ArrowRight');
+    assert.equal(await panel.getByRole('slider', { name: 'Grain strength' }).count(), 0);
     await panel.getByRole('button', { name: 'Duplicate shape', exact: true }).click();
-    assert.equal(await panel.getByLabel('Choose shape').locator('option').count(), 4);
+    assert.equal(await panel.getByLabel('Selected shape').locator('option').count(), 4);
     assert.match(await page.getByLabel('Shape name', { exact: true }).inputValue(), /copy/);
     await panel.getByRole('button', { name: 'Delete shape', exact: true }).click();
-    assert.equal(await panel.getByLabel('Choose shape').locator('option').count(), 3);
-    await panel.getByLabel('Choose shape').selectOption('grid');
+    assert.equal(await panel.getByLabel('Selected shape').locator('option').count(), 3);
+    await panel.getByLabel('Selected shape').selectOption('grid');
     await panel.getByLabel('Snap to this grid').uncheck();
     await panel.getByLabel('Grid spacing', { exact: true }).fill('32'); await panel.getByLabel('Grid spacing', { exact: true }).press('Tab');
     await panel.getByLabel('Line width', { exact: true }).fill('2'); await panel.getByLabel('Line width', { exact: true }).press('Enter');
@@ -379,14 +380,14 @@ test('Shape Properties retains rectangle, grid and legacy texture controls and d
     assert.equal(await panel.getByLabel('Shape height').inputValue(), '224');
     await panel.getByRole('button', { name: 'Make square', exact: true }).click();
     assert.equal(await panel.getByLabel('Shape height').inputValue(), '320');
-    await panel.getByLabel('Choose shape').selectOption('texture');
+    await panel.getByLabel('Selected shape').selectOption('texture');
     await panel.getByLabel('Noise scale', { exact: true }).fill('2'); await panel.getByLabel('Noise scale', { exact: true }).press('Enter');
     await panel.getByLabel('Noise strength', { exact: true }).waitFor();
     assert.equal(await panel.getByRole('slider', { name: 'Grain strength' }).count(), 0);
     for (let index = 0; index < 3; index++) await panel.getByRole('button', { name: 'Delete shape', exact: true }).click();
     await panel.getByText('No shapes remain in this example. Reset to restore them.', { exact: true }).waitFor();
     await page.getByRole('button', { name: 'Reset example', exact: true }).click();
-    assert.equal(await panel.getByLabel('Choose shape').locator('option').count(), 3);
+    assert.equal(await panel.getByLabel('Selected shape').locator('option').count(), 3);
     await page.getByLabel('Properties example state').selectOption('limit');
     assert.equal(await panel.getByRole('button', { name: 'Duplicate shape', exact: true }).isDisabled(), true);
     const geometry = await page.evaluate(() => ({ client: document.documentElement.clientWidth, scroll: document.documentElement.scrollWidth }));
@@ -395,43 +396,7 @@ test('Shape Properties retains rectangle, grid and legacy texture controls and d
   } finally { await browser.close(); }
 });
 
-test('Properties preview control inventory matches the running Image, Display and Shape panels', { timeout: 90000 }, async () => {
-  const browser = await chromium.launch({ executablePath, headless: true });
-  const inventory = scope => scope.locator('button, input, select').evaluateAll(nodes => nodes.map(node => ({
-    control: node.tagName === 'INPUT' ? node.type : node.tagName.toLowerCase(),
-    name: node.getAttribute('aria-label') || (node.tagName === 'BUTTON' ? node.textContent : [...(node.labels || [])].map(label => label.textContent).join(' ')).replace(/\s+/g, ' ').trim(),
-    min: node.getAttribute('min'), max: node.getAttribute('max'),
-    step: node.type === 'number' || node.type === 'range' ? node.getAttribute('step') || '1' : null,
-  })).sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b))));
-  try {
-    const preview = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
-    await mount(preview, 'components');
-    for (const [variant, sample] of [['image', 'image'], ['display', 'layers'], ['shape', 'shape']]) {
-      const actual = await browser.newPage({ viewport: { width: 1440, height: 1000 }, reducedMotion: 'reduce' });
-      await actual.route('**/*', route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
-      await actual.goto(`${origin}/browser-tests/tool-chrome-fixture.html?sample=${sample}`);
-      await actual.locator('.workbench-toolbar').waitFor();
-      if (variant === 'image') await actual.getByRole('button', { name: 'Drop Library artwork into Image', exact: true }).focus();
-      if (variant === 'shape') {
-        await actual.getByRole('button', { name: 'Minimize Display Module to shortcut', exact: true }).first().focus();
-        await actual.keyboard.press('Enter'); await actual.locator('.shape-fill').first().click();
-      }
-      if (variant === 'display') {
-        await actual.getByRole('button', { name: 'Layers', exact: true }).click();
-        await actual.locator('.system-workflow__layer-select').first().click();
-      }
-      const live = actual.locator('[data-context-tools] [data-workbench-inspection-target]');
-      await live.getByText('Dimensions…', { exact: true }).click();
-      await preview.getByLabel('Properties for', { exact: true }).selectOption(variant);
-      if (variant === 'image') await preview.getByLabel('Properties example state').selectOption('empty');
-      const example = preview.locator('.ds-properties-window > .system-workflow__detached-window-surface');
-      await example.getByText('Dimensions…', { exact: true }).click();
-      assert.deepEqual(await inventory(example), await inventory(live), `${variant} retains every control, field and size range`);
-      if (variant === 'image') {
-        const disabled = scope => scope.locator('button:disabled').evaluateAll(nodes => nodes.map(node => node.getAttribute('aria-label') || node.textContent.trim()).sort());
-        assert.deepEqual(await disabled(example), await disabled(live), 'empty Image availability matches the app');
-      }
-      await actual.close();
-    }
-  } finally { await browser.close(); }
-});
+// The retained Properties reference describes the former combined panel.
+// Shared-tool behavior and fields are covered by design-system-interactions
+// and workbench-{image,shape,fx,shared}-tools; an identical inventory is no
+// longer part of the accepted split between Color, Transform and module tabs.

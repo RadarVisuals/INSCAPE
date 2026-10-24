@@ -1,10 +1,24 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createKeeperMotion, keeperZone, keeperViewport, faceKeeperPointer, releaseKeeper, returnKeeper, stepKeeper, KEEPER_MOTION, moveKeeperTo } from './keeperMotion.js';
+import { createKeeperMotion, keeperZone, keeperViewport, keeperFlightViewport, faceKeeperPointer, releaseKeeper, returnKeeper, stepKeeper, KEEPER_MOTION, moveKeeperTo } from './keeperMotion.js';
 import { KEEPER_SWIM_DEFAULTS } from './keeperSwim.js';
 const bounds = { left: 72, top: 96, right: 1368, bottom: 880 };
 const home = { x: 100, y: 120 };
 const run = (state, steps, input = {}) => { for (let i = 0; i < steps; i++) stepKeeper(state, { dt: 1 / 60, bounds, home, pointer: { x: 500, y: 500 }, random: () => .4, ...input }); };
+
+test('an offset room constrains existing flight without changing speed or screen callers', () => {
+  assert.deepEqual(keeperFlightViewport(192, null, 1440, 1000), keeperViewport(192, 1440, 1000));
+  const room = { left: 120, top: 180, width: 600, height: 400 };
+  const area = keeperFlightViewport(192, room, 1440, 1000);
+  for (const [edge, value] of Object.entries({ left: 239.36, right: 600.64, top: 323.36, bottom: 412.64 }))
+    assert.ok(Math.abs(area.bounds[edge] - value) < 1e-9);
+  const state = createKeeperMotion({ x: 400, y: 360 }); releaseKeeper(state);
+  moveKeeperTo(state, { x: 2000, y: -1000 });
+  run(state, 900, { movement: 'swim', bounds: area.bounds });
+  assert.ok(Math.abs(state.x - area.bounds.right) < .01 && Math.abs(state.y - area.bounds.top) < .01);
+  const small = keeperFlightViewport(384, { left: 10, top: 90, width: 320, height: 260 }, 390, 844);
+  assert.ok(small.size < 384 && small.bounds.left >= 10 && small.bounds.bottom <= 350);
+});
 
 test('conversation holds position and heading, keeps idle time, and resumes the existing swim destination', () => {
   const state = createKeeperMotion({ x: 400, y: 400 }); releaseKeeper(state);

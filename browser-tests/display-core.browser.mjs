@@ -15,7 +15,7 @@ test('Display has corner resize and Workbench zoom without independent enlargeme
       for (const deltaY of [-120, 120, -500, -500]) await stage.dispatchEvent('wheel', { deltaY, bubbles: true, cancelable: true });
       const scrolled = await board.boundingBox();
       assert.deepEqual([scrolled.width, scrolled.height], [before.width, before.height], 'ordinary wheel never changes Display size');
-      await page.getByRole('button', { name: 'Reset Workbench position' }).click();
+      await page.getByRole('button', { name: 'Reset Workbench view' }).click();
       await board.getByRole('button', { name: 'Resize Display Module from se', exact: true }).focus(); await page.keyboard.press('ArrowRight');
       const resized = await board.boundingBox();
       assert.ok(resized.width > before.width, 'corner keyboard resize remains available');

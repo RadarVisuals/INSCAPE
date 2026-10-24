@@ -1,16 +1,17 @@
 import { UserRound } from 'lucide-react';
-import { useMemo } from 'react';
+import WorkbenchDestinationPanel from './WorkbenchDestinationPanel.jsx';
 const compactAddress = (address) => address?.length > 18 ? `${address.slice(0, 10)}…${address.slice(-6)}` : address;
 
-export default function OwnerSystemWorkflowProfile({ identity, model, onDisconnect, onOpenIdentity, onOpenReception, phase }) {
-  const sourceIdentity = useMemo(() => ({
+export default function OwnerSystemWorkflowProfile({ identity, model, onClose, onDisconnect, onOpenIdentity, onOpenReception, phase }) {
+  const sourceIdentity = {
     avatarUrl: model?.officialProfile.avatarUrl || identity?.avatarUrl || null,
-    displayName: model?.officialProfile.name || identity?.name || 'UNNAMED PROFILE',
-    secondaryLabel: `${compactAddress(model?.address)} · OWNER`,
-  }), [identity, model]);
+    displayName: model?.officialProfile.name || identity?.name || 'Unnamed profile',
+    secondaryLabel: [compactAddress(model?.address || identity?.address), 'Owner'].filter(Boolean).join(' · '),
+  };
   return <>
-    <aside aria-hidden={phase === 'closing' || undefined} aria-label="Profile" className="system-workflow__profile system-workflow__motion-panel"
+    <WorkbenchDestinationPanel title="Profile" onClose={onClose} aria-hidden={phase === 'closing' || undefined} className="system-workflow__profile"
       inert={phase === 'closing' ? '' : undefined}>
+      <div className="workbench-destination-body">
       <button className="system-workflow__profile-card" data-identity-dossier-source="true"
         onClick={onOpenIdentity} type="button">
         <span className="system-workflow__profile-avatar">{sourceIdentity.avatarUrl ? <img alt="" src={sourceIdentity.avatarUrl} /> : <UserRound />}
@@ -20,6 +21,7 @@ export default function OwnerSystemWorkflowProfile({ identity, model, onDisconne
       </button>
       {onOpenReception && <button className="system-workflow__profile-action" onClick={onOpenReception} type="button">View my reception</button>}
       {onDisconnect && <button className="system-workflow__profile-action" onClick={onDisconnect} type="button">Disconnect</button>}
-    </aside>
+      </div>
+    </WorkbenchDestinationPanel>
   </>;
 }

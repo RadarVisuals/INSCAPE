@@ -16,6 +16,12 @@
 
 ## Change discipline: inspect dependencies before extending
 
+- For Reception, navigation, multiple compositions, Keeper habitats or optional
+  exploration worlds, read `docs/design-references/2026-10-20-inscape-vision/README.md`
+  and inspect the linked original screenshots after the two required product
+  documents. Distinguish founder intent, open questions and proposed technical
+  approaches. The packet does not authorize implementation by itself.
+
 - Before a feature or workflow change, trace the relevant existing path through
   UI, state, data, persistence, and access boundaries. Inspect the code and tests
   that the change will depend on; do not assume working screens prove sound

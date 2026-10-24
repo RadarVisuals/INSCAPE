@@ -49,7 +49,7 @@ export async function mountFilledDisplay(page, origin, { gridCount = 3, placemen
     if (visitor) draft.grids.push((await import('/src/systemWorkflow/domain/systemWorkflowDraft.js')).createEmptySystemWorkflowWorldCoverGrid());
     const runtime = visitor ? React.createElement((await import('/src/profileDocument/components/ProfileDocumentV9Visitor.jsx')).default,
       { document: (await import('/src/profileDocument/domain/profileDocumentV9Builder.js')).buildProfileDocumentV9({ systemWorkflowDraft: draft, profileAddress: draft.profileAddress, assetRecords: assets }) })
-      : React.createElement(Runtime, { profileAddress: draft.profileAddress, reviewStorage: storage, reviewAssets: assets, reviewCategories: [], reviewActivity: [], reviewDiscovery: [], reviewProfile: { name: 'Filled Display fixture' } });
+      : React.createElement(Runtime, { profileAddress: draft.profileAddress, reviewStorage: storage, reviewAssets: assets, reviewCategories: [], reviewActivity: [], reviewProfile: { name: 'Filled Display fixture' } });
     createRoot(document.getElementById('root')).render(profile ? React.createElement(React.Profiler, { id: 'Filled Display', onRender: (_id, phase, duration, baseDuration, start, commit) => {
       if (probe.recording) probe.commits.push({ phase, duration, baseDuration, start, commit });
     } }, runtime) : runtime);

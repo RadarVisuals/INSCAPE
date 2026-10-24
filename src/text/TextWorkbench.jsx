@@ -1,3 +1,4 @@
+import { useWorkbenchMiniature } from '../public/ownerSystemWorkflow/workbenchMiniatures.js';
 import { useWorkbenchArea } from '../public/ownerSystemWorkflow/WorkbenchAreaContext.jsx';
 import { useSceneNavigation } from './SceneNavigation.jsx';
 import { editPassage, textDisplays } from './scenePassages.js';
@@ -5,7 +6,7 @@ import { useTextScene, SceneTextViewport, TextContentPage } from './SceneTextCon
 import { lazy, memo, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { X, Settings2 as Settings, Eye, Pencil, Plus } from 'lucide-react';
 import { WorkbenchWindow } from '../public/ownerSystemWorkflow/DisplayInstrumentWindow.jsx';
-import { useWorkbenchView, workbenchModuleTransform } from '../public/ownerSystemWorkflow/WorkbenchViewContext.js';
+import { useWorkbenchView, workbenchModuleTransform, useArtworkOpener, useClosedArtworkLayout, useWorkbenchToolSource } from '../public/ownerSystemWorkflow/WorkbenchViewContext.js';
 import { useWorkbenchCamera } from '../public/ownerSystemWorkflow/WorkbenchCamera.jsx';
 import { clampWorkbenchPosition } from '../public/ownerSystemWorkflow/workbenchSpace.js';
 import { createTextPresentation } from '../profileDocument/domain/workbenchPresentation.js';
@@ -24,11 +25,12 @@ import { textRecoveryScope } from './textEditRecovery.js';
 import useTextEditSession from './useTextEditSession.js';
 import '../public/ownerSystemWorkflow/displayInstruments.css';
 import './text.css';
+const TextColourTools = lazy(() => import('./TextColourTools.jsx'));
 const ArticleEditor = lazy(() => import('./ArticleEditor.jsx'));
 const textValue = record => record;
 const saveText = (store, scope, expected, next, options) => saveTextModuleResult(store, scope.profile, expected, next, options);
 
-const TextInstance = memo(function TextInstance({ record, index, store, profileAddress, assets, registerTarget, placementTargets, destinations = [], initialPresentation, onPresentationChange, suspended, active, activateModule, toolsOpen, setToolsOpen, displays, savedLayout, windowSnap, initialView, onViewChange, initiallyOpenId }) {
+const TextInstance = memo(function TextInstance({ record, index, store, profileAddress, registerTarget, placementTargets, destinations = [], initialPresentation, onPresentationChange, suspended, active, activateModule, toolsOpen, setToolsOpen, displays, savedLayout, windowSnap, initialView, onViewChange, initiallyOpenId }) {
   const onActivate = useCallback(() => activateModule(record.id), [activateModule, record.id]);
   const { bounds: areaBounds } = useWorkbenchArea();
   const workbenchView = useWorkbenchView();
@@ -38,6 +40,8 @@ const TextInstance = memo(function TextInstance({ record, index, store, profileA
   const { value: working, failed, error, reason, session: edit } = useTextEditSession({ store, scope, record, valueOf: textValue, saveRecord: saveText });
   const { save: change, setError } = edit;
   const [presentation, setPresentation] = useState(() => ({ ...(initialPresentation || createTextPresentation(record.id, index)), ...(initiallyOpenId === record.id ? { open: true } : {}) }));
+  useArtworkOpener(record.id, () => setPresentation(current => ({ ...current, open: true })));
+  useClosedArtworkLayout(presentation, setPresentation, savedLayout?.texts?.find(item => item.id === record.id));
   const linked = Boolean(presentation.frames?.length);
   const [flowEditor, setFlowEditor] = useState(null);
   const savedFrames = savedLayout?.texts?.find(item => item.id === record.id)?.frames;
@@ -46,7 +50,7 @@ const TextInstance = memo(function TextInstance({ record, index, store, profileA
     if (previousFramesKey.current === savedFramesKey) return;
     previousFramesKey.current = savedFramesKey;
     setPresentation(current => { const next = { ...current }; if (savedFrames?.length) next.frames = savedFrames; else delete next.frames; return next; });
-  }, [savedFramesKey]);
+  }, [savedFramesKey, savedFrames]);
   const [editingMode, setMode] = useState(store ? initialView?.mode || 'write' : 'read');
   const mode = view.presented ? 'read' : editingMode;
   const settings = Boolean(store && toolsOpen && active);
@@ -58,17 +62,36 @@ const TextInstance = memo(function TextInstance({ record, index, store, profileA
   useEffect(() => { onViewChange?.(record.id, { mode: editingMode }); }, [record.id, editingMode, onViewChange]);
   useEffect(() => () => onViewChange?.(record.id, null), [record.id, onViewChange]);
   const surface = useRef(null), editor = useRef(null), shortcut = useRef(null);
+  const [colourEditor, setColourEditor] = useState(null), [colourTarget, setColourTarget] = useState('default');
+  const [colourPreview, setColourPreview] = useState(null);
   const sceneState = useTextScene(working, mode);
-  const { scene, sectionLink, sectionRead, paginated, gridId, article, unavailable, swiping } = sceneState;
+  const { sectionLink, sectionRead, paginated, gridId, article: savedArticle, unavailable, swiping } = sceneState;
+  const article = colourPreview?.source === working && colourPreview.gridId === gridId ? colourPreview.article : savedArticle;
   const appearance = textAppearance(article);
   const flow = useArticleFlow(article, [record.id, ...(presentation.frames || []).map(frame => frame.id)]);
+  const { id: miniatureFrame, from: miniatureFrom, to: miniatureTo } = flow.ranges.length > 1 ? flow.ranges[0] : {};
+  useWorkbenchMiniature(record.id, useMemo(() => ({ kind: 'text', article,
+    range: miniatureFrame ? { id: miniatureFrame, from: miniatureFrom, to: miniatureTo } : null, index: 0 }),
+  [article, miniatureFrame, miniatureFrom, miniatureTo]));
   const paintScale = view.scale * (globalThis.devicePixelRatio || 1);
   const missingDisplay = Boolean(store && working.sceneLink && !displays.some(display => display.id === working.sceneLink.displayId));
   const editBlocked = view.presented || suspended || (!sectionLink && (unavailable || swiping));
   const changeArticle = value => {
     if (!editBlocked) change(editPassage(edit.getSnapshot().value, gridId, value));
   };
-  const setEditor = useCallback(value => { editor.current = value; }, []);
+  const setEditor = useCallback(value => { editor.current = value; setColourEditor(value); }, []);
+  useEffect(() => {
+    if (!colourEditor || colourEditor.isDestroyed) return;
+    const selectBody = () => setColourTarget('body');
+    colourEditor.on('focus', selectBody); colourEditor.on('selectionUpdate', selectBody);
+    return () => { colourEditor.off('focus', selectBody); colourEditor.off('selectionUpdate', selectBody); };
+  }, [colourEditor]);
+  useEffect(() => { setColourTarget('default'); setColourPreview(null); }, [gridId]);
+  const sharedColour = useWorkbenchToolSource(record.id, { color: <Suspense fallback={<p>Opening Color…</p>}>
+    <TextColourTools key={gridId || 'article'} article={sectionLink ? working.article : savedArticle} editor={colourEditor} target={colourTarget} onTarget={setColourTarget}
+      store={store} disabled={editBlocked || failed || !presentation.open} error={error} onRecovery={() => setSettings(true)} onChange={changeArticle}
+      onPreview={value => setColourPreview(value ? { source: working, gridId, article: value } : null)} />
+  </Suspense> });
   const acceptImage = useCallback((asset, point) => {
     if (!edit.isCurrent() || !editor.current || editBlocked || !presentation.open || mode !== 'write') return false;
     const id = asset.stableAssetId || asset.id;
@@ -77,12 +100,13 @@ const TextInstance = memo(function TextInstance({ record, index, store, profileA
       if (resolved.media.type !== 'image') throw new Error('Choose a Library image.');
       return editor.current.chain().insertArticleArtwork({ asset: resolved, alt: resolved.name || '', caption: '' }, point, flowEditor?.bridge.viewAt(point)).focus().run();
     } catch (e) { setError(e.message); return false; }
-  }, [edit, editBlocked, presentation.open, mode, gridId, flowEditor]);
+  }, [edit, editBlocked, presentation.open, mode, flowEditor, setError]);
   useEffect(() => {
     if (!store || !registerTarget || suspended || !presentation.open || mode !== 'write') return;
     registerTarget(record.id, { get node() { return surface.current; }, label: 'Insert artwork into article', placeAsset: acceptImage });
     return () => registerTarget(record.id, null);
-  }, [record.id, store, registerTarget, suspended, presentation.open, mode, acceptImage]);
+  // A passage change retires the Library receiver even when the editor stays mounted.
+  }, [record.id, store, registerTarget, suspended, presentation.open, mode, acceptImage, gridId]);
   useEffect(() => { onPresentationChange?.(record.id, presentation); }, [record.id, presentation, onPresentationChange]);
   useEffect(() => () => onPresentationChange?.(record.id, null), [record.id, onPresentationChange]);
   const layout = useCallback(window => setPresentation(current => JSON.stringify(current.window) === JSON.stringify(window) ? current : { ...current, window }), []);
@@ -101,7 +125,7 @@ const TextInstance = memo(function TextInstance({ record, index, store, profileA
       applyFrame: applyGroupFrame, reportError: setError, minimumWidth: 180, minimumHeight: 100,
       maximumWidth: 7992, maximumHeight: 7992,
     };
-  }, [store, profileAddress, editBlocked, failed, working, record, applyGroupFrame]);
+  }, [store, profileAddress, editBlocked, failed, working, record, applyGroupFrame, setError]);
   const name = article.title || 'Untitled article';
   const changeFrames = frames => {
     if (editBlocked || failed) return;
@@ -131,7 +155,7 @@ const TextInstance = memo(function TextInstance({ record, index, store, profileA
     edit.accept(result.record); setLinkTarget(''); setMode('write');
   };
   return <div className="text-workbench" data-workbench-module="text" data-text-id={record.id} data-text-tools-open={settings || undefined}
-    style={{ '--text-z': active ? 49 : 46, '--text-shortcut-bottom': `${64 + index * 38}px` }} onPointerDownCapture={onActivate} onFocusCapture={onActivate}>
+    style={{ '--text-z': active ? 49 : 46, '--text-shortcut-bottom': `${64 + index * 38}px` }} onPointerDownCapture={onActivate} onFocusCapture={event => { onActivate(); if (event.target.matches('.text-document-title')) setColourTarget('title'); }}>
     {shortcutMenu.content}
     {store && active && linked && presentation.open && workbenchView.subscribe && <TextFrameLinks ids={[record.id, ...presentation.frames.map(frame => frame.id)]} />}
     {!presentation.open && <button data-workbench-pan ref={shortcut} className="text-shortcut" onContextMenu={shortcutMenu.onContextMenu} onKeyDown={shortcutMenu.onKeyDown}
@@ -157,7 +181,7 @@ const TextInstance = memo(function TextInstance({ record, index, store, profileA
         <SceneTextViewport record={working} state={sceneState} open={presentation.open} mode={mode}>
           <TextContentPage article={article} paginated={paginated} mode={mode} flow={linked ? flow : null}
             showOverflow={Boolean(store)} resetKey={sectionRead || paginated ? gridId : null}>
-                  {store && <div hidden={mode !== 'write'}><Suspense fallback={<p role="status">Opening editor…</p>}><ArticleEditor key={sectionLink ? 'article' : gridId || 'article'} article={sectionLink ? working.article : article}
+                  {store && <div hidden={mode !== 'write'}><Suspense fallback={<p role="status">Opening editor…</p>}><ArticleEditor sharedColour={sharedColour} key={sectionLink ? 'article' : gridId || 'article'} article={sectionLink && colourPreview?.source !== working ? working.article : article}
                     onChange={changeArticle} onEditor={setEditor} onFlowEditor={setFlowEditor} flowRange={linked ? flow.ranges[0] : null} controlsHost={controlsHost} disabled={editBlocked || mode !== 'write'} saveError={error}
                     onFindRequest={() => { if (!editBlocked && mode === 'write') setSettings(true); }} /></Suspense></div>}
           </TextContentPage>
@@ -167,7 +191,7 @@ const TextInstance = memo(function TextInstance({ record, index, store, profileA
     {presentation.open && presentation.frames?.map((frame, index) => <LinkedTextWindow key={frame.id} {...{ frame, article, flow, active, store, resizeTarget, windowSnap, mode, flowEditor }} registerTarget={!editBlocked ? registerTarget : null} acceptImage={acceptImage}
       index={index + 1} ownerId={record.id} onLayout={frameLayout} onAdd={addFrame} onRemove={id => { if (changeFrames(presentation.frames.filter(frame => frame.id !== id))) queueMicrotask(() => toolsTrigger.current?.focus()); }}
       onEdit={() => { setMode('write'); setSettings(true); }} onTools={() => { setMode('write'); setSettings(true); }} />)}
-    {store && <TextTools targetId={record.id} available={presentation.open && !suspended} article={sectionLink ? working.article : article} onChange={changeArticle}
+    {store && <TextTools sharedColour={sharedColour} targetId={record.id} available={presentation.open && !suspended} article={sectionLink ? working.article : article} onChange={changeArticle}
       backupScope={JSON.stringify([profileAddress, record.id, sectionLink ? null : gridId])} recoveryPending={failed}
       controlsRef={setControlsHost} onClose={closeTools} disabled={editBlocked}
       anchor={{ left: (view.frame || presentation.window).left * view.scale + view.x + offset.x,
@@ -230,19 +254,20 @@ function IsolatedTextWorkbench(props) {
     <SharedTextToolsWindow hidden={props.suspended} /><TextInstances {...props} />
   </SharedTextToolsProvider>;
 }
-function TextInstances({ records, presentations, store, profileAddress, assets = [], registerTarget, placementTargets, onPresentationChange, suspended = false, windowSnap = false, views, onViewChange, initiallyOpenId }) {
+function TextInstances({ records, presentations, store, profileAddress, registerTarget, placementTargets, onPresentationChange, suspended = false, windowSnap = false, views, onViewChange, initiallyOpenId }) {
   const tools = useSharedTextTools();
   const [active, setActive] = useState(null);
   const draft = store?.getSnapshot();
   // Other articles changing must not render every editor. Explicitly retain the
   // cross-module inputs: Display choices and saved geometry (including undo).
-  const displays = useMemo(() => draft ? textDisplays(draft) : [], [draft?.grids, draft?.displays, draft?.workbench]);
+  const grids = draft?.grids, displayRecords = draft?.displays, workbench = draft?.workbench;
+  const displays = useMemo(() => textDisplays({ grids, displays: displayRecords, workbench }), [grids, displayRecords, workbench]);
   const activeId = tools ? tools.activeModuleId : active;
   // Targets can become unavailable without changing a saved article (locking,
   // opening or closing a Display). Refresh the active transfer menu from live
   // host refs on every host render without waking unrelated editors.
   const destinations = placementTargets?.current?.textTargets?.() || [];
-  return records.map((record, index) => <TextInstance key={`${profileAddress}:${record.id}`} {...{ record, index, store, profileAddress, assets, registerTarget, placementTargets, onPresentationChange, suspended, windowSnap }}
+  return records.map((record, index) => <TextInstance key={`${profileAddress}:${record.id}`} {...{ record, index, store, profileAddress, registerTarget, placementTargets, onPresentationChange, suspended, windowSnap }}
     displays={displays} savedLayout={draft?.workbench} activateModule={tools ? tools.activate : setActive} toolsOpen={tools?.open} setToolsOpen={tools?.setOpen}
     destinations={activeId === record.id ? destinations : undefined}
     initiallyOpenId={initiallyOpenId} initialView={views?.[record.id]} onViewChange={onViewChange} initialPresentation={presentations?.find(p => p.id === record.id)} active={activeId === record.id} />);

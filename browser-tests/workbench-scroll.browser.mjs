@@ -101,14 +101,14 @@ for (const visitor of [false, true]) for (const width of [1440, 390]) {
         await setWorkbenchZoom(page, scale);
         await host.dispatchEvent('wheel', { deltaX: 480, deltaY: 730, bubbles: true, cancelable: true }); await settle(page);
         const before = await camera(page);
-        if (scale === .25) await page.getByRole('button', { name: 'Reset Workbench zoom to 100%' }).click();
+        if (scale === .25) await page.getByRole('slider', { name: 'Workbench zoom', exact: true }).fill('100');
         else { await host.focus(); await page.keyboard.press('Control+0'); }
         await settle(page);
         const after = await camera(page);
         assert.equal(after.scale, 1);
         near(after.worldX, before.worldX, '100% retains horizontal centre');
         near(after.worldY, before.worldY, '100% retains vertical centre');
-        await page.getByRole('button', { name: 'Reset Workbench zoom to 100%' }).click(); await settle(page);
+        await page.getByRole('slider', { name: 'Workbench zoom', exact: true }).fill('100'); await settle(page);
         assert.deepEqual(await camera(page), after, '100% is a no-op when already at 100%');
         await resetPan();
         assert.equal((await camera(page)).x, 0); assert.equal((await camera(page)).y, 0);

@@ -1,11 +1,6 @@
-.workbench-index { position: absolute; inset: 0; z-index: 45; pointer-events: none; }
+.workbench-index { position: absolute; inset: 0; z-index: 90; pointer-events: none; }
 .workbench-index .system-workflow__instrument-window { pointer-events: auto; }
 .workbench-index .system-workflow__instrument-content { overflow: auto; overscroll-behavior: contain; padding: 10px; }
-.workbench-index .system-workflow__instrument-content :is(input, select, button) { box-sizing: border-box; min-width: 0; max-width: 100%; border: 1px solid var(--workflow-border); border-radius: 0; padding: 6px; color: var(--workflow-ink); background: transparent; font: var(--workflow-type-control); }
-.workbench-index button { cursor: pointer; }
-.workbench-index button:hover:not(:disabled) { background: var(--workflow-hover); }
-.workbench-index button:disabled { opacity: .4; cursor: default; }
-.workbench-index :is(input, select, button):focus-visible { outline: 1px solid var(--workflow-ink); outline-offset: 2px; }
 .workbench-index ol { list-style: none; padding: 0; margin: 0; display: grid; gap: 4px; }
 .workbench-index li { display: flex; gap: 4px; }
 .workbench-index li > button:first-child { flex: 1; display: flex; align-items: center; gap: 8px; text-align: left; overflow-wrap: anywhere; }

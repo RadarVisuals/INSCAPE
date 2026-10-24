@@ -11,7 +11,7 @@ const EMPTY_GROUPS = Object.freeze([]);
 
 // Group browsing owns temporary presentation geometry and visibility. Registered modules stay mounted, keep
 // their authored frames, and continue to own their content and editing state.
-export function useWorkbenchGroupScene({ view, content, hostRef, navigation, sceneRef, disabled }) {
+export function useWorkbenchGroupScene({ view, content, navigation, sceneRef, disabled }) {
   const [openId, setOpenId] = useState(null), [focusedId, setFocusedId] = useState('');
   const revision = useSyncExternalStore(view.subscribe, view.snapshot);
   const latest = useRef(null);

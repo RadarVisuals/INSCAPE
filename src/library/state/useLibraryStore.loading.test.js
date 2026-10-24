@@ -104,6 +104,24 @@ test('failed discovery without cache ends in error, not a ready empty Library', 
   assert.deepEqual(useLibraryStore.getState().assets, []);
 });
 
+test('a source ending without a complete batch cannot report a successful refresh', async (t) => {
+  for (const retained of [false, true]) await t.test(retained ? 'retained cards' : 'empty cache', async () => {
+    const storage = memoryStorage();
+    const known = retained ? seedKnownInventory(storage) : null;
+    if (!retained) resetLibraryStoreForTests(PROFILE, storage);
+    chillwhalesProfileRepository.loadProfileAssets = async function* () {
+      yield { assets: [], failures: 0, resolved: 0, total: 1, complete: false };
+    };
+    luksoRpcProfileRepository.loadProfileAssets = async function* () {};
+    await useLibraryStore.getState().load({ forceLive: true });
+    const state = useLibraryStore.getState();
+    assert.equal(state.status, retained ? 'partial' : 'error');
+    assert.match(state.liveError, /incomplete/i);
+    assert.deepEqual(state.assets, known ? [known] : []);
+    assert.deepEqual(loadLibraryAssetCache(storage, PROFILE), known ? [known] : []);
+  });
+});
+
 test('mixed RPC success merges verified additions without deleting known assets or reporting ready', async () => {
   const storage = memoryStorage();
   const known = seedKnownInventory(storage);

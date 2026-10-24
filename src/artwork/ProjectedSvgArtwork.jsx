@@ -1,9 +1,10 @@
-import { useLayoutEffect, useRef, useState } from 'react';
+import { useCallback, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import ArtworkSvgDocument from './ArtworkSvgDocument.jsx';
 import { useArtworkPreparation } from './ArtworkPreparation.jsx';
 import { useArtworkGeometry } from './ArtworkGeometry.jsx';
 import { useArtworkVisibility } from './useArtworkVisibility.js';
+import { useRetainedArtwork } from './useRetainedArtwork.js';
 
 // Each mounted artwork owns its document and keeps it in the same DOM location.
 // Lift supplies temporary projection only; the registry ends with its owner.
@@ -26,7 +27,7 @@ export function projectedSvgArtworkFor(source, src) {
 
 // Geometry belongs to the containing module. One SVG viewport clips the
 // artwork document after applying that module's existing media transform.
-export default function ProjectedSvgArtwork({ src, width, height, dimensions, mediaStyle, onReady }) {
+export default function ProjectedSvgArtwork({ src, width, height, dimensions, mediaStyle, onReady, renderStatus }) {
   const root = useRef(null);
   const media = useRef(null);
   const host = useRef(null);
@@ -39,30 +40,44 @@ export default function ProjectedSvgArtwork({ src, width, height, dimensions, me
   const documentControls = useRef(null);
   const visible = useArtworkVisibility(root);
   const prepared = useArtworkPreparation();
+  const requested = Boolean(visible || prepared || lift);
+  const retained = useRetainedArtwork(src, requested);
+  const measuring = useRef(requested); measuring.current = requested;
   const geometry = useArtworkGeometry();
-  const updatePixelScale = () => {
+  const densityFrame = useRef(null);
+  const updatePixelScale = useCallback(() => {
+    cancelAnimationFrame(densityFrame.current);
+    densityFrame.current = null;
     // Camera motion has already prepared its largest layout. Measuring its
     // temporary shrinking transform would replace those pixels with a thumbnail.
-    if (geometry.isProjected()) return;
+    if (!loaded.current || !measuring.current || geometry.isProjected()) return;
     const matrix = media.current?.getScreenCTM();
     if (matrix) documentControls.current?.setPixelScale(Math.max(Math.hypot(matrix.a, matrix.b), Math.hypot(matrix.c, matrix.d)) * (devicePixelRatio || 1));
-  };
-  // Module geometry changes at resize/zoom endpoints; never resample per motion
-  // frame. Inspection uses original pixels until its explicit release.
-  useLayoutEffect(updatePixelScale);
+  }, [geometry]);
+  const schedulePixelScale = useCallback(() => {
+    if (densityFrame.current === null) densityFrame.current = requestAnimationFrame(updatePixelScale);
+  }, [updatePixelScale]);
+  // Camera commits notify after all module layout writes. Keep this synchronous:
+  // Focus must prepare its largest pixels before temporary projection begins.
+  // It also consumes any measurement already queued by a child layout effect.
   useLayoutEffect(() => geometry.subscribe(updatePixelScale), [geometry]);
   useLayoutEffect(() => {
     // Image content is memoized in authored coordinates; zoom resizes its outer
-    // viewport without rendering this component. Measure that real viewport.
-    const observer = new ResizeObserver(updatePixelScale);
+    // viewport without rendering this component. Coalesce local geometry and
+    // resize notifications, without forcing layout between sibling React writes.
+    const observer = new ResizeObserver(schedulePixelScale);
     observer.observe(root.current);
-    addEventListener('resize', updatePixelScale);
-    return () => { observer.disconnect(); removeEventListener('resize', updatePixelScale); };
-  }, [geometry]);
+    addEventListener('resize', schedulePixelScale);
+    return () => {
+      observer.disconnect(); removeEventListener('resize', schedulePixelScale);
+      cancelAnimationFrame(densityFrame.current); densityFrame.current = null;
+    };
+  }, [schedulePixelScale]);
   useLayoutEffect(() => {
     const home = host.current;
     let active = true, target = null;
     loaded.current = false;
+    documentControls.current = null;
     home.appendChild(paintHost);
     const paint = projection => {
       if (!active || !target) return;
@@ -125,7 +140,10 @@ export default function ProjectedSvgArtwork({ src, width, height, dimensions, me
       artworkHosts.delete(home); paintHost.remove();
     };
   }, [paintHost, src]);
-  useLayoutEffect(() => { if (!visible && !prepared && !lift) loaded.current = false; }, [visible, prepared, lift]);
+  useLayoutEffect(() => {
+    if (!retained) { loaded.current = false; documentControls.current = null; }
+    else if (requested) schedulePixelScale();
+  }, [retained, requested, schedulePixelScale]);
   const rect = mediaStyle || { left: 0, top: 0, width, height };
   // Keep the document in native media coordinates. Resizing its iframe during
   // Lift reflows SVG content/scripts instead of scaling the artwork as a unit.
@@ -137,12 +155,13 @@ export default function ProjectedSvgArtwork({ src, width, height, dimensions, me
   // transform to a newly promoted, native-size outer SVG layer.
   const svgWidth = lift ? lift.width : width;
   const svgHeight = lift ? lift.height : height;
+  useLayoutEffect(schedulePixelScale, [schedulePixelScale, transform, svgWidth, svgHeight, viewport.width, viewport.height]);
   return <span ref={host} className="artwork-svg-host" data-svg-artwork-host>{createPortal(
     <svg ref={root} className="artwork-svg-viewport" data-interactive-svg viewBox={`0 0 ${svgWidth} ${svgHeight}`} preserveAspectRatio="none">
       <foreignObject ref={media} width={viewport.width} height={viewport.height} transform={transform}>
-        {(visible || prepared || lift) && <ArtworkSvgDocument key={src} src={src} stretch paintOnly onReady={controls => {
-          documentControls.current = controls; updatePixelScale();
-          loaded.current = true; liftReady.current?.(); onReady?.();
+        {retained && <ArtworkSvgDocument key={src} src={src} visible={Boolean(visible || lift)} stretch paintOnly renderStatus={renderStatus} onReady={controls => {
+          documentControls.current = controls; loaded.current = true; schedulePixelScale();
+          liftReady.current?.(); onReady?.();
         }} />}
       </foreignObject>
     </svg>, paintHost)}</span>;

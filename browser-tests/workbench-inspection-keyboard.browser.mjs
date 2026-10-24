@@ -30,8 +30,7 @@ async function mount(page) {
     addEventListener('inscape:review-storage-write', event => { if (event.detail.key === key) window.inspectionWrites++; });
     await import('/src/index.css'); await import('/src/inscapeTokens.css'); await import('/src/public/ownerSystemWorkflow/ownerSystemWorkflow.css'); await import('/src/lattice/rendering/latticeMenuSurface.css');
     createRoot(document.getElementById('root')).render(React.createElement(Runtime, { profileAddress, reviewStorage: storage,
-      reviewAssets: fixture.OWNER_SYSTEM_WORKFLOW_REVIEW_ASSETS, reviewCategories: [], reviewActivity: [], reviewDiscovery: [],
-      reviewProfile: { name: 'Keyboard inspection' } }));
+      reviewAssets: fixture.OWNER_SYSTEM_WORKFLOW_REVIEW_ASSETS, reviewCategories: [], reviewActivity: [], reviewProfile: { name: 'Keyboard inspection' } }));
   });
   await page.getByRole('article', { name: 'Display Module', exact: true }).waitFor();
 }
@@ -88,23 +87,23 @@ for (const visitor of [false, true]) for (const width of [1440, 390]) {
         await page.getByRole('menuitem', { name: 'METADATA', exact: true }).press('Enter');
         const metadata = page.locator('[data-shared-tool="metadata"]');
         await metadata.waitFor();
-        assert.match(await metadata.locator('xpath=ancestor::aside').getAttribute('aria-label'), /ABYSSAL STUDY/);
+        assert.equal(await metadata.getByRole('heading', { name: 'ABYSSAL STUDY', exact: true }).count(), 1);
         assert.equal(await inspection.isVisible(), true, 'reading Metadata keeps the same inspection open');
         if (key === 'Shift+F10') {
           await mkdir(output, { recursive: true });
           await page.screenshot({ path: join(output, `inspection-keyboard-${visitor ? 'visitor' : 'owner'}-${width}.png`) });
         }
         if (key === 'Shift+F10') {
-          await page.getByRole('button', { name: 'Close Artwork info', exact: true }).click();
+          await page.getByRole('button', { name: visitor ? 'Close Artwork info' : 'Close Info', exact: true }).click();
         } else {
           // A user can choose a new focus target before deferred close recovery.
           // Keep both actions in one frame to reproduce that race deterministically.
           await page.evaluate(([close, target]) => { close.click(); target.focus(); }, [
-            await page.getByRole('button', { name: 'Close Artwork info', exact: true }).elementHandle(),
+            await page.getByRole('button', { name: visitor ? 'Close Artwork info' : 'Close Info', exact: true }).elementHandle(),
             await header.elementHandle(),
           ]);
         }
-        await metadata.waitFor({ state: 'detached' });
+        await metadata.waitFor({ state: 'hidden' });
         await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
         if (key === 'Shift+F10') assert.equal(await page.evaluate(() => document.activeElement !== document.body && document.activeElement.isConnected), true, 'ordinary close restores focus');
         else assert.equal(await header.evaluate(node => node === document.activeElement), true, 'close recovery preserves a newer focus choice');

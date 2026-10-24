@@ -23,7 +23,7 @@ test('built fresh entry stays below 1 MB JS without wallet/owner acquisition; bu
       page.on('request',r=>{if(new URL(r.url()).pathname.endsWith('.js')) requests.push(new URL(r.url()).pathname);});
       await page.route('**/*',r=>new URL(r.request().url()).origin===origin?r.continue():r.abort());
       await page.goto(origin,{waitUntil:'networkidle'});
-      await page.getByRole('button',{name:'CONNECT',exact:true}).waitFor();
+      await page.getByRole('button',{name:'Connect',exact:true}).waitFor();
       assert.deepEqual(requests.filter(p=>forbidden.has(p)),[]);
       const bytes=await page.evaluate(()=>performance.getEntriesByType('resource')
         .filter(x=>new URL(x.name).pathname.endsWith('.js')).reduce((sum,x)=>sum+x.decodedBodySize,0));

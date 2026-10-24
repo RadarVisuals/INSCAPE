@@ -28,7 +28,7 @@ export function ContextToolbar({ hidden, menuSurface }) {
   const recoveryControls = view.entries.get(context?.target)?.querySelectorAll('[data-workbench-recovery-control]');
   return <div data-context-tools hidden={hidden || !content?.properties}>
     <WorkbenchWindow label="Properties" title={content?.label || 'Selection'} width={320} initialHeight={132} minimumHeight={64}
-      initialX={Math.max(8, globalThis.innerWidth - 336)} initialY={24} avoidControls={recoveryControls} fitContent fitContentFromTop resizable={false} chrome="tactile" menuSurface={menuSurface} className="context-toolbar workbench-tool-window">
+      initialX={Math.max(8, globalThis.innerWidth - (view.toolSources ? 1020 : 336))} initialY={view.toolSources ? 88 : 24} avoidControls={recoveryControls} fitContent fitContentFromTop resizable={false} chrome="tactile" menuSurface={menuSurface} className="context-toolbar workbench-tool-window">
       <div ref={context?.setHost} />
     </WorkbenchWindow>
   </div>;

@@ -1,4 +1,4 @@
-import { Plus, Trash2, X } from 'lucide-react';
+import { Trash2, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { categoryDialogInitialName } from '../../lattice/browser/browserWorkspaceModel.js';
 
@@ -54,6 +54,8 @@ export function OwnerSystemWorkflowWorkspaceShell({ children, className, label, 
     });
   };
   return <section aria-hidden={phase === 'closing' || undefined} aria-label={label}
+    data-library-chrome
+    data-workflow-material="tactile" data-workflow-finish="flat"
     className={`system-workflow__workspace-window system-workflow__browser-workspace system-workflow__motion-panel ${className}`}
     data-placing={placing || undefined} style={style}
     data-sidebar-collapsed={sidebarCollapsed || undefined}
@@ -68,46 +70,4 @@ export function OwnerSystemWorkflowWorkspaceShell({ children, className, label, 
       data-active={hoverLabel.active || undefined}
       style={{ height: hoverLabel.height, left: hoverLabel.left, top: hoverLabel.top }}>{hoverLabel.label}</output>}
   </section>;
-}
-
-export function useOwnerSystemWorkflowSidebar(initialWidth = 174, preferences = null) {
-  const [width, setWidth] = useState(() => preferences?.width || initialWidth);
-  const gesture = useRef(null);
-  const expandedWidth = useRef(width >= 152 ? width : initialWidth);
-  const collapsed = width <= 48;
-  const resize = {
-    begin(event) { if (event.button !== 0) return; event.preventDefault(); gesture.current = { pointerId: event.pointerId, startX: event.clientX, startWidth: width }; event.currentTarget.setPointerCapture?.(event.pointerId); },
-    update(event) { if (gesture.current?.pointerId !== event.pointerId) return; const next = Math.min(320, Math.max(48, gesture.current.startWidth + event.clientX - gesture.current.startX)); if (next >= 152) expandedWidth.current = next; setWidth(next); if (preferences) preferences.width = next; },
-    finish(event) { if (gesture.current?.pointerId === event.pointerId) gesture.current = null; },
-  };
-  const ensureWidth = (minimum = 152) => {
-    if (width >= minimum) return;
-    const next = Math.max(minimum, expandedWidth.current);
-    setWidth(next); if (preferences) preferences.width = next;
-  };
-  return { collapsed, ensureWidth, resize, width };
-}
-
-export function OwnerSystemWorkflowBrowserSidebar({ afterCreate = null, children, createLabel, editing = false, inlineEditor = null, onCreate, sidebar }) {
-  return <>
-    <nav aria-label="Browser navigation" className="lattice-browser-sidebar" data-collapsed={sidebar.collapsed || undefined}>
-      {children}
-      <div className="lattice-browser-sidebar__category-heading">
-        {inlineEditor || (onCreate && <button aria-label={createLabel} className="lattice-browser-sidebar__create" onClick={onCreate} type="button"><Plus size={14} /><span>{createLabel}</span></button>)}
-      </div>
-      {afterCreate}
-    </nav>
-    <button aria-label="Resize Browser navigation" className="lattice-browser-sidebar-resize" disabled={editing} onLostPointerCapture={sidebar.resize.finish}
-      onPointerDown={sidebar.resize.begin} onPointerMove={sidebar.resize.update} onPointerUp={sidebar.resize.finish} type="button" />
-  </>;
-}
-
-export function OwnerSystemWorkflowCreateDialog({ initialName = '', label, onCancel, onConfirm, submitLabel = 'Create' }) {
-  const [name, setName] = useState(initialName);
-  return <div className="system-workflow__create-dialog" role="dialog" aria-modal="true" aria-label={label}>
-    <form onSubmit={(event) => { event.preventDefault(); if (onConfirm(name)) onCancel(); }}>
-      <label><span>{label}</span><input autoFocus maxLength="80" onChange={(event) => setName(event.target.value)} value={name} /></label>
-      <footer><button onClick={onCancel} type="button">Cancel</button><button disabled={!name.trim()} type="submit">{submitLabel}</button></footer>
-    </form>
-  </div>;
 }

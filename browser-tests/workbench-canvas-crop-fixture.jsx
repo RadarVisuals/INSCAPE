@@ -44,4 +44,4 @@ window.canvasDocument = () => buildProfileDocumentV9({ profileAddress, systemWor
 const visitor = new URLSearchParams(location.search).has('visitor');
 createRoot(document.getElementById('root')).render(visitor ? <Visitor document={window.canvasDocument()} />
   : <Runtime profileAddress={profileAddress} reviewStorage={storage} reviewAssets={[]} reviewCategories={[]}
-    reviewActivity={[]} reviewDiscovery={[]} reviewProfile={{ name: 'Canvas crop review' }} />);
+    reviewActivity={[]} reviewProfile={{ name: 'Canvas crop review' }} />);

@@ -20,7 +20,6 @@
 }
 .system-workflow__presentation-board:has(.display-inspection-cues[data-open]) .system-workflow__selection-chrome { visibility: hidden; }
 .display-inspection-bubble :is(button, select):focus-visible { outline: 1px solid var(--workflow-ink); outline-offset: -2px; }
-.display-inspection-error { position: absolute; bottom: 8px; left: 8px; margin: 0; background: var(--workflow-panel); font: var(--workflow-type-control); }
 @keyframes display-cue-unfold { from { opacity: 0; } to { opacity: 1; } }
 @media (hover: none) { .display-inspection-cue { opacity: 1; pointer-events: auto; } }
 @media (prefers-reduced-motion: reduce) { .display-inspection-cue { transition: none; } .display-inspection-bubble { animation: none; } }

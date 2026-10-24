@@ -21,6 +21,7 @@ for (const theme of ['carbon', 'mist']) for (const [width, height, touch] of [[1
     const browser = await chromium.launch({ executablePath, headless: true });
     try {
       const page = await browser.newPage({ viewport: { width, height }, hasTouch: touch });
+      page.setDefaultTimeout(10000);
       const errors = []; page.on('pageerror', e => errors.push(e.message));
       await page.route('**/*', route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
       await page.goto(`${origin}/browser-tests/workbench-toolbar-fixture.html?theme=${theme}`);
@@ -64,12 +65,12 @@ for (const theme of ['carbon', 'mist']) for (const [width, height, touch] of [[1
       const host = page.locator('main.system-workflow');
       await host.dispatchEvent('wheel', { bubbles: true, cancelable: true, clientX: 80, clientY: 90, deltaX: 70, deltaY: 90 }); await settle(page);
       assert.notDeepEqual(await snapshot(page), cameraBefore);
-      await rail.getByRole('button', { name: 'Reset Workbench position', exact: true }).click(); await settle(page);
+      await page.getByRole('button', { name: 'Reset Workbench view', exact: true }).click(); await settle(page);
       assert.deepEqual(await snapshot(page), cameraBefore);
       await host.dispatchEvent('wheel', { bubbles: true, cancelable: true, clientX: 80, clientY: 90, deltaY: -100, ctrlKey: true }); await settle(page);
-      const zoom = rail.getByRole('button', { name: 'Reset Workbench zoom to 100%', exact: true });
-      assert.notEqual(await zoom.innerText(), '100%');
-      await zoom.click(); await settle(page); assert.equal(await zoom.innerText(), '100%');
+      const zoom = page.getByRole('slider', { name: 'Workbench zoom', exact: true });
+      assert.notEqual(await zoom.inputValue(), '100');
+      await zoom.fill('100'); await settle(page); assert.equal(await zoom.inputValue(), '100');
       await page.emulateMedia({ forcedColors: 'active', reducedMotion: 'reduce' });
       await canvas.click(); await page.keyboard.press('Escape');
       const focus = await canvas.evaluate(node => ({ outline: getComputedStyle(node).outlineWidth, transition: getComputedStyle(node).transitionDuration }));

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { acquireProfileEditor, captureProfileDraftWriteAccess } from './profileEditorLease.js';
+import { acquireProfileEditor, beforeProfileEditorRelease, captureProfileDraftWriteAccess } from './profileEditorLease.js';
 import { createSystemWorkflowDraftStore } from './systemWorkflowDraftStore.js';
 
 const profile = `0x${'1'.repeat(40)}`, other = `0x${'2'.repeat(40)}`;
@@ -25,7 +25,11 @@ test('exclusive editor scopes profiles, rejects competitors and revokes stale st
     const store = createSystemWorkflowDraftStore({ profileAddress: profile, storage, requireEditor: true });
     const draft = store.getDraft(); draft.identityPresentation.alias = 'Editor';
     assert.equal(store.commitCompletedOperation(draft, { expectedGeneration: 0 }), true);
-    const accepted = store.getDraft(), history = store.getHistory(); first.stop(); await Promise.resolve();
+    const accepted = store.getDraft(), history = store.getHistory();
+    let exitWritable = null, exits = 0;
+    beforeProfileEditorRelease(profile, () => { exitWritable = store.hasWriteAccess(); exits++; });
+    const unsubscribe = beforeProfileEditorRelease(profile, () => { throw Error('disposed listener'); }); unsubscribe();
+    first.stop(); assert.equal(exitWritable, true); first.stop(); assert.equal(exits, 1); await Promise.resolve();
     assert.equal(store.commitCompletedOperation(accepted, { expectedGeneration: store.getGeneration() }), false);
     assert.equal(store.getLastCommitFailure(), 'editor_unavailable');
     assert.equal(store.undo(), false); assert.deepEqual(store.getHistory(), history);

@@ -1,28 +1,66 @@
 import { openTextToolSection } from './fixtures/text-tool-sections.mjs';
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { mkdir, writeFile } from 'node:fs/promises';
 import { chromium } from 'playwright-core';
+import { withinDeadline } from './browser-test-lifecycle.mjs';
 import { mountTextToolsFixture } from './fixtures/text-tools-fixture.mjs';
 import { setWorkbenchZoom } from './fixtures/workbench-zoom.mjs';
 
 const origin = process.env.INSCAPE_TEXT_ROOT || 'http://127.0.0.1:5197';
 const executablePath = 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe';
+const output = process.env.INSCAPE_BROWSER_OUTPUT || '.browser-test-runtime';
 const settle = page => page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
 const near = (actual, expected, label) => assert.ok(Math.abs(actual - expected) < 1, `${label}: ${actual} / ${expected}`);
 const hit = locator => locator.evaluate(node => {
   const r = node.getBoundingClientRect();
   return node.contains(document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2));
 });
+const diagnostics = async action => {
+  try { await withinDeadline(action(), 5000, 'Text diagnostics exceeded their deadline'); }
+  catch (error) { console.warn(`Text diagnostics unavailable: ${error.message}`); }
+};
+const captureTarget = async (page, target, name, extra = {}) => {
+  const snapshot = await target.evaluate(node => {
+    const describe = element => {
+      if (!element) return null;
+      const css = getComputedStyle(element);
+      return { tag: element.tagName, class: element.getAttribute('class'), label: element.getAttribute('aria-label'), edge: element.dataset.edge,
+        rect: element.getBoundingClientRect().toJSON(),
+        scroll: [element.scrollLeft, element.scrollTop, element.clientWidth, element.clientHeight, element.scrollWidth, element.scrollHeight],
+        css: Object.fromEntries(['position', 'zIndex', 'pointerEvents', 'overflowX', 'overflowY', 'transform', 'zoom', 'minHeight', 'isolation'].map(key => [key, css[key]])) };
+    };
+    const rect = node.getBoundingClientRect(), ancestors = [];
+    for (let parent = node; parent; parent = parent.parentElement) ancestors.push(describe(parent));
+    return { viewport: { width: innerWidth, height: innerHeight, coarse: matchMedia('(pointer: coarse)').matches }, ancestors,
+      samples: [[.5, .5], [.1, .1], [.9, .1], [.1, .9], [.9, .9]].map(([x, y]) => {
+        const point = { x: rect.left + rect.width * x, y: rect.top + rect.height * y }, stack = document.elementsFromPoint(point.x, point.y);
+        return { point, hitsTarget: node.contains(stack[0]), stack: stack.map(describe) };
+      }) };
+  });
+  await writeFile(`${output}/${name}.json`, JSON.stringify({ ...snapshot, ...extra }, null, 2));
+  await page.screenshot({ path: `${output}/${name}.png`, timeout: 4000 });
+};
 
 for (const width of [1440, 390]) for (const touch of [false, true]) {
   test(`Text recovery remains visible and operable with ${touch ? 'touch' : 'pointer'} at ${width}px`, { timeout: 90000 }, async () => {
     const browser = await chromium.launch({ executablePath, headless: true });
     try {
+      await mkdir(output, { recursive: true });
       const page = await browser.newPage({ viewport: { width, height: width === 390 ? 844 : 1000 }, hasTouch: touch });
       const errors = []; page.on('pageerror', error => errors.push(error.message));
       await mountTextToolsFixture(page, origin);
       const tools = page.locator('.text-tools-window');
       const body = page.getByRole('textbox', { name: 'Article text', exact: true });
+      if (width === 390) {
+        // Navigator otherwise covers the recovery footer. Park it through its
+        // own grip so this test reaches the actual Text recovery controls.
+        const before = await page.evaluate(() => window.savedDraft());
+        const grip = page.getByLabel('Move Navigator window', { exact: true });
+        await grip.focus();
+        for (let step = 0; step < 16; step++) await grip.press('Shift+ArrowUp');
+        assert.deepEqual(await page.evaluate(() => window.savedDraft()), before, 'parking Navigator does not author content');
+      }
       await page.evaluate(async () => {
         const { systemWorkflowDraftKey } = await import('/src/systemWorkflow/systemWorkflowDraftStore.js');
         const draft = window.savedDraft(); draft.identityPresentation.alias = 'Other tab';
@@ -36,7 +74,7 @@ for (const width of [1440, 390]) for (const touch of [false, true]) {
       assert.match(await footer.innerText(), /saved draft changed elsewhere/i);
       assert.equal(await hit(footer.locator('[role="alert"]')), true, 'the detailed save warning stays visible above the global notice');
       const toolBounds = await tools.boundingBox(), retryBounds = await retry.boundingBox(), footerBounds = await footer.boundingBox();
-      await page.screenshot({ path: `.browser-test-runtime/text-recovery-${width}-${touch ? 'touch' : 'pointer'}.png` });
+      await page.screenshot({ path: `${output}/text-recovery-${width}-${touch ? 'touch' : 'pointer'}.png` });
       assert.ok(footerBounds.y + footerBounds.height <= toolBounds.y + toolBounds.height, 'the complete warning and recovery footer fit inside the tools');
       assert.ok(retryBounds.height >= 29.9 && retryBounds.y + retryBounds.height < toolBounds.y + toolBounds.height, `the complete recovery target is visible: ${JSON.stringify({ retryBounds, toolBounds, style: await retry.evaluate(n => ({ minHeight: getComputedStyle(n).minHeight, zoom: getComputedStyle(n).zoom })) })}`);
       if (touch) await retry.tap(); else await retry.click();
@@ -56,6 +94,7 @@ for (const width of [1440, 390]) for (const touch of [false, true]) {
       if (touch) await retry.tap(); else await retry.click();
       const replace = tools.getByRole('button', { name: 'Replace saved Text with my edits', exact: true });
       await replace.waitFor(); await settle(page);
+      await diagnostics(() => captureTarget(page, replace, `replace-${width}-${touch ? 'touch' : 'pointer'}`));
       assert.equal(await page.evaluate(() => window.savedDraft().texts[0].article.content.content[0].content[0].text), 'Saved in another tab.');
       const replacementBounds = await replace.boundingBox(), expandedBounds = await tools.boundingBox();
       assert.ok(replacementBounds.y + replacementBounds.height < expandedBounds.y + expandedBounds.height, 'explicit replacement stays fully inside the expanded footer');
@@ -63,6 +102,7 @@ for (const width of [1440, 390]) for (const touch of [false, true]) {
       if (touch) await replace.tap(); else await replace.click();
       await page.waitForFunction(() => !document.querySelector('.system-workflow__recovery-notice'));
       assert.equal(await page.evaluate(() => window.savedDraft().texts[0].article.content.content[0].content[0].text), 'My explicitly chosen replacement.');
+      assert.equal(await page.evaluate(() => window.savedDraft().identityPresentation.alias), 'Other tab');
       assert.deepEqual(errors, []);
     } finally { await browser.close(); }
   });
@@ -71,10 +111,20 @@ for (const width of [1440, 390]) for (const touch of [false, true]) {
 for (const [width, scale, method] of [[1600, 1, 'keyboard'], [1600, .5, 'drag'], [1600, 1.37, 'keyboard'], [390, .5, 'keyboard']]) {
   test(`Text ${method} detachment removes camera pan at ${scale * 100}% / ${width}px and survives reload`, { timeout: 90000 }, async () => {
     const browser = await chromium.launch({ executablePath, headless: true });
+    let page;
     try {
-      const page = await browser.newPage({ viewport: { width, height: width === 390 ? 844 : 1000 } });
+      await mkdir(output, { recursive: true });
+      page = await browser.newPage({ viewport: { width, height: width === 390 ? 844 : 1000 } });
       const errors = []; page.on('pageerror', error => errors.push(error.message));
       await mountTextToolsFixture(page, origin, { displayTextCount: 1 });
+      if (method === 'drag') {
+        // The pan setup below puts the Display beneath the expanded sidebar.
+        // Collapse that independent surface before exercising the drag handle.
+        await page.getByRole('button', { name: 'Collapse sidebar', exact: true }).click();
+        // The parked Text window must also remain reachable after detachment.
+        const info = page.getByRole('button', { name: 'Close Info', exact: true });
+        if (await info.count()) await info.click();
+      }
       await page.getByRole('button', { name: 'Close Text tools', exact: true }).click();
       const unlock = page.getByRole('button', { name: 'Unlock Display Module composition', exact: true });
       if (await unlock.count()) { await unlock.focus(); await page.keyboard.press('Enter'); }
@@ -117,8 +167,35 @@ for (const [width, scale, method] of [[1600, 1, 'keyboard'], [1600, .5, 'drag'],
         const from = await handle.boundingBox(), source = await editor.locator('xpath=ancestor::*[@data-system-workflow-placement-id]').boundingBox();
         const start = { x: from.x + from.width / 2, y: from.y + from.height / 2 }, end = { x: 700, y: 650 };
         expectedScreen = { left: source.x + end.x - start.x, top: source.y + end.y - start.y };
+        const canvas = await stage.boundingBox();
+        const extra = { start, end, source, camera, scale, canvas, tools: await page.locator('.text-tools-window').boundingBox(),
+          outside: end.x < canvas.x || end.x > canvas.x + canvas.width || end.y < canvas.y || end.y > canvas.y + canvas.height };
+        await diagnostics(() => captureTarget(page, handle, 'detach-before', extra));
+        assert.equal(await hit(handle), true, 'the Text detach handle receives the pointer start');
+        assert.equal(extra.outside, true, 'the drag destination is outside the Display');
+        await page.evaluate(() => {
+          window.textTransferTrace = [];
+          for (const type of ['pointerdown', 'gotpointercapture', 'pointermove', 'pointerup', 'pointercancel', 'lostpointercapture']) {
+            document.addEventListener(type, event => {
+              const target = event.target;
+              const entry = { type, time: performance.now(), x: event.clientX, y: event.clientY, pointerId: event.pointerId, buttons: event.buttons,
+                target: { tag: target.tagName, class: target.getAttribute?.('class'), label: target.getAttribute?.('aria-label') } };
+              window.textTransferTrace.push(entry);
+              queueMicrotask(() => {
+                entry.capturedAfterDispatch = target.hasPointerCapture?.(event.pointerId) || false;
+                entry.preview = document.querySelector('.text-transfer-preview')?.textContent || null;
+              });
+            }, true);
+          }
+        });
         await page.mouse.move(start.x, start.y); await page.mouse.down();
-        await page.mouse.move(end.x, end.y, { steps: 12 }); await page.mouse.up();
+        await page.mouse.move(end.x, end.y, { steps: 12 });
+        await diagnostics(async () => captureTarget(page, handle, 'detach-preview', { ...extra,
+          preview: await page.locator('.text-transfer-preview').allTextContents() }));
+        await page.mouse.up();
+        // Reload below replaces the page globals; preserve the completed gesture now.
+        await diagnostics(async () => writeFile(`${output}/detach-events.json`,
+          JSON.stringify(await page.evaluate(() => window.textTransferTrace), null, 2)));
       }
       await page.waitForFunction(() => window.savedDraft().texts.length === 2);
       const after = await page.evaluate(() => window.savedDraft());
@@ -135,14 +212,25 @@ for (const [width, scale, method] of [[1600, 1, 'keyboard'], [1600, .5, 'drag'],
       near(actual.y, expectedTop * scale + camera.y, 'visible y');
       assert.deepEqual(record.article.content, original.text.article.content);
       assert.equal(after.grids.flatMap(grid => grid.placements).some(item => item.id === original.id), false, 'Text has one owner after moving');
+      if (method === 'drag') await diagnostics(() => captureTarget(page,
+        page.getByRole('button', { name: 'Close Text tools', exact: true }), 'detach-close-tools'));
       await page.getByRole('button', { name: 'Close Text tools', exact: true }).click();
-      await page.screenshot({ path: `.browser-test-runtime/text-detached-pan-${width}-${scale}.png` });
+      await page.screenshot({ path: `${output}/text-detached-pan-${width}-${scale}.png` });
       await page.reload(); await mountTextToolsFixture(page, origin);
       await text.waitFor(); await settle(page);
       const restored = await text.boundingBox();
       near(restored.x, frame.left, 'reload x without temporary camera'); near(restored.y, frame.top, 'reload y without temporary camera');
       assert.deepEqual(await page.evaluate(id => window.savedDraft().texts.find(item => item.id === id), record.id), record, 'reload preserves article and formatting');
       assert.deepEqual(errors, []);
-    } finally { await browser.close(); }
+    } finally {
+      try {
+        if (method === 'drag' && page) await diagnostics(async () => {
+          const result = await page.evaluate(() => ({ trace: window.textTransferTrace, draft: window.readDraft?.(), saved: window.savedDraft?.(),
+            alerts: [...document.querySelectorAll('[role="alert"]')].map(node => node.textContent) }));
+          await writeFile(`${output}/detach-result.json`, JSON.stringify(result, null, 2));
+          await page.screenshot({ path: `${output}/detach-result.png`, timeout: 4000 });
+        });
+      } finally { await browser.close(); }
+    }
   });
 }

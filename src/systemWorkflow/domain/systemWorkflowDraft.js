@@ -1,5 +1,6 @@
 import { validReception } from '../../profileDocument/domain/receptionPresentation.js';
 import { validWorkbenchIndex } from './workbenchIndex.js';
+import { validArtworkLayers } from './artworkLayers.js';
 import { validWorkbenchGroups } from './workbenchGroups.js';
 import { validPlacementGroups } from './placementGroups.js';
 import { DISPLAY_CANVAS_APPEARANCE_KEYS, validDisplayCanvasAppearance } from './displayAppearance.js';
@@ -265,7 +266,7 @@ function validatePlacement(value, path, fail) {
 export function validateSystemWorkflowDraft(input) {
   const errors = [];
   const fail = (path, code, message) => errors.push({ path, code, message });
-  const allowedKeys = [...DRAFT_KEYS, 'workbench', 'displays', 'miniApps', 'texts', 'imageModules', 'shapes', 'keeperDocks', 'workbenchGroups', 'workbenchIndex', 'reception'];
+  const allowedKeys = [...DRAFT_KEYS, 'workbench', 'displays', 'miniApps', 'texts', 'imageModules', 'shapes', 'keeperDocks', 'workbenchGroups', 'workbenchIndex', 'artworkLayers', 'reception'];
   if (!exactKeys(input, allowedKeys.filter(key => DRAFT_KEYS.includes(key) || Object.hasOwn(input || {}, key)))) {
     const missing = DRAFT_KEYS.filter(key => !Object.hasOwn(input || {}, key));
     const unexpected = record(input) ? Object.keys(input).filter(key => !allowedKeys.includes(key)) : [];
@@ -290,6 +291,7 @@ export function validateSystemWorkflowDraft(input) {
   validateIdentity(input.identityPresentation, fail);
   if (Object.hasOwn(input, 'reception') && !validReception(input.reception)) fail('reception', 'invalid_reception', 'Invalid reception selection');
   if (Object.hasOwn(input, 'workbenchIndex') && !validWorkbenchIndex(input.workbenchIndex, input)) fail('workbenchIndex', 'invalid_workbench_index', 'Invalid Workbench Index');
+  if (Object.hasOwn(input, 'artworkLayers') && !validArtworkLayers(input.artworkLayers, input)) fail('artworkLayers', 'invalid_artwork_layers', 'Invalid artwork order or composition block');
   if (Object.hasOwn(input, 'workbenchGroups') && !validWorkbenchGroups(input.workbenchGroups, input)) fail('workbenchGroups', 'invalid_workbench_groups', 'Invalid Workbench groups');
   if (Object.hasOwn(input, 'keeperDocks') && !validKeeperDocks(input.keeperDocks)) fail('keeperDocks', 'invalid_keepers', 'Invalid Keeper dock');
   if (Array.isArray(input.workbench?.keeperDocks) && input.workbench.keeperDocks.some(item => !Array.isArray(input.keeperDocks) || !input.keeperDocks.some(keeper => keeper?.id === item?.id))) fail('workbench.keeperDocks', 'unknown_keeper', 'Dock refers to an unavailable Keeper');

@@ -21,4 +21,4 @@ if (!store.getDraft().shapes?.length) {
 }
 window.gridResizeSaved = () => JSON.parse(localStorage.getItem(systemWorkflowDraftKey(profileAddress)));
 createRoot(document.getElementById('root')).render(<Runtime profileAddress={profileAddress} reviewStorage={storage}
-  reviewAssets={[]} reviewCategories={[]} reviewActivity={[]} reviewDiscovery={[]} reviewProfile={{ name: 'Grid resize release review' }} />);
+  reviewAssets={[]} reviewCategories={[]} reviewActivity={[]} reviewProfile={{ name: 'Grid resize release review' }} />);

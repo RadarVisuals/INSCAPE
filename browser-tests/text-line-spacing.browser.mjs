@@ -30,12 +30,12 @@ for (const width of [1440, 390]) test(`line spacing and long illustrated text re
     const body = win.getByRole('textbox', { name: 'Article text', exact: true });
     const setNumber = async (name, value) => { const field = tools.getByRole('spinbutton', { name, exact: true }); await field.fill(String(value)); await field.press('Enter'); await settle(page); };
     const line = node => node.evaluate(n => getComputedStyle(n).lineHeight);
-    await openTextToolSection(tools, 'Default text style'); await setNumber('Document line spacing', 2);
+    await openTextToolSection(tools, 'Default text style'); await setNumber('Default line spacing', 2);
     assert.equal(await line(body.locator('p').first()), '32px');
     const titleLineHeight = await line(win.getByLabel('Article title', { exact: true }));
-    await setNumber('Document line spacing', 2.1);
+    await setNumber('Default line spacing', 2.1);
     assert.equal(await line(win.getByLabel('Article title', { exact: true })), titleLineHeight, 'body spacing leaves title leading alone');
-    await setNumber('Document line spacing', 2);
+    await setNumber('Default line spacing', 2);
 
     await tools.locator('.text-inspector-advanced summary').click();
     await body.focus(); await body.locator('p').first().evaluate(node => {
@@ -57,11 +57,11 @@ for (const width of [1440, 390]) test(`line spacing and long illustrated text re
     await tools.getByRole('button', { name: 'Undo', exact: true }).click();
     assert.equal(await line(body.locator('p').first()), '20px');
     assert.equal(await line(body.locator('p').nth(1)), '32px');
-    await tools.getByRole('button', { name: 'Use inherited paragraph line spacing', exact: true }).click();
+    await tools.getByRole('button', { name: 'Use default paragraph line spacing', exact: true }).click();
     assert.equal(await line(body.locator('p').first()), '32px');
     await openTextToolSection(tools, 'Default text style'); await tools.getByRole('button', { name: 'Use default document line spacing', exact: true }).click();
     assert.equal(await line(body.locator('p').first()), '26.4px');
-    await setNumber('Document line spacing', 1.9);
+    await setNumber('Default line spacing', 1.9);
     const savedArticle = await page.evaluate(() => window.savedDraft().texts[0].article);
     await tools.getByRole('button', { name: 'Close Text tools', exact: true }).click();
     const readable = async () => {

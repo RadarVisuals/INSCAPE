@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { chromium } from 'playwright-core';
+import { openTextToolSection } from './fixtures/text-tool-sections.mjs';
 const origin = process.env.INSCAPE_TEXT_ROOT || 'http://127.0.0.1:5183';
 test('Display text belongs to the Grid, saves and matches Visitor at wide and narrow widths', { timeout: 120_000 }, async () => {
   const browser = await chromium.launch({ executablePath: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', headless: true });
@@ -45,7 +46,7 @@ test('Display text belongs to the Grid, saves and matches Visitor at wide and na
       await import('/src/inscapeTokens.css'); await import('/src/public/ownerSystemWorkflow/ownerSystemWorkflow.css'); await import('/src/lattice/rendering/latticeMenuSurface.css');
       window.reviewRoot = createRoot(document.getElementById('root'));
       window.reviewRoot.render(React.createElement(Runtime, { profileAddress, reviewStorage: localStorage, reviewAssets: fixture.OWNER_SYSTEM_WORKFLOW_REVIEW_ASSETS,
-        reviewCategories: [], reviewActivity: [], reviewDiscovery: [], reviewProfile: { name: 'Display text review' } }));
+        reviewCategories: [], reviewActivity: [], reviewProfile: { name: 'Display text review' } }));
     });
     await page.goto(`${origin}/__display_text__`); await mount();
     await page.getByRole('button', { name: 'Tools', exact: true }).click();
@@ -54,7 +55,9 @@ test('Display text belongs to the Grid, saves and matches Visitor at wide and na
     if (await unlock.count()) await unlock.click();
     await page.getByRole('button', { name: 'Add text', exact: true }).click();
     await page.getByRole('textbox', { name: 'Article text' }).fill('//ARRIVAL');
-    await page.getByRole('spinbutton', { name: 'Text size' }).fill('76');
+    await openTextToolSection(page.locator('.text-tools-window'), 'Default text style');
+    await page.getByRole('spinbutton', { name: 'Default text size' }).fill('76');
+    await page.locator('.text-tools-window').getByRole('tab', { name: 'Format text', exact: true }).click();
     await page.getByRole('button', { name: 'Align center', exact: true }).click();
     await page.getByRole('button', { name: 'Align left', exact: true }).click();
     await page.getByRole('button', { name: 'Close Text tools', exact: true }).click();

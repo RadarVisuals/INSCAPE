@@ -11,7 +11,7 @@ async function mount(browser,width=1440,height=900) {
   await page.goto(origin+'/design-system.html#components');
   const studio=page.locator('.ds-studio');await studio.waitFor();
   await page.evaluate(()=>document.fonts.ready);
-  return {page,studio,errors,tab: name=>studio.getByRole('tab',{name,exact:true}).click()};
+  return {page,studio,errors,tab: name=>name === 'Text' ? studio.getByRole('button',{name:'Text tools',exact:true}).click() : studio.getByRole('tab',{name,exact:true}).click()};
 }
 test('composition geometry and content survive every inspector tab and targeted edits', {timeout:60000},async()=>{
   const browser=await chromium.launch({executablePath,headless:true});
@@ -22,10 +22,10 @@ test('composition geometry and content survive every inspector tab and targeted 
         await page.getByLabel('Preview surface').selectOption(theme);
         await studio.getByLabel('Workspace selection').selectOption('foreground');
         assert.equal(await studio.locator('.ds-studio-canvas-scroll').evaluate(n=>n.scrollHeight>n.clientHeight),false,'composition fits at 100%');
-        const scene=studio.getByRole('group',{name:'Example Display composition'});
+        const scene=studio.locator('.ds-layer-scene');
         const geometry=()=>scene.locator('[data-layer-id]').evaluateAll(nodes=>nodes.map(n=>({id:n.dataset.layerId,style:n.getAttribute('style'),art:n.querySelector('svg')?.outerHTML})));
         const initial=await geometry();
-        for(const name of ['Layers','Color','Shape','Image','Display','Transform','FX','Text']) {
+        for(const name of ['Layers','Color','Shape','Image','Display','Transform','FX']) {
           await tab(name);assert.deepEqual(await geometry(),initial,name+' does not replace the canvas');
           assert.equal(await scene.locator('[data-layer-id]').count(),5);
           assert.equal(await studio.locator('.ds-studio-art').count(),0,'no rectangular fallback');
@@ -35,10 +35,9 @@ test('composition geometry and content survive every inspector tab and targeted 
         assert.notEqual(await scene.locator('[data-layer-id="artwork"] path').getAttribute('fill'),'#2277aa');
         await tab('Transform');await studio.getByLabel('Studio Width',{exact:true}).fill('140');await studio.getByLabel('Studio Width',{exact:true}).press('Tab');
         assert.ok(await scene.locator('[data-layer-id="foreground"] path').count());
-        await tab('FX');await studio.getByLabel('Studio grain',{exact:true}).fill('40');
-        const shapePaint=scene.locator('[data-layer-id="foreground"] svg > path');
-        assert.equal(await shapePaint.count(),2);assert.equal(await shapePaint.nth(0).getAttribute('d'),await shapePaint.nth(1).getAttribute('d'),'grain follows the silhouette');
-        await studio.getByLabel('Studio grain',{exact:true}).fill('0');
+        await tab('FX');
+        assert.equal(await studio.getByLabel('Studio grain',{exact:true}).count(),0,'FX only offers the implemented Shape target');
+        assert.ok(await scene.locator('[data-layer-id="foreground"] path').count());
         await tab('Color');await mkdir(output,{recursive:true});
         await studio.getByLabel('Studio colour',{exact:true}).click();
         await studio.locator('.ds-studio-layout').screenshot({path:`${output}/${theme}-${width}.png`});
@@ -127,13 +126,13 @@ test('zoomed canvas and overflowing tools scroll without trapping the page', {ti
    if(width<520){await page.mouse.wheel(120,0);await page.waitForTimeout(150);assert.ok(await viewport.evaluate(n=>n.scrollLeft>0));}
    await studio.getByLabel('Workspace selection').selectOption('text');await tab('Text');
    await studio.getByLabel('Text example',{exact:true}).selectOption('article');
-   await studio.locator('.ds-text-tools details').first().waitFor();
-   await studio.locator('.ds-text-tools details').evaluateAll(nodes=>nodes.forEach(n=>n.open=true));
-   const panel=studio.getByRole('tabpanel');assert.ok(await panel.evaluate(n=>n.scrollHeight>n.clientHeight));
+   await studio.locator('.text-tools-window .text-tools-content details').first().waitFor();
+   await studio.locator('.text-tools-window .text-tools-content details').evaluateAll(nodes=>nodes.forEach(n=>n.open=true));
+   const panel=studio.locator('.text-tools-content');assert.ok(await panel.evaluate(n=>n.scrollHeight>n.clientHeight));
    await panel.scrollIntoViewIfNeeded();await panel.hover();await page.mouse.wheel(0,250);await page.waitForTimeout(150);
    assert.ok(await panel.evaluate(n=>n.scrollTop>0));
    await panel.evaluate(n=>n.scrollTop=n.scrollHeight);const before=await page.evaluate(()=>scrollY);
-   await page.mouse.wheel(0,500);await page.waitForTimeout(200);assert.ok(await page.evaluate(()=>scrollY)>before,'scroll continues onto the page at the panel edge');
+   await page.mouse.wheel(0,500);await page.waitForTimeout(200);assert.equal(await page.evaluate(()=>scrollY),before,'the floating tool contains scrolling at its edge');
    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));assert.deepEqual(errors,[]);await page.close();
   }
  }finally{await browser.close()}

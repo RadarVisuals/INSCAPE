@@ -27,8 +27,7 @@ try {
     window.instances = { root, storage, profile: fixture.OWNER_SYSTEM_WORKFLOW_REVIEW_PROFILE,
       getDraft: () => JSON.parse(storage.getItem(systemWorkflowDraftKey(fixture.OWNER_SYSTEM_WORKFLOW_REVIEW_PROFILE))) };
     const props = { profileAddress: fixture.OWNER_SYSTEM_WORKFLOW_REVIEW_PROFILE, reviewStorage: storage,
-      reviewAssets: fixture.OWNER_SYSTEM_WORKFLOW_REVIEW_ASSETS, reviewCategories: [], reviewActivity: [], reviewDiscovery: [],
-      reviewProfile: { name: 'Display review' } };
+      reviewAssets: fixture.OWNER_SYSTEM_WORKFLOW_REVIEW_ASSETS, reviewCategories: [], reviewActivity: [], reviewProfile: { name: 'Display review' } };
     instances.render = () => root.render(React.createElement(Runtime, props)); instances.render();
   });
   await page.locator('.system-workflow__presentation-board').waitFor();

@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { chromium } from 'playwright-core';
+import { hideWorkspaceSidebar } from './fixtures/workspace-sidebar.mjs';
 
 const origin = process.env.INSCAPE_TEST_ORIGIN || 'http://127.0.0.1:5173';
 const output = process.env.INSCAPE_BROWSER_OUTPUT || '.browser-test-runtime/canvas-crop';
@@ -20,12 +21,19 @@ async function mount(page, query = '') {
   await imageAt(page, 0).waitFor();
   await page.locator('[data-media-state="ready"]').first().waitFor();
   await imageAt(page, 0).locator('.artwork-svg-status').waitFor({ state: 'detached' });
+  await hideWorkspaceSidebar(page);
 }
-async function overview(page) {
+async function overview(page, belowToolbar = false) {
   const host = page.locator('main.system-workflow').first();
   for (let i = 0; i < 7; i++) await host.dispatchEvent('wheel', { ctrlKey: true, deltaY: 120, clientX: 0, clientY: 0, bubbles: true, cancelable: true });
-  await page.getByRole('button', { name: 'Reset Workbench position', exact: true }).press('Enter');
   await settle(page);
+  assert.equal(await host.getAttribute('data-workbench-camera-scale'), '0.25', 'the crop fixture starts at quarter scale');
+  if (belowToolbar) {
+    // Keep the original quarter-scale hit and marquee probes below fixed
+    // workspace chrome, using the same ordinary camera pan as the user.
+    await host.dispatchEvent('wheel', { deltaY: -120, bubbles: true, cancelable: true });
+    await settle(page);
+  }
 }
 async function controls(page) {
   const trigger = page.getByRole('button', { name: 'Canvas size', exact: true });
@@ -53,9 +61,9 @@ for (const width of [1440, 390]) test(`canvas crops without loss; outside editin
   page.setDefaultTimeout(8000);
   try {
     await mount(page);
-    await overview(page);
+    await overview(page, true);
     const before = await saved(page);
-    assert.equal(await visibleHit(page, 90, 60), true, 'image initially extends through the future boundary');
+    assert.equal(await visibleHit(page, 90, 180), true, 'image initially extends through the future boundary');
     await controls(page);
     const edge = page.getByRole('button', { name: 'Resize canvas width', exact: true });
     let handle = await edge.boundingBox();
@@ -77,14 +85,14 @@ for (const width of [1440, 390]) test(`canvas crops without loss; outside editin
     assert.deepEqual(cropped.workbench.imageModules, before.workbench.imageModules, 'canvas shrink preserves every authored Image position');
     assert.deepEqual(cropped.shapes, before.shapes);
     await page.getByRole('button', { name: 'Close canvas size', exact: true }).click();
-    assert.equal(await visibleHit(page, 75, 60), true, 'inside portion remains interactive');
-    assert.equal(await visibleHit(page, 90, 60), false, 'outside portion is clipped and cannot be clicked');
+    assert.equal(await visibleHit(page, 75, 180), true, 'inside portion remains interactive');
+    assert.equal(await visibleHit(page, 90, 180), false, 'outside portion is clipped and cannot be clicked');
     await page.keyboard.press('Control+z'); await settle(page);
     assert.equal((await saved(page)).workbench.area.height, 310, 'canvas resize participates in undo');
     await page.keyboard.press('Control+Shift+z'); await settle(page);
     assert.equal((await saved(page)).workbench.area.height, 300, 'redo restores the crop');
-    await page.mouse.move(150, 30); await page.mouse.down();
-    await page.mouse.move(210, 100, { steps: 4 }); await page.mouse.up();
+    await page.mouse.move(150, 150); await page.mouse.down();
+    await page.mouse.move(210, 220, { steps: 4 }); await page.mouse.up();
     assert.equal(await page.locator('.workbench-selection').count(), 0, 'marquee cannot select fully clipped artwork');
     // A live SVG remains in its source DOM during inspection; the canvas
     // clipping ancestor must not trap it behind the full-screen backdrop.
@@ -96,10 +104,10 @@ for (const width of [1440, 390]) test(`canvas crops without loss; outside editin
     await page.getByRole('button', { name: 'Return to Image', exact: true }).click();
     await page.getByRole('dialog', { name: 'Inspect Image', exact: true }).waitFor({ state: 'detached' });
     assert.notEqual(await page.locator('.workbench-canvas-content').evaluate(node => getComputedStyle(node).clipPath), 'none');
-    assert.equal(await visibleHit(page, 90, 60), false, 'inspection return reinstates cropping');
+    assert.equal(await visibleHit(page, 90, 180), false, 'inspection return reinstates cropping');
     await page.screenshot({ path: join(output, `clipped-${width}.png`) });
-    await page.getByRole('button', { name: 'Reset Workbench zoom to 100%', exact: true }).click();
-    await page.getByRole('button', { name: 'Reset Workbench position', exact: true }).click(); await settle(page);
+    await page.getByRole('slider', { name: 'Workbench zoom', exact: true }).fill('100');
+    await page.getByRole('button', { name: 'Reset Workbench view', exact: true }).click(); await settle(page);
     // Zooming around the viewport centre can briefly unload an offscreen SVG.
     // Wait for its existing document lifecycle before checking painted pixels.
     await imageAt(page, 0).locator('iframe.artwork-svg-document').waitFor({ state: 'attached' });
@@ -114,11 +122,11 @@ for (const width of [1440, 390]) test(`canvas crops without loss; outside editin
     }, screenshot.toString('base64'));
     assert.ok(painted.svg[0] > 230 && painted.svg[1] > 170 && painted.svg[2] < 140, 'live SVG paints after inspection and zoom');
     assert.deepEqual(painted.outside, [36, 38, 38, 255], 'cropped raster pixels do not leak outside the canvas');
-    await overview(page);
+    await overview(page, true);
     await controls(page);
     await page.getByRole('button', { name: 'Show outside canvas', exact: true }).click();
     await page.getByRole('button', { name: 'Close canvas size', exact: true }).click();
-    assert.equal(await visibleHit(page, 90, 60), true, 'outside content can be reached explicitly');
+    assert.equal(await visibleHit(page, 90, 180), true, 'outside content can be reached explicitly');
     await page.screenshot({ path: join(output, `outside-${width}.png`) });
     const second = imageAt(page, 1);
     const box = await second.boundingBox();
@@ -131,16 +139,17 @@ for (const width of [1440, 390]) test(`canvas crops without loss; outside editin
     await size(page, 800, 650);
     await page.getByRole('button', { name: 'Show outside canvas', exact: true }).click();
     await page.getByRole('button', { name: 'Close canvas size', exact: true }).click();
-    assert.equal(await visibleHit(page, 180, 60), true, 'enlarging recovers the fully hidden third Image');
+    const thirdImagePoint = [180, 190];
+    assert.equal(await visibleHit(page, ...thirdImagePoint), true, 'enlarging recovers the fully hidden third Image');
     await size(page, 320, 300);
-    await page.reload(); await imageAt(page, 0).waitFor(); await overview(page);
-    assert.equal(await visibleHit(page, 180, 60), false, 'reload keeps clipping, outside visibility is session-only');
+    await page.reload(); await imageAt(page, 0).waitFor(); await overview(page, true);
+    assert.equal(await visibleHit(page, ...thirdImagePoint), false, 'reload keeps clipping, outside visibility is session-only');
     const document = await page.evaluate(() => canvasDocument());
     assert.equal(document.imageModules.length, 3, 'public projection retains public source references non-destructively');
     const preserved = await saved(page);
     await page.goto(`${origin}/browser-tests/workbench-canvas-crop-fixture.html?visitor`);
-    await imageAt(page, 0).waitFor(); await overview(page);
-    assert.equal(await visibleHit(page, 180, 60), false, 'Visitor uses the same crop');
+    await imageAt(page, 0).waitFor(); await overview(page, true);
+    assert.equal(await visibleHit(page, ...thirdImagePoint), false, 'Visitor uses the same crop');
     assert.equal(await page.getByRole('button', { name: 'Show outside canvas', exact: true }).count(), 0, 'Visitor has no editing recovery mode');
     await page.getByRole('button', { name: 'Crop group', exact: true }).click();
     await page.getByRole('group', { name: 'Open Workbench group', exact: true }).waitFor();

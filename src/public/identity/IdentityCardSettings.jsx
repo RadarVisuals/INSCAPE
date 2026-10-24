@@ -85,15 +85,16 @@ export function IdentityProfileEditor({ edit, official, children }) {
 
 export function IdentityFields({ card, edit }) {
   const grid = useRef(null);
+  const editing = Boolean(edit);
   const [moved, setMoved] = useState(null);
   useLayoutEffect(() => {
-    if (!moved || !edit) return;
+    if (!moved || !editing) return;
     const cell = [...grid.current.children].find(node => node.dataset.fieldId === moved.id);
     cell?.querySelector('input')?.focus({ preventScroll: true });
     cell?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
     const timer = setTimeout(() => setMoved(null), 1400);
     return () => clearTimeout(timer);
-  }, [moved, Boolean(edit)]);
+  }, [moved, editing]);
   const [dividers, setDividers] = useState({ width: 1, height: 1, path: '' });
   useLayoutEffect(() => {
     const node = grid.current;
@@ -113,7 +114,7 @@ export function IdentityFields({ card, edit }) {
     for (const cell of node.children) observer.observe(cell);
     measure();
     return () => observer.disconnect();
-  }, [card, Boolean(edit)]);
+  }, [card, editing]);
   const fields = edit ? card.fields : projectIdentityCard(card).fields;
   const updateField = (id, update) => edit.setCard({ fields: fields.map(field => field.id === id ? { ...field, ...update } : field) });
   const move = (index, offset) => {

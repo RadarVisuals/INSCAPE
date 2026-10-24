@@ -30,6 +30,16 @@ for (const [width, density] of [[1440, 1], [390, 1.25]]) test(`Image corners res
       (await import('/browser-tests/image-fit-fixture.jsx')).mount();
     });
     await page.locator('.image-module__window').first().waitFor();
+    // This fixture forces a dock open on narrow screens. Shorten and park it
+    // through its own controls, leaving every Image corner reachable.
+    if (width === 390) {
+      const dock = page.locator('.workbench-tool-dock');
+      const resize = dock.locator('.workbench-tool-panel-resize[data-edge="se"]');
+      await resize.focus(); for (let i = 0; i < 10; i++) await resize.press('Shift+ArrowUp');
+      const move = dock.getByRole('button', { name: 'Move Transform, Color and Info panel', exact: true });
+      await move.focus(); for (let i = 0; i < 20; i++) await move.press('Shift+ArrowDown');
+      await settle(page);
+    }
     let sequence = 0;
     const reset = async (scale = 1, crop = null) => {
       await page.evaluate(({ scale, crop, sequence }) => {
@@ -50,6 +60,9 @@ for (const [width, density] of [[1440, 1], [390, 1.25]]) test(`Image corners res
     const artwork = () => surface.locator('svg image').evaluate(node => ({ width: Number(node.getAttribute('width')), height: Number(node.getAttribute('height')) }));
     const start = async (selector, dx, dy) => {
       const box = await page.locator(selector).boundingBox();
+      assert.ok(await page.locator(selector).evaluate(node => {
+        const r = node.getBoundingClientRect(); return node.contains(document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2));
+      }), `resize target must be uncovered: ${selector}`);
       await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2); await page.mouse.down();
       await page.mouse.move(box.x + box.width / 2 + dx, box.y + box.height / 2 + dy, { steps: 3 }); await settle(page);
     };

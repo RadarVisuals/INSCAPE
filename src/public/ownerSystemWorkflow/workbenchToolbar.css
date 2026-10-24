@@ -31,6 +31,8 @@
 .workbench-toolbar :where(*, *::before, *::after) {
   box-sizing: border-box;
 }
+/* Explicit tool menus must remain clickable above navigation and floating tools. */
+.workbench-toolbar:has(> .workbench-toolbar__popup) { z-index: 100; }
 .workbench-toolbar svg {
   width: var(--toolbar-icon);
   height: var(--toolbar-icon);

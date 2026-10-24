@@ -5,7 +5,6 @@ import {
   OWNER_SYSTEM_WORKFLOW_REVIEW_ACTIVITY,
   OWNER_SYSTEM_WORKFLOW_REVIEW_ASSETS,
   OWNER_SYSTEM_WORKFLOW_REVIEW_CATEGORIES,
-  OWNER_SYSTEM_WORKFLOW_REVIEW_DISCOVERY,
   OWNER_SYSTEM_WORKFLOW_REVIEW_PROFILE,
 } from './ownerSystemWorkflowDevelopmentFixture.js';
 
@@ -13,7 +12,7 @@ export default function OwnerSystemWorkflowDevelopmentEntrance() {
   const storage = useMemo(createOwnerSystemWorkflowReviewStorage, []);
   return <OwnerSystemWorkflowShell ownerAuthoringEnabled workspaceProfileAddress={OWNER_SYSTEM_WORKFLOW_REVIEW_PROFILE} viewedProfileAddress={OWNER_SYSTEM_WORKFLOW_REVIEW_PROFILE}
     reviewStorage={storage} reviewAssets={OWNER_SYSTEM_WORKFLOW_REVIEW_ASSETS} reviewCategories={OWNER_SYSTEM_WORKFLOW_REVIEW_CATEGORIES}
-    reviewActivity={OWNER_SYSTEM_WORKFLOW_REVIEW_ACTIVITY} reviewDiscovery={OWNER_SYSTEM_WORKFLOW_REVIEW_DISCOVERY}
+    reviewActivity={OWNER_SYSTEM_WORKFLOW_REVIEW_ACTIVITY}
     reviewProfile={{
       name: 'RADAR VISUALS',
       avatarUrl: null,

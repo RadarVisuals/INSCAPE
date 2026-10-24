@@ -31,6 +31,8 @@ export default function useOwnerSystemWorkflowCrop({ assetsById, controller }) {
   const sessionRef = useRef(null);
   const failedLeaveTarget = useRef(null);
   sessionRef.current = cropSession;
+  useEffect(() => controller.store?.guardWorkbenchTransition?.(() => sessionRef.current
+    ? 'Finish or cancel the crop before switching Workbenches.' : null), [controller.store]);
   const commit = (crop) => {
     const current = sessionRef.current;
     if (!current) return false;
@@ -171,9 +173,13 @@ export default function useOwnerSystemWorkflowCrop({ assetsById, controller }) {
     globalThis.document?.addEventListener('visibilitychange', visibility);
   };
 
+  const currentActions = useRef(null);
+  currentActions.current = { controller, assetsById, applyCrop, beginCrop, cancelCrop, nudge };
+  const cropActive = Boolean(cropSession);
   useEffect(() => {
-    if (!cropSession) return undefined;
+    if (!cropActive) return undefined;
     const onKeyDown = (event) => {
+      const { applyCrop, cancelCrop, nudge } = currentActions.current;
       failedLeaveTarget.current = null;
       if (event.defaultPrevented || event.isComposing || event.target?.isContentEditable
         || event.target?.closest?.('input, textarea, select, [role="textbox"]')) return;
@@ -190,6 +196,9 @@ export default function useOwnerSystemWorkflowCrop({ assetsById, controller }) {
       event.preventDefault(); event.stopPropagation(); event.stopImmediatePropagation?.();
     };
     const onPointerDown = (event) => {
+      // Undo/Redo may change a neighbour without invalidating this crop. Read
+      // the current grid, media and actions when the user chooses that neighbour.
+      const { controller, assetsById, applyCrop, beginCrop, cancelCrop } = currentActions.current;
       failedLeaveTarget.current = null;
       const display = event.target?.closest?.('[data-display-instance]');
       if (display && display.dataset.displayInstance !== controller.moduleId) { cancelCrop(); return; }
@@ -224,7 +233,7 @@ export default function useOwnerSystemWorkflowCrop({ assetsById, controller }) {
     globalThis.addEventListener('pointerdown', onPointerDown, true);
     globalThis.addEventListener('click', onClick, true);
     return () => { globalThis.removeEventListener('keydown', onKeyDown, true); globalThis.removeEventListener('pointerdown', onPointerDown, true); globalThis.removeEventListener('click', onClick, true); };
-  }, [cropSession]);
+  }, [cropActive]);
 
   useEffect(() => {
     if (!cropSession) return;
@@ -232,7 +241,7 @@ export default function useOwnerSystemWorkflowCrop({ assetsById, controller }) {
     const media = mediaFor(placement, assetsById);
     if (!placement || cropSession.gridId !== controller.selectedGrid?.id || cropSession.moduleId !== controller.moduleId
       || !media || media.stableAssetId !== cropSession.expectedMedia.stableAssetId
-      || media.width !== cropSession.expectedMedia.width || media.height !== cropSession.expectedMedia.height) { cancelCrop(); return; }
+      || media.width !== cropSession.expectedMedia.width || media.height !== cropSession.expectedMedia.height) { currentActions.current.cancelCrop(); return; }
     // Pointer preview is ahead of canonical placement geometry until pointer-up.
     // Reconciliation here would undo the live reframe and cause a visible jump
     // when the resize transaction commits.
@@ -251,7 +260,7 @@ export default function useOwnerSystemWorkflowCrop({ assetsById, controller }) {
       resizedBaseline.mediaFrameRatio = placement.mediaFrameRatio;
     }
     if (!resizeRef.current?.awaitingCommit || !sameSystemWorkflowPlacementSnapshot(placement, resizedBaseline)) {
-      cancelCrop(); return;
+      currentActions.current.cancelCrop(); return;
     }
     resizeRef.current = null;
     const nextMask = systemWorkflowCropMask(placement);
@@ -266,9 +275,9 @@ export default function useOwnerSystemWorkflowCrop({ assetsById, controller }) {
       return { ...current, expectedPlacement: structuredClone(placement), geometry: { column: placement.column, row: placement.row, columnSpan: placement.columnSpan, rowSpan: placement.rowSpan },
         mask: nextMask, previewCrop: unprojectSystemWorkflowCrop(current.transform, previewCrop), interacted: true, dirty: true };
     });
-  }, [controller.generation, controller.selectedGrid, cropSession, assetsById]);
+  }, [controller.generation, controller.selectedGrid, controller.moduleId, cropSession, assetsById]);
 
-  useEffect(() => { cancelCrop(); }, [controller.store, controller.moduleId]);
+  useEffect(() => { currentActions.current.cancelCrop(); }, [controller.store, controller.moduleId]);
   useEffect(() => () => { cleanupDrag(); resizeRef.current = null; sessionRef.current = null; }, []);
   return { applyCrop, beginCrop, beginCropDrag, cancelCrop, cropResize, cropSession, restoreNativeFit, updateCropZoom };
 }

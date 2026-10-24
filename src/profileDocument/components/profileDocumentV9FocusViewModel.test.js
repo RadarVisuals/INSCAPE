@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { createProfileDocumentV9AssetResolver } from '../domain/profileDocumentV9Asset.js';
-import { createProfileDocumentV9FocusViewModel } from './profileDocumentV9FocusViewModel.js';
+import { createProfileDocumentV9FocusViewModel, createProfileDocumentV9AssetDossier } from './profileDocumentV9FocusViewModel.js';
 
 test('shared visitor Metadata retains every published creator and its source scope without rewriting the asset', () => {
   const contractAddress = '0x3333333333333333333333333333333333333333';
@@ -22,4 +22,10 @@ test('shared visitor Metadata retains every published creator and its source sco
   assert.deepEqual(model.dossier.technical.filter(entry => entry.provenance).map(entry => entry.provenance),
     ['LSP4Creators[] / contract', 'LSP4Creators[] / tokenId']);
   assert.equal(JSON.stringify(asset), bytes);
+  const unavailable = { ...asset, media: { ...asset.media, url: null, width: null, height: null } };
+  const dossier = createProfileDocumentV9AssetDossier(unavailable);
+  assert.equal(dossier.description, asset.description, 'metadata remains readable without ready media');
+  assert.deepEqual(dossier.creators, asset.creators);
+  assert.equal(dossier.technical.some(entry => entry.label === 'SOURCE DIMENSIONS'), false);
+  assert.equal(createProfileDocumentV9AssetDossier(null), null);
 });

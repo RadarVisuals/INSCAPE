@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile, mkdir } from 'node:fs/promises';
+import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright-core';
 import { mountTextToolsFixture } from './fixtures/text-tools-fixture.mjs';
 
@@ -8,7 +9,7 @@ const origin = process.env.INSCAPE_TEXT_ROOT || 'http://127.0.0.1:5180';
 const source = 'https://keepers.inscape.test/prepared.svg';
 const art = new URL('./fixtures/keeper-layered.svg', import.meta.url);
 const launch = () => chromium.launch({ executablePath: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', headless: true });
-const beforeImports = page => page.route(source, route => route.fulfill({ contentType: 'image/svg+xml', path: art.pathname.replace(/^\/(\w:)/, '$1') }));
+const beforeImports = page => page.route(source, route => route.fulfill({ contentType: 'image/svg+xml', path: fileURLToPath(art) }));
 
 async function mount(page, visitor = false) {
   await mountTextToolsFixture(page, origin, { visitor, beforeImports: () => beforeImports(page) });
@@ -62,7 +63,7 @@ test('Right-button hold follows across windows, releases at the final point and 
     assert.ok(await page.evaluate(() => window.keeperMenus.some(item => item.prevented)), 'native context menu is suppressed for the follow gesture');
     assert.deepEqual(await page.evaluate(() => window.savedDraft()), saved, 'following is never authored state');
     // A new right-click starting on a real control retains its normal context menu.
-    await page.getByRole('button', { name: 'Reset Workbench position', exact: true }).click({ button: 'right' });
+    await page.getByRole('button', { name: 'Reset Workbench view', exact: true }).click({ button: 'right' });
     assert.equal(await page.evaluate(() => window.keeperMenus.at(-1).prevented), false);
     await page.mouse.move(1200, 700); await page.waitForTimeout(200);
     assert.ok(Math.abs((await position(page)).x - 700) < 7);
@@ -109,17 +110,19 @@ test('Right-button following cancels on lost focus and remains disabled for redu
     await page.mouse.move(1100, 650); await page.mouse.down({ button: 'right' }); await page.mouse.move(500, 700); await page.mouse.up({ button: 'right' });
     await page.waitForTimeout(150);
     assert.deepEqual(await position(page), before);
-    const reachedWindow = await page.evaluate(() => {
+    const reachedHost = await page.evaluate(() => {
       let reached = false;
       const observe = () => { reached = true; };
-      window.addEventListener('contextmenu', observe);
+      const host = document.querySelector('main.system-workflow');
+      host.addEventListener('contextmenu', observe, true);
       const event = new MouseEvent('contextmenu', { button: 2, bubbles: true, cancelable: true });
-      document.querySelector('main.system-workflow').dispatchEvent(event);
-      // The host may provide its own menu, but the Keeper must not stop propagation.
-      window.removeEventListener('contextmenu', observe);
+      host.dispatchEvent(event);
+      // Keeper's window-capture handler must allow the event to reach the host.
+      // The Workbench may then handle its own menu and stop bubble propagation.
+      host.removeEventListener('contextmenu', observe, true);
       return reached;
     });
-    assert.equal(reachedWindow, true);
+    assert.equal(reachedHost, true);
   } finally { await browser.close(); }
 });
 
@@ -208,7 +211,7 @@ test('Layered Keeper swims without flipping, preserves controls and drafts, and 
     const errors = []; page.on('pageerror', error => errors.push(error.message));
     await seed(page);
     await page.getByRole('button', { name: 'Release Keeper', exact: true }).click();
-    assert.equal(await page.locator('.keeper-rig__part').count(), 8);
+    assert.equal(await page.locator('.keeper-roamer .keeper-rig__part').count(), 8);
     assert.equal(await page.locator('.keeper-roamer > img').count(), 0);
     assert.equal(await page.locator('.keeper-roamer').evaluate(n => getComputedStyle(n).pointerEvents), 'none');
     const saved = await page.evaluate(() => window.savedDraft());
@@ -218,7 +221,7 @@ test('Layered Keeper swims without flipping, preserves controls and drafts, and 
     await page.mouse.move(200, 850); await page.waitForTimeout(200);
     const after = await position(page); assert.ok(Math.hypot(after.x - before.x, after.y - before.y) < 8, 'hover cannot retarget swimming');
     await backgroundClick(page, 450, 650); await page.waitForTimeout(1700);
-    const rotations = await page.locator('.keeper-rig__part').evaluateAll(nodes => nodes.map(node => getComputedStyle(node).transform));
+    const rotations = await page.locator('.keeper-roamer .keeper-rig__part').evaluateAll(nodes => nodes.map(node => getComputedStyle(node).transform));
     assert.equal(new Set(rotations).size, 8);
     assert.ok(rotations.every(value => !value.startsWith('matrix3d')), 'parts rotate in the screen plane');
     await page.screenshot({ path: '.browser-test-runtime/keeper-layered-wide.png' });
@@ -234,7 +237,7 @@ test('Layered Keeper swims without flipping, preserves controls and drafts, and 
     const still = await position(page); assert.ok(Math.hypot(still.x - 450, still.y - 650) < 8);
     assert.deepEqual(await page.evaluate(() => window.savedDraft()), saved);
     await page.setViewportSize({ width: 390, height: 844 });
-    await page.waitForFunction(() => [...document.querySelectorAll('.keeper-rig__part img')].every(n => {
+    await page.waitForFunction(() => [...document.querySelectorAll('.keeper-roamer .keeper-rig__part img')].every(n => {
       const r = n.getBoundingClientRect(); return r.left >= 0 && r.top >= 0 && r.right <= innerWidth && r.bottom <= innerHeight;
     }));
     await page.screenshot({ path: '.browser-test-runtime/keeper-layered-narrow.png' });
@@ -242,15 +245,17 @@ test('Layered Keeper swims without flipping, preserves controls and drafts, and 
     await page.setViewportSize({ width: 1440, height: 1000 });
     await page.getByRole('button', { name: 'Return Keeper', exact: true }).click();
     await page.waitForFunction(() => document.querySelector('.keeper-instance').dataset.keeperPhase === 'docked');
+    if (!await page.getByRole('combobox', { name: 'Keeper movement', exact: true }).isVisible())
+      await page.getByRole('button', { name: 'Keeper settings', exact: true }).click();
     await page.getByRole('combobox', { name: 'Keeper movement', exact: true }).selectOption('flip');
     await page.getByRole('button', { name: 'Release Keeper', exact: true }).click();
     assert.equal(await page.locator('.keeper-roamer > img').count(), 1);
-    assert.equal(await page.locator('.keeper-rig').count(), 0);
+    assert.equal(await page.locator('.keeper-roamer .keeper-rig').count(), 0);
     await page.getByRole('combobox', { name: 'Keeper movement', exact: true }).selectOption('swim');
     await page.getByRole('button', { name: 'Release Keeper', exact: true }).waitFor();
     await page.reload(); await mount(page, true);
     await page.getByRole('button', { name: 'Release Keeper', exact: true }).focus(); await page.keyboard.press('Enter');
-    await page.locator('.keeper-rig').waitFor();
+    await page.locator('.keeper-roamer .keeper-rig').waitFor();
     assert.equal(await page.locator('.keeper-tools').count(), 0);
     await page.screenshot({ path: '.browser-test-runtime/keeper-layered-visitor.png' });
     await backgroundClick(page, 850, 650);
@@ -268,12 +273,15 @@ test('Layered Keeper holds still for reduced motion and reports recoverable rig 
     page.setDefaultTimeout(15000); await seed(page);
     await page.getByRole('button', { name: 'Release Keeper', exact: true }).click();
     await page.waitForTimeout(100);
-    const before = await page.locator('.keeper-roamer').evaluate(n => n.outerHTML);
+    const pose = () => page.locator('.keeper-roamer').evaluate(node => [node.getAttribute('style'), ...Array.from(node.querySelectorAll('.keeper-rig__part'), part => part.getAttribute('style'))]);
+    const before = await pose();
     await backgroundClick(page, 1000, 700); await page.mouse.move(100, 100); await page.waitForTimeout(200);
-    assert.equal(await page.locator('.keeper-roamer').evaluate(n => n.outerHTML), before);
+    assert.deepEqual(await pose(), before, 'reduced motion preserves the roamer and every part transform');
     await page.getByRole('button', { name: 'Return Keeper', exact: true }).click();
     assert.equal(await page.locator('.keeper-instance').getAttribute('data-keeper-phase'), 'docked');
     await page.route(source, route => route.fulfill({ contentType: 'image/svg+xml', body: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" />' }));
+    if (!await page.getByRole('combobox', { name: 'Keeper movement', exact: true }).isVisible())
+      await page.getByRole('button', { name: 'Keeper settings', exact: true }).click();
     await page.getByRole('combobox', { name: 'Keeper movement', exact: true }).selectOption('flip');
     await page.getByRole('combobox', { name: 'Keeper movement', exact: true }).selectOption('swim');
     await page.getByRole('button', { name: 'Retry Keeper artwork', exact: true }).waitFor();
@@ -293,11 +301,12 @@ test('Swim controls tune active flight, reject invalid/failed saves and survive 
     let artworkRequests = 0; page.on('request', request => { if (request.url() === source) artworkRequests++; });
     await seed(page);
     await page.getByRole('button', { name: 'Release Keeper', exact: true }).click();
+    await page.getByRole('button', { name: 'Keeper settings', exact: true }).click();
     const field = name => page.getByRole('spinbutton', { name: `Keeper ${name}`, exact: true });
     assert.equal(await field('swim speed').inputValue(), '420');
     assert.equal(await field('gather time').inputValue(), '0.4');
     assert.equal(await field('spread time').inputValue(), '0.55');
-    await page.evaluate(() => { window.originalKeeperRig = document.querySelector('.keeper-rig'); });
+    await page.evaluate(() => { window.originalKeeperRig = document.querySelector('.keeper-roamer .keeper-rig'); });
     const requests = artworkRequests;
     await field('swim speed').fill('650');
     assert.equal(await page.evaluate(() => window.savedDraft().keeperDocks[0].swim), undefined, 'typing is not a completed edit');
@@ -308,7 +317,7 @@ test('Swim controls tune active flight, reject invalid/failed saves and survive 
     const tuning = { speed: 650, gatherSeconds: .2, spreadSeconds: .3, turnSeconds: .25, staggerSeconds: .1 };
     assert.deepEqual(await page.evaluate(() => window.savedDraft().keeperDocks[0].swim), tuning);
     assert.equal(await page.locator('.keeper-instance').getAttribute('data-keeper-phase'), 'free');
-    assert.ok(await page.evaluate(() => window.originalKeeperRig === document.querySelector('.keeper-rig')), 'tuning does not remount artwork');
+    assert.ok(await page.evaluate(() => window.originalKeeperRig === document.querySelector('.keeper-roamer .keeper-rig')), 'tuning does not remount artwork');
     assert.equal(artworkRequests, requests, 'tuning does not reload the embedded images');
     await field('swim speed').fill('9000'); await field('swim speed').press('Enter');
     assert.equal(await field('swim speed').inputValue(), '650');
@@ -336,6 +345,8 @@ test('Swim controls tune active flight, reject invalid/failed saves and survive 
       assert.ok(box.x >= 0 && box.x + box.width <= 390 && box.y >= 0 && box.y + box.height <= 844, `${name} stays reachable`);
     }
     await page.setViewportSize({ width: 1440, height: 1000 });
+    if (!await page.getByRole('combobox', { name: 'Keeper movement', exact: true }).isVisible())
+      await page.getByRole('button', { name: 'Keeper settings', exact: true }).click();
     await page.getByRole('combobox', { name: 'Keeper movement', exact: true }).selectOption('flip');
     assert.equal(await page.locator('.keeper-swim-controls').count(), 0);
     await page.getByRole('combobox', { name: 'Keeper movement', exact: true }).selectOption('swim');
@@ -344,6 +355,7 @@ test('Swim controls tune active flight, reject invalid/failed saves and survive 
     const closeTextTools = page.getByRole('button', { name: 'Close Text tools', exact: true });
     if (await closeTextTools.count()) await closeTextTools.click();
     await page.getByRole('button', { name: 'Release Keeper', exact: true }).click();
+    await page.getByRole('button', { name: 'Keeper settings', exact: true }).click();
     assert.equal(await field('tentacle stagger').inputValue(), '0.1');
     assert.deepEqual(await page.evaluate(() => window.savedDraft().keeperDocks[0].swim), tuning);
     assert.deepEqual(errors, []);

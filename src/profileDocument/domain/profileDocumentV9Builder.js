@@ -1,5 +1,6 @@
 import { projectReception } from './receptionPresentation.js';
 import { projectWorkbenchIndex } from '../../systemWorkflow/domain/workbenchIndex.js';
+import { projectArtworkLayers } from '../../systemWorkflow/domain/artworkLayers.js';
 import { projectPublishedWorkbenchGroups } from './publishedWorkbenchGroups.js';
 import { normalizeProfileAddress } from '../../library/config.js';
 import {
@@ -152,7 +153,7 @@ export function buildProfileDocumentV9({
   const imageModules = draft.imageModules ? projectImageModules(draft.imageModules) : undefined;
   const texts = draft.texts ? projectTextModules(draft.texts, [{ id: 'display:primary', grids: draft.grids.filter(g => !isSystemWorkflowWorldCoverGrid(g)) }, ...(draft.displays || []).filter(d => d.visibility === 'PUBLIC').map(d => ({ ...d, grids: d.grids.filter(g => !isSystemWorkflowWorldCoverGrid(g)) }))]) : undefined;
   const publicWorkbench = presentation ? structuredClone(presentation) : null;
-  if (publicWorkbench?.keeperDocks) publicWorkbench.keeperDocks = publicWorkbench.keeperDocks.filter(item => keeperDocks?.some(keeper => keeper.id === item.id));
+  if (publicWorkbench) delete publicWorkbench.keeperDocks;
   if (publicWorkbench?.shapes) publicWorkbench.shapes = publicWorkbench.shapes.filter(item => shapes?.some(shape => shape.id === item.id));
   if (publicWorkbench?.imageModules) publicWorkbench.imageModules = publicWorkbench.imageModules.filter(item => imageModules?.some(image => image.id === item.id));
   if (publicWorkbench?.miniApps) publicWorkbench.miniApps = publicWorkbench.miniApps.filter(item => miniApps?.some(app => app.id === item.id));
@@ -161,6 +162,7 @@ export function buildProfileDocumentV9({
   const grids = projectSystemWorkflowPublicGrids(draft, assetRecords);
   const workbenchGroups = projectPublishedWorkbenchGroups(draft.workbenchGroups, { grids, displays, texts, imageModules, shapes, keeperDocks });
   const workbenchIndex = projectWorkbenchIndex(draft.workbenchIndex, { workbench: publicWorkbench, workbenchGroups, grids, displays, texts, imageModules, shapes, keeperDocks });
+  const artworkOrder = projectArtworkLayers(draft, { texts, imageModules, shapes });
   return assertValidProfileDocumentV9({
     documentType: INSCAPE_PROFILE_DOCUMENT_TYPE,
     version: INSCAPE_PROFILE_DOCUMENT_VERSION,
@@ -186,6 +188,7 @@ export function buildProfileDocumentV9({
       visibility: { ...identity.visibility },
     },
     grids,
+    ...(artworkOrder.length ? { artworkLayers: artworkOrder } : {}),
     ...(workbenchGroups.length ? { workbenchGroups } : {}),
     ...(workbenchIndex ? { workbenchIndex } : {}),
     ...(draft.reception ? { reception: projectReception(draft.reception, { grids, displays, texts, imageModules }) } : {}),

@@ -48,6 +48,9 @@ export function reconcileOwnerDraftWithPublishedProfile({ document: documentInpu
     return Object.freeze({ status: 'LOCAL_DRAFT_UNAVAILABLE', reason: recordState?.reason,
       issues: recordState?.issues || [], fingerprint: recordState?.fingerprint });
   }
+  // The existing public v9 document represents one composition. It cannot
+  // replace or hydrate a local collection until scoped publication is built.
+  if (store.isCollection?.()) return Object.freeze({ status: 'LOCAL_CHANGES_PRESERVED' });
   const localDraft = store.getDraft();
   const localFingerprint = systemWorkflowDraftFingerprint(localDraft);
   const importedDraft = createOwnerDraftFromPublishedProfile(document);

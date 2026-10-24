@@ -7,13 +7,13 @@ import { bindWorkbenchTextRecovery } from '../../text/textEditRecovery.js';
 
 function browserStorage() { try { return globalThis.localStorage; } catch { return null; } }
 
-export default function useWorkbenchController(profileAddress, { storage } = {}) {
+export default function useWorkbenchController(profileAddress, { storage, sharedStore } = {}) {
   const profile = normalizeProfileAddress(profileAddress), selectedStorage = storage ?? browserStorage();
   const authority = useMemo(() => {
-    const store = createSystemWorkflowDraftStore({ profileAddress: profile, storage: selectedStorage, requireEditor: true });
+    const store = sharedStore || createSystemWorkflowDraftStore({ profileAddress: profile, storage: selectedStorage, requireEditor: true });
     bindWorkbenchTextRecovery(store);
     return { store, session: createWorkbenchSession({ store }) };
-  }, [profile, selectedStorage]);
+  }, [profile, selectedStorage, sharedStore]);
   const live = useRef(authority), mounted = useRef(true);
   live.current = authority;
   const [, render] = useState(0), [failure, setFailure] = useState(null);

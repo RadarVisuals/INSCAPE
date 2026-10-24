@@ -88,7 +88,8 @@ export function createProductionContentSecurityPolicy(env = {}) {
     "font-src 'self'",
     "img-src 'self' https: data: blob:",
     `connect-src 'self' ${productionConnectOrigins(env).join(' ')}`,
-    "worker-src 'none'",
+    // Bundled Image paint worker; remote and blob worker scripts stay excluded.
+    "worker-src 'self'",
     "frame-src 'self' https:",
     `frame-ancestors ${UNIVERSAL_PROFILE_PARENT_ORIGINS.join(' ')}`,
     "form-action 'self'",

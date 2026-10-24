@@ -2,14 +2,14 @@ export const LATTICE_FLOATING_WINDOW_RESIZE_STEP = 24;
 
 const clamp = (value, minimum, maximum) => Math.min(maximum, Math.max(minimum, value));
 
-export function latticeFloatingWindowMargin(viewport) {
+function latticeFloatingWindowMargin() {
   return 10;
 }
 
 export function latticeFloatingWindowViewportBounds(viewport) {
   const width = Math.max(320, Number(viewport?.width) || 1280);
   const height = Math.max(320, Number(viewport?.height) || 720);
-  const margin = latticeFloatingWindowMargin({ height, width });
+  const margin = latticeFloatingWindowMargin();
   return {
     maximumHeight: Math.max(300, height - (margin * 2)),
     maximumWidth: Math.max(300, width - (margin * 2)),
@@ -66,7 +66,7 @@ export function resizeLatticeFloatingWindowRightEdge(size, deltaX, viewport) {
 export function clampLatticeFloatingWindowPosition(position, size, viewport) {
   const width = Math.max(320, Number(viewport?.width) || 1280);
   const height = Math.max(320, Number(viewport?.height) || 720);
-  const margin = latticeFloatingWindowMargin({ height, width });
+  const margin = latticeFloatingWindowMargin();
   const windowWidth = Math.max(1, Number(size?.width) || 1);
   const windowHeight = Math.max(1, Number(size?.height) || 1);
   return {

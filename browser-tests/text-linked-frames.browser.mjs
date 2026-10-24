@@ -7,7 +7,36 @@ import { setWorkbenchZoom } from './fixtures/workbench-zoom.mjs';
 
 const origin = process.env.INSCAPE_TEXT_ROOT || 'http://127.0.0.1:5173';
 const settle = page => page.evaluate(async () => { await document.fonts.ready; await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))); });
+async function revealFrameControls(page) {
+  // Authored frames sit beside navigation and extend beneath the independent
+  // Info panel. Use the real controls; narrow/reloaded views may already fold.
+  const collapse = page.getByRole('button', { name: 'Collapse sidebar', exact: true });
+  if (await collapse.count()) await collapse.click();
+  const info = page.getByRole('button', { name: 'Close Info', exact: true });
+  if (await info.count()) await info.click();
+  await settle(page);
+}
 const story = 'The keeper travels through the Underneath. Every creature carries a fragment of this world, and every fragment has a story that continues beyond the edge of its frame. ';
+test('reading-order links follow temporary group presentation with unchanged camera and registration revision', async () => {
+  const browser = await chromium.launch({ headless: true });
+  try {
+    const page = await browser.newPage();
+    await page.goto(`${origin}/browser-tests/text-frame-links-fixture.html`);
+    const check = async () => {
+      await settle(page);
+      const { actual, expected } = await page.evaluate(() => {
+        const [a, b] = [...document.querySelectorAll('[data-frame]')].map(n => n.getBoundingClientRect());
+        const line = document.querySelector('.text-flow-links line');
+        return { actual: ['x1', 'y1', 'x2', 'y2'].map(key => Number(line.getAttribute(key))),
+          expected: [a.right, a.top + a.height / 2, b.left, b.top + b.height / 2] };
+      });
+      assert.deepEqual(actual, expected);
+    };
+    await check();
+    await page.getByRole('button', { name: 'Spread frames', exact: true }).click(); await check();
+    await page.getByRole('button', { name: 'Return frames', exact: true }).click(); await check();
+  } finally { await browser.close(); }
+});
 async function assertPainted(page, locator) {
   const png = await locator.screenshot();
   const ink = await page.evaluate(async data => {
@@ -176,7 +205,7 @@ test('fixed-width text remeasures stable break positions after typing before the
       const {systemWorkflowDraftKey}=await import('/src/systemWorkflow/systemWorkflowDraftStore.js');
       localStorage.setItem(systemWorkflowDraftKey(draft.profileAddress),JSON.stringify(draft));
     });
-    await mountTextToolsFixture(page,origin);await page.getByRole('button',{name:'Add linked Text frame',exact:true}).click();await settle(page);
+    await mountTextToolsFixture(page,origin);await revealFrameControls(page);await page.getByRole('button',{name:'Add linked Text frame',exact:true}).click();await settle(page);
     await page.getByRole('button',{name:'Close Text tools',exact:true}).click();
     const first=page.getByRole('textbox',{name:'Article text',exact:true}),second=page.getByRole('textbox',{name:'Article text in frame 2',exact:true});
     await first.focus();await page.keyboard.press('Control+Home');await page.keyboard.type('X');await settle(page);
@@ -195,6 +224,7 @@ async function seed(page) {
     localStorage.setItem(systemWorkflowDraftKey(draft.profileAddress), JSON.stringify(draft));
   }, story);
   await mountTextToolsFixture(page, origin); await settle(page);
+  await revealFrameControls(page);
 }
 async function clickLastCharacter(page, body) {
   const point = await body.evaluate(body => {

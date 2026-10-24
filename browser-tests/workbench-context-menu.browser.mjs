@@ -1,10 +1,14 @@
 import assert from 'node:assert/strict';
+import { mkdir } from 'node:fs/promises';
 import { chromium } from 'playwright-core';
 
+const output = process.env.INSCAPE_BROWSER_OUTPUT || 'output';
 const origin = process.env.INSCAPE_SYSTEM_WORKFLOW_ROOT || 'http://127.0.0.1:5173';
 const browser = await chromium.launch({ executablePath: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', headless: true });
 try {
+  await mkdir(output, { recursive: true });
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, reducedMotion: 'reduce' });
+  page.setDefaultTimeout(10000);
   const errors = [];
   page.on('pageerror', error => errors.push(error.message));
   await page.route('https://raw.githubusercontent.com/**', route => {
@@ -22,29 +26,40 @@ try {
     const { createRoot } = client.default || client;
     const Runtime = (await import('/src/public/ownerSystemWorkflow/OwnerSystemWorkflowRuntime.jsx')).default;
     const fixture = await import('/src/public/ownerSystemWorkflow/ownerSystemWorkflowDevelopmentFixture.js');
-    const { systemWorkflowDraftKey } = await import('/src/systemWorkflow/systemWorkflowDraftStore.js');
+    const { systemWorkflowDraftKey, createSystemWorkflowDraftStore } = await import('/src/systemWorkflow/systemWorkflowDraftStore.js');
     await import('/src/public/ownerSystemWorkflow/ownerSystemWorkflow.css');
     await import('/src/lattice/rendering/latticeMenuSurface.css');
     const storage = fixture.createOwnerSystemWorkflowReviewStorage();
     const profile = fixture.OWNER_SYSTEM_WORKFLOW_REVIEW_PROFILE;
+    // Display is parked and absent from Add. Seed the isolated format-scoping
+    // experiment through its existing domain operation before mounting the UI.
+    const { addDisplayModule } = await import('/src/systemWorkflow/displayModuleSession.js');
+    addDisplayModule(createSystemWorkflowDraftStore({ profileAddress: profile, storage }));
     const preferences = await import('/src/public/ownerSystemWorkflow/workbenchPreferences.js');
     preferences.saveWorkbenchPreferences(profile, { ...preferences.DEFAULT_WORKBENCH_PREFERENCES, surfaceId: 'carbon' });
     const root = createRoot(document.getElementById('root'));
     window.review = { root, storage, profile, getDraft: () => JSON.parse(storage.getItem(systemWorkflowDraftKey(profile))),
       dockVisible: () => preferences.loadWorkbenchPreferences(profile).dockVisible };
     const props = { profileAddress: profile, reviewStorage: storage, reviewAssets: fixture.OWNER_SYSTEM_WORKFLOW_REVIEW_ASSETS,
-      reviewCategories: [], reviewActivity: [], reviewDiscovery: [], reviewProfile: { name: 'Menu review' } };
+      reviewCategories: [], reviewActivity: [], reviewProfile: { name: 'Menu review' } };
     review.render = key => root.render(React.createElement(Runtime, { ...props, key }));
     review.render('first');
   });
-  await page.locator('.system-workflow__presentation-board').waitFor();
-  const desktop = async (x = 15, y = 15) => page.mouse.click(x, y, { button: 'right' });
+  await page.locator('.system-workflow__presentation-board').first().waitFor();
+  const desktop = async (x, y) => {
+    const host = page.locator('main.system-workflow');
+    await host.focus();
+    if (x !== undefined) await host.dispatchEvent('contextmenu', { clientX:x, clientY:y, bubbles:true, cancelable:true });
+    else await page.keyboard.press('Shift+F10');
+    await menu().waitFor();
+  };
   const menu = () => page.getByRole('menu', { name: 'Workbench commands', exact: true });
   const rootLabels = () => menu().locator(':scope > button').allTextContents();
   await desktop();
-  assert.deepEqual((await rootLabels()).map(s => s.replace('›', '').trim()), ['TOOLS', 'ADD', 'IDENTITY', 'LIBRARY', 'DISCOVER', 'PREVIEW', 'PUBLISH', 'HIDE DOCK']);
+  assert.deepEqual((await rootLabels()).map(s => s.replace('›', '').trim()), ['TOOLS', 'ADD', 'IDENTITY', 'LIBRARY', 'DISCOVER', 'PREVIEW', 'PUBLISH', 'HIDE SIDEBAR']);
   await page.getByRole('menuitem', { name: 'ADD', exact: true }).hover();
-  await page.getByRole('menuitem', { name: 'DISPLAY MODULE', exact: true }).waitFor();
+  await page.getByRole('menuitem', { name: 'IMAGE', exact: true }).waitFor();
+  assert.equal(await page.getByRole('menuitem', { name: 'DISPLAY MODULE', exact: true }).count(), 0, 'parked Display stays absent from Add');
   assert.equal(await page.getByRole('menuitem', { name: 'METADATA MODULE', exact: true }).count(), 0);
   // Cross the touching boundary very slowly, including a pause at the seam.
   const rootBounds = await menu().boundingBox();
@@ -53,25 +68,24 @@ try {
   await page.mouse.move(rootBounds.x + rootBounds.width - 2, childBounds.y + 18);
   await page.mouse.move(childBounds.x, childBounds.y + 18);
   await page.waitForTimeout(500);
-  assert.equal(await page.getByRole('menuitem', { name: 'DISPLAY MODULE', exact: true }).isVisible(), true);
-  await page.screenshot({ path: 'output/workbench-menu-wide.png' });
+  assert.equal(await page.getByRole('menuitem', { name: 'IMAGE', exact: true }).isVisible(), true);
+  await page.screenshot({ path: `${output}/workbench-menu-wide.png` });
   await page.keyboard.press('Escape');
   const before = await page.evaluate(() => JSON.stringify(review.getDraft()));
   const height = await page.locator('[data-presentation-workbench]').first().evaluate(node => node.clientHeight);
-  const dockHeight = (await page.locator('.system-workflow__global-bar').boundingBox()).height;
-  assert.ok(Math.abs(height + dockHeight - page.viewportSize().height) <= 1, 'visible dock occupies the reserved bottom rail, including its border');
+  assert.equal(height, page.viewportSize().height, 'sidebar does not reserve a bottom rail');
   await desktop();
-  await page.getByRole('menuitem', { name: 'HIDE DOCK', exact: true }).click();
-  await page.waitForFunction(() => !document.querySelector('.system-workflow__global-bar') && !review.dockVisible());
-  assert.equal(await page.locator('[data-presentation-workbench]').first().evaluate(node => node.clientHeight), page.viewportSize().height, 'hiding the dock releases its reserved work area');
+  await page.getByRole('menuitem', { name: 'HIDE SIDEBAR', exact: true }).click();
+  await page.waitForFunction(() => !document.querySelector('.workbench-sidebar') && !review.dockVisible());
+  assert.equal(await page.locator('[data-presentation-workbench]').first().evaluate(node => node.clientHeight), page.viewportSize().height, 'hiding the sidebar does not change canvas coordinates');
   assert.equal(await page.evaluate(() => JSON.stringify(review.getDraft())), before);
   await page.evaluate(() => review.render('remounted'));
-  await page.locator('.system-workflow__presentation-board').waitFor();
-  assert.equal(await page.locator('.system-workflow__global-bar').count(), 0);
+  await page.locator('.system-workflow__presentation-board').first().waitFor();
+  assert.equal(await page.locator('.workbench-sidebar').count(), 0);
   await page.locator('main.system-workflow').focus();
   await page.keyboard.press('Shift+F10');
-  await page.getByRole('menuitem', { name: 'SHOW DOCK', exact: true }).click();
-  await page.locator('.system-workflow__global-bar').waitFor();
+  await page.getByRole('menuitem', { name: 'SHOW SIDEBAR', exact: true }).click();
+  await page.locator('.workbench-sidebar').waitFor();
   await desktop();
   await menu().waitFor();
   await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
@@ -80,25 +94,21 @@ try {
   await page.keyboard.press('ArrowRight');
   await page.getByRole('menu', { name: 'ADD options' }).waitFor();
   await page.waitForFunction(() => document.activeElement?.closest('[role="menu"]')?.getAttribute('aria-label') === 'ADD options');
-  await page.keyboard.press('ArrowRight');
-  await page.waitForFunction(() => document.activeElement?.closest('[role="menu"]')?.getAttribute('aria-label') === 'DISPLAY MODULE options');
-  await page.keyboard.press('ArrowLeft');
-  await page.getByRole('menu', { name: 'DISPLAY MODULE options' }).waitFor({ state: 'hidden' });
-  assert.equal(await page.getByRole('menuitem', { name: 'DISPLAY MODULE', exact: true }).evaluate(node => node === document.activeElement), true);
+  await page.keyboard.press('ArrowDown');
+  assert.equal(await page.getByRole('menuitem', { name: 'MINI APP', exact: true }).evaluate(node => node === document.activeElement), true);
   await page.keyboard.press('ArrowLeft');
   await page.getByRole('menu', { name: 'ADD options' }).waitFor({ state: 'hidden' });
   assert.equal(await page.getByRole('menu', { name: 'ADD options' }).count(), 0);
   await page.keyboard.press('Escape');
-  // Add a second Display and change only its format from its title bar.
+  // Add an ordinary Image, then verify the seeded Display's independent format.
   await desktop();
   await page.getByRole('menuitem', { name: 'ADD', exact: true }).click();
-  await page.getByRole('menuitem', { name: 'DISPLAY MODULE', exact: true }).click();
-  await page.getByRole('menuitem', { name: 'HORIZONTAL 16:9', exact: true }).click();
-  await page.waitForFunction(() => review.getDraft().displays?.length === 1);
+  await page.getByRole('menuitem', { name: 'IMAGE', exact: true }).click();
+  await page.waitForFunction(() => review.getDraft().imageModules?.length === 1);
   const second = page.locator('[data-display-instance]').nth(1);
   const firstGeometry = await page.evaluate(() => review.getDraft().geometry);
   await second.locator('.system-workflow__identity-strip').focus();
-  await second.locator('.system-workflow__identity-strip').click({ button: 'right' });
+  await page.keyboard.press('Shift+F10');
   assert.equal(await page.getByRole('menuitem', { name: 'ADD', exact: true }).count(), 0);
   await page.getByRole('menuitem', { name: 'FORMAT', exact: true }).click();
   assert.equal(await page.getByRole('menuitemcheckbox', { name: 'HORIZONTAL 16:9', exact: true }).getAttribute('aria-checked'), 'true');
@@ -107,10 +117,10 @@ try {
   assert.deepEqual(await page.evaluate(() => review.getDraft().geometry), firstGeometry);
   await second.locator('.system-workflow__identity-strip').focus();
   await second.getByRole('button', { name: 'Minimize Display Module to shortcut', exact: true }).click();
-  await second.locator('.system-workflow__desktop-shortcut').click({ button: 'right' });
+  await second.locator('.system-workflow__desktop-shortcut').press('Shift+F10');
   await page.getByRole('menuitem', { name: 'FORMAT', exact: true }).click();
   assert.equal(await page.getByRole('menuitemcheckbox', { name: 'VERTICAL 9:16', exact: true }).getAttribute('aria-checked'), 'true');
-  await page.screenshot({ path: 'output/display-format-menu.png' });
+  await page.screenshot({ path: `${output}/display-format-menu.png` });
   await page.getByRole('menuitemcheckbox', { name: 'HORIZONTAL 16:9', exact: true }).click();
   await page.waitForFunction(() => review.getDraft().displays[0].geometry.columns === 32);
   // Narrow and edge-opening menus remain inside the viewport and traversable.
@@ -121,12 +131,12 @@ try {
   for (const bounds of await page.locator('[role="menu"]').evaluateAll(nodes => nodes.map(n => {
     const r = n.getBoundingClientRect(); return { left: r.left, right: r.right, bottom: r.bottom };
   }))) assert.ok(bounds.left >= 0 && bounds.right <= 390 && bounds.bottom <= 844, JSON.stringify(bounds));
-  await page.screenshot({ path: 'output/workbench-menu-narrow.png' });
+  await page.screenshot({ path: `${output}/workbench-menu-narrow.png` });
   await page.keyboard.press('Escape');
   await desktop(380, 12);
-  await page.getByRole('menuitem', { name: 'HIDE DOCK', exact: true }).click();
+  await page.getByRole('menuitem', { name: 'HIDE SIDEBAR', exact: true }).click();
   assert.equal(await page.locator('[data-presentation-workbench]').first().evaluate(node => node.clientHeight), 844);
-  await page.screenshot({ path: 'output/workbench-hidden-dock-narrow.png' });
+  await page.screenshot({ path: `${output}/workbench-hidden-dock-narrow.png` });
   assert.deepEqual(errors, []);
   console.log('Workbench menu: gap traversal, dock persistence/layout, keyboard, scoped Display formats and narrow bounds passed.');
 } finally { await browser.close(); }

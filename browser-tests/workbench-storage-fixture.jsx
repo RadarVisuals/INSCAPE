@@ -26,5 +26,5 @@ window.savedDraft = () => JSON.parse(localStorage.getItem(key));
 window.guardedStore = () => createSystemWorkflowDraftStore({ profileAddress: profile, storage: localStorage, requireEditor: true });
 const root = createRoot(document.getElementById('root'));
 window.leaveEditor = () => root.unmount();
-root.render(<Boundary profileAddress={profile} reviewStorage={localStorage} reviewAssets={[]} reviewCategories={[]} reviewActivity={[]} reviewDiscovery={[]}
+root.render(<Boundary profileAddress={profile} reviewStorage={localStorage} reviewAssets={[]} reviewCategories={[]} reviewActivity={[]}
   reviewProfile={{ name: 'Local storage verification' }} onOpenReception={() => root.render(<p>Published view requested</p>)} />);

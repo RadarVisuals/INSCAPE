@@ -37,7 +37,7 @@ test('modules move beyond the screen, remain editable after panning, and restore
       const board = page.locator('.system-workflow__presentation-board').first();
       const image = page.locator('[data-workbench-view-id="image:motion-4"]');
       await image.waitFor(); await page.waitForTimeout(600);
-      assert.equal(await page.getByRole('button', { name: 'Reset Workbench position' }).isVisible(), true);
+      assert.equal(await page.getByRole('button', { name: 'Reset Workbench view' }).isVisible(), true);
       const saved = await page.evaluate(() => localStorage.getItem(window.__motionKey));
       const initialBoard = await board.boundingBox(), initialImage = await image.boundingBox();
       await moveWindow(page, board.locator('header').first(), 1800, 1000);
@@ -63,9 +63,9 @@ test('modules move beyond the screen, remain editable after panning, and restore
       await board.dispatchEvent('wheel', { deltaY: -120, bubbles: true, cancelable: true }); await settle(page);
       assert.deepEqual(await board.boundingBox(), { ...pannedBoard, y: pannedBoard.y + 120 }, 'ordinary wheel pans over outlying modules without changing their world position');
       await page.screenshot({ path: `.browser-test-runtime/workbench-space-${visitor}.png` });
-      await page.getByRole('button', { name: 'Reset Workbench position' }).click(); await settle(page);
+      await page.getByRole('button', { name: 'Reset Workbench view' }).click(); await settle(page);
       assert.equal((await board.boundingBox()).x, initialBoard.x + 1840);
-      assert.equal(await page.getByRole('button', { name: 'Reset Workbench position' }).isVisible(), true);
+      assert.equal(await page.getByRole('button', { name: 'Reset Workbench view' }).isVisible(), true);
       await mountGridMotionFixture(page, { origin, visitor, heavy: true, displayWidth: 600 });
       await page.locator('[data-workbench-view-id="image:motion-6"]').waitFor(); await page.waitForTimeout(300);
       assert.equal((await board.boundingBox()).x, initialBoard.x + (visitor ? 0 : 1840));

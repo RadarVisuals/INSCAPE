@@ -3,15 +3,15 @@ import { useArtworkVisibility } from '../artwork/useArtworkVisibility.js';
 
 // HTML owns its animation and controls. The Workbench owns only the frame's
 // bounds/lifecycle; this surface never creates a wallet or mini-app bridge.
-export default function HtmlArtworkFrame({ url, name }) {
+export default function HtmlArtworkFrame({ url, name, width, height }) {
   const viewport = useRef(null);
   const visible = useArtworkVisibility(viewport);
   return <div ref={viewport} className="html-artwork-viewport">
-    {visible && <HtmlArtworkDocument key={url.href} url={url} name={name} />}
+    {visible && <HtmlArtworkDocument key={url.href} url={url} name={name} width={width} height={height} />}
   </div>;
 }
 
-function HtmlArtworkDocument({ url, name }) {
+function HtmlArtworkDocument({ url, name, width, height }) {
   const frame = useRef(null);
   const [attempt, setAttempt] = useState(0), [status, setStatus] = useState('loading');
   useEffect(() => {
@@ -33,7 +33,7 @@ function HtmlArtworkDocument({ url, name }) {
   };
   return <>
     <iframe key={attempt} ref={frame} title={`${name} HTML artwork`} src={url.href}
-      className="html-artwork-frame" sandbox="allow-scripts" referrerPolicy="no-referrer"
+      className="html-artwork-frame" style={{ width, height }} sandbox="allow-scripts" referrerPolicy="no-referrer"
       allow="camera 'none'; microphone 'none'; geolocation 'none'; payment 'none'; clipboard-read 'none'; clipboard-write 'none'"
       onLoad={loaded} />
     {status !== 'loaded' && <div className="html-artwork-status" role="status">

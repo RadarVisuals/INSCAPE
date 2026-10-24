@@ -35,12 +35,12 @@ const RPC_REPAIR_TIMEOUT_MS = 60000;
 const RPC_SOURCE_TIMEOUT_MS = 240000;
 const INCOMPLETE_ASSETS_MESSAGE = 'Some Library assets could not be loaded. The Library may be incomplete. Retry to refresh.';
 
-function commitWorkspace(set, get, workspace, extra = {}) {
+function commitWorkspace(set, get, workspace) {
   if (workspace === get().workspace) return false;
   if (workspace?.profileAddress !== get().profileAddress) return false;
   const result = workspacePersistence.save(workspace);
   if (!result.ok) { set({ persistenceError: result.error }); return false; }
-  set({ workspace, persistenceError: null, ...extra });
+  set({ workspace, persistenceError: null });
   return true;
 }
 
@@ -71,9 +71,6 @@ export const useLibraryStore = create((set, get) => ({
   progress: { resolved: 0, total: 0, failures: 0 },
   error: null,
   liveError: null,
-  searchQuery: '',
-  activeView: { type: 'all', id: null },
-  selectedAssetId: null,
   ...initialWorkspace,
   loadGeneration: 0,
 
@@ -88,7 +85,7 @@ export const useLibraryStore = create((set, get) => ({
     activeLoadController?.abort();
     activeLoadController = null;
     set({ profileAddress: profile, ...workspacePersistence.load(profile), assets: loadLibraryAssetCache(workspaceStorage, profile), sourceMode: null, status: 'idle', error: null, liveError: null,
-      progress: { resolved: 0, total: 0, failures: 0 }, searchQuery: '', activeView: { type: 'all', id: null }, selectedAssetId: null,
+      progress: { resolved: 0, total: 0, failures: 0 },
       loadGeneration: get().loadGeneration + 1 });
     return true;
   },
@@ -150,6 +147,10 @@ export const useLibraryStore = create((set, get) => ({
             : { resolved: batch.resolved, total: batch.total, failures: (state.progress.failures || 0) + batch.failures } }));
         saveLibraryAssetCache(workspaceStorage, requestedProfileAddress, get().assets);
       }
+      // Ending an iterator is not confirmation of a complete inventory. Keep
+      // retained cards and use the existing fallback/error path on interruption.
+      // Targeted repair already calculates completeness against requested IDs.
+      if (!sourceComplete && !options.preserveProgress) throw new Error(`${repository.source} asset source incomplete`);
       return { unresolvedAssetIds: [...new Set(unresolvedAssetIds)], assets: sourceAssets,
         failures: sourceFailures, complete: sourceComplete };
     };
@@ -314,21 +315,17 @@ export const useLibraryStore = create((set, get) => ({
       if (activeLoadController === controller) activeLoadController = null;
     }
   },
-  setSearchQuery: (searchQuery) => set({ searchQuery }),
-  setActiveView: (activeView) => set({ activeView, selectedAssetId: null }),
-  selectAsset: (selectedAssetId) => set({ selectedAssetId }),
   discardUnavailableAsset(assetId) {
     const assets = get().assets.filter((asset) => asset.id !== assetId);
     if (assets.length === get().assets.length) return false;
-    set({ assets, selectedAssetId: get().selectedAssetId === assetId ? null : get().selectedAssetId });
+    set({ assets });
     saveLibraryAssetCache(workspaceStorage, get().profileAddress, assets);
     return true;
   },
   createFolder(name) {
     const workspace = createFolder(get().workspace, name);
     const created = workspace.folders.length > get().workspace.folders.length ? workspace.folders.at(-1) : null;
-    const committed = commitWorkspace(set, get, workspace, { activeView: created
-      ? { type: 'folder', id: created.id } : get().activeView });
+    const committed = commitWorkspace(set, get, workspace);
     return committed ? created?.id || null : null;
   },
   renameFolder(id, name) {
@@ -336,7 +333,7 @@ export const useLibraryStore = create((set, get) => ({
   },
   deleteFolder(id) {
     const workspace = deleteFolder(get().workspace, id);
-    commitWorkspace(set, get, workspace, { activeView: get().activeView.id === id ? { type: 'all', id: null } : get().activeView });
+    commitWorkspace(set, get, workspace);
   },
   setFolderAsset(folderId, assetId, included) {
     const workspace = setFolderAsset(get().workspace, folderId, assetId, included); commitWorkspace(set, get, workspace);
@@ -389,7 +386,7 @@ export function resetLibraryStoreForTests(nextProfileAddress, nextStorage) {
   activeLoadController = null;
   workspacePersistence = createLibraryWorkspacePersistence(nextStorage);
   useLibraryStore.setState({ profileAddress: nextProfileAddress, ...workspacePersistence.load(nextProfileAddress), assets: [], status: 'idle', sourceMode: null,
-    progress: { resolved: 0, total: 0, failures: 0 }, searchQuery: '', activeView: { type: 'all', id: null }, selectedAssetId: null });
+    progress: { resolved: 0, total: 0, failures: 0 } });
 }
 
 export function flushLibraryWorkspace() {

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { validReception, saveReceptionSelection } from './receptionPresentation.js';
+import { validReception } from './receptionPresentation.js';
 import { createSystemWorkflowDraftStore } from '../../systemWorkflow/systemWorkflowDraftStore.js';
 import { addImageModule, saveImageModule } from '../../imageModule/imageModuleSession.js';
 import { validImageModules } from '../../imageModule/imageModule.js';
@@ -41,23 +41,14 @@ test('curation is explicit, ordered, restored and filters private or deleted mod
   const { store } = fixture();
   const id = store.getDraft().imageModules[0].id;
   const privateId = addImageModule(store, profile);
-  assert.ok(saveReceptionSelection(store, profile, undefined, [id, privateId, 'image:deleted', 'display:primary']));
+  assert.ok(store.commitCompletedOperation({ ...store.getDraft(), reception: { version: 1, items: [id, privateId, 'image:deleted', 'display:primary'] } }, { expectedGeneration: store.getGeneration() }));
   const document = publish(store.getDraft());
   assert.deepEqual(document.reception.items, [id, 'display:primary']);
   assert.deepEqual(reconcileSystemWorkflowDraftFromProfileDocumentV9(document).reception, document.reception);
-  assert.ok(saveReceptionSelection(store, profile, store.getDraft().reception, []));
+  assert.ok(store.commitCompletedOperation({ ...store.getDraft(), reception: { version: 1, items: [] } }, { expectedGeneration: store.getGeneration() }));
   assert.deepEqual(publish(store.getDraft()).reception.items, []);
   const invalid = structuredClone(document); invalid.reception.items.push(privateId);
   assert.throws(() => assertValidProfileDocumentV9(invalid));
-});
-test('selection rejects stale, wrong-profile and failed writes without changing saved content', () => {
-  const f = fixture(), id = f.store.getDraft().imageModules[0].id;
-  assert.equal(saveReceptionSelection(f.store, `0x${'2'.repeat(40)}`, undefined, [id]), false);
-  assert.ok(saveReceptionSelection(f.store, profile, undefined, [id]));
-  const before = f.store.getDraft();
-  assert.equal(saveReceptionSelection(f.store, profile, undefined, []), false);
-  f.fail(true); assert.equal(saveReceptionSelection(f.store, profile, before.reception, []), false);
-  assert.deepEqual(f.store.getDraft(), before);
 });
 test('invalid crop and curation values cannot enter draft or public image records', () => {
   const { store } = fixture(), item = store.getDraft().imageModules[0];

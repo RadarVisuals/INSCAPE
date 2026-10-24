@@ -23,7 +23,8 @@ test('active Text transfer destinations follow background Display availability w
     assert.equal(await body.evaluate(node=>node===document.activeElement),true);
     await page.getByRole('button',{name:'Unlock Display Module composition',exact:true}).evaluate(button=>button.click());
     await menu.waitFor({state:'attached'});
-    assert.equal(await menu.getByRole('option').count(),2);
+    // The transfer details stays closed while background availability changes.
+    assert.equal(await menu.getByRole('option',{includeHidden:true}).count(),2);
     assert.equal(await body.evaluate((element,previous)=>element===previous,node),true);
     assert.deepEqual(await saved(page),before,'availability changes do not save or replace the article');
   } finally {await browser.close();}

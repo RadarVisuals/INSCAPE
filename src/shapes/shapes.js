@@ -5,8 +5,8 @@ export const SHAPE_ID = /^shape:[A-Za-z0-9_-]{1,80}$/u;
 const exact = (value, keys) => value && typeof value === 'object' && !Array.isArray(value)
   && Object.keys(value).length === keys.length && keys.every(key => Object.hasOwn(value, key));
 
-// Array order owns stacking, back to front. Shapes occupy a background band
-// below content windows, independent of tool focus.
+// Shape records own their appearance. Workbench artworkLayers owns their paint
+// order alongside Images and Text, independently of tool focus.
 export function validShapes(items, published = false) {
   if (!Array.isArray(items) || items.length > MAX_SHAPES) return false;
   const ids = new Set();
@@ -19,11 +19,12 @@ export function validShapes(items, published = false) {
     if (kind === 'texture' && (!exact(item.texture, ['scale'])
       || !Number.isFinite(item.texture.scale) || item.texture.scale < .25 || item.texture.scale > 8)) return false;
     const appearanceKeys = kind === 'rectangle' ? (Object.hasOwn(item || {}, 'grain') ? ['grain'] : []) : ['kind', kind];
-    if (!exact(item, ['id', 'name', 'color', 'opacity', ...appearanceKeys, ...(!published ? ['visibility'] : [])])
+    if (!exact(item, ['id', 'name', 'color', 'opacity', ...appearanceKeys, ...(Object.hasOwn(item || {}, 'blur') ? ['blur'] : []), ...(!published ? ['visibility'] : [])])
       || !SHAPE_ID.test(item.id) || ids.has(item.id)
       || typeof item.name !== 'string' || !item.name.trim() || item.name.length > 48 || /[\u0000-\u001f\u007f]/u.test(item.name)
       || !/^#[0-9a-f]{6}$/iu.test(item.color) || !Number.isFinite(item.opacity) || item.opacity < 0 || item.opacity > 1
       || Object.hasOwn(item, 'grain') && (!Number.isFinite(item.grain) || item.grain < 0 || item.grain > 1)
+      || Object.hasOwn(item, 'blur') && (!Number.isFinite(item.blur) || item.blur < 0 || item.blur > 12)
       || !published && !['PRIVATE', 'PUBLIC'].includes(item.visibility)) return false;
     ids.add(item.id); return true;
   });

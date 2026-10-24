@@ -4,6 +4,7 @@ import { readFile, mkdir } from 'node:fs/promises';
 import { chromium } from 'playwright-core';
 import { mountGridMotionFixture } from './fixtures/grid-motion-fixture.mjs';
 const origin = process.env.INSCAPE_TEXT_ROOT || 'http://127.0.0.1:5217';
+const output = process.env.INSCAPE_BROWSER_OUTPUT || '.browser-test-runtime';
 const grey = await readFile(new URL('./fixtures/keeper-layered.svg', import.meta.url), 'utf8');
 const purple = await readFile(new URL('./fixtures/keeper-octopus.svg', import.meta.url), 'utf8');
 const launch = () => chromium.launch({ executablePath: 'C:/Program Files (x86)/Google/Chrome/Application/chrome.exe', headless: true });
@@ -36,8 +37,8 @@ test('embedded WebP thumbnails stay filtered while Inspect prepares original pix
       await source.locator('..').getByRole('button', { name: 'Inspect Image', exact: true }).dispatchEvent('pointerover', { pointerType: 'mouse', buttons: 0 });
       await page.waitForFunction(() => window.prepared);
       assert.deepEqual(await runtime.evaluate(() => [...document.querySelectorAll('image')].map(n => n.href.baseVal)), before, 'Inspect warming never replaces the visible filtered sources');
-      await mkdir('.browser-test-runtime', { recursive: true });
-      await source.screenshot({ path: `.browser-test-runtime/svg-quality-hover-${width}.png` });
+      await mkdir(output, { recursive: true });
+      await source.screenshot({ path: `${output}/svg-quality-hover-${width}.png` });
       const board = page.locator('main.system-workflow').first();
       for (const target of [.5, 2, .25, 1]) {
         for (let step = 0; step < 30; step++) {
@@ -122,7 +123,8 @@ test('grey layers and purple WebP head use bounded filtered sources, resize, and
       })));
       const before = await dimensions();
       assert.ok(before.every(image => image.width > 0 && image.width < 600 && image.height < 600));
-      await page.screenshot({ path: `.browser-test-runtime/keeper-quality-fixed-${width}.png` });
+      await mkdir(output, { recursive: true });
+      await page.screenshot({ path: `${output}/keeper-quality-fixed-${width}.png` });
       await page.locator('.keeper-roamer').evaluateAll(nodes => nodes.forEach(node => node.style.setProperty('--keeper-size', '520px')));
       await page.waitForFunction(urls => [...document.querySelectorAll('.keeper-rig img, .keeper-rig image')].every((n, i) => (n.getAttribute('src') || n.getAttribute('href')) !== urls[i]), before.map(image => image.url));
       const after = await dimensions();
@@ -198,8 +200,8 @@ test('Focus, Return and subsequent zoom update Image and Display pixels without 
         await page.getByRole('button', { name: 'Focus selected Workbench modules', exact: true }).click();
         await arrived(); await correctPixels();
         assert.ok(await runtime.evaluate(() => window.cameraDensities.length <= 6), 'camera preparation/arrival refresh pixels without per-frame resampling');
-        await mkdir('.browser-test-runtime', { recursive: true });
-        await source.screenshot({ path: `.browser-test-runtime/svg-focus-${kind}-${visitor}-${width}.png` });
+        await mkdir(output, { recursive: true });
+        await source.screenshot({ path: `${output}/svg-focus-${kind}-${visitor}-${width}.png` });
         await page.getByRole('button', { name: 'Back to previous Workbench view', exact: true }).click();
         await arrived(); await correctPixels();
         await select();
@@ -281,7 +283,7 @@ test('live group spreading, item focus and pointer pan retain SVG pixel density 
       await page.mouse.move(920, 660, { steps: 8 }); await page.mouse.up(); await page.keyboard.up('Space');
       await settled(); await correctPixels();
       await bench.dispatchEvent('wheel', { ctrlKey: true, deltaY: 120, clientX: 700, clientY: 450, bubbles: true, cancelable: true }); await correctPixels();
-      await page.getByRole('button', { name: 'Reset Workbench position', exact: true }).click(); await settled();
+      await page.getByRole('button', { name: 'Reset Workbench view', exact: true }).click(); await settled();
       // The authored window is now below the viewport at this zoom. Its document
       // may unload normally between journeys; the next opening prepares it again.
       await source.locator('iframe').waitFor({ state: 'detached' });

@@ -6,6 +6,9 @@ import { fileURLToPath } from 'node:url';
 import { fileInventory, gitIdentity, passingTap, sha256, sourceInventory } from './releaseEvidence.mjs';
 
 export const verificationSteps = Object.freeze([
+  { name: 'browser-catalog', args: ['scripts/browserSuiteCatalog.mjs'] },
+  { name: 'lint', args: ['scripts/lintSource.mjs'] },
+  { name: 'typecheck', args: ['typechecks/verify-workbench-contracts.mjs'] },
   { name: 'unit', args: ['--test', '--test-reporter=tap'], tap: true },
   { name: 'browser', args: ['scripts/runBrowserTests.mjs'] },
   { name: 'standards', args: ['--test', '--test-reporter=tap', 'scripts/luksoStandards.audit.test.js'], tap: true },
@@ -29,6 +32,8 @@ export async function verifyRelease({ root, output, steps = verificationSteps, e
   process.once('SIGTERM', stop);
   try {
     await save();
+    if (new Set(steps.map(step => step.name)).size !== steps.length)
+      throw Error('Duplicate verification step names');
     const requiredNode = (await readFile(resolve(root, '.node-version'), 'utf8')).trim().replace(/^v/u, '');
     if (process.versions.node !== requiredNode) throw Error(`Node ${requiredNode} required; found ${process.versions.node}`);
     summary.git = gitIdentity(root);

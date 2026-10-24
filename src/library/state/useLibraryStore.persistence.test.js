@@ -26,7 +26,7 @@ test('a completed Library command cannot overwrite a subsequently restored works
 
   assert.equal(useLibraryStore.getState().replaceWorkspace(restored), true);
   await delay(220);
-  assert.deepEqual(loadLibraryWorkspace(storage, PROFILE), restored);
+  assert.deepEqual(loadLibraryWorkspace(storage, PROFILE).workspace, restored);
   assert.deepEqual(useLibraryStore.getState().workspace, restored);
 
   resetLibraryStoreForTests(PROFILE, storage);
@@ -38,7 +38,7 @@ test('category commands are durable before returning and rejected saves leave UI
   resetLibraryStoreForTests(PROFILE, storage);
   const id = useLibraryStore.getState().commitCategoryForProfile(PROFILE, { type: 'create', name: 'Immediate' });
   assert.ok(id);
-  assert.equal(loadLibraryWorkspace(storage, PROFILE).folders[0].id, id);
+  assert.equal(loadLibraryWorkspace(storage, PROFILE).workspace.folders[0].id, id);
   const before = useLibraryStore.getState().workspace;
   const originalSave = storage.setItem;
   storage.setItem = () => { throw new Error('quota'); };
@@ -66,7 +66,7 @@ test('Library draft flushing persists the latest workspace immediately and repor
   resetLibraryStoreForTests(PROFILE, storage);
   useLibraryStore.getState().createFolder('Flush me');
   assert.equal(flushLibraryWorkspace(), true);
-  assert.equal(loadLibraryWorkspace(storage, PROFILE).folders.some((folder) => folder.name === 'Flush me'), true);
+  assert.equal(loadLibraryWorkspace(storage, PROFILE).workspace.folders.some((folder) => folder.name === 'Flush me'), true);
 
   resetLibraryStoreForTests(PROFILE, { getItem: () => null, setItem: () => { throw new Error('quota'); } });
   assert.equal(flushLibraryWorkspace(), false);
@@ -77,13 +77,11 @@ test('switching installed profiles isolates each Library workspace', () => {
   const storage = memoryStorage();
   resetLibraryStoreForTests(PROFILE, storage);
   useLibraryStore.getState().createFolder('First profile only');
-  useLibraryStore.getState().selectAsset('first-profile-asset');
 
   assert.equal(useLibraryStore.getState().setProfileAddress(OTHER_PROFILE), true);
   assert.equal(useLibraryStore.getState().profileAddress, OTHER_PROFILE);
   assert.equal(useLibraryStore.getState().workspace.profileAddress, OTHER_PROFILE);
   assert.deepEqual(useLibraryStore.getState().workspace.folders, []);
-  assert.equal(useLibraryStore.getState().selectedAssetId, null);
 
   assert.equal(useLibraryStore.getState().setProfileAddress(PROFILE), true);
   assert.equal(useLibraryStore.getState().workspace.folders[0].name, 'First profile only');
@@ -97,13 +95,11 @@ test('discarding a broken visual asset removes only its transient index record',
   useLibraryStore.setState({
     assets: [{ id: stableAssetId, ownerAddress: PROFILE,
       contractAddress: '0x1111111111111111111111111111111111111111', imageUrl: 'https://broken.example/image.webp' }],
-    selectedAssetId: stableAssetId,
     workspace
   });
 
   assert.equal(useLibraryStore.getState().discardUnavailableAsset(stableAssetId), true);
   assert.deepEqual(useLibraryStore.getState().assets, []);
-  assert.equal(useLibraryStore.getState().selectedAssetId, null);
   assert.deepEqual(useLibraryStore.getState().workspace, workspace);
 });
 

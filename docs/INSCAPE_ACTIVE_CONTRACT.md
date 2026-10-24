@@ -5,7 +5,294 @@ Established: 2026-08-28
 Product clarification: 2026-09-06 — public Workbench and independent modules
 Rollback baseline before the documentation reset: `64458ac`
 
+## Multiple named Workbenches direction (2026-10-20)
+
+**Engineering preservation clarification (2026-10-23):** the founder authorized
+technical cleanup and coordination across separate agent tasks. Obsolete or
+superseded implementation may be removed with evidence. Preserve current intended
+composition authoring, Library-to-canvas workflows, retained modules, content and
+the accepted UI appearance. Do not remove a functioning module or product capability
+to simplify the code. This changes engineering scope, not product direction or
+publication authority. The execution record is the 30-step code-quality plan under
+`docs/audits/2026-10-23/`; its progress is not a new product contract.
+
+**Accepted product direction; the first local slice is implemented below.
+Public multi-Workbench presentation/publication remains pending.**
+The founder chose multiple named Workbenches per profile. Each Workbench is an
+independent composition canvas with its own dimensions, module instances,
+authored layout, Layers order and composition blocks. One Workbench is active
+at a time; opening another changes the working context rather than creating a
+canvas window inside the current canvas. A profile offers an overview of its
+Workbenches. Visitors can browse and switch between published Workbenches;
+private Workbenches and unpublished edits are excluded. The Library remains
+shared source material; reusing an asset does not share mutable module content.
+
+The founder initially chose a profile-level Keeper accompanying Workbench
+switching. The later illustrated clarification below supersedes the assumption
+of one always-accompanying Keeper: a home/habitat and optional accompaniment
+are distinct intents; multiple inhabitants remain a possibility to design.
+Keeper identity/configuration must not be silently duplicated across compositions.
+
+Reception is a desired future profile entrance, but its form and default landing
+are unresolved and need not block composition creation/switching design. A
+Workbench overview does not implicitly approve a new Reception design. Local
+edits in each Workbench must remain saved when working in another; this is
+distinct from deciding which revisions to publish.
+
+The founder chose an explicit publication-scope choice before publishing: offer
+the current Workbench alone, individually checked other changed Workbenches,
+and an option to select all local changes. The proposed default is the current
+Workbench. The review must name every affected Workbench and distinguish an
+update to a live composition from first publication of a private one. Selecting
+all is explicit, never an automatic consequence of saving or switching. Existing
+per-content public exclusions still apply; this is not a command to expose every
+private module. Any included profile-level changes, such as shared Keeper or
+Reception configuration, need their own visible scope rather than silently
+travelling with an unrelated composition. Unselected Workbenches retain their
+last published revisions and all their local edits. No publisher implementation
+or UI has been changed by this decision.
+
+This supersedes the earlier single-Workbench product restriction. Local saving
+and switching now use the bounded implementation below. The public document
+and publication flow still describe one composition. Profile-level wallet
+authority, local editor exclusion and save/recovery guarantees remain in force.
+Cloud draft sync is not thereby approved.
+
+The founder explained that old Workbench groups were primarily folder-like
+stacks that expand on the Workbench. Multiple canvases now remove their role as
+a required organizer of unrelated compositions. Retaining that folder/stack
+feature is not a requirement of the new UI. Layers composition blocks remain
+the accepted grouping mechanism inside a composition. This decision does not
+authorize deleting current groups/content or automatically converting them.
+The earlier recommendation to retain navigation groups as a required basis is
+superseded; any transition of actual content must be explicit and scoped.
+
+Display remains parked. Mobile authoring remains a separate design review.
+The [multiple Workbenches workflow proposal](audits/2026-10-20/multiple-workbenches.md)
+distinguishes accepted intent, observed technical dependencies, recommended
+workflows and remaining founder choices. Visitor landing and shared Keeper
+presentation remain to be settled; publication now has an explicit scope choice.
+The original direction decision changed no runtime. The subsequently authorized
+local implementation is described separately below.
+
+### First local named-Workbench slice (2026-10-20)
+
+**Founder measurement scope (20 October):** retain multiple Workbenches with one active runtime.
+Defer the spatial overview with neighbouring canvases. First measure a well
+populated ordinary Workbench, including navigation, active artwork, editing,
+save cost and switching. This does not authorize mounting inactive compositions,
+building frozen overview previews, or replacing the model with one giant canvas.
+Keep the existing local changes and Keeper trial; no commit, push or deployment.
+The [filled-Workbench measurement](audits/2026-10-20/filled-workbench-performance.md)
+records twelve local runs: inactive compositions do not retain executable
+artwork frames; visible animation, collection-wide saving and navigation peaks
+are distinct costs. It also records the existing HTML-window geometry mismatch.
+The measurement itself changes no production runtime.
+
+**Authorized follow-up (21 October), implemented locally:** address the measured
+save path and HTML geometry, then repeat the same filled-Workbench workload.
+Ordinary composition edits validate the changed draft and retain already
+validated, frozen inactive content. Shared changes still validate every projected
+Workbench. Collection size, external-write detection, editor authority, atomic
+persistence and failure/recovery behavior remain enforced. The collection still
+uses one synchronous browser-storage record; serialization and writing therefore
+still grow with the collection. No deferred-save success or additional cache is
+introduced. See the [follow-up measurements and checks](audits/2026-10-21/storage-html-performance.md).
+The spatial overview remains deferred; existing changes and the Keeper trial are
+retained. No commit, push, upload or deployment is authorized by this follow-up.
+
+**Implemented locally after explicit founder authorization; uncommitted.**
+The owner can name the existing Workbench, create an empty named Workbench,
+switch between them and reload the last active one. Names and stable IDs,
+modules, dimensions and authored composition layout belong to each Workbench.
+Undo/Redo is scoped to its originating composition during the editor session.
+The first create/rename retains the current draft rather than clearing it.
+The current bounded implementation allows up to eight local Workbenches.
+
+One validated profile collection owns these compositions plus shared identity,
+Reception configuration and Keeper records. The Library remains shared source
+material; module content is independent. Existing module operations receive a
+derived active-composition view. Leaving that context revokes its write handle,
+so delayed work cannot write into the arriving composition or a later reopening.
+Layout caches and failed Text recovery are composition-scoped. Saving a switch
+accepts both the departing layout and arriving ID together; failed persistence
+keeps the current context open. Pending Text recovery and unfinished crops or
+canvas gestures block context changes.
+
+The existing profile editor lease remains in force. The exploration trial
+still edits the shared Keeper and retains its existing movement, camera,
+collision and F-zoom behavior. This slice adds no habitat/world behavior.
+Collection backups explicitly cover all Workbenches and shared settings;
+restoration explicitly replaces the whole local collection. A single-Workbench
+backup cannot silently replace an existing collection. Additive import remains
+future work.
+
+Publishing a local collection is blocked with an explanation until explicit
+publication selection and the public collection format are implemented.
+Existing public documents cannot overwrite this local collection during
+reconciliation. No visitor overview/switcher, deletion, duplication, public
+routes, Layers/docking migration, cloud sync, upload or wallet action is added.
+See [implementation and current checks](audits/2026-10-20/local-workbenches.md).
+
+## Illustrated Inscape and habitat direction (2026-10-20)
+
+**Recorded founder intent; design/documentation only.** The founder supplied 19
+screenshots and requested that their explanation be retained for future chats.
+Read the [visual reference packet](design-references/2026-10-20-inscape-vision/README.md)
+and inspect the original images for Reception/navigation/Keeper/world work.
+This section records direction; the packet preserves examples and open choices.
+
+- Inscape is the profile's overall place and presentation. Reception is a fully
+  branding-friendly, creator-arranged bento grid, not a fixed card with avatar
+  replacement. Figures, portraits, bio, links and chosen metadata illustrate
+  possibilities. Do not automatically fill it with recently added Library art.
+  The precise block editor, identity placement and public landing remain design
+  work; official profile identity and authored persona remain distinct.
+- The ordinary route from Reception leads to a published-content overview and
+  a selected composition. The composition screenshot with camera points is
+  the ordinary canvas/Index experience. Workbench/canvas need not be final
+  visitor-facing names. Example sidebar categories are not a mandatory module
+  or commerce feature list.
+- A separate entrance to the right of Reception is the founder's **optional
+  personal exploration-world study**. Other creators do not need to author one
+  to use Inscape. Illustrated architecture, platforms, scale changes and a
+  Keeper cave reuse source artwork. The desired movement is free, at the
+  visitor's chosen speed, building on existing Keeper motion plus collision and
+  world/camera integration. A mandatory guided route is not the chosen intent.
+  Actor/control details, collision shapes, camera behavior and zoom bounds remain
+  to be designed. Source reuse and bounded zoom do not prove smooth performance.
+- Keeper should have an identifiable, configurable home/habitat where it can
+  remain visible without always following; the founder envisages one or possibly
+  several inhabitants. It may also leave and accompany activity across contexts,
+  including Reception and the overview. Habitat and accompaniment are separate
+  meanings. This refines the earlier shared-Keeper decision; exact count,
+  ownership of habitat placement and visitor behavior remain unresolved.
+- Selling/minting Keepers, their appearances and interior artwork is the
+  founder's creative/commercial ambition. Mint annotations do not authorize a
+  transaction or define protocol, ownership, licenses or current runtime support.
+
+No public/UI routes, runtime, schema, animations or transactions are introduced
+by preserving this material. Display remains parked and removed Animation/Mirror
+modules are not restored. Future implementation needs its own concrete scope;
+the reference map is not a requirement to mount all these surfaces together.
+
+## Reception wireframe replacement (2026-10-20)
+
+**Implemented locally following explicit founder authorization.** The founder
+approved replacing the previous Reception rather than retaining it behind a
+flag. The public profile landing now renders a read-only identity/persona bento
+wireframe from the verified public identity: portrait, bio, links and existing
+custom fields. It does not auto-populate an artwork carousel. The old card
+expansion, artwork inspection host, carousel lifecycle and Reception-specific
+curation/crop editor have been removed, including their unused components.
+
+Explore on the right opens a separate temporary empty exploration wireframe;
+Back to Reception or Escape returns focus to its trigger. The owner Keeper
+trial below adds existing movement; this is not yet a world renderer,
+interior collision feature or persistent/shareable room route.
+The composition overview entrance below is labelled coming later and disabled.
+Full bento customization remains future work. Reception portraits use the image
+renderer in this wireframe; this pass does not restore its old executable card.
+
+The owner return-to-Workbench route and profile authority remain unchanged.
+Existing explicit public work links resolve to the canonical visitor canvas,
+instead of mounting a second copy of the modules inside Reception. Invalid
+targets show the existing unavailable-target message on the new landing.
+Public document validation/projection still understands current Reception
+selection/crop fields; those are no longer an active UI/editor path. No content
+is erased and no document migration or new saved schema is introduced.
+
+This supersedes the older implemented Reception carousel/editor descriptions
+under Cover, entry, and Discover. It does not supersede the longer-term visual
+direction or activate the optional world. [Implementation and verification](audits/2026-10-20/reception-wireframe.md).
+
+## Keeper dock in the exploration trial (2026-10-20)
+
+**Implemented locally after explicit founder authorization.** In the owner's
+Reception → Explore room, reuse the existing Keeper dock, Library drag/drop,
+artwork host, movement modes, swim speed, settings and recall. The existing
+profile draft remains authoritative: reuse its first Keeper (choose when there
+are several), or create one empty private dock with Layered swim selected.
+Artwork and parameter changes are shared with the Workbench Keeper. The room
+dock position and flight are temporary, not another saved composition/habitat.
+
+Only a verified owner can open this editor, under the existing single-editor
+lease. A missing/unreadable draft requires recovery through the Workbench;
+it must not be replaced with an empty room draft. Visitors have no private
+Library/editor. Leaving the room releases motion and the editing lease.
+Room bounds constrain the existing motion. The next authorized trial places one
+founder-supplied static environment image and makes its outlined upper beam a
+solid rectangle for free flight. Keeper uses a simple body footprint and slides
+along the beam; illustrative protrusions and the right wall are not colliders.
+Direct recall intentionally bypasses this trial collider as a recovery action.
+The original SVG is retained; the room uses a transparent lossless WebP at
+1200 × 1200 for a maximum 320 CSS-pixel presentation. This is not a zoom-quality
+or full-world performance claim. Rigged dock previews reuse parsed artwork
+parts rather than attempting to display the source SVG as a flat image.
+General scene collision, camera-follow, world zoom, authored scenery placement
+and public habitat presentation remain pending.
+This small trial does not implement multiple Workbenches or prove full-world
+performance. [Evidence and use](audits/2026-10-20/exploration-keeper.md).
+
+The [first environment/collision evidence](audits/2026-10-20/exploration-collision.md)
+records source integrity, rendering and the deliberately limited collision rule.
+
 ## Current product map (2026-10-19)
+
+### Larger exploration trial with Keeper camera follow (2026-10-20)
+
+Subsequent founder feedback exposed the combined wall/zoom focus shift. Latest
+implementation removes positional follow lag: Keeper's existing smooth motion
+is the sole source of travel smoothing; the camera keeps its core at the room
+viewport centre. The lens is allowed outside the physical room so 50% overview
+does not shift Keeper sideways when camera bounds meet a nearby metal wall.
+Physical actor bounds and metal collision remain intact. Trial core margin is
+now 8% of world-rendered size, tightened from 16%; it remains an approximation.
+This supersedes the damped/clamped-camera and earlier footprint descriptions
+below. F uses the shared inspection curve on the same motion clock; no zoom RAF.
+
+Latest shortcut refinement: the founder replaced J with **F**, matching existing
+Workbench muscle memory. Reuse `LATTICE_PRODUCTION_FOCUS_OPENING_MS` (460ms)
+and `latticeProductionFocusOpeningProgress` for the room's 100%/50% transition;
+Keeper remains the room focus, not a newly selectable scenery object. F toggles
+in both directions, J no longer does. A reported movement/zoom jitter was
+traced to an independent zoom clock resetting camera centring every sample.
+The replacement advances zoom on the existing Keeper motion clock and preserves
+its current screen anchor before normal camera-follow damping. Rapid reversal
+starts from the live scale. Docked/reduced-motion zoom is immediate.
+
+Later explicit zoom choice, implemented locally: start at 100%; one toggle
+switches to a true 50% overview and back to 100%. The founder assigned **J**
+to both directions. The visible toggle carries that shortcut. No wheel zoom,
+continuous zoom control or scale above 100%. Camera follow remains active;
+artwork and Keeper scale together while world speed, body collision geometry
+and authored state remain unchanged. Ignore J while typing, using modifiers,
+key repeat/composition, or working in Library. The shortcut is scoped to the
+room and cleaned up when leaving. New room sessions start at 100%.
+
+Explicitly authorized and locally implemented: a 2800 × 1800 temporary room,
+two 600-unit copies of the same environment source, fixed 1:1 camera scale and
+damped camera follow. The founder tried the result and positively confirmed
+the feel of camera follow. This does not settle zoom, final scenery or a public
+world/editor. Only the straight horizontal/vertical metal beams collide;
+the founder explicitly excluded organic interior detail from collision.
+
+`explorationSpace.js` owns room geometry, screen/world conversion and temporary
+camera presentation. Existing Keeper integration remains the motion owner.
+World positions, speed and beams do not change when the camera moves. Pointer
+destinations are converted to world space; a held right button continuously
+updates that destination under the camera. Dock and Library stay in screen
+space. Rig pose and conversation anchors receive projected screen positions.
+Camera, flight and scenery do not write into the profile draft. Return directly
+recalls to the room start, then restores the starting view; leaving releases
+the existing motion loop and editor lease. Reduced motion retains stationary
+Keeper behavior without animated camera follow.
+
+The trial body collision footprint is tightened from 30% to 16% of rendered
+size, while ordinary Workbench behavior retains its defaults. This remains a
+simple body approximation, not pixel/tentacle collision. The previous single
+viewport-space beam trial is superseded by these world-space metal beams.
+See [camera trial evidence](audits/2026-10-20/exploration-camera.md).
 
 INSCAPE is an artist's Workbench for composing and experiencing identifiable
 creative material through independent modules. The ordinary working route is
@@ -62,7 +349,7 @@ save/recovery guarantees or authorize deleting the founder's current work.
 | Separate Mobile presentation/module | **Removed on 12 October.** The accepted replacement is the ordinary profile/Workbench route at narrow widths. | Keep responsive layout and touch support; do not restore a separate mobile entrance, schema or legacy reader. [Decision](#removed-mobile-presentation-and-module), [data rejection](../src/profileDocument/domain/removedMobile.test.js). |
 | Mirror; former Animation module and layered-character assembly | **Removed**, not merely waiting in the Add menu. Animation was removed on 20 September to narrow work to the then-current composition/navigation focus; that historical reason does not make Display today's priority. | Do not restore their runtime or saved fields implicitly. Current Keeper motion, intrinsic media animation and isolated HTML artwork are separately scoped capabilities. [Mirror](#removed-mirror-module), [Animation](#removed-artwork-animation). |
 | Artwork Frame/mat panel | **Removed on 21 September.** Source transparency is retained. | No restoration of decorative mats, backing or transparency overrides. Module appearance and In place/Lift inspection remain separate. [Decision](#removed-artwork-presentation-panel). |
-| Shared workspace, Layers and Color/tools dock | **Chosen design direction, confirmed 19 October; migration pending.** The founder identifies the existing workspace design-system layout as the intended reference. Tools can be docked together, detached, rejoined or hidden. | Build Workbench layering and Layers-based artwork removal as a coherent workflow. The current preview still uses a disposable Display layer model; selected design is not completed production behavior. [New clarification](#workbench-composition-direction-2026-10-19), [reference](#shared-creative-workspace-direction-2026-10-14). |
+| Shared workspace, Layers and Color/tools dock | **Chosen design direction; first local Workbench Layers slice implemented 21 October. Shared tools/docking remain pending.** The founder identifies the existing workspace design-system layout as the intended reference. Tools can eventually be docked together, detached, rejoined or hidden. | Real Images/Text/Shapes now share saved ordering, composition blocks and Layers removal/recovery. This does not complete the tool-docking migration. [Local scope](#first-local-workbench-layers-slice-2026-10-21), [reference](#shared-creative-workspace-direction-2026-10-14). |
 | Live minting, remix/co-authoring, module marketplace and generic connections | **Direction or unresolved scope.** Visitor minting has a local interaction simulation; broader protocols and commercial rules are not specified. | Define a concrete workflow, authority and acceptance criteria before implementation. Do not infer permission from asset possession or creative intent. [Minting](#minting-direction), [scope](#scope-discipline). |
 | Authored starting camera, public appearance policy and public profile QR destination | **Deferred choices.** Existing reset/zoom, local preferences and address QR remain authoritative. | Specify the public destination/experience first; saved Index destinations are not an authored startup camera. [Camera](#public-workbench-and-visitor-interaction), [QR](#cover-entry-and-discover). |
 
@@ -143,6 +430,15 @@ cross-profile copying are introduced.
 
 ## Display experimental status (2026-10-16)
 
+**Founder preservation clarification (2026-10-23):** Display was temporarily
+parked because the founder did not currently need it; it must continue to work.
+Technical cleanup must preserve its existing implemented functionality and
+include its affected behavior in verification. Keep ordinary creation access
+hidden as described below; this clarification does not reactivate its menus or
+approve new features. Remove obsolete implementation only when the retained
+Display behavior still works. This does not require historical development-data
+migrations or restoring superseded behavior.
+
 The founder parked Display as experimental while reconsidering its role beside
 the Workbench. On 19 October they clarified the reason: the large-canvas
 composition setup and the choice between Display, solo Images and Workbench
@@ -164,14 +460,14 @@ isolated experiments; they are not permission to restore ordinary access.
 
 ## Workbench composition direction (2026-10-19)
 
-**Accepted future direction; implementation deferred.** The founder chose the existing
+**Accepted direction; first local Layers slice implemented below.** The founder chose the existing
 design-system creative workspace as the intended visual/workflow reference,
 describing an Affinity-like organization. That identifies the reference to use;
 it does not claim every preview capability is already a production feature.
-Production migration remains a separate scoped change. The founder clarified
-that the current audit improvement agenda must be completed first. Discussing
-Layers and docking records future intent; it does not move that feature work
-ahead of stabilization, final verification and the remaining release decisions.
+Production migration remains scoped. On 21 October the founder requested the
+UI migration handoff and first visible Layers step, superseding the earlier
+audit-first sequencing for this bounded work. Relevant regression checks still
+apply; this is no claim that remaining release decisions have been resolved.
 
 - Standalone artwork, explicitly including solo Images on the Workbench, must
   support deliberate front/back layer ordering relative to other artwork. The
@@ -184,13 +480,20 @@ ahead of stabilization, final verification and the remaining release decisions.
 - Shared tools, including Color, belong in a compact dock/tab organization and
   act on the relevant selection. Shape colour is one use of the common colour
   control, not a reason for a separate, disconnected picker in every workflow.
+- **Founder clarification, 21 October: Image has no colour-editing target.**
+  Image tinting, recolouring and source-dependent colour editing are excluded
+  from this migration. The shared Color tab serves applicable Shape and Text
+  settings. Selecting an Image keeps the chosen tool tab in place, with no
+  applicable colour target; it must not keep editing a previously selected
+  Shape or Text. Earlier references to unresolved Image colour semantics are
+  superseded by this decision.
 - The founder explicitly wants tools to remain together by default, with the
   option to detach a panel, return it to the dock, or hide it. The previously
   accepted detachable/regroupable tab direction still applies. Tool visibility
   and placement are presentation state, distinct from artwork visibility and
   deletion; changing tools must not rewrite or remove the composition.
 
-The current application and reference have different limits. Image Close still
+At the 19 October review, application and reference had different limits. Image Close
 sets its window to closed and returns focus to its shortcut. Shape ordering is
 within the shape collection, while retained Display Layers orders Grid
 placements. The workspace reference's layer adapter filters its disposable
@@ -198,11 +501,12 @@ items to Display children. None of those is an implemented authored layer-order
 workflow for standalone Workbench Images. Reference screenshots demonstrate
 the intended instruments, not production persistence or full tool docking.
 
-The next implementation must trace selection, rendering order, saved content,
+The implementation must trace selection, rendering order, saved content,
 undo, publication and temporary tool layout together. Use one authoritative
 artwork order and module-owned content, retaining the existing validated-save
-and recovery boundaries. The exact participating module types, behavior of
-groups/stacks and publication of order need a concrete design before edits;
+and recovery boundaries. The 20 October decision below fixes the initial module
+scope and composition-block meaning. Remaining group/stack integration and
+publication of order need a concrete design before edits;
 do not silently turn temporary focus/activation into a saved order change.
 Define behavioral checks for overlapping Images, order after reload/undo and
 public projection, Layers deletion/recovery, and tool detach/rejoin/hide without
@@ -212,6 +516,369 @@ The existing workspace is the chosen design basis. Unimplemented FX, generic
 module connections, live minting and unrelated reference demonstrations are
 not thereby implemented or automatically in the next slice. Display remains
 experimental while this Workbench workflow is developed.
+
+### Layers composition groups decision (2026-10-20)
+
+**Accepted direction; first local implementation described below.** The founder
+chose groups in Layers as composition blocks, rather than organizational lists
+whose members can be interleaved with unrelated layers. A group's participating
+artwork occupies one contiguous block in the authored front/back order. Moving
+that block in Layers moves its members together in that order; members remain
+individually editable and reorderable within the expanded group. An unrelated
+layer can sit above or below the block; to place it between group members it
+must join the group, or a member must leave. This decision does not flatten
+artwork, erase asset identity or introduce group effects or nested groups.
+
+The founder subsequently approved these formation and selection rules:
+
+- Creating a composition group anchors its block at the frontmost selected
+  member's position in the authored layer order. Selected members retain their
+  relative order and canvas geometry; intervening unselected layers remain
+  outside the block. Overlap may therefore change. Group formation and its order
+  change are one undoable operation, restoring the complete prior state on Undo.
+- In normal canvas interaction, one click selects the block; dragging moves its
+  members together. Double-click focuses the whole block rather than entering
+  its contents. Focus is temporary navigation, not a layer-order edit.
+- An explicit Edit parts action, or Enter while the composition block is
+  selected outside text/input editing, enters the group. Canvas clicks then
+  select individual members. A visible context cue identifies the group and
+  selected part, for example Personage > Ogen. This entry preserves the authored
+  overlap; it does not invoke the existing Workbench reading spread.
+- Escape first cancels or exits an active edit/gesture according to its existing
+  scoped behavior. Otherwise it leaves group editing and selects the whole
+  block. It must not bypass Text's own input or cancellation behavior.
+- Expanding a group in Layers and clicking a member selects that part directly;
+  it does not require first entering through the canvas. Merely expanding or
+  collapsing the Layers row does not alter canvas geometry or authored order.
+
+These rules resolve the formation-anchor and group-entry choices in the review.
+They did not authorize a UI rebuild during that documentation round. The later
+21 October migration request authorized the bounded local implementation below.
+
+The first shared Layers scope is Images, Text and Shapes, with expandable groups.
+Artwork info has its own detachable tool tab. The layer eye is temporary editor
+visibility, separate from inclusion in publication. Mobile authoring is a
+separate design review; this migration targets desktop, with controls remaining
+reachable when its window narrows. Display remains parked.
+
+Existing named Workbench groups still implement membership, navigation order,
+compact stacks and a temporary spread for reading. They do not implement these
+composition blocks. The new direction does not silently reinterpret their
+member order as z-order, turn opening a group into an authored rearrangement,
+or convert existing groups. Their navigation/stack behavior and the composition
+model need explicit reconciliation before implementation. In particular,
+spreading a character's body, eyes and effects into separate reading tiles
+cannot be assumed to be the intended way to open that composition.
+
+See the [design review and group reconciliation proposal](audits/2026-10-20/design-system-review.md#compositieblokken-en-bestaande-workbench-groepen)
+for observed boundaries, unresolved choices and acceptance cases. The choice of
+composition blocks supersedes the earlier open group-semantics question; it
+does not approve every proposal in that review or authorize UI changes.
+
+### Movable tool docks (2026-10-21)
+
+**Founder-authorized and implemented locally; uncommitted and undeployed.**
+Layers, Transform and Color each have one independent tool instance. They start
+as three tabs in one movable dock on desktop. Dragging a tab out makes a separate
+window; dropping it on another dock's tab strip joins that group. Tab placement
+also permits reordering. The free header area moves the whole group, and its
+invisible edges/corners resize the group. Whole groups may join another dock.
+
+Closing hides the active tab only. The Layers toolbar button and Actions
+(Ctrl+K) reopen the relevant tool in its existing group. Right-click or Shift+F10
+on a tab offers detach, join another visible group and close. Tab arrow keys and
+the existing keyboard move/resize controls remain available. Escape, loss of
+focus and editor disposal cancel an unfinished drag. A target strip highlights
+only during docking; ordinary pointer use does not leave a keyboard focus box.
+
+The dock owns only in-memory editor layout for the current runtime. Layout is
+not persisted across reloads, published or entered in artwork Undo history.
+Stable tool containers move between groups; artwork selection, module-owned
+edits and saving remain separate. Color cancels a live preview when rearranging
+or hiding its panel. Canvas Delete reveals Layers and its inline confirmation
+even when another tab was active. Toolbar visibility is derived from the layout;
+moving a dock does not require updating the whole owner runtime's React state.
+
+This implements docking for these three tools, not the pending migration of
+every module-specific panel. The founder explicitly declined a numeric rotation
+field: do not add one from the earlier reference example. Rotate and both Mirror
+actions remain in the Image toolbar. See [checks and screenshots](audits/2026-10-21/tool-docking.md).
+
+**Founder refinement (2026-10-22), implemented locally:** a dock can also stack
+several tool panes vertically, as in the supplied Layers-over-Color screenshot.
+Each pane has its own tab strip, active tool and close control, so multiple tools
+remain visible together. Drop a tab at a pane's upper/lower edge to stack it;
+drop on its tab strip to join its tabs. A thin divider resizes the neighbouring
+panes, with pointer and keyboard access and cancellation. Any free header area
+moves the whole dock, and its invisible outer edges resize the common frame.
+Whole docks can stack while retaining their panes; tabs can still detach.
+The tab context menu also offers Dock above/below alongside detach/join/close.
+Closed panes retain their placement and proportions until reopened. Small
+viewports retain internal scrolling and reachable headers. This replaces the
+single-tab-group layout structure with one dock frame containing pane groups;
+the existing stable tool instances and module-owned edits remain unchanged.
+Layout initially remained session-only. The 2026-10-23 Library and editor-preferences refinement below now persists it outside artwork history and publication.
+Text stays independent. See [stacked-dock checks](audits/2026-10-22/stacked-tool-docks.md).
+
+### Image tool window migration (2026-10-21)
+
+**Founder-selected next window, implemented locally; uncommitted and undeployed.**
+Image now joins Layers, Transform and Color as a fourth tab in the same dock.
+It can detach, join another dock, move, resize through invisible edges, close
+and reopen through Actions → Image settings. Selecting artwork does not change
+the active tab. The Image tab follows one selected Image; other selections and
+closed artwork have explicit empty/reopen states.
+
+The existing Library drop choice, Remove Image side and Include Image in
+publication controls keep their order and module-owned behavior. The old Image
+Properties contents are replaced, not duplicated. Side selection/drop mode,
+asynchronous drop invalidation, edits, storage errors and Undo remain in Image.
+The host routes its existing controls through the same selection/tool-source
+boundary already used by Color. Action errors, including Fit and crop completion,
+remain visible beside the toolbar even when the Image tab is hidden. Settings
+errors stay beside the corresponding Image controls without duplicate alerts.
+
+Rotate, Mirror, Crop, Fit, inspection and duplication stay in the Image toolbar;
+dimensions remain in Transform and Image has no Color target. This migrates the
+Image tool window only; Shape and Text tools still await their own pass. Dock
+layout persistence remains deferred. See [checks and screenshots](audits/2026-10-21/image-tools.md).
+
+### Shape tool window migration (2026-10-21)
+
+**Founder-approved next window, implemented locally; uncommitted and undeployed.**
+Shape joins Layers, Transform, Color and Image as a fifth independent, dockable
+tool. It reopens through Actions → Shape settings. Selecting another artwork
+does not change the active tab. Narrow dock headers scroll horizontally while
+keeping the close button reachable; keyboard tab navigation reveals its target.
+
+The Shape selector, Name, Grid snap / spacing / line width, texture strength /
+scale and publication choice retain their order and behavior. Shape supplies these controls through
+its existing tool-source registration; the old Shape Properties contents are
+removed. Shape owns its presentation, validation, saving and Undo. Closed Shapes
+remain editable through their existing controls and can reopen through Layers.
+Settings and Color report their own errors; toolbar failures remain visible
+with the Shape tab hidden.
+
+Color and dimensions remain in Color and Transform. Duplicate, order and delete
+remain in the existing Shape toolbar. This introduces no new shape kinds, FX
+behavior or authored schema. Text is deliberately last in the agreed sequence.
+See [checks and screenshots](audits/2026-10-21/shape-tools.md).
+
+**Founder refinement later on 21 October:** remove Show shape and Grain strength
+from Shape, including its Properties reference example. Visibility is controlled
+through the Layers eye; the existing Layers reopen action handles closed artwork.
+The next tool is FX. Its shared Grain control must edit the selected Shape's
+existing authored grain value, with module-owned validation, saving and Undo.
+There must be one grain editing location, rather than duplicate controls in each
+tool panel. Removing the Shape control does not reset existing grain or change
+rendering/publication. FX is not implemented in this cleanup; its Grain behavior
+for Shape is now agreed. Blur and effects for other module types are not inferred
+from this decision. Text remains last.
+
+### First local FX slice (2026-10-21)
+
+**Accepted by the founder and implemented locally; uncommitted.** The founder
+approved Grain and the reference's Blur together in FX for the selected Shape.
+This supersedes the pending FX/Blur scope above. FX is the sixth tab alongside
+Layers, Transform, Color, Image and Shape. It uses the same movable dock,
+invisible resize edges, detach/rejoin and close behavior. Actions → FX reopens it.
+Dock arrangement remains editor-session state; reload starts the tabs together.
+
+Shape supplies its controls through the existing module tool source and owns
+validation, temporary previews, saving and Undo. The host supplies selection and
+window presentation. Grain edits the existing rectangle strength (0–1, shown
+as 0–100%). Grid and retained Texture keep their existing pattern models. Blur
+applies to Shape paint, including Grid/Texture, as an optional authored `blur`
+value from 0–12 Workbench pixels; its slider steps by 0.5. It scales with the
+camera and pixel density without blurring selection or resize controls. These
+values follow existing duplication, history, reload, public projection and
+visitor rendering. No second effects store or publication path is introduced.
+
+Each slider previews during a pointer drag or keyboard gesture and saves once
+when completed. Escape, lost focus, cancellation, dismissal or a changed draft
+discard the preview. Failed writes leave the saved artwork unchanged and show
+a recoverable error in FX. Effects follow one selected Shape without changing
+the active tab. Other module types and multiple selection have no FX controls
+in this slice; Image and Text effects are not added. Text migration remains last.
+See [implementation evidence](audits/2026-10-21/fx-tools.md).
+
+### Independent Text tool window (2026-10-21)
+
+**Founder-approved and implemented locally; uncommitted.** Text stays outside
+the Layers/Transform/Color/Image/Shape/FX dock. Its larger set of typography,
+paragraph, writing and article controls belongs in one independent movable and
+resizable window. This supersedes the earlier intention to migrate Text into
+the dock and the older fixed-width, content-sized tactile inspector description.
+
+The existing shared Text source/editor relationship remains: the active article
+supplies controls, selection, Undo, saving and failed-save recovery. Only its
+screen shell now reuses the same flat Carbon/Mist `WorkbenchToolPanel` as
+Layers, with invisible pointer resize edges and keyboard resizing. The header
+identifies the active article. Native disclosures and one body scroller retain
+the existing control organization. Tool position and dimensions are session
+state, independent of authored text-frame geometry and article contents.
+Reopening or changing articles retains the tool frame. Initial placement and
+viewport fitting keep the live camera controls reachable. Toolbar menus remain
+above the independent Text window.
+
+Workbench Text colour stays in shared Color; its position and dimensions stay
+in shared Transform. Font size, paragraph spacing, columns and padding remain
+typographic/layout settings in Text. Existing Display Text editing remains
+supported through the same independent window. No schema, history or storage
+path changes, new typography functions, or Text FX migration are introduced.
+The design-system workspace now also opens Text as the real independent window
+instead of a Text tab; its data remains disposable. See
+[checks and screenshots](audits/2026-10-21/text-panel.md).
+
+**Founder-approved hierarchy refinement (2026-10-21):** Text has one persistent
+navigation row: **Format text** (Tekst opmaken) and **Article settings** (Artikel
+instellen). Format text explicitly identifies selected text or the typing cursor,
+groups character and paragraph controls separately, and keeps existing writing
+tools accessible. Article settings identifies whole-article defaults and groups
+default typography, layout and article management. Headings, secondary
+disclosures, field labels and spacing convey distinct levels. The two scopes
+remain mounted; switching is session presentation state and preserves editor
+selection and history. Find reveals Format text before focusing
+its search field. Shared Color/Transform and Focus writing's existing design and
+behavior remain unchanged. The design-system preview uses this same component.
+See [hierarchy checks](audits/2026-10-21/text-hierarchy.md).
+
+**Founder clarification later on 21 October:** ordinary formatting shows the
+actual font at the cursor or in the selection, including heading defaults;
+different fonts show Mixed fonts. The ambiguous Article font placeholder and
+redundant Character heading are removed. The existing inline-font reset has a
+small reset control identifying its default. Article settings shows a compact
+default-style summary; its Default font, Default size and default line spacing
+are behind the explicit Change default style disclosure. Changing these defaults
+keeps individually authored formatting. This refines presentation without adding
+another font model or changing Focus writing. See
+[font clarity checks](audits/2026-10-21/text-font-clarity.md).
+
+### Existing tool-window finishing pass (2026-10-22)
+
+**Founder-approved finishing round, implemented locally; uncommitted.** Clarify
+the existing controls before working on Keeper. Color names its article-wide
+targets explicitly and replaces “Use inherited color” with “Use default text
+color”; the tooltip identifies the paragraph/heading or article default being
+restored. Typography reset controls use the same default terminology. Image
+names its Library-drop outcomes Add as a new side and Replace current side.
+Shape's existing-object chooser is Selected shape. Layers consistently calls
+its composition blocks groups in its controls and identifies editing or moving
+a member out of a group explicitly. These are wording changes, with the same
+module-owned edits, history and storage.
+
+The workspace reference removes its stale numeric Rotation and Show shape
+controls, offers no Image color controls, and limits FX to the implemented
+Shape scope (Grain for rectangles, Blur for Shapes). This reconciles earlier
+accepted placement; it does not introduce effects or migrate every independent
+reference example. Existing controls retain their placement and flat shell.
+Keeper dock is the next round, followed by Navigator/minimap and sidebar;
+saved window arrangement and Focus writing remain deferred. See
+[checks and visual evidence](audits/2026-10-22/tool-window-polish.md).
+
+### First local shared Transform / Color slice (2026-10-21)
+
+**Implemented locally, uncommitted and undeployed.** A compact Carbon/Mist
+companion originally used the same screen-space shell as Layers, with two tabs
+in its header; the movable docking implementation above supersedes that fixed
+pair. Selection changes do not switch tabs. It opens on desktop;
+Actions (Ctrl+K) reopens either tab. Moving/resizing/closing tools remains local
+UI state. Invisible edge/corner targets and keyboard resizing remain available.
+
+Transform reads the registered artwork frame in Workbench coordinates, with
+X/Y and width/height. The founder's correction on 21 October keeps Rotate and
+both Mirror actions in the Image toolbar alongside Crop. Their initial move
+into Transform was an assistant assumption, not an agreed product decision.
+Do not add or relocate controls based only on their conceptual fit with a tab;
+follow the agreed placement and discuss proposed changes separately. Module
+limits, grid-cell sizing, validated saving and shared history remain in their
+existing owners. Multiple selected frames require an explicit single frame;
+closed artwork offers an open action. Image fitting/cropping stays in its
+existing controls pending its own migration.
+
+Color reuses the reference workspace's hue ring, triangle and hex control.
+The founder's follow-up keeps the current Saturation/Lightness fields for now;
+do not replace them with sliders or relocate them from the spoken exploration.
+Pointer use of the ring/triangle must not paint a focus frame. The shared picker
+distinguishes pointer focus from keyboard navigation; keyboard focus remains
+visible, with Escape cancellation and arrow-key editing intact.
+Shape supplies its color and opacity; texture strength remains a Shape-specific
+setting. Text supplies selected words/caret, document default, title, background
+and heading/caption styles. The target is explicit; range/caret selection survives
+tab changes. Live color gestures preview without intermediate saves, commit once,
+and cancel on Escape, focus loss, scope change or disposal. Inline Text retains
+its native editing history and existing failed-save recovery. Image has no Color
+target and cannot continue editing the previous Shape/Text selection.
+
+Migrated controls are removed from the owner Image/Shape properties and Text
+color controls. The retained module-specific tools are still the older surface;
+this initial slice did not complete their migration or docking/detachment. The shared
+host routes module-owned controls through the existing Workbench selection;
+there is no second authored-content or selection store. Keyboard entry and
+explicit creation target that same selection. Color-source notifications are
+separate from canvas geometry notifications.
+
+Evidence and remaining limits: [shared Transform / Color review](audits/2026-10-21/shared-transform-color.md).
+
+### First local Workbench Layers slice (2026-10-21)
+
+**Implemented locally, uncommitted and undeployed.** The owner Workbench has a
+real compact Carbon/Mist Layers companion. The founder's clean-window follow-up
+replaces its inherited artwork window host with a small screen-space tool panel:
+title/drag button, close button and content area. The panel owns only temporary
+position/size, viewport bounds and pointer/keyboard gestures; artwork, camera,
+selection and saving retain their existing owners. Keyboard navigation keeps a
+focus mark, while ordinary pointer dragging does not highlight the title bar.
+Persistent Workbench navigation and the camera/creation rails bound its usable
+height; the list shrinks and scrolls without pushing its actions offscreen. It opens
+by default on desktop, can be closed/reopened from the creation toolbar, and
+uses its own scrolling. The founder's 21 October clarification keeps resizing
+through invisible edge/corner targets and directional cursors; only the visible
+handle marks are removed. A keyboard-reachable bottom-right target supports
+arrow-key resizing. The minimum is 280 × 240 px, bounded by available viewport
+space. The permanent visibility/order explanation labels are removed; the eye
+tooltip retains the temporary-visibility meaning. The separate Undo footer is
+also removed at the founder's request; shared Workbench Undo/Redo remains
+available through its existing keyboard shortcuts and commands. Layers remains draggable by
+its title bar. Below 600 px it starts closed to
+preserve existing controls; this is not a mobile-authoring redesign.
+
+Images, Text and Shapes share one optional `artworkLayers` field, stored from
+back to front. Entries are module IDs or contiguous composition blocks with
+ordered children. Canvas paint, Layers, history, reload and the active
+composition's public projection derive from it. Text continuation frames travel
+with their Text. Selection/focus never raises artwork. Module content, geometry
+and source assets retain their existing owners; Layers uses the existing
+Workbench selection. Ordinary selection retains module handles and Text input.
+
+Buttons, Alt+Up/Down and row dragging reorder artwork. Group formation uses the
+approved frontmost-member anchor; internal ordering, ungrouping and leaving a
+block preserve artwork. Canvas click/drag selects and moves a complete block,
+including hidden or closed members. Double-click focuses a block; Enter or
+Edit parts enters it. Expanded rows can select parts directly. Escape respects
+Text input and active gestures before leaving part editing. No nested blocks,
+group FX or automatic conversion of navigation groups is introduced.
+
+Eye controls are session-only editor visibility. Deletion has inline
+confirmation and one completed save; Undo restores module records, sides,
+source references, captured layout and memberships. Failed or stale writes do
+not partially mutate the composition. Canvas Delete opens the confirmation
+even when Layers is closed and does not intercept text input. Closed artwork
+remains reopenable in Layers; owner Images no longer expose the old hover X.
+Library assets and other modules using their source remain independent.
+
+The public single-composition document receives only a flat filtered order of
+its published modules. Local block names and private members do not enter that
+order. Preview/Visitor share the canvas projection without owner Layers tools.
+This does not implement publishing multiple Workbenches.
+
+Color, Transform, module properties, Artwork info, dock/tab grouping and
+detach/rejoin remain the next migration slice. Joining a part to an existing
+block currently requires ungrouping and reforming it; no implicit drag-to-join
+semantics were added. Tool layout persistence/reset is not yet part of this
+companion. Existing navigation groups/stacks, Keeper trial, Reception and
+Library behavior remain separate. See the
+[implementation and verification record](audits/2026-10-21/workbench-layers.md).
 
 ## Independent Image module
 
@@ -251,9 +918,20 @@ inside a clipped SVG viewport; it does not receive module editing input.
 Owner, Visitor and enlarged inspection share this rendering path. Display
 prepares SVG documents within its existing bounded five-slot Grid rail while
 the module is visible, so incoming artwork can start before a swipe exposes it.
-Documents outside that rail, or in a hidden module, are disposed. Other offscreen
-projected documents restart when visible; their internal
-animation state is temporary, not saved composition data. Display selects live
+After the founder's 21 October navigation follow-up, an already mounted projected
+SVG can remain outside the viewport for up to 30 seconds. At most four idle
+documents are retained across the page; the oldest is evicted on capacity pressure.
+Visible documents and Display's active preparation rail do not occupy idle slots.
+Returning within that bound reuses the same isolated document. Changing its source,
+removing its placement or leaving its Workbench disposes it immediately. No inactive
+Workbench is mounted by retention. The host forwards the existing boolean
+`inscape:html-artwork-visibility` signal, including across initial loading, so
+cooperating Nomads pause offscreen and resume without rebuilding their textures.
+This does not guarantee suspension of arbitrary third-party SVG scripts that ignore
+the signal; their idle lifetime is still bounded. HTML artwork retains its existing
+disposal policy. Internal animation state is temporary, not saved composition data.
+See [local verification and its limits](audits/2026-10-21/svg-offscreen-retention.md).
+Display selects live
 SVGs by rectangular bounds because a static alpha mask cannot describe animated
 content. Raster artwork keeps its existing renderer. Saved URLs and schemas are
 unchanged, and the runtime retains its existing restricted LUKSO RPC policy.
@@ -598,9 +1276,11 @@ originating module. No article schema or storage keys change.
 Optional `texts` extends the existing profile draft and v9 public document;
 `workbench.texts` carries starting windows. Typing saves through the existing
 profile draft store. Public articles use the normal Workbench publication flow.
-Older documents remain readable without storage-key changes or content resets.
-Legacy draft NFT bindings are accepted as unused compatibility data, never used
-or published; new records and restored public articles do not create bindings.
+Draft Text validation accepts only the current fields. The obsolete NFT `target`
+binding is unsupported: drafts containing that field fail validation, while their
+stored bytes remain intact for explicit recovery. New Text records and public
+projections contain no NFT binding. No storage-key change, automatic migration
+or silent content removal is introduced.
 Restoring an older publication retains missing local articles as private.
 
 Article typography may use Sora, IBM Plex Sans Condensed, Literata, Cormorant
@@ -1127,8 +1807,10 @@ The hierarchy is:
    scenes, not a required container for ordinary Workbench composition.
 5. **Assets and authored primitives** — material interpreted by a module.
 
-One Workbench per Universal Profile is the current product direction. Multiple
-Workbenches per profile remain unproven and are not a requirement.
+The current implementation has one Workbench per Universal Profile. The
+[20 October direction](#multiple-named-workbenches-direction-2026-10-20)
+supersedes the former single-Workbench restriction: multiple named composition
+Workbenches are now accepted direction, with implementation pending.
 
 The public Workbench is part of the created experience. Visitors can enter its
 desktop and open the creator's published modules. The creator's Library
@@ -1219,6 +1901,14 @@ are not part of that visitor experience. Module chrome is not Stage content.
   decisions to evaluate against a concrete module, not product assumptions.
 
 ## Named Workbench groups
+
+The following describes the existing navigation/stack implementation. The
+[multiple Workbenches direction](#multiple-named-workbenches-direction-2026-10-20)
+removes it as a required organizer in the new UI; it does not delete current data.
+The
+[20 October Layers decision](#layers-composition-groups-decision-2026-10-20)
+chooses composition blocks for the future Layers workflow; it does not claim
+that these existing groups already enforce contiguous artwork order.
 
 On 2026-10-05 the founder approved the next spatial-navigation step: saved,
 named groups of Workbench modules. The owner Groups tool creates a group from
@@ -1394,7 +2084,8 @@ Reading or reloading older 8,000-area arrangements does not move outlying module
 Show outside canvas and Focus can still recover them beyond the visible grid.
 
 Dragging empty Workbench space marquee-selects fully enclosed registered content
-windows: shapes, images, Displays, Text, Keeper docks and other registered modules.
+windows: shapes, images, Displays, Text and other registered canvas modules.
+Keeper's dock is a screen tool and is excluded from canvas selection and groups.
 An intersecting background is not selected unless its entire bounds are enclosed. Shift-drag adds to the selection; Shift-click a window header toggles it.
 Focused window headers also toggle selection with Shift+Enter.
 The selection's corner handles scale multiple windows proportionally around the
@@ -1768,19 +2459,23 @@ The work area is not a full-size render target and adds no module instances.
 
 The owner's local arrangement also survives reload independently of publication.
 A profile-scoped `inscape:workbench:layout:v1` record stores module geometry,
-open state and shortcuts, selected Display Grid, lock and instrument state,
+open state and shortcuts, selected Display Grid, lock and shared tool state,
 and Text Read/Write state. It contains no module content. Existing
 drafts fall back to their saved Workbench or runtime defaults; deleted module
 IDs are ignored. A changed saved Workbench configuration invalidates the local
 record. Unreadable records are retained until the owner explicitly saves the
 current layout; failed writes are reported with a retry action. Optional
 `views['workbench:tools']` retains shared Layers and Artwork info open state,
-window geometry and the explicit Display target. Older per-Display instrument
-records are consolidated on read without changing authored content.
-Optional `views['workbench:text-tools']` retains the single Text tool's open
-state; its active module uses the existing shared tool target. Old per-Text
-`settings` flags consolidate to one available Text target on read, retaining
-each article's Read/Write mode. No draft/publication schema or storage key changes.
+window geometry and the explicit Display target. The authorized cleanup on
+23 October removed the obsolete per-Display instrument conversion. Current
+shared tool records remain supported; historical records are not deleted.
+The single Text tool's open state belongs to profile-local editor preferences
+(`textOpen`). An unset preference falls back to an available writing article;
+an explicit open or closed preference takes precedence. Its active module uses
+the existing shared tool target, with a valid saved Text target restored before
+the initial-article fallback. Per-article view records retain only Read/Write
+mode; the obsolete per-Text `settings` conversion has been removed. Reading
+does not rewrite the stored layout. No draft/publication schema or storage key changes.
 Optional shared Display `appearance` open state and window geometry use the
 same profile-local tool record as Layers and Metadata; omission means closed.
 
@@ -1891,7 +2586,14 @@ The founder requested a floating Nomad HTML artwork with its animation and
 hideable controls embedded in the file. Mini App settings now offer Transparent
 HTML artwork through optional `surface: 'artwork'`. Missing fields preserve
 ordinary Mini App behavior; draft v4 and public v9 use the same optional field.
-Artwork shares Mini App window positions, lifecycle, undo and publication rules.
+Artwork shares Mini App records, lifecycle, undo and publication rules. Since
+the authorized 21 October correction, its window uses the existing Workbench
+canvas projection: authored position and size survive zoom, pan, switching and
+reload. The HTML document keeps its authored viewport size while its pixels
+scale with the camera; window controls overlay it instead of consuming artwork
+height. Ordinary Mini Apps retain their screen-window behavior. Owner and
+visitor share this rendering component; the dedicated geometry regression uses
+the owner fixture, not a separate visitor-route performance measurement.
 Its frame is transparent and sandboxed with scripts only, with no wallet bridge,
 same-origin access, microphone delegation, forms, popups or top navigation.
 The file owns animation and controls; the Workbench does not interpret cloth or
@@ -2134,7 +2836,8 @@ internal compatibility names during this migration; do not broadly rename them.
   controls in place. Closed, locked or unavailable targets hide the window; they
   never leave the previous Display editable through it.
 - Owner tool state survives reload in the profile-local layout record; visitor
-  Metadata state stays session-local. Old open sidecars migrate to shared windows.
+  Metadata state stays session-local. The obsolete sidecar conversion was removed
+  by the authorized cleanup on 23 October; current shared windows remain supported.
   Unavailable targets retain their tool's open preference and window geometry,
   so a valid target can restore it without creating an empty inspector first.
   The existing Metadata command can enable in-scene selection cues before an
@@ -2812,6 +3515,234 @@ On short viewports the stack uses the existing zero-offset position so camera
 controls stay on screen. The rest of Properties, dock and camera commands are
 outside this component migration.
 
+### Navigator and Keeper screen utilities (2026-10-23)
+
+The founder approved the Navigator/minimap implementation beside Keeper.
+Navigator starts to Keeper's left at lower right, above the measured bottom
+controls. Each remains an independently movable screen window; camera travel
+never moves them. Their positions survive Workbench switches within the current
+profile editor session; the Library and editor-preferences refinement below now retains them across reloads. Width and available height adapt to
+small screens, with internal scrolling on very low viewports. Keeper settings
+open above the pair or beside them where space permits.
+
+Navigator uses the reference Carbon/Mist flat window and contains only a
+composition minimap, Home and a 25–200% zoom slider with percentage. These replace
+the former bottom Home/zoom controls. Back, Focus, canvas and group commands stay
+in the bottom rail. Home returns to the origin at 100%. Zoom anchors to the
+current usable view centre. The existing camera controller owns these actions,
+inspection locks and navigation history; Navigator owns no second camera.
+
+The viewport frame drags live without jumping when grabbed inside. Clicking
+outside centres there. Arrow keys pan; Escape, capture loss and focus loss
+cancel a drag and restore its starting camera. Pointer focus has no extra ring;
+keyboard focus remains visible. The map includes the canvas, current view and
+visible outside artwork, and holds its projection fixed during a drag.
+
+Modules expose read-only miniature inputs from their existing live state.
+Image sides/crop, Display placements, Shape appearance, article content, frames,
+layer order and editor visibility feed the projection. Miniatures never mount
+an editor, interactive SVG runtime or mini-app. Unsupported/missing media retain
+a frame. Keeper and tools are not composition objects. Camera painting updates
+the projection and viewport frame without reconstructing the media tree. The
+reference and app share Navigator controls and pointer/keyboard logic.
+
+This adds no persisted document fields or migrations. Sidebar, camera index and
+exploration-world development remain outside this change. The local verification
+and its limits are recorded in [Navigator evidence](audits/2026-10-23/navigator.md).
+
+### Workspace sidebar migration (2026-10-23)
+
+The founder approved continuing with the design-system sidebar after Navigator.
+The owner workspace now uses the reference's flat Carbon/Mist sidebar in place
+of the old bottom application bar. Workbench, Display-scoped Grids, Library,
+Discover, Activity, Preview, Publish, Profile, Docs and Settings call their
+existing actions. This adds no destination or publication authority. Creation
+tools and the Workbench selector remain independent.
+
+Reference and application share the navigation presentation. The sidebar folds
+and hosts the existing Library category tree when
+expanded on desktop. Collapsed and narrow layouts return that same tree to
+Library. Browsing state is still owned by Library. Collapse state follows local
+Workbench changes and, under the editor-preferences refinement below, reloads. The existing
+hide/show preference remains available through the Workbench context menu.
+
+The founder subsequently removed Filter navigation as unnecessary for this
+short menu. Neither the application nor the reference filters navigation labels.
+Library retains its separate artwork search.
+
+On narrow screens the folded navigation becomes a horizontally scrollable icon
+strip. At phone width and low height it becomes one reopen button beside the
+Workbench selector. Destination panels, floating tools and Keeper settings
+respect the available screen area. An explicitly opened destination appears
+above editing utilities; the sidebar remains reachable. None of these changes
+move authored objects or change the camera. During artwork inspection both the
+sidebar and Workbench selector yield to the existing inspection lock, leaving
+the return button reachable. Hidden owner preview also hides the sidebar.
+The sidebar retains its hidden presentation during Preview/inspection so closing
+Preview can restore the same navigation trigger; hidden navigation is excluded
+from accessibility and does not reserve tool space. Embedded Discover and
+screen-space companion windows respect the existing sidebar clearance. Phone
+Discover search uses its own row. See [panel regression verification](audits/2026-10-23/panel-regressions.md).
+
+No document fields, migrations, dependency additions, camera-index or
+exploration-world features are introduced. Library's wider panel styling and
+the existing destination windows are not redesigned by this migration.
+See [sidebar verification](audits/2026-10-23/sidebar.md) for local evidence and
+remaining verification limits.
+
+### Artwork info joins the shared tool dock (2026-10-23)
+
+The founder requested restoring access to artwork metadata and adding it to
+the shared tabs, with the option to detach it. **Implemented locally:** Info
+joins Layers, Transform, Color, Image, Shape and FX. It uses the same flat
+Carbon/Mist shell, invisible resize targets, detachable/stackable panes and
+profile-local dock layout (persistence refined below). This supersedes the older independent owner Metadata
+window described above. Visitor keeps its independent read-only metadata host.
+
+Artwork info in the toolbar and the existing Display Metadata command open the
+same Info tab. The dock alone owns owner visibility and geometry; modules keep
+the existing content registration and explicit active target. Image now supplies
+the canonical source facts for its visible side, even when the source image
+cannot load. Side changes update the content. Shape, multi-selection and empty
+Workbench states show a selection hint rather than stale Image information.
+Display continues to supply its selected artwork through its existing controller.
+
+The reference and app share the metadata presentation: artwork title, collection,
+description, creators, attributes and expandable Source details. Unknown facts
+remain unknown; creator source/scope stays distinct from holding or authority.
+Reading metadata, docking and navigating sides do not author data or add Undo
+history. No new document fields, migrations, publication or wallet actions are
+introduced. On cramped screens an active dock is above Navigator/Keeper and
+scrolls within the available area; closing it restores access to those utilities.
+Explicit toolbar menus appear above the sidebar and floating tools.
+
+See [Info verification](audits/2026-10-23/artwork-info.md) for local evidence.
+
+### Library and editor preferences (2026-10-23)
+
+The founder approved the Library migration and explicitly requested retaining
+Library settings and the arrangement of tool tabs/windows after leaving or
+restarting. This supersedes earlier session-only limits for these preferences.
+
+**Implemented locally:** Library and the reference share flat Carbon/Mist card,
+rail, search, filter and sort styling. Existing asset sources, relationships,
+category operations, drag targets and module-owned interpretation remain intact.
+Controls remain reachable below navigation on narrow and low screens.
+
+A single profile-local editor-preferences store, separate from authored documents
+and per-composition geometry, automatically retains Library search, collection
+filter, relationship/category view, sorting, thumbnail size, label visibility,
+sidebar width, panel width and collapsed category sections. It retains the full
+shared-dock arrangement (groups, pane order, active tabs, proportions, hidden
+tabs and window frames), independent Text frame/open state/section, Navigator
+and Keeper dock positions, and explicit sidebar folding. Workbenches in that
+profile share these preferences. Reload restores them; a smaller viewport clamps
+rendered windows to reachable bounds. A restored dock is not automatically
+raised above Navigator/Keeper until explicitly activated.
+
+Storage is local to the browser and profile, not wallet/cloud synchronization.
+The reference remains disposable. Selection, Undo, camera state, transient
+attachment expansion and dialogs are not added to these preferences. Keeper
+settings still use their existing automatic placement; Display appearance and
+other destination windows retain their existing owners.
+
+Writes are briefly batched and flushed before the originating editor releases
+its lease, on immediate unmount and on normal reload. Invalid stored records
+are retained, failed writes are shown with an explicit retry, and an external
+change cannot be silently overwritten. This introduces no authored document
+fields, migration, publication or additional dependency. Earlier per-composition
+Text-tool visibility restoration is removed in favour of this one preference.
+See [Library and preference verification](audits/2026-10-23/library-preferences.md).
+
+### Settings and keyboard selection finishing (2026-10-23)
+
+**Implemented locally:** Settings uses the shared flat Carbon/Mist material,
+titlebar, close control and field geometry. Its existing Activity, Workbench,
+Interface and backup sections scroll below a fixed titlebar, within the sidebar's
+reserved screen area. It remains a sidebar destination. This does not introduce
+new settings or move it into the shared dock. Signal preferences, local Workbench
+preferences, authored interface appearance and backup/recovery retain their
+existing owners and storage boundaries. Shared selector popups choose available
+space above or below their trigger and close if their origin scrolls or resizes.
+
+**Workbench preference recovery (2026-10-24):** local grid, snapping, module gap,
+chrome, lock, sidebar visibility and background preferences now report failed
+reads/writes. Current choices remain active during a write failure and across
+composition switches in the same profile. Explicitly saving the current preferences
+retries persistence; unreadable or externally changed records are retained until
+that explicit action. The two existing preference owners share persistence mechanics
+while retaining their keys, formats and separate contents. Preference and layout
+recovery actions share one notice container so simultaneous errors do not cover
+each other's buttons. Composition documents, publication and ordinary UI styling
+remain unchanged by this refinement.
+
+Ordinary artwork focus retains module outline activation. Explicit Shift+Enter
+selection keeps that first artwork and then toggles membership; visiting another
+candidate with keyboard focus no longer replaces the explicit group. No new
+selection state or history is introduced. Closing a dock tab preserves a newer
+focus choice outside that dock, including during inspection.
+See [Settings finishing verification](audits/2026-10-23/settings-finishing.md).
+
+### Activity window finishing (2026-10-23)
+
+**Implemented locally after founder approval:** recent Activity and full history
+use the shared flat Carbon/Mist panel material and titlebar. Filters sit above a
+bounded scrolling list; history search and the bottom actions stay reachable.
+The recent view retains its five-event limit and category filters. Full history
+retains search, Unread/category filters, mark-all-read and refresh. Closing history
+or pressing Escape returns to recent Activity; closing again returns to the
+sidebar trigger. Keyboard opening focuses search; pointer opening adds no
+automatic input focus ring. A newer focus choice survives returning from history.
+
+The signal store remains the sole owner of event data and persisted read state.
+The old history action labelled "Open" only marked an event as read; it is now
+labelled "Mark as read". Read events show a check and "Read". Unread events retain
+a narrow edge mark. No event-detail destination, wallet action or new data source
+is introduced. Loading, partial data, empty/filter-empty, refresh failure and
+failed local writes remain distinct; refresh retains existing rows. No authored
+document, camera or Undo state is changed by these Activity operations.
+See [Activity finishing verification](audits/2026-10-23/activity-finishing.md).
+
+### Discover finishing (2026-10-23)
+
+Discover now uses the shared flat Carbon/Mist material, thin edges, control
+radii and typography. The owner panel receives the existing editor theme;
+standalone public entry defaults to Mist. The shared portal retains its
+wordmark return, search, published cards, bounded result batches and account
+actions. Narrow screens give search its own row. Cards keep their full
+preview and identity strip while results scroll beneath the stationary header
+and pagination. Search uses a quiet focus border; keyboard controls and forced
+colors retain visible focus. Escape closes an open account menu first.
+
+The discovery controller, publication resolver and application navigation remain
+the data and route owners. No saved document fields, preferences or publication
+behavior are added. The existing canonical cover renderer remains in use;
+unused noncanonical fitting observers and their styling have been removed.
+This migrates the current directory chrome, not the future presentation of
+multiple published Workbenches. See [implementation and checks](audits/2026-10-23/discover-finishing.md).
+
+### Remaining Workbench window finishing (2026-10-23)
+
+The founder authorized continuing through the remaining existing window chrome
+without stopping after each surface. Publish, its confirmed result, Docs, Profile
+and the retained Grids panel share `WorkbenchDestinationPanel`, the existing
+flat Carbon/Mist material and titlebar/control tokens. Content scrolls inside the
+window; Publish keeps its action below the scroll area. The owner host supplies
+its existing sidebar clearance. The confirmation retains the originating theme
+through the owner refresh; it is still shown only after confirmed publication.
+
+Groups and Index retain their existing movable `WorkbenchWindow` and domain
+controllers with flat chrome, fields and invisible Index resize targets. Opening
+these tools keeps them above floating utilities. Their explicit screen boundary
+allows useful content height on short screens; authored camera anchoring, group
+geometry and destination semantics are unchanged. Docs describes the current
+Image/Text/Shape workflow, shared tools and local preference saving.
+
+No new document fields, migration, wallet action or publication route is added.
+The redundant older panel styles are removed. Focus writing and authored Identity,
+Reception and world presentations are outside this finishing round. Evidence:
+[window finishing](audits/2026-10-23/remaining-window-finishing.md).
+
 ### Shared creative workspace direction (2026-10-14)
 
 **Status updated 2026-10-19.** The founder selected this existing workspace
@@ -2853,6 +3784,8 @@ digits; invalid values do not change the selection. The native browser colour
 popup is removed from this tab. The swatch is a preview, not a second picker.
 Opacity and precise saturation/lightness fields edit the same selected colour.
 This remains reference-only; existing module/article appearance owns the value.
+The 21 October Image exclusion above also governs migration of this preview:
+generic example colour fields do not authorize Image colour editing.
 
 The reference composition stays on the canvas while changing inspector tabs.
 Artwork silhouettes, layer geometry and order come from the same composition
@@ -2935,6 +3868,26 @@ On 2026-10-12 the founder approved the following owner-tool consolidation:
 - Keeper settings open from an icon on the Keeper dock, independently of the
   current artwork or Text selection. Release/return and conversations remain
   Keeper-owned. Its settings window has no resize handles.
+  On 2026-10-22 the founder explicitly chose the Keeper dock from the workspace
+  design-system reference for its visual migration. The live dock now shares
+  the reference's artwork-slot component and flat Carbon/Mist material, at
+  176 by 188 pixels with a compact Keeper titlebar and existing settings icon.
+  Its independent settings window uses the same flat material, thin separators
+  and fields as the other migrated windows. It remains movable, content-fitted
+  and internally scrollable. Navigation clearance and window ordering keep its
+  close button reachable on narrow screens. The founder then explicitly removed
+  Keeper's canvas attachment: the dock is a movable screen tool, initially at
+  lower right above the existing bottom controls. Zooming, panning, canvas
+  selection and groups must not move, scale or hide it. The same profile-level
+  Keeper records and settings accompany local Workbench switches. Dock position
+  is shared within that profile's current editor session across those switches;
+  reload returns to the default corner. Neither dock nor settings placement is
+  authored composition geometry. Navigator now shares this corner under the 23 October screen-utility contract above. Library drop,
+  movement, size, release/return, conversation and publication remain
+  Keeper-owned. This does not add Keeper habitats or put Keeper in the shared
+  Layers/Transform/Color dock. See
+  [visual implementation evidence](audits/2026-10-22/keeper-dock-style.md) and
+  [screen-placement correction](audits/2026-10-22/keeper-screen-position.md).
 - The camera rail uses compact icons beside the creation toolbar on wide screens
   and above it on narrow screens. Both rails bound tool-window height. Library
   and the owner Tools launcher are removed from the global app dock because

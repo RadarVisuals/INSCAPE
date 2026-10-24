@@ -74,7 +74,7 @@ export const ARTWORK_DOCUMENT_HTML = `<!doctype html>
 <style>html,body,iframe{margin:0;width:100%;height:100%;border:0;overflow:hidden;background:transparent;color-scheme:normal}iframe{display:block}</style>
 </head><body><script>
 (() => {
-  let url, frame, density;
+  let url, frame, density, visibility;
   addEventListener('message', event => {
     if (event.source === frame?.contentWindow && event.data?.type === 'inscape:artwork-prepared'
       && Number.isSafeInteger(event.data.requestId)) {
@@ -84,8 +84,14 @@ export const ARTWORK_DOCUMENT_HTML = `<!doctype html>
       if (event.data.type === 'inscape:artwork-density') density = event.data;
       frame?.contentWindow.postMessage(event.data, '*'); return;
     }
+    if (event.source === parent && event.data?.type === 'inscape:html-artwork-visibility') {
+      if (typeof event.data.visible !== 'boolean') return;
+      visibility = { type: 'inscape:html-artwork-visibility', visible: event.data.visible };
+      frame?.contentWindow.postMessage(visibility, '*'); return;
+    }
     if (event.source !== parent || event.data?.type !== 'inscape:artwork-source'
       || typeof event.data.svg !== 'string' || event.data.svg.length > 8 * 1024 * 1024 || url) return;
+    visibility ||= { type: 'inscape:html-artwork-visibility', visible: event.data.visible !== false };
     const svg = new DOMParser().parseFromString(event.data.svg, 'image/svg+xml');
     const preparation = svg.createElementNS('http://www.w3.org/2000/svg', 'script');
     preparation.textContent = ${JSON.stringify(`(${prepareSvgInspection.toString()})(${prepareRasterArtwork.toString()});`)};
@@ -97,6 +103,7 @@ export const ARTWORK_DOCUMENT_HTML = `<!doctype html>
     frame.referrerPolicy = 'no-referrer';
     frame.addEventListener('load', () => {
       if (density) frame.contentWindow.postMessage(density, '*');
+      frame.contentWindow.postMessage(visibility, '*');
       parent.postMessage({type:'inscape:artwork-loaded'}, '*');
     }, {once:true});
     frame.src = url;

@@ -1,4 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { useWorkbenchMiniature } from '../public/ownerSystemWorkflow/workbenchMiniatures.js';
 import ArticleView from './ArticleView.jsx';
 import { TextFrameOverflow, useTextFrame, useLinkedFrameLayout } from './TextFrame.jsx';
 import { WorkbenchWindow } from '../public/ownerSystemWorkflow/DisplayInstrumentWindow.jsx';
@@ -20,7 +21,7 @@ export function TextFrameLinks({ ids }) {
       return left && right ? [{ x1: left.right, y1: left.top + left.height / 2, x2: right.left, y2: right.top + right.height / 2 }] : [];
     });
     setLines(old => JSON.stringify(old) === JSON.stringify(next) ? old : next);
-  }, [key, revision, view.scale, view.transforms, offset.x, offset.y]);
+  }, [key, revision, view.scale, view.transforms, view.presentationTransforms, offset.x, offset.y]);
   return <svg className="text-flow-links" aria-label="Linked text frame reading order" role="img">
     {lines.map((line, index) => <g key={index} data-workbench-camera-decoration=""><line {...line} /><rect x={line.x1 - 2} y={line.y1 - 2} width="4" height="4" /><rect x={line.x2 - 2} y={line.y2 - 2} width="4" height="4" /></g>)}
   </svg>;
@@ -43,6 +44,7 @@ export default function LinkedTextWindow({ frame, index, article, flow, ownerId,
   const view = workbenchModuleTransform(useWorkbenchView(), frame.id), paintScale = view.scale * (globalThis.devicePixelRatio || 1);
   const [committed, setCommitted] = useState(null);
   const surface = useRef(null);
+  useWorkbenchMiniature(frame.id, useMemo(() => ({ kind: 'text', article, range: flow.ranges[index], index }), [article, index, flow.ranges[index]?.from, flow.ranges[index]?.to]));
   useEffect(() => {
     if (!store || !registerTarget || mode !== 'write') return;
     registerTarget(frame.id, { get node() { return surface.current; }, label: 'Insert artwork into article', placeAsset: acceptImage });

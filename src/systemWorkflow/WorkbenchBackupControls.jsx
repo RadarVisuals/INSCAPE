@@ -13,12 +13,14 @@ export default function WorkbenchBackupControls({ store, storage, getDraft = () 
   }, [store]);
   useEffect(() => { if (disabled) { request.current++; setPending(null); setReading(false); } }, [disabled]);
   const hasRecovery = () => recoveryPending || textRecoveries(store, store.getProfileAddress()).length > 0;
-  const currentBase = () => { try { return JSON.stringify(live.current.getDraft()); } catch { return null; } };
+  const backupDraft = () => store.getBackupSnapshot?.(live.current.getDraft()) ?? live.current.getDraft();
+  const currentBase = () => { try { return JSON.stringify(backupDraft()); } catch { return null; } };
+  const collection = store.isCollection?.();
   const download = () => {
     if (disabled) return;
     try {
       if (hasRecovery()) throw Error('Save your pending Text edits first, or download their article backups from Text tools.');
-      const source = serializeWorkbenchBackup(live.current.getDraft());
+      const source = serializeWorkbenchBackup(backupDraft());
       const url = URL.createObjectURL(new Blob([source], { type: 'application/json' }));
       const link = document.createElement('a'); link.href = url;
       link.download = `inscape-workbench-${store.getProfileAddress().slice(2, 10)}.json`;
@@ -38,6 +40,7 @@ export default function WorkbenchBackupControls({ store, storage, getDraft = () 
       const backup = parseWorkbenchBackup(await file.text(), profile);
       if (token !== request.current || live.current.store !== store) return;
       if (store.getProfileAddress() !== profile || store.getGeneration() !== generation || currentBase() !== base) throw Error('Your Workbench changed. Choose the backup again.');
+      if (collection && backup.version !== 2) throw Error('Choose an all-Workbenches backup. A single Workbench backup cannot replace this collection.');
       setPending({ backup, profile, generation, fingerprint, base });
     } catch (error) { if (token === request.current) setMessage(error.message); }
     finally { if (token === request.current) setReading(false); }
@@ -48,21 +51,21 @@ export default function WorkbenchBackupControls({ store, storage, getDraft = () 
     if (store.getProfileAddress() !== pending.profile || store.getGeneration() !== pending.generation || currentBase() !== pending.base) {
       setPending(null); setMessage('Your Workbench changed. Choose the backup again.'); return;
     }
-    const { saved, warning } = restoreWorkbenchBackup(store, pending.backup, { expectedGeneration: pending.generation, expectedFingerprint: pending.fingerprint }, storage);
-    if (!saved) { setMessage('The backup was not restored. The saved draft changed or browser storage is unavailable. Your previous work has not been replaced.'); return; }
+    const { saved, warning, error } = restoreWorkbenchBackup(store, pending.backup, { expectedGeneration: pending.generation, expectedFingerprint: pending.fingerprint }, storage);
+    if (!saved) { setMessage(error || 'The backup was not restored. The saved draft changed or browser storage is unavailable. Your previous work has not been replaced.'); return; }
     setPending(null); setMessage('Workbench restored and saved locally. Nothing was published.');
     live.current.onRestored?.(warning);
     if (warning) setMessage(warning);
   };
   return <section className="workbench-backup system-workflow__settings-section" aria-label="Workbench backup">
     <header><strong>Workbench backup</strong></header>
-    <p>A private file of your complete saved composition, including private modules and artwork references. Media files, wallet credentials, Library caches and interface preferences are not included. Keep this file private.</p>
-    {store.getRecordState().status !== 'corrupt' && <button className="workflow-tactile-control" type="button" disabled={disabled} onClick={download}>Download Workbench backup</button>}
+    <p>A private file of {collection ? 'all your local Workbenches and shared profile/Keeper settings' : 'your complete saved composition'}, including private modules and artwork references. Media files, wallet credentials, Library caches and interface preferences are not included. Keep this file private.</p>
+    {store.getRecordState().status !== 'corrupt' && <button className="workflow-tactile-control" type="button" disabled={disabled} onClick={download}>{collection ? 'Download all Workbenches' : 'Download Workbench backup'}</button>}
     <label>Open Workbench backup<input type="file" accept=".json,application/json" aria-label="Open Workbench backup" disabled={disabled || recoveryPending}
       onChange={event => { const file = event.target.files[0]; event.target.value = ''; if (file) void read(file); }} /></label>
     {reading && <p role="status">Opening backup…</p>}
     {pending && <div className="workbench-backup__preview">
-      <strong>Replace this profile’s entire local Workbench?</strong>
+      <strong>{collection || pending.backup.version === 2 ? 'Replace all of this profile’s local Workbenches?' : 'Replace this profile’s entire local Workbench?'}</strong>
       <p>Backup from {new Date(pending.backup.createdAt).toLocaleString()}. {summarizeWorkbenchBackup(pending.backup.draft)}</p>
       <p>This replaces public and private modules, content and saved composition layout. It clears local undo history. Download your current backup first if you want to keep it. It does not change your published profile.</p>
       <button className="workflow-tactile-control" type="button" disabled={disabled || recoveryPending} onClick={restore}>Replace Workbench with backup</button>

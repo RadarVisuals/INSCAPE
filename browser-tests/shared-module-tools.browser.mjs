@@ -5,6 +5,22 @@ import { chromium } from 'playwright-core';
 import { mountTextToolsFixture } from './fixtures/text-tools-fixture.mjs';
 const origin = process.env.INSCAPE_TEXT_ROOT || 'http://127.0.0.1:5198';
 const settle = page => page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+async function exposeText(page) {
+  await page.getByRole('button', { name: 'Collapse sidebar', exact: true }).click();
+  for (const name of ['Close Workbench Layers', 'Close Transform', 'Close Color', 'Close Image', 'Close Shape', 'Close FX', 'Close Info']) {
+    const close = page.getByRole('button', { name, exact: true });
+    if (await close.count()) { await close.focus(); await close.press('Enter'); }
+  }
+  const saved = await page.evaluate(() => savedDraft());
+  await page.locator('main.system-workflow').focus();
+  await page.mouse.move(800, 950); await page.keyboard.down('Space'); await page.mouse.down();
+  await page.mouse.move(896, 1046, { steps: 4 }); await page.mouse.up(); await page.keyboard.up('Space'); await settle(page);
+  assert.deepEqual(await page.evaluate(() => savedDraft()), saved, 'camera setup never moves authored modules');
+}
+async function clearOnCanvas(page) {
+  assert.equal(await page.evaluate(() => Boolean(document.elementFromPoint(1596,1096)?.closest('[data-system-workflow-overlay], [data-workbench-view-id]'))), false);
+  await page.mouse.click(1596, 1096); await settle(page);
+}
 
 test('one Text tool follows selection, retains its position, scopes edits and preserves unsaved recovery', { timeout: 120000 }, async () => {
   const browser = await chromium.launch({ executablePath: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', headless: true });
@@ -13,6 +29,7 @@ test('one Text tool follows selection, retains its position, scopes edits and pr
     page.setDefaultTimeout(10000);
     const errors = []; page.on('pageerror', error => errors.push(error.message));
     await mountTextToolsFixture(page, origin, { textCount: 2 });
+    await exposeText(page);
     const display = page.locator('[data-display-instance="display:primary"]').first();
     await display.getByRole('button', { name: 'Minimize Display Module to shortcut', exact: true }).focus();
     await page.keyboard.press('Enter');
@@ -20,7 +37,7 @@ test('one Text tool follows selection, retains its position, scopes edits and pr
     const first = texts.nth(0), second = texts.nth(1);
     const body = module => module.getByRole('textbox', { name: 'Article text', exact: true });
     await body(first).focus(); await tools.waitFor(); assert.equal(await tools.count(), 1);
-    await page.mouse.click(1540, 30);
+    await clearOnCanvas(page);
     for (const module of [first, second]) {
       await module.hover();
       assert.equal(await module.locator('.text-window-bounds').evaluate(node => getComputedStyle(node).opacity), '0', 'hover never selects Text');
@@ -29,7 +46,7 @@ test('one Text tool follows selection, retains its position, scopes edits and pr
     await body(first).click();
     assert.equal(await first.locator('.text-window-bounds').evaluate(node => getComputedStyle(node).opacity), '1');
     await openTextToolSection(page.locator('.text-tools-window'), 'Default text style');
-    await tools.getByRole('spinbutton', { name: 'Text size', exact: true }).fill('18');
+    await tools.getByRole('spinbutton', { name: 'Default text size', exact: true }).fill('18');
     const grip = tools.getByLabel('Move Text tools window', { exact: true }), start = await grip.boundingBox();
     await page.mouse.move(start.x + 80, start.y + 15); await page.mouse.down();
     await page.mouse.move(1240, 90, { steps: 8 }); await page.mouse.up(); await settle(page);
@@ -43,11 +60,11 @@ test('one Text tool follows selection, retains its position, scopes edits and pr
     const afterSwitch = await tools.boundingBox();
     assert.equal(afterSwitch.x, beforeSwitch.x); assert.equal(afterSwitch.y, beforeSwitch.y);
     await openTextToolSection(page.locator('.text-tools-window'), 'Default text style');
-    assert.equal(await tools.getByRole('spinbutton', { name: 'Text size', exact: true }).inputValue(), '16');
+    assert.equal(await tools.getByRole('spinbutton', { name: 'Default text size', exact: true }).inputValue(), '16');
     await openTextToolSection(page.locator('.text-tools-window'), 'Default text style');
-    await tools.getByRole('spinbutton', { name: 'Text size', exact: true }).fill('22');
+    await tools.getByRole('spinbutton', { name: 'Default text size', exact: true }).fill('22');
     await body(second).fill('Second article stays independent.'); await page.keyboard.press('Control+A');
-
+    await tools.getByRole('tab', { name: 'Format text', exact: true }).click();
     await tools.getByRole('button', { name: 'Bold', exact: true }).click();
     assert.equal(await body(second).locator('strong').innerText(), 'Second article stays independent.');
     assert.equal(await body(first).locator('strong').count(), 0);
@@ -75,7 +92,9 @@ test('one Text tool follows selection, retains its position, scopes edits and pr
     await page.waitForFunction(() => {
       const key = Object.keys(localStorage).find(key => key.startsWith('inscape:workbench:layout:'));
       const view = key && JSON.parse(localStorage.getItem(key)).views;
-      return view?.['workbench:tools']?.targetId === savedDraft().texts[1].id && view?.['workbench:text-tools']?.open;
+      const preferencesKey = Object.keys(localStorage).find(key => key.startsWith('inscape:editor-preferences:'));
+      const preferences = preferencesKey && JSON.parse(localStorage.getItem(preferencesKey)).value;
+      return view?.['workbench:tools']?.targetId === savedDraft().texts[1].id && preferences?.textOpen === true;
     });
     await page.screenshot({ path: '.browser-test-runtime/shared-text-tools-wide.png' });
     await page.reload(); await mountTextToolsFixture(page, origin, { textCount: 2 }); await tools.waitFor();
@@ -100,16 +119,17 @@ test('Text tools switch between standalone articles and selected Text layers in 
     if (await unlock.count()) { await unlock.focus(); await page.keyboard.press('Enter'); }
     const first = page.getByRole('button', { name: 'Select Display article 1', exact: true });
     const second = page.getByRole('button', { name: 'Select Display article 2', exact: true });
-    await first.focus(); await page.keyboard.press('Enter'); await tools.waitFor();
-    assert.equal(await tools.count(), 1); assert.match(await tools.getAttribute('aria-label'), /Display article 1/);
+    await first.focus(); await page.keyboard.press('Enter');
     await first.getByRole('textbox', { name: 'Article text', exact: true }).fill('First embedded article.');
+    await tools.waitFor();
+    assert.equal(await tools.count(), 1); assert.match(await tools.getAttribute('aria-label'), /Display article 1/);
     await openTextToolSection(page.locator('.text-tools-window'), 'Default text style');
-    await tools.getByRole('spinbutton', { name: 'Text size', exact: true }).fill('19');
+    await tools.getByRole('spinbutton', { name: 'Default text size', exact: true }).fill('19');
     await second.click();
     await second.getByRole('textbox', { name: 'Article text', exact: true }).waitFor();
     assert.equal(await tools.count(), 1); assert.match(await tools.getAttribute('aria-label'), /Display article 2/);
     await openTextToolSection(page.locator('.text-tools-window'), 'Default text style');
-    assert.equal(await tools.getByRole('spinbutton', { name: 'Text size', exact: true }).inputValue(), '16');
+    assert.equal(await tools.getByRole('spinbutton', { name: 'Default text size', exact: true }).inputValue(), '16');
     await second.getByRole('textbox', { name: 'Article text', exact: true }).fill('Second embedded article.');
     for (const width of [390, 1600]) {
       await page.setViewportSize({ width, height: 900 });
@@ -117,7 +137,7 @@ test('Text tools switch between standalone articles and selected Text layers in 
       assert.equal(await second.getByRole('textbox', { name: 'Article text', exact: true }).innerText(), 'Second embedded article.', 'responsive hosting preserves Display Text while its ancestor ref reattaches');
       assert.equal(await tools.count(), 1);
     }
-    await standalone.getByRole('textbox', { name: 'Article text', exact: true }).click();
+    await standalone.getByRole('textbox', { name: 'Article text', exact: true }).focus();
     assert.equal(await tools.count(), 1); assert.match(await tools.getAttribute('aria-label'), /Titel kan rechtstreeks/);
     const saved = await page.evaluate(() => savedDraft());
     const placements = saved.grids.flatMap(grid => grid.placements).filter(item => item.kind === 'text');
@@ -137,6 +157,7 @@ test('Image, Text and Shape bounds follow activation rather than hover, includin
       page.setDefaultTimeout(10000);
       const errors = []; page.on('pageerror', error => errors.push(error.message));
       await mountTextToolsFixture(page, origin, { surfaces: true });
+      await exposeText(page);
       await page.getByRole('button', { name: 'Close Text tools', exact: true }).click();
       const text = page.locator('.text-window'), image = page.locator('.image-module__window'), shape = page.locator('.shape-window');
       const visible = async () => ({
@@ -144,7 +165,7 @@ test('Image, Text and Shape bounds follow activation rather than hover, includin
         image: await image.locator('.image-module__bounds').evaluate(node => getComputedStyle(node).opacity),
         shape: await shape.evaluate(node => { const style = getComputedStyle(node); return style.outlineStyle === 'none' ? '0px' : style.outlineWidth; }),
       });
-      await page.mouse.click(1540, 30);
+      await clearOnCanvas(page);
       for (const surface of [text, image, shape]) {
         await surface.hover();
         assert.deepEqual(await visible(), { text: '0', image: '0', shape: '0px' });
@@ -162,7 +183,7 @@ test('Image, Text and Shape bounds follow activation rather than hover, includin
       const before = await page.evaluate(() => savedDraft().imageModules[0].width);
       await page.keyboard.press('ArrowRight');
       assert.ok(await page.evaluate(() => savedDraft().imageModules[0].width) > before, 'keyboard resizing still works');
-      await page.mouse.click(1540, 30);
+      await clearOnCanvas(page);
       assert.deepEqual(await visible(), { text: '0', image: '0', shape: '0px' });
       assert.deepEqual(errors, []); await page.close();
     }

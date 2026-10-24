@@ -1,4 +1,5 @@
 import { restoreWorkbenchIndex } from '../../systemWorkflow/domain/workbenchIndex.js';
+import { artworkLayers, artworkRecords, projectArtworkLayers, reconcileArtworkLayers } from '../../systemWorkflow/domain/artworkLayers.js';
 import { restorePublishedWorkbenchGroups } from './publishedWorkbenchGroups.js';
 import { reconcileRemovedWorkbenchMembers } from '../../systemWorkflow/domain/workbenchGroups.js';
 import {
@@ -118,11 +119,7 @@ export function reconcileSystemWorkflowDraftFromProfileDocumentV9(documentInput,
     workbench.shapes = [...(workbench.shapes || []), ...structuredClone(privateShapeWindows)];
   }
   const privateImageWindows = (currentDraftInput?.workbench?.imageModules || []).filter(w => imageModules.some(image => image.id === w.id && image.visibility === 'PRIVATE'));
-  const privateKeeperWindows = (currentDraftInput?.workbench?.keeperDocks || []).filter(w => keeperDocks.some(keeper => keeper.id === w.id && keeper.visibility === 'PRIVATE'));
-  if (privateKeeperWindows.length) {
-    workbench ||= createDefaultWorkbenchPresentation();
-    workbench.keeperDocks = [...(workbench.keeperDocks || []), ...structuredClone(privateKeeperWindows)];
-  }
+  if (workbench) delete workbench.keeperDocks;
   if (privateImageWindows.length) {
     workbench ||= createDefaultWorkbenchPresentation();
     workbench.imageModules = [...(workbench.imageModules || []), ...structuredClone(privateImageWindows)];
@@ -149,13 +146,19 @@ export function reconcileSystemWorkflowDraftFromProfileDocumentV9(documentInput,
   if (workbenchGroups) restored.workbenchGroups = workbenchGroups;
   const workbenchIndex = restoreWorkbenchIndex(document.workbenchIndex, currentDraftInput?.workbenchIndex);
   if (workbenchIndex) restored.workbenchIndex = workbenchIndex;
+  if (document.artworkLayers || currentDraftInput?.artworkLayers) {
+    if (currentDraftInput?.artworkLayers && JSON.stringify(projectArtworkLayers(currentDraftInput, document)) === JSON.stringify(artworkLayers(document))) {
+      restored.artworkLayers = reconcileArtworkLayers(currentDraftInput, { ...restored, artworkLayers: currentDraftInput.artworkLayers }).artworkLayers;
+    } else {
+      const publicIds = new Set(artworkRecords(document).map(item => item.id));
+      const available = new Set(artworkRecords(restored).map(item => item.id));
+      const privateLayers = artworkLayers(currentDraftInput).flatMap(layer => {
+        if (typeof layer === 'string') return !publicIds.has(layer) && available.has(layer) ? [layer] : [];
+        const children = layer.children.filter(id => !publicIds.has(id) && available.has(id));
+        return children.length ? [{ ...layer, children }] : [];
+      });
+      restored.artworkLayers = [...artworkLayers(document), ...privateLayers];
+    }
+  }
   return assertValidSystemWorkflowDraft(reconcileRemovedWorkbenchMembers(currentDraftInput, restored));
-}
-
-export function createProfileDocumentV9RestorePlan(document, currentDraft = null) {
-  const value = assertValidProfileDocumentV9(document);
-  return Object.freeze({
-    profileAddress: value.profile.address,
-    systemWorkflowDraft: reconcileSystemWorkflowDraftFromProfileDocumentV9(value, currentDraft),
-  });
 }

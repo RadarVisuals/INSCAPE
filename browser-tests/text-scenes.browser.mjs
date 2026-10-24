@@ -55,17 +55,33 @@ for (const sections of [false, true]) test(sections ? 'article sections link fro
         const Visitor = (await import('/src/profileDocument/components/ProfileDocumentV9Visitor.jsx')).default;
         root.render(React.createElement(Visitor, { document: buildProfileDocumentV9({ systemWorkflowDraft: draft, profileAddress: profile, assetRecords: fixture.OWNER_SYSTEM_WORKFLOW_REVIEW_ASSETS }) }));
       } else {
+        const { acquireProfileEditor } = await import('/src/systemWorkflow/profileEditorLease.js');
+        window.sceneEditorLease = acquireProfileEditor(profile);
+        if (await window.sceneEditorLease.ready !== 'editing') throw Error('Scene fixture could not acquire its editor');
         const Runtime = (await import('/src/public/ownerSystemWorkflow/OwnerSystemWorkflowRuntime.jsx')).default;
-        root.render(React.createElement(Runtime, { profileAddress: profile, reviewStorage: localStorage, reviewAssets: fixture.OWNER_SYSTEM_WORKFLOW_REVIEW_ASSETS, reviewCategories: [], reviewActivity: [], reviewDiscovery: [], reviewProfile: { name: 'Scene review' } }));
+        root.render(React.createElement(Runtime, { profileAddress: profile, reviewStorage: localStorage, reviewAssets: fixture.OWNER_SYSTEM_WORKFLOW_REVIEW_ASSETS, reviewCategories: [], reviewActivity: [], reviewProfile: { name: 'Scene review' } }));
       }
     }, { visitor, sections });
     await page.goto(`${origin}/__scene_review__`); console.log('Scene review loaded'); await mount(); console.log('Scene review mounted');
     const text = page.locator('[data-workbench-module="text"]'), tools = page.locator('.text-tools-window');
     const editor = text.getByRole('textbox', { name: 'Article text', exact: true });
+    await editor.waitFor();
+    await page.getByRole('button', { name: 'Collapse sidebar', exact: true }).click();
+    for (const name of ['Close Workbench Layers', 'Close Transform', 'Close Color', 'Close Image', 'Close Shape', 'Close FX', 'Close Info']) {
+      const close = page.getByRole('button', { name, exact: true });
+      if (await close.count()) { await close.focus(); await close.press('Enter'); }
+    }
+    const beforePan = await page.evaluate(() => localStorage.getItem(window.__sceneDraftKey));
+    await page.locator('main.system-workflow').focus();
+    await page.mouse.move(720, 780); await page.keyboard.down('Space'); await page.mouse.down();
+    await page.mouse.move(816, 880, { steps: 4 }); await page.mouse.up(); await page.keyboard.up('Space');
+    assert.equal(await page.evaluate(() => localStorage.getItem(window.__sceneDraftKey)), beforePan, 'camera arrangement preserves the authored scene');
     const navigateOwner = async direction => {
       const stage = page.locator('[data-system-workflow-artboard]'); const box = await stage.boundingBox();
       const lock = page.getByRole('button', { name: 'Lock Display Module composition', exact: true });
       if (await lock.count()) await activate(page, lock);
+      const start = { x: box.x + box.width * (direction === 'next' ? .8 : .2), y: box.y + box.height * .4 };
+      assert.equal(await stage.evaluate((node,p)=>node.contains(document.elementFromPoint(p.x,p.y)),start),true,'Grid swipe starts on Display');
       await page.mouse.move(box.x + box.width * (direction === 'next' ? .8 : .2), box.y + box.height * .4); await page.mouse.down();
       await page.mouse.move(box.x + box.width * (direction === 'next' ? .2 : .8), box.y + box.height * .4, { steps: 8 }); await page.mouse.up();
     };
@@ -76,11 +92,11 @@ for (const sections of [false, true]) test(sections ? 'article sections link fro
       await text.getByRole('button', { name: 'Next text page', exact: true }).click();
       assert.match(await text.locator('.text-page-navigation span').innerText(), /^2 \/ /);
       const original = await page.evaluate(() => JSON.parse(localStorage.getItem(window.__sceneDraftKey)).texts[0].article);
-      await text.getByRole('button', { name: 'Text tools', exact: true }).click();
+      await text.getByRole('button', { name: 'Text tools', exact: true }).focus(); await page.keyboard.press('Enter');
       await openTextToolSection(tools, 'Display connection');
       await tools.getByRole('combobox', { name: 'Follow Display', exact: true }).selectOption('display:primary');
       await tools.getByRole('button', { name: 'Link Text to Display', exact: true }).click();
-      await text.getByRole('button', { name: 'Read', exact: true }).click();
+      await text.getByRole('button', { name: 'Read', exact: true }).focus(); await page.keyboard.press('Enter');
       await page.waitForFunction(() => document.querySelector('.text-scene-page article')?.textContent.includes('Second section already written'));
       assert.doesNotMatch(await text.locator('.text-scene-page article').innerText(), /First section/);
       const saved = await page.evaluate(() => JSON.parse(localStorage.getItem(window.__sceneDraftKey)).texts[0]);
@@ -134,7 +150,7 @@ for (const sections of [false, true]) test(sections ? 'article sections link fro
     await openTextToolSection(tools, 'Writing tools');
     await tools.getByRole('button', { name: 'Insert page break', exact: true }).click();
     await page.keyboard.type('I stop breathing for a moment.');
-    await text.getByRole('button', { name: 'Read', exact: true }).click();
+    await text.getByRole('button', { name: 'Read', exact: true }).focus(); await page.keyboard.press('Enter');
     const next = text.getByRole('button', { name: 'Next text page', exact: true }); await next.waitFor();
     const count = await text.locator('.text-page-navigation span').innerText(); assert.match(count, /^1 \/ [2-9][0-9]*$/);
     await next.click(); assert.match(await text.locator('.text-page-navigation span').innerText(), /^2 \/ /);

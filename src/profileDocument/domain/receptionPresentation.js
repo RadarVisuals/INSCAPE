@@ -1,5 +1,5 @@
-// Optional curation. Absence preserves older publications' automatic overview;
-// an explicit empty list is an authored empty reception, not a default request.
+// Current document validation/projection only. The Reception wireframe does not
+// render this selection or offer the retired curation editor.
 export function validReception(value) {
   return Boolean(value && typeof value === 'object' && !Array.isArray(value)
     && Object.keys(value).length === 2 && value.version === 1 && Array.isArray(value.items)
@@ -19,12 +19,4 @@ export function projectReception(value, document) {
   if (!value) return undefined;
   const available = new Set(receptionModuleIds(document));
   return { version: 1, items: value.items.filter(id => available.has(id)) };
-}
-
-export function saveReceptionSelection(store, profile, expected, items) {
-  if (store.getProfileAddress() !== profile) return false;
-  const draft = store.getDraft(), generation = store.getGeneration();
-  const reception = { version: 1, items: [...items] };
-  if (JSON.stringify(draft.reception) !== JSON.stringify(expected) || !validReception(reception)) return false;
-  return store.commitCompletedOperation({ ...draft, reception }, { expectedGeneration: generation, historyLabel: 'Edit reception selection' });
 }

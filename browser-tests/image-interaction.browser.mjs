@@ -1,13 +1,15 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { chromium } from 'playwright-core';
-import { mkdir } from 'node:fs/promises';
+import { mkdir, writeFile } from 'node:fs/promises';
+import { mountGridMotionFixture } from './fixtures/grid-motion-fixture.mjs';
 
 const origin = process.env.INSCAPE_IMAGE_ROOT || 'http://127.0.0.1:5197';
+const output = process.env.INSCAPE_BROWSER_OUTPUT || '.browser-test-runtime';
 const settle = page => page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
 
 test('Image body distinguishes inspection, movement, cancellation, flip, crop and Workbench selection', { timeout: 60000 }, async () => {
-  await mkdir('.browser-test-runtime', { recursive: true });
+  await mkdir(output, { recursive: true });
   const browser = await chromium.launch({ executablePath: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', headless: true });
   try {
     const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, reducedMotion: 'reduce' });
@@ -36,7 +38,7 @@ test('Image body distinguishes inspection, movement, cancellation, flip, crop an
     const rectangle = () => first.evaluate(node => node.getBoundingClientRect().toJSON());
     const initial = await rectangle(), draft = await page.evaluate(() => imageFitFixture.store.getDraft());
     assert.ok(initial.x >= 0 && initial.right <= 1440 && initial.y >= 0 && initial.bottom <= 1000, JSON.stringify(initial));
-    await page.screenshot({ path: '.browser-test-runtime/image-interaction-initial.png' });
+    await page.screenshot({ path: `${output}/image-interaction-initial.png` });
     // Pointer jitter stays a selection click, without camera travel or inspection.
     await page.mouse.move(initial.x + 70, initial.y + 90); await page.mouse.down();
     assert.equal(await first.evaluate(node => node === document.activeElement), true, 'first pointer activation focuses the same Image window');
@@ -79,7 +81,7 @@ test('Image body distinguishes inspection, movement, cancellation, flip, crop an
     assert.deepEqual(await rectangle(), moved); assert.equal(await dialog.count(), 0);
     await next.focus(); await page.keyboard.press('Enter'); await settle(page);
     assert.equal(await canvas.getAttribute('data-side-id'), firstSide, 'keyboard flipping wraps');
-    await page.screenshot({ path: '.browser-test-runtime/image-interaction-wide.png' });
+    await page.screenshot({ path: `${output}/image-interaction-wide.png` });
     // Crop owns its drag; closing it restores the ordinary body interaction.
     const dock = page.locator('[data-context-tools], [data-context-action-bars]');
     await dock.getByRole('button', { name: 'Crop', exact: true }).click();
@@ -99,6 +101,11 @@ test('Image body distinguishes inspection, movement, cancellation, flip, crop an
     await page.evaluate(() => imageFitFixture.store.undo()); await settle(page);
     assert.deepEqual(await rectangle(), moved);
     // Both pointer and keyboard selection act on the artwork without opening it.
+    // Ordinary activation already selected this Image. The first Shift-click
+    // removes it; the next adds it to an explicit selection.
+    await canvas.click({ modifiers: ['Shift'] }); await settle(page);
+    assert.equal(await page.locator('.workbench-selection').count(), 0, 'Shift removes the ordinary selection');
+    assert.equal(await page.getByRole('spinbutton', { name: 'Transform Width', exact: true }).count(), 0, 'Transform has no selected artwork');
     await canvas.click({ modifiers: ['Shift'] }); await settle(page);
     assert.equal(await dialog.count(), 0);
     await page.getByRole('group', { name: '1 selected Workbench modules', exact: true }).waitFor();
@@ -110,6 +117,10 @@ test('Image body distinguishes inspection, movement, cancellation, flip, crop an
     await page.getByRole('group', { name: '1 selected Workbench modules', exact: true }).waitFor();
     assert.equal(await dialog.count(), 0, 'deselecting through the selection overlay does not inspect');
     await page.keyboard.press('Escape');
+    await page.mouse.click(10, 700); await settle(page);
+    await canvas.click({ modifiers: ['Shift'] }); await settle(page);
+    assert.equal(await page.getByRole('group', { name: '1 selected Workbench modules', exact: true }).count(), 1, 'isolated fixture also selects Image from empty background');
+    await page.keyboard.press('Escape'); await settle(page);
 
     // Visitor uses identical click/drag/flip behavior and never writes the draft.
     await page.evaluate(() => imageFitFixture.owner(false)); await settle(page);
@@ -121,30 +132,120 @@ test('Image body distinguishes inspection, movement, cancellation, flip, crop an
     assert.deepEqual(await page.evaluate(() => imageFitFixture.store.getDraft()), draft);
     await page.evaluate(() => imageFitFixture.camera(1, { x: -100, y: 0 }));
     await page.setViewportSize({ width: 390, height: 844 }); await canvas.hover();
-    await page.screenshot({ path: '.browser-test-runtime/image-interaction-narrow.png' });
+    await page.screenshot({ path: `${output}/image-interaction-narrow.png` });
     const closeRect = await first.locator('.image-module__close').boundingBox();
     assert.ok(closeRect.x >= 0 && closeRect.x + closeRect.width <= 390, 'close remains reachable');
     await page.mouse.click(10, 700); await settle(page);
     assert.equal(await next.evaluate(node => getComputedStyle(node).opacity), '0', 'resting artwork has no flip tag');
-    await page.screenshot({ path: '.browser-test-runtime/image-interaction-rest.png' });
+    await page.screenshot({ path: `${output}/image-interaction-rest.png` });
     // Minimum-size artwork retains a real drag/inspection target. Hover controls
     // sit outside both it and the resize targets, and stay reachable on narrow screens.
     await page.evaluate(() => {
       // This minimal fixture has no Runtime background-activation handler.
-      // Start the isolated hit-target check without the previous Properties window.
+      // Clear the old contextual target before the isolated hit-target check.
       imageFitFixture.select(null);
       imageFitFixture.owner(true);
       const store = imageFitFixture.store, draft = store.getDraft();
       draft.imageModules[0] = { ...draft.imageModules[0], width: 32, height: 32 };
       if (!store.commitCompletedOperation(draft, { expectedGeneration: store.getGeneration() })) throw Error('Minimum-size fixture failed to save');
     }); await settle(page);
-    await canvas.hover();
-    assert.ok(await canvas.evaluate(node => { const r = node.getBoundingClientRect(); return document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2) === node; }), 'minimum canvas centre remains grabbable');
-    for (const control of [next, first.locator('.image-module__close')]) {
-      assert.ok(await control.evaluate(node => { const r = node.getBoundingClientRect(); return document.elementFromPoint(r.x + 14, r.y + 14)?.closest('button') === node; }), 'minimum canvas controls have distinct hit targets');
+    // The owner dock reappears above the tiny Image's controls. Park it via UI.
+    const resizeDock = page.locator('.workbench-tool-dock .workbench-tool-panel-resize[data-edge="se"]');
+    await resizeDock.focus(); for (let i = 0; i < 10; i++) await resizeDock.press('Shift+ArrowUp');
+    const moveDock = page.getByRole('button', { name: 'Move Transform, Color and Info panel', exact: true });
+    await moveDock.focus(); for (let i = 0; i < 20; i++) await moveDock.press('Shift+ArrowDown');
+    await settle(page);
+    assert.equal(await first.locator('.image-module__close').count(), 0, 'owner artwork has no Visitor close control');
+    assert.ok(await first.getByRole('separator').count() > 0, 'owner retains minimum-size resize targets');
+    for (const owner of [true, false]) {
+      if (!owner) { await page.evaluate(() => imageFitFixture.owner(false)); await settle(page); }
+      await canvas.hover();
+      assert.ok(await canvas.evaluate(node => { const r = node.getBoundingClientRect(); return document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2) === node; }), 'minimum canvas centre remains grabbable');
+      // Close belongs to Visitor; both modes retain a real flip target.
+      for (const control of owner ? [next] : [next, first.locator('.image-module__close')]) {
+        assert.ok(await control.evaluate(node => { const r = node.getBoundingClientRect(); return document.elementFromPoint(r.x + 14, r.y + 14)?.closest('button') === node; }), 'minimum canvas controls have distinct hit targets');
+      }
+      await next.click(); await settle(page); assert.equal(await dialog.count(), 0);
+      await page.screenshot({ path: `${output}/image-interaction-minimum-${owner ? 'owner' : 'visitor'}.png` });
     }
-    await next.click(); await settle(page); assert.equal(await dialog.count(), 0);
-    await page.screenshot({ path: '.browser-test-runtime/image-interaction-minimum.png' });
+    assert.deepEqual(errors, []);
+  } finally { await browser.close(); }
+});
+
+for (const visitor of [false, true]) for (const width of [1440, 390]) test(`Runtime Image Shift selection starts empty and preserves group candidates (${visitor ? 'Visitor' : 'owner'}, ${width}px)`, { timeout: 60000 }, async () => {
+  await mkdir(output, { recursive: true });
+  const browser = await chromium.launch({ headless: true });
+  try {
+    const page = await browser.newPage({ viewport: { width, height: 900 }, reducedMotion: 'reduce' });
+    page.setDefaultTimeout(8000);
+    const errors = []; page.on('pageerror', error => errors.push(error.message));
+    await mountGridMotionFixture(page, { origin, visitor, count: 1, displayWidth: 320, seamReview: 'single' });
+    await page.evaluate(async ({ visitor, width }) => {
+      const draft = JSON.parse(localStorage.getItem(window.__motionKey)), original = draft.imageModules[0];
+      const { createArticle } = await import('/src/text/domain/article.js');
+      const { createTextPresentation } = await import('/src/profileDocument/domain/workbenchPresentation.js');
+      draft.displays = []; draft.grids[0].placements = []; draft.workbench.display.open = false;
+      draft.imageModules = [0, 1].map(index => ({ ...original, id: `image:selection-${index}`, width: 200, height: 160 }));
+      draft.workbench.imageModules = draft.imageModules.map((image, index) => ({ id: image.id, open: true, position: { left: width === 390 ? 80 : 320 + index * 300, top: width === 390 ? 180 + index * 240 : 180 } }));
+      draft.texts = [{ id: 'text:candidate', article: createArticle('Candidate text'), visibility: 'PUBLIC' }];
+      draft.workbench.texts = [{ ...createTextPresentation('text:candidate'), open: true, window: { left: 900, top: 180, width: 180, height: 120 } }];
+      draft.shapes = [{ id: 'shape:candidate', name: 'Candidate shape', color: '#758278', opacity: 1, visibility: 'PUBLIC' }];
+      draft.workbench.shapes = [{ id: 'shape:candidate', open: true, window: { left: 900, top: 400, width: 160, height: 120 } }];
+      draft.artworkLayers = ['image:selection-0', 'image:selection-1', 'text:candidate', 'shape:candidate'];
+      localStorage.setItem(window.__motionKey, JSON.stringify(draft));
+      if (visitor) {
+        const { buildProfileDocumentV9 } = await import('/src/profileDocument/domain/profileDocumentV9Builder.js');
+        Object.assign(window.__motionDocument, buildProfileDocumentV9({ systemWorkflowDraft: draft, profileAddress: `0x${'1'.repeat(40)}`, assetRecords: [] }));
+      }
+      window.__motionRemount();
+    }, { visitor, width });
+    const first = page.locator('[data-image-module="image:selection-0"] .image-module__canvas');
+    const second = page.locator('[data-image-module="image:selection-1"] .image-module__canvas');
+    const group = count => page.getByRole('group', { name: `${count} selected Workbench modules`, exact: true });
+    await first.waitFor(); await settle(page);
+    const saved = await page.evaluate(() => localStorage.getItem(window.__motionKey));
+    const frames = await page.locator('.image-module__window').evaluateAll(nodes => nodes.map(node => node.getBoundingClientRect().toJSON()));
+    await page.evaluate(() => {
+      window.__imageSelectionTrace = [];
+      const record = phase => event => window.__imageSelectionTrace.push({ phase, type: event.type, shift: event.shiftKey, target: event.target.className, focus: document.activeElement?.className });
+      document.addEventListener('pointerdown', record('document capture'), true);
+      document.addEventListener('focusin', record('document capture'), true);
+      const host = document.querySelector('main.system-workflow');
+      host.addEventListener('pointerdown', record('native host capture'), true);
+      host.addEventListener('focusin', record('native host bubble'));
+    });
+    await page.mouse.click(4, 4); await settle(page);
+    await page.evaluate(() => { window.__imageSelectionTrace = []; });
+    await first.click({ modifiers: ['Shift'] }); await settle(page);
+    const proof = await page.evaluate(() => ({ trace: window.__imageSelectionTrace, group: document.querySelector('.workbench-selection')?.getAttribute('aria-label') || null }));
+    proof.savedContentUnchanged = await page.evaluate(saved => localStorage.getItem(window.__motionKey) === saved, saved);
+    await writeFile(`${output}/image-shift-empty-${visitor ? 'visitor' : 'owner'}-${width}.json`, JSON.stringify(proof, null, 2));
+    assert.equal(await group(1).count(), 1, 'Shift-click from empty background creates an explicit Image selection');
+    assert.ok(await group(1).isVisible());
+    assert.equal(proof.savedContentUnchanged, true);
+    // The explicit selection overlay owns this real pointer hit.
+    await page.keyboard.down('Shift'); await page.mouse.click(frames[0].x + 70, frames[0].y + 90); await page.keyboard.up('Shift'); await settle(page);
+    assert.equal(await page.locator('.workbench-selection').count(), 0, 'a second Shift-click removes it');
+    await first.click({ modifiers: ['Shift'] }); await settle(page);
+    await group(1).waitFor();
+    await second.focus(); await settle(page); await page.keyboard.press('Shift+Enter'); await group(2).waitFor();
+    const firstRect = frames[0];
+    await page.keyboard.down('Shift'); await page.mouse.click(firstRect.x + 70, firstRect.y + 90); await page.keyboard.up('Shift'); await group(1).waitFor();
+    if (!visitor && width === 1440) for (const id of ['text:candidate', 'shape:candidate']) {
+      const candidate = page.locator(`[data-workbench-view-id="${id}"][data-workbench-selectable], [data-workbench-view-id="${id}"] [data-workbench-selectable]`).first();
+      await candidate.focus(); await settle(page);
+      await group(1).waitFor();
+      await page.keyboard.press('Shift+Enter'); await group(2).waitFor();
+      await page.keyboard.press('Shift+Enter'); await group(1).waitFor();
+    }
+    await page.keyboard.press('Escape'); await settle(page);
+    await first.click(); await settle(page);
+    assert.equal(await first.evaluate(node => node.closest('.image-module__window') === document.activeElement), true, 'ordinary pointer activation retains Image window focus');
+    await first.focus(); await settle(page); await page.keyboard.press('Shift+Enter'); await group(1).waitFor();
+    assert.equal(await page.locator('.image-lift').count(), 0, 'selection never opens Inspect');
+    assert.equal(await page.getByRole('button', { name: 'Back to previous Workbench view', exact: true }).isDisabled(), true, 'selection never adds camera history');
+    assert.deepEqual(await page.locator('.image-module__window').evaluateAll(nodes => nodes.map(node => node.getBoundingClientRect().toJSON())), frames);
+    assert.equal(await page.evaluate(() => localStorage.getItem(window.__motionKey)), saved, 'pointer and keyboard selection never save authored content');
     assert.deepEqual(errors, []);
   } finally { await browser.close(); }
 });

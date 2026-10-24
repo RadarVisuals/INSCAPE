@@ -10,6 +10,8 @@ import { validateProfileDocumentV9 } from '../profileDocument/domain/profileDocu
 import { reconcileSystemWorkflowDraftFromProfileDocumentV9 } from '../profileDocument/domain/profileDocumentV9Reconciliation.js';
 import { removeWorkbenchModule } from '../systemWorkflow/removeWorkbenchModule.js';
 import { captureWorkbenchPresentation } from '../public/ownerSystemWorkflow/workbenchPresentationCapture.js';
+import { createDefaultWorkbenchPresentation } from '../profileDocument/domain/workbenchPresentation.js';
+import { workbenchGroupModules } from '../systemWorkflow/domain/workbenchGroups.js';
 import { loadWorkbenchLayout, saveWorkbenchLayout } from '../public/ownerSystemWorkflow/workbenchLayoutStorage.js';
 import { createDisplayModuleSession } from '../systemWorkflow/displayModuleSession.js';
 import { resolveLibraryImageAsset } from '../library/resolveLibraryImageAsset.js';
@@ -112,7 +114,7 @@ test('Keeper creation, artwork replacement and removal are atomic, undoable and 
   const { store, storage } = fixture(), old = store.getDraft();
   assert.ok(validateSystemWorkflowDraft(old).valid); assert.ok(validateProfileDocumentV9(build(old)).valid);
   const id = addKeeperDock(store, profile, { position: { left: 420, top: 80 } });
-  assert.deepEqual(store.getDraft().workbench.keeperDocks, [{ id, position: { left: 420, top: 80 } }]);
+  assert.deepEqual(store.getDraft().workbench, old.workbench, 'adding a shared Keeper does not place canvas content');
   assert.ok(store.undo()); assert.deepEqual(store.getDraft(), old); assert.ok(store.redo());
   const asset = await resolveLibraryImageAsset(assets[0]);
   assert.ok(saveKeeperDock(store, profile, store.getDraft().keeperDocks[0], { asset, faces: 'left' }));
@@ -122,7 +124,7 @@ test('Keeper creation, artwork replacement and removal are atomic, undoable and 
   assert.ok(store.undo()); assert.deepEqual(store.getDraft(), before);
   assert.deepEqual(createSystemWorkflowDraftStore({ profileAddress: profile, storage }).getDraft(), before);
   assert.ok(removeWorkbenchModule(store, profile, 'keeper', before.keeperDocks[0]));
-  assert.deepEqual(store.getDraft().keeperDocks, []); assert.deepEqual(store.getDraft().workbench.keeperDocks, []);
+  assert.deepEqual(store.getDraft().keeperDocks, []); assert.deepEqual(store.getDraft().workbench, old.workbench);
   assert.ok(store.undo()); assert.deepEqual(store.getDraft(), before);
   createDisplayModuleSession(store, 'display:primary').createGrid();
   assert.deepEqual(store.getDraft().keeperDocks, before.keeperDocks);
@@ -136,13 +138,13 @@ test('Only public Keepers publish; legacy restoration retains local artwork and 
   assert.ok(saveKeeperDock(store, profile, store.getDraft().keeperDocks[0], { asset, visibility: 'PUBLIC' }));
   const draft = store.getDraft(), document = build(draft);
   assert.ok(validateProfileDocumentV9(document).valid); assert.ok(validKeeperDocks(document.keeperDocks, true));
-  assert.equal(document.keeperDocks.length, 1); assert.equal(document.workbench.keeperDocks.length, 1);
+  assert.equal(document.keeperDocks.length, 1); assert.equal(document.workbench?.keeperDocks, undefined);
   assert.equal(countProfileDocumentV9Assets(document), beforeCount + 1);
   assert.deepEqual(reconcileSystemWorkflowDraftFromProfileDocumentV9(document, draft).keeperDocks, draft.keeperDocks);
   const restored = reconcileSystemWorkflowDraftFromProfileDocumentV9(oldDocument, draft);
   assert.deepEqual(restored.keeperDocks, draft.keeperDocks.map(item => ({ ...item, visibility: 'PRIVATE' })));
-  assert.deepEqual(restored.workbench.keeperDocks, draft.workbench.keeperDocks);
-  const invalid = structuredClone(document); invalid.workbench.keeperDocks[0].id = 'keeper:missing';
+  assert.deepEqual(restored.workbench?.keeperDocks, draft.workbench?.keeperDocks);
+  const invalid = structuredClone(document); invalid.workbench = { ...createDefaultWorkbenchPresentation(), keeperDocks: [{ id: 'keeper:missing', position: { left: 0, top: 0 } }] };
   assert.equal(validateProfileDocumentV9(invalid).valid, false);
   const animated = structuredClone(draft); animated.keeperDocks[0].phase = 'free';
   assert.equal(validateSystemWorkflowDraft(animated).valid, false, 'temporary motion cannot enter saved schema');
@@ -162,14 +164,15 @@ test('Keeper refuses stale/profile/failed edits and bounds module count without 
   assert.throws(() => addKeeperDock(f.store, profile)); assert.equal(f.store.getDraft().keeperDocks.length, MAX_KEEPER_DOCKS);
 });
 
-test('Live dock positions cache separately; deleted membership cannot be resurrected by capture or reload', () => {
+test('Keeper screen positions never enter canvas capture or its saved layout', () => {
   const { store, storage } = fixture(); const id = addKeeperDock(store, profile), draft = store.getDraft();
+  assert.equal(workbenchGroupModules(draft).has(id), false, 'a shared companion is not canvas group content');
   const live = { id, position: { left: 700, top: 300 } };
-  const layout = captureWorkbenchPresentation({ layout: draft.workbench, keeperDocks: draft.keeperDocks, keeperPresentations: { [id]: live }, hasPrimaryDisplay: false, identityOpen: false }).value;
-  assert.deepEqual(layout.keeperDocks, [live]); assert.ok(saveWorkbenchLayout(profile, draft, layout, {}, storage));
-  assert.deepEqual(loadWorkbenchLayout(profile, draft, storage).layout.keeperDocks, [live]);
-  assert.deepEqual(loadWorkbenchLayout(profile, { ...draft, keeperDocks: [] }, storage).layout.keeperDocks, []);
-  assert.deepEqual(captureWorkbenchPresentation({ layout, keeperDocks: [], keeperPresentations: { [id]: live }, hasPrimaryDisplay: false, identityOpen: false }).value.keeperDocks, []);
+  const layout = captureWorkbenchPresentation({ layout: draft.workbench || createDefaultWorkbenchPresentation(), keeperDocks: draft.keeperDocks, keeperPresentations: { [id]: live }, hasPrimaryDisplay: false, identityOpen: false }).value;
+  assert.equal(layout.keeperDocks, undefined); assert.ok(saveWorkbenchLayout(profile, draft, layout, {}, storage));
+  assert.equal(loadWorkbenchLayout(profile, draft, storage).layout.keeperDocks, undefined);
+  assert.equal(loadWorkbenchLayout(profile, { ...draft, keeperDocks: [] }, storage).layout.keeperDocks, undefined);
+  assert.equal(captureWorkbenchPresentation({ layout: { ...layout, keeperDocks: [live] }, hasPrimaryDisplay: false, identityOpen: false }).value.keeperDocks, undefined);
 });
 
 test('Library resolver preserves selected attachment metadata for both Image and Keeper', async () => {

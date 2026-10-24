@@ -67,6 +67,7 @@ function MiniAppInstance({ record, initialPresentation, index, store, profileAdd
       setPresentation(current => ({ ...current, open: true })); onActivate();
     }}><AppWindow size={18} /><span>{record.name}</span></button>}
     {presentation.open && <WorkbenchWindow label={artwork ? "Artwork" : "Mini app"} className={artwork && !editing ? "mini-app-artwork-window" : ""} title={record.name} width={presentation.window.width} resizableWidth
+      viewId={artwork ? record.id : undefined} preserveAuthoredLayout={!artwork} placementModule={artwork && Boolean(store)}
       initialX={presentation.window.left} initialY={presentation.window.top} initialHeight={presentation.window.height}
       onLayoutChange={changeLayout} controls={<>
         {store && <button ref={settingsTrigger} type="button" className="system-workflow__round-control" aria-label={`Settings for ${record.name}`}
@@ -76,7 +77,7 @@ function MiniAppInstance({ record, initialPresentation, index, store, profileAdd
       {editing && store ? <MiniAppSettings record={record} onSave={save} onCancel={finishEditing} onRemove={expected => save(expected, null)} />
         : !url ? <div className="mini-app-status">Set this app’s URL in Settings to open it.</div>
           : suspended ? <div className="mini-app-status">App paused during preview.</div>
-            : artwork ? <HtmlArtworkFrame url={url} name={record.name} />
+            : artwork ? <HtmlArtworkFrame url={url} name={record.name} width={presentation.window.width} height={presentation.window.height} />
             : <MiniAppFrame key={`${record.url}:${microphone}:${reload}`} {...{ url, profileAddress, microphone, onConnect }} name={record.name}
               onMicrophoneChange={setMicrophone} onReload={() => { setMicrophone(false); setReload(current => current + 1); }} />}
     </WorkbenchWindow>}

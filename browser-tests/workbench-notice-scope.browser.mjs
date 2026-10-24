@@ -42,7 +42,7 @@ async function mount(page) {
     window.noticeFault = true; window.noticeAttempts = 0; window.noticeWrites = 0;
     await import('/src/index.css'); await import('/src/inscapeTokens.css'); await import('/src/public/ownerSystemWorkflow/ownerSystemWorkflow.css'); await import('/src/lattice/rendering/latticeMenuSurface.css');
     createRoot(document.getElementById('root')).render(React.createElement(Runtime, { profileAddress, reviewStorage: storage,
-      reviewAssets: [], reviewCategories: [], reviewActivity: [], reviewDiscovery: [], reviewProfile: { name: 'Notice scope' } }));
+      reviewAssets: [], reviewCategories: [], reviewActivity: [], reviewProfile: { name: 'Notice scope' } }));
   });
   await page.locator('[data-display-instance]').nth(1).waitFor();
   await page.clock.install(); await page.clock.pauseAt(await page.evaluate(() => Date.now() + 100));

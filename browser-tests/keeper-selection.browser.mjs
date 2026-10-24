@@ -36,10 +36,13 @@ test('Keeper chat retains selection and sends fresh selected Image/Display conte
       const board = page.locator('main.system-workflow').first();
       const choose = async (ids, clear = true) => {
         if (clear) { await board.focus(); await page.keyboard.press('Escape'); }
-        for (const id of ids) await page.locator(`[data-workbench-view-id="${id}"]`).evaluate(node => {
-          const target = node.matches('[data-workbench-selectable]') ? node : node.querySelector('[data-workbench-selectable]');
-          target.focus({ preventScroll: true }); target.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', shiftKey: true, bubbles: true, cancelable: true }));
-        });
+        // Let native focus settle before the separate Shift+Enter gesture.
+        for (const id of ids) {
+          const window = page.locator(`[data-workbench-view-id="${id}"]`);
+          const target = await window.getAttribute('data-workbench-selectable') !== null ? window : window.locator('[data-workbench-selectable]').first();
+          await target.focus();
+          await page.keyboard.press('Shift+Enter');
+        }
       };
       await choose(['image:motion-1']);
       await page.getByRole('button', { name: 'Release Keeper', exact: true }).click();

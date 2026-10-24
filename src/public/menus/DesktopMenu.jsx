@@ -14,7 +14,7 @@ export default function DesktopMenu({ anchor, commands, label, menuSurfaceId = n
   useLayoutEffect(() => {
     const rect = ref.current?.getBoundingClientRect();
     if (rect) setPosition(clampMenuPosition(anchor, rect, { width: window.innerWidth, height: window.innerHeight }));
-    ref.current?.querySelector('button')?.focus();
+    (ref.current?.querySelector('button:not(:disabled)') || ref.current)?.focus();
   }, [anchor]);
   useEffect(() => {
     const close = (event) => { if (event.key === 'Escape') { event.preventDefault(); onPreviewCommand?.(null); onClose(); returnFocus?.focus?.(); } };
@@ -91,7 +91,7 @@ export default function DesktopMenu({ anchor, commands, label, menuSurfaceId = n
   return <div ref={ref} className={`desktop-menu${getSubmenuCommands ? ' desktop-menu--cascade' : ''}${className ? ` ${className}` : ''}`}
     data-lattice-menu-surface={menuSurfaceId || undefined} data-menu-surface={menuSurfaceId || undefined}
     data-system-workflow-overlay={systemWorkflowOverlay || undefined}
-    role="menu" aria-label={label} style={{ left: position.x, top: position.y, ...(systemWorkflowOverlay ? { width: Math.min(SYSTEM_WORKFLOW_PANEL_WIDTH, (window.innerWidth - 20) / 2) } : {}) }} onKeyDown={onKeyDown}
+    role="menu" tabIndex={-1} aria-label={label} style={{ left: position.x, top: position.y, ...(systemWorkflowOverlay ? { width: Math.min(SYSTEM_WORKFLOW_PANEL_WIDTH, (window.innerWidth - 20) / 2) } : {}) }} onKeyDown={onKeyDown}
     onPointerLeave={() => {
       window.clearTimeout(hoverTimerRef.current);
       const focused = document.activeElement;

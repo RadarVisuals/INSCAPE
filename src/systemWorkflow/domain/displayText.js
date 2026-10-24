@@ -1,4 +1,4 @@
-import { ARTICLE_FONTS, ARTICLE_ALIGNMENTS, assertArticle, createArticle, textAppearance } from '../../text/domain/article.js';
+import { ARTICLE_FONTS, ARTICLE_ALIGNMENTS, assertArticle, createArticle, textAppearance, validArticleFontSize } from '../../text/domain/article.js';
 
 export const DISPLAY_TEXT_KEYS = ['id', 'kind', 'text', 'column', 'row', 'columnSpan', 'rowSpan', 'layer', 'navigationOrder', 'visibility', 'transform'];
 export const isTextPlacement = placement => placement?.kind === 'text';
@@ -9,7 +9,7 @@ export function validDisplayText(value) {
   const keys = ['content', 'font', 'size', 'color', 'alignment', 'bold', 'italic'];
   return Boolean(value && typeof value === 'object' && Object.keys(value).length === keys.length && keys.every(key => Object.hasOwn(value, key))
     && typeof value.content === 'string' && value.content.length <= 4000 && !/[\u0000-\u0008\u000b-\u001f\u007f]/u.test(value.content)
-    && ARTICLE_FONTS.some(font => font.id === value.font) && Number.isFinite(value.size) && value.size >= 8 && value.size <= 300
+    && ARTICLE_FONTS.some(font => font.id === value.font) && validArticleFontSize(value.size)
     && /^#[0-9a-f]{6}$/iu.test(value.color) && ARTICLE_ALIGNMENTS.includes(value.alignment)
     && typeof value.bold === 'boolean' && typeof value.italic === 'boolean');
 }

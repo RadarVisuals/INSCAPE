@@ -11,11 +11,14 @@ const camera = page => page.locator('main.system-workflow').first().evaluate(nod
   scale: Number(node.dataset.workbenchCameraScale ?? node.querySelector('[data-workbench-scale]')?.dataset.workbenchScale ?? 1),
   x: Number(node.dataset.workbenchCameraX || 0), y: Number(node.dataset.workbenchCameraY || 0) }));
 const select = async (page, ids) => {
-  for (const id of ids) await page.locator(`[data-workbench-view-id="${id}"]`).evaluate(node => {
-    const target = node.matches('[data-workbench-selectable]') ? node : node.querySelector('[data-workbench-selectable]');
-    target.focus({ preventScroll: true });
-    target.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', shiftKey: true, bubbles: true, cancelable: true }));
-  });
+  for (const id of ids) {
+    const node = page.locator(`[data-workbench-view-id="${id}"]`);
+    const target = await node.evaluate(node => node.matches('[data-workbench-selectable]'))
+      ? node : node.locator('[data-workbench-selectable]').first();
+    // Focus activation must settle before Shift+Enter starts/extends a group,
+    // just as it does between native browser input events.
+    await target.focus(); await page.keyboard.press('Shift+Enter');
+  }
   await settle(page);
 };
 const destinationCentre = page => page.evaluate(() => {
@@ -99,8 +102,10 @@ for (const visitor of [false, true]) for (const width of [1440, 390]) {
         await settle(page); assert.deepEqual(await camera(page), original);
       }
       await page.evaluate(() => document.getElementById('focus-test-input').remove());
-      // Back restored the first selection. Add another module and frame their union.
-      await select(page, ['image:motion-1']);
+      // Establish an explicit group from the returned ordinary activation.
+      // Moving focus alone must not be treated as adding a selected module.
+      await page.locator('main.system-workflow').first().focus(); await page.keyboard.press('Escape');
+      await select(page, ['image:motion-0', 'image:motion-1']);
       const groupCentre = await destinationCentre(page);
       await page.keyboard.press('f'); await arrived(page); await centered(page, ['image:motion-0', 'image:motion-1'], groupCentre);
       await back.click(); await arrived(page);

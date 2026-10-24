@@ -44,7 +44,7 @@ test('Grid menu duplicates a filled scene independently, supports undo and reloa
       const Runtime = (await import('/src/public/ownerSystemWorkflow/OwnerSystemWorkflowRuntime.jsx')).default;
       createRoot(document.getElementById('root')).render(React.createElement(Runtime, { profileAddress: profile,
         reviewStorage: localStorage, reviewAssets: fixture.OWNER_SYSTEM_WORKFLOW_REVIEW_ASSETS,
-        reviewCategories: [], reviewActivity: [], reviewDiscovery: [], reviewProfile: { name: 'Grid copy review' } }));
+        reviewCategories: [], reviewActivity: [], reviewProfile: { name: 'Grid copy review' } }));
     });
     const read = () => page.evaluate(() => JSON.parse(localStorage.getItem(window.__gridDraftKey)));
     const panel = page.locator('.system-workflow__grid-switcher');

@@ -47,7 +47,7 @@ test('owner category boundary creates private, renames, changes visibility, and 
   assert.equal(useLibraryStore.getState().workspace.canvas, preservedCanvas);
   assert.equal(useLibraryStore.getState().workspace.tables, preservedTables);
   assert.equal(flushLibraryWorkspace(), true);
-  assert.deepEqual(loadLibraryWorkspace(storage, PROFILE).folders, []);
+  assert.deepEqual(loadLibraryWorkspace(storage, PROFILE).workspace.folders, []);
 });
 test('membership add/remove is stable-ID based and repeated commands perform no additional writes', async () => {
   const storage = memoryStorage();
@@ -80,7 +80,7 @@ test('section commands persist profile-scoped category organization and return c
   assert.equal(commands.moveSection(currentId, archiveId), true);
   assert.equal(commands.deleteSection(archiveId), true);
   assert.equal(flushLibraryWorkspace(), true);
-  assert.deepEqual(loadLibraryWorkspace(storage, PROFILE).categoryOrganization, {
+  assert.deepEqual(loadLibraryWorkspace(storage, PROFILE).workspace.categoryOrganization, {
     rootCategoryIds: [firstId, secondId],
     sections: [{ id: currentId, name: 'Current', categoryIds: [] }],
   });
@@ -103,7 +103,7 @@ test('invalid input, cancellation, and stale captured callbacks produce zero wri
   await delay(220);
   assert.deepEqual(storage.writes, []);
   assert.deepEqual(useLibraryStore.getState().workspace.folders, []);
-  assert.deepEqual(loadLibraryWorkspace(storage, PROFILE).folders, []);
+  assert.deepEqual(loadLibraryWorkspace(storage, PROFILE).workspace.folders, []);
 });
 
 test('bulk category membership validates the canonical asset set and schedules one idempotent save', async () => {

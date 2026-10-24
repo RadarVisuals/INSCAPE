@@ -23,10 +23,9 @@ test('failed writes preserve persisted bytes and can be retried after storage re
   assert.deepEqual(JSON.parse(storage.getItem(libraryWorkspaceKey(profile))).favorites, ['saved-asset']);
 });
 
-test('corrupt current data stays intact even when legacy data exists', () => {
+test('corrupt current data stays intact and blocks writes', () => {
   const storage = storageFor(); const key = libraryWorkspaceKey(profile);
   storage.records.set(key, '{corrupt');
-  storage.records.set(libraryWorkspaceKey(profile, 8), JSON.stringify({ version: 8, profileAddress: profile, folders: [] }));
   const persistence = createLibraryWorkspacePersistence(storage);
   const loaded = persistence.load(profile);
   assert.match(loaded.persistenceError, /preserved/);
@@ -55,22 +54,40 @@ test('a blocked browser storage getter does not escape during acquisition', () =
   finally { if (original) Object.defineProperty(globalThis, 'window', original); else delete globalThis.window; }
 });
 
-test('legacy data remains migratable, while malformed legacy data is preserved and blocked', () => {
-  for (const valid of [true, false]) {
-    const storage = storageFor(); const legacyKey = libraryWorkspaceKey(profile, 8);
-    const raw = valid ? JSON.stringify({ version: 8, profileAddress: profile, favorites: ['legacy'], folders: [] }) : '{broken legacy';
-    storage.records.set(legacyKey, raw);
-    const persistence = createLibraryWorkspacePersistence(storage);
-    const loaded = persistence.load(profile);
-    assert.equal(storage.getItem(legacyKey), raw);
-    if (valid) {
-      assert.equal(loaded.persistenceError, null);
-      assert.deepEqual(loaded.workspace.favorites, ['legacy']);
-      assert.equal(persistence.save(loaded.workspace).ok, true);
-    } else {
-      assert.ok(loaded.persistenceError);
-      assert.equal(persistence.save(loaded.workspace).ok, false);
-      assert.equal(storage.getItem(libraryWorkspaceKey(profile)), null);
-    }
+test('unsupported versions under the current key stay intact and block writes until explicit reload after repair', () => {
+  for (const version of [1, 8, 10]) {
+    const storage = storageFor(), key = libraryWorkspaceKey(profile);
+    const raw = JSON.stringify({ version, profileAddress: profile, favorites: ['unsupported'], folders: [] });
+    storage.records.set(key, raw);
+    const persistence = createLibraryWorkspacePersistence(storage), loaded = persistence.load(profile);
+    assert.match(loaded.persistenceError, /preserved/);
+    assert.equal(persistence.save(loaded.workspace).ok, false);
+    assert.equal(storage.getItem(key), raw);
+    storage.records.set(key, JSON.stringify({ version: 9, profileAddress: profile, favorites: ['repaired'], folders: [] }));
+    assert.equal(persistence.save(loaded.workspace).ok, false, 'external repair does not silently grant write access');
+    const recovered = persistence.load(profile);
+    assert.equal(recovered.persistenceError, null); assert.deepEqual(recovered.workspace.favorites, ['repaired']);
+    assert.equal(persistence.save(recovered.workspace).ok, true);
   }
+});
+
+test('historical keys are neither read, migrated nor removed when the current record is absent', () => {
+  const storage = storageFor(), historical = `inscape.library-workspace.v8:${profile}`, reads = [];
+  const raw = '{historical bytes'; storage.records.set(historical, raw);
+  const get = storage.getItem; storage.getItem = key => { reads.push(key); return get(key); };
+  const persistence = createLibraryWorkspacePersistence(storage), loaded = persistence.load(profile);
+  assert.equal(loaded.persistenceError, null); assert.deepEqual(loaded.workspace.favorites, []);
+  assert.equal(storage.records.size, 1); assert.deepEqual(reads, [libraryWorkspaceKey(profile)]);
+  assert.equal(persistence.save({ ...loaded.workspace, favorites: ['new'] }).ok, true);
+  assert.equal(storage.records.get(historical), raw);
+});
+
+test('a failed read blocks writes and a successful reload restores current data', () => {
+  const storage = storageFor(), get = storage.getItem;
+  storage.getItem = () => { throw new Error('denied'); };
+  const persistence = createLibraryWorkspacePersistence(storage), failed = persistence.load(profile);
+  assert.match(failed.persistenceError, /unavailable/); assert.equal(persistence.save(failed.workspace).ok, false);
+  storage.getItem = get;
+  const recovered = persistence.load(profile);
+  assert.equal(recovered.persistenceError, null); assert.equal(persistence.save(recovered.workspace).ok, true);
 });

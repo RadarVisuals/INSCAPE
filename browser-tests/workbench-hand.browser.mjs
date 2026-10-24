@@ -7,7 +7,7 @@ const origin = process.env.INSCAPE_TEXT_ROOT || 'http://127.0.0.1:5217';
 const settle = page => page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
 const camera = page => page.locator('main.system-workflow').first().evaluate(node => ({
   x: Number(node.dataset.workbenchCameraX || 0), y: Number(node.dataset.workbenchCameraY || 0) }));
-const reset = async page => { await page.getByRole('button', { name: 'Reset Workbench position', exact: true }).click(); await settle(page); };
+const reset = async page => { await page.getByRole('button', { name: 'Reset Workbench view', exact: true }).click(); await settle(page); };
 
 for (const visitor of [false, true]) for (const width of [1440, 390]) {
   test(`Hand preserves module geometry and focus (${visitor ? 'Visitor' : 'owner'}, ${width}px)`, { timeout: 90000 }, async () => {
@@ -23,7 +23,15 @@ for (const visitor of [false, true]) for (const width of [1440, 390]) {
       const firstImage = page.locator('[data-workbench-view-id="image:motion-0"]');
       await firstImage.locator('.image-module__artwork[data-media-state="ready"]').waitFor();
       await page.evaluate(() => document.fonts.ready); await settle(page);
-      if (!visitor) await page.locator('[data-workbench-view-id="text:fit"]').getByRole('button', { name: 'Read', exact: true }).click();
+      if (!visitor) {
+        const collapse=page.getByRole('button',{name:'Collapse sidebar',exact:true});if(await collapse.count())await collapse.click();
+        const savedBeforePan=await page.evaluate(()=>localStorage.getItem(window.__motionKey));
+        await page.locator('main.system-workflow').first().focus();
+        await page.mouse.move(width-20,1000);await page.keyboard.down('Space');await page.mouse.down();
+        await page.mouse.move(width-20,1040,{steps:4});await page.mouse.up();await page.keyboard.up('Space');await settle(page);
+        assert.equal(await page.evaluate(()=>localStorage.getItem(window.__motionKey)),savedBeforePan);
+      }
+      if (!visitor) { const read=page.locator('[data-workbench-view-id="text:fit"]').getByRole('button',{name:'Read',exact:true});await read.focus();await read.press('Enter'); }
       assert.equal(await hand.count(), 1, 'one navigation tool');
       assert.equal(await page.getByRole('button', { name: 'Explore Workbench', exact: true }).count(), 0, 'redundant Explore control removed');
       const saved = await page.evaluate(() => localStorage.getItem(window.__motionKey));
@@ -41,7 +49,7 @@ for (const visitor of [false, true]) for (const width of [1440, 390]) {
           const surface = node.matches('.system-workflow__canvas, .visitor-grid-world__viewport')
             ? node.closest('[data-workbench-view-id]') : node;
           const hits = [];
-          for (const yRatio of [.5, .1, .9]) for (const xRatio of [.5, .1, .9]) {
+          for (const yRatio of [.5, .1, .9]) for (const xRatio of [.5, .1, .9, .25, .75]) {
             const x = rect.x + rect.width * xRatio, y = rect.y + rect.height * yRatio;
             const hit = document.elementFromPoint(x, y);
             const childControl = hit?.closest('button, input, textarea, select, a, summary, [role="slider"]');
@@ -96,13 +104,24 @@ for (const visitor of [false, true]) for (const width of [1440, 390]) {
         await handle.focus(); await page.keyboard.press('ArrowRight');
         await drag(handle);
         assert.deepEqual(await firstImage.boundingBox(), bounds);
-        const instrument = page.locator('.context-toolbar header');
+        // Properties exists only for a selected Display layer. Open an actual
+        // floating Display instrument through its ordinary module menu.
+        await page.getByLabel(/Move Display Module:/).focus();await page.keyboard.press('Shift+F10');
+        await page.getByRole('menuitem',{name:'APPEARANCE',exact:true}).click();
+        const instrument = page.locator('[data-shared-tool="appearance"]').locator('xpath=ancestor::aside').locator('header');
         const instrumentBounds = await instrument.boundingBox();
         await drag(instrument);
         await instrument.focus(); await page.keyboard.press('ArrowRight');
         assert.deepEqual(await instrument.boundingBox(), instrumentBounds, 'Hand keeps floating tool windows fixed too');
+        await page.getByRole('button', { name: 'Close Display appearance', exact: true }).focus();
+        await page.keyboard.press('Enter');
       }
       await reset(page);
+      if (!visitor) {
+        await page.locator('main.system-workflow').dispatchEvent('wheel', { deltaX: -96, deltaY: 0, bubbles: true, cancelable: true });
+        await settle(page);
+        assert.equal(await page.evaluate(() => localStorage.getItem(window.__motionKey)), saved, 'revealing the title beside the sidebar preserves geometry');
+      }
       const canvas = page.locator(visitor ? '.visitor-grid-world__viewport' : '.system-workflow__canvas').first();
       await drag(canvas);
       const title = page.locator('[data-workbench-view-id="text:fit"] [data-workbench-selectable]').first();

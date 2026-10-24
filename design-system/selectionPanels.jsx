@@ -1,8 +1,8 @@
-import React from 'react';
 import { Plus } from 'lucide-react';
 import ColourControls from './colourPreview.jsx';
 import SampleArtwork from './sampleArtwork.jsx';
 import { NumberField, CheckField } from './previewControls.jsx';
+import { OwnerSystemWorkflowMetadataContent } from '../src/public/ownerSystemWorkflow/OwnerSystemWorkflowMetadataModule.jsx';
 const typeHint = (kind) => (
   <p className="ds-studio-empty">
     Select {kind} to use these settings. Your current tab stays open.
@@ -17,6 +17,10 @@ export default function SelectionPanels({
   update,
   colourTarget,
 }) {
+  if (tab === 'Info') return selectedCount === 1 && ['image', 'artwork'].includes(item?.kind)
+    ? <OwnerSystemWorkflowMetadataContent dossier={{ title: item.name, description: 'Example artwork metadata in the design-system preview.',
+      collection: 'Design-system examples', creators: [], traits: [{ label: 'Example type', value: item.kind === 'image' ? 'Image' : 'Display artwork' }] }} />
+    : <p className="ds-studio-empty">Select one artwork with source information.</p>;
   if (selectedCount > 1)
     return (
       <p className="ds-studio-empty">
@@ -31,6 +35,7 @@ export default function SelectionPanels({
       </p>
     );
   if (tab === 'Color') {
+    if (item.kind === 'image') return <p className="ds-studio-empty">Images have no color settings.</p>;
     const target = item.kind === 'text' && colourTarget?.id === item.id ? colourTarget : null;
     return (
       <>
@@ -68,22 +73,15 @@ export default function SelectionPanels({
             onChange={(height) => update({ height })}
           />
         </div>
-        <NumberField
-          label="Rotation"
-          value={item.rotation}
-          min={-360}
-          max={360}
-          onChange={(rotation) => update({ rotation })}
-        />
         <small className="ds-studio-note">
           Position and size use example canvas coordinates.
         </small>
       </>
     );
   if (tab === 'FX')
-    return (
+    return item.kind !== 'shape' ? typeHint('a Shape') : (
       <>
-        <label className="ds-studio-range">
+        {item.shape !== 'grid' && <label className="ds-studio-range">
           Grain
           <input
             aria-label="Studio grain"
@@ -94,7 +92,7 @@ export default function SelectionPanels({
             onChange={(event) => update({ grain: Number(event.target.value) })}
           />
           <output>{item.grain}%</output>
-        </label>
+        </label>}
         <label className="ds-studio-range">
           Blur
           <input
@@ -109,7 +107,7 @@ export default function SelectionPanels({
           <output>{item.blur}px</output>
         </label>
         <small className="ds-studio-note">
-          Shared effects are proposed. These sliders affect only this sample.
+          The app now supports Shape effects in FX. These sliders affect only this sample.
         </small>
       </>
     );
@@ -128,7 +126,7 @@ export default function SelectionPanels({
           />
         </label>
         <label>
-          Shape
+          Shape type
           <select
             aria-label="Studio shape type"
             value={item.shape}
@@ -145,11 +143,6 @@ export default function SelectionPanels({
             onChange={(snap) => update({ snap })}
           />
         )}
-        <CheckField
-          label="Show shape"
-          value={item.visible}
-          onChange={(visible) => update({ visible })}
-        />
         <CheckField
           label="Include in publication"
           value={item.included}
@@ -190,14 +183,14 @@ export default function SelectionPanels({
           </button>
         </div>
         <label>
-          Library drop
+          When dropping from Library
           <select
-            aria-label="Studio Library drop"
+            aria-label="When dropping from Library"
             value={item.drop || 'append'}
             onChange={(event) => update({ drop: event.target.value })}
           >
-            <option value="append">Add side</option>
-            <option value="replace">Replace side</option>
+            <option value="append">Add as a new side</option>
+            <option value="replace">Replace current side</option>
           </select>
         </label>
         <CheckField
@@ -205,9 +198,6 @@ export default function SelectionPanels({
           value={item.included}
           onChange={(included) => update({ included })}
         />
-        <small className="ds-studio-note">
-          Side management is being reviewed here. Artwork is a local sample.
-        </small>
       </>
     );
   if (tab === 'Display')

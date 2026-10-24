@@ -3,8 +3,8 @@ import assert from 'node:assert/strict';
 import { mkdtemp, mkdir, readFile, writeFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
-import { fileInventory, passingTap, sourceInventory } from './releaseEvidence.mjs';
-import { verifyRelease } from './verifyRelease.mjs';
+import { fileInventory, passingTap, sourceInventory, SOURCE_INPUTS } from './releaseEvidence.mjs';
+import { verifyRelease, verificationSteps } from './verifyRelease.mjs';
 
 const green = '# tests 1\n# pass 1\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n';
 async function fixture(t) {
@@ -20,6 +20,22 @@ async function fixture(t) {
 const build = { name: 'build', args: ['--input-type=module', '-e',
   "import fs from 'node:fs'; fs.mkdirSync('dist',{recursive:true}); fs.writeFileSync('dist/index.html','<title>fixture</title>');"] };
 const pass = { name: 'test', tap: true, args: ['-e', `console.log(${JSON.stringify(green)})`] };
+
+test('the normal verification steps and source inputs are unique', () => {
+  assert.equal(new Set(verificationSteps.map(step => step.name)).size, verificationSteps.length);
+  assert.equal(new Set(SOURCE_INPUTS).size, SOURCE_INPUTS.length);
+  assert.ok(SOURCE_INPUTS.includes('tsconfig.contracts.json') && SOURCE_INPUTS.includes('typechecks'));
+  assert.deepEqual(verificationSteps.find(step => step.name === 'typecheck')?.args, ['typechecks/verify-workbench-contracts.mjs']);
+});
+
+test('duplicate step names fail before any child or artifact is produced', async t => {
+  const root = await fixture(t);
+  const result = await verifyRelease({ root, output: resolve(root, '.verification/duplicates'), steps: [build, build], environment: {} });
+  assert.equal(result.status, 'failed');
+  assert.match(result.error, /Duplicate verification step names/);
+  assert.ok(result.steps.every(step => step.status === 'pending'));
+  await assert.rejects(readFile(resolve(root, 'dist/index.html')), { code: 'ENOENT' });
+});
 
 test('evidence detects changed bytes and new files, independent of generated output', async t => {
   const root = await fixture(t);

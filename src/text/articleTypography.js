@@ -1,7 +1,7 @@
 import { Extension } from '@tiptap/core';
 import { TextStyle } from '@tiptap/extension-text-style';
 import { closeHistory } from '@tiptap/pm/history';
-import { validArticleFontSize, validArticleTracking } from './domain/article.js';
+import { ARTICLE_FONTS, textAppearance, validArticleFontSize, validArticleTracking } from './domain/article.js';
 
 const properties = {
   fontSize: { css: 'font-size', unit: 'px', valid: validArticleFontSize },
@@ -59,6 +59,26 @@ export function selectedTypography(editor, name) {
   });
   return { value: values.size === 1 ? [...values][0] : null, mixed: values.size > 1,
     hasOverride: [...values].some(value => value != null) };
+}
+
+// Derive the displayed font from the same article/heading defaults as the
+// renderer. A mixed selection must not pretend that its first font applies to all.
+export function selectedFont(editor, article) {
+  const { from, to, empty, $from } = editor.state.selection;
+  const base = ARTICLE_FONTS.find(font => font.id === article.font).family;
+  const styles = textAppearance(article).textStyles;
+  const fonts = new Set(), defaults = new Set();
+  let hasOverride = false;
+  const collect = (marks, parent) => {
+    const fallback = (parent.type.name === 'heading' && styles?.[`h${parent.attrs.level}`]?.fontFamily) || base;
+    const explicit = marks.find(mark => mark.type.name === 'textStyle')?.attrs.fontFamily;
+    fonts.add(explicit || fallback); defaults.add(fallback); hasOverride ||= Boolean(explicit);
+  };
+  if (empty) collect(editor.state.storedMarks || $from.marks(), $from.parent);
+  else editor.state.doc.nodesBetween(from, to, (node, _pos, parent) => { if (node.isText) collect(node.marks, parent); });
+  const defaultFont = defaults.size === 1 && ARTICLE_FONTS.find(font => font.family === [...defaults][0]);
+  return { value: fonts.size > 1 ? '' : [...fonts][0] || base, hasOverride,
+    resetLabel: defaultFont ? `Use default font (${defaultFont.label})` : 'Use default fonts' };
 }
 
 // A mixed selection cannot be restored by applying one numeric value. Retain

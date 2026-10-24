@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { mkdir } from 'node:fs/promises';
 import { chromium } from 'playwright-core';
+import { hideWorkspaceSidebar } from './fixtures/workspace-sidebar.mjs';
 import { mountGridMotionFixture } from './fixtures/grid-motion-fixture.mjs';
 import { setWorkbenchZoom } from './fixtures/workbench-zoom.mjs';
 import { prepareCameraTestView } from './fixtures/workbench-camera-test.mjs';
@@ -61,6 +62,35 @@ async function pixelJoin(page, label) {
   assert.equal(result.bad, 0, label + ' opaque black join');
 }
 
+for (const secondaryDisplay of [false, true]) for (const kind of ['native', 'group']) test(`authored ${secondaryDisplay ? 'additional' : 'primary'} Display ${kind} resize stays continuous on a 390px viewport`, { timeout: 60000 }, async () => {
+  const browser = await chromium.launch({ headless: true });
+  try {
+    const page = await browser.newPage({ viewport: { width: 390, height: 844 }, reducedMotion: 'reduce' });
+    await mountGridMotionFixture(page, { origin, count: 1, textModes: true, adjoiningModules: { secondaryDisplay } });
+    await prepareCameraTestView(page, false); await hideWorkspaceSidebar(page);
+    for (const name of ['Read', 'Close Text tools']) {
+      const button = page.getByRole('button', { name, exact: true });
+      if (await button.count()) { await button.focus(); await page.keyboard.press('Enter'); }
+    }
+    await setWorkbenchZoom(page, .25); await settle(page);
+    const before = await geometry(page);
+    assert.ok(before.savedDisplay.width > 390, 'the authored width exceeds viewport fit');
+    if (kind === 'group') await selectPair(page);
+    const name = kind === 'group' ? 'Scale selected modules from se' : 'Resize Display Module from se';
+    await page.getByRole('button', { name, exact: true }).focus(); await page.keyboard.press('Alt+ArrowRight'); await settle(page);
+    const after = await geometry(page);
+    assert.ok(after.display.width > before.display.width, `${kind} enlargement must not shrink to viewport fit: ${before.display.width} -> ${after.display.width}`);
+    assert.ok(after.display.width < before.display.width * 1.3, 'the first increment stays small');
+    if (kind === 'group') {
+      await checkJoin(page, 'narrow authored group resize');
+      assert.ok(after.savedDisplay.width > before.savedDisplay.width, 'the group authoring commit agrees with the painted enlargement');
+      await page.locator('main').first().focus(); await page.keyboard.press('Control+z'); await settle(page);
+      const undone = await geometry(page);
+      assert.deepEqual(undone.savedDisplay, before.savedDisplay); assert.deepEqual(undone.savedText, before.savedText);
+    }
+  } finally { await browser.close(); }
+});
+
 for (const secondaryDisplay of [false, true]) for (const density of [1, 1.25, 2]) test(`Text/${secondaryDisplay ? 'additional' : 'primary'} Display group resize preserves joins through preview, save and camera changes at DPR ${density}`, { timeout: 90000 }, async () => {
   await mkdir('.browser-test-runtime', { recursive: true });
   const browser = await chromium.launch({ executablePath: 'C:/Program Files (x86)/Google/Chrome/Application/chrome.exe', headless: true });
@@ -76,6 +106,7 @@ for (const secondaryDisplay of [false, true]) for (const density of [1, 1.25, 2]
       adjoiningModules: { secondaryDisplay, textAppearance: { background: '#000000' } },
       artwork: { url: 'https://motion.invalid/opaque.png', width: 2560, height: 1440, contentType: 'image/png', body: Buffer.from(black, 'base64') } });
     await prepareCameraTestView(page, false);
+    await hideWorkspaceSidebar(page);
     await page.locator('.text-window').waitFor();
     for (const name of ['Read', 'Close Text tools']) {
       const button = page.getByRole('button', { name, exact: true });

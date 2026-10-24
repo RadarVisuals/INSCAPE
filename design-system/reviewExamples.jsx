@@ -1,4 +1,3 @@
-import React from 'react';
 export { PropertiesPreview } from './propertiesSamples.jsx';
 
 const states = [

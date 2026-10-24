@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { clearOwnerSystemWorkflowDocumentSelection } from './ownerSystemWorkflowSelection.js';
+import useDeferredFocusReturn from '../useDeferredFocusReturn.js';
 
 export const OWNER_SYSTEM_WORKFLOW_PANEL_IDS = Object.freeze(['activity', 'discover', 'docs', 'grids', 'library', 'profile', 'settings']);
 
@@ -44,6 +45,7 @@ export default function useOwnerSystemWorkflowPanels({ blocked = false } = {}) {
   const isPanelOpen = useCallback(panelId => openPanels.includes(panelId), [openPanels]);
   const triggers = useRef(new Map());
   const pendingFocus = useRef(null);
+  const { restoreFocus, cancelFocusReturn } = useDeferredFocusReturn();
   const activity = useOwnerSystemWorkflowPanelPresence(activePanel === 'activity');
   const discover = useOwnerSystemWorkflowPanelPresence(activePanel === 'discover', { exitMs: 200 });
   const docs = useOwnerSystemWorkflowPanelPresence(activePanel === 'docs');
@@ -54,21 +56,24 @@ export default function useOwnerSystemWorkflowPanels({ blocked = false } = {}) {
   const presence = useMemo(() => ({ activity, discover, docs, grids, library, profile, settings }), [activity, discover, docs, grids, library, profile, settings]);
 
   const closePanel = useCallback(({ panelId = null, returnFocus = true } = {}) => {
+    const focused = document.activeElement;
+    cancelFocusReturn();
     clearOwnerSystemWorkflowDocumentSelection();
     setOpenPanels((current) => {
       const closing = panelId || current.at(-1);
       if (!current.includes(closing)) return current;
-      pendingFocus.current = returnFocus ? { id: closing, node: triggers.current.get(closing) } : null;
+      pendingFocus.current = returnFocus ? { id: closing, node: triggers.current.get(closing), focused } : null;
       return panelId ? current.filter(id => id !== panelId) : [];
     });
-  }, []);
+  }, [cancelFocusReturn]);
   const openPanel = useCallback((panelId, trigger = null) => {
     if (blocked || !OWNER_SYSTEM_WORKFLOW_PANEL_IDS.includes(panelId)) return;
+    cancelFocusReturn();
     if (trigger) triggers.current.set(panelId, trigger);
     pendingFocus.current = null;
     setOpenPanels(current => (panelId === 'grids' && current.includes('library')
       || panelId === 'library' && current.includes('grids')) ? ['library', 'grids'] : [panelId]);
-  }, [blocked]);
+  }, [blocked, cancelFocusReturn]);
   const togglePanel = useCallback((panelId, trigger = null) => {
     if (isPanelOpen(panelId)) closePanel({ panelId });
     else openPanel(panelId, trigger);
@@ -79,8 +84,8 @@ export default function useOwnerSystemWorkflowPanels({ blocked = false } = {}) {
     if (!pending || presence[pending.id]?.present) return;
     const node = pending.node;
     pendingFocus.current = null;
-    if (node?.isConnected) requestAnimationFrame(() => node.isConnected && node.focus({ preventScroll: true }));
-  }, [presence]);
+    if (node?.isConnected) restoreFocus(node, pending.focused);
+  }, [presence, restoreFocus]);
 
   useEffect(() => {
     const onKeyDown = (event) => {

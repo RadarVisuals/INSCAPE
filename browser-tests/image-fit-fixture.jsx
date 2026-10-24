@@ -1,3 +1,5 @@
+import WorkbenchToolDocks from '../src/public/ownerSystemWorkflow/WorkbenchToolDocks.jsx';
+import { createToolDockLayout, createToolDockStore } from '../src/public/ownerSystemWorkflow/workbenchToolDockState.js';
 import React, { useRef, useState, useSyncExternalStore } from 'react';
 import { createRoot } from 'react-dom/client';
 import ImageWorkbench from '../src/imageModule/ImageWorkbench.jsx';
@@ -6,6 +8,7 @@ import { useWorkbenchCamera } from '../src/public/ownerSystemWorkflow/WorkbenchC
 import { WorkbenchPlacement } from '../src/public/ownerSystemWorkflow/WorkbenchPlacement.jsx';
 import Grid from '../src/public/ownerSystemWorkflow/WorkbenchAlignmentGrid.jsx';
 import { ContextActionBars, ContextToolbar, ContextToolbarProvider } from '../src/public/ownerSystemWorkflow/ContextToolbar.jsx';
+import { SharedDisplayToolsProvider } from '../src/public/ownerSystemWorkflow/SharedDisplayTools.jsx';
 import { createSystemWorkflowDraftStore, systemWorkflowDraftKey } from '../src/systemWorkflow/systemWorkflowDraftStore.js';
 import { buildProfileDocumentV9Asset } from '../src/profileDocument/domain/profileDocumentV9Asset.js';
 import { OWNER_SYSTEM_WORKFLOW_REVIEW_ASSETS } from '../src/public/ownerSystemWorkflow/ownerSystemWorkflowDevelopmentFixture.js';
@@ -42,25 +45,26 @@ export function mount({ persistent = false } = {}) {
   function Scene({ draft, owner }) {
     const hostRef = useRef(null), view = useWorkbenchView(), camera = useWorkbenchCamera();
     const [target, setTarget] = useState('image:one');
+    const [dock] = useState(() => { const layout = createToolDockLayout(innerWidth); layout.hidden = ['Layers', 'Image', 'Shape', 'FX']; layout.groups[0].panes[0].active = 'Transform'; return createToolDockStore(layout); });
     const [preferences, setPreferences] = useState({ edge: true, grid: true });
     const [single, setSingle] = useState(false);
     Object.assign(api, { select: setTarget, single: setSingle, setPreferences, selection: view.setSelection,
       camera: (scale, offset) => { view.setScale(scale); camera.setOffset(offset); },
       frame: id => ({ ...view.frames.get(id)?.current }),
     });
-    return <ContextToolbarProvider target={target}><WorkbenchPlacement hostRef={hostRef} enabled={preferences.edge && owner} gridEnabled={preferences.grid && owner} gap={0}>
+    return <ContextToolbarProvider target={target}><SharedDisplayToolsProvider metadataDock={dock} targetId={target} onTargetChange={setTarget}><WorkbenchPlacement hostRef={hostRef} enabled={preferences.edge && owner} gridEnabled={preferences.grid && owner} gap={0}>
       <main ref={hostRef} tabIndex={-1} className="system-workflow" data-surface="carbon" data-lattice-menu-surface data-menu-surface="carbon" style={{ position: 'fixed', inset: 0, background: '#383a3a' }}>
         <Grid mode="DOTS" color="#111313" /><WorkbenchViewControls hostRef={hostRef} />
         <ImageWorkbench records={single ? draft.imageModules.slice(0, 1) : draft.imageModules} presentations={draft.workbench.imageModules}
           store={owner ? store : null} profileAddress={profileAddress} onActivate={setTarget} />
-        {owner && <><div style={{ position: 'fixed', bottom: 16, left: 16, maxWidth: 'calc(100% - 32px)' }}><ContextActionBars /></div><ContextToolbar menuSurface="carbon" /></>}
+        {owner && <><div style={{ position: 'fixed', bottom: 16, left: 16, maxWidth: 'calc(100% - 32px)' }}><ContextActionBars /></div><ContextToolbar menuSurface="carbon" /><WorkbenchToolDocks controller={dock} menuSurface="carbon" hostRef={hostRef} /></>}
       </main>
-    </WorkbenchPlacement></ContextToolbarProvider>;
+    </WorkbenchPlacement></SharedDisplayToolsProvider></ContextToolbarProvider>;
   }
   function App() {
     const draft = useSyncExternalStore(store.subscribe, store.getSnapshot), [owner, setOwner] = useState(true);
     api.owner = setOwner;
-    return <WorkbenchViewProvider store={owner ? store : null} profileAddress={profileAddress} presentation={draft.workbench}>
+    return <WorkbenchViewProvider store={owner ? store : null} profileAddress={profileAddress} presentation={draft.workbench} groupContent={draft}>
       <Scene draft={draft} owner={owner} />
     </WorkbenchViewProvider>;
   }

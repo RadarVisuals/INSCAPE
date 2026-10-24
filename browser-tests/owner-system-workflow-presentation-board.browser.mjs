@@ -19,29 +19,14 @@ async function prepare(page) {
   await routeOpaqueWorkflowArtwork(page);
 }
 
-async function boardMetrics(page) {
-  return page.evaluate(() => {
-    const rectangle = (selector) => {
-      const value = document.querySelector(selector).getBoundingClientRect();
-      return { height: value.height, left: value.left, top: value.top, width: value.width };
-    };
-    const strip = document.querySelector('.system-workflow__identity-strip');
-    const mark = document.querySelector('.system-workflow__identity-mark');
-    return {
-      board: rectangle('.system-workflow__presentation-board'),
-      dock: rectangle('.system-workflow__global-bar'),
-      fontSize: getComputedStyle(strip.querySelector('strong')).fontSize,
-      mark: rectangle('.system-workflow__identity-mark'),
-      markBorder: getComputedStyle(mark).borderTopWidth,
-      stage: rectangle('[data-presentation-stage]'),
-      strip: rectangle('.system-workflow__identity-strip'),
-    };
-  });
-}
-
-async function setSlider(page, percentage) {
-  await page.getByRole('slider', { name: 'Board zoom' }).fill(String(percentage));
-  await page.waitForFunction((value) => document.querySelector('[data-board-scale]')?.dataset.boardScale === String(value / 100), percentage);
+async function revealShortcut(page, shortcut) {
+  const collapse = page.getByRole('button', { name: 'Collapse sidebar', exact: true });
+  if (await collapse.isVisible()) await collapse.click();
+  await shortcut.scrollIntoViewIfNeeded();
+  assert.equal(await shortcut.evaluate(node => {
+    const box = node.getBoundingClientRect();
+    return node.contains(document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2));
+  }), true, 'the shortcut receives native pointer hits');
 }
 
 async function capture(page, viewportName, percentage) {
@@ -49,133 +34,7 @@ async function capture(page, viewportName, percentage) {
   await page.screenshot({ path: resolve(SCREENSHOT_DIR, `presentation-board-zoom-${viewportName}-${percentage}.png`) });
 }
 
-test.skip('legacy slider contract replaced by direct corner resizing', { timeout: 60_000 }, async () => {
-  const browser = await chromium.launch({ executablePath: EDGE, headless: true });
-  try {
-    const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
-    const pageErrors = [];
-    page.on('pageerror', (error) => pageErrors.push(error.stack || error.message));
-    await prepare(page);
-    await page.goto(URL, { waitUntil: 'networkidle' });
-    assert.deepEqual(pageErrors, []);
-    await page.evaluate(() => {
-      window.__workflowWrites = 0;
-      addEventListener('inscape:review-storage-write', () => { window.__workflowWrites += 1; });
-    });
 
-    const slider = page.getByRole('slider', { name: 'Board zoom' });
-    const number = page.getByRole('spinbutton', { name: 'Board zoom percentage' });
-    assert.equal(await slider.getAttribute('min'), '25');
-    assert.equal(await slider.getAttribute('step'), '1');
-    assert.equal(await slider.inputValue(), '100');
-    assert.equal(await number.inputValue(), '100');
-    assert.equal(await slider.getAttribute('max'), '100');
-
-    const wideDefault = await boardMetrics(page);
-    for (const percentage of [25, 50, 75, 100]) {
-      await setSlider(page, percentage);
-      assert.equal(await number.inputValue(), String(percentage));
-      const metrics = await boardMetrics(page);
-      assert.ok(closeEnough(metrics.board.width, metrics.strip.width), JSON.stringify({ percentage, metrics }));
-      assert.ok(closeEnough(metrics.board.width, metrics.stage.width), JSON.stringify({ percentage, metrics }));
-      assert.ok(closeEnough(metrics.board.height, metrics.stage.height + metrics.strip.height), JSON.stringify({ percentage, metrics }));
-      assert.ok(closeEnough(metrics.stage.width / metrics.stage.height, 16 / 9, 0.002));
-      assert.ok(closeEnough(metrics.strip.height, wideDefault.strip.height));
-      assert.equal(metrics.fontSize, wideDefault.fontSize);
-      assert.ok(closeEnough(metrics.mark.width, wideDefault.mark.width));
-      assert.equal(metrics.markBorder, wideDefault.markBorder);
-      assert.deepEqual(metrics.dock, wideDefault.dock);
-      await capture(page, 'wide', percentage);
-    }
-    await capture(page, 'wide', `max-${await slider.getAttribute('max')}`);
-
-    await number.fill('');
-    await number.press('Enter');
-    assert.equal(await number.inputValue(), '100');
-    await number.fill('-999');
-    await number.press('Enter');
-    assert.equal(await slider.inputValue(), '25');
-    await number.fill('9999');
-    await number.press('Enter');
-    assert.equal(await slider.inputValue(), '100');
-    await number.fill('50');
-    await number.press('Escape');
-    assert.equal(await number.inputValue(), '100');
-    await number.press('ArrowDown');
-    assert.equal(await slider.inputValue(), '99');
-    await number.press('ArrowUp');
-    assert.equal(await slider.inputValue(), '100');
-    assert.equal(await page.evaluate(() => window.__workflowWrites), 0);
-
-    await setSlider(page, 75);
-    await page.setViewportSize({ width: 390, height: 720 });
-    await page.waitForFunction(() => document.querySelector('.system-workflow')?.dataset.layout === 'narrow'
-      && document.querySelector('[data-presentation-workbench]')?.clientWidth === 390);
-    assert.equal(await slider.inputValue(), '75');
-    assert.equal(await number.inputValue(), '75');
-    assert.equal(await slider.getAttribute('max'), '100');
-    const narrowReference = await boardMetrics(page);
-    for (const percentage of [25, 50, 75, 100]) {
-      await setSlider(page, percentage);
-      const metrics = await boardMetrics(page);
-      assert.ok(closeEnough(metrics.board.width, metrics.strip.width));
-      assert.ok(closeEnough(metrics.board.width, metrics.stage.width));
-      assert.ok(closeEnough(metrics.strip.height, narrowReference.strip.height), JSON.stringify({ percentage, metrics, narrowReference }));
-      assert.equal(metrics.fontSize, narrowReference.fontSize);
-      assert.ok(closeEnough(metrics.mark.width, narrowReference.mark.width));
-      assert.deepEqual(metrics.dock, narrowReference.dock);
-      assert.equal(await number.inputValue(), String(percentage));
-      await capture(page, 'narrow', percentage);
-    }
-    await capture(page, 'narrow', `max-${await slider.getAttribute('max')}`);
-    assert.equal(await page.evaluate(() => window.__workflowWrites), 0);
-  } finally {
-    await browser.close();
-  }
-});
-
-test.skip('legacy percentage projection contract replaced by direct Board geometry', { timeout: 60_000 }, async () => {
-  const browser = await chromium.launch({ executablePath: EDGE, headless: true });
-  try {
-    for (const percentage of [25, 100]) {
-      const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
-      await prepare(page);
-    await page.goto(URL, { waitUntil: 'networkidle' });
-      await page.evaluate(() => {
-        window.__workflowWrites = 0;
-        addEventListener('inscape:review-storage-write', () => { window.__workflowWrites += 1; });
-      });
-      await setSlider(page, percentage);
-      assert.equal(await page.evaluate(() => window.__workflowWrites), 0);
-
-      const placement = page.getByRole('button', { name: /Select ABYSSAL STUDY/ });
-      await placement.click();
-      await page.waitForFunction(() => document.querySelector('[aria-label^="Select ABYSSAL STUDY"]')?.getAttribute('aria-pressed') === 'true');
-      const before = await placement.boundingBox();
-      const cellSize = await page.locator('.system-workflow__canvas').evaluate((node) => (
-        Number.parseFloat(getComputedStyle(node).getPropertyValue('--world-cell-size'))
-        * Number(node.closest('[data-board-scale]').dataset.boardScale)
-      ));
-      await page.mouse.move(before.x + before.width / 2, before.y + before.height / 2);
-      await page.mouse.down();
-      await page.mouse.move(before.x + before.width / 2 + cellSize * 1.1, before.y + before.height / 2, { steps: 4 });
-      await page.mouse.up();
-      const after = await placement.boundingBox();
-      const board = await page.locator('.system-workflow__presentation-board').boundingBox();
-      const stage = await page.locator('[data-presentation-stage]').boundingBox();
-      assert.equal(await page.evaluate(() => window.__workflowWrites), 1,
-        JSON.stringify({ after, before, board, cellSize, percentage, stage }));
-      assert.ok(closeEnough(after.x - before.x, cellSize, 0.75), JSON.stringify({ after, before, cellSize, percentage }));
-
-      const handle = page.getByRole('button', { name: 'Resize selection from se' });
-      const handleBox = await handle.boundingBox();
-      assert.ok(closeEnough(handleBox.width, 8, 0.2), JSON.stringify({ handleBox, percentage }));
-      await page.close();
-    }
-  } finally {
-    await browser.close();
-  }
-});
 
 test('shared Metadata moves, resizes and reopens independently from Display geometry', { timeout: 60000 }, async () => {
   const browser = await chromium.launch({ executablePath: EDGE, headless: true });
@@ -185,7 +44,9 @@ test('shared Metadata moves, resizes and reopens independently from Display geom
     await page.goto(URL, { waitUntil: 'networkidle' });
     const board = page.locator('.system-workflow__presentation-board'), original = await board.boundingBox();
     const placement = page.getByRole('button', { name: /Select ABYSSAL STUDY/ });
-    await placement.click();
+    await openDisplayTool(page, board, 'LAYERS');
+    await page.locator('[data-shared-tool="layers"]').getByRole('button', { name: 'ABYSSAL STUDY', exact: true }).click();
+    await page.getByRole('button', { name: 'Close Layers', exact: true }).click();
     await openDisplayTool(page, board, 'METADATA');
     const metadata = page.locator('[data-shared-tool="metadata"]'), panel = metadata.locator('xpath=ancestor::aside');
     await metadata.waitFor();
@@ -205,14 +66,14 @@ test('shared Metadata moves, resizes and reopens independently from Display geom
     await openDisplayTool(page, board, 'METADATA'); await panel.waitFor();
     assert.deepEqual(await panel.boundingBox(), saved, 'reopening retains the shared window geometry');
     const inspection = page.getByRole('group', { name: 'Artwork inspection', exact: true });
-    await page.getByRole('button', { name: /Select MOUNTAIN SIGNAL II/ }).focus(); await page.keyboard.press('Enter');
+    await page.getByRole('button', { name: /Select MOUNTAIN SIGNAL II/ }).focus(); await page.keyboard.press('Space');
     await page.waitForFunction(() => document.querySelector('[data-shared-tool="metadata"]')?.closest('aside')?.textContent.includes('MOUNTAIN SIGNAL II'));
     assert.equal(await inspection.count(), 0, 'Metadata selection leaves artwork in its scene');
     assert.deepEqual(await panel.boundingBox(), saved);
     assert.deepEqual(await board.boundingBox(), original);
     await page.getByRole('button', { name: 'Close Artwork info', exact: true }).click(); await panel.waitFor({ state: 'detached' });
     await page.waitForFunction(() => document.activeElement?.getAttribute('aria-label')?.startsWith('Move Display Module:'));
-    await placement.focus(); await page.keyboard.press('Enter');
+    await placement.focus(); await page.keyboard.press('i');
     await inspection.waitFor();
     await openDisplayTool(page, board, 'METADATA'); await panel.waitFor();
     assert.equal(await inspection.isVisible(), true, 'Metadata can also open during separate artwork inspection');
@@ -234,126 +95,6 @@ test('shared Metadata moves, resizes and reopens independently from Display geom
   } finally { await browser.close(); }
 });
 
-test.skip('legacy inspection-to-immediate-restore contract replaced by persistent maximized Board', { timeout: 60_000 }, async () => {
-  const browser = await chromium.launch({ executablePath: EDGE, headless: true });
-  try {
-    const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
-    const pageErrors = [];
-    page.on('pageerror', (error) => pageErrors.push(error.stack || error.message));
-    await prepare(page);
-    await page.goto(URL, { waitUntil: 'networkidle' });
-    await setSlider(page, 30);
-
-    const board = page.locator('.system-workflow__presentation-board');
-    const header = board.locator('.system-workflow__identity-strip');
-    const handle = await header.boundingBox();
-    await page.mouse.move(handle.x + 60, handle.y + handle.height / 2);
-    await page.mouse.down();
-    await page.mouse.move(handle.x + 150, handle.y + 90, { steps: 4 });
-    await page.mouse.up();
-    const saved = await board.boundingBox();
-    const placement = page.getByRole('button', { name: /Select ABYSSAL STUDY/ });
-    await placement.click();
-    await placement.dblclick();
-
-    await page.waitForFunction(() => document.querySelector('.system-workflow__presentation-board')?.dataset.inspectionPhase === 'inspecting');
-    await page.waitForFunction(() => document.querySelector('[data-lattice-focus-viewer]')?.dataset.phase === 'open');
-    const slider = page.getByRole('slider', { name: 'Board zoom' });
-    assert.equal(await slider.inputValue(), '30');
-    assert.equal(await slider.isDisabled(), true);
-    assert.equal(await page.getByText('INSPECT', { exact: true }).count(), 1);
-    const contained = await page.evaluate(() => {
-      const boardNode = document.querySelector('.system-workflow__presentation-board');
-      const hostNode = boardNode.querySelector('.system-workflow__board-inspection-host');
-      const viewerNode = hostNode.querySelector('.lattice-focus-viewer');
-      const boardRect = boardNode.getBoundingClientRect();
-      const hostRect = hostNode.getBoundingClientRect();
-      const viewerRect = viewerNode.getBoundingClientRect();
-      return {
-        board: { bottom: boardRect.bottom, left: boardRect.left, right: boardRect.right, top: boardRect.top },
-        host: { bottom: hostRect.bottom, left: hostRect.left, right: hostRect.right, top: hostRect.top },
-        overflowX: document.documentElement.scrollWidth - document.documentElement.clientWidth,
-        parentIsHost: viewerNode.parentElement === hostNode,
-        position: getComputedStyle(viewerNode).position,
-        viewer: { bottom: viewerRect.bottom, left: viewerRect.left, right: viewerRect.right, top: viewerRect.top },
-      };
-    });
-    assert.equal(contained.parentIsHost, true);
-    assert.equal(contained.position, 'absolute');
-    assert.ok(contained.viewer.left >= contained.host.left && contained.viewer.right <= contained.host.right);
-    assert.ok(contained.viewer.top >= contained.host.top && contained.viewer.bottom <= contained.host.bottom);
-    assert.ok(contained.board.left > 0 && contained.board.top > 0 && contained.board.right < 1440 && contained.board.bottom < 858);
-    assert.equal(contained.overflowX, 0);
-    if (SCREENSHOT_DIR) await page.screenshot({ path: resolve(SCREENSHOT_DIR, 'presentation-board-inspect-wide.png') });
-
-    const metadataRack = page.locator('.lattice-focus-viewer__rack');
-    const initialMetadata = await metadataRack.textContent();
-    await page.getByRole('button', { name: 'Next artwork' }).click();
-    await page.waitForFunction((previous) => document.querySelector('.lattice-focus-viewer__rack')?.textContent !== previous,
-      initialMetadata);
-    assert.notEqual(await metadataRack.textContent(), initialMetadata);
-    await page.waitForFunction(() => document.querySelector('[aria-label="Next artwork"]')?.getAttribute('aria-disabled') !== 'true');
-
-    await page.getByRole('button', { name: 'Close artwork viewer' }).click();
-    await page.waitForFunction(() => document.querySelector('.system-workflow__presentation-board')?.dataset.inspectionPhase === 'idle');
-    const restoredByX = await board.boundingBox();
-    assert.ok(closeEnough(restoredByX.x, saved.x) && closeEnough(restoredByX.y, saved.y), JSON.stringify({ restoredByX, saved }));
-    assert.ok(closeEnough(restoredByX.width, saved.width) && closeEnough(restoredByX.height, saved.height), JSON.stringify({ restoredByX, saved }));
-    assert.equal(await slider.inputValue(), '30');
-    assert.equal(await slider.isEnabled(), true);
-    assert.equal(await placement.getAttribute('aria-pressed'), 'true');
-
-    await placement.dblclick();
-    await page.waitForFunction(() => document.querySelector('.system-workflow__presentation-board')?.dataset.inspectionPhase === 'inspecting');
-    await page.waitForFunction(() => document.querySelector('[data-lattice-focus-viewer]')?.dataset.phase === 'open');
-    await page.keyboard.press('Escape');
-    await page.waitForFunction(() => document.querySelector('.system-workflow__presentation-board')?.dataset.inspectionPhase === 'idle');
-    const restoredByEscape = await board.boundingBox();
-    assert.ok(closeEnough(restoredByEscape.x, saved.x) && closeEnough(restoredByEscape.y, saved.y), JSON.stringify({ restoredByEscape, saved }));
-    assert.ok(closeEnough(restoredByEscape.width, saved.width) && closeEnough(restoredByEscape.height, saved.height), JSON.stringify({ restoredByEscape, saved }));
-    assert.equal(await slider.inputValue(), '30');
-    assert.equal(await placement.getAttribute('aria-pressed'), 'true');
-
-    await placement.dblclick();
-    await page.waitForFunction(() => document.querySelector('.system-workflow__presentation-board')?.dataset.inspectionPhase === 'focusing');
-    await page.keyboard.press('Escape');
-    await page.waitForFunction(() => document.querySelector('.system-workflow__presentation-board')?.dataset.inspectionPhase === 'idle');
-    const restoredAfterFastCancel = await board.boundingBox();
-    assert.ok(closeEnough(restoredAfterFastCancel.x, saved.x) && closeEnough(restoredAfterFastCancel.y, saved.y),
-      JSON.stringify({ restoredAfterFastCancel, saved }));
-    assert.equal(await slider.inputValue(), '30');
-
-    await page.setViewportSize({ width: 390, height: 720 });
-    await page.waitForFunction(() => document.querySelector('.system-workflow')?.dataset.layout === 'narrow');
-    const narrowPlacement = page.getByRole('button', { name: /Select ABYSSAL STUDY/ });
-    await narrowPlacement.dblclick();
-    await page.waitForFunction(() => document.querySelector('.system-workflow__presentation-board')?.dataset.inspectionPhase === 'inspecting');
-    await page.waitForFunction(() => document.querySelector('[data-lattice-focus-viewer]')?.dataset.phase === 'open');
-    const narrow = await page.evaluate(() => {
-      const artwork = document.querySelector('.lattice-focus-viewer__artwork').getBoundingClientRect();
-      const rack = document.querySelector('.lattice-focus-viewer__rack').getBoundingClientRect();
-      const viewer = document.querySelector('.lattice-focus-viewer').getBoundingClientRect();
-      return {
-        artworkBottom: artwork.bottom,
-        layout: document.querySelector('.lattice-focus-viewer').dataset.layout,
-        overflowX: document.documentElement.scrollWidth - document.documentElement.clientWidth,
-        rackTop: rack.top,
-        viewerWidth: viewer.width,
-      };
-    });
-    assert.equal(narrow.layout, 'rack-compact');
-    assert.ok(narrow.rackTop >= narrow.artworkBottom, JSON.stringify(narrow));
-    assert.equal(narrow.overflowX, 0);
-    assert.ok(narrow.viewerWidth <= 390);
-    if (SCREENSHOT_DIR) await page.screenshot({ path: resolve(SCREENSHOT_DIR, 'presentation-board-inspect-narrow.png') });
-    await page.keyboard.press('Escape');
-    await page.waitForFunction(() => document.querySelector('.system-workflow__presentation-board')?.dataset.inspectionPhase === 'idle');
-    assert.equal(await slider.inputValue(), '30');
-    assert.deepEqual(pageErrors, []);
-  } finally {
-    await browser.close();
-  }
-});
 
 test('Display corners resize native artwork and preserve window and shortcut state', { timeout: 60000 }, async () => {
   const browser = await chromium.launch({ executablePath: EDGE, headless: true });
@@ -385,7 +126,8 @@ test('Display corners resize native artwork and preserve window and shortcut sta
     await nativeStage(); const resized = await board.boundingBox();
     assert.ok(resized.width > initial.width + 200);
     await activate(page, board.getByRole('button', { name: 'Minimize Display Module to shortcut', exact: true })); await board.waitFor({ state: 'detached' });
-    await page.getByRole('button', { name: 'Open DISPLAY MODULE', exact: true }).dblclick(); await board.waitFor();
+    const shortcut = page.getByRole('button', { name: 'Open DISPLAY MODULE', exact: true });
+    await revealShortcut(page, shortcut); await shortcut.dblclick(); await board.waitFor();
     assert.deepEqual(await board.boundingBox(), resized);
     await capture(page, 'native-resize', 1440);
     let belowBreakpoint;
@@ -423,7 +165,7 @@ test('contained artwork inspection preserves Display geometry and source through
       const saved = await board.boundingBox(), source = await placement.boundingBox();
       await placement.evaluate(node => { window.__presentationSource = node; });
       await page.keyboard.press('Escape');
-      await placement.dblclick(); await inspection.waitFor();
+      await placement.focus(); await page.keyboard.press('i'); await inspection.waitFor();
       await page.waitForFunction(() => document.querySelector('.system-workflow__lift-artwork')?.style.getPropertyValue('--inspection-lift-progress') === '1'
         || Number(document.querySelector('.system-workflow__artwork-plane')?.style.getPropertyValue('--inspection-lift-progress')) === 1);
       assert.deepEqual(await board.boundingBox(), saved, 'artwork Lift does not enlarge the module');
@@ -438,7 +180,7 @@ test('contained artwork inspection preserves Display geometry and source through
       await activate(page, page.getByRole('button', { name: 'Close artwork viewer', exact: true })); await inspection.waitFor({ state: 'detached' });
       assert.deepEqual(await board.boundingBox(), saved); assert.deepEqual(await placement.boundingBox(), source);
       assert.equal(await page.locator('[data-inspection-context]').count(), 0);
-      await placement.focus(); await page.keyboard.press('Enter'); await inspection.waitFor();
+      await placement.focus(); await page.keyboard.press('i'); await inspection.waitFor();
       await page.keyboard.press('Escape'); await inspection.waitFor({ state: 'detached' });
       assert.deepEqual(await board.boundingBox(), saved, 'Escape during opening also restores the same window');
     }
@@ -446,32 +188,40 @@ test('contained artwork inspection preserves Display geometry and source through
   } finally { await browser.close(); }
 });
 
-test('Workbench ADD creates independent Displays while Metadata remains a shared tool', { timeout: 60000 }, async () => {
+test('isolated additional Display preserves the existing instance and minimizes independently', { timeout: 60000 }, async () => {
   const browser = await chromium.launch({ executablePath: EDGE, headless: true });
   try {
     const page = await browser.newPage({ viewport: { width: 1440, height: 900 }, reducedMotion: 'reduce' });
     await prepare(page); await page.goto(URL, { waitUntil: 'networkidle' });
     const board = page.getByRole('article', { name: 'Display Module', exact: true }).first();
     const before = await board.boundingBox();
-    await page.mouse.click(30, 100, { button: 'right' });
-    const menu = page.getByRole('menu', { name: 'Workbench commands', exact: true }); await menu.waitFor();
-    assert.equal(await menu.getAttribute('data-menu-surface'), await page.locator('main.system-workflow').getAttribute('data-menu-surface'));
-    await menu.getByRole('menuitem', { name: 'ADD', exact: true }).click();
-    assert.equal(await page.getByRole('menuitem', { name: 'METADATA MODULE', exact: true }).count(), 0);
-    await page.getByRole('menuitem', { name: 'DISPLAY MODULE', exact: true }).click();
-    await page.getByRole('menuitem', { name: 'HORIZONTAL 16:9', exact: true }).click();
-    await page.getByRole('article', { name: 'Display Module', exact: true }).nth(1).waitFor();
-    assert.deepEqual(await board.boundingBox(), before, 'a new Display does not mutate the existing window');
-    const second = page.getByRole('article', { name: 'Display Module', exact: true }).nth(1);
-    await openDisplayTool(page, second, 'METADATA');
-    assert.equal(await page.locator('[data-shared-tool="metadata"]').count(), 1);
-    await openDisplayTool(page, board, 'METADATA');
-    assert.equal(await page.locator('[data-shared-tool="metadata"]').count(), 1, 'targeting another Display reuses Metadata');
-    await page.getByRole('button', { name: 'Close Artwork info', exact: true }).click();
+    // Seed only on an isolated development page; ordinary Add remains unavailable.
+    const seedUrl = new globalThis.URL('/__presentation_instance_seed__', URL).href;
+    await page.route(seedUrl, route => route.fulfill({ contentType: 'text/html', body: '<title>Display fixture seed</title>' }));
+    await page.goto(seedUrl);
+    const primaryUnchanged = await page.evaluate(async () => {
+      const { OWNER_SYSTEM_WORKFLOW_REVIEW_PROFILE: profileAddress } = await import('/src/public/ownerSystemWorkflow/ownerSystemWorkflowDevelopmentFixture.js');
+      const { createSystemWorkflowDraftStore } = await import('/src/systemWorkflow/systemWorkflowDraftStore.js');
+      const { addDisplayModule } = await import('/src/systemWorkflow/displayModuleSession.js');
+      const store = createSystemWorkflowDraftStore({ profileAddress, storage: localStorage });
+      const primary = draft => JSON.stringify({ grids: draft.grids, appearance: draft.appearance, display: draft.workbench?.display });
+      const before = primary(store.getDraft()); addDisplayModule(store);
+      return primary(store.getDraft()) === before;
+    });
+    assert.equal(primaryUnchanged, true, 'seeding an additional Display does not change primary content or presentation');
+    await page.goto(URL, { waitUntil: 'networkidle' });
+    const displays = page.getByRole('article', { name: 'Display Module', exact: true });
+    await displays.nth(1).waitFor();
+    assert.deepEqual(await board.boundingBox(), before, 'the additional Display leaves the existing window unchanged');
+    const second = displays.nth(1), sibling = await second.boundingBox();
     await activate(page, board.getByRole('button', { name: 'Minimize Display Module to shortcut', exact: true }));
-    assert.equal(await page.getByRole('article', { name: 'Display Module', exact: true }).count(), 1);
-    await page.getByRole('button', { name: 'Open DISPLAY MODULE', exact: true }).dblclick();
-    assert.equal(await page.getByRole('article', { name: 'Display Module', exact: true }).count(), 2);
+    assert.equal(await displays.count(), 1);
+    assert.deepEqual(await displays.first().boundingBox(), sibling, 'minimizing the primary preserves the sibling');
+    const shortcut = page.getByRole('button', { name: 'Open DISPLAY MODULE', exact: true }).first();
+    await revealShortcut(page, shortcut); await shortcut.dblclick();
+    await displays.nth(1).waitFor();
+    assert.equal(await displays.count(), 2);
+    assert.deepEqual(await board.boundingBox(), before);
   } finally { await browser.close(); }
 });
 
@@ -484,6 +234,7 @@ test('Workbench shortcut snaps, renames, and accepts a Library artwork as its ic
     await page.goto(URL, { waitUntil: 'networkidle' });
     await activate(page, page.getByRole('button', { name: 'Minimize Display Module to shortcut', exact: true }));
     let shortcut = page.locator('.system-workflow__desktop-shortcut');
+    await revealShortcut(page, shortcut);
     const before = await shortcut.boundingBox();
     await page.mouse.move(before.x + before.width / 2, before.y + 10);
     await page.mouse.down();
@@ -493,6 +244,7 @@ test('Workbench shortcut snaps, renames, and accepts a Library artwork as its ic
     assert.equal(moved.x % 24, 0);
     assert.equal(moved.y % 24, 0);
 
+    await revealShortcut(page, shortcut);
     await shortcut.click({ button: 'right' });
     const shortcutMenu = page.getByRole('menu', { name: 'Display Module shortcut commands' });
     assert.equal(await shortcutMenu.getAttribute('data-menu-surface'),
@@ -533,6 +285,7 @@ test('Workbench shortcut snaps, renames, and accepts a Library artwork as its ic
     }), { background: 'rgba(0, 0, 0, 0)', border: '0px', custom: 'true', height: 60, objectFit: 'contain', width: 60 });
 
     await page.getByRole('button', { name: 'Close workspace' }).click();
+    await revealShortcut(page, shortcut);
     await shortcut.click({ button: 'right' });
     await page.getByRole('menuitem', { name: 'EDIT ICON' }).click();
     const iconEditor = page.getByRole('dialog', { name: 'Edit Display Module shortcut icon' });
@@ -591,6 +344,7 @@ test('Workbench shortcut snaps, renames, and accepts a Library artwork as its ic
       && closeEnough(shortcutPositionAfterClose.y, shortcutPositionBeforeOpen.y),
     JSON.stringify({ shortcutPositionAfterClose, shortcutPositionBeforeOpen }));
     await page.setViewportSize({ width: 390, height: 720 });
+    await revealShortcut(page, shortcut);
     await shortcut.click({ button: 'right' });
     await page.getByRole('menuitem', { name: 'EDIT ICON' }).click();
     const narrowEditor = page.getByRole('dialog', { name: 'Edit Display Module shortcut icon' });
@@ -672,7 +426,7 @@ test('Workbench appearance stays local and independent from the published Displa
       const key = Object.keys(localStorage).find((candidate) => candidate.startsWith('inscape:workbench:preferences:'));
       return key ? JSON.parse(localStorage.getItem(key)) : null;
     });
-    assert.deepEqual(stored, { chromeNoise: true, compositionLocked: false, dockVisible: true, edgeSnap: true, moduleGap: 0, gridColor: '#ff00ff', gridMode: 'NONE', shortcutSnap: false, surfaceId: 'carbon' });
+    assert.deepEqual(stored, { chromeNoise: true, compositionLocked: false, dockVisible: true, edgeSnap: true, moduleGap: 0, gridSpacing: 24, gridColor: '#ff00ff', gridMode: 'NONE', shortcutSnap: false, surfaceId: 'carbon' });
 
     await page.reload({ waitUntil: 'networkidle' });
     assert.equal(await root.getAttribute('data-surface'), 'carbon');
@@ -722,7 +476,7 @@ test('Display composition Lock blocks edits but preserves inspection, Layers and
     await placement.focus(); await page.keyboard.press('ArrowRight'); await page.keyboard.press('Delete');
     assert.deepEqual(await placement.boundingBox(), before); assert.equal(await placement.count(), 1);
     await page.getByRole('button', { name: 'Close Layers', exact: true }).click();
-    await placement.focus(); await page.keyboard.press('Enter');
+    await placement.focus(); await page.keyboard.press('i');
     const inspection = page.getByRole('group', { name: 'Artwork inspection', exact: true }); await inspection.waitFor();
     await page.keyboard.press('Escape'); await inspection.waitFor({ state: 'detached' });
     const stage = page.locator('[data-system-workflow-stage]'), label = await stage.getAttribute('aria-label');
@@ -734,5 +488,36 @@ test('Display composition Lock blocks edits but preserves inspection, Layers and
     await activate(page, board.getByRole('button', { name: 'Unlock Display Module composition', exact: true }));
     assert.equal(await board.getAttribute('data-authoring-locked'), null);
     assert.deepEqual(errors, []);
+  } finally { await browser.close(); }
+});
+
+
+test('Display preserves user-chosen names through shortcut and open-window reload', { timeout: 60000 }, async () => {
+  const browser = await chromium.launch({ executablePath: EDGE, headless: true });
+  try {
+    if (SCREENSHOT_DIR) await mkdir(SCREENSHOT_DIR, { recursive: true });
+    const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+    await prepare(page);
+    await page.goto(URL, { waitUntil: 'networkidle' });
+    for (const name of ['CURATED NFTs', 'PRESENTATION BOARD']) {
+      await activate(page, page.getByRole('button', { name: 'Minimize Display Module to shortcut', exact: true }));
+      const shortcut = page.locator('.system-workflow__desktop-shortcut');
+      await shortcut.press('Shift+F10');
+      await page.getByRole('menuitem', { name: 'RENAME', exact: true }).click();
+      const input = page.getByRole('textbox', { name: 'Display Module shortcut name' });
+      await input.fill(name); await input.press('Enter');
+      assert.equal(await shortcut.locator('strong').innerText(), name, 'native rename displays the chosen name');
+      await page.reload({ waitUntil: 'networkidle' });
+      await shortcut.waitFor();
+      assert.equal(await shortcut.locator('strong').innerText(), name, 'reload preserves the exact chosen shortcut name');
+      await shortcut.press('Enter');
+      const title = page.locator('.system-workflow__board-title');
+      await title.waitFor();
+      assert.equal(await title.getAttribute('title'), name, 'opening the Display uses the chosen name');
+      await page.reload({ waitUntil: 'networkidle' });
+      await title.waitFor();
+      assert.equal(await title.getAttribute('title'), name, 'open-window reload preserves the chosen name');
+      if (SCREENSHOT_DIR) await page.screenshot({ path: resolve(SCREENSHOT_DIR, `display-name-${name.replaceAll(' ', '-')}.png`) });
+    }
   } finally { await browser.close(); }
 });

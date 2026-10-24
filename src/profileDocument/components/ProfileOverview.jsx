@@ -1,201 +1,75 @@
-import { lazy, Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { ArrowUpRight, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, FileText } from 'lucide-react';
+import { lazy, Suspense, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { ArrowDown, ArrowLeft, ArrowRight, UserRound } from 'lucide-react';
 import { useProfileIdentity } from '../../profileIdentity/state/useProfileIdentity.js';
 import { createPublishedIdentityRackViewModel } from './publishedIdentityRackViewModel.js';
 import { useStartupDestinationReady } from '../../startveil/StartupDestinationContext.jsx';
-import { applicationRouteUrl } from '../../profileDiscovery/applicationNavigation.js';
-import { publicCanvasItems } from './profileOverviewModel.js';
-import { SceneNavigationProvider } from '../../text/SceneNavigation.jsx';
-import { SharedDisplayToolsProvider, SharedDisplayToolWindows, useSharedDisplayTools } from '../../public/ownerSystemWorkflow/SharedDisplayTools.jsx';
-import useOwnerSystemWorkflowLayout from '../../public/ownerSystemWorkflow/useOwnerSystemWorkflowLayout.js';
-import BentoStage from './BentoStage.jsx';
-import BentoDisplayFrame from './BentoDisplayFrame.jsx';
-import IdentityCardBody from '../../public/identity/IdentityCardBody.jsx';
-import IdentityTitle from '../../public/identity/IdentityTitle.jsx';
-import IdentityClouds from '../../public/identity/IdentityClouds.jsx';
-import { resolveIdentityCard } from '../../profileIdentity/domain/identityCard.js';
-import { LATTICE_SURFACES } from '../../lattice/rendering/latticeGeometry.js';
-import useReceptionCarousel from './useReceptionCarousel.js';
-import ReceptionImagePreview from './ReceptionImagePreview.jsx';
-import { projectSystemWorkflowTransform } from '../../systemWorkflow/systemWorkflowTransform.js';
-import ProfileWorkViewer from './ProfileWorkViewer.jsx';
-import { ArtworkPreparationProvider } from '../../artwork/ArtworkPreparation.jsx';
+import IdentityPortrait from '../../public/identity/IdentityPortrait.jsx';
 import '../../public/ownerSystemWorkflow/workflowTactile.css';
 import '../../public/ownerSystemWorkflow/ownerSystemWorkflow.css';
-import '../../public/ownerSystemWorkflow/workbenchWindowChrome.css';
-import '../../public/identity/identityModule.css';
+import '../../public/ownerSystemWorkflow/workflowFlat.css';
 import '../../lattice/rendering/latticeMenuSurface.css';
 import './profileOverview.css';
+const ExplorationKeeper = lazy(() => import('../../keeper/ExplorationKeeper.jsx'));
 
-const PublishedDisplayModule = lazy(() => import('./PublishedDisplayModule.jsx'));
-const BentoLinkedText = lazy(() => import('./BentoLinkedText.jsx'));
-const plainClick = event => event.button === 0 && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey;
-
-function TilePreview({ item, side, onReady }) {
-  return <div className={'profile-overview__preview profile-overview__preview--' + item.kind} inert="" aria-hidden="true">
-    {side ? <ReceptionImagePreview side={side} onReady={onReady} />
-      : <><FileText size={22} /><p>{item.description || 'Open this article.'}</p></>}
-  </div>;
-}
-
-export default function ProfileOverview(props) {
-  return <SharedDisplayToolsProvider key={[props.document.profile.address, props.document.documentId, props.document.revision].join(':')}>
-    <SceneNavigationProvider><ProfileOverviewContent {...props} /></SceneNavigationProvider>
-  </SharedDisplayToolsProvider>;
-}
-
-function ProfileOverviewContent({ document, onOpenCanvas, unavailableTarget = false, returnTarget, focusedTarget, onOpenWork, onCloseWork, reception, onEditImage }) {
+// Only verified public identity is read here. Temporary room navigation owns no draft.
+export default function ProfileOverview({ document: publication, ownerEditingAllowed = false, unavailableTarget = false, onOpenDirectory, onReturn }) {
   useStartupDestinationReady();
-  const root = useRef(null), rail = useRef(null), tileNodes = useRef(new Map());
-  const [linkedModule, setLinkedModule] = useState(() => (focusedTarget || returnTarget)?.moduleId);
+  const identity = useProfileIdentity(publication.profile.address);
+  const model = useMemo(() => createPublishedIdentityRackViewModel({ document: publication, identity }), [publication, identity]);
+  const [exploring, setExploring] = useState(false);
+  const explore = useRef(null), roomTitle = useRef(null), flightArea = useRef(null), previous = useRef(false);
   useLayoutEffect(() => {
-    const id = (focusedTarget || returnTarget)?.moduleId;
-    if (id) setLinkedModule(id);
-  }, [focusedTarget?.moduleId, returnTarget?.moduleId]);
-  const identity = useProfileIdentity(document.profile.address);
-  const model = useMemo(() => createPublishedIdentityRackViewModel({ document, identity }) || {
-    address: document.profile.address, profile: { displayName: document.profile.cachedIdentity.name || 'Unnamed profile',
-      avatarUrl: document.profile.cachedIdentity.avatarUrl, tags: [], description: '' }, links: [],
-  }, [document, identity]);
-  const items = useMemo(() => {
-    const published = publicCanvasItems(document);
-    if (document.reception) {
-      const selected = document.reception.items.map(id => published.find(item => item.key === id)).filter(Boolean);
-      // Curation chooses the landing composition; explicit links still resolve
-      // every public module and keep their return origin mounted.
-      const destination = published.find(item => item.key === ((focusedTarget || returnTarget)?.moduleId || linkedModule));
-      return destination && !selected.includes(destination) ? [...selected, destination] : selected;
-    }
-    return [...published.filter(item => item.kind === 'image'), ...published.filter(item => item.kind !== 'image')];
-  }, [document, focusedTarget?.moduleId, returnTarget?.moduleId, linkedModule]);
-  const [expanded, setExpanded] = useState('compact');
-  useLayoutEffect(() => {
-    const fields = root.current?.querySelector('.identity-module__extension');
-    if (!fields) return;
-    const measure = () => root.current?.style.setProperty('--reception-fields-height', `${fields.getBoundingClientRect().height}px`);
-    const observer = new ResizeObserver(measure);
-    observer.observe(fields); measure();
-    return () => observer.disconnect();
-  }, []);
-  const card = model.card || resolveIdentityCard({});
-  const hasArtwork = model.profile.avatarProvenance === 'INSCAPE_PUBLISHED_ASSET';
-  const official = model.officialProfile || { name: model.profile.displayName, avatarUrl: model.profile.avatarUrl,
-    url: `https://universaleverything.io/${document.profile.address}` };
-  const layout = useOwnerSystemWorkflowLayout();
-  const tools = useSharedDisplayTools();
-  const name = model?.profile.displayName || document.profile.cachedIdentity.name || 'Unnamed profile';
-  const canvasHref = target => applicationRouteUrl(window.location, { kind: 'profile', address: document.profile.address, canvas: true, reception, ...(target ? { target } : {}) });
-  const workHref = target => applicationRouteUrl(window.location, { kind: 'profile', address: document.profile.address, reception, target });
-  const [localTarget, setLocalTarget] = useState(null);
-  // The card and its inspection share one temporary side selection and one
-  // mounted artwork. No publication fields or module sessions are rewritten.
-  const [sides, setSides] = useState({}), [readySources, setReadySources] = useState({});
-  const requestedTarget = focusedTarget || localTarget;
-  const viewerTarget = items.some(item => item.target.moduleId === requestedTarget?.moduleId && item.kind !== 'display' && !item.record?.sceneLink) ? requestedTarget : null;
-  const viewerItem = items.find(item => item.key === viewerTarget?.moduleId);
-  useReceptionCarousel(rail, { disabled: Boolean(viewerTarget) || expanded === 'profile', reducedMotion: layout.reducedMotion, revision: expanded });
-  useLayoutEffect(() => {
-    if (focusedTarget || returnTarget) {
-      const node = tileNodes.current.get((focusedTarget || returnTarget).moduleId);
-      if (node && rail.current) {
-        const bounds = node.getBoundingClientRect(), viewport = rail.current.getBoundingClientRect();
-        if (bounds.left < viewport.left || bounds.right > viewport.right) rail.current.scrollLeft += bounds.left - viewport.left;
-      }
-    }
-  }, [focusedTarget?.moduleId, returnTarget?.moduleId]);
-  const openWork = (event, target) => { if (plainClick(event)) { event.preventDefault(); if (onOpenWork) onOpenWork(target); else setLocalTarget(target); } };
-  const closingWork = useRef(false);
-  useEffect(() => { closingWork.current = false; }, [viewerTarget]);
-  const closeWork = () => {
-    if (closingWork.current) return;
-    closingWork.current = true;
-    if (onCloseWork) onCloseWork(); else setLocalTarget(null);
-  };
-  const open = (event, target) => { if (plainClick(event) && onOpenCanvas) { event.preventDefault(); onOpenCanvas(target); } };
-  useEffect(() => {
-    if (!focusedTarget && returnTarget) tileNodes.current.get(returnTarget.moduleId)?.focus({ preventScroll: true });
-  }, [returnTarget?.moduleId]);
-  const wideImage = item => {
-    if (item.kind !== 'image') return false;
-    const side = item.record.sides[0];
-    if (!side) return false;
-    const size = projectSystemWorkflowTransform(side.transform, side.asset.media, null).dimensions;
-    return size.width / size.height > 1.2;
-  };
-  const moveRail = direction => rail.current?.scrollBy({ left: rail.current.clientWidth * .65 * direction, behavior: layout.reducedMotion ? 'instant' : 'smooth' });
-  return <main className="profile-overview system-workflow__token-scope" data-workflow-material="tactile" data-window-chrome="bevel"
-    data-lattice-menu-surface data-menu-surface={document.appearance.menuSurfaceId} style={{ '--reception-surround': LATTICE_SURFACES.find(surface => surface.id === 'ash').color }}
-    data-published-focus-fallback tabIndex={-1} ref={root} onKeyDown={event => { if (viewerTarget && event.key === 'Escape') { event.preventDefault(); closeWork(); } }} aria-label={`${name} overview`}>
+    if (exploring) roomTitle.current?.focus({ preventScroll: true });
+    else if (previous.current) explore.current?.focus({ preventScroll: true });
+    previous.current = exploring;
+  }, [exploring]);
+  const profile = model?.profile || { displayName: publication.profile.cachedIdentity.name || 'Unnamed profile', avatarUrl: publication.profile.cachedIdentity.avatarUrl, description: '', tags: [] };
+  const official = model?.officialProfile, fields = model?.card?.fields || [], links = model?.links || [], name = profile.displayName;
+  return <main className="profile-overview system-workflow__token-scope" data-menu-surface={publication.appearance.menuSurfaceId}
+    data-lattice-menu-surface data-workflow-material="tactile" data-workflow-finish="flat"
+    data-published-focus-fallback tabIndex={-1} aria-label={`${name} reception`}
+    onKeyDown={event => { if (event.key === 'Escape' && !event.defaultPrevented && exploring) { event.preventDefault(); setExploring(false); } }}>
     <div className="profile-overview__inner">
-      {unavailableTarget && <p className="profile-overview__notice" role="status">That destination is no longer in this publication. Explore the available work below.</p>}
-      <header className="profile-overview__heading identity-module">
-        <IdentityTitle address={model.address} profile={official} label={`${official.name}.INSCAPE.ID`} groupedActions />
-        <a className="profile-overview__canvas" href={canvasHref()} onClick={event => open(event)}>Canvas</a>
+      <header className="reception-heading"><span>INSCAPE</span><span>{name}</span>
+        {onOpenDirectory && <button type="button" onClick={onOpenDirectory}>Discover</button>}
+        {onReturn && <button type="button" onClick={onReturn}>Back to my Inscape</button>}
       </header>
-      <div className="profile-overview__frame">
-      <BentoStage target={viewerTarget} getOrigin={target => tileNodes.current.get(target?.moduleId)} onClose={closeWork} reducedMotion={layout.reducedMotion}
-        transition={viewerItem?.kind === 'image' ? 'artwork' : 'panel'}
-        renderExpanded={(target, inspection) =>
-          <ProfileWorkViewer key={target.moduleId} document={document} target={target} publisherName={name}
-            active={sides[target.moduleId] || 0} onActiveChange={index => setSides(current => ({ ...current, [target.moduleId]: index }))}
-            readySource={readySources[target.moduleId]} inspection={inspection}
-            onClose={closeWork} onOpenCanvas={onOpenCanvas} canvasHref={canvasHref} />
-        }>
-      <section className="profile-overview__composition" data-expanded={expanded} data-item-count={items.length} aria-label="Profile and published work">
-        <article className="profile-overview__identity identity-module" data-artwork={hasArtwork ? 'custom' : 'official'}
-          inert={expanded === 'artwork' ? '' : undefined} aria-hidden={expanded === 'artwork' || undefined}>
-          {card.background.type === 'clouds' && <IdentityClouds surface={document.appearance.menuSurfaceId} color={card.background.color} speed={card.background.speed} />}
-          <IdentityCardBody model={model} card={card} portraitUrl={model.profile.avatarUrl}
-            expanded={expanded === 'profile'} onExpandedChange={value => setExpanded(value ? 'profile' : 'compact')}
-            expansionControls={null} />
-        </article>
-        <div className="profile-overview__reveals">
-          {card.fields.length > 0 && <button type="button" aria-label={expanded === 'profile' ? 'Collapse INSCAPE details' : 'Expand INSCAPE details'}
-            title={expanded === 'profile' ? 'Less info' : 'More info'}
-            aria-expanded={expanded === 'profile'} onClick={() => setExpanded(value => value === 'profile' ? 'compact' : 'profile')}>
-            {expanded === 'profile' ? <ChevronUp /> : <ChevronDown />}
-          </button>}
-          {items.length > 0 && <button type="button" aria-label={expanded === 'artwork' ? 'Collapse artwork' : 'Expand artwork'}
-            title={expanded === 'artwork' ? 'Less artwork' : 'More artwork'}
-            aria-expanded={expanded === 'artwork'} onClick={() => setExpanded(value => value === 'artwork' ? 'compact' : 'artwork')}>
-            {expanded === 'artwork' ? <ChevronDown /> : <ChevronUp />}
-          </button>}
+      {exploring ? <section className="exploration-room" aria-label="Exploration room">
+        <header><button type="button" onClick={() => setExploring(false)}><ArrowLeft aria-hidden="true" />Back to Reception</button><span>01 / EXPLORATION</span></header>
+        <div className="exploration-room__canvas" ref={flightArea}><div className="exploration-room__origin">
+          <span className="reception-kicker">{name}</span><h1 ref={roomTitle} tabIndex={-1}>A space to explore.</h1><p>The world starts here.</p>
+          <span className="exploration-room__marker" aria-hidden="true" />
         </div>
-        <div className="profile-overview__gallery" inert={expanded === 'profile' ? '' : undefined} aria-hidden={expanded === 'profile' || undefined}>
-        <div className="profile-overview__grid" ref={rail} tabIndex={0} role="region" aria-label="Published artwork carousel" onFocus={event => {
-          if (event.target === event.currentTarget || expanded !== 'compact') return;
-          const bounds = event.target.getBoundingClientRect(), frame = event.currentTarget.closest('.bento-stage').getBoundingClientRect();
-          if (bounds.bottom > frame.bottom + 1) setExpanded('artwork');
-        }}>
-        {items.map(item => item.kind === 'display' || item.record?.sceneLink ? <div key={item.key}
-          className={'profile-overview__tile profile-overview__module' + (item.kind === 'display' ? ' profile-overview__display' : ' profile-overview__linked-text')}
-          tabIndex={-1} ref={node => { if (node) tileNodes.current.set(item.key, node); else tileNodes.current.delete(item.key); }}>
-          <Suspense fallback={<p role="status">Opening module…</p>}>
-            {item.kind === 'display' ? <PublishedDisplayModule document={item.document} instanceId={item.id} Frame={BentoDisplayFrame} active={tools.target === item.id} visible={!viewerTarget && expanded !== 'profile'}
-              entryTarget={focusedTarget || returnTarget} reducedMotion={layout.reducedMotion} /> : <BentoLinkedText record={item.record} />}
-          </Suspense>
-        </div> : <a key={item.key} className={`profile-overview__tile profile-overview__work${item.kind === 'image' ? ' profile-overview__work--image' : ''}`}
-          data-wide={wideImage(item) || undefined}
-          ref={node => { if (node) tileNodes.current.set(item.key, node); else tileNodes.current.delete(item.key); }} href={workHref(item.target)} onClick={event => {
-            if (onEditImage && item.kind === 'image' && plainClick(event)) { event.preventDefault(); onEditImage(item.record, event.currentTarget); }
-            else openWork(event, item.target);
-          }} aria-label={onEditImage && item.kind === 'image' ? `Edit reception crop for ${item.title}` : `Open ${item.title}`}>
-          <ArtworkPreparationProvider viewportRef={root} enabled={viewerTarget?.moduleId === item.key}>
-          <TilePreview item={item} side={item.record.sides?.[sides[item.key] || 0]}
-            onReady={() => { const id = item.record.sides?.[sides[item.key] || 0]?.asset.media.url;
-              setReadySources(current => current[item.key] === id ? current : { ...current, [item.key]: id }); }} />
-          </ArtworkPreparationProvider>
-          {item.kind === 'text' && <div className="profile-overview__caption"><div><span className="profile-overview__eyebrow">Writing</span><h2>{item.title}</h2></div><ArrowUpRight size={20} aria-hidden="true" /></div>}
-        </a>)}
-        {items.length === 0 && <p className="profile-overview__empty">No published artwork yet.</p>}
+          {ownerEditingAllowed && <Suspense fallback={<p role="status">Opening Keeper dock…</p>}>
+            <ExplorationKeeper profileAddress={publication.profile.address} flightAreaRef={flightArea} menuSurface={publication.appearance.menuSurfaceId} onReturn={() => setExploring(false)} />
+          </Suspense>}
         </div>
-        <button className="profile-overview__rail-arrow profile-overview__rail-arrow--previous" type="button" aria-label="Previous artworks" onClick={() => moveRail(-1)}><ChevronLeft /></button>
-        <button className="profile-overview__rail-arrow profile-overview__rail-arrow--next" type="button" aria-label="Next artworks" onClick={() => moveRail(1)}><ChevronRight /></button>
-        </div>
-      </section>
-      </BentoStage>
-      </div>
+        <footer>{ownerEditingAllowed ? '2800 × 1800 · Camera follows Keeper · Metal beams only · Direct recall.' : 'Exploration wireframe · The profile owner can configure a Keeper here.'}</footer>
+      </section> : <>
+        {unavailableTarget && <p className="reception-notice" role="status">That destination is no longer in this publication.</p>}
+        <section className="reception-bento" aria-label="Reception wireframe">
+          <article className="reception-bento__identity"><span className="reception-kicker">IDENTITY / PERSONA</span><h1>{name}</h1>
+            <div className="reception-portrait">{profile.avatarUrl ? <IdentityPortrait src={profile.avatarUrl} title={`${name} portrait`} /> : <UserRound aria-hidden="true" />}</div>
+            <a className="reception-official" href={official?.url || `https://universaleverything.io/${publication.profile.address}`} target="_blank" rel="noreferrer">Official profile · {official?.name || publication.profile.cachedIdentity.name || 'Universal Profile'} ↗</a>
+            <span className="reception-address">{publication.profile.address}</span>
+          </article>
+          <section className="reception-bento__links" aria-label="Profile links"><span className="reception-kicker">LINKS</span>
+            {links.length ? <ul>{links.map((link, i) => <li key={link.id || i}><a href={link.url} target="_blank" rel="noreferrer">{link.title || link.label || 'Website'} ↗</a></li>)}</ul> : <p>Your links belong here.</p>}
+          </section>
+          <section className="reception-bento__bio"><span className="reception-kicker">INTRODUCTION</span><h2>A little about {name}.</h2>
+            <p>{profile.description || 'A place for your story, your practice and what you stand for.'}</p>
+            {profile.tags?.length > 0 && <ul className="reception-tags">{profile.tags.map(tag => <li key={tag}>{tag}</li>)}</ul>}
+          </section>
+          <section className="reception-bento__details"><span className="reception-kicker">DETAILS</span>
+            {fields.length ? <dl>{fields.map(field => <div key={field.id}><dt>{field.label}</dt><dd>{field.value}</dd></div>)}</dl> : <><h2>Make it yours.</h2><p>Interests, craft, location — or something else entirely.</p></>}
+          </section>
+          <section className="reception-bento__space"><span className="reception-kicker">YOUR SPACE</span><p>Room for your own introduction.</p></section>
+          <button className="reception-explore" type="button" ref={explore} onClick={() => setExploring(true)}><span>Explore<span className="reception-explore__caption">Step into the exploration room</span></span><ArrowRight aria-hidden="true" /></button>
+        </section>
+        <footer className="reception-entry"><button type="button" disabled aria-describedby="reception-entry-status"><ArrowDown aria-hidden="true" />Enter Inscape</button>
+          <p id="reception-entry-status">Composition overview · Coming later</p><span>Reception wireframe · Bento customization comes later.</span>
+        </footer>
+      </>}
     </div>
-    <SharedDisplayToolWindows readOnly menuSurface={document.appearance.menuSurfaceId} fallbackFocus={root} />
   </main>;
 }

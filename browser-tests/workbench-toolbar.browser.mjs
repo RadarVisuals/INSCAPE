@@ -43,7 +43,8 @@ for (const [width, height, touch] of [[1576, 1244, false], [1440, 900, false], [
       }
       for (const button of await buttons.all()) {
         const box = await button.boundingBox(); within(box, width, height, await button.getAttribute('aria-label'));
-        const expanded = width > 520 && await button.getAttribute('aria-pressed') === 'true';
+        const persistent = ['Select tool', 'Hand tool', 'Text tool'].includes(await button.getAttribute('aria-label'));
+        const expanded = width > 520 && persistent && await button.getAttribute('aria-pressed') === 'true';
         const target = touch || width <= 520 ? 44 : 36;
         if (expanded) assert.ok(box.width >= 82, 'selected persistent tool shows its label');
         else assert.equal(box.width, target, 'icon key retains its full input width');
@@ -160,7 +161,16 @@ for (const theme of ['carbon', 'mist']) for (const width of [1440, 390]) {
         return { scheme: s.colorScheme, face: s.getPropertyValue('--tactile-face').trim(), radius: key.borderRadius, shellRadius: shell.borderRadius, stroke: icon.strokeWidth, vector: icon.vectorEffect };
       });
       assert.deepEqual(recipe, { scheme: theme === 'mist' ? 'light' : 'dark', face: theme === 'mist' ? '#ebece7' : '#191b1b', radius: '5px', shellRadius: '9px', stroke: '1.5px', vector: 'non-scaling-stroke' });
-      assert.deepEqual(await page.locator('main.system-workflow [data-workflow-finish="flat"]').evaluateAll(nodes => nodes.map(node => node.className).sort()), ['workbench-toolbar', 'workbench-view-controls'], 'flat production styling is limited to the two migrated rails');
+      // The accepted migrations now include the sidebar, switcher, Navigator and shared tools.
+      // Keep an explicit surface boundary, including the otherwise classless dock material root.
+      const migrated = await page.locator('main.system-workflow [data-workflow-finish="flat"]').evaluateAll(nodes => nodes.map(node => {
+        for (const name of ['workbench-toolbar', 'workbench-view-controls', 'workbench-navigator', 'workbench-layers', 'workbench-switcher', 'workspace-navigation']) {
+          if (node.classList.contains(name)) return name;
+        }
+        if (!node.className && node.matches('[data-workbench-selection-tools][data-system-workflow-overlay][data-lattice-menu-surface]') && (!node.children.length || node.querySelector(':scope > .workbench-tool-dock'))) return 'shared-tool-dock';
+        return 'unrecognized:' + node.outerHTML.slice(0, 180);
+      }));
+      assert.deepEqual(migrated.sort(), ['shared-tool-dock', 'workbench-navigator', 'workbench-switcher', 'workbench-toolbar', 'workbench-view-controls', 'workspace-navigation', ...(width > 520 ? ['workbench-layers'] : [])].sort(), 'only the accepted mounted surfaces opt into flat styling');
       const select = page.getByRole('button', { name: 'Select tool', exact: true });
       await select.focus(); await page.keyboard.press('ArrowRight');
       assert.equal(await page.getByRole('button', { name: 'Hand tool', exact: true }).evaluate(node => node === document.activeElement), true);

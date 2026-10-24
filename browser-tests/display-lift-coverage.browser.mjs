@@ -113,7 +113,7 @@ test('In place retains its own CSS opening and closing fade', { timeout: 60000 }
       assert.ok(closing > .18 && closing < 1, `In place closing: ${closing}`);
       await page.clock.runFor(400);
       assert.equal(await page.locator('[data-inspection-context]').count(), 0);
-      assert.equal(await page.getByRole('button', { name: 'Reset Workbench position', exact: true }).isDisabled(), false);
+      assert.equal(await page.getByRole('button', { name: 'Reset Workbench view', exact: true }).isDisabled(), false);
       await page.close();
     }
   } finally { await browser.close(); }

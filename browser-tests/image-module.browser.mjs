@@ -1,3 +1,4 @@
+import { setTransform } from './fixtures/shared-tools.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { chromium } from 'playwright-core';
@@ -33,7 +34,7 @@ test('independent Image: Library drop, free size, dock crop, wraparound flip, Li
       window.root = createRoot(document.getElementById('root'));
       const reviewAssets = fixture.OWNER_SYSTEM_WORKFLOW_REVIEW_ASSETS.map((asset, index) => index === 0 ? { ...asset, imageWidth: null, imageHeight: null, width: null, height: null } : asset);
       window.root.render(React.createElement(Runtime, { profileAddress, reviewStorage: storage, reviewAssets,
-        reviewCategories: [], reviewActivity: [], reviewDiscovery: [], reviewProfile: { name: 'Image review' } }));
+        reviewCategories: [], reviewActivity: [], reviewProfile: { name: 'Image review' } }));
     });
     await page.goto(`${origin}/__image__`); await mount();
     await page.getByRole('button', { name: 'Library', exact: true }).waitFor();
@@ -80,13 +81,11 @@ test('independent Image: Library drop, free size, dock crop, wraparound flip, Li
     await page.mouse.move(resizeBounds.x + 70, resizeBounds.y - 90, { steps: 8 }); await page.mouse.up();
     await page.waitForFunction(height => window.readDraft().imageModules[0].height !== height, beforeResize.height);
     assert.notEqual((await page.evaluate(() => window.readDraft().imageModules[0])).width, beforeResize.width);
-    await dock.getByRole('spinbutton', { name: 'Image width' }).fill('640');
-    await dock.getByRole('spinbutton', { name: 'Image height' }).fill('96');
-    await dock.getByRole('button', { name: 'Set size', exact: true }).click();
+    await setTransform(page, 'Width', 640); const transform = await setTransform(page, 'Height', 96);
     await page.waitForFunction(() => window.readDraft().imageModules[0].height === 96);
     const size = await canvas.boundingBox();
     assert.ok(Math.abs(size.width / size.height - 640 / 96) < .05);
-    for (const name of ['Rotate', 'Mirror horizontal', 'Mirror vertical']) await dock.getByRole('button', { name, exact: true }).click();
+    for (const name of ['Rotate', 'Mirror horizontal', 'Mirror vertical']) await transform.getByRole('button', { name, exact: true }).click();
     await dock.getByRole('button', { name: 'Crop', exact: true }).click();
     await dock.getByRole('slider', { name: 'Crop zoom' }).fill('2');
     await canvas.focus(); await page.keyboard.press('ArrowRight');
@@ -166,11 +165,11 @@ test('independent Image: Library drop, free size, dock crop, wraparound flip, Li
     await page.getByRole('dialog', { name: 'Inspect Image' }).waitFor({ state: 'detached' });
     await page.locator('body').click({ position: { x: 5, y: 5 } });
     assert.ok((await artworkScreenshot()).equals(beforeInterruptedInspect), 'interrupted Lift restores the exact artwork pixels');
-    await grip.focus(); await dock.getByRole('button', { name: 'Remove Image side' }).click();
+    await grip.focus(); await dock.getByRole('button', { name: 'Remove current Image side' }).click();
     await page.waitForFunction(() => window.readDraft().imageModules[0].sides.length === 2);
     await canvas.focus(); await page.keyboard.press('Control+z');
     await page.waitForFunction(() => window.readDraft().imageModules[0].sides.length === 3);
-    await grip.focus(); await dock.getByRole('combobox', { name: 'Image drop action' }).selectOption('replace');
+    await grip.focus(); await dock.getByRole('combobox', { name: 'When dropping from Library' }).selectOption('replace');
     await page.getByRole('button', { name: 'Library', exact: true }).click();
     await drop('SKULL REAPER');
     await page.waitForFunction(() => window.readDraft().imageModules[0].sides[0].asset.name === 'SKULL REAPER');

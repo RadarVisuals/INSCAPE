@@ -1,3 +1,4 @@
+import { setSharedColor } from './fixtures/shared-tools.mjs';
 import { openTextToolSection } from './fixtures/text-tool-sections.mjs';
 import assert from 'node:assert/strict';
 import test from 'node:test';
@@ -68,7 +69,7 @@ for (const width of [1440, 390]) test(`article styles, outline and portable reco
     await tools.getByLabel('Article style', { exact: true }).selectOption('h2');
     await number('Style text size', 32); await number('Style line spacing', 1.5); await number('Style tracking', .02);
     await tools.getByLabel('Style font', { exact: true }).selectOption('Inscape Article Literata');
-    await tools.getByLabel('Style colour', { exact: true }).fill('#aabbcc'); await settle(page);
+    await setSharedColor(page, '#aabbcc', 'h2'); await settle(page);
     assert.equal(await style(body.locator('h2').last(), 'color'), 'rgb(170, 187, 204)');
     assert.ok((await style(body.locator('h2').last(), 'fontFamily')).includes('Inscape Article Literata'));
     assert.equal(await style(body.locator('h2').first(), 'fontSize'), '32px');

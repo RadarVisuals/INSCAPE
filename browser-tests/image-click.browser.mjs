@@ -40,6 +40,8 @@ for (const visitor of [false, true]) for (const width of [1440, 390]) {
       const source = first.locator('.image-module__canvas');
       const back = page.getByRole('button', { name: 'Back to previous Workbench view', exact: true });
       await source.waitFor(); await page.evaluate(() => document.fonts.ready); await settled(page);
+      // The owner sidebar overlays the historical fixture position.
+      if (!visitor && width === 1440) { await page.getByRole('button', { name: 'Collapse sidebar', exact: true }).click(); await settled(page); }
       const initial = await camera(page), geometry = await first.boundingBox();
       const saved = await page.evaluate(() => localStorage.getItem(window.__motionKey));
       if (width === 390) await source.tap(); else await source.click();
@@ -50,7 +52,9 @@ for (const visitor of [false, true]) for (const width of [1440, 390]) {
       assert.equal(await page.locator('.image-lift').count(), 0);
       if (!visitor) {
         assert.equal(await first.getAttribute('data-active'), 'true', 'click activates the Image and bounds');
-        assert.equal(await page.locator('[data-context-tools] [data-workbench-inspection-target]').getAttribute('data-workbench-inspection-target'), 'image:click-0');
+        const actions = page.locator('[data-context-action-bars] [data-context-action-target]');
+        await actions.waitFor();
+        assert.equal(await actions.getAttribute('data-context-action-target'), 'image:click-0');
       }
       await source.click(); await settled(page);
       assert.deepEqual(await camera(page), initial, 'another ordinary click on the active Image still does not zoom');

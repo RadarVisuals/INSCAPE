@@ -1,25 +1,15 @@
-import React, { useLayoutEffect, useState } from 'react';
+import { useLayoutEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import ArticleEditor from '../src/text/ArticleEditor.jsx';
 import TextTools from '../src/text/TextTools.jsx';
-import { SharedTextToolsProvider, useSharedTextTools } from '../src/text/SharedTextTools.jsx';
+import { SharedTextToolsProvider, SharedTextToolsWindow } from '../src/text/SharedTextTools.jsx';
 import { textSurfaceStyle } from '../src/text/domain/article.js';
 import useTextColourSelection from './textColourSelection.js';
 import './textPreview.css';
 
-function PreviewToolsHost({ host }) {
-  const { setHost } = useSharedTextTools();
-  useLayoutEffect(() => {
-    setHost(host);
-    return () => setHost(null);
-  }, [host, setHost]);
-  return null;
-}
-
 function TextExample({
   item,
   selected,
-  open,
   canvasHost,
   layerHost,
   onChange,
@@ -66,7 +56,7 @@ function TextExample({
               borderRadius: 'var(--module-corners,0)',
             }}
           >
-            <ArticleEditor
+            <ArticleEditor sharedColour
               article={item.article}
               onChange={changeArticle}
               onEditor={setEditor}
@@ -80,7 +70,7 @@ function TextExample({
           </div>,
           mount,
         )}
-      <TextTools
+      <TextTools sharedColour
         targetId={item.id}
         available={selected}
         article={item.article}
@@ -158,7 +148,7 @@ export default function TextPreview({
   items,
   selectedId,
   open,
-  panelHost,
+  onOpenChange,
   canvasHost,
   layerHost,
   onChange,
@@ -172,10 +162,10 @@ export default function TextPreview({
       activeModuleId={selectedId}
       onActivate={() => {}}
       open={open}
-      onOpenChange={() => {}}
+      onOpenChange={onOpenChange}
       menuSurface={theme === 'mist' ? 'paper' : 'carbon'}
     >
-      <PreviewToolsHost host={panelHost} />
+      <SharedTextToolsWindow />
       {items
         .filter((item) => item.kind === 'text')
         .map((item) => (
@@ -183,7 +173,6 @@ export default function TextPreview({
             key={item.id + ':' + (item.textRevision || 0)}
             item={item}
             selected={selectedId === item.id}
-            open={open}
             canvasHost={canvasHost}
             layerHost={layerHost}
             onChange={onChange}

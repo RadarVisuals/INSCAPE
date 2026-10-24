@@ -142,7 +142,9 @@ test('production owner Identity window owns focus, scrolling, details and respon
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.mouse.click(5, 5);
     assert.equal(await opened.dialog.isVisible(), true, 'a non-modal Identity remains open after outside interaction');
-    await opened.dialog.getByRole('button', { name: 'Close Identity', exact: true }).click();
+    // The independently positioned Workbench switcher can overlap this corner
+    // after resizing; keyboard closure still has to restore the opening trigger.
+    await opened.dialog.getByRole('button', { name: 'Close Identity', exact: true }).press('Enter');
     await opened.dialog.waitFor({ state: 'detached' });
     assert.equal(await opened.trigger.evaluate(node => node === document.activeElement), true);
     for (const boundary of [{ width: 1280, height: 720 }, { width: 900, height: 720 }, { width: 640, height: 720 }, { width: 390, height: 844 }]) {

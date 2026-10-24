@@ -1,12 +1,11 @@
 import assert from 'node:assert/strict';
+
 import test from 'node:test';
 import { mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
 import { analyzeProductionBuild, assertNoProhibitedProductionArtifacts, assertSafeOutputDirectory, checkProductionBudgets, pruneProductionAuthoringAssets,
-  assertProductionFontContract, diagnosticsEnvironmentPlugin, productionBuildHygienePlugin, PRODUCTION_BUDGETS, UNUSED_PUBLIC_PATHS } from './productionBuild.js';
-import { ownerRuntimeIsolationPlugin } from './ownerRuntimeIsolation.js';
-import { excludeUnsupportedWalletConnectorsPlugin } from './unsupportedWalletConnectors.js';
+  assertProductionFontContract, PRODUCTION_BUDGETS, UNUSED_PUBLIC_PATHS } from './productionBuild.js';
 
 const removeTree = (path) => rm(path, { recursive: true, force: true, maxRetries: 8, retryDelay: 100 });
 
@@ -75,7 +74,7 @@ test('measured production allowances retain exact budget boundaries with the laz
     standaloneWalletJavaScript: { raw: 4_600_000, gzip: 1_225_000 },
     initialCss: { raw: 51_807, gzip: 10_301 },
     ownerCss: { raw: 143_870, gzip: 21_140 },
-    coreJavaScript: { raw: 2_480_000, gzip: 786_000 },
+    coreJavaScript: { raw: 2_519_500, gzip: 809_500 },
     publicAssets: { raw: 17_960_000 },
     largestPublicAsset: { raw: 2_700_000 },
   });
@@ -287,9 +286,8 @@ test('an alternate-outDir production build writes reports there and strips diagn
     await mkdir(resolve(alternate, 'assets/patterns'), { recursive: true });
     await writeFile(resolve(alternate, 'owner-runtime-graph.json'), 'stale');
     await writeFile(resolve(alternate, 'bundle-report.json'), 'stale');
-    const [{ build }, { default: react }] = await Promise.all([import('vite'), import('@vitejs/plugin-react')]);
-    await build({ configFile: false, root: project, logLevel: 'silent', plugins: [diagnosticsEnvironmentPlugin(), react(),
-      excludeUnsupportedWalletConnectorsPlugin(), ownerRuntimeIsolationPlugin(), productionBuildHygienePlugin()],
+    const { build } = await import('vite');
+    await build({ configFile: resolve(project, 'vite.config.js'), root: project, logLevel: 'silent',
       build: { outDir: alternate, emptyOutDir: true, manifest: true } });
     const report = JSON.parse(await readFile(resolve(alternate, 'bundle-report.json'), 'utf8'));
     const netlifyHeaders = await readFile(resolve(alternate, '_headers'), 'utf8');
@@ -311,4 +309,23 @@ test('an alternate-outDir production build writes reports there and strips diagn
   } finally {
     await removeTree(alternate);
   }
+});
+
+// Inspect every emitted JS chunk, independently of its generated filename.
+test('artifact hygiene rejects development fixture markers', async () => {
+  const root = resolve(tmpdir(), `underneath-development-authority-${process.pid}`);
+  const chunk = 'assets/lazy-owner-random-hash.js';
+  try {
+    await mkdir(resolve(root, 'assets'), { recursive: true });
+    await writeFile(resolve(root, chunk), 'export const categoryCommands = null;');
+    assert.equal(await assertNoProhibitedProductionArtifacts(root), true);
+    for (const marker of ['review-category', 'review-section', 'review-activity-', 'fixture-asset-received', '/fixtures/profile-identity-radar.svg']) {
+      await writeFile(resolve(root, chunk), `export const idPrefix = ${JSON.stringify(marker)};`);
+      await assert.rejects(() => assertNoProhibitedProductionArtifacts(root), error => {
+        assert.ok(error.message.includes(chunk));
+        assert.ok(error.message.includes(`development fixture marker: ${marker}`));
+        return true;
+      });
+    }
+  } finally { await removeTree(root); }
 });

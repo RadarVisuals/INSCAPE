@@ -13,7 +13,6 @@ import { projectSystemWorkflowTransform, unprojectSystemWorkflowCrop } from './s
 export const SYSTEM_WORKFLOW_CROP_DEAD_ZONE = 10;
 export const SYSTEM_WORKFLOW_CROP_MIN_ZOOM = 1;
 export const SYSTEM_WORKFLOW_CROP_MAX_ZOOM = 4;
-export const SYSTEM_WORKFLOW_CROP_ZOOM_STEP = 0.05;
 export const SYSTEM_WORKFLOW_DEFAULT_CROP = Object.freeze({ x: 0.5, y: 0.5, zoom: 1 });
 
 const clamp = (value, minimum, maximum) => Math.min(maximum, Math.max(minimum, value));

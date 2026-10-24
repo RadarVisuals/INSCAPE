@@ -49,7 +49,7 @@ test('Persistent groups select, move and resize together across save, undo and V
       await import('/src/inscapeTokens.css'); await import('/src/public/ownerSystemWorkflow/ownerSystemWorkflow.css'); await import('/src/lattice/rendering/latticeMenuSurface.css');
       window.reviewRoot = createRoot(document.getElementById('root'));
       window.reviewRoot.render(React.createElement(Runtime, { profileAddress, reviewStorage: localStorage, reviewAssets: fixture.OWNER_SYSTEM_WORKFLOW_REVIEW_ASSETS,
-        reviewCategories: [], reviewActivity: [], reviewDiscovery: [], reviewProfile: { name: 'Display text review' } }));
+        reviewCategories: [], reviewActivity: [], reviewProfile: { name: 'Display text review' } }));
     });
     await page.goto(`${origin}/__display_text__`); await mount();
     await page.getByRole('button', { name: 'Tools', exact: true }).click();

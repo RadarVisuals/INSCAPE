@@ -485,25 +485,6 @@ main > p {
   color: var(--color-text-secondary);
   margin: var(--space-3) 0;
 }
-.ds-demo-stage {
-  position: relative;
-  transform: translateZ(0);
-  min-height: 400px;
-  overflow: hidden;
-  background: var(--lattice-menu-panel);
-  color: var(--lattice-menu-ink);
-  border: 1px solid var(--lattice-menu-line-strong);
-  margin: var(--space-6) 0 var(--space-3);
-}
-.ds-demo-caption {
-  position: absolute;
-  top: 20px;
-  left: 24px;
-  right: 24px;
-  display: grid;
-  gap: 6px;
-  font-size: var(--ds-text-base);
-}
 .ds-windows {
   grid-template-columns: minmax(0, 1fr);
 }
@@ -519,35 +500,11 @@ main > p {
 .ds-example-window > .system-workflow__detached-window-titlebar {
   cursor: default;
 }
-.ds-example-window .ds-field {
-  display: grid;
-  gap: 5px;
-  margin: var(--space-3) 0;
-}
-.ds-example-window .ds-field > output {
-  font-family: var(--font-technical);
-}
-.ds-field-pair {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-}
 .ds-check {
   display: flex;
   align-items: center;
   gap: var(--space-2);
   padding-block: var(--space-2);
-}
-.ds-transform-actions {
-  display: flex;
-  gap: var(--space-2);
-  margin-bottom: var(--space-3);
-}
-.ds-transform-actions button {
-  width: var(--tool-action-target);
-  height: var(--tool-action-target);
-  display: grid;
-  place-items: center;
 }
 .ds-shell-copy {
   color: var(--workflow-ink);
@@ -828,11 +785,6 @@ td {
 .ds-example-heading h2 {
   margin: 0;
 }
-.ds-demo-caption .ds-badge {
-  margin-left: 8px;
-  color: inherit;
-  border-color: currentColor;
-}
 .ds-decision-list {
   display: grid;
   gap: 0;
@@ -970,9 +922,6 @@ td {
   .ds-type-list article {
     grid-template-columns: minmax(0, 1fr);
     gap: var(--space-4);
-  }
-  .ds-demo-stage {
-    min-height: 430px;
   }
   .ds-windows .ds-card {
     padding: 14px;

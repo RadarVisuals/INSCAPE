@@ -14,11 +14,15 @@ export function acquireProfileEditor(profile, locks = globalThis.navigator?.lock
   const existing = requests.get(address) || new Set();
   const releases = [...existing].filter(item => item.cancelled).map(item => item.finished);
   existing.add(record); requests.set(address, existing);
-  const token = {};
+  const token = { beforeRelease: new Set() };
   const ready = new Promise(resolve => { settle = resolve; });
   const stop = () => {
     record.cancelled = true;
-    if (held.get(address) === token) held.delete(address);
+    if (held.get(address) === token) {
+      // Pending local preferences must flush while their originating editor still owns the lease.
+      for (const flush of token.beforeRelease) { try { flush(); } catch { /* Release must still complete. */ } }
+      token.beforeRelease.clear(); held.delete(address);
+    }
     release?.(); settle('released');
   };
   // Route changes may request again before the browser completes our previous
@@ -50,4 +54,10 @@ export function captureProfileDraftWriteAccess(profile, storage) {
   const address = normalizeProfileAddress(profile), token = held.get(address);
   // A later editor for this profile must never reauthorize an old store.
   return () => Boolean(token) && held.get(address) === token;
+}
+
+export function beforeProfileEditorRelease(profile, callback) {
+  const token = held.get(normalizeProfileAddress(profile));
+  token?.beforeRelease.add(callback);
+  return () => token?.beforeRelease.delete(callback);
 }

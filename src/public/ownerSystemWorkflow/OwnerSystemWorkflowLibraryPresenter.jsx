@@ -7,6 +7,7 @@ import { clearOwnerSystemWorkflowDocumentSelection } from './ownerSystemWorkflow
 import { ImageChoice, libraryImageChoices, librarySourceLabel } from './OwnerSystemWorkflowLibraryImages.jsx';
 import LibraryArtworkImage from './LibraryArtworkImage.jsx';
 import { OwnerSystemWorkflowSidebarDeleteConfirmation, OwnerSystemWorkflowSidebarEditor } from './OwnerSystemWorkflowBrowserWorkspace.jsx';
+import useDeferredFocusReturn from '../useDeferredFocusReturn.js';
 
 const assetId = (asset) => asset?.stableAssetId || asset?.id;
 
@@ -125,16 +126,24 @@ export default function OwnerSystemWorkflowLibraryPresenter({ categoryCommands, 
   });
   const categorySectionRef = useRef(null);
   const [contextMenu, setContextMenu] = useState(null); const [organizationDrag, setOrganizationDrag] = useState(null);
-  const [collapsedSections, setCollapsedSections] = useState(() => new Set());
-  const [relationshipView, setRelationshipView] = useState('all');
-  const restoreFocus = (trigger) => requestAnimationFrame(() => trigger?.focus?.({ preventScroll: true }));
-  const closeContextMenu = (restore = true) => { const trigger = contextMenu?.trigger; clearOwnerSystemWorkflowDocumentSelection(); setContextMenu(null); if (restore) restoreFocus(trigger); };
-  const closeDialog = () => { const trigger = workspace.dialog?.trigger; clearOwnerSystemWorkflowDocumentSelection(); workspace.setDialog(null); restoreFocus(trigger); };
+  const collapsedSections = new Set(workspace.collapsedSections);
+  const setCollapsedSections = change => workspace.setCollapsedSections(current => [...change(new Set(current))]);
+  const { relationshipView, setRelationshipView } = workspace;
+  const { restoreFocus, cancelFocusReturn } = useDeferredFocusReturn();
+  const closeContextMenu = (restore = true) => { const trigger = contextMenu?.trigger; cancelFocusReturn(); clearOwnerSystemWorkflowDocumentSelection(); setContextMenu(null); if (restore) restoreFocus(trigger); };
+  const closeDialog = () => { const target = workspace.dialog?.returnFocus; clearOwnerSystemWorkflowDocumentSelection(); workspace.setDialog(null); restoreFocus(target); };
+  const openDialog = (trigger, dialog) => {
+    cancelFocusReturn();
+    const parent = trigger?.parentElement, index = parent ? [...parent.children].indexOf(trigger) : -1;
+    workspace.setDialog({ ...dialog, returnFocus: () => trigger?.isConnected ? trigger
+      : parent?.isConnected ? parent.children[index] : categorySectionRef.current?.querySelector('button') });
+  };
   const openCreateDialog = (event, kind = 'category') => { workspace.ensureSidebarWidth?.();
-    workspace.setDialog({ trigger: event.currentTarget, type: `create-${kind}` }); };
-  const openCategoryContext = (event, category) => setContextMenu({ anchor: contextAnchor(event), categoryId: category.id, kind: 'category', trigger: event.currentTarget });
-  const openSectionContext = (event, section) => setContextMenu({ anchor: contextAnchor(event), sectionId: section.id, kind: 'section', trigger: event.currentTarget });
+    openDialog(event.currentTarget, { type: `create-${kind}` }); };
+  const openCategoryContext = (event, category) => { cancelFocusReturn(); setContextMenu({ anchor: contextAnchor(event), categoryId: category.id, kind: 'category', trigger: event.currentTarget }); };
+  const openSectionContext = (event, section) => { cancelFocusReturn(); setContextMenu({ anchor: contextAnchor(event), sectionId: section.id, kind: 'section', trigger: event.currentTarget }); };
   const openAssetContext = (event, asset) => {
+    cancelFocusReturn();
     const ids = workspace.selectForContext(assetId(asset));
     setContextMenu({ anchor: contextAnchor(event), assetIds: ids, kind: 'membership', trigger: event.currentTarget });
   };
@@ -162,8 +171,8 @@ export default function OwnerSystemWorkflowLibraryPresenter({ categoryCommands, 
       const section = data.categoryOrganization?.sections?.find(({ id }) => id === contextMenu.sectionId);
       if (!section) return closeContextMenu();
       const trigger = contextMenu.trigger; closeContextMenu(false);
-      if (commandId === 'delete-section') { workspace.setDialog({ section, trigger, type: 'delete-section' }); return; }
-      workspace.setDialog({ section, trigger, type: commandId }); return;
+      if (commandId === 'delete-section') { openDialog(trigger, { section, type: 'delete-section' }); return; }
+      openDialog(trigger, { section, type: commandId }); return;
     }
     if (contextMenu?.kind === 'category') {
       const category = data.categories.find(({ id }) => id === contextMenu.categoryId);
@@ -174,7 +183,7 @@ export default function OwnerSystemWorkflowLibraryPresenter({ categoryCommands, 
         restoreFocus(trigger); return;
       }
       if (commandId === 'rename') workspace.ensureSidebarWidth?.();
-      workspace.setDialog({ category, trigger, type: commandId === 'rename' ? 'rename-category' : commandId }); return;
+      openDialog(trigger, { category, type: commandId === 'rename' ? 'rename-category' : commandId }); return;
     }
     if (contextMenu?.kind !== 'membership' || !workspace.areAssetsRenderable(contextMenu.assetIds)) return closeContextMenu();
     if (commandId.startsWith('remove-current:')) {

@@ -3,23 +3,23 @@ import test from 'node:test';
 import {
   OWNER_SYSTEM_WORKFLOW_ARTBOARD_MODES,
   createOwnerSystemWorkflowProjectedField,
-  measureOwnerSystemWorkflowArtboard,
   measureOwnerSystemWorkflowHeroArtboard,
   ownerSystemWorkflowArtboardContainsPoint,
   ownerSystemWorkflowProjectedFieldContainsPoint,
   projectOwnerSystemWorkflowPlacement,
 } from './systemWorkflowArtboardProjection.js';
 import { SYSTEM_WORKFLOW_DEFAULT_VIEW, projectSystemWorkflowViewport } from '../../systemWorkflow/systemWorkflowViewportProjection.js';
+import { projectDisplayStageViewport } from '../../lattice/rendering/displayPaintGeometry.js';
 
 test('world projection keeps square cells while the usable Grid fills wide and narrow viewports', () => {
   assert.deepEqual(SYSTEM_WORKFLOW_DEFAULT_VIEW, { horizontalAnchor: 0.5, verticalAnchor: 0.5, zoomMode: 'CONTAIN_REFERENCE' });
-  const wide = measureOwnerSystemWorkflowArtboard(1440, 848);
+  const wide = projectSystemWorkflowViewport({ columns: 32, rows: 18 }, { width: 1440, height: 848 });
   assert.deepEqual(wide, {
     cellSize: 45, left: 0, top: 19, width: 1440, height: 848,
     referenceWidth: 1440, referenceHeight: 810,
   });
   assert.deepEqual(projectOwnerSystemWorkflowPlacement({ column: 15, row: 4, columnSpan: 4, rowSpan: 4 }, wide), { left: 675, top: 199, width: 180, height: 180 });
-  const narrow = measureOwnerSystemWorkflowArtboard(390, 668);
+  const narrow = projectSystemWorkflowViewport({ columns: 32, rows: 18 }, { width: 390, height: 668 });
   assert.equal(narrow.width, 390);
   assert.equal(narrow.height, 668);
   assert.equal(narrow.cellSize, 12.1875);
@@ -35,9 +35,7 @@ test('world projection keeps square cells while the usable Grid fills wide and n
   });
 });
 
-test('owner and v9 Visitor share one explicit centered start view', () => {
-  assert.deepEqual(projectSystemWorkflowViewport({ columns: 32, rows: 18 }, { width: 1440, height: 848 }),
-    measureOwnerSystemWorkflowArtboard(1440, 848));
+test('the canonical centered start view rejects unsupported anchors', () => {
   assert.throws(() => projectSystemWorkflowViewport({ columns: 32, rows: 18 }, { width: 1440, height: 848 },
     { horizontalAnchor: 2, verticalAnchor: 0.5, zoomMode: 'CONTAIN_REFERENCE' }), /canonical view/);
 });
@@ -56,8 +54,9 @@ test('Hero artboard stays compact on desktop and preserves a centered 16:9 apert
   assert.ok(Math.abs(narrow.top - 181.14375) < 1e-9);
   assert.ok(Math.abs(narrow.referenceWidth / narrow.referenceHeight - 16 / 9) < 1e-12);
 
-  const field = createOwnerSystemWorkflowProjectedField({ getBoundingClientRect: () => ({ left: 10, top: 20, width: 465, height: 582 }) }, 1, 1,
-    OWNER_SYSTEM_WORKFLOW_ARTBOARD_MODES.HERO);
+  const node = { getBoundingClientRect: () => ({ left: 10, top: 20, width: 465, height: 582 }) };
+  const field = createOwnerSystemWorkflowProjectedField(node, 1,
+    OWNER_SYSTEM_WORKFLOW_ARTBOARD_MODES.HERO, node, narrow);
   assert.equal(ownerSystemWorkflowProjectedFieldContainsPoint(field, { x: field.left, y: field.top }), true);
   assert.equal(ownerSystemWorkflowProjectedFieldContainsPoint(field, { x: field.left - 1, y: field.top }), false);
   assert.equal(ownerSystemWorkflowProjectedFieldContainsPoint(field, {
@@ -73,7 +72,7 @@ test('Hero margins, cap and pointer projection keep their authored size on a phy
     const physical = measureOwnerSystemWorkflowHeroArtboard(960 * contentScale, 540 * contentScale, contentScale);
     for (const key of Object.keys(logical)) assert.ok(Math.abs(physical[key] / contentScale - logical[key]) < 1e-9);
     const node = { getBoundingClientRect: () => ({ left: 41, top: 73, width: 960 * zoom, height: 540 * zoom }) };
-    const field = createOwnerSystemWorkflowProjectedField(node, 1, 1, OWNER_SYSTEM_WORKFLOW_ARTBOARD_MODES.HERO, node, physical, 1 / density);
+    const field = createOwnerSystemWorkflowProjectedField(node, 1, OWNER_SYSTEM_WORKFLOW_ARTBOARD_MODES.HERO, node, physical, 1 / density);
     assert.ok(Math.abs((field.left - 41) / zoom - logical.left) < 1e-9);
     assert.ok(Math.abs(field.cellSize / zoom - logical.cellSize) < 1e-9);
   }
@@ -84,7 +83,8 @@ test('a resting scene offset changes editing coordinates without moving the clip
     getBoundingClientRect: () => ({ left: 100, top: 60, width: 180, height: 320 }) };
   for (const offset of [-50.25, 50.25]) {
     const scene = { getBoundingClientRect: () => ({ left: 100 + offset, top: 60, width: 180, height: 320 }) };
-    const field = createOwnerSystemWorkflowProjectedField(node, 1, 1, OWNER_SYSTEM_WORKFLOW_ARTBOARD_MODES.GRID, scene);
+    const projection = projectDisplayStageViewport({ columns: 18, rows: 32 }, { width: 180, height: 320 });
+    const field = createOwnerSystemWorkflowProjectedField(node, 1, OWNER_SYSTEM_WORKFLOW_ARTBOARD_MODES.GRID, scene, projection);
     assert.equal(field.left, 100 + offset);
     assert.equal(field.viewportLeft, 100);
     assert.equal(field.viewportWidth, 180);
@@ -96,15 +96,27 @@ test('a resting scene offset changes editing coordinates without moving the clip
 
 test('Stage scaling keeps pointer projection proportional at 25, 75, and the safe fitted maximum', () => {
   const documentPlacement = Object.freeze({ column: 7, row: 4, columnSpan: 3, rowSpan: 2 });
-  const fieldAt = (scale) => createOwnerSystemWorkflowProjectedField({
-    getBoundingClientRect: () => ({ left: 100, top: 60, width: 800 * scale, height: 450 * scale }),
-  });
+  const projection = projectDisplayStageViewport({ columns: 32, rows: 18 }, { width: 800, height: 450 });
+  const fieldAt = scale => {
+    const node = { getBoundingClientRect: () => ({ left: 100, top: 60, width: 800 * scale, height: 450 * scale }) };
+    return createOwnerSystemWorkflowProjectedField(node, 1, OWNER_SYSTEM_WORKFLOW_ARTBOARD_MODES.GRID, node, projection, scale);
+  };
   const quarter = fieldAt(.25);
   const reduced = fieldAt(.75);
   const fitted = fieldAt(1);
   assert.equal(quarter.cellSize, fitted.cellSize * .25);
   assert.equal(reduced.cellSize, fitted.cellSize * .75);
   assert.deepEqual(documentPlacement, { column: 7, row: 4, columnSpan: 3, rowSpan: 2 });
-  assert.deepEqual(projectOwnerSystemWorkflowPlacement(documentPlacement, measureOwnerSystemWorkflowArtboard(800, 450)),
+  assert.deepEqual(projectOwnerSystemWorkflowPlacement(documentPlacement, projection),
     { left: 175, top: 100, width: 75, height: 50 });
+});
+
+test('pointer fields require the rendered Stage projection instead of fitting from DOM size again', () => {
+  const node = { getBoundingClientRect: () => ({ left: 10, top: 20, width: 500, height: 300 }) };
+  assert.equal(createOwnerSystemWorkflowProjectedField(node), null);
+  const projection = projectDisplayStageViewport({ columns: 32, rows: 18 }, { width: 960, height: 540 });
+  const field = createOwnerSystemWorkflowProjectedField(node, 1, OWNER_SYSTEM_WORKFLOW_ARTBOARD_MODES.GRID, node, projection, .5);
+  assert.equal(field.cellSize, 15, 'the supplied Stage and camera scale own pointer geometry');
+  assert.equal(field.viewportWidth, 500, 'the actual DOM rectangle still clips input');
+  assert.equal(createOwnerSystemWorkflowProjectedField(node, 0, OWNER_SYSTEM_WORKFLOW_ARTBOARD_MODES.GRID, node, projection), null);
 });

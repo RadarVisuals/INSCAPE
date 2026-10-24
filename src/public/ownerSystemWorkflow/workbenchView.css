@@ -7,7 +7,6 @@
   box-sizing: border-box;
   border-color: transparent; }
 .workbench-view-controls svg:where(.lucide) { width: var(--icon-size-interface); height: var(--icon-size-interface); }
-.workbench-view-controls .workbench-view-controls__zoom { min-width: 56px; }
 .workbench-view-controls__selection-count { position: absolute; right: 8px; bottom: calc(100% + 4px); padding: 3px 7px; white-space: nowrap; background: var(--tactile-surface); color: var(--tactile-muted); border-radius: var(--control-radius); font: var(--workflow-type-control); }
 @media (pointer: coarse), (max-width: 520px) {
   .workbench-view-controls { --view-control-target: var(--control-target-touch); }
@@ -65,3 +64,6 @@
     background: Highlight;
   }
 }
+
+/* An open Canvas menu stays above the screen utilities. */
+.workbench-view-controls:has(.workbench-canvas-tools) { z-index: 87; }

@@ -1,3 +1,4 @@
+import { setSharedColor } from './fixtures/shared-tools.mjs';
 import { openTextToolSection } from './fixtures/text-tool-sections.mjs';
 import assert from 'node:assert/strict';
 import test from 'node:test';
@@ -24,6 +25,7 @@ async function selectText(page, body, text) {
 async function setNumber(page, name, value) {
   const tools = page.locator('.text-tools-window');
   if (name.startsWith('Title')) await openTextToolSection(tools, 'Title');
+  else await tools.getByRole('tab', { name: 'Format text', exact: true }).click();
   if (name.startsWith('Paragraph') || name === 'Selected text tracking') {
     const advanced = tools.locator('.text-inspector-advanced');
     if (!await advanced.getAttribute('open').then(value => value !== null)) await advanced.locator('summary').click();
@@ -90,7 +92,7 @@ test('clicking a small sub-label preserves the target and joined lines can be se
           await separate.scrollIntoViewIfNeeded(); await separate.focus();
           const tools = page.locator('.text-tools-window'), box = await tools.boundingBox();
           assert.ok(box.x >= 0 && box.x + box.width <= 390.5);
-          assert.equal(await tools.locator('.system-workflow__instrument-content').evaluate(n => n.scrollWidth <= n.clientWidth + 1), true);
+          assert.equal(await tools.locator('.text-tools-content').evaluate(n => n.scrollWidth <= n.clientWidth + 1), true);
           await page.screenshot({ path: '.browser-test-runtime/text-line-shared-narrow.png' });
           await page.getByRole('button', { name: 'Redo', exact: true }).click();
           await page.getByRole('button', { name: 'Redo', exact: true }).click();
@@ -125,7 +127,7 @@ test('selected size and tracking author a sub-label, preserve other text, undo, 
     await page.keyboard.insertText('A paragraph with selected words and ordinary text.');
     await selectText(page, body, 'ARCHIVE // 01');
     await page.getByLabel('Selected text font', { exact: true }).selectOption('Inscape Article Mono');
-    await page.getByLabel('Selected text colour', { exact: true }).fill('#aabbcc');
+    await setSharedColor(page, '#aabbcc', 'body');
     await setNumber(page, 'Selected text size', 10);
     await setNumber(page, 'Selected text tracking', .2);
     const label = body.locator('span').filter({ hasText: 'ARCHIVE // 01' });
@@ -161,18 +163,18 @@ test('selected size and tracking author a sub-label, preserve other text, undo, 
     assert.equal((await styleOf(words))[1], '1.92px', 'an unfinished negative number does not clear tracking on blur');
 
     await selectText(page, body, 'selected words');
-    await page.getByRole('button', { name: 'Use inherited text size', exact: true }).click();
+    await page.getByRole('button', { name: 'Use default text size', exact: true }).click();
     assert.equal((await styleOf(words))[0], '16px'); assert.equal((await styleOf(words))[1], '1.28px');
-    await page.getByRole('button', { name: 'Use inherited text tracking', exact: true }).click();
+    await page.getByRole('button', { name: 'Use default letter spacing', exact: true }).click();
     assert.equal(await body.locator('p').nth(1).locator('span').count(), 0, 'reset removes only empty marks');
     // An explicit zero survives unrelated FontFamily/Color cleanup commands.
     await selectText(page, body, 'ordinary'); await setNumber(page, 'Selected text tracking', 0);
     assert.equal(await body.locator('span').filter({ hasText: 'ordinary' }).evaluate(n => n.style.letterSpacing), '0em', 'explicit zero renders immediately');
-    await page.getByLabel('Selected text font', { exact: true }).selectOption('Inscape Sora');
-    await page.getByLabel('Selected text font', { exact: true }).selectOption('');
+    await page.getByLabel('Selected text font', { exact: true }).selectOption('Inscape Article Literata');
+    await page.getByRole('button', { name: 'Use default font (Sora)', exact: true }).click();
     const zero = body.locator('span').filter({ hasText: 'ordinary' });
     assert.equal(await zero.evaluate(n => n.style.letterSpacing), '0em');
-    await page.getByRole('button', { name: 'Use inherited text tracking', exact: true }).click();
+    await page.getByRole('button', { name: 'Use default letter spacing', exact: true }).click();
 
     await body.focus(); await body.press('Control+A'); await settle(page);
     assert.equal(await field.getAttribute('placeholder'), 'Mixed'); assert.equal(await field.inputValue(), '');
@@ -195,7 +197,7 @@ test('selected size and tracking author a sub-label, preserve other text, undo, 
     await page.setViewportSize({ width: 390, height: 844 }); await settle(page);
     const tools = page.locator('.text-tools-window'), box = await tools.boundingBox();
     assert.ok(box.x >= 0 && box.x + box.width <= 390.5);
-    assert.equal(await tools.locator('.system-workflow__instrument-content').evaluate(node => node.scrollWidth <= node.clientWidth + 1), true);
+    assert.equal(await tools.locator('.text-tools-content').evaluate(node => node.scrollWidth <= node.clientWidth + 1), true);
     await field.scrollIntoViewIfNeeded(); await field.fill('30'); await settle(page);
     assert.equal((await styleOf(label))[0], '30px');
     assert.equal(await field.evaluate(node => node === document.activeElement), true);
@@ -267,8 +269,8 @@ test('title and paragraph gaps control the Nomad layout, undo, reset and persist
     const point = async index => body.locator('p').nth(index).evaluate(node => {
       const range = document.createRange(); range.selectNodeContents(node); return range.getBoundingClientRect().top;
     });
-    await setNumber(page, 'Title gap', 0); const top = await point(0);
-    await setNumber(page, 'Title gap', 8); assert.ok(Math.abs((await point(0)) - top - 8) < .1);
+    await setNumber(page, 'Title gap', 0); await page.getByLabel('Title gap', { exact: true }).press('Enter'); const top = await point(0);
+    await setNumber(page, 'Title gap', 8); await page.getByLabel('Title gap', { exact: true }).press('Enter'); assert.ok(Math.abs((await point(0)) - top - 8) < .1);
     await setNumber(page, 'Title gap', 28);
     assert.ok(Math.abs((await point(0)) - top - 28) < .1);
     await page.getByLabel('Title gap', { exact: true }).press('Escape'); await settle(page);
@@ -313,7 +315,7 @@ test('title and paragraph gaps control the Nomad layout, undo, reset and persist
     await control.scrollIntoViewIfNeeded(); await control.focus();
     const tools = page.locator('.text-tools-window'), box = await tools.boundingBox();
     assert.ok(box.x >= 0 && box.x + box.width <= 390.5);
-    assert.equal(await tools.locator('.system-workflow__instrument-content').evaluate(n => n.scrollWidth <= n.clientWidth + 1), true);
+    assert.equal(await tools.locator('.text-tools-content').evaluate(n => n.scrollWidth <= n.clientWidth + 1), true);
     await page.screenshot({ path: '.browser-test-runtime/text-spacing-narrow.png' });
     await page.setViewportSize({ width: 1440, height: 1100 }); await settle(page);
     await page.getByRole('button', { name: 'Read', exact: true }).focus(); await page.keyboard.press('Enter');

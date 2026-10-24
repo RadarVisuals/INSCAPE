@@ -129,7 +129,7 @@ function ProfileDocumentV9Session({ document, onExit, onOpenDirectory, onReturn,
       navigationHost={activeDisplay === item.id ? navigationHost : null} reducedMotion={layout.reducedMotion}
       layoutMode={layout.mode} onInspectionChange={activeDisplay === item.id ? setInspecting : undefined} />)}
     {document.keeperDocks?.length > 0 && <Suspense fallback={null}>
-      <KeeperWorkbench records={document.keeperDocks} presentations={document.workbench?.keeperDocks} profileAddress={document.profile.address}
+      <KeeperWorkbench records={document.keeperDocks} profileAddress={document.profile.address}
         hostRef={rootRef} reducedMotion={layout.reducedMotion} />
     </Suspense>}
     {document.shapes?.length > 0 && <Suspense fallback={null}>

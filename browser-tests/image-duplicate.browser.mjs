@@ -91,7 +91,9 @@ test('Image tools duplicate the viewed cropped side and all other sides, recover
     assert.equal(copyRecord.width, 1032); assert.equal(copyRecord.height, 264);
     assert.equal(await copy.locator('.image-module__canvas').getAttribute('data-side-id'), copyRecord.sides[1].id);
     assert.equal(await copy.locator('.image-module__canvas').evaluate(node => node === document.activeElement), true);
-    await tools.getByRole('region', { name: 'Cropped creature copy / Side 2 tools', exact: true }).waitFor();
+    const copyActions = tools.locator('[data-context-action-target]');
+    await copyActions.waitFor();
+    assert.equal(await copyActions.getAttribute('data-context-action-target'), copyRecord.id, 'tools follow the viewed side of the selected copy');
     const geometry = module => module.locator('.image-module__artwork').evaluate(node => ({
       viewBox: node.getAttribute('viewBox'), image: node.querySelector('image')?.outerHTML,
       transform: [...node.querySelectorAll('[transform]')].map(element => element.getAttribute('transform')),

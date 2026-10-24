@@ -6,7 +6,6 @@ const source = readFileSync(new URL('./RackMenu.jsx', import.meta.url), 'utf8');
 const desktopMenu = readFileSync(new URL('./DesktopMenu.jsx', import.meta.url), 'utf8');
 const styles = readFileSync(new URL('./rackMenu.css', import.meta.url), 'utf8');
 const productionLibrary = readFileSync(new URL('../ownerSystemWorkflow/OwnerSystemWorkflowLibraryPresenter.jsx', import.meta.url), 'utf8');
-const productionDiscover = readFileSync(new URL('../ownerSystemWorkflow/OwnerSystemWorkflowDiscoverWorkspace.jsx', import.meta.url), 'utf8');
 
 test('RackMenu retains DesktopMenu interaction ownership behind one shared visual primitive', () => {
   assert.match(source, /import DesktopMenu from '.\/DesktopMenu\.jsx'/);
@@ -30,7 +29,7 @@ test('cascade menus wait for pointer intent and close their flyout when the poin
 });
 
 test('active production context-menu callers use RackMenu instead of styling DesktopMenu directly', () => {
-  for (const caller of [productionLibrary, productionDiscover]) {
+  for (const caller of [productionLibrary]) {
     assert.match(caller, /import RackMenu/);
     assert.match(caller, /<RackMenu/);
     assert.doesNotMatch(caller, /import DesktopMenu/);

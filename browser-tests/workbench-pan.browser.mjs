@@ -18,7 +18,7 @@ const snapshot = page => page.evaluate(() => ({
     const r = el.getBoundingClientRect();
     return { id: el.dataset.workbenchViewId, x: r.x, y: r.y, width: r.width, height: r.height, left: el.style.left, top: el.style.top };
   }),
-  dock: document.querySelector('.system-workflow__global-bar, .visitor-grid-world__dock').getBoundingClientRect().toJSON(),
+  dock: document.querySelector('.workbench-sidebar, .visitor-grid-world__dock').getBoundingClientRect().toJSON(),
   grid: document.querySelector('main.system-workflow > .lattice-pixel-grid')?.getBoundingClientRect().toJSON(),
   shortcut: document.querySelector('.system-workflow__desktop-shortcut')?.getBoundingClientRect().toJSON(),
   storage: Object.fromEntries(Object.keys(localStorage).map(key => [key, localStorage.getItem(key)])),
@@ -69,6 +69,8 @@ test('owner and Visitor pan all modules equally at native and zoomed sizes witho
       await page.locator('[data-workbench-view-id]').nth(7).waitFor();
       if (!visitor && await page.getByRole('button', { name: 'Close Text tools', exact: true }).isVisible())
         await page.getByRole('button', { name: 'Close Text tools', exact: true }).click();
+      const collapse = page.getByRole('button', { name: 'Collapse sidebar', exact: true });
+      if (await collapse.isVisible()) await collapse.click();
       await page.waitForTimeout(1000);
       let before = await snapshot(page);
       await drag(page, { x: 100, y: -65 });
@@ -98,7 +100,8 @@ test('owner and Visitor pan all modules equally at native and zoomed sizes witho
       for (const end of ['blur', 'space']) {
         await drag(page, { x: 40, y: 25 }, { end });
         const stopped = await snapshot(page);
-        shifted(before, stopped, 40, 25);
+        // Focus loss cancels the current pan; Space release commits it.
+        shifted(before, stopped, end === 'blur' ? 0 : 40, end === 'blur' ? 0 : 25);
         await page.mouse.move(230, 580); await settle(page);
         shifted(stopped, await snapshot(page), 0, 0);
         await resetCameraTestView(page, visitor); await settle(page);
@@ -123,7 +126,7 @@ test('owner and Visitor pan all modules equally at native and zoomed sizes witho
       await image.focus(); await page.keyboard.press('Space');
       assert.equal(await page.locator('.image-lift').count(), 0, 'Space on a focused Image remains a camera modifier');
       await drag(page, { x: 0, y: -260 });
-      await image.click();
+      await image.click(); await image.press('i');
       await page.getByRole('button', { name: 'Return to Image', exact: true }).waitFor();
       await page.keyboard.press('Escape');
       await page.locator('.image-lift').waitFor({ state: 'detached' });
@@ -178,7 +181,7 @@ test('pan respects editable controls and clears gestures on suspension and Workb
       const after = await frame.boundingBox();
       assert.deepEqual(after, { ...before, x: before.x + 70, y: before.y + 35 }, 'armed Space overrides text and resize input without editing geometry');
       assert.equal(await page.getByRole('textbox', { name: 'Text entry' }).inputValue(), 'Two words');
-      await page.getByRole('button', { name: 'Reset Workbench position', exact: true }).click(); await settle(page);
+      await page.getByRole('button', { name: 'Reset Workbench view', exact: true }).click(); await settle(page);
     }
     const windows = page.locator('[data-workbench-pan]');
     const tools = page.getByRole('complementary', { name: 'Tools — Test', exact: true });

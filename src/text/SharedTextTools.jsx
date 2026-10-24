@@ -1,7 +1,7 @@
-import { createContext, useCallback, useContext, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { createContext, useCallback, useContext, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
-import { WorkbenchWindow } from '../public/ownerSystemWorkflow/DisplayInstrumentWindow.jsx';
-import { X } from 'lucide-react';
+import WorkbenchToolPanel from '../public/ownerSystemWorkflow/WorkbenchToolPanel.jsx';
+import { useWorkbenchView } from '../public/ownerSystemWorkflow/WorkbenchViewContext.js';
 import './text.css';
 
 const Context = createContext(null);
@@ -9,36 +9,47 @@ export const useSharedTextTools = () => useContext(Context);
 
 // The shared window owns only its screen position and active tool source.
 // Editors, callbacks, unsaved recovery and article content remain module-owned.
-export function SharedTextToolsProvider({ activeModuleId, onActivate, open, onOpenChange, menuSurface, children }) {
+const noSubscription = () => () => {};
+export function SharedTextToolsProvider({ activeModuleId, onActivate, open, onOpenChange, menuSurface, children, editorPreferences }) {
   const [host, setHost] = useState(null), [source, setSource] = useState(null);
+  const [localSection, setLocalSection] = useState('format');
+  const storedSection = editorPreferences?.section('textSection'), framePreferences = editorPreferences?.section('textFrame');
+  const section = useSyncExternalStore(storedSection?.subscribe || noSubscription, storedSection?.getSnapshot || (() => localSection));
+  const setSection = storedSection?.update || setLocalSection;
   const report = useCallback(value => {
     setSource(value);
     return () => setSource(current => current?.token === value.token ? null : current);
   }, []);
-  const value = useMemo(() => ({ activeModuleId, activate: onActivate, open, setOpen: onOpenChange, menuSurface, host, setHost, source, report }),
-    [activeModuleId, onActivate, open, onOpenChange, menuSurface, host, source, report]);
+  const value = useMemo(() => ({ activeModuleId, activate: onActivate, open, setOpen: onOpenChange, menuSurface, host, setHost, source, report, section, setSection, framePreferences }),
+    [activeModuleId, onActivate, open, onOpenChange, menuSurface, host, source, report, section, setSection, framePreferences]);
   return <Context.Provider value={value}>{children}</Context.Provider>;
 }
 
-export function SharedTextToolsWindow({ hidden = false }) {
+export function SharedTextToolsWindow({ hidden = false, navigationRef }) {
   const tools = useSharedTextTools();
+  const view = useWorkbenchView();
   const { source } = tools;
-  const initialAnchor = useRef(null);
-  const frame = useRef(null);
-  if (source && !initialAnchor.current) initialAnchor.current = source.anchor || { left: 760, right: 748, top: 72 };
-  if (!initialAnchor.current || hidden || !tools.open || !source) return null;
-  const anchor = initialAnchor.current;
-  const width = Math.min(326, globalThis.innerWidth - 16);
-  const left = anchor.right + 12 + width <= globalThis.innerWidth - 8 ? anchor.right + 12 : Math.max(8, anchor.left - width - 12);
-  return <div data-shared-text-tools>
-    <WorkbenchWindow label="Text tools" title={source?.label || 'Select Text'} chrome="tactile" className="text-tools-window" width={326} initialHeight={620} minimumHeight={160}
-      titleContent={<div className="text-inspector-heading"><strong>Text</strong><span title={source?.label}>{source?.label || 'Select Text'}</span></div>}
-      fitContent fitContentFromTop resizable={false} initialX={frame.current?.left ?? left} initialY={frame.current?.top ?? anchor.top} onLayoutChange={value => { frame.current = value; }}
-      controls={<button type="button" className="workflow-tactile-control system-workflow__window-cap" aria-label="Close Text tools" onClick={() => {
+  const [localFrame, setLocalFrame] = useState(null);
+  const frame = useSyncExternalStore(tools.framePreferences?.subscribe || noSubscription, tools.framePreferences?.getSnapshot || (() => localFrame));
+  const setFrame = tools.framePreferences?.update || setLocalFrame;
+  useLayoutEffect(() => {
+    if (!source || frame || (view.setToolViewportBottom && view.toolViewportBottom == null)) return;
+    const anchor = source.anchor || { left: 760, right: 748, top: 72 };
+    const width = Math.min(326, innerWidth - 16);
+    const left = anchor.right + 12 + width <= innerWidth - 8 ? anchor.right + 12 : Math.max(8, anchor.left - width - 12);
+    setFrame({ left, top: anchor.top, width, height: Math.min(620, Math.max(240, (view.toolViewportBottom ?? innerHeight - 48) - anchor.top - 8)) });
+  }, [source, frame, setFrame, view.setToolViewportBottom, view.toolViewportBottom]);
+  if (!frame || hidden || !tools.open || !source) return null;
+  return <div data-shared-text-tools data-workbench-inspection-target={tools.activeModuleId}
+    data-system-workflow-overlay data-workflow-material="tactile" data-workflow-finish="flat" data-lattice-menu-surface data-menu-surface={tools.menuSurface}>
+    <WorkbenchToolPanel label={`Text tools: ${source.label}`} title="Text" moveLabel="Move Text tools window" closeLabel="Close Text tools" className="text-tools-window"
+      titleContent={<span className="text-inspector-heading"><strong>Text</strong><span title={source.label}>{source.label}</span></span>}
+      frame={frame} onFrameChange={setFrame} minimumWidth={300} zIndex={81} viewportBottom={view.toolViewportBottom} topBoundaryRef={navigationRef} fitFromTop
+      onClose={() => {
         if (source?.close() !== false) tools.setOpen(false);
-      }}><X /></button>}>
+      }}>
       <div className="text-tools-content" ref={tools.setHost} />
-    </WorkbenchWindow>
+    </WorkbenchToolPanel>
   </div>;
 }
 

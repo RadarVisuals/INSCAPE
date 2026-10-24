@@ -1,5 +1,5 @@
 import ArticleView from '../src/text/ArticleView.jsx';
-import React, { useEffect, useId, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import {
   Check,
   Eye,

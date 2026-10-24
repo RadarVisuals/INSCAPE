@@ -22,7 +22,7 @@ const CREATION_CONTROLS = `${EDITING},button,a,summary,[role=separator]`;
 // Adapts Workbench commands to the toolbar. It does not own module content,
 // camera state, tool windows, or a second command/persistence implementation.
 export default function OwnerWorkbenchToolbar({ hostRef, placementTargets, commands, onCommand, onOpenLibrary, libraryOpen,
-  preferences, onPreferencesChange, hidden, onHistory, history, historyBlocked, onNotice }) {
+  preferences, onPreferencesChange, hidden, onHistory, history, historyBlocked, onNotice, artworkLayersOpen, onToggleArtworkLayers, onOpenSharedTool }) {
   const { bounds: areaBounds } = useWorkbenchArea();
   const view = useWorkbenchView(), camera = useWorkbenchCamera(), tools = useSharedDisplayTools();
   const [actionRequest, setActionRequest] = useState(0), [ghost, setGhost] = useState(null);
@@ -144,7 +144,9 @@ export default function OwnerWorkbenchToolbar({ hostRef, placementTargets, comma
 
   const inspector = (id, reason) => ({ enabled: tools.isAvailable(id), open: tools.isAvailable(id) && Boolean(tools.state[id]), reason: tools.isAvailable(id) ? undefined : reason,
     onToggle: () => tools.command(id, undefined, document.activeElement) });
-  const layers = inspector('layers', 'Select a Display to see its layers.'), info = inspector('metadata', 'Select an artwork to see its information.');
+  const layers = onToggleArtworkLayers ? { enabled: true, open: artworkLayersOpen, onToggle: onToggleArtworkLayers }
+    : inspector('layers', 'Select a Display to see its layers.');
+  const info = inspector('metadata', 'Select an artwork to see its information.');
   const adapt = command => ({ ...command, label: LABELS[command.id] || command.label, icon: ICONS[command.id],
     reason: command.disabled ? 'Module limit reached.' : undefined,
     children: command.children?.map(adapt), onSelect: () => {
@@ -155,6 +157,7 @@ export default function OwnerWorkbenchToolbar({ hostRef, placementTargets, comma
   const shapeCommands = addCommands.filter(command => isShapeCommand(command.id))
     .map(command => command.id === 'shape' ? { ...command, shortcut: 'R' } : command);
   const actions = [
+    ...(onOpenSharedTool ? ['Transform', 'Color', 'Image', 'Shape', 'FX'].map(tab => ({ id: ['Image', 'Shape'].includes(tab) ? `${tab.toLowerCase()}-settings` : tab.toLowerCase(), label: ['Image', 'Shape'].includes(tab) ? `${tab} settings` : tab, icon: Settings2, group: 'Selection', onSelect: () => onOpenSharedTool(tab) })) : []),
     { id: 'layers', label: 'Layers', icon: Layers, group: 'Selection', disabled: !layers.enabled, reason: layers.reason, selected: layers.open, onSelect: layers.onToggle },
     { id: 'metadata', label: 'Artwork info', icon: Info, group: 'Selection', disabled: !info.enabled, reason: info.reason, selected: info.open, onSelect: info.onToggle },
     { id: 'appearance', label: 'Display appearance', icon: Settings2, group: 'Selection', disabled: !tools.isAvailable('appearance'), reason: 'Select a Display first.',

@@ -1,6 +1,6 @@
-import { createEmptyWorkspace, LIBRARY_WORKSPACE_VERSION } from '../domain/libraryWorkspace.js';
+import { createEmptyWorkspace } from '../domain/libraryWorkspace.js';
 import { normalizeProfileAddress } from '../config.js';
-import { inspectLibraryWorkspaceRecord, libraryWorkspaceKey, loadLibraryWorkspace, normalizeWorkspace } from './libraryWorkspaceStorage.js';
+import { libraryWorkspaceKey, loadLibraryWorkspace, normalizeWorkspace } from './libraryWorkspaceStorage.js';
 
 export function browserLibraryStorage() {
   try { return globalThis.window?.localStorage || null; } catch { return null; }
@@ -14,28 +14,15 @@ export function createLibraryWorkspacePersistence(storage) {
   return {
     load(profileAddress) {
       const profile = normalizeProfileAddress(profileAddress);
-      let inspection = inspectLibraryWorkspaceRecord(storage, profile);
-      if (inspection.presence === 'legacy') {
-        try {
-          const legacy = JSON.parse(storage.getItem(libraryWorkspaceKey(profile, inspection.version)));
-          if (normalizeProfileAddress(legacy?.profileAddress) !== profile
-            || !Number.isInteger(legacy?.version) || legacy.version < 1 || legacy.version > LIBRARY_WORKSPACE_VERSION)
-            inspection = { presence: 'invalid' };
-        } catch { inspection = { presence: 'invalid' }; }
-      }
-      if (inspection.presence === 'invalid' || inspection.presence === 'unavailable') {
-        const error = inspection.presence === 'invalid'
+      try {
+        const { raw, workspace } = loadLibraryWorkspace(storage, profile);
+        records.set(profile, { raw });
+        return { workspace, persistenceError: null };
+      } catch (cause) {
+        const error = cause instanceof SyntaxError || cause instanceof TypeError
           ? 'Saved Library data could not be read. It has been preserved; editing is blocked.' : unavailable;
         records.set(profile, { error });
         return { workspace: createEmptyWorkspace(profile), persistenceError: error };
-      }
-      const workspace = loadLibraryWorkspace(storage, profile);
-      try {
-        records.set(profile, { raw: storage.getItem(libraryWorkspaceKey(profile)) });
-        return { workspace, persistenceError: null };
-      } catch {
-        records.set(profile, { error: unavailable });
-        return { workspace, persistenceError: unavailable };
       }
     },
     save(workspace) {

@@ -41,7 +41,7 @@ test('Display text editing preserves placement and ordinary placement keyboard e
         await import('/src/index.css'); await import('/src/inscapeTokens.css');
         await import('/src/lattice/rendering/latticeMenuSurface.css'); await import('/src/public/ownerSystemWorkflow/ownerSystemWorkflow.css');
         createRoot(document.getElementById('root')).render(React.createElement(Runtime, { profileAddress, reviewStorage: localStorage,
-          reviewAssets: fixture.OWNER_SYSTEM_WORKFLOW_REVIEW_ASSETS, reviewCategories: [], reviewActivity: [], reviewDiscovery: [], reviewProfile: { name: 'Repair review' } }));
+          reviewAssets: fixture.OWNER_SYSTEM_WORKFLOW_REVIEW_ASSETS, reviewCategories: [], reviewActivity: [], reviewProfile: { name: 'Repair review' } }));
       });
       await page.getByRole('button', { name: 'Tools', exact: true }).click();
       await page.getByRole('menuitem', { name: 'LAYERS', exact: true }).click();

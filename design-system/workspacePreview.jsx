@@ -1,4 +1,4 @@
-import React, { useEffect, useId, useRef, useState, lazy, Suspense } from 'react';
+import { useEffect, useId, useRef, useState, lazy, Suspense } from 'react';
 import {
   ArrowDown,
   ArrowUp,
@@ -6,18 +6,12 @@ import {
   ChevronsUp,
   Copy,
   Crop,
-  Home,
-  Image,
-  Layers,
-  Lock,
-  Plus,
-  Shapes,
+  Image,  Lock,  Shapes,
   Trash2,
-  Type,
-  X,
-  ZoomIn,
+  Type,  ZoomIn,
 } from 'lucide-react';
 import WorkbenchToolbar from '../src/public/ownerSystemWorkflow/WorkbenchToolbar.jsx';
+import KeeperDockContent from '../src/keeper/KeeperDockContent.jsx';
 import ArtworkTransformTools from '../src/public/ownerSystemWorkflow/ArtworkTransformTools.jsx';
 import '../src/public/ownerSystemWorkflow/contextToolbar.css';
 import './workspacePreview.css';
@@ -25,6 +19,7 @@ import NavigationPreview from './navigationPreview.jsx';
 import { IconKey, keyClass } from './previewControls.jsx';
 import SampleArtwork from './sampleArtwork.jsx';
 import NavigatorMap from './navigatorPreview.jsx';
+import { NavigatorHome, NavigatorZoom } from '../src/public/ownerSystemWorkflow/NavigatorContent.jsx';
 import SelectionPanels from './selectionPanels.jsx';
 import LayersPreview, { LayerScene, LayerRemovalConfirmation } from './layersPreview.jsx';
 import {
@@ -51,7 +46,7 @@ const libraryExamples = [
   ['created-error', 'Created source unavailable'],
 ];
 
-const tabs = ['Color', 'Layers', 'Shape', 'Image', 'Display', 'Transform', 'FX', 'Text'];
+const tabs = ['Color', 'Layers', 'Shape', 'Image', 'Display', 'Transform', 'FX', 'Info'];
 const seed = () =>
   [
     { id: 'image', kind: 'image', name: 'Image · Side 1', color: '#b5a99a', sides: 2 },
@@ -91,7 +86,7 @@ export default function WorkspacePreview({ theme, onAction, status }) {
     [zoom, setZoom] = useState(100),
     [view, setView] = useState({ x: 50, y: 50 });
   const cropTrigger = useRef(null);
-  const [textPanelHost, setTextPanelHost] = useState(null),
+  const [textOpen, setTextOpen] = useState(false),
     [textCanvasHost, setTextCanvasHost] = useState(null),
     [layerTextHost, setLayerTextHost] = useState(null),
     [textColourTarget, setTextColourTarget] = useState(null),
@@ -99,7 +94,6 @@ export default function WorkspacePreview({ theme, onAction, status }) {
     [textReset, setTextReset] = useState(0);
   const [crop, setCrop] = useState(null),
     [notice, setNotice] = useState('Choose a selection, then try the tabs and tools.');
-  const [auxiliary, setAuxiliary] = useState(null);
   const [libraryOpen, setLibraryOpen] = useState(false),
     [libraryVisited, setLibraryVisited] = useState(false),
     [libraryScenario, setLibraryScenario] = useState('browse');
@@ -177,7 +171,6 @@ export default function WorkspacePreview({ theme, onAction, status }) {
         : ids,
     );
     setCrop(null);
-    setAuxiliary(null);
     setRemoveCandidate(null);
   };
   const toggleLayer = (id, field) => {
@@ -351,6 +344,7 @@ export default function WorkspacePreview({ theme, onAction, status }) {
     report('Example order updated.');
   };
   const reset = () => {
+    setTextOpen(false);
     setTextReset((n) => n + 1);
     setLibraryOpen(false);
     setLibraryVisited(false);
@@ -361,7 +355,6 @@ export default function WorkspacePreview({ theme, onAction, status }) {
     setLayerScenario('composition');
     setRemoveCandidate(null);
     setCrop(null);
-    setAuxiliary(null);
     setTab('Image');
     setZoom(100);
     setView({ x: 50, y: 50 });
@@ -438,7 +431,7 @@ export default function WorkspacePreview({ theme, onAction, status }) {
           onAddText={addLayerText}
           onEditText={(id) => {
             choose(id);
-            setTab('Text');
+            setTextOpen(true);
           }}
           onGutter={applyGutter}
           confirmation={removeCandidate}
@@ -499,7 +492,8 @@ export default function WorkspacePreview({ theme, onAction, status }) {
             </select>
           </label>
         )}
-        {tab === 'Text' && item?.kind === 'text' && !multiple && (
+        {item?.kind === 'text' && !multiple && <button type="button" className="workflow-tactile-control" onClick={() => setTextOpen(true)}>Text tools</button>}
+        {textOpen && item?.kind === 'text' && !multiple && (
           <label>
             Text example
             <select
@@ -817,7 +811,7 @@ export default function WorkspacePreview({ theme, onAction, status }) {
                 report(`${value} tool`);
                 if (value === 'text') {
                   if (item?.kind !== 'text' || multiple) selectSample('text');
-                  setTab('Text');
+                  setTextOpen(true);
                 }
               }}
               onOpenLibrary={toggleLibrary}
@@ -828,12 +822,9 @@ export default function WorkspacePreview({ theme, onAction, status }) {
                 onToggle: () => selectedTab('Layers'),
               }}
               info={{
-                enabled: Boolean(item),
-                open: auxiliary === 'Artwork info',
-                onToggle: () => {
-                  setAuxiliary(auxiliary === 'Artwork info' ? null : 'Artwork info');
-                  report('Artwork info stays a separate panel.');
-                },
+                enabled: !multiple && ['image', 'artwork'].includes(item?.kind),
+                open: tab === 'Info',
+                onToggle: () => selectedTab('Info'),
               }}
               actions={[
                 {
@@ -888,22 +879,12 @@ export default function WorkspacePreview({ theme, onAction, status }) {
                   icon: Type,
                   onSelect: () => {
                     selectSample('text');
-                    setTab('Text');
+                    setTextOpen(true);
                     report('Add Text');
                   },
                 },
               ]}
             />
-            {auxiliary && (
-              <div className="ds-studio-auxiliary">
-                <span>{auxiliary} remains a separate panel in this direction.</span>
-                <IconKey
-                  label="Dismiss panel note"
-                  icon={X}
-                  onClick={() => setAuxiliary(null)}
-                />
-              </div>
-            )}
           </div>
 
         </div>
@@ -961,18 +942,13 @@ export default function WorkspacePreview({ theme, onAction, status }) {
               )}
               <fieldset
                 disabled={Boolean(
-                  tab !== 'Layers' &&
+                  !['Layers', 'Info'].includes(tab) &&
                   (selectedItems.some((i) => i.locked || i.textReadOnly) ||
                     (readOnly && isLayerSelection)),
                 )}
                 aria-label={`${tab} settings`}
               >
                 {panelContent()}
-                <div
-                  ref={setTextPanelHost}
-                  className="ds-text-tools text-tools-window"
-                  hidden={tab !== 'Text' || item?.kind !== 'text' || multiple}
-                />
                 {tab !== 'Layers' && removeCandidate && (
                   <LayerRemovalConfirmation
                     count={removeCandidate.ids.length}
@@ -994,28 +970,10 @@ export default function WorkspacePreview({ theme, onAction, status }) {
             >
               <header>
                 <strong>Navigator</strong>
-                <IconKey
-                  label="Reset preview view"
-                  icon={Home}
-                  onClick={() => {
-                    setZoom(100);
-                    setView({ x: 50, y: 50 });
-                  }}
-                />
+                <NavigatorHome label="Reset preview view" onClick={() => { setZoom(100); setView({ x: 50, y: 50 }); }} />
               </header>
               <NavigatorMap view={view} zoom={zoom} onViewChange={setView} />
-              <label className="ds-studio-zoom">
-                <span>Zoom</span>
-                <input
-                  aria-label="Preview zoom"
-                  type="range"
-                  min="25"
-                  max="200"
-                  value={zoom}
-                  onChange={(event) => setZoom(Number(event.target.value))}
-                />
-                <output>{zoom}%</output>
-              </label>
+              <NavigatorZoom label="Preview zoom" zoom={zoom} onChange={setZoom} />
             </section>
             <section
               className="ds-studio-keeper"
@@ -1025,13 +983,7 @@ export default function WorkspacePreview({ theme, onAction, status }) {
               <header>
                 <strong>Keeper</strong>
               </header>
-              <div className="ds-studio-keeper-body">
-                <span className="ds-studio-keeper-empty">
-                  <Plus aria-hidden="true" size={22} strokeWidth={1.4} />
-                </span>
-                <span>Drop artwork</span>
-                <small>Dock placement preview</small>
-              </div>
+              <KeeperDockContent empty label="Drop artwork" hint="Dock placement preview" />
             </section>
           </div>
         </div>
@@ -1044,13 +996,13 @@ export default function WorkspacePreview({ theme, onAction, status }) {
             key={textReset}
             items={items}
             selectedId={multiple ? '' : selected}
-            open={tab === 'Text' && !multiple}
-            panelHost={textPanelHost}
+            open={textOpen && !multiple}
+            onOpenChange={setTextOpen}
             canvasHost={textCanvasHost}
             layerHost={layerTextHost}
             onColourTarget={setTextColourTarget}
             onChange={changeText}
-            onFindRequest={() => setTab('Text')}
+            onFindRequest={() => setTextOpen(true)}
             theme={theme}
             readOnly={readOnly}
           />
@@ -1060,9 +1012,10 @@ export default function WorkspacePreview({ theme, onAction, status }) {
         {notice}
       </p>
       <p className="ds-caption">
-        Chosen workspace direction · production migration is pending. Layers still uses a
-        disposable Display composition; Workbench artwork ordering and detachable tool panels
-        are not implemented here. Existing control references remain below.
+        This reference uses a disposable Display composition. The local Workbench now has
+        Layers, Transform, Color, Image, Shape, FX and Info in movable docks. Text uses its own window;
+        Color and Transform remain shared.
+        Existing control references remain below.
       </p>
     </section>
   );

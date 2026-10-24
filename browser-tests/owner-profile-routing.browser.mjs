@@ -307,9 +307,14 @@ describe('owner/viewed-profile routing through the real App', { concurrency: fal
       const box = await back().boundingBox();
       assert.ok(box.x >= 0 && box.y >= 0 && box.x + box.width <= width && box.y + box.height <= 900);
       await page.evaluate(() => { window.__routingStorageOperations.length = 0; });
-      await page.getByRole('link', { name: 'Canvas', exact: true }).click();
-      await page.locator('.visitor-grid-world').waitFor();
-      assert.match(page.url(), /[?&]canvas=1/);
+      assert.equal(await page.getByRole('button', { name: 'Enter Inscape', exact: true }).isDisabled(), true);
+      await page.getByRole('button', { name: /^Explore/ }).click();
+      await page.getByRole('region', { name: 'Exploration room', exact: true }).waitFor();
+      await page.locator('.keeper-dock').waitFor();
+      const roomDraft = await page.evaluate(address => localStorage.getItem('inscape.system-workflow-draft.v1:' + address), PROFILE_A);
+      const beforeRoom = JSON.parse(savedDraft), afterRoom = JSON.parse(roomDraft);
+      assert.equal(afterRoom.keeperDocks.length, Math.max(1, beforeRoom.keeperDocks?.length || 0));
+      assert.deepEqual(afterRoom.imageModules, beforeRoom.imageModules);
       assert.match(page.url(), /[?&]reception=1/);
       assert.equal(await page.locator('main.system-workflow:not(.visitor-grid-world)').count(), 0);
       assert.equal(await back().count(), 1);
@@ -318,10 +323,11 @@ describe('owner/viewed-profile routing through the real App', { concurrency: fal
         return { connected: useWalletStore.getState().isWalletConnected, storage: [...window.__routingStorageOperations] };
       });
       assert.equal(publicState.connected, true);
-      assert.deepEqual(publicState.storage, [], 'Public navigation does not access draft or Library storage');
-      const overviewReturn = page.getByRole('link', { name: '← Profile overview', exact: true });
+      assert.ok(publicState.storage.length > 0, 'Verified owner opens the existing local draft for Keeper editing');
+      const overviewReturn = page.getByRole('button', { name: 'Back to Reception', exact: true });
       const ownerBox = await back().boundingBox(), overviewBox = await overviewReturn.boundingBox();
-      assert.ok(ownerBox.x >= overviewBox.x + overviewBox.width || ownerBox.y >= overviewBox.y + overviewBox.height,
+      assert.ok(ownerBox.x >= overviewBox.x + overviewBox.width || overviewBox.x >= ownerBox.x + ownerBox.width
+        || ownerBox.y >= overviewBox.y + overviewBox.height || overviewBox.y >= ownerBox.y + ownerBox.height,
         'Owner return and profile overview controls do not overlap');
       await overviewReturn.click();
       await page.locator('.profile-overview').waitFor();
@@ -330,7 +336,7 @@ describe('owner/viewed-profile routing through the real App', { concurrency: fal
       await page.keyboard.press('Enter');
       await waitForOwnerShell('Published reception returns to owner');
       assert.doesNotMatch(page.url(), /[?&](view|reception|canvas)=/);
-      assert.equal(await page.evaluate(address => localStorage.getItem('inscape.system-workflow-draft.v1:' + address), PROFILE_A), savedDraft);
+      assert.equal(await page.evaluate(address => localStorage.getItem('inscape.system-workflow-draft.v1:' + address), PROFILE_A), roomDraft);
       await page.goBack(); await page.locator('.profile-overview').waitFor();
       assert.equal(await back().count(), 1);
       await page.goForward(); await waitForOwnerShell('Forward returns to editing');
@@ -353,7 +359,7 @@ describe('owner/viewed-profile routing through the real App', { concurrency: fal
     await setRoutingState({ authorityLifecycleStatus: 'complete', hostProfileAddress: null,
       isWalletConnected: false, isHostProfileOwner: false });
     await setUrl(''); await page.locator('.public-entry-portal').waitFor();
-    assert.equal(await page.getByRole('button', { name: 'CONNECT PROFILE', exact: true }).count(), 1);
+    assert.equal(await page.getByRole('button', { name: 'Connect profile', exact: true }).count(), 1);
     assert.doesNotMatch(await page.locator('body').innerText(), /PROFILE CONTEXT REQUIRED/iu);
     assert.equal(await page.getByRole('button', { name: 'RETURN', exact: true }).count(), 0);
 
@@ -412,12 +418,12 @@ describe('owner/viewed-profile routing through the real App', { concurrency: fal
         store.repository = { resolve: async (address) => ({ status: 'UNAVAILABLE', address, document: null }) };
       });
       await page.evaluate(() => { window.__cancelSignIn = true; });
-      await page.getByRole('button', { name: 'CONNECT', exact: true }).click();
-      await page.getByRole('button', { name: 'CONNECT', exact: true }).waitFor();
+      await page.getByRole('button', { name: 'Connect', exact: true }).click();
+      await page.getByRole('button', { name: 'Connect', exact: true }).waitFor();
       assert.match(page.url(), /[?&]discover/);
       assert.equal(await page.locator('.system-workflow').count(), 0);
       await page.evaluate(() => { window.__cancelSignIn = false; });
-      await page.getByRole('button', { name: 'CONNECT', exact: true }).click();
+      await page.getByRole('button', { name: 'Connect', exact: true }).click();
       await waitForOwnerShell('Connect from Discover opens owner');
       await page.evaluate(() => { window.__ownerBeforeDiscover = document.querySelector('.system-workflow'); });
       await page.getByRole('button', { name: 'Discover', exact: true }).click();
@@ -444,27 +450,27 @@ describe('owner/viewed-profile routing through the real App', { concurrency: fal
       assert.equal(await page.locator('.system-workflow').count(), 0);
       await page.reload({ waitUntil: 'domcontentloaded' });
       await page.locator('.public-entry-portal[data-mode="explore"]').waitFor();
-      await page.getByRole('button', { name: 'CONNECT', exact: true }).click();
+      await page.getByRole('button', { name: 'Connect', exact: true }).click();
       await waitForOwnerShell('Reconnect returns to owner');
       await page.getByRole('button', { name: 'Discover', exact: true }).click();
       await page.locator('.public-entry-portal__account-trigger').click();
-      await page.getByRole('button', { name: 'DISCONNECT', exact: true }).click();
+      await page.getByRole('button', { name: 'Disconnect', exact: true }).click();
       await page.locator('.public-entry-portal[data-mode="explore"]').waitFor();
       assert.equal(await page.locator('.system-workflow').count(), 0);
       if (process.env.INSCAPE_CAPTURE) await page.screenshot({ path: `.browser-test-runtime/disconnected-discover-${width}.png` });
-      await page.getByRole('button', { name: 'CONNECT', exact: true }).click();
+      await page.getByRole('button', { name: 'Connect', exact: true }).click();
       await waitForOwnerShell('Owner before explicit visit');
       await setUrl(`?view=${PROFILE_B}`);
       await page.getByRole('button', { name: 'DISCOVER', exact: true }).click();
       await page.locator('.public-entry-portal__account-trigger').click();
-      await page.getByRole('button', { name: 'DISCONNECT', exact: true }).click();
-      await page.getByRole('button', { name: 'CONNECT', exact: true }).waitFor();
+      await page.getByRole('button', { name: 'Disconnect', exact: true }).click();
+      await page.getByRole('button', { name: 'Connect', exact: true }).waitFor();
       await page.getByRole('button', { name: 'Return to workspace', exact: true }).click();
       assert.match(page.url(), new RegExp(`view=${PROFILE_B}`));
       assert.equal(await page.locator('.system-workflow').count(), 0);
       // An in-flight disconnect belongs to its originating route, not a later visit.
       await setUrl('?discover');
-      await page.getByRole('button', { name: 'CONNECT', exact: true }).click();
+      await page.getByRole('button', { name: 'Connect', exact: true }).click();
       await waitForOwnerShell('Owner before delayed disconnect');
       await page.evaluate(() => { window.__delayDisconnect = true; window.__disconnectCalls = 0; });
       await page.getByRole('button', { name: 'Profile', exact: true }).click();
@@ -479,7 +485,7 @@ describe('owner/viewed-profile routing through the real App', { concurrency: fal
       assert.match(page.url(), new RegExp(`view=${PROFILE_B}`));
       await setUrl('?discover');
       await page.evaluate(() => { window.__delaySignIn = true; });
-      await page.getByRole('button', { name: 'CONNECT', exact: true }).click();
+      await page.getByRole('button', { name: 'Connect', exact: true }).click();
       await page.waitForFunction(() => typeof window.__finishSignIn === 'function');
       await setUrl(`?view=${PROFILE_B}`);
       await page.evaluate(() => window.__finishSignIn());

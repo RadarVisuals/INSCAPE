@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { addShape, editShape, reorderShape, prepareShapeResize } from './shapeSession.js';
+import { artworkLayers, layerIds } from '../systemWorkflow/domain/artworkLayers.js';
 import { validShapes, createShapePresentation, isShapeCommand } from './shapes.js';
 import { createSystemWorkflowDraftStore } from '../systemWorkflow/systemWorkflowDraftStore.js';
 import { buildProfileDocumentV9 } from '../profileDocument/domain/profileDocumentV9Builder.js';
@@ -27,6 +28,32 @@ function addLegacyTexture(store, placed = {}) {
 }
 const build = draft => buildProfileDocumentV9({ profileAddress: profile, systemWorkflowDraft: draft, assetRecords: [] });
 
+test('Shape blur is bounded and survives editing, history, duplication, reload and publication', () => {
+  const f = fixture();
+  for (const kind of ['rectangle', 'grid', 'texture']) {
+    const id = kind === 'texture' ? addLegacyTexture(f.store) : addShape(f.store, profile, { kind });
+    const original = f.store.getDraft();
+    const record = original.shapes.find(item => item.id === id);
+    editShape(f.store, profile, record, { blur: 6.5 });
+    assert.ok(f.store.undo()); assert.deepEqual(f.store.getDraft(), original); assert.ok(f.store.redo());
+    const changed = f.store.getDraft().shapes.find(item => item.id === id);
+    const copy = addShape(f.store, profile, null, changed);
+    assert.equal(f.store.getDraft().shapes.find(item => item.id === copy).blur, 6.5);
+    for (const blur of [-.1, 12.1, null, '4', NaN, Infinity]) {
+      assert.throws(() => editShape(f.store, profile, changed, { blur }));
+      const invalid = build(f.store.getDraft()); invalid.shapes.find(item => item.id === id).blur = blur;
+      assert.equal(validateProfileDocumentV9(invalid).valid, false);
+    }
+  }
+  const saved = f.store.getDraft(), published = build(saved);
+  assert.equal(validateProfileDocumentV9(published).valid, true);
+  assert.deepEqual(createSystemWorkflowDraftStore({ profileAddress: profile, storage: f.storage }).getDraft(), saved);
+  assert.deepEqual(reconcileSystemWorkflowDraftFromProfileDocumentV9(published, saved).shapes, saved.shapes);
+  f.fail(true);
+  assert.throws(() => editShape(f.store, profile, saved.shapes[0], { blur: 12 }));
+  assert.deepEqual(f.store.getDraft(), saved);
+});
+
 test('Grid and noise Texture retain transparent-pattern settings through editing, duplication, resize, undo, reload and publication', () => {
   const { store, storage } = fixture();
   addShape(store, profile);
@@ -48,7 +75,7 @@ test('Grid and noise Texture retain transparent-pattern settings through editing
       layoutKey: 'shapes', prepare: prepareShapeResize, left: 100, top: 200, width: 1200, height: 800 }]));
     assert.deepEqual(store.getDraft().shapes.find(item => item.id === copyId)[kind], settings[kind], 'resizing keeps pattern measurements');
     reorderShape(store, profile, copyId, 'back');
-    assert.equal(store.getDraft().shapes[0].id, copyId);
+    assert.equal(layerIds(artworkLayers(store.getDraft()))[0], copyId);
     assert.ok(store.undo()); assert.ok(store.redo());
   }
   const draft = store.getDraft(), published = build(draft);
@@ -123,9 +150,9 @@ test('Shape creation, duplication, order, colour and dimensions survive undo and
   assert.deepEqual(store.getDraft().workbench.shapes[1].window, { left: 474.5, top: 344.25, width: 288, height: 288 });
   assert.equal(store.getDraft().shapes[1].color, '#ff6600');
   reorderShape(store, profile, duplicate, 'back');
-  assert.deepEqual(store.getDraft().shapes.map(item => item.id), [duplicate, first]);
-  assert.ok(store.undo()); assert.deepEqual(store.getDraft().shapes.map(item => item.id), [first, duplicate]); assert.ok(store.redo());
-  const expected = store.getDraft().shapes[0];
+  assert.deepEqual(layerIds(artworkLayers(store.getDraft())), [duplicate, first]);
+  assert.ok(store.undo()); assert.deepEqual(layerIds(artworkLayers(store.getDraft())), [first, duplicate]); assert.ok(store.redo());
+  const expected = store.getDraft().shapes.find(item => item.id === duplicate);
   assert.ok(commitWorkbenchSelectionResize([{ store, profileAddress: profile, expected, id: duplicate, layoutKey: 'shapes', prepare: prepareShapeResize,
     left: 500, top: 300, width: 8, height: 1500 }]));
   const reopened = createSystemWorkflowDraftStore({ profileAddress: profile, storage });

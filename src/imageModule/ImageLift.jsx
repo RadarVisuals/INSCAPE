@@ -4,7 +4,7 @@ import DisplayLiftArtwork from '../public/ownerSystemWorkflow/DisplayLiftArtwork
 import { projectedSvgArtworkFor } from '../artwork/ProjectedSvgArtwork.jsx';
 import { useWorkbenchInspectionLock } from '../public/ownerSystemWorkflow/WorkbenchCamera.jsx';
 
-export default function ImageLift({ source, entry, reducedMotion, onClose }) {
+export default function ImageLift({ source, entry, reducedMotion, onClose, status }) {
   useWorkbenchInspectionLock();
   const [scene, setScene] = useState(null), [closing, setClosing] = useState(false);
   const returnButton = useRef(null), returnId = useId();
@@ -27,7 +27,7 @@ export default function ImageLift({ source, entry, reducedMotion, onClose }) {
     }}>
     <div ref={setScene} />
     <DisplayLiftArtwork scene={scene} source={source} entry={entry} closing={closing} reducedMotion={reducedMotion} onCloseComplete={onClose} />
-    {createPortal(<button id={returnId} ref={returnButton} className="image-lift-return" type="button" autoFocus
-      onClick={() => setClosing(true)}>Return to Image</button>, overlayHost)}
+    {createPortal(<button id={returnId} ref={returnButton} className="image-lift-return" type="button" aria-label="Return to Image" autoFocus
+      onClick={() => setClosing(true)}>Return to Image{status}</button>, overlayHost)}
   </div>, overlayHost);
 }

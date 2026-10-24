@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { existsSync } from 'node:fs';
 import { mkdir } from 'node:fs/promises';
 import { chromium } from 'playwright-core';
-import { TRIANGLE, ringPoint } from '../design-system/colourModel.js';
+import { TRIANGLE, ringPoint } from '../src/colour/colourModel.js';
 const origin = process.env.INSCAPE_TEXT_ROOT || 'http://127.0.0.1:5225';
 const executablePath =
   process.env.INSCAPE_BROWSER_EXECUTABLE ||
@@ -18,6 +18,7 @@ async function mount(browser, width = 1440, theme = 'carbon') {
   await page.goto(origin + '/design-system.html#components');
   await page.getByLabel('Preview surface', { exact: true }).selectOption(theme);
   const studio = page.locator('.ds-studio');
+  await studio.getByLabel('Workspace selection').selectOption('shape');
   await studio.getByRole('tab', { name: 'Color', exact: true }).click();
   const wheel = studio.locator('.ds-colour-controls'),
     hex = studio.getByLabel('Studio colour', { exact: true });
@@ -137,12 +138,12 @@ test(
       await move({ x: 100, y: 100 });
       await page.mouse.down();
       await move(TRIANGLE.hue);
-      await studio.getByLabel('Workspace selection').selectOption('shape');
+      await studio.getByLabel('Workspace selection').selectOption('foreground');
       await page.mouse.up();
       const shape = await value();
-      await studio.getByLabel('Workspace selection').selectOption('image');
-      assert.equal(await value(), initial, 'retarget cancels the originating colour only');
       await studio.getByLabel('Workspace selection').selectOption('shape');
+      assert.equal(await value(), initial, 'retarget cancels the originating colour only');
+      await studio.getByLabel('Workspace selection').selectOption('foreground');
       assert.equal(await value(), shape);
       const triangle = studio.getByRole('group', { name: 'Colour triangle', exact: true }),
         hue = studio.getByRole('slider', { name: 'Colour hue', exact: true });

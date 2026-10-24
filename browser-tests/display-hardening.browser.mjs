@@ -6,10 +6,10 @@ import test from 'node:test';
 import { chromium } from 'playwright-core';
 
 const origin = process.env.INSCAPE_SYSTEM_WORKFLOW_ROOT || 'http://127.0.0.1:5186';
-const screenshots = await mkdtemp(join(tmpdir(), 'inscape-inspection-'));
+const screenshots = process.env.INSCAPE_BROWSER_OUTPUT || await mkdtemp(join(tmpdir(), 'inscape-inspection-'));
 const settle = page => page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
 async function fixture(run, width = 1280, reducedMotion = 'reduce') {
-  const browser = await chromium.launch({ executablePath: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', headless: true });
+  const browser = await chromium.launch({ executablePath: process.env.INSCAPE_BROWSER_EXECUTABLE || 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', headless: true });
   try {
     const page = await browser.newPage({ viewport: { width, height: 800 }, reducedMotion });
     const errors = []; page.on('pageerror', e => errors.push(e.message));
@@ -122,6 +122,7 @@ test('owner navigation drag cancels on pointer cancellation, blur and Grid chang
     const { createRoot } = (await import('/@id/react-dom/client')).default;
     const useInteraction = (await import('/src/public/ownerSystemWorkflow/useOwnerSystemWorkflowPlacementInteraction.js')).default;
     const useGridPlayback = (await import('/src/public/ownerSystemWorkflow/useGridPlayback.js')).default;
+    const { projectDisplayStageViewport } = await import('/src/lattice/rendering/displayPaintGeometry.js');
     const root = createRoot(document.getElementById('root'));
     function Harness() {
       const canvasRef = React.useRef(null), trackRef = React.useRef(null);
@@ -130,6 +131,7 @@ test('owner navigation drag cancels on pointer cancellation, blur and Grid chang
         adjacentGrid: () => gridId === 'a' ? 'b' : 'a', onPause: () => {}, onAdvance: setGridId });
       hardening.navigation = navigation;
       const interaction = useInteraction({ canvasRef, navigation, authoringDisabled: true,
+        artboardProjection: projectDisplayStageViewport({ columns: 32, rows: 18 }, { width: 500, height: 300 }),
         controller: { draft: { profileAddress: 'a' }, selectedGrid: { id: gridId, placements: [] }, selectedPlacementIds: [], replaceSelection: () => {} },
         canNavigateGrid: () => 'b',
       });

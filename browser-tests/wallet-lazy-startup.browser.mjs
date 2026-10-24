@@ -28,9 +28,9 @@ for (const [name,record,automatic] of [['fresh',null,false],['disconnected',disc
         return useWalletStore.getState().authorityLifecycleStatus;
       });
       assert.equal(settled,'complete');
-      await page.getByRole('button',{name:'CONNECT',exact:true}).click();
+      await page.getByRole('button',{name:'Connect',exact:true}).click();
       await page.waitForFunction(()=>window.__walletShows===1);
-      await page.getByRole('button',{name:'CONNECT',exact:true}).click();
+      await page.getByRole('button',{name:'Connect',exact:true}).click();
       await page.waitForFunction(()=>window.__walletShows===2);
       assert.equal(await page.evaluate(()=>window.__walletAcquisitions),1);
       assert.equal(modules.length,1);
@@ -50,9 +50,9 @@ test('a failed wallet setup leaves Connect usable for a successful retry',{timeo
           Promise.resolve({showSignIn(){window.__shown=true;options.onSignInClose();}})};
       }` }));
     await page.goto(origin,{waitUntil:'networkidle'});
-    await page.getByRole('button',{name:'CONNECT',exact:true}).click();
+    await page.getByRole('button',{name:'Connect',exact:true}).click();
     await page.waitForFunction(()=>window.__attempts===1);
-    await page.getByRole('button',{name:'CONNECT',exact:true}).click();
+    await page.getByRole('button',{name:'Connect',exact:true}).click();
     await page.waitForFunction(()=>window.__shown===true);
     assert.equal(await page.evaluate(()=>window.__attempts),2);
   } finally {await browser.close();}

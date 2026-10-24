@@ -4,7 +4,7 @@ import { X } from 'lucide-react';
 // Valid values apply immediately. Keep incomplete input local while typing;
 // Escape restores the formatting captured before this field was edited.
 export default function TextTypographyInput({ label, accessibleLabel = label, value, mixed = false, hasOverride = value != null,
-  limits, disabled, onChange, onReturn, onStart, resetLabel, placeholder = 'Inherited' }) {
+  limits, disabled, onChange, onReturn, onStart, resetLabel, placeholder = 'Default' }) {
   const [input, setInput] = useState(value == null ? '' : String(value));
   const editing = useRef(null);
   useEffect(() => { if (!editing.current) setInput(value == null ? '' : String(value)); }, [value, mixed]);

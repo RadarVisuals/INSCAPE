@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { mkdir } from 'node:fs/promises';
 import { chromium } from 'playwright-core';
+import { hideWorkspaceSidebar } from './fixtures/workspace-sidebar.mjs';
 import { mountGridMotionFixture } from './fixtures/grid-motion-fixture.mjs';
 const origin = process.env.INSCAPE_TEXT_ROOT || 'http://127.0.0.1:5217';
 const saved = page => page.evaluate(() => localStorage.getItem(window.__motionKey));
@@ -27,6 +28,7 @@ test('compact groups move and cancel independently, open live members, return, u
       });
       await page.getByRole('button', { name: 'Workbench groups', exact: true }).click();
       const panel = page.locator('.workbench-groups');
+      await hideWorkspaceSidebar(page);
       await panel.locator('[data-workbench-group-drop]').click();
       const before = JSON.parse(await saved(page)), originalCamera = await camera(page);
       await page.evaluate(() => { window.stackNodes = [...document.querySelectorAll('[data-workbench-view-id]')]; });
@@ -87,6 +89,7 @@ test('mixed groups preserve live editors and saved geometry through reading, ins
       });
       const stack = page.locator('[data-workbench-stack]'); await stack.waitFor();
       await page.waitForFunction(() => document.querySelector('[data-workbench-view-id="text:overflow"] .tiptap'));
+      await hideWorkspaceSidebar(page);
       const initial = await saved(page);
       await page.evaluate(() => { window.mixedNodes = [...document.querySelectorAll('[data-workbench-view-id], .tiptap')]; });
       const closeTools = page.getByRole('button', { name: 'Close Text tools', exact: true });
@@ -120,7 +123,7 @@ test('mixed groups preserve live editors and saved geometry through reading, ins
       if (await closeInspection.isVisible()) await closeInspection.click();
       await page.keyboard.press('Escape'); await settle(page);
       assert.equal(await saved(page), initial);
-      await page.getByRole('button', { name: 'Reset Workbench position', exact: true }).click(); await settle(page); await stack.waitFor();
+      await page.getByRole('button', { name: 'Reset Workbench view', exact: true }).click(); await settle(page); await stack.waitFor();
       assert.equal(await page.locator('[data-workbench-group-presented]').count(), 0);
       assert.equal(await page.evaluate(() => window.mixedNodes.every(node => node.isConnected)), true);
       assert.equal(await reading.locator('.tiptap').getAttribute('contenteditable'), 'true');
@@ -133,7 +136,7 @@ test('mixed groups preserve live editors and saved geometry through reading, ins
       assert.equal(await saved(page), initial);
       await open(); await select.selectOption('display:primary'); await settle(page);
       await page.screenshot({ path: '.browser-test-runtime/workbench-group-mixed-' + width + '.png' });
-      await page.getByRole('button', { name: 'Reset Workbench position', exact: true }).click(); await settle(page); await stack.waitFor();
+      await page.getByRole('button', { name: 'Reset Workbench view', exact: true }).click(); await settle(page); await stack.waitFor();
       assert.equal(await saved(page), initial);
       assert.equal(await page.evaluate(() => window.mixedNodes.every(node => node.isConnected)), true);
       assert.deepEqual(errors, []); await page.close();
@@ -156,11 +159,13 @@ test('spatial stack drops clear hidden selection and named routes restore item a
       localStorage.setItem(window.__motionKey, JSON.stringify(draft)); window.__motionRemount();
     });
     const stack = page.locator('[data-workbench-stack="workbench-group:a"]'); await stack.waitFor();
+    await hideWorkspaceSidebar(page);
     const initial = JSON.parse(await saved(page));
     await page.locator('[data-workbench-view-id="image:motion-0"]').evaluate(node => {
       const target = node.matches('[data-workbench-selectable]') ? node : node.querySelector('[data-workbench-selectable]');
-      target.focus({ preventScroll: true }); target.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', shiftKey: true, bubbles: true, cancelable: true }));
+      target.focus({ preventScroll: true });
     });
+    await page.keyboard.press('Shift+Enter');
     const selection = page.locator('.workbench-selection'); await selection.waitFor();
     const from = await selection.boundingBox(), to = await stack.boundingBox();
     await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2); await page.mouse.down();

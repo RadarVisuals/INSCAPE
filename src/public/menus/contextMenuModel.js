@@ -7,18 +7,6 @@ export function clampMenuPosition(point, menuSize, viewport, margin = 8) {
   };
 }
 
-export function resolveContextTarget(target, desktop) {
-  if (!target || !desktop?.contains(target)) return null;
-  const title = target.closest?.('[data-window-titlebar]');
-  if (title && desktop.contains(title)) return { type: 'window', id: title.dataset.windowTitlebar };
-  const canvasObject = target.closest?.('[data-canvas-object-id]');
-  if (canvasObject && desktop.contains(canvasObject)) return { type: 'canvas-object', id: canvasObject.dataset.canvasObjectId };
-  const launcher = target.closest?.('[data-launcher-id]');
-  if (launcher && desktop.contains(launcher)) return { type: 'launcher', id: launcher.dataset.launcherId };
-  if (target.closest?.('.module-shell--expanded')) return null;
-  if (target.closest?.('[data-desktop-canvas]')) return { type: 'canvas', id: 'canvas' };
-  return null;
-}
 
 export function presentationPatchForCommand(command, presentation = {}) {
   if (command === 'presentation-transparent') return { background: 'transparent' };

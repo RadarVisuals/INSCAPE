@@ -4,6 +4,57 @@ import { chromium } from 'playwright-core';
 const origin = process.env.INSCAPE_SYSTEM_WORKFLOW_ROOT || 'http://127.0.0.1:5173';
 const settle = page => page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
 
+test('Library projection keeps stable empty inputs and reacts to decoded preview revisions', { timeout: 30000 }, async () => {
+  const browser = await chromium.launch({ executablePath: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', headless: true });
+  try {
+    const page = await browser.newPage();
+    const errors = []; page.on('pageerror', error => errors.push(error.message));
+    await page.route(`${origin}/__library_hook__`, route => route.fulfill({ contentType: 'text/html', body: '<div id="root"></div>' }));
+    await page.goto(`${origin}/__library_hook__`);
+    await page.evaluate(async () => {
+      const React = (await import('/@id/react')).default;
+      const { createRoot } = (await import('/@id/react-dom/client')).default;
+      const useBrowserWorkspace = (await import('/src/lattice/browser/useBrowserWorkspace.js')).default;
+      const probe = window.libraryHook = {};
+      function Host({ data }) {
+        probe.current = useBrowserWorkspace(data);
+        return React.createElement('div', { id: 'mounted' });
+      }
+      const root = createRoot(document.getElementById('root'));
+      probe.render = data => root.render(React.createElement(Host, { data }));
+      probe.render({ status: 'ready' });
+    });
+    await page.locator('#mounted').waitFor({ state: 'attached' }); await settle(page);
+    await page.evaluate(() => { libraryHook.previous = libraryHook.current; libraryHook.render({ status: 'ready' }); });
+    await settle(page);
+    assert.deepEqual(await page.evaluate(() => ({
+      assets: libraryHook.previous.renderableAssets === libraryHook.current.renderableAssets,
+      ready: libraryHook.previous.markAssetReady === libraryHook.current.markAssetReady,
+      unavailable: libraryHook.previous.markAssetUnavailable === libraryHook.current.markAssetUnavailable,
+    })), { assets: true, ready: true, unavailable: true });
+    await page.evaluate(() => {
+      libraryHook.data = { status: 'ready', assets: [{ id: 'asset:one', mediaType: 'image',
+        src: '/first.webp', previewCandidates: ['/first.webp'] }], categories: [] };
+      libraryHook.render(libraryHook.data);
+    });
+    await settle(page);
+    await page.evaluate(() => libraryHook.current.markAssetReady('asset:one', '/first.webp', 640, 320));
+    await settle(page);
+    assert.equal(await page.evaluate(() => libraryHook.current.renderableAssets[0].decodedImageWidth), 640);
+    await page.evaluate(() => libraryHook.current.selectAsset('asset:one'));
+    await settle(page);
+    assert.deepEqual(await page.evaluate(() => libraryHook.current.selectedAssetIds), ['asset:one']);
+    await page.evaluate(() => libraryHook.current.markAssetUnavailable('asset:one'));
+    await settle(page);
+    assert.equal(await page.evaluate(() => libraryHook.current.renderableAssets.length), 0);
+    assert.deepEqual(await page.evaluate(() => libraryHook.current.selectedAssetIds), []);
+    await page.evaluate(() => libraryHook.current.selectView({ kind: 'category', id: 'removed' }));
+    await settle(page);
+    assert.deepEqual(await page.evaluate(() => libraryHook.current.view), { kind: 'all', id: null });
+    assert.deepEqual(errors, []);
+  } finally { await browser.close(); }
+});
+
 async function mount(page, { unknownDimensions = false, kind = 'display' } = {}) {
   // Keep the thumbnail pending too: otherwise its onLoad fills intrinsic size
   // before the gesture and would not exercise genuinely unknown dimensions.

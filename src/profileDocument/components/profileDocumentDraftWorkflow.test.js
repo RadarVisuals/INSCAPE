@@ -9,8 +9,10 @@ const publicationSource = readFileSync(new URL('../../public/ownerSystemWorkflow
 const appSource = readFileSync(new URL('../../App.jsx', import.meta.url), 'utf8');
 
 test('Preview builds directly from the current isolated System Workflow draft', () => {
-  assert.match(runtimeSource, /buildOwnerSystemWorkflowPreviewDocument\(\{[\s\S]*systemWorkflowDraft: workbenchController\.draft/u);
-  assert.match(runtimeSource, /<ProfileDocumentV9Preview document=\{preview\}/u);
+  const preparationSource = readFileSync(new URL('../../public/ownerSystemWorkflow/prepareWorkbenchPreview.js', import.meta.url), 'utf8');
+  assert.match(runtimeSource, /prepareWorkbenchPreview\(\{[\s\S]*draft: workbenchController\.draft/u);
+  assert.match(preparationSource, /buildOwnerSystemWorkflowPreviewDocument\(\{[\s\S]*systemWorkflowDraft: draft/u);
+  assert.match(runtimeSource, /<ProfileDocumentV9Preview\s+document=\{preview\}/u);
   assert.doesNotMatch(runtimeSource, /ProfileDocumentPanel|enterPreview\(|ProfileDocumentPreview/u);
 });
 
@@ -33,10 +35,10 @@ test('owner entry reconciles its origin-scoped draft before mounting the Keeper-
 });
 
 test('publication preparation remains explicit and CID verification is snapshot-bound', () => {
-  assert.match(publicationSource, /PREPARE PUBLICATION/u);
+  assert.match(publicationSource, /Prepare publication/u);
   assert.match(publicationSource, /publication\.verifyCid\(snapshot, uploaded\.cid/u);
   assert.match(publicationSource, /publication\.publish\(\)/u);
-  assert.match(publicationSource, /Your <strong>Public Grids<\/strong>, custom Identity card and prepared Workbench setup/u);
+  assert.match(publicationSource, /Your public Images, Text and Shapes, <strong>Public Grids<\/strong>, Keeper content, custom Identity card and prepared Workbench setup/u);
   assert.doesNotMatch(publicationSource, /CID \/ MANUAL FALLBACK|PUBLISH VERSION 9/u);
   assert.doesNotMatch(publicationSource, /OwnerRackBoard|profileRackPresentation|buildProfileDocumentV8/u);
 });

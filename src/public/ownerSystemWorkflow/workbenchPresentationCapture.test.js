@@ -3,10 +3,14 @@ import test from 'node:test';
 import { captureWorkbenchPresentation } from './workbenchPresentationCapture.js';
 import { captureDisplayPresentation, restoreDisplayPresentation } from './displayPresentation.js';
 import { isValidPlacementMedia } from '../../systemWorkflow/domain/placementMedia.js';
-import { createDefaultWorkbenchPresentation, createMiniAppPresentation, assertWorkbenchPresentation } from '../../profileDocument/domain/workbenchPresentation.js';
+import { createDefaultWorkbenchPresentation, createMiniAppPresentation, createTextPresentation, assertWorkbenchPresentation } from '../../profileDocument/domain/workbenchPresentation.js';
 import { createProfileDocumentV9AssetResolver } from '../../profileDocument/domain/profileDocumentV9Asset.js';
-import { createSystemWorkflowDraftStore } from '../../systemWorkflow/systemWorkflowDraftStore.js';
+import { createSystemWorkflowDraftStore, systemWorkflowDraftKey } from '../../systemWorkflow/systemWorkflowDraftStore.js';
 import { createWorkbenchSession } from '../../systemWorkflow/workbenchSession.js';
+import { createImagePresentation } from '../../imageModule/imageModule.js';
+import { createShapePresentation } from '../../shapes/shapes.js';
+import { loadWorkbenchLayout, saveWorkbenchLayout, workbenchLayoutKey } from './workbenchLayoutStorage.js';
+import { buildProfileDocumentV9 } from '../../profileDocument/domain/profileDocumentV9Builder.js';
 
 const input = overrides => ({ layout: createDefaultWorkbenchPresentation(), identityOpen: false, ...overrides });
 const display = (id, name) => ({ id, ...createDefaultWorkbenchPresentation().display, name });
@@ -63,6 +67,70 @@ test('a newly dropped Image retains its saved position before its lazy renderer 
   const live = { ...saved, position: { left: 123, top: 456 } };
   assert.deepEqual(captureWorkbenchPresentation({ ...source, imagePresentations: { [saved.id]: live } }).value.imageModules, [live]);
   assert.deepEqual(captureWorkbenchPresentation({ ...source, imageModules: [] }).value.imageModules, []);
+});
+
+test('Text, Image and Shape capture keeps live, cached, authored and default geometry priorities', () => {
+  for (const [collection, liveField, authoredField, factory, prefix] of [
+    ['texts', 'textPresentations', null, createTextPresentation, 'text'],
+    ['imageModules', 'imagePresentations', 'savedImagePresentations', createImagePresentation, 'image'],
+    ['shapes', 'shapePresentations', 'savedShapePresentations', createShapePresentation, 'shape'],
+  ]) {
+    const positioned = (suffix, left) => {
+      const value = factory(`${prefix}:${suffix}`);
+      if (value.window) value.window.left = left; else value.position.left = left;
+      return value;
+    };
+    const live = positioned('live', 111), cached = positioned('cached', 222), authored = positioned('authored', 333);
+    const order = ['live', 'cached', ...(authoredField ? ['authored'] : []), 'default'];
+    const source = freeze(input({ layout: { ...createDefaultWorkbenchPresentation(),
+      [collection]: [positioned('live', 444), cached] },
+      [collection]: order.map(suffix => ({ id: `${prefix}:${suffix}` })), [liveField]: { [live.id]: live },
+      ...(authoredField ? { [authoredField]: [positioned('live', 555), positioned('cached', 666), authored] } : {}),
+    }));
+    const result = captureWorkbenchPresentation(source);
+    assert.equal(result.error, null);
+    assert.deepEqual(result.value[collection], [live, cached, ...(authoredField ? [authored] : []), factory(`${prefix}:default`, order.length - 1)]);
+    assertWorkbenchPresentation(result.value);
+    const removed = captureWorkbenchPresentation({ ...source, [collection]: [] });
+    assert.deepEqual(removed.value[collection], [], 'live reports and both saved sources cannot resurrect removed modules');
+    const { [collection]: omitted, ...withoutModules } = source;
+    assert.equal(Object.hasOwn(captureWorkbenchPresentation(withoutModules).value, collection), false);
+  }
+});
+
+test('explicit publication capture accepts geometry only after save and invalidates the previous local cache', () => {
+  const profile = '0x1111111111111111111111111111111111111111', entries = new Map();
+  let blocked = false;
+  const storage = { getItem: key => entries.get(key) ?? null, setItem: (key, value) => {
+    if (blocked && key === systemWorkflowDraftKey(profile)) throw Error('QuotaExceededError');
+    entries.set(key, value);
+  } };
+  const store = createSystemWorkflowDraftStore({ profileAddress: profile, storage });
+  const session = createWorkbenchSession({ store: store.getWorkbenchScope() });
+  assert.equal(session.saveWorkbench(createDefaultWorkbenchPresentation()), true);
+  const cached = createDefaultWorkbenchPresentation(); cached.display.window.left = 211;
+  assert.equal(saveWorkbenchLayout(profile, store.getDraft(), cached, {}, storage), true);
+  const captured = captureWorkbenchPresentation(input({ layout: cached,
+    displayPresentations: { 'display:primary': { ...cached.display, window: { ...cached.display.window, left: 333 } } },
+  })).value;
+  const before = store.getSnapshot(), history = store.getHistory(), generation = store.getGeneration();
+  const raw = storage.getItem(systemWorkflowDraftKey(profile)), cache = storage.getItem(workbenchLayoutKey(profile));
+  assert.equal(before.workbench.display.window.left, 32, 'preview capture alone does not accept authored geometry');
+  blocked = true;
+  assert.throws(() => session.saveWorkbench(captured), /could not be saved/);
+  assert.equal(store.getSnapshot(), before); assert.equal(store.getGeneration(), generation);
+  assert.deepEqual(store.getHistory(), history);
+  assert.equal(storage.getItem(systemWorkflowDraftKey(profile)), raw);
+  assert.equal(storage.getItem(workbenchLayoutKey(profile)), cache);
+  assert.equal(loadWorkbenchLayout(profile, store.getDraft(), storage).layout.display.window.left, 211);
+  blocked = false;
+  assert.equal(session.saveWorkbench(captured), true);
+  assert.deepEqual(store.getHistory(), history, 'Prepare layout saving adds no independent Undo step');
+  assert.deepEqual(loadWorkbenchLayout(profile, store.getDraft(), storage), { layout: null, views: {} });
+  const reopened = createSystemWorkflowDraftStore({ profileAddress: profile, storage });
+  assert.equal(reopened.getDraft().workbench.display.window.left, 333);
+  const published = buildProfileDocumentV9({ profileAddress: profile, systemWorkflowDraft: reopened.getDraft(), assetRecords: [] });
+  assert.equal(published.workbench.display.window.left, 333, 'public projection consumes the confirmed authored presentation');
 });
 
 test('removed modules contribute neither saved layouts nor cached errors, including undo to absent collections', () => {

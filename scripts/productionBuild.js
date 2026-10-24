@@ -174,7 +174,37 @@ export const PRODUCTION_BUDGETS = Object.freeze({
   // compatibility fields. Measured before: 778,922 gzip; first complete editor:
   // 784,180 gzip (+5,258 bytes). Bound that feature plus a small build margin;
   // raw, initial-entry, owner-static and wallet limits remain unchanged.
-  coreJavaScript: Object.freeze({ raw: 2_480_000, gzip: 786_000 }),
+  // Shared Transform/Color adds the reusable hue ring/triangle and module-owned
+  // color gestures. Measured first complete implementation: 789,828 gzip;
+  // removal of superseded Image/Shape fields reduces that further. Bound the
+  // aggregate feature growth; initial, owner-static, raw and wallet limits stay.
+  // Detachable Layers/Transform/Color docks add session layout and accessible
+  // pointer/keyboard regrouping. First complete build: 791,592 gzip. Keep the
+  // raw, initial, owner-static and wallet ceilings; bound this small addition.
+  // Image now joins those docks through the shared tool source. The first
+  // alternate-output build measured 793,178 gzip. Bound the added tool routing
+  // with 1 kB more gzip allowance; all other ceilings remain unchanged.
+  // Independent Text shell: alternate-output measurement 794,172 gzip bytes.
+  // Keep the raw and initial-load limits; allow only 500 gzip bytes for this step.
+  // Two Text scopes add navigation and explicit control grouping. Native build:
+  // 2,480,549 raw / 793,955 gzip. Bound this step by 2 kB raw and 500 gzip bytes;
+  // the latter retains room for the alternate-output production test graph.
+  // Tool-window wording adds 307 raw bytes (2,482,183 total). Keep the gzip
+  // ceiling and allow 500 raw bytes for this bounded clarity pass.
+  // Stacked tool panes and accessible dividers: 2,486,610 raw / 796,013 gzip.
+  // Bound the measured 4,427 raw / 1,504 gzip addition; other limits stay fixed.
+  // Shared design-system Keeper dock and navigation clearance: 2,487,119 raw /
+  // 796,193 gzip in the native build; alternate-outDir measures 796,773 gzip.
+  // Bound this step with 500 more raw and gzip bytes; other ceilings stay fixed.
+  // Navigator adds shared controls, read-only module projections and responsive
+  // screen utility slots: native core measured 2,505,380 raw / 803,657 gzip.
+  // Bound this addition at 2,515,000 / 807,000; initial-load, owner-static,
+  // wallet, CSS and public-asset ceilings are unchanged. Evidence: 2026-10-23.
+  // Profile-local Library/dock preferences add validated storage and explicit retry.
+  // First native build: 2,517,412 raw / 808,294 gzip, versus the prior Info build
+  // 2,511,618 / 806,397. Allow 4.5 kB raw / 2.5 kB gzip above the old ceiling;
+  // all other limits stay unchanged. Evidence: 2026-10-23/library-preferences.md.
+  coreJavaScript: Object.freeze({ raw: 2_519_500, gzip: 809_500 }),
   // Approved local article fonts plus the creation bar's Inter variable face.
   // Inter and its license/provenance add 357,042 bytes; measured copied assets:
   // 17,811,402 bytes. Retain the previous margin, rounded up by less than 3 kB.
@@ -251,6 +281,11 @@ export async function findProhibitedProductionArtifacts(outputDirectory) {
     const filenameRule = PROHIBITED_ARTIFACT_RULES.find(({ pattern }) => pattern.test(file));
     if (filenameRule) findings.push({ file, reason: filenameRule.label });
     const bytes = await readFile(resolve(outputDirectory, file));
+    if (file.endsWith('.js')) {
+      for (const marker of ['review-category', 'review-section', 'review-activity-', 'fixture-asset-received', '/fixtures/profile-identity-radar.svg']) {
+        if (bytes.includes(marker)) findings.push({ file, reason: `development fixture marker: ${marker}` });
+      }
+    }
     const fingerprint = createHash('sha256').update(bytes).digest('hex');
     if (PROHIBITED_ARTIFACT_SHA256.has(fingerprint)) findings.push({ file, reason: 'historical leaked lock-file content' });
   }
@@ -488,6 +523,7 @@ export function diagnosticsEnvironmentPlugin() {
 
 export async function checkExistingBuild(outputDirectory) {
   const resolvedOutput = resolve(outputDirectory);
+  await assertNoProhibitedProductionArtifacts(resolvedOutput);
   await assertProductionFontContract(resolvedOutput);
   const report = await analyzeProductionBuild(resolvedOutput);
   checkProductionBudgets(report);

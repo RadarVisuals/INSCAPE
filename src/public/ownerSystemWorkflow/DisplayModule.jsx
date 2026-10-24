@@ -1,3 +1,4 @@
+import { useWorkbenchMiniature } from './workbenchMiniatures.js';
 import { useWorkbenchView, useWorkbenchActions, useWorkbenchInspectionAction } from './WorkbenchViewContext.js';
 import ModuleSurfaceControls from './ModuleSurfaceControls.jsx';
 import DisplayCanvasControls from './DisplayCanvasControls.jsx';
@@ -26,12 +27,16 @@ import { displayTextLabel } from '../../systemWorkflow/domain/displayText.js';
 export default forwardRef(function DisplayModule({ assetsById, controller, authoringLocked: editingLocked, suspended = false, displayName,
   panelOccupied, onRevealInstruments, onInspect, onToggleLibrary,
   onAuthoringLockToggle, registerAssetDimensions, resolveAssetDimensions, menuSurface,
-  reducedMotion, workspaceSurfaceColor, windowProps, placementTargetRef, shortcutTargetRef, workspaceRef }, ref) {
-  const authoringLocked = editingLocked || Boolean(useWorkbenchView().presentationTransforms?.[controller.moduleId || PRIMARY_DISPLAY_ID]);
+  reducedMotion, workspaceSurfaceColor, windowProps, placementTargetRef, shortcutTargetRef }, ref) {
+  const view = useWorkbenchView();
+  const authoringLocked = editingLocked || Boolean(view.presentationTransforms?.[controller.moduleId || PRIMARY_DISPLAY_ID]);
   const { focusModules } = useWorkbenchActions();
   const tools = useSharedDisplayTools();
   const textTools = useSharedTextTools();
   const targetId = controller.moduleId;
+  useWorkbenchMiniature(controller.moduleId || PRIMARY_DISPLAY_ID, useMemo(() => ({ kind: 'display', grid: controller.selectedGrid,
+    geometry: controller.draft.geometry, assets: assetsById, hidden: controller.hiddenPlacementIds, appearance: controller.draft.appearance }),
+    [controller.selectedGrid, controller.draft.geometry, assetsById, controller.hiddenPlacementIds, controller.draft.appearance]));
   const toolTarget = useContextToolTarget();
   const toolAvailable = windowProps.instanceState === 'window';
   const inactive = suspended || !toolAvailable;

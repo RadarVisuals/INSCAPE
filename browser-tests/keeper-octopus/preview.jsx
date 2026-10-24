@@ -30,7 +30,7 @@ draft.workbench.display.open = false;
 draft.workbench.keeperDocks = [{ id: 'keeper:octopus-preview', position: { left: 180, top: 200 } }];
 storage.setItem(key, JSON.stringify(draft));
 createRoot(document.getElementById('root')).render(<>
-  <Runtime profileAddress={profile} reviewStorage={storage} reviewAssets={[]} reviewCategories={[]} reviewActivity={[]} reviewDiscovery={[]} reviewProfile={{ name: 'Goo Keeper preview' }} />
+  <Runtime profileAddress={profile} reviewStorage={storage} reviewAssets={[]} reviewCategories={[]} reviewActivity={[]} reviewProfile={{ name: 'Goo Keeper preview' }} />
   <aside style={{ position: 'fixed', top: 12, left: 20, right: 20, maxWidth: 600, zIndex: 60, padding: 8,
     color: 'var(--workflow-ink, #eee)', background: 'var(--workflow-panel, #222)', font: '12px/1.6 "Inscape Sora", sans-serif' }}>
     Octopus Keeper · temporary dock preview<br />

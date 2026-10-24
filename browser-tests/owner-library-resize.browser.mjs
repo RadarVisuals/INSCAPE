@@ -3,6 +3,7 @@ import { mkdir } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import test from 'node:test';
 import { chromium } from 'playwright-core';
+import { openSharedTool } from './fixtures/shared-tools.mjs';
 
 const root = process.env.INSCAPE_SYSTEM_WORKFLOW_ROOT || 'http://127.0.0.1:5173';
 const screenshots = process.env.INSCAPE_SYSTEM_WORKFLOW_SCREENSHOT_DIR;
@@ -15,6 +16,8 @@ test('Library resizes with inset scrolling, accessible controls, and retained st
     for (const width of [1440, 1024]) {
       await page.setViewportSize({ width, height: 900 });
       await page.goto(`${root}/development/owner/system-workflow`, { waitUntil: 'networkidle' });
+      const collapse = page.getByRole('button', { name: 'Collapse sidebar', exact: true });
+      if (await collapse.isVisible()) await collapse.click();
       await page.evaluate(() => { window.__libraryDraftWrites = 0; addEventListener('inscape:review-storage-write', event => { if (event.detail.key.startsWith('inscape.system-workflow-draft.')) window.__libraryDraftWrites += 1; }); });
       const board = page.getByRole('article', { name: 'Display Module', exact: true });
       const grip = board.getByLabel(/Move Display Module:/);
@@ -45,7 +48,7 @@ test('Library resizes with inset scrolling, accessible controls, and retained st
       await page.mouse.up();
       const smaller = await library.boundingBox();
       assert.ok(Math.abs(smaller.width - (maximum - shrink)) < 1, 'inside its limits, Library follows the dragged edge exactly');
-      assert.deepEqual([smaller.x, smaller.y, smaller.height], [0, 0, original.height]);
+      assert.deepEqual([smaller.x, smaller.y, smaller.height], [original.x, original.y, original.height], 'resizing preserves the sidebar clearance and top inset');
       await handle.focus();
       await handle.press('Home');
       assert.equal((await library.boundingBox()).width, minimum);
@@ -65,14 +68,13 @@ test('Library resizes with inset scrolling, accessible controls, and retained st
       await page.waitForTimeout(350);
       assert.equal(await library.isVisible(), true, 'Display Module interactions keep Library open');
       assert.notDeepEqual(await board.boundingBox(), boardBounds, 'the Display Module actually moves while Library stays open');
-      await page.getByRole('button', { name: 'Tools', exact: true }).click();
-      await page.getByRole('menuitem', { name: 'LAYERS', exact: true }).click();
-      await page.locator('[data-shared-tool="layers"]').waitFor();
+      const layers = await openSharedTool(page, 'Layers');
+      await layers.getByRole('tab', { name: 'Layers', exact: true }).waitFor();
       assert.equal(await library.isVisible(), true, 'Layers can be used alongside Library');
-      await page.getByRole('button', { name: 'Close Layers', exact: true }).click();
+      await page.getByRole('button', { name: 'Close Workbench Layers', exact: true }).press('Enter');
       const containment = await library.evaluate((node) => {
         const box = node.getBoundingClientRect();
-        const dock = document.querySelector('.system-workflow__global-bar').getBoundingClientRect();
+        const dock = { top: innerHeight };
         const controls = [...node.querySelectorAll('.system-workflow__workspace-rail-controls > *')];
         return { gutter: dock.top - box.bottom, controlsFit: controls.every((control) => {
           const rect = control.getBoundingClientRect(); return rect.left >= box.left && rect.right <= box.right;

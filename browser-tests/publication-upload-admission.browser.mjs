@@ -53,7 +53,7 @@ async function fixture(page, scenario) {
         systemWorkflowDraft: draft, menuSurface: 'carbon', phase: 'open', getWalletPublicationContext: () => wallet,
         onClose: () => window.__uploadState.closes++ })));
   }, { profile, account: UPLOAD_TEST_SIGNER.address });
-  await page.getByRole('button', { name: 'PREPARE PUBLICATION', exact: true }).waitFor();
+  await page.getByRole('button', { name: 'Prepare publication', exact: true }).waitFor();
   return state;
 }
 
@@ -66,16 +66,16 @@ for (const [scenario, width] of [['accepted', 1440], ['accepted', 390], ['refuse
       const errors = []; page.on('pageerror', error => errors.push(error.message));
       const state = await fixture(page, scenario);
       const rack = page.getByRole('complementary', { name: 'Publish profile' });
-      await page.getByRole('button', { name: 'PREPARE PUBLICATION', exact: true }).click();
+      await page.getByRole('button', { name: 'Prepare publication', exact: true }).click();
       assert.equal(state.requests.length, 0, 'opening and preparing require no request or signature');
       assert.equal(await page.evaluate(() => window.__uploadState.signatures), 0);
-      await page.getByRole('button', { name: 'MAKE PRESENTATION PUBLIC', exact: true }).click();
+      await page.getByRole('button', { name: 'Make presentation public', exact: true }).click();
       if (scenario === 'unconfigured') {
         await rack.getByRole('status').filter({ hasText: 'not configured' }).waitFor();
         assert.equal(await page.evaluate(() => window.__uploadState.signatures), 0);
       } else {
         await page.waitForFunction(() => window.__uploadState.signatures === 1);
-        assert.equal(await page.getByRole('button', { name: 'AUTHORIZE UPLOAD…', exact: true }).isDisabled(), true);
+        assert.equal(await page.getByRole('button', { name: 'Authorize upload…', exact: true }).isDisabled(), true);
         assert.equal(await page.getByRole('button', { name: 'Close Publication', exact: true }).isDisabled(), true);
         await page.keyboard.press('Escape');
         assert.equal(await page.evaluate(() => window.__uploadState.closes), 0);
@@ -89,13 +89,13 @@ for (const [scenario, width] of [['accepted', 1440], ['accepted', 390], ['refuse
           await page.evaluate(() => window.__approveUpload());
         }
         if (scenario === 'accepted') {
-          await page.getByRole('button', { name: 'PUBLISH TO PROFILE', exact: true }).waitFor();
+          await page.getByRole('button', { name: 'Publish to profile', exact: true }).waitFor();
           assert.equal(state.uploads, 1);
           assert.equal(state.requests.length, 2);
         } else if (scenario !== 'unmount') {
           const text = { refused: 'authorization was not completed', 'invalid-profile': 'Universal Profile on LUKSO mainnet', 'profile-change': 'profile, wallet or presentation changed', quota: 'hourly upload limit', 'wrong-cid': 'CID verification failed' }[scenario];
           await rack.getByRole('status').filter({ hasText: text }).waitFor();
-          assert.equal(await page.getByRole('button', { name: 'PUBLISH TO PROFILE', exact: true }).count(), 0);
+          assert.equal(await page.getByRole('button', { name: 'Publish to profile', exact: true }).count(), 0);
         } else {
           await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
           assert.equal(await rack.count(), 0);

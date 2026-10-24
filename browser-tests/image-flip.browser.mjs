@@ -5,10 +5,11 @@ import { chromium } from 'playwright-core';
 
 const origin = process.env.INSCAPE_IMAGE_ROOT || 'http://127.0.0.1:5198';
 const baseline = Boolean(process.env.INSCAPE_FLIP_BASELINE);
+const output = process.env.INSCAPE_BROWSER_OUTPUT || '.browser-test-runtime';
 const settle = page => page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
 
 test('Image flip: loaded transparent artwork, midpoint, wraparound, reduced motion and saved-state isolation', { timeout: 90000 }, async () => {
-  await mkdir('.browser-test-runtime', { recursive: true });
+  await mkdir(output, { recursive: true });
   const browser = await chromium.launch({ executablePath: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', headless: true });
   try {
     const measurements = [];
@@ -31,6 +32,13 @@ test('Image flip: loaded transparent artwork, midpoint, wraparound, reduced moti
         (await import('/browser-tests/image-fit-fixture.jsx')).mount();
       });
       await page.locator('.image-module__window').first().waitFor();
+      // Park the fixture's forced-open dock below the narrow artwork via UI.
+      if (width === 390) {
+        const dock = page.locator('.workbench-tool-dock');
+        const move = dock.getByRole('button', { name: 'Move Transform, Color and Info panel', exact: true });
+        await move.focus(); for (let i = 0; i < 20; i++) await move.press('Shift+ArrowDown');
+        await settle(page);
+      }
       await page.evaluate(() => {
         const api = imageFitFixture, draft = api.store.getDraft(), source = draft.imageModules[0];
         const sides = ['front', 'back'].map(name => ({ ...source.sides[0], id: `side:${name}`, crop: { x: .5, y: .5, zoom: 1.2 },
@@ -71,7 +79,7 @@ test('Image flip: loaded transparent artwork, midpoint, wraparound, reduced moti
             front: node.querySelector('.image-module__face')?.getBoundingClientRect().toJSON(),
             back: node.querySelector('.image-module__face--back')?.getBoundingClientRect().toJSON() };
         }, fraction));
-        if ([.35, .5, .65].includes(fraction)) await page.screenshot({ path: `.browser-test-runtime/flip-${baseline ? 'before' : 'after'}-${width}-${fraction}.png` });
+        if ([.35, .5, .65].includes(fraction)) await page.screenshot({ path: `${output}/flip-${baseline ? 'before' : 'after'}-${width}-${fraction}.png` });
         if (fraction === .65) {
           const screenshot = await page.screenshot();
           const paintedOutside = await canvas.evaluate(async (node, png) => {
@@ -211,7 +219,7 @@ test('Image flip: loaded transparent artwork, midpoint, wraparound, reduced moti
       const edgeSamples = [];
       for (const fraction of [.35, .45, .49, .51, .55, .65]) {
         await seek(fraction); const soft = await brightness();
-        if (fraction === .49) await page.screenshot({ path: `.browser-test-runtime/flip-opaque-edge-${width}.png` });
+        if (fraction === .49) await page.screenshot({ path: `${output}/flip-opaque-edge-${width}.png` });
         const solidStyle = await page.addStyleTag({ content: '.image-module__artwork { opacity: 1 !important; }' }); await settle(page);
         const solid = await brightness(); await solidStyle.evaluate(node => node.remove()); await settle(page);
         const contrast = background - solid;
@@ -230,6 +238,6 @@ test('Image flip: loaded transparent artwork, midpoint, wraparound, reduced moti
       assert.deepEqual(errors, []);
       await page.close();
     }
-    await writeFile(`.browser-test-runtime/flip-${baseline ? 'before' : 'after'}.json`, JSON.stringify(measurements, null, 2));
+    await writeFile(`${output}/flip-${baseline ? 'before' : 'after'}.json`, JSON.stringify(measurements, null, 2));
   } finally { await browser.close(); }
 });

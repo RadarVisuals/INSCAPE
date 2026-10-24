@@ -87,11 +87,11 @@ export function articleAlignmentStyle(alignment) {
   return { textAlign: 'justify', textAlignLast: alignment === 'justify-all' ? 'justify' : alignment.slice(8) };
 }
 export const ARTICLE_FONTS = Object.freeze([
-  { id: 'sora', label: 'Sora', family: 'Inscape Sora', directory: 'Sora', file: 'Sora-VariableFont_wght.ttf' },
-  { id: 'plex', label: 'IBM Plex Sans Condensed', family: 'Inscape IBM Plex Sans Condensed', directory: 'IBM_Plex_Sans_Condensed', file: 'IBMPlexSansCondensed-Regular.ttf' },
-  { id: 'literata', label: 'Literata', family: 'Inscape Article Literata', directory: 'Literata', file: 'Literata.ttf' },
-  { id: 'cormorant', label: 'Cormorant Garamond', family: 'Inscape Article Cormorant', directory: 'Cormorant', file: 'Cormorant.ttf' },
-  { id: 'mono', label: 'IBM Plex Mono', family: 'Inscape Article Mono', directory: 'IBM_Plex_Mono', file: 'IBMPlexMono-Regular.ttf' },
+  { id: 'sora', label: 'Sora', family: 'Inscape Sora' },
+  { id: 'plex', label: 'IBM Plex Sans Condensed', family: 'Inscape IBM Plex Sans Condensed' },
+  { id: 'literata', label: 'Literata', family: 'Inscape Article Literata' },
+  { id: 'cormorant', label: 'Cormorant Garamond', family: 'Inscape Article Cormorant' },
+  { id: 'mono', label: 'IBM Plex Mono', family: 'Inscape Article Mono' },
 ]);
 export const exact = (v, keys, optional = []) => Boolean(v && typeof v === 'object' && !Array.isArray(v)
   && keys.every(k => Object.hasOwn(v, k)) && Object.keys(v).every(k => keys.includes(k) || optional.includes(k)));
@@ -140,8 +140,8 @@ export function assertArticle(article) {
       || !(a.background === null || /^#[\da-f]{6}$/iu.test(a.background)) || !/^#[\da-f]{6}$/iu.test(a.color)
       || !Number.isFinite(a.opacity) || a.opacity < 0 || a.opacity > 1 || typeof a.frame !== 'boolean'
       || !Number.isFinite(a.scale) || a.scale < .01 || a.scale > 100
-      || !Number.isFinite(a.fontSize) || a.fontSize < 8 || a.fontSize > 300
-      || (a.titleFontSize !== undefined && (!Number.isFinite(a.titleFontSize) || a.titleFontSize < 8 || a.titleFontSize > 300))) throw new Error('Unsupported Text appearance.');
+      || !validArticleFontSize(a.fontSize)
+      || (a.titleFontSize !== undefined && !validArticleFontSize(a.titleFontSize))) throw new Error('Unsupported Text appearance.');
     if (a.titleLetterSpacing !== undefined && !validArticleTracking(a.titleLetterSpacing)) throw new Error('Unsupported title tracking.');
     if (a.lineHeight !== undefined && !validArticleLineHeight(a.lineHeight)) throw new Error('Unsupported line spacing.');
     if (a.textStyles !== undefined) {
@@ -213,7 +213,7 @@ export function validTextModules(items, published = false) {
     if (!Array.isArray(items) || items.length > MAX_TEXT_MODULES) return false;
     const ids = new Set();
     return items.every(item => {
-      if (!exact(item, ['id', 'article', ...(!published ? ['visibility'] : [])], published ? ['sceneLink', 'pagination'] : ['target', 'sceneLink', 'pagination']) || !TEXT_ID.test(item.id) || ids.has(item.id)) return false;
+      if (!exact(item, ['id', 'article', ...(!published ? ['visibility'] : [])], ['sceneLink', 'pagination']) || !TEXT_ID.test(item.id) || ids.has(item.id)) return false;
       ids.add(item.id); assertArticle(item.article);
       if (item.pagination !== undefined && item.pagination !== 'pages') return false;
       if (item.sceneLink !== undefined) {
@@ -231,15 +231,9 @@ export function validTextModules(items, published = false) {
           }
         }
       }
-      return published || ['PRIVATE', 'PUBLIC'].includes(item.visibility) && (item.target == null || validLegacyTarget(item.target));
+      return published || ['PRIVATE', 'PUBLIC'].includes(item.visibility);
     });
   } catch { return false; }
-}
-// Read compatibility only: old drafts may still contain an unused NFT binding.
-function validLegacyTarget(t) {
-  return exact(t, ['address', 'tokenId', 'metadataValue', 'assetIndex']) && /^0x[\da-f]{40}$/u.test(t.address)
-    && /^0x[\da-f]{64}$/u.test(t.tokenId) && /^0x(?:[\da-f]{2})+$/iu.test(t.metadataValue) && t.metadataValue.length <= 8192
-    && Number.isSafeInteger(t.assetIndex) && t.assetIndex >= -1 && t.assetIndex < 128;
 }
 export function projectTextModules(items, displays = []) {
   return items.filter(i => i.visibility === 'PUBLIC').flatMap(item => {

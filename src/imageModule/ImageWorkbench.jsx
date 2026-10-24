@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Copy, Crop, Trash2, ChevronRight, ZoomIn } from 'lucide-react';
 import ImageWindow from './ImageWindow.jsx';
 import ImageSides from './ImageSides.jsx';
@@ -8,21 +8,38 @@ import useModuleShortcutMenu from '../public/ownerSystemWorkflow/useModuleShortc
 import { resolveImageLibrarySide } from './imageLibrarySide.js';
 import { createSystemWorkflowCropSession, createSystemWorkflowCropPanGesture, updateSystemWorkflowCropPanGesture, setSystemWorkflowCropZoom, nudgeSystemWorkflowCrop } from '../systemWorkflow/systemWorkflowCrop.js';
 import { projectSystemWorkflowTransform, unprojectSystemWorkflowCrop, transformArtwork } from '../systemWorkflow/systemWorkflowTransform.js';
-import { createImagePresentation, imageFocusEntry, imageSize, MAX_IMAGE_MODULES, MAX_IMAGE_SIDES, nextImageSide, IMAGE_FILL_CROP } from './imageModule.js';
+import { createImagePresentation, imageFocusEntry, MAX_IMAGE_MODULES, MAX_IMAGE_SIDES, nextImageSide, IMAGE_FILL_CROP } from './imageModule.js';
 import { saveImageModule, prepareImageResize, duplicateImageModule } from './imageModuleSession.js';
 import { commitWorkbenchSelectionResize } from '../systemWorkflow/resizeWorkbenchSelection.js';
-import { useWorkbenchActions, useWorkbenchView, useWorkbenchInspectionAction } from '../public/ownerSystemWorkflow/WorkbenchViewContext.js';
+import { useWorkbenchActions, useWorkbenchView, useWorkbenchInspectionAction, useArtworkOpener, useClosedArtworkLayout, useWorkbenchToolSource } from '../public/ownerSystemWorkflow/WorkbenchViewContext.js';
+import { useWorkbenchMiniature } from '../public/ownerSystemWorkflow/workbenchMiniatures.js';
+import { SharedDisplayToolContent } from '../public/ownerSystemWorkflow/SharedDisplayTools.jsx';
+import { OwnerSystemWorkflowMetadataContent } from '../public/ownerSystemWorkflow/OwnerSystemWorkflowMetadataModule.jsx';
+import { createProfileDocumentV9AssetDossier } from '../profileDocument/components/profileDocumentV9FocusViewModel.js';
 import ImageLift from './ImageLift.jsx';
 import { projectedSvgArtworkFor } from '../artwork/ProjectedSvgArtwork.jsx';
 import '../public/ownerSystemWorkflow/displayInstruments.css';
 import './imageModule.css';
 
-const ImageInstance = memo(function ImageInstance({ record, index, store, profileAddress, registerTarget, initialPresentation, onPresentationChange, onActivate, suspended, viewport, reducedMotion, canDuplicate, onDuplicated, initialSideIndex = 0, focusOnMount = false, initiallyOpenId }) {
+const ImageInstance = memo(function ImageInstance({ record, index, store, profileAddress, registerTarget, initialPresentation, onPresentationChange, onActivate, suspended, viewport, reducedMotion, canDuplicate, onDuplicated, initialSideIndex = 0, focusOnMount = false, initiallyOpenId, savedLayout }) {
   const [presentation, setPresentation] = useState(() => ({ ...(initialPresentation || createImagePresentation(record.id, index)), ...(initiallyOpenId === record.id ? { open: true } : {}) }));
+  useArtworkOpener(record.id, () => setPresentation(current => ({ ...current, open: true })));
+  useClosedArtworkLayout(presentation, setPresentation, savedLayout?.imageModules?.find(item => item.id === record.id));
   const [sideId, setSideId] = useState(record.sides[initialSideIndex]?.id), [flipTarget, setFlip] = useState(null);
-  const [cropState, setCrop] = useState(null), [inspect, setInspect] = useState(false), [error, setError] = useState('');
+  const [cropState, setCrop] = useState(null), [inspect, setInspect] = useState(false), [failure, setFailure] = useState(null);
+  const error = failure?.message || '';
+  const setError = useCallback((message, surface = 'actions') => setFailure(message ? { message, surface } : null), []);
   const [dropMode, setDropMode] = useState('append');
-  const [sizeFields, setSizeFields] = useState({ width: String(record.width), height: String(record.height) });
+  const [recoveryHost, setRecoveryHost] = useState(null);
+  const [inspectionRecoveryHost, setInspectionRecoveryHost] = useState(null);
+  useLayoutEffect(() => {
+    // Workbench's native focus listener runs before React's portal bubbling.
+    // Reaching Retry must not turn keyboard focus into an artwork selection.
+    const stop = event => event.stopPropagation();
+    recoveryHost?.addEventListener('focusin', stop);
+    return () => recoveryHost?.removeEventListener('focusin', stop);
+  }, [recoveryHost]);
+
   const source = useRef(null), drag = useRef(null), shortcut = useRef(null), latest = useRef(record), live = useRef(true);
   const imageRequest = useRef(0);
   const pointerFocus = useRef(false);
@@ -31,13 +48,21 @@ const ImageInstance = memo(function ImageInstance({ record, index, store, profil
   const { getPresentation, setSelection, focusModules } = useWorkbenchActions();
   const side = record.sides.find(item => item.id === sideId) || record.sides[0];
   const crop = cropState?.expected === record && cropState?.placementId === side?.id ? cropState : null;
+  const cropping = Boolean(crop);
   const flip = record.sides.some(item => item.id === flipTarget) ? flipTarget : null;
+  useWorkbenchMiniature(record.id, useMemo(() => ({ kind: 'image', record, side, crop: crop?.previewCrop ?? side?.crop }), [record, side, crop?.previewCrop]));
   const sideIndex = record.sides.indexOf(side);
-  const presented = Boolean(useWorkbenchView().presentationTransforms?.[record.id]);
+  const workbenchView = useWorkbenchView();
+  const presented = Boolean(workbenchView.presentationTransforms?.[record.id]);
+  const dossier = useMemo(() => createProfileDocumentV9AssetDossier(side?.asset), [side?.asset]);
   const editable = Boolean(store) && !suspended && !presented;
   const rectangle = crop?.mask || { left: 0, top: 0, width: record.width, height: record.height };
   const liftEntry = useMemo(() => side ? imageFocusEntry(side) : null, [side]);
   const inactive = suspended || !presentation.open;
+  const cropInProgress = useRef(crop);
+  cropInProgress.current = crop;
+  useEffect(() => store?.guardWorkbenchTransition?.(() => cropInProgress.current
+    ? 'Finish or cancel the Image crop before switching Workbenches.' : null), [store]);
   const prepareInspection = () => {
     if (liftEntry && !inactive && !crop && !flip && !inspect && !reducedMotion)
       projectedSvgArtworkFor(source.current, liftEntry.media.src)?.prepareImages();
@@ -52,13 +77,12 @@ const ImageInstance = memo(function ImageInstance({ record, index, store, profil
   };
   useEffect(() => {
     const artwork = liftEntry && projectedSvgArtworkFor(source.current, liftEntry.media.src);
-    if (inactive || crop || flip) artwork?.releaseImages();
+    if (inactive || cropping || flip) artwork?.releaseImages();
     return () => artwork?.releaseImages();
-  }, [liftEntry, inactive, Boolean(crop), flip]);
+  }, [liftEntry, inactive, cropping, flip]);
   useEffect(() => { live.current = true; return () => { live.current = false; imageRequest.current += 1; }; }, []);
   useEffect(() => { if (focusOnMount) source.current?.focus({ preventScroll: true }); }, [focusOnMount]);
   useEffect(() => {
-    setSizeFields({ width: String(record.width), height: String(record.height) });
     imageRequest.current += 1;
     setCrop(null); setFlip(null); setInspect(false); drag.current = null;
   }, [record]);
@@ -78,13 +102,13 @@ const ImageInstance = memo(function ImageInstance({ record, index, store, profil
   useEffect(() => { onPresentationChange?.(record.id, presentation); }, [record.id, presentation, onPresentationChange]);
   useEffect(() => () => onPresentationChange?.(record.id, null), [record.id, onPresentationChange]);
   const layout = useCallback(({ left, top }) => setPresentation(current => current.position.left === left && current.position.top === top ? current : { ...current, position: { left, top } }), []);
-  const save = useCallback((next, expected = latest.current) => {
+  const save = useCallback((next, expected = latest.current, errorSurface = 'actions') => {
     if (!live.current || !store || suspended) return false;
     try {
       if (!saveImageModule(store, profileAddress, expected, next)) throw new Error('Image was not saved. Your saved work is unchanged; try the edit again.');
       latest.current = next; setError(''); return true;
-    } catch (e) { setError(e.message); return false; }
-  }, [store, profileAddress, suspended]);
+    } catch (e) { setError(e.message, errorSurface); return false; }
+  }, [store, profileAddress, suspended, setError]);
   const changeSide = (change, expected = record) => save({ ...expected, sides: expected.sides.map(item => item.id === side?.id ? { ...item, ...change } : item) }, expected);
   const duplicate = () => {
     if (!editable || !live.current || crop || flip || !canDuplicate) return;
@@ -106,12 +130,12 @@ const ImageInstance = memo(function ImageInstance({ record, index, store, profil
       if (!save({ ...current, sides: replacing ? current.sides.map(item => item.id === side.id ? newSide : item) : [...current.sides, newSide] }, current)) return false;
       setSideId(newSide.id); onActivate?.(record.id); return true;
     } catch (e) { if (live.current && imageRequest.current === request) setError(e.message); return false; }
-  }, [editable, presentation.open, dropMode, side?.id, save, onActivate, record.id]);
+  }, [editable, presentation.open, dropMode, side?.id, save, onActivate, record.id, setError]);
   useEffect(() => {
-    if (!editable || !presentation.open || !registerTarget || inspect || crop) return;
+    if (!editable || !presentation.open || !registerTarget || inspect || cropping) return;
     registerTarget(record.id, { get node() { return source.current; }, label: dropMode === 'replace' ? 'Replace Image side' : 'Add Image side', placeAsset: acceptImage });
     return () => registerTarget(record.id, null);
-  }, [editable, presentation.open, registerTarget, record.id, acceptImage, inspect, Boolean(crop), dropMode]);
+  }, [editable, presentation.open, registerTarget, record.id, acceptImage, inspect, cropping, dropMode]);
   const shortcutMenu = useModuleShortcutMenu({ store, profileAddress, kind: 'image', record });
   const beginCrop = () => {
     if (!side || !editable) return;
@@ -129,35 +153,49 @@ const ImageInstance = memo(function ImageInstance({ record, index, store, profil
     if (saved) layout(position);
     return saved;
   };
-  const resizeTarget = useMemo(() => ({ enabled: editable && !crop && !inspect && !flip,
+  const resizeTarget = useMemo(() => ({ enabled: editable && !cropping && !inspect && !flip,
     reflow: editable,
     expected: record, store, profileAddress, layoutKey: 'imageModules', commit: commitWorkbenchSelectionResize, prepare: prepareImageResize, applyFrame: layout, reportError: setError,
     minimumSize: 32, maximumWidth: 4096, maximumHeight: 4096,
-  }), [editable, Boolean(crop), inspect, flip, record, store, profileAddress, layout]);
-  const applySize = event => {
-    event.preventDefault();
-    const width = Number(sizeFields.width), height = Number(sizeFields.height);
-    if (!imageSize(width) || !imageSize(height)) { setError('Use whole-pixel dimensions from 32 to 4096.'); return; }
-    resize({ width, height }, presentation.position);
-  };
+  }), [editable, cropping, inspect, flip, record, store, profileAddress, layout, setError]);
   const next = () => {
     if (record.sides.length < 2 || crop || inspect || flip || inactive) return;
     const target = record.sides[nextImageSide(sideIndex, record.sides.length)].id;
     if (reducedMotion) setSideId(target); else setFlip(target);
   };
+  // Only the tool's presentation moves to the shared dock. Side selection,
+  // Library drop mode, validation, saving and undo remain with this Image.
+  useWorkbenchToolSource(record.id, { image: <section className="workbench-image-tools" data-workbench-inspection-target={record.id} aria-label={`${record.name} Image settings`}>
+    {!presentation.open ? <p>Open this Image to edit its settings.</p>
+      : !editable || inspect ? <p>Image settings are unavailable while viewing this artwork.</p>
+      : crop ? <p>Finish or cancel the crop in the toolbar.</p> : <>
+        <div className="image-module__side-tools">
+          <label>When dropping from Library<select aria-label="When dropping from Library" value={dropMode} onChange={event => setDropMode(event.target.value)}><option value="append">Add as a new side</option><option value="replace">Replace current side</option></select></label>
+          <button className="workflow-tactile-control" type="button" aria-label="Remove current Image side" title="Remove this side; keep the Image" disabled={!side || Boolean(flip)} onClick={() => save({ ...record, sides: record.sides.filter(item => item.id !== side.id) }, record, 'settings')}><Trash2 size={14} /></button>
+        </div>
+        <label className="image-module__publication"><input type="checkbox" checked={record.visibility === 'PUBLIC'} onChange={event => save({ ...record, visibility: event.target.checked ? 'PUBLIC' : 'PRIVATE' }, record, 'settings')} />Include Image in publication</label>
+      </>}
+    {failure?.surface === 'settings' && <p role="alert" className="image-module__error">{error}</p>}
+  </section> });
   return <div className="image-module" data-workbench-module="image" data-image-module={record.id}
     onPointerDownCapture={event => {
       // Finish native focus before activation mounts the companion tools.
       // Otherwise the nested focus event flushes their pending React layout
       // while the pointer gesture is still starting.
-      if (event.button === 0 && !suspended && !presented && !crop && !inspect && !flip
+      // Shift belongs to Workbench selection; nested focus would select first,
+      // causing the host's subsequent toggle to remove the same Image.
+      if (event.button === 0 && !event.shiftKey && !suspended && !presented && !crop && !inspect && !flip
         && source.current && event.target.closest('.image-module__canvas') === source.current) {
         pointerFocus.current = true;
         try { source.current.closest('.image-module__window')?.focus({ preventScroll: true }); }
         finally { pointerFocus.current = false; }
       }
-      onActivate?.(record.id);
+      if (!event.shiftKey) onActivate?.(record.id);
     }} onFocusCapture={() => { if (!pointerFocus.current) onActivate?.(record.id); }}>
+    <SharedDisplayToolContent id="metadata" targetId={record.id} label={dossier?.title || record.name}
+      available={Boolean(dossier) && !inactive && !inspect && (!store || workbenchView.selection?.length === 1 && workbenchView.selection[0] === record.id)}>
+      <OwnerSystemWorkflowMetadataContent dossier={dossier} />
+    </SharedDisplayToolContent>
     {shortcutMenu.content}
     {!presentation.open && <button data-workbench-pan ref={shortcut} className="workflow-tactile-control image-module__shortcut" style={{ bottom: 64 + index * 38 }} onContextMenu={shortcutMenu.onContextMenu} onKeyDown={shortcutMenu.onKeyDown}
       onClick={() => setPresentation(p => ({ ...p, open: true }))}>{record.name}</button>}
@@ -215,9 +253,11 @@ const ImageInstance = memo(function ImageInstance({ record, index, store, profil
         onLostPointerCapture={() => { drag.current = null; }}>
         {!side ? <span className="image-module__empty">{store ? 'Drop artwork from Library' : 'No artwork'}</span>
           : <ImageSides side={side} nextSide={record.sides.find(item => item.id === flip)} rectangle={renderRectangle}
+            recoveryHost={!inactive ? inspect ? inspectionRecoveryHost : recoveryHost : null} recoveryMode={inspect ? 'inspect' : undefined}
             crop={crop?.previewCrop ?? side.crop}
             onComplete={id => { setSideId(id); setFlip(null); }} onCancel={() => setFlip(null)} />}
       </button>
+      <span ref={setRecoveryHost} className="image-module__recovery" data-workbench-selection-tools />
       {!crop && <button type="button" data-workbench-recovery-control className="workflow-tactile-control image-module__inspect" aria-label="Inspect Image" aria-keyshortcuts="I"
         title="Inspect Image (I)" disabled={!side || Boolean(flip || inspect || suspended)} onClick={inspectArtwork}
         onPointerEnter={prepareInspection} onFocus={prepareInspection} onPointerLeave={releaseInspection} onBlur={releaseInspection}><ZoomIn size={14} /></button>}
@@ -230,7 +270,9 @@ const ImageInstance = memo(function ImageInstance({ record, index, store, profil
       actions={!crop && (<nav className="system-workflow__selection-actions" aria-label="Image actions">
           <button className="workflow-tactile-control" type="button" aria-label="Inspect Image" aria-keyshortcuts="I" title="Inspect Image (I)" disabled={!side || Boolean(flip)} onClick={inspectArtwork}
             onPointerEnter={prepareInspection} onFocus={prepareInspection} onPointerLeave={releaseInspection} onBlur={releaseInspection}><ZoomIn size={18} strokeWidth={1.6} /></button>
-          <ArtworkTransformTools disabled={!side || Boolean(flip)} onTransform={operation => changeSide({ transform: transformArtwork(side.transform, operation) })} />
+
+          <ArtworkTransformTools disabled={!side || Boolean(flip)}
+            onTransform={operation => changeSide({ transform: transformArtwork(side.transform, operation) })} />
           <button className="workflow-tactile-control" type="button" aria-label="Crop" title="Crop" disabled={!side || Boolean(flip)} onClick={beginCrop}><Crop size={18} strokeWidth={1.6} /></button>
           <button className="workflow-tactile-control" type="button" aria-label="Duplicate" title={canDuplicate ? 'Duplicate Image, keeping all sides and crops' : 'At most sixteen Image modules are supported'} disabled={!canDuplicate || Boolean(flip)} onClick={duplicate}><Copy size={18} strokeWidth={1.6} /></button>
         </nav>)}
@@ -239,6 +281,7 @@ const ImageInstance = memo(function ImageInstance({ record, index, store, profil
         <input type="range" aria-label="Crop zoom" min="1" max="4" step="0.05" value={visualCrop.crop.zoom}
           onChange={event => updateVisualCrop(setSystemWorkflowCropZoom(visualCrop.crop, { ...crop.media, ...visualCrop.dimensions }, rectangle, Number(event.target.value)))} />
         <footer><button className="workflow-tactile-control" type="button" onClick={() => applyCrop(null)}>Native fit</button><button className="workflow-tactile-control" type="button" onClick={cancelCrop}>Cancel</button><button className="workflow-tactile-control" type="button" onClick={() => applyCrop(crop.previewCrop)}>Done</button></footer>
+        {failure?.surface === 'actions' && <p role="alert" className="image-module__error">{error}</p>}
       </div>) : (<div className="system-workflow__inspection-selector" role="group" aria-label="Image fit">
           <span>Fit</span>
           <button className="workflow-tactile-control" type="button" disabled={!side || Boolean(flip)} aria-pressed={Boolean(side && side.crop === null)}
@@ -247,22 +290,11 @@ const ImageInstance = memo(function ImageInstance({ record, index, store, profil
           <button className="workflow-tactile-control" type="button" disabled={!side || Boolean(flip)} aria-pressed={Boolean(side?.crop)}
             title="Fill the canvas with a centred crop, keeping the image proportions. Edges may be cropped."
             onClick={() => changeSide({ crop: { ...IMAGE_FILL_CROP } })}>Fill canvas</button>
-        </div>)}>
-      {crop ? error && <p role="alert" className="image-module__error">{error}</p> : <>
-        <details className="workbench-dimensions"><summary>Dimensions…</summary><form className="image-module__size" onSubmit={applySize}>
-          {['width', 'height'].map(key => <label key={key}>{key === 'width' ? 'Width' : 'Height'}<input aria-label={`Image ${key}`} type="number" min="32" max="4096" step="1" value={sizeFields[key]} onChange={event => setSizeFields(fields => ({ ...fields, [key]: event.target.value }))} /></label>)}
-          <button className="workflow-tactile-control" type="submit">Set size</button>
-        </form></details>
-        <div className="image-module__side-tools">
-          <label>Library drop<select aria-label="Image drop action" value={dropMode} onChange={event => setDropMode(event.target.value)}><option value="append">Add side</option><option value="replace">Replace side</option></select></label>
-          <button className="workflow-tactile-control" type="button" aria-label="Remove Image side" title="Remove current side" disabled={!side || Boolean(flip)} onClick={() => save({ ...record, sides: record.sides.filter(item => item.id !== side.id) })}><Trash2 size={14} /></button>
-        </div>
-        <label className="image-module__publication"><input type="checkbox" checked={record.visibility === 'PUBLIC'} onChange={event => save({ ...record, visibility: event.target.checked ? 'PUBLIC' : 'PRIVATE' })} />Include Image in publication</label>
-      {error && <p role="alert" className="image-module__error">{error}</p>}
-      </>}
-    </ContextToolContent>}
+          {failure?.surface === 'actions' && <p role="alert" className="image-module__error">{error}</p>}
+        </div>)} />}
     {error && activeTarget !== record.id && <button type="button" className="workflow-tactile-control system-workflow__notice" role="alert" onClick={() => onActivate?.(record.id)}>{error}</button>}
-    {inspect && side && !inactive && <ImageLift source={source.current} entry={liftEntry} reducedMotion={reducedMotion} onClose={() => setInspect(false)} />}
+    {inspect && side && !inactive && <ImageLift source={source.current} entry={liftEntry} reducedMotion={reducedMotion} onClose={() => setInspect(false)}
+      status={<span ref={setInspectionRecoveryHost} />} />}
   </div>;
 });
 

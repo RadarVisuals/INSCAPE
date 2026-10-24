@@ -327,16 +327,6 @@ export function nudgeSystemWorkflowResizeGeometry(placement, cornerInput, delta)
   return sameSystemWorkflowPlacementGeometry(start, geometry) ? null : geometry;
 }
 
-export function nudgeSystemWorkflowGroupResizeGeometries(placements, cornerInput, delta) {
-  const corner = requireCorner(cornerInput);
-  if (!delta || !isSystemWorkflowGridCoordinate(delta.column) || !isSystemWorkflowGridCoordinate(delta.row)) {
-    throw resizeError('SYSTEM_WORKFLOW_RESIZE_DELTA_INVALID', 'Group resize requires a grid-precision delta');
-  }
-  const start = systemWorkflowGroupBounds(placements);
-  const destination = resizedGeometry(start, corner, delta.column, delta.row);
-  if (sameSystemWorkflowPlacementGeometry(start, destination)) return null;
-  return resizeSystemWorkflowGroupGeometries(placements, destination);
-}
 
 function oppositeAnchor(geometry, corner) {
   return {

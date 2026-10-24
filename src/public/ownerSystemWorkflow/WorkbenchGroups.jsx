@@ -8,6 +8,7 @@ import { WorkbenchWindow } from './DisplayInstrumentWindow.jsx';
 import { editWorkbenchGroups } from '../../systemWorkflow/workbenchGroupSession.js';
 import { workbenchGroupModules, workbenchGroupWindowIds, workbenchMemberIds } from '../../systemWorkflow/domain/workbenchGroups.js';
 import './workbenchGroups.css';
+import './workbenchNavigationTools.css';
 import { useWorkbenchGroupScene, WorkbenchGroupStacks } from './WorkbenchGroupScene.jsx';
 
 // This owner tool edits membership through the draft store. Selecting a saved
@@ -20,9 +21,9 @@ export default function WorkbenchGroups({ view, hostRef, locked, dropRef, histor
   const [name, setName] = useState(''), [error, setError] = useState('');
   const [dropTarget, setDropTarget] = useState(null);
   const trigger = useRef(null), input = useRef(null), content = useRef(null);
-  const scene = useWorkbenchGroupScene({ view, content: draft, hostRef, navigation, sceneRef, disabled });
+  const scene = useWorkbenchGroupScene({ view, content: draft, navigation, sceneRef, disabled });
   const groups = draft.workbenchGroups || [], active = groups.find(group => group.id === activeId);
-  const modules = workbenchGroupModules(draft), selected = workbenchMemberIds(draft, selection);
+  const modules = workbenchGroupModules(draft), selected = view.selectionMode === 'activation' ? [] : workbenchMemberIds(draft, selection);
   const grouped = new Set(groups.flatMap(group => group.memberIds));
   const available = selected.filter(id => !grouped.has(id));
   useEffect(() => { setName(active?.name || ''); }, [active?.id, active?.name]);
@@ -87,8 +88,8 @@ export default function WorkbenchGroups({ view, hostRef, locked, dropRef, histor
     {open && !locked && hostRef.current && createPortal(<div data-workbench-group-tools onKeyDown={event => {
       if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); close(); }
     }}>
-      <WorkbenchWindow label="Workbench groups" title="Groups" width={340} initialHeight={490} minimumHeight={200}
-        initialX={Math.max(8, globalThis.innerWidth - 364)} initialY={72} resizable={false} chrome="bevel" className="workbench-groups"
+      <WorkbenchWindow label="Workbench groups" title="Groups" titleContent={<strong>Groups</strong>} viewportBottom={globalThis.innerHeight - 8} width={340} initialHeight={490} minimumHeight={200}
+        initialX={Math.max(8, globalThis.innerWidth - 364)} initialY={72} resizable={false} chrome="flat" className="workbench-groups workbench-tool-window workbench-navigation-tool"
         controls={<button type="button" aria-label="Close Workbench groups" onClick={close}><X size={14} /></button>}>
         <div ref={content} className="workbench-groups__body">
           <form onSubmit={event => { event.preventDefault(); if (active) perform({ type: 'rename', id: active.id, expected: active, name }); else create(selected); }}>

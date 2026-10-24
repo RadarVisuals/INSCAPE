@@ -43,8 +43,8 @@ export const useSignalStore = create((set, get) => {
       if (normalizeProfileAddress(expectedProfile) !== get().profileAddress) return;
       if (get().status === 'loading') return;
       const generation = get().syncGeneration + 1;
-      set({ syncGeneration: generation, status: 'loading', sourceMode: mode, error: null, partialError: null });
-      const repository = mode === 'FIXTURE' ? fixtureActivityRepository : luksoActivityRepository;
+      set({ syncGeneration: generation, status: 'loading', sourceMode: import.meta.env?.PROD ? 'LIVE' : mode, error: null, partialError: null });
+      const repository = !import.meta.env?.PROD && mode === 'FIXTURE' ? fixtureActivityRepository : luksoActivityRepository;
       try {
         const result = await repository.loadRecentActivity(get().profileAddress);
         if (get().syncGeneration !== generation) return;

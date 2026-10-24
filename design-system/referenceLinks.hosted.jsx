@@ -1,4 +1,3 @@
-import React from 'react';
 // This module replaces referenceLinks.local.jsx in the static visual export.
 // No raw-source imports or internal-document links enter that dependency graph.
 export const SourcePreview = null;

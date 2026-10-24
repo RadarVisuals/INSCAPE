@@ -36,7 +36,7 @@ const shortcutPresentationStyle = (presentation) => ({
   '--workflow-shortcut-label-size': `${presentation.labelSize}px`,
   '--workflow-shortcut-width': `${shortcutBounds(presentation).width}px`,
 });
-export default function PresentationBoardShortcut({ assetsById, host, instanceState, menuSurface,
+export default function PresentationBoardShortcut({ assetsById, instanceState, menuSurface,
   onDelete, onRestore, profileAddress, shortcutSnap, shortcutTargetRef, name: shortcutName, onNameChange, initialShortcut, onShortcutChange, instanceId, readOnly = false,
   moduleCommands = [], moduleSubmenu, onModuleCommand }) {
   const { editingBounds: areaBounds } = useWorkbenchArea();

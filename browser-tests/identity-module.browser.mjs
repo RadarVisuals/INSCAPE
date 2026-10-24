@@ -5,6 +5,24 @@ import { createAddressQrImage } from '../src/public/identity/addressQr.js';
 
 const origin = process.env.INSCAPE_SYSTEM_WORKFLOW_ROOT || 'http://127.0.0.1:5174';
 
+
+// Identity is independent of the shared artwork tools. Close their overlapping
+// default window through its real control before exercising the profile card.
+async function closeArtworkTools(page) {
+  await page.getByRole('tab', { name: 'Layers', exact: true }).waitFor();
+  for (const name of ['Layers', 'Transform', 'Color', 'Image', 'Shape', 'FX', 'Info']) {
+    const tab = page.getByRole('tab', { name, exact: true });
+    await tab.press('Enter');
+    await page.getByRole('button', { name: `Close ${name === 'Layers' ? 'Workbench Layers' : name}`, exact: true }).click();
+  }
+}
+async function toggleLibrary(page) {
+  const sidebar = page.getByRole('complementary', { name: 'Workspace sidebar' });
+  const button = sidebar.getByRole('button', { name: 'Library', exact: true });
+  if (!await button.isVisible()) await sidebar.getByRole('button', { name: 'Expand sidebar' }).click();
+  await button.click();
+}
+
 async function observeDraftWrites(page) {
   await page.evaluate(() => {
     window.__identityWrites = 0;
@@ -43,6 +61,7 @@ test('expansion preserves the cloud program, clock and top-anchored pattern', as
     });
     await page.goto(`${origin}/development/owner/system-workflow`);
     await page.locator('.system-workflow').waitFor();
+    await closeArtworkTools(page);
     await page.evaluate(async () => {
       const React = (await import('/@id/react')).default;
       const { createRoot } = (await import('/@id/react-dom/client')).default;
@@ -124,6 +143,7 @@ test('Library drops replace Identity artwork, shader animates, and Display stays
     });
     await page.goto(`${origin}/development/owner/system-workflow`);
     await page.locator('.system-workflow').waitFor();
+    await closeArtworkTools(page);
     await observeDraftWrites(page);
     await page.evaluate(() => {
       window.__cloudDraws = 0;
@@ -152,7 +172,7 @@ test('Library drops replace Identity artwork, shader animates, and Display stays
     await page.getByLabel('Move Identity window', { exact: true }).focus();
     for (let i = 0; i < 12; i++) await page.keyboard.press('Shift+ArrowRight');
     const placementIds = await page.locator('[data-system-workflow-placement-id]').evaluateAll(nodes => nodes.map(n => n.dataset.systemWorkflowPlacementId));
-    await page.getByRole('button', { name: 'Library', exact: true }).click();
+    await toggleLibrary(page);
     const source = page.getByRole('button', { name: 'SKULL REAPER / INSCAPE STUDIES', exact: true });
     await source.waitFor();
     await source.scrollIntoViewIfNeeded();
@@ -186,7 +206,7 @@ test('Library drops replace Identity artwork, shader animates, and Display stays
     assert.deepEqual(await page.evaluate(() => window.__identityRenderedCloud), still, 'reduced motion preserves the rendered clock and pixels');
     await isolateShader.evaluate(node => node.remove());
     assert.deepEqual(await page.locator('[data-system-workflow-placement-id]').evaluateAll(nodes => nodes.map(n => n.dataset.systemWorkflowPlacementId)), placementIds);
-    await page.getByRole('button', { name: 'Library', exact: true }).click();
+    await toggleLibrary(page);
     for (const width of [1440, 390]) {
       await page.setViewportSize({ width, height: 900 }); await page.waitForTimeout(250);
       const content = page.locator('.identity-module .system-workflow__instrument-content');
@@ -255,6 +275,7 @@ test('owner opens Identity, keeps it while using Library, and closes without dra
     await page.route('**/*', (route) => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
     await page.goto(`${origin}/development/owner/system-workflow`);
     await page.locator('.system-workflow').waitFor();
+    await closeArtworkTools(page);
     await observeDraftWrites(page);
     await page.getByRole('button', { name: 'Profile', exact: true }).click();
     await page.locator('[data-identity-dossier-source]').click();
@@ -341,12 +362,12 @@ test('owner opens Identity, keeps it while using Library, and closes without dra
     await page.getByRole('button', { name: 'Crop', exact: true }).click();
     assert.equal(await crop.inputValue(), cropZoom);
     await page.getByRole('button', { name: 'Cancel', exact: true }).click();
-    await page.getByRole('button', { name: 'Library', exact: true }).click();
+    await toggleLibrary(page);
     assert.equal(await identity.count(), 1);
     assert.equal(await page.locator('.system-workflow').getAttribute('inert'), null);
     // Library is intentionally above ordinary module windows. Close the drawer
     // before operating Identity's title controls underneath it.
-    await page.getByRole('button', { name: 'Library', exact: true }).click();
+    await toggleLibrary(page);
     await page.getByRole('button', { name: 'Close Identity', exact: true }).click();
     await identity.waitFor({ state: 'detached' });
     assert.equal(await page.evaluate(() => window.__identityWrites), 0);
@@ -358,6 +379,9 @@ test('Display title follows the existing shortcut name and survives reload', asy
   try {
     const page = await browser.newPage({ viewport: { width: 1440, height: 900 }, reducedMotion: 'reduce' });
     await page.goto(`${origin}/development/owner/system-workflow`);
+    await page.getByLabel('Move Display Module: DISPLAY MODULE', { exact: true }).focus();
+    await closeArtworkTools(page);
+    await page.getByRole('button', { name: 'Collapse sidebar', exact: true }).click();
     await page.getByLabel('Move Display Module: DISPLAY MODULE', { exact: true }).focus();
     await page.getByRole('button', { name: 'Minimize Display Module to shortcut' }).click();
     const shortcut = page.locator('.system-workflow__desktop-shortcut');
@@ -377,6 +401,7 @@ test('Identity edits in place, exposes all cells with one click, and fits conten
   try {
     const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, reducedMotion: 'reduce' });
     await page.goto(`${origin}/development/owner/system-workflow`);
+    await closeArtworkTools(page);
     await page.getByRole('button', { name: 'Profile', exact: true }).click();
     await page.locator('[data-identity-dossier-source]').click();
     const identity = page.locator('.identity-module aside');
@@ -448,7 +473,9 @@ test('Identity edits in place, exposes all cells with one click, and fits conten
       await page.screenshot({ path: `.browser-test-runtime/identity-inline-expanded-${width}.png` });
     }
     await identity.getByRole('button', { name: 'Edit Identity', exact: true }).click();
-    await identity.getByRole('button', { name: 'Remove field 2' }).click();
+    // Navigator may overlap the expanded card on a narrow screen; exercise
+    // the card's keyboard command without changing either window's geometry.
+    await identity.getByRole('button', { name: 'Remove field 2' }).press('Enter');
     await hero.getByLabel('Custom title', { exact: true }).fill('Discarded');
     await identity.getByRole('button', { name: 'Cancel', exact: true }).click();
     assert.equal(await identity.locator('.identity-module__fields dd').count(), 2);
@@ -468,6 +495,7 @@ test('Identity content and window are independent of the owner workspace', async
     await page.route('**/*', (route) => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
     await page.goto(`${origin}/development/owner/system-workflow`);
     await page.locator('.system-workflow').waitFor();
+    await closeArtworkTools(page);
     await page.evaluate(async () => {
       const { default: React } = await import('/@id/react');
       const { default: ReactDOM } = await import('/@id/react-dom/client');
@@ -553,14 +581,14 @@ test('Identity content and window are independent of the owner workspace', async
     await page.getByLabel('Move Identity window', { exact: true }).focus();
     const before = await identity.boundingBox(); await page.keyboard.press('ArrowRight');
     assert.ok((await identity.boundingBox()).x > before.x);
-    await page.getByRole('button', { name: 'Library', exact: true }).click();
+    await toggleLibrary(page);
     await identity.waitFor();
     await page.setViewportSize({ width: 390, height: 560 });
     await page.waitForTimeout(250);
     const box = await identity.boundingBox();
     assert.ok(box.x >= 0 && box.x + box.width <= 390);
-    await page.getByRole('button', { name: 'Library', exact: true }).click();
-    await page.getByRole('button', { name: 'Close Identity', exact: true }).click();
+    await toggleLibrary(page);
+    await page.getByRole('button', { name: 'Close Identity', exact: true }).press('Enter');
     await identity.waitFor({ state: 'detached' });
   } finally { await browser.close(); }
 });
