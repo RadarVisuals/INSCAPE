@@ -4,7 +4,9 @@ import { readFile } from 'node:fs/promises';
 import { relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const fingerprint = text => createHash('sha256').update(text).digest('hex');
+// Git checkouts may use CRLF on Windows and LF in CI. Only canonicalize that
+// difference; all other text changes still invalidate the recorded review.
+export const lintSourceFingerprint = text => createHash('sha256').update(text.replaceAll('\r\n', '\n')).digest('hex');
 const key = item => JSON.stringify([item.file, item.ruleId, item.line, item.column, item.message]);
 // This ceiling is the reviewed initial debt, not an automatically refreshed baseline.
 // A new diagnostic must be fixed; there is deliberately no --update/--suppress mode.
@@ -29,7 +31,7 @@ export function checkLintDebt(results, debt, root) {
       if (!allowance) failures.push(`${file}:${message.line}:${message.column} ${message.ruleId || 'parse'}: ${message.message}`);
       else {
         allowances.delete(id);
-        if (fingerprint(result.source) !== allowance.sourceSha256)
+        if (lintSourceFingerprint(result.source) !== allowance.sourceSha256)
           failures.push(`${file}:${message.line} changed since its recorded hook review; resolve or explicitly re-review the exception for step ${allowance.planStep}`);
         else accepted++;
       }

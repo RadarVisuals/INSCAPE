@@ -38,7 +38,7 @@
       "line": 36,
       "column": 6,
       "message": "React Hook useEffect has a missing dependency: 'view'. Either include it or remove the dependency array.",
-      "sourceSha256": "d2dfec869c9a8a36ffbcd317817d2b80e477e68094d69a1e7f38a89741454fe0",
+      "sourceSha256": "6b405823cd45115faabffa363c55b72d6f2de6d473ab72319742c2a4a2a2a8cb",
       "planStep": "19",
       "reason": "The effect uses only view.setUtilitySettings and record.id; those concrete inputs and settings are dependencies. It deletes the same id on cleanup. Evidence: Keeper settings/layered browser evidence in step19; no whole-context dependency needed. Limits: Current scoped ESLint rerun; source review. Prior browser evidence explicitly identified; no new lifecycle browser run for this proposal."
     },
@@ -48,7 +48,7 @@
       "line": 54,
       "column": 87,
       "message": "The ref value 'request.current' will likely have changed by the time this effect cleanup function runs. If this ref points to a node rendered by React, copy 'request.current' to a variable inside the effect, and use that variable in the cleanup function.",
-      "sourceSha256": "d2dfec869c9a8a36ffbcd317817d2b80e477e68094d69a1e7f38a89741454fe0",
+      "sourceSha256": "6b405823cd45115faabffa363c55b72d6f2de6d473ab72319742c2a4a2a2a8cb",
       "planStep": "19",
       "reason": "request is a numeric generation counter, not a DOM ref. Cleanup must increment its latest value and mark live false so all outstanding requests are invalidated. Copying its value would defeat cancellation. Evidence: step19 Keeper lifecycle; acceptImage checks live and ticket equality before writes. Limits: Current scoped ESLint rerun; source review. Prior browser evidence explicitly identified; no new lifecycle browser run for this proposal."
     },
@@ -58,7 +58,7 @@
       "line": 93,
       "column": 6,
       "message": "React Hook useEffect has a missing dependency: 'record.asset'. Either include it or remove the dependency array.",
-      "sourceSha256": "d2dfec869c9a8a36ffbcd317817d2b80e477e68094d69a1e7f38a89741454fe0",
+      "sourceSha256": "6b405823cd45115faabffa363c55b72d6f2de6d473ab72319742c2a4a2a2a8cb",
       "planStep": "19",
       "reason": "Only asset presence chooses registration label; actual asset processing is in acceptImage and its dependency chain. Boolean presence is the intended label invalidation. Evidence: Keeper layered replacement scenarios; editable/id/receiver cleanup explicitly tracked. Limits: Current scoped ESLint rerun; source review. Prior browser evidence explicitly identified; no new lifecycle browser run for this proposal."
     },
@@ -68,7 +68,7 @@
       "line": 93,
       "column": 44,
       "message": "React Hook useEffect has a complex expression in the dependency array. Extract it to a separate variable so it can be statically checked.",
-      "sourceSha256": "d2dfec869c9a8a36ffbcd317817d2b80e477e68094d69a1e7f38a89741454fe0",
+      "sourceSha256": "6b405823cd45115faabffa363c55b72d6f2de6d473ab72319742c2a4a2a2a8cb",
       "planStep": "19",
       "reason": "Boolean(record.asset) is the same presence gate used by the label, not omitted artwork content. Can be named for readability later; no behavioral fix required. Evidence: Same Keeper receiver evidence as preceding observation. Limits: Current scoped ESLint rerun; source review. Prior browser evidence explicitly identified; no new lifecycle browser run for this proposal."
     },
@@ -88,7 +88,7 @@
       "line": 62,
       "column": 7,
       "message": "React Hook useMemo has an unnecessary dependency: 'previewVersion'. Either exclude it or remove the dependency array.",
-      "sourceSha256": "dce7acec32ce9c9400e8c0ba589ddf74309ec3ec5bf6d136797cdd6cb727f6a9",
+      "sourceSha256": "905b036743829dccacdded0e30d14e704ba4ec6b9f4ee5d1ddc5be1c4922fc94",
       "planStep": "17",
       "reason": "previewVersion is de expliciete invalidatie van de bestaande mutable decode-recordmap. markAssetReady/Unavailable wijzigen de map en verhogen deze revisie; alleen sourceAssets volgen mist decodewijzigingen. Stap 17 behoudt deze noodzakelijke afgeleide previewcache."
     },
@@ -98,7 +98,7 @@
       "line": 72,
       "column": 7,
       "message": "React Hook useEffect has a missing dependency: 'dimensions'. Either include it or remove the dependency array.",
-      "sourceSha256": "b898374d47df6108532ff882805afe54cb0586ee4711f5ccf69f1ec519da789b",
+      "sourceSha256": "72ca6c427cd0d32f6e8a0f6a7381602733ee180dbebcea2f3df5a4806e1c6e01",
       "planStep": "19",
       "reason": "Report semantics depend on dimensions width/height, not object identity. media,loaded,failed,gridId,placementId and callback all invalidate. Dimensions are a measured size pair. Evidence: Published visitor/media recovery evidence; no extra metadata fields consumed by size reporting. Limits: Current scoped ESLint rerun; source review. Prior browser evidence explicitly identified; no new lifecycle browser run for this proposal."
     },
@@ -108,7 +108,7 @@
       "line": 130,
       "column": 44,
       "message": "React Hook useEffect has a missing dependency: 'stageSize'. Either include it or remove the dependency array.",
-      "sourceSha256": "b898374d47df6108532ff882805afe54cb0586ee4711f5ccf69f1ec519da789b",
+      "sourceSha256": "72ca6c427cd0d32f6e8a0f6a7381602733ee180dbebcea2f3df5a4806e1c6e01",
       "planStep": "19",
       "reason": "Observer is needed only when no supplied Stage exists. Presence toggles observer ownership; supplied Stage dimensions are used synchronously in render. Cleanup disconnects its own observer. Evidence: Visitor renderer/frame lifecycle evidence; Stage sizing projection checks. Limits: Current scoped ESLint rerun; source review. Prior browser evidence explicitly identified; no new lifecycle browser run for this proposal."
     },
@@ -118,7 +118,7 @@
       "line": 130,
       "column": 68,
       "message": "React Hook useEffect has a complex expression in the dependency array. Extract it to a separate variable so it can be statically checked.",
-      "sourceSha256": "b898374d47df6108532ff882805afe54cb0586ee4711f5ccf69f1ec519da789b",
+      "sourceSha256": "72ca6c427cd0d32f6e8a0f6a7381602733ee180dbebcea2f3df5a4806e1c6e01",
       "planStep": "19",
       "reason": "Boolean(stageSize) intentionally chooses observer-vs-provider ownership; changing provider dimensions must not remount observer when observer is disabled. Evidence: Same Stage presence boundary as preceding observation. Limits: Current scoped ESLint rerun; source review. Prior browser evidence explicitly identified; no new lifecycle browser run for this proposal."
     },
@@ -128,7 +128,7 @@
       "line": 104,
       "column": 5,
       "message": "React Hook useEffect has missing dependencies: 'entryGridIndex' and 'targetId'. Either include them or remove the dependency array.",
-      "sourceSha256": "9809f71a79fd6468e79add70f92c3744f9362a0dfddb336fed1117f669cd971a",
+      "sourceSha256": "62d322449164ef6417434a5dfdb7b1f7e65eea65bd8bf614c158ac6920ecebe4",
       "planStep": "18",
       "reason": "Behouden: ProfileDocumentV9Visitor remount de sessie op profile/documentId/revision; CanvasDisplay is keyed op item.id. targetId is daardoor constant binnen deze mount. entryGridIndex volgt de vaste gevalideerde grids plus entryTarget.moduleId/gridId, die wel dependencies zijn. Een ander doel mag deze Display niet resetten. Broninspectie ProfileDocumentV9Visitor:30,126; published-visitor 12/12 inclusief semantische Gridnavigatie."
     },
@@ -138,7 +138,7 @@
       "line": 121,
       "column": 6,
       "message": "React Hook useEffect has a missing dependency: 'playback'. Either include it or remove the dependency array.",
-      "sourceSha256": "9809f71a79fd6468e79add70f92c3744f9362a0dfddb336fed1117f669cd971a",
+      "sourceSha256": "62d322449164ef6417434a5dfdb7b1f7e65eea65bd8bf614c158ac6920ecebe4",
       "planStep": "18",
       "reason": "Behouden: het playbackobject wordt per render gemaakt, maar isDragging/beginDrag/moveDrag/endDrag werken op de refs van dezelfde hookinstantie en latest.current. useGridSwipe levert een stabiele setSwipe op stabiele refs. De effect/dragcallback moet daarom niet op de wisselende objectidentiteit invalidateren. Relevante actieve Grid en blokkeerstatus staan wel in de dependencies. published-visitor controleert semantische bediening, keyboard en reduced-motion Grid-drag; geen cleanup of listenerwijziging nodig."
     },
@@ -148,7 +148,7 @@
       "line": 163,
       "column": 6,
       "message": "React Hook useCallback has a missing dependency: 'playback'. Either include it or remove the dependency array.",
-      "sourceSha256": "9809f71a79fd6468e79add70f92c3744f9362a0dfddb336fed1117f669cd971a",
+      "sourceSha256": "62d322449164ef6417434a5dfdb7b1f7e65eea65bd8bf614c158ac6920ecebe4",
       "planStep": "18",
       "reason": "Behouden: het playbackobject wordt per render gemaakt, maar isDragging/beginDrag/moveDrag/endDrag werken op de refs van dezelfde hookinstantie en latest.current. useGridSwipe levert een stabiele setSwipe op stabiele refs. De effect/dragcallback moet daarom niet op de wisselende objectidentiteit invalidateren. Relevante actieve Grid en blokkeerstatus staan wel in de dependencies. published-visitor controleert semantische bediening, keyboard en reduced-motion Grid-drag; geen cleanup of listenerwijziging nodig."
     },
@@ -178,7 +178,7 @@
       "line": 67,
       "column": 105,
       "message": "React Hook useEffect has a missing dependency: 'minimized'. Either include it or remove the dependency array.",
-      "sourceSha256": "f120b1e3b325fd1c97e998893882ca5638ed123e389359c36db39c9cfef72ed8",
+      "sourceSha256": "30652bff7afbfe0cef9941ab46c6aba984cdcbd754d9009bf1baeefe79834bfe",
       "planStep": "15",
       "reason": "Focus uitsluitend bij openen: minimized kiest het initiële zichtbare focusdoel; restore en close bezitten latere focusterugkeer. Een minimized-dependency zou bij latere bediening focus stelen. Owner Identity is op profileAddress gekeyed; Visitor monteert een eigen read-only instantie."
     },
@@ -188,7 +188,7 @@
       "line": 84,
       "column": 28,
       "message": "The ref value 'request.current' will likely have changed by the time this effect cleanup function runs. If this ref points to a node rendered by React, copy 'request.current' to a variable inside the effect, and use that variable in the cleanup function.",
-      "sourceSha256": "5f951063e536520b0331cf7ccf53f6e0964bf86ce7fe0d8e3e6ca2a39db81ae7",
+      "sourceSha256": "eb6adc09e1c92e10c490a663545c3a634cc1e71a0d9f63bab43ba6b9aa4abec8",
       "planStep": "19",
       "reason": "request is a cancellation generation, not an element. Address cleanup increments latest generation so an older clipboard result cannot report success for a newer identity. Evidence: Identity source request-ticket checks; Identity browser7/7 in styling tranche, specific late clipboard race not independently rerun. Limits: Current scoped ESLint rerun; source review. Prior browser evidence explicitly identified; no new lifecycle browser run for this proposal."
     },
@@ -218,7 +218,7 @@
       "line": 157,
       "column": 6,
       "message": "React Hook useLayoutEffect has a missing dependency: 'base'. Either include it or remove the dependency array.",
-      "sourceSha256": "b2941bb49e42e2facfacb570e1748a29718e029385280dc14255edde809619c5",
+      "sourceSha256": "cd34667a021412051ef35fd678fb82115290245af1adc1d1db8462a06c856b62",
       "planStep": "15",
       "reason": "base contains only the four frame geometry values. All four base and frame primitives are explicit dependencies. The effect applies a new committedFrame first, never clamps authored viewId or preserveAuthoredLayout windows, and only clamps screen companion windows. Current initial/preview/compact flags are also explicit. Evidence: Current source reread; agent1 mini-app-window-boundary proof; companion-tool-viewport/run-06 3/3; our Text/Display6 and recovery1. Controls boundary re-review: hook body/dependencies unchanged; only the existing external-control above/below decision now uses the actual canvas clip top. Primary parent and independent_core_review traced clip host, camera projection and presentation exclusions; text-controls-boundary retains native four-case red/green, six current transfer/control cases and unchanged authored bytes. Final shared-source verification remains required."
     },
@@ -228,7 +228,7 @@
       "line": 186,
       "column": 3,
       "message": "React Hook useLayoutEffect contains a call to 'setFrame'. Without a list of dependencies, this can lead to an infinite chain of updates. To fix this, pass [avoidControls, viewId, compact, bounds, minimumHeight, frame] as a second argument to the useLayoutEffect Hook.",
-      "sourceSha256": "b2941bb49e42e2facfacb570e1748a29718e029385280dc14255edde809619c5",
+      "sourceSha256": "cd34667a021412051ef35fd678fb82115290245af1adc1d1db8462a06c856b62",
       "planStep": "15",
       "reason": "Companion-control avoidance deliberately runs after every committed layout because actual control rectangles can change without React object identity changes. It excludes authored viewId/compact/live-gesture/hidden windows and writes only if both measured bounds differ and React frame differs. The second guard makes fractional DOM rounding converge instead of rescheduling equal state. Evidence: Current source reread; companion-tool-viewport/run-06 3/3. Controls boundary re-review: hook body/dependencies unchanged; only the existing external-control above/below decision now uses the actual canvas clip top. Primary parent and independent_core_review traced clip host, camera projection and presentation exclusions; text-controls-boundary retains native four-case red/green, six current transfer/control cases and unchanged authored bytes. Final shared-source verification remains required."
     },
@@ -238,7 +238,7 @@
       "line": 169,
       "column": 6,
       "message": "React Hook useEffect has missing dependencies: 'crop' and 'viewer'. Either include them or remove the dependency array.",
-      "sourceSha256": "a8957c7fc38253f53b52898f0bb3b894d0e8ba8ef467db4234db3a6e0ac6d701",
+      "sourceSha256": "609049987a4041d9d80342ac447c81fca7dbcac60ec82480e19dd2744ef2c34e",
       "planStep": "12",
       "reason": "Behouden: effecten reageren op inactive respectievelijk toolTarget/targetId. Crop/viewer zijn per-render aggregaten; toevoegen daarvan zou lifecycle-cancel als algemene renderactie uitvoeren. cancelCrop wist uitsluitend eigen refs/state; viewer heeft eigen scope-/async-isolatie. Geen nieuwe garantie buiten deze overgangsgrens."
     },
@@ -248,7 +248,7 @@
       "line": 172,
       "column": 6,
       "message": "React Hook useEffect has a missing dependency: 'crop'. Either include it or remove the dependency array.",
-      "sourceSha256": "a8957c7fc38253f53b52898f0bb3b894d0e8ba8ef467db4234db3a6e0ac6d701",
+      "sourceSha256": "609049987a4041d9d80342ac447c81fca7dbcac60ec82480e19dd2744ef2c34e",
       "planStep": "12",
       "reason": "Behouden: effecten reageren op inactive respectievelijk toolTarget/targetId. Crop/viewer zijn per-render aggregaten; toevoegen daarvan zou lifecycle-cancel als algemene renderactie uitvoeren. cancelCrop wist uitsluitend eigen refs/state; viewer heeft eigen scope-/async-isolatie. Geen nieuwe garantie buiten deze overgangsgrens."
     },
@@ -268,7 +268,7 @@
       "line": 17,
       "column": 110,
       "message": "React Hook useMemo has missing dependencies: 'instanceId' and 'profileAddress'. Either include them or remove the dependency array.",
-      "sourceSha256": "3fe24ca6daaf485045528accf116a76d64bf90f361894a365df89884910825ad",
+      "sourceSha256": "8d46808e2d10353cce827e7d6a1d56302fbccceb1b93447913a0d09002729595",
       "planStep": "10",
       "reason": "Behouden: `storedShortcut` is een snapshot bij mount. Profiel/restored revision begrenzen LocalWorkbenchSession, activatie begrenst WorkbenchSession en `id` begrenst OwnerDisplayInstance. `profileAddress` en `instanceId` wisselen niet binnen die levensduur. S: Runtime keys; D owner/Visitor/reload; R release. Bij toekomstige hergebruikte instance over profielen heen vervalt deze uitzondering."
     },
@@ -278,7 +278,7 @@
       "line": 20,
       "column": 6,
       "message": "React Hook useMemo has missing dependencies: 'controller.draft.geometry', 'index', 'initialPresentation', 'storedShortcut?.name', and 'storedShortcut?.open'. Either include them or remove the dependency array.",
-      "sourceSha256": "3fe24ca6daaf485045528accf116a76d64bf90f361894a365df89884910825ad",
+      "sourceSha256": "8d46808e2d10353cce827e7d6a1d56302fbccceb1b93447913a0d09002729595",
       "planStep": "10",
       "reason": "Behouden: eerste presentatie wordt één keer uit expliciete presentatie of geometry/index/defaults samengesteld. Daarna is modulelokale `presentation` de eigenaar. Een veranderde index of controller-render mag de gebruikerpositie/openstatus niet terugzetten. S: `useState(initial)` en `changeWindow`; D, U."
     },
@@ -288,7 +288,7 @@
       "line": 25,
       "column": 46,
       "message": "React Hook useMemo has missing dependencies: 'initial', 'initialPresentation', 'instanceId', and 'storedShortcut'. Either include them or remove the dependency array.",
-      "sourceSha256": "3fe24ca6daaf485045528accf116a76d64bf90f361894a365df89884910825ad",
+      "sourceSha256": "8d46808e2d10353cce827e7d6a1d56302fbccceb1b93447913a0d09002729595",
       "planStep": "10",
       "reason": "Behouden: `initialWindow` is de eerste herstelwaarde van dezelfde keyed instance; shortcut-cache is alleen initiële fallback. Latere positie/openstatus gaat via `changeWindow`. S: instance-lifetime; D, R."
     },
@@ -298,7 +298,7 @@
       "line": 36,
       "column": 5,
       "message": "React Hook useLayoutEffect has a missing dependency: 'controller'. Either include it or remove the dependency array.",
-      "sourceSha256": "3fe24ca6daaf485045528accf116a76d64bf90f361894a365df89884910825ad",
+      "sourceSha256": "8d46808e2d10353cce827e7d6a1d56302fbccceb1b93447913a0d09002729595",
       "planStep": "10",
       "reason": "Behouden onder het bestaande controllercontract: de geregistreerde controller wordt vernieuwd bij generatie, gridselectie, placementselectie, verborgen placements, fout/clearError of lock. Profiel, store-scope en module-id staan vast onder dezelfde instance-key. De callable controllerhandelingen gebruiken die scope en de geselecteerde/generation-waarden; er is geen noodzaak iedere nieuw geconstrueerde controllerobjectidentiteit door te melden. S: controllerproducer en registratie; D release/lock, bestaande controllertests. Dit moet herzien worden als een nieuw controllerresultaat een zelfstandig veranderende waarde toevoegt."
     },
@@ -308,7 +308,7 @@
       "line": 36,
       "column": 60,
       "message": "React Hook useLayoutEffect has a complex expression in the dependency array. Extract it to a separate variable so it can be statically checked.",
-      "sourceSha256": "3fe24ca6daaf485045528accf116a76d64bf90f361894a365df89884910825ad",
+      "sourceSha256": "8d46808e2d10353cce827e7d6a1d56302fbccceb1b93447913a0d09002729595",
       "planStep": "10",
       "reason": "Behouden: `selectedPlacementIds.join(',')` is een volledige geordende inhoudssleutel. Geldige ids bevatten geen komma; lege selectie en één geldige id zijn niet ambigu. S: `SAFE_ID` in domain/systemWorkflowDraft.js; controllerselectiecontract."
     },
@@ -318,7 +318,7 @@
       "line": 11,
       "column": 6,
       "message": "React Hook useEffect has a missing dependency: 'dialog'. Either include it or remove the dependency array. If 'setName' needs the current value of 'dialog', you can also switch to useReducer instead of useState and read 'dialog' in the reducer.",
-      "sourceSha256": "2ced496c0817032c0de32c6bdfbbcd4fcaec7dee9f89ea8bfe062743c29c4801",
+      "sourceSha256": "bc09457d81912f5a506baf055486c0d30da12fd7870c8e74c9da6bc797aec082",
       "planStep": "16",
       "reason": "Form initialization belongs to dialog type/category ID/section ID. Updating the same dialog with a storage error must retain the typed name and focus; adding whole dialog would reset failed-save input. categoryDialogInitialName is only the initial value for that identity. Existing library-storage browser proves retained input and successful retry; new entity/type reinitializes."
     },
@@ -328,7 +328,7 @@
       "line": 84,
       "column": 13,
       "message": "React Hook useMemo has a missing dependency: 'stageSize'. Either include it or remove the dependency array.",
-      "sourceSha256": "3c2dd9a5f2976bf24e478417a8f25bd6413938f14c5ff9697a55bdcfbc64485a",
+      "sourceSha256": "53c01016711302d9916e0472dc05d98559b2691ba6c122e08e5e69edd3148aaf",
       "planStep": "19",
       "reason": "Independently traced measureOwnerSystemWorkflowHeroArtboard and projectDisplayStageViewport. Hero reads width/height/contentScale; grid projection reads width/height and draft geometry. Those fields, worldCover and geometry are explicit dependencies. screenScale is applied later to pointer conversion. Provider object identity conveys no additional projected geometry. Null versus object invalidates width/height in actual provider. Independent stage-input review: reviews/final-core/stage-input-review.json. The production delta removes duplicate child scale inputs and an unused fallback; no hook body changed. The existing lift fixture failed equally with both before components; its native-coordinate repair and final joint verification remain separately required."
     },
@@ -338,7 +338,7 @@
       "line": 104,
       "column": 48,
       "message": "React Hook useMemo has unnecessary dependencies: 'authoringLocked', 'controller.draft.profileAddress', 'cropSession', 'grid.id', 'interactionDisabled', 'playback.swipe', 'playingGrids', 'suspended', and 'viewerOpen'. Either exclude them or remove the dependency array.",
-      "sourceSha256": "3c2dd9a5f2976bf24e478417a8f25bd6413938f14c5ff9697a55bdcfbc64485a",
+      "sourceSha256": "53c01016711302d9916e0472dc05d98559b2691ba6c122e08e5e69edd3148aaf",
       "planStep": "19",
       "reason": "This object is deliberately an interaction epoch. currentPlacementContext is replaced every render; old placementTarget.isCurrent compares its captured epoch before every create/preview/attach/place request. Grid/profile, authoring/input lock, playing/swipe, suspended, viewer and crop changes must invalidate old requests. The imperative handle is refreshed each render; there is no secondary persisted model. Independent stage-input review: reviews/final-core/stage-input-review.json. The production delta removes duplicate child scale inputs and an unused fallback; no hook body changed. The existing lift fixture failed equally with both before components; its native-coordinate repair and final joint verification remain separately required."
     },
@@ -348,7 +348,7 @@
       "line": 164,
       "column": 6,
       "message": "React Hook useLayoutEffect has a missing dependency: 'playback'. Either include it or remove the dependency array.",
-      "sourceSha256": "3c2dd9a5f2976bf24e478417a8f25bd6413938f14c5ff9697a55bdcfbc64485a",
+      "sourceSha256": "53c01016711302d9916e0472dc05d98559b2691ba6c122e08e5e69edd3148aaf",
       "planStep": "19",
       "reason": "Effect observes authoringLocked true->false and updates its previous ref in the same layout pass. It calls that render's pause; useGridPlayback.pause reads current transport/drag/frame refs and latest onPause. Unrelated playback object recreation is neither an unlock event nor needed to make the current transition fresh. Independent stage-input review: reviews/final-core/stage-input-review.json. The production delta removes duplicate child scale inputs and an unused fallback; no hook body changed. The existing lift fixture failed equally with both before components; its native-coordinate repair and final joint verification remain separately required."
     },
@@ -358,7 +358,7 @@
       "line": 258,
       "column": 6,
       "message": "React Hook useEffect has a missing dependency: 'playback'. Either include it or remove the dependency array.",
-      "sourceSha256": "3c2dd9a5f2976bf24e478417a8f25bd6413938f14c5ff9697a55bdcfbc64485a",
+      "sourceSha256": "53c01016711302d9916e0472dc05d98559b2691ba6c122e08e5e69edd3148aaf",
       "planStep": "19",
       "reason": "Global key listener reads only playback.isMoving. Independently traced isMoving at useGridPlayback:166: drag.current, transport.current and latest.current.playing/suspended, all lifetime refs. The listener captures no stale moving boolean. Other controller/grid/crop/interaction/lock/target inputs are explicit; cleanup removes the exact callback before replacement/unmount. Independent stage-input review: reviews/final-core/stage-input-review.json. The production delta removes duplicate child scale inputs and an unused fallback; no hook body changed. The existing lift fixture failed equally with both before components; its native-coordinate repair and final joint verification remain separately required."
     },
@@ -368,7 +368,7 @@
       "line": 73,
       "column": 161,
       "message": "React Hook useMemo has missing dependencies: 'initialPresentation?.name' and 'readOnly'. Either include them or remove the dependency array.",
-      "sourceSha256": "40b3092d8e0ce4f92efa38132f778e6d93c607d0a8daedbdf8da5c298311ba10",
+      "sourceSha256": "a396f1cd110a7b281ffece398ba4bf8eb628a4bd8f0f7eabd6eda586b81afef1",
       "planStep": "10",
       "reason": "Actual owner caller OwnerDisplayInstance constructs initialWindow once for keyed instance lifetime; later shortcut rename updates local moduleName and onWindowChange. Runtime session keys isolate profile/restored session and per-instance id. Production Visitor passes readOnly continuously and remounts by profile/documentId/revision. Therefore these are initialization/authority inputs, not mutable fields omitted from an update subscription. Independently re-read current hook and actual OwnerDisplayInstance/PublishedDisplayModule callers. Hook source span is byte-identical to the Stage-reviewed before-copy. Only line76 displayName fallback changed; no effect body, dependency, persistence key or authority lifetime changed. Independent review: continuation/reviews/final-core/display-name-legacy-alias-review.json."
     },
@@ -378,7 +378,7 @@
       "line": 127,
       "column": 6,
       "message": "React Hook useLayoutEffect has missing dependencies: 'documentGeometry' and 'initialPresentation?.window?.width'. Either include them or remove the dependency array. If 'setView' needs the current value of 'documentGeometry', you can also switch to useReducer instead of useState and read 'documentGeometry' in the reducer.",
-      "sourceSha256": "40b3092d8e0ce4f92efa38132f778e6d93c607d0a8daedbdf8da5c298311ba10",
+      "sourceSha256": "a396f1cd110a7b281ffece398ba4bf8eb628a4bd8f0f7eabd6eda586b81afef1",
       "planStep": "10",
       "reason": "geometryKey serializes documentGeometry, so every effective geometry change recreates measure and its observer with current geometry. host/layoutMode also invalidate. Captured initial width is read only when current view is absent; current frame width otherwise wins. Owner initialWindow and Visitor publication lifetime were checked above. Cleanup disconnects the matching ResizeObserver and global resize listener. Independently re-read current hook and actual OwnerDisplayInstance/PublishedDisplayModule callers. Hook source span is byte-identical to the Stage-reviewed before-copy. Only line76 displayName fallback changed; no effect body, dependency, persistence key or authority lifetime changed. Independent review: continuation/reviews/final-core/display-name-legacy-alias-review.json."
     },
@@ -388,7 +388,7 @@
       "line": 148,
       "column": 6,
       "message": "React Hook useEffect has missing dependencies: 'boardPosition' and 'view'. Either include them or remove the dependency array.",
-      "sourceSha256": "40b3092d8e0ce4f92efa38132f778e6d93c607d0a8daedbdf8da5c298311ba10",
+      "sourceSha256": "a396f1cd110a7b281ffece398ba4bf8eb628a4bd8f0f7eabd6eda586b81afef1",
       "planStep": "10",
       "reason": "Exact emitted fields are displayName, boardPosition.left/top, view.frame.board.width/height. All five values and onWindowChange are dependencies. Object-null initialization changes the optional primitive values, so it also schedules emission. No additional object member affects the output. Independently re-read current hook and actual OwnerDisplayInstance/PublishedDisplayModule callers. Hook source span is byte-identical to the Stage-reviewed before-copy. Only line76 displayName fallback changed; no effect body, dependency, persistence key or authority lifetime changed. Independent review: continuation/reviews/final-core/display-name-legacy-alias-review.json."
     },
@@ -498,7 +498,7 @@
       "line": 31,
       "column": 6,
       "message": "React Hook useMemo has a missing dependency: 'initialGridId'. Either include it or remove the dependency array.",
-      "sourceSha256": "c7032b3e96d8f232b9f17e013a5d1c779a0c623f105063c1836155f0951beeed",
+      "sourceSha256": "0635d06fafdc9f97fef3332e1cbc4d2535648013cca72044ddca879e7fe9282c",
       "planStep": "08",
       "reason": "initialGridId is a mount/authority initializer, validated against the new session grids. Subsequent preference/layout updates must not recreate the Display session or reset its current Grid. Authority identity is explicitly profile, selected storage, shared activation-scoped store and moduleId; caller remounts on profile/Workbench activation. Parent traced Runtime/Display instance callers and authority creation; scope units and current local-workbenches/routing/Display reload coverage support those boundaries. No asynchronous initialGridId callback is retained."
     },
@@ -508,7 +508,7 @@
       "line": 63,
       "column": 46,
       "message": "React Hook useMemo has unnecessary dependencies: 'authority' and 'state.selectedGridId'. Either exclude them or remove the dependency array.",
-      "sourceSha256": "c7032b3e96d8f232b9f17e013a5d1c779a0c623f105063c1836155f0951beeed",
+      "sourceSha256": "0635d06fafdc9f97fef3332e1cbc4d2535648013cca72044ddca879e7fe9282c",
       "planStep": "08",
       "reason": "The empty object is the selection epoch. Authority replacement and selectedGridId transitions intentionally invalidate old selection actions even though the factory reads neither value. liveSelectionScope and mounted guards reject captured actions after a scope switch; available placement IDs and visibility are filtered from the current Grid. Removing either dependency revives selection in a different editor context. Parent reviewed actual guards and caller lifetimes; scoped late-writer and Library-drop lifecycle checks provide related behavioral evidence."
     },
@@ -558,7 +558,7 @@
       "line": 50,
       "column": 162,
       "message": "React Hook useCallback has a missing dependency: 'pan'. Either include it or remove the dependency array.",
-      "sourceSha256": "948232102572b60e0554f8021e1c3a46f65f355844f9a4d11224bb19e7aa54a9",
+      "sourceSha256": "ed430f3fb193d4bcb880303cfe7bc2f8c9d028a91e4223d258270901d265a8ca",
       "planStep": "14",
       "reason": "toggleHand reads only pan.cancel, not other fields of pan. pan.cancel is useWorkbenchPan.finish, a useCallback keyed by update; that exact member is already a dependency. finish consumes active.current, removes its stored pointer/lostcapture handlers and calls afterEnd.current. hand, stopTravel and setInteractionTool are explicit dependencies; editing cancellation reads interaction.current. Independent source/caller review: useWorkbenchNavigation.js35–50; useWorkbenchPan.js finish/cancel; WorkbenchView.jsx navigation caller. No separate browser run by reviewer; final shared verification remains required."
     },
@@ -568,7 +568,7 @@
       "line": 53,
       "column": 6,
       "message": "React Hook useLayoutEffect has a missing dependency: 'pan'. Either include it or remove the dependency array.",
-      "sourceSha256": "948232102572b60e0554f8021e1c3a46f65f355844f9a4d11224bb19e7aa54a9",
+      "sourceSha256": "ed430f3fb193d4bcb880303cfe7bc2f8c9d028a91e4223d258270901d265a8ca",
       "planStep": "14",
       "reason": "The interaction-tool layout effect uses only pan.cancel from the new per-render pan facade. Its exact member plus stopTravel and interactionTool already invalidate the effect. The call restores a currently active pan via finish(true) and cancels current editing through interaction.current; changing an unrelated facade field must not cancel the gesture. Independent source/caller review: useWorkbenchNavigation.js51–53; useWorkbenchPan.js finish. No separate browser run by reviewer; final shared verification remains required."
     },
@@ -578,7 +578,7 @@
       "line": 60,
       "column": 6,
       "message": "React Hook useEffect has a missing dependency: 'pan'. Either include it or remove the dependency array.",
-      "sourceSha256": "948232102572b60e0554f8021e1c3a46f65f355844f9a4d11224bb19e7aa54a9",
+      "sourceSha256": "ed430f3fb193d4bcb880303cfe7bc2f8c9d028a91e4223d258270901d265a8ca",
       "planStep": "14",
       "reason": "Blur/visibility listeners capture only pan.cancel and setInteractionTool; both are listed. pan.cancel reaches active.current and restores the saved origin through update, with current afterEnd callback. Cleanup removes those exact listeners before member replacement/unmount. The pan facade has no additional value read here. Independent source/caller review: useWorkbenchNavigation.js54–60; useWorkbenchPan.js finish. No separate browser run by reviewer; final shared verification remains required."
     },
@@ -588,7 +588,7 @@
       "line": 250,
       "column": 6,
       "message": "React Hook useCallback has a missing dependency: 'pan'. Either include it or remove the dependency array.",
-      "sourceSha256": "948232102572b60e0554f8021e1c3a46f65f355844f9a4d11224bb19e7aa54a9",
+      "sourceSha256": "ed430f3fb193d4bcb880303cfe7bc2f8c9d028a91e4223d258270901d265a8ca",
       "planStep": "14",
       "reason": "resetView reads only pan.cancel, already listed, then resets current presentation callback and camera through separately listed stopTravel,panTo,remember/hostRef and locked/disabled guards. The changing pan facade is not an invalidation. WorkbenchCamera API/cameraMotion members are stable callbacks while camera values are read through getCamera. Independent source/caller review: useWorkbenchNavigation.js246–250; useWorkbenchPan.js; useWorkbenchCameraMotion.js; WorkbenchCamera.jsx. No separate browser run by reviewer; final shared verification remains required."
     },
@@ -598,7 +598,7 @@
       "line": 367,
       "column": 6,
       "message": "React Hook useEffect has missing dependencies: 'hasCapturedPointer' and 'pan'. Either include them or remove the dependency array.",
-      "sourceSha256": "948232102572b60e0554f8021e1c3a46f65f355844f9a4d11224bb19e7aa54a9",
+      "sourceSha256": "ed430f3fb193d4bcb880303cfe7bc2f8c9d028a91e4223d258270901d265a8ca",
       "planStep": "14",
       "reason": "Wheel listener reads only pan.releaseAbandonedGesture, explicitly listed. That member reads pan active.current and calls the current finish owner. hasCapturedPointer is useCallback([]) and calls captureCheck.current; this effect installs checkCapture there and clears it conditionally on cleanup. The captured-pointer map is owned by this exact effect, with pointer/blur/visibility and wheel/key handlers all removed on rebind. Editing actions use interaction.current. All actual camera/hand/lock/handler members are dependencies. Independent source/caller review: useWorkbenchNavigation.js42–43,265–367; useWorkbenchPan.js releaseAbandonedGesture. No separate browser run by reviewer; final shared verification remains required."
     },
@@ -738,7 +738,7 @@
       "line": 35,
       "column": 6,
       "message": "React Hook useMemo has unnecessary dependencies: 'mediaRevision' and 'revision'. Either exclude them or remove the dependency array.",
-      "sourceSha256": "5754e04c0d2fa9fa5214dd305662787598bb462f71b9856483a0d13626cab8d4",
+      "sourceSha256": "e7b623316032d60a95a540ac95a74853eae9681b9c809ad52dfae85ca17bdd5e",
       "planStep": "14",
       "reason": "revision and mediaRevision are required semantic invalidation tokens even though the memo does not read their numeric values. The memo iterates mutable view.frames and entries and dereferences frame refs and miniature sources. Their map identities may stay unchanged after registration/measurement/source replacement, so useSyncExternalStore revision updates force recomputation. Removing the allegedly unnecessary dependencies would leave stale navigator item geometry/media. Independent source/caller review: WorkbenchNavigator.jsx16–35; WorkbenchView registry/miniatures registration; WorkbenchView.jsx1369. No separate browser run by reviewer; final shared verification remains required."
     },
@@ -748,7 +748,7 @@
       "line": 54,
       "column": 6,
       "message": "React Hook useLayoutEffect has a missing dependency: 'camera'. Either include it or remove the dependency array.",
-      "sourceSha256": "5754e04c0d2fa9fa5214dd305662787598bb462f71b9856483a0d13626cab8d4",
+      "sourceSha256": "e7b623316032d60a95a540ac95a74853eae9681b9c809ad52dfae85ca17bdd5e",
       "planStep": "14",
       "reason": "This effect reads camera.getCamera and camera.subscribeCameraPaint only; both are explicitly listed. The stable paint callback dereferences current navigation/area/showOutside/items and live map/zoom refs. Resize cancels NavigatorMap's drag before repaint. hostRef replacement re-observes; cleanup disconnects and unsubscribes. Other camera facade fields are not captured. Independent source/caller review: WorkbenchNavigator.jsx36–55; WorkbenchView.jsx1369; WorkbenchCamera.jsx. No separate browser run by reviewer; final shared verification remains required."
     },
@@ -758,7 +758,7 @@
       "line": 501,
       "column": 6,
       "message": "React Hook useLayoutEffect has missing dependencies: 'entries' and 'selected'. Either include them or remove the dependency array.",
-      "sourceSha256": "6c0ca2faf823b3ebe99603365bfac4c974d2fd2b4dfdacb91c184eb1d605bc25",
+      "sourceSha256": "f8bf7fe47cbb057dbc42a8a5062b1b62a0ee08b75f3ffa7f08677fb1fc087b8e",
       "planStep": "11",
       "reason": "entries is a provider-lifetime Map. Registration/frame changes increment revision; selected is a fresh filtered projection of selection and live visibility markers. The bounds effect responds to revision, selection, editorHiddenIds, authored transforms and camera changes. Depending on the freshly allocated selected array would measure on every unrelated render. Evidence: Layers 10/10, focus toggle 8/8, Text/Display resize 6/6. Selection-v4 rebind: unchanged measurement effect reviewed in selection-mode-applied-lint-review; exact source verified on 2026-10-24."
     },
@@ -768,7 +768,7 @@
       "line": 57,
       "column": 6,
       "message": "React Hook useLayoutEffect has a missing dependency: 'saved'. Either include it or remove the dependency array.",
-      "sourceSha256": "7eb1adb63c1897eb4f4e9544e31e3d87fc2b47e798b94d147f61b7f081bf6fe2",
+      "sourceSha256": "3d91d40f9a4f6e464159d54f7416cea17f4b46e83a5e857cbfe38ce266207c5d",
       "planStep": "10",
       "reason": "Behouden: JSON-key representeert de volledige gevalideerde saved-presentatie. previousKey onderscheidt een echte opgeslagen verandering van gewoon renderen/heropenen. Alleen een gesloten module neemt de nieuwe saved-presentatie over en behoudt open=false. S; F closed Image/blockmove/Undo; U capture. Huidige annotaties hebben regels verplaatst. Parentreview op huidige bron: de twee geanalyseerde bodies blijven op serialized saved-content en frameprimitives sturen; typeannotaties en afzonderlijke openerregistratie veranderen deze invalidatie niet."
     },
@@ -778,7 +778,7 @@
       "line": 119,
       "column": 6,
       "message": "React Hook useLayoutEffect has missing dependencies: 'frame' and 'savedFrame'. Either include them or remove the dependency array.",
-      "sourceSha256": "7eb1adb63c1897eb4f4e9544e31e3d87fc2b47e798b94d147f61b7f081bf6fe2",
+      "sourceSha256": "3d91d40f9a4f6e464159d54f7416cea17f4b46e83a5e857cbfe38ce266207c5d",
       "planStep": "10",
       "reason": "Behouden: savedKey representeert het volledige savedFrame; frame left/top/width/height, resizeTarget en previewFrame staan expliciet in deps. Tijdens gesturepreview wordt niet hersteld. De map bewaart hoogstens 51 oude frames voor Undo vóór de eerste authored frame-entry. S; U history/layout; F blockmove en Undo/reload. Dit is geen tweede persistente cache. Parentreview op huidige bron: de twee geanalyseerde bodies blijven op serialized saved-content en frameprimitives sturen; typeannotaties en afzonderlijke openerregistratie veranderen deze invalidatie niet."
     },
@@ -788,7 +788,7 @@
       "line": 32,
       "column": 6,
       "message": "React Hook useLayoutEffect has missing dependencies: 'range.from' and 'range.to'. Either include them or remove the dependency array.",
-      "sourceSha256": "4d0c4009e6f9ef0e245eec7032fab05dd43e674780729212638d2868b6022d61",
+      "sourceSha256": "00acea974a1539a8009aa3fc28f6781218c91ae2deac20e9340d8c129d77b0c0",
       "planStep": "19",
       "reason": "Continuation editor creation owns controller/range.id/index lifetime. from/to changes are applied by the next layout effect through bridge.update, preserving editor selection instead of disposing the editor. Evidence: step12 text-linked-frames5/5 including typing across boundaries and shared Undo. Limits: Current scoped ESLint rerun; source review. Prior browser evidence explicitly identified; no new lifecycle browser run for this proposal."
     },
@@ -798,7 +798,7 @@
       "line": 110,
       "column": 59,
       "message": "React Hook useLayoutEffect has a complex expression in the dependency array. Extract it to a separate variable so it can be statically checked.",
-      "sourceSha256": "4d0c4009e6f9ef0e245eec7032fab05dd43e674780729212638d2868b6022d61",
+      "sourceSha256": "00acea974a1539a8009aa3fc28f6781218c91ae2deac20e9340d8c129d77b0c0",
       "planStep": "19",
       "reason": "flowRange presence is a deliberate semantic gate alongside its primitive endpoints; bridge update/refresh follows endpoints and focusWriting. No asynchronous captured object is retained. Evidence: step12 text-linked-frames5/5 and Text module final1/1. Limits: Current scoped ESLint rerun; source review. Prior browser evidence explicitly identified; no new lifecycle browser run for this proposal."
     },
@@ -818,7 +818,7 @@
       "line": 24,
       "column": 6,
       "message": "React Hook useLayoutEffect has missing dependencies: 'ids' and 'view.entries'. Either include them or remove the dependency array.",
-      "sourceSha256": "8336460278a8e7349e26c1036220dd27cb799b0631bc05de536e8e143dc0540b",
+      "sourceSha256": "e730129ca04856714d26c89de01637c24391def61fd788fd5c6b906255034db0",
       "planStep": "10",
       "reason": "Ordered ids are represented by the delimiter key; registered IDs cannot contain that delimiter. entries is provider-stable and revision covers registration/frame changes. Scale, authored transforms, camera offsets AND temporary presentationTransforms now invalidate measurement. The prior step10 limitation was a real omission and is fixed in this change. Evidence: links-red-01 fails exact endpoints with unchanged revision/camera; final-targeted-01 new link case passes. Existing linked workflows5 covered across final-targeted-01 plus linked-replay-01. Limits: The isolated boundary test fixes camera and registry revision at constants. Full linked editing/Visitor tests are separate; not a claim that every animation interleaving was benchmarked."
     },
@@ -828,7 +828,7 @@
       "line": 47,
       "column": 112,
       "message": "React Hook useMemo has a missing dependency: 'flow.ranges'. Either include it or remove the dependency array.",
-      "sourceSha256": "8336460278a8e7349e26c1036220dd27cb799b0631bc05de536e8e143dc0540b",
+      "sourceSha256": "e730129ca04856714d26c89de01637c24391def61fd788fd5c6b906255034db0",
       "planStep": "10",
       "reason": "The miniature consumes article, index, and the primitive from/to range limits. The identity or other fields of flow.ranges do not alter articleFlowSlice output for this miniature. Evidence: Current miniature/render path reread; linked-text browser workflows."
     },
@@ -838,7 +838,7 @@
       "line": 47,
       "column": 129,
       "message": "React Hook useMemo has a complex expression in the dependency array. Extract it to a separate variable so it can be statically checked.",
-      "sourceSha256": "8336460278a8e7349e26c1036220dd27cb799b0631bc05de536e8e143dc0540b",
+      "sourceSha256": "e730129ca04856714d26c89de01637c24391def61fd788fd5c6b906255034db0",
       "planStep": "10",
       "reason": "flow.ranges[index].from is the primitive semantic beginning of the miniature slice and is observed directly; replacing the range array without changing this value does not change the slice. Evidence: Same current miniature path; linked-text workflows."
     },
@@ -848,7 +848,7 @@
       "line": 47,
       "column": 155,
       "message": "React Hook useMemo has a complex expression in the dependency array. Extract it to a separate variable so it can be statically checked.",
-      "sourceSha256": "8336460278a8e7349e26c1036220dd27cb799b0631bc05de536e8e143dc0540b",
+      "sourceSha256": "e730129ca04856714d26c89de01637c24391def61fd788fd5c6b906255034db0",
       "planStep": "10",
       "reason": "flow.ranges[index].to is the primitive semantic end of the miniature slice and is observed directly; replacing the range array without changing this value does not change the slice. Evidence: Same current miniature path; linked-text workflows."
     },
@@ -858,7 +858,7 @@
       "line": 26,
       "column": 6,
       "message": "React Hook useLayoutEffect has a missing dependency: 'gridOrder'. Either include it or remove the dependency array.",
-      "sourceSha256": "8ee6c25487d8cad7b8d80a114b38387bb07659a2a22eed768bb5ff2d049b80f1",
+      "sourceSha256": "6f1d911cb146c77d9411e64763dfd8294c5b33522117f9576788f545e241677c",
       "planStep": "19",
       "reason": "gridOrder is an ordered list of IDs; serialized contents drive report invalidation so equivalent new arrays do not cause reporting loops. Cleanup removes this id registration. Evidence: SceneNavigation report comparison and Text scenes source; current text-scenes browser remains a known sidebar-fixture failure, not green evidence. Limits: Current scoped ESLint rerun; source review. Prior browser evidence explicitly identified; no new lifecycle browser run for this proposal."
     },
@@ -868,7 +868,7 @@
       "line": 26,
       "column": 81,
       "message": "React Hook useLayoutEffect has a complex expression in the dependency array. Extract it to a separate variable so it can be statically checked.",
-      "sourceSha256": "8ee6c25487d8cad7b8d80a114b38387bb07659a2a22eed768bb5ff2d049b80f1",
+      "sourceSha256": "6f1d911cb146c77d9411e64763dfd8294c5b33522117f9576788f545e241677c",
       "planStep": "19",
       "reason": "JSON.stringify(gridOrder) intentionally represents ordered ID content, including reorder. Complex-expression warning is tooling visibility, not missing invalidation. Evidence: Same scene report invariant; current scene browser gap explicitly retained. Limits: Current scoped ESLint rerun; source review. Prior browser evidence explicitly identified; no new lifecycle browser run for this proposal."
     },
@@ -878,7 +878,7 @@
       "line": 29,
       "column": 133,
       "message": "React Hook useMemo has a missing dependency: 'flow'. Either include it or remove the dependency array.",
-      "sourceSha256": "05a363e306b1d3cdde2b824067ede3f59439ef3f300d18255eb9277154909957",
+      "sourceSha256": "7ae6d4c39103c222ef7b3e9f486257194989506bccdf54d2f8ed00288a6d2cb5",
       "planStep": "10",
       "reason": "Behouden: remainder leest article.content, range.from, flow.total, aanwezigheid van flow en index voor de title-vlag. Alle semantische waarden staan expliciet in deps; slicing roept flow.report niet aan. S: useLinkedFrameLayout; F Text-flow en kolommen."
     },
@@ -888,7 +888,7 @@
       "line": 29,
       "column": 178,
       "message": "React Hook useMemo has a complex expression in the dependency array. Extract it to a separate variable so it can be statically checked.",
-      "sourceSha256": "05a363e306b1d3cdde2b824067ede3f59439ef3f300d18255eb9277154909957",
+      "sourceSha256": "7ae6d4c39103c222ef7b3e9f486257194989506bccdf54d2f8ed00288a6d2cb5",
       "planStep": "10",
       "reason": "Behouden: Boolean(flow) kiest alleen de berekeningsroute; de numerieke waarden van die route worden afzonderlijk gevolgd. Het is geen vervanging voor een gelezen reportcallback. S en F, gelijk contract als 27."
     },
@@ -898,7 +898,7 @@
       "line": 30,
       "column": 155,
       "message": "React Hook useMemo has a missing dependency: 'flow'. Either include it or remove the dependency array.",
-      "sourceSha256": "05a363e306b1d3cdde2b824067ede3f59439ef3f300d18255eb9277154909957",
+      "sourceSha256": "7ae6d4c39103c222ef7b3e9f486257194989506bccdf54d2f8ed00288a6d2cb5",
       "planStep": "10",
       "reason": "Behouden: visible leest article.content, range.from/to, flow.total, flow-aanwezigheid en index; alle zijn expliciet opgenomen. De actuele onMeasure/reportcallback wordt buiten deze memo per render gevormd. S en F."
     },
@@ -908,7 +908,7 @@
       "line": 30,
       "column": 211,
       "message": "React Hook useMemo has a complex expression in the dependency array. Extract it to a separate variable so it can be statically checked.",
-      "sourceSha256": "05a363e306b1d3cdde2b824067ede3f59439ef3f300d18255eb9277154909957",
+      "sourceSha256": "7ae6d4c39103c222ef7b3e9f486257194989506bccdf54d2f8ed00288a6d2cb5",
       "planStep": "10",
       "reason": "Behouden: Boolean(flow) is dezelfde routekeuze als 28; alle daadwerkelijk gebruikte flowinhoud staat naast die boolean in de deps. S en F."
     },

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { ESLint } from 'eslint';
 import { createHash } from 'node:crypto';
 import { resolve } from 'node:path';
-import { checkLintDebt } from './lintSource.mjs';
+import { checkLintDebt, lintSourceFingerprint } from './lintSource.mjs';
 
 const root = resolve(import.meta.dirname, '..');
 const eslint = new ESLint({ cwd: root });
@@ -51,4 +51,18 @@ test('the reported lint scope excludes tests and applies the correctness rules t
   const config = await eslint.calculateConfigForFile(filePath);
   for (const rule of ['no-undef', 'no-unreachable', 'no-unused-vars', 'react-hooks/rules-of-hooks', 'react-hooks/exhaustive-deps'])
     assert.equal(config.rules[rule][0], 2, rule);
+});
+
+test('review fingerprints survive checkout line endings but reject actual source edits', async () => {
+  const source = 'import { useEffect } from "react";\nexport function Probe({ value }) {\nuseEffect(() => console.log(value), []);\nreturn null;\n}\n';
+  const results = await lint(source);
+  const entry = { file: 'src/lint-proof.jsx', ...results[0].messages[0], sourceSha256: lintSourceFingerprint(source), planStep: '19', reason: 'Test fixture only' };
+  const debt = { version: 1, entries: [entry] };
+  for (const text of [source, source.replaceAll('\n', '\r\n')]) {
+    const report = checkLintDebt(await lint(text), debt, root);
+    assert.equal(report.accepted, 1);
+    assert.deepEqual(report.failures, []);
+  }
+  for (const text of [source + '\n', source.replace('console.log(value)', 'console.dir(value)')])
+    assert.match(checkLintDebt(await lint(text), debt, root).failures.join('\n'), /changed since/);
 });
