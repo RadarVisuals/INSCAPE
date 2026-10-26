@@ -1,0 +1,14 @@
+[
+  {
+    "name": "workbench-overview",
+    "code": 1,
+    "seconds": 34.852,
+    "tests": 5,
+    "pass": 4,
+    "fail": 1,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0,
+    "error": "Incomplete test run: {\"tests\":5,\"pass\":4,\"fail\":1,\"cancelled\":0,\"skipped\":0,\"todo\":0}"
+  }
+]

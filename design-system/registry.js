@@ -391,7 +391,7 @@ export const components = [
     source: 'src/imageModule/ImageWindow.jsx',
     contract:
       'One artwork per side, source transparency, quiet action strip, activation bounds and separate Focus / Inspect actions. No interface texture on media.',
-    evidence: 'browser-tests/image-module.browser.mjs',
+    evidence: 'browser-tests/image-interaction.browser.mjs',
     status: 'Production',
   },
   {

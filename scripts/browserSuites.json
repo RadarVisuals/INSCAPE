@@ -3,6 +3,11 @@
   "notes": "Classification is not a passing test result. Release suites run by default; every other suite remains explicitly selectable. production-startup is separately required after the build by verifyRelease.mjs.",
   "suites": [
     {
+      "name": "workbench-overview",
+      "category": "release",
+      "rationale": "Separate overview browsing, saved introductions, explicit opening, storage failures and responsive read-only previews."
+    },
+    {
       "name": "owner-workflow-contracts",
       "category": "release",
       "rationale": "Stap 26 vervangt standaard bronpatroonchecks; dezelfde releasepoort bewaakt nu echte Library-retentie, ontoegankelijke verborgen bediening, berekende typografie en afzonderlijke Discover-toestanden."
@@ -473,7 +478,7 @@
     {
       "name": "display-audit-repairs",
       "category": "targeted",
-      "rationale": "Behoud als gerichte regressie van de aanwezige experimentele Display/scenegrens; geparkeerde creatie is geen vervangingsbewijs. Concreet: Display text editing preserves placement and ordinary placement keyboard editing remains available.",
+      "rationale": "Gerichte regressies voor crop-sessies, Owner/Visitor media-clipping en reduced motion. Het oude Add text-pad is verwijderd uit de suite: huidig schrijven/overdracht wordt gecontroleerd door text-transfer en keyboard-eigenaarschap door workbench-inspection-keyboard.",
       "prerequisites": [
         "Host: runner_vite.",
         "INSCAPE_TEST_ORIGIN={origin}",
@@ -855,17 +860,6 @@
       ]
     },
     {
-      "name": "image-module",
-      "category": "targeted",
-      "rationale": "Gerichte artwork/Image-regressie voor aanvullende geometrie, pixel- of lifecyclevarianten; expliciet draaien wanneer die grens wijzigt. Concreet: independent Image: Library drop, free size, dock crop, wraparound flip, Lift, persistence and Visitor parity.",
-      "prerequisites": [
-        "Host: runner_vite.",
-        "INSCAPE_IMAGE_ROOT={origin}",
-        "Lokale fixture-/assetbestanden: browser-tests/fixtures/shared-tools.mjs",
-        "Neem benodigde lokaal ongetrackte fixtures/assets bewust op bij latere bronintegratie; huidige HEAD/CI bevat ze niet: browser-tests/fixtures/shared-tools.mjs"
-      ]
-    },
-    {
       "name": "image-paint-production",
       "category": "targeted",
       "rationale": "Gerichte post-buildcontrole van de werkelijke Image-worker onder productieheaders. Een verse dist/ van dezelfde bron is vereist; niet toevoegen aan de pre-build defaultset in deze begrensde integratie.",
@@ -1136,13 +1130,12 @@
     {
       "name": "owner-system-workflow-presentation-board",
       "category": "targeted",
-      "rationale": "Gericht en gemengd: drie expliciet overgeslagen oude Board-scenario’s staan naast zeven actieve checks voor geometrie, inspectie, metadata, shortcuts en lock. Niet als volledig vervangen verklaren; eerst splitsen en resterende unieke dekking bewaren.",
+      "rationale": "Zes gerichte controles voor behouden experimentele Display-geometrie, inspectie, shortcuts, appearance, lock en namen. Verouderde Metadata en dubbele extra-Display-opstelling verwijderd; huidige Info/docking en Display-eigenaarschap hebben eigen suites. Display blijft geparkeerd.",
       "prerequisites": [
         "Host: runner_vite.",
         "INSCAPE_SYSTEM_WORKFLOW_URL={origin}/development/owner/system-workflow (gezet door de gedeelde runner)",
         "Lokale fixture-/assetbestanden: browser-tests/fixtures/display-controls.mjs, browser-tests/fixtures/legacy-workflow-artwork.mjs",
-        "URL vereist ook /development/owner/system-workflow; de gedeelde runner levert de volledige URL.",
-        "Drie test.skip-cases op regels 52,137,237: passingTap verwerpt skips ook bij exit 0. Actieve Add Display/metadataverwachtingen vragen contractcontrole; niet hele suite weggooien."
+        "URL vereist ook /development/owner/system-workflow; de gedeelde runner levert de volledige URL."
       ]
     },
     {

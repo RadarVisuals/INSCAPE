@@ -229,7 +229,7 @@ test('review fixes preserve contrast, enlarged labels and readable source links'
     const sources = page.locator('.ds-component-list > article > .ds-source');
     assert.equal(await sources.count(), components.length);
     assert.ok(await sources.evaluateAll(nodes => nodes.every(node => node.getBoundingClientRect().height >= 24)), 'source links have a usable target');
-    for (const file of ['module-surfaces.browser.mjs', 'workbench-index.browser.mjs', 'image-module.browser.mjs']) {
+    for (const file of ['module-surfaces.browser.mjs', 'workbench-index.browser.mjs', 'image-interaction.browser.mjs']) {
       const source = await browser.newPage();
       try {
         const href = await page.locator('a.ds-source').filter({ hasText: `browser-tests/${file}` }).first().getAttribute('href');

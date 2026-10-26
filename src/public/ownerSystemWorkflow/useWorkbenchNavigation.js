@@ -188,8 +188,10 @@ export default function useWorkbenchNavigation({ hostRef, controlsRef, disabled,
     const host = hostRef.current, controls = controlsRef.current;
     if (!host || disabled) { onControlsTopChange?.(null); return; }
     const toolbar = host.querySelector('[data-workbench-toolbar]');
-    const properties = ['--workbench-toolbar-clearance', '--workbench-toolbar-width'];
+    const switcher = host.querySelector('.workbench-switcher');
+    const properties = ['--workbench-toolbar-clearance', '--workbench-toolbar-width', '--workbench-toolbar-offset'];
     const previousProperties = properties.map(name => controls?.style.getPropertyValue(name));
+    const previousOffset = toolbar?.style.getPropertyValue(properties[2]);
     const measure = () => {
       // The camera rail owns its placement beside/above the creation toolbar.
       // Keep measured CSS values on that rail, outside authored module trees.
@@ -198,6 +200,19 @@ export default function useWorkbenchNavigation({ hostRef, controlsRef, disabled,
         for (const [index, value] of [rectangle.height, rectangle.width].entries()) {
           const pixels = `${Math.ceil(value)}px`, property = properties[index];
           if (controls.style.getPropertyValue(property) !== pixels) controls.style.setProperty(property, pixels);
+        }
+        // Preserve the normal offset while fitting both rails below the
+        // Workbench switcher on short screens. This owner already measures
+        // their wrapped sizes; a second fixed positioning rule drifts from it.
+        const style = getComputedStyle(host), top = host.getBoundingClientRect().top;
+        const ceiling = Math.max(0, (switcher?.getBoundingClientRect().bottom ?? top) - top + 8);
+        const available = host.clientHeight - ceiling - controls.offsetHeight - rectangle.height
+          - (parseFloat(style.getPropertyValue('--workflow-dock-height')) || 0) - 24;
+        const offset = `${Math.max(0, Math.floor(Math.min(
+          parseFloat(style.getPropertyValue(properties[2])) || 0, available
+        )))}px`;
+        for (const node of [toolbar, controls]) {
+          if (node.style.getPropertyValue(properties[2]) !== offset) node.style.setProperty(properties[2], offset);
         }
       }
       // The same live chrome measurement also bounds companion tools. Their
@@ -218,12 +233,15 @@ export default function useWorkbenchNavigation({ hostRef, controlsRef, disabled,
     observer.observe(host);
     if (controls) observer.observe(controls);
     if (toolbar) observer.observe(toolbar);
+    if (switcher) observer.observe(switcher);
     return () => {
       observer.disconnect();
       properties.forEach((property, index) => {
         if (previousProperties[index]) controls?.style.setProperty(property, previousProperties[index]);
         else controls?.style.removeProperty(property);
       });
+      if (previousOffset) toolbar?.style.setProperty(properties[2], previousOffset);
+      else toolbar?.style.removeProperty(properties[2]);
     };
   }, [hostRef, controlsRef, dockVisible, creationToolbarVisible, disabled, locked, readViewport, stopTravel, onControlsTopChange]);
 

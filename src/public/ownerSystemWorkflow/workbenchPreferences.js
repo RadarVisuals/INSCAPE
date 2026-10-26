@@ -15,6 +15,7 @@ export const DEFAULT_WORKBENCH_PREFERENCES = Object.freeze({
   edgeSnap: true,
   moduleGap: 0,
   surfaceId: 'mist',
+  galleryCardSize: 2,
 });
 
 export const workbenchPreferencesStorageKey = (profileAddress) =>
@@ -34,6 +35,7 @@ export function normalizeWorkbenchPreferences(value, fallbackSurfaceId = DEFAULT
   const safeFallbackSurface = SYSTEM_WORKFLOW_SURFACE_IDS.includes(fallbackSurfaceId)
     ? fallbackSurfaceId : DEFAULT_WORKBENCH_PREFERENCES.surfaceId;
   return Object.freeze({
+    galleryCardSize: [1, 2, 3].includes(source.galleryCardSize) ? source.galleryCardSize : 2,
     edgeSnap: typeof source.edgeSnap === 'boolean' ? source.edgeSnap : true,
     moduleGap: Number.isFinite(source.moduleGap) && source.moduleGap >= 0 && source.moduleGap <= 128 ? source.moduleGap : 0,
     chromeNoise: typeof source.chromeNoise === 'boolean' ? source.chromeNoise : true,

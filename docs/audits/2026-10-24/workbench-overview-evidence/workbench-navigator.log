@@ -1,0 +1,70 @@
+TAP version 13
+# Subtest: Navigator shares the live camera and fits with Keeper (carbon 1440x900)
+ok 1 - Navigator shares the live camera and fits with Keeper (carbon 1440x900)
+  ---
+  duration_ms: 3661.4283
+  type: 'test'
+  ...
+# Subtest: Navigator shares the live camera and fits with Keeper (carbon 390x900)
+ok 2 - Navigator shares the live camera and fits with Keeper (carbon 390x900)
+  ---
+  duration_ms: 2271.2406
+  type: 'test'
+  ...
+# Subtest: Navigator shares the live camera and fits with Keeper (carbon 320x568)
+ok 3 - Navigator shares the live camera and fits with Keeper (carbon 320x568)
+  ---
+  duration_ms: 2239.2634
+  type: 'test'
+  ...
+# Subtest: Navigator shares the live camera and fits with Keeper (carbon 844x390)
+ok 4 - Navigator shares the live camera and fits with Keeper (carbon 844x390)
+  ---
+  duration_ms: 2268.9296
+  type: 'test'
+  ...
+# Subtest: Navigator shares the live camera and fits with Keeper (mist 1440x900)
+ok 5 - Navigator shares the live camera and fits with Keeper (mist 1440x900)
+  ---
+  duration_ms: 3603.0236
+  type: 'test'
+  ...
+# Subtest: Navigator shares the live camera and fits with Keeper (mist 390x900)
+ok 6 - Navigator shares the live camera and fits with Keeper (mist 390x900)
+  ---
+  duration_ms: 2184.7391
+  type: 'test'
+  ...
+# Subtest: Navigator shares the live camera and fits with Keeper (mist 320x568)
+ok 7 - Navigator shares the live camera and fits with Keeper (mist 320x568)
+  ---
+  duration_ms: 2430.9129
+  type: 'test'
+  ...
+# Subtest: Navigator shares the live camera and fits with Keeper (mist 844x390)
+ok 8 - Navigator shares the live camera and fits with Keeper (mist 844x390)
+  ---
+  duration_ms: 2132.1684
+  type: 'test'
+  ...
+# Subtest: miniatures follow edits, visibility, ordering and Image sides without changing selection
+ok 9 - miniatures follow edits, visibility, ordering and Image sides without changing selection
+  ---
+  duration_ms: 2272.1626
+  type: 'test'
+  ...
+# Subtest: a filled composition keeps miniature media mounted during live camera travel
+ok 10 - a filled composition keeps miniature media mounted during live camera travel
+  ---
+  duration_ms: 3838.1932
+  type: 'test'
+  ...
+1..10
+# tests 10
+# suites 0
+# pass 10
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 27210.6174

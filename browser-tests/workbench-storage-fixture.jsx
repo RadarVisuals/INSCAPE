@@ -26,5 +26,9 @@ window.savedDraft = () => JSON.parse(localStorage.getItem(key));
 window.guardedStore = () => createSystemWorkflowDraftStore({ profileAddress: profile, storage: localStorage, requireEditor: true });
 const root = createRoot(document.getElementById('root'));
 window.leaveEditor = () => root.unmount();
-root.render(<Boundary profileAddress={profile} reviewStorage={localStorage} reviewAssets={[]} reviewCategories={[]} reviewActivity={[]}
-  reviewProfile={{ name: 'Local storage verification' }} onOpenReception={() => root.render(<p>Published view requested</p>)} />);
+const content = <Boundary profileAddress={profile} reviewStorage={localStorage} reviewAssets={[]} reviewCategories={[]} reviewActivity={[]}
+  reviewProfile={{ name: 'Local storage verification' }} onOpenReception={() => root.render(<p>Published view requested</p>)} />;
+// Use the production shell's CSS boundary when checking route-level interaction.
+root.render(params.has('shell') ? <div className="application-root" data-application-mode="public">
+  <div className="application-interface" data-visible>{content}</div>
+</div> : content);

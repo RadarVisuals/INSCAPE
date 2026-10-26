@@ -1,12 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
 import { readSvgArtwork } from '../public/ownerSystemWorkflow/LibraryArtworkImage.jsx';
+import { svgDocumentViewport } from './svgDocumentViewport.js';
 import './artworkSvg.css';
 
-export default function ArtworkSvgDocument({ src, title = 'Interactive artwork', className = '', stretch = false, paintOnly = false, visible = true, onReady, renderStatus }) {
+export default function ArtworkSvgDocument({ src, title = 'Interactive artwork', className = '', stretch = false, paintOnly = false, visible = true, onReady, onViewport, renderStatus }) {
   const frame = useRef(null);
   const loading = useRef(null);
   const inspection = useRef(null), nextRequest = useRef(0);
   const readyCallback = useRef(onReady); readyCallback.current = onReady;
+  const viewportCallback = useRef(onViewport); viewportCallback.current = onViewport;
   const visibility = useRef(visible); visibility.current = visible;
   const [hostReady, setHostReady] = useState(false);
   const [document, setDocument] = useState(null);
@@ -35,8 +37,10 @@ export default function ArtworkSvgDocument({ src, title = 'Interactive artwork',
     // Fetch completion alone does not mean the isolated artwork is ready.
     request.timer = setTimeout(fail, 15000);
     readSvgArtwork(src, controller.signal).then(svg => {
+      if (loading.current !== request || request.failed) return;
+      viewportCallback.current?.(svgDocumentViewport(svg));
       if (stretch) { svg.setAttribute('width', '100%'); svg.setAttribute('height', '100%'); svg.setAttribute('preserveAspectRatio', 'none'); }
-      if (loading.current === request && !request.failed) setDocument({ src, text: new XMLSerializer().serializeToString(svg) });
+      setDocument({ src, text: new XMLSerializer().serializeToString(svg) });
     }).catch(fail);
     return () => {
       if (loading.current === request) loading.current = null;

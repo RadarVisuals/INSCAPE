@@ -1,0 +1,47 @@
+[
+  {
+    "name": "workbench-overview",
+    "code": 0,
+    "seconds": 62.685,
+    "tests": 12,
+    "pass": 12,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  {
+    "name": "artwork-document",
+    "code": 0,
+    "seconds": 3.234,
+    "tests": 2,
+    "pass": 2,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  {
+    "name": "svg-raster-quality",
+    "code": 1,
+    "seconds": 36.477,
+    "tests": 4,
+    "pass": 2,
+    "fail": 2,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0,
+    "error": "Incomplete test run: {\"tests\":4,\"pass\":2,\"fail\":2,\"cancelled\":0,\"skipped\":0,\"todo\":0}"
+  },
+  {
+    "name": "svg-artwork-lift",
+    "code": 0,
+    "seconds": 24.165,
+    "tests": 1,
+    "pass": 1,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  }
+]

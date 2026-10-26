@@ -10,7 +10,7 @@ Makerexport: projectroot `exploration-environment.svg`, 1.899.278 bytes,
 viewBox `0 0 2000 2000`. Statisch vectorwerk, geen scripts of ingesloten images.
 De hoekvorm toont een stevige horizontale bovenbalk en rechterrand, met rode,
 ivoren en grijze illustratie. Het origineel is intact; een identieke kopie staat
-bij [de referenties](../../design-references/2026-10-20-inscape-vision/environment-source.svg).
+bij [de artworkbronnen](../../artwork-sources/exploration/environment-source.svg).
 SHA256 van beide: `07D79F84BCC8C7C7101FC87A23E9D28C92F06B65B84559B2E889F1F5571754FD`.
 
 De ruwe SVG in public overschreed het bestaande assetbudget. Daarom volgt dit

@@ -1,6 +1,6 @@
 .system-workflow .workbench-sidebar {
-  position: fixed; z-index: 91; top: 12px; left: 12px; bottom: var(--sidebar-bottom);
-  width: 208px; height: auto; max-height: 700px;
+  position: fixed; z-index: 91; top: 12px; left: 12px;
+  width: 208px; height: auto; max-height: min(700px, calc(100dvh - 12px - var(--sidebar-bottom)));
 }
 .system-workflow .workbench-sidebar[data-collapsed] { width: 52px; }
 /* An explicitly opened destination sits above the floating editing utilities. */
@@ -21,14 +21,13 @@
 @media (max-width: 900px) {
   .system-workflow .workbench-sidebar { top: 76px; max-height: calc(100dvh - 152px); }
   .system-workflow .workbench-sidebar[data-collapsed] { width: calc(100% - 24px); height: 52px; bottom: auto; flex-direction: row; padding: 4px; }
-  .workbench-sidebar[data-collapsed] .workspace-navigation-identity { display: none; }
-  .workbench-sidebar[data-collapsed] .workspace-navigation-scroll { flex-direction: row; overflow: auto hidden; padding: 0; }
+  .workbench-sidebar[data-collapsed] .workspace-navigation-header { border-right: 1px solid var(--tactile-edge); }
+  .workbench-sidebar[data-collapsed] .workspace-navigation-scroll { flex: 1; flex-direction: row; overflow: auto hidden; padding: 0; }
   .workbench-sidebar[data-collapsed] .workspace-navigation-scroll > nav,
   .workbench-sidebar[data-collapsed] .workspace-navigation-group,
   .workbench-sidebar[data-collapsed] .workspace-navigation-footer { display: flex; margin: 0; padding: 0; border: 0; }
   .workbench-sidebar[data-collapsed] .workspace-navigation-utilities { flex-direction: row; padding: 0; border: 0; }
   .system-workflow .workbench-sidebar[data-collapsed] button { width: 44px; min-width: 44px; min-height: 42px; }
-  .workbench-sidebar[data-collapsed] .workspace-navigation-collapse { border-top: 0; border-left: 1px solid var(--tactile-edge); }
   .system-workflow[data-workspace-sidebar] .system-workflow__workspace-window { top: 140px; max-height: calc(100dvh - 152px); }
 }
 
@@ -40,5 +39,5 @@
    picker. Opening it reveals the same sidebar, keeping tools usable below. */
 .system-workflow[data-sidebar-menu="true"] .workbench-sidebar[data-collapsed] { top: 12px; width: 52px; }
 .system-workflow[data-sidebar-menu="true"] .workbench-sidebar[data-collapsed] .workspace-navigation-scroll { display: none; }
-.system-workflow[data-sidebar-menu="true"] .workbench-sidebar[data-collapsed] .workspace-navigation-collapse { border: 0; }
+.system-workflow[data-sidebar-menu="true"] .workbench-sidebar[data-collapsed] .workspace-navigation-header { border: 0; }
 .system-workflow[data-sidebar-menu="true"] .workbench-switcher { width: calc(100% - 88px); }

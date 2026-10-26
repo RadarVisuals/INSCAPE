@@ -16,11 +16,12 @@
 
 ## Change discipline: inspect dependencies before extending
 
-- For Reception, navigation, multiple compositions, Keeper habitats or optional
-  exploration worlds, read `docs/design-references/2026-10-20-inscape-vision/README.md`
-  and inspect the linked original screenshots after the two required product
-  documents. Distinguish founder intent, open questions and proposed technical
-  approaches. The packet does not authorize implementation by itself.
+- For Reception, navigation, multiple compositions, articles or future Desktop
+  work, read `docs/design-references/2026-10-25-hanssen/README.md` and inspect its
+  linked screenshots and page interactions after the two required product
+  documents. Hanssen is the primary overall presentation/navigation reference.
+  Distinguish accepted direction from existing implementation and the current
+  task's scope. Desktop remains deferred.
 
 - Before a feature or workflow change, trace the relevant existing path through
   UI, state, data, persistence, and access boundaries. Inspect the code and tests

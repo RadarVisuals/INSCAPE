@@ -35,6 +35,7 @@ export default function ProjectedSvgArtwork({ src, width, height, dimensions, me
     const node = document.createElement('span'); node.className = 'artwork-svg-paint'; return node;
   });
   const [lift, setLift] = useState(null);
+  const [sourceViewport, setSourceViewport] = useState(null);
   const viewportRef = useRef(null);
   const loaded = useRef(false), liftReady = useRef(null);
   const documentControls = useRef(null);
@@ -60,7 +61,7 @@ export default function ProjectedSvgArtwork({ src, width, height, dimensions, me
   // Camera commits notify after all module layout writes. Keep this synchronous:
   // Focus must prepare its largest pixels before temporary projection begins.
   // It also consumes any measurement already queued by a child layout effect.
-  useLayoutEffect(() => geometry.subscribe(updatePixelScale), [geometry]);
+  useLayoutEffect(() => geometry.subscribe(updatePixelScale), [geometry, updatePixelScale]);
   useLayoutEffect(() => {
     // Image content is memoized in authored coordinates; zoom resizes its outer
     // viewport without rendering this component. Coalesce local geometry and
@@ -147,7 +148,9 @@ export default function ProjectedSvgArtwork({ src, width, height, dimensions, me
   const rect = mediaStyle || { left: 0, top: 0, width, height };
   // Keep the document in native media coordinates. Resizing its iframe during
   // Lift reflows SVG content/scripts instead of scaling the artwork as a unit.
-  const viewport = dimensions?.width > 0 && dimensions?.height > 0 ? dimensions : rect;
+  const fallbackViewport = dimensions?.width > 0 && dimensions?.height > 0 ? dimensions : rect;
+  const native = sourceViewport?.src === src ? sourceViewport.viewport : null;
+  const viewport = native && Math.max(native.width, native.height) > Math.max(fallbackViewport.width, fallbackViewport.height) ? native : fallbackViewport;
   viewportRef.current = viewport;
   const transform = projectionMatrix(rect, viewport);
   // Resize and Lift both project the same native-size foreignObject. The
@@ -159,7 +162,8 @@ export default function ProjectedSvgArtwork({ src, width, height, dimensions, me
   return <span ref={host} className="artwork-svg-host" data-svg-artwork-host>{createPortal(
     <svg ref={root} className="artwork-svg-viewport" data-interactive-svg viewBox={`0 0 ${svgWidth} ${svgHeight}`} preserveAspectRatio="none">
       <foreignObject ref={media} width={viewport.width} height={viewport.height} transform={transform}>
-        {retained && <ArtworkSvgDocument key={src} src={src} visible={Boolean(visible || lift)} stretch paintOnly renderStatus={renderStatus} onReady={controls => {
+        {retained && <ArtworkSvgDocument key={src} src={src} visible={Boolean(visible || lift)} stretch paintOnly renderStatus={renderStatus}
+          onViewport={viewport => setSourceViewport({ src, viewport })} onReady={controls => {
           documentControls.current = controls; loaded.current = true; schedulePixelScale();
           liftReady.current?.(); onReady?.();
         }} />}

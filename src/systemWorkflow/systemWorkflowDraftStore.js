@@ -10,7 +10,7 @@ import { DEFAULT_WORKBENCH_AREA } from './domain/workbenchArea.js';
 import { bindWorkbenchTextRecovery, textRecoveries, TEXT_RECOVERY_MESSAGE } from '../text/textEditRecovery.js';
 import {
   FIRST_WORKBENCH_ID, WORKBENCH_COLLECTION_LIMIT, isWorkbenchCollection, createWorkbenchCollection, assertValidWorkbenchCollection,
-  projectWorkbenchDraft, replaceWorkbenchDraft, appendWorkbench, validWorkbenchName,
+  projectWorkbenchDraft, replaceWorkbenchDraft, appendWorkbench, assertWorkbenchName, assertWorkbenchIntroduction, assertThumbnailCrop,
 } from './domain/workbenchCollection.js';
 import {
   createEmptySystemWorkflowDraft,
@@ -272,6 +272,33 @@ export function createSystemWorkflowDraftStore({
     listWorkbenches: () => isWorkbenchCollection(currentRecord)
       ? /** @type {WorkbenchCollection} */ (currentRecord).workbenches.map(({ id, name }) => ({ id, name }))
       : [{ id: FIRST_WORKBENCH_ID, name: 'Workbench 1' }],
+    // The overview reads one selected composition without activating an editor.
+    // Returned content shares only the store's immutable, validated records.
+    /** @param {import('../contracts/workbench.js').WorkbenchId} id */
+    readWorkbench(id) {
+      if (!isWorkbenchCollection(currentRecord)) return id === FIRST_WORKBENCH_ID
+        ? Object.freeze({ id, name: 'Workbench 1', introduction: '', thumbnailCrop: null, draft: api.getSnapshot() }) : null;
+      const collection = /** @type {WorkbenchCollection} */ (currentRecord);
+      const item = collection.workbenches.find(item => item.id === id);
+      return item ? Object.freeze({ id, name: item.name, introduction: item.introduction || '', thumbnailCrop: item.thumbnailCrop || null,
+        draft: deepFreeze(projectWorkbenchDraft(collection, id)) }) : null;
+    },
+    /** @param {import('../contracts/workbench.js').WorkbenchId} id @param {{name: string, introduction: string, thumbnailCrop?: import('../contracts/workbench.js').ThumbnailCrop | null}} details */
+    updateWorkbenchDetails(id, { name, introduction, thumbnailCrop }) {
+      assertWorkbenchName(name); assertWorkbenchIntroduction(introduction);
+      if (thumbnailCrop !== undefined) assertThumbnailCrop(thumbnailCrop);
+      const collection = withCurrentLayout();
+      if (!collection.workbenches.some(item => item.id === id)) return false;
+      return persistCollection({ ...collection, workbenches: collection.workbenches.map(item => item.id === id
+        ? { ...item, name, introduction, ...(thumbnailCrop === undefined ? {} : { thumbnailCrop }) } : item) }, { checkEdits: true });
+    },
+    /** @param {import('../contracts/workbench.js').WorkbenchId[]} ids */
+    reorderWorkbenches(ids) {
+      const collection = withCurrentLayout();
+      if (ids.length !== collection.workbenches.length || new Set(ids).size !== ids.length
+        || ids.some(id => !collection.workbenches.some(item => item.id === id))) return false;
+      return persistCollection({ ...collection, workbenches: ids.map(id => collection.workbenches.find(item => item.id === id)) }, { checkEdits: true });
+    },
     // Export the whole local collection; the supplied active view captures live
     // geometry without treating panel/camera state as another authored document.
     getBackupSnapshot(draft = currentDraft) {
@@ -281,7 +308,7 @@ export function createSystemWorkflowDraftStore({
     },
     /** @param {string} name @param {{workbench?: import('../contracts/workbench.js').WorkbenchPresentation, generateId?: () => string}} [options] */
     createWorkbench(name, { workbench, generateId = () => globalThis.crypto.randomUUID() } = {}) {
-      if (!validWorkbenchName(name)) throw new Error('Use a Workbench name of 1–64 characters.');
+      assertWorkbenchName(name);
       const collection = withCurrentLayout(workbench);
       /** @type {WorkflowDraft} */ const fresh = createEmptySystemWorkflowDraft(activeProfileAddress);
       fresh.grids = []; // Ordinary new canvases do not create a parked Display.
@@ -299,12 +326,18 @@ export function createSystemWorkflowDraftStore({
       if (!collection.workbenches.some(item => item.id === id)) return false;
       return persistCollection({ ...collection, activeId: id }, { changeContext: true });
     },
-    /** @param {string} name */
-    renameWorkbench(name) {
-      if (!validWorkbenchName(name)) throw new Error('Use a Workbench name of 1–64 characters.');
-      const collection = withCurrentLayout();
+    /** @param {string} name @param {{workbench?: import('../contracts/workbench.js').WorkbenchPresentation}} [options] */
+    renameWorkbench(name, { workbench } = {}) {
+      assertWorkbenchName(name);
+      const collection = withCurrentLayout(workbench);
       return persistCollection({ ...collection, workbenches: collection.workbenches.map(item =>
-        item.id === collection.activeId ? { ...item, name } : item) });
+        item.id === collection.activeId ? { ...item, name } : item) }, { checkEdits: Boolean(workbench) });
+    },
+    // Leaving for the overview saves live geometry and revokes the editor even
+    // when the next opened composition has the same ID (A → overview → A).
+    /** @param {undefined} _value @param {{workbench?: import('../contracts/workbench.js').WorkbenchPresentation}} [options] */
+    leaveWorkbench(_value, { workbench } = {}) {
+      return persistCollection(withCurrentLayout(workbench), { changeContext: true });
     },
     /** @param {import('../contracts/workbench.js').TransitionGuard} check */
     guardWorkbenchTransition(check) {
@@ -341,6 +374,7 @@ export function createSystemWorkflowDraftStore({
         createWorkbench: write(api.createWorkbench),
         switchWorkbench: write(api.switchWorkbench),
         renameWorkbench: write(api.renameWorkbench),
+        leaveWorkbench: write(api.leaveWorkbench),
         getHistory: api.getHistory,
         getRecordState: api.getRecordState,
         getLastCommitFailure: api.getLastCommitFailure,
@@ -458,12 +492,12 @@ export function createSystemWorkflowDraftStore({
     return isWorkbenchCollection(currentRecord)
       ? replaceWorkbenchDraft(currentRecord, workbenchId(), validated) : /** @type {WorkbenchCollection} */ (createWorkbenchCollection(validated));
   }
-  /** @param {unknown} candidate */
-  function persistCollection(candidate, { changeContext = false, restore = false } = {}) {
+  /** @param {unknown} candidate @param {{changeContext?: boolean, checkEdits?: boolean, restore?: boolean}} [options] */
+  function persistCollection(candidate, { changeContext = false, checkEdits = changeContext, restore = false } = {}) {
     /** @param {string} reason */
     const reject = reason => { lastCommitFailure = reason; return false; };
     if (!writeAccess()) return reject('editor_unavailable');
-    if (changeContext) {
+    if (checkEdits) {
       if (textRecoveries(api.getWorkbenchScope(), activeProfileAddress).length) throw new Error(TEXT_RECOVERY_MESSAGE);
       for (const guard of transitionGuards.values()) if (guard.activation === activation) {
         const reason = guard.check();

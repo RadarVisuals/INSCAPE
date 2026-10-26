@@ -98,11 +98,11 @@ The founder requested a smaller, flatter toolbar and reduced the theme direction
 
 ## Start here
 
-For the founder's Reception, overview, composition and optional exploration-world
-intent, see the [20 October visual reference packet](../design-references/2026-10-20-inscape-vision/README.md)
-with 19 original screenshots. It distinguishes authored branding from editor
-chrome, the normal composition route from optional exploration, and Keeper
-habitat intent from current implementation. Read the active contract first.
+For Reception, overview, composition presentation and shared navigation, use the
+[Hanssen reference](../design-references/2026-10-25-hanssen/README.md), chosen on
+25 October. Its page links and saved screenshots define the overall visual
+direction. Desktop remains deferred. Read the active contract first; this
+design-system workspace continues to document the existing composition tools.
 
 From the project root, using the Node version declared by the project:
 

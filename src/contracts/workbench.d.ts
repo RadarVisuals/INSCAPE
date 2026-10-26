@@ -51,8 +51,9 @@ export interface WorkflowDraft {
 export interface WorkbenchCollection {
   type: 'inscape-local-workbenches'; version: number; profileAddress: string;
   activeId: WorkbenchId; shared: unknown;
-  workbenches: { id: WorkbenchId; name: string; content: unknown }[];
+  workbenches: { id: WorkbenchId; name: string; introduction?: string; thumbnailCrop?: ThumbnailCrop | null; content: unknown }[];
 }
+export interface ThumbnailCrop { x: number; y: number; zoom: number }
 export type WorkbenchBackup = WorkflowDraft | WorkbenchCollection;
 export interface DraftStorage {
   getItem(key: string): string | null;
@@ -96,7 +97,8 @@ export interface WorkbenchScope {
   restoreBackup(candidate: WorkbenchBackup, options?: RestoreOptions): SaveResult;
   createWorkbench(name: string, options?: { workbench?: WorkbenchPresentation; generateId?: () => string }): WorkbenchId | false;
   switchWorkbench(id: WorkbenchId, options?: { workbench?: WorkbenchPresentation }): SaveResult;
-  renameWorkbench(name: string): SaveResult;
+  renameWorkbench(name: string, options?: { workbench?: WorkbenchPresentation }): SaveResult;
+  leaveWorkbench(value?: undefined, options?: { workbench?: WorkbenchPresentation }): SaveResult;
 }
 /** Mounted editor/visitor windows are reached only after the readable-draft boundary. */
 export interface MountedWorkbenchStore { getSnapshot(): WorkflowDraft }

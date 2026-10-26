@@ -1,0 +1,64 @@
+TAP version 13
+# Subtest: Sidebar routes and chrome stay reachable (carbon 1440x900)
+ok 1 - Sidebar routes and chrome stay reachable (carbon 1440x900)
+  ---
+  duration_ms: 3404.6096
+  type: 'test'
+  ...
+# Subtest: Sidebar routes and chrome stay reachable (carbon 390x900)
+ok 2 - Sidebar routes and chrome stay reachable (carbon 390x900)
+  ---
+  duration_ms: 3054.2769
+  type: 'test'
+  ...
+# Subtest: Sidebar routes and chrome stay reachable (carbon 320x568)
+ok 3 - Sidebar routes and chrome stay reachable (carbon 320x568)
+  ---
+  duration_ms: 3397.1057
+  type: 'test'
+  ...
+# Subtest: Sidebar routes and chrome stay reachable (carbon 844x390)
+ok 4 - Sidebar routes and chrome stay reachable (carbon 844x390)
+  ---
+  duration_ms: 2905.8129
+  type: 'test'
+  ...
+# Subtest: Sidebar routes and chrome stay reachable (mist 1440x900)
+ok 5 - Sidebar routes and chrome stay reachable (mist 1440x900)
+  ---
+  duration_ms: 3304.3216
+  type: 'test'
+  ...
+# Subtest: Sidebar routes and chrome stay reachable (mist 390x900)
+ok 6 - Sidebar routes and chrome stay reachable (mist 390x900)
+  ---
+  duration_ms: 2983.3827
+  type: 'test'
+  ...
+# Subtest: Sidebar routes and chrome stay reachable (mist 320x568)
+ok 7 - Sidebar routes and chrome stay reachable (mist 320x568)
+  ---
+  duration_ms: 3304.6117
+  type: 'test'
+  ...
+# Subtest: Sidebar routes and chrome stay reachable (mist 844x390)
+ok 8 - Sidebar routes and chrome stay reachable (mist 844x390)
+  ---
+  duration_ms: 2832.2705
+  type: 'test'
+  ...
+# Subtest: Sidebar collapse follows Workbench switches, preview and explicit hide/reopen
+ok 9 - Sidebar collapse follows Workbench switches, preview and explicit hide/reopen
+  ---
+  duration_ms: 2358.7831
+  type: 'test'
+  ...
+1..9
+# tests 9
+# suites 0
+# pass 9
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 27851.776

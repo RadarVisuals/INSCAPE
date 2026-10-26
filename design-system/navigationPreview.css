@@ -50,6 +50,6 @@
 }
 @container (max-width: 620px) {
   .ds-studio-shell { grid-template-columns: minmax(0, 1fr); }
-  .ds-studio-shell .workspace-navigation { height: 480px; }
+  .ds-studio-shell .workspace-navigation { max-height: 480px; }
   .ds-studio-shell .workspace-navigation[data-collapsed] { width: 52px; }
 }

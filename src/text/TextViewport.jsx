@@ -4,12 +4,12 @@ import ArticleView from './ArticleView.jsx';
 
 // Automatic end spacing may yield to a fitting article. Explicit article padding
 // remains authored content; genuinely long articles keep their normal scroll tail.
-export default function TextViewport({ children, article, flow, showOverflow = false, automaticPadding, mode, resetKey = null }) {
+export default function TextViewport({ children, article, flow, flowIndex = 0, showOverflow = false, automaticPadding, mode, resetKey = null }) {
   const viewport = useRef(null), content = useRef(null);
   // The first linked frame measures the same optional title field shown in Write.
   // This placeholder is only measuring UI; it never enters the saved article.
   const measuredArticle = mode === 'write' && !article.title ? { ...article, title: 'Title' } : article;
-  const { remainder, visible, height, onMeasure } = useLinkedFrameLayout(article, flow);
+  const { remainder, visible, height, onMeasure } = useLinkedFrameLayout(article, flow, flowIndex);
   const { framed, overflow } = useTextFrame(viewport, article, flow ? 'read' : mode, { force: Boolean(flow), onMeasure });
   useLayoutEffect(() => { if (resetKey !== null) viewport.current.scrollTop = 0; }, [resetKey]);
   useLayoutEffect(() => {

@@ -1,0 +1,9 @@
+.workbench-thumbnail-crop { grid-column: 1 / -1; display: grid; gap: 16px; padding: 16px; min-width: 0; }
+.workbench-thumbnail-crop p { margin: 0; font-size: 12px; color: var(--tactile-muted); }
+.workbench-overview .workbench-thumbnail-crop-preview { display: block; justify-self: center; width: min(100%, calc(44dvh * var(--thumbnail-ratio))); aspect-ratio: var(--thumbnail-ratio); min-height: 0; padding: 0; border: 0; overflow: hidden; border-radius: var(--overview-radius); cursor: grab; touch-action: none; }
+.workbench-thumbnail-crop-preview:active { cursor: grabbing; }
+.workbench-thumbnail-crop-preview .workbench-overview-preview { height: 100%; margin: 0; pointer-events: none; }
+.workbench-thumbnail-crop-zoom { display: grid; gap: 8px; font-size: 12px; }
+.workbench-thumbnail-crop-zoom > span { display: flex; justify-content: space-between; }
+.workbench-thumbnail-crop-zoom input { width: 100%; accent-color: var(--tactile-ink); }
+.workbench-thumbnail-crop .workbench-overview-actions { gap: 8px; }

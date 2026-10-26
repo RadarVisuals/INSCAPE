@@ -4,7 +4,7 @@ Status: required product-meaning context
 
 Established: 2026-09-02
 Clarified with the founder: 2026-09-06
-Scope aligned with the active contract: 2026-10-20
+Scope aligned with the active contract: 2026-10-25
 
 Authority: this document explains why INSCAPE exists and how its concepts must
 be interpreted. It is not an implementation roadmap and does not authorize
@@ -85,13 +85,16 @@ away the creator, collection, token scope, provenance, or story of its parts.
 
 ## Current product focus
 
-The founder's [20 October illustrated reference packet](design-references/2026-10-20-inscape-vision/README.md)
-shows the intended relationship between a freely branded bento Reception,
-the ordinary content overview/compositions, and a separate optional personal
-exploration world. The Keeper habitat study makes the founder's wish to inhabit
-and explore reusable illustration concrete. Read the active contract's dated
-clarification before using those examples as direction. The packet does not
-claim that a world engine, collision or minting has been implemented.
+The founder chose the [Hanssen reference](design-references/2026-10-25-hanssen/README.md)
+on 25 October as the primary presentation and navigation direction. Its About
+page informs Reception; Work informs the composition overview and opening a
+composition with its metadata. A compact top-left navigation connects identity,
+About, Canvases, Articles or Blog, and eventually a separate Desktop. This makes
+the wider creative environment feel connected while each destination serves its
+own purpose. Desktop remains deferred. The founder requested removal of the
+earlier screenshot-and-notes reference. Read the active contract's dated
+decision for scope; the presentation direction preserves structured, explorable
+compositions and their source material.
 
 Apply this creative intent through the ordinary Workbench and its retained
 independent modules. The [current product map](INSCAPE_ACTIVE_CONTRACT.md#current-product-map-2026-10-19)

@@ -32,6 +32,91 @@ function edit(store, change) {
   assert.equal(store.commitCompletedOperation(draft, { expectedGeneration: store.getGeneration() }), true);
 }
 
+test('gallery ordering persists atomically without activating, editing or changing the history of a canvas', () => {
+  const { store, storage, faults, raw } = fixture();
+  addTextModule(store, profile);
+  const second = store.createWorkbench('Second'), third = store.createWorkbench('Third');
+  const ids = [third, FIRST_WORKBENCH_ID, second], before = store.getSnapshot(), activation = store.getActivation(), history = store.getHistory();
+  assert.ok(store.reorderWorkbenches(ids));
+  assert.deepEqual(store.listWorkbenches().map(item => item.id), ids);
+  assert.equal(store.getWorkbenchId(), third); assert.equal(store.getActivation(), activation);
+  assert.deepEqual(store.getSnapshot(), before); assert.deepEqual(store.getHistory(), history);
+  const saved = raw();
+  for (const invalid of [[third], [third, third, second], [third, second, 'workbench:missing']]) assert.equal(store.reorderWorkbenches(invalid), false);
+  faults.write = true;
+  assert.equal(store.reorderWorkbenches([...ids].reverse()), false); assert.equal(raw(), saved);
+  assert.deepEqual(store.listWorkbenches().map(item => item.id), ids);
+  faults.write = false;
+  assert.deepEqual(createSystemWorkflowDraftStore({ profileAddress: profile, storage }).listWorkbenches().map(item => item.id), ids);
+  assert.deepEqual(parseWorkbenchBackup(serializeWorkbenchBackup(store.getBackupSnapshot()), profile).draft.workbenches.map(item => item.id), ids);
+  assert.equal(store.getWorkbenchScope().reorderWorkbenches, undefined, 'modules have no collection reorder authority');
+  storage.setItem(systemWorkflowDraftKey(profile), saved + ' ');
+  assert.equal(store.reorderWorkbenches([...ids].reverse()), false, 'another window blocks stale order writes');
+});
+
+test('overview details belong to the selected Workbench and roundtrip through reload and backup without activating it', () => {
+  const { store, storage, raw } = fixture();
+  addTextModule(store, profile);
+  const second = store.createWorkbench('Second');
+  const active = store.getSnapshot(), activation = store.getActivation(), history = store.getHistory();
+  assert.ok(store.updateWorkbenchDetails(FIRST_WORKBENCH_ID, { name: 'Lunar Desert', introduction: 'A place to begin.\nA second line.' }));
+  assert.equal(store.getWorkbenchId(), second); assert.equal(store.getActivation(), activation);
+  assert.deepEqual(store.getSnapshot(), active); assert.deepEqual(store.getHistory(), history);
+  const beforeRead = raw(), selected = store.readWorkbench(FIRST_WORKBENCH_ID);
+  assert.equal(selected.name, 'Lunar Desert'); assert.equal(selected.draft.texts.length, 1);
+  assert.ok(Object.isFrozen(selected.draft.texts[0].article)); assert.equal(raw(), beforeRead);
+  const reopened = createSystemWorkflowDraftStore({ profileAddress: profile, storage });
+  assert.deepEqual(reopened.readWorkbench(FIRST_WORKBENCH_ID), selected);
+  const backup = parseWorkbenchBackup(serializeWorkbenchBackup(store.getBackupSnapshot()), profile);
+  assert.equal(backup.draft.workbenches[0].introduction, selected.introduction);
+  assert.ok(store.updateWorkbenchDetails(FIRST_WORKBENCH_ID, { name: 'Lunar Desert', introduction: '' }));
+  assert.equal(store.readWorkbench(FIRST_WORKBENCH_ID).introduction, '');
+});
+
+test('details reject invalid input and failed storage without changing saved metadata or content', () => {
+  const { store, faults, raw } = fixture();
+  store.renameWorkbench('Original'); const before = raw();
+  for (const introduction of ['a'.repeat(281), ' padded ', 'bad\u0000text'])
+    assert.throws(() => store.updateWorkbenchDetails(FIRST_WORKBENCH_ID, { name: 'New', introduction }), /280/);
+  faults.write = true;
+  assert.equal(store.updateWorkbenchDetails(FIRST_WORKBENCH_ID, { name: 'New', introduction: 'Unsaved' }), false);
+  assert.equal(raw(), before); assert.equal(store.readWorkbench(FIRST_WORKBENCH_ID).name, 'Original');
+  faults.write = false;
+  assert.ok(store.updateWorkbenchDetails(FIRST_WORKBENCH_ID, { name: 'New', introduction: 'Saved' }));
+});
+
+test('thumbnail framing is per canvas, atomic, reloadable and excluded from composition geometry', () => {
+  const { store, storage, faults, raw } = fixture();
+  addTextModule(store, profile);
+  const other = store.createWorkbench('Other'), original = store.readWorkbench(FIRST_WORKBENCH_ID);
+  const crop = { x: .3, y: .7, zoom: 2 };
+  const details = { name: original.name, introduction: original.introduction, thumbnailCrop: crop };
+  const before = raw(), activation = store.getActivation(), history = store.getHistory();
+  for (const invalid of [{ ...crop, x: -1 }, { ...crop, y: Infinity }, { ...crop, zoom: 5 }, { ...crop, extra: true }]) {
+    assert.throws(() => store.updateWorkbenchDetails(FIRST_WORKBENCH_ID, { ...details, thumbnailCrop: invalid }), /thumbnail crop/);
+    const record = JSON.parse(before); record.workbenches[0].thumbnailCrop = invalid;
+    assert.throws(() => assertValidWorkbenchCollection(record), /thumbnail crop/);
+  }
+  faults.write = true;
+  assert.equal(store.updateWorkbenchDetails(FIRST_WORKBENCH_ID, details), false);
+  assert.equal(raw(), before); assert.equal(store.readWorkbench(FIRST_WORKBENCH_ID).thumbnailCrop, null);
+  faults.write = false; assert.ok(store.updateWorkbenchDetails(FIRST_WORKBENCH_ID, details));
+  crop.x = .9;
+  assert.equal(store.readWorkbench(FIRST_WORKBENCH_ID).thumbnailCrop.x, .3, 'caller changes cannot mutate accepted framing');
+  assert.equal(store.getWorkbenchId(), other); assert.equal(store.getActivation(), activation);
+  assert.deepEqual(store.getHistory(), history);
+  assert.deepEqual(store.readWorkbench(FIRST_WORKBENCH_ID).draft, original.draft);
+  assert.equal(store.readWorkbench(other).thumbnailCrop, null);
+  const reopened = createSystemWorkflowDraftStore({ profileAddress: profile, storage });
+  assert.deepEqual(reopened.readWorkbench(FIRST_WORKBENCH_ID), store.readWorkbench(FIRST_WORKBENCH_ID));
+  const backup = parseWorkbenchBackup(serializeWorkbenchBackup(store.getBackupSnapshot()), profile);
+  assert.deepEqual(backup.draft.workbenches[0].thumbnailCrop, { x: .3, y: .7, zoom: 2 });
+  assert.ok(store.updateWorkbenchDetails(FIRST_WORKBENCH_ID, { name: 'Renamed', introduction: 'Still cropped' }));
+  assert.equal(store.readWorkbench(FIRST_WORKBENCH_ID).thumbnailCrop.zoom, 2, 'editing details retains crop');
+  assert.ok(store.updateWorkbenchDetails(FIRST_WORKBENCH_ID, { ...details, thumbnailCrop: null }));
+  assert.equal(store.readWorkbench(FIRST_WORKBENCH_ID).thumbnailCrop, null);
+});
+
 test('active saves stay detached and atomic across invalid edits, failed writes and Undo', () => {
   const { store, raw, faults, storage } = fixture();
   addTextModule(store, profile);
@@ -239,6 +324,19 @@ test('failed creation, switching and rename preserve accepted bytes, active Work
   assert.equal(raw(), accepted); assert.equal(store.getWorkbenchId(), b);
 });
 
+test('invalid or duplicate generated Workbench IDs cannot write or activate a candidate', () => {
+  const { store, raw } = fixture();
+  store.renameWorkbench('First');
+  const before = raw(), activation = store.getActivation(), history = store.getHistory();
+  for (const id of ['main', '', 'bad/id']) {
+    assert.equal(store.createWorkbench('Second', { generateId: () => id }), false);
+    assert.equal(store.getLastCommitFailure(), 'invalid');
+    assert.equal(raw(), before);
+    assert.equal(store.getActivation(), activation);
+    assert.deepEqual(store.getHistory(), history);
+  }
+});
+
 test('corrupt or externally changed collections are never replaced with an empty Workbench', () => {
   const { store, records, storage, raw } = fixture();
   const b = store.createWorkbench('B'), accepted = store.getDraft();
@@ -346,11 +444,11 @@ test('a Workbench scope exposes only its explicit editing contract, never root l
     'getGeneration', 'getHistory', 'getRecordState', 'getLastCommitFailure', 'isCollection',
     'listWorkbenches', 'getBackupSnapshot', 'subscribe', 'guardWorkbenchTransition',
     'beginHistoryGroup', 'endHistoryGroup', 'undo', 'redo', 'commitCompletedOperation',
-    'retryCompletedOperation', 'restoreBackup', 'createWorkbench', 'switchWorkbench', 'renameWorkbench',
+    'retryCompletedOperation', 'restoreBackup', 'createWorkbench', 'switchWorkbench', 'renameWorkbench', 'leaveWorkbench',
   ].sort());
   assert.ok(Object.isFrozen(scope));
   assert.equal(store.getWorkbenchScope(), scope);
-  for (const name of ['reload', 'setProfileAddress', 'resetCorruptDraft', 'getActivation', 'getWorkbenchScope']) {
+  for (const name of ['reload', 'setProfileAddress', 'resetCorruptDraft', 'getActivation', 'getWorkbenchScope', 'readWorkbench', 'updateWorkbenchDetails']) {
     assert.equal(typeof store[name], 'function', `${name} remains root-owned`);
     assert.equal(scope[name], undefined, `${name} cannot escape the originating activation`);
   }
@@ -415,6 +513,7 @@ const scopedWrites = {
   createWorkbench: scope => scope.createWorkbench('Late Workbench'),
   switchWorkbench: (scope, live) => scope.switchWorkbench(live.listWorkbenches().find(item => item.id !== live.getWorkbenchId()).id),
   renameWorkbench: scope => scope.renameWorkbench('Late rename'),
+  leaveWorkbench: scope => scope.leaveWorkbench(),
 };
 
 for (const departure of ['A to B', 'A to B to A', 'profile A to B', 'profile A to B to A', 'reload', 'editor release', 'editor reacquired']) {

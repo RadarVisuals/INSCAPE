@@ -3,16 +3,6 @@
   "note": "Existing hook observations assigned to concrete plan steps, not certified safe. Exact source bytes and locations are checked. No automatic baseline refresh.",
   "entries": [
     {
-      "file": "src/artwork/ProjectedSvgArtwork.jsx",
-      "ruleId": "react-hooks/exhaustive-deps",
-      "line": 63,
-      "column": 63,
-      "message": "React Hook useLayoutEffect has a missing dependency: 'updatePixelScale'. Either include it or remove the dependency array.",
-      "sourceSha256": "9a4de3db3a3e0c37087fa2c2fa31b87c5d15a487fab0215eff1d4201d4cb1d02",
-      "planStep": "19",
-      "reason": "updatePixelScale is memoized solely by geometry and otherwise reads current refs; geometry changes already replace the subscription. Cleanup is the unsubscribe returned by geometry.subscribe. Evidence: step-19 SVG lifecycle7/7; projection pixel-density tests remain separate. Limits: Current scoped ESLint rerun; source review. Prior browser evidence explicitly identified; no new lifecycle browser run for this proposal."
-    },
-    {
       "file": "src/keeper/KeeperConversation.jsx",
       "ruleId": "react-hooks/exhaustive-deps",
       "line": 81,
@@ -558,9 +548,9 @@
       "line": 50,
       "column": 162,
       "message": "React Hook useCallback has a missing dependency: 'pan'. Either include it or remove the dependency array.",
-      "sourceSha256": "ed430f3fb193d4bcb880303cfe7bc2f8c9d028a91e4223d258270901d265a8ca",
+      "sourceSha256": "e9fa7923cf8623ee31827953fd8c56f717d4270ba2137b2b0a4f0f3ef1ba443e",
       "planStep": "14",
-      "reason": "toggleHand reads only pan.cancel, not other fields of pan. pan.cancel is useWorkbenchPan.finish, a useCallback keyed by update; that exact member is already a dependency. finish consumes active.current, removes its stored pointer/lostcapture handlers and calls afterEnd.current. hand, stopTravel and setInteractionTool are explicit dependencies; editing cancellation reads interaction.current. Independent source/caller review: useWorkbenchNavigation.js35–50; useWorkbenchPan.js finish/cancel; WorkbenchView.jsx navigation caller. No separate browser run by reviewer; final shared verification remains required."
+      "reason": "toggleHand reads only pan.cancel, not other fields of pan. pan.cancel is useWorkbenchPan.finish, a useCallback keyed by update; that exact member is already a dependency. finish consumes active.current, removes its stored pointer/lostcapture handlers and calls afterEnd.current. hand, stopTravel and setInteractionTool are explicit dependencies; editing cancellation reads interaction.current. Independent source/caller review: useWorkbenchNavigation.js35–50; useWorkbenchPan.js finish/cancel; WorkbenchView.jsx navigation caller. No separate browser run by reviewer; final shared verification remains required. Re-reviewed 2026-10-24: only the separate rail-measurement effect changed; these callbacks and their captured member dependencies remain unchanged. No new exception added."
     },
     {
       "file": "src/public/ownerSystemWorkflow/useWorkbenchNavigation.js",
@@ -568,9 +558,9 @@
       "line": 53,
       "column": 6,
       "message": "React Hook useLayoutEffect has a missing dependency: 'pan'. Either include it or remove the dependency array.",
-      "sourceSha256": "ed430f3fb193d4bcb880303cfe7bc2f8c9d028a91e4223d258270901d265a8ca",
+      "sourceSha256": "e9fa7923cf8623ee31827953fd8c56f717d4270ba2137b2b0a4f0f3ef1ba443e",
       "planStep": "14",
-      "reason": "The interaction-tool layout effect uses only pan.cancel from the new per-render pan facade. Its exact member plus stopTravel and interactionTool already invalidate the effect. The call restores a currently active pan via finish(true) and cancels current editing through interaction.current; changing an unrelated facade field must not cancel the gesture. Independent source/caller review: useWorkbenchNavigation.js51–53; useWorkbenchPan.js finish. No separate browser run by reviewer; final shared verification remains required."
+      "reason": "The interaction-tool layout effect uses only pan.cancel from the new per-render pan facade. Its exact member plus stopTravel and interactionTool already invalidate the effect. The call restores a currently active pan via finish(true) and cancels current editing through interaction.current; changing an unrelated facade field must not cancel the gesture. Independent source/caller review: useWorkbenchNavigation.js51–53; useWorkbenchPan.js finish. No separate browser run by reviewer; final shared verification remains required. Re-reviewed 2026-10-24: only the separate rail-measurement effect changed; these callbacks and their captured member dependencies remain unchanged. No new exception added."
     },
     {
       "file": "src/public/ownerSystemWorkflow/useWorkbenchNavigation.js",
@@ -578,29 +568,29 @@
       "line": 60,
       "column": 6,
       "message": "React Hook useEffect has a missing dependency: 'pan'. Either include it or remove the dependency array.",
-      "sourceSha256": "ed430f3fb193d4bcb880303cfe7bc2f8c9d028a91e4223d258270901d265a8ca",
+      "sourceSha256": "e9fa7923cf8623ee31827953fd8c56f717d4270ba2137b2b0a4f0f3ef1ba443e",
       "planStep": "14",
-      "reason": "Blur/visibility listeners capture only pan.cancel and setInteractionTool; both are listed. pan.cancel reaches active.current and restores the saved origin through update, with current afterEnd callback. Cleanup removes those exact listeners before member replacement/unmount. The pan facade has no additional value read here. Independent source/caller review: useWorkbenchNavigation.js54–60; useWorkbenchPan.js finish. No separate browser run by reviewer; final shared verification remains required."
+      "reason": "Blur/visibility listeners capture only pan.cancel and setInteractionTool; both are listed. pan.cancel reaches active.current and restores the saved origin through update, with current afterEnd callback. Cleanup removes those exact listeners before member replacement/unmount. The pan facade has no additional value read here. Independent source/caller review: useWorkbenchNavigation.js54–60; useWorkbenchPan.js finish. No separate browser run by reviewer; final shared verification remains required. Re-reviewed 2026-10-24: only the separate rail-measurement effect changed; these callbacks and their captured member dependencies remain unchanged. No new exception added."
     },
     {
       "file": "src/public/ownerSystemWorkflow/useWorkbenchNavigation.js",
       "ruleId": "react-hooks/exhaustive-deps",
-      "line": 250,
+      "line": 268,
       "column": 6,
       "message": "React Hook useCallback has a missing dependency: 'pan'. Either include it or remove the dependency array.",
-      "sourceSha256": "ed430f3fb193d4bcb880303cfe7bc2f8c9d028a91e4223d258270901d265a8ca",
+      "sourceSha256": "e9fa7923cf8623ee31827953fd8c56f717d4270ba2137b2b0a4f0f3ef1ba443e",
       "planStep": "14",
-      "reason": "resetView reads only pan.cancel, already listed, then resets current presentation callback and camera through separately listed stopTravel,panTo,remember/hostRef and locked/disabled guards. The changing pan facade is not an invalidation. WorkbenchCamera API/cameraMotion members are stable callbacks while camera values are read through getCamera. Independent source/caller review: useWorkbenchNavigation.js246–250; useWorkbenchPan.js; useWorkbenchCameraMotion.js; WorkbenchCamera.jsx. No separate browser run by reviewer; final shared verification remains required."
+      "reason": "resetView reads only pan.cancel, already listed, then resets current presentation callback and camera through separately listed stopTravel,panTo,remember/hostRef and locked/disabled guards. The changing pan facade is not an invalidation. WorkbenchCamera API/cameraMotion members are stable callbacks while camera values are read through getCamera. Independent source/caller review: useWorkbenchNavigation.js246–250; useWorkbenchPan.js; useWorkbenchCameraMotion.js; WorkbenchCamera.jsx. No separate browser run by reviewer; final shared verification remains required. Re-reviewed 2026-10-24: only the separate rail-measurement effect changed; these callbacks and their captured member dependencies remain unchanged. No new exception added."
     },
     {
       "file": "src/public/ownerSystemWorkflow/useWorkbenchNavigation.js",
       "ruleId": "react-hooks/exhaustive-deps",
-      "line": 367,
+      "line": 385,
       "column": 6,
       "message": "React Hook useEffect has missing dependencies: 'hasCapturedPointer' and 'pan'. Either include them or remove the dependency array.",
-      "sourceSha256": "ed430f3fb193d4bcb880303cfe7bc2f8c9d028a91e4223d258270901d265a8ca",
+      "sourceSha256": "e9fa7923cf8623ee31827953fd8c56f717d4270ba2137b2b0a4f0f3ef1ba443e",
       "planStep": "14",
-      "reason": "Wheel listener reads only pan.releaseAbandonedGesture, explicitly listed. That member reads pan active.current and calls the current finish owner. hasCapturedPointer is useCallback([]) and calls captureCheck.current; this effect installs checkCapture there and clears it conditionally on cleanup. The captured-pointer map is owned by this exact effect, with pointer/blur/visibility and wheel/key handlers all removed on rebind. Editing actions use interaction.current. All actual camera/hand/lock/handler members are dependencies. Independent source/caller review: useWorkbenchNavigation.js42–43,265–367; useWorkbenchPan.js releaseAbandonedGesture. No separate browser run by reviewer; final shared verification remains required."
+      "reason": "Wheel listener reads only pan.releaseAbandonedGesture, explicitly listed. That member reads pan active.current and calls the current finish owner. hasCapturedPointer is useCallback([]) and calls captureCheck.current; this effect installs checkCapture there and clears it conditionally on cleanup. The captured-pointer map is owned by this exact effect, with pointer/blur/visibility and wheel/key handlers all removed on rebind. Editing actions use interaction.current. All actual camera/hand/lock/handler members are dependencies. Independent source/caller review: useWorkbenchNavigation.js42–43,265–367; useWorkbenchPan.js releaseAbandonedGesture. No separate browser run by reviewer; final shared verification remains required. Re-reviewed 2026-10-24: only the separate rail-measurement effect changed; these callbacks and their captured member dependencies remain unchanged. No new exception added."
     },
     {
       "file": "src/public/ownerSystemWorkflow/useWorkbenchPreview.js",

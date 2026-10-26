@@ -2,7 +2,7 @@
 
 Ontwerpuitwerking van 20 oktober 2026. **Gekozen:** meerdere benoemde Workbenches per profiel, elk een zelfstandig compositiecanvas; een overzicht en wisselen voor eigenaar én bezoeker. De Library blijft gedeeld. De workflows hieronder zijn voorstellen waar niet uitdrukkelijk als besloten aangeduid. Alleen documentatie is gewijzigd.
 
-**Latere visuele verduidelijking:** [de bundel met 19 screenshots](../../design-references/2026-10-20-inscape-vision/README.md) vult Reception in als vrij te branden bento-grid en toont een afzonderlijke optionele wereldingang rechts ervan. De compositieroute gaat naar overzicht en canvas met camera-index. Keeper krijgt een eigen habitat en kan ook begeleiden; de eerder hieronder vastgelegde ene altijd meereizende Keeper is daarmee te beperkt. Aantal, plaatsing en visitorgedrag zijn nog open. De hier beschreven opslagscope is geen reden om deze nieuwe habitatkeuzes alvast te implementeren.
+**Bijgewerkt op 25 oktober:** de maker heeft de eerdere bundel met screenshots en toelichting laten verwijderen en vervangen door [de Hanssen-referentie](../../design-references/2026-10-25-hanssen/README.md). Die bepaalt de huidige visuele richting voor Reception, compositieoverzicht en gedeelde navigatie. Dit document blijft de workflowuitwerking van 20 oktober; raadpleeg het actieve contract voor latere keuzes en implementatiestatus.
 
 ## Vaststaande richting
 

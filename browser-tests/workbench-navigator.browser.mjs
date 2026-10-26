@@ -36,6 +36,10 @@ for (const theme of ['carbon', 'mist']) for (const [width, height] of [[1440, 90
     assert.equal((await camera(page)).scale, 1.5); assert.deepEqual(await keeper.boundingBox(), k);
     await map.scrollIntoViewIfNeeded(); await settle(page);
     const start = await camera(page), m = await map.boundingBox();
+    assert.equal(await map.evaluate(node => {
+      const r = node.getBoundingClientRect();
+      return node.contains(document.elementFromPoint(r.x + r.width * .7, r.y + r.height * .7));
+    }), true, 'Navigator map remains exposed inside its scrollable window');
     await page.mouse.click(m.x + m.width * .7, m.y + m.height * .7); await settle(page);
     assert.notDeepEqual(await camera(page), start); assert.equal((await camera(page)).scale, 1.5);
     assert.equal(await map.evaluate(n => getComputedStyle(n).outlineStyle), 'none');

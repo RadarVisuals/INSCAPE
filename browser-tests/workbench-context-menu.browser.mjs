@@ -36,10 +36,10 @@ try {
     const { addDisplayModule } = await import('/src/systemWorkflow/displayModuleSession.js');
     addDisplayModule(createSystemWorkflowDraftStore({ profileAddress: profile, storage }));
     const preferences = await import('/src/public/ownerSystemWorkflow/workbenchPreferences.js');
-    preferences.saveWorkbenchPreferences(profile, { ...preferences.DEFAULT_WORKBENCH_PREFERENCES, surfaceId: 'carbon' });
+    preferences.saveWorkbenchPreferences(profile, { ...preferences.DEFAULT_WORKBENCH_PREFERENCES, surfaceId: 'carbon' }, storage);
     const root = createRoot(document.getElementById('root'));
     window.review = { root, storage, profile, getDraft: () => JSON.parse(storage.getItem(systemWorkflowDraftKey(profile))),
-      dockVisible: () => preferences.loadWorkbenchPreferences(profile).dockVisible };
+      dockVisible: () => preferences.loadWorkbenchPreferences(profile, undefined, storage, true).dockVisible };
     const props = { profileAddress: profile, reviewStorage: storage, reviewAssets: fixture.OWNER_SYSTEM_WORKFLOW_REVIEW_ASSETS,
       reviewCategories: [], reviewActivity: [], reviewProfile: { name: 'Menu review' } };
     review.render = key => root.render(React.createElement(Runtime, { ...props, key }));

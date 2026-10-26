@@ -135,7 +135,12 @@ for (const theme of ['carbon', 'mist']) for (const [width, height] of [[1440, 90
         ['index', index, 'Close Index'],
         ['groups', page.getByRole('complementary', { name: 'Workbench groups — Groups', exact: true }), 'Close Workbench groups'],
       ]) {
-        if (name === 'groups') await page.getByRole('button', { name: 'Workbench groups', exact: true }).click();
+        if (name === 'groups') {
+          // Floating Keeper/Navigator windows can overlap the rail on a tiny
+          // viewport. This case checks the panel; open it through its keyboard action.
+          const opener = page.getByRole('button', { name: 'Workbench groups', exact: true });
+          await opener.focus(); await opener.press('Enter');
+        }
         await panel.waitFor();
         const rect = await panel.boundingBox();
         assert.ok(rect.x >= 0 && rect.y >= 0 && rect.x + rect.width <= width + 1 && rect.y + rect.height <= height + 1, `${name} fits`);

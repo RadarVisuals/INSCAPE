@@ -3,6 +3,21 @@ import assert from 'node:assert/strict';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { chromium } from 'playwright-core';
 import { setWorkbenchZoom } from './fixtures/workbench-zoom.mjs';
+// Locate a real, exposed drag point after the browser scrolls the artwork into
+// view. Fixed card offsets can hit the sidebar, attachments or floating tools.
+async function libraryArtworkDragPoint(page, card) {
+  await card.scrollIntoViewIfNeeded();
+  await page.waitForFunction(label => document.querySelector(`[aria-label="${label}"]`)
+    ?.getAttribute('aria-disabled') !== 'true', await card.getAttribute('aria-label'));
+  return card.evaluate(node => {
+    const rect = node.getBoundingClientRect(), x = rect.x + rect.width / 2;
+    for (let y = Math.max(12, rect.y + 24); y < Math.min(innerHeight - 100, rect.bottom); y += 20) {
+      if (node.contains(document.elementFromPoint(x, y))) return { x, y };
+    }
+    throw Error('Artwork card has no exposed drag handle');
+  });
+}
+
 
 const origin = process.env.INSCAPE_IMAGE_ROOT || 'http://127.0.0.1:5197';
 const output = process.env.INSCAPE_BROWSER_OUTPUT || '.browser-test-runtime';
@@ -37,12 +52,16 @@ async function exposedDisplayPoint(page, stage, legacyPoint, name) {
 async function mount(page) {
   await page.route('**/*', route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
   await page.route('https://images.inscape.test/**', route => route.fulfill({ contentType: 'image/jpeg', path: 'browser-tests/fixtures/grid-landscape.jpg' }));
-  await page.route('**/OwnerSystemWorkflowRuntime.jsx*', async route => {
-    const response = await route.fetch();
-    const body = (await response.text()).replace('await decodeOwnerSystemWorkflowAssetDimensions(asset)',
-      'await (globalThis.holdDimensions ? new Promise(resolve => { globalThis.releaseDimensions = () => resolve({width:1920,height:1080,source:asset.src}); }) : decodeOwnerSystemWorkflowAssetDimensions(asset))');
-    await route.fulfill({ response, body });
-  });
+  // Delay the public decoder dependency, not source text inside its caller.
+  // The real decoder still runs when released, including its normal cache.
+  const decoder = `${origin}/src/public/ownerSystemWorkflow/ownerSystemWorkflowAssetDimensions.js`;
+  await page.route(decoder, route => route.fulfill({ contentType: 'text/javascript', body: `
+    import { decodeOwnerSystemWorkflowAssetDimensions as decode } from '${decoder}?drop-decoder-real';
+    export * from '${decoder}?drop-decoder-real';
+    export const decodeOwnerSystemWorkflowAssetDimensions = (...args) => globalThis.holdDimensions
+      ? new Promise(resolve => { globalThis.releaseDimensions = () => resolve(decode(...args)); })
+      : decode(...args);
+  ` }));
   await page.route(`${origin}/__image_drop__`, route => route.fulfill({ contentType: 'text/html', body: '<div id="root"></div>' }));
   await page.goto(`${origin}/__image_drop__`);
   await page.evaluate(async () => {
@@ -79,15 +98,7 @@ async function startDrag(page, point, attachment = false) {
   const library = page.getByRole('region', { name: 'Library workspace' });
   const card = attachment ? library.getByRole('button', { name: 'Image 2 of ABYSSAL STUDY', exact: true })
     : library.getByRole('button', { name: 'ABYSSAL STUDY / INSCAPE STUDIES', exact: true });
-  await card.scrollIntoViewIfNeeded();
-  await page.waitForFunction(label => document.querySelector(`[aria-label="${label}"]`)?.getAttribute('aria-disabled') !== 'true', await card.getAttribute('aria-label'));
-  const origin = await card.evaluate(node => {
-    const rect = node.getBoundingClientRect(), x = rect.x + rect.width / 2;
-    for (let y = Math.max(12, rect.y + 24); y < Math.min(innerHeight - 100, rect.bottom); y += 20) {
-      if (node.contains(document.elementFromPoint(x,y))) return {x,y};
-    }
-    throw Error('Artwork card has no exposed drag handle');
-  });
+  const origin = await libraryArtworkDragPoint(page, card);
   await page.mouse.move(origin.x, origin.y); await page.mouse.down();
   if (!point || typeof point === 'function') {
     // Once dragging begins, Library yields its canvas area to drop targets.
@@ -178,9 +189,14 @@ for (const width of [1440, 700]) test(`Library creates an Image at its preview, 
     await startDrag(page, empty); await page.mouse.up();
     await page.getByRole('button', { name: 'Dismiss notification' }).filter({ hasText: 'Image could not be saved' }).click();
     assert.deepEqual(await page.evaluate(() => window.readDraft()), unchanged);
-    await page.evaluate(() => { window.failSave = false; window.holdDimensions = true; });
+    await page.evaluate(() => {
+      window.failSave = false;
+      window.holdDimensions = true;
+      delete window.releaseDimensions;
+    });
     await startDrag(page, null); await page.mouse.up();
     await page.waitForFunction(() => typeof window.releaseDimensions === 'function');
+    assert.deepEqual(await page.evaluate(() => window.readDraft()), unchanged, 'dimension resolution keeps the drop pending');
     await page.getByRole('button', { name: 'Library', exact: true }).click();
     await page.evaluate(() => window.releaseDimensions()); await settle(page);
     assert.deepEqual(await page.evaluate(() => window.readDraft()), unchanged, 'closed Library cannot finish a delayed drop');

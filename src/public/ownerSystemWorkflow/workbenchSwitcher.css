@@ -14,6 +14,8 @@
   font: 11px/1.5 var(--font-interface);
 }
 .workbench-switcher[hidden] { display: none; }
+/* An open naming form stays above the compact sidebar crossing this corner. */
+.workbench-switcher:has(.workbench-switcher__form) { z-index: 92; }
 .workbench-switcher__row { display: flex; align-items: center; gap: 6px; }
 .workbench-switcher select, .workbench-switcher input {
   min-width: 0;

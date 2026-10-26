@@ -40,6 +40,8 @@ for(const theme of ['carbon','mist']) for(const [width,height] of [[1440,900],[3
   assert.equal(await home.evaluate(hit),true,'Navigator Home is not covered');
   assert.equal(await page.getByRole('button',{name:'Keeper settings',exact:true}).evaluate(hit),true,'Keeper remains reachable');
   if(await button('Expand sidebar').isVisible()) await button('Expand sidebar').click();
+  await page.screenshot({path:`${output}/${theme}-${width}-expanded.png`});
+  await sidebar.screenshot({path:`${output}/${theme}-${width}-navigation.png`});
   assert.equal(await sidebar.getByRole('searchbox',{name:'Filter navigation'}).count(),0);
   await button('Collapse sidebar').click();
   assert.equal(await button('Expand sidebar').evaluate(n=>getComputedStyle(n).outlineStyle),'none','pointer does not leave focus border');
@@ -51,7 +53,7 @@ for(const theme of ['carbon','mist']) for(const [width,height] of [[1440,900],[3
   for(const [label,id] of [['Settings','settings'],['Activity','activity'],['Grids','grids'],['Profile','profile']]) {
    await activate(label);await page.locator(`[data-system-workflow-panel="${id}"] aside`).first().waitFor();
    assert.equal(await button(label).getAttribute('aria-expanded'),'true');
-   await activate('Workbench');await settle(page);
+   await activate('Editor');await settle(page);
    assert.equal(await page.locator(`[data-system-workflow-panel="${id}"]`).count(),0);
   }
   await activate('Discover');
@@ -95,7 +97,7 @@ for(const theme of ['carbon','mist']) for(const [width,height] of [[1440,900],[3
   await page.screenshot({path:`${output}/discover-${theme}-${width}.png`});
   await back.click();await discover.waitFor({state:'detached'});await settle(page);
   assert.equal(await button(width===320?'Expand sidebar':'Discover').evaluate(n=>document.activeElement===n),true,'Discover restores its visible navigation trigger');
-  await activate('Discover');await discover.waitFor();await activate('Workbench');await settle(page);
+  await activate('Discover');await discover.waitFor();await activate('Editor');await settle(page);
   assert.equal(await discover.count(),0,'sidebar remains usable from Discover');
   if(width===1440 || width===390) {
    await button('Publish').click();await page.getByRole('complementary',{name:'Publish profile'}).waitFor();
@@ -113,7 +115,7 @@ for(const theme of ['carbon','mist']) for(const [width,height] of [[1440,900],[3
    await button('Collapse sidebar').click();await settle(page);
    assert.equal(await page.getByRole('region',{name:'Library workspace'}).locator('.lattice-browser-sidebar').count(),1,'collapsing returns categories to Library');
   }
-  await activate('Workbench');await settle(page);
+  await activate('Editor');await settle(page);
   assert.deepEqual(await page.evaluate(()=>window.readToolChromeDraft()),initial,'navigation does not edit the composition');
   assert.deepEqual(errors,[]);
  }finally{await browser.close();}

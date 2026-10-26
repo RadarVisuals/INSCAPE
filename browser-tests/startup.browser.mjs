@@ -30,8 +30,17 @@ test('automatic startup and the editorial landing world through the real App', {
       try { await access(path); edgePath = path; break; } catch { /* Try the next installed browser. */ }
     }
     assert.ok(edgePath, 'Set BROWSER_PATH to an installed Chromium browser');
-    const routeController = createPlaywrightRouteController({ loopbackOrigin: origin,
+    // The real owner's cold Vite graph exceeds the small-fixture default of
+    // 64 in-flight routes. Keep a finite bound without aborting valid imports.
+    const routeController = createPlaywrightRouteController({ loopbackOrigin: origin, maxOutstanding: 256,
       knownOrigins: [], decideKnown: async () => ({ action: 'abort' }) });
+    let peakRoutes = 0;
+    const handleRoute = routeController.handle;
+    routeController.handle = route => {
+      const pending = handleRoute(route);
+      peakRoutes = Math.max(peakRoutes, routeController.outstandingCount());
+      return pending;
+    };
     await launchPlaywrightEdge({ edgePath, runtimePath, workspaceRoot: root, loopbackOrigin: origin,
       routeController, resources, onBrowserProblem: (problem) => problems.push(problem),
       onOwnedProcess: ({ rootPid, processTree }) => {
@@ -45,6 +54,15 @@ test('automatic startup and the editorial landing world through the real App', {
       }`,
     }));
     const page = resources.page;
+    // Preserve the local module URL/status before the browser adapter redacts
+    // generic page errors. This distinguishes a broken fixture from entry logic.
+    page.on('requestfailed', request => {
+      if (request.url().startsWith(origin)) console.error('Startup local request failed:', request.url(), request.failure());
+    });
+    page.on('response', response => {
+      if (response.url().startsWith(origin) && response.status() >= 400)
+        console.error('Startup local response failed:', response.status(), response.url());
+    });
     page.setDefaultTimeout(12_000);
     const open = async (query = '', motion = 'reduce') => {
       await page.emulateMedia({ reducedMotion: motion });
@@ -240,6 +258,9 @@ test('automatic startup and the editorial landing world through the real App', {
         await capture(`${mode}-renderer-error`);
       } finally { await resources.context.unroute(pattern); }
     });
+    console.log(`Startup peak in-flight routes: ${peakRoutes}/256`);
+    assert.deepEqual(problems.filter(problem => problem.startsWith('Route handler:')), [],
+      'The test router must not abort valid module requests or leak unfinished routes');
     assert.deepEqual(problems.filter((problem) => problem.startsWith('Page error:')
       && !problem.includes('Fixture renderer unavailable')), []);
   } catch (error) {

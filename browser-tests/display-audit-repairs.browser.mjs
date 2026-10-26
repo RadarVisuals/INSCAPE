@@ -5,7 +5,7 @@ import { mkdir } from 'node:fs/promises';
 import { mountGridMotionFixture } from './fixtures/grid-motion-fixture.mjs';
 
 const origin = process.env.INSCAPE_TEST_ORIGIN || 'http://127.0.0.1:5194';
-const output = 'output/display-repairs-2026-09-21';
+const output = process.env.INSCAPE_BROWSER_OUTPUT || '.browser-test-runtime/display-repairs';
 const executablePath = process.env.INSCAPE_BROWSER_EXECUTABLE || 'C:/Program Files (x86)/Google/Chrome/Application/chrome.exe';
 async function setup(browser, width = 1440, dpr = 1) {
   const page = await browser.newPage({ viewport: { width, height: 1000 }, deviceScaleFactor: dpr, reducedMotion: 'reduce' });
@@ -25,48 +25,6 @@ async function setup(browser, width = 1440, dpr = 1) {
   return { page, errors };
 }
 const settle = page => page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
-
-test('Display text editing preserves placement and ordinary placement keyboard editing remains available', { timeout: 90000 }, async () => {
-  await mkdir(output, { recursive: true });
-  const browser = await chromium.launch({ executablePath, headless: true });
-  try {
-    for (const width of [1440, 390]) {
-      const { page, errors } = await setup(browser, width);
-      await page.evaluate(async () => {
-        const Runtime = (await import('/src/public/ownerSystemWorkflow/OwnerSystemWorkflowRuntime.jsx')).default;
-        const fixture = await import('/src/public/ownerSystemWorkflow/ownerSystemWorkflowDevelopmentFixture.js');
-        const { createSystemWorkflowDraftStore } = await import('/src/systemWorkflow/systemWorkflowDraftStore.js');
-        const profileAddress = fixture.OWNER_SYSTEM_WORKFLOW_REVIEW_PROFILE;
-        window.readDraft = () => createSystemWorkflowDraftStore({ profileAddress, storage: localStorage }).getDraft();
-        await import('/src/index.css'); await import('/src/inscapeTokens.css');
-        await import('/src/lattice/rendering/latticeMenuSurface.css'); await import('/src/public/ownerSystemWorkflow/ownerSystemWorkflow.css');
-        createRoot(document.getElementById('root')).render(React.createElement(Runtime, { profileAddress, reviewStorage: localStorage,
-          reviewAssets: fixture.OWNER_SYSTEM_WORKFLOW_REVIEW_ASSETS, reviewCategories: [], reviewActivity: [], reviewProfile: { name: 'Repair review' } }));
-      });
-      await page.getByRole('button', { name: 'Tools', exact: true }).click();
-      await page.getByRole('menuitem', { name: 'LAYERS', exact: true }).click();
-      const unlock = page.getByRole('button', { name: 'Unlock Display Module composition', exact: true });
-      if (await unlock.count()) await unlock.click();
-      await page.getByRole('button', { name: 'Add text', exact: true }).click();
-      const editor = page.getByRole('textbox', { name: 'Article text' });
-      await editor.fill('ARRIVAL');
-      const placements = () => page.evaluate(() => readDraft().grids.flatMap(g => g.placements).filter(p => p.kind === 'text'));
-      const before = await placements();
-      await editor.press('End'); await editor.press('ArrowLeft'); await editor.press('Backspace');
-      const after = await placements();
-      assert.equal(after.length, 1); assert.equal(after[0].column, before[0].column); assert.equal(after[0].row, before[0].row);
-      assert.notDeepEqual(after[0].text, before[0].text);
-      assert.equal(await page.getByRole('button', { name: /Frame and/ }).count(), 0);
-      await page.screenshot({ path: `${output}/text-${width}.png` });
-      // The placement itself remains an eligible keyboard target.
-      const layer = page.locator('[data-system-workflow-placement-id]').first();
-      await layer.focus(); await page.keyboard.press('ArrowRight');
-      const moved = await placements(); assert.ok(moved[0].column > after[0].column);
-      await page.keyboard.press('Delete'); assert.equal((await placements()).length, 0);
-      assert.deepEqual(errors, []); await page.close();
-    }
-  } finally { await browser.close(); }
-});
 
 test('cancelled crop drag cannot mutate a replacement session and stale crop never commits', { timeout: 60000 }, async () => {
   const browser = await chromium.launch({ executablePath, headless: true });

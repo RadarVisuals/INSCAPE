@@ -5,6 +5,53 @@ Established: 2026-08-28
 Product clarification: 2026-09-06 — public Workbench and independent modules
 Rollback baseline before the documentation reset: `64458ac`
 
+Preview checkpoint authorization (2026-10-26): the founder requested committing
+and pushing the current implementation to the existing PR #5 preview branch.
+Earlier dated "local/uncommitted" and "no deployment" notes describe those
+individual implementation sessions. This authorization does not merge into
+main or authorize profile publication, uploads or wallet actions.
+
+## Hanssen presentation and navigation direction (2026-10-25)
+
+**Accepted primary design reference; first owner overview slice implemented locally.** The
+founder chose the [Hanssen reference](design-references/2026-10-25-hanssen/README.md)
+as the concrete visual and navigation model connecting Inscape's destinations.
+Use that name in future discussions. Its actual proportions, content hierarchy,
+compact navigation, narrow gaps and rounded panels matter to the direction.
+The former founder screenshot-and-notes packet has been removed at the founder's
+request and is superseded by Hanssen.
+
+- A compact global navigation area stays at the top left: avatar, profile name,
+  About, Canvases, Articles or Blog, and eventually Desktop. This is the common
+  navigation between locations; each location uses the main area for its own
+  content and controls. Articles versus Blog remains an open label.
+- Hanssen's About page is the Reception reference: a chosen identity visual,
+  introduction, links and personal content in related panels. Preserve creator
+  branding and the distinction between verified identity and authored persona.
+- Hanssen's Work page is the composition-overview reference: one large preview
+  beside a compact list of works. Its pointer-driven preview and click-to-open
+  behavior inform the browse, open and explore sequence. Previewing a composition
+  must not activate its editor or change saved content.
+- Opening a work gives its title, description and relevant metadata a deliberate
+  place alongside its content. Adapt the reference to Inscape's live compositions
+  and authored geometry. The template's photography metadata and gallery are
+  examples, not a fixed content model for every composition.
+- Articles or Blog belongs within the same navigation and visual treatment.
+  Its exact presentation is still to be designed around the existing Text work.
+- Desktop is a separate future container for mini-apps and launchers: one large
+  frame with icons and app windows, using the same global navigation. Workbenches
+  remain composition and exploration spaces. **Desktop implementation is deferred**;
+  the immediate focus remains the existing multi-Workbench flow and overview,
+  with Reception connected through this common presentation direction.
+
+The local named-Workbench and overview behavior below remains the implementation
+baseline, including the 25 October overview presentation update. One active composition, reliable saves,
+source identity, private-owner boundaries and explicit publication scope remain
+in force. This decision does not choose a new default landing or implement public
+multi-Workbench publication. Existing composition-tool controls and interface font
+roles remain applicable; Hanssen governs the overall destination presentation and
+navigation as those views are developed.
+
 ## Multiple named Workbenches direction (2026-10-20)
 
 **Engineering preservation clarification (2026-10-23):** the founder authorized
@@ -28,16 +75,15 @@ private Workbenches and unpublished edits are excluded. The Library remains
 shared source material; reusing an asset does not share mutable module content.
 
 The founder initially chose a profile-level Keeper accompanying Workbench
-switching. The later illustrated clarification below supersedes the assumption
-of one always-accompanying Keeper: a home/habitat and optional accompaniment
-are distinct intents; multiple inhabitants remain a possibility to design.
+switching. The Keeper direction below supersedes the assumption of one
+always-accompanying Keeper: a home/habitat and optional accompaniment are
+distinct intents; multiple inhabitants remain a possibility to design.
 Keeper identity/configuration must not be silently duplicated across compositions.
 
-Reception is a desired future profile entrance, but its form and default landing
-are unresolved and need not block composition creation/switching design. A
-Workbench overview does not implicitly approve a new Reception design. Local
-edits in each Workbench must remain saved when working in another; this is
-distinct from deciding which revisions to publish.
+Reception's presentation now follows the Hanssen direction above. Its exact
+editing model and default landing remain to be settled and need not block
+composition creation/switching. Local edits in each Workbench must remain saved
+when working in another; this is distinct from deciding which revisions to publish.
 
 The founder chose an explicit publication-scope choice before publishing: offer
 the current Workbench alone, individually checked other changed Workbenches,
@@ -134,47 +180,218 @@ reconciliation. No visitor overview/switcher, deletion, duplication, public
 routes, Layers/docking migration, cloud sync, upload or wallet action is added.
 See [implementation and current checks](audits/2026-10-20/local-workbenches.md).
 
-## Illustrated Inscape and habitat direction (2026-10-20)
+### Local named-Workbench finishing (2026-10-24)
 
-**Recorded founder intent; design/documentation only.** The founder supplied 19
-screenshots and requested that their explanation be retained for future chats.
-Read the [visual reference packet](design-references/2026-10-20-inscape-vision/README.md)
-and inspect the original images for Reception/navigation/Keeper/world work.
-This section records direction; the packet preserves examples and open choices.
+The founder asked to continue named Workbenches, first checking responsibility
+boundaries, and to sketch the overview afterwards. This pass finishes the
+existing local create/name/switch workflow. The overview and explicit publication
+selection remain separate next steps; no new visitor landing is chosen here.
 
-- Inscape is the profile's overall place and presentation. Reception is a fully
-  branding-friendly, creator-arranged bento grid, not a fixed card with avatar
-  replacement. Figures, portraits, bio, links and chosen metadata illustrate
-  possibilities. Do not automatically fill it with recently added Library art.
-  The precise block editor, identity placement and public landing remain design
-  work; official profile identity and authored persona remain distinct.
-- The ordinary route from Reception leads to a published-content overview and
-  a selected composition. The composition screenshot with camera points is
-  the ordinary canvas/Index experience. Workbench/canvas need not be final
-  visitor-facing names. Example sidebar categories are not a mandatory module
-  or commerce feature list.
-- A separate entrance to the right of Reception is the founder's **optional
-  personal exploration-world study**. Other creators do not need to author one
-  to use Inscape. Illustrated architecture, platforms, scale changes and a
-  Keeper cave reuse source artwork. The desired movement is free, at the
-  visitor's chosen speed, building on existing Keeper motion plus collision and
-  world/camera integration. A mandatory guided route is not the chosen intent.
-  Actor/control details, collision shapes, camera behavior and zoom bounds remain
-  to be designed. Source reuse and bounded zoom do not prove smooth performance.
-- Keeper should have an identifiable, configurable home/habitat where it can
-  remain visible without always following; the founder envisages one or possibly
-  several inhabitants. It may also leave and accompany activity across contexts,
-  including Reception and the overview. Habitat and accompaniment are separate
-  meanings. This refines the earlier shared-Keeper decision; exact count,
-  ownership of habitat placement and visitor behavior remain unresolved.
-- Selling/minting Keepers, their appearances and interior artwork is the
-  founder's creative/commercial ambition. Mint annotations do not authorize a
-  transaction or define protocol, ownership, licenses or current runtime support.
+Naming controls now receive explicit items and actions. An owner adapter supplies
+camera visibility; a separate workflow coordinates live layout, recovery and
+store commands. The existing collection store remains the sole saved authority.
+Rename now commits the current layout and name together, without remounting Text
+or replacing content Undo. Failed saves retain the form and accepted content.
+An open naming form stays above compact navigation, and the existing eight-slot
+limit has a visible explanation. No duplication, deletion, cloud sync, upload,
+wallet action or deployment is added. See the
+[boundary review and verification](audits/2026-10-24/named-workbenches.md).
 
-No public/UI routes, runtime, schema, animations or transactions are introduced
-by preserving this material. Display remains parked and removed Animation/Mirror
-modules are not restored. Future implementation needs its own concrete scope;
-the reference map is not a requirement to mount all these surfaces together.
+### Separate local Workbench overview (2026-10-24)
+
+**Explicitly approved and implemented locally; uncommitted.** Following the
+named-Workbench pass, the founder chose a list of names beside one large selected
+preview, an optional introduction and modest metadata. This supersedes the
+earlier deferral of a local overview, while the spatial neighbouring-canvas
+proposal remains deferred. The overview is a fixed browsing surface, not another
+composition editor or a way to compose compositions.
+
+The owner enters through **Overview** in the local picker or **Canvases** in the
+editor sidebar. The sidebar's former **Workbenches / Workbench** pair is now
+**Canvases / Editor** (25 October): Canvases opens the overview and Editor returns
+to the active composition tools. This terminology distinguishes browsing from
+authoring. The subsequent canvas-inspection slice below makes tile opening a
+viewing action, with a smaller explicit **Edit** action to activate the editor.
+The 25 October Hanssen update replaces the original sidebar and centered layout
+with a large left preview and a right column of composition names and details.
+Hovering a row or focusing it with the keyboard changes only the preview and
+details. Clicking, tapping or pressing Enter on a row opens its fitted canvas
+presentation; **View canvas** provides the same action from its details. Touch
+focus does not change the preview before the tap completes. **New Workbench**
+creates an empty local composition and selects it; opening remains explicit.
+On narrow screens the preview and list stack. The preview fits the saved canvas
+proportions without cropping or changing authored geometry.
+
+The same day's **List / Grid** control keeps that Hanssen list and adds an
+Aerra-inspired responsive gallery of the same saved compositions. Grid tiles
+automatically fill their bounds by centre-cropping the saved canvas. Titles and
+small Edit, Crop and Information actions reveal on hover or keyboard focus.
+Touch reveals them on the first tap and opens on a second tap or View.
+The artwork remains visible beneath a light scrim. Information reveals the
+existing introduction and Edit details inside the tile; the former standalone
+counts/dimensions panel and permanent info icon are removed from Grid.
+**Crop** opens the thumbnail editor directly: drag or use arrow keys to position, zoom from 1–4×,
+then explicitly save. **Auto fill** resets the framing; Cancel discards edits.
+The optional normalized `thumbnailCrop` belongs to that local collection entry
+beside its name/introduction. It survives reload and backup, preserves separate
+canvas crops, and does not alter authored geometry, artwork metadata, editor
+camera or public documents. Failed writes retain the crop form and saved data.
+The crop adapts to the responsive tile's aspect ratio; the manual preview uses
+the current tile ratio. Hanssen's List preview and the opened viewer continue
+to fit the complete canvas. Grid tiles
+open their canvas presentation; the smaller Edit action activates the editor.
+The optional **Wrap** control repeats
+the gallery vertically in both directions, with no automatic movement. It is
+disabled for a single Workbench. Repeated tiles are visual copies, not new
+collection items; keyboard and assistive navigation expose each Workbench once.
+Keyboard browsing remains finite. Turning Wrap off gives a finite gallery for
+all input methods. View and Wrap choices live in the owner profile session and
+survive opening/returning from an editor; they are not saved composition data.
+Hanssen remains the overall navigation reference; Aerra supplies this alternative
+overview layout. See [layout implementation and checks](audits/2026-10-25/overview-layouts/README.md).
+
+The 25 October follow-up adds **Card size** (Small, Medium, Large) and
+**Arrange canvases** inside the same menu. Size changes actual card dimensions,
+including a one-canvas collection; rows do not stretch to cancel that choice.
+It is a profile-local Workbench preference with the existing save/error/retry
+boundary. Arrange temporarily shows one finite collection with drag handles,
+earlier/later buttons and Done; Escape cancels a drag or finishes arrangement.
+Successful drops save the existing collection array order atomically, retain
+the active editor and its history, and appear in List as well as Grid. Failed
+saves leave the accepted order intact and report the error. This adds no second
+composition/order store. Wrap adapts its bounded visual repetitions to the card
+size while retaining one accessible collection and mounting only nearby previews.
+
+The founder's subsequent gallery sketch replaces this overview's top-left
+navigation and separate view toggle with one bottom-centre **INSCAPE** menu.
+It contains avatar/name, **About**, **Canvases**, List/Grid/Wrap and New Workbench,
+using existing profile identity and the existing Reception action. The closed
+menu is the gallery's only persistent control. The menu stays available while
+scrolling; the desktop preview stays beside
+the scrolling list/details. Name/introduction editing locks browsing and exits
+until saved or cancelled. The editor keeps its composition tools and sidebar.
+Reception's own redesign, Articles/Blog, Desktop and global rollout of this
+navigation remain subsequent slices. See the
+[Hanssen overview implementation and checks](audits/2026-10-25/hanssen-overview/README.md).
+
+Names and introductions belong to individual collection items. Introductions
+are optional plain text, limited to 280 characters; absent/empty introductions
+take no space in the reading view. **Edit details** saves name and introduction
+together and retains entered text on failure. Metadata derives content counts
+and canvas dimensions from the saved composition. No invented edit timestamps,
+separate preview cache or new library ownership is added. Card size is the
+explicit local presentation preference described above.
+
+`workbenchOverview/` owns the overview adapter, presentation, preview and pure
+saved-content projection. `OwnerWorkbenchSession` chooses between this view and
+the active editor. Leaving the editor commits its current layout through the
+existing named-Workbench workflow before revoking its scope. Failed saves or
+unfinished edits keep the editor open. Returning to the same Workbench receives
+a fresh scope, so delayed work from before the overview cannot write into it.
+The collection store remains the sole persistence authority; module scopes do
+not expose the overview's collection-wide read/details APIs.
+
+List renders the selected saved composition; Grid projects the bounded local
+collection and mounts previews only near its scrolling viewport. Image, Shape, Text (including linked
+frames) and retained Display first-grid projections reuse existing read-only
+rendering. HTML artwork is represented by its name and bounds; its executable
+runtime opens only inside the Workbench. Previews are inert and contain no
+editing controls. Identity/Keeper screen utilities do not become canvas content.
+The existing local-collection publication gate remains in force. This pass adds
+no public overview, visitor switching, publication selection, Reception redesign,
+cloud sync, upload, wallet action or deployment. See the
+[implementation review and evidence](audits/2026-10-24/workbench-overview.md).
+
+### Local canvas inspection (2026-10-25)
+
+**Founder-approved and implemented locally; uncommitted.** Creation and
+showcasing are separate. A list row or gallery tile now lifts into a fitted
+inspection modal over the blurred overview. Expand fills the app viewport with
+the same viewer and selected camera point. Close returns to the retained gallery
+position and selected row/tile; only the smaller **Edit** action activates the
+saved Workbench and mounts its editor. Failed activation retains the viewer and
+reports the save failure. Browsing requires no save and never changes the active
+Workbench, authored geometry, editor zoom or publication scope.
+
+The complete canvas is the default opening view. Presentation fits its saved
+bounds to the available space without the editor's minimum zoom. Existing named
+Index destinations appear in an optional side drawer and compact numbered strip
+below the controls. They retain their order and saved/follow-group framing,
+using the existing destination resolver; selecting one changes only the view.
+The narrow-screen drawer closes after choosing a point. Camera authoring remains
+in the editor's existing Index. A separately curated artwork sequence remains a
+possible later presentation choice, not part of this implementation.
+
+Compact icon controls reveal **Canvas details** and **Artwork info** on hover,
+keyboard focus or tap/click. Only one information panel is visible at a time;
+Escape dismisses it before the viewer, and reduced motion removes travel.
+The founder explicitly chose Aerra-like translucent glass for these controls.
+The canvas opens with its interface hidden; mouse movement, keyboard navigation
+or a tap reveals the controls over the artwork. Idle controls fade away unless
+an information panel, pointer interaction or keyboard focus needs them. Header,
+footer and optional Index overlay the canvas without reserving artwork space.
+The overview's List/Grid/Wrap controls now sit inside the bottom Inscape menu.
+The grid fills the available viewport, with no reserved header or footer.
+Touch targets and accessible names remain available, with an opaque fallback
+when reduced transparency is requested.
+The latest founder reference supersedes the earlier rim/sheen: the shared
+material follows Aerra's plain dark 50% translucent fill, 10px blur and quiet
+shadow. It has no glossy gradient. Transparent artwork retains its authored
+canvas background. See the [hover/menu follow-up](audits/2026-10-25/gallery-reveal/README.md).
+Canvas title/introduction and derived dimensions/counts come from the existing
+collection entry. Artwork info reuses the existing source dossier and metadata
+component. Its selector lists the source artworks represented in the current
+projection, keeping each creator, description, attributes and provenance
+separate. Repeated placements share one source entry and are highlighted together
+while its information panel is open. These are not merged into composition traits.
+
+The viewer is lazy-loaded and uses the existing read-only composition renderer;
+it adds no second content store, published document, schema or image export.
+Current projection limits still apply: Images show their first side, retained
+Display shows its first Grid, and executable mini-apps remain named placeholders.
+It is a local owner presentation, not the interactive public visitor runtime or
+public multi-Workbench publication. No Reception/Desktop changes, upload,
+wallet request, commit, push or deployment are included. See the
+[implementation and checks](audits/2026-10-25/canvas-presentation/README.md).
+
+The subsequent motion pass follows Aerra's published no-bounce 0.6–0.7-second
+panel springs through native CSS/Web Animations with an approximating settling
+curve. The bottom menu expands as one glass shell; text and details reveal with
+small movement and blur. Its scrollbar is hidden while short-screen scrolling
+remains usable. Details remain mounted for reversible closing, but closed
+content is inert and excluded from accessibility navigation. Canvas lifting,
+returning and expansion have one motion owner: frame bounds, artwork framing
+and backdrop animate together. Interrupted closing samples the current frame
+before replacing the animation. The preview stays at a fixed measurement during
+travel, preventing a second fit animation. Reduced motion removes travel and
+keyboard focus stays within inspection. See
+[motion and arrangement evidence](audits/2026-10-25/presentation-motion/README.md).
+
+The subsequent close/SVG correction keeps the painting clip attached to the
+animated outer frame while its destination fit remains fixed. Closing hides and
+disables the overlay controls immediately. Twenty sampled return frames before
+and after the correction document the former premature thumbnail-sized clip.
+See [close and SVG verification](audits/2026-10-25/canvas-close-svg/README.md).
+
+The subsequent mirrored-image seam correction paints the fitted overview/viewer
+surface in physical pixels and reuses Image's shared-edge rounding for its image
+clips. List, Grid, modal and expanded presentation retain authored dimensions,
+crop, transforms and transparency without adding overlap. Index camera changes
+now use the same interruptible motion owner as opening, closing and expansion;
+the separate canvas CSS transition is removed. This is a local rendering fix,
+not a saved-geometry change. See the
+[seam reproduction and verification](audits/2026-10-25/gallery-image-seams/README.md).
+
+## Keeper and optional exploration direction (2026-10-20)
+
+The Hanssen reference replaces the former visual packet. The separate Keeper
+and exploration intents remain distinct from the current navigation/design task:
+a configurable habitat and optional accompaniment serve different purposes;
+the exact inhabitant count, habitat ownership and visitor behavior remain open.
+An exploration world is optional, with free movement at the visitor's own pace.
+Its actor, collision and camera details require their own scoped design work.
+Keeper/artwork commerce remains a creative ambition rather than transaction
+authority or an implemented protocol. Current trial behavior is recorded below.
 
 ## Reception wireframe replacement (2026-10-20)
 
@@ -915,6 +1132,14 @@ Image and Display render SVG artwork through the same isolated document runtime
 as Identity. Module-owned geometry still determines crop, resize, rotation,
 mirroring and layer order. The document occupies that projected media rectangle
 inside a clipped SVG viewport; it does not receive module editing input.
+Percentage-sized SVG documents use their source viewBox for native document
+layout when larger than the image decoder's default dimensions, with a 4096-pixel
+maximum side for this derived viewport. Fixed-size documents retain their native
+layout. This temporary paint geometry does not rewrite saved placement dimensions,
+crop or metadata. Standard external SVG 1.1 declarations are stripped before
+parsing; other DTDs and internal entity declarations remain rejected. Embedded
+raster layers keep their own source resolution. See the
+[original-asset checks](audits/2026-10-25/canvas-close-svg/README.md).
 Owner, Visitor and enlarged inspection share this rendering path. Display
 prepares SVG documents within its existing bounded five-slot Grid rail while
 the module is visible, so incoming artwork can start before a swipe exposes it.
@@ -1790,6 +2015,11 @@ rewrite, schema migration, publication, upload, deployment, or wallet action.
 
 ## Product hierarchy
 
+The 25 October Hanssen direction defines the overall destinations, including a
+separate deferred Desktop. Older uses of "Workbench" as the containing desktop
+below describe the existing host; they do not merge the future Desktop with a
+composition or require every destination to be a module on its canvas.
+
 INSCAPE is an artist's online desktop: one environment for composing,
 experiencing, and publishing artwork through independent creative modules.
 It begins with the founder's own artistic practice and also accommodates other
@@ -2582,6 +2812,11 @@ See [mini app hosting](MINI_APP_HOSTING.md) for the boundaries and checks.
 
 ### Self-contained HTML artwork (2026-10-14)
 
+**Founder clarification (2026-10-25):** this artwork mode was an experiment, not
+an intended artwork workflow to carry into the Desktop design. The founder uses
+SVG for that case. The description below records existing implementation; this
+clarification does not itself remove code or saved records.
+
 The founder requested a floating Nomad HTML artwork with its animation and
 hideable controls embedded in the file. Mini App settings now offer Transparent
 HTML artwork through optional `surface: 'artwork'`. Missing fields preserve
@@ -3301,6 +3536,11 @@ the initial overview does not introduce a saved curation or layout schema.
 
 ## Visual language
 
+For overall Reception, overview, composition presentation and global navigation,
+use the [Hanssen reference](design-references/2026-10-25-hanssen/README.md) and the
+25 October direction above. The rules below continue to govern existing
+composition tools and shared controls while destination views are developed.
+
 The implementation reference is [INSCAPE design system](design-system/README.md).
 It maps these accepted decisions to the existing production tokens, components,
 patterns and checks. It is derived guidance; this contract remains the sole
@@ -3551,6 +3791,18 @@ exploration-world development remain outside this change. The local verification
 and its limits are recorded in [Navigator evidence](audits/2026-10-23/navigator.md).
 
 ### Workspace sidebar migration (2026-10-23)
+
+**Founder sidebar refinement (2026-10-24):** the supplied screenshot supersedes
+the initial wordmark-as-navigation interpretation. A compact header contains the
+supplied Inscape wordmark and circular logo; the logo is the collapse/expand
+button, replacing the bottom toggle. The supplied wordmark is converted to SVG
+outlines using its original font. Workbench, Grids, Activity and Library form the
+main list; Discover, Preview and Publish follow directly below a divider. Remove
+the old identity card and Workspace, Artwork, Explore and Share headings. The
+sidebar fits its content instead of stretching to a fixed height or pushing the
+footer down; overflow remains bounded and scrollable. Utility actions and the
+Library category host retain their existing behavior. Application and design
+reference share this presentation.
 
 The founder approved continuing with the design-system sidebar after Navigator.
 The owner workspace now uses the reference's flat Carbon/Mist sidebar in place

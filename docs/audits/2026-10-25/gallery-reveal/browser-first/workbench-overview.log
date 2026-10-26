@@ -1,0 +1,133 @@
+TAP version 13
+# Subtest: gallery keeps artwork on hover, reveals bounded titles and actions, and combines navigation in one glass menu
+not ok 1 - gallery keeps artwork on hover, reveals bounded titles and actions, and combines navigation in one glass menu
+  ---
+  duration_ms: 8922.7668
+  type: 'test'
+  location: 'C:\\Users\\Hidden Swarm\\Documents\\ChatGPT\\inscape\\remediation-2026-10-19-shared-checkpoint\\work\\browser-tests\\workbench-overview.browser.mjs:115:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    page.evaluate: Error: Use a Workbench name of 1–64 characters.
+        at assertWorkbenchName (http://127.0.0.1:37261/src/systemWorkflow/domain/workbenchCollection.js:11:40)
+        at Object.createWorkbench (http://127.0.0.1:37261/src/systemWorkflow/systemWorkflowDraftStore.js:304:7)
+        at eval (eval at evaluate (:303:30), <anonymous>:5:20)
+        at UtilityScript.evaluate (<anonymous>:305:16)
+        at UtilityScript.<anonymous> (<anonymous>:1:44)
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    assertWorkbenchName (http://127.0.0.1:37261/src/systemWorkflow/domain/workbenchCollection.js:11:40)
+    Object.createWorkbench (http://127.0.0.1:37261/src/systemWorkflow/systemWorkflowDraftStore.js:304:7)
+    eval (eval at evaluate (:303:30), <anonymous>:5:20)
+    UtilityScript.evaluate (<anonymous>:305:16)
+    UtilityScript.<anonymous> (<anonymous>:1:44)
+    TestContext.<anonymous> (C:\Users\Hidden Swarm\Documents\ChatGPT\inscape\remediation-2026-10-19-shared-checkpoint\work\browser-tests\workbench-overview.browser.mjs:121:16)
+  ...
+# Subtest: canvas inspection fits 5K, reuses source metadata and saved views, and returns without saving or activating
+ok 2 - canvas inspection fits 5K, reuses source metadata and saved views, and returns without saving or activating
+  ---
+  duration_ms: 3789.5772
+  type: 'test'
+  ...
+# Subtest: inspection supports touch details, one info panel and closing during the lift
+ok 3 - inspection supports touch details, one info panel and closing during the lift
+  ---
+  duration_ms: 5860.0191
+  type: 'test'
+  ...
+# Subtest: thumbnail crop supports drag, touch, cancel, failed save, reload and return to automatic fill
+not ok 4 - thumbnail crop supports drag, touch, cancel, failed save, reload and return to automatic fill
+  ---
+  duration_ms: 23685.0983
+  type: 'test'
+  location: 'C:\\Users\\Hidden Swarm\\Documents\\ChatGPT\\inscape\\remediation-2026-10-19-shared-checkpoint\\work\\browser-tests\\workbench-overview.browser.mjs:289:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    locator.tap: Timeout 15000ms exceeded.
+    Call log:
+    [2m  - waiting for getByRole('button', { name: 'Open Workbench 1', exact: true })[22m
+    [2m    - locator resolved to <button tabindex="0" type="button" data-previewed="true" aria-label="Open Workbench 1" data-workbench-id="workbench:main" class="workbench-overview-card-open"></button>[22m
+    [2m  - attempting tap action[22m
+    [2m    2 × waiting for element to be visible, enabled and stable[22m
+    [2m      - element is visible, enabled and stable[22m
+    [2m      - scrolling into view if needed[22m
+    [2m      - done scrolling[22m
+    [2m      - <button tabindex="0" type="button" aria-label="Crop Workbench 1">Crop</button> from <div class="workbench-overview-card-reveal">…</div> subtree intercepts pointer events[22m
+    [2m    - retrying tap action[22m
+    [2m    - waiting 20ms[22m
+    [2m    2 × waiting for element to be visible, enabled and stable[22m
+    [2m      - element is visible, enabled and stable[22m
+    [2m      - scrolling into view if needed[22m
+    [2m      - done scrolling[22m
+    [2m      - <button tabindex="0" type="button" aria-label="Crop Workbench 1">Crop</button> from <div class="workbench-overview-card-reveal">…</div> subtree intercepts pointer events[22m
+    [2m    - retrying tap action[22m
+    [2m      - waiting 100ms[22m
+    [2m    29 × waiting for element to be visible, enabled and stable[22m
+    [2m       - element is visible, enabled and stable[22m
+    [2m       - scrolling into view if needed[22m
+    [2m       - done scrolling[22m
+    [2m       - <button tabindex="0" type="button" aria-label="Crop Workbench 1">Crop</button> from <div class="workbench-overview-card-reveal">…</div> subtree intercepts pointer events[22m
+    [2m     - retrying tap action[22m
+    [2m       - waiting 500ms[22m
+    
+  code: 'ERR_TEST_FAILURE'
+  name: 'TimeoutError'
+  stack: |-
+    revealCard (C:\Users\Hidden Swarm\Documents\ChatGPT\inscape\remediation-2026-10-19-shared-checkpoint\work\browser-tests\workbench-overview.browser.mjs:31:81)
+    async startCrop (C:\Users\Hidden Swarm\Documents\ChatGPT\inscape\remediation-2026-10-19-shared-checkpoint\work\browser-tests\workbench-overview.browser.mjs:299:9)
+    async TestContext.<anonymous> (C:\Users\Hidden Swarm\Documents\ChatGPT\inscape\remediation-2026-10-19-shared-checkpoint\work\browser-tests\workbench-overview.browser.mjs:344:7)
+  ...
+# Subtest: grid wraps both ways without writes, exposes one keyboard collection and remembers its view after opening
+not ok 5 - grid wraps both ways without writes, exposes one keyboard collection and remembers its view after opening
+  ---
+  duration_ms: 3035.2439
+  type: 'test'
+  location: 'C:\\Users\\Hidden Swarm\\Documents\\ChatGPT\\inscape\\remediation-2026-10-19-shared-checkpoint\\work\\browser-tests\\workbench-overview.browser.mjs:353:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    10 !== 32
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 32
+  actual: 10
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///C:/Users/Hidden%20Swarm/Documents/ChatGPT/inscape/remediation-2026-10-19-shared-checkpoint/work/browser-tests/workbench-overview.browser.mjs:388:12)
+    async Test.run (node:internal/test_runner/test:1404:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:969:7)
+  ...
+# Subtest: touch grid handles a single canvas, creation, details and opening without changing saved geometry
+ok 6 - touch grid handles a single canvas, creation, details and opening without changing saved geometry
+  ---
+  duration_ms: 2396.2216
+  type: 'test'
+  ...
+# Subtest: overview browses without activation, saves optional details, and opens only the chosen canvas
+ok 7 - overview browses without activation, saves optional details, and opens only the chosen canvas
+  ---
+  duration_ms: 3899.5197
+  type: 'test'
+  ...
+# Subtest: touch opens a row directly and long names and details stay usable on a narrow screen
+ok 8 - touch opens a row directly and long names and details stay usable on a narrow screen
+  ---
+  duration_ms: 2226.1272
+  type: 'test'
+  ...
+# Subtest: failed departure keeps the live editor and mixed-content previews never start an HTML runtime
+ok 9 - failed departure keeps the live editor and mixed-content previews never start an HTML runtime
+  ---
+  duration_ms: 2860.0381
+  type: 'test'
+  ...
+1..9
+# tests 9
+# suites 0
+# pass 6
+# fail 3
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 56981.0754

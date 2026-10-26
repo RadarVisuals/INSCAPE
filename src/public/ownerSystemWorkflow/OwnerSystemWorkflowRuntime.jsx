@@ -18,7 +18,8 @@ import {
   useState,
   useSyncExternalStore,
 } from 'react';
-import WorkbenchSwitcher from './WorkbenchSwitcher.jsx';
+import OwnerWorkbenchSwitcher from './OwnerWorkbenchSwitcher.jsx';
+import { createNamedWorkbenchActions } from './namedWorkbenchActions.js';
 import WorkbenchToolDocks from './WorkbenchToolDocks.jsx';
 import { useStartupDestinationReady } from '../../startveil/StartupDestinationContext.jsx';
 import { createPortal } from 'react-dom';
@@ -88,6 +89,7 @@ function WorkbenchSession({
   onEnterMyWorld,
   onOpenDiscover,
   onOpenReception,
+  onOpenWorkbenchOverview,
   onPublicationConfirmed,
   profileAddress,
   publishedResolution,
@@ -248,6 +250,19 @@ function WorkbenchSession({
     identityOpen,
   });
   const workbench = workbenchProjection.value;
+  const openWorkbenchOverview = () => {
+    try {
+      createNamedWorkbenchActions({
+        store: sharedStore,
+        projection: workbenchProjection,
+        flushLayout: layoutPersistence.flush,
+        busy: publicationPresence.present || previewSession.preparing || Boolean(preview),
+      }).leave();
+      onOpenWorkbenchOverview();
+    } catch (error) {
+      setNotice(error.message);
+    }
+  };
   const activity = useOwnerSystemWorkflowActivity({
     active: panel === 'activity',
     fixture: reviewActivity,
@@ -439,28 +454,15 @@ function WorkbenchSession({
                   data-previewing={preview ? true : undefined}
                   inert={preview ? '' : undefined}
                 >
-                  <WorkbenchSwitcher
+                  <OwnerWorkbenchSwitcher
+                    onOverview={openWorkbenchOverview}
                     store={sharedStore}
                     navigationRef={workbenchNavigationRef}
                     focusOnMount={focusWorkbench}
                     hidden={Boolean(preview) || panelOccupied}
-                    beforeChange={() => {
-                      if (textRecoveries(sharedStore, profileAddress).length)
-                        throw new Error(TEXT_RECOVERY_MESSAGE);
-                      if (publicationPresence.present || previewSession.preparing)
-                        throw new Error(
-                          'Close publication or finish the preview before switching Workbenches.'
-                        );
-                      if (!workbench)
-                        throw new Error(
-                          workbenchProjection.error || 'The current layout is not ready. Try again.'
-                        );
-                      if (!layoutPersistence.flush())
-                        throw new Error(
-                          'The current layout could not be saved. Retry saving it before switching Workbenches.'
-                        );
-                      return workbench;
-                    }}
+                    projection={workbenchProjection}
+                    flushLayout={layoutPersistence.flush}
+                    busy={publicationPresence.present || previewSession.preparing}
                   />
                   <WorkbenchViewControls
                     hostRef={workspaceRef}
@@ -632,6 +634,7 @@ function WorkbenchSession({
                   )}
                   {workbenchPreferences.dockVisible && (
                     <OwnerSystemWorkflowSidebar
+                      onOverview={openWorkbenchOverview}
                       session={sidebarSession}
                       hostRef={workspaceRef}
                       hidden={Boolean(preview)}

@@ -206,6 +206,14 @@ test(`a failed preference save is visible, retryable and independent of the auth
     await library(page).getByLabel('Card size', { exact: true }).fill('250');
     await page.getByText('Your editor preferences could not be saved. Keep this window open and retry.', { exact: false }).waitFor();
     assert.equal(await library(page).getByLabel('Card size', { exact: true }).inputValue(), '250');
+    // A persistent error must leave the ordinary Library opener usable, too.
+    // R12-OBS01 previously covered this button on short landscape viewports.
+    const opener = page.getByRole('button', { name: 'Artwork library', exact: true });
+    await pointerAction(page, library(page).getByRole('button', { name: 'Close workspace', exact: true }));
+    await library(page).waitFor({ state: 'detached' });
+    await pointerAction(page, opener);
+    await library(page).waitFor();
+    assert.equal(await library(page).getByLabel('Card size', { exact: true }).inputValue(), '250');
     const retry = page.getByRole('button', { name: 'Save current editor preferences', exact: true });
     // Keep the failure in place until the actual retry: a pending layout save
     // could otherwise recover between enabling writes and clicking the button.

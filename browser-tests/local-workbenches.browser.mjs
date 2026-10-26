@@ -166,3 +166,83 @@ test('failed saves and pending Text keep the current Workbench open until recove
     assert.ok(JSON.stringify((await current(page)).texts).includes('Keep this failed edit.'));
   } finally { await browser.close(); }
 });
+
+test('naming validates input, retries failed writes and commits the visible layout without remounting Text', { timeout: 60000 }, async () => {
+  const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
+  try {
+    const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, reducedMotion: 'reduce' });
+    await open(page);
+    const before = await record(page);
+    await rename(page, '   ');
+    await page.getByRole('alert').filter({ hasText: '1–64' }).waitFor();
+    assert.deepEqual(await record(page), before);
+    await page.keyboard.press('Escape');
+    assert.equal(await page.getByLabel('Workbench name', { exact: true }).count(), 0);
+    assert.ok(await page.getByRole('combobox', { name: 'Active Workbench' }).evaluate(node => document.activeElement === node));
+    const header = page.locator('.text-window header[data-workbench-selectable]');
+    const original = await page.locator('.text-window').boundingBox();
+    await header.focus();
+    await page.keyboard.press('ArrowRight');
+    await page.keyboard.press('ArrowRight');
+    await page.keyboard.press('ArrowDown');
+    const moved = await page.locator('.text-window').boundingBox();
+    assert.notEqual(moved.x, original.x);
+    assert.notEqual(moved.y, original.y);
+    await page.evaluate(() => { window.originalTextWindow = document.querySelector('.text-window'); });
+    const beforeRename = await record(page);
+    await failWrites(page, true);
+    await rename(page, 'Lunar Desert');
+    await page.getByRole('alert').filter({ hasText: 'Could not save the Workbench' }).waitFor();
+    assert.deepEqual(await record(page), beforeRename);
+    assert.equal(await page.getByLabel('Workbench name', { exact: true }).inputValue(), 'Lunar Desert');
+    await failWrites(page, false);
+    await page.getByRole('button', { name: 'Save name', exact: true }).click();
+    assert.ok(await page.evaluate(() => window.originalTextWindow === document.querySelector('.text-window')));
+    const saved = await current(page);
+    assert.notDeepEqual(saved.workbench.texts[0].window, before.workbench.texts[0].window);
+    assert.equal((await record(page)).workbenches[0].name, 'Lunar Desert');
+    await page.reload();
+    await page.locator('.text-window').waitFor();
+    assert.deepEqual((await current(page)).workbench, saved.workbench);
+    const reloaded = await page.locator('.text-window').boundingBox();
+    assert.ok(Math.abs(reloaded.x - moved.x) < 1 && Math.abs(reloaded.y - moved.y) < 1);
+  } finally { await browser.close(); }
+});
+
+test('all eight local Workbenches stay reachable, with an explained limit and usable naming forms', { timeout: 60000 }, async () => {
+  const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
+  try {
+    const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, reducedMotion: 'reduce' });
+    await open(page);
+    const firstId = await page.getByRole('combobox', { name: 'Active Workbench' }).inputValue();
+    for (let index = 2; index <= 8; index++) await create(page, `Composition ${index}`);
+    assert.equal(await page.getByRole('combobox', { name: 'Active Workbench' }).locator('option').count(), 8);
+    assert.ok(await page.getByRole('button', { name: 'New', exact: true }).isDisabled());
+    await page.getByText('Saved locally · all 8 Workbench slots are in use.', { exact: true }).waitFor();
+    const lastId = await page.getByRole('combobox', { name: 'Active Workbench' }).inputValue();
+    await page.getByRole('combobox', { name: 'Active Workbench' }).selectOption(firstId);
+    await page.locator('.text-window').waitFor();
+    await page.getByRole('button', { name: 'Rename', exact: true }).click();
+    await page.getByLabel('Workbench name', { exact: true }).fill('Lunar Desert — a long composition name for a narrow screen');
+    await mkdir(output, { recursive: true });
+    for (const width of [1440, 390]) {
+      await page.setViewportSize({ width, height: 900 });
+      const form = page.locator('.workbench-switcher__form');
+      const box = await form.boundingBox();
+      assert.ok(box.x >= 0 && box.x + box.width <= width);
+      assert.ok(await form.evaluate(node => node.scrollWidth <= node.clientWidth));
+      assert.ok(await page.getByLabel('Workbench name', { exact: true }).evaluate(node => {
+        const box = node.getBoundingClientRect();
+        return document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2) === node;
+      }), 'the sidebar cannot cover the name field');
+      await page.screenshot({ path: path.join(output, `workbenches-naming-${width}.png`) });
+    }
+    await page.getByRole('button', { name: 'Save name', exact: true }).click();
+    await page.getByRole('combobox', { name: 'Active Workbench' }).selectOption(lastId);
+    assert.equal(await page.locator('.text-window').count(), 0);
+    await page.reload();
+    await page.getByRole('combobox', { name: 'Active Workbench' }).waitFor();
+    assert.equal(await page.getByRole('combobox', { name: 'Active Workbench' }).inputValue(), lastId);
+    assert.equal((await record(page)).workbenches.length, 8);
+  } finally { await browser.close(); }
+});

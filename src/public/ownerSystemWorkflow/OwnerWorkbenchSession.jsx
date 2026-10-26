@@ -1,9 +1,10 @@
-import { useLayoutEffect, useState, useSyncExternalStore } from 'react';
+import { lazy, Suspense, useLayoutEffect, useState, useSyncExternalStore } from 'react';
 import { beforeProfileEditorRelease } from '../../systemWorkflow/profileEditorLease.js';
 import { SceneNavigationProvider } from '../../text/SceneNavigation.jsx';
 import { createSystemWorkflowDraftStore } from '../../systemWorkflow/systemWorkflowDraftStore.js';
 import { createEditorPreferencesStore } from './editorPreferencesStore.js';
 import { createWorkbenchPreferencesStore } from './workbenchPreferences.js';
+const OwnerWorkbenchOverview = lazy(() => import('../workbenchOverview/OwnerWorkbenchOverview.jsx'));
 
 // Replacing a profile, restored backup or active composition remounts its editor.
 export default function OwnerWorkbenchSession({ component: Session, ...props }) {
@@ -21,6 +22,8 @@ export default function OwnerWorkbenchSession({ component: Session, ...props }) 
 }
 
 function LocalWorkbenchSession({ component: Session, ...props }) {
+  const [overview, setOverview] = useState(false);
+  const [overviewView, setOverviewView] = useState({ layout: 'list', wrap: true });
   const [store] = useState(() =>
     createSystemWorkflowDraftStore({
       profileAddress: props.profileAddress,
@@ -67,10 +70,17 @@ function LocalWorkbenchSession({ component: Session, ...props }) {
     };
   }, [editorPreferences, workbenchPreferenceStore, props.profileAddress]);
   const activation = useSyncExternalStore(store.subscribe, store.getActivation);
+  if (overview) return <Suspense fallback={<p role="status">Opening Workbenches…</p>}>
+    <OwnerWorkbenchOverview store={store} reviewAssets={props.reviewAssets} reviewProfile={props.reviewProfile}
+      preferences={workbenchPreferenceStore}
+      view={overviewView} onViewChange={setOverviewView}
+      onOpen={() => setOverview(false)} onOpenReception={props.onOpenReception} />
+  </Suspense>;
   return (
     <SceneNavigationProvider key={activation}>
       <Session
         {...props}
+        onOpenWorkbenchOverview={() => setOverview(true)}
         editorPreferences={editorPreferences}
         workbenchPreferenceStore={workbenchPreferenceStore}
         sharedStore={store.getWorkbenchScope()}

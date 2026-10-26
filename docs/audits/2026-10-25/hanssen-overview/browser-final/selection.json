@@ -1,0 +1,7 @@
+{
+  "mode": "explicit",
+  "suites": [
+    "workbench-overview",
+    "workbench-sidebar"
+  ]
+}

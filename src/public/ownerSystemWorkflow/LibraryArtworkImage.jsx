@@ -16,7 +16,10 @@ export async function readSvgArtwork(source, signal) {
       chunks.push(value);
     }
   } finally { await reader.cancel(); }
-  const sourceText = await new Blob(chunks).text();
+  // Common vector-editor exports include the standard SVG 1.1 declaration.
+  // Remove only that inert declaration before parsing; never resolve a DTD or
+  // accept internal subsets, custom declarations or entity expansion.
+  const sourceText = (await new Blob(chunks).text()).replace(/<!DOCTYPE\s+svg\s+PUBLIC\s+(["'])-\/\/W3C\/\/DTD SVG 1\.1\/\/EN\1\s+(["'])https?:\/\/www\.w3\.org\/Graphics\/SVG\/1\.1\/DTD\/svg11\.dtd\2\s*>/i, '');
   if (/<!DOCTYPE/i.test(sourceText)) throw new Error('Unsupported SVG document');
   const document = new DOMParser().parseFromString(sourceText, 'image/svg+xml');
   const svg = document.documentElement;

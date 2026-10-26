@@ -1,0 +1,22 @@
+TAP version 13
+# Subtest: vector-editor SVG declarations load without fetching DTDs; custom entities and invalid documents remain rejected
+ok 1 - vector-editor SVG declarations load without fetching DTDs; custom entities and invalid documents remain rejected
+  ---
+  duration_ms: 2077.6517
+  type: 'test'
+  ...
+# Subtest: the deployed artwork host runs SVG scripts with isolated storage, parent and network authority
+ok 2 - the deployed artwork host runs SVG scripts with isolated storage, parent and network authority
+  ---
+  duration_ms: 818.2078
+  type: 'test'
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 2
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 3180.262

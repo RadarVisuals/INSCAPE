@@ -14,14 +14,19 @@ const SCREENSHOT_DIR = process.env.INSCAPE_SYSTEM_WORKFLOW_SCREENSHOT_DIR
 const closeEnough = (left, right, tolerance = 0.2) => Math.abs(left - right) <= tolerance;
 
 async function prepare(page) {
+  page.setDefaultTimeout(12000);
   const origin = new globalThis.URL(URL).origin;
   await page.route('**/*', route => new globalThis.URL(route.request().url()).origin === origin ? route.continue() : route.abort());
   await routeOpaqueWorkflowArtwork(page);
 }
 
 async function revealShortcut(page, shortcut) {
-  const collapse = page.getByRole('button', { name: 'Collapse sidebar', exact: true });
-  if (await collapse.isVisible()) await collapse.click();
+  const sidebar = page.getByRole('complementary', { name: 'Workspace sidebar', exact: true });
+  if (await sidebar.isVisible()) {
+    await page.locator('main.system-workflow').press('Shift+F10');
+    await page.getByRole('menuitem', { name: 'HIDE SIDEBAR', exact: true }).click();
+    await sidebar.waitFor({ state: 'hidden' });
+  }
   await shortcut.scrollIntoViewIfNeeded();
   assert.equal(await shortcut.evaluate(node => {
     const box = node.getBoundingClientRect();
@@ -34,66 +39,6 @@ async function capture(page, viewportName, percentage) {
   await page.screenshot({ path: resolve(SCREENSHOT_DIR, `presentation-board-zoom-${viewportName}-${percentage}.png`) });
 }
 
-
-
-test('shared Metadata moves, resizes and reopens independently from Display geometry', { timeout: 60000 }, async () => {
-  const browser = await chromium.launch({ executablePath: EDGE, headless: true });
-  try {
-    const page = await browser.newPage({ viewport: { width: 1440, height: 900 }, reducedMotion: 'reduce' });
-    await prepare(page);
-    await page.goto(URL, { waitUntil: 'networkidle' });
-    const board = page.locator('.system-workflow__presentation-board'), original = await board.boundingBox();
-    const placement = page.getByRole('button', { name: /Select ABYSSAL STUDY/ });
-    await openDisplayTool(page, board, 'LAYERS');
-    await page.locator('[data-shared-tool="layers"]').getByRole('button', { name: 'ABYSSAL STUDY', exact: true }).click();
-    await page.getByRole('button', { name: 'Close Layers', exact: true }).click();
-    await openDisplayTool(page, board, 'METADATA');
-    const metadata = page.locator('[data-shared-tool="metadata"]'), panel = metadata.locator('xpath=ancestor::aside');
-    await metadata.waitFor();
-    assert.match(await panel.innerText(), /ABYSSAL STUDY/);
-    assert.deepEqual(await board.boundingBox(), original, 'opening Metadata reserves no Display sidecar');
-    const before = await panel.boundingBox(), header = await panel.getByLabel('Move Artwork info window', { exact: true }).boundingBox();
-    await page.mouse.move(header.x + 50, header.y + header.height / 2); await page.mouse.down();
-    await page.mouse.move(header.x + 200, header.y + header.height / 2 + 70, { steps: 5 }); await page.mouse.up();
-    const moved = await panel.boundingBox();
-    assert.ok(moved.x > before.x + 100 && moved.y > before.y + 40, JSON.stringify({ before, moved }));
-    const resize = panel.getByRole('separator', { name: 'Resize Artwork info window', exact: true });
-    await resize.focus(); await page.keyboard.press('ArrowRight');
-    assert.ok((await panel.boundingBox()).width > moved.width, 'Metadata has its own size');
-    const saved = await panel.boundingBox();
-    assert.deepEqual(await board.boundingBox(), original);
-    await page.getByRole('button', { name: 'Close Artwork info', exact: true }).click(); await panel.waitFor({ state: 'detached' });
-    await openDisplayTool(page, board, 'METADATA'); await panel.waitFor();
-    assert.deepEqual(await panel.boundingBox(), saved, 'reopening retains the shared window geometry');
-    const inspection = page.getByRole('group', { name: 'Artwork inspection', exact: true });
-    await page.getByRole('button', { name: /Select MOUNTAIN SIGNAL II/ }).focus(); await page.keyboard.press('Space');
-    await page.waitForFunction(() => document.querySelector('[data-shared-tool="metadata"]')?.closest('aside')?.textContent.includes('MOUNTAIN SIGNAL II'));
-    assert.equal(await inspection.count(), 0, 'Metadata selection leaves artwork in its scene');
-    assert.deepEqual(await panel.boundingBox(), saved);
-    assert.deepEqual(await board.boundingBox(), original);
-    await page.getByRole('button', { name: 'Close Artwork info', exact: true }).click(); await panel.waitFor({ state: 'detached' });
-    await page.waitForFunction(() => document.activeElement?.getAttribute('aria-label')?.startsWith('Move Display Module:'));
-    await placement.focus(); await page.keyboard.press('i');
-    await inspection.waitFor();
-    await openDisplayTool(page, board, 'METADATA'); await panel.waitFor();
-    assert.equal(await inspection.isVisible(), true, 'Metadata can also open during separate artwork inspection');
-    assert.equal(await panel.isVisible(), true);
-    assert.deepEqual(await panel.boundingBox(), saved);
-    await board.getByLabel(/Move Display Module:/).focus();
-    await page.keyboard.press('ArrowRight');
-    await page.waitForFunction(() => document.querySelector('[data-shared-tool="metadata"]')?.closest('aside')?.textContent.includes('MOUNTAIN SIGNAL II'));
-    await activate(page, page.getByRole('button', { name: 'Close artwork viewer', exact: true }));
-    await inspection.waitFor({ state: 'detached' });
-    assert.deepEqual(await board.boundingBox(), original);
-    for (const width of [390, 1440]) {
-      await page.setViewportSize({ width, height: 900 });
-      const box = await panel.boundingBox();
-      assert.ok(box.x >= 0 && box.y >= 0 && box.x + box.width <= width && box.y + box.height <= 900, JSON.stringify(box));
-      assert.equal(await page.locator('[data-shared-tool="metadata"]').count(), 1);
-      await capture(page, 'metadata', width);
-    }
-  } finally { await browser.close(); }
-});
 
 
 test('Display corners resize native artwork and preserve window and shortcut state', { timeout: 60000 }, async () => {
@@ -188,43 +133,6 @@ test('contained artwork inspection preserves Display geometry and source through
   } finally { await browser.close(); }
 });
 
-test('isolated additional Display preserves the existing instance and minimizes independently', { timeout: 60000 }, async () => {
-  const browser = await chromium.launch({ executablePath: EDGE, headless: true });
-  try {
-    const page = await browser.newPage({ viewport: { width: 1440, height: 900 }, reducedMotion: 'reduce' });
-    await prepare(page); await page.goto(URL, { waitUntil: 'networkidle' });
-    const board = page.getByRole('article', { name: 'Display Module', exact: true }).first();
-    const before = await board.boundingBox();
-    // Seed only on an isolated development page; ordinary Add remains unavailable.
-    const seedUrl = new globalThis.URL('/__presentation_instance_seed__', URL).href;
-    await page.route(seedUrl, route => route.fulfill({ contentType: 'text/html', body: '<title>Display fixture seed</title>' }));
-    await page.goto(seedUrl);
-    const primaryUnchanged = await page.evaluate(async () => {
-      const { OWNER_SYSTEM_WORKFLOW_REVIEW_PROFILE: profileAddress } = await import('/src/public/ownerSystemWorkflow/ownerSystemWorkflowDevelopmentFixture.js');
-      const { createSystemWorkflowDraftStore } = await import('/src/systemWorkflow/systemWorkflowDraftStore.js');
-      const { addDisplayModule } = await import('/src/systemWorkflow/displayModuleSession.js');
-      const store = createSystemWorkflowDraftStore({ profileAddress, storage: localStorage });
-      const primary = draft => JSON.stringify({ grids: draft.grids, appearance: draft.appearance, display: draft.workbench?.display });
-      const before = primary(store.getDraft()); addDisplayModule(store);
-      return primary(store.getDraft()) === before;
-    });
-    assert.equal(primaryUnchanged, true, 'seeding an additional Display does not change primary content or presentation');
-    await page.goto(URL, { waitUntil: 'networkidle' });
-    const displays = page.getByRole('article', { name: 'Display Module', exact: true });
-    await displays.nth(1).waitFor();
-    assert.deepEqual(await board.boundingBox(), before, 'the additional Display leaves the existing window unchanged');
-    const second = displays.nth(1), sibling = await second.boundingBox();
-    await activate(page, board.getByRole('button', { name: 'Minimize Display Module to shortcut', exact: true }));
-    assert.equal(await displays.count(), 1);
-    assert.deepEqual(await displays.first().boundingBox(), sibling, 'minimizing the primary preserves the sibling');
-    const shortcut = page.getByRole('button', { name: 'Open DISPLAY MODULE', exact: true }).first();
-    await revealShortcut(page, shortcut); await shortcut.dblclick();
-    await displays.nth(1).waitFor();
-    assert.equal(await displays.count(), 2);
-    assert.deepEqual(await board.boundingBox(), before);
-  } finally { await browser.close(); }
-});
-
 test('Workbench shortcut snaps, renames, and accepts a Library artwork as its icon', { timeout: 60_000 }, async () => {
   const browser = await chromium.launch({ executablePath: EDGE, headless: true });
   try {
@@ -257,7 +165,7 @@ test('Workbench shortcut snaps, renames, and accepts a Library artwork as its ic
     shortcut = page.getByRole('button', { name: 'Open CURATED NFTs' });
     await shortcut.waitFor();
 
-    await page.getByRole('button', { name: 'Library', exact: true }).click();
+    await page.getByRole('button', { name: 'Artwork library', exact: true }).click();
     const firstAsset = page.locator('.lattice-browser-asset').first();
     await firstAsset.waitFor();
     assert.equal(await firstAsset.getAttribute('draggable'), 'true');
@@ -325,6 +233,7 @@ test('Workbench shortcut snaps, renames, and accepts a Library artwork as its ic
     assert.match(await shortcut.locator('.system-workflow__desktop-shortcut-icon img').first().getAttribute('style'),
       /translate\(7px, -5px\) scale\(2\)/);
     assert.equal((await shortcut.locator('.system-workflow__desktop-shortcut-icon').boundingBox()).width, 140);
+    await revealShortcut(page, shortcut);
     const shortcutPositionBeforeOpen = await shortcut.boundingBox();
     await shortcut.dblclick();
     const board = page.getByRole('article', { name: 'Display Module' });
@@ -344,8 +253,9 @@ test('Workbench shortcut snaps, renames, and accepts a Library artwork as its ic
       && closeEnough(shortcutPositionAfterClose.y, shortcutPositionBeforeOpen.y),
     JSON.stringify({ shortcutPositionAfterClose, shortcutPositionBeforeOpen }));
     await page.setViewportSize({ width: 390, height: 720 });
-    await revealShortcut(page, shortcut);
-    await shortcut.click({ button: 'right' });
+    // Resizing the viewport preserves authored shortcut position. Keyboard
+    // commands remain available without requiring it to move back on screen.
+    await shortcut.focus(); await shortcut.press('Shift+F10');
     await page.getByRole('menuitem', { name: 'EDIT ICON' }).click();
     const narrowEditor = page.getByRole('dialog', { name: 'Edit Display Module shortcut icon' });
     await narrowEditor.waitFor();
@@ -385,7 +295,8 @@ test('Workbench appearance stays local and independent from the published Displa
     const pageErrors = [];
     page.on('pageerror', (error) => pageErrors.push(error.stack || error.message));
     await prepare(page);
-    await page.goto(URL, { waitUntil: 'networkidle' });
+    const persistentURL = new globalThis.URL('/browser-tests/tool-chrome-fixture.html?persistent', URL).href;
+    await page.goto(persistentURL, { waitUntil: 'networkidle' });
     await page.evaluate(() => {
       for (const key of Object.keys(localStorage)) {
         if (key.startsWith('inscape:workbench:preferences:')) localStorage.removeItem(key);

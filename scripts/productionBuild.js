@@ -204,7 +204,28 @@ export const PRODUCTION_BUDGETS = Object.freeze({
   // First native build: 2,517,412 raw / 808,294 gzip, versus the prior Info build
   // 2,511,618 / 806,397. Allow 4.5 kB raw / 2.5 kB gzip above the old ceiling;
   // all other limits stay unchanged. Evidence: 2026-10-23/library-preferences.md.
-  coreJavaScript: Object.freeze({ raw: 2_519_500, gzip: 809_500 }),
+  // Local named-Workbench completion adds 359 measured gzip bytes over the
+  // 809,226-byte starting tree. Add 400 bytes, preserving its modest headroom;
+  // the raw ceiling and every loading-boundary budget remain unchanged.
+  // The separate local Workbench overview adds a lazy index, read-only preview
+  // and introduction metadata. First build: 2,530,674 raw / 815,411 gzip across
+  // all non-wallet chunks (this total includes optional routes). Preserve the
+  // initial-load, owner-static and wallet ceilings; bound only the new feature.
+  // Optional gallery view, accessible wrapping and session layout choice: first
+  // native build 2,539,907 raw / 818,669 gzip. Only this aggregate optional-route
+  // budget grows; initial-load, owner-static, wallet and CSS ceilings stay fixed.
+  // Optional canvas inspection, saved framing and existing source metadata:
+  // first native build 2,552,434 raw / 823,153 gzip. Keep initial/owner loading
+  // boundaries and all other ceilings; allow only this measured lazy addition.
+  // Automatic gallery fill and a lazy manual thumbnail crop form, reusing crop
+  // geometry/gestures: 2,559,595 raw / 825,870 gzip. Only this aggregate grows.
+  // Combined gallery navigation and accessible hover/touch actions replace the
+  // old details panel: first native build 2,561,555 raw. Only the aggregate raw
+  // allowance grows by 2 kB; gzip, initial-load and owner-static stay unchanged.
+  // Reversible native presentation motion and saved gallery arrangement/size:
+  // first build 2,569,185 raw / 829,268 gzip. Only the optional-route aggregate
+  // grows; initial, owner-static, wallet and CSS ceilings remain unchanged.
+  coreJavaScript: Object.freeze({ raw: 2_572_000, gzip: 830_500 }),
   // Approved local article fonts plus the creation bar's Inter variable face.
   // Inter and its license/provenance add 357,042 bytes; measured copied assets:
   // 17,811,402 bytes. Retain the previous margin, rounded up by less than 3 kB.

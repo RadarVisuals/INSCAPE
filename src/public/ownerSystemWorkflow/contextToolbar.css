@@ -47,7 +47,3 @@
 @media (pointer: coarse), (max-width: 520px) {
   .context-action-bar { --context-action-target: var(--control-target-touch); }
 }
-@media (max-height: 540px) {
-  /* Use the available lower space on short screens even without action rows. */
-  .system-workflow[data-creation-toolbar] { --workbench-toolbar-offset: 0px; }
-}

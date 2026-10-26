@@ -1,4 +1,9 @@
 .system-workflow[data-creation-toolbar] { --workbench-toolbar-clearance: 60px; --workbench-toolbar-offset: 75px; }
+@media (max-height: 540px) {
+  /* Rail spacing belongs here, not to the optional context-action toolbar.
+     Leave usable height for floating tools on short screens. */
+  .system-workflow[data-creation-toolbar] { --workbench-toolbar-offset: 0px; }
+}
 .workbench-view-controls { position: fixed; z-index: 82; right: 12px; bottom: calc(var(--workflow-dock-height, 40px) + 8px); display: flex; gap: 2px; flex-wrap: wrap; max-width: calc(100% - 24px); padding: calc(var(--control-inset) - 1px); border: 1px solid var(--tactile-edge); border-radius: var(--control-shell-radius); background: var(--tactile-face); color: var(--tactile-ink); font: var(--workflow-type-control);
   --view-control-target: var(--control-target-toolbar);
   box-sizing: border-box; }
@@ -66,4 +71,4 @@
 }
 
 /* An open Canvas menu stays above the screen utilities. */
-.workbench-view-controls:has(.workbench-canvas-tools) { z-index: 87; }
+.workbench-view-controls:has(.workbench-canvas-tools) { z-index: 100; }

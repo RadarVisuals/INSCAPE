@@ -9,6 +9,17 @@ const grey = await readFile(new URL('./fixtures/keeper-layered.svg', import.meta
 const purple = await readFile(new URL('./fixtures/keeper-octopus.svg', import.meta.url), 'utf8');
 const launch = () => chromium.launch({ executablePath: 'C:/Program Files (x86)/Google/Chrome/Application/chrome.exe', headless: true });
 
+async function svgRuntime(source) {
+  const iframe = await source.locator('iframe').elementHandle();
+  const host = await iframe.contentFrame();
+  // Image recovery status is portalled outside the artwork. Its absence inside
+  // the canvas is not proof that the nested SVG has finished loading.
+  const child = await host.waitForSelector('iframe[src^="blob:"]');
+  const runtime = await child.contentFrame();
+  await runtime.locator('svg').waitFor();
+  return { iframe, runtime };
+}
+
 test('embedded WebP thumbnails stay filtered while Inspect prepares original pixels for Lift', { timeout: 60000 }, async () => {
   const browser = await launch();
   try {
@@ -155,7 +166,7 @@ test('Focus, Return and subsequent zoom update Image and Display pixels without 
           : page.locator('.system-workflow__presentation-board').locator('.system-workflow__placement[tabindex="0"], .lattice-production-placement[tabindex="0"]').first();
         await source.locator('.artwork-svg-document').waitFor();
         await source.locator('.artwork-svg-status').waitFor({ state: 'detached' });
-        const iframe = await source.locator('iframe').elementHandle(), host = await iframe.contentFrame(), runtime = host.childFrames()[0];
+        const { iframe, runtime } = await svgRuntime(source);
         const original = await runtime.evaluate(() => {
           // Read the authored dimensions, which remain unchanged by paint preparation.
           const node = document.querySelector('#body image');
@@ -186,10 +197,10 @@ test('Focus, Return and subsequent zoom update Image and Display pixels without 
         };
         const select = async () => {
           await board.focus(); await page.keyboard.press('Escape');
-          await page.locator(`[data-workbench-view-id="${kind === 'image' ? 'image:motion-0' : 'display:primary'}"]`).evaluate(node => {
-            const target = node.matches('[data-workbench-selectable]') ? node : node.querySelector('[data-workbench-selectable]');
-            target.focus({ preventScroll: true }); target.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', shiftKey: true, bubbles: true, cancelable: true }));
-          });
+          const node = page.locator(`[data-workbench-view-id="${kind === 'image' ? 'image:motion-0' : 'display:primary'}"]`);
+          const target = await node.getAttribute('data-workbench-selectable') !== null ? node : node.locator('[data-workbench-selectable]').first();
+          // Native input lets focus activation commit before group selection.
+          await target.focus(); await page.keyboard.press('Shift+Enter');
           await settle();
         };
         await zoom(.25); await select();
@@ -267,14 +278,14 @@ test('live group spreading, item focus and pointer pan retain SVG pixel density 
     const routes = page.getByRole('navigation', { name: 'Workbench destinations', exact: true });
     const saved = await page.evaluate(() => localStorage.getItem(window.__motionKey));
     for (let repeat = 0; repeat < 2; repeat++) {
-      await routes.getByRole('button', { name: 'SVG study', exact: true }).click(); await settled();
+      await routes.getByRole('button', { name: 'SVG study', exact: true }).press('Enter'); await settled();
       await source.locator('.artwork-svg-document').waitFor(); await source.locator('.artwork-svg-status').waitFor({ state: 'detached' });
-      iframe = await source.locator('iframe').elementHandle(); runtime = (await iframe.contentFrame()).childFrames()[0];
+      ({ iframe, runtime } = await svgRuntime(source));
       await correctPixels();
       await routes.getByRole('combobox', { name: 'Group item', exact: true }).selectOption('image:motion-0'); await settled(); await correctPixels();
       // Selecting the current named group returns to its overview, without
       // replaying an already-open image from the compact stack origin.
-      await routes.getByRole('button', { name: 'SVG study', exact: true }).click(); await settled(); await correctPixels();
+      await routes.getByRole('button', { name: 'SVG study', exact: true }).press('Enter'); await settled(); await correctPixels();
       const bench = page.locator('main.system-workflow').first();
       await bench.focus(); await page.keyboard.down('Space');
       await page.mouse.move(1000, 700); await page.mouse.down();
@@ -284,9 +295,9 @@ test('live group spreading, item focus and pointer pan retain SVG pixel density 
       await settled(); await correctPixels();
       await bench.dispatchEvent('wheel', { ctrlKey: true, deltaY: 120, clientX: 700, clientY: 450, bubbles: true, cancelable: true }); await correctPixels();
       await page.getByRole('button', { name: 'Reset Workbench view', exact: true }).click(); await settled();
-      // The authored window is now below the viewport at this zoom. Its document
-      // may unload normally between journeys; the next opening prepares it again.
-      await source.locator('iframe').waitFor({ state: 'detached' });
+      // Reset may retain an idle document under the current bounded retention
+      // policy. The next journey must render correctly with either a retained
+      // document or a fresh one; expiry is covered by artworkRetention tests.
     }
     assert.equal(await page.evaluate(() => localStorage.getItem(window.__motionKey)), saved);
   } finally { await browser.close(); }

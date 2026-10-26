@@ -1,0 +1,5 @@
+
+> underneath-os@0.0.0 design-system:check
+> node scripts/designSystemInventory.js --check
+
+Design-system inventory checked: { files: 79, definitions: 570, names: 290 }

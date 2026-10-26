@@ -1,0 +1,116 @@
+TAP version 13
+# Subtest: gallery keeps artwork on hover, reveals bounded titles and actions, and combines navigation in one glass menu
+not ok 1 - gallery keeps artwork on hover, reveals bounded titles and actions, and combines navigation in one glass menu
+  ---
+  duration_ms: 8933.5132
+  type: 'test'
+  location: 'C:\\Users\\Hidden Swarm\\Documents\\ChatGPT\\inscape\\remediation-2026-10-19-shared-checkpoint\\work\\browser-tests\\workbench-overview.browser.mjs:115:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+    
+    + null
+    - 'Edit Horizon'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'Edit Horizon'
+  actual: ~
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///C:/Users/Hidden%20Swarm/Documents/ChatGPT/inscape/remediation-2026-10-19-shared-checkpoint/work/browser-tests/workbench-overview.browser.mjs:162:12)
+    async Test.run (node:internal/test_runner/test:1404:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3)
+  ...
+# Subtest: canvas inspection fits 5K, reuses source metadata and saved views, and returns without saving or activating
+ok 2 - canvas inspection fits 5K, reuses source metadata and saved views, and returns without saving or activating
+  ---
+  duration_ms: 3858.1776
+  type: 'test'
+  ...
+# Subtest: inspection supports touch details, one info panel and closing during the lift
+ok 3 - inspection supports touch details, one info panel and closing during the lift
+  ---
+  duration_ms: 5789.162
+  type: 'test'
+  ...
+# Subtest: thumbnail crop supports drag, touch, cancel, failed save, reload and return to automatic fill
+not ok 4 - thumbnail crop supports drag, touch, cancel, failed save, reload and return to automatic fill
+  ---
+  duration_ms: 3180.2602
+  type: 'test'
+  location: 'C:\\Users\\Hidden Swarm\\Documents\\ChatGPT\\inscape\\remediation-2026-10-19-shared-checkpoint\\work\\browser-tests\\workbench-overview.browser.mjs:289:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+    
+    + null
+    - 'Open Workbench 1'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'Open Workbench 1'
+  actual: ~
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///C:/Users/Hidden%20Swarm/Documents/ChatGPT/inscape/remediation-2026-10-19-shared-checkpoint/work/browser-tests/workbench-overview.browser.mjs:331:14)
+    async Test.run (node:internal/test_runner/test:1404:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:969:7)
+  ...
+# Subtest: grid wraps both ways without writes, exposes one keyboard collection and remembers its view after opening
+not ok 5 - grid wraps both ways without writes, exposes one keyboard collection and remembers its view after opening
+  ---
+  duration_ms: 3040.1248
+  type: 'test'
+  location: 'C:\\Users\\Hidden Swarm\\Documents\\ChatGPT\\inscape\\remediation-2026-10-19-shared-checkpoint\\work\\browser-tests\\workbench-overview.browser.mjs:353:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    [{"name":"Open Workbench 1","cycle":"0"},{"name":null},{"name":"Open Study 2","cycle":"0"},{"name":null},{"name":"Open Study 3","cycle":"0"},{"name":null},{"name":"Open Study 4","cycle":"0"},{"name":null},{"name":"Open Study 5","cycle":"0"},{"name":null},{"name":"Open Study 6","cycle":"0"},{"name":null},{"name":"Open Study 7","cycle":"0"},{"name":null},{"name":"Open Study 8","cycle":"0"},{"name":null},{"name":null},{"name":"Inscape menu"},{"name":"Open Workbench 1","cycle":"0"},{"name":null},{"name":"Open Study 2","cycle":"0"},{"name":null},{"name":"Open Study 3","cycle":"0"},{"name":null},{"name":"Open Study 4","cycle":"0"},{"name":null},{"name":"Open Study 5","cycle":"0"},{"name":null},{"name":"Open Study 6","cycle":"0"},{"name":null},{"name":"Open Study 7","cycle":"0"},{"name":null}]
+    
+    10 !== 32
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 32
+  actual: 10
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///C:/Users/Hidden%20Swarm/Documents/ChatGPT/inscape/remediation-2026-10-19-shared-checkpoint/work/browser-tests/workbench-overview.browser.mjs:388:12)
+    async Test.run (node:internal/test_runner/test:1404:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:969:7)
+  ...
+# Subtest: touch grid handles a single canvas, creation, details and opening without changing saved geometry
+ok 6 - touch grid handles a single canvas, creation, details and opening without changing saved geometry
+  ---
+  duration_ms: 2393.5145
+  type: 'test'
+  ...
+# Subtest: overview browses without activation, saves optional details, and opens only the chosen canvas
+ok 7 - overview browses without activation, saves optional details, and opens only the chosen canvas
+  ---
+  duration_ms: 3912.1844
+  type: 'test'
+  ...
+# Subtest: touch opens a row directly and long names and details stay usable on a narrow screen
+ok 8 - touch opens a row directly and long names and details stay usable on a narrow screen
+  ---
+  duration_ms: 2226.8499
+  type: 'test'
+  ...
+# Subtest: failed departure keeps the live editor and mixed-content previews never start an HTML runtime
+ok 9 - failed departure keeps the live editor and mixed-content previews never start an HTML runtime
+  ---
+  duration_ms: 2827.5693
+  type: 'test'
+  ...
+1..9
+# tests 9
+# suites 0
+# pass 6
+# fail 3
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 36481.2509

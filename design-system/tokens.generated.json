@@ -4,9 +4,9 @@
   "systemVersion": "1.0.0",
   "note": "Generated from production and design-system reference CSS. Reference roles are preview-only. Values remain CSS expressions, with selector and media scopes; this is not a DTCG interchange file. Runtime custom properties and local overrides are included and are not automatically public design tokens.",
   "counts": {
-    "files": 79,
-    "definitions": 570,
-    "names": 290
+    "files": 83,
+    "definitions": 598,
+    "names": 302
   },
   "sources": [
     {
@@ -78,7 +78,7 @@
     {
       "path": "design-system/navigationPreview.css",
       "role": "Reference local",
-      "sha256": "648a50156371d0d8ef6cc6af9b5907af8cdc62b82c9878cbde99f588c788a719",
+      "sha256": "c3385174738caf1597afdc6aa12aa80631a260693695ce985af99a7ec08ec043",
       "definitions": [
         {
           "name": "--workspace-navigation-width",
@@ -3108,7 +3108,7 @@
     {
       "path": "src/public/ownerSystemWorkflow/contextToolbar.css",
       "role": "Local",
-      "sha256": "a410d2d6a100584a32059910f2579d882c5e6baa809032635d1d5117d02dd033",
+      "sha256": "273f56ac419665b6f617819f1334697373cfb8f34766fb36b9e527975687e125",
       "definitions": [
         {
           "name": "--context-action-target",
@@ -3132,16 +3132,6 @@
           "references": [
             "--control-target-touch"
           ]
-        },
-        {
-          "name": "--workbench-toolbar-offset",
-          "value": "0px",
-          "scope": [
-            "@media (max-height: 540px)",
-            ".system-workflow[data-creation-toolbar]"
-          ],
-          "line": 52,
-          "references": []
         }
       ],
       "references": [
@@ -5123,7 +5113,7 @@
     {
       "path": "src/public/ownerSystemWorkflow/workbenchSidebar.css",
       "role": "Local",
-      "sha256": "9520488dcaeb4250dac8a1554709e30b77fdb9dfc0e0a9f689fa10f2ed2a6c9e",
+      "sha256": "791d48d1a4650fc50233a33a609d58f02ed18bf0e4ea756602d6e3f187f93e6d",
       "definitions": [],
       "references": [
         "--sidebar-bottom",
@@ -5146,7 +5136,7 @@
     {
       "path": "src/public/ownerSystemWorkflow/workbenchSwitcher.css",
       "role": "Local",
-      "sha256": "09de235af590d916b0a68bc5b13d1b7bcc186eafae4de0164bcc3d62429e26ce",
+      "sha256": "6cf54f8bf5fc944837611b08e2a67e868b54e1e038f09366d8e145e0f78b867c",
       "definitions": [],
       "references": [
         "--color-focus",
@@ -5713,7 +5703,7 @@
     {
       "path": "src/public/ownerSystemWorkflow/workbenchView.css",
       "role": "Host",
-      "sha256": "4415aa514bddcaac8bd0b9cd01af517f5efc1c2e6821ee9efdebb788cf1d6674",
+      "sha256": "8ab9c7a3b45fa3adbbc2edb07eae600a6321a7d5019327d2d555885534bacb94",
       "definitions": [
         {
           "name": "--workbench-toolbar-clearance",
@@ -5734,12 +5724,22 @@
           "references": []
         },
         {
+          "name": "--workbench-toolbar-offset",
+          "value": "0px",
+          "scope": [
+            "@media (max-height: 540px)",
+            ".system-workflow[data-creation-toolbar]"
+          ],
+          "line": 5,
+          "references": []
+        },
+        {
           "name": "--view-control-target",
           "value": "var(--control-target-toolbar)",
           "scope": [
             ".workbench-view-controls"
           ],
-          "line": 3,
+          "line": 8,
           "references": [
             "--control-target-toolbar"
           ]
@@ -5751,7 +5751,7 @@
             "@media (pointer: coarse), (max-width: 520px)",
             ".workbench-view-controls"
           ],
-          "line": 12,
+          "line": 17,
           "references": [
             "--control-target-touch"
           ]
@@ -6777,7 +6777,7 @@
     {
       "path": "src/public/ownerSystemWorkflow/workspaceNavigation.css",
       "role": "Local",
-      "sha256": "b29c0ddc8f52d1d782f154a79df052d9f85a957b80bd98e2646d0c3e66f5523d",
+      "sha256": "2ad982ebc6af062088ce08fdfec96cbe9b567300e989536dc0cd799cf1c093b3",
       "definitions": [
         {
           "name": "--workflow-panel",
@@ -6785,7 +6785,7 @@
           "scope": [
             ".workspace-navigation .workspace-library-navigation"
           ],
-          "line": 171,
+          "line": 170,
           "references": [
             "--tactile-face"
           ]
@@ -6796,7 +6796,7 @@
           "scope": [
             ".workspace-navigation .workspace-library-navigation"
           ],
-          "line": 171,
+          "line": 170,
           "references": [
             "--tactile-ink"
           ]
@@ -6807,7 +6807,7 @@
           "scope": [
             ".workspace-navigation .workspace-library-navigation"
           ],
-          "line": 172,
+          "line": 171,
           "references": [
             "--tactile-muted"
           ]
@@ -6818,7 +6818,7 @@
           "scope": [
             ".workspace-navigation .workspace-library-navigation"
           ],
-          "line": 172,
+          "line": 171,
           "references": [
             "--tactile-edge"
           ]
@@ -6829,7 +6829,7 @@
           "scope": [
             ".workspace-navigation .workspace-library-navigation"
           ],
-          "line": 173,
+          "line": 172,
           "references": [
             "--tactile-edge"
           ]
@@ -6840,18 +6840,263 @@
           "scope": [
             ".workspace-navigation .workspace-library-navigation"
           ],
-          "line": 173,
+          "line": 172,
           "references": [
             "--tactile-hover"
           ]
         }
       ],
       "references": [
-        "--control-height-sm",
         "--control-radius",
         "--control-shell-radius",
         "--font-interface",
         "--font-technical",
+        "--space-1",
+        "--space-2",
+        "--tactile-edge",
+        "--tactile-face",
+        "--tactile-hover",
+        "--tactile-ink",
+        "--tactile-muted"
+      ]
+    },
+    {
+      "path": "src/public/publicationConfirmation.css",
+      "role": "Local",
+      "sha256": "37ac3ec381193f5c191f09fa6bf85c2b8f1496132dca9695c980c7aca63c27bc",
+      "definitions": [],
+      "references": [
+        "--tactile-hover",
+        "--tactile-ink",
+        "--tactile-muted"
+      ]
+    },
+    {
+      "path": "src/public/workbenchOverview/canvasPresentation.css",
+      "role": "Local",
+      "sha256": "bb69cd446a3838fb179488833cce487392abcb455322d2dce38ba19375b1d1c8",
+      "definitions": [
+        {
+          "name": "--tactile-ink",
+          "value": "var(--overview-glass-ink)",
+          "scope": [
+            ".canvas-presentation"
+          ],
+          "line": 1,
+          "references": [
+            "--overview-glass-ink"
+          ]
+        },
+        {
+          "name": "--tactile-muted",
+          "value": "#c6c7c7",
+          "scope": [
+            ".canvas-presentation"
+          ],
+          "line": 1,
+          "references": []
+        },
+        {
+          "name": "--presentation-height",
+          "value": "max(min(320px, 86dvh), min(86dvh, calc(88vw / var(--canvas-ratio))))",
+          "scope": [
+            ".canvas-presentation-surface"
+          ],
+          "line": 6,
+          "references": [
+            "--canvas-ratio"
+          ]
+        },
+        {
+          "name": "--presentation-height",
+          "value": "calc(100dvh - 16px)",
+          "scope": [
+            ".canvas-presentation[data-expanded] .canvas-presentation-surface"
+          ],
+          "line": 7,
+          "references": []
+        },
+        {
+          "name": "--presentation-height",
+          "value": "max(min(320px, 92dvh), min(92dvh, calc((100vw - 24px) / var(--canvas-ratio))))",
+          "scope": [
+            "@media (max-width: 800px)",
+            ".canvas-presentation-surface"
+          ],
+          "line": 54,
+          "references": [
+            "--canvas-ratio"
+          ]
+        }
+      ],
+      "references": [
+        "--canvas-ratio",
+        "--control-radius",
+        "--control-shell-radius",
+        "--font-technical",
+        "--overview-ease",
+        "--overview-glass",
+        "--overview-glass-edge",
+        "--overview-glass-filter",
+        "--overview-glass-ink",
+        "--overview-glass-shadow",
+        "--overview-panel-duration",
+        "--overview-radius",
+        "--presentation-height",
+        "--space-2",
+        "--tactile-edge",
+        "--tactile-face",
+        "--tactile-hover",
+        "--tactile-ink",
+        "--tactile-muted",
+        "--tactile-well"
+      ]
+    },
+    {
+      "path": "src/public/workbenchOverview/thumbnailCrop.css",
+      "role": "Local",
+      "sha256": "02f6feb8de334ac4242f8ae0731626274df9dab5887a52678f7faefaa8ee8fb6",
+      "definitions": [],
+      "references": [
+        "--overview-radius",
+        "--tactile-ink",
+        "--tactile-muted",
+        "--thumbnail-ratio"
+      ]
+    },
+    {
+      "path": "src/public/workbenchOverview/workbenchOverview.css",
+      "role": "Local",
+      "sha256": "45ab40dfe5e3ca3c36a6aa49ee2aa811b355a1138e504e05aa2502d2aab67fad",
+      "definitions": [
+        {
+          "name": "--overview-ease",
+          "value": "cubic-bezier(.16,1,.3,1)",
+          "scope": [
+            ".workbench-overview"
+          ],
+          "line": 3,
+          "references": []
+        },
+        {
+          "name": "--overview-menu-duration",
+          "value": "600ms",
+          "scope": [
+            ".workbench-overview"
+          ],
+          "line": 3,
+          "references": []
+        },
+        {
+          "name": "--overview-panel-duration",
+          "value": "700ms",
+          "scope": [
+            ".workbench-overview"
+          ],
+          "line": 3,
+          "references": []
+        },
+        {
+          "name": "--overview-radius",
+          "value": "calc(var(--control-shell-radius) + var(--space-1))",
+          "scope": [
+            ".workbench-overview"
+          ],
+          "line": 3,
+          "references": [
+            "--control-shell-radius",
+            "--space-1"
+          ]
+        },
+        {
+          "name": "--overview-glass",
+          "value": "rgb(12 14 15 / 50%)",
+          "scope": [
+            ".workbench-overview"
+          ],
+          "line": 3,
+          "references": []
+        },
+        {
+          "name": "--overview-glass-ink",
+          "value": "#f4f4f2",
+          "scope": [
+            ".workbench-overview"
+          ],
+          "line": 3,
+          "references": []
+        },
+        {
+          "name": "--overview-glass-edge",
+          "value": "transparent",
+          "scope": [
+            ".workbench-overview"
+          ],
+          "line": 3,
+          "references": []
+        },
+        {
+          "name": "--overview-glass-filter",
+          "value": "blur(10px)",
+          "scope": [
+            ".workbench-overview"
+          ],
+          "line": 3,
+          "references": []
+        },
+        {
+          "name": "--overview-glass-shadow",
+          "value": "0 10px 30px rgb(11 7 30 / 10%)",
+          "scope": [
+            ".workbench-overview"
+          ],
+          "line": 3,
+          "references": []
+        },
+        {
+          "name": "--overview-glass",
+          "value": "rgb(12 14 15)",
+          "scope": [
+            "@media (prefers-reduced-transparency: reduce)",
+            ".workbench-overview"
+          ],
+          "line": 109,
+          "references": []
+        },
+        {
+          "name": "--overview-glass-filter",
+          "value": "none",
+          "scope": [
+            "@media (prefers-reduced-transparency: reduce)",
+            ".workbench-overview"
+          ],
+          "line": 109,
+          "references": []
+        },
+        {
+          "name": "--overview-glass-shadow",
+          "value": "none",
+          "scope": [
+            "@media (prefers-reduced-transparency: reduce)",
+            ".workbench-overview"
+          ],
+          "line": 109,
+          "references": []
+        }
+      ],
+      "references": [
+        "--control-radius",
+        "--control-shell-radius",
+        "--control-target-touch",
+        "--font-interface",
+        "--font-technical",
+        "--overview-ease",
+        "--overview-glass",
+        "--overview-glass-filter",
+        "--overview-glass-ink",
+        "--overview-glass-shadow",
+        "--overview-menu-duration",
+        "--overview-radius",
         "--space-1",
         "--space-2",
         "--space-3",
@@ -6864,14 +7109,130 @@
       ]
     },
     {
-      "path": "src/public/publicationConfirmation.css",
+      "path": "src/public/workbenchOverview/workbenchOverviewGrid.css",
       "role": "Local",
-      "sha256": "37ac3ec381193f5c191f09fa6bf85c2b8f1496132dca9695c980c7aca63c27bc",
-      "definitions": [],
+      "sha256": "ab8e966509ff4f4c586bf80ed33c491d1af2c62e1944fd59bb80b3236dff3b82",
+      "definitions": [
+        {
+          "name": "--gallery-columns",
+          "value": "3",
+          "scope": [
+            "@media (max-width: 1600px)",
+            ".workbench-overview-gallery"
+          ],
+          "line": 38,
+          "references": []
+        },
+        {
+          "name": "--gallery-columns",
+          "value": "2",
+          "scope": [
+            "@media (max-width: 1000px)",
+            ".workbench-overview-gallery"
+          ],
+          "line": 41,
+          "references": []
+        },
+        {
+          "name": "--gallery-columns",
+          "value": "1",
+          "scope": [
+            "@media (max-width: 520px)",
+            ".workbench-overview-gallery"
+          ],
+          "line": 49,
+          "references": []
+        },
+        {
+          "name": "--gallery-columns",
+          "value": "5",
+          "scope": [
+            ".workbench-overview-gallery[data-card-size=\"1\"]"
+          ],
+          "line": 52,
+          "references": []
+        },
+        {
+          "name": "--gallery-height",
+          "value": "40dvh",
+          "scope": [
+            ".workbench-overview-gallery[data-card-size=\"1\"]"
+          ],
+          "line": 52,
+          "references": []
+        },
+        {
+          "name": "--gallery-columns",
+          "value": "2",
+          "scope": [
+            ".workbench-overview-gallery[data-card-size=\"3\"]"
+          ],
+          "line": 53,
+          "references": []
+        },
+        {
+          "name": "--gallery-height",
+          "value": "78dvh",
+          "scope": [
+            ".workbench-overview-gallery[data-card-size=\"3\"]"
+          ],
+          "line": 53,
+          "references": []
+        },
+        {
+          "name": "--gallery-columns",
+          "value": "4",
+          "scope": [
+            "@media (max-width: 1600px)",
+            ".workbench-overview-gallery[data-card-size=\"1\"]"
+          ],
+          "line": 66,
+          "references": []
+        },
+        {
+          "name": "--gallery-columns",
+          "value": "3",
+          "scope": [
+            "@media (max-width: 1000px)",
+            ".workbench-overview-gallery[data-card-size=\"1\"]"
+          ],
+          "line": 67,
+          "references": []
+        },
+        {
+          "name": "--gallery-columns",
+          "value": "1",
+          "scope": [
+            "@media (max-width: 1000px)",
+            ".workbench-overview-gallery[data-card-size=\"3\"]"
+          ],
+          "line": 67,
+          "references": []
+        },
+        {
+          "name": "--gallery-columns",
+          "value": "2",
+          "scope": [
+            "@media (max-width: 520px)",
+            ".workbench-overview-gallery[data-card-size=\"1\"]"
+          ],
+          "line": 68,
+          "references": []
+        }
+      ],
       "references": [
-        "--tactile-hover",
-        "--tactile-ink",
-        "--tactile-muted"
+        "--gallery-columns",
+        "--gallery-height",
+        "--overview-ease",
+        "--overview-glass",
+        "--overview-glass-filter",
+        "--overview-glass-ink",
+        "--overview-radius",
+        "--space-2",
+        "--space-3",
+        "--tactile-edge",
+        "--tactile-face",
+        "--tactile-well"
       ]
     },
     {

@@ -10,6 +10,8 @@ import { projectArtworkInRectangle } from '../../lattice/rendering/latticeProduc
 import { projectSystemWorkflowViewport, projectSystemWorkflowPlacement } from '../../systemWorkflow/systemWorkflowViewportProjection.js';
 import { latticeSurfaceColor } from '../../lattice/rendering/latticeGeometry.js';
 
+const sameGeometry = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+
 function ImageMiniature({ source, width, height }) {
   const side = source.side, media = side?.asset?.media;
   const [failed, setFailed] = useState(null);
@@ -51,7 +53,7 @@ function DisplayMiniature({ source, frame }) {
     })}
   </div>;
 }
-export default memo(function WorkbenchMiniature({ item }) {
+export default memo(function WorkbenchMiniature({ item, paint }) {
   const { source, id, scale = 1 } = item;
   const frame = { ...item.frame, width: item.frame.width / scale, height: item.frame.height / scale };
   let content;
@@ -64,6 +66,6 @@ export default memo(function WorkbenchMiniature({ item }) {
     content = <div className="text-module-body" style={{ ...textWindowStyle(article), ...textOutputStyle(article, frame),
       '--workbench-content-scale': 1, '--workbench-content-width': `${frame.width}px`, '--workbench-paint-width': `${frame.width}px`, '--workbench-paint-height': `${frame.height}px` }}><ArticleView article={article} flow={flow} /></div>;
   } else content = <span>{source?.name || item.name || 'Content'}</span>;
-  return <div data-navigator-object={id} className={`navigator-object${source ? '' : ' navigator-object--missing'}`} style={{ ...item.frame, '--workbench-content-scale': 1, '--workbench-density': 1 }}>
-    <div className="navigator-object-content" style={{ width: frame.width, height: frame.height, transform: `scale(${scale})` }}>{content}</div></div>;
-}, (a, b) => a.item.source === b.item.source && a.item.scale === b.item.scale && JSON.stringify(a.item.frame) === JSON.stringify(b.item.frame) && a.item.name === b.item.name);
+  return <div data-navigator-object={id} className={`navigator-object${source ? '' : ' navigator-object--missing'}`} style={{ ...item.frame, ...paint, '--workbench-content-scale': 1, '--workbench-density': 1 }}>
+    <div className="navigator-object-content" style={{ width: paint?.width ?? frame.width, height: paint?.height ?? frame.height, transform: paint ? undefined : `scale(${scale})` }}>{content}</div></div>;
+}, (a, b) => a.item.source === b.item.source && a.item.scale === b.item.scale && sameGeometry(a.item.frame, b.item.frame) && a.item.name === b.item.name && sameGeometry(a.paint, b.paint));
