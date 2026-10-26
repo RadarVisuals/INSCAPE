@@ -11,6 +11,65 @@ Earlier dated "local/uncommitted" and "no deployment" notes describe those
 individual implementation sessions. This authorization does not merge into
 main or authorize profile publication, uploads or wallet actions.
 
+## Static customizable Reception bento direction (2026-10-26)
+
+**Accepted implementation scope, not yet implemented.** The founder approved
+replacing the fixed Reception wireframe with an editable, static bento. The
+current task prepares its implementation handoff and a source checkpoint; the
+following implementation must inspect and replace the existing path throughout
+its actual dependencies rather than layer another implementation over it.
+The detailed execution brief is
+[Static Reception bento implementation handoff](handoffs/2026-10-26-static-reception-bento.md).
+That brief operationalizes this decision; this contract remains product authority.
+
+- Start from one empty region. Split a selected region side by side or above
+  and below; drag dividers to change proportions; move or swap module placements;
+  merge adjacent regions whose union is a rectangle. Removing content retains
+  its empty region. Structural edits must not silently destroy module content.
+- Expose authored radius, gutter and padding. Gutter separates regions; padding
+  separates a region's content from its edge. Global padding can be overridden
+  per region, with horizontal and vertical content alignment and full-bleed media.
+- Follow the actual Hanssen About presentation: compact branded navigation,
+  generous content, narrow consistent gaps, convex outside corners and concave
+  junctions where the navigation or an identity label occupies a cutout. The
+  founder's close-up and light/dark captures are preserved in the
+  [bento reference packet](design-references/2026-10-26-bento/README.md).
+  This explicitly authorizes the rounded presentation geometry; it does not
+  replace the shared editor control design system.
+- Keep logo/name, available destination tabs and light/dark appearance coherent
+  with that frame. Authored branding stays distinct from verified UP identity.
+  Reuse existing working routes; do not ship inactive Articles/Desktop tabs or
+  expand this into a redesign of the already working gallery/viewer.
+- Regions host supported module content through existing content and rendering
+  boundaries. Initial real Image/Text and existing identity/link presentation
+  should work. Preserve source identity and provenance. Display remains retained
+  and parked; its reactivation, linked movement and new Video/music modules are
+  separate future work.
+- The mobile presentation shares content with desktop but has its own readable
+  arrangement. Default to vertical flow; allow the owner to adjust mobile order,
+  sizes and suitable side-by-side combinations through the layout editor.
+  This is a responsive variant of Reception, not the removed Mobile module or
+  an authorization to implement full Workbench editing on phones.
+- Reuse the canonical profile-scoped draft, editing lease, completed-operation
+  history, save/recovery and explicit public projection. Owner editing, local
+  preview and verified public rendering must have one bento layout/render path
+  with different capabilities. Public inspection never reads private drafts.
+- Replace superseded Reception UI, CSS, validators/projections, storage paths,
+  fixtures, tests, design-system examples and current documentation as required
+  by the actual dependency trace. Keep no hidden old-bento fallback, feature
+  flag, duplicate renderer or CSS override stack. Preserve unrelated Workbench
+  grids, retained Display, Gallery, Keeper and current user data. Historical
+  audit evidence is not an active fallback and is not to be purged.
+- No new bento animation, scroll-driven geometry, GSAP dependency or motion
+  configuration belongs in this slice. Existing intrinsic artwork behavior and
+  unrelated gallery/viewer motion are outside this change. The founder has sent
+  a GSAP licensing inquiry; no permission has been received or assumed here.
+
+The existing fixed wireframe and its selection-only Reception schema remain the
+observed baseline until this replacement is implemented and verified. Update
+those implementation descriptions when delivery actually happens. Source
+checkpointing does not back up browser drafts or prove release readiness.
+
 ## Published canvas gallery (2026-10-26)
 
 The founder requested completing mobile visitor access to the existing gallery.
