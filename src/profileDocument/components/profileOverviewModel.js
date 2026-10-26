@@ -3,7 +3,7 @@ import { createDefaultWorkbenchPresentation } from '../domain/workbenchPresentat
 // Project module instances, retaining their complete authored scene sequence.
 // Shared publication facts stay public; no draft, camera or layout writes.
 export function publicDisplayModules(document) {
-  const { displays, miniApps, texts, imageModules, shapes, keeperDocks, workbenchGroups, reception, ...shared } = document;
+  const { displays, miniApps, texts, imageModules, shapes, keeperDocks, workbenchGroups, reception, canvas, canvases, ...shared } = document;
   return [{ id: 'display:primary', geometry: document.geometry, appearance: document.appearance, grids: document.grids }, ...(displays || [])]
     .filter(module => module.grids.length > 0).map(module => {
       const presentation = module.id === 'display:primary' ? document.workbench?.display

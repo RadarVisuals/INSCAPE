@@ -92,13 +92,13 @@ export default function CanvasPresentation({ selected, model, origin, onClose, o
             viewport={viewport} region={destination?.view || model.area} highlights={source?.frames} presenting />
         </div>
         <footer className={chromeClass('footer')} inert={chromeVisible ? undefined : ''}>
-          <button type="button" className="canvas-presentation-edit" aria-label="Edit canvas" title="Edit canvas" onClick={edit}><Pencil size={15} /><span>Edit</span></button>
+          {onEdit && <button type="button" className="canvas-presentation-edit" aria-label="Edit canvas" title="Edit canvas" onClick={edit}><Pencil size={15} /><span>Edit</span></button>}
           <div className="canvas-presentation-controls">
             <div className="canvas-presentation-tools">
               <Reveal label="Canvas details" icon={Info} active={reveal === 'canvas'} onActivate={() => setReveal('canvas')}>
                 <h2>{selected.name}</h2><p>{selected.introduction || 'No description yet.'}</p>
                 <dl><div><dt>Canvas</dt><dd>{model.area.width} × {model.area.height}</dd></div><div><dt>Contains</dt><dd>{model.contains}</dd></div></dl>
-                {model.interactive && <p className="canvas-presentation-note">Interactive apps are shown as placeholders here. Open the editor to use them.</p>}
+                {model.interactive && <p className="canvas-presentation-note">Interactive apps are shown as placeholders in this preview.</p>}
               </Reveal>
               <Reveal label="Artwork info" icon={Tags} active={reveal === 'artwork'} onActivate={() => setReveal('artwork')}>
                 <label className="canvas-presentation-source">Artwork<select aria-label="Artwork source" value={source?.id || ''} onChange={event => setSourceId(event.target.value || null)}>

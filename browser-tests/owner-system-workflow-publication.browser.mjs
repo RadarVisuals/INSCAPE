@@ -74,7 +74,7 @@ test('System Workflow publication opens the canonical v9 rack without external m
     await rack.waitFor();
 
     await rack.getByRole('button', { name: 'Prepare publication' }).click();
-    assert.match(await rack.getByRole('status').innerText(), /ready to be made public/u);
+    await rack.getByRole('status').filter({ hasText: /ready to be made public/u }).waitFor();
     assert.equal(await rack.getByRole('button', { name: 'Make presentation public' }).isEnabled(), true);
     assert.equal(await rack.getByRole('button', { name: 'Publish to profile' }).count(), 0,
       'the wallet action is not presented before exact-byte verification');

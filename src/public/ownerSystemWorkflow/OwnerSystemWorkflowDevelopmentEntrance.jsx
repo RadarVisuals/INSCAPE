@@ -13,6 +13,7 @@ export default function OwnerSystemWorkflowDevelopmentEntrance() {
   return <OwnerSystemWorkflowShell ownerAuthoringEnabled workspaceProfileAddress={OWNER_SYSTEM_WORKFLOW_REVIEW_PROFILE} viewedProfileAddress={OWNER_SYSTEM_WORKFLOW_REVIEW_PROFILE}
     reviewStorage={storage} reviewAssets={OWNER_SYSTEM_WORKFLOW_REVIEW_ASSETS} reviewCategories={OWNER_SYSTEM_WORKFLOW_REVIEW_CATEGORIES}
     reviewActivity={OWNER_SYSTEM_WORKFLOW_REVIEW_ACTIVITY}
+    publishedResolution={{ status: 'UNAVAILABLE' }}
     reviewProfile={{
       name: 'RADAR VISUALS',
       avatarUrl: null,

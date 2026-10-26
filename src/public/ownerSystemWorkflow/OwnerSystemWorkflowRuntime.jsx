@@ -222,9 +222,7 @@ function WorkbenchSession({
     close: closePublication,
     toggle: togglePublication,
   } = useWorkbenchPublicationPanel({
-    isCollection: sharedStore.isCollection,
     closePanel: panels.closePanel,
-    onNotice: setNotice,
   });
   const panel = panels.activePanel;
   const libraryOpen = panels.isPanelOpen('library');
@@ -743,6 +741,7 @@ function WorkbenchSession({
                   {publicationPresence.present && (
                     <Suspense fallback={null}>
                       <OwnerSystemWorkflowPublicationRack
+                        store={sharedStore}
                         assetRecords={canonicalRecords}
                         getWalletPublicationContext={getWalletPublicationContext}
                         menuSurface={menuSurface}
@@ -770,11 +769,7 @@ function WorkbenchSession({
                         workbench={workbench}
                         onSaveWorkbench={() => workbenchController.saveWorkbench(workbench)}
                         preparationError={
-                          sharedStore.isCollection()
-                            ? 'Publishing multiple Workbenches is not available yet.'
-                            : pendingText.length
-                              ? TEXT_RECOVERY_MESSAGE
-                              : workbenchProjection.error
+                          pendingText.length ? TEXT_RECOVERY_MESSAGE : workbenchProjection.error
                         }
                       />
                     </Suspense>

@@ -205,11 +205,12 @@ export function buildProfileDocumentV9({
 
 export function countProfileDocumentV9Assets(document) {
   const value = assertValidProfileDocumentV9(document);
-  return value.grids.reduce((total, grid) => total + grid.placements.length, 0)
+  const countCanvas = value => value.grids.reduce((total, grid) => total + grid.placements.length, 0)
     + (value.metadata.worldCover?.grid.placements.length || 0)
-    + (value.identityPresentation.avatar.asset ? 1 : 0)
     + (value.workbench?.display.shortcut.icon ? 1 : 0)
     + (value.displays || []).reduce((sum, module) => sum + module.grids.reduce((count, grid) => count + grid.placements.length, 0), 0)
     + (value.workbench?.displays || []).filter(module => module.shortcut.icon).length
-    + keeperReferenceCount(value.keeperDocks) + imageReferenceCount(value.imageModules);
+    + imageReferenceCount(value.imageModules);
+  return countCanvas(value) + (value.canvases || []).reduce((sum, item) => sum + countCanvas(item.content), 0)
+    + (value.identityPresentation.avatar.asset ? 1 : 0) + keeperReferenceCount(value.keeperDocks);
 }

@@ -64,20 +64,20 @@ export default function WorkbenchOverview({ items, selected, model, previews, vi
     <OverviewNavigation profile={profile} address={selected.draft.profileAddress} disabled={Boolean(editing)}
       onAbout={onOpenReception} onCanvases={() => requestAnimationFrame(() => focusSelected({ preventScroll: true }))}
       view={view} onViewChange={next => { setError(''); onViewChange(next); }} count={items.length} triggerRef={menuButton}
-      arranging={arranging} onArrange={() => setArranging(!arranging)} cardSize={cardSize} onCardSize={onCardSize}
-      onCreate={() => { returnFocus.current = menuButton.current; setEditing('new'); }} />
+      arranging={arranging} onArrange={onReorder ? () => setArranging(!arranging) : undefined} cardSize={cardSize} onCardSize={onCardSize}
+      onCreate={onCreate ? () => { returnFocus.current = menuButton.current; setEditing('new'); } : undefined} />
     <main className="workbench-overview-main">
       {grid ? <Suspense fallback={<p role="status">Opening gallery…</p>}><div className="workbench-overview-grid-host" inert={editing ? '' : undefined}>
         <WorkbenchOverviewGrid items={previews} selectedId={selected.id} wrap={view.wrap} hostRef={list}
           cardSize={cardSize} arranging={arranging} onFinishArrange={() => { setArranging(false); requestAnimationFrame(() => menuButton.current?.focus()); }} onReorder={ids => run(() => onReorder(ids))}
-          onOpen={open} onEdit={id => run(() => onEdit(id))} onManage={manage} />
+          onOpen={open} onEdit={onEdit ? id => run(() => onEdit(id)) : undefined} onManage={onSave ? manage : undefined} />
       </div></Suspense> : <section ref={stage} className="workbench-overview-stage" aria-label="Composition preview">
         <WorkbenchOverviewPreview key={selected.id} model={model} name={selected.name} surfaceId={selected.draft.appearance.surfaceId} />
         <div className="workbench-overview-caption"><span>{selected.name}</span><span>Preview</span></div>
       </section>}
       <div className="workbench-overview-content">
         <header className="workbench-overview-heading"><h1>Canvases</h1>
-          <div><p>Your compositions, all in one place.</p><span>{items.length} {items.length === 1 ? 'Workbench' : 'Workbenches'}</span></div>
+          <div><p>{onEdit ? 'Your compositions, all in one place.' : 'Published compositions.'}</p><span>{items.length} {items.length === 1 ? 'Canvas' : 'Canvases'}</span></div>
         </header>
         {!grid && <nav className="workbench-overview-list" aria-label="Named Workbenches" ref={list}>
           {items.map((item, index) => <button type="button" key={item.id} data-previewed={selected.id === item.id} disabled={Boolean(editing)}
@@ -91,11 +91,11 @@ export default function WorkbenchOverview({ items, selected, model, previews, vi
             onCancel={closeForm} onSave={thumbnailCrop => { onSave({ name: selected.name, introduction: selected.introduction, thumbnailCrop }); closeForm(); }} /></Suspense>
             : editing ? <DetailsForm key={`${selected.id}:${editing}`} creating={editing === 'new'} selected={selected} onCancel={closeForm}
             onSave={details => { if (editing === 'new') onCreate(details.name); else onSave(details); closeForm(); }} />
-            : <><div className="workbench-overview-description"><div className="workbench-overview-title"><h2>{selected.name}</h2><button type="button" ref={editButton} onClick={event => manage(selected.id, 'details', event.currentTarget)}>Edit details</button></div>
+            : <><div className="workbench-overview-description"><div className="workbench-overview-title"><h2>{selected.name}</h2>{onSave && <button type="button" ref={editButton} onClick={event => manage(selected.id, 'details', event.currentTarget)}>Edit details</button>}</div>
               {selected.introduction && <p className="workbench-overview-introduction">{selected.introduction}</p>}
               {model.interactive && <p className="workbench-overview-preview-note">Interactive artwork runs when you open the Workbench.</p>}
               <div className="workbench-overview-actions"><button type="button" className="workbench-overview-primary" onClick={event => open(selected.id, event.currentTarget)}>View canvas<ArrowUpRight size={16} aria-hidden="true" /></button>
-                <button type="button" onClick={() => run(() => onEdit(selected.id))}>Edit canvas</button></div>
+                {onEdit && <button type="button" onClick={() => run(() => onEdit(selected.id))}>Edit canvas</button>}</div>
               </div><dl className="workbench-overview-metadata"><div><dt>Contains</dt><dd>{model.contains}</dd></div><div><dt>Canvas</dt><dd>{model.area.width} × {model.area.height}</dd></div></dl>
             </>}
         </section>}

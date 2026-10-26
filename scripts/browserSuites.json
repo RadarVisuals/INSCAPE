@@ -3,6 +3,11 @@
   "notes": "Classification is not a passing test result. Release suites run by default; every other suite remains explicitly selectable. production-startup is separately required after the build by verifyRelease.mjs.",
   "suites": [
     {
+      "name": "published-gallery",
+      "category": "release",
+      "rationale": "Published-only mobile and desktop gallery, wrap, inspection and explicit publication scope."
+    },
+    {
       "name": "workbench-overview",
       "category": "release",
       "rationale": "Separate overview browsing, saved introductions, explicit opening, storage failures and responsive read-only previews."

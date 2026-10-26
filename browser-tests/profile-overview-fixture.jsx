@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { lazy, Suspense } from 'react';
 import { createRoot } from 'react-dom/client';
 import PublishedProfileBoundary from '../src/profileDocument/components/PublishedProfileBoundary.jsx';
 import useApplicationNavigation from '../src/profileDiscovery/useApplicationNavigation.js';
@@ -6,6 +6,10 @@ import { buildProfileDocumentV9 } from '../src/profileDocument/domain/profileDoc
 import { createEmptySystemWorkflowDraft } from '../src/systemWorkflow/domain/systemWorkflowDraft.js';
 import { createDefaultWorkbenchPresentation } from '../src/profileDocument/domain/workbenchPresentation.js';
 import { createProfileDocumentV9AssetResolver } from '../src/profileDocument/domain/profileDocumentV9Asset.js';
+import { createWorkbenchCollection, appendWorkbench } from '../src/systemWorkflow/domain/workbenchCollection.js';
+import { canvasPublicationCandidates, buildCanvasPublication } from '../src/profileDocument/domain/canvasPublication.js';
+import { createSystemWorkflowDraftStore } from '../src/systemWorkflow/systemWorkflowDraftStore.js';
+const OwnerSystemWorkflowPublicationRack = lazy(() => import('../src/public/ownerSystemWorkflow/OwnerSystemWorkflowPublicationRack.jsx'));
 import '../src/index.css';
 const address = `0x${'1'.repeat(40)}`, contract = `0x${'3'.repeat(40)}`;
 const assetId = `42:${contract}:0x01`;
@@ -24,12 +28,38 @@ draft.imageModules = [{ id: 'image:study', visibility: 'PUBLIC', name: 'A closer
   sides: [{ id: 'side:first', asset: createProfileDocumentV9AssetResolver([asset])(assetId), crop: null, transform: { quarterTurns: 0, mirrorX: false, mirrorY: false } }] }];
 draft.workbench = createDefaultWorkbenchPresentation();
 draft.workbench.imageModules = [{ id: 'image:study', open: true, position: { left: 180, top: 100 } }];
-const published = buildProfileDocumentV9({ profileAddress: address, profileIdentity: { name: 'Nomad' }, assetRecords: [asset], systemWorkflowDraft: draft });
+if (new URLSearchParams(location.search).has('collection')) {
+  draft.grids = [];
+  draft.workbench.display.open = false;
+  draft.workbench.area = { left: 0, top: 0, width: 800, height: 1200 };
+  draft.imageModules[0].width = 800; draft.imageModules[0].height = 1200;
+  draft.workbench.imageModules[0].position = { left: 0, top: 0 };
+}
+let published = buildProfileDocumentV9({ profileAddress: address, profileIdentity: { name: 'Nomad' }, assetRecords: [asset], systemWorkflowDraft: draft });
+let collection = createWorkbenchCollection(draft);
+collection.workbenches[0].name = 'Vision';
+collection = appendWorkbench(collection, 'workbench:anatomy', 'Anatomy', draft);
+collection = appendWorkbench(collection, 'workbench:private', 'Private experiment', draft);
+collection.activeId = 'workbench:main';
+if (new URLSearchParams(location.search).has('collection')) {
+  published = buildCanvasPublication({ candidates: canvasPublicationCandidates({ record: collection, assetRecords: [asset], profile: { name: 'Nomad' } }),
+    selectedIds: ['workbench:main', 'workbench:anatomy'], includeShared: true });
+}
+const memory = new Map();
+const storage = { getItem: key => memory.get(key) ?? null, setItem: (key, value) => memory.set(key, value), removeItem: key => memory.delete(key) };
+const store = createSystemWorkflowDraftStore({ profileAddress: address, storage });
+store.restoreBackup(collection, { expectedGeneration: store.getGeneration() });
+window.__galleryStore = store;
 window.__overviewPublication = published;
 window.__overviewDraft = draft;
 function Fixture() {
   const navigation = useApplicationNavigation({ status: 'complete', profileAddress: null, ownershipVerified: false });
   const content = navigation.content;
+  if (new URLSearchParams(location.search).has('publish')) return <Suspense fallback={null}><main className="system-workflow">
+    <OwnerSystemWorkflowPublicationRack store={store} profileAddress={address} profile={{ name: 'Nomad' }} assetRecords={[asset]}
+      systemWorkflowDraft={store.getDraft()} workbench={draft.workbench} publishedResolution={{ status: 'UNAVAILABLE' }}
+      getWalletPublicationContext={() => ({})} menuSurface="carbon" phase="open" onClose={() => {}} />
+  </main></Suspense>;
   return <div className="application-root"><div className="application-interface" data-visible>
     <PublishedProfileBoundary address={address} resolution={{ status: 'RESOLVED', document: published }}
       returnProfileAddress={new URLSearchParams(location.search).has('owner') ? address : undefined} onReturnToWorkbench={() => {}}

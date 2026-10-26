@@ -9,6 +9,8 @@ import {
   saveOwnerPublicationBaseline,
 } from './ownerPublicationBaselineStorage.js';
 import { createSystemWorkflowDraftStore } from '../../systemWorkflow/systemWorkflowDraftStore.js';
+import { canvasDocument, publishedCanvasEntries } from '../domain/publishedCanvases.js';
+import { createWorkbenchCollection, appendWorkbench } from '../../systemWorkflow/domain/workbenchCollection.js';
 
 export function systemWorkflowDraftFingerprint(draftInput) {
   const draft = assertValidSystemWorkflowDraft(draftInput);
@@ -48,9 +50,27 @@ export function reconcileOwnerDraftWithPublishedProfile({ document: documentInpu
     return Object.freeze({ status: 'LOCAL_DRAFT_UNAVAILABLE', reason: recordState?.reason,
       issues: recordState?.issues || [], fingerprint: recordState?.fingerprint });
   }
-  // The existing public v9 document represents one composition. It cannot
-  // replace or hydrate a local collection until scoped publication is built.
+  // Local collections remain authoritative. Publication merges checked public
+  // revisions; a later network read must not replace local compositions.
   if (store.isCollection?.()) return Object.freeze({ status: 'LOCAL_CHANGES_PRESERVED' });
+  if (document.canvas) {
+    // An existing local draft remains authoritative. Only an absent local record
+    // is initialized from the complete public collection, never its first canvas.
+    if (recordState.status !== 'absent') return Object.freeze({ status: 'LOCAL_CHANGES_PRESERVED' });
+    const entries = publishedCanvasEntries(document);
+    let collection = createWorkbenchCollection(createOwnerDraftFromPublishedProfile({ ...canvasDocument(document, entries[0]),
+      ...(document.reception ? { reception: document.reception } : {}) }));
+    collection.workbenches[0] = { ...collection.workbenches[0], ...document.canvas };
+    const firstId = document.canvas.id;
+    collection.activeId = firstId;
+    for (const entry of entries.slice(1)) {
+      collection = appendWorkbench(collection, entry.id, entry.name, createOwnerDraftFromPublishedProfile(canvasDocument(document, entry)));
+      Object.assign(collection.workbenches.at(-1), { introduction: entry.introduction, thumbnailCrop: entry.thumbnailCrop });
+    }
+    collection.activeId = firstId;
+    const saved = store.restoreBackup(collection, { expectedGeneration: store.getGeneration() });
+    return Object.freeze({ status: saved ? 'HYDRATED_FROM_PUBLISHED' : 'HYDRATION_FAILED' });
+  }
   const localDraft = store.getDraft();
   const localFingerprint = systemWorkflowDraftFingerprint(localDraft);
   const importedDraft = createOwnerDraftFromPublishedProfile(document);
@@ -89,6 +109,7 @@ export function reconcileStoredOwnerDraftWithPublishedProfile({ document, profil
 export function recordOwnerPublicationBaseline({ document: documentInput, draft, profileAddress, storage }) {
   const document = matchingDocument(documentInput, profileAddress);
   if (!document) return false;
+  if (document.canvas) return false; // Collection publication never advances a single-draft replacement baseline.
   return saveOwnerPublicationBaseline(storage, profileAddress, {
     publishedFingerprint: systemWorkflowDraftFingerprint(createOwnerDraftFromPublishedProfile(document)),
     localFingerprint: systemWorkflowDraftFingerprint(draft),

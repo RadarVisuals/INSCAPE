@@ -38,10 +38,10 @@ export default function OverviewNavigation({ profile, address, disabled, onAbout
     {view.layout === 'grid' && <div className="workbench-overview-arrangement">
       <label>Card size<input type="range" aria-label="Card size" min="1" max="3" step="1" value={cardSize}
         onChange={event => onCardSize(Number(event.target.value))} /><span>{['Small', 'Medium', 'Large'][cardSize - 1]}</span></label>
-      <button type="button" aria-pressed={arranging} disabled={count < 2} onClick={() => go(onArrange)}><GripVertical size={16} />{arranging ? 'Finish arranging' : 'Arrange canvases'}</button>
+      {onArrange && <button type="button" aria-pressed={arranging} disabled={count < 2} onClick={() => go(onArrange)}><GripVertical size={16} />{arranging ? 'Finish arranging' : 'Arrange canvases'}</button>}
     </div>}
-    <button className="workbench-overview-menu-create" type="button" disabled={count >= MAX_WORKBENCHES} onClick={() => go(onCreate)}><Plus size={16} />New Workbench</button>
-    {count >= MAX_WORKBENCHES && <small>All {MAX_WORKBENCHES} local Workbenches are in use.</small>}
+    {onCreate && <button className="workbench-overview-menu-create" type="button" disabled={count >= MAX_WORKBENCHES} onClick={() => go(onCreate)}><Plus size={16} />New Workbench</button>}
+    {onCreate && count >= MAX_WORKBENCHES && <small>All {MAX_WORKBENCHES} local Workbenches are in use.</small>}
     </section></div>
     <button ref={triggerRef} className="workbench-overview-menu-trigger" type="button" disabled={disabled} aria-label="Inscape menu" aria-expanded={open}
       onClick={() => setOpen(!open)}><span>INSCAPE</span><span className="workbench-overview-menu-icon" aria-hidden="true"><i /><i /></span></button>

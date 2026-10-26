@@ -28,14 +28,14 @@ function GridCard({ item, duplicate, selected, root, onOpen, onEdit, onManage, r
       <div className="workbench-overview-card-actions">
         <button type="button" className="workbench-overview-card-view" tabIndex={duplicate ? -1 : 0}
           onClick={event => onOpen(item.id, event.currentTarget)}>View</button>
-        <button type="button" tabIndex={duplicate ? -1 : 0} onClick={() => onEdit(item.id)} aria-label={`Edit ${item.name}`}>Edit</button>
-        <button type="button" tabIndex={duplicate ? -1 : 0} onClick={event => onManage(item.id, 'crop', event.currentTarget)} aria-label={`Crop ${item.name}`}>Crop</button>
+        {onEdit && <button type="button" tabIndex={duplicate ? -1 : 0} onClick={() => onEdit(item.id)} aria-label={`Edit ${item.name}`}>Edit</button>}
+        {onManage && <button type="button" tabIndex={duplicate ? -1 : 0} onClick={event => onManage(item.id, 'crop', event.currentTarget)} aria-label={`Crop ${item.name}`}>Crop</button>}
         <button type="button" tabIndex={duplicate ? -1 : 0} aria-expanded={information} onClick={() => setInformation(!information)}
           aria-label={`Information for ${item.name}`}>Information</button>
       </div>
       {information && <div className="workbench-overview-card-information">
         {item.introduction && <p>{item.introduction}</p>}
-        <button type="button" tabIndex={duplicate ? -1 : 0} onClick={event => onManage(item.id, 'details', event.currentTarget)}>Edit details</button>
+        {onManage && <button type="button" tabIndex={duplicate ? -1 : 0} onClick={event => onManage(item.id, 'details', event.currentTarget)}>Edit details</button>}
       </div>}
     </div>
     {arranging && <div className="workbench-overview-card-arrange">
@@ -107,7 +107,6 @@ export default function WorkbenchOverviewGrid({ items, wrap, onOpen, onEdit, onM
     return () => observer.disconnect();
   }, [looping, items.length, root, repeatRadius]);
   const normalize = () => {
-    setRevealed(null);
     const host = root.current, size = height.current;
     if (!looping || !size || keyboard.current) return;
     // Keep the viewport centre in the middle cycle. Browser focus scrolling can
@@ -130,7 +129,7 @@ export default function WorkbenchOverviewGrid({ items, wrap, onOpen, onEdit, onM
       setDrag({ ...dragging.current, x: event.clientX, y: event.clientY });
     }}
     onPointerUp={event => endDrag(true, event)} onPointerCancel={event => endDrag(false, event)} onLostPointerCapture={event => endDrag(false, event)}
-    onWheel={() => { keyboard.current = false; }} onTouchStart={() => { keyboard.current = false; }}>
+    onWheel={() => { keyboard.current = false; setRevealed(null); }} onTouchStart={() => { keyboard.current = false; }} onTouchMove={() => setRevealed(null)}>
     {(looping ? Array.from({ length: repeatRadius * 2 + 1 }, (_, index) => index - repeatRadius) : [0]).map(copy => <div key={copy} ref={copy === 0 ? cycle : undefined}
       className="workbench-overview-cycle" data-gallery-cycle={copy} aria-hidden={copy !== 0 || undefined}>
       {items.map((item, index) => <GridCard key={item.id} item={item} root={root} duplicate={copy !== 0} selected={selectedId === item.id}

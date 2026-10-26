@@ -38,15 +38,16 @@ for (const [width, theme] of [[1440, 'carbon'], [640, 'carbon'], [390, 'carbon']
     await page.screenshot({ path: `${output}/entry-button-${width}-${theme}.png` });
     if (width === 390) await canvasEntry.tap();
     else { await canvasEntry.focus(); await canvasEntry.press('Enter'); }
-    await page.locator('.visitor-grid-world').waitFor();
+    await page.locator('.workbench-overview').waitFor();
     assert.match(page.url(), /[?&]canvas=1/);
     assert.match(page.url(), /[?&]reception=1/);
     assert.equal(await page.locator('main.system-workflow:not(.visitor-grid-world)').count(), 0);
     await page.screenshot({ path: `${output}/entered-canvas-${width}-${theme}.png` });
-    await page.getByRole('link', { name: '← Profile overview', exact: true }).click();
+    await page.getByRole('button', { name: 'Inscape menu', exact: true }).click();
+    await page.getByRole('button', { name: 'About', exact: true }).click();
     await canvasEntry.waitFor();
     assert.doesNotMatch(page.url(), /[?&]canvas=/);
-    await page.goBack(); await page.locator('.visitor-grid-world').waitFor();
+    await page.goBack(); await page.locator('.workbench-overview').waitFor();
     await page.goBack(); await canvasEntry.waitFor();
     assert.deepEqual(await page.evaluate(() => ({ publication: JSON.stringify(window.__overviewPublication), storage: JSON.stringify({ ...localStorage }) })), before);
     assert.deepEqual(errors, []);

@@ -4,7 +4,7 @@ import useDeferredFocusReturn from '../useDeferredFocusReturn.js';
 
 // Owns only the publication surface. Preparation, signing and persistence stay
 // with the existing publication rack and its scoped publication controller.
-export default function useWorkbenchPublicationPanel({ isCollection, closePanel, onNotice }) {
+export default function useWorkbenchPublicationPanel({ closePanel }) {
   const [open, setOpen] = useState(false);
   const presence = useOwnerSystemWorkflowPanelPresence(open);
   const focusReturn = useRef(null);
@@ -29,10 +29,6 @@ export default function useWorkbenchPublicationPanel({ isCollection, closePanel,
   }, [open, presence.present, restoreFocus]);
 
   const toggle = trigger => {
-    if (isCollection()) {
-      onNotice('These Workbenches are saved locally. Publishing multiple Workbenches is not available yet.');
-      return;
-    }
     if (open) {
       close();
       return;

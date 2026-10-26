@@ -11,11 +11,13 @@ import { createProfileDocumentPublisher } from './profileDocumentPublisher.js';
 import { createLuksoPublishedProfileRepository } from './luksoPublishedProfileRepository.js';
 import { createPinProfileDocumentHandler } from '../../../netlify/functions/pin-profile-document.mjs';
 import { memoryQuotaStore, uploadTestContext, uploadTestPolicy, uploadTestVerifier, UPLOAD_TEST_NOW } from '../../../scripts/fixtures/publicationUpload.mjs';
+import { createWorkbenchCollection, appendWorkbench } from '../../systemWorkflow/domain/workbenchCollection.js';
+import { buildCanvasPublication, canvasPublicationCandidates } from '../domain/canvasPublication.js';
 
 const CID = 'QmYwAPJzv5CZsnAzt8auVZRnGi2CWF7rP3pVYdWrJwEmQw';
 const ORIGIN = 'https://publication-flow.invalid';
 
-test('current mixed modules pass the deployed upload handler, CID verification, publication and reader together', async () => {
+for (const collectionMode of [false, true]) test(`current mixed modules pass upload, CID, publication and read-back (collection: ${collectionMode})`, async () => {
   // Exercise the real application boundaries; only Pinata, RPC and wallet I/O
   // are replaced. No external upload or transaction can occur in this test.
   const draft = createFilledDisplayDraft();
@@ -29,7 +31,9 @@ test('current mixed modules pass the deployed upload handler, CID verification, 
     { id: 'text:private', article: createArticle('Private fixture'), visibility: 'PRIVATE' }];
   draft.shapes = [{ id: 'shape:flow', name: 'Backdrop', color: '#123456', opacity: .6, grain: .2, visibility: 'PUBLIC' }];
   const before = structuredClone(draft);
-  const document = build();
+  const record = appendWorkbench(createWorkbenchCollection(draft), 'workbench:second', 'Second composition', draft);
+  const document = collectionMode ? buildCanvasPublication({ candidates: canvasPublicationCandidates({ record, assetRecords: filledAssets }),
+    selectedIds: ['workbench:main', 'workbench:second'], includeShared: true }) : build();
   const artifact = createCanonicalPublication(document);
   assert.doesNotMatch(artifact.text, /Private fixture|filled-private|text:private/);
   assert.equal(document.displays.length, 1);
@@ -85,6 +89,7 @@ test('current mixed modules pass the deployed upload handler, CID verification, 
   assert.equal(walletCalls, 1);
   assert.equal(published.result.status, 'RESOLVED');
   assert.deepEqual(published.result.document, document);
+  if (collectionMode) assert.equal(published.result.document.canvases[0].name, 'Second composition');
   const pages = publicReadingPages(published.result.document);
   assert.equal(publicDisplayModules(published.result.document).flatMap(module => module.document.grids).length, 2);
   assert.equal(pages.some(page => page.kind === 'composition'), false);

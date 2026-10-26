@@ -10,6 +10,9 @@ import AlphaSupportPanel from '../../support/AlphaSupportPanel.jsx';
 import { ALPHA_SUPPORT_CODES } from '../../support/alphaSupport.js';
 import { createOwnerLatticePublicationContext } from '../ownerLatticePublicationContext.js';
 import { buildOwnerSystemWorkflowPublicationDocument } from '../ownerSystemWorkflowPreviewDocument.js';
+import { canvasPublicationCandidates, canvasPublicationChanges, buildCanvasPublication } from '../../profileDocument/domain/canvasPublication.js';
+import { isWorkbenchCollection, projectWorkbenchDraft } from '../../systemWorkflow/domain/workbenchCollection.js';
+import useOwnerLatticeBrowser from '../useOwnerLatticeBrowser.js';
 import '../ownerLatticePublicationRack.css';
 
 function publishedDocument(resolution, profileAddress) {
@@ -36,6 +39,7 @@ export default function OwnerSystemWorkflowPublicationRack({
   workbench,
   onSaveWorkbench,
   preparationError,
+  store,
 }) {
   const [snapshot, setSnapshot] = useState(() => initialSnapshot ? assertValidProfileDocumentV9(initialSnapshot) : null);
   const [message, setMessage] = useState('Ready to publish your current public presentation.');
@@ -47,18 +51,44 @@ export default function OwnerSystemWorkflowPublicationRack({
   const cidRef = useRef('');
   const cidGenerationRef = useRef(0);
   const draftGenerationRef = useRef({ fingerprint: null, generation: 0 });
+  const previous = useMemo(() => publishedDocument(publishedResolution, profileAddress), [publishedResolution, profileAddress]);
+  const [selectedIds, setSelectedIds] = useState(() => [store?.getWorkbenchId()]);
+  const [includeShared, setIncludeShared] = useState(false);
+  const firstPublication = publishedResolution?.status === 'UNAVAILABLE';
+  const publishShared = firstPublication || includeShared;
+  const recordState = useMemo(() => {
+    try { return { record: store?.getBackupSnapshot({ ...systemWorkflowDraft, ...(workbench ? { workbench } : {}) }) }; }
+    catch (error) { return { error: error.message }; }
+  }, [store, systemWorkflowDraft, workbench]);
+  const record = recordState.record;
+  const referenceIds = useMemo(() => {
+    const drafts = isWorkbenchCollection(record) ? record.workbenches.map(item => projectWorkbenchDraft(record, item.id)) : record ? [record] : [];
+    return [...new Set(drafts.flatMap(draft => [...draft.grids, ...(draft.displays || []).flatMap(item => item.grids)]
+      .flatMap(grid => grid.placements.map(item => item.stableAssetId)).concat(draft.identityPresentation.avatar.stableAssetId,
+        ...[draft.workbench?.display, ...(draft.workbench?.displays || [])].map(item => item?.shortcut?.icon?.stableAssetId))).filter(Boolean))];
+  }, [record]);
+  const browser = useOwnerLatticeBrowser(profileAddress, false, referenceIds);
+  const candidates = useMemo(() => record ? canvasPublicationCandidates({ record, profile,
+    assetRecords: [...(browser.records || []), ...(assetRecords || [])] }) : [], [record, profile, browser.records, assetRecords]);
+  const changes = useMemo(() => canvasPublicationChanges(candidates, previous), [candidates, previous]);
+  const selectedChanges = useMemo(() => selectedIds.filter(id => changes.some(item => item.id === id && item.changed)), [selectedIds, changes]);
+  const collectionInput = useMemo(() => ({ candidates, selectedIds: selectedChanges, includeShared: publishShared, previousDocument: previous }),
+    [candidates, selectedChanges, publishShared, previous]);
 
   const builderInput = useMemo(() => ({ assetRecords, profile, profileAddress, systemWorkflowDraft, workbench }),
     [assetRecords, profile, profileAddress, systemWorkflowDraft, workbench]);
   const draftState = useMemo(() => {
     try {
       if (preparationError) throw new Error(preparationError);
-      const candidate = buildOwnerSystemWorkflowPublicationDocument({ ...builderInput, exportedAt: new Date(0) });
+      if (recordState.error) throw new Error(recordState.error);
+      if (store && !['RESOLVED', 'UNAVAILABLE'].includes(publishedResolution?.status)) throw new Error('Wait for the latest publication to be verified before preparing changes.');
+      const candidate = store ? buildCanvasPublication({ ...collectionInput, exportedAt: previous?.exportedAt || new Date(0) })
+        : buildOwnerSystemWorkflowPublicationDocument({ ...builderInput, exportedAt: new Date(0) });
       return { error: null, fingerprint: profileDocumentV9ContentFingerprint(candidate) };
     } catch (error) {
       return { error: error?.message || 'The public System Workflow cannot be projected', fingerprint: null };
     }
-  }, [builderInput, preparationError]);
+  }, [builderInput, preparationError, store, collectionInput, publishedResolution?.status, previous, recordState.error]);
   if (draftGenerationRef.current.fingerprint !== draftState.fingerprint) {
     draftGenerationRef.current = {
       fingerprint: draftState.fingerprint,
@@ -98,11 +128,10 @@ export default function OwnerSystemWorkflowPublicationRack({
       setSupportIssue(null);
       setOperationPhase('PREPARING');
       if (!draftFingerprint) throw new Error(draftState.error || 'The public System Workflow is not ready');
-      const previous = snapshot || publishedDocument(publishedResolution, profileAddress);
-      const next = buildOwnerSystemWorkflowPublicationDocument({
+      const next = store ? buildCanvasPublication(collectionInput) : buildOwnerSystemWorkflowPublicationDocument({
         ...builderInput,
         exportedAt: new Date(),
-        previousDocument: previous,
+        previousDocument: snapshot || previous,
       });
       if (onSaveWorkbench && !onSaveWorkbench(next.workbench)) throw new Error('The Workbench setup could not be saved.');
       snapshotRef.current = next;
@@ -121,7 +150,7 @@ export default function OwnerSystemWorkflowPublicationRack({
         phase: 'PUBLICATION_SNAPSHOT', providerCategory: 'LOCAL_VALIDATION', message: nextMessage });
       setOperationPhase(null);
     }
-  }, [builderInput, draftFingerprint, draftState.error, onSaveWorkbench, profileAddress, publication, publishedResolution, snapshot]);
+  }, [builderInput, draftFingerprint, draftState.error, onSaveWorkbench, publication, previous, snapshot, store, collectionInput]);
 
   const uploadSnapshot = useCallback(async () => {
     if (uploadControllerRef.current) return;
@@ -200,6 +229,22 @@ export default function OwnerSystemWorkflowPublicationRack({
       if (event.target === event.currentTarget && event.propertyName === 'opacity') onMotionComplete?.();
     }}>
     <div className="workbench-destination-body">
+    {store && <section className="owner-lattice-publication-rack__summary">
+      <h3>Choose canvases</h3>
+      <p>Only checked changes go live. Other canvases keep their published version.</p>
+      <fieldset disabled={busy || operationPhase === 'PUBLISHED'}><legend>Publication scope</legend>
+        {changes.map(item => <label key={item.id} style={{ display: 'block', marginBlock: 12 }}>
+          <input type="checkbox" checked={selectedChanges.includes(item.id)} disabled={!item.changed}
+            onChange={event => setSelectedIds(current => event.target.checked ? [...current, item.id] : current.filter(id => id !== item.id))} />{' '}
+          {item.name} — {item.first ? 'First publication' : item.changed ? 'Update' : 'No changes'}
+          {item.error && <small>{item.error}</small>}
+        </label>)}
+        <button type="button" onClick={() => setSelectedIds(changes.filter(item => item.changed).map(item => item.id))}>Select all changed canvases</button>
+        <label style={{ display: 'block', marginBlock: 12 }}><input type="checkbox" checked={publishShared} disabled={firstPublication}
+          onChange={event => setIncludeShared(event.target.checked)} />{' '}Profile details, Reception and shared Keeper{firstPublication ? ' · required for first publication' : ''}</label>
+      </fieldset>
+      <p role="status">Selected: {changes.filter(item => selectedChanges.includes(item.id)).map(item => item.name).join(', ') || 'No canvases'}{publishShared ? ' · profile details included' : ''}</p>
+    </section>}
     <section className="owner-lattice-publication-rack__summary">
       <h3>What goes live</h3>
       <p>Your public Images, Text and Shapes, <strong>Public Grids</strong>, Keeper content, custom Identity card and prepared Workbench setup: window positions, starting open state, Display name and shortcut.</p>

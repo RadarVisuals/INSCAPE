@@ -1,4 +1,5 @@
 import { validReception, receptionModuleIds } from './receptionPresentation.js';
+import { validatePublishedCanvases } from './publishedCanvases.js';
 import { validWorkbenchIndex } from '../../systemWorkflow/domain/workbenchIndex.js';
 import { validArtworkLayers } from '../../systemWorkflow/domain/artworkLayers.js';
 import { validPublishedWorkbenchGroups } from './publishedWorkbenchGroups.js';
@@ -204,8 +205,11 @@ export function validateProfileDocumentV9(input, { rawSize } = {}) {
   let measuredSize = rawSize;
   try { measuredSize ??= new TextEncoder().encode(JSON.stringify(input)).byteLength; } catch { measuredSize = Infinity; }
   if (measuredSize > SYSTEM_WORKFLOW_LIMITS.maxJsonBytes) fail('$', 'document_too_large', `Document exceeds ${SYSTEM_WORKFLOW_LIMITS.maxJsonBytes} bytes`);
-  if (depth(input) > SYSTEM_WORKFLOW_LIMITS.maxDepth) fail('$', 'excessive_depth', 'Document nesting is too deep');
-  if (!allowedKeys(input, DOCUMENT_KEYS, ['workbench', 'displays', 'miniApps', 'texts', 'imageModules', 'shapes', 'keeperDocks', 'workbenchGroups', 'workbenchIndex', 'artworkLayers', 'reception'])) {
+  // Each additional canvas is validated as a complete composition below. Its
+  // collection envelope must not consume the composition's existing depth budget.
+  const depthInput = record(input) ? Object.fromEntries(Object.entries(input).filter(([key]) => key !== 'canvases')) : input;
+  if (depth(depthInput) > SYSTEM_WORKFLOW_LIMITS.maxDepth) fail('$', 'excessive_depth', 'Document nesting is too deep');
+  if (!allowedKeys(input, DOCUMENT_KEYS, ['workbench', 'displays', 'miniApps', 'texts', 'imageModules', 'shapes', 'keeperDocks', 'workbenchGroups', 'workbenchIndex', 'artworkLayers', 'reception', 'canvas', 'canvases'])) {
     fail('$', 'unexpected_fields', 'Document contains unexpected or missing fields');
     return { valid: false, errors, value: null, size: measuredSize };
   }
@@ -273,7 +277,7 @@ export function validateProfileDocumentV9(input, { rawSize } = {}) {
       fail('displays', 'invalid_display_count', 'Invalid Display count');
     } else {
       const ids = new Set([PRIMARY_DISPLAY_ID]);
-      const { displays: _displays, workbench: _workbench, miniApps: _miniApps, texts: _texts, imageModules: _images, shapes: _shapes, keeperDocks: _keepers, workbenchGroups: _groups, workbenchIndex: _index, artworkLayers: _layers, reception: _reception, ...shared } = input;
+      const { displays: _displays, workbench: _workbench, miniApps: _miniApps, texts: _texts, imageModules: _images, shapes: _shapes, keeperDocks: _keepers, workbenchGroups: _groups, workbenchIndex: _index, artworkLayers: _layers, reception: _reception, canvas: _canvas, canvases: _canvases, ...shared } = input;
       for (const module of input.displays) {
         if (!exactKeys(module, ['id', ...DISPLAY_CONTENT_KEYS]) || !/^display:[A-Za-z0-9_-]{1,80}$/u.test(module?.id) || ids.has(module.id)) {
           fail('displays', 'invalid_display', 'Invalid or duplicate Display'); continue;
@@ -351,6 +355,7 @@ export function validateProfileDocumentV9(input, { rawSize } = {}) {
   if (documentAssetReferences > SYSTEM_WORKFLOW_LIMITS.maxTotalAssetReferences) {
     fail('metadata.worldCover', 'too_many_asset_references', 'Too many total asset references');
   }
+  validatePublishedCanvases(input, validateProfileDocumentV9, fail);
   // Published bytes are immutable and hash-verified. Accept legacy fields but
   // preserve them here; renderers ignore them and draft restoration removes them.
   return { valid: errors.length === 0, errors, value: errors.length ? null : structuredClone(input), size: measuredSize };

@@ -11,6 +11,34 @@ Earlier dated "local/uncommitted" and "no deployment" notes describe those
 individual implementation sessions. This authorization does not merge into
 main or authorize profile publication, uploads or wallet actions.
 
+## Published canvas gallery (2026-10-26)
+
+The founder requested completing mobile visitor access to the existing gallery.
+Enter Inscape now opens the published collection in the shared Aerra grid, with
+optional wraparound, List, temporary card size, canvas inspection and metadata.
+About returns to Reception. Visitor controls have no create, arrange, edit or
+crop capabilities and do not read local composition drafts.
+
+Publish now defaults to the current changed canvas, offers individual selection
+and an explicit Select all changed canvases action. Every selected canvas is
+named as a first publication or update. Profile details, Reception and shared
+Keeper are a separate selection, required for the first publication. Unselected
+canvases retain their last public content. Private module exclusions and the
+existing upload authorization, exact-byte verification and wallet transaction
+remain in force. A failed or unresolved public read cannot authorize replacement.
+
+The public v9 envelope retains its entry composition and shared profile facts.
+`canvas` names that entry; bounded `canvases` contain additional composition data
+without repeating profile identity, Keeper or menu appearance. The aggregate
+512 KiB publication limit remains. A fresh owner can restore all published
+canvases; existing local collections and edits remain authoritative.
+
+This supersedes the earlier collection-publication block and the temporary
+Reception entry to the old canvas renderer. Direct module links retain that
+renderer. The gallery inspection still represents mini apps as placeholders;
+Desktop and mobile authoring remain deferred. See
+[implementation and checks](audits/2026-10-26/published-gallery/README.md).
+
 ## Hanssen presentation and navigation direction (2026-10-25)
 
 **Accepted primary design reference; first owner overview slice implemented locally.** The

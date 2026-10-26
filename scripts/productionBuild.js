@@ -231,7 +231,10 @@ export const PRODUCTION_BUDGETS = Object.freeze({
   // Reception's existing canvas action is now connected through the public
   // boundaries: 2,572,154 raw / 830,349 gzip before the event-argument guard.
   // Bound this small route addition; all compressed/loading budgets stay fixed.
-  coreJavaScript: Object.freeze({ raw: 2_572_200, gzip: 830_500 }),
+  // Published collections, explicit selection and reuse of the lazy gallery:
+  // measured 2,584,282 raw / 836,967 gzip with a 40-character release ID.
+  // Initial-load, owner, wallet, CSS and asset ceilings remain unchanged.
+  coreJavaScript: Object.freeze({ raw: 2_586_000, gzip: 838_000 }),
   // Approved local article fonts plus the creation bar's Inter variable face.
   // Inter and its license/provenance add 357,042 bytes; measured copied assets:
   // 17,811,402 bytes. Retain the previous margin, rounded up by less than 3 kB.

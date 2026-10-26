@@ -67,7 +67,7 @@ export default function ProfileOverview({ document: publication, ownerEditingAll
           <button className="reception-explore" type="button" ref={explore} onClick={() => setExploring(true)}><span>Explore<span className="reception-explore__caption">Step into the exploration room</span></span><ArrowRight aria-hidden="true" /></button>
         </section>
         <footer className="reception-entry"><button type="button" onClick={() => onOpenCanvas()} disabled={!onOpenCanvas} aria-describedby="reception-entry-status"><ArrowDown aria-hidden="true" />Enter Inscape</button>
-          <p id="reception-entry-status">View published canvas</p><span>Reception wireframe · Bento customization comes later.</span>
+          <p id="reception-entry-status">Explore published canvases</p><span>Reception wireframe · Bento customization comes later.</span>
         </footer>
       </>}
     </div>
