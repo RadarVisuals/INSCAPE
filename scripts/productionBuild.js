@@ -234,7 +234,12 @@ export const PRODUCTION_BUDGETS = Object.freeze({
   // Published collections, explicit selection and reuse of the lazy gallery:
   // measured 2,584,282 raw / 836,967 gzip with a 40-character release ID.
   // Initial-load, owner, wallet, CSS and asset ceilings remain unchanged.
-  coreJavaScript: Object.freeze({ raw: 2_586_000, gzip: 838_000 }),
+  // Static Reception adds its separate lazy editor, canonical partition and
+  // shared public renderer. Shared Image/Text/Library implementations remain
+  // single modules. Measured 2,641,147 raw / 862,169 gzip before final recovery
+  // guards. This bounds the aggregate addition; initial, owner, wallet, CSS
+  // and asset ceilings remain unchanged.
+  coreJavaScript: Object.freeze({ raw: 2_650_000, gzip: 866_000 }),
   // Approved local article fonts plus the creation bar's Inter variable face.
   // Inter and its license/provenance add 357,042 bytes; measured copied assets:
   // 17,811,402 bytes. Retain the previous margin, rounded up by less than 3 kB.

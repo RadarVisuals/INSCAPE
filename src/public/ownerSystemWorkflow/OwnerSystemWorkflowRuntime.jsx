@@ -89,6 +89,7 @@ function WorkbenchSession({
   onEnterMyWorld,
   onOpenDiscover,
   onOpenReception,
+  onEditReception,
   onOpenWorkbenchOverview,
   onPublicationConfirmed,
   profileAddress,
@@ -248,7 +249,7 @@ function WorkbenchSession({
     identityOpen,
   });
   const workbench = workbenchProjection.value;
-  const openWorkbenchOverview = () => {
+  const leaveForDestination = (open) => {
     try {
       createNamedWorkbenchActions({
         store: sharedStore,
@@ -256,11 +257,12 @@ function WorkbenchSession({
         flushLayout: layoutPersistence.flush,
         busy: publicationPresence.present || previewSession.preparing || Boolean(preview),
       }).leave();
-      onOpenWorkbenchOverview();
+      open();
     } catch (error) {
       setNotice(error.message);
     }
   };
+  const openWorkbenchOverview = () => leaveForDestination(onOpenWorkbenchOverview);
   const activity = useOwnerSystemWorkflowActivity({
     active: panel === 'activity',
     fixture: reviewActivity,
@@ -593,6 +595,7 @@ function WorkbenchSession({
                     onClose={() => panels.closePanel()}
                     onVisitProfile={onVisitProfile}
                     onOpenReception={onOpenReception}
+                    onEditReception={() => leaveForDestination(onEditReception)}
                     onOpenIdentity={event => {
                       openIdentity(
                         event.currentTarget

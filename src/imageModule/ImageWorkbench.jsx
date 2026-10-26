@@ -254,6 +254,13 @@ const ImageInstance = memo(function ImageInstance({ record, index, store, profil
         {!side ? <span className="image-module__empty">{store ? 'Drop artwork from Library' : 'No artwork'}</span>
           : <ImageSides side={side} nextSide={record.sides.find(item => item.id === flip)} rectangle={renderRectangle}
             recoveryHost={!inactive ? inspect ? inspectionRecoveryHost : recoveryHost : null} recoveryMode={inspect ? 'inspect' : undefined}
+            onRecoverFocus={() => {
+              const canvas = source.current;
+              const stop = event => event.stopPropagation();
+              canvas?.addEventListener('focusin', stop);
+              try { canvas?.focus({ preventScroll: true }); }
+              finally { canvas?.removeEventListener('focusin', stop); }
+            }}
             crop={crop?.previewCrop ?? side.crop}
             onComplete={id => { setSideId(id); setFlip(null); }} onCancel={() => setFlip(null)} />}
       </button>

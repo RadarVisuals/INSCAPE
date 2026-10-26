@@ -51,9 +51,9 @@ const PageBreak = Node.create({ name: 'pageBreak', group: 'block', atom: true,
   parseHTML: () => [{ tag: 'div[data-text-page-break]' }],
   renderHTML: () => ['div', { 'data-text-page-break': '', class: 'text-page-break' }],
 });
-export default function ArticleEditor({ article, onChange, onEditor, onFindRequest, saveError, saveStatus, focusClassName, disabled, controlsHost, flowRange, onFlowEditor, sharedColour = false }) {
+export default function ArticleEditor({ article, onChange, onEditor, onFindRequest, saveError, saveStatus, focusClassName, disabled, controlsHost, flowRange, onFlowEditor, sharedColour = false, containerOwned = false, onRevealFormatting }) {
   const tools = useSharedTextTools();
-  const revealFormatting = useRef(null); revealFormatting.current = tools?.setSection;
+  const revealFormatting = useRef(null); revealFormatting.current = onRevealFormatting || tools?.setSection;
   const [flowBridge] = useState(createArticleFlowEditor);
   const latest = useRef({ article, onChange }); latest.current = { article, onChange };
   const searchHost = useRef(controlsHost); searchHost.current = controlsHost;
@@ -259,7 +259,7 @@ export default function ArticleEditor({ article, onChange, onEditor, onFindReque
     </>, controlsHost)}
     <ArticleFocusWriting active={focusWriting} onClose={() => setFocusWriting(false)} editor={editor} returnFocus={focusTrigger}
       title={article.title} background={article.appearance?.background} saveError={saveError} saveStatus={saveStatus} className={focusClassName}>
-    <div className={`text-editor-page${appearance.compact ? ' text-document--compact' : ''}`} style={textContentStyle(article)}>
+    <div className={`text-editor-page${appearance.compact ? ' text-document--compact' : ''}`} style={textContentStyle(article, { containerOwned: containerOwned && !focusWriting })}>
       {(article.title || !disabled) && <textarea className="text-document-title" aria-label="Article title" placeholder="Title" rows={1}
         spellCheck={false} autoCorrect="off" autoCapitalize="off" maxLength={160} disabled={disabled}
         style={textTitleStyle(article)} value={article.title}

@@ -28,10 +28,10 @@ function renderNode(node, key, positions) {
   return createElement(tag, { key, ...range, ...(node.type === 'doc' ? { className: 'text-document-body' } : {}), ...(['paragraph', 'heading'].includes(node.type) ? { style: { ...articleAlignmentStyle(node.attrs?.textAlign), ...articleSpacingStyle(node.attrs) } } : {}), ...(node.type === 'orderedList' ? { start: node.attrs?.start } : {}), ...(node.type === 'listItem' && position?.continued ? { style: { listStyleType: 'none' } } : {}) },
     ['hardBreak', 'horizontalRule'].includes(node.type) ? undefined : node.content?.length ? node.content.map((n, i) => renderNode(n, `${key}-${i}`, positions)) : <br />);
 }
-export default function ArticleView({ article, flow }) {
+export default function ArticleView({ article, flow, containerOwned = false }) {
   try { assertArticle(article); } catch (e) { return <p role="alert">{e.message}</p>; }
   const appearance = textAppearance(article);
-  return <article className={`text-document${appearance.compact ? ' text-document--compact' : ''}`} style={textContentStyle(article)}>
+  return <article className={`text-document${appearance.compact ? ' text-document--compact' : ''}`} style={textContentStyle(article, { containerOwned })}>
     {article.title && flow?.title !== false && <h1 className="text-document-title" style={textTitleStyle(article)}>{article.title}</h1>}{renderNode(flow?.content || article.content, 'article', flow?.positions)}
   </article>;
 }

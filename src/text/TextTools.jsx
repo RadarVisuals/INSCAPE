@@ -1,4 +1,4 @@
-import { useId, useLayoutEffect, useRef } from 'react';
+import { useId, useLayoutEffect, useRef, useState } from 'react';
 import ModuleSurfaceControls from '../public/ownerSystemWorkflow/ModuleSurfaceControls.jsx';
 import { SharedTextToolsContent, useSharedTextTools } from './SharedTextTools.jsx';
 import { X, AlignLeft, AlignCenter, AlignRight } from 'lucide-react';
@@ -8,8 +8,18 @@ import TextStyleControls from './TextStyleControls.jsx';
 import TextBackupControls from './TextBackupControls.jsx';
 import './text.css';
 
-export default function TextTools({ targetId, sharedColour = false, available = true, article, onChange, controlsRef, onClose, disabled, children, connection, readOptions, publication, footer, anchor, backupScope = targetId, recoveryPending = false }) {
+export default function TextTools({ targetId, available = true, anchor, onClose, ...props }) {
   const { section, setSection } = useSharedTextTools();
+  return <SharedTextToolsContent targetId={targetId} available={available} label={props.article.title || 'Untitled text'} anchor={anchor} onClose={onClose}>
+    <TextToolsContent {...props} targetId={targetId} available={available} section={section} onSectionChange={setSection} />
+  </SharedTextToolsContent>;
+}
+
+// Content controls are independent of the Workbench window and its registration.
+// A layout host can own the article's box without changing stored appearance.
+export function TextToolsContent({ targetId, sharedColour = false, available = true, article, onChange, controlsRef, disabled, children, connection, readOptions, publication, footer, backupScope = targetId, recoveryPending = false, containerControls = true, section: selectedSection, onSectionChange }) {
+  const [localSection, setLocalSection] = useState('format');
+  const section = selectedSection ?? localSection, setSection = onSectionChange || setLocalSection;
   const id = useId(), body = useRef(null);
   useLayoutEffect(() => {
     const scroll = body.current?.closest('.text-tools-content');
@@ -17,7 +27,7 @@ export default function TextTools({ targetId, sharedColour = false, available = 
   }, [section]);
   const appearance = textAppearance(article);
   const changeAppearance = patch => onChange({ ...article, appearance: { ...appearance, ...patch } });
-  return <SharedTextToolsContent targetId={targetId} available={available} label={article.title || 'Untitled text'} anchor={anchor} onClose={onClose}>
+  return <>
     <div className="text-controls-body" ref={body}>
       <div className="text-tool-tabs" role="tablist" aria-label="Text settings">
         {[['format', 'Format text'], ['article', 'Article settings']].map(([value, label], index) => <button type="button" role="tab" key={value}
@@ -132,5 +142,5 @@ export default function TextTools({ targetId, sharedColour = false, available = 
       </section>
     </div>
     {footer && <footer className="text-tools-footer">{footer}</footer>}
-  </SharedTextToolsContent>;
+  </>;
 }

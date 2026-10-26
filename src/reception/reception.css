@@ -1,0 +1,72 @@
+.reception-page { position: absolute; inset: 0; overflow: auto; padding: 12px; box-sizing: border-box; background: var(--tactile-face); color: var(--tactile-ink); font-family: var(--font-interface); pointer-events: auto; }
+.reception-canvas { position: relative; width: 100%; min-width: 0; isolation: isolate; }
+.reception-clip { position: absolute; pointer-events: none; }
+.reception-paint { position: relative; width: 100%; height: 100%; }
+.reception-region { box-sizing: border-box; min-width: 0; overflow: auto; border-radius: var(--reception-radius); background: var(--tactile-well); display: flex; align-items: var(--reception-align-y); justify-content: var(--reception-align-x); }
+.reception-region-content { width: fit-content; max-width: 100%; min-width: 0; }
+.reception-region[data-image] { overflow: hidden; }
+.reception-region[data-image] .reception-region-content { width: 100%; height: 100%; }
+.reception-image { position: relative; width: 100%; height: 100%; min-height: 80px; }
+.reception-image > :is(svg, .projected-svg-artwork) { position: absolute; inset: 0; width: 100%; height: 100%; }
+.reception-media-status { position: absolute; inset: 0; pointer-events: none; }
+.reception-media-status button { pointer-events: auto; }
+.reception-navigation { position: absolute; top: 0; left: 0; z-index: 3; display: flex; flex-wrap: wrap; align-items: center; gap: 4px; max-width: min(640px, calc(100% - 48px)); box-sizing: border-box; padding: 0 10px 6px 0; font-size: 12px; }
+.reception-navigation :is(a, button) { min-height: 36px; padding: 8px; border: 0; background: transparent; color: inherit; font: inherit; cursor: pointer; text-decoration: none; }
+.reception-brand { display: flex; align-items: center; gap: 8px; max-width: 200px; min-width: 0; margin-right: 8px; }
+.reception-brand span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.reception-brand img { height: 26px; width: 26px; object-fit: contain; }
+.reception-brand svg { flex: none; width: 22px; height: 22px; }
+.reception-page :is(button, a, input, select, textarea):focus-visible { outline: 2px solid var(--tactile-ink); outline-offset: 2px; }
+.reception-profile-copy { overflow-wrap: anywhere; }
+.reception-profile-copy h1, .reception-profile-copy h2 { font-weight: 400; font-size: clamp(22px, 3vw, 42px); line-height: 1.2; }
+.reception-profile-copy p { line-height: 1.7; white-space: pre-wrap; }
+.reception-profile-copy a { font: 12px/1.6 var(--font-technical); color: inherit; }
+.reception-profile-portrait { height: 180px; display: grid; place-items: center; }
+.reception-profile-portrait :is(img, iframe, svg) { max-width: 100%; height: 100%; object-fit: contain; border: 0; }
+.reception-profile-links { display: flex; flex-direction: column; gap: 12px; }
+.reception-profile-links a { color: inherit; padding: 12px 0; overflow-wrap: anywhere; }
+.reception-profile-details { overflow-wrap: anywhere; margin: 0; }
+.reception-profile-details div { margin: 0 0 16px; }
+.reception-profile-details dd { margin: 6px 0 0; }
+.reception-empty { color: var(--tactile-muted); font-size: 12px; }
+.reception-selection-layer { position: absolute; inset: 0; pointer-events: none; }
+.reception-selection { position: absolute; outline: 2px solid var(--tactile-ink); outline-offset: -2px; }
+.reception-region[data-drop-target] { outline: 3px solid var(--tactile-ink); outline-offset: -4px; }
+.reception-divider { position: absolute; z-index: 4; border: 0; padding: 0; background: transparent; touch-action: none; }
+.reception-divider[data-axis="x"] { width: 28px; transform: translateX(-50%); cursor: col-resize; }
+.reception-divider[data-axis="y"] { height: 28px; transform: translateY(-50%); cursor: row-resize; }
+.reception-divider:hover, .reception-divider:focus-visible { background: color-mix(in srgb, var(--tactile-ink) 18%, transparent); }
+.reception-move-grip { position: absolute; right: 12px; top: 12px; z-index: 5; touch-action: none; }
+.reception-drop-label { position: absolute; right: 12px; top: 52px; z-index: 5; padding: 8px; background: var(--tactile-face); pointer-events: none; }
+.reception-canvas[data-mobile] .reception-paint { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--reception-gutter); height: auto; }
+.reception-canvas[data-mobile] .reception-region { overflow: visible; }
+.reception-canvas[data-mobile] .reception-region[data-image] { overflow: hidden; }
+.reception-canvas[data-mobile] .reception-image { min-height: 240px; }
+.reception-canvas[data-mobile] .reception-region[data-selected] { outline: 2px solid var(--tactile-ink); outline-offset: -2px; }
+.reception-editor { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 12px; }
+.reception-editor-main { min-width: 0; }
+.reception-editor-main[data-preview="mobile"] { width: min(390px, 100%); margin: 0 auto; }
+.reception-editor-tools { min-width: 0; position: sticky; top: 0; align-self: start; max-height: calc(100dvh - 24px); overflow: auto; background: var(--tactile-well); border-radius: var(--control-shell-radius); padding: 12px; box-sizing: border-box; }
+.reception-editor-tools header, .reception-editor-actions { display: flex; gap: 4px; flex-wrap: wrap; align-items: center; }
+.reception-editor-tools header strong { margin-right: auto; }
+.reception-editor-tools details { margin-top: 12px; border-top: 1px solid var(--tactile-edge); padding-top: 12px; }
+.reception-editor-tools summary { cursor: pointer; padding: 8px 0; }
+.reception-editor-tools label { display: grid; gap: 6px; margin: 10px 0; font-size: 12px; }
+.reception-editor-tools :is(input, select, textarea) { box-sizing: border-box; max-width: 100%; min-width: 0; min-height: 36px; background: var(--tactile-well); color: var(--tactile-ink); border: 1px solid var(--tactile-edge); border-radius: var(--control-radius); padding: 6px; font: inherit; }
+.reception-editor-tools p { font-size: 12px; line-height: 1.6; }
+.reception-editor-tools button { font-family: var(--font-interface); }
+.reception-editor-actions > button, .reception-editor-tools header button, .reception-editor-tools details > button, .reception-move-grip, .reception-footer button { min-height: 36px; padding: 8px 10px; font-size: 12px; }
+.reception-editor-tools .text-tools-content { min-height: 0; }
+.reception-editor-tools .text-controls-body { padding: 0; }
+.reception-library.system-workflow__workspace-window { position: fixed; inset: 12px; width: auto; height: auto; max-width: none; z-index: 120; }
+.reception-text textarea.text-document-title { display: block; box-sizing: border-box; field-sizing: content; resize: none; }
+.reception-footer { display: flex; flex-wrap: wrap; gap: 8px; padding: 16px 0; }
+.reception-footer button { color: inherit; font: inherit; }
+@media (max-width: 800px) {
+  .reception-editor { display: flex; flex-direction: column-reverse; }
+  .reception-editor-tools { position: relative; max-height: 45dvh; width: 100%; }
+  .reception-page { padding: 8px; }
+  .reception-navigation :is(a, button) { min-height: 44px; }
+  .reception-editor-tools :is(input, select, textarea) { font-size: 16px; }
+}
+@media (forced-colors: active) { .reception-region { border: 1px solid CanvasText; } }

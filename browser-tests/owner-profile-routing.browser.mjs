@@ -296,11 +296,11 @@ describe('owner/viewed-profile routing through the real App', { concurrency: fal
       const savedDraft = await page.evaluate(address => localStorage.getItem('inscape.system-workflow-draft.v1:' + address), PROFILE_A);
       assert.ok(savedDraft, 'Fixture owner has a saved draft to preserve');
       await page.keyboard.press('Enter');
-      await page.locator('.profile-overview').waitFor();
+      await page.locator('.reception-page').waitFor();
       const navigationBounds = await back().boundingBox();
-      const receptionBounds = await page.locator('.profile-overview__inner').boundingBox();
-      assert.ok(receptionBounds.y >= navigationBounds.y + navigationBounds.height,
-        `Reception content reserves space for the owner return control: ${JSON.stringify({ width, navigationBounds, receptionBounds })}`);
+      assert.equal(await back().evaluate(node => !!node.closest('.reception-navigation')), true,
+        'The owner return belongs to the navigation footprint inside the Reception silhouette');
+      assert.ok(await back().evaluate(node => { const b = node.getBoundingClientRect(); return node.contains(document.elementFromPoint(b.x + b.width / 2, b.y + b.height / 2)); }), 'Owner return is exposed and clickable');
       assert.equal(await back().count(), 1);
       await back().focus();
       if (process.env.INSCAPE_RECEPTION_CAPTURE_DIR) await page.screenshot({ path: resolve(process.env.INSCAPE_RECEPTION_CAPTURE_DIR, `reception-${width}.png`) });
@@ -315,7 +315,7 @@ describe('owner/viewed-profile routing through the real App', { concurrency: fal
       assert.deepEqual(await page.evaluate(() => window.__routingStorageOperations), [], 'Entering published content never opens the owner draft');
       await page.getByRole('button', { name: 'Inscape menu', exact: true }).click();
       await page.getByRole('button', { name: 'About', exact: true }).click();
-      await page.locator('.profile-overview').waitFor();
+      await page.locator('.reception-page').waitFor();
       await page.getByRole('button', { name: /^Explore/ }).click();
       await page.getByRole('region', { name: 'Exploration room', exact: true }).waitFor();
       await page.locator('.keeper-dock').waitFor();
@@ -338,14 +338,14 @@ describe('owner/viewed-profile routing through the real App', { concurrency: fal
         || ownerBox.y >= overviewBox.y + overviewBox.height || overviewBox.y >= ownerBox.y + ownerBox.height,
         'Owner return and profile overview controls do not overlap');
       await overviewReturn.click();
-      await page.locator('.profile-overview').waitFor();
+      await page.locator('.reception-page').waitFor();
       assert.match(page.url(), /[?&]reception=1/);
       await back().focus();
       await page.keyboard.press('Enter');
       await waitForOwnerShell('Published reception returns to owner');
       assert.doesNotMatch(page.url(), /[?&](view|reception|canvas)=/);
       assert.equal(await page.evaluate(address => localStorage.getItem('inscape.system-workflow-draft.v1:' + address), PROFILE_A), roomDraft);
-      await page.goBack(); await page.locator('.profile-overview').waitFor();
+      await page.goBack(); await page.locator('.reception-page').waitFor();
       assert.equal(await back().count(), 1);
       await page.goForward(); await waitForOwnerShell('Forward returns to editing');
     }
@@ -361,7 +361,7 @@ describe('owner/viewed-profile routing through the real App', { concurrency: fal
     await page.locator('.workbench-overview').waitFor();
     assert.equal(await back().count(), 0);
     assert.equal(await page.locator('main.system-workflow:not(.visitor-grid-world)').count(), 0);
-    await page.goBack(); await page.locator('.profile-overview').waitFor();
+    await page.goBack(); await page.locator('.reception-page').waitFor();
   });
 
 

@@ -4,7 +4,7 @@ import ImageArtwork from './ImageArtwork.jsx';
 // Side content keeps its DOM identity while entering, turning and becoming the
 // resting image. Only the current and requested sides exist; preparation is
 // local to this transition, never a persistent media or content cache.
-export default function ImageSides({ side, nextSide, rectangle, crop, onComplete, onCancel, recoveryHost, recoveryMode }) {
+export default function ImageSides({ side, nextSide, rectangle, crop, onComplete, onCancel, recoveryHost, recoveryMode, onRecoverFocus }) {
   const [ready, setReady] = useState(null), [notice, setNotice] = useState(null);
   const pending = useRef(null), callbacks = useRef(null);
   callbacks.current = { onComplete, onCancel };
@@ -53,6 +53,7 @@ export default function ImageSides({ side, nextSide, rectangle, crop, onComplete
         <ImageArtwork side={item} rectangle={rectangle} crop={item === side ? crop : item.crop}
           recoveryHost={item === side && !nextSide ? recoveryHost : null}
           recoveryMode={recoveryMode}
+          onRecoverFocus={onRecoverFocus}
           onReady={item === nextSide ? onReady : undefined} onError={item === nextSide ? onError : undefined} />
       </span>)}
     </span>

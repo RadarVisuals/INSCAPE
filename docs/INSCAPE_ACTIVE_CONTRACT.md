@@ -13,11 +13,13 @@ main or authorize profile publication, uploads or wallet actions.
 
 ## Static customizable Reception bento direction (2026-10-26)
 
-**Accepted implementation scope, not yet implemented.** The founder approved
-replacing the fixed Reception wireframe with an editable, static bento. The
-current task prepares its implementation handoff and a source checkpoint; the
-following implementation must inspect and replace the existing path throughout
-its actual dependencies rather than layer another implementation over it.
+**Accepted direction, implemented locally on the Reception branch.** The founder
+approved replacing the fixed Reception wireframe with an editable, static bento.
+The implementation uses a separate editor over the canonical profile draft and
+one shared public/owner region renderer. Its exact source state, replacement
+disposition, checks and remaining limits are recorded in the
+[implementation audit](audits/2026-10-26/static-reception/README.md). This is not a
+claim that the implementation has been pushed or deployed.
 The detailed execution brief is
 [Static Reception bento implementation handoff](handoffs/2026-10-26-static-reception-bento.md).
 That brief operationalizes this decision; this contract remains product authority.
@@ -512,6 +514,9 @@ Keeper/artwork commerce remains a creative ambition rather than transaction
 authority or an implemented protocol. Current trial behavior is recorded below.
 
 ## Reception wireframe replacement (2026-10-20)
+
+Historical implementation: the static customizable Reception section above
+supersedes the fixed Reception cards. Exploration/Keeper remains a live route.
 
 **Implemented locally following explicit founder authorization.** The founder
 approved replacing the previous Reception rather than retaining it behind a

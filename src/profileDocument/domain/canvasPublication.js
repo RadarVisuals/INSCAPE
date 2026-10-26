@@ -42,7 +42,7 @@ export function buildCanvasPublication({ candidates, selectedIds, includeShared,
   if (!entries.length) throw new Error('Select a canvas for the first publication.');
   const shared = includeShared ? current : previous;
   const root = canvasDocument(shared, entries[0]);
-  if (shared.reception) root.reception = projectReception(shared.reception, root);
+  if (shared.reception) root.reception = projectReception(shared.reception);
   return assertValidProfileDocumentV9({ ...root, canvas: canvasDetails(entries[0]), canvases: entries.slice(1),
     createdAt: previous?.createdAt || new Date(exportedAt).toISOString(), exportedAt: new Date(exportedAt).toISOString(), revision: (previous?.revision || 0) + 1 });
 }

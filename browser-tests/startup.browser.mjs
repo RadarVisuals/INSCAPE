@@ -215,7 +215,7 @@ test('automatic startup and the editorial landing world through the real App', {
           assert.equal(waitingForCode.ownerMounted, false);
           release();
           await entered();
-          await page.locator(mode === 'visitor' ? '.profile-overview' : 'main.system-workflow').waitFor();
+          await page.locator(mode === 'visitor' ? '.reception-page' : 'main.system-workflow').waitFor();
           await capture(`${mode}-handoff-complete`);
         } finally {
           await page.evaluate(() => window.__startup?.releaseEditorLease());

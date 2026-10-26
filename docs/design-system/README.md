@@ -104,6 +104,13 @@ For Reception, overview, composition presentation and shared navigation, use the
 direction. Desktop remains deferred. Read the active contract first; this
 design-system workspace continues to document the existing composition tools.
 
+The static Reception implementation now uses `src/reception/ReceptionCanvas.jsx`
+for owner preview and public reading, with a separate `ReceptionEditor.jsx`.
+Its partition, navigation clip and mobile flow own presentation geometry; the
+Library, Image renderer, Text content controls and Color controls are shared
+with Workbench. See the [implementation audit](../audits/2026-10-26/static-reception/README.md)
+for the replacement disposition and actual verification evidence.
+
 From the project root, using the Node version declared by the project:
 
 ```sh

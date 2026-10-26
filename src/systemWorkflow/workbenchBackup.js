@@ -41,6 +41,7 @@ export function summarizeWorkbenchBackup(draft) {
     ['Shapes', draft.shapes?.length || 0], ['Displays', (draft.grids.length ? 1 : 0) + (draft.displays?.length || 0)],
     ['Mini apps', draft.miniApps?.length || 0], ['Keeper docks', draft.keeperDocks?.length || 0],
     ['Groups', draft.workbenchGroups?.length || 0],
+      ['Reception regions', draft.reception?.regions.length || 0],
   ].map(([name, count]) => `${count} ${name}`).join(' · ');
 }
 

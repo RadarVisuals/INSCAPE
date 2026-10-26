@@ -118,6 +118,8 @@ export function createSystemWorkflowDraftStore({
   /** @type {WorkflowDraft | null} */ let currentDraft = null;
   /** @type {WorkflowDraft | WorkbenchCollection | null} */ let currentRecord = null;
   let activation = 0;
+  let editorTarget = 'workbench';
+  /** @type {{getProfileAddress: () => string} | null} */ let receptionScope = null;
   /** @type {ScopedSession | null} */ let scopedSession = null;
   /** @type {Map<object, {activation: number, check: import('../contracts/workbench.js').TransitionGuard}>} */ const transitionGuards = new Map();
   /** @type {RecordState | null} */ let recordState = null;
@@ -135,7 +137,7 @@ export function createSystemWorkflowDraftStore({
   }, 0);
   /** @type {{before: WorkflowDraft, entry: HistoryEntry | null} | null} */ let historyGroup = null;
   const workbenchId = () => isWorkbenchCollection(currentRecord) ? /** @type {WorkbenchCollection} */ (currentRecord).activeId : FIRST_WORKBENCH_ID;
-  const historyKey = () => `${activeProfileAddress}/${workbenchId()}`;
+  const historyKey = () => `${activeProfileAddress}/${editorTarget === 'reception' ? 'reception' : workbenchId()}`;
   const clearProfileHistory = () => {
     for (const key of histories.keys()) if (key.startsWith(`${activeProfileAddress}/`)) histories.delete(key);
   };
@@ -349,6 +351,7 @@ export function createSystemWorkflowDraftStore({
     // readable snapshot, but can never write after A → B → A.
     /** @returns {import('../contracts/workbench.js').WorkbenchScope} */
     getWorkbenchScope() {
+      if (editorTarget !== 'workbench') throw new Error('Reception is the active editor. Close it before opening a Workbench.');
       if (scopedSession?.activation === activation) return /** @type {WorkbenchScope} */ (scopedSession.api);
       /** @type {ScopedSession} */ const session = { activation, snapshot: currentDraft, generation, profile: activeProfileAddress, id: workbenchId() };
       const current = () => session.activation === activation;
@@ -395,12 +398,56 @@ export function createSystemWorkflowDraftStore({
       return session.api;
     },
 
+    // A distinct capability set over this same canonical store. Reception cannot
+    // create/switch canvases or change free-canvas geometry through this handle.
+    acquireReceptionScope() {
+      if (editorTarget === 'reception') throw new Error('Reception is already open.');
+      api.getSnapshot();
+      if (!api.hasWriteAccess()) throw new Error('This tab no longer has editing access. Return to your profile to reopen the editor.');
+      if (textRecoveries(api.getWorkbenchScope(), activeProfileAddress).length) throw new Error(TEXT_RECOVERY_MESSAGE);
+      for (const guard of transitionGuards.values()) if (guard.activation === activation) {
+        const reason = guard.check(); if (reason) throw new Error(reason);
+      }
+      historyGroup = null; editorTarget = 'reception'; activation++;
+      const scopeActivation = activation, profile = activeProfileAddress;
+      let released = false;
+      const current = () => !released && activation === scopeActivation && activeProfileAddress === profile;
+      const writable = () => current() && api.hasWriteAccess();
+      /** @param {WorkflowDraft} draft */
+      const canvasPart = ({ reception, identityPresentation, ...canvas }) => JSON.stringify(canvas);
+      /** @param {WorkflowDraft} candidate @param {import('../contracts/workbench.js').CommitOptions} [options] */
+      const save = (candidate, options) => writable() && canvasPart(candidate) === canvasPart(api.getSnapshot())
+        && api.commitCompletedOperation(candidate, options);
+      const scope = Object.freeze({
+        isCurrent: current, hasWriteAccess: writable,
+        getProfileAddress: () => profile, getRecoveryContext: () => 'reception',
+        getSnapshot: api.getSnapshot, getDraft: api.getDraft, getGeneration: api.getGeneration,
+        getHistory: api.getHistory, getRecordState: api.getRecordState, getLastCommitFailure: api.getLastCommitFailure,
+        getBackupSnapshot: api.getBackupSnapshot, subscribe: api.subscribe,
+        commitCompletedOperation: save,
+        /** @param {(draft: WorkflowDraft) => WorkflowDraft | null | false} make @param {import('../contracts/workbench.js').CommitOptions} [options] */
+        retryCompletedOperation: (make, options) => writable() && api.retryCompletedOperation(draft => {
+          const next = make(draft); return next && canvasPart(next) === canvasPart(draft) ? next : null;
+        }, options),
+        undo: () => writable() && api.undo(), redo: () => writable() && api.redo(),
+        beginHistoryGroup: () => writable() && api.beginHistoryGroup(), endHistoryGroup: () => writable() && api.endHistoryGroup(),
+        release() {
+          if (!current()) return;
+          released = true; historyGroup = null; editorTarget = 'workbench'; receptionScope = null; activation++; notify();
+        },
+      });
+      bindWorkbenchTextRecovery(scope);
+      receptionScope = scope;
+      return scope;
+    },
+
     getRecordState() {
       return immutableDetached(/** @type {RecordState} */ (recordState));
     },
 
     reload() {
       historyGroup = null;
+      editorTarget = 'workbench'; receptionScope = null;
       clearProfileHistory();
       acceptLoaded(load(activeProfileAddress));
       activation++;
@@ -443,7 +490,10 @@ export function createSystemWorkflowDraftStore({
       const returningKey = `${next}/${isWorkbenchCollection(loaded.record) ? /** @type {WorkbenchCollection} */ (loaded.record).activeId : FIRST_WORKBENCH_ID}`;
       const returningHistory = histories.get(returningKey);
       if (returningHistory && returningHistory.acceptedRaw !== loaded.raw) histories.delete(returningKey);
+      const receptionHistory = histories.get(`${next}/reception`);
+      if (receptionHistory && receptionHistory.acceptedRaw !== loaded.raw) histories.delete(`${next}/reception`);
       activeProfileAddress = next;
+      editorTarget = 'workbench'; receptionScope = null;
       writeAccess = requireEditor ? captureProfileDraftWriteAccess(activeProfileAddress, storage) : () => true;
       acceptLoaded(loaded);
       activation++;
@@ -498,7 +548,7 @@ export function createSystemWorkflowDraftStore({
     const reject = reason => { lastCommitFailure = reason; return false; };
     if (!writeAccess()) return reject('editor_unavailable');
     if (checkEdits) {
-      if (textRecoveries(api.getWorkbenchScope(), activeProfileAddress).length) throw new Error(TEXT_RECOVERY_MESSAGE);
+      if (textRecoveries(receptionScope || api.getWorkbenchScope(), activeProfileAddress).length) throw new Error(TEXT_RECOVERY_MESSAGE);
       for (const guard of transitionGuards.values()) if (guard.activation === activation) {
         const reason = guard.check();
         if (reason) throw new Error(reason);
@@ -519,7 +569,7 @@ export function createSystemWorkflowDraftStore({
     if (restore) clearProfileHistory();
     historyGroup = null;
     // Revoke the departing handle before publishing the arriving snapshot.
-    if (changeContext) { activation++; transitionGuards.clear(); }
+    if (changeContext) { activation++; transitionGuards.clear(); editorTarget = 'workbench'; receptionScope = null; }
     currentRecord = deepFreeze(reuseUnchanged(currentRecord, next));
     currentDraft = deepFreeze(reuseUnchanged(currentDraft, projectWorkbenchDraft(currentRecord)));
     acceptedRaw = raw;
@@ -571,7 +621,7 @@ export function createSystemWorkflowDraftStore({
       const changes = recordHistory ? draftChanges(historyBefore, draft) : [];
       try { storage.setItem(systemWorkflowDraftKey(activeProfileAddress), raw); }
       catch { return reject('write_failed'); }
-      if (restore) { clearProfileHistory(); historyGroup = null; }
+      if (restore) { clearProfileHistory(); historyGroup = null; activation++; editorTarget = 'workbench'; receptionScope = null; }
       // External edits invalidate local history only after a successful recovery.
       if (recovered && recovered.raw !== acceptedRaw) { clearProfileHistory(); historyGroup = null; }
       if (changes.length) {

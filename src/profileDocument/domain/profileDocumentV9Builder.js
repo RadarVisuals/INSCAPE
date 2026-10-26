@@ -1,4 +1,4 @@
-import { projectReception } from './receptionPresentation.js';
+import { projectReception, receptionReferenceCount } from './receptionPresentation.js';
 import { projectWorkbenchIndex } from '../../systemWorkflow/domain/workbenchIndex.js';
 import { projectArtworkLayers } from '../../systemWorkflow/domain/artworkLayers.js';
 import { projectPublishedWorkbenchGroups } from './publishedWorkbenchGroups.js';
@@ -191,7 +191,7 @@ export function buildProfileDocumentV9({
     ...(artworkOrder.length ? { artworkLayers: artworkOrder } : {}),
     ...(workbenchGroups.length ? { workbenchGroups } : {}),
     ...(workbenchIndex ? { workbenchIndex } : {}),
-    ...(draft.reception ? { reception: projectReception(draft.reception, { grids, displays, texts, imageModules }) } : {}),
+    ...(draft.reception ? { reception: projectReception(draft.reception) } : {}),
     metadata: worldCover ? { worldCover } : {},
     ...(displays ? { displays } : {}),
     ...(miniApps?.length ? { miniApps } : {}),
@@ -211,6 +211,6 @@ export function countProfileDocumentV9Assets(document) {
     + (value.displays || []).reduce((sum, module) => sum + module.grids.reduce((count, grid) => count + grid.placements.length, 0), 0)
     + (value.workbench?.displays || []).filter(module => module.shortcut.icon).length
     + imageReferenceCount(value.imageModules);
-  return countCanvas(value) + (value.canvases || []).reduce((sum, item) => sum + countCanvas(item.content), 0)
+  return receptionReferenceCount(value.reception) + countCanvas(value) + (value.canvases || []).reduce((sum, item) => sum + countCanvas(item.content), 0)
     + (value.identityPresentation.avatar.asset ? 1 : 0) + keeperReferenceCount(value.keeperDocks);
 }

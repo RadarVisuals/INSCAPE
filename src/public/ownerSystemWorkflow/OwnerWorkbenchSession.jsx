@@ -5,6 +5,7 @@ import { createSystemWorkflowDraftStore } from '../../systemWorkflow/systemWorkf
 import { createEditorPreferencesStore } from './editorPreferencesStore.js';
 import { createWorkbenchPreferencesStore } from './workbenchPreferences.js';
 const OwnerWorkbenchOverview = lazy(() => import('../workbenchOverview/OwnerWorkbenchOverview.jsx'));
+const ReceptionStoreEditor = lazy(() => import('../../reception/ReceptionStoreEditor.jsx'));
 
 // Replacing a profile, restored backup or active composition remounts its editor.
 export default function OwnerWorkbenchSession({ component: Session, ...props }) {
@@ -23,6 +24,7 @@ export default function OwnerWorkbenchSession({ component: Session, ...props }) 
 
 function LocalWorkbenchSession({ component: Session, ...props }) {
   const [overview, setOverview] = useState(false);
+  const [reception, setReception] = useState(false);
   const [overviewView, setOverviewView] = useState({ layout: 'list', wrap: true });
   const [store] = useState(() =>
     createSystemWorkflowDraftStore({
@@ -70,6 +72,11 @@ function LocalWorkbenchSession({ component: Session, ...props }) {
     };
   }, [editorPreferences, workbenchPreferenceStore, props.profileAddress]);
   const activation = useSyncExternalStore(store.subscribe, store.getActivation);
+  if (reception) return <Suspense fallback={<p role="status">Opening Reception…</p>}>
+    <ReceptionStoreEditor rootStore={store} onClose={() => setReception(false)} onCanvases={() => { setReception(false); setOverview(true); }}
+      reviewAssets={props.reviewAssets} reviewCategories={props.reviewCategories} reviewProfile={props.reviewProfile}
+      publishedDocument={props.publishedResolution?.document} storage={props.reviewStorage} />
+  </Suspense>;
   if (overview) return <Suspense fallback={<p role="status">Opening Workbenches…</p>}>
     <OwnerWorkbenchOverview store={store} reviewAssets={props.reviewAssets} reviewProfile={props.reviewProfile}
       preferences={workbenchPreferenceStore}
@@ -81,6 +88,7 @@ function LocalWorkbenchSession({ component: Session, ...props }) {
       <Session
         {...props}
         onOpenWorkbenchOverview={() => setOverview(true)}
+        onEditReception={() => setReception(true)}
         editorPreferences={editorPreferences}
         workbenchPreferenceStore={workbenchPreferenceStore}
         sharedStore={store.getWorkbenchScope()}

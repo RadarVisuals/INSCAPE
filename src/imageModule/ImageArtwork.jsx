@@ -18,7 +18,7 @@ export default function ImageArtwork(props) {
     onRetry={() => setAttempt(current => current === attempt ? current + 1 : current)} />;
 }
 
-function ImageArtworkAttempt({ side, src, rectangle, crop = side.crop, onReady, onError, recoveryHost, recoveryMode, onRetry }) {
+function ImageArtworkAttempt({ side, src, rectangle, crop = side.crop, onReady, onError, recoveryHost, recoveryMode, onRetry, onRecoverFocus }) {
   const media = side.asset.media;
   const { svg, pending } = useArtworkMediaType(src);
   const raster = usePreparedImageArtwork(src, !pending && !svg);
@@ -64,13 +64,7 @@ function ImageArtworkAttempt({ side, src, rectangle, crop = side.crop, onReady, 
       // A later load result must never steal newer focus.
       const button = event.target.closest('button');
       if (button && document.activeElement === button) {
-        const canvas = recoveryHost.closest('.image-module__window')?.querySelector('.image-module__canvas');
-        // This focus restoration is part of recovery, not a fresh selection.
-        // Keep ordinary later focus on this canvas unchanged.
-        const stop = event => event.stopPropagation();
-        canvas?.addEventListener('focusin', stop);
-        try { canvas?.focus({ preventScroll: true }); }
-        finally { canvas?.removeEventListener('focusin', stop); }
+        onRecoverFocus?.();
       }
     },
     onDoubleClick: event => event.stopPropagation(),

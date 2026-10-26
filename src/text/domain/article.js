@@ -39,9 +39,9 @@ export function articleTextStyle(attrs) {
 }
 export const defaultTextAppearance = () => ({ background: '#101111', opacity: 1, frame: false, scale: 1, fontSize: 16, color: '#ffffff' });
 export const textAppearance = article => article.appearance || { ...defaultTextAppearance(), background: '#101111', frame: true };
-export function textContentStyle(article) {
+export function textContentStyle(article, { containerOwned = false } = {}) {
   const appearance = textAppearance(article);
-  const padding = article.appearance?.padding;
+  const padding = containerOwned ? { top: 0, right: 0, bottom: 0, left: 0 } : article.appearance?.padding;
   return { fontFamily: ARTICLE_FONTS.find(f => f.id === article.font).family, fontSize: appearance.fontSize,
     color: article.appearance ? appearance.color : 'inherit', zoom: appearance.scale,
     '--text-columns': appearance.columns > 1 ? appearance.columns : 'auto', '--text-column-gap': `${appearance.columnGap ?? 24}px`,

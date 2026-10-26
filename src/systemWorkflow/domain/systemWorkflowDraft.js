@@ -1,4 +1,4 @@
-import { validReception } from '../../profileDocument/domain/receptionPresentation.js';
+import { validReception, receptionReferenceCount } from '../../profileDocument/domain/receptionPresentation.js';
 import { validWorkbenchIndex } from './workbenchIndex.js';
 import { validArtworkLayers } from './artworkLayers.js';
 import { validWorkbenchGroups } from './workbenchGroups.js';
@@ -289,7 +289,7 @@ export function validateSystemWorkflowDraft(input) {
     || input.appearance.guideSize > SYSTEM_WORKFLOW_GRID_DENSITY.maximum
     || !HEX_COLOR.test(input.appearance?.guideColor || '')) fail('appearance', 'invalid_appearance', 'Invalid appearance');
   validateIdentity(input.identityPresentation, fail);
-  if (Object.hasOwn(input, 'reception') && !validReception(input.reception)) fail('reception', 'invalid_reception', 'Invalid reception selection');
+  if (Object.hasOwn(input, 'reception') && !validReception(input.reception)) fail('reception', 'invalid_reception', 'Invalid Reception layout');
   if (Object.hasOwn(input, 'workbenchIndex') && !validWorkbenchIndex(input.workbenchIndex, input)) fail('workbenchIndex', 'invalid_workbench_index', 'Invalid Workbench Index');
   if (Object.hasOwn(input, 'artworkLayers') && !validArtworkLayers(input.artworkLayers, input)) fail('artworkLayers', 'invalid_artwork_layers', 'Invalid artwork order or composition block');
   if (Object.hasOwn(input, 'workbenchGroups') && !validWorkbenchGroups(input.workbenchGroups, input)) fail('workbenchGroups', 'invalid_workbench_groups', 'Invalid Workbench groups');
@@ -325,7 +325,7 @@ export function validateSystemWorkflowDraft(input) {
     }
   }
   if (Object.hasOwn(input, 'workbench') && !isValidWorkbenchPresentation(input.workbench)) fail('workbench', 'invalid_workbench', 'Invalid Workbench configuration');
-  const allReferences = keeperReferenceCount(input.keeperDocks) + imageReferenceCount(input.imageModules) + (Array.isArray(input.grids) ? input.grids : []).reduce((sum, grid) => sum + (grid?.placements?.length || 0), 0)
+  const allReferences = receptionReferenceCount(input.reception) + keeperReferenceCount(input.keeperDocks) + imageReferenceCount(input.imageModules) + (Array.isArray(input.grids) ? input.grids : []).reduce((sum, grid) => sum + (grid?.placements?.length || 0), 0)
     + (Array.isArray(input.displays) ? input.displays : []).reduce((sum, module) => sum + (Array.isArray(module?.grids) ? module.grids : []).reduce((count, grid) => count + (grid?.placements?.length || 0), 0), 0)
     + (input.identityPresentation?.avatar?.stableAssetId ? 1 : 0) + (input.workbench?.display?.shortcut?.icon ? 1 : 0)
     + (input.workbench?.displays || []).filter(item => item?.shortcut?.icon).length;

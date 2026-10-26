@@ -16,7 +16,7 @@ function PanelPresence({ children, id, panels, retained = false }) {
 }
 
 export default function OwnerSystemWorkflowPanelLayer({ libraryPreferences, navigationHost, workbenchImageTargetRef, moduleAssetTargetRef, placementTargetRef, shortcutTargetRef, workspaceRef, activity, authoringLocked = false, categoryCommands, connectedProfile, controller, libraryData,
-  profileAddress, onMenuSurfaceChange, menuSurface, onChangeGrid, onClose, onConnect, onDisconnect, onOpenIdentity, onOpenReception, onEnterMyWorld, onVisitProfile, panels, profileIdentity, profileModel,
+  profileAddress, onMenuSurfaceChange, menuSurface, onChangeGrid, onClose, onConnect, onDisconnect, onOpenIdentity, onOpenReception, onEditReception, onEnterMyWorld, onVisitProfile, panels, profileIdentity, profileModel,
   resolveAssetDimensions, workbenchPreferences, onWorkbenchPreferencesChange, backupControls }) {
   const show = (id) => panels.presence[id];
   const libraryMounted = useRef(false);
@@ -36,6 +36,7 @@ export default function OwnerSystemWorkflowPanelLayer({ libraryPreferences, navi
       onPointerDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
       <OwnerSystemWorkflowProfile identity={profileIdentity} model={profileModel} onClose={onClose} onOpenIdentity={onOpenIdentity}
         onOpenReception={onOpenReception ? () => { panels.closePanel({ returnFocus: false }); onOpenReception(); } : undefined}
+        onEditReception={onEditReception ? () => { panels.closePanel({ returnFocus: false }); onEditReception(); } : undefined}
         onDisconnect={onDisconnect} phase={show('profile').phase} /></div></PanelPresence>}
     {show('activity').present && <PanelPresence id="activity" panels={panels}>
       <Suspense fallback={null}><OwnerSystemWorkflowActivity activity={activity} onClose={onClose}

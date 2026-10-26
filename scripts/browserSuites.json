@@ -389,17 +389,6 @@
       ]
     },
     {
-      "name": "bounded-stage",
-      "category": "historical_candidate",
-      "rationale": "Historische kandidaat: deze suite verwacht de verwijderde Reception-Bento-expansie, terwijl contract, actuele fixture en vervangende Reception-tests expliciet de wireframe en canonieke Visitor-route gebruiken. Alleen kandidaat; geen verwijderopdracht.",
-      "prerequisites": [
-        "Host: runner_vite.",
-        "INSCAPE_TEXT_ROOT={origin}",
-        "Lokale fixture-/assetbestanden: browser-tests/profile-overview-fixture.html, browser-tests/profile-overview-fixture.jsx",
-        "Wacht op ontbrekende [data-bento-stage], Run stage checks en Expanded work; huidige fixture bevat deze paden niet. Niet uitvoeren als releasecontrole en niets verwijderen."
-      ]
-    },
-    {
       "name": "color-picker-zoom",
       "category": "targeted",
       "rationale": "Gerichte bestaande module-/workflowcontrole; geen functioneel vervangingsbewijs gevonden en daarom behouden. Concreet: Shape colour changes leave zoom and wheel pan available despite stale wheel buttons.",
@@ -1842,6 +1831,11 @@
       "name": "workbench-preferences",
       "category": "release",
       "rationale": "Workbench-voorkeuren behouden de laatste instellingen bij opslagfalen, tonen onafhankelijke herstelacties en vervangen onleesbare records alleen expliciet."
+    },
+    {
+      "name": "reception-editor",
+      "category": "release",
+      "rationale": "Canonical Reception authoring, Library and native Text recovery, gestures, private/public projection and responsive silhouette."
     }
   ]
 }

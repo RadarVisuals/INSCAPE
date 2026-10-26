@@ -1,3 +1,4 @@
+import { restoreReception } from './receptionPresentation.js';
 import { restoreWorkbenchIndex } from '../../systemWorkflow/domain/workbenchIndex.js';
 import { artworkLayers, artworkRecords, projectArtworkLayers, reconcileArtworkLayers } from '../../systemWorkflow/domain/artworkLayers.js';
 import { restorePublishedWorkbenchGroups } from './publishedWorkbenchGroups.js';
@@ -131,7 +132,7 @@ export function reconcileSystemWorkflowDraftFromProfileDocumentV9(documentInput,
     geometry: { ...document.geometry },
     appearance: { ...document.appearance },
     identityPresentation: restoredIdentity(document.identityPresentation),
-    ...(document.reception ? { reception: structuredClone(document.reception) } : {}),
+    ...(document.reception ? { reception: restoreReception(document.reception) } : {}),
     ...(workbench ? { workbench } : {}),
     ...((document.miniApps || currentDraftInput?.miniApps) ? { miniApps } : {}),
     ...((document.shapes || currentDraftInput?.shapes) ? { shapes } : {}),

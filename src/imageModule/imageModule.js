@@ -22,11 +22,11 @@ export function validImageModules(items, published = false) {
     ids.add(item.id);
     const sides = new Set();
     return item.sides.every(side => {
-      if (!exact(side, ['id', 'asset', 'crop', 'transform', ...(Object.hasOwn(side || {}, 'receptionCrop') ? ['receptionCrop'] : [])]) || !/^side:[A-Za-z0-9_-]{1,80}$/u.test(side.id) || sides.has(side.id)
+      if (!exact(side, ['id', 'asset', 'crop', 'transform']) || !/^side:[A-Za-z0-9_-]{1,80}$/u.test(side.id) || sides.has(side.id)
         || !validateProfileDocumentV9Asset(side.asset) || side.asset.media.type !== 'image' || !side.asset.media.url
         || !Number.isSafeInteger(side.asset.media.width) || side.asset.media.width <= 0
         || !Number.isSafeInteger(side.asset.media.height) || side.asset.media.height <= 0
-        || !validCrop(side.crop) || Object.hasOwn(side, 'receptionCrop') && !validCrop(side.receptionCrop)
+        || !validCrop(side.crop)
         || !exact(side.transform, ['quarterTurns', 'mirrorX', 'mirrorY'])
         || !Number.isInteger(side.transform.quarterTurns) || !number(side.transform.quarterTurns, 0, 3)
         || typeof side.transform.mirrorX !== 'boolean' || typeof side.transform.mirrorY !== 'boolean') return false;

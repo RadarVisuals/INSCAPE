@@ -11,6 +11,8 @@ import { canvasPublicationCandidates, buildCanvasPublication } from '../src/prof
 import { createSystemWorkflowDraftStore } from '../src/systemWorkflow/systemWorkflowDraftStore.js';
 const OwnerSystemWorkflowPublicationRack = lazy(() => import('../src/public/ownerSystemWorkflow/OwnerSystemWorkflowPublicationRack.jsx'));
 import '../src/index.css';
+import { createReception } from '../src/profileDocument/domain/receptionPresentation.js';
+import { splitReception } from '../src/reception/receptionLayout.js';
 const address = `0x${'1'.repeat(40)}`, contract = `0x${'3'.repeat(40)}`;
 const assetId = `42:${contract}:0x01`;
 const draft = createEmptySystemWorkflowDraft(address, { generateId: () => 'first' });
@@ -35,6 +37,13 @@ if (new URLSearchParams(location.search).has('collection')) {
   draft.imageModules[0].width = 800; draft.imageModules[0].height = 1200;
   draft.workbench.imageModules[0].position = { left: 0, top: 0 };
 }
+draft.reception = createReception();
+draft.reception = splitReception(draft.reception, draft.reception.regions[0].id, 'x', 'region:portrait');
+draft.reception.regions[0].content = 'profile';
+draft.reception.regions[1].content = 'image:reception';
+draft.reception.regions[1].padding = 0;
+draft.reception.imageModules = [{ ...structuredClone(draft.imageModules[0]), id: 'image:reception' }];
+draft.reception.branding.theme = draft.appearance.menuSurfaceId;
 let published = buildProfileDocumentV9({ profileAddress: address, profileIdentity: { name: 'Nomad' }, assetRecords: [asset], systemWorkflowDraft: draft });
 let collection = createWorkbenchCollection(draft);
 collection.workbenches[0].name = 'Vision';

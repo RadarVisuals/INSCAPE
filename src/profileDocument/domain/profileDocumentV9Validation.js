@@ -1,4 +1,4 @@
-import { validReception, receptionModuleIds } from './receptionPresentation.js';
+import { validReception, receptionReferenceCount } from './receptionPresentation.js';
 import { validatePublishedCanvases } from './publishedCanvases.js';
 import { validWorkbenchIndex } from '../../systemWorkflow/domain/workbenchIndex.js';
 import { validArtworkLayers } from '../../systemWorkflow/domain/artworkLayers.js';
@@ -247,7 +247,7 @@ export function validateProfileDocumentV9(input, { rawSize } = {}) {
     || input.appearance.guideSize > SYSTEM_WORKFLOW_GRID_DENSITY.maximum
     || !HEX_COLOR.test(input.appearance.guideColor || '')) fail('appearance', 'invalid_appearance', 'Invalid public appearance');
   validateIdentity(input.identityPresentation, fail);
-  if (Object.hasOwn(input, 'reception') && (!validReception(input.reception) || !input.reception.items.every(id => receptionModuleIds(input).includes(id)))) fail('reception', 'invalid_reception', 'Invalid published reception selection');
+  if (Object.hasOwn(input, 'reception') && !validReception(input.reception, true)) fail('reception', 'invalid_reception', 'Invalid published Reception layout');
   if (Object.hasOwn(input, 'keeperDocks') && !validKeeperDocks(input.keeperDocks, true)) fail('keeperDocks', 'invalid_keepers', 'Invalid published Keeper dock');
   if (Array.isArray(input.workbench?.keeperDocks) && input.workbench.keeperDocks.some(item => !Array.isArray(input.keeperDocks) || !input.keeperDocks.some(keeper => keeper?.id === item?.id))) fail('workbench.keeperDocks', 'unknown_keeper', 'Dock refers to an unavailable Keeper');
   if (Object.hasOwn(input, 'miniApps') && !validMiniApps(input.miniApps, true)) fail('miniApps', 'invalid_mini_apps', 'Invalid published mini app');
@@ -351,7 +351,7 @@ export function validateProfileDocumentV9(input, { rawSize } = {}) {
   const documentAssetReferences = (input.grids || []).reduce((total, grid) => total + (grid?.placements?.length || 0), 0)
     + worldCoverAssetReferences + (input.identityPresentation?.avatar?.asset ? 1 : 0) + moduleReferences
     + (input.workbench?.display?.shortcut?.icon ? 1 : 0) + (input.workbench?.displays || []).filter(module => module.shortcut?.icon).length
-    + keeperReferenceCount(input.keeperDocks) + imageReferenceCount(input.imageModules);
+    + keeperReferenceCount(input.keeperDocks) + imageReferenceCount(input.imageModules) + receptionReferenceCount(input.reception);
   if (documentAssetReferences > SYSTEM_WORKFLOW_LIMITS.maxTotalAssetReferences) {
     fail('metadata.worldCover', 'too_many_asset_references', 'Too many total asset references');
   }

@@ -32,7 +32,7 @@ export function ImageChoice({ asset, choice, number, onActivate, onPointerDown, 
         event.preventDefault(); event.stopPropagation(); onContext(event, asset); return;
       }
       if (event.key === 'Enter' && selectedAsset) { event.preventDefault(); onActivate(event, selectedAsset); } }}
-    onPointerDown={(event) => selectedAsset && onPointerDown(event, selectedAsset, { isAssetRenderable: () => true })}>
+    onPointerDown={(event) => selectedAsset && onPointerDown?.(event, selectedAsset, { isAssetRenderable: () => true })}>
     <span className="lattice-browser-asset__media">
       {src ? <LibraryArtworkImage key={src} fileType={choice.fileType} alt="" draggable="false" loading="lazy" src={src} onLoad={(event) => {
         setDimensions({ width: event.currentTarget.naturalWidth, height: event.currentTarget.naturalHeight });

@@ -50,6 +50,7 @@ export const designDecisions = [
 ];
 export const themes = ['carbon', 'mist'];
 export const tokenSources = [
+  { path: 'src/reception/reception.css', role: 'Reception', purpose: 'Rectangular partition, responsive flow, navigation contour and separate editor geometry using shared material controls.' },
   { path: 'src/public/ownerSystemWorkflow/workbenchDestinationPanel.css', role: 'Destinations', purpose: 'Shared flat titlebar, stationary actions, contained scrolling and responsive Docs, Profile and Grids.' },
   { path: 'src/public/ownerSystemWorkflow/workbenchNavigationTools.css', role: 'Navigation tools', purpose: 'Flat Groups and Index fields, keyboard focus and invisible resize targets.' },
   { path: 'src/public/ownerLatticePublicationRack.css', role: 'Publication', purpose: 'Publication review, progress, recovery and support within the shared flat shell.' },
@@ -473,11 +474,11 @@ export const components = [
     id: 'reception',
     name: 'Reception',
     kind: 'Presentation',
-    material: 'Bento wireframe',
+    material: 'Static bento / flat tactile controls',
     source: 'src/profileDocument/components/ProfileOverview.jsx',
     contract:
-      'Read-only identity bento with a temporary exploration room and focus-return path. No automatic artwork feed or Reception editor; composition entry is unavailable pending the overview.',
-    evidence: 'browser-tests/reception-card.browser.mjs',
+      'One region renderer for public reading and a separate owner editor. Reception owns geometry, mobile order, surfaces and canonical Image/Text records; shared content tools retain their Workbench consumers. Navigation clips the same surface/media silhouette. Canvases and exploration retain their existing routes.',
+    evidence: 'browser-tests/reception-editor.browser.mjs',
     status: 'Production',
   },
   {

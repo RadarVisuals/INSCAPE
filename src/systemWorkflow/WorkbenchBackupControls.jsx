@@ -59,7 +59,7 @@ export default function WorkbenchBackupControls({ store, storage, getDraft = () 
   };
   return <section className="workbench-backup system-workflow__settings-section" aria-label="Workbench backup">
     <header><strong>Workbench backup</strong></header>
-    <p>A private file of {collection ? 'all your local Workbenches and shared profile/Keeper settings' : 'your complete saved composition'}, including private modules and artwork references. Media files, wallet credentials, Library caches and interface preferences are not included. Keep this file private.</p>
+    <p>A private file of {collection ? 'all your local Workbenches and shared profile, Reception and Keeper settings' : 'your complete saved composition and Reception'}, including private modules and artwork references. Media files, wallet credentials, Library caches and interface preferences are not included. Keep this file private.</p>
     {store.getRecordState().status !== 'corrupt' && <button className="workflow-tactile-control" type="button" disabled={disabled} onClick={download}>{collection ? 'Download all Workbenches' : 'Download Workbench backup'}</button>}
     <label>Open Workbench backup<input type="file" accept=".json,application/json" aria-label="Open Workbench backup" disabled={disabled || recoveryPending}
       onChange={event => { const file = event.target.files[0]; event.target.value = ''; if (file) void read(file); }} /></label>

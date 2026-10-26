@@ -80,13 +80,19 @@ const messages = {
   write_failed: 'Browser storage could not save your changes. It may be full or blocked. Your unsaved text is still here.',
 };
 export const textSaveFailure = code => ({ saved: false, reason: code, message: messages[code] || messages.write_failed });
-export function saveTextModuleResult(store, profile, expected, next, { retry = false, replace = false } = {}) {
+const workbenchTexts = { read: draft => draft.texts, replace: (draft, texts) => ({ ...draft, texts }) };
+export function saveTextModuleResult(store, profile, expected, next, options) {
+  return saveTextRecordResult(store, profile, expected, next, options, workbenchTexts);
+}
+// The host supplies the canonical collection; conflict detection, recovery and
+// accepted saves remain the same for every article editor.
+export function saveTextRecordResult(store, profile, expected, next, { retry = false, replace = false } = {}, collection) {
   let reason;
   const failed = textSaveFailure;
   if (store.getProfileAddress() !== profile) return failed('profile');
   const generation = store.getGeneration();
   const candidate = draft => {
-    const current = draft.texts?.find(item => item.id === expected.id);
+    const current = collection.read(draft)?.find(item => item.id === expected.id);
     if (!current) { reason = 'missing'; return null; }
     const value = { ...current };
     for (const key of ['article', 'visibility', 'sceneLink', 'pagination']) {
@@ -97,10 +103,10 @@ export function saveTextModuleResult(store, profile, expected, next, { retry = f
       value[key] = next[key];
     }
     if (!retry && JSON.stringify(current) !== JSON.stringify(expected)) { reason = 'conflict'; return null; }
-    const texts = draft.texts.map(item => item.id === current.id ? value : item);
+    const texts = collection.read(draft).map(item => item.id === current.id ? value : item);
     // The draft store validates this collection with the complete candidate.
     // Revalidating every sibling article here duplicated that work per keypress.
-    return { ...draft, texts };
+    return collection.replace(draft, texts);
   };
   try {
     const options = { expectedGeneration: generation, historyLabel: 'Edit Text' };
@@ -108,7 +114,7 @@ export function saveTextModuleResult(store, profile, expected, next, { retry = f
     // the edited record. The store still validates and detaches before accepting.
     const nextDraft = retry ? null : candidate(store.getSnapshot());
     const saved = retry ? store.retryCompletedOperation(candidate, options) : nextDraft && store.commitCompletedOperation(nextDraft, options);
-    return saved ? { saved: true, record: structuredClone(store.getSnapshot().texts.find(item => item.id === expected.id)) }
+    return saved ? { saved: true, record: structuredClone(collection.read(store.getSnapshot()).find(item => item.id === expected.id)) }
       : failed(reason || store.getLastCommitFailure?.() || 'write_failed');
   } catch (error) { return { saved: false, reason: 'invalid', message: error.message }; }
 }

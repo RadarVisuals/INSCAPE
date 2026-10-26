@@ -778,9 +778,9 @@
       "line": 32,
       "column": 6,
       "message": "React Hook useLayoutEffect has missing dependencies: 'range.from' and 'range.to'. Either include them or remove the dependency array.",
-      "sourceSha256": "00acea974a1539a8009aa3fc28f6781218c91ae2deac20e9340d8c129d77b0c0",
+      "sourceSha256": "992a5165a0ebc1b049f73dc03b6276267140dbacd9055f403babadfd1b3e9e04",
       "planStep": "19",
-      "reason": "Continuation editor creation owns controller/range.id/index lifetime. from/to changes are applied by the next layout effect through bridge.update, preserving editor selection instead of disposing the editor. Evidence: step12 text-linked-frames5/5 including typing across boundaries and shared Undo. Limits: Current scoped ESLint rerun; source review. Prior browser evidence explicitly identified; no new lifecycle browser run for this proposal."
+      "reason": "Continuation editor creation owns controller/range.id/index lifetime. from/to changes are applied by the next layout effect through bridge.update, preserving editor selection instead of disposing the editor. Evidence: step12 text-linked-frames5/5 including typing across boundaries and shared Undo. Limits: Current scoped ESLint rerun; source review. Prior browser evidence explicitly identified; no new lifecycle browser run for this proposal. Re-reviewed 2026-10-26: Reception adds explicit containerOwned and formatting callback inputs only; these two lifecycle effects are unchanged. Current evidence: static-reception/browser-third text-linked-frames 6/6, text-article-tools 3/3, text-filled-workbench 3/3."
     },
     {
       "file": "src/text/ArticleEditor.jsx",
@@ -788,9 +788,9 @@
       "line": 110,
       "column": 59,
       "message": "React Hook useLayoutEffect has a complex expression in the dependency array. Extract it to a separate variable so it can be statically checked.",
-      "sourceSha256": "00acea974a1539a8009aa3fc28f6781218c91ae2deac20e9340d8c129d77b0c0",
+      "sourceSha256": "992a5165a0ebc1b049f73dc03b6276267140dbacd9055f403babadfd1b3e9e04",
       "planStep": "19",
-      "reason": "flowRange presence is a deliberate semantic gate alongside its primitive endpoints; bridge update/refresh follows endpoints and focusWriting. No asynchronous captured object is retained. Evidence: step12 text-linked-frames5/5 and Text module final1/1. Limits: Current scoped ESLint rerun; source review. Prior browser evidence explicitly identified; no new lifecycle browser run for this proposal."
+      "reason": "flowRange presence is a deliberate semantic gate alongside its primitive endpoints; bridge update/refresh follows endpoints and focusWriting. No asynchronous captured object is retained. Evidence: step12 text-linked-frames5/5 and Text module final1/1. Limits: Current scoped ESLint rerun; source review. Prior browser evidence explicitly identified; no new lifecycle browser run for this proposal. Re-reviewed 2026-10-26: Reception adds explicit containerOwned and formatting callback inputs only; these two lifecycle effects are unchanged. Current evidence: static-reception/browser-third text-linked-frames 6/6, text-article-tools 3/3, text-filled-workbench 3/3."
     },
     {
       "file": "src/text/DisplayArticleEditor.jsx",

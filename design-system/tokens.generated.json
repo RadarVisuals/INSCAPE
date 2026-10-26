@@ -4,7 +4,7 @@
   "systemVersion": "1.0.0",
   "note": "Generated from production and design-system reference CSS. Reference roles are preview-only. Values remain CSS expressions, with selector and media scopes; this is not a DTCG interchange file. Runtime custom properties and local overrides are included and are not automatically public design tokens.",
   "counts": {
-    "files": 83,
+    "files": 84,
     "definitions": 598,
     "names": 302
   },
@@ -2552,7 +2552,7 @@
     {
       "path": "src/profileDocument/components/profileOverview.css",
       "role": "Local",
-      "sha256": "4749ce8763da6967363c5f43cde2f969cc6c38f8f4027e920d60088f314fb471",
+      "sha256": "52c0f92fe03b2a125a97c128e0d880eb213b4bf6fcb017088527c357dd8d77a8",
       "definitions": [],
       "references": [
         "--color-border",
@@ -2564,8 +2564,6 @@
         "--font-interface",
         "--tactile-edge",
         "--tactile-face",
-        "--tactile-hover",
-        "--tactile-ink",
         "--tactile-muted",
         "--tactile-well"
       ]
@@ -2582,7 +2580,7 @@
     {
       "path": "src/profileDocument/components/publishedProfileStatus.css",
       "role": "Local",
-      "sha256": "6c4dd18940e864f3190dc1dd7b73066d6f3980aba87c70472942b6c76cbafb63",
+      "sha256": "8c705c0c32ddb58e1e2a63a0668ed07ec2c44f3b05475e70189daacaf044255f",
       "definitions": [
         {
           "name": "--lattice-menu-panel",
@@ -2590,7 +2588,7 @@
           "scope": [
             ".published-profile-status"
           ],
-          "line": 21,
+          "line": 18,
           "references": []
         },
         {
@@ -2599,7 +2597,7 @@
           "scope": [
             ".published-profile-status"
           ],
-          "line": 22,
+          "line": 19,
           "references": []
         },
         {
@@ -2608,7 +2606,7 @@
           "scope": [
             ".published-profile-status"
           ],
-          "line": 23,
+          "line": 20,
           "references": []
         },
         {
@@ -2617,7 +2615,7 @@
           "scope": [
             ".published-profile-status"
           ],
-          "line": 24,
+          "line": 21,
           "references": []
         },
         {
@@ -2626,7 +2624,7 @@
           "scope": [
             ".published-profile-status"
           ],
-          "line": 25,
+          "line": 22,
           "references": []
         },
         {
@@ -2635,7 +2633,7 @@
           "scope": [
             ".published-profile-status"
           ],
-          "line": 26,
+          "line": 23,
           "references": []
         }
       ],
@@ -7232,6 +7230,27 @@
         "--space-3",
         "--tactile-edge",
         "--tactile-face",
+        "--tactile-well"
+      ]
+    },
+    {
+      "path": "src/reception/reception.css",
+      "role": "Reception",
+      "sha256": "9a271e0c460462b2b01060b0121789962112ab50f18d29050b898727b92a318b",
+      "definitions": [],
+      "references": [
+        "--control-radius",
+        "--control-shell-radius",
+        "--font-interface",
+        "--font-technical",
+        "--reception-align-x",
+        "--reception-align-y",
+        "--reception-gutter",
+        "--reception-radius",
+        "--tactile-edge",
+        "--tactile-face",
+        "--tactile-ink",
+        "--tactile-muted",
         "--tactile-well"
       ]
     },

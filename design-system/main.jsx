@@ -606,7 +606,7 @@ function Patterns() {
       <p>
         Reflow the interface while preserving authored geometry. At 520 px and below, creation uses
         two centred rows. Companion tools reserve room above the measured bottom controls. Long copy
-        wraps; the owning surface scrolls. Reception remains a bounded host for the same modules.
+        wraps; the owning surface scrolls. Reception uses its own rectangular partition and mobile flow, with shared Image and Text content tools.
       </p>
       <aside className="ds-note">
         Artwork, module appearance, Workbench background and menu theme are separate decisions.

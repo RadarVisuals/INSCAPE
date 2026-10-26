@@ -12,7 +12,7 @@ async function mount(context, owner = true) {
     ? route.fulfill({ contentType: 'image/svg+xml', path: 'browser-tests/fixtures/keeper-layered.svg' })
     : new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
   await page.goto(owner ? url : url.replace('&owner=1', ''));
-  await page.getByRole('region', { name: 'Reception wireframe' }).waitFor();
+  await page.getByRole('region', { name: 'Reception layout' }).waitFor();
   return page;
 }
 async function seed(page) {

@@ -3,7 +3,7 @@ import CommittedColourControls from '../colour/CommittedColourControls.jsx';
 import { ARTICLE_STYLE_ROLES, textAppearance } from './domain/article.js';
 import { beginArticleColour, setArticleColour } from './articleColourGesture.js';
 
-export default function TextColourTools({ article, editor, target, onTarget, disabled, onChange, onPreview, store, error, onRecovery }) {
+export default function TextColourTools({ article, editor, target, onTarget, disabled, onChange, onPreview, store, error, onRecovery, containerControls = true }) {
   const [, refresh] = useReducer(value => value + 1, 0);
   useEffect(() => {
     if (!editor || editor.isDestroyed) return;
@@ -42,7 +42,7 @@ export default function TextColourTools({ article, editor, target, onTarget, dis
   return <>
     <label className="workbench-color-target">Apply to<select aria-label="Color target" value={target} onChange={event => onTarget(event.target.value)}>
       <option value="body" disabled={!bodyAvailable}>{selection?.empty ? 'Text at cursor' : 'Selected text'}</option>
-      <option value="default">Article default text</option><option value="title">Article title</option><option value="background">Text box background</option>
+      <option value="default">Article default text</option><option value="title">Article title</option>{containerControls && <option value="background">Text box background</option>}
       {ARTICLE_STYLE_ROLES.map(role => <option key={role.id} value={role.id}>{role.label} (all)</option>)}
     </select></label>
     {body && colors.size > 1 && <p>Mixed colors</p>}

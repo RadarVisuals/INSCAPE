@@ -56,9 +56,7 @@ export default function PublishedProfileBoundary({
   const content = !visibleDocument
     ? <PublishedStatusSurface state={resolution} onRetry={onRetry} onOpenDirectory={onOpenDiscover}
       onReturn={returnToWorkbench || returnHome} returnLabel={returnToWorkbench ? "Back to my Workbench" : "RETURN"} />
-    : <>{returnToWorkbench && <nav className="published-profile-owner-navigation" aria-label="My profile navigation" data-workflow-material="tactile">
-      <button className="workflow-tactile-control" type="button" onClick={returnToWorkbench}>Back to my Workbench</button>
-    </nav>}<PublishedProfileDocumentPreview document={visibleDocument} ownerEditingAllowed={Boolean(returnToWorkbench)} entry={entry} onOpenOverview={onOpenOverview} onOpenCanvas={onOpenCanvas}
+    : <><PublishedProfileDocumentPreview document={visibleDocument} ownerEditingAllowed={Boolean(returnToWorkbench)} onReturnToWorkbench={returnToWorkbench} entry={entry} onOpenOverview={onOpenOverview} onOpenCanvas={onOpenCanvas}
       onOpenDirectory={onOpenDiscover} onReturn={returnHome} onConnect={onConnect} />
     {resolution.status === PUBLISHED_PROFILE_STATUS.STALE && <div className="published-profile-stale" role="status" aria-busy={resolution.busy}>Showing the last verified document while {resolution.busy ? 'checking the network.' : 'the network is unavailable.'} <RetryButton state={resolution} onRetry={onRetry} /></div>}
     </>;
