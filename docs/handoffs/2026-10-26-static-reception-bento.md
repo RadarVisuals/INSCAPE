@@ -2,8 +2,9 @@
 
 Date: 26 October 2026. Recipient: a fresh Codex instance with no conversation
 history. Task: implement the founder-approved static, customizable Reception
-bento in the existing Inscape application. Deliver working authoring,
-persistence and public rendering, and completely remove the implementation
+bento through a separate Reception editor in the existing Inscape application.
+First separate and verify the concrete shared tools it needs. Deliver working
+authoring, persistence and public rendering, and completely remove the implementation
 paths that this work supersedes. This is an execution brief, not a request for
 another general proposal or an isolated demonstration.
 
@@ -19,6 +20,52 @@ recorded near the top of `docs/INSCAPE_ACTIVE_CONTRACT.md`. That contract remain
 product authority; this file supplies execution details, observed source
 locations, defaults and acceptance scenarios. Recheck the actual checkout
 before acting because other work may have continued.
+
+## Cross-chat review and dispatch state (26 October 2026)
+
+This brief was checked against the complete conversation **Stuur inspiratie-sites
+uit Framer** (`01a177a2-b476-7a83-8dd8-7fdff3a09ced`) and the earlier decisions in
+**Check Framer preview access** (`01a17032-43ca-79f1-aab6-216e0cb5b660`). The
+founder stopped the proposed dispatch with "nog niet sturen", then asked for
+this combined review. No implementation chat was created by that dispatch.
+Reading or reviewing this file does not itself authorize starting another chat.
+Begin implementation when the founder explicitly assigns that execution task.
+
+After this review, the founder chose a separate Reception editor that reuses
+existing tools, then asked to inventory and separate those tools first. They
+authorized updating this handoff and committing/pushing the documentation
+before a new chat is started. This supersedes the intervening proposal for a
+Reception mode inside the free Workbench. It does not authorize starting that
+new chat, implementing the editor or changing the live preview during this
+documentation task. The implementation scope below includes the agreed order.
+
+The later choice is a freely configurable, module-based bento with Hanssen as
+its static visual reference. Earlier exploration of hairline dividers,
+[Studio Almond](https://www.almond.studio/) and
+[Notter + Vigne](https://notter-vigne.ch/) was reference research. It did not
+replace Hanssen or establish an additional mandatory hairline mode. A bento is
+the layout structure; it need not mean a fixed collection of identical cards.
+Keep the user's chosen proportions, spacing and corner settings meaningful.
+
+The split/move/merge, mobile and spacing principles below were proposed and
+accepted in that conversation. Detailed cancellation, validation and recovery
+rules are engineering requirements derived from those interactions and the
+existing application boundaries, not claims that the founder specified every
+implementation detail. Exact default dimensions remain implementation choices.
+Additional custom palettes, background treatments and branding typography were
+discussed without a finalized set of controls. Do not silently turn that
+brainstorm into a new general theme/font editor in this static slice.
+
+Use these terms consistently:
+
+- **Reception layout:** the profile-level arrangement being built here. A new
+  blank Reception starts with one region; this does not create a new Workbench.
+- **Canvas / Workbench composition:** an existing independently authored work,
+  opened for presentation through Canvases or for creation through Workbench.
+- **Region / module placement:** a Reception area and its reference to content.
+  New Reception content has its own records using the existing module models;
+  it does not require an instance on a Workbench. If existing content is ever
+  linked, changing its Reception layout must not move its Workbench placement.
 
 ## Start in the correct checkout
 
@@ -72,6 +119,21 @@ Use [checkpoint evidence](../audits/2026-10-26/bento-handoff/README.md) for the
 verified remote tag, branch and checks. Do not infer pushed state from this
 paragraph alone; query Git when starting.
 
+The review verified remote handoff commit
+`b1df6f858f02d80577f66783cdefd61e950d6d9f` and the remote checkpoint tag. That
+commit is the initial handoff and changes documentation/reference images only.
+The subsequent reviewed revision adds the separate-editor decision, tool
+inventory and content flow without changing application source. Before execution,
+verify that the checked-out handoff includes those sections and that the intended
+documentation commit has been pushed; do not assume the initial commit includes
+later decisions. Use Git history and the remote branch to establish exact state.
+
+The handoff branch is different from PR #5's branch. PR #5 and its existing
+Netlify preview still use `codex/audit-checkpoint-2026-10-19`; pushing the handoff
+branch does not update that preview. Preserve this distinction in later Git
+and deployment reports. Verify the chosen delivery branch when implementation
+is assigned; do not silently switch branches or merge simply to update a URL.
+
 At handoff preparation, no application source file was locally modified. One
 pre-existing audit file was modified:
 `docs/audits/2026-10-23/code-quality-progress.json`.
@@ -104,7 +166,8 @@ signatures or publish on-chain based on this handoff.
 
 ## What the founder has approved
 
-The immediate request is a real bento editor without animation. The maker can
+The immediate request is a separate, real Reception editor without animation,
+built from the existing shared tools. The maker can
 split regions, resize their subdivisions, move content between them, merge
 regions, and configure radius, gutter and padding. The experience should be
 visually close to Hanssen's coherent framed presentation while remaining
@@ -112,10 +175,11 @@ personalizable through layout, identity and content.
 
 The founder accepted these interaction principles:
 
-- Begin a new composition with one empty region.
+- Begin a new Reception layout with one empty region.
 - Split a selected region into two side-by-side regions or two stacked regions.
 - Drag a shared divider to change their proportions.
-- Place or replace a supported module in a region.
+- Add or replace supported content directly in a region through the shared
+  Library, Text tools or canonical profile/link presentation.
 - Move a module placement to an empty region or swap placements between filled
   regions.
 - Merge adjacent regions when their combined area is rectangular.
@@ -157,6 +221,68 @@ stack. The platform's Web3 direction does not authorize changing its current
 publication transport or authority model. Do not redesign the existing Aerra
 gallery, Workbench editor, Keeper or canvas viewer as collateral work.
 
+### Existing experience to preserve
+
+The baseline already includes the work completed in the original chat:
+
+- Reception's **Enter Inscape / Canvases** route opens the published collection
+  for signed-out desktop and mobile visitors. It has List/Grid, optional Wrap
+  and temporary card size; About returns to Reception. This is implemented,
+  despite older reference-packet paragraphs describing it as future work.
+- A gallery tile opens the composed canvas fitted in a bounded inspection,
+  with optional expansion, camera points and scoped composition/artwork
+  metadata. It does not directly activate the Workbench editor. Owner editing
+  is a separate action. Thumbnail cropping does not change the actual artwork.
+- The gallery's compact bottom-centre Inscape menu and glass controls were
+  deliberately chosen for that surface. Reception's Hanssen navigation cutout
+  is a separate scoped design choice, not an instruction to relocate every
+  navigation control or redesign the gallery.
+- Selective publication preserves the last published state of unselected
+  canvases. Reception/profile changes have their own shared selection. No real
+  user composition was automatically published by these implementation tasks.
+- The baseline includes the wrap flicker repair: repeated visible copies are
+  prepared together by the gallery's shared visibility owner. Preserve it when
+  integrating Reception navigation; do not reintroduce per-card unmount gaps.
+
+See the [published gallery evidence](../audits/2026-10-26/published-gallery/README.md)
+and [wrap frame analysis](../audits/2026-10-26/gallery-wrap/README.md). Those are
+baseline records, not evidence that the future bento has passed verification.
+New Reception rendering must reuse the current artwork policies, including
+transparent media and isolated SVG rendering, rather than reducing every
+source to a gallery thumbnail. Its region geometry must not rewrite the
+referenced module's authored Workbench position, size or crop.
+
+### Later idea retained for continuity, outside this implementation
+
+The founder's longer-term idea is a fixed outer bento frame whose internal
+allocation changes as the visitor scrolls: a large left block shrinks as
+another enters; that second block fills the frame; further scrolling reveals
+another arrangement. "Full screen" in that example meant filling the bento
+frame. Linked text and images could follow the same progression or move in
+different directions, while branding/navigation stays recognizable.
+
+The founder saw the retained Display module and its existing scene/text links
+as a possible basis. The other chat reported that more than one Text module
+can already follow one Display; verify that existing implementation before a
+future integration. It does not establish that Display already rearranges
+bento geometry. Preserve the retained code without reactivating it now.
+
+References discussed for that future exploration:
+
+- [Founder-supplied Codrops article](https://tympanus.net/codrops/2026/10/26/animating-agents-gsap-animaxxing/).
+- Museum of Motion: [Pinned](https://tympanus.net/Demos/MuseumOfMotion/exhibits/pinned/),
+  [Waypoints](https://tympanus.net/Demos/MuseumOfMotion/exhibits/waypoints/) and
+  [Rearrange](https://tympanus.net/Demos/MuseumOfMotion/exhibits/rearrange/).
+- [GSAP skills](https://github.com/greensock/gsap-skills) and
+  [Animaxxing recipes](https://github.com/johnpolacek/animaxxing-skills).
+
+These links preserve the conversation, not a dependency choice or an instruction
+to install skills, build a motion framework, or add placeholder animation data.
+The founder said the licensing inquiry was sent and chose to build statically
+while awaiting an answer. No reply or permission is evidenced by this handoff.
+Future motion controls and the library choice require their own implementation
+scope. Stable region IDs and clear ownership are sufficient groundwork now.
+
 ## Observed implementation that must be traced
 
 The inspected baseline contains a fixed read-only Reception wireframe. It does
@@ -194,6 +320,114 @@ Before editing, explain briefly to the founder: what owns the current view,
 draft, publication and styling; what you will reuse; what must be replaced; and
 which boundaries remain unchanged. Technical choices should be investigated by
 the agent rather than handed to the founder as developer questions.
+
+## Separate editor and shared tools
+
+The accepted architecture is a separate Reception editor inside Inscape. It
+uses the same real building blocks and persistence/publication authority as
+appropriate, with its own layout, selection, commands and content scope. It is
+not an extra named Workbench, a hidden canvas used as a content warehouse, or
+the entire Workbench runtime with unrelated controls hidden by CSS.
+
+The source inspection explains the distinction. `OwnerWorkbenchToolbar.jsx`
+handles camera-aware creation gestures and Workbench keyboard behavior as well
+as toolbar presentation. `WorkbenchToolbar.jsx` contains reusable menu/focus
+behavior but still assumes several Workbench tools. `TextWorkbench.jsx` and
+`ImageWindow.jsx` own free-canvas positioning, camera and window behavior.
+Mounting those complete hosts would bring dependencies Reception does not need.
+The lower-level text, image and color code provides concrete reuse boundaries;
+some still need host-specific assumptions removed before they can be shared.
+
+### Initial inventory and extraction targets
+
+This table records the initial inventory reviewed with the founder. Preserve
+the required behaviors; choose exact file boundaries from the current code.
+It is not an instruction to implement every option present in an old panel.
+
+| Tool or service | Reception needs | Existing source and required separation |
+| --- | --- | --- |
+| Library | Browse/search the existing material, select a specific image and place it into the chosen region. | `src/library/`, `useOwnerWorkbenchLibrary.js`, `OwnerSystemWorkflowLibraryPresenter.jsx` and the existing browser/placement path. Reuse the Library and its identity/media records. Separate asset selection from Workbench/Display drop coordinates; capture the Reception region as the destination. |
+| Text | Create and edit text, typography, alignment and links directly in a region. | `src/text/ArticleEditor.jsx`, `TextTools.jsx`, `TextColourTools.jsx`, the article model and edit/recovery services. Reuse formatting/editor behavior; separate the content/tool body from `TextWorkbench.jsx` windows and `SharedTextTools` host placement where needed. Do not bring Display connection, Workbench frame-flow or unrelated management tabs into this slice. |
+| Image and crop | Choose/replace artwork; fit or fill a region and position the crop. Preserve transparent/raster/SVG media, source identity and meaningful loading/retry. | `src/imageModule/ImageArtwork.jsx`, `ImageWorkbench.jsx`, `imageModuleSession.js`, and existing crop/projection helpers. Reuse the media pipeline and crop mathematics. Separate crop interaction and recovery/focus callbacks from the Workbench window/camera. Do not rebuild SVG rendering or substitute a Library thumbnail for the original artwork. |
+| Color | Edit supported text and surface colors with the existing controls and a precise selected target. | `src/colour/ColourControls.jsx` and `CommittedColourControls.jsx` are already largely independent. Bind them to Reception's selected content/region through explicit values and completed edits. Keep temporary previews, cancel and one-gesture/one-undo behavior. This is not a new global palette/font system. |
+| Profile and links | Present/edit the existing name, introduction, profile image and links; add the agreed branding/navigation presentation. | Canonical identity data, `src/public/identity/IdentityCardSettings.jsx` and `publishedIdentityRackViewModel.js`. Separate useful field controls from their existing host where needed. Explain when editing a shared profile fact affects other destinations; do not create a competing Reception identity. A custom logo is authored branding, not a replacement for verified UP authority. |
+| Artwork information | Keep creator/source metadata and attributes reachable for the selected artwork. | Existing metadata view models/content and `SharedDisplayTools.jsx`. Reuse the information, separating content from Workbench/Display tool registration and dock hosting. Avoid another permanent info bar on every cell. |
+| Common controls | Familiar buttons, toolbar/menu behavior, inputs, focus and panel styling. | Existing toolbar, menu, panel and token components. Extract/use the actual shared implementation; Reception composes its own relevant actions. Do not copy a toolbar/CSS file and maintain a second equivalent implementation. Full detachable/tabbed docking is not a prerequisite unless it is needed by a concrete retained tool. |
+| Save, undo, recovery and publication | Confirmed edits with correct scope, history, reload/backup and explicit publishing. | Existing profile draft/collection store, editing lease, completed-operation history and publication pipeline. Add an explicit Reception edit target where required; these services currently contain Workbench assumptions and are not proven drop-in adapters. Do not create a second independent store or publisher. |
+
+Keep canvas resolution, free X/Y placement, camera points/index, Workbench Layers,
+Shapes/FX, mini-app authoring and Display linking out of Reception's initial
+command set. They remain available in their existing product scopes. Extra
+rotate/mirror, image-side controls and advanced docking were not separately
+selected for this first Reception toolbar; their mere existence does not make
+them a prerequisite. Existing artwork content must still render correctly.
+
+Reception owns new tools for split/merge, divider resize, move/swap, region
+padding/radius/gutter/alignment, branding/navigation and desktop/mobile layout
+preview. Do not register unrelated Workbench actions and merely hide their
+buttons: context menus, command search, shortcuts and drag targets must all
+use the editor's applicable actions. Define each editor's action once and use
+it from its relevant inputs rather than copying handlers between menus.
+
+### How the maker adds content
+
+The user opens **Edit Reception**, selects a region and chooses **Add content**.
+Image opens the shared Library and assigns the chosen artwork to a new Image
+record in Reception. Text creates a Reception-owned record using the existing
+article model and opens the shared editor. Profile/links uses the existing
+canonical profile facts. An existing Reception content record can be assigned
+again through an explicit reuse action when supported. No step requires the
+maker to create or select an otherwise unused Workbench.
+
+New Reception Image/Text instances belong to one authoritative profile-scoped
+Reception content collection within the canonical draft. Both viewport layouts
+refer to those records. Keep this a use of existing module models, with region
+presentation supplying the host geometry; do not invent new unrelated article
+or asset formats. Library assets remain shared source material. Choosing the
+same asset twice does not silently link the two module instances' editable
+settings. A new region is not a new Workbench and must not consume a slot in
+the eight-canvas collection or appear as a gallery tile.
+
+Content creation and assignment are one completed operation: cancelled Library
+selection or failed persistence cannot leave a phantom placement. Bind async
+media selection to the originating editor, profile, region and edit generation;
+switching editors or replacing/removing that region invalidates the result.
+Edit, replace and remove actions must distinguish content from its placement.
+Removing a placement keeps the layout and must retain the documented recovery
+or reassignment path for its content; it never deletes a shared Library asset.
+
+Copying or live-linking arbitrary modules from another canvas was discussed but
+not settled. Do not make that an implicit dependency or build a cross-canvas
+picker in this slice. If existing references must be retained, scope them
+explicitly and preserve public/private boundaries; do not reinterpret a link as
+a copy or synchronize two editable records in the background. Canvases remains
+reachable through the existing navigation. A new canvas-preview content module
+is not required by this first inventory.
+
+### Ownership of appearance and changes
+
+Reception owns the cell's outer spacing, surface and contour. Text owns its
+article content, typography, paragraph spacing and text alignment. The current
+Text tools also expose box padding, backgrounds and edges: do not show both
+those settings and competing bento controls for the same physical boundary.
+Separate content controls from container controls, and render through explicit
+host inputs without rewriting stored article settings to make them disappear.
+Workbench retains its current text-box controls and behavior.
+
+The same principle applies to artwork crop versus cell geometry, authored
+radius versus tool-button radius, and saved appearance versus temporary visitor
+theme. Every setting has one owner. A shared control/style improvement should
+reach both editors because they import the same implementation; a new
+Workbench-specific operation must not appear in Reception automatically.
+
+Perform extraction in small, working steps: first Library/Image placement and
+rendering, then Text/Color, using existing common controls throughout. Verify
+the original Workbench after each changed boundary and prove the extracted
+pieces with real Reception image/text content. These are intermediate checkpoints
+within the full implementation assignment, not permission for a whole-app
+rewrite or a reason to stop permanently at a test-only demonstration. Keep
+future Display insertion possible through the existing module boundaries;
+do not design a speculative editor/plugin framework in advance.
 
 ## Visual target and reusable styling
 
@@ -360,7 +594,8 @@ Provide an equivalent Move/Swap command for keyboard and touch users.
 
 Keep references stable and do not duplicate article content, asset records or
 entire Workbench documents during the gesture. Cancelled/invalid drops do not
-write. Moving a bento placement must not move its original Workbench window.
+write. Moving a bento placement changes its Reception assignment only; any
+separately linked Workbench placement stays unchanged.
 
 ### Merging
 
@@ -433,17 +668,18 @@ on every desktop edit. Content replacement propagates because it has one owner.
 Do not store a separately serialized copy of the whole composition per viewport.
 
 Bento owns region identity, subdivision geometry, assignment, presentation
-spacing and mobile arrangement. Modules own their content and supported render
-behavior. Use stable region IDs and explicit content references. Image and Text
-should use their existing models and renderer/editor services. Existing
+spacing and mobile arrangement. Reception-owned module records own their content
+and use the existing supported render behavior. Use stable region IDs and
+explicit Reception content references. Image and Text use their existing
+models and renderer/editor services. Existing
 identity, introduction and link presentation may bind to the canonical profile
 view model; do not clone that identity into another mutable bento object.
 
-Investigate module scope across named Workbenches. Reception is profile-shared;
-an unqualified module ID in the active canvas is not a safe general lookup if
-IDs can repeat across canvases. Use explicit qualified references where needed,
-and resolve them only against eligible data for the current mode. Do not change
-the active editor merely to render or preview a referenced module.
+Reception is profile-shared; its own content does not live in the active
+Workbench. Never resolve an unqualified Reception ID against whichever canvas
+happens to be active. Any retained external reference needs an explicit scope
+and eligible data for the current mode. Do not change the active Workbench to
+render, edit or preview Reception content.
 
 The initial implementation must demonstrate real image and text content,
 identity/links, save/reload and public projection. A layout containing only
@@ -485,9 +721,9 @@ not an apparent successful save followed by lost work.
 
 Temporary state includes selection, open menus, pointer candidates, drag
 targets, focus, current mobile preview and visitor theme/navigation choices.
-Authored state includes accepted geometry, placement assignments, defaults and
-overrides. Keep those categories separate. Cache invalidation must be explicit;
-no derived cache becomes an alternative saved layout.
+Authored state includes Reception content records, accepted geometry, placement
+assignments, defaults and overrides. Keep those categories separate. Cache
+invalidation must be explicit; no derived cache becomes an alternative saved layout.
 
 The current public v9 envelope has a shared profile/Reception and selected
 canvases, with an aggregate 512 KiB bound. The current collection limit is eight
@@ -495,13 +731,23 @@ canvases. Recheck these definitions in code. Reception publication is part of
 the profile/shared selection. Preserve unselected published canvases and the
 separation between private changes, prepared publication and actual publication.
 
-If a bento references content, its public projection must include only content
-the owner explicitly makes public through the existing workflow. Never auto-
-publish a private canvas or copy private module payloads into Reception to make
-a cell appear filled. Resolve references against the publication being built,
-including retained unselected public canvases. Where an assignment cannot be
-published, explain it in preparation and offer a deliberate correction; do not
-silently lose content or fetch it from an owner's local draft in Visitor mode.
+Reception's public projection includes its selected public placements and the
+eligible Reception-owned content needed by them, using the same Image/Text/asset
+validation and bounded public document. Private and unplaced editing material
+does not become public merely because it is in the Reception draft. Keep
+Reception under the explicit profile/shared publication selection; exclude its
+changes when that selection is off and preserve the last public Reception.
+There is no hidden Workbench to publish along with it. Inspect current first-
+publication prerequisites and explain them through the existing workflow rather
+than silently creating or publishing a canvas to satisfy them.
+
+If a retained placement references content elsewhere, include only content the
+owner explicitly makes public through the existing workflow. Never auto-publish
+a private canvas or copy its private module payload into Reception to fill a
+cell. Resolve such references against the publication being built, including
+retained unselected public canvases. Where an assignment cannot be published,
+explain it in preparation and offer a deliberate correction; do not silently
+lose content or fetch it from an owner's local draft in Visitor mode.
 
 Visitor rendering receives verified public data only. No private module list,
 editor-only sidebar, wallet tools, local backup information or draft preview
@@ -565,22 +811,33 @@ dependencies are gone, not when every occurrence of a historical name is gone.
 1. Verify checkout, branch, dirty state and checkpoint. Read required context,
    inspect the reference and capture the existing Reception in disposable test
    data at wide/narrow sizes and both themes.
-2. Trace responsibilities and write the disposition table. Decide the single
-   canonical bento model and content ownership from actual dependencies.
-3. Implement pure layout operations/validation and integrate one transaction
-   boundary, with meaningful tests for split/resize/move/merge/undo/failure.
-4. Replace the fixed Reception rendering with the shared static renderer,
-   including real supported content and the Hanssen contour. Add the owner
-   controls through existing styling and access boundaries.
-5. Complete mobile arrangement, global/local spacing, branding and real
+2. Trace responsibilities and write the disposition table and concrete tool
+   inventory. Establish Reception's canonical content ownership, layout model,
+   selection, command scope and existing draft/history/publication boundaries.
+3. Extract only the required shared tools, starting with Library/Image, then
+   Text/Color and necessary control primitives. Keep the original Workbench
+   using those same implementations and verify its behavior after each slice.
+   Do not build a generic editor framework or carry over Workbench-only commands.
+4. Connect the separate Reception editor to those real tools: select a region,
+   add an Image from Library, create/edit Text and assign profile/link content.
+   Prove canonical save, cancellation, recovery and scoped history for this
+   initial production flow before expanding the layout controls.
+5. Implement pure layout operations/validation and integrate the existing
+   transaction boundary, with meaningful split/resize/move/merge/undo/failure
+   checks. Keep content records independent of their region assignments.
+6. Replace the fixed Reception rendering with the shared owner/public static
+   renderer, real supported content and the Hanssen contour. Connect Reception's
+   own controls and command registration through existing access boundaries.
+7. Complete mobile arrangement, global/local spacing, branding and real
    navigation/theme behavior. Verify long content and actual media early.
-6. Complete save/reload, backup/recovery, collection projection, publication and
-   restoration. Test private exclusions and selected-canvas interactions.
-7. Remove obsolete paths across the full disposition table. Update current
+8. Complete save/reload, backup/recovery, collection projection, publication and
+   restoration. Include Reception-owned content, private/unplaced exclusions,
+   shared-section selection and selected-canvas interactions.
+9. Remove obsolete paths across the full disposition table. Update current
    contract implementation status, design-system descriptions and inventory.
-8. Run final checks on the final source, inspect actual screenshots/interactions,
-   and report exact remaining limitations. Commit in reviewable slices following
-   the current user's Git authorization; retain the pre-bento checkpoint.
+10. Run final checks on the final source, inspect actual screenshots/interactions,
+    and report exact remaining limitations. Commit in reviewable slices following
+    the current user's Git authorization; retain the pre-bento checkpoint.
 
 Do not stop at a beautiful standalone HTML mock, a fixture-only implementation,
 an editor that cannot save, a public view that cannot load, or a tree model
@@ -596,7 +853,11 @@ strings or class names.
 
 | Scenario | Required result |
 | --- | --- |
+| Separate editor entry | Editing Reception does not create or consume a Workbench slot, change the active canvas's content or mount the full Workbench camera/window runtime. |
 | Blank start | One empty region; reachable split/place controls in owner mode; no construction tools for a visitor. |
+| Direct content creation | Add an Image through the shared Library and create/edit Text directly in Reception without first placing either on a Workbench. Each has one canonical Reception-owned record, survives save/reload and follows scoped history; cancellation/failure leaves no orphan assignment. |
+| Shared-tool regression | The original Workbench still creates and edits Image/Text content using the extracted production tools. Library selection, crop, typography and color remain functional; the disposition review identifies the common implementation used by both editors. |
+| Editor command scope | Reception shortcuts, context menus and panels expose only its registered tools. Free-canvas size, camera/index, Workbench Layers, Shapes/FX, mini-app and Display-link commands cannot run through hidden handlers; leaving the editor cancels pending gestures and stale writes. |
 | First composition | Split left/right, split the right child into two rows, put an image left and distinct text/link content right. The intended asymmetric composition renders without overlapping or missing content. |
 | Repeated subdivision | Nested splits preserve all unaffected cells and stable references; no multiplying gutter or padding. Minimum-size/depth limits have a usable explanation. |
 | Divider pointer resize | Resize through both directions, near limits and after scrolling. One accepted operation, one undo; no stuck capture. |
@@ -609,9 +870,10 @@ strings or class names.
 | Invalid merge/drop | L-shaped, diagonal and outside destinations do not mutate state. |
 | Remove content | Region remains; only the placement is cleared; underlying content remains recoverable. |
 | Geometry extremes | Zero/default/high radius, gutter and padding work in both themes; no self-intersection, doubled seams, blocked targets or media bleed. |
+| Appearance ownership | Reception cell controls own the outer padding, background and corners; Text tools own typography and paragraph layout. There is no doubled container styling, and existing Workbench Text box settings are preserved. |
 | Inner corners | Founder screenshot's navigation cutout is visibly reproduced with variable navigation width and light/dark surfaces. Ordinary outer border-radius alone fails this check. |
 | Long identity/navigation | Long names/links and narrow widths preserve navigation, focus, contour and readable text. |
-| Shared content | Editing a referenced Text or Image through its canonical owner updates both viewport layouts without a duplicate article/module. |
+| Shared content | Editing a Reception-owned Text or Image updates both viewport layouts without a duplicate article/module. Any retained external reference resolves through its explicit owner, never whichever Workbench happens to be active. |
 | Mobile layout | Vertical default and deliberate ordering; owner overrides survive unrelated desktop edits; removed cells leave no stale mobile entries. |
 | Text and media overflow | Long text remains readable; transparent/raster/SVG image handling retains the existing renderer policy, fit and provenance. |
 | History | Completed split, merge, move, resize and appearance changes undo/redo chronologically; native text undo remains scoped. |
@@ -620,6 +882,7 @@ strings or class names.
 | Profile isolation | Two profiles and same-profile second tab cannot share or race authored bento state; stale async work cannot commit. |
 | Preview parity | Owner preview and public renderer have matching geometry, clipping, content and themes for the same allowed data. |
 | Public privacy | A private module/canvas can never enter public bento bytes or appear through a local-draft fallback. |
+| Reception publication | Selecting the shared Reception section publishes its eligible placed content through the existing publisher; private and unplaced records stay out. Leaving that section unchecked preserves the previous public Reception. No hidden Workbench is created to satisfy publication prerequisites. |
 | Partial publication | Updating Reception or a selected canvas preserves unselected public canvases and validates all cross-canvas references. |
 | Visitor routing | Signed-out About/Canvases/Discover, direct work links, missing targets, Back/Forward and owner return work without activating a private editor. |
 | Retained functionality | Existing Workbench gallery/viewer, exploration/Keeper and affected Image/Text/Display behavior still work. |

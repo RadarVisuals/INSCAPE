@@ -22,6 +22,35 @@ The detailed execution brief is
 [Static Reception bento implementation handoff](handoffs/2026-10-26-static-reception-bento.md).
 That brief operationalizes this decision; this contract remains product authority.
 
+- **Editor clarification after the handoff review:** build a separate Reception
+  editor inside Inscape, using genuinely shared tools and content services. Do
+  not create a special extra Workbench as its content store or turn the free
+  Workbench into a Reception mode with scattered exceptions. Reception owns
+  its layout, selection and commands; Workbench retains its free placement,
+  camera and layer behavior. Familiar styling does not require the same editor
+  runtime. Extract only the concrete shared dependencies needed for this slice,
+  and keep the existing Workbench using those same implementations.
+- Fill Reception directly: select a region, choose Image from the shared
+  Library, create/edit Text, or place existing profile/link content. New Image
+  and Text records belong to Reception within the canonical profile draft;
+  reuse their existing content models and editing/rendering logic. This does
+  not copy or expose another canvas's private modules. Linked cross-canvas
+  content versus independent copies remains a separate product choice, not a
+  prerequisite for the initial authoring flow.
+- The initial tool inventory is Library, Text, Image/crop, Color, profile/links,
+  artwork information and shared control/menu/panel building blocks. Reuse the
+  existing save, recovery, history and publication boundaries with an explicit
+  Reception target. Reception supplies its own split/merge/move tools, region
+  appearance and responsive preview. Canvas dimensions, free X/Y placement,
+  camera index, Workbench Layers, Shapes/FX, mini-app authoring and Display
+  linking are not part of its first toolbar, shortcuts or context menus; retain them in their existing
+  Workbench scopes. Additional media transforms or full detachable docking are
+  not automatically required merely because related code exists.
+- Give the region's outer padding, surface and contour one owner in Reception.
+  Text owns typography and paragraph layout. Do not expose duplicate Text-box
+  and bento padding/radius controls or rewrite a reused article to remove its
+  Workbench appearance. Shared tool improvements must reach both consumers;
+  editor-specific behavior must remain local to that editor.
 - Start from one empty region. Split a selected region side by side or above
   and below; drag dividers to change proportions; move or swap module placements;
   merge adjacent regions whose union is a rectangle. Removing content retains
