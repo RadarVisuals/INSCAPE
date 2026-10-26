@@ -12,7 +12,7 @@ import './profileOverview.css';
 const ExplorationKeeper = lazy(() => import('../../keeper/ExplorationKeeper.jsx'));
 
 // Only verified public identity is read here. Temporary room navigation owns no draft.
-export default function ProfileOverview({ document: publication, ownerEditingAllowed = false, unavailableTarget = false, onOpenDirectory, onReturn }) {
+export default function ProfileOverview({ document: publication, ownerEditingAllowed = false, unavailableTarget = false, onOpenDirectory, onReturn, onOpenCanvas }) {
   useStartupDestinationReady();
   const identity = useProfileIdentity(publication.profile.address);
   const model = useMemo(() => createPublishedIdentityRackViewModel({ document: publication, identity }), [publication, identity]);
@@ -66,8 +66,8 @@ export default function ProfileOverview({ document: publication, ownerEditingAll
           <section className="reception-bento__space"><span className="reception-kicker">YOUR SPACE</span><p>Room for your own introduction.</p></section>
           <button className="reception-explore" type="button" ref={explore} onClick={() => setExploring(true)}><span>Explore<span className="reception-explore__caption">Step into the exploration room</span></span><ArrowRight aria-hidden="true" /></button>
         </section>
-        <footer className="reception-entry"><button type="button" disabled aria-describedby="reception-entry-status"><ArrowDown aria-hidden="true" />Enter Inscape</button>
-          <p id="reception-entry-status">Composition overview · Coming later</p><span>Reception wireframe · Bento customization comes later.</span>
+        <footer className="reception-entry"><button type="button" onClick={() => onOpenCanvas()} disabled={!onOpenCanvas} aria-describedby="reception-entry-status"><ArrowDown aria-hidden="true" />Enter Inscape</button>
+          <p id="reception-entry-status">View published canvas</p><span>Reception wireframe · Bento customization comes later.</span>
         </footer>
       </>}
     </div>

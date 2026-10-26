@@ -307,7 +307,14 @@ describe('owner/viewed-profile routing through the real App', { concurrency: fal
       const box = await back().boundingBox();
       assert.ok(box.x >= 0 && box.y >= 0 && box.x + box.width <= width && box.y + box.height <= 900);
       await page.evaluate(() => { window.__routingStorageOperations.length = 0; });
-      assert.equal(await page.getByRole('button', { name: 'Enter Inscape', exact: true }).isDisabled(), true);
+      await page.getByRole('button', { name: 'Enter Inscape', exact: true }).click();
+      await page.locator('.visitor-grid-world').waitFor();
+      assert.match(page.url(), /[?&]canvas=1/);
+      assert.match(page.url(), /[?&]reception=1/);
+      assert.equal(await page.locator('main.system-workflow:not(.visitor-grid-world)').count(), 0);
+      assert.deepEqual(await page.evaluate(() => window.__routingStorageOperations), [], 'Entering published content never opens the owner draft');
+      await page.getByRole('link', { name: '← Profile overview', exact: true }).click();
+      await page.locator('.profile-overview').waitFor();
       await page.getByRole('button', { name: /^Explore/ }).click();
       await page.getByRole('region', { name: 'Exploration room', exact: true }).waitFor();
       await page.locator('.keeper-dock').waitFor();
@@ -349,6 +356,11 @@ describe('owner/viewed-profile routing through the real App', { concurrency: fal
       isWalletConnected: false, isHostProfileOwner: false });
     assert.equal(await back().count(), 0, 'Signed-out visitors cannot enter owner editing');
     assert.equal(await page.locator('main.system-workflow:not(.visitor-grid-world)').count(), 0);
+    await page.getByRole('button', { name: 'Enter Inscape', exact: true }).click();
+    await page.locator('.visitor-grid-world').waitFor();
+    assert.equal(await back().count(), 0);
+    assert.equal(await page.locator('main.system-workflow:not(.visitor-grid-world)').count(), 0);
+    await page.goBack(); await page.locator('.profile-overview').waitFor();
   });
 
 

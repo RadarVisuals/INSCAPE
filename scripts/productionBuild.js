@@ -228,7 +228,10 @@ export const PRODUCTION_BUDGETS = Object.freeze({
   // Hosted builds inject a 40-character commit instead of the 11-character
   // development label. Reserve those 29 raw bytes; feature/gzip headroom stays
   // unchanged. Exact-SHA preview build: 2,572,016 raw / 830,333 gzip.
-  coreJavaScript: Object.freeze({ raw: 2_572_029, gzip: 830_500 }),
+  // Reception's existing canvas action is now connected through the public
+  // boundaries: 2,572,154 raw / 830,349 gzip before the event-argument guard.
+  // Bound this small route addition; all compressed/loading budgets stay fixed.
+  coreJavaScript: Object.freeze({ raw: 2_572_200, gzip: 830_500 }),
   // Approved local article fonts plus the creation bar's Inter variable face.
   // Inter and its license/provenance add 357,042 bytes; measured copied assets:
   // 17,811,402 bytes. Retain the previous margin, rounded up by less than 3 kB.

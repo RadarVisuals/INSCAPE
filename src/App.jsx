@@ -229,6 +229,7 @@ function App() {
             onReturnToWorkbench={ownershipVerified && authorityLifecycleStatus === 'complete' ? enterConnectedWorld : undefined}
             onOpenDiscover={navigation.openDiscover} onVisitProfile={visitProfile}
             entry={{ surface: content.canvas ? 'canvas' : 'overview', target: content.target, reception: content.reception }}
+            onOpenCanvas={() => navigation.openCanvas(viewedProfileAddress)}
             onOpenOverview={() => navigation.openOverview(viewedProfileAddress)} />}
         </div>
         {!standaloneSignInActive && !publicEntryPortal && ['entry', 'discover'].includes(destination.kind) && <Suspense fallback={<div className="mode-loading">Opening Discover...</div>}>

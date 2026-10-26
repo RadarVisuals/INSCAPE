@@ -34,7 +34,7 @@ function Fixture() {
     <PublishedProfileBoundary address={address} resolution={{ status: 'RESOLVED', document: published }}
       returnProfileAddress={new URLSearchParams(location.search).has('owner') ? address : undefined} onReturnToWorkbench={() => {}}
       entry={{ surface: content?.canvas ? 'canvas' : 'overview', target: content?.target, reception: content?.reception }}
-      onOpenCanvas={target => navigation.openCanvas(address, target)} onOpenOverview={() => navigation.openOverview(address)} />
+      onOpenCanvas={() => navigation.openCanvas(address)} onOpenOverview={() => navigation.openOverview(address)} />
   </div></div>;
 }
 createRoot(document.getElementById('root')).render(<Fixture />);

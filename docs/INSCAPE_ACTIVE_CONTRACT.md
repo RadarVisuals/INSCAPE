@@ -407,7 +407,12 @@ Explore on the right opens a separate temporary empty exploration wireframe;
 Back to Reception or Escape returns focus to its trigger. The owner Keeper
 trial below adds existing movement; this is not yet a world renderer,
 interior collision feature or persistent/shareable room route.
-The composition overview entrance below is labelled coming later and disabled.
+The original disabled composition entrance is superseded by the 26 October
+repair: **Enter Inscape** opens the existing published canvas through application
+navigation, with **View published canvas** as its description. The profile
+overview return and browser Back/Forward retain the public Reception route.
+This works for signed-out visitors and an owner viewing their public Reception;
+it does not open private drafts or publish the local multi-Workbench overview.
 Full bento customization remains future work. Reception portraits use the image
 renderer in this wireframe; this pass does not restore its old executable card.
 

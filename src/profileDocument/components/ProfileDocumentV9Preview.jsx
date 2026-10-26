@@ -8,7 +8,7 @@ import './profileOverview.css';
 const ProfileOverview = lazy(() => import('./ProfileOverview.jsx'));
 const VisitorGridWorld = lazy(() => import('./VisitorGridWorld.jsx'));
 
-export default function ProfileDocumentV9Preview({ document: input, ownerEditingAllowed = false, onExit, onOpenDirectory, onReturn, onConnect, entry, onOpenOverview }) {
+export default function ProfileDocumentV9Preview({ document: input, ownerEditingAllowed = false, onExit, onOpenDirectory, onReturn, onConnect, entry, onOpenOverview, onOpenCanvas }) {
   const document = useMemo(() => assertValidProfileDocumentV9(input), [input]);
   const target = useMemo(() => resolvePublicCanvasTarget(document, entry?.target), [document, entry?.target]);
   const unavailableTarget = Boolean(entry?.target && !target);
@@ -18,7 +18,7 @@ export default function ProfileDocumentV9Preview({ document: input, ownerEditing
   const returnHref = applicationRouteUrl(window.location, { kind: 'profile', address: document.profile.address, reception: entry?.reception });
   return <Suspense fallback={<main className="public-shell" role="status">LOADING VISITOR GRID</main>}>
     {overview ? <ProfileOverview key={document.profile.address} document={document} ownerEditingAllowed={ownerEditingAllowed}
-        onOpenDirectory={onOpenDirectory} onReturn={onReturn} unavailableTarget={unavailableTarget} />
+        onOpenDirectory={onOpenDirectory} onReturn={onReturn} unavailableTarget={unavailableTarget} onOpenCanvas={onOpenCanvas} />
       : <><VisitorGridWorld key={JSON.stringify([document.profile.address, document.documentId, document.revision, target])}
           document={document} entryTarget={target} onExit={onExit} onOpenDirectory={onOpenDirectory} onReturn={onReturn} onConnect={onConnect} />
         {entry && <a className="visitor-overview-return" href={returnHref} onClick={event => {
