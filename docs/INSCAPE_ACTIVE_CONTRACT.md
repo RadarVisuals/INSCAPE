@@ -288,7 +288,9 @@ Successful drops save the existing collection array order atomically, retain
 the active editor and its history, and appear in List as well as Grid. Failed
 saves leave the accepted order intact and report the error. This adds no second
 composition/order store. Wrap adapts its bounded visual repetitions to the card
-size while retaining one accessible collection and mounting only nearby previews.
+size while retaining one accessible collection. Nearby compositions mount their
+equivalent visual copies together so scroll normalization cannot reveal an empty
+copy; distant compositions remain unloaded (26 October wrap-flicker fix).
 
 The founder's subsequent gallery sketch replaces this overview's top-left
 navigation and separate view toggle with one bottom-centre **INSCAPE** menu.
@@ -320,7 +322,7 @@ The collection store remains the sole persistence authority; module scopes do
 not expose the overview's collection-wide read/details APIs.
 
 List renders the selected saved composition; Grid projects the bounded local
-collection and mounts previews only near its scrolling viewport. Image, Shape, Text (including linked
+collection and mounts nearby compositions plus their equivalent wrap copies. Image, Shape, Text (including linked
 frames) and retained Display first-grid projections reuse existing read-only
 rendering. HTML artwork is represented by its name and bounds; its executable
 runtime opens only inside the Workbench. Previews are inert and contain no

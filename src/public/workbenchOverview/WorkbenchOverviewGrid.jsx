@@ -4,16 +4,9 @@ import { PRESENTATION_EASING } from './useCanvasPresentationMotion.js';
 import WorkbenchOverviewPreview from './WorkbenchOverviewPreview.jsx';
 import './workbenchOverviewGrid.css';
 
-function GridCard({ item, duplicate, selected, root, onOpen, onEdit, onManage, revealed, onReveal, arranging, index, count, onMove, onDrag, dropTarget }) {
-  const host = useRef(null), [visible, setVisible] = useState(false);
+function GridCard({ item, duplicate, selected, visible, onOpen, onEdit, onManage, revealed, onReveal, arranging, index, count, onMove, onDrag, dropTarget }) {
+  const host = useRef(null);
   const [information, setInformation] = useState(false);
-  useEffect(() => {
-    // A resize plus wrap normalization can queue several entries for this card.
-    // Use the newest one; the first may describe its position before the jump.
-    const observer = new IntersectionObserver(entries => setVisible(entries.at(-1).isIntersecting), { root: root.current, rootMargin: '160px' });
-    observer.observe(host.current);
-    return () => observer.disconnect();
-  }, [root]);
   return <article className="workbench-overview-card" ref={host} data-revealed={revealed || undefined} data-card-id={item.id} data-drop-target={dropTarget || undefined}
     onPointerLeave={event => { if (event.pointerType === 'mouse' && !host.current.matches(':has(:focus-visible)')) setInformation(false); }}
     onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget)) setInformation(false); }}>
@@ -48,15 +41,28 @@ function GridCard({ item, duplicate, selected, root, onOpen, onEdit, onManage, r
   </article>;
 }
 
-// Bounded visual cycles, one accessible collection. Only cards near the
-// viewport mount preview content; repeated tiles never create new saved records.
+// Bounded visual cycles, one accessible collection. Nearby compositions warm
+// every visual copy so a wrap never swaps a painted preview for an empty card.
 export default function WorkbenchOverviewGrid({ items, wrap, onOpen, onEdit, onManage, selectedId, hostRef: root, cardSize, arranging, onFinishArrange, onReorder }) {
   const cycle = useRef(null), height = useRef(0), keyboard = useRef(false);
   const [revealed, setRevealed] = useState(null);
   const [repeatRadius, setRepeatRadius] = useState(1);
+  const [visibleIds, setVisibleIds] = useState(() => new Set());
   const [drag, setDrag] = useState(null), [announcement, setAnnouncement] = useState('');
   const dragging = useRef(null), previous = useRef(new Map()), motions = useRef([]), dropFrame = useRef(0);
   const looping = wrap && items.length > 1 && !arranging;
+  useEffect(() => {
+    const intersecting = new Map();
+    const observer = new IntersectionObserver(entries => {
+      // A scroll normalization can queue several entries for one card. Keep
+      // its latest position, then derive visibility across all equivalent copies.
+      for (const entry of entries) intersecting.set(entry.target, entry.isIntersecting);
+      const next = new Set([...intersecting].filter(([, near]) => near).map(([card]) => card.dataset.cardId));
+      setVisibleIds(current => current.size === next.size && [...next].every(id => current.has(id)) ? current : next);
+    }, { root: root.current, rootMargin: '160px' });
+    root.current.querySelectorAll('.workbench-overview-card').forEach(card => observer.observe(card));
+    return () => observer.disconnect();
+  }, [items, looping, repeatRadius, root]);
   const reorder = (id, targetId) => {
     const ids = items.map(item => item.id), from = ids.indexOf(id), to = ids.indexOf(targetId);
     if (from < 0 || to < 0 || from === to) return;
@@ -132,7 +138,7 @@ export default function WorkbenchOverviewGrid({ items, wrap, onOpen, onEdit, onM
     onWheel={() => { keyboard.current = false; setRevealed(null); }} onTouchStart={() => { keyboard.current = false; }} onTouchMove={() => setRevealed(null)}>
     {(looping ? Array.from({ length: repeatRadius * 2 + 1 }, (_, index) => index - repeatRadius) : [0]).map(copy => <div key={copy} ref={copy === 0 ? cycle : undefined}
       className="workbench-overview-cycle" data-gallery-cycle={copy} aria-hidden={copy !== 0 || undefined}>
-      {items.map((item, index) => <GridCard key={item.id} item={item} root={root} duplicate={copy !== 0} selected={selectedId === item.id}
+      {items.map((item, index) => <GridCard key={item.id} item={item} visible={visibleIds.has(item.id)} duplicate={copy !== 0} selected={selectedId === item.id}
         arranging={arranging} index={index} count={items.length} onMove={move} dropTarget={drag?.target === item.id && drag.id !== item.id}
         onDrag={(event, id) => {
           if (event.button !== 0 || !event.isPrimary || dragging.current) return;

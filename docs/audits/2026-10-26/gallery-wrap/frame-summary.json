@@ -1,0 +1,42 @@
+[
+  {
+    "stage": "before",
+    "width": 1440,
+    "screencastFrames": 114,
+    "animationFrameSamples": 537,
+    "wraps": 22,
+    "missing": 0,
+    "downMissing": 0,
+    "upMissing": 0
+  },
+  {
+    "stage": "before",
+    "width": 390,
+    "screencastFrames": 141,
+    "animationFrameSamples": 550,
+    "wraps": 10,
+    "missing": 20,
+    "downMissing": 10,
+    "upMissing": 10
+  },
+  {
+    "stage": "after",
+    "width": 1440,
+    "screencastFrames": 111,
+    "animationFrameSamples": 527,
+    "wraps": 22,
+    "missing": 0,
+    "downMissing": 0,
+    "upMissing": 0
+  },
+  {
+    "stage": "after",
+    "width": 390,
+    "screencastFrames": 111,
+    "animationFrameSamples": 514,
+    "wraps": 10,
+    "missing": 0,
+    "downMissing": 0,
+    "upMissing": 0
+  }
+]

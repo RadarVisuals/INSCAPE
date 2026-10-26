@@ -4,6 +4,7 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { chromium } from 'playwright-core';
 import { browserExecutable } from '../scripts/browserEnvironment.mjs';
+import { measureGalleryScroll } from './measureGalleryScroll.mjs';
 
 const origin = process.env.INSCAPE_TEST_ORIGIN || 'http://127.0.0.1:5217';
 const output = process.env.INSCAPE_BROWSER_OUTPUT || '.browser-test-runtime/workbench-overview';
@@ -623,6 +624,25 @@ test('thumbnail crop supports drag, touch, cancel, failed save, reload and retur
   } finally { await browser.close(); }
 });
 
+test('eight-canvas wrap preserves painted content at every frame and unloads distant compositions', { timeout: 90000 }, async () => {
+  const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
+  try {
+    const page = await browser.newPage({ viewport: { width: 1440, height: 913 }, deviceScaleFactor: 1.25 });
+    await open(page); await seedGallery(page); await menuAction(page, 'Grid'); await settlePreview(page);
+    const saved = await page.evaluate(() => JSON.stringify(window.savedDraft()));
+    const frames = await measureGalleryScroll(page);
+    await mkdir(output, { recursive: true });
+    await writeFile(path.join(output, 'wrap-eight-frames.json'), JSON.stringify(frames));
+    assert.deepEqual(frames.filter(frame => frame.missing.length), [], 'No partial blank rows during a wrap');
+    for (const direction of [1, -1]) assert.ok(frames.some((frame, i) => i && frame.direction === direction &&
+      (frame.scroll - frames[i - 1].scroll) * direction < -200), `Both directions wrap: ${direction}`);
+    await page.screenshot({ path: path.join(output, 'wrap-eight-1440.png') });
+    await page.setViewportSize({ width: 390, height: 900 }); await settlePreview(page);
+    assert.ok(await page.locator('.workbench-overview-card:not(:has(.workbench-overview-preview))').count() > 0, 'Distant compositions remain unloaded');
+    assert.equal(await page.evaluate(() => JSON.stringify(window.savedDraft())), saved);
+  } finally { await browser.close(); }
+});
+
 test('grid wraps both ways without writes, exposes one keyboard collection and remembers its view after opening', { timeout: 90000 }, async () => {
   const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
   try {
@@ -651,7 +671,7 @@ test('grid wraps both ways without writes, exposes one keyboard collection and r
     }
     assert.equal(await page.evaluate(() => JSON.stringify(window.savedDraft())), saved, 'view changes and wrapping never persist or activate');
     assert.equal(await gallery.locator('iframe, [contenteditable="true"]').count(), 0);
-    assert.ok(await gallery.locator('.workbench-overview-preview').count() < 24, 'only nearby preview content is mounted');
+    assert.ok(await gallery.locator('.workbench-overview-preview').count() <= 24, 'preview copies remain bounded to the visual cycles');
     await gallery.getByRole('button', { name: 'Open Workbench 1', exact: true }).focus();
     const tabOrder = [];
     for (let i = 0; i < 32; i++) {

@@ -1,11 +1,32 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdir } from 'node:fs/promises';
+import { mkdir, writeFile } from 'node:fs/promises';
+import { measureGalleryScroll } from './measureGalleryScroll.mjs';
 import { chromium } from 'playwright-core';
 import { browserExecutable } from '../scripts/browserEnvironment.mjs';
 const origin = process.env.INSCAPE_TEST_ORIGIN || 'http://127.0.0.1:5173';
 const output = process.env.INSCAPE_BROWSER_OUTPUT || '.browser-test-runtime/published-gallery';
 const address = '0x' + '1'.repeat(40);
+test('published wrap keeps every visible SVG preview painted through wheel and touch transitions', { timeout: 90000 }, async () => {
+  const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
+  try {
+    for (const touch of [false, true]) {
+      const page = await browser.newPage({ viewport: { width: 390, height: 900 }, hasTouch: touch, deviceScaleFactor: 2 });
+      await page.route('**/*', route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
+      await page.goto(`${origin}/browser-tests/profile-overview-fixture.html?view=${address}&reception=1&collection=1&canvas=1`, { waitUntil: 'domcontentloaded', timeout: 60000 });
+      await page.locator('.workbench-overview-gallery').waitFor();
+      await page.waitForTimeout(700);
+      const frames = await measureGalleryScroll(page, { touch });
+      await mkdir(output, { recursive: true });
+      await writeFile(`${output}/wrap-${touch ? 'touch' : 'wheel'}-frames.json`, JSON.stringify(frames));
+      assert.deepEqual(frames.filter(frame => frame.missing.length), [], 'No blank artwork at any sampled animation frame');
+      for (const direction of [1, -1]) assert.ok(frames.some((frame, i) => i && frame.direction === direction &&
+        (frame.scroll - frames[i - 1].scroll) * direction < -200), `Input crosses a wrap in direction ${direction}`);
+      await page.screenshot({ path: `${output}/wrap-${touch ? 'touch' : 'wheel'}-390.png` });
+      await page.close();
+    }
+  } finally { await browser.close(); }
+});
 for (const width of [390, 1440]) test(`published gallery, wrap, modal, metadata and return at ${width}`, { timeout: 90000 }, async () => {
   const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
   try {
