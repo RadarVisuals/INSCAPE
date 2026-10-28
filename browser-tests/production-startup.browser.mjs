@@ -40,6 +40,20 @@ test('built fresh entry stays below 1 MB JS without wallet/owner acquisition; bu
         // Rollup may put the original module namespace in a shared chunk export.
         return [exports,...Object.values(exports)].some(value=>typeof value?.acquireStandaloneWalletSession==='function');
       },wallet.file),true);
+      // Check actual built imports as well as the manifest: both read routes
+      // must stay usable without evaluating editor or owner Library code.
+      const ownerOnly = new Set(report.ownerRuntimeGraph.ownerChunks.map(chunk => '/' + chunk.file));
+      const moduleFiles = Object.values(JSON.parse(await (await import('node:fs/promises')).readFile(resolve(root, 'dist/.vite/manifest.json'), 'utf8')));
+      for (const name of ['publicAbout', 'ownerAbout', 'receptionEditing']) {
+        const route = report.receptionRoutes[name];
+        assert.ok(route, 'Missing route report: ' + name);
+        const entry = moduleFiles.find(record => record.src === route.source || name === 'receptionEditing' && record.name === 'reception-editing');
+        assert.ok(entry, 'Missing built route entry: ' + name);
+        const start = requests.length;
+        assert.equal(await page.evaluate(async file => Object.values(await import('/' + file)).some(value =>
+          typeof value === 'function' || value && typeof value.default === 'function'), entry.file), true);
+        if (name !== 'receptionEditing') assert.deepEqual(requests.slice(start).filter(path => ownerOnly.has(path)), []);
+      }
       await page.close();
     }
     await writeFile(resolve(output,'results.json'),JSON.stringify(rows,null,2));

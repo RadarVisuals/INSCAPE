@@ -55,7 +55,7 @@ function LibraryResults({ assets, emptyLabel, expandedImageIds, onActivate, onCo
       event.preventDefault(); event.stopPropagation(); workspace.selectAllVisible();
     } }} style={{ '--lattice-browser-asset-media-max': `${Math.round(size * 1.15)}px`, '--lattice-browser-asset-min': `${size}px` }}>
     {assets.flatMap((asset) => {
-      const id = assetId(asset); const isSelected = selected.has(id);
+      const id = assetId(asset); const isSelected = selected.has(id) && workspace.selectedImage?.assetId !== id;
       const ratio = decodedRatios.get(id)
         || (Number(asset.width) > 0 && Number(asset.height) > 0 ? `${asset.width} / ${asset.height}` : undefined);
       const opensCollection = asset.isCollection && asset.collectionRole !== 'cover';

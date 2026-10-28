@@ -78,7 +78,7 @@ function HexField({ value, onChange, disabled, labelPrefix }) {
   );
 }
 
-export default function ColourControls({ item, update, beginGesture, labelPrefix = 'Studio', showOpacity = true }) {
+export default function ColourControls({ item, update, beginGesture, labelPrefix = 'Studio', showOpacity = true, wheelAccessory }) {
   const instructions = useId(),
     canvas = useRef(null),
     drag = useRef(null),
@@ -190,6 +190,7 @@ export default function ColourControls({ item, update, beginGesture, labelPrefix
         />
         <HexField labelPrefix={labelPrefix} value={item.color} onChange={setHex} disabled={item.locked} />
       </div>
+      <div className="ds-colour-wheel-row" data-accessory={Boolean(wheelAccessory) || undefined}>
       <div className="ds-studio-colour-wheel" data-dragging={dragging || undefined} data-pointer-focus={pointerFocus || undefined}
         onKeyDownCapture={event => {
           if (['Tab', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'].includes(event.key)) setPointerFocus(false);
@@ -334,11 +335,13 @@ export default function ColourControls({ item, update, beginGesture, labelPrefix
           />
         </svg>
       </div>
-      <span id={instructions} className="ds-sr-only">
+      {wheelAccessory}
+      </div>
+      <span id={instructions} className="ds-colour-instructions">
         Drag or use arrow keys to move between white, colour and black. Shift moves faster. Home
         selects white; End selects black. Current colour {item.color.toUpperCase()}.
       </span>
-      <div className="ds-studio-field-row">
+      <div className="ds-studio-field-row ds-colour-fields">
         <NumberField
           label="Saturation" labelPrefix={labelPrefix} disabled={item.locked}
           value={Math.round(hsl.s * 100)}

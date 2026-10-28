@@ -262,6 +262,7 @@
 .system-workflow__library .lattice-browser-asset__record { padding: 10px; }
 .system-workflow__workspace-window .lattice-browser-asset__record strong { font: 400 10px/1.2 "Inscape Sora", sans-serif; font-variation-settings: "wght" 400; text-transform: none; }
 .system-workflow__workspace-window .lattice-browser-asset__record > small { color: var(--workflow-muted); font: 400 10px/1.35 "Inscape IBM Plex Sans Condensed", "Arial Narrow", sans-serif; letter-spacing: .07em; text-transform: none; }
+.system-workflow__library .workflow-tactile-control.system-workflow__library-selection-action { font: var(--workflow-type-control); }
 .system-workflow__library[data-placing] { opacity: .075; pointer-events: none; box-shadow: none; transition-delay: 90ms; }
 .system-workflow__library[data-placing] .lattice-browser-sidebar { pointer-events: auto; }
 .system-workflow__library-drag-ghost { position: fixed; z-index: 96; translate: 10px 10px; padding: 5px 7px; border: 1px solid var(--lattice-menu-line); color: var(--lattice-menu-ink); background: var(--lattice-menu-panel); font: var(--workflow-type-micro); letter-spacing: .06em; pointer-events: none; }

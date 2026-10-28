@@ -1,32 +1,26 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { createWorkbenchGestures } from '../public/ownerSystemWorkflow/workbenchGestures.js';
 
-// Pointer candidates are temporary. Every exit route cleans up capture and
-// listeners; only a valid release may submit one completed operation.
+// Reception supplies cell/crop geometry; Workbench's controller owns capture,
+// Escape, blur, visibility, lost capture and exactly one completed operation.
 export default function useReceptionGesture(version) {
-  const active = useRef(null);
-  useEffect(() => { active.current?.cancel(); }, [version]);
-  useEffect(() => () => active.current?.cancel(), []);
-  return { cancel: () => active.current?.cancel(), begin(event, { update, commit, cancel }) {
+  const host = useRef(null), active = useRef(null), currentVersion = useRef(version);
+  currentVersion.current = version;
+  const [gestures] = useState(() => createWorkbenchGestures({
+    getHost: () => host.current, restoreTransforms: () => active.current?.cancel(),
+    finishSnap: () => { active.current = null; }, cancelDrop: () => {}, previewMarquee: () => {},
+  }));
+  useEffect(() => { gestures.cancel(); }, [version, gestures]);
+  useEffect(() => () => gestures.cancel(), [gestures]);
+  return { cancel: gestures.cancel, begin(event, operation) {
     if (event.button !== 0) return;
-    active.current?.cancel(); event.preventDefault(); event.stopPropagation();
-    const source = event.currentTarget, pointerId = event.pointerId;
-    let done = false;
-    const finish = accepted => {
-      if (done) return; done = true; active.current = null;
-      removeEventListener('pointermove', move, true); removeEventListener('pointerup', up, true);
-      removeEventListener('pointercancel', abort, true); removeEventListener('keydown', key, true); removeEventListener('blur', abort);
-      document.removeEventListener('visibilitychange', hidden); source.removeEventListener('lostpointercapture', abort);
-      if (source.hasPointerCapture(pointerId)) source.releasePointerCapture(pointerId);
-      if (accepted) commit(); else cancel();
-    };
-    const abort = () => finish(false), key = e => { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); abort(); } };
-    const hidden = () => { if (document.hidden) abort(); };
-    const move = e => { if (e.pointerId === pointerId) { if (!e.buttons) abort(); else update(e); } };
-    const up = e => { if (e.pointerId === pointerId) { update(e); finish(true); } };
-    active.current = { cancel: abort };
-    source.setPointerCapture(pointerId);
-    addEventListener('pointermove', move, true); addEventListener('pointerup', up, true); addEventListener('pointercancel', abort, true);
-    addEventListener('keydown', key, true); addEventListener('blur', abort); document.addEventListener('visibilitychange', hidden);
-    source.addEventListener('lostpointercapture', abort);
+    gestures.cancel(); event.preventDefault(); event.stopPropagation();
+    host.current = operation.captureHost || event.currentTarget; active.current = operation;
+    const origin = { x: event.clientX, y: event.clientY }, source = host.current;
+    gestures.beginResize(event, { beforeTransforms: {},
+      valid: () => currentVersion.current === version && source.isConnected,
+      preview: delta => operation.update({ clientX: origin.x + delta.x, clientY: origin.y + delta.y }),
+      commit: pointer => { operation.update(pointer); operation.commit(); },
+    });
   } };
 }

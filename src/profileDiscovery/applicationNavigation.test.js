@@ -51,7 +51,7 @@ test('explicit disconnect drops the private return route but retains public visi
   assert.equal(disconnectRoute(publicOverlay, resolveApplicationDestination(publicRoute, owner)), publicOverlay);
 });
 
-test('reception links stay public for a connected owner and retain focused destinations', () => {
+test('reception links retain the viewing route and focused destinations for a connected owner', () => {
   const expected = { kind: 'profile', address: A, reception: true, target: { moduleId: 'display:primary', gridId: 'grid:one' } };
   const href = applicationRouteUrl({ href: 'https://example.test/?keep=1' }, expected);
   assert.deepEqual(readApplicationRoute(new URL(href, 'https://example.test')), expected);
@@ -60,4 +60,17 @@ test('reception links stay public for a connected owner and retain focused desti
   assert.equal(resolveApplicationDestination({ kind: 'profile', address: A }, owner).kind, 'workbench');
   const home = applicationRouteUrl({ href: 'https://example.test' + href }, { kind: 'home' });
   assert.equal(home, '/?keep=1');
+});
+
+test('canvas entry opens the verified owner collection while visitor and explicit public routes remain public', () => {
+  const canvases = route('?view=' + A + '&canvas=1');
+  assert.deepEqual(resolveApplicationDestination(canvases, owner), { kind: 'workbench', address: A, canvas: true });
+  for (const authority of [signedOut, { ...owner, status: 'pending' }, { ...owner, ownershipVerified: false }, { ...owner, profileAddress: B }]) {
+    assert.deepEqual(resolveApplicationDestination(canvases, authority), { kind: 'public', address: A, canvas: true });
+  }
+  assert.deepEqual(resolveApplicationDestination({ ...canvases, reception: true }, owner), {
+    kind: 'public', address: A, canvas: true, reception: true,
+  });
+  assert.deepEqual(readApplicationRoute({ search: '?discover' }, { inscapeReturnRoute: canvases }).returnTo, canvases);
+  assert.deepEqual(resolveApplicationDestination(route('?view=' + A), owner), { kind: 'workbench', address: A });
 });

@@ -23,9 +23,9 @@ function Reveal({ label, icon: Icon, active, onActivate, children }) {
   </div>;
 }
 
-export default function CanvasPresentation({ selected, model, origin, onClose, onEdit }) {
+export default function CanvasPresentation({ selected, model, origin, onClose, onEdit, initialDestinationId = null }) {
   const dialog = useRef(null), surface = useRef(null), closeButton = useRef(null), hideTimer = useRef(null);
-  const [expanded, setExpanded] = useState(false), [destinationId, setDestinationId] = useState(null), [sourceId, setSourceId] = useState(null);
+  const [expanded, setExpanded] = useState(false), [destinationId, setDestinationId] = useState(initialDestinationId), [sourceId, setSourceId] = useState(null);
   const [error, setError] = useState('');
   const [reveal, setReveal] = useState(null);
   const [chromeVisible, setChromeVisible] = useState(false);

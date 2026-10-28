@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createReception, validReception, projectReception } from './receptionPresentation.js';
-import { splitReception, mergeReception, canMergeReception, resizeReception, receptionDividers, moveReception } from '../../reception/receptionLayout.js';
-import { saveReception, assignReceptionContent, addReceptionText, prepareReceptionImage, saveReceptionTextResult } from '../../reception/receptionSession.js';
+import { splitReception, resizeReception, receptionDividers, reorderReception, deleteReceptionCell } from '../../reception/receptionLayout.js';
+import { saveReception, addReceptionText, prepareReceptionImage, saveReceptionTextResult } from '../../reception/receptionSession.js';
 import { createSystemWorkflowDraftStore } from '../../systemWorkflow/systemWorkflowDraftStore.js';
 import { buildProfileDocumentV9, countProfileDocumentV9Assets } from './profileDocumentV9Builder.js';
 import { assertValidProfileDocumentV9 } from './profileDocumentV9Validation.js';
@@ -11,6 +11,7 @@ import { createWorkbenchCollection, appendWorkbench } from '../../systemWorkflow
 import { canvasPublicationCandidates, buildCanvasPublication } from './canvasPublication.js';
 import { createArticle } from '../../text/domain/article.js';
 import { createProfileDocumentV9AssetResolver } from './profileDocumentV9Asset.js';
+import { validImageModules } from '../../imageModule/imageModule.js';
 import { OWNER_SYSTEM_WORKFLOW_REVIEW_ASSETS as assets } from '../../public/ownerSystemWorkflow/ownerSystemWorkflowDevelopmentFixture.js';
 const profile = '0x' + '1'.repeat(40);
 const asset = createProfileDocumentV9AssetResolver(assets, { compactContentReference: false })(assets[0].id);
@@ -33,6 +34,44 @@ test('first content creation is one operation and a cancelled first Library choi
   assert.equal(store.getHistory().undo, null);
 });
 const publish = draft => buildProfileDocumentV9({ profileAddress: profile, systemWorkflowDraft: draft, assetRecords: [] });
+test('replacement discards orphaned Reception text, remains undoable and never changes Workbench data', () => {
+  const { store, root } = fixture(), initial = createReception(), cell = initial.regions[0].id;
+  const workbenches = structuredClone(root.getDraft().workbenches);
+  for (let i = 0; i < 20; i++) {
+    const expected = store.getSnapshot().reception;
+    addReceptionText(store, expected, cell, expected || initial);
+    assert.equal(store.getSnapshot().reception.texts.length, 1);
+  }
+  const value = store.getSnapshot().reception;
+  assert.ok(store.undo()); assert.notEqual(store.getSnapshot().reception.texts[0].id, value.texts[0].id);
+  assert.ok(store.redo()); assert.deepEqual(store.getSnapshot().reception, value);
+  assert.deepEqual(root.getDraft().workbenches, workbenches);
+});
+
+test('Library replacement discards orphaned records, preserves source identity and protects a header logo', async () => {
+  const { store } = fixture(), initial = createReception(), cell = initial.regions[0].id;
+  await prepareReceptionImage(store, undefined, cell, initial).choose({ ...assets[0], assetRecord: assets[0] });
+  let value = store.getSnapshot().reception;
+  assert.deepEqual(value.imageModules[0].sides[0].crop, { x: .5, y: .5, zoom: 1 });
+  assert.equal(value.regions[0].padding, 0);
+  const original = structuredClone(value.imageModules[0]);
+  await prepareReceptionImage(store, value, cell).choose({ ...assets[0], assetRecord: assets[0] });
+  value = store.getSnapshot().reception;
+  assert.notEqual(value.imageModules[0].id, original.id);
+  assert.equal(value.imageModules.length, 1);
+  assert.deepEqual(value.imageModules[0].sides[0].asset, original.sides[0].asset);
+  const logo = value.imageModules[0];
+  saveReception(store, value, { ...value, branding: { ...value.branding, logo: logo.id } });
+  value = store.getSnapshot().reception;
+  await prepareReceptionImage(store, value, cell).choose({ ...assets[0], assetRecord: assets[0] });
+  value = store.getSnapshot().reception;
+  assert.deepEqual(value.imageModules.find(item => item.id === logo.id), logo);
+  assert.equal(value.imageModules.length, 2);
+  const split = splitReception(value, cell, 'x', 'region:text');
+  saveReception(store, value, split);
+  addReceptionText(store, store.getSnapshot().reception, 'region:text');
+  assert.equal(store.getSnapshot().reception.regions.find(r => r.id === 'region:text').padding, 24);
+});
 function sample() {
   let value = createReception(), first = value.regions[0].id;
   value = splitReception(value, first, 'x', 'region:right');
@@ -42,29 +81,52 @@ function sample() {
   value.regions[0].content = 'image:one'; value.regions[1].content = 'text:one';
   return value;
 }
-test('partition splits, resizes T junctions and merges non-siblings without losing a record', () => {
-  let v = sample(), left = v.regions[0].id;
-  v = splitReception(v, left, 'y', 'region:bottom-left');
-  v = splitReception(v, 'region:right', 'y', 'region:bottom-right');
-  assert.equal(validReception(v), true);
-  assert.equal(canMergeReception(v.regions[0], v.regions[2]), true);
-  assert.throws(() => mergeReception(v, left, 'region:right'), /Choose/);
-  const retained = v.texts;
-  v = mergeReception(v, left, 'region:right', 'image:one');
-  assert.deepEqual(v.texts, retained);
-  const divider = receptionDividers(v).find(d => d.axis === 'y');
-  v = resizeReception(v, divider.id, 6500);
-  assert.equal(v.regions.find(r => r.id === left).height, 6500);
-  assert.ok(v.regions.filter(r => r.id !== left).every(r => r.y === 6500));
-  v = assignReceptionContent(v, 'region:bottom-left', 'text:one');
-  v = moveReception(v, left, 'region:bottom-left');
-  assert.equal(v.regions.find(r => r.id === left).content, 'text:one');
-  assert.equal(v.imageModules[0].sides[0].crop.zoom, 2);
-  assert.equal(validReception(v), true);
-  for (const corrupt of [x => x.regions[0].width++, x => x.mobile.pop(), x => x.regions.push(x.regions[0]), x => x.branding.theme = 'unknown']) {
-    const bad = structuredClone(v); corrupt(bad); assert.equal(validReception(bad), false);
+test('Reception zoom below fill survives storage, history and public round trip without widening Workbench crops', () => {
+  const { root, store, storage } = fixture(), value = sample();
+  const workbenches = structuredClone(root.getDraft().workbenches);
+  saveReception(store, undefined, value);
+  for (const zoom of [.1, .25, .75]) {
+    const before = store.getSnapshot().reception, next = structuredClone(before);
+    next.imageModules[0].sides[0].crop.zoom = zoom;
+    assert.equal(validReception(next), true);
+    assert.equal(validImageModules(next.imageModules), false, 'Workbench Images still require fill zoom');
+    saveReception(store, before, next);
+    assert.ok(store.undo()); assert.deepEqual(store.getSnapshot().reception, before);
+    assert.ok(store.redo()); assert.deepEqual(store.getSnapshot().reception, next);
+    const reloaded = createSystemWorkflowDraftStore({ profileAddress: profile, storage });
+    assert.deepEqual(reloaded.getDraft().reception, next);
+    const document = publish(root.getDraft());
+    assertValidProfileDocumentV9(document);
+    assert.deepEqual(document.reception.imageModules[0].sides, next.imageModules[0].sides);
+    const fresh = fixture(); fresh.store.release();
+    assert.equal(reconcileOwnerDraftWithPublishedProfile({ document, profileAddress: profile, storage: fresh.storage, store: fresh.root }).status, 'HYDRATED_FROM_PUBLISHED');
+    assert.deepEqual(projectReception(fresh.root.getDraft().reception), document.reception);
+  }
+  for (const zoom of [0, .09, 4.01, NaN]) {
+    const invalid = structuredClone(value); invalid.imageModules[0].sides[0].crop.zoom = zoom;
+    assert.equal(validReception(invalid), false);
+    assert.equal(validReception(projectReception(invalid), true), false);
+  }
+  assert.deepEqual(root.getDraft().workbenches, workbenches);
+});
+
+test('partition splits and resizes T junctions without losing records or accepting invalid geometry', () => {
+  let value = sample(), left = value.regions[0].id;
+  value = splitReception(value, left, 'y', 'region:bottom-left');
+  value = splitReception(value, 'region:right', 'y', 'region:bottom-right');
+  assert.equal(validReception(value), true);
+  const divider = receptionDividers(value).find(item => item.axis === 'y');
+  value = resizeReception(value, divider.id, 6500);
+  assert.equal(value.regions.find(item => item.id === left).height, 6500);
+  assert.equal(value.regions.find(item => item.id === 'region:bottom-left').y, 6500);
+  assert.equal(value.imageModules[0].sides[0].crop.zoom, 2);
+  assert.equal(value.texts.length, 1);
+  assert.equal(validReception(value), true);
+  for (const corrupt of [item => item.regions[0].width++, item => item.mobile.pop(), item => item.regions.push(item.regions[0]), item => item.branding.theme = 'unknown']) {
+    const bad = structuredClone(value); corrupt(bad); assert.equal(validReception(bad), false);
   }
 });
+
 test('Reception saves, isolated history, failures, reload and scope revocation preserve Workbench bytes', () => {
   const { root, store, storage, workbench, fail } = fixture(), before = root.getDraft();
   const value = sample(); saveReception(store, undefined, value);
@@ -138,4 +200,57 @@ test('shared publication choice preserves unselected canvases and independently 
   const shared = buildCanvasPublication({ candidates: candidates(), selectedIds: [], includeShared: true, previousDocument: selected });
   assert.equal(shared.reception.radius, 60);
   assert.deepEqual(shared.canvases, first.canvases); assert.deepEqual(shared.workbench, first.workbench);
+});
+
+
+test('cell reordering moves identity, content and appearance and shifts intervening cells in one saved operation', () => {
+  const { store } = fixture();
+  let value = sample(), first = value.regions[0].id;
+  value = splitReception(value, 'region:right', 'y', 'region:third');
+  value.regions[0] = { ...value.regions[0], padding: 7, surface: '#223344', alignX: 'right' };
+  saveReception(store, undefined, value);
+  const reordered = reorderReception(value, first, 'region:third');
+  assert.equal(validReception(reordered), true);
+  assert.deepEqual(reordered.regions.map(cell => cell.id), ['region:right', 'region:third', first]);
+  assert.equal(reordered.regions[2].content, value.regions[0].content);
+  assert.equal(reordered.regions[2].padding, 7);
+  assert.equal(reordered.regions[2].surface, '#223344');
+  assert.deepEqual(reordered.mobile, value.mobile);
+  saveReception(store, store.getSnapshot().reception, reordered);
+  assert.ok(store.undo()); assert.deepEqual(store.getSnapshot().reception, value);
+  assert.ok(store.redo()); assert.deepEqual(store.getSnapshot().reception, reordered);
+  const mobile = reorderReception(reordered, first, 'region:right', 'mobile');
+  assert.deepEqual(mobile.regions, reordered.regions);
+  assert.equal(mobile.mobile[1].id, first);
+});
+
+test('cell deletion closes nested partitions, removes only local content, restores via undo and keeps a blank final cell', () => {
+  const { store, root, fail } = fixture();
+  let value = sample();
+  value = splitReception(value, value.regions[0].id, 'y', 'region:lower');
+  value = splitReception(value, 'region:lower', 'x', 'region:fourth');
+  const workbenches = structuredClone(root.getDraft().workbenches);
+  saveReception(store, undefined, value);
+  for (const cell of value.regions) {
+    const removed = deleteReceptionCell(value, cell.id);
+    assert.equal(validReception(removed), true);
+    assert.equal(removed.regions.length, value.regions.length - 1);
+    assert.ok(!removed.regions.some(item => item.id === cell.id));
+  }
+  const target = value.regions.find(cell => cell.content === 'image:one');
+  const deleted = deleteReceptionCell(value, target.id);
+  assert.equal(deleted.imageModules.length, 0);
+  fail(true); assert.throws(() => saveReception(store, store.getSnapshot().reception, deleted), /could not be saved/);
+  assert.deepEqual(store.getSnapshot().reception, value);
+  fail(false); saveReception(store, store.getSnapshot().reception, deleted);
+  assert.ok(store.undo()); assert.deepEqual(store.getSnapshot().reception, value);
+  assert.ok(store.redo());
+  value = deleted;
+  while (value.regions.length > 1) value = deleteReceptionCell(value, value.regions[0].id);
+  value = deleteReceptionCell(value, value.regions[0].id);
+  assert.equal(validReception(value), true);
+  assert.equal(value.regions.length, 1); assert.equal(value.regions[0].content, null);
+  assert.deepEqual(value.mobile, [{ id: value.regions[0].id, columns: 2, height: 320 }]);
+  assert.equal(value.texts.length, 0); assert.equal(value.imageModules.length, 0);
+  assert.deepEqual(root.getDraft().workbenches, workbenches);
 });

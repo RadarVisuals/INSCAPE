@@ -1,4 +1,6 @@
 import { validReception, receptionReferenceCount } from './receptionPresentation.js';
+import { receptionLinkProblems } from './receptionLinks.js';
+import { publishedPresentationSnapshot } from '../../presentation/presentationSources.js';
 import { validatePublishedCanvases } from './publishedCanvases.js';
 import { validWorkbenchIndex } from '../../systemWorkflow/domain/workbenchIndex.js';
 import { validArtworkLayers } from '../../systemWorkflow/domain/artworkLayers.js';
@@ -356,6 +358,10 @@ export function validateProfileDocumentV9(input, { rawSize } = {}) {
     fail('metadata.worldCover', 'too_many_asset_references', 'Too many total asset references');
   }
   validatePublishedCanvases(input, validateProfileDocumentV9, fail);
+  if (!errors.length && input.reception?.links?.length) {
+    for (const problem of receptionLinkProblems(input.reception, publishedPresentationSnapshot(input)))
+      fail(`reception.links.${problem.id}`, 'unavailable_reception_link', problem.reason);
+  }
   // Published bytes are immutable and hash-verified. Accept legacy fields but
   // preserve them here; renderers ignore them and draft restoration removes them.
   return { valid: errors.length === 0, errors, value: errors.length ? null : structuredClone(input), size: measuredSize };

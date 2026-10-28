@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import ColourControls from './ColourControls.jsx';
+import ColourEyedropper from './ColourEyedropper.jsx';
 
 // One completed gesture is one authored edit. Preview is temporary and belongs
 // to the calling module; scope changes/unmount never commit its last pointer.
-export default function CommittedColourControls({ color, opacity, disabled, onChange, onPreview, beginPreview, getVersion, opacityLabel = 'Opacity' }) {
+export default function CommittedColourControls({ color, opacity, disabled, onChange, onPreview, beginPreview, getVersion, opacityLabel = 'Opacity', eyedropper = false, scopeKey }) {
   const [preview, setPreview] = useState(null), active = useRef(null);
   const version = getVersion();
   const cancel = () => active.current?.finish(true);
@@ -33,6 +34,7 @@ export default function CommittedColourControls({ color, opacity, disabled, onCh
   };
   return <>
     <ColourControls item={{ color: preview?.color || color, locked: disabled }} labelPrefix="Color" showOpacity={false}
+      wheelAccessory={eyedropper && <ColourEyedropper color={color} disabled={disabled} scopeKey={scopeKey} getVersion={getVersion} onChange={onChange} />}
       beginGesture={begin} update={patch => { if (!disabled) onChange(patch); }} />
     {opacity !== undefined && <label>{opacityLabel} (%)<input key={opacity} aria-label={`Color ${opacityLabel.toLowerCase()}`} type="number" min="0" max="100" step="1"
       disabled={disabled} defaultValue={Math.round(opacity * 100)} onBlur={event => {

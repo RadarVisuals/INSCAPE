@@ -13,7 +13,7 @@ export function overviewAssetIds(draft) {
 
 // Saved content is the only input. Browsing never needs a camera, editor scope,
 // module registry or a second persisted preview document.
-export function workbenchOverviewModel(draft, assets = new Map()) {
+export function workbenchOverviewModel(draft, assets = new Map(), scenes = {}) {
   const presentation = draft.workbench || createDefaultWorkbenchPresentation();
   const area = workbenchArea(presentation), items = [], artwork = new Map();
   const add = (id, layout, source, name) => layout.open && ({ id, frame: layout.window, source, name });
@@ -21,7 +21,9 @@ export function workbenchOverviewModel(draft, assets = new Map()) {
     const content = displayContent(draft, id);
     const layout = id === PRIMARY_DISPLAY_ID ? presentation.display
       : presentation.displays?.find(item => item.id === id) || createNewDisplayPresentation(content.geometry, index);
-    const item = add(id, layout, { kind: 'display', grid: content.grids[0], geometry: content.geometry, appearance: content.appearance, assets }, layout.name);
+    const grid = scenes[id] ? content.grids.find(grid => grid.id === scenes[id].gridId) : content.grids[0];
+    const item = add(id, layout, grid ? { kind: 'display', grid, geometry: content.geometry, appearance: content.appearance, assets }
+      : { kind: 'unavailable', name: 'Scene unavailable' }, layout.name);
     if (item) items.push(item);
   }
   for (const [index, record] of (draft.miniApps || []).entries()) {
@@ -42,7 +44,8 @@ export function workbenchOverviewModel(draft, assets = new Map()) {
     const layout = presentation.texts?.find(item => item.id === record.id) || createTextPresentation(record.id, index);
     const display = record.sceneLink && displayModuleIds(draft).includes(record.sceneLink.displayId)
       ? displayContent(draft, record.sceneLink.displayId) : null;
-    const article = passageArticle(record, display?.grids[0]?.id || record.sceneLink?.gridId, display?.grids.map(grid => grid.id));
+    const gridId = scenes[record.sceneLink?.displayId]?.gridId ?? display?.grids[0]?.id ?? record.sceneLink?.gridId;
+    const article = passageArticle(record, gridId, display?.grids.map(grid => grid.id));
     artwork.set(record.id, add(record.id, layout, { kind: 'text', article, frames: layout.frames || [] }));
   }
   items.push(...layerIds(artworkLayers(draft)).map(id => artwork.get(id)).filter(Boolean));

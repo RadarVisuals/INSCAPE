@@ -19,12 +19,12 @@ export function ImageChoice({ asset, choice, number, onActivate, onPointerDown, 
   const [dimensions, setDimensions] = useState(null);
   const src = choice.sources[candidate];
   const id = asset.stableAssetId || asset.id;
-  const selected = workspace?.selectedAssetIds.includes(id);
+  const selected = workspace?.selectedAssetIds.includes(id) && workspace.selectedImage?.assetId === id && workspace.selectedImage.media.url === src;
   const selectedAsset = dimensions && ownerSystemWorkflowDecodedAsset(
     assetForPlacement(asset, { selectedMedia: { url: src, ...dimensions } }), { source: src, ...dimensions });
   return <button className="lattice-browser-asset" type="button" aria-label={`Image ${number} of ${asset.title || asset.name}`}
     data-selected={selected || undefined} aria-pressed={workspace ? selected : undefined}
-    onClick={(event) => workspace?.selectAsset(id, event)}
+    onClick={(event) => selectedAsset && workspace?.selectAsset(id, event, selectedAsset.selectedMedia)}
     onContextMenu={(event) => { if (onContext) { event.preventDefault(); event.stopPropagation(); onContext(event, asset); } }}
     aria-disabled={!selectedAsset} onDoubleClick={(event) => selectedAsset && onActivate(event, selectedAsset)}
     onKeyDown={(event) => {

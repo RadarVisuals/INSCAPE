@@ -7,9 +7,9 @@ export const IMAGE_FILL_CROP = Object.freeze({ x: .5, y: .5, zoom: 1 });
 export const IMAGE_MODULE_ID = /^image:[A-Za-z0-9_-]{1,80}$/u;
 const exact = (v, keys) => v && typeof v === 'object' && !Array.isArray(v) && Object.keys(v).length === keys.length && keys.every(k => Object.hasOwn(v, k));
 const number = (v, min, max) => Number.isFinite(v) && v >= min && v <= max;
-const validCrop = crop => crop === null || exact(crop, ['x', 'y', 'zoom']) && number(crop.x, 0, 1) && number(crop.y, 0, 1) && number(crop.zoom, 1, 4);
+const validCrop = (crop, minimumZoom) => crop === null || exact(crop, ['x', 'y', 'zoom']) && number(crop.x, 0, 1) && number(crop.y, 0, 1) && number(crop.zoom, minimumZoom, 4);
 export const imageSize = v => Number.isInteger(v) && number(v, 32, 4096);
-export function validImageModules(items, published = false) {
+export function validImageModules(items, published = false, { minimumCropZoom = 1 } = {}) {
   if (!Array.isArray(items) || items.length > MAX_IMAGE_MODULES) return false;
   const ids = new Set();
   return items.every(item => {
@@ -26,7 +26,7 @@ export function validImageModules(items, published = false) {
         || !validateProfileDocumentV9Asset(side.asset) || side.asset.media.type !== 'image' || !side.asset.media.url
         || !Number.isSafeInteger(side.asset.media.width) || side.asset.media.width <= 0
         || !Number.isSafeInteger(side.asset.media.height) || side.asset.media.height <= 0
-        || !validCrop(side.crop)
+        || !validCrop(side.crop, minimumCropZoom)
         || !exact(side.transform, ['quarterTurns', 'mirrorX', 'mirrorY'])
         || !Number.isInteger(side.transform.quarterTurns) || !number(side.transform.quarterTurns, 0, 3)
         || typeof side.transform.mirrorX !== 'boolean' || typeof side.transform.mirrorY !== 'boolean') return false;

@@ -20,7 +20,7 @@ test('owner Display Module reuses the existing interactive canvas inside one cli
   const canvas = read('./OwnerSystemWorkflowCanvas.jsx');
   const controller = read('./useOwnerSystemWorkflowController.js');
   const geometry = read('./presentationBoardGeometry.js');
-  const styles = read('./ownerSystemWorkflow.css');
+  const styles = read('./workflowTokens.css') + '\n' + read('./ownerSystemWorkflow.css');
 
   assert.match(display, /<PresentationBoard[\s\S]*<OwnerSystemWorkflowCanvas[\s\S]*<\/PresentationBoard>/);
   assert.equal(canonicalExport.trim(), "export { default } from './PresentationBoardDefinitive.jsx';");

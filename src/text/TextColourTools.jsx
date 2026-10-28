@@ -3,7 +3,7 @@ import CommittedColourControls from '../colour/CommittedColourControls.jsx';
 import { ARTICLE_STYLE_ROLES, textAppearance } from './domain/article.js';
 import { beginArticleColour, setArticleColour } from './articleColourGesture.js';
 
-export default function TextColourTools({ article, editor, target, onTarget, disabled, onChange, onPreview, store, error, onRecovery, containerControls = true }) {
+export default function TextColourTools({ article, editor, target, onTarget, disabled, onChange, onPreview, store, error, onRecovery, containerControls = true, eyedropper = false, scopeKey }) {
   const [, refresh] = useReducer(value => value + 1, 0);
   useEffect(() => {
     if (!editor || editor.isDestroyed) return;
@@ -49,6 +49,7 @@ export default function TextColourTools({ article, editor, target, onTarget, dis
     {target === 'background' && <label>Background<select aria-label="Text background" disabled={disabled} value={appearance.background === null ? 'none' : 'color'}
       onChange={event => onChange(changeAppearance({ color: event.target.value === 'none' ? null : '#101111' }))}><option value="none">None</option><option value="color">Color</option></select></label>}
     <CommittedColourControls key={`${target}:${body ? `${selection?.from}:${selection?.to}` : ''}`} color={color}
+      eyedropper={eyedropper} scopeKey={`${scopeKey}:${target}:${body ? `${selection?.from}:${selection?.to}` : ''}`}
       opacity={target === 'background' ? appearance.opacity : undefined} disabled={disabled || (body && !bodyAvailable) || (target === 'background' && appearance.background === null)}
       getVersion={() => store.getGeneration()} onChange={apply}
       beginPreview={body && bodyAvailable ? () => beginArticleColour(editor) : undefined}

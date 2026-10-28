@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react';
 import { StartupDestinationReady } from '../../startveil/StartupDestinationContext.jsx';
 import PublishedProfileDocumentPreview from './PublishedProfileDocumentPreview.jsx';
 import { PUBLISHED_PROFILE_STATUS } from '../storage/luksoPublishedProfileRepository.js';
@@ -5,6 +6,7 @@ import './publishedProfileStatus.css';
 import '../../public/ownerSystemWorkflow/workflowTactile.css';
 import AlphaSupportPanel from '../../support/AlphaSupportPanel.jsx';
 import { ALPHA_SUPPORT_CODES } from '../../support/alphaSupport.js';
+const OwnerReception = lazy(() => import('../../reception/OwnerReception.jsx'));
 
 
 const STATUS_COPY = Object.freeze({
@@ -53,10 +55,13 @@ export default function PublishedProfileBoundary({
   const returnToWorkbench = ownProfile ? onReturnToWorkbench : null;
   const canReturn = Boolean(returnProfileAddress && !ownProfile);
   const returnHome = canReturn ? () => onVisitProfile?.(returnProfileAddress, { returnToConnectedProfile: true }) : null;
+  if (returnToWorkbench && entry?.surface === 'overview' && !entry.target) return <Suspense fallback={<p role="status">Opening Reception…</p>}>
+    <OwnerReception key={address} address={address} document={visibleDocument} onReturn={returnToWorkbench} onCanvases={onOpenCanvas} onDiscover={onOpenDiscover} />
+  </Suspense>;
   const content = !visibleDocument
     ? <PublishedStatusSurface state={resolution} onRetry={onRetry} onOpenDirectory={onOpenDiscover}
       onReturn={returnToWorkbench || returnHome} returnLabel={returnToWorkbench ? "Back to my Workbench" : "RETURN"} />
-    : <><PublishedProfileDocumentPreview document={visibleDocument} ownerEditingAllowed={Boolean(returnToWorkbench)} onReturnToWorkbench={returnToWorkbench} entry={entry} onOpenOverview={onOpenOverview} onOpenCanvas={onOpenCanvas}
+    : <><PublishedProfileDocumentPreview document={visibleDocument} onReturnToWorkbench={returnToWorkbench} entry={entry} onOpenOverview={onOpenOverview} onOpenCanvas={onOpenCanvas}
       onOpenDirectory={onOpenDiscover} onReturn={returnHome} onConnect={onConnect} />
     {resolution.status === PUBLISHED_PROFILE_STATUS.STALE && <div className="published-profile-stale" role="status" aria-busy={resolution.busy}>Showing the last verified document while {resolution.busy ? 'checking the network.' : 'the network is unavailable.'} <RetryButton state={resolution} onRetry={onRetry} /></div>}
     </>;

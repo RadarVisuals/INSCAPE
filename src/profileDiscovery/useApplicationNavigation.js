@@ -55,8 +55,13 @@ export default function useApplicationNavigation(authority) {
   }, [navigate]);
   const openCanvas = useCallback((address, target) => {
     const normalized = normalizeProfileAddress(address);
-    if (normalized) navigate({ kind: 'profile', address: normalized, canvas: true, ...(current.current.reception ? { reception: true } : {}), ...(target ? { target } : {}) });
-  }, [navigate]);
+    if (!normalized) return;
+    const profile = { kind: 'profile', address: normalized, canvas: true };
+    // The owner's Canvases action returns to their existing local collection.
+    // Explicit public URLs and individual published-work links remain public.
+    const ownCollection = !target && resolveApplicationDestination(profile, authority).kind === 'workbench';
+    navigate({ ...profile, ...(!ownCollection && current.current.reception ? { reception: true } : {}), ...(target ? { target } : {}) });
+  }, [authority, navigate]);
   const openWork = useCallback((address, target) => {
     const normalized = normalizeProfileAddress(address);
     if (!normalized || !target?.moduleId) return;

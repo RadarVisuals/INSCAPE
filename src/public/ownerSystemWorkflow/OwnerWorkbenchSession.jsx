@@ -23,9 +23,13 @@ export default function OwnerWorkbenchSession({ component: Session, ...props }) 
 }
 
 function LocalWorkbenchSession({ component: Session, ...props }) {
-  const [overview, setOverview] = useState(false);
+  const [overview, setOverview] = useState(props.canvasOverviewRequested === true);
   const [reception, setReception] = useState(false);
-  const [overviewView, setOverviewView] = useState({ layout: 'list', wrap: true });
+  const [overviewView, setOverviewView] = useState({ layout: props.canvasOverviewRequested ? 'grid' : 'list', wrap: true });
+  useLayoutEffect(() => {
+    setOverview(props.canvasOverviewRequested === true);
+    setReception(false);
+  }, [props.canvasOverviewRequested]);
   const [store] = useState(() =>
     createSystemWorkflowDraftStore({
       profileAddress: props.profileAddress,
@@ -72,8 +76,9 @@ function LocalWorkbenchSession({ component: Session, ...props }) {
     };
   }, [editorPreferences, workbenchPreferenceStore, props.profileAddress]);
   const activation = useSyncExternalStore(store.subscribe, store.getActivation);
+  const content = useSyncExternalStore(store.subscribe, store.getSnapshot);
   if (reception) return <Suspense fallback={<p role="status">Opening Reception…</p>}>
-    <ReceptionStoreEditor rootStore={store} onClose={() => setReception(false)} onCanvases={() => { setReception(false); setOverview(true); }}
+    <ReceptionStoreEditor rootStore={store} editorPreferences={editorPreferences} onClose={() => setReception(false)} onCanvases={() => { setReception(false); setOverview(true); }}
       reviewAssets={props.reviewAssets} reviewCategories={props.reviewCategories} reviewProfile={props.reviewProfile}
       publishedDocument={props.publishedResolution?.document} storage={props.reviewStorage} />
   </Suspense>;
@@ -81,10 +86,10 @@ function LocalWorkbenchSession({ component: Session, ...props }) {
     <OwnerWorkbenchOverview store={store} reviewAssets={props.reviewAssets} reviewProfile={props.reviewProfile}
       preferences={workbenchPreferenceStore}
       view={overviewView} onViewChange={setOverviewView}
-      onOpen={() => setOverview(false)} onOpenReception={props.onOpenReception} />
+      onOpen={() => { setOverview(false); if (props.canvasOverviewRequested) props.onEnterMyWorld?.(); }} onOpenReception={props.onOpenReception} />
   </Suspense>;
   return (
-    <SceneNavigationProvider key={activation}>
+    <SceneNavigationProvider key={activation} scope={{ profileAddress: props.profileAddress, canvasId: store.getWorkbenchId(), revision: activation }} content={content}>
       <Session
         {...props}
         onOpenWorkbenchOverview={() => setOverview(true)}

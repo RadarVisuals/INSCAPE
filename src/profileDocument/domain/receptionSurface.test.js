@@ -1,0 +1,31 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { createReception, validReception, projectReception, restoreReception } from './receptionPresentation.js';
+import { createSystemWorkflowDraftStore } from '../../systemWorkflow/systemWorkflowDraftStore.js';
+import { saveReception } from '../../reception/receptionSession.js';
+import { buildProfileDocumentV9 } from './profileDocumentV9Builder.js';
+import { assertValidProfileDocumentV9 } from './profileDocumentV9Validation.js';
+
+test('grid background is saved, undone, reloaded and published without changing cell overrides or Workbench', () => {
+  const data = new Map(), profileAddress = '0x' + '4'.repeat(40);
+  const storage = { getItem: key => data.get(key) ?? null, setItem: (key, value) => data.set(key, value), removeItem: key => data.delete(key) };
+  const root = createSystemWorkflowDraftStore({ profileAddress, storage }), store = root.acquireReceptionScope();
+  const initial = createReception(); initial.regions[0].surface = '#123456';
+  saveReception(store, undefined, initial);
+  const before = structuredClone(root.getDraft());
+  const next = { ...initial, surface: '#234567' };
+  saveReception(store, store.getSnapshot().reception, next, 'Change grid background');
+  assert.ok(store.undo()); assert.deepEqual(store.getSnapshot().reception, initial);
+  assert.ok(store.redo()); assert.deepEqual(store.getSnapshot().reception, next);
+  assert.deepEqual(createSystemWorkflowDraftStore({ profileAddress, storage }).getDraft().reception, next);
+  const { reception: _old, ...oldWorkbench } = before, { reception: _new, ...newWorkbench } = root.getDraft();
+  assert.deepEqual(oldWorkbench, newWorkbench);
+  const document = buildProfileDocumentV9({ profileAddress, systemWorkflowDraft: root.getDraft(), assetRecords: [] });
+  assertValidProfileDocumentV9(document);
+  assert.equal(document.reception.surface, '#234567');
+  assert.equal(document.reception.regions[0].surface, '#123456');
+  assert.deepEqual(projectReception(restoreReception(document.reception)), document.reception);
+  for (const invalid of ['red', '#123', 'url(example)', 0, undefined]) assert.equal(validReception({ ...next, surface: invalid }), false);
+  assert.ok(validReception({ ...next, surface: null }));
+  store.release();
+});

@@ -57,7 +57,8 @@ export function resolveApplicationDestination(route, authority) {
     ownershipVerified: authority.ownershipVerified, verifiedOwnerProfileAddress: connected,
     workspaceProfileAddress: connected, viewedProfileAddress: address,
   });
-  return { kind: owner ? 'workbench' : 'public', address, ...(!owner ? profileIntent(route) : {}) };
+  return { kind: owner ? 'workbench' : 'public', address,
+    ...(owner ? route.canvas && !route.target ? { canvas: true } : {} : profileIntent(route)) };
 }
 
 export function disconnectRoute(route, destination) {

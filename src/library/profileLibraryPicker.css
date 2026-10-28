@@ -1,0 +1,26 @@
+/* Reception uses the shared Library in an independent screen tool. */
+.reception-library-window { container: reception-library / inline-size; }
+.reception-library-window > .reception-library.system-workflow__workspace-window {
+  position: relative; inset: auto; flex: 1; width: 100%; min-width: 0; min-height: 0; height: auto; max-width: none;
+  border: 0; border-radius: 0; box-shadow: none; z-index: 0;
+}
+.reception-library-window.is-placing { opacity: .075; pointer-events: none; }
+.reception-library-window.is-placing .system-workflow__library { opacity: 1; }
+.reception-library-window.is-placing .lattice-browser-sidebar { pointer-events: none; }
+.reception-library-window .system-workflow__workspace-rail-controls:not(:has(.system-workflow__workspace-close)) {
+  grid-template-columns: minmax(0, 1fr) 80px 64px;
+}
+.reception-library-window .system-workflow__workspace-search { grid-column: 1 / -1; }
+.reception-library-window .system-workflow__library-selection-action { width: 100%; }
+.reception-library-window .system-workflow__library-create-row { grid-template-columns: 1fr; }
+.reception-library-window .system-workflow__library-create-row > .lattice-browser-sidebar__create + .lattice-browser-sidebar__create { border-left: 0; }
+@container reception-library (max-width: 420px) {
+  .reception-library .lattice-browser-panel { grid-template-columns: 44px 1px minmax(0, 1fr); }
+  .reception-library .lattice-browser-sidebar-resize { visibility: hidden; }
+  .reception-library .lattice-browser-sidebar button { padding-inline: 0; justify-content: center; }
+  .reception-library .lattice-browser-sidebar button > span { gap: 0; }
+  .reception-library .lattice-browser-sidebar button > span > b,
+  .reception-library .lattice-browser-sidebar button > i,
+  .reception-library .system-workflow__library-create-row .lattice-browser-sidebar__create > span { display: none; }
+  .reception-library .system-workflow__library-create-row > .lattice-browser-sidebar__create { justify-content: center; padding-inline: 0; }
+}

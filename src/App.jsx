@@ -205,6 +205,7 @@ function App() {
             : content.kind === 'entry' ? null
             : localOwnerRoute ? !ownerSourceReady ? <div className="mode-loading" role="status">Resolving owner workspace...</div> : <OwnerRuntimeBoundary
             ownerAuthoringEnabled={ownerAuthoringEnabled}
+            canvasOverviewRequested={content.canvas === true}
             workspaceProfileAddress={connectedWorkspaceProfileAddress}
             getWalletPublicationContext={getWalletPublicationContext}
             visitorWalletConnected={visitorWalletConnected}

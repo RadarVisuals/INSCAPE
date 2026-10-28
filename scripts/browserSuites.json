@@ -3,6 +3,16 @@
   "notes": "Classification is not a passing test result. Release suites run by default; every other suite remains explicitly selectable. production-startup is separately required after the build by verifyRelease.mjs.",
   "suites": [
     {
+      "name": "reception-styling",
+      "category": "release",
+      "rationale": "Filled Reception typography across reader/editor, header editing, shared Colour and nested touch controls in Reception and Workbench. Also runs against dist with INSCAPE_STYLING_PRODUCTION=1."
+    },
+    {
+      "name": "reception-boundaries",
+      "category": "release",
+      "rationale": "Owner draft/public isolation, cross-tab refresh, backup recovery, focus, authored typography and touch controls."
+    },
+    {
       "name": "published-gallery",
       "category": "release",
       "rationale": "Published-only mobile and desktop gallery, wrap, inspection and explicit publication scope."
@@ -40,7 +50,7 @@
     {
       "name": "camera-controls",
       "category": "release",
-      "rationale": "Bestaande release-default onverkort behouden. Concrete controle: `flat camera and scrollable canvas menu fit ${theme} ${width}×${height}`."
+      "rationale": "Bestaande release-default onverkort behouden. Concrete controle: `flat camera and scrollable canvas menu fit ${theme} ${width}Ã—${height}`."
     },
     {
       "name": "context-action-bars",
@@ -250,7 +260,7 @@
     {
       "name": "workbench-index",
       "category": "release",
-      "rationale": "Bestaande release-default onverkort behouden. Concrete controle: `Index stays readable and follows the canvas at 25–200% (${visitor ? 'Visitor' : 'Owner'}, ${width}px)`."
+      "rationale": "Bestaande release-default onverkort behouden. Concrete controle: `Index stays readable and follows the canvas at 25â€“200% (${visitor ? 'Visitor' : 'Owner'}, ${width}px)`."
     },
     {
       "name": "workbench-inspection-keyboard",
@@ -300,7 +310,7 @@
     {
       "name": "workbench-toolbar",
       "category": "release",
-      "rationale": "Bestaande release-default onverkort behouden. Concrete controle: `Flat toolbar and menus remain usable at ${width}×${height}${touch ? ' touch' : ''}`."
+      "rationale": "Bestaande release-default onverkort behouden. Concrete controle: `Flat toolbar and menus remain usable at ${width}Ã—${height}${touch ? ' touch' : ''}`."
     },
     {
       "name": "entry-contrast",
@@ -405,6 +415,11 @@
       "rationale": "Release: gedeelde Color-bediening onderscheidt pointer- en toetsenbordfocus en behoudt Escape-annulering."
     },
     {
+      "name": "colour-eyedropper",
+      "category": "release",
+      "rationale": "Shared opt-in eyedropper lifecycle, target/version invalidation, focus return and unsupported-browser color chooser. Native sampling results are stubbed; this does not claim OS picker coverage."
+    },
+    {
       "name": "companion-tool-viewport",
       "category": "targeted",
       "rationale": "Gerichte bestaande module-/workflowcontrole; geen functioneel vervangingsbewijs gevonden en daarom behouden. Concreet: `Companion tools reserve live camera controls through dock and viewport changes (${width}px)`.",
@@ -432,12 +447,12 @@
     {
       "name": "design-system-interactions",
       "category": "release",
-      "rationale": "Release: geïntegreerde referentietabs, Color/Text-history, layer-dropvolgorde, zoom en scroll mogen selectie of geometrie niet verstoren."
+      "rationale": "Release: geÃ¯ntegreerde referentietabs, Color/Text-history, layer-dropvolgorde, zoom en scroll mogen selectie of geometrie niet verstoren."
     },
     {
       "name": "design-system-library",
       "category": "release",
-      "rationale": "Release: de gedeelde Library/sidebar-presentatie heeft eigen interactieve filters, categorieën, selectie en fouttoestanden."
+      "rationale": "Release: de gedeelde Library/sidebar-presentatie heeft eigen interactieve filters, categorieÃ«n, selectie en fouttoestanden."
     },
     {
       "name": "design-system-workspace",
@@ -447,7 +462,7 @@
     {
       "name": "design-system",
       "category": "release",
-      "rationale": "Release: controleert de levende referentie, tokens, thema’s, bronviewer en componentcontrols; inventory --check voert deze browserinteracties niet uit."
+      "rationale": "Release: controleert de levende referentie, tokens, themaâ€™s, bronviewer en componentcontrols; inventory --check voert deze browserinteracties niet uit."
     },
     {
       "name": "destination-panels",
@@ -860,7 +875,7 @@
       "prerequisites": [
         "Host: suite_owned_production_server.",
         "Lokale fixture-/assetbestanden: public/assets/actors/abyssal_eye/full.webp",
-        "Een verse, bij dezelfde bron behorende dist/; uitvoeren na build en build-budget, niet vóór de build.",
+        "Een verse, bij dezelfde bron behorende dist/; uitvoeren na build en build-budget, niet vÃ³Ã³r de build.",
         "Fase: post_build; huidige stap 03 krijgt geen multi-phase runner."
       ]
     },
@@ -922,7 +937,7 @@
     {
       "name": "keeper-screen",
       "category": "release",
-      "rationale": "Release: Keeper is schermruimte, blijft onafhankelijk van camera en deelt één Keeper tussen named Workbenches."
+      "rationale": "Release: Keeper is schermruimte, blijft onafhankelijk van camera en deelt Ã©Ã©n Keeper tussen named Workbenches."
     },
     {
       "name": "layer-thumbnails",
@@ -1000,9 +1015,9 @@
       "prerequisites": [
         "Host: suite_owned_production_server.",
         "Lokale fixture-/assetbestanden: browser-tests/mini-app-fixture.js",
-        "Een verse, bij dezelfde bron behorende dist/; uitvoeren na build en build-budget, niet vóór de build.",
+        "Een verse, bij dezelfde bron behorende dist/; uitvoeren na build en build-budget, niet vÃ³Ã³r de build.",
         "esbuild fixturebundel en Chromium fake-media flags voor microfoon; INSCAPE_TEST_LIVE_RADAR en INSCAPE_TEST_LIVE_P1 uit voor reproduceerbare release.",
-        "Top-level script zonder test()-scenario’s: Node --test rapporteert de file als subtest; TAP-tests tellen hier geen afzonderlijke workflows. Live opt-ins worden niet afgedwongen door de huidige runner.",
+        "Top-level script zonder test()-scenarioâ€™s: Node --test rapporteert de file als subtest; TAP-tests tellen hier geen afzonderlijke workflows. Live opt-ins worden niet afgedwongen door de huidige runner.",
         "Fase: post_build; huidige stap 03 krijgt geen multi-phase runner."
       ]
     },
@@ -1029,11 +1044,11 @@
     {
       "name": "nomad-loading-lifecycle",
       "category": "targeted",
-      "rationale": "Gericht artworkdeliverable: controleert één gegenereerde Nomad-export en GPU-loading/disposal. De export in output/ is geen standaard CI-broninput; dit is geen bewijs dat de test historisch vervallen is.",
+      "rationale": "Gericht artworkdeliverable: controleert Ã©Ã©n gegenereerde Nomad-export en GPU-loading/disposal. De export in output/ is geen standaard CI-broninput; dit is geen bewijs dat de test historisch vervallen is.",
       "prerequisites": [
         "Host: file_export_and_intercepted_origin.",
         "Lokale fixture-/assetbestanden: browser-tests/fixtures/nomad-study.mjs",
-        "output/nomad-loading-2026-10-21/NOMAD-incremental-loading.svg moet expliciet aanwezig en geïdentificeerd zijn; bestand wordt op module-import gelezen.",
+        "output/nomad-loading-2026-10-21/NOMAD-incremental-loading.svg moet expliciet aanwezig en geÃ¯dentificeerd zijn; bestand wordt op module-import gelezen.",
         "Neem benodigde lokaal ongetrackte fixtures/assets bewust op bij latere bronintegratie; huidige HEAD/CI bevat ze niet: browser-tests/fixtures/nomad-study.mjs",
         "Gegenereerd output/ valt buiten SOURCE_INPUTS en is niet git-tracked; vers gegenereerde CI-checkout heeft dit niet vanzelf."
       ]
@@ -1193,7 +1208,7 @@
       "rationale": "Al verplicht als afzonderlijke post-buildstap in verifyRelease.mjs. Catalogiseer als targeted voor exacte inventaris en expliciete CLI, maar behoud de bestaande verplichte verifydekking; niet nogmaals in de dev-defaults uitvoeren.",
       "prerequisites": [
         "Host: suite_owned_production_server.",
-        "Een verse, bij dezelfde bron behorende dist/; uitvoeren na build en build-budget, niet vóór de build.",
+        "Een verse, bij dezelfde bron behorende dist/; uitvoeren na build en build-budget, niet vÃ³Ã³r de build.",
         "Bestaande mandatory verifyRelease-stap production-startup ongewijzigd na build behouden; targeted betekent hier uitsluitend buiten runner-defaults."
       ]
     },
@@ -1513,7 +1528,7 @@
     {
       "name": "workbench-context-menu",
       "category": "release",
-      "rationale": "Release: actuele submenu’s en sidebar-hide/heropen zitten buiten de defaults; controleert ook dat geparkeerde Display niet terugkeert in Add."
+      "rationale": "Release: actuele submenuâ€™s en sidebar-hide/heropen zitten buiten de defaults; controleert ook dat geparkeerde Display niet terugkeert in Add."
     },
     {
       "name": "workbench-destinations",
@@ -1746,7 +1761,7 @@
     {
       "name": "workbench-shared-tools",
       "category": "release",
-      "rationale": "Release: Transform en Color delen selectie maar moeten één gebaar opslaan, annuleren, Undo en herstel aan het oorspronkelijke Image/Shape/Text-doel binden."
+      "rationale": "Release: Transform en Color delen selectie maar moeten Ã©Ã©n gebaar opslaan, annuleren, Undo en herstel aan het oorspronkelijke Image/Shape/Text-doel binden."
     },
     {
       "name": "workbench-sidebar",
@@ -1836,6 +1851,57 @@
       "name": "reception-editor",
       "category": "release",
       "rationale": "Canonical Reception authoring, Library and native Text recovery, gestures, private/public projection and responsive silhouette."
+    },
+    {
+      "name": "reception-library-selection",
+      "category": "release",
+      "rationale": "Reception expanded image selection and Use selected image preserve the exact media used by drag placement; selecting the cover restores its own image.",
+      "prerequisites": [
+        "Host: runner_vite.",
+        "INSCAPE_TEST_ROOT={origin}"
+      ]
+    },
+    {
+      "name": "reception-shared-controls",
+      "category": "release",
+      "rationale": "Shared tool bounds/private preferences, persistent floating Library, click versus drag, repeated explicit cell drops, cancellation and undo.",
+      "prerequisites": [
+        "Host: runner_vite.",
+        "INSCAPE_TEST_ROOT={origin}"
+      ]
+    },
+    {
+      "name": "reception-rich-cell",
+      "category": "targeted",
+      "rationale": "Isolated rich-cell feasibility experiment; not a production content model or authoring route.",
+      "prerequisites": [
+        "Host: runner_vite.",
+        "INSCAPE_TEST_ROOT={origin}"
+      ]
+    },
+    {
+      "name": "scene-boundaries",
+      "category": "release",
+      "rationale": "Scoped temporary scene selection, Display/Text continuity, linked source availability and a finite gallery sharing the parent scroll at desktop and mobile widths."
+    },
+    {
+      "name": "reception-settings",
+      "category": "release",
+      "rationale": "Simple empty start, Grid settings, direct header editing, visual logo choices and separate current/visitor appearance at desktop and mobile widths."
+    },
+    {
+      "name": "reception-linked",
+      "category": "release",
+      "rationale": "Real Display mouse/touch swipes, linked content and saved link editing, separate local/public canvas overview navigation, and camera/focus/scroll recovery."
+    },
+    {
+      "name": "reception-overview-navigation",
+      "category": "release",
+      "rationale": "Reception review Canvases opens the existing overview; canvas inspection and About return preserve the local draft and restore owner editing at desktop and mobile widths.",
+      "prerequisites": [
+        "Host: runner_vite.",
+        "INSCAPE_TEST_ROOT={origin}"
+      ]
     }
   ]
 }

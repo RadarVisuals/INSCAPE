@@ -1,6 +1,6 @@
 import { gridRailScenes } from './gridRail.js';
 import { ArtworkPreparationProvider } from '../../artwork/ArtworkPreparation.jsx';
-import { useReportScene } from '../../text/SceneNavigation.jsx';
+import { useSceneMotion } from '../../text/SceneNavigation.jsx';
 import { useContext, useDeferredValue, useEffect, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { DisplayStageSizeContext } from './DisplayStageSizeContext.js';
 import { assetForPlacement } from '../../systemWorkflow/domain/placementMedia.js';
@@ -174,7 +174,7 @@ export default function OwnerSystemWorkflowCanvas({ assetsById, authoringLocked 
     [gridSwipe?.offset, cameraMoving, onPlaybackStateChange]);
   useEffect(() => () => onPlaybackStateChange?.({ offset: false, moving: false }), [onPlaybackStateChange]);
   const swipeGridId = gridSwipe?.targetGridId || null;
-  useReportScene(controller.moduleId || 'display:primary', sourceGridId, swipeGridId, gridSwipe, !interactionDisabled && !worldCover, gridOrder);
+  useSceneMotion(controller.moduleId || 'display:primary', sourceGridId, swipeGridId, gridSwipe, !interactionDisabled && !worldCover);
   // Keep neighboring media mounted outside the clipped Stage before a gesture.
   // A newly mounted image can miss the first paint even when its URL is cached.
   // The rail suppresses only their painting at an exact resting boundary.

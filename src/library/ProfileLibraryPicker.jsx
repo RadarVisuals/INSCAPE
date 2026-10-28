@@ -1,32 +1,31 @@
-import { useRef, useState } from 'react';
-import useBrowserWorkspace from '../lattice/browser/useBrowserWorkspace.js';
-import OwnerSystemWorkflowLibraryPresenter from '../public/ownerSystemWorkflow/OwnerSystemWorkflowLibraryPresenter.jsx';
-import WorkspaceRail from '../public/ownerSystemWorkflow/OwnerSystemWorkflowWorkspaceControls.jsx';
-import { OwnerSystemWorkflowWorkspaceShell } from '../public/ownerSystemWorkflow/OwnerSystemWorkflowBrowserWorkspace.jsx';
-import '../lattice/browser/browserWorkspace.css';
-import '../public/ownerSystemWorkflow/libraryWorkspace.css';
+import { useCallback, useState, useSyncExternalStore } from 'react';
+import LibraryWorkspace from '../public/ownerSystemWorkflow/OwnerSystemWorkflowLibraryWorkspace.jsx';
+import ToolPanel from '../ui/ToolPanel.jsx';
+import './profileLibraryPicker.css';
 
-// The same browsing/presentation controls as Workbench, with selection as its
-// only content action. No Workbench drop routing, camera or window runtime.
-export default function ProfileLibraryPicker({ library, menuSurface, onChoose, onClose }) {
-  const records = useRef(new Map());
-  const workspace = useBrowserWorkspace(library.libraryData, records.current);
-  const [busy, setBusy] = useState(false), [error, setError] = useState('');
-  const choose = async asset => {
-    if (busy) return;
-    if (asset.isCollection && asset.collectionRole !== 'cover') { library.libraryData.onOpenCollection?.(asset.assetRecord); return; }
-    setBusy(true); setError('');
-    try { if (!await onChoose(asset)) setError('This selection is no longer current. Close Library and select the region again.'); }
-    catch (failure) { setError(failure.message); }
-    finally { setBusy(false); }
+const subscribeNone = () => () => {};
+
+// The host supplies explicit receivers. Browsing, click/drag threshold, fading,
+// cancellation and asynchronous destination capture are the Workbench's path.
+export default function ProfileLibraryPicker({ library, menuSurface, onClose, placementScope, placementTargetRef, preferences, framePreferences, boundsRef, initialTop = 16, selectionEnabled, active, onActivate, onPlacingChange }) {
+  const [localFrames, setLocalFrames] = useState({}), [placing, setPlacing] = useState(false);
+  const frames = useSyncExternalStore(framePreferences?.subscribe || subscribeNone, framePreferences?.getSnapshot || (() => localFrames));
+  const [initial] = useState(() => ({ left: 16, top: initialTop,
+    width: Math.min(480, Math.max(300, (boundsRef?.current?.clientWidth || innerWidth) * .4)),
+    height: Math.min(640, (boundsRef?.current?.clientHeight || innerHeight) - initialTop - 16,
+      Math.max(300, (boundsRef?.current?.clientHeight || innerHeight) * .72)) }));
+  const updateFrame = change => {
+    const update = current => ({ ...current, library: typeof change === 'function' ? change(current.library || initial) : change });
+    if (framePreferences) framePreferences.update(update); else setLocalFrames(update);
   };
-  const selected = library.libraryData.assets.find(a => (a.stableAssetId || a.id) === workspace.selectedAssetIds[0]);
-  return <OwnerSystemWorkflowWorkspaceShell className="reception-library" label="Choose Reception image" phase="open"
-    rail={<><WorkspaceRail menuSurface={menuSurface} workspace={workspace} onClose={onClose} />
-      <button className="workflow-tactile-control" type="button" disabled={busy || !selected || workspace.selectedAssetIds.length !== 1}
-        onClick={() => choose(selected)}>{busy ? 'Preparing image…' : 'Use selected image'}</button></>}>
-    {error && <p role="alert">{error}</p>}
-    <OwnerSystemWorkflowLibraryPresenter data={library.libraryData} workspace={workspace} categoryCommands={library.categoryCommands}
-      menuSurfaceId={menuSurface} onAssetActivate={(_event, asset) => choose(asset)} onImageActivate={(_event, asset) => choose(asset)} />
-  </OwnerSystemWorkflowWorkspaceShell>;
+  const handlePlacing = useCallback(next => { setPlacing(next); onPlacingChange?.(next); }, [onPlacingChange]);
+  return <ToolPanel title="Library" label="Library" closeLabel="Close Library" onClose={onClose} chrome="flat"
+    className={`reception-library-window workbench-tool-controls${placing ? ' is-placing' : ''}`}
+    frame={frames.library || initial} onFrameChange={updateFrame} boundsRef={boundsRef} active={active} onActivate={onActivate}
+    minimumWidth={280} minimumHeight={300}>
+    {renderHeader => <>{renderHeader()}<LibraryWorkspace className="reception-library" label="Choose Reception image" phase="open" resizable={false} overlayPlacement
+      data={library.libraryData} categoryCommands={library.categoryCommands} menuSurface={menuSurface}
+      placementScope={placementScope} placementTargetRef={placementTargetRef} preferenceStore={preferences}
+      selectionAction="Use selected image" selectionEnabled={selectionEnabled} onPlacingChange={handlePlacing} /></>}
+  </ToolPanel>;
 }

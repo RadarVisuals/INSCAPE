@@ -7,7 +7,7 @@ export default function ProfileEditingBoundary(props) {
   return <EditingSession key={props.profileAddress.toLowerCase()} {...props} />;
 }
 
-function EditingSession({ profileAddress, children, onView }) {
+function EditingSession({ profileAddress, children, onView, viewLabel = 'View published workspace' }) {
   const [attempt, setAttempt] = useState(0), [status, setStatus] = useState('loading');
   useEffect(() => {
     let active = true;
@@ -41,7 +41,7 @@ function EditingSession({ profileAddress, children, onView }) {
               button.closest('.application-interface')?.focus({ preventScroll: true });
             setAttempt(value => value + 1);
           }}>Try editing here</button>}
-          {onView && <button type="button" className="published-profile-retry" onClick={onView}>View published workspace</button>}
+          {onView && <button type="button" className="published-profile-retry" onClick={onView}>{viewLabel}</button>}
         </div>
       </div>
     </section>

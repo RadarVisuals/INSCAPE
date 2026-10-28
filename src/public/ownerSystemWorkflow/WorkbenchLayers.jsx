@@ -1,9 +1,10 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { ArrowDown, ArrowUp, ChevronsDown, ChevronsUp, ChevronRight, ChevronDown, Eye, EyeOff, Trash2, X, Check, Group, Ungroup, Scan, Image, Type, Square } from 'lucide-react';
+import { ChevronRight, ChevronDown, Eye, EyeOff, Trash2, X, Check, Group, Ungroup, Scan, Image, Type, Square } from 'lucide-react';
 import { useWorkbenchView } from './WorkbenchViewContext.js';
 import { artworkRecords, artworkModuleId, artworkWindowIds, layerMembers } from '../../systemWorkflow/domain/artworkLayers.js';
 import { editArtworkLayers } from '../../systemWorkflow/artworkLayerSession.js';
 import './workbenchLayers.css';
+import ArtworkOrderControls from '../../ui/ArtworkOrderControls.jsx';
 
 export default function WorkbenchLayers({ open, hidden, onOpen, historyBlocked, hostRef }) {
   const view = useWorkbenchView(), { store, profileAddress, layers, content } = view;
@@ -111,7 +112,7 @@ export default function WorkbenchLayers({ open, hidden, onOpen, historyBlocked, 
           {layers.length ? [...layers].reverse().map(layer => row(layer)) : <p>No artwork yet. Add an Image, Text or Shape to this Workbench.</p>}
         </div>
         <nav className="workbench-layers-actions" aria-label="Layer actions">
-          {[['back', 'Send layers to back', ChevronsDown], ['backward', 'Move layers backward', ArrowDown], ['forward', 'Move layers forward', ArrowUp], ['front', 'Bring layers to front', ChevronsUp]].map(([direction, label, Icon]) => <button type="button" key={direction} aria-label={label} title={label} disabled={!selected.length || Boolean(historyBlocked)} onClick={() => run({ type: 'order', ids: selected, direction })}><Icon /></button>)}
+          <ArtworkOrderControls disabled={!selected.length || Boolean(historyBlocked)} onOrder={direction => run({ type: 'order', ids: selected, direction })} />
           <button type="button" aria-label="Group selected layers" title="Group selected layers" disabled={selected.length < 2 || selected.some(id => layers.some(layer => layer.children?.includes(id)))} onClick={() => setGrouping(true)}><Group /></button>
           <button type="button" aria-label="Ungroup selected group" title="Ungroup; keep all artwork" disabled={!block} onClick={() => run({ type: 'ungroup', id: block.id })}><Ungroup /></button>
           <button type="button" aria-label="Focus selected layers" title="Focus selected layers" disabled={!selected.length} onClick={() => view.focusModulesRef.current?.(artworkWindowIds(content, selected))}><Scan /></button>

@@ -35,11 +35,12 @@
     {
       "id": "03",
       "status": "implemented",
-      "disposition": "full_92_suite_catalog_executed_with_additional_29_suite_diagnostics",
+      "disposition": "current_93_release_suites_executed_obsolete_tests_retired",
       "result": "../code-quality/step-03/result.md",
       "blockers": [
-        "Final-01: 92 release-suites uitgevoerd (435/450 pass, 15 fail, 0 skip); 29 aanvullende suites (109/123 pass, 11 fail, 3 expliciet verouderde skips). Actuele fouten en testopstellingen worden gericht gecorrigeerd. CI-duur inclusief installatie binnen 30 minuten blijft onbewezen."
-      ]
+        "2026-10-24: volledige browserronde93 suites:436/443 pass,7 fail,0 skip. Twee latere gerichte testreparaties11/11 pass; dit maakt de oorspronkelijke run niet groen. CI-duur inclusief installatie blijft onbewezen."
+      ],
+      "currentEvidence": "technical-closeout-2026-10-24/closeout.json"
     },
     {
       "id": "04",
@@ -53,11 +54,12 @@
     {
       "id": "05",
       "status": "implemented",
-      "disposition": "lint_gate_and_negative_proofs_passed_review_repairs_applied",
+      "disposition": "current_lint_pass_467_files_92_existing_observations",
       "result": "../code-quality/step-05/result.md",
       "blockers": [
-        "Lint slaagt voor 458 bronbestanden met 93 individueel beoordeelde observaties. De laatste drie ongewijzigde hookinvarianten zijn op basis van de onafhankelijke naamreview opnieuw gebonden. Finale gezamenlijke verificatie blijft vereist."
-      ]
+        "92 bestaande hookobservaties blijven expliciet geregistreerd. Vijf ongewijzigde uitzonderingen in de navigatiehook opnieuw beoordeeld na de afzonderlijke meetwijziging; geen nieuwe uitzondering toegevoegd."
+      ],
+      "currentEvidence": "technical-closeout-2026-10-24/closeout.json"
     },
     {
       "id": "06",
@@ -106,12 +108,13 @@
     },
     {
       "id": "11",
-      "status": "in_progress",
-      "disposition": "single_owner_selection_arrival_and_shift_regressions_reopened",
+      "status": "implemented",
+      "disposition": "current_shift_and_destination_arrival_regressions_pass",
       "result": "../code-quality/step-11/result.md",
       "blockers": [
-        "Final-01 toont een dubbele Image Shift-selectieactie en het conflateren van moduleactivatie na aankomst met een gewone selectie. Behoud één selectie-owner, originele aankomstasserties en de bestaande single-Layers Focus/teller-route."
-      ]
+        "Image-interaction5/5 en workbench-destinations7/7 slagen op de huidige bron. Dit is afgebakend gedragsbewijs; de gezamenlijke releasecontrole blijft rood op andere grenzen."
+      ],
+      "currentEvidence": "technical-closeout-2026-10-24/closeout.json"
     },
     {
       "id": "12",
@@ -133,12 +136,13 @@
     },
     {
       "id": "14",
-      "status": "in_progress",
-      "disposition": "full_destination_suite_exposed_arrival_semantics_and_fixture_membership_gaps",
+      "status": "implemented",
+      "disposition": "landscape_camera_navigator_and_destination_panels_pass",
       "result": "../code-quality/step-14/result.md",
       "blockers": [
-        "workbench-destinations 0/3: case 1 is een echte aankomstregressie; cases 2/3 missen contentlidmaatschap in de fixture. Camera/Back en bruikbare moduletools moeten samen behouden blijven."
-      ]
+        "Canvasmenu9/9,Navigator10/10,sidebar9/9 en bestemmingspanelen17/17 slagen na de twee CSS-reparaties. Geen nieuwe volledige releasecontrole uitgevoerd."
+      ],
+      "currentEvidence": "targeted-repairs-2026-10-24/result.json"
     },
     {
       "id": "15",
@@ -151,13 +155,14 @@
     },
     {
       "id": "16",
-      "status": "in_progress",
-      "disposition": "local_escape_ownership_conflict_found_in_full_verification",
+      "status": "implemented",
+      "disposition": "local_keyboard_and_current_landscape_layering_repaired",
       "result": "../code-quality/step-16/result.md",
       "blockers": [
-        "Final-01: Grid-delete en acht Discover-accountmenugevallen verliezen lokale Escape aan Workbench-capture. Gerichte reparatie en volledige oorspronkelijke 17+9 cases vereist.",
-        "Gezamenlijke volledige eindcontrole blijft vereist. R12-OBS01: bij een blijvende voorkeurenopslagfout bedekt de melding op 844×390 de onderste Library-opener. De bereikbare retry en herstel na geslaagde opslag zijn bewezen; de overlap zelf is behouden en niet opgelost."
-      ]
+        "Eerdere Escape/voorkeurencontroles blijven behouden. De huidige canvasmenu/Navigator-problemen zijn met native bediening en77 gerichte controles afgehandeld.",
+        "Alleen de smalle experimentele Display-icoon-editor blijft in deze eerdere bevindingen open; Display blijft geparkeerd."
+      ],
+      "currentEvidence": "targeted-repairs-2026-10-24/result.json"
     },
     {
       "id": "17",
@@ -271,22 +276,24 @@
     {
       "id": "29",
       "status": "in_progress",
-      "disposition": "final_01_complete_stable_source_failed_gate_and_separate_diagnostics",
+      "disposition": "targeted_followup_resolves_recorded_runtime_fixture_and_landscape_failures",
       "result": "../code-quality/step-29/result.md",
       "blockers": [
-        "Final-01 is afgerond op bron 7fcc3f3cb5f470c2839e63ed0e33a55a309f93c0bee84aefe9c45db004346562; voor/na identiek. Officiële gate faalt bij unit (1419/1420): werkelijk gzipbudget 809609 > 809500 (+109).",
-        "Afzonderlijke diagnostiek: 92 release-suites 435/450 pass, 15 fail; 29 aanvullende suites 109/123 pass, 11 fail, 3 obsolete skips. Standards 5/5, design-systeminventaris, zelfstandige design-systembuild en diagnostische productie-startup slagen. Dit is geen releasepass.",
-        "Gerichte reparaties en een nieuwe gezamenlijke verificatie van de uiteindelijke bron blijven nodig. Geen CI-bewijs op deze lokale wijzigingen."
-      ]
+        "De eerdere officiële93-suite-run blijft historisch rood. Gerichte follow-up:77/77 browsercontroles,20/20 routerlifecycle,4/4 inventariscontroles,lint/typecheck enbuild/budget slagen. Dit is geen nieuwe volledige releasepass.",
+        "Tussenruns bevatten een Windows-procesinventaristime-out; de laatste afzonderlijke startup16/16 slaagt. Geen nieuwe externe CI."
+      ],
+      "currentEvidence": "targeted-repairs-2026-10-24/result.json"
     },
     {
       "id": "30",
       "status": "in_progress",
-      "disposition": "final_01_evidence_recorded_current_regressions_and_budget_still_open",
+      "disposition": "authorized_targeted_repairs_complete_broad_acceptance_remains_open",
       "result": "../code-quality/step-30/result.md",
       "blockers": [
-        "Reële bedieningsfouten, verouderde fixtures, drie obsolete skips en gzipbudget moeten worden afgehandeld vóór finale acceptatie. Performanceoorzaak en CI-duur inclusief installatie blijven open. R12-OBS01 is niet opgelost."
-      ]
+        "De drie afgesproken grenzen zijn gericht afgehandeld: opstarttestlimiet en echte landscape-ruimte/menulaagfouten. De Display-icoon-editor blijft bewust geparkeerd.",
+        "Performanceoorzaak uit stap27, brede architectuuracceptatie,individuele overige criteria en actuele externe CI blijven buiten deze herstelronde."
+      ],
+      "currentEvidence": "targeted-repairs-2026-10-24/result.json"
     }
   ],
   "followups": [
@@ -422,11 +429,27 @@
     }
   ],
   "integration": {
-    "result": "../code-quality/three-scenarios/result.md",
-    "sourceSha256": "dfda98753e34b9d96540a0b4f433bd096e9df619469210228ad5915b552d452f",
+    "result": "technical-closeout-2026-10-24/closeout.json",
+    "sourceSha256": "1090893e51f2ef53f381db136a398ede19b121fad60a70d55147a92f4e7127cc",
     "fullReleaseRun": false,
     "releaseReady": false,
-    "latestEvidence": "technical-regie-2026-10-23/continuation/midplan-01 and midplan-build-01"
+    "latestEvidence": "targeted-repairs-2026-10-24/result.json",
+    "completeReleaseBrowserCatalog": true,
+    "scope": "Actuele bron van de gerichte77 browsercontroles en beperkte aanvullende checks, vóór deze voortgangsupdate. Geen nieuwe gezamenlijke releasegate. De eerdere volledige run blijft afzonderlijk bewaard."
   },
-  "nextExecution": "Gerichte correcties van final-01: Image Shift, één selectie-owner met expliciete aankomstbetekenis, lokale Escape-eigenaarsgrens, aantoonbaar verouderde fixtures en Display-testbediening; daarna gerichte bewijsreview en nieuwe gezamenlijke verificatie. Geen commit/push/deployment."
+  "nextExecution": "Afgesproken herstelronde afgerond. Geen verdere brede audit uitvoeren zonder nieuwe concrete aanleiding. Display blijft geparkeerd; Reception-brainstorm blijft afzonderlijk. Bestaande performance- en CI/acceptatiepunten zijn niet als afgerond verklaard. Geen commit/push/deployment.",
+  "latestTechnicalCloseout": {
+    "date": "2026-10-24",
+    "result": "technical-closeout-2026-10-24/closeout.json",
+    "scope": "Afgebakende lokale testopruiming en actuele verificatie; Display blijft geparkeerd. Geen Reception-implementatie.",
+    "removedCases": 4,
+    "replacementCasesPassed": 38,
+    "localOnly": true,
+    "followup": {
+      "date": "2026-10-24",
+      "result": "targeted-repairs-2026-10-24/result.json",
+      "scope": "Gerichte herstelronde: eigenaar-opstart, canvasmenu en Navigator. Geen Display-reactivering of Reception-productwijziging.",
+      "browserCasesPassed": 77
+    }
+  }
 }

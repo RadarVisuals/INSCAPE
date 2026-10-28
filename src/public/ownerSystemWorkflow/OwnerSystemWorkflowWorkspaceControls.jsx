@@ -65,6 +65,6 @@ export default function OwnerSystemWorkflowWorkspaceRail({ menuSurface, onClose,
     <label className="system-workflow__workspace-size"><span>Size</span><input aria-label="Card size" max={workspace.assetSizeBounds.MAXIMUM} min={workspace.assetSizeBounds.MINIMUM} onChange={(event) => workspace.setAssetSize(Number(event.target.value))} type="range" value={workspace.assetSize} /></label>
     <OwnerSystemWorkflowFilterMenu flat menuSurface={menuSurface} onChange={workspace.setCollection} options={collections} value={workspace.collection} />
     <OwnerSystemWorkflowSelectMenu flat compact label="Sort assets" menuSurface={menuSurface} onChange={workspace.setSort} options={sorts} value={workspace.sort} />
-    <button aria-label="Close workspace" className="system-workflow__workspace-close" onClick={onClose} title="Close workspace" type="button"><X size={13} /></button>
+    {onClose && <button aria-label="Close workspace" className="system-workflow__workspace-close" onClick={onClose} title="Close workspace" type="button"><X size={13} /></button>}
   </div>;
 }

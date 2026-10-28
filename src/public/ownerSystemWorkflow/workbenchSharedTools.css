@@ -1,11 +1,9 @@
-.workbench-tools-body { --tool-control-height: var(--control-height-sm); --ds-field-edge: var(--tactile-edge); --ds-control-radius: var(--control-radius); --ds-text-small: 11px; display: flex; flex-direction: column; align-items: stretch; gap: 12px; width: 100%; padding: 12px; overflow: auto; overscroll-behavior: contain; }
+.workbench-tools-body { display: flex; flex-direction: column; align-items: stretch; gap: 12px; width: 100%; padding: 12px; overflow: auto; overscroll-behavior: contain; }
 .workbench-tools-body label { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
 .workbench-tools-body :is(input:not([type='checkbox']), select) { box-sizing: border-box; width: 100%; min-width: 0; height: var(--tool-control-height); border: 1px solid var(--tactile-edge); border-radius: var(--control-radius); background: transparent; color: inherit; padding: 4px 6px; font: inherit; }
 .workbench-tools-body :is(input, select):focus-visible { outline: 1px solid var(--tactile-ink); outline-offset: 1px; }
 .workbench-tools-body :is(input, select):disabled { opacity: .45; }
-.workbench-tools-fields, .workbench-tools-body .ds-studio-field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-.workbench-tools-body .ds-studio-colour-wheel { align-self: center; flex: none; }
-.workbench-tools-body .ds-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.workbench-tools-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .workbench-tools-body p { margin: 0; line-height: 1.6; }
 .workbench-tools-empty { color: var(--tactile-muted); }
 .workbench-color-target { margin-bottom: 0; }

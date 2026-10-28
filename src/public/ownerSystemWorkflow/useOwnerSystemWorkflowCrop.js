@@ -178,6 +178,16 @@ export default function useOwnerSystemWorkflowCrop({ assetsById, controller }) {
   const cropActive = Boolean(cropSession);
   useEffect(() => {
     if (!cropActive) return undefined;
+    // Auxiliary modules (such as Identity) do not change artwork selection.
+    // Leaving this Display still ends its temporary crop, without committing it.
+    const cancelForOtherModule = target => {
+      const display = target?.closest?.('[data-display-instance]');
+      if (!target?.closest?.('[data-workbench-module]')
+        && (!display || display.dataset.displayInstance === currentActions.current.controller.moduleId)) return false;
+      currentActions.current.cancelCrop();
+      return true;
+    };
+    const onFocusIn = event => { cancelForOtherModule(event.target); };
     const onKeyDown = (event) => {
       const { applyCrop, cancelCrop, nudge } = currentActions.current;
       failedLeaveTarget.current = null;
@@ -198,11 +208,9 @@ export default function useOwnerSystemWorkflowCrop({ assetsById, controller }) {
     const onPointerDown = (event) => {
       // Undo/Redo may change a neighbour without invalidating this crop. Read
       // the current grid, media and actions when the user chooses that neighbour.
-      const { controller, assetsById, applyCrop, beginCrop, cancelCrop } = currentActions.current;
+      const { controller, assetsById, applyCrop, beginCrop } = currentActions.current;
       failedLeaveTarget.current = null;
-      const display = event.target?.closest?.('[data-display-instance]');
-      if (display && display.dataset.displayInstance !== controller.moduleId) { cancelCrop(); return; }
-      if (event.target?.closest?.('[data-workbench-module]')) return;
+      if (cancelForOtherModule(event.target)) return;
       if (event.target?.closest?.('[data-context-tools]')) return;
       if (event.target?.closest?.('[data-system-workflow-crop-surface], .system-workflow__crop-controls, .system-workflow__resize-handle')) return;
       const placementId = event.target?.closest?.('[data-system-workflow-placement-id]')?.dataset?.systemWorkflowPlacementId;
@@ -230,9 +238,10 @@ export default function useOwnerSystemWorkflowCrop({ assetsById, controller }) {
       failedLeaveTarget.current = null;
     };
     globalThis.addEventListener('keydown', onKeyDown, true);
+    globalThis.addEventListener('focusin', onFocusIn, true);
     globalThis.addEventListener('pointerdown', onPointerDown, true);
     globalThis.addEventListener('click', onClick, true);
-    return () => { globalThis.removeEventListener('keydown', onKeyDown, true); globalThis.removeEventListener('pointerdown', onPointerDown, true); globalThis.removeEventListener('click', onClick, true); };
+    return () => { globalThis.removeEventListener('keydown', onKeyDown, true); globalThis.removeEventListener('focusin', onFocusIn, true); globalThis.removeEventListener('pointerdown', onPointerDown, true); globalThis.removeEventListener('click', onClick, true); };
   }, [cropActive]);
 
   useEffect(() => {

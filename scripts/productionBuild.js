@@ -239,7 +239,25 @@ export const PRODUCTION_BUDGETS = Object.freeze({
   // single modules. Measured 2,641,147 raw / 862,169 gzip before final recovery
   // guards. This bounds the aggregate addition; initial, owner, wallet, CSS
   // and asset ceilings remain unchanged.
-  coreJavaScript: Object.freeze({ raw: 2_650_000, gzip: 866_000 }),
+  // Approved direct cell editing, crop gestures and reusable-content management
+  // replace the Reception sidebar. Measured aggregate: 2,651,292 raw / 865,404
+  // gzip. This includes lazy routes, not just startup. Bound the raw addition
+  // by 2 kB; compressed, initial-load, owner and wallet ceilings stay unchanged.
+  // Saved owner Reception viewing reuses the editor's content resolver and the
+  // public presentation. Measured: 2,652,486 raw / 865,503 gzip; allow 1 kB raw
+  // for this optional route. Startup and every other limit remain unchanged.
+  // Linked Reception: persisted references, shared scene scopes, source editing
+  // and the finite gallery add 19 kB raw / 8 kB gzip across lazy routes.
+  // Measured 2,671,487 raw / 873,871 gzip before final controls and checks.
+  // Startup, owner-runtime, wallet and CSS budgets are unchanged.
+  // Unified Reception Settings, persistent colour tools with scoped eyedropper,
+  // and exact Library image selection: final measured aggregate 2,682,359 raw.
+  // Add 7 kB to the aggregate raw allowance; compressed/startup limits stay fixed.
+  // Restoring the separate public overview shares WorkbenchOverview with its
+  // owner route again. Rollup emits seven more shared chunks/import facades;
+  // the measured aggregate is 2,685,621 raw / 881,633 gzip. Bound that split
+  // by 3 kB in each aggregate limit; startup, owner and wallet limits stay fixed.
+  coreJavaScript: Object.freeze({ raw: 2_686_000, gzip: 882_000 }),
   // Approved local article fonts plus the creation bar's Inter variable face.
   // Inter and its license/provenance add 357,042 bytes; measured copied assets:
   // 17,811,402 bytes. Retain the previous margin, rounded up by less than 3 kB.
@@ -413,6 +431,32 @@ function cssFiles(manifest, keys) {
   return [...new Set([...keys].flatMap((key) => manifest[key].css || []))].sort();
 }
 
+// Route cost includes startup once and static dependencies only. Optional tools
+// remain excluded until opened; aggregate core budgets still cover all of them.
+export async function measureReceptionRoutes(outputDirectory, manifest, initialKeys) {
+  const routes = {
+    publicAbout: 'src/profileDocument/components/ProfileOverview.jsx',
+    ownerAbout: 'src/reception/OwnerReception.jsx',
+    receptionEditing: 'src/reception/OwnerReceptionEditor.jsx',
+  };
+  const startupJs = new Set([...initialKeys].map(key => manifest[key].file));
+  const startupCss = new Set(cssFiles(manifest, initialKeys));
+  const results = {};
+  for (const [name, source] of Object.entries(routes)) {
+    const key = Object.keys(manifest).find(key => key === source || manifest[key].src === source
+      || name === 'receptionEditing' && manifest[key].name === 'reception-editing');
+    if (!key) continue;
+    const keys = new Set([...initialKeys, ...manifestClosure(manifest, key)]);
+    const js = await Promise.all([...new Set([...keys].map(k => manifest[k].file))].sort().map(file => measure(outputDirectory, file)));
+    const css = await Promise.all(cssFiles(manifest, keys).map(file => measure(outputDirectory, file)));
+    results[name] = { source, javaScript: sum(js), css: sum(css),
+      additionalJavaScript: sum(js.filter(item => !startupJs.has(item.file))),
+      additionalCss: sum(css.filter(item => !startupCss.has(item.file))),
+      files: js.map(item => item.file), cssFiles: css.map(item => item.file) };
+  }
+  return results;
+}
+
 function publicAssetFile(file) {
   return !file.startsWith('.vite/') && !file.endsWith('.html') && !file.endsWith('.js') && !file.endsWith('.css')
     && !GENERATED_BUILD_FILES.includes(file);
@@ -483,6 +527,7 @@ export async function analyzeProductionBuild(outputDirectory, { budgets = PRODUC
   };
   return {
     version: 2, budgets, utilizationPercent: utilization(totals, budgets), totals,
+    receptionRoutes: await measureReceptionRoutes(outputDirectory, manifest, initialKeys),
     initialJavaScript: initialJs, ownerJavaScript: ownerJs, standaloneWalletJavaScript: walletJs,
     lazyJavaScript, initialCss, ownerCss,
     publicAssetCount: publicAssets.length, largestPublicAssets: publicAssets.slice(0, 10),

@@ -4,8 +4,10 @@ import { workbenchSaveError } from '../ownerSystemWorkflow/namedWorkbenchActions
 import { overviewAssetIds, workbenchOverviewModel } from './workbenchOverviewModel.js';
 import WorkbenchOverview from './WorkbenchOverview.jsx';
 import { useProfileIdentity } from '../../profileIdentity/index.js';
+import { useStartupDestinationReady } from '../../startveil/StartupDestinationContext.jsx';
 
 export default function OwnerWorkbenchOverview({ store, preferences, reviewAssets, reviewProfile, view, onViewChange, onOpen, onOpenReception }) {
+  useStartupDestinationReady();
   const generation = useSyncExternalStore(store.subscribe, store.getGeneration);
   const { galleryCardSize } = useSyncExternalStore(preferences.subscribe, preferences.getSnapshot);
   const preferenceError = useSyncExternalStore(preferences.subscribe, preferences.getError);

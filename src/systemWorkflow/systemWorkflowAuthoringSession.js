@@ -1,4 +1,5 @@
 import { createPlacementGroupCandidate, ungroupPlacementsCandidate, guardGroupedOperation } from './systemWorkflowGroups.js';
+import { createSceneSelection } from '../presentation/sceneSelection.js';
 import {
   createSystemWorkflowGridCandidate,
   createSystemWorkflowGridDeleteCandidate,
@@ -11,10 +12,6 @@ import {
 } from './domain/systemWorkflowGrid.js';
 import {
   adjacentSystemWorkflowGridId,
-  firstSystemWorkflowGridId,
-  reconcileSystemWorkflowGridSelection,
-  reconcileSystemWorkflowGridSelectionInGrids,
-  selectSystemWorkflowGrid,
   selectSystemWorkflowGridInGrids,
 } from './domain/systemWorkflowNavigation.js';
 import {
@@ -55,11 +52,19 @@ function sessionError(code, message) {
   return Object.assign(new Error(message), { code });
 }
 
-export function createSystemWorkflowAuthoringSession({ store } = {}) {
+export function createSystemWorkflowAuthoringSession({ store, navigation } = {}) {
   if (!store?.getDraft || !store?.getGeneration || !store?.commitCompletedOperation) {
     throw new TypeError('A System Workflow draft store is required');
   }
-  let selectedGridId = firstSystemWorkflowGridId(store.getDraft());
+  const scenes = navigation || createSceneSelection(store.getDraft().grids);
+  const selectedGrid = draft => scenes.reconcile(draft.grids, false);
+  const selectGrid = gridId => {
+    const draft = store.getSnapshot ? store.getSnapshot() : store.getDraft();
+    selectSystemWorkflowGridInGrids(draft.grids, gridId);
+    scenes.reconcile(draft.grids, false);
+    scenes.select(gridId);
+    return gridId;
+  };
 
   function transact(createCandidate, options = {}) {
     const generation = store.getGeneration();
@@ -70,14 +75,14 @@ export function createSystemWorkflowAuthoringSession({ store } = {}) {
     if (!store.commitCompletedOperation(candidateDraft, { ...options, expectedGeneration: generation })) {
       throw sessionError('SYSTEM_WORKFLOW_OPERATION_STALE', 'The change could not be saved. Storage may be unavailable or the draft changed in another tab. Reload before continuing.');
     }
-    selectedGridId = reconcileSystemWorkflowGridSelection(store.getDraft(), selectedGridId);
+    scenes.reconcile(store.getDraft().grids);
     return true;
   }
 
   return Object.freeze({
     getState() {
       const draft = store.getDraft();
-      selectedGridId = reconcileSystemWorkflowGridSelection(draft, selectedGridId);
+      const selectedGridId = selectedGrid(draft);
       return Object.freeze({
         draft,
         generation: store.getGeneration(),
@@ -87,34 +92,29 @@ export function createSystemWorkflowAuthoringSession({ store } = {}) {
 
     setProfileAddress(profileAddress) {
       if (!store.setProfileAddress?.(profileAddress)) return false;
-      selectedGridId = firstSystemWorkflowGridId(store.getDraft());
+      scenes.reconcile(store.getDraft().grids); scenes.reset();
       return true;
     },
 
-    selectGrid(gridId) {
-      selectedGridId = store.getSnapshot
-        ? selectSystemWorkflowGridInGrids(store.getSnapshot().grids, gridId)
-        : selectSystemWorkflowGrid(store.getDraft(), gridId);
-      return selectedGridId;
-    },
+    selectGrid,
 
     selectAdjacentGrid(direction) {
-      const candidate = adjacentSystemWorkflowGridId(store.getDraft(), selectedGridId, direction);
-      if (candidate) selectedGridId = candidate;
-      return selectedGridId;
+      const draft = store.getDraft(), current = selectedGrid(draft);
+      const candidate = adjacentSystemWorkflowGridId(draft, current, direction);
+      return candidate ? selectGrid(candidate) : current;
     },
 
     createGrid(options) {
       const previous = new Set(systemWorkflowGridOrder(store.getDraft()));
       const committed = transact((draft) => createSystemWorkflowGridCandidate(draft, options));
-      if (committed) selectedGridId = store.getDraft().grids.find(({ id }) => !previous.has(id)).id;
+      if (committed) selectGrid(store.getDraft().grids.find(({ id }) => !previous.has(id)).id);
       return committed;
     },
 
     duplicateGrid(request) {
       const previous = new Set(systemWorkflowGridOrder(store.getDraft()));
       const committed = transact(draft => createSystemWorkflowGridDuplicateCandidate(draft, request), { historyLabel: 'Duplicate Grid' });
-      if (committed) selectedGridId = store.getDraft().grids.find(({ id }) => !previous.has(id)).id;
+      if (committed) selectGrid(store.getDraft().grids.find(({ id }) => !previous.has(id)).id);
       return committed;
     },
 
@@ -159,9 +159,7 @@ export function createSystemWorkflowAuthoringSession({ store } = {}) {
 
     getSnapshot() {
       const draft = store.getSnapshot ? store.getSnapshot() : store.getDraft();
-      selectedGridId = store.getSnapshot
-        ? reconcileSystemWorkflowGridSelectionInGrids(draft.grids, selectedGridId)
-        : reconcileSystemWorkflowGridSelection(draft, selectedGridId);
+      const selectedGridId = selectedGrid(draft);
       return Object.freeze({ draft, generation: store.getGeneration(), selectedGridId });
     },
 

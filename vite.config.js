@@ -24,7 +24,18 @@ export default defineConfig(({ mode }) => {
         // One shared icon family should not become dozens of tiny shared files.
         // Keep module/editor dependencies in their existing lazy boundaries.
         onlyExplicitManualChunks: true,
-        manualChunks: id => id.replaceAll('\\', '/').includes('/node_modules/lucide-react/') ? 'interface-icons' : undefined,
+        // Vite already preloads a lazy route's transitive dependencies. Avoid
+        // duplicating those imports again in every Rollup entry facade.
+        hoistTransitiveImports: false,
+        manualChunks: id => {
+          const path = id.replaceAll('\\', '/');
+          if (path.includes('/node_modules/lucide-react/')) return 'interface-icons';
+          // Both Reception edit entrances load the same editor. Keep their
+          // facades together to avoid repeating its large dependency/preload
+          // list, while preserving the lazy boundary from both readers.
+          if (['OwnerReceptionEditor', 'ReceptionStoreEditor', 'ReceptionEditor']
+            .some(name => path.endsWith('/src/reception/' + name + '.jsx'))) return 'reception-editing';
+        },
       },
     } },
     // Audit exports and browser runtime artifacts are not application entries.

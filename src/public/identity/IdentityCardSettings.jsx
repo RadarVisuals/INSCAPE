@@ -1,5 +1,6 @@
 import { ArrowDown, ArrowUp, Plus, Trash2 } from 'lucide-react';
 import { useLayoutEffect, useRef, useState } from 'react';
+import './identityCardContent.css';
 import { IDENTITY_CARD_LIMITS as limits, isValidIdentityCard, projectIdentityCard, resolveIdentityCard } from '../../profileIdentity/domain/identityCard.js';
 
 // One temporary edit session shared by the hero and its cells. No draft writes until Save.
@@ -68,7 +69,7 @@ export function IdentityProfileEditor({ edit, official, children }) {
   const { editor, setProfile, setTags } = edit;
   const titleRef = useRef(null);
   useLayoutEffect(() => { titleRef.current?.focus({ preventScroll: true }); }, []);
-  return <>
+  return <div className="identity-editor-content">
     <input ref={titleRef} className="identity-module__inline identity-module__custom-title" aria-label="Custom title" placeholder="Add a title"
       maxLength={80} value={editor.profile.title} onChange={event => setProfile({ title: event.target.value })} />
     <h2>{official.name}</h2>
@@ -80,7 +81,7 @@ export function IdentityProfileEditor({ edit, official, children }) {
     {official.tags?.length > 0 && <ul aria-label="Profile tags">{official.tags.map(tag => <li key={tag}>{tag}</li>)}</ul>}
     <input className="identity-module__inline identity-module__tags-input" aria-label="Tags, separated by commas"
       placeholder="Add interests, separated by commas" maxLength={798} value={editor.tagsText} onChange={event => setTags(event.target.value)} />
-  </>;
+  </div>;
 }
 
 export function IdentityFields({ card, edit }) {
@@ -123,7 +124,7 @@ export function IdentityFields({ card, edit }) {
     setMoved({ id: fields[index].id, message: `${fields[index].label || 'Field'} moved to position ${index + offset + 1}` });
   };
   const add = () => edit.setCard({ fields: [...fields, { id: `field:${crypto.randomUUID()}`, label: '', type: 'text', value: '' }] });
-  return <div className="identity-module__field-layout">
+  return <div className="identity-editor-content identity-module__field-layout" data-editing={editing}>
     {edit && <span className="identity-module__move-status" role="status">{moved?.message || ''}</span>}
     {edit && <label className="identity-module__columns">Detail columns<select aria-label="Detail columns" value={card.columns ?? 2}
       onChange={event => edit.setCard({ columns: Number(event.target.value) })}>{[2, 3, 4, 5].map(count => <option key={count} value={count}>{count}</option>)}</select>

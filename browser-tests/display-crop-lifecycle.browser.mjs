@@ -69,6 +69,8 @@ async function fixture(run, { historyControls = false } = {}) {
             } }, 'Move B'),
             React.createElement('button', { onClick: crop.applyCrop }, 'Done'),
             React.createElement('button', { onClick: crop.restoreNativeFit }, 'Native fit')),
+          React.createElement('div', { 'data-workbench-module': 'identity' },
+            React.createElement('button', { onClick: () => { api.identityClicks = (api.identityClicks || 0) + 1; } }, 'Identity target')),
           controller.error && React.createElement('p', { role: 'alert' }, controller.error));
       }
       root.render(React.createElement(App));
@@ -83,6 +85,21 @@ async function fixture(run, { historyControls = false } = {}) {
   } finally { await browser.close(); }
 }
 const snapshot = page => page.evaluate(() => cropAudit.crop.cropSession);
+for (const input of ['keyboard focus', 'pointer']) test(`moving to Identity by ${input} cancels crop without saving or intercepting Identity`, () => fixture(async page => {
+  const generation = await page.evaluate(() => cropAudit.store.getGeneration());
+  const saved = await page.evaluate(() => cropAudit.store.getDraft());
+  if (input === 'keyboard focus') await page.getByRole('button', { name: 'Identity target' }).focus();
+  else await page.getByRole('button', { name: 'Identity target' }).click();
+  await settle(page);
+  assert.equal(await snapshot(page), null);
+  assert.equal(await page.evaluate(() => cropAudit.store.getGeneration()), generation);
+  assert.deepEqual(await page.evaluate(() => cropAudit.store.getDraft()), saved);
+  if (input === 'pointer') assert.equal(await page.evaluate(() => cropAudit.identityClicks), 1);
+  await page.keyboard.press('ArrowRight'); await page.keyboard.press('Enter'); await settle(page);
+  assert.equal(await page.evaluate(() => cropAudit.store.getGeneration()), generation, 'closed crop cannot consume later keys');
+  await page.evaluate(() => cropAudit.crop.beginCrop(cropAudit.controller.selectedGrid.placements[0])); await settle(page);
+  assert.equal((await snapshot(page)).controlZoom, 1, 'reopening uses the saved crop');
+}));
 for (const scenario of ['Undo deletion', 'Undo movement', 'Redo movement']) test(`crop routing follows neighbour ${scenario} while crop A stays active`, () => fixture(async page => {
   await page.getByRole('button', { name: scenario === 'Undo deletion' ? 'Delete B' : 'Move B', exact: true }).click(); await settle(page);
   assert.equal(await page.getByRole('alert').count(), 0, 'the native neighbour edit was accepted');

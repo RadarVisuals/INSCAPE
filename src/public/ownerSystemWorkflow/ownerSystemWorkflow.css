@@ -1,54 +1,8 @@
+@import './workflowTokens.css';
 @import './displayInspection.css';
 /* Accepted System Workflow presentation, promoted from the frozen study into
    the production component namespace. Canonical geometry and state remain in
    the production components; this layer owns only their presentation. */
-.system-workflow,
-.system-workflow__token-scope {
-  --workflow-window-inset: 18px;
-  --workflow-dock-height: 42px;
-  --workflow-dock-clearance: 12px;
-  --workflow-rail-height: 38px;
-  --workflow-row-height: 38px;
-  --workflow-panel-padding: 12px;
-  --workflow-content-padding: 10px;
-  --workflow-gap-small: 6px;
-  --workflow-gap-medium: 10px;
-  /* Shared module chrome. Content layout and Stage geometry stay module-owned. */
-  --workflow-window-chrome-radius: 10px;
-  --workflow-window-chrome-gutter: 6px;
-  --workflow-window-chrome-shadow-inset: 6px;
-  --workflow-window-chrome-shadow-height: 90px;
-  --workflow-window-chrome-shadow: 4px 6px 14px rgb(17 19 19 / 14%);
-  --workflow-window-chrome-noise-size: 128px;
-  --workflow-window-chrome-noise-opacity: 30%;
-  --workflow-border: var(--lattice-menu-line);
-  --workflow-border-strong: var(--workflow-border);
-  --workflow-muted: var(--lattice-menu-muted);
-  --workflow-ink: var(--lattice-menu-ink);
-  --workflow-panel: var(--lattice-menu-panel);
-  --workflow-selection: color-mix(in srgb, var(--workflow-ink) 12%, var(--workflow-panel));
-  --workflow-hover: color-mix(in srgb, var(--workflow-ink) 7%, transparent);
-  --workflow-active-vertical: inset 4px 0 0 var(--workflow-ink);
-  --workflow-active-horizontal: inset 0 4px 0 var(--workflow-ink);
-  --workflow-shadow-panel: none;
-  --workflow-shadow-workspace: none;
-  --workflow-motion-in: 180ms;
-  --workflow-motion-out: 140ms;
-  --workflow-ease: cubic-bezier(.2, .72, .2, 1);
-  --workflow-type-display: 600 28px/1.08 "Inscape Sora", sans-serif;
-  --workflow-type-title: 600 18px/1.15 "Inscape Sora", sans-serif;
-  --workflow-type-section: 600 15px/1.2 "Inscape Sora", sans-serif;
-  --workflow-type-body: 400 14px/1.5 "Inscape Sora", sans-serif;
-  --workflow-type-control: 400 11px/1.2 "Inscape Sora", sans-serif;
-  --workflow-type-sidebar: 450 11px/1.1 "Inscape Sora", sans-serif;
-  --workflow-type-browser-rail: 400 10px/1 "Inscape IBM Plex Sans Condensed", "Arial Narrow", sans-serif;
-  --workflow-type-panel-heading: 500 11px/1.15 "Inscape Sora", sans-serif;
-  --workflow-type-panel-body: 400 11px/1.5 "Inscape IBM Plex Sans Condensed", "Arial Narrow", sans-serif;
-  --workflow-type-panel-rail: 400 11px/1 "Inscape IBM Plex Sans Condensed", "Arial Narrow", sans-serif;
-  --workflow-type-label: 500 10px/1.25 "Inscape IBM Plex Sans Condensed", "Arial Narrow", sans-serif;
-  --workflow-type-micro: 400 10px/1.35 "Inscape IBM Plex Sans Condensed", "Arial Narrow", sans-serif;
-  --workflow-type-technical: 400 10px/1.35 "Inscape IBM Plex Sans Condensed", "Arial Narrow", sans-serif;
-}
 
 .system-workflow {
   --study-surface: #c9c6bd;

@@ -1,7 +1,8 @@
 export const OWNER_RUNTIME_MODULES = [
   '/src/public/OwnerSystemWorkflowShell.jsx',
   '/src/library/state/useLibraryStore.js',
-  '/src/signals/state/useSignalStore.js'
+  '/src/signals/state/useSignalStore.js',
+  '/src/reception/ReceptionEditor.jsx'
 ];
 const normalize = (id) => id.replaceAll('\\', '/');
 
@@ -10,6 +11,8 @@ export function createOwnerRuntimeGraph(bundle) {
   const ownerChunks = Object.values(chunks).filter((chunk) => Object.keys(chunk.modules)
     .some((id) => OWNER_RUNTIME_MODULES.some((ownerModule) => normalize(id).endsWith(ownerModule))));
   const entryChunks = Object.values(chunks).filter((chunk) => chunk.isEntry);
+  const readerChunks = Object.values(chunks).filter(chunk => Object.keys(chunk.modules).some(id =>
+    ['/src/reception/OwnerReception.jsx', '/src/profileDocument/components/ProfileOverview.jsx'].some(path => normalize(id).endsWith(path))));
   const staticFiles = (entry) => {
     const visited = new Set();
     const visit = (fileName) => {
@@ -21,7 +24,7 @@ export function createOwnerRuntimeGraph(bundle) {
     return visited;
   };
 
-  const leaks = entryChunks.flatMap((entry) => {
+  const leaks = [...entryChunks, ...readerChunks].flatMap((entry) => {
     const initialFiles = staticFiles(entry);
     return ownerChunks.filter((chunk) => initialFiles.has(chunk.fileName))
       .map((chunk) => ({ entry: entry.fileName, ownerChunk: chunk.fileName }));
@@ -46,7 +49,7 @@ export function createOwnerRuntimeGraph(bundle) {
 export function assertOwnerRuntimeGraph(graph) {
   if (!graph.ownerChunks.length) throw new Error('The production graph did not contain an owner runtime chunk');
   if (graph.leaks.length) {
-    throw new Error(`Owner runtime leaked into an initial entry: ${graph.leaks
+    throw new Error(`Owner runtime leaked into an initial entry or Reception reader: ${graph.leaks
       .map(({ entry, ownerChunk }) => `${entry} -> ${ownerChunk}`).join(', ')}`);
   }
 }

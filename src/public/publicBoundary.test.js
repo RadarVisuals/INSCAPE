@@ -89,8 +89,9 @@ test('System Workflow routing contains no legacy Gallery destination controls', 
 
 test('published navigation follows ordered v9 Grids without a spatial-world handoff', () => {
   const visitorSource = readFileSync(new URL('../profileDocument/components/PublishedDisplayModule.jsx', import.meta.url), 'utf8');
-  assert.match(visitorSource, /const \[activeIndex, setActiveIndex\] = useState\(entryGridIndex\)/u);
-  assert.match(visitorSource, /document\.grids\[activeIndex\]/u);
+  // Scene selection now lives in the headless presentation session. Behavioral
+  // selection/lifetime coverage is in presentation/sceneSession.test.js and
+  // browser-tests/scene-boundaries.browser.mjs, not a component state spelling.
   assert.match(visitorSource, /aria-label="Next Grid"/u);
   assert.doesNotMatch(visitorSource, /GalleryWorld|UpperWorldSurface|SpatialLevelNavigation/u);
 });

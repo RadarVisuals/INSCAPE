@@ -1,12 +1,13 @@
 /* The overview owns its viewport; the editor and its tools remain unmounted. */
 .workbench-overview-browse { display: contents; }
-.workbench-overview { --overview-ease: cubic-bezier(.16,1,.3,1); --overview-menu-duration: 600ms; --overview-panel-duration: 700ms; --overview-radius: calc(var(--control-shell-radius) + var(--space-1)); --overview-glass: rgb(12 14 15 / 50%); --overview-glass-ink: #f4f4f2; --overview-glass-edge: transparent; --overview-glass-filter: blur(10px); --overview-glass-shadow: 0 10px 30px rgb(11 7 30 / 10%); position: fixed; inset: 0; z-index: 1; pointer-events: auto; overflow: auto; padding: var(--space-3) var(--space-3) 80px; background: var(--tactile-face); color: var(--tactile-ink); font: 14px/1.6 var(--font-interface); }
-.workbench-overview *, .workbench-overview *::before, .workbench-overview *::after { box-sizing: border-box; }
-.workbench-overview :is(button, input, textarea) { font: inherit; color: inherit; }
-.workbench-overview button { display: inline-flex; align-items: center; justify-content: center; gap: 10px; min-height: var(--control-target-touch); padding: 10px 16px; border: 1px solid transparent; border-radius: var(--control-radius); background: transparent; cursor: pointer; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
-.workbench-overview button:where(:not(.workbench-overview-card-open)):hover:not(:disabled) { background: var(--tactile-hover); }
-.workbench-overview button:disabled { opacity: .5; cursor: default; }
-.workbench-overview :is(button, input, textarea):focus-visible { outline: 2px solid var(--tactile-ink); outline-offset: -3px; }
+:is(.workbench-overview, .canvas-gallery-section) { --overview-ease: cubic-bezier(.16,1,.3,1); --overview-menu-duration: 600ms; --overview-panel-duration: 700ms; --overview-radius: calc(var(--control-shell-radius) + var(--space-1)); --overview-glass: rgb(12 14 15 / 50%); --overview-glass-ink: #f4f4f2; --overview-glass-edge: transparent; --overview-glass-filter: blur(10px); --overview-glass-shadow: 0 10px 30px rgb(11 7 30 / 10%); }
+.workbench-overview { position: fixed; inset: 0; z-index: 1; pointer-events: auto; overflow: auto; padding: var(--space-3) var(--space-3) 80px; background: var(--tactile-face); color: var(--tactile-ink); font: 14px/1.6 var(--font-interface); }
+:is(.workbench-overview, .canvas-gallery-section) *, :is(.workbench-overview, .canvas-gallery-section) *::before, :is(.workbench-overview, .canvas-gallery-section) *::after { box-sizing: border-box; }
+:is(.workbench-overview, .canvas-gallery-section) :is(button, input, textarea) { font: inherit; color: inherit; }
+:is(.workbench-overview, .canvas-gallery-section) button { display: inline-flex; align-items: center; justify-content: center; gap: 10px; min-height: var(--control-target-touch); padding: 10px 16px; border: 1px solid transparent; border-radius: var(--control-radius); background: transparent; cursor: pointer; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+:is(.workbench-overview, .canvas-gallery-section) button:where(:not(.workbench-overview-card-open)):hover:not(:disabled) { background: var(--tactile-hover); }
+:is(.workbench-overview, .canvas-gallery-section) button:disabled { opacity: .5; cursor: default; }
+:is(.workbench-overview, .canvas-gallery-section) :is(button, input, textarea):focus-visible { outline: 2px solid var(--tactile-ink); outline-offset: -3px; }
 .workbench-overview-navigation { position: fixed; bottom: max(16px, env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%); z-index: 4; color: var(--overview-glass-ink); width: 156px; overflow: hidden; transition: width var(--overview-menu-duration) var(--overview-ease); }
 .workbench-overview-navigation { border-radius: 6px; background: var(--overview-glass); box-shadow: var(--overview-glass-shadow); -webkit-backdrop-filter: var(--overview-glass-filter); backdrop-filter: var(--overview-glass-filter); }
 .workbench-overview .workbench-overview-menu-trigger { width: 100%; justify-content: space-between; border-radius: 6px; gap: 16px; padding: 8px 14px; font-size: 14px; letter-spacing: .12em; }

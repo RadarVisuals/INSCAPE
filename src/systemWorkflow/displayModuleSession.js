@@ -4,9 +4,9 @@ import { DISPLAY_CONTENT_KEYS, MAX_DISPLAY_MODULES, PRIMARY_DISPLAY_ID, displayF
 import { createDefaultWorkbenchPresentation, createNewDisplayPresentation } from '../profileDocument/domain/workbenchPresentation.js';
 import { createSystemWorkflowAppearanceCandidate } from './systemWorkflowAppearance.js';
 
-export function createDisplayModuleSession(store, id) {
+export function createDisplayModuleSession(store, id, navigation) {
   let sourceSnapshot, displaySnapshot;
-  return createSystemWorkflowAuthoringSession({ store: {
+  return createSystemWorkflowAuthoringSession({ navigation, store: {
     getDraft: () => projectDisplayDraft(store.getDraft(), id),
     // Derived view only. Re-read every accepted root to detect removal/reload,
     // but unrelated module edits must not replace this Display's snapshot.

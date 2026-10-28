@@ -11,7 +11,252 @@ Earlier dated "local/uncommitted" and "no deployment" notes describe those
 individual implementation sessions. This authorization does not merge into
 main or authorize profile publication, uploads or wallet actions.
 
+## Reception editor simplification (2026-10-28)
+
+The founder approved implementing this UX cleanup with two agents and the lead
+agent. This section supersedes earlier Reception instructions about a covering
+Library, automatic selection, Saved content, profile content choices, cell
+content menus, content swaps and Join cells. Display creation and the design of
+canvas-link authoring are explicitly outside this round.
+
+- Start with Image from Library, New Text and an accessible Add cell action.
+  Open without selecting a cell. Explicit selection has a restrained outline
+  and contextual toolbar; clicking outside deselects. One toolbar stays fixed
+  at the bottom centre of the editor viewport, independent of cell width and
+  content scrolling. Its actions follow the selected cell. Only the move handle
+  remains at the selected cell's top-left corner, as a quiet grip without a
+  button background or border. Light dot centres with a thin dark contour keep
+  the grip legible over light/dark artwork independently of the interface theme.
+  Its full hit area and keyboard focus remain;
+  hover/focus strengthens the glyph. Narrow screens wrap actions
+  instead of clipping them inside a cell. Keyboard focus remains
+  visible. A Library drag indicates its receiving cell temporarily.
+- Library is a modeless, movable and resizable shared tool. Library and the
+  other Reception tools can move outside the centered grid window, anywhere
+  within the editor viewport. New tools initially leave header controls clear;
+  a clicked tool comes to the front. Library's edges and corners accept actual
+  pointer resizing above its content. It stays open during cell selection, repeated placement,
+  cropping and undo. The grid remains interactive. Private window preferences
+  do not enter authored content, history or publication. Image placement still
+  opens direct crop. A click placement requires a selected cell; a drag captures
+  its explicit receiving cell and current draft generation.
+- One Delete cell action applies to every cell type. It removes the cell and
+  its unreferenced Reception content; Library originals and records still used
+  as the header logo stay intact. Normal partitions collapse neighboring space;
+  a partition with no removable local seam is repacked in reading order. The
+  last deletion leaves a blank starting cell. The operation is undoable.
+- The cell's top-left handle moves its complete identity, content and appearance
+  through the existing rectangular positions, shifting intervening cells.
+  Preview precedes one completed save; Escape cancels. Arrow keys provide an
+  alternative. Mobile order remains its independent responsive arrangement.
+  Join cells and the content-only move/swap command are removed.
+- Remove Profile, Links, Introduction and Details from authoring choices; remove
+  the cell three-dot menu, Saved content and Edit profile details. Replacing
+  content discards unreferenced Reception records within the same undoable
+  operation. Existing public profile-block rendering is not removed by this
+  editor cleanup. Workbench profile editing remains independent.
+- One Settings window has always-visible Grid and Text tabs. Grid contains
+  corners, gaps, a Grid color entry and the two appearance choices below.
+  The optional Reception `surface` is a validated hex colour
+  or null and survives local/public round trips. Per-cell surfaces override it.
+  Backup/recovery remains available separately.
+- Clicking the header name/logo edits the optional name and chooses a logo
+  from visual image previews. The header appearance icon directly toggles the
+  temporary view. Settings shows Your current view and Default for visitors
+  side by side; the latter changes the authored publication default. Changing these controls
+  does not edit the shared Workbench profile card.
+
+This implementation is local; it has not been committed, pushed or deployed.
+See [implementation and verification](audits/2026-10-28/reception-editor-revamp/README.md).
+
+The founder clarified that blank Text must start with an inset and full-width
+title/body fields that wrap within narrow cells. Text and its reader use the
+same available cell width. See the [free tools and Text correction](audits/2026-10-28/reception-free-tools/README.md).
+
+The final spacing instruction replaces all presets and global spacing controls
+with one Content spacing slider (0–128px) in Settings → Text, for Text only.
+New Text starts at 24px independently of the former grid default. An adjacent
+Apply to all checkbox starts unchecked and resets when the tool is reopened or
+another cell is selected. Checking it applies the current value to all Reception
+Text cells; subsequent slider edits use that scope until unchecked. Each
+completed change is one undoable save; live previews can be cancelled. Images
+use their full cell area and crop controls, with no content-spacing control.
+Existing explicitly authored Text spacing remains visible and editable. The
+saved format's other fields are not migrated by this UI simplification.
+See the [Text-only slider verification](audits/2026-10-28/reception-text-spacing-slider/README.md).
+
+The founder further removed the separate Cell appearance and Appearance windows.
+New Text and Edit text reveal the separate Text editing tool. Settings → Text
+contains only layout (spacing and alignment), never the text-formatting tools.
+With no Text selected, that tab remains available and explains the required
+selection. The palette action opens
+only Color, for either an Image or Text cell's background; Text also exposes its
+existing article/selection colour targets there. Crop remains a direct Image
+toolbar action. Color is modeless, movable and resizable outside the grid, stays
+open until closed, and retargets when another cell is selected. A compact pipette
+icon beside the colour wheel uses the browser's explicit screen-sampling API
+where supported, with a native
+colour chooser fallback. Pending sampling is cancelled or ignored when its
+target, generation or lifetime changes. Grid background uses the same tool.
+
+Library's selected expanded image choice is temporary workspace selection,
+qualified by source and media URL. Use selected image places that displayed
+choice exactly, as drag already does; it must not substitute the source's cover.
+See [Settings, colour and Library verification](audits/2026-10-28/reception-settings-colour-library/README.md).
+
+## Linked Reception and canvas presentation (2026-10-28)
+
+The founder approved continuing the preparatory separation into the actual
+Reception/gallery connection and persisted links, and clarified that Display
+must retain its direct swipe interaction. The founder subsequently withdrew the
+inline gallery arrangement: there is no canvas overview beneath the Reception
+bento. Canvases opens the existing separate overview again, for owner and public
+visitors. Opening a card still reuses the existing viewer, metadata and Index.
+An explicitly linked cell can still open a specified canvas and camera point.
+Closing restores browsing position and focus.
+
+Reception can show an existing Display, Image side or Text from a named canvas,
+or map Display scenes to existing Image/Text sources. The real Display runtime
+owns swipe, keyboard and playback interactions. Its Text follower shares the
+same temporary motion; mapped cells follow the committed scene. Unlinked cells
+stay static. Canvas/profile-qualified sources remain in their original records.
+Link settings use the existing Reception store, editing lease, history, private
+backup and recovery. The editor keeps its scene session stable through saves;
+a new reading snapshot starts fresh temporary selection.
+
+Publication validates sources and camera points against the final selected and
+retained public canvases. It refuses unavailable content without publishing a
+private canvas implicitly. Mappings for private controller scenes are omitted
+from the public projection but remain locally authored. Public readers have no
+local fallback. The owner reader resolves only referenced artwork through the
+existing read repository, with cancellation/retry and no Library workspace or
+editing capability.
+
+This is local application work, not a deployed release or a signed profile
+publication. Display creation remains outside ordinary Add menus. The separate
+owner canvas-management overview is retained. The inline gallery in the earlier
+[implementation evidence](audits/2026-10-28/reception-linked-canvases/README.md)
+is superseded by this restoration of the separate overview.
+
+## Preparation for linked Reception and canvas presentation (2026-10-28)
+
+After the [dependency audit](audits/2026-10-28/reception-canvas-display-boundaries/README.md),
+the founder approved separating the evidenced dependencies before combining
+Reception and the canvas overview. The intended experiment lets one Display
+scene selection drive several linked cells, while other cells remain static.
+Showing source content, opening a canvas/camera point and following a scene are
+distinct operations. Source addresses include profile, canvas and module;
+temporary session state also belongs to an explicit snapshot scope.
+
+The local preparatory implementation makes logical Display selection independent
+of its mounted view, shared by existing owner Display/Text and visitor Display/Text.
+Animation remains an optional view adapter. Closing or temporarily unmounting
+Display retains its selected scene for linked readers; changing the presentation
+scope starts a fresh session. Selection is temporary and never saves or publishes.
+The existing authoring session retains all content transactions and history.
+
+Read-only presentation can now receive a validated collection snapshot, explicitly
+project a selected scene, and resolve qualified sources against that snapshot.
+Public resolution uses only the assembled publication, including retained older
+versions of unselected canvases. Missing references are unavailable; they never
+fall back to private drafts or a different canvas. A finite gallery section uses
+the existing cards without owning the page's scrolling or navigation.
+
+An isolated development fixture exercises linked image/text cells, a static cell,
+two independent canvas scopes and an in-flow gallery. This is preparation and
+behavioral evidence, not a merged Reception UI or a new canonical/public binding
+schema. Persisted binding editing, validation, undo/recovery and actual publication
+of bindings remain a later slice. Display is not restored to ordinary Add menus;
+List removal and the final page composition have not been implemented here.
+See [implementation and verification](audits/2026-10-28/scene-boundary-implementation/README.md).
+
 ## Static customizable Reception bento direction (2026-10-26)
+
+**Reception frame clarification (2026-10-28):** View, Preview and Edit always
+use the same centered, bounded window and content dimensions. The shared header
+reserves the same space in every mode; viewing and previewing must not expand
+Reception to fullscreen. Preview retains the selected desktop/mobile framing.
+This supersedes the earlier full-viewport visitor-preview sizing below.
+
+**Reception header clarification (2026-10-28):** profile branding, About,
+Canvases, Discover, appearance and Edit Reception belong inside the existing
+window header. Workbench and the current mode's actions occupy its right side.
+Navigation never overlaps or cuts into the bento grid. Each region owns its
+rounded corners and authored padding, with no navigation-dependent clipping,
+corner exceptions or extra top spacing. All modes share the same header size;
+narrow screens use two contained rows with horizontally scrollable controls.
+
+**Editor interaction refinement (2026-10-27):** the founder approved a large,
+centered, viewport-fitted work window with the Workbench's shared flat controls.
+Start with one empty cell. A cell's Add action offers a visual Beside / Below
+choice, preserves its content and permits direct divider resizing. Empty cells
+offer Image from Library, Text and profile content directly. Selection reveals
+local actions; text, color, image framing and page settings use temporary tools,
+not a permanently reserved settings column. No canvas dimensions, pixel crop
+coordinates or zoom percentage belong in this Reception layout UI. Font controls
+retain their shared typography semantics. Image crop is direct drag with a zoom
+slider, and keyboard equivalents. Reception images may zoom below Fill cell
+to show the whole artwork with free space in the cell (0.1–4 times fill scale).
+An axis smaller than the cell stays centered; overflowing axes remain pannable.
+This framing is saved and published unchanged. Workbench and overview crop
+limits are unaffected. The existing Library opens temporarily for an
+explicit cell; cancellation preserves its previous content and chosen artwork
+retains its source identity. Unplaced Reception records can be reused or deleted
+with undo, without deleting Library sources. Mobile starts in readable flow with
+reachable tools. Visitor preview uses the actual public frame geometry without
+an editor sidebar; the public renderer fits the available viewport. No new
+Workbench mode, publication path or animation system is introduced.
+
+**Shared Reception operation (2026-10-27):** the separate bounded editor now
+uses the same movable/resizable tool-window implementation as Workbench.
+Reception window frames are private editor preferences, outside authored
+content and Undo. Library covers the complete content area below the actual
+header. Its existing drag threshold and fade expose explicit Reception cell
+receivers, including cells under the Library sidebar; release captures the
+receiving cell and draft generation before asynchronous decoding. Closure,
+Escape and obsolete requests cannot replace later content. Crop and divider
+gestures use the existing shared pointer controller with Reception geometry.
+The 0.1–4 crop range and Done/local/public boundaries remain unchanged.
+
+An isolated development fixture tests Image, Text and Shape together in one
+cell using shared selection, colour, gestures and layer-order controls. Its
+placements and history adapter are experimental, outside canonical Reception
+data and production routes. Mobile scaling versus readable flow is compared,
+not decided: scaling preserves overlap but shrinks text; flow restores reading
+size but loses overlap. Production multi-object cells still require an explicit
+data/command adapter, public projection and a mobile composition decision.
+See [implementation and evidence](audits/2026-10-27/reception-shared-controls/README.md).
+
+**Owner viewing clarification (2026-10-27):** About opens the verified owner's
+saved local Reception, including when returning from Canvases. Done leaves
+editing and shows that same saved content without editor tools. The reader and
+editor use the canonical draft and shared presentation; no copied publication
+is made. Viewing releases the Reception editing lease. Visitors and other
+profiles continue to see published content; Done never publishes. If no local
+draft exists, show the publication until the owner enters editing/recovery.
+
+**Reception boundary hardening (2026-10-27):** a verified owner's About reader
+does not depend on publication availability. It reads the canonical local record,
+refreshes after another tab saves or the page returns to the foreground, and
+keeps a clearly marked last-good view on read failure. Done and successful
+private recovery both reopen that reader. This refresh never reloads an active
+editor's store or acquires an editing lease. Actual edit entry loads the editor
+and Library; visitors continue to receive only the published projection.
+Shared tool sizing and chrome apply to tool hosts, not authored Text. Artwork
+uses its existing name/description for accessibility, with recovery controls
+outside that semantic image. Route costs and reader/editor isolation are checked
+alongside the existing production budgets. See the
+[audit remediation](audits/2026-10-27/reception-audit-remediation/README.md).
+
+**Reception shared styling follow-up (2026-10-27):** reader, Edit, Preview and
+Done retain the same authored profile typography. Tool fonts belong to tool
+surfaces. Shared Colour and Identity content own their intrinsic layout and
+editable field styles without requiring a Workbench module ancestor. One shared
+control-sizing recipe supplies touch targets to both hosts, including nested
+Text buttons, reset controls and backup disclosures. Default tool chrome must
+not override an intrinsic control's styling by selector specificity. Focused
+checks and remaining unrelated failures are recorded in the
+[styling remediation](audits/2026-10-27/reception-styling-remediation/README.md).
 
 **Accepted direction, implemented locally on the Reception branch.** The founder
 approved replacing the fixed Reception wireframe with an editable, static bento.
@@ -46,8 +291,9 @@ That brief operationalizes this decision; this contract remains product authorit
   appearance and responsive preview. Canvas dimensions, free X/Y placement,
   camera index, Workbench Layers, Shapes/FX, mini-app authoring and Display
   linking are not part of its first toolbar, shortcuts or context menus; retain them in their existing
-  Workbench scopes. Additional media transforms or full detachable docking are
-  not automatically required merely because related code exists.
+  Workbench scopes. Reception now shares tool-window movement and resizing.
+  Additional media transforms and dock grouping/detaching remain outside this
+  slice; their presence elsewhere does not automatically require them here.
 - Give the region's outer padding, surface and contour one owner in Reception.
   Text owns typography and paragraph layout. Do not expose duplicate Text-box
   and bento padding/radius controls or rewrite a reused article to remove its
@@ -60,9 +306,10 @@ That brief operationalizes this decision; this contract remains product authorit
 - Expose authored radius, gutter and padding. Gutter separates regions; padding
   separates a region's content from its edge. Global padding can be overridden
   per region, with horizontal and vertical content alignment and full-bleed media.
-- Follow the actual Hanssen About presentation: compact branded navigation,
-  generous content, narrow consistent gaps, convex outside corners and concave
-  junctions where the navigation or an identity label occupies a cutout. The
+- Follow the Hanssen About presentation's compact branded navigation,
+  generous content, narrow consistent gaps and rounded regions. The founder's
+  28 October clarification places navigation in the window header above the
+  grid and removes the earlier navigation cutout. The
   founder's close-up and light/dark captures are preserved in the
   [bento reference packet](design-references/2026-10-26-bento/README.md).
   This explicitly authorizes the rounded presentation geometry; it does not
@@ -108,6 +355,14 @@ Enter Inscape now opens the published collection in the shared Aerra grid, with
 optional wraparound, List, temporary card size, canvas inspection and metadata.
 About returns to Reception. Visitor controls have no create, arrange, edit or
 crop capabilities and do not read local composition drafts.
+
+Owner navigation clarification (2026-10-27): Canvases and Enter Inscape from
+the owner's Reception open the same local collection as the Workbench, once
+ownership is verified. This action does not publish or modify compositions.
+Visitors and other profiles continue to use the published collection. Explicit
+public canvas URLs retain their public collection intent. About itself shows
+the verified owner their saved local Reception. Browser Back/Forward retain
+the gallery destination.
 
 Publish now defaults to the current changed canvas, offers individual selection
 and an explicit Select all changed canvases action. Every selected canvas is

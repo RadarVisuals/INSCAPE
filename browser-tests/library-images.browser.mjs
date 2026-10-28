@@ -41,8 +41,8 @@ test('NFTs expand independently and retain chosen images through drag, reload an
       await library.getByRole('button', { name: 'Fold 41 images of MOUNTAIN SIGNAL I', exact: true }).click();
       assert.equal(await library.locator('.system-workflow__library-item').count(), 12, 'folding layers keeps poses expanded');
       // Navigation and closing the drawer preserve independent browsing choices.
-      await library.getByRole('button', { name: 'PORTFOLIO', exact: true }).click();
-      await library.getByRole('button', { name: 'All Assets', exact: true }).click();
+      await page.getByRole('button', { name: 'PORTFOLIO', exact: true }).click();
+      await page.getByRole('button', { name: 'All Assets', exact: true }).click();
       await page.getByRole('button', { name: 'Library', exact: true }).click();
       await page.getByRole('button', { name: 'Library', exact: true }).click();
       assert.equal(await library.locator('.system-workflow__library-item').count(), 12);
@@ -62,7 +62,7 @@ test('NFTs expand independently and retain chosen images through drag, reload an
         const style = getComputedStyle(node); return [parseFloat(style.width), parseFloat(style.height), style.borderRadius];
       }), [26, 26, '50%']);
       const beforeFiling = await page.evaluate(() => window.__imageTest.draft().grids[0].placements.length);
-      const category = library.getByRole('button', { name: 'FIELD NOTES', exact: true });
+      const category = page.getByRole('button', { name: 'FIELD NOTES', exact: true });
       const dragToCategory = async source => {
         const from = await source.boundingBox(), to = await category.boundingBox();
         await page.mouse.move(from.x + from.width / 2, from.y + 35); await page.mouse.down();
@@ -74,15 +74,15 @@ test('NFTs expand independently and retain chosen images through drag, reload an
       await dragToCategory(library.locator('.system-workflow__library-item > button').first());
       assert.equal(await category.locator('i').textContent(), '3', 'cover and attachment file the same NFT once');
       assert.equal(await page.evaluate(() => window.__imageTest.draft().grids[0].placements.length), beforeFiling);
-      await library.getByRole('button', { name: 'Create Section', exact: true }).click();
-      await library.getByRole('textbox', { name: 'section name', exact: true }).fill('STORY');
+      await page.getByRole('button', { name: 'Create Section', exact: true }).click();
+      await page.getByRole('textbox', { name: 'section name', exact: true }).fill('STORY');
       await page.keyboard.press('Enter');
-      const section = library.locator('.system-workflow__library-section').filter({ has: page.locator('b', { hasText: 'STORY' }) });
+      const section = page.locator('.system-workflow__library-section').filter({ has: page.locator('b', { hasText: 'STORY' }) });
       await category.dragTo(section.locator('header button'));
       await section.getByRole('button', { name: 'FIELD NOTES', exact: true }).waitFor();
       await page.screenshot({ path: resolve(screenshotDir, `choices-${width}.png`) });
       const card = await second.boundingBox();
-      const canvas = await page.locator('.system-workflow__canvas').boundingBox();
+      const canvas = await page.locator('[data-system-workflow-artboard]').first().boundingBox();
       await page.mouse.move(card.x + card.width / 2, card.y + 50);
       await page.mouse.down();
       // Drop through the Library onto the covered part of the Display.
@@ -92,6 +92,7 @@ test('NFTs expand independently and retain chosen images through drag, reload an
       await page.mouse.move(dropX, canvas.y + canvas.height * .4, { steps: 12 });
       assert.equal(await library.getAttribute('data-placing'), 'true');
       await page.waitForFunction(() => Number(getComputedStyle(document.querySelector('.system-workflow__library')).opacity) < .2);
+      await page.mouse.move(dropX + 1, canvas.y + canvas.height * .4);
       await page.locator('.system-workflow__placement-preview').waitFor();
       await page.getByText('Release to add layer', { exact: true }).waitFor();
       await page.screenshot({ path: resolve(screenshotDir, `drop-feedback-${width}.png`) });

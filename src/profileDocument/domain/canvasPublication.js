@@ -3,6 +3,8 @@ import { buildProfileDocumentV9 } from './profileDocumentV9Builder.js';
 import { assertValidProfileDocumentV9 } from './profileDocumentV9Validation.js';
 import { canvasContent, canvasDetails, canvasDocument, publishedCanvasEntries } from './publishedCanvases.js';
 import { projectReception } from './receptionPresentation.js';
+import { projectReceptionSceneMappings } from './receptionLinks.js';
+import { publishedPresentationSnapshot } from '../../presentation/presentationSources.js';
 
 const canonical = value => JSON.stringify(value, function (key, item) {
   return item && typeof item === 'object' && !Array.isArray(item)
@@ -12,7 +14,10 @@ export function canvasPublicationCandidates({ record, assetRecords, profile }) {
   const collection = isWorkbenchCollection(record) ? record : createWorkbenchCollection(record);
   return collection.workbenches.map(item => {
     try {
-      const document = buildProfileDocumentV9({ systemWorkflowDraft: projectWorkbenchDraft(collection, item.id), profileAddress: collection.profileAddress, profileIdentity: profile, assetRecords });
+      const { reception, ...draft } = projectWorkbenchDraft(collection, item.id);
+      const contentDocument = buildProfileDocumentV9({ systemWorkflowDraft: draft, profileAddress: collection.profileAddress, profileIdentity: profile, assetRecords });
+      // Shared links are checked only once every selected/retained canvas is assembled.
+      const document = { ...contentDocument, ...(reception ? { reception: projectReception(reception) } : {}) };
       return { ...canvasDetails(item), content: canvasContent(document), document };
     } catch (error) { return { ...canvasDetails(item), error: error.message }; }
   });
@@ -43,6 +48,8 @@ export function buildCanvasPublication({ candidates, selectedIds, includeShared,
   const shared = includeShared ? current : previous;
   const root = canvasDocument(shared, entries[0]);
   if (shared.reception) root.reception = projectReception(shared.reception);
-  return assertValidProfileDocumentV9({ ...root, canvas: canvasDetails(entries[0]), canvases: entries.slice(1),
-    createdAt: previous?.createdAt || new Date(exportedAt).toISOString(), exportedAt: new Date(exportedAt).toISOString(), revision: (previous?.revision || 0) + 1 });
+  const document = { ...root, canvas: canvasDetails(entries[0]), canvases: entries.slice(1),
+    createdAt: previous?.createdAt || new Date(exportedAt).toISOString(), exportedAt: new Date(exportedAt).toISOString(), revision: (previous?.revision || 0) + 1 };
+  if (document.reception) document.reception = projectReceptionSceneMappings(document.reception, publishedPresentationSnapshot(document));
+  return assertValidProfileDocumentV9(document);
 }

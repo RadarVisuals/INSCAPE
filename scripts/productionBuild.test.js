@@ -5,7 +5,7 @@ import { mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
 import { analyzeProductionBuild, assertNoProhibitedProductionArtifacts, assertSafeOutputDirectory, checkProductionBudgets, pruneProductionAuthoringAssets,
-  assertProductionFontContract, PRODUCTION_BUDGETS, UNUSED_PUBLIC_PATHS } from './productionBuild.js';
+  assertProductionFontContract, measureReceptionRoutes, PRODUCTION_BUDGETS, UNUSED_PUBLIC_PATHS } from './productionBuild.js';
 
 const removeTree = (path) => rm(path, { recursive: true, force: true, maxRetries: 8, retryDelay: 100 });
 
@@ -42,6 +42,27 @@ test('manifest classification survives hashed filename changes and current synth
   } finally { await Promise.all(roots.map(removeTree)); }
 });
 
+test('Reception route costs deduplicate startup and shared files and exclude unopened tools', async () => {
+  const root = resolve(tmpdir(), `reception-route-costs-${process.pid}`);
+  try {
+    await fixture(root, 'route');
+    const manifest = JSON.parse(await readFile(resolve(root, '.vite/manifest.json'), 'utf8'));
+    const publicKey = 'src/profileDocument/components/ProfileOverview.jsx';
+    const ownerKey = 'src/reception/OwnerReception.jsx';
+    const editorKey = 'src/reception/OwnerReceptionEditor.jsx';
+    manifest[publicKey] = { file: 'assets/public.js', imports: ['_shared.js'], css: ['assets/app-route.css'] };
+    manifest[ownerKey] = { file: 'assets/reader.js', imports: [publicKey, '_shared.js'], dynamicImports: [editorKey] };
+    manifest[editorKey] = { file: 'assets/editor.js', imports: [ownerKey] };
+    for (const name of ['public', 'reader', 'editor']) await writeFile(resolve(root, 'assets', name + '.js'), name);
+    const routes = await measureReceptionRoutes(root, manifest, new Set(['index.html', '_shared.js']));
+    assert.equal(routes.ownerAbout.additionalJavaScript.raw, 'publicreader'.length);
+    assert.equal(routes.ownerAbout.additionalCss.raw, 0);
+    assert.equal(routes.ownerAbout.files.filter(file => file.includes('shared')).length, 1);
+    assert.ok(!routes.ownerAbout.files.includes('assets/editor.js'));
+    assert.equal(routes.receptionEditing.additionalJavaScript.raw, 'publicreadereditor'.length);
+  } finally { await removeTree(root); }
+});
+
 test('manifest classification accepts Vite internal owner facade keys after a nested lazy split', async () => {
   const root = resolve(tmpdir(), `underneath-budget-owner-facade-${process.pid}`);
   try {
@@ -74,7 +95,7 @@ test('measured production allowances retain exact budget boundaries with the laz
     standaloneWalletJavaScript: { raw: 4_600_000, gzip: 1_225_000 },
     initialCss: { raw: 51_807, gzip: 10_301 },
     ownerCss: { raw: 143_870, gzip: 21_140 },
-    coreJavaScript: { raw: 2_650_000, gzip: 866_000 },
+    coreJavaScript: { raw: 2_686_000, gzip: 882_000 },
     publicAssets: { raw: 17_960_000 },
     largestPublicAsset: { raw: 2_700_000 },
   });
@@ -290,6 +311,8 @@ test('an alternate-outDir production build writes reports there and strips diagn
     await build({ configFile: resolve(project, 'vite.config.js'), root: project, logLevel: 'silent',
       build: { outDir: alternate, emptyOutDir: true, manifest: true } });
     const report = JSON.parse(await readFile(resolve(alternate, 'bundle-report.json'), 'utf8'));
+    assert.deepEqual(Object.keys(report.receptionRoutes).sort(), ['ownerAbout', 'publicAbout', 'receptionEditing']);
+    assert.ok(report.receptionRoutes.receptionEditing.javaScript.raw > report.receptionRoutes.ownerAbout.javaScript.raw);
     const netlifyHeaders = await readFile(resolve(alternate, '_headers'), 'utf8');
     assert.equal(report.ownerRuntimeGraph.leaks.length, 0); assert.ok(report.initialJavaScript.length);
     assert.match(netlifyHeaders, /Content-Security-Policy: default-src 'self'/u);

@@ -9,7 +9,7 @@ const ProfileOverview = lazy(() => import('./ProfileOverview.jsx'));
 const VisitorGridWorld = lazy(() => import('./VisitorGridWorld.jsx'));
 const PublishedCanvasGallery = lazy(() => import('./PublishedCanvasGallery.jsx'));
 
-export default function ProfileDocumentV9Preview({ document: input, ownerEditingAllowed = false, onReturnToWorkbench, onExit, onOpenDirectory, onReturn, onConnect, entry, onOpenOverview, onOpenCanvas }) {
+export default function ProfileDocumentV9Preview({ document: input, onReturnToWorkbench, onExit, onOpenDirectory, onReturn, onConnect, entry, onOpenOverview, onOpenCanvas }) {
   const document = useMemo(() => assertValidProfileDocumentV9(input), [input]);
   const target = useMemo(() => resolvePublicCanvasTarget(document, entry?.target), [document, entry?.target]);
   const unavailableTarget = Boolean(entry?.target && !target);
@@ -22,7 +22,7 @@ export default function ProfileDocumentV9Preview({ document: input, ownerEditing
       <button className="workflow-tactile-control" type="button" onClick={onReturnToWorkbench}>Back to my Workbench</button>
     </nav>}
     {entry?.surface === 'canvas' && !entry.target ? <PublishedCanvasGallery key={`${document.profile.address}:${document.revision}`} document={document} onAbout={onOpenOverview} />
-      : overview ? <ProfileOverview key={document.profile.address} document={document} ownerEditingAllowed={ownerEditingAllowed} onReturnToWorkbench={onReturnToWorkbench}
+      : overview ? <ProfileOverview key={document.profile.address} document={document} onReturnToWorkbench={onReturnToWorkbench}
         onOpenDirectory={onOpenDirectory} onReturn={onReturn} unavailableTarget={unavailableTarget} onOpenCanvas={onOpenCanvas} />
       : <><VisitorGridWorld key={JSON.stringify([document.profile.address, document.documentId, document.revision, target])}
           document={document} entryTarget={target} onExit={onExit} onOpenDirectory={onOpenDirectory} onReturn={onReturn} onConnect={onConnect} />

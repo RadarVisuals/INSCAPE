@@ -6,12 +6,14 @@ export const editorPreferencesKey = profile => `inscape:editor-preferences:v1:${
 const position = value => value === null || Boolean(value && ['left', 'top'].every(key => Number.isFinite(value[key]) && Math.abs(value[key]) <= 100000));
 const positions = value => value && typeof value === 'object' && !Array.isArray(value) && Object.keys(value).length <= 16
   && Object.entries(value).every(([id, frame]) => id.length <= 128 && position(frame));
+const frames = value => value && typeof value === 'object' && !Array.isArray(value) && Object.keys(value).length <= 16
+  && Object.entries(value).every(([id, frame]) => id.length <= 80 && validToolFrame(frame));
 const validators = {
-  library: validBrowserPreferences, docks: validToolDockLayout, textFrame: value => value === null || validToolFrame(value),
+  receptionFrames: frames, library: validBrowserPreferences, docks: validToolDockLayout, textFrame: value => value === null || validToolFrame(value),
   textOpen: value => value === null || typeof value === 'boolean', textSection: value => ['format', 'article'].includes(value),
   navigator: position, keeper: positions, sidebar: value => value === null || typeof value === 'boolean',
 };
-const defaults = width => ({ library: defaultBrowserPreferences(), docks: createToolDockLayout(width),
+const defaults = width => ({ receptionFrames: {}, library: defaultBrowserPreferences(), docks: createToolDockLayout(width),
   textFrame: null, textOpen: null, textSection: 'format', navigator: null, keeper: {}, sidebar: null });
 
 // One profile-local owner for editor preferences. No composition content or camera
@@ -22,6 +24,7 @@ export function createEditorPreferencesStore({ profile, storage, canSave = () =>
     initial: defaults(width), encode: value => JSON.stringify({ version: 1, value }),
     decode(serialized) {
       const saved = JSON.parse(serialized);
+      if (saved.value && saved.value.receptionFrames === undefined) saved.value.receptionFrames = {};
       if (saved.version !== 1 || !saved.value || Object.keys(validators).some(name => !validators[name](saved.value[name]))) throw Error('Invalid preferences');
       const value = Object.fromEntries(Object.keys(validators).map(name => [name, saved.value[name]]));
       return { ...value, docks: { ...value.docks, activeGroup: null } };

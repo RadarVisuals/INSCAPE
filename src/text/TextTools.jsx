@@ -93,7 +93,7 @@ export function TextToolsContent({ targetId, sharedColour = false, available = t
           </div>
         </div>
       </details>
-      <details className="text-inspector-section">
+      {containerControls && <><details className="text-inspector-section">
         <summary>Text box layout</summary>
         <div className="text-settings text-settings--appearance">
           <label>Columns<select aria-label="Text columns" disabled={disabled} value={appearance.columns || 1} onChange={event => changeAppearance({ columns: Number(event.target.value) })}>
@@ -128,7 +128,7 @@ export function TextToolsContent({ targetId, sharedColour = false, available = t
           </>}
           <ModuleSurfaceControls value={appearance.edges} onChange={edges => changeAppearance({ edges })} frame={appearance.frame} onFrameChange={frame => changeAppearance({ frame })} disabled={disabled} />
         </div>
-      </details>
+      </details></>}
       </section>
       <section className="text-tool-group" aria-label="Article management"><h3>Manage article</h3>
       {(connection || children) && <details className="text-inspector-section text-inspector-connections">

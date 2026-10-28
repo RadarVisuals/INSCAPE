@@ -1,7 +1,7 @@
 import { useWorkbenchMiniature } from '../../public/ownerSystemWorkflow/workbenchMiniatures.js';
-import { forwardRef, useCallback, useDeferredValue, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
+import { forwardRef, useCallback, useDeferredValue, useEffect, useImperativeHandle, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
-import { useReportScene } from '../../text/SceneNavigation.jsx';
+import { useSceneController, useSceneMotion } from '../../text/SceneNavigation.jsx';
 import { latticeSurfaceColor } from '../../lattice/rendering/latticeGeometry.js';
 import GridProductionRenderer from './GridProductionRenderer.jsx';
 import { createProfileDocumentV9FocusViewModel } from './profileDocumentV9FocusViewModel.js';
@@ -25,7 +25,7 @@ function PublishedStage({ children, activeGridId, onClickCapture, onPointerDown,
 
 
 // One public Display session. The host supplies its frame and optional canvas
-// focus action; scene state, media, gestures and playback stay here.
+// focus action. The scoped session owns selection; media and motion stay here.
 const PublishedDisplayModule = forwardRef(function PublishedDisplayModule({ document, Frame, frameProps,
   instanceId = 'display:primary', entryTarget, active = true, onActivate, onFocusModule,
   open: displayOpen = true, visible = true, onOpenChange, onInspectionChange, navigationHost, reducedMotion = false }, ref) {
@@ -43,7 +43,11 @@ const PublishedDisplayModule = forwardRef(function PublishedDisplayModule({ docu
   const [playing, setPlaying] = useState(false), [liftInspection, setLiftInspection] = useState(false), [liftMoving, setLiftMoving] = useState(false);
   const [displayMenu, setDisplayMenu] = useState(null), [gridDragging, setGridDragging] = useState(false);
   const entryGridIndex = entryTarget?.moduleId === targetId ? Math.max(0, document.grids.findIndex(grid => grid.id === entryTarget.gridId)) : 0;
-  const [activeIndex, setActiveIndex] = useState(entryGridIndex);
+  const sceneControl = useSceneController(targetId);
+  const selection = useSyncExternalStore(sceneControl.subscribe, sceneControl.getSnapshot);
+  const activeIndex = Math.max(0, document.grids.findIndex(grid => grid.id === selection.gridId));
+  const selectIndex = useCallback(index => sceneControl.select(document.grids[index]?.id), [sceneControl, document.grids]);
+  const entryGridId = entryTarget?.moduleId === targetId ? document.grids[entryGridIndex]?.id : null;
   const [placementMedia, setPlacementMedia] = useState({});
   const displayPresentation = useMemo(() => {
     const display = document.workbench?.display || createDefaultWorkbenchPresentation().display;
@@ -89,7 +93,7 @@ const PublishedDisplayModule = forwardRef(function PublishedDisplayModule({ docu
     onAdvance: gridId => {
       const index = document.grids.findIndex(grid => grid.id === gridId);
       if (index < 0) return false;
-      setActiveIndex(index); return true;
+      selectIndex(index); return true;
     },
   });
 
@@ -98,14 +102,12 @@ const PublishedDisplayModule = forwardRef(function PublishedDisplayModule({ docu
   useEffect(() => {
     // Unrelated reception-card navigation must not reset this Display or its
     // linked Text. Only a destination addressed to this instance selects a Grid.
-    if (entryTarget?.moduleId !== targetId) return;
-    setActiveIndex(entryGridIndex); setPlacementMedia({});
-  },
-    [document.documentId, document.revision, entryTarget?.moduleId, entryTarget?.gridId]);
+    if (sceneControl.enter(entryGridId)) setPlacementMedia({});
+  }, [sceneControl, entryGridId]);
   const selectGrid = useCallback((index) => {
     if (viewer.placementId || liftMoving) return;
-    setActiveIndex(((index % (lastIndex + 1)) + lastIndex + 1) % (lastIndex + 1));
-  }, [lastIndex, viewer.placementId, liftMoving]);
+    selectIndex(((index % (lastIndex + 1)) + lastIndex + 1) % (lastIndex + 1));
+  }, [lastIndex, viewer.placementId, liftMoving, selectIndex]);
   const clearGridDrag = useCallback(() => {
     const active = gridDragRef.current;
     if (!active) return;
@@ -205,7 +207,7 @@ const PublishedDisplayModule = forwardRef(function PublishedDisplayModule({ docu
   const swipeGrid = Number.isInteger(swipe?.targetIndex) ? document.grids[swipe.targetIndex]
     : document.grids.find(grid => grid.id === swipe?.targetGridId);
   const sourceGridId = swipe?.sourceGridId || activeGrid?.id;
-  useReportScene(targetId, sourceGridId, swipeGrid?.id, swipe, displayOpen, document.grids.map(grid => grid.id));
+  useSceneMotion(targetId, sourceGridId, swipeGrid?.id, swipe, displayOpen);
   // Keep a bounded neighborhood mounted, with stable scene keys. Arrival reuses
   // the incoming media instead of loading it again in a second canonical plane.
   // Two on either side also prepare the next handoff during drag and momentum.

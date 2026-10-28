@@ -27,7 +27,9 @@ const compactAddress = (address) => `${address.slice(0, 10)}…${address.slice(-
 
 
 export default function ProfileDocumentV9Visitor(props) {
-  return <SharedDisplayToolsProvider key={[props.document.profile.address, props.document.documentId, props.document.revision].join(':')}><SceneNavigationProvider><WorkbenchViewProvider groupContent={props.document}><ProfileDocumentV9Session {...props} /><VisitorEntryFocus target={props.entryTarget} /></WorkbenchViewProvider></SceneNavigationProvider></SharedDisplayToolsProvider>;
+  return <SharedDisplayToolsProvider key={[props.document.profile.address, props.document.documentId, props.document.revision].join(':')}><SceneNavigationProvider
+    scope={{ profileAddress: props.document.profile.address, canvasId: props.document.canvas?.id || 'workbench:main', revision: `${props.document.documentId}:${props.document.revision}` }} content={props.document}>
+    <WorkbenchViewProvider groupContent={props.document}><ProfileDocumentV9Session {...props} /><VisitorEntryFocus target={props.entryTarget} /></WorkbenchViewProvider></SceneNavigationProvider></SharedDisplayToolsProvider>;
 }
 
 function CanvasDisplay({ item, entryTarget, active, onActivate, navigationHost, reducedMotion, open, onOpenChange, layoutMode, onInspectionChange }) {

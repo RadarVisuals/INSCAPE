@@ -1,3 +1,10 @@
+/* Intrinsic colour-control layout also applies outside the Workbench host. */
+.ds-colour-instructions { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.ds-colour-fields { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; }
+.ds-colour-fields label, .ds-colour-hex { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.ds-colour-fields input, .ds-colour-hex input { box-sizing: border-box; width: 100%; min-width: 0; height: var(--tool-control-height, 32px); border: 1px solid var(--ds-field-edge, var(--tactile-edge)); border-radius: var(--ds-control-radius, var(--control-radius)); background: transparent; color: inherit; padding: 4px 6px; font: inherit; }
+.ds-colour-fields input:focus-visible, .ds-colour-hex input:focus-visible { outline: 1px solid var(--tactile-ink); outline-offset: 1px; }
+.ds-colour-fields input:disabled, .ds-colour-hex input:disabled { opacity: .45; }
 .ds-studio-colour-heading {
   display: flex;
   align-items: end;
@@ -5,9 +12,9 @@
 }
 .ds-colour-swatch {
   flex: 0 0 36px;
-  height: var(--tool-control-height);
-  border: 1px solid var(--ds-field-edge);
-  border-radius: var(--ds-control-radius);
+  height: var(--tool-control-height, 32px);
+  border: 1px solid var(--ds-field-edge, var(--tactile-edge));
+  border-radius: var(--ds-control-radius, var(--control-radius));
 }
 .ds-studio-colour-heading .ds-colour-hex {
   flex: 1;
@@ -17,14 +24,24 @@
   font-family: var(--font-technical);
 }
 .ds-colour-hex [role='alert'] {
-  font-size: var(--ds-text-small);
+  font-size: var(--ds-text-small, 11px);
 }
+.ds-colour-wheel-row { --colour-icon-size: var(--tool-icon-target, 32px); display: grid; grid-template-columns: minmax(0, 176px); justify-content: center; align-items: end; gap: 8px; min-width: 0; align-self: stretch; }
+.ds-colour-wheel-row[data-accessory] { grid-template-columns: minmax(0, 176px) var(--colour-icon-size); }
+.ds-colour-wheel-row :is(.ds-colour-eyedropper, .ds-colour-native) { display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; width: var(--colour-icon-size); height: var(--colour-icon-size); min-height: var(--colour-icon-size); padding: 4px; }
+.ds-colour-native { position: relative; cursor: pointer; }
+.ds-colour-native input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: inherit; }
+.ds-colour-native:has(input:focus-visible) { outline: 2px solid var(--tactile-accent); outline-offset: 1px; }
+.ds-colour-native[data-disabled] { opacity: .45; cursor: default; }
+.ds-colour-sampling-error { grid-column: 1 / -1; margin: 0; font: inherit; }
 .ds-studio-colour-wheel {
   position: relative;
   width: 176px;
   max-width: 100%;
   aspect-ratio: 1;
   justify-self: center;
+  align-self: center;
+  flex: none;
   user-select: none;
   touch-action: none;
 }

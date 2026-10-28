@@ -106,10 +106,19 @@ design-system workspace continues to document the existing composition tools.
 
 The static Reception implementation now uses `src/reception/ReceptionCanvas.jsx`
 for owner preview and public reading, with a separate `ReceptionEditor.jsx`.
-Its partition, navigation clip and mobile flow own presentation geometry; the
+Its partition, contained header and mobile flow own presentation geometry; the
 Library, Image renderer, Text content controls and Color controls are shared
-with Workbench. See the [implementation audit](../audits/2026-10-26/static-reception/README.md)
-for the replacement disposition and actual verification evidence.
+with Workbench. Both editors now use `src/ui/ToolPanel.jsx` for tool-window
+movement/resizing and the existing Library drag lifecycle. Reception supplies
+bounded window geometry, private frame preferences and explicit cell receivers.
+Library is now a persistent modeless tool; cells use a shared Delete action and
+a drag handle for full-cell reordering. Grid settings, header editing and
+appearance are separate tools, and selection begins empty with restrained
+visual feedback. See the [editor simplification](../audits/2026-10-28/reception-editor-revamp/README.md).
+See the [shared-operation audit](../audits/2026-10-27/reception-shared-controls/README.md)
+for verification and the isolated multi-object-cell experiment, and the
+[initial implementation audit](../audits/2026-10-26/static-reception/README.md)
+for the earlier renderer replacement.
 
 From the project root, using the Node version declared by the project:
 

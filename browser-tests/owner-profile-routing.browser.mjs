@@ -241,7 +241,7 @@ describe('owner/viewed-profile routing through the real App', { concurrency: fal
     assert.doesNotMatch(await page.url(), /[?&]view=/u);
   });
 
-  test('owner Profile opens its published reception and returns without disconnecting or editing the draft', async () => {
+  test('owner Reception shows saved local content and returns without disconnecting or changing compositions', async () => {
     await setRoutingState({ authorityLifecycleStatus: 'complete', hostProfileAddress: PROFILE_A,
       isWalletConnected: true, isHostProfileOwner: true });
     await setUrl('');
@@ -258,16 +258,19 @@ describe('owner/viewed-profile routing through the real App', { concurrency: fal
       assert.equal(await page.locator('main.system-workflow:not(.visitor-grid-world)').count(), 0);
     };
     await openReception();
-    await page.getByText('PROFILE UNAVAILABLE', { exact: true }).waitFor();
+    await page.locator('.reception-canvas').waitFor();
+    assert.equal(await page.locator('.published-profile-status').count(), 0);
     await page.evaluate(async (address) => {
       const { publishedProfileResolutionStore: store } = await import('/src/profileDocument/state/publishedProfileResolutionStore.js');
       store.repository = { resolve: () => new Promise((_, reject) => { window.__failReceptionRead = reject; }) };
       void store.resolve(address);
     }, PROFILE_A);
-    await page.getByText('RESOLVING PUBLISHED PROFILE', { exact: true }).waitFor();
+    await page.locator('.reception-canvas').waitFor();
+    assert.equal(await page.locator('.published-profile-status').count(), 0);
     assert.equal(await back().isEnabled(), true);
     await page.evaluate(() => window.__failReceptionRead(new Error('Fixture network failure')));
-    await page.getByText('PROFILE TEMPORARILY UNAVAILABLE', { exact: true }).waitFor();
+    await page.locator('.reception-canvas').waitFor();
+    assert.equal(await page.locator('.published-profile-status').count(), 0);
     assert.equal(await back().isEnabled(), true);
     await back().click();
     await waitForOwnerShell('Unpublished reception returns to owner');
@@ -286,6 +289,18 @@ describe('owner/viewed-profile routing through the real App', { concurrency: fal
         ? { status: 'RESOLVED', address: target, document }
         : { status: 'UNAVAILABLE', address: target, document: null } };
       await store.resolve(address);
+      const { createSystemWorkflowDraftStore } = await import('/src/systemWorkflow/systemWorkflowDraftStore.js');
+      const { createReception } = await import('/src/profileDocument/domain/receptionPresentation.js');
+      const { createArticle } = await import('/src/text/domain/article.js');
+      const local = createSystemWorkflowDraftStore({ profileAddress: address, storage: localStorage, requireEditor: true });
+      const scope = local.acquireReceptionScope();
+      try {
+        const reception = createReception(), article = createArticle();
+        article.title = 'Saved local Reception';
+        reception.texts = [{ id: 'text:reception-local', article, visibility: 'PUBLIC' }];
+        reception.regions[0].content = reception.texts[0].id;
+        if (!scope.commitCompletedOperation({ ...scope.getDraft(), reception }, { expectedGeneration: scope.getGeneration() })) throw Error('Could not seed local Reception');
+      } finally { scope.release(); }
     }, PROFILE_A);
     await waitForOwnerShell('Owner after publication fixture');
     for (const width of [1440, 640, 390]) {
@@ -297,6 +312,17 @@ describe('owner/viewed-profile routing through the real App', { concurrency: fal
       assert.ok(savedDraft, 'Fixture owner has a saved draft to preserve');
       await page.keyboard.press('Enter');
       await page.locator('.reception-page').waitFor();
+      await page.getByRole('heading', { name: 'Saved local Reception', exact: true }).waitFor();
+      await page.getByRole('button', { name: 'Edit Reception', exact: true }).click();
+      await page.locator('[data-reception-editor]').waitFor();
+      await page.getByRole('button', { name: 'Done', exact: true }).click();
+      await page.locator('[data-reception-editor]').waitFor({ state: 'detached' });
+      await page.getByRole('heading', { name: 'Saved local Reception', exact: true }).waitFor();
+      assert.equal(await page.locator('.reception-cell-actions, .reception-divider, .reception-tool-panel').count(), 0);
+      await page.getByRole('button', { name: 'Edit Reception', exact: true }).click();
+      await page.locator('[data-reception-editor]').waitFor();
+      await page.getByRole('button', { name: 'Done', exact: true }).click();
+      await page.getByRole('heading', { name: 'Saved local Reception', exact: true }).waitFor();
       const navigationBounds = await back().boundingBox();
       assert.equal(await back().evaluate(node => !!node.closest('.reception-navigation')), true,
         'The owner return belongs to the navigation footprint inside the Reception silhouette');
@@ -310,12 +336,18 @@ describe('owner/viewed-profile routing through the real App', { concurrency: fal
       await page.getByRole('button', { name: 'Enter Inscape', exact: true }).click();
       await page.locator('.workbench-overview').waitFor();
       assert.match(page.url(), /[?&]canvas=1/);
-      assert.match(page.url(), /[?&]reception=1/);
+      assert.doesNotMatch(page.url(), /[?&]reception=1/);
       assert.equal(await page.locator('main.system-workflow:not(.visitor-grid-world)').count(), 0);
-      assert.deepEqual(await page.evaluate(() => window.__routingStorageOperations), [], 'Entering published content never opens the owner draft');
+      assert.ok(await page.getByRole('button', { name: /^Edit / }).count() > 0, 'The owner opens their local collection from Reception');
+      assert.equal(await page.evaluate(address => localStorage.getItem('inscape.system-workflow-draft.v1:' + address), PROFILE_A), savedDraft,
+        'Opening the owner collection does not change its saved compositions');
+      await page.goBack(); await page.locator('.reception-page').waitFor();
+      await page.goForward(); await page.locator('.workbench-overview').waitFor();
+      assert.doesNotMatch(page.url(), /[?&]reception=1/);
       await page.getByRole('button', { name: 'Inscape menu', exact: true }).click();
       await page.getByRole('button', { name: 'About', exact: true }).click();
       await page.locator('.reception-page').waitFor();
+      await page.getByRole('heading', { name: 'Saved local Reception', exact: true }).waitFor();
       await page.getByRole('button', { name: /^Explore/ }).click();
       await page.getByRole('region', { name: 'Exploration room', exact: true }).waitFor();
       await page.locator('.keeper-dock').waitFor();
@@ -356,9 +388,15 @@ describe('owner/viewed-profile routing through the real App', { concurrency: fal
     await setRoutingState({ authorityLifecycleStatus: 'complete', hostProfileAddress: null,
       isWalletConnected: false, isHostProfileOwner: false });
     assert.equal(await back().count(), 0, 'Signed-out visitors cannot enter owner editing');
+    assert.equal(await page.getByRole('heading', { name: 'Saved local Reception', exact: true }).count(), 0,
+      'Local Reception content disappears when owner authority is lost');
     assert.equal(await page.locator('main.system-workflow:not(.visitor-grid-world)').count(), 0);
+    await page.evaluate(() => { window.__routingStorageOperations.length = 0; });
     await page.getByRole('button', { name: 'Enter Inscape', exact: true }).click();
     await page.locator('.workbench-overview').waitFor();
+    assert.match(page.url(), /[?&]reception=1/);
+    assert.equal(await page.getByRole('button', { name: /^Edit / }).count(), 0);
+    assert.deepEqual(await page.evaluate(() => window.__routingStorageOperations), [], 'Visitors only open the published collection');
     assert.equal(await back().count(), 0);
     assert.equal(await page.locator('main.system-workflow:not(.visitor-grid-world)').count(), 0);
     await page.goBack(); await page.locator('.reception-page').waitFor();

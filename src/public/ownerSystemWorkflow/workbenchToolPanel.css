@@ -1,10 +1,11 @@
+@import '../../ui/toolControlSizing.css';
 .workbench-tool-panel { position: fixed; z-index: 84; display: flex; flex-direction: column; box-sizing: border-box; overflow: hidden; border: 1px solid var(--tactile-edge); border-radius: var(--control-shell-radius); background: var(--tactile-face); color: var(--tactile-ink); font: var(--workflow-type-control); }
 .workbench-tool-panel-header { display: flex; align-items: center; flex: none; min-height: 35px; border-bottom: 1px solid var(--tactile-edge); padding-right: 4px; }
 .workbench-tool-panel-header button { border: 0; border-radius: var(--control-radius); background: transparent; color: inherit; font: inherit; }
 .workbench-tool-panel-header button:focus-visible { outline: 2px solid var(--tactile-ink); outline-offset: -2px; }
 .workbench-tool-panel-grip { align-self: stretch; flex: 1; min-width: 0; padding: 8px 10px; text-align: left; cursor: grab; touch-action: none; user-select: none; }
 .workbench-tool-panel-grip:active { cursor: grabbing; }
-.workbench-tool-panel-close { display: grid; place-items: center; width: 28px; height: 28px; padding: 4px; cursor: pointer; }
+.workbench-tool-panel-close { display: grid; place-items: center; width: var(--tool-icon-target, 28px); min-width: var(--tool-icon-target, 28px); height: var(--tool-icon-target, 28px); min-height: var(--tool-icon-target, 28px); padding: 4px; cursor: pointer; }
 .workbench-tool-panel-close:hover { background: var(--tactile-hover); }
 .workbench-tool-panel-close svg { width: var(--icon-size-interface); height: var(--icon-size-interface); }
 .workbench-tool-panel-content { display: flex; flex: 1; min-width: 0; min-height: 0; overflow: hidden; }

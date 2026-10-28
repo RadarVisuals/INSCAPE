@@ -1,28 +1,35 @@
-import { useEffect, useState } from 'react';
-import ProfileEditingBoundary from '../systemWorkflow/ProfileEditingBoundary.jsx';
-import { createSystemWorkflowDraftStore } from '../systemWorkflow/systemWorkflowDraftStore.js';
-import { reconcileOwnerDraftWithPublishedProfile } from '../profileDocument/storage/ownerDraftReconciliation.js';
-import WorkbenchBackupControls from '../systemWorkflow/WorkbenchBackupControls.jsx';
-import ReceptionEditor from './ReceptionEditor.jsx';
+import { lazy, Suspense, useMemo, useState, useSyncExternalStore } from 'react';
+import { createProfileDraftReader } from '../systemWorkflow/profileDraftReader.js';
+import { useProfileIdentity } from '../profileIdentity/state/useProfileIdentity.js';
+import { createProductionIdentityDossierViewModel } from '../public/identity/productionIdentityDossierViewModel.js';
+import { createPublishedIdentityRackViewModel } from '../profileDocument/components/publishedIdentityRackViewModel.js';
+import ReceptionOverview from './ReceptionOverview.jsx';
+import { createReception, projectReception } from '../profileDocument/domain/receptionPresentation.js';
+import { publishedPresentationSnapshot } from '../presentation/presentationSources.js';
+const OwnerReceptionEditor = lazy(() => import('./OwnerReceptionEditor.jsx'));
+const OwnerReceptionCollection = lazy(() => import('./OwnerReceptionCollection.jsx'));
 
 export default function OwnerReception(props) {
-  return <ProfileEditingBoundary profileAddress={props.document.profile.address} onView={props.onClose}>
-    <OwnerReceptionSession key={props.document.profile.address} {...props} />
-  </ProfileEditingBoundary>;
+  const [editing, setEditing] = useState(false), [warning, setWarning] = useState(null);
+  const close = () => setEditing(false);
+  if (editing) return <Suspense fallback={<p role="status">Opening Reception editor…</p>}>
+    <OwnerReceptionEditor {...props} onClose={close} onDone={notice => { setWarning(notice || null); close(); }} />
+  </Suspense>;
+  return <SavedReception {...props} warning={warning} onEdit={() => setEditing(true)} />;
 }
-function OwnerReceptionSession({ document, onClose, onCanvases, onDiscover, onReturn }) {
-  const [root] = useState(() => createSystemWorkflowDraftStore({ profileAddress: document.profile.address, storage: localStorage, requireEditor: true }));
-  const [state, setState] = useState(null);
-  useEffect(() => {
-    let scope;
-    try {
-      const result = reconcileOwnerDraftWithPublishedProfile({ document, profileAddress: document.profile.address, storage: localStorage, store: root });
-      if (['HYDRATION_FAILED', 'LOCAL_DRAFT_UNAVAILABLE'].includes(result.status)) throw new Error('The local draft could not be opened safely. Use private backup recovery or return to Workbench.');
-      scope = root.acquireReceptionScope(); setState({ scope });
-    } catch (error) { setState({ error: error.message }); }
-    return () => scope?.release();
-  }, [root, document]);
-  if (!state) return <p role="status">Opening Reception…</p>;
-  if (state.error) return <main className="public-shell"><p role="alert">{state.error}</p><WorkbenchBackupControls store={root} storage={localStorage} onRestored={onClose} /><button type="button" onClick={onClose}>Return</button></main>;
-  return <ReceptionEditor store={state.scope} rootStore={root} publishedDocument={document} onClose={onClose} onCanvases={onCanvases} onDiscover={onDiscover} onReturn={onReturn} />;
+function SavedReception({ address, document, warning, onEdit, onCanvases, onDiscover, onReturn }) {
+  const [reader] = useState(() => createProfileDraftReader({ profileAddress: address, storage: localStorage }));
+  const { draft, collection, status, stale } = useSyncExternalStore(reader.subscribe, reader.getSnapshot);
+  const publicSnapshot = useMemo(() => document ? publishedPresentationSnapshot(document) : null, [document]);
+  const [blank] = useState(createReception), identity = useProfileIdentity(address);
+  const reception = useMemo(() => projectReception(draft?.reception || document?.reception || blank), [draft?.reception, document?.reception, blank]);
+  const model = useMemo(() => draft || !document
+    ? createProductionIdentityDossierViewModel({ identity, identityPresentation: draft?.identityPresentation, cachedIdentity: document?.profile.cachedIdentity })
+    : createPublishedIdentityRackViewModel({ document, identity }), [draft, document, identity]);
+  const failed = status === 'corrupt' || status === 'unavailable';
+  const notice = failed ? `Your local Reception could not be read. ${stale ? 'Showing the last saved view.' : document ? 'Showing the published version.' : 'No saved view is available.'} Open Edit Reception to recover your draft.` : warning;
+  const View = collection ? OwnerReceptionCollection : ReceptionOverview;
+  return <Suspense fallback={<p role="status">Opening Reception…</p>}><View snapshot={collection || publicSnapshot} reception={reception} model={model} address={address} menuSurface={draft?.appearance.menuSurfaceId || document?.appearance.menuSurfaceId || 'carbon'}
+    notice={notice} onRetry={failed ? reader.refresh : undefined} ownerEditingAllowed onEdit={onEdit}
+    onReturnToWorkbench={onReturn} onOpenCanvas={onCanvases} onOpenDirectory={onDiscover} /></Suspense>;
 }

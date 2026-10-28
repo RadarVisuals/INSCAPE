@@ -1,7 +1,7 @@
 import { assertReception, RECEPTION_EXTENT as E, RECEPTION_MIN, RECEPTION_LIMIT } from '../profileDocument/domain/receptionPresentation.js';
 
 // A rectangular partition is authoritative. No stored split tree or computed
-// pixel cache: any adjacent rectangular union can merge, including non-siblings.
+// pixel cache: move and delete derive their geometry from these cells.
 const right = r => r.x + r.width, bottom = r => r.y + r.height;
 const overlap = (a, b, c, d) => Math.max(a, c) < Math.min(b, d);
 const change = (value, regions, mobile = value.mobile) => assertReception({ ...value, regions, mobile });
@@ -14,22 +14,83 @@ export function splitReception(value, id, axis, newId = `region:${crypto.randomU
   const mobile = value.mobile.flatMap(m => m.id === id ? [m, { id: newId, columns: 2, height: m.height }] : [m]);
   return change(value, value.regions.flatMap(item => item.id === id ? [{ ...r, [key]: first }, second] : [item]), mobile);
 }
-export function moveReception(value, from, to) {
-  const a = value.regions.find(r => r.id === from), b = value.regions.find(r => r.id === to);
-  if (!a || !b || a === b || !a.content) return value;
-  return change(value, value.regions.map(r => r === a ? { ...r, content: b.content } : r === b ? { ...r, content: a.content } : r));
+// Reordering moves cell identity and every authored cell setting. Rectangular
+// positions stay a complete partition; cells between origin and destination shift.
+export function reorderReception(value, from, to, mode = 'desktop') {
+  const ordered = mode === 'mobile' ? value.mobile : [...value.regions].sort((a, b) => a.y - b.y || a.x - b.x);
+  const first = ordered.findIndex(item => item.id === from), last = ordered.findIndex(item => item.id === to);
+  if (first < 0 || last < 0 || first === last) return value;
+  const next = [...ordered], [moved] = next.splice(first, 1); next.splice(last, 0, moved);
+  if (mode === 'mobile') return change(value, value.regions, next);
+  const regions = next.map((cell, index) => {
+    const { x, y, width, height } = ordered[index];
+    return { ...cell, x, y, width, height };
+  });
+  return change(value, regions);
 }
-export function canMergeReception(a, b) {
-  return Boolean(a && b && a.id !== b.id && (a.y === b.y && a.height === b.height && (right(a) === b.x || right(b) === a.x)
-    || a.x === b.x && a.width === b.width && (bottom(a) === b.y || bottom(b) === a.y)));
+
+const boundsOf = cells => ({ x: Math.min(...cells.map(r => r.x)), y: Math.min(...cells.map(r => r.y)),
+  width: Math.max(...cells.map(right)) - Math.min(...cells.map(r => r.x)), height: Math.max(...cells.map(bottom)) - Math.min(...cells.map(r => r.y)) });
+function fillBounds(cells, source, target) {
+  return cells.map(cell => {
+    const x = target.x + Math.round((cell.x - source.x) / source.width * target.width);
+    const y = target.y + Math.round((cell.y - source.y) / source.height * target.height);
+    return { ...cell, x, y,
+      width: target.x + Math.round((right(cell) - source.x) / source.width * target.width) - x,
+      height: target.y + Math.round((bottom(cell) - source.y) / source.height * target.height) - y };
+  });
 }
-export function mergeReception(value, id, otherId, keep) {
-  const a = value.regions.find(r => r.id === id), b = value.regions.find(r => r.id === otherId);
-  if (!canMergeReception(a, b)) throw new Error('Only neighboring regions whose union is a rectangle can merge.');
-  if (a.content && b.content && ![a.content, b.content].includes(keep)) throw new Error('Choose the content to retain. Both records remain available.');
-  const merged = { ...a, x: Math.min(a.x, b.x), y: Math.min(a.y, b.y), width: Math.max(right(a), right(b)) - Math.min(a.x, b.x),
-    height: Math.max(bottom(a), bottom(b)) - Math.min(a.y, b.y), content: keep || a.content || b.content };
-  return change(value, value.regions.filter(r => r.id !== otherId).map(r => r.id === id ? merged : r), value.mobile.filter(m => m.id !== otherId));
+function removeFromPartition(cells, id) {
+  if (cells.length === 1) return [];
+  // Reconstruct only the necessary partition from its geometry. There is no
+  // persisted split-tree or second layout model to synchronize.
+  for (const axis of ['x', 'y']) {
+    const edge = axis === 'x' ? right : bottom;
+    const boundaries = [...new Set(cells.map(edge))].sort((a, b) => a - b);
+    for (const point of boundaries) {
+      const before = cells.filter(cell => edge(cell) <= point), after = cells.filter(cell => cell[axis] >= point);
+      if (!before.length || !after.length || before.length + after.length !== cells.length) continue;
+      const target = before.some(cell => cell.id === id) ? before : after, sibling = target === before ? after : before;
+      const remaining = removeFromPartition(target, id);
+      if (!remaining) continue;
+      return remaining.length ? [...remaining, ...sibling] : fillBounds(sibling, boundsOf(sibling), boundsOf(cells));
+    }
+  }
+  // A valid externally supplied partition can be non-slicing. Absorb the
+  // removed rectangle into a complete adjacent strip when one is available.
+  const removed = cells.find(cell => cell.id === id), rest = cells.filter(cell => cell.id !== id);
+  for (const direction of ['left', 'right', 'top', 'bottom']) {
+    const vertical = direction === 'left' || direction === 'right';
+    const start = vertical ? removed.y : removed.x, finish = vertical ? bottom(removed) : right(removed);
+    const neighbors = rest.filter(cell => (direction === 'left' ? right(cell) === removed.x : direction === 'right' ? cell.x === right(removed)
+      : direction === 'top' ? bottom(cell) === removed.y : cell.y === bottom(removed))
+      && (vertical ? cell.y >= start && bottom(cell) <= finish : cell.x >= start && right(cell) <= finish));
+    if (neighbors.reduce((sum, cell) => sum + (vertical ? cell.height : cell.width), 0) !== finish - start) continue;
+    return rest.map(cell => !neighbors.includes(cell) ? cell : direction === 'left' ? { ...cell, width: cell.width + removed.width }
+      : direction === 'right' ? { ...cell, x: removed.x, width: cell.width + removed.width }
+        : direction === 'top' ? { ...cell, height: cell.height + removed.height } : { ...cell, y: removed.y, height: cell.height + removed.height });
+  }
+  return null;
+}
+export function deleteReceptionCell(value, id) {
+  const removed = value.regions.find(cell => cell.id === id);
+  if (!removed) return value;
+  let regions = removeFromPartition(value.regions, id);
+  if (regions === null) {
+    // Rare non-slicing layouts are repacked in reading order, retaining complete
+    // cells and all their settings, rather than leaving holes or losing content.
+    const rest = value.regions.filter(cell => cell.id !== id).sort((a, b) => a.y - b.y || a.x - b.x);
+    regions = rest.map((cell, index) => ({ ...cell, x: Math.round(index * E / rest.length), y: 0,
+      width: Math.round((index + 1) * E / rest.length) - Math.round(index * E / rest.length), height: E }));
+  }
+  const empty = !regions.length;
+  if (empty) regions = [{ ...removed, x: 0, y: 0, width: E, height: E, content: null, padding: null, alignX: 'left', alignY: 'top', surface: null }];
+  const ids = new Set(regions.map(cell => cell.id));
+  const used = new Set(regions.map(cell => cell.content));
+  if (value.branding.logo) used.add(value.branding.logo);
+  return assertReception({ ...value, regions, mobile: empty ? [{ id: removed.id, columns: 2, height: 320 }] : value.mobile.filter(cell => ids.has(cell.id)),
+    imageModules: value.imageModules.filter(item => used.has(item.id)), texts: value.texts.filter(item => used.has(item.id)),
+    ...(value.links ? { links: value.links.filter(item => used.has(item.id)) } : {}) });
 }
 export function receptionDividers(value, minimum = {}) {
   const found = new Map();
