@@ -5,6 +5,7 @@ import { chromium } from 'playwright-core';
 import { browserExecutable } from '../scripts/browserEnvironment.mjs';
 import { mountToolDockFixture } from './fixtures/tool-docks.mjs';
 import { openSharedTool, hideModuleTools } from './fixtures/shared-tools.mjs';
+import { settlePlaywrightAnimationFrames } from './playwright-browser-adapter.mjs';
 const output = process.env.INSCAPE_BROWSER_OUTPUT || '.browser-test-runtime/tool-docking';
 const saved = page => page.evaluate(() => window.savedDraft());
 const dock = (page, tab) => page.locator('.workbench-tool-dock').filter({ has: page.getByRole('tab', { name: tab, exact: true }) });
@@ -200,8 +201,17 @@ test('keyboard docking keeps text selection, color history and the three indepen
     await mountToolDockFixture(page, { writing: true }); await hideModuleTools(page);
     await page.getByRole('button', { name: 'Select Mist', exact: true }).click();
     const text = page.getByRole('textbox', { name: 'Article text', exact: true });
-    await text.focus(); await text.press('Control+Home');
-    for (let i = 0; i < 'Native '.length; i++) await text.press('Shift+ArrowRight');
+    await page.evaluate(() => document.fonts.ready);
+    await text.focus(); await settlePlaywrightAnimationFrames(page);
+    assert.equal(await text.evaluate(node => node === document.activeElement), true);
+    // Let flow focus settle, then type into the existing selection without
+    // Locator.press refocusing the editor between selection keystrokes.
+    await page.keyboard.press('Control+Home');
+    await page.waitForFunction(() => {
+      const selection = getSelection(), editor = document.querySelector('[aria-label="Article text"]');
+      return editor?.contains(selection?.anchorNode) && selection.isCollapsed && selection.anchorOffset === 0;
+    });
+    for (let i = 0; i < 'Native '.length; i++) await page.keyboard.press('Shift+ArrowRight');
     await page.waitForFunction(() => window.getSelection()?.toString() === 'Native ');
     await tab(page, 'Color').focus(); await tab(page, 'Color').press('Enter');
     // Wait for the editor's selection transaction before docking its controls.

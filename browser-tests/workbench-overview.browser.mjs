@@ -969,14 +969,20 @@ test('failed departure keeps the live editor and mixed-content previews never st
     });
     await page.reload(); await page.getByRole('button', { name: 'Overview', exact: true }).click();
     await page.locator('.workbench-overview').waitFor();
+    // Preview content appears after ResizeObserver supplies its fitted size.
+    await page.locator('.workbench-overview [data-navigator-object="shape:preview"]').waitFor();
     assert.equal(await page.locator('.workbench-overview [data-navigator-object="shape:preview"]').count(), 1);
     assert.equal(await page.locator('.workbench-overview iframe').count(), 0);
     assert.match(await page.locator('.workbench-overview-interactive').innerText(), /Orbit study/);
-    await page.waitForFunction(() => [...document.querySelectorAll('.workbench-overview .text-flow-visible .text-document-body')].every(node => node.textContent.length > 20));
+    await page.waitForFunction(() => {
+      const bodies = [...document.querySelectorAll('.workbench-overview .text-flow-visible .text-document-body')];
+      return bodies.length === 2 && bodies.every(node => node.textContent.length > 20);
+    });
     const frames = page.locator('.workbench-overview .text-flow-visible');
     assert.equal(await frames.count(), 2);
     assert.notEqual(await frames.nth(0).innerText(), await frames.nth(1).innerText());
     assert.equal(await frames.locator('.text-document-title').count(), 1);
+    await page.locator('.workbench-overview [data-navigator-object="image:preview"] svg image').waitFor({ state: 'attached' });
     assert.equal(await page.locator('.workbench-overview [data-navigator-object="image:preview"] svg image').count(), 1);
     await mkdir(output, { recursive: true });
     await page.screenshot({ path: path.join(output, 'overview-mixed.png') });

@@ -12,6 +12,7 @@ export default function DesktopMenu({ anchor, commands, label, menuSurfaceId = n
   const [position, setPosition] = useState(anchor);
   const [openPath, setOpenPath] = useState([]);
   useLayoutEffect(() => {
+    window.clearTimeout(hoverTimerRef.current);
     const rect = ref.current?.getBoundingClientRect();
     if (rect) setPosition(clampMenuPosition(anchor, rect, { width: window.innerWidth, height: window.innerHeight }));
     (ref.current?.querySelector('button:not(:disabled)') || ref.current)?.focus();
@@ -20,8 +21,11 @@ export default function DesktopMenu({ anchor, commands, label, menuSurfaceId = n
     const close = (event) => { if (event.key === 'Escape') { event.preventDefault(); onPreviewCommand?.(null); onClose(); returnFocus?.focus?.(); } };
     const outside = (event) => { if (!ref.current?.contains(event.target)) onClose(); };
     window.addEventListener('keydown', close); window.addEventListener('pointerdown', outside, true);
-    return () => { window.removeEventListener('keydown', close); window.removeEventListener('pointerdown', outside, true); window.clearTimeout(hoverTimerRef.current); };
+    return () => { window.removeEventListener('keydown', close); window.removeEventListener('pointerdown', outside, true); };
   }, [onClose, onPreviewCommand, returnFocus]);
+  // Refreshing listener callbacks must not discard an in-flight user hover.
+  // The timer belongs to this menu instance, its anchor and pointer lifetime.
+  useEffect(() => () => window.clearTimeout(hoverTimerRef.current), []);
   const onKeyDown = (event) => {
     const button = event.target.closest('button');
     const panel = button?.closest('[role="menu"]');

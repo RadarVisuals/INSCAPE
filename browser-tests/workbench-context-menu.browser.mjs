@@ -57,6 +57,21 @@ try {
   const rootLabels = () => menu().locator(':scope > button').allTextContents();
   await desktop();
   assert.deepEqual((await rootLabels()).map(s => s.replace('›', '').trim()), ['TOOLS', 'ADD', 'IDENTITY', 'LIBRARY', 'DISCOVER', 'PREVIEW', 'PUBLISH', 'HIDE SIDEBAR']);
+  // A background Workbench render replaces callback props while the menu is
+  // still open. It must not cancel the user's pending submenu hover.
+  await page.clock.install();
+  await page.clock.pauseAt(await page.evaluate(() => Date.now() + 100));
+  await page.getByRole('menuitem', { name: 'ADD', exact: true }).dispatchEvent('pointerover', { bubbles: true, pointerType: 'mouse' });
+  await page.evaluate(async () => {
+    const dom = await import('/@id/react-dom'), { flushSync } = dom.default || dom;
+    flushSync(() => review.render('first'));
+  });
+  await page.clock.runFor(120);
+  assert.equal(await page.getByRole('menuitem', { name: 'IMAGE', exact: true }).count(), 1,
+    'parent rendering preserves the pending submenu hover');
+  await page.clock.resume();
+  await page.keyboard.press('Escape');
+  await desktop();
   await page.getByRole('menuitem', { name: 'ADD', exact: true }).hover();
   await page.getByRole('menuitem', { name: 'IMAGE', exact: true }).waitFor();
   assert.equal(await page.getByRole('menuitem', { name: 'DISPLAY MODULE', exact: true }).count(), 0, 'parked Display stays absent from Add');
