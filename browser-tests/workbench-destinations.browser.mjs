@@ -373,7 +373,12 @@ test('camera journeys retarget, retain interrupted Back, and stop for input, loc
         await page.keyboard.press('End');
       } else if (reason === 'lock') await page.evaluate(() => window.destinationLock(true));
       else if (reason === 'blur') await page.evaluate(() => window.dispatchEvent(new Event('blur')));
-      else await page.setViewportSize({ width: 1000, height: 760 });
+      else {
+        await page.setViewportSize({ width: 1000, height: 760 });
+        // ResizeObserver uses the browser's rendering cycle, not the paused
+        // journey clock. Require resize to cancel travel before advancing it.
+        await page.waitForFunction(() => !document.querySelector('[data-workbench-travelling]'), null, { polling: 10 });
+      }
       await advance(page, 32);
       const stopped = await read(page); await advance(page);
       const afterStopped = await read(page);

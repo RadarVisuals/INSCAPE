@@ -207,6 +207,8 @@ test('Layers selection, grouping, visibility, ordering and confirmed removal sta
     assert.ok(Math.abs(affirmativeBounds.x-trashBounds.x)<1 && Math.abs(affirmativeBounds.y-trashBounds.y)<1,'confirmation replaces the trash control in place');
     assert.equal((await list.boundingBox()).height,listBounds.height,'confirmation does not move neighbouring rows');
     await page.keyboard.press('Escape');
+    await confirm.waitFor({ state: 'hidden' });
+    await page.waitForFunction(node => node === document.activeElement, await remove.elementHandle());
     assert.equal(await confirm.count(),0); assert.ok(await remove.evaluate(n=>n===document.activeElement));
     await remove.click(); await confirm.getByRole('button',{name:'Remove',exact:true}).click();
     assert.equal(await list.locator('.ds-layer-row').count(),3);

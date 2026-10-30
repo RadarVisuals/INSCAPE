@@ -53,6 +53,9 @@ test('FX previews one Shape gesture, commits once, cancels safely, survives dock
     await beginDrag(page, blur, .5);
     await fx.getByRole('button', { name: 'Close FX', exact: true }).dispatchEvent('click');
     await page.mouse.up();
+    // Closing the dock unmounts the slider; its cleanup clears the Shape's
+    // preview in a subsequent React commit without changing the saved draft.
+    await page.waitForFunction(node => getComputedStyle(node).filter === 'none', await paint(page).elementHandle());
     assert.deepEqual(await saved(page), original, 'closing FX cancels an unfinished gesture');
     assert.equal(await paint(page).evaluate(node => getComputedStyle(node).filter), 'none');
     fx = await openSharedTool(page, 'FX');
