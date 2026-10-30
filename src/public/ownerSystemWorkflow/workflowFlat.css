@@ -33,10 +33,10 @@
 /* Founder-selected neutral palette for the composition overview. */
 [data-workflow-material='tactile'][data-workflow-finish='flat']:where([data-workflow-palette='charcoal']) {
   color-scheme: dark;
-  --tactile-face: #121212;
+  --tactile-face: #080808;
   --tactile-ink: #c2c2c2;
   --tactile-muted: var(--tactile-ink);
-  --tactile-well: #2c2c2c;
+  --tactile-well: #171717;
   --tactile-hover: var(--tactile-well);
   --tactile-edge: var(--tactile-well);
 }
