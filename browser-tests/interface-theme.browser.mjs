@@ -79,3 +79,45 @@ test('one Settings choice governs owner controls, portal menus, reception, overv
   assert.deepEqual(errors, []);
  } finally { await browser.close(); }
 });
+
+test('Workbench outside background and reveal shading repaint their actual pixels with the global mode', { timeout: 60000 }, async () => {
+ const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
+ try {
+  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, reducedMotion: 'reduce' });
+  page.setDefaultTimeout(15000);
+  const errors = []; page.on('pageerror', error => errors.push(error.message));
+  await page.route('**/*', route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
+  await open(page, '/browser-tests/workbench-storage-fixture.html?seed=1&shell=1');
+  await button(page, 'Canvas size').click();
+  const size = page.getByRole('group', { name: 'Canvas size controls', exact: true });
+  await size.getByLabel('Width (px)', { exact: true }).fill('480');
+  await size.getByLabel('Height (px)', { exact: true }).fill('320');
+  await size.getByRole('button', { name: 'Apply', exact: true }).click();
+  await button(page, 'Show outside canvas').click();
+  await button(page, 'Close canvas size').click();
+  await button(page, 'Settings').click();
+  const saved = await page.evaluate(() => JSON.stringify(window.savedDraft()));
+  const pixels = () => page.evaluate(() => ['[data-workbench-area]', '[data-workbench-outside-shade]'].map(selector => {
+   const canvas = document.querySelector(selector);
+   return [...canvas.getContext('2d').getImageData(canvas.width - 4, canvas.height - 4, 1, 1).data];
+  }));
+  await mkdir(output, { recursive: true });
+  for (const mode of ['dark', 'light', 'dark']) {
+   await button(page, mode.toUpperCase()).click();
+   const expected = mode === 'dark' ? [23, 23, 23] : [222, 219, 211];
+   const [outside, shade] = await pixels();
+   assert.deepEqual(outside, [...expected, 255], 'painted exterior uses the shared environment');
+   shade.slice(0, 3).forEach((channel, index) => assert.ok(Math.abs(channel - expected[index]) <= 1, 'reveal shade uses the same colour'));
+   assert.equal(shade[3], 166, 'reveal remains 65% opaque');
+   await capture(page, `workbench-background-${mode}`);
+  }
+  await button(page, 'Close Settings').click();
+  const beforePan = await pixels();
+  await page.mouse.move(1050, 600); await page.keyboard.down('Space');
+  await page.mouse.down(); await page.mouse.move(1120, 640, { steps: 6 });
+  await page.mouse.up(); await page.keyboard.up('Space');
+  assert.deepEqual(await pixels(), beforePan, 'camera repaint retains the selected palette');
+  assert.equal(await page.evaluate(() => JSON.stringify(window.savedDraft())), saved, 'mode and camera do not edit the composition');
+  assert.deepEqual(errors, []);
+ } finally { await browser.close(); }
+});

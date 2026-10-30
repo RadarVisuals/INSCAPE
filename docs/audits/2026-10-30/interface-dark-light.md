@@ -80,3 +80,24 @@ productiecijfers. De nieuwe code bestaat uit één voorkeur-store, gedeelde
 bediening en beperkte leesopschoning om bestaande composities te behouden.
 De oude themapaden en forwarding zijn verwijderd, waardoor productiecode netto
 kleiner wordt.
+
+
+## Correctie: daadwerkelijk getekende Workbench-achtergrond
+
+De oprichter wees na de eerste oplevering terecht op de Workbench-achtergrond.
+De controle hierboven mat de CSS-achtergrond van de host, maar miste de Canvas2D-laag
+buiten de compositie. `WorkbenchArea` schilderde die nog met `#242626`, een vaste
+`#888b88`-rand en een groen-grijze schaduw bij “Show outside canvas”.
+
+Die drie vaste kleuren zijn verwijderd. De tekenlaag leest nu de gedeelde
+omgeving en randkleur bij montage en bij een Dark/Light-wijziging. Camera-frames
+hergebruiken de gemeten kleuren; er komen geen stijlmetingen per pan-frame bij.
+De compositie en buitenliggende objecten houden dezelfde inhoud en geometrie.
+
+De aangevulde browsercontrole verkleint het canvas, schakelt de buitenweergave in,
+wisselt Dark → Light → Dark en leest de echte Canvas2D-pixels: `23/23/23` versus
+`222/219/211`, plus de overeenkomstige 65%-schaduw. Na pannen blijven de kleuren
+correct en de opgeslagen compositie ongewijzigd. Beide interface-browsertests,
+lint en de productiebuild met budgetcontrole slagen. Screenshots voor deze
+correctie: `.browser-test-runtime/interface-theme/workbench-background-*.png`.
+Deze correctie is lokaal; geen push of deployment.
