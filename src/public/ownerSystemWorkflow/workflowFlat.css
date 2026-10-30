@@ -30,6 +30,16 @@
   --tactile-face: var(--color-text-primary);
   --tactile-ink: var(--color-surface-subtle);
 }
+/* Founder-selected neutral palette for the composition overview. */
+[data-workflow-material='tactile'][data-workflow-finish='flat']:where([data-workflow-palette='charcoal']) {
+  color-scheme: dark;
+  --tactile-face: #121212;
+  --tactile-ink: #c2c2c2;
+  --tactile-muted: var(--tactile-ink);
+  --tactile-well: #2c2c2c;
+  --tactile-hover: var(--tactile-well);
+  --tactile-edge: var(--tactile-well);
+}
 @media (forced-colors: active) {
   [data-workflow-material='tactile'][data-workflow-finish='flat'] {
     --tactile-face: Canvas;

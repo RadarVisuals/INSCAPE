@@ -34,6 +34,11 @@ The founder explicitly excluded mobile from this iteration. Review quickly,
 then adjust or revert from the verified checkpoint; this is not final visual
 approval or permission for a broad rewrite of Reception or publication.
 
+The founder's first colour correction for this overview trial is neutral charcoal:
+`#121212` for the interface background, `#2C2C2C` for panels and selected/hover
+surfaces, and `#C2C2C2` for interface text. Apply it through the shared material
+palette to owner and public overviews; preserve authored artwork colours.
+
 The Free page/header-removal and style-template experiment was rolled back
 because its code growth and visible result were unsatisfactory. The founder
 still wants more visual freedom from the Reception frame. Continue that goal

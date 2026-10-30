@@ -62,7 +62,7 @@ export default function WorkbenchOverview({ items, selected, model, previews, vi
     onCancel={closeForm} onSave={thumbnailCrop => { onSave({ name: selected.name, introduction: selected.introduction, thumbnailCrop }); closeForm(); }} /></Suspense>
     : editing ? <DetailsForm key={`${selected.id}:${editing}`} creating={editing === 'new'} selected={selected} onCancel={closeForm}
       onSave={details => { if (editing === 'new') onCreate(details.name); else onSave(details); closeForm(); }} /> : null;
-  return <div className="workbench-overview system-workflow__token-scope" data-workflow-material="tactile" data-workflow-finish="flat"
+  return <div className="workbench-overview system-workflow__token-scope" data-workflow-material="tactile" data-workflow-finish="flat" data-workflow-palette="charcoal"
     data-menu-surface={selected.draft.appearance.menuSurfaceId} data-layout={view.layout}>
     {grid ? <div className="workbench-overview-browse" inert={presentation ? '' : undefined}>
     <OverviewNavigation profile={profile} address={selected.draft.profileAddress} disabled={Boolean(editing)}
