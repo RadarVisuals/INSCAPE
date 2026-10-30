@@ -1,5 +1,7 @@
 import { spawn } from 'node:child_process';
-import { basename, dirname, isAbsolute, relative, resolve } from 'node:path';
+import { basename, delimiter, dirname, isAbsolute, relative, resolve } from 'node:path';
+import { readFile, realpath, stat } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
 
 const delay = (milliseconds) => new Promise((resolveDelay) => setTimeout(resolveDelay, milliseconds));
 
@@ -149,16 +151,72 @@ export async function removeBrowserRuntime({ runtimePath, workspaceRoot, timeout
   return { runtimePath: exactRuntime, mode: 'powershell-fallback' };
 }
 
-export async function listWindowsProcesses() {
-  const script = 'Get-CimInstance Win32_Process | Select-Object ProcessId,ParentProcessId,CreationDate | ConvertTo-Json -Compress';
-  const result = await runBoundedCommand('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', script], { stdio: ['ignore', 'pipe', 'pipe'] });
+const windowsRuntimeCache = new Map();
+const windowsExecutableMetadata = new Map();
+
+// Pin metadata only. Every ownership checkpoint still executes a fresh query.
+export async function resolveWindowsProcessRuntime(environment = process.env, { run = runBoundedCommand, platform = process.platform } = {}) {
+  if (platform !== 'win32') return null;
+  const configured = environment.INSCAPE_PROCESS_POWERSHELL ?? process.env.INSCAPE_PROCESS_POWERSHELL;
+  const searchPath = environment.PATH ?? environment.Path ?? process.env.PATH ?? '';
+  const systemRoot = environment.SystemRoot ?? process.env.SystemRoot;
+  const key = JSON.stringify([configured || null, searchPath, systemRoot]);
+  if (!windowsRuntimeCache.has(key)) windowsRuntimeCache.set(key, (async () => {
+    const directories = searchPath.split(delimiter).map(value => value.replace(/^"|"$/gu, '')).filter(isAbsolute);
+    const locate = async name => {
+      if (!isAbsolute(name) && /[\\/]/u.test(name)) throw Error('PowerShell configuration requires an absolute path or executable name');
+      const paths = isAbsolute(name) ? [name] : directories.map(directory => resolve(directory, name));
+      if (!isAbsolute(name) && name === 'powershell.exe' && systemRoot)
+        paths.push(resolve(systemRoot, 'System32/WindowsPowerShell/v1.0/powershell.exe'));
+      for (const path of paths) {
+        const info = await stat(path).catch(error => { if (error.code === 'ENOENT' || error.code === 'ENOTDIR') return null; throw error; });
+        if (info?.isFile()) return realpath(path);
+      }
+      return null;
+    };
+    const executable = configured ? await locate(configured) : await locate('pwsh.exe') || await locate('powershell.exe');
+    if (!executable) throw Error('Windows process inventory requires an available PowerShell executable');
+    if (!windowsExecutableMetadata.has(executable)) windowsExecutableMetadata.set(executable, (async () => {
+      const sha256 = createHash('sha256').update(await readFile(executable)).digest('hex');
+      const result = await run(executable, ['-NoProfile', '-NonInteractive', '-Command', '$PSVersionTable.PSVersion.ToString()'], {
+        stdio: ['ignore', 'pipe', 'pipe'], timeoutMs: BROWSER_LIFECYCLE_TIMEOUTS.processInventoryMs,
+      });
+      const version = result.stdout.trim();
+      if (result.code !== 0 || !/^\d+\.\d+\.\d+(?:\.\d+)?(?:[-+][\da-z.-]+)?$/iu.test(version))
+        throw Error(`Unable to identify Windows process runtime: ${result.stderr.trim() || `exit ${result.code}; invalid version`}`);
+      return Object.freeze({ executable, version, sha256 });
+    })());
+    return windowsExecutableMetadata.get(executable);
+  })());
+  return windowsRuntimeCache.get(key);
+}
+
+export async function listWindowsProcesses({ run = runBoundedCommand, runtime, environment = process.env } = {}) {
+  const selected = runtime || await resolveWindowsProcessRuntime(environment);
+  if (!selected) throw Error('Windows process inventory requires a Windows runtime');
+  // JSON serializes DateTime differently in Windows PowerShell and PowerShell 7.
+  // Preserve the existing UTC millisecond identity explicitly in both runtimes.
+  const script = "$ErrorActionPreference='Stop'; Get-CimInstance Win32_Process -Property ProcessId,ParentProcessId,CreationDate -ErrorAction Stop | Select-Object ProcessId,ParentProcessId,@{Name='CreationDate';Expression={if ($null -ne $_.CreationDate) {'/Date(' + ([DateTimeOffset]$_.CreationDate).ToUnixTimeMilliseconds().ToString([Globalization.CultureInfo]::InvariantCulture) + ')/'}}} | ConvertTo-Json -Compress -ErrorAction Stop";
+  const result = await run(selected.executable, ['-NoProfile', '-NonInteractive', '-Command', script], {
+    stdio: ['ignore', 'pipe', 'pipe'], timeoutMs: BROWSER_LIFECYCLE_TIMEOUTS.processInventoryMs,
+  });
   if (result.code !== 0) throw new Error(`Unable to inspect Windows process ownership: ${result.stderr.trim() || `exit ${result.code}`}`);
-  const parsed = result.stdout.trim() ? JSON.parse(result.stdout) : [];
-  return (Array.isArray(parsed) ? parsed : [parsed]).map((entry) => ({
-    pid: Number(entry.ProcessId),
-    parentPid: Number(entry.ParentProcessId),
-    identity: String(entry.CreationDate || '')
-  })).filter((entry) => validPid(entry.pid));
+  if (!result.stdout.trim()) throw new Error('Windows process inventory was empty');
+  const parsed = JSON.parse(result.stdout), processes = [], seen = new Set();
+  for (const entry of Array.isArray(parsed) ? parsed : [parsed]) {
+    if (!entry || !Number.isSafeInteger(entry.ProcessId) || entry.ProcessId < 0)
+      throw new Error('Windows process inventory contains an invalid process ID');
+    // The idle process has PID 0 and no creation date; it cannot be owned.
+    if (entry.ProcessId === 0) continue;
+    if (!Number.isSafeInteger(entry.ParentProcessId) || entry.ParentProcessId < 0
+        || typeof entry.CreationDate !== 'string' || !entry.CreationDate.trim())
+      throw new Error(`Windows process inventory lacks ownership identity for PID ${entry.ProcessId}`);
+    if (seen.has(entry.ProcessId)) throw new Error(`Windows process inventory repeats PID ${entry.ProcessId}`);
+    seen.add(entry.ProcessId);
+    processes.push({ pid: entry.ProcessId, parentPid: entry.ParentProcessId, identity: entry.CreationDate });
+  }
+  if (!processes.length) throw new Error('Windows process inventory was empty');
+  return processes;
 }
 
 export async function terminateWindowsProcessTree(pid) {

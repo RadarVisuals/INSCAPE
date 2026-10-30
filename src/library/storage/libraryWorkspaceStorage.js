@@ -1,5 +1,5 @@
 import { normalizeProfileAddress } from '../config.js';
-import { LIBRARY_WORKSPACE_VERSION, createEmptyWorkspace } from '../domain/libraryWorkspace.js';
+import { LIBRARY_WORKSPACE_VERSION, createEmptyWorkspace, normalizeCategoryImageSelections } from '../domain/libraryWorkspace.js';
 import { normalizeCanvasObjects } from '../domain/canvasObjects.js';
 import { normalizeTablePlacements } from '../domain/tablePlacements.js';
 
@@ -21,6 +21,7 @@ export function normalizeWorkspace(candidate, profileAddress) {
     if (!name) return [];
     seen.add(folder.id);
     return [{ id: folder.id, name, assetIds: [...new Set((Array.isArray(folder.assetIds) ? folder.assetIds : []).filter((id) => typeof id === 'string' && id.length <= 300))], public: folder.public === true,
+      ...normalizeCategoryImageSelections(folder),
       createdAt: Number.isFinite(folder.createdAt) ? folder.createdAt : 0, updatedAt: Number.isFinite(folder.updatedAt) ? folder.updatedAt : 0 }];
   });
   const objects = normalizeCanvasObjects(candidate.canvas?.objects);

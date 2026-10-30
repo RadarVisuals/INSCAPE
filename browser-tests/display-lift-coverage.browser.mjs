@@ -26,7 +26,7 @@ test('Lift covers the adjoining artwork edge through its final frames and leaves
       const source = page.locator('.system-workflow__grid-plane--current .system-workflow__placement, .visitor-grid-world__grid-plane--current .lattice-production-placement').first();
       await page.waitForFunction(() => [...document.querySelectorAll('.system-workflow__presentation-board img')].every(i => i.complete && i.naturalWidth));
       const saved = await page.evaluate(() => localStorage.getItem(window.__motionKey));
-      await source.dispatchEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true });
+      await source.dispatchEvent('keydown', { key: 'i', bubbles: true, cancelable: true });
       await page.waitForFunction(() => Number((document.querySelector('[data-inspection-context="selected"]') ? getComputedStyle(document.querySelector('[data-inspection-context="selected"]')).getPropertyValue('--inspection-lift-progress') : NaN)) === 1);
       await page.clock.install(); await page.clock.pauseAt(await page.evaluate(() => Date.now() + 100));
       await page.keyboard.press('Escape'); await page.clock.runFor(400);
@@ -69,7 +69,7 @@ test('native-fit artwork outside the Stage returns without a lingering filter tr
         artwork: { url: 'https://motion.invalid/motion-artwork.png', width: 2560, height: 1440 } });
       const source = page.locator('.system-workflow__grid-plane--current .system-workflow__placement, .visitor-grid-world__grid-plane--current .lattice-production-placement').nth(1);
       await source.waitFor();
-      await source.dispatchEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true });
+      await source.dispatchEvent('keydown', { key: 'i', bubbles: true, cancelable: true });
       await page.waitForFunction(() => Number((document.querySelector('[data-inspection-context="selected"]') ? getComputedStyle(document.querySelector('[data-inspection-context="selected"]')).getPropertyValue('--inspection-lift-progress') : NaN)) === 1);
       await page.clock.install(); await page.clock.pauseAt(await page.evaluate(() => Date.now() + 100));
       await page.keyboard.press('Escape'); await page.clock.runFor(496);
@@ -95,7 +95,7 @@ test('In place retains its own CSS opening and closing fade', { timeout: 60000 }
       const source = page.locator('.system-workflow__grid-plane--current .system-workflow__placement, .visitor-grid-world__grid-plane--current .lattice-production-placement').nth(1);
       await source.waitFor();
       await page.clock.install(); await page.clock.pauseAt(await page.evaluate(() => Date.now() + 100));
-      await source.dispatchEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true });
+      await source.dispatchEvent('keydown', { key: 'i', bubbles: true, cancelable: true });
       const background = page.locator('[data-inspection-context="background"]').first();
       const middle = async () => background.evaluate(n => {
         const a = n.getAnimations().find(a => a.transitionProperty === 'filter');

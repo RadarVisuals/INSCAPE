@@ -1,3 +1,6 @@
+import { isValidPublishedAssetUrl } from '../../profileDocument/domain/publishedAssetUrl.js';
+import { imageResourceIdentity } from '../data/resolveContentUrl.js';
+
 export const LIBRARY_WORKSPACE_VERSION = 9;
 
 export const LIBRARY_VIEW_TYPES = Object.freeze({ ALL: 'all', FAVORITES: 'favorites', FOLDER: 'folder' });
@@ -103,14 +106,7 @@ export function moveCategorySection(workspace, id, beforeId = null) {
 }
 
 export function setFolderAsset(workspace, folderIdValue, assetId, included, now = Date.now()) {
-  if (typeof included !== 'boolean' || typeof assetId !== 'string' || !assetId) return workspace;
-  const folder = workspace.folders.find(({ id }) => id === folderIdValue);
-  if (!folder || folder.assetIds.includes(assetId) === included) return workspace;
-  return { ...workspace, folders: workspace.folders.map((folder) => {
-    if (folder.id !== folderIdValue) return folder;
-    const assetIds = included ? [...new Set([...folder.assetIds, assetId])] : folder.assetIds.filter((id) => id !== assetId);
-    return { ...folder, assetIds, updatedAt: now };
-  }) };
+  return setFolderAssets(workspace, folderIdValue, [assetId], included, now);
 }
 
 export function setFolderAssets(workspace, folderIdValue, assetIdsValue, included, now = Date.now()) {
@@ -122,10 +118,39 @@ export function setFolderAssets(workspace, folderIdValue, assetIdsValue, include
   const requested = new Set(assetIds);
   const nextAssetIds = included ? [...new Set([...folder.assetIds, ...assetIds])]
     : folder.assetIds.filter((id) => !requested.has(id));
+  const imageSelections = (folder.imageSelections || []).filter(({ assetId }) => !requested.has(assetId));
   if (nextAssetIds.length === folder.assetIds.length
-    && nextAssetIds.every((id, index) => id === folder.assetIds[index])) return workspace;
+    && nextAssetIds.every((id, index) => id === folder.assetIds[index])
+    && imageSelections.length === (folder.imageSelections || []).length) return workspace;
   return { ...workspace, folders: workspace.folders.map((candidate) => candidate.id === folderIdValue
-    ? { ...candidate, assetIds: nextAssetIds, updatedAt: now } : candidate) };
+    ? { ...candidate, assetIds: nextAssetIds, ...(candidate.imageSelections ? { imageSelections } : {}), updatedAt: now } : candidate) };
+}
+
+// Asset IDs retain source/ownership scope; image selections only narrow the
+// material shown in this category. Choosing an image replaces a whole-asset entry.
+export function setFolderImage(workspace, folderIdValue, assetId, url, included, now = Date.now()) {
+  if (!isValidPublishedAssetUrl(url) || typeof included !== 'boolean' || !assetId) return workspace;
+  const folder = workspace.folders.find(({ id }) => id === folderIdValue);
+  if (!folder) return workspace;
+  const previous = folder.imageSelections || [];
+  const matches = entry => entry.assetId === assetId && imageResourceIdentity(entry.url) === imageResourceIdentity(url);
+  if (included && previous.some(matches)) return workspace;
+  if (!included && !previous.some(entry => entry.assetId === assetId)) return setFolderAsset(workspace, folderIdValue, assetId, false, now);
+  if (!included && !previous.some(matches)) return workspace;
+  const imageSelections = included ? [...previous, { assetId, url }] : previous.filter(entry => !matches(entry));
+  const assetIds = included ? [...new Set([...folder.assetIds, assetId])]
+    : imageSelections.some(entry => entry.assetId === assetId) ? folder.assetIds : folder.assetIds.filter(id => id !== assetId);
+  return { ...workspace, folders: workspace.folders.map(candidate => candidate.id === folderIdValue
+    ? { ...candidate, assetIds, imageSelections, updatedAt: now } : candidate) };
+}
+
+export function normalizeCategoryImageSelections(folder) {
+  if (folder.imageSelections === undefined) return {};
+  if (!Array.isArray(folder.imageSelections) || folder.imageSelections.some(entry => !entry
+    || !folder.assetIds.includes(entry.assetId) || !isValidPublishedAssetUrl(entry.url)))
+    throw new TypeError('Saved category image selections are invalid.');
+  return { imageSelections: [...new Map(folder.imageSelections.map(({ assetId, url }) =>
+    [`${assetId}\n${imageResourceIdentity(url)}`, { assetId, url }])).values()] };
 }
 
 export function toggleFavorite(workspace, assetId) {

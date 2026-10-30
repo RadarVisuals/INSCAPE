@@ -5,6 +5,10 @@ import { chromium } from 'playwright-core';
 
 const origin = process.env.INSCAPE_IMAGE_ROOT || 'http://127.0.0.1:5198';
 const output = process.env.INSCAPE_BROWSER_OUTPUT || '.browser-test-runtime';
+const quietLoading = async locator => {
+  await locator.waitFor({ state: 'attached' });
+  assert.equal(await locator.evaluate(node => getComputedStyle(node).clipPath), 'inset(50%)', 'loading remains accessible without covering artwork');
+};
 for (const kind of ['raster', 'svg']) test(`Image ${kind} Retry isolates attempts without authoring; Visitor also retains close and reopen`, { timeout: 120000 }, async () => {
   const browser = await chromium.launch({ executablePath: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', headless: true });
   await mkdir(output, { recursive: true });
@@ -96,25 +100,25 @@ for (const kind of ['raster', 'svg']) test(`Image ${kind} Retry isolates attempt
       const retriedRequest = page.waitForRequest(sourceUrl);
       if (touch) await retry.tap(); else { await retry.focus(); await retry.press('Enter'); }
       await retriedRequest;
-      await page.getByRole('status').filter({ hasText: 'Loading artwork' }).waitFor();
+      await quietLoading(page.getByRole('status').filter({ hasText: 'Loading artwork' }));
       assert.ok(requests > beforeRetry, 'Retry genuinely requests the original source again');
       assert.equal(await retry.count(), 0, 'a pending attempt cannot be retried twice');
       if (modeChecks && !cropCheck) {
         await inspect.focus(); await inspect.press('Enter');
         const back = page.getByRole('button', { name: 'Return to Image', exact: true });
-        await back.getByRole('status').filter({ hasText: 'Loading artwork' }).waitFor();
+        await quietLoading(back.getByRole('status').filter({ hasText: 'Loading artwork' }));
         await back.click(); await page.getByRole('dialog', { name: 'Inspect Image', exact: true }).waitFor({ state: 'hidden' });
         assert.deepEqual(await frame.boundingBox(), geometry, 'loading Inspect and Return do not move the camera or artwork');
         if (loadingCropCheck) {
           await page.getByRole('button', { name: 'Crop', exact: true }).click();
           assert.equal(await canvas.getAttribute('data-cropping'), 'true');
-          await page.getByRole('status').filter({ hasText: 'Loading artwork' }).waitFor();
+          await quietLoading(page.getByRole('status').filter({ hasText: 'Loading artwork' }));
         }
       }
       await page.locator('main.system-workflow').focus();
       retryGate = null; releaseRetry();
       await ready();
-      await page.getByRole('status').filter({ hasText: 'Loading artwork' }).waitFor({ state: 'hidden' });
+      await page.getByRole('status').filter({ hasText: 'Loading artwork' }).waitFor({ state: 'detached' });
       assert.equal(await page.getByRole('status').filter({ hasText: 'Artwork unavailable' }).count(), 0);
       assert.equal(await page.locator('main.system-workflow').evaluate(node => node === document.activeElement), true, 'load completion does not steal newer focus');
       assert.deepEqual(await frame.boundingBox(), geometry);

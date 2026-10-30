@@ -14,11 +14,19 @@ test('returning before expiry cancels eviction; a later departure gets a fresh g
   returned(); expire(); assert.equal(evictions, 0); assert.equal(timers.size, 0);
   pool.retain(() => evictions++); expire(); assert.equal(evictions, 1); assert.equal(timers.size, 0);
 });
-test('only the four most recently departed documents survive capacity pressure', () => {
+test('only the bounded most recently departed documents survive capacity pressure', () => {
   const { pool, timers, expire } = fixture(); const evicted = [];
-  for (let i = 0; i < 7; i++) pool.retain(() => evicted.push(i));
+  for (let i = 0; i < ARTWORK_RETENTION_LIMIT + 3; i++) pool.retain(() => evicted.push(i));
   assert.deepEqual(evicted, [0, 1, 2]); assert.equal(timers.size, ARTWORK_RETENTION_LIMIT);
-  expire(); assert.deepEqual(evicted, [0, 1, 2, 3, 4, 5, 6]);
+  expire(); assert.deepEqual(evicted, Array.from({ length: ARTWORK_RETENTION_LIMIT + 3 }, (_, i) => i));
+});
+
+test('a full twelve-document scene survives departure and return without eviction', () => {
+  const { pool, timers, expire } = fixture(); let evictions = 0;
+  const resume = Array.from({ length: 12 }, () => pool.retain(() => evictions++));
+  assert.equal(evictions, 0); assert.equal(timers.size, 12);
+  resume.forEach(cancel => cancel()); expire();
+  assert.equal(evictions, 0); assert.equal(timers.size, 0);
 });
 test('source replacement and owner disposal remove their pending evictions', () => {
   const { pool, timers, expire } = fixture(); let evictions = 0;

@@ -10,12 +10,14 @@ import { analyzeProductionBuild, assertNoProhibitedProductionArtifacts, assertSa
 const removeTree = (path) => rm(path, { recursive: true, force: true, maxRetries: 8, retryDelay: 100 });
 
 const graph = (leaks = []) => ({ ownerModules: ['/src/public/OwnerSystemWorkflowShell.jsx'], entries: [{ file: 'assets/app-a.js' }],
+  standaloneWallet: { source: 'src/wallet/standaloneWalletSession.js', file: 'assets/wallet-a.js' },
   ownerChunks: [{ file: 'assets/system-workflow-a.js', modules: ['/src/public/OwnerSystemWorkflowShell.jsx'] }], leaks });
 
 async function fixture(root, suffix = 'a') {
   await mkdir(resolve(root, '.vite'), { recursive: true }); await mkdir(resolve(root, 'assets'), { recursive: true });
   const manifest = {
-    'index.html': { file: `assets/app-${suffix}.js`, isEntry: true, imports: ['_shared.js'], css: [`assets/app-${suffix}.css`] },
+    'index.html': { file: `assets/app-${suffix}.js`, isEntry: true, imports: ['_shared.js'],
+      dynamicImports: ['_standalone-wallet.js'], css: [`assets/app-${suffix}.css`] },
     '_shared.js': { file: `assets/shared-${suffix}.js` },
     '_standalone-wallet.js': { file: `assets/wallet-${suffix}.js`, name: 'standaloneWalletSession', isDynamicEntry: true,
       imports: ['_shared.js'], dynamicImports: ['_wallet-icon.js'] },
@@ -23,7 +25,9 @@ async function fixture(root, suffix = 'a') {
     'src/public/OwnerSystemWorkflowShell.jsx': { file: `assets/system-workflow-${suffix}.js`, isDynamicEntry: true, imports: ['_shared.js'], css: [`assets/system-workflow-${suffix}.css`] },
   };
   await writeFile(resolve(root, '.vite/manifest.json'), JSON.stringify(manifest));
-  await writeFile(resolve(root, 'owner-runtime-graph.json'), JSON.stringify(graph()));
+  const runtimeGraph = graph();
+  runtimeGraph.standaloneWallet.file = `assets/wallet-${suffix}.js`;
+  await writeFile(resolve(root, 'owner-runtime-graph.json'), JSON.stringify(runtimeGraph));
   for (const file of [`app-${suffix}.js`, `shared-${suffix}.js`, `wallet-${suffix}.js`, `wallet-icon-${suffix}.js`,
     `system-workflow-${suffix}.js`, `app-${suffix}.css`, `system-workflow-${suffix}.css`])
     await writeFile(resolve(root, 'assets', file), file.repeat(3));
@@ -40,6 +44,63 @@ test('manifest classification survives hashed filename changes and current synth
     assert.ok(first.standaloneWalletJavaScript.every(({ file }) => file.includes('wallet')));
     assert.deepEqual(first.totals, second.totals); assert.equal(checkProductionBudgets(first), true);
   } finally { await Promise.all(roots.map(removeTree)); }
+});
+
+test('wallet measurement uses emitted source identity after a merged chunk is renamed', async () => {
+  const root = resolve(tmpdir(), `underneath-budget-wallet-merged-${process.pid}`);
+  try {
+    await fixture(root, 'merged');
+    const before = await analyzeProductionBuild(root);
+    const manifestPath = resolve(root, '.vite/manifest.json');
+    const manifest = JSON.parse(await readFile(manifestPath, 'utf8'));
+    const wallet = manifest['_standalone-wallet.js'];
+    wallet.name = 'chains';
+    wallet.file = 'assets/chains-abc.js';
+    // The wallet can be a shared dependency of a dynamic facade, not itself a
+    // named dynamic entry. Classification follows its source-bearing file.
+    delete wallet.isDynamicEntry;
+    manifest['_chains-abc.js'] = wallet;
+    delete manifest['_standalone-wallet.js'];
+    manifest['index.html'].dynamicImports = ['_wallet-facade.js'];
+    manifest['_wallet-facade.js'] = { file: 'assets/facade.js', isDynamicEntry: true, imports: ['_chains-abc.js'] };
+    await writeFile(resolve(root, 'assets/chains-abc.js'), await readFile(resolve(root, 'assets/wallet-merged.js')));
+    await rm(resolve(root, 'assets/wallet-merged.js'));
+    await writeFile(resolve(root, 'assets/facade.js'), '');
+    await writeFile(manifestPath, JSON.stringify(manifest));
+    const runtimeGraph = graph();
+    runtimeGraph.standaloneWallet.file = wallet.file;
+    await writeFile(resolve(root, 'owner-runtime-graph.json'), JSON.stringify(runtimeGraph));
+    const after = await analyzeProductionBuild(root);
+    assert.deepEqual(after.standaloneWalletEntry, { source: 'src/wallet/standaloneWalletSession.js', file: wallet.file });
+    assert.deepEqual(after.totals.standaloneWalletJavaScript, before.totals.standaloneWalletJavaScript);
+    assert.equal(after.totals.coreJavaScript.raw, before.totals.coreJavaScript.raw);
+    assert.equal(after.totals.coreJavaScript.gzip, before.totals.coreJavaScript.gzip + 20); // Empty facade's gzip header/trailer.
+    assert.equal(after.standaloneWalletJavaScript.length, 2);
+  } finally { await removeTree(root); }
+});
+
+test('wallet measurement rejects missing source metadata and unreachable or eagerly loaded wallet chunks', async () => {
+  const root = resolve(tmpdir(), `underneath-budget-wallet-missing-${process.pid}`);
+  try {
+    await fixture(root);
+    const graphPath = resolve(root, 'owner-runtime-graph.json');
+    const manifestPath = resolve(root, '.vite/manifest.json');
+    const runtimeGraph = graph();
+    delete runtimeGraph.standaloneWallet;
+    await writeFile(graphPath, JSON.stringify(runtimeGraph));
+    await assert.rejects(() => analyzeProductionBuild(root), /missing the standalone wallet source chunk/);
+    runtimeGraph.standaloneWallet = { source: 'src/wallet/standaloneWalletSession.js', file: 'assets/not-emitted.js' };
+    await writeFile(graphPath, JSON.stringify(runtimeGraph));
+    await assert.rejects(() => analyzeProductionBuild(root), /missing the reachable standalone wallet source chunk/);
+    await writeFile(graphPath, JSON.stringify(graph()));
+    const manifest = JSON.parse(await readFile(manifestPath, 'utf8'));
+    delete manifest['index.html'].dynamicImports;
+    await writeFile(manifestPath, JSON.stringify(manifest));
+    await assert.rejects(() => analyzeProductionBuild(root), /missing the reachable standalone wallet source chunk/);
+    manifest['index.html'].imports.push('_standalone-wallet.js');
+    await writeFile(manifestPath, JSON.stringify(manifest));
+    await assert.rejects(() => analyzeProductionBuild(root), /Standalone wallet runtime leaked into the initial manifest closure/);
+  } finally { await removeTree(root); }
 });
 
 test('Reception route costs deduplicate startup and shared files and exclude unopened tools', async () => {
@@ -95,7 +156,7 @@ test('measured production allowances retain exact budget boundaries with the laz
     standaloneWalletJavaScript: { raw: 4_600_000, gzip: 1_225_000 },
     initialCss: { raw: 51_807, gzip: 10_301 },
     ownerCss: { raw: 143_870, gzip: 21_140 },
-    coreJavaScript: { raw: 2_686_000, gzip: 882_000 },
+    coreJavaScript: { raw: 2_693_000, gzip: 885_000 },
     publicAssets: { raw: 17_960_000 },
     largestPublicAsset: { raw: 2_700_000 },
   });

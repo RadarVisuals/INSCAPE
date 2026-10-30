@@ -54,9 +54,10 @@ function ImageArtworkAttempt({ side, src, rectangle, crop = side.crop, onReady, 
   // Status belongs beside the canvas button, outside transformed artwork and
   // its interaction tree. SVG retains its existing loader and retry lifecycle.
   const renderStatus = (node, state) => !onReady && recoveryHost ? createPortal(recoveryMode === 'inspect'
-    ? <span className="image-module__inspection-status" role="status">{state === 'loading' ? 'Loading artwork…' : 'Artwork unavailable. Return to Image to retry.'}</span>
+    ? <span className="image-module__inspection-status" role="status" data-artwork-loading={state === 'loading' || undefined}>{state === 'loading' ? 'Loading artwork…' : 'Artwork unavailable. Return to Image to retry.'}</span>
     : cloneElement(node, {
     className: 'image-module__flip-status image-module__recovery-status',
+    'data-artwork-loading': state === 'loading' || undefined,
     onPointerDown: event => event.stopPropagation(),
     onClick: event => {
       event.stopPropagation();

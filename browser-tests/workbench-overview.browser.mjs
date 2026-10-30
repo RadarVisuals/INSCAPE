@@ -807,13 +807,23 @@ test('overview browses without activation, saves optional details, and opens onl
   try {
     const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, reducedMotion: 'reduce' });
     const errors = []; page.on('pageerror', error => errors.push(error.message));
+    const assertWorkbenchFocus = async () => {
+      const button = page.getByRole('navigation', { name: 'Named Workbenches' }).getByRole('button', { name: /Workbench 1/ });
+      const target = await button.elementHandle();
+      try {
+        // Mount uses a passive effect; Canvases returns focus on the next frame.
+        // Await that actual destination within open()'s existing 15-second limit.
+        await page.waitForFunction(node => node === document.activeElement, target);
+        assert.ok(await button.evaluate(node => node === document.activeElement));
+      } finally { await target?.dispose(); }
+    };
     await open(page);
     await page.getByRole('button', { name: 'Canvas size', exact: true }).click();
     await page.getByRole('button', { name: 'Fit canvas to content', exact: true }).click();
     await page.getByRole('button', { name: 'Close canvas size', exact: true }).click();
     await page.getByRole('button', { name: 'Overview', exact: true }).click();
     await page.getByRole('heading', { name: 'Canvases', exact: true }).waitFor();
-    assert.ok(await page.getByRole('navigation', { name: 'Named Workbenches' }).getByRole('button', { name: /Workbench 1/ }).evaluate(node => node === document.activeElement));
+    await assertWorkbenchFocus();
     await menu(page);
     assert.match(await page.locator('.workbench-overview-identity').innerText(), /Local storage verification/);
     assert.equal(await page.getByRole('button', { name: 'Canvases', exact: true }).getAttribute('aria-current'), 'page');
@@ -823,7 +833,7 @@ test('overview browses without activation, saves optional details, and opens onl
       const box = button.getBoundingClientRect();
       return button.contains(document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2));
     }), true, 'overview controls receive real pointer hits through the production shell');
-    assert.ok(await page.getByRole('navigation', { name: 'Named Workbenches' }).getByRole('button', { name: /Workbench 1/ }).evaluate(node => node === document.activeElement));
+    await assertWorkbenchFocus();
     assert.equal(await page.locator('.text-window, .workbench-navigator, iframe').count(), 0);
     await page.getByRole('button', { name: 'Edit details', exact: true }).click();
     await page.getByLabel('Workbench name', { exact: true }).fill('Lunar Desert');

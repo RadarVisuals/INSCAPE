@@ -162,21 +162,20 @@ export function createLuksoCreationsRepository({
       let offset = 0;
       let total = null;
       do {
+        signal?.throwIfAborted();
         const data = await requestCollectionPage({ contract, endpoint, fetchImpl, limit: pageSize, offset, signal });
-        let rows = Array.isArray(data?.Token) ? data.Token : [];
+        signal?.throwIfAborted();
+        const rows = Array.isArray(data?.Token) ? data.Token : [];
         total = Number(data?.Token_aggregate?.aggregate?.count) || 0;
-        if (rows.length && collectionMetadataResolver !== null) {
-          const { refreshIndexedCollectionTokens } = await import('./lsp8CollectionMetadataResolver.js');
-          rows = await refreshIndexedCollectionTokens(contract, rows, { resolver: collectionMetadataResolver, signal });
-        }
         const assets = deduplicateCreations(rows
           .map((token) => normalizeCollectionToken(token, collectionRecord, profile)).filter(Boolean));
         offset += rows.length;
         const complete = offset >= total;
-        yield { assets, resolved: offset, total,
+        yield { assets, phase: 'inventory', resolved: offset, total,
           failures: assets.filter((asset) => !asset.imageUrl || asset.metadataStatus === 'unavailable').length, complete };
         if (!rows.length) break;
       } while (offset < total);
+      if (offset < total) throw new Error('Collection inventory is incomplete. Retry to refresh.');
     },
     async *loadCreations(viewedProfileAddress, { signal } = {}) {
       const profile = normalizeProfileAddress(viewedProfileAddress);

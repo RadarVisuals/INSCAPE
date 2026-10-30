@@ -28,18 +28,9 @@ import {
   useState,
   useSyncExternalStore,
 } from 'react';
-import {
-  clampWorkbenchMove,
-  identityWorkbenchTransform,
-  proportionalCornerResize,
-  scaleWorkbenchTransform,
-  stepWorkbenchViewScale,
-  workbenchSelectionBounds,
-} from './workbenchViewScale.js';
+import { identityWorkbenchTransform, workbenchSelectionBounds } from './workbenchViewScale.js';
 import { WorkbenchCameraProvider, useWorkbenchCameraScale } from './WorkbenchCamera.jsx';
 import './workbenchView.css';
-import { moveWorkbenchGroup } from '../../systemWorkflow/moveWorkbenchGroup.js';
-import { workbenchMemberIds } from '../../systemWorkflow/domain/workbenchGroups.js';
 import {
   artworkLayers,
   artworkModuleId,
@@ -51,6 +42,8 @@ const WorkbenchGroups = lazy(() => import('./WorkbenchGroups.jsx'));
 import { createWorkbenchMiniatures } from './workbenchMiniatures.js';
 import useWorkbenchSelection from './useWorkbenchSelection.js';
 import { createWorkbenchGestures } from './workbenchGestures.js';
+import { createWorkbenchMoveOperation } from './workbenchMoveOperation.js';
+import { createWorkbenchResizeOperation } from './workbenchResizeOperation.js';
 const WorkbenchNavigator = lazy(() => import('./WorkbenchNavigator.jsx'));
 const WorkbenchIndex = lazy(() => import('./WorkbenchIndex.jsx'));
 const PublishedWorkbenchGroups = lazy(() => import('./PublishedWorkbenchGroups.jsx'));
@@ -66,7 +59,11 @@ export function WorkbenchViewProvider(props) {
   return (
     <WorkbenchCameraProvider>
       <WorkbenchAreaProvider store={props.store} groupContent={props.groupContent}>
-        {props.selectionState ? <WorkbenchViewStateProvider {...props} /> : <LocalWorkbenchSelection {...props} />}
+        {props.selectionState ? (
+          <WorkbenchViewStateProvider {...props} />
+        ) : (
+          <LocalWorkbenchSelection {...props} />
+        )}
       </WorkbenchAreaProvider>
     </WorkbenchCameraProvider>
   );
@@ -102,8 +99,22 @@ function WorkbenchViewStateProvider({
   const [transforms, setTransforms] = useState({});
   const [presentationTransforms, setPresentationTransforms] = useState({});
   const [hiddenModuleIds, setHiddenModuleIds] = useState([]);
-  const { selection, setSelection, selectArtwork, focusModule, arriveAt, selectionMode, moduleSelectionBounds,
-    editingBlockId, enterBlock, leaveBlock, selectLayers, clearSelection, captureSelection, restoreSelection } = selectionState;
+  const {
+    selection,
+    setSelection,
+    selectArtwork,
+    focusModule,
+    arriveAt,
+    selectionMode,
+    moduleSelectionBounds,
+    editingBlockId,
+    enterBlock,
+    leaveBlock,
+    selectLayers,
+    clearSelection,
+    captureSelection,
+    restoreSelection,
+  } = selectionState;
   const [editorHiddenIds, setEditorHiddenIds] = useState([]);
   const layers = useMemo(() => artworkLayers(content), [content]);
   const artworkOpeners = useRef(new Map());
@@ -160,7 +171,15 @@ function WorkbenchViewStateProvider({
       openArtwork,
       focusModules: ids => focusModulesRef.current?.(ids) ?? false,
     }),
-    [getPresentation, getSelection, setSelection, selectArtwork, registerInspection, registerArtworkOpener, openArtwork]
+    [
+      getPresentation,
+      getSelection,
+      setSelection,
+      selectArtwork,
+      registerInspection,
+      registerArtworkOpener,
+      openArtwork,
+    ]
   );
   const revision = useRef(0),
     listeners = useRef(new Set());
@@ -353,20 +372,25 @@ export function WorkbenchViewControls({
   const focusSelected = view.selectionMode === 'activation' ? [] : selected;
   const currentSnap = useRef(snapMovement);
   currentSnap.current = snapMovement;
-  const [gestures] = useState(() => createWorkbenchGestures({
-    getHost: () => hostRef.current,
-    restoreTransforms: values => latest.current.setTransforms(values),
-    replaceSelection: ids => latest.current.setSelection(ids),
-    restoreSelection: state => latest.current.restoreSelection(state),
-    previewMarquee: setMarquee,
-    finishSnap: () => currentSnap.current.finish(),
-    cancelDrop: () => groupDrop.current?.cancel(),
-  }));
-  const cancelGesture = gestures.cancel, isEditing = gestures.isActive;
+  const [gestures] = useState(() =>
+    createWorkbenchGestures({
+      getHost: () => hostRef.current,
+      restoreTransforms: values => latest.current.setTransforms(values),
+      replaceSelection: ids => latest.current.setSelection(ids),
+      restoreSelection: state => latest.current.restoreSelection(state),
+      previewMarquee: setMarquee,
+      finishSnap: () => currentSnap.current.finish(),
+      cancelDrop: () => groupDrop.current?.cancel(),
+    })
+  );
+  const cancelGesture = gestures.cancel,
+    isEditing = gestures.isActive;
   const releaseAbandonedGesture = gestures.releaseAbandoned;
   useEffect(
-    () => view.store?.guardWorkbenchTransition?.(() =>
-      gestures.isActive() ? 'Finish or cancel the canvas gesture before switching Workbenches.' : null),
+    () =>
+      view.store?.guardWorkbenchTransition?.(() =>
+        gestures.isActive() ? 'Finish or cancel the canvas gesture before switching Workbenches.' : null
+      ),
     [view.store, gestures]
   );
   const captureContext = useCallback(
@@ -475,7 +499,8 @@ export function WorkbenchViewControls({
     },
     [focusDestination, area.left, area.top, area.width, area.height, showOutside, setShowOutside]
   );
-  const focusSelection = () => latest.current.selectionMode !== 'activation' && focusModules(latest.current.selection);
+  const focusSelection = () =>
+    latest.current.selectionMode !== 'activation' && focusModules(latest.current.selection);
   useLayoutEffect(() => {
     // Modules request navigation through stable actions; the mounted camera owns it.
     view.focusModulesRef.current = focusModules;
@@ -527,376 +552,92 @@ export function WorkbenchViewControls({
     const camera = navigation.getCamera();
     return projectWorkbenchBounds(camera.scale, camera.offset, currentAreaBounds.current);
   };
-  const moveMembers = (current, ids) => [
-    ...new Set([
-      ...ids,
-      ...(current.layers || []).flatMap(layer => {
-        if (typeof layer === 'string') return [];
-        const windows = artworkWindowIds(current.content, layer.children);
-        return windows.every(id => current.selection.includes(id)) && windows.some(id => ids.includes(id))
-          ? windows
-          : [];
-      }),
-    ]),
-  ];
-  const finishMove = (current, ids, transforms, generation = current.store?.getGeneration()) => {
-    if (!current.store) return true;
-    ids = moveMembers(current, ids);
-    const draft = current.store.getSnapshot();
-    const members = workbenchMemberIds(draft, ids);
-    const blockMove = current.layers.some(
-      layer =>
-        typeof layer !== 'string' &&
-        artworkWindowIds(current.content, layer.children).every(id => ids.includes(id))
-    );
-    if (blockMove || draft.workbenchGroups?.some(group => group.memberIds.some(id => members.includes(id)))) {
-      const changes = ids.flatMap(id => {
-        const registration = current.frames.get(id),
-          transform = transforms[id];
-        const layout = current.getPresentation();
-        const saved =
-          ['texts', 'imageModules', 'shapes']
-            .flatMap(key => layout?.[key] || [])
-            .find(item => item.id === id) ||
-          layout?.texts?.flatMap(text => text.frames || []).find(frame => frame.id === id);
-        const frame = registration?.current || saved?.position || saved?.window;
-        if (!frame || !transform || (!transform.x && !transform.y)) return [];
-        return [
-          {
-            id,
-            left: frame.left + transform.x / transform.scale,
-            top: frame.top + transform.y / transform.scale,
-          },
-        ];
-      });
-      if (changes.length)
-        try {
-          moveWorkbenchGroup(
-            current.store,
-            current.profileAddress,
-            changes,
-            current.getPresentation(),
-            generation
-          );
-          setMoveError('');
-        } catch (failure) {
-          setTransforms(current.transforms);
-          setMoveError(failure.message);
-          return false;
+  const operationOrigin = current => ({
+    kind: current.store ? 'owner' : 'visitor',
+    ...(current.store
+      ? {
+          store: current.store,
+          profileAddress: current.profileAddress,
+          getPresentation: current.getPresentation,
         }
-    }
-    const next = { ...transforms };
-    for (const id of ids) {
-      const registration = current.frames.get(id),
-        transform = transforms[id];
-      if (!transform || (!transform.x && !transform.y)) continue;
-      if (!registration?.move) {
-        delete next[id];
-        continue;
-      }
-      const frame = registration.current;
-      // Absorb translation only. Camera zoom/pan and any independent local
-      // scale remain view state; moving cannot choose a size or crop.
-      registration.move({
-        left: frame.left + transform.x / transform.scale,
-        top: frame.top + transform.y / transform.scale,
-      });
-      if (transform.scale === 1) delete next[id];
-      else next[id] = { ...transform, x: 0, y: 0 };
-    }
-    setTransforms(next);
-    return true;
-  };
-  const translate = (current, ids, rectangle, delta, bypass = false) => {
-    ids = moveMembers(current, ids);
-    const candidate = {
-      ...rectangle,
-      left: rectangle.left + delta.x,
-      top: rectangle.top + delta.y,
-      width: rectangle.width,
-      height: rectangle.height,
-    };
-    const snapped = snapMovement(
-      candidate,
-      ids.map(id => current.entries.get(id)).filter(Boolean),
-      current.scale,
-      bypass
-    );
-    const movement = clampWorkbenchMove(
-      rectangle,
-      {
-        x: (snapped.left ?? candidate.left) - rectangle.left,
-        y: (snapped.top ?? candidate.top) - rectangle.top,
+      : {}),
+    isCurrent: () => latest.current.store === current.store && latest.current.entries === current.entries,
+  });
+  const moveOperation = (current, ids) =>
+    createWorkbenchMoveOperation({
+      origin: operationOrigin(current),
+      selection: {
+        ids,
+        selectedIds: current.selection,
+        content: current.content,
+        layers: current.layers || [],
       },
-      workspaceBounds()
-    );
-    const next = {
-      ...current.transforms,
-      ...Object.fromEntries(
-        ids.map(id => {
-          const transform = current.transforms[id] || identityWorkbenchTransform;
-          return [
-            id,
-            {
-              ...transform,
-              x: transform.x + movement.x / current.scale,
-              y: transform.y + movement.y / current.scale,
-            },
-          ];
-        })
-      ),
-    };
-    setTransforms(next);
-    return next;
-  };
+      registry: current,
+      geometry: {
+        scale: current.scale,
+        rectangle: snapMovement.rectangle,
+        snap: snapMovement,
+        bounds: workspaceBounds,
+      },
+      transforms: current.transforms,
+      setTransforms,
+      reportError: setMoveError,
+    });
   const beginMove = (event, ids = selection) => {
     if (event.button !== 0 || gestures.isActive()) return;
-    event.preventDefault(); event.stopPropagation();
+    event.preventDefault();
+    event.stopPropagation();
     if (event.target.matches?.('.workbench-selection')) event.target.focus({ preventScroll: true });
     else hostRef.current?.focus({ preventScroll: true });
-    const current = latest.current;
-    ids = moveMembers(current, ids);
-    const nodes = ids.map(id => current.entries.get(id)).filter(node => node && !node.hasAttribute('data-editor-hidden'));
-    const generation = current.store?.getGeneration();
-    snapMovement.begin(event, nodes);
-    const rectangle = snapMovement.rectangle(nodes);
-    if (!rectangle) { snapMovement.finish(); return; }
+    const operation = moveOperation(latest.current, ids);
+    if (!operation) return;
+    snapMovement.begin(event, operation.nodes);
     gestures.beginMove(event, {
-      nodes, beforeTransforms: current.transforms,
-      preview: (delta, bypass) => translate(current, ids, rectangle, delta, bypass),
-      commit: moved => finishMove(current, ids, moved, generation),
+      ...operation,
       previewDrop: pointer => groupDrop.current?.preview(pointer),
-      commitDrop: pointer => groupDrop.current?.commit(pointer, ids),
+      commitDrop: pointer => groupDrop.current?.commit(pointer, operation.ids),
     });
   };
-  const selectionResize = (current, ids, corner) => {
-    const nodes = ids.map(id => current.entries.get(id));
-    const rectangle = snapMovement.rectangle(nodes);
-    if (!rectangle?.width || !rectangle?.height) return null;
-    const anchor = {
-      x: corner.includes('w') ? rectangle.left + rectangle.width : rectangle.left,
-      y: corner.includes('n') ? rectangle.top + rectangle.height : rectangle.top,
-    };
-    const vector = {
-      x: (corner.includes('w') ? -1 : 1) * rectangle.width,
-      y: (corner.includes('n') ? -1 : 1) * rectangle.height,
-    };
-    const scales = ids.map(id => workbenchModuleTransform(current, id).scale);
-    const editors = ids.map(id => current.resizeTargets.get(id)?.current);
-    // The module supplies its authoring boundary. Workbench only projects frames.
-    const authored = editors.every(
-      editor =>
-        editor?.enabled &&
-        editor.commit === editors[0]?.commit &&
-        editor.store === editors[0]?.store &&
-        editor.profileAddress === editors[0]?.profileAddress
-    );
-    // Owner authoring must not silently fall back to an unsaved group scale.
-    if (current.store && !authored) return null;
-    const originals = nodes.map(node => snapMovement.rectangle([node]));
-    if (authored && ids.length === 1 && editors[0].resizeCorner) {
-      const editor = editors[0],
-        id = ids[0],
-        offset = navigation.getCamera().offset;
-      const original = {
-        left: (rectangle.left - offset.x) / current.scale,
-        top: (rectangle.top - offset.y) / current.scale,
-        width: rectangle.width / current.scale,
-        height: rectangle.height / current.scale,
-      };
-      let next = null;
-      return {
-        nodes,
-        authored,
-        step: editor.resizeStep ?? 1,
-        applyDelta: (delta, bypass) => {
-          next = editor.resizeCorner(
-            original,
-            corner,
-            { x: delta.x / current.scale, y: delta.y / current.scale },
-            bypass
-          );
-          setTransforms({ ...current.transforms, [id]: { ...identityWorkbenchTransform, frame: next } });
-        },
-        commit: () => {
-          if (!next) return true;
-          if (current.resizeTargets.get(id)?.current !== editor) return false;
-          if (!editor.commit([{ ...editor, id, getPresentation: current.getPresentation, ...next }]))
-            return false;
-          editor.applyFrame(next);
-          setTransforms(values => {
-            const restored = { ...values };
-            delete restored[id];
-            return restored;
-          });
-          return true;
-        },
-      };
-    }
-    const limits = workspaceBounds();
-    const availableX = corner.includes('w') ? anchor.x - limits.left : limits.right - anchor.x;
-    const availableY = corner.includes('n') ? anchor.y - limits.top : limits.bottom - anchor.y;
-    // A camera change must not force an already larger/smaller selection to
-    // jump on grab. Existing size remains valid; area bounds still take priority.
-    const upper = authored
-      ? Math.min(
-          ...editors.flatMap((editor, i) => [
-            (editor.maximumWidth * current.scale) / originals[i].width,
-            (editor.maximumHeight * current.scale) / originals[i].height,
-            (editor.maximumScale ?? Infinity) / (current.transforms[ids[i]]?.scale || 1),
-          ])
-        )
-      : Math.max(1, 1 / Math.max(...scales));
-    const lower = authored
-      ? Math.max(
-          ...editors.flatMap((editor, i) => [
-            ((editor.minimumWidth ?? editor.minimumSize) * current.scale) / originals[i].width,
-            ((editor.minimumHeight ?? editor.minimumSize) * current.scale) / originals[i].height,
-            (editor.minimumScale ?? 0) / (current.transforms[ids[i]]?.scale || 1),
-          ])
-        )
-      : Math.min(1, 0.25 / Math.min(...scales));
-    const gridSizes =
-      ids.length > 1
-        ? editors.flatMap(editor => (editor?.expected?.kind === 'grid' ? [editor.expected.grid.spacing] : []))
-        : [];
-    const maximum = Math.max(
-      0,
-      Math.min(
-        upper,
-        availableX / rectangle.width,
-        availableY / rectangle.height,
-        ...gridSizes.map(size => 512 / size)
-      )
-    );
-    const minimum = Math.min(maximum, Math.max(lower, ...gridSizes.map(size => 8 / size)));
-    const cameraOffset = navigation.getCamera().offset;
-    const worldAnchor = {
-      x: (anchor.x - cameraOffset.x) / current.scale,
-      y: (anchor.y - cameraOffset.y) / current.scale,
-    };
-    // Preview and commit use the same endpoints, including Text's reflow box.
-    const resizedFrame = (frame, factor, continuous = false) => {
-      // Text reflow and fixed-ratio Display keep their shared exact endpoints.
-      // Only modules with whole-pixel dimensions (Image) quantize here.
-      const round = value => (continuous ? value : Math.round(Math.round(value * 1e7) / 1e7));
-      const edge = (value, axis) =>
-        worldAnchor[axis] +
-        round(((value - cameraOffset[axis]) / current.scale - worldAnchor[axis]) * factor);
-      const left = edge(frame.left, 'x'),
-        top = edge(frame.top, 'y');
-      return {
-        left,
-        top,
-        width: continuous
-          ? (frame.width / current.scale) * factor
-          : round(edge(frame.left + frame.width, 'x') - left),
-        height: continuous
-          ? (frame.height / current.scale) * factor
-          : round(edge(frame.top + frame.height, 'y') - top),
-      };
-    };
-    const frameFor = (frame, factor, i) => {
-      const next = resizedFrame(frame, factor, editors[i]?.continuousGeometry);
-      return ids.length === 1 && editors[i]?.constrainFrame
-        ? editors[i].constrainFrame(next, { edge: corner, bounds: currentAreaBounds.current })
-        : next;
-    };
-    let appliedFactor = null;
-    return {
-      nodes,
-      vector,
-      authored,
-      maximumScale: Math.max(...scales),
-      commit: () => {
-        if (!authored || appliedFactor === null) return true;
-        if (ids.some((id, i) => current.resizeTargets.get(id)?.current !== editors[i])) return false;
-        // Round common world endpoints around the same anchor, never each width
-        // independently. Joined images retain their shared edge with whole sizes.
-        const changes = originals.map((frame, i) => ({
-          ...editors[i],
-          id: ids[i],
-          gridScale: ids.length > 1 ? appliedFactor : undefined,
-          getPresentation: current.getPresentation,
-          ...frameFor(frame, appliedFactor, i),
-        }));
-        if (!editors[0].commit(changes)) return false;
-        changes.forEach(change =>
-          change.applyFrame({
-            left: change.left,
-            top: change.top,
-            width: change.width,
-            height: change.height,
-          })
-        );
-        setTransforms(values => {
-          const next = { ...values };
-          ids.forEach(id => {
-            delete next[id];
-          });
-          return next;
-        });
-        return true;
+  const moveByKey = (event, current, ids, step) => {
+    const operation = moveOperation(current, ids);
+    if (!operation) return;
+    snapMovement.begin(event, operation.nodes);
+    operation.preview(
+      {
+        x: event.key === 'ArrowRight' ? step : event.key === 'ArrowLeft' ? -step : 0,
+        y: event.key === 'ArrowDown' ? step : event.key === 'ArrowUp' ? -step : 0,
       },
-      apply: (requested, bypass) => {
-        const bounded = Math.max(minimum, Math.min(maximum, requested));
-        const factor = snapMovement.resize(
-          rectangle,
-          anchor,
-          corner,
-          bounded,
-          nodes,
-          current.scale,
-          minimum,
-          maximum,
-          bypass
-        );
-        appliedFactor = factor;
-        setTransforms({
-          ...current.transforms,
-          ...Object.fromEntries(
-            ids.map((id, i) => {
-              if (editors[i]?.reflow) {
-                return [
-                  id,
-                  {
-                    ...identityWorkbenchTransform,
-                    gridScale: ids.length > 1 ? factor : 1,
-                    frame: frameFor(originals[i], factor, i),
-                  },
-                ];
-              }
-              return [
-                id,
-                scaleWorkbenchTransform(
-                  current.transforms[id] || identityWorkbenchTransform,
-                  factor,
-                  worldAnchor
-                ),
-              ];
-            })
-          ),
-        });
-      },
-    };
+      event.altKey
+    );
+    if (!operation.commit()) setTransforms(operation.beforeTransforms);
   };
+  const resizeOperation = (current, ids, corner) =>
+    createWorkbenchResizeOperation({
+      origin: operationOrigin(current),
+      ids,
+      corner,
+      registry: current,
+      geometry: {
+        scale: current.scale,
+        cameraOffset: navigation.getCamera().offset,
+        moduleScale: id => workbenchModuleTransform(current, id).scale,
+        rectangle: snapMovement.rectangle,
+        snapResize: snapMovement.resize,
+        bounds: workspaceBounds,
+        areaBounds: () => currentAreaBounds.current,
+      },
+      transforms: current.transforms,
+      setTransforms,
+    });
   const beginResize = (event, corner) => {
     if (event.button !== 0 || !bounds || gestures.isActive()) return;
-    const current = latest.current, ids = [...selected];
-    const resize = selectionResize(current, ids, corner);
-    if (!resize) return;
-    event.preventDefault(); event.stopPropagation();
+    const operation = resizeOperation(latest.current, [...selected], corner);
+    if (!operation) return;
+    event.preventDefault();
+    event.stopPropagation();
     event.currentTarget.focus({ preventScroll: true });
-    snapMovement.begin(event, resize.nodes);
-    gestures.beginResize(event, {
-      beforeTransforms: current.transforms,
-      valid: () => ids.every(id => latest.current.entries.has(id)),
-      preview: (delta, bypass) => {
-        if (resize.applyDelta) resize.applyDelta(delta, bypass);
-        else resize.apply(proportionalCornerResize(resize.vector, delta).factor, bypass);
-      },
-      commit: resize.commit,
-    });
+    snapMovement.begin(event, operation.nodes);
+    gestures.beginResize(event, operation);
   };
   const resizeByKey = (event, corner) => {
     if (
@@ -907,43 +648,24 @@ export function WorkbenchViewControls({
       return;
     event.preventDefault();
     event.stopPropagation();
-    const current = latest.current,
-      ids = current.selection.filter(id => current.entries.has(id));
-    const resize = selectionResize(current, ids, corner);
-    if (!resize) return;
-    if (resize.applyDelta) {
-      const step = resize.step * (event.shiftKey ? 10 : 1) * current.scale;
-      snapMovement.begin(event, resize.nodes);
-      resize.applyDelta(
-        {
-          x: event.key === 'ArrowRight' ? step : event.key === 'ArrowLeft' ? -step : 0,
-          y: event.key === 'ArrowDown' ? step : event.key === 'ArrowUp' ? -step : 0,
-        },
-        event.altKey
-      );
-      if (!resize.commit()) setTransforms(current.transforms);
-      return;
-    }
-    const direction = ['ArrowUp', 'ArrowRight'].includes(event.key) ? 1 : -1;
-    const nextScale = resize.authored
-      ? resize.maximumScale * (1 + direction * (event.shiftKey ? 0.25 : 0.1))
-      : stepWorkbenchViewScale(resize.maximumScale, direction);
-    if (
-      (direction > 0 && nextScale <= resize.maximumScale) ||
-      (direction < 0 && nextScale >= resize.maximumScale)
-    )
-      return;
-    snapMovement.begin(event, resize.nodes);
-    resize.apply(nextScale / resize.maximumScale, event.altKey);
-    if (!resize.commit()) setTransforms(current.transforms);
+    const current = latest.current;
+    const operation = resizeOperation(
+      current,
+      current.selection.filter(id => current.entries.has(id)),
+      corner
+    );
+    if (!operation) return;
+    snapMovement.begin(event, operation.nodes);
+    if (operation.previewByKey(event.key, event.shiftKey, event.altKey) && !operation.commit())
+      setTransforms(operation.beforeTransforms);
   };
   const interactionActions = useRef(null);
-  interactionActions.current = { navigation, snapMovement, translate, finishMove, beginMove, pick: objectPicker.pick };
+  interactionActions.current = { navigation, moveByKey, beginMove, pick: objectPicker.pick };
   useEffect(() => {
     const host = hostRef.current;
     if (!host || disabled) return;
     const key = event => {
-      const { navigation, snapMovement, translate, finishMove } = interactionActions.current;
+      const { navigation, moveByKey } = interactionActions.current;
       if (
         event.target.closest?.(
           '[data-workbench-group-tools], [data-workbench-selection-tools], [data-workbench-layers]'
@@ -996,7 +718,10 @@ export function WorkbenchViewControls({
         !gestures.isActive()
       ) {
         const current = latest.current,
-          ids = current.selectionMode === 'activation' ? [] : current.selection.map(id => artworkModuleId(current.content, id));
+          ids =
+            current.selectionMode === 'activation'
+              ? []
+              : current.selection.map(id => artworkModuleId(current.content, id));
         const block = current.layers?.find(
           layer => typeof layer !== 'string' && layer.children.every(id => ids.includes(id))
         );
@@ -1007,8 +732,9 @@ export function WorkbenchViewControls({
           return;
         }
       }
+      const shortcut = event.key.toLowerCase();
       if (
-        event.key.toLowerCase() === 'f' &&
+        (shortcut === 'f' || (shortcut === 'i' && !event.shiftKey)) &&
         !event.ctrlKey &&
         !event.metaKey &&
         !event.altKey &&
@@ -1023,54 +749,30 @@ export function WorkbenchViewControls({
         }
         if (gestures.isActive() || navigation.isPanning() || navigation.hasCapturedPointer()) return;
         const current = latest.current;
-        // Arrival activation yields to native focus. Keep the existing host
-        // Back route after restoring ordinary module selection, too.
-        const selected = current.selectionMode === 'activation'
-          || (current.moduleSelectionBounds && event.target === host && navigation.canGoBack)
-          ? [] : current.selection.filter(id => current.entries.has(id));
-        const target =
-          event.target.closest?.('[data-workbench-inspection-target]')?.dataset.workbenchInspectionTarget ||
-          presentedId;
-        // Ordinary module activation keeps native keyboard focus, without making
-        // a group-selection overlay. F accepts that explicit target as well.
-        const ids = selected.length ? selected : current.entries.has(target) ? [target] : [];
-        const accepted = ids.length ? focusModules(ids, true) : navigation.goBack();
-        if (accepted) {
-          event.preventDefault();
-          event.stopPropagation();
-        }
-        return;
-      }
-      if (
-        event.key.toLowerCase() === 'i' &&
-        !event.ctrlKey &&
-        !event.metaKey &&
-        !event.altKey &&
-        !event.shiftKey &&
-        !event.isComposing &&
-        !editable &&
-        !event.defaultPrevented &&
-        !event.target.closest?.('[data-immersive], [role="dialog"], [role="menu"]')
-      ) {
-        if (event.repeat) {
-          event.preventDefault();
-          return;
-        }
-        if (gestures.isActive() || navigation.isPanning() || navigation.hasCapturedPointer()) return;
-        const current = latest.current;
-        // A retained arrival target must not override another native I target.
-        const selected = current.selectionMode === 'activation'
-          ? [] : current.selection.filter(id => current.entries.has(id));
-        if (selected.length > 1) return;
+        const selected =
+          current.selectionMode === 'activation' ||
+          (shortcut === 'f' && current.moduleSelectionBounds && event.target === host && navigation.canGoBack)
+            ? []
+            : current.selection.filter(id => current.entries.has(id));
         const target = event.target.closest?.('[data-workbench-inspection-target]')?.dataset
           .workbenchInspectionTarget;
-        const id = selected[0] || target || presentedId || inspectionTarget.current;
-        const node = current.entries.get(id);
-        if (
-          node &&
-          !node.hasAttribute('data-workbench-group-hidden') &&
-          current.inspections.get(id)?.current?.(event.target)
-        ) {
+        let accepted;
+        if (shortcut === 'f') {
+          // Arrival activation yields to native focus; F also retains the host Back route.
+          const focused = target || presentedId;
+          const ids = selected.length ? selected : current.entries.has(focused) ? [focused] : [];
+          accepted = ids.length ? focusModules(ids, true) : navigation.goBack();
+        } else {
+          // A retained arrival target must not override another native I target.
+          if (selected.length > 1) return;
+          const id = selected[0] || target || presentedId || inspectionTarget.current;
+          const node = current.entries.get(id);
+          accepted =
+            node &&
+            !node.hasAttribute('data-workbench-group-hidden') &&
+            current.inspections.get(id)?.current?.(event.target);
+        }
+        if (accepted) {
           event.preventDefault();
           event.stopPropagation();
         }
@@ -1087,25 +789,16 @@ export function WorkbenchViewControls({
       ) {
         event.preventDefault();
         event.stopPropagation();
-        snapMovement.begin(event, [entries.get(headerId)]);
-        const step = event.shiftKey ? 24 : 8;
-        const moved = translate(
-          current,
-          [headerId],
-          snapMovement.rectangle([entries.get(headerId)]),
-          {
-            x: event.key === 'ArrowRight' ? step : event.key === 'ArrowLeft' ? -step : 0,
-            y: event.key === 'ArrowDown' ? step : event.key === 'ArrowUp' ? -step : 0,
-          },
-          event.altKey
-        );
-        finishMove(current, [headerId], moved);
+        moveByKey(event, current, [headerId], event.shiftKey ? 24 : 8);
         return;
       }
       if (
         event.key === 'Escape' &&
-        (gestures.isActive() || (!editable && latest.current.selection.length && !latest.current.editingBlockId &&
-          (!latest.current.moduleSelectionBounds || !navigation.canGoBack)))
+        (gestures.isActive() ||
+          (!editable &&
+            latest.current.selection.length &&
+            !latest.current.editingBlockId &&
+            (!latest.current.moduleSelectionBounds || !navigation.canGoBack)))
       ) {
         event.preventDefault();
         event.stopPropagation();
@@ -1175,9 +868,9 @@ export function WorkbenchViewControls({
       const module = target.closest?.('[data-workbench-view-id]');
       // Host controls (including a Display's failure notice) keep their current
       // target. Only an artwork or the canvas background changes selection.
-      const background = event.target === host || event.target.matches?.(
-        '.system-workflow__workbench, .system-workflow__display-instance'
-      );
+      const background =
+        event.target === host ||
+        event.target.matches?.('.system-workflow__workbench, .system-workflow__display-instance');
       if (!module && !background) return;
       if (module && latest.current.presentationTransforms[module.dataset.workbenchViewId]) return;
       const current = latest.current,
@@ -1219,7 +912,12 @@ export function WorkbenchViewControls({
         !event.shiftKey
       )
         setSelection([]);
-      if (module && current.store && (layerIds(current.layers || []).includes(moduleId) || moduleId?.startsWith('display:')) && !event.shiftKey)
+      if (
+        module &&
+        current.store &&
+        (layerIds(current.layers || []).includes(moduleId) || moduleId?.startsWith('display:')) &&
+        !event.shiftKey
+      )
         current.selectArtwork(module.dataset.workbenchViewId);
       else if (
         module &&
@@ -1245,12 +943,19 @@ export function WorkbenchViewControls({
       host.focus({ preventScroll: true });
       gestures.beginMarquee(event, {
         beforeSelection: latest.current.captureSelection(),
-        previousSelection: event.shiftKey && latest.current.selectionMode !== 'activation' ? latest.current.selection : [],
-        hits: rectangle => [...entries].filter(([, node]) => {
-          if (node.matches('[data-workbench-group-hidden], [data-workbench-canvas-hidden]') ||
-              latest.current.presentationTransforms[node.dataset.workbenchViewId]) return false;
-          return marqueeContains(rectangle, node.getBoundingClientRect());
-        }).map(([id]) => id),
+        previousSelection:
+          event.shiftKey && latest.current.selectionMode !== 'activation' ? latest.current.selection : [],
+        hits: rectangle =>
+          [...entries]
+            .filter(([, node]) => {
+              if (
+                node.matches('[data-workbench-group-hidden], [data-workbench-canvas-hidden]') ||
+                latest.current.presentationTransforms[node.dataset.workbenchViewId]
+              )
+                return false;
+              return marqueeContains(rectangle, node.getBoundingClientRect());
+            })
+            .map(([id]) => id),
       });
     };
     const activateInspection = event => {
@@ -1282,16 +987,7 @@ export function WorkbenchViewControls({
       globalThis.removeEventListener('keydown', backKey);
       host.removeEventListener('pointerdown', pointer, true);
     };
-  }, [
-    hostRef,
-    disabled,
-    locked,
-    cancelGesture,
-    gestures,
-    setSelection,
-    entries,
-    focusModules,
-  ]);
+  }, [hostRef, disabled, locked, cancelGesture, gestures, setSelection, entries, focusModules]);
   if (disabled) return null;
   return (
     <>
@@ -1343,22 +1039,7 @@ export function WorkbenchViewControls({
               const step =
                 (event.altKey ? 1 : snapMovement.step(selected.map(id => entries.get(id)))) *
                 (event.shiftKey ? 10 : 1);
-              snapMovement.begin(
-                event,
-                selected.map(id => entries.get(id))
-              );
-              const current = latest.current;
-              const moved = translate(
-                current,
-                selected,
-                snapMovement.rectangle(selected.map(id => entries.get(id))),
-                {
-                  x: event.key === 'ArrowRight' ? step : event.key === 'ArrowLeft' ? -step : 0,
-                  y: event.key === 'ArrowDown' ? step : event.key === 'ArrowUp' ? -step : 0,
-                },
-                event.altKey
-              );
-              finishMove(current, selected, moved);
+              moveByKey(event, latest.current, selected, step);
             }}
           >
             {['nw', 'ne', 'sw', 'se'].map(corner => (

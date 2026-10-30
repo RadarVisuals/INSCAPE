@@ -44,7 +44,8 @@ for (const width of [1440,390]) for (const mode of ['metadata','outage','empty']
       assert.deepEqual(result.names,['Retained artwork','Recovered artwork']);
       assert.deepEqual(result.cache,result.names);
       assert.equal(result.error,null); assert.equal(result.liveError,null);
-      assert.equal(result.progress.failures,0); assert.equal(result.loads,2);
+      assert.equal(result.progress.failures,0);
+      assert.equal(result.loads,mode === 'metadata' ? 1 : 2, 'targeted repair must not enumerate the complete inventory again');
       assert.equal(result.workspaceUnchanged,true); assert.deepEqual(errors,[]);
       assert.equal(await page.locator('.lattice-browser-asset').count(),2);
       await page.screenshot({path:`${output}/${mode}-${width}-recovered.jpg`});

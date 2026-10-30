@@ -58,9 +58,10 @@
 .system-workflow__panel-presence { position: relative; z-index: 83; }
 /* Grids can open while Library stays visible for choosing a drop destination. */
 .system-workflow__panel-presence[data-system-workflow-panel="grids"] { z-index: 84; }
-.system-workflow__recovery-notice, .system-workflow__layout-notice { position: fixed; z-index: 110; left: 8px; right: 8px; bottom: calc(var(--workflow-dock-height) + 8px); margin: 0; padding: 8px 12px; border: 1px solid var(--workflow-border-strong); background: var(--workflow-panel); color: var(--workflow-ink); font: var(--workflow-type-control); }
-.system-workflow__recovery-notice { z-index: 80; }
-.system-workflow__recovery-notice + .system-workflow__layout-notice { bottom: calc(var(--workflow-dock-height) + 64px); }
+.system-workflow__recovery-stack { position: fixed; z-index: 110; left: 8px; right: 8px; bottom: var(--workbench-recovery-bottom, calc(var(--workflow-dock-height) + 8px)); display: grid; gap: 8px; max-height: max(0px, calc(100dvh - var(--workbench-recovery-bottom, calc(var(--workflow-dock-height) + 8px)) - 8px)); overflow: auto; }
+.system-workflow__recovery-stack:empty { display: none; }
+.system-workflow__recovery-notice, .system-workflow__layout-notice { margin: 0; padding: 8px 12px; border: 1px solid var(--workflow-border-strong); background: var(--workflow-panel); color: var(--workflow-ink); font: var(--workflow-type-control); }
+.system-workflow__recovery-notice { position: fixed; z-index: 80; left: 8px; right: 8px; bottom: calc(var(--workflow-dock-height) + 8px); }
 .system-workflow__layout-notice button { font: inherit; color: inherit; background: var(--workflow-selection); border: 1px solid var(--workflow-border); padding: 4px 8px; }
 .system-workflow__motion-panel:is([data-panel-phase="entering"], [data-panel-phase="closing"]),
 [data-panel-phase="entering"] .system-workflow__motion-panel,

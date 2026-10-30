@@ -14,6 +14,13 @@
 }
 .workbench-canvas-content :is([data-workbench-view-id], [data-workbench-pan], [data-workbench-stack]) { pointer-events: auto; }
 .workbench-canvas-content[data-show-outside] { clip-path: none; }
+/* A stable DOM parent keeps SVG documents and editors alive. Only ordinary
+   camera pan creates its box; resting content and inspection keep their original
+   stacking/containing blocks, and group morphs retain individual projections. */
+.workbench-camera-plane { display: contents; }
+.workbench-camera-plane[data-workbench-camera-projected] {
+  display: block; position: absolute; inset: 0; pointer-events: none; transform-origin: 0 0;
+}
 [data-workbench-canvas-hidden], [data-workbench-canvas-hidden] * { visibility: hidden !important; }
 [data-workbench-artwork]:not([data-svg-inspection]) { z-index: var(--artwork-order) !important; }
 [data-editor-hidden], [data-editor-hidden] * { visibility: hidden !important; pointer-events: none !important; }

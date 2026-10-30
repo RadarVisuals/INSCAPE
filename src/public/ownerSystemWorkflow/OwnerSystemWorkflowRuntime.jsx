@@ -7,7 +7,7 @@ import prepareWorkbenchPreview from './prepareWorkbenchPreview.js';
 import workbenchCommands from './workbenchCommands.js';
 import OwnerWorkbenchModules from './OwnerWorkbenchModules.jsx';
 import { WorkbenchPlacement } from './WorkbenchPlacement.jsx';
-import { WorkbenchViewProvider, WorkbenchViewControls } from './WorkbenchView.jsx';
+import { WorkbenchViewProvider, WorkbenchViewControls, useWorkbenchView } from './WorkbenchView.jsx';
 import {
   lazy,
   Suspense,
@@ -56,6 +56,21 @@ const ProfileDocumentV9Preview = lazy(
   () => import('../../profileDocument/components/ProfileDocumentV9Preview.jsx')
 );
 const IdentityModule = lazy(() => import('../identity/IdentityModule.jsx'));
+
+// Reuse the camera/toolbar owner's measured free viewport. Recovery stays
+// reachable above wrapped controls without changing any authored geometry.
+function WorkbenchRecoveryMessages({ children }) {
+  const { toolViewportBottom } = useWorkbenchView();
+  const style = Number.isFinite(toolViewportBottom)
+    ? { '--workbench-recovery-bottom': `max(8px, calc(100dvh - ${toolViewportBottom}px + 8px))` }
+    : undefined;
+  return (
+    <div className="system-workflow__recovery-stack" style={style}>
+      {children}
+    </div>
+  );
+}
+
 function reviewIdentity(profileAddress, fixture) {
   if (!fixture) return null;
   return {
@@ -249,7 +264,7 @@ function WorkbenchSession({
     identityOpen,
   });
   const workbench = workbenchProjection.value;
-  const leaveForDestination = (open) => {
+  const leaveForDestination = open => {
     try {
       createNamedWorkbenchActions({
         store: sharedStore,
@@ -664,14 +679,6 @@ function WorkbenchSession({
                       {noticeMessage}
                     </button>
                   )}
-                  {previewSession.preparing && (
-                    <p className="system-workflow__layout-notice" role="status">
-                      Preparing preview…{' '}
-                      <button type="button" onClick={() => closePreview()}>
-                        Cancel preview
-                      </button>
-                    </p>
-                  )}
                   {workspaceMenu &&
                     createPortal(
                       <WorkbenchCommandMenu
@@ -718,29 +725,39 @@ function WorkbenchSession({
                       {TEXT_RECOVERY_MESSAGE}
                     </p>
                   )}
-                  {(layoutPersistence.error || preferenceError || workbenchPreferenceError) && (
-                    <div className="system-workflow__layout-notice" role="alert">
-                      {[
-                        [layoutPersistence.error, layoutPersistence.retry, 'Save current layout'],
-                        [preferenceError, editorPreferences.retry, 'Save current editor preferences'],
-                        [
-                          workbenchPreferenceError,
-                          workbenchPreferenceStore.retry,
-                          'Save current Workbench preferences',
-                        ],
-                      ].map(
-                        ([message, retry, label]) =>
-                          message && (
-                            <div key={label}>
-                              {message}{' '}
-                              <button type="button" onClick={retry}>
-                                {label}
-                              </button>
-                            </div>
-                          )
-                      )}
-                    </div>
-                  )}
+                  <WorkbenchRecoveryMessages>
+                    {previewSession.preparing && (
+                      <p className="system-workflow__layout-notice" role="status">
+                        Preparing preview…{' '}
+                        <button type="button" onClick={() => closePreview()}>
+                          Cancel preview
+                        </button>
+                      </p>
+                    )}
+                    {(layoutPersistence.error || preferenceError || workbenchPreferenceError) && (
+                      <div className="system-workflow__layout-notice" role="alert">
+                        {[
+                          [layoutPersistence.error, layoutPersistence.retry, 'Save current layout'],
+                          [preferenceError, editorPreferences.retry, 'Save current editor preferences'],
+                          [
+                            workbenchPreferenceError,
+                            workbenchPreferenceStore.retry,
+                            'Save current Workbench preferences',
+                          ],
+                        ].map(
+                          ([message, retry, label]) =>
+                            message && (
+                              <div key={label}>
+                                {message}{' '}
+                                <button type="button" onClick={retry}>
+                                  {label}
+                                </button>
+                              </div>
+                            )
+                        )}
+                      </div>
+                    )}
+                  </WorkbenchRecoveryMessages>
                   {publicationPresence.present && (
                     <Suspense fallback={null}>
                       <OwnerSystemWorkflowPublicationRack

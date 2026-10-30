@@ -14,10 +14,10 @@ const camera = host => host.evaluate(node => ({ scale: Number(node.dataset.workb
 for (const visitor of [false, true]) for (const width of [1440, 390]) {
   test(`Late Text registration preserves pan projection and cancellation (${visitor ? 'Visitor' : 'Owner'}, ${width}px)`, { timeout: 120000 }, async () => {
     const browser = await chromium.launch({ executablePath: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', headless: true });
-    let releaseText;
+    let releaseText, page;
     const textReady = new Promise(resolve => { releaseText = resolve; });
     try {
-      const page = await browser.newPage({ viewport: { width, height: 1000 }, reducedMotion: 'reduce' });
+      page = await browser.newPage({ viewport: { width, height: 1000 }, reducedMotion: 'reduce' });
       page.setDefaultTimeout(15000);
       const errors = [];
       page.on('pageerror', error => errors.push(error.message));
@@ -28,7 +28,7 @@ for (const visitor of [false, true]) for (const width of [1440, 390]) {
         await route.fulfill({ response: await route.fetch() });
       });
       await mountGridMotionFixture(page, { origin, visitor, heavy: true, count: 3, textModes: true, displayWidth: 600 });
-      const explore = page.getByRole('button', { name: 'Explore Workbench', exact: true });
+      const explore = page.getByRole('button', { name: 'Hand tool', exact: true });
       await explore.waitFor();
       const existingImage = page.locator('[data-workbench-view-id="image:motion-0"]');
       await existingImage.waitFor({ state: 'attached' });
@@ -38,7 +38,15 @@ for (const visitor of [false, true]) for (const width of [1440, 390]) {
       await host.dispatchEvent('wheel', { deltaX: 5000, deltaY: 5000, bubbles: true, cancelable: true });
       await settle(page);
       await explore.click();
-      const start = await camera(host), x = Math.min(200, width - 160), y = 350;
+      const start = await camera(host);
+      const point = await page.waitForFunction(() => {
+        for (let y = 350; y < innerHeight - 150; y += 20) for (let x = 30; x < innerWidth - 140; x += 20) {
+          const hit = document.elementFromPoint(x, y);
+          if (hit?.matches('main.system-workflow, .system-workflow__workbench, .system-workflow__display-instance')) return { x, y };
+        }
+        return false;
+      });
+      const { x, y } = await point.jsonValue();
       const imageAtStart = await existingImage.boundingBox();
       await page.mouse.move(x, y); await page.mouse.down();
       await page.mouse.move(x + 30, y + 20); await settle(page);
@@ -85,7 +93,7 @@ for (const visitor of [false, true]) for (const width of [1440, 390]) {
       assert.ok(Math.abs(paintedAfter.x - paintedBefore.x - 80) < 1, 'new Text follows the same horizontal camera delta');
       assert.ok(Math.abs(paintedAfter.y - paintedBefore.y - 40) < 1, 'new Text follows the same vertical camera delta');
       for (const node of await page.locator('[data-workbench-view-id]').all()) {
-        assert.notEqual(await node.getAttribute('data-workbench-camera-projected'), null, 'all live modules belong to the renewed projection');
+        assert.ok(await node.evaluate(element => Boolean(element.closest('[data-workbench-camera-projected]'))), 'all live modules belong to the renewed projection');
       }
       await page.keyboard.press('Escape'); await page.mouse.up(); await settle(page);
       assert.deepEqual(await camera(host), start, 'Escape retains the original gesture origin across rebase');
@@ -93,20 +101,22 @@ for (const visitor of [false, true]) for (const width of [1440, 390]) {
       assert.equal(await host.getAttribute('data-workbench-panning'), null);
       // A subsequent release still settles normally without changing the draft.
       // Newly mounted Text may open its screen-space tools at the left edge.
-      const releaseX = width - 20;
-      assert.equal(await host.evaluate((node, point) => {
-        const hit = document.elementFromPoint(point.x, point.y);
-        return hit === node || Boolean(hit?.matches('.system-workflow__workbench, .system-workflow__display-instance'));
-      },
-        { x: releaseX, y }), true, 'the next drag begins on exposed Workbench background');
-      await page.mouse.move(releaseX, y); await page.mouse.down();
-      await page.mouse.move(releaseX - 80, y + 50, { steps: 8 }); await page.mouse.up(); await settle(page);
+      const releasePoint = await page.waitForFunction(() => {
+        for (let y = 350; y < innerHeight - 150; y += 20) for (let x = 100; x < innerWidth - 20; x += 20) {
+          const hit = document.elementFromPoint(x, y);
+          if (hit?.matches('main.system-workflow, .system-workflow__workbench, .system-workflow__display-instance')) return { x, y };
+        }
+        return false;
+      });
+      const { x: releaseX, y: releaseY } = await releasePoint.jsonValue();
+      await page.mouse.move(releaseX, releaseY); await page.mouse.down();
+      await page.mouse.move(releaseX - 80, releaseY + 50, { steps: 8 }); await page.mouse.up(); await settle(page);
       assert.deepEqual(await camera(host), { ...start, x: start.x - 80, y: start.y + 50 });
       assert.equal(await page.locator('[data-workbench-camera-projected]').count(), 0);
       assert.equal(await page.evaluate(() => localStorage.getItem(window.__motionKey)), saved);
       assert.deepEqual(errors, []);
       await mkdir(output, { recursive: true });
       await page.screenshot({ path: join(output, `late-module-pan-${visitor ? 'visitor' : 'owner'}-${width}.png`) });
-    } finally { releaseText(); await browser.close(); }
+    } finally { releaseText(); await page?.unrouteAll({ behavior: 'ignoreErrors' }); await browser.close(); }
   });
 }

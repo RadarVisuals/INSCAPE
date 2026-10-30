@@ -55,6 +55,7 @@ function ShapeInstance({ record, records, index, initialPresentation, store, pro
     prepare: prepareShapeResize, applyFrame, reportError: setError, resizeCorner: resizeWorkbenchWindow,
     minimumWidth: kind === 'grid' ? record.grid.spacing : 8, minimumHeight: kind === 'grid' ? record.grid.spacing : 8,
     maximumWidth: 7992, maximumHeight: 7992,
+    groupScaleLimits: kind === 'grid' ? { minimum: 8 / record.grid.spacing, maximum: 512 / record.grid.spacing } : undefined,
     resizeStep: kind === 'grid' ? record.grid.spacing : undefined,
     constrainFrame: kind === 'grid' ? (frame, options) => gridShapeFrame(frame, record.grid.spacing, options) : undefined,
   }), [editable, record, store, profileAddress, applyFrame, kind, setError]);

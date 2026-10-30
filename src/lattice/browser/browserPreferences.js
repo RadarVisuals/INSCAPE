@@ -2,9 +2,17 @@ import { BROWSER_ASSET_SIZE, BROWSER_SORTS, BROWSER_VIEW_KINDS } from './browser
 
 export const defaultBrowserPreferences = () => ({ view: { kind: BROWSER_VIEW_KINDS.ALL, id: null }, query: '',
   collection: 'all', sort: BROWSER_SORTS.TITLE_ASC, assetSize: BROWSER_ASSET_SIZE.DEFAULT,
-  sidebarWidth: 174, hideLabels: false, libraryWidth: null, relationshipView: 'all', collapsedSections: [] });
+  sidebarWidth: 174, hideLabels: false, libraryWidth: null, relationshipView: 'all', collapsedSections: [], startCategoryId: null });
+export function libraryOpeningPreferences(preferences, categories) {
+  if (!preferences.startCategoryId) return preferences;
+  const exists = categories.some(category => category.id === preferences.startCategoryId);
+  return { ...preferences, startCategoryId: exists ? preferences.startCategoryId : null,
+    view: { kind: exists ? BROWSER_VIEW_KINDS.CATEGORY : BROWSER_VIEW_KINDS.ALL, id: exists ? preferences.startCategoryId : null },
+    query: '', collection: 'all', relationshipView: 'all' };
+}
 export function validBrowserPreferences(value) {
   return Boolean(value && value.view && Object.values(BROWSER_VIEW_KINDS).includes(value.view.kind)
+    && (value.startCategoryId == null || typeof value.startCategoryId === 'string' && value.startCategoryId.length > 0 && value.startCategoryId.length <= 256)
     && (value.view.kind === BROWSER_VIEW_KINDS.CATEGORY ? typeof value.view.id === 'string' && value.view.id.length <= 256 : value.view.id === null)
     && typeof value.query === 'string' && value.query.length <= 1000
     && typeof value.collection === 'string' && value.collection.length <= 1000

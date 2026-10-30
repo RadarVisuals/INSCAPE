@@ -73,16 +73,6 @@
       "reason": "Extra size/movement inputs cause bounded callback refresh, not stale state. Paint reads effective size from viewport and movement mode through rigged; leave optimization to measured step27 rather than deleting gates blindly. Evidence: Keeper motion/layered tests; no performance improvement claimed. Limits: Current scoped ESLint rerun; source review. Prior browser evidence explicitly identified; no new lifecycle browser run for this proposal."
     },
     {
-      "file": "src/lattice/browser/useBrowserWorkspace.js",
-      "ruleId": "react-hooks/exhaustive-deps",
-      "line": 62,
-      "column": 7,
-      "message": "React Hook useMemo has an unnecessary dependency: 'previewVersion'. Either exclude it or remove the dependency array.",
-      "sourceSha256": "905b036743829dccacdded0e30d14e704ba4ec6b9f4ee5d1ddc5be1c4922fc94",
-      "planStep": "17",
-      "reason": "previewVersion is de expliciete invalidatie van de bestaande mutable decode-recordmap. markAssetReady/Unavailable wijzigen de map en verhogen deze revisie; alleen sourceAssets volgen mist decodewijzigingen. Stap 17 behoudt deze noodzakelijke afgeleide previewcache."
-    },
-    {
       "file": "src/profileDocument/components/GridProductionRenderer.jsx",
       "ruleId": "react-hooks/exhaustive-deps",
       "line": 72,
@@ -538,19 +528,19 @@
       "line": 50,
       "column": 162,
       "message": "React Hook useCallback has a missing dependency: 'pan'. Either include it or remove the dependency array.",
-      "sourceSha256": "e9fa7923cf8623ee31827953fd8c56f717d4270ba2137b2b0a4f0f3ef1ba443e",
+      "sourceSha256": "26319010da08d9aa2c42f163b257da2a54e549338b112b65226d45824b6f2e84",
       "planStep": "14",
-      "reason": "toggleHand reads only pan.cancel, not other fields of pan. pan.cancel is useWorkbenchPan.finish, a useCallback keyed by update; that exact member is already a dependency. finish consumes active.current, removes its stored pointer/lostcapture handlers and calls afterEnd.current. hand, stopTravel and setInteractionTool are explicit dependencies; editing cancellation reads interaction.current. Independent source/caller review: useWorkbenchNavigation.js35–50; useWorkbenchPan.js finish/cancel; WorkbenchView.jsx navigation caller. No separate browser run by reviewer; final shared verification remains required. Re-reviewed 2026-10-24: only the separate rail-measurement effect changed; these callbacks and their captured member dependencies remain unchanged. No new exception added."
+      "reason": "toggleHand reads only pan.cancel, not other fields of pan. pan.cancel is useWorkbenchPan.finish, a useCallback keyed by update; that exact member is already a dependency. finish consumes active.current, removes its stored pointer/lostcapture handlers and calls afterEnd.current. hand, stopTravel and setInteractionTool are explicit dependencies; editing cancellation reads interaction.current. Independent source/caller review: useWorkbenchNavigation.js35–50; useWorkbenchPan.js finish/cancel; WorkbenchView.jsx navigation caller. No separate browser run by reviewer; final shared verification remains required. Re-reviewed 2026-10-24: only the separate rail-measurement effect changed; these callbacks and their captured member dependencies remain unchanged. No new exception added. Re-reviewed 2026-10-30 for camera projection: Only shortcut pan-style ownership and its observer changed. The existing pan member callbacks and captureCheck lifetime above remain unchanged; their exact dependencies still apply. Current browser checks: pan, Hand, Focus, camera controls and SVG raster/lifecycle passed."
     },
     {
       "file": "src/public/ownerSystemWorkflow/useWorkbenchNavigation.js",
       "ruleId": "react-hooks/exhaustive-deps",
-      "line": 268,
+      "line": 287,
       "column": 6,
       "message": "React Hook useCallback has a missing dependency: 'pan'. Either include it or remove the dependency array.",
-      "sourceSha256": "e9fa7923cf8623ee31827953fd8c56f717d4270ba2137b2b0a4f0f3ef1ba443e",
+      "sourceSha256": "26319010da08d9aa2c42f163b257da2a54e549338b112b65226d45824b6f2e84",
       "planStep": "14",
-      "reason": "resetView reads only pan.cancel, already listed, then resets current presentation callback and camera through separately listed stopTravel,panTo,remember/hostRef and locked/disabled guards. The changing pan facade is not an invalidation. WorkbenchCamera API/cameraMotion members are stable callbacks while camera values are read through getCamera. Independent source/caller review: useWorkbenchNavigation.js246–250; useWorkbenchPan.js; useWorkbenchCameraMotion.js; WorkbenchCamera.jsx. No separate browser run by reviewer; final shared verification remains required. Re-reviewed 2026-10-24: only the separate rail-measurement effect changed; these callbacks and their captured member dependencies remain unchanged. No new exception added."
+      "reason": "resetView reads only pan.cancel, already listed, then resets current presentation callback and camera through separately listed stopTravel,panTo,remember/hostRef and locked/disabled guards. The changing pan facade is not an invalidation. WorkbenchCamera API/cameraMotion members are stable callbacks while camera values are read through getCamera. Independent source/caller review: useWorkbenchNavigation.js246–250; useWorkbenchPan.js; useWorkbenchCameraMotion.js; WorkbenchCamera.jsx. No separate browser run by reviewer; final shared verification remains required. Re-reviewed 2026-10-24: only the separate rail-measurement effect changed; these callbacks and their captured member dependencies remain unchanged. No new exception added. Re-reviewed 2026-10-30 for camera projection: Only shortcut pan-style ownership and its observer changed. The existing pan member callbacks and captureCheck lifetime above remain unchanged; their exact dependencies still apply. Current browser checks: pan, Hand, Focus, camera controls and SVG raster/lifecycle passed."
     },
     {
       "file": "src/public/ownerSystemWorkflow/useWorkbenchNavigation.js",
@@ -558,9 +548,9 @@
       "line": 53,
       "column": 6,
       "message": "React Hook useLayoutEffect has a missing dependency: 'pan'. Either include it or remove the dependency array.",
-      "sourceSha256": "e9fa7923cf8623ee31827953fd8c56f717d4270ba2137b2b0a4f0f3ef1ba443e",
+      "sourceSha256": "26319010da08d9aa2c42f163b257da2a54e549338b112b65226d45824b6f2e84",
       "planStep": "14",
-      "reason": "The interaction-tool layout effect uses only pan.cancel from the new per-render pan facade. Its exact member plus stopTravel and interactionTool already invalidate the effect. The call restores a currently active pan via finish(true) and cancels current editing through interaction.current; changing an unrelated facade field must not cancel the gesture. Independent source/caller review: useWorkbenchNavigation.js51–53; useWorkbenchPan.js finish. No separate browser run by reviewer; final shared verification remains required. Re-reviewed 2026-10-24: only the separate rail-measurement effect changed; these callbacks and their captured member dependencies remain unchanged. No new exception added."
+      "reason": "The interaction-tool layout effect uses only pan.cancel from the new per-render pan facade. Its exact member plus stopTravel and interactionTool already invalidate the effect. The call restores a currently active pan via finish(true) and cancels current editing through interaction.current; changing an unrelated facade field must not cancel the gesture. Independent source/caller review: useWorkbenchNavigation.js51–53; useWorkbenchPan.js finish. No separate browser run by reviewer; final shared verification remains required. Re-reviewed 2026-10-24: only the separate rail-measurement effect changed; these callbacks and their captured member dependencies remain unchanged. No new exception added. Re-reviewed 2026-10-30 for camera projection: Only shortcut pan-style ownership and its observer changed. The existing pan member callbacks and captureCheck lifetime above remain unchanged; their exact dependencies still apply. Current browser checks: pan, Hand, Focus, camera controls and SVG raster/lifecycle passed."
     },
     {
       "file": "src/public/ownerSystemWorkflow/useWorkbenchNavigation.js",
@@ -568,19 +558,19 @@
       "line": 60,
       "column": 6,
       "message": "React Hook useEffect has a missing dependency: 'pan'. Either include it or remove the dependency array.",
-      "sourceSha256": "e9fa7923cf8623ee31827953fd8c56f717d4270ba2137b2b0a4f0f3ef1ba443e",
+      "sourceSha256": "26319010da08d9aa2c42f163b257da2a54e549338b112b65226d45824b6f2e84",
       "planStep": "14",
-      "reason": "Blur/visibility listeners capture only pan.cancel and setInteractionTool; both are listed. pan.cancel reaches active.current and restores the saved origin through update, with current afterEnd callback. Cleanup removes those exact listeners before member replacement/unmount. The pan facade has no additional value read here. Independent source/caller review: useWorkbenchNavigation.js54–60; useWorkbenchPan.js finish. No separate browser run by reviewer; final shared verification remains required. Re-reviewed 2026-10-24: only the separate rail-measurement effect changed; these callbacks and their captured member dependencies remain unchanged. No new exception added."
+      "reason": "Blur/visibility listeners capture only pan.cancel and setInteractionTool; both are listed. pan.cancel reaches active.current and restores the saved origin through update, with current afterEnd callback. Cleanup removes those exact listeners before member replacement/unmount. The pan facade has no additional value read here. Independent source/caller review: useWorkbenchNavigation.js54–60; useWorkbenchPan.js finish. No separate browser run by reviewer; final shared verification remains required. Re-reviewed 2026-10-24: only the separate rail-measurement effect changed; these callbacks and their captured member dependencies remain unchanged. No new exception added. Re-reviewed 2026-10-30 for camera projection: Only shortcut pan-style ownership and its observer changed. The existing pan member callbacks and captureCheck lifetime above remain unchanged; their exact dependencies still apply. Current browser checks: pan, Hand, Focus, camera controls and SVG raster/lifecycle passed."
     },
     {
       "file": "src/public/ownerSystemWorkflow/useWorkbenchNavigation.js",
       "ruleId": "react-hooks/exhaustive-deps",
-      "line": 385,
+      "line": 404,
       "column": 6,
       "message": "React Hook useEffect has missing dependencies: 'hasCapturedPointer' and 'pan'. Either include them or remove the dependency array.",
-      "sourceSha256": "e9fa7923cf8623ee31827953fd8c56f717d4270ba2137b2b0a4f0f3ef1ba443e",
+      "sourceSha256": "26319010da08d9aa2c42f163b257da2a54e549338b112b65226d45824b6f2e84",
       "planStep": "14",
-      "reason": "Wheel listener reads only pan.releaseAbandonedGesture, explicitly listed. That member reads pan active.current and calls the current finish owner. hasCapturedPointer is useCallback([]) and calls captureCheck.current; this effect installs checkCapture there and clears it conditionally on cleanup. The captured-pointer map is owned by this exact effect, with pointer/blur/visibility and wheel/key handlers all removed on rebind. Editing actions use interaction.current. All actual camera/hand/lock/handler members are dependencies. Independent source/caller review: useWorkbenchNavigation.js42–43,265–367; useWorkbenchPan.js releaseAbandonedGesture. No separate browser run by reviewer; final shared verification remains required. Re-reviewed 2026-10-24: only the separate rail-measurement effect changed; these callbacks and their captured member dependencies remain unchanged. No new exception added."
+      "reason": "Wheel listener reads only pan.releaseAbandonedGesture, explicitly listed. That member reads pan active.current and calls the current finish owner. hasCapturedPointer is useCallback([]) and calls captureCheck.current; this effect installs checkCapture there and clears it conditionally on cleanup. The captured-pointer map is owned by this exact effect, with pointer/blur/visibility and wheel/key handlers all removed on rebind. Editing actions use interaction.current. All actual camera/hand/lock/handler members are dependencies. Independent source/caller review: useWorkbenchNavigation.js42–43,265–367; useWorkbenchPan.js releaseAbandonedGesture. No separate browser run by reviewer; final shared verification remains required. Re-reviewed 2026-10-24: only the separate rail-measurement effect changed; these callbacks and their captured member dependencies remain unchanged. No new exception added. Re-reviewed 2026-10-30 for camera projection: Only shortcut pan-style ownership and its observer changed. The existing pan member callbacks and captureCheck lifetime above remain unchanged; their exact dependencies still apply. Current browser checks: pan, Hand, Focus, camera controls and SVG raster/lifecycle passed."
     },
     {
       "file": "src/public/ownerSystemWorkflow/useWorkbenchPreview.js",
@@ -605,32 +595,32 @@
     {
       "file": "src/public/ownerSystemWorkflow/WorkbenchCanvasContent.jsx",
       "ruleId": "react-hooks/exhaustive-deps",
-      "line": 43,
+      "line": 45,
       "column": 6,
       "message": "React Hook useLayoutEffect has a missing dependency: 'view'. Either include it or remove the dependency array.",
-      "sourceSha256": "ea19ee06dcd4ce1e6dc995d3155d710f575d0c36e18c8fd2128bdaa529389be9",
+      "sourceSha256": "66dea5a9a16600387f49fef99234f15b25e631220eda6688de30f8d95b8cc1a7",
       "planStep": "10",
-      "reason": "Behouden: ordering leest layers, content, entries, subscribe en editorHiddenIds; alle zijn expliciet opgenomen. entries is de stabiele map van de provider; registratieveranderingen melden via subscribe. S: mapproducer/changed; F artwork-layers."
+      "reason": "Behouden: ordering leest layers, content, entries, subscribe en editorHiddenIds; alle zijn expliciet opgenomen. entries is de stabiele map van de provider; registratieveranderingen melden via subscribe. S: mapproducer/changed; F artwork-layers. Re-reviewed 2026-10-30 for camera projection: The outer clipping host is still the same unconditional div. The added inner camera plane has a separate ref and registration cleanup; it does not change the ordering/clipping callbacks or their captured dependencies. Current browser checks: canvas crop, groups and SVG raster/lifecycle passed."
+    },
+    {
+      "file": "src/public/ownerSystemWorkflow/WorkbenchCanvasContent.jsx",
+      "ruleId": "react-hooks/exhaustive-deps",
+      "line": 65,
+      "column": 6,
+      "message": "React Hook useLayoutEffect has a missing dependency: 'view'. Either include it or remove the dependency array.",
+      "sourceSha256": "66dea5a9a16600387f49fef99234f15b25e631220eda6688de30f8d95b8cc1a7",
+      "planStep": "10",
+      "reason": "Behouden: clipping leest entries, frames, transforms, presentationTransforms, subscribe, vier area-primitives en showOutside; elk staat expliciet in de deps. De stabiele frame-map gebruikt live refs en meldt veranderingen. S: provider/registratie, C cleanup; F gesloten modules. Re-reviewed 2026-10-30 for camera projection: The outer clipping host is still the same unconditional div. The added inner camera plane has a separate ref and registration cleanup; it does not change the ordering/clipping callbacks or their captured dependencies. Current browser checks: canvas crop, groups and SVG raster/lifecycle passed."
     },
     {
       "file": "src/public/ownerSystemWorkflow/WorkbenchCanvasContent.jsx",
       "ruleId": "react-hooks/exhaustive-deps",
       "line": 63,
-      "column": 6,
-      "message": "React Hook useLayoutEffect has a missing dependency: 'view'. Either include it or remove the dependency array.",
-      "sourceSha256": "ea19ee06dcd4ce1e6dc995d3155d710f575d0c36e18c8fd2128bdaa529389be9",
-      "planStep": "10",
-      "reason": "Behouden: clipping leest entries, frames, transforms, presentationTransforms, subscribe, vier area-primitives en showOutside; elk staat expliciet in de deps. De stabiele frame-map gebruikt live refs en meldt veranderingen. S: provider/registratie, C cleanup; F gesloten modules."
-    },
-    {
-      "file": "src/public/ownerSystemWorkflow/WorkbenchCanvasContent.jsx",
-      "ruleId": "react-hooks/exhaustive-deps",
-      "line": 61,
       "column": 61,
       "message": "The ref value 'node.current' will likely have changed by the time this effect cleanup function runs. If this ref points to a node rendered by React, copy 'node.current' to a variable inside the effect, and use that variable in the cleanup function.",
-      "sourceSha256": "ea19ee06dcd4ce1e6dc995d3155d710f575d0c36e18c8fd2128bdaa529389be9",
+      "sourceSha256": "66dea5a9a16600387f49fef99234f15b25e631220eda6688de30f8d95b8cc1a7",
       "planStep": "10",
-      "reason": "Behouden onder huidige DOM-lifetime: de component rendert altijd dezelfde onvoorwaardelijke, ongekeyde div voor node. Layout-cleanup draait vóór de hostref wordt losgemaakt. De cleanup raakt alleen geregistreerde nakomelingen van die host. C bewijst echte attribute-opruiming op een verborgen Shape bij unmount. Bij een toekomstig conditioneel hostelement moet de effectcallback zijn concrete host vastleggen."
+      "reason": "Behouden onder huidige DOM-lifetime: de component rendert altijd dezelfde onvoorwaardelijke, ongekeyde div voor node. Layout-cleanup draait vóór de hostref wordt losgemaakt. De cleanup raakt alleen geregistreerde nakomelingen van die host. C bewijst echte attribute-opruiming op een verborgen Shape bij unmount. Bij een toekomstig conditioneel hostelement moet de effectcallback zijn concrete host vastleggen. Re-reviewed 2026-10-30 for camera projection: The outer clipping host is still the same unconditional div. The added inner camera plane has a separate ref and registration cleanup; it does not change the ordering/clipping callbacks or their captured dependencies. Current browser checks: canvas crop, groups and SVG raster/lifecycle passed."
     },
     {
       "file": "src/public/ownerSystemWorkflow/WorkbenchCanvasControls.jsx",
@@ -638,9 +628,9 @@
       "line": 62,
       "column": 6,
       "message": "React Hook useLayoutEffect has a missing dependency: 'camera'. Either include it or remove the dependency array.",
-      "sourceSha256": "1373c9a871abe567a235c57625aebdaff426489edb61ac5baef52617f58fe16a",
+      "sourceSha256": "38c4d123bc1386416290103d340ac0f8c0d5cab0b5b5ddbaf5d83ba16a400685",
       "planStep": "13",
-      "reason": "The layout subscription reads only camera.subscribeCameraPaint, explicitly listed; it never reads camera.scale/offset/getCamera. Camera events pass next snapshot. Active resize stores its start camera; differing paint cancels it, and ResizeObserver cancellation happens before viewport update. finish is stable and clears current drag/unlocks/preview. open/hostRef/subscriber replacement disconnects observer and unsubscribes. Independent source/caller review: WorkbenchCanvasControls.jsx22–33,52–62; WorkbenchView.jsx1421; WorkbenchCamera.jsx API. No separate browser run by reviewer; final shared verification remains required."
+      "reason": "The layout subscription reads only camera.subscribeCameraPaint, explicitly listed; it never reads camera.scale/offset/getCamera. Camera events pass next snapshot. Active resize stores its start camera; differing paint cancels it, and ResizeObserver cancellation happens before viewport update. finish is stable and clears current drag/unlocks/preview. open/hostRef/subscriber replacement disconnects observer and unsubscribes. Independent source/caller review: WorkbenchCanvasControls.jsx22–33,52–62; WorkbenchView.jsx1421; WorkbenchCamera.jsx API. No separate browser run by reviewer; final shared verification remains required. Numeric canvas input review (2026-10-29): hook body and dependency list are unchanged; the added form submits through the existing resize operation and does not subscribe to camera state. The camera-controls and workbench-canvas-crop browser suites passed 15/15, including desktop/mobile camera, fit, resize, undo and Visitor coverage."
     },
     {
       "file": "src/public/ownerSystemWorkflow/WorkbenchCanvasControls.jsx",
@@ -648,9 +638,9 @@
       "line": 63,
       "column": 75,
       "message": "React Hook useLayoutEffect has a missing dependency: 'camera'. Either include it or remove the dependency array.",
-      "sourceSha256": "1373c9a871abe567a235c57625aebdaff426489edb61ac5baef52617f58fe16a",
+      "sourceSha256": "38c4d123bc1386416290103d340ac0f8c0d5cab0b5b5ddbaf5d83ba16a400685",
       "planStep": "13",
-      "reason": "The synchronization effect calls camera.getCamera and uses camera.scale/offset solely as invalidation signals; all these members plus open are explicitly listed. Other camera facade members cannot change its result. The camera paint subscription at52–62 supplies animation frames independently. This effect initializes/reconciles the snapshot when opening or React camera state changes. Independent source/caller review: WorkbenchCanvasControls.jsx63; WorkbenchCamera.jsx; WorkbenchView.jsx1421. No separate browser run by reviewer; final shared verification remains required."
+      "reason": "The synchronization effect calls camera.getCamera and uses camera.scale/offset solely as invalidation signals; all these members plus open are explicitly listed. Other camera facade members cannot change its result. The camera paint subscription at52–62 supplies animation frames independently. This effect initializes/reconciles the snapshot when opening or React camera state changes. Independent source/caller review: WorkbenchCanvasControls.jsx63; WorkbenchCamera.jsx; WorkbenchView.jsx1421. No separate browser run by reviewer; final shared verification remains required. Numeric canvas input review (2026-10-29): hook body and dependency list are unchanged; the added form submits through the existing resize operation and does not subscribe to camera state. The camera-controls and workbench-canvas-crop browser suites passed 15/15, including desktop/mobile camera, fit, resize, undo and Visitor coverage."
     },
     {
       "file": "src/public/ownerSystemWorkflow/WorkbenchGroupScene.jsx",
@@ -735,12 +725,12 @@
     {
       "file": "src/public/ownerSystemWorkflow/WorkbenchView.jsx",
       "ruleId": "react-hooks/exhaustive-deps",
-      "line": 501,
+      "line": 526,
       "column": 6,
       "message": "React Hook useLayoutEffect has missing dependencies: 'entries' and 'selected'. Either include them or remove the dependency array.",
-      "sourceSha256": "f8bf7fe47cbb057dbc42a8a5062b1b62a0ee08b75f3ffa7f08677fb1fc087b8e",
+      "sourceSha256": "40caf4cf4f4fe59844f9899606e0c0730cce35569c361d751c1edcfee455b996",
       "planStep": "11",
-      "reason": "entries is a provider-lifetime Map. Registration/frame changes increment revision; selected is a fresh filtered projection of selection and live visibility markers. The bounds effect responds to revision, selection, editorHiddenIds, authored transforms and camera changes. Depending on the freshly allocated selected array would measure on every unrelated render. Evidence: Layers 10/10, focus toggle 8/8, Text/Display resize 6/6. Selection-v4 rebind: unchanged measurement effect reviewed in selection-mode-applied-lint-review; exact source verified on 2026-10-24."
+      "reason": "entries is a provider-lifetime Map. Registration/frame changes increment revision; selected is a fresh filtered projection of selection and live visibility markers. The bounds effect responds to revision, selection, editorHiddenIds, authored transforms and camera changes. Depending on the freshly allocated selected array would measure on every unrelated render. Re-reviewed 2026-10-29 after extracting concrete operations: the measurement effect and invalidation owners are unchanged. Evidence: .verification/codebase-consolidation-2026-10-29/view-lint-review.json; 83 focused units and 27 latest interaction browser cases, including layout reload and Text/Display resize. This is one retained observation, not an expanded allowance. Re-reviewed after direct operation wiring and shared F/I eligibility handling: the bounds effect and its invalidation owners still have identical bodies. Additional evidence: budget-review.json and p3-shortcuts-browser/browser.json (9 real focus/inspect cases passed)."
     },
     {
       "file": "src/public/ownerSystemWorkflow/WorkbenchViewContext.js",

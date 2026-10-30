@@ -1,3 +1,4 @@
+import { refreshLibraryTokenMetadata } from '../data/refreshLibraryTokenMetadata.js';
 import assert from 'node:assert/strict';
 import test, { beforeEach, afterEach } from 'node:test';
 import { lsp8CollectionMetadataResolver } from '../data/lsp8TokenMetadataResolver.js';
@@ -158,6 +159,7 @@ test('main Library refresh commits a consistent cover and attachments without ch
   try {
     resetLibraryStoreForTests(PROFILE, memoryStorage());
     await useLibraryStore.getState().load({ forceLive: true });
+    for await (const batch of refreshLibraryTokenMetadata(useLibraryStore.getState().assets)) useLibraryStore.getState().updateMetadata(batch.assets);
     const state = useLibraryStore.getState();
     assert.equal(state.status, 'ready');
     assert.equal(state.assets.length, 1);
@@ -171,39 +173,7 @@ test('main Library refresh commits a consistent cover and attachments without ch
   }
 });
 
-test('late direct metadata is ignored after a profile switch', async () => {
-  const contract = '0x1111111111111111111111111111111111111111';
-  const tokenId = '0x' + '0'.repeat(63) + '1';
-  const originalLoad = chillwhalesProfileRepository.loadProfileAssets;
-  const originalEnrich = luksoEnvioAttributeRepository.enrich;
-  let release; let started = false;
-  const gate = new Promise(resolve => { release = resolve; });
-  chillwhalesProfileRepository.loadProfileAssets = async function* () {
-    yield { assets: [{ id: `42:${contract}:${tokenId}`, standard: 'LSP8', contractAddress: contract, tokenId }],
-      unresolvedAssetIds: [], resolved: 1, total: 1, failures: 0, complete: true };
-  };
-  luksoEnvioAttributeRepository.enrich = async () => [];
-  lsp8CollectionMetadataResolver.resolve = async () => {
-    started = true; await gate;
-    return new Map([[tokenId, { name: 'Obsolete Zero', images: [], attributes: [] }]]);
-  };
-  try {
-    resetLibraryStoreForTests(PROFILE, memoryStorage());
-    const pending = useLibraryStore.getState().load();
-    while (!started) await delay(0);
-    useLibraryStore.getState().setProfileAddress('0x3333333333333333333333333333333333333333');
-    release(); await pending;
-    assert.deepEqual(useLibraryStore.getState().assets, []);
-    assert.equal(useLibraryStore.getState().status, 'idle');
-  } finally {
-    release?.();
-    chillwhalesProfileRepository.loadProfileAssets = originalLoad;
-    luksoEnvioAttributeRepository.enrich = originalEnrich;
-    resetLibraryStoreForTests(PROFILE, memoryStorage());
-  }
-});
-
-test('a successful library load enriches incomplete indexed token attributes through Envio', async () => {
+test('demanded metadata can enrich incomplete indexed token attributes through Envio', async () => {
   const storage = memoryStorage();
   const contract = '0x1111111111111111111111111111111111111111';
   const tokenId = `0x${'0'.repeat(63)}1`;
@@ -227,56 +197,13 @@ test('a successful library load enriches incomplete indexed token attributes thr
   try {
     resetLibraryStoreForTests(PROFILE, storage);
     await useLibraryStore.getState().load({ forceLive: true });
-    assert.equal(useLibraryStore.getState().sourceMode, 'INDEXER+ENVIO');
+    for await (const batch of refreshLibraryTokenMetadata(useLibraryStore.getState().assets)) useLibraryStore.getState().updateMetadata(batch.assets);
+    assert.equal(useLibraryStore.getState().sourceMode, 'INDEXER', 'attribute enrichment does not change holding evidence');
     assert.deepEqual(useLibraryStore.getState().assets[0].attributes, [
       { key: 'Performance Tier', value: 'Strike Unit', type: 'string' },
       { key: 'Rank', value: '281', type: 'number' }
     ]);
   } finally {
-    chillwhalesProfileRepository.loadProfileAssets = originalLoad;
-    luksoEnvioAttributeRepository.enrich = originalEnrich;
-    resetLibraryStoreForTests(PROFILE, memoryStorage());
-  }
-});
-
-test('the first valid indexer batch paints before index completion and background Envio enrichment', async () => {
-  const storage = memoryStorage();
-  const contract = '0x1111111111111111111111111111111111111111';
-  const tokenId = `0x${'0'.repeat(63)}1`;
-  const stableAssetId = `42:${contract}:${tokenId}`;
-  const originalLoad = chillwhalesProfileRepository.loadProfileAssets;
-  const originalEnrich = luksoEnvioAttributeRepository.enrich;
-  let releaseIndexer; let releaseEnrichment; let enrichmentStarted = false;
-  const indexerGate = new Promise((resolve) => { releaseIndexer = resolve; });
-  const enrichmentGate = new Promise((resolve) => { releaseEnrichment = resolve; });
-  chillwhalesProfileRepository.loadProfileAssets = async function* progressiveToken() {
-    const asset = { id: stableAssetId, chainId: 42, ownerAddress: PROFILE, contractAddress: contract,
-      tokenId, standard: 'LSP8', imageUrl: 'https://assets.example/progressive.webp', attributes: [], rawMetadata: {} };
-    yield { assets: [asset], unresolvedAssetIds: [], resolved: 1, total: 2, failures: 0, complete: false };
-    await indexerGate;
-    yield { assets: [asset], unresolvedAssetIds: [], resolved: 1, total: 1, failures: 0, complete: true };
-  };
-  luksoEnvioAttributeRepository.enrich = async () => {
-    enrichmentStarted = true;
-    await enrichmentGate;
-    return [{ id: stableAssetId, attributes: [{ key: 'Rank', value: '281', type: 'number' }] }];
-  };
-  try {
-    resetLibraryStoreForTests(PROFILE, storage);
-    const pending = useLibraryStore.getState().load({ forceLive: true });
-    await delay(0);
-    assert.deepEqual(useLibraryStore.getState().assets.map(({ id }) => id), [stableAssetId]);
-    assert.equal(useLibraryStore.getState().status, 'loading');
-    assert.equal(enrichmentStarted, false);
-    releaseIndexer();
-    while (!enrichmentStarted) await delay(0);
-    assert.deepEqual(useLibraryStore.getState().assets.map(({ id }) => id), [stableAssetId]);
-    assert.deepEqual(useLibraryStore.getState().assets[0].attributes, []);
-    releaseEnrichment();
-    await pending;
-    assert.deepEqual(useLibraryStore.getState().assets[0].attributes, [{ key: 'Rank', value: '281', type: 'number' }]);
-  } finally {
-    releaseIndexer?.(); releaseEnrichment?.();
     chillwhalesProfileRepository.loadProfileAssets = originalLoad;
     luksoEnvioAttributeRepository.enrich = originalEnrich;
     resetLibraryStoreForTests(PROFILE, memoryStorage());

@@ -116,6 +116,7 @@ export function adaptLatticeProductionBrowserData({
 
   const categories = (Array.isArray(workspace.folders) ? workspace.folders : []).map((folder) => ({
     assetIds: [...folder.assetIds],
+    ...(folder.imageSelections ? { imageSelections: folder.imageSelections.map(entry => ({ ...entry })) } : {}),
     id: folder.id,
     name: folder.name,
     public: folder.public === true,

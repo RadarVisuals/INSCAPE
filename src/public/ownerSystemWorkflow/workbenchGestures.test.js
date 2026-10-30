@@ -124,6 +124,18 @@ test('removed target at pointer-up cancels instead of authoring stale geometry',
   const f=fixture();f.move();f.events.emit('pointermove',{clientX:30});f.node.isConnected=false;f.events.emit('pointerup');
   assert.equal(f.state.attempts,0);assert.equal(f.state.transforms,f.original);f.clean();
 });
+test('move adapter invalidation cancels before preview or completion while nodes remain connected', () => {
+  for (const phase of ['preview', 'completion']) {
+    const f = fixture(); let valid = true;
+    f.move({ valid: () => valid });
+    f.events.emit('pointermove', { clientX: 30 });
+    valid = false;
+    f.events.emit(phase === 'preview' ? 'pointermove' : 'pointerup', { clientX: 80 });
+    assert.equal(f.state.attempts, 0);
+    assert.equal(f.state.transforms, f.original);
+    f.clean();
+  }
+});
 test('failed capture and an abandoned capture both release ownership',()=>{
   const f=fixture();f.host.setPointerCapture=()=>{throw Error('Unmounted');};assert.equal(f.move(),false);f.clean();
   const g=fixture();g.move();assert.equal(g.gestures.releaseAbandoned(),null);g.host.forgetCapture();

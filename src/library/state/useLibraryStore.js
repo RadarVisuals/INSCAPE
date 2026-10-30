@@ -1,12 +1,8 @@
 import { create } from 'zustand';
+import { createLibraryInventoryActions } from './libraryInventoryActions.js';
 import { normalizeProfileAddress, resolveWorkspaceProfile } from '../config.js';
-import { chillwhalesProfileRepository } from '../data/chillwhalesProfileRepository.js';
-import { refreshLibraryTokenMetadata } from '../data/refreshLibraryTokenMetadata.js';
-import { luksoRpcProfileRepository } from '../data/luksoRpcProfileRepository.js';
-import { luksoEnvioAttributeRepository } from '../data/luksoEnvioAttributeRepository.js';
-import { mergeProfileAssetAttributeEnrichments } from '../domain/mergeProfileAssetAttributes.js';
 import { useWalletStore } from '../../store/useWalletStore.js';
-import { developmentLog, reportControlledError } from '../../diagnostics.js';
+import { developmentLog } from '../../diagnostics.js';
 import {
   createFolder,
   createCategorySection,
@@ -18,6 +14,7 @@ import {
   renameFolder,
   setFolderAsset,
   setFolderAssets,
+  setFolderImage,
   setFolderPublic,
   toggleFavorite
 } from '../domain/libraryWorkspace.js';
@@ -28,12 +25,6 @@ const profileAddress = resolveWorkspaceProfile(useWalletStore.getState().hostPro
 let workspaceStorage = browserLibraryStorage();
 let workspacePersistence = createLibraryWorkspacePersistence(workspaceStorage);
 const initialWorkspace = workspacePersistence.load(profileAddress);
-let activeLoadController = null;
-const INDEXER_SOURCE_TIMEOUT_MS = 8000;
-const ENVIO_ENRICHMENT_TIMEOUT_MS = 12000;
-const RPC_REPAIR_TIMEOUT_MS = 60000;
-const RPC_SOURCE_TIMEOUT_MS = 240000;
-const INCOMPLETE_ASSETS_MESSAGE = 'Some Library assets could not be loaded. The Library may be incomplete. Retry to refresh.';
 
 function commitWorkspace(set, get, workspace) {
   if (workspace === get().workspace) return false;
@@ -42,12 +33,6 @@ function commitWorkspace(set, get, workspace) {
   if (!result.ok) { set({ persistenceError: result.error }); return false; }
   set({ workspace, persistenceError: null });
   return true;
-}
-
-function uniqueAssets(existing, incoming) {
-  const byId = new Map(existing.map((asset) => [asset.id, asset]));
-  incoming.forEach((asset) => byId.set(asset.id, asset));
-  return [...byId.values()];
 }
 
 function commitProfileScopedCategory(set, get, expectedProfileAddress, update) {
@@ -82,239 +67,14 @@ export const useLibraryStore = create((set, get) => ({
       previousProfileAddress: get().profileAddress,
       profileAddress: profile
     });
-    activeLoadController?.abort();
-    activeLoadController = null;
-    set({ profileAddress: profile, ...workspacePersistence.load(profile), assets: loadLibraryAssetCache(workspaceStorage, profile), sourceMode: null, status: 'idle', error: null, liveError: null,
+    get().cancel();
+    set({ profileAddress: profile, ...workspacePersistence.load(profile), assets: loadLibraryAssetCache(workspaceStorage, profile), referencedAssets: [], hasMore: false, inventoryComplete: false, sourceMode: null, status: 'idle', error: null, liveError: null,
       progress: { resolved: 0, total: 0, failures: 0 },
       loadGeneration: get().loadGeneration + 1 });
     return true;
   },
 
-  async load({ forceLive = false } = {}) {
-    if (get().status === 'loading' && !forceLive) {
-      developmentLog('[asset-index] duplicate load ignored', {
-        profileAddress: get().profileAddress,
-        generation: get().loadGeneration
-      });
-      return;
-    }
-    activeLoadController?.abort();
-    const controller = new AbortController();
-    activeLoadController = controller;
-    const requestedProfileAddress = get().profileAddress;
-    const generation = get().loadGeneration + 1;
-    developmentLog('[asset-index] load started', {
-      endpoint: chillwhalesProfileRepository.endpoint,
-      forceLive,
-      generation,
-      profileAddress: requestedProfileAddress,
-      timeoutMs: INDEXER_SOURCE_TIMEOUT_MS
-    });
-    // Refresh the source, not the retained inventory. Only a complete successful
-    // replacement can establish that previously known assets are no longer held.
-    set({ loadGeneration: generation, sourceMode: 'INDEXER', status: 'loading',
-      error: null, liveError: null, progress: { resolved: 0, total: 0, failures: 0 } });
-    const consume = async (repository, signal, options = {}) => {
-      const unresolvedAssetIds = []; let sourceAssets = []; let sourceFailures = 0; let sourceComplete = false;
-      const replaceOnComplete = options.replaceOnComplete ?? !options.preserveProgress;
-      for await (const batch of repository.loadProfileAssets(requestedProfileAddress,
-        { signal, requestedAssetIds: options.requestedAssetIds })) {
-        if (get().loadGeneration !== generation) {
-          developmentLog('[asset-index] stale batch discarded', { generation, profileAddress: requestedProfileAddress });
-          return;
-        }
-        developmentLog('[asset-index] batch received', {
-          assets: batch.assets.length,
-          complete: batch.complete,
-          failures: batch.failures,
-          generation,
-          profileAddress: requestedProfileAddress,
-          resolved: batch.resolved,
-          source: options.sourceMode || repository.source,
-          total: batch.total
-        });
-        unresolvedAssetIds.push(...(Array.isArray(batch.unresolvedAssetIds) ? batch.unresolvedAssetIds : []));
-        sourceAssets = uniqueAssets(sourceAssets, batch.assets);
-        sourceFailures += batch.failures;
-        sourceComplete = Boolean(batch.complete);
-        set((state) => ({
-          assets: batch.complete && !sourceFailures && replaceOnComplete ? sourceAssets : uniqueAssets(state.assets, batch.assets),
-          sourceMode: options.sourceMode || repository.source,
-          status: options.preserveProgress ? state.status : batch.complete ? sourceFailures ? 'partial' : 'ready' : 'loading',
-          ...(batch.complete && !options.preserveProgress ? { liveError: sourceFailures
-            ? INCOMPLETE_ASSETS_MESSAGE : null } : {}),
-          progress: options.preserveProgress ? state.progress
-            : { resolved: batch.resolved, total: batch.total, failures: (state.progress.failures || 0) + batch.failures } }));
-        saveLibraryAssetCache(workspaceStorage, requestedProfileAddress, get().assets);
-      }
-      // Ending an iterator is not confirmation of a complete inventory. Keep
-      // retained cards and use the existing fallback/error path on interruption.
-      // Targeted repair already calculates completeness against requested IDs.
-      if (!sourceComplete && !options.preserveProgress) throw new Error(`${repository.source} asset source incomplete`);
-      return { unresolvedAssetIds: [...new Set(unresolvedAssetIds)], assets: sourceAssets,
-        failures: sourceFailures, complete: sourceComplete };
-    };
-    const consumeWithTimeout = async (repository, timeoutMs, options = {}) => {
-      const sourceController = new AbortController(); let timedOut = false;
-      const abortSource = () => sourceController.abort(controller.signal.reason);
-      controller.signal.addEventListener('abort', abortSource, { once: true });
-      const timeout = setTimeout(() => {
-        timedOut = true;
-        developmentLog('[asset-index] source timeout reached', {
-          generation, profileAddress: requestedProfileAddress, source: repository.source, timeoutMs
-        });
-        sourceController.abort();
-      }, timeoutMs);
-      try {
-        return await consume(repository, sourceController.signal, options);
-      } catch (error) {
-        if (controller.signal.aborted) throw error;
-        if (timedOut) {
-          const timeoutError = new Error(`${repository.source} ASSET SOURCE DID NOT RESPOND`);
-          timeoutError.name = 'SourceTimeoutError';
-          throw timeoutError;
-        }
-        throw error;
-      } finally {
-        clearTimeout(timeout);
-        controller.signal.removeEventListener('abort', abortSource);
-      }
-    };
-    try {
-      try {
-        const indexed = await consumeWithTimeout(chillwhalesProfileRepository, INDEXER_SOURCE_TIMEOUT_MS);
-        if (controller.signal.aborted || get().loadGeneration !== generation) return;
-        const { unresolvedAssetIds } = indexed;
-        const tokenAssetIds = get().assets.filter((asset) => asset.standard === 'LSP8' && asset.tokenId).map((asset) => asset.id);
-        if (tokenAssetIds.length) {
-          developmentLog('[asset-index] enriching indexed token attributes through Envio', {
-            assets: tokenAssetIds.length, generation, profileAddress: requestedProfileAddress
-          });
-          const enrichmentController = new AbortController(); let enrichmentTimedOut = false;
-          const abortEnrichment = () => enrichmentController.abort(controller.signal.reason);
-          controller.signal.addEventListener('abort', abortEnrichment, { once: true });
-          const enrichmentTimeout = setTimeout(() => {
-            enrichmentTimedOut = true;
-            enrichmentController.abort();
-          }, ENVIO_ENRICHMENT_TIMEOUT_MS);
-          try {
-            const enrichments = await luksoEnvioAttributeRepository.enrich(tokenAssetIds,
-              { signal: enrichmentController.signal });
-            if (get().loadGeneration === generation && enrichments.length) {
-              set((state) => ({ assets: mergeProfileAssetAttributeEnrichments(state.assets, enrichments),
-                sourceMode: 'INDEXER+ENVIO' }));
-              saveLibraryAssetCache(workspaceStorage, requestedProfileAddress, get().assets);
-            }
-          } catch (enrichmentError) {
-            if (controller.signal.aborted || get().loadGeneration !== generation) throw enrichmentError;
-            developmentLog('[asset-index] Envio attribute enrichment incomplete', {
-              generation, message: enrichmentTimedOut ? 'LUKSO ENVIO ATTRIBUTE ENRICHMENT DID NOT RESPOND'
-                : enrichmentError instanceof Error ? enrichmentError.message : String(enrichmentError),
-              profileAddress: requestedProfileAddress
-            });
-          } finally {
-            clearTimeout(enrichmentTimeout);
-            controller.signal.removeEventListener('abort', abortEnrichment);
-          }
-        }
-        if (unresolvedAssetIds.length) {
-          developmentLog('[asset-index] repairing unresolved metadata through RPC', {
-            assets: unresolvedAssetIds.length, generation, profileAddress: requestedProfileAddress
-          });
-          try {
-            const repaired = await consumeWithTimeout(luksoRpcProfileRepository, RPC_REPAIR_TIMEOUT_MS,
-              { requestedAssetIds: unresolvedAssetIds,
-                sourceMode: tokenAssetIds.length ? 'INDEXER+ENVIO+RPC' : 'INDEXER+RPC', preserveProgress: true });
-            if (controller.signal.aborted || get().loadGeneration !== generation) return;
-            const requested = new Set(unresolvedAssetIds);
-            const recovered = repaired.assets.filter(asset => requested.has(asset.id) && asset.imageUrl);
-            const failures = Math.max(indexed.failures - recovered.length, repaired.failures,
-              indexed.complete && repaired.complete ? 0 : 1);
-            // A repair finishes the indexed inventory only when every missing
-            // asset was returned and both sources completed without failures.
-            // An empty or unrelated response cannot establish recovery.
-            const complete = failures === 0;
-            set(state => {
-              const current = new Map(state.assets.map(asset => [asset.id, asset]));
-              return { assets: complete ? uniqueAssets(indexed.assets, recovered).map(asset => current.get(asset.id) || asset) : state.assets,
-                status: complete ? 'ready' : 'partial', liveError: complete ? null : INCOMPLETE_ASSETS_MESSAGE,
-                progress: { ...state.progress, failures } };
-            });
-            saveLibraryAssetCache(workspaceStorage, requestedProfileAddress, get().assets);
-          } catch (repairError) {
-            if (controller.signal.aborted || get().loadGeneration !== generation) throw repairError;
-            developmentLog('[asset-index] RPC metadata repair incomplete', {
-              generation, message: repairError instanceof Error ? repairError.message : String(repairError),
-              profileAddress: requestedProfileAddress
-            });
-          }
-        }
-        // Publish indexed cards immediately; refresh token metadata without re-reading holdings.
-        const metadataController = new AbortController();
-        const abortMetadata = () => metadataController.abort(controller.signal.reason);
-        controller.signal.addEventListener('abort', abortMetadata, { once: true });
-        const metadataTimeout = setTimeout(() => metadataController.abort(), RPC_REPAIR_TIMEOUT_MS);
-        let metadataFailures = 0;
-        try {
-          for await (const batch of refreshLibraryTokenMetadata(get().assets, { signal: metadataController.signal })) {
-            if (controller.signal.aborted || get().loadGeneration !== generation) return;
-            metadataFailures += batch.failures;
-            set((state) => ({ assets: uniqueAssets(state.assets, batch.assets) }));
-            saveLibraryAssetCache(workspaceStorage, requestedProfileAddress, get().assets);
-          }
-        } catch (metadataError) {
-          if (controller.signal.aborted || get().loadGeneration !== generation) throw metadataError;
-          metadataFailures += 1;
-        } finally {
-          clearTimeout(metadataTimeout);
-          controller.signal.removeEventListener('abort', abortMetadata);
-        }
-        if (metadataFailures && get().loadGeneration === generation) set({
-          status: 'partial', liveError: 'Some token metadata could not be refreshed. Indexed results retained.',
-        });
-      } catch (indexerSourceError) {
-        if (controller.signal.aborted || get().loadGeneration !== generation) throw indexerSourceError;
-        const liveMessage = indexerSourceError instanceof Error ? indexerSourceError.message : String(indexerSourceError);
-        developmentLog('[asset-index] switching to RPC fallback', {
-          generation, message: liveMessage, profileAddress: requestedProfileAddress,
-          rpcEndpoint: luksoRpcProfileRepository.endpoint
-        });
-        set({ sourceMode: 'RPC', status: 'loading', error: null, liveError: liveMessage,
-          progress: { resolved: 0, total: 0, failures: 0 } });
-        await consumeWithTimeout(luksoRpcProfileRepository, RPC_SOURCE_TIMEOUT_MS);
-      }
-      if (get().loadGeneration === generation && get().status === 'loading') set({ status: 'ready' });
-      if (get().loadGeneration === generation) {
-        developmentLog('[asset-index] load completed', {
-          assets: get().assets.length,
-          generation,
-          profileAddress: requestedProfileAddress,
-          status: get().status
-        });
-      }
-    } catch (error) {
-      if (get().loadGeneration !== generation) {
-        developmentLog('[asset-index] superseded load cancelled', { generation, profileAddress: requestedProfileAddress });
-        return;
-      }
-      const message = error instanceof Error ? error.message : String(error);
-      reportControlledError('asset-index-load', new Error(message));
-      developmentLog('[asset-index] load failed', {
-        errorName: error instanceof Error ? error.name : typeof error,
-        generation,
-        message,
-        profileAddress: requestedProfileAddress,
-        sourceMode: get().sourceMode
-      });
-      if (get().assets.length > 0) {
-        set({ liveError: `${message} Previously loaded assets retained.`, status: 'partial' });
-        return;
-      }
-      set({ liveError: message, status: 'error', error: message, assets: [] });
-    } finally {
-      if (activeLoadController === controller) activeLoadController = null;
-    }
-  },
+  ...createLibraryInventoryActions(set, get, () => saveLibraryAssetCache(workspaceStorage, get().profileAddress, get().assets)),
   discardUnavailableAsset(assetId) {
     const assets = get().assets.filter((asset) => asset.id !== assetId);
     if (assets.length === get().assets.length) return false;
@@ -359,11 +119,13 @@ export const useLibraryStore = create((set, get) => ({
       if (command?.type === 'move-category') return moveCategory(current, command.categoryId, command.sectionId, command.beforeId);
       if (command?.type === 'move-section') return moveCategorySection(current, command.sectionId, command.beforeId);
       if (command?.type === 'asset') return setFolderAsset(current, command.categoryId, command.assetId, command.value);
-      if (command?.type === 'assets') {
+      if (command?.type === 'assets' || command?.type === 'image') {
         const acceptedIds = new Set([...get().assets.map(({ id }) => id),
           ...(command.acceptedAssetIds || [])]);
         const assetIds = Array.isArray(command.assetIds) ? [...new Set(command.assetIds)] : [];
         if (!assetIds.length || assetIds.some((id) => typeof id !== 'string' || !acceptedIds.has(id))) return current;
+        if (command.type === 'image') return assetIds.length === 1
+          ? setFolderImage(current, command.categoryId, assetIds[0], command.url, command.value) : current;
         return setFolderAssets(current, command.categoryId, assetIds, command.value);
       }
       return current;
@@ -382,10 +144,9 @@ export const useLibraryStore = create((set, get) => ({
 
 export function resetLibraryStoreForTests(nextProfileAddress, nextStorage) {
   workspaceStorage = nextStorage;
-  activeLoadController?.abort();
-  activeLoadController = null;
+  useLibraryStore.getState().cancel();
   workspacePersistence = createLibraryWorkspacePersistence(nextStorage);
-  useLibraryStore.setState({ profileAddress: nextProfileAddress, ...workspacePersistence.load(nextProfileAddress), assets: [], status: 'idle', sourceMode: null,
+  useLibraryStore.setState({ profileAddress: nextProfileAddress, ...workspacePersistence.load(nextProfileAddress), assets: [], referencedAssets: [], hasMore: false, inventoryComplete: false, status: 'idle', sourceMode: null,
     progress: { resolved: 0, total: 0, failures: 0 } });
 }
 

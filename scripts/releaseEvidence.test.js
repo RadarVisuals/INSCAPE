@@ -6,7 +6,7 @@ import { resolve } from 'node:path';
 import { fileInventory, passingTap, sourceInventory, SOURCE_INPUTS } from './releaseEvidence.mjs';
 import { verifyRelease, verificationSteps } from './verifyRelease.mjs';
 
-const green = '# tests 1\n# pass 1\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n';
+const green = 'TAP version 13\nok 1 - fixture\n1..1\n# tests 1\n# pass 1\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n';
 async function fixture(t) {
   const root = await mkdtemp(resolve(tmpdir(), 'inscape-release-'));
   t.after(() => rm(root, { recursive: true, force: true }));
@@ -58,9 +58,26 @@ test('verification rejects unrecorded local environment configuration', async t 
 
 test('TAP gate rejects missing totals, zero tests, failures, cancellations, skips and todo', () => {
   assert.equal(passingTap(green).pass, 1);
-  for (const text of ['', green + '# tests 1\n', green.replace('# tests 1', '# tests 0'),
+  for (const text of ['', green.slice(green.indexOf('# tests')), green.replace('1..1\n', ''), green.replace('ok 1 - fixture\n', ''),
+    green.replace('1..1', '1..2').replace('# tests 1', '# tests 2').replace('# pass 1', '# pass 2'), green.replace('ok 1 -', 'ok 2 -'),
+    green + '# tests 1\n', green.replace('# tests 1', '# tests 0'),
     ...['pass', 'fail', 'cancelled', 'skipped', 'todo'].map(key => green.replace(`# ${key} ${key === 'pass' ? 1 : 0}`, `# ${key} ${key === 'pass' ? 0 : 1}`))])
     assert.throws(() => passingTap(text));
+});
+
+test('nested Node TAP completes its top-level plan while test totals count nested tests', () => {
+  const nested = 'TAP version 13\n# Subtest: group\n    # Subtest: first\n    ok 1 - first\n    # Subtest: second\n    ok 2 - second\n    1..2\nok 1 - group\n1..1\n# tests 2\n# suites 1\n# pass 2\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n';
+  assert.equal(passingTap(nested).tests, 2);
+});
+
+test('a green check that mutates built bytes cannot issue successful artifact evidence', async t => {
+  const root = await fixture(t), output = resolve(root, '.verification/artifact-changed');
+  const result = await verifyRelease({ root, output, environment: {}, steps: [build,
+    { name: 'mutate-output', args: ['-e', "require('node:fs').writeFileSync('dist/index.html','changed during checks')"] }] });
+  assert.equal(result.status, 'failed'); assert.equal(result.releaseValidated, false);
+  assert.match(result.error, /artifact changed after build/);
+  await assert.rejects(readFile(resolve(output, 'artifact-manifest.json')), { code: 'ENOENT' });
+  assert.ok(await readFile(resolve(output, 'candidate-artifact-manifest.json')));
 });
 
 test('successful child checks bind source, lockfile and built artifact bytes', async t => {

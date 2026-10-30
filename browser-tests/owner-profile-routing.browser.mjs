@@ -171,7 +171,7 @@ describe('owner/viewed-profile routing through the real App', { concurrency: fal
       await cleanupBrowserTest(resources); } catch (error) { failures.push(error); }
     const actionable = browserProblems.filter((problem) => /Page error|Route handler/iu.test(problem));
     if (actionable.length) failures.push(new Error(actionable.join('\n')));
-    if (failures.length) throw new AggregateError(failures, 'Routing browser cleanup failed');
+    if (failures.length) throw new AggregateError(failures, `Routing browser cleanup failed: ${failures.map(error => error.message).join('; ')}`);
   });
 
   test('pending implicit authority is neutral and makes no publication, owner graph, or owner storage request', async () => {
@@ -324,8 +324,8 @@ describe('owner/viewed-profile routing through the real App', { concurrency: fal
       await page.getByRole('button', { name: 'Done', exact: true }).click();
       await page.getByRole('heading', { name: 'Saved local Reception', exact: true }).waitFor();
       const navigationBounds = await back().boundingBox();
-      assert.equal(await back().evaluate(node => !!node.closest('.reception-navigation')), true,
-        'The owner return belongs to the navigation footprint inside the Reception silhouette');
+      assert.equal(await back().evaluate(node => !!node.closest('.reception-window-header')), true,
+        'The owner return remains in the shared Reception header alongside its navigation');
       assert.ok(await back().evaluate(node => { const b = node.getBoundingClientRect(); return node.contains(document.elementFromPoint(b.x + b.width / 2, b.y + b.height / 2)); }), 'Owner return is exposed and clickable');
       assert.equal(await back().count(), 1);
       await back().focus();

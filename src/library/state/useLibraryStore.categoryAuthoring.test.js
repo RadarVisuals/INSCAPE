@@ -4,12 +4,50 @@ import { createEmptyWorkspace } from '../domain/libraryWorkspace.js';
 import { loadLibraryWorkspace } from '../storage/libraryWorkspaceStorage.js';
 import { createOwnerLatticeCategoryCommands } from '../../public/useOwnerLatticeBrowser.js';
 import { flushLibraryWorkspace, resetLibraryStoreForTests, useLibraryStore } from './useLibraryStore.js';
+import { adaptLatticeProductionBrowserData } from '../../lattice/browser/latticeProductionBrowserAdapter.js';
+import { categoryMembershipState } from '../../lattice/browser/browserWorkspaceModel.js';
 
 const PROFILE = '0x1111111111111111111111111111111111111111';
 const OTHER_PROFILE = '0x2222222222222222222222222222222222222222';
 const ASSET_ID = '42:0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:contract';
 const SECOND_ASSET_ID = '42:0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb:contract';
 const delay = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
+
+test('a chosen image narrows a whole asset, persists independently, and removes without losing its sibling', () => {
+  const storage = memoryStorage();
+  resetLibraryStoreForTests(PROFILE, storage);
+  useLibraryStore.setState({ assets: [{ id: ASSET_ID }] });
+  const commands = createOwnerLatticeCategoryCommands(PROFILE);
+  const id = commands.createCategory('Chosen images');
+  commands.setCategoryAsset(id, ASSET_ID, true);
+  const first = 'https://art.test/pose-2.webp', second = 'https://art.test/pose-5.webp';
+  assert.equal(commands.setCategoryImage(id, ASSET_ID, first, true), true);
+  assert.equal(commands.setCategoryImage(id, ASSET_ID, first, true), false);
+  assert.equal(commands.setCategoryImage(id, ASSET_ID, second, true), true);
+  const loaded = loadLibraryWorkspace(storage, PROFILE).workspace;
+  const category = adaptLatticeProductionBrowserData({ profileAddress: PROFILE, workspace: loaded }).categories[0];
+  assert.deepEqual(category.assetIds, [ASSET_ID]);
+  assert.deepEqual(category.imageSelections, [{ assetId: ASSET_ID, url: first }, { assetId: ASSET_ID, url: second }]);
+  assert.equal(categoryMembershipState(category, [ASSET_ID], first), 'all');
+  assert.equal(categoryMembershipState(category, [ASSET_ID], 'https://art.test/cover.webp'), 'none');
+  assert.equal(commands.setCategoryImage(id, ASSET_ID, first, false), true);
+  assert.deepEqual(loadLibraryWorkspace(storage, PROFILE).workspace.folders[0].imageSelections, [{ assetId: ASSET_ID, url: second }]);
+  assert.equal(commands.setCategoryImage(id, ASSET_ID, second, false), true);
+  assert.deepEqual(loadLibraryWorkspace(storage, PROFILE).workspace.folders[0].assetIds, []);
+});
+
+test('image filing rejects unavailable identity, unsafe media and an obsolete profile without writes', () => {
+  const storage = memoryStorage();
+  resetLibraryStoreForTests(PROFILE, storage);
+  useLibraryStore.setState({ assets: [{ id: ASSET_ID }] });
+  const commands = createOwnerLatticeCategoryCommands(PROFILE);
+  const id = commands.createCategory('Images'); storage.writes.length = 0;
+  assert.equal(commands.setCategoryImage(id, SECOND_ASSET_ID, 'https://art.test/pose.webp', true), false);
+  assert.equal(commands.setCategoryImage(id, ASSET_ID, 'javascript:alert(1)', true), false);
+  useLibraryStore.getState().setProfileAddress(OTHER_PROFILE);
+  assert.equal(commands.setCategoryImage(id, ASSET_ID, 'https://art.test/pose.webp', true), false);
+  assert.deepEqual(storage.writes, []);
+});
 const memoryStorage = () => {
   const values = new Map(); const writes = [];
   return {

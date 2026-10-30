@@ -3,14 +3,16 @@ import { normalizeProfileAddress } from '../../library/config.js';
 import { parseCanonicalAssetId } from '../../profileDocument/domain/assetReference.js';
 import { luksoCreationsRepository } from '../data/luksoCreationsRepository.js';
 import { deduplicateCreations } from '../domain/normalizeCreation.js';
+import { createAssetPageSession } from '../../library/data/assetPageSession.js';
+import { mergeAssetMetadata } from '../../library/data/libraryMetadataDemand.js';
 
-export function createCreationsStore({ liveRepository = luksoCreationsRepository, fixtureRepository = null, retainOnRetry = false } = {}) {
-  let activeController = null;
-  let referencedController = null;
-  let referencedRequestKey = null;
+export function createCreationsStore({ liveRepository = luksoCreationsRepository, retainOnRetry = false, pageOnDemand = false } = {}) {
+  let pageSession = null;
+  const referencesInFlight = new Map();
+  const cancelReferences = () => { referencesInFlight.forEach(controller => controller.abort()); referencesInFlight.clear(); };
   return create((set, get) => ({
     profileAddress: null, assets: [], sourceMode: null, status: 'idle',
-    referencedAssets: [],
+    referencedAssets: [], hasMore: false,
     progress: { resolved: 0, total: 0, failures: 0 }, error: null, liveError: null,
     searchQuery: '', selectedAssetId: null, loadGeneration: 0,
 
@@ -18,9 +20,9 @@ export function createCreationsStore({ liveRepository = luksoCreationsRepository
       const profile = normalizeProfileAddress(viewedProfileAddress);
       if (!profile) return false;
       if (get().profileAddress === profile) return true;
-      activeController?.abort(); activeController = null;
-      referencedController?.abort(); referencedController = null; referencedRequestKey = null;
-      set({ profileAddress: profile, assets: [], referencedAssets: [], sourceMode: null, status: 'idle',
+      pageSession?.session.cancel(); pageSession = null;
+      cancelReferences();
+      set({ profileAddress: profile, assets: [], referencedAssets: [], hasMore: false, sourceMode: null, status: 'idle',
         progress: { resolved: 0, total: 0, failures: 0 }, error: null, liveError: null,
         searchQuery: '', selectedAssetId: null, loadGeneration: get().loadGeneration + 1 });
       return true;
@@ -30,131 +32,81 @@ export function createCreationsStore({ liveRepository = luksoCreationsRepository
       const profile = normalizeProfileAddress(viewedProfileAddress);
       if (!profile) throw new TypeError('A valid viewed Universal Profile address is required');
       if (get().status === 'loading' && get().profileAddress === profile && !forceLive) return;
-      activeController?.abort();
-      if (get().profileAddress !== profile) {
-        referencedController?.abort();
-        referencedRequestKey = null;
-      }
-      const controller = new AbortController();
-      activeController = controller;
-      const generation = get().loadGeneration + 1;
-      const profileChanged = get().profileAddress !== profile;
-      set({
-        profileAddress: profile, loadGeneration: generation,
-        assets: profileChanged || (forceLive && !retainOnRetry) ? [] : get().assets,
-        referencedAssets: profileChanged ? [] : get().referencedAssets,
-        sourceMode: 'LIVE', status: 'loading', error: null, liveError: null,
-        selectedAssetId: profileChanged ? null : get().selectedAssetId,
-        searchQuery: profileChanged ? '' : get().searchQuery,
-        progress: { resolved: 0, total: 0, failures: 0 }
-      });
-      const current = () => get().loadGeneration === generation && get().profileAddress === profile && !controller.signal.aborted;
-      const consume = async (repository) => {
-        for await (const batch of repository.loadCreations(profile, { signal: controller.signal })) {
-          if (!current()) return;
-          set((state) => ({ assets: deduplicateCreations([...state.assets, ...batch.assets]), sourceMode: repository.source,
-            status: batch.complete ? 'ready' : 'loading', progress: { resolved: batch.resolved, total: batch.total, failures: batch.failures } }));
-        }
-      };
+      get().setProfileAddress(profile);
+      pageSession?.session.cancel();
+      const run = { assets: [], failures: 0,
+        session: createAssetPageSession(signal => liveRepository.loadCreations(profile, { signal })) };
+      pageSession = run;
+      set({ assets: forceLive && !retainOnRetry ? [] : get().assets, status: 'idle', hasMore: true,
+        sourceMode: liveRepository.source || 'LIVE', error: null, liveError: null,
+        progress: { resolved: 0, total: 0, failures: 0 }, loadGeneration: get().loadGeneration + 1 });
+      do { await get().loadMore(); }
+      while (!pageOnDemand && pageSession === run && get().hasMore);
+    },
+    async loadMore() {
+      const run = pageSession;
+      if (!run || !get().hasMore || get().status === 'loading') return;
+      set({ status: 'loading' });
       try {
-        await consume(liveRepository);
-        if (current() && get().status === 'loading') set({ status: 'ready' });
+        const batch = await run.session.next();
+        if (run !== pageSession || !batch) return;
+        run.assets = deduplicateCreations([...run.assets, ...batch.assets]);
+        run.failures += batch.failures || 0;
+        set(state => ({ assets: batch.complete && !run.failures ? run.assets : deduplicateCreations([...state.assets, ...batch.assets]),
+          hasMore: !batch.complete, status: run.failures ? 'partial' : 'ready',
+          progress: { resolved: batch.resolved, total: batch.total, failures: run.failures } }));
       } catch (error) {
-        if (!current() || error?.name === 'AbortError') return;
-        const message = error instanceof Error ? error.message : String(error);
-        if (get().assets.length) { set({ liveError: message, status: 'partial', sourceMode: 'LIVE' }); return; }
-        if (!fixtureRepository) {
-          set({ liveError: message, status: 'error', sourceMode: 'LIVE', error: message, assets: [], progress: { resolved: 0, total: 0, failures: 0 } });
-          return;
-        }
-        set({ liveError: message, status: 'fallback', sourceMode: 'LIVE', assets: [], progress: { resolved: 0, total: 0, failures: 0 } });
-        try {
-          await consume(fixtureRepository);
-          if (current()) set({ status: 'ready', sourceMode: fixtureRepository.source || 'FIXTURE' });
-        } catch (fixtureError) {
-          if (current()) set({ status: 'error', error: fixtureError instanceof Error ? fixtureError.message : String(fixtureError) });
-        }
-      } finally {
-        if (activeController === controller) activeController = null;
+        if (run === pageSession) set({ status: get().assets.length ? 'partial' : 'error', hasMore: false,
+          liveError: error.message, error: get().assets.length ? null : error.message });
       }
     },
-    async resolveReferencedAssets(viewedProfileAddress, stableAssetIds = []) {
+    updateMetadata(updates) {
+      if (pageSession) pageSession.assets = mergeAssetMetadata(pageSession.assets, updates);
+      set(state => ({ assets: mergeAssetMetadata(state.assets, updates), referencedAssets: mergeAssetMetadata(state.referencedAssets, updates) }));
+    },
+    async resolveReferencedAssets(viewedProfileAddress, stableAssetIds = [], { signal } = {}) {
       const profile = normalizeProfileAddress(viewedProfileAddress);
-      if (!profile || get().profileAddress !== profile) return;
-      const references = [...new Map((stableAssetIds || []).map((assetId) => parseCanonicalAssetId(assetId))
-        .filter(Boolean)
-        .map((reference) => [reference.stableAssetId, reference])).values()]
-        .sort((left, right) => left.stableAssetId.localeCompare(right.stableAssetId));
-      const requestKey = `${profile}:${references.map(({ stableAssetId }) => stableAssetId).join(',')}`;
-      if (referencedRequestKey === requestKey) return;
-      const knownIds = new Set([...get().assets, ...get().referencedAssets].map(({ id }) => id));
-      const missing = references.filter(({ stableAssetId }) => !knownIds.has(stableAssetId));
-      if (!missing.length) {
-        referencedRequestKey = requestKey;
-        return;
-      }
-      if (typeof liveRepository.loadReferencedCreations === 'function') {
-        referencedController?.abort();
-        const controller = new AbortController();
-        referencedController = controller;
-        referencedRequestKey = requestKey;
-        const current = () => referencedController === controller && get().profileAddress === profile
-          && !controller.signal.aborted;
-        try {
-          for await (const batch of liveRepository.loadReferencedCreations(profile,
-            missing.map(({ stableAssetId }) => stableAssetId), { signal: controller.signal })) {
-            if (!current()) return;
-            const requestedIds = new Set(missing.map(({ stableAssetId }) => stableAssetId));
-            const accepted = batch.assets.filter(({ id }) => requestedIds.has(id));
-            if (accepted.length) set((state) => ({
-              referencedAssets: deduplicateCreations([...state.referencedAssets, ...accepted]),
-            }));
-          }
-        } catch (error) {
-          if (!current() || error?.name === 'AbortError') return;
-          referencedRequestKey = null;
-        } finally {
-          if (referencedController === controller) referencedController = null;
-        }
-        return;
-      }
-      const collections = new Map(get().assets.filter(({ isCollection }) => isCollection === true)
-        .map((record) => [normalizeProfileAddress(record.contractAddress), record]));
-      const tokenReferences = missing.filter(({ tokenId }) => tokenId);
-      const targets = [...new Set(tokenReferences.map(({ contractAddress }) => contractAddress))]
-        .map((contractAddress) => collections.get(contractAddress)).filter(Boolean);
-      if (!targets.length) return;
-      referencedController?.abort();
+      if (!profile || get().profileAddress !== profile || signal?.aborted) return;
+      const known = new Set([...get().assets, ...get().referencedAssets].map(asset => asset.id));
+      const missing = [...new Map(stableAssetIds.map(parseCanonicalAssetId).filter(reference => reference?.chainId === 42)
+        .map(reference => [reference.stableAssetId, reference])).values()].filter(reference => !known.has(reference.stableAssetId));
+      if (!missing.length) return;
+      const key = missing.map(reference => reference.stableAssetId).sort().join(',');
+      if (referencesInFlight.has(key)) return;
       const controller = new AbortController();
-      referencedController = controller;
-      referencedRequestKey = requestKey;
-      const current = () => referencedController === controller && get().profileAddress === profile
-        && !controller.signal.aborted;
-      try {
-        const requestedIds = new Set(tokenReferences.map(({ stableAssetId }) => stableAssetId));
-        for (const collection of targets) {
-          for await (const batch of liveRepository.loadCollectionTokens(profile, collection, { signal: controller.signal })) {
-            if (!current()) return;
-            const requestedAssets = batch.assets.filter(({ id }) => requestedIds.has(id));
-            if (requestedAssets.length) set((state) => ({
-              referencedAssets: deduplicateCreations([...state.referencedAssets, ...requestedAssets]),
-            }));
+      referencesInFlight.set(key, controller);
+      const abort = () => controller.abort();
+      signal?.addEventListener('abort', abort, { once: true });
+      const current = () => !controller.signal.aborted && get().profileAddress === profile;
+      const ids = new Set(missing.map(reference => reference.stableAssetId));
+      const consume = async open => {
+        const session = createAssetPageSession(open);
+        const cancel = () => session.cancel();
+        controller.signal.addEventListener('abort', cancel, { once: true });
+        try {
+          while (current()) {
+            const batch = await session.next();
+            if (!current() || !batch) return;
+            set(state => ({ referencedAssets: deduplicateCreations([...state.referencedAssets,
+              ...batch.assets.filter(asset => ids.has(asset.id))]) }));
+            if (batch.complete) break;
           }
-        }
-      } catch (error) {
-        if (!current() || error?.name === 'AbortError') return;
-        referencedRequestKey = null;
-      } finally {
-        if (referencedController === controller) referencedController = null;
+        } finally { controller.signal.removeEventListener('abort', cancel); session.cancel(); }
+      };
+      try {
+        await consume(childSignal => liveRepository.loadReferencedCreations(profile, [...ids], { signal: childSignal }));
+      } catch (error) { if (current() && signal) throw error; }
+      finally {
+        signal?.removeEventListener('abort', abort);
+        if (referencesInFlight.get(key) === controller) referencesInFlight.delete(key);
       }
     },
     retry: () => get().load(get().profileAddress, { forceLive: true }),
     setSearchQuery: (searchQuery) => set({ searchQuery }),
     selectAsset: (selectedAssetId) => set({ selectedAssetId }),
     cancel() {
-      activeController?.abort(); activeController = null;
-      referencedController?.abort(); referencedController = null;
-      referencedRequestKey = null;
+      pageSession?.session.cancel(); pageSession = null;
+      cancelReferences();
       if (get().status === 'loading') set({ status: get().assets.length ? 'ready' : 'idle' });
     }
   }));

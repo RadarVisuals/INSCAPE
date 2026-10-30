@@ -157,13 +157,31 @@ export default function useWorkbenchNavigation({ hostRef, controlsRef, disabled,
   useLayoutEffect(() => {
     const host = hostRef.current;
     if (!host) return;
-    host.style.setProperty('--workbench-pan-x', `${offset.x}px`);
-    host.style.setProperty('--workbench-pan-y', `${offset.y}px`);
+    // Only unregistered shortcuts consume inherited pan. Module windows own
+    // their full camera geometry; changing properties on the host restyles every
+    // artwork/editor descendant even when those properties are never used there.
+    const selector = '[data-workbench-pan]:not([data-workbench-view-id])';
+    const paint = node => {
+      const { offset } = getCamera();
+      node.style.setProperty('--workbench-pan-x', `${offset.x}px`);
+      node.style.setProperty('--workbench-pan-y', `${offset.y}px`);
+    };
+    host.querySelectorAll(selector).forEach(paint);
+    // A minimized or lazy shortcut may mount after this camera commit.
+    const observer = new MutationObserver(records => {
+      for (const record of records) for (const node of record.addedNodes) {
+        if (node.nodeType !== 1) continue;
+        if (node.matches(selector)) paint(node);
+        node.querySelectorAll(selector).forEach(paint);
+      }
+    });
+    observer.observe(host, { childList: true, subtree: true });
     const current = getCamera();
     host.dataset.workbenchCameraScale = String(current.scale);
     host.dataset.workbenchCameraX = String(current.offset.x);
     host.dataset.workbenchCameraY = String(current.offset.y);
     host.toggleAttribute('data-workbench-panned', offset.x !== 0 || offset.y !== 0);
+    return () => observer.disconnect();
   }, [hostRef, offset, getCamera]);
   useLayoutEffect(() => {
     const host = hostRef.current;
@@ -178,8 +196,9 @@ export default function useWorkbenchNavigation({ hostRef, controlsRef, disabled,
   useEffect(() => {
     const host = hostRef.current;
     return () => {
-      host?.style.removeProperty('--workbench-pan-x');
-      host?.style.removeProperty('--workbench-pan-y');
+      host?.querySelectorAll('[data-workbench-pan]:not([data-workbench-view-id])').forEach(node => {
+        node.style.removeProperty('--workbench-pan-x'); node.style.removeProperty('--workbench-pan-y');
+      });
       host?.removeAttribute('data-workbench-panned');
       for (const name of ['data-workbench-camera-scale', 'data-workbench-camera-x', 'data-workbench-camera-y']) host?.removeAttribute(name);
     };

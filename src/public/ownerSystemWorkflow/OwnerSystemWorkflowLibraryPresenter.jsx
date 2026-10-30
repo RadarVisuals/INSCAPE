@@ -4,7 +4,7 @@ import { createPortal } from 'react-dom';
 import { BROWSER_ASSET_SIZE, BROWSER_VIEW_KINDS, categoryAssetIds, categoryMembershipState } from '../../lattice/browser/browserWorkspaceModel.js';
 import RackMenu from '../menus/RackMenu.jsx';
 import { clearOwnerSystemWorkflowDocumentSelection } from './ownerSystemWorkflowSelection.js';
-import { ImageChoice, libraryImageChoices, librarySourceLabel } from './OwnerSystemWorkflowLibraryImages.jsx';
+import { ImageChoice, libraryCategoryImage, libraryImageChoices, librarySourceLabel } from './OwnerSystemWorkflowLibraryImages.jsx';
 import LibraryArtworkImage from './LibraryArtworkImage.jsx';
 import { OwnerSystemWorkflowSidebarDeleteConfirmation, OwnerSystemWorkflowSidebarEditor } from './OwnerSystemWorkflowBrowserWorkspace.jsx';
 import useDeferredFocusReturn from '../useDeferredFocusReturn.js';
@@ -56,6 +56,12 @@ function LibraryResults({ assets, emptyLabel, expandedImageIds, onActivate, onCo
     } }} style={{ '--lattice-browser-asset-media-max': `${Math.round(size * 1.15)}px`, '--lattice-browser-asset-min': `${size}px` }}>
     {assets.flatMap((asset) => {
       const id = assetId(asset); const isSelected = selected.has(id) && workspace.selectedImage?.assetId !== id;
+      const curated = (workspace.selectedCategory?.imageSelections || []).filter(entry => entry.assetId === id);
+      if (curated.length) return curated.map(({ url }, index) =>
+        <div className="system-workflow__library-item" data-library-asset-id={id} key={`${id}:${url}`}>
+          <ImageChoice asset={asset} choice={{ sources: [url] }} number={index + 1} onActivate={onImageActivate}
+            onPointerDown={onPointerDown} workspace={workspace} onContext={onContext} />
+        </div>);
       const ratio = decodedRatios.get(id)
         || (Number(asset.width) > 0 && Number(asset.height) > 0 ? `${asset.width} / ${asset.height}` : undefined);
       const opensCollection = asset.isCollection && asset.collectionRole !== 'cover';
@@ -67,7 +73,7 @@ function LibraryResults({ assets, emptyLabel, expandedImageIds, onActivate, onCo
       const choices = opensCollection ? [] : libraryImageChoices(asset);
       const imageCount = choices.length;
       const expanded = expandedImageIds.has(id);
-      return [<div className="system-workflow__library-item" key={id}><button aria-label={[asset.title || id, asset.collection].filter(Boolean).join(' / ')} aria-pressed={isSelected}
+      return [<div className="system-workflow__library-item" data-library-asset-id={id} key={id}><button aria-label={[asset.title || id, asset.collection].filter(Boolean).join(' / ')} aria-pressed={isSelected}
         className="lattice-browser-asset" data-collection={opensCollection || undefined}
         data-multi-selected={isSelected && selected.size > 1 || undefined} data-selected={isSelected || undefined}
         draggable={!opensCollection} key={id}
@@ -114,7 +120,7 @@ function contextAnchor(event) {
   return { x: bounds.left + Math.min(18, bounds.width / 2), y: bounds.bottom };
 }
 
-export default function OwnerSystemWorkflowLibraryPresenter({ categoryCommands, categoryDrag, data, dropFeedback, menuSurfaceId,
+export default function OwnerSystemWorkflowLibraryPresenter({ categoryCommands, categoryDrag, data, dropFeedback, menuSurfaceId, open = true,
   navigationHost = null, onAssetActivate, onAssetPointerDown, onImageActivate, workspace }) {
   // Temporary browsing state, retained across filtering and closing the drawer.
   // The workspace keys this presenter by profile; no authored data is changed.
@@ -144,12 +150,14 @@ export default function OwnerSystemWorkflowLibraryPresenter({ categoryCommands, 
   const openSectionContext = (event, section) => { cancelFocusReturn(); setContextMenu({ anchor: contextAnchor(event), sectionId: section.id, kind: 'section', trigger: event.currentTarget }); };
   const openAssetContext = (event, asset) => {
     cancelFocusReturn();
-    const ids = workspace.selectForContext(assetId(asset));
-    setContextMenu({ anchor: contextAnchor(event), assetIds: ids, kind: 'membership', trigger: event.currentTarget });
+    const imageUrl = libraryCategoryImage(asset);
+    const ids = imageUrl ? [assetId(asset)] : workspace.selectForContext(assetId(asset));
+    setContextMenu({ anchor: contextAnchor(event), assetIds: ids, imageUrl, imageReady: Boolean(asset.selectedMedia), kind: 'membership', trigger: event.currentTarget });
   };
   const categoryMenuCommands = contextMenu?.kind === 'category' ? (() => {
     const category = data.categories.find(({ id }) => id === contextMenu.categoryId);
-    return category ? [{ id: 'rename', label: 'Rename' },
+    return category ? [{ id: 'start-category', label: 'Open Library here', checkable: true, selected: workspace.startCategoryId === category.id },
+      { id: 'rename', label: 'Rename' },
       ...(categoryCommands?.moveCategory ? [{ id: 'move-root', label: 'Move / Outside sections' },
         ...(data.categoryOrganization?.sections || []).map((section) => ({ id: `move-section:${section.id}`, label: `Move / ${section.name}` }))] : []),
       { id: 'delete', label: 'Delete' }] : [];
@@ -161,8 +169,8 @@ export default function OwnerSystemWorkflowLibraryPresenter({ categoryCommands, 
     ? data.categories.find(({ id }) => id === workspace.view.id) : null;
   const membershipCommands = data.categories.length ? data.categories.flatMap((category) => {
     const command = { checkable: true, id: `membership:${category.id}`, label: category.name,
-      mixed: categoryMembershipState(category, membershipIds) === 'mixed',
-      selected: categoryMembershipState(category, membershipIds) === 'all' };
+      mixed: categoryMembershipState(category, membershipIds, contextMenu?.imageUrl) === 'mixed',
+      selected: categoryMembershipState(category, membershipIds, contextMenu?.imageUrl) === 'all' };
     return currentMembershipCategory?.id === category.id
       ? [{ id: `remove-current:${category.id}`, label: `Remove from ${category.name}` }, command] : [command];
   }) : [{ id: 'no-categories', label: 'No categories yet', disabled: true }];
@@ -178,6 +186,10 @@ export default function OwnerSystemWorkflowLibraryPresenter({ categoryCommands, 
       const category = data.categories.find(({ id }) => id === contextMenu.categoryId);
       if (!category) return closeContextMenu();
       const trigger = contextMenu.trigger; closeContextMenu(false);
+      if (commandId === 'start-category') {
+        workspace.setStartCategory(workspace.startCategoryId === category.id ? null : category.id);
+        restoreFocus(trigger); return;
+      }
       if (commandId === 'move-root' || commandId.startsWith('move-section:')) {
         categoryCommands.moveCategory?.(category.id, commandId === 'move-root' ? null : commandId.slice('move-section:'.length));
         restoreFocus(trigger); return;
@@ -185,19 +197,22 @@ export default function OwnerSystemWorkflowLibraryPresenter({ categoryCommands, 
       if (commandId === 'rename') workspace.ensureSidebarWidth?.();
       openDialog(trigger, { category, type: commandId === 'rename' ? 'rename-category' : commandId }); return;
     }
-    if (contextMenu?.kind !== 'membership' || !workspace.areAssetsRenderable(contextMenu.assetIds)) return closeContextMenu();
+    if (contextMenu?.kind !== 'membership' || !contextMenu.imageReady && !workspace.areAssetsRenderable(contextMenu.assetIds)) return closeContextMenu();
+    const assign = (categoryId, included) => contextMenu.imageUrl
+      ? categoryCommands.setCategoryImage(categoryId, contextMenu.assetIds[0], contextMenu.imageUrl, included)
+      : categoryCommands.setCategoryAssets(categoryId, contextMenu.assetIds, included);
     if (commandId.startsWith('remove-current:')) {
-      categoryCommands.setCategoryAssets(commandId.slice('remove-current:'.length), contextMenu.assetIds, false);
+      assign(commandId.slice('remove-current:'.length), false);
     } else {
       const categoryId = commandId.slice('membership:'.length);
       const category = data.categories.find(({ id }) => id === categoryId);
-      if (category) categoryCommands.setCategoryAssets(category.id, contextMenu.assetIds, true);
+      if (category) assign(category.id, true);
     }
     closeContextMenu();
   };
   const beginOrganizationDrag = (event, asset, mediaWorkspace = workspace) => {
     if (asset.isCollection && asset.collectionRole !== 'cover') return;
-    const id = assetId(asset); const selectedIds = workspace.selectedAssetIds.includes(id) ? [...workspace.selectedAssetIds] : [id];
+    const id = assetId(asset); const selectedIds = !asset.selectedMedia && workspace.selectedAssetIds.includes(id) ? [...workspace.selectedAssetIds] : [id];
     onAssetPointerDown?.(event, asset, mediaWorkspace, { placementPreset: 'compact', assetIds: selectedIds });
   };
   const confirmDialog = (name) => {
@@ -228,6 +243,27 @@ export default function OwnerSystemWorkflowLibraryPresenter({ categoryCommands, 
   const filed = categoryAssetIds(categories); const related = relationshipView === 'owned'
     ? workspace.filteredAssets.filter((asset) => asset.owned) : relationshipView === 'created'
       ? workspace.filteredAssets.filter((asset) => asset.created) : workspace.filteredAssets;
+  const resultsRef = useRef(null);
+  const visibleRef = useRef(new Set());
+  const demand = data.onMetadataDemand;
+  const selectedKey = workspace.selectedAssetIds.join(',');
+  const assetKey = related.map(assetId).join(',');
+  useEffect(() => {
+    visibleRef.current = new Set();
+    if (!open || !demand || !resultsRef.current) return undefined;
+    const selected = selectedKey ? selectedKey.split(',') : [];
+    const publish = () => demand([...new Set([...selected, ...visibleRef.current])]);
+    const observer = new IntersectionObserver(entries => {
+      for (const entry of entries) {
+        const id = entry.target.dataset.libraryAssetId;
+        if (entry.isIntersecting) visibleRef.current.add(id); else visibleRef.current.delete(id);
+      }
+      publish();
+    }, { root: resultsRef.current, rootMargin: '150px' });
+    resultsRef.current.querySelectorAll('[data-library-asset-id]').forEach(node => observer.observe(node));
+    publish();
+    return () => { observer.disconnect(); demand([]); };
+  }, [open, demand, selectedKey, assetKey]);
   const selectBuiltIn = (view) => { setRelationshipView('all'); workspace.selectView(view); };
   const beginTreeDrag = (event, payload) => {
     event.stopPropagation(); event.dataTransfer.effectAllowed = 'move';
@@ -255,7 +291,8 @@ export default function OwnerSystemWorkflowLibraryPresenter({ categoryCommands, 
         : editing ? <OwnerSystemWorkflowSidebarEditor dialog={workspace.dialog} entityLabel="category"
           onCancel={closeDialog} onConfirm={confirmDialog} /> : <LibraryNavigationButton
         active={active}
-        categoryId={category.id} count={category.assetIds.filter((id) => renderableIds.has(id)).length}
+        categoryId={category.id} count={category.assetIds.filter((id) => renderableIds.has(id))
+          .reduce((count, id) => count + ((category.imageSelections || []).filter(entry => entry.assetId === id).length || 1), 0)}
         draggable dropTarget={categoryDrag?.categoryId === category.id} label={category.name}
         onClick={() => selectBuiltIn({ kind: BROWSER_VIEW_KINDS.CATEGORY, id: category.id })}
         onContextMenu={(event) => { event.preventDefault(); openCategoryContext(event, category); }}
@@ -269,7 +306,8 @@ export default function OwnerSystemWorkflowLibraryPresenter({ categoryCommands, 
       : workspace.hasActiveFilters && workspace.viewAssetCount
         ? `${workspace.viewAssetCount} assets are in this view / none match the active search or filters`
         : relationshipView === 'created' && data.createdStatus === 'loading' ? 'Loading creator-attributed works'
-          : relationshipView === 'created' && data.createdStatus === 'error' ? 'Created source unavailable' : 'No assets in this view';
+          : relationshipView === 'created' && data.createdStatus === 'error' ? 'Created source unavailable'
+            : data.hasMore ? 'No matches in loaded assets' : 'No assets in this view';
   const navigation = (
       <nav aria-label="Browser navigation" className="lattice-browser-sidebar">
         {data.collectionContext ? <>
@@ -279,7 +317,7 @@ export default function OwnerSystemWorkflowLibraryPresenter({ categoryCommands, 
             label={data.collectionContext.name || 'Collection'} onClick={() => {}} />
         </> : <>
         <LibraryNavigationButton active={relationshipView === 'all' && workspace.view.kind === BROWSER_VIEW_KINDS.ALL}
-          count={assets.length} icon={Layers3} label="All Assets" onClick={() => selectBuiltIn({ kind: BROWSER_VIEW_KINDS.ALL, id: null })} />
+          count={`${assets.length}${data.hasMore ? '+' : ''}`} icon={Layers3} label="All Assets" onClick={() => selectBuiltIn({ kind: BROWSER_VIEW_KINDS.ALL, id: null })} />
         <LibraryNavigationButton active={relationshipView === 'owned'} count={assets.filter((asset) => asset.owned).length}
           icon={UserRound} label="Owned" onClick={() => { setRelationshipView('owned'); workspace.selectView({ kind: BROWSER_VIEW_KINDS.ALL, id: null }); }} />
         <LibraryNavigationButton active={relationshipView === 'created'} count={assets.filter((asset) => asset.created).length}
@@ -353,7 +391,14 @@ export default function OwnerSystemWorkflowLibraryPresenter({ categoryCommands, 
         onLostPointerCapture={workspace.sidebarResize.finish} onPointerCancel={workspace.sidebarResize.finish}
         onPointerDown={workspace.sidebarResize.begin} onPointerMove={workspace.sidebarResize.update}
         onPointerUp={workspace.sidebarResize.finish} title="Resize Browser navigation" type="button" />}
-      <main className="lattice-browser-results">
+      <main className="lattice-browser-results" ref={resultsRef} onScroll={event => {
+        const node = event.currentTarget;
+        if (open && data.hasMore && !data.loadingMore && !workspace.hasActiveFilters
+          && node.scrollHeight - node.scrollTop - node.clientHeight < node.clientHeight * .75) data.onLoadMore?.();
+      }}>
+        {data.hasMore && <p className="lattice-browser-notice" role="status">
+          {assets.length} assets loaded · More available. Search and sorting apply to loaded assets.
+        </p>}
         {dropFeedback && <div className="lattice-browser-notice" data-error role="status">{dropFeedback}</div>}
         {data.persistenceError && <div className="lattice-browser-notice" data-error role="alert">{data.persistenceError}</div>}
         {data.collectionContext && <div className="lattice-browser-notice" role="status">
@@ -374,6 +419,8 @@ export default function OwnerSystemWorkflowLibraryPresenter({ categoryCommands, 
           expandedImageIds={expandedImageIds} onToggleImages={toggleImages}
           onContext={openAssetContext} onPointerDown={beginOrganizationDrag}
           workspace={workspace} />
+        {data.hasMore && <button className="workflow-tactile-control" type="button" disabled={data.loadingMore}
+          onClick={data.onLoadMore}>{data.loadingMore ? 'Loading more assets' : 'Load more assets'}</button>}
       </main>
     </div>
     {contextMenu && createPortal(<RackMenu anchor={contextMenu.anchor}

@@ -1,3 +1,7 @@
+import { createElement } from 'react';
+import { renderToString } from 'react-dom/server';
+import useOwnerLatticeBrowser from './useOwnerLatticeBrowser.js';
+import { useLibraryStore } from '../library/state/useLibraryStore.js';
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
 import test from 'node:test';
@@ -61,17 +65,23 @@ test('selected owner workflow does not restore the legacy Gallery workspace', ()
   assert.doesNotMatch(modulesSource, /GalleryWorld|CreationsBrowser|UpperWorldSurface|SpatialLevelNavigation/u);
 });
 
-test('owner inventory is profile-scoped before the Library panel opens', () => {
-  const runtimeSource = readFileSync(new URL('./ownerSystemWorkflow/OwnerSystemWorkflowRuntime.jsx', import.meta.url), 'utf8');
-  const browserSource = readFileSync(new URL('./useOwnerLatticeBrowser.js', import.meta.url), 'utf8');
-  assert.match(browserSource, /storeProfileAddress === profile/u);
-  assert.match(browserSource, /createdProfileAddress === profile/u);
-  const librarySource = readFileSync(new URL('../library/useProfileLibrary.js', import.meta.url), 'utf8');
-  assert.match(runtimeSource, /useOwnerWorkbenchLibrary\(\{/u);
-  assert.match(librarySource, /useOwnerLatticeBrowser\(profileAddress, libraryOpen && browserEnabled, referencedAssetIds\)/u);
-  assert.match(librarySource, /const records = fixtureAssets \|\| browser\.records/);
-  assert.doesNotMatch(runtimeSource, /const rawAssets = useLibraryStore/);
-  assert.doesNotMatch(librarySource, /const rawAssets = useLibraryStore/);
+test('before effects run a different profile cannot observe the current private inventory or category commands', () => {
+  const previous = useLibraryStore.getState();
+  const owner = '0x1111111111111111111111111111111111111111';
+  const other = '0x2222222222222222222222222222222222222222';
+  const contract = '0x3333333333333333333333333333333333333333';
+  useLibraryStore.setState({ profileAddress: owner, workspace: { ...previous.workspace, profileAddress: owner },
+    assets: [{ id: `42:${contract}:contract`, chainId: 42, standard: 'LSP7', contractAddress: contract,
+      tokenId: null, ownerAddress: owner, imageUrl: 'https://art.test/private.webp' }] });
+  let result;
+  function Probe() { result = useOwnerLatticeBrowser(other, false); return null; }
+  try {
+    renderToString(createElement(Probe));
+    assert.deepEqual(result.records, []);
+    assert.deepEqual(result.data.assets, []);
+    assert.equal(result.commands, null);
+    assert.equal(result.data.workspaceReady, false);
+  } finally { useLibraryStore.setState(previous); }
 });
 
 test('owner folders remain direct categories in the selected Library presenter', () => {

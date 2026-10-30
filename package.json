@@ -19,7 +19,7 @@
     "test:browser:design-system": "node --test browser-tests/design-system.browser.mjs browser-tests/design-system-workspace.browser.mjs browser-tests/design-system-library.browser.mjs browser-tests/design-system-colour.browser.mjs browser-tests/design-system-interactions.browser.mjs",
     "build": "vite build",
     "build:check": "node scripts/checkProductionBuild.js",
-    "test": "node --test",
+    "test": "node --test --test-concurrency=4",
     "test:lukso-standards": "node --test scripts/luksoStandards.audit.test.js",
     "test:browser": "node scripts/runBrowserTests.mjs",
     "verify": "node scripts/verifyRelease.mjs",

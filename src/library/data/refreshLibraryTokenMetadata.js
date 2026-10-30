@@ -1,9 +1,11 @@
 import { lsp8CollectionMetadataResolver } from './lsp8TokenMetadataResolver.js';
 import { selectImageGroups, selectImageUrls } from './resolveContentUrl.js';
+import { luksoEnvioAttributeRepository } from './luksoEnvioAttributeRepository.js';
 
 // Metadata refresh never discovers holdings or changes creator/owner authority.
 // Small sequential batches bound RPC and media work across contracts.
-export async function* refreshLibraryTokenMetadata(assets, { signal, resolver = lsp8CollectionMetadataResolver } = {}) {
+export async function* refreshLibraryTokenMetadata(assets, { signal, resolver = lsp8CollectionMetadataResolver,
+  attributeRepository = luksoEnvioAttributeRepository } = {}) {
   const contracts = new Map();
   for (const asset of assets) {
     if (asset.standard !== 'LSP8' || !/^0x[0-9a-f]{64}$/iu.test(asset.tokenId || '')) continue;
@@ -34,7 +36,14 @@ export async function* refreshLibraryTokenMetadata(assets, { signal, resolver = 
           rawMetadata: { ...asset.rawMetadata, originalImageUrl: urls.originalImageUrl },
         });
       }
-      yield { assets: refreshed, failures: batch.length - refreshed.length };
+      const missing = batch.filter(asset => !metadata.has(asset.tokenId.toLowerCase()));
+      if (missing.length) {
+        const attributes = await attributeRepository.enrich(missing.map(asset => asset.id), { signal }).catch(() => []);
+        signal?.throwIfAborted();
+        refreshed.push(...attributes.map(asset => ({ ...asset,
+          fieldProvenance: { attributes: { scope: 'tokenId', source: 'LUKSO Envio Indexer' } } })));
+      }
+      yield { assets: refreshed, failures: missing.length };
     }
   }
 }

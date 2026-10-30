@@ -17,8 +17,13 @@ test('loads progressive collection pages and replaces tokens when collection sco
   const store = createCollectionTokensStore({ repository });
   await store.getState().load(PROFILE_A, collection(COLLECTION_A));
   assert.equal(store.getState().status, 'ready');
+  assert.equal(store.getState().assets.length, 1);
+  assert.equal(store.getState().hasMore, true);
+  await store.getState().loadMore();
+  assert.equal(store.getState().hasMore, false);
   assert.deepEqual(store.getState().assets.map(({ id }) => id), [`${COLLECTION_A}:1`, `${COLLECTION_A}:2`]);
   await store.getState().load(PROFILE_A, collection(COLLECTION_B));
+  await store.getState().loadMore();
   assert.deepEqual(store.getState().assets.map(({ id }) => id), [`${COLLECTION_B}:1`, `${COLLECTION_B}:2`]);
 });
 
@@ -69,4 +74,39 @@ test('reopening a collection replaces the previous media snapshot and removed to
   await store.getState().load(PROFILE_A, collection(COLLECTION_A));
   assert.deepEqual(store.getState().assets.map(a => a.id), ['same-token']);
   assert.deepEqual(store.getState().assets[0].imageGroups, [{ index: 0, imageUrl: 'https://art.test/2.webp' }]);
+});
+
+test('explicit metadata replaces media while preserving current ownership and creator scope', async () => {
+  const before = { ...token('one'), ownerAddress: PROFILE_A, imageUrl: 'https://art.test/old.webp',
+    imageGroups: [{ index: 0 }, { index: 1 }], fieldProvenance: { creators: { source: 'LSP4' } } };
+  const store = createCollectionTokensStore({ repository: { async *loadCollectionTokens() {
+    yield { assets: [before], resolved: 1, total: 1, failures: 0, complete: true };
+  } } });
+  await store.getState().load(PROFILE_A, collection(COLLECTION_A));
+  store.getState().updateMetadata([{ id: 'one', ownerAddress: PROFILE_B, viewedProfileIsCollectionCreator: false,
+    imageUrl: 'https://art.test/new.webp', imageGroups: [{ index: 0 }],
+    fieldProvenance: { images: { scope: 'tokenId', source: 'RPC' } } }]);
+  const asset = store.getState().assets[0];
+  assert.equal(asset.imageUrl, 'https://art.test/new.webp');
+  assert.equal(asset.imageGroups.length, 1);
+  assert.equal(asset.ownerAddress, PROFILE_A);
+  assert.equal(asset.viewedProfileIsCollectionCreator, true);
+  assert.deepEqual(asset.fieldProvenance, { creators: { source: 'LSP4' }, images: { scope: 'tokenId', source: 'RPC' } });
+});
+
+test('closing during the next page settles the caller and ignores an abort-ignoring provider', { timeout: 2000 }, async () => {
+  let release;
+  const gate = new Promise(resolve => { release = resolve; });
+  const store = createCollectionTokensStore({ repository: { async *loadCollectionTokens() {
+    yield { assets: [token('first')], resolved: 1, total: 2, failures: 0, complete: false };
+    await gate;
+    yield { assets: [token('late')], resolved: 2, total: 2, failures: 0, complete: true };
+  } } });
+  await store.getState().load(PROFILE_A, collection(COLLECTION_A));
+  const pending = store.getState().loadMore();
+  store.getState().cancel();
+  await pending;
+  release(); await new Promise(setImmediate);
+  assert.deepEqual(store.getState().assets.map(asset => asset.id), ['first']);
+  assert.equal(store.getState().status, 'ready');
 });

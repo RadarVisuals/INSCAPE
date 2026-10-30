@@ -158,8 +158,10 @@ test('detached and stacked tabs, Text and screen utility positions restore after
     const { page, errors } = await mount(browser); const before = await saved(page);
     await tab(page, 'Color').press('Shift+F10');
     await page.getByRole('menuitem', { name: /^Dock below Layers/ }).click();
+    await tab(page, 'Color').and(page.locator(':focus')).waitFor();
     await tab(page, 'Info').press('Shift+F10');
     await page.getByRole('menuitem', { name: 'Detach Info', exact: true }).click();
+    await tab(page, 'Info').and(page.locator(':focus')).waitFor();
     await dock(page, 'Info').getByRole('button', { name: 'Move Info panel', exact: true }).press('ArrowLeft');
     await dock(page, 'Info').locator('[data-edge="se"]').press('ArrowRight');
     await tab(page, 'Image').click(); await page.getByRole('button', { name: 'Close Image', exact: true }).click();

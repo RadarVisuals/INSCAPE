@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdir, readFile } from 'node:fs/promises';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { chromium } from 'playwright-core';
 import { browserExecutable } from '../scripts/browserEnvironment.mjs';
@@ -10,10 +10,26 @@ const output = process.env.INSCAPE_BROWSER_OUTPUT || '.browser-test-runtime/loca
 const url = `${origin}/browser-tests/workbench-storage-fixture.html?seed=1`;
 const current = page => page.evaluate(() => window.guardedStore().getDraft());
 const record = page => page.evaluate(() => window.savedDraft());
-async function open(page) {
+let diagnosticIndex = 0;
+async function open(page, selection = false) {
   page.setDefaultTimeout(15000);
+  const outstanding = new Map(), responses = [], errors = [];
+  page.on('request', request => outstanding.set(request, { url: request.url(), type: request.resourceType() }));
+  page.on('requestfinished', request => outstanding.delete(request));
+  page.on('requestfailed', request => outstanding.delete(request));
+  page.on('response', response => responses.push({ url: response.url(), status: response.status() }));
+  page.on('pageerror', error => errors.push(error.message));
   await page.route('**/*', route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
-  await page.goto(url);
+  try { await page.goto(selection ? `${url}&selection=1` : url); }
+  catch (error) {
+    await mkdir(output, { recursive: true });
+    await writeFile(path.join(output, `navigation-${++diagnosticIndex}.json`), JSON.stringify({
+      outstanding: [...outstanding.values()], responses, errors,
+      state: await page.evaluate(() => ({ ready: document.readyState, url: location.href, text: document.body.innerText.slice(0, 2000) })).catch(() => null),
+    }, null, 2));
+    await page.screenshot({ path: path.join(output, `navigation-${diagnosticIndex}.png`) }).catch(() => {});
+    throw error;
+  }
   await page.getByRole('combobox', { name: 'Active Workbench' }).waitFor();
   await page.locator('.text-window').waitFor();
 }
@@ -45,6 +61,144 @@ async function failWrites(page, fail) {
     } : window.normalSetItem;
   }, fail);
 }
+
+const settle = page => page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+const selectedFrames = page => page.locator('[data-workbench-view-id="text:private"], [data-workbench-view-id="image:gesture"]').evaluateAll(nodes =>
+  nodes.map(node => { const { x, y, width, height } = node.getBoundingClientRect(); return { id: node.dataset.workbenchViewId, x, y, width, height }; }));
+async function selectMixed(page) {
+  await page.locator('[data-workbench-view-id="image:gesture"]').waitFor();
+  // Start the canvas operation from Read with the actual tool controls closed.
+  // Otherwise the Text toolbar occupies the marquee's empty-canvas start point.
+  const collapse = page.getByRole('button', { name: 'Collapse sidebar', exact: true });
+  if (await collapse.count()) await collapse.click();
+  const read = page.getByRole('button', { name: 'Read', exact: true });
+  if (await read.count()) { await read.focus(); await page.keyboard.press('Enter'); }
+  for (const name of ['Close Text tools', 'Close Transform', 'Close Color', 'Close Image', 'Close Shape', 'Close FX', 'Close Info']) {
+    const close = page.getByRole('button', { name, exact: true });
+    if (await close.count()) await close.click();
+  }
+  await settle(page);
+  const frames = await selectedFrames(page);
+  assert.equal(frames.length, 2);
+  const left = Math.min(...frames.map(frame => frame.x)), top = Math.min(...frames.map(frame => frame.y));
+  const right = Math.max(...frames.map(frame => frame.x + frame.width)), bottom = Math.max(...frames.map(frame => frame.y + frame.height));
+  const hit = await page.evaluate(({ x, y }) => document.elementFromPoint(x, y)?.outerHTML.slice(0, 500), { x: right + 20, y: bottom + 20 });
+  await page.mouse.move(right + 20, bottom + 20);
+  await page.mouse.down();
+  // Marquee selection requires complete containment of both module rectangles.
+  await page.mouse.move(left - 20, top - 20, { steps: 5 });
+  await page.mouse.up();
+  try { await page.getByRole('group', { name: '2 selected Workbench modules', exact: true }).waitFor(); }
+  catch (error) {
+    await mkdir(output, { recursive: true });
+    await writeFile(path.join(output, `mixed-selection-${++diagnosticIndex}.json`), JSON.stringify({ frames, hit,
+      groups: await page.getByRole('group').evaluateAll(nodes => nodes.map(node => node.getAttribute('aria-label'))),
+    }, null, 2));
+    await page.screenshot({ path: path.join(output, `mixed-selection-${diagnosticIndex}.png`) });
+    throw error;
+  }
+  const close = page.getByRole('button', { name: 'Close Transform', exact: true });
+  if (await close.count()) await close.click();
+}
+async function beginMixedGesture(page, kind = 'resize') {
+  const target = kind === 'resize'
+    ? page.getByRole('button', { name: 'Scale selected modules from se', exact: true })
+    : page.getByRole('group', { name: '2 selected Workbench modules', exact: true });
+  const box = await target.boundingBox();
+  const x = box.x + box.width / 2, y = box.y + box.height / 2;
+  if (kind === 'move') assert.ok(await page.evaluate(({ x, y }) => {
+    const hit = document.elementFromPoint(x, y);
+    return Boolean(hit?.matches('.workbench-selection'));
+  }, { x, y }), 'the selection surface receives the actual pointer drag');
+  await page.mouse.move(x, y); await page.mouse.down();
+  await page.mouse.move(x + 60, y + 40, { steps: 4 });
+  await settle(page);
+}
+
+test('active mixed selection gestures block canvas switching and Escape restores both module frames', { timeout: 60000 }, async () => {
+  const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
+  try {
+    const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, reducedMotion: 'reduce' });
+    const errors = []; page.on('pageerror', error => errors.push(error.message));
+    await open(page, true);
+    const chooser = page.getByRole('combobox', { name: 'Active Workbench' });
+    const aId = await chooser.inputValue();
+    await create(page, 'Other');
+    const bId = await chooser.inputValue();
+    await chooser.selectOption(aId);
+    await selectMixed(page);
+    for (const kind of ['move', 'resize']) {
+      const before = await record(page), frames = await selectedFrames(page);
+      await beginMixedGesture(page, kind);
+      assert.notDeepEqual(await selectedFrames(page), frames, `${kind} has a visible temporary preview`);
+      await chooser.selectOption(bId);
+      await page.getByRole('region', { name: 'Local Workbenches' }).getByRole('alert')
+        .filter({ hasText: 'Finish or cancel the canvas gesture' }).waitFor();
+      assert.equal(await chooser.inputValue(), aId);
+      assert.deepEqual(await record(page), before, 'the rejected switch cannot save the preview');
+      if (kind === 'resize') await page.screenshot({ path: path.join(output, 'mixed-resize-switch-guard.png') });
+      await page.keyboard.press('Escape'); await page.mouse.up(); await settle(page);
+      assert.deepEqual(await selectedFrames(page), frames);
+      assert.deepEqual(await record(page), before);
+    }
+    await chooser.selectOption(bId);
+    assert.equal(await page.locator('.text-window').count(), 0);
+    await chooser.selectOption(aId);
+    await page.locator('.text-window').waitFor();
+    assert.deepEqual(errors, []);
+  } finally { await browser.close(); }
+});
+
+test('mixed selection UI completion rejects a failed save, then keyboard resize saves both modules with one Undo', { timeout: 60000 }, async () => {
+  const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
+  try {
+    const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, reducedMotion: 'reduce' });
+    const errors = []; page.on('pageerror', error => errors.push(error.message));
+    await open(page, true); await selectMixed(page);
+    const before = await record(page), frames = await selectedFrames(page);
+    await failWrites(page, true);
+    await beginMixedGesture(page); await page.mouse.up(); await settle(page);
+    assert.deepEqual(await record(page), before);
+    assert.deepEqual(await selectedFrames(page), frames, 'failed completion rolls both previews back');
+    await page.getByRole('alert').filter({ hasText: 'The selection could not be saved' }).first().waitFor();
+    await page.screenshot({ path: path.join(output, 'mixed-resize-failed-save.png') });
+    await failWrites(page, false);
+    const handle = page.getByRole('button', { name: 'Scale selected modules from se', exact: true });
+    await handle.focus(); await page.keyboard.press('ArrowRight');
+    await page.waitForFunction(width => window.savedDraft().imageModules[0].width !== width, before.imageModules[0].width);
+    const saved = await record(page);
+    assert.notDeepEqual(saved.workbench.texts[0].window, before.workbench.texts[0].window);
+    assert.deepEqual(saved.texts, before.texts, 'resizing preserves the article');
+    await page.screenshot({ path: path.join(output, 'mixed-resize-keyboard-saved.png') });
+    await page.getByRole('combobox', { name: 'Active Workbench' }).focus();
+    await page.keyboard.press('Control+z');
+    await page.waitForFunction(width => window.savedDraft().imageModules[0].width === width, before.imageModules[0].width);
+    const undone = await record(page);
+    assert.deepEqual(undone.imageModules, before.imageModules);
+    assert.deepEqual(undone.workbench, before.workbench, 'one Undo restores both authored module frames');
+    assert.deepEqual(errors, []);
+  } finally { await browser.close(); }
+});
+
+test('forced editor unmount discards a mixed resize preview and ignores the late pointer completion', { timeout: 30000 }, async () => {
+  const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
+  try {
+    const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, reducedMotion: 'reduce' });
+    const errors = []; page.on('pageerror', error => errors.push(error.message));
+    await open(page, true); await selectMixed(page);
+    const before = await record(page), frames = await selectedFrames(page);
+    await beginMixedGesture(page);
+    assert.notDeepEqual(await selectedFrames(page), frames);
+    await page.evaluate(() => window.leaveEditor());
+    await page.locator('.text-window').waitFor({ state: 'detached' });
+    await page.mouse.up(); await page.keyboard.press('ArrowRight'); await settle(page);
+    assert.deepEqual(await record(page), before);
+    await page.reload();
+    await page.locator('.text-window').waitFor();
+    assert.deepEqual(await record(page), before, 'reopening keeps the accepted state from before the unfinished gesture');
+    assert.deepEqual(errors, []);
+  } finally { await browser.close(); }
+});
 
 test('named local Workbenches keep separate content and canvas geometry through UI switches, Undo and reload', { timeout: 90000 }, async () => {
   const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
@@ -91,10 +245,15 @@ test('named local Workbenches keep separate content and canvas geometry through 
     assert.deepEqual((await current(page)).texts, b.texts);
     await page.getByRole('combobox', { name: 'Active Workbench' }).selectOption(aId);
     assert.deepEqual((await current(page)).texts, a.texts);
+    const beforeReview = await record(page);
     await page.getByRole('button', { name: 'Publish', exact: true }).click();
-    await page.getByRole('button', { name: 'Dismiss notification' }).filter({ hasText: 'not available yet' }).waitFor();
-    assert.equal(await page.locator('.owner-lattice-publication-rack').count(), 0);
-    await page.getByRole('button', { name: 'Dismiss notification' }).click();
+    const publication = page.getByRole('complementary', { name: 'Publish profile' });
+    await publication.waitFor();
+    assert.equal(await publication.getByRole('checkbox', { name: /Lunar Desert/ }).isChecked(), true);
+    assert.equal(await publication.getByRole('checkbox', { name: /Studies/ }).isChecked(), false);
+    await publication.getByRole('button', { name: 'Close Publication', exact: true }).click();
+    await publication.waitFor({ state: 'detached' });
+    assert.deepEqual(await record(page), beforeReview, 'Opening publication review does not change either saved canvas');
     await mkdir(output, { recursive: true });
     for (const width of [1440, 700, 390]) {
       await page.setViewportSize({ width, height: 1000 });
@@ -117,7 +276,7 @@ test('named local Workbenches keep separate content and canvas geometry through 
   } finally { await browser.close(); }
 });
 
-test('a local multi-Workbench collection cannot start publication or change its saved bytes', { timeout: 30000 }, async () => {
+test('multi-Workbench publication review selects the active canvas and changes scope without writing or uploading', { timeout: 30000 }, async () => {
   const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
   try {
     const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, reducedMotion: 'reduce' });
@@ -127,9 +286,20 @@ test('a local multi-Workbench collection cannot start publication or change its 
     const saved = await record(page), requests = [];
     page.on('request', request => { if (/pin-profile-document|ipfs|rpc/.test(request.url())) requests.push(request.url()); });
     await page.getByRole('button', { name: 'Publish', exact: true }).click();
-    await page.getByRole('button', { name: 'Dismiss notification' }).filter({ hasText: 'Publishing multiple Workbenches is not available yet.' }).waitFor();
-    assert.equal(await page.getByRole('button', { name: 'Prepare publication', exact: true }).count(), 0);
+    const publication = page.getByRole('complementary', { name: 'Publish profile' });
+    await publication.waitFor();
+    const original = publication.getByRole('checkbox', { name: /Workbench 1/ });
+    const second = publication.getByRole('checkbox', { name: /Private second Workbench/ });
+    assert.equal(await original.isChecked(), false, 'The other canvas does not join publication implicitly');
+    assert.equal(await second.isChecked(), true, 'Review defaults to the current canvas');
+    await original.check();
+    await second.uncheck();
+    assert.equal(await original.isChecked(), true);
+    assert.equal(await second.isChecked(), false, 'An unselected private canvas stays outside the requested publication scope');
+    assert.equal(await publication.getByRole('button', { name: 'Prepare publication', exact: true }).isEnabled(), true);
     assert.equal(await page.getByRole('button', { name: 'Make presentation public', exact: true }).count(), 0);
+    await publication.getByRole('button', { name: 'Close Publication', exact: true }).click();
+    await publication.waitFor({ state: 'detached' });
     assert.deepEqual(await record(page), saved);
     assert.deepEqual(requests, []);
   } finally { await browser.close(); }

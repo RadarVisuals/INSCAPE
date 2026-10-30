@@ -9,12 +9,10 @@ const COLLECTION_A = '0x1111111111111111111111111111111111111111';
 const COLLECTION_B = '0x2222222222222222222222222222222222222222';
 
 const asset = (id, profile) => ({ id, creators: [{ address: profile }], imageUrl: null, metadataStatus: 'partial' });
-const emptyFixture = { source: 'FIXTURE', async *loadCreations() { yield { assets: [], resolved: 0, total: 0, failures: 0, complete: true }; } };
-
 test('Creations store remains isolated from Library state', async () => {
   const libraryBefore = useLibraryStore.getState().assets;
   const liveRepository = { source: 'LIVE', async *loadCreations(profile) { yield { assets: [asset('creation', profile)], resolved: 1, total: 1, failures: 1, complete: true }; } };
-  const store = createCreationsStore({ liveRepository, fixtureRepository: emptyFixture });
+  const store = createCreationsStore({ liveRepository });
   await store.getState().load(PROFILE_A);
   assert.deepEqual(store.getState().assets.map((entry) => entry.id), ['creation']);
   assert.strictEqual(useLibraryStore.getState().assets, libraryBefore);
@@ -28,7 +26,7 @@ test('cancels stale requests when the viewed profile changes', async () => {
     if (signal.aborted) { const error = new Error('aborted'); error.name = 'AbortError'; throw error; }
     yield { assets: [asset(profile, profile)], resolved: 1, total: 1, failures: 1, complete: true };
   } };
-  const store = createCreationsStore({ liveRepository, fixtureRepository: emptyFixture });
+  const store = createCreationsStore({ liveRepository });
   const first = store.getState().load(PROFILE_A);
   const second = store.getState().load(PROFILE_B);
   await second;
@@ -36,16 +34,6 @@ test('cancels stale requests when the viewed profile changes', async () => {
   await first;
   assert.equal(store.getState().profileAddress, PROFILE_B);
   assert.deepEqual(store.getState().assets.map((entry) => entry.id), [PROFILE_B]);
-});
-
-test('live failure is explicit when fixture fallback is shown', async () => {
-  const liveRepository = { source: 'LIVE', async *loadCreations() { throw new Error('indexer offline'); } };
-  const fixtureRepository = { source: 'FIXTURE', async *loadCreations(profile) { yield { assets: [asset('fixture', profile)], resolved: 1, total: 1, failures: 1, complete: true }; } };
-  const store = createCreationsStore({ liveRepository, fixtureRepository });
-  await store.getState().load(PROFILE_A);
-  assert.equal(store.getState().sourceMode, 'FIXTURE');
-  assert.equal(store.getState().liveError, 'indexer offline');
-  assert.equal(store.getState().status, 'ready');
 });
 
 test('production store never invents creations when the live source fails', async () => {
@@ -102,15 +90,15 @@ test('resolves only placed LSP8 collection tokens without opening Library or add
     async *loadCreations() {
       yield { assets: [collection(COLLECTION_A), collection(COLLECTION_B)], resolved: 2, total: 2, failures: 0, complete: true };
     },
-    async *loadCollectionTokens(profile, record) {
-      calls.push({ profile, contractAddress: record.contractAddress });
+    async *loadReferencedCreations(profile, ids) {
+      calls.push({ profile, ids });
       yield { assets: [{ id: requested }, { id: unrelated }], resolved: 2, total: 2, failures: 0, complete: true };
     },
   };
   const store = createCreationsStore({ liveRepository });
   await store.getState().load(PROFILE_A);
   await store.getState().resolveReferencedAssets(PROFILE_A, [requested]);
-  assert.deepEqual(calls, [{ profile: PROFILE_A, contractAddress: COLLECTION_A }]);
+  assert.deepEqual(calls, [{ profile: PROFILE_A, ids: [requested] }]);
   assert.deepEqual(store.getState().referencedAssets.map(({ id }) => id), [requested]);
   assert.deepEqual(store.getState().assets.map(({ id }) => id), [
     `42:${COLLECTION_A}:contract`, `42:${COLLECTION_B}:contract`,
@@ -151,7 +139,7 @@ test('referenced LSP8 resolution is profile-scoped, deduplicated, and stale-safe
         creators: [{ address: profile }], viewedProfileIsCreator: true, creatorAttributionLevel: 'contract' }],
       resolved: 1, total: 1, failures: 0, complete: true };
     },
-    async *loadCollectionTokens() {
+    async *loadReferencedCreations() {
       calls += 1;
       await gate;
       yield { assets: [{ id: requested }], resolved: 1, total: 1, failures: 0, complete: true };

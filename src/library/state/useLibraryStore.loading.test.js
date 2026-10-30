@@ -114,6 +114,7 @@ test('a source ending without a complete batch cannot report a successful refres
     };
     luksoRpcProfileRepository.loadProfileAssets = async function* () {};
     await useLibraryStore.getState().load({ forceLive: true });
+    await useLibraryStore.getState().loadMore();
     const state = useLibraryStore.getState();
     assert.equal(state.status, retained ? 'partial' : 'error');
     assert.match(state.liveError, /incomplete/i);
@@ -194,7 +195,8 @@ test('complete targeted repair clears the warning and replaces retained inventor
     started(); await gate;
     yield { assets: [repaired], failures: 0, resolved: 1, total: 1, complete: true };
   };
-  const pending = useLibraryStore.getState().load(); await repairing;
+  await useLibraryStore.getState().load();
+  const pending = useLibraryStore.getState().repair(); await repairing;
   assert.deepEqual(useLibraryStore.getState().assets, [old, indexed]);
   assert.equal(useLibraryStore.getState().status, 'partial');
   assert.match(useLibraryStore.getState().liveError, /assets could not be loaded/u);
@@ -219,6 +221,7 @@ for (const outcome of ['partial', 'empty', 'unrelated', 'unfinished']) {
         resolved: 2, total: 2, complete: outcome !== 'unfinished' };
     };
     await useLibraryStore.getState().load();
+    await useLibraryStore.getState().repair();
     const result = useLibraryStore.getState();
     assert.equal(result.status, 'partial');
     assert.match(result.liveError, /assets could not be loaded/u);
@@ -239,7 +242,8 @@ test('a successful repair arriving after a profile switch cannot clear or replac
     started(); await gate;
     yield { assets: [repaired], failures: 0, resolved: 1, total: 1, complete: true };
   };
-  const pending = useLibraryStore.getState().load(); await repairing;
+  await useLibraryStore.getState().load();
+  const pending = useLibraryStore.getState().repair(); await repairing;
   useLibraryStore.getState().setProfileAddress(OTHER_PROFILE);
   release(); await pending;
   assert.equal(useLibraryStore.getState().status, 'idle');
@@ -248,30 +252,70 @@ test('a successful repair arriving after a profile switch cannot clear or replac
   assert.deepEqual(loadLibraryAssetCache(storage, OTHER_PROFILE), [next]);
 });
 
-test('completing targeted repair retains already enriched indexed attributes and reports a separate token refresh failure', async () => {
-  const { luksoEnvioAttributeRepository } = await import('../data/luksoEnvioAttributeRepository.js');
-  const { lsp8CollectionMetadataResolver } = await import('../data/lsp8TokenMetadataResolver.js');
-  const originalEnrich = luksoEnvioAttributeRepository.enrich;
-  const originalResolve = lsp8CollectionMetadataResolver.resolve;
-  const storage = memoryStorage(); seedKnownInventory(storage);
-  const tokenId = `0x${'0'.repeat(63)}1`, repaired = repairedAsset('3');
-  const indexed = { ...repairedAsset(), standard: 'LSP8', tokenId,
-    id: `42:0x${'2'.repeat(40)}:${tokenId}`, attributes: [] };
-  indexedMissing([indexed], [repaired]);
-  luksoEnvioAttributeRepository.enrich = async () => [{ id: indexed.id, attributes: [{ key: 'Rank', value: '281', type: 'number' }] }];
-  lsp8CollectionMetadataResolver.resolve = async () => new Map();
-  luksoRpcProfileRepository.loadProfileAssets = async function* () {
-    yield { assets: [repaired], failures: 0, resolved: 1, total: 1, complete: true };
+test('metadata updates survive subsequent pages and successful cache replacement', async () => {
+  const storage = memoryStorage(); resetLibraryStoreForTests(PROFILE, storage);
+  const first = knownAsset(), second = repairedAsset('3');
+  chillwhalesProfileRepository.loadProfileAssets = async function* () {
+    yield { assets: [first], failures: 0, resolved: 1, total: 2, complete: false };
+    yield { assets: [second], failures: 0, resolved: 2, total: 2, complete: true };
   };
-  try {
-    await useLibraryStore.getState().load();
-    const result = useLibraryStore.getState();
-    assert.deepEqual(result.assets.find(({ id }) => id === indexed.id).attributes, [{ key: 'Rank', value: '281', type: 'number' }]);
-    assert.equal(result.status, 'partial');
-    assert.match(result.liveError, /token metadata could not be refreshed/u);
-    assert.deepEqual(loadLibraryAssetCache(storage, PROFILE), result.assets);
-  } finally {
-    luksoEnvioAttributeRepository.enrich = originalEnrich;
-    lsp8CollectionMetadataResolver.resolve = originalResolve;
+  await useLibraryStore.getState().load();
+  useLibraryStore.getState().updateMetadata([{ id: first.id, name: 'Updated token', imageGroups: [{ index: 0 }] }]);
+  await useLibraryStore.getState().loadMore();
+  assert.equal(useLibraryStore.getState().assets[0].name, 'Updated token');
+  assert.equal(loadLibraryAssetCache(storage, PROFILE)[0].name, 'Updated token');
+});
+
+test('healthy pages can take longer than eight seconds in total without invoking RPC fallback', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const releases = [];
+  let rpcCalls = 0, sourceSignal;
+  chillwhalesProfileRepository.loadProfileAssets = async function* (_profile, { signal }) {
+    sourceSignal = signal;
+    for (let page = 0; page < 3; page++) {
+      await new Promise(resolve => releases.push(resolve));
+      signal.throwIfAborted();
+      yield { assets: [repairedAsset(String(page + 2))], resolved: page + 1, total: 3, failures: 0, complete: page === 2 };
+    }
+  };
+  luksoRpcProfileRepository.loadProfileAssets = async function* () { rpcCalls++; throw new Error('unexpected fallback'); };
+  resetLibraryStoreForTests(PROFILE, memoryStorage());
+  let pending = useLibraryStore.getState().load();
+  for (let page = 0; page < 3; page++) {
+    t.mock.timers.tick(7000);
+    assert.equal(sourceSignal.aborted, false);
+    releases[page]();
+    await pending;
+    t.mock.timers.tick(60000);
+    assert.equal(sourceSignal.aborted, false, "paused pages have no deadline");
+    if (page < 2) pending = useLibraryStore.getState().loadMore();
   }
+  await pending;
+  assert.equal(rpcCalls, 0);
+  assert.equal(useLibraryStore.getState().status, 'ready');
+  assert.equal(useLibraryStore.getState().assets.length, 3);
+});
+
+test('a stalled next page still times out and invokes the existing fallback', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  let rpcCalls = 0, sourceSignal;
+  chillwhalesProfileRepository.loadProfileAssets = async function* (_profile, { signal }) {
+    sourceSignal = signal;
+    yield { assets: [knownAsset()], resolved: 1, total: 2, failures: 0, complete: false };
+    await new Promise((_resolve, reject) => signal.addEventListener('abort',
+      () => reject(new DOMException('Aborted', 'AbortError')), { once: true }));
+  };
+  luksoRpcProfileRepository.loadProfileAssets = async function* () {
+    rpcCalls++;
+    yield { assets: [knownAsset()], resolved: 1, total: 1, failures: 0, complete: true };
+  };
+  resetLibraryStoreForTests(PROFILE, memoryStorage());
+  await useLibraryStore.getState().load();
+  const pending = useLibraryStore.getState().loadMore();
+  await new Promise(setImmediate);
+  t.mock.timers.tick(8000); await pending;
+  assert.equal(sourceSignal.aborted, true);
+  assert.equal(rpcCalls, 1);
+  assert.equal(useLibraryStore.getState().status, 'ready');
+  assert.equal(useLibraryStore.getState().assets.length, 1);
 });

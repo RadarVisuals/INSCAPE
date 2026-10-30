@@ -45,6 +45,7 @@ test('NFTs expand independently and retain chosen images through drag, reload an
       await page.getByRole('button', { name: 'All Assets', exact: true }).click();
       await page.getByRole('button', { name: 'Library', exact: true }).click();
       await page.getByRole('button', { name: 'Library', exact: true }).click();
+      await library.locator('.system-workflow__library-item').first().waitFor();
       assert.equal(await library.locator('.system-workflow__library-item').count(), 12);
       await library.getByRole('button', { name: 'Fold 6 images of SKULL REAPER', exact: true }).click();
       await open.focus(); await page.keyboard.press('Enter');
@@ -71,8 +72,13 @@ test('NFTs expand independently and retain chosen images through drag, reload an
       };
       await dragToCategory(second);
       await page.waitForFunction(() => document.querySelector('[data-browser-category-id="field-notes"] i')?.textContent === '3');
+      await category.click();
+      assert.equal(await library.locator('[data-library-images-for="42:0x1111111111111111111111111111111111111111:0x01"]').count(), 0);
+      assert.equal(await library.getByRole('button', { name: 'Image 1 of ABYSSAL STUDY', exact: true }).locator('img').getAttribute('src'),
+        'https://images.inscape.test/transparent-fallback.webp', 'dragging files the actual decoded image');
+      await page.getByRole('button', { name: 'All Assets', exact: true }).click();
       await dragToCategory(library.locator('.system-workflow__library-item > button').first());
-      assert.equal(await category.locator('i').textContent(), '3', 'cover and attachment file the same NFT once');
+      assert.equal(await category.locator('i').textContent(), '4', 'cover and attachment remain two individual images from the same NFT');
       assert.equal(await page.evaluate(() => window.__imageTest.draft().grids[0].placements.length), beforeFiling);
       await page.getByRole('button', { name: 'Create Section', exact: true }).click();
       await page.getByRole('textbox', { name: 'section name', exact: true }).fill('STORY');
@@ -134,6 +140,7 @@ test('NFTs expand independently and retain chosen images through drag, reload an
       await page.getByRole('button', { name: 'Library', exact: true }).click();
       await page.reload({ waitUntil: 'networkidle' });
       await page.getByRole('button', { name: 'Library', exact: true }).click();
+      await library.locator('.system-workflow__library-item').first().waitFor();
       assert.equal(await library.locator('.system-workflow__library-item').count(), 7, 'reload starts with one tile per NFT');
       await page.getByRole('button', { name: 'Library', exact: true }).click();
       const restored = await page.evaluate((selected) => window.__imageTest.draft().grids[0].placements.find(({ id }) => id === selected.id), selected);

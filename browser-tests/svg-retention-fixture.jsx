@@ -1,6 +1,7 @@
 import React, { StrictMode, useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import ProjectedSvgArtwork from '../src/artwork/ProjectedSvgArtwork.jsx';
+import { ARTWORK_RETENTION_MS } from '../src/artwork/artworkRetention.js';
 
 // Test-only instrumentation. Source artwork stays intact on disk; both modes
 // use this identical copy and the actual production SVG document host.
@@ -60,7 +61,7 @@ function Fixture() {
   }, [asset]);
   const hostFrames = () => [...stage.current.querySelectorAll('.artwork-svg-document')];
   async function checkLifecycle() {
-    setBusy(true); setText('Lifecycle controleren, inclusief 30 seconden bewaartijd…');
+    setBusy(true); setText(`Lifecycle controleren, inclusief ${ARTWORK_RETENTION_MS / 1000} seconden bewaartijd…`);
     try {
       await until(() => hostFrames().length === 4);
       const initial = hostFrames();
@@ -68,7 +69,7 @@ function Fixture() {
       const hiddenCount = hostFrames().length;
       stage.current.style.transform = ''; await delay(500);
       const reused = hostFrames().every((frame, i) => frame === initial[i]);
-      stage.current.style.transform = 'translateX(-2000px)'; await delay(31000);
+      stage.current.style.transform = 'translateX(-2000px)'; await delay(ARTWORK_RETENTION_MS + 1000);
       const expired = hostFrames().length === 0;
       stage.current.style.transform = ''; await until(() => hostFrames().length === 4);
       const recreated = hostFrames().every((frame, i) => frame !== initial[i]);

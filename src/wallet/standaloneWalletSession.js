@@ -1,5 +1,5 @@
 import { disconnect as disconnectWagmi, getConnection, reconnect, watchConnection } from '@wagmi/core';
-import { setupLuksoConnector } from '@lukso/up-modal';
+import { setupLuksoConnector } from '@lukso/up-modal/auto-setup';
 import { resolveStandaloneUniversalProfile } from '../store/universalProfileValidation.js';
 import { ensureUniversalProfileExtensionConnector } from './universalProfileExtensionReadiness.js';
 import { STANDALONE_WALLET_STORAGE_KEY } from './standaloneWalletLoader.js';
@@ -60,7 +60,13 @@ export async function createStandaloneWalletSession({ initializeWallet, disposeW
   // A stale or revoked authorization must remain a normal disconnected state:
   // the sign-in modal is still available for an explicit reconnect.
   try {
-    await reconnect(connector.wagmiConfig);
+    const config = connector.wagmiConfig;
+    let recent;
+    try { recent = await config.storage?.getItem('recentConnectorId'); } catch { /* Storage is only a loading hint. */ }
+    const mobileWasChosen = recent === 'walletConnect'
+      || [...config.state.connections.values()].some(connection => connection.connector.id === 'walletConnect');
+    const candidates = config.connectors.filter(candidate => candidate.id !== 'walletConnect' || mobileWasChosen);
+    if (candidates.length) await reconnect(config, { connectors: candidates });
   } catch (error) {
     onError?.(error);
   }

@@ -1,10 +1,30 @@
+// @ts-check
 // Owns only a Workbench editing gesture and its temporary preview. Geometry,
 // module authoring and storage remain behind the explicit actions passed in.
+/** @typedef {import('../../contracts/workbench.js').WorkbenchTransforms} WorkbenchTransforms */
+/**
+ * @template Selection
+ * @typedef {{beforeTransforms?: WorkbenchTransforms, beforeSelection?: Selection,
+ * valid(): boolean, preview(pointer: PointerEvent): void, commit(pointer: PointerEvent): boolean}} GestureOperation
+ */
+/**
+ * @template Selection
+ * @typedef {GestureOperation<Selection> & {host: HTMLElement, pointerId: number,
+ * move(pointer: PointerEvent): void, finish(pointer: PointerEvent): void,
+ * pointerCancel(pointer: PointerEvent): void, lost(pointer: PointerEvent): void,
+ * cancel(): void, hidden(): void, escape(key: KeyboardEvent): void}} ActiveGesture
+ */
+/**
+ * @template Selection
+ * @param {import('../../contracts/workbench.js').WorkbenchGestureInput<Selection>} input
+ * @returns {import('../../contracts/workbench.js').WorkbenchGestures<Selection>}
+ */
 export function createWorkbenchGestures({
   getHost, restoreTransforms, replaceSelection, restoreSelection, previewMarquee, finishSnap, cancelDrop,
   events = globalThis, visibility = globalThis.document,
 }) {
-  let active = null;
+  /** @type {ActiveGesture<Selection> | null} */ let active = null;
+  /** @param {ActiveGesture<Selection>} current */
   const detach = current => {
     if (active !== current) return false;
     active = null;
@@ -18,6 +38,7 @@ export function createWorkbenchGestures({
     if (current.host.hasPointerCapture(current.pointerId)) current.host.releasePointerCapture(current.pointerId);
     return true;
   };
+  /** @param {ActiveGesture<Selection>} current */
   const restore = current => {
     if (current.beforeTransforms) restoreTransforms(current.beforeTransforms);
     if (current.beforeSelection) restoreSelection(current.beforeSelection);
@@ -28,11 +49,18 @@ export function createWorkbenchGestures({
     if (!current || !detach(current)) return;
     try { if (rollback) restore(current); } finally { clean(); }
   };
+  /**
+   * @param {import('../../contracts/workbench.js').GestureStartEvent} event
+   * @param {GestureOperation<Selection>} operation
+   */
   const start = (event, operation) => {
     if (event.button !== 0 || active) return false;
     const host = getHost();
     if (!host) return false;
-    const current = { ...operation, host, pointerId: event.pointerId };
+    // All callbacks are assigned synchronously below, before active ownership
+    // or listener registration exposes this completed gesture object.
+    const current = /** @type {ActiveGesture<Selection>} */ ({ ...operation, host, pointerId: event.pointerId });
+    /** @param {Pick<PointerEvent, 'pointerId'>} pointer */
     const owns = pointer => active === current && pointer.pointerId === current.pointerId;
     current.move = pointer => {
       if (!owns(pointer)) return;
@@ -80,10 +108,11 @@ export function createWorkbenchGestures({
       if (!active || active.host.hasPointerCapture(active.pointerId)) return null;
       const pointerId = active.pointerId; cancel(); return pointerId;
     },
-    beginMove(event, { nodes, beforeTransforms, preview, commit, previewDrop, commitDrop }) {
-      const origin = { x: event.clientX, y: event.clientY }; let moved = null;
+    beginMove(event, { nodes, beforeTransforms, preview, commit, previewDrop, commitDrop, valid = () => true }) {
+      const origin = { x: event.clientX, y: event.clientY };
+      /** @type {WorkbenchTransforms | null} */ let moved = null;
       return start(event, {
-        beforeTransforms, valid: () => nodes.every(node => node.isConnected),
+        beforeTransforms, valid: () => nodes.every(node => node.isConnected) && valid(),
         preview: pointer => {
           moved = preview({ x: pointer.clientX - origin.x, y: pointer.clientY - origin.y }, pointer.altKey);
           previewDrop(pointer);

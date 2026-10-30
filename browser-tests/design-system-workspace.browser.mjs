@@ -221,6 +221,7 @@ test('Layers selection, grouping, visibility, ordering and confirmed removal sta
     await page.keyboard.press('Escape');
     assert.ok(await toolbarRemove.evaluate(n=>n===document.activeElement));
     await toolbarRemove.click(); await confirm.getByRole('button',{name:'Remove',exact:true}).click();
+    await studio.getByRole('tab',{name:'Color',exact:true}).and(page.locator(':focus')).waitFor();
     assert.ok(await studio.getByRole('tab',{name:'Color',exact:true}).evaluate(n=>n===document.activeElement));
     await studio.getByRole('tab',{name:'Layers',exact:true}).click();
     assert.equal(await list.locator('.ds-layer-row').count(),2);

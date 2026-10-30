@@ -6,6 +6,11 @@
 .workbench-canvas-tools p { margin: 0; color: var(--tactile-muted); font: var(--workflow-type-control); }
 .workbench-canvas-tools p[role="alert"] { color: var(--tactile-ink); }
 .workbench-canvas-tools > button { display: flex; align-items: center; gap: 8px; min-height: var(--view-control-target); padding: 6px 10px; border-radius: var(--control-radius); text-align: left; font: inherit; }
+.workbench-canvas-size-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.workbench-canvas-size-fields label { display: grid; gap: 4px; min-width: 0; font: var(--workflow-type-control); }
+.workbench-canvas-size-fields input { box-sizing: border-box; width: 100%; min-width: 0; min-height: var(--view-control-target); padding: 4px 6px; border: 1px solid var(--tactile-edge); border-radius: var(--control-radius); background: transparent; color: inherit; font: inherit; font-variant-numeric: tabular-nums; }
+.workbench-canvas-size-fields input:focus-visible { outline: 2px solid var(--tactile-ink); outline-offset: -2px; }
+.workbench-canvas-size-fields button { grid-column: 1 / -1; min-height: var(--view-control-target); border-radius: var(--control-radius); font: inherit; }
 .workbench-canvas-edge { position: fixed; z-index: 81; padding: 0; border: 0; border-radius: 0; background: transparent; touch-action: none; }
 .workbench-canvas-edge::before { content: ''; position: absolute; background: var(--workflow-ink); pointer-events: none; }
 .workbench-canvas-edge::after { content: ''; position: absolute; left: 50%; top: 50%; width: 8px; height: 8px; box-sizing: border-box; transform: translate(-50%, -50%); border: 1px solid #fff; background: #111313; pointer-events: none; }

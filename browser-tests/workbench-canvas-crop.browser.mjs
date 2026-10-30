@@ -52,6 +52,57 @@ async function size(page, width, height) {
   await settle(page);
 }
 
+for (const width of [1440, 390]) test(`typed canvas dimensions save together, preserve origin and support undo (${width}px)`, { timeout: 90000 }, async () => {
+  await mkdir(output, { recursive: true });
+  const browser = await chromium.launch({ headless: true });
+  try {
+    const page = await browser.newPage({ viewport: { width, height: 950 }, reducedMotion: 'reduce' });
+    page.setDefaultTimeout(8000);
+    const errors = []; page.on('pageerror', error => errors.push(error.message));
+    await mount(page, '?edges'); await controls(page);
+    await page.getByRole('button', { name: 'Fit canvas to content', exact: true }).click(); await settle(page);
+    const before = await saved(page), original = before.workbench.area;
+    const popup = page.getByRole('group', { name: 'Canvas size controls' });
+    const field = axis => popup.getByRole('spinbutton', { name: `${axis} (px)` });
+    const apply = popup.getByRole('button', { name: 'Apply', exact: true });
+    assert.equal(original.left, 60); assert.equal(original.top, 60);
+    assert.equal(await field('Width').inputValue(), String(original.width));
+    assert.equal(await field('Height').inputValue(), String(original.height));
+    assert.equal(await apply.isDisabled(), true);
+    for (const invalid of ['', '0', '12.5', '16385', '16384']) {
+      await field('Width').fill(invalid); await apply.click();
+      assert.match(await popup.getByRole('alert').innerText(), /whole pixels/);
+      assert.deepEqual(await saved(page), before, 'invalid input cannot change saved content or dimensions');
+    }
+    await field('Width').fill('1920'); await field('Height').fill('1080');
+    assert.deepEqual(await saved(page), before, 'typing and moving between fields do not save early');
+    await field('Height').press('Enter'); await settle(page);
+    const expected = { ...original, width: 1920, height: 1080 }, after = await saved(page);
+    assert.deepEqual(after.workbench.area, expected);
+    assert.deepEqual(after.imageModules, before.imageModules); assert.deepEqual(after.shapes, before.shapes);
+    assert.deepEqual(after.workbench.imageModules, before.workbench.imageModules);
+    assert.deepEqual(after.workbench.shapes, before.workbench.shapes);
+    assert.equal(await field('Height').evaluate(node => node === document.activeElement), true, 'applying keeps keyboard focus');
+    await page.getByRole('button', { name: 'Close canvas size', exact: true }).click();
+    await page.keyboard.press('Control+z'); await settle(page);
+    assert.deepEqual((await saved(page)).workbench.area, original, 'one undo restores both dimensions');
+    await page.keyboard.press('Control+Shift+z'); await settle(page);
+    assert.deepEqual((await saved(page)).workbench.area, expected);
+    await controls(page); await field('Width').fill('3333'); await field('Width').press('Escape');
+    await controls(page);
+    assert.equal(await field('Width').inputValue(), '1920', 'closing discards unfinished input');
+    await field('Width').fill('3333');
+    await popup.getByRole('button', { name: 'Fit canvas to content', exact: true }).click(); await settle(page);
+    assert.equal(await field('Width').inputValue(), String(original.width), 'another resize replaces stale field input');
+    await field('Width').fill('2223'); await field('Height').fill('1429'); await apply.click(); await settle(page);
+    await page.reload(); await imageAt(page, 0).waitFor(); await controls(page);
+    assert.equal(await field('Width').inputValue(), '2223'); assert.equal(await field('Height').inputValue(), '1429');
+    assert.deepEqual(await page.evaluate(() => canvasDocument().workbench.area), { ...original, width: 2223, height: 1429 });
+    await popup.screenshot({ path: join(output, `numeric-size-${width}.png`) });
+    assert.deepEqual(errors, []);
+  } finally { await browser.close(); }
+});
+
 for (const width of [1440, 390]) test(`canvas crops without loss; outside editing, restore and Visitor agree (${width}px)`, { timeout: 120000 }, async () => {
   await mkdir(output, { recursive: true });
   const browser = await chromium.launch({ headless: true });

@@ -5,7 +5,7 @@ import { chromium } from 'playwright-core';
 import { browserExecutable } from '../scripts/browserEnvironment.mjs';
 
 const origin = process.env.INSCAPE_TEXT_ROOT || 'http://127.0.0.1:24970';
-const output = '.browser-test-runtime/settings-finishing';
+const output = process.env.INSCAPE_BROWSER_OUTPUT || '.browser-test-runtime/settings-finishing';
 const profile = '0x9999999999999999999999999999999999999999';
 const settings = page => page.getByRole('dialog', { name: 'Settings', exact: true });
 const saved = page => page.evaluate(() => window.readToolChromeDraft());
@@ -15,17 +15,31 @@ async function open(page) {
   const trigger = sidebar.getByRole('button', { name: 'Settings', exact: true, includeHidden: true });
   if (!await trigger.isVisible()) await sidebar.getByRole('button', { name: 'Expand sidebar', exact: true }).click();
   await trigger.click(); await settings(page).waitFor();
+  return await trigger.isVisible() ? trigger : sidebar.getByRole('button', { name: 'Expand sidebar', exact: true });
 }
 async function mount(browser, theme = 'mist', width = 1440, height = 900) {
   const page = await browser.newPage({ viewport: { width, height }, reducedMotion: 'reduce' });
   page.setDefaultTimeout(12000); const errors = []; page.on('pageerror', error => errors.push(error.message));
+  const pending = new Set();
+  const started = request => pending.add(request.url());
+  const finished = request => pending.delete(request.url());
+  page.on('request', started); page.on('requestfinished', finished); page.on('requestfailed', finished);
   await page.route('**/*', route => {
     const url = new URL(route.request().url());
     if (url.origin === origin) return route.continue();
     if (url.hostname === 'raw.githubusercontent.com' && url.pathname.includes('/public/')) return route.fulfill({ path: 'public/' + url.pathname.split('/public/')[1] });
     return route.abort();
   });
-  await page.goto(`${origin}/browser-tests/tool-chrome-fixture.html?sample=navigator&persistent&theme=${theme}`);
+  try {
+    await page.goto(`${origin}/browser-tests/tool-chrome-fixture.html?sample=navigator&persistent&theme=${theme}`);
+  } catch (error) {
+    console.error('Settings navigation diagnostics', JSON.stringify({ pending: [...pending], errors,
+      document: await page.evaluate(() => ({ readyState: document.readyState, text: document.body.innerText,
+        resources: performance.getEntriesByType('resource').map(({ name, duration }) => ({ name, duration })) })).catch(() => null) }));
+    throw error;
+  } finally {
+    page.off('request', started); page.off('requestfinished', finished); page.off('requestfailed', finished);
+  }
   await page.locator('.keeper-dock-window').waitFor();
   // The isolated fixture mounts below the app's normal signal/profile binding.
   await page.evaluate(async profile => {
@@ -41,7 +55,7 @@ for (const theme of ['carbon', 'mist']) for (const [width, height] of [[1440, 90
     try {
       const { page, errors } = await mount(browser, theme, width, height), before = await saved(page);
       const material = await page.locator('.keeper-dock-window').evaluate(node => ({ background: getComputedStyle(node).backgroundColor, radius: getComputedStyle(node).borderRadius }));
-      await open(page); const panel = settings(page), close = panel.getByRole('button', { name: 'Close Settings' });
+      const trigger = await open(page), panel = settings(page), close = panel.getByRole('button', { name: 'Close Settings' });
       await mkdir(output, { recursive: true });
       await page.screenshot({ path: `${output}/settings-${theme}-${width}-top.png` });
       const box = await panel.boundingBox();
@@ -80,7 +94,10 @@ for (const theme of ['carbon', 'mist']) for (const [width, height] of [[1440, 90
       await file.scrollIntoViewIfNeeded(); assert.equal(await file.evaluate(hit), true);
       assert.equal(await close.evaluate(hit), true, 'titlebar stays reachable while the body scrolls');
       await page.screenshot({ path: `${output}/settings-${theme}-${width}-backup.png` });
-      await close.click(); assert.equal(await settings(page).count(), 0);
+      await close.click();
+      await panel.waitFor({ state: 'detached' });
+      await trigger.and(page.locator(':focus')).waitFor();
+      assert.equal(await settings(page).count(), 0);
       assert.deepEqual(await saved(page), before, 'reading Settings and local signal preferences do not edit the composition');
       assert.deepEqual(errors, []);
     } finally { await browser.close(); }

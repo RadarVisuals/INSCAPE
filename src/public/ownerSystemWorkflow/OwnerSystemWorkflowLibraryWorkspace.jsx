@@ -6,7 +6,7 @@ import OwnerSystemWorkflowWorkspaceRail from './OwnerSystemWorkflowWorkspaceCont
 import { OwnerSystemWorkflowWorkspaceShell } from './OwnerSystemWorkflowBrowserWorkspace.jsx';
 import { decodeOwnerSystemWorkflowAssetDimensions, ownerSystemWorkflowAssetDimensions } from './ownerSystemWorkflowAssetDimensions.js';
 import OwnerSystemWorkflowLibraryPresenter from './OwnerSystemWorkflowLibraryPresenter.jsx';
-import { libraryImageChoices } from './OwnerSystemWorkflowLibraryImages.jsx';
+import { libraryCategoryImage, libraryImageChoices } from './OwnerSystemWorkflowLibraryImages.jsx';
 import { assetForPlacement } from '../../systemWorkflow/domain/placementMedia.js';
 import './libraryWorkspace.css';
 
@@ -16,14 +16,20 @@ const ownerLibraryPreviewRecords = new Map();
 
 export default function OwnerSystemWorkflowLibraryWorkspace({ authoringLocked = false, categoryCommands, placementScope, data, menuSurface, onClose, phase,
   navigationHost = null, preferences, preferenceStore, previewRecords = ownerLibraryPreviewRecords, resolveAssetDimensions, workbenchImageTargetRef, moduleAssetTargetRef, placementTargetRef, shortcutTargetRef, workspaceRef, className = '', label = 'Library workspace', resizable = true, overlayPlacement = false, selectionAction, selectionEnabled = true, onPlacingChange }) {
-  const workspace = useBrowserWorkspace(data, previewRecords, preferences, preferenceStore);
-  // NFT selection owns category membership. A selected image is a separate,
-  // temporary choice within that NFT, retained for the explicit placement action.
+  const libraryClosed = phase === 'closing' || phase === 'closed';
+  const workspace = useBrowserWorkspace(data, previewRecords, preferences, preferenceStore, !libraryClosed);
+  const onBrowse = data.onBrowse;
+  useEffect(() => {
+    if (!libraryClosed && data.workspaceReady !== false && !data.collectionContext) onBrowse?.({ ...workspace.view, relationship: workspace.relationshipView });
+  }, [libraryClosed, data.workspaceReady, data.collectionContext, onBrowse, workspace.view, workspace.relationshipView]);
+  // Source identity and the selected image travel together to category and
+  // placement actions. Neither changes the NFT's ownership or creator facts.
   const [imageSelection, setImageSelection] = useState(null);
   const source = workspace.selectedAsset;
   const imageChoice = source && imageSelection?.assetId === (source.stableAssetId || source.id) ? imageSelection : null;
   const selectedAsset = imageChoice ? imageChoice.ownerContext === data.ownerContext
-    && libraryImageChoices(source).some(choice => choice.sources.includes(imageChoice.media.url))
+    && (libraryImageChoices(source).some(choice => choice.sources.includes(imageChoice.media.url))
+      || workspace.selectedCategory?.imageSelections?.some(entry => entry.assetId === imageChoice.assetId && entry.url === imageChoice.media.url))
       ? assetForPlacement(source, { selectedMedia: imageChoice.media }) : null : source;
   const resolveDimensions = resolveAssetDimensions || decodeOwnerSystemWorkflowAssetDimensions;
   const [dragPreview, setDragPreview] = useState(null);
@@ -33,7 +39,6 @@ export default function OwnerSystemWorkflowLibraryWorkspace({ authoringLocked = 
   const suppressSelection = useRef(false);
   const latestLibrary = useRef(null);
   latestLibrary.current = { data, categoryCommands };
-  const libraryClosed = phase === 'closing' || phase === 'closed';
   const placementContext = useMemo(() => ({ placementScope, ownerContext: data.ownerContext, authoringLocked, libraryClosed }),
     [placementScope, data.ownerContext, authoringLocked, libraryClosed]);
   const currentPlacementContext = useRef(placementContext);
@@ -115,7 +120,9 @@ export default function OwnerSystemWorkflowLibraryWorkspace({ authoringLocked = 
         return { kind: 'category', categoryId, point, preview: () => null,
           isCurrent: () => latestLibrary.current.data.categories.some(({ id }) => id === categoryId)
             && assetIds.every(id => latestLibrary.current.data.assets.some(asset => (asset.stableAssetId || asset.id) === id)),
-          place: () => latestLibrary.current.categoryCommands?.setCategoryAssets(categoryId, assetIds, true),
+          place: () => assetIds.length === 1 && libraryCategoryImage(asset)
+            ? latestLibrary.current.categoryCommands?.setCategoryImage(categoryId, id, libraryCategoryImage(asset), true)
+            : latestLibrary.current.categoryCommands?.setCategoryAssets(categoryId, assetIds, true),
           rejection: 'Artwork could not be added to this category.' };
       }
       if (!canPlace) return null;
@@ -246,7 +253,7 @@ export default function OwnerSystemWorkflowLibraryWorkspace({ authoringLocked = 
         disabled={authoringLocked || !selectionEnabled || !selectedAsset}
         onClick={() => { if (selectedAsset) activate(selectedAsset); }}>{selectionAction}</button>}</>}
     sidebarCollapsed={workspace.sidebarWidth <= 72}>
-    <OwnerSystemWorkflowLibraryPresenter key={data.ownerContext} categoryCommands={categoryCommands} data={data}
+    <OwnerSystemWorkflowLibraryPresenter key={data.ownerContext} categoryCommands={categoryCommands} data={data} open={!libraryClosed}
       navigationHost={navigationHost} categoryDrag={categoryDrag} dropFeedback={dropFeedback}
       menuSurfaceId={menuSurface} onAssetActivate={(_event, asset) => activate(asset)}
       onAssetPointerDown={beginAssetDrag} onImageActivate={(_event, asset) => place(asset)}

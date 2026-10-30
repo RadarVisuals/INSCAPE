@@ -630,7 +630,7 @@
     {
       "path": "src/artwork/artworkSvg.css",
       "role": "Local",
-      "sha256": "66cf54a5d4757ab3b847bab139d0298b140e764f8c7a3a8296ec1ae060c4facb",
+      "sha256": "49defdf15b3c3f7ca547d9ba3b0728529f61cf2d59f4084a882520e628036fde",
       "definitions": [],
       "references": [
         "--workflow-ink",
@@ -3843,7 +3843,7 @@
     {
       "path": "src/public/ownerSystemWorkflow/ownerSystemWorkflow.css",
       "role": "Workflow",
-      "sha256": "974ac60f4a0dabffa7ae4dc23c445f86da404866c5d2878efdc94f185e0c4823",
+      "sha256": "adfa9419325289dc870cbaabd6917250457fb513caeb8e61b8fe7bec281f8ecd",
       "definitions": [
         {
           "name": "--study-surface",
@@ -4040,7 +4040,7 @@
           "scope": [
             ".system-workflow__presentation-board"
           ],
-          "line": 90,
+          "line": 91,
           "references": [
             "--workflow-window-chrome-gutter"
           ]
@@ -4051,7 +4051,7 @@
           "scope": [
             ".system-workflow__presentation-board"
           ],
-          "line": 91,
+          "line": 92,
           "references": [
             "--workflow-window-chrome-radius"
           ]
@@ -4062,7 +4062,7 @@
           "scope": [
             ".system-workflow__presentation-board"
           ],
-          "line": 92,
+          "line": 93,
           "references": [
             "--workflow-selection"
           ]
@@ -4073,7 +4073,7 @@
           "scope": [
             ".system-workflow__select-popover, .system-workflow__filter-popover"
           ],
-          "line": 484,
+          "line": 485,
           "references": [
             "--lattice-menu-ink"
           ]
@@ -4084,7 +4084,7 @@
           "scope": [
             ".system-workflow__select-popover, .system-workflow__filter-popover"
           ],
-          "line": 484,
+          "line": 485,
           "references": [
             "--lattice-menu-ink",
             "--lattice-menu-panel"
@@ -4096,7 +4096,7 @@
           "scope": [
             ".system-workflow__select-popover, .system-workflow__filter-popover"
           ],
-          "line": 484,
+          "line": 485,
           "references": []
         },
         {
@@ -4105,7 +4105,7 @@
           "scope": [
             ".system-workflow__detached-window"
           ],
-          "line": 537,
+          "line": 538,
           "references": []
         },
         {
@@ -4114,7 +4114,7 @@
           "scope": [
             ".system-workflow__detached-window"
           ],
-          "line": 538,
+          "line": 539,
           "references": [
             "--workflow-window-chrome-radius"
           ]
@@ -4125,7 +4125,7 @@
           "scope": [
             ".system-workflow__detached-window"
           ],
-          "line": 539,
+          "line": 540,
           "references": [
             "--workflow-window-chrome-gutter"
           ]
@@ -4136,7 +4136,7 @@
           "scope": [
             ".system-workflow__detached-window"
           ],
-          "line": 540,
+          "line": 541,
           "references": [
             "--workflow-rail-height"
           ]
@@ -4147,7 +4147,7 @@
           "scope": [
             ".system-workflow__detached-window"
           ],
-          "line": 541,
+          "line": 542,
           "references": []
         },
         {
@@ -4156,7 +4156,7 @@
           "scope": [
             ".system-workflow__detached-window"
           ],
-          "line": 542,
+          "line": 543,
           "references": []
         },
         {
@@ -4165,7 +4165,7 @@
           "scope": [
             ".system-workflow__detached-window"
           ],
-          "line": 543,
+          "line": 544,
           "references": [
             "--workflow-window-chrome-shadow-inset"
           ]
@@ -4176,7 +4176,7 @@
           "scope": [
             ".system-workflow__detached-window"
           ],
-          "line": 544,
+          "line": 545,
           "references": [
             "--workflow-window-chrome-shadow-height"
           ]
@@ -4187,7 +4187,7 @@
           "scope": [
             ".system-workflow:is([data-menu-surface=\"ash\"], [data-menu-surface=\"mist\"], [data-menu-surface=\"paper\"])\n  .system-workflow__detached-window-surface,\n.visitor-grid-world:is([data-menu-surface=\"ash\"], [data-menu-surface=\"mist\"], [data-menu-surface=\"paper\"])\n  .system-workflow__detached-window-surface"
           ],
-          "line": 609,
+          "line": 610,
           "references": []
         },
         {
@@ -4196,7 +4196,7 @@
           "scope": [
             ".system-workflow:is([data-menu-surface=\"ash\"], [data-menu-surface=\"mist\"], [data-menu-surface=\"paper\"])\n  .system-workflow__detached-window-surface,\n.visitor-grid-world:is([data-menu-surface=\"ash\"], [data-menu-surface=\"mist\"], [data-menu-surface=\"paper\"])\n  .system-workflow__detached-window-surface"
           ],
-          "line": 610,
+          "line": 611,
           "references": []
         },
         {
@@ -4205,7 +4205,7 @@
           "scope": [
             ".system-workflow[data-layout=\"narrow\"]"
           ],
-          "line": 632,
+          "line": 633,
           "references": []
         }
       ],
@@ -4231,6 +4231,7 @@
         "--tool-icon-target",
         "--workbench-content-scale",
         "--workbench-control-scale",
+        "--workbench-recovery-bottom",
         "--workflow-active-vertical",
         "--workflow-board-frame-gap",
         "--workflow-board-frame-surface",
@@ -4421,7 +4422,7 @@
     {
       "path": "src/public/ownerSystemWorkflow/workbenchCanvasContent.css",
       "role": "Local",
-      "sha256": "256198654f2b2d17c6f1579f63736363a7e149ef6b6f1dd1781af0c71f88d527",
+      "sha256": "15c4d18f5c42a8dd8d1b1bfe69609a5d7597ce7b1e8282069bf571413b986d93",
       "definitions": [],
       "references": [
         "--artwork-order",
@@ -4434,7 +4435,7 @@
     {
       "path": "src/public/ownerSystemWorkflow/workbenchCanvasControls.css",
       "role": "Local",
-      "sha256": "61dc6f09cb6dd82c899238f2b51476fce4c7bf1ef997ecd36be6ae5a560e25b0",
+      "sha256": "6b17aa1af01c7a872a28741d83815996800f1e5169588dc2f65373971f30b157",
       "definitions": [],
       "references": [
         "--control-radius",

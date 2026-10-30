@@ -3,10 +3,18 @@ import { workbenchPaintGeometry } from './workbenchPaintGeometry.js';
 // Use the same approach as Display Lift: lay out the live surfaces at the
 // largest required resolution once, then project them down during the journey.
 // No surface is ever magnified beyond the resolution prepared for this trip.
-export function createWorkbenchCameraSurfaceMotion(host, entries, rasterCamera, { origins, destinations, kind, start, end } = {}) {
+export function createWorkbenchCameraSurfaceMotion(host, entries, rasterCamera, { origins, destinations, kind, start, end } = {}, planes = new Set()) {
   const registered = new Map(entries);
+  const planeCount = planes.size;
+  // Ordinary camera translation is shared by all content in a registered plane.
+  // Inspection removes the clipping box; group morphs have independent endpoints.
+  const shared = !origins && !destinations && (kind === 'pan' || kind === 'coast')
+    ? [...planes].filter(node => node?.isConnected && host.contains(node)
+      && getComputedStyle(node.parentElement).display !== 'contents'
+      && !node.querySelector('[data-workbench-camera-decoration], [data-workbench-pan]:not([data-workbench-view-id])')) : [];
+  const contained = node => shared.some(plane => plane.contains(node));
   const decorations = [...host.querySelectorAll('[data-workbench-camera-decoration]')];
-  const surfaces = [...registered.values(), ...decorations].map(node => {
+  const surfaces = [...registered.values(), ...decorations].filter(node => !contained(node)).map(node => {
     const transform = getComputedStyle(node).transform;
     const matrix = new DOMMatrix(transform === 'none' ? undefined : transform);
     const id = node.dataset.workbenchViewId;
@@ -16,6 +24,7 @@ export function createWorkbenchCameraSurfaceMotion(host, entries, rasterCamera, 
       width: box.width / rasterCamera.scale, height: box.height / rasterCamera.scale };
     return { node, matrix, box, from: source || world, to: destination || world };
   });
+  surfaces.push(...shared.map(node => ({ node, matrix: new DOMMatrix() })));
   const overlay = host.querySelector('.workbench-selection');
   const selection = overlay?.getBoundingClientRect();
   const shortcuts = [...host.querySelectorAll('[data-workbench-pan]:not([data-workbench-view-id])')];
@@ -36,7 +45,8 @@ export function createWorkbenchCameraSurfaceMotion(host, entries, rasterCamera, 
     }
   }
   return {
-    isCurrent: () => entries.size === registered.size && [...registered].every(([id, node]) => entries.get(id) === node && node.isConnected),
+    isCurrent: () => planes.size === planeCount && shared.every(node => planes.has(node) && node.isConnected)
+      && entries.size === registered.size && [...registered].every(([id, node]) => entries.get(id) === node && node.isConnected),
     paint(camera, progress = 1) {
       const ratio = camera.scale / rasterCamera.scale;
       let x = camera.offset.x - rasterCamera.offset.x * ratio;
@@ -86,9 +96,8 @@ export function createWorkbenchCameraSurfaceMotion(host, entries, rasterCamera, 
         node.removeAttribute('data-workbench-camera-projected');
         node.style.removeProperty('--workbench-camera-transform');
       }
-      for (const node of shortcuts) {
-        node.style.removeProperty('--workbench-pan-x'); node.style.removeProperty('--workbench-pan-y');
-      }
+      // Navigation owns shortcut offsets, including at rest. Retain their last
+      // paint until its next geometry commit (or navigation unmount cleanup).
     },
   };
 }

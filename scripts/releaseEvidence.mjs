@@ -61,6 +61,12 @@ export function gitIdentity(root) {
 }
 
 export function passingTap(log) {
+  const plans = [...log.matchAll(/^1\.\.([1-9]\d*)\r?$/gm)];
+  const points = [...log.matchAll(/^ok (\d+)\b.*$/gm)];
+  if ([...log.matchAll(/^TAP version 13\r?$/gm)].length !== 1
+    || plans.length !== 1 || points.length !== Number(plans[0][1])
+    || points.some((point, index) => Number(point[1]) !== index + 1)
+    || /^\s*not ok\b/m.test(log)) throw Error('Missing or incomplete TAP plan/results');
   const fields = ['tests', 'pass', 'fail', 'cancelled', 'skipped', 'todo'];
   const counts = Object.fromEntries(fields.map(key => {
     const matches = [...log.matchAll(new RegExp(`^# ${key} (\\d+)\\r?$`, 'gm'))];

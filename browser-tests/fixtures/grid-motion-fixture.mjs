@@ -1,5 +1,5 @@
 // Filled, layered Display scenes and independent Images shared by motion tests.
-export async function mountGridMotionFixture(page, { origin, visitor = false, heavy = false, count = 4, displayWidth = 1000, grain, edgeReview = false, seamReview = false, artwork, inspectionArtwork, inspectionMode, textModes = false, adjoiningModules = null, workbenchGroups, privateModuleIds = [] }) {
+export async function mountGridMotionFixture(page, { origin, visitor = false, heavy = false, count = 4, displayWidth = 1000, grain, edgeReview = false, seamReview = false, artwork, inspectionArtwork, inspectionMode, textModes = false, adjoiningModules = null, workbenchGroups, privateModuleIds = [], retentionStudy = false }) {
   await page.route('**/*', route => new URL(route.request().url()).origin === origin ? route.fallback() : route.abort());
   await page.route('**/motion-artwork.png', route => route.fulfill({ contentType: 'image/jpeg', path: 'browser-tests/fixtures/grid-landscape.jpg' }));
   await page.route('https://raw.githubusercontent.com/RadarVisuals/INSCAPE/**', route => route.fulfill({ contentType: 'image/webp', path: `public/${new URL(route.request().url()).pathname.split('/public/')[1]}` }));
@@ -7,7 +7,7 @@ export async function mountGridMotionFixture(page, { origin, visitor = false, he
   if (inspectionArtwork?.body) await page.route(inspectionArtwork.url, route => route.fulfill({ contentType: inspectionArtwork.contentType || 'image/svg+xml', body: inspectionArtwork.body }));
   await page.route(`${origin}/__motion__`, route => route.fulfill({ contentType: 'text/html', body: '<div id="root"></div>' }));
   await page.goto(`${origin}/__motion__`);
-  await page.evaluate(async ({ visitor, heavy, count, displayWidth, grain, edgeReview, seamReview, artwork, inspectionArtwork, inspectionMode, textModes, adjoiningModules, workbenchGroups, privateModuleIds }) => {
+  await page.evaluate(async ({ visitor, heavy, count, displayWidth, grain, edgeReview, seamReview, artwork, inspectionArtwork, inspectionMode, textModes, adjoiningModules, workbenchGroups, privateModuleIds, retentionStudy }) => {
     const refresh = (await import('/@react-refresh')).default;
     refresh.injectIntoGlobalHook(window); window.$RefreshReg$ = () => {}; window.$RefreshSig$ = () => type => type; window.__vite_plugin_react_preamble_installed__ = true;
     const React = (await import('/@id/react')).default, { createRoot } = (await import('/@id/react-dom/client')).default;
@@ -129,6 +129,15 @@ export async function mountGridMotionFixture(page, { origin, visitor = false, he
       }
     }
     if (workbenchGroups) draft.workbenchGroups = workbenchGroups;
+    if (retentionStudy) {
+      const original = draft.imageModules[0];
+      const width = retentionStudy === 'large' ? 240 : 72, height = retentionStudy === 'large' ? 240 : 90;
+      draft.imageModules = Array.from({ length: 12 }, (_, i) => ({ ...original, id: `image:retention-${i}`, name: `Moving artwork ${i + 1}`, width, height }));
+      draft.workbench.imageModules = draft.imageModules.map((image, i) => ({ id: image.id, open: true,
+        position: { left: 20 + i % 4 * (width + 12), top: 170 + Math.floor(i / 4) * (height + 10) } }));
+      draft.workbench.identity.open = false; draft.workbench.display.open = false;
+      draft.texts = []; draft.workbench.texts = [];
+    }
     for (const key of ['imageModules', 'texts', 'shapes', 'keeperDocks', 'displays']) for (const item of draft[key] || [])
       if (privateModuleIds.includes(item.id)) item.visibility = 'PRIVATE';
     localStorage.setItem(key, JSON.stringify(draft)); window.__motionSaved = localStorage.getItem(key); window.__motionKey = key;
@@ -151,5 +160,5 @@ export async function mountGridMotionFixture(page, { origin, visitor = false, he
     // Owner reload checks reread storage without reseeding the fixture draft.
     window.__motionRemount = () => { window.__motionRoot.unmount(); window.__motionRoot = createRoot(document.getElementById('root')); render(); };
     render();
-  }, { visitor, heavy, count, displayWidth, grain, edgeReview, seamReview, artwork, inspectionArtwork, inspectionMode, textModes, adjoiningModules, workbenchGroups, privateModuleIds });
+  }, { visitor, heavy, count, displayWidth, grain, edgeReview, seamReview, artwork, inspectionArtwork, inspectionMode, textModes, adjoiningModules, workbenchGroups, privateModuleIds, retentionStudy });
 }

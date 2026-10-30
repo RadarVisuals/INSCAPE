@@ -10,9 +10,11 @@ import { artworkModuleId, layerIds } from '../../systemWorkflow/domain/artworkLa
 // Tools and inspection overlays remain in the existing viewport host.
 export default function WorkbenchCanvasContent({ children }) {
   const { area, showOutside, setCanvasHost } = useWorkbenchArea();
-  const { getCamera, subscribeCameraPaint } = useWorkbenchCamera();
+  const { getCamera, subscribeCameraPaint, registerCameraPlane } = useWorkbenchCamera();
   const view = useWorkbenchView();
   const node = useRef(null), current = useRef(area); current.current = area;
+  const plane = useRef(null);
+  useLayoutEffect(() => registerCameraPlane?.(plane.current), [registerCameraPlane]);
   const paint = useRef(null);
   useLayoutEffect(() => {
     const element = node.current;
@@ -61,5 +63,7 @@ export default function WorkbenchCanvasContent({ children }) {
       for (const element of view.entries.values()) if (node.current?.contains(element)) element.removeAttribute('data-workbench-canvas-hidden');
     };
   }, [view.entries, view.frames, view.transforms, view.presentationTransforms, view.subscribe, area.left, area.top, area.width, area.height, showOutside]);
-  return <div ref={node} className="workbench-canvas-content" data-show-outside={showOutside || undefined}>{children}</div>;
+  return <div ref={node} className="workbench-canvas-content" data-show-outside={showOutside || undefined}>
+    <div ref={plane} className="workbench-camera-plane">{children}</div>
+  </div>;
 }

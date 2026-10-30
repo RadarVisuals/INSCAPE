@@ -1,0 +1,21 @@
+{
+  "provenance": {"run": "40775463649", "artifact": "12855519197", "testedCommit": "f665913dd7282a25261014117c7b79b6bb7a8cd7", "entry": "browser/results.json", "platform": "linux", "meaning": "Observed completed suite seconds, including failed cases; scheduling weights only, not performance budgets."},
+  "unknownSeconds": 30,
+  "seconds": {
+    "reception-styling":19.404,"reception-boundaries":9.578,"published-gallery":31.576,"workbench-overview":111.137,"owner-workflow-contracts":9.244,
+    "artwork-document":3.178,"artwork-info":17.894,"animated-raster":1.932,"svg-lifecycle":39.791,"camera-controls":18.818,"context-action-bars":32.925,
+    "image-activation":4.728,"image-click":15.46,"image-duplicate":3.613,"image-interaction":13.509,"image-flip":14.862,"image-load-recovery":61.626,
+    "image-recovery-owner":45.396,"image-resize-focus":2.727,"resize-mark-pixels":8.087,"image-corner-resize":60.474,"image-large-resize":28.09,"image-fit":5.479,
+    "keeper":25.026,"keeper-dialogue":15.563,"keeper-selection":6.877,"library-drop-lifecycle":19.569,"activity":32.166,"settings":26.748,"editor-preferences":67.226,
+    "library-filter-keyboard":4.935,"library-storage":2.259,"library-recovery":6.054,"mini-apps":27.056,"html-artwork-workbench":10.546,"owner-profile-routing":18.753,
+    "published-visitor":18.165,"published-workbench-groups":11.816,"reception-card":16.413,"exploration-keeper":28.348,"shapes":8.821,"shape-corner-resize":16.765,
+    "grid-resize-release":18.396,"text-focus-writing":21.192,"text-hierarchy":11.027,"text-linked-frames":34.312,"text-recovery-position":29.15,"text-window-edges":1.654,
+    "workbench-area-navigation":19.049,"workbench-canvas-crop":33.091,"workbench-groups":13.034,"workbench-index":13.478,"workbench-inspection-keyboard":11.762,
+    "workbench-inspection-lock":21.182,"workbench-layout-reload":18.022,"workbench-navigation-boundary":1.423,"workbench-focus-toggle":62.259,"workbench-focus-motion":8.875,
+    "workbench-focus-start":29.171,"workbench-recovery":8.238,"workbench-stacks":25.832,"workbench-toolbar":26.748,"entry-contrast":2.358,"wallet-lazy-startup":7.137,
+    "workbench-storage":23.613,"local-workbenches":46.537,"text-article-tools":17.879,"text-filled-workbench":19.41,"workbench-activation":9.059,"publication-upload-admission":9.732,
+    "publication-confirmation":33.431,"colour-focus":8.277,"colour-eyedropper":4.216,"design-system-colour":8.958,"design-system-interactions":19.498,
+    "design-system-library":13.94,"design-system-workspace":32.893,"design-system":23.854,"destination-panels":45.741,"discover-style":15.124,"hidden-svg-raster":1.231,
+    "keeper-panel":6.096,"keeper-screen":5.023,"prepared-image":7.103,"publication-recovery":10.261
+  }
+}

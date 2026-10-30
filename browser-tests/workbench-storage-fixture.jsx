@@ -19,6 +19,10 @@ if (params.has('seed') && localStorage.getItem(key) === null) {
   draft.workbench = createDefaultWorkbenchPresentation();
   draft.workbench.texts = [createTextPresentation('text:private', 0)];
   draft.workbench.texts[0].window = { left: 60, top: 100, width: 320, height: 400 };
+  if (params.has('selection')) {
+    draft.imageModules = [{ id: 'image:gesture', name: 'Gesture Image', width: 240, height: 240, sides: [], visibility: 'PRIVATE' }];
+    draft.workbench.imageModules = [{ id: 'image:gesture', open: true, position: { left: 420, top: 100 } }];
+  }
   localStorage.setItem(key, JSON.stringify(draft));
 }
 window.fixtureProfile = profile;
@@ -27,6 +31,7 @@ window.guardedStore = () => createSystemWorkflowDraftStore({ profileAddress: pro
 const root = createRoot(document.getElementById('root'));
 window.leaveEditor = () => root.unmount();
 const content = <Boundary profileAddress={profile} reviewStorage={localStorage} reviewAssets={[]} reviewCategories={[]} reviewActivity={[]}
+  publishedResolution={{ status: 'UNAVAILABLE', address: profile, document: null }}
   reviewProfile={{ name: 'Local storage verification' }} onOpenReception={() => root.render(<p>Published view requested</p>)} />;
 // Use the production shell's CSS boundary when checking route-level interaction.
 root.render(params.has('shell') ? <div className="application-root" data-application-mode="public">

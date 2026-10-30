@@ -94,7 +94,7 @@ export default function ArtworkSvgDocument({ src, title = 'Interactive artwork',
   useEffect(() => {
     if (hostReady) frame.current?.contentWindow?.postMessage({ type: 'inscape:html-artwork-visibility', visible }, '*');
   }, [visible, hostReady]);
-  const statusContent = status !== 'ready' && <span className="artwork-svg-status" role="status">
+  const statusContent = status !== 'ready' && <span className="artwork-svg-status" role="status" data-artwork-loading={status === 'loading' || undefined}>
     {status === 'loading' ? 'Loading artwork…' : <button type="button" style={{ pointerEvents: 'auto' }}
       onClick={() => { setHostReady(false); setAttempt(value => value + 1); }}>Artwork unavailable — retry</button>}
   </span>;

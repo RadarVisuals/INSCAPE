@@ -194,13 +194,14 @@ test('cancellation during a direct holding read never yields an empty success', 
   assert.deepEqual(batches, []);
 });
 
-test('hydrates gallery-referenced assets before the remaining RPC inventory', async () => {
+test('streams the full RPC inventory or hydrates only explicitly requested assets', async () => {
   const secondTokenId = `0x${'0'.repeat(63)}2`;
   const client = {
     async multicall({ contracts }) {
       if (contracts[0]?.functionName === 'supportsInterface') {
         return [{ status: 'success', result: true }, { status: 'success', result: false }];
       }
+      if (contracts[0]?.functionName === 'tokenOwnerOf') return [success(profile)];
       return [{ status: 'success', result: [tokenId, secondTokenId] }];
     },
     async readContract({ functionName, args }) {
@@ -216,11 +217,10 @@ test('hydrates gallery-referenced assets before the remaining RPC inventory', as
   };
   const repository = createLuksoRpcProfileRepository({ client, rpcUrl: 'https://rpc.example', pageSize: 1,
     discoverContracts: async () => [lsp8], fetchImpl: async (url) => response(documents[url.split('/').at(-1)]) });
-  const priorityId = `42:${lsp8}:${secondTokenId}`;
   const batches = [];
-  for await (const batch of repository.loadProfileAssets(profile, { priorityAssetIds: [priorityId] })) batches.push(batch);
-  assert.equal(batches[0].assets[0].id, priorityId);
-  assert.equal(batches[1].assets[0].id, `42:${lsp8}:${tokenId}`);
+  for await (const batch of repository.loadProfileAssets(profile)) batches.push(batch);
+  assert.equal(batches[0].assets[0].id, `42:${lsp8}:${tokenId}`);
+  assert.equal(batches[1].assets[0].id, `42:${lsp8}:${secondTokenId}`);
 
   const requestedBatches = [];
   for await (const batch of repository.loadProfileAssets(profile,
@@ -473,4 +473,69 @@ test('Creations collection repair uses the same verified on-chain SVG metadata p
   assert.equal(result.get(tokenId).name, 'On-chain work');
   assert.equal(result.get(tokenId).images[0].url, svgUrl);
   assert.equal(result.get(tokenId).metadataSource, 'LSP4MetadataForTokenId (DIRECT LUKSO RPC)');
+});
+
+test('targeted repair checks only requested LSP8 owners and LSP7 balances, without LSP5 or token enumeration', async () => {
+  const calls = [];
+  const otherToken = `0x${'0'.repeat(63)}2`;
+  const repository = createLuksoRpcProfileRepository({
+    discoverContracts: async () => { throw new Error('Targeted repair must not discover LSP5'); },
+    client: {
+      async multicall({ contracts }) {
+        calls.push(...contracts);
+        return contracts.map(call => {
+          if (call.functionName === 'supportsInterface') return success(call.address.toLowerCase() === lsp8
+            ? call.args[0] === '0x3a271706' : call.args[0] === '0xc52d6008');
+          if (call.functionName === 'tokenOwnerOf') return success(call.args[0] === tokenId ? profile : lsp7);
+          if (call.functionName === 'balanceOf') return success(2n);
+          throw new Error('Unexpected inventory enumeration');
+        });
+      },
+      async readContract({ functionName, args }) {
+        return functionName === 'getDataForTokenId' || args[0] === '0x9afb95cacc9f95858ec44aa8c3b685511002e30ae54415823f406128b85b238e'
+          ? uri('repair') : '0x';
+      },
+    }, fetchImpl: async () => response({ LSP4Metadata: { images: [{ url: 'https://art.example/repaired.webp' }] } }),
+  });
+  const ids = [`42:${lsp8}:${tokenId}`, `42:${lsp8}:${otherToken}`, `42:${lsp7}:contract`];
+  const batches = [];
+  for await (const batch of repository.loadProfileAssets(profile, { requestedAssetIds: [...ids, ids[0]] })) batches.push(batch);
+  assert.deepEqual(batches.flatMap(batch => batch.assets.map(asset => asset.id)), [ids[0], ids[2]]);
+  assert.deepEqual(calls.filter(call => call.functionName === 'tokenOwnerOf').map(call => call.args[0]), [tokenId, otherToken]);
+  assert.equal(calls.filter(call => call.functionName === 'balanceOf').length, 1);
+  assert.equal(calls.some(call => call.functionName === 'tokenIdsOf'), false);
+  assert.equal(batches.at(-1).complete, true);
+});
+
+test('invalid or empty repair identities never widen into full inventory discovery', async () => {
+  const repository = createLuksoRpcProfileRepository({
+    discoverContracts: async () => { throw new Error('Unexpected discovery'); },
+    client: { multicall: async () => { throw new Error('Unexpected RPC'); } },
+  });
+  for (const ids of [['bad'], [`1:${lsp8}:${tokenId}`], [`42:${lsp8}:0x01`], 'not-an-array']) {
+    await assert.rejects(repository.loadProfileAssets(profile, { requestedAssetIds: ids }).next(), TypeError);
+  }
+  const iterator = repository.loadProfileAssets(profile, { requestedAssetIds: [] });
+  assert.deepEqual((await iterator.next()).value, { assets: [], resolved: 0, total: 0, failures: 0, complete: true });
+  assert.equal((await iterator.next()).done, true);
+});
+
+test('failed targeted owner reads remain unknown and cancellation never publishes their late result', async () => {
+  for (const abort of [false, true]) {
+    const controller = new AbortController();
+    const repository = createLuksoRpcProfileRepository({ discoverContracts: async () => { throw new Error('Unexpected discovery'); },
+      client: { multicall: async ({ contracts }) => {
+        if (contracts[0].functionName === 'supportsInterface') return [success(true), success(false)];
+        if (abort) controller.abort();
+        return [failedRead()];
+      } },
+    });
+    const batches = [];
+    await assert.rejects(async () => {
+      for await (const batch of repository.loadProfileAssets(profile,
+        { requestedAssetIds: [`42:${lsp8}:${tokenId}`], signal: controller.signal })) batches.push(batch);
+    }, abort ? { name: 'AbortError' } : /holdings could not be verified/);
+    assert.equal(batches.some(batch => batch.complete), false);
+    assert.equal(batches.flatMap(batch => batch.assets).length, 0);
+  }
 });

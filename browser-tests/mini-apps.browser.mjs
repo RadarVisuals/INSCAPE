@@ -4,13 +4,14 @@ import { mkdir } from 'node:fs/promises';
 import { build } from 'esbuild';
 import { chromium } from 'playwright-core';
 const origin = process.env.INSCAPE_TEST_ORIGIN || 'http://127.0.0.1:5192';
+const output = process.env.INSCAPE_BROWSER_OUTPUT || 'output/mini-apps';
 const appOrigin = 'https://new-mini-app.test', secondOrigin = 'https://another-mini-app.test';
 const radarOrigin = 'https://radar725.netlify.app';
 const profile = `0x${'1'.repeat(40)}`, account = `0x${'2'.repeat(40)}`;
 console.log('Bundling standard UP Provider fixture');
 const bundle = await build({ entryPoints: ['browser-tests/mini-app-fixture.js'], bundle: true, write: false, format: 'iife' });
 console.log('Fixture bundled');
-await mkdir('output/mini-apps', { recursive: true });
+await mkdir(output, { recursive: true });
 const browser = await chromium.launch({ executablePath: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', headless: true,
   args: ['--use-fake-ui-for-media-stream', '--use-fake-device-for-media-stream', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
 console.log('Browser launched');
@@ -28,7 +29,7 @@ try {
   watchdog = setTimeout(async () => {
     console.error('Browser test stalled:', await page.locator('body').innerText());
     console.error('Frames:', page.frames().map(frame => frame.url()));
-    await page.screenshot({ path: 'output/mini-apps/stalled.png' });
+    await page.screenshot({ path: `${output}/stalled.png` });
     await browser.close();
   }, 60000);
   watchdog.unref();
@@ -62,6 +63,7 @@ try {
     useWalletStore.setState({ provider, accounts: [account], chainId: '0x2a', isWalletConnected: true,
       authorityLifecycleStatus: 'complete', publicClient: { request: async () => '0x01' } });
     review.renderOwner = () => review.root.render(React.createElement(Runtime, { profileAddress: profile, reviewStorage: storage,
+      publishedResolution: { status: 'UNAVAILABLE', address: profile, document: null },
       reviewAssets: fixture.OWNER_SYSTEM_WORKFLOW_REVIEW_ASSETS, reviewCategories: [], reviewActivity: [], reviewProfile: { name: 'Mini app review' } }));
     review.renderOwner();
   }, { profile, account });
@@ -161,9 +163,9 @@ try {
   await page.getByLabel('Resize Mini app window', { exact: true }).focus();
   await page.keyboard.press('ArrowRight'); await page.keyboard.press('ArrowDown');
   assert.equal(await page.evaluate(() => JSON.stringify(review.draft())), beforeGeometry);
-  await page.screenshot({ path: 'output/mini-apps/owner-wide.png' });
+  await page.screenshot({ path: `${output}/owner-wide.png` });
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.screenshot({ path: 'output/mini-apps/owner-narrow.png' });
+  await page.screenshot({ path: `${output}/owner-narrow.png` });
   const bounds = await page.locator('.mini-app-workbench .system-workflow__instrument-window').boundingBox();
   assert.ok(bounds.x >= 0 && bounds.x + bounds.width <= 391, JSON.stringify(bounds));
   await page.setViewportSize({ width: 1440, height: 1000 });
@@ -220,7 +222,7 @@ try {
   assert.ok(Math.abs(captured[0].window.width - capturedBounds.width) < 1);
   assert.ok(Math.abs(captured[0].window.left - capturedBounds.x) < 1);
   assert.equal(uploads, 0);
-  await page.screenshot({ path: 'output/mini-apps/capture-prepared-wide.png' });
+  await page.screenshot({ path: `${output}/capture-prepared-wide.png` });
   await page.getByRole('button', { name: 'Publish', exact: true }).click();
   await publication.waitFor({ state: 'detached' });
   console.log('Prepare Publication captured live window geometry and closed app state without an upload');
@@ -237,9 +239,9 @@ try {
   first = await clientFrame(); assert.deepEqual(await accounts(first), []);
   assert.equal(await page.getByRole('button', { name: 'Settings for RADAR test' }).count(), 0);
   assert.equal(await page.evaluate(() => review.document.miniApps.length), 1);
-  await page.screenshot({ path: 'output/mini-apps/visitor-wide.png' });
+  await page.screenshot({ path: `${output}/visitor-wide.png` });
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.screenshot({ path: 'output/mini-apps/visitor-narrow.png' });
+  await page.screenshot({ path: `${output}/visitor-narrow.png` });
   await page.getByRole('button', { name: 'Close RADAR test', exact: true }).click();
   assert.equal(await page.evaluate(() => JSON.stringify(review.draft()) === review.before), true);
   assert.deepEqual(errors, []);
@@ -257,12 +259,12 @@ try {
     await page.getByRole('button', { name: 'Connect app', exact: true }).click();
     await page.getByRole('button', { name: 'Disconnect app', exact: true }).waitFor();
     await radar.getByText('Fetching Setlist...', { exact: true }).waitFor({ state: 'hidden', timeout: 45000 });
-    await page.screenshot({ path: 'output/mini-apps/radar-workbench-wide.png' });
+    await page.screenshot({ path: `${output}/radar-workbench-wide.png` });
     await page.setViewportSize({ width: 390, height: 844 });
     await radar.locator('.menu-dot').evaluate(button => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
     const liveFrame = page.frames().find(frame => frame.url() === `${radarOrigin}/`);
     await liveFrame.waitForFunction(() => document.querySelector('.menu-dot').getBoundingClientRect().right <= innerWidth);
-    await page.screenshot({ path: 'output/mini-apps/radar-workbench-narrow.png' });
+    await page.screenshot({ path: `${output}/radar-workbench-narrow.png` });
     console.log('PASS live RADAR in the actual Workbench with a simulated connected account');
   }
   if (process.env.INSCAPE_TEST_LIVE_P1 === '1') {
@@ -281,10 +283,10 @@ try {
     await p1.getByRole('button', { name: 'Connect', exact: true }).waitFor();
     await page.getByRole('status').filter({ hasText: 'Connect through the app’s own controls.' }).waitFor({ timeout: 20000 });
     assert.equal(await page.getByRole('button', { name: 'Connect app', exact: true }).isDisabled(), true);
-    await page.screenshot({ path: 'output/mini-apps/p1-workbench-wide.png' });
+    await page.screenshot({ path: `${output}/p1-workbench-wide.png` });
     await page.setViewportSize({ width: 390, height: 844 });
     await p1.locator('body').evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
-    await page.screenshot({ path: 'output/mini-apps/p1-workbench-narrow.png' });
+    await page.screenshot({ path: `${output}/p1-workbench-narrow.png` });
     const bounds = await page.locator('.mini-app-workbench .system-workflow__instrument-window').boundingBox();
     assert.ok(bounds.x >= 0 && bounds.x + bounds.width <= 391, JSON.stringify(bounds));
     console.log('PASS live P1: settings saved, player rendered with its own Connect control; host connection unavailable and microphone denied');
@@ -299,7 +301,7 @@ try {
       console.error('Client:', await frame.evaluate(() => ({ body: document.body.innerText,
         context: window.miniAppFixture?.provider.contextAccounts, accounts: window.miniAppFixture?.provider.accounts })));
     }
-    await testPage.screenshot({ path: 'output/mini-apps/failure.png' });
+    await testPage.screenshot({ path: `${output}/failure.png` });
   }
   throw error;
 } finally { clearTimeout(watchdog); await browser.close(); }

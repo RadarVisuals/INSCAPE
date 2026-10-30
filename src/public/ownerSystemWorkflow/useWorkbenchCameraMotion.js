@@ -8,7 +8,7 @@ import { workbenchPanCoast } from './workbenchInertia.js';
 // One projection lifetime serves destination travel, pointer pan and release
 // inertia. Destinations and Back history remain with the navigation controller.
 export default function useWorkbenchCameraMotion(camera, hostRef, entries) {
-  const { getCamera, updateCamera: applyCamera, prepareCamera, projectCamera, previewCamera } = camera;
+  const { getCamera, getCameraPlanes, updateCamera: applyCamera, prepareCamera, projectCamera, previewCamera } = camera;
   const active = useRef(null);
   const [moving, setMoving] = useState(false);
   const preference = useMemo(() => globalThis.matchMedia?.('(prefers-reduced-motion: reduce)'), []);
@@ -35,13 +35,15 @@ export default function useWorkbenchCameraMotion(camera, hostRef, entries) {
     const raster = { scale: Math.max(motion.start.scale, motion.end?.scale || motion.start.scale), offset: motion.start.offset };
     // Prepare native media resolution once. Pointer samples and animation frames
     // then paint live DOM transforms without rendering module editors each time.
+    projectCamera(null);
     flushSync(() => { setMoving(true); prepareCamera(raster); });
-    motion.surface = createWorkbenchCameraSurfaceMotion(hostRef.current, entries, raster, motion);
+    motion.surface = createWorkbenchCameraSurfaceMotion(hostRef.current, entries, raster, motion, getCameraPlanes());
     projectCamera(motion.surface);
     previewCamera(motion.start, 0);
-  }, [prepareCamera, projectCamera, previewCamera, hostRef, entries]);
+  }, [prepareCamera, projectCamera, previewCamera, hostRef, entries, getCameraPlanes]);
   const run = useCallback(motion => {
-    prepare(motion);
+    if (motion.surface) active.current = motion;
+    else prepare(motion);
     const tick = time => {
       if (active.current !== motion) return;
       if (motion.isCurrent && !motion.isCurrent()) { stop(); return; }
@@ -74,6 +76,12 @@ export default function useWorkbenchCameraMotion(camera, hostRef, entries) {
     run(motion);
   }, [getCamera, preference, stop, finish, run]);
   const beginPan = useCallback(() => {
+    const previous = active.current;
+    if (previous?.kind === 'coast' && previous.surface.isCurrent()) {
+      cancelAnimationFrame(previous.frame);
+      active.current = { kind: 'pan', start: getCamera(), surface: previous.surface, frame: null };
+      return;
+    }
     stop(true);
     prepare({ kind: 'pan', start: getCamera(), frame: null });
   }, [getCamera, prepare, stop]);
@@ -89,10 +97,12 @@ export default function useWorkbenchCameraMotion(camera, hostRef, entries) {
     else { stop(); applyCamera(next); }
   }, [getCamera, prepare, previewCamera, stop, applyCamera]);
   const releasePan = useCallback(velocity => {
-    stop();
-    if (preference?.matches) return;
-    const start = getCamera(), coast = workbenchPanCoast(start, velocity);
-    if (coast) run({ ...coast, kind: 'coast', start, frame: null, started: null });
+    const previous = active.current;
+    const start = getCamera(), coast = !preference?.matches && workbenchPanCoast(start, velocity);
+    // Release changes the motion clock, not its prepared surfaces. Avoid a full
+    // geometry commit between the last pointer sample and the first coast frame.
+    if (coast && previous?.kind === 'pan') run({ ...coast, kind: 'coast', start, surface: previous.surface, frame: null, started: null });
+    else { stop(); if (coast) run({ ...coast, kind: 'coast', start, frame: null, started: null }); }
   }, [getCamera, preference, stop, run]);
   useLayoutEffect(() => {
     const change = () => {

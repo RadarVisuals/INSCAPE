@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { setFolderAssets, setFolderImage } from '../../library/domain/libraryWorkspace.js';
 
 const cleanName = (value) => String(value || '').trim().replace(/\s+/gu, ' ').slice(0, 80);
 const createId = (prefix) => `${prefix}:${globalThis.crypto?.randomUUID?.() || Math.random().toString(36).slice(2)}`;
@@ -42,8 +43,10 @@ function useOwnerSystemWorkflowDevelopmentAuthorities({ categories, enabled }) {
       setReviewCategories((current) => current.map((entry) => entry.id === id ? { ...entry, name: value } : entry)); return true;
     },
     setCategoryAssets(id, assetIds, included) {
-      setReviewCategories((current) => current.map((entry) => entry.id === id ? { ...entry, assetIds: included
-        ? [...new Set([...entry.assetIds, ...assetIds])] : entry.assetIds.filter((assetId) => !assetIds.includes(assetId)) } : entry)); return true;
+      setReviewCategories(folders => setFolderAssets({ folders }, id, assetIds, included).folders); return true;
+    },
+    setCategoryImage(id, assetId, url, included) {
+      setReviewCategories(folders => setFolderImage({ folders }, id, assetId, url, included).folders); return true;
     },
     setCategoryPublic(id, value) { setReviewCategories((current) => current.map((entry) => entry.id === id ? { ...entry, public: Boolean(value) } : entry)); return true; },
     createSection(name) {

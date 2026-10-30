@@ -1,3 +1,5 @@
+import { imageResourceIdentity } from '../../library/data/resolveContentUrl.js';
+
 export const BROWSER_FILING_FILTERS = Object.freeze({
   ALL: 'all',
   FAVORITES: 'favorites',
@@ -116,8 +118,12 @@ export function updateBrowserSelection(selectedIds, visibleAssets, targetId, {
   return { anchorId: targetId, selectedIds: [targetId] };
 }
 
-export function categoryMembershipState(category, selectedIds) {
+export function categoryMembershipState(category, selectedIds, imageUrl = null) {
   const members = new Set(category?.assetIds || []); const ids = Array.isArray(selectedIds) ? selectedIds : [];
-  const included = ids.filter((id) => members.has(id)).length;
+  const included = ids.filter((id) => {
+    const images = (category?.imageSelections || []).filter(entry => entry.assetId === id);
+    return members.has(id) && (!imageUrl || !images.length
+      || images.some(entry => imageResourceIdentity(entry.url) === imageResourceIdentity(imageUrl)));
+  }).length;
   return included === 0 ? 'none' : included === ids.length ? 'all' : 'mixed';
 }

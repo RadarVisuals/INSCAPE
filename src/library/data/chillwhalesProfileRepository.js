@@ -1,6 +1,7 @@
 import { CHILLWHALES_INDEXER_URL, IPFS_GATEWAY_URL, LIBRARY_PAGE_SIZE, normalizeProfileAddress } from '../config.js';
 import { normalizeProfileAsset } from '../domain/normalizeProfileAsset.js';
 import { metadataImages as collectMetadataImages } from './metadataImages.js';
+import { parseCanonicalAssetId } from '../../profileDocument/domain/assetReference.js';
 
 const PROFILE_ASSET_FRAGMENTS = `
 fragment InscapeMetadata on lsp4_metadata {
@@ -25,9 +26,9 @@ fragment InscapeDigitalAsset on digital_asset {
 `;
 
 const PROFILE_ASSETS_QUERY = `${PROFILE_ASSET_FRAGMENTS}
-query InscapeProfileAssets($owner: String!, $limit: Int!, $assetOffset: Int!, $tokenOffset: Int!) {
+query InscapeProfileAssets($owner: String!, $limit: Int!, $assetOffset: Int!, $tokenOffset: Int!, $assetFilter: owned_asset_bool_exp!, $tokenFilter: owned_token_bool_exp!) {
   owned_asset(
-    where: { owner: { _ilike: $owner } }
+    where: { owner: { _ilike: $owner }, _and: [$assetFilter] }
     order_by: [{ block_number: desc }, { id: asc }]
     limit: $limit
     offset: $assetOffset
@@ -36,9 +37,9 @@ query InscapeProfileAssets($owner: String!, $limit: Int!, $assetOffset: Int!, $t
     tokenIds_aggregate { aggregate { count } }
     digitalAsset { ...InscapeDigitalAsset }
   }
-  owned_asset_aggregate(where: { owner: { _ilike: $owner } }) { aggregate { count } }
+  owned_asset_aggregate(where: { owner: { _ilike: $owner }, _and: [$assetFilter] }) { aggregate { count } }
   owned_token(
-    where: { owner: { _ilike: $owner } }
+    where: { owner: { _ilike: $owner }, _and: [$tokenFilter] }
     order_by: [{ block_number: desc }, { id: asc }]
     limit: $limit
     offset: $tokenOffset
@@ -50,7 +51,7 @@ query InscapeProfileAssets($owner: String!, $limit: Int!, $assetOffset: Int!, $t
       lsp4MetadataBaseUri { ...InscapeMetadata }
     }
   }
-  owned_token_aggregate(where: { owner: { _ilike: $owner } }) { aggregate { count } }
+  owned_token_aggregate(where: { owner: { _ilike: $owner }, _and: [$tokenFilter] }) { aggregate { count } }
 }`;
 
 function metadataError(metadata) {
@@ -144,12 +145,12 @@ export function normalizeOwnedToken(row, ownerAddress, options) {
   }, ownerAddress, options);
 }
 
-async function requestPage({ endpoint, fetchImpl, profile, limit, assetOffset, tokenOffset, signal }) {
+async function requestPage({ endpoint, fetchImpl, profile, limit, assetOffset, tokenOffset, signal, assetFilter, tokenFilter }) {
   const response = await fetchImpl(endpoint, {
     method: 'POST', signal,
     headers: { 'content-type': 'application/json', accept: 'application/json' },
     body: JSON.stringify({ query: PROFILE_ASSETS_QUERY,
-      variables: { owner: profile, limit, assetOffset, tokenOffset } })
+      variables: { owner: profile, limit, assetOffset, tokenOffset, assetFilter, tokenFilter } })
   });
   if (!response.ok) throw new Error(`Chillwhales indexer responded ${response.status}`);
   const payload = await response.json();
@@ -161,19 +162,28 @@ export function createChillwhalesProfileRepository({
   endpoint = CHILLWHALES_INDEXER_URL,
   fetchImpl = globalThis.fetch,
   ipfsGateway = IPFS_GATEWAY_URL,
-  pageSize = Math.max(LIBRARY_PAGE_SIZE, 48)
+  pageSize = LIBRARY_PAGE_SIZE
 } = {}) {
   if (typeof fetchImpl !== 'function') throw new TypeError('fetch is required');
   return {
     source: 'INDEXER', endpoint,
-    async *loadProfileAssets(profileAddress, { signal } = {}) {
+    async *loadProfileAssets(profileAddress, { signal, requestedAssetIds = null } = {}) {
       const profile = normalizeProfileAddress(profileAddress);
       if (!profile) throw new TypeError('A valid Universal Profile address is required');
+      const references = requestedAssetIds === null ? null : requestedAssetIds.map(parseCanonicalAssetId);
+      if (references?.some(reference => !reference || reference.chainId !== 42)) throw new TypeError('Invalid LUKSO asset ID');
+      const requested = references && new Set(references.map(reference => reference.stableAssetId));
+      const assetFilter = references ? { _or: references.filter(reference => !reference.tokenId)
+        .map(reference => ({ address: { _ilike: reference.contractAddress } })) } : {};
+      const tokenFilter = references ? { _or: references.filter(reference => reference.tokenId)
+        .map(reference => ({ address: { _ilike: reference.contractAddress }, token_id: { _ilike: reference.tokenId } })) } : {};
+      if (requested?.size === 0) { yield { assets: [], unresolvedAssetIds: [], resolved: 0, total: 0, failures: 0, complete: true }; return; }
       let assetOffset = 0; let tokenOffset = 0; let assetTotal = null; let tokenTotal = null;
       let skippedCollectionWrappers = 0;
       do {
         const data = await requestPage({ endpoint, fetchImpl, profile, limit: pageSize,
-          assetOffset, tokenOffset, signal });
+          assetOffset, tokenOffset, signal, assetFilter, tokenFilter });
+        signal?.throwIfAborted();
         const assetRows = Array.isArray(data.owned_asset) ? data.owned_asset : [];
         const tokenRows = Array.isArray(data.owned_token) ? data.owned_token : [];
         assetTotal = Number(data?.owned_asset_aggregate?.aggregate?.count) || 0;
@@ -183,7 +193,7 @@ export function createChillwhalesProfileRepository({
         const contractAssets = renderableAssetRows
           .map((row) => normalizeOwnedAsset(row, profile, { ipfsGateway }));
         const tokenAssets = tokenRows.map((row) => normalizeOwnedToken(row, profile, { ipfsGateway }));
-        const records = [...contractAssets, ...tokenAssets].filter(Boolean);
+        const records = [...contractAssets, ...tokenAssets].filter(asset => asset && (!requested || requested.has(asset.id)));
         const assets = records.filter((asset) => asset.imageUrl);
         const unresolvedAssetIds = records.filter((asset) => !asset.imageUrl).map((asset) => asset.id);
         const failures = unresolvedAssetIds.length;
@@ -194,6 +204,7 @@ export function createChillwhalesProfileRepository({
           total: assetTotal + tokenTotal - skippedCollectionWrappers, failures, complete };
         if (!assetRows.length && !tokenRows.length) break;
       } while (assetOffset < assetTotal || tokenOffset < tokenTotal);
+      if (assetOffset < assetTotal || tokenOffset < tokenTotal) throw new Error('Asset inventory is incomplete. Retry to refresh.');
     }
   };
 }

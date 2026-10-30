@@ -14,6 +14,12 @@ export function libraryImageChoices(asset) {
   });
 }
 
+export function libraryCategoryImage(asset) {
+  if (asset.isCollection) return null;
+  return asset.selectedMedia?.url || resolvePublishedAssetUrl(asset.src || asset.originalImageUrl || asset.previewSrc)
+    || libraryImageChoices(asset)[0]?.sources[0] || null;
+}
+
 export function ImageChoice({ asset, choice, number, onActivate, onPointerDown, workspace, onContext }) {
   const [candidate, setCandidate] = useState(0);
   const [dimensions, setDimensions] = useState(null);
@@ -25,11 +31,11 @@ export function ImageChoice({ asset, choice, number, onActivate, onPointerDown, 
   return <button className="lattice-browser-asset" type="button" aria-label={`Image ${number} of ${asset.title || asset.name}`}
     data-selected={selected || undefined} aria-pressed={workspace ? selected : undefined}
     onClick={(event) => selectedAsset && workspace?.selectAsset(id, event, selectedAsset.selectedMedia)}
-    onContextMenu={(event) => { if (onContext) { event.preventDefault(); event.stopPropagation(); onContext(event, asset); } }}
+    onContextMenu={(event) => { if (onContext && selectedAsset) { event.preventDefault(); event.stopPropagation(); onContext(event, selectedAsset); } }}
     aria-disabled={!selectedAsset} onDoubleClick={(event) => selectedAsset && onActivate(event, selectedAsset)}
     onKeyDown={(event) => {
       if (onContext && (event.key === 'ContextMenu' || event.shiftKey && event.key === 'F10')) {
-        event.preventDefault(); event.stopPropagation(); onContext(event, asset); return;
+        event.preventDefault(); event.stopPropagation(); if (selectedAsset) onContext(event, selectedAsset); return;
       }
       if (event.key === 'Enter' && selectedAsset) { event.preventDefault(); onActivate(event, selectedAsset); } }}
     onPointerDown={(event) => selectedAsset && onPointerDown?.(event, selectedAsset, { isAssetRenderable: () => true })}>

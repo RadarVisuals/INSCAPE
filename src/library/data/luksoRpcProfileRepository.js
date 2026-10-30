@@ -1,13 +1,15 @@
 import { fetchMetadataJson } from './fetchMetadataJson.js';
-import { ERC725, decodeDataSourceWithHash } from '@erc725/erc725.js';
+import { ERC725 } from '@erc725/erc725.js';
 import { metadataImages as collectMetadataImages } from './metadataImages.js';
 import { createPublicClient, fallback, getAddress, http } from 'viem';
 import { lukso } from 'viem/chains';
-import { IPFS_GATEWAY_URL, LIBRARY_PAGE_SIZE, LUKSO_RPC_FALLBACK_URLS, LUKSO_RPC_URL,
+import { IPFS_GATEWAY_URL, LIBRARY_PAGE_SIZE, LUKSO_CHAIN_ID, LUKSO_RPC_FALLBACK_URLS, LUKSO_RPC_URL,
   normalizeProfileAddress } from '../config.js';
-import { createStableAssetId, normalizeProfileAsset } from '../domain/normalizeProfileAsset.js';
+import { normalizeProfileAsset } from '../domain/normalizeProfileAsset.js';
 import { resolveContentUrl } from './resolveContentUrl.js';
 import { decodeVerifiedOnchainJsonDataUri } from './onchainDataUri.js';
+import { parseCanonicalAssetId } from '../../profileDocument/domain/assetReference.js';
+import { decodeMetadataPointer, decodeStoredNumber, decodeTokenIdForMetadata } from './lspMetadataDecoding.js';
 
 const LSP5_RECEIVED_ASSETS_SCHEMA = [{
   name: 'LSP5ReceivedAssets[]',
@@ -35,6 +37,8 @@ const LSP7_ABI = [{ type: 'function', name: 'balanceOf', stateMutability: 'view'
 const LSP8_ABI = [
   { type: 'function', name: 'tokenIdsOf', stateMutability: 'view',
     inputs: [{ name: 'tokenOwner', type: 'address' }], outputs: [{ type: 'bytes32[]' }] },
+  { type: 'function', name: 'tokenOwnerOf', stateMutability: 'view',
+    inputs: [{ name: 'tokenId', type: 'bytes32' }], outputs: [{ type: 'address' }] },
   { type: 'function', name: 'getDataForTokenId', stateMutability: 'view',
     inputs: [{ name: 'tokenId', type: 'bytes32' }, { name: 'dataKey', type: 'bytes32' }],
     outputs: [{ name: 'dataValue', type: 'bytes' }] }
@@ -75,7 +79,7 @@ function resultValue(result) {
   return result?.status === 'success' ? result.result : null;
 }
 
-async function discoverOwnedTokens(profileAddress, contracts, client, signal) {
+async function discoverOwnedTokens(profileAddress, contracts, client, signal, requested = null) {
   const holdings = [];
   let failures = 0;
   const collectionPageSize = 12;
@@ -91,16 +95,19 @@ async function discoverOwnedTokens(profileAddress, contracts, client, signal) {
     page.forEach((address, index) => {
       const supportsLsp8 = resultValue(interfaceResults[index * 2]);
       const supportsLsp7 = resultValue(interfaceResults[index * 2 + 1]);
-      if (supportsLsp8 === true) {
-        ownershipMeta.push({ address, standard: 'LSP8' });
-        ownershipCalls.push({ address: getAddress(address), abi: LSP8_ABI, functionName: 'tokenIdsOf', args: [getAddress(profileAddress)] });
-      } else if (supportsLsp8 === false && supportsLsp7 === true) {
-        ownershipMeta.push({ address, standard: 'LSP7' });
-        ownershipCalls.push({ address: getAddress(address), abi: LSP7_ABI, functionName: 'balanceOf', args: [getAddress(profileAddress)] });
-      } else if (supportsLsp8 !== false || supportsLsp7 !== false) {
+      const standard = supportsLsp8 === true ? 'LSP8' : supportsLsp8 === false && supportsLsp7 === true ? 'LSP7' : null;
+      if (!standard) {
         // Only two confirmed negatives establish an unsupported contract.
         // A failed/missing read must not become an empty holding inventory.
-        failures += 1;
+        if (supportsLsp8 !== false || supportsLsp7 !== false) failures += 1;
+        return;
+      }
+      for (const tokenId of requested?.get(address) || [null]) {
+        if (requested && Boolean(tokenId) !== (standard === 'LSP8')) { failures += 1; continue; }
+        ownershipMeta.push({ address, standard, tokenId });
+        ownershipCalls.push({ address: getAddress(address), abi: standard === 'LSP8' ? LSP8_ABI : LSP7_ABI,
+          functionName: tokenId ? 'tokenOwnerOf' : standard === 'LSP8' ? 'tokenIdsOf' : 'balanceOf',
+          args: [tokenId || getAddress(profileAddress)] });
       }
     });
     if (!ownershipCalls.length) continue;
@@ -108,7 +115,11 @@ async function discoverOwnedTokens(profileAddress, contracts, client, signal) {
     throwIfAborted(signal);
     ownershipMeta.forEach((meta, index) => {
       const value = resultValue(ownershipResults[index]);
-      if (meta.standard === 'LSP8' && Array.isArray(value)
+      if (meta.standard === 'LSP8' && meta.tokenId) {
+        const owner = normalizeProfileAddress(value);
+        if (!owner) failures += 1;
+        else if (owner === profileAddress) holdings.push(meta);
+      } else if (meta.standard === 'LSP8' && Array.isArray(value)
         && value.every((tokenId) => typeof tokenId === 'string' && /^0x[0-9a-f]{64}$/iu.test(tokenId))) {
         value.forEach((tokenId) => holdings.push({ ...meta, tokenId: String(tokenId).toLowerCase() }));
       } else if (meta.standard === 'LSP7' && typeof value === 'bigint' && value >= 0n) {
@@ -119,27 +130,6 @@ async function discoverOwnedTokens(profileAddress, contracts, client, signal) {
     });
   }
   return { holdings, failures };
-}
-
-function prioritizeHoldings(holdings, priorityAssetIds) {
-  const priorities = new Map((Array.isArray(priorityAssetIds) ? priorityAssetIds : [])
-    .map((id, index) => [String(id || '').toLowerCase(), index]));
-  if (!priorities.size) return holdings;
-  return holdings.map((holding, index) => ({ holding, index,
-    priority: priorities.get(createStableAssetId({ contractAddress: holding.address, tokenId: holding.tokenId })) }))
-    .sort((first, second) => {
-      const firstPriority = first.priority ?? Number.POSITIVE_INFINITY;
-      const secondPriority = second.priority ?? Number.POSITIVE_INFINITY;
-      return firstPriority - secondPriority || first.index - second.index;
-    }).map((entry) => entry.holding);
-}
-
-function decodeMetadataPointer(value) {
-  if (!value || value === '0x') return null;
-  try {
-    const pointer = decodeDataSourceWithHash(value);
-    return pointer?.url ? pointer : null;
-  } catch { return null; }
 }
 
 function metadataRoot(document) { return document?.LSP4Metadata || document || {}; }
@@ -160,26 +150,6 @@ function decodeTokenType(value) {
     const type = Number(BigInt(value));
     return ({ 0: 'TOKEN', 1: 'NFT', 2: 'COLLECTION' })[type] || `TYPE_${type}`;
   } catch { return null; }
-}
-
-function decodeStoredNumber(value) {
-  if (typeof value !== 'string' || !/^0x[0-9a-f]+$/iu.test(value) || value.length > 66) return null;
-  try { return Number(BigInt(value)); } catch { return null; }
-}
-
-function decodeTokenIdForMetadata(tokenId, tokenIdFormat) {
-  if (typeof tokenId !== 'string' || !/^0x[0-9a-f]{64}$/iu.test(tokenId)) return null;
-  switch (tokenIdFormat) {
-    case 0: return BigInt(tokenId).toString(10);
-    case 1: {
-      const bytes = tokenId.slice(2).match(/.{2}/gu).map((byte) => Number.parseInt(byte, 16));
-      try { return new TextDecoder().decode(Uint8Array.from(bytes)).replace(/\0+$/u, ''); } catch { return null; }
-    }
-    case 2: return `0x${tokenId.slice(-40)}`;
-    case 3: return tokenId.replace(/0+$/u, '');
-    case 4: return tokenId;
-    default: return tokenId;
-  }
 }
 
 function arrayElementKey(arrayKey, index) {
@@ -314,17 +284,28 @@ export function createLuksoRpcProfileRepository({
   const publicClient = client || createRpcClient(rpcUrls);
   return {
     source: 'RPC', endpoint: rpcUrls.join(', '),
-    async *loadProfileAssets(profileAddress, { signal, priorityAssetIds = [], requestedAssetIds = null } = {}) {
+    async *loadProfileAssets(profileAddress, { signal, requestedAssetIds = null } = {}) {
       const profile = normalizeProfileAddress(profileAddress);
       if (!profile) throw new TypeError('A valid Universal Profile address is required');
-      const contracts = await discoverContracts(profile, { rpcUrls, signal });
+      // Repair already has exact identities. Verify only those holdings, without
+      // enumerating LSP5 or every token in their collections again.
+      let requested = null;
+      if (requestedAssetIds !== null) {
+        if (!Array.isArray(requestedAssetIds)) throw new TypeError('Expected an array of asset IDs');
+        requested = new Map();
+        for (const id of requestedAssetIds) {
+          const reference = parseCanonicalAssetId(id);
+          if (!reference || reference.chainId !== LUKSO_CHAIN_ID
+            || reference.tokenId !== null && !/^0x[0-9a-f]{64}$/u.test(reference.tokenId))
+            throw new TypeError('Invalid LUKSO asset ID');
+          const entries = requested.get(reference.contractAddress) || new Set();
+          entries.add(reference.tokenId);
+          requested.set(reference.contractAddress, entries);
+        }
+      }
+      const contracts = requested ? [...requested.keys()] : await discoverContracts(profile, { rpcUrls, signal });
       throwIfAborted(signal);
-      const { holdings: discoveredHoldings, failures: discoveryFailures } = await discoverOwnedTokens(profile, contracts, publicClient, signal);
-      const requested = Array.isArray(requestedAssetIds) && requestedAssetIds.length
-        ? new Set(requestedAssetIds.map((id) => String(id).toLowerCase())) : null;
-      const selectedHoldings = requested ? discoveredHoldings.filter((holding) => requested.has(
-        createStableAssetId({ contractAddress: holding.address, tokenId: holding.tokenId }))) : discoveredHoldings;
-      const holdings = prioritizeHoldings(selectedHoldings, priorityAssetIds);
+      const { holdings, failures: discoveryFailures } = await discoverOwnedTokens(profile, contracts, publicClient, signal, requested);
       const collectionMetadata = new Map(); const contractFacts = new Map(); let resolved = 0;
       const streamBatchSize = Math.min(pageSize, METADATA_CONCURRENCY);
       for (let offset = 0; offset < holdings.length; offset += streamBatchSize) {

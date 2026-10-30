@@ -1,4 +1,4 @@
-import type { MutableRefObject, ReactNode } from 'react';
+import type { Dispatch, MutableRefObject, ReactNode, SetStateAction } from 'react';
 
 /** Prefixes distinguish targets; existing runtime validators still check syntax/length. */
 export type ProfileAddress = `0x${string}`;
@@ -46,6 +46,7 @@ export interface WorkflowDraft {
   workbench?: WorkbenchPresentation;
   identityPresentation: { alias: string; [field: string]: unknown };
   grids: unknown[];
+  workbenchGroups?: { memberIds: ModuleId[] }[];
   [domainField: string]: unknown;
 }
 export interface WorkbenchCollection {
@@ -101,16 +102,15 @@ export interface WorkbenchScope {
   leaveWorkbench(value?: undefined, options?: { workbench?: WorkbenchPresentation }): SaveResult;
 }
 /** Mounted editor/visitor windows are reached only after the readable-draft boundary. */
-export interface MountedWorkbenchStore { getSnapshot(): WorkflowDraft }
-export interface ToolSource { color?: ReactNode; fx?: ReactNode; image?: ReactNode; shape?: ReactNode }
-export interface ViewTransform { scale: number; x: number; y: number; frame?: Frame }
-export interface ResizeTarget {
-  store?: MountedWorkbenchStore;
-  layoutKey?: 'display' | 'displays' | 'texts' | 'miniApps' | 'imageModules' | 'shapes';
-  parentTextId?: TextId;
-  /** Image restores position only; other modules may restore a complete frame. */
-  applyFrame(frame: Position | Frame): void;
+export interface MountedWorkbenchStore extends WorkbenchScope {
+  getSnapshot(): WorkflowDraft;
+  getDraft(): WorkflowDraft;
 }
+export interface ToolSource { color?: ReactNode; fx?: ReactNode; image?: ReactNode; shape?: ReactNode }
+export interface ViewTransform { scale: number; x: number; y: number; frame?: Frame; gridScale?: number }
+export type ResizeLayoutKey = 'display' | 'displays' | 'texts' | 'miniApps' | 'imageModules' | 'shapes';
+/** The registration hook and operation adapters use the same complete capability. */
+export type ResizeTarget = WorkbenchResizeTarget;
 export interface WorkbenchActionsValue {
   registerArtworkOpener?(id: ModuleId, action: MutableRefObject<() => void>): Release;
   registerInspection?(id: ModuleId, action: MutableRefObject<(source?: HTMLElement) => boolean | void>): Release;
@@ -162,3 +162,166 @@ export interface CapturePresentationInput {
 export type CapturePresentationResult =
   | { value: WorkbenchPresentation; error: null }
   | { value: null; error: string };
+
+export interface Vector { x: number; y: number }
+export interface WorkbenchBounds { left: number; top: number; right: number; bottom: number }
+export type ResizeCorner = 'nw' | 'ne' | 'sw' | 'se';
+export type ArrowKey = 'ArrowLeft' | 'ArrowRight' | 'ArrowUp' | 'ArrowDown';
+export type WorkbenchTransforms = Partial<Record<WindowId, ViewTransform>>;
+export type SetWorkbenchTransforms = Dispatch<SetStateAction<WorkbenchTransforms>>;
+export type FrameRegistration = MutableRefObject<Frame | null> & { move?: ((position: Position) => void) | null };
+/** Visitor inputs cannot carry an authored writer, including through a wider object. */
+export interface VisitorOperationOrigin {
+  kind: 'visitor';
+  isCurrent(): boolean;
+  store?: never;
+  profileAddress?: never;
+  getPresentation?: never;
+}
+export interface OwnerOperationOrigin {
+  kind: 'owner';
+  isCurrent(): boolean;
+  store: MountedWorkbenchStore;
+  profileAddress: string;
+  getPresentation(): WorkbenchPresentation;
+}
+export type WorkbenchOperationOrigin = VisitorOperationOrigin | OwnerOperationOrigin;
+export interface OperationGeometry {
+  scale: number;
+  rectangle(nodes: readonly HTMLElement[]): Frame | null;
+  bounds(): WorkbenchBounds;
+}
+export interface MoveOperationInput {
+  origin: WorkbenchOperationOrigin;
+  selection: {
+    ids: readonly WindowId[];
+    selectedIds: readonly WindowId[];
+    content: WorkflowDraft;
+    layers: readonly (ModuleId | { children: ModuleId[] })[];
+  };
+  registry: { entries: ReadonlyMap<WindowId, HTMLElement>; frames: ReadonlyMap<WindowId, FrameRegistration> };
+  geometry: OperationGeometry & {
+    snap(candidate: Frame, nodes: readonly HTMLElement[], scale: number, bypass: boolean): Partial<Position>;
+  };
+  transforms: WorkbenchTransforms;
+  setTransforms: SetWorkbenchTransforms;
+  reportError(message: string): void;
+}
+export interface WorkbenchMoveOperation {
+  ids: WindowId[];
+  nodes: HTMLElement[];
+  mode: 'visitor' | 'presentation' | 'authored';
+  beforeTransforms: WorkbenchTransforms;
+  valid(): boolean;
+  preview(delta: Vector, bypass?: boolean): WorkbenchTransforms | null;
+  commit(): boolean;
+}
+/** Window-only Display preparation has no content snapshot; content modules do. */
+export type ResizeContentExpectation =
+  | { layoutKey: 'display' | 'displays'; expected?: unknown }
+  | { layoutKey: Exclude<ResizeLayoutKey, 'display' | 'displays'>; expected: unknown };
+/** Module data is deliberately opaque to the host; only module preparers interpret it. */
+export interface SelectionResizeCandidate extends Frame {
+  id: WindowId;
+  store: MountedWorkbenchStore;
+  profileAddress: string;
+  parentTextId?: TextId;
+  gridScale?: number;
+  getPresentation?: () => WorkbenchPresentation;
+  prepare(draft: WorkflowDraft, change: SelectionResizeChange): WorkflowDraft;
+  applyFrame(frame: Frame): void;
+  reportError?: (message: string) => void;
+}
+export type SelectionResizeChange = SelectionResizeCandidate & ResizeContentExpectation;
+export type SelectionResizeCommit = (changes: SelectionResizeChange[]) => boolean;
+export interface ResizeTargetCapabilities {
+  enabled: boolean;
+  store?: MountedWorkbenchStore;
+  profileAddress: string;
+  parentTextId?: TextId;
+  prepare: SelectionResizeChange['prepare'];
+  commit: SelectionResizeCommit;
+  /** Image history restores position only; other targets restore their full frame. */
+  applyFrame(frame: Position | Frame): void;
+  reportError?: (message: string) => void;
+  reflow?: boolean;
+  continuousGeometry?: boolean;
+  maximumWidth: number;
+  maximumHeight: number;
+  minimumScale?: number;
+  maximumScale?: number;
+  groupScaleLimits?: { minimum: number; maximum: number };
+  resizeStep?: number;
+  resizeCorner?: (frame: Frame, corner: ResizeCorner, delta: Vector, bypass: boolean) => Frame;
+  constrainFrame?: (frame: Frame, options: { edge: ResizeCorner; bounds: WorkbenchBounds }) => Frame;
+}
+export type WorkbenchResizeTarget = ResizeTargetCapabilities & ResizeContentExpectation & (
+  | { minimumSize: number; minimumWidth?: number; minimumHeight?: number }
+  | { minimumSize?: number; minimumWidth: number; minimumHeight: number }
+);
+/** The adapter checks enabled, writer identity and profile before using this refinement. */
+export type AuthoredResizeTarget = WorkbenchResizeTarget & { store: MountedWorkbenchStore };
+export interface ResizeOperationInput {
+  origin: WorkbenchOperationOrigin;
+  ids: WindowId[];
+  registry: {
+    entries: ReadonlyMap<WindowId, HTMLElement>;
+    resizeTargets: ReadonlyMap<WindowId, MutableRefObject<WorkbenchResizeTarget | null>>;
+  };
+  geometry: OperationGeometry & {
+    cameraOffset: Vector;
+    moduleScale(id: WindowId): number;
+    areaBounds(): WorkbenchBounds;
+    snapResize(rectangle: Frame, anchor: Vector, corner: ResizeCorner, factor: number,
+      nodes: readonly HTMLElement[], scale: number, minimum: number, maximum: number, bypass: boolean): number;
+  };
+  transforms: WorkbenchTransforms;
+  corner: ResizeCorner;
+  setTransforms: SetWorkbenchTransforms;
+}
+export interface WorkbenchResizeOperation {
+  ids: WindowId[];
+  nodes: HTMLElement[];
+  mode: 'visitor' | 'authored';
+  beforeTransforms: WorkbenchTransforms;
+  valid(): boolean;
+  preview(delta: Vector, bypass?: boolean): boolean;
+  previewByKey(key: ArrowKey, shift?: boolean, bypass?: boolean): boolean;
+  commit(): boolean;
+}
+export type GestureStartEvent = Pick<PointerEvent, 'button' | 'pointerId' | 'clientX' | 'clientY'>;
+export interface GestureMoveInput {
+  nodes: readonly HTMLElement[];
+  beforeTransforms: WorkbenchTransforms;
+  valid?: () => boolean;
+  preview(delta: Vector, bypass: boolean): WorkbenchTransforms | null;
+  commit(transforms: WorkbenchTransforms): boolean;
+  previewDrop(event: PointerEvent): void;
+  commitDrop(event: PointerEvent): boolean;
+}
+export type GestureResizeInput = Pick<WorkbenchResizeOperation, 'beforeTransforms' | 'valid' | 'preview' | 'commit'>;
+export interface GestureMarqueeInput<Selection> {
+  beforeSelection: Selection;
+  previousSelection: WindowId[];
+  hits(rectangle: Frame): WindowId[];
+}
+export interface WorkbenchGestureInput<Selection> {
+  getHost(): HTMLElement | null;
+  restoreTransforms(transforms: WorkbenchTransforms): void;
+  replaceSelection(ids: WindowId[]): void;
+  restoreSelection(selection: Selection): void;
+  previewMarquee(rectangle: Frame | null): void;
+  finishSnap(): void;
+  cancelDrop(): void;
+  events?: Pick<Window, 'addEventListener' | 'removeEventListener'>;
+  visibility?: Document;
+}
+export interface WorkbenchGestures<Selection> {
+  isActive(): boolean;
+  ownsPointer(pointerId: number): boolean;
+  cancel(rollback?: boolean): void;
+  releaseAbandoned(): number | null;
+  beginMove(event: GestureStartEvent, operation: GestureMoveInput): boolean;
+  beginResize(event: GestureStartEvent, operation: GestureResizeInput): boolean;
+  beginMarquee(event: GestureStartEvent, operation: GestureMarqueeInput<Selection>): boolean;
+}

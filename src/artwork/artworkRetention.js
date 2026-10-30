@@ -1,8 +1,11 @@
 // Only idle documents occupy this pool. The placement still owns the document;
 // leaving its Workbench or changing its source cancels retention immediately.
 // This is a count/time bound, not an estimate of third-party GPU allocation.
-export const ARTWORK_RETENTION_MS = 30_000;
-export const ARTWORK_RETENTION_LIMIT = 4;
+// Keep a recently visited composition warm through ordinary back-and-forth
+// navigation. Visibility still controls cooperative animation; retaining a
+// document does not request playback or start artwork that was never visible.
+export const ARTWORK_RETENTION_MS = 120_000;
+export const ARTWORK_RETENTION_LIMIT = 24;
 
 export function createArtworkRetention({ limit = ARTWORK_RETENTION_LIMIT, duration = ARTWORK_RETENTION_MS,
   schedule = setTimeout, cancel = clearTimeout } = {}) {

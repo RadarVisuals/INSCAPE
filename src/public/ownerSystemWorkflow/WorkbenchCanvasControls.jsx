@@ -4,7 +4,7 @@ import { Frame, Maximize, Scan, Eye, X } from 'lucide-react';
 import { useWorkbenchArea } from './WorkbenchAreaContext.jsx';
 import { useWorkbenchCamera } from './WorkbenchCamera.jsx';
 import { useWorkbenchView } from './WorkbenchViewContext.js';
-import { fitWorkbenchArea, resizeWorkbenchArea } from '../../systemWorkflow/domain/workbenchArea.js';
+import { fitWorkbenchArea, resizeWorkbenchArea, MIN_WORKBENCH_SIZE, MAX_WORKBENCH_SIZE } from '../../systemWorkflow/domain/workbenchArea.js';
 import { resizeWorkbenchCanvas } from '../../systemWorkflow/workbenchAreaSession.js';
 import { WORKBENCH_GROUP_STACK_SIZE } from '../../systemWorkflow/domain/workbenchGroups.js';
 import './workbenchCanvasControls.css';
@@ -129,6 +129,7 @@ export default function WorkbenchCanvasControls({ hostRef, navigation, historyBl
     {open && <div className="workbench-canvas-tools" data-system-workflow-overlay role="group" aria-label="Canvas size controls">
       <div className="workbench-canvas-tools__heading"><strong>Canvas</strong><output aria-label="Canvas dimensions">{area.width} × {area.height}</output>
         <button className="workflow-tactile-control" type="button" aria-label="Close canvas size" onClick={close}><X /></button></div>
+      <CanvasSizeFields area={area} revision={view.store.getGeneration()} disabled={blocked} onApply={commit} />
       <p>Drag any edge or corner. Artwork outside is hidden, not removed.</p>
       <button className="workflow-tactile-control" type="button" disabled={blocked}
         aria-pressed={areaContext.showOutside} onClick={() => areaContext.setShowOutside(value => !value)}>
@@ -151,4 +152,20 @@ export default function WorkbenchCanvasControls({ hostRef, navigation, historyBl
       {(rightVisible && bottomVisible || drag.current?.edge === 'se') && handle('se', { left: right, top: bottom }, 'Resize canvas width and height')}
     </>, hostRef.current)}
   </>;
+}
+
+function CanvasSizeFields({ area, revision, disabled, onApply }) {
+  // Discard unfinished input when a saved edit or a drag changes its source.
+  const [edit, setEdit] = useState(null);
+  const values = edit?.revision === revision && edit.area === area ? edit.values : { width: String(area.width), height: String(area.height) };
+  return <form className="workbench-canvas-size-fields" noValidate onKeyDown={event => event.stopPropagation()}
+    onSubmit={event => { event.preventDefault(); onApply({ ...area, width: Number(values.width), height: Number(values.height) }); }}>
+    {['width', 'height'].map(axis => <label key={axis}>{axis === 'width' ? 'Width (px)' : 'Height (px)'}
+      <input type="number" inputMode="numeric" min={MIN_WORKBENCH_SIZE}
+        max={Math.min(MAX_WORKBENCH_SIZE, MAX_WORKBENCH_SIZE - area[axis === 'width' ? 'left' : 'top'])}
+        step="1" disabled={disabled} value={values[axis]}
+        onChange={event => setEdit({ revision, area, values: { ...values, [axis]: event.target.value } })} />
+    </label>)}
+    <button className="workflow-tactile-control" type="submit" disabled={disabled || Number(values.width) === area.width && Number(values.height) === area.height}>Apply</button>
+  </form>;
 }

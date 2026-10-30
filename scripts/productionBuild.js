@@ -257,7 +257,16 @@ export const PRODUCTION_BUDGETS = Object.freeze({
   // owner route again. Rollup emits seven more shared chunks/import facades;
   // the measured aggregate is 2,685,621 raw / 881,633 gzip. Bound that split
   // by 3 kB in each aggregate limit; startup, owner and wallet limits stay fixed.
-  coreJavaScript: Object.freeze({ raw: 2_686_000, gzip: 882_000 }),
+  // Numeric Workbench canvas fields measure 2,686,581 raw / 881,814 gzip.
+  // Allow 1 kB more raw; compressed, startup, owner and wallet limits stay fixed.
+  // Consolidation measured 2,686,423 raw / 882,484 gzip after removing duplicate
+  // operation and shortcut wiring. Founder approved the measured +1 kB gzip
+  // allowance on 29 October; all other limits and required checks stay fixed.
+  // Paged Library and curated opening measured 2,689,736 raw / 883,607 gzip.
+  // Founder approved +3 kB raw / +1 kB gzip on 29 October; other limits stay fixed.
+  // Individual category images add about 2.6 kB raw / 0.7 kB gzip. Founder
+  // approved a further +3 kB raw / +1 kB gzip on 29 October for this behavior.
+  coreJavaScript: Object.freeze({ raw: 2_693_000, gzip: 885_000 }),
   // Approved local article fonts plus the creation bar's Inter variable face.
   // Inter and its license/provenance add 357,042 bytes; measured copied assets:
   // 17,811,402 bytes. Retain the previous margin, rounded up by less than 3 kB.
@@ -421,10 +430,15 @@ function ownerKey(manifest) {
   return key;
 }
 
-function standaloneWalletKey(manifest) {
-  return Object.keys(manifest).find((candidate) => normalize(candidate).endsWith('/src/wallet/standaloneWalletSession.js')
-    || normalize(candidate) === 'src/wallet/standaloneWalletSession.js'
-    || manifest[candidate].name === 'standaloneWalletSession');
+function standaloneWalletKey(manifest, graph, initialKeys) {
+  const file = graph.standaloneWallet.file;
+  const reachableKeys = manifestClosure(manifest, entryKey(manifest), { includeDynamic: true });
+  const key = [...reachableKeys].find((candidate) => manifest[candidate].file === file);
+  if (!key) throw new Error('Vite manifest is missing the reachable standalone wallet source chunk');
+  if ([...initialKeys].some((candidate) => manifest[candidate].file === file)) {
+    throw new Error('Standalone wallet runtime leaked into the initial manifest closure');
+  }
+  return key;
 }
 
 function cssFiles(manifest, keys) {
@@ -492,13 +506,12 @@ export async function analyzeProductionBuild(outputDirectory, { budgets = PRODUC
   catch (error) { throw new Error(`Cannot check production build: missing or invalid Vite manifest in ${outputDirectory}`, { cause: error }); }
   try { ownerRuntimeGraph = JSON.parse(await readFile(resolve(outputDirectory, 'owner-runtime-graph.json'), 'utf8')); }
   catch (error) { throw new Error(`Cannot check production build: missing or invalid owner runtime graph in ${outputDirectory}`, { cause: error }); }
+  assertOwnerRuntimeGraph(ownerRuntimeGraph);
 
   const initialKeys = manifestClosure(manifest, entryKey(manifest));
   const ownerKeys = manifestClosure(manifest, ownerKey(manifest));
-  const walletEntryKey = standaloneWalletKey(manifest);
-  const walletKeys = walletEntryKey
-    ? manifestClosure(manifest, walletEntryKey, { includeDynamic: true, excludeKeys: initialKeys })
-    : new Set();
+  const walletEntryKey = standaloneWalletKey(manifest, ownerRuntimeGraph, initialKeys);
+  const walletKeys = manifestClosure(manifest, walletEntryKey, { includeDynamic: true, excludeKeys: initialKeys });
   const initialFiles = new Set([...initialKeys].map((key) => manifest[key].file));
   const ownerFiles = [...ownerKeys].map((key) => manifest[key].file).filter((file) => !initialFiles.has(file));
   const walletFiles = [...new Set([...walletKeys].map((key) => manifest[key].file))]
@@ -527,6 +540,7 @@ export async function analyzeProductionBuild(outputDirectory, { budgets = PRODUC
   };
   return {
     version: 2, budgets, utilizationPercent: utilization(totals, budgets), totals,
+    standaloneWalletEntry: ownerRuntimeGraph.standaloneWallet,
     receptionRoutes: await measureReceptionRoutes(outputDirectory, manifest, initialKeys),
     initialJavaScript: initialJs, ownerJavaScript: ownerJs, standaloneWalletJavaScript: walletJs,
     lazyJavaScript, initialCss, ownerCss,

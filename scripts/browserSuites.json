@@ -3,6 +3,11 @@
   "notes": "Classification is not a passing test result. Release suites run by default; every other suite remains explicitly selectable. production-startup is separately required after the build by verifyRelease.mjs.",
   "suites": [
     {
+      "name": "svg-pan-retention",
+      "category": "release",
+      "rationale": "Twelve animated SVG documents survive repeated offscreen camera pans, pause/resume, preserve identity and avoid reload labels in Owner and Visitor at wide/narrow viewports."
+    },
+    {
       "name": "reception-styling",
       "category": "release",
       "rationale": "Filled Reception typography across reader/editor, header editing, shared Colour and nested touch controls in Reception and Workbench. Also runs against dist with INSCAPE_STYLING_PRODUCTION=1."

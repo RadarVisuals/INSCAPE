@@ -6,6 +6,27 @@ import { ARTWORK_DOCUMENT_HEADERS } from '../scripts/artworkDocumentHost.js';
 
 const origin = process.env.INSCAPE_SYSTEM_WORKFLOW_ROOT || 'http://127.0.0.1:5188';
 const output = process.env.INSCAPE_SVG_TEST_OUTPUT || process.env.INSCAPE_BROWSER_OUTPUT || '.svg-lifecycle-results';
+test('cold SVG loading stays accessible without a visible label; failure still offers Retry', { timeout: 30000 }, async () => {
+  const { browser, page } = await open();
+  let release;
+  const gate = new Promise(resolve => { release = resolve; });
+  try {
+    await page.route('**/svg-lifecycle-source.svg', async route => {
+      await gate;
+      await route.fulfill({ status: 503, contentType: 'text/plain', body: 'Unavailable test artwork' });
+    });
+    await page.goto(`${origin}/browser-tests/svg-lifecycle-fixture.html`);
+    const plain = page.getByRole('region', { name: 'Plain host', exact: true });
+    await plain.locator('[data-artwork-loading]').waitFor({ state: 'attached' });
+    assert.equal(await plain.locator('[data-artwork-loading]').textContent(), 'Loading artwork…');
+    const paint = await plain.locator('[data-artwork-loading]').evaluate(node => ({ clip: getComputedStyle(node).clipPath,
+      width: node.getBoundingClientRect().width, height: node.getBoundingClientRect().height }));
+    assert.equal(paint.clip, 'inset(50%)'); assert.equal(paint.width, 1); assert.equal(paint.height, 1);
+    release();
+    await plain.getByRole('button', { name: 'Artwork unavailable — retry', exact: true }).waitFor();
+    assert.equal(await plain.locator('[data-artwork-loading]').count(), 0, 'failure is not hidden like loading');
+  } finally { release(); await page.unrouteAll({ behavior: 'ignoreErrors' }); await browser.close(); }
+});
 const open = async () => {
   const browser = await chromium.launch({ executablePath: 'C:/Program Files (x86)/Google/Chrome/Application/chrome.exe', headless: true });
   const page = await browser.newPage({ viewport: { width: 1200, height: 900 } });

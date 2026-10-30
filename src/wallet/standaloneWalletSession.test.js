@@ -5,7 +5,7 @@ import test from 'node:test';
 const sessionSource = readFileSync(new URL('./standaloneWalletSession.js', import.meta.url), 'utf8');
 
 test('standalone wallet sessions restore persisted UP connections before initial synchronization', () => {
-  const reconnectIndex = sessionSource.indexOf('await reconnect(connector.wagmiConfig)');
+  const reconnectIndex = sessionSource.indexOf('await reconnect(config, { connectors: candidates })');
   const watchIndex = sessionSource.indexOf('const stopWatching = watchConnection');
   const initialSyncIndex = sessionSource.indexOf('await syncConnection(getConnection(connector.wagmiConfig))');
 

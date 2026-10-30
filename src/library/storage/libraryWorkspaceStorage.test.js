@@ -23,6 +23,17 @@ test('v9 organization roundtrips with normalized profile, favorites and category
   assert.deepEqual(loaded.folders, [{ id: 'folder', name: 'Art', assetIds: ['a'], public: true, createdAt: 1, updatedAt: 2 }]);
 });
 
+test('invalid stored image selection never broadens a category back to the whole asset', () => {
+  const workspace = { version: 9, profileAddress: profile, folders: [{ id: 'one', name: 'Chosen', assetIds: ['asset'],
+    imageSelections: [{ assetId: 'asset', url: 'javascript:invalid' }] }] };
+  const raw = JSON.stringify(workspace), key = libraryWorkspaceKey(profile);
+  const storage = memoryStorage({ [key]: raw });
+  const persistence = createLibraryWorkspacePersistence(storage);
+  assert.ok(persistence.load(profile).persistenceError);
+  assert.equal(storage.getItem(key), raw);
+  assert.equal(persistence.save(workspace).ok, false);
+});
+
 test('missing current record is empty without writing; malformed, unsupported and wrong-profile records throw', () => {
   const storage = memoryStorage();
   assert.deepEqual(loadLibraryWorkspace(storage, profile).workspace.folders, []);

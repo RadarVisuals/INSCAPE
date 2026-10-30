@@ -4,6 +4,7 @@ import { ownerRuntimeIsolationPlugin } from './scripts/ownerRuntimeIsolation.js'
 import { diagnosticsEnvironmentPlugin, productionBuildHygienePlugin } from './scripts/productionBuild.js';
 import { productionResponseSecurityHeaders } from './scripts/productionSecurityPolicy.js';
 import { excludeUnsupportedWalletConnectorsPlugin } from './scripts/unsupportedWalletConnectors.js';
+import { narrowLuksoWalletImportsPlugin } from './scripts/luksoWalletImports.js';
 import { artworkDocumentHostPlugin } from './scripts/artworkDocumentHost.js';
 import { keeperChatgptPlugin } from './scripts/keeperChatgpt/service.js';
 
@@ -16,7 +17,7 @@ export default defineConfig(({ mode }) => {
   const productionEnvironment = loadEnv(mode, process.cwd(), 'VITE_');
   return {
     define: { __INSCAPE_RELEASE_COMMIT__: JSON.stringify(resolveReleaseCommit({ ...process.env, ...productionEnvironment })) },
-    plugins: [keeperChatgptPlugin(), artworkDocumentHostPlugin(), diagnosticsEnvironmentPlugin(), react(), excludeUnsupportedWalletConnectorsPlugin(),
+    plugins: [keeperChatgptPlugin(), artworkDocumentHostPlugin(), diagnosticsEnvironmentPlugin(), react(), narrowLuksoWalletImportsPlugin(), excludeUnsupportedWalletConnectorsPlugin(),
       ownerRuntimeIsolationPlugin(), productionBuildHygienePlugin()],
     build: { manifest: true, rollupOptions: {
       input: { app: 'index.html', miniAppHost: 'mini-app-host.html' },

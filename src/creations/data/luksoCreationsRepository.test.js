@@ -1,8 +1,8 @@
+import { refreshLibraryTokenMetadata } from '../../library/data/refreshLibraryTokenMetadata.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { COLLECTION_TOKENS_QUERY, createLuksoCreationsRepository, CREATIONS_QUERY,
   REFERENCED_CREATIONS_QUERY } from './luksoCreationsRepository.js';
-import { collectionTokenNeedsMetadataRefresh } from './lsp8CollectionMetadataResolver.js';
 
 const PROFILE = '0x1234567890abcdef1234567890abcdef12345678';
 const CONTRACT_A = '0x1111111111111111111111111111111111111111';
@@ -117,7 +117,7 @@ test('collection query supports current baseAsset and legacy asset token relatio
   assert.match(COLLECTION_TOKENS_QUERY, /holders \{ id profile_id balance \}/);
 });
 
-test('refreshes loaded tokens even with previews and retains indexed fallback and holder facts', async () => {
+test('indexed tokens arrive without metadata IO; explicit refresh preserves token provenance and holder facts', async () => {
   const cover = { url: 'ipfs://collection-cover', src: 'https://gateway.example/collection-cover' };
   const revealed = { url: 'ipfs://revealed-one', src: 'https://gateway.example/revealed-one' };
   const current = { url: 'ipfs://current-two', src: 'https://gateway.example/current-two' };
@@ -143,27 +143,49 @@ test('refreshes loaded tokens even with previews and retains indexed fallback an
   const repository = createLuksoCreationsRepository({ fetchImpl, pageSize: 24, collectionMetadataResolver });
   const batches = [];
   for await (const batch of repository.loadCollectionTokens(PROFILE, collectionRecord)) batches.push(batch);
+  assert.equal(resolverCalls.length, 0, 'inventory must not refresh every token');
+  assert.equal(batches.length, 1);
+  for await (const batch of refreshLibraryTokenMetadata(batches[0].assets, { resolver: collectionMetadataResolver, attributeRepository: { enrich: async () => [] } })) {
+    batches.push({ ...batch, phase: 'metadata' });
+  }
   assert.equal(resolverCalls.length, 1);
   assert.deepEqual(resolverCalls[0].tokens.map(({ tokenId }) => tokenId), [staleToken.tokenId, currentToken.tokenId]);
-  assert.equal(batches[0].assets[0].name, 'HALO:0001');
-  assert.equal(batches[0].assets[0].imageUrl, revealed.src);
-  assert.equal(batches[0].assets[0].currentOwnerAddress, CONTRACT_B);
-  assert.deepEqual(batches[0].assets[0].fieldProvenance.images,
+  assert.equal(batches[0].phase, 'inventory');
+  assert.equal(batches[0].assets[0].imageUrl, cover.src);
+  assert.equal(batches[1].phase, 'metadata');
+  assert.equal(batches[1].assets[0].name, 'HALO:0001');
+  assert.equal(batches[1].assets[0].imageUrl, revealed.src);
+  assert.equal(batches[1].assets[0].currentOwnerAddress, CONTRACT_B);
+  assert.deepEqual(batches[1].assets[0].fieldProvenance.images,
     { scope: 'tokenId', source: 'LSP8TokenMetadataBaseURI (DIRECT LUKSO RPC)' });
   assert.equal(batches[0].assets[1].imageUrl, current.src);
 });
 
-test('indexed previews do not establish complete metadata', () => {
-  const cover = { url: 'ipfs://cover' };
-  assert.equal(collectionTokenNeedsMetadataRefresh({ tokenId: '0x01', images: [cover],
-    baseAsset: { images: [cover] } }), true);
-  assert.equal(collectionTokenNeedsMetadataRefresh({ tokenId: '0x01', images: [], baseAsset: { images: [cover] } }), true);
-  assert.equal(collectionTokenNeedsMetadataRefresh({ tokenId: '0x01', images: [{ url: 'ipfs://token' }],
-    baseAsset: { images: [cover] } }), true);
-  assert.equal(collectionTokenNeedsMetadataRefresh({ tokenId: '0x01', metadataResolved: true }), false);
-  assert.equal(collectionTokenNeedsMetadataRefresh({ tokenId: '0x01', images: [{
-    url: 'data:image/svg+xml;base64,PHN2Zy8+',
-  }], baseAsset: { images: [cover] } }), true);
+test('advancing an aborted collection cannot fetch another page', async () => {
+  const controller = new AbortController();
+  let requests = 0;
+  const repository = createLuksoCreationsRepository({ pageSize: 1, fetchImpl: async () => {
+    requests++;
+    return { ok: true, json: async () => ({ data: {
+      Token: [{ tokenId: `0x${'1'.padStart(64, '0')}`, name: 'Indexed', baseAsset: { id: CONTRACT_A } }],
+      Token_aggregate: { aggregate: { count: 5000 } },
+    } }) };
+  } });
+  const iterator = repository.loadCollectionTokens(PROFILE, { contractAddress: CONTRACT_A, isCollection: true }, { signal: controller.signal });
+  assert.equal((await iterator.next()).value.total, 5000);
+  controller.abort();
+  await assert.rejects(iterator.next(), { name: 'AbortError' });
+  assert.equal(requests, 1);
+});
+
+test('a short indexer scan cannot report a complete collection', async () => {
+  const repository = createLuksoCreationsRepository({ collectionMetadataResolver: null,
+    fetchImpl: async () => ({ ok: true, json: async () => ({ data: { Token: [],
+      Token_aggregate: { aggregate: { count: 1000 } } } }) }),
+  });
+  const iterator = repository.loadCollectionTokens(PROFILE, { contractAddress: CONTRACT_A, isCollection: true });
+  assert.equal((await iterator.next()).value.complete, false);
+  await assert.rejects(iterator.next(), /inventory is incomplete/);
 });
 
 test('uses a directly resolved token preview to keep a coverless creator collection discoverable', async () => {

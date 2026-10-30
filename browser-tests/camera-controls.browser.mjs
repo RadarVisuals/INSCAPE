@@ -52,6 +52,10 @@ for (const theme of ['carbon', 'mist']) for (const [width, height, touch] of [[1
         assert.deepEqual(await snapshot(page), cameraBefore, 'scrolling the menu cannot pan the artwork');
       }
       await page.keyboard.press('Tab');
+      assert.equal(await popup.getByRole('spinbutton', { name: 'Width (px)' }).evaluate(node => node === document.activeElement), true);
+      await page.keyboard.press('Tab');
+      assert.equal(await popup.getByRole('spinbutton', { name: 'Height (px)' }).evaluate(node => node === document.activeElement), true);
+      await page.keyboard.press('Tab');
       assert.equal(await popup.getByRole('button', { name: 'Show outside canvas', exact: true }).evaluate(node => node === document.activeElement), true);
       await page.keyboard.press('Tab'); await page.keyboard.press('Tab');
       const last = popup.getByRole('button', { name: 'Find resize corner', exact: true });

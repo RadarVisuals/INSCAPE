@@ -58,7 +58,7 @@ test('refresh replaces stale collection fallback with cover and all four token i
 
 test('unavailable token metadata retains existing records and reports incomplete refresh', async () => {
   const asset = token(1); const batches = [];
-  for await (const batch of refreshLibraryTokenMetadata([asset], { resolver: { resolve: async () => new Map() } })) batches.push(batch);
+  for await (const batch of refreshLibraryTokenMetadata([asset], { resolver: { resolve: async () => new Map() }, attributeRepository: { enrich: async () => [] } })) batches.push(batch);
   assert.deepEqual(batches, [{ assets: [], failures: 1 }]);
   assert.equal(asset.imageUrl, 'https://example.test/stale.webp');
 });

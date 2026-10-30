@@ -21,6 +21,7 @@ async function mount(page, scale) {
     const React = (await import('/@id/react')).default, { createRoot } = (await import('/@id/react-dom/client')).default;
     const { WorkbenchViewProvider, WorkbenchViewControls, useWorkbenchView } = await import('/src/public/ownerSystemWorkflow/WorkbenchView.jsx');
     const { useWorkbenchCamera } = await import('/src/public/ownerSystemWorkflow/WorkbenchCamera.jsx');
+    const WorkbenchCanvasContent = (await import('/src/public/ownerSystemWorkflow/WorkbenchCanvasContent.jsx')).default;
     const ImageWindow = (await import('/src/imageModule/ImageWindow.jsx')).default;
     const ImageArtwork = (await import('/src/imageModule/ImageArtwork.jsx')).default;
     await import('/src/imageModule/imageModule.css');
@@ -29,15 +30,17 @@ async function mount(page, scale) {
     function Fixture() {
       const host = React.useRef(null), view = useWorkbenchView(), camera = useWorkbenchCamera();
       window.__joinsCamera = camera.getCamera;
+      React.useLayoutEffect(() => { window.__joinsCameraCommits++; }, [camera.offset, camera.scale]);
       window.__joinsAuthored = () => ({ positions, transforms: view.transforms });
       React.useLayoutEffect(() => { view.setScale(scale); camera.setOffset({ x: .37, y: -.23 }); }, []);
       return React.createElement('main', { ref: host, tabIndex: -1, style: { position: 'fixed', inset: 0 } },
         React.createElement(WorkbenchViewControls, { hostRef: host }),
-        positions.map((position, i) => React.createElement(ImageWindow, { key: i, id: `image:${i}`, title: `Image ${i}`, position, size: { width: 180, height: 130 },
+        React.createElement(WorkbenchCanvasContent, null, positions.map((position, i) => React.createElement(ImageWindow, { key: i, id: `image:${i}`, title: `Image ${i}`, position, size: { width: 180, height: 130 },
           editable: false, onPosition: () => { throw Error('camera wrote a module position'); }, onClose: () => {} },
-        rectangle => React.createElement(ImageArtwork, { rectangle, side }))));
+        rectangle => React.createElement(ImageArtwork, { rectangle, side })))));
     }
     window.__joinsCommits = 0;
+    window.__joinsCameraCommits = 0;
     createRoot(document.getElementById('root')).render(React.createElement(React.Profiler, { id: 'joins', onRender: () => window.__joinsCommits++ },
       React.createElement(WorkbenchViewProvider, null, React.createElement(Fixture))));
   }, scale);
@@ -76,6 +79,13 @@ for (const density of [1, 1.25, 2]) for (const width of [1440, 390]) {
     const browser = await chromium.launch({ executablePath: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', headless: true });
     try {
       const page = await browser.newPage({ viewport: { width, height: 900 }, deviceScaleFactor: density });
+      // Native pointer capture/clicks remain real. Only the velocity sample
+      // clock is deterministic, independent of delays in browser automation.
+      await page.addInitScript(() => {
+        let time = 1000;
+        for (const type of ['pointerdown', 'pointermove', 'pointerup']) window.addEventListener(type,
+          event => Object.defineProperty(event, 'timeStamp', { value: time += 16 }), true);
+      });
       const errors = []; page.on('pageerror', error => errors.push(error.message));
       await mount(page, width === 390 ? .671 : 1.371);
       const before = await page.evaluate(() => window.__joinsAuthored());
@@ -94,10 +104,13 @@ for (const density of [1, 1.25, 2]) for (const width of [1440, 390]) {
         window.__joinsRestore = () => { window.requestAnimationFrame = request; window.cancelAnimationFrame = cancel; };
       });
       await page.mouse.move(width - 80, 650); await page.mouse.down();
-      for (let i = 1; i <= 8; i++) { await page.mouse.move(width - 80 + i * 2, 650 + i * 1.5); if (i < 8) await page.waitForTimeout(12); }
+      for (let i = 1; i <= 8; i++) await page.mouse.move(width - 80 + i * 2, 650 + i * 1.5);
+      const pointerCommits = await page.evaluate(() => window.__joinsCameraCommits);
       await page.mouse.up();
       const released = await page.evaluate(() => ({ camera: window.__joinsCamera(), time: performance.now(), commits: window.__joinsCommits }));
-      assert.equal(await page.locator('[data-workbench-camera-projected]').count(), 4, 'release started projected motion');
+      assert.equal(await page.evaluate(() => window.__joinsCameraCommits), pointerCommits, 'release retains the live projection without committing geometry');
+      assert.equal(await page.locator('.workbench-camera-plane[data-workbench-camera-projected]').count(), 1, 'adjoining Images share one camera projection');
+      assert.equal(await page.locator('[data-workbench-view-id][data-workbench-camera-projected]').count(), 0, 'individual Image transforms are unchanged during camera movement');
       let coastCommits;
       for (const elapsed of [0, 33, 83, 157]) {
         await page.evaluate(time => window.__joinsStep(time), released.time + elapsed);
@@ -109,7 +122,13 @@ for (const density of [1, 1.25, 2]) for (const width of [1440, 390]) {
         if (elapsed === 0) coastCommits = await page.evaluate(() => window.__joinsCommits);
       }
       assert.equal(await page.evaluate(() => window.__joinsCommits), coastCommits, 'coast does not commit React per frame');
-      await page.evaluate(time => window.__joinsStep(time), released.time + 1000);
+      const beforeGrab = await page.evaluate(() => ({ camera: window.__joinsCamera(), commits: window.__joinsCameraCommits }));
+      await page.mouse.move(width - 80, 650); await page.mouse.down();
+      assert.deepEqual(await page.evaluate(() => ({ camera: window.__joinsCamera(), commits: window.__joinsCameraCommits })), beforeGrab,
+        'grabbing a moving canvas retains its camera and projection without a geometry commit');
+      assert.equal((await pixels(page)).bad, 0, 'interrupted coast keeps opaque joins');
+      await page.mouse.up();
+      await page.evaluate(() => window.__joinsStep(performance.now() + 1000));
       assert.equal(await page.locator('[data-workbench-camera-projected]').count(), 0, 'projection retires after settling');
       assert.equal((await pixels(page)).bad, 0, 'settled joins');
       assert.deepEqual(await page.evaluate(() => window.__joinsAuthored()), before, 'camera preserves authored geometry');

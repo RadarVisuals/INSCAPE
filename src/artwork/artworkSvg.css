@@ -1,4 +1,8 @@
 .artwork-svg-document { display: block; width: 100%; height: 100%; border: 0; background: transparent; color-scheme: normal; }
 .artwork-svg-status { position: absolute; inset: auto 4px 4px; font: var(--workflow-type-technical); color: var(--workflow-ink); background: var(--workflow-panel); text-align: center; pointer-events: none; }
+/* Loading stays announced without placing a label over the composition. This
+   also applies when Image portals the status beside its canvas or inspector.
+   Failed states have no loading marker and retain their visible Retry action. */
+[data-artwork-loading] { position: absolute !important; width: 1px !important; height: 1px !important; padding: 0 !important; margin: -1px !important; overflow: hidden !important; clip-path: inset(50%) !important; white-space: nowrap !important; border: 0 !important; }
 .artwork-svg-viewport { position: absolute; inset: 0; display: block; width: 100%; height: 100%; overflow: hidden; pointer-events: none; }
 .artwork-svg-host, .artwork-svg-paint { position: absolute; inset: 0; display: block; pointer-events: none; }

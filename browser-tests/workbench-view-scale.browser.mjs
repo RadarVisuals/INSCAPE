@@ -1,8 +1,11 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { chromium } from 'playwright-core';
+import { mkdir, writeFile } from 'node:fs/promises';
 
 const origin = process.env.INSCAPE_TEXT_ROOT || 'http://127.0.0.1:5178';
+const output = process.env.INSCAPE_BROWSER_OUTPUT || '.browser-test-runtime';
+await mkdir(output, { recursive: true });
 const settle = page => page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
 const closeTo = (actual, expected, message) => assert.ok(Math.abs(actual - expected) <= 1, `${message}: ${actual} vs ${expected}`);
 const sameTextLayout = (actual, expected) => {
@@ -15,6 +18,12 @@ const closeBrowser = async browser => {
   for (const context of browser.contexts()) for (const page of context.pages()) await page.unrouteAll({ behavior: 'wait' });
   await browser.close();
 };
+async function closeSelectionTools(page) {
+  for (const name of ['Close Transform', 'Close Color', 'Close Image', 'Close Shape', 'Close FX', 'Close Info']) {
+    const close = page.getByRole('button', { name, exact: true });
+    if (await close.count()) await close.click();
+  }
+}
 
 async function mount(page, visitor = false, fractional = false) {
   await page.route('**/*', route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
@@ -92,6 +101,7 @@ async function mount(page, visitor = false, fractional = false) {
   // default desktop Layers companion. Its own reachability has separate checks.
   if (!visitor && await page.getByRole('button', { name: 'Close Workbench Layers' }).count())
     await page.getByRole('button', { name: 'Close Workbench Layers' }).click();
+  if (!visitor) await page.getByRole('button', { name: 'Collapse sidebar', exact: true }).click();
   await page.evaluate(() => document.fonts.ready);
   await page.waitForTimeout(400);
 }
@@ -108,7 +118,7 @@ async function zoomToHalf(page) {
       const b = await board.boundingBox(), t = await text.boundingBox();
       assert.ok(Math.abs(t.x + t.width - b.x) < .02, 'no subpixel gap between joined windows');
       assert.ok(Math.abs(t.y - b.y) < .02, 'joined top edges share the same pixel');
-      if (i === 3) await page.screenshot({ path: '.browser-test-runtime/workbench-seam-67.png', clip: { x: Math.max(0, Math.floor(b.x) - 20), y: Math.floor(b.y), width: 80, height: Math.floor(Math.min(t.height, b.height)) } });
+      if (i === 3) await page.screenshot({ path: `${output}/workbench-seam-67.png`, clip: { x: Math.max(0, Math.floor(b.x) - 20), y: Math.floor(b.y), width: 80, height: Math.floor(Math.min(t.height, b.height)) } });
     }
   }
   const cameraScale = await page.locator('main').first().getAttribute('data-workbench-camera-scale');
@@ -136,6 +146,7 @@ async function measure(page) {
 
 test('fractional adjoining windows leave no painted seam while zooming and scrolling', { timeout: 120000 }, async () => {
   const browser = await chromium.launch({ executablePath: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', headless: true });
+  const samples = [];
   try {
     for (const visitor of [false, true]) for (const deviceScaleFactor of [1, 1.25, 2]) {
       const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, deviceScaleFactor, reducedMotion: 'reduce' });
@@ -143,6 +154,7 @@ test('fractional adjoining windows leave no painted seam while zooming and scrol
       if (!visitor) {
         await page.getByRole('button', { name: 'Read', exact: true }).focus(); await page.keyboard.press('Enter');
         await page.locator('.text-tools-window').waitFor({ state: 'detached' });
+        await closeSelectionTools(page);
         await page.locator('main').first().focus();
       }
       // A contrasting Workbench exposes even a partially transparent raster gap.
@@ -156,8 +168,26 @@ test('fractional adjoining windows leave no painted seam while zooming and scrol
         const b = await board.boundingBox(), t = await page.locator('.text-window').boundingBox();
         const clip = { x: Math.floor(b.x) - 3, y: Math.floor(Math.min(b.y, t.y)) - 3, width: 6,
           height: Math.floor(Math.min(b.height, t.height)) };
-        const png = await page.screenshot({ path: '.browser-test-runtime/seam-pixel-probe.png' });
-        const probe = { x: Math.floor(t.x + 5), y: Math.floor(Math.max(b.y + b.height, t.y + t.height) + 12) };
+        const png = await page.screenshot({ path: `${output}/seam-pixel-probe.png` });
+        // The left edge can move under the fixed sidebar at low camera zoom.
+        // Keep the contrast point beneath the composition's visible middle.
+        const probe = { x: Math.floor((t.x + b.x + b.width) / 2), y: Math.floor(Math.max(b.y + b.height, t.y + t.height) + 12) };
+        const hits = await page.evaluate(({ clip, probe }) => {
+          const describe = node => ({ tag: node?.tagName, className: node?.className, label: node?.getAttribute('aria-label') });
+          const overlay = '[data-system-workflow-overlay], .visitor-grid-world__dock, .workbench-navigator';
+          const obstructions = [];
+          for (let y = clip.y + 6; y < clip.y + clip.height - 3; y++) for (const x of [clip.x, clip.x + 3, clip.x + 5]) {
+            const hit = document.elementFromPoint(x, y);
+            if (!hit?.closest('main.system-workflow') || hit.closest(overlay)) obstructions.push({ x, y, hit: describe(hit) });
+          }
+          const background = document.elementFromPoint(probe.x, probe.y);
+          return { obstructions: obstructions.slice(0, 3), probeHit: describe(background),
+            emptyCanvas: !!background?.matches('main.system-workflow, .system-workflow__workbench') };
+        }, { clip, probe });
+        samples.push({ visitor, deviceScaleFactor, step, clip, probe, ...hits });
+        await writeFile(`${output}/seam-hit-tests.json`, JSON.stringify(samples, null, 2));
+        assert.deepEqual(hits.obstructions, [], 'the full sampled join is clear of fixed interface overlays');
+        assert.ok(hits.emptyCanvas, 'the contrast point is on empty canvas');
         const result = await page.evaluate(async ({ png, density, clip, probe }) => {
           const image = new Image(); image.src = `data:image/png;base64,${png}`; await image.decode();
           const canvas = document.createElement('canvas'); canvas.width = Math.floor(clip.width * density); canvas.height = Math.floor(clip.height * density);
@@ -198,12 +228,13 @@ for (const visitor of [false, true]) test(`${visitor ? 'Visitor' : 'Owner'} sepa
       await page.getByRole('slider', { name: 'Workbench zoom', exact: true }).fill('100');
       await page.getByRole('button', { name: 'Reset Workbench view' }).click(); await settle(page);
       await page.getByRole('button', { name: 'Read', exact: true }).focus(); await page.keyboard.press('Enter');
+      await closeSelectionTools(page);
     }
     for (const [name, viewport] of [['wide', { width: 1440, height: 1000 }], ['narrow', { width: 390, height: 844 }]]) {
       await page.setViewportSize(viewport); await page.waitForTimeout(350);
       const before = await measure(page);
       const storage = await page.evaluate(() => JSON.stringify({ ...localStorage }));
-      await page.screenshot({ path: `.browser-test-runtime/workbench-scale-${visitor ? 'visitor' : 'owner'}-${name}-100.png` });
+      await page.screenshot({ path: `${output}/workbench-scale-${visitor ? 'visitor' : 'owner'}-${name}-100.png` });
       await zoomToHalf(page);
       const after = await measure(page);
       for (const item of ['board', 'text']) for (const key of ['x', 'y', 'width', 'height']) closeTo(after[item][key], before[item][key] / 2, `${item} ${key}`);
@@ -214,7 +245,7 @@ for (const visitor of [false, true]) test(`${visitor ? 'Visitor' : 'Owner'} sepa
       for (let i = 0; i < after.lines.length; i++) for (const key of ['x', 'y', 'width', 'height']) closeTo(after.lines[i][key], before.lines[i][key] / 2, `text glyph line ${key}`);
       await page.waitForTimeout(200);
       assert.equal(await page.evaluate(() => JSON.stringify({ ...localStorage })), storage, 'zoom writes no content or local layout');
-      await page.screenshot({ path: `.browser-test-runtime/workbench-scale-${visitor ? 'visitor' : 'owner'}-${name}-50.png` });
+      await page.screenshot({ path: `${output}/workbench-scale-${visitor ? 'visitor' : 'owner'}-${name}-50.png` });
       const host = page.locator('main').first(); await host.focus(); await page.keyboard.press('Control+0'); await settle(page);
       await page.getByRole('button', { name: 'Reset Workbench view' }).click(); await settle(page);
       assert.deepEqual(await measure(page), before, 'reset restores exact composition');
@@ -230,6 +261,7 @@ for (const visitor of [false, true]) test(`${visitor ? 'Visitor' : 'Owner'} sepa
     if (!visitor) {
       await page.getByRole('button', { name: 'Read', exact: true }).focus(); await page.keyboard.press('Enter');
       await page.locator('.text-tools-window').waitFor({ state: 'detached' });
+      await closeSelectionTools(page);
     }
     const board = page.locator('.system-workflow__presentation-board');
     const original = await measure(page);
@@ -260,7 +292,7 @@ for (const visitor of [false, true]) test(`${visitor ? 'Visitor' : 'Owner'} sepa
       assert.deepEqual(draftAfterResize.texts, draftBeforeResize.texts, 'resize leaves article content and appearance unchanged');
       assert.deepEqual(draftAfterResize.grids, draftBeforeResize.grids, 'Display resize leaves its placements unchanged');
     }
-    await page.screenshot({ path: `.browser-test-runtime/workbench-marquee-${visitor ? 'visitor' : 'owner'}.png` });
+    await page.screenshot({ path: `${output}/workbench-marquee-${visitor ? 'visitor' : 'owner'}.png` });
     // Escape rolls back an unfinished resize; a completed gesture remains.
     const nextCorner = await handle.boundingBox();
     await page.mouse.move(nextCorner.x + 14, nextCorner.y + 14); await page.mouse.down(); await page.mouse.move(nextCorner.x - 30, nextCorner.y - 20);
@@ -312,7 +344,7 @@ for (const visitor of [false, true]) test(`${visitor ? 'Visitor' : 'Owner'} sepa
     await page.mouse.move(beforeCancel.board.x + 50, beforeCancel.board.y + 50); await page.mouse.down();
     await page.mouse.move(beforeCancel.board.x + 90, beforeCancel.board.y + 80); await page.keyboard.press('Escape'); await page.mouse.up(); await settle(page);
     assert.deepEqual(await measure(page), beforeCancel, 'Escape restores group movement');
-    await page.screenshot({ path: `.browser-test-runtime/workbench-group-move-${visitor ? 'visitor' : 'owner'}.png` });
+    await page.screenshot({ path: `${output}/workbench-group-move-${visitor ? 'visitor' : 'owner'}.png` });
     // Cropping can remove the focused selection surface during cancellation.
     // Explicitly select the restored pair before testing keyboard membership.
     await page.mouse.move(beforeCancel.board.x + beforeCancel.board.width + 20, beforeCancel.board.y + beforeCancel.board.height + 20); await page.mouse.down();

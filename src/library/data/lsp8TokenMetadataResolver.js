@@ -1,4 +1,3 @@
-import { decodeDataSourceWithHash } from '@erc725/erc725.js';
 import { metadataImages as collectMetadataImages } from './metadataImages.js';
 import { createPublicClient, fallback, getAddress, http } from 'viem';
 import { lukso } from 'viem/chains';
@@ -6,6 +5,8 @@ import { IPFS_GATEWAY_URL, LUKSO_RPC_FALLBACK_URLS, LUKSO_RPC_URL, normalizeProf
 import { resolveContentUrl } from './resolveContentUrl.js';
 import { decodeVerifiedOnchainJsonDataUri } from './onchainDataUri.js';
 import { fetchMetadataJson } from './fetchMetadataJson.js';
+import { decodeMetadataPointer as decodePointer, decodeStoredNumber as decodeNumber,
+  decodeTokenIdForMetadata as decodeTokenId } from './lspMetadataDecoding.js';
 
 const METADATA_KEY = '0x9afb95cacc9f95858ec44aa8c3b685511002e30ae54415823f406128b85b238e';
 const BASE_URI_KEY = '0x1a7628600c3bac7101f53697f48df381ddc36b9015e7d7c9c5633d1252aa2843';
@@ -22,29 +23,7 @@ const RESPONSE_TIMEOUT_MS = 10_000;
 
 function abortError() { return new DOMException('The operation was aborted', 'AbortError'); }
 function throwIfAborted(signal) { if (signal?.aborted) throw abortError(); }
-function decodePointer(value) {
-  if (!value || value === '0x') return null;
-  try {
-    const pointer = decodeDataSourceWithHash(value);
-    return pointer?.url ? pointer : null;
-  } catch { return null; }
-}
 const decodeUri = (value) => decodePointer(value)?.url || null;
-function decodeNumber(value) {
-  if (typeof value !== 'string' || !/^0x[0-9a-f]+$/iu.test(value) || value.length > 66) return null;
-  try { return Number(BigInt(value)); } catch { return null; }
-}
-function decodeTokenId(tokenId, format) {
-  if (typeof tokenId !== 'string' || !/^0x[0-9a-f]{64}$/iu.test(tokenId)) return null;
-  if (format === 0) return BigInt(tokenId).toString(10);
-  if (format === 1) {
-    try { return new TextDecoder().decode(Uint8Array.from(tokenId.slice(2).match(/.{2}/gu)
-      .map((byte) => Number.parseInt(byte, 16)))).replace(/\0+$/u, ''); } catch { return null; }
-  }
-  if (format === 2) return `0x${tokenId.slice(-40)}`;
-  if (format === 3) return tokenId.replace(/0+$/u, '');
-  return tokenId;
-}
 function metadataRoot(document) { return document?.LSP4Metadata || document || {}; }
 function metadataImages(document) { return collectMetadataImages(metadataRoot(document)); }
 function metadataAttributes(document) {
@@ -164,21 +143,6 @@ export function createLsp8CollectionMetadataResolver({
 
 export const lsp8CollectionMetadataResolver = createLsp8CollectionMetadataResolver();
 
-// A valid indexed preview does not prove that attachments or metadata updates
-// have been indexed. Refresh each loaded collection page, with bounded concurrency.
-export function collectionTokenNeedsMetadataRefresh(token) {
-  return Boolean(token?.tokenId && token.metadataResolved !== true);
-}
-function overlayToken(token, metadata) {
-  return metadata ? { ...token, name: metadata.name, lsp4TokenName: metadata.name,
-    description: metadata.description, images: metadata.images, attributes: metadata.attributes,
-    metadataSource: metadata.metadataSource, metadataResolved: true, error: null } : token;
-}
-export async function refreshIndexedCollectionTokens(contract, tokens, { resolver, signal } = {}) {
-  const candidates = tokens.filter(collectionTokenNeedsMetadataRefresh); if (!candidates.length) return tokens;
-  const refreshed = await (resolver || lsp8CollectionMetadataResolver).resolve(contract, candidates, { signal }).catch(() => new Map());
-  return tokens.map((token) => overlayToken(token, refreshed.get(String(token?.tokenId || '').toLowerCase())));
-}
 export async function resolveMissingCollectionPreviews(rows, { resolver, signal } = {}) {
   const activeResolver = resolver || lsp8CollectionMetadataResolver;
   return Promise.all(rows.map(async (row) => {

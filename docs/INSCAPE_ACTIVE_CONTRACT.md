@@ -1526,8 +1526,8 @@ raster layers keep their own source resolution. See the
 Owner, Visitor and enlarged inspection share this rendering path. Display
 prepares SVG documents within its existing bounded five-slot Grid rail while
 the module is visible, so incoming artwork can start before a swipe exposes it.
-After the founder's 21 October navigation follow-up, an already mounted projected
-SVG can remain outside the viewport for up to 30 seconds. At most four idle
+After the founder's 30 October retention follow-up, an already mounted projected
+SVG can remain outside the viewport for up to two minutes. At most 24 idle
 documents are retained across the page; the oldest is evicted on capacity pressure.
 Visible documents and Display's active preparation rail do not occupy idle slots.
 Returning within that bound reuses the same isolated document. Changing its source,
@@ -1538,7 +1538,12 @@ cooperating Nomads pause offscreen and resume without rebuilding their textures.
 This does not guarantee suspension of arbitrary third-party SVG scripts that ignore
 the signal; their idle lifetime is still bounded. HTML artwork retains its existing
 disposal policy. Internal animation state is temporary, not saved composition data.
-See [local verification and its limits](audits/2026-10-21/svg-offscreen-retention.md).
+Loading remains available to assistive technology, without a visible loading label
+over the composition or inspection. Failure and Retry remain visible. This is a
+bounded warm-document policy, not a guarantee of arbitrary SVG memory cost or of
+reload-free returns after expiry or capacity eviction.
+See the [twelve-SVG verification and limits](audits/2026-10-30/svg-retention/REPORT.txt)
+and the [original retention checks](audits/2026-10-21/svg-offscreen-retention.md).
 Display selects live
 SVGs by rectangular bounds because a static alpha mask cannot describe animated
 content. Raster artwork keeps its existing renderer. Saved URLs and schemas are
@@ -3061,6 +3066,11 @@ existing content uses the independent finite editing bounds. Initial placement
 and the alignment grid use the canvas bounds with an eight-pixel inset, reduced
 when the canvas is too small for that inset. Panning
 or zooming beyond them reveals the darker exterior. Resize handles appear only while Canvas size is open.
+Canvas size also exposes Width and Height in pixels. Apply or Enter saves both
+dimensions as one undoable resize, retaining the canvas origin and artwork
+geometry. Typing is temporary; closing discards unfinished input. Invalid values
+leave saved work unchanged. Saved edits and drag previews replace stale field
+input through the existing canvas state; no additional persisted size is stored.
 Reset view is always visible in the Workbench controls. It resets the temporary
 pan, not the saved arrangement. Browser resizing and reload never pull saved
 positions back into the viewport. Existing Display/Image viewport size fitting
@@ -4288,6 +4298,23 @@ change cannot be silently overwritten. This introduces no authored document
 fields, migration, publication or additional dependency. Earlier per-composition
 Text-tool visibility restoration is removed in favour of this one preference.
 See [Library and preference verification](audits/2026-10-23/library-preferences.md).
+
+**Library curation refinement (2026-10-29):** The founder chose an explicit
+opening category. **Open Library here** in a category's menu stores that choice
+in the existing profile-local editor preferences. Reopening or reloading starts
+there with hiding search and relationship filters cleared; deleting the chosen
+category falls back to All. Without a chosen category, existing browsing
+preferences apply. Known category references load independently of the full
+inventory. Owned, Created and collection browsing advances in requested pages;
+visible and selected tokens drive bounded metadata work. Partial inventory
+counts, search and sorting describe loaded assets. Choosing an individual image
+for a category, through its context menu or by dragging, retains that image's
+URL alongside the source asset ID. The category shows only the chosen images;
+multiple images from one source remain independently removable. This local
+organization does not rewrite token metadata, creator attribution or ownership.
+An existing whole-asset entry can be narrowed by adding the desired image;
+the earlier discarded image choice cannot be reconstructed. See
+[implementation and behavioral evidence](audits/2026-10-29/library-demand/README.md).
 
 ### Settings and keyboard selection finishing (2026-10-23)
 

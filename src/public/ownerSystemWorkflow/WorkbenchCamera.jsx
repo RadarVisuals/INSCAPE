@@ -18,6 +18,9 @@ export function WorkbenchCameraProvider({ children }) {
   const [camera, setCamera] = useState({ scale: 1, offset: { x: 0, y: 0 } });
   const current = useRef(camera);
   const projection = useRef(null), painters = useRef(new Set());
+  const planes = useRef(new Set());
+  const registerCameraPlane = useCallback(node => { planes.current.add(node); return () => planes.current.delete(node); }, []);
+  const getCameraPlanes = useCallback(() => planes.current, []);
   const geometryListeners = useRef(new Set());
   const artworkGeometry = useMemo(() => ({
     subscribe(listener) { geometryListeners.current.add(listener); return () => geometryListeners.current.delete(listener); },
@@ -25,8 +28,10 @@ export function WorkbenchCameraProvider({ children }) {
   }), []);
   const getCamera = useCallback(() => current.current, []);
   const subscribeCameraPaint = useCallback(listener => { painters.current.add(listener); return () => painters.current.delete(listener); }, []);
-  const prepareCamera = useCallback(rasterCamera => setCamera(rasterCamera), []);
-  const projectCamera = useCallback(surface => { projection.current = surface; }, []);
+  const prepareCamera = useCallback(rasterCamera => setCamera(previous =>
+    previous.scale === rasterCamera.scale && previous.offset.x === rasterCamera.offset.x && previous.offset.y === rasterCamera.offset.y
+      ? previous : rasterCamera), []);
+  const projectCamera = useCallback(surface => { projection.current?.dispose(); projection.current = surface; }, []);
   const previewCamera = useCallback((next, progress) => {
     current.current = next;
     painters.current.forEach(paint => paint(next));
@@ -59,8 +64,8 @@ export function WorkbenchCameraProvider({ children }) {
     setLocks(current => new Set(current).add(token));
     return () => setLocks(current => { const next = new Set(current); next.delete(token); return next; });
   }, []);
-  const value = useMemo(() => ({ ...camera, getCamera, updateCamera, prepareCamera, projectCamera, previewCamera, subscribeCameraPaint, setOffset, locked: locks.size > 0, lock }),
-    [camera, getCamera, updateCamera, prepareCamera, projectCamera, previewCamera, subscribeCameraPaint, setOffset, locks.size, lock]);
+  const value = useMemo(() => ({ ...camera, getCamera, updateCamera, prepareCamera, projectCamera, previewCamera, subscribeCameraPaint, registerCameraPlane, getCameraPlanes, setOffset, locked: locks.size > 0, lock }),
+    [camera, getCamera, updateCamera, prepareCamera, projectCamera, previewCamera, subscribeCameraPaint, registerCameraPlane, getCameraPlanes, setOffset, locks.size, lock]);
   return <Camera.Provider value={value}>
     <CameraScale.Provider value={scale}><ArtworkGeometry.Provider value={artworkGeometry}>{children}</ArtworkGeometry.Provider></CameraScale.Provider>
   </Camera.Provider>;

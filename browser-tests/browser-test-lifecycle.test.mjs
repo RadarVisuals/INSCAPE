@@ -2,11 +2,16 @@ import assert from 'node:assert/strict';
 import { describe, test } from 'node:test';
 import { EventEmitter } from 'node:events';
 import { resolve } from 'node:path';
+import { mkdtemp, writeFile, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { createHash } from 'node:crypto';
 import {
   BROWSER_LIFECYCLE_TIMEOUTS,
   createBrowserTestCleanup,
   createOwnedProcessTree,
   listPosixProcesses,
+  listWindowsProcesses,
+  resolveWindowsProcessRuntime,
   removeBrowserRuntime,
   runBrowserSetupWithCleanup,
   terminatePosixProcessTree,
@@ -22,6 +27,15 @@ import {
 
 const workspaceRoot = resolve('browser-lifecycle-fixture');
 const codedError = (code) => Object.assign(new Error(code), { code });
+const mockWindowsRuntime = { executable: 'powershell.exe' };
+
+async function powershellFixture(t, { modern = true } = {}) {
+  const root = await mkdtemp(resolve(tmpdir(), 'inscape-powershell-'));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  if (modern) await writeFile(resolve(root, 'pwsh.exe'), 'fixture-modern');
+  await writeFile(resolve(root, 'powershell.exe'), 'fixture-built-in');
+  return { root, environment: { PATH: root, SystemRoot: root, INSCAPE_PROCESS_POWERSHELL: '' } };
+}
 
 describe('Playwright browser lifecycle', () => {
   const runtimePath = resolve(workspaceRoot, '.browser-test-runtime');
@@ -107,6 +121,76 @@ describe('Playwright browser lifecycle', () => {
       { pid: 10, parentPid: 1, identity: 'Fri Aug  7 12:00:00 2026' },
       { pid: 11, parentPid: 10, identity: 'Fri Aug  7 12:00:01 2026' },
     ]);
+  });
+
+  test('Windows inventory preserves all positive process identities and its bounded native dependency', async () => {
+    const entries = [
+      { ProcessId: 0, ParentProcessId: 0, CreationDate: null },
+      { ProcessId: 10, ParentProcessId: 0, CreationDate: '/Date(1793290708130)/' },
+      { ProcessId: 11, ParentProcessId: 10, CreationDate: '/Date(1793290708131)/' },
+      { ProcessId: 99, ParentProcessId: 1, CreationDate: '/Date(1793290708132)/' },
+    ];
+    const calls = [];
+    const result = await listWindowsProcesses({ runtime: mockWindowsRuntime, run: async (...args) => {
+      calls.push(args); return { code: 0, stdout: JSON.stringify(entries), stderr: '' };
+    } });
+    assert.deepEqual(result, entries.slice(1).map(entry => ({ pid: entry.ProcessId, parentPid: entry.ParentProcessId, identity: entry.CreationDate })));
+    assert.equal(calls[0][0], 'powershell.exe');
+    assert.equal(calls[0][2].timeoutMs, 3000);
+    assert.match(calls[0][1].at(-1), /-ErrorAction Stop/u);
+    const single = await listWindowsProcesses({ runtime: mockWindowsRuntime, run: async () => ({ code: 0, stdout: JSON.stringify(entries[1]), stderr: '' }) });
+    assert.deepEqual(single, [result[0]]);
+  });
+
+  test('Windows inventory fails closed on missing, malformed or ambiguous ownership evidence', async () => {
+    const valid = { ProcessId: 10, ParentProcessId: 0, CreationDate: '/Date(1793290708130)/' };
+    for (const stdout of ['', '   ', '[]', 'null', 'not JSON', '{}', '[{"ProcessId":0}]',
+      JSON.stringify({ ...valid, ProcessId: -1 }), JSON.stringify({ ...valid, ProcessId: '10' }),
+      JSON.stringify({ ...valid, ParentProcessId: undefined }), JSON.stringify({ ...valid, ParentProcessId: -1 }),
+      JSON.stringify({ ...valid, CreationDate: undefined }), JSON.stringify({ ...valid, CreationDate: null }),
+      JSON.stringify({ ...valid, CreationDate: ' ' }), JSON.stringify([valid, valid])]) {
+      await assert.rejects(listWindowsProcesses({ runtime: mockWindowsRuntime, run: async () => ({ code: 0, stdout, stderr: '' }) }), undefined, `Accepted invalid inventory: ${stdout}`);
+    }
+    await assert.rejects(listWindowsProcesses({ runtime: mockWindowsRuntime, run: async () => ({ code: 1, stdout: JSON.stringify(valid), stderr: 'CIM unavailable' }) }), /CIM unavailable/u);
+    const timeout = codedError('ETIMEDOUT');
+    await assert.rejects(listWindowsProcesses({ runtime: mockWindowsRuntime, run: async () => { throw timeout; } }), error => error === timeout);
+  });
+
+  test('Windows runtime resolves PATH once, records actual metadata, and leaves POSIX unchanged', async t => {
+    const { root, environment } = await powershellFixture(t), calls = [];
+    const dependencies = { platform: 'win32', run: async (...args) => {
+      calls.push(args); return { code: 0, stdout: '7.6.5\r\n', stderr: '' };
+    } };
+    const runtime = await resolveWindowsProcessRuntime(environment, dependencies);
+    assert.deepEqual(runtime, { executable: resolve(root, 'pwsh.exe'), version: '7.6.5', sha256: createHash('sha256').update('fixture-modern').digest('hex') });
+    assert.equal(await resolveWindowsProcessRuntime(environment, dependencies), runtime);
+    assert.equal(await resolveWindowsProcessRuntime({ ...environment, INSCAPE_PROCESS_POWERSHELL: runtime.executable }, dependencies), runtime);
+    assert.equal(calls.length, 1); assert.equal(calls[0][2].timeoutMs, 3000);
+    assert.equal(await resolveWindowsProcessRuntime(environment, { platform: 'linux', run: () => assert.fail('POSIX must not probe PowerShell') }), null);
+  });
+
+  test('Windows runtime honors explicit selection and falls back only when modern executable is absent', async t => {
+    for (const explicit of [false, true]) {
+      const { root, environment } = await powershellFixture(t, { modern: explicit });
+      if (explicit) environment.INSCAPE_PROCESS_POWERSHELL = resolve(root, 'powershell.exe');
+      const runtime = await resolveWindowsProcessRuntime(environment, { platform: 'win32', run: async executable => {
+        assert.equal(executable, resolve(root, 'powershell.exe')); return { code: 0, stdout: '5.1.22621.6160', stderr: '' };
+      } });
+      assert.equal(runtime.executable, resolve(root, 'powershell.exe')); assert.equal(runtime.version, '5.1.22621.6160');
+    }
+  });
+
+  test('Windows runtime never falls back after explicit selection or probe failure', async t => {
+    const { root, environment } = await powershellFixture(t), calls = [];
+    const dependencies = { platform: 'win32', run: async executable => {
+      calls.push(executable); throw codedError('ETIMEDOUT');
+    } };
+    await assert.rejects(resolveWindowsProcessRuntime({ ...environment, INSCAPE_PROCESS_POWERSHELL: resolve(root, 'missing.exe') }, dependencies), /available PowerShell/u);
+    await assert.rejects(resolveWindowsProcessRuntime({ ...environment, INSCAPE_PROCESS_POWERSHELL: './pwsh.exe' }, dependencies), /absolute path/u);
+    await assert.rejects(resolveWindowsProcessRuntime(environment, dependencies), { code: 'ETIMEDOUT' });
+    assert.deepEqual(calls, [resolve(root, 'pwsh.exe')]);
+    const other = await powershellFixture(t);
+    await assert.rejects(resolveWindowsProcessRuntime(other.environment, { platform: 'win32', run: async () => ({ code: 0, stdout: 'not-a-version', stderr: '' }) }), /invalid version/u);
   });
 
   test('POSIX forced cleanup terminates only the verified root tree, descendants first', async () => {

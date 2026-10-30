@@ -1,17 +1,18 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { chromium } from 'playwright-core';
-import { mkdtemp } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
+import { mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
+import { browserExecutable } from '../scripts/browserEnvironment.mjs';
 import { openTextToolSection } from './fixtures/text-tool-sections.mjs';
 import { hideWorkspaceSidebar } from './fixtures/workspace-sidebar.mjs';
 const origin = process.env.INSCAPE_TEXT_ROOT || 'http://127.0.0.1:5297';
 
 test('reload restores local arrangement; failed Text survives editor disposal and blocks stale publication', { timeout: 120000 }, async () => {
-  const shots = await mkdtemp(join(tmpdir(), 'inscape-workbench-recovery-'));
+  const shots = process.env.INSCAPE_BROWSER_OUTPUT || '.browser-test-runtime/workbench-recovery';
+  await mkdir(shots, { recursive: true });
   console.log(`Screenshots: ${shots}`);
-  const browser = await chromium.launch({ executablePath: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', headless: true });
+  const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
   try {
     const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, reducedMotion: 'reduce' });
     page.setDefaultTimeout(10000);
@@ -76,6 +77,10 @@ test('reload restores local arrangement; failed Text survives editor disposal an
     await page.screenshot({ path: join(shots, 'after-reload.png') });
     await page.getByRole('button', { name: 'Close Arrival', exact: true }).focus(); await page.keyboard.press('Enter');
     await page.getByRole('button', { name: 'Minimize Display Module to shortcut', exact: true }).focus(); await page.keyboard.press('Enter');
+    await page.waitForFunction(() => {
+      const layout = window.readLayout()?.layout;
+      return layout?.texts[0]?.open === false && layout.display.open === false;
+    });
     await page.reload(); await mount();
     await page.getByRole('button', { name: 'Arrival', exact: true }).waitFor();
     assert.equal(await text.count(), 0); assert.equal(await board.count(), 0);
