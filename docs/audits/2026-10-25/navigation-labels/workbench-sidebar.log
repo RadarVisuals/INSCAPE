@@ -1,0 +1,100 @@
+TAP version 13
+# Subtest: Sidebar routes and chrome stay reachable (carbon 1440x900)
+not ok 1 - Sidebar routes and chrome stay reachable (carbon 1440x900)
+  ---
+  duration_ms: 13218.9417
+  type: 'test'
+  location: 'C:\\Users\\Hidden Swarm\\Documents\\ChatGPT\\inscape\\remediation-2026-10-19-shared-checkpoint\\work\\browser-tests\\workbench-sidebar.browser.mjs:28:111'
+  failureType: 'testCodeFailure'
+  error: |-
+    page.goto: Timeout 12000ms exceeded.
+    Call log:
+    [2m  - navigating to "http://127.0.0.1:10093/browser-tests/tool-chrome-fixture.html?sample=navigator&theme=carbon", waiting until "load"[22m
+    
+  code: 'ERR_TEST_FAILURE'
+  name: 'TimeoutError'
+  stack: |-
+    mount (C:\Users\Hidden Swarm\Documents\ChatGPT\inscape\remediation-2026-10-19-shared-checkpoint\work\browser-tests\workbench-sidebar.browser.mjs:20:13)
+    async TestContext.<anonymous> (C:\Users\Hidden Swarm\Documents\ChatGPT\inscape\remediation-2026-10-19-shared-checkpoint\work\browser-tests\workbench-sidebar.browser.mjs:31:47)
+  ...
+# Subtest: Sidebar routes and chrome stay reachable (carbon 390x900)
+not ok 2 - Sidebar routes and chrome stay reachable (carbon 390x900)
+  ---
+  duration_ms: 12661.7017
+  type: 'test'
+  location: 'C:\\Users\\Hidden Swarm\\Documents\\ChatGPT\\inscape\\remediation-2026-10-19-shared-checkpoint\\work\\browser-tests\\workbench-sidebar.browser.mjs:28:111'
+  failureType: 'testCodeFailure'
+  error: |-
+    page.goto: Timeout 12000ms exceeded.
+    Call log:
+    [2m  - navigating to "http://127.0.0.1:10093/browser-tests/tool-chrome-fixture.html?sample=navigator&theme=carbon", waiting until "load"[22m
+    
+  code: 'ERR_TEST_FAILURE'
+  name: 'TimeoutError'
+  stack: |-
+    mount (C:\Users\Hidden Swarm\Documents\ChatGPT\inscape\remediation-2026-10-19-shared-checkpoint\work\browser-tests\workbench-sidebar.browser.mjs:20:13)
+    async TestContext.<anonymous> (C:\Users\Hidden Swarm\Documents\ChatGPT\inscape\remediation-2026-10-19-shared-checkpoint\work\browser-tests\workbench-sidebar.browser.mjs:31:47)
+  ...
+# Subtest: Sidebar routes and chrome stay reachable (carbon 320x568)
+not ok 3 - Sidebar routes and chrome stay reachable (carbon 320x568)
+  ---
+  duration_ms: 12721.1129
+  type: 'test'
+  location: 'C:\\Users\\Hidden Swarm\\Documents\\ChatGPT\\inscape\\remediation-2026-10-19-shared-checkpoint\\work\\browser-tests\\workbench-sidebar.browser.mjs:28:111'
+  failureType: 'testCodeFailure'
+  error: |-
+    page.goto: Timeout 12000ms exceeded.
+    Call log:
+    [2m  - navigating to "http://127.0.0.1:10093/browser-tests/tool-chrome-fixture.html?sample=navigator&theme=carbon", waiting until "load"[22m
+    
+  code: 'ERR_TEST_FAILURE'
+  name: 'TimeoutError'
+  stack: |-
+    mount (C:\Users\Hidden Swarm\Documents\ChatGPT\inscape\remediation-2026-10-19-shared-checkpoint\work\browser-tests\workbench-sidebar.browser.mjs:20:13)
+    async TestContext.<anonymous> (C:\Users\Hidden Swarm\Documents\ChatGPT\inscape\remediation-2026-10-19-shared-checkpoint\work\browser-tests\workbench-sidebar.browser.mjs:31:47)
+  ...
+# Subtest: Sidebar routes and chrome stay reachable (carbon 844x390)
+ok 4 - Sidebar routes and chrome stay reachable (carbon 844x390)
+  ---
+  duration_ms: 7420.3758
+  type: 'test'
+  ...
+# Subtest: Sidebar routes and chrome stay reachable (mist 1440x900)
+ok 5 - Sidebar routes and chrome stay reachable (mist 1440x900)
+  ---
+  duration_ms: 3604.0789
+  type: 'test'
+  ...
+# Subtest: Sidebar routes and chrome stay reachable (mist 390x900)
+ok 6 - Sidebar routes and chrome stay reachable (mist 390x900)
+  ---
+  duration_ms: 3883.669
+  type: 'test'
+  ...
+# Subtest: Sidebar routes and chrome stay reachable (mist 320x568)
+ok 7 - Sidebar routes and chrome stay reachable (mist 320x568)
+  ---
+  duration_ms: 3611.0998
+  type: 'test'
+  ...
+# Subtest: Sidebar routes and chrome stay reachable (mist 844x390)
+ok 8 - Sidebar routes and chrome stay reachable (mist 844x390)
+  ---
+  duration_ms: 3336.9386
+  type: 'test'
+  ...
+# Subtest: Sidebar collapse follows Workbench switches, preview and explicit hide/reopen
+ok 9 - Sidebar collapse follows Workbench switches, preview and explicit hide/reopen
+  ---
+  duration_ms: 2518.5815
+  type: 'test'
+  ...
+1..9
+# tests 9
+# suites 0
+# pass 6
+# fail 3
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 63286.4189

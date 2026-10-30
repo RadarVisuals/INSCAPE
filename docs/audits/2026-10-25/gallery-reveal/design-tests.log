@@ -1,0 +1,18 @@
+✔ hue ring and triangle use the same centred geometry and white/black/hue endpoints (1.9138ms)
+✔ colour codes round-trip through the triangle and achromatic colours retain the chosen hue (0.8641ms)
+✔ dragging outside the triangle projects to its nearest edge without out-of-range colours (0.4197ms)
+✔ painted triangle colours agree with selection math, including neutral mixtures (4.729ms)
+✔ explicit drop edges match front-to-back rows while keeping groups intact (1.6284ms)
+✔ visual export accepts only its dedicated output or a declared Site dist (10.2921ms)
+✔ inventory is identical for Windows and Linux multiline CSS (4.165ms)
+✔ inventory retains cascade scope, aliases, media modes and complex CSS values (0.9411ms)
+✔ checked-in inventory and registered implementation/evidence paths match the current system (86.2242ms)
+✔ reference values and production defaults remain separately scoped and discoverable (66.4071ms)
+ℹ tests 10
+ℹ suites 0
+ℹ pass 10
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 468.8287

@@ -1,0 +1,114 @@
+/* Intrinsic colour-control layout also applies outside the Workbench host. */
+.ds-colour-instructions { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.ds-colour-fields { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; }
+.ds-colour-fields label, .ds-colour-hex { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.ds-colour-fields input, .ds-colour-hex input { box-sizing: border-box; width: 100%; min-width: 0; height: var(--tool-control-height, 32px); border: 1px solid var(--ds-field-edge, var(--tactile-edge)); border-radius: var(--ds-control-radius, var(--control-radius)); background: transparent; color: inherit; padding: 4px 6px; font: inherit; }
+.ds-colour-fields input:focus-visible, .ds-colour-hex input:focus-visible { outline: 1px solid var(--tactile-ink); outline-offset: 1px; }
+.ds-colour-fields input:disabled, .ds-colour-hex input:disabled { opacity: .45; }
+.ds-studio-colour-heading {
+  display: flex;
+  align-items: end;
+  gap: var(--space-3);
+}
+.ds-colour-swatch {
+  flex: 0 0 36px;
+  height: var(--tool-control-height, 32px);
+  border: 1px solid var(--ds-field-edge, var(--tactile-edge));
+  border-radius: var(--ds-control-radius, var(--control-radius));
+}
+.ds-studio-colour-heading .ds-colour-hex {
+  flex: 1;
+  min-width: 0;
+}
+.ds-colour-hex input {
+  font-family: var(--font-technical);
+}
+.ds-colour-hex [role='alert'] {
+  font-size: var(--ds-text-small, 11px);
+}
+.ds-colour-wheel-row { --colour-icon-size: var(--tool-icon-target, 32px); display: grid; grid-template-columns: minmax(0, 176px); justify-content: center; align-items: end; gap: 8px; min-width: 0; align-self: stretch; }
+.ds-colour-wheel-row[data-accessory] { grid-template-columns: minmax(0, 176px) var(--colour-icon-size); }
+.ds-colour-wheel-row :is(.ds-colour-eyedropper, .ds-colour-native) { display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; width: var(--colour-icon-size); height: var(--colour-icon-size); min-height: var(--colour-icon-size); padding: 4px; }
+.ds-colour-native { position: relative; cursor: pointer; }
+.ds-colour-native input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: inherit; }
+.ds-colour-native:has(input:focus-visible) { outline: 2px solid var(--tactile-accent); outline-offset: 1px; }
+.ds-colour-native[data-disabled] { opacity: .45; cursor: default; }
+.ds-colour-sampling-error { grid-column: 1 / -1; margin: 0; font: inherit; }
+.ds-studio-colour-wheel {
+  position: relative;
+  width: 176px;
+  max-width: 100%;
+  aspect-ratio: 1;
+  justify-self: center;
+  align-self: center;
+  flex: none;
+  user-select: none;
+  touch-action: none;
+}
+.ds-colour-ring-paint,
+.ds-colour-triangle-paint,
+.ds-colour-controls {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.ds-colour-ring-paint {
+  border-radius: 50%;
+  background: conic-gradient(red, #ff0, #0f0, #0ff, #00f, #f0f, red);
+  mask: radial-gradient(farthest-side, transparent 82.5%, #000 83.5%, #000 99%, transparent 100%);
+}
+.ds-colour-ring-paint,
+.ds-colour-triangle-paint {
+  pointer-events: none;
+  forced-color-adjust: none;
+}
+.ds-colour-controls {
+  overflow: visible;
+  touch-action: none;
+}
+.ds-colour-hue {
+  cursor: crosshair;
+  pointer-events: stroke;
+}
+.ds-colour-triangle {
+  cursor: crosshair;
+  pointer-events: fill;
+}
+.ds-studio-colour-wheel[data-dragging] {
+  cursor: grabbing;
+}
+.ds-studio-colour-wheel[data-dragging] :is(.ds-colour-hue, .ds-colour-triangle) {
+  cursor: grabbing;
+}
+.ds-colour-marker {
+  pointer-events: none;
+  fill: transparent;
+  stroke: white;
+  stroke-width: 2;
+  filter: drop-shadow(0 0 1px black) drop-shadow(0 0 1px black);
+  forced-color-adjust: none;
+}
+.ds-colour-controls [tabindex]:focus {
+  outline: none;
+}
+.ds-studio-colour-wheel:not([data-pointer-focus]):has(:focus-visible) {
+  outline: 2px solid var(--tactile-ink);
+  outline-offset: 4px;
+  border-radius: 50%;
+}
+.ds-studio-colour-wheel:not([data-pointer-focus]) .ds-colour-triangle:focus-visible {
+  stroke: var(--tactile-ink);
+  stroke-width: 1;
+}
+.ds-colour-controls [aria-disabled='true'] {
+  cursor: default;
+}
+@media (forced-colors: active) {
+  .ds-studio-colour-wheel:not([data-pointer-focus]):has(:focus-visible) {
+    outline-color: Highlight;
+  }
+  .ds-studio-colour-wheel:not([data-pointer-focus]) .ds-colour-triangle:focus-visible {
+    stroke: Highlight;
+  }
+}

@@ -1,0 +1,70 @@
+/* Settings retains its destination host and existing preference owners. */
+.system-workflow__settings.workbench-tool-panel {
+  --workflow-panel: var(--tactile-face);
+  --workflow-ink: var(--tactile-ink);
+  --workflow-muted: var(--tactile-muted);
+  --workflow-border: var(--tactile-edge);
+  --workflow-border-strong: var(--tactile-edge);
+  --workflow-hover: var(--tactile-hover);
+  --workflow-selection: var(--tactile-hover);
+  --settings-inset: max(12px, var(--workspace-navigation-inset, 0px));
+  --settings-top: max(12px, calc(var(--workspace-navigation-top, 8px) + 4px));
+  --settings-target: var(--control-height-sm);
+  left: var(--settings-inset);
+  bottom: 12px;
+  width: min(440px, calc(100vw - var(--settings-inset) - 12px));
+  max-height: calc(100dvh - var(--settings-top) - 12px);
+  padding: 0;
+  box-shadow: none;
+}
+.system-workflow__settings > .workbench-tool-panel-header h2 {
+  flex: 1; margin: 0; padding: 8px 10px; font: inherit;
+}
+.system-workflow__settings-body {
+  min-height: 0; min-width: 0; overflow: auto; overscroll-behavior: contain;
+  scrollbar-width: thin; scrollbar-gutter: stable; padding: 0 12px;
+}
+.system-workflow__settings-section { min-width: 0; padding: 14px 0; }
+.system-workflow__settings-section + .system-workflow__settings-section { border-top: 1px solid var(--tactile-edge); }
+.system-workflow__settings-section > header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; margin-bottom: 10px; }
+.system-workflow__settings-section > header strong { font: 500 12px/1.5 var(--font-interface); }
+.system-workflow__settings-section > header > span { color: var(--tactile-muted); font: 11px/1.5 var(--font-technical); }
+.system-workflow__settings-section > p { margin: 8px 0 0; color: var(--tactile-muted); font: 11px/1.5 var(--font-interface); }
+.system-workflow__settings-theme > label, .system-workflow__check-control {
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(120px, 160px);
+  align-items: center; min-height: var(--settings-target); gap: 8px; margin-bottom: 6px;
+  font: inherit;
+}
+.system-workflow__settings .system-workflow__check-control { grid-template-columns: minmax(0, 1fr) 20px; cursor: pointer; }
+.system-workflow__check-control:has(:disabled) { color: var(--tactile-disabled); cursor: default; }
+.system-workflow__settings input[type=checkbox] { appearance: auto; width: 16px; height: 16px; margin: 0; accent-color: var(--tactile-ink); }
+.system-workflow__settings :is(input[type=number], .system-workflow__rail-select, .system-workflow__settings-color > button) {
+  box-sizing: border-box; width: 100%; min-width: 0; min-height: var(--settings-target);
+  border: 1px solid var(--tactile-edge); border-radius: var(--control-radius);
+  background: transparent; color: inherit; padding: 6px 8px; font: inherit;
+}
+.system-workflow__settings .system-workflow__rail-select { justify-content: space-between; }
+.system-workflow__settings .system-workflow__rail-select:is([aria-expanded='true'], [data-active])::after { content: none; }
+.system-workflow__settings .system-workflow__rail-select > span { overflow: hidden; text-overflow: ellipsis; }
+.system-workflow__settings :is(input, button):focus-visible { outline: 2px solid var(--tactile-ink); outline-offset: -2px; }
+.system-workflow__settings :focus:not(:focus-visible) { outline: none; }
+.system-workflow__settings :is(button, label):has(> input[type=checkbox]):hover,
+.system-workflow__settings button:hover:not(:disabled) { background: var(--tactile-hover); }
+.system-workflow__settings button:disabled { color: var(--tactile-disabled); cursor: default; }
+.system-workflow__settings-color { display: flex; gap: 6px; }
+.system-workflow__settings input[type=color] { box-sizing: border-box; width: 48px; height: var(--settings-target); flex: none; padding: 3px; border: 1px solid var(--tactile-edge); border-radius: var(--control-radius); background: transparent; }
+.system-workflow__settings .workbench-gap-preview { display: block; width: 100%; height: 48px; margin-top: 8px; }
+.system-workflow__settings .workbench-gap-preview rect { fill: var(--tactile-hover); stroke: var(--tactile-edge); }
+.system-workflow__settings .workbench-gap-preview path { fill: none; stroke: var(--tactile-muted); }
+.system-workflow__settings .workbench-gap-preview text { fill: var(--tactile-muted); font: 11px var(--font-technical); text-anchor: middle; }
+.system-workflow__settings .workbench-backup { font: inherit; }
+.system-workflow__settings .workbench-backup p { color: var(--tactile-muted); line-height: 1.5; }
+.system-workflow__settings .workbench-backup :is(button, input[type=file]) { border-radius: var(--control-radius); min-height: var(--settings-target); }
+.system-workflow__settings input::file-selector-button { border-radius: var(--control-radius); min-height: var(--settings-target); }
+.system-workflow__settings [role=alert] { color: var(--tactile-ink); }
+@media (max-width: 520px), (pointer: coarse) {
+  .system-workflow__settings.workbench-tool-panel { --settings-target: 44px; }
+  .system-workflow__settings .workbench-tool-panel-header { min-height: 52px; }
+  .system-workflow__settings .workbench-tool-panel-close { width: 44px; height: 44px; }
+  .system-workflow__settings input[type=number] { font-size: 16px; }
+}

@@ -1,0 +1,28 @@
+✔ manifest classification survives hashed filename changes and current synthetic output passes (26.7328ms)
+✔ manifest classification accepts Vite internal owner facade keys after a nested lazy split (16.5649ms)
+✔ each independent budget category reports an actionable overage (0.8771ms)
+✔ measured production allowances retain exact budget boundaries with the lazy article editor (0.6438ms)
+✔ owner leakage fails independently of byte budgets (0.1945ms)
+✔ missing manifest and graph inputs fail clearly (3.1996ms)
+✔ output validation rejects roots, profiles and unrelated directories (0.5127ms)
+✔ authoring pruning touches only the active verified output directory (13.0712ms)
+✔ artifact hygiene rejects representative lock and temporary files with actionable paths (3.7066ms)
+✔ artifact hygiene accepts ordinary intended production assets (6.6785ms)
+✔ authoring pruning rejects a path that escapes the verified output directory (1.2284ms)
+✔ the two historical public lock paths cannot survive artifact hygiene (8.7886ms)
+✔ production pruning excludes development-only prototype assets (0.1499ms)
+✔ manifest classification recognizes the sole System Workflow production owner entry (14.6915ms)
+✔ production pruning excludes unused font sources without removing active bundled fonts (0.2162ms)
+✔ the mini app bridge stays outside initial bytes while remaining in aggregate budgets (20.1725ms)
+✔ production font assets include approved article fonts while interface fonts stay constrained (13.8043ms)
+Production budgets passed; owner and standalone wallet runtimes remain outside the initial entry.
+✔ an alternate-outDir production build writes reports there and strips diagnostics (17827.055ms)
+✔ artifact hygiene rejects development fixture markers (29.5922ms)
+ℹ tests 19
+ℹ suites 0
+ℹ pass 19
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 18211.7522

@@ -1,0 +1,97 @@
+@import '../../ui/toolControlSizing.css';
+/* Geometry for migrated tools. Material and button states have one owner in
+   workflowTactile.css; authored module windows keep their own frame geometry. */
+.system-workflow__detached-window:is([data-window-chrome="tactile"], [data-window-chrome="flat"]) {
+  --detached-window-gutter: 0px;
+  --detached-window-titlebar-padding: 10px;
+  --detached-window-content-padding: 10px;
+  --tactile-radius-control: 8px;
+  --workflow-panel: var(--tactile-surface);
+  --workflow-ink: var(--tactile-ink);
+  --workflow-muted: var(--tactile-muted);
+  --workflow-border-strong: var(--tactile-edge);
+  --workflow-selection: var(--tactile-well);
+  border: 1px solid var(--tactile-edge);
+  background: var(--tactile-face);
+  color: var(--tactile-ink);
+  box-shadow: var(--tactile-shadow-shell);
+}
+.system-workflow__detached-window[data-window-chrome="tactile"] {
+  --detached-window-titlebar-height: var(--tool-titlebar-height, 36px);
+  --workflow-border: var(--tactile-rim);
+  --workflow-hover: color-mix(in srgb, white 8%, var(--tactile-surface));
+  border-radius: 14px;
+  font: 400 11px/1.45 'Inscape Sora', sans-serif;
+}
+:is([data-window-chrome="tactile"], [data-window-chrome="flat"]) > .system-workflow__detached-window-surface {
+  width: 100%; margin: 0; border: 0; border-radius: 0;
+  background: transparent; box-shadow: none; scrollbar-width: thin;
+}
+:is([data-window-chrome="tactile"], [data-window-chrome="flat"]) > .system-workflow__detached-window-titlebar { background: transparent; }
+:is([data-window-chrome="tactile"], [data-window-chrome="flat"]) .system-workflow__detached-window-titlebar > strong {
+  text-transform: none;
+}
+[data-window-chrome="tactile"] > .system-workflow__detached-window-surface { padding: 8px 10px 10px; }
+[data-window-chrome="tactile"] .system-workflow__detached-window-titlebar > strong {
+  font: 500 11px/1.3 'Inscape Sora', sans-serif; letter-spacing: 0;
+}
+:is([data-window-chrome="tactile"], [data-window-chrome="flat"]) :where(button, input, select, textarea) { box-sizing: border-box; min-width: 0; max-width: 100%; font: inherit; }
+:is([data-window-chrome="tactile"], [data-window-chrome="flat"]) .workflow-tactile-control { min-height: var(--tool-control-height, 32px); padding: 5px 8px; }
+:is([data-window-chrome="tactile"], [data-window-chrome="flat"]) .system-workflow__detached-window-controls > button {
+  display: grid;
+  place-items: center;
+  min-width: var(--tool-icon-target, 28px);
+  width: var(--tool-icon-target, 28px);
+  min-height: var(--tool-icon-target, 28px);
+  height: var(--tool-icon-target, 28px);
+  padding: 4px;
+}
+[data-window-chrome="tactile"] .system-workflow__detached-window-controls > button { border-radius: 50%; }
+:is([data-window-chrome="tactile"], [data-window-chrome="flat"]) svg:where(.lucide) { width: 18px; height: 18px; stroke-width: 1.6; flex-shrink: 0; }
+:is([data-window-chrome="tactile"], [data-window-chrome="flat"]) :where(input:not([type=checkbox]):not([type=radio]):not([type=range]), select, textarea) {
+  min-height: var(--tool-control-height, 32px); padding: 5px 7px; border: 1px solid var(--tactile-edge);
+  color: var(--tactile-ink);
+}
+[data-window-chrome="tactile"] :where(input:not([type=checkbox]):not([type=radio]):not([type=range]), select, textarea) {
+  border-radius: 7px; background: var(--tactile-well); box-shadow: inset 0 1px 2px rgb(0 0 0 / 18%);
+}
+:is([data-window-chrome="tactile"], [data-window-chrome="flat"]) :is(input, select, textarea, summary):focus-visible { outline: 2px solid var(--tactile-accent); outline-offset: 1px; }
+:is([data-window-chrome="tactile"], [data-window-chrome="flat"]) :is(input[type=checkbox], input[type=range]) { accent-color: var(--tactile-accent); }
+:is([data-window-chrome="tactile"], [data-window-chrome="flat"]) input[type=range] { width: 100%; margin-inline: 0; }
+:is([data-window-chrome="tactile"], [data-window-chrome="flat"]) fieldset { min-width: 0; }
+:is([data-window-chrome="tactile"], [data-window-chrome="flat"]) summary { padding-block: 7px; cursor: pointer; }
+:is([data-window-chrome="tactile"], [data-window-chrome="flat"]) details[open] > summary { margin-bottom: 4px; }
+.workbench-dimensions { border-top: 1px solid var(--tactile-rim); }
+/* Flat instruments retain this host's canvas placement and content fitting,
+   while sharing the tool panels' material, thin dividers and control geometry. */
+.system-workflow__detached-window[data-window-chrome="flat"] {
+  --tool-control-height: var(--control-height-sm);
+  --tool-icon-target: 28px;
+  --detached-window-titlebar-height: var(--tool-titlebar-height, 35px);
+  --workflow-border: var(--tactile-edge);
+  --workflow-hover: var(--tactile-hover);
+  border-radius: var(--control-shell-radius);
+  font: var(--workflow-type-control);
+}
+[data-window-chrome="flat"] > .system-workflow__detached-window-titlebar {
+  border-bottom: 1px solid var(--tactile-edge); padding: 0 4px 0 10px; gap: 6px;
+}
+[data-window-chrome="flat"] .system-workflow__detached-window-titlebar > strong { font: inherit; font-variation-settings: inherit; letter-spacing: normal; translate: none; }
+[data-window-chrome="flat"] .system-workflow__detached-window-controls > button { border: 0; border-radius: var(--control-radius); }
+[data-window-chrome="flat"] .system-workflow__detached-window-controls > button::after { display: none; }
+[data-window-chrome="flat"] > .system-workflow__detached-window-surface { padding: 12px; scrollbar-gutter: auto; }
+[data-window-chrome="flat"] :where(input:not([type=checkbox]):not([type=radio]):not([type=range]), select, textarea) {
+  border-radius: var(--control-radius); background: transparent; box-shadow: none; font-weight: 400;
+}
+[data-window-chrome="flat"] .workflow-tactile-control { font-weight: 400; }
+@media (pointer: coarse) {
+  :is([data-window-chrome="tactile"], [data-window-chrome="flat"]) .workflow-tactile-control { min-height: var(--tool-control-height, 40px); }
+}
+
+/* Flat windows keep their compact desktop geometry. */
+.workbench-tool-window > .system-workflow__detached-window-surface { scrollbar-gutter: stable; }
+@media (pointer: coarse), (max-width: 520px) {
+  .system-workflow__detached-window[data-window-chrome="flat"] { --tool-control-height: 44px; --tool-icon-target: 44px; }
+}
+
+.workbench-tool-controls [data-icon-only] { min-width: var(--tool-icon-target); min-height: var(--tool-icon-target); }

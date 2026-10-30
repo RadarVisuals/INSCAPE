@@ -1,0 +1,35 @@
+[
+  {
+    "name": "published-gallery",
+    "code": 0,
+    "seconds": 17.943,
+    "tests": 3,
+    "pass": 3,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  {
+    "name": "reception-card",
+    "code": 0,
+    "seconds": 13.873,
+    "tests": 6,
+    "pass": 6,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  {
+    "name": "owner-profile-routing",
+    "code": 0,
+    "seconds": 20.33,
+    "tests": 5,
+    "pass": 5,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  }
+]

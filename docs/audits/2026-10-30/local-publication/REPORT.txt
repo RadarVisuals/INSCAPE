@@ -1,0 +1,58 @@
+Local editor publication - 30 October 2026
+
+Scope and cause
+The founder requested publishing directly from the editor where the current
+draft lives, including ordinary Vite development. The reported disabled Prepare
+button showed Duplicate production asset record on each of eight canvases.
+The publication rack concatenated the reference-reader inventory and current
+canvas inventory, even though both legitimately contain the same NFT.
+
+Implementation
+The rack now reconciles those inventories by asset identity before passing them
+to the strict document builder. Current refined canvas records take precedence.
+The strict builder still rejects ambiguous duplicate records supplied as a list.
+Long publication messages wrap within the panel.
+
+Loopback Vite builds send publication requests to the existing PR 5 Netlify
+service; a public VITE_PUBLICATION_SERVICE_ORIGIN can select a different HTTPS
+service. Production builds retain their same-origin endpoint. No draft changes
+origin, and there is no localStorage synchronization or credential duplication.
+The backend permits exact localhost, 127.0.0.1 and IPv6-loopback origins via
+bounded CORS. Authorization remains bound to the local page origin including
+port, profile, hash and bytes. Profile signature validation, canonical document
+validation, durable quotas, CID verification, stale-context checks and explicit
+wallet confirmation remain in their existing owners.
+
+Validation of this patch over base 50e03ea38eb8a5237b59f424317ea4685118d32f
+- Full Node unit suite: 1593 passed, no failures.
+- Focused upload client, endpoint, admission and flow tests: 34 passed.
+- LUKSO standards audit: 5 passed.
+- Source lint, type contracts, production build and build check: passed.
+- Initial JS: 801129 bytes, unchanged from the preceding build budget.
+- Eight-canvas publication browser regression: 2 passed at 1440px and 390px.
+  It seeds overlapping real library records, verifies current-record precedence,
+  prepares all eight canvases and reaches Publish to profile using a simulated
+  signer, upload service and RPC. Prepare makes no upload; upload makes no
+  on-chain write. Both screenshots were inspected; no horizontal panel overflow.
+- Publication confirmation: 16 passed, including app owner refresh.
+- Upload admission: 9 passed in the first run.
+- Publication recovery: 1 passed. Existing workflow publication: 1 passed.
+- Production startup: 3 passed.
+
+Browser-run limitations
+The first orchestration run marked the two passing local-publication cases as
+failed because Windows process inventory exceeded its 3000ms cleanup deadline.
+No remaining owned PIDs were reported. The final run passed both local-publication
+cases and all three production-startup cases with verified cleanup. Its upload
+admission repeat timed out in the first test (the other eight passed) and also
+reported unknown cleanup after process-inventory timeouts. The earlier 9/9 result
+is retained; the combined runs are not claimed as an entirely green release run.
+Logs, result JSON and screenshots are under output/publication-local-2026-10-30.
+
+No real user wallet signature, artwork/document upload, transaction or draft
+replacement was performed. Viewport tests do not establish physical-phone
+behavior. Hosted loopback publication requires deployment of this function
+change; a separate live preflight/challenge probe can verify the deployed service
+without signing, uploading a document or accessing the user's draft. Earlier
+base-commit CI had source/browser failures despite a successful Netlify build;
+this scoped validation does not certify the entire release workflow.

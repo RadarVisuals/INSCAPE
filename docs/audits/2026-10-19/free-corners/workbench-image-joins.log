@@ -1,0 +1,16 @@
+TAP version 13
+# Subtest: Image joins survive Workbench capture, repeated grabs, pan and continuous zoom
+ok 1 - Image joins survive Workbench capture, repeated grabs, pan and continuous zoom
+  ---
+  duration_ms: 40680.1151
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 41029.5862

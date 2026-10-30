@@ -11,15 +11,19 @@ export function ownerPublicationBaselineKey(profileAddress) {
 
 export function loadOwnerPublicationBaseline(storage, profileAddress) {
   const profile = normalizeProfileAddress(profileAddress);
-  if (!profile || !storage?.getItem) return null;
+  if (!profile || !storage?.getItem) return { status: 'unavailable', value: null };
+  let raw;
+  try { raw = storage.getItem(ownerPublicationBaselineKey(profile)); }
+  catch { return { status: 'unavailable', value: null }; }
+  if (raw === null) return { status: 'absent', value: null };
   try {
-    const value = JSON.parse(storage.getItem(ownerPublicationBaselineKey(profile)) || 'null');
+    const value = JSON.parse(raw);
     if (value?.version !== OWNER_PUBLICATION_BASELINE_VERSION
       || normalizeProfileAddress(value.profileAddress) !== profile
       || typeof value.publishedFingerprint !== 'string'
-      || typeof value.localFingerprint !== 'string') return null;
-    return value;
-  } catch { return null; }
+      || typeof value.localFingerprint !== 'string') return { status: 'corrupt', value: null };
+    return { status: 'valid', value };
+  } catch { return { status: 'corrupt', value: null }; }
 }
 
 export function saveOwnerPublicationBaseline(storage, profileAddress, baseline) {

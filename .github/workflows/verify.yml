@@ -1,0 +1,161 @@
+name: Verify Inscape
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: verify-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  INSCAPE_PR_HEAD_SHA: ${{ github.event.pull_request.head.sha || '' }}
+
+jobs:
+  source:
+    name: Source checks (partial)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .node-version
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: node scripts/verifyRelease.mjs --scope=source
+        env:
+          INSCAPE_VERIFY_REPORT: .verification/source
+      - name: Retain partial evidence
+        if: always()
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: verification-source-${{ github.run_attempt }}
+          path: .verification/source
+          include-hidden-files: true
+          if-no-files-found: warn
+          retention-days: 14
+
+  production:
+    name: Production build and startup (partial)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .node-version
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: node node_modules/playwright-core/cli.js install --with-deps chromium
+      - run: node scripts/verifyRelease.mjs --scope=production
+        env:
+          INSCAPE_VERIFY_REPORT: .verification/production
+      - name: Retain partial evidence
+        if: always()
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: verification-production-${{ github.run_attempt }}
+          path: .verification/production
+          include-hidden-files: true
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Retain candidate bytes for diagnostics and aggregation
+        if: always()
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: diagnostic-build-${{ github.run_attempt }}
+          path: dist
+          include-hidden-files: true
+          if-no-files-found: warn
+          retention-days: 14
+
+  browser:
+    name: Browser shard ${{ matrix.shard }} of 4 (partial)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .node-version
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: node node_modules/playwright-core/cli.js install --with-deps chromium
+      - run: node scripts/verifyRelease.mjs --scope=browser --shard=${{ matrix.shard }}
+        env:
+          INSCAPE_VERIFY_REPORT: .verification/browser-${{ matrix.shard }}
+      - name: Retain partial evidence
+        if: always()
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: verification-browser-${{ matrix.shard }}-${{ github.run_attempt }}
+          path: .verification/browser-${{ matrix.shard }}
+          include-hidden-files: true
+          if-no-files-found: warn
+          retention-days: 14
+
+  verify:
+    name: Source, tests and production build
+    needs: [source, production, browser]
+    if: ${{ always() }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .node-version
+      - name: Download separately named evidence directories
+        continue-on-error: true
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          pattern: verification-*-${{ github.run_attempt }}
+          path: .verification/incoming
+          merge-multiple: false
+      - name: Download the exact candidate build
+        continue-on-error: true
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: diagnostic-build-${{ github.run_attempt }}
+          path: .verification/build
+      - name: Require all jobs, complete coverage, source identity and build bytes
+        if: ${{ always() }}
+        run: node scripts/aggregateVerification.mjs
+        env:
+          INSCAPE_VERIFY_JOBS: ${{ toJSON(needs) }}
+          INSCAPE_VERIFY_REPORT: .verification/aggregate
+      - name: Retain aggregate acceptance or failure
+        if: always()
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: aggregate-${{ github.sha }}-${{ github.run_attempt }}
+          path: .verification/aggregate
+          include-hidden-files: true
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Retain release-validated bytes only after joint acceptance
+        if: success()
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: build-${{ github.sha }}-${{ github.run_attempt }}
+          path: .verification/build
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 14

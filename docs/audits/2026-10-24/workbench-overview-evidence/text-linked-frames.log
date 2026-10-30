@@ -1,0 +1,46 @@
+TAP version 13
+# Subtest: reading-order links follow temporary group presentation with unchanged camera and registration revision
+ok 1 - reading-order links follow temporary group presentation with unchanged camera and registration revision
+  ---
+  duration_ms: 828.4142
+  type: 'test'
+  ...
+# Subtest: typing crosses a frame boundary, cross-frame selection edits one range, and Focus writing preserves the story
+ok 2 - typing crosses a frame boundary, cross-frame selection edits one range, and Focus writing preserves the story
+  ---
+  duration_ms: 5776.6241
+  type: 'test'
+  ...
+# Subtest: different frame sizes retain lists, artwork and captions in Write, Read and narrow Visitor layouts
+ok 3 - different frame sizes retain lists, artwork and captions in Write, Read and narrow Visitor layouts
+  ---
+  duration_ms: 4747.1733
+  type: 'test'
+  ...
+# Subtest: a Library drop into a continuation uses that frame and preserves the complete shared writing
+ok 4 - a Library drop into a continuation uses that frame and preserves the complete shared writing
+  ---
+  duration_ms: 4471.6647
+  type: 'test'
+  ...
+# Subtest: fixed-width text remeasures stable break positions after typing before the first frame boundary
+ok 5 - fixed-width text remeasures stable break positions after typing before the first frame boundary
+  ---
+  duration_ms: 3402.1155
+  type: 'test'
+  ...
+# Subtest: linked frames share live editing, formatting and one undo history, preserve text on removal, and survive publication
+ok 6 - linked frames share live editing, formatting and one undo history, preserve text on removal, and survive publication
+  ---
+  duration_ms: 4688.4014
+  type: 'test'
+  ...
+1..6
+# tests 6
+# suites 0
+# pass 6
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 24236.531

@@ -1,17 +1,39 @@
+import { readFileSync } from 'node:fs';
 import { readFile, readdir, rm, stat, writeFile } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
 import { homedir, tmpdir } from 'node:os';
 import { dirname, isAbsolute, parse, relative, resolve, sep } from 'node:path';
 import { gzipSync } from 'node:zlib';
 import { assertOwnerRuntimeGraph } from './ownerRuntimeIsolation.js';
+import { NETLIFY_HEADERS_FILE, writeNetlifyHeaders } from './productionSecurityPolicy.js';
 
 export const BUILD_REPORT_FILE = 'bundle-report.json';
-export const GENERATED_BUILD_FILES = Object.freeze([BUILD_REPORT_FILE, 'owner-runtime-graph.json']);
+export const GENERATED_BUILD_FILES = Object.freeze([BUILD_REPORT_FILE, 'owner-runtime-graph.json', NETLIFY_HEADERS_FILE]);
 export const UNUSED_PUBLIC_PATHS = Object.freeze([
+  // Local recovery materials remain in public/ for development only.
+  'recovery',
+  'artwork-experiments', // Local self-contained HTML trials; never shipped as app assets.
   'assets/PFP',
   'assets/patterns',
   'assets/palettes',
   'assets/prototype',
   'assets/ratio',
+  'assets/brand/fonts',
+  'assets/fonts/Sora/README.txt',
+  'assets/fonts/Sora/static',
+  'assets/fonts/IBM_Plex_Sans_Condensed/IBMPlexSansCondensed-SemiBold.ttf',
+  'assets/fonts/IBM_Plex_Sans_Condensed/IBMPlexSansCondensed-Bold.ttf',
+  'assets/fonts/IBM_Plex_Sans_Condensed/IBMPlexSansCondensed-ExtraLight.ttf',
+  'assets/fonts/IBM_Plex_Sans_Condensed/IBMPlexSansCondensed-Light.ttf',
+  'assets/fonts/IBM_Plex_Sans_Condensed/IBMPlexSansCondensed-Thin.ttf',
+  'assets/fonts/IBM_Plex_Sans_Condensed/IBMPlexSansCondensed-MediumItalic.ttf',
+  'assets/fonts/IBM_Plex_Sans_Condensed/IBMPlexSansCondensed-ThinItalic.ttf',
+  'assets/fonts/IBM_Plex_Sans_Condensed/IBMPlexSansCondensed-Italic.ttf',
+  'assets/fonts/IBM_Plex_Sans_Condensed/IBMPlexSansCondensed-BoldItalic.ttf',
+  'assets/fonts/IBM_Plex_Sans_Condensed/IBMPlexSansCondensed-ExtraLightItalic.ttf',
+  'assets/fonts/IBM_Plex_Sans_Condensed/IBMPlexSansCondensed-Medium.ttf',
+  'assets/fonts/IBM_Plex_Sans_Condensed/IBMPlexSansCondensed-LightItalic.ttf',
+  'assets/fonts/IBM_Plex_Sans_Condensed/IBMPlexSansCondensed-SemiBoldItalic.ttf',
   'assets/inscape-table-grid-arena-banner.png',
   'assets/inscape-table-grid-banner.png',
   'assets/inscape-table-grid-grunge-banner.png',
@@ -22,10 +44,24 @@ export const UNUSED_PUBLIC_PATHS = Object.freeze([
   'assets/actors/skull_reaper/position.afdesign'
 ]);
 
+const PROHIBITED_ARTIFACT_RULES = Object.freeze([
+  Object.freeze({ label: 'editor lock file', pattern: /~lock~/iu }),
+  Object.freeze({ label: 'editor swap, backup, or temporary file', pattern: /(?:\.sw[ponx]|\.bak|\.backup|\.tmp|\.temp|\.orig|\.rej|~)$/iu }),
+  Object.freeze({ label: 'platform metadata file', pattern: /(?:^|\/)(?:\.DS_Store|Thumbs\.db|desktop\.ini|\.directory|\._[^/]+)$/iu }),
+  Object.freeze({ label: 'credential-looking file', pattern: /(?:^|\/)(?:\.env(?:\.[^/]*)?|id_(?:rsa|dsa|ecdsa|ed25519)(?:\.pub)?|credentials?(?:\.[^/]*)?|secrets?(?:\.[^/]*)?|passwords?(?:\.[^/]*)?|tokens?(?:\.[^/]*)?|[^/]+\.(?:pem|p12|pfx|key))$/iu })
+]);
+
+// Content fingerprints keep the two historical leaks detectable even if they
+// are renamed. Never log or retain their workstation/editor metadata.
+const PROHIBITED_ARTIFACT_SHA256 = new Set([
+  '8a9b66f1e88c45f3bad9026061cb368090bf0e28b7a51a5ec815e961d2c65b50',
+  '8e52629cdf832579ffddf6809aa4520fce75149cb6b20b329e822e6f28fe01e8'
+]);
+
 // Phase 1C2H baseline, recalibrated for the approved Gallery and hybrid Index runtime.
 // Keep these byte limits deterministic and deliberately close to the measured build.
 export const PRODUCTION_BUDGETS = Object.freeze({
-  initialJavaScript: Object.freeze({ raw: 1_265_000, gzip: 370_000 }),
+  initialJavaScript: Object.freeze({ raw: 1_303_524, gzip: 379_811 }),
   // The universal owner RÄCK adds grouped authoring transactions, Layers,
   // reversible compact chrome, and runtime-only module controls. Keep the lazy
   // owner boundary close to the measured Windows build with modest CI margin.
@@ -37,12 +73,47 @@ export const PRODUCTION_BUDGETS = Object.freeze({
   // the measured gzip-boundary shift caused by that shared chunk.
   // Phase 8B adds only the lazy-module activation and explicit snapshot inputs
   // to the owner graph; the writer implementation remains in its own lazy chunk.
-  ownerJavaScript: Object.freeze({ raw: 261_000, gzip: 78_000 }),
+  // Phase 9 activates the already isolated Creations, Activity, Discovery, and
+  // Settings boundaries. The measured owner graph grows only at the activation
+  // seam; each substantial surface remains independently lazy.
+  // The prior owner presentation stayed within a measured allowance. The extra rollback
+  // production entry wrapper within a measured allowance. The extra rollback
+  // margin kept that historical selector buildable through its acceptance checkpoint.
+  // The combined Alpha candidate adds the lightweight Grid Walker integration
+  // and Keeper dock controls to the lazy owner graph. Phase 3's complete System
+  // Workflow review slice shared accepted focus,
+  // identity, and guide primitives with that graph. These ceilings are the
+  // exact matrix-wide alternate-outDir measurements.
+  // Phase 4A makes the strict v9 Visitor/parser closure authoritative while the
+  // selected historical shell remained unchanged. Keep the exact measured cutover
+  // boundary; the wallet runtime remains independently budgeted below.
+  // Independent audit adds strict canonical-byte equality, including original
+  // byte comparison so a UTF-8 BOM cannot disappear at a decoded-text boundary.
+  // Phase 4B selects the complete System Workflow owner shell. The measured
+  // increase belongs only to this lazy owner graph; the initial and standalone
+  // wallet boundaries retain their previous limits.
+  // The accepted Alpha UI coherence slice keeps publication safety gates,
+  // persistent Library state, Space-drag navigation, resolved Activity identity,
+  // and shared Owner/Visitor presentation in this selected lazy owner graph.
+  // Primary output measured 378,237 raw / 114,885 gzip; the alternate-output
+  // matrix stayed at or below that boundary. Preserve 0 raw / 3 gzip bytes.
+  ownerJavaScript: Object.freeze({ raw: 378_237, gzip: 114_888 }),
   // WalletConnect's platform-conditional graph is larger in Netlify's Linux build
   // than in the local Windows build. Keep a small measured cross-platform margin
   // while continuing to budget this lazy runtime independently from the core app.
-  standaloneWalletJavaScript: Object.freeze({ raw: 4_400_000, gzip: 1_200_000 }),
-  initialCss: Object.freeze({ raw: 117_000, gzip: 20_000 }),
+  // Vite 6.4.3 / esbuild 0.25.12 rebuild the unchanged wallet dependency graph
+  // to 4,545,415 raw / 1,208,418 gzip bytes on Windows. Retain the new default
+  // CommonJS semantics; allow a bounded cross-platform margin for this lazy
+  // group only. Initial/core budgets and runtime-isolation checks stay fixed.
+  standaloneWalletJavaScript: Object.freeze({ raw: 4_600_000, gzip: 1_225_000 }),
+  // Task 5's accepted resolver-status repair replaces the legacy presentation.
+  // Preserve its measured 15-byte gzip headroom; the raw ceiling stays fixed.
+  // The accepted Startveil and lightweight resident presentation are initial
+  // UI. Preserve the prior 970 raw / 15 gzip bytes of measured headroom.
+  // Legacy v7 canvas styles are compatibility-only and lazy. The production
+  // font roles now resolve centrally to bundled Sora and IBM Plex Sans Condensed files.
+  // Preserve 970 raw / 15 gzip bytes of headroom around the active v8 route.
+  initialCss: Object.freeze({ raw: 51_807, gzip: 10_301 }),
   // Phase 7 adds the lazy owner-only Identity RÄCK; Phase 7.5 adds its compact,
   // shared-theme Keeper context controls. Keep both isolated from initial CSS
   // and deliberately close to the measured owner-only output.
@@ -50,7 +121,17 @@ export const PRODUCTION_BUDGETS = Object.freeze({
   // and the visitor runtime; keep the raw ceiling while measuring the split CSS.
   // Visitor Identity reuses the existing MODULE RACK and theme-token CSS. The
   // raw ceiling remains unchanged; this allowance measures the shared split.
-  ownerCss: Object.freeze({ raw: 67_000, gzip: 12_000 }),
+  // Phase 9 exposes the already-existing owner-only Creations, Activity, and
+  // Settings styles without moving them into initial CSS.
+  // The combined Keeper dock, accepted identity/focus motion, and canonical guide
+  // projection and Phase 3's shared review primitives add only lazy owner
+  // styles. These ceilings use the exact matrix-wide alternate build result.
+  // Phase 4A activates the strict v9 Visitor styles at the published boundary.
+  // The accepted guide-free inspection fix makes the no-grid viewer veil fully
+  // opaque. Preserve the existing gzip ceiling and bound the measured raw split.
+  // Phase 4B selects the consolidated System Workflow presentation and its
+  // owner-lazy responsive, panel, canvas, and publication-rack styles.
+  ownerCss: Object.freeze({ raw: 143_870, gzip: 21_140 }),
   // Owner/publication reconciliation adds the deterministic IPFS hydration and
   // three-way baseline guard to production. Keep the accepted growth bounded.
   // Phase 7 adds paragraph-preserving LSP3 normalization, independently
@@ -72,14 +153,145 @@ export const PRODUCTION_BUDGETS = Object.freeze({
   // Phase 8A.3 adds only the public identity adapter, trigger ownership, and
   // live public LSP3/RPC read boundary; the RACK itself remains lazy/reused.
   // Phase 8B adds one owner-triggered lazy publication module around the
-  // existing canonical IPFS/wallet/read-back pipeline. Initial entry remains
-  // unchanged; bound the measured standalone v8 publication chunk explicitly.
-  coreJavaScript: Object.freeze({ raw: 2_020_000, gzip: 602_000 }),
-  publicAssets: Object.freeze({ raw: 15_200_000 }),
+  // existing canonical IPFS/wallet/read-back pipeline. MODUL-8R Task 4 adds
+  // shared headless controllers to the existing lazy Activity and Discovery
+  // surfaces while its adapters remain development-only. Initial entry stays
+  // unchanged; bound the measured aggregate production graph explicitly.
+  // Task 8 prunes the old Browser/Rack owner branch at build selection time.
+  // The remaining measured growth is the accepted complete MODUL-8R
+  // Activity/People/Layers/Settings presentation; legacy visitor chunks stay
+  // readable and are not owner-hybrid reachability.
+  // Task 5 adds bounded evidence formatting, release identity, recovery copy,
+  // and error-surface wiring without a remote monitoring runtime. These limits
+  // add only the measured Task-5 delta and retain the prior headroom exactly.
+  // Text adds the on-demand Tiptap editor (416 kB raw / 131 kB gzip), its
+  // reader and local draft integration. Measured aggregate: 2,435,393 / 755,647.
+  // Initial and owner-static limits remain unchanged; keep bounded build margin.
+  // Local grid snapping and the optional saved-view Index add validation,
+  // publication filtering and a lazy editor. Measured aggregate gzip: 776,432.
+  // Keep raw, initial-entry, owner-static and wallet limits unchanged.
+  // Reception adds an explicitly opened owner crop/selection editor and optional
+  // compatibility fields. Measured before: 778,922 gzip; first complete editor:
+  // 784,180 gzip (+5,258 bytes). Bound that feature plus a small build margin;
+  // raw, initial-entry, owner-static and wallet limits remain unchanged.
+  // Shared Transform/Color adds the reusable hue ring/triangle and module-owned
+  // color gestures. Measured first complete implementation: 789,828 gzip;
+  // removal of superseded Image/Shape fields reduces that further. Bound the
+  // aggregate feature growth; initial, owner-static, raw and wallet limits stay.
+  // Detachable Layers/Transform/Color docks add session layout and accessible
+  // pointer/keyboard regrouping. First complete build: 791,592 gzip. Keep the
+  // raw, initial, owner-static and wallet ceilings; bound this small addition.
+  // Image now joins those docks through the shared tool source. The first
+  // alternate-output build measured 793,178 gzip. Bound the added tool routing
+  // with 1 kB more gzip allowance; all other ceilings remain unchanged.
+  // Independent Text shell: alternate-output measurement 794,172 gzip bytes.
+  // Keep the raw and initial-load limits; allow only 500 gzip bytes for this step.
+  // Two Text scopes add navigation and explicit control grouping. Native build:
+  // 2,480,549 raw / 793,955 gzip. Bound this step by 2 kB raw and 500 gzip bytes;
+  // the latter retains room for the alternate-output production test graph.
+  // Tool-window wording adds 307 raw bytes (2,482,183 total). Keep the gzip
+  // ceiling and allow 500 raw bytes for this bounded clarity pass.
+  // Stacked tool panes and accessible dividers: 2,486,610 raw / 796,013 gzip.
+  // Bound the measured 4,427 raw / 1,504 gzip addition; other limits stay fixed.
+  // Shared design-system Keeper dock and navigation clearance: 2,487,119 raw /
+  // 796,193 gzip in the native build; alternate-outDir measures 796,773 gzip.
+  // Bound this step with 500 more raw and gzip bytes; other ceilings stay fixed.
+  // Navigator adds shared controls, read-only module projections and responsive
+  // screen utility slots: native core measured 2,505,380 raw / 803,657 gzip.
+  // Bound this addition at 2,515,000 / 807,000; initial-load, owner-static,
+  // wallet, CSS and public-asset ceilings are unchanged. Evidence: 2026-10-23.
+  // Profile-local Library/dock preferences add validated storage and explicit retry.
+  // First native build: 2,517,412 raw / 808,294 gzip, versus the prior Info build
+  // 2,511,618 / 806,397. Allow 4.5 kB raw / 2.5 kB gzip above the old ceiling;
+  // all other limits stay unchanged. Evidence: 2026-10-23/library-preferences.md.
+  // Local named-Workbench completion adds 359 measured gzip bytes over the
+  // 809,226-byte starting tree. Add 400 bytes, preserving its modest headroom;
+  // the raw ceiling and every loading-boundary budget remain unchanged.
+  // The separate local Workbench overview adds a lazy index, read-only preview
+  // and introduction metadata. First build: 2,530,674 raw / 815,411 gzip across
+  // all non-wallet chunks (this total includes optional routes). Preserve the
+  // initial-load, owner-static and wallet ceilings; bound only the new feature.
+  // Optional gallery view, accessible wrapping and session layout choice: first
+  // native build 2,539,907 raw / 818,669 gzip. Only this aggregate optional-route
+  // budget grows; initial-load, owner-static, wallet and CSS ceilings stay fixed.
+  // Optional canvas inspection, saved framing and existing source metadata:
+  // first native build 2,552,434 raw / 823,153 gzip. Keep initial/owner loading
+  // boundaries and all other ceilings; allow only this measured lazy addition.
+  // Automatic gallery fill and a lazy manual thumbnail crop form, reusing crop
+  // geometry/gestures: 2,559,595 raw / 825,870 gzip. Only this aggregate grows.
+  // Combined gallery navigation and accessible hover/touch actions replace the
+  // old details panel: first native build 2,561,555 raw. Only the aggregate raw
+  // allowance grows by 2 kB; gzip, initial-load and owner-static stay unchanged.
+  // Reversible native presentation motion and saved gallery arrangement/size:
+  // first build 2,569,185 raw / 829,268 gzip. Only the optional-route aggregate
+  // grows; initial, owner-static, wallet and CSS ceilings remain unchanged.
+  // Hosted builds inject a 40-character commit instead of the 11-character
+  // development label. Reserve those 29 raw bytes; feature/gzip headroom stays
+  // unchanged. Exact-SHA preview build: 2,572,016 raw / 830,333 gzip.
+  // Reception's existing canvas action is now connected through the public
+  // boundaries: 2,572,154 raw / 830,349 gzip before the event-argument guard.
+  // Bound this small route addition; all compressed/loading budgets stay fixed.
+  // Published collections, explicit selection and reuse of the lazy gallery:
+  // measured 2,584,282 raw / 836,967 gzip with a 40-character release ID.
+  // Initial-load, owner, wallet, CSS and asset ceilings remain unchanged.
+  // Static Reception adds its separate lazy editor, canonical partition and
+  // shared public renderer. Shared Image/Text/Library implementations remain
+  // single modules. Measured 2,641,147 raw / 862,169 gzip before final recovery
+  // guards. This bounds the aggregate addition; initial, owner, wallet, CSS
+  // and asset ceilings remain unchanged.
+  // Approved direct cell editing, crop gestures and reusable-content management
+  // replace the Reception sidebar. Measured aggregate: 2,651,292 raw / 865,404
+  // gzip. This includes lazy routes, not just startup. Bound the raw addition
+  // by 2 kB; compressed, initial-load, owner and wallet ceilings stay unchanged.
+  // Saved owner Reception viewing reuses the editor's content resolver and the
+  // public presentation. Measured: 2,652,486 raw / 865,503 gzip; allow 1 kB raw
+  // for this optional route. Startup and every other limit remain unchanged.
+  // Linked Reception: persisted references, shared scene scopes, source editing
+  // and the finite gallery add 19 kB raw / 8 kB gzip across lazy routes.
+  // Measured 2,671,487 raw / 873,871 gzip before final controls and checks.
+  // Startup, owner-runtime, wallet and CSS budgets are unchanged.
+  // Unified Reception Settings, persistent colour tools with scoped eyedropper,
+  // and exact Library image selection: final measured aggregate 2,682,359 raw.
+  // Add 7 kB to the aggregate raw allowance; compressed/startup limits stay fixed.
+  // Restoring the separate public overview shares WorkbenchOverview with its
+  // owner route again. Rollup emits seven more shared chunks/import facades;
+  // the measured aggregate is 2,685,621 raw / 881,633 gzip. Bound that split
+  // by 3 kB in each aggregate limit; startup, owner and wallet limits stay fixed.
+  // Numeric Workbench canvas fields measure 2,686,581 raw / 881,814 gzip.
+  // Allow 1 kB more raw; compressed, startup, owner and wallet limits stay fixed.
+  // Consolidation measured 2,686,423 raw / 882,484 gzip after removing duplicate
+  // operation and shortcut wiring. Founder approved the measured +1 kB gzip
+  // allowance on 29 October; all other limits and required checks stay fixed.
+  // Paged Library and curated opening measured 2,689,736 raw / 883,607 gzip.
+  // Founder approved +3 kB raw / +1 kB gzip on 29 October; other limits stay fixed.
+  // Individual category images add about 2.6 kB raw / 0.7 kB gzip. Founder
+  // approved a further +3 kB raw / +1 kB gzip on 29 October for this behavior.
+  coreJavaScript: Object.freeze({ raw: 2_693_000, gzip: 885_000 }),
+  // Approved local article fonts plus the creation bar's Inter variable face.
+  // Inter and its license/provenance add 357,042 bytes; measured copied assets:
+  // 17,811,402 bytes. Retain the previous margin, rounded up by less than 3 kB.
+  // Fonts load only when used; JavaScript budgets are unchanged.
+  publicAssets: Object.freeze({ raw: 17_960_000 }),
   largestPublicAsset: Object.freeze({ raw: 2_700_000 })
 });
 
 const normalize = (value) => value.replaceAll('\\', '/');
+const LEGACY_FONT_PATTERN = /(?:PP Monument|Geist(?: Sans| Mono)?|IBM Plex Mono|Space Mono|Bahnschrift|system-ui|\bmonospace\b)/iu;
+const PRODUCTION_FONT_FILES = Object.freeze([
+  'assets/fonts/Cormorant/Cormorant.ttf',
+  'assets/fonts/Cormorant/OFL.txt',
+  'assets/fonts/IBM_Plex_Mono/IBMPlexMono-Regular.ttf',
+  'assets/fonts/IBM_Plex_Mono/OFL.txt',
+  'assets/fonts/IBM_Plex_Sans_Condensed/IBMPlexSansCondensed-Regular.ttf',
+  'assets/fonts/IBM_Plex_Sans_Condensed/OFL.txt',
+  'assets/fonts/Inter/InterVariable.woff2',
+  'assets/fonts/Inter/OFL.txt',
+  'assets/fonts/Inter/SOURCE.txt',
+  'assets/fonts/Literata/Literata.ttf',
+  'assets/fonts/Literata/OFL.txt',
+  'assets/fonts/Sora/OFL.txt',
+  'assets/fonts/Sora/Sora-VariableFont_wght.ttf',
+]);
 const isWithin = (parent, child) => {
   const path = relative(parent, child);
   return path !== '' && path !== '..' && !path.startsWith(`..${sep}`) && !isAbsolute(path);
@@ -102,8 +314,18 @@ export function resolveBuildOutputDirectory(config) {
   return assertSafeOutputDirectory(config.root, resolve(config.root, config.build.outDir));
 }
 
-export async function pruneProductionAuthoringAssets(outputDirectory) {
-  await Promise.all(UNUSED_PUBLIC_PATHS.map((path) => rm(resolve(outputDirectory, path), { recursive: true, force: true })));
+export async function pruneProductionAuthoringAssets(outputDirectory, {
+  projectRoot = process.cwd(), paths = UNUSED_PUBLIC_PATHS
+} = {}) {
+  const verifiedOutput = assertSafeOutputDirectory(projectRoot, outputDirectory);
+  const targets = paths.map((path) => {
+    const target = resolve(verifiedOutput, path);
+    if (!isWithin(verifiedOutput, target)) throw new Error(`Refusing build-output prune path outside verified output directory: ${path}`);
+    return target;
+  });
+  // Windows can briefly retain directory entries after their files are removed.
+  // Retry only within the verified build output; persistent failures still reject.
+  await Promise.all(targets.map((target) => rm(target, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 })));
 }
 
 async function walk(directory, root = directory) {
@@ -112,6 +334,53 @@ async function walk(directory, root = directory) {
     ? walk(resolve(directory, entry.name), root)
     : normalize(relative(root, resolve(directory, entry.name)))));
   return values.flat().sort();
+}
+
+export async function findProhibitedProductionArtifacts(outputDirectory) {
+  const files = await walk(outputDirectory);
+  const findings = [];
+  for (const file of files) {
+    const filenameRule = PROHIBITED_ARTIFACT_RULES.find(({ pattern }) => pattern.test(file));
+    if (filenameRule) findings.push({ file, reason: filenameRule.label });
+    const bytes = await readFile(resolve(outputDirectory, file));
+    if (file.endsWith('.js')) {
+      for (const marker of ['review-category', 'review-section', 'review-activity-', 'fixture-asset-received', '/fixtures/profile-identity-radar.svg']) {
+        if (bytes.includes(marker)) findings.push({ file, reason: `development fixture marker: ${marker}` });
+      }
+    }
+    const fingerprint = createHash('sha256').update(bytes).digest('hex');
+    if (PROHIBITED_ARTIFACT_SHA256.has(fingerprint)) findings.push({ file, reason: 'historical leaked lock-file content' });
+  }
+  return findings;
+}
+
+export async function assertNoProhibitedProductionArtifacts(outputDirectory) {
+  const findings = await findProhibitedProductionArtifacts(outputDirectory);
+  if (findings.length) {
+    throw new Error(`Production artifact hygiene failed:\n${findings.map(({ file, reason }) => `- ${file}: ${reason}`).join('\n')}`);
+  }
+  return true;
+}
+
+export async function assertProductionFontContract(outputDirectory) {
+  const files = await walk(outputDirectory);
+  const cssFiles = files.filter((file) => file.endsWith('.css'));
+  const css = (await Promise.all(cssFiles.map((file) => readFile(resolve(outputDirectory, file), 'utf8')))).join('\n');
+  if (LEGACY_FONT_PATTERN.test(css)) throw new Error('Production font contract failed: a CSS chunk contains a legacy font');
+  for (const [family, fontPath] of [
+    ['Inter Variable', '/assets/fonts/Inter/InterVariable.woff2'],
+    ['Inscape Sora', '/assets/fonts/Sora/Sora-VariableFont_wght.ttf'],
+    ['Inscape IBM Plex Sans Condensed', '/assets/fonts/IBM_Plex_Sans_Condensed/IBMPlexSansCondensed-Regular.ttf'],
+  ]) {
+    if (!css.includes(family) || !css.includes(fontPath)) {
+      throw new Error(`Production font contract failed: missing ${family} declaration or request`);
+    }
+  }
+  const fontFiles = files.filter((file) => file.startsWith('assets/fonts/'));
+  if (JSON.stringify(fontFiles) !== JSON.stringify(PRODUCTION_FONT_FILES)) {
+    throw new Error(`Production font contract failed: unexpected font assets: ${fontFiles.join(', ')}`);
+  }
+  return true;
 }
 
 function manifestClosure(manifest, entryKey, { includeDynamic = false, excludeKeys = new Set() } = {}) {
@@ -140,12 +409,16 @@ const sum = (items) => ({
 
 function entryKey(manifest) {
   const keys = Object.keys(manifest).filter((key) => manifest[key].isEntry);
-  if (keys.length !== 1) throw new Error(`Expected one Vite entry in the manifest, found ${keys.length}`);
-  return keys[0];
+  if (!manifest['index.html']?.isEntry || keys.some(key => !['index.html', 'mini-app-host.html'].includes(key))) {
+    throw new Error(`Unexpected Vite application entries: ${keys.join(', ')}`);
+  }
+  // Host bytes remain in core/lazy totals; this entry is loaded only inside an
+  // opened mini app and is not part of the main document's initial graph.
+  return 'index.html';
 }
 
 function ownerKey(manifest) {
-  const ownerPaths = ['src/public/OwnerLatticeShell.jsx', 'src/public/ModuleGridShell.jsx'];
+  const ownerPaths = ['src/public/OwnerSystemWorkflowShell.jsx'];
   const key = Object.keys(manifest).find((candidate) => ownerPaths.some((path) => normalize(candidate).endsWith(`/${path}`)
     || normalize(candidate) === path)) || Object.keys(manifest).find((candidate) => {
     const record = manifest[candidate];
@@ -157,14 +430,45 @@ function ownerKey(manifest) {
   return key;
 }
 
-function standaloneWalletKey(manifest) {
-  return Object.keys(manifest).find((candidate) => normalize(candidate).endsWith('/src/wallet/standaloneWalletSession.js')
-    || normalize(candidate) === 'src/wallet/standaloneWalletSession.js'
-    || manifest[candidate].name === 'standaloneWalletSession');
+function standaloneWalletKey(manifest, graph, initialKeys) {
+  const file = graph.standaloneWallet.file;
+  const reachableKeys = manifestClosure(manifest, entryKey(manifest), { includeDynamic: true });
+  const key = [...reachableKeys].find((candidate) => manifest[candidate].file === file);
+  if (!key) throw new Error('Vite manifest is missing the reachable standalone wallet source chunk');
+  if ([...initialKeys].some((candidate) => manifest[candidate].file === file)) {
+    throw new Error('Standalone wallet runtime leaked into the initial manifest closure');
+  }
+  return key;
 }
 
 function cssFiles(manifest, keys) {
   return [...new Set([...keys].flatMap((key) => manifest[key].css || []))].sort();
+}
+
+// Route cost includes startup once and static dependencies only. Optional tools
+// remain excluded until opened; aggregate core budgets still cover all of them.
+export async function measureReceptionRoutes(outputDirectory, manifest, initialKeys) {
+  const routes = {
+    publicAbout: 'src/profileDocument/components/ProfileOverview.jsx',
+    ownerAbout: 'src/reception/OwnerReception.jsx',
+    receptionEditing: 'src/reception/OwnerReceptionEditor.jsx',
+  };
+  const startupJs = new Set([...initialKeys].map(key => manifest[key].file));
+  const startupCss = new Set(cssFiles(manifest, initialKeys));
+  const results = {};
+  for (const [name, source] of Object.entries(routes)) {
+    const key = Object.keys(manifest).find(key => key === source || manifest[key].src === source
+      || name === 'receptionEditing' && manifest[key].name === 'reception-editing');
+    if (!key) continue;
+    const keys = new Set([...initialKeys, ...manifestClosure(manifest, key)]);
+    const js = await Promise.all([...new Set([...keys].map(k => manifest[k].file))].sort().map(file => measure(outputDirectory, file)));
+    const css = await Promise.all(cssFiles(manifest, keys).map(file => measure(outputDirectory, file)));
+    results[name] = { source, javaScript: sum(js), css: sum(css),
+      additionalJavaScript: sum(js.filter(item => !startupJs.has(item.file))),
+      additionalCss: sum(css.filter(item => !startupCss.has(item.file))),
+      files: js.map(item => item.file), cssFiles: css.map(item => item.file) };
+  }
+  return results;
 }
 
 function publicAssetFile(file) {
@@ -202,13 +506,12 @@ export async function analyzeProductionBuild(outputDirectory, { budgets = PRODUC
   catch (error) { throw new Error(`Cannot check production build: missing or invalid Vite manifest in ${outputDirectory}`, { cause: error }); }
   try { ownerRuntimeGraph = JSON.parse(await readFile(resolve(outputDirectory, 'owner-runtime-graph.json'), 'utf8')); }
   catch (error) { throw new Error(`Cannot check production build: missing or invalid owner runtime graph in ${outputDirectory}`, { cause: error }); }
+  assertOwnerRuntimeGraph(ownerRuntimeGraph);
 
   const initialKeys = manifestClosure(manifest, entryKey(manifest));
   const ownerKeys = manifestClosure(manifest, ownerKey(manifest));
-  const walletEntryKey = standaloneWalletKey(manifest);
-  const walletKeys = walletEntryKey
-    ? manifestClosure(manifest, walletEntryKey, { includeDynamic: true, excludeKeys: initialKeys })
-    : new Set();
+  const walletEntryKey = standaloneWalletKey(manifest, ownerRuntimeGraph, initialKeys);
+  const walletKeys = manifestClosure(manifest, walletEntryKey, { includeDynamic: true, excludeKeys: initialKeys });
   const initialFiles = new Set([...initialKeys].map((key) => manifest[key].file));
   const ownerFiles = [...ownerKeys].map((key) => manifest[key].file).filter((file) => !initialFiles.has(file));
   const walletFiles = [...new Set([...walletKeys].map((key) => manifest[key].file))]
@@ -237,6 +540,8 @@ export async function analyzeProductionBuild(outputDirectory, { budgets = PRODUC
   };
   return {
     version: 2, budgets, utilizationPercent: utilization(totals, budgets), totals,
+    standaloneWalletEntry: ownerRuntimeGraph.standaloneWallet,
+    receptionRoutes: await measureReceptionRoutes(outputDirectory, manifest, initialKeys),
     initialJavaScript: initialJs, ownerJavaScript: ownerJs, standaloneWalletJavaScript: walletJs,
     lazyJavaScript, initialCss, ownerCss,
     publicAssetCount: publicAssets.length, largestPublicAssets: publicAssets.slice(0, 10),
@@ -269,13 +574,20 @@ export function collectChunkModuleGroups(bundle) {
 }
 
 export function productionBuildHygienePlugin() {
-  let outputDirectory; let chunkGroups = {};
+  let outputDirectory; let productionEnvironment = {}; let chunkGroups = {};
   return {
     name: 'production-build-hygiene', apply: 'build',
-    configResolved(config) { outputDirectory = resolveBuildOutputDirectory(config); },
+    configResolved(config) {
+      outputDirectory = resolveBuildOutputDirectory(config);
+      productionEnvironment = config.env;
+    },
     generateBundle(_options, bundle) { chunkGroups = collectChunkModuleGroups(bundle); },
-    async closeBundle() {
+    async writeBundle() {
+      await assertNoProhibitedProductionArtifacts(outputDirectory);
       await pruneProductionAuthoringAssets(outputDirectory);
+      await writeNetlifyHeaders(outputDirectory, { env: productionEnvironment });
+      await assertNoProhibitedProductionArtifacts(outputDirectory);
+      await assertProductionFontContract(outputDirectory);
       const report = await analyzeProductionBuild(outputDirectory, { chunkGroups });
       await writeFile(resolve(outputDirectory, BUILD_REPORT_FILE), `${JSON.stringify(report, null, 2)}\n`);
       checkProductionBudgets(report);
@@ -285,16 +597,29 @@ export function productionBuildHygienePlugin() {
 }
 
 export function diagnosticsEnvironmentPlugin() {
+  const selectedSource = readFileSync(resolve(process.cwd(), 'src/public/ownerRuntimeSelected.js'), 'utf8');
+  const ownerRuntimeSelection = selectedSource.match(/OWNER_RUNTIME_SELECTION\s*=\s*'([^']+)'/u)?.[1];
+  if (ownerRuntimeSelection !== 'SYSTEM_WORKFLOW') {
+    throw new TypeError(`Unsupported owner runtime build selection: ${String(ownerRuntimeSelection)}`);
+  }
   return {
     name: 'diagnostics-environment',
     config(_config, { command }) {
-      return { define: { __DEVELOPMENT_DIAGNOSTICS__: JSON.stringify(command === 'serve') } };
+      return {
+        define: {
+        __DEVELOPMENT_DIAGNOSTICS__: JSON.stringify(command === 'serve'),
+        __OWNER_RUNTIME_SELECTION__: JSON.stringify(ownerRuntimeSelection),
+        },
+      };
     }
   };
 }
 
 export async function checkExistingBuild(outputDirectory) {
-  const report = await analyzeProductionBuild(resolve(outputDirectory));
+  const resolvedOutput = resolve(outputDirectory);
+  await assertNoProhibitedProductionArtifacts(resolvedOutput);
+  await assertProductionFontContract(resolvedOutput);
+  const report = await analyzeProductionBuild(resolvedOutput);
   checkProductionBudgets(report);
   return report;
 }

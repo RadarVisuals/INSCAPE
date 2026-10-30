@@ -1,0 +1,16 @@
+TAP version 13
+# Subtest: Shapes create at cursor, resize, layer beneath content, recover covered shapes, persist and preview
+ok 1 - Shapes create at cursor, resize, layer beneath content, recover covered shapes, persist and preview
+  ---
+  duration_ms: 6833.3994
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 7349.0247

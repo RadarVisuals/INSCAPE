@@ -1,0 +1,6 @@
+{
+  "mode": "explicit",
+  "suites": [
+    "workbench-sidebar"
+  ]
+}

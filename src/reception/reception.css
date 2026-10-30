@@ -1,0 +1,142 @@
+.reception-page { position: absolute; inset: 0; display: grid; grid-template: minmax(0, 1fr) / minmax(0, 1fr); place-items: center; overflow: hidden; padding: clamp(12px, 4vw, 80px); box-sizing: border-box; background: var(--color-surface-base, #101111); color: var(--tactile-ink); font-family: var(--font-interface); pointer-events: auto; }
+.reception-canvas { height: 100%; min-height: 320px; position: relative; width: 100%; min-width: 0; isolation: isolate; }
+.reception-paint { position: relative; width: 100%; height: 100%; }
+.reception-region { position: relative; box-sizing: border-box; min-width: 0; overflow: auto; border-radius: var(--reception-radius); background: var(--tactile-well); display: flex; align-items: var(--reception-align-y); justify-content: var(--reception-align-x); }
+.reception-region-content { position: relative; width: fit-content; max-width: 100%; min-width: 0; }
+/* Reception supplies Text's inset and column width in both editor and reader.
+   Shrink-to-fit would size an empty article to its title placeholder. */
+.reception-region[data-text] > .reception-region-content { width: 100%; }
+.reception-text, .reception-text .text-editor-page { box-sizing: border-box; width: 100%; min-width: 0; max-width: 100%; }
+/* Clip the nested absolute artwork's hit area as well as its rounded paint. */
+.reception-region[data-image] { overflow: hidden; clip-path: inset(0 round var(--reception-radius)); }
+.reception-region[data-image] .reception-region-content { width: 100%; height: 100%; }
+.reception-image { position: relative; width: 100%; height: 100%; min-height: 80px; }
+.reception-artwork, .reception-artwork > :is(svg, [data-svg-artwork-host]) { position: absolute; inset: 0; width: 100%; height: 100%; }
+.reception-media-status { position: absolute; inset: 0; pointer-events: none; }
+.reception-media-status button { pointer-events: auto; }
+.reception-navigation { display: flex; flex: 1; align-items: center; gap: 4px; min-width: 0; height: 100%; box-sizing: border-box; padding: 3px; overflow-x: auto; scrollbar-width: none; font: 12px var(--font-interface); }
+.reception-navigation :is(a, button) { flex: none; min-height: 36px; padding: 8px; border: 0; background: transparent; color: inherit; font: inherit; white-space: nowrap; cursor: pointer; text-decoration: none; }
+@media (pointer: coarse) {
+  .reception-window-header .reception-navigation :is(a, button) { min-height: var(--control-target-touch); min-width: var(--control-target-touch); }
+}
+.reception-brand { display: flex; align-items: center; gap: 8px; max-width: 200px; min-width: 0; margin-right: 8px; }
+.reception-brand span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.reception-brand img { height: 26px; width: 26px; object-fit: contain; }
+.reception-brand svg { flex: none; width: 22px; height: 22px; }
+.reception-page :is(button, a, input, select, textarea):focus-visible { outline: 2px solid var(--tactile-ink); outline-offset: 2px; }
+.reception-profile-copy { overflow-wrap: anywhere; }
+.reception-profile-copy h1, .reception-profile-copy h2 { font-weight: 400; font-size: clamp(22px, 3vw, 42px); line-height: 1.2; }
+.reception-profile-copy p { line-height: 1.7; white-space: pre-wrap; }
+.reception-profile-copy a { font: 12px/1.6 var(--font-technical); color: inherit; }
+.reception-profile-portrait { height: 180px; display: grid; place-items: center; }
+.reception-profile-portrait :is(img, iframe, svg) { max-width: 100%; height: 100%; object-fit: contain; border: 0; }
+.reception-profile-links { display: flex; flex-direction: column; gap: 12px; }
+.reception-profile-links a { color: inherit; padding: 12px 0; overflow-wrap: anywhere; }
+.reception-profile-details { overflow-wrap: anywhere; margin: 0; }
+.reception-profile-details div { margin: 0 0 16px; }
+.reception-profile-details dd { margin: 6px 0 0; }
+.reception-empty { color: var(--tactile-muted); font-size: 12px; }
+.reception-selection-layer { position: absolute; inset: 0; pointer-events: none; }
+.reception-selection { position: absolute; outline: 1px solid var(--tactile-edge); outline-offset: -1px; }
+.reception-divider { position: absolute; z-index: 3; border: 0; padding: 0; background: transparent; touch-action: none; }
+.reception-divider[data-axis="x"] { width: 28px; transform: translateX(-50%); cursor: col-resize; }
+.reception-divider[data-axis="y"] { height: 28px; transform: translateY(-50%); cursor: row-resize; }
+.reception-divider:hover, .reception-divider:focus-visible { background: color-mix(in srgb, var(--tactile-ink) 18%, transparent); }
+.reception-canvas[data-mobile] { height: auto; }
+.reception-canvas[data-mobile] .reception-paint { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--reception-gutter); height: auto; }
+.reception-canvas[data-mobile] .reception-region { overflow: visible; }
+.reception-canvas[data-mobile] .reception-region[data-image] { overflow: hidden; }
+.reception-canvas[data-mobile] .reception-image { min-height: 240px; }
+.reception-canvas[data-mobile] .reception-region[data-selected] { outline: 1px solid var(--tactile-edge); outline-offset: -1px; }
+
+/* Reception owns bounded placement; material and native controls stay shared. */
+.reception-window { position: relative; display: flex; flex-direction: column; box-sizing: border-box; width: min(1440px, 100%); height: min(900px, 88dvh); max-height: 100%; min-height: 0; border: 1px solid var(--tactile-edge); border-radius: var(--control-shell-radius); background: var(--tactile-face); overflow: hidden; }
+.reception-window-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex: none; height: 56px; box-sizing: border-box; padding: 2px 12px; border-bottom: 1px solid var(--tactile-edge); font: var(--workflow-type-control); }
+.reception-window-actions { display: flex; flex: none; align-items: center; gap: 4px; min-width: 0; max-width: 100%; box-sizing: border-box; overflow-x: auto; scrollbar-width: none; padding: 3px; }
+.reception-window-actions > button { flex: none; white-space: nowrap; }
+.reception-editor-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; }
+.reception-editor .workflow-tactile-control, .reception-window-header .workflow-tactile-control { display: inline-flex; gap: 6px; align-items: center; justify-content: center; min-height: var(--tool-control-height, 32px); padding: 6px 8px; font: inherit; }
+.reception-editor .workflow-tactile-control > svg { flex: none; width: 16px; height: 16px; }
+.reception-window-workspace { position: relative; display: flex; flex-direction: column; flex: 1; min-height: 0; min-width: 0; }
+.reception-window-main { flex: 1; min-width: 0; min-height: 0; overflow: auto; padding: 8px; }
+.reception-editor-main[data-preview="mobile"] { width: min(390px, 100%); box-sizing: border-box; margin: 0 auto; }
+.reception-tool-panel .workbench-tool-panel-content { padding: 12px; overflow: auto; overscroll-behavior: contain; display: flex; flex-direction: column; gap: 12px; }
+.reception-tool-panel p { color: var(--tactile-muted); margin: 0; line-height: 1.6; }
+.reception-tool-panel .text-controls-body { padding: 0; }
+.reception-tool-panel .text-tools-content { min-height: 0; }
+.reception-settings-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; position: sticky; top: -12px; padding-block: 4px; background: var(--tactile-face); z-index: 3; }
+.reception-settings-tabs [aria-selected="true"] { box-shadow: inset 0 -2px var(--tactile-ink); }
+.reception-settings-section, .reception-selected-settings { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.reception-settings-section[hidden] { display: none; }
+.reception-selected-settings { margin: 0; padding: 0; border: 0; }
+.reception-selected-settings > legend { padding: 0 0 8px; font: var(--workflow-type-control); }
+.reception-selected-settings:disabled { opacity: .6; }
+.reception-theme-choices { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; }
+.reception-theme-choices .reception-choices { min-width: 0; }
+.reception-theme-choices .reception-choices > div { flex-wrap: nowrap; }
+.reception-field, .reception-range { display: grid; gap: 8px; font-size: 12px; }
+.reception-check { display: flex; align-items: center; gap: 8px; }
+.reception-check input { width: 16px; height: 16px; flex: none; }
+.reception-spacing { display: flex; align-items: end; gap: 12px; }
+.reception-spacing > .reception-range { flex: 1; min-width: 0; }
+.reception-spacing > .reception-check { flex: none; min-height: var(--tool-control-height, 32px); font: var(--workflow-type-control); }
+.reception-spacing input[type="range"] { width: 100%; min-width: 0; }
+.reception-choices { padding: 0; margin: 0; border: 0; }
+.reception-choices legend { padding: 0 0 8px; font-size: 12px; }
+.reception-choices > div { display: flex; flex-wrap: wrap; gap: 4px; }
+.reception-split-options, .reception-content-choices { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.reception-split-options .workflow-tactile-control { min-height: 72px; flex-direction: column; }
+.reception-split-options .workflow-tactile-control svg { width: 28px; height: 28px; }
+.reception-empty-actions { display: grid; gap: 16px; text-align: center; padding: 12px; font: var(--workflow-type-control); }
+.reception-empty-actions > span { color: var(--tactile-muted); font: 14px var(--font-interface); }
+.reception-empty-actions > div { display: flex; justify-content: center; flex-wrap: wrap; gap: 6px; }
+.reception-region[data-empty] { align-items: center; justify-content: center; }
+.reception-editor-toolbar { position: absolute; z-index: 10; bottom: max(16px, env(safe-area-inset-bottom)); left: 16px; right: 16px; display: flex; justify-content: center; pointer-events: none; }
+.reception-editor-toolbar > * { pointer-events: auto; }
+.reception-cell-actions { display: flex; align-items: center; flex-wrap: wrap; justify-content: center; max-width: 100%; box-sizing: border-box; gap: 3px; padding: 4px; border: 1px solid var(--tactile-edge); border-radius: var(--control-shell-radius); background: var(--tactile-face); color: var(--tactile-ink); font: var(--workflow-type-control); }
+.reception-cell-actions > span { font-size: 11px; padding: 0 4px; }
+.reception-cell-actions .workflow-tactile-control { flex: none; border-color: transparent; }
+.reception-split-hint { position: absolute; pointer-events: none; z-index: 2; background: color-mix(in srgb, var(--tactile-ink) 10%, transparent); border: 0 dashed var(--tactile-ink); }
+.reception-split-hint[data-axis="x"] { inset: 0 0 0 50%; border-left-width: 1px; }
+.reception-split-hint[data-axis="y"] { inset: 50% 0 0; border-top-width: 1px; }
+.reception-crop-target { position: absolute; inset: 0; cursor: grab; touch-action: none; z-index: 2; }
+.reception-crop-target:active { cursor: grabbing; }
+.reception-crop-target:focus-visible { outline: 2px solid var(--tactile-ink); outline-offset: -3px; }
+.reception-editor-error, .reception-operation { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 12px; border-bottom: 1px solid var(--tactile-edge); font-size: 12px; }
+.reception-editor-error { color: var(--color-text-warm); }
+.reception-text textarea.text-document-title { display: block; box-sizing: border-box; field-sizing: content; resize: none; }
+@media (max-width: 800px) {
+  .reception-page { padding: 8px; }
+  .reception-window { height: 100%; width: 100%; }
+  .reception-window-header { display: grid; grid-template: repeat(2, minmax(0, 1fr)) / minmax(0, 1fr); height: 120px; gap: 6px; padding: 6px; }
+  .reception-window-main { padding: 6px; }
+  .reception-navigation :is(a, button) { min-height: 44px; }
+  .reception-window-actions { justify-self: end; gap: 1px; }
+}
+
+@media (forced-colors: active) { .reception-region { border: 1px solid CanvasText; } }
+
+/* Linked sources keep the region's geometry; Display owns gestures and media. */
+.reception-region[data-linked] .reception-region-content { width: 100%; height: 100%; }
+.reception-linked-content, .reception-linked-content > .published-display { position: relative; width: 100%; height: 100%; min-height: 160px; }
+.reception-display { position: absolute; inset: 0; display: flex; flex-direction: column; overflow: hidden; border-radius: inherit; }
+.reception-display-scene { position: relative; flex: 1; min-height: 0; }
+.reception-display-controls { display: flex; align-items: center; justify-content: space-between; flex: none; gap: 4px; min-height: var(--control-target-touch); padding: 4px; }
+.reception-display-controls button, .reception-open-source { min-height: var(--control-target-touch); font: var(--workflow-type-control); }
+.reception-linked-content > .reception-open-source.workflow-tactile-control { position: absolute; bottom: 8px; right: 8px; z-index: 3; font: var(--workflow-type-control); padding: 8px; }
+.reception-link-editor { display: grid; gap: 12px; }
+.reception-linked-content .reception-display-controls .workflow-tactile-control { font: var(--workflow-type-control); padding: 8px; }
+.reception-canvas[data-mobile] .reception-region[data-linked]:has([data-linked-kind="display"], [data-linked-kind="image"]) { overflow: hidden; }
+
+.reception-display-controls .visitor-grid-world__navigation { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.reception-display-controls .visitor-grid-world__navigation button { min-width: var(--control-target-touch); }
+.reception-display-controls .visitor-grid-world__navigation span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: var(--workflow-type-control); }
+.reception-editor-main { position: relative; }
+.reception-region:focus-visible { outline: 2px solid var(--tactile-ink); outline-offset: -3px; }
+.reception-cell-handle { position: absolute; top: 8px; left: 8px; z-index: 5; }
+.reception-cell-handle .workflow-tactile-control.reception-cell-drag { touch-action: none; cursor: grab; background: transparent; border-color: transparent; box-shadow: none; opacity: .85; }
+.reception-cell-handle .workflow-tactile-control.reception-cell-drag > svg { width: 14px; height: 14px; }
+.reception-cell-handle .reception-cell-drag svg circle { fill: #f4f4f4; stroke: #101111; stroke-width: 1px; paint-order: stroke fill; }
+.reception-cell-handle .reception-cell-drag:is(:hover, :focus-visible, :active) { opacity: 1; }
+.reception-cell-handle .reception-cell-drag:active { cursor: grabbing; }
+.reception-region[data-dragging] { box-shadow: inset 0 0 0 2px var(--tactile-edge); opacity: .7; }

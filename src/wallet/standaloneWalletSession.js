@@ -1,6 +1,8 @@
-import { getConnection, reconnect, watchConnection } from '@wagmi/core';
-import { setupLuksoConnector } from '@lukso/up-modal';
+import { disconnect as disconnectWagmi, getConnection, reconnect, watchConnection } from '@wagmi/core';
+import { setupLuksoConnector } from '@lukso/up-modal/auto-setup';
 import { resolveStandaloneUniversalProfile } from '../store/universalProfileValidation.js';
+import { ensureUniversalProfileExtensionConnector } from './universalProfileExtensionReadiness.js';
+import { STANDALONE_WALLET_STORAGE_KEY } from './standaloneWalletLoader.js';
 
 export const isEmbeddedApplication = () => typeof window !== 'undefined' && window.parent !== window;
 
@@ -8,21 +10,28 @@ let sharedSessionPromise = null;
 let sharedConsumers = 0;
 let pendingRelease = null;
 
-export async function createStandaloneWalletSession({ initializeWallet, disposeWallet, onError }) {
+export async function createStandaloneWalletSession({ initializeWallet, disposeWallet, beginWalletTransition, onError, onSignInClose }) {
   const connector = await setupLuksoConnector({
-    theme: 'dark',
+    theme: 'light',
     chains: { defaultChainId: 42 },
     connectors: { eoa: false },
-    storage: { key: 'inscape-up' },
+    storage: { key: STANDALONE_WALLET_STORAGE_KEY },
+    onClose: () => onSignInClose?.(),
     onError: (event) => onError?.(event?.detail || new Error('Universal Profile connection failed.'))
   });
 
   let syncGeneration = 0;
   let disposed = false;
+  let showSignInPromise = null;
 
   const syncConnection = async (connection) => {
     const generation = ++syncGeneration;
     if (disposed) return false;
+
+    if (connection?.status === 'connecting' || connection?.status === 'reconnecting') {
+      beginWalletTransition?.();
+      return false;
+    }
 
     if (connection?.status !== 'connected' || connection.chainId !== 42 || !connection.connector) {
       disposeWallet();
@@ -51,7 +60,13 @@ export async function createStandaloneWalletSession({ initializeWallet, disposeW
   // A stale or revoked authorization must remain a normal disconnected state:
   // the sign-in modal is still available for an explicit reconnect.
   try {
-    await reconnect(connector.wagmiConfig);
+    const config = connector.wagmiConfig;
+    let recent;
+    try { recent = await config.storage?.getItem('recentConnectorId'); } catch { /* Storage is only a loading hint. */ }
+    const mobileWasChosen = recent === 'walletConnect'
+      || [...config.state.connections.values()].some(connection => connection.connector.id === 'walletConnect');
+    const candidates = config.connectors.filter(candidate => candidate.id !== 'walletConnect' || mobileWasChosen);
+    if (candidates.length) await reconnect(config, { connectors: candidates });
   } catch (error) {
     onError?.(error);
   }
@@ -62,7 +77,24 @@ export async function createStandaloneWalletSession({ initializeWallet, disposeW
   await syncConnection(getConnection(connector.wagmiConfig));
 
   return {
-    showSignIn: () => connector.showSignInModal(),
+    showSignIn: () => {
+      if (showSignInPromise) return showSignInPromise;
+      showSignInPromise = (async () => {
+        await ensureUniversalProfileExtensionConnector({
+          wagmiConfig: connector.wagmiConfig
+        });
+        if (!disposed) connector.showSignInModal();
+      })().finally(() => {
+        showSignInPromise = null;
+      });
+      return showSignInPromise;
+    },
+    async disconnect() {
+      if (disposed) return false;
+      await disconnectWagmi(connector.wagmiConfig);
+      if (!disposed) disposeWallet();
+      return true;
+    },
     dispose() {
       disposed = true;
       syncGeneration += 1;

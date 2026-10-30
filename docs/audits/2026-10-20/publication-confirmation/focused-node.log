@@ -1,0 +1,44 @@
+✔ project instructions permanently route LUKSO work through the reviewed baseline (3.1951ms)
+✔ legacy ownership fallback discovers through LSP5 and then verifies each asset standard (0.5968ms)
+✔ issued, creator-attributed and currently held relationships remain separate (0.9846ms)
+✔ metadata dossiers require provenance and do not convert creator evidence into owner authority (0.8216ms)
+✔ mainnet identity remains explicit and HTTPS-only at the central Library boundary (0.371ms)
+✔ journal blocks duplicate wallet submission across publisher instances and preserves post-hash failures (50.4179ms)
+✔ journal storage failures block wallet invocation; ambiguous pre-hash failures remain reserved (24.1873ms)
+✔ repricing persists the replacement hash before receipt interruption (6.1899ms)
+✔ canonical publication download is the exact serializer output and never the formatted export (1.2104ms)
+✔ publisher rejects v1-v8 before reading publication context or CID bytes (0.846ms)
+✔ closing and reopening publication creates a new unverified session (0.1131ms)
+✔ bare and ipfs CID inputs normalize while URLs, paths, queries, schemes, and malformed CIDs fail (0.2038ms)
+✔ the frozen key value is an LSP2 VerifiableURI for the exact canonical-byte hash (0.5756ms)
+✔ CID mismatch and stale, visitor, wrong-profile, or wrong-chain context block every wallet call (7.2653ms)
+✔ invalid, oversized, wrong-profile, and hash-mismatched gateway content never reaches a wallet (5.404ms)
+✔ an insecure snapshot is refused before publication context or wallet access (1.0551ms)
+✔ context changes immediately before provider submission block the wallet request (3.1153ms)
+✔ provider generation changes during CID verification are rejected (2.4199ms)
+✔ the provider-backed wallet receives one setData request and failures submit no duplicate (5.0624ms)
+✔ a successful receipt still requires matching resolver read-back (5.4057ms)
+✔ simultaneous mouse and keyboard activation shares one synchronous publication operation (4.7659ms)
+✔ a different verified context is rejected while another request owns the lock (8.1143ms)
+✔ wallet rejection and a pre-hash provider failure release the lock for one controlled retry (12.2015ms)
+✔ receipt and resolver retry after a hash never submit another wallet request (3.5532ms)
+✔ Viem cancellation after a known hash is retained and can never trigger another wallet request (2.9619ms)
+✔ every publication identity binding invalidates a verified artifact before submission (41.2152ms)
+✔ a draft change after provider invocation confirms only the frozen submitted artifact (3.2667ms)
+✔ provider, account, and chain changes after the hash preserve the submitted record without resubmission (3.0073ms)
+✔ provider and LSP6 failures are decoded accurately (1.3572ms)
+✔ browser publication source contains no Pinata endpoint, credential, SDK, or private-state dependency (0.7723ms)
+✔ journal survives a new instance, scopes by profile and retains only bounded public references (14.9084ms)
+✔ unavailable, full, corrupt and cross-profile storage fail closed without overwriting (2.2837ms)
+✔ recovery requires both the exact receipt hash and the matching public document (5.7142ms)
+✔ missing receipts can be rechecked, while hashless interruptions never issue network or wallet calls (2.2087ms)
+✔ System Workflow production shell preserves the Phase 3 authority and isolation boundary (71.6041ms)
+✔ System Workflow dock tools cannot expand into the INSCAPE wordmark (15.319ms)
+ℹ tests 36
+ℹ suites 0
+ℹ pass 36
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1611.9107

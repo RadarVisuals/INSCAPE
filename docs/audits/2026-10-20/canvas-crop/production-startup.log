@@ -1,0 +1,16 @@
+TAP version 13
+# Subtest: built fresh entry stays below 1 MB JS without wallet/owner acquisition; built connector remains importable
+ok 1 - built fresh entry stays below 1 MB JS without wallet/owner acquisition; built connector remains importable
+  ---
+  duration_ms: 2810.0057
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 3229.9313

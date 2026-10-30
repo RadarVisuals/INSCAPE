@@ -1,0 +1,12 @@
+.workbench-tools-body { display: flex; flex-direction: column; align-items: stretch; gap: 12px; width: 100%; padding: 12px; overflow: auto; overscroll-behavior: contain; }
+.workbench-tools-body label { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.workbench-tools-body :is(input:not([type='checkbox']), select) { box-sizing: border-box; width: 100%; min-width: 0; height: var(--tool-control-height); border: 1px solid var(--tactile-edge); border-radius: var(--control-radius); background: transparent; color: inherit; padding: 4px 6px; font: inherit; }
+.workbench-tools-body :is(input, select):focus-visible { outline: 1px solid var(--tactile-ink); outline-offset: 1px; }
+.workbench-tools-body :is(input, select):disabled { opacity: .45; }
+.workbench-tools-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.workbench-tools-body p { margin: 0; line-height: 1.6; }
+.workbench-tools-empty { color: var(--tactile-muted); }
+.workbench-color-target { margin-bottom: 0; }
+
+.workbench-tools-body > * { flex-shrink: 0; }
+.workbench-tools-body .workflow-tactile-control { min-height: var(--control-height-sm); }

@@ -1,0 +1,29 @@
+.reception-kicker { color: var(--tactile-muted); font: 12px/1.4 'Inscape IBM Plex Sans Condensed', sans-serif; letter-spacing: .12em; }
+.reception-notice { padding: 16px; border: 1px solid var(--tactile-edge); }
+.exploration-room { border: 1px solid var(--tactile-edge); border-radius: var(--control-shell-radius); overflow: hidden; }
+.exploration-room > header { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 16px; padding: 16px; border-bottom: 1px solid var(--tactile-edge); }
+.exploration-room > header button { display: flex; align-items: center; gap: 8px; padding: 8px; border: 0; background: none; }
+.exploration-room > header span, .exploration-room > footer { color: var(--tactile-muted); font: 12px/1.5 'Inscape IBM Plex Sans Condensed', sans-serif; }
+.exploration-room__canvas { position: relative; display: grid; place-items: center; min-height: min(60dvh, 600px); padding: 32px; box-sizing: border-box; background: var(--tactile-well); }
+.exploration-room__origin { pointer-events: none; }
+.exploration-world-viewport { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+.exploration-world { position: absolute; left: 0; top: 0; will-change: transform; outline: 1px solid var(--tactile-edge); }
+.exploration-home-marker { position: absolute; font: 11px 'Inscape IBM Plex Sans Condensed', sans-serif; color: var(--tactile-muted); transform: translate(-50%, 72px); }
+.exploration-environment { position: absolute; aspect-ratio: 1; pointer-events: none; }
+.exploration-environment > img { display: block; width: 100%; height: 100%; }
+.exploration-environment__wall { position: absolute; outline: 1px dashed var(--tactile-muted); }
+.exploration-keeper-controls { position: absolute; z-index: 2; left: 16px; top: 16px; right: 16px; display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.exploration-room__canvas:has(.exploration-world) .exploration-keeper-controls { padding: 8px; background: var(--tactile-face); border: 1px solid var(--tactile-edge); border-radius: var(--control-radius); }
+.exploration-keeper-controls button, .exploration-keeper-controls select { padding: 8px 12px; border: 1px solid var(--tactile-edge); border-radius: var(--control-radius); color: inherit; background: var(--tactile-face); font: inherit; }
+.exploration-keeper-controls span { max-width: 440px; color: var(--tactile-muted); font-size: 12px; line-height: 1.6; }
+.exploration-keeper-notice { position: absolute; top: 16px; left: 16px; right: 16px; font-size: 13px; }
+.exploration-room__origin { text-align: center; }
+.exploration-room__canvas:has(.exploration-keeper-controls) .exploration-room__origin { position: absolute; right: 24px; top: 160px; text-align: right; max-width: 48%; }
+.exploration-room__canvas:has(.exploration-keeper-controls) .exploration-room__origin h1 { font-size: 20px; }
+.exploration-room__canvas:has(.exploration-keeper-controls) .exploration-room__origin :is(p, .exploration-room__marker) { display: none; }
+.exploration-room__origin h1 { font-size: clamp(28px, 4vw, 48px); font-weight: 400; }
+.exploration-room__origin p { color: var(--tactile-muted); }
+.exploration-room__marker { display: block; width: 160px; height: 4px; margin: 64px auto 0; background: var(--tactile-edge); }
+.exploration-room > footer { padding: 16px; border-top: 1px solid var(--tactile-edge); }
+.visitor-overview-return { position: fixed; left: 20px; top: 20px; z-index: 300; pointer-events: auto; padding: 10px 16px; border-radius: var(--control-radius); border: 1px solid var(--color-border); background: var(--color-surface-elevated); color: var(--color-text-primary); font: 12px var(--font-interface); text-decoration: none; }
+.visitor-overview-return:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 3px; }

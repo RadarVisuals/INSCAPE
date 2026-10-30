@@ -1,0 +1,73 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { mkdir } from 'node:fs/promises';
+import { chromium } from 'playwright-core';
+import { browserExecutable } from '../scripts/browserEnvironment.mjs';
+
+const origin = process.env.INSCAPE_TEXT_ROOT || 'http://127.0.0.1:24970';
+const output = process.env.INSCAPE_BROWSER_OUTPUT || '.browser-test-runtime/keeper-panel';
+const material = node => {
+  const style = getComputedStyle(node);
+  return [style.backgroundColor, style.color, style.borderRadius, style.borderTopColor, style.boxShadow];
+};
+for (const [width, theme] of [[1440, 'mist'], [390, 'carbon']]) test(`Keeper uses the design-system dock and flat, bounded settings (${theme}, ${width}px)`, { timeout: 60000 }, async () => {
+  const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
+  try {
+    await mkdir(output, { recursive: true });
+    const page = await browser.newPage({ viewport: { width, height: 900 }, reducedMotion: 'reduce' });
+    const errors = []; page.on('pageerror', error => errors.push(error.message));
+    await page.route('**/*', route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
+    await page.goto(`${origin}/browser-tests/tool-chrome-fixture.html?sample=keeper&theme=${theme}`);
+    const dock = page.locator('.keeper-dock-window'), settings = page.locator('.keeper-settings-window');
+    await dock.waitFor(); await page.evaluate(() => document.fonts.ready);
+    const before = await page.evaluate(() => window.readToolChromeDraft());
+    assert.equal(await dock.getByText('Keeper', { exact: true }).count(), 1);
+    assert.equal(await dock.getByText('Drop artwork', { exact: true }).count(), 1);
+    assert.equal(await dock.getByText('Dock placement preview', { exact: true }).count(), 0);
+    assert.ok(Math.abs((await dock.boundingBox()).width - Math.min(176, (width - 44) / 2)) < 1);
+    const trigger = page.getByRole('button', { name: 'Keeper settings', exact: true });
+    await trigger.click(); await settings.waitFor();
+    assert.deepEqual(await settings.evaluate(material), await dock.evaluate(material));
+    assert.equal(await settings.locator('.system-workflow__resize-handle').count(), 0);
+    const move = settings.getByLabel('Move Keeper settings window', { exact: true });
+    assert.equal(await move.evaluate(node => node.matches(':focus-visible')), false, 'mouse opening does not highlight the title bar');
+    await page.screenshot({ path: `${output}/pointer-${theme}-${width}.png` });
+    const initial = await settings.boundingBox();
+    await move.focus(); await move.press('ArrowDown');
+    assert.ok((await settings.boundingBox()).y > initial.y);
+    await page.getByLabel('Keeper movement', { exact: true }).selectOption('swim');
+    const saved = await page.evaluate(() => window.readToolChromeDraft());
+    assert.equal(saved.keeperDocks[0].movement, 'swim');
+    await page.getByRole('button', { name: 'Delete dock', exact: true }).scrollIntoViewIfNeeded();
+    const frame = await settings.boundingBox();
+    assert.ok(frame.x >= 8 && frame.x + frame.width <= width - 7 && frame.y >= 8);
+    assert.equal(await settings.locator('.system-workflow__detached-window-surface').evaluate(node => node.scrollWidth <= node.clientWidth), true);
+    const reachable = await settings.getByRole('button', { name: 'Delete dock', exact: true }).evaluate(node => {
+      const r = node.getBoundingClientRect(); return node.contains(document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2));
+    });
+    assert.equal(reachable, true);
+    await page.screenshot({ path: `${output}/settings-actions-${theme}-${width}.png` });
+    await page.getByLabel('Keeper name', { exact: true }).scrollIntoViewIfNeeded();
+    await page.getByLabel('Keeper name', { exact: true }).click();
+    await page.screenshot({ path: `${output}/settings-${theme}-${width}.png` });
+    await settings.getByRole('button', { name: 'Close Keeper settings', exact: true }).click();
+    assert.equal(await trigger.evaluate(node => document.activeElement === node), true);
+    await dock.screenshot({ path: `${output}/dock-${theme}-${width}.png` });
+    await trigger.press('Enter');
+    await page.getByLabel('Keeper name', { exact: true }).focus(); await page.keyboard.press('Escape');
+    assert.equal(await settings.count(), 0);
+    assert.equal(await trigger.evaluate(node => document.activeElement === node), true);
+    const after = await page.evaluate(() => window.readToolChromeDraft());
+    assert.deepEqual(after, saved, 'opening, moving and closing settings does not author anything');
+    assert.deepEqual(after.keeperDocks[0].asset, before.keeperDocks[0].asset);
+    const dockMaterial = await dock.evaluate(material);
+    const slot = await dock.locator('.keeper-dock-artwork--empty').evaluate(node => ({ width: node.clientWidth, height: node.clientHeight, border: getComputedStyle(node).borderTopStyle }));
+    await page.goto(`${origin}/design-system.html#components`);
+    await page.getByLabel('Preview surface').selectOption(theme);
+    const reference = page.getByRole('region', { name: 'Keeper dock preview', exact: true });
+    assert.deepEqual(await reference.evaluate(material), dockMaterial, 'the live dock matches the actual reference material');
+    assert.deepEqual(await reference.locator('.keeper-dock-artwork--empty').evaluate(node => ({ width: node.clientWidth, height: node.clientHeight, border: getComputedStyle(node).borderTopStyle })), slot);
+    await reference.screenshot({ path: `${output}/reference-${theme}-${width}.png` });
+    assert.deepEqual(errors, []);
+  } finally { await browser.close(); }
+});

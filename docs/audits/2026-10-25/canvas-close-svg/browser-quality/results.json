@@ -1,0 +1,13 @@
+[
+  {
+    "name": "svg-raster-quality",
+    "code": 0,
+    "seconds": 57.895,
+    "tests": 4,
+    "pass": 4,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  }
+]

@@ -1,0 +1,52 @@
+.mini-app-workbench { color: var(--workflow-ink); font: var(--workflow-type-control); }
+.mini-app-workbench .system-workflow__instrument-window { z-index: var(--mini-app-z); }
+.mini-app-workbench .system-workflow__instrument-content { display: flex; flex-direction: column; padding: 0; overflow: hidden; }
+.mini-app-content { display: flex; flex-direction: column; min-height: 0; flex: 1; }
+.mini-app-frame { border: 0; width: 100%; min-height: 0; flex: 1; background: var(--workflow-panel); }
+.mini-app-toolbar { display: flex; flex-wrap: wrap; align-items: stretch; border-bottom: 1px solid var(--workflow-border); }
+.mini-app-toolbar > a { display: flex; gap: 6px; align-items: center; flex: 1; min-width: 100px; padding: 8px; color: var(--workflow-muted); text-decoration: none; font: var(--workflow-type-micro); }
+.mini-app-toolbar > a > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mini-app-workbench button:not(.system-workflow__round-control), .mini-app-settings input { color: inherit; background: var(--workflow-panel); font: inherit; border: 1px solid var(--workflow-border); }
+.mini-app-toolbar > button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 32px; padding: 6px 10px; position: relative; border-block: 0 !important; border-right: 0 !important; }
+.mini-app-toolbar > button[aria-pressed="true"]::before { content: ''; position: absolute; inset: 0 0 auto; height: 2px; background: currentColor; }
+.mini-app-workbench button:hover:not(:disabled) { background: var(--workflow-hover); }
+.mini-app-workbench button:disabled { opacity: .45; cursor: not-allowed; }
+.mini-app-workbench :is(button, input, a):focus-visible { outline: 1px solid var(--workflow-ink); outline-offset: -3px; }
+.mini-app-status { padding: 10px; color: var(--workflow-muted); font: var(--workflow-type-micro); overflow-wrap: anywhere; }
+.mini-app-settings { display: grid; gap: 14px; padding: 14px; overflow: auto; }
+.mini-app-settings > label { display: grid; gap: 6px; }
+.mini-app-settings input:not([type="checkbox"]) { min-width: 0; width: 100%; box-sizing: border-box; padding: 8px; }
+.mini-app-settings > .mini-app-settings__visibility { display: flex; align-items: center; gap: 8px; }
+.mini-app-settings p { margin: 0; color: var(--workflow-muted); font: var(--workflow-type-micro); }
+.mini-app-settings__actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.mini-app-settings__actions > button { padding: 8px 12px; }
+.mini-app-settings__actions > button:last-child { margin-left: auto; }
+.mini-app-shortcut { position: fixed; z-index: var(--mini-app-z); right: 24px; bottom: var(--mini-app-shortcut-bottom); max-width: calc(100vw - 48px); display: flex; align-items: center; gap: 8px; padding: 8px 12px; }
+.mini-app-shortcut > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Artwork removes the host's material, retaining the existing movable header
+   and resize semantics. Controls appear on hover/focus and remain on touch. */
+.mini-app-workbench .mini-app-artwork-window {
+  --detached-window-gutter: 0px;
+  border: 0; border-radius: 0; background: transparent; box-shadow: none;
+}
+.mini-app-workbench .mini-app-artwork-window::after,
+.mini-app-workbench .mini-app-artwork-window > .system-workflow__instrument-content::before { display: none; }
+.mini-app-workbench .mini-app-artwork-window > .system-workflow__instrument-content {
+  position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none;
+}
+.mini-app-artwork-window > header { position: relative; z-index: 1; opacity: 0; }
+.mini-app-artwork-window:is(:hover, :focus-within) > header { opacity: 1; background: var(--workflow-panel); border-radius: var(--workflow-board-radius); }
+.mini-app-artwork-window [role="separator"] { opacity: 0; }
+.mini-app-artwork-window:is(:hover, :focus-within) [role="separator"] { opacity: 1; }
+.html-artwork-viewport { position: relative; display: flex; flex: 1; min-height: 0; width: 100%; background: transparent; }
+/* Match the neutral embedded document; inheriting the host theme can force an opaque browser canvas. */
+/* Keep the embedded document in authored units. Camera zoom projects its pixels
+   without resizing/reflowing the artwork's internal viewport. */
+.html-artwork-frame { position: absolute; left: 0; top: 0; display: block; border: 0; width: 100%; height: 100%; transform-origin: 0 0; transform: scale(var(--workbench-content-scale, 1)); background: transparent; color-scheme: normal; }
+.html-artwork-status { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); max-width: 100%; padding: 10px; border-radius: 8px; background: var(--workflow-panel); }
+.html-artwork-status button { margin-left: 8px; padding: 6px 12px; }
+@media (hover: none) {
+  .mini-app-artwork-window > header { opacity: 1; background: var(--workflow-panel); }
+  .mini-app-artwork-window [role="separator"] { opacity: 1; }
+}
