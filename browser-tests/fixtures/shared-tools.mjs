@@ -23,7 +23,13 @@ export async function closeSharedTool(page, tab) {
 export async function openSharedTool(page, tab) {
   const button = page.getByRole('tab', { name: tab, exact: true });
   if (!await button.count()) {
-    await page.locator('main.system-workflow').focus(); await page.keyboard.press('Control+k');
+    const host = page.locator('main.system-workflow');
+    // A preceding modal close must release the editor before its shortcut can
+    // receive focus. Locator.focus alone can silently target an inert host.
+    await page.waitForFunction(node => node.isConnected && !node.closest('[inert], [hidden], [aria-hidden="true"]'), await host.elementHandle());
+    await host.focus();
+    await page.waitForFunction(node => node === document.activeElement, await host.elementHandle());
+    await page.keyboard.press('Control+k');
     await page.getByRole('dialog').getByRole('button', { name: ['Image', 'Shape'].includes(tab) ? `${tab} settings` : tab, exact: true }).click();
   } else { await button.focus(); await button.press('Enter'); }
   return page.locator('.workbench-tool-panel').filter({ has: page.getByRole('tab', { name: tab, exact: true }) });

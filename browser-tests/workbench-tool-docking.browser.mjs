@@ -200,6 +200,9 @@ test('keyboard docking keeps text selection, color history and the three indepen
     const errors = []; page.on('pageerror', error => errors.push(error.message));
     await mountToolDockFixture(page, { writing: true }); await hideModuleTools(page);
     await page.getByRole('button', { name: 'Select Mist', exact: true }).click();
+    await openSharedTool(page, 'Color');
+    const target = page.getByRole('combobox', { name: 'Color target', exact: true });
+    await target.waitFor();
     const text = page.getByRole('textbox', { name: 'Article text', exact: true });
     await page.evaluate(() => document.fonts.ready);
     await text.focus(); await settlePlaywrightAnimationFrames(page);
@@ -213,9 +216,13 @@ test('keyboard docking keeps text selection, color history and the three indepen
     });
     for (let i = 0; i < 'Native '.length; i++) await page.keyboard.press('Shift+ArrowRight');
     await page.waitForFunction(() => window.getSelection()?.toString() === 'Native ');
+    await settlePlaywrightAnimationFrames(page);
+    assert.equal(await page.evaluate(() => getSelection()?.toString()), 'Native ');
+    // The visible Color target reflects the editor's selection transaction,
+    // which follows the browser's native selectionchange notification.
+    await page.waitForFunction(() => document.querySelector('[aria-label="Color target"]')?.selectedOptions[0]?.textContent === 'Selected text');
     await tab(page, 'Color').focus(); await tab(page, 'Color').press('Enter');
     // Wait for the editor's selection transaction before docking its controls.
-    const target = page.getByRole('combobox', { name: 'Color target', exact: true });
     await page.waitForFunction(() => document.querySelector('[aria-label="Color target"]')?.selectedOptions[0]?.textContent === 'Selected text');
     assert.equal(await target.inputValue(), 'body');
     await tab(page, 'Color').press('Shift+F10');

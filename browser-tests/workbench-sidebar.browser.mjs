@@ -48,7 +48,8 @@ for(const theme of ['carbon','mist']) for(const [width,height] of [[1440,900],[3
   await button('Expand sidebar').press('Tab');await page.keyboard.press('Shift+Tab');
   assert.notEqual(await button('Expand sidebar').evaluate(n=>getComputedStyle(n).outlineStyle),'none','keyboard focus stays visible');
   await activate('Docs');await page.getByRole('dialog',{name:'Docs',exact:true}).waitFor();
-  await page.getByRole('button',{name:'Close Docs'}).click();await settle(page);
+  await page.getByRole('button',{name:'Close Docs'}).click();
+  await page.waitForFunction(node=>node===document.activeElement,await button(width===320 ? 'Expand sidebar' : 'Docs').elementHandle());
   assert.equal(await button(width===320 ? 'Expand sidebar' : 'Docs').evaluate(n=>document.activeElement===n),true,'panel close returns focus');
   for(const [label,id] of [['Settings','settings'],['Activity','activity'],['Grids','grids'],['Profile','profile']]) {
    await activate(label);await page.locator(`[data-system-workflow-panel="${id}"] aside`).first().waitFor();
@@ -78,6 +79,9 @@ for(const theme of ['carbon','mist']) for(const [width,height] of [[1440,900],[3
    const trigger = discover.locator('.public-entry-portal__account-trigger');
    assert.equal(await trigger.evaluate(node => node === document.activeElement), true, 'account Escape restores trigger focus');
    await trigger.click();
+   // Discovery is asynchronous. Native Tab can only reach the next portal
+   // action after a result or retry button has become available.
+   await discover.locator('main button:enabled').first().waitFor();
    await discover.getByRole('button',{name:'Disconnect',exact:true}).focus();
    await page.keyboard.press('Tab');
    const outsideAccount = await discover.evaluate(node => ({
@@ -95,7 +99,8 @@ for(const theme of ['carbon','mist']) for(const [width,height] of [[1440,900],[3
    await writeFile(`${output}/account-escape-${theme}-${width}.json`, JSON.stringify({ beforeAccountEscape, afterAccountEscape, outsideAccount, afterTabEscape, triggerFocused: true }, null, 2));
   await search.fill('Surface');assert.equal(await search.inputValue(),'Surface');
   await page.screenshot({path:`${output}/discover-${theme}-${width}.png`});
-  await back.click();await discover.waitFor({state:'detached'});await settle(page);
+  await back.click();await discover.waitFor({state:'detached'});
+  await page.waitForFunction(node=>node===document.activeElement,await button(width===320?'Expand sidebar':'Discover').elementHandle());
   assert.equal(await button(width===320?'Expand sidebar':'Discover').evaluate(n=>document.activeElement===n),true,'Discover restores its visible navigation trigger');
   await activate('Discover');await discover.waitFor();await activate('Editor');await settle(page);
   assert.equal(await discover.count(),0,'sidebar remains usable from Discover');
@@ -130,7 +135,8 @@ test('Sidebar collapse follows Workbench switches, preview and explicit hide/reo
   await page.getByRole('combobox',{name:'Active Workbench'}).selectOption({label:'Workbench 1'});await button('Expand sidebar').waitFor();
   await button('Preview').click();await page.getByRole('button',{name:'EXIT',exact:true}).waitFor();
   assert.equal(await page.locator('.workbench-sidebar').isVisible(),false);assert.equal(await page.getByRole('complementary',{name:'Workspace sidebar'}).count(),0,'hidden navigation is absent from accessibility');
-  await page.getByRole('button',{name:'EXIT',exact:true}).click();await button('Expand sidebar').waitFor();await settle(page);
+  await page.getByRole('button',{name:'EXIT',exact:true}).click();await button('Expand sidebar').waitFor();
+  await page.waitForFunction(node=>node===document.activeElement,await button('Preview').elementHandle());
   assert.equal(await button('Preview').evaluate(n=>n===document.activeElement),true,'Preview returns focus to its retained sidebar trigger');
   const host=page.locator('main.system-workflow').first();await host.focus();await page.keyboard.press('Shift+F10');
   await page.getByRole('menuitem',{name:'HIDE SIDEBAR',exact:true}).click();assert.equal(await page.locator('.workbench-sidebar').count(),0);
