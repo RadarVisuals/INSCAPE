@@ -15,6 +15,10 @@ for (const width of [1920, 390]) test(`Reception review Canvases opens the exist
     await page.getByRole('button', { name: 'Canvases', exact: true }).waitFor();
     const before = await page.evaluate(() => receptionFixture.root.getBackupSnapshot());
     await page.getByRole('button', { name: 'Canvases', exact: true }).click();
+    await page.locator('.workbench-overview').waitFor();
+    if (await page.locator('.composition-index').count()) {
+      await page.getByRole('button', { name: 'Grid', exact: true }).click();
+    }
     await page.locator('.workbench-overview-gallery').waitFor();
     assert.equal(await page.locator('[data-reception-editor], .reception-page, .reception-canvases').count(), 0);
     const card = page.getByRole('button', { name: /^Open Workbench/ }).first();
@@ -32,7 +36,7 @@ for (const width of [1920, 390]) test(`Reception review Canvases opens the exist
     assert.equal(await page.locator('.reception-canvases, .canvas-gallery-section').count(), 0);
     await page.screenshot({ path: `${output}/review-reception-${width}.png` });
     await page.getByRole('button', { name: 'Canvases', exact: true }).click();
-    await page.locator('.workbench-overview-gallery').waitFor();
+    await page.locator('.composition-explorer-viewport, .workbench-overview-gallery').waitFor();
     assert.deepEqual(await page.evaluate(() => receptionFixture.root.getBackupSnapshot()), before);
     assert.deepEqual(errors, []);
   } finally { await browser.close(); }

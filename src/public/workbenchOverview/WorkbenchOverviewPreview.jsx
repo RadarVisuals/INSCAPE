@@ -35,7 +35,7 @@ function TextPreview({ item, scale, area }) {
   </div>);
 }
 
-export default function WorkbenchOverviewPreview({ model, surfaceId, name, region = model.area, highlights = [], presenting = false, thumbnail = false, crop = null, viewport = null }) {
+export default function WorkbenchOverviewPreview({ model, surfaceId, name, region = model.area, highlights = [], presenting = false, thumbnail = false, crop = null, viewport = null, camera = null }) {
   const host = useRef(null), [measured, setSize] = useState({ width: 0, height: 0 });
   useLayoutEffect(() => {
     const measure = () => { const { width, height } = host.current.getBoundingClientRect(); setSize({ width, height }); };
@@ -47,7 +47,8 @@ export default function WorkbenchOverviewPreview({ model, surfaceId, name, regio
   const { area, items } = model;
   const covered = thumbnail && size.width > 0 && size.height > 0
     ? projectCroppedMediaRectangle({ left: 0, top: 0, ...size }, area, crop || { x: .5, y: .5, zoom: 1 }) : null;
-  const { scale, left, top } = covered ? { ...covered, scale: covered.width / area.width }
+  const { scale, left, top } = camera ? { scale: camera.scale, left: camera.offset.x + area.left * camera.scale, top: camera.offset.y + area.top * camera.scale }
+    : covered ? { ...covered, scale: covered.width / area.width }
     : fitCanvasRegion(area, region, size, presenting ? 0 : 16);
   // Paint one fitted surface in physical pixels. Image clips share the editor's
   // rounded-edge policy inside it; scaling separate clipped world-size images

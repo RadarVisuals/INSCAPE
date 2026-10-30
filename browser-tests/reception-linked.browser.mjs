@@ -62,6 +62,10 @@ for (const width of [1920, 390]) for (const mode of ['local', 'public']) test(`R
     await page.keyboard.press('Escape'); await dialog.waitFor({ state: 'detached' });
     await page.waitForFunction(() => document.activeElement?.textContent === 'Open canvas');
     await page.getByRole('button', { name: 'Canvases', exact: true }).click();
+    await page.locator('.workbench-overview').waitFor();
+    if (await page.locator('.composition-index').count()) {
+      await page.getByRole('button', { name: 'Grid', exact: true }).click();
+    }
     const main = page.locator('.workbench-overview-gallery');
     await main.waitFor();
     assert.equal(await page.locator('.reception-page, .reception-canvases, .canvas-gallery-section').count(), 0, 'Canvases leaves Reception for its overview');

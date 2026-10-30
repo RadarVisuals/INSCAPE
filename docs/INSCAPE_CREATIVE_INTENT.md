@@ -91,13 +91,13 @@ direction connects those experiences through recognizable identity and deliberat
 presentation. An opened work remains structured and explorable, with its source
 material and story intact. Workbench supplies the creative authoring environment.
 
-The founder will supply a new overall presentation/navigation example; the former
-template reference is retired. The founder wants more visual freedom for
-Reception and has a further navigation idea to discuss from their PC.
-Read the active contract's current focus for the
-boundary: the rejected Free page/template implementation does not reject that
-creative goal, and a new connecting layout has not yet been specified. Articles
-and a separate Desktop retain their declared scope; Desktop remains deferred.
+The founder supplied a dark work-index sketch and the React Bits documentation
+page as a reference for a large interactive work framed by stable navigation.
+They want to assess this through quick, reversible iterations in the real desktop
+application, using real artwork at useful viewing sizes. Read the active
+contract for the exact trial scope. Reception freedom and independent articles
+remain broader goals; this navigation iteration does not implement them. Mobile
+is excluded from this round, and the separate Desktop remains deferred.
 
 Apply this creative intent through the ordinary Workbench and its retained
 independent modules. The [current product map](INSCAPE_ACTIVE_CONTRACT.md#current-product-map-2026-10-19)

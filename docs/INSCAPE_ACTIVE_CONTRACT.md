@@ -22,14 +22,17 @@ with recognizable maker identity through the transition. Here "work index" means
 the overview of compositions, not the existing camera-point Index inside a canvas.
 
 On 30 October the founder retired Hanssen as the overall presentation/navigation
-reference and will supply a new example. Its saved packet is historical material,
-not required reading or a model for future screens. Existing scoped overview and
-control decisions remain in effect until changed; no replacement overall visual
-reference has been selected. References guide hierarchy and relationships without
-imposing every template detail on the maker's content.
-The founder has a further idea for connecting the destinations and will discuss
-it from their PC. Its layout and interactions are not yet specified: retain the
-current routes and do not invent or implement that redesign ahead of discussion.
+reference. Its saved packet remains historical material. The replacement supplied
+in this conversation is the founder's dark work-index sketch and the surrounding
+page/frame relationship at https://pro.reactbits.dev/docs/components/parallax-cards.
+These guide hierarchy and relationships, not the parallax effect or the artwork.
+The founder authorized a reversible implementation trial in the real application:
+a persistent works list beside a large explorable composition, with title above
+and information below. Small simulated chat mockups are not useful acceptance
+evidence for this work; assess real artwork at ordinary desktop browser sizes.
+The founder explicitly excluded mobile from this iteration. Review quickly,
+then adjust or revert from the verified checkpoint; this is not final visual
+approval or permission for a broad rewrite of Reception or publication.
 
 The Free page/header-removal and style-template experiment was rolled back
 because its code growth and visible result were unsatisfactory. The founder
@@ -352,10 +355,18 @@ Desktop and mobile authoring remain deferred. See
 
 ## Presentation and navigation scope (2026-10-30)
 
-The former template-specific direction is retired. The founder's new example
-and connecting navigation idea are pending. The existing Reception, overview
-and viewer remain the implementation baseline; do not infer a new layout,
-fixed navigation position or template geometry from the old reference packet.
+The former template-specific direction is retired. The current desktop trial
+replaces the split list/preview view with a works index and inline composition
+exploration. Desktop collection entries start in this list; the thumbnail grid
+and its existing inspection remain available as a distinct browsing choice.
+Clicking a work changes the viewed composition; hovering or tabbing must not.
+Pan, cursor-anchored zoom, saved camera destinations, whole-canvas return and
+frame expansion are temporary presentation state. Returning to a work within
+the index retains its camera. Only explicit Edit activates the owner Workbench.
+The source renderers and storage/publication boundaries remain authoritative.
+The new reader still uses the existing composition presentation: interactive
+mini apps are represented as previews, not running embedded applications.
+Mobile layout and touch work are explicitly outside this iteration.
 
 - Reception presents the maker, their introduction, links and chosen content.
   Preserve creator branding and the distinction between verified identity and
@@ -3713,8 +3724,7 @@ the initial overview does not introduce a saved curation or layout schema.
 ## Visual language
 
 For Reception, overview, composition presentation and global navigation, follow
-the current focus and presentation scope above. A new overall visual example is
-pending. Preserve the existing surfaces until a scoped replacement is accepted;
+the current focus and desktop trial scope above. Preserve other existing surfaces;
 the rules below govern composition tools and shared controls.
 
 The implementation reference is [INSCAPE design system](design-system/README.md).

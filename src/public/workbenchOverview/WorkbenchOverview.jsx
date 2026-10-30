@@ -1,7 +1,6 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react';
-import { ArrowUpRight } from 'lucide-react';
 import OverviewNavigation from './OverviewNavigation.jsx';
-import WorkbenchOverviewPreview from './WorkbenchOverviewPreview.jsx';
+import CompositionIndex from './CompositionIndex.jsx';
 import { MAX_WORKBENCH_INTRODUCTION } from '../../systemWorkflow/domain/workbenchCollection.js';
 import useDeferredFocusReturn from '../useDeferredFocusReturn.js';
 import '../ownerSystemWorkflow/workflowTactile.css';
@@ -39,14 +38,14 @@ export default function WorkbenchOverview({ items, selected, model, previews, vi
   const [arranging, setArranging] = useState(false);
   const [presentation, setPresentation] = useState(null);
   const [cropRatio, setCropRatio] = useState(1);
-  const list = useRef(null), menuButton = useRef(null), editButton = useRef(null), returnFocus = useRef(null), stage = useRef(null);
+  const list = useRef(null), menuButton = useRef(null), returnFocus = useRef(null);
   const grid = view.layout === 'grid';
   const { restoreFocus } = useDeferredFocusReturn();
   const selectedButton = () => list.current?.querySelector('button[data-previewed="true"]');
   useEffect(() => { selectedButton()?.focus({ preventScroll: true }); }, []);
   const run = action => { try { action(); setError(''); } catch (failure) { setError(failure.message); } };
   const closeForm = () => { setEditing(null); restoreFocus(() => {
-    if (!grid && editing === 'details') return editButton.current;
+    if (!grid && editing === 'details') return list.current?.closest('.composition-index')?.querySelector('.composition-explorer-secondary button');
     return returnFocus.current?.isConnected ? returnFocus.current : selectedButton();
   }); };
   const preview = id => { if (!editing && !presentation) { setError(''); onSelect(id); } };
@@ -57,54 +56,40 @@ export default function WorkbenchOverview({ items, selected, model, previews, vi
     if (kind === 'crop') setCropRatio(bounds ? bounds.width / bounds.height : 1);
     setEditing(kind);
   };
-  const open = (id, trigger) => { preview(id); setPresentation({ origin: grid ? trigger?.closest('.workbench-overview-card') : stage.current?.querySelector('.workbench-overview-preview') }); };
+  const open = (id, trigger) => { preview(id); setPresentation({ origin: trigger?.closest('.workbench-overview-card') }); };
   const closePresentation = () => { setPresentation(null); restoreFocus(selectedButton); };
+  const settings = editing === 'crop' ? <Suspense fallback={<p role="status">Opening crop controls…</p>}><ThumbnailCropForm key={selected.id} selected={selected} model={model} ratio={cropRatio}
+    onCancel={closeForm} onSave={thumbnailCrop => { onSave({ name: selected.name, introduction: selected.introduction, thumbnailCrop }); closeForm(); }} /></Suspense>
+    : editing ? <DetailsForm key={`${selected.id}:${editing}`} creating={editing === 'new'} selected={selected} onCancel={closeForm}
+      onSave={details => { if (editing === 'new') onCreate(details.name); else onSave(details); closeForm(); }} /> : null;
   return <div className="workbench-overview system-workflow__token-scope" data-workflow-material="tactile" data-workflow-finish="flat"
     data-menu-surface={selected.draft.appearance.menuSurfaceId} data-layout={view.layout}>
-    <div className="workbench-overview-browse" inert={presentation ? '' : undefined}>
+    {grid ? <div className="workbench-overview-browse" inert={presentation ? '' : undefined}>
     <OverviewNavigation profile={profile} address={selected.draft.profileAddress} disabled={Boolean(editing)}
       onAbout={onOpenReception} onCanvases={() => restoreFocus(selectedButton)}
       view={view} onViewChange={next => { setError(''); onViewChange(next); }} count={items.length} triggerRef={menuButton}
       arranging={arranging} onArrange={onReorder ? () => setArranging(!arranging) : undefined} cardSize={cardSize} onCardSize={onCardSize}
       onCreate={onCreate ? () => { returnFocus.current = menuButton.current; setEditing('new'); } : undefined} />
     <main className="workbench-overview-main">
-      {grid ? <Suspense fallback={<p role="status">Opening gallery…</p>}><div className="workbench-overview-grid-host" inert={editing ? '' : undefined}>
+      <Suspense fallback={<p role="status">Opening gallery…</p>}><div className="workbench-overview-grid-host" inert={editing ? '' : undefined}>
         <WorkbenchOverviewGrid items={previews} selectedId={selected.id} wrap={view.wrap} hostRef={list}
           cardSize={cardSize} arranging={arranging} onFinishArrange={() => { setArranging(false); restoreFocus(() => menuButton.current); }} onReorder={ids => run(() => onReorder(ids))}
           onOpen={open} onEdit={onEdit ? id => run(() => onEdit(id)) : undefined} onManage={onSave ? manage : undefined} />
-      </div></Suspense> : <section ref={stage} className="workbench-overview-stage" aria-label="Composition preview">
-        <WorkbenchOverviewPreview key={selected.id} model={model} name={selected.name} surfaceId={selected.draft.appearance.surfaceId} />
-        <div className="workbench-overview-caption"><span>{selected.name}</span><span>Preview</span></div>
-      </section>}
+      </div></Suspense>
       <div className="workbench-overview-content">
         <header className="workbench-overview-heading"><h1>Canvases</h1>
           <div><p>{onEdit ? 'Your compositions, all in one place.' : 'Published compositions.'}</p><span>{items.length} {items.length === 1 ? 'Canvas' : 'Canvases'}</span></div>
         </header>
-        {!grid && <nav className="workbench-overview-list" aria-label="Named Workbenches" ref={list}>
-          {items.map((item, index) => <button type="button" key={item.id} data-previewed={selected.id === item.id} disabled={Boolean(editing)}
-            onPointerEnter={event => { if (event.pointerType === 'mouse') preview(item.id); }}
-            onFocus={event => { if (event.currentTarget.matches(':focus-visible')) preview(item.id); }}
-            onClick={event => open(item.id, event.currentTarget)} aria-label={`Open ${item.name}`}>
-            <small>{String(index + 1).padStart(2, '0')}</small><span>{item.name}</span><ArrowUpRight size={18} aria-hidden="true" /></button>)}
-        </nav>}
-        {(!grid || editing) && <section className="workbench-overview-detail" aria-label={editing ? 'Canvas settings' : 'Selected Workbench'}>
-          {editing === 'crop' ? <Suspense fallback={<p role="status">Opening crop controls…</p>}><ThumbnailCropForm key={selected.id} selected={selected} model={model} ratio={cropRatio}
-            onCancel={closeForm} onSave={thumbnailCrop => { onSave({ name: selected.name, introduction: selected.introduction, thumbnailCrop }); closeForm(); }} /></Suspense>
-            : editing ? <DetailsForm key={`${selected.id}:${editing}`} creating={editing === 'new'} selected={selected} onCancel={closeForm}
-            onSave={details => { if (editing === 'new') onCreate(details.name); else onSave(details); closeForm(); }} />
-            : <><div className="workbench-overview-description"><div className="workbench-overview-title"><h2>{selected.name}</h2>{onSave && <button type="button" ref={editButton} onClick={event => manage(selected.id, 'details', event.currentTarget)}>Edit details</button>}</div>
-              {selected.introduction && <p className="workbench-overview-introduction">{selected.introduction}</p>}
-              {model.interactive && <p className="workbench-overview-preview-note">Interactive artwork runs when you open the Workbench.</p>}
-              <div className="workbench-overview-actions"><button type="button" className="workbench-overview-primary" onClick={event => open(selected.id, event.currentTarget)}>View canvas<ArrowUpRight size={16} aria-hidden="true" /></button>
-                {onEdit && <button type="button" onClick={() => run(() => onEdit(selected.id))}>Edit canvas</button>}</div>
-              </div><dl className="workbench-overview-metadata"><div><dt>Contains</dt><dd>{model.contains}</dd></div><div><dt>Canvas</dt><dd>{model.area.width} × {model.area.height}</dd></div></dl>
-            </>}
-        </section>}
-        {error && <p role="alert" className="workbench-overview-error">{error}</p>}
-        {preferenceError && <p role="alert" className="workbench-overview-error">{preferenceError} <button type="button" onClick={onRetryPreferences}>Retry saving</button></p>}
+        {editing && <section className="workbench-overview-detail" aria-label="Canvas settings">{settings}</section>}
       </div>
     </main>
-    </div>
+    </div> : <CompositionIndex items={items} selected={selected} model={model} profile={profile} listRef={list} settings={settings} disabled={Boolean(editing)}
+      onSelect={preview} onEdit={onEdit ? id => run(() => onEdit(id)) : undefined} onOpenReception={onOpenReception}
+      onGrid={() => onViewChange({ ...view, layout: 'grid' })}
+      onDetails={onSave ? event => manage(selected.id, 'details', event.currentTarget) : undefined}
+      onCreate={onCreate ? event => { returnFocus.current = event.currentTarget; setEditing('new'); } : undefined} />}
+    {error && <p role="alert" className="workbench-overview-error">{error}</p>}
+    {preferenceError && <p role="alert" className="workbench-overview-error">{preferenceError} <button type="button" onClick={onRetryPreferences}>Retry saving</button></p>}
     {presentation && <Suspense fallback={<p role="status">Opening canvas…</p>}><CanvasPresentation key={selected.id} selected={selected} model={model}
       origin={presentation.origin} onClose={closePresentation} onEdit={onEdit} /></Suspense>}
   </div>;

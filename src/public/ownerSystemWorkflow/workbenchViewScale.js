@@ -1,8 +1,8 @@
 import { workbenchPaintStyle } from './workbenchPaintGeometry.js';
 export const WORKBENCH_VIEW_SCALES = [.25, .33, .5, .67, .75, .8, .9, 1];
 
-export function zoomWorkbenchCamera(scale, offset, nextScale, anchor) {
-  const next = Math.max(.25, Math.min(2, nextScale));
+export function zoomWorkbenchCamera(scale, offset, nextScale, anchor, limits = { min: .25, max: 2 }) {
+  const next = Math.max(limits.min, Math.min(limits.max, nextScale));
   const ratio = next / scale;
   return { scale: next, offset: { x: anchor.x - (anchor.x - offset.x) * ratio,
     y: anchor.y - (anchor.y - offset.y) * ratio } };

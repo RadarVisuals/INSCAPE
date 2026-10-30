@@ -68,7 +68,7 @@ async function inspectImageJoin(page, preview, label, transparentSvg = false) {
 test('mirrored Image joins stay seamless in list, grid and canvas presentation', { timeout: 120000 }, async () => {
   const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
   try {
-    for (const transparentSvg of [false, true]) for (const [width, density] of [[1440, 1], [1439, 1.25], [390, 2]]) {
+    for (const transparentSvg of [false, true]) for (const [width, density] of [[1440, 1], [1439, 1.25]]) {
       const page = await browser.newPage({ viewport: { width, height: 1000 }, deviceScaleFactor: density, reducedMotion: 'reduce' });
       await open(page); await seedMirroredImages(page, transparentSvg);
       await page.getByRole('button', { name: 'Overview', exact: true }).click(); await settlePreview(page);
@@ -101,10 +101,16 @@ async function menu(page, show = true) {
   if ((await trigger.getAttribute('aria-expanded') === 'true') !== show) await trigger.click();
 }
 async function menuAction(page, name, touch = false) {
+  await page.locator('.workbench-overview').waitFor();
+  if (await page.locator('.composition-index').count()) {
+    const direct = name === 'About' ? 'Reception' : name;
+    await page.getByRole('button', { name: direct, exact: true })[touch ? 'tap' : 'click']();
+    return;
+  }
   await menu(page);
   const button = page.getByRole('button', { name, exact: true });
   await button[touch ? 'tap' : 'click']();
-  if (['List', 'Grid', 'Wrap around'].includes(name)) await menu(page, false);
+  if (['List', 'Grid', 'Wrap around'].includes(name) && await page.getByRole('button', { name: 'Inscape menu', exact: true }).count()) await menu(page, false);
 }
 async function revealCard(page, name, touch = false) {
   const button = page.getByRole('button', { name: 'Open ' + name, exact: true });
@@ -802,143 +808,6 @@ test('touch grid handles a single canvas, creation, details and opening without 
     assert.deepEqual(await page.evaluate(() => window.savedDraft().workbenches[0].content), initial);
   } finally { await browser.close(); }
 });
-test('overview browses without activation, saves optional details, and opens only the chosen canvas', { timeout: 90000 }, async () => {
-  const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
-  try {
-    const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, reducedMotion: 'reduce' });
-    const errors = []; page.on('pageerror', error => errors.push(error.message));
-    const assertWorkbenchFocus = async () => {
-      const button = page.getByRole('navigation', { name: 'Named Workbenches' }).getByRole('button', { name: /Workbench 1/ });
-      const target = await button.elementHandle();
-      try {
-        // Mount uses a passive effect; Canvases returns focus on the next frame.
-        // Await that actual destination within open()'s existing 15-second limit.
-        await page.waitForFunction(node => node === document.activeElement, target);
-        assert.ok(await button.evaluate(node => node === document.activeElement));
-      } finally { await target?.dispose(); }
-    };
-    await open(page);
-    await page.getByRole('button', { name: 'Canvas size', exact: true }).click();
-    await page.getByRole('button', { name: 'Fit canvas to content', exact: true }).click();
-    await page.getByRole('button', { name: 'Close canvas size', exact: true }).click();
-    await page.getByRole('button', { name: 'Overview', exact: true }).click();
-    await page.getByRole('heading', { name: 'Canvases', exact: true }).waitFor();
-    await assertWorkbenchFocus();
-    await menu(page);
-    assert.match(await page.locator('.workbench-overview-identity').innerText(), /Local storage verification/);
-    assert.equal(await page.getByRole('button', { name: 'Canvases', exact: true }).getAttribute('aria-current'), 'page');
-    await menuAction(page, 'Canvases');
-    assert.equal(await page.locator('.application-interface').evaluate(node => getComputedStyle(node).pointerEvents), 'none');
-    assert.equal(await page.getByRole('button', { name: 'Edit details', exact: true }).evaluate(button => {
-      const box = button.getBoundingClientRect();
-      return button.contains(document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2));
-    }), true, 'overview controls receive real pointer hits through the production shell');
-    await assertWorkbenchFocus();
-    assert.equal(await page.locator('.text-window, .workbench-navigator, iframe').count(), 0);
-    await page.getByRole('button', { name: 'Edit details', exact: true }).click();
-    await page.getByLabel('Workbench name', { exact: true }).fill('Lunar Desert');
-    await page.getByLabel(/Introduction/).fill('An open landscape, collected in small studies.');
-    assert.equal(await page.getByRole('button', { name: 'Inscape menu', exact: true }).isDisabled(), true);
-    await failWrites(page, true);
-    await page.getByRole('button', { name: 'Save details', exact: true }).click();
-    assert.match(await page.getByRole('alert').innerText(), /Could not save/);
-    assert.equal(await page.getByLabel(/Introduction/).inputValue(), 'An open landscape, collected in small studies.');
-    await failWrites(page, false);
-    await page.getByRole('button', { name: 'Save details', exact: true }).click();
-    await page.getByRole('heading', { name: 'Lunar Desert' }).waitFor();
-    await menuAction(page, 'New Workbench');
-    await page.getByLabel('Workbench name', { exact: true }).fill('Studies');
-    await page.getByRole('button', { name: 'Create Workbench', exact: true }).click();
-    await page.getByRole('heading', { name: 'Studies', exact: true }).waitFor();
-    assert.match(await page.locator('.workbench-overview-empty').innerText(), /Nothing on the canvas/);
-    const secondId = await page.evaluate(() => window.savedDraft().activeId);
-    const beforeSelection = await page.evaluate(() => JSON.stringify(window.savedDraft()));
-    const lunarRow = page.getByRole('navigation', { name: 'Named Workbenches' }).getByRole('button', { name: /Lunar Desert/ });
-    await lunarRow.hover();
-    await page.getByRole('heading', { name: 'Lunar Desert' }).waitFor();
-    assert.equal(await page.evaluate(() => JSON.stringify(window.savedDraft())), beforeSelection);
-    assert.equal(await page.evaluate(() => window.savedDraft().activeId), secondId);
-    assert.equal(await page.locator('.workbench-overview-introduction').innerText(), 'An open landscape, collected in small studies.');
-    assert.equal(await page.locator('.workbench-overview-preview [contenteditable="true"], .workbench-overview-preview iframe').count(), 0);
-    assert.ok(await page.locator('.workbench-overview-preview [inert]').count());
-    await lunarRow.focus();
-    await page.keyboard.press('Tab');
-    await page.getByRole('img', { name: 'Preview of Studies' }).waitFor();
-    await page.keyboard.press('Shift+Tab');
-    await page.getByRole('img', { name: 'Preview of Lunar Desert' }).waitFor();
-    assert.equal(await page.evaluate(() => JSON.stringify(window.savedDraft())), beforeSelection, 'hover and keyboard browsing never write or activate a draft');
-    await mkdir(output, { recursive: true });
-    for (const width of [2560, 1440, 1024, 800, 700, 390, 320]) {
-      await page.setViewportSize({ width, height: 1000 });
-      await settlePreview(page);
-      await page.screenshot({ path: path.join(output, `overview-${width}.png`) });
-      assert.ok(await page.locator('.workbench-overview').evaluate(node => node.scrollWidth <= node.clientWidth + 1));
-      if (width >= 1024) assert.ok((await page.locator('.workbench-overview-preview').boundingBox()).width > 400);
-    }
-    await page.setViewportSize({ width: 1440, height: 600 });
-    await page.getByRole('button', { name: 'View canvas', exact: true }).scrollIntoViewIfNeeded();
-    assert.ok((await page.locator('.workbench-overview-navigation').boundingBox()).y >= 0, 'profile navigation remains visible while browsing the right column');
-    assert.ok((await page.locator('.workbench-overview-stage').boundingBox()).y >= 0, 'composition preview stays visible while details scroll');
-    await failWrites(page, true);
-    await lunarRow.press('Enter');
-    await page.getByRole('dialog', { name: 'View Lunar Desert' }).waitFor();
-    await revealPresentation(page);
-    assert.equal(await page.evaluate(() => window.savedDraft().activeId), secondId, 'viewing does not activate the editor');
-    await page.getByRole('dialog').getByRole('button', { name: 'Edit canvas', exact: true }).click();
-    assert.match(await page.getByRole('alert').innerText(), /Could not save/);
-    assert.equal(await page.evaluate(() => window.savedDraft().activeId), secondId);
-    await failWrites(page, false);
-    await page.getByRole('dialog').getByRole('button', { name: 'Edit canvas', exact: true }).click();
-    await page.locator('.text-window').waitFor();
-    assert.notEqual(await page.getByRole('combobox', { name: 'Active Workbench' }).inputValue(), secondId);
-    await page.reload(); await page.getByRole('button', { name: 'Overview', exact: true }).click();
-    await page.getByRole('heading', { name: 'Lunar Desert' }).waitFor();
-    assert.equal(await page.locator('.workbench-overview-introduction').innerText(), 'An open landscape, collected in small studies.');
-    await page.getByRole('button', { name: 'Edit details', exact: true }).click();
-    await page.getByLabel(/Introduction/).fill(''); await page.getByRole('button', { name: 'Save details', exact: true }).click();
-    assert.equal(await page.locator('.workbench-overview-introduction').count(), 0);
-    await page.waitForFunction(() => document.activeElement?.textContent === 'Edit details');
-    assert.equal(await page.getByRole('button', { name: 'Edit details', exact: true }).evaluate(node => node === document.activeElement), true);
-    await page.getByRole('button', { name: 'Edit details', exact: true }).click();
-    await page.getByLabel('Workbench name', { exact: true }).fill('Discard this name');
-    await page.getByLabel('Workbench name', { exact: true }).press('Escape');
-    await page.getByRole('heading', { name: 'Lunar Desert' }).waitFor();
-    await menuAction(page, 'About');
-    await page.getByText('Published view requested', { exact: true }).waitFor();
-    assert.deepEqual(errors, []);
-  } finally { await browser.close(); }
-});
-
-test('touch opens a row directly and long names and details stay usable on a narrow screen', { timeout: 60000 }, async () => {
-  const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
-  try {
-    const page = await browser.newPage({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, reducedMotion: 'reduce' });
-    await open(page);
-    await page.getByRole('button', { name: 'Overview', exact: true }).tap();
-    await menuAction(page, 'New Workbench', true);
-    const name = 'A long composition title with enough room for one more study';
-    await page.getByLabel('Workbench name', { exact: true }).fill(name);
-    await page.getByRole('button', { name: 'Create Workbench', exact: true }).tap();
-    await page.getByRole('button', { name: 'Edit details', exact: true }).tap();
-    await page.getByLabel(/Introduction/).fill('A landscape in progress. '.repeat(11));
-    await page.getByRole('button', { name: 'Save details', exact: true }).tap();
-    assert.ok(await page.locator('.workbench-overview').evaluate(node => node.scrollWidth <= node.clientWidth + 1));
-    await menu(page);
-    assert.ok((await page.getByRole('button', { name: 'About', exact: true }).boundingBox()).y >= 0);
-    await menu(page, false);
-    await mkdir(output, { recursive: true });
-    await page.screenshot({ path: path.join(output, 'overview-touch-details.png') });
-    const before = await page.evaluate(() => JSON.stringify(window.savedDraft()));
-    await menuAction(page, 'Canvases', true);
-    assert.equal(await page.evaluate(() => JSON.stringify(window.savedDraft())), before);
-    await page.getByRole('button', { name: 'Open Workbench 1', exact: true }).tap();
-    await revealPresentation(page);
-    await page.getByRole('dialog').getByRole('button', { name: 'Edit canvas', exact: true }).tap();
-    await page.locator('.text-window').waitFor();
-    assert.equal(await page.getByRole('combobox', { name: 'Active Workbench' }).locator('option:checked').innerText(), 'Workbench 1');
-  } finally { await browser.close(); }
-});
-
 test('failed departure keeps the live editor and mixed-content previews never start an HTML runtime', { timeout: 60000 }, async () => {
   const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
   try {

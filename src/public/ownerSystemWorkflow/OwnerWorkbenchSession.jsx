@@ -25,7 +25,7 @@ export default function OwnerWorkbenchSession({ component: Session, ...props }) 
 function LocalWorkbenchSession({ component: Session, ...props }) {
   const [overview, setOverview] = useState(props.canvasOverviewRequested === true);
   const [reception, setReception] = useState(false);
-  const [overviewView, setOverviewView] = useState({ layout: props.canvasOverviewRequested ? 'grid' : 'list', wrap: true });
+  const [overviewView, setOverviewView] = useState(() => ({ layout: props.canvasOverviewRequested && innerWidth < 900 ? 'grid' : 'list', wrap: true }));
   useLayoutEffect(() => {
     setOverview(props.canvasOverviewRequested === true);
     setReception(false);

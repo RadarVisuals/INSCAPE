@@ -15,7 +15,7 @@ export default function PublishedCanvasGallery({ document, onAbout }) {
   const previews = useMemo(() => publishedPresentationSnapshot(document).entries.map(entry => ({ ...entry,
     model: workbenchOverviewModel(entry.draft) })), [document]);
   const [selectedId, select] = useState(previews[0].id);
-  const [view, setView] = useState({ layout: 'grid', wrap: true });
+  const [view, setView] = useState(() => ({ layout: innerWidth >= 900 ? 'list' : 'grid', wrap: true }));
   const [cardSize, setCardSize] = useState(2);
   const selected = previews.find(item => item.id === selectedId) || previews[0];
   return <WorkbenchOverview items={previews} previews={previews} selected={selected} model={selected.model}

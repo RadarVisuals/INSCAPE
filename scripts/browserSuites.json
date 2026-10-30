@@ -3,6 +3,12 @@
   "notes": "Classification is not a passing test result. Release suites run by default; every other suite remains explicitly selectable. production-startup is separately required after the build by verifyRelease.mjs.",
   "suites": [
     {
+      "name": "composition-index",
+      "category": "release",
+      "rationale": "Desktop index camera gestures, per-composition navigation, read-only viewing, owner activation and persistence failures with actual artwork.",
+      "prerequisites": ["Host: runner_vite.", "INSCAPE_TEST_ORIGIN={origin}"]
+    },
+    {
       "name": "publication-local",
       "category": "release",
       "rationale": "Eight canvases with overlapping Library/reference records prepare and upload from the local origin through the hosted publication service without an on-chain write."
