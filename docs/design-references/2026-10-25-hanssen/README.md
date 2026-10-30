@@ -1,16 +1,13 @@
 # Hanssen reference for Inscape
 
-Accepted by the founder on 25 October 2026 as the primary reference for
-Inscape's overall presentation and navigation. Refer to this direction as
-**the Hanssen reference**. The founder identified it as the example that makes
-the whole experience concrete: Reception, browsing compositions, opening a
-work, articles and eventually Desktop should feel like connected parts of one
-place.
+Status: historical reference, retired by the founder on 30 October 2026.
 
-The [active contract](../../INSCAPE_ACTIVE_CONTRACT.md#hanssen-presentation-and-navigation-direction-2026-10-25)
-owns the accepted direction. This packet preserves the examples and their
-intended meaning. The previous founder screenshot-and-notes packet has been
-removed at the founder's request; Hanssen replaces it as the visual reference.
+This packet records the examples and interpretation from 25 October, including
+later scoped overview/viewer studies. It is not required reading or current
+design authority. The founder will supply a new overall presentation/navigation
+example. The [active contract](../../INSCAPE_ACTIVE_CONTRACT.md#presentation-and-navigation-scope-2026-10-30)
+owns current scope and the retained behavior of existing surfaces. The dated
+instructions below record that earlier work; they do not authorize new screens.
 
 ## Source pages
 
@@ -166,8 +163,8 @@ The composition remains a live, structured work. Previews do not replace its
 editable content, source identity or metadata. Keep one active editor, reliable
 local saves, scoped publication and existing identity/owner boundaries.
 Established interface fonts and composition-tool controls continue to apply
-until their own scoped design changes are agreed. The overall presentation and
-navigation should follow Hanssen when those views are implemented.
+until their own scoped design changes are agreed. The former requirement to
+follow this template for future presentation and navigation is retired.
 
 ## Saved screenshots
 
@@ -182,6 +179,6 @@ not production assets for Inscape.
 | [About and Reception](screenshots/02-about-reception.jpg) | Identity visual, introduction, links and personal sections. |
 | [Opened work detail supplied by the founder](screenshots/03-work-detail-founder.png) | Title, description, metadata and content hierarchy highlighted by the founder. |
 
-Inspect these images and the live page interactions before implementing a
-related screen. Keyboard, touch, narrow layouts and reduced-motion behavior
-need their own implementation checks; the captures show the desktop reference.
+These captures preserve the historical desktop reference. They do not prescribe
+future screens. Keyboard, touch, narrow layouts and reduced-motion behavior
+need their own implementation checks when changing the application.

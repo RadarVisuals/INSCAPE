@@ -200,7 +200,8 @@ test('keyboard docking keeps text selection, color history and the three indepen
     await mountToolDockFixture(page, { writing: true }); await hideModuleTools(page);
     await page.getByRole('button', { name: 'Select Mist', exact: true }).click();
     const text = page.getByRole('textbox', { name: 'Article text', exact: true });
-    await text.focus(); await text.press('Control+Home'); await text.press('Control+Shift+ArrowRight');
+    await text.focus(); await text.press('Control+Home');
+    for (let i = 0; i < 'Native '.length; i++) await text.press('Shift+ArrowRight');
     await page.waitForFunction(() => window.getSelection()?.toString() === 'Native ');
     await tab(page, 'Color').focus(); await tab(page, 'Color').press('Enter');
     // Wait for the editor's selection transaction before docking its controls.

@@ -58,7 +58,7 @@ test('Library and content tools work beside the modal with drop targeting and wi
       await page.mouse.move(grip.x + 70, grip.y + 15); await page.mouse.down(); await page.mouse.move(90, 40, { steps: 8 }); await page.mouse.up();
       const box = await panel.boundingBox(); assert.ok(box.x + box.width < modal.x && box.y < modal.y, title + ' is outside both modal edges');
     };
-    for (const [trigger, title, image] of [['Cell color', 'Color', true], ['Artwork information', 'Artwork information', true], ['Edit text', 'Settings', false]]) {
+    for (const [trigger, title, image] of [['Cell color', 'Color', true], ['Artwork information', 'Artwork information', true], ['Edit text', 'Text', false]]) {
       await page.locator(image ? '[data-region-id="region:right"]' : '[data-region-id]').first().press('Enter');
       await page.getByRole('button', { name: trigger, exact: true }).click(); await moveOutside(title);
       await page.getByRole('button', { name: `Close ${title}`, exact: true }).click();

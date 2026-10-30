@@ -4,11 +4,11 @@ Start with the [current product map](INSCAPE_ACTIVE_CONTRACT.md#current-product-
 and the relevant detailed contract section. This file defines verification
 procedures, not product scope or a record that a particular run passed.
 
-The shared [audit checkpoint and verification evidence](audits/2026-10-19/README.md)
-records the current outcome and remaining boundaries. The original long audit
-remains in the founder's local workspace; a GitHub checkout uses the portable
-summary and logs here. Product decisions remain in the active contract.
-Layers/dock implementation waits until the current audit agenda is finished.
+The shared [19 October audit checkpoint](audits/2026-10-19/README.md) records that
+round's outcome and boundaries. Use reports for the actual source version and
+current CI for today's result; the [engineering map](INSCAPE_ENGINEERING_MAP.md)
+locates maintained verification entry points. Product scope and subsequent
+Layers/tool migrations belong to the active contract, not this historical audit.
 
 Use the Node version required by `package.json` and the existing lockfile. A local
 Chrome, Edge or Chromium installation is required for browser checks. Set
@@ -16,10 +16,11 @@ Chrome, Edge or Chromium installation is required for browser checks. Set
 the Playwright cache and common Windows, macOS and Linux installation paths.
 No browser download or dependency installation is performed by the runner.
 
-`npm run verify` runs the complete Node suite, the maintained browser selection,
-LUKSO standards checks, the design-system inventory check, the production build
-and its existing budgets, then the built-app startup browser check. Any failure, cancelled browser test or skipped browser
-test fails the command. This is a local verification command, not a deployment.
+`npm run verify` runs the browser catalog check, lint, typecheck, complete Node
+suite, LUKSO standards checks, design-system inventory check, maintained browser
+selection, production build/budgets and built-app startup check. The exact plan
+lives in `scripts/verificationPlan.mjs`. Failure, cancellation or a skipped test
+fails verification. This command does not deploy.
 
 The runner stores each step's log and `verification.json` beneath a unique
 `.verification/run-*` directory. Set `INSCAPE_VERIFY_REPORT` to choose a new,
@@ -47,10 +48,15 @@ The passing report and matching artifact hashes supply that evidence. A dirty lo
 tree retains its observed HEAD only as metadata, and uses `development` in the support
 UI rather than claiming that its build is the clean commit.
 
-`.github/workflows/verify.yml` runs the same command on pushes, pull requests and
-manual dispatch. It uses read-only repository access, fixed action SHAs and no
-application secrets. Failed runs retain available logs; only successful runs retain
-the build artifact. No deployment is configured here. On 19 October 2026, the
+`.github/workflows/verify.yml` runs the same verification plan on pushes, pull
+requests and manual dispatch, split into source, production and four browser
+shards. Individual jobs provide partial evidence, never release acceptance.
+The aggregate job requires all jobs, complete suite coverage, matching source
+identity and the exact candidate build bytes. Failed runs retain diagnostics,
+including candidate bytes when available; only joint acceptance produces a
+release-validated build artifact. It uses read-only repository access, fixed
+action SHAs and no application secrets. No deployment is configured here.
+On 19 October 2026, the
 `main` branch was configured to require `Source, tests and production build`
 from the GitHub Actions app (15368), with up-to-date source and enforcement for
 administrators. The setting was read back through GitHub's API. A fork or another
@@ -79,11 +85,12 @@ Logs, per-suite screenshots and `results.json` go into a unique directory beneat
 directory. Some older suites still write their screenshots to their existing
 fixture directories; the per-suite log remains authoritative for the outcome.
 
-The maintained selection covers the audit's 32 suites plus the complete Keeper
-editor flow, entry contrast and Image recovery through the complete owner runtime. It uses disposable browser
-storage and mocked external services. It does not run all historical browser
-files, prove a live wallet/OAuth integration, upload content or approve a release
-deployment. The source array is the exact current selection. Wallet startup tests
+The maintained selection and each suite's disposition are owned by
+`scripts/browserSuiteCatalog.mjs` and its catalog data. Run
+`npm run test:browser:catalog` to check coverage; do not infer it from a dated
+suite count. Tests use disposable browser storage and mocked external services.
+They do not prove a live wallet/OAuth integration, upload content or approve a
+release deployment. Wallet startup tests
 cover fresh/disconnected visits, persisted reconnect hints, malformed storage and
 retry after setup failure, using a simulated connector.
 

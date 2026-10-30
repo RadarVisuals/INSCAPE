@@ -21,7 +21,7 @@ test('Reception Use selected image preserves the same expanded image as drag', a
       const url = new URL(route.request().url());
       if (url.origin === origin) return route.continue();
       if (url.hostname === 'raw.githubusercontent.com' && url.pathname.includes('/public/assets/'))
-        return route.fulfill({ response: await route.fetch({ url: origin + url.pathname.split('/public')[1] }) });
+        return route.fulfill({ path: 'public/' + url.pathname.split('/public/')[1] });
       return route.abort();
     });
     await page.goto(`${origin}/browser-tests/reception-editor-fixture.html?sample&image-choices&session=${crypto.randomUUID()}`);

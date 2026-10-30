@@ -183,7 +183,8 @@ test('Settings holds layout while dedicated Text tools and persistent Color foll
     await page.screenshot({ path: `${output}/settings-and-persistent-color-1920.png` });
     await button(page, 'Close Color').focus();
     await button(page, 'Close Color').press('Enter');
-    await page.waitForFunction(id => document.activeElement?.dataset.regionId === id, first);
+    await page.waitForFunction(() => document.activeElement?.getAttribute('aria-label') === 'Cell color');
+    assert.equal(await page.locator('[data-selected]').getAttribute('data-region-id'), first);
     await page.getByRole('main', { name: 'Reception editor', exact: true }).click({ position: { x: 3, y: 3 } });
     assert.equal(await page.locator('[data-selected]').count(), 0);
     assert.equal(await settings.isVisible(), true, 'Deselecting keeps Settings available');

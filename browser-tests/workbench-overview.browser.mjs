@@ -897,6 +897,7 @@ test('overview browses without activation, saves optional details, and opens onl
     await page.getByRole('button', { name: 'Edit details', exact: true }).click();
     await page.getByLabel(/Introduction/).fill(''); await page.getByRole('button', { name: 'Save details', exact: true }).click();
     assert.equal(await page.locator('.workbench-overview-introduction').count(), 0);
+    await page.waitForFunction(() => document.activeElement?.textContent === 'Edit details');
     assert.equal(await page.getByRole('button', { name: 'Edit details', exact: true }).evaluate(node => node === document.activeElement), true);
     await page.getByRole('button', { name: 'Edit details', exact: true }).click();
     await page.getByLabel('Workbench name', { exact: true }).fill('Discard this name');

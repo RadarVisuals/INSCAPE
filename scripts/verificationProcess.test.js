@@ -149,7 +149,19 @@ test('nested Node test workers do not inherit a blocking parent handshake', { ti
 
 test('timeout termination failure never passes even when direct-child fallback exits', { timeout: 30_000 }, async () => {
   const result = await run({ args: ['-e', 'setInterval(()=>{},1000)'], timeoutMs: 500,
-    createTree: options => ({ ...createOwnedProcessTree(options), forceTerminate: async () => { throw Error('simulated termination failure'); } }) });
+    createTree: options => {
+      const tree = createOwnedProcessTree(options);
+      let gracefulWait = process.platform !== 'win32';
+      return { ...tree,
+        // POSIX first attempts a graceful stop. Simulate an owned process that
+        // still needs forced termination so both platforms exercise that path.
+        waitForExit: async (...args) => {
+          if (gracefulWait) { gracefulWait = false; return [{ pid: options.rootPid }]; }
+          return tree.waitForExit(...args);
+        },
+        forceTerminate: async () => { throw Error('simulated termination failure'); },
+      };
+    } });
   assert.equal(result.timeout, true); assert.equal(result.cleanup.status, 'unknown');
   assert.ok(result.cleanup.errors.includes('simulated termination failure'));
   assert.throws(() => requireSuccessfulCommand(result, 'failed termination'));

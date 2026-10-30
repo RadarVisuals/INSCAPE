@@ -3,6 +3,7 @@ import { ArrowUpRight } from 'lucide-react';
 import OverviewNavigation from './OverviewNavigation.jsx';
 import WorkbenchOverviewPreview from './WorkbenchOverviewPreview.jsx';
 import { MAX_WORKBENCH_INTRODUCTION } from '../../systemWorkflow/domain/workbenchCollection.js';
+import useDeferredFocusReturn from '../useDeferredFocusReturn.js';
 import '../ownerSystemWorkflow/workflowTactile.css';
 import '../ownerSystemWorkflow/workflowFlat.css';
 import './workbenchOverview.css';
@@ -40,13 +41,13 @@ export default function WorkbenchOverview({ items, selected, model, previews, vi
   const [cropRatio, setCropRatio] = useState(1);
   const list = useRef(null), menuButton = useRef(null), editButton = useRef(null), returnFocus = useRef(null), stage = useRef(null);
   const grid = view.layout === 'grid';
-  const focusSelected = options => list.current?.querySelector('button[data-previewed="true"]')?.focus(options);
-  useEffect(() => { focusSelected({ preventScroll: true }); }, []);
+  const { restoreFocus } = useDeferredFocusReturn();
+  const selectedButton = () => list.current?.querySelector('button[data-previewed="true"]');
+  useEffect(() => { selectedButton()?.focus({ preventScroll: true }); }, []);
   const run = action => { try { action(); setError(''); } catch (failure) { setError(failure.message); } };
-  const closeForm = () => { setEditing(null); requestAnimationFrame(() => {
-    if (!grid && editing === 'details') editButton.current?.focus({ preventScroll: true });
-    else if (returnFocus.current?.isConnected) returnFocus.current.focus({ preventScroll: true });
-    else focusSelected({ preventScroll: true });
+  const closeForm = () => { setEditing(null); restoreFocus(() => {
+    if (!grid && editing === 'details') return editButton.current;
+    return returnFocus.current?.isConnected ? returnFocus.current : selectedButton();
   }); };
   const preview = id => { if (!editing && !presentation) { setError(''); onSelect(id); } };
   const manage = (id, kind, trigger) => {
@@ -57,19 +58,19 @@ export default function WorkbenchOverview({ items, selected, model, previews, vi
     setEditing(kind);
   };
   const open = (id, trigger) => { preview(id); setPresentation({ origin: grid ? trigger?.closest('.workbench-overview-card') : stage.current?.querySelector('.workbench-overview-preview') }); };
-  const closePresentation = () => { setPresentation(null); requestAnimationFrame(() => focusSelected({ preventScroll: true })); };
+  const closePresentation = () => { setPresentation(null); restoreFocus(selectedButton); };
   return <div className="workbench-overview system-workflow__token-scope" data-workflow-material="tactile" data-workflow-finish="flat"
     data-menu-surface={selected.draft.appearance.menuSurfaceId} data-layout={view.layout}>
     <div className="workbench-overview-browse" inert={presentation ? '' : undefined}>
     <OverviewNavigation profile={profile} address={selected.draft.profileAddress} disabled={Boolean(editing)}
-      onAbout={onOpenReception} onCanvases={() => requestAnimationFrame(() => focusSelected({ preventScroll: true }))}
+      onAbout={onOpenReception} onCanvases={() => restoreFocus(selectedButton)}
       view={view} onViewChange={next => { setError(''); onViewChange(next); }} count={items.length} triggerRef={menuButton}
       arranging={arranging} onArrange={onReorder ? () => setArranging(!arranging) : undefined} cardSize={cardSize} onCardSize={onCardSize}
       onCreate={onCreate ? () => { returnFocus.current = menuButton.current; setEditing('new'); } : undefined} />
     <main className="workbench-overview-main">
       {grid ? <Suspense fallback={<p role="status">Opening gallery…</p>}><div className="workbench-overview-grid-host" inert={editing ? '' : undefined}>
         <WorkbenchOverviewGrid items={previews} selectedId={selected.id} wrap={view.wrap} hostRef={list}
-          cardSize={cardSize} arranging={arranging} onFinishArrange={() => { setArranging(false); requestAnimationFrame(() => menuButton.current?.focus()); }} onReorder={ids => run(() => onReorder(ids))}
+          cardSize={cardSize} arranging={arranging} onFinishArrange={() => { setArranging(false); restoreFocus(() => menuButton.current); }} onReorder={ids => run(() => onReorder(ids))}
           onOpen={open} onEdit={onEdit ? id => run(() => onEdit(id)) : undefined} onManage={onSave ? manage : undefined} />
       </div></Suspense> : <section ref={stage} className="workbench-overview-stage" aria-label="Composition preview">
         <WorkbenchOverviewPreview key={selected.id} model={model} name={selected.name} surfaceId={selected.draft.appearance.surfaceId} />

@@ -4,6 +4,7 @@ import { mkdir } from 'node:fs/promises';
 import { chromium } from 'playwright-core';
 import { browserExecutable } from '../scripts/browserEnvironment.mjs';
 import { separateLayers } from './fixtures/shared-tools.mjs';
+import { settlePlaywrightAnimationFrames } from './playwright-browser-adapter.mjs';
 const origin = process.env.INSCAPE_TEST_ORIGIN || 'http://127.0.0.1:24970';
 const output = process.env.INSCAPE_BROWSER_OUTPUT || '.browser-test-runtime/workbench-shared-tools';
 const saved = page => page.evaluate(() => window.savedDraft());
@@ -90,12 +91,20 @@ test('Text Color preserves words, caret, mixed marks and typing history; documen
     const errors = []; page.on('pageerror', error => errors.push(error.message));
     await fixture(page, { writing: true }); await mkdir(output, { recursive: true });
     const panel = page.getByRole('region', { name: 'Transform and Color', exact: true });
+    // The fixture's Eyes layer covers the text caret; hide it through the UI
+    // so returning to the article exercises a real pointer interaction.
+    await page.getByRole('button', { name: 'Hide Eyes in editor', exact: true }).click();
     await page.getByRole('button', { name: 'Select Mist', exact: true }).click();
     const text = page.getByRole('textbox', { name: 'Article text', exact: true });
     await text.focus(); await text.press('Control+End'); await text.press('!');
-    await text.press('Control+Home'); await text.press('Control+Shift+ArrowRight');
+    await settlePlaywrightAnimationFrames(page);
+    await text.press('Control+Home');
+    for (let i = 0; i < 'Native '.length; i++) await text.press('Shift+ArrowRight');
+    await page.waitForFunction(() => getSelection()?.toString() === 'Native ');
+    assert.equal(await page.evaluate(() => window.getSelection()?.toString()), 'Native ');
     await panel.getByRole('tab', { name: 'Color', exact: true }).click();
     await panel.getByRole('combobox', { name: 'Color target', exact: true }).waitFor();
+    await page.waitForFunction(() => document.querySelector('[aria-label="Color target"]')?.selectedOptions[0]?.textContent === 'Selected text');
     assert.equal(await panel.getByRole('combobox', { name: 'Color target', exact: true }).inputValue(), 'body');
     await panel.getByRole('textbox', { name: 'Color colour', exact: true }).fill('#ff0000');
     await panel.getByRole('textbox', { name: 'Color colour', exact: true }).press('Tab');
@@ -117,10 +126,21 @@ test('Text Color preserves words, caret, mixed marks and typing history; documen
     await text.focus(); await text.press('Control+z');
     assert.equal((await saved(page)).texts[0].article.content.content[0].content.some(item => item.marks?.some(mark => mark.attrs?.color)), false, 'one native Undo restores the original mixed range');
     await text.press('Control+z'); assert.equal(await text.innerText(), 'Native Text deletion', 'preview restoration preserves earlier typing history');
+    await settlePlaywrightAnimationFrames(page);
     await text.press('Control+End');
+    await page.waitForFunction(() => {
+      const selection = getSelection(), editor = document.querySelector('[aria-label="Article text"]');
+      return editor?.contains(selection?.anchorNode) && selection.isCollapsed
+        && selection.anchorOffset === 'Native Text deletion'.length;
+    });
+    await page.waitForFunction(() => document.querySelector('[aria-label="Color target"]')?.selectedOptions[0]?.textContent === 'Text at cursor');
+    const caret = await text.evaluate(() => getSelection().getRangeAt(0).getBoundingClientRect().toJSON());
     await panel.getByRole('textbox', { name: 'Color colour', exact: true }).fill('#336699');
     await panel.getByRole('textbox', { name: 'Color colour', exact: true }).press('Tab');
-    await text.focus(); await text.press('!');
+    // Resume at the same visible caret as a user would. Locator.press on an
+    // unfocused contenteditable resets selection before sending the key.
+    await page.mouse.click(caret.right + 1, caret.top + caret.height / 2);
+    await page.keyboard.press('!');
     const last = (await saved(page)).texts[0].article.content.content[0].content.at(-1);
     assert.equal(last.text, '!'); assert.equal(last.marks[0].attrs.color, '#336699');
     await panel.getByRole('combobox', { name: 'Color target', exact: true }).selectOption('title');

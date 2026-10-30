@@ -4,7 +4,7 @@ Status: required product-meaning context
 
 Established: 2026-09-02
 Clarified with the founder: 2026-09-06
-Scope aligned with the active contract: 2026-10-25
+Scope aligned with the active contract: 2026-10-30
 
 Authority: this document explains why INSCAPE exists and how its concepts must
 be interpreted. It is not an implementation roadmap and does not authorize
@@ -85,16 +85,19 @@ away the creator, collection, token scope, provenance, or story of its parts.
 
 ## Current product focus
 
-The founder chose the [Hanssen reference](design-references/2026-10-25-hanssen/README.md)
-on 25 October as the primary presentation and navigation direction. Its About
-page informs Reception; Work informs the composition overview and opening a
-composition with its metadata. A compact top-left navigation connects identity,
-About, Canvases, Articles or Blog, and eventually a separate Desktop. This makes
-the wider creative environment feel connected while each destination serves its
-own purpose. Desktop remains deferred. The founder requested removal of the
-earlier screenshot-and-notes reference. Read the active contract's dated
-decision for scope; the presentation direction preserves structured, explorable
-compositions and their source material.
+Reception introduces the maker and their artistic world; the separate work
+overview offers a clear route into their compositions. The founder's editorial
+direction connects those experiences through recognizable identity and deliberate
+presentation. An opened work remains structured and explorable, with its source
+material and story intact. Workbench supplies the creative authoring environment.
+
+The founder will supply a new overall presentation/navigation example; the former
+template reference is retired. The founder wants more visual freedom for
+Reception and has a further navigation idea to discuss from their PC.
+Read the active contract's current focus for the
+boundary: the rejected Free page/template implementation does not reject that
+creative goal, and a new connecting layout has not yet been specified. Articles
+and a separate Desktop retain their declared scope; Desktop remains deferred.
 
 Apply this creative intent through the ordinary Workbench and its retained
 independent modules. The [current product map](INSCAPE_ACTIVE_CONTRACT.md#current-product-map-2026-10-19)
@@ -112,12 +115,14 @@ Display is no longer the immediate authoring priority. The founder parked it
 on 16 October while reconsidering its role beside the Workbench. On 19 October
 they explained that choosing between Display and solo Workbench Images had
 become confusing and blocked their composition workflow, while layering was
-needed. The chosen future direction uses the existing design-system workspace:
+needed. The chosen direction uses the existing design-system workspace:
 artwork layers on the Workbench, removal through Layers and shared tools such
 as Color, docked together with the option to detach, rejoin or hide panels.
-This is accepted direction, not completed production behavior or the current
-audit work item. Finish the existing audit agenda before starting this redesign. Display may
-return, but its role is undecided. Its Stage, Grids and Layers remain the
+The active contract records the subsequent bounded production migrations;
+the earlier audit-first sequencing is superseded. Check the current code and
+affected behavior for each further step rather than assuming the entire
+reference is implemented. Display may return, but its role is undecided.
+Its Stage, Grids and Layers remain the
 composition experiment described below, not a required route for every artist.
 
 ## Product hierarchy

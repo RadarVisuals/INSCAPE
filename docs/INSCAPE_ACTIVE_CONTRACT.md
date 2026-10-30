@@ -3,13 +3,116 @@
 Status: sole active product-direction document
 Established: 2026-08-28
 Product clarification: 2026-09-06 — public Workbench and independent modules
-Rollback baseline before the documentation reset: `64458ac`
+Current focus clarified: 2026-10-30 — personal presentation, work index and incremental changes
 
-Preview checkpoint authorization (2026-10-26): the founder requested committing
-and pushing the current implementation to the existing PR #5 preview branch.
-Earlier dated "local/uncommitted" and "no deployment" notes describe those
-individual implementation sessions. This authorization does not merge into
-main or authorize profile publication, uploads or wallet actions.
+This contract owns accepted product decisions. `INSCAPE_CREATIVE_INTENT.md`
+explains their artistic purpose; `AGENTS.md` owns engineering/change discipline.
+Implementation maps and dated audit reports record structure and evidence.
+Read the current focus and product map first, then the affected detailed
+section. Section dates identify decisions, not today's release status. Execution
+history belongs in dated audits; check the current checkout and CI for status.
+
+## Current focus and change boundaries (2026-10-30)
+
+Reception introduces the person and their artistic world. The separate canvas
+overview presents their work; opening a composition gives that work room to live
+and be explored. Workbench remains the creative editing environment. The founder
+wants Reception and the work index to feel like a connected editorial whole,
+with recognizable maker identity through the transition. Here "work index" means
+the overview of compositions, not the existing camera-point Index inside a canvas.
+
+On 30 October the founder retired Hanssen as the overall presentation/navigation
+reference and will supply a new example. Its saved packet is historical material,
+not required reading or a model for future screens. Existing scoped overview and
+control decisions remain in effect until changed; no replacement overall visual
+reference has been selected. References guide hierarchy and relationships without
+imposing every template detail on the maker's content.
+The founder has a further idea for connecting the destinations and will discuss
+it from their PC. Its layout and interactions are not yet specified: retain the
+current routes and do not invent or implement that redesign ahead of discussion.
+
+The Free page/header-removal and style-template experiment was rolled back
+because its code growth and visible result were unsatisfactory. The founder
+still wants more visual freedom from the Reception frame. Continue that goal
+through small, reviewable steps; neither silently restore the rolled-back bundle
+nor interpret its rollback as a permanent requirement for a fixed header.
+The current bounded Reception remains the implementation baseline until changed.
+
+Every replacement includes cleanup of the displaced implementation. Cosmetic
+overrides and parallel paths are not an acceptable substitute for fixing the
+existing owner. Follow the concrete replacement, style-ownership and completion
+checks in `AGENTS.md`; preserve useful behavior and current authored work.
+
+## Current product map (2026-10-19)
+
+Consolidated on 30 October 2026. Dates in section anchors preserve existing links.
+
+INSCAPE is an artist's Workbench for composing and experiencing identifiable
+creative material through independent modules. The ordinary working route is
+Workbench + Image, Text, Shape and the other retained modules. Display is an
+experimental module, not the required entry point for composition.
+
+### Reading order and status
+
+This map is an index into this same contract, not another authority. Read the
+relevant detailed section before changing behavior. Explicit dated removals and
+scope decisions take precedence over older implementation descriptions; a
+design-system specimen or passing fixture does not activate a parked feature.
+[Creative intent](INSCAPE_CREATIVE_INTENT.md) explains meaning, while
+[verification guidance](DEVELOPMENT_CHECKS.md) explains how to check implementation.
+Neither independently expands this contract's scope. If an actual product
+choice remains ambiguous after applying the explicit decisions, ask the founder.
+
+**Implemented** means a route exists in the local application, not that hosted
+operation or every device has been verified. **Experimental** means retained
+for isolated work without ordinary creation. **Removed** means no current
+product route. **Direction/reference** means accepted intent or a review
+specimen, not a shipped capability. The checks below are existing acceptance
+entry points, not a claim that they were all rerun with this documentation edit.
+
+### Ordinary product routes
+
+| Area | Current route and state boundary | Detail / acceptance entry points |
+| --- | --- | --- |
+| Workbench and camera | Implemented. Multiple named Workbenches per profile, with one active composition. Camera, selection, Focus/Back and inspection are temporary; module content and accepted layout edits use the existing draft boundary. | [Collection](#multiple-named-workbenches-direction-2026-10-20), [Workbench](#public-workbench-and-visitor-interaction); [camera/area](../browser-tests/workbench-area-navigation.browser.mjs), [F toggle](../browser-tests/workbench-focus-toggle.browser.mjs) |
+| Image | Implemented. Add Image or drop Library artwork onto empty Workbench. One click selects; double-click/Enter focuses, F focuses/returns, I inspects. Image owns sides, crop and dimensions; asset identity stays attached. | [Image](#independent-image-module); [click](../browser-tests/image-click.browser.mjs), [artwork host](../browser-tests/artwork-document.browser.mjs) |
+| Text | Implemented. Standalone rich articles, linked reading frames and focused writing. One article owns content; save failure/recovery and native text undo remain scoped to it. Display transfer/linking is conditional on the retained experimental Display. | [Text](#text-authoring); [filled editors](../browser-tests/text-filled-workbench.browser.mjs), [linked frames](../browser-tests/text-linked-frames.browser.mjs) |
+| Shapes | Implemented. Rectangle and Grid creation; authored shape appearance and geometry, with owner editing and shared Visitor paint. Texture creation is retired; retained Texture records are not a new creation route. | [Shapes](#workbench-background-shapes); [shape behavior](../browser-tests/shapes.browser.mjs) |
+| Groups and Index | Implemented. Named membership, stacks and saved navigation destinations. Membership/anchors and explicit publication choices are authored; browsing and camera return are temporary. These are not Display Grids. | [Groups](#named-workbench-groups); [groups](../browser-tests/workbench-groups.browser.mjs), [stacks](../browser-tests/workbench-stacks.browser.mjs), [Index](../browser-tests/workbench-index.browser.mjs) |
+| Library and artwork information | Implemented. Browse source assets, select attached images and inspect their retained source information. Browsing state is not artwork authorship or wallet authority; failure must not become a successful empty result. | [Library](#editing-public-inspection-and-publication); [recovery](../browser-tests/library-recovery.browser.mjs), [filter/focus](../browser-tests/library-filter-keyboard.browser.mjs) |
+| Identity, Reception and Discover | Implemented. Official profile identity stays distinct from authored presentation; the owner edits, Visitor reads and explores. Narrow widths use the same routes. | [Identity](#identity-and-authored-personas), [entry](#cover-entry-and-discover); [Reception](../browser-tests/reception-card.browser.mjs), [routing](../browser-tests/owner-profile-routing.browser.mjs) |
+| Keeper | Implemented within its declared formats. A dock owns artwork/settings; roaming and conversation are temporary. Optional AI access is local-development-only and separately scoped, not a hosted promise. | [Keeper](#keeper-dock); [dock](../browser-tests/keeper.browser.mjs), [dialogue](../browser-tests/keeper-dialogue.browser.mjs), [selection](../browser-tests/keeper-selection.browser.mjs) |
+| Mini Apps / HTML artwork | Implemented URL-based hosting. Remote apps own their content; instance grants are temporary. Transparent HTML artwork uses the separate restricted surface, not a general module SDK or NFT import pipeline. | [hosting](#hosted-mini-apps), [HTML](#self-contained-html-artwork-2026-10-14); [host behavior](../browser-tests/mini-apps.browser.mjs) |
+| Private editing and backup | Implemented. One editor per profile within an origin/storage partition; other tabs can view the last publication. Settings exports a manual private JSON backup and validates an explicit replacement. No cross-device draft sync. | [recovery](#local-editing-and-private-recovery-2026-10-19); [two tabs and backup](../browser-tests/workbench-storage.browser.mjs), [article recovery](../browser-tests/text-article-tools.browser.mjs) |
+| Preview, publication and Visitor | Implemented explicit canvas/shared-profile selection and public collection browsing. Dev and deployed editors can prepare publication through the configured upload service; preparation, upload and wallet publication remain separate. Browsing never changes the saved publication. | [gallery](#published-canvas-gallery-2026-10-26), [publication](#editing-public-inspection-and-publication); [projection](../browser-tests/workbench-publication.browser.mjs), [recovery](../browser-tests/publication-recovery.browser.mjs), [Visitor](../browser-tests/published-visitor.browser.mjs) |
+
+Private drafts own authored content. Local preferences/layout caches own only
+their stated presentation data; camera, selections, gestures and visitor changes
+remain temporary. Public snapshots contain only explicitly projected public
+content. Wallet authority remains external to those document and UI states.
+The [development-data policy](#development-data-and-compatibility-2026-10-16)
+removes a general backward-compatibility obligation; it does not remove current
+save/recovery guarantees or authorize deleting the founder's current work.
+
+### Parked, removed and future work
+
+| Area | Status and recorded reason | Consequence / condition for further work |
+| --- | --- | --- |
+| Display, its Stage/Grids and Display-specific instruments | **Experimental since 16 October; reason clarified 19 October.** Choosing Display versus solo Images/Workbench blocked the founder's composition workflow. Workbench layering and shared tools come first. A future return remains open. | No ordinary Add, search command or experimental toggle. Detailed Display sections and fixtures describe retained experiments; they do not authorize restoring access. [Decision](#display-experimental-status-2026-10-16), [creation exclusion](../browser-tests/workbench-toolbar.browser.mjs). |
+| Separate Mobile presentation/module | **Removed on 12 October.** The accepted replacement is the ordinary profile/Workbench route at narrow widths. | Keep responsive layout and touch support; do not restore a separate mobile entrance, schema or legacy reader. [Decision](#removed-mobile-presentation-and-module), [data rejection](../src/profileDocument/domain/removedMobile.test.js). |
+| Mirror; former Animation module and layered-character assembly | **Removed**, not merely waiting in the Add menu. Animation was removed on 20 September to narrow work to the then-current composition/navigation focus; that historical reason does not make Display today's priority. | Do not restore their runtime or saved fields implicitly. Current Keeper motion, intrinsic media animation and isolated HTML artwork are separately scoped capabilities. [Mirror](#removed-mirror-module), [Animation](#removed-artwork-animation). |
+| Artwork Frame/mat panel | **Removed on 21 September.** Source transparency is retained. | No restoration of decorative mats, backing or transparency overrides. Module appearance and In place/Lift inspection remain separate. [Decision](#removed-artwork-presentation-panel). |
+| Shared workspace, Layers and tools dock | Implemented within the bounded migrations below. Layers, Color/Transform and module tools share docking/window infrastructure; tool layout is private and does not change artwork. Further module migrations require their own scope. | [Docking](#movable-tool-docks-2026-10-21), [Layers](#first-local-workbench-layers-slice-2026-10-21), [shared reference](#shared-creative-workspace-direction-2026-10-14). |
+| Live minting, remix/co-authoring, module marketplace and generic connections | **Direction or unresolved scope.** Visitor minting has a local interaction simulation; broader protocols and commercial rules are not specified. | Define a concrete workflow, authority and acceptance criteria before implementation. Do not infer permission from asset possession or creative intent. [Minting](#minting-direction), [scope](#scope-discipline). |
+| Authored starting camera, public appearance policy and public profile QR destination | **Deferred choices.** Existing reset/zoom, local preferences and address QR remain authoritative. | Specify the public destination/experience first; saved Index destinations are not an authored startup camera. [Camera](#public-workbench-and-visitor-interaction), [QR](#cover-entry-and-discover). |
+
+### Decisions that supersede earlier wording
+
+Current removals, compatibility and editor rules are stated in the map and
+their detailed sections. The former decision-by-decision log and September
+dependency checkpoint are retained in the [consolidation archive](audits/2026-10-30/contract-consolidation/history.md).
+Use [Development checks](DEVELOPMENT_CHECKS.md) and source-bound evidence for
+implementation/release status; no historical test total is release clearance.
 
 ## Reception editor simplification (2026-10-28)
 
@@ -66,8 +169,8 @@ canvas-link authoring are explicitly outside this round.
   side by side; the latter changes the authored publication default. Changing these controls
   does not edit the shared Workbench profile card.
 
-This implementation is local; it has not been committed, pushed or deployed.
-See [implementation and verification](audits/2026-10-28/reception-editor-revamp/README.md).
+See the dated [implementation and verification](audits/2026-10-28/reception-editor-revamp/README.md)
+for this slice's original execution evidence; check current Git/CI separately.
 
 The founder clarified that blank Text must start with an inset and full-width
 title/body fields that wrap within narrow cells. Text and its reader use the
@@ -132,221 +235,84 @@ local fallback. The owner reader resolves only referenced artwork through the
 existing read repository, with cancellation/retry and no Library workspace or
 editing capability.
 
-This is local application work, not a deployed release or a signed profile
-publication. Display creation remains outside ordinary Add menus. The separate
+Display creation remains outside ordinary Add menus. The separate
 owner canvas-management overview is retained. The inline gallery in the earlier
 [implementation evidence](audits/2026-10-28/reception-linked-canvases/README.md)
 is superseded by this restoration of the separate overview.
 
-## Preparation for linked Reception and canvas presentation (2026-10-28)
-
-After the [dependency audit](audits/2026-10-28/reception-canvas-display-boundaries/README.md),
-the founder approved separating the evidenced dependencies before combining
-Reception and the canvas overview. The intended experiment lets one Display
-scene selection drive several linked cells, while other cells remain static.
-Showing source content, opening a canvas/camera point and following a scene are
-distinct operations. Source addresses include profile, canvas and module;
-temporary session state also belongs to an explicit snapshot scope.
-
-The local preparatory implementation makes logical Display selection independent
-of its mounted view, shared by existing owner Display/Text and visitor Display/Text.
-Animation remains an optional view adapter. Closing or temporarily unmounting
-Display retains its selected scene for linked readers; changing the presentation
-scope starts a fresh session. Selection is temporary and never saves or publishes.
-The existing authoring session retains all content transactions and history.
-
-Read-only presentation can now receive a validated collection snapshot, explicitly
-project a selected scene, and resolve qualified sources against that snapshot.
-Public resolution uses only the assembled publication, including retained older
-versions of unselected canvases. Missing references are unavailable; they never
-fall back to private drafts or a different canvas. A finite gallery section uses
-the existing cards without owning the page's scrolling or navigation.
-
-An isolated development fixture exercises linked image/text cells, a static cell,
-two independent canvas scopes and an in-flow gallery. This is preparation and
-behavioral evidence, not a merged Reception UI or a new canonical/public binding
-schema. Persisted binding editing, validation, undo/recovery and actual publication
-of bindings remain a later slice. Display is not restored to ordinary Add menus;
-List removal and the final page composition have not been implemented here.
-See [implementation and verification](audits/2026-10-28/scene-boundary-implementation/README.md).
+Showing source content, opening a canvas/camera point and following a scene
+remain separate operations. Temporary scene selection belongs to its snapshot
+scope, survives view unmounting within that scope and never saves or publishes.
+The [preparatory implementation report](audits/2026-10-28/scene-boundary-implementation/README.md)
+preserves the earlier boundary work and fixture evidence, not additional pending
+product scope.
 
 ## Static customizable Reception bento direction (2026-10-26)
 
-**Reception frame clarification (2026-10-28):** View, Preview and Edit always
-use the same centered, bounded window and content dimensions. The shared header
-reserves the same space in every mode; viewing and previewing must not expand
-Reception to fullscreen. Preview retains the selected desktop/mobile framing.
-This supersedes the earlier full-viewport visitor-preview sizing below.
+Reception uses a separate editor over the canonical profile draft and one shared
+owner/public renderer. The editor simplification above defines its current cell
+actions and tools; the former wireframe, covering Library, Saved content, content
+swaps and Join cells are retired.
 
-**Reception header clarification (2026-10-28):** profile branding, About,
-Canvases, Discover, appearance and Edit Reception belong inside the existing
-window header. Workbench and the current mode's actions occupy its right side.
-Navigation never overlaps or cuts into the bento grid. Each region owns its
-rounded corners and authored padding, with no navigation-dependent clipping,
-corner exceptions or extra top spacing. All modes share the same header size;
-narrow screens use two contained rows with horizontally scrollable controls.
+- View, Preview and Edit use the same centered, bounded window, header and
+  content dimensions. Preview retains the chosen desktop/mobile framing.
+  Navigation sits in the header above the grid, without cutouts, exceptional
+  corners or extra top spacing. Narrow headers use two contained rows with
+  horizontally scrollable controls. This is the current baseline, not a ban on
+  the founder's requested future visual freedom.
+- Branding, About, Canvases, Discover, appearance and Edit Reception belong in
+  the header; Workbench and mode-specific actions use its right side. Authored
+  branding is distinct from verified Universal Profile identity. Reuse working
+  routes; do not add inactive Articles/Desktop tabs.
+- Start from one empty region. Add Beside/Below preserves its content; dividers
+  resize the partition directly. Cells own their corner geometry and surface;
+  Text owns typography and paragraph layout. Settings owns grid corners, gaps
+  and background. The Text-only spacing slider above replaces global/preset
+  spacing controls. Shared article content is not rewritten to imitate bento
+  appearance.
+- Image crop uses direct drag, keyboard alternatives and a zoom slider from
+  0.1 to 4 times Fill cell. Smaller axes stay centered; overflowing axes pan.
+  Save and publication retain the framing. Other canvas/overview crop limits
+  remain independent. Keep technical canvas dimensions, pixel coordinates and
+  zoom percentages out of the Reception layout UI.
+- Reception shares Library, Text, Color, tool-window movement/resizing and
+  pointer gesture infrastructure with Workbench. Window geometry and stacking
+  are private preferences outside authored content, publication and undo.
+  Content tools are modeless; no permanent settings column is reserved.
+  Shared content owns its intrinsic styles; tool chrome must not override them
+  through selector specificity. All modes retain authored profile typography.
+- A Library placement retains source identity and captures its explicit cell
+  and draft generation before asynchronous work. Closure, Escape or obsolete
+  requests cannot replace later content. Image/Text creation and removal follow
+  the current editor rules; canvas links use the separate linked-content rules.
+- Mobile shares content with desktop but has its own readable arrangement.
+  The owner can adjust mobile ordering, sizes and suitable side-by-side cells.
+  This neither restores the removed Mobile module nor authorizes phone-wide
+  Workbench editing. The isolated multi-object cell fixture remains an
+  experiment; production multi-object cells need a data/public projection and
+  a mobile composition decision.
+- About and Done show the verified owner's saved local Reception. Viewing
+  releases the editing lease; Done does not publish. Without a local draft,
+  show the publication until explicit editing/recovery. Other profiles and
+  visitors receive only the public projection.
+- Owner reading does not depend on publication availability. Refresh the local
+  record after another tab saves or the page regains foreground, retain a marked
+  last-good view on read failure, and do not reload an active editor store.
+  Editing and Library load only on edit entry. Successful private recovery
+  returns to the same reader; no copied publication or second renderer exists.
+- Use profile-scoped save/recovery, editing exclusion, completed-operation
+  history and explicit public projection. Public inspection never reads private
+  drafts. Keep recovery controls outside the artwork's semantic image.
+- Replacement includes displaced UI, CSS, validation, projection, storage,
+  fixtures and examples where no remaining consumer needs them. Preserve
+  unrelated modules, current authored work and historical evidence. This scope
+  does not add bento animation, GSAP, new media modules or Display creation.
 
-**Editor interaction refinement (2026-10-27):** the founder approved a large,
-centered, viewport-fitted work window with the Workbench's shared flat controls.
-Start with one empty cell. A cell's Add action offers a visual Beside / Below
-choice, preserves its content and permits direct divider resizing. Empty cells
-offer Image from Library, Text and profile content directly. Selection reveals
-local actions; text, color, image framing and page settings use temporary tools,
-not a permanently reserved settings column. No canvas dimensions, pixel crop
-coordinates or zoom percentage belong in this Reception layout UI. Font controls
-retain their shared typography semantics. Image crop is direct drag with a zoom
-slider, and keyboard equivalents. Reception images may zoom below Fill cell
-to show the whole artwork with free space in the cell (0.1–4 times fill scale).
-An axis smaller than the cell stays centered; overflowing axes remain pannable.
-This framing is saved and published unchanged. Workbench and overview crop
-limits are unaffected. The existing Library opens temporarily for an
-explicit cell; cancellation preserves its previous content and chosen artwork
-retains its source identity. Unplaced Reception records can be reused or deleted
-with undo, without deleting Library sources. Mobile starts in readable flow with
-reachable tools. Visitor preview uses the actual public frame geometry without
-an editor sidebar; the public renderer fits the available viewport. No new
-Workbench mode, publication path or animation system is introduced.
-
-**Shared Reception operation (2026-10-27):** the separate bounded editor now
-uses the same movable/resizable tool-window implementation as Workbench.
-Reception window frames are private editor preferences, outside authored
-content and Undo. Library covers the complete content area below the actual
-header. Its existing drag threshold and fade expose explicit Reception cell
-receivers, including cells under the Library sidebar; release captures the
-receiving cell and draft generation before asynchronous decoding. Closure,
-Escape and obsolete requests cannot replace later content. Crop and divider
-gestures use the existing shared pointer controller with Reception geometry.
-The 0.1–4 crop range and Done/local/public boundaries remain unchanged.
-
-An isolated development fixture tests Image, Text and Shape together in one
-cell using shared selection, colour, gestures and layer-order controls. Its
-placements and history adapter are experimental, outside canonical Reception
-data and production routes. Mobile scaling versus readable flow is compared,
-not decided: scaling preserves overlap but shrinks text; flow restores reading
-size but loses overlap. Production multi-object cells still require an explicit
-data/command adapter, public projection and a mobile composition decision.
-See [implementation and evidence](audits/2026-10-27/reception-shared-controls/README.md).
-
-**Owner viewing clarification (2026-10-27):** About opens the verified owner's
-saved local Reception, including when returning from Canvases. Done leaves
-editing and shows that same saved content without editor tools. The reader and
-editor use the canonical draft and shared presentation; no copied publication
-is made. Viewing releases the Reception editing lease. Visitors and other
-profiles continue to see published content; Done never publishes. If no local
-draft exists, show the publication until the owner enters editing/recovery.
-
-**Reception boundary hardening (2026-10-27):** a verified owner's About reader
-does not depend on publication availability. It reads the canonical local record,
-refreshes after another tab saves or the page returns to the foreground, and
-keeps a clearly marked last-good view on read failure. Done and successful
-private recovery both reopen that reader. This refresh never reloads an active
-editor's store or acquires an editing lease. Actual edit entry loads the editor
-and Library; visitors continue to receive only the published projection.
-Shared tool sizing and chrome apply to tool hosts, not authored Text. Artwork
-uses its existing name/description for accessibility, with recovery controls
-outside that semantic image. Route costs and reader/editor isolation are checked
-alongside the existing production budgets. See the
-[audit remediation](audits/2026-10-27/reception-audit-remediation/README.md).
-
-**Reception shared styling follow-up (2026-10-27):** reader, Edit, Preview and
-Done retain the same authored profile typography. Tool fonts belong to tool
-surfaces. Shared Colour and Identity content own their intrinsic layout and
-editable field styles without requiring a Workbench module ancestor. One shared
-control-sizing recipe supplies touch targets to both hosts, including nested
-Text buttons, reset controls and backup disclosures. Default tool chrome must
-not override an intrinsic control's styling by selector specificity. Focused
-checks and remaining unrelated failures are recorded in the
-[styling remediation](audits/2026-10-27/reception-styling-remediation/README.md).
-
-**Accepted direction, implemented locally on the Reception branch.** The founder
-approved replacing the fixed Reception wireframe with an editable, static bento.
-The implementation uses a separate editor over the canonical profile draft and
-one shared public/owner region renderer. Its exact source state, replacement
-disposition, checks and remaining limits are recorded in the
-[implementation audit](audits/2026-10-26/static-reception/README.md). This is not a
-claim that the implementation has been pushed or deployed.
-The detailed execution brief is
-[Static Reception bento implementation handoff](handoffs/2026-10-26-static-reception-bento.md).
-That brief operationalizes this decision; this contract remains product authority.
-
-- **Editor clarification after the handoff review:** build a separate Reception
-  editor inside Inscape, using genuinely shared tools and content services. Do
-  not create a special extra Workbench as its content store or turn the free
-  Workbench into a Reception mode with scattered exceptions. Reception owns
-  its layout, selection and commands; Workbench retains its free placement,
-  camera and layer behavior. Familiar styling does not require the same editor
-  runtime. Extract only the concrete shared dependencies needed for this slice,
-  and keep the existing Workbench using those same implementations.
-- Fill Reception directly: select a region, choose Image from the shared
-  Library, create/edit Text, or place existing profile/link content. New Image
-  and Text records belong to Reception within the canonical profile draft;
-  reuse their existing content models and editing/rendering logic. This does
-  not copy or expose another canvas's private modules. Linked cross-canvas
-  content versus independent copies remains a separate product choice, not a
-  prerequisite for the initial authoring flow.
-- The initial tool inventory is Library, Text, Image/crop, Color, profile/links,
-  artwork information and shared control/menu/panel building blocks. Reuse the
-  existing save, recovery, history and publication boundaries with an explicit
-  Reception target. Reception supplies its own split/merge/move tools, region
-  appearance and responsive preview. Canvas dimensions, free X/Y placement,
-  camera index, Workbench Layers, Shapes/FX, mini-app authoring and Display
-  linking are not part of its first toolbar, shortcuts or context menus; retain them in their existing
-  Workbench scopes. Reception now shares tool-window movement and resizing.
-  Additional media transforms and dock grouping/detaching remain outside this
-  slice; their presence elsewhere does not automatically require them here.
-- Give the region's outer padding, surface and contour one owner in Reception.
-  Text owns typography and paragraph layout. Do not expose duplicate Text-box
-  and bento padding/radius controls or rewrite a reused article to remove its
-  Workbench appearance. Shared tool improvements must reach both consumers;
-  editor-specific behavior must remain local to that editor.
-- Start from one empty region. Split a selected region side by side or above
-  and below; drag dividers to change proportions; move or swap module placements;
-  merge adjacent regions whose union is a rectangle. Removing content retains
-  its empty region. Structural edits must not silently destroy module content.
-- Expose authored radius, gutter and padding. Gutter separates regions; padding
-  separates a region's content from its edge. Global padding can be overridden
-  per region, with horizontal and vertical content alignment and full-bleed media.
-- Follow the Hanssen About presentation's compact branded navigation,
-  generous content, narrow consistent gaps and rounded regions. The founder's
-  28 October clarification places navigation in the window header above the
-  grid and removes the earlier navigation cutout. The
-  founder's close-up and light/dark captures are preserved in the
-  [bento reference packet](design-references/2026-10-26-bento/README.md).
-  This explicitly authorizes the rounded presentation geometry; it does not
-  replace the shared editor control design system.
-- Keep logo/name, available destination tabs and light/dark appearance coherent
-  with that frame. Authored branding stays distinct from verified UP identity.
-  Reuse existing working routes; do not ship inactive Articles/Desktop tabs or
-  expand this into a redesign of the already working gallery/viewer.
-- Regions host supported module content through existing content and rendering
-  boundaries. Initial real Image/Text and existing identity/link presentation
-  should work. Preserve source identity and provenance. Display remains retained
-  and parked; its reactivation, linked movement and new Video/music modules are
-  separate future work.
-- The mobile presentation shares content with desktop but has its own readable
-  arrangement. Default to vertical flow; allow the owner to adjust mobile order,
-  sizes and suitable side-by-side combinations through the layout editor.
-  This is a responsive variant of Reception, not the removed Mobile module or
-  an authorization to implement full Workbench editing on phones.
-- Reuse the canonical profile-scoped draft, editing lease, completed-operation
-  history, save/recovery and explicit public projection. Owner editing, local
-  preview and verified public rendering must have one bento layout/render path
-  with different capabilities. Public inspection never reads private drafts.
-- Replace superseded Reception UI, CSS, validators/projections, storage paths,
-  fixtures, tests, design-system examples and current documentation as required
-  by the actual dependency trace. Keep no hidden old-bento fallback, feature
-  flag, duplicate renderer or CSS override stack. Preserve unrelated Workbench
-  grids, retained Display, Gallery, Keeper and current user data. Historical
-  audit evidence is not an active fallback and is not to be purged.
-- No new bento animation, scroll-driven geometry, GSAP dependency or motion
-  configuration belongs in this slice. Existing intrinsic artwork behavior and
-  unrelated gallery/viewer motion are outside this change. The founder has sent
-  a GSAP licensing inquiry; no permission has been received or assumed here.
-
-The existing fixed wireframe and its selection-only Reception schema remain the
-observed baseline until this replacement is implemented and verified. Update
-those implementation descriptions when delivery actually happens. Source
-checkpointing does not back up browser drafts or prove release readiness.
+Execution evidence: [static Reception](audits/2026-10-26/static-reception/README.md),
+[shared controls](audits/2026-10-27/reception-shared-controls/README.md),
+[reader boundaries](audits/2026-10-27/reception-audit-remediation/README.md),
+[shared styling](audits/2026-10-27/reception-styling-remediation/README.md).
+These reports record their tested source, not today's release status.
 
 ## Published canvas gallery (2026-10-26)
 
@@ -384,46 +350,29 @@ renderer. The gallery inspection still represents mini apps as placeholders;
 Desktop and mobile authoring remain deferred. See
 [implementation and checks](audits/2026-10-26/published-gallery/README.md).
 
-## Hanssen presentation and navigation direction (2026-10-25)
+## Presentation and navigation scope (2026-10-30)
 
-**Accepted primary design reference; first owner overview slice implemented locally.** The
-founder chose the [Hanssen reference](design-references/2026-10-25-hanssen/README.md)
-as the concrete visual and navigation model connecting Inscape's destinations.
-Use that name in future discussions. Its actual proportions, content hierarchy,
-compact navigation, narrow gaps and rounded panels matter to the direction.
-The former founder screenshot-and-notes packet has been removed at the founder's
-request and is superseded by Hanssen.
+The former template-specific direction is retired. The founder's new example
+and connecting navigation idea are pending. The existing Reception, overview
+and viewer remain the implementation baseline; do not infer a new layout,
+fixed navigation position or template geometry from the old reference packet.
 
-- A compact global navigation area stays at the top left: avatar, profile name,
-  About, Canvases, Articles or Blog, and eventually Desktop. This is the common
-  navigation between locations; each location uses the main area for its own
-  content and controls. Articles versus Blog remains an open label.
-- Hanssen's About page is the Reception reference: a chosen identity visual,
-  introduction, links and personal content in related panels. Preserve creator
-  branding and the distinction between verified identity and authored persona.
-- Hanssen's Work page is the composition-overview reference: one large preview
-  beside a compact list of works. Its pointer-driven preview and click-to-open
-  behavior inform the browse, open and explore sequence. Previewing a composition
-  must not activate its editor or change saved content.
-- Opening a work gives its title, description and relevant metadata a deliberate
-  place alongside its content. Adapt the reference to Inscape's live compositions
-  and authored geometry. The template's photography metadata and gallery are
-  examples, not a fixed content model for every composition.
-- Articles or Blog belongs within the same navigation and visual treatment.
-  Its exact presentation is still to be designed around the existing Text work.
-- Desktop is a separate future container for mini-apps and launchers: one large
-  frame with icons and app windows, using the same global navigation. Workbenches
-  remain composition and exploration spaces. **Desktop implementation is deferred**;
-  the immediate focus remains the existing multi-Workbench flow and overview,
-  with Reception connected through this common presentation direction.
+- Reception presents the maker, their introduction, links and chosen content.
+  Preserve creator branding and the distinction between verified identity and
+  authored persona.
+- The work overview supports browsing and opening compositions. Previewing a
+  composition must not activate its editor or change saved content.
+- Opened work retains its authored geometry, title, description and relevant
+  metadata, without a template prescribing its content model.
+- Articles or Blog belongs within the connected presentation around the existing
+  Text work; its exact presentation and label are unresolved.
+- Desktop remains a separate future container for mini-apps and launchers.
+  Its implementation is deferred; Workbenches remain composition and exploration
+  spaces.
 
-The local named-Workbench and overview behavior below remains the implementation
-baseline, including the 25 October overview presentation update. One active composition, reliable saves,
-source identity, private-owner boundaries and explicit publication scope remain
-in force. This decision does not choose a new default landing or implement public
-multi-Workbench publication. Existing composition-tool controls and interface font
-roles remain applicable; Hanssen governs the overall destination presentation and
-navigation as those views are developed.
+One active composition, reliable saves, source identity, private-owner boundaries
+and explicit publication scope remain in force. Existing shared controls and
+interface font roles apply until a scoped change is accepted.
 
 ## Multiple named Workbenches direction (2026-10-20)
 
@@ -436,8 +385,8 @@ to simplify the code. This changes engineering scope, not product direction or
 publication authority. The execution record is the 30-step code-quality plan under
 `docs/audits/2026-10-23/`; its progress is not a new product contract.
 
-**Accepted product direction; the first local slice is implemented below.
-Public multi-Workbench presentation/publication remains pending.**
+**Accepted product direction.** Current public collection selection and browsing
+are defined in [Published canvas gallery](#published-canvas-gallery-2026-10-26).
 The founder chose multiple named Workbenches per profile. Each Workbench is an
 independent composition canvas with its own dimensions, module instances,
 authored layout, Layers order and composition blocks. One Workbench is active
@@ -453,14 +402,13 @@ always-accompanying Keeper: a home/habitat and optional accompaniment are
 distinct intents; multiple inhabitants remain a possibility to design.
 Keeper identity/configuration must not be silently duplicated across compositions.
 
-Reception's presentation now follows the Hanssen direction above. Its exact
-editing model and default landing remain to be settled and need not block
-composition creation/switching. Local edits in each Workbench must remain saved
-when working in another; this is distinct from deciding which revisions to publish.
+Reception uses its separate editor and shared tools described above. Local edits
+in each Workbench must remain saved when working in another; this is distinct
+from deciding which revisions to publish.
 
 The founder chose an explicit publication-scope choice before publishing: offer
 the current Workbench alone, individually checked other changed Workbenches,
-and an option to select all local changes. The proposed default is the current
+and an option to select all changed canvases. The default is the current changed
 Workbench. The review must name every affected Workbench and distinguish an
 update to a live composition from first publication of a private one. Selecting
 all is explicit, never an automatic consequence of saving or switching. Existing
@@ -468,14 +416,13 @@ per-content public exclusions still apply; this is not a command to expose every
 private module. Any included profile-level changes, such as shared Keeper or
 Reception configuration, need their own visible scope rather than silently
 travelling with an unrelated composition. Unselected Workbenches retain their
-last published revisions and all their local edits. No publisher implementation
-or UI has been changed by this decision.
+last published revisions and all their local edits.
 
-This supersedes the earlier single-Workbench product restriction. Local saving
-and switching now use the bounded implementation below. The public document
-and publication flow still describe one composition. Profile-level wallet
-authority, local editor exclusion and save/recovery guarantees remain in force.
-Cloud draft sync is not thereby approved.
+This supersedes the earlier single-Workbench product restriction. Local saving,
+switching and explicitly selected public collections retain profile-level wallet
+authority, local editor exclusion and save/recovery guarantees. Cloud draft sync
+is not thereby approved. The first-slice descriptions below are dated execution
+history; their former publication block is superseded by the public gallery.
 
 The founder explained that old Workbench groups were primarily folder-like
 stacks that expand on the Workbench. Multiple canvases now remove their role as
@@ -508,7 +455,7 @@ artwork frames; visible animation, collection-wide saving and navigation peaks
 are distinct costs. It also records the existing HTML-window geometry mismatch.
 The measurement itself changes no production runtime.
 
-**Authorized follow-up (21 October), implemented locally:** address the measured
+**Accepted behavior.** address the measured
 save path and HTML geometry, then repeat the same filled-Workbench workload.
 Ordinary composition edits validate the changed draft and retain already
 validated, frozen inactive content. Shared changes still validate every projected
@@ -520,7 +467,7 @@ introduced. See the [follow-up measurements and checks](audits/2026-10-21/storag
 The spatial overview remains deferred; existing changes and the Keeper trial are
 retained. No commit, push, upload or deployment is authorized by this follow-up.
 
-**Implemented locally after explicit founder authorization; uncommitted.**
+**Accepted behavior.**
 The owner can name the existing Workbench, create an empty named Workbench,
 switch between them and reload the last active one. Names and stable IDs,
 modules, dimensions and authored composition layout belong to each Workbench.
@@ -572,7 +519,7 @@ wallet action or deployment is added. See the
 
 ### Separate local Workbench overview (2026-10-24)
 
-**Explicitly approved and implemented locally; uncommitted.** Following the
+**Accepted behavior.** Following the
 named-Workbench pass, the founder chose a list of names beside one large selected
 preview, an optional introduction and modest metadata. This supersedes the
 earlier deferral of a local overview, while the spatial neighbouring-canvas
@@ -585,7 +532,7 @@ editor sidebar. The sidebar's former **Workbenches / Workbench** pair is now
 to the active composition tools. This terminology distinguishes browsing from
 authoring. The subsequent canvas-inspection slice below makes tile opening a
 viewing action, with a smaller explicit **Edit** action to activate the editor.
-The 25 October Hanssen update replaces the original sidebar and centered layout
+The 25 October overview update replaces the original sidebar and centered layout
 with a large left preview and a right column of composition names and details.
 Hovering a row or focusing it with the keyboard changes only the preview and
 details. Clicking, tapping or pressing Enter on a row opens its fitted canvas
@@ -595,7 +542,7 @@ creates an empty local composition and selects it; opening remains explicit.
 On narrow screens the preview and list stack. The preview fits the saved canvas
 proportions without cropping or changing authored geometry.
 
-The same day's **List / Grid** control keeps that Hanssen list and adds an
+The same day's **List / Grid** control keeps that preview/list and adds an
 Aerra-inspired responsive gallery of the same saved compositions. Grid tiles
 automatically fill their bounds by centre-cropping the saved canvas. Titles and
 small Edit, Crop and Information actions reveal on hover or keyboard focus.
@@ -610,7 +557,7 @@ beside its name/introduction. It survives reload and backup, preserves separate
 canvas crops, and does not alter authored geometry, artwork metadata, editor
 camera or public documents. Failed writes retain the crop form and saved data.
 The crop adapts to the responsive tile's aspect ratio; the manual preview uses
-the current tile ratio. Hanssen's List preview and the opened viewer continue
+the current tile ratio. The List preview and the opened viewer continue
 to fit the complete canvas. Grid tiles
 open their canvas presentation; the smaller Edit action activates the editor.
 The optional **Wrap** control repeats
@@ -620,8 +567,8 @@ collection items; keyboard and assistive navigation expose each Workbench once.
 Keyboard browsing remains finite. Turning Wrap off gives a finite gallery for
 all input methods. View and Wrap choices live in the owner profile session and
 survive opening/returning from an editor; they are not saved composition data.
-Hanssen remains the overall navigation reference; Aerra supplies this alternative
-overview layout. See [layout implementation and checks](audits/2026-10-25/overview-layouts/README.md).
+Aerra informed this alternative overview layout. See
+[layout implementation and checks](audits/2026-10-25/overview-layouts/README.md).
 
 The 25 October follow-up adds **Card size** (Small, Medium, Large) and
 **Arrange canvases** inside the same menu. Size changes actual card dimensions,
@@ -647,7 +594,7 @@ the scrolling list/details. Name/introduction editing locks browsing and exits
 until saved or cancelled. The editor keeps its composition tools and sidebar.
 Reception's own redesign, Articles/Blog, Desktop and global rollout of this
 navigation remain subsequent slices. See the
-[Hanssen overview implementation and checks](audits/2026-10-25/hanssen-overview/README.md).
+[25 October overview implementation and checks](audits/2026-10-25/hanssen-overview/README.md).
 
 Names and introductions belong to individual collection items. Introductions
 are optional plain text, limited to 280 characters; absent/empty introductions
@@ -679,7 +626,7 @@ cloud sync, upload, wallet action or deployment. See the
 
 ### Local canvas inspection (2026-10-25)
 
-**Founder-approved and implemented locally; uncommitted.** Creation and
+**Accepted behavior.** Creation and
 showcasing are separate. A list row or gallery tile now lifts into a fitted
 inspection modal over the blurred overview. Expand fills the app viewport with
 the same viewer and selected camera point. Close returns to the retained gallery
@@ -759,8 +706,8 @@ not a saved-geometry change. See the
 
 ## Keeper and optional exploration direction (2026-10-20)
 
-The Hanssen reference replaces the former visual packet. The separate Keeper
-and exploration intents remain distinct from the current navigation/design task:
+The separate Keeper and exploration intents remain distinct from navigation
+and presentation reference choices:
 a configurable habitat and optional accompaniment serve different purposes;
 the exact inhabitant count, habitat ownership and visitor behavior remain open.
 An exploration world is optional, with free movement at the visitor's own pace.
@@ -770,208 +717,47 @@ authority or an implemented protocol. Current trial behavior is recorded below.
 
 ## Reception wireframe replacement (2026-10-20)
 
-Historical implementation: the static customizable Reception section above
-supersedes the fixed Reception cards. Exploration/Keeper remains a live route.
-
-**Implemented locally following explicit founder authorization.** The founder
-approved replacing the previous Reception rather than retaining it behind a
-flag. The public profile landing now renders a read-only identity/persona bento
-wireframe from the verified public identity: portrait, bio, links and existing
-custom fields. It does not auto-populate an artwork carousel. The old card
-expansion, artwork inspection host, carousel lifecycle and Reception-specific
-curation/crop editor have been removed, including their unused components.
-
-Explore on the right opens a separate temporary empty exploration wireframe;
-Back to Reception or Escape returns focus to its trigger. The owner Keeper
-trial below adds existing movement; this is not yet a world renderer,
-interior collision feature or persistent/shareable room route.
-The original disabled composition entrance is superseded by the 26 October
-repair: **Enter Inscape** opens the existing published canvas through application
-navigation, with **View published canvas** as its description. The profile
-overview return and browser Back/Forward retain the public Reception route.
-This works for signed-out visitors and an owner viewing their public Reception;
-it does not open private drafts or publish the local multi-Workbench overview.
-Full bento customization remains future work. Reception portraits use the image
-renderer in this wireframe; this pass does not restore its old executable card.
-
-The owner return-to-Workbench route and profile authority remain unchanged.
-Existing explicit public work links resolve to the canonical visitor canvas,
-instead of mounting a second copy of the modules inside Reception. Invalid
-targets show the existing unavailable-target message on the new landing.
-Public document validation/projection still understands current Reception
-selection/crop fields; those are no longer an active UI/editor path. No content
-is erased and no document migration or new saved schema is introduced.
-
-This supersedes the older implemented Reception carousel/editor descriptions
-under Cover, entry, and Discover. It does not supersede the longer-term visual
-direction or activate the optional world. [Implementation and verification](audits/2026-10-20/reception-wireframe.md).
+Historical replacement record: the static bento and linked Reception rules above
+own current behavior. The fixed wireframe and its selection-only editor are
+retired. [Original evidence](audits/2026-10-20/reception-wireframe.md).
 
 ## Keeper dock in the exploration trial (2026-10-20)
 
-**Implemented locally after explicit founder authorization.** In the owner's
-Reception → Explore room, reuse the existing Keeper dock, Library drag/drop,
-artwork host, movement modes, swim speed, settings and recall. The existing
-profile draft remains authoritative: reuse its first Keeper (choose when there
-are several), or create one empty private dock with Layered swim selected.
-Artwork and parameter changes are shared with the Workbench Keeper. The room
-dock position and flight are temporary, not another saved composition/habitat.
-
-Only a verified owner can open this editor, under the existing single-editor
-lease. A missing/unreadable draft requires recovery through the Workbench;
-it must not be replaced with an empty room draft. Visitors have no private
-Library/editor. Leaving the room releases motion and the editing lease.
-Room bounds constrain the existing motion. The next authorized trial places one
-founder-supplied static environment image and makes its outlined upper beam a
-solid rectangle for free flight. Keeper uses a simple body footprint and slides
-along the beam; illustrative protrusions and the right wall are not colliders.
-Direct recall intentionally bypasses this trial collider as a recovery action.
-The original SVG is retained; the room uses a transparent lossless WebP at
-1200 × 1200 for a maximum 320 CSS-pixel presentation. This is not a zoom-quality
-or full-world performance claim. Rigged dock previews reuse parsed artwork
-parts rather than attempting to display the source SVG as a flat image.
-General scene collision, camera-follow, world zoom, authored scenery placement
-and public habitat presentation remain pending.
-This small trial does not implement multiple Workbenches or prove full-world
-performance. [Evidence and use](audits/2026-10-20/exploration-keeper.md).
-
-The [first environment/collision evidence](audits/2026-10-20/exploration-collision.md)
-records source integrity, rendering and the deliberately limited collision rule.
-
-## Current product map (2026-10-19)
+The owner-only Explore room reuses the existing Keeper dock, Library, artwork
+host, movement modes, swim speed, settings and recall. The profile draft owns
+artwork/settings; the room does not create another saved habitat. Reuse the
+first Keeper, choosing when several exist, or create an empty private dock with
+Layered swim. A missing/unreadable draft requires Workbench recovery, never
+replacement with an empty room draft. Use the profile's exclusive editor lease.
+Visitors have no private Library or room editor. Leaving releases motion and
+the lease. General scene authoring and public habitat presentation remain open.
 
 ### Larger exploration trial with Keeper camera follow (2026-10-20)
 
-Subsequent founder feedback exposed the combined wall/zoom focus shift. Latest
-implementation removes positional follow lag: Keeper's existing smooth motion
-is the sole source of travel smoothing; the camera keeps its core at the room
-viewport centre. The lens is allowed outside the physical room so 50% overview
-does not shift Keeper sideways when camera bounds meet a nearby metal wall.
-Physical actor bounds and metal collision remain intact. Trial core margin is
-now 8% of world-rendered size, tightened from 16%; it remains an approximation.
-This supersedes the damped/clamped-camera and earlier footprint descriptions
-below. F uses the shared inspection curve on the same motion clock; no zoom RAF.
+The temporary room is 2800 × 1800 with two 600-unit environment copies. Only
+straight horizontal/vertical metal beams collide; organic interior detail does
+not. The body's collision approximation is 8% of world-rendered size, not pixel
+or tentacle collision. Direct recall bypasses colliders for recovery.
 
-Latest shortcut refinement: the founder replaced J with **F**, matching existing
-Workbench muscle memory. Reuse `LATTICE_PRODUCTION_FOCUS_OPENING_MS` (460ms)
-and `latticeProductionFocusOpeningProgress` for the room's 100%/50% transition;
-Keeper remains the room focus, not a newly selectable scenery object. F toggles
-in both directions, J no longer does. A reported movement/zoom jitter was
-traced to an independent zoom clock resetting camera centring every sample.
-The replacement advances zoom on the existing Keeper motion clock and preserves
-its current screen anchor before normal camera-follow damping. Rapid reversal
-starts from the live scale. Docked/reduced-motion zoom is immediate.
+Start at 100%; F toggles a true 50% overview and returns to 100%. J, wheel zoom,
+continuous zoom and scales above 100% are excluded. Ignore F while typing, using
+modifiers, key repeat/composition or Library. Clean up the room-scoped shortcut.
+Use the existing 460ms inspection curve on Keeper's motion clock, with reversal
+from the live scale; do not create a separate zoom animation loop.
 
-Later explicit zoom choice, implemented locally: start at 100%; one toggle
-switches to a true 50% overview and back to 100%. The founder assigned **J**
-to both directions. The visible toggle carries that shortcut. No wheel zoom,
-continuous zoom control or scale above 100%. Camera follow remains active;
-artwork and Keeper scale together while world speed, body collision geometry
-and authored state remain unchanged. Ignore J while typing, using modifiers,
-key repeat/composition, or working in Library. The shortcut is scoped to the
-room and cleaned up when leaving. New room sessions start at 100%.
+Keeper's existing motion owns travel smoothing. The camera keeps its core at the
+viewport centre without follow lag and may extend outside the physical room.
+World geometry, speed and collision remain unchanged. Pointer destinations are
+converted into world space; held-right-button movement updates that destination.
+Dock/Library stay in screen space; rig/conversation anchors are projected.
+Camera, flight and scenery never write the draft. Return recalls to the start
+and restores the initial view. Reduced motion keeps Keeper stationary without
+animated camera follow; docked/reduced-motion zoom is immediate.
 
-Explicitly authorized and locally implemented: a 2800 × 1800 temporary room,
-two 600-unit copies of the same environment source, fixed 1:1 camera scale and
-damped camera follow. The founder tried the result and positively confirmed
-the feel of camera follow. This does not settle zoom, final scenery or a public
-world/editor. Only the straight horizontal/vertical metal beams collide;
-the founder explicitly excluded organic interior detail from collision.
-
-`explorationSpace.js` owns room geometry, screen/world conversion and temporary
-camera presentation. Existing Keeper integration remains the motion owner.
-World positions, speed and beams do not change when the camera moves. Pointer
-destinations are converted to world space; a held right button continuously
-updates that destination under the camera. Dock and Library stay in screen
-space. Rig pose and conversation anchors receive projected screen positions.
-Camera, flight and scenery do not write into the profile draft. Return directly
-recalls to the room start, then restores the starting view; leaving releases
-the existing motion loop and editor lease. Reduced motion retains stationary
-Keeper behavior without animated camera follow.
-
-The trial body collision footprint is tightened from 30% to 16% of rendered
-size, while ordinary Workbench behavior retains its defaults. This remains a
-simple body approximation, not pixel/tentacle collision. The previous single
-viewport-space beam trial is superseded by these world-space metal beams.
-See [camera trial evidence](audits/2026-10-20/exploration-camera.md).
-
-INSCAPE is an artist's Workbench for composing and experiencing identifiable
-creative material through independent modules. The ordinary working route is
-Workbench + Image, Text, Shape and the other retained modules. Display is an
-experimental module, not the required entry point for composition.
-
-### Reading order and status
-
-This map is an index into this same contract, not another authority. Read the
-relevant detailed section before changing behavior. Explicit dated removals and
-scope decisions take precedence over older implementation descriptions; a
-design-system specimen or passing fixture does not activate a parked feature.
-[Creative intent](INSCAPE_CREATIVE_INTENT.md) explains meaning, while
-[verification guidance](DEVELOPMENT_CHECKS.md) explains how to check implementation.
-Neither independently expands this contract's scope. If an actual product
-choice remains ambiguous after applying the explicit decisions, ask the founder.
-
-**Implemented** means a route exists in the local application, not that hosted
-operation or every device has been verified. **Experimental** means retained
-for isolated work without ordinary creation. **Removed** means no current
-product route. **Direction/reference** means accepted intent or a review
-specimen, not a shipped capability. The checks below are existing acceptance
-entry points, not a claim that they were all rerun with this documentation edit.
-
-### Ordinary product routes
-
-| Area | Current route and state boundary | Detail / acceptance entry points |
-| --- | --- | --- |
-| Workbench and camera | Implemented. One Workbench per profile; compose independent modules. Camera, selection, Focus/Back and inspection are temporary; module content and accepted layout edits use the existing draft boundary. | [Workbench](#public-workbench-and-visitor-interaction); [camera/area](../browser-tests/workbench-area-navigation.browser.mjs), [F toggle](../browser-tests/workbench-focus-toggle.browser.mjs) |
-| Image | Implemented. Add Image or drop Library artwork onto empty Workbench. One click selects; double-click/Enter focuses, F focuses/returns, I inspects. Image owns sides, crop and dimensions; asset identity stays attached. | [Image](#independent-image-module); [click](../browser-tests/image-click.browser.mjs), [artwork host](../browser-tests/artwork-document.browser.mjs) |
-| Text | Implemented. Standalone rich articles, linked reading frames and focused writing. One article owns content; save failure/recovery and native text undo remain scoped to it. Display transfer/linking is conditional on the retained experimental Display. | [Text](#text-authoring); [filled editors](../browser-tests/text-filled-workbench.browser.mjs), [linked frames](../browser-tests/text-linked-frames.browser.mjs) |
-| Shapes | Implemented. Rectangle and Grid creation; authored shape appearance and geometry, with owner editing and shared Visitor paint. Texture creation is retired; retained Texture records are not a new creation route. | [Shapes](#workbench-background-shapes); [shape behavior](../browser-tests/shapes.browser.mjs) |
-| Groups and Index | Implemented. Named membership, stacks and saved navigation destinations. Membership/anchors and explicit publication choices are authored; browsing and camera return are temporary. These are not Display Grids. | [Groups](#named-workbench-groups); [groups](../browser-tests/workbench-groups.browser.mjs), [stacks](../browser-tests/workbench-stacks.browser.mjs), [Index](../browser-tests/workbench-index.browser.mjs) |
-| Library and artwork information | Implemented. Browse source assets, select attached images and inspect their retained source information. Browsing state is not artwork authorship or wallet authority; failure must not become a successful empty result. | [Library](#editing-public-inspection-and-publication); [recovery](../browser-tests/library-recovery.browser.mjs), [filter/focus](../browser-tests/library-filter-keyboard.browser.mjs) |
-| Identity, Reception and Discover | Implemented. Official profile identity stays distinct from authored presentation; the owner edits, Visitor reads and explores. Narrow widths use the same routes. | [Identity](#identity-and-authored-personas), [entry](#cover-entry-and-discover); [Reception](../browser-tests/reception-card.browser.mjs), [routing](../browser-tests/owner-profile-routing.browser.mjs) |
-| Keeper | Implemented within its declared formats. A dock owns artwork/settings; roaming and conversation are temporary. Optional AI access is local-development-only and separately scoped, not a hosted promise. | [Keeper](#keeper-dock); [dock](../browser-tests/keeper.browser.mjs), [dialogue](../browser-tests/keeper-dialogue.browser.mjs), [selection](../browser-tests/keeper-selection.browser.mjs) |
-| Mini Apps / HTML artwork | Implemented URL-based hosting. Remote apps own their content; instance grants are temporary. Transparent HTML artwork uses the separate restricted surface, not a general module SDK or NFT import pipeline. | [hosting](#hosted-mini-apps), [HTML](#self-contained-html-artwork-2026-10-14); [host behavior](../browser-tests/mini-apps.browser.mjs) |
-| Private editing and backup | Implemented. One editor per profile within an origin/storage partition; other tabs can view the last publication. Settings exports a manual private JSON backup and validates an explicit replacement. No cross-device draft sync. | [recovery](#local-editing-and-private-recovery-2026-10-19); [two tabs and backup](../browser-tests/workbench-storage.browser.mjs), [article recovery](../browser-tests/text-article-tools.browser.mjs) |
-| Preview, publication and Visitor | Implemented local flows with explicit public projection. Preparation, upload and wallet publication are separate; browsing never changes the creator's saved publication. A working localhost app is not a deployed public service. | [publication](#editing-public-inspection-and-publication); [projection](../browser-tests/workbench-publication.browser.mjs), [recovery](../browser-tests/publication-recovery.browser.mjs), [Visitor](../browser-tests/published-visitor.browser.mjs) |
-
-Private drafts own authored content. Local preferences/layout caches own only
-their stated presentation data; camera, selections, gestures and visitor changes
-remain temporary. Public snapshots contain only explicitly projected public
-content. Wallet authority remains external to those document and UI states.
-The [development-data policy](#development-data-and-compatibility-2026-10-16)
-removes a general backward-compatibility obligation; it does not remove current
-save/recovery guarantees or authorize deleting the founder's current work.
-
-### Parked, removed and future work
-
-| Area | Status and recorded reason | Consequence / condition for further work |
-| --- | --- | --- |
-| Display, its Stage/Grids and Display-specific instruments | **Experimental since 16 October; reason clarified 19 October.** Choosing Display versus solo Images/Workbench blocked the founder's composition workflow. Workbench layering and shared tools come first. A future return remains open. | No ordinary Add, search command or experimental toggle. Detailed Display sections and fixtures describe retained experiments; they do not authorize restoring access. [Decision](#display-experimental-status-2026-10-16), [creation exclusion](../browser-tests/workbench-toolbar.browser.mjs). |
-| Separate Mobile presentation/module | **Removed on 12 October.** The accepted replacement is the ordinary profile/Workbench route at narrow widths. | Keep responsive layout and touch support; do not restore a separate mobile entrance, schema or legacy reader. [Decision](#removed-mobile-presentation-and-module), [data rejection](../src/profileDocument/domain/removedMobile.test.js). |
-| Mirror; former Animation module and layered-character assembly | **Removed**, not merely waiting in the Add menu. Animation was removed on 20 September to narrow work to the then-current composition/navigation focus; that historical reason does not make Display today's priority. | Do not restore their runtime or saved fields implicitly. Current Keeper motion, intrinsic media animation and isolated HTML artwork are separately scoped capabilities. [Mirror](#removed-mirror-module), [Animation](#removed-artwork-animation). |
-| Artwork Frame/mat panel | **Removed on 21 September.** Source transparency is retained. | No restoration of decorative mats, backing or transparency overrides. Module appearance and In place/Lift inspection remain separate. [Decision](#removed-artwork-presentation-panel). |
-| Shared workspace, Layers and Color/tools dock | **Chosen design direction; first local Workbench Layers slice implemented 21 October. Shared tools/docking remain pending.** The founder identifies the existing workspace design-system layout as the intended reference. Tools can eventually be docked together, detached, rejoined or hidden. | Real Images/Text/Shapes now share saved ordering, composition blocks and Layers removal/recovery. This does not complete the tool-docking migration. [Local scope](#first-local-workbench-layers-slice-2026-10-21), [reference](#shared-creative-workspace-direction-2026-10-14). |
-| Live minting, remix/co-authoring, module marketplace and generic connections | **Direction or unresolved scope.** Visitor minting has a local interaction simulation; broader protocols and commercial rules are not specified. | Define a concrete workflow, authority and acceptance criteria before implementation. Do not infer permission from asset possession or creative intent. [Minting](#minting-direction), [scope](#scope-discipline). |
-| Authored starting camera, public appearance policy and public profile QR destination | **Deferred choices.** Existing reset/zoom, local preferences and address QR remain authoritative. | Specify the public destination/experience first; saved Index destinations are not an authored startup camera. [Camera](#public-workbench-and-visitor-interaction), [QR](#cover-entry-and-discover). |
-
-### Decisions that supersede earlier wording
-
-| Decision date | Current rule | Earlier expectation that no longer governs |
-| --- | --- | --- |
-| 2026-10-12 | One responsive profile/Workbench route; separate Mobile removed. | A separate mobile module, renderer or entrance is required. |
-| 2026-10-16 | No general backward-compatibility requirement during development unless explicitly requested. | Older preservation/migration paragraphs impose new legacy support. They may describe existing code, not a future obligation. |
-| 2026-10-16 | Display is experimental and absent from ordinary creation. | Display authoring is the immediate product priority; older Add/Format prose restores access. |
-| 2026-10-16 | Flat styling migrated only to the recorded production components. | All tactile references are current everywhere, or every new reference specimen is already production-approved. |
-| 2026-10-19 | The design-system workspace is the chosen direction: Workbench artwork layering, Layers removal and shared dockable/hideable tools. | The shared workspace is merely an unchosen layout proposal, or its Display-based preview already implements Workbench layering. |
-| 2026-10-19 | One active editor per profile/origin; manual private Workbench backup with explicit restore. | Two local editors may silently compete, or public publication is a full private backup. |
-| 2026-10-19 | Image single click selects; double-click/Enter focuses; F focuses/returns; I inspects. | Ordinary Image click immediately zooms, or marquee selection is required before F. |
-
-This is a navigation log for decisions already recorded below, not new feature
-approval. September dependency counts and verification totals under
-[Dependency checkpoint](#dependency-checkpoint-2026-09-08) are dated evidence,
-not current audit results. [Development checks](DEVELOPMENT_CHECKS.md) defines
-verification; actual reports must name their source version and scope. Shared
-Git/CI verification, hosted upload admission/quotas and deployment validation
-remain release work, separate from local feature availability.
+Evidence: [dock](audits/2026-10-20/exploration-keeper.md),
+[collision](audits/2026-10-20/exploration-collision.md),
+[camera](audits/2026-10-20/exploration-camera.md). These bounded trials do not prove
+full-world performance or implement an authored public world.
 
 ## Development data and compatibility (2026-10-16)
 
@@ -1093,29 +879,13 @@ apply; this is no claim that remaining release decisions have been resolved.
   and placement are presentation state, distinct from artwork visibility and
   deletion; changing tools must not rewrite or remove the composition.
 
-At the 19 October review, application and reference had different limits. Image Close
-sets its window to closed and returns focus to its shortcut. Shape ordering is
-within the shape collection, while retained Display Layers orders Grid
-placements. The workspace reference's layer adapter filters its disposable
-items to Display children. None of those is an implemented authored layer-order
-workflow for standalone Workbench Images. Reference screenshots demonstrate
-the intended instruments, not production persistence or full tool docking.
-
-The implementation must trace selection, rendering order, saved content,
-undo, publication and temporary tool layout together. Use one authoritative
-artwork order and module-owned content, retaining the existing validated-save
-and recovery boundaries. The 20 October decision below fixes the initial module
-scope and composition-block meaning. Remaining group/stack integration and
-publication of order need a concrete design before edits;
-do not silently turn temporary focus/activation into a saved order change.
-Define behavioral checks for overlapping Images, order after reload/undo and
-public projection, Layers deletion/recovery, and tool detach/rejoin/hide without
-content loss. Those checks do not exist merely because the reference works.
-
-The existing workspace is the chosen design basis. Unimplemented FX, generic
-module connections, live minting and unrelated reference demonstrations are
-not thereby implemented or automatically in the next slice. Display remains
-experimental while this Workbench workflow is developed.
+Use one authoritative artwork order and module-owned content across selection,
+rendering, undo, publication and save/recovery. Temporary activation never changes
+saved order. Verify overlap, reload/undo, public projection, Layers removal and
+recovery, and dock detach/rejoin/hide without content loss. The concrete Layers,
+Image, Shape, Text, Color/Transform and FX rules below describe their accepted
+scope; generic module connections and live minting remain separate future work.
+Display remains retained and experimental.
 
 ### Layers composition groups decision (2026-10-20)
 
@@ -1177,7 +947,7 @@ does not approve every proposal in that review or authorize UI changes.
 
 ### Movable tool docks (2026-10-21)
 
-**Founder-authorized and implemented locally; uncommitted and undeployed.**
+**Accepted behavior.**
 Layers, Transform and Color each have one independent tool instance. They start
 as three tabs in one movable dock on desktop. Dragging a tab out makes a separate
 window; dropping it on another dock's tab strip joins that group. Tab placement
@@ -1204,7 +974,7 @@ every module-specific panel. The founder explicitly declined a numeric rotation
 field: do not add one from the earlier reference example. Rotate and both Mirror
 actions remain in the Image toolbar. See [checks and screenshots](audits/2026-10-21/tool-docking.md).
 
-**Founder refinement (2026-10-22), implemented locally:** a dock can also stack
+**Accepted behavior.** a dock can also stack
 several tool panes vertically, as in the supplied Layers-over-Color screenshot.
 Each pane has its own tab strip, active tool and close control, so multiple tools
 remain visible together. Drop a tab at a pane's upper/lower edge to stack it;
@@ -1222,7 +992,7 @@ Text stays independent. See [stacked-dock checks](audits/2026-10-22/stacked-tool
 
 ### Image tool window migration (2026-10-21)
 
-**Founder-selected next window, implemented locally; uncommitted and undeployed.**
+**Accepted behavior.**
 Image now joins Layers, Transform and Color as a fourth tab in the same dock.
 It can detach, join another dock, move, resize through invisible edges, close
 and reopen through Actions → Image settings. Selecting artwork does not change
@@ -1245,7 +1015,7 @@ layout persistence remains deferred. See [checks and screenshots](audits/2026-10
 
 ### Shape tool window migration (2026-10-21)
 
-**Founder-approved next window, implemented locally; uncommitted and undeployed.**
+**Accepted behavior.**
 Shape joins Layers, Transform, Color and Image as a fifth independent, dockable
 tool. It reopens through Actions → Shape settings. Selecting another artwork
 does not change the active tab. Narrow dock headers scroll horizontally while
@@ -1277,7 +1047,7 @@ from this decision. Text remains last.
 
 ### First local FX slice (2026-10-21)
 
-**Accepted by the founder and implemented locally; uncommitted.** The founder
+**Accepted behavior.** The founder
 approved Grain and the reference's Blur together in FX for the selected Shape.
 This supersedes the pending FX/Blur scope above. FX is the sixth tab alongside
 Layers, Transform, Color, Image and Shape. It uses the same movable dock,
@@ -1304,7 +1074,7 @@ See [implementation evidence](audits/2026-10-21/fx-tools.md).
 
 ### Independent Text tool window (2026-10-21)
 
-**Founder-approved and implemented locally; uncommitted.** Text stays outside
+**Accepted behavior.** Text stays outside
 the Layers/Transform/Color/Image/Shape/FX dock. Its larger set of typography,
 paragraph, writing and article controls belongs in one independent movable and
 resizable window. This supersedes the earlier intention to migrate Text into
@@ -1356,7 +1126,7 @@ another font model or changing Focus writing. See
 
 ### Existing tool-window finishing pass (2026-10-22)
 
-**Founder-approved finishing round, implemented locally; uncommitted.** Clarify
+**Accepted behavior.** Clarify
 the existing controls before working on Keeper. Color names its article-wide
 targets explicitly and replaces “Use inherited color” with “Use default text
 color”; the tooltip identifies the paragraph/heading or article default being
@@ -1378,7 +1148,7 @@ saved window arrangement and Focus writing remain deferred. See
 
 ### First local shared Transform / Color slice (2026-10-21)
 
-**Implemented locally, uncommitted and undeployed.** A compact Carbon/Mist
+**Accepted behavior.** A compact Carbon/Mist
 companion originally used the same screen-space shell as Layers, with two tabs
 in its header; the movable docking implementation above supersedes that fixed
 pair. Selection changes do not switch tabs. It opens on desktop;
@@ -1422,7 +1192,7 @@ Evidence and remaining limits: [shared Transform / Color review](audits/2026-10-
 
 ### First local Workbench Layers slice (2026-10-21)
 
-**Implemented locally, uncommitted and undeployed.** The owner Workbench has a
+**Accepted behavior.** The owner Workbench has a
 real compact Carbon/Mist Layers companion. The founder's clean-window follow-up
 replaces its inherited artwork window host with a small screen-space tool panel:
 title/drag button, close button and content area. The panel owns only temporary
@@ -2403,9 +2173,9 @@ rewrite, schema migration, publication, upload, deployment, or wallet action.
 
 ## Product hierarchy
 
-The 25 October Hanssen direction defines the overall destinations, including a
-separate deferred Desktop. Older uses of "Workbench" as the containing desktop
-below describe the existing host; they do not merge the future Desktop with a
+The presentation and navigation scope above distinguishes the existing
+destinations from a separate deferred Desktop. Older uses of "Workbench" as the
+containing desktop below describe the existing host; they do not merge the future Desktop with a
 composition or require every destination to be a module on its canvas.
 
 INSCAPE is an artist's online desktop: one environment for composing,
@@ -2425,10 +2195,11 @@ The hierarchy is:
    scenes, not a required container for ordinary Workbench composition.
 5. **Assets and authored primitives** — material interpreted by a module.
 
-The current implementation has one Workbench per Universal Profile. The
-[20 October direction](#multiple-named-workbenches-direction-2026-10-20)
-supersedes the former single-Workbench restriction: multiple named composition
-Workbenches are now accepted direction, with implementation pending.
+Each profile can have multiple named composition Workbenches, with one active
+editing context. Shared Library material does not share mutable module content.
+The [collection rules](#multiple-named-workbenches-direction-2026-10-20) and
+[public gallery](#published-canvas-gallery-2026-10-26) define saving, switching
+and explicit publication selection.
 
 The public Workbench is part of the created experience. Visitors can enter its
 desktop and open the creator's published modules. The creator's Library
@@ -3941,10 +3712,10 @@ the initial overview does not introduce a saved curation or layout schema.
 
 ## Visual language
 
-For overall Reception, overview, composition presentation and global navigation,
-use the [Hanssen reference](design-references/2026-10-25-hanssen/README.md) and the
-25 October direction above. The rules below continue to govern existing
-composition tools and shared controls while destination views are developed.
+For Reception, overview, composition presentation and global navigation, follow
+the current focus and presentation scope above. A new overall visual example is
+pending. Preserve the existing surfaces until a scoped replacement is accepted;
+the rules below govern composition tools and shared controls.
 
 The implementation reference is [INSCAPE design system](design-system/README.md).
 It maps these accepted decisions to the existing production tokens, components,
@@ -4281,7 +4052,7 @@ The founder approved the Library migration and explicitly requested retaining
 Library settings and the arrangement of tool tabs/windows after leaving or
 restarting. This supersedes earlier session-only limits for these preferences.
 
-**Implemented locally:** Library and the reference share flat Carbon/Mist card,
+**Accepted behavior.** Library and the reference share flat Carbon/Mist card,
 rail, search, filter and sort styling. Existing asset sources, relationships,
 category operations, drag targets and module-owned interpretation remain intact.
 Controls remain reachable below navigation on narrow and low screens.
@@ -4330,7 +4101,7 @@ the earlier discarded image choice cannot be reconstructed. See
 
 ### Settings and keyboard selection finishing (2026-10-23)
 
-**Implemented locally:** Settings uses the shared flat Carbon/Mist material,
+**Accepted behavior.** Settings uses the shared flat Carbon/Mist material,
 titlebar, close control and field geometry. Its existing Activity, Workbench,
 Interface and backup sections scroll below a fixed titlebar, within the sidebar's
 reserved screen area. It remains a sidebar destination. This does not introduce
@@ -4359,7 +4130,7 @@ See [Settings finishing verification](audits/2026-10-23/settings-finishing.md).
 
 ### Activity window finishing (2026-10-23)
 
-**Implemented locally after founder approval:** recent Activity and full history
+**Accepted behavior.** recent Activity and full history
 use the shared flat Carbon/Mist panel material and titlebar. Filters sit above a
 bounded scrolling list; history search and the bottom actions stay reachable.
 The recent view retains its five-event limit and category filters. Full history
@@ -4778,85 +4549,6 @@ is the reference. Its browser checks are in
 
 ### Dependency checkpoint (2026-09-08)
 
-**Historical verification evidence.** All package versions, registry observations,
-counts and test totals in this section belong to the September checkpoint and
-its recorded follow-ups. They are not current audit results, current package
-recommendations or a release clearance. Use the active lockfile and new
-source-bound verification for a new release; do not reinterpret the word
-"current" in the retained record below as today.
-
-The Identity QR addition declares the already locked `qrcode-generator@1.5.2`
-directly; no package versions or transitive package entries changed. Its code
-loads when the QR is opened. Existing origin: `@lukso/up-modal` through
-`@lukso/web-components` and `qr-code-styling`.
-
-A live `npm audit --json` reported 93 advisories (10 low, 61 moderate,
-19 high, 3 critical). This is a dependency inventory, not a demonstrated
-browser exploit or a security clearance. The critical entries are `form-data`,
-`request` and `tar`. A confirmed path runs from `@lukso/up-modal` through LUKSO
-contract packages, `solidity-bytes-utils`, `@truffle/hdwallet-provider` and
-legacy Web3 utilities. Vite also has a direct high-severity advisory.
-The local Node 18.20.7 emits engine warnings for existing dependencies
-requiring newer Node versions. These findings predate the QR declaration.
-
-Before a release, perform a focused dependency maintenance slice: align the
-Node/toolchain version, assess current supported Vite and LUKSO package
-updates, trace affected runtime paths, and verify wallet and publication
-boundaries after any upgrade. Do not combine blind dependency upgrades with
-Identity layout work or claim build success resolves these advisories.
-
-The subsequent local maintenance check updated Vite 5.4.21 to 6.4.3 and
-esbuild 0.21.5 to 0.25.12. Lockfile comparison found no runtime package
-version changes. The audit now reports 91 findings (10 low, 60 moderate,
-18 high, 3 critical); the inherited wallet-chain findings remain unresolved.
-The configured registry still reports `@lukso/up-modal@0.21.11` and
-`@lukso/web-components@1.207.0` as latest (rechecked September 8).
-This is a targeted remediation, not a claim that Vite 6 is the newest major
-or that the application has received security clearance.
-
-Vite 6's changed bundling exceeds the former standalone-wallet budget with
-the same application inputs. The measured Windows output is 4,545,415 raw /
-1,208,418 gzip bytes. Only that lazy group's limits were recalibrated to
-4,600,000 / 1,225,000; initial/core limits and isolation checks are unchanged.
-The migration retains Vite's defaults rather than adding compatibility
-switches. See the [official Vite 6 migration notes](https://v6.vite.dev/guide/migration#advanced).
-Node 24.20.0 LTS is now installed and selected explicitly for local checks and
-the development server. `.node-version` pins it for project tooling; the
-package engine range is `>=24.20.0 <25`. The global Windows NVM link can still
-select Node 18, so a normal terminal is not automatically migrated. Use the
-session-only instructions in `NETLIFY_PUBLIC_IPFS_PUBLICATION.md`. No deployment
-runtime has been changed or verified remotely.
-
-The September 8 targeted lockfile update retains all existing wallet/LUKSO
-versions and updates PostCSS, nanoid, DOMPurify and the Browserslist data chain.
-A broad `npm audit fix` trial unexpectedly downgraded transitive packages; it
-was reverted before the final clean installation. No downgrade, force option,
-or override remains. `npm ci` succeeds under Node 24 with no engine warnings.
-The current audit is **87 findings: 10 low, 59 moderate, 15 high, 3 critical**.
-
-The emitted Rollup module inventory and a bundled esbuild import graph of
-`netlify/functions/pin-profile-document.mjs` were checked against the affected
-installed paths in that audit. The critical `form-data`, `request` and `tar`
-paths are absent from both outputs; no high-severity affected paths were found
-there either. Eleven flagged parent LUKSO packages are present in the browser
-(including contract ABI modules), but have no direct advisory in this audit:
-their findings are inherited from dependencies outside the emitted graph.
-Axios remains pinned to 1.16.0 by `@coinbase/cdp-sdk`; its affected path was
-also absent from these outputs. This bounds the inspected runtime exposure,
-not installation/supply-chain risk or every possible exploit. Keep the
-inherited findings visible and revisit upstream package releases before release.
-
-Local verification repeated under Node 24 after the targeted updates:
-756 Node tests, seven Identity browser
-cases, five LUKSO standards checks, production build and build check passed.
-The built wallet chunk imported in an isolated browser without creating a
-wallet session; live wallet connection/signing remains untested here.
-Identity was visually checked at 390 and 1440 pixels. The targeted review
-confirmed shared card validation, profile-scoped authoring callbacks and
-module-owned shader cleanup; no new abstraction or layout layer was needed.
-The Identity browser harness now resolves React through Vite's module IDs
-instead of assuming the optimizer's physical cache path.
-The Vite watcher also excludes `.browser-test-runtime` and
-`.browser-test-profile`: watching Windows-locked Chromium cookie files caused
-an observed EBUSY development-server crash during the first Node 24 browser run.
-The browser suite and full tests/build passed after that narrowly scoped fix.
+The September versions, audit counts, budget recalibration and test totals are
+historical evidence in the [consolidation archive](audits/2026-10-30/contract-consolidation/history.md).
+Use the current lockfile and fresh verification for maintenance or release.

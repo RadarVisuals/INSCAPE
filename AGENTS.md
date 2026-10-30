@@ -17,9 +17,9 @@
 ## Change discipline: inspect dependencies before extending
 
 - For Reception, navigation, multiple compositions, articles or future Desktop
-  work, read `docs/design-references/2026-10-25-hanssen/README.md` and inspect its
-  linked screenshots and page interactions after the two required product
-  documents. Hanssen is the primary overall presentation/navigation reference.
+  work, follow the active contract's current focus and inspect the founder's
+  references accepted for the task. A new overall presentation/navigation
+  example is pending; historical reference packets are not mandatory direction.
   Distinguish accepted direction from existing implementation and the current
   task's scope. Desktop remains deferred.
 
@@ -28,14 +28,22 @@
   that the change will depend on; do not assume working screens prove sound
   separation. Keep this investigation proportional to the change.
 - Before editing, briefly explain in plain language what the change depends on,
-  who currently owns those responsibilities, and any concrete prerequisite
-  cleanup. Distinguish accepted intent, observed behavior, and assumptions.
+  who currently owns those responsibilities, what existing path will be replaced,
+  and what that replacement makes removable. Distinguish accepted intent,
+  observed behavior, and assumptions.
   Investigate technical questions yourself; ask the user about unresolved
   purpose or tradeoffs, not implementation details they cannot assess.
 - If an observed responsibility conflict would make the requested change
   fragile or duplicate behavior, simplify that boundary first in a small,
-  reviewable step. Replace the existing path and remove superseded logic where
-  safe; do not merely add another flag, wrapper, or parallel implementation.
+  reviewable step. Complete the replacement in the same slice: remove superseded
+  logic, styles, selectors, props, helpers, imports and obsolete test expectations
+  where their remaining consumers have been checked. Do not leave the old path
+  hidden, disabled or overridden beneath another flag, wrapper or implementation.
+- Work in small, independently useful steps with a visible result. Do not bundle
+  extra settings, templates or speculative abstractions into a scoped change.
+  For an uncertain visual direction, make the smallest useful comparison before
+  expanding implementation. A rollback of an unsatisfactory implementation does
+  not by itself reject the underlying product goal.
 - Do not turn this into a mandatory whole-app audit or require a perfect
   foundation. Cleanup must address an evidenced dependency of the current work.
   More files and abstractions are not evidence of better architecture. If the
@@ -49,8 +57,16 @@
   match source text. Use the required checks below and inspect UI results.
 - Report what the work revealed about the architecture, what was actually
   simplified, and what remains coupled or unproven. A behavior fix is not proof
-  of an architectural cleanup. If new evidence changes the next step, explain
-  why before proceeding; do not silently expand scope.
+  of an architectural cleanup. Before delivery, inspect the diff and search for
+  remaining references to replaced code and styles; retain required shared
+  consumers and remove dead remnants. Report the replacement, concrete removals,
+  any retained overlap and its reason, and the behavioral/visual checks performed.
+  Do not call cleanup complete while its displaced path still remains without
+  a justified consumer. For a substantial replacement, report production-code
+  additions and deletions separately from tests, docs and generated output;
+  explain necessary growth without code-golfing or removing useful safeguards.
+  If new evidence changes the next step, explain why before proceeding; do not
+  silently expand scope.
 
 ## Implementation guardrails
 
@@ -61,10 +77,11 @@ not require a separate audit or approval round for every edit.
   maintaining synchronized copies. Document the purpose and invalidation of
   caches; a cache must not silently become a second source of truth.
 - Follow the active contract's development-data policy: backward compatibility
-  is not required unless the founder explicitly requests it. There are no active
-  users or authored compositions to preserve. Do not add migration code, legacy
-  adapters, old-data tests or retention paths for hypothetical existing work.
-  Keep current behavior and persistence correct within the agreed task scope.
+  is not required unless the founder explicitly requests it. The original
+  no-users/no-compositions observation was dated; current drafts are not disposable.
+  Do not add migration code, legacy adapters, old-data tests or retention paths
+  for hypothetical existing work. Preserve current work and keep current behavior
+  and persistence correct within the agreed task scope.
 - Bind asynchronous results and interactions to their originating profile,
   module, and request where relevant. Ignore or cancel obsolete work after
   navigation, account changes, closure, or disposal. Clean up listeners, timers,
@@ -117,15 +134,24 @@ not require a separate audit or approval round for every edit.
 - Read the visual-language section in `docs/INSCAPE_ACTIVE_CONTRACT.md` before
   UI or CSS work. Inspect the active component, its CSS, sibling production
   surfaces, and the user's screenshots before proposing a visual change.
+- Trace the winning styles and their owner before changing appearance. Change
+  the responsible rule or shared component instead of appending compensating
+  CSS, increasing specificity, adding `!important`, or using inline styles to
+  conceal an obsolete/conflicting rule. Remove displaced declarations. Intentional
+  theme, responsive, state and component variants remain valid when their scope
+  expresses a real difference; they must not mask an unresolved ownership conflict.
+  If an external component requires a scoped override, identify the constraint
+  and keep that exception with its owning integration.
 - Reuse established tokens, line weights, selector grammar, spacing, and
   responsive patterns. Use Inscape Sora for human interface copy and Inscape
   IBM Plex Sans Condensed for technical and dense secondary copy. Do not invent
   an adjacent design system or approve another interface font. The founder
   explicitly approved Inter Variable for the creation bar; use its scoped token
   as documented in the active contract, without changing other font roles.
-- The creation toolbar is the accepted dark tactile reference; follow the
-  active contract's Tactile interface section and reuse its material/control
-  recipes for requested migrations. Preserve existing surfaces until migrated.
+- Follow the affected surface's accepted production styling and shared recipes.
+  The dated flat toolbar, camera and tool-window migrations supersede the older
+  tactile reference for their named surfaces; do not restore an older treatment
+  merely because it remains documented. Preserve other surfaces until migrated.
   Do not invent unrelated palettes, glass effects, oversized spacing, arbitrary
   shadows, or decorative grids. Keep artwork and authored geometry independent.
 - Visual grids must control alignment or interaction; they are not decoration.

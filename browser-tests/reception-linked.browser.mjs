@@ -14,7 +14,7 @@ async function setup(width, query) {
     const url = new URL(route.request().url());
     if (url.origin === origin) return route.continue();
     if (url.hostname === 'raw.githubusercontent.com' && url.pathname.includes('/public/assets/'))
-      return route.fulfill({ response: await route.fetch({ url: origin + url.pathname.split('/public')[1] }) });
+      return route.fulfill({ path: 'public/' + url.pathname.split('/public/')[1] });
     return route.abort();
   });
   await page.goto(`${origin}/browser-tests/reception-linked-fixture.html?session=${crypto.randomUUID()}&${query}`);

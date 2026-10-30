@@ -30,7 +30,9 @@ test('Library browsing preserves filters, attachments and selection when closed,
   await studio.getByRole('button',{name:'All Assets',exact:true}).click();await search.fill('moon');
   assert.equal(await library.locator('.lattice-browser-asset').count(),1);
   await studio.getByRole('button',{name:'Close workspace',exact:true}).click();assert.ok(await library.isHidden());
-  const trigger=studio.getByRole('button',{name:'Artwork library',exact:true});assert.ok(await trigger.evaluate(n=>n===document.activeElement));
+  const trigger=studio.getByRole('button',{name:'Artwork library',exact:true});
+  await page.waitForFunction(node=>node===document.activeElement,await trigger.elementHandle());
+  assert.ok(await trigger.evaluate(n=>n===document.activeElement));
   await trigger.click();assert.equal(await search.inputValue(),'moon');await search.fill('');
   assert.ok(await studio.getByRole('button',{name:'Fold 3 images of Arch study',exact:true}).isVisible());
   await studio.getByRole('button',{name:'Filters: All',exact:true}).click();await page.getByRole('radio',{name:'Light studies',exact:true}).click();await page.keyboard.press('Escape');

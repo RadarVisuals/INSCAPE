@@ -141,7 +141,7 @@ for (const [width, scale, method] of [[1600, 1, 'keyboard'], [1600, .5, 'drag'],
       await page.mouse.move(empty.x, empty.y);
       await page.mouse.wheel(initialStage.x - 80, initialStage.y - 100); await settle(page);
       const camera = await page.locator('main.system-workflow').first().evaluate(node => ({
-        x: parseFloat(node.style.getPropertyValue('--workbench-pan-x')), y: parseFloat(node.style.getPropertyValue('--workbench-pan-y')),
+        x: Number(node.dataset.workbenchCameraX), y: Number(node.dataset.workbenchCameraY),
       }));
       assert.ok(Math.abs(camera.x) > 100 && Math.abs(camera.y) > 10, 'test has both horizontal and vertical camera pan');
       const select = page.getByRole('button', { name: 'Select Display article 1', exact: true });

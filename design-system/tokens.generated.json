@@ -7193,7 +7193,7 @@
     {
       "path": "src/reception/reception.css",
       "role": "Reception",
-      "sha256": "efef30b22654484820077e3c57b7d57c91c0ae308f93cda0c08f7060c903194d",
+      "sha256": "c2617ec8f657a854cede841d453edf40f1658eb693f2865fd7fefafbfaeecde1",
       "definitions": [],
       "references": [
         "--color-surface-base",

@@ -15,7 +15,8 @@ test('cold SVG loading stays accessible without a visible label; failure still o
       await gate;
       await route.fulfill({ status: 503, contentType: 'text/plain', body: 'Unavailable test artwork' });
     });
-    await page.goto(`${origin}/browser-tests/svg-lifecycle-fixture.html`);
+    // The source is deliberately held open; navigation must not wait for it.
+    await page.goto(`${origin}/browser-tests/svg-lifecycle-fixture.html`, { waitUntil: 'domcontentloaded' });
     const plain = page.getByRole('region', { name: 'Plain host', exact: true });
     await plain.locator('[data-artwork-loading]').waitFor({ state: 'attached' });
     assert.equal(await plain.locator('[data-artwork-loading]').textContent(), 'Loading artwork…');

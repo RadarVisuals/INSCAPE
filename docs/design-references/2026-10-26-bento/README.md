@@ -1,9 +1,13 @@
 # Hanssen bento geometry reference
 
-The founder selected the Hanssen About presentation for the static customizable
-Reception bento on 26 October 2026. Read the
-[accepted scope](../../INSCAPE_ACTIVE_CONTRACT.md#static-customizable-reception-bento-direction-2026-10-26)
-and [implementation handoff](../../handoffs/2026-10-26-static-reception-bento.md).
+Status: historical reference; the founder retired the template reference on
+30 October 2026 and will supply a new overall example.
+
+This packet preserves the 26 October Reception geometry study and its original
+instructions, not current requirements. Later Reception decisions already
+removed the navigation cutout. Follow the [active contract's current focus](../../INSCAPE_ACTIVE_CONTRACT.md#current-focus-and-change-boundaries-2026-10-30)
+for accepted scope; the [implementation handoff](../../handoffs/2026-10-26-static-reception-bento.md)
+records that earlier task.
 
 ## Live references
 

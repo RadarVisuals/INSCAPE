@@ -14,7 +14,7 @@ async function fixture(page, options = {}) {
   await page.route('**/*', route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
   await page.route('https://raw.githubusercontent.com/RadarVisuals/INSCAPE/**', async route => {
     const file = new URL(route.request().url()).pathname.split('/public/')[1];
-    await route.fulfill({ response: await route.fetch({ url: `${origin}/${file}` }) });
+    await route.fulfill({ path: `public/${file}` });
   });
   await page.goto(`${origin}/browser-tests/workbench-storage-fixture.html`);
   await page.getByRole('combobox', { name: 'Active Workbench' }).waitFor();
@@ -84,6 +84,7 @@ test('tool panel moves independently, distinguishes pointer/keyboard focus, canc
     await page.screenshot({ path: `${output}/layers-clean-760-short.png` });
     await page.getByRole('button', { name: 'Close Workbench Layers' }).click();
     const toggle = page.locator('[data-workbench-toolbar]').getByRole('button', { name: 'Layers', exact: true });
+    await page.waitForFunction(node => document.activeElement === node, await toggle.elementHandle());
     assert.equal(await toggle.evaluate(node => document.activeElement === node), true);
     await toggle.click(); await grip.waitFor();
     assert.deepEqual(await saved(page), before, 'panel interaction never writes artwork or presentation');

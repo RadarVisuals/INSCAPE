@@ -88,8 +88,8 @@ The founder chose multiple named Workbenches as independent composition canvases
 with a profile overview and visitor switching between published Workbenches.
 Layers and composition blocks belong to the active Workbench; Library source
 material stays shared. Folder-like Workbench stacks are no longer a required
-organizer in the new UI. Current references still demonstrate the single-canvas
-implementation. See the [active decision](../INSCAPE_ACTIVE_CONTRACT.md#multiple-named-workbenches-direction-2026-10-20)
+organizer in the new UI. Isolated reference specimens do not define the extent
+of the production collection workflow. See the [active decision](../INSCAPE_ACTIVE_CONTRACT.md#multiple-named-workbenches-direction-2026-10-20)
 and [workflow proposal](../audits/2026-10-20/multiple-workbenches.md).
 
 ## Reference direction, 2026-10-14
@@ -98,11 +98,11 @@ The founder requested a smaller, flatter toolbar and reduced the theme direction
 
 ## Start here
 
-For Reception, overview, composition presentation and shared navigation, use the
-[Hanssen reference](../design-references/2026-10-25-hanssen/README.md), chosen on
-25 October. Its page links and saved screenshots define the overall visual
-direction. Desktop remains deferred. Read the active contract first; this
-design-system workspace continues to document the existing composition tools.
+For Reception, overview, composition presentation and shared navigation, read
+the active contract's current focus first. The founder will supply a new overall
+visual example; historical reference packets do not prescribe future screens.
+Desktop remains deferred. This design-system workspace continues to document
+the existing composition tools.
 
 The static Reception implementation now uses `src/reception/ReceptionCanvas.jsx`
 for owner preview and public reading, with a separate `ReceptionEditor.jsx`.

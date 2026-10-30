@@ -11,6 +11,7 @@ import {
   moveCategory,
   moveCategorySection,
   setFolderAssets,
+  setFolderImage,
 } from '../src/library/domain/libraryWorkspace.js';
 import './libraryPreview.css';
 
@@ -113,6 +114,7 @@ export default function LibraryPreview({ open, theme, scenario, onScenarioChange
     moveCategory: (...args) => apply(moveCategory, ...args),
     moveSection: (...args) => apply(moveCategorySection, ...args),
     setCategoryAssets: (...args) => apply(setFolderAssets, ...args),
+    setCategoryImage: (...args) => apply(setFolderImage, ...args),
   };
   const source = collectionOpen ? assets.slice(4, 6) : assets;
   const retry = () => onScenarioChange('browse');
