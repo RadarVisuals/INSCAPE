@@ -12,7 +12,7 @@ export default function PublicationConfirmation({ confirmation, onClose }) {
   const transactionUrl = /^0x[0-9a-f]{64}$/i.test(transactionHash || '')
     ? `${lukso.blockExplorers.default.url}/tx/${transactionHash}` : null;
   return createPortal(<WorkbenchDestinationPanel title="Published successfully" onClose={onClose} closeLabel="Dismiss publication confirmation"
-    className="publication-confirmation system-workflow__token-scope" data-lattice-menu-surface data-menu-surface={confirmation.menuSurface || 'carbon'}
+    className="publication-confirmation system-workflow__token-scope" data-lattice-menu-surface
     aria-label="Publication complete">
     <div className="workbench-destination-body">
     <div role="status" aria-live="polite" aria-atomic="true">

@@ -2,16 +2,9 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
-const ownerSource = readFileSync(new URL('./ownerSystemWorkflow/OwnerSystemWorkflowRuntime.jsx', import.meta.url), 'utf8');
 const browserStyles = readFileSync(new URL('../lattice/browser/browserWorkspace.css', import.meta.url), 'utf8');
 const menuStyles = readFileSync(new URL('../lattice/rendering/latticeMenuSurface.css', import.meta.url), 'utf8');
 const tokenStyles = readFileSync(new URL('../inscapeTokens.css', import.meta.url), 'utf8');
-
-test('System Workflow owner surfaces receive the active canonical menu surface', () => {
-  assert.match(ownerSource, /data-lattice-menu-surface\s+data-menu-surface=\{menuSurface\}/);
-  assert.match(ownerSource, /<OwnerSystemWorkflowPanelLayer[\s\S]*menuSurface=\{menuSurface\}/);
-  assert.match(menuStyles, /\[data-lattice-menu-surface\]/);
-});
 
 test('central typography exposes only the approved interface and technical faces', () => {
   assert.match(tokenStyles, /font-family:\s*"Inscape Sora";[\s\S]*Sora-VariableFont_wght\.ttf/);

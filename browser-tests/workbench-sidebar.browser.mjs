@@ -64,7 +64,7 @@ for(const theme of ['carbon','mist']) for(const [width,height] of [[1440,900],[3
   assert.equal(await search.evaluate(hit),true,'Discover search is reachable');
   assert.ok((await search.boundingBox()).width>=80,'search retains usable typing space');
   assert.equal(await discover.locator('.public-entry-portal__header').evaluate(n=>n.scrollWidth<=n.clientWidth),true,'header has no horizontal overflow');
-  assert.equal(await discover.getAttribute('data-menu-surface'),theme,'Discover follows the editor theme');
+  assert.equal(await page.locator('html').getAttribute('data-interface-theme'),theme === 'mist' ? 'light' : 'dark','Discover follows the global interface');
   assert.equal(await search.evaluate(n=>getComputedStyle(n).borderRadius),'5px','Workbench reset does not override the field recipe');
   assert.ok((await search.boundingBox()).height >= (width < 900 ? 44 : 28),'field retains the shared pointer target');
   await discover.locator('.public-entry-portal__account-trigger').click();

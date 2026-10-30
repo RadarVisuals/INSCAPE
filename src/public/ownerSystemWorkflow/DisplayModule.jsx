@@ -26,8 +26,7 @@ import { displayTextLabel } from '../../systemWorkflow/domain/displayText.js';
 // controller and window configuration; it does not inspect selection or crop state.
 export default forwardRef(function DisplayModule({ assetsById, controller, authoringLocked: editingLocked, suspended = false, displayName,
   panelOccupied, onRevealInstruments, onInspect, onToggleLibrary,
-  onAuthoringLockToggle, registerAssetDimensions, resolveAssetDimensions, menuSurface,
-  reducedMotion, workspaceSurfaceColor, windowProps, placementTargetRef, shortcutTargetRef }, ref) {
+  onAuthoringLockToggle, registerAssetDimensions, resolveAssetDimensions, reducedMotion, windowProps, placementTargetRef, shortcutTargetRef }, ref) {
   const view = useWorkbenchView();
   const authoringLocked = editingLocked || Boolean(view.presentationTransforms?.[controller.moduleId || PRIMARY_DISPLAY_ID]);
   const { focusModules } = useWorkbenchActions();
@@ -189,15 +188,15 @@ export default forwardRef(function DisplayModule({ assetsById, controller, autho
       inspectionAtmosphere={viewer.atmosphereActive}
       playing={playingGrids}
       onTogglePlayback={() => { controller.replaceSelection([]); setPlayingGrids((current) => !current); }}
-      menuSurface={menuSurface}
+
       renderCues={host => <DisplayInspectionCues key={`${controller.draft.profileAddress}:${controller.selectedGridId}`}
         host={host} items={controller.selectedGrid?.placements || []} viewer={viewer} contentVersion={assetsById} onSelect={id => { tools.activate(targetId); controller.replaceSelection([id]); }}
         editable={!authoringLocked} disabled={!tools.state.metadata || panelOccupied || playbackState.moving || playbackState.offset || Boolean(crop.cropSession)}
         />}
       onAuthoringLockToggle={toggleAuthoringLock}
       renderInspection={viewer.placementId ? (container, controlsContainer, scene) => <DisplayFocusViewer
-        scene={scene} container={container} controlsContainer={controlsContainer} menuSurface={menuSurface}
-        viewer={viewer} workspaceSurfaceColor={workspaceSurfaceColor} /> : null}
+        scene={scene} container={container} controlsContainer={controlsContainer}
+        viewer={viewer} /> : null}
 >
     <OwnerSystemWorkflowCanvas placementTargetRef={placementTargetRef} assetsById={assetsById} authoringLocked={authoringLocked || liftInspection} controller={controller} crop={crop}
         editingTextId={editingText?.gridId === controller.selectedGridId ? editingText.id : null} onEditText={liftInspection ? undefined : editText}
@@ -228,13 +227,13 @@ export default forwardRef(function DisplayModule({ assetsById, controller, autho
       <ModuleSurfaceControls display value={controller.draft.appearance.edges} frame={controller.draft.appearance.frame !== false}
         onChange={edges => controller.setAppearance({ edges })} onFrameChange={frame => controller.setAppearance({ frame })} />
     </SharedDisplayToolContent>
-    {sizeDialog && !suspended && !authoringLocked && <DisplaySizeDialog geometry={sizeDialog.geometry} appearance={sizeDialog.appearance} menuSurface={menuSurface}
+    {sizeDialog && !suspended && !authoringLocked && <DisplaySizeDialog geometry={sizeDialog.geometry} appearance={sizeDialog.appearance}
       returnFocus={sizeDialog.trigger} error={controller.error} onClose={() => setSizeDialog(null)}
       onConfirm={(size, appearance) => controller.setDisplayFormat(size, sizeDialog.geometry, appearance, sizeDialog.appearance)} />}
     {moduleMenu && createPortal(<RackMenu anchor={moduleMenu} commands={[...moduleCommands,
       { id: 'close-module', label: 'CLOSE MODULE' },
       ...(moduleMenu.onDelete ? [{ id: 'delete-module', label: 'DELETE MODULE' }] : []),
     ]} getSubmenuCommands={moduleSubmenu}
-      label="Display Module commands" menuSurfaceId={menuSurface} returnFocus={moduleMenu.trigger}
+      label="Display Module commands"  returnFocus={moduleMenu.trigger}
       onClose={() => setModuleMenu(null)} onCommand={moduleCommand} systemWorkflowOverlay />, document.body)}</>;
 });

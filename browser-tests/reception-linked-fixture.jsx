@@ -81,7 +81,7 @@ function App() {
     : <WorkbenchOverview items={previews} previews={previews} selected={selected} model={selected.model} profile={reviewProfile}
       onSelect={select} view={view} onViewChange={setView} cardSize={cardSize} onCardSize={setCardSize} onOpenReception={() => setSurface('reception')} />;
   return surface === 'edit' ? <ReceptionStoreEditor rootStore={root} storage={storage} onClose={() => setSurface('reception')} onCanvases={() => setSurface('canvases')} reviewAssets={assets} reviewCategories={[]} reviewProfile={reviewProfile} />
-    : <ReceptionOverview reception={root.getSnapshot().reception} model={model} address={profileAddress} menuSurface="carbon" snapshot={snapshot} assets={assetMap}
+    : <ReceptionOverview reception={root.getSnapshot().reception} model={model} address={profileAddress} snapshot={snapshot} assets={assetMap}
       onEdit={publicView ? undefined : () => setSurface('edit')} onOpenCanvas={() => setSurface('canvases')} />;
 }
 createRoot(document.getElementById('root')).render(<React.StrictMode><App /></React.StrictMode>);

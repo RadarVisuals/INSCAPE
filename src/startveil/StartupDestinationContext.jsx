@@ -24,7 +24,7 @@ export function StartupReloadButton() {
 
 export function StartupDestinationFailure({ title = 'WORLD COULD NOT BE OPENED', children }) {
   return <main className="published-profile-status" data-published-focus-fallback tabIndex={-1}
-    data-lattice-menu-surface data-menu-surface="mist" aria-label={title}>
+    data-lattice-menu-surface  aria-label={title}>
     <StartupDestinationReady />
     <section className="published-profile-status__card" role="alert">
       <header><span>INSCAPE</span><h1>{title}</h1></header>

@@ -12,7 +12,7 @@ const groupName = tabs => tabs.length === 1 ? tabs[0] : `${tabs.slice(0, -1).joi
 
 // One layout owns the tools. Stable portal containers move between docks;
 // docking never creates a second tool instance or changes the artwork selection.
-export default function WorkbenchToolDocks({ controller, hidden, menuSurface, navigationRef, historyBlocked, hostRef }) {
+export default function WorkbenchToolDocks({ controller, hidden, navigationRef, historyBlocked, hostRef }) {
   const view = useWorkbenchView(), prefix = useId();
   const layout = useSyncExternalStore(controller.subscribe, controller.getSnapshot);
   const [containers] = useState(() => Object.fromEntries(WORKBENCH_TOOL_TABS.map(tab => [tab, document.createElement('div')])));
@@ -166,7 +166,7 @@ export default function WorkbenchToolDocks({ controller, hidden, menuSurface, na
   };
   const menuPane = menu && toolPane(layout, menu.tab);
   const menuGroup = menu && layout.groups.find(group => group.panes.includes(menuPane));
-  return <div data-system-workflow-overlay data-workbench-selection-tools data-workflow-material="tactile" data-workflow-finish="flat" data-lattice-menu-surface data-menu-surface={menuSurface}>
+  return <div data-system-workflow-overlay data-workbench-selection-tools data-workflow-material="tactile" data-workflow-finish="flat" data-lattice-menu-surface >
     {!hidden && layout.groups.map(group => {
       const visiblePanes = group.panes.filter(pane => visibleToolTabs(layout, pane).length);
       if (!visiblePanes.length) return null;

@@ -33,7 +33,7 @@ function RoomLibrary({ profileAddress, ...props }) {
   return <OwnerSystemWorkflowLibraryWorkspace {...props} data={browser.data} categoryCommands={browser.commands} phase="open" placementScope={`${profileAddress}:exploration-keeper`} />;
 }
 
-function KeeperRoom({ store, profileAddress, flightAreaRef, menuSurface }) {
+function KeeperRoom({ store, profileAddress, flightAreaRef }) {
   const draft = useSyncExternalStore(store.subscribe, store.getSnapshot);
   const [error, setError] = useState(''), [libraryOpen, setLibraryOpen] = useState(false), [selected, setSelected] = useState(null);
   const libraryButton = useRef(null), previousLibrary = useRef(false), dockTarget = useRef(null);
@@ -111,7 +111,7 @@ function KeeperRoom({ store, profileAddress, flightAreaRef, menuSurface }) {
     </div>
     <KeeperWorkbench records={record ? [record] : []} presentations={presentation} store={store} profileAddress={profileAddress}
       hostRef={flightAreaRef} flightAreaRef={flightAreaRef} motionSpace={motionSpace} registerTarget={registerTarget} reducedMotion={layout.reducedMotion} windowSnap={false} />
-    {libraryOpen && <RoomLibrary key={`${profileAddress}:${record?.id || ''}`} profileAddress={profileAddress} menuSurface={menuSurface}
+    {libraryOpen && <RoomLibrary key={`${profileAddress}:${record?.id || ''}`} profileAddress={profileAddress}
       onClose={() => setLibraryOpen(false)} workspaceRef={flightAreaRef} moduleAssetTargetRef={moduleTargets} placementTargetRef={placementTarget}
       workbenchImageTargetRef={emptyTarget} shortcutTargetRef={emptyTarget} />}
   </WorkbenchViewProvider>;

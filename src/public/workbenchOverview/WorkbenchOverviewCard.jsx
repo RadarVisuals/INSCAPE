@@ -8,7 +8,7 @@ export default function WorkbenchOverviewCard({ item, duplicate, selected, visib
   return <article className="workbench-overview-card" ref={host} data-revealed={revealed || undefined} data-card-id={item.id} data-drop-target={dropTarget || undefined}
     onPointerLeave={event => { if (event.pointerType === 'mouse' && !host.current.matches(':has(:focus-visible)')) setInformation(false); }}
     onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget)) setInformation(false); }}>
-    {visible && <WorkbenchOverviewPreview model={item.model} name={item.name} surfaceId={item.draft.appearance.surfaceId} thumbnail crop={item.thumbnailCrop} />}
+    {visible && <WorkbenchOverviewPreview model={item.model} name={item.name} thumbnail crop={item.thumbnailCrop} />}
     <button type="button" className="workbench-overview-card-open" disabled={arranging} tabIndex={duplicate ? -1 : 0}
       data-workbench-id={item.id} data-previewed={!duplicate && selected} onClick={event => {
         if (event.nativeEvent.pointerType === 'touch' && !revealed) { onReveal(); return; }

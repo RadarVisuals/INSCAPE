@@ -77,11 +77,11 @@ function Profile({ profile }) {
   const browser = useOwnerLatticeBrowser(profile, open);
   probe.data = browser.data;
   return <><button style={{ position: 'fixed', right: 0, top: 0, zIndex: 2147483647 }} onClick={() => setOpen(value => !value)}>{open ? 'Close fixture Library' : 'Open fixture Library'}</button>
-    <main ref={workspaceRef} className="system-workflow" data-lattice-menu-surface data-menu-surface="paper"
+    <main ref={workspaceRef} className="system-workflow" data-lattice-menu-surface
       data-layout={innerWidth < 800 ? 'narrow' : 'wide'} data-library-open={open || undefined}>
       <OwnerSystemWorkflowLibraryWorkspace placementScope={`${profile}:fixture`} data={browser.data}
         categoryCommands={browser.commands} preferenceStore={preferences.section('library')}
-        workspaceRef={workspaceRef} menuSurface="paper" onClose={() => setOpen(false)} phase={open ? 'open' : 'closed'} />
+        workspaceRef={workspaceRef} onClose={() => setOpen(false)} phase={open ? 'open' : 'closed'} />
     </main></>;
 }
 function Fixture() {

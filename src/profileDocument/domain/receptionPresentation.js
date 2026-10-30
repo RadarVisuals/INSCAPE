@@ -19,7 +19,7 @@ export const newReceptionRegion = (id = `region:${crypto.randomUUID()}`) => ({ i
 export const createReception = () => {
   const region = newReceptionRegion();
   return { version: 2, regions: [region], imageModules: [], texts: [], mobile: [{ id: region.id, columns: 2, height: 320 }],
-    radius: 20, gutter: 8, padding: 24, height: 900, branding: { name: '', logo: null, theme: 'carbon' } };
+    radius: 20, gutter: 8, padding: 24, height: 900, branding: { name: '', logo: null } };
 };
 export function validReception(value, published = false) {
   if (!exact(value, ['version', 'regions', 'imageModules', 'texts', 'mobile', 'radius', 'gutter', 'padding', 'height', 'branding', ...Object.hasOwn(value || {}, 'links') ? ['links'] : [], ...Object.hasOwn(value || {}, 'surface') ? ['surface'] : []])
@@ -28,8 +28,8 @@ export function validReception(value, published = false) {
     || value.version !== 2 || !number(value.radius, 0, 160) || !number(value.gutter, 0, 64) || !number(value.padding, 0, 128)
     || !integer(value.height, 480, 2400) || !validImageModules(value.imageModules, published, { minimumCropZoom: RECEPTION_IMAGE_MIN_ZOOM }) || !validTextModules(value.texts, published)
     || value.texts.some(text => text.sceneLink || text.pagination)
-    || !exact(value.branding, ['name', 'logo', 'theme']) || typeof value.branding.name !== 'string'
-    || value.branding.name.length > 64 || /[\u0000-\u001f\u007f]/u.test(value.branding.name) || !['carbon', 'mist'].includes(value.branding.theme)
+    || !exact(value.branding, ['name', 'logo', ...Object.hasOwn(value.branding || {}, 'theme') ? ['theme'] : []]) || typeof value.branding.name !== 'string'
+    || value.branding.name.length > 64 || /[\u0000-\u001f\u007f]/u.test(value.branding.name) || Object.hasOwn(value.branding || {}, 'theme') && !['carbon', 'mist'].includes(value.branding.theme)
     || value.branding.logo !== null && !value.imageModules.some(item => item.id === value.branding.logo)
     || !Array.isArray(value.regions) || !value.regions.length || value.regions.length > RECEPTION_LIMIT) return false;
   const ids = new Set(), placed = new Set(), content = new Set([...builtins, ...value.imageModules.map(i => i.id), ...value.texts.map(i => i.id), ...(value.links || []).map(i => i.id)]);

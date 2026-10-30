@@ -1,3 +1,4 @@
+import { retiredInterfaceKeys, withoutRetiredInterfaceAppearance } from './retiredInterfaceAppearance.js';
 import { validReception, receptionReferenceCount } from '../../profileDocument/domain/receptionPresentation.js';
 import { validWorkbenchIndex } from './workbenchIndex.js';
 import { validArtworkLayers } from './artworkLayers.js';
@@ -50,10 +51,10 @@ export const SYSTEM_WORKFLOW_LIMITS = Object.freeze({
 });
 
 const DRAFT_KEYS = ['profileAddress', 'draftVersion', 'artboard', 'geometry', 'appearance', 'identityPresentation', 'grids'];
-const APPEARANCE_KEYS = ['surfaceId', 'menuSurfaceId', 'dossierSurfaceId', 'guideMode', 'guideSize', 'guideColor'];
+const APPEARANCE_KEYS = ['surfaceId', 'guideMode', 'guideSize', 'guideColor'];
 const GRID_KEYS = ['id', 'title', 'subtitle', 'visibility', 'labelVisible', 'labelAnchor', 'labelOffset', 'placements'];
 const PLACEMENT_KEYS = ['id', 'stableAssetId', 'column', 'row', 'columnSpan', 'rowSpan', 'layer', 'navigationOrder', 'crop', 'visibility', 'locked', 'transform'];
-const IDENTITY_KEYS = ['alias', 'avatar', 'bio', 'tags', 'dossierSurface', 'visibility'];
+const IDENTITY_KEYS = ['alias', 'avatar', 'bio', 'tags', 'visibility'];
 const SAFE_ID = /^[A-Za-z0-9:_-]+$/u;
 const GRID_ID = /^grid:[A-Za-z0-9_-]+$/u;
 const HEX_COLOR = /^#[0-9a-f]{6}$/iu;
@@ -133,7 +134,6 @@ export function createEmptySystemWorkflowIdentityPresentation() {
     avatar: { mode: 'official', stableAssetId: null, shape: 'square' },
     bio: { mode: 'official', customText: '' },
     tags: { includeOfficial: true, additional: [] },
-    dossierSurface: 'paper',
     visibility: { links: true, network: true, counts: true, publicationDate: true },
   };
 }
@@ -171,7 +171,7 @@ export function createEmptySystemWorkflowDraft(profileAddress, options = {}) {
     artboard: { ...SYSTEM_WORKFLOW_ARTBOARD },
     geometry: { ...SYSTEM_WORKFLOW_GEOMETRY },
     appearance: {
-      surfaceId: 'mist', menuSurfaceId: 'mist', dossierSurfaceId: 'paper',
+      surfaceId: 'mist',
       guideMode: 'LINES', guideSize: SYSTEM_WORKFLOW_GRID_DENSITY.default, guideColor: '#6f746f',
     },
     identityPresentation: createEmptySystemWorkflowIdentityPresentation(),
@@ -185,7 +185,7 @@ export function createEmptySystemWorkflowDraft(profileAddress, options = {}) {
 }
 
 function validateIdentity(value, fail) {
-  if (!exactKeys(value, Object.hasOwn(value || {}, 'card') ? [...IDENTITY_KEYS, 'card'] : IDENTITY_KEYS)) return fail('identityPresentation', 'invalid_identity_structure', 'Invalid identity');
+  if (!exactKeys(value, [...IDENTITY_KEYS, ...['card', 'dossierSurface'].filter(key => Object.hasOwn(value || {}, key))])) return fail('identityPresentation', 'invalid_identity_structure', 'Invalid identity');
   if (Object.hasOwn(value, 'card') && !isValidIdentityCard(value.card)) fail('identityPresentation.card', 'invalid_identity_card', 'Invalid Identity card settings');
   if (!safeText(value.alias, 80)) fail('identityPresentation.alias', 'invalid_alias', 'Invalid alias');
   if (!exactKeys(value.avatar, Object.hasOwn(value.avatar || {}, 'selectedMedia') ? ['mode', 'stableAssetId', 'shape', 'selectedMedia'] : ['mode', 'stableAssetId', 'shape'])
@@ -205,7 +205,7 @@ function validateIdentity(value, fail) {
     || value.tags.additional.some((tag) => !safeText(tag, 48, { empty: false }))) {
     fail('identityPresentation.tags', 'invalid_tags', 'Invalid tags');
   }
-  if (!sets.surfaces.has(value.dossierSurface)) fail('identityPresentation.dossierSurface', 'invalid_dossier_surface', 'Invalid dossier surface');
+  if (Object.hasOwn(value, 'dossierSurface') && !sets.surfaces.has(value.dossierSurface)) fail('identityPresentation.dossierSurface', 'invalid_dossier_surface', 'Invalid dossier surface');
   if (!exactKeys(value.visibility, ['links', 'network', 'counts', 'publicationDate'])
     || Object.values(value.visibility || {}).some((entry) => typeof entry !== 'boolean')) {
     fail('identityPresentation.visibility', 'invalid_identity_visibility', 'Invalid identity visibility');
@@ -276,13 +276,13 @@ export function validateSystemWorkflowDraft(input) {
   if (!normalizeProfileAddress(input.profileAddress) || input.profileAddress !== input.profileAddress.toLowerCase()) fail('profileAddress', 'invalid_profile_address', 'Invalid profile address');
   if (input.draftVersion !== SYSTEM_WORKFLOW_DRAFT_VERSION) fail('draftVersion', 'unsupported_draft_version', 'Unsupported draft version');
   if (!isDisplayFormat(input.artboard, input.geometry)) fail('artboard', 'invalid_artboard', 'Invalid Display format');
-  if (!exactKeys(input.appearance, [...APPEARANCE_KEYS, ...['edges', 'frame', ...DISPLAY_CANVAS_APPEARANCE_KEYS].filter(key => Object.hasOwn(input.appearance || {}, key))])
+  if (!exactKeys(input.appearance, [...APPEARANCE_KEYS, ...retiredInterfaceKeys(input.appearance), ...['edges', 'frame', ...DISPLAY_CANVAS_APPEARANCE_KEYS].filter(key => Object.hasOwn(input.appearance || {}, key))])
     || !validDisplayCanvasAppearance(input.appearance)
     || input.appearance?.edges !== undefined && !validModuleEdges(input.appearance.edges)
     || input.appearance?.frame !== undefined && typeof input.appearance.frame !== 'boolean'
     || !sets.surfaces.has(input.appearance?.surfaceId)
-    || !sets.surfaces.has(input.appearance?.menuSurfaceId)
-    || !sets.surfaces.has(input.appearance?.dossierSurfaceId)
+    || Object.hasOwn(input.appearance || {}, 'menuSurfaceId') && !sets.surfaces.has(input.appearance.menuSurfaceId)
+    || Object.hasOwn(input.appearance || {}, 'dossierSurfaceId') && !sets.surfaces.has(input.appearance.dossierSurfaceId)
     || !sets.guides.has(input.appearance?.guideMode)
     || !Number.isSafeInteger(input.appearance?.guideSize)
     || input.appearance.guideSize < SYSTEM_WORKFLOW_GRID_DENSITY.minimum
@@ -387,7 +387,7 @@ export function validateSystemWorkflowDraft(input) {
   } catch {
     fail('$', 'draft_not_serializable', 'Draft is not serializable');
   }
-  return { valid: errors.length === 0, errors, value: errors.length ? null : withoutRemovedArtworkPresentation(input) };
+  return { valid: errors.length === 0, errors, value: errors.length ? null : withoutRetiredInterfaceAppearance(withoutRemovedArtworkPresentation(input)) };
 }
 
 export function assertValidSystemWorkflowDraft(input) {

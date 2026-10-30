@@ -1,7 +1,7 @@
 import { FIRST_WORKBENCH_ID, MAX_WORKBENCHES, assertWorkbenchName, assertWorkbenchIntroduction, assertThumbnailCrop } from '../../systemWorkflow/domain/workbenchCollection.js';
 
 // The root is the entry canvas. Additional canvases contain composition facts
-// only; profile identity, Keeper and menu appearance have one owner at the root.
+// only; profile identity, and Keeper have one owner at the root.
 export const CANVAS_CONTENT_KEYS = ['artboard', 'geometry', 'appearance', 'grids', 'metadata', 'workbench', 'displays', 'miniApps', 'texts', 'imageModules', 'shapes', 'workbenchGroups', 'workbenchIndex', 'artworkLayers'];
 export function canvasContent(document) {
   const content = Object.fromEntries(CANVAS_CONTENT_KEYS.filter(key => Object.hasOwn(document, key)).map(key => [key, structuredClone(document[key])]));
@@ -16,7 +16,7 @@ export function publishedCanvasEntries(document) {
 }
 export function canvasDocument(document, entry) {
   const shared = Object.fromEntries(Object.entries(document).filter(([key]) => !CANVAS_CONTENT_KEYS.includes(key) && !['canvas', 'canvases', 'reception'].includes(key)));
-  return { ...shared, ...entry.content, appearance: { ...entry.content.appearance, menuSurfaceId: document.appearance.menuSurfaceId } };
+  return { ...shared, ...entry.content, appearance: { ...entry.content.appearance } };
 }
 export function validatePublishedCanvases(document, validate, fail) {
   if (!Object.hasOwn(document, 'canvas') && !Object.hasOwn(document, 'canvases')) return;

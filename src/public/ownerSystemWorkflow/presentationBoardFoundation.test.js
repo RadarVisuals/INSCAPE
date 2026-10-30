@@ -35,7 +35,6 @@ test('owner Display Module reuses the existing interactive canvas inside one cli
   assert.match(moduleState, /ABSENT: 'absent'[\s\S]*MINIMIZED: 'minimized'[\s\S]*WINDOW: 'window'/);
   assert.match(board, /data-presentation-workbench/);
   assert.match(board, /data-presentation-stage data-surface=\{displaySurface\}/);
-  assert.match(runtime, /data-surface=\{workbenchPreferences\.surfaceId\}/);
   assert.match(display, /displaySurface=\{controller\.draft\?\.appearance\.surfaceId\}/);
   assert.doesNotMatch(board, /aria-label="Board zoom"|Board zoom percentage|system-workflow__board-zoom[^\n]*type="range"/);
   assert.match(board, /aria-label="Minimize Display Module to shortcut"/);
@@ -94,7 +93,6 @@ test('owner Display Module reuses the existing interactive canvas inside one cli
   assert.match(shortcut, /aria-label="Shortcut label size"/);
   assert.match(shortcut, /aria-label="Shortcut label size"[^>]*max="20"/);
   assert.match(shortcut, /shortcutIconPreviewStyle/);
-  assert.match(shortcut, /menuSurfaceId=\{menuSurface\}/);
   assert.match(shortcut, /iconPresentation: shortcutIconPresentation/);
   assert.match(shortcut, /visible: shortcutVisible/);
   assert.match(display, /<SharedDisplayToolContent id="metadata"/);

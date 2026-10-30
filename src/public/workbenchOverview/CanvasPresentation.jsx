@@ -88,7 +88,7 @@ export default function CanvasPresentation({ selected, model, origin, onClose, o
             <button ref={closeButton} type="button" aria-label="Close canvas" title="Close canvas" onClick={close}><X size={16} /></button></div>
         </header>
         <div className="canvas-presentation-stage">
-          <WorkbenchOverviewPreview model={model} name={selected.name} surfaceId={selected.draft.appearance.surfaceId}
+          <WorkbenchOverviewPreview model={model} name={selected.name}
             viewport={viewport} region={destination?.view || model.area} highlights={source?.frames} presenting />
         </div>
         <footer className={chromeClass('footer')} inert={chromeVisible ? undefined : ''}>

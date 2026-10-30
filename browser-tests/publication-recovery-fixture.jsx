@@ -1,3 +1,7 @@
+import { interfaceTheme } from '../src/interfaceTheme.js';
+if (!localStorage.getItem('inscape:interface-theme') && new URLSearchParams(location.search).has('theme')) {
+  interfaceTheme.setMode(['light', 'mist'].includes(new URLSearchParams(location.search).get('theme')) ? 'light' : 'dark');
+}
 import React, { useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { createEmptySystemWorkflowDraft } from '../src/systemWorkflow/domain/systemWorkflowDraft.js';
@@ -12,10 +16,10 @@ function Fixture() {
   const menuSurface = ['carbon', 'mist'].includes(requestedTheme) ? requestedTheme : 'paper';
   const [address, setAddress] = useState(`0x${'1'.repeat(40)}`);
   window.recoveryFixture = { setAddress, journal: publicationJournal };
-  return <main className="system-workflow" data-lattice-menu-surface data-menu-surface={menuSurface}>
+  return <main className="system-workflow" data-lattice-menu-surface>
     <OwnerSystemWorkflowPublicationRack profileAddress={address} profile={{ address, name: 'Test' }}
       assetRecords={[]} systemWorkflowDraft={createEmptySystemWorkflowDraft(address)}
-      getWalletPublicationContext={() => ({})} menuSurface={menuSurface} phase="open" onClose={() => {}} />
+      getWalletPublicationContext={() => ({})} phase="open" onClose={() => {}} />
   </main>;
 }
 createRoot(document.getElementById('root')).render(<Fixture />);

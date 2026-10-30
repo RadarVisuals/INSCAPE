@@ -44,7 +44,7 @@ export default function ThumbnailCropForm({ selected, model, ratio, onSave, onCa
         const current = normalizeCropForMask(value, mask(), model.area);
         update({ ...current, x: Math.max(0, Math.min(1, current.x + direction[0] * step)), y: Math.max(0, Math.min(1, current.y + direction[1] * step)) });
       }}>
-      <WorkbenchOverviewPreview model={model} name={selected.name} surfaceId={selected.draft.appearance.surfaceId} thumbnail crop={crop} />
+      <WorkbenchOverviewPreview model={model} name={selected.name} thumbnail crop={crop} />
     </button>
     <label className="workbench-thumbnail-crop-zoom"><span>Zoom <output>{Math.round(value.zoom * 100)}%</output></span>
       <input type="range" aria-label="Thumbnail zoom" min="1" max="4" step=".05" value={value.zoom} onChange={event => update({ ...value, zoom: Number(event.target.value) })} /></label>

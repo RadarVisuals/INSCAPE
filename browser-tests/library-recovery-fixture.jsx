@@ -48,10 +48,9 @@ luksoRpcProfileRepository.loadProfileAssets = async function* () {
 function Fixture() {
   const browser = useOwnerLatticeBrowser(profile,false);
   const workspaceRef = useRef(null), placementTargetRef = useRef(null), shortcutTargetRef = useRef(null), moduleAssetTargetRef = useRef(null);
-  return <main ref={workspaceRef} className="system-workflow" data-lattice-menu-surface data-menu-surface="paper" data-layout={innerWidth < 800 ? 'narrow' : 'wide'} data-library-open>
+  return <main ref={workspaceRef} className="system-workflow" data-lattice-menu-surface data-layout={innerWidth < 800 ? 'narrow' : 'wide'} data-library-open>
     <OwnerSystemWorkflowLibraryWorkspace categoryCommands={browser.commands} placementScope={`${profile}:test`} data={browser.data}
-      workspaceRef={workspaceRef} placementTargetRef={placementTargetRef} shortcutTargetRef={shortcutTargetRef} moduleAssetTargetRef={moduleAssetTargetRef}
-      menuSurface="paper" onClose={() => {}} phase="open" />
+      workspaceRef={workspaceRef} placementTargetRef={placementTargetRef} shortcutTargetRef={shortcutTargetRef} moduleAssetTargetRef={moduleAssetTargetRef} onClose={() => {}} phase="open" />
   </main>;
 }
 createRoot(document.getElementById('root')).render(<Fixture />);

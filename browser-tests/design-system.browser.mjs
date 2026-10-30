@@ -86,7 +86,7 @@ test('live examples retain real control states, theme separation, field access a
     assert.equal(await page.getByRole('button', { name: 'Actions', exact: true }).evaluate(node => document.activeElement === node), true);
     const material = page.locator('.ds-live-controls');
     const light = await material.evaluate(node => getComputedStyle(node).background);
-    await page.getByLabel('Preview surface').selectOption('mist');
+    await page.getByRole('button', { name: 'mist' === 'mist' ? 'LIGHT' : 'DARK', exact: true }).click();
     assert.notEqual(await material.evaluate(node => getComputedStyle(node).background), light, 'reference instruments invert between Carbon and Mist');
     await page.getByRole('complementary', { name: 'Properties preview', exact: true }).getByRole('button', { name: 'Rotate', exact: true }).click();
     await page.locator('.ds-properties-feedback').filter({ hasText: 'ROTATE' }).waitFor();
@@ -138,7 +138,7 @@ test('overview and component minimal popups preserve dismissal, nested navigatio
       const page = await browser.newPage({ viewport: { width, height: 1000 }, hasTouch: width < 520 });
       try {
         const errors = await mount(page, section);
-        await page.getByLabel('Preview surface').selectOption('mist');
+        await page.getByRole('button', { name: 'mist' === 'mist' ? 'LIGHT' : 'DARK', exact: true }).click();
         const toolbar = page.getByRole('toolbar', { name: 'Creation tools' });
         const edges = await toolbar.evaluate(node => {
           const bar = node.getBoundingClientRect(), buttons = [...node.querySelectorAll('button')].map(button => button.getBoundingClientRect());
@@ -214,7 +214,7 @@ test('review fixes preserve contrast, enlarged labels and readable source links'
       return label.left >= button.left && label.right <= button.right;
     }), 'enlarged label stays inside its selected background');
     await page.goto(`${origin}/design-system.html#foundations`); await page.reload();
-    const contrast = await page.locator('.ds-themes [data-menu-surface="mist"] > small').evaluate(node => {
+    const contrast = await page.locator('.ds-themes article > small').evaluate(node => {
       const parse = value => value.match(/[\d.]+/g).map(Number);
       const blend = (front, back) => front.slice(0, 3).map((value, i) => value * (front[3] ?? 1) + back[i] * (1 - (front[3] ?? 1)));
       let bg = [255, 255, 255]; const chain = [];
@@ -279,7 +279,7 @@ test('complete Properties examples preserve Image actions, fields, crop and loca
       assert.equal(await size.evaluate(node => node.validity.valid), false);
       await size.fill('512'); await panel.getByRole('button', { name: 'Set size', exact: true }).click();
       assert.match(await feedback.innerText(), /512 × 192/);
-      await page.getByLabel('Preview surface').selectOption('mist');
+      await page.getByRole('button', { name: 'mist' === 'mist' ? 'LIGHT' : 'DARK', exact: true }).click();
       await page.getByRole('button', { name: 'Close example Properties' }).click();
       const reopen = page.getByRole('button', { name: 'Reopen example Properties' });
       assert.ok(await reopen.evaluate(node => document.activeElement === node)); await reopen.click();
@@ -359,7 +359,7 @@ test('Shape Properties retains rectangle, grid and legacy texture controls and d
     const panel = page.getByRole('complementary', { name: 'Properties preview', exact: true });
     assert.equal(await panel.getByRole('navigation', { name: 'Shape actions' }).getByRole('button').count(), 6);
     await page.getByLabel('Shape name', { exact: true }).fill('Reference rectangle'); await page.getByLabel('Shape name', { exact: true }).press('Tab');
-    await page.getByLabel('Preview surface').selectOption('mist');
+    await page.getByRole('button', { name: 'mist' === 'mist' ? 'LIGHT' : 'DARK', exact: true }).click();
     assert.equal(await page.getByLabel('Shape name', { exact: true }).inputValue(), 'Reference rectangle');
     assert.equal(await panel.getByRole('checkbox', { name: 'Show shape', exact: true }).count(), 0);
     await panel.getByRole('checkbox', { name: 'Include in publication', exact: true }).uncheck();

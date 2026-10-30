@@ -1,13 +1,13 @@
 // This registry describes the production system. Values live in the linked CSS.
-export const system = { name: 'INSCAPE', version: '1.0.0', reviewed: '2026-10-14' };
+export const system = { name: 'INSCAPE', version: '1.0.0', reviewed: '2026-10-30' };
 // Current design directions. Production retains older surface IDs for saved content.
 // Review status describes the new design direction, separately from production inventory.
 export const designDecisions = [
   {
     id: 'themes',
-    name: 'Carbon and Mist',
-    status: 'agreed',
-    detail: 'Dark Carbon and light Mist instruments with neutral focus.',
+    name: 'Dark and Light',
+    status: 'app',
+    detail: 'One device-wide Dark/Light preference; neutral charcoal or paper, with inverted selection.',
   },
   {
     id: 'toolbar',
@@ -48,7 +48,7 @@ export const designDecisions = [
     detail: 'Field validation is previewed; the broader message family is still to design.',
   },
 ];
-export const themes = ['carbon', 'mist'];
+export const themes = ['dark', 'light'];
 export const tokenSources = [
   { path: 'src/reception/reception.css', role: 'Reception', purpose: 'Rectangular partition, responsive flow, navigation contour and separate editor geometry using shared material controls.' },
   { path: 'src/public/ownerSystemWorkflow/workbenchDestinationPanel.css', role: 'Destinations', purpose: 'Shared flat titlebar, stationary actions, contained scrolling and responsive Docs, Profile and Grids.' },
@@ -164,7 +164,7 @@ export const components = [
     contract: 'The existing movable window retains membership, visibility, stack and history actions. Flat fields and reachable controls use the shared tool material.' },
   { id: 'discover', name: 'Discover', kind: 'Shared public directory', material: 'Flat Carbon / Mist',
     source: 'src/startveil/PublicEntryPortal.jsx', evidence: 'browser-tests/discover-style.browser.mjs',
-    contract: 'Owner and public entry share the same search, published cards and account controls. The owner theme is explicit; public entry defaults to Mist. Results scroll beneath the header, with reachable pagination. Publication resolution and navigation retain their existing owners.' },
+    contract: 'Owner and public entry share the same search, published cards and account controls. One device-wide Dark/Light preference governs owner and public entry, including before sign-in. Results scroll beneath the header, with reachable pagination. Publication resolution and navigation retain their existing owners.' },
   { id: 'activity', name: 'Activity', kind: 'Sidebar destination', material: 'Flat Carbon / Mist',
     source: owner + 'OwnerSystemWorkflowActivity.jsx', evidence: 'browser-tests/activity.browser.mjs',
     contract: 'Recent notifications and full history share the flat panel shell. Filters, search, read markers, refresh and failure states retain the signal owner. Header and actions remain reachable while entries scroll. Escape returns from history, then closes Activity.' },
@@ -499,7 +499,7 @@ export const components = [
     material: 'Flat Carbon / Mist',
     source: owner + 'OwnerSystemWorkflowPublicationRack.jsx',
     contract:
-      'Local save, prepared snapshot, upload and confirmed publication are distinct states. The shared flat shell keeps its close and primary action reachable while copy scrolls. The confirmed result carries the originating menu theme. Styling never triggers publication or wallet actions.',
+      'Local save, prepared snapshot, upload and confirmed publication are distinct states. The shared flat shell keeps its close and primary action reachable while copy scrolls. The confirmed result uses the current shared interface appearance. Styling never triggers publication or wallet actions.',
     evidence: 'browser-tests/owner-system-workflow-publication.browser.mjs',
     status: 'Production',
   },

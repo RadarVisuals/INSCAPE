@@ -24,7 +24,7 @@ export function mount() {
       },
       select: () => view.setSelection(['sample']),
     };
-    return <main ref={host} tabIndex={-1} className="system-workflow" data-surface="slate" data-lattice-menu-surface data-menu-surface="carbon">
+    return <main ref={host} tabIndex={-1} className="system-workflow" data-surface="slate" data-lattice-menu-surface>
       <WorkbenchViewControls hostRef={host} />
       {sample.kind === 'Image' ? <ImageWindow key={sample.version} id="sample" title="Handle sample" position={image} size={image}
         active editable onClose={() => {}} onPosition={position => setImage(value => ({ ...value, ...position }))}

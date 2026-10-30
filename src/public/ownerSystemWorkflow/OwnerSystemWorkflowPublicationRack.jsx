@@ -27,7 +27,6 @@ export default function OwnerSystemWorkflowPublicationRack({
   assetRecords,
   getWalletPublicationContext,
   initialSnapshot = null,
-  menuSurface,
   onClose,
   onMotionComplete,
   onPublished,
@@ -229,7 +228,7 @@ export default function OwnerSystemWorkflowPublicationRack({
 
   return <WorkbenchDestinationPanel title="Publish" onClose={onClose} closeLabel="Close Publication" closeDisabled={busy}
     aria-label="Publish profile" className="owner-lattice-publication-rack"
-    data-lattice-chrome data-lattice-menu-surface data-menu-surface={menuSurface} data-panel-phase={phase} onKeyDown={(event) => {
+    data-lattice-chrome data-lattice-menu-surface  data-panel-phase={phase} onKeyDown={(event) => {
       if (event.key === 'Escape' && !busy) onClose?.();
     }} onTransitionEnd={(event) => {
       if (event.target === event.currentTarget && event.propertyName === 'opacity') onMotionComplete?.();

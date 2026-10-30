@@ -1,6 +1,5 @@
 import {
   SYSTEM_WORKFLOW_GUIDE_MODES,
-  SYSTEM_WORKFLOW_SURFACE_IDS,
 } from '../../systemWorkflow/domain/systemWorkflowDraft.js';
 import { createLocalPreferencesStore } from './localPreferencesStore.js';
 
@@ -14,26 +13,18 @@ export const DEFAULT_WORKBENCH_PREFERENCES = Object.freeze({
   shortcutSnap: true,
   edgeSnap: true,
   moduleGap: 0,
-  surfaceId: 'mist',
   galleryCardSize: 2,
 });
 
 export const workbenchPreferencesStorageKey = (profileAddress) =>
   `inscape:workbench:preferences:${String(profileAddress || 'anonymous').toLowerCase()}`;
 
-const automaticGridColorPreviews = Object.freeze({
-  ash: '#c3c3c3', carbon: '#1d1e1d', graphite: '#4f5050',
-  mist: '#b4b2aa', paper: '#c5c2b9', slate: '#8c8c8b',
-});
-export const workbenchGridColorPreview = (surfaceId) =>
-  automaticGridColorPreviews[surfaceId] || automaticGridColorPreviews.mist;
+export const workbenchGridColorPreview = mode => mode === 'light' ? '#bab8b0' : '#3d3d3c';
 
 const validHexColor = (value) => typeof value === 'string' && /^#[0-9a-f]{6}$/i.test(value);
 
-export function normalizeWorkbenchPreferences(value, fallbackSurfaceId = DEFAULT_WORKBENCH_PREFERENCES.surfaceId) {
+export function normalizeWorkbenchPreferences(value) {
   const source = value && typeof value === 'object' ? value : {};
-  const safeFallbackSurface = SYSTEM_WORKFLOW_SURFACE_IDS.includes(fallbackSurfaceId)
-    ? fallbackSurfaceId : DEFAULT_WORKBENCH_PREFERENCES.surfaceId;
   return Object.freeze({
     galleryCardSize: [1, 2, 3].includes(source.galleryCardSize) ? source.galleryCardSize : 2,
     edgeSnap: typeof source.edgeSnap === 'boolean' ? source.edgeSnap : true,
@@ -45,14 +36,13 @@ export function normalizeWorkbenchPreferences(value, fallbackSurfaceId = DEFAULT
     gridColor: validHexColor(source.gridColor) ? source.gridColor.toLowerCase() : null,
     gridMode: SYSTEM_WORKFLOW_GUIDE_MODES.includes(source.gridMode) ? source.gridMode : DEFAULT_WORKBENCH_PREFERENCES.gridMode,
     shortcutSnap: typeof source.shortcutSnap === 'boolean' ? source.shortcutSnap : DEFAULT_WORKBENCH_PREFERENCES.shortcutSnap,
-    surfaceId: SYSTEM_WORKFLOW_SURFACE_IDS.includes(source.surfaceId) ? source.surfaceId : safeFallbackSurface,
   });
 }
 
-export function loadWorkbenchPreferences(profileAddress, fallbackSurfaceId, storage = globalThis.localStorage, fresh = false) {
+export function loadWorkbenchPreferences(profileAddress, storage = globalThis.localStorage, fresh = false) {
   const stored = storage.getItem(workbenchPreferencesStorageKey(profileAddress));
-  return stored === null ? normalizeWorkbenchPreferences(fresh ? { gridMode: 'NONE' } : null, fallbackSurfaceId)
-    : decodeWorkbenchPreferences(stored, fallbackSurfaceId);
+  return stored === null ? normalizeWorkbenchPreferences(fresh ? { gridMode: 'NONE' } : null)
+    : decodeWorkbenchPreferences(stored);
 }
 
 export function saveWorkbenchPreferences(profileAddress, preferences, storage = globalThis.localStorage) {
@@ -61,19 +51,19 @@ export function saveWorkbenchPreferences(profileAddress, preferences, storage = 
   return normalized;
 }
 
-function decodeWorkbenchPreferences(serialized, fallbackSurfaceId) {
+function decodeWorkbenchPreferences(serialized) {
   const value = JSON.parse(serialized);
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw Error('Invalid preferences');
-  return normalizeWorkbenchPreferences(value, fallbackSurfaceId);
+  return normalizeWorkbenchPreferences(value);
 }
 
-export function createWorkbenchPreferencesStore({ profile, storage, fallbackSurfaceId, fresh, canSave }) {
+export function createWorkbenchPreferencesStore({ profile, storage, fresh, canSave }) {
   const record = createLocalPreferencesStore({
     key: workbenchPreferencesStorageKey(profile), storage, canSave, delay: 0,
     label: 'Workbench', initializeMissing: true,
-    initial: normalizeWorkbenchPreferences(fresh ? { gridMode: 'NONE' } : null, fallbackSurfaceId),
-    decode: serialized => decodeWorkbenchPreferences(serialized, fallbackSurfaceId),
+    initial: normalizeWorkbenchPreferences(fresh ? { gridMode: 'NONE' } : null),
+    decode: serialized => decodeWorkbenchPreferences(serialized),
   });
   return { ...record, update: change => record.update(current =>
-    normalizeWorkbenchPreferences(typeof change === 'function' ? change(current) : change, fallbackSurfaceId)) };
+    normalizeWorkbenchPreferences(typeof change === 'function' ? change(current) : change)) };
 }

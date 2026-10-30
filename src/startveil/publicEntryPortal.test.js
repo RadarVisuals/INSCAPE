@@ -38,7 +38,7 @@ test('the same Discover surface can be opened from owner and visitor workspaces'
 
 test('Portal reuses the dock wordmark, canonical menu tokens, and production Grid renderer', () => {
   assert.match(styles, /url\('\/assets\/brand\/inscape-wordmark\.svg'\)/);
-  assert.match(styles, /var\(--lattice-menu-panel/);
+  assert.match(styles, /var\(--interface-panel/);
   assert.match(styles, /var\(--lattice-window-type-label\)/);
   assert.match(portal, /GridProductionRenderer/);
   assert.match(portal, /document\?\.metadata\?\.worldCover\?\.grid/);
@@ -53,9 +53,9 @@ test('profile avatar remains a small publisher signature rather than the world c
   assert.doesNotMatch(portal, /world-preview[^\n]*avatarUrl/);
 });
 
-test('Connect Profile keeps the official UP Modal but presents it in the INSCAPE mist system', () => {
-  assert.match(walletSession, /theme: 'light'/);
+test('Connect Profile keeps the official UP Modal but presents it in the shared INSCAPE interface', () => {
+  assert.match(walletSession, /theme: interfaceTheme.getSnapshot\(\).mode/);
   assert.match(styles, /--up-modal-font-family:\s*"Inscape Sora"/);
-  assert.match(styles, /--up-modal-bg:\s*var\(--lattice-menu-panel/);
+  assert.match(styles, /--up-modal-bg:\s*var\(--interface-panel/);
   assert.match(styles, /--up-modal-border-radius:\s*0px/);
 });

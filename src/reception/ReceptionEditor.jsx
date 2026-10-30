@@ -28,13 +28,16 @@ import '../lattice/rendering/latticeMenuSurface.css';
 import ReceptionPresentation from './ReceptionPresentation.jsx';
 import ReceptionLinkEditor from './ReceptionLinkEditor.jsx';
 import ReceptionGridSettings from './ReceptionGridSettings.jsx';
-import { ReceptionBrandSettings, ReceptionThemeSettings } from './ReceptionBrandSettings.jsx';
+import InterfaceThemeToggle from '../InterfaceThemeToggle.jsx';
+import { useInterfaceTheme } from '../interfaceTheme.js';
+import { ReceptionBrandSettings } from './ReceptionBrandSettings.jsx';
 const ReceptionTextEditor = lazy(() => import('./ReceptionTextEditor.jsx'));
 
 export default function ReceptionEditor({ store, rootStore, onClose, onRestored, onCanvases = onClose, onDiscover, onReturn, reviewAssets, reviewCategories, reviewProfile, publishedDocument, storage, editorPreferences }) {
   const draft = useSyncExternalStore(store.subscribe, store.getSnapshot), generation = store.getGeneration();
   const [blank] = useState(createReception), value = draft.reception || blank;
-  const [selected, setSelected] = useState(null), [preview, setPreview] = useState(null), [theme, setTheme] = useState(value.branding.theme);
+  const { mode: interfaceMode } = useInterfaceTheme();
+  const [selected, setSelected] = useState(null), [preview, setPreview] = useState(null);
   const [previewMode, setPreviewMode] = useState(null), [editing, setEditing] = useState(true), [error, setError] = useState('');
   const [frameSize, setFrameSize] = useState({ width: 1000, height: 700 });
   const mode = previewMode === 'mobile' || frameSize.width <= 640 ? 'mobile' : 'desktop';
@@ -188,13 +191,13 @@ export default function ReceptionEditor({ store, rootStore, onClose, onRestored,
   };
   const togglePreview = () => { if (!guard()) return; gesture.cancel(); cancelLibrary(); closePanel(); setCropping(false); setEditing(!editing); };
   const historyAction = redo => { if (!guard()) return; gesture.cancel(); run(() => { if (!(redo ? store.redo() : store.undo())) throw new Error('History could not be saved. Your accepted layout is unchanged.'); }); };
-  const nav = <ReceptionNavigation reception={shown} model={model} theme={theme} onTheme={setTheme}
+  const nav = <ReceptionNavigation reception={shown} model={model}
     onCanvases={() => leave(onCanvases)} onDiscover={onDiscover ? () => leave(onDiscover) : undefined}
     onEditBrand={editing ? () => openPanel('brand') : undefined} />;
   const cellNumber = value.regions.indexOf(region) + 1;
   const toolTop = workspaceHost.current ? workspaceHost.current.getBoundingClientRect().top - editorHost.current.getBoundingClientRect().top + 8 : 16;
   return <ReceptionPresentation snapshot={collection} assets={assets}><main ref={editorHost} className={'reception-page system-workflow__token-scope ' + (editing ? 'reception-editor' : 'reception-preview')} data-reception-editor
-    data-menu-surface={theme} data-lattice-menu-surface data-workflow-material="tactile" data-workflow-finish="flat" aria-label="Reception editor"
+     data-lattice-menu-surface data-workflow-material="tactile" data-workflow-finish="flat" aria-label="Reception editor"
     onPointerDown={event => { if (editing && !event.target.closest('[data-region-id], .workbench-tool-panel, .reception-tool-panel, .reception-library, .reception-library-window, .reception-divider, .reception-window-header')) select(null); }}
     onKeyDown={event => {
       if (event.defaultPrevented) return;
@@ -271,7 +274,7 @@ export default function ReceptionEditor({ store, rootStore, onClose, onRestored,
           <section className="reception-settings-section" role="tabpanel" id={`${settingsId}-grid`} aria-labelledby={`${settingsId}-grid-tab`} hidden={settingsTab !== 'grid'}>
             <ReceptionGridSettings value={value} generation={generation} onColour={() => openColour('grid')}
               onSave={(next, label) => run(() => save(next, label))} onPreview={next => setPreview(next ? { generation, value: next } : null)} />
-            <ReceptionThemeSettings value={value} theme={theme} onTheme={setTheme} onSave={(next, label) => run(() => save(next, label))} />
+            <InterfaceThemeToggle />
             {selectedRegion && <fieldset className="reception-selected-settings"><legend>Cell {cellNumber}</legend>
               {(image || text) && <label className="reception-check"><input type="checkbox" checked={(image || text).visibility === 'PUBLIC'}
                 onChange={event => image ? changeImage({ visibility: event.target.checked ? 'PUBLIC' : 'PRIVATE' })
@@ -316,13 +319,13 @@ export default function ReceptionEditor({ store, rootStore, onClose, onRestored,
         {colourScope === 'cell' && selectedText && <ReceptionChoices label="Apply color to" value={textColour ? 'text' : 'background'}
           choices={ [['background', 'Background'], ['text', 'Text']] } onChange={setColourMode} />}
         {textColour ? <div ref={setColourHost} /> : <ReceptionColourPanel key={colourKey} scopeKey={colourKey}
-          color={(colourScope === 'cell' ? selectedRegion?.surface : null) || value.surface || (theme === 'carbon' ? '#202222' : '#f4f4f4')}
+          color={(colourScope === 'cell' ? selectedRegion?.surface : null) || value.surface || (interfaceMode === 'dark' ? '#171717' : '#dedbd3')}
           disabled={colourScope === 'cell' && !selectedRegion} getVersion={store.getGeneration}
           onChange={patch => run(() => save(colourValue(patch.color), 'Change color'))}
           onPreview={patch => setPreview(patch ? { generation, value: colourValue(patch.color) } : null)}
           onReset={() => run(() => save(colourValue(null), 'Reset color'))} resetLabel={colourScope === 'grid' ? 'Use theme background' : 'Use grid background'} />}
       </ReceptionPanel>}
-      {libraryOpen && <ReceptionLibrary library={library} menuSurface={theme} onClose={cancelLibrary}
+      {libraryOpen && <ReceptionLibrary library={library}  onClose={cancelLibrary}
         store={store} value={value} expected={draft.reception} regionId={selected} boundsRef={workspaceHost} toolBoundsRef={editorHost} initialTop={toolTop}
         active={activeTool === 'library'} onActivate={() => setActiveTool('library')}
         preferences={editorPreferences.section('library')} framePreferences={editorPreferences.section('receptionFrames')} onPlacingChange={setLibraryPlacing}

@@ -50,7 +50,7 @@ const nomads = params.get('nomad') === '1' ? Array.from({ length: 4 }, (_, i) =>
 }) : [];
 const assets = [...sources, layered, keeperSource, ...nomads], resolve = createProfileDocumentV9AssetResolver(assets);
 const draft = createEmptySystemWorkflowDraft(profile); draft.grids = [];
-draft.appearance.menuSurfaceId = 'carbon';
+
 draft.workbench = { ...createDefaultWorkbenchPresentation(), area: { width: 4200, height: 3200 } };
 draft.workbench.display.open = false;
 const numbers = size === 'small' ? { images: 4, texts: 2, shapes: 4, apps: 0, paragraphs: 3 }

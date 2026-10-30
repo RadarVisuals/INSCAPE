@@ -42,7 +42,7 @@ function Display({ result, reference }) {
       const content = displayContent(draft, reference.moduleId);
       const display = reference.moduleId === 'display:primary' ? draft.workbench?.display : draft.workbench?.displays?.find(item => item.id === reference.moduleId);
       return { ...content, profile: { address: snapshot.profileAddress }, documentId: snapshot.revision, revision: 1,
-        appearance: { ...content.appearance, menuSurfaceId: draft.appearance.menuSurfaceId }, grids: grids(content.grids), workbench: { display } };
+        appearance: { ...content.appearance }, grids: grids(content.grids), workbench: { display } };
     } catch { return null; }
   }, [result.entry.draft, reference.moduleId, assets, snapshot]);
   return projected ? <Suspense fallback={<p role="status">Opening Display…</p>}><SharedDisplayToolsProvider>

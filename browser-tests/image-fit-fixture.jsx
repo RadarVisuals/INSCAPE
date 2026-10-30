@@ -53,11 +53,11 @@ export function mount({ persistent = false } = {}) {
       frame: id => ({ ...view.frames.get(id)?.current }),
     });
     return <ContextToolbarProvider target={target}><SharedDisplayToolsProvider metadataDock={dock} targetId={target} onTargetChange={setTarget}><WorkbenchPlacement hostRef={hostRef} enabled={preferences.edge && owner} gridEnabled={preferences.grid && owner} gap={0}>
-      <main ref={hostRef} tabIndex={-1} className="system-workflow" data-surface="carbon" data-lattice-menu-surface data-menu-surface="carbon" style={{ position: 'fixed', inset: 0, background: '#383a3a' }}>
+      <main ref={hostRef} tabIndex={-1} className="system-workflow" data-surface="carbon" data-lattice-menu-surface style={{ position: 'fixed', inset: 0, background: '#383a3a' }}>
         <Grid mode="DOTS" color="#111313" /><WorkbenchViewControls hostRef={hostRef} />
         <ImageWorkbench records={single ? draft.imageModules.slice(0, 1) : draft.imageModules} presentations={draft.workbench.imageModules}
           store={owner ? store : null} profileAddress={profileAddress} onActivate={setTarget} />
-        {owner && <><div style={{ position: 'fixed', bottom: 16, left: 16, maxWidth: 'calc(100% - 32px)' }}><ContextActionBars /></div><ContextToolbar menuSurface="carbon" /><WorkbenchToolDocks controller={dock} menuSurface="carbon" hostRef={hostRef} /></>}
+        {owner && <><div style={{ position: 'fixed', bottom: 16, left: 16, maxWidth: 'calc(100% - 32px)' }}><ContextActionBars /></div><ContextToolbar /><WorkbenchToolDocks controller={dock} hostRef={hostRef} /></>}
       </main>
     </WorkbenchPlacement></SharedDisplayToolsProvider></ContextToolbarProvider>;
   }

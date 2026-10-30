@@ -1,7 +1,7 @@
 /* The overview owns its viewport; the editor and its tools remain unmounted. */
 .workbench-overview-browse { display: contents; }
-:is(.workbench-overview, .canvas-gallery-section) { --overview-ease: cubic-bezier(.16,1,.3,1); --overview-menu-duration: 600ms; --overview-panel-duration: 700ms; --overview-radius: calc(var(--control-shell-radius) + var(--space-1)); --overview-glass: rgb(12 14 15 / 50%); --overview-glass-ink: #f4f4f2; --overview-glass-edge: transparent; --overview-glass-filter: blur(10px); --overview-glass-shadow: 0 10px 30px rgb(11 7 30 / 10%); }
-.workbench-overview { position: fixed; inset: 0; z-index: 1; pointer-events: auto; overflow: auto; padding: var(--space-3) var(--space-3) 80px; background: var(--tactile-face); color: var(--tactile-ink); font: 14px/1.6 var(--font-interface); }
+:is(.workbench-overview, .canvas-gallery-section) { --overview-ease: cubic-bezier(.16,1,.3,1); --overview-menu-duration: 600ms; --overview-panel-duration: 700ms; --overview-radius: calc(var(--control-shell-radius) + var(--space-1)); --overview-glass: var(--interface-panel); --overview-glass-ink: var(--interface-ink); --overview-glass-edge: transparent; --overview-glass-filter: blur(10px); --overview-glass-shadow: 0 10px 30px rgb(0 0 0 / 10%); }
+.workbench-overview { position: fixed; inset: 0; z-index: 1; pointer-events: auto; overflow: auto; padding: var(--space-3) var(--space-3) 80px; background: var(--interface-environment); color: var(--tactile-ink); font: 14px/1.6 var(--font-interface); }
 :is(.workbench-overview, .canvas-gallery-section) *, :is(.workbench-overview, .canvas-gallery-section) *::before, :is(.workbench-overview, .canvas-gallery-section) *::after { box-sizing: border-box; }
 :is(.workbench-overview, .canvas-gallery-section) :is(button, input, textarea) { font: inherit; color: inherit; }
 :is(.workbench-overview, .canvas-gallery-section) button { display: inline-flex; align-items: center; justify-content: center; gap: 10px; min-height: var(--control-target-touch); padding: 10px 16px; border: 1px solid transparent; border-radius: var(--control-radius); background: transparent; cursor: pointer; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
@@ -35,14 +35,14 @@
 .workbench-overview-identity > span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 22ch; }
 .workbench-overview-navigation nav { display: grid; gap: 2px; }
 .workbench-overview-navigation nav button, .workbench-overview .workbench-overview-menu-create { width: calc(100% - 16px); justify-content: start; font-size: 12px; }
-.workbench-overview .workbench-overview-menu button:is(:hover:not(:disabled), [aria-current], [aria-pressed="true"]) { background: rgb(255 255 255 / 12%); }
-.workbench-overview .workbench-overview-menu-trigger:hover:not(:disabled) { background: rgb(12 14 15 / 65%); }
+.workbench-overview .workbench-overview-menu button:is(:hover:not(:disabled), [aria-current], [aria-pressed="true"]) { background: var(--interface-hover); }
+.workbench-overview .workbench-overview-menu-trigger:hover:not(:disabled) { background: var(--interface-hover); }
 .workbench-overview .workbench-overview-navigation button:focus-visible { outline-color: var(--overview-glass-ink); }
 .workbench-overview-preview { position: relative; width: 100%; height: 100%; overflow: hidden; }
 .workbench-overview-canvas { position: absolute; left: 0; top: 0; overflow: hidden; transform-origin: 0 0; will-change: transform; pointer-events: none; }
 .workbench-overview-canvas > :is(.navigator-object, .workbench-overview-interactive) { transform-origin: 0 0; }
 .workbench-overview-canvas .text-module-body { position: absolute; inset: 0; }
-.workbench-overview-view-controls { display: flex; gap: 4px; padding: 12px 0; margin-top: 8px; border-top: 1px solid rgb(255 255 255 / 12%); }
+.workbench-overview-view-controls { display: flex; gap: 4px; padding: 12px 0; margin-top: 8px; border-top: 1px solid var(--interface-hover); }
 .workbench-overview-view-controls button { width: 36px; height: 36px; min-height: 36px; padding: 8px; }
 .workbench-overview-heading h1 { font: 400 clamp(32px, 2.5vw, 48px)/1.2 var(--font-interface); margin: 0; letter-spacing: -.04em; }
 .workbench-overview-detail { min-width: 0; }
@@ -70,6 +70,6 @@
   .workbench-overview-view-controls button[aria-pressed="true"] { border-color: Highlight; }
 }
 @media (pointer: coarse) { .workbench-overview-view-controls button { width: 44px; height: 44px; } }
-@media (prefers-reduced-transparency: reduce) { .workbench-overview { --overview-glass: rgb(12 14 15); --overview-glass-filter: none; --overview-glass-shadow: none; } }
+@media (prefers-reduced-transparency: reduce) { .workbench-overview { --overview-glass: var(--interface-panel); --overview-glass-filter: none; --overview-glass-shadow: none; } }
 
 @media (prefers-reduced-motion: reduce) { .workbench-overview-navigation, .workbench-overview-menu-fold, .workbench-overview-menu > *, .workbench-overview-menu-icon i { transition: none; } }

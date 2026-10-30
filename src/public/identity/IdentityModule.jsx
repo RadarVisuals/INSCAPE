@@ -16,7 +16,7 @@ import '../ownerSystemWorkflow/displayInstruments.css';
 import './identityModule.css';
 
 // Inputs are already projected for owner or visitor. No draft, wallet or route ownership.
-export default function IdentityModule({ model, onClose, returnFocus, menuSurface, assetTargetRef, presentationRef, onDisconnect, avatar, onSave, customAvatar = false, portraitChoices = [], initialWindow, onWindowChange }) {
+export default function IdentityModule({ model, onClose, returnFocus, assetTargetRef, presentationRef, onDisconnect, avatar, onSave, customAvatar = false, portraitChoices = [], initialWindow, onWindowChange }) {
   const [shortcutMenu, setShortcutMenu] = useState(null);
   const shortcutButton = useRef(null);
   const shortcut = useIdentityShortcut(model.address, Boolean(onSave));
@@ -83,7 +83,7 @@ export default function IdentityModule({ model, onClose, returnFocus, menuSurfac
     {portraitUrl && !imageFailed ? <LibraryArtworkImage key={portraitUrl} alt="" draggable={false} src={portraitUrl} onError={() => setImageFailed(true)} /> : <UserRound />}
   </button>;
   return <div className="identity-module system-workflow__token-scope" data-shortcut-shape={shortcut.position.shape} data-minimized={minimized || undefined} data-artwork={hasArtwork ? 'custom' : 'official'} data-expanded={expanded} data-editing={editing} data-workbench-module="identity" data-lattice-menu-surface
-    data-menu-surface={menuSurface} onKeyDown={(event) => {
+     onKeyDown={(event) => {
       if (shortcutMenu) return;
       const qr = event.currentTarget.querySelector('[popover]:popover-open');
       if (event.key === 'Escape' && qr) {
@@ -93,11 +93,11 @@ export default function IdentityModule({ model, onClose, returnFocus, menuSurfac
       }
       if (event.key === 'Escape' && !event.defaultPrevented) { event.preventDefault(); event.stopPropagation(); if (editing) edit.cancel(); else close(); }
     }} onPointerDown={(event) => event.stopPropagation()}>
-    <WorkbenchWindow chrome="bevel" menuSurface={menuSurface} label="Identity" title={model.profile.displayName} width={initialWindow?.width || 840} fitContent
+    <WorkbenchWindow chrome="bevel"  label="Identity" title={model.profile.displayName} width={initialWindow?.width || 840} fitContent
       compact={minimized ? { content: circle, style: { left: shortcut.position.x, top: shortcut.position.y,
         width: shortcut.position.size, height: shortcut.position.size, minHeight: 0, maxHeight: 'none',
         '--detached-window-width': `${shortcut.position.size}px`, borderRadius: shortcut.position.shape === 'square' ? 'var(--workflow-window-chrome-radius)' : '50%', overflow: 'hidden' } } : undefined}
-      background={background.type === 'clouds' ? <IdentityClouds surface={menuSurface} color={background.color} speed={background.speed} /> : null}
+      background={background.type === 'clouds' ? <IdentityClouds color={background.color} speed={background.speed} /> : null}
       initialX={initialWindow?.left ?? Math.max(8, (globalThis.innerWidth - 840) / 2)} initialY={initialWindow?.top ?? 72}
       onLayoutChange={onWindowChange}
       titleContent={<IdentityTitle address={model.address} profile={model.officialProfile || {
@@ -128,7 +128,7 @@ export default function IdentityModule({ model, onClose, returnFocus, menuSurfac
       {edit.error && <p role="alert">{edit.error}</p>}
       {artworkError && <p role="alert">{artworkError}</p>}
     </WorkbenchWindow>
-    {shortcutMenu && createPortal(<RackMenu anchor={shortcutMenu} label="Identity shortcut commands" menuSurfaceId={menuSurface}
+    {shortcutMenu && createPortal(<RackMenu anchor={shortcutMenu} label="Identity shortcut commands"
       commands={[{ id: 'open', label: 'OPEN IDENTITY' }, { id: 'size', label: 'SIZE' }, { id: 'shape', label: 'SHAPE' }, { id: 'close', label: 'CLOSE' },
         ...(onSave && onDisconnect ? [{ id: 'disconnect', label: 'DISCONNECT' }] : [])]}
       getSubmenuCommands={id => id === 'size' ? Object.entries(IDENTITY_SHORTCUT_SIZES).map(([id, size]) => ({ id, label: id.toUpperCase(), checkable: true, selected: shortcut.position.size === size }))

@@ -69,7 +69,7 @@ test('workspace tabs preserve selection scope and local values across editing an
     await studio.getByRole('tab', { name: 'FX', exact: true }).click();
     await studio.getByLabel('Studio blur', { exact: true }).fill('3');
     assert.equal(await studio.locator('.ds-studio-art').evaluate(n => getComputedStyle(n).filter), 'blur(3px)');
-    await page.getByLabel('Preview surface').selectOption('mist');
+    await page.getByRole('button', { name: 'mist' === 'mist' ? 'LIGHT' : 'DARK', exact: true }).click();
     assert.equal(await studio.getByLabel('Studio blur', { exact: true }).inputValue(), '3');
     await studio.getByRole('button', { name: 'Studio duplicate', exact: true }).click();
     assert.equal(await select.locator('option').count(), initialCount + 1);
@@ -138,7 +138,7 @@ test('workspace themes and tabs fit wide and narrow containers with legible tool
     for (const width of [1440, 390, 320]) {
       const { page, studio, errors } = await mount(browser, width);
       for (const theme of ['carbon', 'mist']) {
-        await page.getByLabel('Preview surface').selectOption(theme);
+        await page.getByRole('button', { name: theme === 'mist' ? 'LIGHT' : 'DARK', exact: true }).click();
         for (const name of ['Color','Layers','Shape','Image','Display','Transform','FX','Info']) {
           await studio.getByRole('tab', { name, exact: true }).click();
           assert.ok(await studio.getByRole('tabpanel', { name, exact: true }).isVisible());
@@ -272,7 +272,7 @@ test('Layers long-list layout, touch selection and keyboard reach remain usable 
       const {page,studio,errors}=await mount(browser,width);
       await studio.getByRole('tab',{name:'Layers',exact:true}).click();
       for(const theme of ['carbon','mist']){
-        await page.getByLabel('Preview surface').selectOption(theme);
+        await page.getByRole('button', { name: theme === 'mist' ? 'LIGHT' : 'DARK', exact: true }).click();
         await studio.getByLabel('Layer example',{exact:true}).selectOption('long');
         const list=studio.getByRole('group',{name:'Layers, front to back'});
         assert.equal(await list.locator('.ds-layer-row').count(),24);
@@ -301,7 +301,7 @@ test('Navigator pans live while held and ends or cancels pointer gestures cleanl
       const map=studio.getByRole('button',{name:'Navigate example workbench'}), frame=map.locator('.ds-studio-map-view');
       const position=()=>frame.evaluate(n=>({x:parseFloat(n.style.left),y:parseFloat(n.style.top)}));
       for(const theme of ['carbon','mist']) {
-        await page.getByLabel('Preview surface').selectOption(theme);
+        await page.getByRole('button', { name: theme === 'mist' ? 'LIGHT' : 'DARK', exact: true }).click();
         await studio.getByRole('button',{name:'Reset preview view'}).click();
         await studio.getByLabel('Workspace selection').selectOption(theme === 'carbon' ? 'image' : 'foreground');
         await studio.getByRole('tab',{name:theme==='carbon'?'Image':'Layers',exact:true}).click();

@@ -3,7 +3,6 @@ import WorkbenchCanvasContent from './WorkbenchCanvasContent.jsx';
 import OwnerDisplayInstance from './OwnerDisplayInstance.jsx';
 
 import { PRIMARY_DISPLAY_ID, displayModuleIds } from '../../systemWorkflow/domain/displayModules.js';
-import { latticeSurfaceColor } from '../../lattice/rendering/latticeGeometry.js';
 const MiniAppsWorkbench = lazy(() => import('../../miniApps/MiniAppsWorkbench.jsx'));
 const TextWorkbench = lazy(() => import('../../text/TextWorkbench.jsx'));
 const ImageWorkbench = lazy(() => import('../../imageModule/ImageWorkbench.jsx'));
@@ -43,8 +42,8 @@ export default function OwnerWorkbenchModules({
   const { assetsById, registerAssetDimensions, resolveAssetDimensions } = library;
   const displayIds = displayModuleIds(workbenchController.draft);
   const activeModuleId = selectionState.targetId;
-  const menuSurface = workbenchController.draft?.appearance.menuSurfaceId;
-  const workspaceSurfaceColor = latticeSurfaceColor(workbenchPreferences.surfaceId);
+
+
   const initialPrimary = useRef(true);
   if (!workbenchController.draft.grids.length) initialPrimary.current = false;
   return (
@@ -105,9 +104,7 @@ export default function OwnerWorkbenchModules({
               },
               registerAssetDimensions,
               resolveAssetDimensions,
-              menuSurface,
               reducedMotion: layout.reducedMotion,
-              workspaceSurfaceColor,
               windowProps: {
                 layoutMode: layout.mode,
                 reducedMotion: layout.reducedMotion,

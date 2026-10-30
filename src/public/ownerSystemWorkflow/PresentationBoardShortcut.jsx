@@ -36,8 +36,7 @@ const shortcutPresentationStyle = (presentation) => ({
   '--workflow-shortcut-label-size': `${presentation.labelSize}px`,
   '--workflow-shortcut-width': `${shortcutBounds(presentation).width}px`,
 });
-export default function PresentationBoardShortcut({ assetsById, instanceState, menuSurface,
-  onDelete, onRestore, profileAddress, shortcutSnap, shortcutTargetRef, name: shortcutName, onNameChange, initialShortcut, onShortcutChange, instanceId, readOnly = false,
+export default function PresentationBoardShortcut({ assetsById, instanceState, onDelete, onRestore, profileAddress, shortcutSnap, shortcutTargetRef, name: shortcutName, onNameChange, initialShortcut, onShortcutChange, instanceId, readOnly = false,
   moduleCommands = [], moduleSubmenu, onModuleCommand }) {
   const { editingBounds: areaBounds } = useWorkbenchArea();
   const storedShortcut = useMemo(() => initialShortcut || (readOnly ? null : loadPresentationBoardShortcut(profileAddress, undefined, instanceId)), [profileAddress, instanceId]);
@@ -168,7 +167,7 @@ export default function PresentationBoardShortcut({ assetsById, instanceState, m
       { id: 'rename', label: 'RENAME' }, { disabled: !shortcutIconId, id: 'edit-icon', label: 'EDIT ICON' },
       { disabled: !shortcutIconId, id: 'reset-icon', label: 'RESET ICON' },
       ...(onDelete ? [{ id: 'delete', label: 'DELETE' }] : []),
-    ]} getSubmenuCommands={moduleSubmenu} returnFocus={shortcutNode.current} label="Display Module shortcut commands" menuSurfaceId={menuSurface} onClose={() => setShortcutMenu(null)} onCommand={(id) => {
+    ]} getSubmenuCommands={moduleSubmenu} returnFocus={shortcutNode.current} label="Display Module shortcut commands"  onClose={() => setShortcutMenu(null)} onCommand={(id) => {
       onModuleCommand?.(id);
       if (id === 'delete') shortcutMenu.onDelete?.();
       if (id === 'rename') { setRenameValue(shortcutName); setRenaming(true); }

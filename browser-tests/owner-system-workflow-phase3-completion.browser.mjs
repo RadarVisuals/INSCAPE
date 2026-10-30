@@ -228,12 +228,8 @@ test('Profile, Activity, Discover, and Settings expose the promoted lifecycle an
     await settings.waitFor();
     assert.deepEqual(await settings.locator('.system-workflow__settings-section > header strong').allTextContents(), ['Activity', 'Workbench', 'Interface', 'Workbench backup']);
     assert.equal(await settings.locator('select').count(), 0);
-    const canvasTheme = settings.getByRole('button', { name: /Workbench background/ });
-    assert.equal(await canvasTheme.locator('span').innerText(), 'Mist');
-    await canvasTheme.click();
-    assert.deepEqual(await page.getByRole('option').allTextContents(), ['Carbon', 'Graphite', 'Slate', 'Ash', 'Mist', 'Paper']);
-    await page.getByRole('option', { name: 'Carbon' }).click();
-    assert.equal(await page.locator('.system-workflow').getAttribute('data-surface'), 'carbon');
+    await settings.getByRole('button', { name: 'DARK', exact: true }).click();
+    assert.equal(await page.locator('html').getAttribute('data-interface-theme'), 'dark');
     assert.equal(await displaySurface.getAttribute('data-surface'), originalDisplaySurface, 'local Workbench background does not change Display appearance');
     await settings.getByRole('button', { name: /Workbench grid display/ }).click();
     await page.getByRole('option', { name: 'Dots' }).click();

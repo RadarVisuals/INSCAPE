@@ -120,7 +120,7 @@ function contextAnchor(event) {
   return { x: bounds.left + Math.min(18, bounds.width / 2), y: bounds.bottom };
 }
 
-export default function OwnerSystemWorkflowLibraryPresenter({ categoryCommands, categoryDrag, data, dropFeedback, menuSurfaceId, open = true,
+export default function OwnerSystemWorkflowLibraryPresenter({ categoryCommands, categoryDrag, data, dropFeedback, open = true,
   navigationHost = null, onAssetActivate, onAssetPointerDown, onImageActivate, workspace }) {
   // Temporary browsing state, retained across filtering and closing the drawer.
   // The workspace keys this presenter by profile; no authored data is changed.
@@ -426,7 +426,7 @@ export default function OwnerSystemWorkflowLibraryPresenter({ categoryCommands, 
     {contextMenu && createPortal(<RackMenu anchor={contextMenu.anchor}
       commands={contextMenu.kind === 'category' ? categoryMenuCommands : contextMenu.kind === 'section' ? sectionMenuCommands : membershipCommands}
       label={contextMenu.kind === 'category' ? 'Category commands' : contextMenu.kind === 'section' ? 'Section commands' : 'NFT category membership'}
-      menuSurfaceId={menuSurfaceId} onClose={() => closeContextMenu()} onCommand={handleContextCommand}
+       onClose={() => closeContextMenu()} onCommand={handleContextCommand}
       returnFocus={contextMenu.trigger} systemWorkflowOverlay />, document.body)}
     {categoryDrag && createPortal(<div aria-hidden="true" className="system-workflow__library-drag-ghost"
       data-valid={categoryDrag.categoryId ? true : undefined}

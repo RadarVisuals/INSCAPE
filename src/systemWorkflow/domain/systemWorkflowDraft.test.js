@@ -42,7 +42,7 @@ test('draft v4 starts with one ordered public HOME Grid and no fixed topology', 
   assert.deepEqual(draft.artboard, { aspectWidth: 16, aspectHeight: 9 });
   assert.deepEqual(draft.geometry, { columns: 32, rows: 18 });
   assert.deepEqual(draft.appearance, {
-    surfaceId: 'mist', menuSurfaceId: 'mist', dossierSurfaceId: 'paper',
+    surfaceId: 'mist',
     guideMode: 'LINES', guideSize: 0, guideColor: '#6f746f',
   });
   assert.deepEqual(draft.grids, [{

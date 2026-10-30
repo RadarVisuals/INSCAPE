@@ -21,7 +21,7 @@ export default function CanvasExplorer({ selected, model, memory, disabled, expa
     <div ref={host} className="composition-explorer-viewport" tabIndex={0} role="group" aria-label={`${selected.name} canvas`}
       aria-describedby={helpId} onKeyDown={navigation.onKeyDown}
       data-camera-scale={navigation.camera?.scale} data-camera-x={navigation.camera?.offset.x} data-camera-y={navigation.camera?.offset.y}>
-      <WorkbenchOverviewPreview model={model} name={selected.name} surfaceId={selected.draft.appearance.surfaceId}
+      <WorkbenchOverviewPreview model={model} name={selected.name}
         camera={navigation.camera} highlights={source?.frames} presenting />
     </div>
     <div className="composition-explorer-controls">

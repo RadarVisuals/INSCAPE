@@ -12,7 +12,7 @@ function Fixture() {
   const current = useRef(version), writes = useRef([]); current.current = version;
   const save = patch => { writes.current.push({ target, ...patch }); setColors(value => ({ ...value, [target]: patch.color })); setVersion(value => value + 1); };
   globalThis.colourFixture = { colors, target, version, writes: writes.current };
-  return <main className="system-workflow__token-scope workbench-tool-controls" data-lattice-menu-surface data-menu-surface="carbon" data-window-chrome="flat"
+  return <main className="system-workflow__token-scope workbench-tool-controls" data-lattice-menu-surface data-window-chrome="flat"
     style={{ padding: 24, color: 'var(--tactile-ink)', background: 'var(--tactile-face)', width: 340 }}>
     <div><button onClick={() => setTarget(value => value === 'first' ? 'second' : 'first')}>Switch target</button>
       <button onClick={() => setVersion(value => value + 1)}>Advance version</button>

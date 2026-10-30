@@ -153,14 +153,14 @@ for (const theme of ['carbon', 'mist']) for (const width of [1440, 390]) {
     try {
       const page = await browser.newPage({ viewport: { width, height: 900 }, hasTouch: width < 520 });
       const errors = await mount(page, theme);
-      assert.equal(await page.locator('main.system-workflow').getAttribute('data-menu-surface'), theme, 'theme comes from the real saved appearance boundary');
+      assert.equal(await page.locator('html').getAttribute('data-interface-theme'), theme === 'mist' ? 'light' : 'dark', 'theme comes from the shared device preference');
       const root = page.locator('[data-workbench-toolbar]');
       const recipe = await root.evaluate(node => {
         const s = getComputedStyle(node), key = getComputedStyle(node.querySelector('button')), shell = getComputedStyle(node.querySelector('[aria-label="Creation tools"]'), '::before');
         const icon = getComputedStyle(node.querySelector('svg.lucide > *'));
         return { scheme: s.colorScheme, face: s.getPropertyValue('--tactile-face').trim(), radius: key.borderRadius, shellRadius: shell.borderRadius, stroke: icon.strokeWidth, vector: icon.vectorEffect };
       });
-      assert.deepEqual(recipe, { scheme: theme === 'mist' ? 'light' : 'dark', face: theme === 'mist' ? '#ebece7' : '#191b1b', radius: '5px', shellRadius: '9px', stroke: '1.5px', vector: 'non-scaling-stroke' });
+      assert.deepEqual(recipe, { scheme: theme === 'mist' ? 'light' : 'dark', face: theme === 'mist' ? '#ebece7' : '#080808', radius: '5px', shellRadius: '9px', stroke: '1.5px', vector: 'non-scaling-stroke' });
       // The accepted migrations now include the sidebar, switcher, Navigator and shared tools.
       // Keep an explicit surface boundary, including the otherwise classless dock material root.
       const migrated = await page.locator('main.system-workflow [data-workflow-finish="flat"]').evaluateAll(nodes => nodes.map(node => {

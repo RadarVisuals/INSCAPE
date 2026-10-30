@@ -49,7 +49,7 @@
 .system-workflow__settings :is(input, button):focus-visible { outline: 2px solid var(--tactile-ink); outline-offset: -2px; }
 .system-workflow__settings :focus:not(:focus-visible) { outline: none; }
 .system-workflow__settings :is(button, label):has(> input[type=checkbox]):hover,
-.system-workflow__settings button:hover:not(:disabled) { background: var(--tactile-hover); }
+.system-workflow__settings button:where(:hover:not(:disabled):not([aria-pressed="true"])) { background: var(--tactile-hover); }
 .system-workflow__settings button:disabled { color: var(--tactile-disabled); cursor: default; }
 .system-workflow__settings-color { display: flex; gap: 6px; }
 .system-workflow__settings input[type=color] { box-sizing: border-box; width: 48px; height: var(--settings-target); flex: none; padding: 3px; border: 1px solid var(--tactile-edge); border-radius: var(--control-radius); background: transparent; }

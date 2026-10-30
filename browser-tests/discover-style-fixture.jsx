@@ -1,3 +1,7 @@
+import { interfaceTheme } from '../src/interfaceTheme.js';
+if (!localStorage.getItem('inscape:interface-theme') && new URLSearchParams(location.search).has('theme')) {
+  interfaceTheme.setMode(['light', 'mist'].includes(new URLSearchParams(location.search).get('theme')) ? 'light' : 'dark');
+}
 import React, { useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import Portal from '../src/startveil/PublicEntryPortal.jsx';
@@ -31,7 +35,7 @@ const resolutionStore = { get: address => snapshots.get(address), subscribe: () 
 function Review() {
  const [open, setOpen] = useState(params.has('landing'));
  return <><button id="discover-trigger" onClick={() => setOpen(true)}>Open Discover</button>
- {open && <Portal initialMode={params.has('landing') ? 'landing' : 'explore'} menuSurface={params.get('theme') || 'mist'}
+ {open && <Portal initialMode={params.has('landing') ? 'landing' : 'explore'}
    connectedProfile={params.has('connected') ? { address: source, name: 'Artist with a long profile name' } : null}
    discoveryRepository={repository} resolutionStore={resolutionStore}
    onConnect={() => window.discoverReview.connects++} onDisconnect={() => window.discoverReview.disconnects++}

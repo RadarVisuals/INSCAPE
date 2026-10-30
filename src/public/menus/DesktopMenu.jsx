@@ -6,7 +6,7 @@ const ROW_HEIGHT = 43;
 const SYSTEM_WORKFLOW_PANEL_WIDTH = 196;
 const SYSTEM_WORKFLOW_ROW_HEIGHT = 38;
 
-export default function DesktopMenu({ anchor, commands, label, menuSurfaceId = null, onCommand, onClose, returnFocus, className = '', panelClassName = '', getSubmenuCommands, onPreviewCommand, systemWorkflowOverlay = false }) {
+export default function DesktopMenu({ anchor, commands, label, onCommand, onClose, returnFocus, className = '', panelClassName = '', getSubmenuCommands, onPreviewCommand, systemWorkflowOverlay = false }) {
   const ref = useRef(null);
   const hoverTimerRef = useRef(0);
   const [position, setPosition] = useState(anchor);
@@ -93,7 +93,7 @@ export default function DesktopMenu({ anchor, commands, label, menuSurfaceId = n
     </>;
   };
   return <div ref={ref} className={`desktop-menu${getSubmenuCommands ? ' desktop-menu--cascade' : ''}${className ? ` ${className}` : ''}`}
-    data-lattice-menu-surface={menuSurfaceId || undefined} data-menu-surface={menuSurfaceId || undefined}
+    data-lattice-menu-surface
     data-system-workflow-overlay={systemWorkflowOverlay || undefined}
     role="menu" tabIndex={-1} aria-label={label} style={{ left: position.x, top: position.y, ...(systemWorkflowOverlay ? { width: Math.min(SYSTEM_WORKFLOW_PANEL_WIDTH, (window.innerWidth - 20) / 2) } : {}) }} onKeyDown={onKeyDown}
     onPointerLeave={() => {

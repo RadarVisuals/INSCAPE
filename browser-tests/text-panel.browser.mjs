@@ -22,11 +22,7 @@ for (const [width, theme] of [[1440, 'Mist'], [390, 'Carbon']]) test(`independen
     const tools = page.locator('.text-tools-window'), body = page.getByRole('textbox', { name: 'Article text', exact: true });
     const editor = await body.elementHandle();
     await page.getByRole('button', { name: 'Settings', exact: true }).click();
-    const themeTrigger = page.getByRole('button', { name: /^Menu theme:/ });
-    await themeTrigger.scrollIntoViewIfNeeded();
-    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
-    await themeTrigger.press('Enter');
-    await page.getByRole('option', { name: theme, exact: true }).click();
+    await page.getByRole('button', { name: theme === 'Mist' ? 'LIGHT' : 'DARK', exact: true }).click();
     await page.getByRole('button', { name: 'Close Settings', exact: true }).click();
     const layers = await openSharedTool(page, 'Layers');
     assert.deepEqual(await tools.evaluate(material), await layers.evaluate(material));

@@ -1,7 +1,8 @@
 import { X } from 'lucide-react';
 import { cloneElement } from 'react';
 import { useSignalStore } from '../../signals/state/useSignalStore.js';
-import { SYSTEM_WORKFLOW_SURFACE_IDS } from '../../systemWorkflow/domain/systemWorkflowDraft.js';
+import InterfaceThemeToggle from '../../InterfaceThemeToggle.jsx';
+import { useInterfaceTheme } from '../../interfaceTheme.js';
 import { OwnerSystemWorkflowSelectMenu } from './OwnerSystemWorkflowWorkspaceControls.jsx';
 import { workbenchGridColorPreview } from './workbenchPreferences.js';
 import './workbenchToolPanel.css';
@@ -12,7 +13,6 @@ const SIGNAL_OPTIONS = [
   ['visualEffects', 'Visual signal effects'], ['audio', 'Audio notifications'],
 ];
 const titleCase = (value) => value.charAt(0).toUpperCase() + value.slice(1).toLowerCase();
-const themeOptions = SYSTEM_WORKFLOW_SURFACE_IDS.map((value) => ({ label: titleCase(value), value }));
 const guideOptions = ['LINES', 'DOTS', 'NONE'].map((value) => ({ label: titleCase(value), value }));
 
 function CheckControl({ checked, disabled = false, label, onChange }) {
@@ -20,12 +20,13 @@ function CheckControl({ checked, disabled = false, label, onChange }) {
     <input checked={checked} disabled={disabled} onChange={(event) => onChange(event.target.checked)} type="checkbox" /></label>;
 }
 
-export default function OwnerSystemWorkflowSettings({ profileAddress: profile, onMenuSurfaceChange, menuSurface, onClose,
+export default function OwnerSystemWorkflowSettings({ profileAddress: profile, onClose,
   onWorkbenchPreferencesChange, phase, workbenchPreferences, backupControls }) {
   const signalSettings = useSignalStore((state) => state.settings);
   const signalProfile = useSignalStore((state) => state.profileAddress);
   const signalPersistenceError = useSignalStore((state) => state.persistenceError);
   const updateSignalSetting = useSignalStore((state) => state.updateSetting);
+  const { mode } = useInterfaceTheme();
   const gap = workbenchPreferences.moduleGap;
   return <aside aria-hidden={phase === 'closing' || undefined} aria-label="Settings"
     data-workflow-material="tactile" data-workflow-finish="flat"
@@ -40,9 +41,8 @@ export default function OwnerSystemWorkflowSettings({ profileAddress: profile, o
       {signalProfile === profile && signalPersistenceError && <p role="alert">{signalPersistenceError}</p>}
     </section>
     <section className="system-workflow__settings-section system-workflow__settings-theme"><header><strong>Workbench</strong><span>Local to this device</span></header>
-      <label><span>Background</span><OwnerSystemWorkflowSelectMenu flat label="Workbench background" menuSurface={menuSurface} onChange={(surfaceId) => onWorkbenchPreferencesChange({ surfaceId })} options={themeOptions} value={workbenchPreferences.surfaceId} /></label>
-      <label><span>Grid display</span><OwnerSystemWorkflowSelectMenu flat label="Workbench grid display" menuSurface={menuSurface} onChange={(gridMode) => onWorkbenchPreferencesChange({ gridMode })} options={guideOptions} value={workbenchPreferences.gridMode} /></label>
-      <label><span>Grid color</span><span className="system-workflow__settings-color"><input aria-label="Workbench grid color" onChange={(event) => onWorkbenchPreferencesChange({ gridColor: event.target.value })} type="color" value={workbenchPreferences.gridColor || workbenchGridColorPreview(workbenchPreferences.surfaceId)} /><button disabled={!workbenchPreferences.gridColor} onClick={() => onWorkbenchPreferencesChange({ gridColor: null })} type="button">Auto</button></span></label>
+      <label><span>Grid display</span><OwnerSystemWorkflowSelectMenu flat label="Workbench grid display"  onChange={(gridMode) => onWorkbenchPreferencesChange({ gridMode })} options={guideOptions} value={workbenchPreferences.gridMode} /></label>
+      <label><span>Grid color</span><span className="system-workflow__settings-color"><input aria-label="Workbench grid color" onChange={(event) => onWorkbenchPreferencesChange({ gridColor: event.target.value })} type="color" value={workbenchPreferences.gridColor || workbenchGridColorPreview(mode)} /><button disabled={!workbenchPreferences.gridColor} onClick={() => onWorkbenchPreferencesChange({ gridColor: null })} type="button">Auto</button></span></label>
       <label><span>Grid cell size</span><input key={workbenchPreferences.gridSpacing} aria-label="Workbench grid cell size" type="number" min="8" max="512" step="any" defaultValue={workbenchPreferences.gridSpacing}
         onBlur={event => { const gridSpacing = event.target.valueAsNumber; if (Number.isFinite(gridSpacing) && gridSpacing >= 8 && gridSpacing <= 512) onWorkbenchPreferencesChange({ gridSpacing }); else event.target.value = workbenchPreferences.gridSpacing; }}
         onKeyDown={event => { if (event.key === 'Enter') event.currentTarget.blur(); }} /></label>
@@ -59,8 +59,8 @@ export default function OwnerSystemWorkflowSettings({ profileAddress: profile, o
       <p>Local grid patches take priority. Outside patches, nearby module edges can align; a zero gap joins them flush.</p>
       <p id="workbench-gap-description">Guides show the active edge, grid line or spacing. Pull away to release a snap, or hold Alt to bypass snapping.</p>
     </section>
-    <section className="system-workflow__settings-section system-workflow__settings-theme"><header><strong>Interface</strong></header>
-      <label><span>Windows</span><OwnerSystemWorkflowSelectMenu flat label="Menu theme" menuSurface={menuSurface} onChange={onMenuSurfaceChange} options={themeOptions} value={menuSurface} /></label>
+    <section className="system-workflow__settings-section system-workflow__settings-theme"><header><strong>Interface</strong><span>Everywhere on this device</span></header>
+      <InterfaceThemeToggle />
       <CheckControl checked={workbenchPreferences.chromeNoise} label="Chrome noise"
         onChange={(chromeNoise) => onWorkbenchPreferencesChange({ chromeNoise })} />
     </section>

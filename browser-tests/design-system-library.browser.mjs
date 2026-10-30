@@ -88,7 +88,7 @@ test('Library organization uses real category commands, inline confirmation and 
 test('Library empty, loading and recoverable failures fit both themes on wide and narrow screens', {timeout:90000},async()=>{
  const browser=await chromium.launch({executablePath,headless:true});
  try{for(const width of [1440,390,320])for(const theme of ['carbon','mist']){
-  const {page,studio,library,clean}=await mount(browser,width);await page.getByLabel('Preview surface').selectOption(theme);
+  const {page,studio,library,clean}=await mount(browser,width);await page.getByRole('button', { name: theme === 'mist' ? 'LIGHT' : 'DARK', exact: true }).click();
   const scenario=studio.getByLabel('Library example',{exact:true});
   await scenario.selectOption('loading');await studio.getByText('Loading assets',{exact:true}).waitFor();assert.equal(await library.locator('.lattice-browser-asset').count(),0);
   await scenario.selectOption('empty');await studio.getByText('No assets in this view',{exact:true}).waitFor();
@@ -138,7 +138,7 @@ test('Sidebar keeps one Library tree and preserves the canvas, camera and browsi
   if(output){
    await mkdir(output,{recursive:true});
    for(const theme of ['carbon','mist']){
-    await page.getByLabel('Preview surface').selectOption(theme);
+    await page.getByRole('button', { name: theme === 'mist' ? 'LIGHT' : 'DARK', exact: true }).click();
     await studio.locator('.ds-studio-shell').screenshot({path:output+`/sidebar-${theme}.png`});
    }
    await studio.getByRole('button',{name:'Library',exact:true}).click();

@@ -17,11 +17,7 @@ for (const [width, theme] of [[1440, 'Mist'], [390, 'Carbon']]) test(`Text scope
     await mountTextToolsFixture(page, origin);
     const tools = page.locator('.text-tools-window'), body = page.getByRole('textbox', { name: 'Article text', exact: true });
     await page.getByRole('button', { name: 'Settings', exact: true }).click();
-    const themeTrigger = page.getByRole('button', { name: /^Menu theme:/ });
-    await themeTrigger.scrollIntoViewIfNeeded();
-    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
-    await themeTrigger.press('Enter');
-    await page.getByRole('option', { name: theme, exact: true }).click();
+    await page.getByRole('button', { name: theme === 'Mist' ? 'LIGHT' : 'DARK', exact: true }).click();
     await page.getByRole('button', { name: 'Close Settings', exact: true }).click();
     const editor = await body.elementHandle(), saved = () => page.evaluate(() => window.savedDraft());
     const before = await saved(), initialText = await body.innerText();

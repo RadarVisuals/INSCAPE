@@ -16,7 +16,7 @@ async function mount(browser, width = 1440, theme = 'carbon') {
     errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
   await page.goto(origin + '/design-system.html#components');
-  await page.getByLabel('Preview surface', { exact: true }).selectOption(theme);
+  await page.getByRole('button', { name: theme === 'mist' ? 'LIGHT' : 'DARK', exact: true }).click();
   const studio = page.locator('.ds-studio');
   await studio.getByLabel('Workspace selection').selectOption('shape');
   await studio.getByRole('tab', { name: 'Color', exact: true }).click();

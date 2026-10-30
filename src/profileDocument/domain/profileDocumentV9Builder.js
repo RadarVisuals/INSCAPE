@@ -184,7 +184,6 @@ export function buildProfileDocumentV9({
         customText: identity.bio.mode === 'inscape' ? identity.bio.customText : '',
       },
       tags: structuredClone(identity.tags),
-      dossierSurface: identity.dossierSurface,
       visibility: { ...identity.visibility },
     },
     grids,

@@ -363,7 +363,7 @@ function WorkbenchSession({
     if (publicationOpen) closePublication({ returnFocus: false });
     startPreview(trigger);
   };
-  const menuSurface = workbenchController.draft?.appearance.menuSurfaceId;
+
   const authoringLocked = selectedInstance?.locked || false;
   const instrumentsObscured = panelOccupied;
   const revealInstruments = () => {
@@ -401,7 +401,7 @@ function WorkbenchSession({
         >
           <SharedTextToolsProvider
             editorPreferences={editorPreferences}
-            menuSurface={menuSurface}
+
             activeModuleId={activeModuleId}
             onActivate={selectionState.focusModule}
             open={textToolsOpen}
@@ -463,9 +463,9 @@ function WorkbenchSession({
                   }
                   data-chrome-noise={workbenchPreferences.chromeNoise ? 'on' : 'off'}
                   data-lattice-menu-surface
-                  data-menu-surface={menuSurface}
+
                   data-reduced-motion={layout.reducedMotion || undefined}
-                  data-surface={workbenchPreferences.surfaceId}
+
                   data-previewing={preview ? true : undefined}
                   inert={preview ? '' : undefined}
                 >
@@ -518,13 +518,10 @@ function WorkbenchSession({
                   />
                   <SharedDisplayToolWindows
                     fallbackFocus={workspaceRef}
-                    menuSurface={menuSurface}
+
                     hidden={Boolean(preview) || instrumentsObscured}
                   />
-                  <ContextToolbar
-                    menuSurface={menuSurface}
-                    hidden={Boolean(preview) || instrumentsObscured}
-                  />
+                  <ContextToolbar hidden={Boolean(preview) || instrumentsObscured} />
                   <SharedTextToolsWindow
                     hidden={Boolean(preview) || instrumentsObscured}
                     navigationRef={workbenchNavigationRef}
@@ -532,7 +529,7 @@ function WorkbenchSession({
                   <WorkbenchToolDocks
                     controller={toolDocks}
                     hidden={Boolean(preview) || instrumentsObscured}
-                    menuSurface={menuSurface}
+
                     navigationRef={workbenchNavigationRef}
                     hostRef={workspaceRef}
                     historyBlocked={pendingText.length ? TEXT_RECOVERY_MESSAGE : null}
@@ -581,9 +578,9 @@ function WorkbenchSession({
                     onEnterMyWorld={onEnterMyWorld}
                     controller={activeController}
                     profileAddress={profileAddress}
-                    onMenuSurfaceChange={workbenchController.setMenuSurface}
+
                     libraryData={libraryData}
-                    menuSurface={menuSurface}
+
                     onChangeGrid={changeGrid}
                     backupControls={
                       <WorkbenchBackupControls
@@ -629,7 +626,7 @@ function WorkbenchSession({
                       <IdentityModule
                         key={profileAddress}
                         model={profileModel}
-                        menuSurface={menuSurface}
+
                         presentationRef={identityPresentationRef}
                         onDisconnect={onDisconnect}
                         initialWindow={workbenchLayout.identity.window}
@@ -712,7 +709,7 @@ function WorkbenchSession({
                                 : addCommands.find(command => command.id === id)?.children || []
                         }
                         label="Workbench commands"
-                        menuSurfaceId={menuSurface}
+
                         returnFocus={workspaceRef.current}
                         onClose={() => setWorkspaceMenu(null)}
                         onCommand={runCommand}
@@ -764,7 +761,7 @@ function WorkbenchSession({
                         store={sharedStore}
                         assetRecords={canonicalRecords}
                         getWalletPublicationContext={getWalletPublicationContext}
-                        menuSurface={menuSurface}
+
                         onClose={closePublication}
                         onMotionComplete={publicationPresence.completeTransition}
                         onPublished={result => {
@@ -779,7 +776,7 @@ function WorkbenchSession({
                               });
                             })
                             .catch(() => {});
-                          onPublicationConfirmed?.({ ...result, menuSurface });
+                          onPublicationConfirmed?.({ ...result });
                         }}
                         profile={publicationProfile}
                         profileAddress={profileAddress}

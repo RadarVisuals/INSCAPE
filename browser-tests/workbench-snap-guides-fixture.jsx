@@ -23,7 +23,7 @@ export function mount(width) {
         <circle cx="160" cy="90" r="58" fill="#aab6b7" /><circle cx="160" cy="90" r="27" fill="#252b2e" />
       </svg></div>;
     return <WorkbenchViewProvider><WorkbenchPlacement hostRef={hostRef} enabled={preferences.edgeSnap} gridEnabled={preferences.shortcutSnap} gap={preferences.moduleGap}>
-      <main ref={hostRef} tabIndex={-1} className="system-workflow" data-surface="carbon" data-lattice-menu-surface data-menu-surface="carbon" style={{ position: 'fixed', inset: 0 }}>
+      <main ref={hostRef} tabIndex={-1} className="system-workflow" data-surface="carbon" data-lattice-menu-surface style={{ position: 'fixed', inset: 0 }}>
         <Grid hostRef={hostRef} mode="LINES" /><WorkbenchViewControls hostRef={hostRef} />
         <div className="system-workflow__display-instance" data-display-instance="moving" data-active-display>
           <Board profileAddress="snap-test" instanceId="moving" documentGeometry={{ columns: 32, rows: 18 }} reducedMotion
@@ -37,7 +37,7 @@ export function mount(width) {
           initialX={60} initialY={690} width={240} initialHeight={200} snapToGrid={preferences.shortcutSnap}>
           <p>A window can align to an edge, a grid line, or the chosen space between modules.</p>
         </WorkbenchWindow>
-        {settings && <Settings profileAddress="snap-test" menuSurface="carbon" onMenuSurfaceChange={() => {}} phase="open" workbenchPreferences={preferences}
+        {settings && <Settings profileAddress="snap-test" phase="open" workbenchPreferences={preferences}
           onWorkbenchPreferencesChange={patch => setPreferences(p => ({ ...p, ...patch }))} onClose={() => setSettings(false)} />}
       </main>
     </WorkbenchPlacement></WorkbenchViewProvider>;

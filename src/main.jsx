@@ -3,6 +3,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App.jsx';
 import './index.css';
+import './interfaceTheme.js';
 
 if (import.meta.env.PROD) {
   window.addEventListener('vite:preloadError', (event) => {

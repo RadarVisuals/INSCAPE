@@ -30,7 +30,6 @@ export default function useWorkbenchController(profileAddress, { storage, shared
   const draft = authority.store.getSnapshot();
   return { draft, store: authority.store, storage: selectedStorage, run, clearError, error: failure?.authority === authority ? failure.message : null,
     saveWorkbench: workbench => run(session => session.saveWorkbench(workbench)),
-    setMenuSurface: menuSurfaceId => run(session => session.setMenuSurface({ expected: draft.appearance.menuSurfaceId, menuSurfaceId })),
     saveIdentity: ({ profile: values, card, avatar }) => run(session => {
       const { alias, bio, tags, avatar: expectedAvatar } = draft.identityPresentation;
       const changedBio = values.description !== (bio.mode === 'inscape' ? bio.customText : '');

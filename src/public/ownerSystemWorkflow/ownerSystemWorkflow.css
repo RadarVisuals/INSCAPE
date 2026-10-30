@@ -5,9 +5,9 @@
    the production components; this layer owns only their presentation. */
 
 .system-workflow {
-  --study-surface: #c9c6bd;
-  --study-ink: #111313;
-  --study-grid: rgb(18 20 20 / 11%);
+  --study-surface: var(--interface-environment);
+  --study-ink: var(--interface-ink);
+  --study-grid: var(--interface-line);
   position: fixed;
   inset: 0;
   isolation: isolate;
@@ -19,12 +19,6 @@
   font-family: "Inscape Sora", sans-serif;
 }
 
-:is(.system-workflow, .system-workflow__stage)[data-surface="carbon"] { --study-surface: #0b0c0c; --study-ink: #d8d7d2; --study-grid: rgb(216 213 204 / 8.5%); }
-:is(.system-workflow, .system-workflow__stage)[data-surface="graphite"] { --study-surface: #383a3a; --study-ink: #e8e7e2; --study-grid: rgb(232 231 226 / 11.5%); }
-:is(.system-workflow, .system-workflow__stage)[data-surface="slate"] { --study-surface: #7b7b7b; --study-ink: #f3f2ed; --study-grid: rgb(243 242 237 / 14%); }
-:is(.system-workflow, .system-workflow__stage)[data-surface="ash"] { --study-surface: #b2b2b2; --study-ink: #151818; --study-grid: rgb(255 255 255 / 22%); }
-:is(.system-workflow, .system-workflow__stage)[data-surface="mist"] { --study-surface: #c9c6bd; --study-ink: #111313; --study-grid: rgb(18 20 20 / 11%); }
-:is(.system-workflow, .system-workflow__stage)[data-surface="paper"] { --study-surface: #d8d4ca; --study-ink: #111313; --study-grid: rgb(34 31 27 / 9.5%); }
 .system-workflow[data-previewing] { visibility: hidden; }
 
 .system-workflow button,
@@ -75,7 +69,7 @@
   position: absolute;
   inset: 0 0 var(--workflow-dock-height);
   overflow: clip;
-  background: color-mix(in srgb, var(--study-surface) 96%, var(--study-ink));
+  background: var(--study-surface);
 }
 
 .system-workflow__display-instance { position: absolute; inset: 0; pointer-events: none; }
@@ -603,10 +597,7 @@ html[data-system-workflow-grid-direction="previous"]::view-transition-new(inscap
 .system-workflow__detached-window-surface {
   box-shadow: inset 0 0 0 1px rgb(0 0 0 / 8%);
 }
-.system-workflow:is([data-menu-surface="ash"], [data-menu-surface="mist"], [data-menu-surface="paper"])
-  .system-workflow__detached-window-surface,
-.visitor-grid-world:is([data-menu-surface="ash"], [data-menu-surface="mist"], [data-menu-surface="paper"])
-  .system-workflow__detached-window-surface {
+:root[data-interface-theme="light"] .system-workflow__detached-window-surface {
   --detached-window-shadow-height: 45px;
   --workflow-window-inner-shadow-opacity: 18%;
 }

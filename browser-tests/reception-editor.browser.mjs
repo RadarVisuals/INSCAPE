@@ -147,9 +147,8 @@ test('image regions retain their own zero/max corners below long navigation with
       const control = page.getByRole('slider', { name: 'Corners', exact: true });
       await control.press(r ? 'End' : 'Home');
       await page.getByRole('button', { name: 'Preview', exact: true }).click();
-      for (const theme of ['carbon', 'mist']) {
-        const toggle = page.getByRole('button', { name: theme === 'carbon' ? 'Use dark appearance' : 'Use light appearance' });
-        if (await toggle.count()) await toggle.click();
+      for (const theme of ['dark', 'light']) {
+        await page.evaluate(async mode => (await import('/src/interfaceTheme.js')).interfaceTheme.setMode(mode), theme);
         await page.locator('.reception-canvas').scrollIntoViewIfNeeded();
         await page.screenshot({ path: output + '/transparent-region-' + r + '-' + theme + '.png' });
         const hit = await page.locator('.reception-canvas').evaluate(n => {
@@ -277,9 +276,9 @@ for (const width of [2560, 1440, 800, 640, 390, 320]) test('public static Recept
   const { browser, page, errors } = await setup(width, '?sample&public');
   try {
     await page.getByText('Drawn to the unusual.', { exact: true }).waitFor();
-    const before = await page.evaluate(() => JSON.stringify(localStorage));
-    for (const theme of ['carbon', 'mist']) {
-      if (theme === 'mist') await page.getByRole('button', { name: 'Use light appearance' }).click();
+    const before = await page.evaluate(() => JSON.stringify(Object.fromEntries(Object.entries(localStorage).filter(([key]) => key !== 'inscape:interface-theme'))));
+    for (const theme of ['dark', 'light']) {
+      await page.evaluate(async mode => (await import('/src/interfaceTheme.js')).interfaceTheme.setMode(mode), theme);
       await mkdir(output, { recursive: true });
       await page.screenshot({ path: output + '/public-' + width + '-' + theme + '.png', fullPage: true });
       assert.ok(await page.locator('.reception-page').evaluate(n => n.scrollWidth <= n.clientWidth + 1));
@@ -292,7 +291,7 @@ for (const width of [2560, 1440, 800, 640, 390, 320]) test('public static Recept
         await page.locator('.reception-navigation').scrollIntoViewIfNeeded();
       }
     }
-    assert.equal(await page.evaluate(() => JSON.stringify(localStorage)), before);
+    assert.equal(await page.evaluate(() => JSON.stringify(Object.fromEntries(Object.entries(localStorage).filter(([key]) => key !== 'inscape:interface-theme')))), before);
     assert.deepEqual(errors, []);
   } finally { await browser.close(); }
 });

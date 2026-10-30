@@ -1,6 +1,6 @@
-import { UserRound, Sun, Moon } from 'lucide-react';
+import { UserRound } from 'lucide-react';
 import { resolvePublishedAssetUrl } from '../profileDocument/domain/publishedAssetUrl.js';
-export default function ReceptionNavigation({ reception, model, theme, onTheme, onAbout, onCanvases, onDiscover, onEdit, onEditBrand }) {
+export default function ReceptionNavigation({ reception, model, onAbout, onCanvases, onDiscover, onEdit, onEditBrand }) {
   const logo = reception.imageModules.find(i => i.id === reception.branding.logo)?.sides[0]?.asset.media.url || model?.profile?.avatarUrl;
   const name = reception.branding.name || model?.profile?.displayName || 'Inscape';
   const identity = <>{logo ? <img alt="" src={resolvePublishedAssetUrl(logo)} /> : <UserRound aria-hidden="true" />}<span>{name}</span></>;
@@ -10,7 +10,6 @@ export default function ReceptionNavigation({ reception, model, theme, onTheme, 
     <button type="button" aria-current="page" onClick={onAbout}>About</button>
     {onCanvases && <button type="button" onClick={onCanvases}>Canvases</button>}
     {onDiscover && <button type="button" onClick={onDiscover}>Discover</button>}
-    <button type="button" aria-label={theme === 'carbon' ? 'Use light appearance' : 'Use dark appearance'} onClick={() => onTheme(theme === 'carbon' ? 'mist' : 'carbon')}>{theme === 'carbon' ? <Sun size={16} /> : <Moon size={16} />}</button>
     {onEdit && <button type="button" onClick={onEdit}>Edit Reception</button>}
   </nav>;
 }

@@ -100,13 +100,13 @@ function ProfileDocumentV9Session({ document, onExit, onOpenDirectory, onReturn,
   const openIdentityRack = () => { if (identityRack) { setIdentityOpen(true); setProfileVisible(false); } };
   return <main ref={rootRef} tabIndex={-1} className="visitor-grid-world system-workflow" data-workbench data-layout={layout.mode}
     aria-label="Published INSCAPE Grid visitor" data-lattice-menu-surface data-guide-mode={document.appearance.guideMode}
-    data-menu-surface={document.appearance.menuSurfaceId} data-surface={document.appearance.surfaceId}>
+    >
     <WorkbenchViewControls entryTarget={entryTarget} hostRef={rootRef} />
-    <SharedDisplayToolWindows readOnly menuSurface={document.appearance.menuSurfaceId} />
+    <SharedDisplayToolWindows readOnly  />
     {profileVisible && <LatticeProfileRail blocked={inspecting} identityDisabled={inspecting} collapsed entries={[]} identityControlRef={identityControlRef} identityOnly
       identityExpanded={identityOpen} officialIdentity={officialIdentity} onIdentityActivate={openIdentityRack} />}
     <footer className="visitor-grid-world__dock"><nav aria-label="Published profile navigation">
-      <SharedDisplayToolsLauncher readOnly menuSurface={document.appearance.menuSurfaceId} />
+      <SharedDisplayToolsLauncher readOnly  />
       <button aria-expanded={document.workbench ? identityOpen : profileVisible} aria-label="Profile" data-visitor-profile-trigger
         disabled={inspecting}
         onClick={document.workbench ? () => setIdentityOpen(current => !current) : toggleProfile} ref={profileDockControlRef} type="button">PROFILE</button>
@@ -120,7 +120,7 @@ function ProfileDocumentV9Session({ document, onExit, onOpenDirectory, onReturn,
       </div>}
     </nav><strong aria-label="INSCAPE" className="visitor-grid-world__brand"><span aria-hidden="true" /></strong></footer>
     {identityOpen && identityRack && <div hidden={inspecting}><Suspense fallback={<p role="status">Opening Identity…</p>}>
-      <IdentityModule key={document.profile.address} model={identityRack} menuSurface={document.appearance.menuSurfaceId}
+      <IdentityModule key={document.profile.address} model={identityRack}
         initialWindow={identityWindow} onWindowChange={document.workbench ? changeIdentityWindow : undefined}
         onClose={() => setIdentityOpen(false)} returnFocus={profileDockControlRef.current} />
     </Suspense></div>}

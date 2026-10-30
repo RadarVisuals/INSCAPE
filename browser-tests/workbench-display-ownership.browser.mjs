@@ -1,3 +1,4 @@
+import { browserExecutable } from '../scripts/browserEnvironment.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { chromium } from 'playwright-core';
@@ -7,7 +8,7 @@ const origin = process.env.INSCAPE_SYSTEM_WORKFLOW_ROOT || 'http://127.0.0.1:518
 const output = process.env.INSCAPE_BROWSER_OUTPUT || '.browser-test-runtime';
 
 for (const primary of [true, false]) test(`Workbench theme and Display lifetimes with primary ${primary}`, { timeout: 60000 }, async () => {
-  const browser = await chromium.launch({ executablePath: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', headless: true });
+  const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
   let page;
   try {
     await mkdir(output, { recursive: true });
@@ -71,13 +72,10 @@ for (const primary of [true, false]) test(`Workbench theme and Display lifetimes
     const second = page.locator(`[data-display-instance="${secondId}"]`);
     await second.locator('header.system-workflow__identity-strip').focus();
     const before = await page.evaluate(() => ownership.read());
-    const theme = before.appearance.menuSurfaceId === 'paper' ? 'carbon' : 'paper';
     await page.getByRole('button', { name: 'Settings', exact: true }).click();
-    await page.getByRole('button', { name: /^Menu theme:/ }).click();
-    await page.getByRole('option', { name: theme[0].toUpperCase() + theme.slice(1), exact: true }).click();
-    await page.waitForFunction(theme => ownership.read().appearance.menuSurfaceId === theme, theme);
+    await page.getByRole('button', { name: 'LIGHT', exact: true }).click();
     assert.deepEqual((await page.evaluate(() => ownership.read())).displays, before.displays, 'global theme never edits the selected Display');
-    assert.equal(await page.locator('main.system-workflow').getAttribute('data-menu-surface'), theme);
+    assert.equal(await page.locator('html').getAttribute('data-interface-theme'), 'light');
     await page.getByRole('button', { name: 'Settings', exact: true }).click();
     const instance = primary ? page.locator('[data-display-instance="display:primary"]') : second;
     await instance.locator('header.system-workflow__identity-strip').focus();

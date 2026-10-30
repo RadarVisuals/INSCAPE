@@ -14,7 +14,7 @@ const DRAG_THRESHOLD = 6;
 const sourceFor = (asset) => asset?.previewSrc || asset?.src || asset?.imageUrl || asset?.thumbnailUrl || null;
 const ownerLibraryPreviewRecords = new Map();
 
-export default function OwnerSystemWorkflowLibraryWorkspace({ authoringLocked = false, categoryCommands, placementScope, data, menuSurface, onClose, phase,
+export default function OwnerSystemWorkflowLibraryWorkspace({ authoringLocked = false, categoryCommands, placementScope, data, onClose, phase,
   navigationHost = null, preferences, preferenceStore, previewRecords = ownerLibraryPreviewRecords, resolveAssetDimensions, workbenchImageTargetRef, moduleAssetTargetRef, placementTargetRef, shortcutTargetRef, workspaceRef, className = '', label = 'Library workspace', resizable = true, overlayPlacement = false, selectionAction, selectionEnabled = true, onPlacingChange }) {
   const libraryClosed = phase === 'closing' || phase === 'closed';
   const workspace = useBrowserWorkspace(data, previewRecords, preferences, preferenceStore, !libraryClosed);
@@ -248,14 +248,14 @@ export default function OwnerSystemWorkflowLibraryWorkspace({ authoringLocked = 
         setLibraryWidth(clampWidth(event.key === 'Home' ? 300 : event.key === 'End' ? window.innerWidth
           : width + (event.key === 'ArrowLeft' ? -1 : 1) * (event.shiftKey ? 80 : 20)));
       }} />}
-    placing={placing} rail={<><OwnerSystemWorkflowWorkspaceRail menuSurface={menuSurface} onClose={onClose} workspace={workspace} />
+    placing={placing} rail={<><OwnerSystemWorkflowWorkspaceRail  onClose={onClose} workspace={workspace} />
       {selectionAction && <button type="button" className="workflow-tactile-control system-workflow__library-selection-action"
         disabled={authoringLocked || !selectionEnabled || !selectedAsset}
         onClick={() => { if (selectedAsset) activate(selectedAsset); }}>{selectionAction}</button>}</>}
     sidebarCollapsed={workspace.sidebarWidth <= 72}>
     <OwnerSystemWorkflowLibraryPresenter key={data.ownerContext} categoryCommands={categoryCommands} data={data} open={!libraryClosed}
       navigationHost={navigationHost} categoryDrag={categoryDrag} dropFeedback={dropFeedback}
-      menuSurfaceId={menuSurface} onAssetActivate={(_event, asset) => activate(asset)}
+       onAssetActivate={(_event, asset) => activate(asset)}
       onAssetPointerDown={beginAssetDrag} onImageActivate={(_event, asset) => place(asset)}
       workspace={{ ...workspace, selectedImage: imageChoice, selectAsset: (id, event, media = null) => {
         if (!suppressSelection.current || event.detail === 0) {

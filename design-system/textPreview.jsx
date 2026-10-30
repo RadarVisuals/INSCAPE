@@ -153,7 +153,6 @@ export default function TextPreview({
   layerHost,
   onChange,
   onFindRequest,
-  theme,
   readOnly,
   onColourTarget,
 }) {
@@ -163,7 +162,6 @@ export default function TextPreview({
       onActivate={() => {}}
       open={open}
       onOpenChange={onOpenChange}
-      menuSurface={theme === 'mist' ? 'paper' : 'carbon'}
     >
       <SharedTextToolsWindow />
       {items

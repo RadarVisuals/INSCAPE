@@ -14,7 +14,7 @@ import { clampOwnerSystemWorkflowWindowPosition, resizeWorkbenchWindow, workbenc
 
 // The host owns gestures and temporary geometry. A module's resize target owns
 // validation and persistence; companion tools retain only their screen layout.
-export function WorkbenchWindow({ avoidControls, children, background, compact, chrome, menuSurface, className = '', label, controls, title, titleContent, width = 320, resizable = true, resizableWidth = false, initialHeight = 420, minimumHeight = 180, minimumWidth = 240, initialX = 18, initialY = 72, fitContent = false, fitContentFromTop = false, onLayoutChange, snapToGrid = false, placementModule = false, viewId, active, surfaceStyle, resizeTarget, committedFrame, externalControls = false, moveFromContent = false, registerView = true, screenSized = false, preserveAuthoredLayout = false, onLayoutCommit, viewportBottom }) {
+export function WorkbenchWindow({ avoidControls, children, background, compact, chrome, className = '', label, controls, title, titleContent, width = 320, resizable = true, resizableWidth = false, initialHeight = 420, minimumHeight = 180, minimumWidth = 240, initialX = 18, initialY = 72, fitContent = false, fitContentFromTop = false, onLayoutChange, snapToGrid = false, placementModule = false, viewId, active, surfaceStyle, resizeTarget, committedFrame, externalControls = false, moveFromContent = false, registerView = true, screenSized = false, preserveAuthoredLayout = false, onLayoutCommit, viewportBottom }) {
   const { editingBounds: areaBounds, area, showOutside, canvasHost } = useWorkbenchArea();
   const view = useWorkbenchView();
   const { offset, getCamera, subscribeCameraPaint } = useWorkbenchCamera();
@@ -260,7 +260,7 @@ export function WorkbenchWindow({ avoidControls, children, background, compact, 
     headerPointerProps={{ 'aria-label': `Move ${label} window`, 'data-workbench-selectable': registerView && viewId ? true : undefined,
       'data-controls-below': externalControls && painted.top < controlsTop + 56 || undefined, 'aria-keyshortcuts': registerView && viewId ? 'Shift+Enter' : undefined,
       tabIndex: 0, onKeyDown: event => key(event), onPointerDown: event => begin(event, 'move'), ...pointerProps }}
-    controls={controls} titleContent={titleContent} background={background} compactContent={compact?.content} chrome={chrome} menuSurface={menuSurface}
+    controls={controls} titleContent={titleContent} background={background} compactContent={compact?.content} chrome={chrome}
     contentPointerProps={moveFromContent ? { 'data-content-move': true, 'data-workbench-selectable': Boolean(viewId) || undefined,
       onPointerDown: event => begin(event, 'content-move'), ...pointerProps } : undefined}
     style={{ ...surfaceStyle, '--workbench-pan-scale': camera.scale, '--workbench-control-scale': density, '--detached-window-width': `${current.width}px`,
@@ -281,9 +281,9 @@ export function WorkbenchWindow({ avoidControls, children, background, compact, 
   </OwnerSystemWorkflowDetachedWindow>;
 }
 
-export default function DisplayInstrumentWindow({ menuSurface, children, instrument, onClose, title, layout, onLayoutChange }) {
+export default function DisplayInstrumentWindow({ children, instrument, onClose, title, layout, onLayoutChange }) {
   const label = instrument === 'layers' ? 'Layers' : instrument === 'appearance' ? 'Display appearance' : 'Artwork info';
-  return <WorkbenchWindow chrome="tactile" className="workbench-tool-window" menuSurface={menuSurface} label={label} title={title}
+  return <WorkbenchWindow chrome="tactile" className="workbench-tool-window"  label={label} title={title}
     width={320} resizable={false} fitContent fitContentFromTop initialHeight={480} minimumHeight={96}
     initialX={layout?.left ?? 18} initialY={layout?.top ?? (instrument === 'metadata' ? 260 : 24)}
     onLayoutChange={onLayoutChange}

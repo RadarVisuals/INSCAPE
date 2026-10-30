@@ -54,7 +54,6 @@ function restoredIdentity(identity) {
     },
     bio: { ...identity.bio },
     tags: structuredClone(identity.tags),
-    dossierSurface: identity.dossierSurface,
     visibility: { ...identity.visibility },
   };
 }

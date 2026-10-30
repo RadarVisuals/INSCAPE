@@ -11,13 +11,12 @@ export default function useModuleShortcutMenu({ store, profileAddress, kind, rec
     const bounds = event.currentTarget.getBoundingClientRect();
     setMenu({ x: event.clientX || bounds.left, y: event.clientY || bounds.bottom,
       expected: record, profile: profileAddress,
-      returnFocus: event.currentTarget.closest('.system-workflow')?.querySelector('[aria-label="Profile"]'),
-      surface: event.currentTarget.closest('[data-menu-surface]')?.dataset.menuSurface });
+      returnFocus: event.currentTarget.closest('.system-workflow')?.querySelector('[aria-label="Profile"]') });
   };
   return { onContextMenu: open,
     onKeyDown: event => { if (event.key === 'ContextMenu' || event.shiftKey && event.key === 'F10') open(event); },
     content: <>{menu && createPortal(<RackMenu anchor={menu} commands={[{ id: 'delete', label: 'DELETE' }]}
-      label="Module shortcut commands" menuSurfaceId={menu.surface} onClose={() => setMenu(null)} systemWorkflowOverlay
+      label="Module shortcut commands"  onClose={() => setMenu(null)} systemWorkflowOverlay
       onCommand={() => {
         try {
           if (!removeWorkbenchModule(store, menu.profile, kind, menu.expected)) setError('Could not delete this module. Reopen its menu and try again.');

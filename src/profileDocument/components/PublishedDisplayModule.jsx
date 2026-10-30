@@ -2,7 +2,6 @@ import { useWorkbenchMiniature } from '../../public/ownerSystemWorkflow/workbenc
 import { forwardRef, useCallback, useDeferredValue, useEffect, useImperativeHandle, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
 import { useSceneController, useSceneMotion } from '../../text/SceneNavigation.jsx';
-import { latticeSurfaceColor } from '../../lattice/rendering/latticeGeometry.js';
 import GridProductionRenderer from './GridProductionRenderer.jsx';
 import { createProfileDocumentV9FocusViewModel } from './profileDocumentV9FocusViewModel.js';
 import useDisplayInspection from '../../public/ownerSystemWorkflow/useDisplayInspection.js';
@@ -59,7 +58,7 @@ const PublishedDisplayModule = forwardRef(function PublishedDisplayModule({ docu
   const activeGrid = document.grids[activeIndex];
   useWorkbenchMiniature(instanceId, useMemo(() => ({ kind: 'display', grid: activeGrid, geometry: document.geometry, appearance: document.appearance }), [activeGrid, document.geometry, document.appearance]));
   const hasDisplay = document.grids.length > 0, lastIndex = document.grids.length - 1;
-  const workspaceSurfaceColor = latticeSurfaceColor(document.appearance.surfaceId);
+
   const viewerEntries = useMemo(() => (activeGrid?.placements || []).filter(placement => placement.kind !== 'text').map((placement) => {
     const decoded = placementMedia[`${activeGrid.id}:${placement.id}`];
     const model = createProfileDocumentV9FocusViewModel(placement, {
@@ -256,7 +255,7 @@ const PublishedDisplayModule = forwardRef(function PublishedDisplayModule({ docu
       onInspect={() => inspectArtwork()} inspectDisabled={!viewerEntry || playing || liftMoving || gridDragging || Boolean(gridSwipe?.moving || gridSwipe?.offset || viewer.placementId)}
       documentGeometry={document.geometry} profileAddress={document.profile.address}
       instanceState={displayOpen ? 'window' : 'minimized'} onMinimize={() => onOpenChange?.(false)} onRestore={() => onOpenChange?.(true)}
-      menuSurface={document.appearance.menuSurfaceId} displaySurface={document.appearance.surfaceId} moduleAppearance={document.appearance} reducedMotion={reducedMotion}
+       displaySurface={document.appearance.surfaceId} moduleAppearance={document.appearance} reducedMotion={reducedMotion}
       shortcutSnap={false}
       onContextMenu={event => {
         event.preventDefault(); event.stopPropagation();
@@ -271,7 +270,7 @@ const PublishedDisplayModule = forwardRef(function PublishedDisplayModule({ docu
         host={host} items={activeGrid.placements} viewer={viewer} contentVersion={viewerEntries} onSelect={selectMetadata} disabled={!tools.state.metadata || playing || Boolean(gridSwipe?.moving || gridSwipe?.offset)} />}
       renderInspection={viewer.placementId && viewer.entry ? (container, controlsContainer, scene) => <DisplayFocusViewer
         scene={scene} container={container} controlsContainer={controlsContainer} viewer={viewer}
-        menuSurface={document.appearance.menuSurfaceId} workspaceSurfaceColor={workspaceSurfaceColor} /> : null}
+         /> : null}
 >
       {stage}
     </Frame>}
@@ -279,7 +278,7 @@ const PublishedDisplayModule = forwardRef(function PublishedDisplayModule({ docu
       commands={[{ id: 'tools', label: 'TOOLS' },
         ...(lastIndex > 0 ? [{ id: 'play-grids', label: playing ? 'PAUSE GRIDS' : 'PLAY GRIDS', disabled: Boolean(viewer.placementId) }] : [])]}
       getSubmenuCommands={id => id === 'tools' ? displayToolCommands(true) : []}
-      menuSurfaceId={document.appearance.menuSurfaceId} returnFocus={displayMenu.trigger}
+       returnFocus={displayMenu.trigger}
       onClose={() => setDisplayMenu(null)} onCommand={id => {
         if (id === 'tool-metadata') tools.command('metadata', true, displayMenu.trigger, targetId);
         if (id === 'play-grids') setPlaying(current => !current);

@@ -1,3 +1,4 @@
+import { browserExecutable } from '../scripts/browserEnvironment.mjs';
 import { setTextBackground } from './fixtures/shared-tools.mjs';
 import { openTextToolSection } from './fixtures/text-tool-sections.mjs';
 import assert from 'node:assert/strict';
@@ -8,7 +9,7 @@ import { mountTextToolsFixture } from './fixtures/text-tools-fixture.mjs';
 const origin = process.env.INSCAPE_TEXT_ROOT || 'http://127.0.0.1:5173';
 
 for (const width of [1440, 390]) test(`Text inspector preserves editing, document styles and Display connection at ${width}px`, { timeout: 90000 }, async () => {
-  const browser = await chromium.launch({ executablePath: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', headless: true });
+  const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
   try {
     const page = await browser.newPage({ viewport: { width, height: 900 }, colorScheme: width === 1440 ? 'light' : 'dark' });
     page.setDefaultTimeout(10000);
@@ -19,10 +20,9 @@ for (const width of [1440, 390]) test(`Text inspector preserves editing, documen
     const originalEditor = await body.elementHandle();
     const originalTexts = await page.evaluate(() => window.savedDraft().texts);
     await mkdir('.browser-test-runtime', { recursive: true });
-    for (const theme of ['Carbon', 'Graphite', 'Slate', 'Ash', 'Mist', 'Paper']) {
+    for (const theme of ['DARK', 'LIGHT']) {
       await page.getByRole('button', { name: 'Settings', exact: true }).click();
-      await page.getByRole('button', { name: /^Menu theme:/ }).click();
-      await page.getByRole('option', { name: theme, exact: true }).click();
+      await page.getByRole('button', { name: theme, exact: true }).click();
       await page.getByRole('button', { name: 'Close Settings', exact: true }).click();
       await tools.waitFor();
       const expected = await page.locator('main.system-workflow').evaluate(root => {
@@ -38,10 +38,10 @@ for (const width of [1440, 390]) test(`Text inspector preserves editing, documen
       assert.equal(await body.evaluate((node, original) => node === original, originalEditor), true, 'theme changes preserve the editor');
       assert.deepEqual(await page.evaluate(() => window.savedDraft().texts), originalTexts, 'system themes never author article colours or content');
       await tools.screenshot({ path: `.browser-test-runtime/text-system-theme-${theme.toLowerCase()}-${width}.png` });
-      if (theme === 'Carbon' || theme === 'Paper') {
+      if (theme === 'DARK' || theme === 'LIGHT') {
         await tools.getByRole('button', { name: 'Focus writing', exact: true }).click();
         const dialog = page.getByRole('dialog', { name: 'Focus writing', exact: true }); await dialog.waitFor();
-        assert.equal(await dialog.getAttribute('data-menu-surface'), theme.toLowerCase());
+        assert.equal(await page.locator('html').getAttribute('data-interface-theme'), theme.toLowerCase());
         assert.deepEqual(await dialog.evaluate(node => { const s = getComputedStyle(node); return [s.backgroundColor, s.color]; }), expected.slice(0, 2), 'the portalled Focus controls retain the same system theme');
         await dialog.getByRole('button', { name: 'Return to composition', exact: true }).focus();
         await page.screenshot({ path: `.browser-test-runtime/text-system-focus-${theme.toLowerCase()}-${width}.png` });

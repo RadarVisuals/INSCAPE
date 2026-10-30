@@ -14,7 +14,6 @@ const OwnerSystemWorkflowDetachedWindow = forwardRef(function OwnerSystemWorkflo
   background,
   compactContent,
   chrome,
-  menuSurface,
   className = '',
   controls,
   headerPointerProps,
@@ -27,7 +26,7 @@ const OwnerSystemWorkflowDetachedWindow = forwardRef(function OwnerSystemWorkflo
 }, ref) {
   const rootClassName = `system-workflow__detached-window${className ? ` ${className}` : ''}`;
   const contentClassName = `system-workflow__detached-window-surface${surfaceClassName ? ` ${surfaceClassName}` : ''}`;
-  return <Element aria-label={ariaLabel} className={rootClassName} data-workflow-material={['tactile', 'flat'].includes(chrome) ? 'tactile' : undefined} data-workflow-finish={chrome === 'flat' ? 'flat' : undefined} data-window-active={active || undefined} data-workbench-pan={workbenchPan || undefined} data-workbench-view-id={viewId} data-window-chrome={chrome} data-menu-surface={menuSurface} data-detached-window data-floating ref={ref} style={style}>
+  return <Element aria-label={ariaLabel} className={rootClassName} data-workflow-material={['tactile', 'flat'].includes(chrome) ? 'tactile' : undefined} data-workflow-finish={chrome === 'flat' ? 'flat' : undefined} data-window-active={active || undefined} data-workbench-pan={workbenchPan || undefined} data-workbench-view-id={viewId} data-window-chrome={chrome}  data-detached-window data-floating ref={ref} style={style}>
     {background}
     <header style={compactContent ? { display: 'none' } : undefined} className="system-workflow__detached-window-titlebar" {...headerPointerProps}>
       {titleContent ?? <strong title={title}>{title}</strong>}

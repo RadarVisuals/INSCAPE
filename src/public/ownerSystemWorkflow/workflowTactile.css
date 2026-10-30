@@ -2,23 +2,18 @@
    to native buttons. Geometry stays with the consuming component.
    Reference and state contract: INSCAPE_ACTIVE_CONTRACT.md, Tactile interface. */
 [data-workflow-material="tactile"] {
-  color-scheme: dark;
+  color-scheme: inherit;
   --tactile-surface: var(--color-surface-subtle);
   --tactile-ink: var(--color-text-warm);
   --tactile-muted: var(--color-text-secondary);
   --tactile-disabled: var(--color-text-disabled);
   --tactile-accent: var(--color-focus);
-  --tactile-edge: rgb(0 0 0 / 48%);
+  --tactile-edge: var(--interface-line);
   --tactile-rim: rgb(255 255 255 / 10%);
-  --tactile-face: linear-gradient(165deg,
-    color-mix(in srgb, white 9%, var(--tactile-surface)), var(--tactile-surface));
-  --tactile-raised: linear-gradient(165deg,
-    color-mix(in srgb, white 10%, var(--tactile-surface)),
-    color-mix(in srgb, white 3%, var(--tactile-surface)));
-  --tactile-hover: linear-gradient(165deg,
-    color-mix(in srgb, white 15%, var(--tactile-surface)),
-    color-mix(in srgb, white 6%, var(--tactile-surface)));
-  --tactile-well: color-mix(in srgb, black 20%, var(--tactile-surface));
+  --tactile-face: var(--interface-panel);
+  --tactile-raised: var(--interface-panel);
+  --tactile-hover: var(--interface-hover);
+  --tactile-well: var(--interface-environment);
   --tactile-shadow-shell: inset 0 1px 0 var(--tactile-rim),
     inset 0 -1px 0 rgb(0 0 0 / 24%), 0 2px 4px rgb(0 0 0 / 28%), 0 8px 20px rgb(0 0 0 / 20%);
   --tactile-shadow-raised: inset 0 1px 0 rgb(255 255 255 / 13%),

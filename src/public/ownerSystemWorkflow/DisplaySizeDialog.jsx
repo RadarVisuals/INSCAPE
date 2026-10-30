@@ -7,7 +7,7 @@ import DisplayCanvasControls from './DisplayCanvasControls.jsx';
 // Both creation and editing submit dimensions and appearance together. Typing is temporary;
 // the caller's existing Display operation owns validation, saving and undo.
 export default function DisplaySizeDialog({ geometry = { columns: 32, rows: 18 }, appearance, creating = false,
-  onConfirm, onClose, returnFocus, menuSurface, error }) {
+  onConfirm, onClose, returnFocus, error }) {
   const dialog = useRef(null), widthInput = useRef(null);
   const [width, setWidth] = useState(String(geometry.columns));
   const [height, setHeight] = useState(String(geometry.rows));
@@ -21,7 +21,7 @@ export default function DisplaySizeDialog({ geometry = { columns: 32, rows: 18 }
     return () => { node.close(); if (returnFocus?.isConnected) returnFocus.focus(); };
   }, [returnFocus]);
   return createPortal(<dialog ref={dialog} className="system-workflow__create-dialog system-workflow__display-size-dialog system-workflow__token-scope"
-    data-lattice-menu-surface={menuSurface} aria-label={title} onCancel={event => { event.preventDefault(); onClose(); }}
+    data-lattice-menu-surface aria-label={title} onCancel={event => { event.preventDefault(); onClose(); }}
     onKeyDown={event => event.stopPropagation()} onPointerDown={event => event.stopPropagation()}>
     <form noValidate onSubmit={event => {
       event.preventDefault();

@@ -1,7 +1,7 @@
 /* Flat material for explicitly migrated instruments. Native states stay in workflowTactile.css. */
 
 [data-workflow-material='tactile'][data-workflow-finish='flat'] {
-  color-scheme: dark;
+  color-scheme: inherit;
   --tactile-face: var(--color-surface-subtle);
   --tactile-ink: var(--color-text-primary);
   --tactile-muted: color-mix(in srgb, var(--tactile-ink) 70%, var(--tactile-face));
@@ -10,7 +10,7 @@
   --tactile-edge: color-mix(in srgb, var(--tactile-ink) 18%, var(--tactile-face));
   --tactile-raised: transparent;
   --tactile-hover: color-mix(in srgb, var(--tactile-ink) 8%, var(--tactile-face));
-  --tactile-well: color-mix(in srgb, var(--tactile-ink) 5%, var(--tactile-face));
+  --tactile-well: var(--interface-environment);
   --tactile-shadow-shell: none;
   --tactile-shadow-raised: none;
   --tactile-shadow-inset: none;
@@ -18,27 +18,6 @@
   --tactile-radius-control: var(--control-radius);
   --tactile-radius-row: var(--control-radius);
   --tactile-motion: 0ms;
-}
-:where([data-menu-surface='mist'], [data-menu-surface='ash'], [data-menu-surface='paper'])
-  [data-workflow-material='tactile'][data-workflow-finish='flat'],
-[data-workflow-material='tactile'][data-workflow-finish='flat']:where(
-    [data-menu-surface='mist'],
-    [data-menu-surface='ash'],
-    [data-menu-surface='paper']
-  ) {
-  color-scheme: light;
-  --tactile-face: var(--color-text-primary);
-  --tactile-ink: var(--color-surface-subtle);
-}
-/* Founder-selected neutral palette for the composition overview. */
-[data-workflow-material='tactile'][data-workflow-finish='flat']:where([data-workflow-palette='charcoal']) {
-  color-scheme: dark;
-  --tactile-face: #080808;
-  --tactile-ink: #c2c2c2;
-  --tactile-muted: var(--tactile-ink);
-  --tactile-well: #171717;
-  --tactile-hover: var(--tactile-well);
-  --tactile-edge: var(--tactile-well);
 }
 @media (forced-colors: active) {
   [data-workflow-material='tactile'][data-workflow-finish='flat'] {

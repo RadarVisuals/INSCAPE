@@ -1,11 +1,11 @@
 :root {
   --up-modal-font-family: "Inscape Sora", sans-serif;
-  --up-modal-font-color: var(--lattice-menu-ink, #111313);
-  --up-modal-btn-color: var(--lattice-menu-selected, #c3c0b8);
-  --up-modal-btn-text: var(--lattice-menu-ink, #111313);
+  --up-modal-font-color: var(--interface-ink);
+  --up-modal-btn-color: var(--interface-hover);
+  --up-modal-btn-text: var(--interface-ink);
   --up-modal-btn-radius: 0px;
   --up-modal-border-radius: 0px;
-  --up-modal-bg: var(--lattice-menu-panel, #d7d3ca);
+  --up-modal-bg: var(--interface-panel);
 }
 
 .startveil {
@@ -16,8 +16,8 @@
   display: grid;
   place-items: center;
   overflow: hidden;
-  background-color: var(--lattice-menu-panel, #d7d3ca);
-  color: var(--lattice-menu-ink, #111313);
+  background-color: var(--interface-environment);
+  color: var(--interface-ink);
   cursor: default;
   isolation: isolate;
 }
@@ -56,7 +56,7 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background: var(--tactile-face);
+  background: var(--interface-environment);
   color: var(--tactile-ink);
   pointer-events: auto;
   font: 400 12px/1.5 var(--font-interface);
@@ -70,6 +70,7 @@
   position: relative; z-index: 10; flex: none;
   display: grid; grid-template-columns: 136px minmax(120px, 1fr) auto;
   min-height: 44px; align-items: stretch;
+  background: var(--interface-panel);
   border-bottom: 1px solid var(--tactile-edge);
 }
 .public-entry-portal__header button { border: 0; background: transparent; }

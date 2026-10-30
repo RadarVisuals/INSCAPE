@@ -31,5 +31,5 @@ test('existing snapping preferences remain authoritative; removed column mode fa
   const old = normalizeWorkbenchPreferences({ shortcutSnap: false, gridMode: 'DOTS', surfaceId: 'carbon' });
   assert.equal(old.shortcutSnap, false); assert.equal(old.gridMode, 'DOTS');
   const trial = normalizeWorkbenchPreferences({ shortcutSnap: true, gridMode: 'COLUMNS', surfaceId: 'carbon' });
-  assert.equal(trial.gridMode, 'LINES'); assert.equal(trial.surfaceId, 'carbon');
+  assert.equal(trial.gridMode, 'LINES'); assert.equal(Object.hasOwn(trial, 'surfaceId'), false);
 });

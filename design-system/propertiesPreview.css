@@ -26,7 +26,7 @@
   border-radius: var(--ds-shell-radius);
   font: 400 var(--ds-text-base)/1.5 var(--font-interface);
 }
-.ds-flat-preview:where([data-menu-surface='mist'])
+:root[data-interface-theme="light"] .ds-flat-preview
   .ds-properties-window[data-window-chrome='tactile'] {
   --ds-error-ink: color-mix(in srgb, var(--color-destructive) 55%, var(--tactile-ink));
 }

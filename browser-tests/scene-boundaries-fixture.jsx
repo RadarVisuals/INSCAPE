@@ -79,7 +79,7 @@ function App() {
   const [revision, setRevision] = useState(0), [opened, setOpened] = useState(null);
   const trigger = useRef(null);
   const close = () => { setOpened(null); requestAnimationFrame(() => trigger.current?.focus({ preventScroll: true })); };
-  return <main className="scene-boundary-study system-workflow__token-scope" data-workflow-material="tactile" data-workflow-finish="flat" data-menu-surface="carbon">
+  return <main className="scene-boundary-study system-workflow__token-scope" data-workflow-material="tactile" data-workflow-finish="flat">
     <div inert={opened ? '' : undefined}><header><h1>Linked cells / boundary study</h1><p>Two independent canvases, each with one scene controller and shared image and text renderers.</p>
       <button onClick={() => setRevision(revision + 1)}>New presentation session</button></header>
       {snapshot.entries.map(entry => <Group key={entry.id} entry={entry} revision={revision} />)}

@@ -1,6 +1,5 @@
 import { useLayoutEffect, useRef, useState } from 'react';
 import WorkbenchMiniature from '../ownerSystemWorkflow/WorkbenchMiniature.jsx';
-import { latticeSurfaceColor } from '../../lattice/rendering/latticeGeometry.js';
 import { useArticleFlow } from '../../text/TextFrame.jsx';
 import TextViewport from '../../text/TextViewport.jsx';
 import ArticleView from '../../text/ArticleView.jsx';
@@ -35,7 +34,7 @@ function TextPreview({ item, scale, area }) {
   </div>);
 }
 
-export default function WorkbenchOverviewPreview({ model, surfaceId, name, region = model.area, highlights = [], presenting = false, thumbnail = false, crop = null, viewport = null, camera = null }) {
+export default function WorkbenchOverviewPreview({ model, name, region = model.area, highlights = [], presenting = false, thumbnail = false, crop = null, viewport = null, camera = null }) {
   const host = useRef(null), [measured, setSize] = useState({ width: 0, height: 0 });
   useLayoutEffect(() => {
     const measure = () => { const { width, height } = host.current.getBoundingClientRect(); setSize({ width, height }); };
@@ -56,7 +55,7 @@ export default function WorkbenchOverviewPreview({ model, surfaceId, name, regio
   const density = globalThis.devicePixelRatio || 1, paintScale = scale * density;
   return <div className="workbench-overview-preview" ref={host} role="img" aria-label={`${presenting ? 'Canvas' : 'Preview'} of ${name}`} data-presenting={presenting || undefined}>
     <div className="workbench-overview-canvas" data-world-width={area.width} aria-hidden="true" inert="" style={{ width: area.width * paintScale, height: area.height * paintScale,
-      transform: `matrix(${1 / density},0,0,${1 / density},${left},${top})`, background: latticeSurfaceColor(surfaceId) }}>
+      transform: `matrix(${1 / density},0,0,${1 / density},${left},${top})`, background: 'var(--interface-environment)' }}>
         {scale > 0 && items.map(item => {
           const frame = projectFrame(item.frame, area, paintScale);
           return item.source.kind === 'text' ? <TextPreview key={item.id} item={item} scale={paintScale} area={area} />

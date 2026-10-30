@@ -40,7 +40,7 @@ for (const theme of ['carbon','mist']) for (const [width,height] of [[1440,900],
    assert.ok((await search.boundingBox()).width>=100,'usable search width');
    assert.equal(await portal.evaluate(n=>n.scrollWidth<=n.clientWidth),true);
    const material=await portal.evaluate(n=>({face:getComputedStyle(n).backgroundColor,shadow:getComputedStyle(n.querySelector('article')).boxShadow}));
-   assert.equal(material.face,theme==='carbon'?'rgb(25, 27, 27)':'rgb(235, 236, 231)');
+   assert.equal(material.face,theme==='carbon'?'rgb(23, 23, 23)':'rgb(222, 219, 211)');
    assert.equal(material.shadow,'none');
    await page.waitForFunction(() => [...document.querySelectorAll('.public-entry-portal__world-card')].filter(n=>n.getBoundingClientRect().top < n.parentElement.getBoundingClientRect().bottom).every(n=>n.querySelectorAll('img.is-ready').length===2));
    assert.equal(await page.locator('.public-entry-portal__world-card').first().evaluate(n=>n.querySelector('footer').getBoundingClientRect().bottom <= n.getBoundingClientRect().bottom),true,'publisher stays inside its card');

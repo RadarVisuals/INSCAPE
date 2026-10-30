@@ -19,7 +19,7 @@ test('composition geometry and content survive every inspector tab and targeted 
     for (const width of [1440,390]) {
       const {page,studio,errors,tab}=await mount(browser,width);
       for(const theme of ['carbon','mist']) {
-        await page.getByLabel('Preview surface').selectOption(theme);
+        await page.getByRole('button', { name: theme === 'mist' ? 'LIGHT' : 'DARK', exact: true }).click();
         await studio.getByLabel('Workspace selection').selectOption('foreground');
         assert.equal(await studio.locator('.ds-studio-canvas-scroll').evaluate(n=>n.scrollHeight>n.clientHeight),false,'composition fits at 100%');
         const scene=studio.locator('.ds-layer-scene');

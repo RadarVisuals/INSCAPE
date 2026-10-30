@@ -101,7 +101,7 @@ function Trial() {
       preview: move, commit: () => setFrame(id, candidate, version) });
     else gestures.beginMove(event, { nodes: [node], beforeTransforms: {}, preview: move, commit: frame => setFrame(id, frame, version), previewDrop: () => {}, commitDrop: () => false });
   };
-  return <main className="rich-trial system-workflow__token-scope" data-menu-surface="carbon" data-lattice-menu-surface data-workflow-material="tactile" data-workflow-finish="flat"
+  return <main className="rich-trial system-workflow__token-scope" data-lattice-menu-surface data-workflow-material="tactile" data-workflow-finish="flat"
     onKeyDown={event => { if (event.defaultPrevented || event.target.closest('input,textarea,[contenteditable]')) return;
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') { event.preventDefault(); gestures.cancel(); store.history(event.shiftKey ? 'redo' : 'undo'); } }}>
     <header className="workbench-tool-controls" data-window-chrome="flat"><strong>Rich Reception cell · isolated experiment</strong>

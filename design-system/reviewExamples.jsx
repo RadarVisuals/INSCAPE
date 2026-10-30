@@ -1,3 +1,4 @@
+import { useInterfaceTheme } from '../src/interfaceTheme.js';
 export { PropertiesPreview } from './propertiesSamples.jsx';
 
 const states = [
@@ -10,6 +11,7 @@ const states = [
 ];
 
 export function ControlStatesSheet({ onAction, status }) {
+  const { mode } = useInterfaceTheme();
   return (
     <section className="ds-state-sheet" aria-labelledby="state-sheet-title">
       <div className="ds-example-heading">
@@ -17,19 +19,18 @@ export function ControlStatesSheet({ onAction, status }) {
         {status}
       </div>
       <p className="ds-caption">
-        The same button in each state, shown in both themes. These samples hold their pictured
+        The same button in each state, shown in the current interface mode. These samples hold their pictured
         state; the controls above are interactive.
       </p>
       <div className="ds-state-themes">
-        {['carbon', 'mist'].map((theme) => (
+        {[mode].map((theme) => (
           <section
             className="ds-flat-preview"
-            data-menu-surface={theme}
             key={theme}
             aria-label={`${theme} button states`}
           >
             <div className="ds-control-examples ds-state-material" data-workflow-material="tactile" data-workflow-finish="flat">
-              <h3>{theme === 'carbon' ? 'Carbon' : 'Mist'}</h3>
+              <h3>{theme === 'dark' ? 'Dark' : 'Light'}</h3>
               <div className="ds-state-grid">
                 {states.map(([label, state]) => (
                   <figure key={state}>

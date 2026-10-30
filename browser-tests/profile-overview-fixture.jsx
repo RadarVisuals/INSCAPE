@@ -1,3 +1,7 @@
+import { interfaceTheme } from '../src/interfaceTheme.js';
+if (!localStorage.getItem('inscape:interface-theme') && new URLSearchParams(location.search).has('theme')) {
+  interfaceTheme.setMode(['light', 'mist'].includes(new URLSearchParams(location.search).get('theme')) ? 'light' : 'dark');
+}
 import React, { lazy, Suspense } from 'react';
 import { createRoot } from 'react-dom/client';
 import PublishedProfileBoundary from '../src/profileDocument/components/PublishedProfileBoundary.jsx';
@@ -25,7 +29,6 @@ const portrait = 'data:image/svg+xml;base64,' + btoa('<svg xmlns="http://www.w3.
 const asset = { id: assetId, chainId: 42, contractAddress: contract, tokenId: '0x01', standard: 'LSP8', name: 'Source artwork',
   imageUrl: portrait, originalImageUrl: portrait, imageWidth: 800, imageHeight: 1200, creators: [], attributes: [] };
 draft.identityPresentation.avatar = { mode: 'inscape', stableAssetId: assetId, shape: 'square' };
-draft.appearance.menuSurfaceId = new URLSearchParams(location.search).get('theme') === 'mist' ? 'mist' : 'carbon';
 draft.imageModules = [{ id: 'image:study', visibility: 'PUBLIC', name: 'A closer look', width: 320, height: 480,
   sides: [{ id: 'side:first', asset: createProfileDocumentV9AssetResolver([asset])(assetId), crop: null, transform: { quarterTurns: 0, mirrorX: false, mirrorY: false } }] }];
 draft.workbench = createDefaultWorkbenchPresentation();
@@ -43,7 +46,6 @@ draft.reception.regions[0].content = 'profile';
 draft.reception.regions[1].content = 'image:reception';
 draft.reception.regions[1].padding = 0;
 draft.reception.imageModules = [{ ...structuredClone(draft.imageModules[0]), id: 'image:reception' }];
-draft.reception.branding.theme = draft.appearance.menuSurfaceId;
 let published = buildProfileDocumentV9({ profileAddress: address, profileIdentity: { name: 'Nomad' }, assetRecords: [asset], systemWorkflowDraft: draft });
 let collection = createWorkbenchCollection(draft);
 collection.workbenches[0].name = 'Vision';
@@ -67,7 +69,7 @@ function Fixture() {
   if (new URLSearchParams(location.search).has('publish')) return <Suspense fallback={null}><main className="system-workflow">
     <OwnerSystemWorkflowPublicationRack store={store} profileAddress={address} profile={{ name: 'Nomad' }} assetRecords={[asset]}
       systemWorkflowDraft={store.getDraft()} workbench={draft.workbench} publishedResolution={{ status: 'UNAVAILABLE' }}
-      getWalletPublicationContext={() => ({})} menuSurface="carbon" phase="open" onClose={() => {}} />
+      getWalletPublicationContext={() => ({})} phase="open" onClose={() => {}} />
   </main></Suspense>;
   return <div className="application-root"><div className="application-interface" data-visible>
     <PublishedProfileBoundary address={address} resolution={{ status: 'RESOLVED', document: published }}

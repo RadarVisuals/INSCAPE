@@ -11,6 +11,6 @@ export default function ProfileOverview({ document: publication, onReturnToWorkb
   const model = useMemo(() => createPublishedIdentityRackViewModel({ document: publication, identity }), [publication, identity]);
   const [blank] = useState(createReception), reception = publication.reception || blank;
   const snapshot = useMemo(() => publishedPresentationSnapshot(publication), [publication]);
-  return <ReceptionOverview snapshot={snapshot} reception={reception} model={model} address={publication.profile.address} menuSurface={publication.appearance.menuSurfaceId}
+  return <ReceptionOverview snapshot={snapshot} reception={reception} model={model} address={publication.profile.address}
     onReturnToWorkbench={onReturnToWorkbench} unavailableTarget={unavailableTarget} onOpenDirectory={onOpenDirectory} onReturn={onReturn} onOpenCanvas={onOpenCanvas} />;
 }

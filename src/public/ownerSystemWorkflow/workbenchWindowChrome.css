@@ -22,7 +22,7 @@
   background: var(--workflow-panel);
   box-shadow: var(--workflow-window-edge-top), var(--workflow-window-chrome-shadow);
 }
-[data-window-chrome="bevel"]:is([data-menu-surface="ash"], [data-menu-surface="mist"], [data-menu-surface="paper"]) {
+:root[data-interface-theme="light"] [data-window-chrome="bevel"] {
   --workflow-window-control-ink: color-mix(in srgb, var(--workflow-ink) 85%, var(--workflow-panel));
   --workflow-window-control-fill: linear-gradient(155deg, color-mix(in srgb, white 18%, var(--workflow-panel)), color-mix(in srgb, var(--workflow-ink) 4%, var(--workflow-panel)));
   --workflow-window-control-hover: linear-gradient(155deg, color-mix(in srgb, white 30%, var(--workflow-panel)), var(--workflow-panel));

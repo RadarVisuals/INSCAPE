@@ -4,7 +4,7 @@ import { prepareReceptionImage } from './receptionSession.js';
 
 // Explicit cell receivers; the shared Library owns the whole pointer lifecycle.
 // A receiver captures this draft generation before decoding, never a later selection.
-export default function ReceptionLibrary({ library, menuSurface, onClose, store, value, expected, regionId,
+export default function ReceptionLibrary({ library, onClose, store, value, expected, regionId,
   boundsRef, toolBoundsRef = boundsRef, initialTop, preferences, framePreferences, active, onActivate, onPlaced, onPlacingChange }) {
   const live = useRef(true), requests = useRef(new Set());
   const generation = store.getGeneration();
@@ -43,7 +43,7 @@ export default function ReceptionLibrary({ library, menuSurface, onClose, store,
     const node = document.elementFromPoint(point.x, point.y)?.closest('[data-region-id]');
     return boundsRef.current?.contains(node) ? capture(node.dataset.regionId) : null;
   } };
-  return <ProfileLibraryPicker library={library} menuSurface={menuSurface} onClose={onClose} placementScope={scope}
+  return <ProfileLibraryPicker library={library}  onClose={onClose} placementScope={scope}
     placementTargetRef={targets} preferences={preferences} framePreferences={framePreferences} boundsRef={toolBoundsRef} initialTop={initialTop} active={active} onActivate={onActivate}
     selectionEnabled={value.regions.some(cell => cell.id === regionId)} onPlacingChange={onPlacingChange} />;
 }

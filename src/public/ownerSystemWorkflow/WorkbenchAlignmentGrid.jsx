@@ -1,3 +1,4 @@
+import { useInterfaceTheme } from '../../interfaceTheme.js';
 import { useWorkbenchArea } from './WorkbenchAreaContext.jsx';
 import { useLayoutEffect, useRef } from 'react';
 import { useWorkbenchCamera } from './WorkbenchCamera.jsx';
@@ -13,6 +14,7 @@ export default function WorkbenchAlignmentGrid({ color, mode, spacing = WORKBENC
 }
 
 export function WorkbenchGridPattern({ color, mode, offset, scale, subscribeCameraPaint, cellSize = WORKBENCH_GRID_STEP }) {
+  const { mode: interfaceMode } = useInterfaceTheme();
   const { bounds: areaBounds } = useWorkbenchArea();
   const node = useRef(null);
   const current = useRef(null), repaint = useRef(null), ink = useRef(null);
@@ -79,8 +81,8 @@ export function WorkbenchGridPattern({ color, mode, offset, scale, subscribeCame
     return () => { observer.disconnect(); repaint.current = null; };
   }, [visible]);
   // Resolve theme ink only when it changes; camera frames perform no style reads.
-  useLayoutEffect(() => { if (node.current) ink.current = getComputedStyle(node.current).color; }, [color, visible]);
-  useLayoutEffect(() => { repaint.current?.(); }, [color, mode, offset, scale, cellSize, areaBounds]);
+  useLayoutEffect(() => { if (node.current) ink.current = getComputedStyle(node.current).color; }, [color, visible, interfaceMode]);
+  useLayoutEffect(() => { repaint.current?.(); }, [color, mode, offset, scale, cellSize, areaBounds, interfaceMode]);
   useLayoutEffect(() => subscribeCameraPaint?.(camera => {
     current.current = { ...current.current, ...camera }; repaint.current?.();
   }), [subscribeCameraPaint]);

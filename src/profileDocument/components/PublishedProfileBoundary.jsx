@@ -25,7 +25,7 @@ function RetryButton({ state, onRetry }) {
 function PublishedStatusSurface({ state, onRetry, onOpenDirectory, onReturn, returnLabel = 'RETURN' }) {
   const [title, message] = STATUS_COPY[state?.status] || STATUS_COPY.ERROR;
   const supportRequired = [PUBLISHED_PROFILE_STATUS.INVALID, PUBLISHED_PROFILE_STATUS.ERROR].includes(state?.status);
-  return <main className="published-profile-status" data-lattice-menu-surface data-menu-surface="mist"
+  return <main className="published-profile-status" data-lattice-menu-surface
     data-published-focus-fallback tabIndex="-1" aria-label="Published profile status">
     {state?.status !== PUBLISHED_PROFILE_STATUS.LOADING && <StartupDestinationReady />}
     <section className="published-profile-status__card" role="status" aria-busy={state?.busy}>

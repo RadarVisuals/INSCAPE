@@ -1,3 +1,7 @@
+import { interfaceTheme } from '../src/interfaceTheme.js';
+if (!localStorage.getItem('inscape:interface-theme') && new URLSearchParams(location.search).has('theme')) {
+  interfaceTheme.setMode(['light', 'mist'].includes(new URLSearchParams(location.search).get('theme')) ? 'light' : 'dark');
+}
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import Runtime from '../src/public/ownerSystemWorkflow/OwnerSystemWorkflowRuntime.jsx';
@@ -25,7 +29,6 @@ async function mountFixture() {
   const store = createSystemWorkflowDraftStore({ profileAddress, storage });
   const session = createSystemWorkflowAuthoringSession({ store });
   if (!seeded) {
-  if (params.has('theme')) session.setAppearance({ expectedAppearance: session.getState().draft.appearance, appearance: { menuSurfaceId: params.get('theme') === 'mist' ? 'mist' : 'carbon' } });
   for (let index = 0; index < (sample === 'layers' ? 24 : 1); index++) {
     session.placeAsset({ gridId: session.getState().selectedGridId, stableAssetId: assets[index % assets.length].id,
       destination: { column: 2 + index % 6 * 4, row: 2 + Math.floor(index / 6) * 3, columnSpan: 5, rowSpan: 5 } });

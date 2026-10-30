@@ -83,7 +83,7 @@ function initialLibrary() {
   };
 }
 
-export default function LibraryPreview({ open, theme, scenario, onScenarioChange, onClose, navigationHost }) {
+export default function LibraryPreview({ open, scenario, onScenarioChange, onClose, navigationHost }) {
   const [assets] = useState(sampleAssets),
     [library, setLibrary] = useState(initialLibrary),
     [collectionOpen, setCollectionOpen] = useState(false);
@@ -161,7 +161,6 @@ export default function LibraryPreview({ open, theme, scenario, onScenarioChange
         previewRecords={previewRecords}
         categoryCommands={categoryCommands}
         data={data}
-        menuSurface={theme === 'mist' ? 'paper' : 'carbon'}
         onClose={onClose}
         phase={open ? 'open' : 'closed'}
         placementScope={scenario}

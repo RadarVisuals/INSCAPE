@@ -39,7 +39,7 @@ export default function PortalStartveil({ connectedProfile, portal = false, onCo
     style={{ '--startveil-reveal-duration': `${reducedMotion ? 0 : shortened ? STARTVEIL_RETURN_REVEAL_MS : STARTVEIL_REVEAL_MS}ms` }}
     data-portal={portal || undefined} data-ready={ready || undefined}
     data-reduced-motion={reducedMotion || undefined} data-sequence={shortened ? 'short' : 'full'}
-    data-state={state} data-exiting={exiting || undefined} data-lattice-menu-surface data-menu-surface="mist">
+    data-state={state} data-exiting={exiting || undefined} data-lattice-menu-surface >
     <div aria-hidden="true" className="startveil__grid" />
     {portal && ready ? <PublicEntryPortal connectedProfile={connectedProfile} onConnect={onConnect} onExplore={onExplore}
       onDisconnect={onDisconnect} onEnterMyWorld={onEnterMyWorld} onVisitProfile={visitProfile} />

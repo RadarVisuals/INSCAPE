@@ -19,7 +19,7 @@ const localAssets = new Map(assets.map(asset => [asset.id, asset]));
 function entry(id, name, introduction, placements, area) {
   const draft = createEmptySystemWorkflowDraft(address);
   draft.workbench = createDefaultWorkbenchPresentation();
-  draft.appearance.menuSurfaceId = 'carbon'; draft.appearance.surfaceId = 'carbon';
+  draft.appearance.surfaceId = 'carbon';
   draft.workbench.area = area;
   // The retained scene renderer accepts the existing local Library assets. No
   // network fixture, publishing URL exception or new asset resolver is needed.

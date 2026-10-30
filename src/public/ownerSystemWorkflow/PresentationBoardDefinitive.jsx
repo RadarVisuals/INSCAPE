@@ -46,7 +46,7 @@ export default function PresentationBoardDefinitive({ assetsById = new Map(), ch
   onMinimize, onRestore,
   playing = false, onTogglePlayback, reducedMotion = false, liftDisabled = false, onLiftInspectionChange, onLiftTransitionChange, onLiftReturn,
   instanceState = PRESENTATION_BOARD_INSTANCE_STATE.WINDOW,
-  menuSurface = null, profileAddress, instanceId, renderInspection, renderCues,
+  profileAddress, instanceId, renderInspection, renderCues,
   shortcutTargetRef, shortcutSnap = true, windowSnap = false, initialPresentation, onWindowChange, onShortcutChange, readOnly = false }) {
   const { editingBounds: areaBounds } = useWorkbenchArea();
   const localShortcutRef = useRef(null);
@@ -232,10 +232,10 @@ export default function PresentationBoardDefinitive({ assetsById = new Map(), ch
       moduleCommands={moduleCommands} moduleSubmenu={moduleSubmenu} onModuleCommand={onModuleCommand}
       initialShortcut={initialPresentation?.shortcut} onShortcutChange={onShortcutChange}
       name={displayName} onNameChange={(name) => setModuleName({ profile: profileAddress, name })}
-      menuSurface={menuSurface} onRestore={onRestore} profileAddress={profileAddress}
+       onRestore={onRestore} profileAddress={profileAddress}
       shortcutSnap={shortcutSnap} shortcutTargetRef={shortcutRef} />
     {view && instanceState === PRESENTATION_BOARD_INSTANCE_STATE.WINDOW
-      && <article aria-label="Display Module" className="system-workflow__presentation-board" data-window-chrome="bevel" data-menu-surface={menuSurface}
+      && <article aria-label="Display Module" className="system-workflow__presentation-board" data-window-chrome="bevel"
       onContextMenu={liftActive ? event => { event.preventDefault(); event.stopPropagation(); } : onContextMenu} data-module-edges={Boolean(moduleAppearance?.edges) || undefined} data-module-frame={moduleAppearance?.frame === false ? 'off' : moduleAppearance?.frame === true ? 'on' : undefined}
       data-authoring-locked={authoringLocked || undefined} data-display-lift={liftActive || undefined} data-lift-moving={liftMoving || undefined}
       data-workbench-scale={workbenchScale}

@@ -11,7 +11,7 @@ export const displayToolCommands = (readOnly = false) => [
   ...(!readOnly ? [{ id: 'tool-layers', label: 'LAYERS' }] : []),
   { id: 'tool-metadata', label: 'METADATA' },
 ];
-export function SharedDisplayToolsLauncher({ menuSurface, readOnly = false, onOpen }) {
+export function SharedDisplayToolsLauncher({ readOnly = false, onOpen }) {
   const tools = useSharedDisplayTools();
   const [anchor, setAnchor] = useState(null);
   const trigger = useRef(null);
@@ -21,7 +21,7 @@ export function SharedDisplayToolsLauncher({ menuSurface, readOnly = false, onOp
       setAnchor(anchor ? null : { x: rect.left, y: rect.top });
     }}><Wrench size={14} /><span>Tools</span></button>
     {anchor && createPortal(<RackMenu anchor={anchor} commands={displayToolCommands(readOnly)}
-      label="Workbench tools" menuSurfaceId={menuSurface} returnFocus={trigger.current}
+      label="Workbench tools"  returnFocus={trigger.current}
       onClose={() => setAnchor(null)} onCommand={id => {
         onOpen?.();
         tools.command(id.slice(5), true, trigger.current);
@@ -67,12 +67,12 @@ export function SharedDisplayToolsProvider({ children, value, onChange, targetId
     [state, setState, target, activate, hosts, registerHost, registerTool, getTool, isAvailable, command, metadataDock]);
   return <Context.Provider value={context}>{children}</Context.Provider>;
 }
-function ToolWindow({ id, menuSurface, fallbackFocus }) {
+function ToolWindow({ id, fallbackFocus }) {
   const tools = useSharedDisplayTools();
   const { registerHost, setState } = tools;
   const host = useCallback(node => registerHost(id, node), [id, registerHost]);
   const layout = useCallback(value => setState(current => JSON.stringify(current.windows[id]) === JSON.stringify(value) ? current : { ...current, windows: { ...current.windows, [id]: value } }), [id, setState]);
-  return <DisplayInstrumentWindow instrument={id} menuSurface={menuSurface} layout={tools.state.windows[id]} onLayoutChange={layout}
+  return <DisplayInstrumentWindow instrument={id}  layout={tools.state.windows[id]} onLayoutChange={layout}
     title={tools.getTool(id)?.label}
     onClose={() => {
       const focused = document.activeElement;
@@ -88,9 +88,9 @@ function ToolWindow({ id, menuSurface, fallbackFocus }) {
     <div ref={host} data-shared-tool={id} />
   </DisplayInstrumentWindow>;
 }
-export function SharedDisplayToolWindows({ menuSurface, readOnly = false, hidden = false, fallbackFocus }) {
+export function SharedDisplayToolWindows({ readOnly = false, hidden = false, fallbackFocus }) {
   const tools = useSharedDisplayTools();
-  return <div hidden={hidden} data-shared-display-tools>{['layers', 'metadata', 'appearance'].filter(id => !(id === 'metadata' && tools.dockedMetadata) && tools.state[id] && tools.isAvailable(id) && (!readOnly || id === 'metadata')).map(id => <ToolWindow key={id} id={id} menuSurface={menuSurface} fallbackFocus={fallbackFocus} />)}</div>;
+  return <div hidden={hidden} data-shared-display-tools>{['layers', 'metadata', 'appearance'].filter(id => !(id === 'metadata' && tools.dockedMetadata) && tools.state[id] && tools.isAvailable(id) && (!readOnly || id === 'metadata')).map(id => <ToolWindow key={id} id={id}  fallbackFocus={fallbackFocus} />)}</div>;
 }
 export function MetadataDockContent() {
   const tools = useSharedDisplayTools();

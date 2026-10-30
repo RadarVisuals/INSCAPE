@@ -100,7 +100,7 @@ test('Library workspace exposes accepted views, stable filters and one-commit pl
     await workspace.getByRole('button', { name: 'Travel signals', exact: true }).click({ button: 'right' });
     const categoryMenu = page.getByRole('menu', { name: 'Category commands' });
     assert.deepEqual(await categoryMenu.getByRole('menuitem').allTextContents(), ['Rename', 'Move / Outside sections', 'Delete'], 'Library category context exposes the canonical section move without obsolete publication visibility');
-    assert.equal(await categoryMenu.getAttribute('data-menu-surface'), 'mist', 'Library context menu inherits the active workflow theme');
+    assert.equal(await categoryMenu.evaluate(n => getComputedStyle(n).color), await page.locator('.system-workflow').evaluate(n => getComputedStyle(n).color), 'Library context menu inherits the global interface ink');
     await categoryMenu.getByRole('menuitem', { name: 'Delete', exact: true }).click();
     const deleteCategoryDialog = workspace.getByRole('alertdialog', { name: 'Delete category Travel signals' });
     assert.match(await deleteCategoryDialog.textContent(), /Travel signals/);

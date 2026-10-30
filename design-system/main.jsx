@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
+import { interfaceTheme, useInterfaceTheme } from '../src/interfaceTheme.js';
+import InterfaceThemeToggle from '../src/InterfaceThemeToggle.jsx';
 import { createRoot } from 'react-dom/client';
 import {
   ArrowUpRight,
@@ -187,7 +189,6 @@ function Overview({ theme, setTheme }) {
         <div
           className="ds-overview-instrument ds-flat-preview"
           data-lattice-menu-surface
-          data-menu-surface={theme}
         >
           <div className="ds-overview-preview-label">
             <span>Creation toolbar</span>
@@ -207,12 +208,11 @@ function Overview({ theme, setTheme }) {
             aria-pressed={theme === value}
             onClick={() => setTheme(value)}
             data-lattice-menu-surface
-            data-menu-surface={value}
           >
             <i aria-hidden="true" />
             <span>
               <strong>{value}</strong>
-              <small>{value === 'carbon' ? 'Dark and focused' : 'Light and warm'}</small>
+              <small>{value === 'dark' ? 'Dark and focused' : 'Light and warm'}</small>
             </span>
             <Check aria-hidden="true" size={16} />
           </button>
@@ -225,7 +225,7 @@ function Overview({ theme, setTheme }) {
   );
 }
 
-function Foundations() {
+function Foundations({ theme }) {
   return (
     <>
       <SectionTitle number="01" title="Foundations">
@@ -246,14 +246,13 @@ function Foundations() {
         Use readable ink for text and a visible neutral outline for keyboard focus. Subtle borders
         are for separation.
       </p>
-      <h2>Carbon and Mist</h2>
+      <h2>Dark and Light</h2>
       <div className="ds-themes">
-        {themes.map((theme) => (
+        {[theme].map((theme) => (
           <article
             className="ds-flat-preview"
             key={theme}
             data-lattice-menu-surface
-            data-menu-surface={theme}
           >
             <strong>{theme}</strong>
             <span>Primary information</span>
@@ -266,7 +265,7 @@ function Foundations() {
         ))}
       </div>
       <p>
-        Carbon pairs a dark surface with dark instruments; Mist pairs a warm light surface with
+        Dark pairs a neutral environment with darker instruments; Light pairs a paper environment with
         light instruments. Keyboard focus follows the instrument ink; selection uses a distinct fill
         and state mark.
       </p>
@@ -382,8 +381,8 @@ function ComponentExamples({ theme }) {
       <SectionTitle number="02" title="Components in use">
         The shared workspace, retained control coverage and interface states.
       </SectionTitle>
-      <WorkspacePreview theme={theme} onAction={report} status={<DesignStatus id="workspace" />} />
-      <div className="ds-flat-preview" data-menu-surface={theme}>
+      <WorkspacePreview onAction={report} status={<DesignStatus id="workspace" />} />
+      <div className="ds-flat-preview">
         <section
           className="ds-card ds-control-examples ds-live-controls"
           data-workflow-material="tactile" data-workflow-finish="flat"
@@ -438,7 +437,6 @@ function ComponentExamples({ theme }) {
           new homes in the shared tabs.
         </p>
         <PropertiesPreview
-          theme={theme}
           onAction={report}
           status={<DesignStatus id="properties" />}
         />
@@ -454,12 +452,11 @@ function ComponentExamples({ theme }) {
               Identity and compatible windows keep their theme-aware bevel. Tool migration does not
               rewrite them.
             </p>
-            <div data-lattice-menu-surface data-menu-surface={theme}>
+            <div data-lattice-menu-surface>
               <DetachedWindow
                 ariaLabel="Example Identity shell"
                 title="Identity · example"
                 chrome="bevel"
-                menuSurface={theme}
                 className="ds-example-window"
                 controls={
                   <button
@@ -609,7 +606,7 @@ function Patterns() {
         wraps; the owning surface scrolls. Reception uses its own rectangular partition and mobile flow, with shared Image and Text content tools.
       </p>
       <aside className="ds-note">
-        Artwork, module appearance, Workbench background and menu theme are separate decisions.
+        One device preference controls the entire interface. Authored artwork and module colours remain part of the composition.
         Never propagate a chrome token change into stored artwork settings.
       </aside>
     </>
@@ -881,8 +878,9 @@ function Guidance() {
 function Reference() {
   const currentSection = () =>
     sections.some(([id]) => id === location.hash.slice(1)) ? location.hash.slice(1) : 'overview';
-  const [section, setSection] = useState(currentSection),
-    [theme, setTheme] = useState('carbon');
+  const [section, setSection] = useState(currentSection);
+  const { mode: theme } = useInterfaceTheme();
+  const setTheme = interfaceTheme.setMode;
   const main = useRef(null),
     first = useRef(true);
   useEffect(() => {
@@ -904,7 +902,6 @@ function Reference() {
       className="ds-reference system-workflow__token-scope"
       data-reference-section={section}
       data-lattice-menu-surface
-      data-menu-surface={theme}
     >
       <a
         className="ds-skip"
@@ -941,24 +938,13 @@ function Reference() {
       <div className="ds-main-column">
         <header className="ds-topbar">
           <span>INSCAPE / Interface reference</span>
-          <label>
-            Preview surface
-            <select
-              aria-label="Preview surface"
-              value={theme}
-              onChange={(event) => setTheme(event.target.value)}
-            >
-              {themes.map((value) => (
-                <option key={value}>{value}</option>
-              ))}
-            </select>
-          </label>
+          <InterfaceThemeToggle />
         </header>
         <main id="reference-content" ref={main} tabIndex="-1">
           {section === 'overview' ? (
             <Overview theme={theme} setTheme={setTheme} />
           ) : section === 'foundations' ? (
-            <Foundations />
+            <Foundations theme={theme} />
           ) : section === 'components' ? (
             <ComponentExamples theme={theme} />
           ) : section === 'patterns' ? (

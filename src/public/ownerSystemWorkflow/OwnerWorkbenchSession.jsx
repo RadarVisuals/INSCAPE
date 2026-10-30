@@ -51,7 +51,6 @@ function LocalWorkbenchSession({ component: Session, ...props }) {
       profile: props.profileAddress,
       storage: props.reviewStorage ?? globalThis.localStorage,
       canSave: store.hasWriteAccess,
-      fallbackSurfaceId: store.getDraft().appearance.surfaceId,
       fresh: store.getRecordState().status === 'absent',
     })
   );

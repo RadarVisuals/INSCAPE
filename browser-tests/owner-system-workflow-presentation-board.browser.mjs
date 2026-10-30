@@ -155,8 +155,8 @@ test('Workbench shortcut snaps, renames, and accepts a Library artwork as its ic
     await revealShortcut(page, shortcut);
     await shortcut.click({ button: 'right' });
     const shortcutMenu = page.getByRole('menu', { name: 'Display Module shortcut commands' });
-    assert.equal(await shortcutMenu.getAttribute('data-menu-surface'),
-      await page.locator('.system-workflow').getAttribute('data-menu-surface'));
+    assert.equal(await shortcutMenu.evaluate(n => getComputedStyle(n).color),
+      await page.locator('.system-workflow').evaluate(n => getComputedStyle(n).color));
     if (SCREENSHOT_DIR) await page.screenshot({ path: resolve(SCREENSHOT_DIR, 'display-module-shortcut-menu-wide.png') });
     await page.getByRole('menuitem', { name: 'RENAME' }).click();
     const input = page.getByRole('textbox', { name: 'Display Module shortcut name' });
@@ -311,9 +311,8 @@ test('Workbench appearance stays local and independent from the published Displa
     const settings = page.getByRole('dialog', { name: 'Settings' });
     await settings.waitFor();
 
-    await settings.getByRole('button', { name: /^Workbench background:/ }).click();
-    await page.getByRole('option', { name: 'Carbon' }).click();
-    assert.equal(await root.getAttribute('data-surface'), 'carbon');
+    await settings.getByRole('button', { name: 'DARK', exact: true }).click();
+    assert.equal(await page.locator('html').getAttribute('data-interface-theme'), 'dark');
     assert.equal(await stage.getAttribute('data-surface'), originalStageSurface);
 
     await settings.getByLabel('Workbench grid color').fill('#ff00ff');

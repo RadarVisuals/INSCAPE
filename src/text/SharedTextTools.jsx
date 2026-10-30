@@ -10,7 +10,7 @@ export const useSharedTextTools = () => useContext(Context);
 // The shared window owns only its screen position and active tool source.
 // Editors, callbacks, unsaved recovery and article content remain module-owned.
 const noSubscription = () => () => {};
-export function SharedTextToolsProvider({ activeModuleId, onActivate, open, onOpenChange, menuSurface, children, editorPreferences }) {
+export function SharedTextToolsProvider({ activeModuleId, onActivate, open, onOpenChange, children, editorPreferences }) {
   const [host, setHost] = useState(null), [source, setSource] = useState(null);
   const [localSection, setLocalSection] = useState('format');
   const storedSection = editorPreferences?.section('textSection'), framePreferences = editorPreferences?.section('textFrame');
@@ -20,8 +20,8 @@ export function SharedTextToolsProvider({ activeModuleId, onActivate, open, onOp
     setSource(value);
     return () => setSource(current => current?.token === value.token ? null : current);
   }, []);
-  const value = useMemo(() => ({ activeModuleId, activate: onActivate, open, setOpen: onOpenChange, menuSurface, host, setHost, source, report, section, setSection, framePreferences }),
-    [activeModuleId, onActivate, open, onOpenChange, menuSurface, host, source, report, section, setSection, framePreferences]);
+  const value = useMemo(() => ({ activeModuleId, activate: onActivate, open, setOpen: onOpenChange, host, setHost, source, report, section, setSection, framePreferences }),
+    [activeModuleId, onActivate, open, onOpenChange, host, source, report, section, setSection, framePreferences]);
   return <Context.Provider value={value}>{children}</Context.Provider>;
 }
 
@@ -41,7 +41,7 @@ export function SharedTextToolsWindow({ hidden = false, navigationRef }) {
   }, [source, frame, setFrame, view.setToolViewportBottom, view.toolViewportBottom]);
   if (!frame || hidden || !tools.open || !source) return null;
   return <div data-shared-text-tools data-workbench-inspection-target={tools.activeModuleId}
-    data-system-workflow-overlay data-workflow-material="tactile" data-workflow-finish="flat" data-lattice-menu-surface data-menu-surface={tools.menuSurface}>
+    data-system-workflow-overlay data-workflow-material="tactile" data-workflow-finish="flat" data-lattice-menu-surface >
     <WorkbenchToolPanel label={`Text tools: ${source.label}`} title="Text" moveLabel="Move Text tools window" closeLabel="Close Text tools" className="text-tools-window"
       titleContent={<span className="text-inspector-heading"><strong>Text</strong><span title={source.label}>{source.label}</span></span>}
       frame={frame} onFrameChange={setFrame} minimumWidth={300} zIndex={81} viewportBottom={view.toolViewportBottom} topBoundaryRef={navigationRef} fitFromTop

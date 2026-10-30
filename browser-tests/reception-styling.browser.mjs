@@ -75,7 +75,8 @@ for (const [width, touch, theme] of [[1440, false, 'carbon'], [390, true, 'mist'
     page.on('pageerror', error => errors.push(error.message));
     page.on('request', request => requests.push(new URL(request.url()).pathname));
     await context.route('**/*', route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
-    const seed = receptionStylingSeed(), raw = JSON.parse(seed.raw); raw.reception.branding.theme = theme; seed.raw = JSON.stringify(raw);
+    const seed = receptionStylingSeed();
+    await context.addInitScript(mode => localStorage.setItem('inscape:interface-theme', mode), theme === 'mist' ? 'light' : 'dark');
     await context.addInitScript(seed => localStorage.setItem(seed.key, seed.raw), seed);
     try {
       await page.goto(`${origin}/?view=${seed.address}&reception=1`, { waitUntil: 'domcontentloaded', timeout: 30000 });

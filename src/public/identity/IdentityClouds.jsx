@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useInterfaceTheme } from '../../interfaceTheme.js';
 
 const vertex = `attribute vec2 position; void main(){gl_Position=vec4(position,0.,1.);}`;
 const fragment = `
@@ -28,7 +29,8 @@ void main(){
 }`;
 
 // Bounded, module-owned renderer. No profile, wallet, or Workbench dependencies.
-export default function IdentityClouds({ surface, color = null, speed = 1 }) {
+export default function IdentityClouds({ color = null, speed = 1 }) {
+  const { mode } = useInterfaceTheme();
   const ref = useRef(null);
   const settings = useRef({ color, speed });
   settings.current = { color, speed };
@@ -114,6 +116,6 @@ export default function IdentityClouds({ surface, color = null, speed = 1 }) {
       canvas.removeEventListener('webglcontextrestored', contextRestored);
       gl.deleteBuffer(buffer); gl.deleteProgram(program); shaders.forEach(shader => gl.deleteShader(shader));
     };
-  }, [contextRevision, surface]);
+  }, [contextRevision, mode]);
   return <canvas ref={ref} className="identity-module__clouds" aria-hidden="true" />;
 }

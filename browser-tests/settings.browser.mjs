@@ -70,7 +70,7 @@ for (const theme of ['carbon', 'mist']) for (const [width, height] of [[1440, 90
       assert.equal(await notification.evaluate(node => getComputedStyle(node).outlineStyle), 'none', 'pointer does not add a focus ring');
       await notification.press('Tab'); await page.keyboard.press('Shift+Tab');
       assert.notEqual(await notification.evaluate(node => getComputedStyle(node).outlineStyle), 'none', 'keyboard focus remains visible');
-      const background = panel.getByRole('button', { name: /^Workbench background:/ });
+      const background = panel.getByRole('button', { name: /^Workbench grid display:/ });
       await background.scrollIntoViewIfNeeded();
       // A user can scroll a selector to the top of the panel; its popup must flip.
       await background.evaluate(node => {
@@ -88,7 +88,7 @@ for (const theme of ['carbon', 'mist']) for (const [width, height] of [[1440, 90
       await page.keyboard.press('Escape');
       const grid = panel.getByLabel('Workbench grid cell size', { exact: true });
       await grid.scrollIntoViewIfNeeded(); assert.equal(await grid.evaluate(hit), true);
-      const windows = panel.getByRole('button', { name: /^Menu theme:/ });
+      const windows = panel.getByRole('button', { name: 'DARK', exact: true });
       await windows.scrollIntoViewIfNeeded(); assert.equal(await windows.evaluate(hit), true);
       const file = panel.getByLabel('Open Workbench backup', { exact: true });
       await file.scrollIntoViewIfNeeded(); assert.equal(await file.evaluate(hit), true);
@@ -117,11 +117,10 @@ test('Settings keeps existing local persistence, interface theme and backup vali
     await panel.getByRole('button', { name: /^Workbench grid display:/ }).click();
     await page.getByRole('option', { name: 'Dots', exact: true }).click();
     assert.deepEqual(await saved(page), before, 'local Workbench and signal controls do not author the composition');
-    await panel.getByRole('button', { name: /^Menu theme:/ }).click();
-    await page.getByRole('option', { name: 'Carbon', exact: true }).click();
+    await panel.getByRole('button', { name: 'DARK', exact: true }).click();
     const changed = await saved(page);
-    assert.equal(changed.appearance.menuSurfaceId, 'carbon');
-    assert.deepEqual({ ...changed, appearance: before.appearance }, before, 'theme retains its existing appearance owner');
+    assert.equal(await page.locator('html').getAttribute('data-interface-theme'), 'dark');
+    assert.deepEqual(changed, before, 'the interface preference never edits a composition');
     await page.reload(); await page.locator('.keeper-dock-window').waitFor(); await open(page);
     await page.evaluate(async profile => {
       const { useSignalStore } = await import('/src/signals/state/useSignalStore.js');
@@ -132,7 +131,7 @@ test('Settings keeps existing local persistence, interface theme and backup vali
     assert.equal(await panel.getByLabel('Space between modules', { exact: true }).inputValue(), '12');
     assert.equal(await panel.getByLabel('Workbench grid color', { exact: true }).inputValue(), '#8d73c2');
     assert.equal(await panel.getByRole('button', { name: 'Workbench grid display: Dots', exact: true }).count(), 1);
-    assert.equal(await panel.getByRole('button', { name: 'Menu theme: Carbon', exact: true }).count(), 1);
+    assert.equal(await panel.getByRole('button', { name: 'DARK', exact: true }).getAttribute('aria-pressed'), 'true');
     await panel.getByLabel('Open Workbench backup', { exact: true }).setInputFiles({ name: 'invalid.json', mimeType: 'application/json', buffer: Buffer.from('{invalid') });
     await panel.getByRole('status').waitFor();
     assert.match(await panel.getByRole('status').innerText(), /backup|JSON/i);

@@ -21,7 +21,7 @@ function EditingSession({ profileAddress, children, onView, viewLabel = 'View pu
   }, [profileAddress, attempt]);
   if (status === 'editing') return children;
   const loading = status === 'loading';
-  return <main className="published-profile-status" data-lattice-menu-surface data-menu-surface="mist">
+  return <main className="published-profile-status" data-lattice-menu-surface >
     {!loading && <StartupDestinationReady />}
     <section className="published-profile-status__card" aria-label="Profile editing access">
       <header><span>INSCAPE</span><h1>{loading ? 'Checking editing access…' : 'This tab is view-only'}</h1></header>

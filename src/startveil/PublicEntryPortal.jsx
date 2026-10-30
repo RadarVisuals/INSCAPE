@@ -60,7 +60,7 @@ function PublishedWorldCard({ compact = false, onVisit, profile, resolutionStore
   </article>;
 }
 
-export default function PublicEntryPortal({ connectedProfile, discoveryRepository, embedded = false, menuSurface = 'mist', initialMode = 'landing', mode: controlledMode, onExplore, onHome, onClose,
+export default function PublicEntryPortal({ connectedProfile, discoveryRepository, embedded = false, initialMode = 'landing', mode: controlledMode, onExplore, onHome, onClose,
   onConnect, onDisconnect, onEnterMyWorld, onVisitProfile, resolutionStore }) {
   const [localMode, setMode] = useState(initialMode === 'explore' ? 'explore' : 'landing');
   const mode = controlledMode || localMode;
@@ -95,7 +95,7 @@ export default function PublicEntryPortal({ connectedProfile, discoveryRepositor
   const returnHome = () => (onClose || onHome) ? (onClose || onHome)() : setMode('landing');
   return <div className="public-entry-portal" data-embedded={embedded || undefined} data-workbench-selection-tools={accountOpen || undefined}
     data-workflow-material="tactile" data-workflow-finish="flat"
-    data-lattice-menu-surface data-menu-surface={menuSurface} data-mode={mode}
+    data-lattice-menu-surface  data-mode={mode}
     onKeyDown={event => {
       if (event.key !== 'Escape' || !accountOpen) return;
       event.preventDefault(); event.stopPropagation(); setAccountOpen(false);

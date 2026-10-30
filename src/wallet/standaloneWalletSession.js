@@ -2,6 +2,7 @@ import { disconnect as disconnectWagmi, getConnection, reconnect, watchConnectio
 import { setupLuksoConnector } from '@lukso/up-modal/auto-setup';
 import { resolveStandaloneUniversalProfile } from '../store/universalProfileValidation.js';
 import { ensureUniversalProfileExtensionConnector } from './universalProfileExtensionReadiness.js';
+import { interfaceTheme } from '../interfaceTheme.js';
 import { STANDALONE_WALLET_STORAGE_KEY } from './standaloneWalletLoader.js';
 
 export const isEmbeddedApplication = () => typeof window !== 'undefined' && window.parent !== window;
@@ -12,13 +13,17 @@ let pendingRelease = null;
 
 export async function createStandaloneWalletSession({ initializeWallet, disposeWallet, beginWalletTransition, onError, onSignInClose }) {
   const connector = await setupLuksoConnector({
-    theme: 'light',
+    theme: interfaceTheme.getSnapshot().mode,
     chains: { defaultChainId: 42 },
     connectors: { eoa: false },
     storage: { key: STANDALONE_WALLET_STORAGE_KEY },
     onClose: () => onSignInClose?.(),
     onError: (event) => onError?.(event?.detail || new Error('Universal Profile connection failed.'))
   });
+
+  const syncTheme = () => connector.setTheme(interfaceTheme.getSnapshot().mode);
+  syncTheme();
+  const stopTheme = interfaceTheme.subscribe(syncTheme);
 
   let syncGeneration = 0;
   let disposed = false;
@@ -99,6 +104,7 @@ export async function createStandaloneWalletSession({ initializeWallet, disposeW
       disposed = true;
       syncGeneration += 1;
       stopWatching?.();
+      stopTheme();
       connector.destroyModal();
       disposeWallet();
     }

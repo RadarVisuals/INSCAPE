@@ -19,7 +19,7 @@ export const TRANSPARENCY_MODES = Object.freeze({
 const PROFILE_KEYS = ['contractVersion', 'profileAddress', 'artboard', 'geometry', 'identityPresentation', 'tables'];
 const TABLE_KEYS = ['id', 'coordinate', 'title', 'subtitle', 'labelVisible', 'labelAnchor', 'labelOffset', 'visibility', 'placements'];
 const PLACEMENT_KEYS = ['id', 'stableAssetId', 'x', 'y', 'width', 'height', 'layer', 'navigationOrder', 'crop', 'frameId', 'transparencyMode', 'visitorVisible'];
-const IDENTITY_KEYS = ['alias', 'avatar', 'bio', 'tags', 'dossierSurface', 'visibility'];
+const IDENTITY_KEYS = ['alias', 'avatar', 'bio', 'tags', 'visibility'];
 const PROFILE_ADDRESS = /^0x[0-9a-f]{40}$/iu;
 const FRAME_ID_VALUES = new Set(Object.values(FRAME_IDS));
 const TRANSPARENCY_MODE_VALUES = new Set(Object.values(TRANSPARENCY_MODES));
@@ -58,7 +58,6 @@ export function createEmptyIdentityPresentation() {
     avatar: { mode: 'official', assetReference: null, shape: 'round' },
     bio: { mode: 'official', customText: '' },
     tags: { includeOfficial: true, additional: [] },
-    dossierSurface: 'paper',
     visibility: { links: true, network: true, counts: true, publicationDate: true }
   };
 }
@@ -100,9 +99,6 @@ function validateIdentityPresentation(value, fail) {
     || !Array.isArray(value.tags?.additional)
     || value.tags.additional.some((tag) => typeof tag !== 'string')) {
     fail('identityPresentation.tags', 'invalid_tag_presentation', 'Tag presentation is invalid');
-  }
-  if (typeof value.dossierSurface !== 'string' || !value.dossierSurface) {
-    fail('identityPresentation.dossierSurface', 'invalid_dossier_surface', 'Dossier surface must be a semantic ID');
   }
   if (!exactKeys(value.visibility, ['links', 'network', 'counts', 'publicationDate'])
     || Object.values(value.visibility || {}).some((setting) => typeof setting !== 'boolean')) {

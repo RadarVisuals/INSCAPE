@@ -69,7 +69,7 @@ const seed = () =>
     included: true,
     ...item,
   }));
-export default function WorkspacePreview({ theme, onAction, status }) {
+export default function WorkspacePreview({ onAction, status }) {
   const id = useId(),
     nextId = useRef(0),
     tabRefs = useRef([]);
@@ -529,7 +529,7 @@ export default function WorkspacePreview({ theme, onAction, status }) {
           Reset workspace
         </button>
       </div>
-      <div className="ds-studio-shell ds-flat-preview" data-menu-surface={theme} data-lattice-menu-surface
+      <div className="ds-studio-shell ds-flat-preview" data-lattice-menu-surface
         data-library-open={libraryOpen || undefined} data-navigation-collapsed={sidebarCollapsed || undefined}>
         <NavigationPreview collapsed={sidebarCollapsed} onCollapse={() => setSidebarCollapsed(value => !value)}
           libraryOpen={libraryOpen} onLibrary={toggleLibrary} navigationHost={setLibraryNavigationHost}
@@ -540,7 +540,6 @@ export default function WorkspacePreview({ theme, onAction, status }) {
               <LibraryPreview
                 open={libraryOpen}
                 navigationHost={libraryNavigationHost}
-                theme={theme}
                 scenario={libraryScenario}
                 onScenarioChange={setLibraryScenario}
                 onClose={closeLibrary}
@@ -550,7 +549,6 @@ export default function WorkspacePreview({ theme, onAction, status }) {
         <div className="ds-studio-main">
       <div
         className="ds-studio-layout ds-flat-preview"
-        data-menu-surface={theme}
         data-lattice-menu-surface
       >
         <div className="ds-studio-workbench">
@@ -1003,7 +1001,6 @@ export default function WorkspacePreview({ theme, onAction, status }) {
             onColourTarget={setTextColourTarget}
             onChange={changeText}
             onFindRequest={() => setTextOpen(true)}
-            theme={theme}
             readOnly={readOnly}
           />
         </Suspense>

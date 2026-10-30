@@ -1,3 +1,7 @@
+import { interfaceTheme } from '../src/interfaceTheme.js';
+if (!localStorage.getItem('inscape:interface-theme') && new URLSearchParams(location.search).has('theme')) {
+  interfaceTheme.setMode(['light', 'mist'].includes(new URLSearchParams(location.search).get('theme')) ? 'light' : 'dark');
+}
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import Runtime from '../src/public/ownerSystemWorkflow/OwnerSystemWorkflowRuntime.jsx';
@@ -17,7 +21,6 @@ const assets = OWNER_SYSTEM_WORKFLOW_REVIEW_ASSETS.map(asset => ({ ...asset, ima
 const store = createSystemWorkflowDraftStore({ profileAddress, storage });
 const session = createSystemWorkflowAuthoringSession({ store });
 const theme = new URLSearchParams(location.search).get('theme') === 'mist' ? 'mist' : 'carbon';
-session.setAppearance({ expectedAppearance: session.getState().draft.appearance, appearance: { menuSurfaceId: theme } });
 session.placeAsset({ gridId: session.getState().selectedGridId, stableAssetId: assets[0].id,
   destination: { column: 10, row: 4, columnSpan: 9, rowSpan: 9 } });
 createRoot(document.getElementById('root')).render(<Runtime profileAddress={profileAddress} reviewStorage={storage} reviewAssets={assets}

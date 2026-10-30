@@ -1,3 +1,4 @@
+import { withoutRetiredInterfaceAppearance } from './retiredInterfaceAppearance.js';
 import { assertValidSystemWorkflowDraft, SYSTEM_WORKFLOW_DRAFT_VERSION, SYSTEM_WORKFLOW_LIMITS } from './systemWorkflowDraft.js';
 
 export const WORKBENCH_COLLECTION_TYPE = 'inscape-local-workbenches';
@@ -36,20 +37,20 @@ export const isWorkbenchCollection = value => value?.type === WORKBENCH_COLLECTI
 // No mutable module content is copied into the overview or another composition.
 function splitDraft(draft) {
   const { profileAddress, draftVersion, identityPresentation, keeperDocks, reception, appearance, ...content } = draft;
-  const { menuSurfaceId, ...canvasAppearance } = appearance;
   return {
-    shared: { identityPresentation, menuSurfaceId,
+    shared: { identityPresentation,
       ...(keeperDocks === undefined ? {} : { keeperDocks }), ...(reception === undefined ? {} : { reception }) },
-    content: { ...content, appearance: canvasAppearance },
+    content: { ...content, appearance },
   };
 }
 
 export function projectWorkbenchDraft(collection, id = collection.activeId) {
   const item = collection.workbenches.find(item => item.id === id);
   if (!item) throw new Error('This Workbench is unavailable.');
-  const { menuSurfaceId, ...shared } = collection.shared;
+  const shared = { ...collection.shared };
+  delete shared.menuSurfaceId; // Discard the retired field when reading existing collections.
   return { profileAddress: collection.profileAddress, draftVersion: SYSTEM_WORKFLOW_DRAFT_VERSION,
-    ...item.content, ...shared, appearance: { ...item.content.appearance, menuSurfaceId } };
+    ...item.content, ...shared, appearance: { ...item.content.appearance } };
 }
 
 export function createWorkbenchCollection(draft) {
@@ -76,7 +77,7 @@ export function appendWorkbench(collection, id, name, draft) {
 export function assertValidWorkbenchCollection(input) {
   if (!exact(input, ['type', 'version', 'profileAddress', 'activeId', 'shared', 'workbenches'])
     || !isWorkbenchCollection(input) || input.version !== 1
-    || !object(input.shared) || !exact(input.shared, ['identityPresentation', 'menuSurfaceId',
+    || !object(input.shared) || !exact(input.shared, ['identityPresentation', ...Object.hasOwn(input.shared, 'menuSurfaceId') ? ['menuSurfaceId'] : [],
       ...['keeperDocks', 'reception'].filter(key => Object.hasOwn(input.shared, key))])
     || !Array.isArray(input.workbenches) || !input.workbenches.length || input.workbenches.length > MAX_WORKBENCHES)
     throw new Error('Invalid local Workbench collection.');
@@ -95,5 +96,5 @@ export function assertValidWorkbenchCollection(input) {
   if (!ids.has(input.activeId)) throw new Error('The active Workbench is unavailable.');
   if (new TextEncoder().encode(JSON.stringify(input)).length > WORKBENCH_COLLECTION_LIMIT)
     throw new Error('The local Workbenches exceed the storage limit.');
-  return structuredClone(input);
+  return withoutRetiredInterfaceAppearance(input);
 }

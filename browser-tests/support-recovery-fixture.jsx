@@ -20,13 +20,12 @@ export function renderSettings(root) {
     if (window.blockSignalSave) throw Error('Injected quota error'); localStorage.setItem(key, value);
   } });
   window.signalState = () => useSignalStore.getState();
-  root.render(<main className="system-workflow" data-menu-surface="mist">
-    <Settings profileAddress={profile} onMenuSurfaceChange={() => {}}
-      menuSurface="mist" phase="open" workbenchPreferences={DEFAULT_WORKBENCH_PREFERENCES} onClose={() => {}} onWorkbenchPreferencesChange={() => {}} />
+  root.render(<main className="system-workflow">
+    <Settings profileAddress={profile} phase="open" workbenchPreferences={DEFAULT_WORKBENCH_PREFERENCES} onClose={() => {}} onWorkbenchPreferencesChange={() => {}} />
   </main>);
 }
 export function renderActivity(root) {
   const activity = { entries: [{ id: 'received', label: 'Received artwork', detail: 'Test asset', type: 'ASSETS', date: 'Today', time: '12:00', unread: true }],
     status: 'partial', partialError: 'Some source metadata is unavailable.', unreadCount: 1, markRead() {}, refresh() {}, retry() {} };
-  root.render(<main className="system-workflow" data-menu-surface="mist"><Activity activity={activity} phase="open" onClose={() => {}} /></main>);
+  root.render(<main className="system-workflow"><Activity activity={activity} phase="open" onClose={() => {}} /></main>);
 }

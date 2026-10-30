@@ -34,10 +34,25 @@ The founder explicitly excluded mobile from this iteration. Review quickly,
 then adjust or revert from the verified checkpoint; this is not final visual
 approval or permission for a broad rewrite of Reception or publication.
 
-The founder's current colour choice for this overview trial is neutral charcoal:
-`#080808` for the interface background, `#171717` for panels and selected/hover
-surfaces, and `#C2C2C2` for interface text. Apply it through the shared material
-palette to owner and public overviews; preserve authored artwork colours.
+The founder's subsequent colour decision applies to the entire interface, including
+the initial sign-in screen, Discover, Reception, owner/public overviews, Workbench,
+all windows, toolbars and portalled menus. Settings offers one DARK / LIGHT choice,
+stored on this device independently of profiles and compositions. No separate
+Workbench background palette, window palette, Reception view theme, visitor default
+or overview-only palette remains. The design reference uses this same preference.
+
+Dark uses `#171717` for the environment, `#080808` for windows and toolbars, and the
+existing Workbench white `#EBECE7` for text. Light uses a paper environment
+`#DEDBD3`, light windows/toolbars `#EBECE7`, and ink `#171717`. Selected toolbar
+controls invert ink and panel. The founder's supplied light toolbar is the
+reference for that relationship. Existing typography and control geometry stay.
+
+This 30 October decision supersedes the earlier overview-only palette and all older
+Carbon/Mist interface choices or per-window theme forwarding described below.
+Authored image, Text, Shape, Display and Reception cell colours remain composition
+content. Existing work must still open; retired interface fields are discarded on
+draft read and omitted from new saves. Immutable published documents remain readable
+without rewriting their verified bytes. Mobile work remains excluded from this slice.
 
 The Free page/header-removal and style-template experiment was rolled back
 because its code growth and visible result were unsatisfactory. The founder
@@ -3376,8 +3391,8 @@ drafts retain their schemas and content.
   renderer spans the body and title bar; the title bar and detail extension
   overlay 65%-opaque surfaces while text and controls remain opaque. Detail
   dividers are internal only and fade over 16px into an 8px outer inset.
-  The shared shell owns this opt-in style through `chrome="bevel"` and an explicit
-  `menuSurface`. `workbenchWindowChrome.css` owns the edge, overlay, selector and
+  The shared shell owns this opt-in style through `chrome="bevel"` and the shared
+  device interface preference. `workbenchWindowChrome.css` owns the edge, overlay, selector and
   raised-control tokens and their light/dark theme values. Controls use the shared
   window-cap class, including the recessed pressed state and keyboard focus.
   Identity owns its content layout, artwork, editor and divider geometry.
@@ -3389,7 +3404,7 @@ drafts retain their schemas and content.
 - Display adopts the same bevel tokens for its outer frame, title-bar controls,
   inspection controls and independent instrument windows. Opening tools leaves
   Stage dimensions, artwork crop and saved compositions unchanged. Tool windows
-  receive the module theme explicitly.
+  inherit the shared interface palette, including when portalled.
   Owner and Visitor share this treatment, including the two-pixel tab selector,
   reduced grain, thin content boundary and light-theme control shadows.
 
@@ -3877,8 +3892,8 @@ enlarged text, strengthens Mist supporting text in the reference, and separates
 Agreed, Needs review and In the app labels. A flat Properties shell and a
 two-theme button state sheet are proposals for review, not accepted production
 migrations. Properties reuses the existing shell and native controls, with local
-example values, close/reopen focus return and field validation. The founder subsequently requested complete Properties coverage: Image, Display artwork and Shape retain their existing controls in separate reference specimens, including crop, selection/grouping, locked/empty states, Grid and retained Texture. Reference adapters reuse shared controls and compare their inventories against running production fixtures; they do not replace module editing or saving logic. Production controls, theme selectors and stored surface IDs retain their
-current behavior pending review and migration. The founder's Properties review
+example values, close/reopen focus return and field validation. The founder subsequently requested complete Properties coverage: Image, Display artwork and Shape retain their existing controls in separate reference specimens, including crop, selection/grouping, locked/empty states, Grid and retained Texture. Reference adapters reuse shared controls and compare their inventories against running production fixtures; they do not replace module editing or saving logic. Production control behavior stays with its existing owners; interface theme choices
+were subsequently replaced by the single 30 October Dark/Light preference. The founder's Properties review
 removes the redundant visible Fit label and permanent borders around action-row
 icons. Solid selected Fit/Inspect choices have no underline; native fields use
 neutral, centered dropdowns and finer number-stepper chevrons. Grain uses a compact
@@ -4121,12 +4136,12 @@ titlebar, close control and field geometry. Its existing Activity, Workbench,
 Interface and backup sections scroll below a fixed titlebar, within the sidebar's
 reserved screen area. It remains a sidebar destination. This does not introduce
 new settings or move it into the shared dock. Signal preferences, local Workbench
-preferences, authored interface appearance and backup/recovery retain their
-existing owners and storage boundaries. Shared selector popups choose available
+preferences and backup/recovery retain their existing owners and storage boundaries.
+Interface appearance is the device-wide Dark/Light preference specified above. Shared selector popups choose available
 space above or below their trigger and close if their origin scrolls or resizes.
 
 **Workbench preference recovery (2026-10-24):** local grid, snapping, module gap,
-chrome, lock, sidebar visibility and background preferences now report failed
+chrome, lock and sidebar visibility preferences now report failed
 reads/writes. Current choices remain active during a write failure and across
 composition switches in the same profile. Explicitly saving the current preferences
 retries persistence; unreadable or externally changed records are retained until
@@ -4166,8 +4181,8 @@ See [Activity finishing verification](audits/2026-10-23/activity-finishing.md).
 ### Discover finishing (2026-10-23)
 
 Discover now uses the shared flat Carbon/Mist material, thin edges, control
-radii and typography. The owner panel receives the existing editor theme;
-standalone public entry defaults to Mist. The shared portal retains its
+radii and typography. Owner, visitor and standalone entry now share the same
+device Dark/Light preference, defaulting to Dark before any choice. The shared portal retains its
 wordmark return, search, published cards, bounded result batches and account
 actions. Narrow screens give search its own row. Cards keep their full
 preview and identity strip while results scroll beneath the stationary header
@@ -4188,7 +4203,7 @@ without stopping after each surface. Publish, its confirmed result, Docs, Profil
 and the retained Grids panel share `WorkbenchDestinationPanel`, the existing
 flat Carbon/Mist material and titlebar/control tokens. Content scrolls inside the
 window; Publish keeps its action below the scroll area. The owner host supplies
-its existing sidebar clearance. The confirmation retains the originating theme
+its existing sidebar clearance. The confirmation follows the shared interface preference
 through the owner refresh; it is still shown only after confirmed publication.
 
 Groups and Index retain their existing movable `WorkbenchWindow` and domain

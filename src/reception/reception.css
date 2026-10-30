@@ -1,4 +1,4 @@
-.reception-page { position: absolute; inset: 0; display: grid; grid-template: minmax(0, 1fr) / minmax(0, 1fr); place-items: center; overflow: hidden; padding: clamp(12px, 4vw, 80px); box-sizing: border-box; background: var(--color-surface-base, #101111); color: var(--tactile-ink); font-family: var(--font-interface); pointer-events: auto; }
+.reception-page { position: absolute; inset: 0; display: grid; grid-template: minmax(0, 1fr) / minmax(0, 1fr); place-items: center; overflow: hidden; padding: clamp(12px, 4vw, 80px); box-sizing: border-box; background: var(--interface-environment); color: var(--tactile-ink); font-family: var(--font-interface); pointer-events: auto; }
 .reception-canvas { height: 100%; min-height: 320px; position: relative; width: 100%; min-width: 0; isolation: isolate; }
 .reception-paint { position: relative; width: 100%; height: 100%; }
 .reception-region { position: relative; box-sizing: border-box; min-width: 0; overflow: auto; border-radius: var(--reception-radius); background: var(--tactile-well); display: flex; align-items: var(--reception-align-y); justify-content: var(--reception-align-x); }
@@ -71,9 +71,6 @@
 .reception-selected-settings { margin: 0; padding: 0; border: 0; }
 .reception-selected-settings > legend { padding: 0 0 8px; font: var(--workflow-type-control); }
 .reception-selected-settings:disabled { opacity: .6; }
-.reception-theme-choices { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; }
-.reception-theme-choices .reception-choices { min-width: 0; }
-.reception-theme-choices .reception-choices > div { flex-wrap: nowrap; }
 .reception-field, .reception-range { display: grid; gap: 8px; font-size: 12px; }
 .reception-check { display: flex; align-items: center; gap: 8px; }
 .reception-check input { width: 16px; height: 16px; flex: none; }

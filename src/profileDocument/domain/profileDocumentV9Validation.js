@@ -1,3 +1,4 @@
+import { retiredInterfaceKeys } from '../../systemWorkflow/domain/retiredInterfaceAppearance.js';
 import { validReception, receptionReferenceCount } from './receptionPresentation.js';
 import { receptionLinkProblems } from './receptionLinks.js';
 import { publishedPresentationSnapshot } from '../../presentation/presentationSources.js';
@@ -42,13 +43,13 @@ const DOCUMENT_KEYS = [
   'network', 'profile', 'artboard', 'geometry', 'appearance', 'identityPresentation',
   'grids', 'metadata',
 ];
-const APPEARANCE_KEYS = ['surfaceId', 'menuSurfaceId', 'dossierSurfaceId', 'guideMode', 'guideSize', 'guideColor'];
+const APPEARANCE_KEYS = ['surfaceId', 'guideMode', 'guideSize', 'guideColor'];
 const GRID_KEYS = ['id', 'title', 'subtitle', 'visibility', 'labelVisible', 'labelAnchor', 'labelOffset', 'placements'];
 const PLACEMENT_KEYS = [
   'id', 'asset', 'column', 'row', 'columnSpan', 'rowSpan', 'layer', 'navigationOrder',
   'crop', 'visibility', 'transform',
 ];
-const IDENTITY_KEYS = ['alias', 'avatar', 'bio', 'tags', 'dossierSurface', 'visibility'];
+const IDENTITY_KEYS = ['alias', 'avatar', 'bio', 'tags', 'visibility'];
 const WORLD_COVER_KEYS = ['width', 'height', 'grid'];
 const ID = /^[A-Za-z0-9:_-]+$/u;
 const GRID_ID = /^grid:[A-Za-z0-9_-]+$/u;
@@ -95,7 +96,7 @@ function validCrop(value) {
 }
 
 function validateIdentity(value, fail) {
-  if (!allowedKeys(value, IDENTITY_KEYS, ['card'])) return fail('identityPresentation', 'invalid_identity_structure', 'Invalid identity presentation');
+  if (!allowedKeys(value, IDENTITY_KEYS, ['card', 'dossierSurface'])) return fail('identityPresentation', 'invalid_identity_structure', 'Invalid identity presentation');
   if (Object.hasOwn(value, 'card') && !isValidIdentityCard(value.card, { published: true })) fail('identityPresentation.card', 'invalid_identity_card', 'Invalid public Identity card');
   if (!safeText(value.alias, 80)) fail('identityPresentation.alias', 'invalid_alias', 'Invalid identity alias');
   if (!exactKeys(value.avatar, ['mode', 'asset', 'shape'])
@@ -118,7 +119,7 @@ function validateIdentity(value, fail) {
     || value.tags.additional.some((tag) => !safeText(tag, 48, { empty: false }))) {
     fail('identityPresentation.tags', 'invalid_tags', 'Invalid public tags');
   }
-  if (!sets.surfaces.has(value.dossierSurface)) fail('identityPresentation.dossierSurface', 'invalid_dossier_surface', 'Invalid dossier surface');
+  if (Object.hasOwn(value, 'dossierSurface') && !sets.surfaces.has(value.dossierSurface)) fail('identityPresentation.dossierSurface', 'invalid_dossier_surface', 'Invalid dossier surface');
   if (!exactKeys(value.visibility, ['links', 'network', 'counts', 'publicationDate'])
     || Object.values(value.visibility || {}).some((entry) => typeof entry !== 'boolean')) {
     fail('identityPresentation.visibility', 'invalid_identity_visibility', 'Invalid identity visibility');
@@ -236,13 +237,13 @@ export function validateProfileDocumentV9(input, { rawSize } = {}) {
     fail('profile.cachedIdentity', 'invalid_identity', 'Invalid cached public identity fallback');
   }
   if (!isDisplayFormat(input.artboard, input.geometry)) fail('artboard', 'invalid_artboard', 'Invalid Display format');
-  if (!exactKeys(input.appearance, [...APPEARANCE_KEYS, ...['edges', 'frame', ...DISPLAY_CANVAS_APPEARANCE_KEYS].filter(key => Object.hasOwn(input.appearance || {}, key))])
+  if (!exactKeys(input.appearance, [...APPEARANCE_KEYS, ...retiredInterfaceKeys(input.appearance), ...['edges', 'frame', ...DISPLAY_CANVAS_APPEARANCE_KEYS].filter(key => Object.hasOwn(input.appearance || {}, key))])
     || !validDisplayCanvasAppearance(input.appearance)
     || input.appearance?.edges !== undefined && !validModuleEdges(input.appearance.edges)
     || input.appearance?.frame !== undefined && typeof input.appearance.frame !== 'boolean'
     || !sets.surfaces.has(input.appearance.surfaceId)
-    || !sets.surfaces.has(input.appearance.menuSurfaceId)
-    || !sets.surfaces.has(input.appearance.dossierSurfaceId)
+    || Object.hasOwn(input.appearance || {}, 'menuSurfaceId') && !sets.surfaces.has(input.appearance.menuSurfaceId)
+    || Object.hasOwn(input.appearance || {}, 'dossierSurfaceId') && !sets.surfaces.has(input.appearance.dossierSurfaceId)
     || !sets.guides.has(input.appearance.guideMode)
     || !Number.isSafeInteger(input.appearance.guideSize)
     || input.appearance.guideSize < SYSTEM_WORKFLOW_GRID_DENSITY.minimum

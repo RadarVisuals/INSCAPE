@@ -60,7 +60,7 @@ function App() {
     const address = normalizeProfileAddress(result?.document?.profile?.address);
     if (result?.status !== PUBLISHED_PROFILE_STATUS.RESOLVED || !address
       || address !== connectedWorkspaceProfileAddress || address !== publicationProfileRef.current) return;
-    setPublicationConfirmation({ profileAddress: address, transactionHash: result.transactionHash, menuSurface: result.menuSurface });
+    setPublicationConfirmation({ profileAddress: address, transactionHash: result.transactionHash });
     retryPublishedProfile();
   };
   const ownerSourceReady = publishedResolution?.status !== PUBLISHED_PROFILE_STATUS.LOADING;

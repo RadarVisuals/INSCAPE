@@ -29,7 +29,7 @@ function SavedReception({ address, document, warning, onEdit, onCanvases, onDisc
   const failed = status === 'corrupt' || status === 'unavailable';
   const notice = failed ? `Your local Reception could not be read. ${stale ? 'Showing the last saved view.' : document ? 'Showing the published version.' : 'No saved view is available.'} Open Edit Reception to recover your draft.` : warning;
   const View = collection ? OwnerReceptionCollection : ReceptionOverview;
-  return <Suspense fallback={<p role="status">Opening Reception…</p>}><View snapshot={collection || publicSnapshot} reception={reception} model={model} address={address} menuSurface={draft?.appearance.menuSurfaceId || document?.appearance.menuSurfaceId || 'carbon'}
+  return <Suspense fallback={<p role="status">Opening Reception…</p>}><View snapshot={collection || publicSnapshot} reception={reception} model={model} address={address}
     notice={notice} onRetry={failed ? reader.refresh : undefined} ownerEditingAllowed onEdit={onEdit}
     onReturnToWorkbench={onReturn} onOpenCanvas={onCanvases} onOpenDirectory={onDiscover} /></Suspense>;
 }

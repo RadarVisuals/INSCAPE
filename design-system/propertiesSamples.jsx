@@ -731,7 +731,7 @@ function ShapeSample({ example, report, setTitle }) {
     </div>
   );
 }
-export function PropertiesPreview({ theme, onAction, status }) {
+export function PropertiesPreview({ onAction, status }) {
   const [variant, setVariant] = useState('image'),
     [example, setExample] = useState('artwork'),
     [revision, setRevision] = useState(0);
@@ -815,7 +815,6 @@ export function PropertiesPreview({ theme, onAction, status }) {
       </div>
       <div
         className="ds-properties-stage ds-flat-preview"
-        data-menu-surface={theme}
         data-lattice-menu-surface
       >
         <div className="ds-properties-frame" hidden={!open}>

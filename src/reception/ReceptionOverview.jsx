@@ -19,10 +19,10 @@ const CanvasPresentation = lazy(() => import('../public/workbenchOverview/Canvas
 export default function ReceptionOverview({ snapshot, assets, assetStatus, ...props }) {
   return <ReceptionPresentation snapshot={snapshot} assets={assets} assetStatus={assetStatus}><ReceptionPage {...props} /></ReceptionPresentation>;
 }
-function ReceptionPage({ reception, model, address, menuSurface, ownerEditingAllowed = false,
+function ReceptionPage({ reception, model, address, ownerEditingAllowed = false,
   onEdit, onReturnToWorkbench, unavailableTarget = false, onOpenDirectory, onReturn, onOpenCanvas, notice, onRetry }) {
   useStartupDestinationReady();
-  const [exploring, setExploring] = useState(false), [theme, setTheme] = useState(reception.branding.theme);
+  const [exploring, setExploring] = useState(false);
   const explore = useRef(null), roomTitle = useRef(null), flightArea = useRef(null), previous = useRef(false);
   const scrollRoot = useRef(null), pageRoot = useRef(null), trigger = useRef(null);
   const presentation = useReceptionPresentation();
@@ -42,12 +42,12 @@ function ReceptionPage({ reception, model, address, menuSurface, ownerEditingAll
     previous.current = exploring;
   }, [exploring]);
   const name = model?.profile?.displayName || 'Unnamed profile';
-  return <main ref={pageRoot} className="reception-page system-workflow__token-scope" data-menu-surface={theme}
+  return <main ref={pageRoot} className="reception-page system-workflow__token-scope"
     data-lattice-menu-surface data-workflow-material="tactile" data-workflow-finish="flat"
     data-published-focus-fallback tabIndex={-1} aria-label={`${name} reception`}
     onKeyDown={event => { if (event.key === 'Escape' && !event.defaultPrevented && exploring) { event.preventDefault(); setExploring(false); } }}>
     <div className="reception-window" inert={opened ? '' : undefined}>
-      <ReceptionHeader navigation={<ReceptionNavigation reception={reception} model={model} theme={theme} onTheme={setTheme}
+      <ReceptionHeader navigation={<ReceptionNavigation reception={reception} model={model}
         onAbout={() => { setExploring(false); scrollRoot.current?.scrollTo({ top: 0 }); }} onCanvases={onOpenCanvas} onDiscover={onOpenDirectory} onEdit={onEdit} />}>
         {(onReturnToWorkbench || onReturn) && <button className="workflow-tactile-control" type="button"
           aria-label={onReturnToWorkbench ? 'Back to my Workbench' : 'Back to my Inscape'}
@@ -66,7 +66,7 @@ function ReceptionPage({ reception, model, address, menuSurface, ownerEditingAll
           <span className="exploration-room__marker" aria-hidden="true" />
         </div>
           {ownerEditingAllowed && <Suspense fallback={<p role="status">Opening Keeper dock…</p>}>
-            <ExplorationKeeper profileAddress={address} flightAreaRef={flightArea} menuSurface={menuSurface} onReturn={() => setExploring(false)} />
+            <ExplorationKeeper profileAddress={address} flightAreaRef={flightArea}  onReturn={() => setExploring(false)} />
           </Suspense>}
         </div>
         <footer>{ownerEditingAllowed ? '2800 × 1800 · Camera follows Keeper · Metal beams only · Direct recall.' : 'Exploration wireframe · The profile owner can configure a Keeper here.'}</footer>
