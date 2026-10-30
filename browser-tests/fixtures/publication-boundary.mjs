@@ -7,12 +7,12 @@ export const otherBoundaryProfile = `0x${'2'.repeat(40)}`;
 const cid = 'QmYwAPJzv5CZsnAzt8auVZRnGi2CWF7rP3pVYdWrJwEmQw';
 const transactionHash = `0x${'a'.repeat(64)}`;
 
-export async function mountPublicationBoundary(page, origin, pauseAt, menuSurface = 'mist') {
+export async function mountPublicationBoundary(page, origin, pauseAt, menuSurface = 'mist', collection = false) {
   let arrive, release, deliver;
   const reached = new Promise(resolve => { arrive = resolve; });
   const gate = new Promise(resolve => { release = resolve; });
   const delivered = new Promise(resolve => { deliver = resolve; });
-  const state = { bytes: '', value: '0x', uploads: 0, writes: 0, verifications: 0, reached, release, delivered };
+  const state = { bytes: '', value: '0x', uploads: 0, writes: 0, verifications: 0, requests: [], reached, release, delivered };
   let paused = false;
   const pause = async phase => { if (phase === pauseAt && !paused) { paused = true; arrive(); await gate; } };
   const handler = createPinProfileDocumentHandler({ getJwt: () => 'fixture-only', getQuotaStore: () => memory,
@@ -26,6 +26,7 @@ export async function mountPublicationBoundary(page, origin, pauseAt, menuSurfac
   await page.route('**/*', route => new URL(route.request().url()).origin === origin ? route.fallback() : route.abort());
   await page.route('**/api/profile-publications**', async route => {
     const request = route.request();
+    state.requests.push({ url: request.url(), method: request.method(), origin: request.headers().origin });
     const response = await handler(new Request(request.url(), { method: request.method(), headers: request.headers(), body: request.postDataBuffer() }));
     await route.fulfill({ status: response.status, headers: Object.fromEntries(response.headers), body: await response.text() });
     if (pauseAt === 'upload' && paused) deliver();
@@ -42,7 +43,7 @@ export async function mountPublicationBoundary(page, origin, pauseAt, menuSurfac
   await page.exposeFunction('boundaryReceipt', async () => { await pause('receipt'); return { status: 'success', transactionHash }; });
   await page.route(`${origin}/__publication_boundary__`, route => route.fulfill({ contentType: 'text/html', body: '<div id="root"></div>' }));
   await page.goto(`${origin}/__publication_boundary__`);
-  await page.evaluate(async ({ profile, signer, menuSurface }) => {
+  await page.evaluate(async ({ profile, signer, menuSurface, collection }) => {
     const refresh = (await import('/@react-refresh')).default;
     refresh.injectIntoGlobalHook(window); window.$RefreshReg$ = () => {}; window.$RefreshSig$ = () => type => type; window.__vite_plugin_react_preamble_installed__ = true;
     const React = (await import('/@id/react')).default, { createRoot } = (await import('/@id/react-dom/client')).default;
@@ -59,6 +60,24 @@ export async function mountPublicationBoundary(page, origin, pauseAt, menuSurfac
       systemWorkflowDraft: createEmptySystemWorkflowDraft(profile), menuSurface, phase: 'open',
       getWalletPublicationContext: () => wallet, onSaveWorkbench: () => { probe.saves++; return true; },
       onPublished: result => { probe.confirmed.push(result); }, onClose: () => root.render(null) };
+    if (collection) {
+      const fixture = await import('/src/public/ownerSystemWorkflow/ownerSystemWorkflowDevelopmentFixture.js');
+      const { systemWorkflowDraftKey } = await import('/src/systemWorkflow/systemWorkflowDraftStore.js');
+      const { createWorkbenchCollection, appendWorkbench } = await import('/src/systemWorkflow/domain/workbenchCollection.js');
+      const { useLibraryStore } = await import('/src/library/state/useLibraryStore.js');
+      const { projectLibraryAssetUnion } = await import('/src/lattice/browser/libraryAssetUnion.js');
+      const draft = JSON.parse(fixture.createOwnerSystemWorkflowReviewStorage().getItem(systemWorkflowDraftKey(profile)));
+      draft.grids[0].visibility = 'PUBLIC';
+      const records = fixture.OWNER_SYSTEM_WORKFLOW_REVIEW_ASSETS.map(asset => ({ ...asset, ownerAddress: profile }));
+      useLibraryStore.getState().setProfileAddress(profile);
+      useLibraryStore.setState({ assets: records, referencedAssets: [], status: 'ready' });
+      probe.referenceRecordCount = projectLibraryAssetUnion({ ownedAssets: records, profileAddress: profile }).records.length;
+      let record = createWorkbenchCollection(draft);
+      for (let i = 2; i <= 8; i++) record = appendWorkbench(record, `workbench:${i}`, `Canvas ${i}`, draft);
+      props = { ...props, systemWorkflowDraft: draft, publishedResolution: { status: 'UNAVAILABLE' },
+        assetRecords: records.map(asset => ({ ...asset, name: `Current ${asset.name}` })),
+        store: { getBackupSnapshot: () => record, getWorkbenchId: () => record.activeId } };
+    }
     probe.render = () => root.render(React.createElement(Rack, { ...props, key: props.profileAddress }));
     probe.changeSnapshot = () => { props = { ...props, profile: { name: 'Changed profile' } }; probe.render(); };
     probe.changeProfile = address => {
@@ -68,7 +87,7 @@ export async function mountPublicationBoundary(page, origin, pauseAt, menuSurfac
     };
     probe.close = () => root.render(null);
     probe.render();
-  }, { profile: boundaryProfile, signer: UPLOAD_TEST_SIGNER.address, menuSurface });
+  }, { profile: boundaryProfile, signer: UPLOAD_TEST_SIGNER.address, menuSurface, collection });
   await page.getByRole('button', { name: 'Prepare publication', exact: true }).waitFor();
   return state;
 }

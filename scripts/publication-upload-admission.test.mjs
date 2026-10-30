@@ -56,6 +56,60 @@ test('server challenge uses its own deployment, immutable byte hash, expiry and 
   assert.equal(state.calls(), 0); assert.equal(state.store.records.size, 0, 'unauthenticated challenges do not allocate quota storage');
 });
 
+test('loopback clients get a bounded CORS preflight; arbitrary sites and methods remain rejected', async () => {
+  const state = setup();
+  const preflight = (origin, method = 'POST', headers = 'content-type,x-inscape-upload-authorization,x-inscape-upload-signature') =>
+    state.handler(new Request(`${UPLOAD_TEST_ORIGIN}/api/profile-publications`, { method: 'OPTIONS', headers: {
+      origin, 'access-control-request-method': method, 'access-control-request-headers': headers,
+    } }));
+  for (const origin of ['http://localhost:5173', 'http://127.0.0.1:5173', 'http://[::1]:5173']) {
+    const response = await preflight(origin);
+    assert.equal(response.status, 204);
+    assert.equal(response.headers.get('access-control-allow-origin'), origin);
+    assert.equal(response.headers.get('access-control-allow-methods'), 'POST');
+    assert.equal(response.headers.get('access-control-allow-credentials'), null);
+    assert.equal(response.headers.get('vary'), 'Origin');
+  }
+  for (const origin of ['https://evil.example', 'http://localhost.evil.example', 'http://127.0.0.1.evil.example', 'null', 'http://127.0.0.1:5173/path']) {
+    const response = await preflight(origin);
+    assert.equal(response.status, 403);
+    assert.equal(response.headers.get('access-control-allow-origin'), null);
+  }
+  assert.equal((await preflight('http://localhost:5173', 'DELETE')).status, 403);
+  assert.equal((await preflight('http://localhost:5173', 'POST', 'authorization')).status, 403);
+  assert.equal(state.calls(), 0); assert.equal(state.signatureChecks(), 0); assert.equal(state.store.records.size, 0);
+});
+
+test('local publication uses the same signature and durable quota gates without transferring its origin', async () => {
+  const state = setup(), origin = 'http://127.0.0.1:5173', doc = document();
+  const { profile, hash, bytes } = uploadTestChallenge(doc).permit;
+  const response = await state.handler(new Request(`${UPLOAD_TEST_ORIGIN}/api/profile-publications/challenge`, {
+    method: 'POST', headers: { origin, 'content-type': 'application/json' }, body: JSON.stringify({ profile, hash, bytes }),
+  }));
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get('access-control-allow-origin'), origin);
+  const challenge = await response.json();
+  assert.equal(challenge.permit.origin, origin);
+  const sendLocal = async (sourceOrigin, signed) => {
+    const request = uploadRequest(doc, signed ? challenge : null, signed, sourceOrigin);
+    return state.handler(new Request(`${UPLOAD_TEST_ORIGIN}/api/profile-publications`, {
+      method: 'POST', headers: request.headers, body: await request.text(),
+    }));
+  };
+  assert.equal((await sendLocal(origin)).status, 401);
+  assert.equal(state.calls(), 0); assert.equal(state.store.records.size, 0);
+  const signature = await sign(challenge);
+  assert.equal((await sendLocal('http://127.0.0.1:5174', signature)).status, 401);
+  assert.equal(state.calls(), 0);
+  const uploaded = await sendLocal(origin, signature);
+  assert.equal(uploaded.status, 201);
+  assert.equal(uploaded.headers.get('access-control-allow-origin'), origin);
+  assert.equal((await uploaded.json()).cid, CID);
+  assert.equal(state.calls(), 1);
+  assert.equal((await sendLocal(origin, signature)).status, 200, 'replay reuses the durable result');
+  assert.equal(state.calls(), 1);
+});
+
 test('two independently verified Universal Profiles upload without an invitation; impersonation still fails', async () => {
   const state = setup({ verifySignature: (permit, signature) => uploadTestVerifier(permit.profile)(permit, signature) });
   assert.equal((await send(state.handler, document())).status, 201);

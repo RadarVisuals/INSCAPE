@@ -1,6 +1,6 @@
 # Netlify Public IPFS publication
 
-INSCAPE publishes prepared profile snapshots through the Netlify Function at `POST /api/profile-publications`. The function validates the closed profile-document schema, requires the exact canonical serialization, streams at most 512 KiB, and accepts same-origin requests only. Everyone with a valid mainnet Universal Profile can authorize an upload; no invitation list is required. The function checks profile interfaces and a short-lived signed upload authorization, then reserves durable profile/global quotas before contacting Pinata. It returns only the resulting CID.
+INSCAPE publishes prepared profile snapshots through the Netlify Function at `POST /api/profile-publications`. The function validates the closed profile-document schema, requires the exact canonical serialization, streams at most 512 KiB, and accepts its own origin plus exact loopback development origins. Everyone with a valid mainnet Universal Profile can authorize an upload; no invitation list is required. The function checks profile interfaces and a short-lived signed upload authorization, then reserves durable profile/global quotas before contacting Pinata. It returns only the resulting CID.
 
 The browser never receives a Pinata credential. It verifies the returned CID against the canonical snapshot bytes before enabling the existing wallet publication transaction. The manual canonical-file and CID workflow remains available as a recovery path.
 
@@ -49,7 +49,27 @@ override when activation is limited to that branch.
 
 These are provisional service limits, not a hosting billing cap. The founder chose access for all valid Universal Profiles on 19 October 2026. The monthly limits are shared by everyone; reaching one temporarily stops new uploads across the site. Failed and uncertain attempts still count. Successfully cached results reuse their CID in the same month without another upload. Stored files can accumulate across months; RPC, Functions, Blobs and gateway usage also have costs. Review the provider's own plan limits and alerts as usage grows.
 
-For local end-to-end testing of the function, run the site through Netlify Dev rather than plain `npm run dev`. Plain Vite serves only the frontend and has no `/api/profile-publications` server function. Unit tests mock Pinata and never need a real JWT.
+The ordinary Vite editor can publish without leaving its local origin. In a
+development build on `localhost`, `127.0.0.1` or IPv6 loopback, the upload client
+uses `https://deploy-preview-5--enterinscape.netlify.app` as the service. Set the
+public, nonsecret `VITE_PUBLICATION_SERVICE_ORIGIN` to another configured HTTPS
+service origin if that development target changes. Hosted production builds
+ignore this development override and use their own same-origin function.
+
+The service must include the 30 October loopback CORS support. It allows POST
+and only the content-type/upload-authorization/upload-signature request headers;
+no cross-origin cookies or arbitrary website/LAN origins are allowed. The permit
+contains the local page's exact origin, including port, and its canonical snapshot
+hash. Another page origin or changed snapshot cannot reuse that authorization.
+The hosted verifier and durable quotas are the same as for same-origin uploads.
+Secrets stay hosted; no Pinata or authorization secret is copied into Vite.
+
+LocalStorage remains scoped to the local editor. This connection uploads the
+snapshot prepared there, without importing or replacing drafts on the preview.
+For offline development or a service outage, editing remains available and upload
+reports an unavailable service. Unit/browser tests mock Pinata and wallets and
+never need a real JWT or transaction. Netlify Dev remains an option for developing
+the function itself, with its required server environment and storage configured.
 
 ## Security and operations
 

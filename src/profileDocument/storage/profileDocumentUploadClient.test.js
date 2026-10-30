@@ -45,17 +45,36 @@ test('upload client sends canonical bytes and validates the returned CID', async
   assert.equal(result.ipfsUri, `ipfs://${CID}`);
 });
 
+test('a local draft uses the hosted service while signing authorization for the local page', async () => {
+  const origin = 'http://127.0.0.1:5173';
+  const fixture = clientFixture({ challenge: uploadTestChallenge(document, { origin }) });
+  Object.assign(fixture.options, { origin, endpoint: `${UPLOAD_TEST_ORIGIN}/api/profile-publications` });
+  const result = await uploadProfileDocument(document, fixture.options);
+  assert.equal(result.cid, CID);
+  assert.ok(fixture.requests.every(request => new URL(request.url).origin === UPLOAD_TEST_ORIGIN));
+  assert.match(fixture.signatures[0].message, /127\.0\.0\.1:5173/);
+  assert.equal(fixture.requests[1].init.body, canonicalSerializeProfileDocumentV9(document));
+});
+
+test('a hosted service cannot substitute its own origin for the local draft authorization', async () => {
+  const fixture = clientFixture();
+  Object.assign(fixture.options, { origin: 'http://127.0.0.1:5173', endpoint: `${UPLOAD_TEST_ORIGIN}/api/profile-publications` });
+  await assert.rejects(() => uploadProfileDocument(document, fixture.options), { code: 'UPLOAD_CHALLENGE_INVALID' });
+  assert.equal(fixture.signatures.length, 0);
+  assert.equal(fixture.requests.length, 1);
+});
+
 test('upload client does not accept a successful response without a valid CID', async () => {
   const fixture = clientFixture({ upload: () => Response.json({ cid: 'bad' }, { status: 201 }) });
   await assert.rejects(() => uploadProfileDocument(document, fixture.options), /invalid IPFS CID/i);
 });
 
-test('plain Vite HTML fallback is identified as an unavailable publication function', async () => {
+test('an HTML fallback is identified as an unavailable publication service without asking users to change sites', async () => {
   await assert.rejects(() => uploadProfileDocument(document, {
     ...clientFixture().options,
     fetchImpl: async () => new Response('<!doctype html>', { status: 200, headers: { 'content-type': 'text/html' } }),
   }), (error) => error.code === 'PUBLICATION_FUNCTION_UNAVAILABLE'
-    && /Plain Vite cannot upload to IPFS/u.test(error.message));
+    && /local draft is unchanged/u.test(error.message));
 });
 
 test('upload client rejects v1-v8 and malformed payloads before the publication endpoint', async () => {

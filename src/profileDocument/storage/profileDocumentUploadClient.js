@@ -1,8 +1,9 @@
 import { assertPublicationContext, createCanonicalPublication, normalizeProfileDocumentCid } from '../domain/profileDocumentPublication.js';
 import { assertValidProfileDocumentV9 } from '../domain/profileDocumentV9Validation.js';
 import { assertUploadPermit, uploadAuthorizationMessage, PUBLICATION_UPLOAD_PATH } from '../domain/uploadAuthorization.js';
+import { isLocalPublicationOrigin } from '../domain/publicationOrigin.js';
+import { publicationUploadEndpoint } from './publicationUploadEndpoint.js';
 
-const DEFAULT_UPLOAD_ENDPOINT = PUBLICATION_UPLOAD_PATH;
 const DEFAULT_UPLOAD_TIMEOUT_MS = 50_000;
 
 export class ProfileDocumentUploadError extends Error {
@@ -37,7 +38,7 @@ async function requestJson(endpoint, init, { fetchImpl, timeoutMs, signal }) {
   }
   if (!payload) {
     throw new ProfileDocumentUploadError(
-      'The publication function is unavailable. Plain Vite cannot upload to IPFS; use Netlify Dev or the exact Deploy Preview.',
+      'The publication service is unavailable. Your local draft is unchanged; try again when the service is available.',
       'PUBLICATION_FUNCTION_UNAVAILABLE');
   }
   if (!response.ok) {
@@ -47,7 +48,7 @@ async function requestJson(endpoint, init, { fetchImpl, timeoutMs, signal }) {
 }
 
 export async function uploadProfileDocument(snapshot, {
-  endpoint = DEFAULT_UPLOAD_ENDPOINT, origin = globalThis.location?.origin,
+  origin = globalThis.location?.origin, endpoint = publicationUploadEndpoint(origin),
   fetchImpl = fetch, timeoutMs = DEFAULT_UPLOAD_TIMEOUT_MS, getContext, signal, onPhase = () => {}, now = Date.now,
 } = {}) {
   assertValidProfileDocumentV9(snapshot);
@@ -75,8 +76,10 @@ export async function uploadProfileDocument(snapshot, {
   };
   assertFresh();
   const target = new URL(endpoint, origin);
-  if (target.origin !== origin || target.pathname !== PUBLICATION_UPLOAD_PATH || target.search || target.hash) {
-    throw new ProfileDocumentUploadError('Upload authorization must use this INSCAPE deployment.', 'UPLOAD_ORIGIN_INVALID');
+  const localService = isLocalPublicationOrigin(origin) && target.protocol === 'https:';
+  if ((!localService && target.origin !== origin) || target.username || target.password
+    || target.pathname !== PUBLICATION_UPLOAD_PATH || target.search || target.hash) {
+    throw new ProfileDocumentUploadError('Upload authorization must use this INSCAPE deployment or its local development service.', 'UPLOAD_ORIGIN_INVALID');
   }
   const options = { fetchImpl, timeoutMs, signal };
   const challenge = await requestJson(`${target.href}/challenge`, {

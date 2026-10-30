@@ -3051,7 +3051,7 @@
     {
       "path": "src/public/ownerLatticePublicationRack.css",
       "role": "Publication",
-      "sha256": "9916f74feaaa49d052b12dda39f3a262db04e5b63b8b23c3c94b375f4327ba92",
+      "sha256": "1068d94f3e3ef6ccc6d1fdcb832a35961d86aad1d6529f69776f07c92e08ea56",
       "definitions": [
         {
           "name": "--destination-width",

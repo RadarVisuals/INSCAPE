@@ -68,15 +68,21 @@ export default function OwnerSystemWorkflowPublicationRack({
         ...[draft.workbench?.display, ...(draft.workbench?.displays || [])].map(item => item?.shortcut?.icon?.stableAssetId))).filter(Boolean))];
   }, [record]);
   const browser = useOwnerLatticeBrowser(profileAddress, false, referenceIds);
+  // The reference reader covers other canvases; the current canvas supplies
+  // its refined records. Both can contain the same NFT. Reconcile that overlap
+  // here, before the document builder validates one record per identity.
+  const publicationAssets = useMemo(() => new Map([
+    ...(browser.records || []), ...(assetRecords || []),
+  ].map(asset => [asset.id, asset])), [browser.records, assetRecords]);
   const candidates = useMemo(() => record ? canvasPublicationCandidates({ record, profile,
-    assetRecords: [...(browser.records || []), ...(assetRecords || [])] }) : [], [record, profile, browser.records, assetRecords]);
+    assetRecords: publicationAssets }) : [], [record, profile, publicationAssets]);
   const changes = useMemo(() => canvasPublicationChanges(candidates, previous), [candidates, previous]);
   const selectedChanges = useMemo(() => selectedIds.filter(id => changes.some(item => item.id === id && item.changed)), [selectedIds, changes]);
   const collectionInput = useMemo(() => ({ candidates, selectedIds: selectedChanges, includeShared: publishShared, previousDocument: previous }),
     [candidates, selectedChanges, publishShared, previous]);
 
-  const builderInput = useMemo(() => ({ assetRecords, profile, profileAddress, systemWorkflowDraft, workbench }),
-    [assetRecords, profile, profileAddress, systemWorkflowDraft, workbench]);
+  const builderInput = useMemo(() => ({ assetRecords: publicationAssets, profile, profileAddress, systemWorkflowDraft, workbench }),
+    [publicationAssets, profile, profileAddress, systemWorkflowDraft, workbench]);
   const draftState = useMemo(() => {
     try {
       if (preparationError) throw new Error(preparationError);

@@ -3887,6 +3887,18 @@ the initial overview does not introduce a saved curation or layout schema.
   checks, not proof of a unique person. Hosted secrets and service availability
   remain operational prerequisites. Upload authorization and the later on-chain
   Publish action stay separate; browsing and preparing do not request signatures.
+- On 30 October 2026 the founder requested publication from the development
+  editor as well as deployed editors, without changing origin and losing access
+  to the current local draft. Loopback Vite pages use the existing hosted preview
+  upload service; deployed builds continue to use their own publication function.
+  The function permits exact localhost/127.0.0.1/IPv6-loopback origins through
+  a bounded CORS policy. Permits and signatures remain bound to the originating
+  page, profile and snapshot; wallet checks, canonical bytes, quotas, CID
+  verification and explicit on-chain confirmation remain required. Credentials
+  stay on the service. This does not synchronize localStorage between origins.
+  Publication reconciles overlapping current-canvas and reference-reader asset
+  inventories by canonical identity before strict document validation, so using
+  the same NFT across canvases does not create a duplicate-record blocker.
 - The Library retains one canonical record and initially one cover tile per token.
   Its circular image-count button expands or folds that NFT's supported attached
   images directly in the browsing grid, labelled with their source NFT. Each NFT

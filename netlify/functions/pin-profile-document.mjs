@@ -4,6 +4,7 @@ import { createProfileDocumentV9Filename, isCanonicalProfileDocumentV9Bytes } fr
 import { parseProfileDocumentV9Json } from '../../src/profileDocument/domain/profileDocumentV9Validation.js';
 import { isValidCid } from '../../src/profileDocument/domain/cidValidation.js';
 import { PUBLICATION_UPLOAD_PATH } from '../../src/profileDocument/domain/uploadAuthorization.js';
+import { isLocalPublicationOrigin } from '../../src/profileDocument/domain/publicationOrigin.js';
 import { FUNCTION_RESPONSE_SECURITY_HEADERS } from '../../scripts/productionSecurityPolicy.js';
 import { UploadServiceError, readUploadPolicy, createUploadChallenge, verifyUploadAuthorization, createProfileSignatureVerifier } from '../lib/publicationUploadAuth.mjs';
 import { publicationQuotaStore, createUploadQuota } from '../lib/publicationUploadQuota.mjs';
@@ -43,16 +44,36 @@ export function createPinProfileDocumentHandler({
   verifySignature = createProfileSignatureVerifier(), getQuotaStore = publicationQuotaStore, now = Date.now,
 } = {}) {
   return async function pinProfileDocument(request) {
-    if (request.method !== 'POST') return requestError('METHOD_NOT_ALLOWED', 'Use POST to upload a publication', 405);
+    if (!['POST', 'OPTIONS'].includes(request.method)) return requestError('METHOD_NOT_ALLOWED', 'Use POST to upload a publication', 405);
     const url = new URL(request.url);
     const origin = request.headers.get('origin');
-    if (!origin || origin !== url.origin) return requestError('ORIGIN_NOT_ALLOWED', 'The upload must originate from this INSCAPE deployment', 403);
-    if (request.headers.get('content-type')?.split(';', 1)[0].trim().toLowerCase() !== 'application/json') {
-      return requestError('UNSUPPORTED_MEDIA_TYPE', 'Expected a canonical JSON publication', 415);
+    if (!origin || origin !== url.origin && !isLocalPublicationOrigin(origin)) {
+      return requestError('ORIGIN_NOT_ALLOWED', 'The upload must originate from this INSCAPE deployment or its local development client', 403);
     }
     const challenge = url.pathname === `${PUBLICATION_UPLOAD_PATH}/challenge`;
     if (!challenge && url.pathname !== PUBLICATION_UPLOAD_PATH && url.pathname !== '/.netlify/functions/pin-profile-document') {
       return requestError('NOT_FOUND', 'Unknown publication endpoint', 404);
+    }
+    const cors = origin !== url.origin ? { 'access-control-allow-origin': origin,
+      'access-control-expose-headers': 'retry-after', vary: 'Origin' } : {};
+    if (request.method === 'OPTIONS') {
+      const headers = (request.headers.get('access-control-request-headers') || '').toLowerCase().split(',').map(value => value.trim()).filter(Boolean);
+      if (request.headers.get('access-control-request-method') !== 'POST'
+        || headers.some(value => !['content-type', 'x-inscape-upload-authorization', 'x-inscape-upload-signature'].includes(value))) {
+        return requestError('PREFLIGHT_NOT_ALLOWED', 'This publication request is not supported.', 403);
+      }
+      return new Response(null, { status: 204, headers: { ...FUNCTION_RESPONSE_SECURITY_HEADERS, ...cors,
+        'access-control-allow-methods': 'POST', 'access-control-allow-headers': 'content-type, x-inscape-upload-authorization, x-inscape-upload-signature',
+        'access-control-max-age': '600', 'cache-control': 'no-store' } });
+    }
+    const response = await upload(request, origin, challenge);
+    for (const [name, value] of Object.entries(cors)) response.headers.set(name, value);
+    return response;
+  };
+
+  async function upload(request, origin, challenge) {
+    if (request.headers.get('content-type')?.split(';', 1)[0].trim().toLowerCase() !== 'application/json') {
+      return requestError('UNSUPPORTED_MEDIA_TYPE', 'Expected a canonical JSON publication', 415);
     }
     const deadline = AbortSignal.timeout(55_000);
     try {
@@ -129,11 +150,11 @@ export function createPinProfileDocumentHandler({
       console.error('[profile-publication-upload] Service unavailable');
       return requestError('UPLOAD_UNAVAILABLE', 'The upload service is unavailable. No new request should be retried automatically.', 503);
     }
-  };
+  }
 }
 
 export default createPinProfileDocumentHandler();
 export const config = {
-  path: ['/api/profile-publications', '/api/profile-publications/challenge'], method: 'POST',
+  path: ['/api/profile-publications', '/api/profile-publications/challenge'], method: ['POST', 'OPTIONS'],
   rateLimit: { action: 'rate_limit', aggregateBy: ['ip'], windowSize: 3600, windowLimit: 36 },
 };

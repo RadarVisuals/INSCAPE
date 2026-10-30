@@ -3,6 +3,11 @@
   "notes": "Classification is not a passing test result. Release suites run by default; every other suite remains explicitly selectable. production-startup is separately required after the build by verifyRelease.mjs.",
   "suites": [
     {
+      "name": "publication-local",
+      "category": "release",
+      "rationale": "Eight canvases with overlapping Library/reference records prepare and upload from the local origin through the hosted publication service without an on-chain write."
+    },
+    {
       "name": "svg-pan-retention",
       "category": "release",
       "rationale": "Twelve animated SVG documents survive repeated offscreen camera pans, pause/resume, preserve identity and avoid reload labels in Owner and Visitor at wide/narrow viewports."

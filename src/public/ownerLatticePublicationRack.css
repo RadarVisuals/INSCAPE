@@ -9,6 +9,9 @@
 .owner-lattice-publication-rack__status-copy > p, .owner-lattice-publication-rack [role=alert] { color: var(--tactile-ink); }
 .owner-lattice-publication-rack .owner-lattice-publication-rack__publish { width: 100%; text-align: center; }
 .owner-lattice-publication-rack__hash { overflow-wrap: anywhere; }
+.owner-lattice-publication-rack fieldset { min-inline-size: 0; }
+.owner-lattice-publication-rack :is(label, [role=alert], [role=status]) { overflow-wrap: anywhere; }
+.owner-lattice-publication-rack label > small { display: block; }
 .owner-lattice-publication-rack summary { padding: 8px 0; cursor: pointer; }
 .owner-lattice-publication-rack .alpha-support { max-width: none; padding: 12px 0 0; border: 0; border-top: 1px solid var(--tactile-edge); background: transparent; font: inherit; }
 .owner-lattice-publication-rack .alpha-support :is(strong, span, summary) { font: inherit; }
