@@ -1,0 +1,98 @@
+TAP version 13
+# Subtest: Display, Image and Shape actions follow the active module and retain undo
+ok 1 - Display, Image and Shape actions follow the active module and retain undo
+  ---
+  duration_ms: 3501.7215
+  type: 'test'
+  ...
+# Subtest: crop moves into the inspection row, cancels without saving and commits one undoable edit
+ok 2 - crop moves into the inspection row, cancels without saving and commits one undoable edit
+  ---
+  duration_ms: 2133.586
+  type: 'test'
+  ...
+# Subtest: context rows and keyboard access fit 1440×1000 carbon
+ok 3 - context rows and keyboard access fit 1440×1000 carbon
+  ---
+  duration_ms: 1699.0783
+  type: 'test'
+  ...
+# Subtest: context rows and keyboard access fit 1440×1000 mist
+ok 4 - context rows and keyboard access fit 1440×1000 mist
+  ---
+  duration_ms: 1804.023
+  type: 'test'
+  ...
+# Subtest: context rows and keyboard access fit 390×844 carbon
+ok 5 - context rows and keyboard access fit 390×844 carbon
+  ---
+  duration_ms: 1661.3993
+  type: 'test'
+  ...
+# Subtest: context rows and keyboard access fit 320×568 mist
+ok 6 - context rows and keyboard access fit 320×568 mist
+  ---
+  duration_ms: 1600.8742
+  type: 'test'
+  ...
+# Subtest: context rows and keyboard access fit 844×390 carbon
+ok 7 - context rows and keyboard access fit 844×390 carbon
+  ---
+  duration_ms: 1856.923
+  type: 'test'
+  ...
+# Subtest: Inspect button and I honour the selected Display mode (1440px)
+ok 8 - Inspect button and I honour the selected Display mode (1440px)
+  ---
+  duration_ms: 8320.955
+  type: 'test'
+  ...
+# Subtest: Inspect button and I honour the selected Display mode (390px)
+ok 9 - Inspect button and I honour the selected Display mode (390px)
+  ---
+  duration_ms: 3244.4266
+  type: 'test'
+  ...
+# Subtest: inspection return waits for the closing commit (none)
+not ok 10 - inspection return waits for the closing commit (none)
+  ---
+  duration_ms: 1148.9811
+  type: 'test'
+  location: '<audit-workspace>/remediation-2026-10-19-shared-checkpoint\\work\\browser-tests\\context-action-bars.browser.mjs:211:3'
+  failureType: 'testCodeFailure'
+  error: |-
+    return belongs to the committed inspection scope
+    
+    false !== true
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<audit-workspace>/remediation-2026-10-19-shared-checkpoint/work/browser-tests/context-action-bars.browser.mjs:264:14)
+    async Test.run (node:internal/test_runner/test:1404:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:969:7)
+  ...
+# Subtest: inspection return waits for the closing commit (new focus)
+ok 11 - inspection return waits for the closing commit (new focus)
+  ---
+  duration_ms: 1109.6566
+  type: 'test'
+  ...
+# Subtest: inspection return waits for the closing commit (new scope)
+ok 12 - inspection return waits for the closing commit (new scope)
+  ---
+  duration_ms: 1274.8215
+  type: 'test'
+  ...
+1..12
+# tests 12
+# suites 0
+# pass 11
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 29669.7363

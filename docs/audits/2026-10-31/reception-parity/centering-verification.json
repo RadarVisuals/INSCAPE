@@ -1,0 +1,38 @@
+{
+  "date": "2026-10-31",
+  "scope": "Reception positioning in the shared Editor, responsive preview and saved reader",
+  "status": "Local changes on the existing 5217 server; not committed or deployed",
+  "cause": {
+    "editor": "Initial camera and Navigator Home used world origin instead of framing the Reception canvas bounds.",
+    "reader": "The document was horizontally centered in ordinary top-aligned flow."
+  },
+  "change": "Use the existing camera destination calculation for Reception entry and Home, capped at 100%; use flex auto margins in Reception presentation and preview. Authored positions, dimensions and layers remain unchanged. Long mobile compositions retain top-to-bottom scrolling.",
+  "verification": {
+    "receptionBrowserCases": "10 passed, including off-origin 947x575 canvas entry/Home, preview return, saved geometry, global layer ordering, native cell editing and Library drops",
+    "navigatorBrowserCases": "8 passed; 2 fail at 320x568 because the Reset Workbench view button is obscured (carbon and mist). This separate narrow-screen overlap remains unresolved.",
+    "navigationDomainCases": "10 passed",
+    "lint": "Passed; re-reviewed five unchanged pan/listener dependency exceptions after line shifts; no new exception",
+    "typecheck": "Passed",
+    "build": "Passed, with existing dependency annotation and bundle-size warnings",
+    "buildCheck": "Passed; 799609 initial JS bytes",
+    "designSystemInventory": "Regenerated and checked",
+    "whitespace": "Passed",
+    "fullReleaseSuite": "Not run"
+  },
+  "livePage": {
+    "canvasSize": [1720, 880],
+    "editorScale": 1,
+    "editorCanvasCenter": [1422, 657.4149780273438],
+    "editorViewportSize": [2844, 1450],
+    "readerWorkspaceCenter": [1422.2222366333008, 733.8976135253906],
+    "readerCanvasCenter": [1422.2222900390625, 733.9062805175781],
+    "leftOpen": "Reception in the shared Editor",
+    "screenshots": "Live Chrome screenshot capture timed out twice; desktop and phone fixture screenshots were captured and inspected instead."
+  },
+  "fixtureScreenshots": [
+    ".browser-test-runtime/reception-layer-order/centred-editor.png",
+    ".browser-test-runtime/reception-layer-order/centred-preview.png",
+    ".browser-test-runtime/reception-layer-order/centred-public.png",
+    ".browser-test-runtime/reception-layer-order/centred-phone.png"
+  ]
+}

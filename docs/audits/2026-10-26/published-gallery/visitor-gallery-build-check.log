@@ -1,0 +1,5 @@
+
+> underneath-os@0.0.0 build:check
+> node scripts/checkProductionBuild.js
+
+Production budgets passed (826366 initial JS bytes).

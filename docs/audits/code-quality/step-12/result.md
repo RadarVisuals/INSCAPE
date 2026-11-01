@@ -1,0 +1,7 @@
+# Expliciete module- en gereedschapsgrenzen
+
+De bestaande registratie-, doel- en ResizeTarget-contracten zijn behouden. Vijf bronnen volgen nu hun concrete inputs en stabiele acties; Shape-FX annuleert de oorspronkelijke gesture. Er is geen extra registry, pluginsysteem of kopie van creatieve module-inhoud toegevoegd. Display-specifieke instrumenten en de publieke Tools-ingang blijven bestaan.
+
+De [overdracht](../../../../../../technical-regie-2026-10-23/continuation/step-12-26-handoff.md) bevat de exacte delta, bronidentiteit en testgrenzen. De [onafhankelijke bronreview](../../../../../../technical-regie-2026-10-23/continuation/reviews/step-12-review.md) vond geen probleem in de vijf gewijzigde bestanden. Van 23 hookobservaties zijn 21 opgelost; twee Display-effecten behouden hun afzonderlijk beoordeelde lifecycle-invariant in de centrale ledger.
+
+Gericht bewijs: zeven registry/voorkeur-units; 30 aanvankelijk groene browsergevallen voor tools, docking, Image, FX, Info en linked Text. De zes toen falende Text-fixturegevallen en overige aangewezen suites zijn daarna hersteld: integrated-02 slaagt 25/25, inclusief alle 15 gevallen van de zes toegewezen suites, vier nieuwe contractgevallen en zes notices. Text-herstel na reload vereiste bovendien een echte Runtime-fix door de selectie-eigenaar. Dit is geen volledige bronfreeze: de overdracht registreert gelijktijdige veranderingen. De gezamenlijke eindcontrole blijft vereist. Alles lokaal, niet gecommit/gepusht.

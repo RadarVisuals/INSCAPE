@@ -1,0 +1,68 @@
+.workbench-overview[data-layout="grid"] { overflow: hidden; }
+.workbench-overview[data-layout="grid"] .workbench-overview-main,
+.workbench-overview[data-layout="grid"] .workbench-overview-content { display: contents; }
+.workbench-overview[data-layout="grid"] .workbench-overview-heading { position: absolute; width: 1px; height: 1px; min-height: 0; padding: 0; overflow: hidden; clip-path: inset(50%); }
+.workbench-overview-grid-host { position: absolute; inset: 12px; }
+.workbench-overview-gallery { height: 100%; overflow: auto; overscroll-behavior: contain; scroll-behavior: auto; overflow-anchor: none; scrollbar-width: none; border-radius: var(--overview-radius); }
+.workbench-overview-gallery::-webkit-scrollbar { display: none; }
+.workbench-overview-cycle { display: grid; grid-template-columns: repeat(var(--gallery-columns, 4), minmax(0, 1fr)); grid-auto-rows: clamp(240px, var(--gallery-height, 58dvh), 780px); gap: var(--space-3); padding-bottom: var(--space-3); }
+.workbench-overview-card { position: relative; min-width: 0; overflow: hidden; border-radius: var(--overview-radius); background: var(--tactile-well); }
+.workbench-overview-card .workbench-overview-preview { height: 100%; margin: 0; }
+:is(.workbench-overview, .canvas-gallery-section) .workbench-overview-card-open { position: absolute; inset: 0; width: 100%; height: 100%; padding: 0; border-radius: inherit; }
+.workbench-overview-card-open::before { content: ''; position: absolute; inset: 0; background: rgb(0 0 0 / 30%); opacity: 0; transition: opacity 160ms ease; pointer-events: none; }
+.workbench-overview-card-reveal { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 24px; color: var(--overview-glass-ink); text-align: center; pointer-events: none; opacity: 0; transform: translateY(8px); filter: blur(4px); transition: opacity 220ms ease, transform 400ms var(--overview-ease), filter 400ms var(--overview-ease); }
+.workbench-overview-card-title { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; overflow-wrap: anywhere; font-size: clamp(18px, 1.5vw, 28px); line-height: 1.35; text-shadow: 0 1px 12px rgb(0 0 0 / 25%); }
+.workbench-overview-card-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 0 4px; }
+:is(.workbench-overview, .canvas-gallery-section) .workbench-overview-card-actions button, :is(.workbench-overview, .canvas-gallery-section) .workbench-overview-card-information button { min-height: 36px; padding: 6px 8px; font-size: 11px; }
+:is(.workbench-overview, .canvas-gallery-section) .workbench-overview-card-reveal button:hover:not(:disabled) { background: rgb(255 255 255 / 12%); }
+:is(.workbench-overview, .canvas-gallery-section) .workbench-overview-card-reveal button:focus-visible, :is(.workbench-overview, .canvas-gallery-section) .workbench-overview-card-open:focus-visible { outline-color: var(--overview-glass-ink); }
+:is(.workbench-overview, .canvas-gallery-section) .workbench-overview-card-view { display: none; }
+.workbench-overview-card-information { max-width: 36ch; max-height: 40%; overflow: auto; }
+.workbench-overview-card-information p { margin: 0 0 8px; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12px; }
+.workbench-overview-card:is([data-revealed], :has(:focus-visible)) .workbench-overview-card-reveal { opacity: 1; transform: none; filter: none; }
+.workbench-overview-card:is([data-revealed], :has(:focus-visible)) :is(.workbench-overview-card-actions, .workbench-overview-card-information) { pointer-events: auto; }
+.workbench-overview-card:is([data-revealed], :has(:focus-visible)) .workbench-overview-card-open::before { opacity: 1; }
+@media (hover: hover) {
+  .workbench-overview-card:hover .workbench-overview-card-reveal { opacity: 1; transform: none; filter: none; }
+  .workbench-overview-card:hover :is(.workbench-overview-card-actions, .workbench-overview-card-information) { pointer-events: auto; }
+  .workbench-overview-card:hover .workbench-overview-card-open::before { opacity: 1; }
+}
+@media (pointer: coarse) {
+  :is(.workbench-overview, .canvas-gallery-section) .workbench-overview-card-view { display: inline-flex; }
+  :is(.workbench-overview, .canvas-gallery-section) .workbench-overview-card-reveal button { min-height: 44px; min-width: 44px; }
+}
+@media (prefers-reduced-motion: reduce) { .workbench-overview-card-reveal, .workbench-overview-card-open::before { transition: none; } }
+.workbench-overview[data-layout="grid"] .workbench-overview-detail { position: absolute; right: 12px; bottom: 76px; z-index: 3; width: min(720px, calc(100% - 24px)); max-height: calc(100% - 140px); overflow: auto; padding: 12px; border: 1px solid var(--tactile-edge); border-radius: var(--overview-radius); background: var(--tactile-face); }
+.workbench-overview[data-layout="grid"] .workbench-overview-error { position: absolute; bottom: 76px; left: 12px; right: 12px; z-index: 4; background: var(--tactile-face); }
+@media (max-width: 1600px) {
+  :is(.workbench-overview-gallery, .canvas-gallery-section) { --gallery-columns: 3; }
+}
+@media (max-width: 1000px) {
+  :is(.workbench-overview-gallery, .canvas-gallery-section) { --gallery-columns: 2; }
+}
+@media (max-width: 800px) {
+  .workbench-overview-grid-host { inset: 8px; }
+  .workbench-overview-cycle { gap: var(--space-2); padding-bottom: var(--space-2); }
+  .workbench-overview[data-layout="grid"] .workbench-overview-detail { right: 8px; width: calc(100% - 16px); max-height: calc(100% - 140px); padding: 8px; }
+}
+@media (max-width: 520px) {
+  :is(.workbench-overview-gallery, .canvas-gallery-section) { --gallery-columns: 1; }
+}
+
+:is(.workbench-overview-gallery, .canvas-gallery-section)[data-card-size="1"] { --gallery-columns: 5; --gallery-height: 40dvh; }
+:is(.workbench-overview-gallery, .canvas-gallery-section)[data-card-size="3"] { --gallery-columns: 2; --gallery-height: 78dvh; }
+.workbench-overview-gallery[data-arranging] .workbench-overview-card-reveal { opacity: 0; }
+.workbench-overview-gallery[data-arranging] .workbench-overview-card-open::before { opacity: 0; }
+.workbench-overview-card[data-drop-target] { outline: 3px solid var(--overview-glass-ink); outline-offset: -5px; }
+.workbench-overview-card-arrange { position: absolute; inset: auto 12px 12px; padding: 8px; color: var(--overview-glass-ink); background: var(--overview-glass); backdrop-filter: var(--overview-glass-filter); border-radius: 6px; text-align: center; }
+.workbench-overview-card-arrange > span { display: block; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 12px; }
+.workbench-overview-card-arrange > div { display: flex; justify-content: center; }
+:is(.workbench-overview, .canvas-gallery-section) .workbench-overview-card-arrange button { min-height: 44px; min-width: 44px; padding: 8px; }
+.workbench-overview .workbench-overview-drag { touch-action: none; cursor: grab; }
+.workbench-overview-drag:active { cursor: grabbing; }
+.workbench-overview-arrange-help { position: fixed; top: 16px; left: 50%; transform: translateX(-50%); z-index: 3; display: flex; align-items: center; gap: 16px; padding-left: 16px; border-radius: 6px; background: var(--overview-glass); color: var(--overview-glass-ink); backdrop-filter: var(--overview-glass-filter); font-size: 12px; }
+.workbench-overview-drag-label { position: fixed; z-index: 5; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; pointer-events: none; padding: 8px 12px; border-radius: 6px; background: var(--overview-glass); color: var(--overview-glass-ink); backdrop-filter: var(--overview-glass-filter); font-size: 12px; }
+.workbench-overview-announcement { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+@media (max-width: 1600px) { :is(.workbench-overview-gallery, .canvas-gallery-section)[data-card-size="1"] { --gallery-columns: 4; } }
+@media (max-width: 1000px) { :is(.workbench-overview-gallery, .canvas-gallery-section)[data-card-size="1"] { --gallery-columns: 3; } :is(.workbench-overview-gallery, .canvas-gallery-section)[data-card-size="3"] { --gallery-columns: 1; } }
+@media (max-width: 520px) { :is(.workbench-overview-gallery, .canvas-gallery-section)[data-card-size="1"] { --gallery-columns: 2; } }

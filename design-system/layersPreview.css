@@ -1,0 +1,328 @@
+.ds-studio-panel:has(.ds-studio-layers) {
+  padding: var(--space-2);
+}
+.ds-studio-layers {
+  min-width: 0;
+}
+.ds-layer-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: 0 var(--space-1) 7px;
+  color: var(--tactile-muted);
+  font: var(--ds-text-small) var(--font-technical);
+}
+.ds-layer-summary > div {
+  display: flex;
+}
+.ds-studio-layers .workflow-tactile-control {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+  min-height: 30px;
+  padding: var(--space-1) 6px;
+  font-size: var(--ds-text-small);
+}
+.ds-studio-layers .ds-layer-key {
+  flex: 0 0 28px;
+  min-width: 28px;
+  width: 28px;
+  padding: var(--space-1);
+}
+.ds-studio-layers .ds-studio-layer-list {
+  max-height: 326px;
+  overflow: auto;
+  scrollbar-width: thin;
+  outline-offset: -2px;
+}
+.ds-studio-layers .ds-layer-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-height: 40px;
+  border-bottom: 1px solid var(--tactile-edge);
+  border-radius: 0;
+}
+.ds-layer-indent {
+  width: 16px;
+  flex: 0 0 16px;
+  display: grid;
+  place-items: center;
+  color: var(--tactile-muted);
+}
+.ds-studio-layers .ds-layer-select {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  align-self: stretch;
+  padding: var(--space-1);
+  border: 0;
+  border-radius: 0;
+  color: var(--tactile-ink);
+  background: transparent;
+  text-align: left;
+  font: var(--ds-text-small) var(--font-interface);
+}
+.ds-layer-select > span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ds-layer-thumb {
+  flex: 0 0 30px;
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  padding: 3px;
+  background: var(--tactile-well);
+  border: 1px solid var(--tactile-edge);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.ds-layer-thumb > svg {
+  width: 100%;
+  height: 100%;
+}
+.ds-flat-preview .ds-studio-inspector .ds-studio-layers button[aria-pressed='true'] {
+  color: var(--tactile-ink);
+  background: var(--tactile-hover);
+}
+.ds-flat-preview .ds-studio-inspector .ds-studio-layers .ds-layer-select[aria-pressed='true'] {
+  background: transparent;
+}
+.ds-studio-layers .ds-layer-row[data-selected] {
+  box-shadow: inset 2px 0 var(--tactile-ink);
+  background: var(--tactile-hover);
+}
+.ds-layer-row[data-hidden] .ds-layer-select {
+  opacity: 0.45;
+}
+.ds-layer-row[data-drop]::after {
+  content: '';
+  position: absolute;
+  z-index: 1;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--tactile-ink);
+  pointer-events: none;
+}
+.ds-layer-row[data-drop='before']::after {
+  top: 0;
+}
+.ds-layer-row[data-drop='after']::after {
+  bottom: 0;
+}
+.ds-studio-layers button:disabled {
+  color: var(--tactile-disabled);
+  cursor: default;
+}
+.ds-studio-layers button:where(:not(:disabled):hover) {
+  background: var(--tactile-hover);
+}
+.ds-layer-footer {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  padding-block: var(--space-2) 2px;
+}
+.ds-layer-footer > button:first-child {
+  margin-right: auto;
+}
+.ds-layer-hint {
+  display: block;
+  margin: 7px var(--space-1);
+  color: var(--tactile-muted);
+  font: var(--ds-text-small)/1.5 var(--font-technical);
+}
+.ds-layer-empty {
+  display: grid !important;
+  justify-items: center;
+  gap: var(--space-2);
+  padding: 32px var(--space-3);
+  text-align: center;
+  color: var(--tactile-muted);
+}
+.ds-layer-empty p {
+  font-size: var(--ds-text-small);
+  margin: 0;
+}
+.ds-layer-confirm {
+  margin-top: var(--space-2);
+  padding: 10px;
+  background: var(--tactile-well);
+  border: 1px solid var(--tactile-ink);
+  border-radius: var(--ds-control-radius);
+}
+.ds-layer-confirm p {
+  margin: 0 0 var(--space-2);
+  font-size: var(--ds-text-base);
+}
+.ds-layer-confirm > div {
+  display: flex;
+  justify-content: end;
+  gap: 6px;
+}
+.ds-studio-layers .ds-layer-confirm button {
+  border-color: var(--tactile-edge);
+}
+.ds-studio-layers .ds-layer-confirm--inline {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+  min-height: 38px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: var(--tactile-hover);
+}
+.ds-layer-confirm--inline p {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  padding: var(--space-1);
+  font: var(--ds-text-small)/1.4 var(--font-interface);
+}
+.ds-layer-confirm--inline > div {
+  gap: 0;
+}
+.ds-studio-layers .ds-layer-confirm--inline button {
+  border-color: transparent;
+}
+@media (max-width: 520px), (pointer: coarse) {
+  .ds-studio-layers .ds-layer-confirm--inline {
+    min-height: 46px;
+  }
+}
+.ds-layer-spacing > div {
+  display: flex;
+  align-items: end;
+  gap: var(--space-2);
+}
+.ds-layer-spacing label {
+  flex: 1;
+}
+.ds-layer-spacing label span {
+  font-size: var(--ds-text-micro);
+  color: var(--tactile-muted);
+}
+.ds-layer-spacing button {
+  white-space: nowrap;
+  margin-bottom: 1px;
+}
+.ds-layer-spacing p,
+.ds-layer-notice {
+  font-size: var(--ds-text-small);
+  line-height: 1.5;
+}
+.ds-layer-scene {
+  position: relative;
+  width: min(90cqw, 360px);
+  aspect-ratio: 3/2;
+  background: #d4d1c8;
+  overflow: hidden;
+  transform-origin: center;
+}
+.ds-layer-scene > .ds-layer-object {
+  position: absolute;
+}
+.ds-layer-canvas-select {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  border-radius: 0;
+}
+.ds-layer-object[data-selected] {
+  outline: 1px solid #202623;
+  outline-offset: -1px;
+}
+.ds-layer-canvas-select > svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.ds-layer-scene > span {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: #222;
+  font: var(--ds-text-base) var(--font-interface);
+}
+.ds-layer-text-art {
+  display: block;
+  height: 100%;
+  overflow: auto;
+  width: 100%;
+  white-space: pre-wrap;
+  line-height: 1.3;
+}
+.ds-layer-editor-host {
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  scrollbar-width: thin;
+}
+.ds-layer-scene :is(.text-document, .text-editor-page) {
+  max-width: none;
+  padding: 0;
+  margin: 0;
+}
+.ds-layer-editor-host .text-document-title:placeholder-shown {
+  display: none;
+}
+@media (max-width: 520px), (pointer: coarse) {
+  .ds-studio-layers .workflow-tactile-control {
+    min-height: var(--ds-target-touch);
+  }
+  .ds-studio-layers .ds-layer-key {
+    flex-basis: 30px;
+    min-width: 30px;
+    width: 30px;
+  }
+  .ds-studio-layers .ds-layer-row {
+    min-height: 48px;
+  }
+  .ds-layer-thumb {
+    flex-basis: 24px;
+    width: 24px;
+    height: 28px;
+  }
+  .ds-studio-layers .ds-layer-select {
+    gap: 5px;
+  }
+  .ds-layer-indent {
+    flex-basis: 8px;
+    width: 8px;
+  }
+}
+@media (forced-colors: active) {
+  .ds-studio-layers .ds-layer-row[data-selected] {
+    border-left: 2px solid Highlight;
+  }
+  .ds-layer-thumb {
+    border-color: CanvasText;
+  }
+  .ds-layer-object[data-selected] {
+    outline-color: Highlight;
+  }
+  .ds-layer-row[data-drop]::after {
+    background: Highlight;
+    forced-color-adjust: none;
+  }
+}

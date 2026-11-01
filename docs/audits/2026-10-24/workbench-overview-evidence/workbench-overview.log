@@ -1,0 +1,22 @@
+TAP version 13
+# Subtest: overview browses without activation, saves optional details, and opens only the chosen canvas
+ok 1 - overview browses without activation, saves optional details, and opens only the chosen canvas
+  ---
+  duration_ms: 8805.4969
+  type: 'test'
+  ...
+# Subtest: failed departure keeps the live editor and mixed-content previews never start an HTML runtime
+ok 2 - failed departure keeps the live editor and mixed-content previews never start an HTML runtime
+  ---
+  duration_ms: 2927.1678
+  type: 'test'
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 2
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 12110.2658

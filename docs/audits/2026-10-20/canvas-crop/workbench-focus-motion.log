@@ -1,0 +1,22 @@
+TAP version 13
+# Subtest: focus keeps painted geometry in sync without per-frame module style writes (owner)
+ok 1 - focus keeps painted geometry in sync without per-frame module style writes (owner)
+  ---
+  duration_ms: 3099.8663
+  type: 'test'
+  ...
+# Subtest: focus keeps painted geometry in sync without per-frame module style writes (Visitor)
+ok 2 - focus keeps painted geometry in sync without per-frame module style writes (Visitor)
+  ---
+  duration_ms: 2884.7564
+  type: 'test'
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 2
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 6304.7268

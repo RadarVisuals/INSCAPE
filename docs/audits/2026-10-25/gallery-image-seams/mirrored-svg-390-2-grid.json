@@ -1,0 +1,61 @@
+{
+  "frames": [
+    {
+      "x": -56,
+      "y": 47,
+      "width": 242,
+      "height": 242,
+      "top": 47,
+      "right": 186,
+      "bottom": 289,
+      "left": -56
+    },
+    {
+      "x": 186,
+      "y": 47,
+      "width": 242,
+      "height": 242,
+      "top": 47,
+      "right": 428,
+      "bottom": 289,
+      "left": 186
+    },
+    {
+      "x": -56,
+      "y": 289,
+      "width": 242,
+      "height": 242,
+      "top": 289,
+      "right": 186,
+      "bottom": 531,
+      "left": -56
+    },
+    {
+      "x": 186,
+      "y": 289,
+      "width": 242,
+      "height": 242,
+      "top": 289,
+      "right": 428,
+      "bottom": 531,
+      "left": 186
+    }
+  ],
+  "expected": [
+    127,
+    161,
+    179
+  ],
+  "background": [
+    201,
+    198,
+    189
+  ],
+  "hole": [
+    201,
+    198,
+    189,
+    255
+  ],
+  "badPixels": []
+}

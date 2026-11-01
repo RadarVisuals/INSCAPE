@@ -1,0 +1,5 @@
+
+> underneath-os@0.0.0 lint
+> node scripts/lintSource.mjs
+
+Lint: 484 source files; 91 recorded hook-dependency observations remain assigned to plan steps.

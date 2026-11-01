@@ -1,0 +1,155 @@
+import { useLayoutEffect, useRef, useState } from 'react';
+import { X } from 'lucide-react';
+import { clampOwnerSystemWorkflowWindowPosition, resizeWorkbenchWindow, WORKBENCH_RESIZE_EDGES } from '../public/ownerSystemWorkflow/ownerSystemWorkflowWindowGeometry.js';
+import '../public/ownerSystemWorkflow/workbenchToolPanel.css';
+
+// Screen-only tool chrome. Artwork, camera, selection and saving stay with callers.
+export default function ToolPanel({ label, title, titleContent, moveLabel, headerContent, headerActions, children, onClose, active = false, zIndex = active ? 85 : 84, onActivate, chrome, className = '', frame, onFrameChange: setFrame, panelRef, closeLabel, onMoveStart, onMove, onMoveEnd, minimumWidth = 280, minimumHeight = 240, viewportBottom, topBoundaryRef, fitFromTop = false, boundsRef, navigationInset = 0, navigationTop = 0, contentSized = false, resizable = true, hidden = false, ...surfaceProps }) {
+  const [viewport, setViewport] = useState(() => ({ width: innerWidth, height: innerHeight }));
+  const [hostSize, setHostSize] = useState(null);
+  const [boundaryTop, setTop] = useState(0);
+  const [contentSize, setContentSize] = useState(null);
+  const element = useRef(null);
+  const top = boundsRef ? 0 : Math.max(boundaryTop, navigationTop);
+  const width = boundsRef ? (hostSize?.width || viewport.width) : viewport.width;
+  const gesture = useRef(null), latest = useRef(null);
+  const bottom = boundsRef ? (hostSize?.height || viewport.height) : Math.min(viewport.height, viewportBottom ?? viewport.height - 48);
+  const bounds = { left: boundsRef ? 8 : Math.max(8, navigationInset), top: top + 8, right: width - 8, bottom: bottom - 8 };
+  const clamp = candidate => {
+    const size = { width: Math.max(1, Math.min(candidate.width, bounds.right - bounds.left)), height: Math.max(1, Math.min(candidate.height, bounds.bottom - bounds.top)) };
+    const next = clampOwnerSystemWorkflowWindowPosition({ x: candidate.left, y: candidate.top - top }, size, { width, height: bottom - top });
+    return { left: Math.max(bounds.left, Math.min(bounds.right - size.width, next.x)), top: next.y + top, ...size };
+  };
+  const placed = clamp(contentSized && contentSize ? { ...frame, ...contentSize } : frame);
+  const resized = (start, edge, delta) => resizeWorkbenchWindow(start, edge, delta, { width: minimumWidth, height: minimumHeight }, bounds);
+  const release = drag => { if (drag?.element.hasPointerCapture(drag.id)) drag.element.releasePointerCapture(drag.id); };
+  const finish = (cancelled, event) => {
+    const drag = gesture.current;
+    if (!drag) return;
+    gesture.current = null;
+    if (cancelled) setFrame(drag.frame);
+    release(drag);
+    if (!drag.edge) onMoveEnd?.(cancelled, event);
+  };
+  // Long independent tools can shorten above wrapping camera controls without
+  // moving over their module's action strip. Drag and resize keep normal bounds.
+  latest.current = { finish, clamp, setFrame, fit: candidate => clamp(fitFromTop
+    ? { ...candidate, height: Math.min(candidate.height, Math.max(minimumHeight, bounds.bottom - candidate.top)) } : candidate) };
+
+  useLayoutEffect(() => {
+    const host = boundsRef?.current;
+    if (!host) return;
+    const measure = () => setHostSize({ width: host.clientWidth, height: host.clientHeight });
+    const observer = new ResizeObserver(measure);
+    observer.observe(host); measure();
+    return () => observer.disconnect();
+  }, [boundsRef]);
+
+  useLayoutEffect(() => {
+    if (!contentSized || hidden) return;
+    const measure = () => {
+      const box = element.current.getBoundingClientRect();
+      setContentSize(current => current?.width === box.width && current?.height === box.height ? current : { width: box.width, height: box.height });
+    };
+    const observer = new ResizeObserver(measure); observer.observe(element.current); measure();
+    return () => observer.disconnect();
+  }, [contentSized, hidden]);
+
+  useLayoutEffect(() => {
+    const boundary = topBoundaryRef?.current;
+    if (!boundary) return;
+    // A freely placed selector is an independent tool, not a top-screen rail.
+    const measure = () => setTop(boundary.hasAttribute('data-floating') ? 0 : boundary.getBoundingClientRect().bottom);
+    const observer = new ResizeObserver(measure);
+    const placement = new MutationObserver(measure);
+    placement.observe(boundary, { attributes: true, attributeFilter: ['data-floating'] });
+    observer.observe(boundary); window.addEventListener('resize', measure); measure();
+    return () => { observer.disconnect(); placement.disconnect(); window.removeEventListener('resize', measure); };
+  }, [topBoundaryRef]);
+
+  useLayoutEffect(() => {
+    const cancel = () => latest.current.finish(true);
+    const resize = () => { cancel(); setViewport({ width: innerWidth, height: innerHeight }); };
+    const visibility = () => { if (document.hidden) cancel(); };
+    const escape = event => {
+      if (event.key !== 'Escape' || !gesture.current) return;
+      event.preventDefault(); event.stopPropagation(); cancel();
+    };
+    window.addEventListener('resize', resize);
+    window.addEventListener('blur', cancel);
+    document.addEventListener('visibilitychange', visibility);
+    document.addEventListener('keydown', escape, true);
+    return () => {
+      window.removeEventListener('resize', resize);
+      window.removeEventListener('blur', cancel);
+      document.removeEventListener('visibilitychange', visibility);
+      document.removeEventListener('keydown', escape, true);
+      const drag = gesture.current; gesture.current = null; release(drag);
+    };
+  }, []);
+  useLayoutEffect(() => {
+    latest.current.finish(true);
+    if (hidden) return;
+    latest.current.setFrame(current => {
+      const next = latest.current.fit(contentSized && contentSize ? { ...current, ...contentSize } : current);
+      return Object.keys(next).every(key => next[key] === current[key]) ? current : next;
+    });
+  }, [width, top, bottom, navigationInset, hidden, contentSized, contentSize]);
+
+  const begin = (event, edge = null) => {
+    if (event.button !== 0 || !event.isPrimary || gesture.current) return;
+    event.stopPropagation();
+    // Pointer resizing must stay invisible, even after keyboard resizing left
+    // this same target focused. Tab can still reveal the keyboard resize target.
+    if (edge) { event.preventDefault(); event.currentTarget.blur(); }
+    gesture.current = { id: event.pointerId, element: event.currentTarget, x: event.clientX, y: event.clientY, frame, start: placed, edge };
+    event.currentTarget.setPointerCapture(event.pointerId);
+    if (!edge) onMoveStart?.(event);
+    // The title button keeps native pointer-versus-keyboard focus behavior.
+  };
+  const move = event => {
+    const drag = gesture.current;
+    if (!drag || event.pointerId !== drag.id) return;
+    event.stopPropagation();
+    const delta = { x: event.clientX - drag.x, y: event.clientY - drag.y };
+    setFrame(drag.edge ? resized(drag.start, drag.edge, delta) : clamp({ ...drag.start, left: drag.start.left + delta.x, top: drag.start.top + delta.y }));
+    if (!drag.edge) onMove?.(event);
+  };
+  const end = (event, cancelled) => {
+    if (event.pointerId !== gesture.current?.id) return;
+    event.stopPropagation(); finish(cancelled, event);
+  };
+  const key = (event, edge = null) => {
+    const delta = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[event.key];
+    if (!delta || event.ctrlKey || event.metaKey || gesture.current) return;
+    event.preventDefault(); event.stopPropagation();
+    const step = event.altKey ? 1 : event.shiftKey ? 24 : 8;
+    setFrame(edge ? resized(placed, edge, { x: delta[0] * step, y: delta[1] * step })
+      : clamp({ ...placed, left: placed.left + delta[0] * step, top: placed.top + delta[1] * step }));
+  };
+
+  const renderMoveHandle = (content = titleContent || title, className = 'workbench-tool-panel-grip') => (
+    <button type="button" className={className} aria-label={moveLabel || `Move ${title} panel`}
+      title="Drag to move; use arrow keys when focused" onKeyDown={event => key(event)} onPointerDown={event => begin(event)} onPointerMove={move}
+      onPointerUp={event => end(event, false)} onPointerCancel={event => end(event, true)} onLostPointerCapture={event => end(event, true)}>{content}</button>
+  );
+  const renderHeader = (content = headerContent, close = onClose, closeName = closeLabel || `Close ${label}`) => (
+    <header className="workbench-tool-panel-header">
+      {content}
+      {renderMoveHandle(content ? null : titleContent || title)}
+      {headerActions}
+      <button type="button" className="workbench-tool-panel-close" aria-label={closeName} onClick={close}><X /></button>
+    </header>
+  );
+  return <section {...surfaceProps} data-window-chrome={chrome} hidden={hidden} ref={node => {
+    element.current = node;
+    if (typeof panelRef === 'function') panelRef(node); else if (panelRef) panelRef.current = node;
+  }} className={`workbench-tool-panel ${className}`} aria-label={label}
+    style={{ ...(contentSized ? { left: placed.left, top: placed.top } : placed), zIndex, position: boundsRef ? 'absolute' : 'fixed' }} onPointerDownCapture={onActivate} onFocusCapture={onActivate}>
+    {typeof children === 'function' ? children(renderHeader, renderMoveHandle) : <>{renderHeader()}<div className="workbench-tool-panel-content">{children}</div></>}
+    {resizable && WORKBENCH_RESIZE_EDGES.map(([edge, name]) => <button key={edge} type="button" className="workbench-tool-panel-resize"
+      data-edge={edge} tabIndex={edge === 'se' ? 0 : -1} aria-label={`Resize ${title} panel${name ? ` from ${name}` : ''}`}
+      onKeyDown={event => key(event, edge)} onPointerDown={event => begin(event, edge)} onPointerMove={move}
+      onPointerUp={event => end(event, false)} onPointerCancel={event => end(event, true)} onLostPointerCapture={event => end(event, true)} />)}
+  </section>;
+}

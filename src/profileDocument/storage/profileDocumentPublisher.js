@@ -1,10 +1,11 @@
-import { canonicalSerializeProfileDocument } from '../domain/profileDocumentSerialization.js';
+import { canonicalSerializeProfileDocumentV9 } from '../domain/profileDocumentV9Serialization.js';
 import { assertPublicationContext, createCanonicalPublication, encodeProfileDocumentVerifiableUri, normalizeProfileDocumentCid, publicationContentFingerprint } from '../domain/profileDocumentPublication.js';
-import { createLuksoPublishedProfileRepository, OS_UNDERNEATH_PROFILE_DOCUMENT_KEY, PUBLISHED_PROFILE_STATUS } from './luksoPublishedProfileRepository.js';
+import { createLuksoPublishedProfileRepository, PUBLISHED_PROFILE_STATUS } from './luksoPublishedProfileRepository.js';
 import { PROFILE_DOCUMENT_IPFS_GATEWAY_URL, normalizeProfileAddress } from '../../library/config.js';
 import { keccak256 } from 'viem';
 import { describePublicationError, PUBLICATION_ERROR_ABI } from './publicationError.js';
-import { assertProfileDocumentPublicationVersion } from '../domain/constants.js';
+import { assertValidProfileDocumentV9 } from '../domain/profileDocumentV9Validation.js';
+import { INSCAPE_PROFILE_DOCUMENT_KEY } from '../domain/inscapeProfileDocumentKey.js';
 
 export const SET_PROFILE_DOCUMENT_ABI = [
   { type: 'function', name: 'setData', stateMutability: 'payable', inputs: [{ name: 'dataKey', type: 'bytes32' }, { name: 'dataValue', type: 'bytes' }], outputs: [] },
@@ -14,7 +15,7 @@ export const SET_PROFILE_DOCUMENT_ABI = [
 export { describePublicationError };
 
 function matchesArtifact(document, artifact) {
-  return keccak256(new TextEncoder().encode(canonicalSerializeProfileDocument(document))).toLowerCase() === artifact.hash.toLowerCase();
+  return keccak256(new TextEncoder().encode(canonicalSerializeProfileDocumentV9(document))).toLowerCase() === artifact.hash.toLowerCase();
 }
 
 function accountAddress(context) {
@@ -49,6 +50,16 @@ function bindingIdentity(binding) {
   return JSON.stringify(binding);
 }
 
+function isUserRejected(error) {
+  const seen = new Set();
+  for (let current = error; current && typeof current === 'object' && seen.size < 8; current = current.cause) {
+    if (seen.has(current)) break;
+    seen.add(current);
+    if (current.code === 4001) return true;
+  }
+  return false;
+}
+
 function assertFreshBinding(context, verified) {
   assertPublicationContext(context, verified.artifact, { requireClients: true });
   const currentUri = normalizeProfileDocumentCid(context.cidInput);
@@ -64,7 +75,7 @@ function assertFreshBinding(context, verified) {
 }
 
 export function createProfileDocumentPublisher({ getContext, fetchImpl = globalThis.fetch,
-  ipfsGateway = PROFILE_DOCUMENT_IPFS_GATEWAY_URL, resolvePublished, onStatus = () => {} } = {}) {
+  ipfsGateway = PROFILE_DOCUMENT_IPFS_GATEWAY_URL, resolvePublished, journal = null, onStatus = () => {} } = {}) {
   if (typeof getContext !== 'function') throw new TypeError('A live publication context is required');
   const readBack = resolvePublished || createLuksoPublishedProfileRepository({ fetchImpl, ipfsGateway }).resolve;
   let active = null;
@@ -89,7 +100,16 @@ export function createProfileDocumentPublisher({ getContext, fetchImpl = globalT
         let replacement = null;
         const receipt = await record.publicClient.waitForTransactionReceipt({
           hash: record.transactionHash,
-          onReplaced: (value) => { replacement = value; }
+          onReplaced: (value) => {
+            replacement = value;
+            if (record.journalRecord) {
+              try {
+                record.journalRecord = journal.update(record.journalRecord, value.reason === 'repriced'
+                  ? { transactionHash: value.transaction.hash }
+                  : { status: 'FAILED' });
+              } catch (error) { record.journalError = error; }
+            }
+          }
         });
         if (replacement?.reason === 'cancelled' || replacement?.reason === 'replaced') {
           throw Object.assign(new Error(`The submitted transaction was ${replacement.reason}`), {
@@ -101,7 +121,12 @@ export function createProfileDocumentPublisher({ getContext, fetchImpl = globalT
         record.receipt = receipt;
         record.replacement = replacement;
       }
+      if (record.journalError) throw record.journalError;
       if (!record.result) record.result = await verifyPublication(record.verified, record.transactionHash);
+      if (record.journalRecord) {
+        journal.remove(record.journalRecord);
+        record.journalRecord = null;
+      }
       return { transactionHash: record.transactionHash, receipt: record.receipt, result: record.result };
     } catch (error) {
       if (error && typeof error === 'object') {
@@ -122,7 +147,7 @@ export function createProfileDocumentPublisher({ getContext, fetchImpl = globalT
 
   return {
     async verifyCid(snapshot, cidInput, { stale = false } = {}) {
-      assertProfileDocumentPublicationVersion(snapshot);
+      assertValidProfileDocumentV9(snapshot);
       const artifact = createCanonicalPublication(snapshot);
       if (stale) throw new Error('Rebuild the stale snapshot before publication');
       const uri = normalizeProfileDocumentCid(cidInput);
@@ -156,7 +181,7 @@ export function createProfileDocumentPublisher({ getContext, fetchImpl = globalT
 
     publish(verified) {
       if (!verified?.artifact || !verified?.value || !verified?.identity) return Promise.reject(new Error('Verify the CID before requesting publication'));
-      try { assertProfileDocumentPublicationVersion(verified.artifact.document); }
+      try { assertValidProfileDocumentV9(verified.artifact.document); }
       catch (error) { return Promise.reject(error); }
       const identity = verified.identity;
       if (active) {
@@ -169,17 +194,37 @@ export function createProfileDocumentPublisher({ getContext, fetchImpl = globalT
       // The lock exists before this operation begins. The final freshness check and
       // provider-backed write invocation are synchronous and adjacent: invocation is
       // the irreversible submission boundary because UP Provider offers no cancellation.
-      return runLocked(identity, async () => {
+      const submit = async () => {
         onStatus('AWAITING_WALLET', verified);
         const current = assertFreshBinding(getContext(), verified);
         const address = normalizeProfileAddress(verified.artifact.document.profile.address);
         const call = { address, abi: SET_PROFILE_DOCUMENT_ABI, functionName: 'setData',
-          args: [OS_UNDERNEATH_PROFILE_DOCUMENT_KEY, verified.value], account: current.walletClient.account };
-        const transactionHash = await current.walletClient.writeContract(call);
-        const record = { verified, transactionHash, publicClient: current.publicClient, receipt: null, result: null };
+          args: [INSCAPE_PROFILE_DOCUMENT_KEY, verified.value], account: current.walletClient.account };
+        const journalRecord = journal?.reserve(verified) || null;
+        let invoked = false;
+        let transactionHash;
+        try {
+          assertFreshBinding(getContext(), verified);
+          invoked = true;
+          transactionHash = await current.walletClient.writeContract(call);
+        } catch (error) {
+          // Only a definite user rejection (or failure before invocation) can release
+          // the reservation. An ambiguous provider failure must survive a reload.
+          if (journalRecord && (!invoked || isUserRejected(error))) journal.remove(journalRecord);
+          throw error;
+        }
+        const record = { verified, transactionHash, publicClient: current.publicClient, receipt: null, result: null, journalRecord };
         submitted.set(identity, record);
+        if (journalRecord) {
+          try { record.journalRecord = journal.update(journalRecord, { transactionHash, status: 'SUBMITTED' }); }
+          catch (error) {
+            throw Object.assign(new Error('The transaction was submitted, but its hash could not be saved. Keep this hash and check your wallet before reloading.'), { transactionHash, cause: error });
+          }
+        }
         return confirmSubmitted(record);
-      });
+      };
+      return runLocked(identity, () => journal
+        ? journal.runExclusive(verified.artifact.document.profile.address, submit) : submit());
     },
     verifyPublication
   };

@@ -1,0 +1,8 @@
+.display-canvas-controls .display-canvas-colour { display: grid; grid-template-columns: minmax(0, 1fr) 56px; gap: 8px; }
+.display-canvas-controls input[type="color"] { box-sizing: border-box; width: 100%; height: 30px; padding: 2px; }
+.display-canvas-controls input[type="checkbox"] { min-height: 0; width: 16px; height: 16px; margin: 0 4px 0 0; accent-color: var(--workflow-ink); }
+.display-canvas-controls input[type="range"] { padding: 0; width: 100%; accent-color: var(--workflow-ink); }
+.display-canvas-controls output { color: var(--workflow-muted); font: var(--workflow-type-micro); }
+.system-workflow__display-size-dialog .display-canvas-controls { margin: 0 14px 12px; }
+.system-workflow__display-size-dialog .display-canvas-controls label { padding: 0; }
+.system-workflow__display-size-dialog .display-canvas-controls input[type="checkbox"] { padding: 0; }

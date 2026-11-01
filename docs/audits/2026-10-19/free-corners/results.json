@@ -1,0 +1,250 @@
+{
+  "atUtc": "2026-10-19T18:14:35.722Z",
+  "baselineCommit": "7cceccbc109398c52d83efd632375ba7792d2adf",
+  "request": "All four Image and Shape corners independently change width and height, including repeated resizing after selection; source artwork must remain undistorted.",
+  "correction": "Earlier proportional-corner interpretation was wrong. Independent per-axis geometry replaces it.",
+  "sourceFitting": "Retain Fit inside/Fill canvas and crop/transform choices during all resizes; renderer retains source aspect ratio.",
+  "smallPointerCombinations": 192,
+  "largePointerCombinations": 96,
+  "browserCasesPassed": 19,
+  "browser": [
+    {
+      "name": "image-corner-resize",
+      "code": 0,
+      "seconds": 33.684,
+      "tests": 2,
+      "pass": 2,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0,
+      "run": "shapes-final"
+    },
+    {
+      "name": "image-large-resize",
+      "code": 0,
+      "seconds": 23.108,
+      "tests": 2,
+      "pass": 2,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0,
+      "run": "browser"
+    },
+    {
+      "name": "image-fit",
+      "code": 0,
+      "seconds": 4.392,
+      "tests": 1,
+      "pass": 1,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0,
+      "run": "browser"
+    },
+    {
+      "name": "image-resize-focus",
+      "code": 0,
+      "seconds": 4.709,
+      "tests": 2,
+      "pass": 2,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0,
+      "run": "browser"
+    },
+    {
+      "name": "workbench-resize-handles",
+      "code": 0,
+      "seconds": 26.342,
+      "tests": 2,
+      "pass": 2,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0,
+      "run": "shapes-final"
+    },
+    {
+      "name": "workbench-image-joins",
+      "code": 0,
+      "seconds": 41.093,
+      "tests": 1,
+      "pass": 1,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0,
+      "run": "browser"
+    },
+    {
+      "name": "workbench-text-display-resize",
+      "code": 0,
+      "seconds": 38.224,
+      "tests": 6,
+      "pass": 6,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0,
+      "run": "shapes-final"
+    },
+    {
+      "name": "shape-corner-resize",
+      "code": 0,
+      "seconds": 11.521,
+      "tests": 2,
+      "pass": 2,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0,
+      "run": "shapes-final-pass"
+    },
+    {
+      "name": "shapes",
+      "code": 0,
+      "seconds": 7.422,
+      "tests": 1,
+      "pass": 1,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0,
+      "run": "shapes-final"
+    }
+  ],
+  "node": {
+    "pass": 1240,
+    "fail": 0,
+    "skipped": 0
+  },
+  "productionBuild": true,
+  "buildBudgets": true,
+  "initialJavaScriptBytes": 822709,
+  "applied": true,
+  "sourceFiles": [
+    {
+      "file": "browser-tests/fixtures/text-tools-fixture.mjs",
+      "before": "db05ae9ff68ca1533b5bcc4cab2ca000900891b2b2bb1114d5c4a63bc0e0f95d",
+      "after": "ab01695c4d83fc0f6b74833215cd462b2b8cde4effed5ea46e3847ecdb5dbef7"
+    },
+    {
+      "file": "browser-tests/image-corner-resize.browser.mjs",
+      "before": "69a5165b8e74747d7ae01ab552755241f3cf4eee026486e23e4838ac4214fd0b",
+      "after": "b4a303ae0dfb6ab7f3a9109a0b7aa6faf798bfa2bb3f7d3541f7e1d880bc92e3"
+    },
+    {
+      "file": "browser-tests/image-fit.browser.mjs",
+      "before": "a195ae8a2ccb7e5f53b720bb56b21f68605683d18845b142cce5e7afc4acbe21",
+      "after": "581f87ba0b1b9a6dbffac8ad799da34980adf87b82cc0f03217a3fba79cc3eb7"
+    },
+    {
+      "file": "browser-tests/image-large-resize.browser.mjs",
+      "before": "83af7022af41ff7fd83e6d4c867cf1a25d50e394d186b9e2e54e205a6ff17bcd",
+      "after": "21685b6377160d2baa8a07fdcf6653f5f44ac2f85a3dfd52902fe4f2504b21d5"
+    },
+    {
+      "file": "browser-tests/workbench-resize-handles.browser.mjs",
+      "before": "a0267ad8b64c2ed7bc8921f264eae8c05bec49ab5781ebdd0ba202212d2336b8",
+      "after": "f3bc3dad3c69c8026cf0149a7bd0868a96a697da199187b6c0141cd0eda7e081"
+    },
+    {
+      "file": "docs/INSCAPE_ACTIVE_CONTRACT.md",
+      "before": "be750ddad5cb09bee55380b840845406c3ac987b7abe7d85eeaa08be041b3725",
+      "after": "57a8b2f77e9409e114d1edf392fecb996573201fbcc0c3acc0f5d3d39470ed1e"
+    },
+    {
+      "file": "scripts/runBrowserTests.mjs",
+      "before": "bed06418746f792922d290795f44d7b34ccf630c2b92c54036ee32a4074eb39a",
+      "after": "b238524204c8ea54aa30046c8f16124fb50108b793039aeee97bb47bfedc870a"
+    },
+    {
+      "file": "src/imageModule/ImageWindow.jsx",
+      "before": "a2b5c4158566a7be50fabc0322b263a4241bc50c3419a8379d85deacfda8725c",
+      "after": "45ab7fed7566b97baa18745452ad2fa82a9b5f9220ba0fc2b7d984d95c7cffc9"
+    },
+    {
+      "file": "src/imageModule/ImageWorkbench.jsx",
+      "before": "1c74e7d632cf73a0ba812d8429924c3bdc36a1f25159c1a13a2e7ade6f17ccb4",
+      "after": "45c61ff9c51907d74b3ca91b300d1bcdd857bb02275d5a37f36c4e86b1e0bae2"
+    },
+    {
+      "file": "src/imageModule/imageModule.js",
+      "before": "576cc1c7f4f491091057435d135cfecffbf90a2c7db233c02a56f1e1d0791b1e",
+      "after": "809d90917c252fe9dfcd92ee6e0c7041827dd9b7e22f2a38fd528efc50aa9131"
+    },
+    {
+      "file": "src/imageModule/imageModule.test.js",
+      "before": "f244fc65f2086a1bb2a16029b6df9e5a9e57b0d455160c900dce89d9680a31b1",
+      "after": "c8bc87795747cca9f5d369146eec657cc54adce4e7929a2f0b572b0474d97f30"
+    },
+    {
+      "file": "src/imageModule/imageModuleSession.js",
+      "before": "32e9a7319d978ccefd97f436e380bbfe64b11120a36587518fe17a5771eca54a",
+      "after": "d56ca5673cd7bada21b3ce37cb3b399bb38539bf0face7f68b6291ae037af06f"
+    },
+    {
+      "file": "src/imageModule/imageWindowGeometry.js",
+      "before": "b6fbfc735a88ab8eb711276d036d964c913018c65cb6e37218afe93e7eb3cff2",
+      "after": "d40c0ce55e5187ee3355939865b2b8869068a9c6057081769edfc12281aad931"
+    },
+    {
+      "file": "src/imageModule/imageWindowGeometry.test.js",
+      "before": "682388b9af74deb7ca1e0b9f339c8b1e0c1fdeadb1a80e67f3ffacadc8dc13ec",
+      "after": "e18b85935dbdb493c698077f8552d1c0613a8665272298477ba4bc5c196c975d"
+    },
+    {
+      "file": "src/public/ownerSystemWorkflow/DisplayInstrumentWindow.jsx",
+      "before": "08a6bd87f3cf00e21d5076cd49f1fd0e1594469b9fa672d32ab7f1bb6b0ba7d5",
+      "after": "6286e4a0da1ccfb6851f8c34391f42e71b2beb1f137a25c3c4899d8b38ec7597"
+    },
+    {
+      "file": "src/public/ownerSystemWorkflow/WorkbenchView.jsx",
+      "before": "1d5a2e2e7cd7048a34d0f7bc0e040c8c694b6ac05ec3b6827bf39f24d3abfcf4",
+      "after": "4c8d5cb46947c4636de48a1e871436ab553145039bc425aed3cb861d915e3509"
+    },
+    {
+      "file": "src/public/ownerSystemWorkflow/ownerSystemWorkflowWindowGeometry.js",
+      "before": "c782db7210652420fd3fb2d88ddb6efcb79a195e7f962542dfae83392dde6743",
+      "after": "dc80ee21cc9f3eb78639005dd1cd967d1a2c1a204b701e3c53823e3da4ffa683"
+    },
+    {
+      "file": "src/public/ownerSystemWorkflow/ownerSystemWorkflowWindowGeometry.test.js",
+      "before": "6e9aa98ed1281e758447e74ef53e965d2228da013e2ed634724de76c18a0dc56",
+      "after": "edfdbcfcb4df4b6e3213dcb478f49bc52130bc6a0310914853776807e62a00c6"
+    },
+    {
+      "file": "src/shapes/ShapeWorkbench.jsx",
+      "before": "9fdba677f469b85c057a76029d9cf8b3dafd0200548233bfd638896741637ba0",
+      "after": "cb684800393eb64eede3ac957d92e977001a66e488f95aedeb0661b2ea1fb43d"
+    },
+    {
+      "file": "src/systemWorkflow/workbenchAreaSession.test.js",
+      "before": "85cefedbd3458fc8bce3562652de6106063d9103817d2eaf396712aebe454699",
+      "after": "939a51343a384383069cc570902016a5fa71f65c645e0ac5e9f15dd85a293b4b"
+    },
+    {
+      "file": "browser-tests/shape-corner-resize.browser.mjs",
+      "before": "392d6f99470e8e37b9dbbc1f98fbcb1572494ad20718fcbdf2d0802864eba296",
+      "after": "c149af11ae4e62bacaeed658b5e777fec5a778a6c7e661a04822f5f1626336b6"
+    }
+  ],
+  "userConfirmedLocalBehavior": true,
+  "userConfirmation": "eindelijk",
+  "initialGripCheck": "0/2 because its expectation still required proportional Image corners; updated to the clarified independent dimensions, then 2/2.",
+  "priorLiveProbe": "Horizontal and vertical input both scaled width and height. Both probes were undone, with original sizes and screen bounds restored.",
+  "shapeRegression": "The initial native grip changed 288x288 to 300x288. The next vertical selection drag incorrectly changed width to 312.5; the same sequence now passes with width held at 300.",
+  "shapeVerification": "20 rectangle drags and 6 Grid drags across two viewports, all four corners, repeated selection, undo/redo, reload, fixed Grid spacing and cell-step keyboard resizing.",
+  "narrowFixture": "Closed the covering Text module and moved Properties below the shape, restoring selection after moving the panel. Earlier narrow failures were blocked pointer targets, recorded in local diagnostic screenshots; no occluded click was forced.",
+  "limitations": [
+    "Targeted browser suites, not a full browser run",
+    "Synthetic Chromium media except read-only/prior reversible live inspection",
+    "Multi-module groups retain proportional behavior",
+    "No real wallet, upload or publication",
+    "Hosting status is recorded separately after push"
+  ]
+}

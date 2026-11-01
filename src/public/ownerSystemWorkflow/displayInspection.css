@@ -1,0 +1,19 @@
+.system-workflow__inspection-scene { position: relative; width: 100%; height: 100%; }
+.system-workflow__scene-controls { display: flex; align-items: center; gap: 6px; }
+.system-workflow__scene-controls > span { font-size: 10px; color: var(--workflow-muted); }
+/* In place uses CSS fades. Lift owns its complete return clock, including the
+   background; removing its attributes must not start another filter transition. */
+.system-workflow__inspection-scene[data-inspection-phase]:not([data-inspection-lift]) :is(.system-workflow__placement, .lattice-production-placement) {
+  transition: filter 360ms ease-in-out, opacity 360ms ease-in-out;
+}
+.system-workflow__inspection-scene[data-inspection-phase="active"] [data-inspection-context="background"] { filter: grayscale(1) brightness(.18); }
+.system-workflow__inspection-scene[data-inspection-phase="active"] [data-inspection-context="foreground"] { opacity: 0; }
+.system-workflow__inspection-scene[data-inspection-lift] [data-inspection-context="background"] {
+  filter: grayscale(var(--inspection-lift-progress, 0)) brightness(calc(1 - .82 * var(--inspection-lift-progress, 0)));
+}
+.system-workflow__inspection-scene [data-inspection-context="selected"] { transition: none; }
+.system-workflow__inspection-scene [data-lift-source] { visibility: hidden; }
+.system-workflow__lift-artwork { position: absolute; z-index: 35; pointer-events: none; }
+.system-workflow__presentation-board[data-inspecting] .system-workflow__stage-viewport { pointer-events: none; }
+.system-workflow__inspection-hit-surface { position: absolute; inset: 0; z-index: 40; pointer-events: auto; }
+@media (prefers-reduced-motion: reduce) { .system-workflow__inspection-scene[data-inspection-phase]:not([data-inspection-lift]) :is(.system-workflow__placement, .lattice-production-placement) { transition: none; } }

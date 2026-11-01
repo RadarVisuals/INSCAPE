@@ -1,0 +1,167 @@
+import { useWorkbenchArea } from '../public/ownerSystemWorkflow/WorkbenchAreaContext.jsx';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { X } from 'lucide-react';
+import { useWorkbenchView, workbenchModuleTransform, useWorkbenchViewRegistration } from '../public/ownerSystemWorkflow/WorkbenchViewContext.js';
+import { useWorkbenchPlacement, useWorkbenchMovementSnap } from '../public/ownerSystemWorkflow/WorkbenchPlacement.jsx';
+import { imageWindowGeometry, imageWindowPosition, imagePaintGeometry, resizeImageGeometry } from './imageWindowGeometry.js';
+import { WORKBENCH_RESIZE_EDGES, workbenchResizeControl } from '../public/ownerSystemWorkflow/ownerSystemWorkflowWindowGeometry.js';
+import { useWorkbenchCamera } from '../public/ownerSystemWorkflow/WorkbenchCamera.jsx';
+import { clampWorkbenchPosition } from '../public/ownerSystemWorkflow/workbenchSpace.js';
+
+// Image owns a borderless surface. Workbench owns the camera, placement bounds
+// and snapping. No instrument-window sizing, chrome or content gutter is used.
+export default function ImageWindow({ id, title, position, size, viewport = { width: innerWidth, height: innerHeight }, editable, active, suspended, movable = true, placementModule,
+  onPosition, onResize, onClose, resizeTarget, children }) {
+  const { editingBounds: areaBounds } = useWorkbenchArea();
+  const node = useRef(null), gesture = useRef(null), suppressClick = useRef(false);
+  const [preview, setPreview] = useState(null);
+  const view = useWorkbenchView();
+  const camera = workbenchModuleTransform(view, id);
+  if (camera.presented) { editable = false; movable = false; }
+  const { offset } = useWorkbenchCamera();
+  const snapMovement = useWorkbenchMovementSnap();
+  // Authored selection resizing supplies the same whole-pixel frame it will
+  // commit. Render that frame so artwork fitting updates during the gesture.
+  // Visitor scaling remains a view transform and never changes the fit choice.
+  const currentSize = camera.frame || preview?.size || size, currentPosition = camera.frame || preview?.position || position;
+  // Camera zoom changes the window's real pixel dimensions. Its content and
+  // event handlers only change when the module or authored rectangle changes.
+  const content = useMemo(() => children({ left: 0, top: 0, width: currentSize.width, height: currentSize.height }),
+    [children, currentSize.width, currentSize.height]);
+  // Image dimensions are Workbench dimensions. Only the Workbench camera scales
+  // them: fitting each Image to the viewport would cancel proportional resizing.
+  const { width, height } = currentSize;
+  const density = globalThis.devicePixelRatio || 1;
+  const screen = imageWindowGeometry(currentPosition, { width, height }, camera, offset);
+  const placement = useWorkbenchPlacement(node, placementModule, camera.scale, true, screen);
+  const latest = useRef(null);
+  latest.current = { onPosition, placement, areaBounds };
+  // A single selected Image delegates its corner geometry back to Image. The
+  // Workbench still owns selection preview and the shared atomic commit.
+  const registeredResizeTarget = useMemo(() => resizeTarget && { ...resizeTarget,
+    resizeCorner: (frame, edge, delta, bypass) => {
+      const next = resizeImageGeometry(frame, frame, edge, delta,
+        (axis, side, value) => latest.current.placement.edge(axis, side, value, frame, bypass), latest.current.areaBounds);
+      return { ...next.position, ...next.size };
+    },
+  }, [resizeTarget]);
+  useWorkbenchViewRegistration(id, node, true, { ...position, width: size.width, height: size.height }, registeredResizeTarget, onPosition);
+  const finish = (cancelled = false) => {
+    const active = gesture.current;
+    if (!active) return;
+    gesture.current = null;
+    latest.current.placement.finish();
+    suppressClick.current = active.kind === 'move' && (active.dragged || cancelled);
+    if (!cancelled && active.next) {
+      if (active.kind === 'resize') active.onResize(active.next.size, active.next.position);
+      else latest.current.onPosition(active.next.position);
+    }
+    setPreview(null);
+    if (active.target.hasPointerCapture(active.id)) active.target.releasePointerCapture(active.id);
+  };
+  useEffect(() => {
+    const cancel = event => {
+      if (!gesture.current || event.type !== 'blur' && event.key !== 'Escape') return;
+      // This Escape belongs to the drag/resize, before Workbench Back sees it.
+      if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); }
+      finish(true);
+    };
+    addEventListener('blur', cancel); addEventListener('keydown', cancel, true);
+    return () => { removeEventListener('blur', cancel); removeEventListener('keydown', cancel, true); finish(true); };
+  }, []);
+  useEffect(() => { finish(true); }, [position.left, position.top, size.width, size.height, camera.scale, camera.x, camera.y, offset.x, offset.y, viewport.width, viewport.height, suspended, movable, editable, resizeTarget?.expected]);
+  const begin = (event, kind, edge) => {
+    suppressClick.current = false;
+    if (suspended || event.button !== 0 || kind === 'move' && !movable
+      || event.target.closest('button:not(.image-module__canvas), a, input, select, textarea')) return;
+    event.preventDefault(); event.stopPropagation(); event.currentTarget.focus({ preventScroll: true });
+    placement.begin(event);
+    // Capture on the artwork button itself so a stationary release still
+    // produces its native click. A completed drag suppresses that click below.
+    const target = event.target.closest('.image-module__canvas') || event.currentTarget;
+    gesture.current = { id: event.pointerId, kind, x: event.clientX, y: event.clientY,
+      position, size, edge, onResize, target };
+    target.setPointerCapture(event.pointerId);
+  };
+  const placedPosition = (candidate, bypass) => {
+    const bounded = clampWorkbenchPosition(candidate, { width, height }, areaBounds);
+    const projected = imageWindowGeometry(bounded, { width, height }, camera, offset);
+    const snapped = placementModule ? snapMovement(projected, [node.current], camera.scale, bypass) : projected;
+    return clampWorkbenchPosition(imageWindowPosition(snapped, camera, offset), { width, height }, areaBounds);
+  };
+  const resizeTo = (start, edge, delta, bypass) => resizeImageGeometry(start.position, start.size, edge, delta,
+    (axis, side, value) => placement.edge(axis, side, value, currentPosition, bypass), areaBounds);
+  const move = event => {
+    const active = gesture.current;
+    if (active?.id !== event.pointerId) return;
+    event.stopPropagation();
+    const dx = (event.clientX - active.x) / camera.scale, dy = (event.clientY - active.y) / camera.scale;
+    if (active.kind === 'move') {
+      if (!active.dragged && Math.hypot(event.clientX - active.x, event.clientY - active.y) < 5) return;
+      active.dragged = true;
+      active.next = { size: active.size, position: placedPosition({ left: active.position.left + dx, top: active.position.top + dy }, event.altKey) };
+      setPreview(active.next);
+    } else {
+      active.next = resizeTo(active, active.edge, { x: dx, y: dy }, event.altKey);
+      setPreview(active.next);
+    }
+  };
+  const pointer = (kind, edge) => ({ onPointerDown: event => begin(event, kind, edge), onPointerMove: move,
+    onPointerUp: () => finish(), onPointerCancel: () => finish(true), onLostPointerCapture: () => finish(true) });
+  const key = (event, kind, edge) => {
+    if (suspended || kind === 'move' && !movable || event.target !== event.currentTarget || !event.key.startsWith('Arrow')) return;
+    event.preventDefault(); event.stopPropagation();
+    const step = event.shiftKey ? 10 : 1;
+    const dx = event.key === 'ArrowRight' ? step : event.key === 'ArrowLeft' ? -step : 0;
+    const dy = event.key === 'ArrowDown' ? step : event.key === 'ArrowUp' ? -step : 0;
+    placement.begin(event);
+    if (kind === 'move') onPosition(placedPosition({ left: position.left + dx / camera.scale, top: position.top + dy / camera.scale }, event.altKey));
+    else {
+      const next = resizeTo({ position, size }, edge, { x: dx, y: dy }, event.altKey);
+      onResize(next.size, next.position);
+    }
+    placement.finish();
+  };
+  // Round shared edges once, only for painting. The composited 2D surface maps
+  // physical pixels to CSS pixels without a second fractional layout rounding.
+  const paint = imagePaintGeometry(screen, density);
+  // Tiny or thin canvases must remain available for direct dragging. Put their
+  // action targets outside, beyond the screen-sized resize handles.
+  const outsideControls = screen.width < 80 || screen.height < 80;
+  const controlsAbove = screen.top + screen.height + 56 > viewport.height && screen.top >= 56;
+  const controlsTop = controlsAbove ? -56 : paint.height / density + 28;
+  const controlsLeft = Math.max(0, Math.min(viewport.width - 84, paint.left / density)) - paint.left / density;
+  // Recovery uses its own row beyond the existing action row. Keep both rows
+  // inside the viewport without changing artwork or resize-control geometry.
+  const recoveryWidth = Math.min(240, viewport.width - 16), recoveryHeight = 40;
+  const belowRecovery = controlsTop + 28 + 8;
+  const recoveryTop = controlsAbove ? controlsTop - recoveryHeight - 8
+    : screen.top + belowRecovery + recoveryHeight <= viewport.height - 8 ? belowRecovery : -recoveryHeight - 16;
+  const recoveryLeft = Math.max(8, Math.min(viewport.width - recoveryWidth - 8, paint.left / density)) - paint.left / density;
+  return <section ref={node} className="image-module__window" aria-label={`Image — ${title}`} data-workbench-view-id={id}
+    data-workbench-selectable={movable && !suspended || undefined} tabIndex={0} aria-keyshortcuts="Shift+Enter I"
+    aria-description="Click artwork to select it. Press F to focus it and F again to return. Double-click or press Enter on the artwork also zooms to its module. Press I to inspect. Drag to move. Arrow keys move the window; Shift+Enter toggles Workbench selection."
+    {...pointer('move')} onKeyDown={event => key(event, 'move')}
+    onClickCapture={event => { if (suppressClick.current && event.detail !== 0) { suppressClick.current = false; event.preventDefault(); event.stopPropagation(); } }}
+    data-moving={gesture.current?.dragged || undefined}
+    data-controls-outside={outsideControls || undefined}
+    data-editable={editable || undefined} data-active={active || undefined} data-suspended={suspended || undefined}
+    style={{ '--image-density': density, '--image-controls-left': `${controlsLeft}px`, '--image-controls-top': `${controlsTop}px`,
+      '--image-recovery-left': `${recoveryLeft}px`, '--image-recovery-width': `${recoveryWidth}px`,
+      '--image-recovery-top': `${Math.max(8 - screen.top, Math.min(viewport.height - screen.top - recoveryHeight - 8, recoveryTop))}px`,
+      '--image-controls-bridge': `${controlsTop + (controlsAbove ? 28 : -28)}px`, left: 0, top: 0, width: paint.width, height: paint.height,
+      transformOrigin: '0 0', transform: `matrix(${1 / density},0,0,${1 / density},${paint.left / density},${paint.top / density})` }}>
+    {content}
+    {editable && <div className="image-module__bounds" aria-hidden="true" />}
+    {!view.store && <button type="button" data-workbench-recovery-control className="image-module__close" aria-label={`Close ${title}`} title="Close Image" onClick={onClose}><X size={14} /></button>}
+    {editable && WORKBENCH_RESIZE_EDGES.filter(([edge]) => gesture.current?.edge === edge || (edge.length === 2
+      ? !edge.includes('w') || screen.width >= 56
+      : (edge === 'n' || edge === 's' ? screen.width : screen.height) >= 56)).map(([edge, label]) =>
+      <div key={edge} className={`image-module__resize is-${edge}`} role="separator"
+        style={workbenchResizeControl(edge, { left: paint.left / density, top: paint.top / density, width: paint.width / density, height: paint.height / density }, viewport, density)}
+        aria-label={label ? `Resize Image ${label}` : 'Resize Image window'}
+        aria-orientation={edge === 'e' || edge === 'w' ? 'vertical' : 'horizontal'}
+        aria-valuetext={`${currentSize.width} by ${currentSize.height} pixels`} aria-valuenow={edge === 'e' || edge === 'w' ? currentSize.width : currentSize.height} tabIndex={0}
+        {...pointer('resize', edge)} onKeyDown={event => key(event, 'resize', edge)} />)}
+  </section>;
+}

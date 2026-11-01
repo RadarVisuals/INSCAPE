@@ -9,7 +9,7 @@ test('the startveil waits for readiness and ignores early entry', () => {
   assert.equal(transitionStartveil(loading, 'READY'), STARTVEIL_STATES.DORMANT);
 });
 
-test('the reveal sequence advances in system, world, resident, interface order', () => {
+test('entry reveals the destination in one phase without empty boot or resident holds', () => {
   let state = transitionStartveil(STARTVEIL_STATES.DORMANT, 'ENTER');
   const states = [state];
   while (state !== STARTVEIL_STATES.COMPLETE) {
@@ -17,22 +17,19 @@ test('the reveal sequence advances in system, world, resident, interface order',
     states.push(state);
   }
   assert.deepEqual(states, [
-    STARTVEIL_STATES.ENTERING,
-    STARTVEIL_STATES.BOOTING,
-    STARTVEIL_STATES.BLACK_HANDOFF,
-    STARTVEIL_STATES.REVEALING_WORLD,
-    STARTVEIL_STATES.REVEALING_RESIDENT,
     STARTVEIL_STATES.REVEALING_INTERFACE,
     STARTVEIL_STATES.COMPLETE
   ]);
 });
 
 test('return visits use shorter phase durations', () => {
-  assert.ok(getStartveilStateDuration(STARTVEIL_STATES.BOOTING, true) < getStartveilStateDuration(STARTVEIL_STATES.BOOTING, false));
+  assert.ok(getStartveilStateDuration(STARTVEIL_STATES.REVEALING_INTERFACE, true) < getStartveilStateDuration(STARTVEIL_STATES.REVEALING_INTERFACE, false));
 });
 
-test('the black handoff is brief and the full interface phase covers the module cascade', () => {
-  const blackHold = getStartveilStateDuration(STARTVEIL_STATES.BLACK_HANDOFF, false);
-  assert.ok(blackHold >= 80 && blackHold <= 160);
-  assert.ok(getStartveilStateDuration(STARTVEIL_STATES.REVEALING_INTERFACE, false) >= 1180);
+test('reduced motion has no timed hold and completed entry cannot replay', () => {
+  assert.equal(getStartveilStateDuration(STARTVEIL_STATES.REVEALING_INTERFACE, false, true), 0);
+  assert.equal(getStartveilStateDuration(STARTVEIL_STATES.REVEALING_INTERFACE, true, true), 0);
+  for (const event of ['READY', 'ENTER', 'ADVANCE']) {
+    assert.equal(transitionStartveil(STARTVEIL_STATES.COMPLETE, event), STARTVEIL_STATES.COMPLETE);
+  }
 });

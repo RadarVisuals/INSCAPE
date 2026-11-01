@@ -1,0 +1,56 @@
+/* Activity keeps the existing signal owner and sidebar destination host. */
+.activity-panel.workbench-tool-panel {
+  --activity-inset: max(12px, var(--workspace-navigation-inset, 0px));
+  --activity-top: max(12px, calc(var(--workspace-navigation-top, 8px) + 4px));
+  --activity-target: var(--control-height-sm);
+  left: var(--activity-inset); bottom: 12px;
+  width: min(420px, calc(100vw - var(--activity-inset) - 12px));
+  height: min(480px, calc(100dvh - var(--activity-top) - 12px));
+  box-shadow: none;
+}
+.activity-panel.system-workflow__activity-history {
+  width: min(700px, calc(100vw - var(--activity-inset) - 12px));
+  height: min(660px, calc(100dvh - var(--activity-top) - 12px));
+}
+.activity-panel h2 { flex: 1; margin: 0; padding: 8px 10px; font: inherit; }
+.activity-panel button { color: inherit; font: inherit; cursor: pointer; }
+.activity-panel button:disabled { color: var(--tactile-muted); cursor: default; }
+.activity-panel button:hover:not(:disabled) { background: var(--tactile-hover); }
+.activity-panel :is(button, input):focus-visible { outline: 2px solid var(--tactile-ink); outline-offset: -2px; }
+.activity-panel :focus:not(:focus-visible) { outline: none; }
+.activity-filters { flex: none; display: flex; gap: 2px; padding: 6px 10px; border-bottom: 1px solid var(--tactile-edge); }
+.activity-filters button { flex: 1; min-width: 0; min-height: var(--activity-target); padding: 4px 2px; border: 1px solid transparent; border-radius: var(--control-radius); background: transparent; }
+.activity-filters button[aria-pressed='true'] { background: var(--tactile-hover); border-bottom-color: var(--tactile-ink); }
+.activity-search { flex: none; display: flex; align-items: center; gap: 8px; margin: 10px 12px 0; padding-left: 8px; border: 1px solid var(--tactile-edge); border-radius: var(--control-radius); }
+.activity-search svg { flex: none; color: var(--tactile-muted); }
+.activity-search input { width: 100%; min-width: 0; min-height: var(--activity-target); padding: 6px 8px; border: 0; border-radius: var(--control-radius); color: inherit; background: transparent; font: inherit; }
+.activity-body { flex: 1; min-height: 0; overflow: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-gutter: stable; padding: 0 12px; }
+.activity-body ol { margin: 0; padding: 0; list-style: none; }
+.activity-body li { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 12px 8px 12px 12px; border-bottom: 1px solid var(--tactile-edge); }
+.activity-body li:last-child { border-bottom: 0; }
+.activity-body li:hover { background: var(--tactile-hover); }
+.activity-body li > i { position: absolute; top: 12px; bottom: 12px; left: 0; width: 2px; box-sizing: border-box; }
+.activity-body li[data-unread] > i { border-left: 2px solid var(--tactile-ink); }
+.activity-entry-copy { min-width: 0; display: grid; gap: 4px; overflow-wrap: anywhere; }
+.activity-entry-copy strong { font: inherit; font-weight: 500; }
+.activity-entry-copy > span { color: var(--tactile-muted); line-height: 1.5; }
+.activity-entry-meta { display: flex; flex-wrap: wrap; gap: 4px 10px; color: var(--tactile-muted); font: 11px/1.5 var(--font-technical); }
+.activity-read { display: flex; align-items: center; gap: 4px; min-height: var(--activity-target); padding: 6px; border: 0; border-radius: var(--control-radius); background: transparent; white-space: nowrap; }
+.activity-actions { flex: none; display: flex; gap: 8px; padding: 8px 12px; border-top: 1px solid var(--tactile-edge); }
+.activity-actions button { display: flex; align-items: center; justify-content: center; gap: 6px; min-height: var(--activity-target); padding: 6px 10px; border: 1px solid var(--tactile-edge); border-radius: var(--control-radius); background: transparent; }
+.activity-actions button:first-child { margin-right: auto; }
+.activity-panel .system-workflow__activity-feedback:empty { display: none; }
+.activity-panel .system-workflow__activity-feedback p { margin: 0; padding: 12px 0; color: var(--tactile-muted); line-height: 1.5; overflow-wrap: anywhere; }
+.activity-panel .system-workflow__activity-feedback [role='alert'] { color: var(--tactile-ink); }
+.activity-panel .system-workflow__activity-feedback button { display: block; min-height: var(--activity-target); margin-top: 8px; padding: 6px 10px; border: 1px solid var(--tactile-edge); border-radius: var(--control-radius); background: transparent; }
+@media (max-width: 520px), (pointer: coarse) {
+  .activity-panel.workbench-tool-panel { --activity-target: 44px; }
+  .activity-panel .workbench-tool-panel-header { min-height: 52px; }
+  .activity-panel .workbench-tool-panel-close { width: 44px; height: 44px; }
+  .activity-search input { font-size: 16px; }
+  .activity-actions button { padding-inline: 8px; }
+  .activity-body li { gap: 6px; padding-right: 0; }
+}
+@media (forced-colors: active) {
+  .activity-filters button[aria-pressed='true'] { forced-color-adjust: none; background: Highlight; color: HighlightText; }
+}

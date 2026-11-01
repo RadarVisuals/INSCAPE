@@ -1,0 +1,15 @@
+.workbench-index { position: absolute; inset: 0; z-index: 90; pointer-events: none; }
+.workbench-index .system-workflow__instrument-window { pointer-events: auto; }
+.workbench-index .system-workflow__instrument-content { overflow: auto; overscroll-behavior: contain; padding: 10px; }
+.workbench-index ol { list-style: none; padding: 0; margin: 0; display: grid; gap: 4px; }
+.workbench-index li { display: flex; gap: 4px; }
+.workbench-index li > button:first-child { flex: 1; display: flex; align-items: center; gap: 8px; text-align: left; overflow-wrap: anywhere; }
+.workbench-index li span { flex-shrink: 0; opacity: .55; font-variant-numeric: tabular-nums; }
+.workbench-index li small { flex-shrink: 0; margin-left: auto; opacity: .65; }
+.workbench-index__editor, .workbench-index form, .workbench-index section, .workbench-index label { display: grid; gap: 6px; }
+.workbench-index__editor { margin-top: 12px; border-top: 1px solid var(--workflow-border); padding-top: 10px; }
+.workbench-index section { border-block: 1px solid var(--workflow-border); padding-block: 10px; }
+.workbench-index p { font: var(--workflow-type-control); line-height: 1.5; }
+.workbench-index .workbench-index__check { display: flex; align-items: center; gap: 6px; }
+.workbench-index__check input { margin: 0; }
+.workbench-index__row { display: flex; gap: 4px; flex-wrap: wrap; }

@@ -1,0 +1,22 @@
+TAP version 13
+# Subtest: every resize grip can be grabbed at its actual corner or midpoint at 1440px
+ok 1 - every resize grip can be grabbed at its actual corner or midpoint at 1440px
+  ---
+  duration_ms: 9904.4994
+  type: 'test'
+  ...
+# Subtest: every resize grip can be grabbed at its actual corner or midpoint at 390px
+ok 2 - every resize grip can be grabbed at its actual corner or midpoint at 390px
+  ---
+  duration_ms: 9805.8194
+  type: 'test'
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 2
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 20031.4176

@@ -1,0 +1,17 @@
+TAP version 13
+# Screenshots: C:\\Users\\Hidden Swarm\\AppData\\Local\\Temp\\inscape-workbench-recovery-aRZdsf
+# Subtest: reload restores local arrangement; failed Text survives editor disposal and blocks stale publication
+ok 1 - reload restores local arrangement; failed Text survives editor disposal and blocks stale publication
+  ---
+  duration_ms: 4992.5473
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 5360.5221

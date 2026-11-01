@@ -1,0 +1,74 @@
+.system-workflow[data-creation-toolbar] { --workbench-toolbar-clearance: 60px; --workbench-toolbar-offset: 75px; }
+@media (max-height: 540px) {
+  /* Rail spacing belongs here, not to the optional context-action toolbar.
+     Leave usable height for floating tools on short screens. */
+  .system-workflow[data-creation-toolbar] { --workbench-toolbar-offset: 0px; }
+}
+.workbench-view-controls { position: fixed; z-index: 82; right: 12px; bottom: calc(var(--workflow-dock-height, 40px) + 8px); display: flex; gap: 2px; flex-wrap: wrap; max-width: calc(100% - 24px); padding: calc(var(--control-inset) - 1px); border: 1px solid var(--tactile-edge); border-radius: var(--control-shell-radius); background: var(--tactile-face); color: var(--tactile-ink); font: var(--workflow-type-control);
+  --view-control-target: var(--control-target-toolbar);
+  box-sizing: border-box; }
+.system-workflow[data-creation-toolbar] > .workbench-view-controls { bottom: calc(var(--workflow-dock-height, 42px) + var(--workbench-toolbar-offset) + var(--workbench-toolbar-clearance) + 16px); }
+.workbench-view-controls > .workflow-tactile-control { display: grid; place-items: center; min-width: var(--view-control-target); min-height: var(--view-control-target); padding: 4px 8px; font: inherit;
+  box-sizing: border-box;
+  border-color: transparent; }
+.workbench-view-controls svg:where(.lucide) { width: var(--icon-size-interface); height: var(--icon-size-interface); }
+.workbench-view-controls__selection-count { position: absolute; right: 8px; bottom: calc(100% + 4px); padding: 3px 7px; white-space: nowrap; background: var(--tactile-surface); color: var(--tactile-muted); border-radius: var(--control-radius); font: var(--workflow-type-control); }
+@media (pointer: coarse), (max-width: 520px) {
+  .workbench-view-controls { --view-control-target: var(--control-target-touch); }
+}
+@media (min-width: 1100px) {
+  .system-workflow[data-creation-toolbar] > .workbench-view-controls {
+    left: calc(50% + var(--workbench-toolbar-width, 430px) / 2 + 10px); right: auto;
+    bottom: calc(var(--workflow-dock-height, 42px) + var(--workbench-toolbar-offset) + 8px);
+    max-width: calc((100dvw - var(--workbench-toolbar-width, 430px)) / 2 - 24px);
+  }
+}
+.workbench-marquee, .workbench-selection { position: fixed; z-index: 79; pointer-events: none; box-sizing: border-box; border: 1px solid var(--workflow-ink); }
+.workbench-marquee { background: rgb(127 127 127 / 12%); }
+.workbench-selection { pointer-events: auto; touch-action: none; cursor: move; }
+.workbench-selection:focus-visible { outline: 1px solid var(--workflow-ink); outline-offset: 2px; }
+.workbench-selection__handle { position: absolute; pointer-events: auto; touch-action: none; width: 28px; height: 28px; padding: 0; border: 0; border-radius: 0; background: transparent; transform: translate(-50%, -50%); }
+.workbench-selection__handle::after { content: ''; position: absolute; inset: 9px; border: 1px solid #ffffff; background: #111313; }
+.workbench-selection__handle.is-nw { left: 0; top: 0; cursor: nwse-resize; }
+.workbench-selection__handle.is-ne { left: 100%; top: 0; cursor: nesw-resize; }
+.workbench-selection__handle.is-sw { left: 0; top: 100%; cursor: nesw-resize; }
+.workbench-selection__handle.is-se { left: 100%; top: 100%; cursor: nwse-resize; }
+.system-workflow .workbench-selection__handle:focus { outline: none; }
+.workbench-selection__handle:focus-visible::after { background: #fff; border-color: #111313; }
+
+/* A journey projects high-resolution live modules, just as Display Lift does.
+   This value must not inherit and restyle every descendant on each frame. */
+@property --workbench-camera-transform { syntax: '*'; inherits: false; initial-value: none; }
+[data-workbench-camera-projected] { transform: var(--workbench-camera-transform) !important; }
+
+/* Translate only explicit workspace surfaces. The dock and
+   viewport menus retain their screen coordinates. Compensate native zoom. */
+[data-workbench-panned] [data-workbench-pan] { translate: calc(var(--workbench-pan-x, 0px) / var(--workbench-pan-scale, 1)) calc(var(--workbench-pan-y, 0px) / var(--workbench-pan-scale, 1)); }
+.system-workflow[data-workbench-pan-ready], .system-workflow[data-workbench-pan-ready] * { cursor: grab !important; }
+.system-workflow[data-workbench-panning], .system-workflow[data-workbench-panning] * { cursor: grabbing !important; user-select: none; }
+
+.system-workflow[data-workbench-hand],
+.system-workflow[data-workbench-hand] :is(.system-workflow__workbench, .system-workflow__display-instance, [data-workbench-view-id], [data-workbench-module], .system-workflow__canvas, .image-module__canvas, [data-workbench-selectable], .system-workflow__resize-handle, .image-module__resize) { cursor: grab; }
+
+.workbench-object-preview { position: fixed; z-index: 89; pointer-events: none; box-sizing: border-box; border: 1px solid #fff; outline: 1px solid #111313; }
+.workbench-object-menu { max-height: calc(100dvh - 16px); overflow-y: auto; overscroll-behavior: contain; }
+.workbench-object-menu button span { overflow-wrap: anywhere; }
+.workbench-view-controls > .workflow-tactile-control:where(:not(:disabled):is([aria-pressed='true'], [aria-expanded='true'])) {
+  background: color-mix(in srgb, var(--tactile-ink) 14%, var(--tactile-face));
+}
+.workbench-view-controls > .workbench-view-controls__hand[aria-pressed='true'] {
+  color: var(--tactile-face);
+  background: var(--tactile-ink);
+}
+.workbench-view-controls > .workbench-view-controls__hand[aria-pressed='true']::after { display: none; }
+@media (forced-colors: active) {
+  .workbench-view-controls > .workflow-tactile-control { border-color: ButtonText; }
+  .workbench-view-controls > .workflow-tactile-control:is([aria-pressed='true'], [aria-expanded='true']):not(:disabled) {
+    forced-color-adjust: none;
+    color: HighlightText;
+    background: Highlight;
+  }
+}
+
+/* An open Canvas menu stays above the screen utilities. */
+.workbench-view-controls:has(.workbench-canvas-tools) { z-index: 100; }

@@ -12,7 +12,7 @@ test('publication baselines are isolated by normalized profile address', () => {
   const target = storage();
   assert.equal(saveOwnerPublicationBaseline(target, PROFILE, { cid: 'bafy-one', pointerHash: `0x${'a'.repeat(64)}`,
     publishedFingerprint: 'published', localFingerprint: 'local', hydratedAt: 12 }), true);
-  assert.equal(loadOwnerPublicationBaseline(target, `0x${PROFILE.slice(2).toUpperCase()}`)?.cid, 'bafy-one');
+  assert.equal(loadOwnerPublicationBaseline(target, `0x${PROFILE.slice(2).toUpperCase()}`)?.value.cid, 'bafy-one');
   assert.match(ownerPublicationBaselineKey(PROFILE), new RegExp(`${PROFILE}$`));
 });
 

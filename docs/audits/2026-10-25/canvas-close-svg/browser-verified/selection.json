@@ -1,0 +1,7 @@
+{
+  "mode": "explicit",
+  "suites": [
+    "svg-raster-quality",
+    "svg-lifecycle"
+  ]
+}

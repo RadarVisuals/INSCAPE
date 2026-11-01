@@ -1,0 +1,19 @@
+{"status":201,"upstreamCalls":1,"realNetwork":false}
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: An unsigned caller must not be admitted to the paid upload service
+
+201 !== 401
+
+    at file:///<audit-workspace>/remediation-2026-10-19-upload-admission/probe-anonymous-before.mjs:12:8 {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: 201,
+  expected: 401,
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+
+Node.js v24.20.0

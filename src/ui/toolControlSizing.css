@@ -1,0 +1,25 @@
+/* Shared intrinsic control sizes. Hosts own placement, scrolling and material. */
+:is(.workbench-tool-window, .keeper-dock-window, .workbench-tool-controls, .workbench-tool-panel, .identity-editor-content) {
+  --tool-control-height: 32px;
+  --tool-icon-target: 32px;
+  --tool-action-target: 40px;
+  --tool-touch-target: 0px;
+}
+@media (pointer: coarse), (max-width: 520px) {
+  :is(.workbench-tool-window, .keeper-dock-window, .workbench-tool-controls, .workbench-tool-panel, .identity-editor-content) {
+    --tool-control-height: 44px;
+    --tool-icon-target: 44px;
+    --tool-action-target: 44px;
+    --tool-touch-target: 44px;
+    --tool-field-font-size: 16px;
+    --tool-titlebar-height: 52px;
+  }
+  :is(.workbench-tool-window, .workbench-tool-controls, .workbench-tool-panel) summary {
+    box-sizing: border-box;
+    min-height: var(--tool-touch-target);
+    padding-block: 13px;
+  }
+  :is(.workbench-tool-window, .workbench-tool-controls, .workbench-tool-panel, .identity-editor-content) :is(input:not([type=checkbox]):not([type=radio]):not([type=range]), select, textarea) {
+    font-size: var(--tool-field-font-size);
+  }
+}

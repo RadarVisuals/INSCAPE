@@ -1,0 +1,40 @@
+TAP version 13
+# Subtest: project instructions permanently route LUKSO work through the reviewed baseline
+ok 1 - project instructions permanently route LUKSO work through the reviewed baseline
+  ---
+  duration_ms: 1.4473
+  type: 'test'
+  ...
+# Subtest: legacy ownership fallback discovers through LSP5 and then verifies each asset standard
+ok 2 - legacy ownership fallback discovers through LSP5 and then verifies each asset standard
+  ---
+  duration_ms: 0.9023
+  type: 'test'
+  ...
+# Subtest: issued, creator-attributed and currently held relationships remain separate
+ok 3 - issued, creator-attributed and currently held relationships remain separate
+  ---
+  duration_ms: 1.0954
+  type: 'test'
+  ...
+# Subtest: metadata dossiers require provenance and do not convert creator evidence into owner authority
+ok 4 - metadata dossiers require provenance and do not convert creator evidence into owner authority
+  ---
+  duration_ms: 1.0438
+  type: 'test'
+  ...
+# Subtest: mainnet identity remains explicit and HTTPS-only at the central Library boundary
+ok 5 - mainnet identity remains explicit and HTTPS-only at the central Library boundary
+  ---
+  duration_ms: 0.3576
+  type: 'test'
+  ...
+1..5
+# tests 5
+# suites 0
+# pass 5
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 76.9885

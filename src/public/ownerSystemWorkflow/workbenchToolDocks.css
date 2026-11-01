@@ -1,0 +1,23 @@
+.workbench-dock-tabs { display: flex; align-self: stretch; min-width: 0; padding-left: 6px; overflow-x: auto; scrollbar-width: none; }
+.workbench-dock-tabs::-webkit-scrollbar { display: none; }
+.workbench-dock-tabs [role='tab'] { flex: none; position: relative; padding: 8px; border-radius: 0; cursor: grab; touch-action: none; user-select: none; white-space: nowrap; color: var(--tactile-muted); }
+.workbench-dock-tabs [aria-selected='true'] { color: var(--tactile-ink); box-shadow: inset 0 -1px var(--tactile-ink); }
+.workbench-dock-tabs [data-drop-before]::before { content: ''; position: absolute; left: 0; top: 5px; bottom: 5px; border-left: 2px solid var(--tactile-ink); }
+.workbench-tool-dock .workbench-tool-panel-grip { min-width: 20px; padding-inline: 4px; }
+.workbench-tool-dock .workbench-tool-panel-close { flex: none; }
+.workbench-dock-pane--target > .workbench-tool-panel-header { background: var(--tactile-hover); box-shadow: inset 0 -2px var(--tactile-ink); }
+.workbench-dock-stack { display: flex; flex-direction: column; flex: 1; min-height: 0; overflow: auto; overscroll-behavior: contain; }
+.workbench-dock-pane { position: relative; display: flex; flex-direction: column; flex-basis: 0; flex-shrink: 0; min-width: 0; min-height: 72px; }
+.workbench-dock-divider { position: relative; flex: none; height: 1px; background: var(--tactile-edge); cursor: ns-resize; touch-action: none; z-index: 2; }
+.workbench-dock-divider::before { content: ''; position: absolute; inset: -3px 0; }
+.workbench-dock-divider:focus-visible { outline: 2px solid var(--tactile-ink); outline-offset: 1px; }
+.workbench-dock-pane[data-drop-side]::after { content: ''; position: absolute; z-index: 3; pointer-events: none; left: 3px; right: 3px; height: 32px; border: 1px solid var(--tactile-ink); background: var(--tactile-hover); border-radius: var(--control-radius); }
+.workbench-dock-pane[data-drop-side='above']::after { top: 2px; }
+.workbench-dock-pane[data-drop-side='below']::after { bottom: 2px; }
+.workbench-dock-slot, .workbench-docked-content { display: flex; flex: 1; min-width: 0; min-height: 0; overflow: hidden; }
+.workbench-docked-content[hidden] { display: none; }
+.workbench-dock-ghost { position: fixed; z-index: 110; pointer-events: none; box-sizing: border-box; border: 1px solid var(--tactile-edge); border-radius: var(--control-shell-radius); background: var(--tactile-face); color: var(--tactile-ink); padding: 10px; font: var(--workflow-type-control); }
+.workbench-dock-menu { position: fixed; z-index: 111; display: flex; flex-direction: column; gap: 2px; width: 220px; max-width: calc(100vw - 16px); max-height: calc(100vh - 24px); overflow-y: auto; padding: 3px; border: 1px solid var(--tactile-edge); border-radius: var(--control-shell-radius); background: var(--tactile-face); color: var(--tactile-ink); font: var(--workflow-type-control); }
+.workbench-dock-menu button { flex-shrink: 0; }
+.workbench-dock-menu button { border: 0; background: transparent; color: inherit; border-radius: var(--control-radius); padding: 8px; font: inherit; text-align: left; cursor: pointer; }
+.workbench-dock-menu button:hover, .workbench-dock-menu button:focus-visible { background: var(--tactile-hover); outline: 1px solid var(--tactile-ink); outline-offset: -1px; }

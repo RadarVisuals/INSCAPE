@@ -1,0 +1,34 @@
+✔ mirrored Image joins stay seamless in list, grid and canvas presentation (16507.3291ms)
+✖ normal motion reverses a partial canvas lift without a jump and menu and details reveal smoothly (24526.5368ms)
+✔ card size changes actual bounds for one canvas, and touch arrangement works without scrolling the card (5127.31ms)
+✔ gallery drag order, keyboard moves and card size persist while failed order saves stay unchanged (4156.2314ms)
+✔ gallery keeps artwork on hover, reveals bounded titles and actions, and combines navigation in one glass menu (4212.4654ms)
+✔ canvas inspection fits 5K, reuses source metadata and saved views, and returns without saving or activating (3465.259ms)
+✔ inspection supports touch details, one info panel and closing during the lift (7209.0863ms)
+✔ thumbnail crop supports drag, touch, cancel, failed save, reload and return to automatic fill (7986.9288ms)
+✔ grid wraps both ways without writes, exposes one keyboard collection and remembers its view after opening (3934.9584ms)
+✔ touch grid handles a single canvas, creation, details and opening without changing saved geometry (2135.2541ms)
+✔ overview browses without activation, saves optional details, and opens only the chosen canvas (3574.2021ms)
+✔ touch opens a row directly and long names and details stay usable on a narrow screen (2088.6656ms)
+✔ failed departure keeps the live editor and mixed-content previews never start an HTML runtime (2634.7157ms)
+ℹ tests 13
+ℹ suites 0
+ℹ pass 12
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 87865.2367
+
+✖ failing tests:
+
+test at browser-tests\workbench-overview.browser.mjs:208:1
+✖ normal motion reverses a partial canvas lift without a jump and menu and details reveal smoothly (24526.5368ms)
+  locator.evaluate: Timeout 15000ms exceeded.
+  Call log:
+  [2m  - waiting for getByRole('dialog').getByRole('button', { name: 'Complete canvas', exact: true })[22m
+  
+      at TestContext.<anonymous> (C:\Users\Hidden Swarm\Documents\ChatGPT\inscape\remediation-2026-10-19-shared-checkpoint\work\browser-tests\workbench-overview.browser.mjs:264:78) {
+    name: 'TimeoutError',
+    log: [ "  - waiting for getByRole('dialog').getByRole('button', { name: 'Complete canvas', exact: true })" ]
+  }

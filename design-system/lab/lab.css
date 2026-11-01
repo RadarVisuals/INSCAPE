@@ -1,0 +1,28 @@
+/* Lab hosting only. Component appearance stays with production recipes. */
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--interface-environment); color: var(--interface-ink); font-family: var(--font-interface); }
+.lab-header, .lab-inspector, .lab-footer { padding: var(--space-5); background: var(--interface-panel); border-bottom: 1px solid var(--interface-line); }
+.lab-heading, .lab-controls { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); }
+.lab-heading { justify-content: space-between; margin-bottom: var(--space-4); }
+.lab-heading h1 { margin: 0; font-size: 16px; font-weight: 500; }
+.lab-heading h1 span { margin-left: var(--space-3); color: var(--color-text-secondary); }
+.lab-controls { align-items: end; }
+.lab-controls label { display: grid; gap: var(--space-1); font: 13px var(--font-technical); }
+.lab-controls :is(button, select, a), .lab-inspector button { min-height: 36px; padding: var(--space-2) var(--space-3); background: var(--interface-panel); color: var(--interface-ink); border: 1px solid var(--interface-line); border-radius: var(--control-radius); font: 12px var(--font-interface); text-decoration: none; }
+.lab-controls button[aria-pressed='true'] { color: var(--interface-panel); background: var(--interface-ink); }
+.lab :is(button, a, select, input, textarea):focus-visible { outline: 2px solid var(--interface-ink); outline-offset: 3px; }
+.lab-header p, .lab-inspector p, .lab-artboard > p { font-size: 12px; line-height: 1.6; }
+.lab-header p { margin-top: var(--space-3); max-width: none; }
+.lab-note, .lab-footer { color: var(--color-text-secondary); font: 12px var(--font-technical); }
+.lab-viewport { overflow: auto; }
+.lab-artboard { min-height: 600px; margin-inline: auto; padding: var(--space-5); }
+.lab-footer { display: flex; flex-wrap: wrap; gap: var(--space-4); border-top: 1px solid var(--interface-line); }
+.lab-footer code { overflow-wrap: anywhere; }
+.lab-inspector textarea { display: block; width: 100%; margin-block: var(--space-3); color: var(--interface-ink); background: var(--interface-environment); border: 1px solid var(--interface-line); font: 12px monospace; }
+.lab-inspector strong { overflow-wrap: anywhere; font: 13px var(--font-technical); }
+.lab-inspector [role='status'] { margin-left: var(--space-3); font-size: 12px; }
+[data-lab-inspected] { outline: 2px dashed var(--interface-ink); outline-offset: 3px; }
+.lab-toolbar-stage { min-height: 480px; position: relative; }
+.lab-toolbar-stage .workbench-toolbar { position: absolute; }
+.lab-toolbar-stage > p { font-size: 13px; color: var(--color-text-secondary); }
+.lab-reception-stage { position: relative; height: 1000px; }

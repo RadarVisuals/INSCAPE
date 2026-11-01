@@ -1,0 +1,19 @@
+.display-artwork-surface { position: absolute; inset: 0; display: block; pointer-events: none; }
+/* Older engines retain the existing image/clip behavior. No alternate asset
+   loader, bitmap cache or animated-media snapshot is introduced. */
+@supports (object-view-box: inset(0%)) {
+.display-artwork-surface img {
+  left: var(--display-media-left) !important;
+  top: var(--display-media-top) !important;
+  width: var(--display-media-width) !important;
+  height: var(--display-media-height) !important;
+  object-fit: fill;
+  object-view-box: var(--display-media-viewbox);
+}
+.system-workflow__placement:has(> .system-workflow__artwork-opening > .display-artwork-surface),
+.system-workflow__placement > .system-workflow__artwork-opening,
+.lattice-production-placement:has(.display-artwork-surface),
+.lattice-production-placement__opening:has(.display-artwork-surface),
+.lattice-production-focus-artwork:has(.display-artwork-surface),
+.lattice-production-focus-artwork__opening:has(.display-artwork-surface) { overflow: visible; }
+}

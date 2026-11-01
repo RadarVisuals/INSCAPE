@@ -1,0 +1,47 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { createSystemWorkflowDraftStore } from './systemWorkflowDraftStore.js';
+import { addDisplayModule, createDisplayModuleSession } from './displayModuleSession.js';
+import { PRIMARY_DISPLAY_ID } from './domain/displayModules.js';
+import { addTextModule, saveTextModule } from '../text/textSession.js';
+import { assertArticle } from '../text/domain/article.js';
+import { buildProfileDocumentV9 } from '../profileDocument/domain/profileDocumentV9Builder.js';
+import { validateProfileDocumentV9 } from '../profileDocument/domain/profileDocumentV9Validation.js';
+import { reconcileSystemWorkflowDraftFromProfileDocumentV9 } from '../profileDocument/domain/profileDocumentV9Reconciliation.js';
+const profile = `0x${'1'.repeat(40)}`;
+test('authored edges save independently, reopen, publish and restore; legacy content needs no rewrite', () => {
+  const entries = new Map(), storage = { getItem: k => entries.get(k) ?? null, setItem: (k, v) => entries.set(k, v) };
+  const store = createSystemWorkflowDraftStore({ profileAddress: profile, storage });
+  const primary = createDisplayModuleSession(store, PRIMARY_DISPLAY_ID);
+  const legacy = store.getDraft();
+  const legacyDocument = buildProfileDocumentV9({ profileAddress: profile, systemWorkflowDraft: legacy });
+  assert.equal(validateProfileDocumentV9(legacyDocument).valid, true);
+  assert.equal(Object.hasOwn(legacyDocument.appearance, 'edges'), false);
+  const secondId = addDisplayModule(store);
+  const edges = { corners: [12, 0, 0, 12], shadow: false, grain: .22 };
+  primary.setAppearance({ expectedAppearance: primary.getState().draft.appearance, appearance: { edges, frame: false } });
+  assert.deepEqual(store.getDraft().displays[0].appearance, legacy.appearance);
+  const second = createDisplayModuleSession(store, secondId);
+  second.setAppearance({ expectedAppearance: second.getState().draft.appearance, appearance: { edges: { ...edges, corners: [0, 12, 12, 0] } } });
+  addTextModule(store, profile);
+  const text = store.getDraft().texts[0];
+  saveTextModule(store, profile, text, { ...text, visibility: 'PUBLIC', article: { ...text.article, appearance: { ...text.article.appearance, edges } } });
+  const reopened = createSystemWorkflowDraftStore({ profileAddress: profile, storage }).getDraft();
+  assert.deepEqual(reopened.appearance.edges, edges);
+  assert.deepEqual(reopened.texts[0].article.appearance.edges, edges);
+  assert.equal(buildProfileDocumentV9({ profileAddress: profile, systemWorkflowDraft: reopened }).displays.length, 0);
+  reopened.displays[0].visibility = 'PUBLIC';
+  const doc = buildProfileDocumentV9({ profileAddress: profile, systemWorkflowDraft: reopened });
+  assert.equal(validateProfileDocumentV9(doc).valid, true);
+  const restored = reconcileSystemWorkflowDraftFromProfileDocumentV9(doc, reopened);
+  assert.deepEqual(restored.appearance, reopened.appearance);
+  assert.deepEqual(restored.displays[0].appearance, reopened.displays[0].appearance);
+  assert.deepEqual(restored.texts[0].article, reopened.texts[0].article);
+  for (const invalid of [null, {}, { ...edges, corners: [0, 0, -1, 0] }, { ...edges, grain: 2 }, { ...edges, shadow: 'yes' }, { ...edges, extra: 1 }]) {
+    const bad = structuredClone(doc); bad.appearance.edges = invalid;
+    assert.equal(validateProfileDocumentV9(bad).valid, false);
+    assert.throws(() => assertArticle({ ...text.article, appearance: { ...text.article.appearance, edges: invalid } }));
+    assert.throws(() => primary.setAppearance({ expectedAppearance: primary.getState().draft.appearance, appearance: { edges: invalid } }));
+  }
+  assert.deepEqual(store.getDraft().appearance.edges, edges);
+});

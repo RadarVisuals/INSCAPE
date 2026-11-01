@@ -1,0 +1,25 @@
+[
+  {
+    "name": "svg-raster-quality",
+    "code": 1,
+    "seconds": 41.644,
+    "tests": 4,
+    "pass": 2,
+    "fail": 2,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0,
+    "error": "Incomplete test run: {\"tests\":4,\"pass\":2,\"fail\":2,\"cancelled\":0,\"skipped\":0,\"todo\":0}"
+  },
+  {
+    "name": "svg-lifecycle",
+    "code": 0,
+    "seconds": 41.187,
+    "tests": 7,
+    "pass": 7,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  }
+]

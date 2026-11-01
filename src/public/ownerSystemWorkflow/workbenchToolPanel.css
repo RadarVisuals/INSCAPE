@@ -1,0 +1,23 @@
+@import '../../ui/toolControlSizing.css';
+.workbench-tool-panel { position: fixed; z-index: 84; display: flex; flex-direction: column; box-sizing: border-box; overflow: hidden; border: 1px solid var(--tactile-edge); border-radius: var(--control-shell-radius); background: var(--tactile-face); color: var(--tactile-ink); font: var(--workflow-type-control); }
+.workbench-tool-panel-header { display: flex; align-items: center; flex: none; min-height: 35px; border-bottom: 1px solid var(--tactile-edge); padding-right: 4px; }
+.workbench-tool-panel-header button { border: 0; border-radius: var(--control-radius); background: transparent; color: inherit; font: inherit; }
+.workbench-tool-panel-header button:focus-visible { outline: 2px solid var(--tactile-ink); outline-offset: -2px; }
+.workbench-tool-panel-grip { align-self: stretch; flex: 1; min-width: 0; padding: 8px 10px; text-align: left; cursor: grab; touch-action: none; user-select: none; }
+.workbench-tool-panel-grip:active { cursor: grabbing; }
+.workbench-tool-panel-close { display: grid; place-items: center; width: var(--tool-icon-target, 28px); min-width: var(--tool-icon-target, 28px); height: var(--tool-icon-target, 28px); min-height: var(--tool-icon-target, 28px); padding: 4px; cursor: pointer; }
+.workbench-tool-panel-close:hover { background: var(--tactile-hover); }
+.workbench-tool-panel-close svg { width: var(--icon-size-interface); height: var(--icon-size-interface); }
+.workbench-tool-panel-content { display: flex; flex: 1; min-width: 0; min-height: 0; overflow: hidden; }
+/* Invisible edge targets; native resize cursors reveal their purpose on hover. */
+.workbench-tool-panel > .workbench-tool-panel-resize { position: absolute; z-index: 1; display: block; padding: 0; margin: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; touch-action: none; }
+.workbench-tool-panel-resize[data-edge='n'], .workbench-tool-panel-resize[data-edge='s'] { left: 14px; right: 14px; height: 6px; cursor: ns-resize; }
+.workbench-tool-panel-resize[data-edge='e'], .workbench-tool-panel-resize[data-edge='w'] { top: 14px; bottom: 14px; width: 6px; cursor: ew-resize; }
+.workbench-tool-panel-resize:is([data-edge='nw'], [data-edge='ne'], [data-edge='sw'], [data-edge='se']) { width: 14px; height: 14px; }
+.workbench-tool-panel-resize:is([data-edge='n'], [data-edge='nw'], [data-edge='ne']) { top: 0; }
+.workbench-tool-panel-resize:is([data-edge='s'], [data-edge='sw'], [data-edge='se']) { bottom: 0; }
+.workbench-tool-panel-resize:is([data-edge='w'], [data-edge='nw'], [data-edge='sw']) { left: 0; }
+.workbench-tool-panel-resize:is([data-edge='e'], [data-edge='ne'], [data-edge='se']) { right: 0; }
+.workbench-tool-panel-resize:is([data-edge='nw'], [data-edge='se']) { cursor: nwse-resize; }
+.workbench-tool-panel-resize:is([data-edge='ne'], [data-edge='sw']) { cursor: nesw-resize; }
+.workbench-tool-panel > .workbench-tool-panel-resize:focus-visible { outline: 2px solid var(--tactile-ink); outline-offset: -3px; }

@@ -1,2 +1,2 @@
-export { default as Startveil } from './Startveil.jsx';
+export { default as Startveil } from './PortalStartveil.jsx';
 export * from './startveilMachine.js';

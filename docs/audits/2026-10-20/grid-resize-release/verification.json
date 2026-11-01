@@ -1,0 +1,114 @@
+{
+  "atUtc": "2026-10-19T22:11:01.742Z",
+  "baseCommit": "575702012dec10d11b81b2d4b32e247c6275ea82",
+  "reportedFailure": "React #185 (maximum update depth) on Grid resize pointer release; stack at WorkbenchGroupScene setHiddenModuleIds",
+  "rootCauseConfirmed": false,
+  "baselineCrashReproduced": false,
+  "realUserRetestPending": true,
+  "status": "Guard at observed failure site implemented; original composition still needs retest",
+  "node": {
+    "passed": 1263,
+    "failed": 0,
+    "skipped": 0
+  },
+  "browser": [
+    {
+      "name": "grid-resize-release",
+      "code": 0,
+      "seconds": 27.282,
+      "tests": 1,
+      "pass": 1,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0
+    },
+    {
+      "name": "shape-corner-resize",
+      "code": 0,
+      "seconds": 14.223,
+      "tests": 2,
+      "pass": 2,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0
+    },
+    {
+      "name": "workbench-groups",
+      "code": 0,
+      "seconds": 8.847,
+      "tests": 2,
+      "pass": 2,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0
+    },
+    {
+      "name": "workbench-stacks",
+      "code": 0,
+      "seconds": 20.697,
+      "tests": 3,
+      "pass": 3,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0
+    },
+    {
+      "name": "published-workbench-groups",
+      "code": 0,
+      "seconds": 9.542,
+      "tests": 2,
+      "pass": 2,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0
+    },
+    {
+      "name": "workbench-recovery",
+      "code": 0,
+      "seconds": 5.416,
+      "tests": 1,
+      "pass": 1,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0
+    }
+  ],
+  "finalProductionWithFonts": [
+    {
+      "name": "grid-resize-release",
+      "code": 0,
+      "seconds": 14.623,
+      "tests": 1,
+      "pass": 1,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0
+    }
+  ],
+  "productionResizeReleases": 32,
+  "initialJavaScriptBytes": 822884,
+  "buildPassed": true,
+  "buildBudgetPassed": true,
+  "sourceHashes": {
+    "src/public/ownerSystemWorkflow/WorkbenchGroupScene.jsx": "c64ef0c22bdfecebcd1f6403e104e64671ca8e6a4a2daa0e07b577a96afd8c08",
+    "scripts/runBrowserTests.mjs": "871b2d72db2993f54eb0e377936c27b3021198a390089eb073b73c5db81226a0",
+    "browser-tests/grid-resize-release-fixture.html": "bf44283d4ad26def4cb2fa86c0449a37834bc59b568523f69bf936035ae50029",
+    "browser-tests/grid-resize-release-fixture.jsx": "5fa2187994f18b81c2d5b69d122239d6a11eb60597210ef96d12ee3e92a35d17",
+    "browser-tests/grid-resize-release.browser.mjs": "c92e55c9cb4f679041cd821891b60aef05cbf7357d3c0a621af140c3c038fcbd"
+  },
+  "limits": [
+    "Original production React #185 was read from the user browser, not reproduced in the isolated fixture.",
+    "Earlier test setup used development NODE_ENV or native storage without an editor lease; those setup runs are not product failures.",
+    "Exploratory unselected Grid grips in the filled fixture were covered by sibling Text; those attempts are not verified resizes.",
+    "Final production test uses selected corner grips, fixture Images/Text and actual interface fonts; no wallet or media-library verification.",
+    "Previous hosted Arrival recovery timeout remains unexplained despite the local passing retest.",
+    "No new complete hosted verification result is implied by these local tests."
+  ]
+}

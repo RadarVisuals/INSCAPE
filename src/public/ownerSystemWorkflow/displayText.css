@@ -1,0 +1,3 @@
+.display-text-content { width: 100%; height: 100%; line-height: 1.2; white-space: pre-wrap; overflow-wrap: anywhere; overflow: hidden; }
+.display-text-placement { position: absolute; overflow: hidden; pointer-events: none; }
+.system-workflow__add-text { box-sizing: border-box; width: 100%; min-height: 32px; padding: 5px 6px; cursor: pointer; }

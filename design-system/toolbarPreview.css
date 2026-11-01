@@ -1,0 +1,13 @@
+/* Reference hosting only. Toolbar geometry, menus and states live in workbenchToolbar.css. */
+.ds-flat-preview .workbench-toolbar {
+  position: absolute;
+  max-width: calc(100% - 24px);
+}
+.ds-overview-instrument .workbench-toolbar {
+  top: 50%;
+  bottom: auto;
+  transform: translate(-50%, -50%);
+}
+.ds-flat-preview .workbench-toolbar__popup {
+  max-height: 220px;
+}
