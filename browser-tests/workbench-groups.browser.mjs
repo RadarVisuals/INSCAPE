@@ -1,3 +1,4 @@
+import { editorCommand } from './fixtures/editor-menu.mjs';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { mkdir } from 'node:fs/promises';
@@ -47,7 +48,7 @@ test('owner groups preserve the camera and artwork through editing, undo, moveme
       assert.deepEqual(withoutGroups(await draft(page)), before);
       assert.deepEqual(await camera(page), initialCamera);
       await panel.getByRole('textbox', { name: 'Group name', exact: true }).fill('Chapter one');
-      await panel.getByRole('button', { name: 'Rename', exact: true }).click();
+      await editorCommand(panel, 'Canvas', 'Rename');
       await choose(page, ['image:motion-2']);
       await panel.getByRole('button', { name: 'Add selection (1)', exact: true }).click();
       const rows = panel.locator('.workbench-groups__members li');

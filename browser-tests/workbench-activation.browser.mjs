@@ -1,3 +1,4 @@
+import { editorCommand } from './fixtures/editor-menu.mjs';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { mkdir } from 'node:fs/promises';
@@ -36,7 +37,7 @@ test('filled Workbench retargets tools and reserves camera/popup space through v
       await page.setViewportSize({ width, height: 1000 }); await settle(page);
       // Occupied panels remove the toolbar. Its next instance must be observed
       // as well, so changing tools after returning still reserves the right space.
-      await page.getByRole('button', { name: 'Settings', exact: true }).click();
+      await editorCommand(page, 'Edit', 'Settings');
       await toolbar.waitFor({ state: 'detached' });
       await page.getByRole('button', { name: 'Close Settings', exact: true }).click();
       await toolbar.waitFor(); await settle(page);

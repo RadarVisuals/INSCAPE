@@ -10,7 +10,7 @@ const settle = page => page.evaluate(async () => { await document.fonts.ready; a
 async function revealFrameControls(page) {
   // Authored frames sit beside navigation and extend beneath the independent
   // Info panel. Use the real controls; narrow/reloaded views may already fold.
-  const collapse = page.getByRole('button', { name: 'Collapse sidebar', exact: true });
+  const collapse = page.locator('.editor-menu-brand[aria-expanded="true"]');
   if (await collapse.count()) await collapse.click();
   const info = page.getByRole('button', { name: 'Close Info', exact: true });
   if (await info.count()) await info.click();

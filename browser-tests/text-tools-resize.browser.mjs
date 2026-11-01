@@ -59,7 +59,7 @@ for (const width of [1440, 390]) test(`Text columns, inline title and module res
     const tools = page.locator('.text-tools-window'), text = page.locator('.text-window');
     // The fixture's original frame starts underneath current navigation chrome.
     // Pan the camera through a clear canvas point, preserving authored geometry.
-    if (width === 1440) await page.getByRole('button', { name: 'Collapse sidebar', exact: true }).click();
+    if (width === 1440) await page.locator('.editor-menu-brand[aria-expanded="true"]').click();
     const beforePan = await saved(page), beforePanFrame = await text.boundingBox();
     await page.locator('main.system-workflow').focus();
     const panPoint = { x: width === 1440 ? width / 2 : 16, y: 780 };

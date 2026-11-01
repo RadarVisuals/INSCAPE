@@ -41,7 +41,7 @@ for (const visitor of [false, true]) for (const width of [1440, 390]) {
       const back = page.getByRole('button', { name: 'Back to previous Workbench view', exact: true });
       await source.waitFor(); await page.evaluate(() => document.fonts.ready); await settled(page);
       // The owner sidebar overlays the historical fixture position.
-      if (!visitor && width === 1440) { await page.getByRole('button', { name: 'Collapse sidebar', exact: true }).click(); await settled(page); }
+      if (!visitor && width === 1440) { await page.locator('.editor-menu-brand[aria-expanded="true"]').click(); await settled(page); }
       const initial = await camera(page), geometry = await first.boundingBox();
       const saved = await page.evaluate(() => localStorage.getItem(window.__motionKey));
       if (width === 390) await source.tap(); else await source.click();

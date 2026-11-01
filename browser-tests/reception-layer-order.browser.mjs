@@ -1,3 +1,4 @@
+import { editorCommand, editorOverview } from './fixtures/editor-menu.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdir } from 'node:fs/promises';
@@ -9,6 +10,58 @@ const output = process.env.INSCAPE_SCREENSHOT_DIR || '.browser-test-runtime/rece
 const probes = [[300, 280, 'image:art'], [900, 330, 'text:nomad'], [450, 350, 'shape:overlay'],
   [150, 350, 'shape:grid'], [165, 155, 'shape:grid']];
 const settle = page => page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+
+test('Reception canvas follows the theme through transparent artwork without changing authored colours or saved data', { timeout: 90000 }, async () => {
+  const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
+  const page = await browser.newPage({ viewport: { width: 1600, height: 1000 }, reducedMotion: 'reduce' });
+  page.setDefaultTimeout(15000);
+  await page.route('**/*', route => {
+    const url = new URL(route.request().url());
+    if (url.origin === origin) return route.continue();
+    const asset = url.hostname === 'raw.githubusercontent.com' && url.pathname.split('/public/')[1];
+    return asset ? route.fulfill({ path: `public/${asset}` }) : route.abort();
+  });
+  try {
+    await page.goto(`${origin}/browser-tests/reception-layer-order-fixture.html?session=${crypto.randomUUID()}`, { waitUntil: 'domcontentloaded' });
+    await page.getByRole('toolbar', { name: 'Creation tools', exact: true }).waitFor();
+    const before = await page.evaluate(() => {
+      const root = window.receptionLayerFixture.root, draft = root.getDraft();
+      // A retained canvas surface must not override the shared environment.
+      // The transparent cell exposes it; the authored purple backdrop stays.
+      const reception = { ...draft.reception, surface: '#ffffff', shapes: draft.reception.shapes.map(shape =>
+        shape.id === 'shape:cell' ? { ...shape, opacity: 0 } : shape) };
+      if (!root.commitCompletedOperation({ ...draft, reception }, { expectedGeneration: root.getGeneration(), recordHistory: false })) throw new Error('Could not seed transparency');
+      return reception;
+    });
+    await editorCommand(page, 'Canvas', 'Preview');
+    const canvas = page.locator('.reception-document-canvas');
+    await canvas.waitFor();
+    await mkdir(output, { recursive: true });
+    const checkTheme = async (mode, expected, view) => {
+      await page.evaluate(async mode => (await import('/src/interfaceTheme.js')).interfaceTheme.setMode(mode), mode);
+      await settle(page);
+      assert.equal(await canvas.evaluate(node => getComputedStyle(node).backgroundColor), expected);
+      assert.equal(await canvas.locator('[data-cell-id="shape:cell"] .shape-fill').evaluate(node => getComputedStyle(node).opacity), '0');
+      assert.equal(await canvas.locator('[data-layer-id="shape:backdrop"] .shape-fill').evaluate(node => getComputedStyle(node).backgroundColor), 'rgb(59, 22, 57)');
+      assert.equal(await canvas.locator('.reception-image').evaluate(node => getComputedStyle(node).backgroundColor), 'rgba(0, 0, 0, 0)');
+      await page.screenshot({ path: `${output}/transparent-${view}-${mode}.png` });
+    };
+    await checkTheme('dark', 'rgb(23, 23, 23)', 'preview');
+    await checkTheme('light', 'rgb(222, 219, 211)', 'preview');
+    await page.getByRole('button', { name: 'Back to editing', exact: true }).click();
+    await editorOverview(page);
+    await page.getByRole('button', { name: 'Reception', exact: true }).click();
+    await canvas.waitFor();
+    for (const width of [1600, 390]) {
+      await page.setViewportSize({ width, height: 1000 });
+      await checkTheme('dark', 'rgb(23, 23, 23)', `public-${width}`);
+      await checkTheme('light', 'rgb(222, 219, 211)', `public-${width}`);
+    }
+    const after = await page.evaluate(() => window.receptionLayerFixture.root.getDraft().reception);
+    for (const key of ['surface', 'shapes', 'imageModules', 'texts', 'cells', 'artworkLayers']) assert.deepEqual(after[key], before[key]);
+  } finally { await browser.close(); }
+});
+
 async function assertDocumentCentered(page, selector) {
   const geometry = await page.locator(selector).evaluate(host => {
     const canvas = host.querySelector('.reception-document-canvas').getBoundingClientRect();
@@ -55,7 +108,7 @@ test('Reception opens and returns Home centred without moving authored geometry;
     await settle(page);
     const panned = await readCamera();
     assert.notEqual(panned.x, initial.x);
-    await page.getByRole('button', { name: 'Preview', exact: true }).click();
+    await editorCommand(page, 'Canvas', 'Preview');
     await page.locator('.reception-document-canvas').waitFor(); await settle(page);
     const preview = await assertDocumentCentered(page, '.reception-document-preview-scroll');
     assert.equal(preview.width, 947); assert.equal(preview.height, 575);
@@ -66,7 +119,7 @@ test('Reception opens and returns Home centred without moving authored geometry;
     await page.getByRole('button', { name: 'Reset Workbench view', exact: true }).click(); await settle(page);
     assert.deepEqual(await readCamera(), initial, 'Home returns to the canvas rather than world origin');
     await page.screenshot({ path: `${output}/centred-editor.png` });
-    await page.getByRole('button', { name: 'My Inscape', exact: true }).click();
+    await editorOverview(page);
     await page.getByRole('button', { name: 'Reception', exact: true }).click();
     await page.locator('.reception-document-canvas').waitFor(); await settle(page);
     const published = await assertDocumentCentered(page, '.reception-window-main');
@@ -130,7 +183,7 @@ test('Reception Editor, preview and public reader preserve interleaved global la
     assert.equal(await page.locator('[data-workbench-view-id="text:private"]').count(), 1);
     await mkdir(output, { recursive: true });
     await page.screenshot({ path: `${output}/editor.png` });
-    await page.getByRole('button', { name: 'Preview', exact: true }).click();
+    await editorCommand(page, 'Canvas', 'Preview');
     await page.locator('[data-layer-id="text:nomad"] .text-document').waitFor();
     await assertPaint(page, false);
     assert.deepEqual(await textPaint(page, false), nativeText, 'shared padding, font and surface match the native Text');
@@ -139,7 +192,7 @@ test('Reception Editor, preview and public reader preserve interleaved global la
     assert.deepEqual(await page.locator('.reception-document-canvas > [data-layer-id], .reception-document-canvas > [data-cell-id]').evaluateAll(nodes => nodes.map(node => node.dataset.layerId || node.dataset.cellId)), before.artworkLayers.filter(id => id !== 'text:private'));
     await page.screenshot({ path: `${output}/preview.png` });
     await page.getByRole('button', { name: 'Back to editing', exact: true }).click();
-    await page.getByRole('button', { name: 'My Inscape', exact: true }).click();
+    await editorOverview(page);
     await page.getByRole('button', { name: 'Reception', exact: true }).click();
     await page.locator('[data-layer-id="text:nomad"] .text-document').waitFor();
     await assertPaint(page, false);

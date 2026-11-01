@@ -66,6 +66,58 @@ overrides and parallel paths are not an acceptable substitute for fixing the
 existing owner. Follow the concrete replacement, style-ownership and completion
 checks in `AGENTS.md`; preserve useful behavior and current authored work.
 
+## Editor menu and sidebar (2026-11-01)
+
+The founder approved a thin, fixed full-width Editor menu: the supplied Inscape
+wordmark, Canvas, Edit, View, Tools, Docs and Backup. The workspace begins below
+it. The wordmark toggles the whole sidebar; there is no remaining icon rail.
+Destinations remain in that sidebar. On narrow screens opening a destination
+closes the sidebar so the destination stays reachable. The shared DARK / LIGHT
+preference governs the bar; the new wordmark retains its orange accent.
+
+The sidebar order is Reception, My Inscape, Editor, Library, Grids, Activity,
+Discover, Publish, Profile. My Inscape is the sidebar label for the canvas overview.
+Reception opens the profile's Reception through the existing save-before-leaving
+guard. Library appears once, after Editor; Profile is a labelled row.
+
+The My Inscape grid's floating menu restores its translucent, blurred glass,
+using the shared DARK / LIGHT colours. Its trigger uses the supplied SVG wordmark
+instead of uppercase text and a hamburger. The founder authorized a small motion
+trial: the orange corner quickly forms the close mark, then spins 180 degrees
+as it moves into place on the left. The letters settle horizontally in sequence
+on the right, keeping a fixed baseline. Keep the existing menu expansion,
+keyboard access and reduced-motion/reduced-transparency preferences.
+
+Canvas opens Reception or an existing canvas, creates and renames ordinary
+canvases, opens their dimensions and starts the existing preview. Edit exposes
+Undo, Redo and Settings. View exposes camera and grid/snapping controls. Tools
+shows or hides the drawing toolbar and existing tool panes. Docs and Backup
+open their existing content directly. Backup is no longer inside Settings.
+These entries share the existing document, save/recovery, camera, history and
+preference owners. The movable document picker and its saved position are
+retired. Back to cells stays reachable below the bar. Reset, duplicate and wipe
+commands are outside this slice; Desktop remains deferred.
+
+## Tool-window edges and right dock (2026-11-01)
+
+The founder requested floating tool windows that reach the workspace edges,
+including the lower corners beside the creation toolbar. The bottom controls
+no longer impose a full-width exclusion strip on these windows. The fixed
+Editor menu remains the top boundary.
+
+Tools, Text, detached Library, Navigator and Keeper can attach to a fixed dock
+on the right. Drag a title to the right edge or use its Dock on right control;
+drag it out or use Undock to return to a floating window. Tool tabs retain
+their existing grouping and stacking and can also drop on the right edge.
+The dock shares a resizable width and its stacked windows have adjustable
+heights. Floating Navigator and Keeper also resize in both dimensions.
+Bottom controls use the remaining space beside the dock.
+
+Arrangement and utility dimensions are private, profile-local editor
+preferences, retained across reloads. Docking keeps the actual tools and
+utility contents mounted; it does not change artwork, camera ownership,
+Keeper identity, authored dimensions, undo or publication.
+
 ## Reception in the Editor (2026-10-31)
 
 The founder approved building Reception in the existing Editor itself, including
@@ -108,6 +160,9 @@ Cell contents are clipped by their owner's rectangle. Ordinary shapes remain
 available without becoming cells. Nested cells remain outside this slice.
 
 Public Reception remains frameless with a one-pixel usable-area boundary.
+The native Reception canvas uses the shared Dark/Light environment in both
+preview and Reception. A retained document-level surface colour does not
+override it; authored Shape, Text and cell colours and transparency remain intact.
 Cells may be coupled in rows or columns with adjustable spacing; unlinking
 retains geometry. New conversions allow up to eight cells. Existing authored
 Reception layouts convert on edit entry while retaining their content, sources,
@@ -622,6 +677,35 @@ wallet action or deployment is added. See the
 
 ### Separate local Workbench overview (2026-10-24)
 
+**Owner workspace continuity (2026-11-01).** The founder approved keeping the
+Editor top bar and left navigation in My Inscape. Owner browsing now occupies
+the content area within that same frame. Canvas flips into My Inscape one letter
+at a time, with a small letter stagger and a smaller stagger between menu buttons.
+My Inscape provides creation and opening; Edit provides names/introduction,
+thumbnail cropping and arrangement; View provides List/Grid, card size, wrapping
+and immersive browsing. Docs and Backup keep their existing destinations. Tools
+belongs to the Editor. The glass wordmark menu remains in immersive Grid browsing.
+
+Opening a preview moves its artwork into the Editor while the preview's empty
+dark margins contract to the actual canvas bounds. Returning restores the preview
+frame around the same artwork. Both directions share one read-only painted surface,
+preserve authored geometry and camera state, suppress duplicate preview paint, and
+honor reduced motion. The surrounding overview fades during departure. Editor tools
+prepare at initiation and appear above the moving artwork as the overview fades;
+they must not suddenly appear at the final handoff. Canvas boundaries and selection
+marks wait until the moving artwork reaches their position.
+On return, the existing tool windows remain mounted and noninteractive during
+their short fade-out. The overview fades in behind them; its stationary preview
+frame stays hidden until the moving frame arrives, preventing an empty-frame pop.
+
+This supersedes the standalone owner overview and mandatory editor revocation
+on browsing described below. Save and unfinished-edit guards still run before
+browsing; the mounted editor is suspended. Selecting another document, restoring
+or leaving the workspace still revokes its scope. Overview selection, camera and
+scroll memory remain session-only; no document fields or second persistence owner
+are added. Grids and Publish first open the selected canvas in Editor. Publication
+authorization and the existing collection gate remain unchanged.
+
 **Accepted behavior.** Following the
 named-Workbench pass, the founder chose a list of names beside one large selected
 preview, an optional introduction and modest metadata. This supersedes the
@@ -708,11 +792,11 @@ separate preview cache or new library ownership is added. Card size is the
 explicit local presentation preference described above.
 
 `workbenchOverview/` owns the overview adapter, presentation, preview and pure
-saved-content projection. `OwnerWorkbenchSession` chooses between this view and
-the active editor. Leaving the editor commits its current layout through the
-existing named-Workbench workflow before revoking its scope. Failed saves or
-unfinished edits keep the editor open. Returning to the same Workbench receives
-a fresh scope, so delayed work from before the overview cannot write into it.
+saved-content projection. `OwnerWorkbenchSession` owns the destination within
+the shared owner workspace. Browsing commits the live layout through the
+named-Workbench workflow without revoking the suspended editor. Failed saves or
+unfinished edits keep the editor open. Actual document changes and departures
+still revoke the previous scope so delayed work cannot write into a new context.
 The collection store remains the sole persistence authority; module scopes do
 not expose the overview's collection-wide read/details APIs.
 

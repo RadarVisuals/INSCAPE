@@ -1,3 +1,4 @@
+import { editorCommand } from './fixtures/editor-menu.mjs';
 import assert from 'node:assert/strict';
 import { mkdir } from 'node:fs/promises';
 import { resolve } from 'node:path';
@@ -307,7 +308,7 @@ test('Workbench appearance stays local and independent from the published Displa
     const root = page.locator('.system-workflow');
     const stage = page.locator('[data-presentation-stage]');
     const originalStageSurface = await stage.getAttribute('data-surface');
-    await page.getByRole('button', { name: 'Settings' }).click();
+    await editorCommand(page, 'Edit', 'Settings');
     const settings = page.getByRole('dialog', { name: 'Settings' });
     await settings.waitFor();
 
@@ -342,7 +343,7 @@ test('Workbench appearance stays local and independent from the published Displa
     assert.equal(await root.getAttribute('data-surface'), 'carbon');
     assert.equal(await stage.getAttribute('data-surface'), originalStageSurface);
     assert.equal(await page.locator('main.system-workflow > canvas.lattice-pixel-grid').count(), 0);
-    await page.getByRole('button', { name: 'Settings' }).click();
+    await editorCommand(page, 'Edit', 'Settings');
     const reloadedSettings = page.getByRole('dialog', { name: 'Settings' });
     assert.equal(await reloadedSettings.getByLabel('Grid snapping', { exact: true }).isChecked(), false);
     assert.deepEqual(pageErrors, []);

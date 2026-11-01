@@ -4,17 +4,22 @@ import WorkbenchToolPanel from './WorkbenchToolPanel.jsx';
 import WorkbenchDockDivider from './WorkbenchDockDivider.jsx';
 import WorkbenchLayers from './WorkbenchLayers.jsx';
 import WorkbenchSharedTools from './WorkbenchSharedTools.jsx';
-import { useWorkbenchView } from './WorkbenchViewContext.js';
 import { dockTabs, toolPane, toolIsVisible, visibleToolTabs, WORKBENCH_TOOL_TABS } from './workbenchToolDockState.js';
 import './workbenchToolDocks.css';
+import { useSideDock } from './WorkbenchSideDock.jsx';
 
 const groupName = tabs => tabs.length === 1 ? tabs[0] : `${tabs.slice(0, -1).join(', ')} and ${tabs.at(-1)}`;
 
 // One layout owns the tools. Stable portal containers move between docks;
 // docking never creates a second tool instance or changes the artwork selection.
 export default function WorkbenchToolDocks({ controller, hidden, navigationRef, historyBlocked, hostRef }) {
-  const view = useWorkbenchView(), prefix = useId();
+  const prefix = useId();
   const layout = useSyncExternalStore(controller.subscribe, controller.getSnapshot);
+  const sideDock = useSideDock();
+  useLayoutEffect(() => {
+    sideDock?.retainTools(layout.groups.map(group => `tools:${group.id}`));
+    if (layout.activeGroup) sideDock?.activate(`tools:${layout.activeGroup}`);
+  }, [layout, sideDock]);
   const [containers] = useState(() => Object.fromEntries(WORKBENCH_TOOL_TABS.map(tab => [tab, document.createElement('div')])));
   const panels = useRef(new Map()), panes = useRef(new Map()), slots = useRef(new Map()), tabs = useRef(new Map());
   const drag = useRef(null), latest = useRef(null), skipClick = useRef(false), menuRoot = useRef(null);
@@ -82,8 +87,16 @@ export default function WorkbenchToolDocks({ controller, hidden, navigationRef, 
     const current = drag.current;
     if (!current) return;
     drag.current = null; setPreview(null); release(current);
+    if (current.kind === 'tab') sideDock?.preview(null);
     if (cancelled || !current.moved) return;
     skipClick.current = current.kind === 'tab';
+    if (current.kind === 'tab' && sideDock && event.clientX >= innerWidth - 32) {
+      const frame = { ...current.frame, left: event.clientX - current.offsetX, top: event.clientY - current.offsetY };
+      place(current.tabs, null, frame, undefined, false);
+      const group = controller.getSnapshot().groups.find(group => dockTabs(group).includes(current.tabs[0]));
+      sideDock.attach(`tools:${group.id}`, frame, event.clientY);
+      return;
+    }
     const target = event && hit(event.clientX, event.clientY, current);
     if (target) place(current.tabs, target.id, undefined, target.before, false, target.side);
     else if (current.kind === 'tab') place(current.tabs, null, { ...current.frame,
@@ -94,6 +107,7 @@ export default function WorkbenchToolDocks({ controller, hidden, navigationRef, 
     if (!current || event.pointerId !== current.pointerId) return;
     if (!current.moved && Math.hypot(event.clientX - current.x, event.clientY - current.y) < 6) return;
     current.moved = true;
+    if (current.kind === 'tab') sideDock?.preview(event.clientX >= innerWidth - 32 ? { x: event.clientX, y: event.clientY } : null);
     const target = hit(event.clientX, event.clientY, current);
     setPreview({ kind: current.kind, tabs: current.tabs, target: target?.id, before: target?.before, side: target?.side,
       left: event.clientX - current.offsetX, top: event.clientY - current.offsetY, width: current.frame.width });
@@ -184,12 +198,13 @@ export default function WorkbenchToolDocks({ controller, hidden, navigationRef, 
       const title = groupName(visiblePanes.flatMap(pane => visibleToolTabs(layout, pane))), label = title === 'Layers' ? 'Workbench Layers' : title;
       // Only an explicitly opened/activated dock rises above screen utilities.
       return <WorkbenchToolPanel key={group.id} label={label} title={title}
+        dockId={`tools:${group.id}`}
         className="workbench-tool-dock"
         frame={group.frame} onFrameChange={frame => dispatch({ type: 'frame', group: group.id, frame })}
         panelRef={node => { if (node) panels.current.set(group.id, node); else panels.current.delete(group.id); }}
         active={layout.activeGroup === group.id} onActivate={() => dispatch({ type: 'activate', group: group.id })}
         zIndex={layout.activeGroup === group.id ? 86 : 84}
-        viewportBottom={view.toolViewportBottom} topBoundaryRef={navigationRef}
+        topBoundaryRef={navigationRef}
         onMoveStart={event => start(event, group, dockTabs(group), 'group')} onMove={move} onMoveEnd={finish}>
         {renderHeader => <div className="workbench-dock-stack">{visiblePanes.map((pane, index) => <Fragment key={pane.id}>
           {index > 0 && <WorkbenchDockDivider group={group.id} before={visiblePanes[index - 1]} after={pane}

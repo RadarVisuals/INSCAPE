@@ -1,3 +1,4 @@
+import { editorMenu, editorCommand } from './fixtures/editor-menu.mjs';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { mkdir } from 'node:fs/promises';
@@ -26,7 +27,7 @@ for (const theme of ['carbon', 'mist']) for (const [width, height, touch] of [[1
       await page.route('**/*', route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
       await page.goto(`${origin}/browser-tests/workbench-toolbar-fixture.html?theme=${theme}`);
       const rail = page.getByRole('group', { name: 'Workbench zoom', exact: true });
-      const canvas = rail.getByRole('button', { name: 'Canvas size', exact: true });
+      const canvas = editorMenu(page, 'Canvas');
       await canvas.waitFor(); await page.evaluate(() => document.fonts.ready); await settle(page);
       const box = await rail.boundingBox(); inside(box, width, height);
       const style = await rail.evaluate(node => { const s = getComputedStyle(node), icon = getComputedStyle(node.querySelector('svg.lucide > *')); return [s.borderRadius, s.boxShadow, s.colorScheme, icon.strokeWidth, icon.vectorEffect]; });
@@ -40,14 +41,16 @@ for (const theme of ['carbon', 'mist']) for (const [width, height, touch] of [[1
       const creation = await page.getByRole('toolbar', { name: 'Creation tools' }).boundingBox();
       if (width >= 1100) assert.equal(box.y + box.height, creation.y + creation.height, 'both rails share their lower edge');
       else assert.ok(box.y + box.height <= creation.y - 7, 'narrow camera stays above creation');
-      await canvas.click(); await page.keyboard.press('Tab');
-      const popup = rail.getByRole('group', { name: 'Canvas size controls' });
+      if (await page.getByRole('button', { name: 'Inscape sidebar' }).getAttribute('aria-expanded') === 'true') await page.getByRole('button', { name: 'Inscape sidebar' }).click();
+      await page.getByRole('button', { name: 'Reset Workbench view', exact: true }).click(); await settle(page);
+      await editorCommand(page, 'Canvas', 'Canvas size');
+      const popup = page.getByRole('group', { name: 'Canvas size controls' });
       assert.equal(await popup.getByRole('button', { name: 'Close canvas size' }).evaluate(node => node === document.activeElement), true);
       inside(await popup.boundingBox(), width, height);
       assert.equal(await popup.evaluate(node => getComputedStyle(node).borderRadius), '9px');
       const cameraBefore = await snapshot(page);
       if (height < 400) {
-        assert.ok(await popup.evaluate(node => node.scrollHeight > node.clientHeight), 'short viewport gets a native scroller');
+        assert.ok((await popup.boundingBox()).height <= height - 48, 'canvas controls stay within the space below the menu');
         await popup.hover(); await page.mouse.wheel(0, 400); await settle(page);
         assert.deepEqual(await snapshot(page), cameraBefore, 'scrolling the menu cannot pan the artwork');
       }

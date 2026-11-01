@@ -4,8 +4,8 @@
   "systemVersion": "1.0.0",
   "note": "Generated from production and design-system reference CSS. Reference roles are preview-only. Values remain CSS expressions, with selector and media scopes; this is not a DTCG interchange file. Runtime custom properties and local overrides are included and are not automatically public design tokens.",
   "counts": {
-    "files": 94,
-    "definitions": 553,
+    "files": 95,
+    "definitions": 555,
     "names": 318
   },
   "sources": [
@@ -1823,7 +1823,7 @@
     {
       "path": "src/keeper/keeper.css",
       "role": "Local",
-      "sha256": "3843695bf5d1c7790ec27a9105e8f223b5a97a5a08ae5d7dafaf62db9b102f56",
+      "sha256": "61f89072406d6ab209336e68049df51310e2bfd07fffaf0052d818f8b77cdb84",
       "definitions": [
         {
           "name": "--keeper-size",
@@ -1831,7 +1831,7 @@
           "scope": [
             ".keeper-dock-preview .keeper-rig"
           ],
-          "line": 86,
+          "line": 83,
           "references": []
         }
       ],
@@ -3127,9 +3127,23 @@
       "references": []
     },
     {
+      "path": "src/public/ownerSystemWorkflow/editorMenuBar.css",
+      "role": "Local",
+      "sha256": "60b0085a075847c16ddbd9f4169ab411935e079965355b8657ec80b691fa8ff0",
+      "definitions": [],
+      "references": [
+        "--font-interface",
+        "--tactile-edge",
+        "--tactile-face",
+        "--tactile-hover",
+        "--tactile-ink",
+        "--tactile-well"
+      ]
+    },
+    {
       "path": "src/public/ownerSystemWorkflow/libraryWorkspace.css",
       "role": "Library",
-      "sha256": "5dd487d84798bca9cc8da65342f67dafde46e4c621f7f0ad75760445da71969b",
+      "sha256": "bdbec4f4b2ba24c256177d9b300ecd406e032fe06ded7f14c9c022ec66e6795c",
       "definitions": [
         {
           "name": "--workflow-panel",
@@ -3437,7 +3451,7 @@
           "scope": [
             ".system-workflow__browser-workspace"
           ],
-          "line": 214,
+          "line": 211,
           "references": [
             "--workflow-panel"
           ]
@@ -3448,7 +3462,7 @@
           "scope": [
             ".system-workflow__browser-workspace"
           ],
-          "line": 214,
+          "line": 211,
           "references": [
             "--workflow-ink"
           ]
@@ -3459,7 +3473,7 @@
           "scope": [
             ".system-workflow__browser-workspace"
           ],
-          "line": 214,
+          "line": 211,
           "references": [
             "--workflow-muted"
           ]
@@ -3470,7 +3484,7 @@
           "scope": [
             ".system-workflow__browser-workspace"
           ],
-          "line": 214,
+          "line": 211,
           "references": [
             "--lattice-menu-faint"
           ]
@@ -3481,7 +3495,7 @@
           "scope": [
             ".system-workflow__browser-workspace"
           ],
-          "line": 214,
+          "line": 211,
           "references": [
             "--workflow-border"
           ]
@@ -3492,7 +3506,7 @@
           "scope": [
             ".system-workflow__browser-workspace"
           ],
-          "line": 214,
+          "line": 211,
           "references": [
             "--workflow-border-strong"
           ]
@@ -3503,7 +3517,7 @@
           "scope": [
             ".system-workflow__browser-workspace"
           ],
-          "line": 214,
+          "line": 211,
           "references": [
             "--workflow-ink"
           ]
@@ -3514,7 +3528,7 @@
           "scope": [
             ".system-workflow__browser-workspace"
           ],
-          "line": 214,
+          "line": 211,
           "references": [
             "--workflow-panel"
           ]
@@ -3525,7 +3539,7 @@
           "scope": [
             ".system-workflow__browser-workspace"
           ],
-          "line": 214,
+          "line": 211,
           "references": [
             "--workflow-panel",
             "--workflow-ink"
@@ -3537,7 +3551,7 @@
           "scope": [
             ".system-workflow__browser-workspace"
           ],
-          "line": 214,
+          "line": 211,
           "references": [
             "--workflow-hover"
           ]
@@ -3548,7 +3562,7 @@
           "scope": [
             ".system-workflow__browser-workspace"
           ],
-          "line": 214,
+          "line": 211,
           "references": [
             "--workflow-panel"
           ]
@@ -3559,7 +3573,7 @@
           "scope": [
             ".system-workflow__browser-workspace"
           ],
-          "line": 214,
+          "line": 211,
           "references": [
             "--workflow-panel"
           ]
@@ -3570,7 +3584,7 @@
           "scope": [
             ".system-workflow__browser-workspace"
           ],
-          "line": 214,
+          "line": 211,
           "references": [
             "--workflow-selection"
           ]
@@ -3581,7 +3595,7 @@
           "scope": [
             ".system-workflow__browser-workspace"
           ],
-          "line": 214,
+          "line": 211,
           "references": [
             "--workflow-selection",
             "--workflow-ink"
@@ -3652,13 +3666,11 @@
     {
       "path": "src/public/ownerSystemWorkflow/navigator.css",
       "role": "Local",
-      "sha256": "92fea8e2a131cc7719eb2dc5e2ce4550e2d1f5230ddde363c756c673e7554e0f",
+      "sha256": "ea8942ebad21faf8998e3eff77d7dd800a0d5c0e3801f416033ff10eb3e457a1",
       "definitions": [],
       "references": [
-        "--detached-window-titlebar-height",
         "--font-interface",
         "--font-technical",
-        "--navigator-height",
         "--tactile-edge",
         "--tactile-face",
         "--tactile-ink",
@@ -4095,7 +4107,7 @@
     {
       "path": "src/public/ownerSystemWorkflow/workbenchCanvasContent.css",
       "role": "Local",
-      "sha256": "15c4d18f5c42a8dd8d1b1bfe69609a5d7597ce7b1e8282069bf571413b986d93",
+      "sha256": "579b9b16171059c14fa3b195573826c184f3575290ec823c3f7daa5cefa942c9",
       "definitions": [],
       "references": [
         "--artwork-order",
@@ -4108,7 +4120,7 @@
     {
       "path": "src/public/ownerSystemWorkflow/workbenchCanvasControls.css",
       "role": "Local",
-      "sha256": "6b17aa1af01c7a872a28741d83815996800f1e5169588dc2f65373971f30b157",
+      "sha256": "34afd87c598c82323ccae2679ce607f8926fe076278f8b7c0fb4d2348aec24b1",
       "definitions": [],
       "references": [
         "--control-radius",
@@ -4383,13 +4395,24 @@
       ]
     },
     {
+      "path": "src/public/ownerSystemWorkflow/workbenchSideDock.css",
+      "role": "Local",
+      "sha256": "08e6c5fdd0801d13daf504c89f36749435bb0f946e6fc12ac909752efa6eae8d",
+      "definitions": [],
+      "references": [
+        "--tactile-edge",
+        "--tactile-face",
+        "--tactile-ink",
+        "--workflow-type-control"
+      ]
+    },
+    {
       "path": "src/public/ownerSystemWorkflow/workbenchSidebar.css",
       "role": "Local",
-      "sha256": "1d9b614a465e3e8348103b7e42afc2663a1ba441731ec3c988e155203d61d63b",
+      "sha256": "f78875f746de8a97a50b726f4d4fa643461cb305221f97bd5c8f9e2851881afd",
       "definitions": [],
       "references": [
         "--sidebar-bottom",
-        "--tactile-edge",
         "--workspace-navigation-inset",
         "--workspace-navigation-top"
       ]
@@ -4403,24 +4426,6 @@
         "--workflow-border-strong",
         "--workflow-ink",
         "--workflow-panel"
-      ]
-    },
-    {
-      "path": "src/public/ownerSystemWorkflow/workbenchSwitcher.css",
-      "role": "Local",
-      "sha256": "5d9d0abfef6932874cc0478b332d9072a7bed1fb2c7dd987a6636f8a0b2b8836",
-      "definitions": [],
-      "references": [
-        "--color-focus",
-        "--control-radius",
-        "--control-shell-radius",
-        "--font-interface",
-        "--tactile-edge",
-        "--tactile-face",
-        "--tactile-hover",
-        "--tactile-ink",
-        "--tactile-muted",
-        "--tactile-well"
       ]
     },
     {
@@ -4682,7 +4687,7 @@
     {
       "path": "src/public/ownerSystemWorkflow/workbenchToolbar.css",
       "role": "Creation",
-      "sha256": "51ce083e08c2b9261830ec6af7afe280d69980e9ee559f7d31d0aa910af753d7",
+      "sha256": "a42fbf7ab0844da00e76d67a10a85b3ead38cf69c3018fdb8fdabeba6477b571",
       "definitions": [
         {
           "name": "--toolbar-target",
@@ -4900,6 +4905,7 @@
         "--toolbar-radius",
         "--toolbar-row-gap",
         "--toolbar-target",
+        "--workbench-side-dock-width",
         "--workbench-toolbar-clearance",
         "--workbench-toolbar-offset",
         "--workflow-dock-height",
@@ -4910,7 +4916,7 @@
     {
       "path": "src/public/ownerSystemWorkflow/workbenchView.css",
       "role": "Host",
-      "sha256": "8ab9c7a3b45fa3adbbc2edb07eae600a6321a7d5019327d2d555885534bacb94",
+      "sha256": "ed38ee810cfe690282a795bf6105b31e18d6a3ba5888e45c77bfede5b0742ca2",
       "definitions": [
         {
           "name": "--workbench-toolbar-clearance",
@@ -4981,6 +4987,7 @@
         "--workbench-pan-scale",
         "--workbench-pan-x",
         "--workbench-pan-y",
+        "--workbench-side-dock-width",
         "--workbench-toolbar-clearance",
         "--workbench-toolbar-offset",
         "--workbench-toolbar-width",
@@ -6564,7 +6571,7 @@
     {
       "path": "src/public/workbenchOverview/compositionIndex.css",
       "role": "Local",
-      "sha256": "4a48d0689ad39ffc157acaed4202791df31695b470d42f6da71140d40a2cf948",
+      "sha256": "055b1fe563708ba1ba909ded8a7492f7696b1b47470f4e536d21afc282d958f5",
       "definitions": [
         {
           "name": "--index-width",
@@ -6582,6 +6589,16 @@
             ".composition-index"
           ],
           "line": 3,
+          "references": []
+        },
+        {
+          "name": "--index-gutter",
+          "value": "16px",
+          "scope": [
+            "@media (max-width: 800px)",
+            ".composition-index"
+          ],
+          "line": 57,
           "references": []
         }
       ],
@@ -6613,7 +6630,7 @@
     {
       "path": "src/public/workbenchOverview/workbenchOverview.css",
       "role": "Local",
-      "sha256": "ed6183e6ee680ecbd78b524a8a913f5ce8503a440c1478631a737aba5d37c3a2",
+      "sha256": "ae1cc514c0ac1fd31dc1b8ff8806d88fe79876c9cb7e8e53a6eb07d64fe3010b",
       "definitions": [
         {
           "name": "--overview-ease",
@@ -6705,12 +6722,23 @@
         },
         {
           "name": "--overview-glass",
+          "value": "color-mix(in srgb, var(--interface-panel) 50%, transparent)",
+          "scope": [
+            ".workbench-overview-navigation"
+          ],
+          "line": 29,
+          "references": [
+            "--interface-panel"
+          ]
+        },
+        {
+          "name": "--overview-glass",
           "value": "var(--interface-panel)",
           "scope": [
             "@media (prefers-reduced-transparency: reduce)",
-            ".workbench-overview"
+            ".workbench-overview, .workbench-overview-navigation"
           ],
-          "line": 73,
+          "line": 103,
           "references": [
             "--interface-panel"
           ]
@@ -6720,9 +6748,9 @@
           "value": "none",
           "scope": [
             "@media (prefers-reduced-transparency: reduce)",
-            ".workbench-overview"
+            ".workbench-overview, .workbench-overview-navigation"
           ],
-          "line": 73,
+          "line": 103,
           "references": []
         },
         {
@@ -6730,9 +6758,9 @@
           "value": "none",
           "scope": [
             "@media (prefers-reduced-transparency: reduce)",
-            ".workbench-overview"
+            ".workbench-overview, .workbench-overview-navigation"
           ],
-          "line": 73,
+          "line": 103,
           "references": []
         }
       ],
@@ -6761,7 +6789,8 @@
         "--tactile-hover",
         "--tactile-ink",
         "--tactile-muted",
-        "--tactile-well"
+        "--tactile-well",
+        "--workspace-navigation-inset"
       ]
     },
     {
@@ -7002,7 +7031,7 @@
     {
       "path": "src/reception/receptionDocument.css",
       "role": "Local",
-      "sha256": "d7ae2b7dc3a6021742453c6f27510c7f7cebdfb3de9b0467e0ce346030c8f699",
+      "sha256": "91a7a745330509718f53fe862142ac235b3566fc18348eb02f85c75133041049",
       "definitions": [],
       "references": [
         "--interface-environment",

@@ -9,13 +9,16 @@ import { resizeWorkbenchCanvas } from '../../systemWorkflow/workbenchAreaSession
 import { WORKBENCH_GROUP_STACK_SIZE } from '../../systemWorkflow/domain/workbenchGroups.js';
 import './workbenchCanvasControls.css';
 
-export default function WorkbenchCanvasControls({ hostRef, navigation, historyBlocked }) {
+export default function WorkbenchCanvasControls({ hostRef, navigation, historyBlocked, open: controlledOpen, onOpenChange, returnFocus }) {
   const view = useWorkbenchView(), areaContext = useWorkbenchArea(), camera = useWorkbenchCamera();
   const draft = useSyncExternalStore(view.store.subscribe, view.store.getSnapshot);
-  const [open, setOpen] = useState(false), [error, setError] = useState('');
+  const [localOpen, setLocalOpen] = useState(false), [error, setError] = useState('');
+  const open = controlledOpen ?? localOpen;
+  const setOpen = onOpenChange || setLocalOpen;
   const [projection, setProjection] = useState(camera.getCamera);
   const [viewport, setViewport] = useState(null);
-  const drag = useRef(null), trigger = useRef(null), latest = useRef(null);
+  const drag = useRef(null), trigger = useRef(null), panel = useRef(null), latest = useRef(null);
+  useLayoutEffect(() => { if (open && controlledOpen !== undefined) panel.current?.querySelector('button')?.focus(); }, [open, controlledOpen]);
   useEffect(() => view.store?.guardWorkbenchTransition?.(() => drag.current
     ? 'Finish or cancel resizing the canvas before switching Workbenches.' : null), [view.store]);
   latest.current = { view, areaContext, camera, historyBlocked, navigation };
@@ -31,20 +34,20 @@ export default function WorkbenchCanvasControls({ hostRef, navigation, historyBl
     }
     latest.current.areaContext.setPreview(null);
   }, []);
-  const close = () => { finish(true); setOpen(false); trigger.current?.focus({ preventScroll: true }); };
+  const close = () => { finish(true); setOpen(false); (returnFocus || trigger.current)?.focus({ preventScroll: true }); };
   useEffect(() => {
     const cancel = () => finish(true);
     const hidden = () => { if (document.hidden) cancel(); };
     const key = event => {
       if (event.key !== 'Escape' || !open) return;
       event.preventDefault(); event.stopImmediatePropagation();
-      if (drag.current) cancel(); else { setOpen(false); trigger.current?.focus({ preventScroll: true }); }
+      if (drag.current) cancel(); else { setOpen(false); (returnFocus || trigger.current)?.focus({ preventScroll: true }); }
     };
     addEventListener('keydown', key, true); addEventListener('blur', cancel);
     document.addEventListener('visibilitychange', hidden);
     return () => { removeEventListener('keydown', key, true); removeEventListener('blur', cancel);
       document.removeEventListener('visibilitychange', hidden); cancel(); };
-  }, [open, finish]);
+  }, [open, finish, setOpen, returnFocus]);
   useEffect(() => {
     const active = drag.current;
     if (active && (view.store.getGeneration() !== active.generation || historyBlocked)) finish(true);
@@ -124,9 +127,9 @@ export default function WorkbenchCanvasControls({ hostRef, navigation, historyBl
     onPointerUp={event => { if (drag.current?.id === event.pointerId) finish(); }}
     onPointerCancel={() => finish(true)} onLostPointerCapture={() => finish(true)} onKeyDown={event => resizeByKey(event, edge)} />;
   return <>
-    <button ref={trigger} type="button" className="workflow-tactile-control" aria-label="Canvas size" title="Canvas size"
-      aria-expanded={open} disabled={blocked} onClick={() => { if (open) close(); else { view.setInteractionTool('select'); setOpen(true); setError(''); } }}><Frame /></button>
-    {open && <div className="workbench-canvas-tools" data-system-workflow-overlay role="group" aria-label="Canvas size controls">
+    {controlledOpen === undefined && <button ref={trigger} type="button" className="workflow-tactile-control" aria-label="Canvas size" title="Canvas size"
+      aria-expanded={open} disabled={blocked} onClick={() => { if (open) close(); else { view.setInteractionTool('select'); setOpen(true); setError(''); } }}><Frame /></button>}
+    {open && <div ref={panel} className="workbench-canvas-tools" data-menu={controlledOpen !== undefined || undefined} data-system-workflow-overlay role="group" aria-label="Canvas size controls">
       <div className="workbench-canvas-tools__heading"><strong>Canvas</strong><output aria-label="Canvas dimensions">{area.width} × {area.height}</output>
         <button className="workflow-tactile-control" type="button" aria-label="Close canvas size" onClick={close}><X /></button></div>
       <CanvasSizeFields area={area} revision={view.store.getGeneration()} disabled={blocked} onApply={commit} />

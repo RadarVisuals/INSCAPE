@@ -1,3 +1,4 @@
+import { editorCommand } from './fixtures/editor-menu.mjs';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { chromium } from 'playwright-core';
@@ -35,7 +36,7 @@ test('layer eye is temporary editor state and preserves Preview, selection, and 
     assert.equal(await bay.getByRole('button', { name: 'Show MOUNTAIN SIGNAL II in editor', exact: true }).getAttribute('aria-pressed'), 'true');
     assert.equal(await page.evaluate(() => window.__eyeWrites), 0);
     await page.screenshot({ path: '.browser-test-runtime/layer-eye-wide.png' });
-    await page.getByRole('button', { name: 'Preview', exact: true }).click();
+    await editorCommand(page, 'Canvas', 'Preview');
     await page.locator(`.lattice-production-placement[data-placement-id="${selectedId}"]`).waitFor();
     assert.equal(await page.evaluate(() => window.__eyeWrites), 0, 'temporary layer visibility does not write the draft, including when entering Preview');
     // Reload resets only the temporary eye state; the fixture draft still has both placements.

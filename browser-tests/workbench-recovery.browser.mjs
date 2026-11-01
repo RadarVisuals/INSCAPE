@@ -1,3 +1,4 @@
+import { editorCommand } from './fixtures/editor-menu.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { chromium } from 'playwright-core';
@@ -115,7 +116,7 @@ test('reload restores local arrangement; failed Text survives editor disposal an
     await page.locator('main.system-workflow').first().focus();
     await page.keyboard.press('Shift+F10');
     await page.getByRole('menuitem', { name: 'SHOW SIDEBAR', exact: true }).click();
-    await page.getByRole('button', { name: 'Preview', exact: true }).click();
+    await editorCommand(page, 'Canvas', 'Preview');
     assert.equal(await page.locator('.visitor-grid-world').count(), 0);
     await hideWorkspaceSidebar(page);
     await page.getByRole('button', { name: 'Unlock Display Module composition', exact: true }).focus(); await page.keyboard.press('Enter');

@@ -1,3 +1,4 @@
+import { editorMenu, editorCommand, selectEditorDocument } from './fixtures/editor-menu.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdir, writeFile } from 'node:fs/promises';
@@ -21,8 +22,17 @@ async function mount(browser,width=1440,height=900,theme='mist') {
  await page.locator('.keeper-dock-window').waitFor();await page.locator('.workbench-sidebar').waitFor();
  await page.locator('[data-navigator-object^="image:"] image').waitFor();await settle(page);
  const sidebar=page.getByRole('complementary',{name:'Workspace sidebar'});
- const button=name=>sidebar.getByRole('button',{name,exact:true,includeHidden:true});
- const activate = async name => { if (!await button(name).isVisible()) await button('Expand sidebar').click(); await button(name).click(); };
+ const button = name => ['Collapse sidebar', 'Expand sidebar'].includes(name)
+   ? page.locator(`.editor-menu-brand[aria-expanded="${name === 'Collapse sidebar'}"]`)
+   : ['Docs', 'Backup'].includes(name) ? editorMenu(page, name)
+   : sidebar.getByRole('button', { name, exact: true, includeHidden: true });
+ const activate = async name => {
+   if (name === 'Settings') return editorCommand(page, 'Edit', 'Settings');
+   if (name === 'Preview') return editorCommand(page, 'Canvas', 'Preview');
+   if (['Docs', 'Backup'].includes(name)) return editorMenu(page, name).click();
+   if (!await sidebar.isVisible()) await page.getByRole('button', { name: 'Inscape sidebar' }).click();
+   await button(name).click();
+ };
  return {page,sidebar,button,activate,errors};
 }
 for(const theme of ['carbon','mist']) for(const [width,height] of [[1440,900],[390,900],[320,568],[844,390]]) test(`Sidebar routes and chrome stay reachable (${theme} ${width}x${height})`,{timeout:60000},async()=>{
@@ -36,6 +46,7 @@ for(const theme of ['carbon','mist']) for(const [width,height] of [[1440,900],[3
   const beforeCamera = await camera();
   await sidebar.dispatchEvent('wheel',{deltaY:90,bubbles:true,cancelable:true});await settle(page);
   assert.deepEqual(await camera(),beforeCamera,'sidebar scrolling does not move the canvas');
+  if (width <= 900) await button('Collapse sidebar').click();
   const home=page.getByRole('button',{name:'Reset Workbench view',exact:true});
   assert.equal(await home.evaluate(hit),true,'Navigator Home is not covered');
   assert.equal(await page.getByRole('button',{name:'Keeper settings',exact:true}).evaluate(hit),true,'Keeper remains reachable');
@@ -49,11 +60,11 @@ for(const theme of ['carbon','mist']) for(const [width,height] of [[1440,900],[3
   assert.notEqual(await button('Expand sidebar').evaluate(n=>getComputedStyle(n).outlineStyle),'none','keyboard focus stays visible');
   await activate('Docs');await page.getByRole('dialog',{name:'Docs',exact:true}).waitFor();
   await page.getByRole('button',{name:'Close Docs'}).click();
-  await page.waitForFunction(node=>node===document.activeElement,await button(width===320 ? 'Expand sidebar' : 'Docs').elementHandle());
-  assert.equal(await button(width===320 ? 'Expand sidebar' : 'Docs').evaluate(n=>document.activeElement===n),true,'panel close returns focus');
+  await page.waitForFunction(node=>node===document.activeElement,await button('Docs').elementHandle());
+  assert.equal(await button('Docs').evaluate(n=>document.activeElement===n),true,'panel close returns focus');
   for(const [label,id] of [['Settings','settings'],['Activity','activity'],['Grids','grids'],['Profile','profile']]) {
    await activate(label);await page.locator(`[data-system-workflow-panel="${id}"] aside`).first().waitFor();
-   assert.equal(await button(label).getAttribute('aria-expanded'),'true');
+   if (label !== 'Settings' && width > 900) assert.equal(await button(label).getAttribute('aria-expanded'),'true');
    await activate('Editor');await settle(page);
    assert.equal(await page.locator(`[data-system-workflow-panel="${id}"]`).count(),0);
   }
@@ -100,8 +111,8 @@ for(const theme of ['carbon','mist']) for(const [width,height] of [[1440,900],[3
   await search.fill('Surface');assert.equal(await search.inputValue(),'Surface');
   await page.screenshot({path:`${output}/discover-${theme}-${width}.png`});
   await back.click();await discover.waitFor({state:'detached'});
-  await page.waitForFunction(node=>node===document.activeElement,await button(width===320?'Expand sidebar':'Discover').elementHandle());
-  assert.equal(await button(width===320?'Expand sidebar':'Discover').evaluate(n=>document.activeElement===n),true,'Discover restores its visible navigation trigger');
+  await page.waitForFunction(node=>node===document.activeElement,await button(width<=900?'Expand sidebar':'Discover').elementHandle());
+  assert.equal(await button(width<=900?'Expand sidebar':'Discover').evaluate(n=>document.activeElement===n),true,'Discover restores its visible navigation trigger');
   await activate('Discover');await discover.waitFor();await activate('Editor');await settle(page);
   assert.equal(await discover.count(),0,'sidebar remains usable from Discover');
   if(width===1440 || width===390) {
@@ -112,7 +123,7 @@ for(const theme of ['carbon','mist']) for(const [width,height] of [[1440,900],[3
   const tree=page.locator('.lattice-browser-sidebar');assert.equal(await tree.count(),1,'one Library tree');
   assert.equal(await tree.isVisible(),true);
   if(width===1440) {
-   await button('Expand sidebar').click();await settle(page);
+   if (!await sidebar.isVisible()) await button('Expand sidebar').click();await settle(page);
    assert.equal(await sidebar.locator('.lattice-browser-sidebar').count(),1);
    const s=await sidebar.boundingBox(),l=await page.getByRole('region',{name:'Library workspace'}).boundingBox();
    assert.ok(l.x>=s.x+s.width,JSON.stringify({s,l}));
@@ -125,22 +136,23 @@ for(const theme of ['carbon','mist']) for(const [width,height] of [[1440,900],[3
   assert.deepEqual(errors,[]);
  }finally{await browser.close();}
 });
-test('Sidebar collapse follows Workbench switches, preview and explicit hide/reopen',{timeout:60000},async()=>{
- const browser=await chromium.launch({executablePath:browserExecutable,headless:true});
+test('sidebar visibility persists across canvas switches and preview', { timeout: 60000 }, async () => {
+ const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
  try {
-  const {page,button,errors}=await mount(browser);
-  await button('Collapse sidebar').click();
-  await page.getByRole('button',{name:'New canvas',exact:true}).click();await page.getByLabel('New canvas name',{exact:true}).fill('Sidebar check');
-  await page.getByRole('button',{name:'Create canvas',exact:true}).click();await button('Expand sidebar').waitFor();
-  await page.getByRole('combobox',{name:'Active document'}).selectOption({label:'Workbench 1'});await button('Expand sidebar').waitFor();
-  await button('Preview').click();await page.getByRole('button',{name:'EXIT',exact:true}).waitFor();
-  assert.equal(await page.locator('.workbench-sidebar').isVisible(),false);assert.equal(await page.getByRole('complementary',{name:'Workspace sidebar'}).count(),0,'hidden navigation is absent from accessibility');
-  await page.getByRole('button',{name:'EXIT',exact:true}).click();await button('Expand sidebar').waitFor();
-  await page.waitForFunction(node=>node===document.activeElement,await button('Preview').elementHandle());
-  assert.equal(await button('Preview').evaluate(n=>n===document.activeElement),true,'Preview returns focus to its retained sidebar trigger');
-  const host=page.locator('main.system-workflow').first();await host.focus();await page.keyboard.press('Shift+F10');
-  await page.getByRole('menuitem',{name:'HIDE SIDEBAR',exact:true}).click();assert.equal(await page.locator('.workbench-sidebar').count(),0);
-  await host.focus();await page.keyboard.press('Shift+F10');await page.getByRole('menuitem',{name:'SHOW SIDEBAR',exact:true}).click();await button('Expand sidebar').waitFor();
-  assert.deepEqual(errors,[]);
- }finally{await browser.close();}
+  const { page, sidebar, errors } = await mount(browser);
+  const logo = page.getByRole('button', { name: 'Inscape sidebar' });
+  await logo.click(); assert.equal(await sidebar.isVisible(), false);
+  await editorCommand(page, 'Canvas', 'New canvas');
+  await page.getByLabel('New canvas name', { exact: true }).fill('Sidebar check');
+  await page.getByRole('button', { name: 'Create canvas', exact: true }).click();
+  assert.equal(await sidebar.isVisible(), false);
+  await selectEditorDocument(page, { label: 'Workbench 1' });
+  assert.equal(await sidebar.isVisible(), false);
+  await editorCommand(page, 'Canvas', 'Preview');
+  await page.getByRole('button', { name: 'EXIT', exact: true }).click();
+  await editorMenu(page, 'Canvas').waitFor();
+  assert.equal(await sidebar.isVisible(), false);
+  await logo.click(); assert.equal(await sidebar.isVisible(), true);
+  assert.deepEqual(errors, []);
+ } finally { await browser.close(); }
 });

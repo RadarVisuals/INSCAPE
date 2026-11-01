@@ -16,8 +16,9 @@ export function workbenchDestinationCamera(bounds, viewport, minimumScale = .25,
 // One centred Workbench rectangle above the measured bottom controls. Tool
 // windows stay where the user put them and never push the camera sideways.
 export function workbenchNavigationViewport(viewport, controlsTop) {
-  return { left: 0, top: 0, width: viewport.width,
-    height: Number.isFinite(controlsTop) ? Math.max(0, Math.min(viewport.height, controlsTop - 8)) : viewport.height };
+  const top = viewport.top || 0;
+  const bottom = Number.isFinite(controlsTop) ? Math.min(viewport.height, controlsTop - 8) : viewport.height;
+  return { left: 0, top, width: viewport.width, height: Math.max(0, bottom - top) };
 }
 
 export function interpolateWorkbenchCamera(start, end, progress) {

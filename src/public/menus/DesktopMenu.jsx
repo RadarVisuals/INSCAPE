@@ -6,7 +6,7 @@ const ROW_HEIGHT = 43;
 const SYSTEM_WORKFLOW_PANEL_WIDTH = 196;
 const SYSTEM_WORKFLOW_ROW_HEIGHT = 38;
 
-export default function DesktopMenu({ anchor, commands, label, onCommand, onClose, returnFocus, className = '', panelClassName = '', getSubmenuCommands, onPreviewCommand, systemWorkflowOverlay = false }) {
+export default function DesktopMenu({ anchor, commands, label, onCommand, onClose, returnFocus, className = '', panelClassName = '', getSubmenuCommands, onPreviewCommand, systemWorkflowOverlay = false, menuBarRef, onNavigateMenu, focusLast = false }) {
   const ref = useRef(null);
   const hoverTimerRef = useRef(0);
   const [position, setPosition] = useState(anchor);
@@ -15,20 +15,25 @@ export default function DesktopMenu({ anchor, commands, label, onCommand, onClos
     window.clearTimeout(hoverTimerRef.current);
     const rect = ref.current?.getBoundingClientRect();
     if (rect) setPosition(clampMenuPosition(anchor, rect, { width: window.innerWidth, height: window.innerHeight }));
-    (ref.current?.querySelector('button:not(:disabled)') || ref.current)?.focus();
-  }, [anchor]);
+    const buttons = ref.current?.querySelectorAll('button:not(:disabled)');
+    (buttons?.[focusLast ? buttons.length - 1 : 0] || ref.current)?.focus();
+  }, [anchor, focusLast]);
   useEffect(() => {
     const close = (event) => { if (event.key === 'Escape') { event.preventDefault(); onPreviewCommand?.(null); onClose(); returnFocus?.focus?.(); } };
-    const outside = (event) => { if (!ref.current?.contains(event.target)) onClose(); };
+    const outside = (event) => { if (!ref.current?.contains(event.target) && !menuBarRef?.current?.contains(event.target)) onClose(); };
     window.addEventListener('keydown', close); window.addEventListener('pointerdown', outside, true);
     return () => { window.removeEventListener('keydown', close); window.removeEventListener('pointerdown', outside, true); };
-  }, [onClose, onPreviewCommand, returnFocus]);
+  }, [onClose, onPreviewCommand, returnFocus, menuBarRef]);
   // Refreshing listener callbacks must not discard an in-flight user hover.
   // The timer belongs to this menu instance, its anchor and pointer lifetime.
   useEffect(() => () => window.clearTimeout(hoverTimerRef.current), []);
   const onKeyDown = (event) => {
     const button = event.target.closest('button');
     const panel = button?.closest('[role="menu"]');
+    if (event.key === 'Tab') { if (menuBarRef) returnFocus?.focus?.(); onClose(); return; }
+    if (onNavigateMenu && panel === ref.current && ['ArrowLeft', 'ArrowRight'].includes(event.key) && button?.getAttribute('aria-haspopup') !== 'menu') {
+      event.preventDefault(); onNavigateMenu(event.key === 'ArrowRight' ? 1 : -1); return;
+    }
     if (event.key === 'ArrowRight' && button?.getAttribute('aria-haspopup') === 'menu') {
       event.preventDefault(); button.click();
       requestAnimationFrame(() => panel?.querySelector(':scope > [role="menu"] > button:not(:disabled)')?.focus());
@@ -44,8 +49,9 @@ export default function DesktopMenu({ anchor, commands, label, onCommand, onClos
       setOpenPath(current => current.slice(0, Number(panel.dataset.depth) - 1));
       return;
     }
-    if (!['ArrowDown', 'ArrowUp'].includes(event.key)) return;
+    if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) return;
     event.preventDefault(); const buttons = [...(panel || ref.current).querySelectorAll(':scope > button:not(:disabled)')];
+    if (event.key === 'Home' || event.key === 'End') { buttons[event.key === 'Home' ? 0 : buttons.length - 1]?.focus(); return; }
     const offset = event.key === 'ArrowDown' ? 1 : -1; const index = buttons.indexOf(document.activeElement);
     buttons[(index + offset + buttons.length) % buttons.length]?.focus();
   };
@@ -81,7 +87,7 @@ export default function DesktopMenu({ anchor, commands, label, onCommand, onClos
         const selected = command.selected || legacySelected;
         const mixed = command.mixed === true;
         const displayLabel = (legacySelected ? command.label.slice(2) : command.label).replace(/\s*>$/, '');
-        return <button key={command.id} type="button" role={command.checkable ? 'menuitemcheckbox' : 'menuitem'} disabled={command.disabled} data-submenu={hasSubmenu || undefined} data-selected={selected || undefined} data-mixed={mixed || undefined} aria-checked={command.checkable ? mixed ? 'mixed' : selected : undefined} aria-haspopup={hasSubmenu ? 'menu' : undefined} aria-expanded={hasSubmenu ? openId === command.id : undefined}
+        return <button key={command.id} data-command-id={command.id} type="button" role={command.checkable ? 'menuitemcheckbox' : 'menuitem'} disabled={command.disabled} data-submenu={hasSubmenu || undefined} data-selected={selected || undefined} data-mixed={mixed || undefined} aria-checked={command.checkable ? mixed ? 'mixed' : selected : undefined} aria-haspopup={hasSubmenu ? 'menu' : undefined} aria-expanded={hasSubmenu ? openId === command.id : undefined}
           onPointerEnter={() => openSubmenu(depth, command)} onFocus={() => { if (depth > 0) openSubmenu(depth, command, true); }}
           onClick={() => { if (hasSubmenu) { openSubmenu(depth, command, true); return; } onPreviewCommand?.(null); onCommand(command.id); }}><i aria-hidden="true" /><span>{displayLabel}</span><b aria-hidden="true">{hasSubmenu ? '›' : mixed ? '−' : selected ? '·' : ''}</b></button>;
       })}
@@ -95,7 +101,7 @@ export default function DesktopMenu({ anchor, commands, label, onCommand, onClos
   return <div ref={ref} className={`desktop-menu${getSubmenuCommands ? ' desktop-menu--cascade' : ''}${className ? ` ${className}` : ''}`}
     data-lattice-menu-surface
     data-system-workflow-overlay={systemWorkflowOverlay || undefined}
-    role="menu" tabIndex={-1} aria-label={label} style={{ left: position.x, top: position.y, ...(systemWorkflowOverlay ? { width: Math.min(SYSTEM_WORKFLOW_PANEL_WIDTH, (window.innerWidth - 20) / 2) } : {}) }} onKeyDown={onKeyDown}
+    role="menu" tabIndex={-1} aria-label={label} style={{ left: position.x, top: position.y, ...(systemWorkflowOverlay ? { width: menuBarRef ? Math.min(PANEL_WIDTH, window.innerWidth - 16) : Math.min(SYSTEM_WORKFLOW_PANEL_WIDTH, (window.innerWidth - 20) / 2) } : {}) }} onKeyDown={onKeyDown}
     onPointerLeave={() => {
       window.clearTimeout(hoverTimerRef.current);
       const focused = document.activeElement;

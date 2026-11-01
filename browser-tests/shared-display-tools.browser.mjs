@@ -61,7 +61,7 @@ test('one shared Layers and Metadata window follow explicit Display targets with
         reviewCategories: [], reviewActivity: [], reviewProfile: { name: 'Display text review' } }));
     });
     await page.goto(`${origin}/__display_text__`); await mount();
-    await page.getByRole('button', { name: 'Collapse sidebar', exact: true }).click();
+    await page.locator('.editor-menu-brand[aria-expanded="true"]').click();
     const primary = page.locator('[data-display-instance="display:primary"]').first();
     const secondary = page.locator('.system-workflow__display-instance').nth(1);
     const clickControl = async (container, name) => {

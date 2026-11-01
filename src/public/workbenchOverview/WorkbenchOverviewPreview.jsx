@@ -37,11 +37,14 @@ function TextPreview({ item, scale, area }) {
 export default function WorkbenchOverviewPreview({ model, name, region = model.area, highlights = [], presenting = false, thumbnail = false, crop = null, viewport = null, camera = null }) {
   const host = useRef(null), [measured, setSize] = useState({ width: 0, height: 0 });
   useLayoutEffect(() => {
+    // An animated preview supplies its paint viewport. Measuring its changing
+    // outer rectangle would re-render every artwork on each animation frame.
+    if (viewport) return;
     const measure = () => { const { width, height } = host.current.getBoundingClientRect(); setSize({ width, height }); };
     const observer = new ResizeObserver(measure);
     observer.observe(host.current); addEventListener('resize', measure);
     return () => { observer.disconnect(); removeEventListener('resize', measure); };
-  }, []);
+  }, [viewport]);
   const size = viewport || measured;
   const { area, items } = model;
   const covered = thumbnail && size.width > 0 && size.height > 0

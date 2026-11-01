@@ -1,3 +1,4 @@
+import { editorCommand, editorOverview } from './fixtures/editor-menu.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdir } from 'node:fs/promises';
@@ -25,7 +26,7 @@ test('one Settings choice governs owner controls, portal menus, reception, overv
   const errors = []; page.on('pageerror', e => errors.push(e.message));
   await mkdir(output, { recursive: true });
   await open(page, '/browser-tests/workbench-storage-fixture.html?seed=1&shell=1');
-  await button(page, 'Settings').click();
+  await editorCommand(page, 'Edit', 'Settings');
   for (const mode of ['light', 'dark']) {
    const content = await page.evaluate(() => JSON.stringify(window.savedDraft()));
    const expected = colors[mode];
@@ -40,15 +41,15 @@ test('one Settings choice governs owner controls, portal menus, reception, overv
    await capture(page, `settings-${mode}`);
    assert.equal(await page.evaluate(() => JSON.stringify(window.savedDraft())), content);
    await button(page, 'Close Settings').click(); await page.locator('.system-workflow__settings').waitFor({ state: 'detached' });
-   await button(page, 'Overview').click(); await page.locator('.composition-index').waitFor();
+   await editorOverview(page); await page.locator('.composition-index').waitFor();
    assert.equal((await palette(page, '.workbench-overview')).background, expected.environment);
    assert.equal((await palette(page, '.composition-explorer-viewport')).background, expected.panel);
    await capture(page, `overview-${mode}`);
-   await button(page, 'Edit canvas').click(); await button(page, 'Settings').click();
+   await button(page, 'Edit canvas').click(); await editorCommand(page, 'Edit', 'Settings');
   }
   await button(page, 'LIGHT').click();
   await open(page, '/browser-tests/reception-editor-fixture.html?sample&session=theme-review');
-  await button(page, 'Settings').click(); await page.getByRole('tab', {name: 'Grid',exact:true}).click();
+  await editorCommand(page, 'Edit', 'Settings'); await page.getByRole('tab', {name: 'Grid',exact:true}).click();
   assert.equal(await button(page, 'LIGHT').getAttribute('aria-pressed'), 'true');
   assert.equal((await palette(page, '.reception-window')).background, colors.light.panel);
   const reception = await page.evaluate(() => JSON.stringify(receptionFixture.root.getBackupSnapshot()));
@@ -95,7 +96,7 @@ test('Workbench outside background and reveal shading repaint their actual pixel
   await size.getByRole('button', { name: 'Apply', exact: true }).click();
   await button(page, 'Show outside canvas').click();
   await button(page, 'Close canvas size').click();
-  await button(page, 'Settings').click();
+  await editorCommand(page, 'Edit', 'Settings');
   const saved = await page.evaluate(() => JSON.stringify(window.savedDraft()));
   const pixels = () => page.evaluate(() => ['[data-workbench-area]', '[data-workbench-outside-shade]'].map(selector => {
    const canvas = document.querySelector(selector);

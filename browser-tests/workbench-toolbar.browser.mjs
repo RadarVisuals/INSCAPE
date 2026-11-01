@@ -164,13 +164,13 @@ for (const theme of ['carbon', 'mist']) for (const width of [1440, 390]) {
       // The accepted migrations now include the sidebar, switcher, Navigator and shared tools.
       // Keep an explicit surface boundary, including the otherwise classless dock material root.
       const migrated = await page.locator('main.system-workflow [data-workflow-finish="flat"]').evaluateAll(nodes => nodes.map(node => {
-        for (const name of ['workbench-toolbar', 'workbench-view-controls', 'workbench-navigator', 'workbench-layers', 'workbench-switcher', 'workspace-navigation']) {
+        for (const name of ['workbench-toolbar', 'workbench-view-controls', 'workbench-navigator', 'workbench-layers', 'editor-menu-shell', 'workspace-navigation']) {
           if (node.classList.contains(name)) return name;
         }
         if (!node.className && node.matches('[data-workbench-selection-tools][data-system-workflow-overlay][data-lattice-menu-surface]') && (!node.children.length || node.querySelector(':scope > .workbench-tool-dock'))) return 'shared-tool-dock';
         return 'unrecognized:' + node.outerHTML.slice(0, 180);
       }));
-      assert.deepEqual(migrated.sort(), ['shared-tool-dock', 'workbench-navigator', 'workbench-switcher', 'workbench-toolbar', 'workbench-view-controls', 'workspace-navigation', ...(width > 520 ? ['workbench-layers'] : [])].sort(), 'only the accepted mounted surfaces opt into flat styling');
+      assert.deepEqual(migrated.sort(), ['shared-tool-dock', 'workbench-navigator', 'editor-menu-shell', 'workbench-toolbar', 'workbench-view-controls', 'workspace-navigation', ...(width > 520 ? ['workbench-layers'] : [])].sort(), 'only the accepted mounted surfaces opt into flat styling');
       const select = page.getByRole('button', { name: 'Select tool', exact: true });
       await select.focus(); await page.keyboard.press('ArrowRight');
       assert.equal(await page.getByRole('button', { name: 'Hand tool', exact: true }).evaluate(node => node === document.activeElement), true);

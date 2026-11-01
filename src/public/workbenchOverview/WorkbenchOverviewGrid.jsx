@@ -6,7 +6,7 @@ import './workbenchOverviewGrid.css';
 
 // Bounded visual cycles, one accessible collection. Nearby compositions warm
 // every visual copy so a wrap never swaps a painted preview for an empty card.
-export default function WorkbenchOverviewGrid({ items, wrap, onOpen, onEdit, onManage, selectedId, hostRef: root, cardSize, arranging, onFinishArrange, onReorder }) {
+export default function WorkbenchOverviewGrid({ items, wrap, onOpen, onEdit, onManage, selectedId, hostRef: root, cardSize, arranging, onFinishArrange, onReorder, memory, movingCanvasId }) {
   const cycle = useRef(null), height = useRef(0), keyboard = useRef(false);
   const [revealed, setRevealed] = useState(null);
   const [repeatRadius, setRepeatRadius] = useState(1);
@@ -68,21 +68,23 @@ export default function WorkbenchOverviewGrid({ items, wrap, onOpen, onEdit, onM
       height.current = cycle.current.getBoundingClientRect().height;
       const radius = Math.min(8, Math.max(1, Math.ceil(root.current.clientHeight / height.current)));
       setRepeatRadius(radius);
-      root.current.scrollTop = looping ? height.current * radius : 0;
+      root.current.scrollTop = (looping ? height.current * radius : 0) + (memory?.scroll?.grid || 0);
     };
     measure();
     const observer = new ResizeObserver(measure);
     observer.observe(cycle.current);
     return () => observer.disconnect();
-  }, [looping, items.length, root, repeatRadius]);
+  }, [looping, items.length, root, repeatRadius, memory]);
   const normalize = () => {
     const host = root.current, size = height.current;
+    if (memory) memory.scroll = { ...memory.scroll, grid: host.scrollTop - (looping ? size * repeatRadius : 0) };
     if (!looping || !size || keyboard.current) return;
     // Keep the viewport centre in the middle cycle. Browser focus scrolling can
     // then centre its first or last card without moving the target to a copy.
     const start = size * repeatRadius - host.clientHeight / 2;
     if (host.scrollTop < start || host.scrollTop >= start + size) {
       host.scrollTop = start + ((host.scrollTop - start) % size + size) % size;
+      if (memory) memory.scroll.grid = host.scrollTop - size * repeatRadius;
     }
   };
   return <section className="workbench-overview-gallery" aria-label="Workbench gallery" ref={root}
@@ -101,7 +103,7 @@ export default function WorkbenchOverviewGrid({ items, wrap, onOpen, onEdit, onM
     onWheel={() => { keyboard.current = false; setRevealed(null); }} onTouchStart={() => { keyboard.current = false; }} onTouchMove={() => setRevealed(null)}>
     {(looping ? Array.from({ length: repeatRadius * 2 + 1 }, (_, index) => index - repeatRadius) : [0]).map(copy => <div key={copy} ref={copy === 0 ? cycle : undefined}
       className="workbench-overview-cycle" data-gallery-cycle={copy} aria-hidden={copy !== 0 || undefined}>
-      {items.map((item, index) => <GridCard key={item.id} item={item} visible={visibleIds.has(item.id)} duplicate={copy !== 0} selected={selectedId === item.id}
+      {items.map((item, index) => <GridCard key={item.id} item={item} visible={visibleIds.has(item.id)} duplicate={copy !== 0} selected={selectedId === item.id} moving={movingCanvasId === item.id}
         arranging={arranging} index={index} count={items.length} onMove={move} dropTarget={drag?.target === item.id && drag.id !== item.id}
         onDrag={(event, id) => {
           if (event.button !== 0 || !event.isPrimary || dragging.current) return;

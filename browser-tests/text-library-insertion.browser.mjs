@@ -6,7 +6,7 @@ import { setWorkbenchZoom } from './fixtures/workbench-zoom.mjs';
 const origin = process.env.INSCAPE_TEXT_ROOT || 'http://127.0.0.1:5173';
 const settle = page => page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
 async function exposeText(page) {
-  const collapse = page.getByRole('button', { name: 'Collapse sidebar', exact: true });
+  const collapse = page.locator('.editor-menu-brand[aria-expanded="true"]');
   if (await collapse.count()) await collapse.click();
   const info = page.getByRole('button', { name: 'Close Info', exact: true });
   if (await info.count()) { await info.focus(); await info.press('Enter'); }

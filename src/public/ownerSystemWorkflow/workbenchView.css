@@ -4,7 +4,7 @@
      Leave usable height for floating tools on short screens. */
   .system-workflow[data-creation-toolbar] { --workbench-toolbar-offset: 0px; }
 }
-.workbench-view-controls { position: fixed; z-index: 82; right: 12px; bottom: calc(var(--workflow-dock-height, 40px) + 8px); display: flex; gap: 2px; flex-wrap: wrap; max-width: calc(100% - 24px); padding: calc(var(--control-inset) - 1px); border: 1px solid var(--tactile-edge); border-radius: var(--control-shell-radius); background: var(--tactile-face); color: var(--tactile-ink); font: var(--workflow-type-control);
+.workbench-view-controls { position: fixed; z-index: 82; right: calc(12px + var(--workbench-side-dock-width, 0px)); bottom: calc(var(--workflow-dock-height, 40px) + 8px); display: flex; gap: 2px; flex-wrap: wrap; max-width: calc(100% - var(--workbench-side-dock-width, 0px) - 24px); padding: calc(var(--control-inset) - 1px); border: 1px solid var(--tactile-edge); border-radius: var(--control-shell-radius); background: var(--tactile-face); color: var(--tactile-ink); font: var(--workflow-type-control);
   --view-control-target: var(--control-target-toolbar);
   box-sizing: border-box; }
 .system-workflow[data-creation-toolbar] > .workbench-view-controls { bottom: calc(var(--workflow-dock-height, 42px) + var(--workbench-toolbar-offset) + var(--workbench-toolbar-clearance) + 16px); }
@@ -18,9 +18,9 @@
 }
 @media (min-width: 1100px) {
   .system-workflow[data-creation-toolbar] > .workbench-view-controls {
-    left: calc(50% + var(--workbench-toolbar-width, 430px) / 2 + 10px); right: auto;
+    left: calc((100% - var(--workbench-side-dock-width, 0px) + var(--workbench-toolbar-width, 430px)) / 2 + 10px); right: auto;
     bottom: calc(var(--workflow-dock-height, 42px) + var(--workbench-toolbar-offset) + 8px);
-    max-width: calc((100dvw - var(--workbench-toolbar-width, 430px)) / 2 - 24px);
+    max-width: calc((100dvw - var(--workbench-side-dock-width, 0px) - var(--workbench-toolbar-width, 430px)) / 2 - 24px);
   }
 }
 .workbench-marquee, .workbench-selection { position: fixed; z-index: 79; pointer-events: none; box-sizing: border-box; border: 1px solid var(--workflow-ink); }

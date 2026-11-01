@@ -28,7 +28,7 @@ async function open(browser, width, height, theme, suffix = '') {
   await sidebar.waitFor();
   const activate = async name => {
     const button = sidebar.getByRole('button', { name, exact: true, includeHidden: true });
-    if (!await button.isVisible()) await sidebar.getByRole('button', { name: 'Expand sidebar' }).click();
+    if (!await button.isVisible()) await sidebar.locator('.editor-menu-brand[aria-expanded="false"]').click();
     await button.click();
   };
   return { page, activate, errors };

@@ -18,7 +18,7 @@ for (const visitor of [false, true]) for (const width of [1440, 390]) {
       await mountGridMotionFixture(page, { origin, visitor, count: 2, textModes: true, displayWidth: 320 });
       await page.locator('[data-workbench-view-id="image:motion-0"] [data-media-state="ready"]').waitFor();
       await page.evaluate(() => document.fonts.ready);
-      const sidebar = page.getByRole('button', { name: 'Collapse sidebar', exact: true });
+      const sidebar = page.locator('.editor-menu-brand[aria-expanded="true"]');
       if (await sidebar.count()) await sidebar.click();
       await settled(page);
       const host = page.locator('main.system-workflow').first();

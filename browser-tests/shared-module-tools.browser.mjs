@@ -6,7 +6,7 @@ import { mountTextToolsFixture } from './fixtures/text-tools-fixture.mjs';
 const origin = process.env.INSCAPE_TEXT_ROOT || 'http://127.0.0.1:5198';
 const settle = page => page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
 async function exposeText(page) {
-  await page.getByRole('button', { name: 'Collapse sidebar', exact: true }).click();
+  await page.locator('.editor-menu-brand[aria-expanded="true"]').click();
   for (const name of ['Close Workbench Layers', 'Close Transform', 'Close Color', 'Close Image', 'Close Shape', 'Close FX', 'Close Info']) {
     const close = page.getByRole('button', { name, exact: true });
     if (await close.count()) { await close.focus(); await close.press('Enter'); }

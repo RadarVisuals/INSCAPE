@@ -1,3 +1,4 @@
+import { editorMenu, selectEditorDocument } from './fixtures/editor-menu.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdir } from 'node:fs/promises';
@@ -40,7 +41,7 @@ test('HTML artwork uses authored canvas geometry through zoom, pan, edits, narro
       return url.origin === origin ? route.continue() : route.abort();
     });
     await page.goto(origin + '/browser-tests/filled-workbench-performance-fixture.html?size=filled&count=2&animated=0');
-    const selector = page.getByRole('combobox', { name: 'Active document', exact: true });
+    const selector = editorMenu(page, 'Canvas');
     await selector.waitFor();
     const closeTools = page.getByRole('button', { name: 'Close Text tools', exact: true });
     if (await closeTools.isVisible()) await closeTools.click();
@@ -92,7 +93,7 @@ test('HTML artwork uses authored canvas geometry through zoom, pan, edits, narro
       await page.screenshot({ path: path.join(output, 'html-artwork-' + width + '.png') });
     }
     await page.setViewportSize({ width: 1440, height: 1000 });
-    await selector.selectOption('workbench:perf-1');
+    await selectEditorDocument(page, 'workbench:perf-1');
     const saved = await presentation(page);
     near(saved.window.left, edited.window.left, 'switch saves movement in canvas units');
     assert.equal(saved.window.top, edited.window.top);
@@ -100,7 +101,7 @@ test('HTML artwork uses authored canvas geometry through zoom, pan, edits, narro
     assert.equal(saved.window.height, edited.window.height);
     edited = saved;
     assert.equal(await page.locator('.html-artwork-frame').count(), 0);
-    await selector.selectOption('workbench:main'); await artwork.waitFor({ state: 'attached' });
+    await selectEditorDocument(page, 'workbench:main'); await artwork.waitFor({ state: 'attached' });
     assert.deepEqual(await presentation(page), edited);
     await page.reload(); await selector.waitFor(); await artwork.waitFor({ state: 'attached' });
     assert.deepEqual(await presentation(page), edited, 'reload keeps authored geometry');

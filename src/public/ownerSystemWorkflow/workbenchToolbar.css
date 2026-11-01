@@ -16,10 +16,10 @@
   gap: 6px;
   position: fixed;
   z-index: 84;
-  left: 50%;
+  left: calc((100% - var(--workbench-side-dock-width, 0px)) / 2);
   bottom: calc(var(--workflow-dock-height, 42px) + var(--workbench-toolbar-offset, 0px) + 8px);
   width: max-content;
-  max-width: calc(100dvw - 16px);
+  max-width: calc(100dvw - var(--workbench-side-dock-width, 0px) - 16px);
   transform: translateX(-50%);
   font: var(--workflow-type-control);
   --toolbar-popup-border: 1px;

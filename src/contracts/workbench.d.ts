@@ -102,7 +102,7 @@ export interface WorkbenchScope {
   createWorkbench(name: string, options?: { workbench?: WorkbenchPresentation; generateId?: () => string }): WorkbenchId | false;
   switchWorkbench(id: WorkbenchId, options?: { workbench?: WorkbenchPresentation }): SaveResult;
   renameWorkbench(name: string, options?: { workbench?: WorkbenchPresentation }): SaveResult;
-  leaveWorkbench(value?: undefined, options?: { workbench?: WorkbenchPresentation }): SaveResult;
+  leaveWorkbench(value?: undefined, options?: { workbench?: WorkbenchPresentation; retainEditor?: boolean }): SaveResult;
 }
 /** Mounted editor/visitor windows are reached only after the readable-draft boundary. */
 export interface MountedWorkbenchStore extends WorkbenchScope {

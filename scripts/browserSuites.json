@@ -1922,6 +1922,25 @@
       "name": "reception-layer-order",
       "category": "release",
       "rationale": "Native Reception, preview and public rendering preserve interleaved global artwork order, rounded cell clipping, Text appearance and linked source actions."
+    },
+    {
+      "name": "editor-menu-bar",
+      "category": "release",
+      "rationale": "Fixed Editor menus, keyboard and focus, full sidebar visibility, canvas save failures and history, tool preferences and destinations at desktop and phone widths."
+    },
+    {
+      "name": "workbench-side-dock",
+      "category": "release",
+      "rationale": "Screen-edge reach, persistent right docking, shared width and stack resizing, undocking and cancellation with Navigator and Keeper, without artwork changes.",
+      "prerequisites": [
+        "Host: runner_vite.",
+        "INSCAPE_TEST_ORIGIN={origin}"
+      ]
+    },
+    {
+      "name": "owner-workspace",
+      "category": "release",
+      "rationale": "Shared owner frame, contextual menus, bidirectional canvas presentation, retained camera and save guards, reduced motion and narrow viewport behavior."
     }
   ]
 }

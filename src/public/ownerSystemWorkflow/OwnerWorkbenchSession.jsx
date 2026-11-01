@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { beforeProfileEditorRelease } from '../../systemWorkflow/profileEditorLease.js';
 import { SceneNavigationProvider } from '../../text/SceneNavigation.jsx';
 import { createSystemWorkflowDraftStore } from '../../systemWorkflow/systemWorkflowDraftStore.js';
@@ -7,7 +7,6 @@ import { createWorkbenchPreferencesStore } from './workbenchPreferences.js';
 import { createReceptionEditorScope } from '../../reception/receptionEditorScope.js';
 import WorkbenchBackupControls from '../../systemWorkflow/WorkbenchBackupControls.jsx';
 import { workbenchSaveError } from './namedWorkbenchActions.js';
-const OwnerWorkbenchOverview = lazy(() => import('../workbenchOverview/OwnerWorkbenchOverview.jsx'));
 
 // Replacing a profile, restored backup or active composition remounts its editor.
 export default function OwnerWorkbenchSession({ component: Session, ...props }) {
@@ -26,6 +25,9 @@ export default function OwnerWorkbenchSession({ component: Session, ...props }) 
 
 function LocalWorkbenchSession({ component: Session, rootStore, ...props }) {
   const [overview, setOverview] = useState(props.canvasOverviewRequested === true);
+  const [journey, setJourney] = useState(null);
+  const [editorAction, setEditorAction] = useState(null);
+  const overviewMemory = useRef({ cameras: new Map(), scroll: null });
   const [reception, setReception] = useState(null);
   const [openingError, setOpeningError] = useState(null);
   const appliedRequest = useRef(null);
@@ -57,7 +59,6 @@ function LocalWorkbenchSession({ component: Session, rootStore, ...props }) {
     })
   );
   const [navigatorPosition] = useState(() => editorPreferences.ref('navigator'));
-  const [sidebarSession] = useState(() => editorPreferences.ref('sidebar'));
   // Flush before the parent releases its editor lease, including page-cache exits.
   useLayoutEffect(() => {
     editorPreferences.resume();
@@ -84,10 +85,11 @@ function LocalWorkbenchSession({ component: Session, rootStore, ...props }) {
     if (!reception?.isCurrent()) setReception(createReceptionEditorScope(store));
     setOpeningError(null); setOverview(false);
   }, [reception, store]);
-  const openOverview = useCallback(() => {
-    reception?.release(); setReception(null); setOpeningError(null); setOverview(true);
-  }, [reception]);
-  const selectDocument = id => {
+  const openOverview = useCallback(source => {
+    setOpeningError(null); setOverview(true);
+    setJourney(source ? { source, direction: 'overview' } : null);
+  }, []);
+  const selectDocument = (id, source, action) => {
     if (id === 'reception') openReception();
     else {
       if (!store.listWorkbenches().some(item => item.id === id)) throw new Error('This canvas is no longer available.');
@@ -101,6 +103,8 @@ function LocalWorkbenchSession({ component: Session, rootStore, ...props }) {
       }
       setReception(null); setOverview(false); setOpeningError(null);
     }
+    setJourney(source ? { source, direction: 'editor' } : null);
+    setEditorAction(action || null);
     props.onEditorDocumentChange?.(id === 'reception' ? 'reception' : 'canvas');
   };
   // Routes request a document in this same session. Local selection and editing
@@ -122,18 +126,14 @@ function LocalWorkbenchSession({ component: Session, rootStore, ...props }) {
   if (readyRequest !== request) return <p role="status">Opening Editor…</p>;
   if (openingError) return <main className="public-shell"><p role="alert">{openingError}</p>
     <WorkbenchBackupControls store={store} storage={props.reviewStorage ?? globalThis.localStorage} onRestored={props.onDraftRestored} />
-    <button type="button" onClick={openOverview}>My Inscape</button></main>;
-  if (overview) return <Suspense fallback={<p role="status">Opening My Inscape…</p>}>
-    <OwnerWorkbenchOverview store={store} reviewAssets={props.reviewAssets} reviewProfile={props.reviewProfile}
-      preferences={workbenchPreferenceStore}
-      view={overviewView} onViewChange={setOverviewView}
-      onOpen={() => { setOverview(false); props.onEditorDocumentChange?.('canvas'); }} onOpenReception={props.onOpenReception}
-      onEditReception={() => selectDocument('reception')} />
-  </Suspense>;
+    <button type="button" onClick={() => openOverview()}>My Inscape</button></main>;
   const scope = reception?.isCurrent() ? reception : store.getWorkbenchScope();
   return (
     <EditorDocument key={activation} component={Session} scope={scope} revision={activation}
         {...props}
+        overview={{ active: overview, store, view: overviewView, onViewChange: setOverviewView, memory: overviewMemory.current,
+          onEdit: selectDocument, onResume: () => { setJourney(null); setEditorAction(null); setOverview(false); }, journey, onJourneyComplete: () => setJourney(null),
+          editorAction, onActionComplete: () => setEditorAction(null) }}
         onOpenWorkbenchOverview={openOverview}
         onEditReception={() => selectDocument('reception')}
         documentNavigation={{ items: store.listWorkbenches(), activeId: scope.getWorkbenchId(), select: selectDocument }}
@@ -143,7 +143,6 @@ function LocalWorkbenchSession({ component: Session, rootStore, ...props }) {
         workbenchPreferenceStore={workbenchPreferenceStore}
         keeperDockPositions={keeperDockPositions}
         navigatorPosition={navigatorPosition}
-        sidebarSession={sidebarSession}
         focusWorkbench={activation > 0}
       />
   );

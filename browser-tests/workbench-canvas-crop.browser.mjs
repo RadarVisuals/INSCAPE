@@ -1,3 +1,4 @@
+import { editorCommand } from './fixtures/editor-menu.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdir, writeFile } from 'node:fs/promises';
@@ -10,7 +11,7 @@ const output = process.env.INSCAPE_BROWSER_OUTPUT || '.browser-test-runtime/canv
 const settle = page => page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
 const saved = page => page.evaluate(() => canvasSaved());
 const imageAt = (page, index) => page.locator('.image-module__window').nth(index);
-const visibleHit = (page, x, y) => page.evaluate(({ x, y }) => Boolean(document.elementFromPoint(x, y)?.closest('.image-module__window')), { x, y });
+const visibleHit = (page, x, y) => page.evaluate(({ x, y }) => Boolean(document.elementFromPoint(x, y)?.closest('.image-module__window')), { x, y: y + 280 });
 async function mount(page, query = '') {
   const png = await page.evaluate(() => { const c = document.createElement('canvas'); c.width = c.height = 32; const ctx = c.getContext('2d'); ctx.fillStyle = '#e83e3e'; ctx.fillRect(0, 0, 32, 32); return c.toDataURL().split(',')[1]; });
   await page.route('**/*', route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
@@ -25,19 +26,19 @@ async function mount(page, query = '') {
 }
 async function overview(page, belowToolbar = false) {
   const host = page.locator('main.system-workflow').first();
-  for (let i = 0; i < 7; i++) await host.dispatchEvent('wheel', { ctrlKey: true, deltaY: 120, clientX: 0, clientY: 0, bubbles: true, cancelable: true });
+  const origin = await host.boundingBox();
+  for (let i = 0; i < 7; i++) await host.dispatchEvent('wheel', { ctrlKey: true, deltaY: 120, clientX: origin.x, clientY: origin.y, bubbles: true, cancelable: true });
   await settle(page);
   assert.equal(await host.getAttribute('data-workbench-camera-scale'), '0.25', 'the crop fixture starts at quarter scale');
-  if (belowToolbar) {
-    // Keep the original quarter-scale hit and marquee probes below fixed
-    // workspace chrome, using the same ordinary camera pan as the user.
-    await host.dispatchEvent('wheel', { deltaY: -120, bubbles: true, cancelable: true });
-    await settle(page);
-  }
+  // Put the probes below the open Canvas size panel. Normalise the camera
+  // through ordinary pan input, including after Center canvas has been used.
+  const x = Number(await host.getAttribute('data-workbench-camera-x'));
+  const y = Number(await host.getAttribute('data-workbench-camera-y'));
+  await host.dispatchEvent('wheel', { deltaX: x, deltaY: y - (belowToolbar ? 400 : 0), bubbles: true, cancelable: true });
+  await settle(page);
 }
 async function controls(page) {
-  const trigger = page.getByRole('button', { name: 'Canvas size', exact: true });
-  if (await trigger.getAttribute('aria-expanded') !== 'true') await trigger.click();
+  if (!await page.getByRole('group', { name: 'Canvas size controls', exact: true }).isVisible()) await editorCommand(page, 'Canvas', 'Canvas size');
 }
 async function size(page, width, height) {
   await controls(page);
@@ -142,8 +143,8 @@ for (const width of [1440, 390]) test(`canvas crops without loss; outside editin
     assert.equal((await saved(page)).workbench.area.height, 310, 'canvas resize participates in undo');
     await page.keyboard.press('Control+Shift+z'); await settle(page);
     assert.equal((await saved(page)).workbench.area.height, 300, 'redo restores the crop');
-    await page.mouse.move(150, 150); await page.mouse.down();
-    await page.mouse.move(210, 220, { steps: 4 }); await page.mouse.up();
+    await page.mouse.move(150, 430); await page.mouse.down();
+    await page.mouse.move(210, 500, { steps: 4 }); await page.mouse.up();
     assert.equal(await page.locator('.workbench-selection').count(), 0, 'marquee cannot select fully clipped artwork');
     // A live SVG remains in its source DOM during inspection; the canvas
     // clipping ancestor must not trap it behind the full-screen backdrop.
@@ -163,16 +164,25 @@ for (const width of [1440, 390]) test(`canvas crops without loss; outside editin
     // Wait for its existing document lifecycle before checking painted pixels.
     await imageAt(page, 0).locator('iframe.artwork-svg-document').waitFor({ state: 'attached' });
     await imageAt(page, 0).locator('.artwork-svg-status').waitFor({ state: 'detached' }); await settle(page);
+    const points = await page.evaluate(() => {
+      const image = document.querySelector('.image-module__canvas').getBoundingClientRect();
+      const host = document.querySelector('main.system-workflow'), frame = host.getBoundingClientRect();
+      const clip = document.querySelector('.workbench-canvas-content').style;
+      const number = key => parseFloat(clip.getPropertyValue(`--canvas-${key}`));
+      return { svg: [image.x + image.width / 2, image.y + image.height / 2],
+        outside: [frame.left + number('left') + number('width') + 8, frame.top + number('top') + number('height') / 2],
+        background: getComputedStyle(host).backgroundColor.match(/\d+/g).map(Number) };
+    });
     const screenshot = await page.screenshot({ path: join(output, `clipped-detail-${width}.png`) });
-    const painted = await page.evaluate(async data => {
+    const painted = await page.evaluate(async ({ data, points }) => {
       const image = new Image(); image.src = `data:image/png;base64,${data}`; await image.decode();
       const canvas = document.createElement('canvas'); canvas.width = image.width; canvas.height = image.height;
       const ctx = canvas.getContext('2d'); ctx.drawImage(image, 0, 0);
       const pixel = (x, y) => [...ctx.getImageData(Math.floor(x * devicePixelRatio), Math.floor(y * devicePixelRatio), 1, 1).data];
-      return { svg: pixel(140, 140), outside: pixel(350, 200) };
-    }, screenshot.toString('base64'));
+      return { svg: pixel(...points.svg), outside: pixel(...points.outside) };
+    }, { data: screenshot.toString('base64'), points });
     assert.ok(painted.svg[0] > 230 && painted.svg[1] > 170 && painted.svg[2] < 140, 'live SVG paints after inspection and zoom');
-    assert.deepEqual(painted.outside, [36, 38, 38, 255], 'cropped raster pixels do not leak outside the canvas');
+    assert.deepEqual(painted.outside, [...points.background, 255], 'cropped raster pixels do not leak outside the canvas');
     await overview(page, true);
     await controls(page);
     await page.getByRole('button', { name: 'Show outside canvas', exact: true }).click();
@@ -222,7 +232,7 @@ for (const width of [1440, 390]) test(`Fit has no padding; all canvas edges and 
   const errors = []; page.on('pageerror', error => errors.push(error.message)); page.setDefaultTimeout(8000);
   try {
     await mount(page, '?edges'); await overview(page);
-    await page.locator('main.system-workflow').first().dispatchEvent('wheel', { deltaX: -40, deltaY: -120, bubbles: true, cancelable: true });
+    await page.locator('main.system-workflow').first().dispatchEvent('wheel', { deltaX: 0, deltaY: -400, bubbles: true, cancelable: true });
     await settle(page);
     const before = await saved(page);
     const exact = { left: 60, top: 60, width: 720, height: 484 };
@@ -234,7 +244,7 @@ for (const width of [1440, 390]) test(`Fit has no padding; all canvas edges and 
     assert.equal(await page.locator('.workbench-canvas-edge').count(), 8);
     const projection = () => page.locator('.workbench-canvas-content').evaluate(node => Object.fromEntries(
       ['left', 'top', 'width', 'height'].map(key => [key, parseFloat(node.style.getPropertyValue(`--canvas-${key}`))])));
-    assert.deepEqual(await projection(), { left: 55, top: 135, width: 180, height: 121 }, 'clip uses the authored origin and camera together');
+    assert.deepEqual(await projection(), { left: 15, top: 415, width: 180, height: 121 }, 'clip uses the authored origin and camera together');
     await page.screenshot({ path: join(output, `fit-exact-${width}.png`) });
     const gestures = [];
     for (const edge of ['w', 'n', 'e', 's', 'nw', 'ne', 'sw', 'se']) {
@@ -251,7 +261,7 @@ for (const width of [1440, 390]) test(`Fit has no padding; all canvas edges and 
         assert.equal(area.top, edge.includes('n') ? 60 + dy * 4 : 60, edge);
         assert.equal(area.left + area.width, edge.includes('e') ? 780 + dx * 4 : 780, edge);
         assert.equal(area.top + area.height, edge.includes('s') ? 544 + dy * 4 : 544, edge);
-        assert.deepEqual(await projection(), { left: 40 + area.left / 4, top: 120 + area.top / 4,
+        assert.deepEqual(await projection(), { left: area.left / 4, top: 400 + area.top / 4,
           width: area.width / 4, height: area.height / 4 }, 'clipping follows the origin even when it crosses world zero');
         gestures.push({ edge, dx, dy, area });
       }

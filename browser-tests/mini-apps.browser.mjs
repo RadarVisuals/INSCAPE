@@ -172,7 +172,7 @@ try {
   // The narrow viewport leaves the floating tools beside the app. Move that
   // ordinary editor surface before testing the app's pointer controls.
   const sidebar = page.getByRole('complementary', { name: 'Workspace sidebar' });
-  const collapseSidebar = sidebar.getByRole('button', { name: 'Collapse sidebar' });
+  const collapseSidebar = sidebar.locator('.editor-menu-brand[aria-expanded="true"]');
   if (await collapseSidebar.isVisible()) await collapseSidebar.click();
   const settingsButton = page.getByRole('button', { name: 'Settings for RADAR test' });
   const reachable = () => settingsButton.evaluate(node => {

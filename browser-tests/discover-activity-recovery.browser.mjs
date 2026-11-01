@@ -60,7 +60,7 @@ for (const { theme, width, height } of r12Cases) {
       const trigger = page.getByRole('button', { name: 'Discover', exact: true });
       const sidebar = page.getByRole('complementary', { name: 'Workspace sidebar', exact: true });
       await sidebar.waitFor();
-      if (!await trigger.isVisible()) await pointerAction(page, page.getByRole('button', { name: 'Expand sidebar', exact: true }));
+      if (!await trigger.isVisible()) await pointerAction(page, page.locator('.editor-menu-brand[aria-expanded="false"]'));
       await trigger.waitFor();
       const returnFocus = await page.locator('main.system-workflow').getAttribute('data-sidebar-menu') === 'true'
         ? sidebar.locator('.workspace-navigation-collapse') : trigger;

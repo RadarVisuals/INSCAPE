@@ -4,10 +4,8 @@ import { workbenchSaveError } from '../ownerSystemWorkflow/namedWorkbenchActions
 import { overviewAssetIds, workbenchOverviewModel } from './workbenchOverviewModel.js';
 import WorkbenchOverview from './WorkbenchOverview.jsx';
 import { useProfileIdentity } from '../../profileIdentity/index.js';
-import { useStartupDestinationReady } from '../../startveil/StartupDestinationContext.jsx';
 
-export default function OwnerWorkbenchOverview({ store, preferences, reviewAssets, reviewProfile, view, onViewChange, onOpen, onOpenReception, onEditReception }) {
-  useStartupDestinationReady();
+export default function OwnerWorkbenchOverview({ store, preferences, reviewAssets, reviewProfile, view, onViewChange, onEdit, onOpenReception, onEditReception, workspace }) {
   const generation = useSyncExternalStore(store.subscribe, store.getGeneration);
   const { galleryCardSize } = useSyncExternalStore(preferences.subscribe, preferences.getSnapshot);
   const preferenceError = useSyncExternalStore(preferences.subscribe, preferences.getError);
@@ -26,12 +24,12 @@ export default function OwnerWorkbenchOverview({ store, preferences, reviewAsset
     .map(asset => [asset.stableAssetId || asset.id, asset])), [browser.data.assets, browser.records, reviewAssets]);
   const previews = useMemo(() => entries.map(item => ({ ...item, model: workbenchOverviewModel(item.draft, assets) })), [entries, assets]);
   const model = previews.find(item => item.id === selectedId).model;
-  const edit = id => { if (!store.switchWorkbench(id)) throw workbenchSaveError(store); onOpen(); };
   return <WorkbenchOverview items={store.listWorkbenches()} selected={selected} model={model} previews={previews} view={view} onViewChange={onViewChange} onSelect={setSelectedId}
     cardSize={galleryCardSize} onCardSize={value => preferences.update(current => ({ ...current, galleryCardSize: value }))}
     preferenceError={preferenceError} onRetryPreferences={preferences.retry}
     onReorder={ids => { if (!store.reorderWorkbenches(ids)) throw workbenchSaveError(store); }}
-    profile={fixtureProfile || identity} onEdit={edit} onOpenReception={onOpenReception} onEditReception={onEditReception}
+    workspace={workspace}
+    profile={fixtureProfile || identity} onEdit={onEdit} onOpenReception={onOpenReception} onEditReception={onEditReception}
     onCreate={name => { const id = store.createWorkbench(name); if (!id) throw workbenchSaveError(store); setSelectedId(id); }}
     onSave={details => { if (!store.updateWorkbenchDetails(selectedId, details)) throw workbenchSaveError(store); }} />;
 }

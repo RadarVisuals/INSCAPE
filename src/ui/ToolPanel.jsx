@@ -4,7 +4,7 @@ import { clampOwnerSystemWorkflowWindowPosition, resizeWorkbenchWindow, WORKBENC
 import '../public/ownerSystemWorkflow/workbenchToolPanel.css';
 
 // Screen-only tool chrome. Artwork, camera, selection and saving stay with callers.
-export default function ToolPanel({ label, title, titleContent, moveLabel, headerContent, headerActions, children, onClose, active = false, zIndex = active ? 85 : 84, onActivate, chrome, className = '', frame, onFrameChange: setFrame, panelRef, closeLabel, onMoveStart, onMove, onMoveEnd, minimumWidth = 280, minimumHeight = 240, viewportBottom, topBoundaryRef, fitFromTop = false, boundsRef, navigationInset = 0, navigationTop = 0, contentSized = false, resizable = true, hidden = false, ...surfaceProps }) {
+export default function ToolPanel({ label, title, titleContent, moveLabel, headerContent, headerActions, children, onClose, active = false, zIndex = active ? 85 : 84, onActivate, chrome, className = '', frame, onFrameChange: setFrame, panelRef, closeLabel, onMoveStart, onMove, onMoveEnd, minimumWidth = 280, minimumHeight = 240, topBoundaryRef, boundsRef, navigationInset = 0, navigationTop = 0, contentSized = false, resizable = true, hidden = false, edgeMargin = 8, resizeEdges, ...surfaceProps }) {
   const [viewport, setViewport] = useState(() => ({ width: innerWidth, height: innerHeight }));
   const [hostSize, setHostSize] = useState(null);
   const [boundaryTop, setTop] = useState(0);
@@ -13,11 +13,11 @@ export default function ToolPanel({ label, title, titleContent, moveLabel, heade
   const top = boundsRef ? 0 : Math.max(boundaryTop, navigationTop);
   const width = boundsRef ? (hostSize?.width || viewport.width) : viewport.width;
   const gesture = useRef(null), latest = useRef(null);
-  const bottom = boundsRef ? (hostSize?.height || viewport.height) : Math.min(viewport.height, viewportBottom ?? viewport.height - 48);
-  const bounds = { left: boundsRef ? 8 : Math.max(8, navigationInset), top: top + 8, right: width - 8, bottom: bottom - 8 };
+  const bottom = boundsRef ? (hostSize?.height || viewport.height) : viewport.height;
+  const bounds = { left: boundsRef ? edgeMargin : Math.max(edgeMargin, navigationInset), top: top + edgeMargin, right: width - edgeMargin, bottom: bottom - edgeMargin };
   const clamp = candidate => {
     const size = { width: Math.max(1, Math.min(candidate.width, bounds.right - bounds.left)), height: Math.max(1, Math.min(candidate.height, bounds.bottom - bounds.top)) };
-    const next = clampOwnerSystemWorkflowWindowPosition({ x: candidate.left, y: candidate.top - top }, size, { width, height: bottom - top });
+    const next = clampOwnerSystemWorkflowWindowPosition({ x: candidate.left, y: candidate.top - top }, size, { width, height: bottom - top }, edgeMargin);
     return { left: Math.max(bounds.left, Math.min(bounds.right - size.width, next.x)), top: next.y + top, ...size };
   };
   const placed = clamp(contentSized && contentSize ? { ...frame, ...contentSize } : frame);
@@ -31,10 +31,7 @@ export default function ToolPanel({ label, title, titleContent, moveLabel, heade
     release(drag);
     if (!drag.edge) onMoveEnd?.(cancelled, event);
   };
-  // Long independent tools can shorten above wrapping camera controls without
-  // moving over their module's action strip. Drag and resize keep normal bounds.
-  latest.current = { finish, clamp, setFrame, fit: candidate => clamp(fitFromTop
-    ? { ...candidate, height: Math.min(candidate.height, Math.max(minimumHeight, bounds.bottom - candidate.top)) } : candidate) };
+  latest.current = { finish, clamp, setFrame };
 
   useLayoutEffect(() => {
     const host = boundsRef?.current;
@@ -91,7 +88,7 @@ export default function ToolPanel({ label, title, titleContent, moveLabel, heade
     latest.current.finish(true);
     if (hidden) return;
     latest.current.setFrame(current => {
-      const next = latest.current.fit(contentSized && contentSize ? { ...current, ...contentSize } : current);
+      const next = latest.current.clamp(contentSized && contentSize ? { ...current, ...contentSize } : current);
       return Object.keys(next).every(key => next[key] === current[key]) ? current : next;
     });
   }, [width, top, bottom, navigationInset, hidden, contentSized, contentSize]);
@@ -138,7 +135,7 @@ export default function ToolPanel({ label, title, titleContent, moveLabel, heade
       {content}
       {renderMoveHandle(content ? null : titleContent || title)}
       {headerActions}
-      <button type="button" className="workbench-tool-panel-close" aria-label={closeName} onClick={close}><X /></button>
+      {close && <button type="button" className="workbench-tool-panel-close" aria-label={closeName} onClick={close}><X /></button>}
     </header>
   );
   return <section {...surfaceProps} data-window-chrome={chrome} hidden={hidden} ref={node => {
@@ -147,8 +144,8 @@ export default function ToolPanel({ label, title, titleContent, moveLabel, heade
   }} className={`workbench-tool-panel ${className}`} aria-label={label}
     style={{ ...(contentSized ? { left: placed.left, top: placed.top } : placed), zIndex, position: boundsRef ? 'absolute' : 'fixed' }} onPointerDownCapture={onActivate} onFocusCapture={onActivate}>
     {typeof children === 'function' ? children(renderHeader, renderMoveHandle) : <>{renderHeader()}<div className="workbench-tool-panel-content">{children}</div></>}
-    {resizable && WORKBENCH_RESIZE_EDGES.map(([edge, name]) => <button key={edge} type="button" className="workbench-tool-panel-resize"
-      data-edge={edge} tabIndex={edge === 'se' ? 0 : -1} aria-label={`Resize ${title} panel${name ? ` from ${name}` : ''}`}
+    {resizable && WORKBENCH_RESIZE_EDGES.filter(([edge]) => !resizeEdges || resizeEdges.includes(edge)).map(([edge, name]) => <button key={edge} type="button" className="workbench-tool-panel-resize"
+      data-edge={edge} tabIndex={resizeEdges ? 0 : edge === 'se' ? 0 : -1} aria-label={`Resize ${title} panel${name ? ` from ${name}` : ''}`}
       onKeyDown={event => key(event, edge)} onPointerDown={event => begin(event, edge)} onPointerMove={move}
       onPointerUp={event => end(event, false)} onPointerCancel={event => end(event, true)} onLostPointerCapture={event => end(event, true)} />)}
   </section>;

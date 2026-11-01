@@ -1,3 +1,4 @@
+import { editorMenu, editorCommand } from './fixtures/editor-menu.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdir } from 'node:fs/promises';
@@ -28,7 +29,7 @@ async function mount(browser, theme = 'mist', width = 1440, height = 1000) {
     return route.abort();
   });
   await page.goto(`${origin}/browser-tests/tool-chrome-fixture.html?sample=navigator&persistent&theme=${theme}`);
-  await page.getByRole('combobox', { name: 'Active document' }).waitFor();
+  await editorMenu(page, 'Canvas').waitFor();
   return { page, errors };
 }
 
@@ -58,8 +59,7 @@ for (const reducedMotion of ['reduce', 'no-preference']) {
     try {
       const { page, errors } = await mount(browser); await page.emulateMedia({ reducedMotion });
       const sidebar = page.getByRole('complementary', { name: 'Workspace sidebar' });
-      const trigger = sidebar.getByRole('button', { name: 'Docs', exact: true });
-      if (!await trigger.isVisible()) await sidebar.getByRole('button', { name: 'Expand sidebar' }).click();
+      const trigger = editorMenu(page, 'Docs');
       const panel = page.getByRole('dialog', { name: 'Docs', exact: true });
       await trigger.click(); await panel.waitFor();
       await panel.getByRole('button', { name: 'Close Docs', exact: true }).click();
@@ -67,7 +67,7 @@ for (const reducedMotion of ['reduce', 'no-preference']) {
       await page.waitForFunction(node => document.activeElement === node, await trigger.elementHandle());
       await trigger.click(); await panel.waitFor(); await holdFrames(page);
       await panel.getByRole('button', { name: 'Close Docs', exact: true }).click();
-      const next = page.getByRole('combobox', { name: 'Active document' }); await next.focus();
+      const next = editorMenu(page, 'Canvas'); await next.focus();
       await panel.waitFor({ state: 'detached' });
       await page.evaluate(() => window.releaseHeldFrames());
       assert.equal(await next.evaluate(n => n === document.activeElement), true, 'closing animation and deferred return preserve newer focus');
@@ -143,7 +143,7 @@ test('Library preferences survive close, Workbench switching and reload without 
     assert.ok(settings.libraryWidth > 300);
     await library(page).getByRole('button', { name: 'Close workspace', exact: true }).click();
     assert.deepEqual(await saved(page), before);
-    await page.getByRole('button', { name: 'New canvas', exact: true }).click();
+    await editorCommand(page, 'Canvas', 'New canvas');
     await page.getByLabel('New canvas name', { exact: true }).fill('Preference check');
     await page.getByRole('button', { name: 'Create canvas', exact: true }).click();
     await openLibrary(page); assert.equal(await search.inputValue(), 'moon');

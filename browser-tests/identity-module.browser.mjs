@@ -19,7 +19,7 @@ async function closeArtworkTools(page) {
 async function toggleLibrary(page) {
   const sidebar = page.getByRole('complementary', { name: 'Workspace sidebar' });
   const button = sidebar.getByRole('button', { name: 'Library', exact: true });
-  if (!await button.isVisible()) await sidebar.getByRole('button', { name: 'Expand sidebar' }).click();
+  if (!await button.isVisible()) await sidebar.locator('.editor-menu-brand[aria-expanded="false"]').click();
   await button.click();
 }
 
@@ -381,7 +381,7 @@ test('Display title follows the existing shortcut name and survives reload', asy
     await page.goto(`${origin}/development/owner/system-workflow`);
     await page.getByLabel('Move Display Module: DISPLAY MODULE', { exact: true }).focus();
     await closeArtworkTools(page);
-    await page.getByRole('button', { name: 'Collapse sidebar', exact: true }).click();
+    await page.locator('.editor-menu-brand[aria-expanded="true"]').click();
     await page.getByLabel('Move Display Module: DISPLAY MODULE', { exact: true }).focus();
     await page.getByRole('button', { name: 'Minimize Display Module to shortcut' }).click();
     const shortcut = page.locator('.system-workflow__desktop-shortcut');

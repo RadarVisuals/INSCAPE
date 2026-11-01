@@ -253,7 +253,7 @@ export default function OwnerSystemWorkflowLibraryWorkspace({ authoringLocked = 
         setLibraryWidth(clampWidth(event.key === 'Home' ? 300 : event.key === 'End' ? window.innerWidth
           : width + (event.key === 'ArrowLeft' ? -1 : 1) * (event.shiftKey ? 80 : 20)));
       }} />}
-    placing={placing} rail={<><OwnerSystemWorkflowWorkspaceRail  onClose={onClose} workspace={workspace} />
+    placing={placing} rail={<><OwnerSystemWorkflowWorkspaceRail  onClose={header ? undefined : onClose} workspace={workspace} />
       {selectionAction && <button type="button" className="workflow-tactile-control system-workflow__library-selection-action"
         disabled={authoringLocked || !selectionEnabled || !selectedAsset}
         onClick={() => { if (selectedAsset) activate(selectedAsset); }}>{selectionAction}</button>}</>}

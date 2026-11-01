@@ -1,4 +1,5 @@
-import { lazy, Suspense, useRef } from 'react';
+import { cloneElement, lazy, Suspense, useRef } from 'react';
+import { X } from 'lucide-react';
 import PublicEntryPortal from '../../startveil/PublicEntryPortal.jsx';
 import WorkbenchLibraryWindow from './WorkbenchLibraryWindow.jsx';
 import OwnerSystemWorkflowManual from './OwnerSystemWorkflowManual.jsx';
@@ -46,9 +47,17 @@ export default function OwnerSystemWorkflowPanelLayer({ libraryPreferences, libr
         onConnect={onConnect} onDisconnect={onDisconnect}
         onEnterMyWorld={() => { onClose(); onEnterMyWorld?.(); }}
         onVisitProfile={(address) => { panels.closePanel({ returnFocus: false }); onVisitProfile?.(address); }} /></PanelPresence>}
+    {show('backup').present && <PanelPresence id="backup" panels={panels}>
+      <aside role="dialog" aria-label="Backup" data-workflow-material="tactile" data-workflow-finish="flat"
+        className="workbench-tool-panel system-workflow__settings system-workflow__motion-panel"
+        inert={show('backup').phase === 'closing' ? '' : undefined}>
+        <header className="workbench-tool-panel-header"><h2>Backup</h2><button type="button" className="workbench-tool-panel-close" aria-label="Close Backup" onClick={onClose}><X /></button></header>
+        <div className="system-workflow__settings-body">{backupControls && cloneElement(backupControls, { disabled: show('backup').phase === 'closing' })}</div>
+      </aside>
+    </PanelPresence>}
     {show('settings').present && <PanelPresence id="settings" panels={panels}>
       <OwnerSystemWorkflowSettings profileAddress={profileAddress}
         onClose={onClose} onWorkbenchPreferencesChange={onWorkbenchPreferencesChange}
-        phase={show('settings').phase} workbenchPreferences={workbenchPreferences} backupControls={backupControls} /></PanelPresence>}
+        phase={show('settings').phase} workbenchPreferences={workbenchPreferences} /></PanelPresence>}
   </>;
 }

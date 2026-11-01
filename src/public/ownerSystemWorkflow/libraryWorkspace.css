@@ -203,9 +203,6 @@
   [data-library-chrome] .system-workflow__workspace-close { width: 44px; }
 }
 
-/* The existing navigation host reserves screen space, independently of canvas geometry. */
-.system-workflow[data-workspace-sidebar] .system-workflow__library[data-library-chrome]:not([data-library-embedded]) { top: calc(var(--workspace-navigation-top, 8px) + 4px); }
-
 /* Library structure and material belong here. The sidebar host only supplies screen clearance. */
 
 .system-workflow__workspace-window svg { width: 16px; height: 16px; flex: 0 0 16px; stroke-width: 1.75; }
@@ -335,7 +332,7 @@
 .system-workflow__library-section-empty { position: relative; z-index: 1; min-height: 34px; padding: 0 10px 0 28px; display: flex; align-items: center; border-bottom: 1px solid var(--workflow-border); color: var(--workflow-faint); font: 400 9px/1 "Inscape IBM Plex Sans Condensed", "Arial Narrow", sans-serif; letter-spacing: .045em; }
 .system-workflow__browser-workspace[data-sidebar-collapsed] .system-workflow__library-section-empty { display: none; }
 .system-workflow__browser-workspace .lattice-browser-status { margin: 0; padding: 13px 10px; color: var(--workflow-muted); font: 400 10px/1.35 "Inscape IBM Plex Sans Condensed", "Arial Narrow", sans-serif; letter-spacing: .055em; text-transform: none; }
-.system-workflow[data-layout="narrow"] .system-workflow__workspace-window:not([data-library-embedded]) { inset: 8px 8px 60px; width: auto; min-width: 0; }
+.system-workflow[data-layout="narrow"] .system-workflow__workspace-window:not([data-library-embedded]) { inset: max(8px, calc(var(--workspace-navigation-top, 0px) + 4px)) 8px 60px; width: auto; min-width: 0; }
 .system-workflow[data-layout="narrow"] .system-workflow__browser-workspace .lattice-browser-panel {
   grid-template-columns: 54px 1px minmax(0, 1fr);
 }

@@ -1,3 +1,4 @@
+import { editorCommand } from './fixtures/editor-menu.mjs';
 import { openTextToolSection } from './fixtures/text-tool-sections.mjs';
 import assert from 'node:assert/strict';
 import test from 'node:test';
@@ -122,7 +123,7 @@ test('module edges, appearance, keyboard controls and public rendering', async (
     near((await text.boundingBox()).x, t.x - 8, 'keyboard movement bypass');
     await drag(textHeader, 8, 0);
     await page.screenshot({ path: join(screenshots, 'joined-wide.png') });
-    await page.getByRole('button', { name: 'Settings', exact: true }).click();
+    await editorCommand(page, 'Edit', 'Settings');
     await page.getByLabel('Space between modules', { exact: true }).fill('12');
     await page.getByRole('button', { name: 'Close Settings', exact: true }).click();
     await page.getByRole('button', { name: 'Close Settings', exact: true }).waitFor({ state: 'detached' });
@@ -131,7 +132,7 @@ test('module edges, appearance, keyboard controls and public rendering', async (
     t = await text.boundingBox(); b = await board.boundingBox();
     await drag(textHeader, b.x - 12 - t.width - t.x + 2, 0);
     t = await text.boundingBox(); near(b.x - t.x - t.width, 12, 'custom gap');
-    await page.getByRole('button', { name: 'Preview', exact: true }).click();
+    await editorCommand(page, 'Canvas', 'Preview');
     await page.waitForSelector('.visitor-grid-world .system-workflow__presentation-board');
     const publicBoard = page.locator('.visitor-grid-world .system-workflow__presentation-board').first();
     assert.equal(await publicBoard.evaluate(el => getComputedStyle(el).borderRadius), '0px');
@@ -145,7 +146,7 @@ test('module edges, appearance, keyboard controls and public rendering', async (
     await page.screenshot({ path: join(screenshots, 'tools-narrow.png') });
     const tb = await tools.boundingBox(); assert.ok(tb.x >= 0 && tb.x + tb.width <= 390, 'tools fit narrow viewport');
     await page.getByRole('button', { name: 'Close Text tools', exact: true }).focus(); await page.keyboard.press('Enter');
-    await page.getByRole('button', { name: 'Settings', exact: true }).click();
+    await editorCommand(page, 'Edit', 'Settings');
     await page.getByLabel('Space between modules', { exact: true }).scrollIntoViewIfNeeded();
     await page.getByLabel('Space between modules', { exact: true }).fill('0');
     const gapHit = await page.getByLabel('Space between modules', { exact: true }).evaluate(el => { const r = el.getBoundingClientRect(); return el === document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); });

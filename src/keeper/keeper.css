@@ -1,9 +1,6 @@
 .keeper-workbench { display: contents; }
 .keeper-instance[data-suspended] { visibility: hidden; }
-.keeper-dock-window[data-window-chrome] { z-index: 85; }
-.keeper-settings-window[data-window-chrome] { z-index: 86; }
-.keeper-dock-window[data-window-chrome] > .system-workflow__detached-window-surface { padding: 0; overflow: hidden; }
-.keeper-dock-window .system-workflow__instrument-content { min-height: 0; height: 100%; padding: 0; overflow: hidden; }
+.keeper-settings-window[data-window-chrome] { z-index: 90; }
 .keeper-dock, .keeper-dock > button { width: 100%; height: 100%; }
 .keeper-dock > button { display: block; padding: 0; border: 0; border-radius: 0; background: transparent; color: var(--tactile-ink); cursor: pointer; }
 .keeper-dock > button[aria-disabled='true'] { cursor: default; }

@@ -25,7 +25,7 @@ test('Library resizes with inset scrolling, accessible controls, and retained st
     for (const width of [1440, 1024]) {
       await page.setViewportSize({ width, height: 900 });
       await page.goto(`${root}/development/owner/system-workflow`, { waitUntil: 'networkidle' });
-      const collapse = page.getByRole('button', { name: 'Collapse sidebar', exact: true });
+      const collapse = page.locator('.editor-menu-brand[aria-expanded="true"]');
       if (await collapse.isVisible()) await collapse.click();
       await page.evaluate(() => { window.__libraryDraftWrites = 0; addEventListener('inscape:review-storage-write', event => { if (event.detail.key.startsWith('inscape.system-workflow-draft.')) window.__libraryDraftWrites += 1; }); });
       const board = page.getByRole('article', { name: 'Display Module', exact: true });

@@ -101,7 +101,7 @@ async function mount(page, visitor = false, fractional = false) {
   // default desktop Layers companion. Its own reachability has separate checks.
   if (!visitor && await page.getByRole('button', { name: 'Close Workbench Layers' }).count())
     await page.getByRole('button', { name: 'Close Workbench Layers' }).click();
-  if (!visitor) await page.getByRole('button', { name: 'Collapse sidebar', exact: true }).click();
+  if (!visitor) await page.locator('.editor-menu-brand[aria-expanded="true"]').click();
   await page.evaluate(() => document.fonts.ready);
   await page.waitForTimeout(400);
 }

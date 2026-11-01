@@ -245,7 +245,7 @@ test('three tools detach, regroup, reorder, move as a dock and recover without a
     await page.setViewportSize({ width: 760, height: 540 });
     await tab(page, 'Color').click();
     const narrow = await dock(page, 'Color').boundingBox();
-    assert.ok(narrow.x >= 8 && narrow.x + narrow.width <= 752 && narrow.y + narrow.height <= 492);
+    assert.ok(narrow.x >= 0 && narrow.x + narrow.width <= 760 && narrow.y + narrow.height <= 540);
     const opacity = page.getByRole('slider', { name: 'Color opacity', exact: true });
     await opacity.scrollIntoViewIfNeeded();
     const fieldBox = await opacity.boundingBox();

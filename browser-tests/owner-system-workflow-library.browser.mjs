@@ -17,7 +17,7 @@ test('Library workspace exposes accepted views, stable filters and one-commit pl
     await page.evaluate(() => { window.__workflowWrites = 0; addEventListener('inscape:review-storage-write', event => { if (event.detail.key.startsWith('inscape.system-workflow-draft.')) window.__workflowWrites += 1; }); });
     const compositionBefore = await page.locator('.system-workflow__presentation-board').boundingBox();
     // Exercise Library's own tree; the expanded desktop sidebar otherwise hosts it.
-    await page.getByRole('button', { name: 'Collapse sidebar', exact: true }).click();
+    await page.locator('.editor-menu-brand[aria-expanded="true"]').click();
     const trigger = page.getByRole('button', { name: 'Library', exact: true });
     await trigger.click();
     const workspace = page.getByRole('region', { name: 'Library workspace' });

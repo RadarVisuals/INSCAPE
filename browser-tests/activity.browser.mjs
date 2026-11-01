@@ -25,7 +25,7 @@ async function destination(page, name) {
   const sidebar = page.getByRole('complementary', { name: 'Workspace sidebar' });
   await sidebar.waitFor();
   const trigger = sidebar.getByRole('button', { name, exact: true, includeHidden: true });
-  if (!await trigger.isVisible()) await sidebar.getByRole('button', { name: 'Expand sidebar', exact: true }).click();
+  if (!await trigger.isVisible()) await sidebar.locator('.editor-menu-brand[aria-expanded="false"]').click();
   await trigger.click(); return trigger;
 }
 async function mount(browser, width = 1440, height = 900, theme = 'mist', motion = 'reduce') {
@@ -80,7 +80,7 @@ for (const theme of ['carbon', 'mist']) for (const [width, height] of [[1440,900
       assert.equal(await drawer(page).getByRole('button', { name: 'Open full activity history' }).evaluate(node => node === document.activeElement), true);
       await drawer(page).getByRole('button', { name: 'Close activity' }).click();
       await drawer(page).waitFor({ state: 'detached' }); await settle(page);
-      const returnTarget = await trigger.isVisible() ? trigger : page.getByRole('button', { name: 'Expand sidebar', exact: true });
+      const returnTarget = await trigger.isVisible() ? trigger : page.locator('.editor-menu-brand[aria-expanded="false"]');
       assert.equal(await returnTarget.evaluate(node => node === document.activeElement), true);
       assert.deepEqual(await saved(page), before); assert.deepEqual(await camera(page), view);
       assert.deepEqual(errors, []);

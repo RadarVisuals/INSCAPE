@@ -121,7 +121,7 @@ for (const [width, scale, method] of [[1600, 1, 'keyboard'], [1600, .5, 'drag'],
       if (method === 'drag') {
         // The pan setup below puts the Display beneath the expanded sidebar.
         // Collapse that independent surface before exercising the drag handle.
-        await page.getByRole('button', { name: 'Collapse sidebar', exact: true }).click();
+        await page.locator('.editor-menu-brand[aria-expanded="true"]').click();
         // The parked Text window must also remain reachable after detachment.
         const info = page.getByRole('button', { name: 'Close Info', exact: true });
         if (await info.count()) await info.click();

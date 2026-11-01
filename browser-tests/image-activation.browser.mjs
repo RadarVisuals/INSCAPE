@@ -24,7 +24,7 @@ for (const width of [1440, 390]) test(`Image activation preserves pointer/keyboa
     const windows = page.locator('.image-module__window'), first = windows.first(), second = windows.nth(1);
     await first.waitFor(); await settle(page);
     // The sidebar overlays authored geometry; expose the Image through its UI.
-    if (width === 1440) { await page.getByRole('button', { name: 'Collapse sidebar', exact: true }).click(); await settle(page); }
+    if (width === 1440) { await page.locator('.editor-menu-brand[aria-expanded="true"]').click(); await settle(page); }
     const saved = await page.evaluate(() => localStorage.getItem(window.__motionKey));
     const geometry = await first.boundingBox();
     await page.mouse.move(geometry.x + 50, geometry.y + 70); await page.mouse.down();

@@ -44,7 +44,7 @@ export function SharedTextToolsWindow({ hidden = false, navigationRef }) {
     data-system-workflow-overlay data-workflow-material="tactile" data-workflow-finish="flat" data-lattice-menu-surface >
     <WorkbenchToolPanel label={`Text tools: ${source.label}`} title="Text" moveLabel="Move Text tools window" closeLabel="Close Text tools" className="text-tools-window"
       titleContent={<span className="text-inspector-heading"><strong>Text</strong><span title={source.label}>{source.label}</span></span>}
-      frame={frame} onFrameChange={setFrame} minimumWidth={300} zIndex={81} viewportBottom={view.toolViewportBottom} topBoundaryRef={navigationRef} fitFromTop
+      frame={frame} onFrameChange={setFrame} minimumWidth={300} zIndex={81} topBoundaryRef={navigationRef}
       onClose={() => {
         if (source?.close() !== false) tools.setOpen(false);
       }}>

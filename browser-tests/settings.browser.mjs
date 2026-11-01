@@ -1,3 +1,4 @@
+import { editorMenu, editorCommand } from './fixtures/editor-menu.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdir } from 'node:fs/promises';
@@ -11,11 +12,8 @@ const settings = page => page.getByRole('dialog', { name: 'Settings', exact: tru
 const saved = page => page.evaluate(() => window.readToolChromeDraft());
 const hit = node => { const r = node.getBoundingClientRect(); return node.contains(document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2)); };
 async function open(page) {
-  const sidebar = page.getByRole('complementary', { name: 'Workspace sidebar' });
-  const trigger = sidebar.getByRole('button', { name: 'Settings', exact: true, includeHidden: true });
-  if (!await trigger.isVisible()) await sidebar.getByRole('button', { name: 'Expand sidebar', exact: true }).click();
-  await trigger.click(); await settings(page).waitFor();
-  return await trigger.isVisible() ? trigger : sidebar.getByRole('button', { name: 'Expand sidebar', exact: true });
+  await editorCommand(page, 'Edit', 'Settings'); await settings(page).waitFor();
+  return editorMenu(page, 'Edit');
 }
 async function mount(browser, theme = 'mist', width = 1440, height = 900) {
   const page = await browser.newPage({ viewport: { width, height }, reducedMotion: 'reduce' });
@@ -90,8 +88,7 @@ for (const theme of ['carbon', 'mist']) for (const [width, height] of [[1440, 90
       await grid.scrollIntoViewIfNeeded(); assert.equal(await grid.evaluate(hit), true);
       const windows = panel.getByRole('button', { name: 'DARK', exact: true });
       await windows.scrollIntoViewIfNeeded(); assert.equal(await windows.evaluate(hit), true);
-      const file = panel.getByLabel('Open Workbench backup', { exact: true });
-      await file.scrollIntoViewIfNeeded(); assert.equal(await file.evaluate(hit), true);
+      assert.equal(await panel.getByLabel('Open Workbench backup', { exact: true }).count(), 0, 'Backup has its own menu entry');
       assert.equal(await close.evaluate(hit), true, 'titlebar stays reachable while the body scrolls');
       await page.screenshot({ path: `${output}/settings-${theme}-${width}-backup.png` });
       await close.click();
@@ -132,9 +129,11 @@ test('Settings keeps existing local persistence, interface theme and backup vali
     assert.equal(await panel.getByLabel('Workbench grid color', { exact: true }).inputValue(), '#8d73c2');
     assert.equal(await panel.getByRole('button', { name: 'Workbench grid display: Dots', exact: true }).count(), 1);
     assert.equal(await panel.getByRole('button', { name: 'DARK', exact: true }).getAttribute('aria-pressed'), 'true');
-    await panel.getByLabel('Open Workbench backup', { exact: true }).setInputFiles({ name: 'invalid.json', mimeType: 'application/json', buffer: Buffer.from('{invalid') });
-    await panel.getByRole('status').waitFor();
-    assert.match(await panel.getByRole('status').innerText(), /backup|JSON/i);
+    await editorMenu(page, 'Backup').click();
+    const backup = page.getByRole('dialog', { name: 'Backup', exact: true });
+    await backup.getByLabel('Open Workbench backup', { exact: true }).setInputFiles({ name: 'invalid.json', mimeType: 'application/json', buffer: Buffer.from('{invalid') });
+    await backup.getByRole('status').waitFor();
+    assert.match(await backup.getByRole('status').innerText(), /backup|JSON/i);
     assert.deepEqual(await saved(page), changed, 'an invalid backup does not replace the draft');
     assert.deepEqual(errors, []);
   } finally { await browser.close(); }

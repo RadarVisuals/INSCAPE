@@ -30,7 +30,7 @@ async function fixture(page, visitor) {
   }, visitor);
   await page.locator('[data-image-module="image:toggle-0"] .image-module__artwork[data-media-state="ready"]').waitFor();
   await page.evaluate(() => document.fonts.ready); await settled(page);
-  const sidebar = page.getByRole('button', { name: 'Collapse sidebar', exact: true });
+  const sidebar = page.locator('.editor-menu-brand[aria-expanded="true"]');
   if (await sidebar.count()) await sidebar.click();
   await settled(page);
 }

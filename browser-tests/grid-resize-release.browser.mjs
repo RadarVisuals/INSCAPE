@@ -30,7 +30,7 @@ test('production Grid resize commits on release without a render loop', { timeou
     await page.goto(`${origin}/browser-tests/grid-resize-release-fixture.html`);
     const grid = page.locator('.shape-window'); await grid.waitFor();
     await page.evaluate(() => document.fonts.ready);
-    const collapse = page.getByRole('button', { name: 'Collapse sidebar', exact: true });
+    const collapse = page.locator('.editor-menu-brand[aria-expanded="true"]');
     if (await collapse.count()) await collapse.click();
     await grid.locator('header').focus(); await page.keyboard.press('Shift+Enter'); await settle(page);
     const before = await page.evaluate(() => gridResizeSaved().workbench.shapes[0].window);

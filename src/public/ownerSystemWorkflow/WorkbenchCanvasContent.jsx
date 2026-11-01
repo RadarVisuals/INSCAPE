@@ -10,7 +10,7 @@ import { editorCellClip, transformedCellWindow } from '../../reception/editorCel
 // One clipping plane for authored content. Its projection follows the camera
 // paint clock, without reading module rectangles or re-rendering their media.
 // Tools and inspection overlays remain in the existing viewport host.
-export default function WorkbenchCanvasContent({ children }) {
+export default function WorkbenchCanvasContent({ children, suspended = false }) {
   const { area, showOutside, setCanvasHost } = useWorkbenchArea();
   const { getCamera, subscribeCameraPaint, registerCameraPlane } = useWorkbenchCamera();
   const { layers, content, entries, editorHiddenIds, subscribe, frames, transforms, presentationTransforms, scale } = useWorkbenchView();
@@ -91,7 +91,7 @@ export default function WorkbenchCanvasContent({ children }) {
       }
     };
   }, [cellContext?.cells, entries, frames, transforms, presentationTransforms, content, subscribe, scale]);
-  return <div ref={node} className="workbench-canvas-content" data-show-outside={showOutside || undefined}>
+  return <div ref={node} className="workbench-canvas-content" data-show-outside={showOutside || undefined} data-suspended={suspended || undefined} inert={suspended ? '' : undefined} aria-hidden={suspended || undefined}>
     <div ref={plane} className="workbench-camera-plane">{children}</div>
   </div>;
 }

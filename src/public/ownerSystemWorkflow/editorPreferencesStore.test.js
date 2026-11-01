@@ -13,7 +13,7 @@ test('editor preferences round-trip all dock panes, hidden tabs and profile-leve
   store.tools.change({ type: 'close', tab: 'FX' });
   store.section('library').update(current => ({ ...current, sort: 'title-desc', query: 'moon', assetSize: 240, hideLabels: true, libraryWidth: 520, relationshipView: 'created', collapsedSections: ['section:one'], view: { kind: 'category', id: 'category:one' }, collection: 'Studies', sidebarWidth: 220 }));
   store.ref('navigator').current = { left: 300, top: 500 };
-  store.section('switcher').update({ left: 440, top: 280 });
+  store.section('creationBar').update(false);
   store.ref('keeper').current = { 'keeper:one': { left: 510, top: 500 } };
   store.section('textFrame').update({ left: 80, top: 70, width: 420, height: 610 });
   store.section('libraryWindow').update({ detached: true, frame: { left: 300, top: 120, width: 540, height: 600 } });
@@ -41,7 +41,7 @@ test('Library window rejects invalid frames and docking retains its last floatin
 });
 test('invalid saved docks are retained and cannot overwrite until explicit retry', () => {
   const disk = storage(); disk.setItem(editorPreferencesKey('alice'), '{broken');
-  const store = make(disk); store.update('sidebar', true);
+  const store = make(disk); store.update('creationBar', false);
   assert.equal(store.flush(), false); assert.equal(disk.getItem(editorPreferencesKey('alice')), '{broken');
   assert.match(store.getError(), /could not be read/);
   assert.equal(store.retry(), true); assert.equal(store.getError(), null); store.dispose();
@@ -54,18 +54,18 @@ test('invalid saved docks are retained and cannot overwrite until explicit retry
 test('failed writes retain current preferences and retry saves them without modifying unrelated data', () => {
   const disk = storage(), set = disk.setItem; disk.setItem('composition', 'unchanged');
   disk.setItem = () => { throw Error('Quota'); };
-  const store = make(disk); store.update('sidebar', true);
+  const store = make(disk); store.update('creationBar', false);
   assert.equal(store.flush(), false); assert.match(store.getError(), /could not be saved/);
-  assert.equal(store.getSnapshot().sidebar, true);
+  assert.equal(store.getSnapshot().creationBar, false);
   disk.setItem = set; assert.equal(store.retry(), true);
   assert.equal(disk.getItem('composition'), 'unchanged'); store.dispose();
 });
 test('revoked authority and external changes cannot be silently overwritten', () => {
   const disk = storage(); let writable = false;
-  const store = make(disk, 'alice', { canSave: () => writable }); store.update('sidebar', true);
+  const store = make(disk, 'alice', { canSave: () => writable }); store.update('creationBar', false);
   assert.equal(store.flush(), false); assert.equal(disk.getItem(editorPreferencesKey('alice')), null);
   writable = true; assert.equal(store.retry(), true);
-  disk.setItem(editorPreferencesKey('alice'), 'external'); store.update('sidebar', false);
+  disk.setItem(editorPreferencesKey('alice'), 'external'); store.update('creationBar', true);
   assert.equal(store.flush(), false); assert.equal(disk.getItem(editorPreferencesKey('alice')), 'external');
   assert.match(store.getError(), /another window/); store.dispose();
 });

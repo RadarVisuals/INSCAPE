@@ -206,7 +206,7 @@ async function mountArrivalReview(page, visitor) {
   }, visitor);
   await page.locator('[data-image-module="image:arrival-a"] .image-module__artwork[data-media-state="ready"]').waitFor();
   await page.evaluate(() => document.fonts.ready); await arrived(page);
-  const sidebar = page.getByRole('button', { name: 'Collapse sidebar', exact: true });
+  const sidebar = page.locator('.editor-menu-brand[aria-expanded="true"]');
   if (await sidebar.count()) await sidebar.click();
   await arrived(page);
 }

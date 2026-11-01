@@ -15,10 +15,10 @@ export default function useWorkbenchUtilityWindow(slot, saved, onSave) {
     addEventListener('resize', resize); media.addEventListener('change', resize);
     return () => { removeEventListener('resize', resize); media.removeEventListener('change', resize); };
   }, []);
-  const width = view.miniatures ? Math.min(176, (viewport.width - 44) / 2) : 176;
+  const width = manual?.width ?? (view.miniatures ? Math.min(176, (viewport.width - 44) / 2) : 176);
   const bottom = view.toolViewportBottom ?? viewport.height - 48;
   const minimumTop = Math.max(68, view.navigationTop ?? 0);
-  const naturalHeight = view.miniatures ? Math.max(72, Math.min(touch ? 228 : 188, bottom - minimumTop - 8)) : 188;
+  const naturalHeight = manual?.height ?? (view.miniatures ? Math.max(72, Math.min(touch ? 228 : 188, bottom - minimumTop - 8)) : 188);
   // On a short screen, keep settings above both utilities. Their own content
   // scrolls within the temporarily shorter windows; closing restores the size.
   const height = view.utilitySettings?.size && viewport.width < 700 ? Math.max(72, Math.min(naturalHeight, (view.toolViewportBottom ?? viewport.height - 48) - minimumTop - 16 - 140)) : naturalHeight;
@@ -26,6 +26,11 @@ export default function useWorkbenchUtilityWindow(slot, saved, onSave) {
   const frame = useMemo(() => ({ left: manual?.left ?? Math.max(8, viewport.width - 16 - width - slot % columns * (width + 12)),
     top: manual?.top ?? Math.max(8, (view.toolViewportBottom ?? viewport.height - 48) - 8 - height - Math.floor(slot / columns) * (height + 12)), width, height }),
   [manual, viewport.width, viewport.height, view.toolViewportBottom, width, height, slot, columns]);
-  const commit = useCallback(frame => { const position = { left: frame.left, top: frame.top }; setManual(position); current.current?.(position); }, []);
+  const latest = useRef(frame); latest.current = frame;
+  const commit = useCallback(change => {
+    const next = typeof change === 'function' ? change(latest.current) : change;
+    if (Object.keys(next).every(key => next[key] === latest.current[key])) return;
+    latest.current = next; setManual(next); current.current?.(next);
+  }, []);
   return { frame, commit };
 }

@@ -196,7 +196,7 @@ try {
     const url = origin + '/browser-tests/filled-workbench-performance-fixture.html?' + new URLSearchParams(testCase);
     const start = performance.now();
     await page.goto(url);
-    const selector = page.getByRole('combobox', { name: 'Active document' });
+    const selector = page.getByRole('menubar', { name: 'Editor commands' });
     try { await selector.waitFor(); } catch (error) {
       await writeFile(path.join(output, 'failure.txt'), JSON.stringify({ errors, failedLocalRequests, body: await page.locator('body').innerText() }, null, 2));
       throw error;

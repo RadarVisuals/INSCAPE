@@ -45,6 +45,16 @@ export default function OverviewNavigation({ profile, address, disabled, onAbout
     {onCreate && count >= MAX_WORKBENCHES && <small>All {MAX_WORKBENCHES} local canvases are in use.</small>}
     </section></div>
     <button ref={triggerRef} className="workbench-overview-menu-trigger" type="button" disabled={disabled} aria-label="Inscape menu" aria-expanded={open}
-      onClick={() => setOpen(!open)}><span>INSCAPE</span><span className="workbench-overview-menu-icon" aria-hidden="true"><i /><i /></span></button>
+      onClick={() => setOpen(!open)}>
+      <svg className="workbench-overview-wordmark" viewBox="0 0 480 154" aria-hidden="true">
+        {'inscape'.split('').map(letter => <use key={letter} className="workbench-overview-wordmark-letter" href={`/assets/brand/inscape-wordmark-new.svg#inscape-wordmark-${letter}`} />)}
+        <g className="workbench-overview-wordmark-corner">
+          <g className="workbench-overview-wordmark-spin">
+            <use href="/assets/brand/inscape-wordmark-new.svg#inscape-wordmark-corner" />
+            <use href="/assets/brand/inscape-wordmark-new.svg#inscape-wordmark-corner" />
+          </g>
+        </g>
+      </svg>
+    </button>
   </header>;
 }

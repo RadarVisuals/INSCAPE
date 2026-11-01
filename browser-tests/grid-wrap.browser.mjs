@@ -1,3 +1,4 @@
+import { editorCommand } from './fixtures/editor-menu.mjs';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { chromium } from 'playwright-core';
@@ -42,7 +43,7 @@ test('locked editor and Preview swipe through the ordered Grids in both directio
       await swipe('.system-workflow__canvas', 'previous');
       assert.match(await page.locator(editor).getAttribute('aria-label'), /GRID 03/);
       await page.screenshot({ path: `.browser-test-runtime/grid-wrap-editor-${width}.png` });
-      await page.getByRole('button', { name: 'Preview', exact: true }).click();
+      await editorCommand(page, 'Canvas', 'Preview');
       const nav = page.getByRole('group', { name: 'Published Grid navigation' });
       await nav.waitFor();
       const viewport = '.visitor-grid-world__viewport';

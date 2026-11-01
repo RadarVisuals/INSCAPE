@@ -51,7 +51,7 @@ export default function CanvasPresentation({ selected, model, origin, onClose, o
   const choose = id => { if (id !== destinationId && beforeViewChange()) setDestinationId(id); if (innerWidth <= 800) setIndexOpen(false); };
   const { viewport, close, beforeViewChange } = useCanvasPresentationMotion({ dialog, surface, origin, area: model.area,
     region: destination?.view || model.area, expanded, onClose });
-  const edit = () => { try { onEdit(selected.id); } catch (failure) { setError(failure.message); } };
+  const edit = () => { try { onEdit(selected.id, surface.current); } catch (failure) { setError(failure.message); } };
   return <dialog className="canvas-presentation" ref={dialog} tabIndex={-1} aria-modal="true" aria-label={`View ${selected.name}`}
     data-chrome-visible={chromeVisible || undefined}
     style={{ '--canvas-ratio': model.area.width / model.area.height }} data-expanded={expanded || undefined} onCancel={event => { event.preventDefault(); close(); }}

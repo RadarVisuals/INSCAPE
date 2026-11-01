@@ -55,7 +55,7 @@ export default function ReceptionDocumentCanvas({ reception, width, model, addre
   };
   return <div className="reception-document-viewport" ref={host} style={width ? { width } : undefined}>
     <section className="reception-document-canvas" aria-label="Reception layout" data-mobile={layout?.mobile || undefined}
-      style={{ width: layout?.width, height: layout?.height || 1, background: reception.surface || undefined }}>
+      style={{ width: layout?.width, height: layout?.height || 1 }}>
     {layout && order.map((id, zIndex) => {
       const rect = layout.windows[id];
       if (!rect) return null;

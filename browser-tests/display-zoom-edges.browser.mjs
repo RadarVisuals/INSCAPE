@@ -16,7 +16,7 @@ test('neighboring Display grids stay clipped while holding after navigation at f
       const board = page.locator('.system-workflow__presentation-board').first(); await board.waitFor();
       const saved = await page.evaluate(() => localStorage.getItem(window.__motionKey));
       if (!visitor) {
-        await page.getByRole('button', { name: 'Collapse sidebar', exact: true }).click();
+        await page.locator('.editor-menu-brand[aria-expanded="true"]').click();
         for (const name of ['Close Workbench Layers', 'Close Transform', 'Close Color', 'Close Image', 'Close Shape', 'Close FX', 'Close Info']) {
           const close = page.getByRole('button', { name, exact: true });
           if (await close.count()) { await close.focus(); await close.press('Enter'); }

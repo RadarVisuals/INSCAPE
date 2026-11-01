@@ -1,3 +1,4 @@
+import { editorCommand } from './fixtures/editor-menu.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdir, writeFile } from 'node:fs/promises';
@@ -22,6 +23,10 @@ for (const theme of ['carbon', 'mist']) for (const [width, height] of [[1440, 90
     await page.goto(`${origin}/browser-tests/tool-chrome-fixture.html?sample=navigator&theme=${theme}`);
     const nav = page.locator('.workbench-navigator'), keeper = page.locator('.keeper-dock-window'), map = page.getByRole('button', { name: 'Navigate Workbench', exact: true });
     await map.waitFor(); await page.locator('[data-navigator-object^="image:"] image').waitFor(); await settle(page);
+    const sidebar = page.getByRole('button', { name: 'Inscape sidebar', exact: true });
+    if (await sidebar.getAttribute('aria-expanded') === 'true') await sidebar.click();
+    await settle(page);
+    const homeCamera = await camera(page);
     assert.equal(await nav.locator('[data-navigator-object^="shape:"]').count(), 1);
     assert.match(await nav.locator('[data-navigator-object^="text:"]').innerText(), /Navigator study/);
     assert.equal(await nav.locator('iframe, [contenteditable="true"], [data-navigator-object^="keeper:"]').count(), 0);
@@ -64,7 +69,7 @@ for (const theme of ['carbon', 'mist']) for (const [width, height] of [[1440, 90
     await map.focus(); await map.press('ArrowLeft'); await settle(page);
     assert.ok((await camera(page)).x > grabbed.x);
     await page.getByRole('button', { name: 'Reset Workbench view', exact: true }).click(); await settle(page);
-    assert.deepEqual(await camera(page), { x: 0, y: 0, scale: 1 });
+    assert.deepEqual(await camera(page), homeCamera, 'Home uses the current Editor canvas framing');
     const slider = page.getByRole('slider', { name: 'Workbench zoom', exact: true });
     for (const percent of [25, 200]) { await slider.fill(String(percent)); await settle(page); assert.equal((await camera(page)).scale, percent / 100); }
     await map.focus(); await map.press('Control+0'); await settle(page);
@@ -73,7 +78,7 @@ for (const theme of ['carbon', 'mist']) for (const [width, height] of [[1440, 90
 
     assert.deepEqual(await page.evaluate(() => window.readToolChromeDraft()), before, 'navigation leaves saved content/history alone');
     if (width === 1440) {
-      await page.getByRole('button', { name: 'Preview', exact: true }).click();
+      await editorCommand(page, 'Canvas', 'Preview');
       await page.getByRole('button', { name: 'EXIT', exact: true }).waitFor(); await settle(page);
       assert.equal(await page.locator('main.system-workflow[inert]').count(), 1);
       assert.equal(await page.locator('main.system-workflow[inert] .workbench-navigator').count(), 0, 'hidden owner preview unmounts its Navigator');
@@ -89,7 +94,7 @@ for (const theme of ['carbon', 'mist']) for (const [width, height] of [[1440, 90
     if (width === 1440) {
       const move = page.getByLabel('Move Navigator window', { exact: true }); await move.focus(); await move.press('Shift+ArrowLeft');
       const moved = await nav.boundingBox();
-      await page.getByRole('button', { name: 'New canvas', exact: true }).click(); await page.getByLabel('New canvas name').fill('Navigator second');
+      await editorCommand(page, 'Canvas', 'New canvas'); await page.getByLabel('New canvas name').fill('Navigator second');
       await page.getByRole('button', { name: 'Create canvas', exact: true }).click(); await map.waitFor(); await settle(page);
       assert.equal((await nav.boundingBox()).x, moved.x); assert.equal(await nav.locator('[data-navigator-object^="image:"]').count(), 0);
       await page.reload(); await map.waitFor(); await settle(page);

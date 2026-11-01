@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Settings2, X } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import { WorkbenchWindow } from '../public/ownerSystemWorkflow/DisplayInstrumentWindow.jsx';
+import WorkbenchUtilityPanel from '../public/ownerSystemWorkflow/WorkbenchUtilityPanel.jsx';
 import { removeWorkbenchModule } from '../systemWorkflow/removeWorkbenchModule.js';
 import { resolvePublishedAssetUrl } from '../profileDocument/domain/publishedAssetUrl.js';
 import { resolveLibraryImageAsset } from '../library/resolveLibraryImageAsset.js';
@@ -20,7 +21,7 @@ import '../public/ownerSystemWorkflow/displayInstruments.css';
 import './keeper.css';
 
 function KeeperDock({ record, index, initialPresentation, store, profileAddress, hostRef, registerTarget,
-  dockPositions, suspended, reducedMotion, flightAreaRef, motionSpace, navigationRef }) {
+  dockPositions, suspended, exiting, reducedMotion, flightAreaRef, motionSpace, navigationRef }) {
   const view = useWorkbenchView();
   const utility = useWorkbenchUtilityWindow(index ? index + 1 : 0, dockPositions?.current[record.id] || initialPresentation?.position,
     position => { if (dockPositions) dockPositions.current = { ...dockPositions.current, [record.id]: position }; });
@@ -42,7 +43,7 @@ function KeeperDock({ record, index, initialPresentation, store, profileAddress,
   const editable = Boolean(store) && !suspended;
   const src = record.asset ? resolvePublishedAssetUrl(record.asset.media.url) : null;
   const movement = keeperMovement(record), rigged = movement === 'swim' || movement === 'svg';
-  const layered = useKeeperRig(src, rigged && !suspended, attempt);
+  const layered = useKeeperRig(src, rigged && (!suspended || exiting), attempt);
   const wrongSvg = movement === 'svg' && layered.status === 'ready' && layered.rig?.kind !== 'octopus';
   const status = wrongSvg ? 'failed' : rigged ? layered.status : imageState.src === src ? imageState.status : 'loading';
   const size = keeperSize(record), swim = keeperSwim(record);
@@ -107,13 +108,12 @@ function KeeperDock({ record, index, initialPresentation, store, profileAddress,
       if (direction) { event.preventDefault(); event.stopPropagation(); nudge(direction[0] * 80, direction[1] * 80); }
     },
     onClick: () => setTalking(value => !value) };
-  return <div className="keeper-instance" data-workbench-selection-tools data-keeper={record.id} data-keeper-phase={phase} data-keeper-movement={movement} data-suspended={suspended || undefined}>
-    <WorkbenchWindow label="Keeper dock" title={record.name} titleContent={<strong title={record.name}>Keeper</strong>}
-      className="keeper-dock-window" chrome="flat" avoidControls={navigationRef?.current ? [navigationRef.current] : undefined}
-      controls={editable && <button ref={settingsButton} type="button" className="workflow-tactile-control keeper-settings-button" data-workbench-selection-tools aria-label="Keeper settings" title="Keeper settings" aria-expanded={Boolean(settings)}
+  return <div className="keeper-instance" data-workbench-selection-tools data-workflow-material="tactile" data-workflow-finish="flat" data-keeper={record.id} data-keeper-phase={phase} data-keeper-movement={movement} data-suspended={suspended && !exiting || undefined} inert={suspended ? '' : undefined}>
+    <WorkbenchUtilityPanel dockId={record.id} label="Keeper dock" title="Keeper" moveLabel="Move Keeper dock window" titleContent={<strong title={record.name}>Keeper</strong>}
+      className="keeper-dock-window workbench-utility-panel" chrome="flat" hidden={suspended && !exiting} zIndex={85}
+      headerActions={editable && <button ref={settingsButton} type="button" className="workflow-tactile-control keeper-settings-button" data-workbench-selection-tools aria-label="Keeper settings" title="Keeper settings" aria-expanded={Boolean(settings)}
         onClick={() => settings ? closeSettings() : setSettings(true)}><Settings2 size={14} strokeWidth={1.6} /></button>}
-      width={utility.frame.width} initialHeight={utility.frame.height} minimumWidth={utility.frame.width} minimumHeight={utility.frame.height}
-      resizable={false} initialX={utility.frame.left} initialY={utility.frame.top} committedFrame={utility.frame} onLayoutCommit={utility.commit} onLayoutChange={layout}>
+      minimumWidth={160} minimumHeight={120} frame={utility.frame} onFrameChange={utility.commit} onLayoutChange={layout}>
       <div ref={dock} className="keeper-dock" aria-busy={loading || src && status === 'loading' || undefined}>
         <button type="button" data-workbench-selection-tools aria-label={label} title={label} onClick={event => { if (!loading && !suspended) { if (status === 'failed' && src) retry(); else toggle(event); } }}
           aria-disabled={!src || loading || status === 'loading' || suspended || undefined} aria-pressed={phase !== 'docked'}>
@@ -124,7 +124,7 @@ function KeeperDock({ record, index, initialPresentation, store, profileAddress,
           </KeeperDockContent>
         </button>
       </div>
-    </WorkbenchWindow>
+    </WorkbenchUtilityPanel>
     {/* Keeper and its dock use viewport coordinates independently of the canvas. */}
     {createPortal(<>
     {src && <div ref={actor} className="keeper-roamer" data-workbench-selection-tools hidden={phase === 'docked' || suspended}>

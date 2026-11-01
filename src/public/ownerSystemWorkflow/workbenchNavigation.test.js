@@ -33,6 +33,16 @@ test('focus uses the full Workbench width and the actual bottom controls boundar
   }
 });
 
+test('editor framing reserves its menu while keeping the canvas screen origin', () => {
+  const viewport = workbenchNavigationViewport({ width: 390, height: 800, top: 40 }, 700);
+  const bounds = { left: 0, top: 0, width: 320, height: 300 };
+  const camera = workbenchDestinationCamera(bounds, viewport);
+  assert.equal(viewport.top, 40);
+  assert.equal(viewport.height, 652);
+  assert.equal(150 * camera.scale + camera.offset.y, 366);
+  assert.equal(workbenchNavigationViewport({ width: 320, height: 320, top: 40 }, 30).height, 0);
+});
+
 test('camera interpolation reaches exact endpoints without changing either saved context', () => {
   const start = Object.freeze({ scale: .67, offset: Object.freeze({ x: -123.4, y: 56.78 }) });
   const end = Object.freeze({ scale: 2, offset: Object.freeze({ x: -1760, y: -560 }) });

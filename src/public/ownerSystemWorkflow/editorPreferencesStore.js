@@ -1,20 +1,23 @@
 import { createLocalPreferencesStore } from './localPreferencesStore.js';
 import { createToolDockLayout, changeToolDock, toolIsVisible, validToolDockLayout, validToolFrame } from './workbenchToolDockState.js';
 import { defaultBrowserPreferences, validBrowserPreferences } from '../../lattice/browser/browserPreferences.js';
+import { emptySideDock, validSideDock } from './workbenchSideDockState.js';
 
 export const editorPreferencesKey = profile => `inscape:editor-preferences:v1:${profile.toLowerCase()}`;
-const position = value => value === null || Boolean(value && ['left', 'top'].every(key => Number.isFinite(value[key]) && Math.abs(value[key]) <= 100000));
+const position = value => value === null || Boolean(value && ['left', 'top'].every(key => Number.isFinite(value[key]) && Math.abs(value[key]) <= 100000)
+  && (value.width === undefined && value.height === undefined || validToolFrame(value)));
 const positions = value => value && typeof value === 'object' && !Array.isArray(value) && Object.keys(value).length <= 16
   && Object.entries(value).every(([id, frame]) => id.length <= 128 && position(frame));
 const validators = {
-  switcher: value => value == null || position(value),
+  creationBar: value => value == null || typeof value === 'boolean',
   libraryWindow: value => value == null || Boolean(value && typeof value.detached === 'boolean' && validToolFrame(value.frame)),
   library: validBrowserPreferences, docks: validToolDockLayout, textFrame: value => value === null || validToolFrame(value),
   textOpen: value => value === null || typeof value === 'boolean', textSection: value => ['format', 'article'].includes(value),
-  navigator: position, keeper: positions, sidebar: value => value === null || typeof value === 'boolean',
+  navigator: position, keeper: positions,
+  sideDock: validSideDock,
 };
-const defaults = width => ({ switcher: null, libraryWindow: null, library: defaultBrowserPreferences(), docks: createToolDockLayout(width),
-  textFrame: null, textOpen: null, textSection: 'format', navigator: null, keeper: {}, sidebar: null });
+const defaults = width => ({ creationBar: true, libraryWindow: null, library: defaultBrowserPreferences(), docks: createToolDockLayout(width),
+  textFrame: null, textOpen: null, textSection: 'format', navigator: null, keeper: {}, sideDock: emptySideDock() });
 
 // One profile-local owner for editor preferences. No composition content or camera
 // state is stored here. Sections expose stable snapshots to their actual controls.
@@ -26,7 +29,7 @@ export function createEditorPreferencesStore({ profile, storage, canSave = () =>
       const saved = JSON.parse(serialized);
       if (saved.version !== 1 || !saved.value || Object.keys(validators).some(name => !validators[name](saved.value[name]))) throw Error('Invalid preferences');
       const value = Object.fromEntries(Object.keys(validators).map(name => [name, saved.value[name]]));
-      return { ...value, docks: { ...value.docks, activeGroup: null } };
+      return { ...value, sideDock: value.sideDock ?? emptySideDock(), creationBar: value.creationBar ?? true, docks: { ...value.docks, activeGroup: null } };
     },
   });
   const { subscribe, getSnapshot } = record;

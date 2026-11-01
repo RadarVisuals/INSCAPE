@@ -1,3 +1,4 @@
+import { editorMenu, activeEditorDocument, editorCommand, selectEditorDocument } from './fixtures/editor-menu.mjs';
 import { separateLayers } from './fixtures/shared-tools.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -17,7 +18,7 @@ async function fixture(page, options = {}) {
     await route.fulfill({ path: `public/${file}` });
   });
   await page.goto(`${origin}/browser-tests/workbench-storage-fixture.html`);
-  await page.getByRole('combobox', { name: 'Active document' }).waitFor();
+  await editorMenu(page, 'Canvas').waitFor();
   await page.evaluate(async options => {
     const { layersDraft } = await import('/browser-tests/fixtures/artwork-layers.js');
     const { systemWorkflowDraftKey } = await import('/src/systemWorkflow/systemWorkflowDraftStore.js');
@@ -72,7 +73,7 @@ test('tool panel moves independently, distinguishes pointer/keyboard focus, canc
     await page.setViewportSize({ width: 760, height: 500 });
     await page.waitForFunction(() => {
       const panel = document.querySelector('.workbench-tool-panel').getBoundingClientRect();
-      const navigation = document.querySelector('.workbench-switcher__navigation').getBoundingClientRect();
+      const navigation = document.querySelector('.editor-menu-bar').getBoundingClientRect();
       return panel.x >= 8 && panel.right <= innerWidth - 8 && panel.bottom <= innerHeight - 48 && panel.top >= navigation.bottom + 8;
     });
     const list = page.locator('.workbench-layers-list');
@@ -424,18 +425,18 @@ test('Workbench A to B to A drops the old group; Visitor selection has no owner 
     const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, reducedMotion: 'reduce' });
     const errors = []; page.on('pageerror', error => errors.push(error.message));
     await fixture(page, { selectionOnly: true });
-    const aId = await page.getByRole('combobox', { name: 'Active document' }).inputValue();
+    const aId = await activeEditorDocument(page);
     await page.getByRole('button', { name: 'Select Eyes', exact: true }).click();
     await page.getByRole('button', { name: 'Select Body', exact: true }).click({ modifiers: ['Shift'] });
     assert.equal(await page.locator('.workbench-layer-row[data-selected]').count(), 2);
     const original = await page.evaluate(() => window.guardedStore().getDraft());
-    await page.getByRole('button', { name: 'New canvas', exact: true }).click();
+    await editorCommand(page, 'Canvas', 'New canvas');
     await page.getByLabel('New canvas name', { exact: true }).fill('Selection B');
     await page.getByRole('button', { name: 'Create canvas', exact: true }).click();
     await page.waitForFunction(() => window.guardedStore().listWorkbenches().length === 2 && !window.guardedStore().getDraft().imageModules?.length);
     assert.equal(await page.locator('.workbench-layer-row[data-selected]').count(), 0);
     assert.equal(await page.locator('[data-context-action-target]').count(), 0);
-    await page.getByRole('combobox', { name: 'Active document' }).selectOption(aId);
+    await selectEditorDocument(page, aId);
     await page.getByRole('button', { name: 'Select Body', exact: true }).waitFor();
     assert.equal(await page.locator('.workbench-layer-row[data-selected]').count(), 0, 'the previous explicit group is not restored into the new activation');
     assert.equal(await page.locator('[data-context-action-target]').count(), 0);

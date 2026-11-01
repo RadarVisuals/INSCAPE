@@ -24,7 +24,7 @@ for (const visitor of [false, true]) for (const width of [1440, 390]) {
       await firstImage.locator('.image-module__artwork[data-media-state="ready"]').waitFor();
       await page.evaluate(() => document.fonts.ready); await settle(page);
       if (!visitor) {
-        const collapse=page.getByRole('button',{name:'Collapse sidebar',exact:true});if(await collapse.count())await collapse.click();
+        const collapse=page.locator('.editor-menu-brand[aria-expanded="true"]');if(await collapse.count())await collapse.click();
         const savedBeforePan=await page.evaluate(()=>localStorage.getItem(window.__motionKey));
         await page.locator('main.system-workflow').first().focus();
         await page.mouse.move(width-20,1000);await page.keyboard.down('Space');await page.mouse.down();

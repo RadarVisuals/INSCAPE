@@ -27,6 +27,7 @@
 .composition-explorer-heading > div { display: flex; flex: none; gap: 4px; }
 .composition-explorer-heading button { font-size: 12px; color: var(--tactile-muted); padding: 8px 10px; min-height: 36px; }
 .composition-explorer-viewport { height: clamp(400px, calc(100dvh - 242px), 1100px); position: relative; overflow: hidden; border-radius: 14px; background: var(--tactile-face); cursor: grab; outline-offset: 3px; }
+.workbench-overview[data-workspace] .composition-explorer-viewport { height: clamp(300px, calc(100dvh - 282px), 1100px); }
 .composition-explorer-viewport[data-workbench-panning] { cursor: grabbing; user-select: none; }
 .composition-explorer-viewport > .workbench-overview-preview { width: 100%; height: 100%; margin: 0; pointer-events: none; }
 .composition-explorer-controls { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-top: 10px; }
@@ -51,5 +52,12 @@
 .composition-index[data-expanded] .composition-index-body { grid-template-columns: minmax(0, 1fr); }
 .composition-index[data-expanded] .composition-index-sidebar { display: none; }
 .composition-index[data-expanded] .composition-explorer-viewport { height: calc(100dvh - 194px); min-height: 400px; }
+.workbench-overview[data-workspace] .composition-index[data-expanded] .composition-explorer-viewport { height: calc(100dvh - 234px); }
+@media (max-width: 800px) {
+  .composition-index { --index-gutter: 16px; }
+  .composition-index-body { grid-template-columns: minmax(0, 1fr); }
+  .composition-index-sidebar { max-height: 160px; overflow: auto; }
+  .composition-explorer-bottom { gap: 16px; }
+}
 .composition-explorer-viewport .canvas-presentation-highlight { outline: 2px solid var(--tactile-ink); }
 @media (forced-colors: active) { .composition-index .workbench-overview-list button[aria-current] { border-color: Highlight; } }

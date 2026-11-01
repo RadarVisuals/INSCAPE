@@ -24,7 +24,8 @@ export default function OwnerWorkbenchModules({
   workspaceRef,
   workbenchNavigationRef,
   keeperDockPositions,
-  preview,
+  suspended,
+  exiting,
   panelOccupied,
   instrumentsObscured,
   revealInstruments,
@@ -48,7 +49,7 @@ export default function OwnerWorkbenchModules({
   if (!workbenchController.draft.grids.length) initialPrimary.current = false;
   return (
     <>
-      <WorkbenchCanvasContent>
+      <WorkbenchCanvasContent suspended={suspended}>
         {displayIds.map(id => (
           <OwnerDisplayInstance
             key={id}
@@ -94,7 +95,7 @@ export default function OwnerWorkbenchModules({
             onPresentation={registerPresentation}
             shared={{
               assetsById,
-              suspended: Boolean(preview),
+              suspended: suspended,
               panelOccupied,
               instrumentsObscured,
               onRevealInstruments: revealInstruments,
@@ -125,7 +126,8 @@ export default function OwnerWorkbenchModules({
               dockPositions={keeperDockPositions}
               registerTarget={registerModuleAssetTarget}
               reducedMotion={layout.reducedMotion}
-              suspended={Boolean(preview)}
+              suspended={suspended}
+              exiting={exiting}
             />
           </Suspense>
         )}
@@ -142,7 +144,7 @@ export default function OwnerWorkbenchModules({
               onPresentationChange={registerShapePresentation}
               onActivate={selectionState.focusModule}
               windowSnap={workbenchPreferences.shortcutSnap}
-              suspended={Boolean(preview)}
+              suspended={suspended}
             />
           </Suspense>
         )}
@@ -159,7 +161,7 @@ export default function OwnerWorkbenchModules({
               onPresentationChange={registerImagePresentation}
               registerTarget={registerModuleAssetTarget}
               onActivate={selectionState.focusModule}
-              suspended={Boolean(preview)}
+              suspended={suspended}
             />
           </Suspense>
         )}
@@ -179,7 +181,7 @@ export default function OwnerWorkbenchModules({
               onPresentationChange={registerTextPresentation}
               registerTarget={registerModuleAssetTarget}
               placementTargets={allPlacementTargetsRef}
-              suspended={Boolean(preview)}
+              suspended={suspended}
             />
           </Suspense>
         )}
@@ -193,7 +195,7 @@ export default function OwnerWorkbenchModules({
             presentations={initialWorkbench.current?.miniApps}
             onPresentationChange={registerMiniAppPresentation}
             onConnect={onConnect}
-            suspended={Boolean(preview)}
+            suspended={suspended}
           />
         </Suspense>
       )}

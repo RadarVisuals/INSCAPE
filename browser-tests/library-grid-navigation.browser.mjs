@@ -1,3 +1,4 @@
+import { editorCommand } from './fixtures/editor-menu.mjs';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { join } from 'node:path';
@@ -97,7 +98,7 @@ for (const [width, motion] of [[1440, 'reduce'], [390, 'reduce'], [1440, 'no-pre
         assert.equal(await library.isVisible(), true);
 
         // Other dock panels retain their existing replacement behavior.
-        await page.getByRole('button', { name: 'Settings', exact: true }).click();
+        await editorCommand(page, 'Edit', 'Settings');
         await page.getByRole('dialog', { name: 'Settings', exact: true }).waitFor();
         await grids.waitFor({ state: 'detached' });
         await library.waitFor({ state: 'hidden' });

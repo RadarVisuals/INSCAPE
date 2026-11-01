@@ -6,21 +6,23 @@ import './compositionIndex.css';
 
 // This index reads the supplied owner/public collection. It never switches the
 // editor's active Workbench; only the explicit Edit action may do that.
-export default function CompositionIndex({ items, selected, model, profile, listRef, onSelect, onEdit, onDetails, onCreate, onOpenReception, onEditReception, onGrid, settings, disabled }) {
-  const [expanded, setExpanded] = useState(false);
-  const memories = useRef(new Map()), root = useRef(null);
+export default function CompositionIndex({ items, selected, model, profile, listRef, onSelect, onEdit, onDetails, onCreate, onOpenReception, onEditReception, onGrid, settings, disabled, memory: workspaceMemory, framed, movingCanvasId }) {
+  const [expanded, setExpanded] = useState(workspaceMemory?.expanded || false);
+  const localMemories = useRef(new Map()), root = useRef(null);
+  const memories = workspaceMemory?.cameras || localMemories.current;
   const profileAddress = selected.draft.profileAddress;
   const key = `${profileAddress}:${selected.id}:${JSON.stringify(model.area)}`;
-  if (!memories.current.has(key)) memories.current.set(key, { current: null });
-  const memory = memories.current.get(key);
+  if (!memories.has(key)) memories.set(key, { current: null });
+  const memory = memories.get(key);
   useEffect(() => {
     const retained = new Set(items.map(item => `${profileAddress}:${item.id}:`));
-    for (const id of memories.current.keys()) if (![...retained].some(prefix => id.startsWith(prefix))) memories.current.delete(id);
-  }, [items, profileAddress]);
-  const toggleExpanded = () => { setExpanded(value => !value); };
+    for (const id of memories.keys()) if (![...retained].some(prefix => id.startsWith(prefix))) memories.delete(id);
+  }, [items, profileAddress, memories]);
+  const expand = value => { setExpanded(value); if (workspaceMemory) workspaceMemory.expanded = value; };
+  const toggleExpanded = () => expand(!expanded);
   const select = id => { if (!disabled) onSelect(id); };
   return <div className="composition-index" ref={root} data-expanded={expanded || undefined} onKeyDown={event => {
-    if (event.key === 'Escape' && expanded && !event.defaultPrevented) { event.preventDefault(); setExpanded(false); }
+    if (event.key === 'Escape' && expanded && !event.defaultPrevented) { event.preventDefault(); expand(false); }
   }}>
     <header className="composition-index-header" inert={disabled ? '' : undefined}>
       <span className="composition-index-brand">{onEdit ? 'My Inscape' : 'inscape'}</span>
@@ -29,7 +31,7 @@ export default function CompositionIndex({ items, selected, model, profile, list
     </header>
     <div className="composition-index-body">
       <aside className="composition-index-sidebar" inert={disabled || expanded ? '' : undefined}>
-        {(onOpenReception || onEditReception) && <div className="composition-index-reception">
+        {!framed && (onOpenReception || onEditReception) && <div className="composition-index-reception">
           {onOpenReception && <button className="composition-index-about" type="button" onClick={onOpenReception}><ArrowUpLeft size={14} />Reception</button>}
           {onEditReception && <button type="button" className="composition-index-edit-reception" aria-label="Edit Reception" title="Edit Reception" onClick={onEditReception}><Pencil size={14} />{onOpenReception ? 'Edit' : 'Edit Reception'}</button>}
         </div>}
@@ -42,11 +44,11 @@ export default function CompositionIndex({ items, selected, model, profile, list
         </nav>
         {onCreate && <button className="composition-index-create" type="button" onClick={onCreate} disabled={items.length >= MAX_WORKBENCHES}><Plus size={14} />New canvas</button>}
       </aside>
-      <main className="composition-index-main">
+      <section className="composition-index-main">
         {settings ? <section className="composition-index-settings" aria-label="Canvas settings">{settings}</section>
-          : <CanvasExplorer key={key} selected={selected} model={model} memory={memory} disabled={disabled} expanded={expanded}
+          : <CanvasExplorer key={key} selected={selected} model={model} memory={memory} disabled={disabled} expanded={expanded} moving={movingCanvasId === selected.id}
             onExpand={toggleExpanded} onEdit={onEdit} onDetails={onDetails} />}
-      </main>
+      </section>
     </div>
   </div>;
 }

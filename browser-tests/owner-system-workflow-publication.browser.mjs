@@ -1,3 +1,4 @@
+import { editorMenu } from './fixtures/editor-menu.mjs';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { chromium } from 'playwright-core';
@@ -66,7 +67,7 @@ test('System Workflow publication opens the canonical v9 rack without external m
     await rack.waitFor({ state: 'detached' });
     await trigger.click();
     await rack.waitFor();
-    await page.getByRole('button', { name: 'Docs' }).click();
+    await editorMenu(page, 'Docs').click();
     await rack.waitFor({ state: 'detached' });
     await page.getByRole('dialog', { name: 'Docs' }).waitFor();
     await page.getByRole('button', { name: 'Close Docs' }).click();

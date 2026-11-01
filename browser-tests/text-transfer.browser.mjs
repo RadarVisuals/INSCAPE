@@ -1,3 +1,4 @@
+import { editorCommand } from './fixtures/editor-menu.mjs';
 import { setTextBackground } from './fixtures/shared-tools.mjs';
 import { openTextToolSection } from './fixtures/text-tool-sections.mjs';
 import assert from 'node:assert/strict';
@@ -41,7 +42,7 @@ for (const viewScale of [1, .5]) test(`Text tools, save recovery and drag into a
     const text = page.locator('[data-workbench-module="text"]'), output = text.locator('.text-window'), tools = page.locator('.text-tools-window');
     await output.waitFor();
     await page.evaluate(() => document.fonts.ready);
-    await page.getByRole('button', { name: 'Collapse sidebar', exact: true }).click();
+    await page.locator('.editor-menu-brand[aria-expanded="true"]').click();
     for (const name of ['Close Workbench Layers', 'Close Transform', 'Close Color', 'Close Image', 'Close Shape', 'Close FX', 'Close Info']) {
       const close = page.getByRole('button', { name, exact: true });
       if (await close.count()) { await close.focus(); await close.press('Enter'); }
@@ -135,7 +136,7 @@ for (const width of [1600, 390]) for (const scale of [1, .5]) test(`Default Text
     await mountTransfer(page);
     const text = page.locator('.text-window'), grip = text.getByLabel('Move Text window', { exact: true });
     await text.waitFor(); await page.evaluate(() => document.fonts.ready);
-    const collapse = page.getByRole('button', { name: 'Collapse sidebar', exact: true });
+    const collapse = page.locator('.editor-menu-brand[aria-expanded="true"]');
     if (await collapse.count()) await collapse.click();
     for (const name of ['Close Workbench Layers', 'Close Transform', 'Close Color', 'Close Image', 'Close Shape', 'Close FX', 'Close Info', 'Close Text tools']) {
       const close = page.getByRole('button', { name, exact: true });
@@ -169,7 +170,7 @@ for (const width of [1600, 390]) for (const scale of [1, .5]) test(`Default Text
     assert.deepEqual(await page.evaluate(() => window.readDraft()), saved, 'camera and control placement never rewrite authored geometry or content');
     await page.screenshot({ path: `${evidence}/reachable.png` });
     if (width === 1600 && scale === .5) {
-      await page.getByRole('button', { name: 'Canvas size', exact: true }).click();
+      await editorCommand(page, 'Canvas', 'Canvas size');
       await page.getByRole('button', { name: 'Show outside canvas', exact: true }).click();
       await page.getByRole('button', { name: 'Close canvas size', exact: true }).click();
       await grip.focus();

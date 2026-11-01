@@ -1,3 +1,4 @@
+import { editorCommand } from './fixtures/editor-menu.mjs';
 import { openTextToolSection } from './fixtures/text-tool-sections.mjs';
 import assert from 'node:assert/strict';
 import test from 'node:test';
@@ -112,7 +113,7 @@ test('owner Display and Text windows snap to the Workbench, with free movement a
     assert.deepEqual(await board.boundingBox(), baseline, 'ordinary wheel does not resize Display');
     await textHeader.focus();
     await page.getByRole('button', { name: 'Close Untitled article', exact: true }).click();
-    await page.getByRole('button', { name: 'Settings', exact: true }).click();
+    await editorCommand(page, 'Edit', 'Settings');
     await page.getByRole('checkbox', { name: 'Grid snapping', exact: true }).uncheck();
     await page.getByRole('checkbox', { name: 'Module edge snapping', exact: true }).uncheck();
     await page.getByRole('button', { name: 'Close Settings', exact: true }).click();
@@ -125,7 +126,7 @@ test('owner Display and Text windows snap to the Workbench, with free movement a
     assert.deepEqual(after.grids, before.grids); assert.deepEqual(after.texts, before.texts);
     for (const [name, size] of [['wide', { width: 1440, height: 1000 }], ['narrow', { width: 390, height: 844 }]]) {
       await page.setViewportSize(size);
-      await page.getByRole('button', { name: 'Settings', exact: true }).click();
+      await editorCommand(page, 'Edit', 'Settings');
       await page.getByRole('checkbox', { name: 'Grid snapping', exact: true }).scrollIntoViewIfNeeded();
       await page.screenshot({ path: `.browser-test-runtime/workbench-snapping-${name}.png` });
       await page.getByRole('button', { name: 'Close Settings', exact: true }).focus();

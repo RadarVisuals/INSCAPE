@@ -83,7 +83,7 @@ test('frame height fills columns sequentially, preserves text and reports excess
     const errors = []; page.on('pageerror', error => errors.push(error.message));
     await seed(page);
     // The authored frame starts beneath expanded navigation in this fixture.
-    await page.getByRole('button', { name: 'Collapse sidebar', exact: true }).click();
+    await page.locator('.editor-menu-brand[aria-expanded="true"]').click();
     const savedArticle = await page.evaluate(() => window.savedDraft().texts[0].article);
     const editor = await bodyIn(page).elementHandle();
     await page.getByRole('button', { name: 'Close Text tools', exact: true }).click();

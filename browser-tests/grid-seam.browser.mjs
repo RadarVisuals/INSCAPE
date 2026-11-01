@@ -1,3 +1,4 @@
+import { editorCommand } from './fixtures/editor-menu.mjs';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { chromium } from 'playwright-core';
@@ -25,7 +26,7 @@ test('released swipe keeps adjacent edges sealed at fractional sizes and pixel d
       ` });
       for (const mode of ['editor', 'preview']) {
         if (mode === 'preview') {
-          await page.getByRole('button', { name: 'Preview', exact: true }).click();
+          await editorCommand(page, 'Canvas', 'Preview');
           await page.getByRole('group', { name: 'Published Grid navigation' }).waitFor();
         }
         const selector = mode === 'editor' ? '.system-workflow__canvas' : '.visitor-grid-world__viewport';

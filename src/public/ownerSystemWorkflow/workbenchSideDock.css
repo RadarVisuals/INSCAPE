@@ -1,0 +1,7 @@
+.workbench-side-dock { position: fixed; right: 0; z-index: 80; box-sizing: border-box; background: var(--tactile-face); border-left: 1px solid var(--tactile-edge); pointer-events: none; }
+.workbench-side-dock[data-drop-preview] { z-index: 109; background: color-mix(in srgb, var(--tactile-face) 85%, transparent); outline: 1px solid var(--tactile-ink); outline-offset: -1px; }
+.workbench-side-dock-hint { padding: 12px; color: var(--tactile-ink); font: var(--workflow-type-control); }
+.workbench-tool-panel[data-side-docked] { border-radius: 0; }
+.workbench-utility-panel > .workbench-tool-panel-content { overflow: auto; overscroll-behavior: contain; }
+.workbench-navigator .workbench-tool-panel-content > div { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.workbench-navigator .navigator-map { flex: 1; min-height: 24px; }

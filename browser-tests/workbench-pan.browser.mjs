@@ -69,7 +69,7 @@ test('owner and Visitor pan all modules equally at native and zoomed sizes witho
       await page.locator('[data-workbench-view-id]').nth(7).waitFor();
       if (!visitor && await page.getByRole('button', { name: 'Close Text tools', exact: true }).isVisible())
         await page.getByRole('button', { name: 'Close Text tools', exact: true }).click();
-      const collapse = page.getByRole('button', { name: 'Collapse sidebar', exact: true });
+      const collapse = page.locator('.editor-menu-brand[aria-expanded="true"]');
       if (await collapse.isVisible()) await collapse.click();
       await page.waitForTimeout(1000);
       let before = await snapshot(page);

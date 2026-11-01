@@ -1,3 +1,4 @@
+import { editorMenu, editorCommand } from './fixtures/editor-menu.mjs';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { chromium } from 'playwright-core';
@@ -26,7 +27,7 @@ test('Visitor and Preview dock stays visible and clickable above overlapping Tex
         localStorage.setItem(systemWorkflowDraftKey(draft.profileAddress), JSON.stringify(draft));
       });
       await mountTextToolsFixture(page, origin, { visitor: !preview });
-      if (preview) await page.getByRole('button', { name: 'Preview', exact: true }).click();
+      if (preview) await editorCommand(page, 'Canvas', 'Preview');
       const visitor = page.locator('.visitor-grid-world').first();
       const article = visitor.locator('.text-window').first();
       const dock = visitor.locator('.visitor-grid-world__dock');
@@ -70,7 +71,7 @@ test('Visitor and Preview dock stays visible and clickable above overlapping Tex
       await profile.click(); await profile.click();
       if (preview) {
         await dock.getByRole('button', { name: 'EXIT', exact: true }).click();
-        await page.getByRole('button', { name: 'Preview', exact: true }).waitFor();
+        await editorMenu(page, 'Canvas').waitFor();
       }
       assert.deepEqual(errors, [], `${label}: no browser errors`);
       await context.close();

@@ -1,3 +1,4 @@
+import { editorMenu, editorCommand } from './fixtures/editor-menu.mjs';
 import assert from 'node:assert/strict';
 import { mkdir } from 'node:fs/promises';
 import { resolve } from 'node:path';
@@ -216,14 +217,14 @@ test('Profile, Activity, Discover, and Settings expose the promoted lifecycle an
     await discover.waitFor({ state: 'detached' });
     assert.equal(await discoverTrigger.evaluate(node => node === document.activeElement), true);
 
-    const settingsTrigger = page.getByRole('button', { name: 'Settings', exact: true });
+    const settingsTrigger = editorMenu(page, 'Edit');
     const displaySurface = page.locator('.system-workflow__stage-viewport');
     const originalDisplaySurface = await displaySurface.getAttribute('data-surface');
     const originalDisplayGuide = await page.locator('.system-workflow__canvas').getAttribute('data-guide');
     await page.evaluate(() => { window.__phase3PreferenceWrites = 0; addEventListener('inscape:review-storage-write', event => {
       if (event.detail.key.startsWith('inscape.system-workflow-draft.')) window.__phase3PreferenceWrites++;
     }); });
-    await settingsTrigger.click();
+    await editorCommand(page, 'Edit', 'Settings');
     const settings = page.getByRole('dialog', { name: 'Settings' });
     await settings.waitFor();
     assert.deepEqual(await settings.locator('.system-workflow__settings-section > header strong').allTextContents(), ['Activity', 'Workbench', 'Interface', 'Workbench backup']);
@@ -260,7 +261,7 @@ test('Profile, Activity, Discover, and Settings expose the promoted lifecycle an
     await appearance.getByLabel('Grid spacing').fill('-8');
     await appearance.getByLabel('Grid colour', { exact: true }).fill('#123456');
     await page.getByRole('button', { name: 'Close Display appearance', exact: true }).click();
-    await page.getByRole('button', { name: 'Preview', exact: true }).click();
+    await editorCommand(page, 'Canvas', 'Preview');
     const visitorRenderer = page.locator('.visitor-grid-world__grid-plane--current .visitor-grid-renderer');
     await visitorRenderer.waitFor();
     assert.deepEqual(await visitorRenderer.evaluate(node => {
@@ -316,8 +317,8 @@ test('contained inspection and v9 Preview preserve source, metadata, navigation,
     assert.equal(await page.locator('.system-workflow__canvas').getAttribute('data-guide'), 'NONE', 'inspection preserves the Display guide choice');
     await activate(page, page.getByRole('button', { name: 'Close artwork viewer', exact: true }));
     await inspection.waitFor({ state: 'detached' });
-    const previewTrigger = page.getByRole('button', { name: 'Preview', exact: true });
-    await previewTrigger.click();
+    const previewTrigger = editorMenu(page, 'Canvas');
+    await editorCommand(page, 'Canvas', 'Preview');
     const preview = page.getByRole('main', { name: 'Published INSCAPE Grid visitor' });
     await preview.waitFor();
     const current = preview.locator('.visitor-grid-world__grid-plane--current');
@@ -358,7 +359,7 @@ test('normal-motion Preview opens Identity directly and returns focus on closure
     const page = await browser.newPage({ viewport: { width: 1440, height: 900 }, reducedMotion: 'no-preference' });
     await routeFixtureMedia(page);
     await page.goto(URL, { waitUntil: 'networkidle' });
-    await page.getByRole('button', { name: 'Preview', exact: true }).click();
+    await editorCommand(page, 'Canvas', 'Preview');
     const preview = page.getByRole('main', { name: 'Published INSCAPE Grid visitor' });
     await preview.waitFor({ timeout: 10_000 });
     await preview.getByRole('button', { name: 'Profile', exact: true }).click();
@@ -430,7 +431,7 @@ test('narrow and reduced-motion state machines keep dock, overlays, crop, viewer
     assert.ok(inViewport(await viewer.boundingBox(), 390, 720));
     await page.keyboard.press('Escape');
     await viewer.waitFor({ state: 'detached' });
-    await page.getByRole('button', { name: 'Preview' }).click();
+    await editorCommand(page, 'Canvas', 'Preview');
     const preview = page.locator('.visitor-grid-world');
     await preview.waitFor({ timeout: 10_000 });
     assert.ok(inViewport(await preview.boundingBox(), 390, 720));

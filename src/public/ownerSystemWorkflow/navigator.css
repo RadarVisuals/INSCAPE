@@ -18,11 +18,5 @@
 .navigator-zoom > input { grid-area: 2 / 1 / 3 / 3; width: 100%; min-width: 0; margin: 0; accent-color: var(--tactile-ink); }
 .navigator-zoom > output { grid-area: 1 / 2; }
 .navigator-home { display: grid; place-items: center; padding: 0; min-height: 24px; min-width: 24px; border: 0; }
-.workbench-navigator { z-index: 85; }
-.workbench-navigator > .system-workflow__instrument-content { padding: 0; overflow: auto; overscroll-behavior: contain; }
 @media (max-width: 520px), (pointer: coarse) { .navigator-zoom > input { min-height: 44px; } .navigator-home { min-height: 44px; min-width: 44px; } }
 @media (forced-colors: active) { .navigator-map-view { border-color: CanvasText; } }
-
-.keeper-dock-window > .system-workflow__instrument-content { overflow-y: auto; overscroll-behavior: contain; }
-
-.workbench-navigator .navigator-map { height: min(85px, max(24px, calc(var(--navigator-height) - var(--detached-window-titlebar-height) - 24px))); }

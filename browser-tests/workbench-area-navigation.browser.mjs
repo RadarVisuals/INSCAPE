@@ -1,3 +1,4 @@
+import { editorCommand } from './fixtures/editor-menu.mjs';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { mkdir } from 'node:fs/promises';
@@ -150,7 +151,7 @@ test('the canvas clips outlying artwork without relocating it; Show outside canv
     await image.waitFor({ state: 'attached' }); await settle(page);
     assert.equal(await image.isVisible(), false, 'outlying artwork is cropped in the normal composition');
     assert.deepEqual(await camera(page), { scale: 1, x: 0, y: 0 });
-    await page.getByRole('button', { name: 'Canvas size', exact: true }).click();
+    await editorCommand(page, 'Canvas', 'Canvas size');
     await page.getByRole('button', { name: 'Show outside canvas', exact: true }).click();
     await page.getByRole('button', { name: 'Close canvas size', exact: true }).click();
     await image.waitFor();

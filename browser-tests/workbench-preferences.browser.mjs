@@ -1,3 +1,4 @@
+import { editorMenu, editorCommand } from './fixtures/editor-menu.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdir } from 'node:fs/promises';
@@ -10,11 +11,7 @@ const key = 'inscape:workbench:preferences:0x99999999999999999999999999999999999
 const retryName = 'Save current Workbench preferences';
 const settings = page => page.getByRole('dialog', { name: 'Settings', exact: true });
 async function openSettings(page) {
-  const sidebar = page.getByRole('complementary', { name: 'Workspace sidebar' });
-  await sidebar.waitFor();
-  const trigger = sidebar.getByRole('button', { name: 'Settings', exact: true, includeHidden: true });
-  if (!await trigger.isVisible()) await sidebar.getByRole('button', { name: 'Expand sidebar', exact: true }).click();
-  await trigger.click(); await settings(page).waitFor();
+  await editorCommand(page, 'Edit', 'Settings'); await settings(page).waitFor();
 }
 async function mount(browser, width, corrupt = false) {
   const page = await browser.newPage({ viewport: { width, height: 900 }, reducedMotion: 'reduce' });
@@ -30,7 +27,7 @@ async function mount(browser, width, corrupt = false) {
     if (!sessionStorage.getItem('seeded')) { localStorage.setItem(key, '{broken'); sessionStorage.setItem('seeded', 'yes'); }
   }, key);
   await page.goto(`${origin}/browser-tests/tool-chrome-fixture.html?sample=navigator&persistent&theme=mist`, { waitUntil: 'domcontentloaded', timeout: 30000 });
-  await page.getByRole('combobox', { name: 'Active document' }).waitFor();
+  await editorMenu(page, 'Canvas').waitFor();
   return { page, errors };
 }
 async function failWrites(page) {
@@ -102,7 +99,7 @@ test('pending Workbench preferences survive a composition switch in the same pro
     const { page, errors } = await mount(browser, 1440);
     await openSettings(page); await failWrites(page); await setSpacing(page, 73);
     await settings(page).getByRole('button', { name: 'Close Settings', exact: true }).click();
-    await page.getByRole('button', { name: 'New canvas', exact: true }).click();
+    await editorCommand(page, 'Canvas', 'New canvas');
     await page.getByRole('textbox', { name: 'New canvas name', exact: true }).fill('Other composition');
     await page.getByRole('button', { name: 'Create canvas', exact: true }).click();
     await openSettings(page);

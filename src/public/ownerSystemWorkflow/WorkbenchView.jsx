@@ -40,6 +40,7 @@ import {
 const WorkbenchCanvasControls = lazy(() => import('./WorkbenchCanvasControls.jsx'));
 const WorkbenchGroups = lazy(() => import('./WorkbenchGroups.jsx'));
 import { createWorkbenchMiniatures } from './workbenchMiniatures.js';
+import { WorkbenchSideDockProvider } from './WorkbenchSideDock.jsx';
 import useWorkbenchSelection from './useWorkbenchSelection.js';
 import { createWorkbenchGestures } from './workbenchGestures.js';
 import { createWorkbenchMoveOperation } from './workbenchMoveOperation.js';
@@ -91,6 +92,7 @@ function WorkbenchViewStateProvider({
   content,
   selectionState,
   navigatorPosition,
+  sideDockPreferences,
   onOpenSharedTool,
 }) {
   const localNavigatorPosition = useRef(null);
@@ -336,7 +338,9 @@ function WorkbenchViewStateProvider({
   return (
     <WorkbenchView.Provider value={artworkView}>
       <WorkbenchActions.Provider value={actions}>
-        <EditorCellsProvider store={store} content={content} selection={selectionState} onOpenSharedTool={onOpenSharedTool}>{children}</EditorCellsProvider>
+        <WorkbenchSideDockProvider preferences={sideDockPreferences}>
+          <EditorCellsProvider store={store} content={content} selection={selectionState} onOpenSharedTool={onOpenSharedTool}>{children}</EditorCellsProvider>
+        </WorkbenchSideDockProvider>
       </WorkbenchActions.Provider>
     </WorkbenchView.Provider>
   );
@@ -345,7 +349,9 @@ const emptySubscribe = () => () => {};
 
 export function WorkbenchViewControls({
   hostRef,
+  renderMenuBar,
   disabled = false,
+  exiting = false,
   dockVisible = true,
   creationToolbarVisible = true,
   historyBlocked = null,
@@ -432,7 +438,8 @@ export function WorkbenchViewControls({
     disabled,
     dockVisible,
     creationToolbarVisible,
-    homeBounds: frameCanvas ? area : null,
+    homeBounds: area,
+    frameOnEntry: frameCanvas,
     interactionTool: view.interactionTool,
     setInteractionTool: view.setInteractionTool,
     onControlsTopChange: view.setToolViewportBottom,
@@ -1059,9 +1066,10 @@ export function WorkbenchViewControls({
       host.removeEventListener('contextmenu', cellContextMenu, true);
     };
   }, [hostRef, disabled, locked, cancelGesture, gestures, setSelection, entries, focusModules]);
-  if (disabled) return null;
   return (
     <>
+      {renderMenuBar?.(navigation)}
+      {(!disabled || exiting) && <>
       <WorkbenchArea hostRef={hostRef} />
       {objectPicker.element}
       {moveError && (
@@ -1182,7 +1190,7 @@ export function WorkbenchViewControls({
         {focusSelected.length > 0 && (
           <span className="workbench-view-controls__selection-count">{focusSelected.length} selected</span>
         )}
-        {view.store && (
+        {view.store && !renderMenuBar && (
           <Suspense fallback={null}>
             <WorkbenchCanvasControls
               hostRef={hostRef}
@@ -1234,6 +1242,7 @@ export function WorkbenchViewControls({
           </Suspense>
         )}
       </div>
+      </>}
     </>
   );
 }

@@ -2,10 +2,11 @@ import { useRef, useState } from 'react';
 import { ArrowLeft, ArrowRight, GripVertical } from 'lucide-react';
 import WorkbenchOverviewPreview from './WorkbenchOverviewPreview.jsx';
 
-export default function WorkbenchOverviewCard({ item, duplicate, selected, visible, onOpen, onEdit, onManage, revealed, onReveal, arranging, index, count, onMove, onDrag, dropTarget }) {
+export default function WorkbenchOverviewCard({ item, duplicate, selected, visible, onOpen, onEdit, onManage, revealed, onReveal, arranging, index, count, onMove, onDrag, dropTarget, moving }) {
   const host = useRef(null);
   const [information, setInformation] = useState(false);
   return <article className="workbench-overview-card" ref={host} data-revealed={revealed || undefined} data-card-id={item.id} data-drop-target={dropTarget || undefined}
+    data-canvas-journey-target={moving || undefined}
     onPointerLeave={event => { if (event.pointerType === 'mouse' && !host.current.matches(':has(:focus-visible)')) setInformation(false); }}
     onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget)) setInformation(false); }}>
     {visible && <WorkbenchOverviewPreview model={item.model} name={item.name} thumbnail crop={item.thumbnailCrop} />}
@@ -19,7 +20,7 @@ export default function WorkbenchOverviewCard({ item, duplicate, selected, visib
       <div className="workbench-overview-card-actions">
         <button type="button" className="workbench-overview-card-view" tabIndex={duplicate ? -1 : 0}
           onClick={event => onOpen(item.id, event.currentTarget)}>View</button>
-        {onEdit && <button type="button" tabIndex={duplicate ? -1 : 0} onClick={() => onEdit(item.id)} aria-label={`Edit ${item.name}`}>Edit</button>}
+        {onEdit && <button type="button" tabIndex={duplicate ? -1 : 0} onClick={() => onEdit(item.id, host.current)} aria-label={`Edit ${item.name}`}>Edit</button>}
         {onManage && <button type="button" tabIndex={duplicate ? -1 : 0} onClick={event => onManage(item.id, 'crop', event.currentTarget)} aria-label={`Crop ${item.name}`}>Crop</button>}
         <button type="button" tabIndex={duplicate ? -1 : 0} aria-expanded={information} onClick={() => setInformation(!information)}
           aria-label={`Information for ${item.name}`}>Information</button>

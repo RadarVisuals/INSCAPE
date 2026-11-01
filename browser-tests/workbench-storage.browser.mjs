@@ -1,3 +1,4 @@
+import { editorMenu } from './fixtures/editor-menu.mjs';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { readFile, mkdir, writeFile } from 'node:fs/promises';
@@ -9,7 +10,7 @@ const output = process.env.INSCAPE_BROWSER_OUTPUT || '.browser-test-runtime/work
 const url = `${origin}/browser-tests/workbench-storage-fixture.html?seed=1`;
 const route = route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort();
 async function open(page, target = url) { page.setDefaultTimeout(15000); await page.route('**/*', route); await page.goto(target); }
-async function settings(page) { await page.getByRole('button', { name: 'Settings', exact: true }).click(); return page.getByRole('region', { name: 'Workbench backup', exact: true }); }
+async function settings(page) { await editorMenu(page, 'Backup').click(); return page.getByRole('region', { name: 'Workbench backup', exact: true }); }
 const upload = (panel, source) => panel.getByLabel('Open Workbench backup', { exact: true }).setInputFiles({ name: 'workbench.json', mimeType: 'application/json', buffer: Buffer.from(source) });
 
 test('two real tabs have one editor, separate profiles remain independent, and closing releases access', { timeout: 90000 }, async () => {
@@ -97,9 +98,9 @@ test('restore errors retain saved bytes and a delayed file cannot replace subseq
     await page.reload(); await page.locator('.text-window').waitFor(); panel = await settings(page);
     await page.evaluate(() => { const text = File.prototype.text; File.prototype.text = async function() { const value = await text.call(this); await new Promise(resolve => { window.finishRead = resolve; }); return value; }; });
     await upload(panel, source); await page.waitForFunction(() => Boolean(window.finishRead));
-    await page.getByRole('button', { name: 'Close Settings' }).click();
+    await page.getByRole('button', { name: 'Close Backup' }).click();
     await page.evaluate(() => window.finishRead());
-    await page.getByRole('button', { name: 'Settings', exact: true }).click();
+    await editorMenu(page, 'Backup').click();
     // Closing disposes the controls and cancels its outstanding read.
     assert.equal(await page.getByRole('button', { name: 'Replace Workbench with backup' }).count(), 0);
   } finally { await browser.close(); }

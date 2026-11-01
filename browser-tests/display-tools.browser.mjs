@@ -1,3 +1,4 @@
+import { editorCommand } from './fixtures/editor-menu.mjs';
 import { mkdtemp } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -61,7 +62,7 @@ test('Display tools float without moving artwork, remember position, and reveal 
     assert.equal(await header.evaluate(n => getComputedStyle(n).opacity), '0');
     await page.mouse.move(before.x + before.width / 2, before.y + 5);
     assert.equal(await header.evaluate(n => getComputedStyle(n).opacity), '1');
-    await page.getByRole('button', { name: 'Settings', exact: true }).click();
+    await editorCommand(page, 'Edit', 'Settings');
     await page.getByRole('button', { name: 'Tools', exact: true }).click();
     await page.getByRole('menuitem', { name: 'LAYERS', exact: true }).click();
     const moveLayers = page.getByLabel('Move Layers window', { exact: true });

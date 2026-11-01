@@ -14,6 +14,7 @@
 }
 .workbench-canvas-content :is([data-workbench-view-id], [data-workbench-pan], [data-workbench-stack]) { pointer-events: auto; }
 .workbench-canvas-content[data-show-outside] { clip-path: none; }
+.workbench-canvas-content[data-suspended], .system-workflow[data-workspace-journey="editor"] .workbench-canvas-content { visibility: hidden; opacity: 0; }
 /* A stable DOM parent keeps SVG documents and editors alive. Only ordinary
    camera pan creates its box; resting content and inspection keep their original
    stacking/containing blocks, and group morphs retain individual projections. */

@@ -8,7 +8,7 @@ import { createDefaultWorkbenchPresentation, createTextPresentation } from '../.
 import { retainTextRecovery, clearTextRecovery, textRecoveryScope } from '../../text/textEditRecovery.js';
 
 const profile = `0x${'a'.repeat(40)}`;
-test('overview departure saves the live layout and revokes the canvas even when reopening the same Workbench', () => {
+test('leaving the workspace saves the live layout and revokes its editor', () => {
   const { root, store, actions, projection, faults, raw } = fixture();
   const before = raw(), activation = root.getActivation();
   faults.write = true;
@@ -24,6 +24,22 @@ test('overview departure saves the live layout and revokes the canvas even when 
   root.switchWorkbench(root.getWorkbenchId());
   assert.notEqual(root.getWorkbenchScope(), store);
   assert.throws(() => actions.leave(), /cannot save/);
+});
+test('browsing saves geometry and enforces departure guards without revoking the mounted editor', () => {
+  const { root, store, actions, projection, faults, raw } = fixture();
+  const activation = root.getActivation(), before = raw();
+  faults.write = true;
+  assert.throws(() => actions.browse(), /Could not save/);
+  assert.equal(raw(), before); assert.equal(store.isCurrent(), true);
+  faults.write = false;
+  const release = store.guardWorkbenchTransition(() => 'Finish the gesture');
+  assert.throws(() => actions.browse(), /Finish the gesture/); release();
+  actions.browse();
+  assert.equal(root.getActivation(), activation);
+  assert.equal(root.getWorkbenchScope(), store);
+  assert.deepEqual(root.readWorkbench(root.getWorkbenchId()).draft.workbench, projection.value);
+  actions.create('Another canvas');
+  assert.equal(store.isCurrent(), false, 'opening a different document still revokes the old editor');
 });
 function fixture() {
   const records = new Map(), faults = { write: false, read: false };

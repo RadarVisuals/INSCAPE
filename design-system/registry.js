@@ -367,9 +367,9 @@ export const components = [
     name: 'Named Workbenches',
     kind: 'Navigation',
     material: 'Flat Carbon / Mist',
-    source: owner + 'WorkbenchSwitcher.jsx',
+    source: owner + 'OwnerEditorMenuBar.jsx',
     contract:
-      'Names, creates and switches independent local compositions. Save failures retain the current context. The upper-right control leaves the Keeper dock reachable; publishing a collection remains unavailable.',
+      'Names, creates and switches independent local compositions. Save failures retain the current context. The fixed Editor menu leaves the workspace below it and shares its existing camera, history and tool owners; publishing a collection remains unavailable.',
     evidence: 'browser-tests/local-workbenches.browser.mjs',
     status: 'Local',
   },

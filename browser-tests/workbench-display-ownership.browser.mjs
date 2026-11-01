@@ -1,3 +1,4 @@
+import { editorCommand } from './fixtures/editor-menu.mjs';
 import { browserExecutable } from '../scripts/browserEnvironment.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -72,11 +73,11 @@ for (const primary of [true, false]) test(`Workbench theme and Display lifetimes
     const second = page.locator(`[data-display-instance="${secondId}"]`);
     await second.locator('header.system-workflow__identity-strip').focus();
     const before = await page.evaluate(() => ownership.read());
-    await page.getByRole('button', { name: 'Settings', exact: true }).click();
+    await editorCommand(page, 'Edit', 'Settings');
     await page.getByRole('button', { name: 'LIGHT', exact: true }).click();
     assert.deepEqual((await page.evaluate(() => ownership.read())).displays, before.displays, 'global theme never edits the selected Display');
     assert.equal(await page.locator('html').getAttribute('data-interface-theme'), 'light');
-    await page.getByRole('button', { name: 'Settings', exact: true }).click();
+    await editorCommand(page, 'Edit', 'Settings');
     const instance = primary ? page.locator('[data-display-instance="display:primary"]') : second;
     await instance.locator('header.system-workflow__identity-strip').focus();
     await instance.getByRole('button', { name: 'Lock Display Module composition', exact: true }).press('Enter');

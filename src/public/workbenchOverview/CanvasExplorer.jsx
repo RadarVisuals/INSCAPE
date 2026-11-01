@@ -5,7 +5,7 @@ import useCanvasViewport from './useCanvasViewport.js';
 import { canvasArtworkSources, canvasDestinations } from './canvasPresentationModel.js';
 import { OwnerSystemWorkflowMetadataContent } from '../ownerSystemWorkflow/OwnerSystemWorkflowMetadataModule.jsx';
 
-export default function CanvasExplorer({ selected, model, memory, disabled, expanded, onExpand, onEdit, onDetails }) {
+export default function CanvasExplorer({ selected, model, memory, disabled, expanded, onExpand, onEdit, onDetails, moving }) {
   const host = useRef(null), helpId = useId();
   const [sourceId, setSourceId] = useState('');
   const destinations = useMemo(() => canvasDestinations(selected.draft).filter(item => item.view), [selected.draft]);
@@ -14,11 +14,12 @@ export default function CanvasExplorer({ selected, model, memory, disabled, expa
   const navigation = useCanvasViewport({ hostRef: host, area: model.area, destinations, memory, disabled });
   return <section className="composition-explorer" aria-label={`View ${selected.name}`}>
     <header className="composition-explorer-heading"><h1>{selected.name}</h1><div>
-      {onEdit && <button type="button" onClick={() => onEdit(selected.id)} aria-label="Edit canvas"><Pencil size={15} /><span>Edit canvas</span></button>}
+      {onEdit && <button type="button" onClick={() => onEdit(selected.id, host.current)} aria-label="Edit canvas"><Pencil size={15} /><span>Edit canvas</span></button>}
       <button type="button" onClick={onExpand} aria-label={expanded ? 'Return to index' : 'Expand canvas'} aria-pressed={expanded}>
         {expanded ? <Minimize2 size={16} /> : <Maximize2 size={16} />}<span>{expanded ? 'Return to index' : 'Expand'}</span>
       </button></div></header>
-    <div ref={host} className="composition-explorer-viewport" tabIndex={0} role="group" aria-label={`${selected.name} canvas`}
+    <div ref={host} className="composition-explorer-viewport" data-canvas-id={selected.id} tabIndex={0} role="group" aria-label={`${selected.name} canvas`}
+      data-canvas-journey-target={moving || undefined}
       aria-describedby={helpId} onKeyDown={navigation.onKeyDown}
       data-camera-scale={navigation.camera?.scale} data-camera-x={navigation.camera?.offset.x} data-camera-y={navigation.camera?.offset.y}>
       <WorkbenchOverviewPreview model={model} name={selected.name}

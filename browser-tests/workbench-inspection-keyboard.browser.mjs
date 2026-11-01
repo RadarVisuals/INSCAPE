@@ -1,3 +1,4 @@
+import { editorCommand } from './fixtures/editor-menu.mjs';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { mkdir } from 'node:fs/promises';
@@ -45,7 +46,7 @@ for (const visitor of [false, true]) for (const width of [1440, 390]) {
       await mount(page);
       const saved = await page.evaluate(() => window.inspectionDraft());
       if (visitor) {
-        await page.getByRole('button', { name: 'Preview', exact: true }).click();
+        await editorCommand(page, 'Canvas', 'Preview');
         await page.getByRole('main', { name: 'Published INSCAPE Grid visitor' }).waitFor();
       }
       const board = page.getByRole('article', { name: 'Display Module', exact: true });

@@ -1,3 +1,4 @@
+import { editorMenu, editorCommand } from './fixtures/editor-menu.mjs';
 // Regression coverage for the three 2026-09-21 lifecycle audit findings.
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -43,15 +44,14 @@ for (const { theme, width, height } of r12Cases) {
         createRoot(document.getElementById('root')).render(React.createElement(Runtime, { profileAddress,
           reviewStorage: storage, reviewAssets: [], reviewCategories: [], reviewActivity: [], reviewProfile: { name: 'R12 Preview' } }));
       }, theme);
-      const trigger = page.getByRole('button', { name: 'Preview', exact: true });
+      const trigger = editorMenu(page, 'Canvas');
       const sidebar = page.getByRole('complementary', { name: 'Workspace sidebar', exact: true });
       await sidebar.waitFor();
-      if (!await trigger.isVisible()) await pointerAction(page, page.getByRole('button', { name: 'Expand sidebar', exact: true }));
+      if (!await trigger.isVisible()) await pointerAction(page, page.locator('.editor-menu-brand[aria-expanded="false"]'));
       await trigger.waitFor();
-      const returnFocus = await page.locator('main.system-workflow').getAttribute('data-sidebar-menu') === 'true'
-        ? sidebar.locator('.workspace-navigation-collapse') : trigger;
+      const returnFocus = trigger;
       const before = await page.evaluate(() => readR12Draft());
-      await pointerAction(page, trigger);
+      await editorCommand(page, 'Canvas', 'Preview');
       const visitor = page.locator('.visitor-grid-world');
       await visitor.waitFor();
       await page.locator('main.system-workflow[data-previewing]').waitFor({ state: 'attached' });
@@ -189,7 +189,7 @@ try {
   await page.route('**/ownerSystemWorkflowPreviewDocument.js*', async route => {
     markRequested(); await release; await route.continue();
   });
-  await page.getByRole('button', { name: 'Preview', exact: true }).click();
+  await editorCommand(page, 'Canvas', 'Preview');
   await Promise.race([requested, new Promise((_, reject) => setTimeout(() => reject(Error('Preview import was not intercepted')), 10000))]);
   await editor.fill('Saved while preview was loading.');
   await page.screenshot({ path: join(shots, 'preview-loading-wide.png') });
@@ -199,7 +199,7 @@ try {
   releasePreview();
   await page.getByRole('button', { name: 'Dismiss notification' }).filter({ hasText: 'Your work changed while Preview was loading' }).waitFor();
   assert.equal(await page.locator('.visitor-grid-world').count(), 0, 'stale preparation cannot open');
-  await page.getByRole('button', { name: 'Preview', exact: true }).click();
+  await editorCommand(page, 'Canvas', 'Preview');
   await page.locator('main.system-workflow[data-previewing]').waitFor({ state: 'attached' });
   assert.equal(await owner.locator('[aria-label="Pause Grids"]').count(), 0);
   await page.locator('.visitor-grid-world').waitFor();
@@ -211,7 +211,7 @@ try {
   await page.waitForTimeout(12500);
   assert.equal(await owner.locator(`[data-display-instance="${secondId}"] [data-rendered-grid-id]:not([aria-hidden])`).getAttribute('data-rendered-grid-id'), activeGrid);
   await page.getByRole('button', { name: 'RETURN', exact: true }).click();
-  await page.getByRole('button', { name: 'Preview', exact: true }).waitFor();
+  await editorMenu(page, 'Canvas').waitFor();
   assert.equal(await owner.locator('[aria-label="Pause Grids"]').count(), 0);
   assert.equal(await owner.locator(`[data-display-instance="${secondId}"] [data-rendered-grid-id]:not([aria-hidden])`).getAttribute('data-rendered-grid-id'), activeGrid);
   // Normal motion must preserve its fractional camera position, not snap back.
@@ -225,14 +225,14 @@ try {
     const element = document.querySelector(`main.system-workflow [data-display-instance="${id}"] .system-workflow__grid-track`);
     return element && Math.abs(new DOMMatrix(getComputedStyle(element).transform).m41) > 10;
   }, secondId);
-  await page.getByRole('button', { name: 'Preview', exact: true }).click();
+  await editorCommand(page, 'Canvas', 'Preview');
   await page.locator('.visitor-grid-world').waitFor();
   const stopped = await track.evaluate(node => getComputedStyle(node).transform);
   await page.waitForTimeout(200);
   assert.equal(await track.evaluate(node => getComputedStyle(node).transform), stopped);
   assert.ok(await track.evaluate(node => Math.abs(new DOMMatrix(getComputedStyle(node).transform).m41) > 10));
   await page.getByRole('button', { name: 'RETURN', exact: true }).click();
-  await page.getByRole('button', { name: 'Preview', exact: true }).waitFor();
+  await editorMenu(page, 'Canvas').waitFor();
   assert.equal(await track.evaluate(node => getComputedStyle(node).transform), stopped);
   assert.deepEqual(errors, []);
 } finally { await browser.close(); }

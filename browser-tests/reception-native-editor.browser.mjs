@@ -1,3 +1,4 @@
+import { editorMenu, activeEditorDocument, editorCommand, selectEditorDocument, editorOverview } from './fixtures/editor-menu.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdir } from 'node:fs/promises';
@@ -12,7 +13,7 @@ const shape = (page, id) => page.locator(`.shape-instance [data-workbench-view-i
 const withoutReception = ({ reception: _reception, ...draft }) => draft;
 
 async function openSavedReception(page) {
-  await page.getByRole('button', { name: 'My Inscape', exact: true }).click();
+  await editorOverview(page);
   await page.getByRole('button', { name: 'Reception', exact: true }).click();
 }
 
@@ -35,18 +36,18 @@ test('direct Reception entry accepts pointer clicks on controls outside the canv
   for (const width of [1440, 700]) {
     const { browser, page, errors } = await setup({ width, height: 1000 });
     try {
-      const preview = page.getByRole('button', { name: 'Preview', exact: true });
+      const preview = editorMenu(page, 'Canvas');
       assert.equal(await preview.evaluate(node => {
         const rect = node.getBoundingClientRect();
         return node.contains(document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2));
       }), true, `the document controls receive the pointer at ${width}px`);
-      await page.getByRole('button', { name: 'Canvas size', exact: true }).click();
+      await editorCommand(page, 'Canvas', 'Canvas size');
       await page.getByRole('group', { name: 'Canvas size controls', exact: true }).waitFor();
       await page.getByRole('button', { name: 'Close canvas size', exact: true }).click();
       await page.getByRole('button', { name: 'Artwork library', exact: true }).click();
       await page.getByRole('region', { name: 'Library workspace', exact: true }).waitFor();
       await page.getByRole('button', { name: 'Close workspace', exact: true }).click();
-      await preview.click();
+      await editorCommand(page, 'Canvas', 'Preview');
       await page.getByRole('region', { name: 'Reception responsive preview', exact: true }).waitFor();
       await page.getByRole('button', { name: 'Back to editing', exact: true }).click();
       await openSavedReception(page);
@@ -161,9 +162,9 @@ test('Reception uses native Rectangle drawing and cell conversion with undo, rel
 test('one Editor switches Reception and canvas documents and reopens Reception from My Inscape without mixing layers', { timeout: 120000 }, async () => {
   const { browser, page, errors } = await setup();
   try {
-    const selector = page.getByRole('combobox', { name: 'Active document', exact: true });
+    const selector = editorMenu(page, 'Canvas');
     await selector.waitFor();
-    assert.equal(await selector.inputValue(), 'reception');
+    assert.equal(await activeEditorDocument(page), 'reception');
     assert.equal(await page.getByRole('button', { name: 'Done', exact: true }).count(), 0);
     const canvasId = await page.evaluate(() => window.nativeReceptionFixture.root.getWorkbenchId());
     const originalCanvas = withoutReception(await snapshot(page));
@@ -176,7 +177,7 @@ test('one Editor switches Reception and canvas documents and reopens Reception f
     const authoredReception = await reception(page);
     assert.deepEqual(authoredReception.cells[0].members, [memberId]);
 
-    await selector.selectOption(canvasId);
+    await selectEditorDocument(page, canvasId);
     await shape(page, originalCanvas.shapes[0].id).waitFor();
     assert.equal(await page.locator('main[data-reception-editor]').count(), 0);
     assert.equal(await shape(page, cellId).count(), 0);
@@ -190,26 +191,26 @@ test('one Editor switches Reception and canvas documents and reopens Reception f
     const authoredCanvas = withoutReception(await snapshot(page));
     const canvasShape = authoredCanvas.shapes.find(item => !beforeIds.includes(item.id));
 
-    await selector.selectOption('reception');
+    await selectEditorDocument(page, 'reception');
     await shape(page, cellId).waitFor();
     assert.equal(await shape(page, canvasShape.id).count(), 0);
     assert.deepEqual(await reception(page), authoredReception, 'switching back preserves Reception layers, membership and geometry');
-    await page.getByRole('button', { name: 'My Inscape', exact: true }).click();
+    await editorOverview(page);
     await page.getByRole('button', { name: 'Edit Reception', exact: true }).click();
     await selector.waitFor();
-    assert.equal(await selector.inputValue(), 'reception');
+    assert.equal(await activeEditorDocument(page), 'reception');
     await shape(page, memberId).waitFor();
     assert.deepEqual(await reception(page), authoredReception, 'My Inscape edits the same Reception document');
-    await selector.selectOption(canvasId);
+    await selectEditorDocument(page, canvasId);
     await shape(page, canvasShape.id).waitFor();
     assert.deepEqual(withoutReception(await snapshot(page)), authoredCanvas, 'Reception navigation never rewrites the canvas');
 
     await page.reload();
     await selector.waitFor();
-    await page.waitForFunction(() => document.querySelector('[aria-label="Active document"]')?.value === 'reception');
+    await page.waitForFunction(() => document.querySelector('[role="menubar"]')?.dataset.document === 'reception');
     assert.deepEqual(await reception(page), authoredReception, 'fresh Reception entry retains the same saved composition');
     assert.deepEqual(withoutReception(await snapshot(page)), authoredCanvas, 'fresh Reception entry preserves the separately saved canvas');
-    await selector.selectOption(canvasId);
+    await selectEditorDocument(page, canvasId);
     await shape(page, canvasShape.id).waitFor();
     assert.deepEqual(errors, []);
   } finally { await browser.close(); }
@@ -327,7 +328,7 @@ test('native Library Image and Text belong to the cell and render in Desktop and
     if (await closeText.isVisible()) await closeText.click();
     await mkdir(output, { recursive: true });
     await page.screenshot({ path: `${output}/native-image-text-editor.png`, fullPage: true });
-    await page.getByRole('button', { name: 'Preview', exact: true }).click();
+    await editorCommand(page, 'Canvas', 'Preview');
     const preview = page.getByRole('region', { name: 'Reception responsive preview', exact: true }); await preview.waitFor();
     await preview.getByText('Welcome to my Reception. This is a real Text layer.', { exact: true }).waitFor().catch(async error => {
       console.log('preview evidence', await reception(page), await preview.innerText(), errors);
@@ -367,7 +368,7 @@ test('new Reception Text appears above its Shape in preview while explicitly pri
     assert.equal((await reception(page)).texts[0].visibility, 'PUBLIC', 'plain T then typing includes new Reception Text');
     const closeTools = page.getByRole('button', { name: 'Close Text tools', exact: true });
     if (await closeTools.isVisible()) { await closeTools.focus(); await page.keyboard.press('Enter'); }
-    await page.getByRole('button', { name: 'Preview', exact: true }).click();
+    await editorCommand(page, 'Canvas', 'Preview');
     let preview = page.getByRole('region', { name: 'Reception responsive preview', exact: true });
     await preview.getByText('NOMAD', { exact: true }).waitFor();
     const textLayer = preview.locator(`[data-layer-id="${textId}"]`);
@@ -391,7 +392,7 @@ test('new Reception Text appears above its Shape in preview while explicitly pri
     await include.focus(); await page.keyboard.press('Space');
     await page.waitForFunction(() => window.nativeReceptionFixture.root.getDraft().reception.texts[0].visibility === 'PRIVATE');
     await page.getByRole('button', { name: 'Close Text tools', exact: true }).focus(); await page.keyboard.press('Enter');
-    await page.getByRole('button', { name: 'Preview', exact: true }).click();
+    await editorCommand(page, 'Canvas', 'Preview');
     preview = page.getByRole('region', { name: 'Reception responsive preview', exact: true }); await preview.waitFor();
     assert.equal(await preview.locator(`[data-layer-id="${textId}"]`).count(), 0, 'explicitly private Text is absent from the public projection');
     assert.equal(await preview.getByText('NOMAD', { exact: true }).count(), 0);

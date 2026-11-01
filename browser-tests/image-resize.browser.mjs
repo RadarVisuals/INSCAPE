@@ -1,3 +1,4 @@
+import { editorCommand } from './fixtures/editor-menu.mjs';
 import { openSharedTool, setTransform } from './fixtures/shared-tools.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -183,7 +184,7 @@ for (const width of [1440, 390]) test(`Image resize controls expose transparent,
     await page.getByRole('dialog', { name: 'Inspect Image' }).waitFor();
     assert.equal(await first.locator('.image-module__resize').count(), 0);
     await page.keyboard.press('Escape'); await page.getByRole('dialog', { name: 'Inspect Image' }).waitFor({ state: 'detached' });
-    await page.getByRole('button', { name: 'Preview', exact: true }).click();
+    await editorCommand(page, 'Canvas', 'Preview');
     const visitor = page.locator('.visitor-grid-world .image-module__window').first(); await visitor.waitFor();
     assert.equal(await visitor.locator('.image-module__bounds, .image-module__resize').count(), 0);
     await visitor.locator('.image-module__canvas').hover();

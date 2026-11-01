@@ -1,3 +1,4 @@
+import { editorCommand } from './fixtures/editor-menu.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdir } from 'node:fs/promises';
@@ -16,7 +17,7 @@ for (const [width, theme] of [[1440, 'Mist'], [390, 'Carbon']]) test(`Text scope
     const errors = []; page.on('pageerror', error => errors.push(error.message));
     await mountTextToolsFixture(page, origin);
     const tools = page.locator('.text-tools-window'), body = page.getByRole('textbox', { name: 'Article text', exact: true });
-    await page.getByRole('button', { name: 'Settings', exact: true }).click();
+    await editorCommand(page, 'Edit', 'Settings');
     await page.getByRole('button', { name: theme === 'Mist' ? 'LIGHT' : 'DARK', exact: true }).click();
     await page.getByRole('button', { name: 'Close Settings', exact: true }).click();
     const editor = await body.elementHandle(), saved = () => page.evaluate(() => window.savedDraft());

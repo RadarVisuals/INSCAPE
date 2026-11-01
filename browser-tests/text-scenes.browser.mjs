@@ -66,7 +66,7 @@ for (const sections of [false, true]) test(sections ? 'article sections link fro
     const text = page.locator('[data-workbench-module="text"]'), tools = page.locator('.text-tools-window');
     const editor = text.getByRole('textbox', { name: 'Article text', exact: true });
     await editor.waitFor();
-    await page.getByRole('button', { name: 'Collapse sidebar', exact: true }).click();
+    await page.locator('.editor-menu-brand[aria-expanded="true"]').click();
     for (const name of ['Close Workbench Layers', 'Close Transform', 'Close Color', 'Close Image', 'Close Shape', 'Close FX', 'Close Info']) {
       const close = page.getByRole('button', { name, exact: true });
       if (await close.count()) { await close.focus(); await close.press('Enter'); }

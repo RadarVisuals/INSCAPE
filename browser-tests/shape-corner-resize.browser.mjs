@@ -17,7 +17,7 @@ for (const width of [1440, 390]) test(`Shape corners stay free after first resiz
     await mountTextToolsFixture(page, origin);
     await page.getByRole('button', { name: 'Close Text tools', exact: true }).click();
     await page.locator('.text-window').getByRole('button', { name: /^Close / }).press('Enter');
-    const collapse = page.getByRole('button', { name: 'Collapse sidebar', exact: true });
+    const collapse = page.locator('.editor-menu-brand[aria-expanded="true"]');
     if (await collapse.count()) await collapse.click();
     // Create through the real owner UI; the first grip is the Shape's own grip.
     await page.mouse.click(width === 390 ? 96 : 560, width === 390 ? 160 : 240, { button: 'right' });

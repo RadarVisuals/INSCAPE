@@ -1,3 +1,4 @@
+import { editorMenu } from './fixtures/editor-menu.mjs';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { chromium } from 'playwright-core';
@@ -10,11 +11,11 @@ test('Docs tabs explain the current modules and remain usable at wide and narrow
     await page.goto(`${process.env.INSCAPE_SYSTEM_WORKFLOW_ROOT || 'http://127.0.0.1:5174'}/development/owner/system-workflow`);
     for (const width of [1440, 390]) {
       await page.setViewportSize({ width, height: 780 });
-      await page.getByRole('button', { name: 'Docs', exact: true }).click();
+      await editorMenu(page, 'Docs').click();
       const docs = page.getByRole('dialog', { name: 'Docs' });
       await docs.getByRole('tab', { name: 'Workbench', exact: true }).click();
       await page.keyboard.press('ArrowRight');
-      assert.equal(await docs.getByRole('tab', { name: 'Display', exact: true }).getAttribute('aria-selected'), 'true');
+      assert.equal(await docs.getByRole('tab', { name: 'Display · Experimental', exact: true }).getAttribute('aria-selected'), 'true');
       await page.keyboard.press('End');
       assert.match(await docs.getByRole('tabpanel').innerText(), /Preparing does not upload/);
       const bounds = await docs.boundingBox();
@@ -26,7 +27,7 @@ test('Docs tabs explain the current modules and remain usable at wide and narrow
       assert.match(await docs.getByRole('tabpanel').innerText(), /does not rename your Universal Profile/);
       await page.keyboard.press('Escape');
       await docs.waitFor({ state: 'detached' });
-      assert.equal(await page.getByRole('button', { name: 'Docs', exact: true }).evaluate(node => node === document.activeElement), true);
+      assert.equal(await editorMenu(page, 'Docs').evaluate(node => node === document.activeElement), true);
     }
     assert.deepEqual(errors, []);
   } finally { await browser.close(); }

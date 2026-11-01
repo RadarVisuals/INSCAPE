@@ -1,3 +1,4 @@
+import { editorCommand } from './fixtures/editor-menu.mjs';
 import { browserExecutable } from '../scripts/browserEnvironment.mjs';
 import { setTextBackground } from './fixtures/shared-tools.mjs';
 import { openTextToolSection } from './fixtures/text-tool-sections.mjs';
@@ -21,7 +22,7 @@ for (const width of [1440, 390]) test(`Text inspector preserves editing, documen
     const originalTexts = await page.evaluate(() => window.savedDraft().texts);
     await mkdir('.browser-test-runtime', { recursive: true });
     for (const theme of ['DARK', 'LIGHT']) {
-      await page.getByRole('button', { name: 'Settings', exact: true }).click();
+      await editorCommand(page, 'Edit', 'Settings');
       await page.getByRole('button', { name: theme, exact: true }).click();
       await page.getByRole('button', { name: 'Close Settings', exact: true }).click();
       await tools.waitFor();

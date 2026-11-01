@@ -1,6 +1,6 @@
 import { useCallback, useLayoutEffect, useMemo, useRef, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
-import { WorkbenchWindow } from './DisplayInstrumentWindow.jsx';
+import WorkbenchToolPanel from './WorkbenchToolPanel.jsx';
 import { useWorkbenchView } from './WorkbenchViewContext.js';
 import { useWorkbenchArea } from './WorkbenchAreaContext.jsx';
 import { useWorkbenchCamera } from './WorkbenchCamera.jsx';
@@ -66,12 +66,11 @@ export default function WorkbenchNavigator({ hostRef, navigation }) {
   };
   const end = cancelled => { navigation.endNavigator(cancelled); dragging.current = false; paint(camera.getCamera()); };
   const readView = () => navigatorFrame(navigatorViewport(camera.getCamera(), navigation.navigationViewport()), mapping.current).view;
-  return createPortal(<div data-workbench-navigator data-workbench-selection-tools>
-    <WorkbenchWindow label="Navigator" title="Navigator" titleContent={<strong>Navigator</strong>} chrome="flat" className="workbench-navigator workbench-tool-window"
-      width={utility.frame.width} minimumWidth={utility.frame.width} initialHeight={utility.frame.height} minimumHeight={utility.frame.height}
-      initialX={utility.frame.left} initialY={utility.frame.top} committedFrame={utility.frame} onLayoutCommit={utility.commit} resizable={false}
-      surfaceStyle={{ '--navigator-height': `${utility.frame.height}px` }}
-      controls={<NavigatorHome disabled={navigation.locked} onClick={navigation.navigatorHome} />}>
+  return createPortal(<div data-workbench-navigator data-workbench-selection-tools data-workflow-material="tactile" data-workflow-finish="flat">
+    <WorkbenchToolPanel label="Navigator" title="Navigator" moveLabel="Move Navigator window" titleContent={<strong>Navigator</strong>} chrome="flat" className="workbench-navigator workbench-utility-panel"
+      minimumWidth={160} minimumHeight={120} zIndex={85}
+      frame={utility.frame} onFrameChange={utility.commit}
+      headerActions={<NavigatorHome disabled={navigation.locked} onClick={navigation.navigatorHome} />}>
       <div ref={root}>
         <NavigatorMap ref={map} disabled={navigation.locked} view={{ x: 50, y: 50 }} frameSize={{ width: 45, height: 45 }} readView={readView}
           onBegin={begin} onEnd={end} onViewChange={point => { if (mapping.current) navigation.moveNavigator(navigatorCentre(point, mapping.current)); }}>
@@ -86,6 +85,6 @@ export default function WorkbenchNavigator({ hostRef, navigation }) {
         </NavigatorMap>
         <NavigatorZoom ref={zoom} disabled={navigation.locked} zoom={camera.getCamera().scale * 100} onChange={navigation.navigatorZoom} />
       </div>
-    </WorkbenchWindow>
+    </WorkbenchToolPanel>
   </div>, hostRef.current || document.body);
 }

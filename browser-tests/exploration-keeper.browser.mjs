@@ -1,3 +1,4 @@
+import { editorMenu, activeEditorDocument, selectEditorDocument } from './fixtures/editor-menu.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdir } from 'node:fs/promises';
@@ -196,11 +197,11 @@ test('the exploration trial and two named Workbenches retain one shared Keeper',
     await page.getByRole('button', { name: 'Close Keeper settings', exact: true }).click();
     await page.getByRole('button', { name: 'Back to Reception', exact: true }).click();
     await page.goto(`${origin}/browser-tests/workbench-storage-fixture.html`);
-    const selector = page.getByRole('combobox', { name: 'Active document' });
+    const selector = editorMenu(page, 'Canvas');
     await selector.waitFor();
-    assert.equal(await selector.inputValue(), saved.activeId);
+    assert.equal(await activeEditorDocument(page), saved.activeId);
     for (const item of [saved.workbenches[0], saved.workbenches[1]]) {
-      await selector.selectOption(item.id);
+      await selectEditorDocument(page, item.id);
       await page.getByRole('button', { name: 'Keeper settings', exact: true }).click();
       assert.equal(await page.getByLabel('Keeper swim speed', { exact: true }).inputValue(), '210');
       await page.getByRole('button', { name: 'Close Keeper settings', exact: true }).click();

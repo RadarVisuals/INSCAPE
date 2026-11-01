@@ -97,7 +97,7 @@ test('owner group publication is explicit and undoable without changing content 
     await panel.getByRole('button', { name: 'Undo', exact: true }).click(); assert.equal(await sharing.isChecked(), false);
     await panel.getByRole('button', { name: 'Redo', exact: true }).click(); assert.equal(await sharing.isChecked(), true);
     await panel.getByRole('button', { name: 'Close Workbench groups', exact: true }).click();
-    const collapse = page.getByRole('button', { name: 'Collapse sidebar', exact: true });
+    const collapse = page.locator('.editor-menu-brand[aria-expanded="true"]');
     if (await collapse.isVisible()) await collapse.click();
     await page.getByRole('button', { name: 'Open Public study group', exact: true }).click(); await arrived(page);
     await page.getByRole('button', { name: 'Workbench groups', exact: true }).click();

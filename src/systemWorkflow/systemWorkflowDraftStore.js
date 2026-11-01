@@ -335,11 +335,11 @@ export function createSystemWorkflowDraftStore({
       return persistCollection({ ...collection, workbenches: collection.workbenches.map(item =>
         item.id === collection.activeId ? { ...item, name } : item) }, { checkEdits: Boolean(workbench) });
     },
-    // Leaving for the overview saves live geometry and revokes the editor even
-    // when the next opened composition has the same ID (A → overview → A).
-    /** @param {undefined} _value @param {{workbench?: import('../contracts/workbench.js').WorkbenchPresentation}} [options] */
-    leaveWorkbench(_value, { workbench } = {}) {
-      return persistCollection(withCurrentLayout(workbench), { changeContext: true });
+    // Browsing within the mounted workspace keeps its editor handle. A real
+    // departure still revokes it; both paths enforce the same transition guards.
+    /** @param {undefined} _value @param {{workbench?: import('../contracts/workbench.js').WorkbenchPresentation, retainEditor?: boolean}} [options] */
+    leaveWorkbench(_value, { workbench, retainEditor = false } = {}) {
+      return persistCollection(withCurrentLayout(workbench), { changeContext: !retainEditor, checkEdits: true });
     },
     /** @param {import('../contracts/workbench.js').TransitionGuard} check */
     guardWorkbenchTransition(check) {

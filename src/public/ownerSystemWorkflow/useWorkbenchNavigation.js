@@ -27,7 +27,7 @@ function controlsTop(host, controls) {
 // Navigation never receives a draft store or module transforms. Editing owns
 // its gestures and exposes only cancellation and input-ownership callbacks.
 export default function useWorkbenchNavigation({ hostRef, controlsRef, disabled, dockVisible, creationToolbarVisible, onControlsTopChange,
-  homeBounds = null,
+  homeBounds = null, frameOnEntry = false,
   interactionTool = 'select', setInteractionTool,
   isEditing, cancelEditing, releaseAbandonedGesture, captureContext, restoreContext, returnTargets, resetPresentation, entries }) {
   const camera = useWorkbenchCamera();
@@ -36,7 +36,7 @@ export default function useWorkbenchNavigation({ hostRef, controlsRef, disabled,
   const interaction = useRef(null);
   interaction.current = { isEditing, cancelEditing, releaseAbandonedGesture, captureContext, restoreContext, returnTargets, resetPresentation, homeBounds };
   const framedHome = useRef(false);
-  const hasHomeBounds = Boolean(homeBounds);
+  const shouldFrameOnEntry = frameOnEntry && Boolean(homeBounds);
   const [history, setHistory] = useState([]);
   const hand = interactionTool === 'hand';
   const historyRef = useRef(history);
@@ -69,7 +69,7 @@ export default function useWorkbenchNavigation({ hostRef, controlsRef, disabled,
     const dock = parseFloat(getComputedStyle(host).getPropertyValue('--workflow-dock-height')) || 0;
     // Return context uses the Workbench viewport, independent of selection-driven
     // toolbar wrapping. Only destination fitting reserves the camera controls.
-    return { width: host.clientWidth, height: host.clientHeight - dock };
+    return { width: host.clientWidth, height: host.clientHeight - dock, top: host.hasAttribute('data-editor-menu') ? 40 : 0 };
   }, [hostRef]);
   const navigationViewport = useCallback(() => {
     const viewport = readViewport(), host = hostRef.current;
@@ -213,7 +213,6 @@ export default function useWorkbenchNavigation({ hostRef, controlsRef, disabled,
     const host = hostRef.current, controls = controlsRef.current;
     if (!host || disabled) { onControlsTopChange?.(null); return; }
     const toolbar = host.querySelector('[data-workbench-toolbar]');
-    const switcher = host.querySelector('.workbench-switcher');
     const properties = ['--workbench-toolbar-clearance', '--workbench-toolbar-width', '--workbench-toolbar-offset'];
     const previousProperties = properties.map(name => controls?.style.getPropertyValue(name));
     const previousOffset = toolbar?.style.getPropertyValue(properties[2]);
@@ -226,11 +225,8 @@ export default function useWorkbenchNavigation({ hostRef, controlsRef, disabled,
           const pixels = `${Math.ceil(value)}px`, property = properties[index];
           if (controls.style.getPropertyValue(property) !== pixels) controls.style.setProperty(property, pixels);
         }
-        // Preserve the normal offset while fitting both rails below the
-        // Workbench switcher on short screens. This owner already measures
-        // their wrapped sizes; a second fixed positioning rule drifts from it.
-        const style = getComputedStyle(host), top = host.getBoundingClientRect().top;
-        const ceiling = Math.max(0, (switcher?.getBoundingClientRect().bottom ?? top) - top + 8);
+        // Reserve the menu without moving the shared screen-coordinate origin.
+        const style = getComputedStyle(host), ceiling = (host.hasAttribute('data-editor-menu') ? 40 : 0) + 8;
         const available = host.clientHeight - ceiling - controls.offsetHeight - rectangle.height
           - (parseFloat(style.getPropertyValue('--workflow-dock-height')) || 0) - 24;
         const offset = `${Math.max(0, Math.floor(Math.min(
@@ -246,10 +242,10 @@ export default function useWorkbenchNavigation({ hostRef, controlsRef, disabled,
       const previous = measuredViewport.current;
       const viewport = readViewport();
       if (!viewport || viewport.width <= 0 || viewport.height <= 0) return;
-      // A bounded document opens centred at its authored size (or fitted down).
-      // Only entry and Home choose this camera; edits and resizes keep the
-      // user's pan/zoom and never change saved canvas or module coordinates.
-      if (!hasHomeBounds) framedHome.current = false;
+      // The owner Editor frames each document once when its session opens.
+      // Other hosts may supply Home bounds without opting into entry framing.
+      // Edits and resizes keep the user's camera and saved module coordinates.
+      if (!shouldFrameOnEntry) framedHome.current = false;
       else if (!framedHome.current && !locked) {
         const home = homeCamera();
         if (home) { framedHome.current = true; updateCamera(home); }
@@ -266,7 +262,6 @@ export default function useWorkbenchNavigation({ hostRef, controlsRef, disabled,
     observer.observe(host);
     if (controls) observer.observe(controls);
     if (toolbar) observer.observe(toolbar);
-    if (switcher) observer.observe(switcher);
     return () => {
       observer.disconnect();
       properties.forEach((property, index) => {
@@ -276,7 +271,7 @@ export default function useWorkbenchNavigation({ hostRef, controlsRef, disabled,
       if (previousOffset) toolbar?.style.setProperty(properties[2], previousOffset);
       else toolbar?.style.removeProperty(properties[2]);
     };
-  }, [hostRef, controlsRef, dockVisible, creationToolbarVisible, disabled, locked, readViewport, stopTravel, onControlsTopChange, hasHomeBounds, homeCamera, updateCamera]);
+  }, [hostRef, controlsRef, dockVisible, creationToolbarVisible, disabled, locked, readViewport, stopTravel, onControlsTopChange, shouldFrameOnEntry, homeCamera, updateCamera]);
 
   const zoom = useCallback((point, factor) => {
     if (disabled || locked || interaction.current.isEditing() || isPanning()) return;
@@ -341,7 +336,7 @@ export default function useWorkbenchNavigation({ hostRef, controlsRef, disabled,
     const clear = () => { pressedPointers.clear(); endNavigator(true); stopTravel(); };
     const hidden = () => { if (document.hidden) clear(); };
     const wheel = event => {
-      if (event.target.closest?.(".workspace-navigation")) return;
+      if (event.target.closest?.('.workspace-navigation, .editor-menu-shell')) return;
       if (!event.ctrlKey && !event.metaKey && event.target.closest?.("[data-workbench-navigator]")) return;
       pan.releaseAbandonedGesture();
       const released = interaction.current.releaseAbandonedGesture();
