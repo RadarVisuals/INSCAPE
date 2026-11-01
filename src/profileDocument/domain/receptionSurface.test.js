@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createReception, validReception, projectReception, restoreReception } from './receptionPresentation.js';
 import { createSystemWorkflowDraftStore } from '../../systemWorkflow/systemWorkflowDraftStore.js';
-import { saveReception } from '../../reception/receptionSession.js';
+import { saveReception } from '../../../browser-tests/fixtures/reception-v2.js';
 import { buildProfileDocumentV9 } from './profileDocumentV9Builder.js';
 import { assertValidProfileDocumentV9 } from './profileDocumentV9Validation.js';
 

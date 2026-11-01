@@ -30,7 +30,7 @@ async function mount(browser, width, corrupt = false) {
     if (!sessionStorage.getItem('seeded')) { localStorage.setItem(key, '{broken'); sessionStorage.setItem('seeded', 'yes'); }
   }, key);
   await page.goto(`${origin}/browser-tests/tool-chrome-fixture.html?sample=navigator&persistent&theme=mist`, { waitUntil: 'domcontentloaded', timeout: 30000 });
-  await page.getByRole('combobox', { name: 'Active Workbench' }).waitFor();
+  await page.getByRole('combobox', { name: 'Active document' }).waitFor();
   return { page, errors };
 }
 async function failWrites(page) {
@@ -102,9 +102,9 @@ test('pending Workbench preferences survive a composition switch in the same pro
     const { page, errors } = await mount(browser, 1440);
     await openSettings(page); await failWrites(page); await setSpacing(page, 73);
     await settings(page).getByRole('button', { name: 'Close Settings', exact: true }).click();
-    await page.getByRole('button', { name: 'New', exact: true }).click();
-    await page.getByRole('textbox', { name: 'New Workbench name', exact: true }).fill('Other composition');
-    await page.getByRole('button', { name: 'Create Workbench', exact: true }).click();
+    await page.getByRole('button', { name: 'New canvas', exact: true }).click();
+    await page.getByRole('textbox', { name: 'New canvas name', exact: true }).fill('Other composition');
+    await page.getByRole('button', { name: 'Create canvas', exact: true }).click();
     await openSettings(page);
     assert.equal(await settings(page).getByLabel('Workbench grid cell size', { exact: true }).inputValue(), '73');
     const retry = page.getByRole('button', { name: retryName, exact: true }); await retry.waitFor();

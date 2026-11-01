@@ -37,7 +37,7 @@ async function mount(browser, width = 1440, theme = 'carbon') {
     await page.mouse.down();
     await page.mouse.up();
   };
-  const value = async () => (await hex.inputValue()).toLowerCase();
+  const value = async () => '#' + (await hex.inputValue()).replace(/^#/, '').toLowerCase();
   return { page, studio, wheel, hex, point, move, click, value, errors };
 }
 
@@ -98,7 +98,8 @@ test(
         'hue choice while white is used by subsequent triangle selection: ' + colour,
       );
       assert.deepEqual(errors, []);
-      assert.deepEqual(await page.evaluate(() => Object.keys(localStorage)), []);
+      assert.deepEqual(await page.evaluate(() => Object.keys(localStorage)), ['inscape:interface-theme'],
+        'Colour exploration saves no artwork; only the explicit interface preference is stored');
     } finally {
       await browser.close();
     }

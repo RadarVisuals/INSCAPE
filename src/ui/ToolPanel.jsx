@@ -4,10 +4,12 @@ import { clampOwnerSystemWorkflowWindowPosition, resizeWorkbenchWindow, WORKBENC
 import '../public/ownerSystemWorkflow/workbenchToolPanel.css';
 
 // Screen-only tool chrome. Artwork, camera, selection and saving stay with callers.
-export default function ToolPanel({ label, title, titleContent, moveLabel, headerContent, children, onClose, active = false, zIndex = active ? 85 : 84, onActivate, chrome, className = '', frame, onFrameChange: setFrame, panelRef, closeLabel, onMoveStart, onMove, onMoveEnd, minimumWidth = 280, minimumHeight = 240, viewportBottom, topBoundaryRef, fitFromTop = false, boundsRef, navigationInset = 0, navigationTop = 0 }) {
+export default function ToolPanel({ label, title, titleContent, moveLabel, headerContent, headerActions, children, onClose, active = false, zIndex = active ? 85 : 84, onActivate, chrome, className = '', frame, onFrameChange: setFrame, panelRef, closeLabel, onMoveStart, onMove, onMoveEnd, minimumWidth = 280, minimumHeight = 240, viewportBottom, topBoundaryRef, fitFromTop = false, boundsRef, navigationInset = 0, navigationTop = 0, contentSized = false, resizable = true, hidden = false, ...surfaceProps }) {
   const [viewport, setViewport] = useState(() => ({ width: innerWidth, height: innerHeight }));
   const [hostSize, setHostSize] = useState(null);
   const [boundaryTop, setTop] = useState(0);
+  const [contentSize, setContentSize] = useState(null);
+  const element = useRef(null);
   const top = boundsRef ? 0 : Math.max(boundaryTop, navigationTop);
   const width = boundsRef ? (hostSize?.width || viewport.width) : viewport.width;
   const gesture = useRef(null), latest = useRef(null);
@@ -18,7 +20,7 @@ export default function ToolPanel({ label, title, titleContent, moveLabel, heade
     const next = clampOwnerSystemWorkflowWindowPosition({ x: candidate.left, y: candidate.top - top }, size, { width, height: bottom - top });
     return { left: Math.max(bounds.left, Math.min(bounds.right - size.width, next.x)), top: next.y + top, ...size };
   };
-  const placed = clamp(frame);
+  const placed = clamp(contentSized && contentSize ? { ...frame, ...contentSize } : frame);
   const resized = (start, edge, delta) => resizeWorkbenchWindow(start, edge, delta, { width: minimumWidth, height: minimumHeight }, bounds);
   const release = drag => { if (drag?.element.hasPointerCapture(drag.id)) drag.element.releasePointerCapture(drag.id); };
   const finish = (cancelled, event) => {
@@ -44,12 +46,25 @@ export default function ToolPanel({ label, title, titleContent, moveLabel, heade
   }, [boundsRef]);
 
   useLayoutEffect(() => {
+    if (!contentSized || hidden) return;
+    const measure = () => {
+      const box = element.current.getBoundingClientRect();
+      setContentSize(current => current?.width === box.width && current?.height === box.height ? current : { width: box.width, height: box.height });
+    };
+    const observer = new ResizeObserver(measure); observer.observe(element.current); measure();
+    return () => observer.disconnect();
+  }, [contentSized, hidden]);
+
+  useLayoutEffect(() => {
     const boundary = topBoundaryRef?.current;
     if (!boundary) return;
-    const measure = () => setTop(boundary.getBoundingClientRect().bottom);
+    // A freely placed selector is an independent tool, not a top-screen rail.
+    const measure = () => setTop(boundary.hasAttribute('data-floating') ? 0 : boundary.getBoundingClientRect().bottom);
     const observer = new ResizeObserver(measure);
+    const placement = new MutationObserver(measure);
+    placement.observe(boundary, { attributes: true, attributeFilter: ['data-floating'] });
     observer.observe(boundary); window.addEventListener('resize', measure); measure();
-    return () => { observer.disconnect(); window.removeEventListener('resize', measure); };
+    return () => { observer.disconnect(); placement.disconnect(); window.removeEventListener('resize', measure); };
   }, [topBoundaryRef]);
 
   useLayoutEffect(() => {
@@ -74,11 +89,12 @@ export default function ToolPanel({ label, title, titleContent, moveLabel, heade
   }, []);
   useLayoutEffect(() => {
     latest.current.finish(true);
+    if (hidden) return;
     latest.current.setFrame(current => {
-      const next = latest.current.fit(current);
+      const next = latest.current.fit(contentSized && contentSize ? { ...current, ...contentSize } : current);
       return Object.keys(next).every(key => next[key] === current[key]) ? current : next;
     });
-  }, [width, top, bottom, navigationInset]);
+  }, [width, top, bottom, navigationInset, hidden, contentSized, contentSize]);
 
   const begin = (event, edge = null) => {
     if (event.button !== 0 || !event.isPrimary || gesture.current) return;
@@ -112,19 +128,26 @@ export default function ToolPanel({ label, title, titleContent, moveLabel, heade
       : clamp({ ...placed, left: placed.left + delta[0] * step, top: placed.top + delta[1] * step }));
   };
 
+  const renderMoveHandle = (content = titleContent || title, className = 'workbench-tool-panel-grip') => (
+    <button type="button" className={className} aria-label={moveLabel || `Move ${title} panel`}
+      title="Drag to move; use arrow keys when focused" onKeyDown={event => key(event)} onPointerDown={event => begin(event)} onPointerMove={move}
+      onPointerUp={event => end(event, false)} onPointerCancel={event => end(event, true)} onLostPointerCapture={event => end(event, true)}>{content}</button>
+  );
   const renderHeader = (content = headerContent, close = onClose, closeName = closeLabel || `Close ${label}`) => (
     <header className="workbench-tool-panel-header">
       {content}
-      <button type="button" className="workbench-tool-panel-grip" aria-label={moveLabel || `Move ${title} panel`}
-        title="Drag to move; use arrow keys when focused" onKeyDown={event => key(event)} onPointerDown={event => begin(event)} onPointerMove={move}
-        onPointerUp={event => end(event, false)} onPointerCancel={event => end(event, true)} onLostPointerCapture={event => end(event, true)}>{content ? null : titleContent || title}</button>
+      {renderMoveHandle(content ? null : titleContent || title)}
+      {headerActions}
       <button type="button" className="workbench-tool-panel-close" aria-label={closeName} onClick={close}><X /></button>
     </header>
   );
-  return <section data-window-chrome={chrome} ref={panelRef} className={`workbench-tool-panel ${className}`} aria-label={label}
-    style={{ ...placed, zIndex, position: boundsRef ? 'absolute' : 'fixed' }} onPointerDownCapture={onActivate} onFocusCapture={onActivate}>
-    {typeof children === 'function' ? children(renderHeader) : <>{renderHeader()}<div className="workbench-tool-panel-content">{children}</div></>}
-    {WORKBENCH_RESIZE_EDGES.map(([edge, name]) => <button key={edge} type="button" className="workbench-tool-panel-resize"
+  return <section {...surfaceProps} data-window-chrome={chrome} hidden={hidden} ref={node => {
+    element.current = node;
+    if (typeof panelRef === 'function') panelRef(node); else if (panelRef) panelRef.current = node;
+  }} className={`workbench-tool-panel ${className}`} aria-label={label}
+    style={{ ...(contentSized ? { left: placed.left, top: placed.top } : placed), zIndex, position: boundsRef ? 'absolute' : 'fixed' }} onPointerDownCapture={onActivate} onFocusCapture={onActivate}>
+    {typeof children === 'function' ? children(renderHeader, renderMoveHandle) : <>{renderHeader()}<div className="workbench-tool-panel-content">{children}</div></>}
+    {resizable && WORKBENCH_RESIZE_EDGES.map(([edge, name]) => <button key={edge} type="button" className="workbench-tool-panel-resize"
       data-edge={edge} tabIndex={edge === 'se' ? 0 : -1} aria-label={`Resize ${title} panel${name ? ` from ${name}` : ''}`}
       onKeyDown={event => key(event, edge)} onPointerDown={event => begin(event, edge)} onPointerMove={move}
       onPointerUp={event => end(event, false)} onPointerCancel={event => end(event, true)} onLostPointerCapture={event => end(event, true)} />)}

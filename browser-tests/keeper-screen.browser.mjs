@@ -41,11 +41,11 @@ for (const width of [1440, 390]) test(`Keeper belongs to the screen and follows 
     await move.focus(); await move.press('Shift+ArrowLeft'); await move.press('ArrowUp');
     const moved = await dock.boundingBox(); assert.ok(moved.x < initial.x && moved.y < initial.y);
     assert.deepEqual(await page.evaluate(() => window.readToolChromeDraft()), before, 'moving the dock does not author canvas content');
-    const selector = page.getByRole('combobox', { name: 'Active Workbench' });
+    const selector = page.getByRole('combobox', { name: 'Active document' });
     const first = await selector.inputValue();
-    await page.getByRole('button', { name: 'New', exact: true }).click();
-    await page.getByLabel('New Workbench name').fill('Second composition');
-    await page.getByRole('button', { name: 'Create Workbench', exact: true }).click();
+    await page.getByRole('button', { name: 'New canvas', exact: true }).click();
+    await page.getByLabel('New canvas name').fill('Second composition');
+    await page.getByRole('button', { name: 'Create canvas', exact: true }).click();
     await trigger.waitFor(); await settle(page);
     const second = await selector.inputValue(); assert.notEqual(second, first);
     assert.deepEqual((await page.evaluate(() => window.readToolChromeDraft())).keeperDocks, before.keeperDocks);

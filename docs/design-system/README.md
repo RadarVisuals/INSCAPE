@@ -98,6 +98,11 @@ The founder requested a smaller, flatter toolbar and reduced the theme direction
 
 ## Start here
 
+For isolated experiments with real components, use the local
+[component design lab](DESIGN_LAB.md): `npm run design:lab`, then open
+`http://127.0.0.1:5179/design-lab.html`. It provides resettable artboards,
+editable study files, source inspection and screenshot/context capture.
+
 For Reception, overview, composition presentation and shared navigation, read
 the active contract's current focus first. The founder will supply a new overall
 visual example; historical reference packets do not prescribe future screens.

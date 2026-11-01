@@ -59,7 +59,7 @@ test('Reception readers cannot pull the editor or owner Library through a shared
       'entry.js': chunk('entry.js', { entry: true }),
       'about.js': chunk('about.js', { imports: ['shared.js'], modules: { ['/repo/src/' + reader + '.jsx']: {} } }),
       'shared.js': chunk('shared.js', { imports: ['editor.js'] }),
-      'editor.js': chunk('editor.js', { modules: { '/repo/src/reception/ReceptionEditor.jsx': {} } }),
+      'editor.js': chunk('editor.js', { modules: { '/repo/src/public/ownerSystemWorkflow/OwnerSystemWorkflowRuntime.jsx': {} } }),
     });
     assert.throws(() => assertOwnerRuntimeGraph(graph), /about\.js -> editor\.js/);
   }

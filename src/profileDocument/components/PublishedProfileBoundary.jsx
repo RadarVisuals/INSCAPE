@@ -48,7 +48,7 @@ function PublishedStatusSurface({ state, onRetry, onOpenDirectory, onReturn, ret
 }
 
 export default function PublishedProfileBoundary({
-  address, resolution, onRetry, returnProfileAddress, onReturnToWorkbench, onVisitProfile, onOpenDiscover, onConnect, entry, onOpenOverview, onOpenCanvas,
+  address, resolution, onRetry, returnProfileAddress, onReturnToWorkbench, onEditReception, onVisitProfile, onOpenDiscover, onConnect, entry, onOpenOverview, onOpenCanvas,
 }) {
   const visibleDocument = [PUBLISHED_PROFILE_STATUS.RESOLVED, PUBLISHED_PROFILE_STATUS.STALE].includes(resolution?.status) ? resolution.document : null;
   const ownProfile = Boolean(returnProfileAddress && returnProfileAddress.toLowerCase() === String(address || '').toLowerCase());
@@ -56,7 +56,8 @@ export default function PublishedProfileBoundary({
   const canReturn = Boolean(returnProfileAddress && !ownProfile);
   const returnHome = canReturn ? () => onVisitProfile?.(returnProfileAddress, { returnToConnectedProfile: true }) : null;
   if (returnToWorkbench && entry?.surface === 'overview' && !entry.target) return <Suspense fallback={<p role="status">Opening Reception…</p>}>
-    <OwnerReception key={address} address={address} document={visibleDocument} onReturn={returnToWorkbench} onCanvases={onOpenCanvas} onDiscover={onOpenDiscover} />
+    <OwnerReception key={address} address={address} document={visibleDocument} onEditReception={onEditReception}
+      onReturn={returnToWorkbench} onCanvases={onOpenCanvas} onDiscover={onOpenDiscover} />
   </Suspense>;
   const content = !visibleDocument
     ? <PublishedStatusSurface state={resolution} onRetry={onRetry} onOpenDirectory={onOpenDiscover}

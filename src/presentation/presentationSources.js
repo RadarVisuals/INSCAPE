@@ -16,7 +16,7 @@ export function publishedPresentationSnapshot(document) {
 
 const unavailable = reason => ({ status: 'unavailable', reason });
 export function receptionDisplayAssetIds(snapshot, reception) {
-  const placed = new Set(reception.regions.map(region => region.content));
+  const placed = new Set((reception.version === 3 ? reception.cells : reception.regions).map(region => region.content));
   return [...new Set((reception.links || []).filter(link => placed.has(link.id)).flatMap(link => {
     const ref = link.kind === 'scene' ? link.controller : link.source;
     if (ref.profileAddress !== snapshot?.profileAddress?.toLowerCase()) return [];

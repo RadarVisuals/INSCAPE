@@ -39,15 +39,14 @@ async function typography(page) {
   return values.map(({ name, font, line }) => ({ name, font, line }));
 }
 async function colour(page) {
-  const rows = await metrics(page.locator('.ds-colour-fields'));
-  assert.equal(rows.length, 1); assert.equal(rows[0].display, 'grid');
+  const rows = await metrics(page.locator('.ds-colour-readouts'));
+  assert.equal(rows.length, 1); assert.equal(await page.locator('.ds-colour-readouts output').count(), 3);
   const hints = await metrics(page.locator('.ds-colour-instructions'));
   assert.equal(hints.length, 1); assert.equal(hints[0].position, 'absolute'); assert.equal(hints[0].clip, 'inset(50%)');
-  const cells = await page.locator('.ds-colour-fields input').evaluateAll(nodes => nodes.map(n => n.getBoundingClientRect().x));
-  assert.ok(cells[1] > cells[0] + 40, 'Colour numeric fields share one row');
+  assert.equal(await page.locator('.ds-colour-panel input[type=number]').count(), 0, 'HSL values are readouts');
   if (await page.evaluate(() => matchMedia('(pointer: coarse), (max-width: 520px)').matches)) {
-    await targets(page.locator('.ds-colour-fields input, .ds-colour-hex input'));
-    for (const field of await metrics(page.locator('.ds-colour-fields input, .ds-colour-hex input'))) assert.equal(field.font, '16px');
+    await targets(page.locator('.ds-colour-hex input'));
+    for (const field of await metrics(page.locator('.ds-colour-hex input'))) assert.equal(field.font, '16px');
   }
 }
 async function textTargets(page) {
@@ -68,7 +67,7 @@ async function textTargets(page) {
 }
 
 for (const [width, touch, theme] of [[1440, false, 'carbon'], [390, true, 'mist'], [320, false, 'carbon'], [1280, true, 'mist']]) {
-  test(`Reception shared styles survive Edit, Preview and Done: ${width}, touch=${touch}, ${theme}${production ? ', built' : ''}`, { timeout: 90000 }, async () => {
+  test(`Saved Reception reader retains shared styles: ${width}, touch=${touch}, ${theme}${production ? ', built' : ''}`, { timeout: 90000 }, async () => {
     const context = await browser.newContext({ viewport: { width, height: 900 }, hasTouch: touch, reducedMotion: 'reduce' });
     const page = await context.newPage(), errors = [], requests = [], measurements = {};
     page.setDefaultTimeout(15000);
@@ -95,32 +94,9 @@ for (const [width, touch, theme] of [[1440, false, 'carbon'], [390, true, 'mist'
       await page.locator('.startveil').waitFor({ state: 'detached' });
       assert.ok(!requests.some(path => /reception-editing|ReceptionEditor/.test(path)), 'Reader must not load editing code');
       measurements.reader = await typography(page);
-      await button(page, 'Edit Reception').click(); await button(page, 'Done').waitFor();
-      assert.deepEqual(await typography(page), measurements.reader);
-      await button(page, 'Edit name and logo').click();
-      const field = page.getByRole('textbox', { name: 'Header name', exact: true });
-      measurements.header = await metrics(field);
-      if (touch || width <= 520) assert.equal(measurements.header[0].font, '16px');
-      assert.equal(await button(page, 'Edit profile details').count(), 0);
-      await field.fill('Cancelled change'); await field.press('Escape');
-      assert.equal(await field.inputValue(), 'STYLING REVIEW');
-      if (width === 390) await page.screenshot({ path: `${output}/header-${width}-${theme}.png` });
-      await button(page, 'Close Header').click();
-      await page.locator('[data-region-id]').first().press('Enter');
-      await button(page, 'Cell color').click();
-      await page.getByRole('spinbutton', { name: 'Color Lightness', exact: true }).scrollIntoViewIfNeeded();
-      await colour(page);
-      if (width === 1440) await page.screenshot({ path: `${output}/colour-${width}-${theme}.png` });
-      await button(page, 'Close Color').click();
-      await page.locator('[data-region-id="region:text"]').press('Enter');
-      await button(page, 'Edit text').click(); await button(page, 'Bold').scrollIntoViewIfNeeded();
-      if (touch || width <= 520) await textTargets(page);
-      if (width === 320) await page.screenshot({ path: `${output}/text-${width}-${theme}.png` });
-      await button(page, 'Close Text').click();
-      await button(page, 'Preview').click(); assert.deepEqual(await typography(page), measurements.reader);
-      await button(page, 'Back to editing').click(); await button(page, 'Done').click(); await button(page, 'Edit Reception').waitFor();
-      assert.deepEqual(await typography(page), measurements.reader);
-      if (width === 1440) await page.screenshot({ path: `${output}/reader-${width}-${theme}.png` });
+      assert.equal(await page.locator('[data-reception-editor]').count(), 0);
+      if (touch || width <= 520) await targets(page.locator('.reception-navigation button'));
+      await page.screenshot({ path: `${output}/reader-${width}-${theme}.png` });
       assert.deepEqual(errors, []);
       await writeFile(`${output}/metrics-${width}-${theme}.json`, JSON.stringify(measurements, null, 2));
     } catch (error) {
@@ -135,7 +111,7 @@ test('Workbench shares touch Text sizes and intrinsic colour layout', { timeout:
   await context.route('**/*', route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
   try {
     await page.goto(origin + '/browser-tests/workbench-storage-fixture.html');
-    await page.getByRole('combobox', { name: 'Active Workbench' }).waitFor();
+    await page.getByRole('combobox', { name: 'Active document' }).waitFor();
     await page.evaluate(async () => {
       const { layersDraft } = await import('/browser-tests/fixtures/artwork-layers.js');
       const { systemWorkflowDraftKey } = await import('/src/systemWorkflow/systemWorkflowDraftStore.js');
@@ -143,7 +119,7 @@ test('Workbench shares touch Text sizes and intrinsic colour layout', { timeout:
     });
     await page.reload(); await separateLayers(page);
     await button(page, 'Select Landscape').click(); await page.getByRole('tab', { name: 'Color', exact: true }).click();
-    await page.getByRole('spinbutton', { name: 'Color Lightness', exact: true }).scrollIntoViewIfNeeded(); await colour(page);
+    await page.locator('.ds-colour-readouts').scrollIntoViewIfNeeded(); await colour(page);
     await button(page, 'Close Color').click();
     await button(page, 'Select Mist').click();
     const textTab = page.getByRole('tab', { name: 'Text', exact: true }); if (await textTab.count()) await textTab.click();

@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { chromium } from 'playwright-core';
+import { browserExecutable } from '../scripts/browserEnvironment.mjs';
 import { setWorkbenchZoom } from './fixtures/workbench-zoom.mjs';
 // Locate a real, exposed drag point after the browser scrolls the artwork into
 // view. Fixed card offsets can hit the sidebar, attachments or floating tools.
@@ -116,7 +117,7 @@ async function startDrag(page, point, attachment = false) {
 
 for (const width of [1440, 700]) test(`Library creates an Image at its preview, with undo, existing targets and cancellation (${width}px)`, { timeout: 120000 }, async () => {
   await mkdir(output, { recursive: true });
-  const browser = await chromium.launch({ executablePath: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', headless: true });
+  const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
   try {
     const page = await browser.newPage({ viewport: { width, height: 1000 }, deviceScaleFactor: 1.25, reducedMotion: 'reduce' });
     page.setDefaultTimeout(12000);

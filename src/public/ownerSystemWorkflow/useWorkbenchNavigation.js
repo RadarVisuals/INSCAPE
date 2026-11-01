@@ -27,13 +27,16 @@ function controlsTop(host, controls) {
 // Navigation never receives a draft store or module transforms. Editing owns
 // its gestures and exposes only cancellation and input-ownership callbacks.
 export default function useWorkbenchNavigation({ hostRef, controlsRef, disabled, dockVisible, creationToolbarVisible, onControlsTopChange,
+  homeBounds = null,
   interactionTool = 'select', setInteractionTool,
   isEditing, cancelEditing, releaseAbandonedGesture, captureContext, restoreContext, returnTargets, resetPresentation, entries }) {
   const camera = useWorkbenchCamera();
   const { offset, locked, getCamera, updateCamera } = camera;
   const navigatorGesture = useRef(null);
   const interaction = useRef(null);
-  interaction.current = { isEditing, cancelEditing, releaseAbandonedGesture, captureContext, restoreContext, returnTargets, resetPresentation };
+  interaction.current = { isEditing, cancelEditing, releaseAbandonedGesture, captureContext, restoreContext, returnTargets, resetPresentation, homeBounds };
+  const framedHome = useRef(false);
+  const hasHomeBounds = Boolean(homeBounds);
   const [history, setHistory] = useState([]);
   const hand = interactionTool === 'hand';
   const historyRef = useRef(history);
@@ -74,6 +77,9 @@ export default function useWorkbenchNavigation({ hostRef, controlsRef, disabled,
     const top = controlsTop(host, controlsRef.current);
     return workbenchNavigationViewport(viewport, Number.isFinite(top) ? top - host.getBoundingClientRect().top : undefined);
   }, [readViewport, hostRef, controlsRef]);
+  const homeCamera = useCallback(() => workbenchDestinationCamera(
+    interaction.current.homeBounds, navigationViewport(), .25, 32, 1
+  ), [navigationViewport]);
   const beginNavigator = useCallback(() => {
     if (disabled || locked || interaction.current.isEditing() || isPanning()) return false;
     navigatorGesture.current = getCamera(); beginPan(); return true;
@@ -240,6 +246,14 @@ export default function useWorkbenchNavigation({ hostRef, controlsRef, disabled,
       const previous = measuredViewport.current;
       const viewport = readViewport();
       if (!viewport || viewport.width <= 0 || viewport.height <= 0) return;
+      // A bounded document opens centred at its authored size (or fitted down).
+      // Only entry and Home choose this camera; edits and resizes keep the
+      // user's pan/zoom and never change saved canvas or module coordinates.
+      if (!hasHomeBounds) framedHome.current = false;
+      else if (!framedHome.current && !locked) {
+        const home = homeCamera();
+        if (home) { framedHome.current = true; updateCamera(home); }
+      }
       const controlsHeight = controls?.offsetHeight || 32;
       if (previous?.width === viewport.width && previous?.height === viewport.height && previous?.controlsHeight === controlsHeight) return;
       measuredViewport.current = { ...viewport, controlsHeight };
@@ -262,7 +276,7 @@ export default function useWorkbenchNavigation({ hostRef, controlsRef, disabled,
       if (previousOffset) toolbar?.style.setProperty(properties[2], previousOffset);
       else toolbar?.style.removeProperty(properties[2]);
     };
-  }, [hostRef, controlsRef, dockVisible, creationToolbarVisible, disabled, locked, readViewport, stopTravel, onControlsTopChange]);
+  }, [hostRef, controlsRef, dockVisible, creationToolbarVisible, disabled, locked, readViewport, stopTravel, onControlsTopChange, hasHomeBounds, homeCamera, updateCamera]);
 
   const zoom = useCallback((point, factor) => {
     if (disabled || locked || interaction.current.isEditing() || isPanning()) return;
@@ -293,8 +307,8 @@ export default function useWorkbenchNavigation({ hostRef, controlsRef, disabled,
   }, [navigationViewport, hostRef, zoom, getCamera]);
   const navigatorHome = useCallback(() => {
     if (disabled || locked || interaction.current.isEditing() || isPanning()) return;
-    resetView(); updateCamera({ scale: 1, offset: { x: 0, y: 0 } });
-  }, [disabled, locked, isPanning, resetView, updateCamera]);
+    resetView(); updateCamera(homeCamera() || { scale: 1, offset: { x: 0, y: 0 } });
+  }, [disabled, locked, isPanning, resetView, updateCamera, homeCamera]);
 
   useEffect(() => {
     const host = hostRef.current;

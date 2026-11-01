@@ -40,7 +40,7 @@ test('HTML artwork uses authored canvas geometry through zoom, pan, edits, narro
       return url.origin === origin ? route.continue() : route.abort();
     });
     await page.goto(origin + '/browser-tests/filled-workbench-performance-fixture.html?size=filled&count=2&animated=0');
-    const selector = page.getByRole('combobox', { name: 'Active Workbench', exact: true });
+    const selector = page.getByRole('combobox', { name: 'Active document', exact: true });
     await selector.waitFor();
     const closeTools = page.getByRole('button', { name: 'Close Text tools', exact: true });
     if (await closeTools.isVisible()) await closeTools.click();

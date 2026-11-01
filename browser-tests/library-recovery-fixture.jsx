@@ -2,7 +2,7 @@ import React, { useRef } from 'react';
 import { createRoot } from 'react-dom/client';
 import useOwnerLatticeBrowser from '../src/public/useOwnerLatticeBrowser.js';
 import { resetLibraryStoreForTests, useLibraryStore } from '../src/library/state/useLibraryStore.js';
-import { chillwhalesProfileRepository } from '../src/library/data/chillwhalesProfileRepository.js';
+import { luksoEnvioProfileRepository } from '../src/library/data/luksoEnvioProfileRepository.js';
 import { luksoRpcProfileRepository } from '../src/library/data/luksoRpcProfileRepository.js';
 import { saveLibraryAssetCache, loadLibraryAssetCache } from '../src/library/storage/libraryAssetCache.js';
 import OwnerSystemWorkflowLibraryWorkspace from '../src/public/ownerSystemWorkflow/OwnerSystemWorkflowLibraryWorkspace.jsx';
@@ -30,7 +30,7 @@ if (mode !== 'empty') {
 const state = { allowRecovery:false, loads:0, repairing:false, releaseRepair:null, store:useLibraryStore,
   cached:() => loadLibraryAssetCache(storage,profile), originalWorkspace:JSON.stringify(useLibraryStore.getState().workspace) };
 window.libraryRecovery = state;
-chillwhalesProfileRepository.loadProfileAssets = async function* () {
+luksoEnvioProfileRepository.loadProfileAssets = async function* () {
   state.loads++;
   if (mode !== 'metadata' && !state.allowRecovery) throw new Error('Test indexer unavailable');
   yield { assets:mode === 'metadata' ? [known] : [known,recovered],

@@ -194,6 +194,8 @@
 }
 
 .system-workflow__library[data-library-chrome] { grid-template-rows: minmax(0, 1fr) auto; }
+.system-workflow__library[data-library-header] { grid-template-rows: auto minmax(0, 1fr) auto; }
+.system-workflow__library-header > span { flex: 1; padding: 8px 10px; }
 .system-workflow__library[data-library-chrome] .system-workflow__local-rail { height: auto; }
 @media (max-width: 520px), (pointer: coarse) {
   [data-library-chrome] .lattice-browser-sidebar button, [data-library-chrome] .system-workflow__workspace-rail-controls > :is(label, button) { min-height: 44px; }
@@ -202,7 +204,7 @@
 }
 
 /* The existing navigation host reserves screen space, independently of canvas geometry. */
-.system-workflow[data-workspace-sidebar] .system-workflow__library[data-library-chrome] { top: calc(var(--workspace-navigation-top, 8px) + 4px); }
+.system-workflow[data-workspace-sidebar] .system-workflow__library[data-library-chrome]:not([data-library-embedded]) { top: calc(var(--workspace-navigation-top, 8px) + 4px); }
 
 /* Library structure and material belong here. The sidebar host only supplies screen clearance. */
 
@@ -223,8 +225,7 @@
 .system-workflow__library-presenter > .lattice-browser-panel { height: 100%; min-height: 0; }
 .system-workflow__local-rail { min-width: 0; min-height: var(--workflow-rail-height); overflow-x: auto; overflow-y: hidden; border-top: 1px solid var(--workflow-border); background: var(--workflow-panel); scrollbar-width: none; }
 .system-workflow__local-rail::-webkit-scrollbar { display: none; }
-.system-workflow__workspace-rail-controls { box-sizing: border-box; width: 100%; height: var(--workflow-rail-height); display: grid; grid-template-columns: minmax(240px, 1fr) 112px 150px 112px 92px 38px; align-items: stretch; }
-.system-workflow__workspace-rail-controls:not(:has(.system-workflow__workspace-close)) { grid-template-columns: minmax(240px, 1fr) 112px 150px 112px 92px; }
+.system-workflow__workspace-rail-controls { box-sizing: border-box; width: 100%; display: grid; align-items: stretch; }
 :where(.system-workflow__workspace-rail-controls) > :where(label, button) { min-width: 0; margin: 0; overflow: hidden; border: 0; color: var(--workflow-ink); background: transparent; font: var(--workflow-type-browser-rail); letter-spacing: .045em; white-space: nowrap; }
 :where(.system-workflow__workspace-rail-controls) > :where(label, button):hover { background: var(--workflow-hover); }
 .system-workflow__workspace-search { container-type: inline-size; padding: 0 10px; display: grid; grid-template-columns: auto minmax(24px, 1fr); align-items: center; gap: 7px; }
@@ -334,7 +335,7 @@
 .system-workflow__library-section-empty { position: relative; z-index: 1; min-height: 34px; padding: 0 10px 0 28px; display: flex; align-items: center; border-bottom: 1px solid var(--workflow-border); color: var(--workflow-faint); font: 400 9px/1 "Inscape IBM Plex Sans Condensed", "Arial Narrow", sans-serif; letter-spacing: .045em; }
 .system-workflow__browser-workspace[data-sidebar-collapsed] .system-workflow__library-section-empty { display: none; }
 .system-workflow__browser-workspace .lattice-browser-status { margin: 0; padding: 13px 10px; color: var(--workflow-muted); font: 400 10px/1.35 "Inscape IBM Plex Sans Condensed", "Arial Narrow", sans-serif; letter-spacing: .055em; text-transform: none; }
-.system-workflow[data-layout="narrow"] :is(.system-workflow__workspace-window) { inset: 8px 8px 60px; width: auto; min-width: 0; }
+.system-workflow[data-layout="narrow"] .system-workflow__workspace-window:not([data-library-embedded]) { inset: 8px 8px 60px; width: auto; min-width: 0; }
 .system-workflow[data-layout="narrow"] .system-workflow__browser-workspace .lattice-browser-panel {
   grid-template-columns: 54px 1px minmax(0, 1fr);
 }
@@ -346,7 +347,7 @@
 .system-workflow[data-layout="narrow"] .system-workflow__browser-workspace .lattice-browser-sidebar button i,
 .system-workflow[data-layout="narrow"] .system-workflow__browser-workspace .lattice-browser-sidebar__category-heading span { display: none; }
 .system-workflow[data-layout="narrow"] .system-workflow__workspace-rail-controls { overflow-x: auto; }
-.system-workflow .system-workflow__library {
+.system-workflow .system-workflow__library:not([data-library-embedded]) {
   top: 0; left: 0; right: auto; bottom: var(--workflow-dock-height);
   z-index: 80;
   width: min(100vw, var(--workflow-library-width, 440px));
@@ -354,6 +355,28 @@
 }
 .system-workflow__library .lattice-browser-results {
   margin-block: var(--workflow-gap-medium);
+}
+/* Embedded Libraries take their geometry from the shared tool window. */
+.system-workflow__library[data-library-embedded] {
+  position: relative; inset: auto; flex: 1; width: 100%; min-width: 0; min-height: 0; height: auto; max-width: none;
+  border: 0; border-radius: 0; box-shadow: none; z-index: 0;
+}
+.workbench-library-docked-slot, .workbench-library-docked-slot > div { display: contents; }
+.workbench-library-slot, .workbench-library-slot > div { display: flex; flex: 1; min-width: 0; min-height: 0; }
+.workbench-library-window.is-placing { opacity: .075; pointer-events: none; }
+.workbench-library-window.is-placing .system-workflow__library { opacity: 1; }
+.workbench-library-window.is-placing .lattice-browser-sidebar { pointer-events: auto; }
+.workbench-library-window .system-workflow__workspace-search { grid-column: 1 / -1; }
+.workbench-library-window, .reception-library-window { container: library-tool / inline-size; }
+@container library-tool (max-width: 420px) {
+  [data-library-embedded] .lattice-browser-panel { grid-template-columns: 44px 1px minmax(0, 1fr); }
+  [data-library-embedded] .lattice-browser-sidebar-resize { visibility: hidden; }
+  [data-library-embedded] .lattice-browser-sidebar button { padding-inline: 0; justify-content: center; }
+  [data-library-embedded] .lattice-browser-sidebar button > span { gap: 0; }
+  [data-library-embedded] .lattice-browser-sidebar button > span > b,
+  [data-library-embedded] .lattice-browser-sidebar button > i,
+  [data-library-embedded] .system-workflow__library-create-row .lattice-browser-sidebar__create > span { display: none; }
+  [data-library-embedded] .system-workflow__library-create-row > .lattice-browser-sidebar__create { justify-content: center; padding-inline: 0; }
 }
 .system-workflow__library-resize {
   position: absolute; z-index: 5; top: 0; right: 0; bottom: 0;

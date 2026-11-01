@@ -196,7 +196,7 @@ test('the exploration trial and two named Workbenches retain one shared Keeper',
     await page.getByRole('button', { name: 'Close Keeper settings', exact: true }).click();
     await page.getByRole('button', { name: 'Back to Reception', exact: true }).click();
     await page.goto(`${origin}/browser-tests/workbench-storage-fixture.html`);
-    const selector = page.getByRole('combobox', { name: 'Active Workbench' });
+    const selector = page.getByRole('combobox', { name: 'Active document' });
     await selector.waitFor();
     assert.equal(await selector.inputValue(), saved.activeId);
     for (const item of [saved.workbenches[0], saved.workbenches[1]]) {

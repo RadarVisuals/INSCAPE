@@ -7,7 +7,7 @@ beforeEach(() => { lsp8CollectionMetadataResolver.resolve = async () => new Map(
 afterEach(() => { lsp8CollectionMetadataResolver.resolve = originalMetadataResolve; });
 import { createEmptyWorkspace } from '../domain/libraryWorkspace.js';
 import { loadLibraryWorkspace } from '../storage/libraryWorkspaceStorage.js';
-import { chillwhalesProfileRepository } from '../data/chillwhalesProfileRepository.js';
+import { luksoEnvioProfileRepository } from '../data/luksoEnvioProfileRepository.js';
 import { luksoEnvioAttributeRepository } from '../data/luksoEnvioAttributeRepository.js';
 import { flushLibraryWorkspace, resetLibraryStoreForTests, useLibraryStore } from './useLibraryStore.js';
 
@@ -113,8 +113,8 @@ test('late asset batches cannot write the outgoing or incoming profile cache aft
   };
   let releaseBatch;
   const batchReady = new Promise((resolve) => { releaseBatch = resolve; });
-  const originalLoad = chillwhalesProfileRepository.loadProfileAssets;
-  chillwhalesProfileRepository.loadProfileAssets = async function* lateProfileAssets(profileAddress) {
+  const originalLoad = luksoEnvioProfileRepository.loadProfileAssets;
+  luksoEnvioProfileRepository.loadProfileAssets = async function* lateProfileAssets(profileAddress) {
     await batchReady;
     yield {
       assets: [{ id: `42:0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:contract`, chainId: 42,
@@ -136,7 +136,7 @@ test('late asset batches cannot write the outgoing or incoming profile cache aft
     assert.equal(operations.some(({ method, key }) => method === 'setItem'
       && key.startsWith('inscape.library-assets.v2:')), false);
   } finally {
-    chillwhalesProfileRepository.loadProfileAssets = originalLoad;
+    luksoEnvioProfileRepository.loadProfileAssets = originalLoad;
     resetLibraryStoreForTests(PROFILE, memoryStorage());
   }
 });
@@ -145,9 +145,9 @@ test('main Library refresh commits a consistent cover and attachments without ch
   const tokenId = '0x' + '0'.repeat(63) + '1';
   const asset = { id: `42:${contract}:${tokenId}`, chainId: 42, ownerAddress: PROFILE, contractAddress: contract,
     tokenId, standard: 'LSP8', imageUrl: 'https://assets.example/collection.webp', attributes: [], rawMetadata: {} };
-  const originalLoad = chillwhalesProfileRepository.loadProfileAssets;
+  const originalLoad = luksoEnvioProfileRepository.loadProfileAssets;
   const originalEnrich = luksoEnvioAttributeRepository.enrich;
-  chillwhalesProfileRepository.loadProfileAssets = async function* () {
+  luksoEnvioProfileRepository.loadProfileAssets = async function* () {
     yield { assets: [asset], unresolvedAssetIds: [], resolved: 1, total: 1, failures: 0, complete: true };
   };
   luksoEnvioAttributeRepository.enrich = async () => [];
@@ -167,7 +167,7 @@ test('main Library refresh commits a consistent cover and attachments without ch
     assert.equal(state.assets[0].thumbnailUrl, 'https://assets.example/zero-0.webp');
     assert.equal(state.assets[0].imageGroups.length, 4);
   } finally {
-    chillwhalesProfileRepository.loadProfileAssets = originalLoad;
+    luksoEnvioProfileRepository.loadProfileAssets = originalLoad;
     luksoEnvioAttributeRepository.enrich = originalEnrich;
     resetLibraryStoreForTests(PROFILE, memoryStorage());
   }
@@ -178,13 +178,13 @@ test('demanded metadata can enrich incomplete indexed token attributes through E
   const contract = '0x1111111111111111111111111111111111111111';
   const tokenId = `0x${'0'.repeat(63)}1`;
   const stableAssetId = `42:${contract}:${tokenId}`;
-  const originalLoad = chillwhalesProfileRepository.loadProfileAssets;
+  const originalLoad = luksoEnvioProfileRepository.loadProfileAssets;
   const originalEnrich = luksoEnvioAttributeRepository.enrich;
-  chillwhalesProfileRepository.loadProfileAssets = async function* indexedToken() {
+  luksoEnvioProfileRepository.loadProfileAssets = async function* indexedToken() {
     yield { assets: [{ id: stableAssetId, chainId: 42, ownerAddress: PROFILE, contractAddress: contract,
       tokenId, standard: 'LSP8', imageUrl: 'https://assets.example/token.webp',
       attributes: [{ key: 'Performance Tier', value: 'Strike Unit', type: 'string' }],
-      fieldProvenance: { attributes: { scope: 'tokenId', source: 'Chillwhales' } }, rawMetadata: {} }],
+      fieldProvenance: { attributes: { scope: 'tokenId', source: 'LUKSO Envio Indexer' } }, rawMetadata: {} }],
     unresolvedAssetIds: [], resolved: 1, total: 1, failures: 0, complete: true };
   };
   luksoEnvioAttributeRepository.enrich = async (ids) => {
@@ -204,7 +204,7 @@ test('demanded metadata can enrich incomplete indexed token attributes through E
       { key: 'Rank', value: '281', type: 'number' }
     ]);
   } finally {
-    chillwhalesProfileRepository.loadProfileAssets = originalLoad;
+    luksoEnvioProfileRepository.loadProfileAssets = originalLoad;
     luksoEnvioAttributeRepository.enrich = originalEnrich;
     resetLibraryStoreForTests(PROFILE, memoryStorage());
   }

@@ -11,7 +11,7 @@ const sourceLoaders = import.meta.glob(
     '../src/**/*.test.js',
     '../browser-tests/*.browser.mjs',
     '../browser-tests/*.html',
-    './*.css',
+    './**/*.css',
     './*.jsx',
   ],
   { query: '?raw&attempt=0', import: 'default' },

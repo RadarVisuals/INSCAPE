@@ -12,7 +12,7 @@
 }
 /* Destination panels use the free space beside navigation. Authored canvas
    coordinates and camera state do not change when the sidebar folds. */
-.system-workflow[data-workspace-sidebar] :is(.system-workflow__workspace-window) {
+.system-workflow[data-workspace-sidebar] .system-workflow__workspace-window:not([data-library-embedded]) {
   left: max(12px, var(--workspace-navigation-inset, 0px));
   max-width: calc(100vw - max(12px, var(--workspace-navigation-inset, 0px)) - 12px);
   min-width: 0;
@@ -28,11 +28,11 @@
   .workbench-sidebar[data-collapsed] .workspace-navigation-footer { display: flex; margin: 0; padding: 0; border: 0; }
   .workbench-sidebar[data-collapsed] .workspace-navigation-utilities { flex-direction: row; padding: 0; border: 0; }
   .system-workflow .workbench-sidebar[data-collapsed] button { width: 44px; min-width: 44px; min-height: 42px; }
-  .system-workflow[data-workspace-sidebar] .system-workflow__workspace-window { top: 140px; max-height: calc(100dvh - 152px); }
+  .system-workflow[data-workspace-sidebar] .system-workflow__workspace-window:not([data-library-embedded]) { top: 140px; max-height: calc(100dvh - 152px); }
 }
 
 @media (max-width: 900px) {
-  .system-workflow[data-workspace-sidebar] .system-workflow__workspace-window { bottom: 12px; }
+  .system-workflow[data-workspace-sidebar] .system-workflow__workspace-window:not([data-library-embedded]) { bottom: 12px; }
 }
 
 /* At phone-height there is room for one navigation key beside the Workbench

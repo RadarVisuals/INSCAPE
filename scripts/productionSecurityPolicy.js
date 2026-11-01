@@ -6,7 +6,6 @@ export const NETLIFY_HEADERS_FILE = '_headers';
 const DEFAULT_ENDPOINTS = Object.freeze({
   VITE_LUKSO_RPC_URL: 'https://rpc.mainnet.lukso.network',
   VITE_LUKSO_INDEXER_URL: 'https://envio.lukso-mainnet.universal.tech/v1/graphql',
-  VITE_CHILLWHALES_INDEXER_URL: 'https://indexer.chillwhales.dev/v1/graphql',
   VITE_IPFS_GATEWAY_URL: 'https://api.universalprofile.cloud/ipfs/',
   VITE_LUKSO_WSS_RPC_URL: 'wss://ws-rpc.mainnet.lukso.network'
 });
@@ -68,7 +67,6 @@ export function productionConnectOrigins(env = {}) {
     configuredEndpoint(env, 'VITE_LUKSO_RPC_URL', DEFAULT_ENDPOINTS.VITE_LUKSO_RPC_URL, https),
     ...configuredEndpointList(env, 'VITE_LUKSO_RPC_FALLBACK_URLS', https),
     configuredEndpoint(env, 'VITE_LUKSO_INDEXER_URL', DEFAULT_ENDPOINTS.VITE_LUKSO_INDEXER_URL, https),
-    configuredEndpoint(env, 'VITE_CHILLWHALES_INDEXER_URL', DEFAULT_ENDPOINTS.VITE_CHILLWHALES_INDEXER_URL, https),
     endpointOrigin(ipfsGateway, { ...https, label: 'VITE_IPFS_GATEWAY_URL' }),
     endpointOrigin(profileGateway, { ...https, label: 'VITE_PROFILE_DOCUMENT_IPFS_GATEWAY_URL' }),
     ...configuredEndpointList(env, 'VITE_PROFILE_DOCUMENT_IPFS_GATEWAY_FALLBACK_URLS', https),

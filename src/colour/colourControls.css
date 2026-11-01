@@ -1,47 +1,45 @@
 /* Intrinsic colour-control layout also applies outside the Workbench host. */
 .ds-colour-instructions { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-.ds-colour-fields { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; }
-.ds-colour-fields label, .ds-colour-hex { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
-.ds-colour-fields input, .ds-colour-hex input { box-sizing: border-box; width: 100%; min-width: 0; height: var(--tool-control-height, 32px); border: 1px solid var(--ds-field-edge, var(--tactile-edge)); border-radius: var(--ds-control-radius, var(--control-radius)); background: transparent; color: inherit; padding: 4px 6px; font: inherit; }
-.ds-colour-fields input:focus-visible, .ds-colour-hex input:focus-visible { outline: 1px solid var(--tactile-ink); outline-offset: 1px; }
-.ds-colour-fields input:disabled, .ds-colour-hex input:disabled { opacity: .45; }
-.ds-studio-colour-heading {
-  display: flex;
-  align-items: end;
-  gap: var(--space-3);
-}
-.ds-colour-swatch {
-  flex: 0 0 36px;
-  height: var(--tool-control-height, 32px);
-  border: 1px solid var(--ds-field-edge, var(--tactile-edge));
-  border-radius: var(--ds-control-radius, var(--control-radius));
-}
-.ds-studio-colour-heading .ds-colour-hex {
-  flex: 1;
-  min-width: 0;
-}
-.ds-colour-hex input {
-  font-family: var(--font-technical);
-}
-.ds-colour-hex [role='alert'] {
-  font-size: var(--ds-text-small, 11px);
-}
-.ds-colour-wheel-row { --colour-icon-size: var(--tool-icon-target, 32px); display: grid; grid-template-columns: minmax(0, 176px); justify-content: center; align-items: end; gap: 8px; min-width: 0; align-self: stretch; }
-.ds-colour-wheel-row[data-accessory] { grid-template-columns: minmax(0, 176px) var(--colour-icon-size); }
-.ds-colour-wheel-row :is(.ds-colour-eyedropper, .ds-colour-native) { display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; width: var(--colour-icon-size); height: var(--colour-icon-size); min-height: var(--colour-icon-size); padding: 4px; }
+.ds-colour-panel { display: flex; flex-direction: column; gap: 6px; min-width: 0; width: 100%; }
+.ds-colour-sampling { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+.ds-colour-current { width: 14px; height: 14px; border: 1px solid var(--tactile-edge); border-radius: 50%; flex: none; }
+.ds-colour-sampling :is(.ds-colour-eyedropper, .ds-colour-native) { display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; width: var(--tool-icon-target, 32px); height: var(--tool-icon-target, 32px); min-height: var(--tool-icon-target, 32px); padding: 4px; }
+.ds-colour-wheel-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 4px 8px; min-width: 0; }
+.ds-colour-readouts { display: flex; flex-direction: column; grid-row: 2; grid-column: 1; color: var(--tactile-muted); font: 11px/1.35 var(--font-technical); font-variant-numeric: tabular-nums; pointer-events: none; }
+.ds-colour-hex { display: grid; grid-template-columns: auto minmax(0, 76px); align-items: center; gap: 4px; grid-row: 2; grid-column: 2; min-width: 0; }
+.ds-colour-hex input { box-sizing: border-box; width: 100%; min-width: 0; height: var(--tool-control-height, 32px); border: 1px solid var(--ds-field-edge, var(--tactile-edge)); border-radius: var(--control-radius); background: transparent; color: inherit; padding: 4px 6px; font: 12px var(--font-technical); }
+.ds-colour-hex input:focus-visible { outline: 1px solid var(--tactile-ink); outline-offset: 1px; }
+.ds-colour-hex input:disabled { opacity: .45; }
+.ds-colour-hex [role='alert'] { grid-column: 1 / -1; max-width: 120px; font-size: 11px; }
 .ds-colour-native { position: relative; cursor: pointer; }
 .ds-colour-native input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: inherit; }
 .ds-colour-native:has(input:focus-visible) { outline: 2px solid var(--tactile-accent); outline-offset: 1px; }
 .ds-colour-native[data-disabled] { opacity: .45; cursor: default; }
-.ds-colour-sampling-error { grid-column: 1 / -1; margin: 0; font: inherit; }
+.ds-colour-sampling-error { flex-basis: 100%; margin: 0; font: inherit; }
+.ds-colour-opacity { display: flex; flex-direction: column; gap: 2px; }
+.ds-colour-opacity > label { color: var(--tactile-muted); }
+.ds-colour-opacity-row { display: grid; grid-template-columns: 14px minmax(0, 1fr) 42px; align-items: center; gap: 8px; }
+.ds-colour-opacity-row output { text-align: right; font-family: var(--font-technical); font-variant-numeric: tabular-nums; }
+.ds-colour-opacity-preview { width: 14px; height: 14px; border-radius: 50%; overflow: hidden; background: repeating-conic-gradient(#aaa 0% 25%, #666 0% 50%) 50% / 6px 6px; }
+.ds-colour-opacity-preview > span { display: block; width: 100%; height: 100%; }
+.ds-colour-opacity input { appearance: none; box-sizing: border-box; width: 100%; min-width: 0; height: var(--tool-control-height, 32px); margin: 0; padding: 0; background: transparent; border: 0; cursor: pointer; }
+.ds-colour-opacity input::-webkit-slider-runnable-track { height: 4px; background: var(--tactile-edge); border-radius: 2px; }
+.ds-colour-opacity input::-moz-range-track { height: 4px; background: var(--tactile-edge); border-radius: 2px; }
+.ds-colour-opacity input::-webkit-slider-thumb { appearance: none; width: 12px; height: 12px; margin-top: -4px; border: 1px solid var(--tactile-ink); border-radius: 50%; background: var(--tactile-face); }
+.ds-colour-opacity input::-moz-range-thumb { width: 10px; height: 10px; border: 1px solid var(--tactile-ink); border-radius: 50%; background: var(--tactile-face); }
+.ds-colour-opacity input:focus-visible { outline: 1px solid var(--tactile-ink); outline-offset: 1px; }
+.ds-colour-opacity input:disabled { opacity: .45; cursor: default; }
 .ds-studio-colour-wheel {
   position: relative;
   width: 176px;
   max-width: 100%;
   aspect-ratio: 1;
   justify-self: center;
-  align-self: center;
   flex: none;
+  grid-column: 1 / -1;
+  grid-row: 1 / 3;
+  margin-bottom: 22px;
+  align-self: start;
   user-select: none;
   touch-action: none;
 }

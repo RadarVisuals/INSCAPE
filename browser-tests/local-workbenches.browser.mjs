@@ -30,18 +30,18 @@ async function open(page, selection = false) {
     await page.screenshot({ path: path.join(output, `navigation-${diagnosticIndex}.png`) }).catch(() => {});
     throw error;
   }
-  await page.getByRole('combobox', { name: 'Active Workbench' }).waitFor();
+  await page.getByRole('combobox', { name: 'Active document' }).waitFor();
   await page.locator('.text-window').waitFor();
 }
 async function rename(page, name) {
   await page.getByRole('button', { name: 'Rename', exact: true }).click();
-  await page.getByLabel('Workbench name', { exact: true }).fill(name);
+  await page.getByLabel('Canvas name', { exact: true }).fill(name);
   await page.getByRole('button', { name: 'Save name', exact: true }).click();
 }
 async function create(page, name) {
-  await page.getByRole('button', { name: 'New', exact: true }).click();
-  await page.getByLabel('New Workbench name', { exact: true }).fill(name);
-  await page.getByRole('button', { name: 'Create Workbench', exact: true }).click();
+  await page.getByRole('button', { name: 'New canvas', exact: true }).click();
+  await page.getByLabel('New canvas name', { exact: true }).fill(name);
+  await page.getByRole('button', { name: 'Create canvas', exact: true }).click();
 }
 async function write(page, text) {
   const editor = page.getByRole('textbox', { name: 'Article text', exact: true });
@@ -50,7 +50,7 @@ async function write(page, text) {
     await page.getByRole('button', { name: 'Write', exact: true }).click();
   }
   await editor.fill(text);
-  await page.getByRole('combobox', { name: 'Active Workbench' }).focus();
+  await page.getByRole('combobox', { name: 'Active document' }).focus();
 }
 async function failWrites(page, fail) {
   await page.evaluate(fail => {
@@ -63,6 +63,53 @@ async function failWrites(page, fail) {
 }
 
 const settle = page => page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+
+test('Workbench selector moves independently, preserves its actions and restores its position', { timeout: 60000 }, async () => {
+  const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
+  try {
+    const page = await browser.newPage({ viewport: { width: 1440, height: 900 }, reducedMotion: 'reduce' });
+    await open(page);
+    const toolbar = page.getByRole('region', { name: 'Editor documents', exact: true });
+    const handle = toolbar.getByRole('button', { name: 'Move Editor documents panel', exact: true });
+    const before = await record(page), canvas = await selectedFrames(page);
+    const tools = await page.locator('.workbench-tool-dock').boundingBox();
+    const initial = await toolbar.boundingBox(), grip = await handle.boundingBox();
+    await page.mouse.move(grip.x + grip.width / 2, grip.y + grip.height / 2); await page.mouse.down();
+    await page.mouse.move(grip.x + grip.width / 2 - 400, grip.y + grip.height / 2 + 200, { steps: 8 }); await page.mouse.up();
+    const moved = await toolbar.boundingBox();
+    assert.equal(moved.x, initial.x - 400); assert.equal(moved.y, initial.y + 200);
+    assert.deepEqual(await selectedFrames(page), canvas, 'moving navigation never moves authored windows');
+    if (tools) assert.deepEqual(await page.locator('.workbench-tool-dock').boundingBox(), tools, 'moving navigation does not displace other tools');
+    assert.deepEqual(await record(page), before, 'navigation position never enters the artwork draft');
+    await handle.press('ArrowRight');
+    assert.equal((await toolbar.boundingBox()).x, moved.x + 8);
+    const keyboard = await toolbar.boundingBox(), nextGrip = await handle.boundingBox();
+    await page.mouse.move(nextGrip.x + 8, nextGrip.y + 8); await page.mouse.down();
+    await page.mouse.move(nextGrip.x + 100, nextGrip.y + 80, { steps: 4 });
+    await page.keyboard.press('Escape'); await page.mouse.up();
+    assert.deepEqual(await toolbar.boundingBox(), keyboard, 'Escape restores the starting position');
+    await rename(page, 'Movable selector');
+    assert.equal(await toolbar.getByRole('combobox', { name: 'Active document' }).inputValue(), await page.evaluate(() => window.guardedStore().getWorkbenchId()));
+    const renamed = await record(page);
+    await mkdir(output, { recursive: true }); await page.screenshot({ path: path.join(output, 'movable-selector-1440.png') });
+    await page.waitForFunction(() => Object.keys(localStorage).some(key => key.startsWith('inscape:editor-preferences:') && JSON.parse(localStorage[key]).value.switcher?.left > 0));
+    await page.reload(); await toolbar.waitFor();
+    const restored = await toolbar.boundingBox();
+    assert.deepEqual([restored.x, restored.y], [keyboard.x, keyboard.y], 'reload restores the selector position');
+    assert.deepEqual(await record(page), renamed);
+    await create(page, 'Another canvas');
+    assert.equal(await toolbar.getByRole('combobox', { name: 'Active document' }).locator('option:checked').innerText(), 'Another canvas');
+    assert.equal((await toolbar.boundingBox()).x, keyboard.x, 'changing compositions retains the profile-local position');
+    await page.setViewportSize({ width: 390, height: 700 }); await settle(page);
+    const narrow = await toolbar.boundingBox();
+    assert.ok(narrow.x >= 0 && narrow.x + narrow.width <= 390 && narrow.y >= 0 && narrow.y + narrow.height <= 700);
+    await toolbar.getByRole('button', { name: 'Rename', exact: true }).click();
+    const form = await toolbar.boundingBox();
+    assert.ok(form.y + form.height <= 700, 'the naming form stays on screen');
+    await toolbar.getByRole('button', { name: 'Cancel', exact: true }).click();
+    await page.screenshot({ path: path.join(output, 'movable-selector-390.png') });
+  } finally { await browser.close(); }
+});
 const selectedFrames = page => page.locator('[data-workbench-view-id="text:private"], [data-workbench-view-id="image:gesture"]').evaluateAll(nodes =>
   nodes.map(node => { const { x, y, width, height } = node.getBoundingClientRect(); return { id: node.dataset.workbenchViewId, x, y, width, height }; }));
 async function selectMixed(page) {
@@ -121,7 +168,7 @@ test('active mixed selection gestures block canvas switching and Escape restores
     const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, reducedMotion: 'reduce' });
     const errors = []; page.on('pageerror', error => errors.push(error.message));
     await open(page, true);
-    const chooser = page.getByRole('combobox', { name: 'Active Workbench' });
+    const chooser = page.getByRole('combobox', { name: 'Active document' });
     const aId = await chooser.inputValue();
     await create(page, 'Other');
     const bId = await chooser.inputValue();
@@ -132,7 +179,7 @@ test('active mixed selection gestures block canvas switching and Escape restores
       await beginMixedGesture(page, kind);
       assert.notDeepEqual(await selectedFrames(page), frames, `${kind} has a visible temporary preview`);
       await chooser.selectOption(bId);
-      await page.getByRole('region', { name: 'Local Workbenches' }).getByRole('alert')
+      await page.getByRole('region', { name: 'Editor documents' }).getByRole('alert')
         .filter({ hasText: 'Finish or cancel the canvas gesture' }).waitFor();
       assert.equal(await chooser.inputValue(), aId);
       assert.deepEqual(await record(page), before, 'the rejected switch cannot save the preview');
@@ -170,7 +217,7 @@ test('mixed selection UI completion rejects a failed save, then keyboard resize 
     assert.notDeepEqual(saved.workbench.texts[0].window, before.workbench.texts[0].window);
     assert.deepEqual(saved.texts, before.texts, 'resizing preserves the article');
     await page.screenshot({ path: path.join(output, 'mixed-resize-keyboard-saved.png') });
-    await page.getByRole('combobox', { name: 'Active Workbench' }).focus();
+    await page.getByRole('combobox', { name: 'Active document' }).focus();
     await page.keyboard.press('Control+z');
     await page.waitForFunction(width => window.savedDraft().imageModules[0].width === width, before.imageModules[0].width);
     const undone = await record(page);
@@ -209,7 +256,7 @@ test('named local Workbenches keep separate content and canvas geometry through 
     await open(page);
     await write(page, 'Lunar Desert keeps this text.');
     await rename(page, 'Lunar Desert');
-    const aId = await page.getByRole('combobox', { name: 'Active Workbench' }).inputValue();
+    const aId = await page.getByRole('combobox', { name: 'Active document' }).inputValue();
     await page.getByRole('button', { name: 'Canvas size', exact: true }).click();
     await page.getByRole('button', { name: 'Fit canvas to content', exact: true }).click();
     await page.getByRole('button', { name: 'Close canvas size', exact: true }).click();
@@ -217,10 +264,10 @@ test('named local Workbenches keep separate content and canvas geometry through 
     await create(page, 'Studies');
     await page.waitForFunction(() => window.guardedStore().listWorkbenches().length === 2
       && !window.guardedStore().getDraft().texts?.length);
-    const bId = await page.getByRole('combobox', { name: 'Active Workbench' }).inputValue();
+    const bId = await page.getByRole('combobox', { name: 'Active document' }).inputValue();
     assert.notEqual(aId, bId);
     assert.equal(await page.locator('.text-window').count(), 0);
-    assert.ok(await page.getByRole('combobox', { name: 'Active Workbench' }).evaluate(node => document.activeElement === node));
+    assert.ok(await page.getByRole('combobox', { name: 'Active document' }).evaluate(node => document.activeElement === node));
     await page.getByRole('button', { name: 'Text tool', exact: true }).click();
     await page.mouse.click(750, 240);
     await page.locator('.text-window').waitFor();
@@ -228,22 +275,22 @@ test('named local Workbenches keep separate content and canvas geometry through 
     const b = await current(page);
     assert.notEqual(a.texts[0].id, b.texts[0].id);
     assert.notDeepEqual(a.workbench.area, b.workbench.area);
-    await page.getByRole('combobox', { name: 'Active Workbench' }).selectOption(aId);
+    await page.getByRole('combobox', { name: 'Active document' }).selectOption(aId);
     await page.waitForFunction(() => window.guardedStore().getDraft().texts?.[0]?.article.content.content.some(node => JSON.stringify(node).includes('Lunar Desert')));
     assert.deepEqual((await current(page)).texts, a.texts);
     assert.deepEqual((await current(page)).workbench.area, a.workbench.area);
-    await page.getByRole('combobox', { name: 'Active Workbench' }).selectOption(bId);
+    await page.getByRole('combobox', { name: 'Active document' }).selectOption(bId);
     assert.deepEqual((await current(page)).texts, b.texts);
-    await page.getByRole('combobox', { name: 'Active Workbench' }).focus();
+    await page.getByRole('combobox', { name: 'Active document' }).focus();
     await page.keyboard.press('Control+z');
     await page.waitForFunction(() => !JSON.stringify(window.guardedStore().getDraft().texts).includes('Studies keeps independent text.'));
     await page.keyboard.press('Control+Shift+z');
     await page.waitForFunction(() => JSON.stringify(window.guardedStore().getDraft().texts).includes('Studies keeps independent text.'));
     await page.reload();
-    await page.getByRole('combobox', { name: 'Active Workbench' }).waitFor();
-    assert.equal(await page.getByRole('combobox', { name: 'Active Workbench' }).inputValue(), bId);
+    await page.getByRole('combobox', { name: 'Active document' }).waitFor();
+    assert.equal(await page.getByRole('combobox', { name: 'Active document' }).inputValue(), bId);
     assert.deepEqual((await current(page)).texts, b.texts);
-    await page.getByRole('combobox', { name: 'Active Workbench' }).selectOption(aId);
+    await page.getByRole('combobox', { name: 'Active document' }).selectOption(aId);
     assert.deepEqual((await current(page)).texts, a.texts);
     const beforeReview = await record(page);
     await page.getByRole('button', { name: 'Publish', exact: true }).click();
@@ -257,7 +304,7 @@ test('named local Workbenches keep separate content and canvas geometry through 
     await mkdir(output, { recursive: true });
     for (const width of [1440, 700, 390]) {
       await page.setViewportSize({ width, height: 1000 });
-      const box = await page.getByRole('region', { name: 'Local Workbenches', exact: true }).boundingBox();
+      const box = await page.getByRole('region', { name: 'Editor documents', exact: true }).boundingBox();
       assert.ok(box.x >= 0 && box.x + box.width <= width, 'switcher stays inside narrow windows');
       await page.screenshot({ path: path.join(output, `workbenches-${width}.png`) });
     }
@@ -271,7 +318,7 @@ test('named local Workbenches keep separate content and canvas geometry through 
     const other = await context.newPage();
     await other.goto(url);
     await other.getByRole('heading', { name: 'This tab is view-only' }).waitFor();
-    assert.equal(await other.getByRole('combobox', { name: 'Active Workbench' }).count(), 0, 'profile lease still excludes a second editor');
+    assert.equal(await other.getByRole('combobox', { name: 'Active document' }).count(), 0, 'profile lease still excludes a second editor');
     assert.deepEqual(errors, []);
   } finally { await browser.close(); }
 });
@@ -310,29 +357,29 @@ test('failed saves and pending Text keep the current Workbench open until recove
   try {
     const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, reducedMotion: 'reduce' });
     await open(page); await rename(page, 'A');
-    const aId = await page.getByRole('combobox', { name: 'Active Workbench' }).inputValue();
+    const aId = await page.getByRole('combobox', { name: 'Active document' }).inputValue();
     const before = await record(page);
     await failWrites(page, true);
     await create(page, 'B');
-    await page.getByRole('region', { name: 'Local Workbenches' }).getByRole('alert').waitFor();
+    await page.getByRole('region', { name: 'Editor documents' }).getByRole('alert').waitFor();
     assert.deepEqual(await record(page), before);
-    assert.equal(await page.getByRole('combobox', { name: 'Active Workbench' }).inputValue(), aId);
-    assert.equal(await page.getByLabel('New Workbench name').inputValue(), 'B');
+    assert.equal(await page.getByRole('combobox', { name: 'Active document' }).inputValue(), aId);
+    assert.equal(await page.getByLabel('New canvas name').inputValue(), 'B');
     await failWrites(page, false);
-    await page.getByRole('button', { name: 'Create Workbench', exact: true }).click();
+    await page.getByRole('button', { name: 'Create canvas', exact: true }).click();
     await page.waitForFunction(() => window.guardedStore().listWorkbenches().length === 2);
-    const bId = await page.getByRole('combobox', { name: 'Active Workbench' }).inputValue();
-    await page.getByRole('combobox', { name: 'Active Workbench' }).selectOption(aId);
+    const bId = await page.getByRole('combobox', { name: 'Active document' }).inputValue();
+    await page.getByRole('combobox', { name: 'Active document' }).selectOption(aId);
     await failWrites(page, true);
     await write(page, 'Keep this failed edit.');
     await page.getByRole('button', { name: 'Retry local save', exact: true }).waitFor();
-    await page.getByRole('combobox', { name: 'Active Workbench' }).selectOption(bId);
-    await page.getByRole('region', { name: 'Local Workbenches' }).getByRole('alert').filter({ hasText: 'unsaved changes' }).waitFor();
-    assert.equal(await page.getByRole('combobox', { name: 'Active Workbench' }).inputValue(), aId);
+    await page.getByRole('combobox', { name: 'Active document' }).selectOption(bId);
+    await page.getByRole('region', { name: 'Editor documents' }).getByRole('alert').filter({ hasText: 'unsaved changes' }).waitFor();
+    assert.equal(await page.getByRole('combobox', { name: 'Active document' }).inputValue(), aId);
     await failWrites(page, false);
     await page.getByRole('button', { name: 'Retry local save', exact: true }).click();
-    await page.getByRole('combobox', { name: 'Active Workbench' }).selectOption(bId);
-    await page.getByRole('combobox', { name: 'Active Workbench' }).selectOption(aId);
+    await page.getByRole('combobox', { name: 'Active document' }).selectOption(bId);
+    await page.getByRole('combobox', { name: 'Active document' }).selectOption(aId);
     assert.ok(JSON.stringify((await current(page)).texts).includes('Keep this failed edit.'));
   } finally { await browser.close(); }
 });
@@ -347,8 +394,8 @@ test('naming validates input, retries failed writes and commits the visible layo
     await page.getByRole('alert').filter({ hasText: '1–64' }).waitFor();
     assert.deepEqual(await record(page), before);
     await page.keyboard.press('Escape');
-    assert.equal(await page.getByLabel('Workbench name', { exact: true }).count(), 0);
-    assert.ok(await page.getByRole('combobox', { name: 'Active Workbench' }).evaluate(node => document.activeElement === node));
+    assert.equal(await page.getByLabel('Canvas name', { exact: true }).count(), 0);
+    assert.ok(await page.getByRole('combobox', { name: 'Active document' }).evaluate(node => document.activeElement === node));
     const header = page.locator('.text-window header[data-workbench-selectable]');
     const original = await page.locator('.text-window').boundingBox();
     await header.focus();
@@ -364,7 +411,7 @@ test('naming validates input, retries failed writes and commits the visible layo
     await rename(page, 'Lunar Desert');
     await page.getByRole('alert').filter({ hasText: 'Could not save the Workbench' }).waitFor();
     assert.deepEqual(await record(page), beforeRename);
-    assert.equal(await page.getByLabel('Workbench name', { exact: true }).inputValue(), 'Lunar Desert');
+    assert.equal(await page.getByLabel('Canvas name', { exact: true }).inputValue(), 'Lunar Desert');
     await failWrites(page, false);
     await page.getByRole('button', { name: 'Save name', exact: true }).click();
     assert.ok(await page.evaluate(() => window.originalTextWindow === document.querySelector('.text-window')));
@@ -384,16 +431,16 @@ test('all eight local Workbenches stay reachable, with an explained limit and us
   try {
     const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, reducedMotion: 'reduce' });
     await open(page);
-    const firstId = await page.getByRole('combobox', { name: 'Active Workbench' }).inputValue();
+    const firstId = await page.getByRole('combobox', { name: 'Active document' }).inputValue();
     for (let index = 2; index <= 8; index++) await create(page, `Composition ${index}`);
-    assert.equal(await page.getByRole('combobox', { name: 'Active Workbench' }).locator('option').count(), 8);
-    assert.ok(await page.getByRole('button', { name: 'New', exact: true }).isDisabled());
-    await page.getByText('Saved locally · all 8 Workbench slots are in use.', { exact: true }).waitFor();
-    const lastId = await page.getByRole('combobox', { name: 'Active Workbench' }).inputValue();
-    await page.getByRole('combobox', { name: 'Active Workbench' }).selectOption(firstId);
+    assert.equal(await page.getByRole('combobox', { name: 'Active document' }).locator('option:not([value="reception"])').count(), 8);
+    assert.ok(await page.getByRole('button', { name: 'New canvas', exact: true }).isDisabled());
+    await page.getByText('All 8 local canvas slots are in use.', { exact: true }).waitFor();
+    const lastId = await page.getByRole('combobox', { name: 'Active document' }).inputValue();
+    await page.getByRole('combobox', { name: 'Active document' }).selectOption(firstId);
     await page.locator('.text-window').waitFor();
     await page.getByRole('button', { name: 'Rename', exact: true }).click();
-    await page.getByLabel('Workbench name', { exact: true }).fill('Lunar Desert — a long composition name for a narrow screen');
+    await page.getByLabel('Canvas name', { exact: true }).fill('Lunar Desert — a long composition name for a narrow screen');
     await mkdir(output, { recursive: true });
     for (const width of [1440, 390]) {
       await page.setViewportSize({ width, height: 900 });
@@ -401,18 +448,18 @@ test('all eight local Workbenches stay reachable, with an explained limit and us
       const box = await form.boundingBox();
       assert.ok(box.x >= 0 && box.x + box.width <= width);
       assert.ok(await form.evaluate(node => node.scrollWidth <= node.clientWidth));
-      assert.ok(await page.getByLabel('Workbench name', { exact: true }).evaluate(node => {
+      assert.ok(await page.getByLabel('Canvas name', { exact: true }).evaluate(node => {
         const box = node.getBoundingClientRect();
         return document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2) === node;
       }), 'the sidebar cannot cover the name field');
       await page.screenshot({ path: path.join(output, `workbenches-naming-${width}.png`) });
     }
     await page.getByRole('button', { name: 'Save name', exact: true }).click();
-    await page.getByRole('combobox', { name: 'Active Workbench' }).selectOption(lastId);
+    await page.getByRole('combobox', { name: 'Active document' }).selectOption(lastId);
     assert.equal(await page.locator('.text-window').count(), 0);
     await page.reload();
-    await page.getByRole('combobox', { name: 'Active Workbench' }).waitFor();
-    assert.equal(await page.getByRole('combobox', { name: 'Active Workbench' }).inputValue(), lastId);
+    await page.getByRole('combobox', { name: 'Active document' }).waitFor();
+    assert.equal(await page.getByRole('combobox', { name: 'Active document' }).inputValue(), lastId);
     assert.equal((await record(page)).workbenches.length, 8);
   } finally { await browser.close(); }
 });

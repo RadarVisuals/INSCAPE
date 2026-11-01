@@ -4,7 +4,7 @@ import { mkdir } from 'node:fs/promises';
 import { chromium } from 'playwright-core';
 import { browserExecutable } from '../scripts/browserEnvironment.mjs';
 import { mountToolDockFixture } from './fixtures/tool-docks.mjs';
-import { openSharedTool, hideModuleTools } from './fixtures/shared-tools.mjs';
+import { openSharedTool, hideModuleTools, detachTool } from './fixtures/shared-tools.mjs';
 import { settlePlaywrightAnimationFrames } from './playwright-browser-adapter.mjs';
 const output = process.env.INSCAPE_BROWSER_OUTPUT || '.browser-test-runtime/tool-docking';
 const saved = page => page.evaluate(() => window.savedDraft());
@@ -26,6 +26,76 @@ async function dockTab(page, from, to) {
 
 const pane = (page, name) => page.locator('.workbench-dock-pane').filter({ has: tab(page, name) });
 const paneTabs = page => page.locator('.workbench-dock-pane').evaluateAll(nodes => nodes.map(node => [...node.querySelectorAll('[role="tab"]')].map(tab => tab.textContent)));
+
+async function resizedStack(page, name = 'Color') {
+  await mountToolDockFixture(page); await hideModuleTools(page);
+  await page.getByRole('button', { name: 'Select Landscape', exact: true }).click();
+  if (name === 'FX') await openSharedTool(page, name);
+  await detachTool(page, name);
+  await tab(page, 'Layers').click();
+  const box = await dock(page, 'Layers').boundingBox();
+  await drag(page, tab(page, name), { x: box.x + 80, y: box.y + box.height - 16 });
+  const frame = await dock(page, 'Layers').boundingBox();
+  await drag(page, dock(page, 'Layers').locator('[data-edge="s"]'), { x: frame.x + 150, y: frame.y + 700 });
+  const separator = page.getByRole('separator', { name: `Resize Layers and ${name} panels`, exact: true });
+  const split = await separator.boundingBox();
+  await drag(page, separator, { x: split.x + 80, y: frame.y + 260 });
+}
+
+test('Layers fills the dock again after hiding, detaching or rejoining a resized lower pane', { timeout: 90000 }, async () => {
+  const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
+  try {
+    const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, reducedMotion: 'reduce' });
+    await resizedStack(page); await mkdir(output, { recursive: true });
+    const before = await saved(page);
+    const fillsFrame = async stage => {
+      const frame = await dock(page, 'Layers').boundingBox(), content = await pane(page, 'Layers').boundingBox();
+      const actions = await page.getByRole('navigation', { name: 'Layer actions', exact: true }).boundingBox();
+      assert.ok(frame.y + frame.height - content.y - content.height < 3, `${stage}: pane fills its remaining frame`);
+      assert.ok(frame.y + frame.height - actions.y - actions.height < 14, `${stage}: layer actions stay at the lower edge`);
+    };
+    const stackedHeight = (await pane(page, 'Layers').boundingBox()).height;
+    await page.getByRole('button', { name: 'Close Color', exact: true }).click();
+    await dock(page, 'Layers').screenshot({ path: `${output}/layers-after-close.png` });
+    await fillsFrame('close');
+    await openSharedTool(page, 'Color');
+    assert.ok(Math.abs((await pane(page, 'Layers').boundingBox()).height - stackedHeight) < 2, 'reopening restores the split');
+    const colorHeight = (await pane(page, 'Color').boundingBox()).height;
+    await detachTool(page, 'Color'); await fillsFrame('detach');
+    assert.ok(Math.abs((await dock(page, 'Color').boundingBox()).height - colorHeight) < 3, 'menu detach also keeps the pane height');
+    const frame = await dock(page, 'Layers').boundingBox();
+    // The Navigator covers the right end of a tall dock; grab its free lower edge.
+    await page.mouse.move(frame.x + 30, frame.y + frame.height - 2); await page.mouse.down();
+    await page.mouse.move(frame.x + 30, frame.y + 260, { steps: 12 }); await page.mouse.up();
+    assert.ok((await dock(page, 'Layers').boundingBox()).height < 270, 'the bottom edge can actually shorten the window');
+    await fillsFrame('resize');
+    await dock(page, 'Layers').screenshot({ path: `${output}/layers-after-detach-resize.png` });
+    await dockTab(page, 'Color', 'Layers'); await tab(page, 'Layers').click(); await fillsFrame('rejoin');
+    await page.reload(); await tab(page, 'Layers').waitFor(); await fillsFrame('reload');
+    assert.deepEqual(await saved(page), before, 'window rearrangement does not edit artwork');
+  } finally { await browser.close(); }
+});
+
+for (const name of ['Color', 'FX']) test(`detached lower ${name} stays under the pointer and keeps its pane height`, { timeout: 90000 }, async () => {
+  const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
+  try {
+    const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, reducedMotion: 'reduce' });
+    await resizedStack(page, name); await mkdir(output, { recursive: true });
+    const before = await saved(page), source = await tab(page, name).boundingBox(), originalPane = await pane(page, name).boundingBox();
+    const point = { x: 460, y: 320 }, grabY = source.y + source.height / 2 - originalPane.y;
+    await page.mouse.move(source.x + source.width / 2, source.y + source.height / 2); await page.mouse.down();
+    await page.mouse.move(point.x, point.y, { steps: 12 });
+    const ghost = await page.locator('.workbench-dock-ghost').boundingBox();
+    await page.screenshot({ path: `${output}/${name.toLowerCase()}-detaching.png` });
+    assert.ok(Math.abs(ghost.y + grabY - point.y) < 2, 'drag preview is anchored to the grabbed header');
+    await page.mouse.up();
+    const detached = await dock(page, name).boundingBox(), header = await dock(page, name).locator('header').boundingBox();
+    assert.ok(point.y >= header.y && point.y <= header.y + header.height, 'release keeps the header under the pointer');
+    assert.ok(Math.abs(detached.height - originalPane.height) < 3, 'detachment uses the pane height, not the complete stack');
+    await dock(page, name).screenshot({ path: `${output}/${name.toLowerCase()}-detached.png` });
+    assert.deepEqual(await saved(page), before);
+  } finally { await browser.close(); }
+});
 
 test('stacked panels share one movable frame, resize independently, detach and reopen in place', { timeout: 90000 }, async () => {
   const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
@@ -106,7 +176,7 @@ test('keyboard stacking, whole-dock stacking and narrow scrolling retain every p
     assert.deepEqual(await paneTabs(page), [['Transform'], ['Layers'], ['Color']]);
     assert.equal(await page.locator('.workbench-tool-dock').count(), 1);
     await page.setViewportSize({ width: 760, height: 540 });
-    const color = page.getByRole('spinbutton', { name: 'Color opacity', exact: true });
+    const color = page.getByRole('slider', { name: 'Color opacity', exact: true });
     await color.scrollIntoViewIfNeeded();
     const field = await color.boundingBox(), frame = await dock(page, 'Layers').boundingBox();
     assert.ok(field.y + field.height <= frame.y + frame.height + 1);
@@ -176,7 +246,7 @@ test('three tools detach, regroup, reorder, move as a dock and recover without a
     await tab(page, 'Color').click();
     const narrow = await dock(page, 'Color').boundingBox();
     assert.ok(narrow.x >= 8 && narrow.x + narrow.width <= 752 && narrow.y + narrow.height <= 492);
-    const opacity = page.getByRole('spinbutton', { name: 'Color opacity', exact: true });
+    const opacity = page.getByRole('slider', { name: 'Color opacity', exact: true });
     await opacity.scrollIntoViewIfNeeded();
     const fieldBox = await opacity.boundingBox();
     assert.ok(fieldBox.y + fieldBox.height <= narrow.y + narrow.height, 'lower controls remain reachable inside a short dock');

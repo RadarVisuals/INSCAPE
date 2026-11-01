@@ -1,10 +1,7 @@
 .workbench-switcher {
-  position: absolute;
-  /* Above ordinary Workbench tools, below inspection's 200–202 layers. */
-  z-index: 90;
-  top: 12px;
-  right: 12px;
-  width: min(420px, calc(100% - 24px));
+  width: min(560px, calc(100% - 24px));
+  max-height: calc(100dvh - 16px);
+  overflow-y: auto;
   box-sizing: border-box;
   padding: 8px;
   border: 1px solid var(--tactile-edge);
@@ -14,9 +11,11 @@
   font: 11px/1.5 var(--font-interface);
 }
 .workbench-switcher[hidden] { display: none; }
-/* An open naming form stays above the compact sidebar crossing this corner. */
-.workbench-switcher:has(.workbench-switcher__form) { z-index: 92; }
-.workbench-switcher__row { display: flex; align-items: center; gap: 6px; }
+.workbench-switcher__row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.workbench-switcher__grip { display: grid; place-items: center; flex: none; align-self: stretch; width: 24px; padding: 0; border: 0; border-radius: var(--control-radius); background: transparent; color: var(--tactile-muted); cursor: grab; touch-action: none; user-select: none; }
+.workbench-switcher__grip:active { cursor: grabbing; }
+.workbench-switcher__grip:is(:hover, :focus-visible) { color: var(--tactile-ink); background: var(--tactile-hover); }
+.workbench-switcher__grip:focus-visible { outline: 2px solid var(--tactile-ink); outline-offset: -2px; }
 .workbench-switcher select, .workbench-switcher input {
   min-width: 0;
   box-sizing: border-box;
@@ -27,14 +26,11 @@
   font: inherit;
   padding: 6px;
 }
-.workbench-switcher select { flex: 1; width: 80px; text-overflow: ellipsis; }
-.workbench-switcher .workflow-tactile-control { padding: 6px 8px; white-space: nowrap; }
+.workbench-switcher select { flex: 1; width: 80px; min-width: 80px; text-overflow: ellipsis; }
+.workbench-switcher .workflow-tactile-control { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 6px 8px; white-space: nowrap; }
 .workbench-switcher small { display: block; margin-top: 5px; color: var(--tactile-muted); }
 .workbench-switcher__form { display: grid; gap: 8px; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--tactile-edge); }
 .workbench-switcher__form label { display: grid; gap: 4px; }
 .workbench-switcher__form > div { display: flex; gap: 6px; }
 .workbench-switcher p { margin: 8px 0 0; overflow-wrap: anywhere; }
 .workbench-switcher :is(input, select):focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
-@media (max-width: 600px) {
-  .workbench-switcher__row > label { display: none; }
-}

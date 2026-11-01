@@ -2,7 +2,7 @@ import React, { useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import useOwnerLatticeBrowser from '../src/public/useOwnerLatticeBrowser.js';
 import { useLibraryStore, resetLibraryStoreForTests } from '../src/library/state/useLibraryStore.js';
-import { chillwhalesProfileRepository } from '../src/library/data/chillwhalesProfileRepository.js';
+import { luksoEnvioProfileRepository } from '../src/library/data/luksoEnvioProfileRepository.js';
 import { luksoCreationsRepository } from '../src/creations/data/luksoCreationsRepository.js';
 import { lsp8CollectionMetadataResolver } from '../src/library/data/lsp8TokenMetadataResolver.js';
 import { createEditorPreferencesStore } from '../src/public/ownerSystemWorkflow/editorPreferencesStore.js';
@@ -28,7 +28,7 @@ let release;
 const gate = new Promise(resolve => { release = resolve; });
 const probe = window.libraryDemandTest = { ownedPages: 0, createdPages: 0, collectionPages: 0, referencePages: 0,
   metadataIds: [], released: false, release() { probe.released = true; release(); }, store: useLibraryStore };
-chillwhalesProfileRepository.loadProfileAssets = async function* (profile, { signal, requestedAssetIds } = {}) {
+luksoEnvioProfileRepository.loadProfileAssets = async function* (profile, { signal, requestedAssetIds } = {}) {
   if (requestedAssetIds) {
     probe.referencePages++;
     yield { assets: requestedAssetIds.map(id => token(Number.parseInt(id.split(':')[2], 16), profile)),

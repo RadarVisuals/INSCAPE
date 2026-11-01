@@ -4,13 +4,16 @@ import ShapeEffectsControls from './ShapeEffectsControls.jsx';
 import { Copy, Trash2, ChevronDown, ChevronUp, ChevronsDown, ChevronsUp } from 'lucide-react';
 import { gridShapeFrame } from './gridShapeGeometry.js';
 import { useCallback, useEffect, useMemo, useState, useId } from 'react';
+import { createPortal } from 'react-dom';
+import RackMenu from '../public/menus/RackMenu.jsx';
+import { EditorCellTools, useEditorCells } from '../reception/EditorCellsContext.jsx';
+import ShapeSurface from './ShapeSurface.jsx';
 import { WorkbenchWindow } from '../public/ownerSystemWorkflow/DisplayInstrumentWindow.jsx';
 import { resizeWorkbenchWindow } from '../public/ownerSystemWorkflow/ownerSystemWorkflowWindowGeometry.js';
 import { ContextToolContent, useContextToolTarget } from '../public/ownerSystemWorkflow/ContextToolbar.jsx';
 import { useWorkbenchView, workbenchModuleTransform, useArtworkOpener, useClosedArtworkLayout, useWorkbenchToolSource } from '../public/ownerSystemWorkflow/WorkbenchViewContext.js';
 import { commitWorkbenchSelectionResize } from '../systemWorkflow/resizeWorkbenchSelection.js';
 import { removeWorkbenchModule } from '../systemWorkflow/removeWorkbenchModule.js';
-import { moduleGrainStyle } from '../systemWorkflow/domain/moduleSurfaceAppearance.js';
 import { createShapePresentation, MAX_SHAPES } from './shapes.js';
 import { addShape, editShape, reorderShape, prepareShapeResize } from './shapeSession.js';
 import '../public/ownerSystemWorkflow/displayInstruments.css';
@@ -47,6 +50,11 @@ function ShapeInstance({ record, records, index, initialPresentation, store, pro
   const kind = record.kind || 'rectangle';
   const view = useWorkbenchView();
   const editable = Boolean(store) && !suspended && !view.presentationTransforms?.[record.id];
+  const cellContext = useEditorCells(), [cellMenu, setCellMenu] = useState(null);
+  const cell = cellContext?.cells.find(item => item.id === record.id);
+  const cellParent = cellContext?.cells.find(item => item.members.includes(record.id));
+  const registerCellMenu = cellContext?.registerMenu;
+  useEffect(() => registerCellMenu?.(record.id, setCellMenu), [registerCellMenu, record.id]);
   useClosedArtworkLayout(presentation, setPresentation, view.content?.workbench?.shapes?.find(item => item.id === record.id));
   const layout = useCallback(window => setPresentation(current => JSON.stringify(current.window) === JSON.stringify(window) ? current : { ...current, window }), []);
   const applyFrame = useCallback(frame => { setCommittedFrame(frame); layout(frame); }, [layout]);
@@ -89,11 +97,13 @@ function ShapeInstance({ record, records, index, initialPresentation, store, pro
       {kind === 'texture' && <PatternNumber label="Noise scale" value={record.texture.scale} min={.25} max={8} step={.25}
         onChange={scale => change({ texture: { scale } })} />}
       <label className="shape-check"><input type="checkbox" checked={record.visibility === 'PUBLIC'} onChange={event => change({ visibility: event.target.checked ? 'PUBLIC' : 'PRIVATE' })} />Include in publication</label>
+      <EditorCellTools record={record} view={view} run={run} />
     </>}
     {failure?.surface === 'shape' && <p role="alert">{failure.message}</p>}
   </section>;
   useWorkbenchToolSource(record.id, { color: <>
     <CommittedColourControls color={record.color} opacity={kind === 'texture' ? undefined : record.opacity} disabled={!editable || !presentation.open}
+      scopeKey={`${profileAddress}:${record.id}`}
       getVersion={() => store.getGeneration()} onChange={patch => change(patch, 'color')} onPreview={patch => setColorPreview(patch ? { record, patch } : null)} />
     {failure?.surface === 'color' && <p role="alert">{failure.message}</p>}
   </>, shape: shapeTools, fx: <section key={record.id} aria-label={`${record.name} effects`}>
@@ -102,28 +112,39 @@ function ShapeInstance({ record, records, index, initialPresentation, store, pro
     {failure?.surface === 'fx' && <p role="alert">{failure.message}</p>}
   </section> });
   return <>
-    <div className="shape-instance" data-shape-kind={kind} data-grid-selected={kind === 'grid' && view.selection?.includes(record.id) || undefined} data-workbench-select-on-pointer={editable || undefined} data-editable={editable || undefined} data-active={active || undefined}
-      onPointerDownCapture={event => editable && event.button === 0 && onActivate?.(record.id)} onFocusCapture={() => editable && onActivate?.(record.id)}>
+    <div className="shape-instance" data-shape-kind={kind} data-cell-owner={cell ? record.id : undefined} data-grid-selected={kind === 'grid' && view.selection?.includes(record.id) || undefined} data-workbench-select-on-pointer={editable || undefined} data-editable={editable || undefined} data-active={active || undefined}
+      onPointerDownCapture={event => editable && event.button === 0 && onActivate?.(record.id)} onFocusCapture={() => editable && onActivate?.(record.id)}
+      onContextMenuCapture={event => {
+        if (!editable || !cellContext || cell || kind !== 'rectangle') return;
+        event.preventDefault(); event.stopPropagation(); view.selectArtwork(record.id);
+        setCellMenu({ x: event.clientX, y: event.clientY, source: event.target });
+      }} onKeyDownCapture={event => {
+        if (!editable || !cellContext || kind !== 'rectangle' || !(event.key === 'ContextMenu' || event.shiftKey && event.key === 'F10')) return;
+        event.preventDefault(); event.stopPropagation(); const rect = event.target.getBoundingClientRect();
+        setCellMenu({ x: rect.left, y: rect.bottom, source: event.target });
+      }}>
       {presentation.open && <WorkbenchWindow label="Shape" title={record.name} className="shape-window" chrome="bevel"
         viewId={record.id} active={active} placementModule={editable} snapToGrid={editable && windowSnap} moveFromContent={editable}
         minimumWidth={8} minimumHeight={8} resizableWidth resizable={editable}
         width={presentation.window.width} initialHeight={presentation.window.height} initialX={presentation.window.left} initialY={presentation.window.top}
         onLayoutChange={layout} resizeTarget={resizeTarget} committedFrame={committedFrame}
         surfaceStyle={{ zIndex: index + 1 }}>
-        <div className="shape-paint" style={{ filter: painted.blur ? `blur(calc(${painted.blur}px * var(--workbench-content-scale, 1)))` : undefined }}>
-        <div className="shape-fill" data-shape-kind={kind} style={{ backgroundColor: kind === 'grid' ? 'transparent' : painted.color,
-          color: painted.color, opacity: painted.opacity, ...moduleGrainStyle(painted.grain),
-          ...(record.grid ? { '--shape-grid-spacing': `${record.grid.spacing}px`, '--shape-grid-line': `${record.grid.lineWidth}px` } : {}),
-          ...(record.texture ? { '--shape-noise-scale': record.texture.scale } : {}) }}>
-          {kind === 'grid' && <GridPaint record={record} />}
-          {kind === 'rectangle' && painted.grain > 0 && <span aria-hidden="true" className="module-surface-grain" />}
-        </div>
-        </div>
+        <ShapeSurface record={painted} radius={cell?.radius || 0}>{kind === 'grid' && <GridPaint record={record} />}</ShapeSurface>
+        {cell?.content && <span className="editor-cell-content-note">{cell.content.startsWith('link:') ? 'Linked canvas content' : 'Profile content'} · visible in Preview</span>}
         {kind === 'grid' && editable && <div className="shape-grid-border" aria-hidden="true">
           {['n', 'e', 's', 'w'].map(edge => <span key={edge} className={`is-${edge}`} />)}
         </div>}
       </WorkbenchWindow>}
     </div>
+    {cellMenu && editable && createPortal(<RackMenu anchor={cellMenu} label={`${record.name} cell actions`} returnFocus={cellMenu.source}
+      commands={cell ? [{ id: 'edit-cell', label: 'Edit cell contents' }, { id: 'cell-settings', label: 'Cell settings' }]
+        : [{ id: 'make-cell', label: 'Turn into cell', disabled: Boolean(cellParent) || cellContext.cells.length >= 8 }]}
+      onClose={() => setCellMenu(null)} onCommand={id => {
+        setCellMenu(null);
+        if (id === 'edit-cell') cellContext.enterCell(record.id);
+        else if (id === 'cell-settings') cellContext.openSettings(record.id);
+        else run(() => { store.turnShapeIntoCell(record.id, view.getPresentation()); view.selectArtwork(record.id); });
+      }} />, document.body)}
     {editable && <ContextToolContent target={record.id} label={record.name} actions={<nav aria-label="Shape actions" className="system-workflow__selection-actions"><button className="workflow-tactile-control" type="button" disabled={records.length >= MAX_SHAPES} onClick={() => run(() => select(addShape(store, profileAddress, { workbench: view.getPresentation() }, record)))} aria-label="Duplicate shape" title="Duplicate shape"><Copy /></button>
 
           {[['back', 'Send to back', ChevronsDown], ['backward', 'Move backward', ChevronDown], ['forward', 'Move forward', ChevronUp], ['front', 'Bring to front', ChevronsUp]].map(([direction, label, Icon]) =>

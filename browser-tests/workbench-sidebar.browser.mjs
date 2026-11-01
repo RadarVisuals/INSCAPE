@@ -130,9 +130,9 @@ test('Sidebar collapse follows Workbench switches, preview and explicit hide/reo
  try {
   const {page,button,errors}=await mount(browser);
   await button('Collapse sidebar').click();
-  await page.getByRole('button',{name:'New',exact:true}).click();await page.getByLabel('New Workbench name',{exact:true}).fill('Sidebar check');
-  await page.getByRole('button',{name:'Create Workbench',exact:true}).click();await button('Expand sidebar').waitFor();
-  await page.getByRole('combobox',{name:'Active Workbench'}).selectOption({label:'Workbench 1'});await button('Expand sidebar').waitFor();
+  await page.getByRole('button',{name:'New canvas',exact:true}).click();await page.getByLabel('New canvas name',{exact:true}).fill('Sidebar check');
+  await page.getByRole('button',{name:'Create canvas',exact:true}).click();await button('Expand sidebar').waitFor();
+  await page.getByRole('combobox',{name:'Active document'}).selectOption({label:'Workbench 1'});await button('Expand sidebar').waitFor();
   await button('Preview').click();await page.getByRole('button',{name:'EXIT',exact:true}).waitFor();
   assert.equal(await page.locator('.workbench-sidebar').isVisible(),false);assert.equal(await page.getByRole('complementary',{name:'Workspace sidebar'}).count(),0,'hidden navigation is absent from accessibility');
   await page.getByRole('button',{name:'EXIT',exact:true}).click();await button('Expand sidebar').waitFor();

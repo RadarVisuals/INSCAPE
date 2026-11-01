@@ -66,6 +66,78 @@ overrides and parallel paths are not an acceptable substitute for fixing the
 existing owner. Follow the concrete replacement, style-ownership and completion
 checks in `AGENTS.md`; preserve useful behavior and current authored work.
 
+## Reception in the Editor (2026-10-31)
+
+The founder approved building Reception in the existing Editor itself, including
+its Rectangle tool, free positioning, snapping, shared module tools and history.
+The founder's five-rectangle screenshot demonstrates the intended workflow.
+The user draws a normal rectangle and explicitly chooses **Turn into cell** in
+Shapes or its context menu. A separate Reception authoring surface, even one
+that reuses some controls, does not satisfy this direction. This supersedes the
+earlier single-content-cell and separate-editor direction. The editing environment is **Editor**;
+**My Inscape** is the maker's works overview. A created composition is a canvas,
+not another editor. Internal Workbench identifiers and authored names need not
+be mechanically renamed.
+
+Reception remains one shared profile-owned document in the normal Editor session.
+Public **Edit Reception**, **My Inscape → Edit Reception**, and the Editor's
+**Active document** selector all open that same document. The shared document bar
+contains My Inscape, the document selector, Settings and Preview. Cell editing
+adds its Back to cells row inside that bar. There is no separate Reception editor
+host, preferences owner, or Done toolbar. The Design Lab mounts the same Editor
+with isolated sample storage.
+
+The root session owns document switching and the normal owner access, hydration
+and recovery path. A restricted Reception scope supplies its native module view;
+it is not a second saved canvas. Reception edits cannot change the active ordinary
+canvas. Its history, recovery, generation and async authority remain scoped to
+Reception. Leaving a document flushes its current layout and respects recovery
+guards. Preview returns to the same mounted Editor; opening a canvas selects its
+own document and uses the existing canvas preview.
+
+A cell references its original rectangle and the native Image, Text and Shape
+records that belong inside it. The rectangle retains its identity, colour,
+opacity, effects and native window geometry. There is no copied cell rectangle
+or duplicate layer order: native artwork order remains authoritative. Moving
+the outer cell carries its contents; Edit contents or double-click enters inner
+editing, where each layer moves independently. Escape/Back to cells leaves it.
+Library artwork dropped directly onto a cell becomes a new contained Image
+layer, including when existing artwork covers the cell. Right-clicking the cell
+opens **Cell settings** in the shared Shape panel for membership and coupling.
+Cell contents are clipped by their owner's rectangle. Ordinary shapes remain
+available without becoming cells. Nested cells remain outside this slice.
+
+Public Reception remains frameless with a one-pixel usable-area boundary.
+Cells may be coupled in rows or columns with adjustable spacing; unlinking
+retains geometry. New conversions allow up to eight cells. Existing authored
+Reception layouts convert on edit entry while retaining their content, sources,
+mobile order, layer placement and links. Published older layouts stay readable.
+Conversion failure preserves saved work and reports the cause.
+
+Responsive preview has Fit, Desktop, Tablet, Phone and a continuous width.
+Width is temporary. Preview and the saved Reception retain the authored canvas
+size on larger screens and center it; available space never enlarges it. Smaller
+screens may shrink it, and the available viewport determines narrow reflow.
+Cell membership clips content without changing the native global layer order.
+Narrow layouts use saved cell order, half/full-row width
+and height. Images follow cell geometry; text keeps its readable font size and
+wraps inside its box. Mobile layer placement overrides are separate from desktop
+geometry and scale from their authored reference width. This does not promise
+automatic artistic rearrangement of arbitrary overlapping layers.
+
+Further shape masks, arbitrary nested modules and new coordinated scene/flip
+behaviors remain later work. Existing linked Display content is retained.
+This slice uses independent Text layers; Text continuation frames, Follow Display,
+pagination and transfer into Display are not exposed in Reception. Existing
+Text remains subject to its explicit Include in Reception choice. Newly created
+Reception Text is included by default; ordinary Editor Text remains private by
+default, and existing private writing is never implicitly made public. Existing
+profile and linked-content cells retain their public rendering and show an
+identifying placeholder inside the native Editor.
+Minting, portable collectible schemas and asset-update policy remain deferred
+at the founder's request. This section records accepted behavior and boundaries,
+not deployment status or evidence that the whole application has been renamed.
+
 ## Current product map (2026-10-19)
 
 Consolidated on 30 October 2026. Dates in section anchors preserve existing links.
@@ -1198,8 +1270,17 @@ closed artwork offers an open action. Image fitting/cropping stays in its
 existing controls pending its own migration.
 
 Color reuses the reference workspace's hue ring, triangle and hex control.
-The founder's follow-up keeps the current Saturation/Lightness fields for now;
-do not replace them with sliders or relocate them from the spoken exploration.
+**Updated 30 October 2026:** the founder supplied an Affinity Color-panel
+reference and requested this arrangement for the shared picker in Workbench
+and Reception. Screen sampling is part of the shared wheel, with the pipette
+and current-color indicator at upper left. H/S/L are read-only numeric values
+at lower left; editable hex digits sit at lower right with a separate # prefix.
+Where the target supports opacity, use a slider and percentage readout below
+the wheel, with temporary preview and one undoable commit per gesture. Do not
+add Stroke, Swatches or an opacity dropdown. This replaces the earlier editable
+Saturation/Lightness fields and numeric opacity entry. Existing explicit Text
+color targets and module-owned saving remain in place. The same scoped sampling,
+cancel and unsupported-browser fallback behavior applies across both hosts.
 Pointer use of the ring/triangle must not paint a focus frame. The shared picker
 distinguishes pointer focus from keyboard navigation; keyboard focus remains
 visible, with Escape cancellation and arrow-key editing intact.
@@ -4078,6 +4159,16 @@ See [Info verification](audits/2026-10-23/artwork-info.md) for local evidence.
 
 ### Library and editor preferences (2026-10-23)
 
+**Workbench Library window (2026-10-31).** Library can detach from its sidebar
+position into the shared movable, edge/corner-resizable tool window, then dock
+back. Its existing browsing instance and selection remain intact. Detached
+position, size and docked state are profile-local editor preferences; they do not
+change artwork, Undo or publication. The Library category tree accompanies the
+floating window and returns to the existing navigation host when docked.
+The Workbench selector bar also moves through a dedicated grip, with pointer
+and keyboard access. Its position is a profile-local editor preference. Moving
+the selector does not reposition artwork or impose a new top boundary on tools.
+
 The founder approved the Library migration and explicitly requested retaining
 Library settings and the arrangement of tool tabs/windows after leaving or
 restarting. This supersedes earlier session-only limits for these preferences.
@@ -4128,6 +4219,18 @@ organization does not rewrite token metadata, creator attribution or ownership.
 An existing whole-asset entry can be narrowed by adding the desired image;
 the earlier discarded image choice cannot be reconstructed. See
 [implementation and behavioral evidence](audits/2026-10-29/library-demand/README.md).
+
+**Library inventory source (2026-10-31):** The official LUKSO Envio indexer is
+the primary source for profile inventory and saved-category references. Reads
+are paged and scoped to positive holdings of that profile: individual LSP8
+token IDs and LSP7 contracts. Chillwhales is removed from the application and
+its allowed network origins. Direct blockchain reads remain the fallback for
+failed inventory requests and missing references, and the existing bounded
+token-metadata refresh remains available for incomplete or stale media.
+Resolution variants remain grouped; attached images retain their declared
+file URLs. Filename prefixes do not identify an attachment independently of
+its resource URL and token identity. This changes no ownership or wallet
+authority and introduces no additional dependency.
 
 ### Settings and keyboard selection finishing (2026-10-23)
 

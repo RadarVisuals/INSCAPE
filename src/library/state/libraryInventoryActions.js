@@ -1,7 +1,7 @@
-import { chillwhalesProfileRepository } from '../data/chillwhalesProfileRepository.js';
+import { luksoEnvioProfileRepository } from '../data/luksoEnvioProfileRepository.js';
 import { luksoRpcProfileRepository } from '../data/luksoRpcProfileRepository.js';
 import { createAssetPageSession } from '../data/assetPageSession.js';
-import { mergeAssetMetadata } from '../data/libraryMetadataDemand.js';
+import { mergeAssetMetadata, retainResolvedTokenMedia } from '../data/libraryMetadataDemand.js';
 
 const merge = (before, incoming) => [...new Map([...before, ...incoming].map(asset => [asset.id, asset])).values()];
 const incomplete = 'Some Library assets could not be loaded. The Library may be incomplete. Retry to refresh.';
@@ -21,7 +21,7 @@ export function createLibraryInventoryActions(set, get, saveCache) {
       inventory?.session.cancel();
       repairController?.abort();
       const generation = get().loadGeneration + 1;
-      inventory = start(chillwhalesProfileRepository, generation);
+      inventory = start(luksoEnvioProfileRepository, generation);
       set({ loadGeneration: generation, status: 'idle', hasMore: true, inventoryComplete: false, unresolvedAssetIds: [],
         sourceMode: 'INDEXER', error: null, liveError: null, progress: { resolved: 0, total: 0, failures: 0 } });
       return get().loadMore();
@@ -34,10 +34,12 @@ export function createLibraryInventoryActions(set, get, saveCache) {
       try {
         const batch = await run.session.next();
         if (!current() || !batch) return;
-        run.assets = merge(run.assets, batch.assets);
+        const assets = run.repository === luksoEnvioProfileRepository
+          ? retainResolvedTokenMedia(batch.assets, [...get().assets, ...get().referencedAssets]) : batch.assets;
+        run.assets = merge(run.assets, assets);
         run.failures += batch.failures || 0;
         set(state => ({
-          assets: batch.complete && !run.failures ? run.assets : merge(state.assets, batch.assets),
+          assets: batch.complete && !run.failures ? run.assets : merge(state.assets, assets),
           unresolvedAssetIds: [...new Set([...state.unresolvedAssetIds, ...(batch.unresolvedAssetIds || [])])],
           hasMore: !batch.complete, inventoryComplete: Boolean(batch.complete),
           status: run.failures ? 'partial' : 'ready',
@@ -48,7 +50,7 @@ export function createLibraryInventoryActions(set, get, saveCache) {
         if (run.repository === luksoRpcProfileRepository && !batch.complete && batch.resolved >= batch.total) await run.session.next();
       } catch (error) {
         if (!current()) return;
-        if (run.repository === chillwhalesProfileRepository) {
+        if (run.repository === luksoEnvioProfileRepository) {
           run.session.cancel();
           inventory = start(luksoRpcProfileRepository, run.generation);
           set({ sourceMode: 'RPC', status: 'idle', hasMore: true,
@@ -116,14 +118,16 @@ export function createLibraryInventoryActions(set, get, saveCache) {
           while (current()) {
             const batch = await session.next();
             if (!current() || !batch) return;
-            assets = merge(assets, batch.assets.filter(asset => accepted.has(asset.id)));
+            const incoming = batch.assets.filter(asset => accepted.has(asset.id));
+            assets = merge(assets, repository === luksoEnvioProfileRepository
+              ? retainResolvedTokenMedia(incoming, [...get().assets, ...get().referencedAssets]) : incoming);
             unresolved.push(...(batch.unresolvedAssetIds || []));
             if (batch.complete) break;
           }
         } finally { signal?.removeEventListener('abort', abort); session.cancel(); }
       };
       try {
-        await read(chillwhalesProfileRepository);
+        await read(luksoEnvioProfileRepository);
         if (unresolved.length && current()) { ids = [...new Set(unresolved)]; await read(luksoRpcProfileRepository); }
       }
       catch (error) { if (!current()) return; await read(luksoRpcProfileRepository); }

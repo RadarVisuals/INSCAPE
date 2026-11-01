@@ -6,18 +6,9 @@ import { createPublishedIdentityRackViewModel } from '../profileDocument/compone
 import ReceptionOverview from './ReceptionOverview.jsx';
 import { createReception, projectReception } from '../profileDocument/domain/receptionPresentation.js';
 import { publishedPresentationSnapshot } from '../presentation/presentationSources.js';
-const OwnerReceptionEditor = lazy(() => import('./OwnerReceptionEditor.jsx'));
 const OwnerReceptionCollection = lazy(() => import('./OwnerReceptionCollection.jsx'));
 
-export default function OwnerReception(props) {
-  const [editing, setEditing] = useState(false), [warning, setWarning] = useState(null);
-  const close = () => setEditing(false);
-  if (editing) return <Suspense fallback={<p role="status">Opening Reception editor…</p>}>
-    <OwnerReceptionEditor {...props} onClose={close} onDone={notice => { setWarning(notice || null); close(); }} />
-  </Suspense>;
-  return <SavedReception {...props} warning={warning} onEdit={() => setEditing(true)} />;
-}
-function SavedReception({ address, document, warning, onEdit, onCanvases, onDiscover, onReturn }) {
+export default function OwnerReception({ address, document, onEditReception, onCanvases, onDiscover, onReturn }) {
   const [reader] = useState(() => createProfileDraftReader({ profileAddress: address, storage: localStorage }));
   const { draft, collection, status, stale } = useSyncExternalStore(reader.subscribe, reader.getSnapshot);
   const publicSnapshot = useMemo(() => document ? publishedPresentationSnapshot(document) : null, [document]);
@@ -27,9 +18,9 @@ function SavedReception({ address, document, warning, onEdit, onCanvases, onDisc
     ? createProductionIdentityDossierViewModel({ identity, identityPresentation: draft?.identityPresentation, cachedIdentity: document?.profile.cachedIdentity })
     : createPublishedIdentityRackViewModel({ document, identity }), [draft, document, identity]);
   const failed = status === 'corrupt' || status === 'unavailable';
-  const notice = failed ? `Your local Reception could not be read. ${stale ? 'Showing the last saved view.' : document ? 'Showing the published version.' : 'No saved view is available.'} Open Edit Reception to recover your draft.` : warning;
+  const notice = failed ? `Your local Reception could not be read. ${stale ? 'Showing the last saved view.' : document ? 'Showing the published version.' : 'No saved view is available.'} Open Edit Reception to recover your draft.` : null;
   const View = collection ? OwnerReceptionCollection : ReceptionOverview;
   return <Suspense fallback={<p role="status">Opening Reception…</p>}><View snapshot={collection || publicSnapshot} reception={reception} model={model} address={address}
-    notice={notice} onRetry={failed ? reader.refresh : undefined} ownerEditingAllowed onEdit={onEdit}
+    notice={notice} onRetry={failed ? reader.refresh : undefined} ownerEditingAllowed onEdit={onEditReception}
     onReturnToWorkbench={onReturn} onOpenCanvas={onCanvases} onOpenDirectory={onDiscover} /></Suspense>;
 }

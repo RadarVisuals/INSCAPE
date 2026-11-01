@@ -1,7 +1,9 @@
 // Synthetic local/public profiles; only use in disposable browser contexts.
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import PublishedProfileBoundary from '/src/profileDocument/components/PublishedProfileBoundary.jsx';
+import OwnerRuntimeBoundary from '/src/public/OwnerRuntimeBoundary.jsx';
+import useApplicationNavigation from '/src/profileDiscovery/useApplicationNavigation.js';
 import { createSystemWorkflowDraftStore, systemWorkflowDraftKey } from '/src/systemWorkflow/systemWorkflowDraftStore.js';
 import { createReception } from '/src/profileDocument/domain/receptionPresentation.js';
 import { splitReception } from '/src/reception/receptionLayout.js';
@@ -11,6 +13,11 @@ import { serializeWorkbenchBackup } from '/src/systemWorkflow/workbenchBackup.js
 import '/src/index.css';
 
 const address = '0x3333333333333333333333333333333333333333';
+const params = new URLSearchParams(location.search);
+if (!params.has('view')) {
+  params.set('view', address); params.set('reception', '1');
+  history.replaceState(null, '', `${location.pathname}?${params}`);
+}
 const key = systemWorkflowDraftKey(address);
 const store = () => createSystemWorkflowDraftStore({ profileAddress: address, storage: localStorage });
 const memory = { getItem: () => null, setItem() {} };
@@ -46,9 +53,25 @@ function Fixture() {
   window.receptionBoundaryFixture.setStatus = setStatus;
   window.receptionBoundaryFixture.setOwner = setOwner;
   window.receptionBoundaryFixture.remount = () => setRevision(v => v + 1);
-  return <PublishedProfileBoundary key={revision} address={address}
-    resolution={{ status, address, ...(['RESOLVED', 'STALE'].includes(status) ? { document } : {}) }}
-    returnProfileAddress={owner ? address : undefined} onReturnToWorkbench={owner ? () => {} : undefined}
-    onRetry={() => setStatus('RESOLVED')} entry={{ surface: 'overview', reception: true }} onOpenCanvas={() => {}} />;
+  return <RoutedFixture key={revision} status={status} owner={owner} onRetry={() => setStatus('RESOLVED')} />;
 }
-createRoot(window.document.getElementById('root')).render(<Fixture />);
+function RoutedFixture({ status, owner, onRetry }) {
+  const navigation = useApplicationNavigation({ status: 'complete', profileAddress: owner ? address : null, ownershipVerified: owner });
+  const resolution = useMemo(() => ({ status, address, ...(['RESOLVED', 'STALE'].includes(status) ? { document } : {}) }), [status]);
+  const content = navigation.content;
+  const enterEditor = () => navigation.visitProfile(address, { returnToConnectedProfile: true });
+  const editReception = () => navigation.editReception(address);
+  const openReception = () => navigation.openReception(address);
+  return content?.kind === 'workbench' ? <OwnerRuntimeBoundary ownerAuthoringEnabled
+    workspaceProfileAddress={address} viewedProfileAddress={address}
+    receptionEditorRequested={content.receptionEditorRequested === true} canvasOverviewRequested={content.canvas === true}
+    publishedResolution={resolution} reviewAssets={[]} reviewCategories={[]} reviewActivity={[]}
+    reviewProfile={{ name: 'Audit profile' }} interfaceVisible onOpenReception={openReception}
+    onEnterMyWorld={enterEditor} onEditorDocumentChange={kind => kind === 'reception' ? editReception() : enterEditor()} />
+    : <PublishedProfileBoundary address={address} resolution={resolution}
+      returnProfileAddress={owner ? address : undefined} onReturnToWorkbench={owner ? enterEditor : undefined}
+      onEditReception={editReception} onRetry={onRetry}
+      entry={{ surface: content?.canvas ? 'canvas' : 'overview', reception: content?.reception, target: content?.target }}
+      onOpenCanvas={() => navigation.openCanvas(address)} />;
+}
+createRoot(window.document.getElementById('root')).render(params.has('strict') ? <React.StrictMode><Fixture /></React.StrictMode> : <Fixture />);

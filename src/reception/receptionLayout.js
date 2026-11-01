@@ -1,16 +1,20 @@
 import { assertReception, RECEPTION_EXTENT as E, RECEPTION_MIN, RECEPTION_LIMIT } from '../profileDocument/domain/receptionPresentation.js';
+import { pruneReceptionContent } from './receptionLayers.js';
+import { pruneReceptionArrangement, reflowReceptionGroups } from './receptionArrangement.js';
 
-// A rectangular partition is authoritative. No stored split tree or computed
-// pixel cache: move and delete derive their geometry from these cells.
+// Partition editing derives splits from the existing rectangles. Free layouts
+// retain their own authored rectangles and explicit coupling relationships.
 const right = r => r.x + r.width, bottom = r => r.y + r.height;
 const overlap = (a, b, c, d) => Math.max(a, c) < Math.min(b, d);
 const change = (value, regions, mobile = value.mobile) => assertReception({ ...value, regions, mobile });
 export function splitReception(value, id, axis, newId = `region:${crypto.randomUUID()}`) {
   const r = value.regions.find(r => r.id === id), key = axis === 'x' ? 'width' : 'height';
   if (!r || !['x', 'y'].includes(axis)) throw new Error('Select a region to split.');
+  if (value.arrangement?.groups.some(group => group.members.includes(id))) throw new Error('Unlink this cell before dividing it.');
   if (value.regions.length >= RECEPTION_LIMIT) throw new Error(`Reception supports up to ${RECEPTION_LIMIT} regions.`);
   if (r[key] < RECEPTION_MIN * 2) throw new Error('This region is too small to split. Enlarge it first.');
-  const first = Math.floor(r[key] / 2), second = { ...r, id: newId, content: null, [axis]: r[axis] + first, [key]: r[key] - first };
+  const { scene: _scene, ...empty } = r;
+  const first = Math.floor(r[key] / 2), second = { ...empty, id: newId, content: null, [axis]: r[axis] + first, [key]: r[key] - first };
   const mobile = value.mobile.flatMap(m => m.id === id ? [m, { id: newId, columns: 2, height: m.height }] : [m]);
   return change(value, value.regions.flatMap(item => item.id === id ? [{ ...r, [key]: first }, second] : [item]), mobile);
 }
@@ -75,7 +79,7 @@ function removeFromPartition(cells, id) {
 export function deleteReceptionCell(value, id) {
   const removed = value.regions.find(cell => cell.id === id);
   if (!removed) return value;
-  let regions = removeFromPartition(value.regions, id);
+  let regions = value.arrangement ? value.regions.filter(cell => cell.id !== id) : removeFromPartition(value.regions, id);
   if (regions === null) {
     // Rare non-slicing layouts are repacked in reading order, retaining complete
     // cells and all their settings, rather than leaving holes or losing content.
@@ -84,13 +88,15 @@ export function deleteReceptionCell(value, id) {
       width: Math.round((index + 1) * E / rest.length) - Math.round(index * E / rest.length), height: E }));
   }
   const empty = !regions.length;
-  if (empty) regions = [{ ...removed, x: 0, y: 0, width: E, height: E, content: null, padding: null, alignX: 'left', alignY: 'top', surface: null }];
+  if (empty) {
+    const { scene: _scene, ...blank } = removed;
+    regions = [{ ...blank, x: 0, y: 0, width: E, height: E, content: null, padding: null, alignX: 'left', alignY: 'top', surface: null }];
+  }
   const ids = new Set(regions.map(cell => cell.id));
-  const used = new Set(regions.map(cell => cell.content));
-  if (value.branding.logo) used.add(value.branding.logo);
-  return assertReception({ ...value, regions, mobile: empty ? [{ id: removed.id, columns: 2, height: 320 }] : value.mobile.filter(cell => ids.has(cell.id)),
-    imageModules: value.imageModules.filter(item => used.has(item.id)), texts: value.texts.filter(item => used.has(item.id)),
-    ...(value.links ? { links: value.links.filter(item => used.has(item.id)) } : {}) });
+  const next = { ...value, regions,
+    ...(value.arrangement ? { arrangement: pruneReceptionArrangement(value.arrangement, [...ids]) } : {}),
+    mobile: empty ? [{ id: removed.id, columns: 2, height: 320 }] : value.mobile.filter(cell => ids.has(cell.id)) };
+  return assertReception(pruneReceptionContent(value.arrangement ? reflowReceptionGroups(next) : next));
 }
 export function receptionDividers(value, minimum = {}) {
   const found = new Map();

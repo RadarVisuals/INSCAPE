@@ -94,7 +94,7 @@ test('unsupported screen sampling offers a native color choice plus wheel and he
   } finally { await browser.close(); }
 });
 
-test('screen sampler and fallback are a single compact icon beside the wheel on wide and narrow viewports', async () => {
+test('shared color layout keeps sampling above the wheel, readouts left and editable hex lower right', async () => {
   await mkdir(output, { recursive: true });
   for (const supported of [true, false]) {
     const { browser, page, errors } = await setup(supported);
@@ -105,9 +105,13 @@ test('screen sampler and fallback are a single compact icon beside the wheel on 
       for (const width of [1920, 390]) {
         await page.setViewportSize({ width, height: width === 1920 ? 1080 : 844 });
         const wheel = await page.locator('.ds-studio-colour-wheel').boundingBox(), button = await icon.boundingBox();
+        const hex = await page.locator('.ds-colour-hex').boundingBox(), values = await page.locator('.ds-colour-readouts').boundingBox();
         assert.ok(button.width >= 24 && button.width <= 44 && button.height <= 44, 'Compact icon keeps a usable target');
-        assert.ok(button.x >= wheel.x + wheel.width + 4, 'Icon occupies a separate column beside the wheel');
-        assert.ok(Math.abs(button.y + button.height - wheel.y - wheel.height) < 1, 'Icon aligns with the lower wheel edge');
+        assert.ok(button.x < wheel.x && button.y + button.height <= wheel.y, 'Pipette is above the wheel on the left');
+        assert.ok(values.x < wheel.x && values.y > wheel.y + wheel.height / 2, 'HSL readouts sit at the lower left');
+        assert.ok(hex.x > wheel.x + wheel.width / 2 && hex.y > wheel.y + wheel.height / 2, 'Hex entry sits at the lower right');
+        assert.equal(await page.locator('.ds-colour-panel input[type=number], .ds-colour-panel select').count(), 0);
+        assert.equal(await page.locator('.ds-colour-readouts output').count(), 3);
         assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'No horizontal overflow');
         await page.screenshot({ path: `${output}/compact-${supported ? 'eyedropper' : 'fallback'}-${width}.png` });
       }

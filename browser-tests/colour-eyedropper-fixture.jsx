@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import ReceptionColourPanel from '../src/reception/ReceptionColourPanel.jsx';
+import CommittedColourControls from '../src/colour/CommittedColourControls.jsx';
 import '../src/index.css';
 import '../src/public/ownerSystemWorkflow/workflowTactile.css';
 import '../src/public/ownerSystemWorkflow/workflowFlat.css';
@@ -18,7 +18,7 @@ function Fixture() {
       <button onClick={() => setVersion(value => value + 1)}>Advance version</button>
       <button onClick={() => setDisabled(value => !value)}>Toggle disabled</button>
       <button onClick={() => setOpen(value => !value)}>{open ? 'Close color' : 'Open color'}</button></div>
-    {open && <section aria-label="Color"><ReceptionColourPanel color={colors[target]} disabled={disabled} scopeKey={target}
+    {open && <section aria-label="Color"><CommittedColourControls color={colors[target]} disabled={disabled} scopeKey={target}
       getVersion={() => current.current} onChange={save} onPreview={() => {}} /></section>}
   </main>;
 }

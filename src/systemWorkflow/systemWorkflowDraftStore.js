@@ -580,10 +580,11 @@ export function createSystemWorkflowDraftStore({
     return true;
   }
   /** @param {unknown} candidate @param {import('../contracts/workbench.js').CommitOptions} [options] @param {ReturnType<typeof load> | null} [recovered] @param {boolean} [restore] */
-  function commit(candidate, { expectedGeneration, historyLabel, recordHistory = true, historyPresentation } = {}, recovered = null, restore = false) {
+  function commit(candidate, { expectedGeneration, historyLabel, recordHistory = true, historyPresentation, historyReception } = {}, recovered = null, restore = false) {
       /** @param {string} reason */
       const reject = reason => { lastCommitFailure = reason; return false; };
       if (!writeAccess()) return reject('editor_unavailable');
+      if (historyReception !== undefined && (editorTarget !== 'reception' || historyPresentation)) return reject('invalid');
       if (expectedGeneration !== generation || (!currentDraft && !restore)) return reject('stale');
       const validated = validateStoredDraft(restore ? candidate : reconcileArtworkLayers(recovered?.draft || currentDraft,
         reconcileRemovedWorkbenchMembers(recovered?.draft || currentDraft, candidate)), activeProfileAddress).value;
@@ -615,9 +616,10 @@ export function createSystemWorkflowDraftStore({
         && new TextEncoder().encode(raw).length > WORKBENCH_COLLECTION_LIMIT) return reject('invalid');
       // A destructive composition edit captures the departing live layout for
       // Undo in this same write. It cannot mutate content or claim a prior save.
-      const historyBefore = historyPresentation ? validateStoredDraft({ ...currentDraft, workbench: historyPresentation }, activeProfileAddress).value
+      const historyBefore = historyReception !== undefined ? validateStoredDraft({ ...currentDraft, reception: historyReception }, activeProfileAddress).value
+        : historyPresentation ? validateStoredDraft({ ...currentDraft, workbench: historyPresentation }, activeProfileAddress).value
         : recovered?.draft || currentDraft;
-      if (historyPresentation && !historyBefore) return reject('invalid');
+      if ((historyPresentation || historyReception !== undefined) && !historyBefore) return reject('invalid');
       const changes = recordHistory ? draftChanges(historyBefore, draft) : [];
       try { storage.setItem(systemWorkflowDraftKey(activeProfileAddress), raw); }
       catch { return reject('write_failed'); }
@@ -628,6 +630,7 @@ export function createSystemWorkflowDraftStore({
         const h = history(); h.redo = [];
         if (historyGroup?.entry && h.undo.at(-1) === historyGroup.entry) {
           if (historyPresentation) historyGroup.before = { ...historyGroup.before, workbench: historyPresentation };
+          if (historyReception !== undefined) historyGroup.before = { ...historyGroup.before, reception: historyReception };
           historyGroup.entry.changes = draftChanges(historyGroup.before, draft);
           historySizes.delete(historyGroup.entry);
           if (!historyGroup.entry.changes.length) { h.undo.pop(); historyGroup.entry = null; }

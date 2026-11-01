@@ -7,7 +7,9 @@
 .composition-index-header > button { margin-left: auto; flex: none; font-size: 12px; }
 .composition-index-body { display: grid; grid-template-columns: var(--index-width) minmax(0, 1fr); column-gap: clamp(24px, 3vw, 56px); padding: 28px var(--index-gutter) 56px; }
 .composition-index-sidebar { position: sticky; top: 24px; max-height: calc(100dvh - 48px); overflow: auto; overscroll-behavior: contain; align-self: start; padding-top: 5px; padding-right: 8px; scrollbar-width: thin; }
-.composition-index-sidebar .composition-index-about { justify-content: start; gap: 8px; padding-left: 0; color: var(--tactile-muted); font-size: 12px; margin-bottom: 28px; }
+.composition-index-reception { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; margin-bottom: 28px; }
+.composition-index-reception button { gap: 8px; color: var(--tactile-muted); font-size: 12px; }
+.composition-index-sidebar .composition-index-about { justify-content: start; padding-left: 0; }
 .composition-index-label { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 0 8px 12px 0; }
 .composition-index-label h2 { margin: 0; font: 400 14px/1.5 var(--font-interface); }
 .composition-index-label > span { color: var(--tactile-muted); font: 12px/1.4 var(--font-technical); }

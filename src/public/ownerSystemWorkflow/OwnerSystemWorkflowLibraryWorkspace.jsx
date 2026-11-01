@@ -14,9 +14,10 @@ const DRAG_THRESHOLD = 6;
 const sourceFor = (asset) => asset?.previewSrc || asset?.src || asset?.imageUrl || asset?.thumbnailUrl || null;
 const ownerLibraryPreviewRecords = new Map();
 
-export default function OwnerSystemWorkflowLibraryWorkspace({ authoringLocked = false, categoryCommands, placementScope, data, onClose, phase,
-  navigationHost = null, preferences, preferenceStore, previewRecords = ownerLibraryPreviewRecords, resolveAssetDimensions, workbenchImageTargetRef, moduleAssetTargetRef, placementTargetRef, shortcutTargetRef, workspaceRef, className = '', label = 'Library workspace', resizable = true, overlayPlacement = false, selectionAction, selectionEnabled = true, onPlacingChange }) {
-  const libraryClosed = phase === 'closing' || phase === 'closed';
+export default function OwnerSystemWorkflowLibraryWorkspace({ authoringLocked = false, categoryCommands, placementScope, data, onClose, phase, open = phase !== 'closing' && phase !== 'closed',
+  navigationHost = null, preferences, preferenceStore, previewRecords = ownerLibraryPreviewRecords, resolveAssetDimensions, workbenchImageTargetRef, moduleAssetTargetRef, placementTargetRef, shortcutTargetRef, workspaceRef, className = '', label = 'Library workspace', resizable = true, overlayPlacement = false, selectionAction, selectionEnabled = true, onPlacingChange, header, embedded = false }) {
+  // Host closure invalidates pending drops immediately, before exit animation.
+  const libraryClosed = !open;
   const workspace = useBrowserWorkspace(data, previewRecords, preferences, preferenceStore, !libraryClosed);
   const onBrowse = data.onBrowse;
   useEffect(() => {
@@ -130,14 +131,18 @@ export default function OwnerSystemWorkflowLibraryWorkspace({ authoringLocked = 
         const bounds = target.node.getBoundingClientRect();
         return { kind, label, rectangle: { left: bounds.left, top: bounds.top, width: bounds.width, height: bounds.height } };
       };
+      const workbench = workbenchImageTargetRef?.current;
+      const workbenchTarget = workbench?.targetAt?.(point);
       const moduleTarget = active.moduleTarget?.targetAt?.(point) || active.moduleTarget;
-      if (moduleTarget && moduleAssetTargetRef?.current === active.moduleTarget && moduleTarget.node?.contains(hit)) {
+      if (!workbenchTarget?.acceptsModuleSurface && moduleTarget && moduleAssetTargetRef?.current === active.moduleTarget && moduleTarget.node?.contains(hit)) {
         return { preview: () => surfacePreview(moduleTarget, 'module', moduleTarget.label),
           isCurrent: () => moduleAssetTargetRef?.current === active.moduleTarget
             && active.moduleTarget?.has?.(moduleTarget) !== false && moduleTarget.node?.isConnected,
           place: () => moduleTarget.placeAsset(asset, point), rejection: 'This module could not accept the artwork.' };
       }
-      if (hit?.closest('[data-workbench-module]')) return { preview: () => null, isCurrent: () => true,
+      // The native Reception scope can explicitly accept a cell's surface as
+      // its canvas. Other modules still reject drops outside registered targets.
+      if (hit?.closest('[data-workbench-module]') && !workbenchTarget) return { preview: () => null, isCurrent: () => true,
         place: () => false, rejection: 'This module cannot accept artwork here.' };
       const shortcut = shortcutTargetRef?.current?.targetAt?.(point) || shortcutTargetRef?.current;
       if (shortcut?.node?.contains(hit)) {
@@ -147,8 +152,7 @@ export default function OwnerSystemWorkflowLibraryWorkspace({ authoringLocked = 
           place: () => shortcut.placeAsset(asset), rejection: 'This shortcut could not accept the artwork.' };
       }
       const display = active.target?.targetAt?.(point);
-      const workbench = workbenchImageTargetRef?.current;
-      const target = display || workbench?.targetAt?.(point);
+      const target = display || workbenchTarget;
       if (!target) return null;
       return { preview: dimensions => target.previewAt(point, dimensions, options),
         isCurrent: () => target.isCurrent?.() !== false && (display || workbenchImageTargetRef?.current === workbench),
@@ -230,6 +234,7 @@ export default function OwnerSystemWorkflowLibraryWorkspace({ authoringLocked = 
   useEffect(() => { cleanup(); setDropFeedback(null); }, [placementContext]);
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; cleanup(); }; }, []);
   return <OwnerSystemWorkflowWorkspaceShell className={`system-workflow__library ${className}`} label={label} phase={phase}
+    header={header} embedded={embedded}
     style={libraryWidth === null ? undefined : { '--workflow-library-width': `${libraryWidth}px` }}
     resizeHandle={resizable && <button aria-label="Resize Library" className="system-workflow__library-resize" type="button"
       onPointerDown={(event) => {

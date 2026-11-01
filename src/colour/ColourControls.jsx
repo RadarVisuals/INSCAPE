@@ -1,5 +1,6 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
-import NumberField from './NumberField.jsx';
+import ColourEyedropper from './ColourEyedropper.jsx';
+import ColourOpacity from './ColourOpacity.jsx';
 import {
   CENTRE,
   RING_RADIUS,
@@ -10,7 +11,6 @@ import {
   hsvHex,
   hexHsv,
   hsvHsl,
-  hslHsv,
   hsvPoint,
   pointHsv,
   ringPoint,
@@ -24,23 +24,23 @@ function HexField({ value, onChange, disabled, labelPrefix }) {
   const id = useId();
   const [edit, setEdit] = useState({
     source: value,
-    text: value.toUpperCase(),
+    text: value.slice(1).toUpperCase(),
     invalid: false,
   });
   if (edit.source !== value)
-    setEdit({ source: value, text: value.toUpperCase(), invalid: false });
+    setEdit({ source: value, text: value.slice(1).toUpperCase(), invalid: false });
   const commit = () => {
     const hex = normaliseHex(edit.text);
     if (!hex) {
       setEdit((current) => ({ ...current, invalid: true }));
       return;
     }
-    setEdit({ source: hex, text: hex.toUpperCase(), invalid: false });
+    setEdit({ source: hex, text: hex.slice(1).toUpperCase(), invalid: false });
     onChange(hex);
   };
   return (
-    <label className="ds-colour-hex">
-      Hex
+    <div className="ds-colour-hex">
+      <span aria-hidden="true">#</span>
       <input
         aria-label={`${labelPrefix} colour`}
         type="text"
@@ -65,7 +65,7 @@ function HexField({ value, onChange, disabled, labelPrefix }) {
           }
           if (event.key === 'Escape') {
             event.preventDefault();
-            setEdit({ source: value, text: value.toUpperCase(), invalid: false });
+            setEdit({ source: value, text: value.slice(1).toUpperCase(), invalid: false });
           }
         }}
       />
@@ -74,11 +74,11 @@ function HexField({ value, onChange, disabled, labelPrefix }) {
           Use 3 or 6 hex digits, such as #A8B5C2.
         </small>
       )}
-    </label>
+    </div>
   );
 }
 
-export default function ColourControls({ item, update, beginGesture, labelPrefix = 'Studio', showOpacity = true, wheelAccessory }) {
+export default function ColourControls({ item, update, beginGesture, beginOpacityGesture, labelPrefix = 'Studio', showOpacity = true, scopeKey = item.id, getVersion = () => item.color }) {
   const instructions = useId(),
     canvas = useRef(null),
     drag = useRef(null),
@@ -181,16 +181,12 @@ export default function ColourControls({ item, update, beginGesture, labelPrefix
     if (color !== item.color) update({ color });
   };
   return (
-    <>
-      <div className="ds-studio-colour-heading">
-        <span
-          className="ds-colour-swatch"
-          style={{ backgroundColor: item.color }}
-          aria-hidden="true"
-        />
-        <HexField labelPrefix={labelPrefix} value={item.color} onChange={setHex} disabled={item.locked} />
+    <div className="ds-colour-panel">
+      <div className="ds-colour-sampling">
+        <ColourEyedropper color={item.color} disabled={item.locked} scopeKey={scopeKey} getVersion={getVersion} onChange={patch => setHex(patch.color)} />
+        <span className="ds-colour-current" style={{ backgroundColor: item.color }} aria-hidden="true" />
       </div>
-      <div className="ds-colour-wheel-row" data-accessory={Boolean(wheelAccessory) || undefined}>
+      <div className="ds-colour-wheel-row">
       <div className="ds-studio-colour-wheel" data-dragging={dragging || undefined} data-pointer-focus={pointerFocus || undefined}
         onKeyDownCapture={event => {
           if (['Tab', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'].includes(event.key)) setPointerFocus(false);
@@ -335,38 +331,19 @@ export default function ColourControls({ item, update, beginGesture, labelPrefix
           />
         </svg>
       </div>
-      {wheelAccessory}
+      <div className="ds-colour-readouts" aria-label="Color values">
+        <span>H: <output aria-label={`${labelPrefix} hue`}>{Math.round(hsv.h) % 360}</output></span>
+        <span>S: <output aria-label={`${labelPrefix} saturation`}>{Math.round(hsl.s * 100)}</output></span>
+        <span>L: <output aria-label={`${labelPrefix} lightness`}>{Math.round(hsl.l * 100)}</output></span>
+      </div>
+      <HexField labelPrefix={labelPrefix} value={item.color} onChange={setHex} disabled={item.locked} />
       </div>
       <span id={instructions} className="ds-colour-instructions">
         Drag or use arrow keys to move between white, colour and black. Shift moves faster. Home
         selects white; End selects black. Current colour {item.color.toUpperCase()}.
       </span>
-      <div className="ds-studio-field-row ds-colour-fields">
-        <NumberField
-          label="Saturation" labelPrefix={labelPrefix} disabled={item.locked}
-          value={Math.round(hsl.s * 100)}
-          max={100}
-          onChange={(value) => changeColour(hslHsv(hsv.h, value / 100, hsl.l))}
-        />
-        <NumberField
-          label="Lightness" labelPrefix={labelPrefix} disabled={item.locked}
-          value={Math.round(hsl.l * 100)}
-          max={100}
-          onChange={(value) => changeColour(hslHsv(hsv.h, hsl.s, value / 100))}
-        />
-      </div>
-      {showOpacity && <label className="ds-studio-range">
-        Opacity
-        <input
-          aria-label={`${labelPrefix} opacity`} disabled={item.locked}
-          type="range"
-          min="0"
-          max="100"
-          value={item.opacity}
-          onChange={(event) => update({ opacity: Number(event.target.value) })}
-        />
-        <output>{item.opacity}%</output>
-      </label>}
-    </>
+      {showOpacity && <ColourOpacity key={scopeKey} value={item.opacity} color={item.color} disabled={item.locked}
+        labelPrefix={labelPrefix} update={update} beginGesture={beginOpacityGesture} />}
+    </div>
   );
 }

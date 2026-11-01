@@ -31,6 +31,7 @@ export default function workbenchCommands({
   togglePublication,
   setWorkbenchPreferences,
   setWorkspaceMenu,
+  reception = false,
 }) {
   const deleteDisplay = expected => {
     try {
@@ -76,8 +77,9 @@ export default function workbenchCommands({
       id: 'keeper',
       label: 'KEEPER DOCK',
     },
-  ];
+  ].filter(command => !reception || ['text', 'image', 'shape', 'shape-grid'].includes(command.id));
   const runCommand = (id, placement) => {
+    if (reception && ['workbench-index', 'mini-app', 'keeper', 'identity', 'publish'].includes(id)) return;
     try {
       switch (id) {
         case 'workbench-index':
@@ -87,7 +89,7 @@ export default function workbenchCommands({
           addMiniApp(store, profileAddress);
           break;
         case 'text':
-          activateArtwork(addTextModule(store, profileAddress, placement));
+          activateArtwork(addTextModule(store, profileAddress, placement, { visibility: reception ? 'PUBLIC' : 'PRIVATE' }));
           setTextToolsOpen(true);
           break;
         case 'keeper':

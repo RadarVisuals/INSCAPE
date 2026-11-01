@@ -21,7 +21,7 @@ async function mount(browser, theme = 'mist', width = 1440, height = 900) {
     return route.abort();
   });
   await page.goto(`${origin}/browser-tests/tool-chrome-fixture.html?sample=navigator&theme=${theme}`);
-  await page.getByRole('combobox', { name: 'Active Workbench' }).waitFor();
+  await page.getByRole('combobox', { name: 'Active document' }).waitFor();
   if (!await tab(page, 'Layers').count()) await page.locator('[data-workbench-toolbar]').getByRole('button', { name: 'Layers', exact: true }).click();
   await tab(page, 'Layers').click();
   await page.locator('[data-layer-id^="image:"] .workbench-layer-name').click();
@@ -67,9 +67,9 @@ test('Image info follows visible sides, detaches and rejoins without editing con
     assert.deepEqual(await saved(page), before, 'metadata and docking do not edit authored content');
     await page.locator('main.system-workflow').focus(); await page.keyboard.press('Control+z');
     assert.deepEqual(await saved(page), before, 'no metadata operation creates Undo history');
-    await page.getByRole('button', { name: 'New', exact: true }).click();
-    await page.getByLabel('New Workbench name', { exact: true }).fill('Info check');
-    await page.getByRole('button', { name: 'Create Workbench', exact: true }).click();
+    await page.getByRole('button', { name: 'New canvas', exact: true }).click();
+    await page.getByLabel('New canvas name', { exact: true }).fill('Info check');
+    await page.getByRole('button', { name: 'Create canvas', exact: true }).click();
     await tab(page, 'Info').click();
     assert.equal(await info(page).count(), 0, 'new Workbench has no stale registration');
     assert.deepEqual(errors, []);

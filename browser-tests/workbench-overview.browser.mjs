@@ -71,7 +71,7 @@ test('mirrored Image joins stay seamless in list, grid and canvas presentation',
     for (const transparentSvg of [false, true]) for (const [width, density] of [[1440, 1], [1439, 1.25]]) {
       const page = await browser.newPage({ viewport: { width, height: 1000 }, deviceScaleFactor: density, reducedMotion: 'reduce' });
       await open(page); await seedMirroredImages(page, transparentSvg);
-      await page.getByRole('button', { name: 'Overview', exact: true }).click(); await settlePreview(page);
+      await page.getByRole('button', { name: 'My Inscape', exact: true }).click(); await settlePreview(page);
       const saved = await page.evaluate(() => JSON.stringify(window.savedDraft()));
       for (const mode of ['list', 'grid', 'modal', 'expanded']) {
         if (mode === 'grid') await menuAction(page, 'Grid');
@@ -93,7 +93,7 @@ async function open(page) {
   page.setDefaultTimeout(15000);
   await page.route('**/*', route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
   await page.goto(`${origin}/browser-tests/workbench-storage-fixture.html?seed=1&shell=1`, { timeout: 45000, waitUntil: 'domcontentloaded' });
-  await page.getByRole('combobox', { name: 'Active Workbench' }).waitFor();
+  await page.getByRole('combobox', { name: 'Active document' }).waitFor();
   await page.locator('.text-window').waitFor();
 }
 async function menu(page, show = true) {
@@ -176,7 +176,7 @@ async function seedGallery(page) {
     if (!store.switchWorkbench(original)) throw Error('Could not restore initial fixture');
   });
   await page.reload();
-  await page.getByRole('button', { name: 'Overview', exact: true }).click();
+  await page.getByRole('button', { name: 'My Inscape', exact: true }).click();
 }
 
 async function seedPresentation(page) {
@@ -209,7 +209,7 @@ async function seedPresentation(page) {
     ] };
     if (!store.commitCompletedOperation(draft, { expectedGeneration: store.getGeneration() })) throw Error('Presentation fixture save failed');
   });
-  await page.reload(); await page.getByRole('button', { name: 'Overview', exact: true }).click();
+  await page.reload(); await page.getByRole('button', { name: 'My Inscape', exact: true }).click();
 }
 
 test('normal motion reverses a partial canvas lift without a jump and menu and details reveal smoothly', { timeout: 90000 }, async () => {
@@ -327,7 +327,7 @@ test('card size changes actual bounds for one canvas, and touch arrangement work
     assert.ok(sizes[0].width < sizes[1].width && sizes[1].width < sizes[2].width, JSON.stringify(sizes));
     assert.ok(sizes[0].height < sizes[1].height && sizes[1].height < sizes[2].height, JSON.stringify(sizes));
     await page.setViewportSize({ width: 390, height: 420 });
-    await page.getByRole('button', { name: 'New Workbench', exact: true }).scrollIntoViewIfNeeded();
+    await page.getByRole('button', { name: 'New canvas', exact: true }).scrollIntoViewIfNeeded();
     assert.equal(await page.locator('.workbench-overview-menu').evaluate(node => getComputedStyle(node).scrollbarWidth), 'none');
     assert.ok(await page.locator('.workbench-overview-navigation').evaluate(node => {
       const box = node.getBoundingClientRect(); return box.top >= 0 && box.bottom <= innerHeight && box.width <= innerWidth;
@@ -382,7 +382,7 @@ test('gallery drag order, keyboard moves and card size persist while failed orde
     assert.deepEqual(await page.evaluate(() => ({ active: window.guardedStore().getWorkbenchId(), draft: window.guardedStore().getDraft() })), before);
     await mkdir(output, { recursive: true }); await page.screenshot({ path: path.join(output, 'gallery-arrange-small.png') });
     await page.getByRole('button', { name: 'Done', exact: true }).click();
-    await page.reload(); await page.getByRole('button', { name: 'Overview', exact: true }).click(); await menuAction(page, 'Grid');
+    await page.reload(); await page.getByRole('button', { name: 'My Inscape', exact: true }).click(); await menuAction(page, 'Grid');
     assert.equal(await gallery.getAttribute('data-card-size'), '1');
     assert.deepEqual((await names()).slice(0, 3), ['Study 2', 'Study 3', 'Workbench 1']);
     await page.setViewportSize({ width: 390, height: 844 }); await menu(page); await page.getByRole('slider', { name: 'Card size' }).fill('3');
@@ -408,7 +408,7 @@ test('gallery keeps artwork on hover, reveals bounded titles and actions, and co
       }
       store.switchWorkbench(original);
     });
-    await page.reload(); await page.getByRole('button', { name: 'Overview', exact: true }).click();
+    await page.reload(); await page.getByRole('button', { name: 'My Inscape', exact: true }).click();
     await menuAction(page, 'Grid');
     const saved = await page.evaluate(() => JSON.stringify(window.savedDraft()));
     const card = page.getByRole('button', { name: 'Open Horizon', exact: true }).locator('..');
@@ -534,12 +534,15 @@ test('inspection supports touch details, one info panel and closing during the l
     const page = await browser.newPage({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
     const errors = []; page.on('pageerror', error => errors.push(error.message));
     await open(page); await seedPresentation(page);
+    await menuAction(page, 'Grid', true);
     const saved = await page.evaluate(() => JSON.stringify(window.savedDraft()));
     const trigger = page.getByRole('button', { name: 'Open Workbench 1', exact: true });
-    await trigger.tap();
+    await revealCard(page, 'Workbench 1', true);
+    assert.equal(await page.getByRole('dialog').count(), 0, 'first touch reveals the existing card actions');
+    await trigger.tap({ position: { x: 20, y: 20 } });
     const dialog = page.getByRole('dialog'); await dialog.waitFor();
     await page.keyboard.press('Escape'); await dialog.waitFor({ state: 'hidden' });
-    await trigger.tap();
+    await trigger.tap({ position: { x: 20, y: 20 } });
     await page.locator('.canvas-presentation-stage').tap();
     await page.getByRole('button', { name: 'Close canvas', exact: true }).waitFor();
     await dialog.getByRole('button', { name: 'Canvas details', exact: true }).tap();
@@ -609,7 +612,7 @@ test('thumbnail crop supports drag, touch, cancel, failed save, reload and retur
       await zoom.fill('3'); await page.getByRole('button', { name: 'Cancel', exact: true }).click();
       assert.deepEqual(await page.evaluate(() => window.guardedStore().readWorkbench(window.guardedStore().getWorkbenchId()).thumbnailCrop), savedCrop);
       await page.waitForFunction(() => document.activeElement.getAttribute('aria-label') === 'Open Workbench 1');
-      await page.reload(); await page.getByRole('button', { name: 'Overview', exact: true }).click();
+      await page.reload(); await page.getByRole('button', { name: 'My Inscape', exact: true }).click();
       await menuAction(page, 'Grid');
       assert.deepEqual(await page.evaluate(() => window.guardedStore().readWorkbench(window.guardedStore().getWorkbenchId()).thumbnailCrop), savedCrop);
       await settlePreview(page);
@@ -662,7 +665,7 @@ test('grid wraps both ways without writes, exposes one keyboard collection and r
     assert.equal(await gallery.getByRole('button', { name: /^Open / }).count(), 8);
     assert.equal(await page.locator('[data-gallery-cycle]').count(), 3);
     await menu(page);
-    assert.equal(await page.getByRole('button', { name: 'New Workbench', exact: true }).isDisabled(), true);
+    assert.equal(await page.getByRole('button', { name: 'New canvas', exact: true }).isDisabled(), true);
     await menu(page, false);
     for (const offset of [123, -123, 41, -41]) {
       await gallery.evaluate((node, offset) => {
@@ -750,9 +753,9 @@ test('grid wraps both ways without writes, exposes one keyboard collection and r
     await page.mouse.click(repeated.x, repeated.y);
     await revealPresentation(page);
     await page.getByRole('dialog').getByRole('button', { name: 'Edit canvas', exact: true }).click();
-    await page.getByRole('combobox', { name: 'Active Workbench' }).waitFor();
-    assert.equal(await page.getByRole('combobox', { name: 'Active Workbench' }).locator('option:checked').innerText(), repeated.name);
-    await page.getByRole('button', { name: 'Overview', exact: true }).click();
+    await page.getByRole('combobox', { name: 'Active document' }).waitFor();
+    assert.equal(await page.getByRole('combobox', { name: 'Active document' }).locator('option:checked').innerText(), repeated.name);
+    await page.getByRole('button', { name: 'My Inscape', exact: true }).click();
     await gallery.waitFor();
     await menu(page);
     assert.equal(await page.getByRole('button', { name: 'Grid', exact: true }).getAttribute('aria-pressed'), 'true');
@@ -761,7 +764,7 @@ test('grid wraps both ways without writes, exposes one keyboard collection and r
     await gallery.getByRole('button', { name: 'Open Study 8', exact: true }).press('Enter');
     await revealPresentation(page);
     await page.getByRole('dialog').getByRole('button', { name: 'Edit canvas', exact: true }).click();
-    await page.getByRole('button', { name: 'Overview', exact: true }).click();
+    await page.getByRole('button', { name: 'My Inscape', exact: true }).click();
     await gallery.waitFor();
     await menu(page);
     assert.equal(await page.getByRole('button', { name: 'Wrap around', exact: true }).getAttribute('aria-pressed'), 'false');
@@ -774,7 +777,7 @@ test('touch grid handles a single canvas, creation, details and opening without 
   try {
     const page = await browser.newPage({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, reducedMotion: 'reduce' });
     await open(page);
-    await page.getByRole('button', { name: 'Overview', exact: true }).tap();
+    await page.getByRole('button', { name: 'My Inscape', exact: true }).tap();
     const before = await page.evaluate(() => JSON.stringify(window.savedDraft()));
     await menuAction(page, 'Grid', true);
     const gallery = page.getByRole('region', { name: 'Workbench gallery' });
@@ -788,9 +791,9 @@ test('touch grid handles a single canvas, creation, details and opening without 
     await page.getByRole('button', { name: 'Information for Workbench 1', exact: true }).tap();
     assert.equal(await page.locator('.workbench-overview-detail').count(), 0);
     assert.equal(await page.evaluate(() => JSON.stringify(window.savedDraft())), before);
-    await menuAction(page, 'New Workbench', true);
-    await page.getByLabel('Workbench name', { exact: true }).fill('An empty composition');
-    await page.getByRole('button', { name: 'Create Workbench', exact: true }).tap();
+    await menuAction(page, 'New canvas', true);
+    await page.getByLabel('Canvas name', { exact: true }).fill('An empty composition');
+    await page.getByRole('button', { name: 'Create canvas', exact: true }).tap();
     await gallery.waitFor();
     assert.equal(await gallery.getByRole('button', { name: /^Open / }).count(), 2);
     await revealCard(page, 'An empty composition', true);
@@ -815,7 +818,7 @@ test('failed departure keeps the live editor and mixed-content previews never st
     const errors = []; page.on('pageerror', error => errors.push(error.message));
     await open(page);
     await page.route('**/mountain_01.webp', route => route.fulfill({ path: 'public/assets/stage/mountains/mountain_01.webp', contentType: 'image/webp' }));
-    await failWrites(page, true); await page.getByRole('button', { name: 'Overview', exact: true }).click();
+    await failWrites(page, true); await page.getByRole('button', { name: 'My Inscape', exact: true }).click();
     assert.equal(await page.locator('.workbench-overview').count(), 0); assert.equal(await page.locator('.text-window').count(), 1);
     await failWrites(page, false);
     await page.evaluate(async () => {
@@ -836,7 +839,7 @@ test('failed departure keeps the live editor and mixed-content previews never st
       draft.workbench.miniApps = [{ id: 'miniapp:preview', open: true, window: { left: 550, top: 470, width: 500, height: 250 } }];
       if (!store.commitCompletedOperation(draft, { expectedGeneration: store.getGeneration() })) throw Error('Fixture save failed');
     });
-    await page.reload(); await page.getByRole('button', { name: 'Overview', exact: true }).click();
+    await page.reload(); await page.getByRole('button', { name: 'My Inscape', exact: true }).click();
     await page.locator('.workbench-overview').waitFor();
     // Preview content appears after ResizeObserver supplies its fitted size.
     await page.locator('.workbench-overview [data-navigator-object="shape:preview"]').waitFor();

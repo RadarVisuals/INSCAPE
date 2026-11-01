@@ -90,27 +90,3 @@ for (const width of [1920, 390]) for (const mode of ['local', 'public']) test(`R
     assert.deepEqual(errors, []);
   } finally { await browser.close(); }
 });
-test('Reception link editor saves, undoes, retries and restores linked sources', { timeout: 90000 }, async () => {
-  const { browser, page, errors } = await setup(1920, 'edit');
-  try {
-    const cell = page.locator('[data-region-id="region:lower-left"]'); await cell.click({ position: { x: 30, y: 30 } });
-    await page.getByRole('button', { name: 'Edit link', exact: true }).click();
-    await page.getByLabel('Cell behavior', { exact: true }).selectOption('source');
-    const select = page.getByLabel('Linked content', { exact: true });
-    const value = await select.locator('option').evaluateAll(options => options.find(option => option.textContent === 'Second canvas / Study / Side 2').value);
-    await select.selectOption(value);
-    await page.evaluate(() => linkedFixture.fail(true));
-    await page.getByRole('button', { name: 'Save link', exact: true }).click();
-    await page.getByRole('alert').filter({ hasText: 'Reception could not be saved' }).waitFor();
-    await page.evaluate(() => linkedFixture.fail(false));
-    await page.getByRole('button', { name: 'Save link', exact: true }).click();
-    assert.equal(await cell.locator('[data-linked-side]').getAttribute('data-linked-side'), 'side:1');
-    await page.getByRole('button', { name: /^Undo/ }).click();
-    await page.waitForFunction(() => linkedFixture.root.getSnapshot().reception.links.find(link => link.id === 'link:image').kind === 'scene');
-    await page.getByRole('button', { name: /^Redo/ }).click();
-    await page.reload();
-    await cell.locator('[data-linked-side="side:1"]').waitFor();
-    assert.equal(await page.evaluate(() => linkedFixture.publish().reception.links.length), 3);
-    assert.deepEqual(errors, []);
-  } finally { await browser.close(); }
-});

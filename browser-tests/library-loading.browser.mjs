@@ -23,7 +23,7 @@ test('Library retains cached cards after failed RPC discovery and Retry assets r
         // Vite's timestamp after a source edit during a running development server.
         const loadedModule = (path) => performance.getEntriesByType('resource')
           .map(({ name }) => name).find((url) => new URL(url).pathname === path) || path;
-        const { chillwhalesProfileRepository } = await import(loadedModule('/src/library/data/chillwhalesProfileRepository.js'));
+        const { luksoEnvioProfileRepository } = await import(loadedModule('/src/library/data/luksoEnvioProfileRepository.js'));
         const { createLuksoRpcProfileRepository, luksoRpcProfileRepository } = await import(loadedModule('/src/library/data/luksoRpcProfileRepository.js'));
         const { libraryAssetCacheKey, loadLibraryAssetCache, saveLibraryAssetCache } = await import('/src/library/storage/libraryAssetCache.js');
         const profile = '0x1111111111111111111111111111111111111111';
@@ -38,7 +38,7 @@ test('Library retains cached cards after failed RPC discovery and Retry assets r
         store.setState({ assets: loadLibraryAssetCache(storage, profile), status: 'ready' });
         const probe = { failing: true, requests: 0, cache: () => JSON.parse(storage.getItem(libraryAssetCacheKey(profile))).assets };
         window.libraryLoadingTest = probe;
-        chillwhalesProfileRepository.loadProfileAssets = async function* () { throw new Error('Indexer unavailable'); };
+        luksoEnvioProfileRepository.loadProfileAssets = async function* () { throw new Error('Indexer unavailable'); };
         const rpc = createLuksoRpcProfileRepository({
           discoverContracts: async () => [contract],
           client: { async multicall({ contracts }) {
@@ -192,7 +192,11 @@ test('a category keeps individual images from one NFT through reload and removes
       await page.getByRole('menuitemcheckbox', { name: 'Single image', exact: true }).click();
       await category.click();
       assert.equal(await page.locator('.system-workflow__library-item').count(), 2);
-      await page.getByRole('button', { name: 'Image 1 of Fresh A token 1', exact: true }).click({ button: 'right' });
+      // Inventory and metadata responses can update the title independently.
+      // Remove the saved resource, irrespective of its current display name.
+      const savedImage = page.getByRole('button').filter({ has: page.locator('img[src="https://assets.inscape.test/chosen.webp"]') });
+      assert.equal(await savedImage.count(), 1);
+      await savedImage.click({ button: 'right' });
       await page.getByRole('menuitem', { name: 'Remove from Single image' }).click();
       assert.equal(await page.locator('.system-workflow__library-item').count(), 1);
       assert.equal(await page.locator('.system-workflow__library-item img').getAttribute('src'), 'https://assets.inscape.test/new.webp');

@@ -98,14 +98,22 @@ export default function WorkbenchToolDocks({ controller, hidden, navigationRef, 
     setPreview({ kind: current.kind, tabs: current.tabs, target: target?.id, before: target?.before, side: target?.side,
       left: event.clientX - current.offsetX, top: event.clientY - current.offsetY, width: current.frame.width });
   };
+  const tabFrame = (group, tab) => {
+    const panel = panels.current.get(group.id), dock = panel.getBoundingClientRect();
+    const pane = panes.current.get(toolPane(layout, tab).id).getBoundingClientRect();
+    return { left: dock.x, top: pane.y - panel.clientTop, width: dock.width,
+      height: pane.height + dock.height - panel.clientHeight };
+  };
   const start = (event, group, items, kind) => {
     if (event.button !== 0 || !event.isPrimary || drag.current) return;
     setMenu(null); skipClick.current = false;
     const rect = panels.current.get(group.id).getBoundingClientRect();
     const tabRect = event.currentTarget.getBoundingClientRect();
-    drag.current = { kind, source: group.id, tabs: items, frame: { left: rect.x, top: rect.y, width: rect.width, height: rect.height },
+    // A detached tab carries its pane, not the height or header offset of the stack.
+    const frame = kind === 'tab' ? tabFrame(group, items[0]) : { left: rect.x, top: rect.y, width: rect.width, height: rect.height };
+    drag.current = { kind, source: group.id, tabs: items, frame,
       x: event.clientX, y: event.clientY, offsetX: kind === 'tab' ? event.clientX - tabRect.x : event.clientX - rect.x,
-      offsetY: event.clientY - rect.y, pointerId: event.pointerId, moved: false, element: kind === 'tab' ? event.currentTarget : null };
+      offsetY: event.clientY - frame.top, pointerId: event.pointerId, moved: false, element: kind === 'tab' ? event.currentTarget : null };
     if (kind === 'tab') {
       // A pointer tab gesture must not leave an old keyboard focus rectangle.
       if ([...tabs.current.values()].includes(document.activeElement)) document.activeElement.blur();
@@ -170,6 +178,9 @@ export default function WorkbenchToolDocks({ controller, hidden, navigationRef, 
     {!hidden && layout.groups.map(group => {
       const visiblePanes = group.panes.filter(pane => visibleToolTabs(layout, pane).length);
       if (!visiblePanes.length) return null;
+      // CSS flex-grow totals below one leave unused space after hiding/removing a pane.
+      // Normalize visible shares without changing the proportions saved for reopening.
+      const visibleShare = visiblePanes.reduce((total, pane) => total + pane.share, 0);
       const title = groupName(visiblePanes.flatMap(pane => visibleToolTabs(layout, pane))), label = title === 'Layers' ? 'Workbench Layers' : title;
       // Only an explicitly opened/activated dock rises above screen utilities.
       return <WorkbenchToolPanel key={group.id} label={label} title={title}
@@ -184,7 +195,7 @@ export default function WorkbenchToolDocks({ controller, hidden, navigationRef, 
           {index > 0 && <WorkbenchDockDivider group={group.id} before={visiblePanes[index - 1]} after={pane}
             label={`Resize ${visiblePanes[index - 1].active} and ${pane.active} panels`} onChange={dispatch} />}
           <div className={`workbench-dock-pane${preview?.target === pane.id && !preview.side ? ' workbench-dock-pane--target' : ''}`}
-            style={{ flexGrow: pane.share }} data-dock-pane={pane.id}
+            style={{ flexGrow: pane.share / visibleShare }} data-dock-pane={pane.id}
             data-drop-side={preview?.target === pane.id ? preview.side : undefined}
             ref={node => { if (node) panes.current.set(pane.id, node); else panes.current.delete(pane.id); }}>
           {renderHeader(<div className="workbench-dock-tabs" role="tablist" aria-label="Artwork tools">{visibleToolTabs(layout, pane).map(tab => <button key={tab} type="button" role="tab"
@@ -218,7 +229,8 @@ export default function WorkbenchToolDocks({ controller, hidden, navigationRef, 
         if (event.key === 'Tab') setMenu(null);
       }}>
       {dockTabs(menuGroup).length > 1 && <button role="menuitem" type="button" onClick={() => {
-        place([menu.tab], null, { ...menuGroup.frame, left: menuGroup.frame.left >= 348 ? menuGroup.frame.left - 340 : menuGroup.frame.left + 32, top: menuGroup.frame.top + 24 }); setMenu(null);
+        const frame = tabFrame(menuGroup, menu.tab);
+        place([menu.tab], null, { ...frame, left: frame.left >= 348 ? frame.left - 340 : frame.left + 32, top: frame.top + 24 }); setMenu(null);
       }}>Detach {menu.tab}</button>}
       {layout.groups.flatMap(group => group.panes).filter(pane => visibleToolTabs(layout, pane).some(tab => tab !== menu.tab)).map(pane => {
         const name = groupName(visibleToolTabs(layout, pane).filter(tab => tab !== menu.tab));

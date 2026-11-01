@@ -74,3 +74,28 @@ test('canvas entry opens the verified owner collection while visitor and explici
   assert.deepEqual(readApplicationRoute({ search: '?discover' }, { inscapeReturnRoute: canvases }).returnTo, canvases);
   assert.deepEqual(resolveApplicationDestination(route('?view=' + A), owner), { kind: 'workbench', address: A });
 });
+
+test('Edit Reception uses the normal authorized Editor route and survives reload and Discover', () => {
+  const edit = route('?view=' + A + '&editor=reception');
+  assert.deepEqual(edit, { kind: 'profile', address: A, editor: 'reception' });
+  assert.deepEqual(resolveApplicationDestination(edit, owner), {
+    kind: 'workbench', address: A, receptionEditorRequested: true,
+  });
+  const href = applicationRouteUrl({ href: 'https://example.test/?keep=1&canvas=1&reception=1#art' }, edit);
+  assert.equal(href, '/?keep=1&view=' + A + '&editor=reception#art');
+  assert.deepEqual(readApplicationRoute(new URL(href, 'https://example.test')), edit);
+  assert.deepEqual(readApplicationRoute({ search: '?discover' }, { inscapeReturnRoute: edit }).returnTo, edit);
+  assert.equal(applicationRouteUrl({ href: 'https://example.test' + href }, { kind: 'home' }), '/?keep=1#art');
+  assert.deepEqual(disconnectRoute(edit, resolveApplicationDestination(edit, owner)), { kind: 'discover', returnTo: null });
+});
+
+test('Reception editor intent never grants authority or exposes the editor to another account', () => {
+  const edit = route('?view=' + A + '&editor=reception');
+  for (const authority of [signedOut, { ...owner, status: 'pending' }, { ...owner, ownershipVerified: false }, { ...owner, profileAddress: B }]) {
+    assert.deepEqual(resolveApplicationDestination(edit, authority), { kind: 'public', address: A, reception: true });
+  }
+  const competing = route('?view=' + A + '&editor=reception&reception=1&canvas=1&module=display:one');
+  assert.deepEqual(competing, edit);
+  assert.deepEqual(resolveApplicationDestination(competing, owner), { kind: 'workbench', address: A, receptionEditorRequested: true });
+  assert.deepEqual(route('?view=' + A + '&editor=unknown&reception=1'), { kind: 'profile', address: A, reception: true });
+});

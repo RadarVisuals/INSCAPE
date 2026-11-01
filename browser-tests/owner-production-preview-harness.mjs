@@ -51,7 +51,6 @@ const task4bMediaOrigin = 'https://task4b-fixtures.invalid';
 const task4bMediaSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800"><rect width="1200" height="800" fill="#777"/></svg>';
 const graphOrigins = Object.freeze([
   'https://envio.lukso-mainnet.universal.tech',
-  'https://indexer.chillwhales.dev',
 ]);
 const browserCandidates = [
   process.env.BROWSER_PATH,

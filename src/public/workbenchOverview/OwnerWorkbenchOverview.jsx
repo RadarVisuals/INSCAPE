@@ -6,7 +6,7 @@ import WorkbenchOverview from './WorkbenchOverview.jsx';
 import { useProfileIdentity } from '../../profileIdentity/index.js';
 import { useStartupDestinationReady } from '../../startveil/StartupDestinationContext.jsx';
 
-export default function OwnerWorkbenchOverview({ store, preferences, reviewAssets, reviewProfile, view, onViewChange, onOpen, onOpenReception }) {
+export default function OwnerWorkbenchOverview({ store, preferences, reviewAssets, reviewProfile, view, onViewChange, onOpen, onOpenReception, onEditReception }) {
   useStartupDestinationReady();
   const generation = useSyncExternalStore(store.subscribe, store.getGeneration);
   const { galleryCardSize } = useSyncExternalStore(preferences.subscribe, preferences.getSnapshot);
@@ -31,7 +31,7 @@ export default function OwnerWorkbenchOverview({ store, preferences, reviewAsset
     cardSize={galleryCardSize} onCardSize={value => preferences.update(current => ({ ...current, galleryCardSize: value }))}
     preferenceError={preferenceError} onRetryPreferences={preferences.retry}
     onReorder={ids => { if (!store.reorderWorkbenches(ids)) throw workbenchSaveError(store); }}
-    profile={fixtureProfile || identity} onEdit={edit} onOpenReception={onOpenReception}
+    profile={fixtureProfile || identity} onEdit={edit} onOpenReception={onOpenReception} onEditReception={onEditReception}
     onCreate={name => { const id = store.createWorkbench(name); if (!id) throw workbenchSaveError(store); setSelectedId(id); }}
     onSave={details => { if (!store.updateWorkbenchDetails(selectedId, details)) throw workbenchSaveError(store); }} />;
 }

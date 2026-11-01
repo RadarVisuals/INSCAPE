@@ -38,7 +38,6 @@ test('connect-src derives exact origins from every supported public endpoint ove
     VITE_LUKSO_RPC_URL: 'https://rpc.release.invalid/path',
     VITE_LUKSO_RPC_FALLBACK_URLS: 'https://rpc-a.release.invalid,\nhttps://rpc-b.release.invalid/path',
     VITE_LUKSO_INDEXER_URL: 'https://envio.release.invalid/v1/graphql',
-    VITE_CHILLWHALES_INDEXER_URL: 'https://chill.release.invalid/v1/graphql',
     VITE_IPFS_GATEWAY_URL: 'https://media.release.invalid/ipfs/',
     VITE_PROFILE_DOCUMENT_IPFS_GATEWAY_URL: 'https://documents.release.invalid/ipfs/',
     VITE_PROFILE_DOCUMENT_IPFS_GATEWAY_FALLBACK_URLS: 'https://documents-a.release.invalid/ipfs/,https://documents-b.release.invalid/ipfs/',
@@ -46,7 +45,7 @@ test('connect-src derives exact origins from every supported public endpoint ove
   };
   const origins = productionConnectOrigins(env);
   for (const expected of ['https://rpc.release.invalid', 'https://rpc-a.release.invalid', 'https://rpc-b.release.invalid',
-    'https://envio.release.invalid', 'https://chill.release.invalid', 'https://media.release.invalid',
+    'https://envio.release.invalid', 'https://media.release.invalid',
     'https://documents.release.invalid', 'https://documents-a.release.invalid', 'https://documents-b.release.invalid',
     'wss://events.release.invalid']) assert.ok(origins.includes(expected), expected);
   assert.ok(origins.includes('https://rpc.mainnet.lukso.network'));

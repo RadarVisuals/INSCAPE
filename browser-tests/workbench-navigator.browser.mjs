@@ -89,8 +89,8 @@ for (const theme of ['carbon', 'mist']) for (const [width, height] of [[1440, 90
     if (width === 1440) {
       const move = page.getByLabel('Move Navigator window', { exact: true }); await move.focus(); await move.press('Shift+ArrowLeft');
       const moved = await nav.boundingBox();
-      await page.getByRole('button', { name: 'New', exact: true }).click(); await page.getByLabel('New Workbench name').fill('Navigator second');
-      await page.getByRole('button', { name: 'Create Workbench', exact: true }).click(); await map.waitFor(); await settle(page);
+      await page.getByRole('button', { name: 'New canvas', exact: true }).click(); await page.getByLabel('New canvas name').fill('Navigator second');
+      await page.getByRole('button', { name: 'Create canvas', exact: true }).click(); await map.waitFor(); await settle(page);
       assert.equal((await nav.boundingBox()).x, moved.x); assert.equal(await nav.locator('[data-navigator-object^="image:"]').count(), 0);
       await page.reload(); await map.waitFor(); await settle(page);
       assert.equal((await nav.boundingBox()).x, n.x, 'reload starts a fresh screen layout');

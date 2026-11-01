@@ -1,7 +1,7 @@
 import { normalizeProfileAddress } from '../library/config.js';
 import { resolveOwnerAuthoringEnabled } from '../public/publicAccess.js';
 
-const profileIntent = value => ({
+const profileIntent = value => value?.editor === 'reception' ? { editor: 'reception' } : ({
   ...(value?.canvas === true ? { canvas: true } : {}),
   ...(value?.reception === true ? { reception: true } : {}),
   ...(value?.target?.moduleId ? { target: { moduleId: String(value.target.moduleId).slice(0, 160),
@@ -20,18 +20,19 @@ export function readApplicationRoute(locationLike, historyState = null) {
     return { kind: 'discover', returnTo };
   }
   const address = normalizeProfileAddress(params.get('view'));
-  return address ? { kind: 'profile', address, ...profileIntent({ canvas: params.get('canvas') === '1', reception: params.get('reception') === '1',
+  return address ? { kind: 'profile', address, ...profileIntent({ editor: params.get('editor'), canvas: params.get('canvas') === '1', reception: params.get('reception') === '1',
     target: { moduleId: params.get('module'), gridId: params.get('grid') } }) }
     : { kind: 'home', fallbackAddress: normalizeProfileAddress(params.get('profile')) };
 }
 
 export function applicationRouteUrl(locationLike, route) {
   const url = new URL(locationLike.href);
-  for (const key of ['view', 'profile', 'discover', 'canvas', 'module', 'grid', 'reception']) url.searchParams.delete(key);
+  for (const key of ['view', 'profile', 'discover', 'canvas', 'module', 'grid', 'reception', 'editor']) url.searchParams.delete(key);
   if (route.kind === 'discover') url.searchParams.set('discover', '');
   if (route.kind === 'profile') {
     url.searchParams.set('view', route.address);
     const intent = profileIntent(route);
+    if (intent.editor) url.searchParams.set('editor', intent.editor);
     if (intent.canvas) url.searchParams.set('canvas', '1');
     if (intent.reception) url.searchParams.set('reception', '1');
     if (intent.target) {
@@ -53,12 +54,15 @@ export function resolveApplicationDestination(route, authority) {
   const address = route.kind === 'profile' ? normalizeProfileAddress(route.address)
     : connected || route.fallbackAddress;
   if (!address) return { kind: 'entry', address: null };
-  const owner = !route.reception && settled && resolveOwnerAuthoringEnabled({
+  const intent = profileIntent(route);
+  const owner = !intent.reception && settled && resolveOwnerAuthoringEnabled({
     ownershipVerified: authority.ownershipVerified, verifiedOwnerProfileAddress: connected,
     workspaceProfileAddress: connected, viewedProfileAddress: address,
   });
   return { kind: owner ? 'workbench' : 'public', address,
-    ...(owner ? route.canvas && !route.target ? { canvas: true } : {} : profileIntent(route)) };
+    ...(owner ? intent.editor === 'reception' ? { receptionEditorRequested: true }
+      : intent.canvas && !intent.target ? { canvas: true } : {}
+      : intent.editor === 'reception' ? { reception: true } : intent) };
 }
 
 export function disconnectRoute(route, destination) {

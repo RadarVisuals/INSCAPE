@@ -18,7 +18,7 @@ async function fixture(page, options = {}) {
     await route.fulfill({ response: await route.fetch({ url: `${origin}/${file}` }) });
   });
   await page.goto(`${origin}/browser-tests/workbench-storage-fixture.html`);
-  await page.getByRole('combobox', { name: 'Active Workbench' }).waitFor();
+  await page.getByRole('combobox', { name: 'Active document' }).waitFor();
   await page.evaluate(async options => {
     const { layersDraft } = await import('/browser-tests/fixtures/artwork-layers.js');
     const { systemWorkflowDraftKey } = await import('/src/systemWorkflow/systemWorkflowDraftStore.js');
@@ -40,6 +40,64 @@ async function fixture(page, options = {}) {
   await page.locator('[data-workbench-artwork]').first().waitFor();
   await separateLayers(page);
 }
+
+test('Workbench pipette follows Shape/Text targets and opacity previews commit once with undo', { timeout: 90000 }, async () => {
+  const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
+  try {
+    const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, reducedMotion: 'reduce' });
+    await page.addInitScript(() => {
+      window.drops = [];
+      window.EyeDropper = class { open({ signal }) { return new Promise(resolve => window.drops.push({ signal, resolve })); } };
+    });
+    await fixture(page, { writing: true });
+    const panel = page.getByRole('region', { name: 'Transform and Color', exact: true });
+    await page.getByRole('button', { name: 'Select Landscape', exact: true }).click();
+    await panel.getByRole('tab', { name: 'Color', exact: true }).click();
+    const picker = panel.getByRole('button', { name: 'Pick color from screen', exact: true });
+    const original = await saved(page);
+    await picker.click();
+    await page.evaluate(() => window.drops.at(-1).resolve({ sRGBHex: '#336699' }));
+    await page.waitForFunction(() => window.savedDraft().shapes[0].color === '#336699');
+    assert.deepEqual(await panel.locator('.ds-colour-readouts output').allTextContents(), ['210', '50', '40']);
+    await undo(page); assert.deepEqual((await saved(page)).shapes, original.shapes);
+    const slider = panel.getByRole('slider', { name: 'Color opacity', exact: true });
+    const box = await slider.boundingBox();
+    const dragOpacity = async () => {
+      await page.mouse.move(box.x + box.width - 6, box.y + box.height / 2); await page.mouse.down();
+      await page.mouse.move(box.x + box.width * .35, box.y + box.height / 2, { steps: 8 });
+    };
+    await dragOpacity();
+    assert.equal((await saved(page)).shapes[0].opacity, 1, 'drag previews do not save');
+    const chosen = Number(await slider.inputValue()) / 100;
+    assert.ok(chosen > .2 && chosen < .5);
+    await page.mouse.up(); assert.equal((await saved(page)).shapes[0].opacity, chosen);
+    await undo(page); assert.equal((await saved(page)).shapes[0].opacity, 1, 'one undo restores opacity');
+    await dragOpacity(); await page.keyboard.press('Escape');
+    await page.mouse.move(box.x + box.width * .7, box.y + box.height / 2, { steps: 5 }); await page.mouse.up();
+    assert.equal((await saved(page)).shapes[0].opacity, 1);
+    await slider.focus(); await slider.press('ArrowLeft');
+    assert.equal((await saved(page)).shapes[0].opacity, .99);
+    await undo(page); assert.equal((await saved(page)).shapes[0].opacity, 1);
+    await picker.click();
+    await page.getByRole('button', { name: 'Select Mist', exact: true }).click();
+    assert.equal(await page.evaluate(() => window.drops.at(-1).signal.aborted), true);
+    await page.evaluate(() => window.drops.at(-1).resolve({ sRGBHex: '#ff0000' }));
+    assert.deepEqual((await saved(page)).shapes, original.shapes);
+    await panel.getByRole('combobox', { name: 'Color target', exact: true }).selectOption('title');
+    await picker.click(); await page.evaluate(() => window.drops.at(-1).resolve({ sRGBHex: '#336699' }));
+    await page.waitForFunction(() => window.savedDraft().texts[0].article.appearance.titleColor === '#336699');
+    await undo(page); assert.equal((await saved(page)).texts[0].article.appearance.titleColor, original.texts[0].article.appearance.titleColor);
+    await page.getByRole('button', { name: 'Select Landscape', exact: true }).click();
+    await panel.getByRole('textbox', { name: 'Color colour', exact: true }).fill('336699');
+    await panel.getByRole('textbox', { name: 'Color colour', exact: true }).press('Tab');
+    await mkdir(output, { recursive: true });
+    await page.locator('.system-workflow').focus();
+    await panel.screenshot({ path: `${output}/shared-color-layout.png` });
+    await page.setViewportSize({ width: 760, height: 540 });
+    assert.equal(await panel.locator('.workbench-tools-body').evaluate(node => node.scrollWidth <= node.clientWidth), true);
+    await panel.screenshot({ path: `${output}/shared-color-layout-narrow.png` });
+  } finally { await browser.close(); }
+});
 
 test('shared Transform and Color follow selection, save one gesture, cancel, undo and exclude Image', { timeout: 90000 }, async () => {
   const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });

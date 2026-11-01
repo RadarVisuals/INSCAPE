@@ -1,0 +1,25 @@
+{
+  "date": "2026-10-31",
+  "status": "Local implementation; not committed, pushed or deployed",
+  "replacement": "Reception and ordinary canvases use one OwnerWorkbenchSession, Editor runtime and document bar. Public Edit Reception uses normal owner authorization, hydration and recovery.",
+  "removed": ["OwnerReceptionEditor.jsx", "ReceptionStoreEditor.jsx", "ReceptionEditorControls.jsx"],
+  "retained": ["Reception document scope isolates saves and undo from ordinary canvases", "Reception responsive preview and cell-specific behavior", "Isolated Design Lab sample and user-authored design experiments"],
+  "productionDiffMeasurement": {
+    "baseline": "HEAD d181c54",
+    "scope": "12 tracked routing, host and document-navigation files; excludes Runtime changes overlapping earlier uncommitted work, and the previously untracked controls file",
+    "additions": 148,
+    "deletions": 139,
+    "includesTestsDocsOrGeneratedFiles": false,
+    "reasonForAddedLogic": "Shared document selection, route synchronization, save/recovery guards and scoped lifetime replace isolated editor hosts.",
+    "limitation": "This is a bounded current diff against HEAD, not an attribution of the entire dirty checkout to this task."
+  },
+  "verification": {
+    "browserTests": "48 distinct focused cases passed across native cells/layer parity, linked/readers, entry boundaries including StrictMode, ordinary canvas switching and My Inscape. Three initially failing ordinary cases passed after save-error routing and a stale touch-test correction.",
+    "domainTests": "41 Reception/cell/save-action cases, 32 route/authority/reconciliation cases, 4 focused build guard cases passed.",
+    "static": "Lint, strict contract typecheck, production build, build boundary/budget check, design-system inventory and git diff whitespace check passed.",
+    "initialJavaScriptBytes": 799609,
+    "visual": "Native wide/narrow Editor controls and Lab artwork inspected. Full-page iframe capture changed temporary toolbar bounds; final proof uses an ordinary viewport capture.",
+    "currentUserDocument": "Current saved Reception is empty at947x575; user accepted continuing from this state. No composition was restored or reconstructed. A local backup download was requested and its file verified.",
+    "limits": "No full release suite, remote CI or deployment claim. Existing build warnings remain."
+  }
+}

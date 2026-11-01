@@ -7,17 +7,20 @@ import { excludeUnsupportedWalletConnectorsPlugin } from './scripts/unsupportedW
 import { narrowLuksoWalletImportsPlugin } from './scripts/luksoWalletImports.js';
 import { artworkDocumentHostPlugin } from './scripts/artworkDocumentHost.js';
 import { keeperChatgptPlugin } from './scripts/keeperChatgpt/service.js';
+import designMetadata, { designMetadataEnabled } from './scripts/designMetadata.js';
 
 export function resolveReleaseCommit(environment = process.env) {
   const candidate = environment.COMMIT_REF || environment.GITHUB_SHA || environment.VITE_COMMIT_REF || 'development';
   return /^[0-9a-f]{7,40}$/iu.test(candidate) ? candidate.toLowerCase() : 'development';
 }
 
-export default defineConfig(({ mode }) => {
+export default defineConfig(({ mode, command }) => {
   const productionEnvironment = loadEnv(mode, process.cwd(), 'VITE_');
   return {
     define: { __INSCAPE_RELEASE_COMMIT__: JSON.stringify(resolveReleaseCommit({ ...process.env, ...productionEnvironment })) },
-    plugins: [keeperChatgptPlugin(), artworkDocumentHostPlugin(), diagnosticsEnvironmentPlugin(), react(), narrowLuksoWalletImportsPlugin(), excludeUnsupportedWalletConnectorsPlugin(),
+    plugins: [keeperChatgptPlugin(), artworkDocumentHostPlugin(), diagnosticsEnvironmentPlugin(),
+      react({ babel: { plugins: designMetadataEnabled(command, mode) ? [[designMetadata, { root: process.cwd() }]] : [] } }),
+      narrowLuksoWalletImportsPlugin(), excludeUnsupportedWalletConnectorsPlugin(),
       ownerRuntimeIsolationPlugin(), productionBuildHygienePlugin()],
     build: { manifest: true, rollupOptions: {
       input: { app: 'index.html', miniAppHost: 'mini-app-host.html' },
@@ -31,16 +34,16 @@ export default defineConfig(({ mode }) => {
         manualChunks: id => {
           const path = id.replaceAll('\\', '/');
           if (path.includes('/node_modules/lucide-react/')) return 'interface-icons';
-          // Both Reception edit entrances load the same editor. Keep their
-          // facades together to avoid repeating its large dependency/preload
-          // list, while preserving the lazy boundary from both readers.
-          if (['OwnerReceptionEditor', 'ReceptionStoreEditor', 'ReceptionEditor']
-            .some(name => path.endsWith('/src/reception/' + name + '.jsx'))) return 'reception-editing';
         },
       },
     } },
     // Audit exports and browser runtime artifacts are not application entries.
-    optimizeDeps: { entries: ['index.html', 'mini-app-host.html', 'browser-tests/*.html'] },
+    cacheDir: mode === 'design-lab' ? 'node_modules/.vite-design-lab' : undefined,
+    optimizeDeps: mode === 'design-lab'
+      // Scan only the lab entry. Full Editor artboards also need their transitive
+      // CommonJS dependencies optimized when those lazy components are opened.
+      ? { entries: ['design-lab.html'], include: ['react', 'react-dom/client', 'react/jsx-runtime', 'react/jsx-dev-runtime', 'lucide-react', '@tiptap/react', '@tiptap/starter-kit', '@tiptap/extension-text-style', 'buffer', 'qrcode-generator'] }
+      : { entries: ['index.html', 'mini-app-host.html', 'browser-tests/*.html'] },
     preview: { headers: productionResponseSecurityHeaders(productionEnvironment) },
     server: {
       watch: {

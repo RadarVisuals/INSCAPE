@@ -7,7 +7,7 @@ export async function mountToolDockFixture(page, options = {}) {
     await route.fulfill({ response: await route.fetch({ url: `${origin}/${file}` }) });
   });
   await page.goto(`${origin}/browser-tests/workbench-storage-fixture.html`);
-  await page.getByRole('combobox', { name: 'Active Workbench' }).waitFor();
+  await page.getByRole('combobox', { name: 'Active document' }).waitFor();
   await page.evaluate(async options => {
     const { layersDraft } = await import('/browser-tests/fixtures/artwork-layers.js');
     const { systemWorkflowDraftKey } = await import('/src/systemWorkflow/systemWorkflowDraftStore.js');

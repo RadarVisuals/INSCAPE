@@ -6,7 +6,7 @@ test('Envio enrichment updates matching traits and appends metadata omitted by a
   const asset = { id: 'asset', attributes: [
     { key: 'Form Rarity', value: 'Old value', type: 'string' },
     { key: 'Performance Tier', value: 'Strike Unit', type: 'string' }
-  ], fieldProvenance: { attributes: { scope: 'tokenId', source: 'Chillwhales' } }, rawMetadata: {} };
+  ], fieldProvenance: { attributes: { scope: 'tokenId', source: 'LUKSO Envio Indexer' } }, rawMetadata: {} };
   const enriched = mergeProfileAssetAttributes(asset, { id: 'asset', attributes: [
     { key: 'Form Rarity', value: 'Ghost Outline', type: 'string' },
     { key: 'Rank', value: '281', type: 'number' }

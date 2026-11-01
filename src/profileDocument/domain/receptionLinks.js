@@ -55,7 +55,7 @@ export function receptionLinkProblems(reception, snapshot) {
     return displayModuleIds(draft).includes(text.sceneLink.displayId)
       && (!ref.gridId || displayContent(draft, text.sceneLink.displayId).grids.some(grid => grid.id === ref.gridId));
   };
-  return (reception?.links || []).filter(link => reception.regions.some(region => region.content === link.id)).flatMap(link => {
+  return (reception?.links || []).filter(link => (reception.version === 3 ? reception.cells : reception.regions).some(region => region.content === link.id)).flatMap(link => {
     const destination = link.destination && entry(link.destination)?.draft;
     if (link.destination && (!destination || link.destination.destinationId && !destination.workbenchIndex?.destinations.some(item => item.id === link.destination.destinationId)))
       return [{ id: link.id, reason: 'The linked canvas or camera point is not in this publication.' }];

@@ -23,7 +23,7 @@ export default function ProfileLibraryPicker({ library, onClose, placementScope,
     className={`reception-library-window workbench-tool-controls${placing ? ' is-placing' : ''}`}
     frame={frames.library || initial} onFrameChange={updateFrame} boundsRef={boundsRef} active={active} onActivate={onActivate}
     minimumWidth={280} minimumHeight={300}>
-    {renderHeader => <>{renderHeader()}<LibraryWorkspace className="reception-library" label="Choose Reception image" phase="open" resizable={false} overlayPlacement
+    {renderHeader => <>{renderHeader()}<LibraryWorkspace className="reception-library" label="Choose Reception image" phase="open" resizable={false} overlayPlacement embedded
       data={library.libraryData} categoryCommands={library.categoryCommands}
       placementScope={placementScope} placementTargetRef={placementTargetRef} preferenceStore={preferences}
       selectionAction="Use selected image" selectionEnabled={selectionEnabled} onPlacingChange={handlePlacing} /></>}

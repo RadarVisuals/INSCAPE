@@ -8,7 +8,7 @@ import { createArticle } from '../../text/domain/article.js';
 import { canvasPublicationCandidates, buildCanvasPublication } from './canvasPublication.js';
 import { assertValidProfileDocumentV9 } from './profileDocumentV9Validation.js';
 import { createSystemWorkflowDraftStore } from '../../systemWorkflow/systemWorkflowDraftStore.js';
-import { saveReception, placeReceptionLink } from '../../reception/receptionSession.js';
+import { saveReception, placeReceptionLink } from '../../../browser-tests/fixtures/reception-v2.js';
 import { serializeWorkbenchBackup, parseWorkbenchBackup } from '../../systemWorkflow/workbenchBackup.js';
 const profile = '0x' + '1'.repeat(40);
 const source = (moduleId = 'text:story', canvasId = 'workbench:second') => ({ profileAddress: profile, canvasId, moduleId });

@@ -6,13 +6,19 @@
       "name": "interface-theme",
       "category": "release",
       "rationale": "One persistent Dark/Light preference across Settings, portal menus, Reception, canvas overview, login and Discover without editing compositions.",
-      "prerequisites": ["Host: runner_vite.", "INSCAPE_TEST_ORIGIN={origin}"]
+      "prerequisites": [
+        "Host: runner_vite.",
+        "INSCAPE_TEST_ORIGIN={origin}"
+      ]
     },
     {
       "name": "composition-index",
       "category": "release",
       "rationale": "Desktop index camera gestures, per-composition navigation, read-only viewing, owner activation and persistence failures with actual artwork.",
-      "prerequisites": ["Host: runner_vite.", "INSCAPE_TEST_ORIGIN={origin}"]
+      "prerequisites": [
+        "Host: runner_vite.",
+        "INSCAPE_TEST_ORIGIN={origin}"
+      ]
     },
     {
       "name": "publication-local",
@@ -1870,29 +1876,6 @@
       "rationale": "Workbench-voorkeuren behouden de laatste instellingen bij opslagfalen, tonen onafhankelijke herstelacties en vervangen onleesbare records alleen expliciet."
     },
     {
-      "name": "reception-editor",
-      "category": "release",
-      "rationale": "Canonical Reception authoring, Library and native Text recovery, gestures, private/public projection and responsive silhouette."
-    },
-    {
-      "name": "reception-library-selection",
-      "category": "release",
-      "rationale": "Reception expanded image selection and Use selected image preserve the exact media used by drag placement; selecting the cover restores its own image.",
-      "prerequisites": [
-        "Host: runner_vite.",
-        "INSCAPE_TEST_ROOT={origin}"
-      ]
-    },
-    {
-      "name": "reception-shared-controls",
-      "category": "release",
-      "rationale": "Shared tool bounds/private preferences, persistent floating Library, click versus drag, repeated explicit cell drops, cancellation and undo.",
-      "prerequisites": [
-        "Host: runner_vite.",
-        "INSCAPE_TEST_ROOT={origin}"
-      ]
-    },
-    {
       "name": "reception-rich-cell",
       "category": "targeted",
       "rationale": "Isolated rich-cell feasibility experiment; not a production content model or authoring route.",
@@ -1907,14 +1890,9 @@
       "rationale": "Scoped temporary scene selection, Display/Text continuity, linked source availability and a finite gallery sharing the parent scroll at desktop and mobile widths."
     },
     {
-      "name": "reception-settings",
-      "category": "release",
-      "rationale": "Simple empty start, Grid settings, direct header editing, visual logo choices and separate current/visitor appearance at desktop and mobile widths."
-    },
-    {
       "name": "reception-linked",
       "category": "release",
-      "rationale": "Real Display mouse/touch swipes, linked content and saved link editing, separate local/public canvas overview navigation, and camera/focus/scroll recovery."
+      "rationale": "Real Display mouse/touch swipes, retained linked content, local/public canvas overview navigation, and camera/focus/scroll recovery."
     },
     {
       "name": "reception-overview-navigation",
@@ -1924,6 +1902,26 @@
         "Host: runner_vite.",
         "INSCAPE_TEST_ROOT={origin}"
       ]
+    },
+    {
+      "name": "reception-native-editor",
+      "category": "release",
+      "rationale": "Reception in the existing Editor: native rectangles, cell membership, Library and Text, movement, history, isolated persistence and responsive preview."
+    },
+    {
+      "name": "reception-reader",
+      "category": "release",
+      "rationale": "Saved Reception readers preserve mobile ordering, image masks, transparent SVG crop geometry and accessible artwork recovery."
+    },
+    {
+      "name": "reception-cell-interaction",
+      "category": "release",
+      "rationale": "Native Reception cell entry from actual double-clicks, image-covered cells, direct shared Shape settings and row/column coupling spacing."
+    },
+    {
+      "name": "reception-layer-order",
+      "category": "release",
+      "rationale": "Native Reception, preview and public rendering preserve interleaved global artwork order, rounded cell clipping, Text appearance and linked source actions."
     }
   ]
 }

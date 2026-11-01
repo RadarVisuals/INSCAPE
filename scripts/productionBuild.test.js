@@ -110,17 +110,24 @@ test('Reception route costs deduplicate startup and shared files and exclude uno
     const manifest = JSON.parse(await readFile(resolve(root, '.vite/manifest.json'), 'utf8'));
     const publicKey = 'src/profileDocument/components/ProfileOverview.jsx';
     const ownerKey = 'src/reception/OwnerReception.jsx';
-    const editorKey = 'src/reception/OwnerReceptionEditor.jsx';
+    const editorKey = 'src/public/ownerSystemWorkflow/OwnerSystemWorkflowRuntime.jsx';
     manifest[publicKey] = { file: 'assets/public.js', imports: ['_shared.js'], css: ['assets/app-route.css'] };
-    manifest[ownerKey] = { file: 'assets/reader.js', imports: [publicKey, '_shared.js'], dynamicImports: [editorKey] };
-    manifest[editorKey] = { file: 'assets/editor.js', imports: [ownerKey] };
+    manifest[ownerKey] = { file: 'assets/reader.js', imports: [publicKey, '_shared.js'] };
+    manifest[editorKey] = { file: 'assets/editor.js', imports: ['_shared.js'] };
     for (const name of ['public', 'reader', 'editor']) await writeFile(resolve(root, 'assets', name + '.js'), name);
     const routes = await measureReceptionRoutes(root, manifest, new Set(['index.html', '_shared.js']));
     assert.equal(routes.ownerAbout.additionalJavaScript.raw, 'publicreader'.length);
     assert.equal(routes.ownerAbout.additionalCss.raw, 0);
     assert.equal(routes.ownerAbout.files.filter(file => file.includes('shared')).length, 1);
     assert.ok(!routes.ownerAbout.files.includes('assets/editor.js'));
-    assert.equal(routes.receptionEditing.additionalJavaScript.raw, 'publicreadereditor'.length);
+    assert.equal(routes.receptionEditing.additionalJavaScript.raw, 'editor'.length);
+    assert.equal(routes.receptionEditing.entryFile, 'assets/editor.js');
+    manifest['_shared-editor-hash.js'] = manifest[editorKey];
+    delete manifest[editorKey];
+    const merged = await measureReceptionRoutes(root, manifest, new Set(['index.html', '_shared.js']), {
+      ownerChunks: [{ file: 'assets/editor.js', modules: ['C:\\workspace\\' + editorKey.replaceAll('/', '\\')] }],
+    });
+    assert.deepEqual(merged, routes, 'a shared internal Editor chunk measures the same route without a separate editor facade');
   } finally { await removeTree(root); }
 });
 
@@ -156,7 +163,7 @@ test('measured production allowances retain exact budget boundaries with the laz
     standaloneWalletJavaScript: { raw: 4_600_000, gzip: 1_225_000 },
     initialCss: { raw: 51_807, gzip: 10_301 },
     ownerCss: { raw: 143_870, gzip: 21_140 },
-    coreJavaScript: { raw: 2_693_000, gzip: 885_000 },
+    coreJavaScript: { raw: 2_702_000, gzip: 892_000 },
     publicAssets: { raw: 17_960_000 },
     largestPublicAsset: { raw: 2_700_000 },
   });

@@ -17,7 +17,7 @@ async function fixture(page, options = {}) {
     await route.fulfill({ path: `public/${file}` });
   });
   await page.goto(`${origin}/browser-tests/workbench-storage-fixture.html`);
-  await page.getByRole('combobox', { name: 'Active Workbench' }).waitFor();
+  await page.getByRole('combobox', { name: 'Active document' }).waitFor();
   await page.evaluate(async options => {
     const { layersDraft } = await import('/browser-tests/fixtures/artwork-layers.js');
     const { systemWorkflowDraftKey } = await import('/src/systemWorkflow/systemWorkflowDraftStore.js');
@@ -424,18 +424,18 @@ test('Workbench A to B to A drops the old group; Visitor selection has no owner 
     const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, reducedMotion: 'reduce' });
     const errors = []; page.on('pageerror', error => errors.push(error.message));
     await fixture(page, { selectionOnly: true });
-    const aId = await page.getByRole('combobox', { name: 'Active Workbench' }).inputValue();
+    const aId = await page.getByRole('combobox', { name: 'Active document' }).inputValue();
     await page.getByRole('button', { name: 'Select Eyes', exact: true }).click();
     await page.getByRole('button', { name: 'Select Body', exact: true }).click({ modifiers: ['Shift'] });
     assert.equal(await page.locator('.workbench-layer-row[data-selected]').count(), 2);
     const original = await page.evaluate(() => window.guardedStore().getDraft());
-    await page.getByRole('button', { name: 'New', exact: true }).click();
-    await page.getByLabel('New Workbench name', { exact: true }).fill('Selection B');
-    await page.getByRole('button', { name: 'Create Workbench', exact: true }).click();
+    await page.getByRole('button', { name: 'New canvas', exact: true }).click();
+    await page.getByLabel('New canvas name', { exact: true }).fill('Selection B');
+    await page.getByRole('button', { name: 'Create canvas', exact: true }).click();
     await page.waitForFunction(() => window.guardedStore().listWorkbenches().length === 2 && !window.guardedStore().getDraft().imageModules?.length);
     assert.equal(await page.locator('.workbench-layer-row[data-selected]').count(), 0);
     assert.equal(await page.locator('[data-context-action-target]').count(), 0);
-    await page.getByRole('combobox', { name: 'Active Workbench' }).selectOption(aId);
+    await page.getByRole('combobox', { name: 'Active document' }).selectOption(aId);
     await page.getByRole('button', { name: 'Select Body', exact: true }).waitFor();
     assert.equal(await page.locator('.workbench-layer-row[data-selected]').count(), 0, 'the previous explicit group is not restored into the new activation');
     assert.equal(await page.locator('[data-context-action-target]').count(), 0);

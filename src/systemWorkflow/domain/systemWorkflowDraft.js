@@ -19,6 +19,8 @@ import { validTextModules } from '../../text/domain/article.js';
 import { validShapes } from '../../shapes/shapes.js';
 import { validKeeperDocks, keeperReferenceCount } from '../../keeper/keeper.js';
 import { DISPLAY_TEXT_KEYS, isTextPlacement, validDisplayText } from './displayText.js';
+import { SYSTEM_WORKFLOW_GRID_PRECISION, isSystemWorkflowGridCoordinate } from './gridCoordinates.js';
+export { SYSTEM_WORKFLOW_GRID_PRECISION, isSystemWorkflowGridCoordinate, quantizeSystemWorkflowGridCoordinate } from './gridCoordinates.js';
 
 export const SYSTEM_WORKFLOW_DRAFT_VERSION = 4;
 export const resolveInspectionMode = placement => placement?.inspectionMode || 'LIFT';
@@ -26,7 +28,6 @@ export const SYSTEM_WORKFLOW_ARTBOARD = Object.freeze({ aspectWidth: 16, aspectH
 export const SYSTEM_WORKFLOW_GEOMETRY = Object.freeze({ columns: 32, rows: 18 });
 export const SYSTEM_WORKFLOW_WORLD_COVER_GRID_ID = 'grid:world-cover';
 export const SYSTEM_WORKFLOW_WORLD_COVER_SIZE = Object.freeze({ width: 768, height: 432 });
-export const SYSTEM_WORKFLOW_GRID_PRECISION = 9;
 export const SYSTEM_WORKFLOW_GRID_DENSITY = Object.freeze({ minimum: -8, maximum: 8, default: 0 });
 export const SYSTEM_WORKFLOW_WORLD_BOUNDS = Object.freeze({
   minimumColumn: -4096,
@@ -59,18 +60,12 @@ const SAFE_ID = /^[A-Za-z0-9:_-]+$/u;
 const GRID_ID = /^grid:[A-Za-z0-9_-]+$/u;
 const HEX_COLOR = /^#[0-9a-f]{6}$/iu;
 const textEncoder = new TextEncoder();
-const GRID_EPSILON = 1e-7;
 
 const record = (value) => Boolean(value && typeof value === 'object' && !Array.isArray(value));
 const exactKeys = (value, keys) => record(value)
   && Object.keys(value).length === keys.length
   && keys.every((key) => Object.hasOwn(value, key));
 const safeInteger = (value, minimum = 0) => Number.isSafeInteger(value) && value >= minimum;
-export const isSystemWorkflowGridCoordinate = (value) => Number.isFinite(value)
-  && Math.abs(value * SYSTEM_WORKFLOW_GRID_PRECISION - Math.round(value * SYSTEM_WORKFLOW_GRID_PRECISION)) < GRID_EPSILON;
-export const quantizeSystemWorkflowGridCoordinate = (value) => (
-  Math.round(value * SYSTEM_WORKFLOW_GRID_PRECISION) / SYSTEM_WORKFLOW_GRID_PRECISION
-);
 export function systemWorkflowSnapStep(density) {
   if (!Number.isSafeInteger(density)
     || density < SYSTEM_WORKFLOW_GRID_DENSITY.minimum || density > SYSTEM_WORKFLOW_GRID_DENSITY.maximum) {

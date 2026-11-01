@@ -28,7 +28,7 @@ async function mount(browser, theme = 'mist', width = 1440, height = 1000) {
     return route.abort();
   });
   await page.goto(`${origin}/browser-tests/tool-chrome-fixture.html?sample=navigator&persistent&theme=${theme}`);
-  await page.getByRole('combobox', { name: 'Active Workbench' }).waitFor();
+  await page.getByRole('combobox', { name: 'Active document' }).waitFor();
   return { page, errors };
 }
 
@@ -67,7 +67,7 @@ for (const reducedMotion of ['reduce', 'no-preference']) {
       await page.waitForFunction(node => document.activeElement === node, await trigger.elementHandle());
       await trigger.click(); await panel.waitFor(); await holdFrames(page);
       await panel.getByRole('button', { name: 'Close Docs', exact: true }).click();
-      const next = page.getByRole('combobox', { name: 'Active Workbench' }); await next.focus();
+      const next = page.getByRole('combobox', { name: 'Active document' }); await next.focus();
       await panel.waitFor({ state: 'detached' });
       await page.evaluate(() => window.releaseHeldFrames());
       assert.equal(await next.evaluate(n => n === document.activeElement), true, 'closing animation and deferred return preserve newer focus');
@@ -143,9 +143,9 @@ test('Library preferences survive close, Workbench switching and reload without 
     assert.ok(settings.libraryWidth > 300);
     await library(page).getByRole('button', { name: 'Close workspace', exact: true }).click();
     assert.deepEqual(await saved(page), before);
-    await page.getByRole('button', { name: 'New', exact: true }).click();
-    await page.getByLabel('New Workbench name', { exact: true }).fill('Preference check');
-    await page.getByRole('button', { name: 'Create Workbench', exact: true }).click();
+    await page.getByRole('button', { name: 'New canvas', exact: true }).click();
+    await page.getByLabel('New canvas name', { exact: true }).fill('Preference check');
+    await page.getByRole('button', { name: 'Create canvas', exact: true }).click();
     await openLibrary(page); assert.equal(await search.inputValue(), 'moon');
     assert.equal(await library(page).getByLabel('Card size', { exact: true }).inputValue(), '230');
     assert.deepEqual((await prefs(page)).library, settings);

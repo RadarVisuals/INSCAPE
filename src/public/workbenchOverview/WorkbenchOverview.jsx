@@ -23,16 +23,16 @@ function DetailsForm({ selected, onSave, onCancel, creating }) {
     event.preventDefault();
     try { onSave({ name: name.trim(), introduction: introduction.trim() }); } catch (failure) { setError(failure.message); }
   }}>
-    <h2>{creating ? 'New Workbench' : 'Edit details'}</h2>
-    <label>Workbench name<input ref={input} value={name} onChange={event => setName(event.target.value)} required maxLength={64} /></label>
+    <h2>{creating ? 'New canvas' : 'Edit details'}</h2>
+    <label>Canvas name<input ref={input} value={name} onChange={event => setName(event.target.value)} required maxLength={64} /></label>
     {!creating && <label>Introduction <span>optional</span><textarea value={introduction} onChange={event => setIntroduction(event.target.value)} maxLength={MAX_WORKBENCH_INTRODUCTION} rows={4} />
       <small>{introduction.length} / {MAX_WORKBENCH_INTRODUCTION}</small></label>}
     {error && <p role="alert">{error}</p>}
-    <div className="workbench-overview-actions"><button className="workbench-overview-primary" type="submit">{creating ? 'Create Workbench' : 'Save details'}</button><button type="button" onClick={onCancel}>Cancel</button></div>
+    <div className="workbench-overview-actions"><button className="workbench-overview-primary" type="submit">{creating ? 'Create canvas' : 'Save details'}</button><button type="button" onClick={onCancel}>Cancel</button></div>
   </form>;
 }
 
-export default function WorkbenchOverview({ items, selected, model, previews, view, onViewChange, profile, onSelect, onEdit, onCreate, onSave, onOpenReception,
+export default function WorkbenchOverview({ items, selected, model, previews, view, onViewChange, profile, onSelect, onEdit, onCreate, onSave, onOpenReception, onEditReception,
   cardSize, onCardSize, onReorder, preferenceError, onRetryPreferences }) {
   const [editing, setEditing] = useState(null), [error, setError] = useState('');
   const [arranging, setArranging] = useState(false);
@@ -66,7 +66,7 @@ export default function WorkbenchOverview({ items, selected, model, previews, vi
      data-layout={view.layout}>
     {grid ? <div className="workbench-overview-browse" inert={presentation ? '' : undefined}>
     <OverviewNavigation profile={profile} address={selected.draft.profileAddress} disabled={Boolean(editing)}
-      onAbout={onOpenReception} onCanvases={() => restoreFocus(selectedButton)}
+      onAbout={onOpenReception} onEditReception={onEditReception} onCanvases={() => restoreFocus(selectedButton)}
       view={view} onViewChange={next => { setError(''); onViewChange(next); }} count={items.length} triggerRef={menuButton}
       arranging={arranging} onArrange={onReorder ? () => setArranging(!arranging) : undefined} cardSize={cardSize} onCardSize={onCardSize}
       onCreate={onCreate ? () => { returnFocus.current = menuButton.current; setEditing('new'); } : undefined} />
@@ -77,14 +77,14 @@ export default function WorkbenchOverview({ items, selected, model, previews, vi
           onOpen={open} onEdit={onEdit ? id => run(() => onEdit(id)) : undefined} onManage={onSave ? manage : undefined} />
       </div></Suspense>
       <div className="workbench-overview-content">
-        <header className="workbench-overview-heading"><h1>Canvases</h1>
+        <header className="workbench-overview-heading"><h1>{onEdit ? 'My Inscape' : 'Canvases'}</h1>
           <div><p>{onEdit ? 'Your compositions, all in one place.' : 'Published compositions.'}</p><span>{items.length} {items.length === 1 ? 'Canvas' : 'Canvases'}</span></div>
         </header>
         {editing && <section className="workbench-overview-detail" aria-label="Canvas settings">{settings}</section>}
       </div>
     </main>
     </div> : <CompositionIndex items={items} selected={selected} model={model} profile={profile} listRef={list} settings={settings} disabled={Boolean(editing)}
-      onSelect={preview} onEdit={onEdit ? id => run(() => onEdit(id)) : undefined} onOpenReception={onOpenReception}
+      onSelect={preview} onEdit={onEdit ? id => run(() => onEdit(id)) : undefined} onOpenReception={onOpenReception} onEditReception={onEditReception}
       onGrid={() => onViewChange({ ...view, layout: 'grid' })}
       onDetails={onSave ? event => manage(selected.id, 'details', event.currentTarget) : undefined}
       onCreate={onCreate ? event => { returnFocus.current = event.currentTarget; setEditing('new'); } : undefined} />}

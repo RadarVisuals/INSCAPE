@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test, { afterEach, beforeEach } from 'node:test';
 import { encodeDataSourceWithHash } from '@erc725/erc725.js';
-import { chillwhalesProfileRepository } from '../data/chillwhalesProfileRepository.js';
+import { luksoEnvioProfileRepository } from '../data/luksoEnvioProfileRepository.js';
 import { createLuksoRpcProfileRepository, luksoRpcProfileRepository } from '../data/luksoRpcProfileRepository.js';
 import { loadLibraryAssetCache, saveLibraryAssetCache } from '../storage/libraryAssetCache.js';
 import { resetLibraryStoreForTests, useLibraryStore } from './useLibraryStore.js';
@@ -21,7 +21,7 @@ const memoryStorage = () => {
   const values = new Map();
   return { getItem: (key) => values.get(key) ?? null, setItem: (key, value) => values.set(key, value) };
 };
-const originalIndexer = chillwhalesProfileRepository.loadProfileAssets;
+const originalIndexer = luksoEnvioProfileRepository.loadProfileAssets;
 const originalRpc = luksoRpcProfileRepository.loadProfileAssets;
 
 const repairedAsset = (suffix = '2') => ({ ...knownAsset(),
@@ -29,17 +29,17 @@ const repairedAsset = (suffix = '2') => ({ ...knownAsset(),
   name: `Recovered ${suffix}`, imageUrl: `https://assets.example/recovered-${suffix}.webp`,
 });
 function indexedMissing(assets, missing) {
-  chillwhalesProfileRepository.loadProfileAssets = async function* () {
+  luksoEnvioProfileRepository.loadProfileAssets = async function* () {
     yield { assets, unresolvedAssetIds: missing.map(({ id }) => id), failures: missing.length,
       resolved: assets.length + missing.length, total: assets.length + missing.length, complete: true };
   };
 }
 
 beforeEach(() => {
-  chillwhalesProfileRepository.loadProfileAssets = async function* () { throw new Error('Indexer unavailable'); };
+  luksoEnvioProfileRepository.loadProfileAssets = async function* () { throw new Error('Indexer unavailable'); };
 });
 afterEach(() => {
-  chillwhalesProfileRepository.loadProfileAssets = originalIndexer;
+  luksoEnvioProfileRepository.loadProfileAssets = originalIndexer;
   luksoRpcProfileRepository.loadProfileAssets = originalRpc;
   resetLibraryStoreForTests(PROFILE, memoryStorage());
 });
@@ -109,7 +109,7 @@ test('a source ending without a complete batch cannot report a successful refres
     const storage = memoryStorage();
     const known = retained ? seedKnownInventory(storage) : null;
     if (!retained) resetLibraryStoreForTests(PROFILE, storage);
-    chillwhalesProfileRepository.loadProfileAssets = async function* () {
+    luksoEnvioProfileRepository.loadProfileAssets = async function* () {
       yield { assets: [], failures: 0, resolved: 0, total: 1, complete: false };
     };
     luksoRpcProfileRepository.loadProfileAssets = async function* () {};
@@ -255,7 +255,7 @@ test('a successful repair arriving after a profile switch cannot clear or replac
 test('metadata updates survive subsequent pages and successful cache replacement', async () => {
   const storage = memoryStorage(); resetLibraryStoreForTests(PROFILE, storage);
   const first = knownAsset(), second = repairedAsset('3');
-  chillwhalesProfileRepository.loadProfileAssets = async function* () {
+  luksoEnvioProfileRepository.loadProfileAssets = async function* () {
     yield { assets: [first], failures: 0, resolved: 1, total: 2, complete: false };
     yield { assets: [second], failures: 0, resolved: 2, total: 2, complete: true };
   };
@@ -266,11 +266,44 @@ test('metadata updates survive subsequent pages and successful cache replacement
   assert.equal(loadLibraryAssetCache(storage, PROFILE)[0].name, 'Updated token');
 });
 
+for (const timing of ['before refresh', 'while inventory is pending', 'while a category reference is pending']) {
+  test(`direct token images survive a partial indexer record arriving ${timing}`, async () => {
+    const storage = memoryStorage(); resetLibraryStoreForTests(PROFILE, storage);
+    const tokenId = `0x${'0'.repeat(63)}1`;
+    const indexed = { ...knownAsset(), id: `42:${KNOWN_CONTRACT}:${tokenId}`, standard: 'LSP8', tokenId,
+      imageGroups: [{ index: 0, imageUrl: 'https://assets.example/one-attachment.svg' }] };
+    useLibraryStore.setState({ assets: [indexed] });
+    let release; const gate = new Promise(resolve => { release = resolve; });
+    luksoEnvioProfileRepository.loadProfileAssets = async function* () {
+      await gate;
+      yield { assets: [{ ...indexed, name: 'Current inventory name', rawMetadata: { balance: '1' } }],
+        complete: true, resolved: 1, total: 1, failures: 0 };
+    };
+    const direct = { id: indexed.id, imageUrl: 'https://assets.example/resident-zero.webp',
+      originalImageUrl: 'https://assets.example/resident-zero.webp',
+      imageGroups: Array.from({ length: 12 }, (_, index) => ({ index, imageUrl: `https://assets.example/image-${index}.webp` })),
+      fieldProvenance: { images: { scope: 'tokenId', source: 'LSP4MetadataForTokenId (DIRECT LUKSO RPC)' } } };
+    if (timing === 'before refresh') useLibraryStore.getState().updateMetadata([direct]);
+    const reference = timing === 'while a category reference is pending';
+    const pending = reference ? useLibraryStore.getState().loadReferencedAssets([indexed.id]) : useLibraryStore.getState().load();
+    if (timing !== 'before refresh') useLibraryStore.getState().updateMetadata([direct]);
+    release(); await pending;
+    const actual = useLibraryStore.getState()[reference ? 'referencedAssets' : 'assets'][0];
+    assert.equal(actual.imageUrl, direct.imageUrl);
+    assert.deepEqual(actual.imageGroups, direct.imageGroups);
+    assert.equal(actual.name, 'Current inventory name');
+    assert.equal(actual.rawMetadata.balance, '1');
+    assert.equal(loadLibraryAssetCache(storage, PROFILE)[0].imageUrl, direct.imageUrl);
+    useLibraryStore.getState().updateMetadata([{ ...direct, imageUrl: null, imageGroups: [] }]);
+    assert.deepEqual(useLibraryStore.getState().assets[0].imageGroups, [], 'a later direct read can remove obsolete images');
+  });
+}
+
 test('healthy pages can take longer than eight seconds in total without invoking RPC fallback', async (t) => {
   t.mock.timers.enable({ apis: ['setTimeout'] });
   const releases = [];
   let rpcCalls = 0, sourceSignal;
-  chillwhalesProfileRepository.loadProfileAssets = async function* (_profile, { signal }) {
+  luksoEnvioProfileRepository.loadProfileAssets = async function* (_profile, { signal }) {
     sourceSignal = signal;
     for (let page = 0; page < 3; page++) {
       await new Promise(resolve => releases.push(resolve));
@@ -299,7 +332,7 @@ test('healthy pages can take longer than eight seconds in total without invoking
 test('a stalled next page still times out and invokes the existing fallback', async (t) => {
   t.mock.timers.enable({ apis: ['setTimeout'] });
   let rpcCalls = 0, sourceSignal;
-  chillwhalesProfileRepository.loadProfileAssets = async function* (_profile, { signal }) {
+  luksoEnvioProfileRepository.loadProfileAssets = async function* (_profile, { signal }) {
     sourceSignal = signal;
     yield { assets: [knownAsset()], resolved: 1, total: 2, failures: 0, complete: false };
     await new Promise((_resolve, reject) => signal.addEventListener('abort',

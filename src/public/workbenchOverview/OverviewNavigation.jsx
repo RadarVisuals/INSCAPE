@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { UserRound, Plus, List, LayoutGrid, Repeat, GripVertical } from 'lucide-react';
 import { MAX_WORKBENCHES } from '../../systemWorkflow/domain/workbenchCollection.js';
 
-export default function OverviewNavigation({ profile, address, disabled, onAbout, onCanvases, view, onViewChange, count, onCreate, triggerRef, arranging, onArrange, cardSize, onCardSize }) {
+export default function OverviewNavigation({ profile, address, disabled, onAbout, onEditReception, onCanvases, view, onViewChange, count, onCreate, triggerRef, arranging, onArrange, cardSize, onCardSize }) {
   const [avatarFailed, setAvatarFailed] = useState(false), [open, setOpen] = useState(false);
   const root = useRef(null);
   useEffect(() => { setAvatarFailed(false); }, [profile?.avatarUrl]);
@@ -27,6 +27,7 @@ export default function OverviewNavigation({ profile, address, disabled, onAbout
     </div>
     <nav aria-label="Inscape navigation">
       {onAbout && <button type="button" onClick={() => go(onAbout)}>About</button>}
+      {onEditReception && <button type="button" onClick={() => go(onEditReception)}>Edit Reception</button>}
       <button type="button" aria-current="page" onClick={() => go(onCanvases)}>Canvases</button>
     </nav>
     <div className="workbench-overview-view-controls" role="group" aria-label="Overview layout">
@@ -40,8 +41,8 @@ export default function OverviewNavigation({ profile, address, disabled, onAbout
         onChange={event => onCardSize(Number(event.target.value))} /><span>{['Small', 'Medium', 'Large'][cardSize - 1]}</span></label>
       {onArrange && <button type="button" aria-pressed={arranging} disabled={count < 2} onClick={() => go(onArrange)}><GripVertical size={16} />{arranging ? 'Finish arranging' : 'Arrange canvases'}</button>}
     </div>}
-    {onCreate && <button className="workbench-overview-menu-create" type="button" disabled={count >= MAX_WORKBENCHES} onClick={() => go(onCreate)}><Plus size={16} />New Workbench</button>}
-    {onCreate && count >= MAX_WORKBENCHES && <small>All {MAX_WORKBENCHES} local Workbenches are in use.</small>}
+    {onCreate && <button className="workbench-overview-menu-create" type="button" disabled={count >= MAX_WORKBENCHES} onClick={() => go(onCreate)}><Plus size={16} />New canvas</button>}
+    {onCreate && count >= MAX_WORKBENCHES && <small>All {MAX_WORKBENCHES} local canvases are in use.</small>}
     </section></div>
     <button ref={triggerRef} className="workbench-overview-menu-trigger" type="button" disabled={disabled} aria-label="Inscape menu" aria-expanded={open}
       onClick={() => setOpen(!open)}><span>INSCAPE</span><span className="workbench-overview-menu-icon" aria-hidden="true"><i /><i /></span></button>

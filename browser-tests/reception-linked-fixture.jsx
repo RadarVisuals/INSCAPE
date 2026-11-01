@@ -4,7 +4,7 @@ import { createEmptySystemWorkflowDraft } from '../src/systemWorkflow/domain/sys
 import { createWorkbenchCollection, appendWorkbench } from '../src/systemWorkflow/domain/workbenchCollection.js';
 import { createSystemWorkflowDraftStore, systemWorkflowDraftKey } from '../src/systemWorkflow/systemWorkflowDraftStore.js';
 import { createReception } from '../src/profileDocument/domain/receptionPresentation.js';
-import { placeReceptionLink } from '../src/reception/receptionSession.js';
+import { placeReceptionLink } from './fixtures/reception-v2.js';
 import { splitReception } from '../src/reception/receptionLayout.js';
 import { createArticle } from '../src/text/domain/article.js';
 import { createProfileDocumentV9AssetResolver } from '../src/profileDocument/domain/profileDocumentV9Asset.js';
@@ -17,7 +17,7 @@ import ReceptionOverview from '../src/reception/ReceptionOverview.jsx';
 import PublishedCanvasGallery from '../src/profileDocument/components/PublishedCanvasGallery.jsx';
 import WorkbenchOverview from '../src/public/workbenchOverview/WorkbenchOverview.jsx';
 import { workbenchOverviewModel } from '../src/public/workbenchOverview/workbenchOverviewModel.js';
-import ReceptionStoreEditor from '../src/reception/ReceptionStoreEditor.jsx';
+import OwnerSystemWorkflowRuntime from '../src/public/ownerSystemWorkflow/OwnerSystemWorkflowRuntime.jsx';
 import '../src/index.css';
 
 const profileAddress = '0x' + '1'.repeat(40), draft = createEmptySystemWorkflowDraft(profileAddress, { generateId: () => 'first' });
@@ -80,7 +80,9 @@ function App() {
   if (surface === 'canvases') return publicView ? <PublishedCanvasGallery document={publish()} onAbout={() => setSurface('reception')} />
     : <WorkbenchOverview items={previews} previews={previews} selected={selected} model={selected.model} profile={reviewProfile}
       onSelect={select} view={view} onViewChange={setView} cardSize={cardSize} onCardSize={setCardSize} onOpenReception={() => setSurface('reception')} />;
-  return surface === 'edit' ? <ReceptionStoreEditor rootStore={root} storage={storage} onClose={() => setSurface('reception')} onCanvases={() => setSurface('canvases')} reviewAssets={assets} reviewCategories={[]} reviewProfile={reviewProfile} />
+  return surface === 'edit' ? <OwnerSystemWorkflowRuntime profileAddress={profileAddress} rootStore={root} reviewStorage={storage}
+    receptionEditorRequested onOpenReception={() => setSurface('reception')}
+    reviewAssets={assets} reviewCategories={[]} reviewProfile={reviewProfile} />
     : <ReceptionOverview reception={root.getSnapshot().reception} model={model} address={profileAddress} snapshot={snapshot} assets={assetMap}
       onEdit={publicView ? undefined : () => setSurface('edit')} onOpenCanvas={() => setSurface('canvases')} />;
 }

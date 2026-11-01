@@ -66,6 +66,7 @@ export interface CommitOptions {
   historyLabel?: string;
   recordHistory?: boolean;
   historyPresentation?: WorkbenchPresentation;
+  historyReception?: unknown;
 }
 export interface RestoreOptions { expectedGeneration?: number; expectedFingerprint?: string }
 export type SaveResult = boolean;
@@ -94,6 +95,8 @@ export interface WorkbenchScope {
   undo(): SaveResult;
   redo(): SaveResult;
   commitCompletedOperation(candidate: WorkflowDraft, options?: CommitOptions): SaveResult;
+  /** Reception capability: new native layers and their cell membership commit together. Does not change editing focus. */
+  commitInCell?(cellId: ShapeId, candidate: WorkflowDraft, options?: CommitOptions): SaveResult;
   retryCompletedOperation(createCandidate: (draft: WorkflowDraft) => WorkflowDraft | null | false, options?: CommitOptions): SaveResult;
   restoreBackup(candidate: WorkbenchBackup, options?: RestoreOptions): SaveResult;
   createWorkbench(name: string, options?: { workbench?: WorkbenchPresentation; generateId?: () => string }): WorkbenchId | false;

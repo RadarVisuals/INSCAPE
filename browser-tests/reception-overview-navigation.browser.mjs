@@ -11,7 +11,7 @@ for (const width of [1920, 390]) test(`Reception review Canvases opens the exist
   const errors = []; page.on('pageerror', error => errors.push(error.message));
   await page.route('**/*', route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
   try {
-    await page.goto(`${origin}/browser-tests/reception-editor-fixture.html?sample&session=${crypto.randomUUID()}`);
+    await page.goto(`${origin}/browser-tests/reception-editor-fixture.html?sample&public&session=${crypto.randomUUID()}`);
     await page.getByRole('button', { name: 'Canvases', exact: true }).waitFor();
     const before = await page.evaluate(() => receptionFixture.root.getBackupSnapshot());
     await page.getByRole('button', { name: 'Canvases', exact: true }).click();
@@ -30,8 +30,6 @@ for (const width of [1920, 390]) test(`Reception review Canvases opens the exist
     await page.screenshot({ path: `${output}/review-overview-${width}.png` });
     await page.getByRole('button', { name: 'Inscape menu', exact: true }).click();
     await page.getByRole('button', { name: 'About', exact: true }).click();
-    await page.locator('[data-reception-editor]').waitFor();
-    await page.getByRole('button', { name: 'Done', exact: true }).click();
     await page.locator('.reception-page').waitFor();
     assert.equal(await page.locator('.reception-canvases, .canvas-gallery-section').count(), 0);
     await page.screenshot({ path: `${output}/review-reception-${width}.png` });

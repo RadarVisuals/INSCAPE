@@ -53,6 +53,10 @@ export default function useApplicationNavigation(authority) {
     const normalized = normalizeProfileAddress(address);
     if (normalized) navigate({ kind: 'profile', address: normalized, reception: true });
   }, [navigate]);
+  const editReception = useCallback((address) => {
+    const normalized = normalizeProfileAddress(address);
+    if (normalized) navigate({ kind: 'profile', address: normalized, editor: 'reception' });
+  }, [navigate]);
   const openCanvas = useCallback((address, target) => {
     const normalized = normalizeProfileAddress(address);
     if (!normalized) return;
@@ -105,5 +109,5 @@ export default function useApplicationNavigation(authority) {
       if (success && current.current === origin && next !== origin) navigate(next, { replace: true });
     };
   }, [authority, navigate]);
-  return { route, destination, content, visitProfile, openReception, openCanvas, openWork, closeWork, openOverview, openDiscover, closeDiscover, beginSignIn, completeSignIn, beginDisconnect };
+  return { route, destination, content, visitProfile, openReception, editReception, openCanvas, openWork, closeWork, openOverview, openDiscover, closeDiscover, beginSignIn, completeSignIn, beginDisconnect };
 }

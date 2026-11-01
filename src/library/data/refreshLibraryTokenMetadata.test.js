@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { refreshLibraryTokenMetadata } from './refreshLibraryTokenMetadata.js';
 import { metadataImages } from './metadataImages.js';
-import { normalizeOwnedToken } from './chillwhalesProfileRepository.js';
+import { normalizeEnvioHolding } from './luksoEnvioProfileRepository.js';
 
 const contract = '0x1111111111111111111111111111111111111111';
 const token = (n) => ({ id: '42:' + contract + ':0x' + n.toString(16).padStart(64, '0'),
@@ -29,10 +29,10 @@ test('an updated SVG with a spaced filename stays available through direct refre
   assert.equal(fresh.ownerAddress, asset.ownerAddress);
   assert.deepEqual(fresh.creators, asset.creators);
   assert.deepEqual(asset, before, 'refresh must not rewrite an existing placement or cached input');
-  const indexed = normalizeOwnedToken({ address: contract, token_id: asset.tokenId,
-    digitalAsset: { address: contract, lsp4TokenType: { value: 'COLLECTION' } },
-    nft: { lsp4Metadata: { images: [{ image_index: 0, url: 'https://example.test/cover.webp', width: 640 }],
-      assets: [{ url: attachment.url, file_type: attachment.fileType }] } },
+  const indexed = normalizeEnvioHolding({ id: 'holding', profile_id: asset.ownerAddress, balance: '1', baseAsset_id: contract,
+    token_id: `${contract}-${asset.tokenId}`, baseAsset: { id: contract, lsp4TokenType: 2, isCollection: true },
+    token: { tokenId: asset.tokenId, baseAsset_id: contract,
+      images: [{ index: 0, url: 'https://example.test/cover.webp', width: 640 }], assets: [attachment] },
   }, asset.ownerAddress);
   assert.deepEqual(indexed.imageGroups, fresh.imageGroups, 'both metadata paths use the same URL interpretation');
 });

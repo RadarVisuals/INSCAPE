@@ -34,6 +34,7 @@ const TextInstance = memo(function TextInstance({ record, index, store, profileA
   const onActivate = useCallback(() => activateModule(record.id), [activateModule, record.id]);
   const { bounds: areaBounds } = useWorkbenchArea();
   const workbenchView = useWorkbenchView();
+  const reception = store?.getWorkbenchId?.() === 'reception';
   const view = workbenchModuleTransform(workbenchView, record.id);
   const { offset } = useWorkbenchCamera();
   const scope = textRecoveryScope(profileAddress, record.id);
@@ -89,7 +90,7 @@ const TextInstance = memo(function TextInstance({ record, index, store, profileA
   useEffect(() => { setColourTarget('default'); setColourPreview(null); }, [gridId]);
   const sharedColour = useWorkbenchToolSource(record.id, { color: <Suspense fallback={<p>Opening Color…</p>}>
     <TextColourTools key={gridId || 'article'} article={sectionLink ? working.article : savedArticle} editor={colourEditor} target={colourTarget} onTarget={setColourTarget}
-      store={store} disabled={editBlocked || failed || !presentation.open} error={error} onRecovery={() => setSettings(true)} onChange={changeArticle}
+      store={store} scopeKey={`${profileAddress}:${record.id}:${gridId || 'article'}`} disabled={editBlocked || failed || !presentation.open} error={error} onRecovery={() => setSettings(true)} onChange={changeArticle}
       onPreview={value => setColourPreview(value ? { source: working, gridId, article: value } : null)} />
   </Suspense> });
   const acceptImage = useCallback((asset, point) => {
@@ -128,7 +129,7 @@ const TextInstance = memo(function TextInstance({ record, index, store, profileA
   }, [store, profileAddress, editBlocked, failed, working, record, applyGroupFrame, setError]);
   const name = article.title || 'Untitled article';
   const changeFrames = frames => {
-    if (editBlocked || failed) return;
+    if (reception || editBlocked || failed) return;
     try { setPresentation(changeTextFrames(store, profileAddress, edit.getSnapshot().record, presentation, frames, workbenchView.getPresentation?.())); setError(''); return true; }
     catch (error) { setError(error.message); return false; }
   };
@@ -144,6 +145,7 @@ const TextInstance = memo(function TextInstance({ record, index, store, profileA
   const close = () => { if (failed) { setSettings(true); return; } setPresentation(p => ({ ...p, open: false })); queueMicrotask(() => shortcut.current?.focus()); };
   const closeTools = () => { setSettings(false); queueMicrotask(() => toolsTrigger.current?.focus()); };
   const moveInto = preview => {
+    if (reception) throw new Error('Reception Text stays inside Reception.');
     if (!preview?.target?.isCurrent()) throw new Error('Choose an open, unlocked Display.');
     if (!change(edit.getSnapshot().value, { retry: true })) return;
     preview.target.attachText(edit.getSnapshot().record, { ...preview, cellSize: preview.cellSize / view.scale });
@@ -169,11 +171,11 @@ const TextInstance = memo(function TextInstance({ record, index, store, profileA
       moveFromContent={mode === 'read' && !suspended}
       controls={<>{store && !view.presented && <><button type="button" className="text-window-control" aria-label={mode === 'write' ? 'Read' : 'Write'} title={mode === 'write' ? 'Read' : 'Write'}
           onClick={() => { const next = mode === 'write' ? 'read' : 'write'; setMode(next); setSettings(next === 'write' || failed); }}>{mode === 'write' ? <Eye /> : <Pencil />}</button>
-        <TextMoveHandle className="text-window-control" label="Drag Text into Display" disabled={suspended || linked || Boolean(working.sceneLink)} previewAt={(point, rectangle) => placementTargets?.current?.previewTextAt?.(point, rectangle)}
-          onDrop={preview => { if (preview) moveInto(preview); }} onKeyboardMove={() => setSettings(true)} onError={setError} />
+        {!reception && <TextMoveHandle className="text-window-control" label="Drag Text into Display" disabled={suspended || linked || Boolean(working.sceneLink)} previewAt={(point, rectangle) => placementTargets?.current?.previewTextAt?.(point, rectangle)}
+          onDrop={preview => { if (preview) moveInto(preview); }} onKeyboardMove={() => setSettings(true)} onError={setError} />}
         <button ref={toolsTrigger} type="button" className="text-window-control" aria-label="Text tools" title="Text tools" aria-expanded={settings} onClick={() => { if (!settings) setMode('write'); setSettings(!settings); }}><Settings /></button>
-        <button className="text-window-control" type="button" aria-label="Add linked Text frame" title={working.sceneLink || working.pagination ? 'Unlink Follow Display and turn off Read as pages first' : 'Add linked frame'}
-          disabled={editBlocked || failed || Boolean(working.sceneLink || working.pagination) || flow.ranges.length >= 8} onClick={() => addFrame(record.id)}><Plus /></button>
+        {!reception && <button className="text-window-control" type="button" aria-label="Add linked Text frame" title={working.sceneLink || working.pagination ? 'Unlink Follow Display and turn off Read as pages first' : 'Add linked frame'}
+          disabled={editBlocked || failed || Boolean(working.sceneLink || working.pagination) || flow.ranges.length >= 8} onClick={() => addFrame(record.id)}><Plus /></button>}
         {error && <button type="button" className="text-save-error" aria-label="Text not saved — open recovery" onClick={() => setSettings(true)}>!</button>}</>}
         <button type="button" className="text-window-control" aria-label={`Close ${name}`} onClick={close}><X /></button></>}>
       <div className="text-module-body" ref={surface} style={textOutputStyle(article, view.frame || presentation.window)}>
@@ -201,7 +203,7 @@ const TextInstance = memo(function TextInstance({ record, index, store, profileA
         {failed && <button type="button" onClick={() => change(edit.getSnapshot().value, { retry: true })}>Retry local save</button>}
         {reason === 'conflict' && <button type="button" onClick={() => change(edit.getSnapshot().value, { retry: true, replace: true })}>Replace saved Text with my edits</button>}
       </div> : <p className="text-save-summary" role="status">Saved in this browser</p>}
-      connection={linked ? <p>This article flows through {flow.ranges.length} linked frames. Remove the continuation frames to use Follow Display or move into Display. The full text is kept.</p> : <>
+      connection={!reception && (linked ? <p>This article flows through {flow.ranges.length} linked frames. Remove the continuation frames to use Follow Display or move into Display. The full text is kept.</p> : <>
       {!working.sceneLink ? <><div className="text-connection-target"><label>Follow Display<select aria-label="Follow Display" value={linkTarget} onChange={e => setLinkTarget(e.target.value)}>
         <option value="">Choose a Display…</option>{displays.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
       </select></label><button type="button" aria-label="Link Text to Display" disabled={!scenes[linkTarget]?.gridId || failed} onClick={() => {
@@ -219,13 +221,13 @@ const TextInstance = memo(function TextInstance({ record, index, store, profileA
         const next = { ...edit.getSnapshot().value, sceneLink: { mode: 'sections', displayId: working.sceneLink.displayId } };
         delete next.pagination; change(next);
       }}>Use article page breaks for Grids</button>}
-      </>}
-      readOptions={!linked && !sectionLink && <label className="text-visibility text-settings-wide"><input type="checkbox" checked={working.pagination === 'pages'} onChange={e => {
+      </>)}
+      readOptions={!reception && !linked && !sectionLink && <label className="text-visibility text-settings-wide"><input type="checkbox" checked={working.pagination === 'pages'} onChange={e => {
         const next = { ...edit.getSnapshot().value }; if (e.target.checked) next.pagination = 'pages'; else delete next.pagination; change(next);
       }} />Read as pages</label>}
-      publication={<label className="text-visibility"><input type="checkbox" checked={working.visibility === 'PUBLIC'} onChange={e => change({ ...edit.getSnapshot().value, visibility: e.target.checked ? 'PUBLIC' : 'PRIVATE' })} />Include in Workbench publication</label>}>
+      publication={<label className="text-visibility"><input type="checkbox" checked={working.visibility === 'PUBLIC'} onChange={e => change({ ...edit.getSnapshot().value, visibility: e.target.checked ? 'PUBLIC' : 'PRIVATE' })} />{reception ? 'Include in Reception' : 'Include in Workbench publication'}</label>}>
 
-      {!linked && !working.sceneLink && destinations.length > 0 && <details className="text-tools-transfer text-settings-wide"><summary>Move into Display</summary><label>Destination<select aria-label="Text destination" value={destination} onChange={e => setDestination(e.target.value)}>
+      {!reception && !linked && !working.sceneLink && destinations.length > 0 && <details className="text-tools-transfer text-settings-wide"><summary>Move into Display</summary><label>Destination<select aria-label="Text destination" value={destination} onChange={e => setDestination(e.target.value)}>
         <option value="">Choose a Display…</option>{destinations.map(target => <option key={target.id} value={target.id}>{target.label}</option>)}</select></label>
         <button type="button" disabled={!destination} onClick={() => {
           try {

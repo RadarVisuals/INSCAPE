@@ -478,7 +478,7 @@ export const components = [
     source: 'src/profileDocument/components/ProfileOverview.jsx',
     contract:
       'One region renderer for public reading and a separate owner editor. Reception owns geometry, mobile order, surfaces and canonical Image/Text records. Workbench and Reception share movable/resizable ToolPanel windows and Library drag operation; window frames remain private preferences. Navigation clips the same surface/media silhouette. Multi-object cells are an isolated development experiment, not production data. Canvases and exploration retain their existing routes.',
-    evidence: 'browser-tests/reception-editor.browser.mjs',
+    evidence: 'browser-tests/reception-native-editor.browser.mjs',
     status: 'Production',
   },
   {

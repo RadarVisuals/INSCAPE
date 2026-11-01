@@ -1,11 +1,13 @@
-import { lazy, Suspense, useLayoutEffect, useState, useSyncExternalStore } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { beforeProfileEditorRelease } from '../../systemWorkflow/profileEditorLease.js';
 import { SceneNavigationProvider } from '../../text/SceneNavigation.jsx';
 import { createSystemWorkflowDraftStore } from '../../systemWorkflow/systemWorkflowDraftStore.js';
 import { createEditorPreferencesStore } from './editorPreferencesStore.js';
 import { createWorkbenchPreferencesStore } from './workbenchPreferences.js';
+import { createReceptionEditorScope } from '../../reception/receptionEditorScope.js';
+import WorkbenchBackupControls from '../../systemWorkflow/WorkbenchBackupControls.jsx';
+import { workbenchSaveError } from './namedWorkbenchActions.js';
 const OwnerWorkbenchOverview = lazy(() => import('../workbenchOverview/OwnerWorkbenchOverview.jsx'));
-const ReceptionStoreEditor = lazy(() => import('../../reception/ReceptionStoreEditor.jsx'));
 
 // Replacing a profile, restored backup or active composition remounts its editor.
 export default function OwnerWorkbenchSession({ component: Session, ...props }) {
@@ -22,16 +24,16 @@ export default function OwnerWorkbenchSession({ component: Session, ...props }) 
   );
 }
 
-function LocalWorkbenchSession({ component: Session, ...props }) {
+function LocalWorkbenchSession({ component: Session, rootStore, ...props }) {
   const [overview, setOverview] = useState(props.canvasOverviewRequested === true);
-  const [reception, setReception] = useState(false);
+  const [reception, setReception] = useState(null);
+  const [openingError, setOpeningError] = useState(null);
+  const appliedRequest = useRef(null);
+  const request = props.receptionEditorRequested ? 'reception' : props.canvasOverviewRequested ? 'overview' : 'canvas';
+  const [readyRequest, setReadyRequest] = useState(null);
   const [overviewView, setOverviewView] = useState(() => ({ layout: props.canvasOverviewRequested && innerWidth < 900 ? 'grid' : 'list', wrap: true }));
-  useLayoutEffect(() => {
-    setOverview(props.canvasOverviewRequested === true);
-    setReception(false);
-  }, [props.canvasOverviewRequested]);
   const [store] = useState(() =>
-    createSystemWorkflowDraftStore({
+    rootStore || createSystemWorkflowDraftStore({
       profileAddress: props.profileAddress,
       storage: props.reviewStorage ?? globalThis.localStorage,
       requireEditor: true,
@@ -75,32 +77,81 @@ function LocalWorkbenchSession({ component: Session, ...props }) {
     };
   }, [editorPreferences, workbenchPreferenceStore, props.profileAddress]);
   const activation = useSyncExternalStore(store.subscribe, store.getActivation);
-  const content = useSyncExternalStore(store.subscribe, store.getSnapshot);
-  if (reception) return <Suspense fallback={<p role="status">Opening Reception…</p>}>
-    <ReceptionStoreEditor rootStore={store} editorPreferences={editorPreferences} onClose={() => setReception(false)} onCanvases={() => { setReception(false); setOverview(true); }}
-      reviewAssets={props.reviewAssets} reviewCategories={props.reviewCategories} reviewProfile={props.reviewProfile}
-      publishedDocument={props.publishedResolution?.document} storage={props.reviewStorage} />
-  </Suspense>;
-  if (overview) return <Suspense fallback={<p role="status">Opening Workbenches…</p>}>
+  const generation = useSyncExternalStore(store.subscribe, store.getGeneration);
+  const collection = useMemo(() => ({ kind: 'local', profileAddress: props.profileAddress, revision: 'editor', generation,
+    entries: store.listWorkbenches().map(item => store.readWorkbench(item.id)) }), [store, props.profileAddress, generation]);
+  const openReception = useCallback(() => {
+    if (!reception?.isCurrent()) setReception(createReceptionEditorScope(store));
+    setOpeningError(null); setOverview(false);
+  }, [reception, store]);
+  const openOverview = useCallback(() => {
+    reception?.release(); setReception(null); setOpeningError(null); setOverview(true);
+  }, [reception]);
+  const selectDocument = id => {
+    if (id === 'reception') openReception();
+    else {
+      if (!store.listWorkbenches().some(item => item.id === id)) throw new Error('This canvas is no longer available.');
+      const previous = reception?.isCurrent() ? reception : null;
+      previous?.release();
+      try {
+        if (!store.switchWorkbench(id)) throw workbenchSaveError(store);
+      } catch (error) {
+        if (previous) setReception(createReceptionEditorScope(store));
+        throw error;
+      }
+      setReception(null); setOverview(false); setOpeningError(null);
+    }
+    props.onEditorDocumentChange?.(id === 'reception' ? 'reception' : 'canvas');
+  };
+  // Routes request a document in this same session. Local selection and editing
+  // remain here; opening Reception never creates another editor/preferences host.
+  useEffect(() => {
+    if (appliedRequest.current === request) return;
+    appliedRequest.current = request;
+    try {
+      if (request === 'reception') openReception();
+      else if (request === 'overview') openOverview();
+      else {
+        reception?.release();
+        setReception(null); setOpeningError(null); setOverview(false);
+      }
+    } catch (error) { setOpeningError(error.message); }
+    setReadyRequest(request);
+  }, [request, reception, openReception, openOverview]);
+  useEffect(() => () => reception?.release({ force: true }), [reception]);
+  if (readyRequest !== request) return <p role="status">Opening Editor…</p>;
+  if (openingError) return <main className="public-shell"><p role="alert">{openingError}</p>
+    <WorkbenchBackupControls store={store} storage={props.reviewStorage ?? globalThis.localStorage} onRestored={props.onDraftRestored} />
+    <button type="button" onClick={openOverview}>My Inscape</button></main>;
+  if (overview) return <Suspense fallback={<p role="status">Opening My Inscape…</p>}>
     <OwnerWorkbenchOverview store={store} reviewAssets={props.reviewAssets} reviewProfile={props.reviewProfile}
       preferences={workbenchPreferenceStore}
       view={overviewView} onViewChange={setOverviewView}
-      onOpen={() => { setOverview(false); if (props.canvasOverviewRequested) props.onEnterMyWorld?.(); }} onOpenReception={props.onOpenReception} />
+      onOpen={() => { setOverview(false); props.onEditorDocumentChange?.('canvas'); }} onOpenReception={props.onOpenReception}
+      onEditReception={() => selectDocument('reception')} />
   </Suspense>;
+  const scope = reception?.isCurrent() ? reception : store.getWorkbenchScope();
   return (
-    <SceneNavigationProvider key={activation} scope={{ profileAddress: props.profileAddress, canvasId: store.getWorkbenchId(), revision: activation }} content={content}>
-      <Session
+    <EditorDocument key={activation} component={Session} scope={scope} revision={activation}
         {...props}
-        onOpenWorkbenchOverview={() => setOverview(true)}
-        onEditReception={() => setReception(true)}
+        onOpenWorkbenchOverview={openOverview}
+        onEditReception={() => selectDocument('reception')}
+        documentNavigation={{ items: store.listWorkbenches(), activeId: scope.getWorkbenchId(), select: selectDocument }}
+        reception={scope === reception ? { collection, backupControls: <WorkbenchBackupControls store={store}
+          storage={props.reviewStorage ?? globalThis.localStorage} onRestored={props.onDraftRestored} /> } : undefined}
         editorPreferences={editorPreferences}
         workbenchPreferenceStore={workbenchPreferenceStore}
-        sharedStore={store.getWorkbenchScope()}
         keeperDockPositions={keeperDockPositions}
         navigatorPosition={navigatorPosition}
         sidebarSession={sidebarSession}
         focusWorkbench={activation > 0}
       />
-    </SceneNavigationProvider>
   );
+}
+
+function EditorDocument({ component: Session, scope, revision, ...props }) {
+  const content = useSyncExternalStore(scope.subscribe, scope.getSnapshot);
+  return <SceneNavigationProvider scope={{ profileAddress: scope.getProfileAddress(), canvasId: scope.getWorkbenchId(), revision }} content={content}>
+    <Session {...props} sharedStore={scope} />
+  </SceneNavigationProvider>;
 }

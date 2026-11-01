@@ -1,8 +1,9 @@
-import { lazy, Suspense, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useLayoutEffect, useRef, useState } from 'react';
 import { UserRound } from 'lucide-react';
 import ImageArtwork from '../imageModule/ImageArtwork.jsx';
 import ArticleView from '../text/ArticleView.jsx';
 import IdentityPortrait from '../public/identity/IdentityPortrait.jsx';
+import ReceptionScene from './ReceptionScene.jsx';
 import { receptionPixelRect } from './receptionLayout.js';
 import '../imageModule/imageModule.css';
 import './reception.css';
@@ -30,7 +31,7 @@ export function ReceptionImage({ record, onRecoverFocus, decorative = false }) {
     <div ref={setRecoveryHost} className="reception-media-status" />
   </div>;
 }
-function ProfileContent({ kind, model, address }) {
+export function ReceptionProfileContent({ kind, model, address }) {
   const profile = model?.profile || {}, official = model?.officialProfile || {}, name = profile.displayName || official.name || 'Unnamed profile';
   if (kind === 'links') return <nav className="reception-profile-links" aria-label="Profile links">{(model?.links || []).map((link, index) =>
     <a key={link.id || index} href={link.url} target="_blank" rel="noreferrer">{link.title || link.label || 'Website'} ↗</a>)}</nav>;
@@ -41,13 +42,13 @@ function ProfileContent({ kind, model, address }) {
     ? <IdentityPortrait src={profile.avatarUrl} title={`${name} portrait`} /> : <UserRound aria-hidden="true" />}</div><h1>{name}</h1>
     <p>{profile.description}</p><a href={official.url || `https://universaleverything.io/${address}`} target="_blank" rel="noreferrer">Official Universal Profile · {official.name || address} ↗</a></div>;
 }
-export default function ReceptionCanvas({ reception, model, address, selected, onSelect, mode, renderText, renderEmpty, renderMoveHandle, splitHint, dragging, cropTarget, onCropStart, onCropKey, renderFrameTools, onSize, onOpenSource }) {
+export default function ReceptionCanvas({ reception, model, address, onOpenSource }) {
   const frame = useRef(null), size = useBounds(frame);
-  const mobile = mode === 'mobile' || mode !== 'desktop' && size.width <= 640;
+  const mobile = size.width <= 640;
   const order = mobile ? reception.mobile.map(m => reception.regions.find(r => r.id === m.id)) : reception.regions;
   const width = size.width, height = size.height;
-  useEffect(() => { onSize?.(size); }, [size, onSize]);
   const content = region => {
+    if (region.scene) return <ReceptionScene reception={reception} region={region} mobile={mobile} renderImage={record => <ReceptionImage record={record} />} />;
     const link = reception.links?.find(item => item.id === region.content);
     if (link) return <Suspense fallback={<p role="status">Opening linked content…</p>}><ReceptionLinkedContent link={link} onOpen={onOpenSource} /></Suspense>;
     const image = reception.imageModules.find(item => item.id === region.content);
@@ -56,9 +57,9 @@ export default function ReceptionCanvas({ reception, model, address, selected, o
       cell?.focus({ preventScroll: true });
     }} />;
     const text = reception.texts.find(item => item.id === region.content);
-    if (text) return renderText?.(text, region) || <ArticleView article={text.article} containerOwned />;
-    if (region.content) return <ProfileContent kind={region.content} model={model} address={address} />;
-    return onSelect && renderEmpty ? renderEmpty(region) : null;
+    if (text) return <ArticleView article={text.article} containerOwned />;
+    if (region.content) return <ReceptionProfileContent kind={region.content} model={model} address={address} />;
+    return null;
   };
   return <section className="reception-canvas" aria-label="Reception layout" data-mobile={mobile || undefined} ref={frame}
     style={{ '--reception-gutter': `${reception.gutter}px`, '--reception-radius': `${reception.radius}px`, background: reception.surface || undefined }}>
@@ -66,26 +67,18 @@ export default function ReceptionCanvas({ reception, model, address, selected, o
       {order.map((region, index) => {
         const mobileItem = reception.mobile.find(m => m.id === region.id), image = reception.imageModules.some(i => i.id === region.content);
         const text = reception.texts.some(item => item.id === region.content);
-        const rect = receptionPixelRect(region, width, height, reception.gutter), padding = image ? 0 : region.padding ?? (text ? 24 : reception.padding);
-        return <section key={region.id} className="reception-region" data-region-id={region.id} data-selected={selected === region.id || undefined}
-          data-dragging={dragging === region.id || undefined} data-image={image || undefined} data-text={text || undefined} data-linked={region.content?.startsWith('link:') || undefined} data-empty={!region.content || undefined}
-          aria-label={`Region ${index + 1}${region.content ? ` · ${region.content.split(':')[0]}` : ' · Empty'}`}
-          tabIndex={onSelect ? 0 : -1} onPointerDown={onSelect ? () => onSelect(region.id) : undefined}
-          onKeyDown={onSelect ? event => { if (event.target === event.currentTarget && ['Enter', ' '].includes(event.key)) { event.preventDefault(); onSelect(region.id); } } : undefined}
+        const rect = receptionPixelRect(region, width, height, reception.arrangement ? 0 : reception.gutter), padding = image || region.scene ? 0 : region.padding ?? (text ? 24 : reception.padding);
+        return <section key={region.id} className="reception-region" data-region-id={region.id}
+          data-image={image || undefined} data-text={text || undefined} data-scene={Boolean(region.scene) || undefined} data-linked={region.content?.startsWith('link:') || undefined} data-empty={!region.content && !region.scene?.placements.length || undefined}
+          aria-label={`Region ${index + 1}${region.scene ? ' · Layers' : region.content ? ` · ${region.content.split(':')[0]}` : ' · Empty'}`}
+          tabIndex={-1}
           style={{ ...(mobile ? { gridColumn: `span ${mobileItem.columns}`, minHeight: mobileItem.height } : { position: 'absolute', ...rect }),
             background: region.surface || reception.surface || undefined, padding,
             '--reception-align-x': { left: 'flex-start', center: 'center', right: 'flex-end' }[region.alignX],
             '--reception-align-y': { top: 'flex-start', center: 'center', bottom: 'flex-end' }[region.alignY] }}>
-          <div className="reception-region-content">{content(region)}
-            {cropTarget === region.id && <div className="reception-crop-target" role="group" aria-label="Reframe image" tabIndex={0}
-              onPointerDown={event => { event.stopPropagation(); onCropStart(event, event.currentTarget.parentElement); }}
-              onKeyDown={event => onCropKey(event, event.currentTarget.parentElement)} />}
-          </div>
-          {onSelect && selected === region.id && splitHint && <div className="reception-split-hint" data-axis={splitHint} aria-hidden="true" />}
-          {onSelect && selected === region.id && renderMoveHandle && <div className="reception-cell-handle workbench-tool-controls" data-window-chrome="flat" onPointerDown={event => event.stopPropagation()}>{renderMoveHandle()}</div>}
+          <div className="reception-region-content">{content(region)}</div>
         </section>;
       })}
     </div>
-    {renderFrameTools?.({ frame, width, height, mobile })}
   </section>;
 }

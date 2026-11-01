@@ -19,6 +19,22 @@ function fixture() {
 }
 const build = draft => buildProfileDocumentV9({ profileAddress: profile, systemWorkflowDraft: draft, assetRecords: [] });
 
+test('Text creation visibility is explicit and never changes previously private writing', () => {
+  const f = fixture();
+  const privateId = addTextModule(f.store, profile);
+  const original = structuredClone(f.store.getDraft().texts[0]);
+  assert.equal(original.visibility, 'PRIVATE', 'ordinary Editor creation remains private');
+  const includedId = addTextModule(f.store, profile, null, { visibility: 'PUBLIC' });
+  assert.equal(f.store.getDraft().texts.find(item => item.id === includedId).visibility, 'PUBLIC');
+  assert.deepEqual(f.store.getDraft().texts.find(item => item.id === privateId), original);
+  const included = f.store.getDraft().texts.find(item => item.id === includedId);
+  assert.equal(saveTextModule(f.store, profile, included, { ...included, visibility: 'PRIVATE' }), true);
+  addTextModule(f.store, profile, null, { visibility: 'PUBLIC' });
+  assert.equal(f.store.getDraft().texts.find(item => item.id === includedId).visibility, 'PRIVATE', 'explicitly hidden writing stays hidden after another creation');
+  const reloaded = createSystemWorkflowDraftStore({ profileAddress: profile, storage: f.storage }).getDraft();
+  assert.deepEqual(reloaded.texts, f.store.getDraft().texts);
+});
+
 test('editor link defaults save, publish and restore while legacy links remain unchanged', () => {
   for (const extra of [{}, { title: null, target: '_blank', rel: 'noopener noreferrer nofollow', class: null }]) {
     const f = fixture(); addTextModule(f.store, profile);

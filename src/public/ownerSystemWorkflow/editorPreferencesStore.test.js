@@ -13,8 +13,10 @@ test('editor preferences round-trip all dock panes, hidden tabs and profile-leve
   store.tools.change({ type: 'close', tab: 'FX' });
   store.section('library').update(current => ({ ...current, sort: 'title-desc', query: 'moon', assetSize: 240, hideLabels: true, libraryWidth: 520, relationshipView: 'created', collapsedSections: ['section:one'], view: { kind: 'category', id: 'category:one' }, collection: 'Studies', sidebarWidth: 220 }));
   store.ref('navigator').current = { left: 300, top: 500 };
+  store.section('switcher').update({ left: 440, top: 280 });
   store.ref('keeper').current = { 'keeper:one': { left: 510, top: 500 } };
   store.section('textFrame').update({ left: 80, top: 70, width: 420, height: 610 });
+  store.section('libraryWindow').update({ detached: true, frame: { left: 300, top: 120, width: 540, height: 600 } });
   store.section('textOpen').update(true); store.section('textSection').update('article');
   const expected = store.getSnapshot(); store.dispose();
   const restored = make(disk);
@@ -22,6 +24,19 @@ test('editor preferences round-trip all dock panes, hidden tabs and profile-leve
   assert.deepEqual(restored.getSnapshot().docks.hidden, ['FX']);
   assert.equal(restored.tools.infoVisible(), true);
   assert.equal(make(disk, 'bob').getSnapshot().library.query, '', 'profiles cannot share preferences');
+  assert.equal(make(disk, 'bob').getSnapshot().libraryWindow, null, 'floating Library belongs to its profile');
+  restored.dispose();
+});
+test('Library window rejects invalid frames and docking retains its last floating geometry', () => {
+  const disk = storage(), store = make(disk), window = store.section('libraryWindow');
+  const frame = { left: 300, top: 100, width: 500, height: 600 };
+  window.update({ detached: true, frame });
+  window.update({ detached: true, frame: { ...frame, width: Infinity } });
+  assert.deepEqual(window.getSnapshot(), { detached: true, frame });
+  window.update(current => ({ ...current, detached: false }));
+  store.dispose();
+  const restored = make(disk);
+  assert.deepEqual(restored.section('libraryWindow').getSnapshot(), { detached: false, frame });
   restored.dispose();
 });
 test('invalid saved docks are retained and cannot overwrite until explicit retry', () => {

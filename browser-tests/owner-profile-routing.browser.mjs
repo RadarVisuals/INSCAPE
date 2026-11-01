@@ -246,7 +246,7 @@ describe('owner/viewed-profile routing through the real App', { concurrency: fal
       isWalletConnected: true, isHostProfileOwner: true });
     await setUrl('');
     await waitForOwnerShell('Owner before reception');
-    const back = () => page.getByRole('button', { name: 'Back to my Workbench', exact: true });
+    const back = () => page.getByRole('button', { name: 'Back to Editor', exact: true });
     const openReception = async () => {
       await page.getByRole('button', { name: 'Profile', exact: true }).click();
       const entry = page.getByRole('button', { name: 'View my reception', exact: true });

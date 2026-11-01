@@ -206,6 +206,7 @@ function App() {
             : localOwnerRoute ? !ownerSourceReady ? <div className="mode-loading" role="status">Resolving owner workspace...</div> : <OwnerRuntimeBoundary
             ownerAuthoringEnabled={ownerAuthoringEnabled}
             canvasOverviewRequested={content.canvas === true}
+            receptionEditorRequested={content.receptionEditorRequested === true}
             workspaceProfileAddress={connectedWorkspaceProfileAddress}
             getWalletPublicationContext={getWalletPublicationContext}
             visitorWalletConnected={visitorWalletConnected}
@@ -213,6 +214,8 @@ function App() {
             onVisitProfile={visitProfile}
             onOpenDiscover={navigation.openDiscover}
             onOpenReception={() => navigation.openReception(viewedProfileAddress)}
+            onEditorDocumentChange={kind => kind === 'reception'
+              ? navigation.editReception(viewedProfileAddress) : enterConnectedWorld()}
             connectedProfile={connectedProfile}
             onConnect={requestStandaloneSignIn}
             onDisconnect={disconnectStandalone}
@@ -228,6 +231,7 @@ function App() {
             onRetry={retryPublishedProfile}
             returnProfileAddress={verifiedOwnerProfileAddress}
             onReturnToWorkbench={ownershipVerified && authorityLifecycleStatus === 'complete' ? enterConnectedWorld : undefined}
+            onEditReception={() => navigation.editReception(viewedProfileAddress)}
             onOpenDiscover={navigation.openDiscover} onVisitProfile={visitProfile}
             entry={{ surface: content.canvas ? 'canvas' : 'overview', target: content.target, reception: content.reception }}
             onOpenCanvas={() => navigation.openCanvas(viewedProfileAddress)}

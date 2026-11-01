@@ -13,6 +13,23 @@ export function mergeAssetMetadata(assets, updates) {
   });
 }
 
+// Indexer discovery can finish after a direct token read, or run again when
+// Library reopens. Keep that resolved media until another direct read replaces
+// it; inventory membership, holding evidence and other indexed fields stay new.
+export function retainResolvedTokenMedia(incoming, retained) {
+  const direct = asset => asset?.fieldProvenance?.images?.scope === 'tokenId'
+    && asset.fieldProvenance.images.source?.includes('(DIRECT LUKSO RPC)');
+  const byId = new Map(retained.filter(direct).map(asset => [asset.id, asset]));
+  return incoming.map(asset => {
+    const known = byId.get(asset.id);
+    if (!known || direct(asset)) return asset;
+    return { ...asset, ...Object.fromEntries(['imageUrl', 'thumbnailUrl', 'originalImageUrl',
+      'imageWidth', 'imageHeight', 'mediaFileType', 'imageGroups'].filter(key => key in known).map(key => [key, known[key]])),
+      fieldProvenance: { ...asset.fieldProvenance, images: known.fieldProvenance.images },
+      rawMetadata: { ...asset.rawMetadata, originalImageUrl: known.originalImageUrl } };
+  });
+}
+
 // One demand list across Owned, Created and collection records. Selected IDs go
 // first. Only a small active batch and the current visible cards can be fetched.
 export function createLibraryMetadataDemand({ onBatch, onError = () => {}, refresh = refreshLibraryTokenMetadata, now = Date.now }) {

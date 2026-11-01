@@ -43,7 +43,7 @@ test('Color pointer gestures have no focus box; keyboard focus and cancellation 
         assert.deepEqual(await focusPaint(wheel), noPointerOutline, 'dragging paints no browser or keyboard focus frame');
         await page.keyboard.press('Escape'); await page.mouse.up();
         assert.equal(await page.evaluate(() => window.savedDraft().shapes[0].color), before, 'Escape still cancels the pointer color preview');
-        await hex.focus(); await hex.press('Tab');
+        await hex.focus(); await hex.press('Shift+Tab'); await page.keyboard.press('Shift+Tab');
         assert.equal(await hue.evaluate(node => document.activeElement === node), true);
         assert.equal((await focusPaint(wheel)).wheel, 'solid', 'Tab reveals the keyboard indicator');
         if (mode === 'triangle') await page.keyboard.press('Tab');
@@ -53,7 +53,7 @@ test('Color pointer gestures have no focus box; keyboard focus and cancellation 
         await pointer(mode); await page.mouse.up();
         assert.deepEqual(await focusPaint(wheel), noPointerOutline, 'switching the same focused control to mouse clears keyboard paint');
       }
-      await hex.focus(); await hex.press('Tab');
+      await hex.focus(); await hex.press('Shift+Tab'); await page.keyboard.press('Shift+Tab');
       await page.emulateMedia({ forcedColors: 'active' });
       assert.equal((await focusPaint(wheel)).wheel, 'solid');
       assert.deepEqual(errors, []);

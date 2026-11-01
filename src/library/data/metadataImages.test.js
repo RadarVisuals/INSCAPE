@@ -2,7 +2,17 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { metadataImages } from './metadataImages.js';
 import { selectImageGroups } from './resolveContentUrl.js';
-import { normalizeOwnedToken } from './chillwhalesProfileRepository.js';
+import { normalizeEnvioHolding } from './luksoEnvioProfileRepository.js';
+
+const profile = '0x1111111111111111111111111111111111111111';
+const contract = '0x2222222222222222222222222222222222222222';
+function indexedToken(number, metadata) {
+  const tokenId = '0x' + number.toString(16).padStart(64, '0');
+  return normalizeEnvioHolding({ id: `holding-${number}`, profile_id: profile, balance: '1', baseAsset_id: contract,
+    token_id: `${contract}-${tokenId}`, baseAsset: { id: contract, lsp4TokenType: 2, isCollection: true },
+    token: { tokenId, baseAsset_id: contract, ...metadata },
+  }, profile);
+}
 
 test('keeps image resolutions together and exposes attached images beside the main preview', () => {
   const images = metadataImages({ images: [[
@@ -21,12 +31,9 @@ test('keeps image resolutions together and exposes attached images beside the ma
 });
 
 test('indexer token normalization preserves attachments even with a normal main image', () => {
-  const asset = normalizeOwnedToken({ address: '0x2222222222222222222222222222222222222222', token_id: '0x01',
-    digitalAsset: { address: '0x2222222222222222222222222222222222222222', lsp4TokenType: { value: 'COLLECTION' } },
-    nft: { lsp4Metadata: { images: [{ image_index: 0, url: 'https://art.test/main.png', width: 1200 }],
-      assets: [{ url: 'https://art.test/transparent.png', file_type: 'image/png' }] } },
-  }, '0x1111111111111111111111111111111111111111');
-  assert.equal(asset.tokenId, '0x01');
+  const asset = indexedToken(1, { images: [{ index: 0, url: 'https://art.test/main.png', width: 1200 }],
+    assets: [{ url: 'https://art.test/transparent.png', fileType: 'image/png' }] });
+  assert.equal(asset.tokenId, '0x' + '1'.padStart(64, '0'));
   assert.deepEqual(asset.imageGroups.map(({ imageUrl }) => imageUrl), ['https://art.test/main.png', 'https://art.test/transparent.png']);
 });
 
@@ -44,11 +51,7 @@ test('a cover, four XML-labelled SVGs and three WebPs remain eight separate reso
   assert.equal(groups[1].fileType, metadata.assets[0].fileType, 'the declared source type is retained');
   assert.deepEqual(metadata, before);
 
-  const indexed = normalizeOwnedToken({ address: '0x2222222222222222222222222222222222222222', token_id: '0x04',
-    digitalAsset: { address: '0x2222222222222222222222222222222222222222', lsp4TokenType: { value: 'COLLECTION' } },
-    nft: { lsp4Metadata: { images: metadata.images[0].map(image => ({ ...image, image_index: 0 })),
-      assets: metadata.assets.map(({ fileType, ...asset }) => ({ ...asset, file_type: fileType })) } },
-  }, '0x1111111111111111111111111111111111111111');
+  const indexed = indexedToken(4, { images: metadata.images[0].map(image => ({ ...image, index: 0 })), assets: metadata.assets });
   assert.deepEqual(indexed.imageGroups, groups, 'indexer and direct metadata share the same interpretation');
 });
 

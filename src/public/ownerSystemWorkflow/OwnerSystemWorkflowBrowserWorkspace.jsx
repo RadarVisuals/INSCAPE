@@ -37,7 +37,7 @@ export function OwnerSystemWorkflowSidebarDeleteConfirmation({ entityLabel, name
   </div>;
 }
 
-export function OwnerSystemWorkflowWorkspaceShell({ children, className, label, phase, placing = false, rail, sidebarCollapsed = false, style, resizeHandle }) {
+export function OwnerSystemWorkflowWorkspaceShell({ children, className, label, phase, placing = false, rail, sidebarCollapsed = false, style, resizeHandle, header, embedded = false }) {
   const [hoverLabel, setHoverLabel] = useState(null);
   const showHoverLabel = (event) => {
     const button = event.target.closest?.('.lattice-browser-sidebar button');
@@ -54,7 +54,7 @@ export function OwnerSystemWorkflowWorkspaceShell({ children, className, label, 
     });
   };
   return <section aria-hidden={phase === 'closing' || undefined} aria-label={label}
-    data-library-chrome
+    data-library-chrome data-library-embedded={embedded || undefined} data-library-header={Boolean(header) || undefined}
     data-workflow-material="tactile" data-workflow-finish="flat"
     className={`system-workflow__workspace-window system-workflow__browser-workspace system-workflow__motion-panel ${className}`}
     data-placing={placing || undefined} style={style}
@@ -63,6 +63,7 @@ export function OwnerSystemWorkflowWorkspaceShell({ children, className, label, 
     onBlurCapture={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setHoverLabel(null); }}
     onFocusCapture={showHoverLabel}
     onPointerOver={showHoverLabel} onPointerLeave={() => setHoverLabel(null)}>
+    {header}
     <div className="system-workflow__browser-body">{children}</div>
     <footer className="system-workflow__local-rail">{rail}</footer>
     {resizeHandle}

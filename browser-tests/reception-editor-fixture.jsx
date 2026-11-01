@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useSyncExternalStore } from 'react';
 import { createRoot } from 'react-dom/client';
-import ReceptionStoreEditor from '../src/reception/ReceptionStoreEditor.jsx';
+import OwnerSystemWorkflowRuntime from '../src/public/ownerSystemWorkflow/OwnerSystemWorkflowRuntime.jsx';
 import ProfileOverview from '../src/profileDocument/components/ProfileOverview.jsx';
 import WorkbenchOverview from '../src/public/workbenchOverview/WorkbenchOverview.jsx';
 import { workbenchOverviewModel } from '../src/public/workbenchOverview/workbenchOverviewModel.js';
@@ -60,11 +60,13 @@ function CanvasOverview({ onAbout }) {
     profile={reviewProfile} onSelect={select} view={view} onViewChange={setView} cardSize={cardSize} onCardSize={setCardSize} onOpenReception={onAbout} />;
 }
 function Fixture() {
+  useSyncExternalStore(root.subscribe, root.getGeneration);
   const publicView = new URLSearchParams(location.search).has('public');
   const [surface, setSurface] = useState(publicView ? 'reception' : 'edit');
   if (surface === 'canvases') return <CanvasOverview onAbout={() => setSurface(publicView ? 'reception' : 'edit')} />;
-  return surface === 'edit' ? <ReceptionStoreEditor rootStore={root} onClose={() => setSurface('reception')}
-    onCanvases={() => setSurface('canvases')} reviewAssets={assets} reviewCategories={[]} reviewProfile={reviewProfile} storage={storage}/>
+  return surface === 'edit' ? <OwnerSystemWorkflowRuntime profileAddress={profileAddress} rootStore={root} reviewStorage={storage}
+    receptionEditorRequested onOpenReception={() => setSurface('reception')}
+    reviewAssets={assets} reviewCategories={[]} reviewProfile={reviewProfile} />
     : <ProfileOverview document={window.receptionFixture.publish()} onOpenCanvas={() => setSurface('canvases')} />;
 }
 createRoot(document.getElementById('root')).render(<Fixture />);

@@ -2,7 +2,7 @@ export const OWNER_RUNTIME_MODULES = [
   '/src/public/OwnerSystemWorkflowShell.jsx',
   '/src/library/state/useLibraryStore.js',
   '/src/signals/state/useSignalStore.js',
-  '/src/reception/ReceptionEditor.jsx'
+  '/src/public/ownerSystemWorkflow/OwnerSystemWorkflowRuntime.jsx'
 ];
 export const STANDALONE_WALLET_SOURCE = 'src/wallet/standaloneWalletSession.js';
 const normalize = (id) => id.replaceAll('\\', '/');
