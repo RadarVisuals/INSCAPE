@@ -1,15 +1,15 @@
 import ToolPanel from '../../ui/ToolPanel.jsx';
 import { useLayoutEffect, useRef, useSyncExternalStore } from 'react';
-import { PanelRightClose, PanelRightOpen } from 'lucide-react';
+import { PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen } from 'lucide-react';
 import { useWorkbenchView } from './WorkbenchViewContext.js';
 import { useSideDock } from './WorkbenchSideDock.jsx';
-import { sideDockFrames } from './workbenchSideDockState.js';
+import { dockSide, sideDockEdge, sideDockFrames } from './workbenchSideDockState.js';
 
 const noSubscription = () => () => {};
 const emptySnapshot = () => null;
 // One screen shell for tools and utilities. Docking changes geometry only.
 export default function WorkbenchToolPanel({ dockId, ...props }) {
-  const { navigationInset = 0, navigationTop = 0 } = useWorkbenchView();
+  const { navigationTop = 0 } = useWorkbenchView();
   const controller = useSideDock();
   const state = useSyncExternalStore(controller?.subscribe || noSubscription, controller?.getSnapshot || emptySnapshot);
   const id = dockId || props.title;
@@ -19,7 +19,8 @@ export default function WorkbenchToolPanel({ dockId, ...props }) {
   }, [controller, id, props.hidden, props.minimumWidth]);
   const frames = state ? sideDockFrames(state.layout, state.windows, state.viewport) : {};
   const attached = frames[id];
-  const nearEdge = event => event && event.clientX >= innerWidth - 32 && event.clientY >= navigationTop;
+  const side = attached ? dockSide(state.layout.items.find(item => item.id === id)) : null;
+  const nearEdge = event => state && sideDockEdge(event, state.viewport);
   const change = frame => {
     const next = typeof frame === 'function' ? frame(attached || props.frame) : frame;
     if (attached && !gesture.current) controller.resize(id, next);
@@ -34,7 +35,7 @@ export default function WorkbenchToolPanel({ dockId, ...props }) {
     if (drag && Math.hypot(event.clientX - drag.x, event.clientY - drag.y) >= 6) {
       drag.moved = true;
       if (attached) controller.detach(id);
-      controller?.preview(nearEdge(event) ? { x: event.clientX, y: event.clientY } : null);
+      controller?.preview(nearEdge(event));
     }
     props.onMove?.(event);
   };
@@ -42,27 +43,30 @@ export default function WorkbenchToolPanel({ dockId, ...props }) {
     const drag = gesture.current; gesture.current = null;
     controller?.preview(null);
     if (cancelled && drag) { if (drag.layout) controller.restore(drag.layout); props.onFrameChange(drag.frame); }
-    else if (drag?.moved && nearEdge(event)) controller?.attach(id, props.frame, event.clientY);
+    else if (drag?.moved && nearEdge(event)) controller?.attach(id, props.frame, event.clientY, nearEdge(event));
     props.onMoveEnd?.(cancelled, event);
   };
-  const toggle = () => {
+  const toggle = target => {
     if (attached) {
-      props.onFrameChange({ ...props.frame, left: Math.max(navigationInset, attached.left - 32), top: attached.top + 24 });
+      props.onFrameChange({ ...props.frame, left: Math.max(0, attached.left + (side === 'left' ? 32 : -32)), top: attached.top + 24 });
       controller.detach(id);
-    } else controller.attach(id, props.frame);
+    } else controller.attach(id, props.frame, Infinity, target);
   };
-  const dockControl = controller && <button type="button" className="workbench-tool-panel-close" onClick={toggle}
-    aria-label={`${attached ? 'Undock' : 'Dock'} ${props.title}${attached ? '' : ' on right'}`}
-    title={attached ? 'Undock window' : 'Dock on right; drag the title to the right edge'}>
-    {attached ? <PanelRightOpen /> : <PanelRightClose />}
-  </button>;
-  return <ToolPanel {...props} navigationInset={navigationInset} navigationTop={navigationTop}
+  const dockControl = controller && (attached ? [side] : ['left', 'right']).map(target => {
+    const Icon = target === 'left' ? attached ? PanelLeftOpen : PanelLeftClose : attached ? PanelRightOpen : PanelRightClose;
+    return <button key={target} type="button" className="workbench-tool-panel-close" onClick={() => toggle(target)}
+    aria-label={`${attached ? 'Undock' : 'Dock'} ${props.title}${attached ? '' : ` on ${target}`}`}
+    title={attached ? 'Undock window' : `Dock on ${target}; drag the title to the ${target} edge`}><Icon /></button>;
+  });
+  const inward = side === 'left' ? 'e' : 'w';
+  const last = state?.layout.items.filter(item => dockSide(item) === side && frames[item.id]).at(-1)?.id;
+  return <ToolPanel {...props} navigationTop={navigationTop}
     panelRef={node => { panel.current = node; if (typeof props.panelRef === 'function') props.panelRef(node); else if (props.panelRef) props.panelRef.current = node; }}
-    edgeMargin={0} data-side-docked={Boolean(attached) || undefined}
+    edgeMargin={0} data-side-docked={Boolean(attached) || undefined} data-dock-side={side || undefined}
     frame={attached || props.frame} onFrameChange={change} onMoveStart={start} onMove={move} onMoveEnd={finish}
     minimumHeight={attached ? 72 : props.minimumHeight}
     zIndex={state?.active === id ? 88 : props.zIndex}
     onActivate={() => { controller?.activate(id); props.onActivate?.(); }}
-    resizeEdges={attached ? ['w', ...(Object.keys(frames).at(-1) !== id ? ['s', 'sw'] : [])] : undefined}
+    resizeEdges={attached ? [inward, ...(last !== id ? ['s', `s${inward}`] : [])] : undefined}
     headerActions={<>{props.headerActions}{dockControl}</>} />;
 }

@@ -28,3 +28,16 @@ test('drop sizing and placement respect narrow views and the actual Workbench bo
   assert.equal(imageDropGeometry({ width: 1600, height: 900 }, { x: 505, y: 300 },
     { left: 0, top: 0, width: 1440, height: 900 }, .25, { x: 0, y: 0 }), null, 'drops beyond the new area are rejected');
 });
+
+test('a cell target previews and creates an Image covering that exact frame at every camera scale', () => {
+  const host = { left: 12, top: 17, width: 1440, height: 900 }, offset = { x: 34, y: 70 };
+  const frame = { left: 240, top: 120, width: 670, height: 410 };
+  for (const scale of [.25, .67, 1, 1.371, 2]) for (const density of [1, 1.25, 2]) {
+    const point = { x: host.left + offset.x + (frame.left + 20) * scale, y: host.top + offset.y + (frame.top + 20) * scale };
+    const result = imageDropGeometry({ width: 100, height: 200 }, point, host, scale, offset, density, undefined, frame);
+    assert.deepEqual(result.destination, { position: { left: frame.left, top: frame.top }, size: { width: frame.width, height: frame.height } });
+    const paint = imagePaintGeometry(imageWindowGeometry(result.destination.position, result.destination.size, { scale, x: 0, y: 0 }, offset), density);
+    assert.deepEqual(result.rectangle, { left: host.left + paint.left / density, top: host.top + paint.top / density,
+      width: paint.width / density, height: paint.height / density });
+  }
+});

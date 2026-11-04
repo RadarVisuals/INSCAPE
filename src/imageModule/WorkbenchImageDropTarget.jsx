@@ -43,7 +43,9 @@ export default function WorkbenchImageDropTarget({ targetRef, hostRef, suspended
           previewAt(point, dimensions) {
             if (!current()) return null;
             const { view, camera } = latest.current;
-            const preview = imageDropGeometry(dimensions, point, host.getBoundingClientRect(), view.scale, camera.offset, devicePixelRatio || 1, latest.current.areaBounds);
+            const frame = cellId && !editingCell ? view.getPresentation().shapes.find(item => item.id === cellId)?.window : null;
+            const preview = imageDropGeometry(dimensions, point, host.getBoundingClientRect(), view.scale, camera.offset,
+              devicePixelRatio || 1, latest.current.areaBounds, frame);
             return preview && { ...preview, kind: 'workbench-image', target: destinationTarget };
           },
           async placeAsset(input, dimensions, destination, isCurrent) {

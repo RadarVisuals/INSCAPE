@@ -1,6 +1,5 @@
 import { workbenchArea, workbenchAreaBounds } from '../systemWorkflow/domain/workbenchArea.js';
 import { gridShapeFrame } from './gridShapeGeometry.js';
-import { editArtworkLayers } from '../systemWorkflow/artworkLayerSession.js';
 import { MAX_SHAPES, validShapes, createShapePresentation } from './shapes.js';
 import { createDefaultWorkbenchPresentation } from '../profileDocument/domain/workbenchPresentation.js';
 import { clampWorkbenchPosition } from '../public/ownerSystemWorkflow/workbenchSpace.js';
@@ -51,9 +50,6 @@ export function editShape(store, profile, expected, changes, presentation) {
       ? { ...item, window: gridShapeFrame(item.window, changes.grid.spacing) } : item) };
   }
   commit(store, profile, { ...draft, shapes, ...(workbench ? { workbench } : {}) }, 'Edit Shape');
-}
-export function reorderShape(store, profile, id, direction) {
-  return editArtworkLayers(store, profile, { type: 'order', ids: [id], direction });
 }
 export function prepareShapeResize(draft, { expected, gridScale }) {
   if (!draft.shapes?.some(item => JSON.stringify(item) === JSON.stringify(expected))) throw new Error('This shape changed during resizing. Try again.');

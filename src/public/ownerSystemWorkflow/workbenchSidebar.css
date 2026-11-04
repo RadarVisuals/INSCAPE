@@ -1,15 +1,15 @@
 .system-workflow .workbench-sidebar {
-  position: fixed; z-index: 91; top: 48px; left: 12px;
-  width: 208px; height: auto; max-height: min(700px, calc(100dvh - 48px - var(--sidebar-bottom)));
+  position: fixed; z-index: 91; top: calc(var(--workspace-navigation-top, 40px) + 8px); left: 12px;
+  width: 208px; height: auto; max-height: min(700px, calc(100dvh - var(--workspace-navigation-top, 40px) - 8px - var(--sidebar-bottom)));
 }
 .system-workflow[data-editor-menu] .system-workflow__panel-presence { z-index: 90; }
 .system-workflow[data-editor-menu] .public-entry-portal[data-embedded] {
-  inset: 48px 12px 12px max(12px, var(--workspace-navigation-inset, 0px));
+  inset: calc(var(--workspace-navigation-top, 40px) + 8px) 12px 12px;
 }
 .system-workflow[data-editor-menu] .system-workflow__workspace-window:not([data-library-embedded]) {
   top: calc(var(--workspace-navigation-top, 40px) + 4px);
-  left: max(12px, var(--workspace-navigation-inset, 0px));
-  max-width: calc(100vw - max(12px, var(--workspace-navigation-inset, 0px)) - 12px);
+  left: 12px;
+  max-width: calc(100vw - 12px - 12px);
   min-width: 0;
 }
 .system-workflow[data-workspace-sidebar] .system-workflow__library-presenter:has(> .lattice-browser-panel > .lattice-browser-results:first-child) > .lattice-browser-panel { grid-template-columns: minmax(0, 1fr); }

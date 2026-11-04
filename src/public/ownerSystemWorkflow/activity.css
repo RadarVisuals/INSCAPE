@@ -1,6 +1,6 @@
 /* Activity keeps the existing signal owner and sidebar destination host. */
 .activity-panel.workbench-tool-panel {
-  --activity-inset: max(12px, var(--workspace-navigation-inset, 0px));
+  --activity-inset: 12px;
   --activity-top: max(12px, calc(var(--workspace-navigation-top, 8px) + 4px));
   --activity-target: var(--control-height-sm);
   left: var(--activity-inset); bottom: 12px;

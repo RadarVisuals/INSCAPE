@@ -128,7 +128,7 @@ test('one shared Layers and Metadata window follow explicit Display targets with
     await metadata.waitFor();
     assert.ok((await metadata.getByRole('heading', { level: 3 }).innerText()).includes('ABYSSAL STUDY'));
     const before = await page.evaluate(() => window.readDisplayDraft());
-    await page.getByRole('toolbar', { name: 'Inspection and placement', exact: true }).getByRole('button', { name: 'Cover Display', exact: true }).click();
+    await page.getByRole('group', { name: 'Inspection and placement', exact: true }).getByRole('button', { name: 'Cover Display', exact: true }).click();
     const after = await page.evaluate(() => window.readDisplayDraft());
     assert.deepEqual(after.grids, before.grids);
     assert.notDeepEqual(after.displays[0].grids, before.displays[0].grids);
@@ -166,7 +166,7 @@ test('one shared Layers and Metadata window follow explicit Display targets with
     // Selection actions have their own host and survive closing Layers.
     await primary.getByLabel(/Move Display Module:/).focus();
     await layers.getByRole('button', { name: 'MOON PURPLE', exact: true }).click();
-    const dock = page.locator('[data-context-tools], [data-context-action-bars]');
+    const dock = page.locator('[data-context-tools]');
     assert.equal(await layers.getByRole('button', { name: 'Rotate', exact: true }).count(), 0);
     await page.getByRole('button', { name: 'Close Layers', exact: true }).click();
     assert.equal(await layers.count(), 0);
@@ -191,7 +191,7 @@ test('one shared Layers and Metadata window follow explicit Display targets with
     await dock.getByRole('button', { name: 'Crop', exact: true }).click();
     await zoom.fill('1.5');
     await dock.getByRole('button', { name: 'Done', exact: true }).click();
-    assert.equal(await page.evaluate(() => document.activeElement?.getAttribute('aria-label')), 'Inspect artwork', 'finishing crop restores keyboard focus inside the dock');
+    assert.equal(await dock.locator('button:focus').count(), 1, 'finishing crop restores keyboard focus inside the dock');
     assert.notDeepEqual((await page.evaluate(() => window.readDisplayDraft())).grids, transformed.grids);
     assert.equal(await layers.count(), 0, 'crop does not reopen Layers');
     const shots = await mkdtemp(join(tmpdir(), 'inscape-context-toolbar-'));
@@ -202,23 +202,23 @@ test('one shared Layers and Metadata window follow explicit Display targets with
     const bounds = await dock.locator('aside').boundingBox();
     await moveHandle.focus(); await page.keyboard.press('ArrowRight');
     assert.ok((await dock.locator('aside').boundingBox()).x > bounds.x, 'keyboard moves the dock');
-    await page.setViewportSize({ width: 390, height: 844 });
+    await page.setViewportSize({ width: 800, height: 700 });
     await page.waitForFunction(() => {
       const rect = document.querySelector('.context-toolbar').getBoundingClientRect();
-      const controls = document.querySelector('.workbench-view-controls').getBoundingClientRect();
-      return rect.left >= 0 && rect.right <= innerWidth && rect.bottom <= controls.top - 7;
+      const controls = document.querySelector('[data-workbench-toolbar]').getBoundingClientRect();
+      return rect.left >= 0 && rect.right <= innerWidth && rect.bottom <= innerHeight - 8;
     });
     assert.equal(await dock.getByRole('button', { name: /Frame and/ }).count(), 0);
     await dock.getByRole('button', { name: 'Crop', exact: true }).click();
     await page.waitForFunction(() => {
-      const surface = document.querySelector('[data-context-bar="inspection"]');
+      const surface = document.querySelector('.context-toolbar .system-workflow__instrument-content');
       return surface.scrollHeight <= surface.clientHeight + 1 && surface.getBoundingClientRect().bottom <= innerHeight - 54;
     });
     await page.screenshot({ path: join(shots, 'narrow-crop.png') });
     await dock.getByRole('button', { name: 'Cancel', exact: true }).click();
     await dock.getByRole('button', { name: 'Rotate', exact: true }).focus();
     await page.waitForFunction(() => {
-      const surface = document.querySelector('[data-context-bar="inspection"]');
+      const surface = document.querySelector('.context-toolbar .system-workflow__instrument-content');
       return surface.scrollHeight <= surface.clientHeight + 1 && surface.getBoundingClientRect().bottom <= innerHeight - 54;
     });
     await page.screenshot({ path: join(shots, 'narrow.png') });

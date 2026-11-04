@@ -1,3 +1,4 @@
+import { navigateWorkbench } from './fixtures/workbench-navigation.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile, mkdir } from 'node:fs/promises';
@@ -72,7 +73,7 @@ test('embedded WebP thumbnails stay filtered while Inspect prepares original pix
         }, outerScale);
       }
       await source.focus(); await page.keyboard.press('Shift+Enter');
-      await page.getByRole('button', { name: 'Focus selected Workbench modules', exact: true }).click();
+      await navigateWorkbench(page, 'focus');
       await page.waitForFunction(() => !document.querySelector('[data-workbench-travelling]'));
       const focusedScale = await source.locator('foreignObject').evaluate(node => {
         const m = node.getScreenCTM(); return Math.max(Math.hypot(m.a, m.b), Math.hypot(m.c, m.d)) * devicePixelRatio;
@@ -208,7 +209,7 @@ test('Focus, Return and subsequent zoom update Image and Display pixels without 
           window.cameraDensities = [];
           addEventListener('message', event => { if (event.data?.type === 'inscape:artwork-density') window.cameraDensities.push(event.data.scale); });
         });
-        await page.getByRole('button', { name: 'Focus selected Workbench modules', exact: true }).click();
+        await navigateWorkbench(page, 'focus');
         await arrived(); await correctPixels();
         assert.ok(await runtime.evaluate(() => window.cameraDensities.length <= 6), 'camera preparation/arrival refresh pixels without per-frame resampling');
         await mkdir(output, { recursive: true });
@@ -216,7 +217,7 @@ test('Focus, Return and subsequent zoom update Image and Display pixels without 
         await page.getByRole('button', { name: 'Back to previous Workbench view', exact: true }).click();
         await arrived(); await correctPixels();
         await select();
-        await page.getByRole('button', { name: 'Focus selected Workbench modules', exact: true }).click();
+        await navigateWorkbench(page, 'focus');
         await page.waitForFunction(() => Number(document.querySelector('main.system-workflow').dataset.workbenchCameraScale) > .3
           && document.querySelector('[data-workbench-travelling]'));
         // Wheel input interrupts Focus; the intermediate geometry also needs fresh pixels.

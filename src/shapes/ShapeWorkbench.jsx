@@ -1,32 +1,22 @@
 import { useWorkbenchMiniature } from '../public/ownerSystemWorkflow/workbenchMiniatures.js';
 import CommittedColourControls from '../colour/CommittedColourControls.jsx';
+import ShapeOutlineControls, { PatternNumber } from './ShapeOutlineControls.jsx';
 import ShapeEffectsControls from './ShapeEffectsControls.jsx';
-import { Copy, Trash2, ChevronDown, ChevronUp, ChevronsDown, ChevronsUp } from 'lucide-react';
 import { gridShapeFrame } from './gridShapeGeometry.js';
 import { useCallback, useEffect, useMemo, useState, useId } from 'react';
-import { createPortal } from 'react-dom';
-import RackMenu from '../public/menus/RackMenu.jsx';
-import { EditorCellTools, useEditorCells } from '../reception/EditorCellsContext.jsx';
+import { EditorCellTools, useEditorCells, editorCellStructureActions } from '../reception/EditorCellsContext.jsx';
+import { RECEPTION_CELL_LIMIT } from '../reception/receptionEditorDocument.js';
 import ShapeSurface from './ShapeSurface.jsx';
 import { WorkbenchWindow } from '../public/ownerSystemWorkflow/DisplayInstrumentWindow.jsx';
 import { resizeWorkbenchWindow } from '../public/ownerSystemWorkflow/ownerSystemWorkflowWindowGeometry.js';
-import { ContextToolContent, useContextToolTarget } from '../public/ownerSystemWorkflow/ContextToolbar.jsx';
+import { useContextToolTarget } from '../public/ownerSystemWorkflow/ContextToolbar.jsx';
 import { useWorkbenchView, workbenchModuleTransform, useArtworkOpener, useClosedArtworkLayout, useWorkbenchToolSource } from '../public/ownerSystemWorkflow/WorkbenchViewContext.js';
 import { commitWorkbenchSelectionResize } from '../systemWorkflow/resizeWorkbenchSelection.js';
-import { removeWorkbenchModule } from '../systemWorkflow/removeWorkbenchModule.js';
 import { createShapePresentation, MAX_SHAPES } from './shapes.js';
-import { addShape, editShape, reorderShape, prepareShapeResize } from './shapeSession.js';
+import { addShape, editShape, prepareShapeResize } from './shapeSession.js';
 import '../public/ownerSystemWorkflow/displayInstruments.css';
 import '../public/ownerSystemWorkflow/moduleSurface.css';
 import './shapes.css';
-
-function PatternNumber({ label, value, min, max, step = 1, onChange }) {
-  return <label>{label}<input key={value} aria-label={label} type="number" min={min} max={max} step={step} defaultValue={value}
-    onBlur={event => {
-      if (event.target.value === '' || !event.target.validity.valid) { event.target.value = value; return; }
-      const next = Number(event.target.value); if (next !== value) onChange(next);
-    }} onKeyDown={event => { if (event.key === 'Enter') event.currentTarget.blur(); }} /></label>;
-}
 
 function GridPaint({ record }) {
   const id = useId().replace(/:/g, '');
@@ -50,15 +40,13 @@ function ShapeInstance({ record, records, index, initialPresentation, store, pro
   const kind = record.kind || 'rectangle';
   const view = useWorkbenchView();
   const editable = Boolean(store) && !suspended && !view.presentationTransforms?.[record.id];
-  const cellContext = useEditorCells(), [cellMenu, setCellMenu] = useState(null);
+  const cellContext = useEditorCells();
   const cell = cellContext?.cells.find(item => item.id === record.id);
   const cellParent = cellContext?.cells.find(item => item.members.includes(record.id));
-  const registerCellMenu = cellContext?.registerMenu;
-  useEffect(() => registerCellMenu?.(record.id, setCellMenu), [registerCellMenu, record.id]);
   useClosedArtworkLayout(presentation, setPresentation, view.content?.workbench?.shapes?.find(item => item.id === record.id));
   const layout = useCallback(window => setPresentation(current => JSON.stringify(current.window) === JSON.stringify(window) ? current : { ...current, window }), []);
   const applyFrame = useCallback(frame => { setCommittedFrame(frame); layout(frame); }, [layout]);
-  const resizeTarget = useMemo(() => ({ enabled: editable, reflow: true, continuousGeometry: true,
+  const resizeTarget = useMemo(() => ({ enabled: editable && !cell, reflow: true, continuousGeometry: true,
     expected: record, store, profileAddress, layoutKey: 'shapes', commit: commitWorkbenchSelectionResize,
     prepare: prepareShapeResize, applyFrame, reportError: setError, resizeCorner: resizeWorkbenchWindow,
     minimumWidth: kind === 'grid' ? record.grid.spacing : 8, minimumHeight: kind === 'grid' ? record.grid.spacing : 8,
@@ -66,15 +54,20 @@ function ShapeInstance({ record, records, index, initialPresentation, store, pro
     groupScaleLimits: kind === 'grid' ? { minimum: 8 / record.grid.spacing, maximum: 512 / record.grid.spacing } : undefined,
     resizeStep: kind === 'grid' ? record.grid.spacing : undefined,
     constrainFrame: kind === 'grid' ? (frame, options) => gridShapeFrame(frame, record.grid.spacing, options) : undefined,
-  }), [editable, record, store, profileAddress, applyFrame, kind, setError]);
+  }), [editable, cell, record, store, profileAddress, applyFrame, kind, setError]);
   useEffect(() => { onPresentationChange?.(record.id, presentation); }, [record.id, presentation, onPresentationChange]);
   useEffect(() => () => onPresentationChange?.(record.id, null), [record.id, onPresentationChange]);
   const run = (action, surface = 'actions') => { if (!editable) return; try { action(); setError(''); } catch (failure) { setError(failure.message, surface); } };
   const change = (changes, surface = 'shape') => run(() => editShape(store, profileAddress, record, changes, view.getPresentation()), surface);
   const [colorPreview, setColorPreview] = useState(null);
+  const [colorTarget, setColorTarget] = useState('fill');
+  const outline = record.outline || { width: 0, color: record.color, opacity: 1 };
+  const outlineTarget = kind === 'rectangle' && colorTarget === 'outline';
+  const innerLinesTarget = Boolean(cell && colorTarget === 'inner-lines');
+  const colorPatch = patch => outlineTarget ? { outline: { ...outline, ...patch } } : patch;
   const [fxPreview, setFxPreview] = useState(null);
   const painted = useMemo(() => ({ ...record, ...(colorPreview?.record === record ? colorPreview.patch : {}), ...(fxPreview?.record === record ? fxPreview.patch : {}) }), [record, colorPreview, fxPreview]);
-  useWorkbenchMiniature(record.id, useMemo(() => ({ kind: 'shape', record: painted }), [painted]));
+  useWorkbenchMiniature(record.id, useMemo(() => ({ kind: 'shape', record: painted, radius: cell?.radius || 0 }), [painted, cell?.radius]));
   const select = id => { onActivate?.(id); view.setSelection?.([id]); };
   // The module owns its settings, presentation, saving and history; the dock
   // only presents this source for the current Workbench selection.
@@ -101,10 +94,37 @@ function ShapeInstance({ record, records, index, initialPresentation, store, pro
     </>}
     {failure?.surface === 'shape' && <p role="alert">{failure.message}</p>}
   </section>;
-  useWorkbenchToolSource(record.id, { color: <>
-    <CommittedColourControls color={record.color} opacity={kind === 'texture' ? undefined : record.opacity} disabled={!editable || !presentation.open}
-      scopeKey={`${profileAddress}:${record.id}`}
-      getVersion={() => store.getGeneration()} onChange={patch => change(patch, 'color')} onPreview={patch => setColorPreview(patch ? { record, patch } : null)} />
+  useWorkbenchToolSource(record.id, { actions: {
+    disabled: !editable,
+    duplicate: { disabled: Boolean(cell) || records.length >= MAX_SHAPES,
+      reason: cell ? 'Duplicating a whole Reception cell is not available.' : records.length >= MAX_SHAPES ? 'At most 32 shapes are supported.' : undefined,
+      run: () => select(addShape(store, profileAddress, { workbench: view.getPresentation() }, record)) },
+    items: cellContext && kind === 'rectangle' ? cell ? [
+      { id: 'edit-cell', label: 'Edit cell contents', run: () => cellContext.enterCell(record.id) },
+      { id: 'cell-settings', label: 'Bento settings', run: () => cellContext.openSettings(record.id) },
+      ...editorCellStructureActions(store, record.id, view),
+    ] : [{ id: 'make-cell', label: 'Turn into cell', disabled: Boolean(cellParent) || cellContext.cells.length >= RECEPTION_CELL_LIMIT,
+      run: () => { store.turnShapeIntoCell(record.id, view.getPresentation()); view.selectArtwork(record.id); } }] : [],
+  }, color: <>
+    {kind === 'rectangle' && <div className="shape-tools">
+      <label>Color target<select aria-label="Color target" value={colorTarget} disabled={!editable || !presentation.open}
+        onChange={event => { setColorPreview(null); setColorTarget(event.target.value); }}>
+        <option value="fill">Fill</option><option value="outline">Outline</option>
+        {cell && <option value="inner-lines" disabled={!cellContext.innerLines}>Bento inner lines</option>}
+      </select></label>
+    </div>}
+    {innerLinesTarget ? cellContext.innerLines ? <ShapeOutlineControls key="inner-lines" outline={cellContext.innerLines}
+      disabled={!editable || !presentation.open} scopeKey={`${profileAddress}:${record.id}:inner-lines`}
+      getVersion={() => store.getGeneration()} onChange={patch => run(() => cellContext.changeInnerLines(patch), 'color')}
+      onPreview={cellContext.previewInnerLines} /> : <p>Enable inner lines in Bento settings.</p>
+      : outlineTarget ? <ShapeOutlineControls key="outline" outline={outline} disabled={!editable || !presentation.open}
+        scopeKey={`${profileAddress}:${record.id}:outline`} getVersion={() => store.getGeneration()}
+        onChange={patch => change(colorPatch(patch), 'color')} onPreview={patch => setColorPreview(patch ? { record, patch: colorPatch(patch) } : null)} />
+      : <CommittedColourControls key="fill" color={record.color}
+      opacity={kind === 'texture' ? undefined : record.opacity} disabled={!editable || !presentation.open}
+      scopeKey={`${profileAddress}:${record.id}:${colorTarget}`}
+      getVersion={() => store.getGeneration()} onChange={patch => change(colorPatch(patch), 'color')}
+      onPreview={patch => setColorPreview(patch ? { record, patch: colorPatch(patch) } : null)} />}
     {failure?.surface === 'color' && <p role="alert">{failure.message}</p>}
   </>, shape: shapeTools, fx: <section key={record.id} aria-label={`${record.name} effects`}>
     <ShapeEffectsControls record={record} store={store} disabled={!editable || !presentation.open}
@@ -113,48 +133,20 @@ function ShapeInstance({ record, records, index, initialPresentation, store, pro
   </section> });
   return <>
     <div className="shape-instance" data-shape-kind={kind} data-cell-owner={cell ? record.id : undefined} data-grid-selected={kind === 'grid' && view.selection?.includes(record.id) || undefined} data-workbench-select-on-pointer={editable || undefined} data-editable={editable || undefined} data-active={active || undefined}
-      onPointerDownCapture={event => editable && event.button === 0 && onActivate?.(record.id)} onFocusCapture={() => editable && onActivate?.(record.id)}
-      onContextMenuCapture={event => {
-        if (!editable || !cellContext || cell || kind !== 'rectangle') return;
-        event.preventDefault(); event.stopPropagation(); view.selectArtwork(record.id);
-        setCellMenu({ x: event.clientX, y: event.clientY, source: event.target });
-      }} onKeyDownCapture={event => {
-        if (!editable || !cellContext || kind !== 'rectangle' || !(event.key === 'ContextMenu' || event.shiftKey && event.key === 'F10')) return;
-        event.preventDefault(); event.stopPropagation(); const rect = event.target.getBoundingClientRect();
-        setCellMenu({ x: rect.left, y: rect.bottom, source: event.target });
-      }}>
+      onPointerDownCapture={event => editable && event.button === 0 && onActivate?.(record.id)} onFocusCapture={() => editable && onActivate?.(record.id)}>
       {presentation.open && <WorkbenchWindow label="Shape" title={record.name} className="shape-window" chrome="bevel"
-        viewId={record.id} active={active} placementModule={editable} snapToGrid={editable && windowSnap} moveFromContent={editable}
-        minimumWidth={8} minimumHeight={8} resizableWidth resizable={editable}
+        viewId={record.id} active={active} placementModule={editable && !cell} snapToGrid={editable && !cell && windowSnap} moveFromContent={editable && !cell}
+        minimumWidth={8} minimumHeight={8} resizableWidth resizable={editable && !cell}
         width={presentation.window.width} initialHeight={presentation.window.height} initialX={presentation.window.left} initialY={presentation.window.top}
         onLayoutChange={layout} resizeTarget={resizeTarget} committedFrame={committedFrame}
         surfaceStyle={{ zIndex: index + 1 }}>
-        <ShapeSurface record={painted} radius={cell?.radius || 0}>{kind === 'grid' && <GridPaint record={record} />}</ShapeSurface>
+        <ShapeSurface record={painted} radius={cell?.radius || 0} hideOutline={Boolean(cell && cellContext.innerLines)}>{kind === 'grid' && <GridPaint record={record} />}</ShapeSurface>
         {cell?.content && <span className="editor-cell-content-note">{cell.content.startsWith('link:') ? 'Linked canvas content' : 'Profile content'} · visible in Preview</span>}
         {kind === 'grid' && editable && <div className="shape-grid-border" aria-hidden="true">
           {['n', 'e', 's', 'w'].map(edge => <span key={edge} className={`is-${edge}`} />)}
         </div>}
       </WorkbenchWindow>}
     </div>
-    {cellMenu && editable && createPortal(<RackMenu anchor={cellMenu} label={`${record.name} cell actions`} returnFocus={cellMenu.source}
-      commands={cell ? [{ id: 'edit-cell', label: 'Edit cell contents' }, { id: 'cell-settings', label: 'Cell settings' }]
-        : [{ id: 'make-cell', label: 'Turn into cell', disabled: Boolean(cellParent) || cellContext.cells.length >= 8 }]}
-      onClose={() => setCellMenu(null)} onCommand={id => {
-        setCellMenu(null);
-        if (id === 'edit-cell') cellContext.enterCell(record.id);
-        else if (id === 'cell-settings') cellContext.openSettings(record.id);
-        else run(() => { store.turnShapeIntoCell(record.id, view.getPresentation()); view.selectArtwork(record.id); });
-      }} />, document.body)}
-    {editable && <ContextToolContent target={record.id} label={record.name} actions={<nav aria-label="Shape actions" className="system-workflow__selection-actions"><button className="workflow-tactile-control" type="button" disabled={records.length >= MAX_SHAPES} onClick={() => run(() => select(addShape(store, profileAddress, { workbench: view.getPresentation() }, record)))} aria-label="Duplicate shape" title="Duplicate shape"><Copy /></button>
-
-          {[['back', 'Send to back', ChevronsDown], ['backward', 'Move backward', ChevronDown], ['forward', 'Move forward', ChevronUp], ['front', 'Bring to front', ChevronsUp]].map(([direction, label, Icon]) =>
-            <button className="workflow-tactile-control" type="button" key={direction} aria-label={label} title={label}
-              onClick={() => run(() => reorderShape(store, profileAddress, record.id, direction))}><Icon /></button>)}
-          <button className="workflow-tactile-control" type="button" onClick={() => run(() => {
-            if (!removeWorkbenchModule(store, profileAddress, 'shape', record)) throw new Error('The shape could not be deleted. Try again.');
-            onActivate?.(records.find(item => item.id !== record.id)?.id || null);
-          })} aria-label="Delete shape" title="Delete shape"><Trash2 /></button></nav>}
-      inspection={failure?.surface === 'actions' && <p role="alert">{failure.message}</p>} />}
   </>;
 }
 

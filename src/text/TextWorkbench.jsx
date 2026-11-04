@@ -4,6 +4,7 @@ import { useSceneNavigation } from './SceneNavigation.jsx';
 import { editPassage, textDisplays } from './scenePassages.js';
 import { useTextScene, SceneTextViewport, TextContentPage } from './SceneTextContent.jsx';
 import { lazy, memo, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Settings2 as Settings, Eye, Pencil, Plus } from 'lucide-react';
 import { WorkbenchWindow } from '../public/ownerSystemWorkflow/DisplayInstrumentWindow.jsx';
 import { useWorkbenchView, workbenchModuleTransform, useArtworkOpener, useClosedArtworkLayout, useWorkbenchToolSource } from '../public/ownerSystemWorkflow/WorkbenchViewContext.js';
@@ -12,8 +13,8 @@ import { clampWorkbenchPosition } from '../public/ownerSystemWorkflow/workbenchS
 import { createTextPresentation } from '../profileDocument/domain/workbenchPresentation.js';
 import { createProfileDocumentV9AssetResolver } from '../profileDocument/domain/profileDocumentV9Asset.js';
 import useModuleShortcutMenu from '../public/ownerSystemWorkflow/useModuleShortcutMenu.jsx';
-import { textAppearance, textOutputStyle, textWindowStyle } from './domain/article.js';
-import { saveTextModuleResult, unlinkTextModuleResult, prepareTextResize, changeTextFrames } from './textSession.js';
+import { textAppearance, textOutputStyle, textWindowStyle, MAX_TEXT_MODULES } from './domain/article.js';
+import { saveTextModuleResult, unlinkTextModuleResult, prepareTextResize, changeTextFrames, duplicateTextModule } from './textSession.js';
 import { commitWorkbenchSelectionResize } from '../systemWorkflow/resizeWorkbenchSelection.js';
 import TextTools from './TextTools.jsx';
 import { SharedTextToolsProvider, SharedTextToolsWindow, useSharedTextTools } from './SharedTextTools.jsx';
@@ -32,7 +33,7 @@ const saveText = (store, scope, expected, next, options) => saveTextModuleResult
 
 const TextInstance = memo(function TextInstance({ record, index, store, profileAddress, registerTarget, placementTargets, destinations = [], initialPresentation, onPresentationChange, suspended, active, activateModule, toolsOpen, setToolsOpen, displays, savedLayout, windowSnap, initialView, onViewChange, initiallyOpenId }) {
   const onActivate = useCallback(() => activateModule(record.id), [activateModule, record.id]);
-  const { bounds: areaBounds } = useWorkbenchArea();
+  const { bounds: areaBounds, canvasHost } = useWorkbenchArea();
   const workbenchView = useWorkbenchView();
   const reception = store?.getWorkbenchId?.() === 'reception';
   const view = workbenchModuleTransform(workbenchView, record.id);
@@ -88,7 +89,11 @@ const TextInstance = memo(function TextInstance({ record, index, store, profileA
     return () => { colourEditor.off('focus', selectBody); colourEditor.off('selectionUpdate', selectBody); };
   }, [colourEditor]);
   useEffect(() => { setColourTarget('default'); setColourPreview(null); }, [gridId]);
-  const sharedColour = useWorkbenchToolSource(record.id, { color: <Suspense fallback={<p>Opening Color…</p>}>
+  const sharedColour = useWorkbenchToolSource(record.id, { actions: { disabled: !store || editBlocked || failed,
+    duplicate: { disabled: (workbenchView.content?.texts?.length || 0) >= MAX_TEXT_MODULES,
+      reason: (workbenchView.content?.texts?.length || 0) >= MAX_TEXT_MODULES ? 'At most sixteen Text modules are supported.' : undefined,
+      run: () => { const id = duplicateTextModule(store, profileAddress, edit.getSnapshot().value, workbenchView.getPresentation()); workbenchView.setSelection([id]); } } },
+    color: <Suspense fallback={<p>Opening Color…</p>}>
     <TextColourTools key={gridId || 'article'} article={sectionLink ? working.article : savedArticle} editor={colourEditor} target={colourTarget} onTarget={setColourTarget}
       store={store} scopeKey={`${profileAddress}:${record.id}:${gridId || 'article'}`} disabled={editBlocked || failed || !presentation.open} error={error} onRecovery={() => setSettings(true)} onChange={changeArticle}
       onPreview={value => setColourPreview(value ? { source: working, gridId, article: value } : null)} />
@@ -156,11 +161,11 @@ const TextInstance = memo(function TextInstance({ record, index, store, profileA
     if (!result.saved) { setError(result.message, result.reason); return; }
     edit.accept(result.record); setLinkTarget(''); setMode('write');
   };
-  return <div className="text-workbench" data-workbench-module="text" data-text-id={record.id} data-text-tools-open={settings || undefined}
+  const module = <div className="text-workbench" hidden={suspended} data-workbench-module="text" data-text-id={record.id} data-text-tools-open={settings || undefined}
     style={{ '--text-z': active ? 49 : 46, '--text-shortcut-bottom': `${64 + index * 38}px` }} onPointerDownCapture={onActivate} onFocusCapture={event => { onActivate(); if (event.target.matches('.text-document-title')) setColourTarget('title'); }}>
     {shortcutMenu.content}
     {store && active && linked && presentation.open && workbenchView.subscribe && <TextFrameLinks ids={[record.id, ...presentation.frames.map(frame => frame.id)]} />}
-    {!presentation.open && <button data-workbench-pan ref={shortcut} className="text-shortcut" onContextMenu={shortcutMenu.onContextMenu} onKeyDown={shortcutMenu.onKeyDown}
+    {!presentation.open && <button ref={shortcut} className="text-shortcut" onContextMenu={shortcutMenu.onContextMenu} onKeyDown={shortcutMenu.onKeyDown}
       onClick={() => setPresentation(p => ({ ...p, open: true }))}>{name}</button>}
     {presentation.open && <WorkbenchWindow label="Text" title={name} titleContent={<span className="text-window-grip">Text{linked ? ` · 1/${flow.ranges.length}` : ''}</span>} chrome="bevel" externalControls minimumWidth={180} minimumHeight={100} resizableWidth viewId={record.id} active={active} snapToGrid={Boolean(store) && windowSnap}
       surfaceStyle={textWindowStyle(article, paintScale)} placementModule={Boolean(store)} className="text-window text-window--read"
@@ -241,6 +246,9 @@ const TextInstance = memo(function TextInstance({ record, index, store, profileA
         }}>Move into Display</button></details>}
     </TextTools>}
   </div>;
+  // A closed module is viewport navigation, outside the authored canvas clip
+  // and camera transform. Its state, focus and context menu stay with Text.
+  return !presentation.open && canvasHost?.parentElement ? createPortal(module, canvasHost.parentElement) : module;
 });
 export default function TextWorkbench(props) {
   const tools = useSharedTextTools();

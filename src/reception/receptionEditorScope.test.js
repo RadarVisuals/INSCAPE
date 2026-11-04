@@ -5,11 +5,18 @@ import { createReceptionEditorScope } from './receptionEditorScope.js';
 import { addShape, editShape } from '../shapes/shapeSession.js';
 import { removeWorkbenchModule } from '../systemWorkflow/removeWorkbenchModule.js';
 import { receptionModuleWindow } from './receptionEditorDocument.js';
-import { validReception } from '../profileDocument/domain/receptionPresentation.js';
+import { validReception, projectReception } from '../profileDocument/domain/receptionPresentation.js';
 import { addTextModule, saveTextModuleResult, changeTextFrames } from '../text/textSession.js';
 import { createReceptionExample } from '../../design-system/lab/receptionExample.js';
 import { addImageModule } from '../imageModule/imageModuleSession.js';
 
+const fixtureRoots = new WeakMap();
+function setCell(scope, id, patch) {
+  const root = fixtureRoots.get(scope), draft = root.getDraft();
+  assert.equal(root.commitCompletedOperation({ ...draft, reception: { ...draft.reception,
+    cells: draft.reception.cells.map(cell => cell.id === id ? { ...cell, ...patch } : cell) } },
+  { expectedGeneration: root.getGeneration(), historyLabel: 'Prepare cell fixture' }), true);
+}
 const profile = '0x' + '6'.repeat(40);
 function fixture() {
   const data = new Map(); let failure = false;
@@ -17,10 +24,73 @@ function fixture() {
   const root = createSystemWorkflowDraftStore({ profileAddress: profile, storage });
   addShape(root, profile, { position: { left: 900, top: 700 }, size: { width: 200, height: 160 } });
   const canvas = structuredClone(root.getSnapshot()), scope = createReceptionEditorScope(root);
+  fixtureRoots.set(scope, root);
   return { root, scope, storage, canvas, fail: value => { failure = value; } };
 }
 const canvasPart = ({ reception: _reception, ...rest }) => rest;
 const rectangle = (scope, left = 100) => addShape(scope, profile, { position: { left, top: 120 }, size: { width: 320, height: 240 } });
+
+test('cell editing has one observable owner and deletion does not reactivate it on Undo', () => {
+  const { scope } = fixture(), cell = rectangle(scope); scope.turnShapeIntoCell(cell);
+  const observed = [], unsubscribe = scope.subscribe(() => observed.push(scope.getEditingCell()));
+  scope.setEditingCell(cell); assert.equal(observed.at(-1), cell);
+  removeWorkbenchModule(scope, profile, 'shape', scope.getSnapshot().shapes.find(item => item.id === cell));
+  assert.equal(observed.at(-1), null);
+  scope.undo(); assert.equal(scope.getEditingCell(), null);
+  const independent = rectangle(scope); assert.equal(scope.getCells()[0].members.includes(independent), false);
+  scope.setEditingCell(cell); const member = rectangle(scope);
+  assert.equal(scope.getCells()[0].members.includes(member), true);
+  scope.setEditingCell(null); assert.equal(observed.at(-1), null);
+  const count = observed.length; unsubscribe(); scope.setEditingCell(cell);
+  assert.equal(observed.length, count); scope.release();
+});
+
+test('deletion invalidates editing before immediate Undo without any subscriber or intermediate read', () => {
+  const { scope } = fixture(), cell = rectangle(scope); scope.turnShapeIntoCell(cell); scope.setEditingCell(cell);
+  const expected = scope.getSnapshot().shapes.find(item => item.id === cell);
+  assert.equal(removeWorkbenchModule(scope, profile, 'shape', expected), true);
+  assert.equal(scope.undo(), true); assert.equal(scope.getEditingCell(), null); scope.release();
+});
+
+test('deleting a private cell keeps Image, Text and Shape private atomically through failure, Undo, Redo and reload', () => {
+  const { scope, storage, fail } = fixture(), cell = rectangle(scope); scope.turnShapeIntoCell(cell); scope.setEditingCell(cell);
+  const image = addImageModule(scope, profile, { position: { left: 120, top: 140 }, size: { width: 220, height: 180 }, side: createReceptionExample().imageModules[0].sides[0] });
+  const text = addTextModule(scope, profile, null, { visibility: 'PUBLIC' });
+  const shape = rectangle(scope), privateText = addTextModule(scope, profile);
+  const candidate = scope.getDraft();
+  for (const key of ['imageModules', 'shapes']) candidate[key] = candidate[key].map(item => ({ ...item, visibility: item.id === cell ? 'PRIVATE' : 'PUBLIC' }));
+  assert.equal(scope.commitCompletedOperation(candidate, { expectedGeneration: scope.getGeneration() }), true);
+  const before = structuredClone(scope.getReception()), expected = before.shapes.find(item => item.id === cell);
+  const publicIds = value => ['imageModules', 'texts', 'shapes'].flatMap(key => projectReception(value)[key].map(item => item.id));
+  assert.deepEqual(publicIds(before), []);
+  fail(true); assert.equal(removeWorkbenchModule(scope, profile, 'shape', expected), false);
+  assert.deepEqual(scope.getReception(), before); fail(false);
+  assert.equal(removeWorkbenchModule(scope, profile, 'shape', expected), true);
+  const after = structuredClone(scope.getReception());
+  for (const id of [image, text, shape, privateText]) {
+    const key = ['imageModules', 'texts', 'shapes'].find(key => before[key].some(item => item.id === id));
+    assert.deepEqual(after[key].find(item => item.id === id), { ...before[key].find(item => item.id === id), visibility: 'PRIVATE' });
+    assert.deepEqual(receptionModuleWindow(after, id), receptionModuleWindow(before, id));
+  }
+  assert.deepEqual(publicIds(after), []);
+  assert.equal(scope.undo(), true); assert.deepEqual(scope.getReception(), before);
+  assert.equal(scope.redo(), true); assert.deepEqual(scope.getReception(), after);
+  scope.release();
+  assert.deepEqual(createSystemWorkflowDraftStore({ profileAddress: profile, storage }).getDraft().reception, after);
+});
+
+test('shared Editor Display defaults never become Reception edits or undo history', () => {
+  const { scope } = fixture(), id = rectangle(scope), before = structuredClone(scope.getReception());
+  const candidate = scope.getDraft(), presentation = structuredClone(candidate.workbench);
+  presentation.display.shortcut.visible = true; presentation.displays = []; presentation.miniApps = [];
+  candidate.workbench = structuredClone(presentation);
+  candidate.workbench.shapes.find(item => item.id === id).window.left += 50;
+  assert.equal(scope.commitCompletedOperation(candidate, { expectedGeneration: scope.getGeneration(), historyPresentation: presentation }), true);
+  assert.equal(receptionModuleWindow(scope.getReception(), id).left, receptionModuleWindow(before, id).left + 50);
+  assert.deepEqual(scope.getReception().workbench.display, before.workbench.display);
+  assert.equal(Object.hasOwn(scope.getReception().workbench, 'displays'), Object.hasOwn(before.workbench, 'displays'));
+  assert.equal(scope.undo(), true); assert.deepEqual(scope.getReception(), before); scope.release();
+});
 
 test('explicit Image drop authors the target cell atomically without changing the editing cell', () => {
   const { scope, root, canvas, fail } = fixture(), target = rectangle(scope), other = rectangle(scope, 600);
@@ -75,19 +145,8 @@ test('native rectangle conversion keeps exact appearance and geometry and does n
   assert.equal(loaded.getSnapshot().reception.cells[0].id, id);
 });
 
-test('membership preserves visible layer geometry, keeps it above the cell, and native new artwork joins the open cell', () => {
-  const { scope } = fixture(), child = rectangle(scope, 150), cell = rectangle(scope, 100);
-  scope.turnShapeIntoCell(cell); const frame = receptionModuleWindow(scope.getReception(), child);
-  scope.putInCell(cell, [child]);
-  assert.deepEqual(scope.getCells()[0].members, [child]);
-  assert.ok(scope.getSnapshot().artworkLayers.indexOf(child) > scope.getSnapshot().artworkLayers.indexOf(cell));
-  assert.deepEqual(receptionModuleWindow(scope.getReception(), child), frame);
-  scope.setEditingCell(cell); const added = rectangle(scope, 180);
-  assert.ok(scope.getCells()[0].members.includes(added));
-  assert.throws(() => scope.turnShapeIntoCell(child), /Remove this shape/u);
-  scope.removeFromCell([child]); assert.deepEqual(receptionModuleWindow(scope.getReception(), child), frame);
-  assert.equal(scope.getCells()[0].members.includes(child), false); scope.release();
-});
+
+
 
 test('stale native commits, cross-document commands and failed saves never partially mutate Reception', () => {
   const { scope, root, canvas, fail } = fixture(), id = rectangle(scope), before = scope.getDraft(), generation = scope.getGeneration();
@@ -115,24 +174,10 @@ test('native live presentation is stored in Reception undo history without chang
   assert.deepEqual(canvasPart(root.getSnapshot()), canvasPart(canvas)); scope.release();
 });
 
-test('coupled cells keep child geometry together, spacing moves contents, and unlink preserves the arrangement', () => {
-  const { scope } = fixture(), first = rectangle(scope, 100), second = rectangle(scope, 500), child = rectangle(scope, 520);
-  scope.turnShapeIntoCell(first); scope.turnShapeIntoCell(second); scope.putInCell(second, [child]);
-  scope.coupleCells([first, second], 'row');
-  const group = scope.getCellGroups()[0], before = receptionModuleWindow(scope.getReception(), child);
-  scope.setCellGroupGap(group.id, 116);
-  assert.equal(receptionModuleWindow(scope.getReception(), child).left, before.left + 100);
-  const candidate = scope.getDraft(); candidate.workbench.shapes.find(item => item.id === first).window.top += 50;
-  assert.equal(scope.commitCompletedOperation(candidate, { expectedGeneration: scope.getGeneration() }), true);
-  assert.equal(receptionModuleWindow(scope.getReception(), second).top, 170);
-  assert.equal(receptionModuleWindow(scope.getReception(), child).top, 170);
-  const arranged = structuredClone(scope.getSnapshot().workbench); scope.unlinkCells(second);
-  assert.deepEqual(scope.getSnapshot().workbench, arranged); assert.deepEqual(scope.getCellGroups(), []); scope.release();
-});
 
 test('deleting a cell prunes its membership while retaining independent child artwork, and undo restores it', () => {
   const { scope } = fixture(), cell = rectangle(scope), child = rectangle(scope, 140);
-  scope.turnShapeIntoCell(cell); scope.putInCell(cell, [child]);
+  scope.turnShapeIntoCell(cell); setCell(scope, cell, { members: [child] });
   const before = receptionModuleWindow(scope.getReception(), child);
   assert.equal(removeWorkbenchModule(scope, profile, 'shape', scope.getSnapshot().shapes.find(item => item.id === cell)), true);
   assert.equal(scope.getCells().length, 0); assert.deepEqual(receptionModuleWindow(scope.getReception(), child), before);
@@ -159,14 +204,14 @@ test('native default additions fit inside the edited cell while explicitly place
 
 test('locked children reject direct changes but travel with the whole cell and can be unlocked', () => {
   const { scope } = fixture(), cell = rectangle(scope), child = rectangle(scope, 150);
-  scope.turnShapeIntoCell(cell); scope.putInCell(cell, [child]); scope.setCellLayerLocked(cell, child, true);
+  scope.turnShapeIntoCell(cell); setCell(scope, cell, { members: [child] }); setCell(scope, cell, { lockedMembers: [child] });
   const locked = scope.getSnapshot().shapes.find(item => item.id === child);
   assert.throws(() => editShape(scope, profile, locked, { color: '#ffffff' }), /could not be saved/u);
   assert.equal(removeWorkbenchModule(scope, profile, 'shape', locked), false);
   const candidate = scope.getDraft(); candidate.workbench.shapes.find(item => item.id === cell).window.left += 30;
   assert.equal(scope.commitCompletedOperation(candidate, { expectedGeneration: scope.getGeneration() }), true);
   assert.equal(receptionModuleWindow(scope.getReception(), child).left, 180);
-  scope.setCellLayerLocked(cell, child, false);
+  setCell(scope, cell, { lockedMembers: [] });
   assert.doesNotThrow(() => editShape(scope, profile, scope.getSnapshot().shapes.find(item => item.id === child), { color: '#ffffff' }));
   scope.release();
 });
@@ -196,17 +241,6 @@ test('undoing initial activation preserves the old document while native preview
   assert.equal(validReception(reopened.getReception()), true); reopened.release();
 });
 
-test('deleting a coupled middle cell closes its gap and carries the remaining cell content', () => {
-  const { scope } = fixture(), first = rectangle(scope, 100), middle = rectangle(scope, 450), last = rectangle(scope, 800), child = rectangle(scope, 820);
-  for (const id of [first, middle, last]) scope.turnShapeIntoCell(id);
-  scope.putInCell(last, [child]); scope.coupleCells([first, middle, last], 'row');
-  const before = receptionModuleWindow(scope.getReception(), child);
-  assert.equal(removeWorkbenchModule(scope, profile, 'shape', scope.getSnapshot().shapes.find(item => item.id === middle)), true);
-  assert.deepEqual(scope.getCellGroups()[0].members, [first, last]);
-  assert.equal(receptionModuleWindow(scope.getReception(), last).left, 436);
-  assert.equal(receptionModuleWindow(scope.getReception(), child).left, before.left - 336);
-  scope.release();
-});
 
 test('Reception rejects advanced Text flow atomically while retaining the ordinary article', () => {
   const { scope } = fixture(), id = addTextModule(scope, profile), expected = scope.getSnapshot().texts.find(item => item.id === id);

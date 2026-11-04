@@ -336,6 +336,11 @@
       "rationale": "Bestaande release-default onverkort behouden. Concrete controle: compact groups move and cancel independently, open live members, return, undo and reload at wide/narrow sizes."
     },
     {
+      "name": "single-toolbar",
+      "category": "release",
+      "rationale": "Single-row Editor tools, contextual Actions, narrow-screen access, crop cancellation and undo."
+    },
+    {
       "name": "workbench-toolbar",
       "category": "release",
       "rationale": "Bestaande release-default onverkort behouden. Concrete controle: `Flat toolbar and menus remain usable at ${width}Ã—${height}${touch ? ' touch' : ''}`."
@@ -1916,7 +1921,7 @@
     {
       "name": "reception-cell-interaction",
       "category": "release",
-      "rationale": "Native Reception cell entry from actual double-clicks, image-covered cells, direct shared Shape settings and row/column coupling spacing."
+      "rationale": "Native Reception cell entry from actual double-clicks, image-covered cells, scoped Bento settings, shared split/merge actions and selected-cell styling."
     },
     {
       "name": "reception-layer-order",

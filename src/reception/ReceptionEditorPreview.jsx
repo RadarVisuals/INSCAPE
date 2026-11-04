@@ -19,12 +19,15 @@ function NumberSetting({ label, value, min = 0, max = 16384, onCommit }) {
 }
 
 export default function ReceptionEditorPreview({ reception, model, snapshot, assets, onClose, store }) {
-  const [width, setWidth] = useState(1440), [selection, setSelection] = useState(null), [layout, setLayout] = useState(null), [error, setError] = useState('');
+  const [width, setWidth] = useState(null), [selection, setSelection] = useState(null), [layout, setLayout] = useState(null), [error, setError] = useState('');
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const shown = useMemo(() => projectReception(reception), [reception]);
   const cell = reception.cells.find(item => item.id === selection?.cell);
   const cellRect = layout?.windows[cell?.id], childRect = layout?.windows[selection?.id];
-  const record = id => [...reception.shapes, ...reception.imageModules, ...reception.texts].find(item => item.id === id);
-  const name = id => record(id)?.name || record(id)?.article?.title || 'Layer';
+  const name = id => {
+    const record = [...reception.shapes, ...reception.imageModules, ...reception.texts].find(item => item.id === id);
+    return record?.name || record?.article?.title || 'Layer';
+  };
   const run = action => { try { action(); setError(''); } catch (failure) { setError(failure.message); } };
   const select = (cellId, id) => setSelection({ cell: cellId, id });
   const position = childRect && cellRect && { ...childRect, left: childRect.left - cellRect.left, top: childRect.top - cellRect.top };
@@ -44,13 +47,14 @@ export default function ReceptionEditorPreview({ reception, model, snapshot, ass
   return <ReceptionPresentation snapshot={snapshot?.entries ? snapshot : undefined} assets={assets}>
     <section className="reception-document-preview system-workflow__token-scope" aria-label="Reception responsive preview"
       data-workflow-material="tactile" data-workflow-finish="flat">
-      <header><Button icon={ArrowLeft} onClick={onClose}>Back to editing</Button><span>Reception preview</span></header>
-      <ReceptionViewportControls width={width} onChange={setWidth} />
+      <header><Button icon={ArrowLeft} onClick={onClose}>Back to editing</Button><span>Reception preview</span>
+        {store && <Button aria-expanded={settingsOpen} onClick={() => setSettingsOpen(open => !open)}>Phone layout settings</Button>}</header>
+      <ReceptionViewportControls width={width} measuredWidth={layout?.viewportWidth} onChange={setWidth} />
       {error && <p role="alert">{error}</p>}
       <div className="reception-document-preview-body">
         <div className="reception-document-preview-scroll"><ReceptionDocumentCanvas reception={shown} width={width}
-          model={model} address={store?.getProfileAddress()} selected={selection?.id} onSelect={store ? select : undefined} onLayout={setLayout} /></div>
-        {store && <aside className="reception-document-preview-tools" aria-label="Responsive cell settings">
+          model={model} address={store?.getProfileAddress()} selected={settingsOpen ? selection?.id : undefined} onSelect={store && settingsOpen ? select : undefined} onLayout={setLayout} /></div>
+        {store && settingsOpen && <aside className="reception-document-preview-tools" aria-label="Responsive cell settings">
           <p>Choose a cell to adjust its phone layout. Desktop artwork stays in place.</p>
           <label>Cell<select aria-label="Preview cell" value={cell?.id || ''} onChange={event => select(event.target.value, event.target.value)}>
             <option value="">Choose a cell</option>{shown.cells.map(item => <option key={item.id} value={item.id}>{name(item.id)}</option>)}

@@ -31,7 +31,7 @@ for (const width of [1440, 700, 390]) test(`Companion tools reserve live camera 
     const clearControls = async () => {
       await page.waitForFunction(() => {
         const tool = document.querySelector('.text-tools-window').getBoundingClientRect();
-        const camera = document.querySelector('.workbench-view-controls').getBoundingClientRect();
+        const camera = document.querySelector('[data-workbench-toolbar]').getBoundingClientRect();
         return tool.top >= 8 && tool.bottom <= camera.top - 7 && tool.left >= 8 && tool.right <= innerWidth - 8;
       });
       for (const button of await controls.getByRole('button').all()) assert.equal(await button.evaluate(hit), true, `camera control remains reachable: ${await button.getAttribute('aria-label') || await button.innerText()}`);

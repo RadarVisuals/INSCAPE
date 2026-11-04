@@ -1,0 +1,1518 @@
+{
+  "version": 3,
+  "branding": {
+    "name": "AFTER INDUSTRY",
+    "logo": null
+  },
+  "workbench": {
+    "version": 1,
+    "display": {
+      "name": "DISPLAY MODULE",
+      "open": false,
+      "window": {
+        "left": 32,
+        "top": 64,
+        "width": 960,
+        "height": 572
+      },
+      "shortcut": {
+        "position": {
+          "left": 24,
+          "top": 72
+        },
+        "visible": false,
+        "icon": null,
+        "iconPresentation": {
+          "labelSize": 8,
+          "offsetX": 0,
+          "offsetY": 0,
+          "scale": 1,
+          "size": 60
+        }
+      }
+    },
+    "identity": {
+      "open": false,
+      "window": {
+        "left": 28,
+        "top": 72,
+        "width": 840
+      }
+    },
+    "area": {
+      "left": 0,
+      "top": 0,
+      "width": 1920,
+      "height": 1080
+    },
+    "shapes": [
+      {
+        "id": "shape:paper",
+        "open": true,
+        "window": {
+          "left": 0,
+          "top": 0,
+          "width": 1920,
+          "height": 1080
+        }
+      },
+      {
+        "id": "shape:masthead",
+        "open": true,
+        "window": {
+          "left": 32,
+          "top": 32,
+          "width": 1856,
+          "height": 108
+        }
+      },
+      {
+        "id": "shape:masthead-rule",
+        "open": true,
+        "window": {
+          "left": 32,
+          "top": 132,
+          "width": 1856,
+          "height": 8
+        }
+      },
+      {
+        "id": "shape:hall",
+        "open": true,
+        "window": {
+          "left": 32,
+          "top": 156,
+          "width": 1100,
+          "height": 584
+        }
+      },
+      {
+        "id": "shape:hall-title-shade",
+        "open": true,
+        "window": {
+          "left": 32,
+          "top": 452,
+          "width": 1100,
+          "height": 288
+        }
+      },
+      {
+        "id": "shape:introduction",
+        "open": true,
+        "window": {
+          "left": 1148,
+          "top": 156,
+          "width": 392,
+          "height": 280
+        }
+      },
+      {
+        "id": "shape:machinery",
+        "open": true,
+        "window": {
+          "left": 1556,
+          "top": 156,
+          "width": 332,
+          "height": 584
+        }
+      },
+      {
+        "id": "shape:machinery-caption-shade",
+        "open": true,
+        "window": {
+          "left": 1556,
+          "top": 650,
+          "width": 332,
+          "height": 90
+        }
+      },
+      {
+        "id": "shape:series",
+        "open": true,
+        "window": {
+          "left": 1148,
+          "top": 452,
+          "width": 392,
+          "height": 288
+        }
+      },
+      {
+        "id": "shape:light",
+        "open": true,
+        "window": {
+          "left": 32,
+          "top": 756,
+          "width": 536,
+          "height": 292
+        }
+      },
+      {
+        "id": "shape:light-caption-shade",
+        "open": true,
+        "window": {
+          "left": 32,
+          "top": 991,
+          "width": 536,
+          "height": 57
+        }
+      },
+      {
+        "id": "shape:field-note",
+        "open": true,
+        "window": {
+          "left": 584,
+          "top": 756,
+          "width": 548,
+          "height": 292
+        }
+      },
+      {
+        "id": "shape:exterior",
+        "open": true,
+        "window": {
+          "left": 1148,
+          "top": 756,
+          "width": 740,
+          "height": 292
+        }
+      },
+      {
+        "id": "shape:exterior-caption-shade",
+        "open": true,
+        "window": {
+          "left": 1148,
+          "top": 978,
+          "width": 740,
+          "height": 70
+        }
+      }
+    ],
+    "imageModules": [
+      {
+        "id": "image:hall",
+        "open": true,
+        "position": {
+          "left": 32,
+          "top": 156
+        }
+      },
+      {
+        "id": "image:machinery",
+        "open": true,
+        "position": {
+          "left": 1556,
+          "top": 156
+        }
+      },
+      {
+        "id": "image:light",
+        "open": true,
+        "position": {
+          "left": 32,
+          "top": 756
+        }
+      },
+      {
+        "id": "image:exterior",
+        "open": true,
+        "position": {
+          "left": 1148,
+          "top": 756
+        }
+      }
+    ],
+    "texts": [
+      {
+        "id": "text:masthead",
+        "open": true,
+        "window": {
+          "left": 32,
+          "top": 42,
+          "width": 810,
+          "height": 100
+        }
+      },
+      {
+        "id": "text:masthead-note",
+        "open": true,
+        "window": {
+          "left": 1172,
+          "top": 51,
+          "width": 700,
+          "height": 100
+        }
+      },
+      {
+        "id": "text:hall-label",
+        "open": true,
+        "window": {
+          "left": 64,
+          "top": 476,
+          "width": 850,
+          "height": 100
+        }
+      },
+      {
+        "id": "text:hall-title",
+        "open": true,
+        "window": {
+          "left": 64,
+          "top": 524,
+          "width": 930,
+          "height": 196
+        }
+      },
+      {
+        "id": "text:intro-title",
+        "open": true,
+        "window": {
+          "left": 1176,
+          "top": 180,
+          "width": 336,
+          "height": 100
+        }
+      },
+      {
+        "id": "text:intro-body",
+        "open": true,
+        "window": {
+          "left": 1176,
+          "top": 281,
+          "width": 336,
+          "height": 132
+        }
+      },
+      {
+        "id": "text:machinery-caption",
+        "open": true,
+        "window": {
+          "left": 1578,
+          "top": 667,
+          "width": 288,
+          "height": 100
+        }
+      },
+      {
+        "id": "text:series-title",
+        "open": true,
+        "window": {
+          "left": 1176,
+          "top": 477,
+          "width": 336,
+          "height": 100
+        }
+      },
+      {
+        "id": "text:series-index",
+        "open": true,
+        "window": {
+          "left": 1176,
+          "top": 531,
+          "width": 336,
+          "height": 185
+        }
+      },
+      {
+        "id": "text:light-caption",
+        "open": true,
+        "window": {
+          "left": 54,
+          "top": 1007,
+          "width": 484,
+          "height": 100
+        }
+      },
+      {
+        "id": "text:note-label",
+        "open": true,
+        "window": {
+          "left": 614,
+          "top": 782,
+          "width": 488,
+          "height": 100
+        }
+      },
+      {
+        "id": "text:note-quote",
+        "open": true,
+        "window": {
+          "left": 614,
+          "top": 833,
+          "width": 488,
+          "height": 168
+        }
+      },
+      {
+        "id": "text:exterior-caption",
+        "open": true,
+        "window": {
+          "left": 1173,
+          "top": 994,
+          "width": 688,
+          "height": 100
+        }
+      }
+    ]
+  },
+  "imageModules": [
+    {
+      "id": "image:hall",
+      "name": "The quiet shift",
+      "width": 1100,
+      "height": 584,
+      "visibility": "PUBLIC",
+      "sides": [
+        {
+          "id": "side:hall",
+          "asset": {
+            "stableAssetId": "42:0x0000000000000000000000000000000000000000:0x0000000000000000000000000000000000000000000000000000000001de00bb",
+            "network": "lukso-mainnet",
+            "chainId": 42,
+            "tokenStandard": "UNKNOWN",
+            "contractAddress": "0x0000000000000000000000000000000000000000",
+            "tokenId": "0x0000000000000000000000000000000000000000000000000000000001de00bb",
+            "name": "The quiet shift",
+            "description": "Design sample only; not a token or ownership claim. Photo by Mike Norris. https://www.pexels.com/photo/moody-interior-of-an-abandoned-industrial-building-31326395/",
+            "collectionName": "Pexels photography — design sample",
+            "creators": [],
+            "attributes": [
+              {
+                "key": "Photographer",
+                "value": "Mike Norris",
+                "type": null
+              },
+              {
+                "key": "Source",
+                "value": "https://www.pexels.com/photo/moody-interior-of-an-abandoned-industrial-building-31326395/",
+                "type": null
+              },
+              {
+                "key": "License",
+                "value": "https://www.pexels.com/license/",
+                "type": null
+              }
+            ],
+            "media": {
+              "url": "https://images.pexels.com/photos/31326395/pexels-photo-31326395.jpeg?auto=compress&cs=tinysrgb&w=1920",
+              "type": "image",
+              "width": 5808,
+              "height": 3872
+            }
+          },
+          "crop": {
+            "x": 0.5,
+            "y": 0.5,
+            "zoom": 1
+          },
+          "transform": {
+            "quarterTurns": 0,
+            "mirrorX": false,
+            "mirrorY": false
+          }
+        }
+      ]
+    },
+    {
+      "id": "image:machinery",
+      "name": "Machines at rest",
+      "width": 332,
+      "height": 584,
+      "visibility": "PUBLIC",
+      "sides": [
+        {
+          "id": "side:machinery",
+          "asset": {
+            "stableAssetId": "42:0x0000000000000000000000000000000000000000:0x0000000000000000000000000000000000000000000000000000000001ddcafd",
+            "network": "lukso-mainnet",
+            "chainId": 42,
+            "tokenStandard": "UNKNOWN",
+            "contractAddress": "0x0000000000000000000000000000000000000000",
+            "tokenId": "0x0000000000000000000000000000000000000000000000000000000001ddcafd",
+            "name": "Machines at rest",
+            "description": "Design sample only; not a token or ownership claim. Photo by Mike Norris. https://www.pexels.com/photo/eerie-abandoned-factory-interior-with-broken-windows-31312637/",
+            "collectionName": "Pexels photography — design sample",
+            "creators": [],
+            "attributes": [
+              {
+                "key": "Photographer",
+                "value": "Mike Norris",
+                "type": null
+              },
+              {
+                "key": "Source",
+                "value": "https://www.pexels.com/photo/eerie-abandoned-factory-interior-with-broken-windows-31312637/",
+                "type": null
+              },
+              {
+                "key": "License",
+                "value": "https://www.pexels.com/license/",
+                "type": null
+              }
+            ],
+            "media": {
+              "url": "https://images.pexels.com/photos/31312637/pexels-photo-31312637.jpeg?auto=compress&cs=tinysrgb&w=1920",
+              "type": "image",
+              "width": 4000,
+              "height": 6000
+            }
+          },
+          "crop": {
+            "x": 0.5,
+            "y": 0.5,
+            "zoom": 1
+          },
+          "transform": {
+            "quarterTurns": 0,
+            "mirrorX": false,
+            "mirrorY": false
+          }
+        }
+      ]
+    },
+    {
+      "id": "image:light",
+      "name": "Remaining light",
+      "width": 536,
+      "height": 292,
+      "visibility": "PUBLIC",
+      "sides": [
+        {
+          "id": "side:light",
+          "asset": {
+            "stableAssetId": "42:0x0000000000000000000000000000000000000000:0x0000000000000000000000000000000000000000000000000000000000bcec15",
+            "network": "lukso-mainnet",
+            "chainId": 42,
+            "tokenStandard": "UNKNOWN",
+            "contractAddress": "0x0000000000000000000000000000000000000000",
+            "tokenId": "0x0000000000000000000000000000000000000000000000000000000000bcec15",
+            "name": "Remaining light",
+            "description": "Design sample only; not a token or ownership claim. Photo by Andy Lee. https://www.pexels.com/photo/photo-of-an-interior-of-an-abandoned-factory-12381205/",
+            "collectionName": "Pexels photography — design sample",
+            "creators": [],
+            "attributes": [
+              {
+                "key": "Photographer",
+                "value": "Andy Lee",
+                "type": null
+              },
+              {
+                "key": "Source",
+                "value": "https://www.pexels.com/photo/photo-of-an-interior-of-an-abandoned-factory-12381205/",
+                "type": null
+              },
+              {
+                "key": "License",
+                "value": "https://www.pexels.com/license/",
+                "type": null
+              }
+            ],
+            "media": {
+              "url": "https://images.pexels.com/photos/12381205/pexels-photo-12381205.jpeg?auto=compress&cs=tinysrgb&w=1920",
+              "type": "image",
+              "width": 3840,
+              "height": 5760
+            }
+          },
+          "crop": {
+            "x": 0.5,
+            "y": 0.5,
+            "zoom": 1
+          },
+          "transform": {
+            "quarterTurns": 0,
+            "mirrorX": false,
+            "mirrorY": false
+          }
+        }
+      ]
+    },
+    {
+      "id": "image:exterior",
+      "name": "The outside remains",
+      "width": 740,
+      "height": 292,
+      "visibility": "PUBLIC",
+      "sides": [
+        {
+          "id": "side:exterior",
+          "asset": {
+            "stableAssetId": "42:0x0000000000000000000000000000000000000000:0x0000000000000000000000000000000000000000000000000000000000540090",
+            "network": "lukso-mainnet",
+            "chainId": 42,
+            "tokenStandard": "UNKNOWN",
+            "contractAddress": "0x0000000000000000000000000000000000000000",
+            "tokenId": "0x0000000000000000000000000000000000000000000000000000000000540090",
+            "name": "The outside remains",
+            "description": "Design sample only; not a token or ownership claim. Photo by Mike van Schoonderwalt. https://www.pexels.com/photo/abandoned-factory-building-5505168/",
+            "collectionName": "Pexels photography — design sample",
+            "creators": [],
+            "attributes": [
+              {
+                "key": "Photographer",
+                "value": "Mike van Schoonderwalt",
+                "type": null
+              },
+              {
+                "key": "Source",
+                "value": "https://www.pexels.com/photo/abandoned-factory-building-5505168/",
+                "type": null
+              },
+              {
+                "key": "License",
+                "value": "https://www.pexels.com/license/",
+                "type": null
+              }
+            ],
+            "media": {
+              "url": "https://images.pexels.com/photos/5505168/pexels-photo-5505168.jpeg?auto=compress&cs=tinysrgb&w=1920",
+              "type": "image",
+              "width": 4981,
+              "height": 3796
+            }
+          },
+          "crop": {
+            "x": 0.5,
+            "y": 0.5,
+            "zoom": 1
+          },
+          "transform": {
+            "quarterTurns": 0,
+            "mirrorX": false,
+            "mirrorY": false
+          }
+        }
+      ]
+    }
+  ],
+  "texts": [
+    {
+      "id": "text:masthead",
+      "visibility": "PUBLIC",
+      "article": {
+        "documentType": "INSCAPEArticle",
+        "version": 1,
+        "title": "",
+        "font": "sora",
+        "content": {
+          "type": "doc",
+          "content": [
+            {
+              "type": "paragraph",
+              "attrs": {
+                "spaceBefore": 0,
+                "spaceAfter": 0
+              },
+              "content": [
+                {
+                  "type": "text",
+                  "text": "AFTER INDUSTRY",
+                  "marks": [
+                    {
+                      "type": "bold"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        "appearance": {
+          "background": null,
+          "opacity": 1,
+          "frame": false,
+          "scale": 1,
+          "fontSize": 48,
+          "color": "#ecebe5",
+          "compact": true,
+          "lineHeight": 1.2,
+          "padding": {
+            "top": 0,
+            "right": 0,
+            "bottom": 0,
+            "left": 0
+          }
+        }
+      }
+    },
+    {
+      "id": "text:masthead-note",
+      "visibility": "PUBLIC",
+      "article": {
+        "documentType": "INSCAPEArticle",
+        "version": 1,
+        "title": "",
+        "font": "plex",
+        "content": {
+          "type": "doc",
+          "content": [
+            {
+              "type": "paragraph",
+              "attrs": {
+                "spaceBefore": 0,
+                "spaceAfter": 0
+              },
+              "content": [
+                {
+                  "type": "text",
+                  "text": "INDUSTRIËLE FOTOGRAFIE / VERLATEN ARCHITECTUUR"
+                },
+                {
+                  "type": "hardBreak"
+                },
+                {
+                  "type": "text",
+                  "text": "VELDARCHIEF 01                         ONGOING STUDY"
+                }
+              ]
+            }
+          ]
+        },
+        "appearance": {
+          "background": null,
+          "opacity": 1,
+          "frame": false,
+          "scale": 1,
+          "fontSize": 17,
+          "color": "#a1a9a7",
+          "compact": true,
+          "lineHeight": 1.6,
+          "padding": {
+            "top": 0,
+            "right": 0,
+            "bottom": 0,
+            "left": 0
+          }
+        }
+      }
+    },
+    {
+      "id": "text:hall-label",
+      "visibility": "PUBLIC",
+      "article": {
+        "documentType": "INSCAPEArticle",
+        "version": 1,
+        "title": "",
+        "font": "plex",
+        "content": {
+          "type": "doc",
+          "content": [
+            {
+              "type": "paragraph",
+              "attrs": {
+                "spaceBefore": 0,
+                "spaceAfter": 0
+              },
+              "content": [
+                {
+                  "type": "text",
+                  "text": "01 / THE HALLS          LICHT, STAAL EN AFWEZIGHEID"
+                }
+              ]
+            }
+          ]
+        },
+        "appearance": {
+          "background": null,
+          "opacity": 1,
+          "frame": false,
+          "scale": 1,
+          "fontSize": 18,
+          "color": "#e6dfd3",
+          "compact": true,
+          "lineHeight": 1.2,
+          "padding": {
+            "top": 0,
+            "right": 0,
+            "bottom": 0,
+            "left": 0
+          }
+        }
+      }
+    },
+    {
+      "id": "text:hall-title",
+      "visibility": "PUBLIC",
+      "article": {
+        "documentType": "INSCAPEArticle",
+        "version": 1,
+        "title": "",
+        "font": "sora",
+        "content": {
+          "type": "doc",
+          "content": [
+            {
+              "type": "paragraph",
+              "attrs": {
+                "spaceBefore": 0,
+                "spaceAfter": 0
+              },
+              "content": [
+                {
+                  "type": "text",
+                  "text": "THE QUIET",
+                  "marks": [
+                    {
+                      "type": "bold"
+                    }
+                  ]
+                },
+                {
+                  "type": "hardBreak"
+                },
+                {
+                  "type": "text",
+                  "text": "SHIFT.",
+                  "marks": [
+                    {
+                      "type": "bold"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        "appearance": {
+          "background": null,
+          "opacity": 1,
+          "frame": false,
+          "scale": 1,
+          "fontSize": 82,
+          "color": "#f1eee5",
+          "compact": true,
+          "lineHeight": 1.05,
+          "padding": {
+            "top": 0,
+            "right": 0,
+            "bottom": 0,
+            "left": 0
+          }
+        }
+      }
+    },
+    {
+      "id": "text:intro-title",
+      "visibility": "PUBLIC",
+      "article": {
+        "documentType": "INSCAPEArticle",
+        "version": 1,
+        "title": "",
+        "font": "sora",
+        "content": {
+          "type": "doc",
+          "content": [
+            {
+              "type": "paragraph",
+              "attrs": {
+                "spaceBefore": 0,
+                "spaceAfter": 0
+              },
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Waar de stilte",
+                  "marks": [
+                    {
+                      "type": "bold"
+                    }
+                  ]
+                },
+                {
+                  "type": "hardBreak"
+                },
+                {
+                  "type": "text",
+                  "text": "begint.",
+                  "marks": [
+                    {
+                      "type": "bold"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        "appearance": {
+          "background": null,
+          "opacity": 1,
+          "frame": false,
+          "scale": 1,
+          "fontSize": 30,
+          "color": "#202421",
+          "compact": true,
+          "lineHeight": 1.12,
+          "padding": {
+            "top": 0,
+            "right": 0,
+            "bottom": 0,
+            "left": 0
+          }
+        }
+      }
+    },
+    {
+      "id": "text:intro-body",
+      "visibility": "PUBLIC",
+      "article": {
+        "documentType": "INSCAPEArticle",
+        "version": 1,
+        "title": "",
+        "font": "plex",
+        "content": {
+          "type": "doc",
+          "content": [
+            {
+              "type": "paragraph",
+              "attrs": {
+                "spaceBefore": 0,
+                "spaceAfter": 0
+              },
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Ik zoek de sporen van arbeid in"
+                },
+                {
+                  "type": "hardBreak"
+                },
+                {
+                  "type": "text",
+                  "text": "gebouwen waar niemand meer"
+                },
+                {
+                  "type": "hardBreak"
+                },
+                {
+                  "type": "text",
+                  "text": "werkt. Licht, roest en lege ruimte"
+                },
+                {
+                  "type": "hardBreak"
+                },
+                {
+                  "type": "text",
+                  "text": "worden een portret van wat blijft."
+                }
+              ]
+            }
+          ]
+        },
+        "appearance": {
+          "background": null,
+          "opacity": 1,
+          "frame": false,
+          "scale": 1,
+          "fontSize": 20,
+          "color": "#303a34",
+          "compact": true,
+          "lineHeight": 1.4,
+          "padding": {
+            "top": 0,
+            "right": 0,
+            "bottom": 0,
+            "left": 0
+          }
+        }
+      }
+    },
+    {
+      "id": "text:machinery-caption",
+      "visibility": "PUBLIC",
+      "article": {
+        "documentType": "INSCAPEArticle",
+        "version": 1,
+        "title": "",
+        "font": "plex",
+        "content": {
+          "type": "doc",
+          "content": [
+            {
+              "type": "paragraph",
+              "attrs": {
+                "spaceBefore": 0,
+                "spaceAfter": 0
+              },
+              "content": [
+                {
+                  "type": "text",
+                  "text": "02 / MACHINES AT REST"
+                },
+                {
+                  "type": "hardBreak"
+                },
+                {
+                  "type": "text",
+                  "text": "De laatste beweging."
+                }
+              ]
+            }
+          ]
+        },
+        "appearance": {
+          "background": null,
+          "opacity": 1,
+          "frame": false,
+          "scale": 1,
+          "fontSize": 18,
+          "color": "#eee9de",
+          "compact": true,
+          "lineHeight": 1.5,
+          "padding": {
+            "top": 0,
+            "right": 0,
+            "bottom": 0,
+            "left": 0
+          }
+        }
+      }
+    },
+    {
+      "id": "text:series-title",
+      "visibility": "PUBLIC",
+      "article": {
+        "documentType": "INSCAPEArticle",
+        "version": 1,
+        "title": "",
+        "font": "plex",
+        "content": {
+          "type": "doc",
+          "content": [
+            {
+              "type": "paragraph",
+              "attrs": {
+                "spaceBefore": 0,
+                "spaceAfter": 0
+              },
+              "content": [
+                {
+                  "type": "text",
+                  "text": "SELECTED STUDIES"
+                }
+              ]
+            }
+          ]
+        },
+        "appearance": {
+          "background": null,
+          "opacity": 1,
+          "frame": false,
+          "scale": 1,
+          "fontSize": 17,
+          "color": "#c89471",
+          "compact": true,
+          "lineHeight": 1.2,
+          "padding": {
+            "top": 0,
+            "right": 0,
+            "bottom": 0,
+            "left": 0
+          }
+        }
+      }
+    },
+    {
+      "id": "text:series-index",
+      "visibility": "PUBLIC",
+      "article": {
+        "documentType": "INSCAPEArticle",
+        "version": 1,
+        "title": "",
+        "font": "plex",
+        "content": {
+          "type": "doc",
+          "content": [
+            {
+              "type": "paragraph",
+              "attrs": {
+                "spaceBefore": 0,
+                "spaceAfter": 0
+              },
+              "content": [
+                {
+                  "type": "text",
+                  "text": "01  The halls"
+                },
+                {
+                  "type": "hardBreak"
+                },
+                {
+                  "type": "text",
+                  "text": "02  Machines at rest"
+                },
+                {
+                  "type": "hardBreak"
+                },
+                {
+                  "type": "text",
+                  "text": "03  Remaining light"
+                },
+                {
+                  "type": "hardBreak"
+                },
+                {
+                  "type": "text",
+                  "text": "04  The outside remains"
+                }
+              ]
+            }
+          ]
+        },
+        "appearance": {
+          "background": null,
+          "opacity": 1,
+          "frame": false,
+          "scale": 1,
+          "fontSize": 23,
+          "color": "#e8e8df",
+          "compact": true,
+          "lineHeight": 1.65,
+          "padding": {
+            "top": 0,
+            "right": 0,
+            "bottom": 0,
+            "left": 0
+          }
+        }
+      }
+    },
+    {
+      "id": "text:light-caption",
+      "visibility": "PUBLIC",
+      "article": {
+        "documentType": "INSCAPEArticle",
+        "version": 1,
+        "title": "",
+        "font": "plex",
+        "content": {
+          "type": "doc",
+          "content": [
+            {
+              "type": "paragraph",
+              "attrs": {
+                "spaceBefore": 0,
+                "spaceAfter": 0
+              },
+              "content": [
+                {
+                  "type": "text",
+                  "text": "03 / REMAINING LIGHT"
+                }
+              ]
+            }
+          ]
+        },
+        "appearance": {
+          "background": null,
+          "opacity": 1,
+          "frame": false,
+          "scale": 1,
+          "fontSize": 19,
+          "color": "#ecebe5",
+          "compact": true,
+          "lineHeight": 1.2,
+          "padding": {
+            "top": 0,
+            "right": 0,
+            "bottom": 0,
+            "left": 0
+          }
+        }
+      }
+    },
+    {
+      "id": "text:note-label",
+      "visibility": "PUBLIC",
+      "article": {
+        "documentType": "INSCAPEArticle",
+        "version": 1,
+        "title": "",
+        "font": "plex",
+        "content": {
+          "type": "doc",
+          "content": [
+            {
+              "type": "paragraph",
+              "attrs": {
+                "spaceBefore": 0,
+                "spaceAfter": 0
+              },
+              "content": [
+                {
+                  "type": "text",
+                  "text": "UIT HET VELDBOEK / 001"
+                }
+              ]
+            }
+          ]
+        },
+        "appearance": {
+          "background": null,
+          "opacity": 1,
+          "frame": false,
+          "scale": 1,
+          "fontSize": 17,
+          "color": "#272c25",
+          "compact": true,
+          "lineHeight": 1.2,
+          "padding": {
+            "top": 0,
+            "right": 0,
+            "bottom": 0,
+            "left": 0
+          }
+        }
+      }
+    },
+    {
+      "id": "text:note-quote",
+      "visibility": "PUBLIC",
+      "article": {
+        "documentType": "INSCAPEArticle",
+        "version": 1,
+        "title": "",
+        "font": "sora",
+        "content": {
+          "type": "doc",
+          "content": [
+            {
+              "type": "paragraph",
+              "attrs": {
+                "spaceBefore": 0,
+                "spaceAfter": 0
+              },
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Een gebouw raakt"
+                },
+                {
+                  "type": "hardBreak"
+                },
+                {
+                  "type": "text",
+                  "text": "nooit in één keer"
+                },
+                {
+                  "type": "hardBreak"
+                },
+                {
+                  "type": "text",
+                  "text": "verlaten."
+                }
+              ]
+            }
+          ]
+        },
+        "appearance": {
+          "background": null,
+          "opacity": 1,
+          "frame": false,
+          "scale": 1,
+          "fontSize": 37,
+          "color": "#17241d",
+          "compact": true,
+          "lineHeight": 1.23,
+          "padding": {
+            "top": 0,
+            "right": 0,
+            "bottom": 0,
+            "left": 0
+          }
+        }
+      }
+    },
+    {
+      "id": "text:exterior-caption",
+      "visibility": "PUBLIC",
+      "article": {
+        "documentType": "INSCAPEArticle",
+        "version": 1,
+        "title": "",
+        "font": "plex",
+        "content": {
+          "type": "doc",
+          "content": [
+            {
+              "type": "paragraph",
+              "attrs": {
+                "spaceBefore": 0,
+                "spaceAfter": 0
+              },
+              "content": [
+                {
+                  "type": "text",
+                  "text": "04 / THE OUTSIDE REMAINS"
+                },
+                {
+                  "type": "hardBreak"
+                },
+                {
+                  "type": "text",
+                  "text": "BEELDSTUDIE · FOTO’S: MIKE NORRIS / ANDY LEE / MIKE VAN SCHOONDERWALT"
+                }
+              ]
+            }
+          ]
+        },
+        "appearance": {
+          "background": null,
+          "opacity": 1,
+          "frame": false,
+          "scale": 1,
+          "fontSize": 15,
+          "color": "#ecebe5",
+          "compact": true,
+          "lineHeight": 1.35,
+          "padding": {
+            "top": 0,
+            "right": 0,
+            "bottom": 0,
+            "left": 0
+          }
+        }
+      }
+    }
+  ],
+  "shapes": [
+    {
+      "id": "shape:paper",
+      "name": "paper",
+      "color": "#101212",
+      "opacity": 1,
+      "visibility": "PUBLIC"
+    },
+    {
+      "id": "shape:masthead",
+      "name": "masthead",
+      "color": "#101212",
+      "opacity": 1,
+      "visibility": "PUBLIC"
+    },
+    {
+      "id": "shape:masthead-rule",
+      "name": "masthead rule",
+      "color": "#a35d3c",
+      "opacity": 1,
+      "visibility": "PUBLIC"
+    },
+    {
+      "id": "shape:hall",
+      "name": "hall",
+      "color": "#191d1b",
+      "opacity": 1,
+      "visibility": "PUBLIC"
+    },
+    {
+      "id": "shape:hall-title-shade",
+      "name": "hall title shade",
+      "color": "#080b0b",
+      "opacity": 0.62,
+      "visibility": "PUBLIC"
+    },
+    {
+      "id": "shape:introduction",
+      "name": "introduction",
+      "color": "#c0b7a3",
+      "opacity": 1,
+      "visibility": "PUBLIC"
+    },
+    {
+      "id": "shape:machinery",
+      "name": "machinery",
+      "color": "#151b18",
+      "opacity": 1,
+      "visibility": "PUBLIC"
+    },
+    {
+      "id": "shape:machinery-caption-shade",
+      "name": "machinery caption shade",
+      "color": "#0a1010",
+      "opacity": 0.83,
+      "visibility": "PUBLIC"
+    },
+    {
+      "id": "shape:series",
+      "name": "series",
+      "color": "#29312e",
+      "opacity": 1,
+      "visibility": "PUBLIC"
+    },
+    {
+      "id": "shape:light",
+      "name": "light",
+      "color": "#191e1b",
+      "opacity": 1,
+      "visibility": "PUBLIC"
+    },
+    {
+      "id": "shape:light-caption-shade",
+      "name": "light caption shade",
+      "color": "#0c100e",
+      "opacity": 0.78,
+      "visibility": "PUBLIC"
+    },
+    {
+      "id": "shape:field-note",
+      "name": "field note",
+      "color": "#b06442",
+      "opacity": 1,
+      "visibility": "PUBLIC"
+    },
+    {
+      "id": "shape:exterior",
+      "name": "exterior",
+      "color": "#252b26",
+      "opacity": 1,
+      "visibility": "PUBLIC"
+    },
+    {
+      "id": "shape:exterior-caption-shade",
+      "name": "exterior caption shade",
+      "color": "#111714",
+      "opacity": 0.82,
+      "visibility": "PUBLIC"
+    }
+  ],
+  "artworkLayers": [
+    "shape:paper",
+    "shape:masthead",
+    "text:masthead",
+    "text:masthead-note",
+    "shape:masthead-rule",
+    "shape:hall",
+    "image:hall",
+    "shape:hall-title-shade",
+    "text:hall-label",
+    "text:hall-title",
+    "shape:introduction",
+    "text:intro-title",
+    "text:intro-body",
+    "shape:machinery",
+    "image:machinery",
+    "shape:machinery-caption-shade",
+    "text:machinery-caption",
+    "shape:series",
+    "text:series-title",
+    "text:series-index",
+    "shape:light",
+    "image:light",
+    "shape:light-caption-shade",
+    "text:light-caption",
+    "shape:field-note",
+    "text:note-label",
+    "text:note-quote",
+    "shape:exterior",
+    "image:exterior",
+    "shape:exterior-caption-shade",
+    "text:exterior-caption"
+  ],
+  "cells": [
+    {
+      "id": "shape:masthead",
+      "members": [
+        "text:masthead",
+        "text:masthead-note",
+        "shape:masthead-rule"
+      ],
+      "radius": 0,
+      "mobile": {
+        "columns": 2,
+        "height": 160
+      }
+    },
+    {
+      "id": "shape:hall",
+      "members": [
+        "image:hall",
+        "shape:hall-title-shade",
+        "text:hall-label",
+        "text:hall-title"
+      ],
+      "radius": 0,
+      "mobile": {
+        "columns": 2,
+        "height": 500
+      }
+    },
+    {
+      "id": "shape:introduction",
+      "members": [
+        "text:intro-title",
+        "text:intro-body"
+      ],
+      "radius": 0,
+      "mobile": {
+        "columns": 2,
+        "height": 310
+      }
+    },
+    {
+      "id": "shape:machinery",
+      "members": [
+        "image:machinery",
+        "shape:machinery-caption-shade",
+        "text:machinery-caption"
+      ],
+      "radius": 0,
+      "mobile": {
+        "columns": 2,
+        "height": 500
+      }
+    },
+    {
+      "id": "shape:series",
+      "members": [
+        "text:series-title",
+        "text:series-index"
+      ],
+      "radius": 0,
+      "mobile": {
+        "columns": 2,
+        "height": 300
+      }
+    },
+    {
+      "id": "shape:light",
+      "members": [
+        "image:light",
+        "shape:light-caption-shade",
+        "text:light-caption"
+      ],
+      "radius": 0,
+      "mobile": {
+        "columns": 2,
+        "height": 300
+      }
+    },
+    {
+      "id": "shape:field-note",
+      "members": [
+        "text:note-label",
+        "text:note-quote"
+      ],
+      "radius": 0,
+      "mobile": {
+        "columns": 2,
+        "height": 330
+      }
+    },
+    {
+      "id": "shape:exterior",
+      "members": [
+        "image:exterior",
+        "shape:exterior-caption-shade",
+        "text:exterior-caption"
+      ],
+      "radius": 0,
+      "mobile": {
+        "columns": 2,
+        "height": 300
+      }
+    }
+  ],
+  "bento": {
+    "gap": 16,
+    "padding": 32
+  }
+}

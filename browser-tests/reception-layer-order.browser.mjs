@@ -1,4 +1,4 @@
-import { editorCommand, editorOverview } from './fixtures/editor-menu.mjs';
+import { editorCommand, editorOverview, editorDestination } from './fixtures/editor-menu.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdir } from 'node:fs/promises';
@@ -50,7 +50,7 @@ test('Reception canvas follows the theme through transparent artwork without cha
     await checkTheme('light', 'rgb(222, 219, 211)', 'preview');
     await page.getByRole('button', { name: 'Back to editing', exact: true }).click();
     await editorOverview(page);
-    await page.getByRole('button', { name: 'Reception', exact: true }).click();
+    await editorDestination(page, 'Reception');
     await canvas.waitFor();
     for (const width of [1600, 390]) {
       await page.setViewportSize({ width, height: 1000 });
@@ -96,10 +96,10 @@ test('Reception opens and returns Home centred without moving authored geometry;
     const readCamera = () => page.locator('main[data-reception-editor]').evaluate(host => {
       const area = host.querySelector('[data-workbench-area]'), [width, height] = area.dataset.workbenchArea.split('x').map(Number);
       const scale = +host.dataset.workbenchCameraScale, x = +host.dataset.workbenchCameraX, y = +host.dataset.workbenchCameraY;
-      const controlsTop = Math.min(host.querySelector('.workbench-view-controls').getBoundingClientRect().top,
-        host.querySelector('[data-workbench-toolbar]').getBoundingClientRect().top) - host.getBoundingClientRect().top - 8;
+      const controlsTop = host.querySelector('[data-workbench-toolbar]').getBoundingClientRect().top - host.getBoundingClientRect().top - 8;
+      const menuBottom = host.querySelector('.editor-menu-bar').getBoundingClientRect().bottom - host.getBoundingClientRect().top;
       return { scale, x, y, cx: (+area.dataset.canvasLeft + width / 2) * scale + x,
-        cy: (+area.dataset.canvasTop + height / 2) * scale + y, expectedX: host.clientWidth / 2, expectedY: controlsTop / 2 };
+        cy: (+area.dataset.canvasTop + height / 2) * scale + y, expectedX: host.clientWidth / 2, expectedY: (menuBottom + controlsTop) / 2 };
     });
     const initial = await readCamera();
     assert.equal(initial.scale, 1, 'entry never enlarges a small authored canvas');
@@ -120,7 +120,7 @@ test('Reception opens and returns Home centred without moving authored geometry;
     assert.deepEqual(await readCamera(), initial, 'Home returns to the canvas rather than world origin');
     await page.screenshot({ path: `${output}/centred-editor.png` });
     await editorOverview(page);
-    await page.getByRole('button', { name: 'Reception', exact: true }).click();
+    await editorDestination(page, 'Reception');
     await page.locator('.reception-document-canvas').waitFor(); await settle(page);
     const published = await assertDocumentCentered(page, '.reception-window-main');
     assert.equal(published.width, 947); assert.equal(published.height, 575);
@@ -146,7 +146,7 @@ async function assertPaint(page, native) {
     const rect = owner.getBoundingClientRect(), scale = rect.width / 1040;
     return probes.map(([x, y]) => {
       const point = { x: rect.left + (x - 160) * scale, y: rect.top + (y - 150) * scale };
-      const node = document.elementFromPoint(point.x, point.y)?.closest(native ? '[data-workbench-view-id]' : '[data-layer-id], [data-cell-id]');
+      const node = document.elementsFromPoint(point.x, point.y).map(hit => hit.closest(native ? '[data-workbench-view-id]' : '[data-layer-id], [data-cell-id]')).find(Boolean);
       return native ? node?.dataset.workbenchViewId : node?.dataset.layerId || node?.dataset.cellId;
     });
   }, { probes, native });
@@ -159,7 +159,13 @@ async function textPaint(page, native, id = 'text:nomad') {
   return page.locator(native ? `[data-workbench-view-id="${id}"]` : `.reception-document-canvas [data-layer-id="${id}"]`).evaluate(node => {
     const article = node.querySelector('.text-editor-page, .text-document');
     const style = getComputedStyle(article), surface = getComputedStyle(node), body = getComputedStyle(node.querySelector('.text-module-body'));
-    return { padding: style.padding, fontSize: style.fontSize, lineHeight: style.lineHeight, background: surface.backgroundColor, transform: body.transform };
+    const matrix = body.transform === 'none' ? null : new DOMMatrixReadOnly(body.transform);
+    // Native camera zoom changes the paint dimensions. Compare the quarter-turn
+    // and proportional centering, rather than unscaled translation pixels.
+    const transform = matrix ? [matrix.a, matrix.b, matrix.c, matrix.d,
+      Math.round(matrix.e / parseFloat(body.width) * 1000) / 1000,
+      Math.round(matrix.f / parseFloat(body.height) * 1000) / 1000] : 'none';
+    return { padding: style.padding, fontSize: style.fontSize, lineHeight: style.lineHeight, background: surface.backgroundColor, transform };
   });
 }
 
@@ -193,7 +199,7 @@ test('Reception Editor, preview and public reader preserve interleaved global la
     await page.screenshot({ path: `${output}/preview.png` });
     await page.getByRole('button', { name: 'Back to editing', exact: true }).click();
     await editorOverview(page);
-    await page.getByRole('button', { name: 'Reception', exact: true }).click();
+    await editorDestination(page, 'Reception');
     await page.locator('[data-layer-id="text:nomad"] .text-document').waitFor();
     await assertPaint(page, false);
     assert.deepEqual(await textPaint(page, false), nativeText);

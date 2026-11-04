@@ -1,0 +1,31 @@
+.reception-bento-overlay { position: fixed; inset: 0; z-index: 79; pointer-events: none; }
+.reception-bento-line-layer { position: fixed; inset: 0; z-index: 78; pointer-events: none; }
+.reception-bento-cell { position: absolute; box-sizing: border-box; border: 1px solid transparent; pointer-events: auto; cursor: grab; touch-action: none; }
+.reception-bento-cell[data-selected], .reception-bento-cell[data-swap-target] { border-color: var(--workflow-ink); }
+.reception-bento-cell[data-swap-target] { outline: 2px dashed var(--workflow-ink); outline-offset: -5px; }
+.reception-bento-cell:focus-visible { outline: 2px solid var(--workflow-ink); outline-offset: 2px; }
+.reception-bento-overlay[data-previewing] .reception-bento-cell { cursor: default; }
+.reception-bento-cell-actions { position: absolute; display: flex; gap: 3px; width: max-content; max-width: calc(100vw - 16px); padding: 3px; border: 1px solid var(--workflow-border); border-radius: var(--control-radius); background: var(--workflow-panel); cursor: default; pointer-events: auto; font: var(--workflow-type-control); }
+.reception-bento-divider { position: absolute; padding: 0; border: 0; background: transparent; pointer-events: auto; touch-action: none; cursor: row-resize; }
+.reception-bento-divider[data-axis="x"] { cursor: col-resize; }
+.reception-bento-divider::after { content: ''; position: absolute; top: calc(50% - 1px); left: calc(50% - 16px); width: 32px; height: 2px; background: var(--workflow-ink); opacity: 0; }
+.reception-bento-divider[data-axis="x"]::after { top: calc(50% - 16px); left: calc(50% - 1px); width: 2px; height: 32px; }
+.reception-bento-divider:hover::after, .reception-bento-divider:focus-visible::after { opacity: 1; }
+.reception-bento-panel .workbench-tool-panel-content { display: flex; flex-direction: column; overflow: hidden; }
+.reception-bento-modes { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 8px 12px; border-bottom: 1px solid var(--workflow-border); }
+.reception-bento-settings { display: flex; flex: 1; flex-direction: column; min-height: 0; width: 100%; }
+.reception-bento-scroll { display: grid; gap: 16px; padding: 12px; overflow: auto; min-height: 0; }
+.reception-bento-footer { display: grid; gap: 8px; margin-top: auto; padding: 12px; border-top: 1px solid var(--workflow-border); flex-shrink: 0; }
+.reception-bento-footer [role=alert] { max-height: 5em; overflow: auto; }
+.reception-bento-settings fieldset { display: grid; gap: 10px; min-width: 0; margin: 0; padding: 10px 0 0; border: 0; border-top: 1px solid var(--workflow-border); }
+.reception-bento-settings legend { padding: 0 8px 0 0; }
+.reception-bento-settings p { margin: 0; font: var(--workflow-type-control); }
+.reception-bento-settings label:not(.reception-bento-check) { display: grid; gap: 4px; min-width: 0; }
+.reception-bento-check { display: flex; align-items: center; gap: 8px; }
+.reception-bento-check input { accent-color: var(--workflow-ink); }
+.reception-bento-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.reception-bento-formats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; }
+.reception-bento-settings input[type="number"] { width: 100%; }
+.reception-bento-preview { display: block; width: 100%; max-height: 160px; background: var(--interface-environment); }
+.reception-bento-preview rect { fill: var(--workflow-ink); fill-opacity: .22; }
+.reception-bento-error { position: fixed; z-index: 90; bottom: 24px; left: 24px; max-width: min(480px, calc(100vw - 48px)); padding: 12px; border: 1px solid var(--workflow-border); background: var(--workflow-panel); color: var(--workflow-ink); font: var(--workflow-type-control); }

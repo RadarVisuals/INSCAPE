@@ -2,7 +2,6 @@ import { useWorkbenchArea } from './WorkbenchAreaContext.jsx';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Grid3X3, Image, Info, Layers, Redo2, Settings2, Square, Type, Undo2, User, AppWindow, Folder } from 'lucide-react';
 import WorkbenchToolbar from './WorkbenchToolbar.jsx';
-import { ContextActionBars } from './ContextToolbar.jsx';
 import './workbenchCreation.css';
 import { useWorkbenchView } from './WorkbenchViewContext.js';
 import { useWorkbenchCamera } from './WorkbenchCamera.jsx';
@@ -23,11 +22,11 @@ const CREATION_CONTROLS = `${EDITING},button,a,summary,[role=separator]`;
 // Adapts Workbench commands to the toolbar. It does not own module content,
 // camera state, tool windows, or a second command/persistence implementation.
 export default function OwnerWorkbenchToolbar({ hostRef, placementTargets, commands, onCommand, onOpenLibrary, libraryOpen,
-  preferences, onPreferencesChange, hidden, exiting = false, onHistory, history, historyBlocked, onNotice, artworkLayersOpen, onToggleArtworkLayers, onOpenSharedTool, showIdentity = true }) {
+  preferences, onPreferencesChange, hidden, exiting = false, onHistory, history, historyBlocked, onNotice, artworkLayersOpen, onToggleArtworkLayers, onOpenSharedTool, showIdentity = true, searchRequest, searchEnabled = true }) {
   const { bounds: areaBounds } = useWorkbenchArea();
   const view = useWorkbenchView(), camera = useWorkbenchCamera(), tools = useSharedDisplayTools();
   const cells = useEditorCells();
-  const [actionRequest, setActionRequest] = useState(0), [ghost, setGhost] = useState(null);
+  const [ghost, setGhost] = useState(null);
   const gesture = useRef(null), space = useRef(false), latest = useRef(null), suppressedPointer = useRef(null);
   latest.current = { view, camera, hidden, onCommand, onNotice, areaBounds, cells };
   const cancel = useCallback(() => {
@@ -54,9 +53,6 @@ export default function OwnerWorkbenchToolbar({ hostRef, placementTargets, comma
       // scrolling default. It still takes precedence over pending creation.
       if (event.code === 'Space' && !event.ctrlKey && !event.metaKey && !event.altKey) { space.current = true; cancel(); return; }
       if (event.defaultPrevented) return;
-      if ((event.ctrlKey || event.metaKey) && !event.altKey && event.key.toLowerCase() === 'k') {
-        event.preventDefault(); event.stopPropagation(); cancel(); latest.current.view.setInteractionTool('select'); setActionRequest(value => value + 1); return;
-      }
       if (event.ctrlKey || event.metaKey || event.altKey || event.shiftKey || event.repeat) return;
       const tool = { v: 'select', h: 'hand', t: 'text', r: 'shape' }[event.key.toLowerCase()];
       if (tool || event.key === 'Escape' && latest.current.view.interactionTool !== 'select') {
@@ -174,8 +170,8 @@ export default function OwnerWorkbenchToolbar({ hostRef, placementTargets, comma
   const creating = isCreationTool(view.interactionTool);
   return <>
     <WorkbenchToolbar activeTool={view.interactionTool} onToolChange={chooseTool} actions={actions} addCommands={addCommands}
-      shapeCommands={shapeCommands} layers={layers} info={info} before={<ContextActionBars />}
-      onOpenLibrary={trigger => { chooseTool('select'); onOpenLibrary(trigger); }} libraryOpen={libraryOpen} hidden={hidden && !exiting} actionRequest={actionRequest} />
+      shapeCommands={shapeCommands} layers={layers} searchScopeRef={hostRef} searchEnabled={searchEnabled && !camera.locked}
+      onOpenLibrary={trigger => { chooseTool('select'); onOpenLibrary(trigger); }} libraryOpen={libraryOpen} hidden={hidden && !exiting} searchRequest={searchRequest} />
     {!hidden && creating && <p className="workbench-creation-hint" role="status" data-system-workflow-overlay>
       {view.interactionTool === 'text' ? 'Click the Workbench or an unlocked Display to add Text.' : `Click or drag on the Workbench to draw a ${SHAPE_COMMAND_KINDS[view.interactionTool]}.`} <kbd>Esc</kbd> to cancel
     </p>}

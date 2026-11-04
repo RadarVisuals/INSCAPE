@@ -4,8 +4,8 @@
   "systemVersion": "1.0.0",
   "note": "Generated from production and design-system reference CSS. Reference roles are preview-only. Values remain CSS expressions, with selector and media scopes; this is not a DTCG interchange file. Runtime custom properties and local overrides are included and are not automatically public design tokens.",
   "counts": {
-    "files": 95,
-    "definitions": 555,
+    "files": 98,
+    "definitions": 556,
     "names": 318
   },
   "sources": [
@@ -2902,18 +2902,16 @@
     {
       "path": "src/public/ownerSystemWorkflow/activity.css",
       "role": "Activity",
-      "sha256": "7ed803abcab5781ab3b7a2e5f0b22b427974b8bd747908ade9c0e4d0f84e3b10",
+      "sha256": "360b3d2cd232b825479054741d3098b1e8742f8124955b5caea94b021e43306a",
       "definitions": [
         {
           "name": "--activity-inset",
-          "value": "max(12px, var(--workspace-navigation-inset, 0px))",
+          "value": "12px",
           "scope": [
             ".activity-panel.workbench-tool-panel"
           ],
           "line": 3,
-          "references": [
-            "--workspace-navigation-inset"
-          ]
+          "references": []
         },
         {
           "name": "--activity-top",
@@ -2959,8 +2957,22 @@
         "--tactile-hover",
         "--tactile-ink",
         "--tactile-muted",
-        "--workspace-navigation-inset",
         "--workspace-navigation-top"
+      ]
+    },
+    {
+      "path": "src/public/ownerSystemWorkflow/artworkActionControls.css",
+      "role": "Local",
+      "sha256": "bafb81ebd46dad8ef7007c89c0255e6c972bd87ccad80a0976d0a8fd2b2cb74e",
+      "definitions": [],
+      "references": [
+        "--control-radius",
+        "--control-target-toolbar",
+        "--icon-size-interface",
+        "--tactile-face",
+        "--tactile-ink",
+        "--tactile-muted",
+        "--workflow-type-control"
       ]
     },
     {
@@ -2980,46 +2992,9 @@
     {
       "path": "src/public/ownerSystemWorkflow/contextToolbar.css",
       "role": "Local",
-      "sha256": "273f56ac419665b6f617819f1334697373cfb8f34766fb36b9e527975687e125",
-      "definitions": [
-        {
-          "name": "--context-action-target",
-          "value": "var(--control-target-toolbar)",
-          "scope": [
-            ".context-action-bar"
-          ],
-          "line": 11,
-          "references": [
-            "--control-target-toolbar"
-          ]
-        },
-        {
-          "name": "--context-action-target",
-          "value": "var(--control-target-touch)",
-          "scope": [
-            "@media (pointer: coarse), (max-width: 520px)",
-            ".context-action-bar"
-          ],
-          "line": 48,
-          "references": [
-            "--control-target-touch"
-          ]
-        }
-      ],
-      "references": [
-        "--context-action-target",
-        "--control-inset",
-        "--control-radius",
-        "--control-shell-radius",
-        "--control-target-toolbar",
-        "--control-target-touch",
-        "--icon-size-interface",
-        "--tactile-edge",
-        "--tactile-face",
-        "--tactile-ink",
-        "--tactile-muted",
-        "--workflow-type-control"
-      ]
+      "sha256": "246f1299adff800310fea0978004a9c4186ec0b504bcea4f632724203e116222",
+      "definitions": [],
+      "references": []
     },
     {
       "path": "src/public/ownerSystemWorkflow/displayArtworkSurface.css",
@@ -3129,7 +3104,7 @@
     {
       "path": "src/public/ownerSystemWorkflow/editorMenuBar.css",
       "role": "Local",
-      "sha256": "60b0085a075847c16ddbd9f4169ab411935e079965355b8657ec80b691fa8ff0",
+      "sha256": "85a3cb4ae00fa2c34d601969f6c5c09476e0c695abdfb6371ec52e72ba9fa9d3",
       "definitions": [],
       "references": [
         "--font-interface",
@@ -3963,7 +3938,7 @@
     {
       "path": "src/public/ownerSystemWorkflow/settings.css",
       "role": "Settings",
-      "sha256": "3714df4e3a077fa622e17519ea4a864af32a396d2fdfa2604a42a1fdcd0cd561",
+      "sha256": "e74e7cd028ced669369ec4b4c48fd1e5e38b8c4204a9174fcea03c0ccb7734ac",
       "definitions": [
         {
           "name": "--workflow-panel",
@@ -4044,14 +4019,12 @@
         },
         {
           "name": "--settings-inset",
-          "value": "max(12px, var(--workspace-navigation-inset, 0px))",
+          "value": "12px",
           "scope": [
             ".system-workflow__settings.workbench-tool-panel"
           ],
           "line": 10,
-          "references": [
-            "--workspace-navigation-inset"
-          ]
+          "references": []
         },
         {
           "name": "--settings-top",
@@ -4100,7 +4073,6 @@
         "--tactile-hover",
         "--tactile-ink",
         "--tactile-muted",
-        "--workspace-navigation-inset",
         "--workspace-navigation-top"
       ]
     },
@@ -4152,18 +4124,16 @@
     {
       "path": "src/public/ownerSystemWorkflow/workbenchDestinationPanel.css",
       "role": "Destinations",
-      "sha256": "cd8860eaebb3b554ece44d607a1507bd08f8a2cf59f464f3b7eb5277da4733ee",
+      "sha256": "bdea771123726f9db6b52bfc95ece04de63f46ae1facfe9d5b81fd12d01aede2",
       "definitions": [
         {
           "name": "--destination-inset",
-          "value": "max(12px, var(--workspace-navigation-inset, 0px))",
+          "value": "12px",
           "scope": [
             ".workbench-destination-panel.workbench-tool-panel"
           ],
           "line": 3,
-          "references": [
-            "--workspace-navigation-inset"
-          ]
+          "references": []
         },
         {
           "name": "--destination-top",
@@ -4318,7 +4288,6 @@
         "--tactile-hover",
         "--tactile-ink",
         "--tactile-muted",
-        "--workspace-navigation-inset",
         "--workspace-navigation-top"
       ]
     },
@@ -4397,7 +4366,7 @@
     {
       "path": "src/public/ownerSystemWorkflow/workbenchSideDock.css",
       "role": "Local",
-      "sha256": "08e6c5fdd0801d13daf504c89f36749435bb0f946e6fc12ac909752efa6eae8d",
+      "sha256": "c8a29218a457d9adcebade0ecb8311b42f9919ffb0450cbb6cdd7a82e5bbf530",
       "definitions": [],
       "references": [
         "--tactile-edge",
@@ -4409,11 +4378,10 @@
     {
       "path": "src/public/ownerSystemWorkflow/workbenchSidebar.css",
       "role": "Local",
-      "sha256": "f78875f746de8a97a50b726f4d4fa643461cb305221f97bd5c8f9e2851881afd",
+      "sha256": "e4fe628f692a3bb96029cbca9b0648208eee0adcc1539505aca8dc4ba307b427",
       "definitions": [],
       "references": [
         "--sidebar-bottom",
-        "--workspace-navigation-inset",
         "--workspace-navigation-top"
       ]
     },
@@ -4431,7 +4399,7 @@
     {
       "path": "src/public/ownerSystemWorkflow/workbenchToolChrome.css",
       "role": "Tool",
-      "sha256": "3d4e6c4e1883863a06343f2019ceda894bc0fdcf7dc6aa71f4b6841ad18c2653",
+      "sha256": "c4743665ee068fd788fcacd3731bd045789c36bfd16d1cf21ad1f9949d323d81",
       "definitions": [
         {
           "name": "--detached-window-gutter",
@@ -4638,6 +4606,7 @@
         "--tactile-accent",
         "--tactile-edge",
         "--tactile-face",
+        "--tactile-header",
         "--tactile-hover",
         "--tactile-ink",
         "--tactile-muted",
@@ -4654,11 +4623,12 @@
     {
       "path": "src/public/ownerSystemWorkflow/workbenchToolDocks.css",
       "role": "Tool docks",
-      "sha256": "67439e69586fcf74d31117b7d77cacd23398203ec15d8f00c62ca068202da5bb",
+      "sha256": "5cb3d960bc4bde00a01848f9e04398ede89f7e6fd5346f4784ebf334b07e2f5e",
       "definitions": [],
       "references": [
         "--control-radius",
         "--control-shell-radius",
+        "--tactile-divider",
         "--tactile-edge",
         "--tactile-face",
         "--tactile-hover",
@@ -4670,7 +4640,7 @@
     {
       "path": "src/public/ownerSystemWorkflow/workbenchToolPanel.css",
       "role": "Tool panel",
-      "sha256": "eb3449963f3283545063aeaf160aeb86dc7e1b917fccc8a12e3e7b2d62ed1357",
+      "sha256": "c8131f75d628c4f3d186a151549b4b20ddefc47eb6f3b22dbde7afa2656ab837",
       "definitions": [],
       "references": [
         "--control-radius",
@@ -4678,6 +4648,7 @@
         "--icon-size-interface",
         "--tactile-edge",
         "--tactile-face",
+        "--tactile-header",
         "--tactile-hover",
         "--tactile-ink",
         "--tool-icon-target",
@@ -4687,7 +4658,7 @@
     {
       "path": "src/public/ownerSystemWorkflow/workbenchToolbar.css",
       "role": "Creation",
-      "sha256": "a42fbf7ab0844da00e76d67a10a85b3ead38cf69c3018fdb8fdabeba6477b571",
+      "sha256": "843e326fa947e971ec22a7332c71e9f6227da393a7c75ed6401c15c730a33543",
       "definitions": [
         {
           "name": "--toolbar-target",
@@ -4730,21 +4701,12 @@
           "references": []
         },
         {
-          "name": "--toolbar-row-gap",
-          "value": "4px",
-          "scope": [
-            ".workbench-toolbar"
-          ],
-          "line": 7,
-          "references": []
-        },
-        {
           "name": "--toolbar-padding-block",
           "value": "var(--control-inset)",
           "scope": [
             ".workbench-toolbar"
           ],
-          "line": 8,
+          "line": 7,
           "references": [
             "--control-inset"
           ]
@@ -4755,7 +4717,7 @@
           "scope": [
             ".workbench-toolbar"
           ],
-          "line": 9,
+          "line": 8,
           "references": [
             "--control-inset"
           ]
@@ -4766,7 +4728,7 @@
           "scope": [
             ".workbench-toolbar"
           ],
-          "line": 10,
+          "line": 9,
           "references": [
             "--control-shell-radius"
           ]
@@ -4777,7 +4739,7 @@
           "scope": [
             ".workbench-toolbar"
           ],
-          "line": 11,
+          "line": 10,
           "references": [
             "--control-radius"
           ]
@@ -4788,7 +4750,7 @@
           "scope": [
             ".workbench-toolbar"
           ],
-          "line": 12,
+          "line": 11,
           "references": [
             "--toolbar-radius"
           ]
@@ -4843,7 +4805,7 @@
           "scope": [
             ".workbench-toolbar__bar"
           ],
-          "line": 47,
+          "line": 48,
           "references": [
             "--toolbar-key-radius"
           ]
@@ -4855,7 +4817,7 @@
             "@media (max-width: 520px)",
             ".workbench-toolbar"
           ],
-          "line": 279,
+          "line": 274,
           "references": [
             "--control-target-touch"
           ]
@@ -4867,7 +4829,7 @@
             "@media (pointer: coarse)",
             ".workbench-toolbar"
           ],
-          "line": 317,
+          "line": 298,
           "references": [
             "--control-target-touch"
           ]
@@ -4903,20 +4865,19 @@
         "--toolbar-popup-padding-inline",
         "--toolbar-popup-radius",
         "--toolbar-radius",
-        "--toolbar-row-gap",
         "--toolbar-target",
-        "--workbench-side-dock-width",
         "--workbench-toolbar-clearance",
         "--workbench-toolbar-offset",
         "--workflow-dock-height",
         "--workflow-type-control",
-        "--workflow-type-micro"
+        "--workflow-type-micro",
+        "--workspace-navigation-top"
       ]
     },
     {
       "path": "src/public/ownerSystemWorkflow/workbenchView.css",
       "role": "Host",
-      "sha256": "ed38ee810cfe690282a795bf6105b31e18d6a3ba5888e45c77bfede5b0742ca2",
+      "sha256": "4c5cd03e12074d8a0f1941372fade9550e2dbfc49885126fa4bd4315aa371473",
       "definitions": [
         {
           "name": "--workbench-toolbar-clearance",
@@ -4943,7 +4904,7 @@
             "@media (max-height: 540px)",
             ".system-workflow[data-creation-toolbar]"
           ],
-          "line": 5,
+          "line": 4,
           "references": []
         },
         {
@@ -4952,7 +4913,7 @@
           "scope": [
             ".workbench-view-controls"
           ],
-          "line": 8,
+          "line": 7,
           "references": [
             "--control-target-toolbar"
           ]
@@ -4964,7 +4925,7 @@
             "@media (pointer: coarse), (max-width: 520px)",
             ".workbench-view-controls"
           ],
-          "line": 17,
+          "line": 15,
           "references": [
             "--control-target-touch"
           ]
@@ -4984,13 +4945,11 @@
         "--tactile-surface",
         "--view-control-target",
         "--workbench-camera-transform",
+        "--workbench-left-dock-width",
         "--workbench-pan-scale",
         "--workbench-pan-x",
         "--workbench-pan-y",
-        "--workbench-side-dock-width",
-        "--workbench-toolbar-clearance",
-        "--workbench-toolbar-offset",
-        "--workbench-toolbar-width",
+        "--workbench-right-dock-width",
         "--workflow-dock-height",
         "--workflow-ink",
         "--workflow-type-control"
@@ -5310,7 +5269,7 @@
     {
       "path": "src/public/ownerSystemWorkflow/workflowFlat.css",
       "role": "Flat material",
-      "sha256": "c8b3d6972d99675c5387d03d84f0011c616e0bd64b7802e78be475b91edcb42a",
+      "sha256": "b9b13234b0506abd48a4c1569fd81a3bb0b7897622ffb8b886f384e9c6801793",
       "definitions": [
         {
           "name": "--tactile-face",
@@ -5382,12 +5341,36 @@
           ]
         },
         {
+          "name": "--tactile-header",
+          "value": "color-mix(in srgb, var(--tactile-ink) 4%, var(--tactile-face))",
+          "scope": [
+            "[data-workflow-material='tactile'][data-workflow-finish='flat']"
+          ],
+          "line": 11,
+          "references": [
+            "--tactile-ink",
+            "--tactile-face"
+          ]
+        },
+        {
+          "name": "--tactile-divider",
+          "value": "color-mix(in srgb, var(--tactile-ink) 32%, var(--tactile-face))",
+          "scope": [
+            "[data-workflow-material='tactile'][data-workflow-finish='flat']"
+          ],
+          "line": 12,
+          "references": [
+            "--tactile-ink",
+            "--tactile-face"
+          ]
+        },
+        {
           "name": "--tactile-raised",
           "value": "transparent",
           "scope": [
             "[data-workflow-material='tactile'][data-workflow-finish='flat']"
           ],
-          "line": 11,
+          "line": 13,
           "references": []
         },
         {
@@ -5396,7 +5379,7 @@
           "scope": [
             "[data-workflow-material='tactile'][data-workflow-finish='flat']"
           ],
-          "line": 12,
+          "line": 14,
           "references": [
             "--tactile-ink",
             "--tactile-face"
@@ -5408,7 +5391,7 @@
           "scope": [
             "[data-workflow-material='tactile'][data-workflow-finish='flat']"
           ],
-          "line": 13,
+          "line": 15,
           "references": [
             "--interface-environment"
           ]
@@ -5419,7 +5402,7 @@
           "scope": [
             "[data-workflow-material='tactile'][data-workflow-finish='flat']"
           ],
-          "line": 14,
+          "line": 16,
           "references": []
         },
         {
@@ -5428,7 +5411,7 @@
           "scope": [
             "[data-workflow-material='tactile'][data-workflow-finish='flat']"
           ],
-          "line": 15,
+          "line": 17,
           "references": []
         },
         {
@@ -5437,7 +5420,7 @@
           "scope": [
             "[data-workflow-material='tactile'][data-workflow-finish='flat']"
           ],
-          "line": 16,
+          "line": 18,
           "references": []
         },
         {
@@ -5446,7 +5429,7 @@
           "scope": [
             "[data-workflow-material='tactile'][data-workflow-finish='flat']"
           ],
-          "line": 17,
+          "line": 19,
           "references": [
             "--tactile-face"
           ]
@@ -5457,7 +5440,7 @@
           "scope": [
             "[data-workflow-material='tactile'][data-workflow-finish='flat']"
           ],
-          "line": 18,
+          "line": 20,
           "references": [
             "--control-radius"
           ]
@@ -5468,7 +5451,7 @@
           "scope": [
             "[data-workflow-material='tactile'][data-workflow-finish='flat']"
           ],
-          "line": 19,
+          "line": 21,
           "references": [
             "--control-radius"
           ]
@@ -5479,7 +5462,7 @@
           "scope": [
             "[data-workflow-material='tactile'][data-workflow-finish='flat']"
           ],
-          "line": 20,
+          "line": 22,
           "references": []
         },
         {
@@ -5489,7 +5472,7 @@
             "@media (forced-colors: active)",
             "[data-workflow-material='tactile'][data-workflow-finish='flat']"
           ],
-          "line": 24,
+          "line": 26,
           "references": []
         },
         {
@@ -5499,7 +5482,7 @@
             "@media (forced-colors: active)",
             "[data-workflow-material='tactile'][data-workflow-finish='flat']"
           ],
-          "line": 25,
+          "line": 27,
           "references": []
         },
         {
@@ -5509,7 +5492,7 @@
             "@media (forced-colors: active)",
             "[data-workflow-material='tactile'][data-workflow-finish='flat']"
           ],
-          "line": 26,
+          "line": 28,
           "references": []
         },
         {
@@ -5519,7 +5502,7 @@
             "@media (forced-colors: active)",
             "[data-workflow-material='tactile'][data-workflow-finish='flat']"
           ],
-          "line": 27,
+          "line": 29,
           "references": []
         },
         {
@@ -5529,7 +5512,7 @@
             "@media (forced-colors: active)",
             "[data-workflow-material='tactile'][data-workflow-finish='flat']"
           ],
-          "line": 28,
+          "line": 30,
           "references": []
         },
         {
@@ -5539,7 +5522,27 @@
             "@media (forced-colors: active)",
             "[data-workflow-material='tactile'][data-workflow-finish='flat']"
           ],
-          "line": 29,
+          "line": 31,
+          "references": []
+        },
+        {
+          "name": "--tactile-header",
+          "value": "Canvas",
+          "scope": [
+            "@media (forced-colors: active)",
+            "[data-workflow-material='tactile'][data-workflow-finish='flat']"
+          ],
+          "line": 32,
+          "references": []
+        },
+        {
+          "name": "--tactile-divider",
+          "value": "ButtonText",
+          "scope": [
+            "@media (forced-colors: active)",
+            "[data-workflow-material='tactile'][data-workflow-finish='flat']"
+          ],
+          "line": 33,
           "references": []
         },
         {
@@ -5549,7 +5552,7 @@
             "@media (forced-colors: active)",
             "[data-workflow-material='tactile'][data-workflow-finish='flat']"
           ],
-          "line": 30,
+          "line": 34,
           "references": []
         },
         {
@@ -5559,7 +5562,7 @@
             "@media (forced-colors: active)",
             "[data-workflow-material='tactile'][data-workflow-finish='flat']"
           ],
-          "line": 31,
+          "line": 35,
           "references": []
         },
         {
@@ -5569,7 +5572,7 @@
             "@media (forced-colors: active)",
             "[data-workflow-material='tactile'][data-workflow-finish='flat']"
           ],
-          "line": 32,
+          "line": 36,
           "references": []
         },
         {
@@ -5578,7 +5581,7 @@
           "scope": [
             "[data-workflow-menu][data-workflow-finish='flat']"
           ],
-          "line": 47,
+          "line": 51,
           "references": [
             "--tactile-hover"
           ]
@@ -5589,7 +5592,7 @@
           "scope": [
             "[data-workflow-menu][data-workflow-finish='flat']"
           ],
-          "line": 48,
+          "line": 52,
           "references": [
             "--tactile-ink"
           ]
@@ -5600,7 +5603,7 @@
           "scope": [
             "[data-workflow-menu][data-workflow-finish='flat']"
           ],
-          "line": 49,
+          "line": 53,
           "references": [
             "--tactile-ink"
           ]
@@ -5611,7 +5614,7 @@
           "scope": [
             "[data-workflow-menu][data-workflow-finish='flat']"
           ],
-          "line": 50,
+          "line": 54,
           "references": [
             "--tactile-muted"
           ]
@@ -5622,7 +5625,7 @@
           "scope": [
             "[data-workflow-menu][data-workflow-finish='flat']"
           ],
-          "line": 51,
+          "line": 55,
           "references": [
             "--tactile-edge"
           ]
@@ -6630,7 +6633,7 @@
     {
       "path": "src/public/workbenchOverview/workbenchOverview.css",
       "role": "Local",
-      "sha256": "ae1cc514c0ac1fd31dc1b8ff8806d88fe79876c9cb7e8e53a6eb07d64fe3010b",
+      "sha256": "785e250d8d7dad5868a72584cf4478043d99890c8355846cac909dd7c0d6d5ec",
       "definitions": [
         {
           "name": "--overview-ease",
@@ -6790,7 +6793,7 @@
         "--tactile-ink",
         "--tactile-muted",
         "--tactile-well",
-        "--workspace-navigation-inset"
+        "--workspace-navigation-top"
       ]
     },
     {
@@ -6923,12 +6926,11 @@
     {
       "path": "src/reception/editorCells.css",
       "role": "Local",
-      "sha256": "3a22b8336580e0578c803486cd7aac34b18381862bb7f2d3e48f7d5b4e45e807",
+      "sha256": "2700541c9dbe18b1c85c6bf417b1f7e4d81769a842e6e61b77249a68b1ff23ba",
       "definitions": [],
       "references": [
         "--tactile-edge",
         "--tactile-ink",
-        "--tactile-muted",
         "--workbench-content-scale",
         "--workflow-ink",
         "--workflow-type-control"
@@ -7029,9 +7031,23 @@
       ]
     },
     {
+      "path": "src/reception/receptionBento.css",
+      "role": "Local",
+      "sha256": "97ca51517c8321dfbdd5e32fe20463aafc377115fa5ce32321eef596496fa44e",
+      "definitions": [],
+      "references": [
+        "--control-radius",
+        "--interface-environment",
+        "--workflow-border",
+        "--workflow-ink",
+        "--workflow-panel",
+        "--workflow-type-control"
+      ]
+    },
+    {
       "path": "src/reception/receptionDocument.css",
       "role": "Local",
-      "sha256": "91a7a745330509718f53fe862142ac235b3566fc18348eb02f85c75133041049",
+      "sha256": "286e3e4de8475bc7a929c89b9dcfb1d3fab016d59710bdbf5ca1ae0cc53f3b91",
       "definitions": [],
       "references": [
         "--interface-environment",
@@ -7043,6 +7059,13 @@
         "--tool-control-height",
         "--workflow-type-control"
       ]
+    },
+    {
+      "path": "src/reception/receptionInnerLines.css",
+      "role": "Local",
+      "sha256": "6b2783c05ee654a817b2bbe43ce5a764120e1aff96459289015b729bfe5e5de7",
+      "definitions": [],
+      "references": []
     },
     {
       "path": "src/reception/receptionScene.css",
@@ -7064,7 +7087,7 @@
     {
       "path": "src/shapes/shapes.css",
       "role": "Local",
-      "sha256": "09bf02481e1530511ed550cbf217d9809559f0d452d2b97051c18744c5db851f",
+      "sha256": "915080197c2d690f1c47f30f159c0282285d58d9c3f03b7d27bcd55bc1317d7b",
       "definitions": [
         {
           "name": "--detached-window-gutter",
@@ -7081,7 +7104,7 @@
           "scope": [
             ".shape-window > .system-workflow__instrument-content > .shape-grid-border"
           ],
-          "line": 32,
+          "line": 33,
           "references": [
             "--workbench-density"
           ]
@@ -7261,7 +7284,7 @@
     {
       "path": "src/text/text.css",
       "role": "Local",
-      "sha256": "7cc9ce9cc48ba18e2ad819d6d302d45bb1ecaf5330b1ecfc0e2e739bc23567a9",
+      "sha256": "4b33a5c1ba3cae642b3d6757018a6d43f21f3eb8b6ec75cfbdce2ff88f5a2dcc",
       "definitions": [
         {
           "name": "--text-automatic-padding",

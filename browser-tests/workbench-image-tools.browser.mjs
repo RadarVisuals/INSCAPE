@@ -43,25 +43,25 @@ test('Image settings use the shared dock while side edits, publication choice, t
     }; });
     await image.getByRole('button', { name: 'Remove current Image side', exact: true }).click();
     await image.getByRole('alert').waitFor();
-    assert.equal(await page.locator('[data-context-action-bars]').getByRole('alert').count(), 0, 'a settings error is shown once at its own controls');
+    assert.equal(await image.locator('.artwork-action-controls').getByRole('alert').count(), 0, 'a settings error is shown once at its own controls');
     assert.equal((await saved(page)).imageModules[1].sides.length, 2);
     await page.evaluate(() => { Storage.prototype.setItem = window.savedSetItem; });
     await image.getByRole('button', { name: 'Remove current Image side', exact: true }).click();
     assert.equal((await saved(page)).imageModules[1].sides.length, 1); await undo(page);
     const actions = page.getByRole('navigation', { name: 'Image actions', exact: true });
     for (const name of ['Rotate', 'Mirror horizontal', 'Mirror vertical', 'Crop']) {
-      assert.equal(await image.getByRole('button', { name, exact: true }).count(), 0);
+      assert.equal(await image.getByRole('button', { name, exact: true }).count(), 1);
       await actions.getByRole('button', { name, exact: true }).waitFor();
     }
     await actions.getByRole('button', { name: 'Crop', exact: true }).click();
-    await image.getByText('Finish or cancel the crop in the toolbar.').waitFor();
-    await page.locator('[data-context-action-bars]').getByRole('button', { name: 'Cancel', exact: true }).click();
+    await image.getByRole('slider', { name: 'Crop zoom' }).waitFor();
+    await image.locator('.artwork-action-controls').getByRole('button', { name: 'Cancel', exact: true }).click();
     await image.getByRole('combobox', { name: 'When dropping from Library' }).waitFor();
     // Selecting another artwork follows selection without changing the active tab.
-    await page.locator('[data-image-module="image:body"] .image-module__canvas').click({ position: { x: 20, y: 20 } });
+    await page.locator('[data-image-module="image:body"] .image-module__canvas').focus();
     assert.equal(await page.getByRole('tab', { name: 'Image', exact: true }).getAttribute('aria-selected'), 'true');
     assert.equal(await image.getByRole('combobox', { name: 'When dropping from Library' }).inputValue(), 'append');
-    await page.locator('[data-image-module="image:eyes"] .image-module__canvas').click({ position: { x: 220, y: 160 } });
+    await page.locator('[data-image-module="image:eyes"] .image-module__canvas').focus();
     assert.equal(await image.getByRole('combobox', { name: 'When dropping from Library' }).inputValue(), 'replace');
     await page.screenshot({ path: `${output}/image-mist-docked.png` });
     await image.getByRole('button', { name: 'Close Image', exact: true }).click();

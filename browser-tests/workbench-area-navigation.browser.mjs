@@ -1,3 +1,4 @@
+import { navigateWorkbench, workbenchCommandDisabled } from './fixtures/workbench-navigation.mjs';
 import { editorCommand } from './fixtures/editor-menu.mjs';
 import assert from 'node:assert/strict';
 import test from 'node:test';
@@ -18,7 +19,7 @@ async function select(page, id) {
   const target = page.locator(`[data-workbench-view-id="${id}"] [data-workbench-selectable]`).first();
   await target.evaluate(node => node.focus({ preventScroll: true })); await settle(page);
   // Owner keyboard focus already selects artwork; Visitor uses Shift+Enter.
-  if (await page.getByRole('button', { name: 'Focus selected Workbench modules', exact: true }).isDisabled())
+  if (await workbenchCommandDisabled(page, 'focus'))
     await target.dispatchEvent('keydown', { key: 'Enter', shiftKey: true, bubbles: true, cancelable: true });
 }
 
@@ -71,7 +72,7 @@ test('owner and Visitor have free camera movement without custom-frame controls,
           requestAnimationFrame(sample);
         }; requestAnimationFrame(sample);
       });
-      await page.getByRole('button', { name: 'Focus selected Workbench modules', exact: true }).click(); await arrived(page);
+      await navigateWorkbench(page, 'focus'); await arrived(page);
       const end = await camera(page), samples = await page.evaluate(() => window.stopCameraSamples());
       assert.ok(samples.length > 2);
       assert.ok(end.scale > start.scale);
@@ -83,7 +84,7 @@ test('owner and Visitor have free camera movement without custom-frame controls,
         near(sample.y, start.y + (end.y - start.y) * next, 'vertical motion is not recentered by frame limits');
         progress = next;
       }
-      await page.getByRole('button', { name: 'Back to previous Workbench view', exact: true }).click(); await arrived(page);
+      await navigateWorkbench(page, 'back'); await arrived(page);
       assert.deepEqual(await camera(page), start);
       await page.keyboard.press('Escape'); await settle(page);
       const beforeResize = await camera(page);
@@ -103,17 +104,17 @@ test('owner and Visitor have free camera movement without custom-frame controls,
       // Production has no development probe. The selection badge sits outside the
       // rail, so focusing must preserve its layout as well as the return camera.
       await page.setViewportSize({ width: 390, height: 900 });
-      await page.getByRole('button', { name: 'Meet Grid-naad', exact: true }).evaluate(button => { button.style.display = 'none'; });
-      const compactWidth = await page.locator('.workbench-view-controls').evaluate(controls => Math.ceil(
+      assert.equal(await page.getByRole('button', { name: 'Meet Grid-naad', exact: true }).count(), 0);
+      const compactWidth = await page.locator(visitor ? '.workbench-view-controls' : '[data-workbench-toolbar]').evaluate(controls => Math.ceil(
         [...controls.querySelectorAll('button')].filter(button => getComputedStyle(button).display !== 'none')
           .reduce((width, button) => width + button.getBoundingClientRect().width, 0)) + 34);
       await page.setViewportSize({ width: compactWidth, height: 900 });
       await select(page, 'image:motion-0'); await settle(page);
       const narrowStart = await camera(page);
-      const selectedHeight = (await page.locator('.workbench-view-controls').boundingBox()).height;
-      await page.getByRole('button', { name: 'Focus selected Workbench modules', exact: true }).click(); await arrived(page);
-      assert.equal((await page.locator('.workbench-view-controls').boundingBox()).height, selectedHeight, 'selection badge does not reflow the camera rail');
-      await page.getByRole('button', { name: 'Back to previous Workbench view', exact: true }).click(); await arrived(page);
+      const selectedHeight = (await page.locator(visitor ? '.workbench-view-controls' : '[data-workbench-toolbar]').boundingBox()).height;
+      await navigateWorkbench(page, 'focus'); await arrived(page);
+      assert.equal((await page.locator(visitor ? '.workbench-view-controls' : '[data-workbench-toolbar]').boundingBox()).height, selectedHeight, 'selection badge does not reflow the camera rail');
+      await navigateWorkbench(page, 'back'); await arrived(page);
       assert.deepEqual(await camera(page), narrowStart, 'clearing selection cannot change the return position');
       assert.equal(await page.evaluate(() => localStorage.getItem(window.__motionKey)), saved);
       assert.deepEqual(errors, []);
@@ -159,11 +160,11 @@ test('the canvas clips outlying artwork without relocating it; Show outside canv
     near(oldPosition.x, 6200, 'old horizontal position'); near(oldPosition.y, 5100, 'old vertical position');
     const saved = await page.evaluate(() => localStorage.getItem(window.__motionKey));
     await select(page, 'image:motion-0');
-    await page.getByRole('button', { name: 'Focus selected Workbench modules', exact: true }).click(); await arrived(page);
+    await navigateWorkbench(page, 'focus'); await arrived(page);
     const visible = await image.boundingBox();
     assert.ok(visible.x >= 0 && visible.y >= 0 && visible.x + visible.width <= 1440 && visible.y + visible.height <= 1100,
       'older artwork beyond the new grid remains reachable through Focus');
-    await page.getByRole('button', { name: 'Back to previous Workbench view', exact: true }).click(); await arrived(page);
+    await navigateWorkbench(page, 'back'); await arrived(page);
     assert.deepEqual(await image.boundingBox(), oldPosition);
     assert.equal(await page.evaluate(() => localStorage.getItem(window.__motionKey)), saved);
 

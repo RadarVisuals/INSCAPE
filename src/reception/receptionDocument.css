@@ -1,8 +1,9 @@
 .reception-document-viewport { flex: none; width: 100%; min-width: 0; margin-block: auto; }
-.reception-document-canvas { position: relative; flex: none; width: 100%; min-width: 0; margin-inline: auto; overflow: hidden; isolation: isolate; background: var(--interface-environment); outline: 1px solid var(--tactile-edge); outline-offset: -1px; }
+.reception-document-canvas { position: relative; flex: none; width: 100%; min-width: 0; margin-inline: auto; overflow: hidden; isolation: isolate; background: var(--interface-environment); }
+.reception-document-canvas[data-show-frame] { outline: 1px solid var(--tactile-edge); outline-offset: -1px; }
 .reception-document-layer, .reception-document-cell { position: absolute; box-sizing: border-box; min-width: 0; isolation: isolate; }
 .reception-document-cell { overflow: hidden; isolation: isolate; }
-.reception-document-cell-surface, .reception-document-cell-surface > .shape-paint, .reception-document-layer > .shape-paint { position: absolute; inset: 0; }
+.reception-document-cell-surface { position: absolute; inset: 0; }
 .reception-document-cell-content { position: absolute; inset: 0; display: flex; padding: 24px; box-sizing: border-box; overflow: auto; }
 .reception-document-layer[data-text] { overflow: hidden; overflow-wrap: anywhere; }
 .reception-document-layer .reception-image { min-height: 0; }

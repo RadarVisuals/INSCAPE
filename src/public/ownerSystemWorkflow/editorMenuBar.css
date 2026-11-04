@@ -4,6 +4,7 @@
 .editor-menu-bar button:is(:hover, [aria-expanded="true"]) { background: var(--tactile-hover); }
 .editor-menu-bar button:focus-visible { outline: 2px solid var(--tactile-ink); outline-offset: -3px; }
 .editor-menu-bar nav { display: flex; min-width: 0; overflow-x: auto; scrollbar-width: none; }
+.editor-menu-document { align-self: center; flex: 0 1 auto; min-width: 0; max-width: min(32vw, 360px); margin-left: auto; padding: 0 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .editor-menu-shell > .desktop-menu { max-height: calc(100dvh - 48px); overflow-y: auto; }
 .editor-menu-brand { flex: none; display: grid; place-items: center; }
 .editor-menu-brand svg { width: 80px; height: 26px; }
@@ -22,6 +23,7 @@
 .editor-menu-error { top: 180px; }
 .editor-menu-shell > .editor-cell-editing { position: fixed; top: 48px; left: 50%; transform: translateX(-50%); background: var(--tactile-face); max-width: calc(100vw - 24px); }
 @media (max-width: 600px) {
+  .editor-menu-document { display: none; }
   .workspace-context-menu { min-width: 76px; }
   .editor-menu-bar button { padding-inline: 6px; font-size: 10px; }
   .editor-menu-brand svg { width: 58px; }

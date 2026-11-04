@@ -17,7 +17,7 @@ function hasNativeWheelScroll(target, host, dx, dy) {
   return false;
 }
 
-// Both rails reserve screen space, whether they sit beside or above each other.
+// Reserve the visible Editor toolbar or the public navigation rail.
 function controlsTop(host, controls) {
   const top = Math.min(controls?.getBoundingClientRect().top ?? Infinity,
     host?.querySelector('[data-workbench-toolbar]')?.getBoundingClientRect().top ?? Infinity);
@@ -49,27 +49,29 @@ export default function useWorkbenchNavigation({ hostRef, controlsRef, disabled,
   const panTo = useCallback(next => { stopTravel(); updateCamera({ ...getCamera(), offset: next }); }, [stopTravel, updateCamera, getCamera]);
   const beforePan = useCallback(() => { interaction.current.cancelEditing(); beginPan(); }, [beginPan]);
   const afterPan = useCallback(velocity => releasePan(hand ? velocity : null), [releasePan, hand]);
-  const pan = useWorkbenchPan(hostRef, disabled || locked, { getOffset, update: previewPan, onBegin: beforePan, onEnd: afterPan, hand });
-  const toggleHand = useCallback(() => { stopTravel(true); pan.cancel(); interaction.current.cancelEditing(); setInteractionTool?.(hand ? 'select' : 'hand'); }, [stopTravel, pan.cancel, hand, setInteractionTool]);
+  const { active: panActive, cancel: cancelPan, releaseAbandonedGesture: releaseAbandonedPan } = useWorkbenchPan(hostRef, disabled || locked, { getOffset, update: previewPan, onBegin: beforePan, onEnd: afterPan, hand });
+  const toggleHand = useCallback(() => { stopTravel(true); cancelPan(); interaction.current.cancelEditing(); setInteractionTool?.(hand ? 'select' : 'hand'); }, [stopTravel, cancelPan, hand, setInteractionTool]);
   useLayoutEffect(() => {
-    stopTravel(); pan.cancel(true); interaction.current.cancelEditing();
-  }, [interactionTool, stopTravel, pan.cancel]);
+    stopTravel(); cancelPan(true); interaction.current.cancelEditing();
+  }, [interactionTool, stopTravel, cancelPan]);
   useEffect(() => {
-    const reset = () => { pan.cancel(true); setInteractionTool?.('select'); };
+    const reset = () => { cancelPan(true); setInteractionTool?.('select'); };
     const hidden = () => { if (document.hidden) reset(); };
     globalThis.addEventListener('blur', reset);
     document.addEventListener('visibilitychange', hidden);
     return () => { globalThis.removeEventListener('blur', reset); document.removeEventListener('visibilitychange', hidden); };
-  }, [pan.cancel, setInteractionTool]);
+  }, [cancelPan, setInteractionTool]);
   useLayoutEffect(() => { if (disabled) setInteractionTool?.('select'); }, [disabled, setInteractionTool]);
-  const isPanning = useCallback(() => Boolean(pan.active.current || navigatorGesture.current), [pan.active]);
+  const isPanning = useCallback(() => Boolean(panActive.current || navigatorGesture.current), [panActive]);
   const readViewport = useCallback(() => {
     const host = hostRef.current;
     if (!host) return null;
-    const dock = parseFloat(getComputedStyle(host).getPropertyValue('--workflow-dock-height')) || 0;
+    const style = getComputedStyle(host);
+    const size = name => parseFloat(style.getPropertyValue(name)) || 0;
+    const left = size('--workbench-left-dock-width'), right = size('--workbench-right-dock-width');
     // Return context uses the Workbench viewport, independent of selection-driven
     // toolbar wrapping. Only destination fitting reserves the camera controls.
-    return { width: host.clientWidth, height: host.clientHeight - dock, top: host.hasAttribute('data-editor-menu') ? 40 : 0 };
+    return { left, width: host.clientWidth - left - right, height: host.clientHeight - size('--workflow-dock-height'), top: size('--workspace-navigation-top') };
   }, [hostRef]);
   const navigationViewport = useCallback(() => {
     const viewport = readViewport(), host = hostRef.current;
@@ -213,34 +215,12 @@ export default function useWorkbenchNavigation({ hostRef, controlsRef, disabled,
     const host = hostRef.current, controls = controlsRef.current;
     if (!host || disabled) { onControlsTopChange?.(null); return; }
     const toolbar = host.querySelector('[data-workbench-toolbar]');
-    const properties = ['--workbench-toolbar-clearance', '--workbench-toolbar-width', '--workbench-toolbar-offset'];
-    const previousProperties = properties.map(name => controls?.style.getPropertyValue(name));
-    const previousOffset = toolbar?.style.getPropertyValue(properties[2]);
     const measure = () => {
-      // The camera rail owns its placement beside/above the creation toolbar.
-      // Keep measured CSS values on that rail, outside authored module trees.
-      const rectangle = toolbar?.getBoundingClientRect();
-      if (controls && rectangle) {
-        for (const [index, value] of [rectangle.height, rectangle.width].entries()) {
-          const pixels = `${Math.ceil(value)}px`, property = properties[index];
-          if (controls.style.getPropertyValue(property) !== pixels) controls.style.setProperty(property, pixels);
-        }
-        // Reserve the menu without moving the shared screen-coordinate origin.
-        const style = getComputedStyle(host), ceiling = (host.hasAttribute('data-editor-menu') ? 40 : 0) + 8;
-        const available = host.clientHeight - ceiling - controls.offsetHeight - rectangle.height
-          - (parseFloat(style.getPropertyValue('--workflow-dock-height')) || 0) - 24;
-        const offset = `${Math.max(0, Math.floor(Math.min(
-          parseFloat(style.getPropertyValue(properties[2])) || 0, available
-        )))}px`;
-        for (const node of [toolbar, controls]) {
-          if (node.style.getPropertyValue(properties[2]) !== offset) node.style.setProperty(properties[2], offset);
-        }
-      }
+      const viewport = readViewport();
       // The same live chrome measurement also bounds companion tools. Their
       // screen space must account for wrapping controls and the current dock.
       onControlsTopChange?.(controlsTop(host, controls) ?? null);
       const previous = measuredViewport.current;
-      const viewport = readViewport();
       if (!viewport || viewport.width <= 0 || viewport.height <= 0) return;
       // The owner Editor frames each document once when its session opens.
       // Other hosts may supply Home bounds without opting into entry framing.
@@ -262,15 +242,7 @@ export default function useWorkbenchNavigation({ hostRef, controlsRef, disabled,
     observer.observe(host);
     if (controls) observer.observe(controls);
     if (toolbar) observer.observe(toolbar);
-    return () => {
-      observer.disconnect();
-      properties.forEach((property, index) => {
-        if (previousProperties[index]) controls?.style.setProperty(property, previousProperties[index]);
-        else controls?.style.removeProperty(property);
-      });
-      if (previousOffset) toolbar?.style.setProperty(properties[2], previousOffset);
-      else toolbar?.style.removeProperty(properties[2]);
-    };
+    return () => observer.disconnect();
   }, [hostRef, controlsRef, dockVisible, creationToolbarVisible, disabled, locked, readViewport, stopTravel, onControlsTopChange, shouldFrameOnEntry, homeCamera, updateCamera]);
 
   const zoom = useCallback((point, factor) => {
@@ -291,9 +263,9 @@ export default function useWorkbenchNavigation({ hostRef, controlsRef, disabled,
   }, [hostRef, zoom, getCamera]);
   const resetView = useCallback(() => {
     if (disabled || locked) return;
-    stopTravel(); remember([]); interaction.current.resetPresentation?.(); pan.cancel(); panTo({ x: 0, y: 0 });
+    stopTravel(); remember([]); interaction.current.resetPresentation?.(); cancelPan(); panTo({ x: 0, y: 0 });
     hostRef.current?.focus({ preventScroll: true });
-  }, [disabled, locked, pan.cancel, panTo, hostRef, stopTravel, remember]);
+  }, [disabled, locked, cancelPan, panTo, hostRef, stopTravel, remember]);
 
   const navigatorZoom = useCallback(percent => {
     const viewport = navigationViewport(), rect = hostRef.current?.getBoundingClientRect();
@@ -338,7 +310,7 @@ export default function useWorkbenchNavigation({ hostRef, controlsRef, disabled,
     const wheel = event => {
       if (event.target.closest?.('.workspace-navigation, .editor-menu-shell')) return;
       if (!event.ctrlKey && !event.metaKey && event.target.closest?.("[data-workbench-navigator]")) return;
-      pan.releaseAbandonedGesture();
+      releaseAbandonedPan();
       const released = interaction.current.releaseAbandonedGesture();
       if (released !== null) pressedPointers.delete(released);
       const pointerHeld = hasCapturedPointer();
@@ -410,7 +382,7 @@ export default function useWorkbenchNavigation({ hostRef, controlsRef, disabled,
       host.removeEventListener('wheel', wheel, true);
       host.removeEventListener('keydown', key, true);
     };
-  }, [hostRef, disabled, locked, hand, getCamera, isPanning, pan.releaseAbandonedGesture, panTo, zoom, resetZoom, stopTravel, endNavigator]);
+  }, [hostRef, disabled, locked, hand, getCamera, isPanning, hasCapturedPointer, releaseAbandonedPan, panTo, zoom, resetZoom, stopTravel, endNavigator]);
 
   return { navigationViewport, beginNavigator, moveNavigator, endNavigator, navigatorZoom, navigatorHome, offset, locked, getCamera, isPanning, hasCapturedPointer, resetView, resetZoom, moving, hand, toggleHand,
     captureView, focusDestination, goBack, canGoBack: history.length > 0, stopTravel };

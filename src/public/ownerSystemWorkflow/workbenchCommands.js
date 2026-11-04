@@ -2,6 +2,8 @@ import { openWorkbenchIndex } from '../../systemWorkflow/workbenchIndexSession.j
 import { addMiniApp } from '../../miniApps/miniAppSession.js';
 import { MAX_MINI_APPS } from '../../miniApps/domain/miniApps.js';
 import { addTextModule } from '../../text/textSession.js';
+import { interfaceTheme } from '../../interfaceTheme.js';
+import { receptionTextDefaults } from '../../reception/receptionTextDefaults.js';
 import { MAX_TEXT_MODULES } from '../../text/domain/article.js';
 import { addImageModule } from '../../imageModule/imageModuleSession.js';
 import { MAX_IMAGE_MODULES } from '../../imageModule/imageModule.js';
@@ -89,7 +91,8 @@ export default function workbenchCommands({
           addMiniApp(store, profileAddress);
           break;
         case 'text':
-          activateArtwork(addTextModule(store, profileAddress, placement, { visibility: reception ? 'PUBLIC' : 'PRIVATE' }));
+          activateArtwork(addTextModule(store, profileAddress, placement, reception
+            ? receptionTextDefaults(store.getReception(), store.getEditingCell(), interfaceTheme.getSnapshot().mode) : undefined));
           setTextToolsOpen(true);
           break;
         case 'keeper':

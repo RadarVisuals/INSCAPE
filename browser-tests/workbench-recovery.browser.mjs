@@ -1,4 +1,4 @@
-import { editorCommand } from './fixtures/editor-menu.mjs';
+import { editorCommand, editorMenu } from './fixtures/editor-menu.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { chromium } from 'playwright-core';
@@ -7,6 +7,7 @@ import { join } from 'node:path';
 import { browserExecutable } from '../scripts/browserEnvironment.mjs';
 import { openTextToolSection } from './fixtures/text-tool-sections.mjs';
 import { hideWorkspaceSidebar } from './fixtures/workspace-sidebar.mjs';
+import { openSharedTool } from './fixtures/shared-tools.mjs';
 const origin = process.env.INSCAPE_TEXT_ROOT || 'http://127.0.0.1:5297';
 
 test('reload restores local arrangement; failed Text survives editor disposal and blocks stale publication', { timeout: 120000 }, async () => {
@@ -40,12 +41,15 @@ test('reload restores local arrangement; failed Text survives editor disposal an
         const draft = store.getDraft(); draft.texts[0].article.title = 'Arrival';
         draft.texts[0].article.content.content = [{ type: 'paragraph', content: [{ type: 'text', text: 'Remember this arrangement.' }] }];
         draft.workbench = createDefaultWorkbenchPresentation();
+        draft.workbench.area = { left: 0, top: 0, width: 1440, height: 1000 };
         draft.workbench.display.window = { left: 400, top: 100, width: 750, height: 421.875 };
         draft.workbench.texts = [{ ...createTextPresentation(draft.texts[0].id), window: { left: 40, top: 100, width: 300, height: 430 } }];
         store.commitCompletedOperation(draft, { expectedGeneration: store.getGeneration() });
       }
       window.readDraft = () => createSystemWorkflowDraftStore({ profileAddress, storage }).getDraft();
       window.readLayout = () => JSON.parse(localStorage.getItem(`inscape:workbench:layout:v1:${profileAddress}`));
+      const { editorPreferencesKey } = await import('/src/public/ownerSystemWorkflow/editorPreferencesStore.js');
+      window.readPreferences = () => JSON.parse(localStorage.getItem(editorPreferencesKey(profileAddress)))?.value;
       await import('/src/inscapeTokens.css'); await import('/src/public/ownerSystemWorkflow/ownerSystemWorkflow.css'); await import('/src/lattice/rendering/latticeMenuSurface.css');
       window.root = createRoot(document.getElementById('root'));
       window.root.render(React.createElement(Runtime, { profileAddress, reviewStorage: storage, reviewAssets: [], reviewCategories: [], reviewActivity: [], reviewProfile: { name: 'Reload review' } }));
@@ -54,6 +58,8 @@ test('reload restores local arrangement; failed Text survives editor disposal an
     const board = page.getByRole('article', { name: 'Display Module', exact: true });
     const text = page.locator('.text-window');
     await page.getByRole('button', { name: 'Close Text tools', exact: true }).click();
+    await openSharedTool(page, 'Layers');
+    await page.getByRole('button', { name: 'Close Workbench Layers', exact: true }).click();
     await hideWorkspaceSidebar(page);
     await page.getByRole('button', { name: 'Read', exact: true }).focus(); await page.keyboard.press('Enter');
     const drag = async (handle, dx, dy) => {
@@ -65,15 +71,16 @@ test('reload restores local arrangement; failed Text survives editor disposal an
     await drag(page.getByLabel('Move Display Module: DISPLAY MODULE', { exact: true }), 43, 29);
     await page.getByRole('button', { name: 'Resize Display Module from se', exact: true }).focus(); await page.keyboard.press('Alt+ArrowLeft');
     const before = { text: await text.boundingBox(), board: await board.boundingBox(), draft: await page.evaluate(() => window.readDraft()) };
-    await page.waitForFunction(() => window.readLayout()?.views?.['workbench:tools']?.layers === false);
+    await page.waitForFunction(() => window.readPreferences()?.textOpen === false && window.readPreferences().docks.hidden.includes('Layers'));
     await page.screenshot({ path: join(shots, 'before-reload.png') });
     await page.reload(); await mount(); await text.waitFor();
-    await page.waitForFunction(() => document.querySelector('.system-workflow__presentation-board')?.offsetWidth > 300);
+    await board.waitFor();
     const near = (actual, expected) => { for (const key of ['x', 'y', 'width', 'height']) assert.ok(Math.abs(actual[key] - expected[key]) < 1, `${key}: ${actual[key]} != ${expected[key]}`); };
     near(await text.boundingBox(), before.text); near(await board.boundingBox(), before.board);
     assert.equal(await page.getByRole('button', { name: 'Close Text tools', exact: true }).count(), 0);
     assert.equal(await page.getByRole('button', { name: 'Write', exact: true }).count(), 1);
-    assert.equal(await page.locator('[data-shared-tool="layers"]').count(), 0);
+    assert.equal(await page.getByRole('tab', { name: 'Layers', exact: true }).count(), 0);
+    assert.equal(await page.evaluate(() => window.readPreferences().docks.hidden.includes('Layers')), true);
     assert.deepEqual(await page.evaluate(() => window.readDraft()), before.draft, 'restoring layout does not edit the canonical draft');
     await page.screenshot({ path: join(shots, 'after-reload.png') });
     await page.getByRole('button', { name: 'Close Arrival', exact: true }).focus(); await page.keyboard.press('Enter');
@@ -87,6 +94,8 @@ test('reload restores local arrangement; failed Text survives editor disposal an
     assert.equal(await text.count(), 0); assert.equal(await board.count(), 0);
     // Reopen the underlying shortcut before Text covers it again.
     await page.getByRole('button', { name: /Open DISPLAY MODULE/ }).dblclick();
+    const shortcut = page.getByRole('button', { name: 'Arrival', exact: true });
+    assert.equal(await shortcut.evaluate(node => node.closest('main.system-workflow') === node.parentElement.parentElement), true, 'Closed Text belongs to the viewport, outside authored clipping');
     await page.getByRole('button', { name: 'Arrival', exact: true }).click();
     near(await text.boundingBox(), before.text); near(await board.boundingBox(), before.board);
     // Saving can fail independently from closing the Display's embedded editor.
@@ -116,7 +125,9 @@ test('reload restores local arrangement; failed Text survives editor disposal an
     await page.locator('main.system-workflow').first().focus();
     await page.keyboard.press('Shift+F10');
     await page.getByRole('menuitem', { name: 'SHOW SIDEBAR', exact: true }).click();
-    await editorCommand(page, 'Canvas', 'Preview');
+    await editorMenu(page, 'Canvas').click();
+    assert.equal(await page.getByRole('menu', { name: 'Canvas menu' }).getByRole('menuitem', { name: 'Preview', exact: true }).isDisabled(), true);
+    await page.keyboard.press('Escape');
     assert.equal(await page.locator('.visitor-grid-world').count(), 0);
     await hideWorkspaceSidebar(page);
     await page.getByRole('button', { name: 'Unlock Display Module composition', exact: true }).focus(); await page.keyboard.press('Enter');

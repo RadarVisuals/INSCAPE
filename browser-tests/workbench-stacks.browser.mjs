@@ -1,3 +1,4 @@
+import { navigateWorkbench, workbenchCommandDisabled } from './fixtures/workbench-navigation.mjs';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { mkdir } from 'node:fs/promises';
@@ -26,7 +27,7 @@ test('compact groups move and cancel independently, open live members, return, u
         draft.workbenchGroups = [{ id: 'workbench-group:chapter', name: 'Chapter one', memberIds: ['image:motion-0', 'image:motion-1'] }];
         localStorage.setItem(window.__motionKey, JSON.stringify(draft)); window.__motionRemount();
       });
-      await page.getByRole('button', { name: 'Workbench groups', exact: true }).click();
+      await navigateWorkbench(page, 'groups');
       const panel = page.locator('.workbench-groups');
       await hideWorkspaceSidebar(page);
       await panel.locator('[data-workbench-group-drop]').click();
@@ -51,11 +52,11 @@ test('compact groups move and cancel independently, open live members, return, u
       assert.ok(await page.locator('[data-workbench-group-muted]').count() > 0);
       assert.equal(await saved(page), moved);
       await page.screenshot({ path: '.browser-test-runtime/workbench-stack-open-' + width + '.png' });
-      await page.getByRole('group', { name: 'Workbench zoom', exact: true }).getByRole('button', { name: 'Back to previous Workbench view', exact: true }).click(); await settle(page);
+      await navigateWorkbench(page, 'back'); await settle(page);
       await stack.waitFor(); assert.deepEqual(await camera(page), originalCamera);
       assert.equal(await page.locator('[data-workbench-group-hidden]').count(), 2);
       assert.equal(await page.evaluate(() => window.stackNodes.every(node => node.isConnected)), true);
-      await page.getByRole('button', { name: 'Workbench groups', exact: true }).click();
+      await navigateWorkbench(page, 'groups');
       await panel.getByRole('button', { name: 'Undo', exact: true }).click();
       assert.deepEqual(JSON.parse(await saved(page)).workbenchGroups, stacked.workbenchGroups);
       await panel.getByRole('button', { name: 'Redo', exact: true }).click();
@@ -176,7 +177,7 @@ test('spatial stack drops clear hidden selection and named routes restore item a
     const dropped = JSON.parse(await saved(page));
     assert.deepEqual(dropped.workbench, initial.workbench);
     assert.equal(await selection.count(), 0);
-    assert.equal(await page.getByRole('button', { name: 'Focus selected Workbench modules', exact: true }).isDisabled(), true);
+    assert.equal(await workbenchCommandDisabled(page, 'focus'), true);
     const routes = page.getByRole('navigation', { name: 'Workbench destinations', exact: true });
     await routes.getByRole('button', { name: 'First route', exact: true }).click(); await settle(page);
     const overview = await camera(page);

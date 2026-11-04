@@ -9,7 +9,7 @@ import { mkdir, writeFile } from 'node:fs/promises';
 const origin = process.env.INSCAPE_TEXT_ROOT || 'http://127.0.0.1:5198';
 const settle = page => page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
 const launch = () => chromium.launch({ executablePath: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', headless: true });
-const state = page => page.locator('main.system-workflow').evaluate(n => ({ x: n.style.getPropertyValue('--workbench-pan-x'), y: n.style.getPropertyValue('--workbench-pan-y'),
+const state = page => page.locator('main.system-workflow').evaluate(n => ({ x: Number(n.dataset.workbenchCameraX), y: Number(n.dataset.workbenchCameraY),
   zoom: n.querySelector('.navigator-zoom output')?.textContent }));
 
 async function prepareNavigation(page) {
@@ -63,10 +63,11 @@ test('Workbench pan and zoom recover from a missing selection release after edit
     await resetCameraTestView(page, false);
     assert.ok(await page.evaluate(p => document.elementFromPoint(p.x, p.y).matches('main.system-workflow'), point));
     await host.dispatchEvent('pointerdown', { pointerId: 1, pointerType: 'mouse', button: 0, buttons: 1, clientX: point.x, clientY: point.y });
+    const panStart = await state(page);
     await host.focus(); await page.keyboard.down('Space');
     await page.mouse.move(point.x, point.y); await page.mouse.down();
     await page.mouse.move(point.x - 100, point.y - 50, { steps: 8 }); await page.mouse.up(); await page.keyboard.up('Space'); await settle(page);
-    assert.equal((await state(page)).x, '-100px'); assert.equal((await state(page)).y, '-50px');
+    assert.equal((await state(page)).x, panStart.x - 100); assert.equal((await state(page)).y, panStart.y - 50);
     assert.deepEqual(errors, []);
   } finally { await browser.close(); }
 });

@@ -5,6 +5,10 @@ export const SHAPE_ID = /^shape:[A-Za-z0-9_-]{1,80}$/u;
 const exact = (value, keys) => value && typeof value === 'object' && !Array.isArray(value)
   && Object.keys(value).length === keys.length && keys.every(key => Object.hasOwn(value, key));
 
+export const validShapeOutline = outline => Boolean(exact(outline, ['width', 'color', 'opacity'])
+  && Number.isFinite(outline.width) && outline.width >= 0 && outline.width <= 64
+  && /^#[0-9a-f]{6}$/iu.test(outline.color) && Number.isFinite(outline.opacity) && outline.opacity >= 0 && outline.opacity <= 1);
+
 // Shape records own their appearance. Workbench artworkLayers owns their paint
 // order alongside Images and Text, independently of tool focus.
 export function validShapes(items, published = false) {
@@ -18,7 +22,8 @@ export function validShapes(items, published = false) {
       || !Number.isFinite(item.grid.lineWidth) || item.grid.lineWidth < .25 || item.grid.lineWidth > 4)) return false;
     if (kind === 'texture' && (!exact(item.texture, ['scale'])
       || !Number.isFinite(item.texture.scale) || item.texture.scale < .25 || item.texture.scale > 8)) return false;
-    const appearanceKeys = kind === 'rectangle' ? (Object.hasOwn(item || {}, 'grain') ? ['grain'] : []) : ['kind', kind];
+    if (Object.hasOwn(item || {}, 'outline') && (kind !== 'rectangle' || !validShapeOutline(item.outline))) return false;
+    const appearanceKeys = kind === 'rectangle' ? ['grain', 'outline'].filter(key => Object.hasOwn(item || {}, key)) : ['kind', kind];
     if (!exact(item, ['id', 'name', 'color', 'opacity', ...appearanceKeys, ...(Object.hasOwn(item || {}, 'blur') ? ['blur'] : []), ...(!published ? ['visibility'] : [])])
       || !SHAPE_ID.test(item.id) || ids.has(item.id)
       || typeof item.name !== 'string' || !item.name.trim() || item.name.length > 48 || /[\u0000-\u001f\u007f]/u.test(item.name)

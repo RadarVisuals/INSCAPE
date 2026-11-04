@@ -4,9 +4,8 @@ import { useWorkbenchCamera } from './WorkbenchCamera.jsx';
 import { useWorkbenchView } from './WorkbenchViewContext.js';
 import './workbenchSidebar.css';
 
-export default function OwnerSystemWorkflowSidebar({ hostRef, hidden, onNavigationHost, ...actions }) {
+export default function OwnerSystemWorkflowSidebar({ hidden, onNavigationHost, ...actions }) {
   const { locked } = useWorkbenchCamera(), view = useWorkbenchView();
-  const { setNavigationInset, setNavigationTop } = view;
   const [compact, setCompact] = useState(() => matchMedia('(max-width: 900px)').matches);
   const [navigationHost, setNavigationHost] = useState(null);
   const visible = !hidden && !locked;
@@ -20,15 +19,6 @@ export default function OwnerSystemWorkflowSidebar({ hostRef, hidden, onNavigati
     onNavigationHost(visible && !compact ? navigationHost : null);
     return () => onNavigationHost(null);
   }, [visible, compact, navigationHost, onNavigationHost]);
-  useEffect(() => {
-    const host = hostRef.current;
-    if (!host) return;
-    const inset = visible && !compact ? 232 : 0;
-    setNavigationInset(inset); setNavigationTop(40);
-    host.style.setProperty('--workspace-navigation-inset', `${inset}px`);
-    host.style.setProperty('--workspace-navigation-top', '40px');
-    return () => { setNavigationInset(0); setNavigationTop(0); host.style.removeProperty('--workspace-navigation-inset'); host.style.removeProperty('--workspace-navigation-top'); };
-  }, [visible, compact, hostRef, setNavigationInset, setNavigationTop]);
   return <WorkspaceNavigation {...actions} hidden={!visible} className="workbench-sidebar" navigationHost={setNavigationHost}
     style={{ '--sidebar-bottom': `${Math.max(12, innerHeight - (view.toolViewportBottom ?? innerHeight - 48) + 8)}px` }} />;
 }

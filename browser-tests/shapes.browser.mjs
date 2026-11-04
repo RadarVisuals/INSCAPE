@@ -1,12 +1,25 @@
 import { setSharedColor, setTransform, openSharedTool } from './fixtures/shared-tools.mjs';
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { artworkCommand } from './fixtures/artwork-menu.mjs';
 import { chromium } from 'playwright-core';
 import { mountTextToolsFixture } from './fixtures/text-tools-fixture.mjs';
 import { setWorkbenchZoom } from './fixtures/workbench-zoom.mjs';
 const origin = process.env.INSCAPE_TEXT_ROOT || 'http://127.0.0.1:5198';
 const settle = page => page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
 const near = (a, b) => assert.ok(Math.abs(a - b) < 1, `${a} / ${b}`);
+async function actualCoordinates(page) {
+  // Entry now frames the whole canvas; this geometry test deliberately uses
+  // 100% and an unpanned camera before comparing screen and authored positions.
+  await page.locator('main.system-workflow').focus();
+  await setWorkbenchZoom(page, 1);
+  const pan = await page.evaluate(() => {
+    const rect = document.querySelector('.system-workflow__presentation-board').getBoundingClientRect();
+    const frame = window.savedDraft().workbench.display.window;
+    return { deltaX: rect.left - frame.left, deltaY: rect.top - frame.top, bubbles: true, cancelable: true };
+  });
+  await page.locator('main.system-workflow').dispatchEvent('wheel', pan); await settle(page);
+}
 
 test('Shapes create at cursor, resize, layer beneath content, recover covered shapes, persist and preview', { timeout: 120000 }, async () => {
   const browser = await chromium.launch({ executablePath: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', headless: true });
@@ -16,6 +29,7 @@ test('Shapes create at cursor, resize, layer beneath content, recover covered sh
     const errors = []; page.on('pageerror', error => errors.push(error.message));
     await mountTextToolsFixture(page, origin);
     await page.getByRole('button', { name: 'Close Text tools', exact: true }).click();
+    await actualCoordinates(page);
     await page.mouse.click(560, 240, { button: 'right' });
     await page.getByRole('menuitem', { name: 'ADD', exact: true }).hover();
     await page.getByRole('menuitem', { name: 'SHAPE', exact: true }).click();
@@ -52,12 +66,12 @@ test('Shapes create at cursor, resize, layer beneath content, recover covered sh
     await page.getByRole('button', { name: 'Select Shape 1', exact: true }).click();
     await page.getByRole('button', { name: 'Close Workbench Layers', exact: true }).click();
     await openSharedTool(page, 'Shape');
-    await page.getByRole('button', { name: 'Duplicate shape', exact: true }).click();
+    await artworkCommand(page, await page.evaluate(() => window.savedDraft().shapes[0].id), 'Duplicate');
     await page.waitForFunction(() => window.savedDraft().shapes.length === 2);
     const duplicate = await page.evaluate(() => window.savedDraft().shapes[1].id);
     assert.equal(await page.evaluate(() => window.savedDraft().shapes[1].color), '#ff6600', 'duplication retains appearance');
     await setSharedColor(page, '#0055ff');
-    await page.getByRole('button', { name: 'Send to back', exact: true }).click();
+    await artworkCommand(page, duplicate, 'Send to back');
     await page.waitForFunction(id => window.savedDraft().artworkLayers[0] === id, duplicate);
     await page.locator('main.system-workflow').focus(); await page.keyboard.press('Escape');
     await page.locator('.workbench-selection').waitFor({ state: 'detached' });
@@ -106,7 +120,7 @@ test('Shapes create at cursor, resize, layer beneath content, recover covered sh
     assert.ok(panel.x >= 0 && panel.x + panel.width <= 391); assert.ok(panel.y + panel.height <= 845);
     await page.screenshot({ path: '.browser-test-runtime/shapes-narrow.png' });
     await page.setViewportSize({ width: 1440, height: 1000 });
-    await page.reload(); await mountTextToolsFixture(page, origin); await shape.waitFor();
+    await page.reload(); await mountTextToolsFixture(page, origin); await shape.waitFor(); await actualCoordinates(page);
     near((await shape.boundingBox()).width, 740); near((await shape.boundingBox()).x, moved.x);
     // Actual public renderer uses the same geometry/order with no editing tools.
     await mountTextToolsFixture(page, origin, { visitor: true }); await shape.waitFor();

@@ -149,6 +149,7 @@ export async function launchPlaywrightEdge({
     if (previousTmp === undefined) delete process.env.TMP; else process.env.TMP = previousTmp;
   }
   const child = resources.browserServer.process(); const rootPid = child?.pid;
+  diagnostic('setup:browser-server-ready', { rootPid });
   if (!Number.isSafeInteger(rootPid) || rootPid <= 0) throw Object.assign(new Error('Playwright BrowserServer did not expose a valid owned Edge PID'), { code: 'EDGE_PID_MISSING' });
   const processTree = createOwnedProcessTree({ rootPid, listProcesses: inventory, terminateTree });
   const observed = await processTree.observe(); const root = observed.find((entry) => entry.pid === rootPid);

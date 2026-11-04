@@ -1,8 +1,9 @@
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { Copy, Crop, Trash2, ChevronRight, ZoomIn } from 'lucide-react';
+import { Crop, Trash2, ChevronRight, ZoomIn } from 'lucide-react';
 import ImageWindow from './ImageWindow.jsx';
 import ImageSides from './ImageSides.jsx';
-import { ContextToolContent, useContextToolTarget } from '../public/ownerSystemWorkflow/ContextToolbar.jsx';
+import { useContextToolTarget } from '../public/ownerSystemWorkflow/ContextToolbar.jsx';
+import ArtworkActionControls from '../public/ownerSystemWorkflow/ArtworkActionControls.jsx';
 import ArtworkTransformTools from '../public/ownerSystemWorkflow/ArtworkTransformTools.jsx';
 import useModuleShortcutMenu from '../public/ownerSystemWorkflow/useModuleShortcutMenu.jsx';
 import { resolveImageLibrarySide } from './imageLibrarySide.js';
@@ -112,10 +113,8 @@ const ImageInstance = memo(function ImageInstance({ record, index, store, profil
   const changeSide = (change, expected = record) => save({ ...expected, sides: expected.sides.map(item => item.id === side?.id ? { ...item, ...change } : item) }, expected);
   const duplicate = () => {
     if (!editable || !live.current || crop || flip || !canDuplicate) return;
-    try {
-      const id = duplicateImageModule(store, profileAddress, record, { workbench: getPresentation?.(), position: presentation.position });
-      setError(''); onDuplicated(id, Math.max(0, sideIndex)); onActivate?.(id); setSelection?.([id]);
-    } catch (failure) { setError(failure.message); }
+    const id = duplicateImageModule(store, profileAddress, record, { workbench: getPresentation?.(), position: presentation.position });
+    setError(''); onDuplicated(id, Math.max(0, sideIndex)); onActivate?.(id); setSelection?.([id]);
   };
   const acceptImage = useCallback(async input => {
     if (!editable || !presentation.open || !live.current) return false;
@@ -163,17 +162,47 @@ const ImageInstance = memo(function ImageInstance({ record, index, store, profil
     const target = record.sides[nextImageSide(sideIndex, record.sides.length)].id;
     if (reducedMotion) setSideId(target); else setFlip(target);
   };
+  const imageActions = <ArtworkActionControls
+      actions={!crop && (<nav className="system-workflow__selection-actions" aria-label="Image actions">
+          <button className="workflow-tactile-control" type="button" aria-label="Inspect Image" aria-keyshortcuts="I" title="Inspect Image (I)" disabled={!side || Boolean(flip)} onClick={inspectArtwork}
+            onPointerEnter={prepareInspection} onFocus={prepareInspection} onPointerLeave={releaseInspection} onBlur={releaseInspection}><ZoomIn size={18} strokeWidth={1.6} /></button>
+
+          <ArtworkTransformTools disabled={!side || Boolean(flip)}
+            onTransform={operation => changeSide({ transform: transformArtwork(side.transform, operation) })} />
+          <button className="workflow-tactile-control" type="button" aria-label="Crop" title="Crop" disabled={!side || Boolean(flip)} onClick={beginCrop}><Crop size={18} strokeWidth={1.6} /></button>
+        </nav>)}
+      inspection={crop ? (<div className="system-workflow__crop-controls" onKeyDown={event => { if (event.key === 'Escape') { event.preventDefault(); cancelCrop(); } }}>
+        <div><strong>Crop / drag image</strong><output>{Math.round(visualCrop.crop.zoom * 100)}%</output></div>
+        <input type="range" aria-label="Crop zoom" min="1" max="4" step="0.05" value={visualCrop.crop.zoom}
+          onChange={event => updateVisualCrop(setSystemWorkflowCropZoom(visualCrop.crop, { ...crop.media, ...visualCrop.dimensions }, rectangle, Number(event.target.value)))} />
+        <footer><button className="workflow-tactile-control" type="button" onClick={() => applyCrop(null)}>Native fit</button><button className="workflow-tactile-control" type="button" onClick={cancelCrop}>Cancel</button><button className="workflow-tactile-control" type="button" onClick={() => applyCrop(crop.previewCrop)}>Done</button></footer>
+        {failure?.surface === 'actions' && <p role="alert" className="image-module__error">{error}</p>}
+      </div>) : (<div className="system-workflow__inspection-selector" role="group" aria-label="Image fit">
+          <span>Fit</span>
+          <button className="workflow-tactile-control" type="button" disabled={!side || Boolean(flip)} aria-pressed={Boolean(side && side.crop === null)}
+            title="Show the complete image. Different proportions leave space inside the canvas."
+            onClick={() => changeSide({ crop: null })}>Fit inside</button>
+          <button className="workflow-tactile-control" type="button" disabled={!side || Boolean(flip)} aria-pressed={Boolean(side?.crop)}
+            title="Fill the canvas with a centred crop, keeping the image proportions. Edges may be cropped."
+            onClick={() => changeSide({ crop: { ...IMAGE_FILL_CROP } })}>Fill canvas</button>
+          {failure?.surface === 'actions' && <p role="alert" className="image-module__error">{error}</p>}
+        </div>)} />;
   // Only the tool's presentation moves to the shared dock. Side selection,
   // Library drop mode, validation, saving and undo remain with this Image.
-  useWorkbenchToolSource(record.id, { image: <section className="workbench-image-tools" data-workbench-inspection-target={record.id} aria-label={`${record.name} Image settings`}>
+  useWorkbenchToolSource(record.id, { actions: { disabled: !editable || Boolean(crop || flip || inspect),
+    duplicate: { disabled: !canDuplicate, reason: !canDuplicate ? 'At most sixteen Image modules are supported.' : undefined, run: duplicate } },
+    image: <section key={record.id} className="workbench-image-tools" data-workbench-inspection-target={record.id} aria-label={`${record.name} Image settings`}>
     {!presentation.open ? <p>Open this Image to edit its settings.</p>
       : !editable || inspect ? <p>Image settings are unavailable while viewing this artwork.</p>
-      : crop ? <p>Finish or cancel the crop in the toolbar.</p> : <>
+      : <>
+        {imageActions}
+        {!crop && <>
         <div className="image-module__side-tools">
           <label>When dropping from Library<select aria-label="When dropping from Library" value={dropMode} onChange={event => setDropMode(event.target.value)}><option value="append">Add as a new side</option><option value="replace">Replace current side</option></select></label>
           <button className="workflow-tactile-control" type="button" aria-label="Remove current Image side" title="Remove this side; keep the Image" disabled={!side || Boolean(flip)} onClick={() => save({ ...record, sides: record.sides.filter(item => item.id !== side.id) }, record, 'settings')}><Trash2 size={14} /></button>
         </div>
         <label className="image-module__publication"><input type="checkbox" checked={record.visibility === 'PUBLIC'} onChange={event => save({ ...record, visibility: event.target.checked ? 'PUBLIC' : 'PRIVATE' }, record, 'settings')} />Include Image in publication</label>
+        </>}
       </>}
     {failure?.surface === 'settings' && <p role="alert" className="image-module__error">{error}</p>}
   </section> });
@@ -273,32 +302,6 @@ const ImageInstance = memo(function ImageInstance({ record, index, store, profil
         disabled={Boolean(flip || inspect || suspended)} onClick={next}><ChevronRight size={14} /></button>}
       </>}
     </ImageWindow>}
-    {editable && <ContextToolContent target={record.id} label={`${record.name} / ${side ? `Side ${sideIndex + 1}` : 'Empty'}`} available={presentation.open && !inspect}
-      actions={!crop && (<nav className="system-workflow__selection-actions" aria-label="Image actions">
-          <button className="workflow-tactile-control" type="button" aria-label="Inspect Image" aria-keyshortcuts="I" title="Inspect Image (I)" disabled={!side || Boolean(flip)} onClick={inspectArtwork}
-            onPointerEnter={prepareInspection} onFocus={prepareInspection} onPointerLeave={releaseInspection} onBlur={releaseInspection}><ZoomIn size={18} strokeWidth={1.6} /></button>
-
-          <ArtworkTransformTools disabled={!side || Boolean(flip)}
-            onTransform={operation => changeSide({ transform: transformArtwork(side.transform, operation) })} />
-          <button className="workflow-tactile-control" type="button" aria-label="Crop" title="Crop" disabled={!side || Boolean(flip)} onClick={beginCrop}><Crop size={18} strokeWidth={1.6} /></button>
-          <button className="workflow-tactile-control" type="button" aria-label="Duplicate" title={canDuplicate ? 'Duplicate Image, keeping all sides and crops' : 'At most sixteen Image modules are supported'} disabled={!canDuplicate || Boolean(flip)} onClick={duplicate}><Copy size={18} strokeWidth={1.6} /></button>
-        </nav>)}
-      inspection={crop ? (<div className="system-workflow__crop-controls" onKeyDown={event => { if (event.key === 'Escape') { event.preventDefault(); cancelCrop(); } }}>
-        <div><strong>Crop / drag image</strong><output>{Math.round(visualCrop.crop.zoom * 100)}%</output></div>
-        <input type="range" aria-label="Crop zoom" min="1" max="4" step="0.05" value={visualCrop.crop.zoom}
-          onChange={event => updateVisualCrop(setSystemWorkflowCropZoom(visualCrop.crop, { ...crop.media, ...visualCrop.dimensions }, rectangle, Number(event.target.value)))} />
-        <footer><button className="workflow-tactile-control" type="button" onClick={() => applyCrop(null)}>Native fit</button><button className="workflow-tactile-control" type="button" onClick={cancelCrop}>Cancel</button><button className="workflow-tactile-control" type="button" onClick={() => applyCrop(crop.previewCrop)}>Done</button></footer>
-        {failure?.surface === 'actions' && <p role="alert" className="image-module__error">{error}</p>}
-      </div>) : (<div className="system-workflow__inspection-selector" role="group" aria-label="Image fit">
-          <span>Fit</span>
-          <button className="workflow-tactile-control" type="button" disabled={!side || Boolean(flip)} aria-pressed={Boolean(side && side.crop === null)}
-            title="Show the complete image. Different proportions leave space inside the canvas."
-            onClick={() => changeSide({ crop: null })}>Fit inside</button>
-          <button className="workflow-tactile-control" type="button" disabled={!side || Boolean(flip)} aria-pressed={Boolean(side?.crop)}
-            title="Fill the canvas with a centred crop, keeping the image proportions. Edges may be cropped."
-            onClick={() => changeSide({ crop: { ...IMAGE_FILL_CROP } })}>Fill canvas</button>
-          {failure?.surface === 'actions' && <p role="alert" className="image-module__error">{error}</p>}
-        </div>)} />}
     {error && activeTarget !== record.id && <button type="button" className="workflow-tactile-control system-workflow__notice" role="alert" onClick={() => onActivate?.(record.id)}>{error}</button>}
     {inspect && side && !inactive && <ImageLift source={source.current} entry={liftEntry} reducedMotion={reducedMotion} onClose={() => setInspect(false)}
       status={<span ref={setInspectionRecoveryHost} />} />}

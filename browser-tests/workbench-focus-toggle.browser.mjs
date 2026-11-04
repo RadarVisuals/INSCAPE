@@ -1,3 +1,4 @@
+import { workbenchCommandDisabled } from './fixtures/workbench-navigation.mjs';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { mkdir } from 'node:fs/promises';
@@ -47,7 +48,6 @@ for (const visitor of [false, true]) for (const width of [1440, 390]) for (const
       const first = page.locator('[data-image-module="image:toggle-0"] .image-module__window');
       const source = first.locator('.image-module__canvas');
       const host = page.locator('main.system-workflow').first();
-      const back = page.getByRole('button', { name: 'Back to previous Workbench view', exact: true });
       const initial = await camera(page), geometry = await first.boundingBox();
       const saved = await page.evaluate(() => localStorage.getItem(window.__motionKey));
       if (entry === 'click') {
@@ -66,7 +66,7 @@ for (const visitor of [false, true]) for (const width of [1440, 390]) for (const
       assert.deepEqual(await camera(page), focused, 'holding F does not toggle');
       await page.keyboard.press('f'); await settled(page);
       assert.deepEqual(await camera(page), initial, 'F returns to the exact prior camera');
-      assert.equal(await back.isDisabled(), true, 'F consumes the existing return context');
+      assert.equal(await workbenchCommandDisabled(page, 'back'), true, 'F consumes the existing return context');
       assert.equal(await first.evaluate(node => node.contains(document.activeElement)), true, 'Back restores module keyboard focus');
       await page.keyboard.press('f'); await settled(page);
       assert.notDeepEqual(await camera(page), initial, 'F can focus the same Image again after returning');
@@ -85,7 +85,7 @@ for (const visitor of [false, true]) for (const width of [1440, 390]) for (const
       assert.deepEqual(await camera(page), focused, 'nested F returns one level');
       await host.focus(); await page.keyboard.press('f'); await settled(page);
       assert.deepEqual(await camera(page), initial, 'second return reaches the original overview');
-      assert.equal(await back.isDisabled(), true);
+      assert.equal(await workbenchCommandDisabled(page, 'back'), true);
 
       // A deliberate second press during travel reverses it; key repeats do not.
       await source.click(); await page.keyboard.press('f');
@@ -93,7 +93,7 @@ for (const visitor of [false, true]) for (const width of [1440, 390]) for (const
       await host.dispatchEvent('keydown', { key: 'f', repeat: true });
       await page.keyboard.press('f'); await settled(page);
       assert.deepEqual(await camera(page), initial);
-      assert.equal(await back.isDisabled(), true, 'interrupted arrival does not duplicate history');
+      assert.equal(await workbenchCommandDisabled(page, 'back'), true, 'interrupted arrival does not duplicate history');
 
       await source.click(); await page.keyboard.press('f'); await settled(page);
       const guardedCamera = await camera(page);
@@ -138,13 +138,13 @@ for (const visitor of [false, true]) for (const width of [1440, 390]) for (const
         const window = page.locator(`[data-image-module="image:toggle-${index}"] .image-module__window`);
         await window.focus(); await page.keyboard.press('Shift+Enter');
       }
-      assert.match(await page.locator('.workbench-view-controls__selection-count').innerText(), /2 selected/);
+      assert.match(await page.locator('.workbench-selection').getAttribute('aria-label'), /2 selected/);
       await page.keyboard.press('f'); await settled(page);
       const groupCamera = await camera(page);
       assert.notDeepEqual(groupCamera, initial); assert.notDeepEqual(groupCamera, focused);
       await page.keyboard.press('f'); await settled(page);
       assert.deepEqual(await camera(page), initial);
-      assert.match(await page.locator('.workbench-view-controls__selection-count').innerText(), /2 selected/, 'return restores multi-selection');
+      assert.match(await page.locator('.workbench-selection').getAttribute('aria-label'), /2 selected/, 'return restores multi-selection');
       await page.keyboard.press('Escape'); await settled(page);
       // F cannot consume Back while a move owns the pointer.
       await source.dblclick(); await settled(page);

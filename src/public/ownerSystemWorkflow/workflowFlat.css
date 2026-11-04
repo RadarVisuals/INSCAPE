@@ -8,6 +8,8 @@
   --tactile-disabled: color-mix(in srgb, var(--tactile-ink) 35%, var(--tactile-face));
   --tactile-accent: var(--tactile-ink);
   --tactile-edge: color-mix(in srgb, var(--tactile-ink) 18%, var(--tactile-face));
+  --tactile-header: color-mix(in srgb, var(--tactile-ink) 4%, var(--tactile-face));
+  --tactile-divider: color-mix(in srgb, var(--tactile-ink) 32%, var(--tactile-face));
   --tactile-raised: transparent;
   --tactile-hover: color-mix(in srgb, var(--tactile-ink) 8%, var(--tactile-face));
   --tactile-well: var(--interface-environment);
@@ -27,6 +29,8 @@
     --tactile-disabled: GrayText;
     --tactile-accent: Highlight;
     --tactile-edge: ButtonText;
+    --tactile-header: Canvas;
+    --tactile-divider: ButtonText;
     --tactile-raised: ButtonFace;
     --tactile-hover: ButtonFace;
     --tactile-well: ButtonFace;

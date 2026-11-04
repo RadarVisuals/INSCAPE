@@ -1,6 +1,6 @@
 /* Placement uses the host's existing measured navigation clearance. */
 .workbench-destination-panel.workbench-tool-panel {
-  --destination-inset: max(12px, var(--workspace-navigation-inset, 0px));
+  --destination-inset: 12px;
   --destination-top: max(12px, calc(var(--workspace-navigation-top, 8px) + 4px));
   --destination-target: var(--control-height-sm);
   --workflow-panel: var(--tactile-face);

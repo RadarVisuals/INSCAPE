@@ -1,3 +1,4 @@
+import { navigateWorkbench } from './fixtures/workbench-navigation.mjs';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { chromium } from 'playwright-core';
@@ -35,7 +36,7 @@ test('HOME media is already mounted and decoded before either swipe direction', 
           const target = node.matches('[data-workbench-selectable]') ? node : node.querySelector('[data-workbench-selectable]');
           target.focus({ preventScroll: true }); target.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', shiftKey: true, bubbles: true, cancelable: true }));
         });
-        await page.getByRole('button', { name: 'Focus selected Workbench modules', exact: true }).click();
+        await navigateWorkbench(page, 'focus');
         await page.waitForFunction(() => !document.querySelector('[data-workbench-travelling]'));
       };
       await focusDisplay();

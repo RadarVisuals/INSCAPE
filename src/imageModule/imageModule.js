@@ -8,7 +8,8 @@ export const IMAGE_MODULE_ID = /^image:[A-Za-z0-9_-]{1,80}$/u;
 const exact = (v, keys) => v && typeof v === 'object' && !Array.isArray(v) && Object.keys(v).length === keys.length && keys.every(k => Object.hasOwn(v, k));
 const number = (v, min, max) => Number.isFinite(v) && v >= min && v <= max;
 const validCrop = (crop, minimumZoom) => crop === null || exact(crop, ['x', 'y', 'zoom']) && number(crop.x, 0, 1) && number(crop.y, 0, 1) && number(crop.zoom, minimumZoom, 4);
-export const imageSize = v => Number.isInteger(v) && number(v, 32, 4096);
+export const IMAGE_SIZE_LIMITS = Object.freeze({ minimumWidth: 32, minimumHeight: 32, maximumWidth: 4096, maximumHeight: 4096 });
+export const imageSize = v => Number.isInteger(v) && number(v, IMAGE_SIZE_LIMITS.minimumWidth, IMAGE_SIZE_LIMITS.maximumWidth);
 export function validImageModules(items, published = false, { minimumCropZoom = 1 } = {}) {
   if (!Array.isArray(items) || items.length > MAX_IMAGE_MODULES) return false;
   const ids = new Set();

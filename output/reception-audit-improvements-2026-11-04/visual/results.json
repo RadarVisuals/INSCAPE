@@ -1,0 +1,99 @@
+{
+  "errors": [],
+  "captures": [
+    {
+      "theme": "DARK",
+      "width": 1440,
+      "canvas": {
+        "x": 16,
+        "y": 113,
+        "width": 1408,
+        "height": 880
+      },
+      "mobile": null,
+      "ink": "#ffffff",
+      "label": "Preview width · 1408 px",
+      "readyArtwork": 1
+    },
+    {
+      "theme": "DARK",
+      "width": 900,
+      "canvas": {
+        "x": 16,
+        "y": 227.25,
+        "width": 868,
+        "height": 542.5
+      },
+      "mobile": null,
+      "ink": "#ffffff",
+      "label": "Preview width · 868 px",
+      "readyArtwork": 1
+    },
+    {
+      "theme": "LIGHT",
+      "width": 1440,
+      "canvas": {
+        "x": 16,
+        "y": 113,
+        "width": 1408,
+        "height": 880
+      },
+      "mobile": null,
+      "ink": "#000000",
+      "label": "Preview width · 1408 px",
+      "readyArtwork": 1
+    },
+    {
+      "theme": "LIGHT",
+      "width": 900,
+      "canvas": {
+        "x": 16,
+        "y": 227.25,
+        "width": 868,
+        "height": 542.5
+      },
+      "mobile": null,
+      "ink": "#000000",
+      "label": "Preview width · 868 px",
+      "readyArtwork": 1
+    },
+    {
+      "theme": "LIGHT_DARK_CELL",
+      "width": 1440,
+      "canvas": {
+        "x": 16,
+        "y": 113,
+        "width": 1408,
+        "height": 880
+      },
+      "mobile": null,
+      "ink": "#ffffff",
+      "label": "Preview width · 1408 px",
+      "readyArtwork": 1
+    },
+    {
+      "theme": "LIGHT_DARK_CELL",
+      "width": 900,
+      "canvas": {
+        "x": 16,
+        "y": 227.25,
+        "width": 868,
+        "height": 542.5
+      },
+      "mobile": null,
+      "ink": "#ffffff",
+      "label": "Preview width · 868 px",
+      "readyArtwork": 1
+    }
+  ],
+  "browser": "156.0.8078.80",
+  "renamedCellNotice": true,
+  "shortcutCameraStable": true,
+  "shortcutReopenRetainsContent": true,
+  "shortcutOverviewHidden": true,
+  "privacy": {
+    "retained": 1,
+    "visibility": "PRIVATE",
+    "publicTexts": 0
+  }
+}

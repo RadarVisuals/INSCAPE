@@ -1,14 +1,27 @@
+import { projectReceptionMember } from './editorCellGeometry.js';
 import { createEmptySystemWorkflowDraft } from '../systemWorkflow/domain/systemWorkflowDraft.js';
-import { artworkLayers, layerIds } from '../systemWorkflow/domain/artworkLayers.js';
 import { bindWorkbenchTextRecovery, textRecoveries, TEXT_RECOVERY_MESSAGE } from '../text/textEditRecovery.js';
 import { createTextPresentation } from '../profileDocument/domain/workbenchPresentation.js';
 import { createShapePresentation } from '../shapes/shapes.js';
 import { createImagePresentation } from '../imageModule/imageModule.js';
-import { createReceptionEditorDocument, receptionModuleWindow, withReceptionModuleWindow, reconcileReceptionCells, followReceptionCellGroups,
+import { applyReceptionLayout } from './receptionLayoutGenerator.js';
+import { resizeReceptionBento, swapReceptionBentoCells, addReceptionBentoCell, appendReceptionBentoRow, setReceptionBentoSettings, setReceptionCellRadius } from './receptionBento.js';
+import { mergeReceptionCells, splitReceptionCell } from './receptionCellStructure.js';
+import { fillDeletedReceptionCells } from './receptionCellDeletion.js';
+import { createReceptionEditorDocument, receptionModuleWindow, withReceptionModuleWindow, reconcileReceptionCells, receptionModuleLimits,
   RECEPTION_CELL_LIMIT } from './receptionEditorDocument.js';
 
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 const nativeKeys = ['workbench', 'imageModules', 'texts', 'shapes', 'artworkLayers'];
+// The shared Editor projects Display defaults even in Reception. Those are
+// host-only values, not Reception edits or history when leaving the document.
+const receptionWorkbench = (presentation, saved) => {
+  const next = { ...presentation, display: saved.display };
+  for (const key of ['displays', 'miniApps', 'keeperDocks']) {
+    if (Object.hasOwn(saved, key)) next[key] = saved[key]; else delete next[key];
+  }
+  return next;
+};
 const recordIds = draft => ['imageModules', 'texts', 'shapes'].flatMap(key => (draft[key] || []).map(item => item.id));
 const freeze = value => {
   if (!value || typeof value !== 'object' || Object.isFrozen(value)) return value;
@@ -31,7 +44,7 @@ export function createReceptionEditorScope(rootStore, options = {}) {
   base.grids = []; base.displays = [];
   freeze(base);
   let snapshot, source, projectedReception, released = false, editingCell = null;
-  const guards = new Set();
+  const guards = new Set(), listeners = new Set();
   const current = () => !released && underlying.isCurrent();
   const writable = () => current() && underlying.hasWriteAccess();
   const read = () => {
@@ -55,6 +68,7 @@ export function createReceptionEditorScope(rootStore, options = {}) {
     const before = canonical?.version === 3 ? canonical : createReceptionEditorDocument(canonical, options);
     if (targetCell && !before.cells.some(cell => cell.id === targetCell)) throw new Error('This Reception cell is no longer available.');
     let next = { ...before, ...Object.fromEntries(nativeKeys.map(key => [key, candidate[key] || (key === 'workbench' ? before.workbench : [])])) };
+    next.workbench = receptionWorkbench(next.workbench, before.workbench);
     const added = recordIds(candidate).filter(id => !recordIds(previous).includes(id));
     for (const id of added) if (!receptionModuleWindow(next, id)) {
       const key = ['imageModules', 'texts', 'shapes'].find(key => next[key].some(item => item.id === id));
@@ -70,32 +84,35 @@ export function createReceptionEditorScope(rootStore, options = {}) {
         const window = receptionModuleWindow(next, id);
         if (!window || window.left < cell.left + cell.width && window.left + window.width > cell.left
           && window.top < cell.top + cell.height && window.top + window.height > cell.top) continue;
-        const minimum = id.startsWith('text:') ? { width: 180, height: 100 } : { width: id.startsWith('image:') ? 32 : 8, height: id.startsWith('image:') ? 32 : 8 };
+        const limits = receptionModuleLimits(id), minimum = { width: limits.minimumWidth, height: limits.minimumHeight };
         const scale = Math.min(1, cell.width / window.width, cell.height / window.height);
         const width = Math.max(minimum.width, Math.min(cell.width, window.width * scale)), height = Math.max(minimum.height, Math.min(cell.height, window.height * scale));
         next = withReceptionModuleWindow(next, id, { left: cell.left + (cell.width - width) / 2, top: cell.top + (cell.height - height) / 2, width, height });
       }
     }
     assertLockedLayersUnchanged(before, next);
-    next = reconcileReceptionCells(before, followReceptionCellGroups(before, next));
+    next = reconcileReceptionCells(before, next);
+    const filled = fillDeletedReceptionCells(before, next);
+    if (filled !== next) next = reconcileReceptionCells(next, filled);
     return { ...rootDocument, reception: next, identityPresentation: candidate.identityPresentation };
   };
   const safeOptions = opts => {
     // Translate native live geometry to Reception history, never the active canvas.
     const { historyPresentation, ...safe } = opts || {};
     read();
-    return { ...safe, ...(historyPresentation ? { historyReception: { ...projectedReception, workbench: historyPresentation } } : {}) };
+    return { ...safe, ...(historyPresentation ? { historyReception: { ...projectedReception, workbench: receptionWorkbench(historyPresentation, projectedReception.workbench) } } : {}) };
   };
   const commit = (candidate, opts = {}, targetCell = editingCell) => {
     if (!writable()) return false;
     try { return underlying.commitCompletedOperation(convert(candidate, undefined, undefined, targetCell), safeOptions(opts)); } catch { return false; }
   };
-  const mutate = (make, label, presentation) => {
+  const mutate = (make, label, presentation, reconciliationOptions) => {
     if (!writable()) throw new Error('This Reception is no longer active.');
     const generation = underlying.getGeneration(), accepted = underlying.getSnapshot();
     const original = accepted.reception?.version === 3 ? accepted.reception : createReceptionEditorDocument(accepted.reception, options);
-    const before = presentation ? { ...original, workbench: structuredClone(presentation) } : original;
-    const reception = reconcileReceptionCells(original, make(before));
+    const before = presentation ? reconcileReceptionCells(original,
+      { ...original, workbench: receptionWorkbench(structuredClone(presentation), original.workbench) }) : original;
+    const reception = reconcileReceptionCells(before, make(before), reconciliationOptions);
     if (!underlying.commitCompletedOperation({ ...accepted, reception }, { expectedGeneration: generation, historyLabel: label,
       ...(presentation ? { historyReception: before } : {}) }))
       throw new Error('The Reception change could not be saved. Your saved work is unchanged.');
@@ -107,7 +124,10 @@ export function createReceptionEditorScope(rootStore, options = {}) {
     getSnapshot: read, getDraft: () => structuredClone(read()), getGeneration: underlying.getGeneration,
     getHistory: underlying.getHistory, getRecordState: underlying.getRecordState, getLastCommitFailure: underlying.getLastCommitFailure,
     getBackupSnapshot: underlying.getBackupSnapshot,
-    subscribe: listener => underlying.subscribe(() => { if (current()) listener(); }),
+    subscribe: listener => {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    },
     commitCompletedOperation: commit,
     // A drop targets its cell explicitly. Creating its native module and
     // membership is one operation; the user's editing focus never changes.
@@ -126,11 +146,28 @@ export function createReceptionEditorScope(rootStore, options = {}) {
     guardWorkbenchTransition: check => { guards.add(check); return () => guards.delete(check); },
     getCells: () => { read(); return current() ? projectedReception.cells : []; },
     getReception: () => { read(); return current() ? projectedReception : null; },
-    getCellGroups: () => { read(); return current() ? projectedReception.arrangement?.groups || [] : []; },
-    getEditingCell: () => editingCell,
+    getEditingCell: () => { read(); return current() ? editingCell : null; },
     setEditingCell(id) {
       if (!current() || id !== null && !api.getCells().some(cell => cell.id === id)) return false;
-      editingCell = id; return true;
+      if (editingCell !== id) { editingCell = id; listeners.forEach(listener => listener()); }
+      return true;
+    },
+    generateCellLayout(settings, seed, expectedGeneration) {
+      if (!current()) throw new Error('This Reception is no longer active.');
+      if (expectedGeneration !== underlying.getGeneration()) throw new Error('Reception changed. Close and reopen the layout generator to try again.');
+      if (textRecoveries(api, profile).length) throw new Error(TEXT_RECOVERY_MESSAGE);
+      return mutate(value => applyReceptionLayout(value, settings, seed), 'Generate Reception cell layout');
+    },
+    editBento(action, args, expectedGeneration, presentation) {
+      if (!current()) throw new Error('This Reception is no longer active.');
+      if (expectedGeneration !== underlying.getGeneration()) throw new Error('Reception changed. Try the change again.');
+      if (textRecoveries(api, profile).length) throw new Error(TEXT_RECOVERY_MESSAGE);
+      const operations = { resize: resizeReceptionBento, swap: swapReceptionBentoCells, addCell: addReceptionBentoCell, appendRow: appendReceptionBentoRow,
+        settings: setReceptionBentoSettings, cellRadius: setReceptionCellRadius, merge: mergeReceptionCells, split: splitReceptionCell };
+      const labels = { resize: 'Resize Reception cells', swap: 'Swap Reception cells', addCell: 'Add Reception cell', appendRow: 'Add Reception row',
+        settings: 'Change bento settings', cellRadius: 'Change cell radius', merge: 'Merge Reception cells', split: 'Split Reception cell' };
+      if (!operations[action]) throw new Error('Choose an available bento action.');
+      return mutate(value => operations[action](value, ...args), labels[action], presentation, { resizeContents: action !== 'merge' });
     },
     turnShapeIntoCell(id, presentation) {
       mutate(value => {
@@ -142,33 +179,6 @@ export function createReceptionEditorScope(rootStore, options = {}) {
         return { ...value, cells: [...value.cells, { id, members: [], mobile: { columns: 2, height: Math.round(Math.max(80, Math.min(1200, receptionModuleWindow(value, id).height))) } }] };
       }, 'Turn rectangle into cell', presentation);
       return id;
-    },
-    putInCell(cellId, ids, presentation) {
-      return mutate(value => {
-        const target = value.cells.find(cell => cell.id === cellId), selected = new Set(ids), available = new Set(recordIds(value));
-        if (!target || !selected.size || [...selected].some(id => !available.has(id) || value.cells.some(cell => cell.id === id)))
-          throw new Error('Choose artwork layers and an available cell. Cells cannot be nested.');
-        const layers = artworkLayers(value), order = layerIds(layers), members = [...new Set([...target.members, ...selected])];
-        const children = order.filter(id => members.includes(id));
-        const rest = layers.flatMap(layer => {
-          if (typeof layer === 'string') return members.includes(layer) ? [] : [layer];
-          const remaining = layer.children.filter(id => !members.includes(id));
-          if (remaining.includes(cellId)) return remaining;
-          return remaining.length ? [{ ...layer, children: remaining }] : [];
-        }), index = rest.indexOf(cellId);
-        // Explicit membership changes extract their layers; unrelated artwork
-        // blocks and their order remain intact.
-        return { ...value, artworkLayers: [...rest.slice(0, index + 1), ...children, ...rest.slice(index + 1)], cells: value.cells.map(cell => ({ ...cell,
-          members: cell.id === cellId ? members : cell.members.filter(id => !selected.has(id)),
-          ...(cell.lockedMembers ? { lockedMembers: cell.lockedMembers.filter(id => !selected.has(id)) } : {}),
-          mobile: { ...cell.mobile, ...(cell.mobile.placements ? { placements: cell.mobile.placements.filter(item => !selected.has(item.id)) } : {}) } })) };
-      }, 'Put artwork in cell', presentation);
-    },
-    removeFromCell(ids, presentation) {
-      const selected = new Set(ids);
-      return mutate(value => ({ ...value, cells: value.cells.map(cell => ({ ...cell, members: cell.members.filter(id => !selected.has(id)),
-        ...(cell.lockedMembers ? { lockedMembers: cell.lockedMembers.filter(id => !selected.has(id)) } : {}),
-        mobile: { ...cell.mobile, ...(cell.mobile.placements ? { placements: cell.mobile.placements.filter(item => !selected.has(item.id)) } : {}) } })) }), 'Remove artwork from cell', presentation);
     },
     setCellMobile(id, patch) {
       return mutate(value => {
@@ -182,35 +192,6 @@ export function createReceptionEditorScope(rootStore, options = {}) {
         }) };
       }, 'Arrange Reception on mobile');
     },
-    setCellLayerLocked(cellId, id, locked) {
-      return mutate(value => {
-        const cell = value.cells.find(item => item.id === cellId);
-        if (!cell?.members.includes(id)) throw new Error('This layer is no longer in the cell.');
-        return { ...value, cells: value.cells.map(item => item.id === cellId ? { ...item,
-          lockedMembers: locked ? [...new Set([...(item.lockedMembers || []), id])] : (item.lockedMembers || []).filter(member => member !== id) } : item) };
-      }, locked ? 'Lock cell layer' : 'Unlock cell layer');
-    },
-    coupleCells(ids, axis = 'row', presentation) {
-      const members = [...new Set(ids)];
-      return mutate(value => {
-        if (!['row', 'column'].includes(axis) || members.length < 2 || members.some(id => !value.cells.some(cell => cell.id === id)))
-          throw new Error('Choose at least two Reception cells.');
-        const group = { id: `group:${crypto.randomUUID()}`, members, axis, gapX: 16, gapY: 16 };
-        const groups = (value.arrangement?.groups || []).map(item => ({ ...item, members: item.members.filter(id => !members.includes(id)) })).filter(item => item.members.length > 1);
-        return arrangeGroup({ ...value, arrangement: { groups: [...groups, group] } }, group);
-      }, 'Couple Reception cells', presentation);
-    },
-    unlinkCells(id, presentation) {
-      return mutate(value => ({ ...value, arrangement: { groups: (value.arrangement?.groups || []).filter(group => group.id !== id && !group.members.includes(id)) } }), 'Unlink Reception cells', presentation);
-    },
-    setCellGroupGap(id, gap, presentation) {
-      return mutate(value => {
-        const group = value.arrangement?.groups.find(item => item.id === id || item.members.includes(id));
-        if (!group || !Number.isFinite(gap) || gap < 0 || gap > 10000) throw new Error('Choose an available cell group and valid spacing.');
-        const next = { ...group, [group.axis === 'row' ? 'gapX' : 'gapY']: Math.round(gap) };
-        return arrangeGroup({ ...value, arrangement: { groups: value.arrangement.groups.map(item => item.id === group.id ? next : item) } }, next);
-      }, 'Space Reception cells', presentation);
-    },
     setCellMobileOrder(ids) {
       return mutate(value => {
         if (ids.length !== value.cells.length || new Set(ids).size !== ids.length || ids.some(id => !value.cells.some(cell => cell.id === id)))
@@ -219,26 +200,21 @@ export function createReceptionEditorScope(rootStore, options = {}) {
       }, 'Order Reception on mobile');
     },
     release({ force = false } = {}) {
-      if (!current()) return;
-      if (!force && textRecoveries(api, profile).length) throw new Error(TEXT_RECOVERY_MESSAGE);
-      if (!force) for (const guard of guards) { const reason = guard(); if (reason) throw new Error(reason); }
-      read(); released = true; editingCell = null; guards.clear(); underlying.release();
+      if (released) return;
+      if (current() && !force && textRecoveries(api, profile).length) throw new Error(TEXT_RECOVERY_MESSAGE);
+      if (current() && !force) for (const guard of guards) { const reason = guard(); if (reason) throw new Error(reason); }
+      read(); released = true; editingCell = null; guards.clear(); listeners.clear(); unsubscribeUnderlying(); underlying.release();
     },
   });
-  read(); bindWorkbenchTextRecovery(api);
+  read();
+  // Invalidate ephemeral editing focus on every canonical transition, even when
+  // no React consumer reads between deleting a cell and undoing that deletion.
+  const unsubscribeUnderlying = underlying.subscribe(() => {
+    if (!current()) { editingCell = null; return; }
+    read(); listeners.forEach(listener => listener());
+  });
+  bindWorkbenchTextRecovery(api);
   return api;
-}
-
-function arrangeGroup(value, group) {
-  let next = value;
-  const first = receptionModuleWindow(value, group.members[0]), horizontal = group.axis === 'row';
-  let position = horizontal ? first.left : first.top;
-  for (const id of group.members) {
-    const window = receptionModuleWindow(value, id);
-    next = withReceptionModuleWindow(next, id, { ...window, left: horizontal ? position : first.left, top: horizontal ? first.top : position });
-    position += (horizontal ? window.width + group.gapX : window.height + group.gapY);
-  }
-  return next;
 }
 
 function assertLockedLayersUnchanged(before, next) {
@@ -251,9 +227,7 @@ function assertLockedLayersUnchanged(before, next) {
     if (same(oldFrame, newFrame)) continue;
     const oldCell = receptionModuleWindow(before, cell.id), newCell = receptionModuleWindow(next, cell.id);
     if (!oldCell || !newCell || same(oldCell, newCell)) throw new Error('Unlock this layer before moving it.');
-    const expected = { left: newCell.left + (oldFrame.left - oldCell.left) * newCell.width / oldCell.width,
-      top: newCell.top + (oldFrame.top - oldCell.top) * newCell.height / oldCell.height,
-      width: oldFrame.width * newCell.width / oldCell.width, height: oldFrame.height * newCell.height / oldCell.height };
+    const expected = projectReceptionMember(oldCell, newCell, oldFrame);
     if (!newFrame || Object.keys(expected).some(key => Math.abs(newFrame[key] - expected[key]) > 1)) throw new Error('Unlock this layer before moving it.');
   }
 }

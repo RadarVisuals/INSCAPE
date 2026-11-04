@@ -273,7 +273,30 @@ export const PRODUCTION_BUDGETS = Object.freeze({
   // Detachable Library and movable Workbench selector reuse ToolPanel. Native
   // core measures 2,701,193 raw / 890,900 gzip; bound the raw excess by 2 kB.
   // Compressed, initial-load, owner, wallet, CSS and asset ceilings stay fixed.
-  coreJavaScript: Object.freeze({ raw: 2_702_000, gzip: 892_000 }),
+  // Reception's requested cell-layout generator adds a lazy dialog and bounded
+  // geometry/apply helpers. First measurement: 2,709,585 raw / 893,939 gzip.
+  // Allow +10 kB raw / +3 kB gzip for the aggregate; all loading-boundary,
+  // wallet, CSS and asset limits stay unchanged.
+  // Bento shared-edge gestures, scoped cell insertion and the consolidated tool
+  // replace the generator dialog and manual coupling UI. Measured aggregate:
+  // 2,717,554 raw / 898,817 gzip (+7,877 / +4,980 against the prior feature).
+  // Bound this feature at +8 kB raw / +5 kB gzip; all other ceilings stay fixed.
+  // Bento follow-up adds row/cell insertion, reversible spacing previews,
+  // previous variants and start formats. Measured 2,722,407 raw / 900,286 gzip
+  // before the native Image-preview correction. Keep all other limits fixed.
+  // Open Bento inside edges reuse Shape Outline controls and validation. A
+  // scoped before/after build measures 2,724,427 / 900,813 versus 2,729,908 /
+  // 903,372 raw/gzip bytes (+5,481 / +2,559). Bound this feature at +6/+3 kB;
+  // the initial entry is unchanged at 800,014 / 234,683. Other ceilings stay fixed.
+  // Bento merge/split, deletion reflow and cell-sized Library drops measured
+  // 2,730,002 / 903,194 before versus 2,737,346 / 905,189 raw/gzip bytes.
+  // Bound this feature's aggregate growth by +8/+3 kB; initial bytes, owner,
+  // wallet, CSS, assets and runtime-isolation requirements stay unchanged.
+  // Bento review fixes add native-content size bounds, independent proposal
+  // drafts and scoped styling. Initial measurement: 2,742,972 / 907,080 raw/gzip
+  // versus 2,737,346 / 905,189 before. Bound aggregate growth; startup, owner,
+  // wallet, CSS, asset and runtime-isolation ceilings remain unchanged.
+  coreJavaScript: Object.freeze({ raw: 2_744_000, gzip: 909_000 }),
   // Approved local article fonts plus the creation bar's Inter variable face.
   // Inter and its license/provenance add 357,042 bytes; measured copied assets:
   // 17,811,402 bytes. Retain the previous margin, rounded up by less than 3 kB.

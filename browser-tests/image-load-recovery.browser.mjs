@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { chromium } from 'playwright-core';
+import { browserExecutable } from '../scripts/browserEnvironment.mjs';
 
 const origin = process.env.INSCAPE_IMAGE_ROOT || 'http://127.0.0.1:5198';
 const output = process.env.INSCAPE_BROWSER_OUTPUT || '.browser-test-runtime';
@@ -10,7 +11,7 @@ const quietLoading = async locator => {
   assert.equal(await locator.evaluate(node => getComputedStyle(node).clipPath), 'inset(50%)', 'loading remains accessible without covering artwork');
 };
 for (const kind of ['raster', 'svg']) test(`Image ${kind} Retry isolates attempts without authoring; Visitor also retains close and reopen`, { timeout: 120000 }, async () => {
-  const browser = await chromium.launch({ executablePath: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', headless: true });
+  const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
   await mkdir(output, { recursive: true });
   try {
     for (const width of [1440, 640, 390]) for (const owner of [true, false]) for (const touch of [false, true]) {
@@ -63,7 +64,7 @@ for (const kind of ['raster', 'svg']) test(`Image ${kind} Retry isolates attempt
       await page.evaluate(owner => imageFitFixture.owner(owner), owner);
       // This isolated fixture forces its dock open even on narrow screens.
       // Move it using its real keyboard controls to uncover the Image.
-      const dockMove = page.locator('.workbench-tool-panel-grip');
+      const dockMove = page.locator('.workbench-tool-dock .workbench-tool-panel-grip');
       if (await dockMove.count()) {
         await dockMove.focus();
         for (let i = 0; i < 32; i++) await dockMove.press('Shift+ArrowDown');

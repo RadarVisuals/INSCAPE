@@ -1,0 +1,3624 @@
+{
+  "wind": {
+    "version": 3,
+    "branding": {
+      "name": "",
+      "logo": null
+    },
+    "workbench": {
+      "version": 1,
+      "display": {
+        "name": "DISPLAY MODULE",
+        "open": false,
+        "window": {
+          "left": 32,
+          "top": 64,
+          "width": 960,
+          "height": 572
+        },
+        "shortcut": {
+          "position": {
+            "left": 24,
+            "top": 72
+          },
+          "visible": false,
+          "icon": null,
+          "iconPresentation": {
+            "labelSize": 8,
+            "offsetX": 0,
+            "offsetY": 0,
+            "scale": 1,
+            "size": 60
+          }
+        }
+      },
+      "identity": {
+        "open": false,
+        "window": {
+          "left": 28,
+          "top": 72,
+          "width": 840
+        }
+      },
+      "area": {
+        "left": 0,
+        "top": 0,
+        "width": 1920,
+        "height": 1080
+      },
+      "shapes": [
+        {
+          "id": "shape:1b2b5b23-d39e-4374-9515-024e597fbe24",
+          "open": true,
+          "window": {
+            "left": 0,
+            "top": 0,
+            "width": 1920,
+            "height": 1080
+          }
+        },
+        {
+          "id": "shape:0f411c82-b09e-46d1-bc70-c84c6b37c1d4",
+          "open": true,
+          "window": {
+            "left": 24,
+            "top": 24,
+            "width": 1248,
+            "height": 792
+          }
+        },
+        {
+          "id": "shape:94c2e072-79c2-47b7-a0f4-a091429f49dc",
+          "open": true,
+          "window": {
+            "left": 1288,
+            "top": 24,
+            "width": 608,
+            "height": 328
+          }
+        },
+        {
+          "id": "shape:7f7e4320-dc8c-417a-a2ca-b85680d1fe3a",
+          "open": true,
+          "window": {
+            "left": 1288,
+            "top": 368,
+            "width": 608,
+            "height": 448
+          }
+        },
+        {
+          "id": "shape:d8782752-5d44-433e-b7f3-4f36e67d42c7",
+          "open": true,
+          "window": {
+            "left": 24,
+            "top": 832,
+            "width": 432,
+            "height": 224
+          }
+        },
+        {
+          "id": "shape:f50941a0-28c1-4493-bcae-a1f01b141e26",
+          "open": true,
+          "window": {
+            "left": 472,
+            "top": 832,
+            "width": 800,
+            "height": 224
+          }
+        },
+        {
+          "id": "shape:9496bb41-504e-4682-8df4-df38686c3514",
+          "open": true,
+          "window": {
+            "left": 1288,
+            "top": 832,
+            "width": 608,
+            "height": 224
+          }
+        },
+        {
+          "id": "shape:a5684cae-1db6-4cd5-b388-aa2a782bc796",
+          "open": true,
+          "window": {
+            "left": 48,
+            "top": 594,
+            "width": 750,
+            "height": 184
+          }
+        },
+        {
+          "id": "shape:45e8b1fc-d793-4393-bfc9-02d56434e46d",
+          "open": true,
+          "window": {
+            "left": 48,
+            "top": 48,
+            "width": 300,
+            "height": 44
+          }
+        },
+        {
+          "id": "shape:324a55f9-6d00-4bd8-964f-9e7956e3b94d",
+          "open": true,
+          "window": {
+            "left": 1312,
+            "top": 748,
+            "width": 560,
+            "height": 48
+          }
+        }
+      ],
+      "imageModules": [
+        {
+          "id": "image:12994678-d8f6-409b-b35f-f8211ed9c5fd",
+          "open": true,
+          "position": {
+            "left": 24,
+            "top": 24
+          }
+        },
+        {
+          "id": "image:68ac2dca-4a43-4d79-82bd-33f72db2a5f9",
+          "open": true,
+          "position": {
+            "left": 1288,
+            "top": 368
+          }
+        }
+      ],
+      "texts": [
+        {
+          "id": "text:01f6abaf-5269-4706-880a-eb7a0b79cc36",
+          "open": true,
+          "window": {
+            "left": 64,
+            "top": 58,
+            "width": 560,
+            "height": 100
+          }
+        },
+        {
+          "id": "text:3f230c5b-061b-4a28-b9e3-5314014bd5d1",
+          "open": true,
+          "window": {
+            "left": 70,
+            "top": 596,
+            "width": 700,
+            "height": 176
+          }
+        },
+        {
+          "id": "text:3aef493a-4a0b-4185-9e54-096c8d6d6e30",
+          "open": true,
+          "window": {
+            "left": 1320,
+            "top": 48,
+            "width": 544,
+            "height": 100
+          }
+        },
+        {
+          "id": "text:a3e383ee-85bd-40f8-aa38-bcc1f3c2c368",
+          "open": true,
+          "window": {
+            "left": 1318,
+            "top": 88,
+            "width": 540,
+            "height": 184
+          }
+        },
+        {
+          "id": "text:137ec64f-7f27-4e71-bc16-3e53da9ceac0",
+          "open": true,
+          "window": {
+            "left": 1320,
+            "top": 294,
+            "width": 544,
+            "height": 100
+          }
+        },
+        {
+          "id": "text:4cacdaf9-6579-447b-95fd-fa7989d391b2",
+          "open": true,
+          "window": {
+            "left": 1324,
+            "top": 760,
+            "width": 536,
+            "height": 100
+          }
+        },
+        {
+          "id": "text:c917a5c8-8366-4668-b040-a0c11ffcbcb4",
+          "open": true,
+          "window": {
+            "left": 48,
+            "top": 856,
+            "width": 384,
+            "height": 100
+          }
+        },
+        {
+          "id": "text:e789b66b-cbfd-45ba-80d4-447f50e784f3",
+          "open": true,
+          "window": {
+            "left": 48,
+            "top": 894,
+            "width": 380,
+            "height": 146
+          }
+        },
+        {
+          "id": "text:f5e70d07-0af0-4acb-b962-a9d375392aa7",
+          "open": true,
+          "window": {
+            "left": 500,
+            "top": 856,
+            "width": 744,
+            "height": 100
+          }
+        },
+        {
+          "id": "text:98077a5b-773b-4c02-a5b1-45a62731e0e3",
+          "open": true,
+          "window": {
+            "left": 500,
+            "top": 900,
+            "width": 738,
+            "height": 142
+          }
+        },
+        {
+          "id": "text:2a842b68-4e6d-4a2d-bf6c-c2e7248e3025",
+          "open": true,
+          "window": {
+            "left": 1318,
+            "top": 856,
+            "width": 548,
+            "height": 100
+          }
+        },
+        {
+          "id": "text:50a31d85-94d8-4937-85cb-c44bbf9fc193",
+          "open": true,
+          "window": {
+            "left": 1316,
+            "top": 894,
+            "width": 200,
+            "height": 128
+          }
+        },
+        {
+          "id": "text:f85e8c92-db85-40f2-8ed7-f766a1426bf4",
+          "open": true,
+          "window": {
+            "left": 1482,
+            "top": 922,
+            "width": 372,
+            "height": 100
+          }
+        }
+      ]
+    },
+    "imageModules": [
+      {
+        "id": "image:12994678-d8f6-409b-b35f-f8211ed9c5fd",
+        "name": "Image",
+        "width": 1248,
+        "height": 792,
+        "sides": [
+          {
+            "id": "side:f5c68490-15a3-4c2e-8f84-008775f36b28",
+            "asset": {
+              "stableAssetId": "42:0x0000000000000000000000000000000000000000:0x0000000000000000000000000000000000000000000000000000000000000065",
+              "network": "lukso-mainnet",
+              "chainId": 42,
+              "tokenStandard": "UNKNOWN",
+              "contractAddress": "0x0000000000000000000000000000000000000000",
+              "tokenId": "0x0000000000000000000000000000000000000000000000000000000000000065",
+              "name": "wind-world",
+              "description": "AI-generated original sample artwork. Fictional editorial study; no affiliation or token ownership claimed.",
+              "collectionName": "RECEPTION WORLDS",
+              "media": {
+                "url": "https://127.0.0.1:5181/design-system/lab/assets/reception-vibes/wind-world.png",
+                "width": 1536,
+                "height": 1024,
+                "type": "image"
+              },
+              "creators": [],
+              "attributes": [
+                {
+                  "key": "Source",
+                  "value": "Built-in image_gen; prompt set saved with verification evidence",
+                  "type": null
+                }
+              ]
+            },
+            "crop": {
+              "x": 0.5,
+              "y": 0.5,
+              "zoom": 1
+            },
+            "transform": {
+              "quarterTurns": 0,
+              "mirrorX": false,
+              "mirrorY": false
+            }
+          }
+        ],
+        "visibility": "PUBLIC"
+      },
+      {
+        "id": "image:68ac2dca-4a43-4d79-82bd-33f72db2a5f9",
+        "name": "Image",
+        "width": 608,
+        "height": 448,
+        "sides": [
+          {
+            "id": "side:084fe7f3-2547-47b2-8486-95c25fe95ccb",
+            "asset": {
+              "stableAssetId": "42:0x0000000000000000000000000000000000000000:0x0000000000000000000000000000000000000000000000000000000000000066",
+              "network": "lukso-mainnet",
+              "chainId": 42,
+              "tokenStandard": "UNKNOWN",
+              "contractAddress": "0x0000000000000000000000000000000000000000",
+              "tokenId": "0x0000000000000000000000000000000000000000000000000000000000000066",
+              "name": "wind-studies",
+              "description": "AI-generated original sample artwork. Fictional editorial study; no affiliation or token ownership claimed.",
+              "collectionName": "RECEPTION WORLDS",
+              "media": {
+                "url": "https://127.0.0.1:5181/design-system/lab/assets/reception-vibes/wind-studies.png",
+                "width": 1536,
+                "height": 1024,
+                "type": "image"
+              },
+              "creators": [],
+              "attributes": [
+                {
+                  "key": "Source",
+                  "value": "Built-in image_gen; prompt set saved with verification evidence",
+                  "type": null
+                }
+              ]
+            },
+            "crop": {
+              "x": 0.5,
+              "y": 0.5,
+              "zoom": 1
+            },
+            "transform": {
+              "quarterTurns": 0,
+              "mirrorX": false,
+              "mirrorY": false
+            }
+          }
+        ],
+        "visibility": "PUBLIC"
+      }
+    ],
+    "texts": [
+      {
+        "id": "text:01f6abaf-5269-4706-880a-eb7a0b79cc36",
+        "article": {
+          "documentType": "INSCAPEArticle",
+          "version": 1,
+          "title": "",
+          "font": "plex",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "attrs": {
+                  "textAlign": null,
+                  "spaceBefore": 0,
+                  "spaceAfter": 0,
+                  "lineHeight": null
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "FIELDWORK / NO. 001"
+                  }
+                ]
+              }
+            ]
+          },
+          "appearance": {
+            "background": null,
+            "opacity": 1,
+            "frame": false,
+            "scale": 1,
+            "fontSize": 17,
+            "color": "#284234",
+            "lineHeight": 1.2,
+            "padding": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          }
+        },
+        "visibility": "PUBLIC"
+      },
+      {
+        "id": "text:3f230c5b-061b-4a28-b9e3-5314014bd5d1",
+        "article": {
+          "documentType": "INSCAPEArticle",
+          "version": 1,
+          "title": "",
+          "font": "cormorant",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "attrs": {
+                  "textAlign": null,
+                  "spaceBefore": 0,
+                  "spaceAfter": 0,
+                  "lineHeight": null
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "marks": [
+                      {
+                        "type": "bold"
+                      }
+                    ],
+                    "text": "The wandering"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "attrs": {
+                  "textAlign": null,
+                  "spaceBefore": 0,
+                  "spaceAfter": 0,
+                  "lineHeight": null
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "marks": [
+                      {
+                        "type": "bold"
+                      }
+                    ],
+                    "text": "atelier."
+                  }
+                ]
+              }
+            ]
+          },
+          "appearance": {
+            "background": null,
+            "opacity": 1,
+            "frame": false,
+            "scale": 1,
+            "fontSize": 76,
+            "color": "#f7f0d9",
+            "lineHeight": 1.02,
+            "padding": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          }
+        },
+        "visibility": "PUBLIC"
+      },
+      {
+        "id": "text:3aef493a-4a0b-4185-9e54-096c8d6d6e30",
+        "article": {
+          "documentType": "INSCAPEArticle",
+          "version": 1,
+          "title": "",
+          "font": "plex",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "attrs": {
+                  "textAlign": null,
+                  "spaceBefore": 0,
+                  "spaceAfter": 0,
+                  "lineHeight": null
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "AN ILLUSTRATOR’S FIELD GUIDE"
+                  }
+                ]
+              }
+            ]
+          },
+          "appearance": {
+            "background": null,
+            "opacity": 1,
+            "frame": false,
+            "scale": 1,
+            "fontSize": 17,
+            "color": "#7d694d",
+            "lineHeight": 1.2,
+            "padding": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          }
+        },
+        "visibility": "PUBLIC"
+      },
+      {
+        "id": "text:a3e383ee-85bd-40f8-aa38-bcc1f3c2c368",
+        "article": {
+          "documentType": "INSCAPEArticle",
+          "version": 1,
+          "title": "",
+          "font": "cormorant",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "attrs": {
+                  "textAlign": null,
+                  "spaceBefore": 0,
+                  "spaceAfter": 0,
+                  "lineHeight": null
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "marks": [
+                      {
+                        "type": "bold"
+                      }
+                    ],
+                    "text": "NORI"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "attrs": {
+                  "textAlign": null,
+                  "spaceBefore": 0,
+                  "spaceAfter": 0,
+                  "lineHeight": null
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "marks": [
+                      {
+                        "type": "bold"
+                      }
+                    ],
+                    "text": "MORI"
+                  }
+                ]
+              }
+            ]
+          },
+          "appearance": {
+            "background": null,
+            "opacity": 1,
+            "frame": false,
+            "scale": 1,
+            "fontSize": 86,
+            "color": "#294538",
+            "lineHeight": 1,
+            "padding": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          }
+        },
+        "visibility": "PUBLIC"
+      },
+      {
+        "id": "text:137ec64f-7f27-4e71-bc16-3e53da9ceac0",
+        "article": {
+          "documentType": "INSCAPEArticle",
+          "version": 1,
+          "title": "",
+          "font": "plex",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "attrs": {
+                  "textAlign": null,
+                  "spaceBefore": 0,
+                  "spaceAfter": 0,
+                  "lineHeight": null
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "DRAWING WORLDS THAT BREATHE"
+                  }
+                ]
+              }
+            ]
+          },
+          "appearance": {
+            "background": null,
+            "opacity": 1,
+            "frame": false,
+            "scale": 1,
+            "fontSize": 17,
+            "color": "#7d694d",
+            "lineHeight": 1.2,
+            "padding": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          }
+        },
+        "visibility": "PUBLIC"
+      },
+      {
+        "id": "text:4cacdaf9-6579-447b-95fd-fa7989d391b2",
+        "article": {
+          "documentType": "INSCAPEArticle",
+          "version": 1,
+          "title": "",
+          "font": "plex",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "attrs": {
+                  "textAlign": null,
+                  "spaceBefore": 0,
+                  "spaceAfter": 0,
+                  "lineHeight": null
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "CREATURE STUDIES / PENCIL & WATERCOLOUR"
+                  }
+                ]
+              }
+            ]
+          },
+          "appearance": {
+            "background": null,
+            "opacity": 1,
+            "frame": false,
+            "scale": 1,
+            "fontSize": 16,
+            "color": "#514936",
+            "lineHeight": 1.2,
+            "padding": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          }
+        },
+        "visibility": "PUBLIC"
+      },
+      {
+        "id": "text:c917a5c8-8366-4668-b040-a0c11ffcbcb4",
+        "article": {
+          "documentType": "INSCAPEArticle",
+          "version": 1,
+          "title": "",
+          "font": "plex",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "attrs": {
+                  "textAlign": null,
+                  "spaceBefore": 0,
+                  "spaceAfter": 0,
+                  "lineHeight": null
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "A LITTLE MAGIC / EVERY DAY"
+                  }
+                ]
+              }
+            ]
+          },
+          "appearance": {
+            "background": null,
+            "opacity": 1,
+            "frame": false,
+            "scale": 1,
+            "fontSize": 16,
+            "color": "#394b31",
+            "lineHeight": 1.2,
+            "padding": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          }
+        },
+        "visibility": "PUBLIC"
+      },
+      {
+        "id": "text:e789b66b-cbfd-45ba-80d4-447f50e784f3",
+        "article": {
+          "documentType": "INSCAPEArticle",
+          "version": 1,
+          "title": "",
+          "font": "cormorant",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "attrs": {
+                  "textAlign": null,
+                  "spaceBefore": 0,
+                  "spaceAfter": 0,
+                  "lineHeight": null
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "marks": [
+                      {
+                        "type": "bold"
+                      }
+                    ],
+                    "text": "Stay curious."
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "attrs": {
+                  "textAlign": null,
+                  "spaceBefore": 0,
+                  "spaceAfter": 0,
+                  "lineHeight": null
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "marks": [
+                      {
+                        "type": "bold"
+                      }
+                    ],
+                    "text": "Get beautifully"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "attrs": {
+                  "textAlign": null,
+                  "spaceBefore": 0,
+                  "spaceAfter": 0,
+                  "lineHeight": null
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "marks": [
+                      {
+                        "type": "bold"
+                      }
+                    ],
+                    "text": "lost."
+                  }
+                ]
+              }
+            ]
+          },
+          "appearance": {
+            "background": null,
+            "opacity": 1,
+            "frame": false,
+            "scale": 1,
+            "fontSize": 35,
+            "color": "#294538",
+            "lineHeight": 1.12,
+            "padding": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          }
+        },
+        "visibility": "PUBLIC"
+      },
+      {
+        "id": "text:f5e70d07-0af0-4acb-b962-a9d375392aa7",
+        "article": {
+          "documentType": "INSCAPEArticle",
+          "version": 1,
+          "title": "",
+          "font": "plex",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "attrs": {
+                  "textAlign": null,
+                  "spaceBefore": 0,
+                  "spaceAfter": 0,
+                  "lineHeight": null
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "A NOTE FROM THE STUDIO"
+                  }
+                ]
+              }
+            ]
+          },
+          "appearance": {
+            "background": null,
+            "opacity": 1,
+            "frame": false,
+            "scale": 1,
+            "fontSize": 16,
+            "color": "#7d694d",
+            "lineHeight": 1.2,
+            "padding": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          }
+        },
+        "visibility": "PUBLIC"
+      },
+      {
+        "id": "text:98077a5b-773b-4c02-a5b1-45a62731e0e3",
+        "article": {
+          "documentType": "INSCAPEArticle",
+          "version": 1,
+          "title": "",
+          "font": "literata",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "attrs": {
+                  "textAlign": null,
+                  "spaceBefore": 0,
+                  "spaceAfter": 0,
+                  "lineHeight": null
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "I collect small wonders: a crooked roof,"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "attrs": {
+                  "textAlign": null,
+                  "spaceBefore": 0,
+                  "spaceAfter": 0,
+                  "lineHeight": null
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "a moth at the window, a forest that might"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "attrs": {
+                  "textAlign": null,
+                  "spaceBefore": 0,
+                  "spaceAfter": 0,
+                  "lineHeight": null
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "just decide to walk away."
+                  }
+                ]
+              }
+            ]
+          },
+          "appearance": {
+            "background": null,
+            "opacity": 1,
+            "frame": false,
+            "scale": 1,
+            "fontSize": 23,
+            "color": "#384537",
+            "lineHeight": 1.35,
+            "padding": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          }
+        },
+        "visibility": "PUBLIC"
+      },
+      {
+        "id": "text:2a842b68-4e6d-4a2d-bf6c-c2e7248e3025",
+        "article": {
+          "documentType": "INSCAPEArticle",
+          "version": 1,
+          "title": "",
+          "font": "plex",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "attrs": {
+                  "textAlign": null,
+                  "spaceBefore": 0,
+                  "spaceAfter": 0,
+                  "lineHeight": null
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "POSTCARDS FROM ELSEWHERE"
+                  }
+                ]
+              }
+            ]
+          },
+          "appearance": {
+            "background": null,
+            "opacity": 1,
+            "frame": false,
+            "scale": 1,
+            "fontSize": 16,
+            "color": "#ffecd5",
+            "lineHeight": 1.2,
+            "padding": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          }
+        },
+        "visibility": "PUBLIC"
+      },
+      {
+        "id": "text:50a31d85-94d8-4937-85cb-c44bbf9fc193",
+        "article": {
+          "documentType": "INSCAPEArticle",
+          "version": 1,
+          "title": "",
+          "font": "cormorant",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "attrs": {
+                  "textAlign": null,
+                  "spaceBefore": 0,
+                  "spaceAfter": 0,
+                  "lineHeight": null
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "marks": [
+                      {
+                        "type": "bold"
+                      }
+                    ],
+                    "text": "03"
+                  }
+                ]
+              }
+            ]
+          },
+          "appearance": {
+            "background": null,
+            "opacity": 1,
+            "frame": false,
+            "scale": 1,
+            "fontSize": 86,
+            "color": "#ffecd5",
+            "lineHeight": 1,
+            "padding": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          }
+        },
+        "visibility": "PUBLIC"
+      },
+      {
+        "id": "text:f85e8c92-db85-40f2-8ed7-f766a1426bf4",
+        "article": {
+          "documentType": "INSCAPEArticle",
+          "version": 1,
+          "title": "",
+          "font": "plex",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "attrs": {
+                  "textAlign": null,
+                  "spaceBefore": 0,
+                  "spaceAfter": 0,
+                  "lineHeight": null
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "NEW WORLDS"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "attrs": {
+                  "textAlign": null,
+                  "spaceBefore": 0,
+                  "spaceAfter": 0,
+                  "lineHeight": null
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "IN THE SKETCHBOOK"
+                  }
+                ]
+              }
+            ]
+          },
+          "appearance": {
+            "background": null,
+            "opacity": 1,
+            "frame": false,
+            "scale": 1,
+            "fontSize": 22,
+            "color": "#ffecd5",
+            "lineHeight": 1.25,
+            "padding": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          }
+        },
+        "visibility": "PUBLIC"
+      }
+    ],
+    "shapes": [
+      {
+        "name": "Authored paper ground",
+        "color": "#e9e4d5",
+        "opacity": 1,
+        "visibility": "PUBLIC",
+        "id": "shape:1b2b5b23-d39e-4374-9515-024e597fbe24"
+      },
+      {
+        "name": "world",
+        "color": "#304c3d",
+        "opacity": 1,
+        "visibility": "PUBLIC",
+        "id": "shape:0f411c82-b09e-46d1-bc70-c84c6b37c1d4"
+      },
+      {
+        "name": "identity",
+        "color": "#f3ecd9",
+        "opacity": 1,
+        "visibility": "PUBLIC",
+        "id": "shape:94c2e072-79c2-47b7-a0f4-a091429f49dc"
+      },
+      {
+        "name": "studies",
+        "color": "#f6ecd7",
+        "opacity": 1,
+        "visibility": "PUBLIC",
+        "id": "shape:7f7e4320-dc8c-417a-a2ca-b85680d1fe3a"
+      },
+      {
+        "name": "wonder",
+        "color": "#c9d5ac",
+        "opacity": 1,
+        "visibility": "PUBLIC",
+        "id": "shape:d8782752-5d44-433e-b7f3-4f36e67d42c7"
+      },
+      {
+        "name": "letter",
+        "color": "#f3ecd9",
+        "opacity": 1,
+        "visibility": "PUBLIC",
+        "id": "shape:f50941a0-28c1-4493-bcae-a1f01b141e26"
+      },
+      {
+        "name": "journal",
+        "color": "#bc583b",
+        "opacity": 1,
+        "visibility": "PUBLIC",
+        "id": "shape:9496bb41-504e-4682-8df4-df38686c3514"
+      },
+      {
+        "name": "Painting title plate",
+        "color": "#183d32",
+        "opacity": 0.92,
+        "visibility": "PUBLIC",
+        "id": "shape:a5684cae-1db6-4cd5-b388-aa2a782bc796"
+      },
+      {
+        "name": "Fieldwork label",
+        "color": "#f3ecd9",
+        "opacity": 0.95,
+        "visibility": "PUBLIC",
+        "id": "shape:45e8b1fc-d793-4393-bfc9-02d56434e46d"
+      },
+      {
+        "name": "Study caption plate",
+        "color": "#f3ecd9",
+        "opacity": 0.96,
+        "visibility": "PUBLIC",
+        "id": "shape:324a55f9-6d00-4bd8-964f-9e7956e3b94d"
+      }
+    ],
+    "artworkLayers": [
+      "shape:1b2b5b23-d39e-4374-9515-024e597fbe24",
+      "shape:0f411c82-b09e-46d1-bc70-c84c6b37c1d4",
+      "shape:94c2e072-79c2-47b7-a0f4-a091429f49dc",
+      "shape:7f7e4320-dc8c-417a-a2ca-b85680d1fe3a",
+      "shape:d8782752-5d44-433e-b7f3-4f36e67d42c7",
+      "shape:f50941a0-28c1-4493-bcae-a1f01b141e26",
+      "shape:9496bb41-504e-4682-8df4-df38686c3514",
+      "image:12994678-d8f6-409b-b35f-f8211ed9c5fd",
+      "image:68ac2dca-4a43-4d79-82bd-33f72db2a5f9",
+      "shape:a5684cae-1db6-4cd5-b388-aa2a782bc796",
+      "shape:45e8b1fc-d793-4393-bfc9-02d56434e46d",
+      "shape:324a55f9-6d00-4bd8-964f-9e7956e3b94d",
+      "text:01f6abaf-5269-4706-880a-eb7a0b79cc36",
+      "text:3f230c5b-061b-4a28-b9e3-5314014bd5d1",
+      "text:3aef493a-4a0b-4185-9e54-096c8d6d6e30",
+      "text:a3e383ee-85bd-40f8-aa38-bcc1f3c2c368",
+      "text:137ec64f-7f27-4e71-bc16-3e53da9ceac0",
+      "text:4cacdaf9-6579-447b-95fd-fa7989d391b2",
+      "text:c917a5c8-8366-4668-b040-a0c11ffcbcb4",
+      "text:e789b66b-cbfd-45ba-80d4-447f50e784f3",
+      "text:f5e70d07-0af0-4acb-b962-a9d375392aa7",
+      "text:98077a5b-773b-4c02-a5b1-45a62731e0e3",
+      "text:2a842b68-4e6d-4a2d-bf6c-c2e7248e3025",
+      "text:50a31d85-94d8-4937-85cb-c44bbf9fc193",
+      "text:f85e8c92-db85-40f2-8ed7-f766a1426bf4"
+    ],
+    "cells": [
+      {
+        "id": "shape:0f411c82-b09e-46d1-bc70-c84c6b37c1d4",
+        "members": [
+          "image:12994678-d8f6-409b-b35f-f8211ed9c5fd",
+          "shape:a5684cae-1db6-4cd5-b388-aa2a782bc796",
+          "shape:45e8b1fc-d793-4393-bfc9-02d56434e46d",
+          "text:01f6abaf-5269-4706-880a-eb7a0b79cc36",
+          "text:3f230c5b-061b-4a28-b9e3-5314014bd5d1"
+        ],
+        "mobile": {
+          "columns": 2,
+          "height": 792
+        },
+        "radius": 20
+      },
+      {
+        "id": "shape:94c2e072-79c2-47b7-a0f4-a091429f49dc",
+        "members": [
+          "text:3aef493a-4a0b-4185-9e54-096c8d6d6e30",
+          "text:a3e383ee-85bd-40f8-aa38-bcc1f3c2c368",
+          "text:137ec64f-7f27-4e71-bc16-3e53da9ceac0"
+        ],
+        "mobile": {
+          "columns": 2,
+          "height": 328
+        },
+        "radius": 20
+      },
+      {
+        "id": "shape:7f7e4320-dc8c-417a-a2ca-b85680d1fe3a",
+        "members": [
+          "image:68ac2dca-4a43-4d79-82bd-33f72db2a5f9",
+          "shape:324a55f9-6d00-4bd8-964f-9e7956e3b94d",
+          "text:4cacdaf9-6579-447b-95fd-fa7989d391b2"
+        ],
+        "mobile": {
+          "columns": 2,
+          "height": 448
+        },
+        "radius": 20
+      },
+      {
+        "id": "shape:d8782752-5d44-433e-b7f3-4f36e67d42c7",
+        "members": [
+          "text:c917a5c8-8366-4668-b040-a0c11ffcbcb4",
+          "text:e789b66b-cbfd-45ba-80d4-447f50e784f3"
+        ],
+        "mobile": {
+          "columns": 2,
+          "height": 224
+        },
+        "radius": 20
+      },
+      {
+        "id": "shape:f50941a0-28c1-4493-bcae-a1f01b141e26",
+        "members": [
+          "text:f5e70d07-0af0-4acb-b962-a9d375392aa7",
+          "text:98077a5b-773b-4c02-a5b1-45a62731e0e3"
+        ],
+        "mobile": {
+          "columns": 2,
+          "height": 224
+        },
+        "radius": 20
+      },
+      {
+        "id": "shape:9496bb41-504e-4682-8df4-df38686c3514",
+        "members": [
+          "text:2a842b68-4e6d-4a2d-bf6c-c2e7248e3025",
+          "text:50a31d85-94d8-4937-85cb-c44bbf9fc193",
+          "text:f85e8c92-db85-40f2-8ed7-f766a1426bf4"
+        ],
+        "mobile": {
+          "columns": 2,
+          "height": 224
+        },
+        "radius": 20
+      }
+    ],
+    "bento": {
+      "gap": 16,
+      "padding": 24
+    }
+  },
+  "collector": {
+    "version": 3,
+    "branding": {
+      "name": "",
+      "logo": null
+    },
+    "workbench": {
+      "version": 1,
+      "display": {
+        "name": "DISPLAY MODULE",
+        "open": false,
+        "window": {
+          "left": 32,
+          "top": 64,
+          "width": 960,
+          "height": 572
+        },
+        "shortcut": {
+          "position": {
+            "left": 24,
+            "top": 72
+          },
+          "visible": false,
+          "icon": null,
+          "iconPresentation": {
+            "labelSize": 8,
+            "offsetX": 0,
+            "offsetY": 0,
+            "scale": 1,
+            "size": 60
+          }
+        }
+      },
+      "identity": {
+        "open": false,
+        "window": {
+          "left": 28,
+          "top": 72,
+          "width": 840
+        }
+      },
+      "area": {
+        "left": 0,
+        "top": 0,
+        "width": 1920,
+        "height": 1080
+      },
+      "shapes": [
+        {
+          "id": "shape:eb92b940-a852-41fc-b96f-8db34e65f679",
+          "open": true,
+          "window": {
+            "left": 0,
+            "top": 0,
+            "width": 1920,
+            "height": 1080
+          }
+        },
+        {
+          "id": "shape:58fc4d6a-a6b5-4317-9b77-e96c1ebc7c8e",
+          "open": true,
+          "window": {
+            "left": 24,
+            "top": 24,
+            "width": 632,
+            "height": 668
+          }
+        },
+        {
+          "id": "shape:f606471f-f76b-4c92-8cbc-c758725cba27",
+          "open": true,
+          "window": {
+            "left": 672,
+            "top": 24,
+            "width": 760,
+            "height": 1032
+          }
+        },
+        {
+          "id": "shape:2f261e82-9a2f-454c-9d45-3f9eecf99905",
+          "open": true,
+          "window": {
+            "left": 1448,
+            "top": 24,
+            "width": 448,
+            "height": 448
+          }
+        },
+        {
+          "id": "shape:a607936e-4971-4cad-b58b-8d18efd68f15",
+          "open": true,
+          "window": {
+            "left": 24,
+            "top": 708,
+            "width": 632,
+            "height": 348
+          }
+        },
+        {
+          "id": "shape:6bfed500-1382-4210-acf0-5dea7ebf92b5",
+          "open": true,
+          "window": {
+            "left": 1448,
+            "top": 488,
+            "width": 448,
+            "height": 208
+          }
+        },
+        {
+          "id": "shape:9034a4ab-9787-45ee-8778-ee64dcc67545",
+          "open": true,
+          "window": {
+            "left": 1448,
+            "top": 712,
+            "width": 448,
+            "height": 344
+          }
+        },
+        {
+          "id": "shape:7e139a1b-337d-4f48-9158-a0e8d7723ea9",
+          "open": true,
+          "window": {
+            "left": 696,
+            "top": 936,
+            "width": 712,
+            "height": 96
+          }
+        }
+      ],
+      "imageModules": [
+        {
+          "id": "image:16cc2b9d-eb22-4d35-821b-0fea6ccb4116",
+          "open": true,
+          "position": {
+            "left": 672,
+            "top": 24
+          }
+        },
+        {
+          "id": "image:215b5c6d-56a7-47c8-9ef7-650bbf2c6814",
+          "open": true,
+          "position": {
+            "left": 1448,
+            "top": 24
+          }
+        }
+      ],
+      "texts": [
+        {
+          "id": "text:1a62ec6c-fccf-4cdd-bc17-2a72068008d5",
+          "open": true,
+          "window": {
+            "left": 56,
+            "top": 54,
+            "width": 568,
+            "height": 100
+          }
+        },
+        {
+          "id": "text:b8077f00-3354-4807-83e3-5cc1584609f7",
+          "open": true,
+          "window": {
+            "left": 48,
+            "top": 150,
+            "width": 592,
+            "height": 246
+          }
+        },
+        {
+          "id": "text:43c17bba-df02-473b-a6c1-f1fdafbe819c",
+          "open": true,
+          "window": {
+            "left": 56,
+            "top": 470,
+            "width": 560,
+            "height": 148
+          }
+        },
+        {
+          "id": "text:fc30fa1f-add0-46bf-b7da-7f86a0bbb1d2",
+          "open": true,
+          "window": {
+            "left": 56,
+            "top": 640,
+            "width": 568,
+            "height": 100
+          }
+        },
+        {
+          "id": "text:1a0f1b65-4ff2-426f-a973-7ea4da33db18",
+          "open": true,
+          "window": {
+            "left": 56,
+            "top": 748,
+            "width": 568,
+            "height": 226
+          }
+        },
+        {
+          "id": "text:1bf241cf-3e7c-4974-a7bb-2a8c9c7187db",
+          "open": true,
+          "window": {
+            "left": 56,
+            "top": 1016,
+            "width": 568,
+            "height": 100
+          }
+        },
+        {
+          "id": "text:c710ef27-18e3-41fc-b7d3-4d4098b15470",
+          "open": true,
+          "window": {
+            "left": 716,
+            "top": 952,
+            "width": 672,
+            "height": 100
+          }
+        },
+        {
+          "id": "text:c37afe7d-9d83-4447-83b6-97c28e2d1051",
+          "open": true,
+          "window": {
+            "left": 1476,
+            "top": 510,
+            "width": 392,
+            "height": 114
+          }
+        },
+        {
+          "id": "text:75729ef9-2453-43a3-84cb-39e28513073c",
+          "open": true,
+          "window": {
+            "left": 1476,
+            "top": 640,
+            "width": 392,
+            "height": 100
+          }
+        },
+        {
+          "id": "text:cc3b959d-dae7-4b20-96bd-1817b55f6e61",
+          "open": true,
+          "window": {
+            "left": 1476,
+            "top": 738,
+            "width": 392,
+            "height": 100
+          }
+        },
+        {
+          "id": "text:c7812218-d7db-4968-8aa5-7fe3aee78f10",
+          "open": true,
+          "window": {
+            "left": 1472,
+            "top": 774,
+            "width": 392,
+            "height": 164
+          }
+        },
+        {
+          "id": "text:3186f230-0242-42fd-91dc-22bf160f841a",
+          "open": true,
+          "window": {
+            "left": 1476,
+            "top": 1014,
+            "width": 392,
+            "height": 100
+          }
+        }
+      ]
+    },
+    "imageModules": [
+      {
+        "id": "image:16cc2b9d-eb22-4d35-821b-0fea6ccb4116",
+        "name": "Image",
+        "width": 760,
+        "height": 1032,
+        "sides": [
+          {
+            "id": "side:b4cd2b06-cded-460f-9256-4d230aa1abf6",
+            "asset": {
+              "stableAssetId": "42:0x0000000000000000000000000000000000000000:0x0000000000000000000000000000000000000000000000000000000000000067",
+              "network": "lukso-mainnet",
+              "chainId": 42,
+              "tokenStandard": "UNKNOWN",
+              "contractAddress": "0x0000000000000000000000000000000000000000",
+              "tokenId": "0x0000000000000000000000000000000000000000000000000000000000000067",
+              "name": "collector-totem",
+              "description": "AI-generated original sample artwork. Fictional editorial study; no affiliation or token ownership claimed.",
+              "collectionName": "RECEPTION WORLDS",
+              "media": {
+                "url": "https://127.0.0.1:5181/design-system/lab/assets/reception-vibes/collector-totem.png",
+                "width": 1086,
+                "height": 1448,
+                "type": "image"
+              },
+              "creators": [],
+              "attributes": [
+                {
+                  "key": "Source",
+                  "value": "Built-in image_gen; prompt set saved with verification evidence",
+                  "type": null
+                }
+              ]
+            },
+            "crop": {
+              "x": 0.5,
+              "y": 0.5,
+              "zoom": 1
+            },
+            "transform": {
+              "quarterTurns": 0,
+              "mirrorX": false,
+              "mirrorY": false
+            }
+          }
+        ],
+        "visibility": "PUBLIC"
+      },
+      {
+        "id": "image:215b5c6d-56a7-47c8-9ef7-650bbf2c6814",
+        "name": "Image",
+        "width": 448,
+        "height": 448,
+        "sides": [
+          {
+            "id": "side:043723b0-727d-49e0-b300-222e41d5c9ea",
+            "asset": {
+              "stableAssetId": "42:0x0000000000000000000000000000000000000000:0x0000000000000000000000000000000000000000000000000000000000000068",
+              "network": "lukso-mainnet",
+              "chainId": 42,
+              "tokenStandard": "UNKNOWN",
+              "contractAddress": "0x0000000000000000000000000000000000000000",
+              "tokenId": "0x0000000000000000000000000000000000000000000000000000000000000068",
+              "name": "collector-objects",
+              "description": "AI-generated original sample artwork. Fictional editorial study; no affiliation or token ownership claimed.",
+              "collectionName": "RECEPTION WORLDS",
+              "media": {
+                "url": "https://127.0.0.1:5181/design-system/lab/assets/reception-vibes/collector-objects.png",
+                "width": 1254,
+                "height": 1254,
+                "type": "image"
+              },
+              "creators": [],
+              "attributes": [
+                {
+                  "key": "Source",
+                  "value": "Built-in image_gen; prompt set saved with verification evidence",
+                  "type": null
+                }
+              ]
+            },
+            "crop": {
+              "x": 0.5,
+              "y": 0.5,
+              "zoom": 1
+            },
+            "transform": {
+              "quarterTurns": 0,
+              "mirrorX": false,
+              "mirrorY": false
+            }
+          }
+        ],
+        "visibility": "PUBLIC"
+      }
+    ],
+    "texts": [
+      {
+        "id": "text:1a62ec6c-fccf-4cdd-bc17-2a72068008d5",
+        "article": {
+          "documentType": "INSCAPEArticle",
+          "version": 1,
+          "title": "",
+          "font": "plex",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "attrs": {
+                  "textAlign": null,
+                  "spaceBefore": 0,
+                  "spaceAfter": 0,
+                  "lineHeight": null
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "CABINET / NO. 07        PRIVATE COLLECTION"
+                  }
+                ]
+              }
+            ]
+          },
+          "appearance": {
+            "background": null,
+            "opacity": 1,
+            "frame": false,
+            "scale": 1,
+            "fontSize": 17,
+            "color": "#ca9474",
+            "lineHeight": 1.2,
+            "padding": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          }
+        },
+        "visibility": "PUBLIC"
+      },
+      {
+        "id": "text:b8077f00-3354-4807-83e3-5cc1584609f7",
+        "article": {
+          "documentType": "INSCAPEArticle",
+          "version": 1,
+          "title": "",
+          "font": "cormorant",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "attrs": {
+                  "textAlign": null,
+                  "spaceBefore": 0,
+                  "spaceAfter": 0,
+                  "lineHeight": null
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "A private"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "attrs": {
+                  "textAlign": null,
+                  "spaceBefore": 0,
+                  "spaceAfter": 0,
+                  "lineHeight": null
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "obsession."
+                  }
+                ]
+              }
+            ]
+          },
+          "appearance": {
+            "background": null,
+            "opacity": 1,
+            "frame": false,
+            "scale": 1,
+            "fontSize": 105,
+            "color": "#ede2cc",
+            "lineHeight": 1,
+            "padding": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          }
+        },
+        "visibility": "PUBLIC"
+      },
+      {
+        "id": "text:43c17bba-df02-473b-a6c1-f1fdafbe819c",
+        "article": {
+          "documentType": "INSCAPEArticle",
+          "version": 1,
+          "title": "",
+          "font": "literata",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "attrs": {
+                  "textAlign": null,
+                  "spaceBefore": 0,
+                  "spaceAfter": 0,
+                  "lineHeight": null
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Objects with a past."
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "attrs": {
+                  "textAlign": null,
+                  "spaceBefore": 0,
+                  "spaceAfter": 0,
+                  "lineHeight": null
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Forms with an uncertain future."
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "attrs": {
+                  "textAlign": null,
+                  "spaceBefore": 0,
+                  "spaceAfter": 0,
+                  "lineHeight": null
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "A collection assembled by instinct."
+                  }
+                ]
+              }
+            ]
+          },
+          "appearance": {
+            "background": null,
+            "opacity": 1,
+            "frame": false,
+            "scale": 1,
+            "fontSize": 25,
+            "color": "#cfc0a8",
+            "lineHeight": 1.45,
+            "padding": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          }
+        },
+        "visibility": "PUBLIC"
+      },
+      {
+        "id": "text:fc30fa1f-add0-46bf-b7da-7f86a0bbb1d2",
+        "article": {
+          "documentType": "INSCAPEArticle",
+          "version": 1,
+          "title": "",
+          "font": "plex",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "attrs": {
+                  "textAlign": null,
+                  "spaceBefore": 0,
+                  "spaceAfter": 0,
+                  "lineHeight": null
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "FOUND / KEPT / QUESTIONED"
+                  }
+                ]
+              }
+            ]
+          },
+          "appearance": {
+            "background": null,
+            "opacity": 1,
+            "frame": false,
+            "scale": 1,
+            "fontSize": 16,
+            "color": "#ca9474",
+            "lineHeight": 1.2,
+            "padding": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          }
+        },
+        "visibility": "PUBLIC"
+      },
+      {
+        "id": "text:1a0f1b65-4ff2-426f-a973-7ea4da33db18",
+        "article": {
+          "documentType": "INSCAPEArticle",
+          "version": 1,
+          "title": "",
+          "font": "cormorant",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "attrs": {
+                  "textAlign": null,
+                  "spaceBefore": 0,
+                  "spaceAfter": 0,
+                  "lineHeight": null
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Some things"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "attrs": {
+                  "textAlign": null,
+                  "spaceBefore": 0,
+                  "spaceAfter": 0,
+                  "lineHeight": null
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "refuse to be"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "attrs": {
+                  "textAlign": null,
+                  "spaceBefore": 0,
+                  "spaceAfter": 0,
+                  "lineHeight": null
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "ordinary."
+                  }
+                ]
+              }
+            ]
+          },
+          "appearance": {
+            "background": null,
+            "opacity": 1,
+            "frame": false,
+            "scale": 1,
+            "fontSize": 62,
+            "color": "#201919",
+            "lineHeight": 1.02,
+            "padding": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          }
+        },
+        "visibility": "PUBLIC"
+      },
+      {
+        "id": "text:1bf241cf-3e7c-4974-a7bb-2a8c9c7187db",
+        "article": {
+          "documentType": "INSCAPEArticle",
+          "version": 1,
+          "title": "",
+          "font": "plex",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "attrs": {
+                  "textAlign": null,
+                  "spaceBefore": 0,
+                  "spaceAfter": 0,
+                  "lineHeight": null
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "NOTES FROM THE COLLECTOR"
+                  }
+                ]
+              }
+            ]
+          },
+          "appearance": {
+            "background": null,
+            "opacity": 1,
+            "frame": false,
+            "scale": 1,
+            "fontSize": 16,
+            "color": "#281d19",
+            "lineHeight": 1.2,
+            "padding": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          }
+        },
+        "visibility": "PUBLIC"
+      },
+      {
+        "id": "text:c710ef27-18e3-41fc-b7d3-4d4098b15470",
+        "article": {
+          "documentType": "INSCAPEArticle",
+          "version": 1,
+          "title": "",
+          "font": "plex",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "attrs": {
+                  "textAlign": null,
+                  "spaceBefore": 0,
+                  "spaceAfter": 0,
+                  "lineHeight": null
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "004 — THE IMPOSSIBLE BALANCE"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "attrs": {
+                  "textAlign": null,
+                  "spaceBefore": 0,
+                  "spaceAfter": 0,
+                  "lineHeight": null
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "BRONZE / STONE / AMBER · OBJECT STUDY"
+                  }
+                ]
+              }
+            ]
+          },
+          "appearance": {
+            "background": null,
+            "opacity": 1,
+            "frame": false,
+            "scale": 1,
+            "fontSize": 18,
+            "color": "#eadfc9",
+            "lineHeight": 1.5,
+            "padding": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          }
+        },
+        "visibility": "PUBLIC"
+      },
+      {
+        "id": "text:c37afe7d-9d83-4447-83b6-97c28e2d1051",
+        "article": {
+          "documentType": "INSCAPEArticle",
+          "version": 1,
+          "title": "",
+          "font": "cormorant",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "attrs": {
+                  "textAlign": null,
+                  "spaceBefore": 0,
+                  "spaceAfter": 0,
+                  "lineHeight": null
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "marks": [
+                      {
+                        "type": "bold"
+                      }
+                    ],
+                    "text": "Material"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "attrs": {
+                  "textAlign": null,
+                  "spaceBefore": 0,
+                  "spaceAfter": 0,
+                  "lineHeight": null
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "marks": [
+                      {
+                        "type": "bold"
+                      }
+                    ],
+                    "text": "memory."
+                  }
+                ]
+              }
+            ]
+          },
+          "appearance": {
+            "background": null,
+            "opacity": 1,
+            "frame": false,
+            "scale": 1,
+            "fontSize": 46,
+            "color": "#332224",
+            "lineHeight": 1,
+            "padding": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          }
+        },
+        "visibility": "PUBLIC"
+      },
+      {
+        "id": "text:75729ef9-2453-43a3-84cb-39e28513073c",
+        "article": {
+          "documentType": "INSCAPEArticle",
+          "version": 1,
+          "title": "",
+          "font": "plex",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "attrs": {
+                  "textAlign": null,
+                  "spaceBefore": 0,
+                  "spaceAfter": 0,
+                  "lineHeight": null
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "CERAMIC / CHROME / WOVEN FIBRE"
+                  }
+                ]
+              }
+            ]
+          },
+          "appearance": {
+            "background": null,
+            "opacity": 1,
+            "frame": false,
+            "scale": 1,
+            "fontSize": 15,
+            "color": "#76533b",
+            "lineHeight": 1.2,
+            "padding": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          }
+        },
+        "visibility": "PUBLIC"
+      },
+      {
+        "id": "text:cc3b959d-dae7-4b20-96bd-1817b55f6e61",
+        "article": {
+          "documentType": "INSCAPEArticle",
+          "version": 1,
+          "title": "",
+          "font": "plex",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "attrs": {
+                  "textAlign": null,
+                  "spaceBefore": 0,
+                  "spaceAfter": 0,
+                  "lineHeight": null
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "ON THE SHELF"
+                  }
+                ]
+              }
+            ]
+          },
+          "appearance": {
+            "background": null,
+            "opacity": 1,
+            "frame": false,
+            "scale": 1,
+            "fontSize": 16,
+            "color": "#bfae91",
+            "lineHeight": 1.2,
+            "padding": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          }
+        },
+        "visibility": "PUBLIC"
+      },
+      {
+        "id": "text:c7812218-d7db-4968-8aa5-7fe3aee78f10",
+        "article": {
+          "documentType": "INSCAPEArticle",
+          "version": 1,
+          "title": "",
+          "font": "cormorant",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "attrs": {
+                  "textAlign": null,
+                  "spaceBefore": 0,
+                  "spaceAfter": 0,
+                  "lineHeight": null
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "07"
+                  }
+                ]
+              }
+            ]
+          },
+          "appearance": {
+            "background": null,
+            "opacity": 1,
+            "frame": false,
+            "scale": 1,
+            "fontSize": 132,
+            "color": "#d49772",
+            "lineHeight": 1,
+            "padding": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          }
+        },
+        "visibility": "PUBLIC"
+      },
+      {
+        "id": "text:3186f230-0242-42fd-91dc-22bf160f841a",
+        "article": {
+          "documentType": "INSCAPEArticle",
+          "version": 1,
+          "title": "",
+          "font": "plex",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "attrs": {
+                  "textAlign": null,
+                  "spaceBefore": 0,
+                  "spaceAfter": 0,
+                  "lineHeight": null
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "A SMALL, UNREASONABLE UNIVERSE."
+                  }
+                ]
+              }
+            ]
+          },
+          "appearance": {
+            "background": null,
+            "opacity": 1,
+            "frame": false,
+            "scale": 1,
+            "fontSize": 15,
+            "color": "#bfae91",
+            "lineHeight": 1.2,
+            "padding": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          }
+        },
+        "visibility": "PUBLIC"
+      }
+    ],
+    "shapes": [
+      {
+        "name": "Authored paper ground",
+        "color": "#211919",
+        "opacity": 1,
+        "visibility": "PUBLIC",
+        "id": "shape:eb92b940-a852-41fc-b96f-8db34e65f679"
+      },
+      {
+        "name": "manifesto",
+        "color": "#332224",
+        "opacity": 1,
+        "visibility": "PUBLIC",
+        "id": "shape:58fc4d6a-a6b5-4317-9b77-e96c1ebc7c8e"
+      },
+      {
+        "name": "totem",
+        "color": "#23060a",
+        "opacity": 1,
+        "visibility": "PUBLIC",
+        "id": "shape:f606471f-f76b-4c92-8cbc-c758725cba27"
+      },
+      {
+        "name": "shelf",
+        "color": "#b88d57",
+        "opacity": 1,
+        "visibility": "PUBLIC",
+        "id": "shape:2f261e82-9a2f-454c-9d45-3f9eecf99905"
+      },
+      {
+        "name": "quote",
+        "color": "#b95b3b",
+        "opacity": 1,
+        "visibility": "PUBLIC",
+        "id": "shape:a607936e-4971-4cad-b58b-8d18efd68f15"
+      },
+      {
+        "name": "memory",
+        "color": "#e4d7bd",
+        "opacity": 1,
+        "visibility": "PUBLIC",
+        "id": "shape:6bfed500-1382-4210-acf0-5dea7ebf92b5"
+      },
+      {
+        "name": "inventory",
+        "color": "#151818",
+        "opacity": 1,
+        "visibility": "PUBLIC",
+        "id": "shape:9034a4ab-9787-45ee-8778-ee64dcc67545"
+      },
+      {
+        "name": "Object catalogue plate",
+        "color": "#211719",
+        "opacity": 0.9,
+        "visibility": "PUBLIC",
+        "id": "shape:7e139a1b-337d-4f48-9158-a0e8d7723ea9"
+      }
+    ],
+    "artworkLayers": [
+      "shape:eb92b940-a852-41fc-b96f-8db34e65f679",
+      "shape:58fc4d6a-a6b5-4317-9b77-e96c1ebc7c8e",
+      "shape:f606471f-f76b-4c92-8cbc-c758725cba27",
+      "shape:2f261e82-9a2f-454c-9d45-3f9eecf99905",
+      "shape:a607936e-4971-4cad-b58b-8d18efd68f15",
+      "shape:6bfed500-1382-4210-acf0-5dea7ebf92b5",
+      "shape:9034a4ab-9787-45ee-8778-ee64dcc67545",
+      "image:16cc2b9d-eb22-4d35-821b-0fea6ccb4116",
+      "image:215b5c6d-56a7-47c8-9ef7-650bbf2c6814",
+      "shape:7e139a1b-337d-4f48-9158-a0e8d7723ea9",
+      "text:1a62ec6c-fccf-4cdd-bc17-2a72068008d5",
+      "text:b8077f00-3354-4807-83e3-5cc1584609f7",
+      "text:43c17bba-df02-473b-a6c1-f1fdafbe819c",
+      "text:fc30fa1f-add0-46bf-b7da-7f86a0bbb1d2",
+      "text:1a0f1b65-4ff2-426f-a973-7ea4da33db18",
+      "text:1bf241cf-3e7c-4974-a7bb-2a8c9c7187db",
+      "text:c710ef27-18e3-41fc-b7d3-4d4098b15470",
+      "text:c37afe7d-9d83-4447-83b6-97c28e2d1051",
+      "text:75729ef9-2453-43a3-84cb-39e28513073c",
+      "text:cc3b959d-dae7-4b20-96bd-1817b55f6e61",
+      "text:c7812218-d7db-4968-8aa5-7fe3aee78f10",
+      "text:3186f230-0242-42fd-91dc-22bf160f841a"
+    ],
+    "cells": [
+      {
+        "id": "shape:58fc4d6a-a6b5-4317-9b77-e96c1ebc7c8e",
+        "members": [
+          "text:1a62ec6c-fccf-4cdd-bc17-2a72068008d5",
+          "text:b8077f00-3354-4807-83e3-5cc1584609f7",
+          "text:43c17bba-df02-473b-a6c1-f1fdafbe819c",
+          "text:fc30fa1f-add0-46bf-b7da-7f86a0bbb1d2"
+        ],
+        "mobile": {
+          "columns": 2,
+          "height": 668
+        }
+      },
+      {
+        "id": "shape:f606471f-f76b-4c92-8cbc-c758725cba27",
+        "members": [
+          "image:16cc2b9d-eb22-4d35-821b-0fea6ccb4116",
+          "shape:7e139a1b-337d-4f48-9158-a0e8d7723ea9",
+          "text:c710ef27-18e3-41fc-b7d3-4d4098b15470"
+        ],
+        "mobile": {
+          "columns": 2,
+          "height": 1032
+        }
+      },
+      {
+        "id": "shape:2f261e82-9a2f-454c-9d45-3f9eecf99905",
+        "members": [
+          "image:215b5c6d-56a7-47c8-9ef7-650bbf2c6814"
+        ],
+        "mobile": {
+          "columns": 2,
+          "height": 448
+        }
+      },
+      {
+        "id": "shape:a607936e-4971-4cad-b58b-8d18efd68f15",
+        "members": [
+          "text:1a0f1b65-4ff2-426f-a973-7ea4da33db18",
+          "text:1bf241cf-3e7c-4974-a7bb-2a8c9c7187db"
+        ],
+        "mobile": {
+          "columns": 2,
+          "height": 348
+        }
+      },
+      {
+        "id": "shape:6bfed500-1382-4210-acf0-5dea7ebf92b5",
+        "members": [
+          "text:c37afe7d-9d83-4447-83b6-97c28e2d1051",
+          "text:75729ef9-2453-43a3-84cb-39e28513073c"
+        ],
+        "mobile": {
+          "columns": 2,
+          "height": 208
+        }
+      },
+      {
+        "id": "shape:9034a4ab-9787-45ee-8778-ee64dcc67545",
+        "members": [
+          "text:cc3b959d-dae7-4b20-96bd-1817b55f6e61",
+          "text:c7812218-d7db-4968-8aa5-7fe3aee78f10",
+          "text:3186f230-0242-42fd-91dc-22bf160f841a"
+        ],
+        "mobile": {
+          "columns": 2,
+          "height": 344
+        }
+      }
+    ],
+    "bento": {
+      "gap": 16,
+      "padding": 24
+    }
+  },
+  "pop": {
+    "version": 3,
+    "branding": {
+      "name": "",
+      "logo": null
+    },
+    "workbench": {
+      "version": 1,
+      "display": {
+        "name": "DISPLAY MODULE",
+        "open": false,
+        "window": {
+          "left": 32,
+          "top": 64,
+          "width": 960,
+          "height": 572
+        },
+        "shortcut": {
+          "position": {
+            "left": 24,
+            "top": 72
+          },
+          "visible": false,
+          "icon": null,
+          "iconPresentation": {
+            "labelSize": 8,
+            "offsetX": 0,
+            "offsetY": 0,
+            "scale": 1,
+            "size": 60
+          }
+        }
+      },
+      "identity": {
+        "open": false,
+        "window": {
+          "left": 28,
+          "top": 72,
+          "width": 840
+        }
+      },
+      "area": {
+        "left": 0,
+        "top": 0,
+        "width": 1920,
+        "height": 1080
+      },
+      "shapes": [
+        {
+          "id": "shape:0bf7c1bd-bc9c-4dfe-9c17-f4fc021f2065",
+          "open": true,
+          "window": {
+            "left": 0,
+            "top": 0,
+            "width": 1920,
+            "height": 1080
+          }
+        },
+        {
+          "id": "shape:72b61b91-5e8e-48e5-b33f-e935e4aa0d6c",
+          "open": true,
+          "window": {
+            "left": 24,
+            "top": 24,
+            "width": 1040,
+            "height": 456
+          }
+        },
+        {
+          "id": "shape:656a925f-0108-450d-9d82-00342fbdbd21",
+          "open": true,
+          "window": {
+            "left": 1080,
+            "top": 24,
+            "width": 816,
+            "height": 1032
+          }
+        },
+        {
+          "id": "shape:f2d76cd1-8117-4564-9720-cabc2c994013",
+          "open": true,
+          "window": {
+            "left": 24,
+            "top": 496,
+            "width": 496,
+            "height": 560
+          }
+        },
+        {
+          "id": "shape:5a93f544-6904-49bd-8a26-e52d6f9d4c5c",
+          "open": true,
+          "window": {
+            "left": 536,
+            "top": 496,
+            "width": 528,
+            "height": 272
+          }
+        },
+        {
+          "id": "shape:5c1880ce-a796-4eb2-a32d-50c2e57e8b3b",
+          "open": true,
+          "window": {
+            "left": 536,
+            "top": 784,
+            "width": 528,
+            "height": 272
+          }
+        },
+        {
+          "id": "shape:ab1de35d-a777-4477-8ad3-9e9f16ca0b40",
+          "open": true,
+          "window": {
+            "left": 1104,
+            "top": 944,
+            "width": 768,
+            "height": 88
+          }
+        },
+        {
+          "id": "shape:c383cf99-7f44-4b7e-a6ef-823853055ed7",
+          "open": true,
+          "window": {
+            "left": 40,
+            "top": 978,
+            "width": 464,
+            "height": 54
+          }
+        }
+      ],
+      "imageModules": [
+        {
+          "id": "image:9e5ff62c-d358-472b-864b-3633b6f6c0eb",
+          "open": true,
+          "position": {
+            "left": 1080,
+            "top": 24
+          }
+        },
+        {
+          "id": "image:9f206ec4-f131-439e-b5b4-c7f131953090",
+          "open": true,
+          "position": {
+            "left": 24,
+            "top": 496
+          }
+        }
+      ],
+      "texts": [
+        {
+          "id": "text:82f5bc7e-0638-48ef-b5a5-95604835760d",
+          "open": true,
+          "window": {
+            "left": 56,
+            "top": 52,
+            "width": 976,
+            "height": 100
+          }
+        },
+        {
+          "id": "text:6dab9675-b70b-4b38-a759-5b04e93b838a",
+          "open": true,
+          "window": {
+            "left": 48,
+            "top": 108,
+            "width": 780,
+            "height": 334
+          }
+        },
+        {
+          "id": "text:bd457ba9-bc0c-47ff-99b8-67f8d2557550",
+          "open": true,
+          "window": {
+            "left": 844,
+            "top": 212,
+            "width": 196,
+            "height": 150
+          }
+        },
+        {
+          "id": "text:4c582d45-e658-4693-a5fa-36050c3c7663",
+          "open": true,
+          "window": {
+            "left": 1128,
+            "top": 962,
+            "width": 720,
+            "height": 100
+          }
+        },
+        {
+          "id": "text:b9e12d49-3b02-47b6-8842-65aa4382d1c5",
+          "open": true,
+          "window": {
+            "left": 60,
+            "top": 992,
+            "width": 424,
+            "height": 100
+          }
+        },
+        {
+          "id": "text:9e42e362-e756-4310-a2f1-8d493b856758",
+          "open": true,
+          "window": {
+            "left": 564,
+            "top": 522,
+            "width": 472,
+            "height": 100
+          }
+        },
+        {
+          "id": "text:0b1f9405-0667-4604-8a27-841669183e42",
+          "open": true,
+          "window": {
+            "left": 564,
+            "top": 566,
+            "width": 472,
+            "height": 180
+          }
+        },
+        {
+          "id": "text:4a3b075e-faf8-4c08-93b9-93091f6f8977",
+          "open": true,
+          "window": {
+            "left": 564,
+            "top": 820,
+            "width": 204,
+            "height": 140
+          }
+        },
+        {
+          "id": "text:cb5f5bf5-31bc-4632-811d-b4ee3c179562",
+          "open": true,
+          "window": {
+            "left": 790,
+            "top": 820,
+            "width": 244,
+            "height": 140
+          }
+        },
+        {
+          "id": "text:5bf370da-f1cf-4cb6-868e-5a8dfca20f5b",
+          "open": true,
+          "window": {
+            "left": 564,
+            "top": 1002,
+            "width": 472,
+            "height": 100
+          }
+        }
+      ]
+    },
+    "imageModules": [
+      {
+        "id": "image:9e5ff62c-d358-472b-864b-3633b6f6c0eb",
+        "name": "Image",
+        "width": 816,
+        "height": 1032,
+        "sides": [
+          {
+            "id": "side:dc5e6698-1aae-46cd-8274-62ecca76c4ec",
+            "asset": {
+              "stableAssetId": "42:0x0000000000000000000000000000000000000000:0x0000000000000000000000000000000000000000000000000000000000000069",
+              "network": "lukso-mainnet",
+              "chainId": 42,
+              "tokenStandard": "UNKNOWN",
+              "contractAddress": "0x0000000000000000000000000000000000000000",
+              "tokenId": "0x0000000000000000000000000000000000000000000000000000000000000069",
+              "name": "pop-monument",
+              "description": "AI-generated original sample artwork. Fictional editorial study; no affiliation or token ownership claimed.",
+              "collectionName": "RECEPTION WORLDS",
+              "media": {
+                "url": "https://127.0.0.1:5181/design-system/lab/assets/reception-vibes/pop-monument.png",
+                "width": 1086,
+                "height": 1448,
+                "type": "image"
+              },
+              "creators": [],
+              "attributes": [
+                {
+                  "key": "Source",
+                  "value": "Built-in image_gen; prompt set saved with verification evidence",
+                  "type": null
+                }
+              ]
+            },
+            "crop": {
+              "x": 0.5,
+              "y": 0.5,
+              "zoom": 1
+            },
+            "transform": {
+              "quarterTurns": 0,
+              "mirrorX": false,
+              "mirrorY": false
+            }
+          }
+        ],
+        "visibility": "PUBLIC"
+      },
+      {
+        "id": "image:9f206ec4-f131-439e-b5b4-c7f131953090",
+        "name": "Image",
+        "width": 496,
+        "height": 560,
+        "sides": [
+          {
+            "id": "side:fd13637f-fe04-409a-ad69-57cfbff828a4",
+            "asset": {
+              "stableAssetId": "42:0x0000000000000000000000000000000000000000:0x000000000000000000000000000000000000000000000000000000000000006a",
+              "network": "lukso-mainnet",
+              "chainId": 42,
+              "tokenStandard": "UNKNOWN",
+              "contractAddress": "0x0000000000000000000000000000000000000000",
+              "tokenId": "0x000000000000000000000000000000000000000000000000000000000000006a",
+              "name": "pop-detail",
+              "description": "AI-generated original sample artwork. Fictional editorial study; no affiliation or token ownership claimed.",
+              "collectionName": "RECEPTION WORLDS",
+              "media": {
+                "url": "https://127.0.0.1:5181/design-system/lab/assets/reception-vibes/pop-detail.png",
+                "width": 1254,
+                "height": 1254,
+                "type": "image"
+              },
+              "creators": [],
+              "attributes": [
+                {
+                  "key": "Source",
+                  "value": "Built-in image_gen; prompt set saved with verification evidence",
+                  "type": null
+                }
+              ]
+            },
+            "crop": {
+              "x": 0.5,
+              "y": 0.5,
+              "zoom": 1
+            },
+            "transform": {
+              "quarterTurns": 0,
+              "mirrorX": false,
+              "mirrorY": false
+            }
+          }
+        ],
+        "visibility": "PUBLIC"
+      }
+    ],
+    "texts": [
+      {
+        "id": "text:82f5bc7e-0638-48ef-b5a5-95604835760d",
+        "article": {
+          "documentType": "INSCAPEArticle",
+          "version": 1,
+          "title": "",
+          "font": "plex",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "attrs": {
+                  "textAlign": null,
+                  "spaceBefore": 0,
+                  "spaceAfter": 0,
+                  "lineHeight": null
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "SCULPTURE / CHARACTERS / EXCESSIVE FEELINGS"
+                  }
+                ]
+              }
+            ]
+          },
+          "appearance": {
+            "background": null,
+            "opacity": 1,
+            "frame": false,
+            "scale": 1,
+            "fontSize": 18,
+            "color": "#271929",
+            "lineHeight": 1.2,
+            "padding": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          }
+        },
+        "visibility": "PUBLIC"
+      },
+      {
+        "id": "text:6dab9675-b70b-4b38-a759-5b04e93b838a",
+        "article": {
+          "documentType": "INSCAPEArticle",
+          "version": 1,
+          "title": "",
+          "font": "sora",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "attrs": {
+                  "textAlign": null,
+                  "spaceBefore": 0,
+                  "spaceAfter": 0,
+                  "lineHeight": null
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "marks": [
+                      {
+                        "type": "bold"
+                      }
+                    ],
+                    "text": "SOFT"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "attrs": {
+                  "textAlign": null,
+                  "spaceBefore": 0,
+                  "spaceAfter": 0,
+                  "lineHeight": null
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "marks": [
+                      {
+                        "type": "bold"
+                      }
+                    ],
+                    "text": "RIOT."
+                  }
+                ]
+              }
+            ]
+          },
+          "appearance": {
+            "background": null,
+            "opacity": 1,
+            "frame": false,
+            "scale": 1,
+            "fontSize": 148,
+            "color": "#1e1725",
+            "lineHeight": 1.02,
+            "padding": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          }
+        },
+        "visibility": "PUBLIC"
+      },
+      {
+        "id": "text:bd457ba9-bc0c-47ff-99b8-67f8d2557550",
+        "article": {
+          "documentType": "INSCAPEArticle",
+          "version": 1,
+          "title": "",
+          "font": "plex",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "attrs": {
+                  "textAlign": null,
+                  "spaceBefore": 0,
+                  "spaceAfter": 0,
+                  "lineHeight": null
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "marks": [
+                      {
+                        "type": "bold"
+                      }
+                    ],
+                    "text": "BIG"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "attrs": {
+                  "textAlign": null,
+                  "spaceBefore": 0,
+                  "spaceAfter": 0,
+                  "lineHeight": null
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "marks": [
+                      {
+                        "type": "bold"
+                      }
+                    ],
+                    "text": "SOFT"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "attrs": {
+                  "textAlign": null,
+                  "spaceBefore": 0,
+                  "spaceAfter": 0,
+                  "lineHeight": null
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "marks": [
+                      {
+                        "type": "bold"
+                      }
+                    ],
+                    "text": "ENERGY"
+                  }
+                ]
+              }
+            ]
+          },
+          "appearance": {
+            "background": null,
+            "opacity": 1,
+            "frame": false,
+            "scale": 1,
+            "fontSize": 32,
+            "color": "#6e1d55",
+            "lineHeight": 1.05,
+            "padding": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          }
+        },
+        "visibility": "PUBLIC"
+      },
+      {
+        "id": "text:4c582d45-e658-4693-a5fa-36050c3c7663",
+        "article": {
+          "documentType": "INSCAPEArticle",
+          "version": 1,
+          "title": "",
+          "font": "plex",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "attrs": {
+                  "textAlign": null,
+                  "spaceBefore": 0,
+                  "spaceAfter": 0,
+                  "lineHeight": null
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "SMALL FRIENDS, HUGE FEELINGS."
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "attrs": {
+                  "textAlign": null,
+                  "spaceBefore": 0,
+                  "spaceAfter": 0,
+                  "lineHeight": null
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "VINYL DREAMS / ORIGINAL CHARACTER STUDY"
+                  }
+                ]
+              }
+            ]
+          },
+          "appearance": {
+            "background": null,
+            "opacity": 1,
+            "frame": false,
+            "scale": 1,
+            "fontSize": 18,
+            "color": "#d0ff25",
+            "lineHeight": 1.4,
+            "padding": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          }
+        },
+        "visibility": "PUBLIC"
+      },
+      {
+        "id": "text:b9e12d49-3b02-47b6-8842-65aa4382d1c5",
+        "article": {
+          "documentType": "INSCAPEArticle",
+          "version": 1,
+          "title": "",
+          "font": "plex",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "attrs": {
+                  "textAlign": null,
+                  "spaceBefore": 0,
+                  "spaceAfter": 0,
+                  "lineHeight": null
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "SQUISH / STUDY 02"
+                  }
+                ]
+              }
+            ]
+          },
+          "appearance": {
+            "background": null,
+            "opacity": 1,
+            "frame": false,
+            "scale": 1,
+            "fontSize": 20,
+            "color": "#ffe4ed",
+            "lineHeight": 1.2,
+            "padding": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          }
+        },
+        "visibility": "PUBLIC"
+      },
+      {
+        "id": "text:9e42e362-e756-4310-a2f1-8d493b856758",
+        "article": {
+          "documentType": "INSCAPEArticle",
+          "version": 1,
+          "title": "",
+          "font": "plex",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "attrs": {
+                  "textAlign": null,
+                  "spaceBefore": 0,
+                  "spaceAfter": 0,
+                  "lineHeight": null
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "FEELING SCALE / 1000%"
+                  }
+                ]
+              }
+            ]
+          },
+          "appearance": {
+            "background": null,
+            "opacity": 1,
+            "frame": false,
+            "scale": 1,
+            "fontSize": 17,
+            "color": "#d0ff25",
+            "lineHeight": 1.2,
+            "padding": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          }
+        },
+        "visibility": "PUBLIC"
+      },
+      {
+        "id": "text:0b1f9405-0667-4604-8a27-841669183e42",
+        "article": {
+          "documentType": "INSCAPEArticle",
+          "version": 1,
+          "title": "",
+          "font": "sora",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "attrs": {
+                  "textAlign": null,
+                  "spaceBefore": 0,
+                  "spaceAfter": 0,
+                  "lineHeight": null
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "marks": [
+                      {
+                        "type": "bold"
+                      }
+                    ],
+                    "text": "Too soft"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "attrs": {
+                  "textAlign": null,
+                  "spaceBefore": 0,
+                  "spaceAfter": 0,
+                  "lineHeight": null
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "marks": [
+                      {
+                        "type": "bold"
+                      }
+                    ],
+                    "text": "for this"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "attrs": {
+                  "textAlign": null,
+                  "spaceBefore": 0,
+                  "spaceAfter": 0,
+                  "lineHeight": null
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "marks": [
+                      {
+                        "type": "bold"
+                      }
+                    ],
+                    "text": "world."
+                  }
+                ]
+              }
+            ]
+          },
+          "appearance": {
+            "background": null,
+            "opacity": 1,
+            "frame": false,
+            "scale": 1,
+            "fontSize": 44,
+            "color": "#f9e6ff",
+            "lineHeight": 1.06,
+            "padding": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          }
+        },
+        "visibility": "PUBLIC"
+      },
+      {
+        "id": "text:4a3b075e-faf8-4c08-93b9-93091f6f8977",
+        "article": {
+          "documentType": "INSCAPEArticle",
+          "version": 1,
+          "title": "",
+          "font": "sora",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "attrs": {
+                  "textAlign": null,
+                  "spaceBefore": 0,
+                  "spaceAfter": 0,
+                  "lineHeight": null
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "marks": [
+                      {
+                        "type": "bold"
+                      }
+                    ],
+                    "text": "03"
+                  }
+                ]
+              }
+            ]
+          },
+          "appearance": {
+            "background": null,
+            "opacity": 1,
+            "frame": false,
+            "scale": 1,
+            "fontSize": 96,
+            "color": "#223cf4",
+            "lineHeight": 1,
+            "padding": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          }
+        },
+        "visibility": "PUBLIC"
+      },
+      {
+        "id": "text:cb5f5bf5-31bc-4632-811d-b4ee3c179562",
+        "article": {
+          "documentType": "INSCAPEArticle",
+          "version": 1,
+          "title": "",
+          "font": "sora",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "attrs": {
+                  "textAlign": null,
+                  "spaceBefore": 0,
+                  "spaceAfter": 0,
+                  "lineHeight": null
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "marks": [
+                      {
+                        "type": "bold"
+                      }
+                    ],
+                    "text": "MAKE"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "attrs": {
+                  "textAlign": null,
+                  "spaceBefore": 0,
+                  "spaceAfter": 0,
+                  "lineHeight": null
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "marks": [
+                      {
+                        "type": "bold"
+                      }
+                    ],
+                    "text": "ROOM"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "attrs": {
+                  "textAlign": null,
+                  "spaceBefore": 0,
+                  "spaceAfter": 0,
+                  "lineHeight": null
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "marks": [
+                      {
+                        "type": "bold"
+                      }
+                    ],
+                    "text": "FOR WEIRD."
+                  }
+                ]
+              }
+            ]
+          },
+          "appearance": {
+            "background": null,
+            "opacity": 1,
+            "frame": false,
+            "scale": 1,
+            "fontSize": 28,
+            "color": "#223cf4",
+            "lineHeight": 1.05,
+            "padding": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          }
+        },
+        "visibility": "PUBLIC"
+      },
+      {
+        "id": "text:5bf370da-f1cf-4cb6-868e-5a8dfca20f5b",
+        "article": {
+          "documentType": "INSCAPEArticle",
+          "version": 1,
+          "title": "",
+          "font": "plex",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "attrs": {
+                  "textAlign": null,
+                  "spaceBefore": 0,
+                  "spaceAfter": 0,
+                  "lineHeight": null
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "NEW FIGURES / SAME BIG HEART"
+                  }
+                ]
+              }
+            ]
+          },
+          "appearance": {
+            "background": null,
+            "opacity": 1,
+            "frame": false,
+            "scale": 1,
+            "fontSize": 17,
+            "color": "#343067",
+            "lineHeight": 1.2,
+            "padding": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          }
+        },
+        "visibility": "PUBLIC"
+      }
+    ],
+    "shapes": [
+      {
+        "name": "Authored paper ground",
+        "color": "#18151d",
+        "opacity": 1,
+        "visibility": "PUBLIC",
+        "id": "shape:0bf7c1bd-bc9c-4dfe-9c17-f4fc021f2065"
+      },
+      {
+        "name": "title",
+        "color": "#ff60aa",
+        "opacity": 1,
+        "visibility": "PUBLIC",
+        "id": "shape:72b61b91-5e8e-48e5-b33f-e935e4aa0d6c"
+      },
+      {
+        "name": "monument",
+        "color": "#c5f000",
+        "opacity": 1,
+        "visibility": "PUBLIC",
+        "id": "shape:656a925f-0108-450d-9d82-00342fbdbd21"
+      },
+      {
+        "name": "squish",
+        "color": "#e60076",
+        "opacity": 1,
+        "visibility": "PUBLIC",
+        "id": "shape:f2d76cd1-8117-4564-9720-cabc2c994013"
+      },
+      {
+        "name": "feeling",
+        "color": "#1847ed",
+        "opacity": 1,
+        "visibility": "PUBLIC",
+        "id": "shape:5a93f544-6904-49bd-8a26-e52d6f9d4c5c"
+      },
+      {
+        "name": "edition",
+        "color": "#c3abfa",
+        "opacity": 1,
+        "visibility": "PUBLIC",
+        "id": "shape:5c1880ce-a796-4eb2-a32d-50c2e57e8b3b"
+      },
+      {
+        "name": "Monument caption",
+        "color": "#17151c",
+        "opacity": 0.95,
+        "visibility": "PUBLIC",
+        "id": "shape:ab1de35d-a777-4477-8ad3-9e9f16ca0b40"
+      },
+      {
+        "name": "Squish caption",
+        "color": "#17151c",
+        "opacity": 0.95,
+        "visibility": "PUBLIC",
+        "id": "shape:c383cf99-7f44-4b7e-a6ef-823853055ed7"
+      }
+    ],
+    "artworkLayers": [
+      "shape:0bf7c1bd-bc9c-4dfe-9c17-f4fc021f2065",
+      "shape:72b61b91-5e8e-48e5-b33f-e935e4aa0d6c",
+      "shape:656a925f-0108-450d-9d82-00342fbdbd21",
+      "shape:f2d76cd1-8117-4564-9720-cabc2c994013",
+      "shape:5a93f544-6904-49bd-8a26-e52d6f9d4c5c",
+      "shape:5c1880ce-a796-4eb2-a32d-50c2e57e8b3b",
+      "image:9e5ff62c-d358-472b-864b-3633b6f6c0eb",
+      "image:9f206ec4-f131-439e-b5b4-c7f131953090",
+      "shape:ab1de35d-a777-4477-8ad3-9e9f16ca0b40",
+      "shape:c383cf99-7f44-4b7e-a6ef-823853055ed7",
+      "text:82f5bc7e-0638-48ef-b5a5-95604835760d",
+      "text:6dab9675-b70b-4b38-a759-5b04e93b838a",
+      "text:bd457ba9-bc0c-47ff-99b8-67f8d2557550",
+      "text:4c582d45-e658-4693-a5fa-36050c3c7663",
+      "text:b9e12d49-3b02-47b6-8842-65aa4382d1c5",
+      "text:9e42e362-e756-4310-a2f1-8d493b856758",
+      "text:0b1f9405-0667-4604-8a27-841669183e42",
+      "text:4a3b075e-faf8-4c08-93b9-93091f6f8977",
+      "text:cb5f5bf5-31bc-4632-811d-b4ee3c179562",
+      "text:5bf370da-f1cf-4cb6-868e-5a8dfca20f5b"
+    ],
+    "cells": [
+      {
+        "id": "shape:72b61b91-5e8e-48e5-b33f-e935e4aa0d6c",
+        "members": [
+          "text:82f5bc7e-0638-48ef-b5a5-95604835760d",
+          "text:6dab9675-b70b-4b38-a759-5b04e93b838a",
+          "text:bd457ba9-bc0c-47ff-99b8-67f8d2557550"
+        ],
+        "mobile": {
+          "columns": 2,
+          "height": 456
+        },
+        "radius": 26
+      },
+      {
+        "id": "shape:656a925f-0108-450d-9d82-00342fbdbd21",
+        "members": [
+          "image:9e5ff62c-d358-472b-864b-3633b6f6c0eb",
+          "shape:ab1de35d-a777-4477-8ad3-9e9f16ca0b40",
+          "text:4c582d45-e658-4693-a5fa-36050c3c7663"
+        ],
+        "mobile": {
+          "columns": 2,
+          "height": 1032
+        },
+        "radius": 26
+      },
+      {
+        "id": "shape:f2d76cd1-8117-4564-9720-cabc2c994013",
+        "members": [
+          "image:9f206ec4-f131-439e-b5b4-c7f131953090",
+          "shape:c383cf99-7f44-4b7e-a6ef-823853055ed7",
+          "text:b9e12d49-3b02-47b6-8842-65aa4382d1c5"
+        ],
+        "mobile": {
+          "columns": 2,
+          "height": 560
+        },
+        "radius": 26
+      },
+      {
+        "id": "shape:5a93f544-6904-49bd-8a26-e52d6f9d4c5c",
+        "members": [
+          "text:9e42e362-e756-4310-a2f1-8d493b856758",
+          "text:0b1f9405-0667-4604-8a27-841669183e42"
+        ],
+        "mobile": {
+          "columns": 2,
+          "height": 272
+        },
+        "radius": 26
+      },
+      {
+        "id": "shape:5c1880ce-a796-4eb2-a32d-50c2e57e8b3b",
+        "members": [
+          "text:4a3b075e-faf8-4c08-93b9-93091f6f8977",
+          "text:cb5f5bf5-31bc-4632-811d-b4ee3c179562",
+          "text:5bf370da-f1cf-4cb6-868e-5a8dfca20f5b"
+        ],
+        "mobile": {
+          "columns": 2,
+          "height": 272
+        },
+        "radius": 26
+      }
+    ],
+    "bento": {
+      "gap": 16,
+      "padding": 24
+    }
+  }
+}

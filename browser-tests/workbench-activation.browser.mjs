@@ -1,3 +1,4 @@
+import { openSharedTool } from './fixtures/shared-tools.mjs';
 import { editorCommand } from './fixtures/editor-menu.mjs';
 import assert from 'node:assert/strict';
 import test from 'node:test';
@@ -32,8 +33,8 @@ test('filled Workbench retargets tools and reserves camera/popup space through v
     const body = page.getByRole('textbox', { name: 'Article text', exact: true }).first();
     const originalEditor = await body.elementHandle();
     const toolbar = page.locator('[data-workbench-toolbar]');
-    const camera = page.locator('.workbench-view-controls');
-    for (const width of [1440, 600, 390, 1200]) {
+    const menu = page.getByRole('menubar', { name: 'Editor commands' });
+    for (const width of [1440, 1000, 800, 1200]) {
       await page.setViewportSize({ width, height: 1000 }); await settle(page);
       // Occupied panels remove the toolbar. Its next instance must be observed
       // as well, so changing tools after returning still reserves the right space.
@@ -46,18 +47,19 @@ test('filled Workbench retargets tools and reserves camera/popup space through v
         else if (target === 'image') await page.locator('.image-module__canvas').first().focus();
         else await page.locator('.shape-window header').first().focus();
         await settle(page);
-        const rail = await toolbar.boundingBox(), controls = await camera.boundingBox();
+        const rail = await toolbar.boundingBox(), controls = await menu.boundingBox();
         assert.ok(rail.x >= 0 && rail.x + rail.width <= width + 1);
         assert.ok(controls.x >= 0 && controls.x + controls.width <= width + 1);
-        assert.ok(controls.y + controls.height <= rail.y + 1 || controls.x >= rail.x + rail.width - 1,
-          `${target} at ${width}px: camera must sit above or beside the complete action/creation rail`);
+        assert.ok(controls.y + controls.height <= rail.y + 1, `${target} at ${width}px: menus stay above the single toolbar`);
+        assert.equal(await page.locator('.workbench-view-controls').count(), 0);
         if (target === 'image') {
-          assert.equal(await page.getByRole('toolbar', { name: 'Selection tools', exact: true }).getByRole('button', { name: 'Rotate', exact: true }).isVisible(), true);
-          await toolbar.getByRole('button', { name: 'Actions', exact: true }).click();
-          const search = page.getByRole('textbox', { name: 'Search actions' });
+          await openSharedTool(page, 'Image');
+          assert.equal(await page.getByRole('group', { name: 'Selection tools', exact: true }).getByRole('button', { name: 'Rotate', exact: true }).isVisible(), true);
+          await editorCommand(page, 'Edit', 'Search commands');
+          const search = page.getByRole('textbox', { name: 'Search commands' });
           await search.waitFor();
           const popup = await page.locator('.workbench-toolbar__popup').boundingBox();
-          assert.ok(popup.y >= 0 && popup.y + popup.height <= rail.y, 'Actions popup stays above the complete toolbar');
+          assert.ok(popup.y >= 0 && popup.y + popup.height <= rail.y, 'Command search stays above the complete toolbar');
           await page.keyboard.press('Escape');
         }
         assert.equal(await body.evaluate((element, previous) => element === previous, originalEditor), true);

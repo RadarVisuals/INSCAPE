@@ -59,7 +59,7 @@ test('live artboards isolate state, inspect production sources and reset in both
     assert.equal(await page.getByRole('button', { name: 'Hand tool', exact: true }).getAttribute('aria-pressed'), 'true');
     await page.getByRole('button', { name: 'Reset', exact: true }).click();
     assert.equal(await page.getByRole('button', { name: 'Select tool', exact: true }).getAttribute('aria-pressed'), 'true');
-    await page.getByRole('button', { name: 'Actions', exact: true }).click();
+    await page.getByRole('button', { name: 'Select tool', exact: true }).focus(); await page.keyboard.press('Control+k');
     await page.getByRole('button', { name: 'Duplicate artwork', exact: true }).click();
     await page.getByText('Duplicate requested in this example.', { exact: true }).waitFor();
     await page.screenshot({ path: resolve(output, 'toolbar.png'), fullPage: true });

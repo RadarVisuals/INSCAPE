@@ -20,7 +20,7 @@ function CheckControl({ checked, disabled = false, label, onChange }) {
 }
 
 export default function OwnerSystemWorkflowSettings({ profileAddress: profile, onClose,
-  onWorkbenchPreferencesChange, phase, workbenchPreferences }) {
+  onWorkbenchPreferencesChange, phase, workbenchPreferences, canvasGuides = true }) {
   const signalSettings = useSignalStore((state) => state.settings);
   const signalProfile = useSignalStore((state) => state.profileAddress);
   const signalPersistenceError = useSignalStore((state) => state.persistenceError);
@@ -39,7 +39,7 @@ export default function OwnerSystemWorkflowSettings({ profileAddress: profile, o
         onChange={(checked) => updateSignalSetting(key, checked, profile)} />)}</div>
       {signalProfile === profile && signalPersistenceError && <p role="alert">{signalPersistenceError}</p>}
     </section>
-    <section className="system-workflow__settings-section system-workflow__settings-theme"><header><strong>Workbench</strong><span>Local to this device</span></header>
+    {canvasGuides && <section className="system-workflow__settings-section system-workflow__settings-theme"><header><strong>Workbench</strong><span>Local to this device</span></header>
       <label><span>Grid display</span><OwnerSystemWorkflowSelectMenu flat label="Workbench grid display"  onChange={(gridMode) => onWorkbenchPreferencesChange({ gridMode })} options={guideOptions} value={workbenchPreferences.gridMode} /></label>
       <label><span>Grid color</span><span className="system-workflow__settings-color"><input aria-label="Workbench grid color" onChange={(event) => onWorkbenchPreferencesChange({ gridColor: event.target.value })} type="color" value={workbenchPreferences.gridColor || workbenchGridColorPreview(mode)} /><button disabled={!workbenchPreferences.gridColor} onClick={() => onWorkbenchPreferencesChange({ gridColor: null })} type="button">Auto</button></span></label>
       <label><span>Grid cell size</span><input key={workbenchPreferences.gridSpacing} aria-label="Workbench grid cell size" type="number" min="8" max="512" step="any" defaultValue={workbenchPreferences.gridSpacing}
@@ -57,7 +57,7 @@ export default function OwnerSystemWorkflowSettings({ profileAddress: profile, o
       </svg>
       <p>Local grid patches take priority. Outside patches, nearby module edges can align; a zero gap joins them flush.</p>
       <p id="workbench-gap-description">Guides show the active edge, grid line or spacing. Pull away to release a snap, or hold Alt to bypass snapping.</p>
-    </section>
+    </section>}
     <section className="system-workflow__settings-section system-workflow__settings-theme"><header><strong>Interface</strong><span>Everywhere on this device</span></header>
       <InterfaceThemeToggle />
       <CheckControl checked={workbenchPreferences.chromeNoise} label="Chrome noise"

@@ -1,11 +1,12 @@
+import { editorDestination, setEditorSidebarOpen } from './fixtures/editor-menu.mjs';
 import assert from 'node:assert/strict';
 import { after, before, describe, test } from 'node:test';
-import { access } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { createServer } from 'node:net';
 import { randomUUID } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
-import { createServer as createViteServer } from 'vite';
+import { createBrowserTestServer } from '../scripts/runBrowserTests.mjs';
+import { browserExecutable } from '../scripts/browserEnvironment.mjs';
 import {
   BROWSER_LIFECYCLE_TIMEOUTS,
   createBrowserTestCleanup,
@@ -20,10 +21,6 @@ const runtimeDir = resolve(root, `.browser-test-runtime-owner-routing-${process.
 const PROFILE_A = '0x1111111111111111111111111111111111111111';
 const PROFILE_B = '0x2222222222222222222222222222222222222222';
 const ROUTING_NAVIGATION_TIMEOUT_MS = 30_000;
-const browserCandidates = [process.env.BROWSER_PATH,
-  'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
-  'C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe',
-  'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe'].filter(Boolean);
 const resources = {}; const browserProblems = []; const diagnostic = createLifecycleDiagnostics();
 const pendingLocalRequests = new Map();
 let cleanupBrowserTest; let setupAbortController; let baseUrl; let page;
@@ -34,13 +31,6 @@ async function availablePort() {
     socket.unref(); socket.once('error', reject);
     socket.listen(0, '127.0.0.1', () => { const { port } = socket.address(); socket.close(() => resolvePort(port)); });
   }), BROWSER_LIFECYCLE_TIMEOUTS.commandMs, 'Timed out acquiring a routing browser-test port', () => socket.close());
-}
-
-async function findBrowser() {
-  for (const candidate of browserCandidates) {
-    try { await access(candidate); return candidate; } catch { /* try next */ }
-  }
-  throw new Error('No Chromium browser found. Set BROWSER_PATH to Edge, Chrome, or Chromium.');
 }
 
 async function waitForVite(url, signal) {
@@ -77,6 +67,13 @@ async function setUrl(search) {
     history.pushState({}, '', `/${nextSearch}`);
     dispatchEvent(new PopStateEvent('popstate'));
   }, search);
+}
+
+async function savedOwnerDraft() {
+  return page.evaluate(async address => {
+    const { createSystemWorkflowDraftStore } = await import('/src/systemWorkflow/systemWorkflowDraftStore.js');
+    return createSystemWorkflowDraftStore({ profileAddress: address, storage: localStorage }).getDraft();
+  }, PROFILE_A);
 }
 
 async function waitForInitialWalletSettlement() {
@@ -124,17 +121,20 @@ async function waitForOwnerShell(label) {
 
 describe('owner/viewed-profile routing through the real App', { concurrency: false }, () => {
   before(async () => runBrowserSetupWithCleanup(async () => {
-    setupAbortController = new AbortController(); const browserPath = await findBrowser(); const port = await availablePort();
-    baseUrl = `http://127.0.0.1:${port}`;
+    setupAbortController = new AbortController();
     cleanupBrowserTest = createBrowserTestCleanup({ runtimePath: runtimeDir, workspaceRoot: root, diagnostic });
-    resources.vite = await createViteServer({ root, logLevel: 'error', server: { host: '127.0.0.1', port, strictPort: true } });
-    await withinDeadline(resources.vite.listen(), BROWSER_LIFECYCLE_TIMEOUTS.resourceCloseMs, 'Routing Vite listen deadline exceeded');
+    baseUrl = process.env.INSCAPE_TEST_ROOT;
+    if (!baseUrl) {
+      const port = await availablePort(); baseUrl = `http://127.0.0.1:${port}`;
+      resources.vite = await createBrowserTestServer(root, port);
+      await withinDeadline(resources.vite.listen(), BROWSER_LIFECYCLE_TIMEOUTS.resourceCloseMs, 'Routing Vite listen deadline exceeded');
+    }
     await waitForVite(baseUrl, setupAbortController.signal);
     // Vite serves the owner graph as many separate source modules. This bound
     // accommodates its import burst; handler failures still fail the suite.
     const routeController = createPlaywrightRouteController({ loopbackOrigin: baseUrl, knownOrigins: [], maxOutstanding: 512,
       decideKnown: async () => ({ action: 'abort' }), onUnexpected: () => {} });
-    await launchPlaywrightEdge({ edgePath: browserPath, runtimePath: runtimeDir, workspaceRoot: root,
+    await launchPlaywrightEdge({ edgePath: browserExecutable, runtimePath: runtimeDir, workspaceRoot: root,
       loopbackOrigin: baseUrl, routeController, resources, diagnostic,
       onBrowserProblem: (problem) => browserProblems.push(problem),
       onOwnedProcess: ({ rootPid, processTree }) => {
@@ -248,7 +248,7 @@ describe('owner/viewed-profile routing through the real App', { concurrency: fal
     await waitForOwnerShell('Owner before reception');
     const back = () => page.getByRole('button', { name: 'Back to Editor', exact: true });
     const openReception = async () => {
-      await page.getByRole('button', { name: 'Profile', exact: true }).click();
+      await editorDestination(page, 'Profile');
       const entry = page.getByRole('button', { name: 'View my reception', exact: true });
       await entry.focus();
       await page.keyboard.press('Enter');
@@ -299,13 +299,14 @@ describe('owner/viewed-profile routing through the real App', { concurrency: fal
         article.title = 'Saved local Reception';
         reception.texts = [{ id: 'text:reception-local', article, visibility: 'PUBLIC' }];
         reception.regions[0].content = reception.texts[0].id;
-        if (!scope.commitCompletedOperation({ ...scope.getDraft(), reception }, { expectedGeneration: scope.getGeneration() })) throw Error('Could not seed local Reception');
+        const { createReceptionEditorDocument } = await import('/src/reception/receptionEditorDocument.js');
+        if (!scope.commitCompletedOperation({ ...scope.getDraft(), reception: createReceptionEditorDocument(reception) }, { expectedGeneration: scope.getGeneration() })) throw Error('Could not seed local Reception');
       } finally { scope.release(); }
     }, PROFILE_A);
     await waitForOwnerShell('Owner after publication fixture');
     for (const width of [1440, 640, 390]) {
       await page.setViewportSize({ width, height: 900 });
-      await page.getByRole('button', { name: 'Profile', exact: true }).click();
+      await editorDestination(page, 'Profile');
       await page.getByRole('button', { name: 'View my reception', exact: true }).focus();
       if (process.env.INSCAPE_RECEPTION_CAPTURE_DIR) await page.screenshot({ path: resolve(process.env.INSCAPE_RECEPTION_CAPTURE_DIR, `owner-menu-${width}.png`) });
       const savedDraft = await page.evaluate(address => localStorage.getItem('inscape.system-workflow-draft.v1:' + address), PROFILE_A);
@@ -315,17 +316,17 @@ describe('owner/viewed-profile routing through the real App', { concurrency: fal
       await page.getByRole('heading', { name: 'Saved local Reception', exact: true }).waitFor();
       await page.getByRole('button', { name: 'Edit Reception', exact: true }).click();
       await page.locator('[data-reception-editor]').waitFor();
-      await page.getByRole('button', { name: 'Done', exact: true }).click();
+      await editorDestination(page, 'Reception');
       await page.locator('[data-reception-editor]').waitFor({ state: 'detached' });
       await page.getByRole('heading', { name: 'Saved local Reception', exact: true }).waitFor();
       assert.equal(await page.locator('.reception-cell-actions, .reception-divider, .reception-tool-panel').count(), 0);
       await page.getByRole('button', { name: 'Edit Reception', exact: true }).click();
       await page.locator('[data-reception-editor]').waitFor();
-      await page.getByRole('button', { name: 'Done', exact: true }).click();
+      await editorDestination(page, 'Reception');
       await page.getByRole('heading', { name: 'Saved local Reception', exact: true }).waitFor();
       const navigationBounds = await back().boundingBox();
-      assert.equal(await back().evaluate(node => !!node.closest('.reception-window-header')), true,
-        'The owner return remains in the shared Reception header alongside its navigation');
+      assert.equal(await back().evaluate(node => !!node.closest('.reception-page-actions')), true,
+        'The owner return remains in the native Reception action bar alongside its navigation');
       assert.ok(await back().evaluate(node => { const b = node.getBoundingClientRect(); return node.contains(document.elementFromPoint(b.x + b.width / 2, b.y + b.height / 2)); }), 'Owner return is exposed and clickable');
       assert.equal(await back().count(), 1);
       await back().focus();
@@ -337,22 +338,24 @@ describe('owner/viewed-profile routing through the real App', { concurrency: fal
       await page.locator('.workbench-overview').waitFor();
       assert.match(page.url(), /[?&]canvas=1/);
       assert.doesNotMatch(page.url(), /[?&]reception=1/);
-      assert.equal(await page.locator('main.system-workflow:not(.visitor-grid-world)').count(), 0);
+      await page.locator('main.system-workflow[data-overview]').waitFor();
+      assert.equal(await page.getByRole('toolbar', { name: 'Creation tools', exact: true }).isVisible(), false);
+      await page.getByRole('button', { name: /^Edit / }).first().waitFor();
       assert.ok(await page.getByRole('button', { name: /^Edit / }).count() > 0, 'The owner opens their local collection from Reception');
       assert.equal(await page.evaluate(address => localStorage.getItem('inscape.system-workflow-draft.v1:' + address), PROFILE_A), savedDraft,
         'Opening the owner collection does not change its saved compositions');
       await page.goBack(); await page.locator('.reception-page').waitFor();
       await page.goForward(); await page.locator('.workbench-overview').waitFor();
       assert.doesNotMatch(page.url(), /[?&]reception=1/);
-      await page.getByRole('button', { name: 'Inscape menu', exact: true }).click();
-      await page.getByRole('button', { name: 'About', exact: true }).click();
+      await editorDestination(page, 'Reception');
       await page.locator('.reception-page').waitFor();
       await page.getByRole('heading', { name: 'Saved local Reception', exact: true }).waitFor();
+      const beforeRoom = await savedOwnerDraft();
       await page.getByRole('button', { name: /^Explore/ }).click();
       await page.getByRole('region', { name: 'Exploration room', exact: true }).waitFor();
       await page.locator('.keeper-dock').waitFor();
       const roomDraft = await page.evaluate(address => localStorage.getItem('inscape.system-workflow-draft.v1:' + address), PROFILE_A);
-      const beforeRoom = JSON.parse(savedDraft), afterRoom = JSON.parse(roomDraft);
+      const afterRoom = await savedOwnerDraft();
       assert.equal(afterRoom.keeperDocks.length, Math.max(1, beforeRoom.keeperDocks?.length || 0));
       assert.deepEqual(afterRoom.imageModules, beforeRoom.imageModules);
       assert.match(page.url(), /[?&]reception=1/);
@@ -477,18 +480,18 @@ describe('owner/viewed-profile routing through the real App', { concurrency: fal
       await page.getByRole('button', { name: 'Connect', exact: true }).click();
       await waitForOwnerShell('Connect from Discover opens owner');
       await page.evaluate(() => { window.__ownerBeforeDiscover = document.querySelector('.system-workflow'); });
-      await page.getByRole('button', { name: 'Discover', exact: true }).click();
+      await editorDestination(page, 'Discover');
       assert.match(page.url(), /[?&]discover/);
       assert.equal(await page.locator('.public-entry-portal').count(), 1);
       await page.goBack();
-      await page.getByRole('button', { name: 'Profile', exact: true }).waitFor();
+      await setEditorSidebarOpen(page, true); await page.getByRole('button', { name: 'Profile', exact: true }).waitFor();
       await page.goForward();
       await page.getByRole('searchbox', { name: 'Search published worlds' }).waitFor();
       await page.keyboard.press('Escape');
-      await page.getByRole('button', { name: 'Profile', exact: true }).waitFor();
+      await setEditorSidebarOpen(page, true); await page.getByRole('button', { name: 'Profile', exact: true }).waitFor();
       assert.equal(await page.evaluate(() => window.__ownerBeforeDiscover === document.querySelector('.system-workflow')), true,
         'Discover and history navigation must preserve the mounted owner workspace');
-      await page.getByRole('button', { name: 'Profile', exact: true }).click();
+      await editorDestination(page, 'Profile');
       const disconnect = page.getByRole('button', { name: 'Disconnect', exact: true });
       await disconnect.waitFor();
       const bounds = await disconnect.boundingBox();
@@ -503,7 +506,7 @@ describe('owner/viewed-profile routing through the real App', { concurrency: fal
       await page.locator('.public-entry-portal[data-mode="explore"]').waitFor();
       await page.getByRole('button', { name: 'Connect', exact: true }).click();
       await waitForOwnerShell('Reconnect returns to owner');
-      await page.getByRole('button', { name: 'Discover', exact: true }).click();
+      await editorDestination(page, 'Discover');
       await page.locator('.public-entry-portal__account-trigger').click();
       await page.getByRole('button', { name: 'Disconnect', exact: true }).click();
       await page.locator('.public-entry-portal[data-mode="explore"]').waitFor();
@@ -524,7 +527,7 @@ describe('owner/viewed-profile routing through the real App', { concurrency: fal
       await page.getByRole('button', { name: 'Connect', exact: true }).click();
       await waitForOwnerShell('Owner before delayed disconnect');
       await page.evaluate(() => { window.__delayDisconnect = true; window.__disconnectCalls = 0; });
-      await page.getByRole('button', { name: 'Profile', exact: true }).click();
+      await editorDestination(page, 'Profile');
       await page.getByRole('button', { name: 'Disconnect', exact: true }).click();
       await page.waitForFunction(() => typeof window.__finishDisconnect === 'function');
       await page.getByRole('button', { name: 'Disconnect', exact: true }).click();

@@ -1,4 +1,4 @@
-import { editorMenu, editorCommand } from './fixtures/editor-menu.mjs';
+import { editorMenu, editorCommand, setEditorSidebarOpen } from './fixtures/editor-menu.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdir } from 'node:fs/promises';
@@ -11,7 +11,7 @@ const tab = (page, name) => page.getByRole('tab', { name, exact: true });
 const toolbar = page => page.locator('[data-workbench-toolbar]').getByRole('button', { name: 'Artwork info', exact: true });
 const info = page => page.getByRole('article', { name: 'Artwork metadata', exact: true });
 const saved = page => page.evaluate(() => window.readToolChromeDraft());
-async function mount(browser, theme = 'mist', width = 1440, height = 900) {
+async function mount(browser, theme = 'light', width = 1440, height = 900) {
   const page = await browser.newPage({ viewport: { width, height }, reducedMotion: 'reduce' });
   page.setDefaultTimeout(12000);
   const errors = []; page.on('pageerror', error => errors.push(error.message));
@@ -23,9 +23,12 @@ async function mount(browser, theme = 'mist', width = 1440, height = 900) {
   });
   await page.goto(`${origin}/browser-tests/tool-chrome-fixture.html?sample=navigator&theme=${theme}`);
   await editorMenu(page, 'Canvas').waitFor();
+  await setEditorSidebarOpen(page, false);
   if (!await tab(page, 'Layers').count()) await page.locator('[data-workbench-toolbar]').getByRole('button', { name: 'Layers', exact: true }).click();
   await tab(page, 'Layers').click();
   await page.locator('[data-layer-id^="image:"] .workbench-layer-name').click();
+  // Floating tools can overlap the toolbar; close Layers before opening Info on a short, narrow screen.
+  if (width < 600) await page.getByRole('button', { name: 'Close Workbench Layers', exact: true }).click();
   await toolbar(page).click(); await info(page).waitFor();
   return { page, errors };
 }
@@ -76,7 +79,7 @@ test('Image info follows visible sides, detaches and rejoins without editing con
     assert.deepEqual(errors, []);
   } finally { await browser.close(); }
 });
-for (const theme of ['carbon', 'mist']) for (const [width, height] of [[1440, 900], [390, 568]]) test(`Info retains source details and scroll containment (${theme} ${width}x${height})`, { timeout: 60000 }, async () => {
+for (const theme of ['dark', 'light']) for (const [width, height] of [[1440, 900], [390, 568]]) test(`Info retains source details and scroll containment (${theme} ${width}x${height})`, { timeout: 60000 }, async () => {
   const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
   try {
     const { page, errors } = await mount(browser, theme, width, height);
@@ -100,7 +103,6 @@ for (const theme of ['carbon', 'mist']) for (const [width, height] of [[1440, 90
     await page.screenshot({ path: `${output}/${theme}-${width}.png` });
     await page.getByRole('button', { name: 'Close Info', exact: true }).click();
     if (width < 600) {
-      await page.getByRole('button', { name: 'Close Workbench Layers', exact: true }).click();
       assert.equal(await page.getByRole('button', { name: 'Keeper settings', exact: true }).evaluate(node => {
         const r = node.getBoundingClientRect(); return node.contains(document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2));
       }), true, 'closing the dock leaves Keeper reachable');
@@ -118,8 +120,8 @@ test('reference Info shares the artwork presentation and follows selection in bo
       await page.route('**/*', route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
       await page.goto(`${origin}/design-system.html#components`);
       const studio = page.locator('.ds-studio');
-      for (const theme of ['carbon', 'mist']) {
-        await page.getByLabel('Preview surface').selectOption(theme);
+      for (const theme of ['dark', 'light']) {
+        await page.getByRole('group', { name: 'Interface appearance', exact: true }).getByRole('button', { name: theme.toUpperCase(), exact: true }).click();
         await studio.getByLabel('Workspace selection').selectOption('image');
         await studio.getByRole('button', { name: 'Artwork info', exact: true }).click();
         await studio.getByRole('article', { name: 'Artwork metadata', exact: true }).waitFor();

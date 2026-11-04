@@ -1,18 +1,28 @@
+export const projectReceptionMember = (before, after, member) => ({
+  left: after.left + (member.left - before.left) * after.width / before.width,
+  top: after.top + (member.top - before.top) * after.height / before.height,
+  width: member.width * after.width / before.width, height: member.height * after.height / before.height,
+});
+
 // Cells reuse native Editor windows. These are temporary interaction/paint
 // projections; persisted geometry remains in the Reception document's workbench.
 export const editorCellForModule = (cells, id) => cells.find(cell => cell.id === id || cell.members.includes(id));
 
-export function editorCellMoveIds(cells, ids, editingCellId, groups = []) {
+export function editorCellMoveIds(cells, ids, editingCellId) {
   return [...new Set(ids.flatMap(id => {
     const cell = editorCellForModule(cells, id);
     if (!cell || cell.id !== id && cell.id === editingCellId) return [id];
-    const group = groups.find(item => item.members.includes(cell.id));
-    return (group?.members || [cell.id]).flatMap(id => { const item = cells.find(cell => cell.id === id); return item ? [id, ...item.members] : []; });
+    return [cell.id, ...cell.members];
   }))];
 }
 
-export function editorCellWindow(presentation, id) {
-  return ['shapes', 'imageModules', 'texts'].flatMap(key => presentation?.[key] || []).find(item => item.id === id)?.window;
+export function editorCellWindow(presentation, id, content) {
+  const image = content?.imageModules?.find(item => item.id === id);
+  if (image) {
+    const position = presentation?.imageModules?.find(item => item.id === id)?.position;
+    return position ? { ...position, width: image.width, height: image.height } : null;
+  }
+  return ['shapes', 'texts'].flatMap(key => presentation?.[key] || []).find(item => item.id === id)?.window;
 }
 
 export function transformedCellWindow(frame, transform = {}) {
@@ -22,36 +32,19 @@ export function transformedCellWindow(frame, transform = {}) {
     width: source.width * scale, height: source.height * scale };
 }
 
-export function editorCellPreviewTransforms(cells, transforms, presentation, groups = []) {
+export function editorCellPreviewTransforms(cells, transforms, presentation, content) {
   let result = transforms;
-  const project = (child, source, target) => ({
-    left: target.left + (child.left - source.left) * target.width / source.width,
-    top: target.top + (child.top - source.top) * target.height / source.height,
-    width: child.width * target.width / source.width, height: child.height * target.height / source.height,
-  });
-  for (const group of groups) {
-    const owner = group.members.find(id => transforms[id]), source = editorCellWindow(presentation, owner);
-    if (!source) continue;
-    const target = transformedCellWindow(source, transforms[owner]);
-    for (const id of group.members) {
-      if (result[id]) continue;
-      const child = editorCellWindow(presentation, id);
-      if (!child) continue;
-      if (result === transforms) result = { ...transforms };
-      result[id] = { scale: 1, x: 0, y: 0, frame: project(child, source, target) };
-    }
-  }
   for (const cell of cells) {
-    const transform = result[cell.id], source = editorCellWindow(presentation, cell.id);
+    const transform = result[cell.id], source = editorCellWindow(presentation, cell.id, content);
     if (!transform || !source) continue;
     const target = transformedCellWindow(source, transform);
     for (const id of cell.members) {
       // A gesture that already moves both owner and child owns both previews.
       if (transforms[id]) continue;
-      const child = editorCellWindow(presentation, id);
+      const child = editorCellWindow(presentation, id, content);
       if (!child) continue;
       if (result === transforms) result = { ...transforms };
-      result[id] = { scale: 1, x: 0, y: 0, frame: project(child, source, target) };
+      result[id] = { scale: 1, x: 0, y: 0, frame: projectReceptionMember(source, target, child) };
     }
   }
   return result;

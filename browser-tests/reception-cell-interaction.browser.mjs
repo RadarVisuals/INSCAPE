@@ -66,7 +66,7 @@ test('image-covered cells enter on double-click and expose the owning cell setti
       const { OWNER_SYSTEM_WORKFLOW_REVIEW_ASSETS: assets } = await import('/src/public/ownerSystemWorkflow/ownerSystemWorkflowDevelopmentFixture.js');
       const { createProfileDocumentV9AssetResolver } = await import('/src/profileDocument/domain/profileDocumentV9Asset.js');
       const asset = createProfileDocumentV9AssetResolver(assets)(assets[0].id), frame = value.workbench.shapes.find(item => item.id === id).window;
-      value.imageModules = [{ id: 'image:covered-cell', name: 'Cover', width: frame.width, height: frame.height, visibility: 'PUBLIC',
+      value.imageModules = [{ id: 'image:covered-cell', name: 'Cover', width: Math.round(frame.width), height: Math.round(frame.height), visibility: 'PUBLIC',
         sides: [{ id: 'side:cover', asset, crop: null, transform: { quarterTurns: 0, mirrorX: false, mirrorY: false } }] }];
       value.workbench.imageModules = [{ id: 'image:covered-cell', open: true, position: { left: frame.left, top: frame.top } }];
       value.cells[0].members = ['image:covered-cell']; value.artworkLayers = [id, 'image:covered-cell'];
@@ -77,38 +77,32 @@ test('image-covered cells enter on double-click and expose the owning cell setti
     assert.equal(await page.locator(`[data-editor-cell="${id}"]`).count(), 1);
     await back(page).click(); await page.mouse.click(1100, 800);
     await page.mouse.click(540, 420, { button: 'right' });
-    await page.getByRole('menuitem', { name: 'Cell settings', exact: true }).click();
-    await page.getByRole('button', { name: 'Edit contents', exact: true }).waitFor();
-    assert.equal(await page.getByRole('combobox', { name: 'Selected shape', exact: true }).inputValue(), id);
+    await page.getByRole('menuitem', { name: 'Bento settings', exact: true }).click();
+    await page.getByRole('dialog', { name: 'Bento settings', exact: true }).waitFor();
+    await page.getByLabel('Selected cell radius (px)', { exact: true }).waitFor();
     assert.deepEqual(errors, []);
   } finally { await browser.close(); }
 });
 
-test('Cell settings opens the shared Shape panel with reachable coupling and spacing controls', async () => {
+test('Bento settings reuses split and merge actions and saves selected-cell styling', async () => {
   const { browser, page, errors } = await setup();
   try {
-    const first = await cell(page, { x: 200, y: 250 }, { x: 500, y: 550 });
-    const second = await cell(page, { x: 600, y: 250 }, { x: 900, y: 550 });
-    await page.mouse.click(1100, 800); await shape(page, first).click({ button: 'right' });
-    await page.getByRole('menuitem', { name: 'Cell settings', exact: true }).click();
-    const name = (await reception(page)).shapes.find(item => item.id === second).name;
-    await page.getByRole('checkbox', { name: `Couple with ${name}`, exact: true }).check();
-    await page.getByRole('button', { name: 'Couple as row', exact: true }).click();
-    const horizontal = page.getByRole('slider', { name: 'Horizontal cell spacing', exact: true }); await horizontal.waitFor();
-    assert.deepEqual((await reception(page)).arrangement.groups[0].members, [first, second]);
-    assert.equal(await page.locator('.workbench-tool-dock .shape-tools').count(), 1, 'Cell controls belong to the existing Shape tool source');
-    const rowGap = (await reception(page)).arrangement.groups[0].gapX;
-    await horizontal.press('ArrowRight');
-    assert.equal((await reception(page)).arrangement.groups[0].gapX, rowGap + 1);
+    const first = await cell(page);
+    await page.mouse.click(540, 420, { button: 'right' });
+    await page.getByRole('menuitem', { name: 'Bento settings', exact: true }).click();
+    const panel = page.getByRole('dialog', { name: 'Bento settings', exact: true });
+    await panel.getByLabel('Selected cell radius (px)', { exact: true }).fill('32');
+    await panel.getByRole('button', { name: 'Apply cell radius', exact: true }).click();
+    await panel.getByText('Split or merge this cell', { exact: true }).click();
+    await panel.getByRole('button', { name: 'Split vertically', exact: true }).click();
+    assert.equal((await reception(page)).cells.length, 2);
+    assert.equal((await reception(page)).cells[0].id, first);
+    await panel.getByText('Split or merge this cell', { exact: true }).click();
+    await panel.getByRole('button', { name: 'Merge right', exact: true }).click();
+    assert.equal((await reception(page)).cells.length, 1);
+    assert.equal((await reception(page)).cells[0].radius, 32);
     await mkdir(output, { recursive: true });
-    await page.screenshot({ path: `${output}/cell-settings-row.png`, fullPage: true });
-    await page.getByRole('button', { name: 'Couple as column', exact: true }).click();
-    const vertical = page.getByRole('slider', { name: 'Vertical cell spacing', exact: true }); await vertical.waitFor();
-    const columnGap = (await reception(page)).arrangement.groups[0].gapY;
-    await vertical.press('ArrowRight');
-    assert.equal((await reception(page)).arrangement.groups[0].gapY, columnGap + 1);
-    await page.getByRole('button', { name: 'Unlink cells', exact: true }).click();
-    assert.equal((await reception(page)).arrangement.groups.length, 0);
+    await page.screenshot({ path: output + '/cell-settings-structure.png', fullPage: true });
     assert.deepEqual(errors, []);
   } finally { await browser.close(); }
 });

@@ -1,3 +1,4 @@
+import { openSharedTool } from './fixtures/shared-tools.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { chromium } from 'playwright-core';
@@ -83,7 +84,7 @@ test('Image body distinguishes inspection, movement, cancellation, flip, crop an
     assert.equal(await canvas.getAttribute('data-side-id'), firstSide, 'keyboard flipping wraps');
     await page.screenshot({ path: `${output}/image-interaction-wide.png` });
     // Crop owns its drag; closing it restores the ordinary body interaction.
-    const dock = page.locator('[data-context-tools], [data-context-action-bars]');
+    const dock = await openSharedTool(page, 'Image');
     await dock.getByRole('button', { name: 'Crop', exact: true }).click();
     await dock.getByRole('slider', { name: 'Crop zoom' }).fill('2');
     const projection = () => canvas.locator('image').getAttribute('transform'), beforeCrop = await projection();

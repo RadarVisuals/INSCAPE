@@ -2,12 +2,12 @@
 .workbench-overview-browse { display: contents; }
 :is(.workbench-overview, .canvas-gallery-section) { --overview-ease: cubic-bezier(.16,1,.3,1); --overview-menu-duration: 600ms; --overview-panel-duration: 700ms; --overview-radius: calc(var(--control-shell-radius) + var(--space-1)); --overview-glass: var(--interface-panel); --overview-glass-ink: var(--interface-ink); --overview-glass-edge: transparent; --overview-glass-filter: blur(10px); --overview-glass-shadow: 0 10px 30px rgb(0 0 0 / 10%); }
 .workbench-overview { position: fixed; inset: 0; z-index: 1; pointer-events: auto; overflow: auto; padding: var(--space-3) var(--space-3) 80px; background: var(--interface-environment); color: var(--tactile-ink); font: 14px/1.6 var(--font-interface); }
-.workbench-overview[data-workspace] { inset: 40px 0 0 var(--workspace-navigation-inset, 0px); z-index: 80; transition: opacity 200ms ease; }
+.workbench-overview[data-workspace] { inset: var(--workspace-navigation-top, 40px) 0 0; z-index: 80; transition: opacity 200ms ease; }
 .workbench-overview[data-immersive] { z-index: 80; }
 .workbench-overview[data-workspace-exiting] { z-index: 77; opacity: 0; pointer-events: none; }
 .workbench-overview[data-workspace-entering] { z-index: 77; animation: workspace-overview-arrive 260ms ease-out both; }
 .workbench-overview .workbench-overview-return { position: fixed; top: 12px; left: 12px; z-index: 5; background: var(--interface-panel); font-size: 12px; }
-.owner-overview-loading { position: fixed; inset: 40px 0 0 var(--workspace-navigation-inset, 0px); z-index: 80; margin: 0; padding: 24px; background: var(--interface-environment); }
+.owner-overview-loading { position: fixed; inset: var(--workspace-navigation-top, 40px) 0 0; z-index: 80; margin: 0; padding: 24px; background: var(--interface-environment); }
 .owner-canvas-journey { position: fixed; z-index: 78; overflow: hidden; pointer-events: none; background: var(--interface-environment); }
 [data-canvas-journey-target] { opacity: 0; }
 /* Tools arrive with the editor at the start, above the moving canvas. The

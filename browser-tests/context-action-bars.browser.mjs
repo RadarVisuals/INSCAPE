@@ -1,6 +1,9 @@
 import test from 'node:test';
+import { artworkCommand } from './fixtures/artwork-menu.mjs';
 import assert from 'node:assert/strict';
 import { mkdir } from 'node:fs/promises';
+import { openSharedTool } from './fixtures/shared-tools.mjs';
+import { setEditorSidebarOpen } from './fixtures/editor-menu.mjs';
 import { chromium } from 'playwright-core';
 
 const origin = process.env.INSCAPE_TEXT_ROOT || 'http://127.0.0.1:5217';
@@ -8,8 +11,8 @@ const executablePath = process.env.INSCAPE_BROWSER_EXECUTABLE || 'C:/Program Fil
 const output = process.env.INSCAPE_BROWSER_OUTPUT || '.browser-test-runtime';
 const settle = page => page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
 const draft = page => page.evaluate(() => window.readToolChromeDraft());
-const selection = page => page.getByRole('toolbar', { name: 'Selection tools', exact: true });
-const inspection = page => page.getByRole('toolbar', { name: 'Inspection and placement', exact: true });
+const selection = page => page.getByRole('group', { name: 'Selection tools', exact: true });
+const inspection = page => page.getByRole('group', { name: 'Inspection and placement', exact: true });
 const button = (scope, name) => scope.getByRole('button', { name, exact: true });
 async function mount(browser, viewport = { width: 1440, height: 1000 }, theme = 'carbon', hasTouch = false) {
   const page = await browser.newPage({ viewport, hasTouch, reducedMotion: 'reduce' });
@@ -22,6 +25,7 @@ async function mount(browser, viewport = { width: 1440, height: 1000 }, theme = 
   });
   await page.goto(`${origin}/browser-tests/tool-chrome-fixture.html?sample=actions&theme=${theme}`);
   await page.locator('.image-module__canvas').waitFor();
+  await setEditorSidebarOpen(page, false);
   await page.evaluate(() => document.fonts.ready);
   return { page, errors };
 }
@@ -30,6 +34,7 @@ async function activate(page, kind) {
   else if (kind === 'shape') await page.locator('.shape-window header').first().focus();
   else { await page.locator('.system-workflow__placement').first().focus(); await page.keyboard.press('Enter'); }
   await settle(page);
+  if (kind !== 'display') await openSharedTool(page, kind === 'image' ? 'Image' : 'Shape');
 }
 async function undo(page) {
   await page.locator('main.system-workflow').focus();
@@ -58,7 +63,7 @@ test('Display, Image and Shape actions follow the active module and retain undo'
     await button(page, 'Unlock ABYSSAL STUDY').click();
     assert.equal(await button(selection(page), 'Rotate').isEnabled(), true);
     await button(page, 'Close Layers').click();
-    assert.equal(await page.locator('[data-context-tools] .system-workflow__selection-actions').count(), 0);
+    assert.equal(await page.locator('[data-context-tools] .system-workflow__selection-actions').count(), 1);
     assert.equal(await page.getByRole('navigation', { name: 'Selection actions', exact: true }).count(), 1);
     await button(inspection(page), 'In place').click();
     assert.equal((await draft(page)).grids[0].placements[0].inspectionMode, 'IN_PLACE');
@@ -84,9 +89,9 @@ test('Display, Image and Shape actions follow the active module and retain undo'
     await activate(page, 'shape');
     assert.equal(await inspection(page).count(), 0, 'Shape has no unrelated fit or inspection controls');
     assert.equal(await button(selection(page), 'Rotate').count(), 0);
-    await button(selection(page), 'Duplicate shape').click();
+    await artworkCommand(page, (await draft(page)).shapes[0].id, 'Duplicate');
     assert.equal((await draft(page)).shapes.length, 2);
-    await button(selection(page), 'Delete shape').click();
+    await artworkCommand(page, (await draft(page)).shapes.at(-1).id, 'Delete');
     assert.equal((await draft(page)).shapes.length, 1);
     await undo(page);
     assert.equal((await draft(page)).shapes.length, 2);
@@ -95,7 +100,7 @@ test('Display, Image and Shape actions follow the active module and retain undo'
   } finally { await browser.close(); }
 });
 
-test('crop moves into the inspection row, cancels without saving and commits one undoable edit', { timeout: 60000 }, async () => {
+test('crop stays in the module panel, cancels without saving and commits one undoable edit', { timeout: 60000 }, async () => {
   const browser = await chromium.launch({ executablePath, headless: true });
   try {
     const { page, errors } = await mount(browser);
@@ -106,13 +111,13 @@ test('crop moves into the inspection row, cancels without saving and commits one
       const zoom = inspection(page).getByRole('slider', { name: 'Crop zoom' });
       await zoom.waitFor();
       assert.equal(await selection(page).count(), 0);
-      assert.equal(await page.locator('[data-context-tools]').isVisible(), false);
+      assert.equal(await page.locator('[data-context-tools] aside').isVisible(), kind === 'display');
       await zoom.fill('2'); await zoom.focus(); await page.keyboard.press('ArrowRight');
       assert.equal(await zoom.evaluate(node => node === document.activeElement), true, 'toolbar arrows do not steal slider input');
       assert.deepEqual(await draft(page), before, 'crop preview never saves');
       await button(inspection(page), 'Cancel').click();
       assert.deepEqual(await draft(page), before);
-      assert.equal(await selection(page).locator('button:focus').count(), 1, 'focus returns to an available action');
+      assert.equal(await page.locator('.artwork-action-controls button:focus').count(), 1, 'focus returns to an available action');
       await button(selection(page), 'Crop').click(); await zoom.fill('2');
       await button(inspection(page), 'Done').click();
       assert.notDeepEqual(await draft(page), before);
@@ -129,25 +134,33 @@ test('crop moves into the inspection row, cancels without saving and commits one
   } finally { await browser.close(); }
 });
 
-for (const [width, height, touch, theme] of [[1440, 1000, false, 'carbon'], [1440, 1000, false, 'mist'], [390, 844, true, 'carbon'], [320, 568, true, 'mist'], [844, 390, true, 'carbon']]) {
-  test(`context rows and keyboard access fit ${width}×${height} ${theme}`, { timeout: 60000 }, async () => {
+for (const [width, height, touch, theme] of [[1440, 1000, false, 'carbon'], [1440, 1000, false, 'mist'], [1000, 800, false, 'mist'], [800, 650, false, 'carbon']]) {
+  test(`module panels and keyboard access fit ${width}×${height} ${theme}`, { timeout: 60000 }, async () => {
     const browser = await chromium.launch({ executablePath, headless: true });
     try {
       const { page, errors } = await mount(browser, { width, height }, theme, touch);
       await activate(page, 'display');
       const saved = await draft(page);
       const stack = page.locator('[data-workbench-toolbar]');
-      const box = await stack.boundingBox(), camera = await page.locator('.workbench-view-controls').boundingBox();
-      for (const [name, bounds] of [['toolbar stack', box], ['camera', camera]]) {
+      const box = await stack.boundingBox();
+      assert.equal(await page.locator('.workbench-view-controls').count(), 0, 'no second owner toolbar');
+      assert.equal(await stack.getByRole('toolbar').count(), 1);
+      assert.equal(await stack.getByRole('group').count(), 0, 'contextual actions stay out of the creation toolbar');
+      for (const [name, bounds] of [['toolbar', box]]) {
         assert.ok(bounds.x >= 0 && bounds.y >= 0 && bounds.x + bounds.width <= width + 1 && bounds.y + bounds.height <= height + 1, `${name}: ${JSON.stringify(bounds)}`);
       }
       const inspectBox = await inspection(page).boundingBox(), selectBox = await selection(page).boundingBox();
-      assert.ok(inspectBox.y + inspectBox.height < selectBox.y && selectBox.y + selectBox.height < (await page.getByRole('toolbar', { name: 'Creation tools' }).boundingBox()).y);
+      assert.ok(inspectBox.y + inspectBox.height <= selectBox.y + 1);
+      await settle(page);
+      const popup = await page.locator('[data-context-tools] .context-toolbar').boundingBox();
+      assert.ok(inspectBox.y >= popup.y && selectBox.y + selectBox.height <= popup.y + popup.height, 'both context groups stay within Properties');
+      assert.ok(popup.x >= 0 && popup.y >= 40 && popup.x + popup.width <= width && popup.y + popup.height <= height, 'Properties stays in the workspace');
+      assert.ok(box.height <= 44, 'context changes leave the toolbar height unchanged');
       const styles = await button(selection(page), 'Rotate').evaluate(node => {
         const s = getComputedStyle(node), icon = node.querySelector('svg');
         return { radius: s.borderRadius, shadow: s.boxShadow, height: node.getBoundingClientRect().height, icon: icon.getBoundingClientRect().width, stroke: getComputedStyle(icon.firstElementChild).strokeWidth, vector: getComputedStyle(icon.firstElementChild).vectorEffect };
       });
-      assert.deepEqual(styles, { radius: '5px', shadow: 'none', height: touch ? 44 : 36, icon: 18, stroke: '1.5px', vector: 'non-scaling-stroke' });
+      assert.deepEqual(styles, { radius: '5px', shadow: 'none', height: 36, icon: 18, stroke: '1.5px', vector: 'non-scaling-stroke' });
       await button(selection(page), 'Inspect artwork').focus(); await page.keyboard.press('End');
       const crop = button(selection(page), 'Crop');
       assert.equal(await crop.evaluate(node => node === document.activeElement), true);
@@ -162,12 +175,13 @@ for (const [width, height, touch, theme] of [[1440, 1000, false, 'carbon'], [144
 }
 
 
-for (const width of [1440, 390]) test(`Inspect button and I honour the selected Display mode (${width}px)`, { timeout: 60000 }, async () => {
+for (const width of [1440, 800]) test(`Inspect button and I honour the selected Display mode (${width}px)`, { timeout: 60000 }, async () => {
   const browser = await chromium.launch({ executablePath, headless: true });
   try {
-    const { page, errors } = await mount(browser, { width, height: 1000 }, 'carbon', width === 390);
-    await page.emulateMedia({ reducedMotion: width === 390 ? 'reduce' : 'no-preference' });
+    const { page, errors } = await mount(browser, { width, height: 1000 }, 'carbon', width === 800);
+    await page.emulateMedia({ reducedMotion: width === 800 ? 'reduce' : 'no-preference' });
     await page.goto(`${origin}/browser-tests/tool-chrome-fixture.html?sample=layers&theme=carbon`);
+    await setEditorSidebarOpen(page, false);
     await activate(page, 'display');
     await page.waitForFunction(() => !document.querySelector('[data-workbench-travelling]'));
     const source = page.locator('.system-workflow__placement').first();

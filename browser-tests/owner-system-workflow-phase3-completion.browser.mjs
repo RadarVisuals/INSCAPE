@@ -416,7 +416,7 @@ test('narrow and reduced-motion state machines keep dock, overlays, crop, viewer
     await page.getByRole('button', { name: 'Crop', exact: true }).click();
     const cropControls = page.locator('.system-workflow__crop-controls');
     await cropControls.getByLabel('Crop zoom').waitFor();
-    assert.ok(inViewport(await page.getByRole('toolbar', { name: 'Inspection and placement', exact: true }).boundingBox(), 390, 720));
+    assert.ok(inViewport(await page.getByRole('group', { name: 'Inspection and placement', exact: true }).boundingBox(), 390, 720));
     for (const control of await cropControls.locator('input, button').all()) {
       await control.scrollIntoViewIfNeeded();
       assert.equal(await control.evaluate(node => {

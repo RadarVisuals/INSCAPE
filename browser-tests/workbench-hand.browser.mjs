@@ -1,3 +1,4 @@
+import { navigateWorkbench } from './fixtures/workbench-navigation.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { chromium } from 'playwright-core';
@@ -89,7 +90,7 @@ for (const visitor of [false, true]) for (const width of [1440, 390]) {
       await firstImage.locator('.image-module__canvas').dblclick();
       await page.waitForFunction(() => !document.querySelector('[data-workbench-travelling]'));
       assert.equal(await page.locator('.image-lift').count(), 0);
-      await page.getByRole('button', { name: 'Back to previous Workbench view', exact: true }).click();
+      await navigateWorkbench(page, 'back');
       await page.waitForFunction(() => !document.querySelector('[data-workbench-travelling]'));
       assert.equal(await hand.getAttribute('aria-pressed'), 'true');
       // Keyboard movement cannot bypass the navigation tool.

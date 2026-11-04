@@ -6,9 +6,12 @@ import {
   ChevronsUp,
   Copy,
   Crop,
-  Image,  Lock,  Shapes,
+  Image,
+  Lock,
+  Shapes,
   Trash2,
-  Type,  ZoomIn,
+  Type,
+  ZoomIn,
 } from 'lucide-react';
 import WorkbenchToolbar from '../src/public/ownerSystemWorkflow/WorkbenchToolbar.jsx';
 import KeeperDockContent from '../src/keeper/KeeperDockContent.jsx';
@@ -818,11 +821,6 @@ export default function WorkspacePreview({ onAction, status }) {
                 enabled: true,
                 open: tab === 'Layers',
                 onToggle: () => selectedTab('Layers'),
-              }}
-              info={{
-                enabled: !multiple && ['image', 'artwork'].includes(item?.kind),
-                open: tab === 'Info',
-                onToggle: () => selectedTab('Info'),
               }}
               actions={[
                 {

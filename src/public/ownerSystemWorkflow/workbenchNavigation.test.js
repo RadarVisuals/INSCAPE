@@ -55,6 +55,16 @@ test('camera interpolation reaches exact endpoints without changing either saved
   }
 });
 
+test('explicit framing and return use the free space between unequal side docks', () => {
+  const before = { left: 320, width: 800, height: 900, top: 40 };
+  const after = { ...before, left: 410, width: 710 };
+  const viewport = workbenchNavigationViewport(after, 800);
+  const camera = workbenchDestinationCamera({ left: 0, top: 0, width: 200, height: 200 }, viewport);
+  assert.equal(camera.offset.x + 100 * camera.scale, 765);
+  const returned = restoreWorkbenchCamera(camera, before, after);
+  assert.equal(returned.offset.x, camera.offset.x + 45);
+});
+
 test('return restores exactly at the same viewport and retains its world centre after resize', () => {
   const camera = { scale: .73, offset: { x: -92.7, y: 137.4 } };
   const before = { width: 1440, height: 860 }, after = { width: 390, height: 680 };

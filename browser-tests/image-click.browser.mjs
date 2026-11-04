@@ -1,3 +1,5 @@
+import { openSharedTool } from './fixtures/shared-tools.mjs';
+import { navigateWorkbench, workbenchCommandDisabled } from './fixtures/workbench-navigation.mjs';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { mkdir } from 'node:fs/promises';
@@ -38,7 +40,6 @@ for (const visitor of [false, true]) for (const width of [1440, 390]) {
       }, visitor);
       const first = page.locator('[data-image-module="image:click-0"] .image-module__window');
       const source = first.locator('.image-module__canvas');
-      const back = page.getByRole('button', { name: 'Back to previous Workbench view', exact: true });
       await source.waitFor(); await page.evaluate(() => document.fonts.ready); await settled(page);
       // The owner sidebar overlays the historical fixture position.
       if (!visitor && width === 1440) { await page.locator('.editor-menu-brand[aria-expanded="true"]').click(); await settled(page); }
@@ -48,13 +49,14 @@ for (const visitor of [false, true]) for (const width of [1440, 390]) {
       await settled(page);
       assert.deepEqual(await camera(page), initial, 'first click/tap leaves camera unchanged');
       assert.deepEqual(await first.boundingBox(), geometry);
-      assert.equal(await back.isDisabled(), true, 'selection does not add return history');
+      assert.equal(await workbenchCommandDisabled(page, 'back'), true, 'selection does not add return history');
       assert.equal(await page.locator('.image-lift').count(), 0);
       if (!visitor) {
         assert.equal(await first.getAttribute('data-active'), 'true', 'click activates the Image and bounds');
-        const actions = page.locator('[data-context-action-bars] [data-context-action-target]');
+        await openSharedTool(page, 'Image');
+    const actions = page.locator('.workbench-image-tools');
         await actions.waitFor();
-        assert.equal(await actions.getAttribute('data-context-action-target'), 'image:click-0');
+        assert.equal(await actions.getAttribute('data-workbench-inspection-target'), 'image:click-0');
       }
       await source.click(); await settled(page);
       assert.deepEqual(await camera(page), initial, 'another ordinary click on the active Image still does not zoom');
@@ -69,7 +71,7 @@ for (const visitor of [false, true]) for (const width of [1440, 390]) {
       await page.keyboard.press('Escape'); await page.mouse.up({ clickCount: 2 }); await settled(page);
       assert.deepEqual(await first.boundingBox(), geometry);
       assert.deepEqual(await camera(page), initial, 'cancelled drag never zooms on release');
-      assert.equal(await back.isDisabled(), true);
+      assert.equal(await workbenchCommandDisabled(page, 'back'), true);
 
       await source.dblclick(); await settled(page);
       const focused = await camera(page);
@@ -77,13 +79,13 @@ for (const visitor of [false, true]) for (const width of [1440, 390]) {
       assert.equal(await page.locator('.image-lift').count(), 0, 'camera focus is separate from artwork inspection');
       await source.click(); await settled(page);
       assert.deepEqual(await camera(page), focused, 'single click also stays put in the zoomed view');
-      await back.click(); await settled(page);
+      await navigateWorkbench(page, 'back'); await settled(page);
       assert.deepEqual(await camera(page), initial);
-      assert.equal(await back.isDisabled(), true, 'double-click created only one return context');
+      assert.equal(await workbenchCommandDisabled(page, 'back'), true, 'double-click created only one return context');
 
       await source.press('Enter'); await settled(page);
       assert.notDeepEqual(await camera(page), initial, 'Enter retains direct keyboard Focus');
-      await back.click(); await settled(page); assert.deepEqual(await camera(page), initial);
+      await navigateWorkbench(page, 'back'); await settled(page); assert.deepEqual(await camera(page), initial);
       await source.press('Space'); await settled(page);
       assert.deepEqual(await camera(page), initial, 'Space keeps its existing temporary Hand behavior');
       await source.focus(); await page.keyboard.press('i');

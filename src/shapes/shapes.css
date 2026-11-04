@@ -5,7 +5,8 @@
 .shape-window[data-window-chrome]::before, .shape-window[data-window-chrome]::after { display: none; }
 .shape-window[data-window-chrome] > .system-workflow__detached-window-titlebar { position: absolute; width: 1px; height: 1px; min-height: 0; overflow: hidden; padding: 0; opacity: 0; }
 .shape-window > .system-workflow__instrument-content { height: 100%; padding: 0; border-radius: 0 !important; overflow: visible; }
-.shape-window > .system-workflow__instrument-content > .shape-paint, .shape-paint > .shape-fill { position: absolute; inset: 0; isolation: isolate; }
+.shape-paint, .shape-fill, .shape-outline { position: absolute; inset: 0; isolation: isolate; }
+.shape-outline { pointer-events: none; }
 .shape-fx-tools { display: grid; gap: 16px; }
 .shape-fx-tools .shape-fx-range { display: grid; grid-template-columns: 1fr auto; }
 .shape-fx-range input[type='range'] { grid-column: 1 / -1; padding: 0; border: 0; accent-color: var(--tactile-ink); }

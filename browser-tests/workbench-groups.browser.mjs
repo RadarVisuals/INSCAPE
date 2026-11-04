@@ -1,4 +1,4 @@
-import { editorCommand } from './fixtures/editor-menu.mjs';
+import { navigateWorkbench } from './fixtures/workbench-navigation.mjs';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { mkdir } from 'node:fs/promises';
@@ -31,7 +31,7 @@ test('owner groups preserve the camera and artwork through editing, undo, moveme
       const page = await browser.newPage({ viewport: { width, height: 1000 } });
       const errors = []; page.on('pageerror', error => errors.push(error.message));
       await mountGridMotionFixture(page, { origin, heavy: true, count: 2, displayWidth: 600, textModes: true });
-      await page.getByRole('button', { name: 'Workbench groups', exact: true }).waitFor();
+      await page.getByRole('menubar', { name: 'Editor commands' }).waitFor();
       await page.evaluate(() => import('/src/lattice/rendering/latticeMenuSurface.css'));
       await page.evaluate(() => document.fonts.ready); await settle(page);
       await page.locator('main.system-workflow').first().dispatchEvent('wheel', { deltaX: -160, deltaY: 80, bubbles: true, cancelable: true });
@@ -39,7 +39,7 @@ test('owner groups preserve the camera and artwork through editing, undo, moveme
       const before = await draft(page), initialCamera = await camera(page);
       await page.evaluate(() => { window.groupModuleNodes = [...document.querySelectorAll('[data-workbench-view-id]')]; });
       await choose(page, ['image:motion-0', 'image:motion-1']);
-      await page.getByRole('button', { name: 'Workbench groups', exact: true }).click();
+      await navigateWorkbench(page, 'groups');
       const panel = page.locator('[data-workbench-group-tools]');
       await panel.getByRole('textbox', { name: 'Group name', exact: true }).fill('Lunar Desert');
       await panel.getByRole('button', { name: 'Create from selection', exact: true }).click();
@@ -48,7 +48,7 @@ test('owner groups preserve the camera and artwork through editing, undo, moveme
       assert.deepEqual(withoutGroups(await draft(page)), before);
       assert.deepEqual(await camera(page), initialCamera);
       await panel.getByRole('textbox', { name: 'Group name', exact: true }).fill('Chapter one');
-      await editorCommand(panel, 'Canvas', 'Rename');
+      await panel.getByRole('button', { name: 'Rename', exact: true }).click();
       await choose(page, ['image:motion-2']);
       await panel.getByRole('button', { name: 'Add selection (1)', exact: true }).click();
       const rows = panel.locator('.workbench-groups__members li');
@@ -73,7 +73,7 @@ test('owner groups preserve the camera and artwork through editing, undo, moveme
       for (const id of ['image:motion-0', 'image:motion-2']) {
         const initial = authored.workbench.imageModules.find(item => item.id === id).position;
         const position = moved.workbench.imageModules.find(item => item.id === id).position;
-        assert.equal(position.left, initial.left + 1);
+        assert.equal(position.left, initial.left + 1 / Number(initialCamera.scale));
       }
       assert.deepEqual(moved.imageModules, authored.imageModules);
       await panel.getByRole('button', { name: 'Undo', exact: true }).click(); await settle(page);
@@ -109,7 +109,7 @@ test('owner groups preserve the camera and artwork through editing, undo, moveme
       const savedGroups = await groups(page);
       assert.equal(await page.evaluate(() => window.groupModuleNodes.every(node => node.isConnected)), true, 'group editing preserves live module identity');
       await page.evaluate(() => window.__motionRemount());
-      await page.getByRole('button', { name: 'Workbench groups', exact: true }).click();
+      await navigateWorkbench(page, 'groups');
       assert.deepEqual(await groups(page), savedGroups);
       await panel.locator('[data-workbench-group-drop]').first().click();
       assert.equal(await page.locator('.workbench-selection').count(), 1);

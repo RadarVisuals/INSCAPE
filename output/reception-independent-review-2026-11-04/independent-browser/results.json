@@ -1,0 +1,549 @@
+{
+  "errors": [],
+  "consoleErrors": [],
+  "captures": [
+    "editor-1440-dark",
+    "bento-1440-dark",
+    {
+      "name": "bento-1440-DARK",
+      "footer": {
+        "x": 1113,
+        "y": 771,
+        "width": 298,
+        "height": 32
+      },
+      "dialog": {
+        "x": 1100,
+        "y": 56,
+        "width": 324,
+        "height": 760
+      }
+    },
+    "preview-1440-dark",
+    {
+      "name": "preview-1440-DARK",
+      "mobile": null,
+      "canvas": {
+        "x": 16,
+        "y": 133.5,
+        "width": 1168,
+        "height": 730
+      }
+    },
+    "editor-1440-light",
+    "bento-1440-light",
+    {
+      "name": "bento-1440-LIGHT",
+      "footer": {
+        "x": 1113,
+        "y": 771,
+        "width": 298,
+        "height": 32
+      },
+      "dialog": {
+        "x": 1100,
+        "y": 56,
+        "width": 324,
+        "height": 760
+      }
+    },
+    "preview-1440-light",
+    {
+      "name": "preview-1440-LIGHT",
+      "mobile": null,
+      "canvas": {
+        "x": 16,
+        "y": 133.5,
+        "width": 1168,
+        "height": 730
+      }
+    },
+    "editor-900-dark",
+    "bento-900-dark",
+    {
+      "name": "bento-900-DARK",
+      "footer": {
+        "x": 573,
+        "y": 771,
+        "width": 298,
+        "height": 32
+      },
+      "dialog": {
+        "x": 560,
+        "y": 56,
+        "width": 324,
+        "height": 760
+      }
+    },
+    "preview-900-dark",
+    {
+      "name": "preview-900-DARK",
+      "mobile": "true",
+      "canvas": {
+        "x": 16,
+        "y": 252.5,
+        "width": 628,
+        "height": 492
+      }
+    },
+    "editor-900-light",
+    "bento-900-light",
+    {
+      "name": "bento-900-LIGHT",
+      "footer": {
+        "x": 573,
+        "y": 771,
+        "width": 298,
+        "height": 32
+      },
+      "dialog": {
+        "x": 560,
+        "y": 56,
+        "width": 324,
+        "height": 760
+      }
+    },
+    "preview-900-light",
+    {
+      "name": "preview-900-LIGHT",
+      "mobile": "true",
+      "canvas": {
+        "x": 16,
+        "y": 252.5,
+        "width": 628,
+        "height": 492
+      }
+    },
+    "private-cell-delete-confirmation",
+    "private-text-exposed-in-preview",
+    "performance-filled-16"
+  ],
+  "imageResponses": [
+    {
+      "url": "http://127.0.0.1:15804/assets/actors/abyssal_eye/full.webp",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:15804/assets/actors/skull_reaper/full.webp",
+      "status": 200
+    },
+    {
+      "url": "https://raw.githubusercontent.com/RadarVisuals/INSCAPE/226945490a3598b99ddb654f0b15c230348f866e/public/assets/actors/abyssal_eye/full.webp",
+      "status": 200
+    },
+    {
+      "url": "https://raw.githubusercontent.com/RadarVisuals/INSCAPE/226945490a3598b99ddb654f0b15c230348f866e/public/assets/actors/abyssal_eye/full.webp",
+      "status": 200
+    },
+    {
+      "url": "https://raw.githubusercontent.com/RadarVisuals/INSCAPE/226945490a3598b99ddb654f0b15c230348f866e/public/assets/actors/abyssal_eye/full.webp",
+      "status": 200
+    },
+    {
+      "url": "https://raw.githubusercontent.com/RadarVisuals/INSCAPE/226945490a3598b99ddb654f0b15c230348f866e/public/assets/actors/abyssal_eye/full.webp",
+      "status": 200
+    },
+    {
+      "url": "https://raw.githubusercontent.com/RadarVisuals/INSCAPE/226945490a3598b99ddb654f0b15c230348f866e/public/assets/actors/abyssal_eye/full.webp",
+      "status": 200
+    },
+    {
+      "url": "https://raw.githubusercontent.com/RadarVisuals/INSCAPE/226945490a3598b99ddb654f0b15c230348f866e/public/assets/actors/abyssal_eye/full.webp",
+      "status": 200
+    },
+    {
+      "url": "https://raw.githubusercontent.com/RadarVisuals/INSCAPE/226945490a3598b99ddb654f0b15c230348f866e/public/assets/actors/abyssal_eye/full.webp",
+      "status": 200
+    },
+    {
+      "url": "https://raw.githubusercontent.com/RadarVisuals/INSCAPE/226945490a3598b99ddb654f0b15c230348f866e/public/assets/actors/abyssal_eye/full.webp",
+      "status": 200
+    },
+    {
+      "url": "https://raw.githubusercontent.com/RadarVisuals/INSCAPE/226945490a3598b99ddb654f0b15c230348f866e/public/assets/actors/abyssal_eye/full.webp",
+      "status": 200
+    },
+    {
+      "url": "https://raw.githubusercontent.com/RadarVisuals/INSCAPE/226945490a3598b99ddb654f0b15c230348f866e/public/assets/actors/abyssal_eye/full.webp",
+      "status": 200
+    },
+    {
+      "url": "https://raw.githubusercontent.com/RadarVisuals/INSCAPE/226945490a3598b99ddb654f0b15c230348f866e/public/assets/actors/abyssal_eye/full.webp",
+      "status": 200
+    },
+    {
+      "url": "https://raw.githubusercontent.com/RadarVisuals/INSCAPE/226945490a3598b99ddb654f0b15c230348f866e/public/assets/actors/abyssal_eye/full.webp",
+      "status": 200
+    },
+    {
+      "url": "https://raw.githubusercontent.com/RadarVisuals/INSCAPE/226945490a3598b99ddb654f0b15c230348f866e/public/assets/actors/abyssal_eye/full.webp",
+      "status": 200
+    },
+    {
+      "url": "https://raw.githubusercontent.com/RadarVisuals/INSCAPE/226945490a3598b99ddb654f0b15c230348f866e/public/assets/actors/skull_reaper/full.webp",
+      "status": 200
+    },
+    {
+      "url": "https://raw.githubusercontent.com/RadarVisuals/INSCAPE/226945490a3598b99ddb654f0b15c230348f866e/public/assets/actors/abyssal_eye/full.webp",
+      "status": 200
+    },
+    {
+      "url": "https://raw.githubusercontent.com/RadarVisuals/INSCAPE/226945490a3598b99ddb654f0b15c230348f866e/public/assets/actors/skull_reaper/full.webp",
+      "status": 200
+    },
+    {
+      "url": "https://raw.githubusercontent.com/RadarVisuals/INSCAPE/226945490a3598b99ddb654f0b15c230348f866e/public/assets/actors/abyssal_eye/full.webp",
+      "status": 200
+    },
+    {
+      "url": "https://raw.githubusercontent.com/RadarVisuals/INSCAPE/226945490a3598b99ddb654f0b15c230348f866e/public/assets/actors/skull_reaper/full.webp",
+      "status": 200
+    },
+    {
+      "url": "https://raw.githubusercontent.com/RadarVisuals/INSCAPE/226945490a3598b99ddb654f0b15c230348f866e/public/assets/actors/abyssal_eye/full.webp",
+      "status": 200
+    },
+    {
+      "url": "https://raw.githubusercontent.com/RadarVisuals/INSCAPE/226945490a3598b99ddb654f0b15c230348f866e/public/assets/actors/skull_reaper/full.webp",
+      "status": 200
+    }
+  ],
+  "browser": "156.0.8078.80",
+  "loadedImages": [
+    {
+      "state": "ready",
+      "href": "https://raw.githubusercontent.com/RadarVisuals/INSCAPE/226945490a3598b99ddb654f0b15c230348f866e/public/assets/actors/abyssal_eye/full.webp",
+      "rect": {
+        "x": 131,
+        "y": 92,
+        "width": 579,
+        "height": 721,
+        "top": 92,
+        "right": 710,
+        "bottom": 813,
+        "left": 131
+      }
+    }
+  ],
+  "privateBefore": 0,
+  "deletionPrompt": [
+    "Delete Cell 2?"
+  ],
+  "privateAfter": 1,
+  "finalState": {
+    "version": 3,
+    "branding": {
+      "name": "",
+      "logo": null
+    },
+    "workbench": {
+      "version": 1,
+      "display": {
+        "name": "DISPLAY MODULE",
+        "open": false,
+        "window": {
+          "left": 32,
+          "top": 64,
+          "width": 960,
+          "height": 572
+        },
+        "shortcut": {
+          "position": {
+            "left": 24,
+            "top": 72
+          },
+          "visible": false,
+          "icon": null,
+          "iconPresentation": {
+            "labelSize": 8,
+            "offsetX": 0,
+            "offsetY": 0,
+            "scale": 1,
+            "size": 60
+          }
+        }
+      },
+      "identity": {
+        "open": false,
+        "window": {
+          "left": 28,
+          "top": 72,
+          "width": 840
+        }
+      },
+      "area": {
+        "left": 0,
+        "top": 0,
+        "width": 1440,
+        "height": 900
+      },
+      "shapes": [
+        {
+          "id": "shape:5d5abb12-88ba-4330-80c6-2890d3da64d0",
+          "open": true,
+          "window": {
+            "left": 24,
+            "top": 24,
+            "width": 684,
+            "height": 852
+          }
+        },
+        {
+          "id": "shape:b59725cb-b023-4d7c-b788-cea76d5d8563",
+          "open": true,
+          "window": {
+            "left": 732,
+            "top": 24,
+            "width": 684,
+            "height": 852
+          }
+        }
+      ],
+      "imageModules": [
+        {
+          "id": "image:e5242352-9bf0-4fd6-b4fb-682beec175d2",
+          "open": true,
+          "position": {
+            "left": 24,
+            "top": 24
+          }
+        }
+      ],
+      "texts": [
+        {
+          "id": "text:6156aadd-8581-4e7e-a256-79823a13331b",
+          "open": true,
+          "window": {
+            "left": 732,
+            "top": 24,
+            "width": 684,
+            "height": 852
+          }
+        }
+      ]
+    },
+    "imageModules": [
+      {
+        "id": "image:e5242352-9bf0-4fd6-b4fb-682beec175d2",
+        "name": "Image",
+        "width": 684,
+        "height": 852,
+        "sides": [
+          {
+            "id": "side:b1e4e4bd-5017-4136-80f8-1ba1fd0df824",
+            "asset": {
+              "stableAssetId": "42:0x1111111111111111111111111111111111111111:0x01",
+              "network": "lukso-mainnet",
+              "chainId": 42,
+              "tokenStandard": "LSP8",
+              "contractAddress": "0x1111111111111111111111111111111111111111",
+              "tokenId": "0x01",
+              "name": "ABYSSAL STUDY",
+              "description": "System Workflow parity review fixture",
+              "collectionName": "INSCAPE STUDIES",
+              "media": {
+                "url": "https://raw.githubusercontent.com/RadarVisuals/INSCAPE/226945490a3598b99ddb654f0b15c230348f866e/public/assets/actors/abyssal_eye/full.webp",
+                "width": 2000,
+                "height": 2000,
+                "type": "image"
+              },
+              "creators": [
+                {
+                  "address": "0x1111111111111111111111111111111111111111",
+                  "name": "RADAR VISUALS",
+                  "source": "LUKSO INDEXER / LSP4 CREATORS",
+                  "scope": "tokenId"
+                }
+              ],
+              "attributes": []
+            },
+            "crop": {
+              "x": 0.5,
+              "y": 0.5,
+              "zoom": 1
+            },
+            "transform": {
+              "quarterTurns": 0,
+              "mirrorX": false,
+              "mirrorY": false
+            }
+          }
+        ],
+        "visibility": "PUBLIC"
+      }
+    ],
+    "texts": [
+      {
+        "id": "text:6156aadd-8581-4e7e-a256-79823a13331b",
+        "article": {
+          "documentType": "INSCAPEArticle",
+          "version": 1,
+          "title": "",
+          "font": "sora",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "attrs": {
+                  "textAlign": null,
+                  "spaceBefore": null,
+                  "spaceAfter": null,
+                  "lineHeight": null
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "A living archive"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "attrs": {
+                  "textAlign": null,
+                  "spaceBefore": null,
+                  "spaceAfter": null,
+                  "lineHeight": null
+                }
+              },
+              {
+                "type": "paragraph",
+                "attrs": {
+                  "textAlign": null,
+                  "spaceBefore": null,
+                  "spaceAfter": null,
+                  "lineHeight": null
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "I work with light, creatures and fragments of digital space. Every image keeps its source and enters a new relationship here."
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "attrs": {
+                  "textAlign": null,
+                  "spaceBefore": null,
+                  "spaceAfter": null,
+                  "lineHeight": null
+                }
+              },
+              {
+                "type": "paragraph",
+                "attrs": {
+                  "textAlign": null,
+                  "spaceBefore": null,
+                  "spaceAfter": null,
+                  "lineHeight": null
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "This reception is an invitation to explore the work, not a catalogue. Colour, texture and words share one composition."
+                  }
+                ]
+              }
+            ]
+          },
+          "appearance": {
+            "background": null,
+            "opacity": 1,
+            "frame": false,
+            "scale": 1,
+            "fontSize": 16,
+            "color": "#ffffff"
+          }
+        },
+        "visibility": "PUBLIC"
+      }
+    ],
+    "shapes": [
+      {
+        "id": "shape:5d5abb12-88ba-4330-80c6-2890d3da64d0",
+        "name": "Cell 1",
+        "color": "#808080",
+        "opacity": 0.25,
+        "visibility": "PUBLIC"
+      },
+      {
+        "id": "shape:b59725cb-b023-4d7c-b788-cea76d5d8563",
+        "name": "Cell 2",
+        "color": "#808080",
+        "opacity": 0.25,
+        "visibility": "PRIVATE"
+      }
+    ],
+    "artworkLayers": [
+      "shape:5d5abb12-88ba-4330-80c6-2890d3da64d0",
+      "shape:b59725cb-b023-4d7c-b788-cea76d5d8563",
+      "image:e5242352-9bf0-4fd6-b4fb-682beec175d2",
+      "text:6156aadd-8581-4e7e-a256-79823a13331b"
+    ],
+    "cells": [
+      {
+        "id": "shape:5d5abb12-88ba-4330-80c6-2890d3da64d0",
+        "members": [
+          "image:e5242352-9bf0-4fd6-b4fb-682beec175d2"
+        ],
+        "mobile": {
+          "columns": 2,
+          "height": 240
+        },
+        "radius": 0
+      },
+      {
+        "id": "shape:b59725cb-b023-4d7c-b788-cea76d5d8563",
+        "members": [
+          "text:6156aadd-8581-4e7e-a256-79823a13331b"
+        ],
+        "radius": 0,
+        "mobile": {
+          "columns": 2,
+          "height": 240
+        }
+      }
+    ],
+    "bento": {
+      "gap": 24,
+      "padding": 24
+    }
+  },
+  "public900": {
+    "mobile": null,
+    "canvas": {
+      "x": 20,
+      "y": 189.75,
+      "width": 860,
+      "height": 537.5
+    }
+  },
+  "performanceSetup": {
+    "commitMs": 2.699999988079071,
+    "cells": 16,
+    "images": 16,
+    "texts": 16,
+    "distinctArtwork": 7
+  },
+  "performanceIdle": {
+    "frames": 180,
+    "p50": 7,
+    "p95": 7,
+    "max": 7.200000000000728,
+    "over50ms": 0
+  },
+  "performanceActive": {
+    "frames": 180,
+    "p50": 7,
+    "p95": 41.79999999999927,
+    "max": 69.5,
+    "over50ms": 3,
+    "commandTotalMs": 2183
+  },
+  "performanceMedia": {
+    "count": 16,
+    "ready": 16
+  }
+}

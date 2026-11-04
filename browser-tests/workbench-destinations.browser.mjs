@@ -1,3 +1,4 @@
+import { workbenchCommand, workbenchCommandDisabled, navigateWorkbench } from './fixtures/workbench-navigation.mjs';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { mkdir } from 'node:fs/promises';
@@ -9,8 +10,8 @@ const output = process.env.INSCAPE_BROWSER_OUTPUT || '.browser-test-runtime';
 const origin = process.env.INSCAPE_TEXT_ROOT || 'http://127.0.0.1:5217';
 const launch = () => chromium.launch({ executablePath: 'C:/Program Files (x86)/Google/Chrome/Application/chrome.exe', headless: true });
 const settle = page => page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
-const focus = page => page.getByRole('button', { name: 'Focus selected Workbench modules', exact: true });
-const back = page => page.getByRole('button', { name: 'Back to previous Workbench view', exact: true });
+const focus = page => workbenchCommand(page, 'focus');
+const back = page => workbenchCommand(page, 'back');
 const near = (a, b, label) => assert.ok(Math.abs(a - b) < 1e-6, `${label}: ${a} vs ${b}`);
 function sameCamera(actual, expected) {
   near(actual.scale, expected.scale, 'camera scale');
@@ -30,7 +31,7 @@ async function select(page, id) {
   await settle(page);
   await target.press('Shift+Enter');
   await page.getByRole('group', { name: '1 selected Workbench modules', exact: true }).waitFor();
-  assert.equal(await focus(page).isEnabled(), true, 'explicit keyboard selection enables camera focus');
+  assert.equal(!await workbenchCommandDisabled(page, 'focus'), true, 'explicit keyboard selection enables camera focus');
 }
 async function arrived(page) {
   await page.waitForFunction(() => !document.querySelector('[data-workbench-travelling]'));
@@ -64,7 +65,7 @@ test('owner and Visitor focus live modules, activate them idempotently and retur
         return { draft: localStorage.getItem(window.__motionKey), layouts: Object.fromEntries(Object.keys(localStorage)
           .filter(key => key.startsWith('inscape:workbench:layout:')).map(key => [key, JSON.parse(localStorage.getItem(key)).layout])) };
       });
-      if (!reduced) await focus(page).evaluate(button => button.addEventListener('click', () => {
+      if (!reduced) await (await focus(page)).evaluate(button => button.addEventListener('click', () => {
         window.__motionCommits = 0;
         const source = document.querySelector('[data-workbench-view-id="image:motion-0"]');
         let magnifiedBitmap = false, scaledHandles = false;
@@ -82,11 +83,11 @@ test('owner and Visitor focus live modules, activate them idempotently and retur
         frame = requestAnimationFrame(tick);
         window.finishCameraSample = () => { cancelAnimationFrame(frame); return { gaps, magnifiedBitmap, scaledHandles, commits: window.__motionCommits }; };
       }, { once: true }));
-      await focus(page).click();
+      await (await focus(page)).click();
       if (reduced) assert.equal(await page.locator('[data-workbench-travelling]').count(), 0);
       await arrived(page);
-      assert.equal(await focus(page).isDisabled(), true, 'arrival releases selection for content interaction');
-      assert.equal(await back(page).isEnabled(), true);
+      assert.equal(await workbenchCommandDisabled(page, 'focus'), true, 'arrival releases selection for content interaction');
+      assert.equal(!await workbenchCommandDisabled(page, 'back'), true);
       const first = await camera(page);
       assert.equal(await page.locator('.navigator-zoom output').textContent(),
         `${Math.round(first.scale * 100)}%`, 'zoom readout matches the focused camera');
@@ -107,20 +108,20 @@ test('owner and Visitor focus live modules, activate them idempotently and retur
       await source.focus(); await source.press('Enter');
       await arrived(page);
       assert.equal(await page.locator('.image-lift').count(), 0, 'artwork activation focuses without lifting');
-      assert.equal(await back(page).isEnabled(), true);
+      assert.equal(!await workbenchCommandDisabled(page, 'back'), true);
       sameCamera(await camera(page), first);
 
       await select(page, 'text:fit'); await settle(page);
       const secondOrigin = await camera(page);
-      await focus(page).click(); await arrived(page);
+      await (await focus(page)).click(); await arrived(page);
       assert.notDeepEqual(await camera(page), secondOrigin);
-      await back(page).click(); await arrived(page);
+      await (await back(page)).click(); await arrived(page);
       sameCamera(await camera(page), secondOrigin);
-      await back(page).click(); await arrived(page);
+      await (await back(page)).click(); await arrived(page);
       sameCamera(await camera(page), before);
       assert.equal(await page.locator('.navigator-zoom output').textContent(),
         `${Math.round(before.scale * 100)}%`, 'zoom readout matches the restored camera');
-      assert.equal(await back(page).isDisabled(), true);
+      assert.equal(await workbenchCommandDisabled(page, 'back'), true);
       assert.equal(await page.locator('[data-workbench-view-id="image:motion-0"]').evaluate(node => node === document.activeElement || node.contains(document.activeElement)), true);
       const restored = await page.evaluate(() => ({ draft: localStorage.getItem(window.__motionKey), layouts: Object.fromEntries(Object.keys(localStorage)
         .filter(key => key.startsWith('inscape:workbench:layout:')).map(key => [key, JSON.parse(localStorage.getItem(key)).layout])) }));
@@ -179,8 +180,8 @@ const advance = (page, time = 700) => page.clock.runFor(time);
 async function begin(page, id = 'text:a') {
   await choose(page, id);
   assert.deepEqual(await page.evaluate(() => window.destinationSelection().ids), [id], 'lifetime fixture accepts the requested content selection');
-  assert.equal(await focus(page).isEnabled(), true, 'valid lifetime selection enables Focus before travel');
-  await focus(page).dispatchEvent('click');
+  assert.equal(!await workbenchCommandDisabled(page, 'focus'), true, 'valid lifetime selection enables Focus before travel');
+  await (await focus(page)).dispatchEvent('click');
 }
 
 const arrivalCamera = page => page.locator('main.system-workflow').first().evaluate(host => ({
@@ -224,8 +225,8 @@ for (const width of [1440, 390]) test(`Visitor arrival keeps native I targets an
     const saved = await page.evaluate(() => localStorage.getItem(window.__motionKey));
     await a.focus(); await a.press('Enter'); await arrived(page);
     const focused = await arrivalCamera(page); assert.notDeepEqual(focused, initial);
-    assert.equal(await focus(page).isDisabled(), true);
-    assert.equal(await page.locator('.workbench-view-controls__selection-count').count(), 0);
+    assert.equal(await workbenchCommandDisabled(page, 'focus'), true);
+    assert.equal(await page.locator('.workbench-selection').count(), 0);
     await b.focus(); await page.keyboard.press('i');
     await page.getByRole('dialog', { name: 'Inspect Image', exact: true }).waitFor();
     await page.keyboard.press('Escape'); await page.locator('.image-lift').waitFor({ state: 'detached' });
@@ -239,7 +240,7 @@ for (const width of [1440, 390]) test(`Visitor arrival keeps native I targets an
     sameCamera(await arrivalCamera(page), focused);
     await host.focus(); await page.keyboard.press('f'); await arrived(page);
     sameCamera(await arrivalCamera(page), initial);
-    assert.equal(await back(page).isDisabled(), true);
+    assert.equal(await workbenchCommandDisabled(page, 'back'), true);
     assert.equal(await page.evaluate(() => localStorage.getItem(window.__motionKey)), saved);
     assert.deepEqual(errors, []);
   } finally {
@@ -256,36 +257,35 @@ for (const width of [1440, 390]) test(`arrival releases Groups while Layers, Shi
     const errors = []; page.on('pageerror', error => errors.push(error.message));
     await mountArrivalReview(page, false);
     const { openSharedTool, closeSharedTool } = await import('./fixtures/shared-tools.mjs');
-    const groupsButton = page.getByRole('button', { name: 'Workbench groups', exact: true });
     const panel = page.locator('.workbench-groups');
-    await groupsButton.press('Enter');
+    await navigateWorkbench(page, 'groups');
     await panel.locator('[data-workbench-group-drop="workbench-group:arrival-empty"]').press('Enter');
     await page.getByRole('button', { name: 'Close Workbench groups', exact: true }).press('Enter');
     await openSharedTool(page, 'Layers');
     await page.getByRole('button', { name: 'Select Arrival A', exact: true }).press('Enter'); await settle(page);
-    assert.equal(await focus(page).isEnabled(), true, 'single Layers choice enables the global Focus control');
-    assert.match(await page.locator('.workbench-view-controls__selection-count').innerText(), /1 selected/);
+    assert.equal(!await workbenchCommandDisabled(page, 'focus'), true, 'single Layers choice enables the global Focus control');
+    assert.match(await page.locator('.workbench-selection').getAttribute('aria-label'), /1 selected/);
     const initial = await arrivalCamera(page), saved = await page.evaluate(() => localStorage.getItem(window.__motionKey));
-    await focus(page).press('Enter'); await arrived(page);
+    await (await focus(page)).press('Enter'); await arrived(page);
     const first = await arrivalCamera(page); assert.notDeepEqual(first, initial);
-    assert.equal(await focus(page).isDisabled(), true);
+    assert.equal(await workbenchCommandDisabled(page, 'focus'), true);
     assert.equal(await page.locator('.workbench-selection').count(), 0);
-    assert.equal(await page.locator('.workbench-view-controls__selection-count').count(), 0);
+    assert.equal(await page.locator('.workbench-selection').count(), 0);
     assert.equal(await page.locator('[data-image-module="image:arrival-a"] .image-module__window').getAttribute('data-active'), 'true');
     const transform = await openSharedTool(page, 'Transform');
     const widthInput = transform.getByRole('spinbutton', { name: 'Transform Width', exact: true });
     assert.equal(await widthInput.isEnabled(), true, 'arrived Image keeps working native module tools');
     assert.equal(Number(await widthInput.inputValue()), 200);
     await closeSharedTool(page, 'Transform');
-    await groupsButton.press('Enter'); await settle(page);
+    await navigateWorkbench(page, 'groups'); await settle(page);
     assert.equal(await panel.getByRole('button', { name: 'Add selection (0)', exact: true }).isDisabled(), true);
     sameCamera(await arrivalCamera(page), first);
     assert.equal(await page.evaluate(() => localStorage.getItem(window.__motionKey)), saved, 'opening Groups does not write content');
     await openSharedTool(page, 'Layers');
     await page.getByRole('button', { name: 'Select Arrival B', exact: true }).press('Enter'); await settle(page);
-    assert.equal(await focus(page).isEnabled(), true);
+    assert.equal(!await workbenchCommandDisabled(page, 'focus'), true);
     assert.equal(await panel.getByRole('button', { name: 'Add selection (1)', exact: true }).isEnabled(), true, 'a conscious Layers choice restores membership actions');
-    await focus(page).press('Enter'); await arrived(page);
+    await (await focus(page)).press('Enter'); await arrived(page);
     assert.notDeepEqual(await arrivalCamera(page), first);
     assert.equal(await panel.getByRole('button', { name: 'Add selection (0)', exact: true }).isDisabled(), true);
     const b = page.locator('[data-image-module="image:arrival-b"] .image-module__canvas');
@@ -293,17 +293,17 @@ for (const width of [1440, 390]) test(`arrival releases Groups while Layers, Shi
     assert.equal(await panel.getByRole('button', { name: 'Add selection (1)', exact: true }).isEnabled(), true, 'first Shift after arrival selects B instead of removing it');
     await panel.getByRole('button', { name: 'New group', exact: true }).press('Enter');
     assert.equal(await panel.getByRole('button', { name: 'Create from selection', exact: true }).isEnabled(), true);
-    await focus(page).press('Enter'); await arrived(page);
+    await (await focus(page)).press('Enter'); await arrived(page);
     assert.equal(await panel.getByRole('button', { name: 'Create from selection', exact: true }).isDisabled(), true);
     assert.doesNotMatch(await panel.innerText(), /1 selected/);
     await page.getByRole('button', { name: 'Close Workbench groups', exact: true }).press('Enter');
-    await back(page).press('Enter'); await arrived(page);
+    await (await back(page)).press('Enter'); await arrived(page);
     sameCamera(await arrivalCamera(page), first);
-    assert.match(await page.locator('.workbench-view-controls__selection-count').innerText(), /1 selected/, 'Back restores the prior conscious module selection');
+    assert.match(await page.locator('.workbench-selection').getAttribute('aria-label'), /1 selected/, 'Back restores the prior conscious module selection');
     assert.equal(await b.evaluate(node => node === document.activeElement || node.closest('.image-module__window') === document.activeElement), true);
     await page.locator('main.system-workflow').first().focus(); await page.keyboard.press('f'); await arrived(page);
     sameCamera(await arrivalCamera(page), initial);
-    assert.equal(await back(page).isDisabled(), true);
+    assert.equal(await workbenchCommandDisabled(page, 'back'), true);
     assert.equal(await page.evaluate(() => localStorage.getItem(window.__motionKey)), saved);
     assert.deepEqual(errors, []);
   } finally {
@@ -324,14 +324,14 @@ test('camera journeys retarget, retain interrupted Back, and stop for input, loc
     assert.notDeepEqual(midway, original);
     assert.equal(await page.locator('[data-workbench-travelling]').count(), 1);
     await begin(page, 'text:b'); await advance(page);
-    await back(page).dispatchEvent('click'); await advance(page);
+    await (await back(page)).dispatchEvent('click'); await advance(page);
     sameCamera(await read(page), midway);
-    await back(page).dispatchEvent('click'); await advance(page, 100);
+    await (await back(page)).dispatchEvent('click'); await advance(page, 100);
     await page.locator('main').dispatchEvent('wheel', { deltaX: 17, deltaY: 31, bubbles: true, cancelable: true });
     const interrupted = await read(page); await advance(page);
     sameCamera(await read(page), interrupted);
-    assert.equal(await back(page).isEnabled(), true, 'an interrupted return is still available');
-    await back(page).dispatchEvent('click'); await advance(page);
+    assert.equal(!await workbenchCommandDisabled(page, 'back'), true, 'an interrupted return is still available');
+    await (await back(page)).dispatchEvent('click'); await advance(page);
     sameCamera(await read(page), original);
 
     await begin(page); await advance(page);
@@ -340,19 +340,19 @@ test('camera journeys retarget, retain interrupted Back, and stop for input, loc
     await page.keyboard.press('Escape'); await advance(page);
     assert.equal(await page.evaluate(() => window.destinationDismissed), true, 'module Escape runs before navigation');
     sameCamera(await read(page), inspecting);
-    assert.equal(await back(page).isEnabled(), true);
+    assert.equal(!await workbenchCommandDisabled(page, 'back'), true);
     await page.locator('main').focus(); await page.keyboard.press('Escape'); await advance(page);
     sameCamera(await read(page), original);
 
     await page.evaluate(() => window.destinationChoose(['text:a', 'text:b']));
-    await focus(page).dispatchEvent('click'); await advance(page);
+    await (await focus(page)).dispatchEvent('click'); await advance(page);
     const framed = await page.locator('[data-workbench-view-id]').evaluateAll(nodes => nodes.map(node => {
       const { left, top, right, bottom } = node.getBoundingClientRect(); return { left, top, right, bottom };
     }));
     const rail = await page.locator('.workbench-view-controls').boundingBox();
     for (const rect of framed) assert.ok(rect.left >= 0 && rect.top >= 0 && rect.right <= 1200 && rect.bottom <= rail.y,
       `every selected module fits above the navigation: ${JSON.stringify(rect)}`);
-    await back(page).dispatchEvent('click'); await advance(page);
+    await (await back(page)).dispatchEvent('click'); await advance(page);
     sameCamera(await read(page), original);
 
     await begin(page); await advance(page, 160);
@@ -362,7 +362,7 @@ test('camera journeys retarget, retain interrupted Back, and stop for input, loc
     await page.mouse.move(631, 323); await page.mouse.up(); await page.keyboard.up('Space');
     await advance(page);
     sameCamera(await read(page), { scale: panOrigin.scale, offset: { x: panOrigin.offset.x + 31, y: panOrigin.offset.y + 23 } });
-    await back(page).dispatchEvent('click'); await advance(page);
+    await (await back(page)).dispatchEvent('click'); await advance(page);
     sameCamera(await read(page), original);
 
     for (const reason of ['pointer', 'keyboard', 'lock', 'blur', 'resize']) {
@@ -385,17 +385,17 @@ test('camera journeys retarget, retain interrupted Back, and stop for input, loc
       assert.deepEqual(afterStopped, stopped, `${reason} stops camera travel`);
       assert.equal(await page.locator('[data-workbench-travelling]').count(), 0);
       if (reason === 'lock') {
-        assert.equal(await back(page).isDisabled(), true);
+        assert.equal(await workbenchCommandDisabled(page, 'back'), true);
         await page.evaluate(() => window.destinationLock(false));
       }
-      await back(page).dispatchEvent('click'); await advance(page);
+      await (await back(page)).dispatchEvent('click'); await advance(page);
     }
 
     await begin(page); await advance(page, 160);
     await page.evaluate(() => window.destinationRemove(true)); await advance(page, 32);
     const removed = await read(page); await advance(page);
     sameCamera(await read(page), removed);
-    await back(page).dispatchEvent('click'); await advance(page);
+    await (await back(page)).dispatchEvent('click'); await advance(page);
     assert.equal(await page.locator('.workbench-selection').count(), 0, 'removed modules are not restored as selected');
     assert.equal(await page.locator('main').evaluate(node => node === document.activeElement), true);
 
@@ -404,18 +404,18 @@ test('camera journeys retarget, retain interrupted Back, and stop for input, loc
     const suspended = await read(page);
     await page.evaluate(() => window.destinationSuspend(false)); await advance(page);
     sameCamera(await read(page), suspended);
-    assert.equal(await back(page).isDisabled(), true);
+    assert.equal(await workbenchCommandDisabled(page, 'back'), true);
     await begin(page, 'text:b'); await advance(page, 100);
     await page.evaluate(() => window.destinationReplace()); await advance(page);
     sameCamera(await read(page), original);
-    assert.equal(await back(page).isDisabled(), true, 'a replacement Workbench has no old history or pending animation');
+    assert.equal(await workbenchCommandDisabled(page, 'back'), true, 'a replacement Workbench has no old history or pending animation');
     await begin(page); await advance(page, 120);
     await page.emulateMedia({ reducedMotion: 'reduce' }); await advance(page, 32);
     assert.equal(await page.locator('[data-workbench-travelling]').count(), 0, 'changing motion preference completes immediately');
-    assert.equal(await focus(page).isDisabled(), true);
+    assert.equal(await workbenchCommandDisabled(page, 'focus'), true);
     await page.locator('main').focus(); await page.keyboard.press('Escape'); await advance(page, 32);
     sameCamera(await read(page), original);
-    assert.equal(await back(page).isDisabled(), true);
+    assert.equal(await workbenchCommandDisabled(page, 'back'), true);
     assert.deepEqual(errors, []);
   } finally { await browser.close(); }
 });
@@ -453,7 +453,7 @@ test('zoom percentage follows Focus, wheel, reset, Back and interrupted travel',
       await page.getByRole('slider', { name: 'Workbench zoom', exact: true }).fill('100');
       await advance(page, 32); await check('percentage reset');
       near((await read(page)).scale, 1, 'reset restores native zoom');
-      await back(page).dispatchEvent('click'); await advance(page, 160); await check('during Back');
+      await (await back(page)).dispatchEvent('click'); await advance(page, 160); await check('during Back');
       await advance(page); await check('after Back');
       await wheel(90); await check('wheel after Back');
       await begin(page); await advance(page, 160);

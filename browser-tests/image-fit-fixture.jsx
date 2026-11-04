@@ -1,13 +1,13 @@
 import WorkbenchToolDocks from '../src/public/ownerSystemWorkflow/WorkbenchToolDocks.jsx';
 import { createToolDockLayout, createToolDockStore } from '../src/public/ownerSystemWorkflow/workbenchToolDockState.js';
-import React, { useRef, useState, useSyncExternalStore } from 'react';
+import React, { useRef, useEffect, useState, useSyncExternalStore } from 'react';
 import { createRoot } from 'react-dom/client';
 import ImageWorkbench from '../src/imageModule/ImageWorkbench.jsx';
 import { WorkbenchViewProvider, WorkbenchViewControls, useWorkbenchView } from '../src/public/ownerSystemWorkflow/WorkbenchView.jsx';
 import { useWorkbenchCamera } from '../src/public/ownerSystemWorkflow/WorkbenchCamera.jsx';
 import { WorkbenchPlacement } from '../src/public/ownerSystemWorkflow/WorkbenchPlacement.jsx';
 import Grid from '../src/public/ownerSystemWorkflow/WorkbenchAlignmentGrid.jsx';
-import { ContextActionBars, ContextToolbar, ContextToolbarProvider } from '../src/public/ownerSystemWorkflow/ContextToolbar.jsx';
+import { ContextToolbar, ContextToolbarProvider } from '../src/public/ownerSystemWorkflow/ContextToolbar.jsx';
 import { SharedDisplayToolsProvider } from '../src/public/ownerSystemWorkflow/SharedDisplayTools.jsx';
 import { createSystemWorkflowDraftStore, systemWorkflowDraftKey } from '../src/systemWorkflow/systemWorkflowDraftStore.js';
 import { buildProfileDocumentV9Asset } from '../src/profileDocument/domain/profileDocumentV9Asset.js';
@@ -45,10 +45,11 @@ export function mount({ persistent = false } = {}) {
   function Scene({ draft, owner }) {
     const hostRef = useRef(null), view = useWorkbenchView(), camera = useWorkbenchCamera();
     const [target, setTarget] = useState('image:one');
-    const [dock] = useState(() => { const layout = createToolDockLayout(innerWidth); layout.hidden = ['Layers', 'Image', 'Shape', 'FX']; layout.groups[0].panes[0].active = 'Transform'; return createToolDockStore(layout); });
+    useEffect(() => { view.selectArtwork(target); }, [target, view.selectArtwork]);
+    const [dock] = useState(() => { const layout = createToolDockLayout(innerWidth); layout.hidden = ['Layers', 'Shape', 'FX']; layout.groups[0].panes[0].active = 'Image'; return createToolDockStore(layout); });
     const [preferences, setPreferences] = useState({ edge: true, grid: true });
     const [single, setSingle] = useState(false);
-    Object.assign(api, { select: setTarget, single: setSingle, setPreferences, selection: view.setSelection,
+    Object.assign(api, { select: id => { setTarget(id); view.selectArtwork(id); }, single: setSingle, setPreferences, selection: view.setSelection,
       camera: (scale, offset) => { view.setScale(scale); camera.setOffset(offset); },
       frame: id => ({ ...view.frames.get(id)?.current }),
     });
@@ -57,7 +58,7 @@ export function mount({ persistent = false } = {}) {
         <Grid mode="DOTS" color="#111313" /><WorkbenchViewControls hostRef={hostRef} />
         <ImageWorkbench records={single ? draft.imageModules.slice(0, 1) : draft.imageModules} presentations={draft.workbench.imageModules}
           store={owner ? store : null} profileAddress={profileAddress} onActivate={setTarget} />
-        {owner && <><div style={{ position: 'fixed', bottom: 16, left: 16, maxWidth: 'calc(100% - 32px)' }}><ContextActionBars /></div><ContextToolbar /><WorkbenchToolDocks controller={dock} hostRef={hostRef} /></>}
+        {owner && <><ContextToolbar /><WorkbenchToolDocks controller={dock} hostRef={hostRef} /></>}
       </main>
     </WorkbenchPlacement></SharedDisplayToolsProvider></ContextToolbarProvider>;
   }

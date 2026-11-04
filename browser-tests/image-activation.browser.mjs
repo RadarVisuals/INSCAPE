@@ -1,3 +1,4 @@
+import { openSharedTool } from './fixtures/shared-tools.mjs';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { mkdir } from 'node:fs/promises';
@@ -38,13 +39,14 @@ for (const width of [1440, 390]) test(`Image activation preserves pointer/keyboa
     await second.locator('.image-module__canvas').focus(); await settle(page);
     assert.equal(await second.getAttribute('data-active'), 'true', 'keyboard focus activates the other Image');
     assert.equal(await first.getAttribute('data-active'), null);
-    const actions = page.locator('[data-context-action-bars] [data-context-action-target]');
+    await openSharedTool(page, 'Image');
+    const actions = page.locator('.workbench-image-tools');
     await actions.waitFor();
-    assert.equal(await actions.getAttribute('data-context-action-target'), 'image:activation-1');
-    await page.mouse.click(4, 4); await settle(page);
+    assert.equal(await actions.getAttribute('data-workbench-inspection-target'), 'image:activation-1');
+    await page.mouse.click(4, 64); await settle(page);
     assert.equal(await first.getAttribute('data-active'), null);
     assert.equal(await second.getAttribute('data-active'), null);
-    assert.equal(await page.locator('[data-context-action-bars]').isVisible(), false, 'empty Workbench space clears tools');
+    assert.equal(await page.locator('.workbench-image-tools button').count(), 0, 'empty Workbench space clears tools');
     const canvas = first.locator('.image-module__canvas');
     await canvas.focus(); await settle(page);
     assert.equal(await canvas.evaluate(node => node === document.activeElement), true, 'keyboard keeps focus on its original control');

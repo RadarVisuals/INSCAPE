@@ -1,6 +1,6 @@
 import { useCallback, useState, useSyncExternalStore } from 'react';
 import LibraryWorkspace from '../public/ownerSystemWorkflow/OwnerSystemWorkflowLibraryWorkspace.jsx';
-import ToolPanel from '../ui/ToolPanel.jsx';
+import ToolPanel from '../public/ownerSystemWorkflow/WorkbenchToolPanel.jsx';
 import './profileLibraryPicker.css';
 
 const subscribeNone = () => () => {};
@@ -20,6 +20,7 @@ export default function ProfileLibraryPicker({ library, onClose, placementScope,
   };
   const handlePlacing = useCallback(next => { setPlacing(next); onPlacingChange?.(next); }, [onPlacingChange]);
   return <ToolPanel title="Library" label="Library" closeLabel="Close Library" onClose={onClose} chrome="flat"
+    data-workflow-material="tactile" data-workflow-finish="flat" data-workbench-selection-tools
     className={`reception-library-window workbench-tool-controls${placing ? ' is-placing' : ''}`}
     frame={frames.library || initial} onFrameChange={updateFrame} boundsRef={boundsRef} active={active} onActivate={onActivate}
     minimumWidth={280} minimumHeight={300}>

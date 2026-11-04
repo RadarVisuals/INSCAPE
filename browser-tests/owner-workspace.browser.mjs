@@ -160,7 +160,7 @@ test('portrait margins contract while prepared docked tools stay above the artwo
     assert.equal(await page.locator('[data-canvas-journey-target]').evaluate(node => getComputedStyle(node).opacity), '0', 'the empty destination frame cannot pop in');
     const savedDuringFade = await page.evaluate(() => JSON.stringify(window.savedDraft()));
     await page.keyboard.press('Control+k'); await page.keyboard.press('Control+z'); await page.keyboard.press('Delete');
-    assert.equal(await page.getByRole('textbox', { name: 'Search actions', exact: true }).count(), 0, 'outgoing toolbar shortcuts are suspended');
+    assert.equal(await page.getByRole('textbox', { name: 'Search commands', exact: true }).count(), 0, 'outgoing toolbar shortcuts are suspended');
     assert.equal(await page.evaluate(() => JSON.stringify(window.savedDraft())), savedDuringFade);
     await page.screenshot({ path: `${output}/portrait-returning.png` });
     await page.evaluate(() => window.returnAnimations.forEach(animation => animation.play()));

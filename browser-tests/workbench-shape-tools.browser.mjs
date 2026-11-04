@@ -1,4 +1,5 @@
 import test from 'node:test';
+import { artworkCommand } from './fixtures/artwork-menu.mjs';
 import assert from 'node:assert/strict';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { chromium } from 'playwright-core';
@@ -75,9 +76,10 @@ test('Shape settings replace Properties, follow selection, preserve saved edits 
     assert.equal(await page.locator('.workbench-tool-dock').count(), 1);
     panel = await openSharedTool(page, 'Shape');
     await panel.getByRole('button', { name: 'Close Shape', exact: true }).click();
+    panel = await openSharedTool(page, 'Shape');
     await failStorage(page, true);
-    await page.getByRole('navigation', { name: 'Shape actions', exact: true }).getByRole('button', { name: 'Duplicate shape', exact: true }).click();
-    await page.locator('[data-context-action-bars]').getByRole('alert').waitFor();
+    await artworkCommand(page, (await saved(page)).shapes[0].id, 'Duplicate');
+    await page.getByRole('alert').filter({ hasText: /could not be saved/u }).waitFor();
     assert.deepEqual((await saved(page)).shapes, original.shapes);
     await failStorage(page, false);
     panel = await openSharedTool(page, 'Shape');
@@ -90,7 +92,9 @@ test('Shape settings replace Properties, follow selection, preserve saved edits 
     assert.equal(await panel.getByRole('tab', { name: 'Shape', exact: true }).getAttribute('aria-selected'), 'true');
     assert.equal(await panel.getByRole('textbox', { name: 'Shape name', exact: true }).inputValue(), 'Grid');
     assert.equal(await panel.getByRole('slider').count(), 0);
-    await page.locator('[data-image-module="image:body"] .image-module__canvas').click({ position: { x: 20, y: 20 } });
+    await openSharedTool(page, 'Layers');
+    await page.getByRole('button', { name: 'Select Body', exact: true }).click();
+    panel = await openSharedTool(page, 'Shape');
     await panel.getByText('Select one Shape to edit its settings.').waitFor();
     assert.equal(await panel.getByRole('combobox').count(), 0);
     assert.deepEqual((await saved(page)).shapes, original.shapes);
@@ -160,7 +164,7 @@ test('Grid and texture settings retain their behavior in a narrow dock, includin
       assert.ok(tab.x >= strip.x - 1 && tab.x + tab.width <= strip.x + strip.width + 1, `${name} is scrolled into view`);
       assert.equal(await target.getAttribute('aria-selected'), 'true');
       assert.equal(await target.evaluate(node => node === document.activeElement), true, `${name} owns keyboard focus`);
-      assert.equal(await panel.locator('.workbench-tool-panel-close').getAttribute('aria-label'), `Close ${name === 'Layers' ? 'Workbench Layers' : name}`);
+      assert.equal(await panel.getByRole('button', { name: /^Close / }).getAttribute('aria-label'), `Close ${name === 'Layers' ? 'Workbench Layers' : name}`);
     };
     await checkTab('Shape');
     await page.getByRole('tab', { name: 'Shape', exact: true }).focus(); await page.keyboard.press('Home');

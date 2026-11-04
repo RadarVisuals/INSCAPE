@@ -14,7 +14,7 @@ import './workbenchNavigationTools.css';
 const empty = Object.freeze({});
 const noSubscribe = () => () => {};
 
-export default function WorkbenchIndex({ hostRef, navigation, sceneRef, entryTarget }) {
+export default function WorkbenchIndex({ hostRef, navigation, sceneRef, entryTarget, showTrigger = true }) {
   const { bounds: areaBounds } = useWorkbenchArea();
   const view = useWorkbenchView(), owner = Boolean(view.store);
   const { setSelection } = view;
@@ -130,5 +130,5 @@ export default function WorkbenchIndex({ hostRef, navigation, sceneRef, entryTar
       {error && <p role="alert">{error}</p>}
     </WorkbenchWindow>
   </div>, hostRef.current);
-  return <><button className="workflow-tactile-control" type="button" aria-label="Toggle Index" aria-expanded={open} disabled={navigation.locked} onClick={toggle}>Index</button>{panel}</>;
+  return <>{showTrigger && <button className="workflow-tactile-control" type="button" aria-label="Toggle Index" aria-expanded={open} disabled={navigation.locked} onClick={toggle}>Index</button>}{panel}</>;
 }

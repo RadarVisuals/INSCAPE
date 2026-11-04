@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdir } from 'node:fs/promises';
 import { chromium } from 'playwright-core';
 import { browserExecutable } from '../scripts/browserEnvironment.mjs';
+import { setEditorSidebarOpen } from './fixtures/editor-menu.mjs';
 
 const origin = process.env.INSCAPE_TEXT_ROOT || 'http://127.0.0.1:24970';
 const output = process.env.INSCAPE_BROWSER_OUTPUT || '.browser-test-runtime/keeper-panel';
@@ -10,7 +11,7 @@ const material = node => {
   const style = getComputedStyle(node);
   return [style.backgroundColor, style.color, style.borderRadius, style.borderTopColor, style.boxShadow];
 };
-for (const [width, theme] of [[1440, 'mist'], [390, 'carbon']]) test(`Keeper uses the design-system dock and flat, bounded settings (${theme}, ${width}px)`, { timeout: 60000 }, async () => {
+for (const [width, theme] of [[1440, 'light'], [390, 'dark']]) test(`Keeper uses the design-system dock and flat, bounded settings (${theme}, ${width}px)`, { timeout: 60000 }, async () => {
   const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
   try {
     await mkdir(output, { recursive: true });
@@ -18,6 +19,7 @@ for (const [width, theme] of [[1440, 'mist'], [390, 'carbon']]) test(`Keeper use
     const errors = []; page.on('pageerror', error => errors.push(error.message));
     await page.route('**/*', route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
     await page.goto(`${origin}/browser-tests/tool-chrome-fixture.html?sample=keeper&theme=${theme}`);
+    await setEditorSidebarOpen(page, false);
     const dock = page.locator('.keeper-dock-window'), settings = page.locator('.keeper-settings-window');
     await dock.waitFor(); await page.evaluate(() => document.fonts.ready);
     const before = await page.evaluate(() => window.readToolChromeDraft());
@@ -63,7 +65,7 @@ for (const [width, theme] of [[1440, 'mist'], [390, 'carbon']]) test(`Keeper use
     const dockMaterial = await dock.evaluate(material);
     const slot = await dock.locator('.keeper-dock-artwork--empty').evaluate(node => ({ width: node.clientWidth, height: node.clientHeight, border: getComputedStyle(node).borderTopStyle }));
     await page.goto(`${origin}/design-system.html#components`);
-    await page.getByLabel('Preview surface').selectOption(theme);
+    await page.getByRole('group', { name: 'Interface appearance', exact: true }).getByRole('button', { name: theme.toUpperCase(), exact: true }).click();
     const reference = page.getByRole('region', { name: 'Keeper dock preview', exact: true });
     assert.deepEqual(await reference.evaluate(material), dockMaterial, 'the live dock matches the actual reference material');
     assert.deepEqual(await reference.locator('.keeper-dock-artwork--empty').evaluate(node => ({ width: node.clientWidth, height: node.clientHeight, border: getComputedStyle(node).borderTopStyle })), slot);

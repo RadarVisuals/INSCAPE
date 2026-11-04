@@ -1,12 +1,12 @@
 import { createElement, isValidElement, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
-import { ArrowLeft, ChevronDown, ChevronRight, Command, Hand, Image, Info, Layers, MousePointer2, Plus, Search, Shapes, Type } from 'lucide-react';
+import { ArrowLeft, ChevronDown, ChevronRight, Hand, Image, Layers, MousePointer2, Plus, Search, Shapes, Type } from 'lucide-react';
 import './workflowTactile.css';
 import './workflowFlat.css';
 import './workbenchToolbar.css';
 import { isShapeCommand } from '../../shapes/shapes.js';
 
 const EMPTY_COMMANDS = [];
-const POPUP_LABELS = { actions: 'Actions', add: 'Add module', shapes: 'Shapes' };
+const POPUP_LABELS = { commands: 'Search commands', add: 'Add module', shapes: 'Shapes' };
 
 function searchCommands(commands, query, parents = [], unavailable = null) {
   return commands.flatMap(command => {
@@ -27,10 +27,10 @@ function CommandIcon({ icon }) {
 export default function WorkbenchToolbar({
   activeTool = 'select', onToolChange, onOpenLibrary, libraryOpen = false,
   actions = EMPTY_COMMANDS, addCommands = EMPTY_COMMANDS, shapeCommands = EMPTY_COMMANDS,
-  layers, info, hidden = false, actionRequest = 0, before,
+  layers, hidden = false, searchRequest = null, searchScopeRef, searchEnabled = true,
 }) {
   const rootRef = useRef(null), barRef = useRef(null), popupRef = useRef(null), searchRef = useRef(null);
-  const triggerRef = useRef(null), actionsRef = useRef(null), requestRef = useRef(actionRequest);
+  const triggerRef = useRef(null), requestRef = useRef(searchRequest);
   const [popup, setPopup] = useState(null), [path, setPath] = useState([]), [query, setQuery] = useState('');
   const popupId = useId();
   const roots = popup === 'add' ? addCommands : popup === 'shapes' ? shapeCommands : actions;
@@ -60,7 +60,7 @@ export default function WorkbenchToolbar({
     const bar = rootRef.current;
     if (!bar) return;
     // Popup clearance belongs to this toolbar. Writing inherited geometry on
-    // the entire Workbench invalidates every article when action rows change.
+    // the entire Workbench invalidates every article when its geometry changes.
     const previous = bar.style.getPropertyValue('--workbench-toolbar-clearance');
     const measure = () => {
       const rectangle = bar.getBoundingClientRect();
@@ -79,23 +79,40 @@ export default function WorkbenchToolbar({
   }, [hidden]);
 
   useEffect(() => {
-    if (actionRequest === requestRef.current) return;
-    requestRef.current = actionRequest;
-    if (!hidden) open('actions', actionsRef.current);
-  }, [actionRequest, hidden]);
-  useEffect(() => { if (hidden) { setPopup(null); setPath([]); setQuery(''); } }, [hidden]);
+    if (searchRequest === requestRef.current) return;
+    requestRef.current = searchRequest;
+    if (searchEnabled && searchRequest) { onToolChange?.('select'); open('commands', searchRequest.trigger); }
+  }, [searchRequest, searchEnabled, onToolChange]);
+  useEffect(() => {
+    if (hidden) { setPopup(current => current === 'commands' ? current : null); setPath([]); setQuery(''); }
+  }, [hidden]);
+  useEffect(() => {
+    if (!searchEnabled) { setPopup(null); setPath([]); setQuery(''); }
+  }, [searchEnabled]);
+  useEffect(() => {
+    if (!searchEnabled) return;
+    const key = event => {
+      const scope = searchScopeRef?.current || rootRef.current?.closest('main') || rootRef.current?.parentElement;
+      if (!scope?.contains(event.target) || event.defaultPrevented || event.isComposing || event.altKey
+        || !(event.ctrlKey || event.metaKey) || event.key.toLowerCase() !== 'k'
+        || event.target.closest('input,textarea,select,[contenteditable=true],[role=textbox],iframe,[data-immersive]')) return;
+      event.preventDefault(); event.stopPropagation();
+      const trigger = event.target; onToolChange?.('select'); open('commands', trigger);
+    };
+    document.addEventListener('keydown', key, true);
+    return () => document.removeEventListener('keydown', key, true);
+  }, [searchEnabled, searchScopeRef, onToolChange]);
   useLayoutEffect(() => {
-    if (!popup || hidden) return;
-    if (popup === 'actions') searchRef.current?.focus({ preventScroll: true });
+    if (!popup) return;
+    if (popup === 'commands') searchRef.current?.focus({ preventScroll: true });
     else popupRef.current?.querySelector('[data-toolbar-command]:not(:disabled), [data-toolbar-back]')?.focus({ preventScroll: true });
-  }, [popup, path, hidden]);
+  }, [popup, path]);
 
   useEffect(() => {
-    if (!popup || hidden) return;
+    if (!popup) return;
     const outside = event => {
       if (!rootRef.current?.contains(event.target)) { setPopup(null); setPath([]); setQuery(''); }
     };
-    // Capture Escape before the Workbench's selection/navigation handlers.
     const escape = event => {
       if (event.key !== 'Escape' || event.defaultPrevented) return;
       event.preventDefault(); event.stopPropagation();
@@ -110,7 +127,7 @@ export default function WorkbenchToolbar({
       document.removeEventListener('focusin', outside);
       document.removeEventListener('keydown', escape, true);
     };
-  }, [popup, hidden]);
+  }, [popup]);
 
   const choose = command => {
     if (command.disabled) return;
@@ -119,6 +136,7 @@ export default function WorkbenchToolbar({
     command.onSelect?.();
   };
   const navigatePopup = event => {
+    if (event.defaultPrevented) return;
     if (event.key === 'ArrowLeft' && path.length && event.target.tagName !== 'INPUT') {
       event.preventDefault(); event.stopPropagation(); setPath(current => current.slice(0, -1)); return;
     }
@@ -135,6 +153,7 @@ export default function WorkbenchToolbar({
     buttons[next]?.scrollIntoView({ block: 'nearest' });
   };
   const navigateToolbar = event => {
+    if (!event.target.closest('button')) return;
     if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
     event.preventDefault(); event.stopPropagation();
     const buttons = [...barRef.current.querySelectorAll('button:not(:disabled)')];
@@ -150,12 +169,12 @@ export default function WorkbenchToolbar({
     <Icon aria-hidden="true" /><span>{label}</span>{name === 'shapes' && <ChevronDown className="workbench-toolbar__chevron" aria-hidden="true" />}
   </button>;
 
-  if (hidden) return null;
+  if (hidden && popup !== 'commands') return null;
   return <div ref={rootRef} className="workbench-toolbar" data-workbench-toolbar data-system-workflow-overlay
     data-workflow-material="tactile" data-workflow-finish="flat">
     {popup && <section ref={popupRef} id={popupId} className="workbench-toolbar__popup" role="dialog" aria-label={title} onKeyDown={navigatePopup}>
-      {popup === 'actions' && <div className="workbench-toolbar__search">
-        <Search aria-hidden="true" /><input ref={searchRef} aria-label="Search actions" placeholder="Search actions…" value={query}
+      {popup === 'commands' && <div className="workbench-toolbar__search">
+        <Search aria-hidden="true" /><input ref={searchRef} aria-label="Search commands" placeholder="Search commands…" value={query}
           autoComplete="off" spellCheck={false} onChange={event => setQuery(event.target.value)}
           onKeyDown={event => { if (event.key === 'Enter') { const command = visibleCommands.find(item => !item.disabled); if (command) { event.preventDefault(); choose(command); } } }} />
       </div>}
@@ -175,11 +194,10 @@ export default function WorkbenchToolbar({
             {command.children?.length ? <ChevronRight aria-hidden="true" /> : command.shortcut ? <kbd>{command.shortcut}</kbd> : null}
           </button>
         </div>)}
-        {!visibleCommands.length && <p className="workbench-toolbar__empty">{normalizedQuery ? 'No matching actions.' : 'No commands available.'}</p>}
+        {!visibleCommands.length && <p className="workbench-toolbar__empty">{normalizedQuery ? 'No matching commands.' : 'No commands available.'}</p>}
       </div>
     </section>}
-    {before}
-    <div ref={barRef} className="workbench-toolbar__bar" role="toolbar" aria-label="Creation tools" onKeyDown={navigateToolbar}>
+    <div hidden={hidden} ref={barRef} className="workbench-toolbar__bar" role="toolbar" aria-label="Creation tools" onKeyDown={navigateToolbar}>
       {[['select', 'Select', 'V', MousePointer2], ['hand', 'Hand', 'H', Hand], ['text', 'Text', 'T', Type]].map(([id, label, key, Icon]) =>
         <button key={id} type="button" className={`workbench-toolbar__button workbench-toolbar__button--${id} workflow-tactile-control`} aria-label={`${label} tool`} aria-keyshortcuts={key}
           title={id === 'hand' ? 'Hand · H — Drag to explore with momentum. Click artwork to focus its module; module positions stay fixed.' : `${label} · ${key}`} aria-pressed={activeTool === id} onClick={() => { close(); onToolChange?.(id); }}>
@@ -188,11 +206,9 @@ export default function WorkbenchToolbar({
       {menuButton('shapes', Shapes, 'Shapes', { 'data-active': isShapeCommand(activeTool) || undefined })}
       <button type="button" className="workbench-toolbar__button workflow-tactile-control" aria-label="Artwork library" title="Artwork library" aria-pressed={libraryOpen}
         onClick={event => { close(); onOpenLibrary?.(event.currentTarget); }}><Image aria-hidden="true" /><span>Artwork</span></button>
-      {[['Layers', Layers, layers], ['Artwork info', Info, info]].map(([label, Icon, inspector]) =>
-        <button key={label} type="button" className="workbench-toolbar__button workflow-tactile-control" aria-label={label} title={inspector?.reason || label}
-          disabled={!inspector?.enabled} aria-pressed={Boolean(inspector?.open)}
-          onClick={() => { close(); inspector?.onToggle?.(); }}><Icon aria-hidden="true" /><span>{label === 'Artwork info' ? 'Info' : label}</span></button>)}
-      {menuButton('actions', Command, 'Actions', { ref: actionsRef, title: 'Actions · Ctrl / ⌘ K', 'aria-keyshortcuts': 'Control+k Meta+k' })}
+      <button type="button" className="workbench-toolbar__button workflow-tactile-control" aria-label="Layers" title={layers?.reason || 'Layers'}
+        disabled={!layers?.enabled} aria-pressed={Boolean(layers?.open)}
+        onClick={() => { close(); layers?.onToggle?.(); }}><Layers aria-hidden="true" /><span>Layers</span></button>
       {menuButton('add', Plus, 'Add')}
     </div>
   </div>;

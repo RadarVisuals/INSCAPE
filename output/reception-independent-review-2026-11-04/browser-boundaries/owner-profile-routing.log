@@ -1,0 +1,1503 @@
+TAP version 13
+# Browser lifecycle +8ms setup:start deadlineMs=60000
+# Browser lifecycle +26741ms setup:failed code=ETIMEDOUT
+# Browser lifecycle +26741ms cleanup:start rootPid=not-started deadlineMs=35000
+# Browser lifecycle +26741ms cleanup:routes:start
+# Browser lifecycle +26742ms cleanup:routes:complete
+# Browser lifecycle +26742ms cleanup:page-cdp:start
+# Browser lifecycle +26742ms cleanup:page-cdp:complete
+# Browser lifecycle +26742ms cleanup:context:start
+# Browser lifecycle +26742ms cleanup:context:complete
+# Browser lifecycle +26742ms cleanup:browser:start
+# Browser lifecycle +26742ms cleanup:browser:complete
+# Browser lifecycle +26742ms cleanup:browser-server:start
+# Browser lifecycle +65118ms cleanup:browser-server:failed code=ETIMEDOUT
+# Browser lifecycle +65118ms cleanup:vite:start
+# Subtest: owner/viewed-profile routing through the real App
+    # Subtest: pending implicit authority is neutral and makes no publication, owner graph, or owner storage request
+    not ok 1 - pending implicit authority is neutral and makes no publication, owner graph, or owner storage request
+      ---
+      duration_ms: 0
+      type: 'test'
+      location: 'C:\\Users\\Hidden Swarm\\Documents\\ChatGPT\\inscape\\remediation-2026-10-19-shared-checkpoint\\work\\browser-tests\\owner-profile-routing.browser.mjs:177:3'
+      failureType: 'cancelledByParent'
+      error: 'test did not finish before its parent and was cancelled'
+      code: 'ERR_TEST_FAILURE'
+      ...
+    # Subtest: root A to B, explicit visitor, RETURN, and Back/Forward preserve URL intent
+    not ok 2 - root A to B, explicit visitor, RETURN, and Back/Forward preserve URL intent
+      ---
+      duration_ms: 0
+      type: 'test'
+      location: 'C:\\Users\\Hidden Swarm\\Documents\\ChatGPT\\inscape\\remediation-2026-10-19-shared-checkpoint\\work\\browser-tests\\owner-profile-routing.browser.mjs:205:3'
+      failureType: 'cancelledByParent'
+      error: 'test did not finish before its parent and was cancelled'
+      code: 'ERR_TEST_FAILURE'
+      ...
+    # Subtest: owner Reception shows saved local content and returns without disconnecting or changing compositions
+    not ok 3 - owner Reception shows saved local content and returns without disconnecting or changing compositions
+      ---
+      duration_ms: 0
+      type: 'test'
+      location: 'C:\\Users\\Hidden Swarm\\Documents\\ChatGPT\\inscape\\remediation-2026-10-19-shared-checkpoint\\work\\browser-tests\\owner-profile-routing.browser.mjs:244:3'
+      failureType: 'cancelledByParent'
+      error: 'test did not finish before its parent and was cancelled'
+      code: 'ERR_TEST_FAILURE'
+      ...
+    # Subtest: signed-out root, profile fallback, and unpublished explicit visitor have exact return semantics
+    not ok 4 - signed-out root, profile fallback, and unpublished explicit visitor have exact return semantics
+      ---
+      duration_ms: 0
+      type: 'test'
+      location: 'C:\\Users\\Hidden Swarm\\Documents\\ChatGPT\\inscape\\remediation-2026-10-19-shared-checkpoint\\work\\browser-tests\\owner-profile-routing.browser.mjs:406:3'
+      failureType: 'cancelledByParent'
+      error: 'test did not finish before its parent and was cancelled'
+      code: 'ERR_TEST_FAILURE'
+      ...
+    # Subtest: explicit disconnect opens Discover from the Workbench and preserves public visitor destinations
+    not ok 5 - explicit disconnect opens Discover from the Workbench and preserves public visitor destinations
+      ---
+      duration_ms: 0
+      type: 'test'
+      location: 'C:\\Users\\Hidden Swarm\\Documents\\ChatGPT\\inscape\\remediation-2026-10-19-shared-checkpoint\\work\\browser-tests\\owner-profile-routing.browser.mjs:444:3'
+      failureType: 'cancelledByParent'
+      error: 'test did not finish before its parent and was cancelled'
+      code: 'ERR_TEST_FAILURE'
+      ...
+    1..5
+not ok 1 - owner/viewed-profile routing through the real App
+  ---
+  duration_ms: 65248.0463
+  type: 'suite'
+  location: 'C:\\Users\\Hidden Swarm\\Documents\\ChatGPT\\inscape\\remediation-2026-10-19-shared-checkpoint\\work\\browser-tests\\owner-profile-routing.browser.mjs:125:1'
+  failureType: 'hookFailed'
+  error: 'Browser setup failed and cleanup also failed'
+  code: 'ERR_TEST_FAILURE'
+  name: 'AggregateError'
+  stack: |-
+    runBrowserSetupWithCleanup (file:///C:/Users/Hidden%20Swarm/Documents/ChatGPT/inscape/remediation-2026-10-19-shared-checkpoint/work/browser-tests/browser-test-lifecycle.mjs:394:13)
+    async TestHook.run (node:internal/test_runner/test:1404:7)
+    async Suite.runHook (node:internal/test_runner/test:1284:9)
+    async Suite.run (node:internal/test_runner/test:1883:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3)
+  ...
+# Error:   Failed to scan for dependencies from entries:
+#   C:/Users/Hidden Swarm/Documents/ChatGPT/inscape/remediation-2026-10-19-shared-checkpoint/work/index.html
+# C:/Users/Hidden Swarm/Documents/ChatGPT/inscape/remediation-2026-10-19-shared-checkpoint/work/mini-app-host.html
+# C:/Users/Hidden Swarm/Documents/ChatGPT/inscape/remediation-2026-10-19-shared-checkpoint/work/browser-tests/colour-eyedropper-fixture.html
+# C:/Users/Hidden Swarm/Documents/ChatGPT/inscape/remediation-2026-10-19-shared-checkpoint/work/browser-tests/composition-index-fixture.html
+# C:/Users/Hidden Swarm/Documents/ChatGPT/inscape/remediation-2026-10-19-shared-checkpoint/work/browser-tests/controller-hardening-fixture.html
+# C:/Users/Hidden Swarm/Documents/ChatGPT/inscape/remediation-2026-10-19-shared-checkpoint/work/browser-tests/discover-style-fixture.html
+# C:/Users/Hidden Swarm/Documents/ChatGPT/inscape/remediation-2026-10-19-shared-checkpoint/work/browser-tests/filled-workbench-performance-fixture.html
+# C:/Users/Hidden Swarm/Documents/ChatGPT/inscape/remediation-2026-10-19-shared-checkpoint/work/browser-tests/fixture.html
+# C:/Users/Hidden Swarm/Documents/ChatGPT/inscape/remediation-2026-10-19-shared-checkpoint/work/browser-tests/grid-resize-release-fixture.html
+# C:/Users/Hidden Swarm/Documents/ChatGPT/inscape/remediation-2026-10-19-shared-checkpoint/work/browser-tests/keeper-ai-responsive.html
+# C:/Users/Hidden Swarm/Documents/ChatGPT/inscape/remediation-2026-10-19-shared-checkpoint/work/browser-tests/keeper-ai.html
+# C:/Users/Hidden Swarm/Documents/ChatGPT/inscape/remediation-2026-10-19-shared-checkpoint/work/browser-tests/keeper-reactions-simulation.html
+# C:/Users/Hidden Swarm/Documents/ChatGPT/inscape/remediation-2026-10-19-shared-checkpoint/work/browser-tests/keeper-snake.html
+# C:/Users/Hidden Swarm/Documents/ChatGPT/inscape/remediation-2026-10-19-shared-checkpoint/work/browser-tests/library-images-fixture.html
+# C:/Users/Hidden Swarm/Documents/ChatGPT/inscape/remediation-2026-10-19-shared-checkpoint/work/browser-tests/library-progressive-fixture.html
+# C:/Users/Hidden Swarm/Documents/ChatGPT/inscape/remediation-2026-10-19-shared-checkpoint/work/browser-tests/library-recovery-fixture.html
+# C:/Users/Hidden Swarm/Documents/ChatGPT/inscape/remediation-2026-10-19-shared-checkpoint/work/browser-tests/library-storage-fixture.html
+# C:/Users/Hidden Swarm/Documents/ChatGPT/inscape/remediation-2026-10-19-shared-checkpoint/work/browser-tests/nomad-visibility-fixture.html
+# C:/Users/Hidden Swarm/Documents/ChatGPT/inscape/remediation-2026-10-19-shared-checkpoint/work/browser-tests/profile-overview-fixture.html
+# C:/Users/Hidden Swarm/Documents/ChatGPT/inscape/remediation-2026-10-19-shared-checkpoint/work/browser-tests/provider-lifecycle-fixture.html
+# C:/Users/Hidden Swarm/Documents/ChatGPT/inscape/remediation-2026-10-19-shared-checkpoint/work/browser-tests/publication-recovery-fixture.html
+# C:/Users/Hidden Swarm/Documents/ChatGPT/inscape/remediation-2026-10-19-shared-checkpoint/work/browser-tests/reception-boundaries-fixture.html
+# C:/Users/Hidden Swarm/Documents/ChatGPT/inscape/remediation-2026-10-19-shared-checkpoint/work/browser-tests/reception-editor-fixture.html
+# C:/Users/Hidden Swarm/Documents/ChatGPT/inscape/remediation-2026-10-19-shared-checkpoint/work/browser-tests/reception-layer-order-fixture.html
+# C:/Users/Hidden Swarm/Documents/ChatGPT/inscape/remediation-2026-10-19-shared-checkpoint/work/browser-tests/reception-linked-fixture.html
+# C:/Users/Hidden Swarm/Documents/ChatGPT/inscape/remediation-2026-10-19-shared-checkpoint/work/browser-tests/reception-native-editor-fixture.html
+# C:/Users/Hidden Swarm/Documents/ChatGPT/inscape/remediation-2026-10-19-shared-checkpoint/work/browser-tests/reception-rich-cell-fixture.html
+# C:/Users/Hidden Swarm/Documents/ChatGPT/inscape/remediation-2026-10-19-shared-checkpoint/work/browser-tests/regression-review-2026-10-21.html
+# C:/Users/Hidden Swarm/Documents/ChatGPT/inscape/remediation-2026-10-19-shared-checkpoint/work/browser-tests/removed-mobile-fixture.html
+# C:/Users/Hidden Swarm/Documents/ChatGPT/inscape/remediation-2026-10-19-shared-checkpoint/work/browser-tests/scene-boundaries-fixture.html
+# C:/Users/Hidden Swarm/Documents/ChatGPT/inscape/remediation-2026-10-19-shared-checkpoint/work/browser-tests/shape-patterns-fixture.html
+# C:/Users/Hidden Swarm/Documents/ChatGPT/inscape/remediation-2026-10-19-shared-checkpoint/work/browser-tests/startup-fixture.html
+# C:/Users/Hidden Swarm/Documents/ChatGPT/inscape/remediation-2026-10-19-shared-checkpoint/work/browser-tests/svg-lifecycle-fixture.html
+# C:/Users/Hidden Swarm/Documents/ChatGPT/inscape/remediation-2026-10-19-shared-checkpoint/work/browser-tests/svg-retention-fixture.html
+# C:/Users/Hidden Swarm/Documents/ChatGPT/inscape/remediation-2026-10-19-shared-checkpoint/work/browser-tests/text-frame-links-fixture.html
+# C:/Users/Hidden Swarm/Documents/ChatGPT/inscape/remediation-2026-10-19-shared-checkpoint/work/browser-tests/tool-chrome-fixture.html
+# C:/Users/Hidden Swarm/Documents/ChatGPT/inscape/remediation-2026-10-19-shared-checkpoint/work/browser-tests/workbench-canvas-crop-fixture.html
+# C:/Users/Hidden Swarm/Documents/ChatGPT/inscape/remediation-2026-10-19-shared-checkpoint/work/browser-tests/workbench-storage-fixture.html
+# C:/Users/Hidden Swarm/Documents/ChatGPT/inscape/remediation-2026-10-19-shared-checkpoint/work/browser-tests/workbench-toolbar-fixture.html
+#   [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     browser-tests/fixtures/reception-v2.js:4:40:
+# [37m      4 │ ...mageLibrarySide } from [32m'../../src/imageModule/imageLibrarySide.js'[37m;
+#         ╵                           [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     browser-tests/fixtures/reception-v2.js:5:34:
+# [37m      5 │ ... { MAX_IMAGE_MODULES } from [32m'../../src/imageModule/imageModule.js'[37m;
+#         ╵                                [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     browser-tests/fixtures/reception-v2.js:6:48:
+# [37m      6 │ ...rticle, MAX_TEXT_MODULES } from [32m'../../src/text/domain/article.js'[37m;
+#         ╵                                    [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     browser-tests/fixtures/reception-v2.js:7:37:
+# [37m      7 │ import { saveTextRecordResult } from [32m'../../src/text/textSession.js'[37m;
+#         ╵                                      [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     browser-tests/fixtures/reception-v2.js:8:66:
+# [37m      8 │ ...neReceptionContent } from [32m'../../src/reception/receptionLayers.js'[37m;
+#         ╵                              [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     browser-tests/fixtures/reception-v2.js:9:27:
+# [37m      9 │ import { MAX_SHAPES } from [32m'../../src/shapes/shapes.js'[37m;
+#         ╵                            [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/App.jsx:7:37:
+# [37m      7 │ ...onNavigation from [32m'./profileDiscovery/useApplicationNavigation.js'[37m;
+#         ╵                      [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/App.jsx:8:37:
+# [37m      8 │ ...ndary from [32m'./profileDocument/components/PublishedProfileBoundar[37m...
+#         ╵               [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/App.jsx:9:36:
+# [37m      9 │ ...hedProfile } from [32m'./profileDocument/state/usePublishedProfile.js'[37m;
+#         ╵                      [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/App.jsx:10:41:
+# [37m      10 │ ...US } from [32m'./profileDocument/storage/luksoPublishedProfileRepos[37m...
+#          ╵              [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/App.jsx:11:38:
+# [37m      11 │ import { reportControlledError } from [32m'./diagnostics.js'[37m;
+#          ╵                                       [32m~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/App.jsx:12:30:
+# [37m      12 │ import AlphaSupportPanel from [32m'./support/AlphaSupportPanel.jsx'[37m;
+#          ╵                               [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/App.jsx:13:36:
+# [37m      13 │ import { ALPHA_SUPPORT_CODES } from [32m'./support/alphaSupport.js'[37m;
+#          ╵                                     [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/App.jsx:14:79:
+# [37m      14 │ ...dStandaloneConnection } from [32m'./wallet/standaloneWalletLoader.js'[37m;
+#          ╵                                 [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/App.jsx:15:40:
+# [37m      15 │ import { normalizeProfileAddress } from [32m'./library/config.js'[37m;
+#          ╵                                         [32m~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/App.jsx:17:44:
+# [37m      17 │ ...yPortal = lazy(() => import([32m'./startveil/PublicEntryPortal.jsx'[37m));
+#          ╵                                [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/App.jsx:18:50:
+# [37m      18 │ ...tion = lazy(() => import([32m'./public/PublicationConfirmation.jsx'[37m));
+#          ╵                             [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/App.jsx:20:22:
+# [37m      20 │   ? lazy(() => import([32m'./recovery/CreepsMetadataRecoveryPanel.jsx'[37m))
+#          ╵                       [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/artwork/useRetainedArtwork.js:2:33:
+# [37m      2 │ import { artworkRetention } from [32m'./artworkRetention.js'[37m;
+#         ╵                                  [32m~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/colour/ColourControls.jsx:2:29:
+# [37m      2 │ import ColourEyedropper from [32m'./ColourEyedropper.jsx'[37m;
+#         ╵                              [32m~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/colour/ColourControls.jsx:3:26:
+# [37m      3 │ import ColourOpacity from [32m'./ColourOpacity.jsx'[37m;
+#         ╵                           [32m~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/colour/ColourControls.jsx:20:7:
+# [37m      20 │ } from [32m'./colourModel.js'[37m;
+#          ╵        [32m~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/creations/data/luksoCreationsRepository.js:3:38:
+# [37m      3 │ ...calAssetId } from [32m'../../profileDocument/domain/assetReference.js'[37m;
+#         ╵                      [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/creations/data/luksoCreationsRepository.js:139:66:
+# [37m      139 │ ...Previews } = await import([32m'./lsp8CollectionMetadataResolver.js'[37m);
+#           ╵                              [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/imageModule/imageModuleSession.js:3:51:
+# [37m      3 │ ...tation } from [32m'../profileDocument/domain/workbenchPresentation.js'[37m;
+#         ╵                  [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/imageModule/imageModuleSession.js:4:39:
+# [37m      4 │ ...hPosition } from [32m'../public/ownerSystemWorkflow/workbenchSpace.js'[37m;
+#         ╵                     [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/keeper/keeper.js:1:47:
+# [37m      1 │ ...Asset } from [32m'../profileDocument/domain/profileDocumentV9Asset.js'[37m;
+#         ╵                 [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/keeper/keeper.js:2:32:
+# [37m      2 │ import { validKeeperSwim } from [32m'./keeperSwim.js'[37m;
+#         ╵                                 [32m~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/library/data/lsp8TokenMetadataResolver.js:3:22:
+# [37m      3 │ import { lukso } from [32m'viem/chains'[37m;
+#         ╵                       [32m~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/library/data/lsp8TokenMetadataResolver.js:5:34:
+# [37m      5 │ import { resolveContentUrl } from [32m'./resolveContentUrl.js'[37m;
+#         ╵                                   [32m~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/library/data/lsp8TokenMetadataResolver.js:9:51:
+# [37m      9 │ ...enIdForMetadata as decodeTokenId } from [32m'./lspMetadataDecoding.js'[37m;
+#         ╵                                            [32m~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/library/data/luksoEnvioProfileRepository.js:4:38:
+# [37m      4 │ ...calAssetId } from [32m'../../profileDocument/domain/assetReference.js'[37m;
+#         ╵                      [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/library/data/luksoRpcProfileRepository.js:5:22:
+# [37m      5 │ import { lukso } from [32m'viem/chains'[37m;
+#         ╵                       [32m~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/library/data/luksoRpcProfileRepository.js:9:34:
+# [37m      9 │ import { resolveContentUrl } from [32m'./resolveContentUrl.js'[37m;
+#         ╵                                   [32m~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/library/data/luksoRpcProfileRepository.js:11:38:
+# [37m      11 │ ...alAssetId } from [32m'../../profileDocument/domain/assetReference.js'[37m;
+#          ╵                     [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/library/data/luksoRpcProfileRepository.js:12:84:
+# [37m      12 │ ...umber, decodeTokenIdForMetadata } from [32m'./lspMetadataDecoding.js'[37m;
+#          ╵                                           [32m~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/library/data/onchainDataUri.js:1:46:
+# [37m      1 │ ... { authenticContent as authentic } from [32m'./contentVerification.js'[37m;
+#         ╵                                            [32m~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/library/domain/normalizeProfileAsset.js:1:56:
+# [37m      1 │ ...rt { LUKSO_CHAIN_ID, normalizeProfileAddress } from [32m'../config.js'[37m;
+#         ╵                                                        [32m~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/library/domain/normalizeProfileAsset.js:2:51:
+# [37m      2 │ ...ImageGroups, selectImageUrls } from [32m'../data/resolveContentUrl.js'[37m;
+#         ╵                                        [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/library/resolveLibraryImageAsset.js:3:57:
+# [37m      3 │ ...ons } from [32m'../public/ownerSystemWorkflow/ownerSystemWorkflowAss[37m...
+#         ╵               [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/library/state/useLibraryStore.js:3:65:
+# [37m      3 │ ...alizeProfileAddress, resolveWorkspaceProfile } from [32m'../config.js'[37m;
+#         ╵                                                        [32m~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/library/state/useLibraryStore.js:4:31:
+# [37m      4 │ import { useWalletStore } from [32m'../../store/useWalletStore.js'[37m;
+#         ╵                                [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/library/state/useLibraryStore.js:5:31:
+# [37m      5 │ import { developmentLog } from [32m'../../diagnostics.js'[37m;
+#         ╵                                [32m~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/library/state/useLibraryStore.js:20:7:
+# [37m      20 │ } from [32m'../domain/libraryWorkspace.js'[37m;
+#          ╵        [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/library/state/useLibraryStore.js:21:73:
+# [37m      21 │ ...acePersistence } from [32m'../storage/libraryWorkspacePersistence.js'[37m;
+#          ╵                          [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/library/state/useLibraryStore.js:22:61:
+# [37m      22 │ ...e, saveLibraryAssetCache } from [32m'../storage/libraryAssetCache.js'[37m;
+#          ╵                                    [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/library/storage/libraryWorkspaceStorage.js:3:39:
+# [37m      3 │ import { normalizeCanvasObjects } from [32m'../domain/canvasObjects.js'[37m;
+#         ╵                                        [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/library/storage/libraryWorkspaceStorage.js:4:41:
+# [37m      4 │ ...t { normalizeTablePlacements } from [32m'../domain/tablePlacements.js'[37m;
+#         ╵                                        [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/presentation/presentationSources.js:2:49:
+# [37m      2 │ ...splayModuleIds } from [32m'../systemWorkflow/domain/displayModules.js'[37m;
+#         ╵                          [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/presentation/presentationSources.js:3:44:
+# [37m      3 │ ...nchDestination } from [32m'../systemWorkflow/domain/workbenchIndex.js'[37m;
+#         ╵                          [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/presentation/presentationSources.js:4:31:
+# [37m      4 │ import { passageArticle } from [32m'../text/scenePassages.js'[37m;
+#         ╵                                [32m~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/profileDiscovery/data/luksoProfileDiscoveryRepository.js:3:47:
+# [37m      3 │ ...lue } from [32m'../../profileDocument/storage/luksoPublishedProfileR[37m...
+#         ╵               [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/profileDiscovery/data/luksoProfileDiscoveryRepository.js:4:45:
+# [37m      4 │ ...KEY } from [32m'../../profileDocument/domain/inscapeProfileDocumentK[37m...
+#         ╵               [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/profileDiscovery/useApplicationNavigation.js:3:106:
+# [37m      3 │ ... resolveApplicationDestination } from [32m'./applicationNavigation.js'[37m;
+#         ╵                                          [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/profileDiscovery/useApplicationNavigation.js:4:35:
+# [37m      4 │ ... useDeferredFocusReturn from [32m'../public/useDeferredFocusReturn.js'[37m;
+#         ╵                                 [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/profileDocument/components/ProfileDocumentV9Preview.jsx:8:42:
+# [37m      8 │ const ProfileOverview = lazy(() => import([32m'./ProfileOverview.jsx'[37m));
+#         ╵                                           [32m~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/profileDocument/components/ProfileDocumentV9Preview.jsx:9:43:
+# [37m      9 │ const VisitorGridWorld = lazy(() => import([32m'./VisitorGridWorld.jsx'[37m));
+#         ╵                                            [32m~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/profileDocument/components/ProfileDocumentV9Preview.jsx:10:49:
+# [37m      10 │ ...anvasGallery = lazy(() => import([32m'./PublishedCanvasGallery.jsx'[37m));
+#          ╵                                     [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/profileDocument/components/ProfileDocumentV9Visitor.jsx:3:82:
+# [37m      3 │ ...ctions } from [32m'../../public/ownerSystemWorkflow/WorkbenchView.jsx'[37m;
+#         ╵                  [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/profileDocument/components/ProfileDocumentV9Visitor.jsx:4:35:
+# [37m      4 │ ...ntent from [32m'../../public/ownerSystemWorkflow/WorkbenchCanvasCont[37m...
+#         ╵               [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/profileDocument/components/ProfileDocumentV9Visitor.jsx:5:45:
+# [37m      5 │ ...ion } from [32m'../../public/ownerSystemWorkflow/WorkbenchViewContex[37m...
+#         ╵               [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/profileDocument/components/ProfileDocumentV9Visitor.jsx:7:60:
+# [37m      7 │ ...tFacts, useProfileIdentity } from [32m'../../profileIdentity/index.js'[37m;
+#         ╵                                      [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/profileDocument/components/ProfileDocumentV9Visitor.jsx:8:31:
+# [37m      8 │ ...eProfileRail from [32m'../../lattice/rendering/LatticeProfileRail.jsx'[37m;
+#         ╵                      [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/profileDocument/components/ProfileDocumentV9Visitor.jsx:9:53:
+# [37m      9 │ ...IdentityRackViewModel } from [32m'./publishedIdentityRackViewModel.js'[37m;
+#         ╵                                 [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/profileDocument/components/ProfileDocumentV9Visitor.jsx:10:30:
+# [37m      10 │ ...oard from [32m'../../public/ownerSystemWorkflow/PresentationBoard.j[37m...
+#          ╵              [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/profileDocument/components/ProfileDocumentV9Visitor.jsx:11:97:
+# [37m      11 │ ...er } from [32m'../../public/ownerSystemWorkflow/SharedDisplayTools.[37m...
+#          ╵              [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/profileDocument/components/ProfileDocumentV9Visitor.jsx:12:41:
+# [37m      12 │ ...yout from [32m'../../public/ownerSystemWorkflow/useOwnerSystemWorkf[37m...
+#          ╵              [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/profileDocument/components/ProfileDocumentV9Visitor.jsx:13:35:
+# [37m      13 │ import PublishedDisplayModule from [32m'./PublishedDisplayModule.jsx'[37m;
+#          ╵                                    [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/profileDocument/components/ProfileDocumentV9Visitor.jsx:15:30:
+# [37m      15 │ import VisitorEntryFocus from [32m'./VisitorEntryFocus.jsx'[37m;
+#          ╵                               [32m~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/profileDocument/components/ProfileDocumentV9Visitor.jsx:20:41:
+# [37m      20 │ ... = lazy(() => import([32m'../../public/identity/IdentityModule.jsx'[37m));
+#          ╵                         [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/profileDocument/components/ProfileDocumentV9Visitor.jsx:21:44:
+# [37m      21 │ ...ench = lazy(() => import([32m'../../miniApps/MiniAppsWorkbench.jsx'[37m));
+#          ╵                             [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/profileDocument/components/ProfileDocumentV9Visitor.jsx:22:41:
+# [37m      22 │ ...ench = lazy(() => import([32m'../../imageModule/ImageWorkbench.jsx'[37m));
+#          ╵                             [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/profileDocument/components/ProfileDocumentV9Visitor.jsx:23:41:
+# [37m      23 │ ...Workbench = lazy(() => import([32m'../../shapes/ShapeWorkbench.jsx'[37m));
+#          ╵                                  [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/profileDocument/components/ProfileDocumentV9Visitor.jsx:24:42:
+# [37m      24 │ ...orkbench = lazy(() => import([32m'../../keeper/KeeperWorkbench.jsx'[37m));
+#          ╵                                 [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/profileDocument/components/ProfileDocumentV9Visitor.jsx:25:40:
+# [37m      25 │ ...extWorkbench = lazy(() => import([32m'../../text/TextWorkbench.jsx'[37m));
+#          ╵                                     [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/profileDocument/components/ProfileOverview.jsx:3:53:
+# [37m      3 │ ...IdentityRackViewModel } from [32m'./publishedIdentityRackViewModel.js'[37m;
+#         ╵                                 [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/profileDocument/components/ProfileOverview.jsx:4:30:
+# [37m      4 │ import ReceptionOverview from [32m'../../reception/ReceptionOverview.jsx'[37m;
+#         ╵                               [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/profileDocument/components/ProfileOverview.jsx:5:32:
+# [37m      5 │ import { createReception } from [32m'../domain/receptionPresentation.js'[37m;
+#         ╵                                 [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/profileDocument/components/ProfileOverview.jsx:6:46:
+# [37m      6 │ ...ntationSnapshot } from [32m'../../presentation/presentationSources.js'[37m;
+#         ╵                           [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/profileDocument/components/PublishedCanvasGallery.jsx:3:30:
+# [37m      3 │ ...erview from [32m'../../public/workbenchOverview/WorkbenchOverview.jsx'[37m;
+#         ╵                [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/profileDocument/components/PublishedCanvasGallery.jsx:4:39:
+# [37m      4 │ ...del } from [32m'../../public/workbenchOverview/workbenchOverviewMode[37m...
+#         ╵               [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/profileDocument/components/PublishedCanvasGallery.jsx:5:46:
+# [37m      5 │ ...ntationSnapshot } from [32m'../../presentation/presentationSources.js'[37m;
+#         ╵                           [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/profileDocument/components/PublishedCanvasGallery.jsx:7:53:
+# [37m      7 │ ...IdentityRackViewModel } from [32m'./publishedIdentityRackViewModel.js'[37m;
+#         ╵                                 [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/profileDocument/components/PublishedDisplayModule.jsx:5:35:
+# [37m      5 │ import GridProductionRenderer from [32m'./GridProductionRenderer.jsx'[37m;
+#         ╵                                    [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/profileDocument/components/PublishedDisplayModule.jsx:6:54:
+# [37m      6 │ ...mentV9FocusViewModel } from [32m'./profileDocumentV9FocusViewModel.js'[37m;
+#         ╵                                [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/profileDocument/components/PublishedDisplayModule.jsx:7:33:
+# [37m      7 │ ...ction from [32m'../../public/ownerSystemWorkflow/useDisplayInspectio[37m...
+#         ╵               [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/profileDocument/components/PublishedDisplayModule.jsx:8:31:
+# [37m      8 │ ...idRailScenes } from [32m'../../public/ownerSystemWorkflow/gridRail.js'[37m;
+#         ╵                        [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/profileDocument/components/PublishedDisplayModule.jsx:9:43:
+# [37m      9 │ ...kPreparationProvider } from [32m'../../artwork/ArtworkPreparation.jsx'[37m;
+#         ╵                                [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/profileDocument/components/PublishedDisplayModule.jsx:10:31:
+# [37m      10 │ ...ewer from [32m'../../public/ownerSystemWorkflow/DisplayFocusViewer.[37m...
+#          ╵              [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/profileDocument/components/PublishedDisplayModule.jsx:11:21:
+# [37m      11 │ import RackMenu from [32m'../../public/menus/RackMenu.jsx'[37m;
+#          ╵                      [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/profileDocument/components/PublishedDisplayModule.jsx:12:34:
+# [37m      12 │ ...Cues from [32m'../../public/ownerSystemWorkflow/DisplayInspectionCu[37m...
+#          ╵              [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/profileDocument/components/PublishedDisplayModule.jsx:13:85:
+# [37m      13 │ ...ls } from [32m'../../public/ownerSystemWorkflow/SharedDisplayTools.[37m...
+#          ╵              [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/profileDocument/components/PublishedDisplayModule.jsx:14:51:
+# [37m      14 │ ...nt } from [32m'../../public/ownerSystemWorkflow/OwnerSystemWorkflow[37m...
+#          ╵              [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/profileDocument/components/PublishedDisplayModule.jsx:15:51:
+# [37m      15 │ ...WorkbenchPresentation } from [32m'../domain/workbenchPresentation.js'[37m;
+#          ╵                                 [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/profileDocument/components/PublishedDisplayModule.jsx:16:28:
+# [37m      16 │ ...ayback from [32m'../../public/ownerSystemWorkflow/useGridPlayback.js'[37m;
+#          ╵                [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/profileDocument/components/PublishedDisplayModule.jsx:17:41:
+# [37m      17 │ ... resolvePublishedAssetUrl } from [32m'../domain/publishedAssetUrl.js'[37m;
+#          ╵                                     [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/profileDocument/components/PublishedProfileBoundary.jsx:3:44:
+# [37m      3 │ ...rofileDocumentPreview from [32m'./PublishedProfileDocumentPreview.jsx'[37m;
+#         ╵                               [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/profileDocument/components/PublishedProfileBoundary.jsx:4:41:
+# [37m      4 │ ...FILE_STATUS } from [32m'../storage/luksoPublishedProfileRepository.js'[37m;
+#         ╵                       [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/profileDocument/components/PublishedProfileBoundary.jsx:7:30:
+# [37m      7 │ import AlphaSupportPanel from [32m'../../support/AlphaSupportPanel.jsx'[37m;
+#         ╵                               [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/profileDocument/components/PublishedProfileBoundary.jsx:8:36:
+# [37m      8 │ import { ALPHA_SUPPORT_CODES } from [32m'../../support/alphaSupport.js'[37m;
+#         ╵                                     [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/profileDocument/components/PublishedProfileBoundary.jsx:9:41:
+# [37m      9 │ ...ception = lazy(() => import([32m'../../reception/OwnerReception.jsx'[37m));
+#         ╵                                [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/profileDocument/domain/canvasPublication.js:2:39:
+# [37m      2 │ ...rt { buildProfileDocumentV9 } from [32m'./profileDocumentV9Builder.js'[37m;
+#         ╵                                       [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/profileDocument/domain/canvasPublication.js:3:45:
+# [37m      3 │ ...rtValidProfileDocumentV9 } from [32m'./profileDocumentV9Validation.js'[37m;
+#         ╵                                    [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/profileDocument/domain/canvasPublication.js:4:85:
+# [37m      4 │ ...asDocument, publishedCanvasEntries } from [32m'./publishedCanvases.js'[37m;
+#         ╵                                              [32m~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/profileDocument/domain/canvasPublication.js:6:46:
+# [37m      6 │ import { projectReceptionSceneMappings } from [32m'./receptionLinks.js'[37m;
+#         ╵                                               [32m~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/profileDocument/domain/canvasPublication.js:7:46:
+# [37m      7 │ ...ntationSnapshot } from [32m'../../presentation/presentationSources.js'[37m;
+#         ╵                           [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/profileDocument/domain/profileDocumentPublication.js:4:27:
+# [37m      4 │ import { isValidCid } from [32m'./cidValidation.js'[37m;
+#         ╵                            [32m~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/profileDocument/domain/profileDocumentPublication.js:9:7:
+# [37m      9 │ } from [32m'./profileDocumentV9Serialization.js'[37m;
+#         ╵        [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/profileDocument/domain/profileDocumentPublication.js:10:45:
+# [37m      10 │ ...tValidProfileDocumentV9 } from [32m'./profileDocumentV9Validation.js'[37m;
+#          ╵                                   [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/profileDocument/domain/profileDocumentV9Asset.js:3:65:
+# [37m      3 │ ...edAssetUrl, parsePublishedAssetUrl } from [32m'./publishedAssetUrl.js'[37m;
+#         ╵                                              [32m~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/profileDocument/domain/profileDocumentV9Asset.js:4:34:
+# [37m      4 │ ...orPlacement } from [32m'../../systemWorkflow/domain/placementMedia.js'[37m;
+#         ╵                       [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/profileDocument/domain/profileDocumentV9Builder.js:4:48:
+# [37m      4 │ ...ectPublishedWorkbenchGroups } from [32m'./publishedWorkbenchGroups.js'[37m;
+#         ╵                                       [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/profileDocument/domain/profileDocumentV9Builder.js:11:7:
+# [37m      11 │ } from [32m'../../systemWorkflow/domain/systemWorkflowDraft.js'[37m;
+#          ╵        [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/profileDocument/domain/profileDocumentV9Builder.js:16:7:
+# [37m      16 │ } from [32m'./constants.js'[37m;
+#          ╵        [32m~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/profileDocument/domain/profileDocumentV9Builder.js:17:39:
+# [37m      17 │ import { parsePublishedAssetUrl } from [32m'./publishedAssetUrl.js'[37m;
+#          ╵                                        [32m~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/profileDocument/domain/profileDocumentV9Builder.js:19:45:
+# [37m      19 │ ...tValidProfileDocumentV9 } from [32m'./profileDocumentV9Validation.js'[37m;
+#          ╵                                   [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/profileDocument/domain/profileDocumentV9Builder.js:20:36:
+# [37m      20 │ ...dentityCard } from [32m'../../profileIdentity/domain/identityCard.js'[37m;
+#          ╵                       [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/profileDocument/domain/profileDocumentV9Builder.js:21:36:
+# [37m      21 │ ...splayDraft } from [32m'../../systemWorkflow/domain/displayModules.js'[37m;
+#          ╵                      [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/profileDocument/domain/profileDocumentV9Builder.js:22:32:
+# [37m      22 │ import { projectMiniApps } from [32m'../../miniApps/domain/miniApps.js'[37m;
+#          ╵                                 [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/profileDocument/domain/profileDocumentV9Builder.js:24:30:
+# [37m      24 │ import { projectShapes } from [32m'../../shapes/shapes.js'[37m;
+#          ╵                               [32m~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/profileDocument/domain/profileDocumentV9Builder.js:25:57:
+# [37m      25 │ ...KeeperDocks, keeperReferenceCount } from [32m'../../keeper/keeper.js'[37m;
+#          ╵                                             [32m~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/profileDocument/domain/receptionPresentation.js:3:41:
+# [37m      3 │ ...OP_PROJECTION_ZOOM } from [32m'../../lattice/rendering/latticeCrop.js'[37m;
+#         ╵                              [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/profileDocument/domain/receptionPresentation.js:4:36:
+# [37m      4 │ import { validReceptionLinks } from [32m'./receptionLinks.js'[37m;
+#         ╵                                     [32m~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/profileDocument/domain/receptionPresentation.js:5:84:
+# [37m      5 │ ...s, validReceptionScene } from [32m'../../reception/receptionLayers.js'[37m;
+#         ╵                                  [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/profileDocument/domain/receptionPresentation.js:6:42:
+# [37m      6 │ ...eptionArrangement } from [32m'../../reception/receptionArrangement.js'[37m;
+#         ╵                             [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/profileDocument/domain/receptionPresentation.js:7:58:
+# [37m      7 │ ...apes, projectShapes, restoreShapes } from [32m'../../shapes/shapes.js'[37m;
+#         ╵                                              [32m~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/profileDocument/domain/receptionPresentation.js:8:109:
+# [37m      8 │ ...EditorDocument } from [32m'../../reception/receptionEditorDocument.js'[37m;
+#         ╵                          [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/profileDocument/domain/workbenchPresentation.js:3:43:
+# [37m      3 │ ..._MINI_APPS, MINI_APP_ID } from [32m'../../miniApps/domain/miniApps.js'[37m;
+#         ╵                                   [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/profileDocument/domain/workbenchPresentation.js:6:37:
+# [37m      6 │ import { MAX_SHAPES, SHAPE_ID } from [32m'../../shapes/shapes.js'[37m;
+#         ╵                                      [32m~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/profileDocument/domain/workbenchPresentation.js:7:44:
+# [37m      7 │ import { MAX_KEEPER_DOCKS, KEEPER_ID } from [32m'../../keeper/keeper.js'[37m;
+#         ╵                                             [32m~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/profileDocument/domain/workbenchPresentation.js:8:45:
+# [37m      8 │ ...splayPreset } from [32m'../../systemWorkflow/domain/displayModules.js'[37m;
+#         ╵                       [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/profileDocument/storage/luksoPublishedProfileRepository.js:5:40:
+# [37m      5 │ import { PROFILE_DOCUMENT_LIMITS } from [32m'../domain/constants.js'[37m;
+#         ╵                                         [32m~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/profileDocument/storage/luksoPublishedProfileRepository.js:6:27:
+# [37m      6 │ import { isValidCid } from [32m'../domain/cidValidation.js'[37m;
+#         ╵                            [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/profileDocument/storage/luksoPublishedProfileRepository.js:7:45:
+# [37m      7 │ ...OFILE_DOCUMENT_KEY } from [32m'../domain/inscapeProfileDocumentKey.js'[37m;
+#         ╵                              [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/profileDocument/storage/luksoPublishedProfileRepository.js:12:11:
+# [37m      12 │     import([32m'../domain/profileDocumentV9Validation.js'[37m),
+#          ╵            [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/profileDocument/storage/luksoPublishedProfileRepository.js:13:11:
+# [37m      13 │     import([32m'../domain/profileDocumentV9Serialization.js'[37m),
+#          ╵            [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/public/OwnerRuntimeBoundary.jsx:4:33:
+# [37m      4 │ import { loadOwnerRuntime } from [32m'./ownerRuntimeLoader.js'[37m;
+#         ╵                                  [32m~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/public/OwnerRuntimeBoundary.jsx:5:30:
+# [37m      5 │ import AlphaSupportPanel from [32m'../support/AlphaSupportPanel.jsx'[37m;
+#         ╵                               [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/public/OwnerRuntimeBoundary.jsx:6:36:
+# [37m      6 │ import { ALPHA_SUPPORT_CODES } from [32m'../support/alphaSupport.js'[37m;
+#         ╵                                     [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/public/ownerSystemWorkflowPreviewDocument.js:3:41:
+# [37m      3 │ ...edAssetUrl } from [32m'../profileDocument/domain/publishedAssetUrl.js'[37m;
+#         ╵                      [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/public/ownerSystemWorkflow/OwnerSystemWorkflowLibraryWorkspace.jsx:3:32:
+# [37m      3 │ ...owserWorkspace from [32m'../../lattice/browser/useBrowserWorkspace.js'[37m;
+#         ╵                        [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/public/ownerSystemWorkflow/OwnerSystemWorkflowLibraryWorkspace.jsx:5:45:
+# [37m      5 │ ...lowWorkspaceRail from [32m'./OwnerSystemWorkflowWorkspaceControls.jsx'[37m;
+#         ╵                          [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/public/ownerSystemWorkflow/OwnerSystemWorkflowLibraryWorkspace.jsx:6:50:
+# [37m      6 │ ...wWorkspaceShell } from [32m'./OwnerSystemWorkflowBrowserWorkspace.jsx'[37m;
+#         ╵                           [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/public/ownerSystemWorkflow/OwnerSystemWorkflowLibraryWorkspace.jsx:7:93:
+# [37m      7 │ ...owAssetDimensions } from [32m'./ownerSystemWorkflowAssetDimensions.js'[37m;
+#         ╵                             [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/public/ownerSystemWorkflow/OwnerSystemWorkflowLibraryWorkspace.jsx:8:48:
+# [37m      8 │ ...wLibraryPresenter from [32m'./OwnerSystemWorkflowLibraryPresenter.jsx'[37m;
+#         ╵                           [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/public/ownerSystemWorkflow/OwnerSystemWorkflowLibraryWorkspace.jsx:9:58:
+# [37m      9 │ ...ibraryImageChoices } from [32m'./OwnerSystemWorkflowLibraryImages.jsx'[37m;
+#         ╵                              [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/public/ownerSystemWorkflow/OwnerSystemWorkflowLibraryWorkspace.jsx:10:34:
+# [37m      10 │ ...rPlacement } from [32m'../../systemWorkflow/domain/placementMedia.js'[37m;
+#          ╵                      [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/public/ownerSystemWorkflow/OwnerSystemWorkflowPublicationRack.jsx:3:52:
+# [37m      3 │ ...TUS } from [32m'../../profileDocument/domain/profileDocumentPublicat[37m...
+#         ╵               [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/public/ownerSystemWorkflow/OwnerSystemWorkflowPublicationRack.jsx:4:52:
+# [37m      4 │ ...int } from [32m'../../profileDocument/domain/profileDocumentV9Serial[37m...
+#         ╵               [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/public/ownerSystemWorkflow/OwnerSystemWorkflowPublicationRack.jsx:5:45:
+# [37m      5 │ ...tV9 } from [32m'../../profileDocument/domain/profileDocumentV9Valida[37m...
+#         ╵               [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/public/ownerSystemWorkflow/OwnerSystemWorkflowPublicationRack.jsx:6:46:
+# [37m      6 │ ...ion } from [32m'../../profileDocument/state/useProfileDocumentPublic[37m...
+#         ╵               [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/public/ownerSystemWorkflow/OwnerSystemWorkflowPublicationRack.jsx:7:39:
+# [37m      7 │ ...ery } from [32m'../../profileDocument/state/usePublicationRecovery.js'[37m;
+#         ╵               [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/public/ownerSystemWorkflow/OwnerSystemWorkflowPublicationRack.jsx:8:38:
+# [37m      8 │ ...ent } from [32m'../../profileDocument/storage/profileDocumentUploadC[37m...
+#         ╵               [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/public/ownerSystemWorkflow/OwnerSystemWorkflowPublicationRack.jsx:9:30:
+# [37m      9 │ import AlphaSupportPanel from [32m'../../support/AlphaSupportPanel.jsx'[37m;
+#         ╵                               [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/public/ownerSystemWorkflow/OwnerSystemWorkflowPublicationRack.jsx:10:36:
+# [37m      10 │ import { ALPHA_SUPPORT_CODES } from [32m'../../support/alphaSupport.js'[37m;
+#          ╵                                     [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/public/ownerSystemWorkflow/OwnerSystemWorkflowPublicationRack.jsx:11:53:
+# [37m      11 │ ...ePublicationContext } from [32m'../ownerLatticePublicationContext.js'[37m;
+#          ╵                               [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/public/ownerSystemWorkflow/OwnerSystemWorkflowPublicationRack.jsx:12:60:
+# [37m      12 │ ...icationDocument } from [32m'../ownerSystemWorkflowPreviewDocument.js'[37m;
+#          ╵                           [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/public/ownerSystemWorkflow/OwnerSystemWorkflowPublicationRack.jsx:13:94:
+# [37m      13 │ ...cation } from [32m'../../profileDocument/domain/canvasPublication.js'[37m;
+#          ╵                  [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/public/ownerSystemWorkflow/OwnerSystemWorkflowPublicationRack.jsx:14:61:
+# [37m      14 │ ...Draft } from [32m'../../systemWorkflow/domain/workbenchCollection.js'[37m;
+#          ╵                 [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/public/ownerSystemWorkflow/OwnerSystemWorkflowPublicationRack.jsx:15:35:
+# [37m      15 │ import useOwnerLatticeBrowser from [32m'../useOwnerLatticeBrowser.js'[37m;
+#          ╵                                    [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/public/ownerSystemWorkflow/OwnerSystemWorkflowReconciliationBoundary.jsx:3:35:
+# [37m      3 │ ...ingBoundary from [32m'../../systemWorkflow/ProfileEditingBoundary.jsx'[37m;
+#         ╵                     [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/public/ownerSystemWorkflow/OwnerSystemWorkflowReconciliationBoundary.jsx:4:36:
+# [37m      4 │ ...upControls from [32m'../../systemWorkflow/WorkbenchBackupControls.jsx'[37m;
+#         ╵                    [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/public/ownerSystemWorkflow/OwnerSystemWorkflowReconciliationBoundary.jsx:8:53:
+# [37m      8 │ ...owRuntime = lazy(() => import([32m'./OwnerSystemWorkflowRuntime.jsx'[37m));
+#         ╵                                  [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/public/ownerSystemWorkflow/OwnerSystemWorkflowReconciliationBoundary.jsx:32:11:
+# [37m      32 │     import([32m'../../profileDocument/storage/ownerDraftReconciliation[37m...
+#          ╵            [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/public/ownerSystemWorkflow/OwnerSystemWorkflowRuntime.jsx:4:41:
+# [37m      4 │ ...WorkbenchPublicationPanel from [32m'./useWorkbenchPublicationPanel.js'[37m;
+#         ╵                                   [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/public/ownerSystemWorkflow/OwnerSystemWorkflowRuntime.jsx:5:68:
+# [37m      5 │ ...{ useWorkbenchLayoutSession } from [32m'./useWorkbenchPresentation.js'[37m;
+#         ╵                                       [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/public/ownerSystemWorkflow/OwnerSystemWorkflowRuntime.jsx:6:34:
+# [37m      6 │ import OwnerWorkbenchSession from [32m'./OwnerWorkbenchSession.jsx'[37m;
+#         ╵                                   [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/public/ownerSystemWorkflow/OwnerSystemWorkflowRuntime.jsx:7:39:
+# [37m      7 │ ... useWorkbenchModuleRegistry from [32m'./useWorkbenchModuleRegistry.js'[37m;
+#         ╵                                     [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/public/ownerSystemWorkflow/OwnerSystemWorkflowRuntime.jsx:8:37:
+# [37m      8 │ import useOwnerWorkbenchLibrary from [32m'./useOwnerWorkbenchLibrary.js'[37m;
+#         ╵                                      [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/public/ownerSystemWorkflow/OwnerSystemWorkflowRuntime.jsx:9:36:
+# [37m      9 │ import prepareWorkbenchPreview from [32m'./prepareWorkbenchPreview.js'[37m;
+#         ╵                                     [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/public/ownerSystemWorkflow/OwnerSystemWorkflowRuntime.jsx:10:30:
+# [37m      10 │ import workbenchCommands from [32m'./workbenchCommands.js'[37m;
+#          ╵                               [32m~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/public/ownerSystemWorkflow/OwnerSystemWorkflowRuntime.jsx:11:34:
+# [37m      11 │ import OwnerWorkbenchModules from [32m'./OwnerWorkbenchModules.jsx'[37m;
+#          ╵                                   [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/public/ownerSystemWorkflow/OwnerSystemWorkflowRuntime.jsx:12:35:
+# [37m      12 │ import { WorkbenchPlacement } from [32m'./WorkbenchPlacement.jsx'[37m;
+#          ╵                                    [32m~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/public/ownerSystemWorkflow/OwnerSystemWorkflowRuntime.jsx:13:79:
+# [37m      13 │ ...kbenchViewControls, useWorkbenchView } from [32m'./WorkbenchView.jsx'[37m;
+#          ╵                                                [32m~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/public/ownerSystemWorkflow/OwnerSystemWorkflowRuntime.jsx:24:31:
+# [37m      24 │ import OwnerEditorMenuBar from [32m'./OwnerEditorMenuBar.jsx'[37m;
+#          ╵                                [32m~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/public/ownerSystemWorkflow/OwnerSystemWorkflowRuntime.jsx:25:33:
+# [37m      25 │ import OwnerWorkspaceMotion from [32m'./OwnerWorkspaceMotion.jsx'[37m;
+#          ╵                                  [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/public/ownerSystemWorkflow/OwnerSystemWorkflowRuntime.jsx:26:39:
+# [37m      26 │ ...viewModel } from [32m'../workbenchOverview/workbenchOverviewModel.js'[37m;
+#          ╵                     [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/public/ownerSystemWorkflow/OwnerSystemWorkflowRuntime.jsx:27:44:
+# [37m      27 │ ...{ createNamedWorkbenchActions } from [32m'./namedWorkbenchActions.js'[37m;
+#          ╵                                         [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/public/ownerSystemWorkflow/OwnerSystemWorkflowRuntime.jsx:28:31:
+# [37m      28 │ import WorkbenchToolDocks from [32m'./WorkbenchToolDocks.jsx'[37m;
+#          ╵                                [32m~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/public/ownerSystemWorkflow/OwnerSystemWorkflowRuntime.jsx:31:60:
+# [37m      31 │ ...Facts, useProfileIdentity } from [32m'../../profileIdentity/index.js'[37m;
+#          ╵                                     [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/public/ownerSystemWorkflow/OwnerSystemWorkflowRuntime.jsx:32:57:
+# [37m      32 │ ...wModel } from [32m'../identity/productionIdentityDossierViewModel.js'[37m;
+#          ╵                  [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/public/ownerSystemWorkflow/OwnerSystemWorkflowRuntime.jsx:33:59:
+# [37m      33 │ ... saveIdentityShortcut } from [32m'../identity/useIdentityShortcut.js'[37m;
+#          ╵                                 [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/public/ownerSystemWorkflow/OwnerSystemWorkflowRuntime.jsx:38:7:
+# [37m      38 │ } from [32m'./SharedDisplayTools.jsx'[37m;
+#          ╵        [32m~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/public/ownerSystemWorkflow/OwnerSystemWorkflowRuntime.jsx:39:55:
+# [37m      39 │ ...textToolbarProvider, ContextToolbar } from [32m'./ContextToolbar.jsx'[37m;
+#          ╵                                               [32m~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/public/ownerSystemWorkflow/OwnerSystemWorkflowRuntime.jsx:40:63:
+# [37m      40 │ ...er, SharedTextToolsWindow } from [32m'../../text/SharedTextTools.jsx'[37m;
+#          ╵                                     [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/public/ownerSystemWorkflow/OwnerSystemWorkflowRuntime.jsx:41:35:
+# [37m      41 │ import WorkbenchAlignmentGrid from [32m'./WorkbenchAlignmentGrid.jsx'[37m;
+#          ╵                                    [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/public/ownerSystemWorkflow/OwnerSystemWorkflowRuntime.jsx:42:37:
+# [37m      42 │ ...eDropTarget from [32m'../../imageModule/WorkbenchImageDropTarget.jsx'[37m;
+#          ╵                     [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/public/ownerSystemWorkflow/OwnerSystemWorkflowRuntime.jsx:43:25:
+# [37m      43 │ import useDraftUndo from [32m'./useDraftUndo.js'[37m;
+#          ╵                          [32m~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/public/ownerSystemWorkflow/OwnerSystemWorkflowRuntime.jsx:45:39:
+# [37m      45 │ ...wnerSystemWorkflowSidebar from [32m'./OwnerSystemWorkflowSidebar.jsx'[37m;
+#          ╵                                   [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/public/ownerSystemWorkflow/OwnerSystemWorkflowRuntime.jsx:46:42:
+# [37m      46 │ ...stemWorkflowPanelLayer from [32m'./OwnerSystemWorkflowPanelLayer.jsx'[37m;
+#          ╵                                [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/public/ownerSystemWorkflow/OwnerSystemWorkflowRuntime.jsx:47:43:
+# [37m      47 │ ...SystemWorkflowActivity from [32m'./useOwnerSystemWorkflowActivity.js'[37m;
+#          ╵                                [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/public/ownerSystemWorkflow/OwnerSystemWorkflowRuntime.jsx:48:35:
+# [37m      48 │ import useWorkbenchController from [32m'./useWorkbenchController.js'[37m;
+#          ╵                                    [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/public/ownerSystemWorkflow/OwnerSystemWorkflowRuntime.jsx:49:34:
+# [37m      49 │ import useWorkbenchSelection from [32m'./useWorkbenchSelection.js'[37m;
+#          ╵                                   [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/public/ownerSystemWorkflow/OwnerSystemWorkflowRuntime.jsx:50:32:
+# [37m      50 │ import useWorkbenchPreview from [32m'./useWorkbenchPreview.js'[37m;
+#          ╵                                 [32m~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/public/ownerSystemWorkflow/OwnerSystemWorkflowRuntime.jsx:51:28:
+# [37m      51 │ import useTextRecovery from [32m'../../text/useTextRecovery.js'[37m;
+#          ╵                             [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/public/ownerSystemWorkflow/OwnerSystemWorkflowRuntime.jsx:53:41:
+# [37m      53 │ ...wnerSystemWorkflowLayout from [32m'./useOwnerSystemWorkflowLayout.js'[37m;
+#          ╵                                  [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/public/ownerSystemWorkflow/OwnerSystemWorkflowRuntime.jsx:54:41:
+# [37m      54 │ ...wnerSystemWorkflowPanels from [32m'./useOwnerSystemWorkflowPanels.js'[37m;
+#          ╵                                  [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/public/ownerSystemWorkflow/OwnerSystemWorkflowRuntime.jsx:55:36:
+# [37m      55 │ ...pControls from [32m'../../systemWorkflow/WorkbenchBackupControls.jsx'[37m;
+#          ╵                   [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/public/ownerSystemWorkflow/OwnerSystemWorkflowRuntime.jsx:56:33:
+# [37m      56 │ import WorkbenchCommandMenu from [32m'./WorkbenchCommandMenu.jsx'[37m;
+#          ╵                                  [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/public/ownerSystemWorkflow/OwnerSystemWorkflowRuntime.jsx:57:34:
+# [37m      57 │ import OwnerWorkbenchToolbar from [32m'./OwnerWorkbenchToolbar.jsx'[37m;
+#          ╵                                   [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/public/ownerSystemWorkflow/OwnerSystemWorkflowRuntime.jsx:59:61:
+# [37m      59 │ ... = lazy(() => import([32m'./OwnerSystemWorkflowPublicationRack.jsx'[37m));
+#          ╵                         [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/public/ownerSystemWorkflow/OwnerSystemWorkflowRuntime.jsx:61:15:
+# [37m      61 │ ...=> import([32m'../../profileDocument/components/ProfileDocumentV9Pr[37m...
+#          ╵              [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/public/ownerSystemWorkflow/OwnerSystemWorkflowRuntime.jsx:63:41:
+# [37m      63 │ ...tityModule = lazy(() => import([32m'../identity/IdentityModule.jsx'[37m));
+#          ╵                                   [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/public/ownerSystemWorkflow/OwnerSystemWorkflowRuntime.jsx:64:49:
+# [37m      64 │ ... lazy(() => import([32m'../../reception/ReceptionEditorPreview.jsx'[37m));
+#          ╵                       [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/public/ownerSystemWorkflow/OwnerSystemWorkflowRuntime.jsx:65:49:
+# [37m      65 │ ...(() => import([32m'../workbenchOverview/OwnerWorkbenchOverview.jsx'[37m));
+#          ╵                  [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/public/ownerSystemWorkflow/OwnerSystemWorkflowRuntime.jsx:965:33:
+# [37m      965 │ ...   import([32m'../../profileDocument/storage/ownerDraftReconciliat[37m...
+#           ╵              [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/public/ownerSystemWorkflow/SharedDisplayTools.jsx:3:36:
+# [37m      3 │ import DisplayInstrumentWindow from [32m'./DisplayInstrumentWindow.jsx'[37m;
+#         ╵                                     [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/public/ownerSystemWorkflow/SharedDisplayTools.jsx:5:85:
+# [37m      5 │ ...ool, unregisterDisplayTool } from [32m'./sharedDisplayToolRegistry.js'[37m;
+#         ╵                                      [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/public/ownerSystemWorkflow/SharedDisplayTools.jsx:7:21:
+# [37m      7 │ import RackMenu from [32m'../menus/RackMenu.jsx'[37m;
+#         ╵                      [32m~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/public/ownerSystemWorkflow/editorPreferencesStore.js:3:67:
+# [37m      3 │ ...erPreferences } from [32m'../../lattice/browser/browserPreferences.js'[37m;
+#         ╵                         [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/public/ownerSystemWorkflow/editorPreferencesStore.js:4:45:
+# [37m      4 │ ... emptySideDock, validSideDock } from [32m'./workbenchSideDockState.js'[37m;
+#         ╵                                         [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/public/ownerSystemWorkflow/workbenchLayoutStorage.js:2:45:
+# [37m      2 │ ...ion } from [32m'../../profileDocument/domain/workbenchPresentation.js'[37m;
+#         ╵               [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/public/ownerSystemWorkflow/workbenchViewScale.js:1:36:
+# [37m      1 │ import { workbenchPaintStyle } from [32m'./workbenchPaintGeometry.js'[37m;
+#         ╵                                     [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/public/useOwnerLatticeBrowser.js:3:37:
+# [37m      3 │ ...ateCreationsStore } from [32m'../creations/state/useCreationsStore.js'[37m;
+#         ╵                             [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/public/useOwnerLatticeBrowser.js:5:32:
+# [37m      5 │ import { useLibraryStore } from [32m'../library/state/useLibraryStore.js'[37m;
+#         ╵                                 [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/public/useOwnerLatticeBrowser.js:6:50:
+# [37m      6 │ ...ata } from [32m'../lattice/browser/latticeProductionBrowserAdapter.js'[37m;
+#         ╵               [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/public/useOwnerLatticeBrowser.js:7:41:
+# [37m      7 │ ...LibraryAssetUnion } from [32m'../lattice/browser/libraryAssetUnion.js'[37m;
+#         ╵                             [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/public/useOwnerLatticeBrowser.js:8:44:
+# [37m      8 │ ...ryMetadataDemand } from [32m'../library/data/libraryMetadataDemand.js'[37m;
+#         ╵                            [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/public/workbenchOverview/CanvasGallerySection.jsx:2:34:
+# [37m      2 │ import WorkbenchOverviewCard from [32m'./WorkbenchOverviewCard.jsx'[37m;
+#         ╵                                   [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/public/workbenchOverview/CanvasPresentation.jsx:3:37:
+# [37m      3 │ import WorkbenchOverviewPreview from [32m'./WorkbenchOverviewPreview.jsx'[37m;
+#         ╵                                      [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/public/workbenchOverview/CanvasPresentation.jsx:4:51:
+# [37m      4 │ ...ent } from [32m'../ownerSystemWorkflow/OwnerSystemWorkflowMetadataMo[37m...
+#         ╵               [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/public/workbenchOverview/CanvasPresentation.jsx:5:40:
+# [37m      5 │ ...seCanvasPresentationMotion from [32m'./useCanvasPresentationMotion.js'[37m;
+#         ╵                                    [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/public/workbenchOverview/CanvasPresentation.jsx:6:57:
+# [37m      6 │ ...kSources, canvasDestinations } from [32m'./canvasPresentationModel.js'[37m;
+#         ╵                                        [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/public/workbenchOverview/WorkbenchOverview.jsx:3:29:
+# [37m      3 │ import CompositionIndex from [32m'./CompositionIndex.jsx'[37m;
+#         ╵                              [32m~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/public/workbenchOverview/WorkbenchOverview.jsx:4:43:
+# [37m      4 │ ...UCTION } from [32m'../../systemWorkflow/domain/workbenchCollection.js'[37m;
+#         ╵                  [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/public/workbenchOverview/WorkbenchOverview.jsx:5:35:
+# [37m      5 │ import useDeferredFocusReturn from [32m'../useDeferredFocusReturn.js'[37m;
+#         ╵                                    [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/public/workbenchOverview/WorkbenchOverview.jsx:9:58:
+# [37m      9 │ ...erviewCanvas, overviewCanvasNode } from [32m'./overviewCanvasFrame.js'[37m;
+#         ╵                                            [32m~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/public/workbenchOverview/WorkbenchOverview.jsx:11:48:
+# [37m      11 │ ...hOverviewGrid = lazy(() => import([32m'./WorkbenchOverviewGrid.jsx'[37m));
+#          ╵                                      [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/public/workbenchOverview/WorkbenchOverview.jsx:12:45:
+# [37m      12 │ ...nvasPresentation = lazy(() => import([32m'./CanvasPresentation.jsx'[37m));
+#          ╵                                         [32m~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/public/workbenchOverview/WorkbenchOverview.jsx:13:44:
+# [37m      13 │ ...ThumbnailCropForm = lazy(() => import([32m'./ThumbnailCropForm.jsx'[37m));
+#          ╵                                          [32m~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/public/workbenchOverview/workbenchOverviewModel.js:3:40:
+# [37m      3 │ import { createShapePresentation } from [32m'../../shapes/shapes.js'[37m;
+#         ╵                                         [32m~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/public/workbenchOverview/workbenchOverviewModel.js:4:40:
+# [37m      4 │ ...rs, layerIds } from [32m'../../systemWorkflow/domain/artworkLayers.js'[37m;
+#         ╵                        [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/public/workbenchOverview/workbenchOverviewModel.js:5:30:
+# [37m      5 │ ...orkbenchArea } from [32m'../../systemWorkflow/domain/workbenchArea.js'[37m;
+#         ╵                        [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/public/workbenchOverview/workbenchOverviewModel.js:6:69:
+# [37m      6 │ ..._DISPLAY_ID } from [32m'../../systemWorkflow/domain/displayModules.js'[37m;
+#         ╵                       [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/public/workbenchOverview/workbenchOverviewModel.js:7:31:
+# [37m      7 │ import { passageArticle } from [32m'../../text/scenePassages.js'[37m;
+#         ╵                                [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/reception/ReceptionCanvas.jsx:3:25:
+# [37m      3 │ import ImageArtwork from [32m'../imageModule/ImageArtwork.jsx'[37m;
+#         ╵                          [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/reception/ReceptionCanvas.jsx:4:24:
+# [37m      4 │ import ArticleView from [32m'../text/ArticleView.jsx'[37m;
+#         ╵                         [32m~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/reception/ReceptionCanvas.jsx:5:29:
+# [37m      5 │ ...rt IdentityPortrait from [32m'../public/identity/IdentityPortrait.jsx'[37m;
+#         ╵                             [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/reception/ReceptionCanvas.jsx:6:27:
+# [37m      6 │ import ReceptionScene from [32m'./ReceptionScene.jsx'[37m;
+#         ╵                            [32m~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/reception/ReceptionCanvas.jsx:7:35:
+# [37m      7 │ import { receptionPixelRect } from [32m'./receptionLayout.js'[37m;
+#         ╵                                    [32m~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/reception/ReceptionCanvas.jsx:10:49:
+# [37m      10 │ ...inkedContent = lazy(() => import([32m'./ReceptionLinkedContent.jsx'[37m));
+#          ╵                                     [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/reception/ReceptionOverview.jsx:3:43:
+# [37m      3 │ ...stinationReady } from [32m'../startveil/StartupDestinationContext.jsx'[37m;
+#         ╵                          [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/reception/ReceptionOverview.jsx:4:28:
+# [37m      4 │ import ReceptionCanvas from [32m'./ReceptionCanvas.jsx'[37m;
+#         ╵                             [32m~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/reception/ReceptionOverview.jsx:5:32:
+# [37m      5 │ import ReceptionNavigation from [32m'./ReceptionNavigation.jsx'[37m;
+#         ╵                                 [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/reception/ReceptionOverview.jsx:6:28:
+# [37m      6 │ import ReceptionHeader from [32m'./ReceptionHeader.jsx'[37m;
+#         ╵                             [32m~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/reception/ReceptionOverview.jsx:7:64:
+# [37m      7 │ ...n, { useReceptionPresentation } from [32m'./ReceptionPresentation.jsx'[37m;
+#         ╵                                         [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/reception/ReceptionOverview.jsx:8:47:
+# [37m      8 │ ...ntationDestination } from [32m'../presentation/presentationSources.js'[37m;
+#         ╵                              [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/reception/ReceptionOverview.jsx:9:35:
+# [37m      9 │ ... useDeferredFocusReturn from [32m'../public/useDeferredFocusReturn.js'[37m;
+#         ╵                                 [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/reception/ReceptionOverview.jsx:15:44:
+# [37m      15 │ ...ionKeeper = lazy(() => import([32m'../keeper/ExplorationKeeper.jsx'[37m));
+#          ╵                                  [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/reception/ReceptionOverview.jsx:16:45:
+# [37m      16 │ ... => import([32m'../public/workbenchOverview/CanvasPresentation.jsx'[37m));
+#          ╵               [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/reception/ReceptionOverview.jsx:17:50:
+# [37m      17 │ ...umentCanvas = lazy(() => import([32m'./ReceptionDocumentCanvas.jsx'[37m));
+#          ╵                                    [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/reception/receptionEditorDocument.js:3:95:
+# [37m      3 │ ...eModules, IMAGE_SIZE_LIMITS } from [32m'../imageModule/imageModule.js'[37m;
+#         ╵                                       [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/reception/receptionEditorDocument.js:4:73:
+# [37m      4 │ ...TextModules, restoreTextModules } from [32m'../text/domain/article.js'[37m;
+#         ╵                                           [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/reception/receptionEditorDocument.js:5:122:
+# [37m      5 │ ...LIMITS } from [32m'../profileDocument/domain/workbenchPresentation.js'[37m;
+#         ╵                  [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/reception/receptionEditorDocument.js:6:36:
+# [37m      6 │ ...eceptionLinks } from [32m'../profileDocument/domain/receptionLinks.js'[37m;
+#         ╵                         [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/reception/receptionEditorDocument.js:7:84:
+# [37m      7 │ ...leArtworkLayers } from [32m'../systemWorkflow/domain/artworkLayers.js'[37m;
+#         ╵                           [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/reception/receptionEditorDocument.js:8:30:
+# [37m      8 │ ...{ workbenchArea } from [32m'../systemWorkflow/domain/workbenchArea.js'[37m;
+#         ╵                           [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/reception/receptionEditorDocument.js:9:69:
+# [37m      9 │ ...ment, pruneReceptionArrangement } from [32m'./receptionArrangement.js'[37m;
+#         ╵                                           [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/reception/receptionEditorDocument.js:10:41:
+# [37m      10 │ ...CROP_PROJECTION_ZOOM } from [32m'../lattice/rendering/latticeCrop.js'[37m;
+#          ╵                                [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/reception/receptionLayout.js:3:38:
+# [37m      3 │ import { pruneReceptionContent } from [32m'./receptionLayers.js'[37m;
+#         ╵                                       [32m~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/reception/receptionLayout.js:4:65:
+# [37m      4 │ ...angement, reflowReceptionGroups } from [32m'./receptionArrangement.js'[37m;
+#         ╵                                           [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/shapes/shapeSession.js:3:65:
+# [37m      3 │ ..._SHAPES, validShapes, createShapePresentation } from [32m'./shapes.js'[37m;
+#         ╵                                                         [32m~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/shapes/shapeSession.js:4:51:
+# [37m      4 │ ...tation } from [32m'../profileDocument/domain/workbenchPresentation.js'[37m;
+#         ╵                  [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/shapes/shapeSession.js:5:39:
+# [37m      5 │ ...hPosition } from [32m'../public/ownerSystemWorkflow/workbenchSpace.js'[37m;
+#         ╵                     [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/signals/domain/keeperSignal.js:2:40:
+# [37m      2 │ import { normalizeProfileAddress } from [32m'../../library/config.js'[37m;
+#         ╵                                         [32m~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/signals/state/useSignalStore.js:2:65:
+# [37m      2 │ ...eAddress, resolveWorkspaceProfile } from [32m'../../library/config.js'[37m;
+#         ╵                                             [32m~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/signals/state/useSignalStore.js:3:31:
+# [37m      3 │ import { useWalletStore } from [32m'../../store/useWalletStore.js'[37m;
+#         ╵                                [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/signals/state/useSignalStore.js:4:42:
+# [37m      4 │ ...reActivityRepository } from [32m'../data/fixtureActivityRepository.js'[37m;
+#         ╵                                [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/signals/state/useSignalStore.js:5:40:
+# [37m      5 │ ...uksoActivityRepository } from [32m'../data/luksoActivityRepository.js'[37m;
+#         ╵                                  [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/signals/state/useSignalStore.js:6:77:
+# [37m      6 │ ...play, getCompletionCooldown } from [32m'../domain/reactionDirector.js'[37m;
+#         ╵                                       [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/signals/state/useSignalStore.js:7:57:
+# [37m      7 │ ...addReactionsToQueue, mergeSignalSnapshot } from [32m'./signalState.js'[37m;
+#         ╵                                                    [32m~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/signals/state/useSignalStore.js:8:55:
+# [37m      8 │ ...lDocument, saveSignalDocument } from [32m'../storage/signalStorage.js'[37m;
+#         ╵                                         [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/signals/state/useSignalStore.js:9:64:
+# [37m      9 │ ...ies } from [32m'../../profileIdentity/state/profileIdentityService.js'[37m;
+#         ╵               [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/signals/storage/signalStorage.js:2:39:
+# [37m      2 │ import { sortSignalsNewestFirst } from [32m'../domain/keeperSignal.js'[37m;
+#         ╵                                        [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/startveil/PublicEntryPortal.jsx:3:42:
+# [37m      3 │ ...roller from [32m'../profileDiscovery/useProfileDiscoveryController.js'[37m;
+#         ╵                [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/startveil/PublicEntryPortal.jsx:4:36:
+# [37m      4 │ ...edProfile } from [32m'../profileDocument/state/usePublishedProfile.js'[37m;
+#         ╵                     [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/startveil/PublicEntryPortal.jsx:5:41:
+# [37m      5 │ ...TUS } from [32m'../profileDocument/storage/luksoPublishedProfileRepo[37m...
+#         ╵               [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/startveil/PublicEntryPortal.jsx:6:36:
+# [37m      6 │ import { selectFeaturedWorld } from [32m'./featuredWorld.js'[37m;
+#         ╵                                     [32m~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/startveil/PublicEntryPortal.jsx:11:49:
+# [37m      11 │ ...=> import([32m'../profileDocument/components/GridProductionRenderer[37m...
+#          ╵              [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/store/useWalletStore.js:5:22:
+# [37m      5 │ import { lukso } from [32m"viem/chains"[37m;
+#         ╵                       [32m~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/store/useWalletStore.js:7:30:
+# [37m      7 │ ...chema from [32m'@erc725/erc725.js/schemas/LSP3ProfileMetadata.json'[37m ...
+#         ╵               [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/store/useWalletStore.js:8:46:
+# [37m      8 │ ...reateWalletProviderLifecycle } from [32m'./walletProviderLifecycle.js'[37m;
+#         ╵                                        [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/store/useWalletStore.js:9:80:
+# [37m      9 │ ...evelopmentGlobal, reportControlledError } from [32m'../diagnostics.js'[37m;
+#         ╵                                                   [32m~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/systemWorkflow/ProfileEditingBoundary.jsx:2:40:
+# [37m      2 │ ...stinationReady } from [32m'../startveil/StartupDestinationContext.jsx'[37m;
+#         ╵                          [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/systemWorkflow/displayModuleSession.js:5:56:
+# [37m      5 │ ...WorkflowAppearanceCandidate } from [32m'./systemWorkflowAppearance.js'[37m;
+#         ╵                                       [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/systemWorkflow/domain/systemWorkflowDraft.js:4:35:
+# [37m      4 │ import { validArtworkLayers } from [32m'./artworkLayers.js'[37m;
+#         ╵                                    [32m~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/systemWorkflow/domain/systemWorkflowDraft.js:6:37:
+# [37m      6 │ import { validPlacementGroups } from [32m'./placementGroups.js'[37m;
+#         ╵                                      [32m~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/systemWorkflow/domain/systemWorkflowDraft.js:7:77:
+# [37m      7 │ ...KEYS, validDisplayCanvasAppearance } from [32m'./displayAppearance.js'[37m;
+#         ╵                                              [32m~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/systemWorkflow/domain/systemWorkflowDraft.js:8:33:
+# [37m      8 │ import { validModuleEdges } from [32m'./moduleSurfaceAppearance.js'[37m;
+#         ╵                                  [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/systemWorkflow/domain/systemWorkflowDraft.js:9:40:
+# [37m      9 │ import { normalizeProfileAddress } from [32m'../../library/config.js'[37m;
+#         ╵                                         [32m~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/systemWorkflow/domain/systemWorkflowDraft.js:10:38:
+# [37m      10 │ ...alAssetId } from [32m'../../profileDocument/domain/assetReference.js'[37m;
+#          ╵                     [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/systemWorkflow/domain/systemWorkflowDraft.js:11:40:
+# [37m      11 │ ...OCUMENT_LIMITS } from [32m'../../profileDocument/domain/constants.js'[37m;
+#          ╵                          [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/systemWorkflow/domain/systemWorkflowDraft.js:12:38:
+# [37m      12 │ import { isValidPlacementMedia } from [32m'./placementMedia.js'[37m;
+#          ╵                                       [32m~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/systemWorkflow/domain/systemWorkflowDraft.js:13:36:
+# [37m      13 │ ...dentityCard } from [32m'../../profileIdentity/domain/identityCard.js'[37m;
+#          ╵                       [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/systemWorkflow/domain/systemWorkflowDraft.js:14:45:
+# [37m      14 │ ...on } from [32m'../../profileDocument/domain/workbenchPresentation.js'[37m;
+#          ╵              [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/systemWorkflow/domain/systemWorkflowDraft.js:15:116:
+# [37m      15 │ ...isDisplayFormat, projectDisplayDraft } from [32m'./displayModules.js'[37m;
+#          ╵                                                [32m~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/systemWorkflow/domain/systemWorkflowDraft.js:16:30:
+# [37m      16 │ import { validMiniApps } from [32m'../../miniApps/domain/miniApps.js'[37m;
+#          ╵                               [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/systemWorkflow/domain/systemWorkflowDraft.js:17:55:
+# [37m      17 │ ...es, imageReferenceCount } from [32m'../../imageModule/imageModule.js'[37m;
+#          ╵                                   [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/systemWorkflow/domain/systemWorkflowDraft.js:18:33:
+# [37m      18 │ import { validTextModules } from [32m'../../text/domain/article.js'[37m;
+#          ╵                                  [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/systemWorkflow/domain/systemWorkflowDraft.js:19:28:
+# [37m      19 │ import { validShapes } from [32m'../../shapes/shapes.js'[37m;
+#          ╵                             [32m~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/systemWorkflow/domain/systemWorkflowDraft.js:20:55:
+# [37m      20 │ ...KeeperDocks, keeperReferenceCount } from [32m'../../keeper/keeper.js'[37m;
+#          ╵                                             [32m~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/systemWorkflow/domain/systemWorkflowDraft.js:21:69:
+# [37m      21 │ ...KEYS, isTextPlacement, validDisplayText } from [32m'./displayText.js'[37m;
+#          ╵                                                   [32m~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/systemWorkflow/domain/systemWorkflowDraft.js:22:79:
+# [37m      22 │ ...ION, isSystemWorkflowGridCoordinate } from [32m'./gridCoordinates.js'[37m;
+#          ╵                                               [32m~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/systemWorkflow/domain/systemWorkflowDraft.js:393:118:
+# [37m      393 │ ...ovedArtworkPresentation } from [32m'./removedArtworkPresentation.js'[37m;
+#           ╵                                   [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/systemWorkflow/domain/systemWorkflowGrid.js:2:48:
+# [37m      2 │ ...teSystemWorkflowPlacementId } from [32m'../systemWorkflowPlacement.js'[37m;
+#         ╵                                       [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/systemWorkflow/domain/systemWorkflowGrid.js:9:7:
+# [37m      9 │ } from [32m'./systemWorkflowDraft.js'[37m;
+#         ╵        [32m~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/systemWorkflow/domain/workbenchCollection.js:2:102:
+# [37m      2 │ ..._VERSION, SYSTEM_WORKFLOW_LIMITS } from [32m'./systemWorkflowDraft.js'[37m;
+#         ╵                                            [32m~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/systemWorkflow/systemWorkflowAuthoringSession.js:12:7:
+# [37m      12 │ } from [32m'./domain/systemWorkflowGrid.js'[37m;
+#          ╵        [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/systemWorkflow/systemWorkflowAuthoringSession.js:16:7:
+# [37m      16 │ } from [32m'./domain/systemWorkflowNavigation.js'[37m;
+#          ╵        [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/systemWorkflow/systemWorkflowAuthoringSession.js:19:7:
+# [37m      19 │ } from [32m'./systemWorkflowPlacement.js'[37m;
+#          ╵        [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/systemWorkflow/systemWorkflowAuthoringSession.js:23:7:
+# [37m      23 │ } from [32m'./systemWorkflowMovement.js'[37m;
+#          ╵        [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/systemWorkflow/systemWorkflowAuthoringSession.js:27:7:
+# [37m      27 │ } from [32m'./systemWorkflowResize.js'[37m;
+#          ╵        [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/systemWorkflow/systemWorkflowAuthoringSession.js:31:7:
+# [37m      31 │ } from [32m'./systemWorkflowDuplicate.js'[37m;
+#          ╵        [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/systemWorkflow/systemWorkflowAuthoringSession.js:35:7:
+# [37m      35 │ } from [32m'./systemWorkflowRemoval.js'[37m;
+#          ╵        [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/systemWorkflow/systemWorkflowAuthoringSession.js:39:7:
+# [37m      39 │ } from [32m'./systemWorkflowLayer.js'[37m;
+#          ╵        [32m~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/systemWorkflow/systemWorkflowAuthoringSession.js:40:50:
+# [37m      40 │ ...reateSystemWorkflowCropCandidate } from [32m'./systemWorkflowCrop.js'[37m;
+#          ╵                                            [32m~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/systemWorkflow/systemWorkflowAuthoringSession.js:41:56:
+# [37m      41 │ ...orkflowInspectionCandidate } from [32m'./systemWorkflowInspection.js'[37m;
+#          ╵                                      [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/systemWorkflow/systemWorkflowAuthoringSession.js:45:7:
+# [37m      45 │ } from [32m'./systemWorkflowTransform.js'[37m;
+#          ╵        [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/systemWorkflow/systemWorkflowAuthoringSession.js:46:56:
+# [37m      46 │ ...orkflowAppearanceCandidate } from [32m'./systemWorkflowAppearance.js'[37m;
+#          ╵                                      [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/systemWorkflow/systemWorkflowAuthoringSession.js:47:52:
+# [37m      47 │ ...SystemWorkflowGutterCandidate } from [32m'./systemWorkflowGutters.js'[37m;
+#          ╵                                         [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/systemWorkflow/systemWorkflowAuthoringSession.js:48:50:
+# [37m      48 │ ...reateSystemWorkflowLockCandidate } from [32m'./systemWorkflowLock.js'[37m;
+#          ╵                                            [32m~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/systemWorkflow/systemWorkflowAuthoringSession.js:49:53:
+# [37m      49 │ ...ystemWorkflowArrangeCandidate } from [32m'./systemWorkflowArrange.js'[37m;
+#          ╵                                         [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/systemWorkflow/workbenchBackup.js:4:44:
+# [37m      4 │ ...Key } from [32m'../profileDocument/storage/ownerPublicationBaselineS[37m...
+#         ╵               [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/systemWorkflow/workbenchBackup.js:5:35:
+# [37m      5 │ ...Key } from [32m'../public/ownerSystemWorkflow/workbenchLayoutStorage[37m...
+#         ╵               [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/systemWorkflow/workbenchGroupSession.js:2:39:
+# [37m      2 │ ...hPosition } from [32m'../public/ownerSystemWorkflow/workbenchSpace.js'[37m;
+#         ╵                     [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/text/ArticleView.jsx:3:41:
+# [37m      3 │ ...edAssetUrl } from [32m'../profileDocument/domain/publishedAssetUrl.js'[37m;
+#         ╵                      [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/text/LinkedTextFrames.jsx:11:45:
+# [37m      11 │ ... = lazy(() => import([32m'./ArticleEditor.jsx'[37m).then(module => ({ d...
+#          ╵                         [32m~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/text/SceneNavigation.jsx:2:50:
+# [37m      2 │ ...eneSession, sceneScopeKey } from [32m'../presentation/sceneSession.js'[37m;
+#         ╵                                     [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/text/SceneTextContent.jsx:2:53:
+# [37m      2 │ ...seSceneNavigation, useSceneProgress } from [32m'./SceneNavigation.jsx'[37m;
+#         ╵                                               [32m~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/text/SceneTextContent.jsx:3:31:
+# [37m      3 │ import { passageArticle } from [32m'./scenePassages.js'[37m;
+#         ╵                                [32m~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/text/SceneTextContent.jsx:5:25:
+# [37m      5 │ import TextViewport from [32m'./TextViewport.jsx'[37m;
+#         ╵                          [32m~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/text/SceneTextContent.jsx:6:25:
+# [37m      6 │ import PagedArticle from [32m'./PagedArticle.jsx'[37m;
+#         ╵                          [32m~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/text/TextColourTools.jsx:2:36:
+# [37m      2 │ ...mmittedColourControls from [32m'../colour/CommittedColourControls.jsx'[37m;
+#         ╵                               [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/text/TextColourTools.jsx:4:53:
+# [37m      4 │ ...ArticleColour, setArticleColour } from [32m'./articleColourGesture.js'[37m;
+#         ╵                                           [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/text/domain/article.js:3:53:
+# [37m      3 │ ...rticleSections, joinArticleSections } from [32m'../articleSections.js'[37m;
+#         ╵                                               [32m~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/text/textSession.js:3:95:
+# [37m      3 │ ...LIMITS } from [32m'../profileDocument/domain/workbenchPresentation.js'[37m;
+#         ╵                  [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/text/textSession.js:4:39:
+# [37m      4 │ ...hPosition } from [32m'../public/ownerSystemWorkflow/workbenchSpace.js'[37m;
+#         ╵                     [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+# [31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+#     src/ui/ToolPanel.jsx:3:102:
+# [37m      3 │ ...GES } from [32m'../public/ownerSystemWorkflow/ownerSystemWorkflowWin[37m...
+#         ╵               [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+#     at failureErrorWithLog (C:\\Users\\Hidden Swarm\\Documents\\ChatGPT\\inscape\\remediation-2026-10-19-shared-checkpoint\\work\\node_modules\\esbuild\\lib\\main.js:1467:15)
+#     at C:\\Users\\Hidden Swarm\\Documents\\ChatGPT\\inscape\\remediation-2026-10-19-shared-checkpoint\\work\\node_modules\\esbuild\\lib\\main.js:926:25
+#     at runOnEndCallbacks (C:\\Users\\Hidden Swarm\\Documents\\ChatGPT\\inscape\\remediation-2026-10-19-shared-checkpoint\\work\\node_modules\\esbuild\\lib\\main.js:1307:45)
+#     at buildResponseToResult (C:\\Users\\Hidden Swarm\\Documents\\ChatGPT\\inscape\\remediation-2026-10-19-shared-checkpoint\\work\\node_modules\\esbuild\\lib\\main.js:924:7)
+#     at C:\\Users\\Hidden Swarm\\Documents\\ChatGPT\\inscape\\remediation-2026-10-19-shared-checkpoint\\work\\node_modules\\esbuild\\lib\\main.js:936:9
+#     at new Promise (<anonymous>)
+#     at requestCallbacks.on-end (C:\\Users\\Hidden Swarm\\Documents\\ChatGPT\\inscape\\remediation-2026-10-19-shared-checkpoint\\work\\node_modules\\esbuild\\lib\\main.js:935:54)
+#     at handleRequest (C:\\Users\\Hidden Swarm\\Documents\\ChatGPT\\inscape\\remediation-2026-10-19-shared-checkpoint\\work\\node_modules\\esbuild\\lib\\main.js:628:17)
+#     at handleIncomingPacket (C:\\Users\\Hidden Swarm\\Documents\\ChatGPT\\inscape\\remediation-2026-10-19-shared-checkpoint\\work\\node_modules\\esbuild\\lib\\main.js:653:7)
+#     at Socket.readFromStdout (C:\\Users\\Hidden Swarm\\Documents\\ChatGPT\\inscape\\remediation-2026-10-19-shared-checkpoint\\work\\node_modules\\esbuild\\lib\\main.js:581:7)
+#     at Socket.emit (node:events:514:28)
+#     at addChunk (node:internal/streams/readable:567:12)
+#     at readableAddChunkPushByteMode (node:internal/streams/readable:518:3)
+#     at Readable.push (node:internal/streams/readable:398:5)
+#     at Pipe.onStreamRead (node:internal/stream_base_commons:189:23)
+# Browser lifecycle +65610ms cleanup:vite:complete
+# Browser lifecycle +65610ms cleanup:runtime:start
+# Browser lifecycle +65657ms cleanup:runtime:complete
+# Browser lifecycle +65657ms cleanup:complete shutdownMode=not-started elapsedMs=38916 forced=0
+1..1
+# tests 5
+# suites 1
+# pass 0
+# fail 0
+# cancelled 5
+# skipped 0
+# todo 0
+# duration_ms 66617.715

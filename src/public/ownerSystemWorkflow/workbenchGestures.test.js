@@ -146,3 +146,19 @@ test('busy start is rejected; late callbacks of a cancelled gesture cannot affec
   f.gestures.cancel();f.move();stale({pointerId:1});assert.equal(f.gestures.isActive(),true);assert.equal(f.state.attempts,0);
   f.gestures.cancel();f.clean();
 });
+
+test('resize completion releases operation resources once on commit, failure, cancellation and failed capture', () => {
+  for (const reason of ['commit', 'failed save', 'released buttons', 'failed capture', 'throw']) {
+    const f = fixture(); let finished = 0;
+    if (reason === 'failed capture') f.host.setPointerCapture = () => { throw Error('No capture'); };
+    f.gestures.beginResize(f.event, { beforeTransforms: f.original, valid: () => true,
+      preview: () => { f.state.transforms = {}; },
+      commit: () => { if (reason === 'throw') throw Error('Save failed'); return reason !== 'failed save'; },
+      onFinish: () => { finished++; },
+    });
+    if (reason === 'released buttons') f.events.emit('pointermove', { buttons: 0 });
+    else if (reason === 'throw') assert.throws(() => f.events.emit('pointerup'), /Save failed/);
+    else f.events.emit('pointerup');
+    f.gestures.cancel(); assert.equal(finished, 1, reason); f.clean();
+  }
+});

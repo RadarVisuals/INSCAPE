@@ -11,6 +11,17 @@ import { runOwnedCommand, requireSuccessfulCommand } from './verificationProcess
 import { assertEvidencePath, verificationIdentity, probeBrowser } from './verificationIdentity.mjs';
 import { closeViteWithinDeadline } from '../browser-tests/browser-test-lifecycle.mjs';
 
+export function createBrowserTestServer(root, port) {
+  return createServer({ root, server: { host: '127.0.0.1', port, strictPort: true, open: false }, plugins: [{
+    name: 'inscape-browser-verification',
+    configResolved(config) {
+      // Vite's config merge drops inline null overrides of the project's watch options.
+      // Verification already checks source hashes; it must not watch or hot-reload files.
+      config.server.watch = null;
+    },
+  }] });
+}
+
 export async function runBrowserTests({ root, output, args = [], environment = process.env }) {
   assertEvidencePath(root, output);
   await mkdir(dirname(output), { recursive: true }); await mkdir(output);
@@ -41,7 +52,7 @@ export async function runBrowserTests({ root, output, args = [], environment = p
       const socket = createSocketServer(); socket.once('error', reject);
       socket.listen(0, '127.0.0.1', () => { const port = socket.address().port; socket.close(() => resolvePort(port)); });
     });
-    server = await createServer({ root, server: { host: '127.0.0.1', port, strictPort: true, open: false } });
+    server = await createBrowserTestServer(root, port);
     await server.listen();
     const origin = `http://127.0.0.1:${server.httpServer.address().port}`;
     console.log(`Browser: ${JSON.stringify(report.identity.runtime.browser)}\nFixtures: ${origin}\nEvidence: ${output}`);

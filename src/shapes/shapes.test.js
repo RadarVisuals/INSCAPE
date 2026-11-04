@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { addShape, editShape, reorderShape, prepareShapeResize } from './shapeSession.js';
+import { addShape, editShape, prepareShapeResize } from './shapeSession.js';
+import { editArtworkLayers } from '../systemWorkflow/artworkLayerSession.js';
 import { artworkLayers, layerIds } from '../systemWorkflow/domain/artworkLayers.js';
 import { validShapes, createShapePresentation, isShapeCommand } from './shapes.js';
 import { createSystemWorkflowDraftStore } from '../systemWorkflow/systemWorkflowDraftStore.js';
@@ -27,6 +28,42 @@ function addLegacyTexture(store, placed = {}) {
   return id;
 }
 const build = draft => buildProfileDocumentV9({ profileAddress: profile, systemWorkflowDraft: draft, assetRecords: [] });
+
+test('Rectangle outline is independent from fill and survives history, duplication, reload and publication', () => {
+  const { store, storage } = fixture(), id = addShape(store, profile);
+  const before = store.getDraft(), outline = { width: 2.5, color: '#d5f75d', opacity: .8 };
+  editShape(store, profile, before.shapes[0], { opacity: 0, outline });
+  const outlined = store.getDraft();
+  assert.ok(store.undo()); assert.deepEqual(store.getDraft(), before); assert.ok(store.redo());
+  assert.deepEqual(store.getDraft(), outlined);
+  addShape(store, profile, null, store.getDraft().shapes[0]);
+  const reopened = createSystemWorkflowDraftStore({ profileAddress: profile, storage }).getDraft();
+  assert.ok(reopened.shapes.every(item => item.opacity === 0));
+  assert.deepEqual(reopened.shapes.map(item => item.outline), [outline, outline]);
+  const published = build(reopened); assert.ok(validateProfileDocumentV9(published).valid);
+  assert.deepEqual(reconcileSystemWorkflowDraftFromProfileDocumentV9(published, reopened).shapes, reopened.shapes);
+  editShape(store, profile, store.getDraft().shapes.find(item => item.id === id), { outline: { ...outline, width: 0 } });
+  assert.equal(store.getDraft().shapes[0].outline.width, 0);
+});
+
+test('Invalid outlines and failed storage cannot change a saved rectangle or pattern', () => {
+  const f = fixture(); addShape(f.store, profile);
+  const record = f.store.getDraft().shapes[0], outline = { width: 2, color: '#abcdef', opacity: 1 };
+  const bad = [null, { ...outline, width: -1 }, { ...outline, width: 65 }, { ...outline, width: NaN },
+    { ...outline, color: 'red' }, { ...outline, opacity: 1.1 }, { ...outline, opacity: '1' }, { ...outline, extra: true }, { width: 2, color: '#abcdef' }];
+  const before = f.store.getDraft();
+  for (const value of bad) {
+    assert.throws(() => editShape(f.store, profile, record, { outline: value }));
+    assert.deepEqual(f.store.getDraft(), before);
+    const invalid = build(before); invalid.shapes[0].outline = value;
+    assert.equal(validateProfileDocumentV9(invalid).valid, false);
+  }
+  const gridId = addShape(f.store, profile, { kind: 'grid' });
+  assert.throws(() => editShape(f.store, profile, f.store.getDraft().shapes.find(item => item.id === gridId), { outline }));
+  const saved = f.store.getDraft(); f.fail(true);
+  assert.throws(() => editShape(f.store, profile, saved.shapes[0], { outline }));
+  assert.deepEqual(f.store.getDraft(), saved);
+});
 
 test('Shape blur is bounded and survives editing, history, duplication, reload and publication', () => {
   const f = fixture();
@@ -74,7 +111,7 @@ test('Grid and noise Texture retain transparent-pattern settings through editing
     assert.ok(commitWorkbenchSelectionResize([{ store, profileAddress: profile, expected: copy, id: copyId,
       layoutKey: 'shapes', prepare: prepareShapeResize, left: 100, top: 200, width: 1200, height: 800 }]));
     assert.deepEqual(store.getDraft().shapes.find(item => item.id === copyId)[kind], settings[kind], 'resizing keeps pattern measurements');
-    reorderShape(store, profile, copyId, 'back');
+    editArtworkLayers(store, profile, { type: 'order', ids: [copyId], direction: 'back' });
     assert.equal(layerIds(artworkLayers(store.getDraft()))[0], copyId);
     assert.ok(store.undo()); assert.ok(store.redo());
   }
@@ -149,7 +186,7 @@ test('Shape creation, duplication, order, colour and dimensions survive undo and
   const duplicate = addShape(store, profile, null, store.getDraft().shapes[0]);
   assert.deepEqual(store.getDraft().workbench.shapes[1].window, { left: 474.5, top: 344.25, width: 288, height: 288 });
   assert.equal(store.getDraft().shapes[1].color, '#ff6600');
-  reorderShape(store, profile, duplicate, 'back');
+  editArtworkLayers(store, profile, { type: 'order', ids: [duplicate], direction: 'back' });
   assert.deepEqual(layerIds(artworkLayers(store.getDraft())), [duplicate, first]);
   assert.ok(store.undo()); assert.deepEqual(layerIds(artworkLayers(store.getDraft())), [first, duplicate]); assert.ok(store.redo());
   const expected = store.getDraft().shapes.find(item => item.id === duplicate);

@@ -1,3 +1,4 @@
+import { navigateWorkbench } from './fixtures/workbench-navigation.mjs';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { mkdir } from 'node:fs/promises';
@@ -100,7 +101,7 @@ test('owner group publication is explicit and undoable without changing content 
     const collapse = page.locator('.editor-menu-brand[aria-expanded="true"]');
     if (await collapse.isVisible()) await collapse.click();
     await page.getByRole('button', { name: 'Open Public study group', exact: true }).click(); await arrived(page);
-    await page.getByRole('button', { name: 'Workbench groups', exact: true }).click();
+    await navigateWorkbench(page, 'groups');
     await panel.getByRole('button', { name: 'Unstack', exact: true }).click();
     assert.equal(await page.locator('[data-workbench-group-presented]').count(), 0, 'Unstack resumes the authored view');
   } finally { await browser.close(); }

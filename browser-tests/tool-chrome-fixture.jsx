@@ -39,7 +39,7 @@ async function mountFixture() {
   if (sample === 'actions') {
     addShape(store, profileAddress, { position: { left: 100, top: 100 } });
     addImageModule(store, profileAddress, {
-      side: await resolveImageLibrarySide(OWNER_SYSTEM_WORKFLOW_REVIEW_ASSETS[6]), size: { width: 360, height: 240 }, position: { left: 520, top: 100 },
+      side: await resolveImageLibrarySide(OWNER_SYSTEM_WORKFLOW_REVIEW_ASSETS[0]), size: { width: 360, height: 240 }, position: { left: 520, top: 100 },
     });
   }
   if (sample === 'navigator') {

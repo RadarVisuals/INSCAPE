@@ -11,9 +11,11 @@ const exact = (value, keys) => value && typeof value === 'object' && !Array.isAr
   && Object.keys(value).length === keys.length && keys.every(key => Object.hasOwn(value, key));
 const number = (value, min, max) => Number.isFinite(value) && value >= min && value <= max;
 const maximumWindowSize = 16384;
+export const TEXT_WINDOW_LIMITS = Object.freeze({ minimumWidth: 180, minimumHeight: 100, maximumWidth: maximumWindowSize, maximumHeight: maximumWindowSize });
+export const SHAPE_WINDOW_LIMITS = Object.freeze({ minimumWidth: 8, minimumHeight: 8, maximumWidth: 7992, maximumHeight: 7992 });
 export const DISPLAY_WINDOW_LIMITS = Object.freeze({ minimumWidth: .01, minimumHeight: .01, maximumWidth: maximumWindowSize, maximumHeight: maximumWindowSize });
 const position = value => exact(value, ['left', 'top']) && number(value.left, -16384, 16384) && number(value.top, -16384, 16384);
-const windowFrame = (value, height, minimumWidth = 180, minimumHeight = 100) => exact(value, height ? ['left', 'top', 'width', 'height'] : ['left', 'top', 'width'])
+const windowFrame = (value, height, minimumWidth = TEXT_WINDOW_LIMITS.minimumWidth, minimumHeight = TEXT_WINDOW_LIMITS.minimumHeight) => exact(value, height ? ['left', 'top', 'width', 'height'] : ['left', 'top', 'width'])
   && number(value.left, -16384, 16384) && number(value.top, -16384, 16384) && number(value.width, minimumWidth, maximumWindowSize)
   && (!height || number(value.height, minimumHeight, maximumWindowSize));
 
@@ -37,7 +39,9 @@ export function isValidWorkbenchPresentation(value) {
       const frame = item?.window;
       if (!exact(item, ['id', 'open', 'window']) || !SHAPE_ID.test(item.id) || ids.has(item.id)
         || typeof item.open !== 'boolean' || !exact(frame, ['left', 'top', 'width', 'height'])
-        || !position({ left: frame.left, top: frame.top }) || !number(frame.width, 8, 7992) || !number(frame.height, 8, 7992)) return false;
+        || !position({ left: frame.left, top: frame.top })
+        || !number(frame.width, SHAPE_WINDOW_LIMITS.minimumWidth, SHAPE_WINDOW_LIMITS.maximumWidth)
+        || !number(frame.height, SHAPE_WINDOW_LIMITS.minimumHeight, SHAPE_WINDOW_LIMITS.maximumHeight)) return false;
       ids.add(item.id);
     }
   }

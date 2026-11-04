@@ -109,8 +109,12 @@ export interface MountedWorkbenchStore extends WorkbenchScope {
   getSnapshot(): WorkflowDraft;
   getDraft(): WorkflowDraft;
 }
-export interface ToolSource { color?: ReactNode; fx?: ReactNode; image?: ReactNode; shape?: ReactNode }
-export interface ViewTransform { scale: number; x: number; y: number; frame?: Frame; gridScale?: number }
+export interface ArtworkMenuAction { id: string; label: string; disabled?: boolean; reason?: string; run: () => void }
+export interface ToolSource {
+  color?: ReactNode; fx?: ReactNode; image?: ReactNode; shape?: ReactNode;
+  actions?: { disabled?: boolean; duplicate: { disabled?: boolean; reason?: string; run: () => void }; items?: ArtworkMenuAction[] };
+}
+export interface ViewTransform { scale: number; x: number; y: number; frame?: Frame; gridScale?: number; cellRadius?: number }
 export type ResizeLayoutKey = 'display' | 'displays' | 'texts' | 'miniApps' | 'imageModules' | 'shapes';
 /** The registration hook and operation adapters use the same complete capability. */
 export type ResizeTarget = WorkbenchResizeTarget;
@@ -302,7 +306,7 @@ export interface GestureMoveInput {
   previewDrop(event: PointerEvent): void;
   commitDrop(event: PointerEvent): boolean;
 }
-export type GestureResizeInput = Pick<WorkbenchResizeOperation, 'beforeTransforms' | 'valid' | 'preview' | 'commit'>;
+export type GestureResizeInput = Pick<WorkbenchResizeOperation, 'beforeTransforms' | 'valid' | 'preview' | 'commit'> & { onFinish?(): void };
 export interface GestureMarqueeInput<Selection> {
   beforeSelection: Selection;
   previousSelection: WindowId[];
@@ -311,11 +315,11 @@ export interface GestureMarqueeInput<Selection> {
 export interface WorkbenchGestureInput<Selection> {
   getHost(): HTMLElement | null;
   restoreTransforms(transforms: WorkbenchTransforms): void;
-  replaceSelection(ids: WindowId[]): void;
-  restoreSelection(selection: Selection): void;
-  previewMarquee(rectangle: Frame | null): void;
-  finishSnap(): void;
-  cancelDrop(): void;
+  replaceSelection?(ids: WindowId[]): void;
+  restoreSelection?(selection: Selection): void;
+  previewMarquee?(rectangle: Frame | null): void;
+  finishSnap?(): void;
+  cancelDrop?(): void;
   events?: Pick<Window, 'addEventListener' | 'removeEventListener'>;
   visibility?: Document;
 }

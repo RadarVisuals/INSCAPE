@@ -1,3 +1,4 @@
+import { navigateWorkbench } from './fixtures/workbench-navigation.mjs';
 import assert from 'node:assert/strict';
 import { chromium } from 'playwright-core';
 const origin = process.env.INSCAPE_SYSTEM_WORKFLOW_ROOT || 'http://127.0.0.1:5186';
@@ -88,7 +89,7 @@ try {
   const portrait = page.locator('[data-embedded-display] .system-workflow__presentation-board');
   assert.equal((await portrait.boundingBox()).x, 870, 'a narrow viewport preserves the saved placement');
   await portrait.getByLabel(/Move Display Module:/).focus(); await page.keyboard.press('Shift+Enter');
-  await page.getByRole('button', { name: 'Focus selected Workbench modules', exact: true }).focus(); await page.keyboard.press('Enter');
+  await navigateWorkbench(page, 'focus');
   await page.waitForFunction(() => !document.querySelector('[data-workbench-travelling]'));
   const box = await portrait.boundingBox();
   assert.ok(box.x >= 0 && box.x + box.width <= 391 && box.y >= 0 && box.y + box.height <= 845, JSON.stringify(box));

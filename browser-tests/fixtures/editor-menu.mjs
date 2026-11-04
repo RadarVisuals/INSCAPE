@@ -27,8 +27,16 @@ export async function activeEditorDocumentName(page) {
   await trigger.click();
   return name;
 }
-export async function editorOverview(page) {
+export async function setEditorSidebarOpen(page, open) {
   const logo = page.getByRole('button', { name: 'Inscape sidebar' });
-  if (await logo.getAttribute('aria-expanded') !== 'true') await logo.click();
-  await page.getByRole('button', { name: 'My Inscape', exact: true }).click();
+  if (await logo.getAttribute('aria-expanded') !== String(open)) await logo.click();
+}
+export async function editorDestination(page, name) {
+  await setEditorSidebarOpen(page, true);
+  const trigger = page.getByRole('complementary', { name: 'Workspace sidebar' }).getByRole('button', { name, exact: true });
+  await trigger.click();
+  return trigger;
+}
+export async function editorOverview(page) {
+  await editorDestination(page, 'My Inscape');
 }

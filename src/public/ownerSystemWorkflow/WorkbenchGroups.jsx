@@ -13,11 +13,11 @@ import { useWorkbenchGroupScene, WorkbenchGroupStacks } from './WorkbenchGroupSc
 
 // This owner tool edits membership through the draft store. Selecting a saved
 // group only selects its live windows; navigation remains an explicit action.
-export default function WorkbenchGroups({ view, hostRef, locked, dropRef, historyBlocked, navigation, sceneRef, disabled }) {
+export default function WorkbenchGroups({ view, hostRef, locked, dropRef, historyBlocked, navigation, sceneRef, disabled, open, onOpenChange: setOpen, returnFocus, showTrigger = true }) {
   const { bounds: areaBounds } = useWorkbenchArea();
   const { store, profileAddress, selection, setSelection, entries } = view;
   const draft = useSyncExternalStore(store.subscribe, store.getSnapshot);
-  const [open, setOpen] = useState(false), [activeId, setActiveId] = useState(null);
+  const [activeId, setActiveId] = useState(null);
   const [name, setName] = useState(''), [error, setError] = useState('');
   const [dropTarget, setDropTarget] = useState(null);
   const trigger = useRef(null), input = useRef(null), content = useRef(null);
@@ -28,7 +28,7 @@ export default function WorkbenchGroups({ view, hostRef, locked, dropRef, histor
   const available = selected.filter(id => !grouped.has(id));
   useEffect(() => { setName(active?.name || ''); }, [active?.id, active?.name]);
   useEffect(() => { if (open) input.current?.focus({ preventScroll: true }); }, [open]);
-  const close = () => { setOpen(false); trigger.current?.focus({ preventScroll: true }); };
+  const close = () => { setOpen(false); (showTrigger ? trigger.current : returnFocus?.current || hostRef.current)?.focus({ preventScroll: true }); };
   const perform = action => {
     try {
       const id = editWorkbenchGroups(store, profileAddress, action);
@@ -84,7 +84,7 @@ export default function WorkbenchGroups({ view, hostRef, locked, dropRef, histor
   return <>
     <WorkbenchGroupStacks content={draft} {...{ hostRef, scene, locked, dropTarget }} onManage={group => { setActiveId(group.id); setOpen(true); }} onPosition={positionGroup} />
     {error && !open && <p className="workbench-move-error" role="alert">{error}</p>}
-    <button className="workflow-tactile-control" ref={trigger} type="button" disabled={locked} aria-expanded={open} aria-label="Workbench groups" onClick={() => setOpen(value => !value)}>Groups</button>
+    {showTrigger && <button className="workflow-tactile-control" ref={trigger} type="button" disabled={locked} aria-expanded={open} aria-label="Workbench groups" onClick={() => setOpen(value => !value)}>Groups</button>}
     {open && !locked && hostRef.current && createPortal(<div data-workbench-group-tools onKeyDown={event => {
       if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); close(); }
     }}>

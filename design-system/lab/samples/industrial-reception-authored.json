@@ -1,0 +1,1590 @@
+{
+  "version": 3,
+  "branding": {
+    "name": "",
+    "logo": null
+  },
+  "workbench": {
+    "version": 1,
+    "display": {
+      "name": "DISPLAY MODULE",
+      "open": false,
+      "window": {
+        "left": 32,
+        "top": 64,
+        "width": 960,
+        "height": 572
+      },
+      "shortcut": {
+        "position": {
+          "left": 24,
+          "top": 72
+        },
+        "visible": false,
+        "icon": null,
+        "iconPresentation": {
+          "labelSize": 8,
+          "offsetX": 0,
+          "offsetY": 0,
+          "scale": 1,
+          "size": 60
+        }
+      }
+    },
+    "identity": {
+      "open": false,
+      "window": {
+        "left": 28,
+        "top": 72,
+        "width": 840
+      }
+    },
+    "area": {
+      "left": 0,
+      "top": 0,
+      "width": 1920,
+      "height": 1080
+    },
+    "shapes": [
+      {
+        "id": "shape:e9d04401-8063-4c0b-9ecf-d035f49860eb",
+        "open": true,
+        "window": {
+          "left": 32,
+          "top": 32,
+          "width": 1856,
+          "height": 108
+        }
+      },
+      {
+        "id": "shape:ecf7bcc2-723d-4e30-9442-b9765fd3a34b",
+        "open": true,
+        "window": {
+          "left": 32,
+          "top": 156,
+          "width": 1100,
+          "height": 584
+        }
+      },
+      {
+        "id": "shape:1ea98cc0-2591-4db7-a766-288acc9f9297",
+        "open": true,
+        "window": {
+          "left": 1148,
+          "top": 156,
+          "width": 392,
+          "height": 280
+        }
+      },
+      {
+        "id": "shape:14e9d38a-ad8c-400e-a66b-650fd598a139",
+        "open": true,
+        "window": {
+          "left": 1556,
+          "top": 156,
+          "width": 332,
+          "height": 584
+        }
+      },
+      {
+        "id": "shape:dcc4b52a-f8cb-4c0a-8e65-50ac8fd1b85a",
+        "open": true,
+        "window": {
+          "left": 1148,
+          "top": 452,
+          "width": 392,
+          "height": 288
+        }
+      },
+      {
+        "id": "shape:13a1eb9b-da3b-48a4-a05e-240d98271e4b",
+        "open": true,
+        "window": {
+          "left": 32,
+          "top": 756,
+          "width": 536,
+          "height": 292
+        }
+      },
+      {
+        "id": "shape:d6d4e986-7984-449a-802f-12b574d8b629",
+        "open": true,
+        "window": {
+          "left": 584,
+          "top": 756,
+          "width": 548,
+          "height": 292
+        }
+      },
+      {
+        "id": "shape:f44dfe94-94dc-4992-8273-3314a9790cc6",
+        "open": true,
+        "window": {
+          "left": 1148,
+          "top": 756,
+          "width": 740,
+          "height": 292
+        }
+      },
+      {
+        "id": "shape:1b3d3e8e-5a0a-4580-8ee0-98c94ff6b025",
+        "open": true,
+        "window": {
+          "left": 32,
+          "top": 452,
+          "width": 1100,
+          "height": 288
+        }
+      },
+      {
+        "id": "shape:472020a5-7ba4-4c85-bb5a-bf8312204cd4",
+        "open": true,
+        "window": {
+          "left": 1556,
+          "top": 650,
+          "width": 332,
+          "height": 90
+        }
+      },
+      {
+        "id": "shape:002f118b-4263-4364-906c-7d34d711b550",
+        "open": true,
+        "window": {
+          "left": 32,
+          "top": 991,
+          "width": 536,
+          "height": 57
+        }
+      },
+      {
+        "id": "shape:2e356be6-1e9e-4c7e-92f1-0726e9128cea",
+        "open": true,
+        "window": {
+          "left": 1148,
+          "top": 978,
+          "width": 740,
+          "height": 70
+        }
+      }
+    ],
+    "imageModules": [
+      {
+        "id": "image:6056e0da-f608-4375-be19-313da76e56ee",
+        "open": true,
+        "position": {
+          "left": 32,
+          "top": 156
+        }
+      },
+      {
+        "id": "image:81ed5412-c1a4-4c1e-8427-8a43a36d32f5",
+        "open": true,
+        "position": {
+          "left": 1556,
+          "top": 156
+        }
+      },
+      {
+        "id": "image:967c07c6-d0ad-461c-8b47-4ac2fb40791a",
+        "open": true,
+        "position": {
+          "left": 32,
+          "top": 756
+        }
+      },
+      {
+        "id": "image:b32a21c9-c295-4bef-9006-20d57a5355cd",
+        "open": true,
+        "position": {
+          "left": 1148,
+          "top": 756
+        }
+      }
+    ],
+    "texts": [
+      {
+        "id": "text:cee961ce-ce71-4b66-b5a4-4ad0abb319d0",
+        "open": true,
+        "window": {
+          "left": 32,
+          "top": 42,
+          "width": 810,
+          "height": 100
+        }
+      },
+      {
+        "id": "text:1809ee25-dca9-480d-9643-9bbd766cf85f",
+        "open": true,
+        "window": {
+          "left": 1172,
+          "top": 51,
+          "width": 700,
+          "height": 100
+        }
+      },
+      {
+        "id": "text:fd97af71-56e6-4467-a91d-a3a4ca22aaee",
+        "open": true,
+        "window": {
+          "left": 64,
+          "top": 476,
+          "width": 850,
+          "height": 100
+        }
+      },
+      {
+        "id": "text:2e8f9d8f-7f7a-4ba1-b49f-258a1c195c63",
+        "open": true,
+        "window": {
+          "left": 64,
+          "top": 524,
+          "width": 930,
+          "height": 196
+        }
+      },
+      {
+        "id": "text:8af1194a-6800-4b9d-b9b6-f9d82abfcef3",
+        "open": true,
+        "window": {
+          "left": 1176,
+          "top": 180,
+          "width": 336,
+          "height": 100
+        }
+      },
+      {
+        "id": "text:e4fa6e1e-af02-4bdb-90cb-4ec8d78de6da",
+        "open": true,
+        "window": {
+          "left": 1176,
+          "top": 281,
+          "width": 336,
+          "height": 132
+        }
+      },
+      {
+        "id": "text:49ca5033-5331-49b7-bbb2-f8f58e6c7daa",
+        "open": true,
+        "window": {
+          "left": 1578,
+          "top": 667,
+          "width": 288,
+          "height": 100
+        }
+      },
+      {
+        "id": "text:fb933276-6241-4a3f-aced-73eb23671370",
+        "open": true,
+        "window": {
+          "left": 1176,
+          "top": 477,
+          "width": 336,
+          "height": 100
+        }
+      },
+      {
+        "id": "text:ff247760-fd00-4196-b74c-9ef3731a50eb",
+        "open": true,
+        "window": {
+          "left": 1176,
+          "top": 531,
+          "width": 336,
+          "height": 185
+        }
+      },
+      {
+        "id": "text:026f4004-d0ef-441a-8b76-97d4105387a8",
+        "open": true,
+        "window": {
+          "left": 54,
+          "top": 1007,
+          "width": 484,
+          "height": 100
+        }
+      },
+      {
+        "id": "text:0808fe49-8a9c-49ca-a669-78489f3737c5",
+        "open": true,
+        "window": {
+          "left": 614,
+          "top": 782,
+          "width": 488,
+          "height": 100
+        }
+      },
+      {
+        "id": "text:7145e2c6-3e6c-4b0a-bc01-587c5108b713",
+        "open": true,
+        "window": {
+          "left": 614,
+          "top": 833,
+          "width": 488,
+          "height": 168
+        }
+      },
+      {
+        "id": "text:992614e1-e16f-4086-8534-705602bfd9d9",
+        "open": true,
+        "window": {
+          "left": 1173,
+          "top": 994,
+          "width": 688,
+          "height": 100
+        }
+      }
+    ]
+  },
+  "imageModules": [
+    {
+      "id": "image:6056e0da-f608-4375-be19-313da76e56ee",
+      "name": "Image",
+      "width": 1100,
+      "height": 584,
+      "sides": [
+        {
+          "id": "side:471124ee-f9fe-4156-8e84-f57a5d8a8cdc",
+          "asset": {
+            "stableAssetId": "42:0x0000000000000000000000000000000000000000:0x0000000000000000000000000000000000000000000000000000000001de00bb",
+            "network": "lukso-mainnet",
+            "chainId": 42,
+            "tokenStandard": "UNKNOWN",
+            "contractAddress": "0x0000000000000000000000000000000000000000",
+            "tokenId": "0x0000000000000000000000000000000000000000000000000000000001de00bb",
+            "name": "THE QUIET SHIFT",
+            "description": "Design-library photo by Mike Norris, Pexels 31326395. Not a token or ownership claim.",
+            "collectionName": "INDUSTRIAL STUDIES",
+            "media": {
+              "url": "https://images.pexels.com/photos/31326395/pexels-photo-31326395.jpeg?auto=compress&cs=tinysrgb&w=1920",
+              "width": 5808,
+              "height": 3872,
+              "type": "image"
+            },
+            "creators": [],
+            "attributes": [
+              {
+                "key": "Photographer",
+                "value": "Mike Norris",
+                "type": null
+              },
+              {
+                "key": "Source",
+                "value": "https://www.pexels.com/photo/31326395/",
+                "type": null
+              },
+              {
+                "key": "License",
+                "value": "https://www.pexels.com/license/",
+                "type": null
+              }
+            ]
+          },
+          "crop": {
+            "x": 0.5,
+            "y": 0.5,
+            "zoom": 1
+          },
+          "transform": {
+            "quarterTurns": 0,
+            "mirrorX": false,
+            "mirrorY": false
+          }
+        }
+      ],
+      "visibility": "PUBLIC"
+    },
+    {
+      "id": "image:81ed5412-c1a4-4c1e-8427-8a43a36d32f5",
+      "name": "Image",
+      "width": 332,
+      "height": 584,
+      "sides": [
+        {
+          "id": "side:80422c0b-2976-4dd3-bf1f-74f0f3442df5",
+          "asset": {
+            "stableAssetId": "42:0x0000000000000000000000000000000000000000:0x0000000000000000000000000000000000000000000000000000000001ddcafd",
+            "network": "lukso-mainnet",
+            "chainId": 42,
+            "tokenStandard": "UNKNOWN",
+            "contractAddress": "0x0000000000000000000000000000000000000000",
+            "tokenId": "0x0000000000000000000000000000000000000000000000000000000001ddcafd",
+            "name": "MACHINES AT REST",
+            "description": "Design-library photo by Mike Norris, Pexels 31312637. Not a token or ownership claim.",
+            "collectionName": "INDUSTRIAL STUDIES",
+            "media": {
+              "url": "https://images.pexels.com/photos/31312637/pexels-photo-31312637.jpeg?auto=compress&cs=tinysrgb&w=1920",
+              "width": 4000,
+              "height": 6000,
+              "type": "image"
+            },
+            "creators": [],
+            "attributes": [
+              {
+                "key": "Photographer",
+                "value": "Mike Norris",
+                "type": null
+              },
+              {
+                "key": "Source",
+                "value": "https://www.pexels.com/photo/31312637/",
+                "type": null
+              },
+              {
+                "key": "License",
+                "value": "https://www.pexels.com/license/",
+                "type": null
+              }
+            ]
+          },
+          "crop": {
+            "x": 0.5,
+            "y": 0.5,
+            "zoom": 1
+          },
+          "transform": {
+            "quarterTurns": 0,
+            "mirrorX": false,
+            "mirrorY": false
+          }
+        }
+      ],
+      "visibility": "PUBLIC"
+    },
+    {
+      "id": "image:967c07c6-d0ad-461c-8b47-4ac2fb40791a",
+      "name": "Image",
+      "width": 536,
+      "height": 292,
+      "sides": [
+        {
+          "id": "side:12280857-356b-4047-ae77-ed8e8f0838ec",
+          "asset": {
+            "stableAssetId": "42:0x0000000000000000000000000000000000000000:0x0000000000000000000000000000000000000000000000000000000000bcec15",
+            "network": "lukso-mainnet",
+            "chainId": 42,
+            "tokenStandard": "UNKNOWN",
+            "contractAddress": "0x0000000000000000000000000000000000000000",
+            "tokenId": "0x0000000000000000000000000000000000000000000000000000000000bcec15",
+            "name": "REMAINING LIGHT",
+            "description": "Design-library photo by Andy Lee, Pexels 12381205. Not a token or ownership claim.",
+            "collectionName": "INDUSTRIAL STUDIES",
+            "media": {
+              "url": "https://images.pexels.com/photos/12381205/pexels-photo-12381205.jpeg?auto=compress&cs=tinysrgb&w=1920",
+              "width": 3840,
+              "height": 5760,
+              "type": "image"
+            },
+            "creators": [],
+            "attributes": [
+              {
+                "key": "Photographer",
+                "value": "Andy Lee",
+                "type": null
+              },
+              {
+                "key": "Source",
+                "value": "https://www.pexels.com/photo/12381205/",
+                "type": null
+              },
+              {
+                "key": "License",
+                "value": "https://www.pexels.com/license/",
+                "type": null
+              }
+            ]
+          },
+          "crop": {
+            "x": 0.5,
+            "y": 0.5,
+            "zoom": 1
+          },
+          "transform": {
+            "quarterTurns": 0,
+            "mirrorX": false,
+            "mirrorY": false
+          }
+        }
+      ],
+      "visibility": "PUBLIC"
+    },
+    {
+      "id": "image:b32a21c9-c295-4bef-9006-20d57a5355cd",
+      "name": "Image",
+      "width": 740,
+      "height": 292,
+      "sides": [
+        {
+          "id": "side:3587bff6-1540-4d4b-88b8-a43732bfaca9",
+          "asset": {
+            "stableAssetId": "42:0x0000000000000000000000000000000000000000:0x0000000000000000000000000000000000000000000000000000000000540090",
+            "network": "lukso-mainnet",
+            "chainId": 42,
+            "tokenStandard": "UNKNOWN",
+            "contractAddress": "0x0000000000000000000000000000000000000000",
+            "tokenId": "0x0000000000000000000000000000000000000000000000000000000000540090",
+            "name": "THE OUTSIDE REMAINS",
+            "description": "Design-library photo by Mike van Schoonderwalt, Pexels 5505168. Not a token or ownership claim.",
+            "collectionName": "INDUSTRIAL STUDIES",
+            "media": {
+              "url": "https://images.pexels.com/photos/5505168/pexels-photo-5505168.jpeg?auto=compress&cs=tinysrgb&w=1920",
+              "width": 4981,
+              "height": 3796,
+              "type": "image"
+            },
+            "creators": [],
+            "attributes": [
+              {
+                "key": "Photographer",
+                "value": "Mike van Schoonderwalt",
+                "type": null
+              },
+              {
+                "key": "Source",
+                "value": "https://www.pexels.com/photo/5505168/",
+                "type": null
+              },
+              {
+                "key": "License",
+                "value": "https://www.pexels.com/license/",
+                "type": null
+              }
+            ]
+          },
+          "crop": {
+            "x": 0.5,
+            "y": 0.5,
+            "zoom": 1
+          },
+          "transform": {
+            "quarterTurns": 0,
+            "mirrorX": false,
+            "mirrorY": false
+          }
+        }
+      ],
+      "visibility": "PUBLIC"
+    }
+  ],
+  "texts": [
+    {
+      "id": "text:cee961ce-ce71-4b66-b5a4-4ad0abb319d0",
+      "article": {
+        "documentType": "INSCAPEArticle",
+        "version": 1,
+        "title": "",
+        "font": "sora",
+        "content": {
+          "type": "doc",
+          "content": [
+            {
+              "type": "paragraph",
+              "attrs": {
+                "textAlign": null,
+                "spaceBefore": 0,
+                "spaceAfter": 0,
+                "lineHeight": null
+              },
+              "content": [
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "bold"
+                    }
+                  ],
+                  "text": "AFTER INDUSTRY"
+                }
+              ]
+            }
+          ]
+        },
+        "appearance": {
+          "background": null,
+          "opacity": 1,
+          "frame": false,
+          "scale": 1,
+          "fontSize": 48,
+          "color": "#ecebe5",
+          "lineHeight": 1.2,
+          "padding": {
+            "top": 0,
+            "right": 0,
+            "bottom": 0,
+            "left": 0
+          }
+        }
+      },
+      "visibility": "PUBLIC"
+    },
+    {
+      "id": "text:1809ee25-dca9-480d-9643-9bbd766cf85f",
+      "article": {
+        "documentType": "INSCAPEArticle",
+        "version": 1,
+        "title": "",
+        "font": "plex",
+        "content": {
+          "type": "doc",
+          "content": [
+            {
+              "type": "paragraph",
+              "attrs": {
+                "textAlign": null,
+                "spaceBefore": 0,
+                "spaceAfter": 0,
+                "lineHeight": null
+              },
+              "content": [
+                {
+                  "type": "text",
+                  "text": "INDUSTRIËLE FOTOGRAFIE / VERLATEN ARCHITECTUUR"
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "attrs": {
+                "textAlign": null,
+                "spaceBefore": 0,
+                "spaceAfter": 0,
+                "lineHeight": null
+              },
+              "content": [
+                {
+                  "type": "text",
+                  "text": "VELDARCHIEF 01 · ONGOING STUDY"
+                }
+              ]
+            }
+          ]
+        },
+        "appearance": {
+          "background": null,
+          "opacity": 1,
+          "frame": false,
+          "scale": 1,
+          "fontSize": 17,
+          "color": "#a1a9a7",
+          "lineHeight": 1.6,
+          "padding": {
+            "top": 0,
+            "right": 0,
+            "bottom": 0,
+            "left": 0
+          }
+        }
+      },
+      "visibility": "PUBLIC"
+    },
+    {
+      "id": "text:fd97af71-56e6-4467-a91d-a3a4ca22aaee",
+      "article": {
+        "documentType": "INSCAPEArticle",
+        "version": 1,
+        "title": "",
+        "font": "plex",
+        "content": {
+          "type": "doc",
+          "content": [
+            {
+              "type": "paragraph",
+              "attrs": {
+                "textAlign": null,
+                "spaceBefore": 0,
+                "spaceAfter": 0,
+                "lineHeight": null
+              },
+              "content": [
+                {
+                  "type": "text",
+                  "text": "01 / THE HALLS · LICHT, STAAL EN AFWEZIGHEID"
+                }
+              ]
+            }
+          ]
+        },
+        "appearance": {
+          "background": null,
+          "opacity": 1,
+          "frame": false,
+          "scale": 1,
+          "fontSize": 18,
+          "color": "#e6dfd3",
+          "lineHeight": 1.2,
+          "padding": {
+            "top": 0,
+            "right": 0,
+            "bottom": 0,
+            "left": 0
+          }
+        }
+      },
+      "visibility": "PUBLIC"
+    },
+    {
+      "id": "text:2e8f9d8f-7f7a-4ba1-b49f-258a1c195c63",
+      "article": {
+        "documentType": "INSCAPEArticle",
+        "version": 1,
+        "title": "",
+        "font": "sora",
+        "content": {
+          "type": "doc",
+          "content": [
+            {
+              "type": "paragraph",
+              "attrs": {
+                "textAlign": null,
+                "spaceBefore": 0,
+                "spaceAfter": 0,
+                "lineHeight": null
+              },
+              "content": [
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "bold"
+                    }
+                  ],
+                  "text": "THE QUIET"
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "attrs": {
+                "textAlign": null,
+                "spaceBefore": 0,
+                "spaceAfter": 0,
+                "lineHeight": null
+              },
+              "content": [
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "bold"
+                    }
+                  ],
+                  "text": "SHIFT."
+                }
+              ]
+            }
+          ]
+        },
+        "appearance": {
+          "background": null,
+          "opacity": 1,
+          "frame": false,
+          "scale": 1,
+          "fontSize": 82,
+          "color": "#f1eee5",
+          "lineHeight": 1.05,
+          "padding": {
+            "top": 0,
+            "right": 0,
+            "bottom": 0,
+            "left": 0
+          }
+        }
+      },
+      "visibility": "PUBLIC"
+    },
+    {
+      "id": "text:8af1194a-6800-4b9d-b9b6-f9d82abfcef3",
+      "article": {
+        "documentType": "INSCAPEArticle",
+        "version": 1,
+        "title": "",
+        "font": "sora",
+        "content": {
+          "type": "doc",
+          "content": [
+            {
+              "type": "paragraph",
+              "attrs": {
+                "textAlign": null,
+                "spaceBefore": 0,
+                "spaceAfter": 0,
+                "lineHeight": null
+              },
+              "content": [
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "bold"
+                    }
+                  ],
+                  "text": "Waar de stilte"
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "attrs": {
+                "textAlign": null,
+                "spaceBefore": 0,
+                "spaceAfter": 0,
+                "lineHeight": null
+              },
+              "content": [
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "bold"
+                    }
+                  ],
+                  "text": "begint."
+                }
+              ]
+            }
+          ]
+        },
+        "appearance": {
+          "background": null,
+          "opacity": 1,
+          "frame": false,
+          "scale": 1,
+          "fontSize": 30,
+          "color": "#202421",
+          "lineHeight": 1.12,
+          "padding": {
+            "top": 0,
+            "right": 0,
+            "bottom": 0,
+            "left": 0
+          }
+        }
+      },
+      "visibility": "PUBLIC"
+    },
+    {
+      "id": "text:e4fa6e1e-af02-4bdb-90cb-4ec8d78de6da",
+      "article": {
+        "documentType": "INSCAPEArticle",
+        "version": 1,
+        "title": "",
+        "font": "plex",
+        "content": {
+          "type": "doc",
+          "content": [
+            {
+              "type": "paragraph",
+              "attrs": {
+                "textAlign": null,
+                "spaceBefore": 0,
+                "spaceAfter": 0,
+                "lineHeight": null
+              },
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Ik zoek de sporen van arbeid in"
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "attrs": {
+                "textAlign": null,
+                "spaceBefore": 0,
+                "spaceAfter": 0,
+                "lineHeight": null
+              },
+              "content": [
+                {
+                  "type": "text",
+                  "text": "gebouwen waar niemand meer"
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "attrs": {
+                "textAlign": null,
+                "spaceBefore": 0,
+                "spaceAfter": 0,
+                "lineHeight": null
+              },
+              "content": [
+                {
+                  "type": "text",
+                  "text": "werkt. Licht, roest en lege ruimte"
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "attrs": {
+                "textAlign": null,
+                "spaceBefore": 0,
+                "spaceAfter": 0,
+                "lineHeight": null
+              },
+              "content": [
+                {
+                  "type": "text",
+                  "text": "worden een portret van wat blijft."
+                }
+              ]
+            }
+          ]
+        },
+        "appearance": {
+          "background": null,
+          "opacity": 1,
+          "frame": false,
+          "scale": 1,
+          "fontSize": 20,
+          "color": "#303a34",
+          "lineHeight": 1.4,
+          "padding": {
+            "top": 0,
+            "right": 0,
+            "bottom": 0,
+            "left": 0
+          }
+        }
+      },
+      "visibility": "PUBLIC"
+    },
+    {
+      "id": "text:49ca5033-5331-49b7-bbb2-f8f58e6c7daa",
+      "article": {
+        "documentType": "INSCAPEArticle",
+        "version": 1,
+        "title": "",
+        "font": "plex",
+        "content": {
+          "type": "doc",
+          "content": [
+            {
+              "type": "paragraph",
+              "attrs": {
+                "textAlign": null,
+                "spaceBefore": 0,
+                "spaceAfter": 0,
+                "lineHeight": null
+              },
+              "content": [
+                {
+                  "type": "text",
+                  "text": "02 / MACHINES AT REST"
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "attrs": {
+                "textAlign": null,
+                "spaceBefore": 0,
+                "spaceAfter": 0,
+                "lineHeight": null
+              },
+              "content": [
+                {
+                  "type": "text",
+                  "text": "De laatste beweging."
+                }
+              ]
+            }
+          ]
+        },
+        "appearance": {
+          "background": null,
+          "opacity": 1,
+          "frame": false,
+          "scale": 1,
+          "fontSize": 18,
+          "color": "#eee9de",
+          "lineHeight": 1.5,
+          "padding": {
+            "top": 0,
+            "right": 0,
+            "bottom": 0,
+            "left": 0
+          }
+        }
+      },
+      "visibility": "PUBLIC"
+    },
+    {
+      "id": "text:fb933276-6241-4a3f-aced-73eb23671370",
+      "article": {
+        "documentType": "INSCAPEArticle",
+        "version": 1,
+        "title": "",
+        "font": "plex",
+        "content": {
+          "type": "doc",
+          "content": [
+            {
+              "type": "paragraph",
+              "attrs": {
+                "textAlign": null,
+                "spaceBefore": 0,
+                "spaceAfter": 0,
+                "lineHeight": null
+              },
+              "content": [
+                {
+                  "type": "text",
+                  "text": "SELECTED STUDIES"
+                }
+              ]
+            }
+          ]
+        },
+        "appearance": {
+          "background": null,
+          "opacity": 1,
+          "frame": false,
+          "scale": 1,
+          "fontSize": 17,
+          "color": "#c89471",
+          "lineHeight": 1.2,
+          "padding": {
+            "top": 0,
+            "right": 0,
+            "bottom": 0,
+            "left": 0
+          }
+        }
+      },
+      "visibility": "PUBLIC"
+    },
+    {
+      "id": "text:ff247760-fd00-4196-b74c-9ef3731a50eb",
+      "article": {
+        "documentType": "INSCAPEArticle",
+        "version": 1,
+        "title": "",
+        "font": "plex",
+        "content": {
+          "type": "doc",
+          "content": [
+            {
+              "type": "paragraph",
+              "attrs": {
+                "textAlign": null,
+                "spaceBefore": 0,
+                "spaceAfter": 0,
+                "lineHeight": null
+              },
+              "content": [
+                {
+                  "type": "text",
+                  "text": "01  The halls"
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "attrs": {
+                "textAlign": null,
+                "spaceBefore": 0,
+                "spaceAfter": 0,
+                "lineHeight": null
+              },
+              "content": [
+                {
+                  "type": "text",
+                  "text": "02  Machines at rest"
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "attrs": {
+                "textAlign": null,
+                "spaceBefore": 0,
+                "spaceAfter": 0,
+                "lineHeight": null
+              },
+              "content": [
+                {
+                  "type": "text",
+                  "text": "03  Remaining light"
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "attrs": {
+                "textAlign": null,
+                "spaceBefore": 0,
+                "spaceAfter": 0,
+                "lineHeight": null
+              },
+              "content": [
+                {
+                  "type": "text",
+                  "text": "04  The outside remains"
+                }
+              ]
+            }
+          ]
+        },
+        "appearance": {
+          "background": null,
+          "opacity": 1,
+          "frame": false,
+          "scale": 1,
+          "fontSize": 23,
+          "color": "#e8e8df",
+          "lineHeight": 1.65,
+          "padding": {
+            "top": 0,
+            "right": 0,
+            "bottom": 0,
+            "left": 0
+          }
+        }
+      },
+      "visibility": "PUBLIC"
+    },
+    {
+      "id": "text:026f4004-d0ef-441a-8b76-97d4105387a8",
+      "article": {
+        "documentType": "INSCAPEArticle",
+        "version": 1,
+        "title": "",
+        "font": "plex",
+        "content": {
+          "type": "doc",
+          "content": [
+            {
+              "type": "paragraph",
+              "attrs": {
+                "textAlign": null,
+                "spaceBefore": 0,
+                "spaceAfter": 0,
+                "lineHeight": null
+              },
+              "content": [
+                {
+                  "type": "text",
+                  "text": "03 / REMAINING LIGHT"
+                }
+              ]
+            }
+          ]
+        },
+        "appearance": {
+          "background": null,
+          "opacity": 1,
+          "frame": false,
+          "scale": 1,
+          "fontSize": 19,
+          "color": "#ecebe5",
+          "lineHeight": 1.2,
+          "padding": {
+            "top": 0,
+            "right": 0,
+            "bottom": 0,
+            "left": 0
+          }
+        }
+      },
+      "visibility": "PUBLIC"
+    },
+    {
+      "id": "text:0808fe49-8a9c-49ca-a669-78489f3737c5",
+      "article": {
+        "documentType": "INSCAPEArticle",
+        "version": 1,
+        "title": "",
+        "font": "plex",
+        "content": {
+          "type": "doc",
+          "content": [
+            {
+              "type": "paragraph",
+              "attrs": {
+                "textAlign": null,
+                "spaceBefore": 0,
+                "spaceAfter": 0,
+                "lineHeight": null
+              },
+              "content": [
+                {
+                  "type": "text",
+                  "text": "UIT HET VELDBOEK / 001"
+                }
+              ]
+            }
+          ]
+        },
+        "appearance": {
+          "background": null,
+          "opacity": 1,
+          "frame": false,
+          "scale": 1,
+          "fontSize": 17,
+          "color": "#272c25",
+          "lineHeight": 1.2,
+          "padding": {
+            "top": 0,
+            "right": 0,
+            "bottom": 0,
+            "left": 0
+          }
+        }
+      },
+      "visibility": "PUBLIC"
+    },
+    {
+      "id": "text:7145e2c6-3e6c-4b0a-bc01-587c5108b713",
+      "article": {
+        "documentType": "INSCAPEArticle",
+        "version": 1,
+        "title": "",
+        "font": "sora",
+        "content": {
+          "type": "doc",
+          "content": [
+            {
+              "type": "paragraph",
+              "attrs": {
+                "textAlign": null,
+                "spaceBefore": 0,
+                "spaceAfter": 0,
+                "lineHeight": null
+              },
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Een gebouw raakt"
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "attrs": {
+                "textAlign": null,
+                "spaceBefore": 0,
+                "spaceAfter": 0,
+                "lineHeight": null
+              },
+              "content": [
+                {
+                  "type": "text",
+                  "text": "nooit in één keer"
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "attrs": {
+                "textAlign": null,
+                "spaceBefore": 0,
+                "spaceAfter": 0,
+                "lineHeight": null
+              },
+              "content": [
+                {
+                  "type": "text",
+                  "text": "verlaten."
+                }
+              ]
+            }
+          ]
+        },
+        "appearance": {
+          "background": null,
+          "opacity": 1,
+          "frame": false,
+          "scale": 1,
+          "fontSize": 37,
+          "color": "#17241d",
+          "lineHeight": 1.23,
+          "padding": {
+            "top": 0,
+            "right": 0,
+            "bottom": 0,
+            "left": 0
+          }
+        }
+      },
+      "visibility": "PUBLIC"
+    },
+    {
+      "id": "text:992614e1-e16f-4086-8534-705602bfd9d9",
+      "article": {
+        "documentType": "INSCAPEArticle",
+        "version": 1,
+        "title": "",
+        "font": "plex",
+        "content": {
+          "type": "doc",
+          "content": [
+            {
+              "type": "paragraph",
+              "attrs": {
+                "textAlign": null,
+                "spaceBefore": 0,
+                "spaceAfter": 0,
+                "lineHeight": null
+              },
+              "content": [
+                {
+                  "type": "text",
+                  "text": "04 / THE OUTSIDE REMAINS"
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "attrs": {
+                "textAlign": null,
+                "spaceBefore": 0,
+                "spaceAfter": 0,
+                "lineHeight": null
+              },
+              "content": [
+                {
+                  "type": "text",
+                  "text": "FOTO’S: MIKE NORRIS / ANDY LEE / MIKE VAN SCHOONDERWALT"
+                }
+              ]
+            }
+          ]
+        },
+        "appearance": {
+          "background": null,
+          "opacity": 1,
+          "frame": false,
+          "scale": 1,
+          "fontSize": 15,
+          "color": "#ecebe5",
+          "lineHeight": 1.35,
+          "padding": {
+            "top": 0,
+            "right": 0,
+            "bottom": 0,
+            "left": 0
+          }
+        }
+      },
+      "visibility": "PUBLIC"
+    }
+  ],
+  "shapes": [
+    {
+      "name": "AFTER INDUSTRY",
+      "color": "#101212",
+      "opacity": 1,
+      "visibility": "PUBLIC",
+      "id": "shape:e9d04401-8063-4c0b-9ecf-d035f49860eb"
+    },
+    {
+      "name": "The halls",
+      "color": "#191d1b",
+      "opacity": 1,
+      "visibility": "PUBLIC",
+      "id": "shape:ecf7bcc2-723d-4e30-9442-b9765fd3a34b"
+    },
+    {
+      "name": "Introduction",
+      "color": "#c0b7a3",
+      "opacity": 1,
+      "visibility": "PUBLIC",
+      "id": "shape:1ea98cc0-2591-4db7-a766-288acc9f9297"
+    },
+    {
+      "name": "Machines at rest",
+      "color": "#151b18",
+      "opacity": 1,
+      "visibility": "PUBLIC",
+      "id": "shape:14e9d38a-ad8c-400e-a66b-650fd598a139"
+    },
+    {
+      "name": "Selected studies",
+      "color": "#29312e",
+      "opacity": 1,
+      "visibility": "PUBLIC",
+      "id": "shape:dcc4b52a-f8cb-4c0a-8e65-50ac8fd1b85a"
+    },
+    {
+      "name": "Remaining light",
+      "color": "#191e1b",
+      "opacity": 1,
+      "visibility": "PUBLIC",
+      "id": "shape:13a1eb9b-da3b-48a4-a05e-240d98271e4b"
+    },
+    {
+      "name": "Field note",
+      "color": "#b06442",
+      "opacity": 1,
+      "visibility": "PUBLIC",
+      "id": "shape:d6d4e986-7984-449a-802f-12b574d8b629"
+    },
+    {
+      "name": "The outside remains",
+      "color": "#252b26",
+      "opacity": 1,
+      "visibility": "PUBLIC",
+      "id": "shape:f44dfe94-94dc-4992-8273-3314a9790cc6"
+    },
+    {
+      "name": "Hall caption backdrop",
+      "color": "#080b0b",
+      "opacity": 0.62,
+      "visibility": "PUBLIC",
+      "id": "shape:1b3d3e8e-5a0a-4580-8ee0-98c94ff6b025"
+    },
+    {
+      "name": "Machine caption backdrop",
+      "color": "#080b0b",
+      "opacity": 0.83,
+      "visibility": "PUBLIC",
+      "id": "shape:472020a5-7ba4-4c85-bb5a-bf8312204cd4"
+    },
+    {
+      "name": "Light caption backdrop",
+      "color": "#080b0b",
+      "opacity": 0.78,
+      "visibility": "PUBLIC",
+      "id": "shape:002f118b-4263-4364-906c-7d34d711b550"
+    },
+    {
+      "name": "Facade caption backdrop",
+      "color": "#080b0b",
+      "opacity": 0.82,
+      "visibility": "PUBLIC",
+      "id": "shape:2e356be6-1e9e-4c7e-92f1-0726e9128cea"
+    }
+  ],
+  "artworkLayers": [
+    "shape:e9d04401-8063-4c0b-9ecf-d035f49860eb",
+    "shape:ecf7bcc2-723d-4e30-9442-b9765fd3a34b",
+    "shape:1ea98cc0-2591-4db7-a766-288acc9f9297",
+    "shape:14e9d38a-ad8c-400e-a66b-650fd598a139",
+    "shape:dcc4b52a-f8cb-4c0a-8e65-50ac8fd1b85a",
+    "shape:13a1eb9b-da3b-48a4-a05e-240d98271e4b",
+    "shape:d6d4e986-7984-449a-802f-12b574d8b629",
+    "shape:f44dfe94-94dc-4992-8273-3314a9790cc6",
+    "image:6056e0da-f608-4375-be19-313da76e56ee",
+    "image:81ed5412-c1a4-4c1e-8427-8a43a36d32f5",
+    "image:967c07c6-d0ad-461c-8b47-4ac2fb40791a",
+    "image:b32a21c9-c295-4bef-9006-20d57a5355cd",
+    "shape:1b3d3e8e-5a0a-4580-8ee0-98c94ff6b025",
+    "shape:472020a5-7ba4-4c85-bb5a-bf8312204cd4",
+    "shape:002f118b-4263-4364-906c-7d34d711b550",
+    "shape:2e356be6-1e9e-4c7e-92f1-0726e9128cea",
+    "text:cee961ce-ce71-4b66-b5a4-4ad0abb319d0",
+    "text:1809ee25-dca9-480d-9643-9bbd766cf85f",
+    "text:fd97af71-56e6-4467-a91d-a3a4ca22aaee",
+    "text:2e8f9d8f-7f7a-4ba1-b49f-258a1c195c63",
+    "text:8af1194a-6800-4b9d-b9b6-f9d82abfcef3",
+    "text:e4fa6e1e-af02-4bdb-90cb-4ec8d78de6da",
+    "text:49ca5033-5331-49b7-bbb2-f8f58e6c7daa",
+    "text:fb933276-6241-4a3f-aced-73eb23671370",
+    "text:ff247760-fd00-4196-b74c-9ef3731a50eb",
+    "text:026f4004-d0ef-441a-8b76-97d4105387a8",
+    "text:0808fe49-8a9c-49ca-a669-78489f3737c5",
+    "text:7145e2c6-3e6c-4b0a-bc01-587c5108b713",
+    "text:992614e1-e16f-4086-8534-705602bfd9d9"
+  ],
+  "cells": [
+    {
+      "id": "shape:e9d04401-8063-4c0b-9ecf-d035f49860eb",
+      "members": [
+        "text:cee961ce-ce71-4b66-b5a4-4ad0abb319d0",
+        "text:1809ee25-dca9-480d-9643-9bbd766cf85f"
+      ],
+      "mobile": {
+        "columns": 2,
+        "height": 108
+      }
+    },
+    {
+      "id": "shape:ecf7bcc2-723d-4e30-9442-b9765fd3a34b",
+      "members": [
+        "image:6056e0da-f608-4375-be19-313da76e56ee",
+        "shape:1b3d3e8e-5a0a-4580-8ee0-98c94ff6b025",
+        "text:fd97af71-56e6-4467-a91d-a3a4ca22aaee",
+        "text:2e8f9d8f-7f7a-4ba1-b49f-258a1c195c63"
+      ],
+      "mobile": {
+        "columns": 2,
+        "height": 584
+      }
+    },
+    {
+      "id": "shape:1ea98cc0-2591-4db7-a766-288acc9f9297",
+      "members": [
+        "text:8af1194a-6800-4b9d-b9b6-f9d82abfcef3",
+        "text:e4fa6e1e-af02-4bdb-90cb-4ec8d78de6da"
+      ],
+      "mobile": {
+        "columns": 2,
+        "height": 280
+      }
+    },
+    {
+      "id": "shape:14e9d38a-ad8c-400e-a66b-650fd598a139",
+      "members": [
+        "image:81ed5412-c1a4-4c1e-8427-8a43a36d32f5",
+        "shape:472020a5-7ba4-4c85-bb5a-bf8312204cd4",
+        "text:49ca5033-5331-49b7-bbb2-f8f58e6c7daa"
+      ],
+      "mobile": {
+        "columns": 2,
+        "height": 584
+      }
+    },
+    {
+      "id": "shape:dcc4b52a-f8cb-4c0a-8e65-50ac8fd1b85a",
+      "members": [
+        "text:fb933276-6241-4a3f-aced-73eb23671370",
+        "text:ff247760-fd00-4196-b74c-9ef3731a50eb"
+      ],
+      "mobile": {
+        "columns": 2,
+        "height": 288
+      }
+    },
+    {
+      "id": "shape:13a1eb9b-da3b-48a4-a05e-240d98271e4b",
+      "members": [
+        "image:967c07c6-d0ad-461c-8b47-4ac2fb40791a",
+        "shape:002f118b-4263-4364-906c-7d34d711b550",
+        "text:026f4004-d0ef-441a-8b76-97d4105387a8"
+      ],
+      "mobile": {
+        "columns": 2,
+        "height": 292
+      }
+    },
+    {
+      "id": "shape:d6d4e986-7984-449a-802f-12b574d8b629",
+      "members": [
+        "text:0808fe49-8a9c-49ca-a669-78489f3737c5",
+        "text:7145e2c6-3e6c-4b0a-bc01-587c5108b713"
+      ],
+      "mobile": {
+        "columns": 2,
+        "height": 292
+      }
+    },
+    {
+      "id": "shape:f44dfe94-94dc-4992-8273-3314a9790cc6",
+      "members": [
+        "image:b32a21c9-c295-4bef-9006-20d57a5355cd",
+        "shape:2e356be6-1e9e-4c7e-92f1-0726e9128cea",
+        "text:992614e1-e16f-4086-8534-705602bfd9d9"
+      ],
+      "mobile": {
+        "columns": 2,
+        "height": 292
+      }
+    }
+  ],
+  "bento": {
+    "gap": 16,
+    "padding": 32
+  }
+}

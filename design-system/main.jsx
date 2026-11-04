@@ -99,8 +99,7 @@ function Card({ title, children, className = '' }) {
 function CreationToolbarExample({ onAction }) {
   const [tool, setTool] = useState('select'),
     [libraryOpen, setLibraryOpen] = useState(false);
-  const [layersOpen, setLayersOpen] = useState(false),
-    [infoOpen, setInfoOpen] = useState(false);
+  const [layersOpen, setLayersOpen] = useState(false);
   return (
     <WorkbenchToolbar
       activeTool={tool}
@@ -119,14 +118,6 @@ function CreationToolbarExample({ onAction }) {
         onToggle: () => {
           setLayersOpen((value) => !value);
           onAction(layersOpen ? 'Layers closed' : 'Layers opened');
-        },
-      }}
-      info={{
-        enabled: true,
-        open: infoOpen,
-        onToggle: () => {
-          setInfoOpen((value) => !value);
-          onAction(infoOpen ? 'Artwork info closed' : 'Artwork info opened');
         },
       }}
       actions={[

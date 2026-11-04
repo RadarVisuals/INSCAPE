@@ -7,7 +7,7 @@
   --workflow-border-strong: var(--tactile-edge);
   --workflow-hover: var(--tactile-hover);
   --workflow-selection: var(--tactile-hover);
-  --settings-inset: max(12px, var(--workspace-navigation-inset, 0px));
+  --settings-inset: 12px;
   --settings-top: max(12px, calc(var(--workspace-navigation-top, 8px) + 4px));
   --settings-target: var(--control-height-sm);
   left: var(--settings-inset);

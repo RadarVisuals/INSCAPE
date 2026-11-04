@@ -1,4 +1,5 @@
-import { memo, useId, useState } from 'react';
+import { memo, useState } from 'react';
+import ShapeSurface from '../../shapes/ShapeSurface.jsx';
 import { resolvePublishedAssetUrl } from '../../profileDocument/domain/publishedAssetUrl.js';
 import { projectSystemWorkflowTransform, projectSystemWorkflowImageRenderRectangle } from '../../systemWorkflow/systemWorkflowTransform.js';
 import { projectCroppedMediaRectangle } from '../../lattice/rendering/latticeCrop.js';
@@ -23,14 +24,6 @@ function ImageMiniature({ source, width, height }) {
   return <svg viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none"><image href={resolvePublishedAssetUrl(media.url)}
     x={image.left} y={image.top} width={image.width} height={image.height} preserveAspectRatio="none" onError={() => setFailed(media.url)}
     transform={`translate(${fitted.left + fitted.width / 2} ${fitted.top + fitted.height / 2}) scale(${side.transform.mirrorX ? -1 : 1} ${side.transform.mirrorY ? -1 : 1}) rotate(${side.transform.quarterTurns * 90}) translate(${-image.left - image.width / 2} ${-image.top - image.height / 2})`} /></svg>;
-}
-function ShapeMiniature({ record }) {
-  const id = useId().replace(/:/g, '');
-  const style = { position: 'absolute', inset: 0, backgroundColor: record.color, opacity: record.opacity, filter: record.blur ? `blur(${record.blur}px)` : undefined };
-  if (record.kind === 'grid') return <svg style={{ opacity: record.opacity }}><defs><pattern id={id} patternUnits="userSpaceOnUse" width={record.grid.spacing} height={record.grid.spacing}>
-    <path d={`M0,${record.grid.spacing}V0H${record.grid.spacing}`} fill="none" stroke={record.color} strokeWidth={record.grid.lineWidth * 2} /></pattern></defs><rect width="100%" height="100%" fill={`url(#${id})`} /></svg>;
-  if (record.kind === 'texture') Object.assign(style, { maskImage: "url('/assets/noise-samples/grain-mono.png')", maskMode: 'luminance', maskSize: `${128 * record.texture.scale}px` });
-  return <div style={style}>{record.grain > 0 && <span className="module-surface-grain" style={{ '--module-grain': record.grain * .3 }} />}</div>;
 }
 function DisplayMiniature({ source, frame }) {
   if (!source.geometry) return null;
@@ -58,7 +51,7 @@ export default memo(function WorkbenchMiniature({ item, paint }) {
   const frame = { ...item.frame, width: item.frame.width / scale, height: item.frame.height / scale };
   let content;
   if (source?.kind === 'image') content = <ImageMiniature source={source} width={frame.width} height={frame.height} />;
-  else if (source?.kind === 'shape') content = <ShapeMiniature record={source.record} />;
+  else if (source?.kind === 'shape') content = <ShapeSurface record={source.record} radius={source.radius} />;
   else if (source?.kind === 'display') content = <DisplayMiniature source={source} frame={frame} />;
   else if (source?.kind === 'text') {
     const { article, range, index } = source;

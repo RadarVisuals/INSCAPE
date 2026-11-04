@@ -87,7 +87,7 @@ export default function DesktopMenu({ anchor, commands, label, onCommand, onClos
         const selected = command.selected || legacySelected;
         const mixed = command.mixed === true;
         const displayLabel = (legacySelected ? command.label.slice(2) : command.label).replace(/\s*>$/, '');
-        return <button key={command.id} data-command-id={command.id} type="button" role={command.checkable ? 'menuitemcheckbox' : 'menuitem'} disabled={command.disabled} data-submenu={hasSubmenu || undefined} data-selected={selected || undefined} data-mixed={mixed || undefined} aria-checked={command.checkable ? mixed ? 'mixed' : selected : undefined} aria-haspopup={hasSubmenu ? 'menu' : undefined} aria-expanded={hasSubmenu ? openId === command.id : undefined}
+        return <button key={command.id} data-command-id={command.id} type="button" role={command.checkable ? 'menuitemcheckbox' : 'menuitem'} disabled={command.disabled} title={command.reason} data-submenu={hasSubmenu || undefined} data-selected={selected || undefined} data-mixed={mixed || undefined} aria-checked={command.checkable ? mixed ? 'mixed' : selected : undefined} aria-haspopup={hasSubmenu ? 'menu' : undefined} aria-expanded={hasSubmenu ? openId === command.id : undefined}
           onPointerEnter={() => openSubmenu(depth, command)} onFocus={() => { if (depth > 0) openSubmenu(depth, command, true); }}
           onClick={() => { if (hasSubmenu) { openSubmenu(depth, command, true); return; } onPreviewCommand?.(null); onCommand(command.id); }}><i aria-hidden="true" /><span>{displayLabel}</span><b aria-hidden="true">{hasSubmenu ? '›' : mixed ? '−' : selected ? '·' : ''}</b></button>;
       })}

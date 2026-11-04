@@ -31,7 +31,7 @@ export function WorkbenchWindow({ avoidControls, children, background, compact, 
   // An anchored inspector keeps its chosen top while content scrolls below it.
   // Other floating tools retain their existing fit-to-viewport placement.
   const contentFromTop = fitContent && fitContentFromTop && !viewId && !compact;
-  const screenLeft = viewId ? 8 : Math.max(8, view.navigationInset || 0);
+  const screenLeft = 8;
   const screenTop = viewId ? 8 : Math.max(8, view.navigationTop || 0);
   const toolTop = contentFromTop ? Math.max(screenTop, Math.min(frame.top, toolViewportBottom - minimumHeight - 8)) : screenTop;
   const toolMaximumHeight = Math.max(1, toolViewportBottom - toolTop - 8);

@@ -30,17 +30,18 @@ test('captured native-fit seams can be filled without moving frames; Image resiz
       draft.workbench.imageModules.forEach(module => { module.position.left -= 3552; });
       imageFitFixture.store.commitCompletedOperation(draft, { expectedGeneration: imageFitFixture.store.getGeneration() });
     });
-    const dock = page.locator('[data-context-tools], [data-context-action-bars]');
+    const dock = page.locator('.workbench-image-tools');
     await dock.getByRole('button', { name: 'Fill canvas', exact: true }).waitFor();
     await page.evaluate(async () => { const image = new Image(); image.src = 'https://image.fit.test/source.png'; await image.decode(); });
     const scale = 1.0976232973106559, offset = { x: -3541.289770546675 + 3552 * scale, y: -1519.0376733143444 };
     await page.evaluate(({ scale, offset }) => imageFitFixture.camera(scale, offset), { scale, offset }); await settle(page);
     const initial = await page.evaluate(() => imageFitFixture.store.getDraft());
-    await page.getByRole('button', { name: 'Meet Grid-naad', exact: true }).click();
-    const report = JSON.parse(await page.getByRole('textbox', { name: 'Meetrapport' }).inputValue());
+    const report = await page.evaluate(async ({ scale, offset }) => {
+      const { measure } = await import('/browser-tests/fixtures/measure-grid-seams.js');
+      return measure(document.querySelector('main'), scale, offset);
+    }, { scale, offset });
     assert.ok(report.imageJoins.every(join => join.canvasGapPhysicalPx === 0));
     assert.ok(report.imageJoins.some(join => join.mediaRectangleGapPhysicalPx > 2), 'reproduces the uploaded report: frames touch, native image rectangles do not');
-    await page.getByRole('button', { name: 'Sluiten', exact: true }).click();
     const geometry = () => page.locator('.image-module__window').evaluateAll(nodes => nodes.map(node => node.getBoundingClientRect().toJSON()));
     const beforeFrames = await geometry();
     await page.screenshot({ path: `${process.env.INSCAPE_BROWSER_OUTPUT || '.browser-test-runtime'}/image-fit-before.png` });
@@ -145,12 +146,13 @@ test('captured native-fit seams can be filled without moving frames; Image resiz
     await page.evaluate(() => imageFitFixture.store.undo()); await settle(page);
     assert.deepEqual(await page.evaluate(() => imageFitFixture.store.getDraft()), beforeResize, 'one undo restores the entire resized selection and its fitting');
     assert.deepEqual(await geometry(), beforeGroupFrames);
-    await page.evaluate(() => { imageFitFixture.selection([]); imageFitFixture.single(true); });
+    await page.evaluate(() => { imageFitFixture.select('image:one'); imageFitFixture.single(true); });
     await page.setViewportSize({ width: 390, height: 844 });
     await page.evaluate(() => {
       const frame = imageFitFixture.frame('image:one');
       imageFitFixture.camera(1, { x: 160 - frame.left - frame.width, y: 440 - frame.top - frame.height });
     }); await settle(page);
+    await openSharedTool(page, 'Image');
     await dock.getByRole('button', { name: 'Fill canvas', exact: true }).scrollIntoViewIfNeeded();
     await page.screenshot({ path: `${process.env.INSCAPE_BROWSER_OUTPUT || '.browser-test-runtime'}/image-fit-tools-narrow.png` });
     assert.ok(await dock.getByRole('button', { name: 'Fit inside', exact: true }).isVisible());
@@ -200,8 +202,7 @@ test('isolated Image fixture opens and closes real Info content without changing
     await page.locator('.image-module__window').first().waitFor();
     await page.locator('.image-module__canvas').first().focus(); await settle(page);
     const saved = await page.evaluate(() => imageFitFixture.store.getDraft());
-    await page.getByRole('button', { name: 'Close Transform', exact: true }).click();
-    await page.getByRole('button', { name: 'Close Color', exact: true }).click(); await settle(page);
+    await page.getByRole('tab', { name: 'Info', exact: true }).click(); await settle(page);
     assert.deepEqual(errors, [], 'activating Info has its provider context');
     const info = page.locator('[data-shared-tool="metadata"]');
     await info.waitFor();

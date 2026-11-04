@@ -5,7 +5,7 @@
 /**
  * @template Selection
  * @typedef {{beforeTransforms?: WorkbenchTransforms, beforeSelection?: Selection,
- * valid(): boolean, preview(pointer: PointerEvent): void, commit(pointer: PointerEvent): boolean}} GestureOperation
+ * valid(): boolean, preview(pointer: PointerEvent): void, commit(pointer: PointerEvent): boolean, onFinish?(): void}} GestureOperation
  */
 /**
  * @template Selection
@@ -20,7 +20,7 @@
  * @returns {import('../../contracts/workbench.js').WorkbenchGestures<Selection>}
  */
 export function createWorkbenchGestures({
-  getHost, restoreTransforms, replaceSelection, restoreSelection, previewMarquee, finishSnap, cancelDrop,
+  getHost, restoreTransforms, replaceSelection = () => {}, restoreSelection = () => {}, previewMarquee = () => {}, finishSnap = () => {}, cancelDrop = () => {},
   events = globalThis, visibility = globalThis.document,
 }) {
   /** @type {ActiveGesture<Selection> | null} */ let active = null;
@@ -43,11 +43,12 @@ export function createWorkbenchGestures({
     if (current.beforeTransforms) restoreTransforms(current.beforeTransforms);
     if (current.beforeSelection) restoreSelection(current.beforeSelection);
   };
-  const clean = () => { finishSnap(); cancelDrop(); previewMarquee(null); };
+  /** @param {ActiveGesture<Selection>} current */
+  const clean = current => { try { finishSnap(); cancelDrop(); previewMarquee(null); } finally { current.onFinish?.(); } };
   const cancel = (rollback = true) => {
     const current = active;
     if (!current || !detach(current)) return;
-    try { if (rollback) restore(current); } finally { clean(); }
+    try { if (rollback) restore(current); } finally { clean(current); }
   };
   /**
    * @param {import('../../contracts/workbench.js').GestureStartEvent} event
@@ -77,7 +78,7 @@ export function createWorkbenchGestures({
       try {
         if (operation.commit(pointer) === false) restore(current);
       } catch (error) { restore(current); throw error; }
-      finally { clean(); }
+      finally { clean(current); }
     };
     current.cancel = () => { if (active === current) cancel(); };
     current.pointerCancel = pointer => { if (owns(pointer)) cancel(); };
@@ -124,9 +125,9 @@ export function createWorkbenchGestures({
         },
       });
     },
-    beginResize(event, { beforeTransforms, valid, preview, commit }) {
+    beginResize(event, { beforeTransforms, valid, preview, commit, onFinish }) {
       const origin = { x: event.clientX, y: event.clientY };
-      return start(event, { beforeTransforms, valid, commit,
+      return start(event, { beforeTransforms, valid, commit, onFinish,
         preview: pointer => preview({ x: pointer.clientX - origin.x, y: pointer.clientY - origin.y }, pointer.altKey),
       });
     },

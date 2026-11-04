@@ -1,3 +1,5 @@
+import { editorDestination, editorMenu, setEditorSidebarOpen } from './fixtures/editor-menu.mjs';
+import { navigateWorkbench } from './fixtures/workbench-navigation.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdir, writeFile } from 'node:fs/promises';
@@ -10,8 +12,8 @@ const hit = node => { const r = node.getBoundingClientRect(); return node.contai
 const interactionState = page => page.locator('main.system-workflow').evaluate(node => ({
   camera: { zoom: node.querySelector('.navigator-zoom output')?.textContent,
     frames: [...node.querySelectorAll('[data-workbench-view-id]')].map(module => ({ id: module.dataset.workbenchViewId, rect: module.getBoundingClientRect().toJSON() })) },
-  selection: node.querySelector('.workbench-view-controls__selection-count')?.textContent,
-  activeTargets: [...node.querySelectorAll('[data-workbench-view-id][data-window-active]')].map(module => module.dataset.workbenchViewId),
+  selection: [...node.querySelectorAll('.workbench-layer-row[data-selected]')].map(row => row.dataset.layerId),
+  activeTargets: [...node.querySelectorAll('[data-workbench-view-id]:is([data-window-active], [data-active])')].map(module => module.dataset.workbenchViewId),
 }));
 async function open(browser, width, height, theme, suffix = '') {
   const page = await browser.newPage({ viewport: { width, height }, reducedMotion: 'reduce', hasTouch: width < 600 });
@@ -26,10 +28,10 @@ async function open(browser, width, height, theme, suffix = '') {
   await page.goto(`${origin}/browser-tests/tool-chrome-fixture.html?sample=navigator&theme=${theme}${suffix}`);
   const sidebar = page.getByRole('complementary', { name: 'Workspace sidebar' });
   await sidebar.waitFor();
+  await setEditorSidebarOpen(page, false);
   const activate = async name => {
-    const button = sidebar.getByRole('button', { name, exact: true, includeHidden: true });
-    if (!await button.isVisible()) await sidebar.locator('.editor-menu-brand[aria-expanded="false"]').click();
-    await button.click();
+    if (name === 'Docs') await editorMenu(page, 'Docs').click();
+    else await editorDestination(page, name);
   };
   return { page, activate, errors };
 }
@@ -52,7 +54,7 @@ for (const theme of ['carbon', 'mist']) for (const [width, height] of [[1440, 90
         assert.equal(await panel.getAttribute('data-workflow-finish'), 'flat');
         assert.equal(await panel.evaluate(n => getComputedStyle(n).borderRadius), '9px');
         assert.equal(await panel.evaluate(n => n.scrollWidth <= n.clientWidth), true, `${name} has no horizontal overflow`);
-        assert.equal(await panel.evaluate(n => getComputedStyle(n).backgroundColor), theme === 'mist' ? 'rgb(235, 236, 231)' : 'rgb(25, 27, 27)');
+        assert.equal(await panel.evaluate(n => getComputedStyle(n).backgroundColor), theme === 'mist' ? 'rgb(235, 236, 231)' : 'rgb(8, 8, 8)');
         const close = panel.getByRole('button', { name: name === 'Publish' ? 'Close Publication' : `Close ${name}`, exact: true });
         assert.equal(await close.evaluate(hit), true, `${name} close stays reachable`);
         if (name === 'Publish') {
@@ -88,6 +90,12 @@ test('Grids keeps rename, visibility, duplicate and delete with local cancellati
   const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
   try {
     const { page, activate, errors } = await open(browser, 390, 640, 'mist');
+    const imageId = await page.evaluate(() => window.readToolChromeDraft().imageModules[0].id);
+    await page.getByRole('toolbar', { name: 'Creation tools', exact: true }).getByRole('button', { name: 'Layers', exact: true }).click();
+    await page.locator(`[data-layer-id="${imageId}"] .workbench-layer-name`).click();
+    const selectedState = await interactionState(page);
+    assert.deepEqual(selectedState.selection, [imageId]);
+    assert.equal(selectedState.activeTargets.length, 1, 'selecting artwork establishes an active module');
     await activate('Grids');
     const panel = page.getByRole('complementary', { name: 'Grids', exact: true });
     await panel.getByRole('button', { name: 'New Grid', exact: true }).click();
@@ -106,8 +114,8 @@ test('Grids keeps rename, visibility, duplicate and delete with local cancellati
     await copy.getByRole('button', { name: /^Delete / }).click();
     await panel.getByRole('alertdialog').getByRole('button', { name: 'Cancel' }).focus();
     const beforeEscape = await interactionState(page);
-    assert.equal(beforeEscape.selection, '1 selected', 'Escape starts with selected artwork behind the dialog');
-    assert.deepEqual(beforeEscape.activeTargets, [await page.evaluate(() => window.readToolChromeDraft().texts[0].id)], 'the original Text remains the active target');
+    assert.deepEqual(beforeEscape.selection, selectedState.selection, 'Escape starts with selected artwork behind the dialog');
+    assert.deepEqual(beforeEscape.activeTargets, selectedState.activeTargets, 'the original module remains the active target');
     await page.keyboard.press('Escape');
     assert.equal(await panel.getByRole('alertdialog').count(), 0);
     const afterEscape = await interactionState(page);
@@ -136,10 +144,7 @@ for (const theme of ['carbon', 'mist']) for (const [width, height] of [[1440, 90
         ['groups', page.getByRole('complementary', { name: 'Workbench groups — Groups', exact: true }), 'Close Workbench groups'],
       ]) {
         if (name === 'groups') {
-          // Floating Keeper/Navigator windows can overlap the rail on a tiny
-          // viewport. This case checks the panel; open it through its keyboard action.
-          const opener = page.getByRole('button', { name: 'Workbench groups', exact: true });
-          await opener.focus(); await opener.press('Enter');
+          await navigateWorkbench(page, 'groups');
         }
         await panel.waitFor();
         const rect = await panel.boundingBox();

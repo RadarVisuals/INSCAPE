@@ -1,40 +1,56 @@
 import { lazy, Suspense, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
 import RackMenu from '../menus/RackMenu.jsx';
 import { MAX_WORKBENCHES } from '../../systemWorkflow/domain/workbenchCollection.js';
-import { EditorCellEditingNotice } from '../../reception/EditorCellsContext.jsx';
+import { EditorCellEditingNotice, useEditorCells } from '../../reception/EditorCellsContext.jsx';
 import { createNamedWorkbenchActions } from './namedWorkbenchActions.js';
 import { toolIsVisible } from './workbenchToolDockState.js';
 import { useWorkbenchCamera } from './WorkbenchCamera.jsx';
+import { useWorkbenchView } from './WorkbenchViewContext.js';
 import './editorMenuBar.css';
 import WorkspaceMenuLabel from './WorkspaceMenuLabel.jsx';
 
 const CanvasControls = lazy(() => import('./WorkbenchCanvasControls.jsx'));
 
 // The bar presents the existing session, history, camera and tool commands.
-// It owns only the open menu and its temporary name form.
+// It owns its measured screen boundary, open menu and temporary name form.
 export default function OwnerEditorMenuBar({ store, projection, flushLayout, busy, hidden, documentNavigation,
   navigationRef, hostRef, navigation, focusOnMount, onPreview, onOpenPanel, history, onHistory, historyBlocked,
-  preferences, onPreferencesChange, editorPreferences, creationBarVisible, onCreationBarChange, openPanels, overview = false, overviewControls, animateEntry = false }) {
-  const MENUS = overview ? ['My Inscape', 'Edit', 'View', 'Docs', 'Backup'] : ['Canvas', 'Edit', 'View', 'Tools', 'Docs', 'Backup'];
+  preferences, onPreferencesChange, editorPreferences, creationBarVisible, onCreationBarChange, onSearchCommands, openPanels, overview = false, overviewControls, animateEntry = false }) {
+  const cells = useEditorCells();
+  const MENUS = overview ? ['My Inscape', 'Edit', 'View', 'Docs', 'Backup'] : ['Canvas', ...(cells ? ['Bento'] : []), 'Edit', 'View', 'Tools', 'Docs', 'Backup'];
   const camera = useWorkbenchCamera();
   const docks = editorPreferences.tools;
   const layout = useSyncExternalStore(docks.subscribe, docks.getSnapshot);
   const bar = useRef(null), triggers = useRef({}), input = useRef(null);
+  const { setNavigationTop } = useWorkbenchView();
+  useLayoutEffect(() => {
+    const host = bar.current.closest('main') || hostRef.current;
+    const measure = () => {
+      const top = hidden ? 0 : bar.current.getBoundingClientRect().bottom;
+      setNavigationTop(top);
+      host?.style.setProperty('--workspace-navigation-top', `${top}px`);
+    };
+    const observer = new ResizeObserver(measure);
+    observer.observe(bar.current); measure();
+    return () => { observer.disconnect(); setNavigationTop(0); host?.style.removeProperty('--workspace-navigation-top'); };
+  }, [hidden, hostRef, setNavigationTop]);
   const [focusedMenu, setFocusedMenu] = useState('Canvas');
   const [menu, setMenu] = useState(null), [form, setForm] = useState(null), [name, setName] = useState('');
   const [error, setError] = useState(''), [sizeOpen, setSizeOpen] = useState(false);
   const items = documentNavigation?.items || store.listWorkbenches();
   const activeId = documentNavigation?.activeId || store.getWorkbenchId();
   const reception = activeId === 'reception';
+  const documentLabel = reception ? 'Editing Reception' : `Editing canvas · ${items.find(item => item.id === activeId)?.name || 'Untitled'}`;
   const actions = createNamedWorkbenchActions({ store, projection, flushLayout, busy });
   const blocked = Boolean(busy || historyBlocked || camera.locked);
   useLayoutEffect(() => { if (focusOnMount) triggers.current.Canvas?.focus({ preventScroll: true }); }, [focusOnMount]);
   useLayoutEffect(() => { if (form) { input.current?.focus(); input.current?.select(); } }, [form]);
-  useLayoutEffect(() => { setMenu(null); setForm(null); setSizeOpen(false); setError(''); setFocusedMenu(overview ? 'My Inscape' : 'Canvas'); }, [overview]);
+  useLayoutEffect(() => { setMenu(null); setForm(null); setSizeOpen(false); setError(''); setFocusedMenu(overview ? 'My Inscape' : 'Canvas'); }, [overview, activeId]);
   const closeForm = () => { setForm(null); setError(''); triggers.current.Canvas?.focus(); };
   const perform = action => { try { action(); setError(''); return true; } catch (failure) { setError(failure.message); return false; } };
   const openMenu = (label, focusLast = false) => {
     setForm(null); setSizeOpen(false); setError('');
+    if (label === 'Bento') { setMenu(null); cells.openSettings(); return; }
     if (label === 'Docs' || label === 'Backup') { setMenu(null); onOpenPanel(label.toLowerCase(), triggers.current[label]); return; }
     const rect = triggers.current[label].getBoundingClientRect();
     setMenu({ label, focusLast, anchor: { x: rect.left, y: rect.bottom } });
@@ -72,10 +88,11 @@ export default function OwnerEditorMenuBar({ store, projection, flushLayout, bus
       ...items.map(item => check(`canvas:${item.id}`, item.name, activeId === item.id, () => (documentNavigation?.select || actions.switchTo)(item.id))),
       command('new', items.length >= MAX_WORKBENCHES ? `New canvas (${MAX_WORKBENCHES}/${MAX_WORKBENCHES} used)` : 'New canvas', () => startForm('new'), { disabled: reception || blocked || items.length >= MAX_WORKBENCHES }),
       command('rename', 'Rename', () => startForm('rename'), { disabled: reception || blocked }),
-      command('size', 'Canvas size', () => setSizeOpen(true), { disabled: blocked }),
+      command('size', reception ? 'Bento settings' : 'Canvas size', () => reception ? cells.openSettings() : setSizeOpen(true), { disabled: blocked }),
       command('preview', 'Preview', () => onPreview(triggers.current.Canvas), { disabled: blocked }),
     ],
     Edit: [
+      command('search', 'Search commands', () => onSearchCommands(triggers.current.Edit), { disabled: camera.locked || !onSearchCommands }),
       ...['undo', 'redo'].map(id => command(id, id === 'undo' ? 'Undo' : 'Redo', () => onHistory(id), { disabled: blocked || !history[id] })),
       command('settings', 'Settings', () => onOpenPanel('settings', triggers.current.Edit)),
     ],
@@ -84,11 +101,14 @@ export default function OwnerEditorMenuBar({ store, projection, flushLayout, bus
       command('zoom-out', 'Zoom out', () => navigation.navigatorZoom(Math.max(10, camera.getCamera().scale * 80)), { disabled: camera.locked }),
       command('actual-size', 'Actual size · 100%', navigation.resetZoom, { disabled: camera.locked }),
       command('center', 'Center canvas', navigation.navigatorHome, { disabled: camera.locked }),
-      check('grid', 'Grid', preferences.gridMode !== 'NONE', () => change({ gridMode: preferences.gridMode === 'NONE' ? 'DOTS' : 'NONE' })),
+      command('focus', 'Focus selection', navigation.focusSelection, { disabled: camera.locked || !navigation.canFocusSelection }),
+      command('back', 'Previous view', navigation.goBack, { disabled: camera.locked || !navigation.canGoBack }),
+      ...(!reception ? [check('grid', 'Grid', preferences.gridMode !== 'NONE', () => change({ gridMode: preferences.gridMode === 'NONE' ? 'DOTS' : 'NONE' })),
       check('snap-grid', 'Snap to grid', preferences.shortcutSnap, () => change({ shortcutSnap: !preferences.shortcutSnap })),
-      check('snap-edges', 'Snap to edges', preferences.edgeSnap, () => change({ edgeSnap: !preferences.edgeSnap })),
+      check('snap-edges', 'Snap to edges', preferences.edgeSnap, () => change({ edgeSnap: !preferences.edgeSnap }))] : []),
     ],
     Tools: [
+      command('groups', 'Groups', navigation.openGroups, { disabled: camera.locked }),
       check('drawing', 'Drawing toolbar', creationBarVisible, () => onCreationBarChange(!creationBarVisible)),
       ...['Transform', 'Color', 'Image', 'Shape', 'FX', 'Layers', 'Info'].map(tab => check(tab,
         ['Image', 'Shape'].includes(tab) ? `${tab} settings` : tab === 'Info' ? 'Artwork info' : tab,
@@ -112,10 +132,11 @@ export default function OwnerEditorMenuBar({ store, projection, flushLayout, bus
         {MENUS.map((label, index) => <button key={index === 0 ? 'context' : label} ref={node => { triggers.current[label] = node; }} type="button" role="menuitem" data-menu={label} aria-label={label}
           className={index === 0 ? 'workspace-context-menu' : undefined}
           tabIndex={focusedMenu === label ? 0 : -1} onFocus={() => setFocusedMenu(label)}
-          aria-haspopup={['Docs', 'Backup'].includes(label) ? 'dialog' : 'menu'} aria-expanded={menu?.label === label || openPanels.includes(label.toLowerCase())}
+          aria-haspopup={['Bento', 'Docs', 'Backup'].includes(label) ? 'dialog' : 'menu'} aria-expanded={label === 'Bento' ? cells?.bentoOpen : menu?.label === label || openPanels.includes(label.toLowerCase())}
           data-system-workflow-panel-trigger onPointerEnter={() => { if (menu && !['Docs', 'Backup'].includes(label) && menu.label !== label) openMenu(label); }}
           onClick={() => menu?.label === label ? setMenu(null) : openMenu(label)}><WorkspaceMenuLabel label={label} context={overview ? 'overview' : 'editor'} index={index} animateEntry={animateEntry} /></button>)}
       </nav>
+      {!overview && <span className="editor-menu-document" role="status" aria-label="Editing document" title={documentLabel}>{documentLabel}</span>}
     </header>
     {menu && commands[menu.label] && <RackMenu label={`${menu.label} menu`} anchor={menu.anchor} commands={commands[menu.label]} systemWorkflowOverlay
       menuBarRef={bar} focusLast={menu.focusLast} returnFocus={triggers.current[menu.label]} onClose={() => setMenu(null)}

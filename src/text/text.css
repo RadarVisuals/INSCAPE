@@ -91,7 +91,7 @@
 .text-artwork-editor { border: 0; padding: 0; margin: 0; }
 .text-artwork-editor.ProseMirror-selectednode { outline: 2px solid var(--workflow-ink); }
 .text-artwork-editor label { font: 12px/1.4 'Inscape IBM Plex Sans Condensed'; margin-top: 6px; }
-.text-shortcut { position: fixed; left: 24px; bottom: var(--text-shortcut-bottom); z-index: 40; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.text-shortcut { position: fixed; left: 24px; bottom: var(--text-shortcut-bottom); z-index: 80; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .text-workbench .text-window--read { grid-template-rows: minmax(0, 1fr); }
 .text-window--read > .system-workflow__instrument-content { height: 100%; flex: 1; }
 .text-workbench .workbench-window--external-controls[data-window-chrome] > .system-workflow__detached-window-titlebar {

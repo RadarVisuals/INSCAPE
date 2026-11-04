@@ -1,3 +1,4 @@
+import { navigateWorkbench } from './fixtures/workbench-navigation.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { chromium } from 'playwright-core';
@@ -45,7 +46,7 @@ for (const visitor of [false, true]) test(`focus keeps painted geometry in sync 
         window.finishMotionCheck = () => { observer.disconnect(); cancelAnimationFrame(request);
           return { frames, mismatches, travelStyleWrites }; };
       });
-      await page.getByRole('button', { name: direction === 'focus' ? 'Focus selected Workbench modules' : 'Back to previous Workbench view', exact: true }).click();
+      await navigateWorkbench(page, direction);
       await settled(page);
       const result = await page.evaluate(() => window.finishMotionCheck());
       assert.ok(result.frames >= 3, 'sample multiple intermediate poses');

@@ -1,11 +1,11 @@
 import { assertReception, RECEPTION_EXTENT as E, RECEPTION_MIN, RECEPTION_LIMIT } from '../profileDocument/domain/receptionPresentation.js';
+import { partitionDividers } from './receptionPartition.js';
 import { pruneReceptionContent } from './receptionLayers.js';
 import { pruneReceptionArrangement, reflowReceptionGroups } from './receptionArrangement.js';
 
 // Partition editing derives splits from the existing rectangles. Free layouts
 // retain their own authored rectangles and explicit coupling relationships.
 const right = r => r.x + r.width, bottom = r => r.y + r.height;
-const overlap = (a, b, c, d) => Math.max(a, c) < Math.min(b, d);
 const change = (value, regions, mobile = value.mobile) => assertReception({ ...value, regions, mobile });
 export function splitReception(value, id, axis, newId = `region:${crypto.randomUUID()}`) {
   const r = value.regions.find(r => r.id === id), key = axis === 'x' ? 'width' : 'height';
@@ -99,24 +99,7 @@ export function deleteReceptionCell(value, id) {
   return assertReception(pruneReceptionContent(value.arrangement ? reflowReceptionGroups(next) : next));
 }
 export function receptionDividers(value, minimum = {}) {
-  const found = new Map();
-  for (const axis of ['x', 'y']) {
-    const cross = axis === 'x' ? 'y' : 'x', size = axis === 'x' ? 'width' : 'height', crossSize = axis === 'x' ? 'height' : 'width';
-    for (const seed of value.regions) {
-      const position = seed[axis] + seed[size]; if (position === E) continue;
-      let from = seed[cross], to = from + seed[crossSize], previous, members;
-      do {
-        previous = `${from}:${to}`;
-        members = value.regions.filter(r => (r[axis] === position || r[axis] + r[size] === position) && overlap(from, to, r[cross], r[cross] + r[crossSize]));
-        from = Math.min(from, ...members.map(r => r[cross])); to = Math.max(to, ...members.map(r => r[cross] + r[crossSize]));
-      } while (previous !== `${from}:${to}`);
-      const before = members.filter(r => r[axis] + r[size] === position), after = members.filter(r => r[axis] === position);
-      const id = `${axis}:${before.map(r => r.id).sort().join(',')}:${after.map(r => r.id).sort().join(',')}`;
-      found.set(id, { id, axis, position, from, to, before: before.map(r => r.id), after: after.map(r => r.id),
-        min: Math.max(...before.map(r => r[axis] + (minimum[axis] || RECEPTION_MIN))), max: Math.min(...after.map(r => r[axis] + r[size] - (minimum[axis] || RECEPTION_MIN))) });
-    }
-  }
-  return [...found.values()];
+  return partitionDividers(value.regions, { x: minimum.x || RECEPTION_MIN, y: minimum.y || RECEPTION_MIN });
 }
 export function resizeReception(value, dividerId, position, minimum) {
   const d = receptionDividers(value, minimum).find(d => d.id === dividerId);

@@ -1,7 +1,3 @@
 .editor-cell-editing { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--tactile-edge); color: var(--tactile-ink); font: var(--workflow-type-control); }
 .editor-cell-editing > span { padding: 0 4px; }
-.editor-cell-tools { display: grid; gap: 8px; min-width: 0; margin: 0; padding: 8px; border: 1px solid var(--tactile-edge); }
-.editor-cell-tools p { margin: 0; color: var(--tactile-muted); }
-.editor-cell-tools .shape-check { overflow-wrap: anywhere; }
-.editor-cell-member { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .editor-cell-content-note { position: absolute; inset: 0; display: grid; place-items: center; padding: calc(12px * var(--workbench-content-scale, 1)); color: var(--workflow-ink); font: var(--workflow-type-control); font-size: calc(12px * var(--workbench-content-scale, 1)); pointer-events: none; }

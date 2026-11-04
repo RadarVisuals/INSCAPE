@@ -6,6 +6,7 @@ import ShapeSurface from '../shapes/ShapeSurface.jsx';
 import { ReceptionImage, ReceptionProfileContent } from './ReceptionCanvas.jsx';
 import { receptionResponsiveLayout } from './receptionEditorDocument.js';
 import { editorCellClip } from './editorCellGeometry.js';
+import ReceptionInnerLines from './ReceptionInnerLines.jsx';
 import './receptionDocument.css';
 
 const ReceptionLinkedContent = lazy(() => import('./ReceptionLinkedContent.jsx'));
@@ -24,13 +25,14 @@ export default function ReceptionDocumentCanvas({ reception, width, model, addre
   const layout = useMemo(() => viewportWidth > 0 ? receptionResponsiveLayout(reception, viewportWidth) : null, [reception, viewportWidth]);
   useLayoutEffect(() => { if (layout) onLayout?.(layout); }, [layout, onLayout]);
   const order = layerIds(reception.artworkLayers);
-  const owners = new Map(reception.cells.flatMap(cell => cell.members.map(id => [id, cell])));
+  const owners = new Map((layout?.cells || []).flatMap(cell => cell.members.map(id => [id, cell])));
   const record = id => reception.imageModules.find(item => item.id === id)
     || reception.texts.find(item => item.id === id) || reception.shapes.find(item => item.id === id);
-  const paint = id => {
+  const paint = (id, radius = 0) => {
     const item = record(id);
     if (!item) return null;
-    if (id.startsWith('shape:')) return <ShapeSurface record={item} />;
+    if (id.startsWith('shape:')) return <ShapeSurface record={item} radius={radius}
+      hideOutline={Boolean(reception.innerLines && reception.cells.some(cell => cell.id === id))} />;
     if (id.startsWith('image:')) return <ReceptionImage record={item} />;
     const article = item.article, appearance = textAppearance(article), rect = layout.windows[id];
     return <>
@@ -55,6 +57,7 @@ export default function ReceptionDocumentCanvas({ reception, width, model, addre
   };
   return <div className="reception-document-viewport" ref={host} style={width ? { width } : undefined}>
     <section className="reception-document-canvas" aria-label="Reception layout" data-mobile={layout?.mobile || undefined}
+      data-show-frame={reception.showFrame !== false || undefined}
       style={{ width: layout?.width, height: layout?.height || 1 }}>
     {layout && order.map((id, zIndex) => {
       const rect = layout.windows[id];
@@ -74,7 +77,7 @@ export default function ReceptionDocumentCanvas({ reception, width, model, addre
       const link = reception.links?.find(item => item.id === cell.content);
       return <section key={id} className="reception-document-cell" data-cell-id={id} data-selected={selected === id || undefined}
         style={{ ...rect, zIndex, borderRadius: cell.radius || 0 }} {...selectProps(id, id)}>
-        <div className="reception-document-cell-surface">{paint(id)}</div>
+        <div className="reception-document-cell-surface">{paint(id, cell.radius)}</div>
         {cell.content && <div className="reception-document-cell-content" style={{ padding: cell.contentLayout?.padding ?? 24,
           alignItems: { top: 'flex-start', center: 'center', bottom: 'flex-end' }[cell.contentLayout?.alignY || 'top'],
           justifyContent: { left: 'flex-start', center: 'center', right: 'flex-end' }[cell.contentLayout?.alignX || 'left'] }}>{link
@@ -82,6 +85,10 @@ export default function ReceptionDocumentCanvas({ reception, width, model, addre
           : <ReceptionProfileContent kind={cell.content} model={model} address={address} />}</div>}
       </section>;
     })}
+    {layout && <ReceptionInnerLines frames={layout.cells.map(cell => cell.window)}
+      gap={layout.mobile ? Math.min(12, Math.max(0, layout.width - 2)) : reception.bento ? reception.bento.gap * layout.scale : undefined}
+      appearance={reception.innerLines && { ...reception.innerLines, width: reception.innerLines.width * layout.scale }}
+      bounds={{ left: 0, top: 0, width: layout.width, height: layout.height }} style={{ zIndex: order.length }} />}
     </section>
   </div>;
 }

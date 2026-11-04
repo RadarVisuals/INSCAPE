@@ -1,3 +1,5 @@
+import { openSharedTool } from './fixtures/shared-tools.mjs';
+import { navigateWorkbench, workbenchCommandDisabled } from './fixtures/workbench-navigation.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdir } from 'node:fs/promises';
@@ -55,15 +57,14 @@ for (const visitor of [false, true]) for (const width of [1440, 390]) {
       // Both the owner contextual dock and the shared quiet Image controls call
       // the same action; narrow/Visitor use the in-module control.
       const inspect = !visitor && width === 1440
-        ? page.locator('[data-context-tools], [data-context-action-bars]').getByRole('button', { name: 'Inspect Image', exact: true })
+        ? (await openSharedTool(page, 'Image')).getByRole('button', { name: 'Inspect Image', exact: true })
         : image.getByRole('button', { name: 'Inspect Image', exact: true });
       await inspect.click();
       await page.getByRole('dialog', { name: 'Inspect Image', exact: true }).waitFor();
       await page.keyboard.press('Escape'); await page.locator('.image-lift').waitFor({ state: 'detached' });
       await page.keyboard.press('Escape'); await settled(page);
       assert.deepEqual(await camera(page), initial, 'a second Escape consumes Focus history only after Lift closes');
-      const back = page.getByRole('button', { name: 'Back to previous Workbench view', exact: true });
-      assert.equal(await back.isDisabled(), true, 'Lift added no camera-history entry');
+      assert.equal(await workbenchCommandDisabled(page, 'back'), true, 'Lift added no camera-history entry');
       await page.keyboard.press('Escape'); // Back may restore the selection used by F.
 
       // Typing and modified/composed/repeated keys are never inspection actions.
@@ -116,7 +117,7 @@ for (const visitor of [false, true]) for (const width of [1440, 390]) {
       await page.getByRole('button', { name: 'Close artwork viewer', exact: true }).waitFor();
       await page.keyboard.press('Escape');
       await page.getByRole('button', { name: 'Close artwork viewer', exact: true }).waitFor({ state: 'detached' });
-      await back.click(); await settled(page);
+      await navigateWorkbench(page, 'back'); await settled(page);
       assert.deepEqual(await camera(page), initial);
       assert.deepEqual(await saved(page), before, 'inspection mode, content, crop and authored geometry stay unchanged');
       assert.deepEqual(errors, []);

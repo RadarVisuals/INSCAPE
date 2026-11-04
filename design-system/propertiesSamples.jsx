@@ -30,7 +30,6 @@ const examples = {
     ['artwork', 'With artwork'],
     ['empty', 'Empty Image'],
     ['busy', 'Turning a side'],
-    ['limit', 'Image limit reached'],
   ],
   display: [
     ['single', 'One artwork'],
@@ -44,7 +43,6 @@ const examples = {
     ['rectangle', 'Rectangle'],
     ['grid', 'Grid'],
     ['texture', 'Retained texture'],
-    ['limit', 'Shape limit reached'],
   ],
 };
 const orderActions = [
@@ -107,8 +105,7 @@ function ImageSample({ example, report, setTitle }) {
   const [drop, setDrop] = useState('append'),
     [included, setIncluded] = useState(example !== 'empty'),
     [cropping, setCropping] = useState(false);
-  const [size, setSize] = useState({ width: '288', height: '192' }),
-    [count, setCount] = useState(example === 'limit' ? 16 : 1);
+  const [size, setSize] = useState({ width: '288', height: '192' });
   const [rotation, setRotation] = useState(0);
   const cropButton = useRef(null),
     busy = example === 'busy';
@@ -160,15 +157,6 @@ function ImageSample({ example, report, setTitle }) {
         >
           <Crop />
         </button>
-        <IconButton
-          label="Duplicate"
-          icon={Copy}
-          disabled={count >= 16 || busy}
-          onClick={() => {
-            setCount((value) => value + 1);
-            report(`Duplicate Image · ${count + 1} example Images`);
-          }}
-        />
       </nav>
       <div
         className="system-workflow__inspection-selector ds-fit-choices"
@@ -516,18 +504,11 @@ function PatternNumber({ label, caption, value, min, max, step = 1, onChange }) 
 }
 function ShapeSample({ example, report, setTitle }) {
   const [records, setRecords] = useState(initialShapes),
-    [selected, setSelected] = useState(example === 'limit' ? 'rectangle' : example);
-  const record = records.find((item) => item.id === selected),
-    index = records.indexOf(record);
+    [selected, setSelected] = useState(example);
+  const record = records.find((item) => item.id === selected);
   useEffect(() => setTitle(record?.name || 'No shape'), [record?.name, setTitle]);
   const change = (patch) =>
     setRecords((list) => list.map((item) => (item.id === selected ? { ...item, ...patch } : item)));
-  if (!record)
-    return (
-      <p className="system-workflow__layer-hint">
-        No shapes remain in this example. Reset to restore them.
-      </p>
-    );
   const resize = (width, height) => {
     const step = record.kind === 'grid' ? record.grid.spacing : 1;
     const w = record.kind === 'grid' ? Math.ceil(width / step) * step : width,
@@ -535,62 +516,8 @@ function ShapeSample({ example, report, setTitle }) {
     change({ width: w, height: h });
     report(`Shape size · ${w} × ${h} px`);
   };
-  const order = (direction) => {
-    const list = [...records];
-    list.splice(index, 1);
-    list.splice(
-      direction === 'back'
-        ? 0
-        : direction === 'front'
-          ? list.length
-          : index + (direction === 'backward' ? -1 : 1),
-      0,
-      record,
-    );
-    setRecords(list);
-    report(orderActions.find((item) => item[0] === direction)[1]);
-  };
   return (
     <div className="shape-tools">
-      <nav
-        className="system-workflow__selection-actions system-workflow__selection-actions--six"
-        aria-label="Shape actions"
-      >
-        <IconButton
-          label="Duplicate shape"
-          icon={Copy}
-          disabled={example === 'limit' || records.length >= 32}
-          onClick={() => {
-            const copy = {
-              ...record,
-              id: `${record.id}-copy-${records.length}`,
-              name: `${record.name} copy`,
-            };
-            setRecords([...records, copy]);
-            setSelected(copy.id);
-            report('Shape duplicated');
-          }}
-        />
-        {orderActions.map(([direction, label, Icon]) => (
-          <IconButton
-            key={direction}
-            label={label}
-            icon={Icon}
-            disabled={direction.startsWith('back') ? index === 0 : index === records.length - 1}
-            onClick={() => order(direction)}
-          />
-        ))}
-        <IconButton
-          label="Delete shape"
-          icon={Trash2}
-          onClick={() => {
-            const next = records.filter((item) => item.id !== selected);
-            setRecords(next);
-            setSelected(next[0]?.id);
-            report('Example shape deleted');
-          }}
-        />
-      </nav>
       <label>
         Selected shape
         <select

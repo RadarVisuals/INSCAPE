@@ -3,9 +3,10 @@ import assert from 'node:assert/strict';
 import { mkdir } from 'node:fs/promises';
 import { chromium } from 'playwright-core';
 import { browserExecutable } from '../scripts/browserEnvironment.mjs';
+import { editorCommand, editorDestination as destination } from './fixtures/editor-menu.mjs';
 
 const origin = process.env.INSCAPE_TEXT_ROOT || 'http://127.0.0.1:24970';
-const output = '.browser-test-runtime/activity-finishing';
+const output = process.env.INSCAPE_BROWSER_OUTPUT || '.browser-test-runtime/activity-finishing';
 const drawer = page => page.getByRole('complementary', { name: 'Activity notifications' });
 const history = page => page.getByRole('region', { name: 'Full activity history' });
 const settle = page => page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
@@ -21,14 +22,7 @@ async function state(page, patch) {
     return { history, status, persistenceError };
   }, patch);
 }
-async function destination(page, name) {
-  const sidebar = page.getByRole('complementary', { name: 'Workspace sidebar' });
-  await sidebar.waitFor();
-  const trigger = sidebar.getByRole('button', { name, exact: true, includeHidden: true });
-  if (!await trigger.isVisible()) await sidebar.locator('.editor-menu-brand[aria-expanded="false"]').click();
-  await trigger.click(); return trigger;
-}
-async function mount(browser, width = 1440, height = 900, theme = 'mist', motion = 'reduce') {
+async function mount(browser, width = 1440, height = 900, theme = 'light', motion = 'reduce') {
   const page = await browser.newPage({ viewport: { width, height }, reducedMotion: motion, hasTouch: width <= 520 });
   page.setDefaultTimeout(10000); const errors = []; page.on('pageerror', error => errors.push(error.message));
   await page.route('**/*', route => {
@@ -38,15 +32,15 @@ async function mount(browser, width = 1440, height = 900, theme = 'mist', motion
     return route.abort();
   });
   await page.goto(`${origin}/browser-tests/tool-chrome-fixture.html?sample=activity&persistent&theme=${theme}`);
-  await page.getByRole('complementary', { name: 'Workspace sidebar' }).waitFor();
+  await page.getByRole('button', { name: 'Inscape sidebar' }).waitFor();
   return { page, errors };
 }
-for (const theme of ['carbon', 'mist']) for (const [width, height] of [[1440,900], [390,900], [320,568], [844,390]]) {
+for (const theme of ['dark', 'light']) for (const [width, height] of [[1440,900], [390,900], [320,568], [844,390]]) {
   test(`Activity and history share the window material and stay reachable (${theme} ${width}x${height})`, { timeout: 60000 }, async () => {
     const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
     try {
       const { page, errors } = await mount(browser, width, height, theme), before = await saved(page), view = await camera(page);
-      await destination(page, 'Settings');
+      await editorCommand(page, 'Edit', 'Settings');
       const expected = await page.getByRole('dialog', { name: 'Settings' }).evaluate(material);
       await page.getByRole('button', { name: 'Close Settings' }).click();
       const trigger = await destination(page, 'Activity'); await drawer(page).waitFor();
@@ -80,7 +74,7 @@ for (const theme of ['carbon', 'mist']) for (const [width, height] of [[1440,900
       assert.equal(await drawer(page).getByRole('button', { name: 'Open full activity history' }).evaluate(node => node === document.activeElement), true);
       await drawer(page).getByRole('button', { name: 'Close activity' }).click();
       await drawer(page).waitFor({ state: 'detached' }); await settle(page);
-      const returnTarget = await trigger.isVisible() ? trigger : page.locator('.editor-menu-brand[aria-expanded="false"]');
+      const returnTarget = await trigger.isVisible() ? trigger : page.getByRole('button', { name: 'Inscape sidebar' });
       assert.equal(await returnTarget.evaluate(node => node === document.activeElement), true);
       assert.deepEqual(await saved(page), before); assert.deepEqual(await camera(page), view);
       assert.deepEqual(errors, []);
@@ -154,7 +148,7 @@ for (const width of [1440, 390]) test(`Activity distinguishes empty, loading, pa
 test('Activity history supports animated close and does not take a newer focus choice', { timeout: 60000 }, async () => {
   const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
   try {
-    const { page, errors } = await mount(browser, 1440, 900, 'mist', 'no-preference');
+    const { page, errors } = await mount(browser, 1440, 900, 'light', 'no-preference');
     const trigger = await destination(page, 'Activity');
     await drawer(page).getByRole('button', { name: 'Open full activity history' }).click();
     await history(page).getByLabel('Search activity').waitFor();

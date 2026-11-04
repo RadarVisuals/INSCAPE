@@ -30,7 +30,7 @@ test('Image audit: independent commits, unavailable media and minimum-size contr
       const { createToolDockLayout, createToolDockStore } = await import('/src/public/ownerSystemWorkflow/workbenchToolDockState.js');
       const ImageWorkbench = (await import('/src/imageModule/ImageWorkbench.jsx')).default;
       const { WorkbenchViewProvider, useWorkbenchView } = await import('/src/public/ownerSystemWorkflow/WorkbenchView.jsx');
-      const { ContextToolbarProvider, ContextToolbar, ContextActionBars } = await import('/src/public/ownerSystemWorkflow/ContextToolbar.jsx');
+      const { ContextToolbarProvider, ContextToolbar } = await import('/src/public/ownerSystemWorkflow/ContextToolbar.jsx');
       const { SharedDisplayToolsProvider } = await import('/src/public/ownerSystemWorkflow/SharedDisplayTools.jsx');
       await import('/src/inscapeTokens.css');
       await import('/src/public/ownerSystemWorkflow/ownerSystemWorkflow.css');
@@ -50,7 +50,7 @@ test('Image audit: independent commits, unavailable media and minimum-size contr
       function CameraProbe() { const view = useWorkbenchView(); window.auditZoom = view.setScale; React.useEffect(() => view.selectArtwork(id), []); return null; }
       function Fixture() {
         const hostRef = React.useRef(null);
-        const [dock] = React.useState(() => { const layout = createToolDockLayout(innerWidth); layout.hidden = ['Layers']; layout.groups[0].panes[0].active = 'Transform'; return createToolDockStore(layout); });
+        const [dock] = React.useState(() => { const layout = createToolDockLayout(innerWidth); layout.hidden = ['Layers', 'Shape', 'FX']; layout.groups[0].panes[0].active = 'Image'; return createToolDockStore(layout); });
         const d = React.useSyncExternalStore(store.subscribe, store.getSnapshot);
         return React.createElement(WorkbenchViewProvider, { store, profileAddress: profile, presentation: d.workbench },
           React.createElement(CameraProbe),
@@ -58,13 +58,13 @@ test('Image audit: independent commits, unavailable media and minimum-size contr
             React.createElement(SharedDisplayToolsProvider, { metadataDock: dock, targetId: id },
               React.createElement('main', { ref: hostRef, tabIndex: -1, className: 'system-workflow', 'data-surface': 'carbon', 'data-lattice-menu-surface': true, 'data-menu-surface': 'carbon', style: { position: 'fixed', inset: 0, background: '#383a3a' } },
                 React.createElement(ImageWorkbench, { records: d.imageModules.slice(0, 1), store, profileAddress: profile }),
-                React.createElement(ContextActionBars), React.createElement(ContextToolbar, { menuSurface: 'carbon' }), React.createElement(WorkbenchToolDocks, { controller: dock, hostRef, menuSurface: 'carbon' })))));
+                React.createElement(ContextToolbar, { menuSurface: 'carbon' }), React.createElement(WorkbenchToolDocks, { controller: dock, hostRef, menuSurface: 'carbon' })))));
       }
       createRoot(document.getElementById('root')).render(React.createElement(Fixture));
     });
     const module = page.locator('[data-image-module]').first();
     const canvas = module.locator('.image-module__canvas');
-    const dock = page.locator('[data-context-tools], [data-context-action-bars]');
+    const dock = page.locator('.workbench-image-tools');
     await dock.getByRole('button', { name: 'Crop', exact: true }).click();
     await dock.getByRole('slider').fill('2');
     assert.equal(await canvas.getAttribute('data-cropping'), 'true');
@@ -114,6 +114,7 @@ test('Image audit: independent commits, unavailable media and minimum-size contr
       return { width: r.width, height: r.height, accessiblePixels };
     });
     await page.evaluate(() => window.auditExternalChange());
+    await page.getByRole('tab', { name: 'Transform', exact: true }).click();
     const width = page.getByRole('spinbutton', { name: 'Transform Width' });
     await width.fill('64');
     for (let attempt = 0; attempt < 3; attempt++) { await width.focus(); await width.press('Enter'); }

@@ -5,11 +5,11 @@ import './workspaceNavigation.css';
 // Presentation only. The host owns destinations, panel lifetimes and authority.
 export default function WorkspaceNavigation({ hidden, collapsed, onCollapse, onWorkbench, onLibrary, onOverview, onReception,
   openPanels = [], onOpen, onPreview, onPublish, publicationOpen = false, unreadCount = 0,
-  navigationHost, reference = false, documentControls = false, destination = 'editor', className = '', style }) {
+  navigationHost, onNavigate, reference = false, documentControls = false, destination = 'editor', className = '', style }) {
   const libraryOpen = openPanels.includes('library');
   const link = (label, Icon, action, state = {}) => <button type="button"
     className="workspace-navigation-link" aria-label={label} title={action ? label : `${label} · available in the app`}
-    data-system-workflow-panel-trigger disabled={!action} onClick={action} {...state}>
+    data-system-workflow-panel-trigger disabled={!action} onClick={event => { onNavigate?.(event.currentTarget); action?.(event); }} {...state}>
     <Icon size={18} aria-hidden="true" /><span>{label}</span>
     {label === 'Activity' && unreadCount > 0 && <i aria-label={`${unreadCount} unread`}>{unreadCount}</i>}
     {label === 'Library' && (libraryOpen ? <ChevronDown size={13} /> : <ChevronRight size={13} />)}
@@ -49,7 +49,7 @@ export default function WorkspaceNavigation({ hidden, collapsed, onCollapse, onW
             <button key={id} type="button" className={`workspace-navigation-link${id === 'profile' ? '' : ' workspace-navigation-utility'}`}
               aria-label={label} title={label} data-system-workflow-panel-trigger
               aria-expanded={openPanels.includes(id)} data-active={openPanels.includes(id) || undefined} disabled={!onOpen || reference}
-              onClick={event => onOpen?.(id, event.currentTarget)}><Icon size={18} aria-hidden="true" />{id === 'profile' && <span>{label}</span>}</button>)}
+              onClick={event => { onNavigate?.(event.currentTarget); onOpen?.(id, event.currentTarget); }}><Icon size={18} aria-hidden="true" />{id === 'profile' && <span>{label}</span>}</button>)}
         </div>
       </div>
     </div>

@@ -10,6 +10,7 @@ import { splitReception } from '/src/reception/receptionLayout.js';
 import { createArticle } from '/src/text/domain/article.js';
 import { buildProfileDocumentV9 } from '/src/profileDocument/domain/profileDocumentV9Builder.js';
 import { serializeWorkbenchBackup } from '/src/systemWorkflow/workbenchBackup.js';
+import { createDefaultWorkbenchPresentation } from '/src/profileDocument/domain/workbenchPresentation.js';
 import '/src/index.css';
 
 const address = '0x3333333333333333333333333333333333333333';
@@ -31,7 +32,9 @@ reception.texts = [{ id: 'text:audit', article, visibility: 'PUBLIC' }];
 reception.regions[0].content = 'profile';
 reception.regions[1].content = 'text:audit';
 reception.branding.name = 'LOCAL A';
-const draft = { ...base, reception };
+const draft = { ...base, workbench: createDefaultWorkbenchPresentation(), reception };
+// The native Display frame excludes the retired 32px titlebar height.
+draft.workbench.display.window.height = 540;
 if (!localStorage.getItem(key)) {
   const root = store();
   if (!root.commitCompletedOperation(draft, { expectedGeneration: root.getGeneration() })) throw Error('Audit seed failed');
@@ -46,6 +49,13 @@ const restored = structuredClone(draft); restored.reception.branding.name = 'RES
 window.receptionBoundaryFixture = { address, key, document,
   backup: serializeWorkbenchBackup(restored),
   saved: () => store().getDraft(),
+  canvases: () => {
+    const current = store();
+    return current.listWorkbenches().map(meta => {
+      const { reception: _reception, ...draft } = current.readWorkbench(meta.id).draft;
+      return { ...meta, draft };
+    });
+  },
   corrupt: () => localStorage.setItem(key, '{broken'),
 };
 function Fixture() {

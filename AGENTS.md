@@ -157,7 +157,11 @@ not require a separate audit or approval round for every edit.
 - Visual grids must control alignment or interaction; they are not decoration.
 - Preserve owner, Visitor, Discover, and public-presentation parity where they
   share a component. Do not solve one mode with an unrelated visual variant.
-- Validate visual work at representative wide and narrow viewports. Inspect
+- Follow the active contract's [desktop authoring scope](docs/INSCAPE_ACTIVE_CONTRACT.md#desktop-authoring-and-narrow-viewports-2026-11-02)
+  when choosing visual checks. Narrow means smaller computer screens or resized
+  browser windows; do not automatically add mobile layouts or phone/touch test
+  matrices to Editor work.
+- Validate visual work at representative wide and narrow computer viewports. Inspect
   screenshots for alignment, clipping, overflow, scroll containment, focus,
   active selectors, and exact boundary behavior before calling it complete.
 - When the intended visual hierarchy is ambiguous, present a mock or concrete

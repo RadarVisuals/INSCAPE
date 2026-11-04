@@ -1,14 +1,52 @@
-import { validShapes, projectShapes, restoreShapes, MAX_SHAPES } from '../shapes/shapes.js';
-import { validImageModules, projectImageModules, restoreImageModules } from '../imageModule/imageModule.js';
+import { projectReceptionMember } from './editorCellGeometry.js';
+import { validShapes, validShapeOutline, projectShapes, restoreShapes, MAX_SHAPES } from '../shapes/shapes.js';
+import { validImageModules, projectImageModules, restoreImageModules, IMAGE_SIZE_LIMITS } from '../imageModule/imageModule.js';
 import { validTextModules, projectTextModules, restoreTextModules } from '../text/domain/article.js';
-import { createDefaultWorkbenchPresentation, isValidWorkbenchPresentation } from '../profileDocument/domain/workbenchPresentation.js';
+import { createDefaultWorkbenchPresentation, isValidWorkbenchPresentation, TEXT_WINDOW_LIMITS, SHAPE_WINDOW_LIMITS } from '../profileDocument/domain/workbenchPresentation.js';
 import { validReceptionLinks } from '../profileDocument/domain/receptionLinks.js';
 import { artworkLayers, layerIds, validArtworkLayers, reconcileArtworkLayers } from '../systemWorkflow/domain/artworkLayers.js';
 import { workbenchArea } from '../systemWorkflow/domain/workbenchArea.js';
 import { validReceptionArrangement, pruneReceptionArrangement } from './receptionArrangement.js';
 import { MIN_CROP_PROJECTION_ZOOM } from '../lattice/rendering/latticeCrop.js';
 
-export const RECEPTION_CELL_LIMIT = 8;
+export const RECEPTION_CELL_LIMIT = 16;
+export const MIN_RECEPTION_CELL_SIZE = 80;
+export const receptionModuleLimits = id => id.startsWith('image:') ? IMAGE_SIZE_LIMITS
+  : id.startsWith('text:') ? TEXT_WINDOW_LIMITS : SHAPE_WINDOW_LIMITS;
+export function receptionModuleSizeReason(id, frame) {
+  const limits = receptionModuleLimits(id);
+  const name = id.startsWith('image:') ? 'Image' : id.startsWith('text:') ? 'Text' : 'Shape';
+  return ['width', 'height'].some(axis => !Number.isFinite(frame[axis])
+    || frame[axis] < limits[axis === 'width' ? 'minimumWidth' : 'minimumHeight']
+    || frame[axis] > limits[axis === 'width' ? 'maximumWidth' : 'maximumHeight'])
+    ? `${name} needs a frame between ${limits.minimumWidth} × ${limits.minimumHeight} and ${limits.maximumWidth} × ${limits.maximumHeight} px. Enlarge the cell or resize its contents first.` : null;
+}
+
+// Bound the cell by the proportional size of every native member. Empty cells
+// retain their smaller minimum; native Text/Image validators remain authoritative.
+export function receptionCellSizeLimits(value, id) {
+  const frame = receptionModuleWindow(value, id);
+  const limits = { ...SHAPE_WINDOW_LIMITS, minimumWidth: MIN_RECEPTION_CELL_SIZE, minimumHeight: MIN_RECEPTION_CELL_SIZE };
+  for (const member of value.cells.find(cell => cell.id === id)?.members || []) {
+    const content = receptionModuleWindow(value, member), native = receptionModuleLimits(member);
+    if (!content) continue;
+    for (const [axis, minimum, maximum] of [['width', 'minimumWidth', 'maximumWidth'], ['height', 'minimumHeight', 'maximumHeight']]) {
+      limits[minimum] = Math.max(limits[minimum], native[minimum] * frame[axis] / content[axis]);
+      limits[maximum] = Math.min(limits[maximum], native[maximum] * frame[axis] / content[axis]);
+    }
+  }
+  return limits;
+}
+export function receptionCellResizeReason(value, id, nextFrame) {
+  const frame = receptionModuleWindow(value, id);
+  for (const member of value.cells.find(cell => cell.id === id)?.members || []) {
+    const content = receptionModuleWindow(value, member);
+    if (!content) continue;
+    const reason = receptionModuleSizeReason(member, projectReceptionMember(frame, nextFrame, content));
+    if (reason) return reason;
+  }
+  return receptionModuleSizeReason(id, nextFrame);
+}
 const keys = ['shapes', 'imageModules', 'texts'];
 const builtins = new Set(['profile', 'links', 'introduction', 'details']);
 const exact = (v, required, optional = []) => v && typeof v === 'object' && !Array.isArray(v)
@@ -31,6 +69,8 @@ export function receptionModuleWindow(value, id) {
 }
 export function withReceptionModuleWindow(value, id, window) {
   if (!validWindow(window)) throw new Error('Choose a valid layer position and size.');
+  const reason = receptionModuleSizeReason(id, window);
+  if (reason) throw new Error(reason);
   const key = keys.find(key => value[key]?.some(item => item.id === id));
   if (!key) throw new Error('This layer is no longer available.');
   const image = key === 'imageModules';
@@ -41,7 +81,7 @@ export function withReceptionModuleWindow(value, id, window) {
   workbench: { ...value.workbench, [key]: [...(value.workbench[key] || []).filter(item => item.id !== id), placement] } };
 }
 export function validReceptionEditorDocument(value, published = false) {
-  if (!exact(value, ['version', 'branding', 'workbench', 'imageModules', 'texts', 'shapes', 'artworkLayers', 'cells'], ['surface', 'links', 'arrangement'])
+  if (!exact(value, ['version', 'branding', 'workbench', 'imageModules', 'texts', 'shapes', 'artworkLayers', 'cells'], ['surface', 'links', 'arrangement', 'bento', 'showFrame', 'innerLines'])
     || value.version !== 3 || !isValidWorkbenchPresentation(value.workbench)
     || !validShapes(value.shapes, published) || !validImageModules(value.imageModules, published, { minimumCropZoom: MIN_CROP_PROJECTION_ZOOM })
     || !validTextModules(value.texts, published) || value.texts.some(item => item.sceneLink || item.pagination)
@@ -51,6 +91,9 @@ export function validReceptionEditorDocument(value, published = false) {
     || /[\u0000-\u001f\u007f]/u.test(value.branding.name) || value.branding.logo !== null && !value.imageModules.some(item => item.id === value.branding.logo)
     || Object.hasOwn(value, 'surface') && value.surface !== null && !/^#[0-9a-f]{6}$/iu.test(value.surface)
     || Object.hasOwn(value, 'links') && !validReceptionLinks(value.links)
+    || Object.hasOwn(value, 'showFrame') && typeof value.showFrame !== 'boolean'
+    || Object.hasOwn(value, 'innerLines') && value.innerLines !== null && !validShapeOutline(value.innerLines)
+    || Object.hasOwn(value, 'bento') && (!exact(value.bento, ['gap', 'padding']) || ![value.bento.gap, value.bento.padding].every(n => Number.isInteger(n) && number(n, 0, 256)))
     || !Array.isArray(value.cells) || value.cells.length > 32) return false;
   if (['miniApps', 'displays', 'keeperDocks'].some(key => value.workbench[key]?.length)) return false;
   const all = new Set(idsOf(value)), cellIds = new Set(), members = new Set();
@@ -93,15 +136,16 @@ export function assertReceptionEditorDocument(value) {
   return value;
 }
 const filterLayout = (workbench, allowed) => ({ ...workbench, ...Object.fromEntries(keys.map(key => [key, (workbench[key] || []).filter(item => allowed.has(item.id))])) });
+const privateCells = value => value.cells.filter(cell => value.shapes.find(item => item.id === cell.id)?.visibility === 'PRIVATE');
+const pruneCellMembers = (cell, allowed) => ({ ...cell, members: cell.members.filter(id => allowed.has(id)),
+  ...(cell.lockedMembers ? { lockedMembers: cell.lockedMembers.filter(id => allowed.has(id)) } : {}),
+  mobile: { ...cell.mobile, ...(cell.mobile.placements ? { placements: cell.mobile.placements.filter(item => allowed.has(item.id)) } : {}) } });
 export function projectReceptionEditorDocument(value) {
-  const hidden = new Set(value.cells.filter(cell => value.shapes.find(item => item.id === cell.id)?.visibility === 'PRIVATE')
-    .flatMap(cell => [cell.id, ...cell.members]));
+  const hidden = new Set(privateCells(value).flatMap(cell => [cell.id, ...cell.members]));
   const project = (items, fn) => fn(items.filter(item => !hidden.has(item.id)).map(item => ({ ...item, visibility: item.visibility || 'PUBLIC' })));
   const records = { shapes: project(value.shapes, projectShapes), imageModules: project(value.imageModules, projectImageModules), texts: project(value.texts, projectTextModules) };
   const allowed = new Set(idsOf(records));
-  const cells = value.cells.filter(cell => allowed.has(cell.id)).map(cell => ({ ...cell, members: cell.members.filter(id => allowed.has(id)),
-    ...(cell.lockedMembers ? { lockedMembers: cell.lockedMembers.filter(id => allowed.has(id)) } : {}),
-    mobile: { ...cell.mobile, ...(cell.mobile.placements ? { placements: cell.mobile.placements.filter(item => allowed.has(item.id)) } : {}) } }));
+  const cells = value.cells.filter(cell => allowed.has(cell.id)).map(cell => pruneCellMembers(cell, allowed));
   return structuredClone({ ...value, ...records, cells, workbench: filterLayout(value.workbench, allowed),
     artworkLayers: layerIds(artworkLayers(value)).filter(id => allowed.has(id)),
     ...(value.arrangement ? { arrangement: pruneReceptionArrangement(value.arrangement, cells.map(cell => cell.id)) } : {}),
@@ -169,55 +213,30 @@ export function createReceptionEditorDocument(value, { width = 1440 } = {}) {
 
 // Deleting content prunes membership; changing a cell rect carries untouched
 // children once. Explicit child transforms from a group gesture win unchanged.
-export function reconcileReceptionCells(previous, candidate) {
+export function reconcileReceptionCells(previous, candidate, { resizeContents = true } = {}) {
   let next = reconcileArtworkLayers(previous, candidate);
   const available = new Set(idsOf(next));
-  next = { ...next, cells: next.cells.filter(cell => next.shapes.some(shape => shape.id === cell.id)).map(cell => ({ ...cell,
-    members: cell.members.filter(id => available.has(id)), ...(cell.lockedMembers ? { lockedMembers: cell.lockedMembers.filter(id => available.has(id)) } : {}),
-    mobile: { ...cell.mobile, ...(cell.mobile.placements ? { placements: cell.mobile.placements.filter(item => available.has(item.id)) } : {}) } })) };
-  if (next.arrangement) {
-    next.arrangement = pruneReceptionArrangement(next.arrangement, next.cells.map(cell => cell.id));
-    for (const group of next.arrangement.groups) {
-      const previousGroup = previous.arrangement?.groups.find(item => item.id === group.id);
-      if (!previousGroup || previousGroup.members.length <= group.members.length) continue;
-      const first = receptionModuleWindow(next, group.members[0]), horizontal = group.axis === 'row';
-      let position = horizontal ? first.left : first.top;
-      for (const id of group.members) {
-        const window = receptionModuleWindow(next, id);
-        next = withReceptionModuleWindow(next, id, { ...window, left: horizontal ? position : first.left, top: horizontal ? first.top : position });
-        position += horizontal ? window.width + group.gapX : window.height + group.gapY;
-      }
-    }
+  next = { ...next, cells: next.cells.filter(cell => next.shapes.some(shape => shape.id === cell.id)).map(cell => pruneCellMembers(cell, available)) };
+  // Removing a private background keeps its native content and effective privacy.
+  // Explicit membership changes and merges into surviving cells retain their flags.
+  const contained = new Set(next.cells.flatMap(cell => cell.members));
+  const newlyIndependentPrivate = new Set(privateCells(previous).filter(cell => !available.has(cell.id))
+    .flatMap(cell => cell.members).filter(id => !contained.has(id)));
+  if (newlyIndependentPrivate.size) for (const key of keys) {
+    next[key] = next[key].map(item => newlyIndependentPrivate.has(item.id) ? { ...item, visibility: 'PRIVATE' } : item);
   }
+  if (next.arrangement) next.arrangement = pruneReceptionArrangement(next.arrangement, next.cells.map(cell => cell.id));
   for (const cell of next.cells) {
     const before = receptionModuleWindow(previous, cell.id), after = receptionModuleWindow(next, cell.id);
-    if (!before || !after || same(before, after)) continue;
+    if (!resizeContents || !before || !after || same(before, after)) continue;
     for (const id of cell.members) {
       const old = receptionModuleWindow(previous, id), current = receptionModuleWindow(next, id);
       if (!old || !same(old, current)) continue;
-      next = withReceptionModuleWindow(next, id, { left: after.left + (old.left - before.left) * after.width / before.width,
-        top: after.top + (old.top - before.top) * after.height / before.height, width: old.width * after.width / before.width, height: old.height * after.height / before.height });
+      next = withReceptionModuleWindow(next, id, projectReceptionMember(before, after, old));
     }
   }
   if (!available.has(next.branding.logo)) next.branding = { ...next.branding, logo: null };
   return assertReceptionEditorDocument(next);
-}
-
-export function followReceptionCellGroups(previous, candidate) {
-  let next = candidate;
-  for (const group of previous.arrangement?.groups || []) {
-    const changed = group.members.find(id => receptionModuleWindow(candidate, id) && !same(receptionModuleWindow(previous, id), receptionModuleWindow(candidate, id)));
-    if (!changed) continue;
-    const before = receptionModuleWindow(previous, changed), after = receptionModuleWindow(candidate, changed);
-    for (const id of group.members) {
-      const old = receptionModuleWindow(previous, id), current = receptionModuleWindow(candidate, id);
-      if (!old || !current || !same(old, current)) continue;
-      next = withReceptionModuleWindow(next, id, { left: after.left + (old.left - before.left) * after.width / before.width,
-        top: after.top + (old.top - before.top) * after.height / before.height,
-        width: old.width * after.width / before.width, height: old.height * after.height / before.height });
-    }
-  }
-  return next;
 }
 
 export function receptionResponsiveLayout(value, viewportWidth) {
@@ -255,7 +274,7 @@ export function receptionResponsiveLayout(value, viewportWidth) {
             width: rect.width / original.width * window.width, height: rect.height / original.height * window.height };
       }
     }
-    return { ...cell, window };
+    return { ...cell, radius: (cell.radius || 0) * (mobile ? 1 : scale), window };
   });
   const contained = new Set(value.cells.flatMap(cell => [cell.id, ...cell.members]));
   const freeBottom = Math.max(0, ...Object.entries(windows).filter(([id]) => !contained.has(id)).map(([, rect]) => rect.top + rect.height));

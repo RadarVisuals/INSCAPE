@@ -54,8 +54,12 @@ import { projectWorkbenchBounds } from './workbenchSpace.js';
 import { marqueeContains } from './workbenchGrid.js';
 import { workbenchPaintGeometry } from './workbenchPaintGeometry.js';
 import { EditorCellsProvider, useEditorCells } from '../../reception/EditorCellsContext.jsx';
-import { editorCellForModule, editorCellMoveIds, editorCellPreviewTransforms } from '../../reception/editorCellGeometry.js';
-const GridSeamProbe = import.meta.env.DEV ? lazy(() => import('./GridSeamProbe.jsx')) : null;
+import {
+  editorCellForModule,
+  editorCellMoveIds,
+  editorCellPreviewTransforms,
+} from '../../reception/editorCellGeometry.js';
+const ReceptionBentoEditor = lazy(() => import('../../reception/ReceptionBentoEditor.jsx'));
 
 // Session-only view transforms, never module content or publication geometry.
 export function WorkbenchViewProvider(props) {
@@ -93,7 +97,6 @@ function WorkbenchViewStateProvider({
   selectionState,
   navigatorPosition,
   sideDockPreferences,
-  onOpenSharedTool,
 }) {
   const localNavigatorPosition = useRef(null);
   const [miniatures] = useState(createWorkbenchMiniatures);
@@ -102,7 +105,12 @@ function WorkbenchViewStateProvider({
   // Editors need scale for projection, but panning must not render them again.
   const { scale, setScale } = useWorkbenchCameraScale();
   const [transforms, setTransforms] = useState({});
-  const paintedTransforms = editorCellPreviewTransforms(store?.getCells?.() || [], transforms, presentation, store?.getCellGroups?.() || []);
+  const paintedTransforms = editorCellPreviewTransforms(
+    store?.getCells?.() || [],
+    transforms,
+    presentation,
+    content
+  );
   const [presentationTransforms, setPresentationTransforms] = useState({});
   const [hiddenModuleIds, setHiddenModuleIds] = useState([]);
   const {
@@ -132,7 +140,6 @@ function WorkbenchViewStateProvider({
   }, []);
   const openArtwork = useCallback(id => artworkOpeners.current.get(id)?.current?.(), []);
   const [interactionTool, setInteractionTool] = useState('select');
-  const [navigationInset, setNavigationInset] = useState(0);
   const [navigationTop, setNavigationTop] = useState(0);
   const [toolViewportBottom, setToolViewportBottom] = useState(null);
   const entries = useRef(new Map());
@@ -227,8 +234,6 @@ function WorkbenchViewStateProvider({
     () => ({
       navigationTop,
       setNavigationTop,
-      navigationInset,
-      setNavigationInset,
       utilitySettings,
       setUtilitySettings,
       miniatures,
@@ -268,7 +273,6 @@ function WorkbenchViewStateProvider({
     }),
     [
       navigationTop,
-      navigationInset,
       scale,
       setScale,
       paintedTransforms,
@@ -339,7 +343,9 @@ function WorkbenchViewStateProvider({
     <WorkbenchView.Provider value={artworkView}>
       <WorkbenchActions.Provider value={actions}>
         <WorkbenchSideDockProvider preferences={sideDockPreferences}>
-          <EditorCellsProvider store={store} content={content} selection={selectionState} onOpenSharedTool={onOpenSharedTool}>{children}</EditorCellsProvider>
+          <EditorCellsProvider store={store} selection={selectionState}>
+            {children}
+          </EditorCellsProvider>
         </WorkbenchSideDockProvider>
       </WorkbenchActions.Provider>
     </WorkbenchView.Provider>
@@ -349,6 +355,9 @@ const emptySubscribe = () => () => {};
 
 export function WorkbenchViewControls({
   hostRef,
+  bentoLibrary,
+  bentoLibraryPreferences,
+  flushBentoLayout,
   renderMenuBar,
   disabled = false,
   exiting = false,
@@ -361,7 +370,9 @@ export function WorkbenchViewControls({
 }) {
   const { editingBounds: areaBounds, area, showOutside, setShowOutside } = useWorkbenchArea();
   const view = useWorkbenchView();
-  const cells = useEditorCells(), latestCells = useRef(cells); latestCells.current = cells;
+  const cells = useEditorCells(),
+    latestCells = useRef(cells);
+  latestCells.current = cells;
   const snapMovement = useWorkbenchMovementSnap();
   const { scale, transforms, setTransforms, selection = [], setSelection, entries } = view;
   const revision = useSyncExternalStore(view.subscribe, view.snapshot);
@@ -370,6 +381,8 @@ export function WorkbenchViewControls({
   const groupDrop = useRef(null),
     groupScene = useRef(null);
   const [moveError, setMoveError] = useState('');
+  const [groupsOpen, setGroupsOpen] = useState(false);
+  const groupsReturnFocus = useRef(null);
   const controlsRef = useRef(null),
     inspectionTarget = useRef(null);
   const [marquee, setMarquee] = useState(null),
@@ -458,6 +471,7 @@ export function WorkbenchViewControls({
     view,
     disabled,
     locked,
+    historyBlocked,
     isBusy: () => gestures.isActive() || navigation.isPanning(),
   });
   const focusModules = useCallback(
@@ -533,13 +547,29 @@ export function WorkbenchViewControls({
     // Registration can change between render and this layout effect (including
     // module replacement); stale selections must not dereference removed nodes.
     const next = workbenchSelectionBounds(
-      selection.filter(id => !view.editorHiddenIds?.includes(id)).flatMap(id => {
-        const node = entries.get(id);
-        return node?.isConnected && !node.matches('[data-workbench-group-hidden], [data-workbench-canvas-hidden], [data-editor-hidden]') ? [node.getBoundingClientRect()] : [];
-      })
+      selection
+        .filter(id => !view.editorHiddenIds?.includes(id))
+        .flatMap(id => {
+          const node = entries.get(id);
+          return node?.isConnected &&
+            !node.matches(
+              '[data-workbench-group-hidden], [data-workbench-canvas-hidden], [data-editor-hidden]'
+            )
+            ? [node.getBoundingClientRect()]
+            : [];
+        })
     );
     setBounds(current => (JSON.stringify(current) === JSON.stringify(next) ? current : next));
-  }, [scale, transforms, selection, entries, view.editorHiddenIds, revision, navigation.offset, navigation.moving]);
+  }, [
+    scale,
+    transforms,
+    selection,
+    entries,
+    view.editorHiddenIds,
+    revision,
+    navigation.offset,
+    navigation.moving,
+  ]);
   // During camera travel the authored rectangles are stable and already known.
   // Project them directly instead of forcing layout and a second React commit.
   const travellingBounds =
@@ -581,7 +611,8 @@ export function WorkbenchViewControls({
   });
   const moveOperation = (current, ids) => {
     const cells = latestCells.current;
-    const moving = editorCellMoveIds(cells?.cells || [], ids, cells?.editingCellId, cells?.groups || []);
+    if (cells?.cells.some(cell => ids.includes(cell.id))) return null;
+    const moving = editorCellMoveIds(cells?.cells || [], ids, cells?.editingCellId);
     // Reuse the existing authored group gesture without persisting a second
     // group or order list. Cell membership remains owned by Reception.
     const cellGroups = cells && moving.length ? [{ id: 'reception:selection', children: moving }] : [];
@@ -733,7 +764,10 @@ export function WorkbenchViewControls({
         'input, textarea, select, [contenteditable]:not([contenteditable="false"]), [role="textbox"]'
       );
       if (event.key === 'Escape' && !editable && latestCells.current?.editingCellId && !gestures.isActive()) {
-        event.preventDefault(); event.stopPropagation(); latestCells.current.leaveCell(); return;
+        event.preventDefault();
+        event.stopPropagation();
+        latestCells.current.leaveCell();
+        return;
       }
       if (
         event.key === 'Enter' &&
@@ -749,7 +783,10 @@ export function WorkbenchViewControls({
               : current.selection.map(id => artworkModuleId(current.content, id));
         const selectedCell = latestCells.current?.cells.find(cell => ids.length === 1 && ids[0] === cell.id);
         if (selectedCell && latestCells.current.editingCellId !== selectedCell.id) {
-          event.preventDefault(); event.stopPropagation(); latestCells.current.enterCell(selectedCell.id); return;
+          event.preventDefault();
+          event.stopPropagation();
+          latestCells.current.enterCell(selectedCell.id);
+          return;
         }
         const block = current.layers?.find(
           layer => typeof layer !== 'string' && layer.children.every(id => ids.includes(id))
@@ -908,23 +945,40 @@ export function WorkbenchViewControls({
       const cell = editorCellForModule(cellContext?.cells || [], moduleId);
       if (cell && !target.closest('[role="separator"],button:not([data-workbench-selectable]),a')) {
         if (cellContext.editingCellId === cell.id && moduleId === cell.id) {
-          event.preventDefault(); event.stopPropagation(); setSelection([]); host.focus({ preventScroll: true }); return;
+          event.preventDefault();
+          event.stopPropagation();
+          setSelection([]);
+          host.focus({ preventScroll: true });
+          return;
         }
         if (cellContext.editingCellId === cell.id && cell.lockedMembers?.includes(moduleId)) {
-          event.preventDefault(); event.stopPropagation(); current.selectArtwork(moduleId); return;
+          event.preventDefault();
+          event.stopPropagation();
+          current.selectArtwork(moduleId);
+          return;
         }
         if (cellContext.editingCellId !== cell.id || moduleId === cell.id) {
           if (cellContext.editingCellId) cellContext.leaveCell(false);
           setSelection(event.shiftKey ? values => [...new Set([...values, cell.id])] : [cell.id]);
-          beginMove(event, [cell.id]); return;
+          event.preventDefault();
+          event.stopPropagation();
+          return;
         }
       } else if (background && cellContext?.editingCellId) cellContext.leaveCell(false);
       // In a Reception document placement is authored content, including a
       // single free shape or inner layer. Use the same atomic gesture as cells.
-      if (cellContext && moduleId && target.closest('[data-workbench-selectable]')
-        && !target.closest('input,textarea,[contenteditable="true"],[role="separator"],button:not([data-workbench-selectable]),a')
-        && !event.shiftKey) {
-        current.selectArtwork(moduleId); beginMove(event, [moduleId]); return;
+      if (
+        cellContext &&
+        moduleId &&
+        target.closest('[data-workbench-selectable]') &&
+        !target.closest(
+          'input,textarea,[contenteditable="true"],[role="separator"],button:not([data-workbench-selectable]),a'
+        ) &&
+        !event.shiftKey
+      ) {
+        current.selectArtwork(moduleId);
+        beginMove(event, [moduleId]);
+        return;
       }
       const block =
         current.store &&
@@ -1010,27 +1064,28 @@ export function WorkbenchViewControls({
       });
     };
     const doubleClick = event => {
-      const current = latest.current, context = latestCells.current;
+      const current = latest.current,
+        context = latestCells.current;
       if (!context || locked || current.interactionTool !== 'select' || event.button !== 0) return;
       // Authored movement captures pointers on the host. The click sequence can
       // therefore end here even when it began on a cell or its selection frame.
-      const target = event.target === host ? document.elementFromPoint(event.clientX, event.clientY) : event.target;
-      if (!target || target.closest('input,textarea,select,button:not([data-workbench-selectable]),a,[contenteditable="true"],[role="separator"],[data-workbench-selection-tools],[data-workbench-toolbar]')) return;
-      const id = target.closest('[data-editor-cell-surface]')?.dataset.editorCellSurface
-        || target.closest('[data-workbench-view-id]')?.dataset.workbenchViewId;
+      const target =
+        event.target === host ? document.elementFromPoint(event.clientX, event.clientY) : event.target;
+      if (
+        !target ||
+        target.closest(
+          'input,textarea,select,button:not([data-workbench-selectable]),a,[contenteditable="true"],[role="separator"],[data-workbench-selection-tools],[data-workbench-toolbar]'
+        )
+      )
+        return;
+      const id =
+        target.closest('[data-editor-cell-surface]')?.dataset.editorCellSurface ||
+        target.closest('[data-workbench-view-id]')?.dataset.workbenchViewId;
       const cell = editorCellForModule(context.cells, id);
       if (!cell || context.editingCellId === cell.id || current.presentationTransforms[id]) return;
-      event.preventDefault(); event.stopPropagation(); context.enterCell(cell.id);
-    };
-    const cellContextMenu = event => {
-      const current = latest.current, context = latestCells.current;
-      if (!context || locked || current.interactionTool !== 'select') return;
-      const id = event.target.closest?.('[data-editor-cell-surface]')?.dataset.editorCellSurface
-        || event.target.closest?.('[data-workbench-view-id]')?.dataset.workbenchViewId;
-      const cell = editorCellForModule(context.cells, id);
-      if (!cell || context.editingCellId === cell.id && id !== cell.id || current.presentationTransforms[id]) return;
-      event.preventDefault(); event.stopPropagation(); current.selectArtwork(cell.id);
-      context.openMenu(cell.id, { x: event.clientX, y: event.clientY, source: event.target });
+      event.preventDefault();
+      event.stopPropagation();
+      context.enterCell(cell.id);
     };
     const activateInspection = event => {
       const node = event.target.closest?.('[data-workbench-view-id], [data-workbench-inspection-target]');
@@ -1055,7 +1110,6 @@ export function WorkbenchViewControls({
     globalThis.addEventListener('keydown', backKey);
     host.addEventListener('pointerdown', pointer, true);
     host.addEventListener('dblclick', doubleClick, true);
-    host.addEventListener('contextmenu', cellContextMenu, true);
     return () => {
       host.removeEventListener('pointerdown', activateInspection, true);
       host.removeEventListener('focusin', activateInspection);
@@ -1063,186 +1117,216 @@ export function WorkbenchViewControls({
       globalThis.removeEventListener('keydown', backKey);
       host.removeEventListener('pointerdown', pointer, true);
       host.removeEventListener('dblclick', doubleClick, true);
-      host.removeEventListener('contextmenu', cellContextMenu, true);
     };
   }, [hostRef, disabled, locked, cancelGesture, gestures, setSelection, entries, focusModules]);
+  const navigationTools = (
+    <>
+      {view.store && (
+        <Suspense fallback={null}>
+          <WorkbenchGroups
+            view={view}
+            open={groupsOpen}
+            onOpenChange={setGroupsOpen}
+            returnFocus={groupsReturnFocus}
+            showTrigger={!renderMenuBar}
+            hostRef={hostRef}
+            locked={locked}
+            dropRef={groupDrop}
+            historyBlocked={historyBlocked}
+            navigation={navigation}
+            sceneRef={groupScene}
+            disabled={disabled}
+          />
+        </Suspense>
+      )}
+      {!view.store && view.groupContent?.workbenchGroups?.length > 0 && (
+        <Suspense fallback={null}>
+          <PublishedWorkbenchGroups
+            view={view}
+            content={view.groupContent}
+            hostRef={hostRef}
+            navigation={navigation}
+            sceneRef={groupScene}
+            disabled={disabled}
+            locked={locked}
+          />
+        </Suspense>
+      )}
+      {(view.store?.getSnapshot().workbenchIndex || view.groupContent?.workbenchIndex) && (
+        <Suspense fallback={null}>
+          <WorkbenchIndex
+            showTrigger={!renderMenuBar}
+            hostRef={hostRef}
+            navigation={navigation}
+            sceneRef={groupScene}
+            entryTarget={entryTarget}
+          />
+        </Suspense>
+      )}
+    </>
+  );
   return (
     <>
-      {renderMenuBar?.(navigation)}
-      {(!disabled || exiting) && <>
-      <WorkbenchArea hostRef={hostRef} />
-      {objectPicker.element}
-      {moveError && (
-        <p className="workbench-move-error" role="alert" onClick={() => setMoveError('')}>
-          {moveError}
-        </p>
+      {renderMenuBar?.({
+        ...navigation,
+        focusSelection,
+        canFocusSelection: focusSelected.length > 0,
+        openGroups: () => {
+          groupsReturnFocus.current = document.activeElement;
+          setGroupsOpen(true);
+        },
+      })}
+      {cells && (
+        <Suspense fallback={null}>
+          <ReceptionBentoEditor
+            disabled={disabled || Boolean(historyBlocked)}
+            navigation={navigation}
+            flushLayout={flushBentoLayout}
+            library={bentoLibrary}
+            libraryPreferences={bentoLibraryPreferences}
+          />
+        </Suspense>
       )}
-      {marquee && <div className="workbench-marquee" style={marquee} />}
-      {!locked &&
-        view.interactionTool === 'select' &&
-        bounds &&
-        selected.length > 0 &&
-        !view.moduleSelectionBounds && (
-          <div
-            className="workbench-selection"
-            data-editor-cell-surface={cells?.cells.find(cell => selected.length === 1 && selected[0] === cell.id)?.id}
-            style={travellingBounds || bounds}
-            role="group"
-            tabIndex={0}
-            aria-label={`${selected.length} selected Workbench modules`}
-            aria-description="Drag to move the selection. Arrow keys move it; Shift moves further. Escape clears selection."
-            onContextMenu={event => {
-              if (!cells || selected.length !== 1 || !selected[0].startsWith('shape:') || cells.cells.some(cell => cell.id === selected[0])) return;
-              event.preventDefault(); event.stopPropagation();
-              cells.openMenu(selected[0], { x: event.clientX, y: event.clientY, source: event.currentTarget });
-            }}
-            onDoubleClick={event => {
-              if (
-                !view.layers.some(
-                  layer =>
-                    typeof layer !== 'string' &&
-                    artworkWindowIds(view.content, layer.children).every(id => selection.includes(id))
-                )
-              )
-                return;
-              event.preventDefault();
-              event.stopPropagation();
-              focusModules(selected);
-            }}
-            onPointerDown={event => {
-              if (event.target === event.currentTarget) beginMove(event);
-            }}
-            onKeyDown={event => {
-              if (
-                event.target !== event.currentTarget ||
-                gestures.isActive() ||
-                !['ArrowUp', 'ArrowRight', 'ArrowDown', 'ArrowLeft'].includes(event.key)
-              )
-                return;
-              event.preventDefault();
-              event.stopPropagation();
-              const step =
-                (event.altKey ? 1 : snapMovement.step(selected.map(id => entries.get(id)))) *
-                (event.shiftKey ? 10 : 1);
-              moveByKey(event, latest.current, selected, step);
-            }}
-          >
-            {['nw', 'ne', 'sw', 'se'].map(corner => (
+      {(!disabled || exiting) && (
+        <>
+          <WorkbenchArea hostRef={hostRef} />
+          {objectPicker.element}
+          {moveError && (
+            <p className="workbench-move-error" role="alert" onClick={() => setMoveError('')}>
+              {moveError}
+            </p>
+          )}
+          {marquee && <div className="workbench-marquee" style={marquee} />}
+          {!locked &&
+            view.interactionTool === 'select' &&
+            bounds &&
+            selected.length > 0 &&
+            !cells?.cells.some(cell => selected.includes(cell.id)) &&
+            !view.moduleSelectionBounds && (
+              <div
+                className="workbench-selection"
+                data-editor-cell-surface={
+                  cells?.cells.find(cell => selected.length === 1 && selected[0] === cell.id)?.id
+                }
+                style={travellingBounds || bounds}
+                role="group"
+                tabIndex={0}
+                aria-label={`${selected.length} selected Workbench modules`}
+                aria-description="Drag to move the selection. Arrow keys move it; Shift moves further. Escape clears selection."
+                onDoubleClick={event => {
+                  if (
+                    !view.layers.some(
+                      layer =>
+                        typeof layer !== 'string' &&
+                        artworkWindowIds(view.content, layer.children).every(id => selection.includes(id))
+                    )
+                  )
+                    return;
+                  event.preventDefault();
+                  event.stopPropagation();
+                  focusModules(selected);
+                }}
+                onPointerDown={event => {
+                  if (event.target === event.currentTarget) beginMove(event);
+                }}
+                onKeyDown={event => {
+                  if (
+                    event.target !== event.currentTarget ||
+                    gestures.isActive() ||
+                    !['ArrowUp', 'ArrowRight', 'ArrowDown', 'ArrowLeft'].includes(event.key)
+                  )
+                    return;
+                  event.preventDefault();
+                  event.stopPropagation();
+                  const step =
+                    (event.altKey ? 1 : snapMovement.step(selected.map(id => entries.get(id)))) *
+                    (event.shiftKey ? 10 : 1);
+                  moveByKey(event, latest.current, selected, step);
+                }}
+              >
+                {['nw', 'ne', 'sw', 'se'].map(corner => (
+                  <button
+                    key={corner}
+                    className={`workbench-selection__handle is-${corner}`}
+                    type="button"
+                    aria-label={`Scale selected modules from ${corner}`}
+                    onPointerDown={event => beginResize(event, corner)}
+                    onKeyDown={event => resizeByKey(event, corner)}
+                  />
+                ))}
+              </div>
+            )}
+          <Suspense fallback={null}>
+            <WorkbenchNavigator hostRef={hostRef} navigation={navigation} />
+          </Suspense>
+          {renderMenuBar ? (
+            navigationTools
+          ) : (
+            <div
+              ref={controlsRef}
+              className="workbench-view-controls"
+              data-workflow-material="tactile"
+              data-workflow-finish="flat"
+              style={{
+                '--view-controls-top':
+                  view.toolViewportBottom == null ? undefined : `${view.toolViewportBottom}px`,
+              }}
+              role="group"
+              aria-label="Workbench zoom"
+            >
+              {showHandTool && (
+                <button
+                  className="workflow-tactile-control workbench-view-controls__hand"
+                  type="button"
+                  disabled={locked}
+                  aria-pressed={navigation.hand}
+                  aria-label="Hand tool"
+                  title="Drag to explore with momentum. Double-click Image artwork to focus its module; module positions stay fixed."
+                  onClick={navigation.toggleHand}
+                >
+                  <Hand />
+                </button>
+              )}
               <button
-                key={corner}
-                className={`workbench-selection__handle is-${corner}`}
+                className="workflow-tactile-control"
                 type="button"
-                aria-label={`Scale selected modules from ${corner}`}
-                onPointerDown={event => beginResize(event, corner)}
-                onKeyDown={event => resizeByKey(event, corner)}
-              />
-            ))}
-          </div>
-        )}
-      <Suspense fallback={null}>
-        <WorkbenchNavigator hostRef={hostRef} navigation={navigation} />
-      </Suspense>
-      <div
-        ref={controlsRef}
-        className="workbench-view-controls"
-        data-workflow-material="tactile"
-        data-workflow-finish="flat"
-        style={{
-          '--view-controls-top': view.toolViewportBottom == null ? undefined : `${view.toolViewportBottom}px`,
-        }}
-        role="group"
-        aria-label="Workbench zoom"
-      >
-        {showHandTool && (
-          <button
-            className="workflow-tactile-control workbench-view-controls__hand"
-            type="button"
-            disabled={locked}
-            aria-pressed={navigation.hand}
-            aria-label="Hand tool"
-            title="Drag to explore with momentum. Double-click Image artwork to focus its module; module positions stay fixed."
-            onClick={navigation.toggleHand}
-          >
-            <Hand />
-          </button>
-        )}
-        <button
-          className="workflow-tactile-control"
-          type="button"
-          disabled={locked || !navigation.canGoBack}
-          aria-label="Back to previous Workbench view"
-          title="Return to the view before focusing (F, or Escape after clearing selection)"
-          onClick={navigation.goBack}
-        >
-          <ArrowLeft />
-        </button>
-        <button
-          className="workflow-tactile-control"
-          type="button"
-          disabled={locked || !focusSelected.length}
-          aria-label="Focus selected Workbench modules"
-          aria-keyshortcuts="F"
-          title="Center the selected modules (F); press F again to return"
-          onClick={focusSelection}
-        >
-          <Scan />
-        </button>
-        {focusSelected.length > 0 && (
-          <span className="workbench-view-controls__selection-count">{focusSelected.length} selected</span>
-        )}
-        {view.store && !renderMenuBar && (
-          <Suspense fallback={null}>
-            <WorkbenchCanvasControls
-              hostRef={hostRef}
-              navigation={navigation}
-              historyBlocked={historyBlocked}
-            />
-          </Suspense>
-        )}
-        {view.store && (
-          <Suspense fallback={null}>
-            <WorkbenchGroups
-              view={view}
-              hostRef={hostRef}
-              locked={locked}
-              dropRef={groupDrop}
-              historyBlocked={historyBlocked}
-              navigation={navigation}
-              sceneRef={groupScene}
-              disabled={disabled}
-            />
-          </Suspense>
-        )}
-        {!view.store && view.groupContent?.workbenchGroups?.length > 0 && (
-          <Suspense fallback={null}>
-            <PublishedWorkbenchGroups
-              view={view}
-              content={view.groupContent}
-              hostRef={hostRef}
-              navigation={navigation}
-              sceneRef={groupScene}
-              disabled={disabled}
-              locked={locked}
-            />
-          </Suspense>
-        )}
-        {(view.store?.getSnapshot().workbenchIndex || view.groupContent?.workbenchIndex) && (
-          <Suspense fallback={null}>
-            <WorkbenchIndex
-              hostRef={hostRef}
-              navigation={navigation}
-              sceneRef={groupScene}
-              entryTarget={entryTarget}
-            />
-          </Suspense>
-        )}
-        {GridSeamProbe && (
-          <Suspense fallback={null}>
-            <GridSeamProbe hostRef={hostRef} scale={scale} offset={navigation.offset} />
-          </Suspense>
-        )}
-      </div>
-      </>}
+                disabled={locked || !navigation.canGoBack}
+                aria-label="Back to previous Workbench view"
+                title="Return to the view before focusing (F, or Escape after clearing selection)"
+                onClick={navigation.goBack}
+              >
+                <ArrowLeft />
+              </button>
+              <button
+                className="workflow-tactile-control"
+                type="button"
+                disabled={locked || !focusSelected.length}
+                aria-label="Focus selected Workbench modules"
+                aria-keyshortcuts="F"
+                title="Center the selected modules (F); press F again to return"
+                onClick={focusSelection}
+              >
+                <Scan />
+              </button>
+              {focusSelected.length > 0 && (
+                <span className="workbench-view-controls__selection-count">
+                  {focusSelected.length} selected
+                </span>
+              )}
+              {view.store && !renderMenuBar && (
+                <Suspense fallback={null}>
+                  <WorkbenchCanvasControls
+                    hostRef={hostRef}
+                    navigation={navigation}
+                    historyBlocked={historyBlocked}
+                  />
+                </Suspense>
+              )}
+              {navigationTools}
+            </div>
+          )}
+        </>
+      )}
     </>
   );
 }

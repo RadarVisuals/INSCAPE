@@ -13,12 +13,12 @@ export function workbenchDestinationCamera(bounds, viewport, minimumScale = .25,
   } };
 }
 
-// One centred Workbench rectangle above the measured bottom controls. Tool
-// windows stay where the user put them and never push the camera sideways.
+// Explicit navigation fits between fixed docks and above measured controls.
+// Floating windows do not reserve camera space.
 export function workbenchNavigationViewport(viewport, controlsTop) {
   const top = viewport.top || 0;
   const bottom = Number.isFinite(controlsTop) ? Math.min(viewport.height, controlsTop - 8) : viewport.height;
-  return { left: 0, top, width: viewport.width, height: Math.max(0, bottom - top) };
+  return { left: viewport.left || 0, top, width: viewport.width, height: Math.max(0, bottom - top) };
 }
 
 export function interpolateWorkbenchCamera(start, end, progress) {
@@ -35,7 +35,7 @@ export function interpolateWorkbenchCamera(start, end, progress) {
 export function restoreWorkbenchCamera(camera, previousViewport, viewport) {
   if (!previousViewport || !viewport) return camera;
   return { scale: camera.scale, offset: {
-    x: camera.offset.x + (viewport.width - previousViewport.width) / 2,
+    x: camera.offset.x + (viewport.left || 0) - (previousViewport.left || 0) + (viewport.width - previousViewport.width) / 2,
     y: camera.offset.y + (viewport.height - previousViewport.height) / 2,
   } };
 }

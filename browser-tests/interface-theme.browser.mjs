@@ -5,7 +5,7 @@ import { mkdir } from 'node:fs/promises';
 import { chromium } from 'playwright-core';
 import { browserExecutable } from '../scripts/browserEnvironment.mjs';
 const origin = process.env.INSCAPE_TEST_ORIGIN || 'http://127.0.0.1:5217';
-const output = '.browser-test-runtime/interface-theme';
+const output = process.env.INSCAPE_BROWSER_OUTPUT || '.browser-test-runtime/interface-theme';
 const button = (page, name) => page.getByRole('button', { name, exact: true });
 const palette = async (page, selector) => page.locator(selector).first().evaluate(node => ({ background: getComputedStyle(node).backgroundColor, color: getComputedStyle(node).color }));
 const colors = { dark: { environment: 'rgb(23, 23, 23)', panel: 'rgb(8, 8, 8)', ink: 'rgb(235, 236, 231)' }, light: { environment: 'rgb(222, 219, 211)', panel: 'rgb(235, 236, 231)', ink: 'rgb(23, 23, 23)' } };
@@ -49,18 +49,25 @@ test('one Settings choice governs owner controls, portal menus, reception, overv
   }
   await button(page, 'LIGHT').click();
   await open(page, '/browser-tests/reception-editor-fixture.html?sample&session=theme-review');
-  await editorCommand(page, 'Edit', 'Settings'); await page.getByRole('tab', {name: 'Grid',exact:true}).click();
+  await editorCommand(page, 'Edit', 'Settings');
   assert.equal(await button(page, 'LIGHT').getAttribute('aria-pressed'), 'true');
-  assert.equal((await palette(page, '.reception-window')).background, colors.light.panel);
+  assert.equal((await palette(page, '.system-workflow__settings')).background, colors.light.panel);
+  assert.equal((await palette(page, '.system-workflow')).background, colors.light.environment);
   const reception = await page.evaluate(() => JSON.stringify(receptionFixture.root.getBackupSnapshot()));
   await button(page, 'DARK').click();
-  assert.equal((await palette(page, '.reception-window')).background, colors.dark.panel);
+  assert.equal((await palette(page, '.system-workflow__settings')).background, colors.dark.panel);
+  assert.equal((await palette(page, '.system-workflow')).background, colors.dark.environment);
   assert.equal(await page.evaluate(() => JSON.stringify(receptionFixture.root.getBackupSnapshot())), reception);
   await capture(page, 'reception-dark');
   for (const mode of ['dark', 'light']) {
    await button(page, mode.toUpperCase()).click();
    const publicPage = await context.newPage(); publicPage.setDefaultTimeout(20000);
    publicPage.on('pageerror', e => errors.push(e.message));
+   await open(publicPage, '/browser-tests/reception-editor-fixture.html?public&session=theme-review');
+   await publicPage.locator('.reception-page').waitFor();
+   assert.deepEqual(await palette(publicPage, '.reception-page'), { background: colors[mode].environment, color: colors[mode].ink });
+   assert.equal((await palette(publicPage, '.reception-document-canvas')).background, colors[mode].environment);
+   await capture(publicPage, `public-reception-${mode}`);
    for (const path of ['/', '/?discover=']) {
     await open(publicPage, path); await publicPage.locator('.public-entry-portal').waitFor();
     await publicPage.locator('.startveil[data-exiting]').waitFor({state:'detached'});
@@ -89,7 +96,7 @@ test('Workbench outside background and reveal shading repaint their actual pixel
   const errors = []; page.on('pageerror', error => errors.push(error.message));
   await page.route('**/*', route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
   await open(page, '/browser-tests/workbench-storage-fixture.html?seed=1&shell=1');
-  await button(page, 'Canvas size').click();
+  await editorCommand(page, 'Canvas', 'Canvas size');
   const size = page.getByRole('group', { name: 'Canvas size controls', exact: true });
   await size.getByLabel('Width (px)', { exact: true }).fill('480');
   await size.getByLabel('Height (px)', { exact: true }).fill('320');

@@ -1,0 +1,16 @@
+{
+  "status": 200,
+  "etag": [
+    "\"e693494e807edf186c47b931a85e4465-ssl\""
+  ],
+  "date": [
+    "Wed, 04 Nov 2026 09:44:25 GMT"
+  ],
+  "cache": [
+    "public, must-revalidate, max-age=0"
+  ],
+  "contentType": [
+    "text/html; charset=UTF-8"
+  ],
+  "length": 454
+}

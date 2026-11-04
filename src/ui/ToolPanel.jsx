@@ -4,7 +4,7 @@ import { clampOwnerSystemWorkflowWindowPosition, resizeWorkbenchWindow, WORKBENC
 import '../public/ownerSystemWorkflow/workbenchToolPanel.css';
 
 // Screen-only tool chrome. Artwork, camera, selection and saving stay with callers.
-export default function ToolPanel({ label, title, titleContent, moveLabel, headerContent, headerActions, children, onClose, active = false, zIndex = active ? 85 : 84, onActivate, chrome, className = '', frame, onFrameChange: setFrame, panelRef, closeLabel, onMoveStart, onMove, onMoveEnd, minimumWidth = 280, minimumHeight = 240, topBoundaryRef, boundsRef, navigationInset = 0, navigationTop = 0, contentSized = false, resizable = true, hidden = false, edgeMargin = 8, resizeEdges, ...surfaceProps }) {
+export default function ToolPanel({ label, title, titleContent, moveLabel, headerContent, headerActions, children, onClose, active = false, zIndex = active ? 85 : 84, onActivate, chrome, className = '', frame, onFrameChange: setFrame, panelRef, closeLabel, onMoveStart, onMove, onMoveEnd, minimumWidth = 280, minimumHeight = 240, topBoundaryRef, boundsRef, navigationTop = 0, contentSized = false, resizable = true, hidden = false, edgeMargin = 8, resizeEdges, ...surfaceProps }) {
   const [viewport, setViewport] = useState(() => ({ width: innerWidth, height: innerHeight }));
   const [hostSize, setHostSize] = useState(null);
   const [boundaryTop, setTop] = useState(0);
@@ -14,7 +14,7 @@ export default function ToolPanel({ label, title, titleContent, moveLabel, heade
   const width = boundsRef ? (hostSize?.width || viewport.width) : viewport.width;
   const gesture = useRef(null), latest = useRef(null);
   const bottom = boundsRef ? (hostSize?.height || viewport.height) : viewport.height;
-  const bounds = { left: boundsRef ? edgeMargin : Math.max(edgeMargin, navigationInset), top: top + edgeMargin, right: width - edgeMargin, bottom: bottom - edgeMargin };
+  const bounds = { left: edgeMargin, top: top + edgeMargin, right: width - edgeMargin, bottom: bottom - edgeMargin };
   const clamp = candidate => {
     const size = { width: Math.max(1, Math.min(candidate.width, bounds.right - bounds.left)), height: Math.max(1, Math.min(candidate.height, bounds.bottom - bounds.top)) };
     const next = clampOwnerSystemWorkflowWindowPosition({ x: candidate.left, y: candidate.top - top }, size, { width, height: bottom - top }, edgeMargin);
@@ -91,7 +91,7 @@ export default function ToolPanel({ label, title, titleContent, moveLabel, heade
       const next = latest.current.clamp(contentSized && contentSize ? { ...current, ...contentSize } : current);
       return Object.keys(next).every(key => next[key] === current[key]) ? current : next;
     });
-  }, [width, top, bottom, navigationInset, hidden, contentSized, contentSize]);
+  }, [width, top, bottom, hidden, contentSized, contentSize]);
 
   const begin = (event, edge = null) => {
     if (event.button !== 0 || !event.isPrimary || gesture.current) return;

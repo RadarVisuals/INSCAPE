@@ -1,6 +1,6 @@
 import { workbenchArea, workbenchAreaBounds } from '../systemWorkflow/domain/workbenchArea.js';
 import { createArticle, MAX_TEXT_MODULES } from './domain/article.js';
-import { createDefaultWorkbenchPresentation, createTextPresentation } from '../profileDocument/domain/workbenchPresentation.js';
+import { createDefaultWorkbenchPresentation, createTextPresentation, TEXT_WINDOW_LIMITS } from '../profileDocument/domain/workbenchPresentation.js';
 import { clampWorkbenchPosition } from '../public/ownerSystemWorkflow/workbenchSpace.js';
 
 export function prepareTextResize(draft, { expected }) {
@@ -48,15 +48,22 @@ export function unlinkTextModuleResult(store, profile, expected) {
       : textSaveFailure(store.getLastCommitFailure?.() || 'write_failed');
   } catch (error) { return { saved: false, reason: 'invalid', message: error.message }; }
 }
-export function addTextModule(store, profile, placed = null, { visibility = 'PRIVATE' } = {}) {
+export function addTextModule(store, profile, placed = null, { visibility = 'PRIVATE', appearance } = {}) {
   if (store.getProfileAddress() !== profile) throw new Error('This profile is no longer active.');
   const draft = store.getDraft(), generation = store.getGeneration();
   if ((draft.texts?.length || 0) >= MAX_TEXT_MODULES) throw new Error(`At most ${MAX_TEXT_MODULES} Text modules are supported.`);
   const item = { id: `text:${crypto.randomUUID()}`, article: createArticle(), visibility };
+  if (appearance) item.article.appearance = { ...item.article.appearance, ...appearance };
   const next = { ...draft, texts: [...(draft.texts || []), item] };
   if (placed) {
     const presentation = createTextPresentation(item.id, draft.texts?.length || 0);
-    presentation.window = { ...presentation.window, ...clampWorkbenchPosition(placed.position, presentation.window, workbenchAreaBounds(workbenchArea(draft.workbench))) };
+    if (placed.window) {
+      const { width, height } = placed.window, limits = TEXT_WINDOW_LIMITS;
+      if (!Number.isFinite(width) || !Number.isFinite(height) || width < limits.minimumWidth || height < limits.minimumHeight
+        || width > limits.maximumWidth || height > limits.maximumHeight)
+        throw new Error(`Text needs at least ${limits.minimumWidth} × ${limits.minimumHeight} px. Enlarge the cell before adding Text.`);
+      presentation.window = { ...placed.window };
+    } else presentation.window = { ...presentation.window, ...clampWorkbenchPosition(placed.position, presentation.window, workbenchAreaBounds(workbenchArea(draft.workbench))) };
     const workbench = placed.workbench || draft.workbench || createDefaultWorkbenchPresentation();
     next.workbench = { ...workbench, texts: [...(workbench.texts || []), presentation] };
   }
@@ -65,6 +72,28 @@ export function addTextModule(store, profile, placed = null, { visibility = 'PRI
 }
 export function saveTextModule(store, profile, expected, next) {
   return saveTextModuleResult(store, profile, expected, next).saved;
+}
+
+export function duplicateTextModule(store, profile, expected, workbench) {
+  if (store.getProfileAddress() !== profile) throw new Error('This profile is no longer active.');
+  const draft = store.getDraft(), generation = store.getGeneration();
+  prepareTextResize(draft, { expected });
+  if (draft.texts.length >= MAX_TEXT_MODULES) throw new Error(`At most ${MAX_TEXT_MODULES} Text modules are supported.`);
+  const record = { ...structuredClone(expected), id: `text:${crypto.randomUUID()}` };
+  const layout = workbench || draft.workbench || createDefaultWorkbenchPresentation();
+  const original = layout.texts?.find(item => item.id === expected.id) || createTextPresentation(expected.id);
+  const windows = [original.window, ...(original.frames || []).map(frame => frame.window)];
+  const left = Math.min(...windows.map(window => window.left)), top = Math.min(...windows.map(window => window.top));
+  const size = { width: Math.max(...windows.map(window => window.left + window.width)) - left,
+    height: Math.max(...windows.map(window => window.top + window.height)) - top };
+  const offset = clampWorkbenchPosition({ left: left + 24, top: top + 24 }, size, workbenchAreaBounds(workbenchArea(layout)));
+  const shift = window => ({ ...window, left: window.left + offset.left - left, top: window.top + offset.top - top });
+  const presentation = { ...structuredClone(original), id: record.id, open: true, window: shift(original.window),
+    ...(original.frames ? { frames: original.frames.map(frame => ({ id: `text-frame:${crypto.randomUUID()}`, window: shift(frame.window) })) } : {}) };
+  if (!store.commitCompletedOperation({ ...draft, texts: [...draft.texts, record], workbench: { ...layout, texts: [...(layout.texts || []), presentation] } },
+    { expectedGeneration: generation, historyLabel: 'Duplicate Text', historyPresentation: layout }))
+    throw new Error('The Text copy could not be saved. Your saved work is unchanged.');
+  return record.id;
 }
 
 const messages = {

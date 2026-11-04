@@ -59,6 +59,15 @@ test('cell validation rejects cycles, double membership, stale references and un
   invalid(v => v.cells[0].mobile.placements.push({ id: 'shape:missing', window: { left: 0, top: 0, width: 32, height: 32 } }));
 });
 
+test('explicitly removing membership from an existing private cell retains authored member visibility', () => {
+  const before = createReceptionEditorDocument(sample());
+  before.shapes.find(item => item.id === before.cells[0].id).visibility = 'PRIVATE';
+  const candidate = structuredClone(before); candidate.cells[0].members = []; candidate.cells[0].mobile.placements = [];
+  const after = reconcileReceptionCells(before, candidate);
+  assert.deepEqual(after.imageModules, before.imageModules); assert.deepEqual(after.shapes, before.shapes);
+  assert.equal(projectReception(after).imageModules.length, before.imageModules.length);
+});
+
 test('moving and resizing a cell carries untouched native layers once and preserves explicit child transforms', () => {
   const value = createReceptionEditorDocument(sample()), id = value.cells[0].id, original = receptionModuleWindow(value, id);
   const oldChild = receptionModuleWindow(value, 'shape:overlay');

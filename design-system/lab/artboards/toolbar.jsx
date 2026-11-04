@@ -13,7 +13,6 @@ export default function ToolbarArtboard() {
     <WorkbenchToolbar activeTool={tool} onToolChange={setTool}
       libraryOpen={panels.includes('library')} onOpenLibrary={() => toggle('library')}
       layers={{ enabled: true, open: panels.includes('layers'), onToggle: () => toggle('layers') }}
-      info={{ enabled: true, open: panels.includes('info'), onToggle: () => toggle('info') }}
       actions={[{ id: 'duplicate', label: 'Duplicate artwork', icon: Copy, onSelect: () => setNotice('Duplicate requested in this example.') }]}
       addCommands={[{ id: 'image', label: 'Image', icon: Image, onSelect: () => setNotice('Image requested in this example.') },
         { id: 'text', label: 'Text', icon: Type, onSelect: () => setNotice('Text requested in this example.') }]}

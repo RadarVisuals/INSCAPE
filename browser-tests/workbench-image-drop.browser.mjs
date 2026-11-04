@@ -4,6 +4,7 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { chromium } from 'playwright-core';
 import { browserExecutable } from '../scripts/browserEnvironment.mjs';
 import { setWorkbenchZoom } from './fixtures/workbench-zoom.mjs';
+import { openSharedTool } from './fixtures/shared-tools.mjs';
 // Locate a real, exposed drag point after the browser scrolls the artwork into
 // view. Fixed card offsets can hit the sidebar, attachments or floating tools.
 async function libraryArtworkDragPoint(page, card) {
@@ -29,7 +30,19 @@ const exposedWorkbenchPoint = page => page.evaluate(() => {
   }
   throw Error('No exposed Workbench wheel target');
 });
-async function exposedDisplayPoint(page, stage, legacyPoint, name) {
+async function prepareDropView(page) {
+  await setWorkbenchZoom(page, .67);
+  // Entry now fits the authored canvas. Pan its origin into view explicitly;
+  // zooming around (0, 0) does not imply a zero camera offset.
+  const camera = await page.locator('main.system-workflow').evaluate(node => ({
+    x: Number(node.dataset.workbenchCameraX), y: Number(node.dataset.workbenchCameraY),
+  }));
+  const point = await exposedWorkbenchPoint(page);
+  await page.mouse.move(point.x, point.y);
+  await page.mouse.wheel(camera.x, camera.y - 120); await settle(page);
+  await page.mouse.wheel(0, 83); await settle(page);
+}
+async function exposedModulePoint(page, stage, legacyPoint, name) {
   const evidence = await stage.evaluate((node, legacyPoint) => {
     const rect = node.getBoundingClientRect(), sidebar = document.querySelector('.system-workflow__library .lattice-browser-sidebar');
     const side = sidebar?.getBoundingClientRect();
@@ -44,10 +57,10 @@ async function exposedDisplayPoint(page, stage, legacyPoint, name) {
       if (!overSidebar && node.contains(hit)) return { point, exposed: true, hit: describe(hit), stage: rect.toJSON(),
         sidebar: side?.toJSON(), legacyPoint, legacyHit: describe(document.elementFromPoint(legacyPoint.x, legacyPoint.y)) };
     }
-    throw Error('No exposed Display artboard after the Library drag began');
+    throw Error('No exposed module surface after the Library drag began');
   }, legacyPoint);
   await writeFile(`${output}/image-drop-${name}-hit.json`, JSON.stringify(evidence, null, 2));
-  assert.equal(evidence.exposed, true, 'Display receives the actual drop hit outside the Library sidebar');
+  assert.equal(evidence.exposed, true, 'the module receives the actual drop hit outside the Library sidebar');
   return evidence.point;
 }
 async function mount(page) {
@@ -93,7 +106,7 @@ async function mount(page) {
     window.remount = () => { root.unmount(); root = createRoot(document.getElementById('root')); render(); };
     render();
   });
-  await page.getByRole('button', { name: 'Library', exact: true }).waitFor();
+  await page.getByRole('button', { name: 'Artwork library', exact: true }).waitFor();
 }
 async function startDrag(page, point, attachment = false) {
   const library = page.getByRole('region', { name: 'Library workspace' });
@@ -105,7 +118,17 @@ async function startDrag(page, point, attachment = false) {
     // Once dragging begins, Library yields its canvas area to drop targets.
     await page.mouse.move(origin.x + 15, origin.y + 15, { steps: 3 });await settle(page);
     point = typeof point === 'function' ? await point() : await page.evaluate(() => {
-      for (let y = 350; y < innerHeight - 180; y += 30) for (let x = innerWidth - 30; x > 80; x -= 30) {
+      const host = document.querySelector('main.system-workflow'), rect = host.getBoundingClientRect();
+      const canvas = getComputedStyle(host.querySelector('.workbench-canvas-content'));
+      const scale = Number(host.dataset.workbenchCameraScale), inset = 200 * scale;
+      const left = rect.left + parseFloat(canvas.getPropertyValue('--canvas-left'));
+      const top = rect.top + parseFloat(canvas.getPropertyValue('--canvas-top'));
+      const right = left + parseFloat(canvas.getPropertyValue('--canvas-width'));
+      const bottom = top + parseFloat(canvas.getPropertyValue('--canvas-height'));
+      // The centring check needs room for the whole 360-pixel Image. Background
+      // outside the canvas is valid for panning, but is not a placement target.
+      for (let y = Math.max(350, top + inset); y < Math.min(innerHeight - 180, bottom - inset); y += 30)
+        for (let x = Math.min(innerWidth - 30, right - inset); x > Math.max(80, left + inset); x -= 30) {
         if (document.elementFromPoint(x,y)?.matches('.system-workflow, .system-workflow__workbench, .system-workflow__display-instance')) return {x,y};
       }
       throw Error('No exposed Workbench drop target');
@@ -123,10 +146,8 @@ for (const width of [1440, 700]) test(`Library creates an Image at its preview, 
     page.setDefaultTimeout(12000);
     const errors = []; page.on('pageerror', error => errors.push(error.message));
     await mount(page);
-    await setWorkbenchZoom(page, .67);
-    const wheelPoint = await exposedWorkbenchPoint(page);
-    await page.mouse.move(wheelPoint.x, wheelPoint.y); await page.mouse.wheel(0, 83); await settle(page);
-    await page.getByRole('button', { name: 'Library', exact: true }).click();
+    await prepareDropView(page);
+    await page.getByRole('button', { name: 'Artwork library', exact: true }).click();
     await page.getByRole('button', { name: 'Show 2 images of ABYSSAL STUDY', exact: true }).click();
     const before = await page.evaluate(() => window.readDraft());
     const point = await startDrag(page, null, true);
@@ -149,8 +170,8 @@ for (const width of [1440, 700]) test(`Library creates an Image at its preview, 
     assert.equal(dropped.imageModules[0].sides[0].asset.media.url, 'https://images.inscape.test/attached.jpg');
     assert.deepEqual(dropped.imageModules[0].sides[0].crop, { x: .5, y: .5, zoom: 1 }, 'new Image fills the canvas like any other Library side');
     assert.equal(await page.evaluate(() => window.draftWrites), 1);
-    await page.getByRole('button', { name: 'Library', exact: true }).click();
-    await page.getByRole('tab', { name: 'Transform', exact: true }).click();
+    await page.getByRole('button', { name: 'Artwork library', exact: true }).click();
+    await openSharedTool(page, 'Transform');
     assert.equal(await page.getByRole('spinbutton', { name: 'Transform Width', exact: true }).count(), 1, 'created Image is the active tools target');
     const published = await page.evaluate(() => window.publicDocument());
     assert.deepEqual(published.workbench.imageModules, dropped.workbench.imageModules);
@@ -160,26 +181,26 @@ for (const width of [1440, 700]) test(`Library creates an Image at its preview, 
     await page.keyboard.press('Control+Shift+z'); await image.waitFor(); await settle(page);
     assert.deepEqual(await page.evaluate(() => window.readDraft()), dropped);
     // Existing Image is still an append destination, never another new module.
-    await page.getByRole('button', { name: 'Library', exact: true }).click();
-    await startDrag(page, point);
+    await page.getByRole('button', { name: 'Artwork library', exact: true }).click();
+    await startDrag(page, () => exposedModulePoint(page, image, point, `${width}-image`));
     await page.getByText('Add Image side', { exact: true }).waitFor(); await page.mouse.up();
     await page.waitForFunction(() => window.readDraft().imageModules[0].sides.length === 2);
     assert.equal((await page.evaluate(() => window.readDraft())).imageModules.length, 1);
-    await page.getByRole('button', { name: 'Library', exact: true }).click();
-    await page.locator('.workbench-tool-dock .workbench-tool-panel-close').click();
+    await page.getByRole('button', { name: 'Artwork library', exact: true }).click();
+    await page.getByRole('button', { name: 'Close Transform', exact: true }).click();
     // Display remains the placement target; a locked Display is not empty space.
     // Move the Display below the screen navigation before targeting its artboard.
     await page.locator('main.system-workflow').dispatchEvent('wheel', {deltaY:-250,bubbles:true,cancelable:true}); await settle(page);
     const stage = page.locator('[data-system-workflow-artboard]').first();
     const stageRect = await stage.boundingBox(), stagePoint = { x: stageRect.x + stageRect.width * .2, y: stageRect.y + stageRect.height * .7 };
     const priorCount = (await page.evaluate(() => window.readDraft())).grids.reduce((sum, grid) => sum + grid.placements.length, 0);
-    await page.getByRole('button', { name: 'Library', exact: true }).click();
-    await startDrag(page, () => exposedDisplayPoint(page, stage, stagePoint, `${width}-unlocked`)); await page.getByText('Release to add layer', { exact: true }).waitFor(); await page.mouse.up();
+    await page.getByRole('button', { name: 'Artwork library', exact: true }).click();
+    await startDrag(page, () => exposedModulePoint(page, stage, stagePoint, `${width}-unlocked`)); await page.getByText('Release to add layer', { exact: true }).waitFor(); await page.mouse.up();
     await page.waitForFunction(count => window.readDraft().grids.reduce((sum, grid) => sum + grid.placements.length, 0) === count + 1, priorCount);
     assert.equal((await page.evaluate(() => window.readDraft())).imageModules.length, 1);
     await page.getByRole('button', { name: 'Lock Display Module composition', exact: true }).focus(); await page.keyboard.press('Enter');
     const locked = await page.evaluate(() => window.readDraft());
-    await startDrag(page, () => exposedDisplayPoint(page, stage, stagePoint, `${width}-locked`)); assert.equal(await preview.count(), 0); await page.mouse.up(); await settle(page);
+    await startDrag(page, () => exposedModulePoint(page, stage, stagePoint, `${width}-locked`)); assert.equal(await preview.count(), 0); await page.mouse.up(); await settle(page);
     assert.deepEqual(await page.evaluate(() => window.readDraft()), locked, 'a locked Display never creates an Image behind itself');
     // A cancelled or failed empty-space drop leaves both content and layout alone.
     const unchanged = await page.evaluate(() => window.readDraft());
@@ -198,17 +219,20 @@ for (const width of [1440, 700]) test(`Library creates an Image at its preview, 
     await startDrag(page, null); await page.mouse.up();
     await page.waitForFunction(() => typeof window.releaseDimensions === 'function');
     assert.deepEqual(await page.evaluate(() => window.readDraft()), unchanged, 'dimension resolution keeps the drop pending');
-    await page.getByRole('button', { name: 'Library', exact: true }).click();
+    await page.getByRole('button', { name: 'Artwork library', exact: true }).click();
     await page.evaluate(() => window.releaseDimensions()); await settle(page);
     assert.deepEqual(await page.evaluate(() => window.readDraft()), unchanged, 'closed Library cannot finish a delayed drop');
     await page.evaluate(() => { window.holdDimensions = false; window.remount(); });
     await image.waitFor(); await settle(page);
     assert.deepEqual((await page.evaluate(() => window.readDraft())).workbench.imageModules, unchanged.workbench.imageModules);
     const saved = unchanged.workbench.imageModules[0].position, afterReload = await image.boundingBox();
-    assert.ok(Math.abs(afterReload.x - saved.left) < 1 && Math.abs(afterReload.y - saved.top) < 1, 'reload uses authored world position at reset camera');
-    await setWorkbenchZoom(page, .67);
-    const reloadWheelPoint = await exposedWorkbenchPoint(page);
-    await page.mouse.move(reloadWheelPoint.x, reloadWheelPoint.y); await page.mouse.wheel(0, 83); await settle(page);
+    const projection = await page.locator('main.system-workflow').evaluate(node => ({
+      x: node.getBoundingClientRect().left + Number(node.dataset.workbenchCameraX),
+      y: node.getBoundingClientRect().top + Number(node.dataset.workbenchCameraY), scale: Number(node.dataset.workbenchCameraScale),
+    }));
+    assert.ok(Math.abs(afterReload.x - (projection.x + saved.left * projection.scale)) < 1
+      && Math.abs(afterReload.y - (projection.y + saved.top * projection.scale)) < 1, 'reload projects the saved world position through the entry camera');
+    await prepareDropView(page);
     await page.screenshot({ path: `${output}/image-drop-${width}-saved.png` });
     assert.deepEqual(errors, []);
   } finally { await browser.close(); }

@@ -7,6 +7,7 @@ import WorkbenchSharedTools from './WorkbenchSharedTools.jsx';
 import { dockTabs, toolPane, toolIsVisible, visibleToolTabs, WORKBENCH_TOOL_TABS } from './workbenchToolDockState.js';
 import './workbenchToolDocks.css';
 import { useSideDock } from './WorkbenchSideDock.jsx';
+import { sideDockEdge } from './workbenchSideDockState.js';
 
 const groupName = tabs => tabs.length === 1 ? tabs[0] : `${tabs.slice(0, -1).join(', ')} and ${tabs.at(-1)}`;
 
@@ -51,7 +52,8 @@ export default function WorkbenchToolDocks({ controller, hidden, navigationRef, 
       // A newer target, or focus already outside this dock, belongs to the user.
       if (active !== document.body && active?.isConnected && (active !== focused || !panel?.contains(active))) return;
       if (next) { focusTab(next); return; }
-      const fallback = ['Layers', 'Info'].includes(tab) && hostRef.current?.querySelector(`[data-workbench-toolbar] button[aria-label="${tab === 'Info' ? 'Artwork info' : 'Layers'}"]`);
+      const fallback = hostRef.current?.querySelector(tab === 'Layers'
+        ? '[data-workbench-toolbar] button[aria-label="Layers"]' : '[role="menubar"] [data-menu="Tools"]');
       (fallback || hostRef.current)?.focus({ preventScroll: true });
     });
   };
@@ -90,13 +92,15 @@ export default function WorkbenchToolDocks({ controller, hidden, navigationRef, 
     if (current.kind === 'tab') sideDock?.preview(null);
     if (cancelled || !current.moved) return;
     skipClick.current = current.kind === 'tab';
-    if (current.kind === 'tab' && sideDock && event.clientX >= innerWidth - 32) {
+    const edge = sideDock && sideDockEdge(event, sideDock.getSnapshot().viewport);
+    if (current.kind === 'tab' && edge) {
       const frame = { ...current.frame, left: event.clientX - current.offsetX, top: event.clientY - current.offsetY };
       place(current.tabs, null, frame, undefined, false);
       const group = controller.getSnapshot().groups.find(group => dockTabs(group).includes(current.tabs[0]));
-      sideDock.attach(`tools:${group.id}`, frame, event.clientY);
+      sideDock.attach(`tools:${group.id}`, frame, event.clientY, edge);
       return;
     }
+    if (current.kind === 'group' && edge) return;
     const target = event && hit(event.clientX, event.clientY, current);
     if (target) place(current.tabs, target.id, undefined, target.before, false, target.side);
     else if (current.kind === 'tab') place(current.tabs, null, { ...current.frame,
@@ -107,7 +111,7 @@ export default function WorkbenchToolDocks({ controller, hidden, navigationRef, 
     if (!current || event.pointerId !== current.pointerId) return;
     if (!current.moved && Math.hypot(event.clientX - current.x, event.clientY - current.y) < 6) return;
     current.moved = true;
-    if (current.kind === 'tab') sideDock?.preview(event.clientX >= innerWidth - 32 ? { x: event.clientX, y: event.clientY } : null);
+    if (current.kind === 'tab' && sideDock) sideDock.preview(sideDockEdge(event, sideDock.getSnapshot().viewport));
     const target = hit(event.clientX, event.clientY, current);
     setPreview({ kind: current.kind, tabs: current.tabs, target: target?.id, before: target?.before, side: target?.side,
       left: event.clientX - current.offsetX, top: event.clientY - current.offsetY, width: current.frame.width });
