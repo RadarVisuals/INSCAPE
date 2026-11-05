@@ -39,7 +39,7 @@ export default function ReceptionDocumentCanvas({ reception, width, model, addre
       {appearance.edges?.grain > 0 && <span aria-hidden="true" className="module-surface-grain" />}
       {appearance.frame && <span aria-hidden="true" className="module-surface-outline" style={{ boxShadow: `inset 0 0 0 1px ${appearance.color}` }} />}
       <div className="text-module-body" style={textOutputStyle(article, rect)}>
-        <div className="text-scene-viewport"><TextContentPage article={article} /></div>
+        <div className="text-scene-viewport"><TextContentPage article={article} defaultOverflow="clip" /></div>
       </div>
     </>;
   };

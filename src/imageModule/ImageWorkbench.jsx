@@ -20,6 +20,7 @@ import { createProfileDocumentV9AssetDossier } from '../profileDocument/componen
 import ImageLift from './ImageLift.jsx';
 import { projectedSvgArtworkFor } from '../artwork/ProjectedSvgArtwork.jsx';
 import '../public/ownerSystemWorkflow/displayInstruments.css';
+import { useEditorCells } from '../reception/EditorCellsContext.jsx';
 import './imageModule.css';
 
 const ImageInstance = memo(function ImageInstance({ record, index, store, profileAddress, registerTarget, initialPresentation, onPresentationChange, onActivate, suspended, viewport, reducedMotion, canDuplicate, onDuplicated, initialSideIndex = 0, focusOnMount = false, initiallyOpenId, savedLayout }) {
@@ -54,9 +55,11 @@ const ImageInstance = memo(function ImageInstance({ record, index, store, profil
   useWorkbenchMiniature(record.id, useMemo(() => ({ kind: 'image', record, side, crop: crop?.previewCrop ?? side?.crop }), [record, side, crop?.previewCrop]));
   const sideIndex = record.sides.indexOf(side);
   const workbenchView = useWorkbenchView();
+  const cells = useEditorCells();
+  const ownerCell = cells?.cells.find(cell => cell.members.includes(record.id));
   const presented = Boolean(workbenchView.presentationTransforms?.[record.id]);
   const dossier = useMemo(() => createProfileDocumentV9AssetDossier(side?.asset), [side?.asset]);
-  const editable = Boolean(store) && !suspended && !presented;
+  const editable = Boolean(store) && !suspended && !presented && !ownerCell?.lockedMembers?.includes(record.id);
   const rectangle = crop?.mask || { left: 0, top: 0, width: record.width, height: record.height };
   const liftEntry = useMemo(() => side ? imageFocusEntry(side) : null, [side]);
   const inactive = suspended || !presentation.open;
@@ -103,14 +106,26 @@ const ImageInstance = memo(function ImageInstance({ record, index, store, profil
   useEffect(() => { onPresentationChange?.(record.id, presentation); }, [record.id, presentation, onPresentationChange]);
   useEffect(() => () => onPresentationChange?.(record.id, null), [record.id, onPresentationChange]);
   const layout = useCallback(({ left, top }) => setPresentation(current => current.position.left === left && current.position.top === top ? current : { ...current, position: { left, top } }), []);
-  const save = useCallback((next, expected = latest.current, errorSurface = 'actions') => {
+  const save = useCallback((next, expected = latest.current, errorSurface = 'actions', workbench) => {
     if (!live.current || !store || suspended) return false;
     try {
-      if (!saveImageModule(store, profileAddress, expected, next)) throw new Error('Image was not saved. Your saved work is unchanged; try the edit again.');
+      if (!saveImageModule(store, profileAddress, expected, next, workbench)) throw new Error('Image was not saved. Your saved work is unchanged; try the edit again.');
       latest.current = next; setError(''); return true;
     } catch (e) { setError(e.message, errorSurface); return false; }
   }, [store, profileAddress, suspended, setError]);
   const changeSide = (change, expected = record) => save({ ...expected, sides: expected.sides.map(item => item.id === side?.id ? { ...item, ...change } : item) }, expected);
+  // Fit in Bento targets the owning cell, including an independently moved or
+  // resized Image. Frame and fitting mode save together through native history.
+  const fitImage = crop => {
+    if (!side || !editable || flip) return;
+    const workbench = getPresentation?.() || store.getDraft().workbench;
+    const frame = ownerCell && workbench.shapes?.find(item => item.id === ownerCell.id)?.window;
+    const next = { ...record, ...(frame ? { width: Math.round(frame.width), height: Math.round(frame.height) } : {}),
+      sides: record.sides.map(item => item.id === side.id ? { ...item, crop } : item) };
+    const position = frame && { left: frame.left, top: frame.top };
+    const placement = frame ? { ...workbench, imageModules: workbench.imageModules.map(item => item.id === record.id ? { ...item, position } : item) } : undefined;
+    if (save(next, record, 'actions', placement) && position) layout(position);
+  };
   const duplicate = () => {
     if (!editable || !live.current || crop || flip || !canDuplicate) return;
     const id = duplicateImageModule(store, profileAddress, record, { workbench: getPresentation?.(), position: presentation.position });
@@ -122,14 +137,14 @@ const ImageInstance = memo(function ImageInstance({ record, index, store, profil
     const request = ++imageRequest.current;
     try {
       if (dropMode === 'append' && current.sides.length >= MAX_IMAGE_SIDES) throw new Error('Image supports up to 32 sides. Remove a side or replace its artwork.');
-      const newSide = await resolveImageLibrarySide(input);
+      const newSide = await resolveImageLibrarySide(input, undefined, Boolean(ownerCell));
       if (!live.current || imageRequest.current !== request || latest.current !== current) return false;
       const replacing = dropMode === 'replace' && current.sides.some(item => item.id === side?.id);
       if (replacing) newSide.id = side.id;
       if (!save({ ...current, sides: replacing ? current.sides.map(item => item.id === side.id ? newSide : item) : [...current.sides, newSide] }, current)) return false;
       setSideId(newSide.id); onActivate?.(record.id); return true;
     } catch (e) { if (live.current && imageRequest.current === request) setError(e.message); return false; }
-  }, [editable, presentation.open, dropMode, side?.id, save, onActivate, record.id, setError]);
+  }, [editable, presentation.open, dropMode, side?.id, save, onActivate, record.id, setError, ownerCell]);
   useEffect(() => {
     if (!editable || !presentation.open || !registerTarget || inspect || cropping) return;
     registerTarget(record.id, { get node() { return source.current; }, label: dropMode === 'replace' ? 'Replace Image side' : 'Add Image side', placeAsset: acceptImage });
@@ -146,6 +161,22 @@ const ImageInstance = memo(function ImageInstance({ record, index, store, profil
   const updateVisualCrop = value => setCrop(current => current && ({ ...current, previewCrop: unprojectSystemWorkflowCrop(side.transform, value) }));
   const applyCrop = value => { if (crop && changeSide({ crop: value }, crop.expected)) { setCrop(null); drag.current = null; } };
   const cancelCrop = () => { setCrop(null); drag.current = null; };
+  const cropKeyDown = event => { if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); cancelCrop(); } };
+  const fitControls = <>
+    <button className="workflow-tactile-control" type="button" disabled={!side || Boolean(flip)} aria-pressed={Boolean(side && side.crop === null)}
+      title={ownerCell ? 'Show the complete image centred inside this cell.' : 'Show the complete image inside its frame.'}
+      onClick={() => fitImage(null)}>{ownerCell ? 'Fit cell' : 'Fit inside'}</button>
+    <button className="workflow-tactile-control" type="button" disabled={!side || Boolean(flip)} aria-pressed={Boolean(side?.crop)}
+      title={ownerCell ? 'Fill this cell with a centred crop. Edges may be cropped.' : 'Fill the image frame with a centred crop. Edges may be cropped.'}
+      onClick={() => fitImage({ ...IMAGE_FILL_CROP })}>{ownerCell ? 'Fill cell' : 'Fill canvas'}</button>
+  </>;
+  const cropButton = <button className="workflow-tactile-control" type="button" aria-label="Crop" title="Crop" disabled={!side || Boolean(flip)} onClick={beginCrop}><Crop size={18} strokeWidth={1.6} /></button>;
+  const cropCompletion = <>
+    <button className="workflow-tactile-control" type="button" onKeyDown={cropKeyDown} onClick={cancelCrop}>Cancel</button>
+    <button className="workflow-tactile-control" type="button" onKeyDown={cropKeyDown} onClick={() => applyCrop(crop.previewCrop)}>Done</button>
+  </>;
+  const cropZoom = crop && <input type="range" aria-label="Crop zoom" min="1" max="4" step="0.05" value={visualCrop.crop.zoom} onKeyDown={cropKeyDown}
+    onChange={event => updateVisualCrop(setSystemWorkflowCropZoom(visualCrop.crop, { ...crop.media, ...visualCrop.dimensions }, rectangle, Number(event.target.value)))} />;
   const resize = (newSize, position) => {
     cancelCrop();
     const saved = commitWorkbenchSelectionResize([{ ...resizeTarget, id: record.id, ...position, ...newSize, getPresentation }]);
@@ -169,22 +200,15 @@ const ImageInstance = memo(function ImageInstance({ record, index, store, profil
 
           <ArtworkTransformTools disabled={!side || Boolean(flip)}
             onTransform={operation => changeSide({ transform: transformArtwork(side.transform, operation) })} />
-          <button className="workflow-tactile-control" type="button" aria-label="Crop" title="Crop" disabled={!side || Boolean(flip)} onClick={beginCrop}><Crop size={18} strokeWidth={1.6} /></button>
+          {cropButton}
         </nav>)}
-      inspection={crop ? (<div className="system-workflow__crop-controls" onKeyDown={event => { if (event.key === 'Escape') { event.preventDefault(); cancelCrop(); } }}>
+      inspection={crop ? (<div className="system-workflow__crop-controls" onKeyDown={cropKeyDown}>
         <div><strong>Crop / drag image</strong><output>{Math.round(visualCrop.crop.zoom * 100)}%</output></div>
-        <input type="range" aria-label="Crop zoom" min="1" max="4" step="0.05" value={visualCrop.crop.zoom}
-          onChange={event => updateVisualCrop(setSystemWorkflowCropZoom(visualCrop.crop, { ...crop.media, ...visualCrop.dimensions }, rectangle, Number(event.target.value)))} />
-        <footer><button className="workflow-tactile-control" type="button" onClick={() => applyCrop(null)}>Native fit</button><button className="workflow-tactile-control" type="button" onClick={cancelCrop}>Cancel</button><button className="workflow-tactile-control" type="button" onClick={() => applyCrop(crop.previewCrop)}>Done</button></footer>
+        {cropZoom}
+        <footer><button className="workflow-tactile-control" type="button" onClick={() => applyCrop(null)}>Native fit</button>{cropCompletion}</footer>
         {failure?.surface === 'actions' && <p role="alert" className="image-module__error">{error}</p>}
       </div>) : (<div className="system-workflow__inspection-selector" role="group" aria-label="Image fit">
-          <span>Fit</span>
-          <button className="workflow-tactile-control" type="button" disabled={!side || Boolean(flip)} aria-pressed={Boolean(side && side.crop === null)}
-            title="Show the complete image. Different proportions leave space inside the canvas."
-            onClick={() => changeSide({ crop: null })}>Fit inside</button>
-          <button className="workflow-tactile-control" type="button" disabled={!side || Boolean(flip)} aria-pressed={Boolean(side?.crop)}
-            title="Fill the canvas with a centred crop, keeping the image proportions. Edges may be cropped."
-            onClick={() => changeSide({ crop: { ...IMAGE_FILL_CROP } })}>Fill canvas</button>
+          {fitControls}
           {failure?.surface === 'actions' && <p role="alert" className="image-module__error">{error}</p>}
         </div>)} />;
   // Only the tool's presentation moves to the shared dock. Side selection,
@@ -234,6 +258,10 @@ const ImageInstance = memo(function ImageInstance({ record, index, store, profil
       active={activeTarget === record.id}
       placementModule={Boolean(store)} onPosition={layout} onResize={resize}
       resizeTarget={resizeTarget}
+      quickTools={editable && !inspect && !flip && (!ownerCell || cells.editingCellId === ownerCell.id) ? <>
+        {crop ? <><span>Crop · drag image</span>{cropZoom}{cropCompletion}</> : <>{fitControls}{cropButton}</>}
+        {failure?.surface === 'actions' && <span role="alert" className="image-module__error">{error}</span>}
+      </> : null}
       onClose={() => { setPresentation(p => ({ ...p, open: false })); queueMicrotask(() => shortcut.current?.focus()); }}>
       {renderRectangle => <>
       <button type="button" ref={source} className="workflow-tactile-control image-module__canvas" aria-label={crop ? 'Drag to crop Image' : side ? `${focusModules ? 'Focus' : 'Inspect'} ${side.asset.name || 'Image'}` : store ? 'Drop Library artwork into Image' : 'Image is empty'}

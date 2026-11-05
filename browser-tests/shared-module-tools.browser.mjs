@@ -162,7 +162,7 @@ test('Image, Text and Shape bounds follow activation rather than hover, includin
       const text = page.locator('.text-window'), image = page.locator('.image-module__window'), shape = page.locator('.shape-window');
       const visible = async () => ({
         text: await text.locator('.text-window-bounds').evaluate(node => getComputedStyle(node).opacity),
-        image: await image.locator('.image-module__bounds').evaluate(node => getComputedStyle(node).opacity),
+        image: await page.locator('.image-module__bounds').evaluate(node => getComputedStyle(node).opacity),
         shape: await shape.evaluate(node => { const style = getComputedStyle(node); return style.outlineStyle === 'none' ? '0px' : style.outlineWidth; }),
       });
       await clearOnCanvas(page);

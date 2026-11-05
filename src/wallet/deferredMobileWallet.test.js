@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { deferMobileWallet, connectMobileOnDemand } from './deferredMobileWallet.js';
+import { deferMobileWallet, prepareMobileWalletOnDemand } from './deferredMobileWallet.js';
 
 test('mobile setup stays dormant until provider acquisition and initializes once', async () => {
   let loads = 0, setups = 0;
@@ -16,31 +16,20 @@ test('mobile setup stays dormant until provider acquisition and initializes once
   assert.equal(setups, 1);
 });
 
-test('mobile tap reserves navigation synchronously and cleans up after connection or failure', async () => {
+test('mobile tap reserves navigation before preparation and leaves approval to the SDK', async () => {
   const previous = globalThis.window;
   try {
-    for (const fail of [false, true]) {
-      const events = [], calls = [], listeners = new Map();
-      const tab = { location: {}, close() { calls.push('close'); } };
-      globalThis.window = { open() { calls.push('open'); return tab; } };
-      const provider = { on(name, fn) { listeners.set(name, fn); }, off(name) { listeners.delete(name); } };
-      const view = { dispatchEvent(event) { events.push(event.type); }, _cancelConnectionWatch() {} };
-      const connector = {
-        rdns: 'walletConnect',
-        async getProvider() { calls.push('provider'); return provider; },
-        async connect() {
-          listeners.get('display_uri')('wc:test');
-          if (fail) throw new Error('cancelled');
-        },
-      };
-      await connectMobileOnDemand(view, connector, uri => `mobile:${uri}`);
-      assert.deepEqual(calls.slice(0, 2), ['open', 'provider']);
-      assert.equal(tab.location.href, 'mobile:wc:test');
-      assert.deepEqual(events, [fail ? 'on-error' : 'on-connect']);
-      assert.equal(calls.includes('close'), fail);
-      assert.equal(listeners.size, 0);
-      assert.equal(view.isConnecting, false);
-    }
+    const calls = [], tab = { close() { calls.push('close'); } };
+    globalThis.window = { open() { calls.push('open'); return tab; } };
+    const view = { isConnected: true, walletConnectConnector: { rdns: 'walletConnect' },
+      async prewarmWalletConnectUri() { calls.push('prepare'); },
+      dispatchEvent() { assert.fail('SDK must own connection events'); } };
+    assert.equal(await prepareMobileWalletOnDemand(view), tab);
+    assert.deepEqual(calls, ['open', 'prepare']);
+    assert.equal(view.isConnecting, true);
+    assert.equal(view.connectingRdns, 'walletConnect');
+    assert.equal(await prepareMobileWalletOnDemand(view), null, 'Repeated taps stay dormant');
+    assert.deepEqual(calls, ['open', 'prepare']);
   } finally { globalThis.window = previous; }
 });
 
@@ -48,6 +37,58 @@ test('blocked mobile popup does not acquire a provider', async () => {
   const previous = globalThis.window;
   try {
     globalThis.window = { open: () => null };
-    await connectMobileOnDemand({}, { getProvider() { assert.fail('Must remain unloaded'); } }, value => value);
+    assert.equal(await prepareMobileWalletOnDemand({ prewarmWalletConnectUri() { assert.fail('Must remain unloaded'); } }), null);
+  } finally { globalThis.window = previous; }
+});
+
+test('pending or prepared pairings are not replaced by another preparation', async () => {
+  const previous = globalThis.window;
+  try {
+    const tab = {};
+    globalThis.window = { open: () => tab };
+    for (const pending of [{ _pendingWalletConnect: Promise.resolve() }, { prewarmConnectPromise: Promise.resolve() }]) {
+      assert.equal(await prepareMobileWalletOnDemand({ isConnected: true, ...pending,
+        prewarmWalletConnectUri() { assert.fail('Would replace the pending pairing'); } }), tab);
+    }
+  } finally { globalThis.window = previous; }
+});
+
+test('failed provider download closes the reserved tab and permits retry', async () => {
+  const previous = globalThis.window;
+  try {
+    let closed = 0;
+    const events = [], tab = { close() { closed++; } };
+    globalThis.window = { open: () => tab };
+    const view = { isConnected: true, async prewarmWalletConnectUri() { throw new Error('download failed'); },
+      dispatchEvent(event) { events.push(event.type); } };
+    assert.equal(await prepareMobileWalletOnDemand(view), null);
+    assert.equal(closed, 1);
+    assert.equal(view.isConnecting, false);
+    assert.deepEqual(events, ['on-error']);
+    view.prewarmWalletConnectUri = async () => {};
+    assert.equal(await prepareMobileWalletOnDemand(view), tab);
+  } finally { globalThis.window = previous; }
+});
+
+test('closing during preparation cleans a late listener and suppresses events', async () => {
+  const previous = globalThis.window;
+  try {
+    let finish, closed = 0, removed = 0;
+    const handler = () => {};
+    globalThis.window = { open: () => ({ close() { closed++; } }) };
+    const view = { isConnected: true, async prewarmWalletConnectUri() {
+      await new Promise(resolve => { finish = resolve; });
+      view.prewarmResult = { handler, provider: { off(event, listener) {
+        assert.equal(event, 'display_uri'); assert.equal(listener, handler); removed++;
+      } } };
+      view.prewarmConnectPromise = Promise.reject(new Error('removed'));
+    }, dispatchEvent() { assert.fail('Removed view cannot dispatch'); } };
+    const preparing = prepareMobileWalletOnDemand(view);
+    view.isConnected = false;
+    finish();
+    assert.equal(await preparing, null);
+    assert.equal(closed, 1);
+    assert.equal(removed, 1);
+    assert.equal(view.prewarmConnectPromise, null);
   } finally { globalThis.window = previous; }
 });

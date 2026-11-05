@@ -22,7 +22,8 @@ export function editorCellWindow(presentation, id, content) {
     const position = presentation?.imageModules?.find(item => item.id === id)?.position;
     return position ? { ...position, width: image.width, height: image.height } : null;
   }
-  return ['shapes', 'texts'].flatMap(key => presentation?.[key] || []).find(item => item.id === id)?.window;
+  return presentation?.shapes?.find(item => item.id === id)?.window
+    || presentation?.texts?.find(item => item.id === id)?.window;
 }
 
 export function transformedCellWindow(frame, transform = {}) {

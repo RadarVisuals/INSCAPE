@@ -24,7 +24,7 @@ test('generated layouts have the chosen count, exact margins, usable cells and n
     assert.equal(result.rectangles.length, count);
     for (const [index, rect] of result.rectangles.entries()) {
       assert.ok(Object.values(rect).every(Number.isInteger));
-      assert.ok(rect.width >= 80 && rect.height >= 80);
+      assert.ok(rect.width >= 80 && rect.height >= 24);
       assert.ok(rect.left >= settings.padding && rect.top >= settings.padding);
       assert.ok(rect.left + rect.width <= width - settings.padding && rect.top + rect.height <= height - settings.padding);
       for (const other of result.rectangles.slice(index + 1)) assert.ok(

@@ -17,7 +17,7 @@ export default function TextTools({ targetId, available = true, anchor, onClose,
 
 // Content controls are independent of the Workbench window and its registration.
 // A layout host can own the article's box without changing stored appearance.
-export function TextToolsContent({ targetId, sharedColour = false, available = true, article, onChange, controlsRef, disabled, children, connection, readOptions, publication, footer, backupScope = targetId, recoveryPending = false, containerControls = true, section: selectedSection, onSectionChange }) {
+export function TextToolsContent({ targetId, sharedColour = false, titleInput = false, frameLayout = false, defaultOverflow = 'scroll', available = true, article, onChange, controlsRef, disabled, children, connection, readOptions, publication, footer, backupScope = targetId, recoveryPending = false, containerControls = true, section: selectedSection, onSectionChange }) {
   const [localSection, setLocalSection] = useState('format');
   const section = selectedSection ?? localSection, setSection = onSectionChange || setLocalSection;
   const id = useId(), body = useRef(null);
@@ -71,7 +71,10 @@ export function TextToolsContent({ targetId, sharedColour = false, available = t
       <details className="text-inspector-section">
         <summary>Title</summary>
         <div className="text-settings text-settings--type">
-          {!article.title && <p className="text-tools-hint">Type a title above the article body, then set its appearance here.</p>}
+          {titleInput ? <><label className="text-settings-wide">Optional title<input aria-label="Optional text title" maxLength={160} disabled={disabled} value={article.title}
+            onChange={event => onChange({ ...article, title: event.target.value })} /></label>
+            <p className="text-tools-hint">Use a title for a separate heading. A name or label only needs the main text field.</p></>
+            : !article.title && <p className="text-tools-hint">Type a title above the article body, then set its appearance here.</p>}
           <label className="text-settings-wide">Title size<input aria-label="Title size" type="number" min={ARTICLE_FONT_SIZE.min} max={ARTICLE_FONT_SIZE.max} value={appearance.titleFontSize ?? 28} disabled={disabled || !article.title} onChange={e => { const value = e.target.valueAsNumber; if (validArticleFontSize(value)) changeAppearance({ titleFontSize: value }); }} /></label>
           <div className="text-title-controls text-settings-wide" role="group" aria-label="Title appearance">
             <TextTypographyInput label="Title gap (px)" accessibleLabel="Title gap" value={appearance.titleGap}
@@ -93,9 +96,24 @@ export function TextToolsContent({ targetId, sharedColour = false, available = t
           </div>
         </div>
       </details>
-      {containerControls && <><details className="text-inspector-section">
+      {containerControls && <><details className="text-inspector-section" open={titleInput || undefined}>
         <summary>Text box layout</summary>
         <div className="text-settings text-settings--appearance">
+          {frameLayout && <>
+          <label>Vertical alignment<select aria-label="Text vertical alignment" disabled={disabled || appearance.columns > 1} value={appearance.verticalAlign || 'top'}
+            onChange={event => changeAppearance({ verticalAlign: event.target.value })}>
+            <option value="top">Top</option><option value="center">Center</option><option value="bottom">Bottom</option>
+          </select></label>
+          <label>Overflow<select aria-label="Text overflow" disabled={disabled || appearance.columns > 1} value={appearance.overflow || defaultOverflow}
+            onChange={event => changeAppearance({ overflow: event.target.value })}>
+            <option value="clip">Clip at box edge</option><option value="scroll">Scroll</option>
+          </select></label>
+          <p>Alignment positions the text inside its box. Columns fill from the top. Choose Scroll for longer reading text.</p>
+          </>}
+          <label className="text-settings-wide">Text spacing<select aria-label="Text spacing" disabled={disabled} value={appearance.compact ? 'compact' : 'article'}
+            onChange={event => changeAppearance({ compact: event.target.value === 'compact' })}>
+            <option value="compact">Compact · names and labels</option><option value="article">Article · paragraphs</option>
+          </select></label>
           <label>Columns<select aria-label="Text columns" disabled={disabled} value={appearance.columns || 1} onChange={event => changeAppearance({ columns: Number(event.target.value) })}>
             <option value={1}>1</option><option value={2}>2</option><option value={3}>3</option></select></label>
           {appearance.columns > 1 && <label>Column gap<input aria-label="Text column gap" type="number" min={0} max={128} disabled={disabled} value={appearance.columnGap ?? 24}

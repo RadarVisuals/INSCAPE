@@ -19,10 +19,10 @@ export function useTextScene(record, mode = 'read') {
 
 // Keep the editor slot mounted while Read/Write changes visibility. A shared
 // reading projection must not throw away the author's editor/undo session.
-export function TextContentPage({ article, paginated, resetKey = null, mode = 'read', flow, showOverflow = false, children }) {
+export function TextContentPage({ article, paginated, resetKey = null, mode = 'read', flow, showOverflow = false, defaultOverflow = 'scroll', children }) {
   return <>
     <div className="text-authoring-viewport" hidden={mode === 'read' && paginated}>
-      <TextViewport article={article} flow={flow} showOverflow={showOverflow} resetKey={resetKey}
+      <TextViewport article={article} flow={flow} showOverflow={showOverflow} resetKey={resetKey} defaultOverflow={defaultOverflow}
         automaticPadding={!article.appearance?.padding && !article.appearance?.compact} mode={mode}>
         {children}
         {mode === 'read' && !paginated && !flow && <ArticleView article={article} />}

@@ -51,7 +51,7 @@ const PageBreak = Node.create({ name: 'pageBreak', group: 'block', atom: true,
   parseHTML: () => [{ tag: 'div[data-text-page-break]' }],
   renderHTML: () => ['div', { 'data-text-page-break': '', class: 'text-page-break' }],
 });
-export default function ArticleEditor({ article, onChange, onEditor, onFindRequest, saveError, saveStatus, focusClassName, disabled, controlsHost, flowRange, onFlowEditor, sharedColour = false, containerOwned = false, onRevealFormatting }) {
+export default function ArticleEditor({ article, onChange, onEditor, onFindRequest, saveError, saveStatus, focusClassName, disabled, controlsHost, flowRange, onFlowEditor, sharedColour = false, containerOwned = false, titlePlaceholder = true, onRevealFormatting }) {
   const tools = useSharedTextTools();
   const revealFormatting = useRef(null); revealFormatting.current = onRevealFormatting || tools?.setSection;
   const [flowBridge] = useState(createArticleFlowEditor);
@@ -259,15 +259,17 @@ export default function ArticleEditor({ article, onChange, onEditor, onFindReque
     </>, controlsHost)}
     <ArticleFocusWriting active={focusWriting} onClose={() => setFocusWriting(false)} editor={editor} returnFocus={focusTrigger}
       title={article.title} background={article.appearance?.background} saveError={saveError} saveStatus={saveStatus} className={focusClassName}>
-    <div className={`text-editor-page${appearance.compact ? ' text-document--compact' : ''}`} style={textContentStyle(article, { containerOwned: containerOwned && !focusWriting })}>
+    <div className={`text-editor-page${appearance.compact ? ' text-document--compact' : ''}`} style={textContentStyle(article, { containerOwned: containerOwned && !focusWriting })}
+      data-title-only={(!titlePlaceholder && !focusWriting && Boolean(article.title) && editor.isEmpty) || undefined}>
       {(article.title || !disabled) && <textarea className="text-document-title" aria-label="Article title" placeholder="Title" rows={1}
+        data-empty-optional-title={(!titlePlaceholder && !article.title) || undefined}
         spellCheck={false} autoCorrect="off" autoCapitalize="off" maxLength={160} disabled={disabled}
         style={textTitleStyle(article)} value={article.title}
         onChange={event => latest.current.onChange({ ...latest.current.article, title: event.target.value.replace(/[\r\n]+/g, ' ') })}
         onKeyDown={event => { if (event.key === 'Enter' && !event.nativeEvent.isComposing) { event.preventDefault(); editor.commands.focus('start'); } }} />}
       <div className={`text-editor-body${!disabled && editor.isEmpty ? ' text-editor-body--empty' : ''}`}>
         <EditorContent editor={editor} />
-        {!disabled && editor.isEmpty && <span className="text-editor-placeholder" aria-hidden="true">Start writing…</span>}
+        {!disabled && editor.isEmpty && <span className="text-editor-placeholder" aria-hidden="true">{titlePlaceholder ? 'Start writing…' : 'Type text…'}</span>}
       </div>
     </div>
     </ArticleFocusWriting>

@@ -5,12 +5,13 @@ import { editPassage, textDisplays } from './scenePassages.js';
 import { useTextScene, SceneTextViewport, TextContentPage } from './SceneTextContent.jsx';
 import { lazy, memo, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Settings2 as Settings, Eye, Pencil, Plus } from 'lucide-react';
+import { X, Settings2 as Settings, Eye, Pencil, Plus, Hand } from 'lucide-react';
 import { WorkbenchWindow } from '../public/ownerSystemWorkflow/DisplayInstrumentWindow.jsx';
 import { useWorkbenchView, workbenchModuleTransform, useArtworkOpener, useClosedArtworkLayout, useWorkbenchToolSource } from '../public/ownerSystemWorkflow/WorkbenchViewContext.js';
 import { useWorkbenchCamera } from '../public/ownerSystemWorkflow/WorkbenchCamera.jsx';
+import { useEditorCells } from '../reception/EditorCellsContext.jsx';
 import { clampWorkbenchPosition } from '../public/ownerSystemWorkflow/workbenchSpace.js';
-import { createTextPresentation } from '../profileDocument/domain/workbenchPresentation.js';
+import { createTextPresentation, TEXT_WINDOW_LIMITS } from '../profileDocument/domain/workbenchPresentation.js';
 import { createProfileDocumentV9AssetResolver } from '../profileDocument/domain/profileDocumentV9Asset.js';
 import useModuleShortcutMenu from '../public/ownerSystemWorkflow/useModuleShortcutMenu.jsx';
 import { textAppearance, textOutputStyle, textWindowStyle, MAX_TEXT_MODULES } from './domain/article.js';
@@ -35,6 +36,9 @@ const TextInstance = memo(function TextInstance({ record, index, store, profileA
   const onActivate = useCallback(() => activateModule(record.id), [activateModule, record.id]);
   const { bounds: areaBounds, canvasHost } = useWorkbenchArea();
   const workbenchView = useWorkbenchView();
+  const cells = useEditorCells();
+  const cell = cells?.cells.find(cell => cell.members.includes(record.id));
+  const editingCell = cell?.id === cells?.editingCellId ? cell : null;
   const reception = store?.getWorkbenchId?.() === 'reception';
   const view = workbenchModuleTransform(workbenchView, record.id);
   const { offset } = useWorkbenchCamera();
@@ -54,7 +58,7 @@ const TextInstance = memo(function TextInstance({ record, index, store, profileA
     setPresentation(current => { const next = { ...current }; if (savedFrames?.length) next.frames = savedFrames; else delete next.frames; return next; });
   }, [savedFramesKey, savedFrames]);
   const [editingMode, setMode] = useState(store ? initialView?.mode || 'write' : 'read');
-  const mode = view.presented ? 'read' : editingMode;
+  const mode = view.presented || (cell && !editingCell) ? 'read' : editingMode;
   const settings = Boolean(store && toolsOpen && active);
   const setSettings = open => { onActivate(); setToolsOpen?.(open); };
   const [controlsHost, setControlsHost] = useState(null), [destination, setDestination] = useState('');
@@ -128,7 +132,7 @@ const TextInstance = memo(function TextInstance({ record, index, store, profileA
     return { enabled: Boolean(store) && !editBlocked && !failed && (working === record || JSON.stringify(working) === JSON.stringify(record)),
       reflow: true, continuousGeometry: true,
       expected: record, store, profileAddress, layoutKey: 'texts', commit: commitWorkbenchSelectionResize, prepare: prepareTextResize,
-      applyFrame: applyGroupFrame, reportError: setError, minimumWidth: 180, minimumHeight: 100,
+      applyFrame: applyGroupFrame, reportError: setError, minimumWidth: TEXT_WINDOW_LIMITS.minimumWidth, minimumHeight: TEXT_WINDOW_LIMITS.minimumHeight,
       maximumWidth: 7992, maximumHeight: 7992,
     };
   }, [store, profileAddress, editBlocked, failed, working, record, applyGroupFrame, setError]);
@@ -167,7 +171,8 @@ const TextInstance = memo(function TextInstance({ record, index, store, profileA
     {store && active && linked && presentation.open && workbenchView.subscribe && <TextFrameLinks ids={[record.id, ...presentation.frames.map(frame => frame.id)]} />}
     {!presentation.open && <button ref={shortcut} className="text-shortcut" onContextMenu={shortcutMenu.onContextMenu} onKeyDown={shortcutMenu.onKeyDown}
       onClick={() => setPresentation(p => ({ ...p, open: true }))}>{name}</button>}
-    {presentation.open && <WorkbenchWindow label="Text" title={name} titleContent={<span className="text-window-grip">Text{linked ? ` · 1/${flow.ranges.length}` : ''}</span>} chrome="bevel" externalControls minimumWidth={180} minimumHeight={100} resizableWidth viewId={record.id} active={active} snapToGrid={Boolean(store) && windowSnap}
+    {presentation.open && <WorkbenchWindow label="Text" title={name} titleContent={<span className="text-window-grip" title="Drag to move this text box"><Hand aria-hidden="true" />Text{linked ? ` · 1/${flow.ranges.length}` : ''}</span>} chrome="bevel" externalControls minimumWidth={TEXT_WINDOW_LIMITS.minimumWidth} minimumHeight={TEXT_WINDOW_LIMITS.minimumHeight} resizableWidth viewId={record.id} active={active} snapToGrid={Boolean(store) && windowSnap}
+      externalControlsHost={editingCell && active && !suspended && !view.presented ? canvasHost?.parentElement : null} externalControlsClassName="text-workbench"
       surfaceStyle={textWindowStyle(article, paintScale)} placementModule={Boolean(store)} className="text-window text-window--read"
       background={<><span aria-hidden="true" className="text-window-bounds" />{appearance.edges?.grain > 0 && <span aria-hidden="true" className="module-surface-grain" />}
         {appearance.frame && <span aria-hidden="true" className="module-surface-outline" style={{ boxShadow: `inset 0 0 0 ${paintScale}px ${article.appearance ? appearance.color : 'var(--workflow-border)'}` }} />}</>}
@@ -187,8 +192,8 @@ const TextInstance = memo(function TextInstance({ record, index, store, profileA
         {unavailable && <p className="text-status" role="status">{missingDisplay ? 'The linked Display was removed. Your text is preserved. Open Text tools to unlink it.' : sectionLink ? 'Open the linked Display to read its current section. You can still edit the full article in Write.' : 'Open the linked Display to read or edit its passage.'}</p>}
         <SceneTextViewport record={working} state={sceneState} open={presentation.open} mode={mode}>
           <TextContentPage article={article} paginated={paginated} mode={mode} flow={linked ? flow : null}
-            showOverflow={Boolean(store)} resetKey={sectionRead || paginated ? gridId : null}>
-                  {store && <div hidden={mode !== 'write'}><Suspense fallback={<p role="status">Opening editor…</p>}><ArticleEditor sharedColour={sharedColour} key={sectionLink ? 'article' : gridId || 'article'} article={sectionLink && colourPreview?.source !== working ? working.article : article}
+            showOverflow={Boolean(store)} defaultOverflow={reception ? 'clip' : 'scroll'} resetKey={sectionRead || paginated ? gridId : null}>
+                  {store && <div hidden={mode !== 'write'}><Suspense fallback={<p role="status">Opening editor…</p>}><ArticleEditor sharedColour={sharedColour} titlePlaceholder={!reception} key={sectionLink ? 'article' : gridId || 'article'} article={sectionLink && colourPreview?.source !== working ? working.article : article}
                     onChange={changeArticle} onEditor={setEditor} onFlowEditor={setFlowEditor} flowRange={linked ? flow.ranges[0] : null} controlsHost={controlsHost} disabled={editBlocked || mode !== 'write'} saveError={error}
                     onFindRequest={() => { if (!editBlocked && mode === 'write') setSettings(true); }} /></Suspense></div>}
           </TextContentPage>
@@ -198,7 +203,7 @@ const TextInstance = memo(function TextInstance({ record, index, store, profileA
     {presentation.open && presentation.frames?.map((frame, index) => <LinkedTextWindow key={frame.id} {...{ frame, article, flow, active, store, resizeTarget, windowSnap, mode, flowEditor }} registerTarget={!editBlocked ? registerTarget : null} acceptImage={acceptImage}
       index={index + 1} ownerId={record.id} onLayout={frameLayout} onAdd={addFrame} onRemove={id => { if (changeFrames(presentation.frames.filter(frame => frame.id !== id))) queueMicrotask(() => toolsTrigger.current?.focus()); }}
       onEdit={() => { setMode('write'); setSettings(true); }} onTools={() => { setMode('write'); setSettings(true); }} />)}
-    {store && <TextTools sharedColour={sharedColour} targetId={record.id} available={presentation.open && !suspended} article={sectionLink ? working.article : article} onChange={changeArticle}
+    {store && <TextTools sharedColour={sharedColour} titleInput={reception} defaultOverflow={reception ? 'clip' : 'scroll'} frameLayout={reception} targetId={record.id} available={presentation.open && !suspended} article={sectionLink ? working.article : article} onChange={changeArticle}
       backupScope={JSON.stringify([profileAddress, record.id, sectionLink ? null : gridId])} recoveryPending={failed}
       controlsRef={setControlsHost} onClose={closeTools} disabled={editBlocked}
       anchor={{ left: (view.frame || presentation.window).left * view.scale + view.x + offset.x,

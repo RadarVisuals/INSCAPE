@@ -4,13 +4,14 @@ import ArticleView from './ArticleView.jsx';
 
 // Automatic end spacing may yield to a fitting article. Explicit article padding
 // remains authored content; genuinely long articles keep their normal scroll tail.
-export default function TextViewport({ children, article, flow, flowIndex = 0, showOverflow = false, automaticPadding, mode, resetKey = null }) {
+export default function TextViewport({ children, article, flow, flowIndex = 0, showOverflow = false, automaticPadding, mode, resetKey = null, defaultOverflow = 'scroll' }) {
   const viewport = useRef(null), content = useRef(null);
+  const clipped = (article.appearance?.overflow || defaultOverflow) === 'clip';
   // The first linked frame measures the same optional title field shown in Write.
   // This placeholder is only measuring UI; it never enters the saved article.
   const measuredArticle = mode === 'write' && !article.title ? { ...article, title: 'Title' } : article;
   const { remainder, visible, height, onMeasure } = useLinkedFrameLayout(article, flow, flowIndex);
-  const { framed, overflow } = useTextFrame(viewport, article, flow ? 'read' : mode, { force: Boolean(flow), onMeasure });
+  const { framed, overflow } = useTextFrame(viewport, article, flow ? 'read' : mode, { force: Boolean(flow), clip: clipped && showOverflow, onMeasure });
   useLayoutEffect(() => { if (resetKey !== null) viewport.current.scrollTop = 0; }, [resetKey]);
   useLayoutEffect(() => {
     const scroll = viewport.current, body = content.current;
@@ -35,7 +36,9 @@ export default function TextViewport({ children, article, flow, flowIndex = 0, s
     measure();
     return () => observer.disconnect();
   }, [automaticPadding, mode, framed]);
-  return <div ref={viewport} className="text-module-scroll" data-text-frame={framed || undefined} data-text-flow-frame={flow ? 1 : undefined} style={flow ? { '--text-frame-height': height } : undefined} tabIndex={0} role="region" aria-label="Article content">
+  return <div ref={viewport} className="text-module-scroll" data-text-frame={framed || undefined} data-text-flow-frame={flow ? 1 : undefined}
+    data-text-overflow={!framed && clipped ? 'clip' : undefined} data-text-align-y={!framed ? article.appearance?.verticalAlign : undefined}
+    style={flow ? { '--text-frame-height': height } : undefined} tabIndex={0} role="region" aria-label="Article content">
     {flow && <div className="text-flow-measure" aria-hidden="true" inert=""><ArticleView article={measuredArticle} flow={remainder} /></div>}
     <div ref={content} className={flow ? 'text-flow-visible' : 'text-module-content'}>{children}{flow && mode === 'read' && <ArticleView article={article} flow={visible} />}</div>
     {showOverflow && overflow && !flow && <TextFrameOverflow />}

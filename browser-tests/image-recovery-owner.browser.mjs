@@ -52,7 +52,7 @@ test('Owner Image Retry remains reachable beside Image settings on pointer and t
       const inspect = await page.locator('.image-module__window > .image-module__inspect').boundingBox();
       assert.ok(status.y + status.height <= inspect.y || inspect.y + inspect.height <= status.y, `Recovery text overlaps Inspect: ${JSON.stringify({ status, inspect })}`);
       await mkdir(output, { recursive: true });
-      if (size) for (const grip of await page.locator('.image-module__window .image-module__resize').all()) await grip.click({ trial: true });
+      if (size) for (const grip of await page.locator('.image-module__resize').all()) await grip.click({ trial: true });
       await page.screenshot({ path: `${output}/recovery-${width}-${size || 'normal'}-${touch ? 'touch' : 'pointer'}.png` });
       const beforeRetry = requests; fail = false;
       if (touch) await retry.tap(); else await retry.click();
@@ -124,7 +124,7 @@ test('Small and thin Image recovery clears controls at both viewport edges for o
         await retry.waitFor(); await retry.click({ trial: true });
         const image = page.locator('.image-module__window'), status = await page.locator('.image-module__recovery-status').boundingBox();
         assert.ok(status.x >= 0 && status.y >= 0 && status.x + status.width <= 1440 && status.y + status.height <= 1000, JSON.stringify({ width, height, edge, status }));
-        for (const control of await page.locator('.image-module__window > :is(.image-module__inspect,.image-module__next,.image-module__close,.image-module__resize)').all()) {
+        for (const control of await page.locator(':is(.image-module__window,.image-module__editing-controls) > :is(.image-module__inspect,.image-module__next,.image-module__close,.image-module__resize)').all()) {
           await control.click({ trial: true });
           const box = await control.boundingBox();
           assert.ok(box.x + box.width <= status.x || status.x + status.width <= box.x || box.y + box.height <= status.y || status.y + status.height <= box.y, `Recovery overlaps an Image control: ${JSON.stringify({ box, status })}`);

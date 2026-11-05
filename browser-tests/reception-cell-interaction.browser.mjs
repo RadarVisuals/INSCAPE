@@ -3,14 +3,15 @@ import assert from 'node:assert/strict';
 import { mkdir } from 'node:fs/promises';
 import { chromium } from 'playwright-core';
 import { browserExecutable } from '../scripts/browserEnvironment.mjs';
+import { editorMenu, editorCommand, setEditorSidebarOpen } from './fixtures/editor-menu.mjs';
 
 const origin = process.env.INSCAPE_TEST_ROOT || 'http://127.0.0.1:5217';
 const output = process.env.INSCAPE_SCREENSHOT_DIR || '.browser-test-runtime/reception-cell-interaction';
 const reception = page => page.evaluate(() => window.nativeReceptionFixture.root.getDraft().reception);
 const shape = (page, id) => page.locator(`.shape-instance [data-workbench-view-id="${id}"]`);
-async function setup() {
+async function setup(viewport = { width: 1440, height: 1000 }) {
   const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
-  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, reducedMotion: 'reduce' }), errors = [];
+  const page = await browser.newPage({ viewport, reducedMotion: 'reduce' }), errors = [];
   page.setDefaultTimeout(10000); page.on('pageerror', error => errors.push(error.message));
   await page.route('**/*', route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
   await page.route('https://raw.githubusercontent.com/RadarVisuals/INSCAPE/**', route => route.fulfill({ path: 'public/' + new URL(route.request().url()).pathname.split('/public/')[1] }));
@@ -103,6 +104,78 @@ test('Bento settings reuses split and merge actions and saves selected-cell styl
     assert.equal((await reception(page)).cells[0].radius, 32);
     await mkdir(output, { recursive: true });
     await page.screenshot({ path: output + '/cell-settings-structure.png', fullPage: true });
+    assert.deepEqual(errors, []);
+  } finally { await browser.close(); }
+});
+
+for (const width of [1440, 900]) test(`Merge below aligns unequal rows with artwork and one Undo at ${width}px`, { timeout: 90000 }, async () => {
+  const { browser, page, errors } = await setup({ width, height: 1000 });
+  const surface = id => page.locator(`[data-editor-cell-surface="${id}"]`);
+  const closeTools = async () => {
+    const close = page.locator('.workbench-tool-dock').getByRole('button', { name: /^Close /u });
+    if (await close.isVisible()) await close.click();
+  };
+  try {
+    if (width === 900) {
+      await editorCommand(page, 'Edit', 'Settings'); await page.getByRole('button', { name: 'LIGHT', exact: true }).click();
+      await page.getByRole('button', { name: 'Close Settings', exact: true }).click();
+    }
+    await editorMenu(page, 'Bento').click();
+    const panel = page.getByRole('dialog', { name: 'Bento settings', exact: true });
+    await panel.getByRole('button', { name: 'New layout', exact: true }).click();
+    await panel.getByLabel('Number of cells', { exact: true }).fill('6');
+    await panel.getByRole('button', { name: /^(Create Bento|Replace layout)$/u }).click();
+    await panel.getByRole('button', { name: 'Close Bento', exact: true }).click();
+    await setEditorSidebarOpen(page, false); await closeTools();
+    const ids = await page.evaluate(() => {
+      const { root } = window.nativeReceptionFixture, draft = root.getDraft(), value = draft.reception;
+      const frames = [[24, 24, 1000, 260], [1048, 24, 368, 260], [24, 308, 1080, 340],
+        [1128, 308, 288, 340], [24, 672, 920, 204], [968, 672, 448, 204]];
+      value.cells.forEach((cell, i) => {
+        const [left, top, width, height] = frames[i];
+        value.workbench.shapes.find(item => item.id === cell.id).window = { left, top, width, height };
+      });
+      if (!root.commitCompletedOperation(draft, { expectedGeneration: root.getGeneration() })) throw Error('Could not seed staggered grid');
+      return value.cells.map(cell => cell.id);
+    });
+    await surface(ids[0]).click(); await page.getByRole('button', { name: '+ Image', exact: true }).click();
+    const picker = page.locator('.reception-library-window');
+    await picker.getByRole('button', { name: 'ABYSSAL STUDY / INSCAPE STUDIES', exact: true }).click();
+    await picker.getByRole('button', { name: 'Use selected image', exact: true }).click();
+    await picker.waitFor({ state: 'detached' }); await back(page).click(); await closeTools();
+    await surface(ids[2]).click(); await page.getByRole('button', { name: '+ Text', exact: true }).click();
+    await page.getByRole('textbox', { name: 'Article text', exact: true }).fill('CONTENTS FROM THE LOWER CELL');
+    await page.locator('main[data-reception-editor]').focus();
+    await page.waitForFunction(() => JSON.stringify(window.nativeReceptionFixture.root.getDraft().reception.texts).includes('CONTENTS FROM THE LOWER CELL'));
+    await back(page).click(); await closeTools();
+    const before = await reception(page);
+    if (width === 1440) { await surface(ids[0]).focus(); await page.keyboard.press('Shift+F10'); }
+    else await surface(ids[0]).click({ button: 'right' });
+    const merge = page.getByRole('menuitem', { name: 'Merge below', exact: true });
+    assert.ok(await merge.isEnabled());
+    await mkdir(output, { recursive: true });
+    await page.screenshot({ path: `${output}/unequal-merge-menu-${width}.png` });
+    await merge.click();
+    const after = await reception(page), frame = id => after.workbench.shapes.find(item => item.id === id).window;
+    assert.equal(after.cells.length, 5);
+    assert.deepEqual(frame(ids[0]), { left: 24, top: 24, width: 1000, height: 624 });
+    assert.deepEqual(frame(ids[3]), { left: 1048, top: 308, width: 368, height: 340 });
+    assert.deepEqual(after.cells[0].members, [...before.cells[0].members, ...before.cells[2].members]);
+    assert.deepEqual(after.imageModules, before.imageModules);
+    await page.screenshot({ path: `${output}/unequal-merge-editor-${width}.png` });
+    await editorCommand(page, 'Edit', 'Undo'); assert.deepEqual(await reception(page), before);
+    await editorCommand(page, 'Edit', 'Redo'); assert.deepEqual(await reception(page), after);
+    await editorCommand(page, 'Canvas', 'Preview');
+    const preview = page.getByRole('region', { name: 'Reception responsive preview', exact: true });
+    await preview.getByText('CONTENTS FROM THE LOWER CELL', { exact: true }).waitFor();
+    assert.equal(await preview.locator(`[data-layer-id="${after.imageModules[0].id}"]`).count(), 1);
+    await page.screenshot({ path: `${output}/unequal-merge-preview-${width}.png` });
+    await preview.getByRole('button', { name: 'Back to editing', exact: true }).click();
+    await page.reload(); await page.getByRole('toolbar', { name: 'Creation tools', exact: true }).waitFor();
+    // Reload enumerates native windows in record order; artworkLayers owns paint order.
+    const comparable = value => ({ ...value, workbench: { ...value.workbench,
+      shapes: [...value.workbench.shapes].sort((a, b) => a.id.localeCompare(b.id)) } });
+    assert.deepEqual(comparable(await reception(page)), comparable(after));
     assert.deepEqual(errors, []);
   } finally { await browser.close(); }
 });

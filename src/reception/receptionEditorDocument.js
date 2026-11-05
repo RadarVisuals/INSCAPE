@@ -1,4 +1,4 @@
-import { projectReceptionMember } from './editorCellGeometry.js';
+import { editorCellWindow, projectReceptionMember } from './editorCellGeometry.js';
 import { validShapes, validShapeOutline, projectShapes, restoreShapes, MAX_SHAPES } from '../shapes/shapes.js';
 import { validImageModules, projectImageModules, restoreImageModules, IMAGE_SIZE_LIMITS } from '../imageModule/imageModule.js';
 import { validTextModules, projectTextModules, restoreTextModules } from '../text/domain/article.js';
@@ -10,7 +10,7 @@ import { validReceptionArrangement, pruneReceptionArrangement } from './receptio
 import { MIN_CROP_PROJECTION_ZOOM } from '../lattice/rendering/latticeCrop.js';
 
 export const RECEPTION_CELL_LIMIT = 16;
-export const MIN_RECEPTION_CELL_SIZE = 80;
+export const MIN_RECEPTION_CELL_SIZE = Object.freeze({ width: 80, height: TEXT_WINDOW_LIMITS.minimumHeight });
 export const receptionModuleLimits = id => id.startsWith('image:') ? IMAGE_SIZE_LIMITS
   : id.startsWith('text:') ? TEXT_WINDOW_LIMITS : SHAPE_WINDOW_LIMITS;
 export function receptionModuleSizeReason(id, frame) {
@@ -26,7 +26,7 @@ export function receptionModuleSizeReason(id, frame) {
 // retain their smaller minimum; native Text/Image validators remain authoritative.
 export function receptionCellSizeLimits(value, id) {
   const frame = receptionModuleWindow(value, id);
-  const limits = { ...SHAPE_WINDOW_LIMITS, minimumWidth: MIN_RECEPTION_CELL_SIZE, minimumHeight: MIN_RECEPTION_CELL_SIZE };
+  const limits = { ...SHAPE_WINDOW_LIMITS, minimumWidth: MIN_RECEPTION_CELL_SIZE.width, minimumHeight: MIN_RECEPTION_CELL_SIZE.height };
   for (const member of value.cells.find(cell => cell.id === id)?.members || []) {
     const content = receptionModuleWindow(value, member), native = receptionModuleLimits(member);
     if (!content) continue;
@@ -60,12 +60,7 @@ const validWindow = v => exact(v, ['left', 'top', 'width', 'height']) && number(
 // Native Image dimensions belong to the image record; Text/Shape dimensions
 // belong to their existing Workbench presentation. There is no second cell rect.
 export function receptionModuleWindow(value, id) {
-  const image = value.imageModules?.find(item => item.id === id);
-  if (image) {
-    const placement = value.workbench.imageModules?.find(item => item.id === id);
-    return placement ? { ...placement.position, width: image.width, height: image.height } : null;
-  }
-  return value.workbench.shapes?.find(item => item.id === id)?.window || value.workbench.texts?.find(item => item.id === id)?.window || null;
+  return editorCellWindow(value.workbench, id, value) ?? null;
 }
 export function withReceptionModuleWindow(value, id, window) {
   if (!validWindow(window)) throw new Error('Choose a valid layer position and size.');
@@ -269,9 +264,7 @@ export function receptionResponsiveLayout(value, viewportWidth) {
         const overrideScale = window.width / (cell.mobile.referenceWidth || (cell.mobile.columns === 2 ? 390 : 189));
         windows[id] = override ? { left: window.left + override.left * overrideScale, top: window.top + override.top * overrideScale,
           width: override.width * overrideScale, height: override.height * overrideScale }
-          : { left: window.left + (rect.left - original.left) / original.width * window.width,
-            top: window.top + (rect.top - original.top) / original.height * window.height,
-            width: rect.width / original.width * window.width, height: rect.height / original.height * window.height };
+          : projectReceptionMember(original, window, rect);
       }
     }
     return { ...cell, radius: (cell.radius || 0) * (mobile ? 1 : scale), window };

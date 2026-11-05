@@ -11,11 +11,11 @@ const exact = (value, keys) => value && typeof value === 'object' && !Array.isAr
   && Object.keys(value).length === keys.length && keys.every(key => Object.hasOwn(value, key));
 const number = (value, min, max) => Number.isFinite(value) && value >= min && value <= max;
 const maximumWindowSize = 16384;
-export const TEXT_WINDOW_LIMITS = Object.freeze({ minimumWidth: 180, minimumHeight: 100, maximumWidth: maximumWindowSize, maximumHeight: maximumWindowSize });
+export const TEXT_WINDOW_LIMITS = Object.freeze({ minimumWidth: 180, minimumHeight: 24, maximumWidth: maximumWindowSize, maximumHeight: maximumWindowSize });
 export const SHAPE_WINDOW_LIMITS = Object.freeze({ minimumWidth: 8, minimumHeight: 8, maximumWidth: 7992, maximumHeight: 7992 });
 export const DISPLAY_WINDOW_LIMITS = Object.freeze({ minimumWidth: .01, minimumHeight: .01, maximumWidth: maximumWindowSize, maximumHeight: maximumWindowSize });
 const position = value => exact(value, ['left', 'top']) && number(value.left, -16384, 16384) && number(value.top, -16384, 16384);
-const windowFrame = (value, height, minimumWidth = TEXT_WINDOW_LIMITS.minimumWidth, minimumHeight = TEXT_WINDOW_LIMITS.minimumHeight) => exact(value, height ? ['left', 'top', 'width', 'height'] : ['left', 'top', 'width'])
+const windowFrame = (value, height, minimumWidth = 180, minimumHeight = 100) => exact(value, height ? ['left', 'top', 'width', 'height'] : ['left', 'top', 'width'])
   && number(value.left, -16384, 16384) && number(value.top, -16384, 16384) && number(value.width, minimumWidth, maximumWindowSize)
   && (!height || number(value.height, minimumHeight, maximumWindowSize));
 
@@ -59,12 +59,12 @@ export function isValidWorkbenchPresentation(value) {
     const ids = new Set(), frameIds = new Set();
     for (const item of value.texts) {
       if (!exact(item, ['id', 'open', 'window', ...(Object.hasOwn(item || {}, 'frames') ? ['frames'] : [])]) || !TEXT_ID.test(item.id) || ids.has(item.id)
-        || typeof item.open !== 'boolean' || !windowFrame(item.window, true)) return false;
+        || typeof item.open !== 'boolean' || !windowFrame(item.window, true, TEXT_WINDOW_LIMITS.minimumWidth, TEXT_WINDOW_LIMITS.minimumHeight)) return false;
       if (item.frames !== undefined) {
         if (!Array.isArray(item.frames) || !item.frames.length || item.frames.length > 7) return false;
         for (const frame of item.frames) {
           if (!exact(frame, ['id', 'window']) || !/^text-frame:[A-Za-z0-9_-]{1,80}$/u.test(frame.id)
-            || frameIds.has(frame.id) || !windowFrame(frame.window, true)) return false;
+            || frameIds.has(frame.id) || !windowFrame(frame.window, true, TEXT_WINDOW_LIMITS.minimumWidth, TEXT_WINDOW_LIMITS.minimumHeight)) return false;
           frameIds.add(frame.id);
         }
       }

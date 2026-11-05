@@ -66,6 +66,52 @@ overrides and parallel paths are not an acceptable substitute for fixing the
 existing owner. Follow the concrete replacement, style-ownership and completion
 checks in `AGENTS.md`; preserve useful behavior and current authored work.
 
+## Editor finish and existing density (2026-11-05)
+
+The founder accepted the graphite-panel, rounded-field visual direction in the
+second Editor study, with equal Dark and Light modes. They rejected the earlier
+broad UI redesign and subsequently rejected the second study's oversized controls.
+The existing Inscape editor has the preferred scale and proportions: retain its
+compact control density, thin menu bar, creation bar and resizable tool windows.
+The 290-pixel reference dock width is not a new forced width for saved user layouts.
+
+The [saved design reference](design-system/references/2026-11-05-editor/README.md)
+preserves the accepted finish and the compact comparison. These are design
+specimens, not implemented behavior or approval of every illustrated control.
+The palette and selection treatment are the next visual direction; the current
+production theme values above remain the implementation baseline until migrated.
+Authored artwork colours remain independent of the interface theme.
+
+The founder wants incremental implementation in the real Editor, beginning with
+the existing Bento panel and assessing it with their ordinary content. The design
+lab is not a required gate for this work. Reuse the existing shared tool hosts,
+control styling and theme owners, preserving current dimensions and behavior in
+the first visual slice. Separate new interaction proposals from that styling
+change; existing saving, Undo, docking and module responsibilities remain binding.
+
+## Editor foundation evaluation (2026-11-04)
+
+The founder wants existing open-source editor and UI foundations compared before
+extending generic interaction infrastructure. Assess reuse, targeted source reuse
+and continued local implementation against actual code quality, interaction fit,
+maintenance and net production bundle cost. An attractive demo or a longer feature
+list is not sufficient evidence for replacing the current implementation.
+
+Preserve the existing bundle ceilings. Package archive size and unpacked source
+size are not browser delivery cost; an adoption comparison must include dependencies,
+integration code and the existing code actually removed. Retain applicable licence
+notices when incorporating third-party code.
+
+The founder subsequently chose to continue and finish the current Inscape editor
+before pursuing alternative foundations. Prioritize concrete usability issues in
+the existing workflow, one bounded improvement at a time. Moveable, Selecto,
+standalone editable HTML and alternative editor foundations remain references;
+further comparison should address a specific implementation need rather than
+becoming a parallel replacement project. Existing compositions, the canvas overview,
+Library and Inscape's visual identity remain the working foundation.
+The [editor foundations research](audits/2026-11-04/editor-foundations/README.md)
+records the snapping findings and initial shortlist without making them product decisions.
+
 ## Desktop authoring and narrow viewports (2026-11-02)
 
 The founder clarified that Inscape's creative application is designed for desktop
@@ -131,6 +177,11 @@ reachable above those panels.
 
 Image's Fit, Fill, Crop, Rotate and Mirror controls belong in the existing
 Image panel, together with its settings. Crop Done/Cancel stay in that same panel.
+The 4 November image-usability refinement also exposes Fit, Fill and Crop beside
+the selected native Image. This compact strip reuses Image's actions; during a
+crop it shows zoom, Cancel and Done. Image resize handles and this strip live in
+the viewport so cell/canvas clipping cannot remove them. The global creation
+toolbar is unchanged; further reorganization is a separate visual decision.
 Shape-specific properties belong with Shape settings; experimental Display actions stay in its
 existing Properties window. These surfaces present module-owned actions and retain
 the existing save, temporary-edit, undo and access boundaries. Transform continues
@@ -275,10 +326,20 @@ name. The single selection action strip sits outside the selected artwork,
 bounded by the workspace, and uses the shared flat control recipe.
 
 Cell operations respect native Text, Image and Shape size limits as well as
-the 80-pixel empty-cell minimum. Shared edges stop at content-aware bounds;
+the empty-cell minimum. Shared edges stop at content-aware bounds;
 invalid splits or layout changes explain the constraint before saving.
 Text creation receives an explicit native frame and transparent appearance.
 Bento uses the shared Workbench gesture lifecycle for cancellation and cleanup.
+
+The founder's subsequent thin-strip clarification lowers native Text's minimum
+frame height from 100 to 24 work pixels, with its 180-pixel minimum width retained.
+Bento cells use separate minima of 80 pixels wide and 24 pixels high, so a fine
+name strip can contain Text at the lowest cell height. Creation, native resizing,
+shared edges, splits, row creation, layout sizing and saved Text validation use
+these same bounds. Other contents can impose a larger proportional minimum.
+Compact empty text uses a single-line writing target instead of the article's
+64-pixel empty-body target. Font size and actual text fitting remain authored
+choices; reducing a frame does not automatically shrink its typography.
 
 On the scaled desktop public projection, cell radius scales with geometry for
 both background and member clipping. Existing phone reflow retains its radius
@@ -289,9 +350,16 @@ authors to Preview to inspect narrower presentations.
 
 The founder approved directional **Merge above/below/left/right** and **Split
 horizontally/vertically** in the existing cell context menu. Merging creates one
-rectangular cell, retaining the selected cell's identity and appearance and the
-artwork from all merged cells at its existing position and size. Neighbours must
-fill a complete rectangular strip; partial or L-shaped merges are unavailable.
+rectangular cell, retaining the selected cell's identity and appearance. The
+founder's subsequent clarification makes directional merging available across
+unequal widths or heights: keep the selected cell's perpendicular span and align
+the neighbour sharing most of that edge through existing shared-edge resizing.
+A complete, already aligned strip still merges all its cells. Adjacent cells
+fill the released space or yield space, and their native contents follow the
+existing proportional resize rules. The final merge transfers artwork without
+another resize. Alignment and merging form one Undo operation. Outer boundaries,
+content size limits and unrelated rows remain protected; no L-shaped cell or
+second layout model is introduced.
 
 Splitting inserts one divider and creates two halves inside the original bounds,
 using the authored gutter. The founder chose to fit all existing contents into
@@ -324,7 +392,35 @@ selection. Dropping over its existing artwork adds another layer. Inside content
 editing, native image targets and free placement retain their existing behavior.
 Creation and cell membership save together, including Undo and failed-save recovery.
 
+New Bento images, including Library drops and added/replaced sides, start in
+Fit inside so narrow cells show the complete artwork centred without stretching.
+Existing authored crops are preserved. In a cell, the native Fit/Fill controls
+are labelled **Fit cell** and **Fill cell**: both reset the Image frame to the
+owning cell, and choose containment or a centred filling crop respectively.
+Position, size and crop save in one Undo operation. Subsequent splits and divider
+resizing retain that choice through the existing proportional member geometry.
+Fill intentionally crops when aspect ratios differ; it is an explicit choice.
+Ordinary canvas Image fitting keeps its existing frame and insertion defaults.
+
 ## Reception in the Editor (2026-10-31)
+
+Clarification accepted 2026-11-04: Layers presents each cell as a collapsible
+row with its contained Image, Text and Shape layers underneath and a content
+count. The outline derives from existing cell membership and native layer order;
+it creates no additional saved composition group. Cells begin collapsed, and
+selecting contained artwork or entering content editing reveals the owning cell.
+Selecting a child in Layers enters that cell's existing editing mode. The cell
+eye toggles its background and contents together for temporary editor visibility.
+Deleting the cell retains the existing background-only deletion behavior below;
+its surviving artwork returns to the outer list. Ordinary composition groups
+and their authored order remain independent of this cell outline.
+
+Layer-order actions on contained artwork operate among that cell's contents;
+dragging a child onto another cell is not a membership change. Ordering a cell
+row carries its native contents. The saved native order keeps each background
+behind its own contents, including after Send to back, so the cell fill cannot
+wash out or conceal the image. Layers, object menus and keyboard order actions
+use the same rule; Editor and public paint continue to read that saved order.
 
 Clarification accepted 2026-11-04: deleting a private cell background retains
 its native Image, Text and Shape content as private independent layers. Undo
@@ -1963,12 +2059,32 @@ and Escape, blur or cancelled capture restores the starting position. Write
 retains native text selection and the separate window grip.
 The optional title is edited directly in the document; Enter continues in the
 body. It remains the existing article title, not a duplicate rich-text heading.
-Write always shows an inline optional title field with the placeholder “Title”,
+Outside Reception, Write shows an inline optional title field with the placeholder “Title”,
 above the body, without a separate Add title action. An empty title remains empty
 in saved content and reserves no heading space in Read or Visitor. Linked-frame
 measurement accounts for the editing placeholder only while writing. Title alignment (left,
 centre, right) and colour are independent of paragraph formatting. The title
 inherits the document colour unless explicitly overridden.
+For Bento, + Text starts with the main text field only, suitable for a name,
+affiliation or short label. An optional title can be added in Text tools under
+Article settings → Layout → Title. Existing titles remain directly editable;
+their empty body prompt is hidden when the text editor loses focus. Leaving
+cell-content editing shows the reading projection, without writing prompts.
+This reuses the native article content and editor; it adds no text type or
+stored mode and does not convert existing titles into body text.
+The founder clarified that short Bento labels must be easy to position inside
+their text box. New Bento Text starts with compact spacing (no automatic article
+padding), a centred paragraph and vertical centring. Existing authored typography
+is retained. Text box layout exposes compact/article spacing and top/centre/bottom
+alignment; paragraph left/centre/right remains in Format text. Alignment uses the
+available space and returns to the top when content is taller than the frame.
+Bento text clips at its own frame and cell edge by default in both Editor and
+Preview/public presentation, without internal scrollbars. Overflow can explicitly
+be set to Scroll for longer reading text. The editor reports text exceeding its
+frame; Focus writing still exposes the complete article. Other Text hosts keep
+continuous scrolling by default. Optional article appearance `verticalAlign` and
+`overflow` use the existing validation, saving, undo and publication boundaries.
+Columns, linked frames and page reading retain their existing flow behavior.
 Write opens its tools, Read closes them, and the settings action can reopen them.
 Focus writing temporarily presents the same article editor in a full-viewport
 native modal with its title, confirmed local-save status and Return to composition.

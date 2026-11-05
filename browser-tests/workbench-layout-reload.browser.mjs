@@ -145,7 +145,7 @@ test('owner module placement survives real reload after individual, zoomed and g
     await drag(mixed, 32, 46);
     await page.keyboard.press('Escape'); await settle(page);
     const movedBeforeResize = await geometry();
-    await image(0).getByRole('separator', { name:'Resize Image right', exact:true }).focus();
+    await page.locator('[data-workbench-view-id="image:one"]').getByRole('separator', { name:'Resize Image right', exact:true }).focus();
     await page.keyboard.press('Alt+Shift+ArrowRight'); await settle(page);
     const resized = await geometry();
     assert.equal(resized['image:one'].width, movedBeforeResize['image:one'].width + 10);

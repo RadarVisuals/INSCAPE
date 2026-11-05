@@ -7,12 +7,13 @@ import { imageWindowGeometry, imageWindowPosition, imagePaintGeometry, resizeIma
 import { WORKBENCH_RESIZE_EDGES, workbenchResizeControl } from '../public/ownerSystemWorkflow/ownerSystemWorkflowWindowGeometry.js';
 import { useWorkbenchCamera } from '../public/ownerSystemWorkflow/WorkbenchCamera.jsx';
 import { clampWorkbenchPosition } from '../public/ownerSystemWorkflow/workbenchSpace.js';
+import ImageEditingControls from './ImageEditingControls.jsx';
 
 // Image owns a borderless surface. Workbench owns the camera, placement bounds
 // and snapping. No instrument-window sizing, chrome or content gutter is used.
 export default function ImageWindow({ id, title, position, size, viewport = { width: innerWidth, height: innerHeight }, editable, active, suspended, movable = true, placementModule,
-  onPosition, onResize, onClose, resizeTarget, children }) {
-  const { editingBounds: areaBounds } = useWorkbenchArea();
+  onPosition, onResize, onClose, resizeTarget, quickTools, children }) {
+  const { editingBounds: areaBounds, canvasHost } = useWorkbenchArea();
   const node = useRef(null), gesture = useRef(null), suppressClick = useRef(false);
   const [preview, setPreview] = useState(null);
   const view = useWorkbenchView();
@@ -138,6 +139,17 @@ export default function ImageWindow({ id, title, position, size, viewport = { wi
   const recoveryTop = controlsAbove ? controlsTop - recoveryHeight - 8
     : screen.top + belowRecovery + recoveryHeight <= viewport.height - 8 ? belowRecovery : -recoveryHeight - 16;
   const recoveryLeft = Math.max(8, Math.min(viewport.width - recoveryWidth - 8, paint.left / density)) - paint.left / density;
+  const controlsHost = active && !suspended && !camera.presented && !view.editorHiddenIds?.includes(id)
+    && view.interactionTool === 'select' ? canvasHost?.parentElement : null;
+  const handles = editable && WORKBENCH_RESIZE_EDGES.filter(([edge]) => gesture.current?.edge === edge || (edge.length === 2
+    ? !edge.includes('w') || screen.width >= 56
+    : (edge === 'n' || edge === 's' ? screen.width : screen.height) >= 56)).map(([edge, label]) =>
+    <div key={edge} className={`image-module__resize is-${edge}`} role="separator" data-image-resize={edge}
+      style={workbenchResizeControl(edge, { left: paint.left / density, top: paint.top / density, width: paint.width / density, height: paint.height / density }, viewport, density)}
+      aria-label={label ? `Resize Image ${label}` : 'Resize Image window'}
+      aria-orientation={edge === 'e' || edge === 'w' ? 'vertical' : 'horizontal'}
+      aria-valuetext={`${currentSize.width} by ${currentSize.height} pixels`} aria-valuenow={edge === 'e' || edge === 'w' ? currentSize.width : currentSize.height} tabIndex={0}
+      {...pointer('resize', edge)} onKeyDown={event => key(event, 'resize', edge)} />);
   return <section ref={node} className="image-module__window" aria-label={`Image — ${title}`} data-workbench-view-id={id}
     data-workbench-selectable={movable && !suspended || undefined} tabIndex={0} aria-keyshortcuts="Shift+Enter I"
     aria-description="Click artwork to select it. Press F to focus it and F again to return. Double-click or press Enter on the artwork also zooms to its module. Press I to inspect. Drag to move. Arrow keys move the window; Shift+Enter toggles Workbench selection."
@@ -152,16 +164,11 @@ export default function ImageWindow({ id, title, position, size, viewport = { wi
       '--image-controls-bridge': `${controlsTop + (controlsAbove ? 28 : -28)}px`, left: 0, top: 0, width: paint.width, height: paint.height,
       transformOrigin: '0 0', transform: `matrix(${1 / density},0,0,${1 / density},${paint.left / density},${paint.top / density})` }}>
     {content}
-    {editable && <div className="image-module__bounds" aria-hidden="true" />}
+    {!controlsHost && editable && <div className="image-module__bounds" aria-hidden="true" />}
     {!view.store && <button type="button" data-workbench-recovery-control className="image-module__close" aria-label={`Close ${title}`} title="Close Image" onClick={onClose}><X size={14} /></button>}
-    {editable && WORKBENCH_RESIZE_EDGES.filter(([edge]) => gesture.current?.edge === edge || (edge.length === 2
-      ? !edge.includes('w') || screen.width >= 56
-      : (edge === 'n' || edge === 's' ? screen.width : screen.height) >= 56)).map(([edge, label]) =>
-      <div key={edge} className={`image-module__resize is-${edge}`} role="separator"
-        style={workbenchResizeControl(edge, { left: paint.left / density, top: paint.top / density, width: paint.width / density, height: paint.height / density }, viewport, density)}
-        aria-label={label ? `Resize Image ${label}` : 'Resize Image window'}
-        aria-orientation={edge === 'e' || edge === 'w' ? 'vertical' : 'horizontal'}
-        aria-valuetext={`${currentSize.width} by ${currentSize.height} pixels`} aria-valuenow={edge === 'e' || edge === 'w' ? currentSize.width : currentSize.height} tabIndex={0}
-        {...pointer('resize', edge)} onKeyDown={event => key(event, 'resize', edge)} />)}
+    {controlsHost ? <ImageEditingControls host={controlsHost} id={id} viewport={viewport} navigationTop={view.navigationTop}
+      frame={{ left: (currentPosition.left * camera.scale + camera.x) / view.scale, top: (currentPosition.top * camera.scale + camera.y) / view.scale,
+        width: currentSize.width * camera.scale / view.scale, height: currentSize.height * camera.scale / view.scale }}
+      editable={editable} tools={quickTools} handles={handles} /> : handles}
   </section>;
 }

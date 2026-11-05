@@ -36,13 +36,13 @@ export function useLinkedFrameLayout(article, flow, index = 0) {
 }
 // The host supplies its available height; the article still owns typography,
 // padding and content. Measurements are temporary and never enter the draft.
-export function useTextFrame(viewport, article, mode, { force = false, onMeasure } = {}) {
+export function useTextFrame(viewport, article, mode, { force = false, clip = false, onMeasure } = {}) {
   const measured = useRef(onMeasure); measured.current = onMeasure;
   const framed = force || (article?.appearance?.columns || 1) > 1;
   const scale = article?.appearance?.scale || 1;
   const [overflow, setOverflow] = useState(false);
   useLayoutEffect(() => {
-    if (!framed || !viewport.current) { setOverflow(false); return; }
+    if ((!framed && !clip) || !viewport.current) { setOverflow(false); return; }
     const root = viewport.current;
     let live = true, request = 0, page = null, body = null, title = null;
     const selector = mode === 'write' ? '.text-editor-page' : 'article.text-document';
@@ -63,6 +63,10 @@ export function useTextFrame(viewport, article, mode, { force = false, onMeasure
         for (const node of [page, body, title]) if (node) resize.observe(node);
       }
       if (!page || !body || !root.clientHeight || !page.getClientRects().length) { setOverflow(false); return; }
+      if (!framed) {
+        setOverflow(root.scrollWidth > root.clientWidth + 1 || root.scrollHeight > root.clientHeight + 1);
+        return;
+      }
       const style = getComputedStyle(page);
       const padding = style.boxSizing === 'border-box' ? 0 : parseFloat(style.paddingTop) + parseFloat(style.paddingBottom);
       const height = Math.max(0, root.clientHeight / scale - padding);
@@ -85,8 +89,8 @@ export function useTextFrame(viewport, article, mode, { force = false, onMeasure
       root.removeEventListener('load', schedule, true); document.fonts.removeEventListener('loadingdone', schedule);
       page?.style.removeProperty('--text-frame-height');
     };
-  }, [viewport, framed, scale, mode]);
-  return { framed, overflow: framed && overflow };
+  }, [viewport, framed, clip, scale, mode]);
+  return { framed, overflow: (framed || clip) && overflow };
 }
 
 export function TextFrameOverflow() {

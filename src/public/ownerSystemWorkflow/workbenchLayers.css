@@ -8,7 +8,8 @@
 .workbench-layers-list { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
 .workbench-layer-row { display: flex; align-items: center; min-height: 38px; border-bottom: 1px solid var(--tactile-edge); position: relative; }
 .workbench-layer-row[data-selected] { box-shadow: inset 2px 0 var(--tactile-ink); background: var(--tactile-hover); }
-.workbench-layer-row[data-part] { padding-left: 16px; }
+.workbench-layer-children { padding-left: 16px; }
+.workbench-layer-empty { color: var(--tactile-ink); opacity: .65; padding: 6px 12px; }
 .workbench-layer-row[data-drop='after'] { box-shadow: inset 0 2px var(--tactile-ink); }
 .workbench-layer-row[data-drop='before'] { box-shadow: inset 0 -2px var(--tactile-ink); }
 .workbench-layer-row > button:not(.workbench-layer-name) { width: 28px; flex: none; }

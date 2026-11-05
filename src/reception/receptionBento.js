@@ -24,7 +24,7 @@ const applyTiles = (value, regions, gap) => regions.reduce((next, r) => {
 }, value);
 export function receptionBentoDividers(value) {
   const { gap } = receptionBentoSettings(value);
-  return partitionDividers(tiles(value, gap), { x: MIN_RECEPTION_CELL_SIZE + gap, y: MIN_RECEPTION_CELL_SIZE + gap }).map(d => {
+  return partitionDividers(tiles(value, gap), { x: MIN_RECEPTION_CELL_SIZE.width + gap, y: MIN_RECEPTION_CELL_SIZE.height + gap }).map(d => {
     const axis = d.axis === 'x' ? 'left' : 'top', size = d.axis === 'x' ? 'width' : 'height';
     const minKey = d.axis === 'x' ? 'minimumWidth' : 'minimumHeight', maxKey = d.axis === 'x' ? 'maximumWidth' : 'maximumHeight';
     let min = d.min, max = d.max;
@@ -75,7 +75,7 @@ export function addReceptionBentoCell(value, id, newId = `shape:${crypto.randomU
     top = Math.min(...row.map(r => r.y)); bottom = Math.max(...row.map(r => r.y + r.height));
   } while (previous !== `${top}:${bottom}`);
   const left = Math.min(...row.map(r => r.x)), right = Math.max(...row.map(r => r.x + r.width));
-  const width = right - left, minimum = MIN_RECEPTION_CELL_SIZE + gap;
+  const width = right - left, minimum = MIN_RECEPTION_CELL_SIZE.width + gap;
   const edges = [...new Set(row.flatMap(r => [r.x, r.x + r.width]))].sort((a, b) => a - b);
   const offsets = new Map([[left, 0]]);
   for (let i = 1; i < edges.length; i++) offsets.set(edges[i], Math.max(offsets.get(edges[i - 1]),
@@ -87,7 +87,7 @@ export function addReceptionBentoCell(value, id, newId = `shape:${crypto.randomU
   const map = x => left + offsets.get(x) + Math.round((x - left) * extra / width);
   const resized = row.map(r => ({ ...r, x: map(r.x), width: map(r.x + r.width) - map(r.x) }));
   const added = { id: newId, x: right - addedWidth, y: top, width: addedWidth, height: bottom - top };
-  if ([...resized, added].some(r => r.width - gap < MIN_RECEPTION_CELL_SIZE || r.height - gap < MIN_RECEPTION_CELL_SIZE))
+  if ([...resized, added].some(r => r.width - gap < MIN_RECEPTION_CELL_SIZE.width || r.height - gap < MIN_RECEPTION_CELL_SIZE.height))
     throw new Error('This row is too full. Add a row below, use less gutter or make the bento wider.');
   const after = Math.max(...row.map(r => value.cells.findIndex(item => item.id === r.id)));
   const next = { ...value, shapes: [...value.shapes, { id: newId, name: `Cell ${value.cells.length + 1}`, color: '#808080', opacity: 0.25, visibility: 'PUBLIC' }],
@@ -102,15 +102,15 @@ export function appendReceptionBentoRow(value, newId = `shape:${crypto.randomUUI
   const frames = value.cells.map(cell => receptionModuleWindow(value, cell.id));
   const bottom = Math.max(...frames.map(r => r.top + r.height));
   const lastRow = frames.filter(r => r.top + r.height === bottom);
-  const height = Math.round(Math.max(MIN_RECEPTION_CELL_SIZE, Math.min(...lastRow.map(r => r.height))));
+  const height = Math.round(Math.max(MIN_RECEPTION_CELL_SIZE.height, Math.min(...lastRow.map(r => r.height))));
   const top = Math.max(area.top + area.height - padding, bottom) + gap;
   const targetArea = { ...area, height: Math.ceil(top + height + padding - area.top) };
   if (!validWorkbenchArea(targetArea)) throw new Error('There is no room for another row within the canvas editing limits.');
   const width = area.width - 2 * padding;
-  if (width < MIN_RECEPTION_CELL_SIZE) throw new Error('Use a wider bento or less outer margin before adding a row.');
+  if (width < MIN_RECEPTION_CELL_SIZE.width) throw new Error('Use a wider bento or less outer margin before adding a row.');
   const next = { ...value, bento: { gap, padding }, workbench: { ...value.workbench, area: targetArea },
     shapes: [...value.shapes, { id: newId, name: `Cell ${value.cells.length + 1}`, color: '#808080', opacity: 0.25, visibility: 'PUBLIC' }],
-    cells: [...value.cells, { id: newId, members: [], radius: radius ?? 0, mobile: { columns: 2, height: Math.min(1200, height) } }] };
+    cells: [...value.cells, { id: newId, members: [], radius: radius ?? 0, mobile: { columns: 2, height: Math.max(80, Math.min(1200, height)) } }] };
   return withReceptionModuleWindow(next, newId, { left: area.left + padding, top, width, height });
 }
 export function setReceptionBentoSettings(value, settings) {
@@ -133,8 +133,8 @@ export function setReceptionBentoSettings(value, settings) {
     const x = map(r.x, 'left', 'width'), y = map(r.y, 'top', 'height');
     return { ...r, x, y, width: map(r.x + r.width, 'left', 'width') - x, height: map(r.y + r.height, 'top', 'height') - y };
   });
-  if (regions.some(r => r.width - next.gap < MIN_RECEPTION_CELL_SIZE || r.height - next.gap < MIN_RECEPTION_CELL_SIZE))
-    throw new Error('Use a larger bento or less spacing. Each cell needs at least 80 × 80 pixels.');
+  if (regions.some(r => r.width - next.gap < MIN_RECEPTION_CELL_SIZE.width || r.height - next.gap < MIN_RECEPTION_CELL_SIZE.height))
+    throw new Error(`Use a larger bento or less spacing. Each cell needs at least ${MIN_RECEPTION_CELL_SIZE.width} × ${MIN_RECEPTION_CELL_SIZE.height} pixels.`);
   return applyTiles({ ...value, ...appearance, bento: { gap: next.gap, padding: next.padding }, workbench: { ...value.workbench, area: targetArea },
     cells: changeRadius ? value.cells.map(cell => ({ ...cell, radius: next.radius })) : value.cells }, regions, next.gap);
 }

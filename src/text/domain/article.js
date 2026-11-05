@@ -136,7 +136,7 @@ export function assertArticle(article) {
     || article.version !== 1 || !string(article.title, 160) || !ARTICLE_FONTS.some(f => f.id === article.font)) throw new Error('Unsupported article format. The source has not been changed.');
   if (article.appearance !== undefined) {
     const a = article.appearance;
-    if (!exact(a, ['background', 'opacity', 'frame', 'scale', 'fontSize', 'color'], ['transform', 'compact', 'padding', 'edges', 'titleFontSize', 'titleLetterSpacing', 'titleGap', 'titleAlignment', 'titleColor', 'columns', 'columnGap', 'lineHeight', 'textStyles'])
+    if (!exact(a, ['background', 'opacity', 'frame', 'scale', 'fontSize', 'color'], ['transform', 'compact', 'padding', 'edges', 'titleFontSize', 'titleLetterSpacing', 'titleGap', 'titleAlignment', 'titleColor', 'columns', 'columnGap', 'lineHeight', 'textStyles', 'verticalAlign', 'overflow'])
       || !(a.background === null || /^#[\da-f]{6}$/iu.test(a.background)) || !/^#[\da-f]{6}$/iu.test(a.color)
       || !Number.isFinite(a.opacity) || a.opacity < 0 || a.opacity > 1 || typeof a.frame !== 'boolean'
       || !Number.isFinite(a.scale) || a.scale < .01 || a.scale > 100
@@ -162,6 +162,8 @@ export function assertArticle(article) {
     if (a.columnGap !== undefined && (!Number.isFinite(a.columnGap) || a.columnGap < 0 || a.columnGap > 128)) throw new Error('Unsupported Text column spacing.');
     if (a.edges !== undefined && !validModuleEdges(a.edges)) throw new Error('Unsupported Text edges.');
     if (a.compact !== undefined && typeof a.compact !== 'boolean') throw new Error('Unsupported Text spacing.');
+    if (a.verticalAlign !== undefined && !['top', 'center', 'bottom'].includes(a.verticalAlign)) throw new Error('Unsupported Text vertical alignment.');
+    if (a.overflow !== undefined && !['clip', 'scroll'].includes(a.overflow)) throw new Error('Unsupported Text overflow.');
     if (a.padding !== undefined && (!exact(a.padding, ['top', 'right', 'bottom', 'left'])
       || Object.values(a.padding).some(value => !Number.isFinite(value) || value < 0 || value > 512))) throw new Error('Unsupported Text inner spacing.');
     if (a.transform !== undefined && (!exact(a.transform, ['quarterTurns', 'mirrorX', 'mirrorY']) || ![0, 1, 2, 3].includes(a.transform.quarterTurns)

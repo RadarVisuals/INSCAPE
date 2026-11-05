@@ -16,6 +16,8 @@ const OwnerSystemWorkflowDetachedWindow = forwardRef(function OwnerSystemWorkflo
   chrome,
   className = '',
   controls,
+  headerRef,
+  renderHeader,
   headerPointerProps,
   contentPointerProps,
   resizeHandles,
@@ -26,12 +28,13 @@ const OwnerSystemWorkflowDetachedWindow = forwardRef(function OwnerSystemWorkflo
 }, ref) {
   const rootClassName = `system-workflow__detached-window${className ? ` ${className}` : ''}`;
   const contentClassName = `system-workflow__detached-window-surface${surfaceClassName ? ` ${surfaceClassName}` : ''}`;
+  const header = <header ref={headerRef} style={compactContent ? { display: 'none' } : undefined} className="system-workflow__detached-window-titlebar" {...headerPointerProps}>
+    {titleContent ?? <strong title={title}>{title}</strong>}
+    <span className="system-workflow__detached-window-controls">{controls}</span>
+  </header>;
   return <Element aria-label={ariaLabel} className={rootClassName} data-workflow-material={['tactile', 'flat'].includes(chrome) ? 'tactile' : undefined} data-workflow-finish={chrome === 'flat' ? 'flat' : undefined} data-window-active={active || undefined} data-workbench-pan={workbenchPan || undefined} data-workbench-view-id={viewId} data-window-chrome={chrome}  data-detached-window data-floating ref={ref} style={style}>
     {background}
-    <header style={compactContent ? { display: 'none' } : undefined} className="system-workflow__detached-window-titlebar" {...headerPointerProps}>
-      {titleContent ?? <strong title={title}>{title}</strong>}
-      <span className="system-workflow__detached-window-controls">{controls}</span>
-    </header>
+    {renderHeader ? renderHeader(header) : header}
     <div style={compactContent ? { display: 'none' } : undefined} className={contentClassName} {...contentPointerProps}>{children}</div>
     {compactContent}
     {resizeHandles}

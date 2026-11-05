@@ -48,12 +48,13 @@ export function unlinkTextModuleResult(store, profile, expected) {
       : textSaveFailure(store.getLastCommitFailure?.() || 'write_failed');
   } catch (error) { return { saved: false, reason: 'invalid', message: error.message }; }
 }
-export function addTextModule(store, profile, placed = null, { visibility = 'PRIVATE', appearance } = {}) {
+export function addTextModule(store, profile, placed = null, { visibility = 'PRIVATE', appearance, alignment } = {}) {
   if (store.getProfileAddress() !== profile) throw new Error('This profile is no longer active.');
   const draft = store.getDraft(), generation = store.getGeneration();
   if ((draft.texts?.length || 0) >= MAX_TEXT_MODULES) throw new Error(`At most ${MAX_TEXT_MODULES} Text modules are supported.`);
   const item = { id: `text:${crypto.randomUUID()}`, article: createArticle(), visibility };
   if (appearance) item.article.appearance = { ...item.article.appearance, ...appearance };
+  if (alignment) item.article.content.content[0].attrs = { textAlign: alignment };
   const next = { ...draft, texts: [...(draft.texts || []), item] };
   if (placed) {
     const presentation = createTextPresentation(item.id, draft.texts?.length || 0);

@@ -9,7 +9,8 @@ import { addImageModule } from '../imageModule/imageModuleSession.js';
 import { createReceptionExample } from '../../design-system/lab/receptionExample.js';
 import { addShape, editShape } from '../shapes/shapeSession.js';
 import { restoreReceptionEditorDocument } from './receptionEditorDocument.js';
-import { receptionCellMerge, receptionCellSplit } from './receptionCellStructure.js';
+import { receptionCellMerge, receptionCellSplit, mergeReceptionCells } from './receptionCellStructure.js';
+import { projectReceptionMember } from './editorCellGeometry.js';
 import { addTextModule } from '../text/textSession.js';
 import { editArtworkLayers } from '../systemWorkflow/artworkLayerSession.js';
 import { removeWorkbenchModule } from '../systemWorkflow/removeWorkbenchModule.js';
@@ -28,7 +29,7 @@ function closed(value) {
   const rectangles = value.cells.map(cell => receptionModuleWindow(value, cell.id));
   assert.equal(rectangles.reduce((sum, r) => sum + (r.width + gap) * (r.height + gap), 0), (width - padding * 2 + gap) * (height - padding * 2 + gap));
   for (const [i, a] of rectangles.entries()) {
-    assert.ok(a.width >= 80 && a.height >= 80);
+    assert.ok(a.width >= 80 && a.height >= 24);
     assert.ok(a.left >= area.left + padding && a.top >= area.top + padding);
     assert.ok(a.left + a.width <= area.left + width - padding && a.top + a.height <= area.top + height - padding);
     for (const b of rectangles.slice(i + 1)) assert.ok(a.left + a.width + gap <= b.left || b.left + b.width + gap <= a.left
@@ -122,10 +123,148 @@ test('directional merges create spanning cells and split restores rectangular pa
   }
   const { scope, edit, first } = fourCells();
   edit('merge', first, 'below');
-  assert.equal(receptionCellMerge(scope.getReception(), 'shape:right', 'left').reason.includes('rectangle'), true);
+  assert.match(receptionCellMerge(scope.getReception(), 'shape:right', 'left').reason, /outer boundary/u);
   edit('merge', first, 'right'); closed(scope.getReception());
   assert.equal(scope.getCells().length, 1, 'a tall cell can absorb both stacked neighbours');
   scope.release();
+});
+
+function staggeredCells(gap = 24, transpose = false) {
+  const state = fixture(6), draft = state.root.getDraft(), value = draft.reception;
+  const frames = [
+    { left: 24, top: 24, width: 1000, height: 260 },
+    { left: 1024 + gap, top: 24, width: 392 - gap, height: 260 },
+    { left: 24, top: 284 + gap, width: 1080, height: 340 },
+    { left: 1104 + gap, top: 284 + gap, width: 312 - gap, height: 340 },
+    { left: 24, top: 624 + 2 * gap, width: 920, height: 252 - 2 * gap },
+    { left: 944 + gap, top: 624 + 2 * gap, width: 472 - gap, height: 252 - 2 * gap },
+  ];
+  value.bento = { gap, padding: 24 };
+  if (transpose) value.workbench.area = { left: 0, top: 0, width: 900, height: 1440 };
+  value.cells.forEach((cell, i) => {
+    const r = frames[i];
+    value.workbench.shapes.find(item => item.id === cell.id).window = transpose
+      ? { left: r.top, top: r.left, width: r.height, height: r.width } : r;
+  });
+  assert.ok(state.root.commitCompletedOperation(draft, { expectedGeneration: state.root.getGeneration() }));
+  closed(state.scope.getReception());
+  return { ...state, ids: value.cells.map(cell => cell.id) };
+}
+
+test('directional merge aligns staggered neighbouring cells and leaves other rows exact', () => {
+  for (const gap of [0, 24]) for (const direction of ['above', 'below', 'left', 'right']) {
+    const transpose = ['left', 'right'].includes(direction), reverse = ['above', 'left'].includes(direction);
+    const { scope, edit, ids } = staggeredCells(gap, transpose), before = structuredClone(scope.getReception());
+    const selected = ids[reverse ? 2 : 0], removed = ids[reverse ? 0 : 2], cross = transpose ? 'top' : 'left', size = transpose ? 'height' : 'width';
+    assert.equal(receptionCellMerge(before, selected, direction).reason, undefined);
+    edit('merge', selected, direction);
+    const after = structuredClone(scope.getReception()); closed(after);
+    assert.equal(after.cells.length, 5); assert.equal(after.cells.some(cell => cell.id === removed), false);
+    assert.equal(receptionModuleWindow(after, selected)[cross], receptionModuleWindow(before, selected)[cross]);
+    assert.equal(receptionModuleWindow(after, selected)[size], receptionModuleWindow(before, selected)[size]);
+    for (const id of [ids[reverse ? 3 : 1], ...ids.slice(4)])
+      assert.deepEqual(receptionModuleWindow(after, id), receptionModuleWindow(before, id));
+    assert.ok(scope.undo()); assert.deepEqual(scope.getReception(), before);
+    assert.ok(scope.redo()); assert.deepEqual(scope.getReception(), after); scope.release();
+  }
+});
+
+test('unequal-width merge fits native contents, preserves privacy and saves alignment with the merge atomically', () => {
+  const { root, scope, edit, fail, storage, ids } = staggeredCells(), [first, , below, beside] = ids;
+  for (const id of [first, below, beside]) {
+    const frame = receptionModuleWindow(scope.getReception(), id);
+    const target = { ...scope, commitCompletedOperation: (candidate, opts) => scope.commitInCell(id, candidate, opts) };
+    addImageModule(target, profile, { side: createReceptionExample().imageModules[0].sides[0],
+      position: { left: frame.left + 10, top: frame.top + 10 }, size: { width: 200, height: 160 } });
+    addTextModule(target, profile, { window: { left: frame.left + 20, top: frame.top + 20, width: 240, height: 120 } }, { visibility: 'PUBLIC' });
+    addShape(target, profile, { position: { left: frame.left + 30, top: frame.top + 30 }, size: { width: 100, height: 100 } });
+  }
+  const draft = root.getDraft();
+  draft.reception.shapes.find(item => item.id === beside).visibility = 'PRIVATE';
+  draft.reception.cells.find(cell => cell.id === below).lockedMembers = [...draft.reception.cells.find(cell => cell.id === below).members];
+  assert.ok(root.commitCompletedOperation(draft, { expectedGeneration: root.getGeneration() }));
+  const before = structuredClone(scope.getReception()), canvases = structuredClone(root.getDraft().workbenches);
+  fail(true); assert.throws(() => edit('merge', first, 'below'), /could not be saved/u); fail(false);
+  assert.deepEqual(scope.getReception(), before, 'alignment is not saved separately when the merge cannot be saved');
+  edit('merge', first, 'below');
+  const after = structuredClone(scope.getReception()); closed(after);
+  const merged = after.cells.find(cell => cell.id === first), lower = before.cells.find(cell => cell.id === below);
+  assert.deepEqual(merged.members, [...before.cells[0].members, ...lower.members]);
+  assert.deepEqual(merged.lockedMembers, lower.members);
+  for (const id of [first, below, beside]) {
+    const oldFrame = receptionModuleWindow(before, id);
+    const alignedFrame = id === below ? { ...oldFrame, width: 1000 }
+      : id === beside ? receptionModuleWindow(after, id) : oldFrame;
+    for (const member of before.cells.find(cell => cell.id === id).members) {
+      const expected = projectReceptionMember(oldFrame, alignedFrame, receptionModuleWindow(before, member));
+      if (member.startsWith('image:')) { expected.width = Math.round(expected.width); expected.height = Math.round(expected.height); }
+      assert.deepEqual(receptionModuleWindow(after, member), expected);
+    }
+  }
+  assert.deepEqual(after.texts, before.texts);
+  assert.deepEqual(after.artworkLayers, before.artworkLayers.filter(id => id !== below));
+  const published = projectReceptionEditorDocument(after);
+  assert.ok(validReceptionEditorDocument(published, true));
+  for (const id of [beside, ...before.cells.find(cell => cell.id === beside).members])
+    assert.equal([...published.shapes, ...published.imageModules, ...published.texts].some(item => item.id === id), false);
+  assert.deepEqual(root.getDraft().workbenches, canvases);
+  assert.ok(scope.undo()); assert.deepEqual(scope.getReception(), before);
+  assert.ok(scope.redo()); assert.deepEqual(scope.getReception(), after); scope.release();
+  const reopened = createReceptionEditorScope(createSystemWorkflowDraftStore({ profileAddress: profile, storage }));
+  assert.deepEqual(reopened.getReception(), after); reopened.release();
+});
+
+test('alignment rejects content size limits and incompatible visibility before changing the layout', () => {
+  const { root, scope, ids, edit } = staggeredCells(), below = ids[2];
+  const target = { ...scope, commitCompletedOperation: (candidate, opts) => scope.commitInCell(below, candidate, opts) };
+  addTextModule(target, profile, { window: { ...receptionModuleWindow(scope.getReception(), below), width: 180, height: 100 } });
+  const before = structuredClone(scope.getReception());
+  assert.match(receptionCellMerge(before, ids[0], 'below').reason, /size limits/u);
+  assert.throws(() => edit('merge', ids[0], 'below'), /size limits/u); assert.deepEqual(scope.getReception(), before);
+  const draft = root.getDraft(); draft.reception.shapes.find(item => item.id === below).visibility = 'PRIVATE';
+  assert.ok(root.commitCompletedOperation(draft, { expectedGeneration: root.getGeneration() }));
+  assert.match(receptionCellMerge(scope.getReception(), ids[0], 'below').reason, /publication visibility/u);
+  scope.release();
+});
+
+test('a staggered middle cell aligns both edges, making room before contraction', () => {
+  const { root, scope, edit } = fixture(6), draft = root.getDraft(), ids = draft.reception.cells.map(cell => cell.id);
+  const widths = [[400, 500, 444], [300, 500, 544]];
+  for (let row = 0; row < 2; row++) {
+    let left = 24;
+    for (let column = 0; column < 3; column++) {
+      const width = widths[row][column];
+      draft.reception.workbench.shapes.find(item => item.id === ids[row * 3 + column]).window = { left, top: 24 + row * 438, width, height: 414 };
+      left += width + 24;
+    }
+  }
+  assert.ok(root.commitCompletedOperation(draft, { expectedGeneration: root.getGeneration() }));
+  const lower = ids[4], target = { ...scope, commitCompletedOperation: (candidate, opts) => scope.commitInCell(lower, candidate, opts) };
+  const text = addTextModule(target, profile, { window: { ...receptionModuleWindow(scope.getReception(), lower), width: 180, height: 100 } });
+  const before = structuredClone(scope.getReception());
+  edit('merge', ids[1], 'below');
+  const after = scope.getReception(); closed(after);
+  assert.deepEqual(receptionModuleWindow(after, ids[1]), { left: 448, top: 24, width: 500, height: 852 });
+  assert.equal(receptionModuleWindow(after, text).left, receptionModuleWindow(before, text).left + 100);
+  assert.equal(receptionModuleWindow(after, text).width, 180);
+  assert.equal(receptionModuleWindow(after, ids[3]).width, 400);
+  assert.equal(receptionModuleWindow(after, ids[5]).width, 444);
+  assert.ok(scope.undo()); assert.deepEqual(scope.getReception(), before); scope.release();
+});
+
+test('available merges keep generated partitions closed without mutating the proposal input', () => {
+  let alignedCount = 0;
+  for (const count of [3, 6, 10, 16]) for (const seed of [1, 12, 42, 77]) {
+    const { scope } = fixture(count, seed), before = structuredClone(scope.getReception());
+    for (const cell of before.cells) for (const direction of ['above', 'below', 'left', 'right']) {
+      const plan = receptionCellMerge(before, cell.id, direction);
+      if (plan.reason) continue;
+      if (plan.aligned !== before) alignedCount++;
+      closed(mergeReceptionCells(before, cell.id, direction));
+    }
+    assert.deepEqual(scope.getReception(), before); scope.release();
+  }
+  assert.ok(alignedCount > 0);
 });
 
 test('merge preserves native content, locked members, ordering and publication; split carries content into the first half', () => {
@@ -188,8 +327,8 @@ test('merge and split reject invalid geometry, conflicting content, hidden/priva
   assert.throws(() => edit('merge', first, 'below'), /publication visibility/u); assert.ok(scope.undo());
   patch(value => { value.workbench.shapes.find(item => item.id === 'shape:bottom-left').open = false; });
   assert.throws(() => edit('merge', first, 'below'), /Show the neighbouring/u); assert.ok(scope.undo());
-  patch(value => { value.workbench.shapes.find(item => item.id === first).window.height = 183; });
-  assert.ok(receptionCellSplit(scope.getReception(), first, 'horizontal').reason.includes('80')); assert.ok(scope.undo());
+  patch(value => { value.workbench.shapes.find(item => item.id === first).window.height = 71; });
+  assert.ok(receptionCellSplit(scope.getReception(), first, 'horizontal').reason.includes('24')); assert.ok(scope.undo());
   const generation = scope.getGeneration(); scope.release();
   assert.throws(() => scope.editBento('merge', [first, 'below'], generation), /no longer active/u);
   const full = fixture(16); assert.ok(receptionCellSplit(full.scope.getReception(), full.scope.getCells()[0].id, 'vertical').reason.includes('room')); full.scope.release();

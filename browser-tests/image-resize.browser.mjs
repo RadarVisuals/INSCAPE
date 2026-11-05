@@ -56,8 +56,9 @@ for (const width of [1440, 390]) test(`Image resize controls expose transparent,
     });
     const images = page.locator('.image-module__window'), first = images.nth(0), transparent = images.nth(1);
     await first.waitFor(); await transparent.waitFor();
-    const bounds = first.locator('.image-module__bounds'), grip = first;
-    const southeast = first.getByRole('separator', { name: 'Resize Image window', exact: true });
+    const controls = page.locator(`[data-workbench-view-id="${await first.getAttribute('data-workbench-view-id')}"]`);
+    const bounds = controls.locator('.image-module__bounds'), grip = first;
+    const southeast = controls.getByRole('separator', { name: 'Resize Image window', exact: true });
     await page.mouse.move(width - 10, 900); await settle(page);
     assert.equal(await opacity(bounds), '0');
     await first.locator('.image-module__canvas').hover();
@@ -67,7 +68,7 @@ for (const width of [1440, 390]) test(`Image resize controls expose transparent,
     assert.equal(await opacity(southeast), '1');
     let art = await first.boundingBox();
     assert.equal(await first.locator('header').count(), 0, 'the artwork itself is the move surface');
-    for (const handle of await first.locator('.image-module__resize').all()) {
+    for (const handle of await controls.locator('.image-module__resize').all()) {
       const rect = await handle.boundingBox();
       assert.ok(rect.x >= -.01 && rect.x + rect.width <= width + .01, 'resize target stays reachable at the viewport sides');
     }
@@ -111,7 +112,7 @@ for (const width of [1440, 390]) test(`Image resize controls expose transparent,
         await first.dispatchEvent('wheel', { deltaY, ctrlKey: true, clientX: 0, clientY: 0, bubbles: true, cancelable: true });
         currentZoom *= Math.exp(-deltaY * .003); await settle(page);
       }
-      for (const handle of await first.locator('.image-module__resize').all()) {
+      for (const handle of await controls.locator('.image-module__resize').all()) {
         const rect = await handle.boundingBox(); near(rect.width, 28, 'target width'); near(rect.height, 28, 'target height');
       }
     }
@@ -125,8 +126,8 @@ for (const width of [1440, 390]) test(`Image resize controls expose transparent,
     await transform.getByRole('button', { name: 'Close Transform', exact: true }).click(); await settle(page);
     await page.screenshot({ path: `.browser-test-runtime/image-resize-${width}-thin.png` });
     const thin = await page.evaluate(() => window.readDraft()), writes = await page.evaluate(() => window.writes);
-    const top = first.getByRole('separator', { name: 'Resize Image top', exact: true });
-    const bottom = first.getByRole('separator', { name: 'Resize Image bottom', exact: true });
+    const top = controls.getByRole('separator', { name: 'Resize Image top', exact: true });
+    const bottom = controls.getByRole('separator', { name: 'Resize Image bottom', exact: true });
     const topRect = await top.boundingBox(), bottomRect = await bottom.boundingBox(); art = await first.boundingBox();
     assert.ok(topRect.y + topRect.height <= bottomRect.y, 'thin canvas controls never overlap');
     assert.ok(await top.evaluate(node => { const r = node.getBoundingClientRect(); return document.elementFromPoint(r.x + 14, r.y + 20) === node; }), 'top resize target takes priority over artwork dragging');
@@ -168,7 +169,7 @@ for (const width of [1440, 390]) test(`Image resize controls expose transparent,
     await page.keyboard.press('Control+z'); await settle(page);
     assert.deepEqual(await page.evaluate(() => window.readDraft()), resized);
     // Left/corner resizing uses the same saved fit as its preview on narrow screens.
-    const corner = first.getByRole('separator', { name: 'Resize Image top left', exact: true });
+    const corner = controls.getByRole('separator', { name: 'Resize Image top left', exact: true });
     const cornerRect = await corner.boundingBox(), oldRect = await first.boundingBox();
     await page.keyboard.down('Alt'); await page.mouse.move(cornerRect.x + 18, cornerRect.y + 20); await page.mouse.down();
     await page.mouse.move(cornerRect.x + 58, cornerRect.y + 30, { steps: 5 }); await settle(page);
@@ -182,7 +183,7 @@ for (const width of [1440, 390]) test(`Image resize controls expose transparent,
     assert.deepEqual(await page.evaluate(() => window.readDraft()), resized);
     await first.locator('.image-module__canvas').click();
     await page.getByRole('dialog', { name: 'Inspect Image' }).waitFor();
-    assert.equal(await first.locator('.image-module__resize').count(), 0);
+    assert.equal(await controls.locator('.image-module__resize').count(), 0);
     await page.keyboard.press('Escape'); await page.getByRole('dialog', { name: 'Inspect Image' }).waitFor({ state: 'detached' });
     await editorCommand(page, 'Canvas', 'Preview');
     const visitor = page.locator('.visitor-grid-world .image-module__window').first(); await visitor.waitFor();

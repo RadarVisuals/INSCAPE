@@ -92,7 +92,7 @@ test('Image body distinguishes inspection, movement, cancellation, flip, crop an
     await page.mouse.move(moved.x + 130, moved.y + 130, { steps: 6 }); await page.mouse.up(); await settle(page);
     assert.notEqual(await projection(), beforeCrop); assert.deepEqual(await rectangle(), moved);
     await dock.getByRole('button', { name: 'Cancel', exact: true }).click();
-    const resize = first.getByRole('separator', { name: 'Resize Image top', exact: true }), resizeBox = await resize.boundingBox();
+    const resize = page.locator(`[data-workbench-view-id="${await first.getAttribute('data-workbench-view-id')}"]`).getByRole('separator', { name: 'Resize Image top', exact: true }), resizeBox = await resize.boundingBox();
     await page.keyboard.down('Shift'); await page.keyboard.down('Alt');
     await page.mouse.move(resizeBox.x + 14, resizeBox.y + 14); await page.mouse.down();
     await page.mouse.move(resizeBox.x + 14, resizeBox.y - 10, { steps: 4 }); await page.mouse.up();

@@ -96,6 +96,11 @@ not require a separate audit or approval round for every edit.
   Match media resolution to its purpose, bound network work, and avoid loading
   optional runtimes before needed. An empty canvas is not evidence that a
   covered artwork scene renders correctly or performs well.
+- Respect the existing production bundle ceilings. Recover space through
+  measured removal or reuse before adding dependencies or features; do not
+  raise limits or reclassify shipped code to make a failing budget pass.
+  Compare builds with the same release metadata, and count lazy-loaded code
+  in the existing aggregate budget.
 - Reuse existing dependencies and shared UI before adding alternatives. Explain
   the need and maintenance cost of a new dependency or parallel styling system.
   Preserve keyboard access, focus recovery, and reduced-motion behavior when

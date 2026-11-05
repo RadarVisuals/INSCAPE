@@ -7,6 +7,7 @@ import { useWorkbenchView, workbenchModuleTransform } from '../public/ownerSyste
 import { textAppearance, textOutputStyle, textWindowStyle } from './domain/article.js';
 import { Plus, Pencil, Settings2 as Settings, X } from 'lucide-react';
 import { useWorkbenchCamera } from '../public/ownerSystemWorkflow/WorkbenchCamera.jsx';
+import { TEXT_WINDOW_LIMITS } from '../profileDocument/domain/workbenchPresentation.js';
 
 const ContinuationEditor = lazy(() => import('./ArticleEditor.jsx').then(module => ({ default: module.ContinuationEditor })));
 
@@ -55,7 +56,7 @@ export default function LinkedTextWindow({ frame, index, article, flow, ownerId,
   const target = useMemo(() => ({ ...resizeTarget, parentTextId: ownerId, applyFrame: apply }), [resizeTarget, ownerId, apply]);
   const appearance = textAppearance(article), title = article.title || 'Untitled article';
   return <WorkbenchWindow label={`Text frame ${index + 1}`} title={title} titleContent={<span className="text-window-grip">Text · {index + 1}/{flow.ranges.length}</span>}
-    chrome="bevel" externalControls minimumWidth={180} minimumHeight={100} resizableWidth viewId={frame.id} active={active} snapToGrid={Boolean(store) && windowSnap}
+    chrome="bevel" externalControls minimumWidth={TEXT_WINDOW_LIMITS.minimumWidth} minimumHeight={TEXT_WINDOW_LIMITS.minimumHeight} resizableWidth viewId={frame.id} active={active} snapToGrid={Boolean(store) && windowSnap}
     placementModule={Boolean(store)} className="text-window text-window--read text-continuation-window" surfaceStyle={textWindowStyle(article, paintScale)}
     background={<><span aria-hidden="true" className="text-window-bounds" />{appearance.edges?.grain > 0 && <span aria-hidden="true" className="module-surface-grain" />}
       {appearance.frame && <span aria-hidden="true" className="module-surface-outline" style={{ boxShadow: `inset 0 0 0 ${paintScale}px ${article.appearance ? appearance.color : 'var(--workflow-border)'}` }} />}</>}

@@ -21,36 +21,32 @@ export function deferMobileWallet(factory) {
   };
 }
 
-// Reserve the navigation during the tap, before loading the mobile runtime.
-// This preserves the user gesture required by mobile browsers for a new tab.
-export async function connectMobileOnDemand(view, connector, makeDeepLink) {
-  if (view.isConnecting) return;
+// Reserve navigation during the tap, then let the SDK's connection handler own
+// approval, return-to-page recovery and the pending-request toast.
+export async function prepareMobileWalletOnDemand(view) {
+  if (view.isConnecting) return null;
   const tab = window.open('', '_blank');
-  if (!tab) return;
+  if (!tab) return null;
   view.isConnecting = true;
-  view.connectingRdns = connector.rdns;
-  view._connectingViaWalletConnect = true;
-  view._hasMobileNavigated = true;
-  view._connectionDispatched = false;
-  let provider;
-  const onUri = uri => { tab.location.href = makeDeepLink(uri); };
+  view.connectingRdns = view.walletConnectConnector?.rdns;
   try {
-    provider = await connector.getProvider();
-    provider.on('display_uri', onUri);
-    await connector.connect();
-    if (!view._connectionDispatched) {
-      view._connectionDispatched = true;
-      view.dispatchEvent(new CustomEvent('on-connect', { detail: { connector }, bubbles: true, composed: true }));
+    if (!view._pendingWalletConnect && !view.prewarmConnectPromise) {
+      await view.prewarmWalletConnectUri();
     }
+    if (view.isConnected) return tab;
+    // Removal can happen while getProvider() is still downloading. The SDK's
+    // disconnectedCallback ran before this late listener was registered.
+    const pending = view.prewarmResult;
+    pending?.provider.off('display_uri', pending.handler);
+    view.prewarmResult = null;
+    view.prewarmConnectPromise?.catch(() => {});
+    view.prewarmConnectPromise = null;
+    view.prewarmUriPromise = null;
   } catch (error) {
-    tab.close();
-    view.dispatchEvent(new CustomEvent('on-error', { detail: { error }, bubbles: true, composed: true }));
-  } finally {
-    provider?.off('display_uri', onUri);
-    view._cancelConnectionWatch();
-    view.isConnecting = false;
-    view.connectingRdns = undefined;
-    view._connectingViaWalletConnect = false;
-    view._hasMobileNavigated = false;
+    if (view.isConnected) view.dispatchEvent(new CustomEvent('on-error', { detail: { error }, bubbles: true, composed: true }));
   }
+  tab.close();
+  view.isConnecting = false;
+  view.connectingRdns = undefined;
+  return null;
 }

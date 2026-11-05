@@ -1,6 +1,7 @@
 import { avoidWorkbenchControl } from './avoidWorkbenchControl.js';
 import { useWorkbenchArea } from './WorkbenchAreaContext.jsx';
 import { useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { useWorkbenchPlacement } from './WorkbenchPlacement.jsx';
 import { useWorkbenchView, workbenchModuleTransform, useWorkbenchViewRegistration } from './WorkbenchViewContext.js';
@@ -14,7 +15,7 @@ import { clampOwnerSystemWorkflowWindowPosition, resizeWorkbenchWindow, workbenc
 
 // The host owns gestures and temporary geometry. A module's resize target owns
 // validation and persistence; companion tools retain only their screen layout.
-export function WorkbenchWindow({ avoidControls, children, background, compact, chrome, className = '', label, controls, title, titleContent, width = 320, resizable = true, resizableWidth = false, initialHeight = 420, minimumHeight = 180, minimumWidth = 240, initialX = 18, initialY = 72, fitContent = false, fitContentFromTop = false, onLayoutChange, snapToGrid = false, placementModule = false, viewId, active, surfaceStyle, resizeTarget, committedFrame, externalControls = false, moveFromContent = false, registerView = true, screenSized = false, preserveAuthoredLayout = false, onLayoutCommit, viewportBottom }) {
+export function WorkbenchWindow({ avoidControls, children, background, compact, chrome, className = '', label, controls, title, titleContent, width = 320, resizable = true, resizableWidth = false, initialHeight = 420, minimumHeight = 180, minimumWidth = 240, initialX = 18, initialY = 72, fitContent = false, fitContentFromTop = false, onLayoutChange, snapToGrid = false, placementModule = false, viewId, active, surfaceStyle, resizeTarget, committedFrame, externalControls = false, externalControlsHost, externalControlsClassName = '', moveFromContent = false, registerView = true, screenSized = false, preserveAuthoredLayout = false, onLayoutCommit, viewportBottom }) {
   const { editingBounds: areaBounds, area, showOutside, canvasHost } = useWorkbenchArea();
   const view = useWorkbenchView();
   const { offset, getCamera, subscribeCameraPaint } = useWorkbenchCamera();
@@ -23,6 +24,7 @@ export function WorkbenchWindow({ avoidControls, children, background, compact, 
   const anchored = transformed && screenSized;
   const camera = transformed ? workbenchModuleTransform(view, viewId) : { scale: 1, x: 0, y: 0 };
   const node = useRef(null), measuredContent = useRef(null), gesture = useRef(null), latest = useRef(null);
+  const header = useRef(null), externalControlNode = useRef(null);
   const [frame, setFrame] = useState(() => ({ left: initialX, top: initialY, width, height: initialHeight }));
   const [preview, setPreview] = useState(null);
   const hasPreview = Boolean(preview);
@@ -85,6 +87,23 @@ export function WorkbenchWindow({ avoidControls, children, background, compact, 
     paint(getCamera());
     return subscribeCameraPaint(paint);
   }, [anchored, getCamera, subscribeCameraPaint, current.left, current.top, localScale, local?.x, local?.y, camera.scale, offset]);
+  // Cell clipping belongs to artwork. Project the same header into the existing
+  // viewport host, retaining its handlers and the shared authored-move owner.
+  useLayoutEffect(() => {
+    if (!externalControlsHost || !externalControlNode.current || !header.current) return;
+    const element = externalControlNode.current, bar = header.current;
+    let width = bar.getBoundingClientRect().width;
+    const paintControls = ({ scale, offset }) => {
+      const x = anchor.current.left * scale + offset.x, y = anchor.current.top * scale + offset.y;
+      element.style.left = `${Math.max(8, Math.min(x, viewport.width - width - 8))}px`;
+      // Text's existing external header sits 28px above its zero-height anchor.
+      element.style.top = `${Math.max((view.navigationTop || 0) + 8, y - 56) + 56}px`;
+    };
+    const update = () => { width = bar.getBoundingClientRect().width; paintControls(getCamera()); };
+    const resize = new ResizeObserver(update); resize.observe(bar); update();
+    const unsubscribe = subscribeCameraPaint(paintControls);
+    return () => { resize.disconnect(); unsubscribe(); };
+  }, [externalControlsHost, getCamera, subscribeCameraPaint, current.left, current.top, localScale, local?.x, local?.y, viewport.width, view.navigationTop]);
   const bounds = viewId ? {
     left: (areaBounds.left - (local?.x || 0)) / localScale,
     top: (areaBounds.top - (local?.y || 0)) / localScale,
@@ -116,7 +135,7 @@ export function WorkbenchWindow({ avoidControls, children, background, compact, 
       setPreview(null);
     } else if (cancelled || drag.next && onLayoutCommit?.(drag.next) === false) setFrame(drag.authoredFrame || drag.frame);
     if (drag.element.hasPointerCapture?.(drag.id)) drag.element.releasePointerCapture(drag.id);
-    if (!drag.element.isConnected) queueMicrotask(() => node.current?.querySelector('header')?.focus());
+    if (!drag.element.isConnected) queueMicrotask(() => header.current?.focus());
   };
   latest.current = { finish, resizeTo: (...args) => resizeTo(...args) };
   useLayoutEffect(() => {
@@ -167,7 +186,7 @@ export function WorkbenchWindow({ avoidControls, children, background, compact, 
       const shell = getComputedStyle(node.current);
       // Measure the chrome independently: a previously hidden tool can start
       // shorter than its titlebar and padding, before the content fits it.
-      const chromeHeight = node.current.querySelector('header').offsetHeight
+      const chromeHeight = header.current.offsetHeight
         + ['borderTopWidth', 'borderBottomWidth', 'paddingTop', 'paddingBottom']
           .reduce((height, key) => height + parseFloat(shell[key]) + parseFloat(style[key]), 0)
         + parseFloat(style.marginTop) + parseFloat(style.marginBottom);
@@ -179,7 +198,7 @@ export function WorkbenchWindow({ avoidControls, children, background, compact, 
     observer.observe(content);
     // Context tools mount while hidden. Their titlebar becomes measurable on
     // selection and can also grow for touch targets without changing content.
-    observer.observe(node.current.querySelector('header'));
+    observer.observe(header.current);
     globalThis.addEventListener('resize', measure); measure();
     return () => { observer.disconnect(); globalThis.removeEventListener('resize', measure); };
   }, [fitContent, isCompact, minimumHeight, toolMaximumHeight]);
@@ -226,7 +245,7 @@ export function WorkbenchWindow({ avoidControls, children, background, compact, 
   const begin = (event, kind, edge) => {
     if (camera.presented || event.button !== 0 || kind !== 'resize' && event.target.closest('button, a, input, select, textarea')) return;
     event.preventDefault(); event.stopPropagation();
-    if (kind === 'content-move') node.current.querySelector('header')?.focus({ preventScroll: true });
+    if (kind === 'content-move') header.current?.focus({ preventScroll: true });
     else event.currentTarget.focus();
     placement.begin(event);
     gesture.current = { kind, edge, id: event.pointerId, x: event.clientX, y: event.clientY, frame: base, authoredFrame: preserveAuthoredLayout ? frame : undefined, element: event.currentTarget };
@@ -257,8 +276,12 @@ export function WorkbenchWindow({ avoidControls, children, background, compact, 
   const pointerProps = { onPointerMove: move, onPointerUp: () => finish(), onPointerCancel: () => finish(true), onLostPointerCapture: () => finish(true) };
   return <OwnerSystemWorkflowDetachedWindow ariaLabel={`${label} — ${title}`} ref={node} viewId={registerView ? viewId : undefined} active={active} workbenchPan={transformed && !anchored}
     className={`system-workflow__instrument-window ${externalControls ? 'workbench-window--external-controls' : ''} ${className}`} title={`${label} · ${title}`}
+    headerRef={header} renderHeader={externalControlsHost ? bar => createPortal(<div className={externalControlsClassName}>
+      <div ref={externalControlNode} className={`workbench-window--external-controls workbench-window-controls ${className}`} data-window-chrome={chrome}>{bar}</div>
+    </div>, externalControlsHost) : undefined}
     headerPointerProps={{ 'aria-label': `Move ${label} window`, 'data-workbench-selectable': registerView && viewId ? true : undefined,
-      'data-controls-below': externalControls && painted.top < controlsTop + 56 || undefined, 'aria-keyshortcuts': registerView && viewId ? 'Shift+Enter' : undefined,
+      'data-workbench-view-id': externalControlsHost ? viewId : undefined,
+      'data-controls-below': !externalControlsHost && externalControls && painted.top < controlsTop + 56 || undefined, 'aria-keyshortcuts': registerView && viewId ? 'Shift+Enter' : undefined,
       tabIndex: 0, onKeyDown: event => key(event), onPointerDown: event => begin(event, 'move'), ...pointerProps }}
     controls={controls} titleContent={titleContent} background={background} compactContent={compact?.content} chrome={chrome}
     contentPointerProps={moveFromContent ? { 'data-content-move': true, 'data-workbench-selectable': Boolean(viewId) || undefined,

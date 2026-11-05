@@ -1,11 +1,17 @@
 import { artworkLayers, artworkRecords, groupArtwork, reorderArtwork } from './domain/artworkLayers.js';
+import { reorderReceptionArtwork } from '../reception/receptionLayerOrder.js';
 
 export function editArtworkLayers(store, profile, action, expectedGeneration = store.getGeneration(), presentation) {
   if (store.getProfileAddress() !== profile || store.getGeneration() !== expectedGeneration)
     throw new Error('The composition changed. Select the layers again.');
   const draft = store.getDraft(), layers = artworkLayers(draft);
   let next = { ...draft }, label = 'Order artwork';
-  if (action.type === 'order') next.artworkLayers = reorderArtwork(layers, action.ids, action.direction, action.targetId, action.edge);
+  if (action.type === 'order') {
+    const cells = store.getCells?.();
+    next.artworkLayers = cells?.length
+      ? reorderReceptionArtwork(layers, cells, action.ids, action.direction, action.targetId, action.edge)
+      : reorderArtwork(layers, action.ids, action.direction, action.targetId, action.edge);
+  }
   else if (action.type === 'group') {
     next.artworkLayers = groupArtwork(layers, action.ids, action.id, action.name); label = 'Group artwork';
   } else if (action.type === 'ungroup') {

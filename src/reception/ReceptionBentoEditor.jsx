@@ -133,7 +133,7 @@ function BentoEditor({ context, disabled, navigation, flushLayout, library, libr
     imageTarget.current = { captureTarget: () => ({
       async placeAsset(input, dimensions) {
         if (!current()) return false;
-        const side = await resolveImageLibrarySide(input, dimensions);
+        const side = await resolveImageLibrarySide(input, dimensions, true);
         if (!current()) return false;
         const r = receptionModuleWindow(store.getReception(), cellId);
         if (!r) return false;

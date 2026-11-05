@@ -53,11 +53,14 @@ test('mobile runtime loads only after explicit choice on desktop and phone, and 
           await probe.session.showSignIn();
         }, report.standaloneWalletEntry.file);
         const modal = page.locator('connect-modal');
-        await modal.getByText('Mobile Application', { exact: true }).waitFor();
+        await modal.getByText('Wallet Connect to the UP! App', { exact: true }).waitFor();
         if (!phone) await modal.getByText('Browser Extension', { exact: true }).waitFor();
+        assert.equal(await modal.getByText('Continue in the UP! App', { exact: true }).count(), phone ? 1 : 0);
+        await mkdir(output, { recursive: true });
+        await page.screenshot({ path: resolve(output, `wallet-choice-${phone ? 'phone' : 'desktop'}.png`), animations: 'disabled' });
         await page.waitForLoadState('networkidle');
         assert.deepEqual(requests, [], 'Opening the modal must not preload WalletConnect');
-        await modal.getByText('Mobile Application', { exact: true }).click();
+        await modal.getByText('Wallet Connect to the UP! App', { exact: true }).click();
         await page.waitForFunction(() => window.__mobileCheck.errors.length > 0, null, { timeout: 10000 });
         assert.ok(requests.length > 0, 'Choosing mobile must request its provider code');
         // Failed download releases busy state; the choice is available again.
@@ -67,6 +70,88 @@ test('mobile runtime loads only after explicit choice on desktop and phone, and 
       } finally { await context.close(); }
     }
   } finally { await browser?.close(); await new Promise(resolveClose => server.httpServer.close(resolveClose)); }
+});
+
+test('built mobile SDK preserves one pending pairing, its approval toast and cancellation recovery', { timeout: 30000 }, async () => {
+  const report = await analyzeProductionBuild(productionDirectory);
+  const server = await preview({ root, build: { outDir: productionDirectory }, preview: { host: '127.0.0.1', port: 0, open: false } });
+  let browser;
+  try {
+    browser = await chromium.launch({ headless: true });
+    const origin = `http://127.0.0.1:${server.httpServer.address().port}`;
+    for (const cancelled of [false, true]) {
+      const context = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true,
+        userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 Version/17.0 Mobile/15E148 Safari/604.1' });
+      try {
+        await context.route('**/*', route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
+        await context.routeWebSocket('**/*', socket => socket.close());
+        const page = await context.newPage(), errors = [];
+        page.setDefaultTimeout(5000);
+        page.on('pageerror', error => errors.push(error.message));
+        await page.goto(origin, { waitUntil: 'networkidle' });
+        await page.evaluate(async file => {
+          await import('/' + file);
+          const listeners = new Map();
+          const probe = window.__mobileSdk = { connects: 0, providers: 0, tabs: 0, closed: 0, events: [], attempts: [] };
+          const provider = {
+            on(name, callback) { const callbacks = listeners.get(name) || new Set(); callbacks.add(callback); listeners.set(name, callbacks); },
+            off(name, callback) { listeners.get(name)?.delete(callback); },
+          };
+          probe.emit = (name, value) => { for (const callback of [...(listeners.get(name) || [])]) callback(value); };
+          probe.listeners = () => [...listeners.values()].reduce((sum, callbacks) => sum + callbacks.size, 0);
+          window.open = () => { probe.tabs++; return { location: { set href(value) { probe.link = value; } }, close() { probe.closed++; } }; };
+          const view = probe.view = document.createElement('connection-view');
+          view.connectors = [{ type: 'mobile', id: 'test-mobile-uid', rdns: 'walletConnect',
+            async getProvider() { probe.providers++; return provider; },
+            connect() { probe.connects++; return new Promise((resolve, reject) => probe.attempts.push({ resolve, reject })); },
+          }];
+          for (const name of ['on-connect', 'on-error']) view.addEventListener(name, () => probe.events.push(name));
+          document.body.append(view);
+          await view.updateComplete;
+        }, report.standaloneWalletEntry.file);
+        assert.deepEqual(await page.evaluate(() => ({ connects: window.__mobileSdk.connects, providers: window.__mobileSdk.providers })), { connects: 0, providers: 0 });
+        await page.evaluate(() => { window.__mobileSdk.result = window.__mobileSdk.view.handleConnectMobile(); });
+        await page.waitForFunction(() => !!window.__mobileSdk.view._pendingWalletConnect).catch(async error => {
+          console.error('Mobile SDK preparation', await page.evaluate(() => ({
+            connects: window.__mobileSdk.connects, providers: window.__mobileSdk.providers, events: window.__mobileSdk.events,
+            connected: window.__mobileSdk.view.isConnected, mobile: window.__mobileSdk.view.device?.isMobile,
+            connecting: window.__mobileSdk.view.isConnecting, tabs: window.__mobileSdk.tabs,
+          })), errors);
+          throw error;
+        });
+        const toast = page.locator('[data-up-wc-approval-toast]').locator('[part="toast"]');
+        await toast.waitFor();
+        await mkdir(output, { recursive: true });
+        await page.screenshot({ path: resolve(output, `wallet-pending-${cancelled ? 'cancel' : 'approve'}.png`), animations: 'disabled' });
+        if (cancelled) {
+          // Reject before display_uri: waiting for the URI must not hang forever.
+          await page.evaluate(() => window.__mobileSdk.attempts[0].reject(new Error('User rejected connection')));
+          await page.waitForFunction(() => window.__mobileSdk.events.includes('on-error') && !window.__mobileSdk.view.isConnecting);
+          assert.equal(await page.evaluate(() => window.__mobileSdk.closed), 1);
+        } else {
+          await page.evaluate(() => {
+            window.__mobileSdk.emit('display_uri', 'wc:test-pairing@2?relay-protocol=irn&symKey=test');
+            document.dispatchEvent(new Event('visibilitychange'));
+            window.dispatchEvent(new Event('pageshow'));
+          });
+          await page.waitForFunction(() => !!window.__mobileSdk.link);
+          assert.equal(await page.evaluate(() => window.__mobileSdk.connects), 1, 'Returning from the app must preserve the same pairing');
+          await page.evaluate(() => {
+            window.__mobileSdk.emit('connect', {});
+            window.__mobileSdk.attempts[0].resolve();
+          });
+          await page.waitForFunction(() => window.__mobileSdk.events.includes('on-connect') && !window.__mobileSdk.view.isConnecting);
+        }
+        await toast.waitFor({ state: 'hidden' });
+        await page.evaluate(async () => { await window.__mobileSdk.result; window.__mobileSdk.view.remove(); });
+        const result = await page.evaluate(() => ({ events: window.__mobileSdk.events, tabs: window.__mobileSdk.tabs, listeners: window.__mobileSdk.listeners() }));
+        assert.deepEqual(result.events, [cancelled ? 'on-error' : 'on-connect']);
+        assert.equal(result.tabs, 1);
+        assert.equal(result.listeners, 0);
+        assert.deepEqual(errors, []);
+      } finally { await context.close(); }
+    }
+  } finally { await browser?.close(); await new Promise(done => server.httpServer.close(done)); }
 });
 
 test('built fresh entry stays below 1 MB JS without wallet/owner acquisition; built connector remains importable',{timeout:60000},async()=>{
@@ -228,9 +313,9 @@ test('built wallet connects, restores, follows account and chain changes, and di
     }, report.standaloneWalletEntry.file);
     const modal = page.locator('connect-modal');
     await modal.getByText('Browser Extension', { exact: true }).waitFor();
-    await modal.getByText('Mobile Application', { exact: true }).waitFor();
+    await modal.getByText('Wallet Connect to the UP! App', { exact: true }).waitFor();
     await mkdir(output, { recursive: true });
-    await page.screenshot({ path: resolve(output, 'wallet-modal-1440.png') });
+    await page.screenshot({ path: resolve(output, 'wallet-modal-1440.png'), animations: 'disabled' });
     assert.equal(await page.evaluate(() => window.__walletProbe.requests.includes('eth_requestAccounts')), false,
       'Showing the connector UI must not request accounts');
     await modal.getByText('Browser Extension', { exact: true }).click();

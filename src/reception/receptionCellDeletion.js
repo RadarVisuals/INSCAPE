@@ -49,7 +49,7 @@ function repackBand(tiles, hole, minimum) {
   } while (previous !== `${frame.top}:${frame.height}`);
   if (!closed(band)) return false; // Freely drawn, separate cells keep their authored empty space.
   const kept = band.filter(r => !r.removed).sort((a, b) => a.top - b.top || a.left - b.left);
-  const maxColumns = Math.floor((frame.width + 0.001) / minimum), maxRows = Math.floor((frame.height + 0.001) / minimum);
+  const maxColumns = Math.floor((frame.width + 0.001) / minimum.width), maxRows = Math.floor((frame.height + 0.001) / minimum.height);
   if (!kept.length || !maxColumns || !maxRows || maxColumns * maxRows < kept.length) return false;
   const rows = Math.max(Math.ceil(kept.length / maxColumns),
     Math.min(kept.length, maxRows, Math.round(Math.sqrt(kept.length * frame.height / frame.width))));
@@ -80,7 +80,8 @@ export function fillDeletedReceptionCells(previous, candidate) {
     progress = false;
     for (const hole of tiles.filter(r => r.removed)) if (tiles.includes(hole) && absorb(tiles, hole)) progress = true;
   } while (progress && tiles.some(r => r.removed));
-  for (const hole of tiles.filter(r => r.removed)) if (tiles.includes(hole)) repackBand(tiles, hole, MIN_RECEPTION_CELL_SIZE + gap);
+  for (const hole of tiles.filter(r => r.removed)) if (tiles.includes(hole)) repackBand(tiles, hole,
+    { width: MIN_RECEPTION_CELL_SIZE.width + gap, height: MIN_RECEPTION_CELL_SIZE.height + gap });
   return tiles.filter(r => !r.removed).reduce((next, r) => withReceptionModuleWindow(next, r.id,
     { left: r.left, top: r.top, width: r.width - gap, height: r.height - gap }), candidate);
 }

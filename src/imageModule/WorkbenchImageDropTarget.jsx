@@ -53,7 +53,7 @@ export default function WorkbenchImageDropTarget({ targetRef, hostRef, suspended
             const active = () => request === token && current() && isCurrent();
             if (!destination || !active()) return false;
             try {
-              const side = await resolveImageLibrarySide(input, dimensions);
+              const side = await resolveImageLibrarySide(input, dimensions, Boolean(cellId));
               if (!active()) return false;
               const store = cellId ? { ...view.store, commitCompletedOperation: (candidate, opts) => view.store.commitInCell(cellId, candidate, opts) } : view.store;
               const id = addImageModule(store, view.profileAddress, { ...destination, side, workbench: view.getPresentation() });

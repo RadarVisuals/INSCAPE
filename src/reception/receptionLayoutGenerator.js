@@ -3,7 +3,6 @@ import { validWorkbenchArea, workbenchArea } from '../systemWorkflow/domain/work
 import { RECEPTION_CELL_LIMIT, MIN_RECEPTION_CELL_SIZE, withReceptionModuleWindow, receptionCellResizeReason } from './receptionEditorDocument.js';
 
 export const RECEPTION_LAYOUT_DEFAULTS = Object.freeze({ width: 1440, height: 900, count: 6, gap: 24, padding: 24, radius: 0 });
-const MIN_CELL_SIZE = MIN_RECEPTION_CELL_SIZE;
 const occupied = cell => cell.members.length > 0 || Boolean(cell.content);
 export const receptionLayoutCountRange = value => ({
   min: Math.max(1, value.cells.filter(occupied).length),
@@ -30,10 +29,10 @@ export function generateReceptionLayout(settings, seed = 1) {
     return ((value ^ value >>> 14) >>> 0) / 4294967296;
   };
   const innerWidth = width - 2 * padding, innerHeight = height - 2 * padding;
-  const maxColumns = Math.floor((innerWidth + gap) / (MIN_CELL_SIZE + gap));
-  const maxRows = Math.floor((innerHeight + gap) / (MIN_CELL_SIZE + gap));
+  const maxColumns = Math.floor((innerWidth + gap) / (MIN_RECEPTION_CELL_SIZE.width + gap));
+  const maxRows = Math.floor((innerHeight + gap) / (MIN_RECEPTION_CELL_SIZE.height + gap));
   if (maxColumns < 1 || maxRows < 1 || maxColumns * maxRows < count)
-    throw new Error('Use a larger canvas, fewer cells or less spacing. Each cell needs at least 80 × 80 pixels.');
+    throw new Error(`Use a larger canvas, fewer cells or less spacing. Each cell needs at least ${MIN_RECEPTION_CELL_SIZE.width} × ${MIN_RECEPTION_CELL_SIZE.height} pixels.`);
   const minRows = Math.ceil(count / maxColumns);
   const idealRows = Math.ceil(Math.sqrt(count * innerHeight / innerWidth));
   const preferredRows = Math.min(maxRows, Math.ceil(count / 4));
@@ -45,22 +44,22 @@ export function generateReceptionLayout(settings, seed = 1) {
     const candidates = available.filter(row => row.size <= smallest + 1);
     columns[candidates[Math.floor(random() * candidates.length)].index]++;
   }
-  const distribute = (total, amount, emphasis) => {
-    const free = total - amount * MIN_CELL_SIZE;
+  const distribute = (total, amount, emphasis, minimum) => {
+    const free = total - amount * minimum;
     const weights = Array.from({ length: amount }, (_, index) => (0.5 + random()) * (index === emphasis ? 2.4 : 1));
     const sum = weights.reduce((a, b) => a + b, 0);
     let used = 0;
     return weights.map((weight, index) => {
-      const size = index === amount - 1 ? total - used : MIN_CELL_SIZE + Math.floor(free * weight / sum);
+      const size = index === amount - 1 ? total - used : minimum + Math.floor(free * weight / sum);
       used += size; return size;
     });
   };
   const dominantRow = Math.floor(random() * rows);
-  const heights = distribute(innerHeight - gap * (rows - 1), rows, dominantRow);
+  const heights = distribute(innerHeight - gap * (rows - 1), rows, dominantRow, MIN_RECEPTION_CELL_SIZE.height);
   const rectangles = [];
   let top = padding;
   columns.forEach((amount, row) => {
-    const widths = distribute(innerWidth - gap * (amount - 1), amount, Math.floor(random() * amount));
+    const widths = distribute(innerWidth - gap * (amount - 1), amount, Math.floor(random() * amount), MIN_RECEPTION_CELL_SIZE.width);
     let left = padding;
     widths.forEach(cellWidth => { rectangles.push({ left, top, width: cellWidth, height: heights[row] }); left += cellWidth + gap; });
     top += heights[row] + gap;

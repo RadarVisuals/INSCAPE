@@ -46,7 +46,7 @@ export default function useWorkbenchObjectPicker({ hostRef, view, disabled, lock
       if (!current.current.enabled || current.current.isBusy?.()
         || event.target.closest?.(controls) && !event.target.matches?.('[data-editor-cell-surface]')) return;
       const keyboard = event.type === 'keydown';
-      const object = event.target.closest?.('[data-workbench-view-id]');
+      const object = event.target.closest?.('[data-workbench-view-id],[data-editor-cell-surface]');
       const focused = object || current.current.view.entries.get(current.current.view.selection[0]);
       const rect = focused?.getBoundingClientRect();
       const anchor = !keyboard ? { x: event.clientX, y: event.clientY }
@@ -55,7 +55,7 @@ export default function useWorkbenchObjectPicker({ hostRef, view, disabled, lock
       if (!hits.length) return;
       const { view } = current.current;
       const selected = view.selection.length === 1 ? view.selection[0] : null;
-      const preferred = keyboard ? object?.dataset.workbenchViewId || selected
+      const preferred = keyboard ? object?.dataset.editorCellSurface || object?.dataset.workbenchViewId || selected
         : event.target.closest?.('.workbench-selection') ? selected : null;
       const target = targetFor(hits.find(item => item.id === preferred)?.id || hits[0].id);
       if (keyboard && !view.toolSources.get(target)?.current.actions) return;

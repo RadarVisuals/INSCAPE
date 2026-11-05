@@ -4,10 +4,10 @@ import { readFile } from 'node:fs/promises';
 import { assertReviewedLuksoWalletModule, narrowLuksoWalletImportsPlugin } from './luksoWalletImports.js';
 
 test('wallet optimization requires the reviewed SDK source and version', async () => {
-  const file = 'dist/chunk-4NQ3FIAB.js';
+  const file = 'dist/chunk-BZO3BROK.js';
   const code = await readFile(new URL(`../node_modules/@lukso/up-modal/${file}`, import.meta.url), 'utf8');
-  assert.doesNotThrow(() => assertReviewedLuksoWalletModule({ version: '0.21.11', file, code }));
-  for (const changed of [{ version: '0.22.0', file, code }, { version: '0.21.11', file, code: code + '\nchanged' }]) {
+  assert.doesNotThrow(() => assertReviewedLuksoWalletModule({ version: '1.0.2', file, code }));
+  for (const changed of [{ version: '1.0.3', file, code }, { version: '1.0.2', file, code: code + '\nchanged' }]) {
     assert.throws(() => assertReviewedLuksoWalletModule(changed), /review required/);
   }
 });

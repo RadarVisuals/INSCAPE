@@ -5,12 +5,12 @@ import { dirname } from 'node:path';
 
 const PACKAGE_MARKER = '/node_modules/@lukso/up-modal/';
 const PREFIX = '\0inscape-lukso-wallet:';
-const VERSION = '0.21.11';
+const VERSION = '1.0.2';
 
 // up-modal passes whole dynamic namespaces through Promise.all and a service.
 // These facades expose exactly what that reviewed SDK consumes, so Rollup can
-// discard unused exports. They retain the original functions and side effects;
-// no installed dependency or connector implementation is replaced.
+// discard unused exports. The reviewed transforms defer mobile preparation
+// until explicit choice; the SDK retains its connection and approval handling.
 const EXPORTS = Object.freeze({
   '@wagmi/core': ['createConfig', 'createStorage', 'injected', 'connect', 'disconnect', 'getConnection', 'watchConnection', 'getChainId'],
   '@wagmi/connectors': ['walletConnect'],
@@ -18,12 +18,12 @@ const EXPORTS = Object.freeze({
   'viem/chains': ['lukso'],
 });
 const REVIEWED_MODULES = Object.freeze({
-  'dist/chunk-4NQ3FIAB.js': {
-    hash: 'ef8eb549d8be14314b8e659397ee0671e16790ffbc88c9760423468d52cbed3e',
+  'dist/chunk-BZO3BROK.js': {
+    hash: '9886112b7ff81cc4193d4f80c1f8abae01a723f5c43d89b567176c5643a7854f',
     imports: ['@wagmi/core', '@wagmi/connectors', 'viem', 'viem/chains'],
   },
-  'dist/chunk-UNZJGZS4.js': {
-    hash: 'becd59a670b1ff5627498d913eb9d84738560dc6968c4f4f622135109a430cbc',
+  'dist/chunk-DCBIK4FA.js': {
+    hash: '9b13a4b86b609f740f6976cd27237badf7ae07f93c17c3e0ff39d788a7ceca25',
     imports: ['@wagmi/core'],
   },
 });
@@ -49,7 +49,7 @@ export function narrowLuksoWalletImportsPlugin() {
       return { optimizeDeps: { esbuildOptions: { plugins: [{
         name: 'inscape-mobile-wallet-dependency-preparation',
         setup(build) {
-          build.onLoad({ filter: /[\\/]@lukso[\\/]up-modal[\\/]dist[\\/]chunk-(4NQ3FIAB|UNZJGZS4)\.js$/ }, async ({ path }) => {
+          build.onLoad({ filter: /[\\/]@lukso[\\/]up-modal[\\/]dist[\\/]chunk-(BZO3BROK|DCBIK4FA)\.js$/ }, async ({ path }) => {
             const result = await plugin.transform(await readFile(path, 'utf8'), path);
             return { contents: result.code, loader: 'js', resolveDir: dirname(path) };
           });
@@ -72,12 +72,20 @@ export function narrowLuksoWalletImportsPlugin() {
       if (withoutMap(code) !== withoutMap(original)) throw new Error(`Unexpected pre-transform of reviewed wallet SDK: ${file}`);
       code = code.replaceAll('\r\n', '\n');
       const helper = JSON.stringify(fileURLToPath(new URL('../src/wallet/deferredMobileWallet.js', import.meta.url)).replaceAll('\\', '/'));
-      if (file === 'dist/chunk-4NQ3FIAB.js') {
+      if (file === 'dist/chunk-BZO3BROK.js') {
         return { code: `import { deferMobileWallet } from ${helper};\n` + code.replace('walletConnect({', 'deferMobileWallet(walletConnect)({'), map: null };
       }
-      return { code: `import { connectMobileOnDemand } from ${helper};\n` + code
-        .replaceAll('if (!this.hasPrewarmed && changedProperties.has("connectors")', 'if (false && !this.hasPrewarmed && changedProperties.has("connectors")')
-        .replace('if (this.device?.isMobile) {\n        if (this.prewarmedDeepLink', 'if (this.device?.isMobile) {\n        return connectMobileOnDemand(this, connector, walletConnectDeepLinkUrl);\n        if (this.prewarmedDeepLink'), map: null };
+      // Remove eager mobile preparation instead of leaving a disabled duplicate.
+      // Both SDK mobile branches use the tab reserved by the explicit tap.
+      const eagerPreparation = '  updated(changedProperties) {\n    super.updated(changedProperties);\n    if (!this.hasPrewarmed && !this._pendingWalletConnect && changedProperties.has("connectors") && this.connectors.length > 0 && this.device?.isMobile) {\n      this.hasPrewarmed = true;\n      this.prewarmWalletConnectUri();\n    }\n  }\n';
+      return { code: `import { prepareMobileWalletOnDemand } from ${helper};\n` + code
+        .replace(eagerPreparation, '')
+        .replace('if (this.device?.isMobile) {\n        if (this.prewarmedDeepLink', 'if (this.device?.isMobile) {\n        const reservedTab = await prepareMobileWalletOnDemand(this);\n        if (!reservedTab) return;\n        if (this.prewarmedDeepLink')
+        .replace('const tab = window.open(this.prewarmedDeepLink, "_blank");', 'const tab = reservedTab;\n          tab.location.href = this.prewarmedDeepLink;')
+        .replace('const tab = window.open("", "_blank");\n          if (!tab) return;', 'const tab = reservedTab;')
+        // A rejected pairing must not wait forever for a URI that cannot arrive.
+        .replace('const uri = await uriPromise;\n            tab.location.href = uri;', 'const uri = await Promise.race([uriPromise, connectPromise]);\n            if (uri) tab.location.href = uri;\n            else tab.close();')
+        .replace('} else {\n          if (this._pendingWalletConnect)', '} else {\n          reservedTab.close();\n          if (this._pendingWalletConnect)'), map: null };
     },
     buildStart() { reviews.clear(); facades.clear(); intercepted.clear(); },
     async resolveDynamicImport(source, importer) {

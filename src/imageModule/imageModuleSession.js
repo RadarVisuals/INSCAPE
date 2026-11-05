@@ -48,14 +48,14 @@ export function duplicateImageModule(store, profile, expected, { workbench, posi
     throw new Error('The Image copy could not be saved. Your saved work is unchanged; try again.');
   return record.id;
 }
-export function saveImageModule(store, profile, expected, next) {
+export function saveImageModule(store, profile, expected, next, workbench) {
   if (store.getProfileAddress() !== profile || !expected || !next) return false;
   const draft = store.getDraft(), generation = store.getGeneration();
   const current = draft.imageModules?.find(item => item.id === expected.id);
   if (!current || JSON.stringify(current) !== JSON.stringify(expected)) return false;
   const imageModules = draft.imageModules.map(item => item.id === expected.id ? { ...next, id: expected.id } : item);
   if (!validImageModules(imageModules)) return false;
-  return store.commitCompletedOperation({ ...draft, imageModules }, { expectedGeneration: generation, historyLabel: 'Edit Image' });
+  return store.commitCompletedOperation({ ...draft, imageModules, ...(workbench ? { workbench } : {}) }, { expectedGeneration: generation, historyLabel: 'Edit Image' });
 }
 
 export function prepareImageResize(draft, { expected, width, height }) {
