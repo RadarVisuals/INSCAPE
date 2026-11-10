@@ -6,14 +6,14 @@ export const workbenchLayoutKey = (profile, workbenchId = 'workbench:main') =>
   `inscape:workbench:layout:v1:${profile.toLowerCase()}${workbenchId === 'workbench:main' ? '' : `:${workbenchId}`}`;
 // A local view of existing modules, not authored content. An explicit restore of
 // draft.workbench invalidates it; deleted module IDs cannot be resurrected by it.
-export function loadWorkbenchLayout(profile, draft, storage, workbenchId) {
+export function loadWorkbenchLayout(profile, draft, storage, workbenchId, cells) {
   try {
     const raw = storage?.getItem(workbenchLayoutKey(profile, workbenchId));
     if (!raw) return { layout: null, views: {} };
     const value = JSON.parse(raw);
-    if (value.version !== 1 || !isValidWorkbenchPresentation(value.layout)
-      || typeof value.baseline !== 'string' || !value.views || typeof value.views !== 'object' || Array.isArray(value.views)) throw Error('invalid');
+    if (value.version !== 1 || typeof value.baseline !== 'string' || !value.views || typeof value.views !== 'object' || Array.isArray(value.views)) throw Error('invalid');
     if (value.baseline !== JSON.stringify(draft.workbench || null)) return { layout: null, views: {} };
+    if (!isValidWorkbenchPresentation(value.layout, cells)) throw Error('invalid');
     const ids = new Set(displayModuleIds(draft));
     const layout = { ...value.layout,
       displays: value.layout.displays?.filter(item => ids.has(item.id)),
@@ -35,8 +35,8 @@ export function loadWorkbenchLayout(profile, draft, storage, workbenchId) {
     return { layout, views };
   } catch { return { layout: null, views: {}, error: 'The previous workspace layout could not be read. Its stored copy has been kept.', blocked: true }; }
 }
-export function saveWorkbenchLayout(profile, draft, layout, views, storage, workbenchId) {
-  if (!isValidWorkbenchPresentation(layout)) return false;
+export function saveWorkbenchLayout(profile, draft, layout, views, storage, workbenchId, cells) {
+  if (!isValidWorkbenchPresentation(layout, cells)) return false;
   try {
     if (!storage?.setItem) return false;
     storage.setItem(workbenchLayoutKey(profile, workbenchId), JSON.stringify({ version: 1, baseline: JSON.stringify(draft.workbench || null), layout, views }));

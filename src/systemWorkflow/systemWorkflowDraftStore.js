@@ -519,13 +519,11 @@ export function createSystemWorkflowDraftStore({
     retryCompletedOperation(createCandidate, options = {}) {
       const loaded = load(activeProfileAddress);
       if (!loaded.draft) {
-        lastCommitFailure = loaded.state.status === SYSTEM_WORKFLOW_RECORD_STATUS.CORRUPT ? 'corrupt' : 'read_failed';
-        return false;
+        return reject(loaded.state.status === SYSTEM_WORKFLOW_RECORD_STATUS.CORRUPT ? 'corrupt' : 'read_failed');
       }
       if (isWorkbenchCollection(loaded.record) !== isWorkbenchCollection(currentRecord)
         || isWorkbenchCollection(loaded.record) && /** @type {WorkbenchCollection} */ (loaded.record).activeId !== workbenchId()) {
-        lastCommitFailure = 'changed';
-        return false;
+        return reject('changed');
       }
       const candidate = createCandidate(detached(loaded.draft));
       if (!candidate) return false;
@@ -542,10 +540,16 @@ export function createSystemWorkflowDraftStore({
     return isWorkbenchCollection(currentRecord)
       ? replaceWorkbenchDraft(currentRecord, workbenchId(), validated) : /** @type {WorkbenchCollection} */ (createWorkbenchCollection(validated));
   }
+  /** @param {string} reason */
+  function reject(reason) {
+    if (lastCommitFailure !== reason) {
+      lastCommitFailure = reason;
+      notify();
+    }
+    return false;
+  }
   /** @param {unknown} candidate @param {{changeContext?: boolean, checkEdits?: boolean, restore?: boolean}} [options] */
   function persistCollection(candidate, { changeContext = false, checkEdits = changeContext, restore = false } = {}) {
-    /** @param {string} reason */
-    const reject = reason => { lastCommitFailure = reason; return false; };
     if (!writeAccess()) return reject('editor_unavailable');
     if (checkEdits) {
       if (textRecoveries(receptionScope || api.getWorkbenchScope(), activeProfileAddress).length) throw new Error(TEXT_RECOVERY_MESSAGE);
@@ -579,10 +583,8 @@ export function createSystemWorkflowDraftStore({
     notify();
     return true;
   }
-  /** @param {unknown} candidate @param {import('../contracts/workbench.js').CommitOptions} [options] @param {ReturnType<typeof load> | null} [recovered] @param {boolean} [restore] */
-  function commit(candidate, { expectedGeneration, historyLabel, recordHistory = true, historyPresentation, historyReception } = {}, recovered = null, restore = false) {
-      /** @param {string} reason */
-      const reject = reason => { lastCommitFailure = reason; return false; };
+  /** @param {unknown} candidate @param {import('../contracts/workbench.js').CommitOptions} [options] @param {ReturnType<typeof load> | null} [recovered] @param {boolean} [restore] @param {(() => void) | null} [acceptHistory] */
+  function commit(candidate, { expectedGeneration, historyLabel, recordHistory = true, historyPresentation, historyReception } = {}, recovered = null, restore = false, acceptHistory = null) {
       if (!writeAccess()) return reject('editor_unavailable');
       if (historyReception !== undefined && (editorTarget !== 'reception' || historyPresentation)) return reject('invalid');
       if (expectedGeneration !== generation || (!currentDraft && !restore)) return reject('stale');
@@ -646,6 +648,7 @@ export function createSystemWorkflowDraftStore({
       recordState = Object.freeze({ status: SYSTEM_WORKFLOW_RECORD_STATUS.VALID });
       generation += 1;
       lastCommitFailure = null;
+      acceptHistory?.();
       notify();
       return true;
   }
@@ -656,11 +659,12 @@ export function createSystemWorkflowDraftStore({
     if (!entry || !currentDraft) return false;
     const next = applyDraftChanges(currentDraft, entry.changes, direction);
     if (!next) return false;
-    // Move history before notification so subscribers see the final state.
+    // Move history only after storage succeeds, before acceptance is announced.
+    // A failed write can notify its error without exposing provisional history.
     const other = direction === 'undo' ? 'redo' : 'undo';
-    h[direction].pop(); h[other].push(entry);
-    if (api.commitCompletedOperation(next, { expectedGeneration: generation, recordHistory: false })) return true;
-    h[other].pop(); h[direction].push(entry); return false;
+    return commit(next, { expectedGeneration: generation, recordHistory: false }, null, false, () => {
+      h[direction].pop(); h[other].push(entry);
+    });
   }
   return Object.freeze(api);
 }

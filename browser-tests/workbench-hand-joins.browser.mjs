@@ -37,7 +37,7 @@ async function mount(page, scale) {
         React.createElement(WorkbenchViewControls, { hostRef: host }),
         React.createElement(WorkbenchCanvasContent, null, positions.map((position, i) => React.createElement(ImageWindow, { key: i, id: `image:${i}`, title: `Image ${i}`, position, size: { width: 180, height: 130 },
           editable: false, onPosition: () => { throw Error('camera wrote a module position'); }, onClose: () => {} },
-        rectangle => React.createElement(ImageArtwork, { rectangle, side })))));
+        rectangle => React.createElement(ImageArtwork, { rectangle, artwork: side })))));
     }
     window.__joinsCommits = 0;
     window.__joinsCameraCommits = 0;

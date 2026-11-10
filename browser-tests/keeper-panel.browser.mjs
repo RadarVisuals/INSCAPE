@@ -29,7 +29,10 @@ for (const [width, theme] of [[1440, 'light'], [390, 'dark']]) test(`Keeper uses
     assert.ok(Math.abs((await dock.boundingBox()).width - Math.min(176, (width - 44) / 2)) < 1);
     const trigger = page.getByRole('button', { name: 'Keeper settings', exact: true });
     await trigger.click(); await settings.waitFor();
-    assert.deepEqual(await settings.evaluate(material), await dock.evaluate(material));
+    const editorMaterial = theme === 'light'
+      ? ['rgb(250, 249, 246)', 'rgb(37, 43, 39)', '9px', 'rgb(218, 219, 214)', 'none']
+      : ['rgb(52, 54, 53)', 'rgb(236, 238, 235)', '9px', 'rgb(70, 74, 72)', 'none'];
+    assert.deepEqual(await settings.evaluate(material), editorMaterial, 'Keeper settings use the compact Editor finish');
     assert.equal(await settings.locator('.system-workflow__resize-handle').count(), 0);
     const move = settings.getByLabel('Move Keeper settings window', { exact: true });
     assert.equal(await move.evaluate(node => node.matches(':focus-visible')), false, 'mouse opening does not highlight the title bar');

@@ -68,6 +68,8 @@ export function mergeReceptionCells(original, id, direction) {
   const value = plan.aligned;
   const { cells, frame } = plan, selected = cells[0], removed = new Set(cells.slice(1).map(cell => cell.id));
   const content = cells.find(cell => cell.content), locked = cells.flatMap(cell => cell.lockedMembers || []);
+  const anchors = cells.flatMap(cell => cell.memberAnchors || []);
+  const fitText = cells.flatMap(cell => cell.fitText || []);
   const referenceWidth = selected.mobile.referenceWidth || (selected.mobile.columns === 2 ? 390 : 189);
   // Carry existing narrow-view overrides into the merged cell's coordinates.
   // Unoverridden artwork continues to derive its placement from desktop geometry.
@@ -82,6 +84,8 @@ export function mergeReceptionCells(original, id, direction) {
   });
   const merged = { ...selected, members: cells.flatMap(cell => cell.members),
     ...(locked.length ? { lockedMembers: locked } : {}),
+    ...(anchors.length ? { memberAnchors: anchors } : {}),
+    ...(fitText.length ? { fitText } : {}),
     ...(content ? { content: content.content, ...(content.contentLayout ? { contentLayout: content.contentLayout } : {}) } : {}),
     mobile: { ...selected.mobile, ...(placements.length ? { placements, referenceWidth } : {}) } };
   // Put the surviving background at the backmost merged background's position
@@ -123,7 +127,9 @@ export function splitReceptionCell(value, id, direction, newId = `shape:${crypto
   if (plan.reason) throw new Error(plan.reason);
   if ([...value.shapes, ...value.imageModules, ...value.texts].some(item => item.id === newId)) throw new Error('This cell already exists.');
   const cell = value.cells.find(item => item.id === id), shape = value.shapes.find(item => item.id === id);
-  const added = { id: newId, members: [], radius: cell.radius || 0, mobile: { columns: cell.mobile.columns, height: cell.mobile.height } };
+  const added = { id: newId, members: [], radius: cell.radius || 0,
+    ...(cell.clipContent !== undefined ? { clipContent: cell.clipContent } : {}),
+    mobile: { columns: cell.mobile.columns, height: cell.mobile.height } };
   const insert = ids => ids.flatMap(item => item === id ? [item, newId] : [item]);
   const next = { ...value, cells: value.cells.flatMap(item => item.id === id ? [item, added] : [item]),
     shapes: [...value.shapes, { ...shape, id: newId, name: `Cell ${value.cells.length + 1}` }],
@@ -133,8 +139,8 @@ export function splitReceptionCell(value, id, direction, newId = `shape:${crypto
 }
 
 export function receptionCellStructureActions(value, id) {
-  return [...Object.keys(directions).map(direction => ({ action: 'merge', direction, label: `Merge ${direction}`,
+  return [...Object.keys(directions).map(direction => ({ action: 'merge', direction,
     ...receptionCellMerge(value, id, direction) })),
-  ...['horizontal', 'vertical'].map(direction => ({ action: 'split', direction, label: `Split ${direction}ly`,
+  ...['horizontal', 'vertical'].map(direction => ({ action: 'split', direction,
     ...receptionCellSplit(value, id, direction) }))];
 }

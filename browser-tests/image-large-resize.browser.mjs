@@ -36,7 +36,7 @@ for (const [width, density] of [[1440, 1], [390, 1.25]]) test(`large Image corne
         const dock = page.locator('.workbench-tool-dock');
         const resize = dock.locator('.workbench-tool-panel-resize[data-edge="se"]');
         await resize.focus(); for (let i = 0; i < 10; i++) await resize.press('Shift+ArrowUp');
-        const move = dock.getByRole('button', { name: 'Move Transform, Color and Info panel', exact: true });
+        const move = dock.getByRole('button', { name: 'Move Inspector panel', exact: true });
         await move.focus(); for (let i = 0; i < 20; i++) await move.press('Shift+ArrowDown');
         await settle(page);
       }
@@ -55,7 +55,7 @@ for (const [width, density] of [[1440, 1], [390, 1.25]]) test(`large Image corne
       await page.evaluate(({ size, sequence }) => {
         const api = imageFitFixture, draft = api.store.getDraft(), id = `image:large${sequence}`;
         draft.imageModules = [{ ...draft.imageModules[0], ...size, id,
-          sides: draft.imageModules[0].sides.map(side => ({ ...side, crop: null })) }];
+          artwork: { ...draft.imageModules[0].artwork, crop: null } }];
         draft.workbench.area = { width: 6000, height: 6000 };
         draft.workbench.imageModules = [{ id, open: true, position: { left: 600, top: 600 } }];
         api.failSave = false; api.store.commitCompletedOperation(draft, { expectedGeneration: api.store.getGeneration() });
@@ -90,7 +90,7 @@ for (const [width, density] of [[1440, 1], [390, 1.25]]) test(`large Image corne
         const after = await draft();
         assert.equal(after.imageModules[0].width, Math.round(size.width*fx));
         assert.equal(after.imageModules[0].height, Math.round(size.height*fy));
-        assert.deepEqual(after.imageModules[0].sides, before.imageModules[0].sides, 'source, crop and transforms unchanged');
+        assert.deepEqual(after.imageModules[0].artwork, before.imageModules[0].artwork, 'source, crop and transforms unchanged');
         assert.deepEqual(await frame.boundingBox(), preview, 'release keeps the preview');
         await page.evaluate(() => imageFitFixture.store.undo()); await settle(page); assert.deepEqual(await draft(), before);
         measurements.push({ size, corner, axis, factor, before: rect, preview });
@@ -102,7 +102,7 @@ for (const [width, density] of [[1440, 1], [390, 1.25]]) test(`large Image corne
     await drag('.workbench-selection .is-se', 23.9, 0); await page.mouse.up(); await settle(page);
     const saved = await draft(), savedFrame = await frame.boundingBox();
     assert.equal(saved.imageModules[0].width, 335); assert.equal(saved.imageModules[0].height, 1053);
-    assert.equal(saved.imageModules[0].sides[0].crop, null);
+    assert.equal(saved.imageModules[0].artwork.crop, null);
     await page.screenshot({ path: join(output, `large-before-reload-${width}.png`) });
     // Reload the actual page and hydrate the real store from browser storage.
     await page.reload(); await mount(); await configure();

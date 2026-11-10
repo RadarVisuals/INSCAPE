@@ -5,6 +5,7 @@ import { diagnosticsEnvironmentPlugin, productionBuildHygienePlugin } from './sc
 import { productionResponseSecurityHeaders } from './scripts/productionSecurityPolicy.js';
 import { excludeUnsupportedWalletConnectorsPlugin } from './scripts/unsupportedWalletConnectors.js';
 import { narrowLuksoWalletImportsPlugin } from './scripts/luksoWalletImports.js';
+import { providerArtworkCompressionPlugin } from './scripts/providerArtworkCompression.js';
 import { artworkDocumentHostPlugin } from './scripts/artworkDocumentHost.js';
 import { keeperChatgptPlugin } from './scripts/keeperChatgpt/service.js';
 import designMetadata, { designMetadataEnabled } from './scripts/designMetadata.js';
@@ -20,9 +21,9 @@ export default defineConfig(({ mode, command }) => {
     define: { __INSCAPE_RELEASE_COMMIT__: JSON.stringify(resolveReleaseCommit({ ...process.env, ...productionEnvironment })) },
     plugins: [keeperChatgptPlugin(), artworkDocumentHostPlugin(), diagnosticsEnvironmentPlugin(),
       react({ babel: { plugins: designMetadataEnabled(command, mode) ? [[designMetadata, { root: process.cwd() }]] : [] } }),
-      narrowLuksoWalletImportsPlugin(), excludeUnsupportedWalletConnectorsPlugin(),
+      narrowLuksoWalletImportsPlugin(), providerArtworkCompressionPlugin(), excludeUnsupportedWalletConnectorsPlugin(),
       ownerRuntimeIsolationPlugin(), productionBuildHygienePlugin()],
-    build: { manifest: true, rollupOptions: {
+    build: { manifest: true, minify: 'terser', terserOptions: { maxWorkers: 4, compress: { passes: 2 } }, rollupOptions: {
       input: { app: 'index.html', miniAppHost: 'mini-app-host.html' },
       output: {
         // One shared icon family should not become dozens of tiny shared files.
@@ -42,7 +43,7 @@ export default defineConfig(({ mode, command }) => {
     optimizeDeps: mode === 'design-lab'
       // Scan only the lab entry. Full Editor artboards also need their transitive
       // CommonJS dependencies optimized when those lazy components are opened.
-      ? { entries: ['design-lab.html'], include: ['react', 'react-dom/client', 'react/jsx-runtime', 'react/jsx-dev-runtime', 'lucide-react', '@tiptap/react', '@tiptap/starter-kit', '@tiptap/extension-text-style', 'buffer', 'qrcode-generator'] }
+      ? { entries: ['design-lab.html'], include: ['react', 'react-dom/client', 'react/jsx-runtime', 'react/jsx-dev-runtime', 'lucide-react', '@tiptap/react', '@tiptap/core', '@tiptap/extension-text-style', 'buffer', 'qrcode-generator'] }
       : { entries: ['index.html', 'mini-app-host.html', 'browser-tests/*.html'] },
     preview: { headers: productionResponseSecurityHeaders(productionEnvironment) },
     server: {

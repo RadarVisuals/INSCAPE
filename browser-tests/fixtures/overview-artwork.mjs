@@ -22,7 +22,7 @@ export async function seedPresentation(page, { portrait = false } = {}) {
     draft.shapes = [{ id: 'shape:ground', name: 'Ground', color: '#a9b9b1', opacity: 1, visibility: 'PRIVATE' }];
     draft.workbench.shapes = [{ id: 'shape:ground', open: true, window: { left: 0, top: 0, width: 5000, height: 5000 } }];
     draft.imageModules = [asset, asset, other].map((asset, i) => ({ id: `image:study${i}`, name: asset.name, width: 1900, height: 1300, visibility: 'PRIVATE',
-      sides: [{ id: `side:study${i}`, asset, crop: null, transform: { quarterTurns: 0, mirrorX: false, mirrorY: false } }] }));
+      artwork: { id: `artwork:study${i}`, asset, crop: null, transform: { quarterTurns: 0, mirrorX: false, mirrorY: false } } }));
     draft.workbench.imageModules = draft.imageModules.map((item, i) => ({ id: item.id, open: true, position: { left: 350 + (i % 2) * 2300, top: 400 + Math.floor(i / 2) * 1500 } }));
     draft.artworkLayers = ['shape:ground', ...draft.imageModules.map(item => item.id), draft.texts[0].id];
     draft.workbenchIndex = { ...createWorkbenchIndex(), destinations: [
@@ -35,7 +35,7 @@ export async function seedPresentation(page, { portrait = false } = {}) {
       draft.texts = []; draft.workbench.texts = [];
       draft.shapes[0].color = '#001722'; draft.workbench.shapes[0].window = { ...draft.workbench.area };
       draft.imageModules = [{ ...draft.imageModules[0], width: 962, height: 1216,
-        sides: [{ ...draft.imageModules[0].sides[0], asset: portraitAsset }] }];
+        artwork: { ...draft.imageModules[0].artwork, asset: portraitAsset } }];
       draft.workbench.imageModules = [{ id: draft.imageModules[0].id, open: true, position: { left: 0, top: 0 } }];
       draft.artworkLayers = ['shape:ground', draft.imageModules[0].id];
       draft.workbenchIndex = createWorkbenchIndex();

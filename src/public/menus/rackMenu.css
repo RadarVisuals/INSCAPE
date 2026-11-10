@@ -109,3 +109,41 @@
   content: '';
   pointer-events: none;
 }
+
+/* Object menus opt in; header and other workspace menus retain their grammar. */
+.rack-menu-surface[data-workflow-palette='editor'] {
+  --rack-menu-panel: var(--tactile-face);
+  --rack-menu-ink: var(--tactile-ink);
+  --rack-menu-muted: var(--tactile-muted);
+  --rack-menu-line-strong: var(--tactile-edge);
+  --rack-menu-selected: var(--tactile-selected);
+  box-sizing: border-box;
+  padding: 4px;
+  border-radius: var(--editor-control-radius);
+}
+.rack-menu-command-surface.desktop-menu[data-workflow-palette='editor'] button {
+  box-sizing: border-box;
+  height: var(--workflow-menu-row-height);
+  min-height: var(--workflow-menu-row-height);
+  grid-template-columns: minmax(0, 1fr) 12px;
+  gap: 8px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: var(--editor-control-radius);
+  font: var(--workflow-type-control);
+  letter-spacing: 0;
+  text-transform: none;
+}
+.rack-menu-command-surface.desktop-menu[data-workflow-palette='editor'] button > i { display: none; }
+.rack-menu-command-surface.desktop-menu[data-workflow-palette='editor'] button b { color: inherit; font: inherit; }
+.rack-menu-command-surface.desktop-menu[data-workflow-palette='editor'] button:is(:hover, :focus-visible, [data-selected], [aria-expanded='true']) {
+  background: var(--rack-menu-selected);
+  color: var(--tactile-selected-ink);
+  box-shadow: none;
+}
+.rack-menu-command-surface.desktop-menu[data-workflow-palette='editor'] button:disabled {
+  background: transparent;
+  color: var(--rack-menu-muted);
+  box-shadow: none;
+}
+.rack-menu-command-surface.desktop-menu[data-workflow-palette='editor'] button::before { display: none; }

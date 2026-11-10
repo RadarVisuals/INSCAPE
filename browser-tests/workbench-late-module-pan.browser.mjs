@@ -1,3 +1,4 @@
+import { choosePointer } from './fixtures/editor-menu.mjs';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { mkdir } from 'node:fs/promises';
@@ -28,7 +29,7 @@ for (const visitor of [false, true]) for (const width of [1440, 390]) {
         await route.fulfill({ response: await route.fetch() });
       });
       await mountGridMotionFixture(page, { origin, visitor, heavy: true, count: 3, textModes: true, displayWidth: 600 });
-      const explore = page.getByRole('button', { name: 'Hand tool', exact: true });
+      const explore = page.getByRole('button', { name: visitor ? 'Hand tool' : 'Pointer tools', exact: true });
       await explore.waitFor();
       const existingImage = page.locator('[data-workbench-view-id="image:motion-0"]');
       await existingImage.waitFor({ state: 'attached' });
@@ -37,7 +38,7 @@ for (const visitor of [false, true]) for (const width of [1440, 390]) {
       const saved = await page.evaluate(() => localStorage.getItem(window.__motionKey));
       await host.dispatchEvent('wheel', { deltaX: 5000, deltaY: 5000, bubbles: true, cancelable: true });
       await settle(page);
-      await explore.click();
+      await choosePointer(page, 'Hand', visitor);
       const start = await camera(host);
       const point = await page.waitForFunction(() => {
         for (let y = 350; y < innerHeight - 150; y += 20) for (let x = 30; x < innerWidth - 140; x += 20) {

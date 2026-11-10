@@ -170,7 +170,7 @@ try {
   assert.equal(await page.evaluate(() => {
     const event = new Event('beforeunload', { cancelable: true }); window.dispatchEvent(event); return event.defaultPrevented;
   }), false, 'confirmed save releases the page leave guard');
-  await page.getByRole('button', { name: 'Close Text tools', exact: true }).click();
+  await page.getByRole('button', { name: 'Close Inspector', exact: true }).click();
   for (const id of ['display:primary', await page.evaluate(() => window.second)]) {
     const board = page.locator(`[data-display-instance="${id}"]`).getByRole('article', { name: 'Display Module', exact: true });
     await board.locator('.system-workflow__identity-strip').focus();

@@ -30,7 +30,7 @@
 [data-workflow-material="tactile"] .workflow-tactile-control {
   position: relative;
   appearance: none;
-  border: 1px solid var(--tactile-edge);
+  border: 1px solid var(--tactile-control-edge, var(--tactile-edge));
   border-radius: var(--tactile-radius-control);
   color: var(--tactile-ink);
   background: var(--tactile-raised);
@@ -41,6 +41,7 @@
   transition: color var(--tactile-motion) ease-out;
 }
 [data-workflow-material="tactile"] .workflow-tactile-control::after {
+  display: var(--tactile-state-mark, block);
   content: '';
   position: absolute;
   width: 12px;
@@ -68,10 +69,10 @@
   [data-workflow-material="tactile"] .workflow-tactile-control:where(:not(:disabled):hover) { background: var(--tactile-hover); }
 }
 [data-workflow-material="tactile"] .workflow-tactile-control:where(:not(:disabled):is(:active, [aria-pressed="true"], [aria-expanded="true"], [aria-selected="true"], [data-active])) {
-  background: var(--tactile-well);
+  background: var(--tactile-selected, var(--tactile-well));
   box-shadow: var(--tactile-shadow-inset);
 }
-[data-workflow-material="tactile"] .workflow-tactile-control:where(:not(:disabled):is([aria-pressed="true"], [aria-expanded="true"], [aria-selected="true"], [data-active])) { color: var(--tactile-accent); }
+[data-workflow-material="tactile"] .workflow-tactile-control:where(:not(:disabled):is([aria-pressed="true"], [aria-expanded="true"], [aria-selected="true"], [data-active])) { color: var(--tactile-selected-ink, var(--tactile-accent)); }
 [data-workflow-material="tactile"] .workflow-tactile-control:where(:is([aria-pressed="true"], [aria-expanded="true"], [aria-selected="true"], [data-active]))::after { opacity: 1; }
 [data-workflow-material="tactile"] .workflow-tactile-control:focus-visible { outline: 2px solid var(--tactile-accent); outline-offset: 2px; }
 [data-workflow-material="tactile"] .workflow-tactile-control:where(:disabled) {

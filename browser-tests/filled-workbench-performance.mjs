@@ -1,3 +1,4 @@
+import { choosePointer } from './fixtures/editor-menu.mjs';
 // Explicit, local benchmark. Not part of the fast functional test suite.
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
@@ -203,7 +204,7 @@ try {
     }
     await page.locator('.text-window').first().waitFor();
     const coldReadyMs = performance.now() - start;
-    const closeTools = page.getByRole('button', { name: 'Close Text tools', exact: true });
+    const closeTools = page.getByRole('button', { name: 'Close Inspector', exact: true });
     if (await closeTools.isVisible()) await closeTools.click();
     await page.waitForTimeout(1500);
     const cdp = await context.newCDPSession(page); await cdp.send('Performance.enable');
@@ -264,7 +265,7 @@ try {
     const allFramesAfter = await frameState(page);
     const paintWorkers = () => page.workers().filter(worker => worker.url().includes('imagePaint.worker')).length;
     const activePaintWorkers = paintWorkers();
-    assert.ok(activePaintWorkers <= 1, 'mounted Image sides share at most one paint worker');
+    assert.ok(activePaintWorkers <= 1, 'mounted Images share at most one paint worker');
     const mode = testCase.svgMode || (testCase.animated ? 'raf' : 'static');
     let updateRates = [];
     if (nomad) {
@@ -329,14 +330,13 @@ try {
         if (diagnostic) await page.evaluate(target => performance.mark('workbench-zoom-' + target), target);
         await zoom(page, target); await page.waitForTimeout(150);
       }
-      const hand = page.getByRole('button', { name: 'Hand tool', exact: true });
-      await hand.click();
+      await choosePointer(page, 'Hand');
       for (let i = 0; i < 2; i++) {
         if (diagnostic) await page.evaluate(i => performance.mark('workbench-pan-' + i), i);
         await page.mouse.move(1300, 700); await page.mouse.down(); await page.mouse.move(1000, 550, { steps: 16 }); await page.mouse.up();
         await page.waitForTimeout(350);
       }
-      await hand.click();
+      await choosePointer(page, 'Select');
     });
     const zoomEnded = performance.now();
     if (profileNavigation) {
@@ -362,7 +362,7 @@ try {
     assert.ok(panObservation.x < -100 && panObservation.y < -50,
       'the drag must reach the canvas, not disappear into an embedded HTML document');
     assert.deepEqual(await page.evaluate(() => workbenchPerf.record()), initial.record, 'camera must not save authored content');
-    await page.getByRole('button', { name: 'Reset Workbench view', exact: true }).click();
+    await page.getByRole('button', { name: 'Fit canvas in view', exact: true }).click();
     await page.waitForTimeout(500); await zoom(page, 1); await page.waitForTimeout(500);
     const editor = page.getByRole('textbox', { name: 'Article text', exact: true }).first();
     if (!await editor.isVisible()) {

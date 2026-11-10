@@ -3,13 +3,15 @@ export const BROWSER_SHARDS = 4;
 // The slowest of 85 completed CI suites (run 40775463649) took 111.137 seconds.
 export const SUITE_TIMEOUT_MS = 600_000;
 export const STEP_TIMEOUT_MS = 900_000;
+export const UNIT_TEST_PATTERNS = Object.freeze(['src/**/*.test.js', 'scripts/**/*.test.{js,mjs}',
+  'browser-tests/**/*.test.{js,mjs}', 'design-system/**/*.test.js', 'prototypes/**/*.test.js']);
 export const verificationSteps = Object.freeze([
   { name: 'browser-catalog', group: 'source', args: ['scripts/browserSuiteCatalog.mjs'] },
   { name: 'lint', group: 'source', args: ['scripts/lintSource.mjs'] },
   { name: 'typecheck', group: 'source', args: ['typechecks/verify-workbench-contracts.mjs'] },
-  // Keep native discovery and process isolation, but bound concurrent test files:
+  // Select the same maintained source roots as npm test, excluding audit exports.
   // CPU-count defaults overload nested Windows ownership inventories under load.
-  { name: 'unit', group: 'source', args: ['--test', '--test-reporter=tap', '--test-concurrency=4'], tap: true },
+  { name: 'unit', group: 'source', args: ['--test', '--test-reporter=tap', '--test-concurrency=4', ...UNIT_TEST_PATTERNS], tap: true },
   { name: 'standards', group: 'source', args: ['--test', '--test-reporter=tap', 'scripts/luksoStandards.audit.test.js'], tap: true },
   { name: 'design-system', group: 'source', args: ['scripts/designSystemInventory.js', '--check'] },
   { name: 'browser', group: 'browser', args: ['scripts/runBrowserTests.mjs'] },

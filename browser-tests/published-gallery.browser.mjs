@@ -7,6 +7,13 @@ import { browserExecutable } from '../scripts/browserEnvironment.mjs';
 const origin = process.env.INSCAPE_TEST_ORIGIN || 'http://127.0.0.1:5173';
 const output = process.env.INSCAPE_BROWSER_OUTPUT || '.browser-test-runtime/published-gallery';
 const address = '0x' + '1'.repeat(40);
+async function enterGallery(page, width) {
+  if (width >= 900) {
+    await page.locator('.composition-explorer-viewport').waitFor();
+    await page.getByRole('button', { name: 'Grid', exact: true }).click();
+  }
+  await page.locator('.workbench-overview-gallery').waitFor();
+}
 test('published wrap keeps every visible SVG preview painted through wheel and touch transitions', { timeout: 90000 }, async () => {
   const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
   try {
@@ -35,7 +42,7 @@ for (const width of [390, 1440]) test(`published gallery, wrap, modal, metadata 
     await page.route('**/*', route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
     await page.goto(`${origin}/browser-tests/profile-overview-fixture.html?view=${address}&reception=1&collection=1`, { waitUntil: 'domcontentloaded', timeout: 60000 });
     await page.getByRole('button', { name: 'Enter Inscape', exact: true }).click();
-    await page.locator('.workbench-overview-gallery').waitFor();
+    await enterGallery(page, width);
     const before = await page.evaluate(() => ({ publication: JSON.stringify(window.__overviewPublication), local: JSON.stringify(window.__galleryStore.getBackupSnapshot()), storage: JSON.stringify({ ...localStorage }) }));
     assert.equal(await page.getByRole('button', { name: 'Open Private experiment', exact: true }).count(), 0);
     assert.equal(await page.getByRole('button', { name: /^(Edit|Crop|New Workbench)/ }).count(), 0);
@@ -66,13 +73,14 @@ for (const width of [390, 1440]) test(`published gallery, wrap, modal, metadata 
     await page.waitForTimeout(750);
     await page.screenshot({ path: `${output}/gallery-${width}.png` });
     assert.ok(await page.locator('.workbench-overview').evaluate(node => node.scrollWidth <= node.clientWidth + 1));
+    await page.getByRole('button', { name: 'Inscape menu', exact: true }).click();
     await page.getByRole('button', { name: 'About', exact: true }).click();
     await page.getByRole('button', { name: 'Enter Inscape', exact: true }).waitFor();
-    await page.goBack(); await page.locator('.workbench-overview-gallery').waitFor();
+    await page.goBack(); await enterGallery(page, width);
     assert.deepEqual(await page.evaluate(() => ({ publication: JSON.stringify(window.__overviewPublication), local: JSON.stringify(window.__galleryStore.getBackupSnapshot()), storage: JSON.stringify({ ...localStorage }) })), before);
     assert.deepEqual(errors, []);
     await page.reload({ waitUntil: 'domcontentloaded' });
-    await page.locator('.workbench-overview-gallery').waitFor();
+    await enterGallery(page, width);
     assert.ok(await page.locator('.workbench-overview').evaluate(node => getComputedStyle(node).backgroundColor !== 'rgba(0, 0, 0, 0)'));
   } finally { await browser.close(); }
 });
@@ -94,5 +102,36 @@ test('publication review defaults to the current canvas and names every explicit
     await page.getByRole('button', { name: 'Prepare publication', exact: true }).waitFor();
     await page.getByRole('button', { name: 'Select all changed canvases', exact: true }).click();
     assert.equal(await page.getByRole('checkbox', { name: /Private experiment/ }).isChecked(), true);
+  } finally { await browser.close(); }
+});
+
+test('invalid publication replacement requires current consent and invalidates prepared snapshots when withdrawn or rechecked', { timeout: 90000 }, async () => {
+  const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
+  try {
+    const page = await browser.newPage({ viewport: { width: 1200, height: 900 } });
+    await page.route('**/*', route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
+    await page.goto(`${origin}/browser-tests/profile-overview-fixture.html?publish=1&invalid-publication=1`, { waitUntil: 'domcontentloaded' });
+    const consent = page.getByRole('checkbox', { name: 'Replace the invalid publication with my selected local content', exact: true });
+    const prepare = page.getByRole('button', { name: 'Prepare publication', exact: true });
+    await consent.waitFor();
+    assert.equal(await consent.isChecked(), false);
+    assert.equal(await prepare.isDisabled(), true);
+    assert.equal(await page.getByRole('checkbox', { name: /Profile details/ }).isChecked(), true);
+    assert.equal(await page.getByRole('checkbox', { name: /Profile details/ }).isDisabled(), true);
+    assert.equal(await page.getByRole('checkbox', { name: /Private experiment/ }).isChecked(), false);
+    await consent.check();
+    await prepare.click();
+    await page.getByRole('button', { name: 'Make presentation public', exact: true }).waitFor();
+    await consent.uncheck();
+    assert.equal(await prepare.isDisabled(), true);
+    assert.equal(await page.getByRole('button', { name: 'Make presentation public', exact: true }).count(), 0);
+    await consent.check();
+    await page.getByRole('button', { name: 'Recheck publication fixture', exact: true }).click();
+    assert.equal(await consent.isChecked(), false);
+    assert.equal(await prepare.isDisabled(), true);
+    await consent.check();
+    await page.getByRole('button', { name: 'Network failure fixture', exact: true }).click();
+    assert.equal(await consent.count(), 0);
+    assert.equal(await prepare.isDisabled(), true);
   } finally { await browser.close(); }
 });

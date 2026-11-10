@@ -12,7 +12,7 @@ import { createSystemWorkflowAuthoringSession } from '../src/systemWorkflow/syst
 import { addKeeperDock } from '../src/keeper/keeperSession.js';
 import { addTextModule, saveTextModule } from '../src/text/textSession.js';
 import { addShape } from '../src/shapes/shapeSession.js';
-import { resolveImageLibrarySide } from '../src/imageModule/imageLibrarySide.js';
+import { resolveImageLibraryArtwork } from '../src/imageModule/imageLibraryArtwork.js';
 import { addImageModule, saveImageModule } from '../src/imageModule/imageModuleSession.js';
 import '../src/inscapeTokens.css';
 import '../src/public/ownerSystemWorkflow/ownerSystemWorkflow.css';
@@ -39,15 +39,15 @@ async function mountFixture() {
   if (sample === 'actions') {
     addShape(store, profileAddress, { position: { left: 100, top: 100 } });
     addImageModule(store, profileAddress, {
-      side: await resolveImageLibrarySide(OWNER_SYSTEM_WORKFLOW_REVIEW_ASSETS[0]), size: { width: 360, height: 240 }, position: { left: 520, top: 100 },
+      artwork: await resolveImageLibraryArtwork(OWNER_SYSTEM_WORKFLOW_REVIEW_ASSETS[0]), size: { width: 360, height: 240 }, position: { left: 520, top: 100 },
     });
   }
   if (sample === 'navigator') {
     addKeeperDock(store, profileAddress);
     addShape(store, profileAddress, { position: { left: 200, top: 600 } });
-    addImageModule(store, profileAddress, { side: await resolveImageLibrarySide(OWNER_SYSTEM_WORKFLOW_REVIEW_ASSETS[6]), size: { width: 420, height: 280 }, position: { left: 520, top: 600 } });
+    addImageModule(store, profileAddress, { artwork: await resolveImageLibraryArtwork(OWNER_SYSTEM_WORKFLOW_REVIEW_ASSETS[6]), size: { width: 420, height: 280 }, position: { left: 520, top: 600 } });
     const image = store.getDraft().imageModules.at(-1);
-    saveImageModule(store, profileAddress, image, { ...image, sides: [...image.sides, await resolveImageLibrarySide(OWNER_SYSTEM_WORKFLOW_REVIEW_ASSETS[5])] });
+    saveImageModule(store, profileAddress, image, { ...image, artwork: await resolveImageLibraryArtwork(OWNER_SYSTEM_WORKFLOW_REVIEW_ASSETS[5]) });
     const id = addTextModule(store, profileAddress, { position: { left: 80, top: 900 } });
     const text = store.getDraft().texts.find(item => item.id === id);
     saveTextModule(store, profileAddress, text, { ...text, article: { ...text.article, title: 'Navigator study', content: { type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'A live miniature of this composition.' }] }] } } });

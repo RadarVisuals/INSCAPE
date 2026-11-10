@@ -33,6 +33,7 @@ export default forwardRef(function DisplayModule({ assetsById, controller, autho
   const tools = useSharedDisplayTools();
   const textTools = useSharedTextTools();
   const targetId = controller.moduleId;
+  const pickingMetadata = tools.target === targetId && tools.state.metadata;
   useWorkbenchMiniature(controller.moduleId || PRIMARY_DISPLAY_ID, useMemo(() => ({ kind: 'display', grid: controller.selectedGrid,
     geometry: controller.draft.geometry, assets: assetsById, hidden: controller.hiddenPlacementIds, appearance: controller.draft.appearance }),
     [controller.selectedGrid, controller.draft.geometry, assetsById, controller.hiddenPlacementIds, controller.draft.appearance]));
@@ -159,15 +160,19 @@ export default forwardRef(function DisplayModule({ assetsById, controller, autho
   useEffect(() => {
     if (playbackDisabled) pauseGrids();
   }, [playbackDisabled, pauseGrids]);
+  // Cancellation follows availability/target transitions. The current callbacks
+  // must not restart that transition when their own crop/viewer state updates.
+  const cancellation = useRef(null);
+  cancellation.current = { crop: crop.cancelCrop, viewer: viewer.close };
   useEffect(() => {
     if (!inactive) return;
-    crop.cancelCrop();
-    viewer.close();
+    cancellation.current.crop();
+    cancellation.current.viewer();
     setModuleMenu(null);
     setSizeDialog(null);
   }, [inactive]);
   useEffect(() => {
-    if (toolTarget !== targetId) crop.cancelCrop();
+    if (toolTarget !== targetId) cancellation.current.crop();
   }, [toolTarget, targetId]);
   useImperativeHandle(ref, () => ({
     changeGrid,
@@ -191,11 +196,11 @@ export default forwardRef(function DisplayModule({ assetsById, controller, autho
 
       renderCues={host => <DisplayInspectionCues key={`${controller.draft.profileAddress}:${controller.selectedGridId}`}
         host={host} items={controller.selectedGrid?.placements || []} viewer={viewer} contentVersion={assetsById} onSelect={id => { tools.activate(targetId); controller.replaceSelection([id]); }}
-        editable={!authoringLocked} disabled={!tools.state.metadata || panelOccupied || playbackState.moving || playbackState.offset || Boolean(crop.cropSession)}
+        editable={!authoringLocked} disabled={!pickingMetadata || panelOccupied || playbackState.moving || playbackState.offset || Boolean(crop.cropSession)}
         />}
       onAuthoringLockToggle={toggleAuthoringLock}
-      renderInspection={viewer.placementId ? (container, controlsContainer, scene) => <DisplayFocusViewer
-        scene={scene} container={container} controlsContainer={controlsContainer}
+      renderInspection={viewer.placementId ? scene => <DisplayFocusViewer
+        scene={scene}
         viewer={viewer} /> : null}
 >
     <OwnerSystemWorkflowCanvas placementTargetRef={placementTargetRef} assetsById={assetsById} authoringLocked={authoringLocked || liftInspection} controller={controller} crop={crop}
@@ -203,7 +208,7 @@ export default forwardRef(function DisplayModule({ assetsById, controller, autho
         playingGrids={playingGrids} onPauseGrids={pauseGrids} onPlaybackStateChange={setPlaybackState}
         onAssetDimensions={registerAssetDimensions} onChangeGrid={changeGrid}
         suspended={inactive} interactionDisabled={inactive || panelOccupied || liftMoving || Boolean(viewer.placementId)} onOpenViewer={(placement) => {
-          if (tools.state.metadata && !liftInspection) controller.replaceSelection([placement.id]);
+          if (pickingMetadata && !liftInspection) controller.replaceSelection([placement.id]);
           else if (focusModules && !liftInspection) {
             controller.replaceSelection([placement.id]);
             focusModules([targetId]);

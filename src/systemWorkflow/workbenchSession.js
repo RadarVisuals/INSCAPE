@@ -13,14 +13,16 @@ export function createWorkbenchSession({ store }) {
     const generation = store.getGeneration();
     const candidate = makeCandidate(store.getDraft());
     if (candidate === null) return false;
-    if (!store.commitCompletedOperation(candidate, { ...options, expectedGeneration: generation })) {
+    // Reception validates its native modules together with their cells during the commit.
+    const document = store.getWorkbenchId?.() === 'reception' ? candidate : assertValidSystemWorkflowDraft(candidate);
+    if (!store.commitCompletedOperation(document, { ...options, expectedGeneration: generation })) {
       throw failure('SYSTEM_WORKFLOW_OPERATION_STALE', 'The change could not be saved. Storage may be unavailable or the draft changed in another tab.');
     }
     return true;
   }
   return Object.freeze({
     saveWorkbench(workbench) {
-      return transact(draft => assertValidSystemWorkflowDraft({ ...draft, workbench: structuredClone(workbench) }), { recordHistory: false });
+      return transact(draft => ({ ...draft, workbench: structuredClone(workbench) }), { recordHistory: false });
     },
     setIdentityConfiguration({ expectedDetails, expectedCard, details, card }) {
       return transact(draft => {
@@ -30,7 +32,7 @@ export function createWorkbenchSession({ store }) {
         }
         if (same(identityDetails(current), identityDetails(details)) && Object.hasOwn(current, 'card') && same(current.card, card)) return null;
         Object.assign(current, structuredClone(details), { card: structuredClone(card) });
-        return assertValidSystemWorkflowDraft(draft);
+        return draft;
       });
     },
   });

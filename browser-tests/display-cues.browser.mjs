@@ -1,3 +1,4 @@
+import { sharedToolTab } from './fixtures/shared-tools.mjs';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { chromium } from 'playwright-core';
@@ -79,7 +80,7 @@ test('owner marker movement and reset are temporary and independent of artwork g
     for (const key of ['x', 'y', 'width', 'height']) assert.ok(Math.abs(reset[key] - before[key]) < 1);
     await activate(page, cue);
     await page.getByRole('article', { name: 'Artwork metadata', exact: true }).getByRole('heading', { name: 'MOUNTAIN SIGNAL II', exact: true }).waitFor();
-    assert.equal(await page.getByRole('tab', { name: 'Info', exact: true }).getAttribute('aria-selected'), 'true');
+    assert.equal(await sharedToolTab(page, 'Inspector').getAttribute('aria-selected'), 'true');
     assert.equal(await board.getAttribute('data-inspecting'), null);
     assert.equal(await page.evaluate(() => window.__cueWrites), 0);
   } finally { await browser.close(); }

@@ -63,7 +63,7 @@
     {
       "name": "artwork-info",
       "category": "release",
-      "rationale": "Bestaande release-default onverkort behouden. Concrete controle: Image info follows visible sides, detaches and rejoins without editing content or history."
+      "rationale": "Bestaande release-default onverkort behouden. Concrete controle: Image info follows the selected artwork, detaches and rejoins without editing content or history."
     },
     {
       "name": "animated-raster",
@@ -103,12 +103,7 @@
     {
       "name": "image-interaction",
       "category": "release",
-      "rationale": "Bestaande release-default onverkort behouden. Concrete controle: Image body distinguishes inspection, movement, cancellation, flip, crop and Workbench selection."
-    },
-    {
-      "name": "image-flip",
-      "category": "release",
-      "rationale": "Bestaande release-default onverkort behouden. Concrete controle: Image flip: loaded transparent artwork, midpoint, wraparound, reduced motion and saved-state isolation."
+      "rationale": "Bestaande release-default onverkort behouden. Concrete controle: Image body distinguishes inspection, movement, cancellation, crop and Workbench selection."
     },
     {
       "name": "image-load-recovery",
@@ -1672,7 +1667,7 @@
     {
       "name": "workbench-image-tools",
       "category": "release",
-      "rationale": "Release: de nieuwe Image-tab vervangt Properties; sides, publicatiekeuze, dropmodus en foutmelding blijven module-eigendom."
+      "rationale": "Release: de nieuwe Image-tab vervangt Properties; artwork replacement, publicatiekeuze en foutmelding blijven module-eigendom."
     },
     {
       "name": "workbench-input-recovery",
@@ -1907,6 +1902,16 @@
         "Host: runner_vite.",
         "INSCAPE_TEST_ROOT={origin}"
       ]
+    },
+    {
+      "name": "reception-gutter-pixels",
+      "category": "release",
+      "rationale": "Bento gutter coverage at fractional zoom and pixel phases; positive gaps remain visible without inventing spacing, and zero gutters remain seamless."
+    },
+    {
+      "name": "reception-bento-placement",
+      "category": "release",
+      "rationale": "Bento equal-edge snapping and cancellation, left/upper insertion and full-width strip relocation with Undo and reload at desktop sizes."
     },
     {
       "name": "reception-native-editor",

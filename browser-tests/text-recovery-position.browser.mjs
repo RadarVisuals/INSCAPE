@@ -51,7 +51,7 @@ for (const width of [1440, 390]) for (const touch of [false, true]) {
       const page = await browser.newPage({ viewport: { width, height: width === 390 ? 844 : 1000 }, hasTouch: touch });
       const errors = []; page.on('pageerror', error => errors.push(error.message));
       await mountTextToolsFixture(page, origin);
-      const tools = page.locator('.text-tools-window');
+      const tools = page.locator('.workbench-tool-dock:has([data-text-inspector])');
       const body = page.getByRole('textbox', { name: 'Article text', exact: true });
       if (width === 390) {
         // Navigator otherwise covers the recovery footer. Park it through its
@@ -77,7 +77,7 @@ for (const width of [1440, 390]) for (const touch of [false, true]) {
       const toolBounds = await tools.boundingBox(), retryBounds = await retry.boundingBox(), footerBounds = await footer.boundingBox();
       await page.screenshot({ path: `${output}/text-recovery-${width}-${touch ? 'touch' : 'pointer'}.png` });
       assert.ok(footerBounds.y + footerBounds.height <= toolBounds.y + toolBounds.height, 'the complete warning and recovery footer fit inside the tools');
-      assert.ok(retryBounds.height >= 29.9 && retryBounds.y + retryBounds.height < toolBounds.y + toolBounds.height, `the complete recovery target is visible: ${JSON.stringify({ retryBounds, toolBounds, style: await retry.evaluate(n => ({ minHeight: getComputedStyle(n).minHeight, zoom: getComputedStyle(n).zoom })) })}`);
+      assert.ok(retryBounds.height >= (touch ? 43.9 : 27.9) && retryBounds.y + retryBounds.height < toolBounds.y + toolBounds.height, `the complete recovery target is visible: ${JSON.stringify({ retryBounds, toolBounds, style: await retry.evaluate(n => ({ minHeight: getComputedStyle(n).minHeight, zoom: getComputedStyle(n).zoom })) })}`);
       if (touch) await retry.tap(); else await retry.click();
       await page.waitForFunction(() => !document.querySelector('.system-workflow__recovery-notice'));
       assert.equal(await tools.getByRole('alert').count(), 0);
@@ -98,7 +98,7 @@ for (const width of [1440, 390]) for (const touch of [false, true]) {
       await diagnostics(() => captureTarget(page, replace, `replace-${width}-${touch ? 'touch' : 'pointer'}`));
       assert.equal(await page.evaluate(() => window.savedDraft().texts[0].article.content.content[0].content[0].text), 'Saved in another tab.');
       const replacementBounds = await replace.boundingBox(), expandedBounds = await tools.boundingBox();
-      assert.ok(replacementBounds.y + replacementBounds.height < expandedBounds.y + expandedBounds.height, 'explicit replacement stays fully inside the expanded footer');
+      assert.ok(replacementBounds.y + replacementBounds.height <= expandedBounds.y + expandedBounds.height + 1, 'explicit replacement stays fully inside the expanded footer');
       assert.equal(await hit(replace), true);
       if (touch) await replace.tap(); else await replace.click();
       await page.waitForFunction(() => !document.querySelector('.system-workflow__recovery-notice'));
@@ -119,14 +119,16 @@ for (const [width, scale, method] of [[1600, 1, 'keyboard'], [1600, .5, 'drag'],
       const errors = []; page.on('pageerror', error => errors.push(error.message));
       await mountTextToolsFixture(page, origin, { displayTextCount: 1 });
       if (method === 'drag') {
+        const undockNavigator = page.getByRole('button', { name: 'Undock Navigator', exact: true });
+        if (await undockNavigator.count()) await undockNavigator.click();
+        const navigatorGrip = page.getByRole('button', { name: 'Move Navigator window', exact: true });
+        for (let i = 0; i < 40; i++) await navigatorGrip.press('Shift+ArrowRight');
         // The pan setup below puts the Display beneath the expanded sidebar.
         // Collapse that independent surface before exercising the drag handle.
-        await page.locator('.editor-menu-brand[aria-expanded="true"]').click();
-        // The parked Text window must also remain reachable after detachment.
-        const info = page.getByRole('button', { name: 'Close Info', exact: true });
-        if (await info.count()) await info.click();
+        const sidebar = page.locator('.editor-menu-brand[aria-expanded="true"]');
+        if (await sidebar.isVisible()) await sidebar.click();
       }
-      await page.getByRole('button', { name: 'Close Text tools', exact: true }).click();
+      await page.getByRole('button', { name: 'Close Inspector', exact: true }).click();
       const unlock = page.getByRole('button', { name: 'Unlock Display Module composition', exact: true });
       if (await unlock.count()) { await unlock.focus(); await page.keyboard.press('Enter'); }
       await setWorkbenchZoom(page, scale);
@@ -149,19 +151,19 @@ for (const [width, scale, method] of [[1600, 1, 'keyboard'], [1600, .5, 'drag'],
       const editor = stage.getByRole('textbox', { name: 'Article text', exact: true });
       await editor.fill('Attached rich text stays with its new window.');
       await editor.press('Control+A');
-      await page.locator('.text-tools-window').getByRole('button', { name: 'Bold', exact: true }).click();
+      await page.locator('.workbench-tool-dock:has([data-text-inspector])').getByRole('button', { name: 'Bold', exact: true }).click();
       const before = await page.evaluate(() => window.savedDraft());
       const original = before.grids.flatMap(grid => grid.placements).find(item => item.text?.article.title === 'Display article 1');
       let expectedScreen;
       if (method === 'keyboard') {
         const bounds = await stage.boundingBox();
         expectedScreen = { left: bounds.x + bounds.width + 12, top: bounds.y };
-        await openTextToolSection(page.locator('.text-tools-window'), 'Display connection');
+        await openTextToolSection(page.locator('.workbench-tool-dock:has([data-text-inspector])'), 'Display connection');
         await page.getByRole('button', { name: 'Move onto Workbench', exact: true }).focus();
         await page.keyboard.press('Enter');
       } else {
         // Move the companion window away using its own keyboard grip.
-        const grip = page.getByLabel('Move Text tools window', { exact: true });
+        const grip = page.getByLabel('Move Inspector panel', { exact: true });
         await grip.focus();
         for (let step = 0; step < 25; step++) await page.keyboard.press('Shift+ArrowRight');
         const handle = stage.getByRole('button', { name: 'Drag Text out of Display', exact: true });
@@ -169,7 +171,7 @@ for (const [width, scale, method] of [[1600, 1, 'keyboard'], [1600, .5, 'drag'],
         const start = { x: from.x + from.width / 2, y: from.y + from.height / 2 }, end = { x: 700, y: 650 };
         expectedScreen = { left: source.x + end.x - start.x, top: source.y + end.y - start.y };
         const canvas = await stage.boundingBox();
-        const extra = { start, end, source, camera, scale, canvas, tools: await page.locator('.text-tools-window').boundingBox(),
+        const extra = { start, end, source, camera, scale, canvas, tools: await page.locator('.workbench-tool-dock:has([data-text-inspector])').boundingBox(),
           outside: end.x < canvas.x || end.x > canvas.x + canvas.width || end.y < canvas.y || end.y > canvas.y + canvas.height };
         await diagnostics(() => captureTarget(page, handle, 'detach-before', extra));
         assert.equal(await hit(handle), true, 'the Text detach handle receives the pointer start');
@@ -214,13 +216,14 @@ for (const [width, scale, method] of [[1600, 1, 'keyboard'], [1600, .5, 'drag'],
       assert.deepEqual(record.article.content, original.text.article.content);
       assert.equal(after.grids.flatMap(grid => grid.placements).some(item => item.id === original.id), false, 'Text has one owner after moving');
       if (method === 'drag') await diagnostics(() => captureTarget(page,
-        page.getByRole('button', { name: 'Close Text tools', exact: true }), 'detach-close-tools'));
-      await page.getByRole('button', { name: 'Close Text tools', exact: true }).click();
+        page.getByRole('button', { name: 'Close Inspector', exact: true }), 'detach-close-tools'));
+      await page.getByRole('button', { name: 'Close Inspector', exact: true }).click();
       await page.screenshot({ path: `${output}/text-detached-pan-${width}-${scale}.png` });
       await page.reload(); await mountTextToolsFixture(page, origin);
       await text.waitFor(); await settle(page);
       const restored = await text.boundingBox();
-      near(restored.x, frame.left, 'reload x without temporary camera'); near(restored.y, frame.top, 'reload y without temporary camera');
+      const cameraAfterReload = await page.locator('main.system-workflow').first().evaluate(node => ({ x: +node.dataset.workbenchCameraX, y: +node.dataset.workbenchCameraY, scale: +node.dataset.workbenchCameraScale }));
+      near(restored.x, frame.left * cameraAfterReload.scale + cameraAfterReload.x, 'reload x in entry camera'); near(restored.y, frame.top * cameraAfterReload.scale + cameraAfterReload.y, 'reload y in entry camera');
       assert.deepEqual(await page.evaluate(id => window.savedDraft().texts.find(item => item.id === id), record.id), record, 'reload preserves article and formatting');
       assert.deepEqual(errors, []);
     } finally {

@@ -1,4 +1,4 @@
-.system-workflow[data-creation-toolbar] { --workbench-toolbar-clearance: 60px; --workbench-toolbar-offset: 75px; }
+.system-workflow[data-creation-toolbar] { --workbench-toolbar-clearance: 60px; --workbench-toolbar-offset: 12px; }
 @media (max-height: 540px) {
   /* Keep the creation toolbar compact on short desktop windows. */
   .system-workflow[data-creation-toolbar] { --workbench-toolbar-offset: 0px; }
@@ -41,6 +41,7 @@
 .system-workflow[data-workbench-hand],
 .system-workflow[data-workbench-hand] :is(.system-workflow__workbench, .system-workflow__display-instance, [data-workbench-view-id], [data-workbench-module], .system-workflow__canvas, .image-module__canvas, [data-workbench-selectable], .system-workflow__resize-handle, .image-module__resize) { cursor: grab; }
 
+.workbench-move-error { position: fixed; z-index: 85; box-sizing: border-box; left: calc(var(--workbench-left-dock-width, 0px) + 12px); bottom: calc(var(--workflow-dock-height, 40px) + 52px); max-width: calc(100% - var(--workbench-left-dock-width, 0px) - var(--workbench-right-dock-width, 0px) - 24px); background: var(--workflow-panel); color: var(--workflow-ink); border: 1px solid var(--workflow-border); padding: 8px; font: var(--workflow-type-control); }
 .workbench-object-preview { position: fixed; z-index: 89; pointer-events: none; box-sizing: border-box; border: 1px solid #fff; outline: 1px solid #111313; }
 .workbench-object-menu--picker, .workbench-object-menu > .desktop-menu--flyout { max-height: calc(100dvh - 16px); overflow-y: auto; overscroll-behavior: contain; }
 .workbench-object-menu button span { overflow-wrap: anywhere; }

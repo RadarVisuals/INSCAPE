@@ -21,9 +21,8 @@
 
 .system-workflow[data-previewing] { visibility: hidden; }
 
-.system-workflow button,
-.system-workflow input,
-.system-workflow select {
+/* Baseline controls yield to their owning tool's material and geometry. */
+:where(.system-workflow) :is(button, input, select) {
   min-height: 0;
   border-radius: 0;
   color: inherit;
@@ -199,7 +198,6 @@
   height: 13px;
   stroke-width: 2.8;
 }
-.system-workflow__board-inspection-controls-host { min-width: 0; height: 100%; display: flex; align-items: stretch; }
 :is(.system-workflow, .system-workflow__token-scope) .system-workflow__round-control { box-sizing: border-box; width: 20px; min-width: 20px; height: 20px; padding: 0; display: grid; place-items: center; overflow: hidden; border: 1px solid var(--workflow-border-strong); border-radius: 50% !important; color: var(--workflow-muted); background: var(--workflow-selection); cursor: pointer; transition: color 120ms var(--workflow-ease), background-color 120ms var(--workflow-ease), border-color 120ms var(--workflow-ease); }
 :is(.system-workflow, .system-workflow__token-scope) .system-workflow__round-control:hover { border-color: var(--workflow-muted); color: var(--workflow-ink); background: color-mix(in srgb, var(--workflow-ink) 16%, var(--workflow-panel)); }
 :is(.system-workflow, .system-workflow__token-scope) .system-workflow__round-control:focus-visible { outline: 0; border-color: var(--workflow-ink); color: var(--workflow-ink); box-shadow: inset 0 0 0 1px var(--workflow-panel); }
@@ -475,13 +473,24 @@ html[data-system-workflow-grid-direction="previous"]::view-transition-new(inscap
 .lattice-browser-asset[data-workflow-dragging] { opacity: .28; }
 .system-workflow__placement-preview { position: fixed; z-index: 90; overflow: visible; outline: 1px dashed var(--workflow-ink); outline-offset: 4px; background: var(--workflow-panel); box-shadow: var(--workflow-shadow-panel); opacity: .78; pointer-events: none; }
 .system-workflow__placement-preview img { width: 100%; height: 100%; display: block; object-fit: contain; }
+.system-workflow__placement-preview[data-stack-drop] { border-radius: 5% / 6.6%; outline: 2px solid var(--editor-accent); outline-offset: -2px; background: transparent; box-shadow: none; opacity: 1; }
 .system-workflow__placement-preview span { position: absolute; right: 0; bottom: -24px; padding: 5px 7px; border: 1px solid var(--workflow-border-strong); color: var(--workflow-ink); background: var(--workflow-panel); font: var(--workflow-type-micro); letter-spacing: .05em; white-space: nowrap; }
-.system-workflow__select-popover, .system-workflow__filter-popover { --workflow-active-vertical: inset 4px 0 0 var(--lattice-menu-ink); --workflow-selection: color-mix(in srgb, var(--lattice-menu-ink) 12%, var(--lattice-menu-panel)); --workflow-shadow-panel: none; position: fixed; z-index: 80; display: grid; border: 1px solid var(--lattice-menu-line); color: var(--lattice-menu-ink); background: var(--lattice-menu-panel); box-shadow: none; font-family: "Inscape Sora", sans-serif; }
+.system-workflow__select-popover, .system-workflow__filter-popover { --workflow-active-vertical: inset 4px 0 0 var(--lattice-menu-ink); --workflow-selection: color-mix(in srgb, var(--lattice-menu-ink) 12%, var(--lattice-menu-panel)); --workflow-shadow-panel: none; position: fixed; z-index: var(--workflow-menu-z, 80); display: grid; overflow-y: auto; border: 1px solid var(--lattice-menu-line); color: var(--lattice-menu-ink); background: var(--lattice-menu-panel); box-shadow: none; font-family: "Inscape Sora", sans-serif; }
 .system-workflow__select-popover :where(code, output, [data-technical], .technical-value), .system-workflow__filter-popover :where(code, output, [data-technical], .technical-value) { font-family: "Inscape IBM Plex Sans Condensed", "Arial Narrow", sans-serif; }
 .system-workflow__select-popover header, .system-workflow__filter-popover > header { min-height: 30px; padding: 0 8px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--lattice-menu-line); color: var(--lattice-menu-muted); font: 400 10px/1.2 "Inscape Sora", sans-serif; font-variation-settings: "wght" 400; letter-spacing: 0; }
-.system-workflow__select-popover button, .system-workflow__filter-options > button { min-height: 36px; padding: 0 12px; display: grid; grid-template-columns: minmax(0, 1fr); align-items: center; border: 0; color: inherit; background: transparent; font: 400 10px/1.2 "Inscape Sora", sans-serif; font-variation-settings: "wght" 400; letter-spacing: 0; text-align: left; text-transform: none; cursor: pointer; }
+.system-workflow__select-popover button, .system-workflow__filter-options > button { min-height: var(--workflow-menu-row-height, 36px); padding: 0 12px; display: grid; grid-template-columns: minmax(0, 1fr); align-items: center; border: 0; color: inherit; background: transparent; font: var(--workflow-menu-type, 400 10px/1.2 "Inscape Sora", sans-serif); font-variation-settings: "wght" 400; letter-spacing: 0; text-align: left; text-transform: none; cursor: pointer; }
 .system-workflow__select-popover button[aria-selected="true"], .system-workflow__filter-options > button[aria-checked="true"] { background: var(--workflow-selection); box-shadow: var(--workflow-active-vertical); font-weight: 500; }
 .system-workflow__select-popover button:focus-visible, .system-workflow__filter-popover button:focus-visible { outline: 1px solid var(--lattice-menu-ink); outline-offset: -2px; }
+.system-workflow__select-popover[data-toolbar-menu] { row-gap: 2px; }
+.system-workflow__select-popover[data-toolbar-menu] button { min-height: 30px; grid-template-columns: minmax(0, 1fr) 14px; column-gap: 8px; }
+.system-workflow__select-popover[data-toolbar-menu] button > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.system-workflow__select-popover[data-toolbar-menu] button:has(.select-option-font-sample) { grid-template-columns: minmax(0, 1fr) 24px 14px; }
+.system-workflow__select-popover[data-toolbar-menu] button > svg { grid-column: -2; }
+.select-option-font-sample { display: none; grid-column: 2; font-size: 15px; text-align: center; }
+.system-workflow__select-popover button:is(:hover, :focus-visible) > .select-option-font-sample { display: block; }
+.system-workflow__select-popover[data-toolbar-menu] button:is(:hover, :focus-visible):not([aria-disabled='true'], [aria-selected='true']) {
+  color: var(--tactile-selected-ink); background: color-mix(in srgb, var(--tactile-face), var(--workflow-selection) 60%);
+}
 .system-workflow__filter-popover > header button { align-self: stretch; padding: 0 10px; border: 0; border-left: 1px solid var(--lattice-menu-line); color: inherit; background: transparent; font: inherit; }
 .system-workflow__filter-popover { grid-template-rows: minmax(0, 1fr); overflow: hidden; }
 .system-workflow__filter-options { min-height: 0; padding-bottom: 5px; display: grid; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable; }
@@ -513,7 +522,7 @@ html[data-system-workflow-grid-direction="previous"]::view-transition-new(inscap
 .system-workflow__crop-controls footer button { min-height: 32px; font: var(--workflow-type-control); }
 
 .system-workflow__profile-layer { position: fixed; z-index: 81; inset: 0 0 var(--workflow-dock-height); }
-.system-workflow__notice { position: fixed; z-index: 140; top: auto; bottom: calc(var(--workflow-dock-height) + var(--workflow-window-inset)); left: 50%; padding: 9px 13px; translate: -50% 0; border: 1px solid var(--workflow-border-strong); color: var(--workflow-ink); background: var(--workflow-panel); font: var(--workflow-type-control); letter-spacing: .07em; }
+.system-workflow__notice { position: fixed; z-index: 140; top: auto; bottom: calc(var(--workflow-dock-height) + var(--workflow-window-inset) + var(--workbench-toolbar-offset, 0px) + var(--workbench-toolbar-clearance, 0px)); left: 50%; padding: 9px 13px; translate: -50% 0; border: 1px solid var(--workflow-border-strong); color: var(--workflow-ink); background: var(--workflow-panel); font: var(--workflow-type-control); letter-spacing: .07em; }
 
 @media (prefers-reduced-motion: reduce) {
   .system-workflow__motion-panel,
@@ -561,7 +570,7 @@ html[data-system-workflow-grid-direction="previous"]::view-transition-new(inscap
   border-radius: calc(var(--detached-window-radius) - 1px);
   background-position: var(--detached-window-noise-x, 0) var(--detached-window-noise-y, 0);
 }
-.system-workflow__detached-window > :is(.system-workflow__detached-window-titlebar, .system-workflow__detached-window-surface) { position: relative; z-index: 1; }
+.system-workflow__detached-window > :is(.system-workflow__detached-window-titlebar:not(.editor-object-toolbar), .system-workflow__detached-window-surface) { position: relative; z-index: 1; }
 .system-workflow__detached-window-surface {
   box-sizing: border-box;
   width: calc(100% - (2 * var(--detached-window-gutter)));
@@ -603,7 +612,7 @@ html[data-system-workflow-grid-direction="previous"]::view-transition-new(inscap
 }
 .system-workflow__detached-window-surface > * { position: relative; z-index: 1; }
 .system-workflow__detached-window-surface::-webkit-scrollbar { width: 0; height: 0; display: none; }
-.system-workflow__detached-window-titlebar { min-width: 0; height: var(--detached-window-titlebar-height); padding-inline: var(--detached-window-titlebar-padding); display: flex; align-items: center; justify-content: space-between; gap: 7px; border: 0; background: transparent; cursor: move; touch-action: none; }
+.system-workflow__detached-window-titlebar:not(.editor-object-toolbar) { min-width: 0; height: var(--detached-window-titlebar-height); padding-inline: var(--detached-window-titlebar-padding); display: flex; align-items: center; justify-content: space-between; gap: 7px; border: 0; background: transparent; cursor: move; touch-action: none; }
 .system-workflow__detached-window-titlebar > strong { min-width: 0; overflow: hidden; translate: 0 1px; font: 500 11px/1 "Inscape Sora", sans-serif; font-variation-settings: "wght" 500; letter-spacing: .025em; text-overflow: ellipsis; text-transform: uppercase; white-space: nowrap; }
 .system-workflow__detached-window-controls { display: flex; gap: 7px; }
 .system-workflow__instrument-window { overflow: visible; }

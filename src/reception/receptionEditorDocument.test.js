@@ -5,6 +5,8 @@ import { createReceptionExample } from '../../design-system/lab/receptionExample
 import { addReceptionScenePlacement } from './receptionLayers.js';
 import { createReceptionEditorDocument, receptionModuleWindow, withReceptionModuleWindow, reconcileReceptionCells,
   receptionResponsiveLayout } from './receptionEditorDocument.js';
+import { setReceptionCellMemberAnchor, setReceptionCellClip } from './receptionBento.js';
+import { receptionMemberAnchor, editorCellPreviewTransforms } from './editorCellGeometry.js';
 
 function sample() {
   const value = createReceptionExample(); value.radius = 24;
@@ -19,7 +21,7 @@ test('conversion preserves source records, crop, layers, rounded cells and mobil
   assert.equal(validReception(value), true);
   assert.deepEqual(old, saved);
   assert.equal(value.cells[0].radius, 24);
-  assert.deepEqual(value.imageModules[0].sides, old.imageModules[0].sides);
+  assert.deepEqual(value.imageModules[0].artwork, old.imageModules[0].artwork);
   assert.equal(value.cells[0].members.length, 2);
   assert.deepEqual(value.artworkLayers, [value.cells[0].id, ...value.cells[0].members]);
   assert.equal(value.cells[0].mobile.referenceWidth, 390);
@@ -129,6 +131,76 @@ function authoredCanvas(width = 800, height = 500) {
   value.cells = [{ id: 'shape:canvas-cell', members: [], mobile: { columns: 2, height: 280 } }];
   return value;
 }
+
+function anchoredContents() {
+  let value = authoredCanvas();
+  for (const [id, left, top, width, height] of [['shape:a', 160, 110, 60, 40], ['shape:b', 260, 150, 80, 50]]) {
+    value.shapes.push({ id, name: id, color: '#ffffff', opacity: 1, visibility: 'PUBLIC' });
+    value.artworkLayers.push(id);
+    value = withReceptionModuleWindow(value, id, { left, top, width, height });
+  }
+  value.cells[0].members = ['shape:a', 'shape:b'];
+  return setReceptionCellMemberAnchor(value, value.cells[0].id, value.cells[0].members,
+    { alignX: 'center', alignY: 'center', paddingX: 16, paddingY: 12 });
+}
+
+test('native group anchors preserve relative placement and size through cell resize and its preview', () => {
+  const value = anchoredContents(), cell = value.cells[0], oldCell = receptionModuleWindow(value, cell.id);
+  const frame = { ...oldCell, width: 640, height: 480 };
+  const next = reconcileReceptionCells(value, withReceptionModuleWindow(value, cell.id, frame));
+  const a = receptionModuleWindow(next, 'shape:a'), b = receptionModuleWindow(next, 'shape:b');
+  assert.deepEqual(a, { left: 370, top: 285, width: 60, height: 40 });
+  assert.deepEqual(b, { left: 470, top: 325, width: 80, height: 50 });
+  assert.deepEqual(next.cells[0].memberAnchors, cell.memberAnchors);
+  const preview = editorCellPreviewTransforms(value.cells, { [cell.id]: { frame } }, value.workbench, value);
+  assert.deepEqual(preview['shape:a'].frame, a); assert.deepEqual(preview['shape:b'].frame, b);
+});
+
+test('free dragging releases the affected group; individual anchoring moves only its own member', () => {
+  const value = anchoredContents(), cell = value.cells[0], a = receptionModuleWindow(value, 'shape:a'), b = receptionModuleWindow(value, 'shape:b');
+  const moved = reconcileReceptionCells(value, withReceptionModuleWindow(value, 'shape:a', { ...a, left: a.left + 10 }));
+  assert.equal(receptionMemberAnchor(moved.cells[0], ['shape:a']), null);
+  assert.deepEqual(receptionModuleWindow(moved, 'shape:b'), b);
+  const individual = setReceptionCellMemberAnchor(value, cell.id, ['shape:b'], { alignX: 'right', alignY: 'bottom', paddingX: 8, paddingY: 10 });
+  assert.equal(receptionMemberAnchor(individual.cells[0], ['shape:a']), null);
+  assert.deepEqual(receptionModuleWindow(individual, 'shape:a'), a);
+  assert.deepEqual(receptionModuleWindow(individual, 'shape:b'), { left: 372, top: 270, width: 80, height: 50 });
+  assert.deepEqual(receptionMemberAnchor(value.cells[0], ['shape:a']).members, cell.members);
+});
+
+test('resizing anchored contents preserves anchoring, while removal prunes group references', () => {
+  const value = anchoredContents(), a = receptionModuleWindow(value, 'shape:a');
+  const resized = reconcileReceptionCells(value, withReceptionModuleWindow(value, 'shape:a', { ...a, width: 220 }));
+  assert.equal(receptionMemberAnchor(resized.cells[0], ['shape:a']).alignX, 'center');
+  const remaining = { ...value, cells: value.cells.map(cell => ({ ...cell, members: ['shape:a'] })) };
+  const pruned = reconcileReceptionCells(value, remaining);
+  assert.deepEqual(pruned.cells[0].memberAnchors[0].members, ['shape:a']);
+  assert.equal(validReception(pruned), true);
+});
+
+test('anchors and clipping survive public projection with private members removed', () => {
+  const value = setReceptionCellClip(anchoredContents(), 'shape:canvas-cell', false);
+  value.shapes.find(item => item.id === 'shape:b').visibility = 'PRIVATE';
+  const published = projectReception(value);
+  assert.equal(published.cells[0].clipContent, false);
+  assert.deepEqual(published.cells[0].memberAnchors[0].members, ['shape:a']);
+  assert.equal(validReception(published, true), true);
+  assert.deepEqual(restoreReception(published).cells, published.cells);
+  const mobile = receptionResponsiveLayout(value, 390), owner = mobile.cells[0].window;
+  const a = mobile.windows['shape:a'], b = mobile.windows['shape:b'];
+  assert.equal(a.width, 60); assert.equal(b.height, 50);
+  assert.equal((a.left + b.left + b.width) / 2, owner.left + owner.width / 2);
+});
+
+test('strict cell placement validation rejects overlapping, foreign and invalid anchors or clipping', () => {
+  const value = anchoredContents();
+  const invalid = change => { const next = structuredClone(value); change(next.cells[0]); assert.equal(validReception(next), false); };
+  invalid(cell => { cell.clipContent = 'false'; });
+  invalid(cell => { cell.memberAnchors[0].paddingX = -1; });
+  invalid(cell => { cell.memberAnchors[0].members = ['shape:missing']; });
+  invalid(cell => { cell.memberAnchors.push({ ...cell.memberAnchors[0], members: ['shape:a'] }); });
+  invalid(cell => { cell.memberAnchors[0].alignX = 'middle'; });
+});
 
 test('wide Desktop previews preserve authored canvas size and module geometry without upscaling', () => {
   const value = authoredCanvas(), saved = structuredClone(value);

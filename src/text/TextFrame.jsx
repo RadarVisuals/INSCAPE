@@ -26,8 +26,9 @@ export function useArticleFlow(article, ids) {
 export function useLinkedFrameLayout(article, flow, index = 0) {
   const range = flow?.ranges[index];
   const [height, setHeight] = useState('0px');
-  const remainder = useMemo(() => flow && ({ ...articleFlowSlice(article.content, range.from ?? flow.total), title: index === 0 }), [article?.content, range?.from, flow?.total, Boolean(flow), index]);
-  const visible = useMemo(() => flow && ({ ...articleFlowSlice(article.content, range.from ?? flow.total, range.to ?? flow.total), title: index === 0 }), [article?.content, range?.from, range?.to, flow?.total, Boolean(flow), index]);
+  const content = article?.content, total = flow?.total, from = range?.from, to = range?.to, hasFlow = Boolean(flow);
+  const remainder = useMemo(() => hasFlow && ({ ...articleFlowSlice(content, from ?? total), title: index === 0 }), [content, from, total, hasFlow, index]);
+  const visible = useMemo(() => hasFlow && ({ ...articleFlowSlice(content, from ?? total, to ?? total), title: index === 0 }), [content, from, to, total, hasFlow, index]);
   const onMeasure = flow ? (body, height) => {
     setHeight(previous => previous === height ? previous : height);
     if (range.from !== undefined) flow.report(index, fittingArticleEnd(body, range.from, flow.total));
@@ -36,13 +37,12 @@ export function useLinkedFrameLayout(article, flow, index = 0) {
 }
 // The host supplies its available height; the article still owns typography,
 // padding and content. Measurements are temporary and never enter the draft.
-export function useTextFrame(viewport, article, mode, { force = false, clip = false, onMeasure } = {}) {
+export function useTextFrame(viewport, article, mode, { force = false, onMeasure } = {}) {
   const measured = useRef(onMeasure); measured.current = onMeasure;
   const framed = force || (article?.appearance?.columns || 1) > 1;
   const scale = article?.appearance?.scale || 1;
-  const [overflow, setOverflow] = useState(false);
   useLayoutEffect(() => {
-    if ((!framed && !clip) || !viewport.current) { setOverflow(false); return; }
+    if (!framed || !viewport.current) return;
     const root = viewport.current;
     let live = true, request = 0, page = null, body = null, title = null;
     const selector = mode === 'write' ? '.text-editor-page' : 'article.text-document';
@@ -62,11 +62,7 @@ export function useTextFrame(viewport, article, mode, { force = false, clip = fa
         detach(); page = next; body = page?.querySelector('.text-document-body'); title = page?.querySelector('.text-document-title');
         for (const node of [page, body, title]) if (node) resize.observe(node);
       }
-      if (!page || !body || !root.clientHeight || !page.getClientRects().length) { setOverflow(false); return; }
-      if (!framed) {
-        setOverflow(root.scrollWidth > root.clientWidth + 1 || root.scrollHeight > root.clientHeight + 1);
-        return;
-      }
+      if (!page || !body || !root.clientHeight || !page.getClientRects().length) return;
       const style = getComputedStyle(page);
       const padding = style.boxSizing === 'border-box' ? 0 : parseFloat(style.paddingTop) + parseFloat(style.paddingBottom);
       const height = Math.max(0, root.clientHeight / scale - padding);
@@ -74,8 +70,6 @@ export function useTextFrame(viewport, article, mode, { force = false, clip = fa
       if (page.style.getPropertyValue('--text-frame-height') !== value) page.style.setProperty('--text-frame-height', value);
       // CSS fragments whole lines into successive columns. Additional columns
       // remain in the same editor but are clipped at the authored frame edge.
-      setOverflow(body.scrollWidth > body.clientWidth + 1 || body.scrollHeight > body.clientHeight + 1
-        || page.scrollHeight > page.clientHeight + 1);
       measured.current?.(body, value);
     };
     const mutations = new MutationObserver(schedule);
@@ -89,10 +83,6 @@ export function useTextFrame(viewport, article, mode, { force = false, clip = fa
       root.removeEventListener('load', schedule, true); document.fonts.removeEventListener('loadingdone', schedule);
       page?.style.removeProperty('--text-frame-height');
     };
-  }, [viewport, framed, clip, scale, mode]);
-  return { framed, overflow: (framed || clip) && overflow };
-}
-
-export function TextFrameOverflow() {
-  return <span className="text-frame-overflow" role="status" title="Enlarge the frame or use Focus writing to edit the full article.">Text doesn’t fit</span>;
+  }, [viewport, framed, scale, mode]);
+  return { framed };
 }

@@ -3,6 +3,7 @@ import test from 'node:test';
 import { chromium } from 'playwright-core';
 import { mountGridMotionFixture } from './fixtures/grid-motion-fixture.mjs';
 import { resetCameraTestView } from './fixtures/workbench-camera-test.mjs';
+import { sharedToolPanel } from './fixtures/shared-tools.mjs';
 const origin = process.env.INSCAPE_TEXT_ROOT || 'http://127.0.0.1:5194';
 const settle = page => page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
 const near = (a, b, label) => assert.ok(Math.abs(a - b) < 1.1, `${label}: ${a} != ${b}`);
@@ -28,7 +29,7 @@ test('cursor camera and grid stay aligned after pan, reverse smoothly, and ignor
         const camera = el.closest('main').dataset;
         return { scale: Number(camera.workbenchCameraScale), x: Number(camera.workbenchCameraX), y: Number(camera.workbenchCameraY) };
       });
-      const toolWindow = page.locator('[data-context-tools] [data-detached-window]').first();
+      const toolWindow = sharedToolPanel(page);
       const toolFrame = await toolWindow.count() ? await toolWindow.boundingBox() : null;
       for (const modifiers of [{}, { metaKey: true }]) {
         await host.dispatchEvent('wheel', { deltaY: 80, ...modifiers, bubbles: true, cancelable: true }); await settle(page);

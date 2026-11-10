@@ -1,3 +1,4 @@
+import { openTextToolSection } from './fixtures/text-tool-sections.mjs';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { mkdir } from 'node:fs/promises';
@@ -12,7 +13,7 @@ async function revealFrameControls(page) {
   // Info panel. Use the real controls; narrow/reloaded views may already fold.
   const collapse = page.locator('.editor-menu-brand[aria-expanded="true"]');
   if (await collapse.count()) await collapse.click();
-  const info = page.getByRole('button', { name: 'Close Info', exact: true });
+  const info = page.getByRole('button', { name: 'Close Inspector', exact: true });
   if (await info.count()) await info.click();
   await settle(page);
 }
@@ -68,9 +69,9 @@ test('typing crosses a frame boundary, cross-frame selection edits one range, an
     const page = await browser.newPage({ viewport: { width: 1600, height: 1000 } }); page.setDefaultTimeout(12000);
     const errors = []; page.on('pageerror', error => errors.push(error.message));
     await seed(page);
-    await page.getByRole('button', { name: 'Add linked Text frame', exact: true }).click(); await settle(page);
-    await page.getByRole('button', { name: 'Close Text tools', exact: true }).click();
-    await page.getByRole('button', { name: 'Add linked frame after 2', exact: true }).click(); await settle(page);
+    await page.locator('.text-window').first().hover(); await page.getByRole('button', { name: 'Add linked Text frame', exact: true }).click(); await settle(page);
+    await revealFrameControls(page);
+    await page.locator('.text-continuation-window').first().hover(); await page.getByRole('button', { name: 'Add linked frame after 2', exact: true }).click(); await settle(page);
     const first = page.getByRole('textbox', { name: 'Article text', exact: true }), second = page.getByRole('textbox', { name: 'Article text in frame 2', exact: true });
     await clickLastCharacter(page, first);
     const insertion = ' Crossing into the next frame while continuing to write. ';
@@ -111,7 +112,7 @@ test('typing crosses a frame boundary, cross-frame selection edits one range, an
     assert.equal(await first.evaluate(n => n.editor.state.doc.textContent), before.slice(0, -1), 'backspace removes exactly one character in a continuation');
     await page.keyboard.press('Control+z'); await settle(page);
     await page.getByRole('button', { name: 'Text tools for frame 2', exact: true }).focus(); await page.keyboard.press('Enter');
-    await page.locator('.text-tools-window').getByRole('button', { name: 'Focus writing', exact: true }).click();
+    await page.locator('.workbench-tool-dock:has([data-text-inspector])').getByRole('button', { name: 'Focus writing', exact: true }).click();
     const dialog = page.getByRole('dialog'); await dialog.waitFor();
     const full = dialog.getByRole('textbox', { name: 'Article text', exact: true });
     assert.equal(await visibleText(full), before);
@@ -144,7 +145,7 @@ test('different frame sizes retain lists, artwork and captions in Write, Read an
       localStorage.setItem(systemWorkflowDraftKey(draft.profileAddress),JSON.stringify(draft));
     }, story);
     await mountTextToolsFixture(page, origin); await setWorkbenchZoom(page, .5); await settle(page);
-    await page.getByRole('button',{name:'Close Text tools',exact:true}).click(); await settle(page);
+    await page.getByRole('button',{name:'Close Inspector',exact:true}).click(); await settle(page);
     await page.waitForFunction(()=>[...document.querySelectorAll('.text-flow-visible img')].some(n=>n.complete&&n.naturalWidth)); await settle(page);
     const write=[]; const editors=page.locator('.text-flow-visible [role="textbox"]');
     for(let i=0;i<3;i++)write.push(await visibleText(editors.nth(i)));
@@ -175,14 +176,15 @@ test('a Library drop into a continuation uses that frame and preserves the compl
       localStorage.setItem(systemWorkflowDraftKey(draft.profileAddress),JSON.stringify(draft));
     });
     await mountTextToolsFixture(page,origin);await settle(page);
-    await page.getByRole('button',{name:'Close Text tools',exact:true}).click();
+    await page.getByRole('button',{name:'Close Inspector',exact:true}).click();
     const editor=page.getByRole('textbox',{name:'Article text',exact:true}), second=page.getByRole('textbox',{name:'Article text in frame 2',exact:true});
     const firstText=await visibleText(editor), before=await editor.evaluate(n=>n.editor.state.doc.textContent);
     await page.getByRole('button',{name:'Artwork library',exact:true}).click();
     const card=page.getByRole('region',{name:'Library workspace'}).getByRole('button',{name:'ABYSSAL STUDY / INSCAPE STUDIES',exact:true});
-    await card.scrollIntoViewIfNeeded(); const source=await card.boundingBox(),target=await second.boundingBox();
+    await card.scrollIntoViewIfNeeded(); const source=await card.boundingBox();
     await page.mouse.move(source.x+source.width/2,source.y+35);await page.mouse.down();
-    await page.mouse.move(target.x+12,target.y+12,{steps:12});await page.mouse.up();await settle(page);
+    const dropPoint = await exposedTextPoint(second);
+    await page.mouse.move(dropPoint.x, dropPoint.y, { steps: 12 });await page.mouse.up();await settle(page);
     await page.waitForFunction(()=>window.savedDraft().texts[0].article.content.content.some(n=>n.type==='artwork'));
     assert.equal(await editor.evaluate(n=>n.editor.state.doc.textContent),before);
     const position=await editor.evaluate(n=>{let result;n.editor.state.doc.descendants((node,pos)=>{if(node.type.name==='artwork')result=pos;});return result;});
@@ -205,8 +207,7 @@ test('fixed-width text remeasures stable break positions after typing before the
       const {systemWorkflowDraftKey}=await import('/src/systemWorkflow/systemWorkflowDraftStore.js');
       localStorage.setItem(systemWorkflowDraftKey(draft.profileAddress),JSON.stringify(draft));
     });
-    await mountTextToolsFixture(page,origin);await revealFrameControls(page);await page.getByRole('button',{name:'Add linked Text frame',exact:true}).click();await settle(page);
-    await page.getByRole('button',{name:'Close Text tools',exact:true}).click();
+    await mountTextToolsFixture(page,origin);await revealFrameControls(page);await page.getByRole('button',{name:'Add linked Text frame',exact:true}).focus(); await page.keyboard.press('Enter');await settle(page);
     const first=page.getByRole('textbox',{name:'Article text',exact:true}),second=page.getByRole('textbox',{name:'Article text in frame 2',exact:true});
     await first.focus();await page.keyboard.press('Control+Home');await page.keyboard.type('X');await settle(page);
     assert.equal((await visibleText(first))+(await visibleText(second)),await first.evaluate(n=>n.editor.state.doc.textContent));
@@ -226,6 +227,17 @@ async function seed(page) {
   await mountTextToolsFixture(page, origin); await settle(page);
   await revealFrameControls(page);
 }
+async function exposedTextPoint(body) {
+  return body.evaluate(node => {
+    const rect = node.getBoundingClientRect();
+    for (let y = rect.top + 4; y < rect.bottom - 4; y += 4) {
+      for (let x = rect.left + 4; x < rect.right - 4; x += 4) {
+        if (node.contains(document.elementFromPoint(x, y))) return { x, y };
+      }
+    }
+    throw Error('No exposed continuation writing surface');
+  });
+}
 async function clickLastCharacter(page, body) {
   const point = await body.evaluate(body => {
     const walker = document.createTreeWalker(body, NodeFilter.SHOW_TEXT), box = body.getBoundingClientRect(); let result;
@@ -234,8 +246,10 @@ async function clickLastCharacter(page, body) {
       for (let i = 0; i < node.length; i++) {
         const range = document.createRange(); range.setStart(node, i); range.setEnd(node, i + 1);
         const r = range.getBoundingClientRect();
-        if (r.width && r.height && r.right <= box.right + 1 && r.left >= box.left - 1 && r.bottom <= box.bottom + 1)
-          result = { x: r.right - .1, y: r.top + r.height / 2 };
+        if (r.width && r.height && r.right <= box.right + 1 && r.left >= box.left - 1 && r.bottom <= box.bottom + 1) {
+          const point = { x: r.right - .1, y: r.top + r.height / 2 };
+          if (body.contains(document.elementFromPoint(point.x, point.y))) result = point;
+        }
       }
     } return result;
   });
@@ -251,8 +265,8 @@ test('linked frames share live editing, formatting and one undo history, preserv
     await seed(page);
     const original = await page.getByRole('textbox', { name: 'Article text', exact: true }).elementHandle();
     const before = await page.evaluate(() => window.savedDraft().texts[0].article);
-    await page.getByRole('button', { name: 'Add linked Text frame', exact: true }).click(); await settle(page);
-    await page.getByRole('button', { name: 'Close Text tools', exact: true }).click();
+    await page.locator('.text-window').first().hover(); await page.getByRole('button', { name: 'Add linked Text frame', exact: true }).click(); await settle(page);
+    await revealFrameControls(page);
     const second = page.getByRole('textbox', { name: 'Article text in frame 2', exact: true }); await second.waitFor(); await settle(page);
     assert.equal(await page.getByRole('textbox', { name: 'Article text', exact: true }).evaluate((node, old) => node === old, original), true);
     const firstText = await visibleText(page.getByRole('textbox', { name: 'Article text', exact: true }));
@@ -271,21 +285,27 @@ test('linked frames share live editing, formatting and one undo history, preserv
     assert.deepEqual(await page.evaluate(() => window.savedDraft().texts[0].article.content), changed.content);
     await second.focus(); await page.keyboard.press('Control+Shift+ArrowLeft');
     await page.getByRole('button', { name: 'Text tools for frame 2', exact: true }).click();
-    await page.locator('.text-tools-window').getByRole('button', { name: 'Bold', exact: true }).click(); await settle(page);
+    await page.locator('.workbench-tool-dock:has([data-text-inspector])').getByRole('button', { name: 'Bold', exact: true }).click(); await settle(page);
     assert.equal(await second.evaluate(node => node === document.activeElement), true, 'formatting returns focus to frame 2');
     assert.ok(await page.evaluate(() => window.savedDraft().texts[0].article.content.content.some(p => p.content?.some(n => n.marks?.some(m => m.type === 'bold')))));
-    await page.locator('.text-tools-window').getByRole('button', { name: 'Undo', exact: true }).click(); await settle(page);
+    await openTextToolSection(page.locator('.workbench-tool-dock:has([data-text-inspector])'), 'More text tools');
+    await page.locator('.workbench-tool-dock:has([data-text-inspector])').getByRole('button', { name: 'Undo', exact: true }).click(); await settle(page);
+    const selectedText = await page.getByRole('textbox', { name: 'Article text', exact: true }).evaluate(node => {
+      const { doc, selection } = node.editor.state;
+      return doc.textBetween(selection.from, selection.to).trim();
+    });
+    assert.ok(selectedText, 'the continuation retains a non-empty selection after Undo');
     const size = page.getByRole('spinbutton', { name: 'Selected text size', exact: true });
     await size.fill('24'); await settle(page);
     assert.equal(await size.evaluate(node => node === document.activeElement), true, 'reflow never steals focus from the live size field');
-    assert.ok(await second.locator('span').evaluateAll(nodes => nodes.some(node => node.textContent.includes('ME') && getComputedStyle(node).fontSize === '24px')), 'selected text in frame 2 changes before Enter or blur');
+    assert.ok(await second.locator('span').evaluateAll((nodes, selectedText) => nodes.some(node => node.textContent.includes(selectedText) && getComputedStyle(node).fontSize === '24px'), selectedText), 'selected text in frame 2 changes before Enter or blur');
     assert.ok(await page.evaluate(() => window.savedDraft().texts[0].article.content.content.some(p => p.content?.some(n => n.marks?.some(m => m.type === 'textStyle' && m.attrs.fontSize === 24)))));
     await size.press('Escape'); await settle(page);
     assert.deepEqual(await page.evaluate(() => window.savedDraft().texts[0].article.content), changed.content, 'Escape in a continuation restores the shared article');
-    await page.getByRole('button', { name: 'Close Text tools', exact: true }).click();
+    await revealFrameControls(page);
     await mkdir('.browser-test-runtime', { recursive: true });
     await page.screenshot({ path: '.browser-test-runtime/text-linked-write.png' });
-    await page.getByRole('button', { name: 'Add linked frame after 2', exact: true }).click(); await settle(page);
+    await page.locator('.text-continuation-window').first().hover(); await page.getByRole('button', { name: 'Add linked frame after 2', exact: true }).click(); await settle(page);
     assert.equal(await page.locator('[data-text-flow-frame]').count(), 3);
     const initialFirst = await visibleText(page.getByRole('textbox', { name: 'Article text', exact: true }));
     const resize = page.getByRole('separator', { name: 'Resize Text from bottom', exact: true });
@@ -301,7 +321,7 @@ test('linked frames share live editing, formatting and one undo history, preserv
     await page.getByRole('button', { name: 'Add linked frame after 2', exact: true }).focus(); await page.keyboard.press('Enter'); await settle(page);
     const empty = page.getByRole('textbox', {name:'Article text in frame 3',exact:true});
     assert.equal(await visibleText(empty),'');
-    await empty.click({position:{x:10,y:10}}); await page.keyboard.type(' TEST'); await settle(page);
+    const clickPoint = await exposedTextPoint(empty); await page.mouse.click(clickPoint.x,clickPoint.y); await page.keyboard.type(' TEST'); await settle(page);
     assert.equal(await page.getByRole('textbox',{name:'Article text',exact:true}).evaluate(n=>n.editor.state.doc.textContent),changed.content.content[0].content.map(n=>n.text).join('')+' TEST','clicking an empty continuation appends to the article without replacing hidden text');
     await page.keyboard.press('Control+z'); await settle(page);
     await page.getByRole('button', { name: 'Read', exact: true }).focus(); await page.keyboard.press('Enter'); await settle(page);

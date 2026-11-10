@@ -16,7 +16,7 @@ const snapshot = page => page.locator('main.system-workflow').first().evaluate(n
   y: parseFloat(node.dataset.workbenchCameraY ?? node.style.getPropertyValue('--workbench-pan-y')) || 0,
 }));
 
-for (const theme of ['carbon', 'mist']) for (const [width, height, touch] of [[1440,900,false], [390,844,true], [320,568,true], [844,390,true]]) {
+for (const theme of ['carbon', 'mist']) for (const [width, height, touch] of [[1440,900,false], [760,844,false], [960,568,false], [1000,390,false]]) {
   test(`flat camera and scrollable canvas menu fit ${theme} ${width}×${height}`, { timeout: 60000 }, async () => {
     await mkdir(output, { recursive: true });
     const browser = await chromium.launch({ executablePath, headless: true });
@@ -29,20 +29,16 @@ for (const theme of ['carbon', 'mist']) for (const [width, height, touch] of [[1
       const rail = page.getByRole('group', { name: 'Workbench zoom', exact: true });
       const canvas = editorMenu(page, 'Canvas');
       await canvas.waitFor(); await page.evaluate(() => document.fonts.ready); await settle(page);
-      const box = await rail.boundingBox(); inside(box, width, height);
-      const style = await rail.evaluate(node => { const s = getComputedStyle(node), icon = getComputedStyle(node.querySelector('svg.lucide > *')); return [s.borderRadius, s.boxShadow, s.colorScheme, icon.strokeWidth, icon.vectorEffect]; });
-      assert.deepEqual(style, ['9px', 'none', theme === 'mist' ? 'light' : 'dark', '1.5px', 'non-scaling-stroke']);
-      for (const button of await rail.locator(':scope > button').all()) {
-        const target = await button.boundingBox();
-        assert.ok(target.width >= (touch ? 44 : 36) && target.height >= (touch ? 44 : 36));
-        assert.ok(target.x >= box.x + 3 && target.y >= box.y + 3 && target.x + target.width <= box.x + box.width - 3 && target.y + target.height <= box.y + box.height - 3);
-        assert.equal(await button.evaluate(node => getComputedStyle(node).borderRadius), '5px');
-      }
-      const creation = await page.getByRole('toolbar', { name: 'Creation tools' }).boundingBox();
-      if (width >= 1100) assert.equal(box.y + box.height, creation.y + creation.height, 'both rails share their lower edge');
-      else assert.ok(box.y + box.height <= creation.y - 7, 'narrow camera stays above creation');
+      assert.equal(await rail.count(), 0, 'Editor uses the header Zoom menu and Navigator');
+      const zoomTrigger = page.locator('.editor-header-actions').getByRole('button', { name: /^Zoom \d+%$/ });
+      const triggerBox = await zoomTrigger.boundingBox();
+      assert.ok(triggerBox.x >= 0 && triggerBox.y >= 0 && triggerBox.x + triggerBox.width <= width && triggerBox.y + triggerBox.height <= height, JSON.stringify(triggerBox));
+      await zoomTrigger.press('ArrowDown');
+      await page.getByRole('menu', { name: 'Zoom menu', exact: true }).waitFor();
+      await page.keyboard.press('Escape');
+      assert.equal(await zoomTrigger.evaluate(node => node === document.activeElement), true);
       if (await page.getByRole('button', { name: 'Inscape sidebar' }).getAttribute('aria-expanded') === 'true') await page.getByRole('button', { name: 'Inscape sidebar' }).click();
-      await page.getByRole('button', { name: 'Reset Workbench view', exact: true }).click(); await settle(page);
+      await page.getByRole('button', { name: 'Fit canvas in view', exact: true }).click(); await settle(page);
       await editorCommand(page, 'Canvas', 'Canvas size');
       const popup = page.getByRole('group', { name: 'Canvas size controls' });
       assert.equal(await popup.getByRole('button', { name: 'Close canvas size' }).evaluate(node => node === document.activeElement), true);
@@ -72,7 +68,7 @@ for (const theme of ['carbon', 'mist']) for (const [width, height, touch] of [[1
       const host = page.locator('main.system-workflow');
       await host.dispatchEvent('wheel', { bubbles: true, cancelable: true, clientX: 80, clientY: 90, deltaX: 70, deltaY: 90 }); await settle(page);
       assert.notDeepEqual(await snapshot(page), cameraBefore);
-      await page.getByRole('button', { name: 'Reset Workbench view', exact: true }).click(); await settle(page);
+      await page.getByRole('button', { name: 'Fit canvas in view', exact: true }).click(); await settle(page);
       assert.deepEqual(await snapshot(page), cameraBefore);
       await host.dispatchEvent('wheel', { bubbles: true, cancelable: true, clientX: 80, clientY: 90, deltaY: -100, ctrlKey: true }); await settle(page);
       const zoom = page.getByRole('slider', { name: 'Workbench zoom', exact: true });

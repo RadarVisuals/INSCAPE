@@ -133,8 +133,11 @@
 .workspace-library-navigation .lattice-browser-sidebar button {
   border-radius: var(--control-radius);
 }
-.workspace-library-navigation .lattice-browser-sidebar button:is(:hover, [data-active]) {
+.workspace-library-navigation .lattice-browser-sidebar button:hover {
   background: var(--tactile-hover);
+}
+.workspace-library-navigation .lattice-browser-sidebar button[data-active] {
+  background: var(--library-selection, var(--tactile-hover));
 }
 .workspace-library-navigation .system-workflow__library-create-row {
   margin-top: var(--space-2);
@@ -154,7 +157,7 @@
 .workspace-navigation [hidden] { display: none; }
 .workspace-library-navigation { color: var(--tactile-ink); }
 .workspace-library-navigation .lattice-browser-sidebar { box-shadow: none; }
-.workspace-library-navigation .lattice-browser-sidebar button { min-height: 32px; border: 0; font: inherit; text-transform: none; }
+.workspace-library-navigation .lattice-browser-sidebar button { min-height: var(--library-navigation-row-height, 32px); border: 0; font: inherit; text-transform: none; }
 .workspace-library-navigation .lattice-browser-sidebar > button { padding-inline: 8px; }
 .workspace-library-navigation .lattice-browser-sidebar button span { min-width: 0; }
 @media (pointer: coarse) {
@@ -169,11 +172,12 @@
 .workspace-navigation .workspace-library-navigation {
   --workflow-panel: var(--tactile-face); --workflow-ink: var(--tactile-ink);
   --workflow-muted: var(--tactile-muted); --workflow-border: var(--tactile-edge);
-  --workflow-border-strong: var(--tactile-edge); --workflow-selection: var(--tactile-hover);
+  --workflow-border-strong: var(--tactile-edge); --workflow-selection: var(--library-selection, var(--tactile-hover));
 }
 .workspace-navigation .workspace-library-navigation .lattice-browser-sidebar { border: 0; background: transparent; box-shadow: none; }
-.workspace-navigation .workspace-library-navigation .lattice-browser-sidebar > button { min-height: 34px; border: 0; text-transform: none; }
-.workspace-navigation .workspace-library-navigation .lattice-browser-sidebar > button:is(:hover, [data-active]) { background: var(--tactile-hover); }
+.workspace-navigation .workspace-library-navigation .lattice-browser-sidebar > button { min-height: var(--library-navigation-row-height, 34px); border: 0; text-transform: none; }
+.workspace-navigation .workspace-library-navigation .lattice-browser-sidebar > button:hover { background: var(--tactile-hover); }
+.workspace-navigation .workspace-library-navigation .lattice-browser-sidebar > button[data-active] { background: var(--library-navigation-selected, var(--tactile-hover)); }
 .workspace-library-navigation .lattice-browser-category-list { overflow: visible; }
 
 .workspace-navigation-link { position: relative; }

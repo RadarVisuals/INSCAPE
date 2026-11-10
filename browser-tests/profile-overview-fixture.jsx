@@ -2,7 +2,7 @@ import { interfaceTheme } from '../src/interfaceTheme.js';
 if (!localStorage.getItem('inscape:interface-theme') && new URLSearchParams(location.search).has('theme')) {
   interfaceTheme.setMode(['light', 'mist'].includes(new URLSearchParams(location.search).get('theme')) ? 'light' : 'dark');
 }
-import React, { lazy, Suspense } from 'react';
+import React, { lazy, Suspense, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import PublishedProfileBoundary from '../src/profileDocument/components/PublishedProfileBoundary.jsx';
 import useApplicationNavigation from '../src/profileDiscovery/useApplicationNavigation.js';
@@ -30,7 +30,7 @@ const asset = { id: assetId, chainId: 42, contractAddress: contract, tokenId: '0
   imageUrl: portrait, originalImageUrl: portrait, imageWidth: 800, imageHeight: 1200, creators: [], attributes: [] };
 draft.identityPresentation.avatar = { mode: 'inscape', stableAssetId: assetId, shape: 'square' };
 draft.imageModules = [{ id: 'image:study', visibility: 'PUBLIC', name: 'A closer look', width: 320, height: 480,
-  sides: [{ id: 'side:first', asset: createProfileDocumentV9AssetResolver([asset])(assetId), crop: null, transform: { quarterTurns: 0, mirrorX: false, mirrorY: false } }] }];
+  artwork: { id: 'artwork:first', asset: createProfileDocumentV9AssetResolver([asset])(assetId), crop: null, transform: { quarterTurns: 0, mirrorX: false, mirrorY: false } } }];
 draft.workbench = createDefaultWorkbenchPresentation();
 draft.workbench.imageModules = [{ id: 'image:study', open: true, position: { left: 180, top: 100 } }];
 if (new URLSearchParams(location.search).has('collection')) {
@@ -64,16 +64,25 @@ window.__galleryStore = store;
 window.__overviewPublication = published;
 window.__overviewDraft = draft;
 function Fixture() {
+  const replacementTest = new URLSearchParams(location.search).has('invalid-publication');
+  const [publicationResolution, setPublicationResolution] = useState(() => replacementTest
+    ? { status: 'INVALID', errorCode: 'INVALID_DOCUMENT', address }
+    : { status: 'UNAVAILABLE', address });
   const navigation = useApplicationNavigation({ status: 'complete', profileAddress: null, ownershipVerified: false });
   const content = navigation.content;
   if (new URLSearchParams(location.search).has('publish')) return <Suspense fallback={null}><main className="system-workflow">
+    {replacementTest && <div>
+      <button onClick={() => setPublicationResolution(current => ({ ...current }))}>Recheck publication fixture</button>
+      <button onClick={() => setPublicationResolution({ status: 'ERROR', address })}>Network failure fixture</button>
+    </div>}
     <OwnerSystemWorkflowPublicationRack store={store} profileAddress={address} profile={{ name: 'Nomad' }} assetRecords={[asset]}
-      systemWorkflowDraft={store.getDraft()} workbench={draft.workbench} publishedResolution={{ status: 'UNAVAILABLE' }}
+      systemWorkflowDraft={store.getDraft()} workbench={draft.workbench} publishedResolution={publicationResolution}
       getWalletPublicationContext={() => ({})} phase="open" onClose={() => {}} />
   </main></Suspense>;
   return <div className="application-root"><div className="application-interface" data-visible>
     <PublishedProfileBoundary address={address} resolution={{ status: 'RESOLVED', document: published }}
       returnProfileAddress={new URLSearchParams(location.search).has('owner') ? address : undefined} onReturnToWorkbench={() => {}}
+      onEditReception={() => navigation.editReception(address)}
       entry={{ surface: content?.canvas ? 'canvas' : 'overview', target: content?.target, reception: content?.reception }}
       onOpenCanvas={() => navigation.openCanvas(address)} onOpenOverview={() => navigation.openOverview(address)} />
   </div></div>;

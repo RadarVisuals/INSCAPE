@@ -17,7 +17,7 @@ function reorderMembers(layers, members, ids, direction, targetId, edge) {
   return layers.map(layer => siblings.includes(layer) ? ordered[index++] : layer);
 }
 
-function backgroundsBehindContents(layers, cells) {
+export function backgroundsBehindContents(layers, cells) {
   let next = layers;
   for (const cell of cells) {
     const block = next.find(layer => typeof layer !== 'string' && layer.children.includes(cell.id));

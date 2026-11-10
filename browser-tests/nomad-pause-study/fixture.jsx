@@ -57,9 +57,9 @@ const numbers = size === 'small' ? { images: 4, texts: 2, shapes: 4, apps: 0, pa
   : { images: 16, texts: 12, shapes: 24, apps: 2, paragraphs: 12 };
 draft.imageModules = Array.from({ length: numbers.images }, (_, i) => ({
   id: 'image:perf-' + i, name: 'Artwork ' + (i + 1), width: 400, height: 400, visibility: 'PRIVATE',
-  sides: [{ id: 'side:perf-' + i, asset: resolve(i % 4 === 0 ? (nomads[i / 4]?.id || layered.id) : sources[i % sources.length].id),
+  artwork: { id: 'artwork:perf-' + i, asset: resolve(i % 4 === 0 ? (nomads[i / 4]?.id || layered.id) : sources[i % sources.length].id),
     crop: i % 3 === 0 ? { x: .45, y: .55, zoom: 1.2 } : null,
-    transform: { quarterTurns: 0, mirrorX: i % 5 === 0, mirrorY: false } }],
+    transform: { quarterTurns: 0, mirrorX: i % 5 === 0, mirrorY: false } },
 }));
 draft.workbench.imageModules = draft.imageModules.map((item, i) => ({ id: item.id, open: true,
   position: { left: 450 + (i % 4) * 460, top: 130 + Math.floor(i / 4) * 560 } }));

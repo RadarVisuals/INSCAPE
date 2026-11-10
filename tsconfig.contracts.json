@@ -20,7 +20,7 @@
     "src/public/ownerSystemWorkflow/workbenchMoveOperation.js",
     "src/public/ownerSystemWorkflow/workbenchResizeOperation.js",
     "src/public/ownerSystemWorkflow/workbenchGestures.js",
-    "src/systemWorkflow/moveWorkbenchGroup.js",
+    "src/systemWorkflow/moveWorkbenchSelection.js",
     "src/systemWorkflow/resizeWorkbenchSelection.js",
     "typechecks/workbench-contracts.ts",
     "typechecks/workbench-operations.ts"

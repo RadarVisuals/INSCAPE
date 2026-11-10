@@ -18,7 +18,7 @@ test('Shape colour changes leave zoom and wheel pan available despite stale whee
     const page = await browser.newPage({ viewport: { width: 1440, height: 1100 } });
     const errors = []; page.on('pageerror', error => errors.push(error.message));
     await mountTextToolsFixture(page, origin, { surfaces: true });
-    await page.getByRole('button', { name: 'Close Text tools', exact: true }).click();
+    await page.getByRole('button', { name: 'Close Inspector', exact: true }).click();
     await page.locator('.shape-fill').click();
     const colorPanel = await openSharedTool(page, 'Color');
     const colour = colorPanel.getByLabel('Color colour', { exact: true });
@@ -50,7 +50,7 @@ test('real module drags block wheel camera changes even when wheel reports no bu
   try {
     const page = await browser.newPage({ viewport: { width: 1440, height: 1100 } });
     await mountTextToolsFixture(page, origin, { surfaces: true });
-    await page.getByRole('button', { name: 'Close Text tools', exact: true }).click();
+    await page.getByRole('button', { name: 'Close Inspector', exact: true }).click();
     const shape = page.locator('.shape-window'), bounds = await shape.boundingBox();
     await page.mouse.move(bounds.x + 100, bounds.y + 100); await page.mouse.down();
     await page.mouse.move(bounds.x + 120, bounds.y + 120, { steps: 4 }); await settle(page);

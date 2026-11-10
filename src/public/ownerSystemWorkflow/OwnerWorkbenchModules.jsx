@@ -43,7 +43,15 @@ export default function OwnerWorkbenchModules({
   const { assetsById, registerAssetDimensions, resolveAssetDimensions } = library;
   const displayIds = displayModuleIds(workbenchController.draft);
   const activeModuleId = selectionState.targetId;
-
+  const savedLayout = workbenchController.draft.workbench;
+  const layoutAtEntry = useRef(savedLayout);
+  const modulePresentations = key => {
+    const saved = savedLayout?.[key] || [];
+    // A restored Bento cell mounts again after Undo. Its current authored frame
+    // supersedes the cached frame from when this editor session opened.
+    if (workbenchController.store.getReception && savedLayout !== layoutAtEntry.current) return saved;
+    return [...(initialWorkbench.current?.[key] || []), ...saved];
+  };
 
   const initialPrimary = useRef(true);
   if (!workbenchController.draft.grids.length) initialPrimary.current = false;
@@ -137,10 +145,7 @@ export default function OwnerWorkbenchModules({
               records={workbenchController.draft.shapes}
               store={workbenchController.store}
               profileAddress={profileAddress}
-              presentations={[
-                ...(initialWorkbench.current?.shapes || []),
-                ...(workbenchController.draft.workbench?.shapes || []),
-              ]}
+              presentations={modulePresentations('shapes')}
               onPresentationChange={registerShapePresentation}
               onActivate={selectionState.focusModule}
               windowSnap={workbenchPreferences.shortcutSnap}
@@ -152,12 +157,10 @@ export default function OwnerWorkbenchModules({
           <Suspense fallback={<p role="status">Opening Image…</p>}>
             <ImageWorkbench
               records={workbenchController.draft.imageModules}
+              library={library}
               store={workbenchController.store}
               profileAddress={profileAddress}
-              presentations={[
-                ...(initialWorkbench.current?.imageModules || []),
-                ...(workbenchController.draft.workbench?.imageModules || []),
-              ]}
+              presentations={modulePresentations('imageModules')}
               onPresentationChange={registerImagePresentation}
               registerTarget={registerModuleAssetTarget}
               onActivate={selectionState.focusModule}
@@ -174,10 +177,7 @@ export default function OwnerWorkbenchModules({
               store={workbenchController.store}
               profileAddress={profileAddress}
               windowSnap={workbenchPreferences.shortcutSnap}
-              presentations={[
-                ...(initialWorkbench.current?.texts || []),
-                ...(workbenchController.draft.workbench?.texts || []),
-              ]}
+              presentations={modulePresentations('texts')}
               onPresentationChange={registerTextPresentation}
               registerTarget={registerModuleAssetTarget}
               placementTargets={allPlacementTargetsRef}

@@ -109,9 +109,17 @@ export interface MountedWorkbenchStore extends WorkbenchScope {
   getSnapshot(): WorkflowDraft;
   getDraft(): WorkflowDraft;
 }
-export interface ArtworkMenuAction { id: string; label: string; disabled?: boolean; reason?: string; run: () => void }
+interface ArtworkMenuEntry { id: string; label: string; disabled?: boolean; reason?: string }
+export interface ArtworkMenuCommand extends ArtworkMenuEntry { run: () => void; children?: never }
+export interface ArtworkMenuGroup extends ArtworkMenuEntry { children: ArtworkMenuCommand[]; run?: never }
+export type ArtworkMenuAction = ArtworkMenuCommand | ArtworkMenuGroup;
 export interface ToolSource {
-  color?: ReactNode; fx?: ReactNode; image?: ReactNode; shape?: ReactNode;
+  cellFill?: ReactNode;
+  color?: ReactNode;
+  shape?: (tools: { section: (name: string, children: ReactNode, title?: string, open?: boolean) => ReactNode; transform: ReactNode; position: ReactNode; information: ReactNode }) => ReactNode;
+  image?: (tools: { transform: ReactNode; position: ReactNode; information: ReactNode }) => ReactNode;
+  text?: (tools: { transform: ReactNode; color: ReactNode; position: ReactNode; information: ReactNode }) => ReactNode;
+  cell?: (tools: { section: (name: string, children: ReactNode, title?: string, open?: boolean) => ReactNode; requestedSection?: string; request?: number; historyBlocked?: string | null }) => ReactNode;
   actions?: { disabled?: boolean; duplicate: { disabled?: boolean; reason?: string; run: () => void }; items?: ArtworkMenuAction[] };
 }
 export interface ViewTransform { scale: number; x: number; y: number; frame?: Frame; gridScale?: number; cellRadius?: number }
@@ -131,6 +139,11 @@ export interface WorkbenchViewGeometry {
 /** The sole mounted provider supplies these registries and callbacks together. */
 export interface MountedWorkbenchViewValue extends WorkbenchViewGeometry {
   store?: MountedWorkbenchStore;
+  groupDrop?: MutableRefObject<{
+    preview(pointer: Pick<PointerEvent, 'clientX' | 'clientY'>, ids: WindowId[]): void;
+    commit(pointer: Pick<PointerEvent, 'clientX' | 'clientY'>, ids: WindowId[]): boolean;
+    cancel(): void;
+  } | null>;
   toolSources: Map<ModuleId, MutableRefObject<ToolSource>>;
   toolsChanged: () => void;
   frames: Map<WindowId, MutableRefObject<Frame | null> & { move?: ((position: Position) => void) | null }>;
@@ -141,6 +154,7 @@ export interface MountedWorkbenchViewValue extends WorkbenchViewGeometry {
 /** Standalone windows have geometry only, without a partial live registry. */
 export interface StandaloneWorkbenchViewValue extends WorkbenchViewGeometry {
   store?: undefined;
+  groupDrop?: undefined;
   toolSources?: undefined;
   toolsChanged?: undefined;
   frames?: undefined;
@@ -298,6 +312,7 @@ export interface WorkbenchResizeOperation {
 }
 export type GestureStartEvent = Pick<PointerEvent, 'button' | 'pointerId' | 'clientX' | 'clientY'>;
 export interface GestureMoveInput {
+  captureTarget?: HTMLElement;
   nodes: readonly HTMLElement[];
   beforeTransforms: WorkbenchTransforms;
   valid?: () => boolean;

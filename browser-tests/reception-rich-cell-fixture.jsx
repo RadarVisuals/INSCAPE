@@ -32,8 +32,8 @@ function seed() {
   article.content = { type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Image, text and shape keep their own identity inside one cell.' }] }] };
   return { version: 1, size: { width: 800, height: 600 },
     imageModules: [{ id: 'image:trial', name: 'SKULL REAPER', visibility: 'PUBLIC', width: 800, height: 600,
-      sides: [{ id: 'side:trial', asset: createProfileDocumentV9AssetResolver(assets)(assets[1].id), crop: null,
-        transform: { quarterTurns: 0, mirrorX: false, mirrorY: false } }] }],
+      artwork: { id: 'artwork:trial', asset: createProfileDocumentV9AssetResolver(assets)(assets[1].id), crop: null,
+        transform: { quarterTurns: 0, mirrorX: false, mirrorY: false } } }],
     texts: [{ id: 'text:trial', article, visibility: 'PUBLIC' }],
     shapes: [{ id: 'shape:trial', name: 'Backdrop', color: '#456057', opacity: 1, visibility: 'PUBLIC' }],
     artworkLayers: ['shape:trial', 'image:trial', 'text:trial'],

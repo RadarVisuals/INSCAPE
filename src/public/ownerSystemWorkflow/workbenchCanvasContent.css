@@ -23,7 +23,9 @@
   display: block; position: absolute; inset: 0; pointer-events: none; transform-origin: 0 0;
 }
 [data-workbench-canvas-hidden], [data-workbench-canvas-hidden] * { visibility: hidden !important; }
-[data-workbench-artwork]:not([data-svg-inspection]) { z-index: var(--artwork-order) !important; }
+:is([data-workbench-artwork], [data-workbench-group-presented]):not([data-svg-inspection], [data-display-lift]) { z-index: var(--group-reading-order, var(--artwork-order)) !important; }
+/* Reading takes precedence over overlapping artwork, below the canvas tools. */
+[data-workbench-group-presented] { --group-reading-order: 78; }
 [data-editor-hidden], [data-editor-hidden] * { visibility: hidden !important; pointer-events: none !important; }
 .workbench-canvas-content .shape-workbench { display: contents; }
 /* Live SVG and Display inspection retain their DOM and share the viewport

@@ -16,7 +16,7 @@ function PanelPresence({ children, id, panels, retained = false }) {
     onTransitionEnd={(event) => { if (event.propertyName === 'opacity') panels.completePanelTransition(id); }}>{children}</div>;
 }
 
-export default function OwnerSystemWorkflowPanelLayer({ libraryPreferences, libraryWindowPreferences, navigationHost, workbenchImageTargetRef, moduleAssetTargetRef, placementTargetRef, shortcutTargetRef, workspaceRef, activity, authoringLocked = false, categoryCommands, connectedProfile, controller, libraryData,
+export default function OwnerSystemWorkflowPanelLayer({ libraryPreferences, libraryWindowPreferences, libraryDockHost, onDockLibrary, navigationHost, workbenchImageTargetRef, moduleAssetTargetRef, placementTargetRef, shortcutTargetRef, workspaceRef, activity, authoringLocked = false, categoryCommands, connectedProfile, controller, libraryData,
   profileAddress, onChangeGrid, onClose, onConnect, onDisconnect, onOpenIdentity, onOpenReception, onEditReception, onEnterMyWorld, onVisitProfile, panels, profileIdentity, profileModel,
   resolveAssetDimensions, workbenchPreferences, onWorkbenchPreferencesChange, backupControls, canvasGuides = true }) {
   const show = (id) => panels.presence[id];
@@ -28,7 +28,7 @@ export default function OwnerSystemWorkflowPanelLayer({ libraryPreferences, libr
     </PanelPresence>}
     {show('docs').present && <PanelPresence id="docs" panels={panels}><OwnerSystemWorkflowManual onClose={onClose} /></PanelPresence>}
     {libraryMounted.current && <PanelPresence id="library" panels={panels} retained>
-      <WorkbenchLibraryWindow windowPreferences={libraryWindowPreferences} preferenceStore={libraryPreferences} navigationHost={navigationHost} workbenchImageTargetRef={workbenchImageTargetRef} moduleAssetTargetRef={moduleAssetTargetRef} placementTargetRef={placementTargetRef} shortcutTargetRef={shortcutTargetRef} workspaceRef={workspaceRef}
+      <WorkbenchLibraryWindow dockHost={libraryDockHost} onDock={onDockLibrary} windowPreferences={libraryWindowPreferences} preferenceStore={libraryPreferences} navigationHost={navigationHost} workbenchImageTargetRef={workbenchImageTargetRef} moduleAssetTargetRef={moduleAssetTargetRef} placementTargetRef={placementTargetRef} shortcutTargetRef={shortcutTargetRef} workspaceRef={workspaceRef}
         placementScope={`${profileAddress}:${controller?.moduleId || ''}:${controller?.selectedGridId || ''}`}
         authoringLocked={authoringLocked} categoryCommands={categoryCommands} data={libraryData}
          onClose={() => panels.closePanel({ panelId: 'library' })} phase={show('library').phase} open={panels.isPanelOpen('library')}

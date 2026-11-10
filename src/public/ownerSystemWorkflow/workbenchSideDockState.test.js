@@ -20,7 +20,33 @@ test('docked windows resize together, divide height, restore cancellation and re
   remove(); assert.equal(frames().Navigator, undefined);
   dock.register('Navigator', 160); assert.equal(frames().Navigator.width, 420);
   dock.viewport({ width: 320, height: 400, top: 36, left: 0 });
-  assert.equal(frames().Navigator.width, 320); assert.equal(frames().tools.top + frames().tools.height, 400);
+  assert.ok(Math.abs(frames().Navigator.width - 320 * 2 / 3) < 1e-6);
+  assert.equal(frames().tools.top + frames().tools.height, 400);
+});
+
+for (const side of ['left', 'right']) test(`an oversized ${side}-only dock preserves work space and restores its chosen width`, () => {
+  const dock = createSideDockStore();
+  dock.viewport({ width: 1600, height: 900, top: 40 });
+  dock.register('Layers', 280); dock.register('Navigator', 160);
+  dock.attach('Layers', { height: 500 }, Infinity, side);
+  dock.attach('Navigator', { height: 200 }, Infinity, side);
+  const frames = () => { const state = dock.getSnapshot(); return sideDockFrames(state.layout, state.windows, state.viewport); };
+  dock.resize('Layers', { ...frames().Layers, width: 1100 });
+  const chosenLayout = dock.getSnapshot().layout, wide = frames();
+  assert.equal(wide.Layers.width, 1100);
+  dock.viewport({ width: 900, height: 900, top: 40 });
+  const narrow = frames();
+  assert.equal(narrow.Layers.width, 600);
+  assert.equal(narrow.Navigator.width, 600);
+  assert.equal(narrow.Layers.left, side === 'left' ? 0 : 300);
+  assert.equal(narrow.Navigator.left, narrow.Layers.left);
+  assert.equal(narrow.Layers.top, wide.Layers.top);
+  assert.equal(narrow.Layers.height, wide.Layers.height);
+  assert.equal(narrow.Navigator.top + narrow.Navigator.height, 900);
+  assert.equal(dock.getSnapshot().layout, chosenLayout, 'viewport projection does not rewrite saved widths or heights');
+  assert.equal(chosenLayout[side === 'left' ? 'leftWidth' : 'width'], 1100);
+  dock.viewport({ width: 1600, height: 900, top: 40 });
+  assert.deepEqual(frames(), wide, 'the original width and stacked geometry return on a wider screen');
 });
 test('right dock and utility dimensions persist privately and reject malformed layouts', () => {
   const data = new Map(), storage = { getItem: key => data.get(key) ?? null, setItem: (key, value) => data.set(key, value) };
@@ -36,7 +62,11 @@ test('right dock and utility dimensions persist privately and reject malformed l
   assert.deepEqual(restored.getSnapshot().sideDock, dock.getSnapshot().layout);
   assert.equal(restored.getSnapshot().navigator.width, 240); restored.dispose();
   const other = createEditorPreferencesStore({ profile: 'bob', storage });
-  assert.deepEqual(other.getSnapshot().sideDock.items, []); other.dispose();
+  assert.deepEqual(other.getSnapshot().sideDock.items, [
+    { id: 'tools:tools', side: 'left', height: 480 },
+    { id: 'Navigator', side: 'left', height: 120 },
+    { id: 'tools:inspector', side: 'right', height: 640 },
+  ], 'a different profile starts with the Editor defaults, not the previous profile’s dock layout'); other.dispose();
   assert.equal(validSideDock({ width: 320, items: [{ id: 'a', height: 10 }, { id: 'a', height: 20 }] }), false);
   assert.equal(validSideDock({ width: Infinity, items: [] }), false);
   assert.equal(validSideDock({ width: 320, items: [null] }), false);
@@ -66,6 +96,7 @@ test('both docks stack and resize independently, move between edges and fit a na
     dock.viewport({ width, height: 400, top: 40 });
     const f = frames();
     assert.ok(f.Library.width < f.Navigator.left);
+    assert.ok(Math.abs(f.Navigator.left - f.Library.width - Math.min(320, width / 3)) < 1e-6, 'two columns retain the same shared work area');
     assert.ok(Math.abs(f.Layers.top + f.Layers.height - 400) < 1e-6);
     assert.ok(Math.abs(f.Keeper.top + f.Keeper.height - 400) < 1e-6);
   }

@@ -9,7 +9,7 @@ function fixture() {
     ownerDocument: { defaultView: { innerWidth: 1800, innerHeight: 1000 } } };
   for (let i = 0; i < 12; i++) {
     const node = { module: `image:${i}`, selected: false, hidden: false, parentElement: host,
-      dataset: { artworkContextId: `side:${i}`, artworkContextTitle: `Artwork ${i}`, artworkContextSrc: `https://art.test/${i}.png` },
+      dataset: { artworkContextId: `artwork:${i}`, artworkContextTitle: `Artwork ${i}`, artworkContextSrc: `https://art.test/${i}.png` },
       checkVisibility() { return !this.hidden; }, getBoundingClientRect: () => ({ left: i * 120, right: i * 120 + 100, top: 100, bottom: 200 }),
       closest(selector) { return selector.includes('workbench-view-id') ? { dataset: { workbenchViewId: this.module } } : this.selected ? this : null; } };
     nodes.push(node);

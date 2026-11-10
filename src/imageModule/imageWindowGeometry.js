@@ -1,3 +1,4 @@
+import { IMAGE_SIZE_LIMITS } from './imageModule.js';
 export { workbenchPaintGeometry as imagePaintGeometry } from '../public/ownerSystemWorkflow/workbenchPaintGeometry.js';
 import { WORKBENCH_BOUNDS, clampWorkbenchPosition } from '../public/ownerSystemWorkflow/workbenchSpace.js';
 
@@ -19,7 +20,7 @@ export function imageWindowPosition(rectangle, camera, offset) {
 
 // Resize authored dimensions around the opposite edge. Delta and snap values
 // are exact Workbench coordinates; only the camera projects them onto the screen.
-export function resizeImageGeometry(position, size, edge, delta, snap, bounds = WORKBENCH_BOUNDS) {
+export function resizeImageGeometry(position, size, edge, delta, snap, bounds = WORKBENCH_BOUNDS, limits = IMAGE_SIZE_LIMITS) {
   const next = { position: { ...position }, size: { width: size.width, height: size.height } };
   // Each corner owns two independent edges. A horizontal drag must not change
   // height, and a vertical drag must not change width, even with snapping on.
@@ -34,7 +35,9 @@ export function resizeImageGeometry(position, size, edge, delta, snap, bounds = 
     const snapped = snap?.(axis, reverse ? start : end, moving) ?? moving;
     const requested = reverse ? anchor - snapped : snapped - anchor;
     const available = reverse ? anchor - bounds[start] : bounds[end] - anchor;
-    next.size[key] = Math.max(32, Math.min(4096, Math.floor(available + 1e-7), Math.round(requested)));
+    const minimum = axis === 'x' ? limits.minimumWidth : limits.minimumHeight;
+    const maximum = axis === 'x' ? limits.maximumWidth : limits.maximumHeight;
+    next.size[key] = Math.max(minimum, Math.min(maximum, Math.floor(available + 1e-7), Math.round(requested)));
     next.position[start] = reverse ? anchor - next.size[key] : anchor;
   }
   if (edge.includes('w')) next.position.left = position.left + size.width - next.size.width;

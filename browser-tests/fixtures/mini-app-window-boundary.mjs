@@ -37,7 +37,14 @@ export async function verifyMiniAppWindowBoundary(browser, origin) {
     console.log('Mini app narrow measurement', JSON.stringify({ initial, resized, narrow }));
     assert.deepEqual(narrow.captured, resized, 'viewport projection cannot replace authored presentation or capture');
     assert.ok(narrow.painted.x >= 0 && narrow.painted.x + narrow.painted.width <= 391);
-    assert.equal(await page.getByLabel('Resize Mini app window', { exact: true }).count(), 0, 'undersized viewport cannot commit a below-minimum resize');
+    assert.equal(await page.getByLabel('Resize Mini app window', { exact: true }).count(), 1, '390px still has room for the current minimum');
+    await page.setViewportSize({ width: 160, height: 844 });
+    await page.waitForFunction(() => document.querySelector('.mini-app-workbench .system-workflow__instrument-window').getBoundingClientRect().width <= 160);
+    await page.getByLabel('Resize Mini app window', { exact: true }).waitFor({ state: 'detached' });
+    assert.equal(await page.getByLabel('Resize Mini app window', { exact: true }).count(), 0, 'a genuinely below-minimum viewport cannot commit a resize');
+    assert.deepEqual(await page.evaluate(() => window.captureMiniWindow()), resized);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.waitForFunction(() => document.querySelector('.mini-app-workbench .system-workflow__instrument-window').getBoundingClientRect().width > 300);
     const grip = await page.getByLabel('Move Mini app window', { exact: true }).boundingBox();
     await page.mouse.move(grip.x + 10, grip.y + grip.height / 2);
     await page.mouse.down(); await page.mouse.move(grip.x + 10, grip.y + grip.height / 2 + 24);

@@ -35,7 +35,7 @@ if (new URLSearchParams(location.search).has('sample') && !root.getSnapshot().re
   article.appearance = { ...textAppearance(article), fontSize: 22 };
   reception.texts = [{ id: 'text:intro', article, visibility: 'PUBLIC' }];
   reception.imageModules = [{ id: 'image:portrait', name: assets[1].name, visibility: 'PUBLIC', width: 800, height: 900,
-    sides: [{ id: 'side:first', asset: createProfileDocumentV9AssetResolver(assets)(assets[1].id), crop: null, transform: { quarterTurns: 0, mirrorX: false, mirrorY: false } }] }];
+    artwork: { id: 'artwork:first', asset: createProfileDocumentV9AssetResolver(assets)(assets[1].id), crop: null, transform: { quarterTurns: 0, mirrorX: false, mirrorY: false } } }];
   reception.regions = reception.regions.map(r => ({ ...r, content: r.id === first ? 'text:intro' : r.id === 'region:right' ? 'image:portrait' : r.id === 'region:links' ? 'links' : 'details',
     padding: r.id === 'region:right' ? 0 : 32, surface: r.id === first ? '#101111' : null }));
   reception.branding.name = 'NOMAD';

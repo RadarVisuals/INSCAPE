@@ -1,13 +1,17 @@
 import { useMemo, useState } from 'react';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, SlidersHorizontal } from 'lucide-react';
 import { projectReception } from '../profileDocument/domain/receptionPresentation.js';
 import ReceptionDocumentCanvas from './ReceptionDocumentCanvas.jsx';
 import ReceptionViewportControls from './ReceptionViewportControls.jsx';
+import WorkspaceSwitcher from '../public/menus/WorkspaceSwitcher.jsx';
 import ReceptionPresentation from './ReceptionPresentation.jsx';
 import { ReceptionButton as Button } from './ReceptionControls.jsx';
 import '../public/ownerSystemWorkflow/workflowTokens.css';
 import '../public/ownerSystemWorkflow/workflowTactile.css';
 import '../public/ownerSystemWorkflow/workflowFlat.css';
+import './receptionPreview.css';
+
+const editorChrome = { 'data-workflow-material': 'tactile', 'data-workflow-finish': 'flat', 'data-workflow-palette': 'editor' };
 
 function NumberSetting({ label, value, min = 0, max = 16384, onCommit }) {
   return <label>{label}<input key={value} type="number" aria-label={label} defaultValue={Math.round(value * 100) / 100}
@@ -18,7 +22,7 @@ function NumberSetting({ label, value, min = 0, max = 16384, onCommit }) {
     }} /></label>;
 }
 
-export default function ReceptionEditorPreview({ reception, model, snapshot, assets, onClose, store }) {
+export default function ReceptionEditorPreview({ reception, model, snapshot, assets, onClose, store, workspaceDestinations }) {
   const [width, setWidth] = useState(null), [selection, setSelection] = useState(null), [layout, setLayout] = useState(null), [error, setError] = useState('');
   const [settingsOpen, setSettingsOpen] = useState(false);
   const shown = useMemo(() => projectReception(reception), [reception]);
@@ -47,14 +51,18 @@ export default function ReceptionEditorPreview({ reception, model, snapshot, ass
   return <ReceptionPresentation snapshot={snapshot?.entries ? snapshot : undefined} assets={assets}>
     <section className="reception-document-preview system-workflow__token-scope" aria-label="Reception responsive preview"
       data-workflow-material="tactile" data-workflow-finish="flat">
-      <header><Button icon={ArrowLeft} onClick={onClose}>Back to editing</Button><span>Reception preview</span>
-        {store && <Button aria-expanded={settingsOpen} onClick={() => setSettingsOpen(open => !open)}>Phone layout settings</Button>}</header>
-      <ReceptionViewportControls width={width} measuredWidth={layout?.viewportWidth} onChange={setWidth} />
+      <header className="reception-preview-bar" {...editorChrome}>
+        <Button icon={ArrowLeft} label="Back to editing" onClick={onClose}>Back to editing</Button>
+        <WorkspaceSwitcher current="Reception preview" destinations={workspaceDestinations} onChoose={run} />
+        <div className="reception-preview-actions"><ReceptionViewportControls width={width} measuredWidth={layout?.viewportWidth} onChange={setWidth} />
+        {store && <Button icon={SlidersHorizontal} label="Phone layout settings" aria-expanded={settingsOpen}
+          onClick={() => setSettingsOpen(open => !open)} />}</div>
+      </header>
       {error && <p role="alert">{error}</p>}
       <div className="reception-document-preview-body">
         <div className="reception-document-preview-scroll"><ReceptionDocumentCanvas reception={shown} width={width}
           model={model} address={store?.getProfileAddress()} selected={settingsOpen ? selection?.id : undefined} onSelect={store && settingsOpen ? select : undefined} onLayout={setLayout} /></div>
-        {store && settingsOpen && <aside className="reception-document-preview-tools" aria-label="Responsive cell settings">
+        {store && settingsOpen && <aside className="reception-document-preview-tools" aria-label="Responsive cell settings" {...editorChrome}>
           <p>Choose a cell to adjust its phone layout. Desktop artwork stays in place.</p>
           <label>Cell<select aria-label="Preview cell" value={cell?.id || ''} onChange={event => select(event.target.value, event.target.value)}>
             <option value="">Choose a cell</option>{shown.cells.map(item => <option key={item.id} value={item.id}>{name(item.id)}</option>)}

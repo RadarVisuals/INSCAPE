@@ -71,7 +71,7 @@ function RoutedFixture({ status, owner, onRetry }) {
   const content = navigation.content;
   const enterEditor = () => navigation.visitProfile(address, { returnToConnectedProfile: true });
   const editReception = () => navigation.editReception(address);
-  const openReception = () => navigation.openReception(address);
+  const openReception = mode => navigation.openReception(address, mode === 'published' ? 'published' : true);
   return content?.kind === 'workbench' ? <OwnerRuntimeBoundary ownerAuthoringEnabled
     workspaceProfileAddress={address} viewedProfileAddress={address}
     receptionEditorRequested={content.receptionEditorRequested === true} canvasOverviewRequested={content.canvas === true}
@@ -80,7 +80,7 @@ function RoutedFixture({ status, owner, onRetry }) {
     onEnterMyWorld={enterEditor} onEditorDocumentChange={kind => kind === 'reception' ? editReception() : enterEditor()} />
     : <PublishedProfileBoundary address={address} resolution={resolution}
       returnProfileAddress={owner ? address : undefined} onReturnToWorkbench={owner ? enterEditor : undefined}
-      onEditReception={editReception} onRetry={onRetry}
+      onEditReception={editReception} onMyInscape={() => navigation.openCanvas(address, undefined, { ownerCollection: true })} onRetry={onRetry}
       entry={{ surface: content?.canvas ? 'canvas' : 'overview', reception: content?.reception, target: content?.target }}
       onOpenCanvas={() => navigation.openCanvas(address)} />;
 }

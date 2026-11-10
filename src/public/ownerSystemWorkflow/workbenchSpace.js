@@ -20,3 +20,7 @@ export function projectWorkbenchBounds(scale = 1, offset = { x: 0, y: 0 }, bound
 export function unprojectWorkbenchPosition(position, scale = 1, offset = { x: 0, y: 0 }) {
   return { left: (position.left - offset.x) / scale, top: (position.top - offset.y) / scale };
 }
+
+export function unprojectWorkbenchFrame({ scale, offset }, { left = 0, top = 0, width, height }) {
+  return { ...unprojectWorkbenchPosition({ left, top }, scale, offset), width: width / scale, height: height / scale };
+}

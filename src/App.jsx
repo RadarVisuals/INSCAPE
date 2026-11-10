@@ -213,7 +213,7 @@ function App() {
             viewedProfileAddress={viewedProfileAddress}
             onVisitProfile={visitProfile}
             onOpenDiscover={navigation.openDiscover}
-            onOpenReception={() => navigation.openReception(viewedProfileAddress)}
+            onOpenReception={mode => navigation.openReception(viewedProfileAddress, mode === 'published' ? 'published' : true)}
             onEditorDocumentChange={kind => kind === 'reception'
               ? navigation.editReception(viewedProfileAddress) : enterConnectedWorld()}
             connectedProfile={connectedProfile}
@@ -232,6 +232,7 @@ function App() {
             returnProfileAddress={verifiedOwnerProfileAddress}
             onReturnToWorkbench={ownershipVerified && authorityLifecycleStatus === 'complete' ? enterConnectedWorld : undefined}
             onEditReception={() => navigation.editReception(viewedProfileAddress)}
+            onMyInscape={() => navigation.openCanvas(viewedProfileAddress, undefined, { ownerCollection: true })}
             onOpenDiscover={navigation.openDiscover} onVisitProfile={visitProfile}
             entry={{ surface: content.canvas ? 'canvas' : 'overview', target: content.target, reception: content.reception }}
             onOpenCanvas={() => navigation.openCanvas(viewedProfileAddress)}

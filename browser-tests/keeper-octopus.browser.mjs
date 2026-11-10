@@ -23,7 +23,7 @@ async function seed(page) {
     localStorage.setItem(systemWorkflowDraftKey(draft.profileAddress), JSON.stringify(draft));
   }, source);
   await page.reload(); await mount(page);
-  await page.getByRole('button', { name: 'Close Text tools', exact: true }).click();
+  await page.getByRole('button', { name: 'Close Inspector', exact: true }).click();
   await page.getByRole('button', { name: 'Release Keeper', exact: true }).waitFor();
 }
 const sample = page => page.locator('.keeper-octopus').evaluate(node => ({
@@ -183,7 +183,7 @@ test('SVG float is the third choice: no mirrored turns, shared controls, saved s
     assert.equal(await page.locator('.keeper-octopus').count(), 0);
     await returning.click(); await docked(); await selector.selectOption('svg');
     await page.reload(); await mount(page);
-    const closeText = page.getByRole('button', { name: 'Close Text tools', exact: true });
+    const closeText = page.getByRole('button', { name: 'Close Inspector', exact: true });
     if (await closeText.count()) await closeText.click();
     await release.click(); assert.equal(await selector.inputValue(), 'svg');
     await page.mouse.click(1100, 700); await arrives(page, 1100, 700);

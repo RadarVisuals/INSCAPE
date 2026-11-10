@@ -49,38 +49,39 @@ export default function useApplicationNavigation(authority) {
     navigate(returnToConnectedProfile && normalized === authority.profileAddress?.toLowerCase()
       ? { kind: 'home', fallbackAddress: null } : { kind: 'profile', address: normalized });
   }, [authority.profileAddress, navigate]);
-  const openReception = useCallback((address) => {
+  const openReception = useCallback((address, reception = true) => {
     const normalized = normalizeProfileAddress(address);
-    if (normalized) navigate({ kind: 'profile', address: normalized, reception: true });
+    if (normalized) navigate({ kind: 'profile', address: normalized, reception });
   }, [navigate]);
   const editReception = useCallback((address) => {
     const normalized = normalizeProfileAddress(address);
     if (normalized) navigate({ kind: 'profile', address: normalized, editor: 'reception' });
   }, [navigate]);
-  const openCanvas = useCallback((address, target) => {
+  const openCanvas = useCallback((address, target, { ownerCollection = false } = {}) => {
     const normalized = normalizeProfileAddress(address);
     if (!normalized) return;
     const profile = { kind: 'profile', address: normalized, canvas: true };
     // The owner's Canvases action returns to their existing local collection.
     // Explicit public URLs and individual published-work links remain public.
-    const ownCollection = !target && resolveApplicationDestination(profile, authority).kind === 'workbench';
-    navigate({ ...profile, ...(!ownCollection && current.current.reception ? { reception: true } : {}), ...(target ? { target } : {}) });
+    const ownCollection = !target && (ownerCollection || current.current.reception !== 'published')
+      && resolveApplicationDestination(profile, authority).kind === 'workbench';
+    navigate({ ...profile, ...(!ownCollection && current.current.reception ? { reception: current.current.reception } : {}), ...(target ? { target } : {}) });
   }, [authority, navigate]);
   const openWork = useCallback((address, target) => {
     const normalized = normalizeProfileAddress(address);
     if (!normalized || !target?.moduleId) return;
-    navigate({ kind: 'profile', address: normalized, target, ...(current.current.reception ? { reception: true } : {}) },
+    navigate({ kind: 'profile', address: normalized, target, ...(current.current.reception ? { reception: current.current.reception } : {}) },
       { receptionParent: normalized });
   }, [navigate]);
   const closeWork = useCallback((address) => {
     const normalized = normalizeProfileAddress(address);
     if (!normalized) return;
     if (window.history.state?.inscapeReceptionParent === normalized) window.history.back();
-    else navigate({ kind: 'profile', address: normalized, ...(current.current.reception ? { reception: true } : {}) }, { replace: true });
+    else navigate({ kind: 'profile', address: normalized, ...(current.current.reception ? { reception: current.current.reception } : {}) }, { replace: true });
   }, [navigate]);
   const openOverview = useCallback((address) => {
     const normalized = normalizeProfileAddress(address);
-    if (normalized) navigate({ kind: 'profile', address: normalized, ...(current.current.reception ? { reception: true } : {}) });
+    if (normalized) navigate({ kind: 'profile', address: normalized, ...(current.current.reception ? { reception: current.current.reception } : {}) });
   }, [navigate]);
   const openDiscover = useCallback((trigger) => {
     returnFocus.current = trigger || document.activeElement;

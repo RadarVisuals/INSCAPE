@@ -9,9 +9,12 @@ const origin = process.env.INSCAPE_IMAGE_ROOT || 'http://127.0.0.1:5197';
 // Window chrome may cover part of a large selection; start on an exposed surface.
 const dragPoint = target => target.evaluate(node => {
   const box = node.getBoundingClientRect();
-  for (let y = Math.max(12, box.top + 15); y < Math.min(innerHeight - 12, box.bottom - 12); y += 24)
-    for (let x = Math.max(12, box.left + 15); x < Math.min(innerWidth - 12, box.right - 12); x += 24)
-      if (node.contains(document.elementFromPoint(x, y))) return { x, y };
+  for (let y = Math.max(4, box.top + 4); y < Math.min(innerHeight - 4, box.bottom - 4); y += 4)
+    for (let x = Math.max(4, box.left + 4); x < Math.min(innerWidth - 4, box.right - 4); x += 4)
+      {
+        const hit = document.elementFromPoint(x, y);
+        if (node.contains(hit) && !hit.closest('button:not([data-workbench-selectable]),[role="separator"]')) return { x, y };
+      }
   throw Error('No exposed drag surface');
 });
 const settle = page => page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
@@ -43,7 +46,7 @@ async function mount(page, visitor = false) {
       draft.workbench.display.window = { left:400, top:100, width:640, height:360 };
       draft.workbench.identity.open = false;
       draft.imageModules = ['one','two','three'].map((id, index) => ({ id:`image:${id}`, name:`Image ${index + 1}`,
-        width:240, height:135, visibility:'PUBLIC', sides:[{ id:`side:${id}`, asset, crop:{ x:.5,y:.5,zoom:1 }, transform:{ quarterTurns:0,mirrorX:false,mirrorY:false } }],
+        width:240, height:135, visibility:'PUBLIC', artwork: { id:`artwork:${id}`, asset, crop:{ x:.5,y:.5,zoom:1 }, transform:{ quarterTurns:0,mirrorX:false,mirrorY:false } },
       }));
       draft.workbench.imageModules = draft.imageModules.map((image,index) => ({ id:image.id, open:true, position:{ left:80+index*300, top:700 } }));
       draft.texts = [{ id:'text:one', visibility:'PUBLIC', article:createArticle() }];
@@ -117,7 +120,10 @@ test('owner module placement survives real reload after individual, zoomed and g
     await resetCameraTestView(page, false);
     const zoomed = await geometry();
     await reload(); assert.deepEqual(await geometry(), zoomed, 'moving a zoomed individual uses the same saved position path');
-    assert.deepEqual(await page.evaluate(() => readDraft()), draftBeforeMove, 'local arrangement never changes module content');
+    const afterMove = await page.evaluate(() => readDraft());
+    const moduleContent = ({ workbench, ...content }) => content;
+    assert.deepEqual(moduleContent(afterMove), moduleContent(draftBeforeMove), 'arrangement never changes module content');
+    assert.notDeepEqual(afterMove.workbench, draftBeforeMove.workbench, 'completed placement saves its canonical presentation');
     const selectMixed = async () => {
       for (const target of [page.locator('.system-workflow__presentation-board header[data-workbench-selectable]'),
         page.locator('.text-window header[data-workbench-selectable]'), image(0)]) {
@@ -145,6 +151,8 @@ test('owner module placement survives real reload after individual, zoomed and g
     await drag(mixed, 32, 46);
     await page.keyboard.press('Escape'); await settle(page);
     const movedBeforeResize = await geometry();
+    // Activate the Image through its ordinary surface before using its controls.
+    await image(0).press('Enter'); await settle(page);
     await page.locator('[data-workbench-view-id="image:one"]').getByRole('separator', { name:'Resize Image right', exact:true }).focus();
     await page.keyboard.press('Alt+Shift+ArrowRight'); await settle(page);
     const resized = await geometry();

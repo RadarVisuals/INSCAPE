@@ -115,7 +115,7 @@ export default function workbenchCommands({
     }
     if (id === 'tool-layers' || id === 'tool-metadata') {
       revealInstruments();
-      changeTool({ type: 'open', tab: id === 'tool-metadata' ? 'Info' : 'Layers' });
+      changeTool({ type: 'open', tab: id === 'tool-metadata' ? 'Inspector' : 'Layers', ...(id === 'tool-metadata' ? { section: 'Info' } : {}) });
     }
     if (id === 'library') toggleLibrary();
     if (id === 'identity') openIdentity(workspaceRef.current);

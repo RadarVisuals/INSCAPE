@@ -6,8 +6,21 @@ import { workbenchGroupWindowIds, workbenchGroupModules } from '../../systemWork
 import { workbenchSelectionBounds } from './workbenchViewScale.js';
 import { workbenchGroupLayout, compactWorkbenchGroupRectangles } from './workbenchGroupLayout.js';
 import { resolvePublishedAssetUrl } from '../../profileDocument/domain/publishedAssetUrl.js';
+import { workbenchRevealCamera } from './workbenchNavigation.js';
 
 const EMPTY_GROUPS = Object.freeze([]);
+
+function groupPreviews(content, group) {
+  const previews = [];
+  for (const id of group.memberIds) {
+    const asset = content.imageModules?.find(item => item.id === id)?.artwork?.asset
+      || content.keeperDocks?.find(item => item.id === id)?.asset;
+    const url = asset?.media?.url && resolvePublishedAssetUrl(asset.media.url);
+    if (url) previews.push({ id, url });
+    if (previews.length === 2) break;
+  }
+  return previews;
+}
 
 // Group browsing owns temporary presentation geometry and visibility. Registered modules stay mounted, keep
 // their authored frames, and continue to own their content and editing state.
@@ -19,7 +32,8 @@ export function useWorkbenchGroupScene({ view, content, navigation, sceneRef, di
   useEffect(() => { const resize = () => setViewportWidth(innerWidth); addEventListener('resize', resize); return () => removeEventListener('resize', resize); }, []);
   const groups = content.workbenchGroups || EMPTY_GROUPS;
   const active = groups.find(group => group.id === openId) || null;
-  const ids = group => workbenchGroupWindowIds(content, group).filter(id => view.entries.has(id));
+  const { entries, presentationTransforms, setPresentationTransforms, hiddenModuleIds, setHiddenModuleIds, selection, setSelection } = view;
+  const ids = useCallback(group => workbenchGroupWindowIds(content, group).filter(id => entries.has(id)), [content, entries]);
   const authoredRectangles = group => Object.fromEntries(ids(group).flatMap(id => {
     const local = view.transforms[id] || { scale: 1, x: 0, y: 0 };
     const frame = local.frame || view.frames.get(id)?.current;
@@ -28,17 +42,30 @@ export function useWorkbenchGroupScene({ view, content, navigation, sceneRef, di
   const authoredBounds = group => workbenchSelectionBounds(Object.values(authoredRectangles(group)));
   const layout = group => workbenchGroupLayout(ids(group).flatMap(id => {
     const frame = view.frames.get(id)?.current; return frame ? [{ id, frame }] : [];
-  }), group.position || authoredBounds(group) || { left: 8, top: 8 }, viewportWidth);
+  }), group.position || authoredBounds(group) || { left: 8, top: 8 }, viewportWidth, Boolean(group.position));
+  const folded = group => group.position
+    ? compactWorkbenchGroupRectangles(ids(group), group.position, groupPreviews(content, group))
+    : authoredRectangles(group);
   const bounds = group => layout(group).bounds;
   const spread = active && !disabled ? layout(active) : { transforms: {}, rectangles: {} };
-  const spreadKey = JSON.stringify(spread.transforms);
+  const spreadTransforms = spread.transforms, spreadKey = JSON.stringify(spreadTransforms);
   useLayoutEffect(() => {
-    if (JSON.stringify(view.presentationTransforms) !== spreadKey) view.setPresentationTransforms(spread.transforms);
-  }, [spreadKey, view.presentationTransforms, view.setPresentationTransforms]);
-  useLayoutEffect(() => () => { view.setPresentationTransforms({}); view.setHiddenModuleIds([]); }, [view.setPresentationTransforms, view.setHiddenModuleIds]);
-  latest.current = { groups, active, ids, bounds, authoredBounds, authoredRectangles, spread, focusedId, navigation, view, disabled };
+    if (JSON.stringify(presentationTransforms) !== spreadKey) setPresentationTransforms(spreadTransforms);
+  }, [spreadKey, spreadTransforms, presentationTransforms, setPresentationTransforms]);
+  useLayoutEffect(() => () => { setPresentationTransforms({}); setHiddenModuleIds([]); }, [setPresentationTransforms, setHiddenModuleIds]);
+  latest.current = { groups, active, ids, bounds, folded, spread, focusedId, navigation, view, disabled };
+  const open = useCallback(group => {
+    const current = latest.current, target = current.groups.find(item => item.id === group.id);
+    if (!target || current.disabled || !current.bounds(target)) return false;
+    if (current.active?.id === target.id && current.focusedId) return current.navigation.goBack();
+    return current.navigation.focusDestination({ remember: current.active?.id !== target.id, replaceHistory: current.active?.id === target.id,
+      origins: current.active?.id === target.id ? undefined : current.folded(target),
+      cameraForBounds: target.position ? workbenchRevealCamera : undefined,
+      prepare: () => flushSync(() => { setOpenId(target.id); setFocusedId(''); current.view.setSelection([]); }),
+      getBounds: () => { const next = latest.current.groups.find(item => item.id === target.id); return next && latest.current.bounds(next); } });
+  }, []);
   useLayoutEffect(() => {
-    const api = { capture: () => latest.current.active ? { id: latest.current.active.id, itemId: latest.current.focusedId } : null,
+    const api = { open, capture: () => latest.current.active ? { id: latest.current.active.id, itemId: latest.current.focusedId } : null,
       restore: context => {
         const id = context?.id || context;
         const group = latest.current.groups.find(group => group.id === id);
@@ -49,27 +76,26 @@ export function useWorkbenchGroupScene({ view, content, navigation, sceneRef, di
         const id = context?.id || context;
         const current = latest.current, group = current.active;
         if (!group || group.id === id) return;
-        if (group.position) return compactWorkbenchGroupRectangles(current.ids(group), group.position);
-        return current.authoredRectangles(group);
+        return current.folded(group);
       } };
     sceneRef.current = api;
     return () => { if (sceneRef.current === api) sceneRef.current = null; };
-  }, [sceneRef]);
+  }, [sceneRef, open]);
   useEffect(() => {
     if (disabled || openId && (!active || !ids(active).length)) setOpenId(null);
     if (focusedId && (!active || !ids(active).includes(focusedId))) setFocusedId('');
-  }, [disabled, openId, active, focusedId, revision]);
+  }, [disabled, openId, active, focusedId, revision, ids]);
   useLayoutEffect(() => {
     const hidden = new Set(disabled ? [] : groups.filter(group => group.position && group.id !== active?.id).flatMap(ids));
     const hiddenIds = [...hidden];
     // Geometry notifications can arrive during a resize commit. Even a state
     // updater returning its old value can schedule another synchronous render
     // while the provider has pending work. Do not dispatch unchanged state.
-    if (JSON.stringify(view.hiddenModuleIds) !== JSON.stringify(hiddenIds)) view.setHiddenModuleIds(hiddenIds);
+    if (JSON.stringify(hiddenModuleIds) !== JSON.stringify(hiddenIds)) setHiddenModuleIds(hiddenIds);
     // Membership drops can hide the current selection without using Stack.
     // Remove it at the visibility boundary so tools and Keeper receive the same truth.
-    if (view.selection.some(id => hidden.has(id))) view.setSelection(current => current.filter(id => !hidden.has(id)));
-    const focused = new Set(active ? ids(active) : []), nodes = [...view.entries];
+    if (selection.some(id => hidden.has(id))) setSelection(current => current.filter(id => !hidden.has(id)));
+    const focused = new Set(active ? ids(active) : []), nodes = [...entries];
     for (const [id, node] of nodes) {
       node.toggleAttribute('data-workbench-group-presented', !disabled && focused.has(id));
       node.toggleAttribute('data-workbench-group-hidden', !disabled && hidden.has(id));
@@ -82,16 +108,7 @@ export function useWorkbenchGroupScene({ view, content, navigation, sceneRef, di
       node.removeAttribute('data-workbench-group-presented'); node.removeAttribute('data-workbench-group-hidden'); node.removeAttribute('data-workbench-group-muted');
       if (node.hasAttribute('data-group-owns-inert')) { node.inert = false; delete node.dataset.groupOwnsInert; }
     } };
-  }, [groups, active, revision, disabled, view.entries, view.hiddenModuleIds, view.setHiddenModuleIds, view.selection, view.setSelection]);
-  const open = useCallback(group => {
-    const current = latest.current, target = current.groups.find(item => item.id === group.id);
-    if (!target || current.disabled || !current.bounds(target)) return false;
-    if (current.active?.id === target.id && current.focusedId) return current.navigation.goBack();
-    return current.navigation.focusDestination({ remember: current.active?.id !== target.id, replaceHistory: current.active?.id === target.id,
-      origins: current.active?.id === target.id ? undefined : target.position ? compactWorkbenchGroupRectangles(current.ids(target), target.position) : current.authoredRectangles(target),
-      prepare: () => flushSync(() => { setOpenId(target.id); setFocusedId(''); current.view.setSelection([]); }),
-      getBounds: () => { const next = latest.current.groups.find(item => item.id === target.id); return next && latest.current.bounds(next); } });
-  }, []);
+  }, [groups, active, revision, disabled, ids, entries, hiddenModuleIds, setHiddenModuleIds, selection, setSelection]);
   const close = () => { setOpenId(null); setFocusedId(''); };
   const focusItem = id => { if (navigation.focusDestination({ replaceHistory: Boolean(focusedId), getBounds: () => latest.current.spread.rectangles[id] || null })) setFocusedId(id); };
   return { active, open, close, bounds, authoredBounds, back: navigation.goBack, focusItem, focusedId, ids: active ? ids(active) : [] };
@@ -102,14 +119,8 @@ export function WorkbenchGroupStacks({ content, hostRef, scene, locked, dropTarg
   const groups = content.workbenchGroups || [], names = workbenchGroupModules(content);
   const itemIndex = scene.ids.indexOf(scene.focusedId);
   if (!hostRef.current) return null;
-  const previews = group => group.memberIds.flatMap(id => {
-    const image = content.imageModules?.find(item => item.id === id)?.sides?.[0]?.asset;
-    const keeper = content.keeperDocks?.find(item => item.id === id)?.asset;
-    const asset = image || keeper;
-    return asset?.media?.url ? [resolvePublishedAssetUrl(asset.media.url)] : [];
-  }).slice(0, 3);
   return createPortal(<>
-    {createPortal(groups.filter(group => group.position && group.id !== scene.active?.id).map(group => <WorkbenchGroupStack key={group.id} {...{ group, scene, locked, dropTarget, onManage, onPosition }} previews={previews(group)} />), canvasHost || hostRef.current)}
+    {createPortal(groups.filter(group => group.position && group.id !== scene.active?.id).map(group => <WorkbenchGroupStack key={group.id} {...{ group, scene, locked, dropTarget, onManage, onPosition }} previews={groupPreviews(content, group)} />), canvasHost || hostRef.current)}
     {groups.length > 0 && <nav className="workbench-group-browsing" data-workbench-navigation-obstacle data-workbench-group-tools aria-label="Workbench destinations">
       <div className="workbench-group-routes" aria-label="Named groups">{groups.map(group => <button key={group.id} type="button" disabled={locked || !onManage && !scene.bounds(group)}
         aria-current={scene.active?.id === group.id ? 'location' : undefined} title={group.name} onClick={() => { if (!scene.open(group)) onManage?.(group); }}>{group.name}</button>)}</div>

@@ -32,7 +32,7 @@ function fixture() {
 function sample() {
   const value = createReception();
   value.imageModules = [{ id: 'image:backdrop', name: 'Source artwork', visibility: 'PUBLIC', width: 800, height: 600,
-    sides: [{ id: 'side:backdrop', asset, crop: { x: .2, y: .6, zoom: .75 }, transform: { quarterTurns: 1, mirrorX: true, mirrorY: false } }] }];
+    artwork: { id: 'artwork:backdrop', asset, crop: { x: .2, y: .6, zoom: .75 }, transform: { quarterTurns: 1, mirrorX: true, mirrorY: false } } }];
   value.texts = [{ id: 'text:caption', article: { ...createArticle(), title: 'Foreground caption' }, visibility: 'PUBLIC' }];
   value.regions[0].content = 'image:backdrop'; value.regions[0].padding = 0;
   return value;
@@ -173,7 +173,7 @@ test('public projection retains ordered visible layers and embedded source recor
   assert.equal(document.reception.texts.length, 0); assert.equal(countProfileDocumentV9Assets(document), 1);
   assert.equal(JSON.stringify(document).includes('Foreground caption'), false);
   assert.equal(JSON.stringify(document).includes('Unplaced secret'), false);
-  assert.deepEqual(document.reception.imageModules[0].sides, value.imageModules[0].sides);
+  assert.deepEqual(document.reception.imageModules[0].artwork, value.imageModules[0].artwork);
   assert.deepEqual(projectReception(restoreReception(document.reception)), document.reception);
 });
 

@@ -39,11 +39,13 @@
 .system-workflow__composition-tools[open] summary { margin-bottom: 8px; }
 .system-workflow__instrument-window { --detached-window-width: 320px; position: fixed; z-index: 45; }
 .workbench-window-controls { position: fixed; width: 0; height: 0; z-index: 80; pointer-events: none; }
+.workbench-window-controls > [data-resize-edge] { pointer-events: auto; }
+.workbench-window-controls > [data-resize-edge]::after { opacity: 1; }
 [data-shared-display-tools] .system-workflow__instrument-window { z-index: 80; }
 .system-workflow__instrument-window .system-workflow__instrument-content { display: block; }
-.system-workflow__instrument-window header:focus-visible,
-.workbench-window-controls header:focus-visible { outline: 1px solid var(--workflow-ink); outline-offset: -2px; }
-.system-workflow__instrument-window [role="separator"]:focus-visible { outline: 1px solid var(--workflow-ink); outline-offset: -2px; }
+.system-workflow__instrument-window header:where(:not(.editor-object-toolbar)):focus-visible,
+.workbench-window-controls header:where(:not(.editor-object-toolbar)):focus-visible { outline: 1px solid var(--workflow-ink); outline-offset: -2px; }
+:is(.system-workflow__instrument-window, .workbench-window-controls) [role="separator"]:focus-visible { outline: 1px solid var(--workflow-ink); outline-offset: -2px; }
 
 .system-workflow[data-layout="narrow"] .system-workflow__instrument-bay[data-projection="overlay"] {
   position: fixed;

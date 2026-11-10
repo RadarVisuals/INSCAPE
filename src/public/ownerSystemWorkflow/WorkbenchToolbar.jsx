@@ -1,19 +1,19 @@
-import { createElement, isValidElement, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
-import { ArrowLeft, ChevronDown, ChevronRight, Hand, Image, Layers, MousePointer2, Plus, Search, Shapes, Type } from 'lucide-react';
+import { createElement, isValidElement, useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
+import { ArrowLeft, Check, ChevronDown, ChevronRight, Hand, Image, Layers, MousePointer2, Search, Square, Type, Zap } from 'lucide-react';
 import './workflowTactile.css';
 import './workflowFlat.css';
 import './workbenchToolbar.css';
-import { isShapeCommand } from '../../shapes/shapes.js';
 
 const EMPTY_COMMANDS = [];
-const POPUP_LABELS = { commands: 'Search commands', add: 'Add module', shapes: 'Shapes' };
+const POPUP_LABELS = { commands: 'Search commands', pointer: 'Pointer tools', shapes: 'Shapes' };
 
-function searchCommands(commands, query, parents = [], unavailable = null) {
+function searchCommands(commands, words, parents = [], unavailable = null) {
   return commands.flatMap(command => {
     const ancestry = [...parents, command.label];
     const reason = unavailable || (command.disabled ? command.reason || 'Unavailable' : null);
-    if (command.children?.length) return searchCommands(command.children, query, ancestry, reason);
-    return `${ancestry.join(' ')} ${command.group || ''}`.toLocaleLowerCase().includes(query)
+    if (command.children?.length) return searchCommands(command.children, words, ancestry, reason);
+    const terms = `${command.group || ''} ${ancestry.join(' ')}`.toLocaleLowerCase();
+    return words.every(word => terms.includes(word))
       ? [{ ...command, ...(reason ? { disabled: true, reason } : {}), group: parents.join(' / ') || command.group }] : [];
   });
 }
@@ -25,15 +25,40 @@ function CommandIcon({ icon }) {
 // This view owns only its popup and keyboard focus. Workbench supplies current
 // tool/selection state and commands; module actions retain their existing owners.
 export default function WorkbenchToolbar({
-  activeTool = 'select', onToolChange, onOpenLibrary, libraryOpen = false,
-  actions = EMPTY_COMMANDS, addCommands = EMPTY_COMMANDS, shapeCommands = EMPTY_COMMANDS,
+  activeTool = 'select', onToolChange, onOpenCommandSearch, onOpenLibrary, libraryOpen = false,
+  actions = EMPTY_COMMANDS, addCommands = EMPTY_COMMANDS, shapeCommands = EMPTY_COMMANDS, shapePreference,
   layers, hidden = false, searchRequest = null, searchScopeRef, searchEnabled = true,
 }) {
   const rootRef = useRef(null), barRef = useRef(null), popupRef = useRef(null), searchRef = useRef(null);
   const triggerRef = useRef(null), requestRef = useRef(searchRequest);
   const [popup, setPopup] = useState(null), [path, setPath] = useState([]), [query, setQuery] = useState('');
   const popupId = useId();
-  const roots = popup === 'add' ? addCommands : popup === 'shapes' ? shapeCommands : actions;
+  const [lastShape, setLastShape] = useState(() => shapePreference?.getSnapshot());
+  const [lastPointer, setLastPointer] = useState('select');
+  const activeShape = shapeCommands.find(item => item.id === activeTool);
+  const activeShapeId = activeShape?.id;
+  const shape = activeShape || shapeCommands.find(item => item.id === lastShape) || shapeCommands[0];
+  const pointerCommands = [
+    { id: 'select', label: 'Select', icon: MousePointer2, shortcut: 'V' },
+    { id: 'hand', label: 'Hand', icon: Hand, shortcut: 'H' },
+  ].map(item => ({ ...item, selected: item.id === activeTool, onSelect: () => onToolChange?.(item.id) }));
+  const pointer = pointerCommands.find(item => item.selected) || pointerCommands.find(item => item.id === lastPointer);
+  const textTool = addCommands.find(item => item.id === 'text');
+  useEffect(() => {
+    if (activeShapeId) {
+      setLastShape(activeShapeId);
+      if (shapePreference && shapePreference.getSnapshot() !== activeShapeId) shapePreference.update(activeShapeId);
+    }
+    if (activeTool === 'select' || activeTool === 'hand') setLastPointer(activeTool);
+  }, [activeTool, activeShapeId, shapePreference]);
+  const roots = popup === 'pointer' ? pointerCommands : popup === 'shapes'
+    ? shapeCommands.map(item => ({ ...item, selected: item.id === shape?.id }))
+    : [
+      ...addCommands.map(item => ({ ...item, group: 'Add' })),
+      ...shapeCommands.filter(item => !addCommands.some(command => command.id === item.id)),
+      ...(layers ? [{ id: 'layers', label: 'Layers', icon: Layers, group: 'Selection', disabled: !layers.enabled, selected: layers.open, reason: layers.reason, onSelect: layers.onToggle }] : []),
+      ...actions,
+    ];
   let commands = roots, title = POPUP_LABELS[popup], parentTitle = title;
   for (const id of path) {
     const parent = commands.find(command => command.id === id);
@@ -43,16 +68,17 @@ export default function WorkbenchToolbar({
     title = parent.label;
   }
   const normalizedQuery = query.trim().toLocaleLowerCase();
-  const visibleCommands = normalizedQuery ? searchCommands(roots, normalizedQuery) : commands;
+  const visibleCommands = normalizedQuery ? searchCommands(roots, normalizedQuery.split(/\s+/)) : commands;
 
   const close = (restoreFocus = false) => {
     setPopup(null); setPath([]); setQuery('');
     if (restoreFocus) triggerRef.current?.focus({ preventScroll: true });
   };
-  const open = (name, trigger) => {
+  const open = useCallback((name, trigger) => {
+    if (name === 'commands') onOpenCommandSearch?.();
     triggerRef.current = trigger;
     setPopup(name); setPath([]); setQuery('');
-  };
+  }, [onOpenCommandSearch]);
   const toggle = (name, event) => popup === name ? close() : open(name, event.currentTarget);
 
   useLayoutEffect(() => {
@@ -81,8 +107,8 @@ export default function WorkbenchToolbar({
   useEffect(() => {
     if (searchRequest === requestRef.current) return;
     requestRef.current = searchRequest;
-    if (searchEnabled && searchRequest) { onToolChange?.('select'); open('commands', searchRequest.trigger); }
-  }, [searchRequest, searchEnabled, onToolChange]);
+    if (searchEnabled && searchRequest) open('commands', searchRequest.trigger);
+  }, [searchRequest, searchEnabled, open]);
   useEffect(() => {
     if (hidden) { setPopup(current => current === 'commands' ? current : null); setPath([]); setQuery(''); }
   }, [hidden]);
@@ -97,11 +123,11 @@ export default function WorkbenchToolbar({
         || !(event.ctrlKey || event.metaKey) || event.key.toLowerCase() !== 'k'
         || event.target.closest('input,textarea,select,[contenteditable=true],[role=textbox],iframe,[data-immersive]')) return;
       event.preventDefault(); event.stopPropagation();
-      const trigger = event.target; onToolChange?.('select'); open('commands', trigger);
+      open('commands', event.target);
     };
     document.addEventListener('keydown', key, true);
     return () => document.removeEventListener('keydown', key, true);
-  }, [searchEnabled, searchScopeRef, onToolChange]);
+  }, [searchEnabled, searchScopeRef, open]);
   useLayoutEffect(() => {
     if (!popup) return;
     if (popup === 'commands') searchRef.current?.focus({ preventScroll: true });
@@ -132,6 +158,7 @@ export default function WorkbenchToolbar({
   const choose = command => {
     if (command.disabled) return;
     if (command.children?.length) { setPath(current => [...current, command.id]); return; }
+    if (shapeCommands.some(item => item.id === command.id)) setLastShape(command.id);
     close(true);
     command.onSelect?.();
   };
@@ -162,17 +189,20 @@ export default function WorkbenchToolbar({
       : (index + (event.key === 'ArrowRight' ? 1 : -1) + buttons.length) % buttons.length;
     buttons[next]?.focus({ preventScroll: true });
   };
-  const menuButton = (name, Icon, label, extra = {}) => <button type="button"
-    className="workbench-toolbar__button workflow-tactile-control" aria-label={POPUP_LABELS[name]} title={POPUP_LABELS[name]}
-    aria-expanded={popup === name} aria-haspopup="dialog" aria-controls={popup === name ? popupId : undefined}
-    onClick={event => toggle(name, event)} {...extra}>
-    <Icon aria-hidden="true" /><span>{label}</span>{name === 'shapes' && <ChevronDown className="workbench-toolbar__chevron" aria-hidden="true" />}
+  const toolButton = (label, icon, action, props) => <button type="button"
+    className="workbench-toolbar__button workflow-tactile-control workflow-tactile-control--quiet"
+    aria-label={label} title={label} onClick={event => { close(); action?.(event.currentTarget); }} {...props}>
+    <CommandIcon icon={icon} />
   </button>;
+  const menuButton = (name, icon, label, props) => <button type="button"
+    className={`workbench-toolbar__button workflow-tactile-control workflow-tactile-control--quiet${name === 'commands' ? '' : ' workbench-toolbar__arrow'}`}
+    aria-label={label} title={label} aria-expanded={popup === name} aria-haspopup="dialog"
+    aria-controls={popup === name ? popupId : undefined} onClick={event => toggle(name, event)} {...props}><CommandIcon icon={icon} /></button>;
 
   if (hidden && popup !== 'commands') return null;
   return <div ref={rootRef} className="workbench-toolbar" data-workbench-toolbar data-system-workflow-overlay
-    data-workflow-material="tactile" data-workflow-finish="flat">
-    {popup && <section ref={popupRef} id={popupId} className="workbench-toolbar__popup" role="dialog" aria-label={title} onKeyDown={navigatePopup}>
+    data-workflow-material="tactile" data-workflow-finish="flat" data-workflow-palette="editor">
+    {popup && <section ref={popupRef} id={popupId} className="workbench-toolbar__popup" data-popup={popup} role="dialog" aria-label={title} onKeyDown={navigatePopup}>
       {popup === 'commands' && <div className="workbench-toolbar__search">
         <Search aria-hidden="true" /><input ref={searchRef} aria-label="Search commands" placeholder="Search commands…" value={query}
           autoComplete="off" spellCheck={false} onChange={event => setQuery(event.target.value)}
@@ -191,6 +221,7 @@ export default function WorkbenchToolbar({
             onClick={() => choose(command)}>
             <span className="workbench-toolbar__command-icon"><CommandIcon icon={command.icon} /></span>
             <span className="workbench-toolbar__command-copy"><span>{command.label}</span>{command.disabled && command.reason && <small>{command.reason}</small>}</span>
+            {command.selected && <Check aria-hidden="true" />}
             {command.children?.length ? <ChevronRight aria-hidden="true" /> : command.shortcut ? <kbd>{command.shortcut}</kbd> : null}
           </button>
         </div>)}
@@ -198,18 +229,19 @@ export default function WorkbenchToolbar({
       </div>
     </section>}
     <div hidden={hidden} ref={barRef} className="workbench-toolbar__bar" role="toolbar" aria-label="Creation tools" onKeyDown={navigateToolbar}>
-      {[['select', 'Select', 'V', MousePointer2], ['hand', 'Hand', 'H', Hand], ['text', 'Text', 'T', Type]].map(([id, label, key, Icon]) =>
-        <button key={id} type="button" className={`workbench-toolbar__button workbench-toolbar__button--${id} workflow-tactile-control`} aria-label={`${label} tool`} aria-keyshortcuts={key}
-          title={id === 'hand' ? 'Hand · H — Drag to explore with momentum. Click artwork to focus its module; module positions stay fixed.' : `${label} · ${key}`} aria-pressed={activeTool === id} onClick={() => { close(); onToolChange?.(id); }}>
-          <Icon aria-hidden="true" /><span>{label}</span>
-        </button>)}
-      {menuButton('shapes', Shapes, 'Shapes', { 'data-active': isShapeCommand(activeTool) || undefined })}
-      <button type="button" className="workbench-toolbar__button workflow-tactile-control" aria-label="Artwork library" title="Artwork library" aria-pressed={libraryOpen}
-        onClick={event => { close(); onOpenLibrary?.(event.currentTarget); }}><Image aria-hidden="true" /><span>Artwork</span></button>
-      <button type="button" className="workbench-toolbar__button workflow-tactile-control" aria-label="Layers" title={layers?.reason || 'Layers'}
-        disabled={!layers?.enabled} aria-pressed={Boolean(layers?.open)}
-        onClick={() => { close(); layers?.onToggle?.(); }}><Layers aria-hidden="true" /><span>Layers</span></button>
-      {menuButton('add', Plus, 'Add')}
+      <div className="workbench-toolbar__split">
+        {toolButton(`${pointer.label} tool`, pointer.icon, pointer.onSelect, { 'aria-pressed': pointer.selected, 'aria-keyshortcuts': pointer.shortcut })}
+        {menuButton('pointer', ChevronDown, 'Pointer tools')}
+      </div>
+      <div className="workbench-toolbar__split">
+        {toolButton(`${shape?.label || 'Rectangle'} tool`, shape?.icon || Square, shape?.onSelect,
+          { disabled: !shape || shape.disabled, 'aria-pressed': Boolean(activeShape), 'aria-keyshortcuts': shape?.shortcut })}
+        {menuButton('shapes', ChevronDown, 'Shapes')}
+      </div>
+      {toolButton('Text tool', Type, () => onToolChange?.('text'), { 'aria-keyshortcuts': 'T', 'aria-pressed': activeTool === 'text', disabled: textTool?.disabled })}
+      {toolButton('Artwork library', Image, onOpenLibrary, { 'aria-pressed': libraryOpen })}
+      <span className="workbench-toolbar__divider" aria-hidden="true" />
+      {menuButton('commands', Zap, 'Actions', { 'aria-keyshortcuts': 'Control+k Meta+k', disabled: !searchEnabled })}
     </div>
   </div>;
 }

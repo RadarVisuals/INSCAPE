@@ -1,5 +1,6 @@
-import { openSharedTool } from './fixtures/shared-tools.mjs';
+import { openSharedTool, closeSharedTool, sharedToolTab } from './fixtures/shared-tools.mjs';
 import assert from 'node:assert/strict';
+import { setEditorSidebarOpen } from './fixtures/editor-menu.mjs';
 import test from 'node:test';
 import { mkdir } from 'node:fs/promises';
 import { chromium } from 'playwright-core';
@@ -19,19 +20,20 @@ for (const width of [1440, 390]) test(`Image activation preserves pointer/keyboa
       draft.displays = []; draft.grids[0].placements = []; draft.workbench.display.open = false;
       draft.imageModules = [0, 1].map(index => ({ ...original, id: `image:activation-${index}`, name: `Activation ${index}`,
         width: 200, height: 180 }));
-      draft.workbench.imageModules = draft.imageModules.map((image, index) => ({ id: image.id, open: true, position: { left: 32, top: 64 + index * 250 } }));
+      draft.workbench.imageModules = draft.imageModules.map((image, index) => ({ id: image.id, open: true, position: { left: 900, top: 780 + index * 250 } }));
       localStorage.setItem(window.__motionKey, JSON.stringify(draft)); window.__motionRemount();
     });
     const windows = page.locator('.image-module__window'), first = windows.first(), second = windows.nth(1);
     await first.waitFor(); await settle(page);
     // The sidebar overlays authored geometry; expose the Image through its UI.
-    if (width === 1440) { await page.locator('.editor-menu-brand[aria-expanded="true"]').click(); await settle(page); }
+    await setEditorSidebarOpen(page, false);
+    if (await sharedToolTab(page, 'Layers').count()) await closeSharedTool(page, 'Layers');
     const saved = await page.evaluate(() => localStorage.getItem(window.__motionKey));
     const geometry = await first.boundingBox();
-    await page.mouse.move(geometry.x + 50, geometry.y + 70); await page.mouse.down();
+    await page.mouse.move(geometry.x + geometry.width / 2, geometry.y + geometry.height / 2); await page.mouse.down();
     assert.equal(await first.evaluate(node => node === document.activeElement), true, 'pointer focus remains on the Image window');
     assert.equal(await first.getAttribute('data-active'), 'true');
-    await page.mouse.move(geometry.x + 90, geometry.y + 100, { steps: 5 });
+    await page.mouse.move(geometry.x + geometry.width / 2 + 40, geometry.y + geometry.height / 2 + 30, { steps: 5 });
     assert.notDeepEqual(await first.boundingBox(), geometry, 'drag previews movement');
     await page.keyboard.press('Escape'); await page.mouse.up(); await settle(page);
     assert.deepEqual(await first.boundingBox(), geometry, 'Escape restores the original rectangle');
@@ -40,13 +42,20 @@ for (const width of [1440, 390]) test(`Image activation preserves pointer/keyboa
     assert.equal(await second.getAttribute('data-active'), 'true', 'keyboard focus activates the other Image');
     assert.equal(await first.getAttribute('data-active'), null);
     await openSharedTool(page, 'Image');
-    const actions = page.locator('.workbench-image-tools');
+    const actions = page.locator('.workbench-image-inspector');
     await actions.waitFor();
     assert.equal(await actions.getAttribute('data-workbench-inspection-target'), 'image:activation-1');
-    await page.mouse.click(4, 64); await settle(page);
+    const empty = await page.locator('main.system-workflow').evaluate(host => {
+      for (let y = 80; y < innerHeight - 80; y += 40) for (let x = 20; x < innerWidth - 20; x += 40) {
+        const hit = document.elementFromPoint(x, y);
+        if (hit === host || hit?.matches('.system-workflow__workbench')) return { x, y };
+      }
+      throw Error('No exposed Workbench background');
+    });
+    await page.mouse.click(empty.x, empty.y); await settle(page);
     assert.equal(await first.getAttribute('data-active'), null);
     assert.equal(await second.getAttribute('data-active'), null);
-    assert.equal(await page.locator('.workbench-image-tools button').count(), 0, 'empty Workbench space clears tools');
+    assert.equal(await page.locator('.workbench-image-inspector button').count(), 0, 'empty Workbench space clears tools');
     const canvas = first.locator('.image-module__canvas');
     await canvas.focus(); await settle(page);
     assert.equal(await canvas.evaluate(node => node === document.activeElement), true, 'keyboard keeps focus on its original control');

@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createEmptySystemWorkflowDraft } from '../../systemWorkflow/domain/systemWorkflowDraft.js';
 import { createWorkbenchCollection, appendWorkbench } from '../../systemWorkflow/domain/workbenchCollection.js';
-import { canvasPublicationCandidates, canvasPublicationChanges, buildCanvasPublication } from './canvasPublication.js';
+import { canvasPublicationCandidates, canvasPublicationChanges, buildCanvasPublication, canReplaceInvalidPublication, resolvePublicationBaseline } from './canvasPublication.js';
 import { publishedCanvasEntries, canvasDocument } from './publishedCanvases.js';
 import { validateProfileDocumentV9, parseProfileDocumentV9Json } from './profileDocumentV9Validation.js';
 import { canonicalSerializeProfileDocumentV9 } from './profileDocumentV9Serialization.js';
@@ -22,6 +22,35 @@ function fixture() {
 }
 const project = record => canvasPublicationCandidates({ record, profile: { name: 'Artist' }, assetRecords: [] });
 const publish = (record, selectedIds, previousDocument = null, includeShared = !previousDocument) => buildCanvasPublication({ candidates: project(record), selectedIds, previousDocument, includeShared, exportedAt: new Date('2026-10-26T12:00:00Z') });
+
+test('an invalid document can be replaced explicitly from selected local content without reading or retaining it', () => {
+  const record = fixture(), before = structuredClone(record);
+  const resolution = { status: 'INVALID', address, errorCode: 'INVALID_DOCUMENT', document: { untrusted: true } };
+  assert.equal(canReplaceInvalidPublication(resolution, address), true);
+  assert.throws(() => resolvePublicationBaseline(resolution, address), /Confirm replacement/);
+  const previousDocument = resolvePublicationBaseline(resolution, address, { replaceInvalid: true });
+  assert.equal(previousDocument, null);
+  const document = publish(record, ['workbench:second'], previousDocument);
+  assert.deepEqual(publishedCanvasEntries(document).map(item => item.id), ['workbench:second']);
+  assert.doesNotMatch(canonicalSerializeProfileDocumentV9(document), /Private scene|Never published|untrusted/);
+  assert.deepEqual(parseProfileDocumentV9Json(canonicalSerializeProfileDocumentV9(document)), document);
+  assert.deepEqual(record, before);
+});
+
+test('replacement consent cannot bypass pending reads, integrity failures or another profile', () => {
+  const invalid = { status: 'INVALID', address, errorCode: 'INVALID_DOCUMENT' };
+  for (const change of [{ status: 'LOADING' }, { status: 'ERROR' }, { status: 'STALE' }, { busy: true },
+    { errorCode: 'HASH_MISMATCH' }, { errorCode: 'RPC_POINTER_CONFLICT' }, { address: '0x' + '2'.repeat(40) }, { address: undefined }]) {
+    const resolution = { ...invalid, ...change };
+    assert.equal(canReplaceInvalidPublication(resolution, address), false);
+    assert.throws(() => resolvePublicationBaseline(resolution, address, { replaceInvalid: true }), /latest publication/);
+  }
+  const document = publish(fixture(), ['workbench:main', 'workbench:second']);
+  assert.deepEqual(resolvePublicationBaseline({ status: 'RESOLVED', document }, address), document);
+  assert.throws(() => resolvePublicationBaseline({ status: 'RESOLVED', document }, '0x' + '2'.repeat(40)), /belong to this profile/);
+  assert.throws(() => resolvePublicationBaseline({ status: 'RESOLVED', document: { untrusted: true } }, address));
+  assert.equal(resolvePublicationBaseline({ status: 'UNAVAILABLE' }, address), null);
+});
 
 test('scoped publication publishes selected canvases only, retains unselected revisions and excludes private content', () => {
   const record = fixture(), before = structuredClone(record);

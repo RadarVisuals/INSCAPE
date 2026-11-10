@@ -39,11 +39,11 @@ for (const viewScale of [1, .5]) test(`Text tools, save recovery and drag into a
     page = await browser.newPage({ viewport: { width: 1600, height: 1000 }, reducedMotion: 'reduce' });
     const errors = []; page.on('pageerror', error => { errors.push(error.message); console.error(error.stack); });
     await mountTransfer(page);
-    const text = page.locator('[data-workbench-module="text"]'), output = text.locator('.text-window'), tools = page.locator('.text-tools-window');
+    const text = page.locator('[data-workbench-module="text"]'), output = text.locator('.text-window'), tools = page.locator('.workbench-tool-dock:has([data-text-inspector])');
     await output.waitFor();
     await page.evaluate(() => document.fonts.ready);
     await page.locator('.editor-menu-brand[aria-expanded="true"]').click();
-    for (const name of ['Close Workbench Layers', 'Close Transform', 'Close Color', 'Close Image', 'Close Shape', 'Close FX', 'Close Info']) {
+    for (const name of ['Close Workbench Layers', 'Close Inspector']) {
       const close = page.getByRole('button', { name, exact: true });
       if (await close.count()) { await close.focus(); await close.press('Enter'); }
     }
@@ -52,6 +52,7 @@ for (const viewScale of [1, .5]) test(`Text tools, save recovery and drag into a
     const body = output.getByRole('textbox', { name: 'Article text', exact: true });
     await body.fill('The landscape remembers.'); await page.keyboard.press('Control+A');
 
+    await openTextToolSection(tools, 'More text tools');
     await tools.getByRole('button', { name: 'Bold', exact: true }).click();
     assert.equal(await output.getByRole('toolbar').count(), 0);
     const writeBounds = await body.locator('p').boundingBox();
@@ -59,11 +60,11 @@ for (const viewScale of [1, .5]) test(`Text tools, save recovery and drag into a
     const readBounds = await output.locator('article p').boundingBox();
     assert.ok(Math.abs(writeBounds.y - readBounds.y) < 1, 'Read does not move text');
     await output.getByRole('button', { name: 'Write', exact: true }).click();
-    await openTextToolSection(page.locator('.text-tools-window'), 'Background & edges');
+    await openTextToolSection(page.locator('.workbench-tool-dock:has([data-text-inspector])'), 'Background & edges');
     await setTextBackground(page, 'colour');
     await tools.getByRole('checkbox', { name: 'Show border', exact: true }).check();
     assert.notEqual(await output.evaluate(node => getComputedStyle(node).backgroundColor), 'rgba(0, 0, 0, 0)');
-    await openTextToolSection(page.locator('.text-tools-window'), 'Background & edges');
+    await openTextToolSection(page.locator('.workbench-tool-dock:has([data-text-inspector])'), 'Background & edges');
     await setTextBackground(page, 'none');
     await tools.getByRole('checkbox', { name: 'Show border', exact: true }).uncheck();
     // Simulate another writer updating unrelated saved data.
@@ -76,9 +77,9 @@ for (const viewScale of [1, .5]) test(`Text tools, save recovery and drag into a
     await body.fill('The landscape remembers.'); await page.keyboard.press('Control+A');
 
     if (!await body.locator('strong').count()) await tools.getByRole('button', { name: 'Bold', exact: true }).click();
-    await tools.locator('.text-tools-content').evaluate(node => { node.scrollTop = 0; });
+    await tools.locator('.workbench-inspector').evaluate(node => { node.scrollTop = 0; });
     await page.screenshot({ path: `${evidence}/text-tools-wide.png` });
-    await tools.getByRole('button', { name: 'Close Text tools' }).click();
+    await tools.getByRole('button', { name: 'Close Inspector' }).click();
     if (viewScale === .5) await page.getByRole('slider', { name: 'Workbench zoom', exact: true }).fill('50');
     const originalTextHeight = (await body.locator('p').boundingBox()).height;
     const unlock = page.getByRole('button', { name: 'Unlock Display Module composition', exact: true }); if (await unlock.count()) await unlock.click();
@@ -92,14 +93,14 @@ for (const viewScale of [1, .5]) test(`Text tools, save recovery and drag into a
     const editor = canvas.getByRole('textbox', { name: 'Article text', exact: true }); await editor.waitFor();
     assert.equal(await editor.locator('strong').innerText(), 'The landscape remembers.');
     assert.ok(Math.abs((await editor.locator('p').boundingBox()).height - originalTextHeight) < 1, 'attachment retains visible text size at the current Workbench scale');
-    const externalTools = page.locator('.text-tools-window');
+    const externalTools = page.locator('.workbench-tool-dock:has([data-text-inspector])');
     assert.equal(await canvas.getByRole('toolbar').count(), 0);
     await canvas.getByRole('textbox', { name: 'Article title', exact: true }).fill('Attached text');
-    await externalTools.getByRole('button', { name: 'Close Text tools' }).click();
+    await externalTools.getByRole('button', { name: 'Close Inspector' }).click();
     const attached = canvas.getByRole('button', { name: 'Select Attached text', exact: true });
     await attached.focus(); await page.keyboard.press('Enter');
     // Move the floating toolbox aside before reaching the artwork underneath.
-    const toolGrip = externalTools.getByLabel('Move Text tools window', { exact: true });
+    const toolGrip = externalTools.getByLabel('Move Inspector panel', { exact: true });
     const toolRect = await toolGrip.boundingBox();
     await page.mouse.move(toolRect.x + 40, toolRect.y + 15); await page.mouse.down();
     await page.mouse.move(60, 70, { steps: 8 }); await page.mouse.up();
@@ -138,7 +139,7 @@ for (const width of [1600, 390]) for (const scale of [1, .5]) test(`Default Text
     await text.waitFor(); await page.evaluate(() => document.fonts.ready);
     const collapse = page.locator('.editor-menu-brand[aria-expanded="true"]');
     if (await collapse.count()) await collapse.click();
-    for (const name of ['Close Workbench Layers', 'Close Transform', 'Close Color', 'Close Image', 'Close Shape', 'Close FX', 'Close Info', 'Close Text tools']) {
+    for (const name of ['Close Workbench Layers', 'Close Inspector']) {
       const close = page.getByRole('button', { name, exact: true });
       if (await close.count()) { await close.focus(); await close.press('Enter'); }
     }

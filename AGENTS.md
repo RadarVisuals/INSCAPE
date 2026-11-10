@@ -174,6 +174,15 @@ not require a separate audit or approval round for every edit.
 
 ## Verification
 
+- Update affected tests in the same slice when replacing UI, structure, state
+  ownership or a workflow. Trace their existing setup, selectors, commands and
+  expected behavior against the current implementation and accepted contract;
+  remove superseded assumptions rather than carrying them into the next chat.
+  Establish the cause before calling a failure test drift. Preserve meaningful
+  checks for persistence, Undo, focus, geometry and access boundaries when moving
+  a test to the current entry point. Do not delete or weaken an assertion, force
+  an interaction, add a skip or relax a budget merely to obtain a pass. Run the
+  affected suites and report any unverified replacement or remaining failure.
 - Run focused tests for every changed boundary.
 - Run `npm run test:lukso-standards` after LUKSO-facing changes.
 - Run `npm run build` and `npm run build:check` for production-boundary changes.

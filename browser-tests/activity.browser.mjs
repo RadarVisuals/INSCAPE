@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdir } from 'node:fs/promises';
 import { chromium } from 'playwright-core';
 import { browserExecutable } from '../scripts/browserEnvironment.mjs';
-import { editorCommand, editorDestination as destination } from './fixtures/editor-menu.mjs';
+import { editorCommand, editorMenu, editorDestination as destination } from './fixtures/editor-menu.mjs';
 
 const origin = process.env.INSCAPE_TEXT_ROOT || 'http://127.0.0.1:24970';
 const output = process.env.INSCAPE_BROWSER_OUTPUT || '.browser-test-runtime/activity-finishing';
@@ -149,7 +149,8 @@ test('Activity history supports animated close and does not take a newer focus c
   const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
   try {
     const { page, errors } = await mount(browser, 1440, 900, 'light', 'no-preference');
-    const trigger = await destination(page, 'Activity');
+    await destination(page, 'Activity');
+    const trigger = editorMenu(page, 'Canvas');
     await drawer(page).getByRole('button', { name: 'Open full activity history' }).click();
     await history(page).getByLabel('Search activity').waitFor();
     const close = history(page).getByRole('button', { name: 'Close full activity history' });

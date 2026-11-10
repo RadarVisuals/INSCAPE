@@ -7,9 +7,9 @@ export const layersProfile = `0x${'1'.repeat(40)}`;
 export function layersDraft() {
   const draft = createEmptySystemWorkflowDraft(layersProfile); draft.grids = [];
   const asset = createProfileDocumentV9AssetResolver(assets, { compactContentReference: false })(assets[0].id);
-  const side = id => ({ id: `side:${id}`, asset: structuredClone(asset), crop: { x: .4, y: .5, zoom: 1 }, transform: { quarterTurns: 0, mirrorX: false, mirrorY: false } });
+  const side = id => ({ id: `artwork:${id}`, asset: structuredClone(asset), crop: { x: .4, y: .5, zoom: 1 }, transform: { quarterTurns: 0, mirrorX: false, mirrorY: false } });
   draft.imageModules = ['body', 'eyes'].map((id, index) => ({ id: `image:${id}`, name: index ? 'Eyes' : 'Body', width: 260, height: 220,
-    sides: [side(`${id}-1`), side(`${id}-2`)], visibility: 'PUBLIC' }));
+    artwork: side(`${id}-1`), visibility: 'PUBLIC' }));
   draft.shapes = [{ id: 'shape:landscape', name: 'Landscape', color: '#758278', opacity: 1, visibility: 'PUBLIC' }];
   draft.texts = [{ id: 'text:mist', article: createArticle('Mist'), visibility: 'PUBLIC' }];
   draft.workbench = { ...createDefaultWorkbenchPresentation(),

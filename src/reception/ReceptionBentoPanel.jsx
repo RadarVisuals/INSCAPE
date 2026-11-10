@@ -1,108 +1,116 @@
 import { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import ToolPanel from '../public/ownerSystemWorkflow/WorkbenchToolPanel.jsx';
-import { applyReceptionLayout, generateReceptionLayout, receptionLayoutCountRange, RECEPTION_LAYOUT_DEFAULTS } from './receptionLayoutGenerator.js';
+import { applyReceptionLayout, receptionLayoutCountRange, RECEPTION_LAYOUT_DEFAULTS } from './receptionLayoutGenerator.js';
 import { receptionBentoSettings } from './receptionBento.js';
+import { receptionModuleWindow, visibleReceptionInnerLines } from './receptionEditorDocument.js';
 import { useInterfaceTheme } from '../interfaceTheme.js';
+import { OwnerSystemWorkflowSelectMenu } from '../public/ownerSystemWorkflow/OwnerSystemWorkflowWorkspaceControls.jsx';
 
 const Control = props => <button className="workflow-tactile-control" type="button" {...props} />;
-const Field = ({ label, value, onChange, min, max, placeholder }) => <label>{label}<input type="number" min={min} max={max} step="1"
-  placeholder={placeholder} value={value === null || Number.isNaN(value) ? '' : value}
-  onChange={event => onChange(event.target.valueAsNumber)} /></label>;
-function GeometryFields({ settings, change }) {
+const Field = ({ label, prefix, value, onChange, min, max, placeholder, optional = false, title, commit = false, preview }) => {
+  const shown = value === null || Number.isNaN(value) ? '' : value;
+  return <label className="reception-bento-field" title={title}>
+    {prefix && <span aria-hidden="true">{prefix}</span>}<input key={commit ? shown : undefined} aria-label={label} type="number" min={min} max={max} step="1" required={!optional}
+    placeholder={placeholder} {...(commit ? { defaultValue: shown } : { value: shown })}
+    onChange={event => { const next = optional && event.target.value === '' ? null : event.target.valueAsNumber;
+      if (commit) preview?.(next); else onChange(next);
+    }}
+    onBlur={event => {
+      if (!commit) return;
+      const input = event.currentTarget, next = input.valueAsNumber;
+      if ((optional && input.value === '') || next === value) { preview?.(null); input.value = shown; return; }
+      if (onChange(next) === false) input.value = shown;
+    }}
+    onKeyDown={event => {
+      if (event.key === 'Enter') { event.preventDefault(); event.stopPropagation(); event.currentTarget.blur(); }
+      if (commit && event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); event.currentTarget.value = shown; preview?.(null); }
+    }} /></label>;
+};
+const FieldRow = ({ label, children }) => <div className="reception-bento-row"><span>{label}</span><div>{children}</div></div>;
+const FORMATS = [['Landscape', 1440, 900], ['Square', 1080, 1080], ['Portrait', 900, 1440]];
+function GeometryFields({ settings, change, commit = false, preview }) {
+  const format = FORMATS.find(([_, width, height]) => settings.width === width && settings.height === height)?.[0] || '';
   return <>
-    <div className="reception-bento-formats" role="group" aria-label="Start format">
-      {[['Landscape', 1440, 900], ['Square', 1080, 1080], ['Portrait', 900, 1440]].map(([label, width, height]) =>
-        <Control key={label} aria-pressed={settings.width === width && settings.height === height}
-          title={`${width} × ${height} px`} onClick={() => change({ width, height })}>{label}</Control>)}
-    </div>
-    <div className="reception-bento-fields">
-      {[['width', 'Width (px)', 320, 16384], ['height', 'Height (px)', 320, 16384], ['gap', 'Gutter (px)', 0, 256], ['padding', 'Outer margin (px)', 0, 256]]
-        .map(([key, label, min, max]) => <Field key={key} {...{ label, min, max }} value={settings[key]} onChange={value => change({ [key]: value })} />)}
-    </div>
+    <FieldRow label="Format"><OwnerSystemWorkflowSelectMenu flat compact palette="editor" className="workflow-tactile-control reception-bento-format" label="Format" value={format}
+      options={[...(!format ? [{ label: 'Custom', value: '' }] : []), ...FORMATS.map(([label]) => ({ label, value: label }))]}
+      onChange={value => { const preset = FORMATS.find(([label]) => label === value); if (preset) change({ width: preset[1], height: preset[2] }); }} /></FieldRow>
+    <FieldRow label="Size">
+      <Field label="Width (px)" prefix="W" min={320} max={16384} commit={commit} value={settings.width} onChange={width => change({ width })} />
+      <Field label="Height (px)" prefix="H" min={320} max={16384} commit={commit} value={settings.height} onChange={height => change({ height })} />
+    </FieldRow>
+    <FieldRow label="Spacing">
+      <Field label="Gutter (px)" prefix="Gap" min={0} max={256} commit={commit} preview={preview && (gap => preview('gap', gap))} value={settings.gap} onChange={gap => change({ gap })} />
+      <Field label="Outer margin (px)" prefix="Outer" min={0} max={256} commit={commit} value={settings.padding} onChange={padding => change({ padding })} />
+    </FieldRow>
   </>;
 }
 
-export default function ReceptionBentoPanel({ reception, onClose, run, generate, blocked, navigationTop, previewSettings, cancelPreview, revision, selectedId, structureActions }) {
+export default function ReceptionBentoPanel({ reception, onClose, run, generate, blocked, navigationTop, previewSettings, cancelPreview }) {
   const panel = useRef(null), empty = !reception.cells.length;
   const [mode, setMode] = useState(empty ? 'new' : 'current');
   const [firstSeed] = useState(() => Math.floor(Math.random() * 4294967296));
   const [variant, setVariant] = useState(0);
   // The proposal survives changes to the current grid. It is revalidated against
   // the latest contents below; only Generate can turn it into authored state.
-  const [proposalSettings, setProposalSettings] = useState(() => empty ? RECEPTION_LAYOUT_DEFAULTS
-    : { ...receptionBentoSettings(reception), radius: 0 });
+  const [proposalSettings, setProposalSettings] = useState(() => {
+    if (empty) return RECEPTION_LAYOUT_DEFAULTS;
+    const { count, width, height, gap, padding, radius } = receptionBentoSettings(reception);
+    let columns = Math.min(4, Math.ceil(Math.sqrt(count)));
+    while (count % columns) columns--;
+    return { width, height, gap, padding, columns, rows: count / columns, radius: radius ?? 0 };
+  });
   useLayoutEffect(() => cancelPreview, [cancelPreview]);
   useLayoutEffect(() => {
     const returnFocus = document.activeElement;
     panel.current?.querySelector('input')?.focus({ preventScroll: true });
     return () => { if (returnFocus?.isConnected) returnFocus.focus({ preventScroll: true }); };
   }, []);
-  const [frame, setFrame] = useState(() => ({ left: innerWidth - 340, top: navigationTop + 16, width: 324, height: Math.min(760, innerHeight - navigationTop - 32) }));
+  const [frame, setFrame] = useState(() => ({ left: innerWidth - 340, top: navigationTop + 16, width: 324, height: 1 }));
   return <ToolPanel title="Bento" label="Bento settings" closeLabel="Close Bento" chrome="flat"
     frame={frame} onFrameChange={setFrame} onClose={onClose} navigationTop={navigationTop}
-    minimumWidth={290} minimumHeight={360} className="reception-bento-panel workbench-tool-controls"
-    role="dialog" panelRef={panel} data-workflow-material="tactile" data-workflow-finish="flat" data-workbench-selection-tools data-system-workflow-overlay
+    minimumWidth={290} fitContentHeight className="reception-bento-panel workbench-tool-controls"
+    role="dialog" panelRef={panel} data-workflow-material="tactile" data-workflow-finish="flat" data-workflow-palette="editor" data-workbench-selection-tools data-system-workflow-overlay
     onKeyDown={event => { if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); onClose(); } }}>
     <div className="reception-bento-modes" role="group" aria-label="Bento task">
       <Control disabled={empty} aria-pressed={mode === 'current'} onClick={() => { cancelPreview(); setMode('current'); }}>Current grid</Control>
       <Control aria-pressed={mode === 'new'} onClick={() => { cancelPreview(); setMode('new'); }}>New layout</Control>
     </div>
-    {mode === 'current' && !empty ? <CurrentGrid key={revision} {...{ reception, run, blocked, previewSettings, cancelPreview, selectedId, structureActions }} />
-      : <NewLayout {...{ reception, blocked, variant, setVariant }} settings={proposalSettings} setSettings={setProposalSettings} seed={(firstSeed + variant) >>> 0}
-        generate={(settings, seed) => { generate(settings, seed); setMode('current'); }} />}
+    {mode === 'current' && !empty ? <CurrentGrid {...{ reception, run, blocked, previewSettings, cancelPreview }} />
+      : <NewLayout {...{ reception, blocked, variant, setVariant, generate }} settings={proposalSettings} setSettings={setProposalSettings} seed={(firstSeed + variant) >>> 0} />}
   </ToolPanel>;
 }
-function CurrentGrid({ reception, run, blocked, previewSettings, cancelPreview, selectedId, structureActions }) {
-  const { mode } = useInterfaceTheme(), saved = receptionBentoSettings(reception);
-  const [patch, setPatch] = useState({}), [error, setError] = useState('');
-  const settings = { ...saved, ...patch };
+function CurrentGrid({ reception, run, blocked, previewSettings, cancelPreview }) {
+  const { mode } = useInterfaceTheme(), settings = receptionBentoSettings(reception);
+  const [error, setError] = useState('');
   const change = update => {
-    const next = { ...patch, ...update }; setPatch(next); setError('');
-    if ('gap' in update || 'radius' in update) {
-      const preview = Object.fromEntries(['gap', 'radius'].filter(key => Object.hasOwn(next, key)).map(key => [key, next[key]]));
-      try { previewSettings(preview); } catch (failure) { cancelPreview(); setError(failure.message); }
-    }
+    try { run('settings', [update]); setError(''); return true; }
+    catch (failure) { setError(failure.message); return false; }
   };
-  const perform = action => { try { action(); setError(''); } catch (failure) { setError(failure.message); } };
-  const pending = Object.entries(patch).some(([key, value]) => JSON.stringify(value) !== JSON.stringify(saved[key]));
-  const selected = reception.cells.find(cell => cell.id === selectedId);
-  return <form className="reception-bento-settings" onSubmit={event => { event.preventDefault(); perform(() => run('settings', [patch])); }}>
+  const showInnerLines = visible => {
+    const { hidden: _hidden, ...outline } = settings.innerLines ?? { width: 1, color: mode === 'light' ? '#171717' : '#ebece7', opacity: 1 };
+    change({ innerLines: visible ? outline : { ...outline, hidden: true } });
+  };
+  const preview = (key, value) => {
+    setError('');
+    if (!Number.isFinite(value) || value < 0 || value > (key === 'gap' ? 256 : 160)) { cancelPreview(); return; }
+    try { previewSettings({ [key]: value }); } catch (failure) { cancelPreview(); setError(failure.message); }
+  };
+  return <div className="reception-bento-settings">
     <div className="reception-bento-scroll">
       <fieldset disabled={blocked}><legend>Whole Bento</legend>
-        <GeometryFields {...{ settings, change }} />
-        <Field label="Corner radius (px)" min={0} max={160} value={settings.radius} placeholder="Mixed" onChange={radius => change({ radius })} />
-        {saved.radius === null && <p>Cells have different radii. Enter a value to change all cells.</p>}
-        <label className="reception-bento-check"><input type="checkbox" checked={settings.showFrame}
-          onChange={event => change({ showFrame: event.target.checked })} />Show outer frame</label>
-        <label className="reception-bento-check"><input type="checkbox" checked={Boolean(settings.innerLines)}
-          onChange={event => change({ innerLines: event.target.checked ? { width: 1, color: mode === 'light' ? '#171717' : '#ebece7', opacity: 1 } : null })} />Show inner lines</label>
-        {settings.innerLines && <p>Select a cell, then choose Color → Bento inner lines for the shared outline.</p>}
-        <p>Gutter and radius preview live. Apply to save; closing discards the preview.</p>
+        <GeometryFields {...{ settings, change, preview }} commit />
+        <FieldRow label="Radius"><Field label="Corner radius for all cells (px)" prefix="R" min={0} max={160} optional commit value={settings.radius}
+          preview={radius => preview('radius', radius)} placeholder="Per cell" title="Set the corner radius for all cells." onChange={radius => change({ radius })} /></FieldRow>
+        <div className="reception-bento-checks">
+          <label className="reception-bento-check"><input type="checkbox" checked={settings.showFrame}
+            onChange={event => change({ showFrame: event.target.checked })} />Show outer frame</label>
+          <label className="reception-bento-check"><input type="checkbox" checked={Boolean(visibleReceptionInnerLines(settings.innerLines))}
+            onChange={event => showInnerLines(event.target.checked)} />Show inner lines</label>
+        </div>
       </fieldset>
-      {selected && <SelectedCell key={selected.id} {...{ selected, reception, run, perform, structureActions }} blocked={blocked || pending} />}
-      <fieldset disabled={blocked || pending}><legend>Extend this grid</legend>
-        <Control disabled={reception.cells.length >= receptionLayoutCountRange(reception).max} onClick={() => perform(() => run('appendRow', []))}>Add row below</Control>
-        <p>Adds one full-width cell below. Existing cells keep their size.</p>
-      </fieldset>
-      <p>Drag cells to swap; drag shared edges to resize. Double-click a cell to edit its contents.</p>
-      <p>Text wraps at smaller preview widths. Check Canvas → Preview before publishing.</p>
-    </div>
-    <footer className="reception-bento-footer">
       {error && <p role="alert">{error}</p>}
-      <Control type="submit" disabled={blocked || !pending}>Apply settings</Control>
-    </footer>
-  </form>;
-}
-function SelectedCell({ selected, reception, run, perform, blocked, structureActions }) {
-  const [radius, setRadius] = useState(selected.radius || 0);
-  return <fieldset disabled={blocked}><legend>Selected cell · {reception.shapes.find(shape => shape.id === selected.id)?.name || 'Cell'}</legend>
-    <Field label="Selected cell radius (px)" min={0} max={160} value={radius} onChange={setRadius} />
-    <Control disabled={radius === (selected.radius || 0)} onClick={() => perform(() => run('cellRadius', [selected.id, radius]))}>Apply cell radius</Control>
-    <p>Color edits this cell’s fill and outline; Shape edits its name. Whole Bento settings above affect every cell.</p>
-    <details><summary>Split or merge this cell</summary><div className="reception-bento-fields">
-      {structureActions.map(action => <Control key={action.id} disabled={action.disabled} title={action.reason} onClick={() => perform(action.run)}>{action.label}</Control>)}
-    </div></details>
-  </fieldset>;
+    </div>
+  </div>;
 }
 function NewLayout({ reception, settings, setSettings, seed, variant, setVariant, generate, blocked }) {
   const empty = !reception.cells.length, range = receptionLayoutCountRange(reception);
@@ -110,33 +118,36 @@ function NewLayout({ reception, settings, setSettings, seed, variant, setVariant
   const change = patch => { setSettings(current => ({ ...current, ...patch })); setError(''); };
   const proposal = useMemo(() => {
     try {
-      if (settings.count < range.min || settings.count > range.max) throw new Error(`Choose ${range.min}–${range.max} cells to retain existing content.`);
       // Validate the actual placement of existing content, not just empty tiles.
-      applyReceptionLayout(reception, settings, seed);
-      return { layout: generateReceptionLayout(settings, seed) };
+      const candidate = applyReceptionLayout(reception, settings, seed), area = candidate.workbench.area;
+      return { cells: candidate.cells.map(cell => {
+        const frame = receptionModuleWindow(candidate, cell.id);
+        return { ...frame, left: frame.left - area.left, top: frame.top - area.top, radius: cell.radius };
+      }) };
     } catch (failure) { return { error: failure.message }; }
-  }, [reception, settings, seed, range.min, range.max]);
+  }, [reception, settings, seed]);
   return <form className="reception-bento-settings" onSubmit={event => {
     event.preventDefault(); try { generate(settings, seed); setError(''); } catch (failure) { setError(failure.message); }
   }}>
     <div className="reception-bento-scroll">
-      <fieldset disabled={blocked}><legend>{empty ? 'Create your Bento' : 'Replace the arrangement'}</legend>
-        <p>{empty ? 'Start with one cell and split it yourself, or choose a generated layout.' : 'Existing cells keep their contents and style. Undo restores the previous layout.'}</p>
-        <Field label="Number of cells" min={range.min} max={range.max} value={settings.count} onChange={count => change({ count })} />
+      <fieldset disabled={blocked} aria-label="New layout">
+        <FieldRow label="Cells">
+          <Field label="Columns" prefix="Cols" min={1} max={range.max} value={settings.columns} onChange={columns => change({ columns })} />
+          <Field label="Rows" prefix="Rows" min={1} max={range.max} value={settings.rows} onChange={rows => change({ rows })} />
+        </FieldRow>
         <GeometryFields {...{ settings, change }} />
-        <Field label="New cell radius (px)" min={0} max={160} value={settings.radius} onChange={radius => change({ radius })} />
-        {proposal.layout && <svg className="reception-bento-preview" role="img" aria-label={`${settings.count} cells preview`} viewBox={`0 0 ${settings.width} ${settings.height}`}>
-          {proposal.layout.rectangles.map((r, index) => <rect key={index} x={r.left} y={r.top} width={r.width} height={r.height} rx={settings.radius} />)}
+        {proposal.cells && <svg className="reception-bento-preview" role="img" aria-label={`${settings.columns} columns, ${settings.rows} rows preview`} viewBox={`0 0 ${settings.width} ${settings.height}`}>
+          {proposal.cells.map((r, index) => <rect key={index} x={r.left} y={r.top} width={r.width} height={r.height} rx={r.radius} />)}
         </svg>}
         <div className="reception-bento-fields">
           <Control disabled={variant === 0} onClick={() => setVariant(value => value - 1)}>Previous layout</Control>
           <Control onClick={() => setVariant(value => value + 1)}>Another layout</Control>
         </div>
       </fieldset>
+      <footer className="reception-bento-footer">
+        {(error || proposal.error) && <p role="alert">{error || proposal.error}</p>}
+        <Control type="submit" data-primary disabled={blocked || !proposal.cells}>{empty ? 'Create Bento' : 'Replace layout'}</Control>
+      </footer>
     </div>
-    <footer className="reception-bento-footer">
-      {(error || proposal.error) && <p role="alert">{error || proposal.error}</p>}
-      <Control type="submit" disabled={blocked || !proposal.layout}>{empty ? 'Create Bento' : 'Replace layout'}</Control>
-    </footer>
   </form>;
 }

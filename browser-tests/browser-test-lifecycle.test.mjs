@@ -1,6 +1,25 @@
 import assert from 'node:assert/strict';
 import { describe, test } from 'node:test';
 import { EventEmitter } from 'node:events';
+
+test('native per-target identity checks avoid repeated full snapshots and preserve rejection', async () => {
+  let snapshots = 0;
+  const requested = [];
+  const tree = createOwnedProcessTree({ rootPid: 10, listProcesses: async () => {
+    snapshots++;
+    return [{ pid: 10, parentPid: 1, identity: '/Date(2000)/' }];
+  }, terminateWithIdentityCheck: async (entry, timeoutMs) => {
+    requested.push({ entry, timeoutMs });
+    throw Error('Process creation identity changed');
+  } });
+  const remaining = await tree.observe();
+  await assert.rejects(tree.forceTerminate(remaining, 8000), /creation identity changed/);
+  assert.equal(snapshots, 1);
+  assert.equal(requested.length, 1);
+  assert.equal(requested[0].entry.pid, 10);
+  assert.equal(requested[0].entry.identity, '/Date(2000)/');
+  assert.ok(requested[0].timeoutMs > 0 && requested[0].timeoutMs <= 4000);
+});
 import { resolve } from 'node:path';
 import { mkdtemp, writeFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -14,7 +33,8 @@ import {
   resolveWindowsProcessRuntime,
   removeBrowserRuntime,
   runBrowserSetupWithCleanup,
-  terminatePosixProcessTree,
+  terminatePosixProcess,
+  terminateWindowsProcess,
   validateBrowserRuntimePath,
   withinDeadline
 } from './browser-test-lifecycle.mjs';
@@ -39,7 +59,7 @@ async function powershellFixture(t, { modern = true } = {}) {
 
 describe('Playwright browser lifecycle', () => {
   const runtimePath = resolve(workspaceRoot, '.browser-test-runtime');
-  const processEntry = (pid, parentPid, identity = `created-${pid}`) => ({ pid, parentPid, identity, commandLine: '' });
+  const processEntry = (pid, parentPid, identity = `/Date(${Date.now() + pid})/`) => ({ pid, parentPid, identity, commandLine: '' });
   const routeFor = (url, calls, pending = Promise.resolve()) => ({
     request: () => ({ url: () => url }),
     continue: () => { calls.push('continue'); return pending; },
@@ -136,7 +156,7 @@ describe('Playwright browser lifecycle', () => {
     } });
     assert.deepEqual(result, entries.slice(1).map(entry => ({ pid: entry.ProcessId, parentPid: entry.ParentProcessId, identity: entry.CreationDate })));
     assert.equal(calls[0][0], 'powershell.exe');
-    assert.equal(calls[0][2].timeoutMs, 3000);
+    assert.equal(calls[0][2].timeoutMs, 6000);
     assert.match(calls[0][1].at(-1), /-ErrorAction Stop/u);
     const single = await listWindowsProcesses({ runtime: mockWindowsRuntime, run: async () => ({ code: 0, stdout: JSON.stringify(entries[1]), stderr: '' }) });
     assert.deepEqual(single, [result[0]]);
@@ -165,7 +185,7 @@ describe('Playwright browser lifecycle', () => {
     assert.deepEqual(runtime, { executable: resolve(root, 'pwsh.exe'), version: '7.6.5', sha256: createHash('sha256').update('fixture-modern').digest('hex') });
     assert.equal(await resolveWindowsProcessRuntime(environment, dependencies), runtime);
     assert.equal(await resolveWindowsProcessRuntime({ ...environment, INSCAPE_PROCESS_POWERSHELL: runtime.executable }, dependencies), runtime);
-    assert.equal(calls.length, 1); assert.equal(calls[0][2].timeoutMs, 3000);
+    assert.equal(calls.length, 1); assert.equal(calls[0][2].timeoutMs, 6000);
     assert.equal(await resolveWindowsProcessRuntime(environment, { platform: 'linux', run: () => assert.fail('POSIX must not probe PowerShell') }), null);
   });
 
@@ -193,28 +213,111 @@ describe('Playwright browser lifecycle', () => {
     await assert.rejects(resolveWindowsProcessRuntime(other.environment, { platform: 'win32', run: async () => ({ code: 0, stdout: 'not-a-version', stderr: '' }) }), /invalid version/u);
   });
 
-  test('POSIX forced cleanup terminates only the verified root tree, descendants first', async () => {
+  test('POSIX forced cleanup terminates only its verified single identity', async () => {
     const killed = [];
-    const inventory = async () => [processEntry(10, 1), processEntry(11, 10), processEntry(12, 11), processEntry(99, 1)];
-    const result = await terminatePosixProcessTree(10, { inventory, kill: (pid, signal) => killed.push([pid, signal]) });
-    assert.deepEqual(killed, [[12, 'SIGKILL'], [11, 'SIGKILL'], [10, 'SIGKILL']]);
-    assert.deepEqual(result.targets, [12, 11, 10]);
+    const entries = [processEntry(10, 1), processEntry(11, 10), processEntry(12, 11), processEntry(99, 1)];
+    await terminatePosixProcess(entries[0], { inventory: async () => entries, kill: (pid, signal) => killed.push([pid, signal]) });
+    assert.deepEqual(killed, [[10, 'SIGKILL']]);
   });
 
-  test('owned descendants exclude unrelated processes and force only the owned root', async () => {
+  test('owned descendants exclude unrelated processes and terminate each identity descendants first', async () => {
     const killed = []; const inventory = [processEntry(10, 1), processEntry(11, 10), processEntry(99, 1)];
-    const tree = createOwnedProcessTree({ rootPid: 10, listProcesses: async () => inventory, terminateTree: async (pid) => killed.push(pid) });
+    const tree = createOwnedProcessTree({ rootPid: 10, listProcesses: async () => inventory, terminateProcess: async (entry) => killed.push(entry.pid) });
     const remaining = await tree.observe(); await tree.forceTerminate(remaining);
-    assert.deepEqual(tree.ownedPids(), [10, 11]); assert.deepEqual(killed, [10]);
+    assert.deepEqual(tree.ownedPids(), [10, 11]); assert.deepEqual(killed, [11, 10]);
   });
 
-  test('PID reuse immediately before taskkill fails closed', async () => {
+  test('PID reuse immediately before individual termination fails closed', async () => {
     let inventories = 0; let killed = false;
     const tree = createOwnedProcessTree({ rootPid: 20,
-      listProcesses: async () => [processEntry(20, 1, ++inventories === 1 ? 'owned' : 'reused')],
-      terminateTree: async () => { killed = true; } });
+      listProcesses: async () => [processEntry(20, 1, ++inventories === 1 ? '/Date(1000)/' : '/Date(2000)/')],
+      terminateProcess: async () => { killed = true; } });
     const remaining = await tree.observe(); await assert.rejects(tree.forceTerminate(remaining), /reused|creation identity/i);
     assert.equal(killed, false); assert.equal(inventories, 2);
+  });
+
+  test('an expired termination budget cannot begin work on additional owned targets', async () => {
+    const entries = [processEntry(10, 1), processEntry(11, 10), processEntry(12, 11)];
+    const killed = [];
+    const tree = createOwnedProcessTree({ rootPid: 10, listProcesses: async () => entries,
+      terminateProcess: async entry => { killed.push(entry.pid); await new Promise(done => setTimeout(done, 35)); } });
+    const remaining = await tree.observe();
+    await assert.rejects(tree.forceTerminate(remaining, 15), /deadline/u);
+    await new Promise(done => setTimeout(done, 40));
+    assert.deepEqual(killed, [12], 'expiry cannot start another identity lookup or kill after the first operation');
+  });
+
+  test('an older child sharing a reused parent PID is never adopted or terminated', async () => {
+    const root = processEntry(10, 1, '/Date(2000)/');
+    const older = processEntry(11, 10, '/Date(1000)/');
+    const child = processEntry(12, 10, '/Date(2001)/');
+    let entries = [root, older, child]; const killed = [];
+    const tree = createOwnedProcessTree({ rootPid: 10, listProcesses: async () => entries,
+      terminateProcess: async entry => killed.push(entry.pid) });
+    assert.deepEqual((await tree.observe()).map(entry => entry.pid), [10, 12]);
+    entries = [older, child];
+    await tree.forceTerminate(await tree.observe());
+    assert.deepEqual(killed, [12]);
+  });
+
+  test('opaque birth evidence cannot confer ownership, including through an unknown parent', async () => {
+    const entries = [processEntry(10, 1, '/Date(2000)/'), processEntry(11, 10, 'unknown'), processEntry(12, 11, '/Date(3000)/')];
+    const tree = createOwnedProcessTree({ rootPid: 10, listProcesses: async () => entries, terminateProcess: async () => {} });
+    assert.deepEqual((await tree.observe()).map(entry => entry.pid), [10]);
+    const unknown = createOwnedProcessTree({ rootPid: 11, listProcesses: async () => entries, terminateProcess: () => assert.fail('unknown root') });
+    assert.deepEqual(await unknown.observe(), []);
+    await unknown.forceTerminate([]);
+  });
+
+  test('root identity predating launch or absent at first observation cannot be adopted later', async () => {
+    for (const initial of [[], [processEntry(10, 1, '/Date(1000)/')]]) {
+      let entries = initial;
+      const tree = createOwnedProcessTree({ rootPid: 10, rootStartedAt: 2000, listProcesses: async () => entries,
+        terminateProcess: () => assert.fail('unowned root') });
+      assert.deepEqual(await tree.observe(), []);
+      entries = [processEntry(10, 1, '/Date(3000)/')];
+      assert.deepEqual(await tree.observe(), []);
+    }
+  });
+
+  test('reused owned parent cannot confer ownership to a new process', async () => {
+    let entries = [processEntry(10, 1, '/Date(1000)/'), processEntry(11, 10, '/Date(1001)/')];
+    const tree = createOwnedProcessTree({ rootPid: 10, listProcesses: async () => entries, terminateProcess: () => assert.fail('reused parent') });
+    await tree.observe();
+    entries = [processEntry(11, 1, '/Date(2000)/'), processEntry(12, 11, '/Date(2001)/')];
+    assert.deepEqual(await tree.observe(), []);
+    assert.deepEqual(tree.ownedPids(), [10, 11]);
+  });
+
+  test('first observation requires the retained child to remain live under the expected parent', async () => {
+    for (const [isRootAlive, rootParentPid] of [[() => false, 1], [() => true, 2]]) {
+      const tree = createOwnedProcessTree({ rootPid: 10, rootStartedAt: 1000, rootParentPid, isRootAlive,
+        listProcesses: async () => [processEntry(10, 1, '/Date(1001)/')],
+        terminateProcess: () => assert.fail('unowned replacement root') });
+      assert.deepEqual(await tree.observe(), []);
+    }
+  });
+
+  test('Windows termination binds a single native handle to its creation identity without tree traversal', async () => {
+    const calls = [];
+    await terminateWindowsProcess(processEntry(10, 1, '/Date(2000)/'), { runtime: mockWindowsRuntime,
+      run: async (...args) => { calls.push(args); return { code: 0, stderr: '' }; } });
+    assert.equal(calls.length, 1);
+    const script = calls[0][1].at(-1);
+    assert.match(script, /Get-Process -Id 10/u);
+    assert.match(script, /StartTime/u);
+    assert.ok(script.indexOf('.SafeHandle') < script.indexOf('.StartTime'));
+    assert.match(script, /-ne 2000/u);
+    assert.match(script, /\.Kill\(\)/u);
+    assert.doesNotMatch(script, /taskkill|\/T|Stop-Process|Get-CimInstance/u);
+    await assert.rejects(terminateWindowsProcess(processEntry(10, 1, 'unknown'), { runtime: mockWindowsRuntime,
+      run: () => assert.fail('unknown identity') }), /ambiguous/u);
+  });
+
+  test('POSIX per-process termination rejects an identity change at its own checkpoint', async () => {
+    await assert.rejects(terminatePosixProcess(processEntry(10, 1, '/Date(1000)/'), {
+      inventory: async () => [processEntry(10, 1, '/Date(2000)/')], kill: () => assert.fail('reused process'),
+    }), /reused/u);
   });
 
   test('routing continues loopback, fulfills known, and reports and aborts unknown origins', async () => {
@@ -262,12 +365,16 @@ describe('Playwright browser lifecycle', () => {
     const page = new EventEmitter();
     const context = { route: async () => order.push('route'), newPage: async () => { order.push('page'); return page; } };
     const browser = { newContext: async () => { order.push('context'); return context; } };
-    const server = { process: () => ({ pid: 30 }), wsEndpoint: () => 'ws://owned', close: async () => {}, kill: async () => {} };
-    const browserType = { launchServer: async () => { order.push('server'); return server; }, connect: async () => { order.push('connect'); return browser; } };
+    const launchBrowser = async (options, { onSession, onOwnedProcess }) => {
+      order.push('launch'); onSession({ close: async () => {} });
+      onOwnedProcess({ rootPid: 30, processTree: {}, identity: '/Date(1000)/' });
+      assert.equal(options.headless, true);
+      return { browser, rootPid: 30, processTree: {}, identity: '/Date(1000)/' };
+    };
     const controller = createPlaywrightRouteController({ loopbackOrigin: 'http://127.0.0.1:5174', knownOrigins: [], decideKnown: async () => ({ action: 'abort' }) });
     await launchPlaywrightEdge({ edgePath: 'edge.exe', runtimePath, workspaceRoot, loopbackOrigin: 'http://127.0.0.1:5174', routeController: controller,
-      resources, browserType, inventory: async () => [processEntry(30, 1)], terminateTree: async () => {}, prepareRuntime: async () => {}, onOwnedProcess: () => {} });
-    assert.deepEqual(order, ['server', 'connect', 'context', 'route', 'page']);
+      resources, launchBrowser, prepareRuntime: async () => {}, onOwnedProcess: () => {} });
+    assert.deepEqual(order, ['launch', 'context', 'route', 'page']);
   });
 
   test('delayed close focus restoration settles before the next launcher keyboard action', async () => {
@@ -319,29 +426,29 @@ describe('Playwright browser lifecycle', () => {
     assert.equal(fixtureCsp.includes("'unsafe-eval'"), false, 'regression policy continues to forbid unsafe-eval');
   });
 
-  test('partial Playwright setup retains BrowserServer ownership for cleanup', async () => {
-    const resources = {}; const server = { process: () => ({ pid: 40 }), wsEndpoint: () => 'ws://owned', close: async () => {}, kill: async () => {} };
-    const browserType = { launchServer: async () => server, connect: async () => { throw codedError('CONNECT_FAILED'); } };
+  test('partial Playwright setup retains its owned session for cleanup', async () => {
+    const resources = {}; const session = { close: async () => {} };
+    const launchBrowser = async (options, { onSession }) => { onSession(session); throw codedError('CONNECT_FAILED'); };
     const controller = createPlaywrightRouteController({ loopbackOrigin: 'http://127.0.0.1:5174', knownOrigins: [], decideKnown: async () => ({ action: 'abort' }) });
     await assert.rejects(launchPlaywrightEdge({ edgePath: 'edge.exe', runtimePath, workspaceRoot, loopbackOrigin: 'http://127.0.0.1:5174', routeController: controller,
-      resources, browserType, inventory: async () => [processEntry(40, 1)], terminateTree: async () => {}, prepareRuntime: async () => {}, onOwnedProcess: () => {} }),
+      resources, launchBrowser, prepareRuntime: async () => {}, onOwnedProcess: () => {} }),
     (error) => error.code === 'CONNECT_FAILED');
-    assert.strictEqual(resources.browserServer, server);
+    assert.strictEqual(resources.browserSession, session);
   });
 
   test('normal shutdown is graceful and cleanup is idempotent', async () => {
     const calls = []; const cleanup = createBrowserTestCleanup({ runtimePath, workspaceRoot, removeRuntime: async () => calls.push('runtime') });
     const resources = { routeController: { close: async () => calls.push('routes') }, context: { close: async () => calls.push('context') },
-      browser: { close: async () => calls.push('browser') }, browserServer: { close: async () => calls.push('server'), kill: async () => calls.push('kill') } };
+      browser: { close: async () => assert.fail('owned session owns close') }, browserSession: { close: async () => calls.push('owned') } };
     const first = cleanup(resources); const second = cleanup(resources); assert.strictEqual(first, second);
-    const result = await first; assert.deepEqual(calls, ['routes', 'context', 'browser', 'server', 'runtime']); assert.equal(result.shutdownMode, 'graceful');
+    const result = await first; assert.deepEqual(calls, ['routes', 'context', 'owned', 'runtime']); assert.equal(result.shutdownMode, 'owned-processes');
   });
 
   test('verified Windows forced fallback runs after graceful Playwright shutdown', async () => {
-    let waits = 0; const calls = []; const processTree = { waitForExit: async () => ++waits === 1 ? [processEntry(50, 1)] : [], forceTerminate: async () => { calls.push('taskkill'); return [50]; } };
+    let waits = 0; const calls = []; const processTree = { waitForExit: async () => ++waits === 1 ? [processEntry(50, 1)] : [], forceTerminate: async () => { calls.push('verified'); return [50]; } };
     const cleanup = createBrowserTestCleanup({ rootPid: 50, processTree, runtimePath, workspaceRoot, removeRuntime: async () => {} });
-    const result = await cleanup({ browserServer: { close: async () => calls.push('server'), kill: async () => {} } });
-    assert.deepEqual(calls, ['server', 'taskkill']); assert.equal(result.shutdownMode, 'verified-taskkill');
+    const result = await cleanup({ browserSession: { close: async () => calls.push('owned') } });
+    assert.deepEqual(calls, ['owned', 'verified']); assert.equal(result.shutdownMode, 'verified-processes');
   });
 
   test('setup and cleanup errors remain aggregated', async () => {

@@ -10,18 +10,10 @@ import AlphaSupportPanel from '../../support/AlphaSupportPanel.jsx';
 import { ALPHA_SUPPORT_CODES } from '../../support/alphaSupport.js';
 import { createOwnerLatticePublicationContext } from '../ownerLatticePublicationContext.js';
 import { buildOwnerSystemWorkflowPublicationDocument } from '../ownerSystemWorkflowPreviewDocument.js';
-import { canvasPublicationCandidates, canvasPublicationChanges, buildCanvasPublication } from '../../profileDocument/domain/canvasPublication.js';
+import { canvasPublicationCandidates, canvasPublicationChanges, buildCanvasPublication, canReplaceInvalidPublication, resolvePublicationBaseline } from '../../profileDocument/domain/canvasPublication.js';
 import { isWorkbenchCollection, projectWorkbenchDraft } from '../../systemWorkflow/domain/workbenchCollection.js';
 import useOwnerLatticeBrowser from '../useOwnerLatticeBrowser.js';
 import '../ownerLatticePublicationRack.css';
-
-function publishedDocument(resolution, profileAddress) {
-  if (!['RESOLVED', 'STALE'].includes(resolution?.status)) return null;
-  try {
-    const document = assertValidProfileDocumentV9(resolution.document);
-    return document.profile.address === profileAddress ? document : null;
-  } catch { return null; }
-}
 
 export default function OwnerSystemWorkflowPublicationRack({
   assetRecords,
@@ -50,11 +42,20 @@ export default function OwnerSystemWorkflowPublicationRack({
   const cidRef = useRef('');
   const cidGenerationRef = useRef(0);
   const draftGenerationRef = useRef({ fingerprint: null, generation: 0 });
-  const previous = useMemo(() => publishedDocument(publishedResolution, profileAddress), [publishedResolution, profileAddress]);
-  const [selectedIds, setSelectedIds] = useState(() => [store?.getWorkbenchId()]);
-  const [includeShared, setIncludeShared] = useState(false);
+  const [replacementConsent, setReplacementConsent] = useState(null);
+  const replacementAvailable = canReplaceInvalidPublication(publishedResolution, profileAddress);
+  const replaceInvalid = replacementAvailable && replacementConsent === publishedResolution;
+  const baseline = useMemo(() => {
+    try { return { document: resolvePublicationBaseline(publishedResolution, profileAddress, { replaceInvalid }) }; }
+    catch (error) { return { document: null, error: error.message }; }
+  }, [publishedResolution, profileAddress, replaceInvalid]);
+  const previous = baseline.document;
+  const editingReception = store?.getWorkbenchId() === 'reception';
+  const [selectedIds, setSelectedIds] = useState(() => editingReception ? [] : [store?.getWorkbenchId()]);
+  const [includeShared, setIncludeShared] = useState(editingReception);
   const firstPublication = publishedResolution?.status === 'UNAVAILABLE';
-  const publishShared = firstPublication || includeShared;
+  const sharedRequired = firstPublication || replacementAvailable;
+  const publishShared = sharedRequired || includeShared;
   const recordState = useMemo(() => {
     try { return { record: store?.getBackupSnapshot({ ...systemWorkflowDraft, ...(workbench ? { workbench } : {}) }) }; }
     catch (error) { return { error: error.message }; }
@@ -86,14 +87,14 @@ export default function OwnerSystemWorkflowPublicationRack({
     try {
       if (preparationError) throw new Error(preparationError);
       if (recordState.error) throw new Error(recordState.error);
-      if (store && !['RESOLVED', 'UNAVAILABLE'].includes(publishedResolution?.status)) throw new Error('Wait for the latest publication to be verified before preparing changes.');
+      if (store && baseline.error) throw new Error(baseline.error);
       const candidate = store ? buildCanvasPublication({ ...collectionInput, exportedAt: previous?.exportedAt || new Date(0) })
         : buildOwnerSystemWorkflowPublicationDocument({ ...builderInput, exportedAt: new Date(0) });
       return { error: null, fingerprint: profileDocumentV9ContentFingerprint(candidate) };
     } catch (error) {
       return { error: error?.message || 'The public System Workflow cannot be projected', fingerprint: null };
     }
-  }, [builderInput, preparationError, store, collectionInput, publishedResolution?.status, previous, recordState.error]);
+  }, [builderInput, preparationError, store, collectionInput, baseline.error, previous, recordState.error]);
   if (draftGenerationRef.current.fingerprint !== draftState.fingerprint) {
     draftGenerationRef.current = {
       fingerprint: draftState.fingerprint,
@@ -234,19 +235,28 @@ export default function OwnerSystemWorkflowPublicationRack({
       if (event.target === event.currentTarget && event.propertyName === 'opacity') onMotionComplete?.();
     }}>
     <div className="workbench-destination-body">
+    {store && replacementAvailable && <section className="owner-lattice-publication-rack__summary">
+      <h3>Replace invalid publication</h3>
+      <p>The published document cannot be opened. You can publish a replacement from your local work.
+        Only selected canvases and your local profile details, Reception and shared Keeper will be included.
+        Unselected canvases from the previous publication cannot be retained.</p>
+      <label><input type="checkbox" checked={replaceInvalid} disabled={busy || operationPhase === 'PUBLISHED'}
+        onChange={event => setReplacementConsent(event.target.checked ? publishedResolution : null)} />{' '}
+        Replace the invalid publication with my selected local content</label>
+    </section>}
     {store && <section className="owner-lattice-publication-rack__summary">
       <h3>Choose canvases</h3>
-      <p>Only checked changes go live. Other canvases keep their published version.</p>
+      <p>{replacementAvailable ? 'Only checked canvases go live in the replacement.' : 'Only checked changes go live. Other canvases keep their published version.'}</p>
       <fieldset disabled={busy || operationPhase === 'PUBLISHED'}><legend>Publication scope</legend>
         {changes.map(item => <label key={item.id} style={{ display: 'block', marginBlock: 12 }}>
           <input type="checkbox" checked={selectedChanges.includes(item.id)} disabled={!item.changed}
             onChange={event => setSelectedIds(current => event.target.checked ? [...current, item.id] : current.filter(id => id !== item.id))} />{' '}
-          {item.name} — {item.first ? 'First publication' : item.changed ? 'Update' : 'No changes'}
+          {item.name} — {replacementAvailable ? 'Local version' : item.first ? 'First publication' : item.changed ? 'Update' : 'No changes'}
           {item.error && <small>{item.error}</small>}
         </label>)}
         <button type="button" onClick={() => setSelectedIds(changes.filter(item => item.changed).map(item => item.id))}>Select all changed canvases</button>
-        <label style={{ display: 'block', marginBlock: 12 }}><input type="checkbox" checked={publishShared} disabled={firstPublication}
-          onChange={event => setIncludeShared(event.target.checked)} />{' '}Profile details, Reception and shared Keeper{firstPublication ? ' · required for first publication' : ''}</label>
+        <label style={{ display: 'block', marginBlock: 12 }}><input type="checkbox" checked={publishShared} disabled={sharedRequired}
+          onChange={event => setIncludeShared(event.target.checked)} />{' '}Profile details, Reception and shared Keeper{replacementAvailable ? ' · required for replacement' : firstPublication ? ' · required for first publication' : ''}</label>
       </fieldset>
       <p role="status">Selected: {changes.filter(item => selectedChanges.includes(item.id)).map(item => item.name).join(', ') || 'No canvases'}{publishShared ? ' · profile details included' : ''}</p>
     </section>}

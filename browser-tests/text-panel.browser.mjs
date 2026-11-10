@@ -12,7 +12,7 @@ const output = process.env.INSCAPE_BROWSER_OUTPUT || '.browser-test-runtime/text
 const saved = page => page.evaluate(() => window.savedDraft());
 const material = node => { const s = getComputedStyle(node); return [s.backgroundColor, s.color, s.borderRadius, s.borderTopColor, s.boxShadow]; };
 
-for (const [width, theme] of [[1440, 'Mist'], [390, 'Carbon']]) test(`independent Text panel matches Layers and resizes without authoring (${theme}, ${width}px)`, { timeout: 60000 }, async () => {
+for (const [width, theme] of [[1440, 'Mist'], [390, 'Carbon']]) test(`unified Text inspector matches Layers and resizes without authoring (${theme}, ${width}px)`, { timeout: 60000 }, async () => {
   const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
   try {
     await mkdir(output, { recursive: true });
@@ -20,19 +20,24 @@ for (const [width, theme] of [[1440, 'Mist'], [390, 'Carbon']]) test(`independen
     page.setDefaultTimeout(10000);
     const errors = []; page.on('pageerror', error => errors.push(error.message));
     await mountTextToolsFixture(page, origin);
-    const tools = page.locator('.text-tools-window'), body = page.getByRole('textbox', { name: 'Article text', exact: true });
+    const tools = page.locator('.workbench-tool-dock:has([data-text-inspector])'), body = page.getByRole('textbox', { name: 'Article text', exact: true });
     const editor = await body.elementHandle();
     await editorCommand(page, 'Edit', 'Settings');
     await page.getByRole('button', { name: theme === 'Mist' ? 'LIGHT' : 'DARK', exact: true }).click();
     await page.getByRole('button', { name: 'Close Settings', exact: true }).click();
     const layers = await openSharedTool(page, 'Layers');
+    // Compare the same floating-host variant; a filling side dock has square edges.
+    for (const panel of [tools, layers]) {
+      const undock = panel.getByRole('button', { name: /^Undock / });
+      if (await undock.count()) await undock.click();
+    }
     assert.deepEqual(await tools.evaluate(material), await layers.evaluate(material));
     assert.equal(await page.getByRole('tab', { name: 'Text', exact: true }).count(), 0);
     await layers.getByRole('button', { name: 'Close Workbench Layers', exact: true }).click();
     const original = await saved(page), frame = await tools.boundingBox();
     assert.equal(await tools.locator('input[type="color"]').count(), 0);
-    assert.equal(await tools.getByLabel('Selected text font', { exact: true }).evaluate(node => getComputedStyle(node).borderRadius), '5px');
-    assert.equal(await tools.getByRole('spinbutton', { name: /^(Width|Height|Transform)/ }).count(), 0);
+    assert.ok(await tools.getByRole('button', { name: /^Selected text font:/ }).evaluate(node => parseFloat(getComputedStyle(node).borderRadius) > 0), 'font picker uses rounded editor controls');
+    assert.equal(await tools.getByRole('spinbutton', { name: /^Transform / }).count(), 4, 'Text geometry stays in the same inspector');
     assert.equal(await tools.locator('.workbench-tool-panel-resize').count(), 8);
     const edge = tools.locator('[data-edge="se"]');
     assert.equal(await edge.evaluate(node => getComputedStyle(node).backgroundColor), 'rgba(0, 0, 0, 0)');
@@ -46,7 +51,7 @@ for (const [width, theme] of [[1440, 'Mist'], [390, 'Carbon']]) test(`independen
     assert.deepEqual(await tools.boundingBox(), resized, 'cancel restores the full tool frame');
     assert.deepEqual(await saved(page), original, 'tool geometry never authors article or canvas dimensions');
     assert.equal(await body.evaluate((node, initial) => node === initial, editor), true);
-    await tools.getByRole('button', { name: 'Close Text tools', exact: true }).click();
+    await tools.getByRole('button', { name: 'Close Inspector', exact: true }).click();
     const trigger = page.locator('.text-window').getByRole('button', { name: 'Text tools', exact: true });
     await trigger.focus(); await trigger.press('Enter'); await tools.waitFor();
     assert.deepEqual(await tools.boundingBox(), resized, 'reopening retains the session frame');
@@ -56,8 +61,8 @@ for (const [width, theme] of [[1440, 'Mist'], [390, 'Carbon']]) test(`independen
     await openTextToolSection(tools, 'Default text style');
     await tools.getByRole('spinbutton', { name: 'Default text size', exact: true }).fill('20');
     assert.equal((await saved(page)).texts[0].article.appearance.fontSize, 20);
-    await tools.locator('.text-tools-content').evaluate(node => { node.scrollTop = node.scrollHeight; });
-    assert.ok(await tools.locator('.text-tools-content').evaluate(node => node.scrollWidth <= node.clientWidth + 1));
+    await tools.locator('.workbench-inspector').evaluate(node => { node.scrollTop = node.scrollHeight; });
+    assert.ok(await tools.locator('.workbench-inspector').evaluate(node => node.scrollWidth <= node.clientWidth + 1));
     await page.screenshot({ path: `${output}/text-${theme.toLowerCase()}-${width}-settings.png` });
     assert.deepEqual(errors, []);
   } finally { await browser.close(); }

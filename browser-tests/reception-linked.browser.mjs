@@ -1,3 +1,4 @@
+import { workspaceDestination, workspacePicker } from './fixtures/editor-menu.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { chromium } from 'playwright-core';
@@ -23,7 +24,11 @@ async function setup(width, query) {
 for (const width of [1920, 390]) for (const mode of ['local', 'public']) test(`Reception ${mode}: direct Display swipe, linked content, separate overview and camera at ${width}`, { timeout: 90000 }, async () => {
   const { browser, page, errors } = await setup(width, mode);
   try {
-    if (mode === 'public') assert.equal(await page.getByRole('button', { name: 'Edit Reception', exact: true }).count(), 0);
+    if (mode === 'public') {
+      await workspacePicker(page).click();
+      assert.equal(await page.getByRole('menuitemcheckbox', { name: 'Reception Editor', exact: true }).count(), 0);
+      await page.getByRole('menu', { name: 'Workspace menu' }).press('Escape');
+    }
     const display = page.locator('.reception-display .visitor-grid-world__viewport');
     await display.locator('.visitor-grid-world__grid-plane:not([aria-hidden]) [data-media-state=ready]').first().waitFor();
     const before = await page.evaluate(() => ({ storage: JSON.stringify(localStorage), writes: linkedFixture.writes() }));
@@ -45,7 +50,7 @@ for (const width of [1920, 390]) for (const mode of ['local', 'public']) test(`R
     }
     await page.waitForFunction(() => document.querySelector('.reception-display [data-active-grid-id]')?.dataset.activeGridId === 'grid:second');
     await page.locator('.reception-linked-content .text-scene-page').getByRole('heading', { name: 'Dawn', exact: true }).first().waitFor();
-    assert.equal(await page.locator('[data-linked-kind="image"]').getAttribute('data-linked-side'), 'side:1');
+    assert.equal(await page.locator('[data-linked-kind="image"] .reception-artwork').getAttribute('aria-label'), 'Study 2');
     assert.ok(await page.getByRole('heading', { name: 'Small worlds.', exact: true }).isVisible());
     await page.waitForFunction(() => ['.reception-display .visitor-grid-world__grid-track', '.reception-linked-content .text-scene-track'].every(selector =>
       { const node = document.querySelector(selector); return Math.abs(new DOMMatrix(getComputedStyle(node).transform).m41 + Number(node.dataset.railOrigin || 0) * node.getBoundingClientRect().width) < 1; }));
@@ -61,7 +66,7 @@ for (const width of [1920, 390]) for (const mode of ['local', 'public']) test(`R
     assert.equal(await dialog.getByRole('button', { name: 'View Artwork detail' }).getAttribute('aria-pressed'), 'true');
     await page.keyboard.press('Escape'); await dialog.waitFor({ state: 'detached' });
     await page.waitForFunction(() => document.activeElement?.textContent === 'Open canvas');
-    await page.getByRole('button', { name: 'Canvases', exact: true }).click();
+    await workspaceDestination(page, 'Canvases');
     await page.locator('.workbench-overview').waitFor();
     if (await page.locator('.composition-index').count()) {
       await page.getByRole('button', { name: 'Grid', exact: true }).click();

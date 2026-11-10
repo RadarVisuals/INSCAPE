@@ -1,3 +1,4 @@
+import { workspaceDestination, workspacePicker } from './fixtures/editor-menu.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdir } from 'node:fs/promises';
@@ -12,9 +13,9 @@ for (const width of [1920, 390]) test(`Reception review Canvases opens the exist
   await page.route('**/*', route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
   try {
     await page.goto(`${origin}/browser-tests/reception-editor-fixture.html?sample&public&session=${crypto.randomUUID()}`);
-    await page.getByRole('button', { name: 'Canvases', exact: true }).waitFor();
+    await workspacePicker(page).waitFor();
     const before = await page.evaluate(() => receptionFixture.root.getBackupSnapshot());
-    await page.getByRole('button', { name: 'Canvases', exact: true }).click();
+    await workspaceDestination(page, 'Canvases');
     await page.locator('.workbench-overview').waitFor();
     if (await page.locator('.composition-index').count()) {
       await page.getByRole('button', { name: 'Grid', exact: true }).click();
@@ -33,7 +34,7 @@ for (const width of [1920, 390]) test(`Reception review Canvases opens the exist
     await page.locator('.reception-page').waitFor();
     assert.equal(await page.locator('.reception-canvases, .canvas-gallery-section').count(), 0);
     await page.screenshot({ path: `${output}/review-reception-${width}.png` });
-    await page.getByRole('button', { name: 'Canvases', exact: true }).click();
+    await workspaceDestination(page, 'Canvases');
     await page.locator('.composition-explorer-viewport, .workbench-overview-gallery').waitFor();
     assert.deepEqual(await page.evaluate(() => receptionFixture.root.getBackupSnapshot()), before);
     assert.deepEqual(errors, []);

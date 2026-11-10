@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdir } from 'node:fs/promises';
 import { chromium } from 'playwright-core';
 import { mountGridMotionFixture } from './fixtures/grid-motion-fixture.mjs';
-import { openSharedTool } from './fixtures/shared-tools.mjs';
+import { openSharedTool, closeSharedTool, sharedToolTab } from './fixtures/shared-tools.mjs';
 const origin = process.env.INSCAPE_TEXT_ROOT || 'http://127.0.0.1:5173';
 const output = process.env.INSCAPE_BROWSER_OUTPUT || '.browser-test-runtime';
 
@@ -23,23 +23,36 @@ test('Owner Image Retry remains reachable beside Image settings on pointer and t
         const draft = JSON.parse(localStorage.getItem(window.__motionKey));
         draft.displays = []; draft.grids[0].placements = []; draft.workbench.display.open = false;
         draft.imageModules = [{ ...draft.imageModules[0], name: 'Recovery image', width: size || 320, height: size || (width === 390 ? 200 : 280),
-          sides: [{ ...draft.imageModules[0].sides[0], asset: { ...draft.imageModules[0].sides[0].asset,
-            media: { ...draft.imageModules[0].sides[0].asset.media, url: 'https://recovery.test/failed.webp' } } }] }];
-        draft.workbench.imageModules = [{ id: draft.imageModules[0].id, open: true, position: { left: width > 900 ? 300 : 32, top: size ? 260 : 180 } }];
+          artwork: { ...draft.imageModules[0].artwork, asset: { ...draft.imageModules[0].artwork.asset,
+            media: { ...draft.imageModules[0].artwork.asset.media, url: 'https://recovery.test/failed.webp' } } } }];
+        draft.workbench.imageModules = [{ id: draft.imageModules[0].id, open: true,
+          position: { left: size ? 900 : width > 900 ? 300 : 32, top: size ? 780 : 180 } }];
         localStorage.setItem(window.__motionKey, JSON.stringify(draft)); window.__motionRemount();
       }, { width, size });
       await page.getByRole('status').filter({ hasText: 'Artwork unavailable' }).waitFor();
       const saved = await page.evaluate(() => localStorage.getItem(window.__motionKey));
+      if (await sharedToolTab(page, 'Layers').count()) await closeSharedTool(page, 'Layers');
+      if (width <= 640) {
+        const undockNavigator = page.getByRole('button', { name: 'Undock Navigator', exact: true });
+        if (await undockNavigator.count()) await undockNavigator.click();
+        const navigatorGrip = page.getByRole('button', { name: 'Move Navigator window', exact: true });
+        const box = await navigatorGrip.boundingBox();
+        for (let i = 0; i < Math.ceil((width - box.x) / 24); i++) await navigatorGrip.press('Shift+ArrowRight');
+      }
       await page.locator('.image-module__canvas').focus();
       const panel = await openSharedTool(page, 'Image');
       if (width <= 640) {
+        const undock = panel.getByRole('button', { name: 'Undock Inspector', exact: true });
+        if (await undock.count()) await undock.click();
         // Park the real dock below the test artwork using its keyboard controls.
         const resize = panel.locator('.workbench-tool-panel-resize[data-edge="se"]');
         await resize.focus(); for (let i = 0; i < 10; i++) await resize.press('Shift+ArrowUp');
         const move = panel.locator('.workbench-tool-panel-grip');
-        await move.focus(); for (let i = 0; i < 18; i++) await move.press('Shift+ArrowDown');
+        await move.focus();
+        const distance = 500 - (await move.boundingBox()).y;
+        for (let i = 0; i < Math.floor(Math.abs(distance) / 24); i++) await move.press(distance > 0 ? 'Shift+ArrowDown' : 'Shift+ArrowUp');
       }
-      await page.getByRole('tabpanel', { name: 'Image', exact: true }).getByRole('checkbox', { name: 'Include Image in publication' }).click({ trial: true });
+      await panel.getByRole('checkbox', { name: 'Include Image in publication' }).click({ trial: true });
       const retry = page.getByRole('button', { name: 'Retry artwork', exact: true });
       await mkdir(output, { recursive: true });
       await page.screenshot({ path: `${output}/recovery-reachability-${width}-${size || 'normal'}-${touch ? 'touch' : 'pointer'}.png` });
@@ -48,7 +61,7 @@ test('Owner Image Retry remains reachable beside Image settings on pointer and t
       const geometry = await page.locator('.image-module__window').boundingBox();
       const camera = () => page.locator('main.system-workflow').evaluate(node => [node.dataset.workbenchCameraScale, node.dataset.workbenchCameraX, node.dataset.workbenchCameraY]);
       const beforeCamera = await camera();
-      const status = await page.locator('.image-module__flip-status').boundingBox();
+      const status = await page.locator('.image-module__status').boundingBox();
       const inspect = await page.locator('.image-module__window > .image-module__inspect').boundingBox();
       assert.ok(status.y + status.height <= inspect.y || inspect.y + inspect.height <= status.y, `Recovery text overlaps Inspect: ${JSON.stringify({ status, inspect })}`);
       await mkdir(output, { recursive: true });
@@ -106,7 +119,7 @@ test('Small and thin Image recovery clears controls at both viewport edges for o
           const asset = buildProfileDocumentV9Asset(OWNER_SYSTEM_WORKFLOW_REVIEW_ASSETS[0], OWNER_SYSTEM_WORKFLOW_REVIEW_ASSETS[0].id);
           const draft = store.getDraft();
           draft.imageModules = [{ id: 'image:edge', name: 'Edge artwork', width, height, visibility: 'PUBLIC',
-            sides: ['one', 'two'].map(id => ({ id: `side:${id}`, crop: null, transform: { quarterTurns: 0, mirrorX: false, mirrorY: false }, asset: { ...asset, media: { ...asset.media, url, width: 2000, height: 2000 } } })) }];
+            artwork: { id: 'artwork:edge', crop: null, transform: { quarterTurns: 0, mirrorX: false, mirrorY: false }, asset: { ...asset, media: { ...asset.media, url, width: 2000, height: 2000 } } } }];
           draft.workbench = { ...createDefaultWorkbenchPresentation(), imageModules: [{ id: 'image:edge', open: true, position: { left: 32, top: edge === 'top' ? 8 : innerHeight - height - 8 } }] };
           if (!store.commitCompletedOperation(draft, { expectedGeneration: store.getGeneration() })) throw Error('Edge fixture failed to save');
           const api = window.imageRecoveryEdge = { store };
@@ -124,7 +137,7 @@ test('Small and thin Image recovery clears controls at both viewport edges for o
         await retry.waitFor(); await retry.click({ trial: true });
         const image = page.locator('.image-module__window'), status = await page.locator('.image-module__recovery-status').boundingBox();
         assert.ok(status.x >= 0 && status.y >= 0 && status.x + status.width <= 1440 && status.y + status.height <= 1000, JSON.stringify({ width, height, edge, status }));
-        for (const control of await page.locator(':is(.image-module__window,.image-module__editing-controls) > :is(.image-module__inspect,.image-module__next,.image-module__close,.image-module__resize)').all()) {
+        for (const control of await page.locator(':is(.image-module__window,.image-module__editing-controls) > :is(.image-module__inspect,.image-module__close,.image-module__resize)').all()) {
           await control.click({ trial: true });
           const box = await control.boundingBox();
           assert.ok(box.x + box.width <= status.x || status.x + status.width <= box.x || box.y + box.height <= status.y || status.y + status.height <= box.y, `Recovery overlaps an Image control: ${JSON.stringify({ box, status })}`);

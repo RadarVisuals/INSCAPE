@@ -1,3 +1,4 @@
+import { resetCameraTestView } from './fixtures/workbench-camera-test.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdir } from 'node:fs/promises';
@@ -26,19 +27,20 @@ test('Keeper chat retains selection and sends fresh selected Image/Display conte
       await page.route('**/motion-artwork.png', route => route.fulfill({ contentType: 'image/jpeg', headers: { 'Access-Control-Allow-Origin': '*' }, path: 'browser-tests/fixtures/grid-landscape.jpg' }));
       await page.evaluate(width => {
         const draft = JSON.parse(localStorage.getItem(window.__motionKey));
-        draft.imageModules = draft.imageModules.slice(0, 2).map((image, i) => ({ ...image, sides: image.sides.map(side => ({ ...side, asset: { ...side.asset, name: i ? 'Far selected study' : 'Near study' } })) }));
+        draft.imageModules = draft.imageModules.slice(0, 2).map((image, i) => ({ ...image, artwork: { ...image.artwork, asset: { ...image.artwork.asset, name: i ? 'Far selected study' : 'Near study' } } }));
         draft.workbench.imageModules = draft.workbench.imageModules.slice(0, 2).map((image, i) => ({ ...image, position: { left: i ? 220 : 30, top: 620 } }));
-        draft.keeperDocks = [{ id: 'keeper:selection', name: 'Hex', asset: draft.imageModules[0].sides[0].asset, faces: 'right', movement: 'flip', size: 96, visibility: 'PRIVATE' }];
+        draft.keeperDocks = [{ id: 'keeper:selection', name: 'Hex', asset: draft.imageModules[0].artwork.asset, faces: 'right', movement: 'flip', size: 96, visibility: 'PRIVATE' }];
         draft.workbench.keeperDocks = [{ id: 'keeper:selection', position: { left: Math.min(430, width - 130), top: 330 } }];
         localStorage.setItem(window.__motionKey, JSON.stringify(draft)); window.__selectionSaved = localStorage.getItem(window.__motionKey);
         window.__motionRemount();
       }, width);
+      await resetCameraTestView(page);
       const board = page.locator('main.system-workflow').first();
       const choose = async (ids, clear = true) => {
         if (clear) { await board.focus(); await page.keyboard.press('Escape'); }
         // Let native focus settle before the separate Shift+Enter gesture.
         for (const id of ids) {
-          const window = page.locator(`[data-workbench-view-id="${id}"]`);
+          const window = page.locator(`[data-workbench-artwork][data-workbench-view-id="${id}"]`);
           const target = await window.getAttribute('data-workbench-selectable') !== null ? window : window.locator('[data-workbench-selectable]').first();
           await target.focus();
           await page.keyboard.press('Shift+Enter');

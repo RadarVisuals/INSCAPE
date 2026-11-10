@@ -5,6 +5,27 @@ import { canvasContent, canvasDetails, canvasDocument, publishedCanvasEntries } 
 import { projectReception } from './receptionPresentation.js';
 import { projectReceptionSceneMappings } from './receptionLinks.js';
 import { publishedPresentationSnapshot } from '../../presentation/presentationSources.js';
+import { normalizeProfileAddress } from '../../library/config.js';
+
+export function canReplaceInvalidPublication(resolution, profileAddress) {
+  const address = normalizeProfileAddress(profileAddress);
+  return Boolean(address && !resolution?.busy && resolution?.status === 'INVALID'
+    && resolution.errorCode === 'INVALID_DOCUMENT' && normalizeProfileAddress(resolution.address) === address);
+}
+
+export function resolvePublicationBaseline(resolution, profileAddress, { replaceInvalid = false } = {}) {
+  if (!resolution?.busy && resolution?.status === 'RESOLVED') {
+    const document = assertValidProfileDocumentV9(resolution.document);
+    if (document.profile.address !== normalizeProfileAddress(profileAddress)) throw new Error('The publication must belong to this profile.');
+    return document;
+  }
+  if (!resolution?.busy && resolution?.status === 'UNAVAILABLE') return null;
+  if (canReplaceInvalidPublication(resolution, profileAddress)) {
+    if (replaceInvalid) return null;
+    throw new Error('Confirm replacement of the invalid publication before preparing changes.');
+  }
+  throw new Error('Wait for the latest publication to be verified before preparing changes.');
+}
 
 const canonical = value => JSON.stringify(value, function (key, item) {
   return item && typeof item === 'object' && !Array.isArray(item)

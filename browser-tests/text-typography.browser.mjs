@@ -1,5 +1,5 @@
 import { setSharedColor } from './fixtures/shared-tools.mjs';
-import { openTextToolSection } from './fixtures/text-tool-sections.mjs';
+import { openTextToolSection, chooseTextToolOption } from './fixtures/text-tool-sections.mjs';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { mkdir } from 'node:fs/promises';
@@ -23,11 +23,11 @@ async function selectText(page, body, text) {
   await settle(page);
 }
 async function setNumber(page, name, value) {
-  const tools = page.locator('.text-tools-window');
+  const tools = page.locator('.workbench-tool-dock:has([data-text-inspector])');
   if (name.startsWith('Title')) await openTextToolSection(tools, 'Title');
-  else await tools.getByRole('tab', { name: 'Format text', exact: true }).click();
+  else await tools.getByLabel('Selected text size', { exact: true }).scrollIntoViewIfNeeded();
   if (name.startsWith('Paragraph') || name === 'Selected text tracking') {
-    const advanced = tools.locator('.text-inspector-advanced');
+    const advanced = tools.locator('.text-more-tools');
     if (!await advanced.getAttribute('open').then(value => value !== null)) await advanced.locator('summary').click();
   }
   const field = page.getByRole('spinbutton', { name, exact: true });
@@ -59,7 +59,7 @@ test('clicking a small sub-label preserves the target and joined lines can be se
       const body = page.getByRole('textbox', { name: 'Article text', exact: true });
       const label = body.locator('span').filter({ hasText: 'HUMAN UNDERNEATH' });
       await label.click();
-      await page.locator('.text-inspector-advanced summary').click();
+      await openTextToolSection(page.locator('.workbench-tool-dock:has([data-text-inspector])'), 'More text tools');
       const separate = page.getByRole('button', { name: 'Separate this line', exact: true });
       assert.equal(await separate.count(), shape === 'paragraphs' ? 0 : 1);
       await setNumber(page, 'Paragraph space after', 24);
@@ -79,22 +79,30 @@ test('clicking a small sub-label preserves the target and joined lines can be se
         await setNumber(page, 'Paragraph space after', 36);
         const after = await body.locator('p').nth(1).evaluate(n => n.getBoundingClientRect().top);
         assert.ok(Math.abs(after - before - 36) < .1, 'spacing now opens below the label');
+        await openTextToolSection(page.locator('.workbench-tool-dock:has([data-text-inspector])'), 'More text tools');
         await page.getByRole('button', { name: 'Undo', exact: true }).click();
+        await openTextToolSection(page.locator('.workbench-tool-dock:has([data-text-inspector])'), 'More text tools');
         await page.getByRole('button', { name: 'Undo', exact: true }).click();
         assert.equal(await body.locator('p').count(), 2);
+        await openTextToolSection(page.locator('.workbench-tool-dock:has([data-text-inspector])'), 'More text tools');
         await page.getByRole('button', { name: 'Redo', exact: true }).click();
+        await openTextToolSection(page.locator('.workbench-tool-dock:has([data-text-inspector])'), 'More text tools');
         await page.getByRole('button', { name: 'Redo', exact: true }).click();
         assert.deepEqual(await body.locator('p').evaluateAll(nodes => nodes.map(n => n.style.paddingBottom)), ['36px', '24px', '']);
         if (shape === 'hardBreak') {
+          await openTextToolSection(page.locator('.workbench-tool-dock:has([data-text-inspector])'), 'More text tools');
           await page.getByRole('button', { name: 'Undo', exact: true }).click();
+          await openTextToolSection(page.locator('.workbench-tool-dock:has([data-text-inspector])'), 'More text tools');
           await page.getByRole('button', { name: 'Undo', exact: true }).click();
           await page.setViewportSize({ width: 390, height: 844 }); await settle(page);
           await separate.scrollIntoViewIfNeeded(); await separate.focus();
-          const tools = page.locator('.text-tools-window'), box = await tools.boundingBox();
+          const tools = page.locator('.workbench-tool-dock:has([data-text-inspector])'), box = await tools.boundingBox();
           assert.ok(box.x >= 0 && box.x + box.width <= 390.5);
-          assert.equal(await tools.locator('.text-tools-content').evaluate(n => n.scrollWidth <= n.clientWidth + 1), true);
+          assert.equal(await tools.locator('.workbench-inspector').evaluate(n => n.scrollWidth <= n.clientWidth + 1), true);
           await page.screenshot({ path: '.browser-test-runtime/text-line-shared-narrow.png' });
+          await openTextToolSection(page.locator('.workbench-tool-dock:has([data-text-inspector])'), 'More text tools');
           await page.getByRole('button', { name: 'Redo', exact: true }).click();
+          await openTextToolSection(page.locator('.workbench-tool-dock:has([data-text-inspector])'), 'More text tools');
           await page.getByRole('button', { name: 'Redo', exact: true }).click();
           await page.setViewportSize({ width: 1440, height: 1100 });
         }
@@ -126,16 +134,18 @@ test('selected size and tracking author a sub-label, preserve other text, undo, 
     await body.fill('ARCHIVE // 01'); await body.press('End'); await body.press('Enter');
     await page.keyboard.insertText('A paragraph with selected words and ordinary text.');
     await selectText(page, body, 'ARCHIVE // 01');
-    await page.getByLabel('Selected text font', { exact: true }).selectOption('Inscape Article Mono');
+    await chooseTextToolOption(page, 'Selected text font', 'IBM Plex Mono');
     await setSharedColor(page, '#aabbcc', 'body');
     await setNumber(page, 'Selected text size', 10);
     await setNumber(page, 'Selected text tracking', .2);
     const label = body.locator('span').filter({ hasText: 'ARCHIVE // 01' });
     assert.deepEqual(await styleOf(label), ['10px', '2px', 'rgb(170, 187, 204)']);
     assert.equal(await body.locator('p').nth(1).locator('span').count(), 0);
+    await openTextToolSection(page.locator('.workbench-tool-dock:has([data-text-inspector])'), 'More text tools');
     await page.getByRole('button', { name: 'Undo', exact: true }).click();
     assert.equal((await styleOf(label))[1], 'normal', 'one undo removes only tracking');
     assert.equal((await styleOf(label))[0], '10px');
+    await openTextToolSection(page.locator('.workbench-tool-dock:has([data-text-inspector])'), 'More text tools');
     await page.getByRole('button', { name: 'Redo', exact: true }).click();
     assert.equal((await styleOf(label))[1], '2px');
     await setNumber(page, 'Title tracking', .12);
@@ -170,7 +180,7 @@ test('selected size and tracking author a sub-label, preserve other text, undo, 
     // An explicit zero survives unrelated FontFamily/Color cleanup commands.
     await selectText(page, body, 'ordinary'); await setNumber(page, 'Selected text tracking', 0);
     assert.equal(await body.locator('span').filter({ hasText: 'ordinary' }).evaluate(n => n.style.letterSpacing), '0em', 'explicit zero renders immediately');
-    await page.getByLabel('Selected text font', { exact: true }).selectOption('Inscape Article Literata');
+    await chooseTextToolOption(page, 'Selected text font', 'Literata');
     await page.getByRole('button', { name: 'Use default font (Sora)', exact: true }).click();
     const zero = body.locator('span').filter({ hasText: 'ordinary' });
     assert.equal(await zero.evaluate(n => n.style.letterSpacing), '0em');
@@ -195,9 +205,9 @@ test('selected size and tracking author a sub-label, preserve other text, undo, 
     await mkdir('.browser-test-runtime', { recursive: true });
     await page.screenshot({ path: '.browser-test-runtime/text-typography-wide.png' });
     await page.setViewportSize({ width: 390, height: 844 }); await settle(page);
-    const tools = page.locator('.text-tools-window'), box = await tools.boundingBox();
+    const tools = page.locator('.workbench-tool-dock:has([data-text-inspector])'), box = await tools.boundingBox();
     assert.ok(box.x >= 0 && box.x + box.width <= 390.5);
-    assert.equal(await tools.locator('.text-tools-content').evaluate(node => node.scrollWidth <= node.clientWidth + 1), true);
+    assert.equal(await tools.locator('.workbench-inspector').evaluate(node => node.scrollWidth <= node.clientWidth + 1), true);
     await field.scrollIntoViewIfNeeded(); await field.fill('30'); await settle(page);
     assert.equal((await styleOf(label))[0], '30px');
     assert.equal(await field.evaluate(node => node === document.activeElement), true);
@@ -231,6 +241,7 @@ test('typography targets a Display heading and stays scoped when Text tools swit
     await first.focus(); await page.keyboard.press('Enter');
     const body = first.getByRole('textbox', { name: 'Article text', exact: true });
     await body.fill('ARCHIVE HEADING'); await body.press('Control+A');
+    await openTextToolSection(page.locator('.workbench-tool-dock:has([data-text-inspector])'), 'More text tools');
     await page.getByLabel('Paragraph style', { exact: true }).selectOption('2');
     await setNumber(page, 'Selected text size', 32); await setNumber(page, 'Selected text tracking', .1);
     await setNumber(page, 'Paragraph space before', 6); await setNumber(page, 'Paragraph space after', 18);
@@ -279,7 +290,9 @@ test('title and paragraph gaps control the Nomad layout, undo, reset and persist
     await body.focus(); await body.press('Control+Home'); await body.press('ArrowRight'); await settle(page);
     await setNumber(page, 'Paragraph space after', 0); const zeroAfter = await point(1);
     await setNumber(page, 'Paragraph space after', 32); assert.ok(Math.abs((await point(1)) - zeroAfter - 32) < .1);
+    await openTextToolSection(page.locator('.workbench-tool-dock:has([data-text-inspector])'), 'More text tools');
     await page.getByRole('button', { name: 'Undo', exact: true }).click(); assert.ok(Math.abs((await point(1)) - zeroAfter) < .1);
+    await openTextToolSection(page.locator('.workbench-tool-dock:has([data-text-inspector])'), 'More text tools');
     await page.getByRole('button', { name: 'Redo', exact: true }).click();
     await selectText(page, body, 'Nomad is an inversion. A name turned inside out.');
     const before = await point(1); await setNumber(page, 'Paragraph space before', 5);
@@ -299,6 +312,7 @@ test('title and paragraph gaps control the Nomad layout, undo, reset and persist
     await control.press('Escape'); await settle(page);
     assert.deepEqual(await body.locator('p').evaluateAll(nodes => nodes.map(n => n.style.paddingTop)), ['', '5px', ''], 'Escape restores mixed paragraph spacing');
     await setNumber(page, 'Paragraph space before', 0);
+    await openTextToolSection(page.locator('.workbench-tool-dock:has([data-text-inspector])'), 'More text tools');
     await page.getByRole('button', { name: 'Undo', exact: true }).click();
     assert.deepEqual(await body.locator('p').evaluateAll(nodes => nodes.map(n => n.style.paddingTop)), ['', '5px', '']);
     await selectText(page, body, 'Nomad is an inversion. A name turned inside out.');
@@ -313,9 +327,9 @@ test('title and paragraph gaps control the Nomad layout, undo, reset and persist
     await page.screenshot({ path: '.browser-test-runtime/text-spacing-wide.png' });
     await page.setViewportSize({ width: 390, height: 844 }); await settle(page);
     await control.scrollIntoViewIfNeeded(); await control.focus();
-    const tools = page.locator('.text-tools-window'), box = await tools.boundingBox();
+    const tools = page.locator('.workbench-tool-dock:has([data-text-inspector])'), box = await tools.boundingBox();
     assert.ok(box.x >= 0 && box.x + box.width <= 390.5);
-    assert.equal(await tools.locator('.text-tools-content').evaluate(n => n.scrollWidth <= n.clientWidth + 1), true);
+    assert.equal(await tools.locator('.workbench-inspector').evaluate(n => n.scrollWidth <= n.clientWidth + 1), true);
     await page.screenshot({ path: '.browser-test-runtime/text-spacing-narrow.png' });
     await page.setViewportSize({ width: 1440, height: 1100 }); await settle(page);
     await page.getByRole('button', { name: 'Read', exact: true }).focus(); await page.keyboard.press('Enter');

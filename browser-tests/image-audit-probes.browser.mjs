@@ -1,3 +1,4 @@
+import { openSharedTool, sharedToolPanel } from './fixtures/shared-tools.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { chromium } from 'playwright-core';
@@ -41,7 +42,7 @@ test('Image audit: independent commits, unavailable media and minimum-size contr
       const asset = createProfileDocumentV9AssetResolver(assets, { compactContentReference: false })(assets[0].id);
       asset.media = { ...asset.media, url: 'https://audit.test/good.svg', width: 640, height: 480 };
       const draft = store.getDraft();
-      draft.imageModules[0].sides = ['one', 'two'].map(key => ({ id: `side:${key}`, asset, crop: { x: .5, y: .5, zoom: 1 }, transform: { quarterTurns: 0, mirrorX: false, mirrorY: false } }));
+      draft.imageModules[0].artwork = { id: 'artwork:audit', asset, crop: { x: .5, y: .5, zoom: 1 }, transform: { quarterTurns: 0, mirrorX: false, mirrorY: false } };
       store.commitCompletedOperation(draft, { expectedGeneration: store.getGeneration() });
       window.auditStore = store;
       window.auditCommit = patch => { const d = store.getDraft(); Object.assign(d.imageModules[0], patch); return store.commitCompletedOperation(d, { expectedGeneration: store.getGeneration() }); };
@@ -50,7 +51,7 @@ test('Image audit: independent commits, unavailable media and minimum-size contr
       function CameraProbe() { const view = useWorkbenchView(); window.auditZoom = view.setScale; React.useEffect(() => view.selectArtwork(id), []); return null; }
       function Fixture() {
         const hostRef = React.useRef(null);
-        const [dock] = React.useState(() => { const layout = createToolDockLayout(innerWidth); layout.hidden = ['Layers', 'Shape', 'FX']; layout.groups[0].panes[0].active = 'Image'; return createToolDockStore(layout); });
+        const [dock] = React.useState(() => { const layout = createToolDockLayout(innerWidth); layout.hidden = ['Layers']; return createToolDockStore(layout); });
         const d = React.useSyncExternalStore(store.subscribe, store.getSnapshot);
         return React.createElement(WorkbenchViewProvider, { store, profileAddress: profile, presentation: d.workbench },
           React.createElement(CameraProbe),
@@ -64,7 +65,7 @@ test('Image audit: independent commits, unavailable media and minimum-size contr
     });
     const module = page.locator('[data-image-module]').first();
     const canvas = module.locator('.image-module__canvas');
-    const dock = page.locator('.workbench-image-tools');
+    const dock = page.locator('.workbench-image-inspector');
     await dock.getByRole('button', { name: 'Crop', exact: true }).click();
     await dock.getByRole('slider').fill('2');
     assert.equal(await canvas.getAttribute('data-cropping'), 'true');
@@ -84,7 +85,7 @@ test('Image audit: independent commits, unavailable media and minimum-size contr
     await page.keyboard.press('Escape');
     await page.getByRole('dialog', { name: 'Inspect Image' }).waitFor({ state: 'detached' });
 
-    await page.evaluate(() => { const d = window.auditStore.getDraft(); d.imageModules[0].sides[0].asset.media.url = 'https://audit.test/missing.png'; window.auditCommit({ sides: d.imageModules[0].sides }); });
+    await page.evaluate(() => { const d = window.auditStore.getDraft(); d.imageModules[0].artwork.asset.media.url = 'https://audit.test/missing.png'; window.auditCommit({ artwork: d.imageModules[0].artwork }); });
     await module.getByRole('status').filter({ hasText: 'Artwork unavailable' }).waitFor();
     results.unavailable = { alerts: await module.getByRole('alert').count(), status: await module.getByRole('status').count(), label: await canvas.getAttribute('aria-label') };
     assert.equal(results.unavailable.status, 1, 'missing media is distinguished from successful loading');
@@ -94,15 +95,14 @@ test('Image audit: independent commits, unavailable media and minimum-size contr
     results.unavailable.dialogAlerts = await page.getByRole('dialog').getByRole('alert').count();
     await page.keyboard.press('Escape');
 
-    await page.evaluate(() => { const d = window.auditStore.getDraft(); d.imageModules[0].sides[0].asset.media.url = 'https://audit.test/good.svg'; window.auditCommit({ width: 32, height: 32, sides: d.imageModules[0].sides }); });
+    await page.evaluate(() => { const d = window.auditStore.getDraft(); d.imageModules[0].artwork.asset.media.url = 'https://audit.test/good.svg'; window.auditCommit({ width: 32, height: 32, artwork: d.imageModules[0].artwork }); });
     await canvas.focus();
     results.small = await module.evaluate(node => {
       const canvas = node.querySelector('.image-module__canvas').getBoundingClientRect();
-      const next = node.querySelector('.image-module__next').getBoundingClientRect();
       const inspect = node.querySelector('.image-module__inspect').getBoundingClientRect();
-      return { canvas: canvas.toJSON(), next: next.toJSON(), inspect: inspect.toJSON(), nextCenterHit: document.elementFromPoint(next.x + next.width/2, next.y + next.height/2)?.outerHTML.slice(0, 160) };
+      return { canvas: canvas.toJSON(), inspect: inspect.toJSON(), inspectCenterHit: document.elementFromPoint(inspect.x + inspect.width/2, inspect.y + inspect.height/2)?.outerHTML.slice(0, 160) };
     });
-    assert.ok(results.small.next.top >= results.small.canvas.bottom, 'minimum canvas controls leave its artwork exposed');
+    assert.ok(results.small.inspect.top >= results.small.canvas.bottom, 'minimum canvas controls leave its artwork exposed');
     await page.screenshot({ path: `${output}/minimum-canvas-wide.png` });
     await page.setViewportSize({ width: 390, height: 844 });
     await page.screenshot({ path: `${output}/minimum-canvas-narrow.png` });
@@ -114,11 +114,11 @@ test('Image audit: independent commits, unavailable media and minimum-size contr
       return { width: r.width, height: r.height, accessiblePixels };
     });
     await page.evaluate(() => window.auditExternalChange());
-    await page.getByRole('tab', { name: 'Transform', exact: true }).click();
+    await openSharedTool(page, 'Transform');
     const width = page.getByRole('spinbutton', { name: 'Transform Width' });
     await width.fill('64');
     for (let attempt = 0; attempt < 3; attempt++) { await width.focus(); await width.press('Enter'); }
-    results.externalChange = { message: await page.getByRole('tabpanel', { name: 'Transform', exact: true }).getByRole('alert').innerText(), widthAfterThreeAttempts: await page.evaluate(() => window.auditStore.getDraft().imageModules[0].width) };
+    results.externalChange = { message: await sharedToolPanel(page).locator('[data-inspector-section="Transform"]').getByRole('alert').innerText(), widthAfterThreeAttempts: await page.evaluate(() => window.auditStore.getDraft().imageModules[0].width) };
     assert.equal(results.externalChange.widthAfterThreeAttempts, 32);
     assert.deepEqual(errors, []);
     await writeFile(`${output}/probes.json`, JSON.stringify(results, null, 2));

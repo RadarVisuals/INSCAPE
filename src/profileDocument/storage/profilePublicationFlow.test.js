@@ -24,9 +24,9 @@ for (const collectionMode of [false, true]) test(`current mixed modules pass upl
   const build = () => buildProfileDocumentV9({ profileAddress: filledProfile,
     systemWorkflowDraft: draft, assetRecords: filledAssets, createdAt: 1, exportedAt: 2 });
   const asset = build().grids[0].placements.find(placement => placement.asset.media.type === 'image').asset;
-  draft.imageModules = [{ id: 'image:flow', name: 'Two-sided work', width: 640, height: 480, visibility: 'PUBLIC',
-    sides: ['front', 'back'].map(id => ({ id: `side:${id}`, asset: structuredClone(asset),
-      crop: { x: .25, y: .75, zoom: 2 }, transform: { quarterTurns: 1, mirrorX: true, mirrorY: false } })) }];
+  draft.imageModules = [{ id: 'image:flow', name: 'Published image', width: 640, height: 480, visibility: 'PUBLIC',
+    artwork: { id: 'artwork:flow', asset: structuredClone(asset),
+      crop: { x: .25, y: .75, zoom: 2 }, transform: { quarterTurns: 1, mirrorX: true, mirrorY: false } } }];
   draft.texts = [{ id: 'text:flow', article: createArticle('Published essay'), visibility: 'PUBLIC' },
     { id: 'text:private', article: createArticle('Private fixture'), visibility: 'PRIVATE' }];
   draft.shapes = [{ id: 'shape:flow', name: 'Backdrop', color: '#123456', opacity: .6, grain: .2, visibility: 'PUBLIC' }];
@@ -37,7 +37,7 @@ for (const collectionMode of [false, true]) test(`current mixed modules pass upl
   const artifact = createCanonicalPublication(document);
   assert.doesNotMatch(artifact.text, /Private fixture|filled-private|text:private/);
   assert.equal(document.displays.length, 1);
-  assert.equal(document.imageModules[0].sides.length, 2);
+  assert.deepEqual(document.imageModules[0].artwork, draft.imageModules[0].artwork);
   assert.equal(document.texts.length, 1);
   assert.equal(document.shapes.length, 1);
 
@@ -93,7 +93,7 @@ for (const collectionMode of [false, true]) test(`current mixed modules pass upl
   const pages = publicReadingPages(published.result.document);
   assert.equal(publicDisplayModules(published.result.document).flatMap(module => module.document.grids).length, 2);
   assert.equal(pages.some(page => page.kind === 'composition'), false);
-  assert.equal(pages.filter(page => page.kind === 'image').length, 2);
+  assert.equal(pages.filter(page => page.kind === 'image').length, 1);
   assert.equal(pages.filter(page => page.kind === 'text').length, 1);
   assert.deepEqual(draft, before, 'publication does not mutate the authored draft');
 });

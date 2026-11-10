@@ -1,6 +1,6 @@
 import { useWorkbenchArea } from '../public/ownerSystemWorkflow/WorkbenchAreaContext.jsx';
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { X } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { X, GripVertical } from 'lucide-react';
 import { useWorkbenchView, workbenchModuleTransform, useWorkbenchViewRegistration } from '../public/ownerSystemWorkflow/WorkbenchViewContext.js';
 import { useWorkbenchPlacement, useWorkbenchMovementSnap } from '../public/ownerSystemWorkflow/WorkbenchPlacement.jsx';
 import { imageWindowGeometry, imageWindowPosition, imagePaintGeometry, resizeImageGeometry } from './imageWindowGeometry.js';
@@ -12,11 +12,12 @@ import ImageEditingControls from './ImageEditingControls.jsx';
 // Image owns a borderless surface. Workbench owns the camera, placement bounds
 // and snapping. No instrument-window sizing, chrome or content gutter is used.
 export default function ImageWindow({ id, title, position, size, viewport = { width: innerWidth, height: innerHeight }, editable, active, suspended, movable = true, placementModule,
-  onPosition, onResize, onClose, resizeTarget, quickTools, children }) {
+  applyPosition, onBeginMove, onResize, onClose, resizeTarget, quickTools, children }) {
   const { editingBounds: areaBounds, canvasHost } = useWorkbenchArea();
   const node = useRef(null), gesture = useRef(null), suppressClick = useRef(false);
   const [preview, setPreview] = useState(null);
   const view = useWorkbenchView();
+  const { store, groupDrop } = view;
   const camera = workbenchModuleTransform(view, id);
   if (camera.presented) { editable = false; movable = false; }
   const { offset } = useWorkbenchCamera();
@@ -36,18 +37,18 @@ export default function ImageWindow({ id, title, position, size, viewport = { wi
   const screen = imageWindowGeometry(currentPosition, { width, height }, camera, offset);
   const placement = useWorkbenchPlacement(node, placementModule, camera.scale, true, screen);
   const latest = useRef(null);
-  latest.current = { onPosition, placement, areaBounds };
+  latest.current = { placement, areaBounds };
   // A single selected Image delegates its corner geometry back to Image. The
   // Workbench still owns selection preview and the shared atomic commit.
   const registeredResizeTarget = useMemo(() => resizeTarget && { ...resizeTarget,
     resizeCorner: (frame, edge, delta, bypass) => {
       const next = resizeImageGeometry(frame, frame, edge, delta,
-        (axis, side, value) => latest.current.placement.edge(axis, side, value, frame, bypass), latest.current.areaBounds);
+        (axis, side, value) => latest.current.placement.edge(axis, side, value, frame, bypass), latest.current.areaBounds, resizeTarget);
       return { ...next.position, ...next.size };
     },
   }, [resizeTarget]);
-  useWorkbenchViewRegistration(id, node, true, { ...position, width: size.width, height: size.height }, registeredResizeTarget, onPosition);
-  const finish = (cancelled = false) => {
+  useWorkbenchViewRegistration(id, node, true, { ...position, width: size.width, height: size.height }, registeredResizeTarget, applyPosition);
+  const finish = useCallback((cancelled = false, pointer) => {
     const active = gesture.current;
     if (!active) return;
     gesture.current = null;
@@ -55,11 +56,16 @@ export default function ImageWindow({ id, title, position, size, viewport = { wi
     suppressClick.current = active.kind === 'move' && (active.dragged || cancelled);
     if (!cancelled && active.next) {
       if (active.kind === 'resize') active.onResize(active.next.size, active.next.position);
-      else latest.current.onPosition(active.next.position);
+      else {
+        const sameDraft = active.generation === store?.getGeneration();
+        const grouped = sameDraft && groupDrop?.current?.commit(pointer, [id]);
+        if (!grouped) active.commitMove(active.next.position);
+      }
     }
+    if (active.dragged) groupDrop?.current?.cancel();
     setPreview(null);
     if (active.target.hasPointerCapture(active.id)) active.target.releasePointerCapture(active.id);
-  };
+  }, [store, groupDrop, id]);
   useEffect(() => {
     const cancel = event => {
       if (!gesture.current || event.type !== 'blur' && event.key !== 'Escape') return;
@@ -69,19 +75,19 @@ export default function ImageWindow({ id, title, position, size, viewport = { wi
     };
     addEventListener('blur', cancel); addEventListener('keydown', cancel, true);
     return () => { removeEventListener('blur', cancel); removeEventListener('keydown', cancel, true); finish(true); };
-  }, []);
-  useEffect(() => { finish(true); }, [position.left, position.top, size.width, size.height, camera.scale, camera.x, camera.y, offset.x, offset.y, viewport.width, viewport.height, suspended, movable, editable, resizeTarget?.expected]);
+  }, [finish]);
+  useEffect(() => { finish(true); }, [finish, position.left, position.top, size.width, size.height, camera.scale, camera.x, camera.y, offset.x, offset.y, viewport.width, viewport.height, suspended, movable, editable, resizeTarget?.expected]);
   const begin = (event, kind, edge) => {
+    if (gesture.current || suspended || event.button !== 0 || kind === 'move' && !movable
+      || event.target.closest('button:not(.image-module__canvas):not(.image-module__move), a, input, select, textarea')) return;
     suppressClick.current = false;
-    if (suspended || event.button !== 0 || kind === 'move' && !movable
-      || event.target.closest('button:not(.image-module__canvas), a, input, select, textarea')) return;
     event.preventDefault(); event.stopPropagation(); event.currentTarget.focus({ preventScroll: true });
     placement.begin(event);
     // Capture on the artwork button itself so a stationary release still
     // produces its native click. A completed drag suppresses that click below.
     const target = event.target.closest('.image-module__canvas') || event.currentTarget;
     gesture.current = { id: event.pointerId, kind, x: event.clientX, y: event.clientY,
-      position, size, edge, onResize, target };
+      position, size, edge, onResize, generation: view.store?.getGeneration(), commitMove: kind === 'move' ? onBeginMove() : null, target };
     target.setPointerCapture(event.pointerId);
   };
   const placedPosition = (candidate, bypass) => {
@@ -91,7 +97,7 @@ export default function ImageWindow({ id, title, position, size, viewport = { wi
     return clampWorkbenchPosition(imageWindowPosition(snapped, camera, offset), { width, height }, areaBounds);
   };
   const resizeTo = (start, edge, delta, bypass) => resizeImageGeometry(start.position, start.size, edge, delta,
-    (axis, side, value) => placement.edge(axis, side, value, currentPosition, bypass), areaBounds);
+    (axis, side, value) => placement.edge(axis, side, value, currentPosition, bypass), areaBounds, resizeTarget);
   const move = event => {
     const active = gesture.current;
     if (active?.id !== event.pointerId) return;
@@ -100,6 +106,7 @@ export default function ImageWindow({ id, title, position, size, viewport = { wi
     if (active.kind === 'move') {
       if (!active.dragged && Math.hypot(event.clientX - active.x, event.clientY - active.y) < 5) return;
       active.dragged = true;
+      view.groupDrop?.current?.preview(event, [id]);
       active.next = { size: active.size, position: placedPosition({ left: active.position.left + dx, top: active.position.top + dy }, event.altKey) };
       setPreview(active.next);
     } else {
@@ -107,17 +114,20 @@ export default function ImageWindow({ id, title, position, size, viewport = { wi
       setPreview(active.next);
     }
   };
+  const endPointer = (event, cancelled) => { if (gesture.current?.id === event.pointerId) finish(cancelled, event); };
   const pointer = (kind, edge) => ({ onPointerDown: event => begin(event, kind, edge), onPointerMove: move,
-    onPointerUp: () => finish(), onPointerCancel: () => finish(true), onLostPointerCapture: () => finish(true) });
+    onPointerUp: event => endPointer(event, false), onPointerCancel: event => endPointer(event, true), onLostPointerCapture: event => endPointer(event, true) });
   const key = (event, kind, edge) => {
-    if (suspended || kind === 'move' && !movable || event.target !== event.currentTarget || !event.key.startsWith('Arrow')) return;
+    if (gesture.current || suspended || kind === 'move' && !movable || event.target !== event.currentTarget || !event.key.startsWith('Arrow')) return;
     event.preventDefault(); event.stopPropagation();
     const step = event.shiftKey ? 10 : 1;
     const dx = event.key === 'ArrowRight' ? step : event.key === 'ArrowLeft' ? -step : 0;
     const dy = event.key === 'ArrowDown' ? step : event.key === 'ArrowUp' ? -step : 0;
     placement.begin(event);
-    if (kind === 'move') onPosition(placedPosition({ left: position.left + dx / camera.scale, top: position.top + dy / camera.scale }, event.altKey));
-    else {
+    if (kind === 'move') {
+      const commitMove = onBeginMove();
+      commitMove(placedPosition({ left: position.left + dx / camera.scale, top: position.top + dy / camera.scale }, event.altKey));
+    } else {
       const next = resizeTo({ position, size }, edge, { x: dx, y: dy }, event.altKey);
       onResize(next.size, next.position);
     }
@@ -131,7 +141,7 @@ export default function ImageWindow({ id, title, position, size, viewport = { wi
   const outsideControls = screen.width < 80 || screen.height < 80;
   const controlsAbove = screen.top + screen.height + 56 > viewport.height && screen.top >= 56;
   const controlsTop = controlsAbove ? -56 : paint.height / density + 28;
-  const controlsLeft = Math.max(0, Math.min(viewport.width - 84, paint.left / density)) - paint.left / density;
+  const controlsLeft = Math.max(0, Math.min(viewport.width - 56, paint.left / density)) - paint.left / density;
   // Recovery uses its own row beyond the existing action row. Keep both rows
   // inside the viewport without changing artwork or resize-control geometry.
   const recoveryWidth = Math.min(240, viewport.width - 16), recoveryHeight = 40;
@@ -144,7 +154,7 @@ export default function ImageWindow({ id, title, position, size, viewport = { wi
   const handles = editable && WORKBENCH_RESIZE_EDGES.filter(([edge]) => gesture.current?.edge === edge || (edge.length === 2
     ? !edge.includes('w') || screen.width >= 56
     : (edge === 'n' || edge === 's' ? screen.width : screen.height) >= 56)).map(([edge, label]) =>
-    <div key={edge} className={`image-module__resize is-${edge}`} role="separator" data-image-resize={edge}
+    <div key={edge} className={`image-module__resize is-${edge}`} role="separator" data-resize-edge={controlsHost ? edge : undefined}
       style={workbenchResizeControl(edge, { left: paint.left / density, top: paint.top / density, width: paint.width / density, height: paint.height / density }, viewport, density)}
       aria-label={label ? `Resize Image ${label}` : 'Resize Image window'}
       aria-orientation={edge === 'e' || edge === 'w' ? 'vertical' : 'horizontal'}
@@ -169,6 +179,8 @@ export default function ImageWindow({ id, title, position, size, viewport = { wi
     {controlsHost ? <ImageEditingControls host={controlsHost} id={id} viewport={viewport} navigationTop={view.navigationTop}
       frame={{ left: (currentPosition.left * camera.scale + camera.x) / view.scale, top: (currentPosition.top * camera.scale + camera.y) / view.scale,
         width: currentSize.width * camera.scale / view.scale, height: currentSize.height * camera.scale / view.scale }}
-      editable={editable} tools={quickTools} handles={handles} /> : handles}
+      editable={editable} tools={quickTools} moveHandle={movable && <button type="button"
+        className="editor-object-toolbar-button editor-object-toolbar-label image-module__move" aria-label="Move Image" title="Drag to move image; arrow keys to nudge"
+        {...pointer('move')} onKeyDown={event => key(event, 'move')}><GripVertical aria-hidden="true" /></button>} handles={handles} /> : handles}
   </section>;
 }

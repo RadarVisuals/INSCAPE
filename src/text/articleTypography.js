@@ -1,6 +1,8 @@
-import { Extension } from '@tiptap/core';
-import { TextStyle } from '@tiptap/extension-text-style';
+import { CommandManager, Extension } from '@tiptap/core';
+import { TextStyle } from '@tiptap/extension-text-style/text-style';
 import { closeHistory } from '@tiptap/pm/history';
+import { Plugin, PluginKey } from '@tiptap/pm/state';
+import { Decoration, DecorationSet } from '@tiptap/pm/view';
 import { ARTICLE_FONTS, textAppearance, validArticleFontSize, validArticleTracking } from './domain/article.js';
 
 const properties = {
@@ -25,10 +27,54 @@ export const ArticleTextStyle = TextStyle.extend({
   },
 });
 
-// Numeric authored values share the article validator and remain independent of
-// document size and Workbench zoom. TextStyle still owns the combined mark.
+// Font browsing only decorates the view. The document and its history retain the authored marks.
+const fontPreviewKey = new PluginKey('articleFontPreview');
+
+export function activeArticleFontPreview(editor) {
+  return editor && !editor.isDestroyed ? fontPreviewKey.getState(editor.state) : null;
+}
+
+// Measure the same marks that choosing this face would write, on a detached transaction.
+export function articleContentWithFont(editor, family) {
+  const tr = editor.state.tr;
+  new CommandManager({ editor, state: editor.state }).createChain(tr).setFontFamily(family).run();
+  return tr.doc.toJSON();
+}
+
+export function previewArticleFont(editor, family) {
+  if (!editor || editor.isDestroyed) return;
+  const { state } = editor;
+  const next = editor.isEditable && !state.selection.empty ? family : null;
+  if (fontPreviewKey.getState(state) !== next) {
+    editor.view.dispatch(state.tr.setMeta(fontPreviewKey, next).setMeta('addToHistory', false));
+  }
+}
+
 export const ArticleTypography = Extension.create({
   name: 'articleTypography',
+  addProseMirrorPlugins() {
+    return [new Plugin({
+      key: fontPreviewKey,
+      state: {
+        init: () => null,
+        apply(tr, previous) {
+          if (tr.docChanged || tr.selectionSet) return null;
+          const family = tr.getMeta(fontPreviewKey);
+          return family === undefined ? previous : family;
+        },
+      },
+      props: {
+        decorations(state) {
+          const family = fontPreviewKey.getState(state);
+          if (!family) return null;
+          const { from, to } = state.selection;
+          return DecorationSet.create(state.doc, [
+            Decoration.inline(from, to, { style: `font-family: "${family}"` }),
+          ]);
+        },
+      },
+    })];
+  },
   addGlobalAttributes() {
     return [{ types: ['textStyle'], attributes: Object.fromEntries(Object.entries(properties).map(([name, property]) => [name, {
       default: null,
@@ -59,6 +105,15 @@ export function selectedTypography(editor, name) {
   });
   return { value: values.size === 1 ? [...values][0] : null, mixed: values.size > 1,
     hasOverride: [...values].some(value => value != null) };
+}
+
+export function selectedCharacterStyle(editor) {
+  const { from, to, empty, $from } = editor.state.selection;
+  const values = new Set();
+  const collect = marks => values.add(['bold', 'italic'].filter(name => marks.some(mark => mark.type.name === name)).join('-') || 'regular');
+  if (empty) collect(editor.state.storedMarks || $from.marks());
+  else editor.state.doc.nodesBetween(from, to, node => { if (node.isText) collect(node.marks); });
+  return values.size > 1 ? '' : [...values][0] || 'regular';
 }
 
 // Derive the displayed font from the same article/heading defaults as the

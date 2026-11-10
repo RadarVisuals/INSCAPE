@@ -1,12 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { getSchema, Node } from '@tiptap/core';
-import StarterKit from '@tiptap/starter-kit';
+import { articleExtensions } from './articleExtensions.js';
 import { EditorState, NodeSelection, TextSelection } from '@tiptap/pm/state';
 import { history, undo, redo } from '@tiptap/pm/history';
 import { moveArticleArtwork } from './articleArtworkEditing.js';
 const artwork = Node.create({ name: 'artwork', group: 'block', atom: true, addAttributes: () => ({ caption: { default: '' }, asset: { default: null } }) });
-const schema = getSchema([StarterKit, artwork]);
+const schema = getSchema([...articleExtensions, artwork]);
 const p = text => schema.nodes.paragraph.create(null, schema.text(text));
 const art = schema.nodes.artwork.create({ caption: 'Caption', asset: { id: 'unchanged-source' } });
 

@@ -1,3 +1,4 @@
+import { workspacePicker } from './fixtures/editor-menu.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdir } from 'node:fs/promises';
@@ -17,7 +18,9 @@ for (const [width, theme] of [[1440, 'carbon'], [640, 'carbon'], [390, 'carbon']
     const before = await page.evaluate(() => ({ publication: JSON.stringify(window.__overviewPublication), storage: JSON.stringify({ ...localStorage }) }));
     const canvasEntry = page.getByRole('button', { name: 'Enter Inscape', exact: true });
     assert.equal(await canvasEntry.isEnabled(), true);
-    assert.equal(await page.getByRole('button', { name: 'Edit Reception', exact: true }).count(), 1);
+    await workspacePicker(page).click();
+    assert.equal(await page.getByRole('menuitemcheckbox', { name: 'Reception Editor', exact: true }).count(), 1);
+    await page.getByRole('menu', { name: 'Workspace menu' }).press('Escape');
     assert.equal(await page.locator('.profile-overview__gallery, .bento-stage, .identity-module__clouds').count(), 0);
     await page.getByText('Illustration, stories and small worlds.', { exact: true }).waitFor();
     await mkdir(output, { recursive: true });
@@ -43,8 +46,12 @@ for (const [width, theme] of [[1440, 'carbon'], [640, 'carbon'], [390, 'carbon']
     assert.match(page.url(), /[?&]reception=1/);
     assert.equal(await page.locator('main.system-workflow:not(.visitor-grid-world)').count(), 0);
     await page.screenshot({ path: `${output}/entered-canvas-${width}-${theme}.png` });
-    await page.getByRole('button', { name: 'Inscape menu', exact: true }).click();
-    await page.getByRole('button', { name: 'About', exact: true }).click();
+    const reception = page.locator('.composition-index-about');
+    if (await reception.count()) await reception.click();
+    else {
+      await page.getByRole('button', { name: 'Inscape menu', exact: true }).click();
+      await page.getByRole('button', { name: 'About', exact: true }).click();
+    }
     await canvasEntry.waitFor();
     assert.doesNotMatch(page.url(), /[?&]canvas=/);
     await page.goBack(); await page.locator('.workbench-overview').waitFor();

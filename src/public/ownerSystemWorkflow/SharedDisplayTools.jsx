@@ -35,16 +35,17 @@ const closedMetadata = () => false;
 export function SharedDisplayToolsProvider({ children, value, onChange, targetId, onTargetChange, metadataDock }) {
   const [local, setLocal] = useState(defaultSharedTools);
   const [localTarget, setLocalTarget] = useState('display:primary');
+  const [hosts, setHosts] = useState({});
   const metadataOpen = useSyncExternalStore(metadataDock?.subscribe || noSubscription, metadataDock?.infoVisible || closedMetadata);
-  // In the owner editor the dock owns Info visibility and geometry. Visitor
-  // hosts keep their existing independent window and the same module content.
-  const state = useMemo(() => metadataDock ? { ...(value || local), metadata: metadataOpen } : value || local,
-    [value, local, metadataDock, metadataOpen]);
+  // The owner Info section registers its host only while expanded. Inspector
+  // availability alone must not activate Display metadata picking or resolution.
+  // Visitor hosts retain their independent window preference.
+  const state = useMemo(() => metadataDock ? { ...(value || local), metadata: metadataOpen && Boolean(hosts.metadata) } : value || local,
+    [value, local, metadataDock, metadataOpen, hosts.metadata]);
   const setState = onChange || setLocal;
   const target = targetId === undefined ? localTarget : targetId;
   const activate = onTargetChange || setLocalTarget;
   const triggers = useRef({});
-  const [hosts, setHosts] = useState({});
   const [registrations, setRegistrations] = useState(() => new Map());
   const registerHost = useCallback((id, node) => setHosts(current => current[id] === node ? current : { ...current, [id]: node }), []);
   const registerTool = useCallback(tool => {
@@ -58,12 +59,14 @@ export function SharedDisplayToolsProvider({ children, value, onChange, targetId
     if (trigger) triggers.current[id] = trigger;
     if (target) activate(target);
     if (id === 'metadata' && metadataDock) {
-      metadataDock.change({ type: (open ?? !metadataOpen) ? 'open' : 'close', tab: 'Info' });
+      const expand = open ?? !state.metadata;
+      metadataDock.change({ type: expand ? 'open' : 'collapse-section', tab: 'Inspector', section: 'Info' });
       return;
     }
     setState(current => ({ ...current, [id]: open === undefined ? !current[id] : open }));
-  }, [activate, setState, metadataDock, metadataOpen]);
-  const context = useMemo(() => ({ state, setState, target, activate, hosts, registerHost, registerTool, getTool, isAvailable, command, triggers, dockedMetadata: Boolean(metadataDock) }),
+  }, [activate, setState, metadataDock, state.metadata]);
+  const context = useMemo(() => ({ state, setState, target, activate, hosts, registerHost, registerTool, getTool, isAvailable, command, triggers,
+    dockedMetadata: Boolean(metadataDock) }),
     [state, setState, target, activate, hosts, registerHost, registerTool, getTool, isAvailable, command, metadataDock]);
   return <Context.Provider value={context}>{children}</Context.Provider>;
 }
@@ -97,7 +100,7 @@ export function MetadataDockContent() {
   const { registerHost } = tools;
   const host = useCallback(node => registerHost('metadata', node), [registerHost]);
   const available = tools.isAvailable('metadata');
-  return <div className="workbench-tools-body">
+  return <div>
     {!available && <p className="workbench-tools-empty">Select one artwork with source information.</p>}
     <div ref={host} data-shared-tool="metadata" hidden={!available} />
   </div>;

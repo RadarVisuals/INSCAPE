@@ -48,14 +48,14 @@ function PublishedStatusSurface({ state, onRetry, onOpenDirectory, onReturn, ret
 }
 
 export default function PublishedProfileBoundary({
-  address, resolution, onRetry, returnProfileAddress, onReturnToWorkbench, onEditReception, onVisitProfile, onOpenDiscover, onConnect, entry, onOpenOverview, onOpenCanvas,
+  address, resolution, onRetry, returnProfileAddress, onReturnToWorkbench, onEditReception, onMyInscape, onVisitProfile, onOpenDiscover, onConnect, entry, onOpenOverview, onOpenCanvas,
 }) {
   const visibleDocument = [PUBLISHED_PROFILE_STATUS.RESOLVED, PUBLISHED_PROFILE_STATUS.STALE].includes(resolution?.status) ? resolution.document : null;
   const ownProfile = Boolean(returnProfileAddress && returnProfileAddress.toLowerCase() === String(address || '').toLowerCase());
   const returnToWorkbench = ownProfile ? onReturnToWorkbench : null;
   const canReturn = Boolean(returnProfileAddress && !ownProfile);
   const returnHome = canReturn ? () => onVisitProfile?.(returnProfileAddress, { returnToConnectedProfile: true }) : null;
-  if (returnToWorkbench && entry?.surface === 'overview' && !entry.target) return <Suspense fallback={<p role="status">Opening Reception…</p>}>
+  if (entry?.reception !== 'published' && returnToWorkbench && entry?.surface === 'overview' && !entry.target) return <Suspense fallback={<p role="status">Opening Reception…</p>}>
     <OwnerReception key={address} address={address} document={visibleDocument} onEditReception={onEditReception}
       onReturn={returnToWorkbench} onCanvases={onOpenCanvas} onDiscover={onOpenDiscover} />
   </Suspense>;
@@ -63,6 +63,7 @@ export default function PublishedProfileBoundary({
     ? <PublishedStatusSurface state={resolution} onRetry={onRetry} onOpenDirectory={onOpenDiscover}
       onReturn={returnToWorkbench || returnHome} returnLabel={returnToWorkbench ? "Back to my Workbench" : "RETURN"} />
     : <><PublishedProfileDocumentPreview document={visibleDocument} onReturnToWorkbench={returnToWorkbench} entry={entry} onOpenOverview={onOpenOverview} onOpenCanvas={onOpenCanvas}
+      ownerDestinations={returnToWorkbench ? { 'Reception Editor': onEditReception, 'My Inscape': onMyInscape, 'Canvas Editor': returnToWorkbench } : undefined}
       onOpenDirectory={onOpenDiscover} onReturn={returnHome} onConnect={onConnect} />
     {resolution.status === PUBLISHED_PROFILE_STATUS.STALE && <div className="published-profile-stale" role="status" aria-busy={resolution.busy}>Showing the last verified document while {resolution.busy ? 'checking the network.' : 'the network is unavailable.'} <RetryButton state={resolution} onRetry={onRetry} /></div>}
     </>;

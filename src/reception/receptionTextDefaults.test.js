@@ -9,7 +9,7 @@ test('new transparent Reception Text chooses readable ink on the effective cell 
     assert.equal(receptionTextDefaults(reception('#ffffff', 1), 'cell', mode).appearance.color, '#000000');
   }
   assert.deepEqual(receptionTextDefaults(reception('#808080', .25), 'cell', 'light'),
-    { visibility: 'PUBLIC', alignment: 'center', appearance: { background: null, compact: true, verticalAlign: 'center', color: '#000000' } });
+    { visibility: 'PUBLIC', appearance: { background: null, compact: true, color: '#000000' } });
   assert.equal(receptionTextDefaults(reception('#808080', .25), 'cell', 'dark').appearance.color, '#ffffff');
   assert.equal(receptionTextDefaults(reception('#000000', 0), 'cell', 'light').appearance.color, '#000000');
   assert.equal(receptionTextDefaults({ shapes: [] }, null, 'light').appearance.color, '#000000');

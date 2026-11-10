@@ -1,4 +1,4 @@
-import { editorMenu, activeEditorDocument, editorCommand, selectEditorDocument, editorOverview, editorDestination } from './fixtures/editor-menu.mjs';
+import { workspaceDestination, workspacePicker, editorMenu, activeEditorDocument, editorCommand, selectEditorDocument, editorOverview, editorDestination } from './fixtures/editor-menu.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdir } from 'node:fs/promises';
@@ -22,7 +22,8 @@ async function setup(options = {}) {
   return { browser, context, errors, open };
 }
 async function viewReception(page) {
-  await editorDestination(page, 'Reception');
+  await editorDestination(page, 'Profile');
+  await page.getByRole('button', { name: 'View my reception', exact: true }).click();
   await page.locator('.reception-page').waitFor();
 }
 test('local Reception survives every public failure; visitors never see owner drafts', { timeout: 60000 }, async () => {
@@ -37,7 +38,9 @@ test('local Reception survives every public failure; visitors never see owner dr
     await page.evaluate(() => window.receptionBoundaryFixture.setOwner(false));
     await page.getByText('PUBLIC ONLY', { exact: true }).waitFor();
     assert.equal(await page.getByText('LOCAL ARTICLE', { exact: true }).count(), 0);
-    assert.equal(await page.getByRole('button', { name: 'Edit Reception', exact: true }).count(), 0);
+    await workspacePicker(page).click();
+    assert.equal(await page.getByRole('menuitemcheckbox', { name: 'Reception Editor', exact: true }).count(), 0);
+    await page.getByRole('menu', { name: 'Workspace menu' }).press('Escape');
     await page.evaluate(() => window.receptionBoundaryFixture.setStatus('UNAVAILABLE'));
     await page.locator('.published-profile-status').waitFor();
     assert.equal(await page.locator('.reception-canvas').count(), 0);
@@ -48,7 +51,7 @@ test('another tab refreshes its reader after legal editing; editor lease and aut
   const { browser, open, errors } = await setup();
   try {
     const reader = await open(), editor = await open();
-    await editor.getByRole('button', { name: 'Edit Reception', exact: true }).click();
+    await workspaceDestination(editor, 'Reception Editor');
     await editor.getByRole('toolbar', { name: 'Creation tools', exact: true }).waitFor();
     const canvasBefore = await editor.evaluate(() => window.receptionBoundaryFixture.canvases());
     await editor.locator('main[data-reception-editor]').focus(); await editor.keyboard.press('r');
@@ -58,8 +61,8 @@ test('another tab refreshes its reader after legal editing; editor lease and aut
     await editor.locator('.reception-document-canvas').waitFor();
     await reader.locator('.reception-document-canvas').waitFor();
     assert.deepEqual(await editor.evaluate(() => window.receptionBoundaryFixture.canvases()), canvasBefore);
-    await editor.getByRole('button', { name: 'Edit Reception', exact: true }).click();
-    await reader.getByRole('button', { name: 'Edit Reception', exact: true }).click();
+    await workspaceDestination(editor, 'Reception Editor');
+    await workspaceDestination(reader, 'Reception Editor');
     await reader.getByRole('heading', { name: 'This tab is view-only', exact: true }).waitFor();
     await viewReception(editor);
     await reader.getByRole('button', { name: 'Try editing here', exact: true }).click();
@@ -76,7 +79,7 @@ test('successful private recovery immediately renders the restored local Recepti
     const page = await open(), backup = await page.evaluate(() => window.receptionBoundaryFixture.backup);
     await page.evaluate(() => { window.receptionBoundaryFixture.corrupt(); window.receptionBoundaryFixture.remount(); });
     await page.getByText('Your local Reception could not be read.', { exact: false }).waitFor();
-    await page.getByRole('button', { name: 'Edit Reception', exact: true }).click();
+    await workspaceDestination(page, 'Reception Editor');
     await page.getByLabel('Open Workbench backup', { exact: true }).setInputFiles({ name: 'synthetic-backup.json', mimeType: 'application/json', buffer: Buffer.from(backup) });
     await page.getByRole('button', { name: 'Replace Workbench with backup', exact: true }).click();
     await viewReception(page);
@@ -89,7 +92,7 @@ test('backup recovery from an open editor retains the document target and refres
   const { browser, open, errors } = await setup();
   try {
     const page = await open(), backup = await page.evaluate(() => window.receptionBoundaryFixture.backup);
-    await page.getByRole('button', { name: 'Edit Reception', exact: true }).click();
+    await workspaceDestination(page, 'Reception Editor');
     await editorMenu(page, 'Backup').click();
     await page.getByLabel('Open Workbench backup', { exact: true }).setInputFiles({ name: 'synthetic-backup.json', mimeType: 'application/json', buffer: Buffer.from(backup) });
     await page.getByRole('button', { name: 'Replace Workbench with backup', exact: true }).click();
@@ -105,13 +108,13 @@ test('authored Text typography survives native Editor preview and return to Rece
   const { browser, open, errors } = await setup({ hasTouch: true });
   try {
     const page = await open();
-    const metrics = () => page.locator('h1.text-document-title').evaluate(el => {
+    const metrics = () => page.locator('h1.text-document-title:visible').evaluate(el => {
       const style = getComputedStyle(el); return { fontSize: style.fontSize, lineHeight: style.lineHeight };
     });
     const reader = await metrics();
-    await page.getByRole('button', { name: 'Edit Reception', exact: true }).click();
+    await workspaceDestination(page, 'Reception Editor');
     await editorCommand(page, 'Canvas', 'Preview');
-    await page.locator('h1.text-document-title').waitFor();
+    await page.locator('h1.text-document-title:visible').waitFor();
     assert.deepEqual(await metrics(), reader);
     await page.getByRole('button', { name: 'Back to editing', exact: true }).click();
     await page.getByRole('toolbar', { name: 'Creation tools', exact: true }).waitFor();
@@ -127,7 +130,7 @@ test('public Edit Reception and My Inscape use one Editor document selector thro
   try {
     const page = await open();
     const canvases = await page.evaluate(() => window.receptionBoundaryFixture.canvases());
-    await page.getByRole('button', { name: 'Edit Reception', exact: true }).click();
+    await workspaceDestination(page, 'Reception Editor');
     const selector = editorMenu(page, 'Canvas');
     await selector.waitFor();
     assert.equal(new URL(page.url()).searchParams.get('editor'), 'reception');
@@ -147,7 +150,7 @@ test('public Edit Reception and My Inscape use one Editor document selector thro
     assert.equal(new URL(page.url()).searchParams.has('editor'), false);
     await editorOverview(page);
     await editorDestination(page, 'Reception');
-    await page.getByRole('button', { name: 'Edit Reception', exact: true }).click();
+    await workspaceDestination(page, 'Reception Editor');
     await selector.waitFor();
     assert.equal(await activeEditorDocument(page), 'reception');
     assert.deepEqual(await page.evaluate(() => window.receptionBoundaryFixture.canvases()), canvases);
@@ -175,7 +178,7 @@ for (const collection of [false, true]) test(`StrictMode public-to-Editor entry 
     }, collection);
     const saved = () => page.evaluate(() => localStorage.getItem(window.receptionBoundaryFixture.key));
     await page.locator('.reception-document-canvas').waitFor();
-    await page.getByRole('button', { name: 'Edit Reception', exact: true }).click();
+    await workspaceDestination(page, 'Reception Editor');
     await editorMenu(page, 'Canvas').waitFor();
     await page.waitForFunction(count => document.querySelectorAll('main[data-reception-editor] .shape-instance').length === count, before.reception.shapes.length);
     assert.equal(await page.locator('main[data-reception-editor] .shape-instance').count(), before.reception.shapes.length);
@@ -197,7 +200,7 @@ for (const collection of [false, true]) test(`StrictMode public-to-Editor entry 
     await viewReception(page);
     assert.equal(await saved(), afterPreview, 'returning to public view preserves all native records');
     await page.reload();
-    await page.getByRole('button', { name: 'Edit Reception', exact: true }).click();
+    await workspaceDestination(page, 'Reception Editor');
     await editorMenu(page, 'Canvas').waitFor();
     assert.equal(await saved(), afterPreview, 'StrictMode remount and reconciliation preserve the exact saved draft');
     assert.deepEqual(errors, []);

@@ -43,8 +43,8 @@ test('Image paints all four edges, corners and source alpha at fractional camera
           const [config, setConfig] = React.useState({ width: 317, height: 193, alpha: false, turn: 0, mirror: false });
           window.configureImage = (next, zoom) => { setConfig(next); camera.setScale(zoom); pan.setOffset({x: .23*zoom, y: .17*zoom}); };
           const record = { id: 'image:pixels', name: 'Pixels', width: config.width, height: config.height, visibility: 'PUBLIC',
-            sides: [{ id: 'side:pixels', asset: { ...asset, media: { ...asset.media, url: `https://image.test/${config.quadrants ? 'quadrants' : config.alpha ? 'alpha' : 'opaque'}.png`, width: 200, height: 160 } },
-              crop: config.native ? null : { x: .5, y: .5, zoom: config.cropZoom || 1 }, transform: { quarterTurns: config.turn, mirrorX: config.mirror, mirrorY: config.mirrorY ?? config.mirror } }] };
+            artwork: { id: 'artwork:pixels', asset: { ...asset, media: { ...asset.media, url: `https://image.test/${config.quadrants ? 'quadrants' : config.alpha ? 'alpha' : 'opaque'}.png`, width: 200, height: 160 } },
+              crop: config.native ? null : { x: .5, y: .5, zoom: config.cropZoom || 1 }, transform: { quarterTurns: config.turn, mirrorX: config.mirror, mirrorY: config.mirrorY ?? config.mirror } } };
           return React.createElement(ImageWorkbench, { records: [record], presentations: [{ id: record.id, open: true, position: { left: 80.3, top: 60.7 } }] });
         }
         createRoot(document.getElementById('root')).render(React.createElement(WorkbenchViewProvider, null, React.createElement(Fixture)));

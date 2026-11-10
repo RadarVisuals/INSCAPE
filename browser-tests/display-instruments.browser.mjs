@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { chromium } from 'playwright-core';
 import { activate, openDisplayTool } from './fixtures/display-controls.mjs';
+import { sharedToolPanel, closeSharedTool } from './fixtures/shared-tools.mjs';
 
 const origin = process.env.INSCAPE_SYSTEM_WORKFLOW_ROOT || 'http://127.0.0.1:5173';
 const settle = page => page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
@@ -32,17 +33,17 @@ test('shared Layers and Artwork info preserve Display geometry and independent w
     const layers = page.locator('[data-shared-tool="layers"]');
     await layers.getByRole('button', { name: 'MOUNTAIN SIGNAL II', exact: true }).click();
     await openDisplayTool(page, board, 'METADATA');
-    const metadata = page.locator('[data-shared-tool="metadata"]');
-    assert.match(await metadata.locator('xpath=ancestor::aside').getAttribute('aria-label'), /MOUNTAIN SIGNAL II/);
+    const metadata = page.locator('[data-shared-tool="metadata"]:visible');
+    await metadata.getByRole('heading', { name: 'MOUNTAIN SIGNAL II', exact: true }).waitFor();
     assert.deepEqual(await board.boundingBox(), before);
-    const grip = page.getByLabel('Move Artwork info window', { exact: true });
-    const infoWindow = metadata.locator('xpath=ancestor::aside');
+    const infoWindow = sharedToolPanel(page);
+    const grip = infoWindow.getByRole('button', { name: 'Move Inspector panel', exact: true });
     const initialInfo = await infoWindow.boundingBox();
     await grip.focus(); await page.keyboard.press('ArrowRight'); await settle(page);
     const moved = await infoWindow.boundingBox();
     assert.ok(moved.x > initialInfo.x);
     assert.deepEqual(await board.boundingBox(), before);
-    await page.getByRole('button', { name: 'Close Artwork info', exact: true }).click();
+    await closeSharedTool(page, 'Inspector');
     await openDisplayTool(page, board, 'METADATA');
     assert.deepEqual(await infoWindow.boundingBox(), moved);
     const resize = page.getByRole('button', { name: 'Resize Display Module from se', exact: true });
@@ -101,8 +102,8 @@ test('shared metadata stays bounded and scrollable across viewport changes witho
     await page.locator('[data-shared-tool="layers"]').getByRole('button', { name: 'MOUNTAIN SIGNAL II', exact: true }).click();
     await page.getByRole('button', { name: 'Close Layers', exact: true }).click();
     await openDisplayTool(page, board, 'METADATA');
-    const metadata = page.locator('[data-shared-tool="metadata"]');
-    const infoWindow = metadata.locator('xpath=ancestor::aside');
+    const metadata = page.locator('[data-shared-tool="metadata"]:visible');
+    const infoWindow = sharedToolPanel(page);
     // Overflowing source content exercises the reading container, not authored state.
     await metadata.evaluate(node => {
       const extra = document.createElement('p'); extra.textContent = 'Long artwork source description. '.repeat(500); node.append(extra);
@@ -113,10 +114,7 @@ test('shared metadata stays bounded and scrollable across viewport changes witho
       const bounds = await infoWindow.boundingBox();
       assert.ok(bounds.x >= 0 && bounds.x + bounds.width <= viewport.width + 1);
       assert.ok(bounds.y >= 0 && bounds.y + bounds.height <= viewport.height);
-      const scrolling = await metadata.evaluate(node => {
-        let scroll = node;
-        while (scroll && scroll.scrollHeight <= scroll.clientHeight) scroll = scroll.parentElement;
-        if (!scroll) return false;
+      const scrolling = await infoWindow.locator('.workbench-inspector').evaluate(scroll => {
         scroll.scrollTop = scroll.scrollHeight;
         return scroll.scrollTop > 0;
       });

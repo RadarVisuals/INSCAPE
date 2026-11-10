@@ -246,24 +246,23 @@ test('Undo and redo belong to the originating Workbench; switching is not a hist
   assert.equal(store.getDraft().texts[0].article.title, 'A changed');
 });
 
-test('using the same Library source never shares mutable Image crop, sides or dimensions', () => {
+test('using the same Library source never shares mutable Image crop, artwork or dimensions', () => {
   const { store, storage } = fixture();
   const asset = createProfileDocumentV9AssetResolver(assets, { compactContentReference: false })(assets[0].id);
-  const side = { id: 'side:source', asset, crop: null, transform: { quarterTurns: 0, mirrorX: false, mirrorY: false } };
+  const side = { id: 'artwork:source', asset, crop: null, transform: { quarterTurns: 0, mirrorX: false, mirrorY: false } };
   addImageModule(store, profile);
-  edit(store, draft => { draft.imageModules[0].sides = [side]; });
+  edit(store, draft => { draft.imageModules[0].artwork = side; });
   const a = store.getDraft().imageModules[0];
   const bId = store.createWorkbench('Same source, different use');
   addImageModule(store, profile);
-  edit(store, draft => { draft.imageModules[0].sides = [side]; });
+  edit(store, draft => { draft.imageModules[0].artwork = side; });
   edit(store, draft => {
     draft.imageModules[0].width = 800;
-    draft.imageModules[0].sides[0].crop = { x: .2, y: .8, zoom: 2 };
-    draft.imageModules[0].sides.push({ ...side, id: 'side:extra' });
+    draft.imageModules[0].artwork.crop = { x: .2, y: .8, zoom: 2 };
   });
   const b = store.getDraft().imageModules[0];
   assert.notEqual(a.id, b.id);
-  assert.equal(a.sides[0].asset.stableAssetId, b.sides[0].asset.stableAssetId);
+  assert.equal(a.artwork.asset.stableAssetId, b.artwork.asset.stableAssetId);
   const reopened = createSystemWorkflowDraftStore({ profileAddress: profile, storage });
   assert.equal(reopened.getWorkbenchId(), bId);
   assert.deepEqual(reopened.getDraft().imageModules[0], b);

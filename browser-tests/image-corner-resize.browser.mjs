@@ -36,7 +36,7 @@ for (const [width, density] of [[1440, 1], [390, 1.25]]) test(`Image corners res
       const dock = page.locator('.workbench-tool-dock');
       const resize = dock.locator('.workbench-tool-panel-resize[data-edge="se"]');
       await resize.focus(); for (let i = 0; i < 10; i++) await resize.press('Shift+ArrowUp');
-      const move = dock.getByRole('button', { name: 'Move Transform, Color and Info panel', exact: true });
+      const move = dock.getByRole('button', { name: 'Move Inspector panel', exact: true });
       await move.focus(); for (let i = 0; i < 20; i++) await move.press('Shift+ArrowDown');
       await settle(page);
     }
@@ -45,7 +45,7 @@ for (const [width, density] of [[1440, 1], [390, 1.25]]) test(`Image corners res
       await page.evaluate(({ scale, crop, sequence }) => {
         const api = imageFitFixture, draft = api.store.getDraft(), id = `image:corner${sequence}`;
         draft.imageModules = [{ ...draft.imageModules[0], id, width: 240, height: 180,
-          sides: draft.imageModules[0].sides.map(side => ({ ...side, crop })) }];
+          artwork: { ...draft.imageModules[0].artwork, crop } }];
         draft.workbench.imageModules = [{ id, open: true, position: { left: 72, top: 180 } }];
         api.failSave = false;
         api.store.commitCompletedOperation(draft, { expectedGeneration: api.store.getGeneration() });
@@ -86,7 +86,7 @@ for (const [width, density] of [[1440, 1], [390, 1.25]]) test(`Image corners res
         const after = await draft();
         assert.equal(after.imageModules[0].width, Math.round(240 * fx));
         assert.equal(after.imageModules[0].height, Math.round(180 * fy));
-        assert.deepEqual(after.imageModules[0].sides, before.imageModules[0].sides, 'source, fit and transforms are untouched');
+        assert.deepEqual(after.imageModules[0].artwork, before.imageModules[0].artwork, 'source, fit and transforms are untouched');
         assert.deepEqual(await surface.boundingBox(), preview, 'no release jump');
         await page.evaluate(() => imageFitFixture.store.undo()); await settle(page);
         assert.deepEqual(await draft(), before, 'one undo restores the entire resize');
@@ -106,7 +106,7 @@ for (const [width, density] of [[1440, 1], [390, 1.25]]) test(`Image corners res
       if (outcome === 'cancel') await page.keyboard.press('Escape');
       await page.mouse.up(); await settle(page);
       if (outcome === 'commit') {
-        assert.deepEqual((await draft()).imageModules[0].sides, before.imageModules[0].sides);
+        assert.deepEqual((await draft()).imageModules[0].artwork, before.imageModules[0].artwork);
         await page.screenshot({ path: join(output, `corner-horizontal-${width}.png`) });
       } else { assert.deepEqual(await draft(), before); assert.deepEqual(await surface.boundingBox(), rect); }
     }
@@ -124,7 +124,7 @@ for (const [width, density] of [[1440, 1], [390, 1.25]]) test(`Image corners res
       await page.mouse.up(); await settle(page);
       assert.equal((await draft()).imageModules[0].width, axis === 'horizontal' ? 288 : 240);
       assert.equal((await draft()).imageModules[0].height, axis === 'vertical' ? 216 : 180);
-      assert.deepEqual((await draft()).imageModules[0].sides, before.imageModules[0].sides);
+      assert.deepEqual((await draft()).imageModules[0].artwork, before.imageModules[0].artwork);
       await page.evaluate(() => imageFitFixture.store.undo()); assert.deepEqual(await draft(), before);
     }
     await reset();

@@ -1,9 +1,12 @@
 import { useEffect, useReducer } from 'react';
+import InspectorColourControls from '../colour/InspectorColourControls.jsx';
 import CommittedColourControls from '../colour/CommittedColourControls.jsx';
+import EditorToolbarPopover from '../public/ownerSystemWorkflow/EditorToolbarPopover.jsx';
+import { OwnerSystemWorkflowSelectMenu } from '../public/ownerSystemWorkflow/OwnerSystemWorkflowWorkspaceControls.jsx';
 import { ARTICLE_STYLE_ROLES, textAppearance } from './domain/article.js';
 import { beginArticleColour, setArticleColour } from './articleColourGesture.js';
 
-export default function TextColourTools({ article, editor, target, onTarget, disabled, onChange, onPreview, store, error, onRecovery, containerControls = true, scopeKey }) {
+export default function TextColourTools({ article, editor, target, onTarget, disabled, onChange, onPreview, store, error, onRecovery, containerControls = true, scopeKey, compact = false }) {
   const [, refresh] = useReducer(value => value + 1, 0);
   useEffect(() => {
     if (!editor || editor.isDestroyed) return;
@@ -39,21 +42,34 @@ export default function TextColourTools({ article, editor, target, onTarget, dis
   };
   const apply = patch => { if (disabled) return; if (body) { if (bodyAvailable) setArticleColour(editor, patch.color); } else onChange(changeAppearance(patch)); };
   const resetAvailable = body ? Boolean(editor?.getAttributes('textStyle').color) || colors.size > 1 : target === 'title' ? Boolean(appearance.titleColor) : style && Boolean(appearance.textStyles?.[target]?.color);
+  const picker = {
+    color, scopeKey: `${scopeKey}:${target}:${body ? `${selection?.from}:${selection?.to}` : ''}`,
+    opacity: target === 'background' ? appearance.opacity : undefined,
+    disabled: disabled || (body && !bodyAvailable) || (target === 'background' && appearance.background === null),
+    getVersion: () => store.getGeneration(), onChange: apply,
+    beginPreview: body && bodyAvailable ? () => beginArticleColour(editor) : undefined,
+    onPreview: patch => onPreview(patch ? changeAppearance(patch) : null),
+  };
+  if (compact) return <EditorToolbarPopover label={target === 'title' ? 'Title color' : 'Text color'} disabled={picker.disabled}
+    trigger={<span className="workbench-inspector-swatch" data-mixed={body && colors.size > 1 || undefined} style={{ backgroundColor: color }} />}>
+    <strong>{colors.size > 1 ? 'Mixed text colors' : target === 'title' ? 'Title color' : 'Text color'}</strong>
+    <CommittedColourControls key={picker.scopeKey} {...picker} variant="inspector" />
+  </EditorToolbarPopover>;
   return <>
-    <label className="workbench-color-target">Apply to<select aria-label="Color target" value={target} onChange={event => onTarget(event.target.value)}>
-      <option value="body" disabled={!bodyAvailable}>{selection?.empty ? 'Text at cursor' : 'Selected text'}</option>
-      <option value="default">Article default text</option><option value="title">Article title</option>{containerControls && <option value="background">Text box background</option>}
-      {ARTICLE_STYLE_ROLES.map(role => <option key={role.id} value={role.id}>{role.label} (all)</option>)}
-    </select></label>
+    <div className="workbench-inspector-row workbench-color-target"><span>Apply to</span>
+      <OwnerSystemWorkflowSelectMenu flat compact palette="editor" className="workflow-tactile-control" label="Color target" value={target} onChange={onTarget}
+        options={[{ value: 'body', label: selection?.empty ? 'Text at cursor' : 'Selected text', disabled: !bodyAvailable },
+          { value: 'default', label: 'Article default text' }, { value: 'title', label: 'Article title' },
+          ...(containerControls ? [{ value: 'background', label: 'Text box background' }] : []),
+          ...ARTICLE_STYLE_ROLES.map(role => ({ value: role.id, label: `${role.label} (all)` }))]} />
+    </div>
     {body && colors.size > 1 && <p>Mixed colors</p>}
-    {target === 'background' && <label>Background<select aria-label="Text background" disabled={disabled} value={appearance.background === null ? 'none' : 'color'}
-      onChange={event => onChange(changeAppearance({ color: event.target.value === 'none' ? null : '#101111' }))}><option value="none">None</option><option value="color">Color</option></select></label>}
-    <CommittedColourControls key={`${target}:${body ? `${selection?.from}:${selection?.to}` : ''}`} color={color}
-      scopeKey={`${scopeKey}:${target}:${body ? `${selection?.from}:${selection?.to}` : ''}`}
-      opacity={target === 'background' ? appearance.opacity : undefined} disabled={disabled || (body && !bodyAvailable) || (target === 'background' && appearance.background === null)}
-      getVersion={() => store.getGeneration()} onChange={apply}
-      beginPreview={body && bodyAvailable ? () => beginArticleColour(editor) : undefined}
-      onPreview={patch => onPreview(patch ? changeAppearance(patch) : null)} />
+    {target === 'background' && <div className="workbench-inspector-row"><span>Background</span>
+      <OwnerSystemWorkflowSelectMenu flat compact palette="editor" className="workflow-tactile-control" label="Text background" disabled={disabled} value={appearance.background === null ? 'none' : 'color'}
+        options={[{ value: 'none', label: 'None' }, { value: 'color', label: 'Color' }]}
+        onChange={value => onChange(changeAppearance({ color: value === 'none' ? null : '#101111' }))} />
+    </div>}
+    <InspectorColourControls key={picker.scopeKey} label={target === 'background' ? 'Background' : 'Text'} {...picker} />
     {(body || target === 'title' || style) && <button className="workflow-tactile-control" type="button" disabled={disabled || !resetAvailable}
       title={body ? 'Follow each paragraph or heading’s default color.' : `Use the article’s default text color (${appearance.color.toUpperCase()}).`}
       onClick={() => apply({ color: null })}>Use default text color</button>}

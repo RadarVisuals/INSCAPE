@@ -14,16 +14,16 @@ import { latticeSurfaceColor } from '../../lattice/rendering/latticeGeometry.js'
 const sameGeometry = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 
 function ImageMiniature({ source, width, height }) {
-  const side = source.side, media = side?.asset?.media;
+  const artwork = source.artwork, media = artwork?.asset?.media;
   const [failed, setFailed] = useState(null);
   if (!media || failed === media.url) return <div className="navigator-media-missing"><span>Image</span></div>;
-  const projection = projectSystemWorkflowTransform(side.transform, media, source.crop);
+  const projection = projectSystemWorkflowTransform(artwork.transform, media, source.crop);
   const rectangle = { left: 0, top: 0, width, height };
   const fitted = source.crop ? projectCroppedMediaRectangle(rectangle, projection.dimensions, projection.crop) : fitNativeMediaRectangle(rectangle, projection.dimensions);
   const image = projectSystemWorkflowImageRenderRectangle(fitted, projection);
   return <svg viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none"><image href={resolvePublishedAssetUrl(media.url)}
     x={image.left} y={image.top} width={image.width} height={image.height} preserveAspectRatio="none" onError={() => setFailed(media.url)}
-    transform={`translate(${fitted.left + fitted.width / 2} ${fitted.top + fitted.height / 2}) scale(${side.transform.mirrorX ? -1 : 1} ${side.transform.mirrorY ? -1 : 1}) rotate(${side.transform.quarterTurns * 90}) translate(${-image.left - image.width / 2} ${-image.top - image.height / 2})`} /></svg>;
+    transform={`translate(${fitted.left + fitted.width / 2} ${fitted.top + fitted.height / 2}) scale(${artwork.transform.mirrorX ? -1 : 1} ${artwork.transform.mirrorY ? -1 : 1}) rotate(${artwork.transform.quarterTurns * 90}) translate(${-image.left - image.width / 2} ${-image.top - image.height / 2})`} /></svg>;
 }
 function DisplayMiniature({ source, frame }) {
   if (!source.geometry) return null;

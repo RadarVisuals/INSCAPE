@@ -1,5 +1,6 @@
 import { navigateWorkbench, workbenchCommandDisabled } from './fixtures/workbench-navigation.mjs';
-import { editorCommand } from './fixtures/editor-menu.mjs';
+import { editorCommand, setEditorSidebarOpen } from './fixtures/editor-menu.mjs';
+import { resetCameraTestView } from './fixtures/workbench-camera-test.mjs';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { mkdir } from 'node:fs/promises';
@@ -39,7 +40,9 @@ test('owner and Visitor have free camera movement without custom-frame controls,
       const host = page.locator('main.system-workflow').first();
       const wheel = async values => { await host.dispatchEvent('wheel', { bubbles: true, cancelable: true, clientX: 720, clientY: 450, ...values }); await settle(page); };
       const saved = await page.evaluate(() => localStorage.getItem(window.__motionKey));
-      assert.deepEqual(await camera(page), { scale: 1, x: 0, y: 0 });
+      await resetCameraTestView(page);
+      const fitted = await camera(page);
+      assert.deepEqual(fitted, { scale: 1, x: 0, y: 0 });
       assert.equal(await page.locator('.workbench-reference-guide, .workbench-reference-size').count(), 0);
       assert.equal(await page.getByRole('button', { name: 'Fit frame', exact: true }).count(), 0);
       assert.equal(await page.getByRole('button', { name: 'Show reference frame', exact: true }).count(), 0);
@@ -51,10 +54,11 @@ test('owner and Visitor have free camera movement without custom-frame controls,
       assert.equal((await camera(page)).scale, .25);
       const zoomed = await camera(page); await wheel({ deltaX: 87, deltaY: 53 });
       assert.deepEqual(await camera(page), { scale: .25, x: zoomed.x - 87, y: zoomed.y - 53 });
-      await page.getByRole('button', { name: 'Reset Workbench view', exact: true }).click(); await settle(page);
-      assert.deepEqual(await camera(page), { scale: 1, x: 0, y: 0 }, 'Home restores the starting view and 100%');
+      await page.getByRole('button', { name: 'Fit canvas in view', exact: true }).click(); await settle(page);
+      const home = await camera(page);
+      assert.ok(home.scale >= .25 && home.scale <= 1, 'Fit frames the actual canvas');
       await page.getByRole('slider', { name: 'Workbench zoom', exact: true }).fill('100');
-      await page.getByRole('button', { name: 'Reset Workbench view', exact: true }).click(); await settle(page);
+      await page.getByRole('button', { name: 'Fit canvas in view', exact: true }).click(); await settle(page);
 
       // A zoomed camera far beyond the old frame can approach an actual module.
       await wheel({ deltaX: 4500, deltaY: 3700 });
@@ -89,17 +93,16 @@ test('owner and Visitor have free camera movement without custom-frame controls,
       await page.keyboard.press('Escape'); await settle(page);
       const beforeResize = await camera(page);
       if (!visitor) {
-        await host.dispatchEvent('contextmenu', { clientX: 1400, clientY: 850, bubbles: true });
-        await page.getByRole('menuitem', { name: 'HIDE SIDEBAR', exact: true }).click(); await settle(page);
+        await setEditorSidebarOpen(page, false); await settle(page);
         assert.deepEqual(await camera(page), beforeResize, 'hiding the dock does not move the camera');
       }
       for (const width of [390, 1440]) {
+        const beforeResize = await camera(page);
         await page.setViewportSize({ width, height: 900 }); await settle(page);
         assert.deepEqual(await camera(page), beforeResize, 'viewport changes do not refit the camera');
-        await page.getByRole('button', { name: 'Reset Workbench view', exact: true }).focus();
-        await page.keyboard.press('Enter'); await settle(page);
+        await page.getByRole('button', { name: 'Fit canvas in view', exact: true }).focus();
+        await page.keyboard.press('Enter'); await arrived(page);
         await page.screenshot({ path: `.browser-test-runtime/workbench-area-${visitor}-${width}.png` });
-        await wheel({ deltaX: -beforeResize.x, deltaY: -beforeResize.y });
       }
       // Production has no development probe. The selection badge sits outside the
       // rail, so focusing must preserve its layout as well as the return camera.
@@ -148,9 +151,10 @@ test('the canvas clips outlying artwork without relocating it; Show outside canv
       }
       window.__motionRemount();
     });
-    const image = page.locator('[data-workbench-view-id="image:motion-0"]');
+    const image = page.locator('[data-workbench-artwork][data-workbench-view-id="image:motion-0"]');
     await image.waitFor({ state: 'attached' }); await settle(page);
     assert.equal(await image.isVisible(), false, 'outlying artwork is cropped in the normal composition');
+    await resetCameraTestView(page);
     assert.deepEqual(await camera(page), { scale: 1, x: 0, y: 0 });
     await editorCommand(page, 'Canvas', 'Canvas size');
     await page.getByRole('button', { name: 'Show outside canvas', exact: true }).click();
@@ -177,8 +181,9 @@ test('the canvas clips outlying artwork without relocating it; Show outside canv
       await page.locator('main.system-workflow > canvas.lattice-pixel-grid').waitFor(); await settle(page);
       const host = page.locator('main.system-workflow').first();
       for (let i = 0; i < 6; i++) await host.dispatchEvent('wheel', { ctrlKey: true, deltaY: 120, clientX: 0, clientY: 0, bubbles: true, cancelable: true });
-      await page.getByRole('button', { name: 'Reset Workbench view', exact: true }).click();
-      // Start the clipping probe at 25% with an origin-anchored wheel zoom.
+      await page.getByRole('button', { name: 'Fit canvas in view', exact: true }).click();
+      // Fit has its own framing. Reset explicitly before this origin-based pixel probe.
+      await resetCameraTestView(page);
       for (let i = 0; i < 6; i++) await host.dispatchEvent('wheel', { ctrlKey: true, deltaY: 120, clientX: 0, clientY: 0, bubbles: true, cancelable: true });
       await host.dispatchEvent('wheel', { deltaX: -80, deltaY: -60, bubbles: true, cancelable: true }); await settle(page);
       assert.deepEqual(await camera(page), { scale: .25, x: 80, y: 60 });

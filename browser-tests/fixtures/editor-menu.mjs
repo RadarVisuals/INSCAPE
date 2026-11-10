@@ -5,12 +5,20 @@ export async function editorCommand(page, menu, name) {
   if (await trigger.getAttribute('aria-expanded') !== 'true') await trigger.click();
   await page.getByRole('menu', { name: `${menu} menu` }).getByRole('menuitem', { name, exact: true }).click();
 }
+export const workspacePicker = page => page.locator('.workspace-switcher-trigger:visible');
+export async function workspaceDestination(page, name) {
+  const trigger = workspacePicker(page);
+  await trigger.click();
+  await page.getByRole('menu', { name: 'Workspace menu' }).getByRole('menuitemcheckbox', { name, exact: true }).click();
+  return trigger;
+}
 export async function selectEditorDocument(page, id) {
+  if (id === 'reception') return workspaceDestination(page, 'Reception Editor');
   const trigger = editorMenu(page, 'Canvas');
   if (await trigger.getAttribute('aria-expanded') !== 'true') await trigger.press('Enter');
   const menu = page.getByRole('menu', { name: 'Canvas menu' });
   await (typeof id === 'object' ? menu.getByRole('menuitemcheckbox', { name: id.label, exact: true })
-    : menu.locator(`[data-command-id="${id === 'reception' ? id : `canvas:${id}`}"]`)).press('Enter');
+    : menu.locator(`[data-command-id="canvas:${id}"]`)).press('Enter');
 }
 export async function editorDocumentNames(page) {
   const trigger = editorMenu(page, 'Canvas');
@@ -32,6 +40,17 @@ export async function setEditorSidebarOpen(page, open) {
   if (await logo.getAttribute('aria-expanded') !== String(open)) await logo.click();
 }
 export async function editorDestination(page, name) {
+  // Wait for the owner header before choosing a route. Immediately after a
+  // reload, count() can see no switcher and incorrectly select the old sidebar.
+  await page.getByRole('button', { name: 'Inscape sidebar', exact: true }).waitFor();
+  if (await workspacePicker(page).count()) {
+    if (['Reception', 'My Inscape'].includes(name)) return workspaceDestination(page, name);
+    if (['Profile', 'Publish', 'Settings'].includes(name) && await page.locator('.editor-header-actions:visible').count()) {
+      const trigger = page.locator('.editor-header-actions').getByRole('button', { name, exact: true });
+      await trigger.click();
+      return trigger;
+    }
+  }
   await setEditorSidebarOpen(page, true);
   const trigger = page.getByRole('complementary', { name: 'Workspace sidebar' }).getByRole('button', { name, exact: true });
   await trigger.click();
@@ -39,4 +58,10 @@ export async function editorDestination(page, name) {
 }
 export async function editorOverview(page) {
   await editorDestination(page, 'My Inscape');
+}
+
+export async function choosePointer(page, name, visitor = false) {
+  if (visitor) return page.getByRole('button', { name: 'Hand tool', exact: true }).click();
+  await page.getByRole('button', { name: 'Pointer tools', exact: true }).click();
+  await page.getByRole('dialog', { name: 'Pointer tools' }).getByRole('button', { name: new RegExp(`^${name}\\b`) }).click();
 }

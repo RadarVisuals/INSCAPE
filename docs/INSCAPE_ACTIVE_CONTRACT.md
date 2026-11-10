@@ -89,6 +89,193 @@ control styling and theme owners, preserving current dimensions and behavior in
 the first visual slice. Separate new interaction proposals from that styling
 change; existing saving, Undo, docking and module responsibilities remain binding.
 
+The first migration applies this finish to the real Bento settings panel in both
+themes: compact label/value rows, rounded inset fields, blue selected controls
+and the existing explicit Apply actions. The panel keeps its existing floating
+and docked sizing. General usage guidance can collapse; scope and preview/save
+guidance remain beside the affected controls. Other tools retain their current
+finish until migrated through the same shared material and theme owners.
+The founder retained the separate object-alignment icon row in the compact design
+reference; it is distinct from positioning content inside a cell. Those specimen
+controls are not evidence of implemented alignment commands in Bento.
+
+During the subsequent live review, the founder asked for the Bento panel to be
+functional as well as compact. New layout uses explicit columns and rows, without
+the introductory paragraph or a radius control. Existing cell styling survives
+layout replacement; Current grid owns whole-grid corner changes. Selecting a cell
+must not expand the Bento panel into a second inspector. Keep individual cell
+properties with the existing artwork tools and split/merge in the cell context
+menu. Cell insertion belongs to the selected cell's + Cell control, with choices
+for the left/right of its row or above/below the Bento; it does not occupy the settings panel.
+The 7 November extension adds equal-size snapping during divider dragging.
+The subsequent accepted correction replaces cell swapping and the Top/Bottom
+context-menu actions with direct drag insertion and a visible destination preview.
+Full-width strips retain width, height and contents when inserted above, below
+or between complete row bands. Smaller cells insert between cells at unbroken
+column boundaries; the preview shows necessary width/height adjustments. Cells
+and their contents travel together, with one reversible save on release.
+The 8 November sizing decision keeps 1440 × 900 (16:10) as the initial Bento
+format. Existing work retains its authored size. Moving existing cells and adding cells in any direction never
+change the Bento bounds: a new strip takes space from the target row band,
+subject to existing content/minimum-size limits. Preview and release agree on
+that fixed frame. New top/bottom rows share space with the outer row band; left/right additions
+share the selected row band. Only explicit size edits change the work surface.
+Dragging the outer Bento edges is deferred.
+At reduced zoom, positive gutters retain fractional screen coverage in Editor
+and the shared reader instead of being snapped shut. Zero-gap cells retain
+shared pixel-aligned edges. No guide, artificial minimum gutter or persisted
+geometry adjustment is added to compensate for display scaling.
+Remove the expandable usage guide and preview/save instructions from that panel.
+Current grid applies toggles immediately and numeric edits on blur or Enter,
+without an Apply button. Place the outer-frame and inner-line toggles side by
+side. New layout retains explicit confirmation directly beneath its preview and
+variant controls. Numeric entry must not implicitly replace the layout or switch
+tabs; invalid settings should identify the affected field. Both the format trigger
+and its opened list use the accepted rounded Editor control treatment.
+
+Floating Bento height follows the active tab's content, bounded by the available
+screen height; its width remains resizable. Docked panels keep the shared dock's
+geometry and resize through their boundaries. Switching tabs should keep the
+floating panel's top position where screen space permits. Dock/undock glyphs in
+the shared tool headers are smaller and muted, with their existing click targets.
+
+The subsequent review changed the immediate workflow: design the complete UI in
+Figcraft before continuing production UI implementation, using the captured
+screen inventory, the accepted finish and the existing compact proportions in
+both Dark and Light. Review grouping, duplicate controls, selection and editing
+routes as well as appearance. Preserve the existing local implementation work.
+This supersedes the earlier direct-Editor-first preference for this design phase;
+it does not approve every control drawn in a specimen or replace module owners.
+
+After the side-by-side desktop review, the founder chose variant A: one
+selection-following inspector with the same compact finish throughout the UI.
+Cell/Contents, Text, Image, Shape, Color, Effects and Transform use relevant
+sections of that inspector rather than separate stacked tool windows. Preserve
+the union of useful controls from both studies and existing module tools; use
+clearly reachable sections for extended functions. Do not leave an empty Color
+window beside Image. Library, Layers and workspace utilities remain separately
+available. Floating/docking applies to the complete inspector for now, not to
+individual sections. Header-bar changes are the next separate design review.
+The founder did accept persistent centering: Text or Image centered in a cell
+stays centered when that cell resizes, until the user freely drags the content.
+The founder subsequently authorised Cell/Contents and Text implementation and
+confirmed that Contents positions the current native members together as one
+group, preserving their sizes and relative offsets. Selecting an individual
+Text or Image positions only that element. A nine-point position anchors it;
+free movement releases the intersecting anchor and Undo restores that constraint
+together with the geometry. Newly added members remain free until positioned.
+These native-member constraints are separate from editing locks and linked/profile
+content layout. Existing free members retain proportional cell resizing.
+
+Cell dimensions use the shared Bento edges so neighbouring cells stay joined;
+outer edges without a shared divider remain controlled by Whole Bento settings.
+The cell inspector and floating Cell and Bento Text toolbars share the same
+nine-point position control. The Text toolbar offers font, size, bold, italic,
+text color and spacing on the selected writing. Hover or arrow through the font
+menu to preview the selection, including its fitted frame. Click or press Enter
+to apply. Escape restores the original. At a typing cursor the menu previews “Aa”.
+Editing cell contents opens
+the writing surface directly. Reception Preview shows the result. The native Clip content setting defaults
+on and applies consistently in the editor and published Reception.
+
+The inspector comparison must keep the same controls, values and selection in
+both variants; differences in available features are not part of the A/B choice.
+The founder prefers a small chain control beside Width/Height for linking their
+proportions, rather than a separate Keep proportions checkbox. This controls box
+dimensions and is separate from centering content or changing its font size.
+
+The founder accepted the new colour-picker treatment and wants a choice between
+opening it from a swatch and keeping it visible. The design uses a Keep picker
+open pin within the inspector, stored as local UI preference. Preserve the
+existing pipette/screen-picking action and the native-colour-input fallback on
+browsers without EyeDropper. This is a presentation change; the existing colour
+gesture, selection, preview/cancel and commit owners remain authoritative.
+
+The founder subsequently supplied revised Dark and Light palette screenshots
+and requested green as the accent in both themes, superseding the blue accent
+in the earlier study. The bright green sampled from the supplied swatch is
+`#00FF9F`; its printed `E5E5E0` label is incorrect. Dark workspace, panel and
+inset-control references are `#242527`, `#343635` and `#262827`. Both side panels
+use the same material. Light neutrals retain the supplied warm paper family
+(`#F4F3EF`, `#E5E5E0`, `#DADBD6`, `#FFFFFF`) with `#252B27` primary text.
+The light-theme treatment uses deeper green `#007A50` for small interactive
+marks and pale green `#E5F6EF` for selected surfaces. The founder subsequently
+found the bright Publish button uncomfortable in Light and requested the darker
+green there too: Light primary buttons use `#007A50` with white labels; Dark
+keeps its bright-green buttons and dark labels. Confirm other derived state
+colours in the visual reference rather than assuming them settled. The supplied
+dark swatch labelled `B9BEBA` actually renders as `#515654`, and the Light screen
+uses `#FAF9F6` panels: distinguish sampled surfaces from printed palette labels
+when reconciling the reference. These palette decisions do not recolour authored
+artwork or cell fills. At the founder's request, Revision 03 of the Figcraft
+reference now uses this palette, including matching side panels, green wordmark
+accents and bright-green selection outlines over its dark authored examples.
+The previous file is backed up beside it. This is a reference-file update, not
+evidence of production implementation; canvas selection must also remain legible
+over light authored content when implemented.
+
+After reviewing the palette, the founder authorised implementation from the
+updated Figcraft reference, beginning with the shared inspector host and Image
+controls. Continue in functional, reviewable slices; the separate header review
+and Cell/Contents and Text integration are separately authorised slices. The founder
+also requested compact cell context menus: Merge cell and Split cell occupy two
+root rows, with directional choices in their submenus. Reuse the existing menu
+keyboard/focus behaviour and cell operations; this slice adds no separate merge
+or split command to the cell toolbar.
+
+The founder subsequently authorised Shape, Color and Effects in the same compact
+inspector, following the Revision 03 Figcraft reference. Shape keeps its own
+name, pattern, publication and editing responsibilities. Appearance exposes
+Fill and applicable Outline controls directly; Effects keeps Grain for rectangles
+and Blur for supported Shapes. The inspector colour picker uses the reference's
+rectangular saturation/value field, hue strip, editable H/S/L and hex, while
+retaining the pipette and local Keep picker open preference. Existing shared
+colour transactions, preview cancellation, saving and Undo remain authoritative.
+Controls shown in a specimen do not imply new shape conversion or unsupported
+outline capabilities. Header and other workspace utilities remain separate work.
+
+The founder subsequently authorised Layers and Library in this compact finish.
+They remain separately available with their existing window and browsing owners.
+Layers keeps native order, cell membership, groups and temporary visibility;
+quiet row actions remain reachable by pointer and keyboard. Editor Library puts
+search, collection filters and sorting above results, with labels and thumbnail
+size below. Reuse existing category and relationship navigation, and preserve
+selection and browsing when moving the Library between hosts. The specimen's
+Add material footer introduces no new action. Other Library consumers keep their
+existing presentation; header and floating artwork toolbars are separate slices.
+
+The next authorised slice covers floating Cell, Text, Image and Shape actions,
+plus Editor object context menus, following Revision 03. Use one compact toolbar
+recipe with the approved Dark/Light tokens, 28px desktop controls and named icons.
+Keep native movement, crop, text modes and inspector routes; a grip must actually
+move its object. Cell keeps its native Add cell choice and direct content actions,
+with Merge/Split grouped only in the context menu and existing inspector controls.
+Menus retain keyboard navigation, disabled reasons and focus return, with their
+flyout geometry matching the compact rows. Header/creation-bar redesign remains
+separate.
+
+In the owner Editor, freely moving an Image by dragging the artwork or its grip,
+nudging with the keyboard, or moving a selection containing the Image is one
+document Undo step per completed move. Undo restores the starting position and
+any cell placement constraint released by that move. Visitor movement stays local.
+
+## Reception layer transfer (2026-11-09)
+
+The founder authorised the preparatory Reception editor improvements following
+the code review. Layers offers an explicit **Move to cell**
+action, including **Move out of cell**. Transfer keeps native identities, content,
+authored visibility, sizes and relative offsets, centring the selection in the
+destination. Release keeps its world position and applies existing standalone
+module minima. Both use one Reception save and Undo operation. Intersecting
+placement anchors are released without moving the layers left behind; editing
+locks remain binding. Transferred layers derive their narrow-view placement from
+the new cell instead of retaining the old cell's position override.
+Layer dragging continues to reorder within its current ownership. Contents and
+Layers derive their displayed order from the same native artwork order. Numeric
+fields preserve untouched precision and return to the accepted saved value after
+normalisation, cancellation or failed storage. The motion runtime and animation
+editor remain subsequent work; this slice preserves native layer identity for it.
+
 ## Editor foundation evaluation (2026-11-04)
 
 The founder wants existing open-source editor and UI foundations compared before
@@ -132,6 +319,13 @@ does not itself remove existing public viewing behavior or authorize blanket tes
 deletion; shared behavior still needs proportionate regression checks.
 
 ## Editor menu and sidebar (2026-11-01)
+
+On 2026-11-06 the founder chose a centered workspace dropdown for the Canvas
+Editor, Reception Editor, My Inscape and Reception preview. Its label identifies
+the current view and includes the saved canvas name in the Canvas Editor. Keep
+the chevron visible when a long name is shortened. Reception uses the same
+control with destinations supplied by the host for the current visitor or owner.
+Wider adoption follows as other app headers are revised.
 
 The founder approved a thin, fixed full-width Editor menu: the supplied Inscape
 wordmark, Canvas, Edit, View, Tools, Docs and Backup. The workspace begins below
@@ -187,6 +381,19 @@ existing Properties window. These surfaces present module-owned actions and reta
 the existing save, temporary-edit, undo and access boundaries. Transform continues
 to edit the module frame (X, Y, width and height); Image content transforms belong
 to Image. Selecting a different module cancels an unfinished Image crop.
+
+On Shape and Image, drag the six-dot grip to move the object, or click its layer
+name to rename it in place. Enter or leaving the field commits; Escape cancels.
+Renaming an Image leaves its source artwork title unchanged. The info button
+opens or collapses Artwork info in the Inspector and reflects its expanded
+state. Other sections keep their state. Native shapes show their type and
+dimensions; Images show the artwork's source information when available.
+The object toolbar does not repeat generic settings or Inspector launchers.
+The Shape and Reception cell toolbars show the selected shape or cell's fill
+color and percentage. The swatch opens the shared
+color picker and opacity control at the object. Fill, outline and Bento inner-line
+opacity support both dragging and exact percentage entry in the Inspector. One
+completed slider gesture is one undoable edit; fill opacity does not fade the outline.
 
 On 3 November the founder approved a consistent object context menu after finding
 the separate action strips confusing. Native Image, Shape and Text use **Duplicate**,
@@ -331,15 +538,15 @@ invalid splits or layout changes explain the constraint before saving.
 Text creation receives an explicit native frame and transparent appearance.
 Bento uses the shared Workbench gesture lifecycle for cancellation and cleanup.
 
-The founder's subsequent thin-strip clarification lowers native Text's minimum
-frame height from 100 to 24 work pixels, with its 180-pixel minimum width retained.
-Bento cells use separate minima of 80 pixels wide and 24 pixels high, so a fine
-name strip can contain Text at the lowest cell height. Creation, native resizing,
-shared edges, splits, row creation, layout sizing and saved Text validation use
-these same bounds. Other contents can impose a larger proportional minimum.
-Compact empty text uses a single-line writing target instead of the article's
-64-pixel empty-body target. Font size and actual text fitting remain authored
-choices; reducing a frame does not automatically shrink its typography.
+Bento cells have an 80 × 24 work-pixel minimum. New Text in a cell starts with
+an 80 × 24 writing target centred in the cell. Once typed, its frame fits
+the rendered text and follows edits. Position in cell anchors that frame.
+Text starts at the top left of a fixed frame and wraps at its right edge.
+Authors can set paragraph and vertical alignment independently, rotate text
+in quarter turns, or stack upright letters in a single-column text box.
+Resizing the text box by hand switches to a fixed frame. The Text inspector's
+Fit to text control restores automatic sizing and works on existing text too.
+Standalone and linked article windows use a 180 × 24 minimum.
 
 On the scaled desktop public projection, cell radius scales with geometry for
 both background and member clipping. Existing phone reflow retains its radius
@@ -392,9 +599,12 @@ selection. Dropping over its existing artwork adds another layer. Inside content
 editing, native image targets and free placement retain their existing behavior.
 Creation and cell membership save together, including Undo and failed-save recovery.
 
-New Bento images, including Library drops and added/replaced sides, start in
+New Bento images, including Library drops and replacements, start in
 Fit inside so narrow cells show the complete artwork centred without stretching.
-Existing authored crops are preserved. In a cell, the native Fit/Fill controls
+A native Image in a Bento cell can be 24 work pixels high, including a logo
+added from Contents or dropped from the Library. Loose Canvas Images retain
+their 32-pixel minimum on both axes. Existing authored crops are preserved.
+In a cell, the native Fit/Fill controls
 are labelled **Fit cell** and **Fill cell**: both reset the Image frame to the
 owning cell, and choose containment or a centred filling crop respectively.
 Position, size and crop save in one Undo operation. Subsequent splits and divider
@@ -488,7 +698,7 @@ Reception also offers **Bento → Show inner lines** (2026-11-03). Apply setting
 saves optional document-level `innerLines` using the existing Shape Outline record
 `{ color, width, opacity }`; null/omission disables it. The founder explicitly
 requires the existing Color wheel and stroke controls. Select a cell and choose
-**Color → Bento inner lines** for the shared Outline width (0–64 px), colour wheel,
+**Color → Bento inner lines** for the shared Stroke width (0–64 px), colour wheel,
 hex, eyedropper and opacity. Rectangle outlines and Bento inner lines use one
 Outline-control component and validator. There is no separate colour picker or
 width control in Bento. Initial colour contrasts with the current interface theme;
@@ -569,7 +779,7 @@ entry points, not a claim that they were all rerun with this documentation edit.
 | Area | Current route and state boundary | Detail / acceptance entry points |
 | --- | --- | --- |
 | Workbench and camera | Implemented. Multiple named Workbenches per profile, with one active composition. Camera, selection, Focus/Back and inspection are temporary; module content and accepted layout edits use the existing draft boundary. | [Collection](#multiple-named-workbenches-direction-2026-10-20), [Workbench](#public-workbench-and-visitor-interaction); [camera/area](../browser-tests/workbench-area-navigation.browser.mjs), [F toggle](../browser-tests/workbench-focus-toggle.browser.mjs) |
-| Image | Implemented. Add Image or drop Library artwork onto empty Workbench. One click selects; double-click/Enter focuses, F focuses/returns, I inspects. Image owns sides, crop and dimensions; asset identity stays attached. | [Image](#independent-image-module); [click](../browser-tests/image-click.browser.mjs), [artwork host](../browser-tests/artwork-document.browser.mjs) |
+| Image | Implemented. Add Image or drop Library artwork onto empty Workbench. One click selects; double-click/Enter focuses, F focuses/returns, I inspects. Image owns its artwork, crop and dimensions; asset identity stays attached. | [Image](#independent-image-module); [click](../browser-tests/image-click.browser.mjs), [artwork host](../browser-tests/artwork-document.browser.mjs) |
 | Text | Implemented. Standalone rich articles, linked reading frames and focused writing. One article owns content; save failure/recovery and native text undo remain scoped to it. Display transfer/linking is conditional on the retained experimental Display. | [Text](#text-authoring); [filled editors](../browser-tests/text-filled-workbench.browser.mjs), [linked frames](../browser-tests/text-linked-frames.browser.mjs) |
 | Shapes | Implemented. Rectangle and Grid creation; authored shape appearance and geometry, with owner editing and shared Visitor paint. Texture creation is retired; retained Texture records are not a new creation route. | [Shapes](#workbench-background-shapes); [shape behavior](../browser-tests/shapes.browser.mjs) |
 | Groups and Index | Implemented. Named membership, stacks and saved navigation destinations. Membership/anchors and explicit publication choices are authored; browsing and camera return are temporary. These are not Display Grids. | [Groups](#named-workbench-groups); [groups](../browser-tests/workbench-groups.browser.mjs), [stacks](../browser-tests/workbench-stacks.browser.mjs), [Index](../browser-tests/workbench-index.browser.mjs) |
@@ -712,7 +922,7 @@ visitors. Opening a card still reuses the existing viewer, metadata and Index.
 An explicitly linked cell can still open a specified canvas and camera point.
 Closing restores browsing position and focus.
 
-Reception can show an existing Display, Image side or Text from a named canvas,
+Reception can show an existing Display, Image or Text from a named canvas,
 or map Display scenes to existing Image/Text sources. The real Display runtime
 owns swipe, keyboard and playback interactions. Its Text follower shares the
 same temporary motion; mapped cells follow the committed scene. Unlinked cells
@@ -1200,7 +1410,7 @@ while its information panel is open. These are not merged into composition trait
 
 The viewer is lazy-loaded and uses the existing read-only composition renderer;
 it adds no second content store, published document, schema or image export.
-Current projection limits still apply: Images show their first side, retained
+Current projection limits still apply: Images show their artwork, retained
 Display shows its first Grid, and executable mini-apps remain named placeholders.
 It is a local owner presentation, not the interactive public visitor runtime or
 public multi-Workbench publication. No Reception/Desktop changes, upload,
@@ -1530,9 +1740,8 @@ and reopen through Actions → Image settings. Selecting artwork does not change
 the active tab. The Image tab follows one selected Image; other selections and
 closed artwork have explicit empty/reopen states.
 
-The existing Library drop choice, Remove Image side and Include Image in
-publication controls keep their order and module-owned behavior. The old Image
-Properties contents are replaced, not duplicated. Side selection/drop mode,
+Include Image in publication keeps its module-owned behavior. The old Image
+Properties contents are replaced, not duplicated. Artwork replacement,
 asynchronous drop invalidation, edits, storage errors and Undo remain in Image.
 The host routes its existing controls through the same selection/tool-source
 boundary already used by Color. Action errors, including Fit and crop completion,
@@ -1662,7 +1871,7 @@ the existing controls before working on Keeper. Color names its article-wide
 targets explicitly and replaces “Use inherited color” with “Use default text
 color”; the tooltip identifies the paragraph/heading or article default being
 restored. Typography reset controls use the same default terminology. Image
-names its Library-drop outcomes Add as a new side and Replace current side.
+uses Replace image for its Library selection action.
 Shape's existing-object chooser is Selected shape. Layers consistently calls
 its composition blocks groups in its controls and identifies editing or moving
 a member out of a group explicitly. These are wording changes, with the same
@@ -1779,7 +1988,7 @@ Text input and active gestures before leaving part editing. No nested blocks,
 group FX or automatic conversion of navigation groups is introduced.
 
 Eye controls are session-only editor visibility. Deletion has inline
-confirmation and one completed save; Undo restores module records, sides,
+confirmation and one completed save; Undo restores module records, artwork,
 source references, captured layout and memberships. Failed or stale writes do
 not partially mutate the composition. Canvas Delete opens the confirmation
 even when Layers is closed and does not intercept text input. Closed artwork
@@ -1801,34 +2010,33 @@ Library behavior remain separate. See the
 
 ## Independent Image module
 
+**Single artwork per Image (2026-11-09).** The founder retired the unused
+Flipcard/sides experiment throughout Inscape, including Bento. Remove its
+multiple-source model, side controls, flip rendering and tests; no compatibility
+path is required. Each Image owns one `artwork` or is empty. Independent Images
+remain separate layers: multiple Images can overlap freely, including within
+one Bento cell. Layer order, grouping, movement and Undo remain intact.
+
+Image actions use visible English labels: Fit, Fill, Crop and Replace image.
+Replace image opens the shared Library for that Image. Dropping onto an Image
+replaces its artwork without changing its frame or layer, in one Undo operation.
+Dropping onto a cell at Bento level still adds an independent Image layer.
+Crop explains that dragging adjusts the crop.
+
 The founder accepted Image as a standalone Workbench module beside Display.
-It holds one Library image per side, with no layers or nested composition.
-One side holds one artwork source. Multiple sides expose a separate Next control:
-every flip turns in the same direction and the last side wraps to the first.
-The selected side is temporary reading state; reloading starts at side one.
+It holds one Library image, with no nested composition. Multiple independent
+Images may be layered in the Workbench or in a Bento cell.
 Image has its own flat, borderless rectangular surface, without instrument-window
 chrome, grain, shadows or rounded corners. The original media alpha is retained.
 Canvas projection and clipping share one rectangle. Movement and snapping use
 exact Workbench geometry, never rounded DOM positions. Crop projection uses
 authored canvas dimensions independently of the camera. Only painting rounds
 the projected edges to physical pixels, so adjacent modules share a boundary
-through pan and zoom without rewriting authored geometry. Resting
-artwork is 2D. Flip faces and perspective exist only during a side transition.
-The requested side is prepared before the turn: raster media is decoded and
-SVG media waits for its live document, including extensionless sources. The
-visible side remains mounted while waiting; the prepared side retains its DOM
-and live document when it becomes the resting image. Only these two sides are
-mounted during a transition. Loading is bounded, failed preparation preserves
-the current side and offers retry through Next, and closing or changing content
-cancels obsolete preparation. The 600ms turn uses a symmetric easing curve.
-Artwork briefly fades around the edge-on midpoint (30ms either side), softening
-the dark stripe formed by compressing dark artwork. The rotating faces retain
-their backface culling; the resting artwork remains fully opaque.
-Each face retains its authored crop; the rotating plane can extend beyond the
-resting canvas instead of being clipped again by its stationary rectangle.
+through pan and zoom without rewriting authored geometry. Artwork is 2D. Loading and recovery belong to the mounted source; closing
+or replacing it cancels obsolete loading work.
 The explicit Inspect action opens the existing Display Lift renderer, revealing its
 full media from the cropped rectangle. Return or Escape restores that crop.
-Reduced-motion users get immediate side changes and inspection transitions.
+Reduced-motion users get immediate inspection transitions.
 
 Image and Display render SVG artwork through the same isolated document runtime
 as Identity. Module-owned geometry still determines crop, resize, rotation,
@@ -1888,20 +2096,18 @@ ordinary clicks on an already active Image do not zoom. This
 activation is separate from the existing Shift-toggle multi-module selection.
 Dragging beyond five screen pixels moves its window and never focuses on release. Movement is
 temporary until release; Escape, lost capture or blur cancels it. Crop retains
-its own pan gesture. The separate floating title strip is removed. Close and a
-small Next arrow appear on hover or keyboard focus, and remain available on
-touch. The side count stays in the accessible description and tooltip rather
-than covering the artwork. On tiny or thin canvases these action targets sit
-outside the artwork and resize handles so the canvas remains grabbable.
+its own pan gesture. The separate floating title strip is removed. Visitor Close and Inspect appear on hover or keyboard focus and remain
+available on touch. On tiny or thin canvases these action targets sit outside
+the artwork and resize handles so the canvas remains grabbable.
 Shift-click or Shift+Enter on the artwork toggles Workbench selection; focused
 window arrow keys move it. Resizing saves position and dimensions together
 as one undoable operation; Escape cancels the preview. Keyboard focus remains
 visible. Visitor shares direct movement, inspection and quiet controls without
 editing bounds or resize controls. The contextual dock also offers exact
 dimensions, shared rotate/mirror actions, crop pan/zoom and Native fit.
-New artwork fills the canvas through a centred crop. Library drops append a
-side by default; Replace side retains its position in the sequence and starts
-the new artwork at its default crop/transform. Remove side is undoable.
+New standalone artwork fills the canvas through a centred crop; Bento uses
+Fit inside. Library drops onto an Image replace its artwork at the appropriate
+default crop and transform. Replacement is undoable.
 As explicitly clarified on 2026-10-19, Image corners resize width and height
 independently: horizontal movement changes only width, vertical movement only
 height, and diagonal movement changes both freely around the opposite corner.
@@ -1923,16 +2129,14 @@ mode and existing crop focus/zoom, including when the canvas ratio changes.
 Pointer, keyboard, selection and
 numeric size edits use the same authored resize operation. Cancel restores the
 previous fit; undo restores fit, dimensions and position together. Older saved
-native-fit sides remain unchanged when opened or moved. Fit inside and Fill
+native-fit artwork remains unchanged when opened or moved. Fit inside and Fill
 canvas expose the existing fitting choices directly in Image tools; Fit inside
 shows the full source and may leave space. Fill canvas covers the canvas through
 an aspect-preserving crop. Neither mode stretches the artwork.
-The first implementation supports up to sixteen modules and 32 sides each.
-Image tools offer Duplicate, creating an independent Image beside the original.
-It retains authored dimensions, publication inclusion, every side's source,
-crop and transforms, with new module and side IDs. The copy starts on the
-currently viewed side and receives selection and keyboard focus; that side
-choice remains temporary. Duplication saves the copy and its position in one
+The implementation supports up to sixteen independent Image modules.
+Duplicate retains authored dimensions, publication inclusion, source, crop and
+transforms, with new module and artwork IDs. The copy receives selection and
+keyboard focus. Duplication saves the copy and its position in one
 undoable operation, observes the module limit, and never resets an existing crop.
 Dragging Library artwork onto empty Workbench space creates one Image module at
 the preview's exact position, accounting for camera pan and zoom. The preview is
@@ -1942,14 +2146,14 @@ The centred filling crop matches other Library additions; Fit inside remains
 available when the full source is preferred. Creation saves the artwork and open window
 position in one undoable draft operation and selects the Image tools. Drops on
 existing modules retain their own behavior; Display receives a Grid placement
-and Image appends a side unless Replace side is selected.
+and Image replaces its current artwork.
 An Image created by this drop is included in the next explicit publication by
 default. Empty Images created through Add remain private. Existing visibility
 choices stay unchanged, and Include Image in publication remains available.
-Nothing uploads or publishes on drop. It shares the owner/Visitor renderer; Visitor can flip, inspect and
+Nothing uploads or publishes on drop. It shares the owner/Visitor renderer; Visitor can inspect and
 move its temporary window, with no editing tools or authored resize.
 
-Optional `imageModules` extends draft v4 and public document v9. Each side
+Optional `imageModules` extends draft v4 and public document v9. Each Image artwork
 retains the canonical resolved Library asset and source metadata, as illustrated
 Text already does, separately from crop and transform. Authored dimensions
 belong to the module. `workbench.imageModules` stores only window position and
@@ -1960,7 +2164,7 @@ changes or resets. Older publication restore retains missing local Images as
 private. Asset-reference and document-size limits include Image content.
 The ordinary draft store owns edits, persistence errors and undo/redo; current
 Display sessions cannot overwrite Image content. Crop/drag state is scoped to
-its originating module and side and ends on target/content change, close,
+its originating module and artwork and ends on target/content change, close,
 Preview suspension or disposal. Image loads lazily when present.
 
 ## Workbench background shapes
@@ -2074,7 +2278,7 @@ This reuses the native article content and editor; it adds no text type or
 stored mode and does not convert existing titles into body text.
 The founder clarified that short Bento labels must be easy to position inside
 their text box. New Bento Text starts with compact spacing (no automatic article
-padding), a centred paragraph and vertical centring. Existing authored typography
+padding) and a fitted frame centred in the cell. Existing authored typography
 is retained. Text box layout exposes compact/article spacing and top/centre/bottom
 alignment; paragraph left/centre/right remains in Format text. Alignment uses the
 available space and returns to the top when content is taller than the frame.
@@ -2176,7 +2380,7 @@ columns with an authored gap of 0–128 text pixels (24 when omitted). The title
 spans the body width. In two- and three-column compositions, the available frame
 height below the title and inside the authored padding determines the column
 breaks: fill down, then continue to the right. Resizing reflows complete lines;
-extra columns are clipped at the frame edge and the owner sees “Text doesn’t fit”.
+extra columns are clipped at the frame edge. The founder removed the “Text doesn’t fit” overlay on 8 November: no warning covers authored text.
 The full article remains saved and available through Focus writing, which keeps
 its continuous editor. One-column articles retain contained scrolling; the
 explicit page reader retains its pagination. Write, Read, Visitor and Display
@@ -2190,7 +2394,7 @@ fits. Text flows through the authored order and reflows when any frame changes.
 The title appears in the first frame. Removing a continuation preserves the
 entire article and flows it through the remaining frames. Closing the original
 Text minimizes the whole chain. The owner sees frame numbers, connection lines
-while selected, and an overflow notice on the final frame when content remains.
+while selected. Remaining content stays in the article without an overflow notice.
 There is one article, selection and editing history across the chain; typing,
 formatting and undo in a continuation act on that same document. Focus writing
 remains an optional continuous view. The initial implementation permits eight
@@ -2758,7 +2962,7 @@ The hierarchy is:
 1. **INSCAPE Workbench** — the containing desktop and experimental workspace.
 2. **Module instance** — an independently configured creative application on
    that desktop. Multiple instances of the same type are accepted direction.
-3. **Module-owned content** — for example Image sides and Text articles;
+3. **Module-owned content** — for example Image artwork and Text articles;
    experimental Display composes assets across Grids.
 4. **Stage and Grids** — the experimental Display Module's clipped output and
    scenes, not a required container for ordinary Workbench composition.
@@ -3169,17 +3373,20 @@ geometry afterward. This prevents a brief offscreen crossing from restarting an
 SVG document; artwork that remains offscreen still releases its document.
 
 On 2026-10-11 the founder approved named saved camera destinations and a
-Workbench Index. Add > Index creates one optional navigation instrument. It can
-remain pinned to the screen or travel with the canvas. Its window uses the shared
-Workbench host; navigation tools are not composition/group members. Owner moves
-and resizes commit once at gesture completion. Visitors may browse/close it
-without writing the maker's layout.
-The Index retains readable screen-pixel dimensions and controls at every zoom.
-When unpinned, only its position follows the canvas through the shared camera's
-live paint subscription; it is not artwork and never joins composition selection
-or raster projection. Dragging converts screen movement to canvas position;
-resizing retains screen-pixel dimensions. Existing saved window values load
-unchanged, without rewriting destinations, schemas or storage keys.
+Workbench Index. Add > Index creates one optional navigation instrument. As of
+2026-11-07 its expanded list and compact numbered strip both stay pinned to
+the screen. The owner can dock the expanded Index in either editor sidebar.
+The side is a private editor preference. Collapsing frees its dock slot for
+other panels and shows the floating strip. Expanding restores the saved side.
+The strip visits the same destinations in list order. Switching
+between the two is a local viewing preference. The shared Workbench window
+handles dragging and resizing in screen pixels. Older unpinned windows reopen
+at the default screen position with their saved dimensions and destinations.
+Owner moves and resizes commit once at gesture completion. Visitors can
+navigate, move or close the Index locally. In the expanded owner list the
+star sets or clears the visitor's starting view. Clicking a row visits it;
+double-clicking its name or pressing F2 edits the name. Both the list and strip
+mark the saved view that matches the settled camera, including after Back.
 `workbenchIndex` is optional in draft v4 and public v9: `open`, `pinned`, `window`,
 up to 32 ordered `destinations`, and nullable `landingId`. Each destination stores
 an id, name and authored Workbench view rectangle. Owner records also contain
@@ -4523,7 +4730,7 @@ keyboard focus remains visible. The map includes the canvas, current view and
 visible outside artwork, and holds its projection fixed during a drag.
 
 Modules expose read-only miniature inputs from their existing live state.
-Image sides/crop, Display placements, Shape appearance, article content, frames,
+Image artwork/crop, Display placements, Shape appearance, article content, frames,
 layer order and editor visibility feed the projection. Miniatures never mount
 an editor, interactive SVG runtime or mini-app. Unsupported/missing media retain
 a frame. Keeper and tools are not composition objects. Camera painting updates
@@ -4598,15 +4805,15 @@ window described above. Visitor keeps its independent read-only metadata host.
 Artwork info in the toolbar and the existing Display Metadata command open the
 same Info tab. The dock alone owns owner visibility and geometry; modules keep
 the existing content registration and explicit active target. Image now supplies
-the canonical source facts for its visible side, even when the source image
-cannot load. Side changes update the content. Shape, multi-selection and empty
+the canonical source facts for its artwork, even when the source image
+cannot load. Replacing the artwork updates the content. Shape, multi-selection and empty
 Workbench states show a selection hint rather than stale Image information.
 Display continues to supply its selected artwork through its existing controller.
 
 The reference and app share the metadata presentation: artwork title, collection,
 description, creators, attributes and expandable Source details. Unknown facts
 remain unknown; creator source/scope stays distinct from holding or authority.
-Reading metadata, docking and navigating sides do not author data or add Undo
+Reading metadata, docking and selecting Images do not author data or add Undo
 history. No new document fields, migrations, publication or wallet actions are
 introduced. On cramped screens an active dock is above Navigator/Keeper and
 scrolls within the available area; closing it restores access to those utilities.
@@ -4848,9 +5055,9 @@ clarification now selects this workspace design for subsequent implementation;
 this documentation update does not perform that migration. The preview still
 uses disposable example objects; existing Properties specimens remain as
 control-coverage references. The eyedropper, shared FX
-including blur, Navigator behavior and side-management presentation still need
-review. Fit/Cover are the current example choices; an additional Fill command
-needs a distinct agreed purpose. Library, publishing, account and settings stay
+including blur and Navigator behavior still need review. The Image controls now
+follow the 9 November single-artwork contract: Fit, Fill, Crop and Replace image.
+Library, publishing, account and settings stay
 separate. No saved content, application state or access boundaries change.
 
 The founder requested a navigation-sidebar exploration in the same prototype

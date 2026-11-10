@@ -1,8 +1,8 @@
 import { spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
-import { createOwnedProcessTree, listWindowsProcesses, listPosixProcesses, terminateWindowsProcessTree,
-  terminatePosixProcessTree, withinDeadline, resolveWindowsProcessRuntime } from '../browser-tests/browser-test-lifecycle.mjs';
+import { createOwnedProcessTree, listWindowsProcesses, listPosixProcesses, terminateWindowsProcess,
+  terminatePosixProcess, withinDeadline, resolveWindowsProcessRuntime, BROWSER_LIFECYCLE_TIMEOUTS } from '../browser-tests/browser-test-lifecycle.mjs';
 
 // Reuse the browser lifecycle's PID + creation-identity checks. Never kill by
 // process name, port, or an unverified PID, including on Windows.
@@ -17,6 +17,7 @@ export async function runOwnedCommand({ args, cwd, env, stdio, timeoutMs, signal
   // A verification command is its own coordinator, even when unit tests invoke
   // this helper from inside another Node test worker.
   delete childEnvironment.NODE_TEST_CONTEXT; delete childEnvironment.NODE_TEST_WORKER_ID;
+  const rootStartedAt = Date.now();
   const child = spawn(process.execPath, ['--import', new URL('./verificationProcessGate.mjs', import.meta.url).href, ...command], {
     cwd, env: childEnvironment,
     stdio: [...descriptors, 'ipc'], windowsHide: true });
@@ -25,9 +26,11 @@ export async function runOwnedCommand({ args, cwd, env, stdio, timeoutMs, signal
     child.once('close', (code, childSignal) => resolve({ code, signal: childSignal }));
   });
   if (!child.pid) return { ...await outcome, cleanup: { status: 'not-started', remainingPids: [], errors: [] } };
-  const tree = createTree({ rootPid: child.pid,
+  const tree = createTree({ rootPid: child.pid, rootStartedAt, rootParentPid: process.pid,
+    isRootAlive: () => child.exitCode === null && child.signalCode === null,
     listProcesses: windowsRuntime ? () => listWindowsProcesses({ runtime: windowsRuntime }) : listPosixProcesses,
-    terminateTree: process.platform === 'win32' ? terminateWindowsProcessTree : terminatePosixProcessTree });
+    terminateProcess: windowsRuntime ? entry => terminateWindowsProcess(entry, { runtime: windowsRuntime }) : terminatePosixProcess,
+    terminateWithIdentityCheck: windowsRuntime ? (entry, timeoutMs) => terminateWindowsProcess(entry, { runtime: windowsRuntime, timeoutMs }) : undefined });
   const errors = [];
   let observation = Promise.resolve(), pendingObservations = 0, timer, watchdog, stopped = null, stopPromise, cleanupCompleted = false, commandError;
   let started = false, completed = false, completionPending = false, completionObservation = Promise.resolve();
@@ -79,7 +82,7 @@ export async function runOwnedCommand({ args, cwd, env, stdio, timeoutMs, signal
       started = true; child.on('message', onComplete); await acknowledge('start');
       // Slow inventories must not build a periodic backlog. Explicit checkpoints
       // still queue fresh observations, including completion behind a pending poll.
-      timer = setInterval(() => { if (!pendingObservations) void observe(); }, 1000);
+      timer = setInterval(() => { if (!pendingObservations) void observe(); }, BROWSER_LIFECYCLE_TIMEOUTS.processObservationMs);
       watchdog = setTimeout(() => { void stop('timeout'); }, timeoutMs);
     }
     const result = await withinDeadline(outcome, timeoutMs + 35_000, 'Owned command did not close after watchdog cleanup', () => { void stop('timeout'); });

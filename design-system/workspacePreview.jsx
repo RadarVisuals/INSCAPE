@@ -52,7 +52,7 @@ const libraryExamples = [
 const tabs = ['Color', 'Layers', 'Shape', 'Image', 'Display', 'Transform', 'FX', 'Info'];
 const seed = () =>
   [
-    { id: 'image', kind: 'image', name: 'Image · Side 1', color: '#b5a99a', sides: 2 },
+    { id: 'image', kind: 'image', name: 'Image', color: '#b5a99a' },
     { id: 'shape', kind: 'shape', name: 'Rectangle', color: '#8d9c8c', shape: 'rectangle' },
     { id: 'display', kind: 'display', name: 'Display · Grid 1', color: '#d4d1c8', grid: true },
     ...sampleLayers(),

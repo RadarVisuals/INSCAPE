@@ -1,3 +1,4 @@
+import { openSharedTool } from './fixtures/shared-tools.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdir } from 'node:fs/promises';
@@ -37,7 +38,10 @@ test('owner frame persists, contextual actions work, and the canvas travels both
       assert.equal(await page.locator('.workbench-overview-navigation').count(), 0);
       assert.deepEqual(await page.getByRole('menubar').getByRole('menuitem').evaluateAll(nodes => nodes.map(node => node.getAttribute('aria-label'))), ['My Inscape', 'Edit', 'View', 'Docs', 'Backup']);
       const overview = await page.locator('.workbench-overview').boundingBox();
-      assert.equal(overview.y, 40); assert.ok(overview.x >= 200);
+      const bar = await page.locator('.editor-menu-bar').boundingBox();
+      assert.equal(overview.y, bar.y + bar.height);
+      assert.equal(overview.x, 0, 'the collapsed sidebar leaves the overview full width');
+      assert.equal(overview.width, page.viewportSize().width);
       const before = await page.evaluate(() => JSON.stringify(window.savedDraft()));
       await page.keyboard.press('Control+z'); await page.keyboard.press('Delete');
       assert.equal(await page.evaluate(() => JSON.stringify(window.savedDraft())), before, 'browsing cannot edit the hidden document');
@@ -112,15 +116,16 @@ test('portrait margins contract while prepared docked tools stay above the artwo
     await choose(page, 'My Inscape', 'Open in Editor'); await settled(page);
     await page.evaluate(() => {
       const store = window.guardedStore(), draft = store.getDraft();
-      draft.keeperDocks = [{ id: 'keeper:return', name: 'Return test', asset: draft.imageModules[0].sides[0].asset,
+      draft.keeperDocks = [{ id: 'keeper:return', name: 'Return test', asset: draft.imageModules[0].artwork.asset,
         faces: 'right', movement: 'flip', size: 192, visibility: 'PRIVATE' }];
       draft.workbench.keeperDocks = [{ id: 'keeper:return', position: { left: 250, top: 80 } }];
       if (!store.commitCompletedOperation(draft, { expectedGeneration: store.getGeneration() })) throw Error('Keeper fixture save failed');
     });
     await page.reload(); await page.getByRole('button', { name: 'Release Keeper', exact: true }).waitFor();
-    const layersButton = page.locator('[data-workbench-toolbar]').getByRole('button', { name: 'Layers', exact: true });
-    if (await layersButton.getAttribute('aria-pressed') !== 'true') await layersButton.click();
+    await openSharedTool(page, 'Layers');
     const dock = page.locator('.workbench-tool-dock').filter({ has: page.getByRole('tab', { name: 'Layers', exact: true }) });
+    const undock = dock.getByRole('button', { name: /^Undock / });
+    if (await undock.count()) await undock.click();
     await dock.getByRole('button', { name: /Dock .* on right/ }).click();
     const keeperDockButton = page.locator('.keeper-dock-window').getByRole('button', { name: 'Dock Keeper on right', exact: true });
     await keeperDockButton.focus(); await keeperDockButton.click();
@@ -146,7 +151,7 @@ test('portrait margins contract while prepared docked tools stay above the artwo
       window.returnAnimations.forEach(animation => { animation.pause(); animation.currentTime = 100; });
       const rect = tools.getBoundingClientRect();
       return { retained: tools === window.leavingDock, inert: tools.inert, opacity: Number(getComputedStyle(tools).opacity),
-        utilities: [...document.querySelectorAll('.workbench-tool-window')].filter(node => node.getClientRects().length && getComputedStyle(node).visibility !== 'hidden')
+        utilities: [...document.querySelectorAll('.workbench-utility-panel')].filter(node => node.getClientRects().length && getComputedStyle(node).visibility !== 'hidden')
           .map(node => ({ name: node.getAttribute('aria-label'), inert: node.inert, opacity: Number(getComputedStyle(node).opacity) })),
         keeperRetained: keeper === window.leavingKeeper && !keeper.hidden && getComputedStyle(keeper).visibility === 'visible',
         keeperStable: ['x', 'y', 'width', 'height'].every(key => keeper.getBoundingClientRect()[key] === window.leavingKeeperFrame[key]),
@@ -154,7 +159,7 @@ test('portrait margins contract while prepared docked tools stay above the artwo
     });
     assert.equal(exit.retained, true); assert.equal(exit.inert, true); assert.equal(exit.stable, true);
     assert.equal(exit.keeperRetained, true); assert.equal(exit.keeperStable, true);
-    assert.ok(exit.utilities.length && exit.utilities.every(node => node.inert && node.opacity > 0 && node.opacity < 1), `visible floating utilities fade with the dock: ${JSON.stringify(exit.utilities)}`);
+    assert.ok(exit.utilities.length && exit.utilities.every(node => node.inert && node.opacity > 0 && node.opacity < 1), `visible utility windows fade with the dock: ${JSON.stringify(exit.utilities)}`);
     assert.ok(exit.opacity > 0 && exit.opacity < 1, 'the actual outgoing dock fades out');
     assert.ok(exit.overviewOpacity > 0 && exit.overviewOpacity < 1, 'the overview fades in behind it');
     assert.equal(await page.locator('[data-canvas-journey-target]').evaluate(node => getComputedStyle(node).opacity), '0', 'the empty destination frame cannot pop in');
@@ -243,9 +248,8 @@ test('artwork travel retains cameras, staggers letters, handles another canvas a
       await page.getByLabel('Canvas name', { exact: true }).fill('Another canvas');
       await page.getByRole('button', { name: 'Create canvas', exact: true }).click();
       await page.getByRole('button', { name: 'Open Workbench 1', exact: true }).click();
-      await page.getByRole('button', { name: 'Grids', exact: true }).click(); await settled(page);
+      await choose(page, 'My Inscape', 'Open in Editor'); await settled(page);
       assert.equal(await page.evaluate(() => window.savedDraft().activeId), 'workbench:main');
-      await page.getByRole('button', { name: 'Close Grids', exact: true }).click();
       await page.locator('.image-module__canvas').first().waitFor();
       await editorOverview(page); await settled(page);
       await choose(page, 'View', 'Grid', 'menuitemcheckbox');

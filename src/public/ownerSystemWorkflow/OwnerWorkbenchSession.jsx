@@ -5,6 +5,7 @@ import { createSystemWorkflowDraftStore } from '../../systemWorkflow/systemWorkf
 import { createEditorPreferencesStore } from './editorPreferencesStore.js';
 import { createWorkbenchPreferencesStore } from './workbenchPreferences.js';
 import { createReceptionEditorScope } from '../../reception/receptionEditorScope.js';
+import { createReceptionTextMeasure } from '../../reception/measureReceptionText.jsx';
 import WorkbenchBackupControls from '../../systemWorkflow/WorkbenchBackupControls.jsx';
 import { workbenchSaveError } from './namedWorkbenchActions.js';
 
@@ -81,8 +82,25 @@ function LocalWorkbenchSession({ component: Session, rootStore, ...props }) {
   const generation = useSyncExternalStore(store.subscribe, store.getGeneration);
   const collection = useMemo(() => ({ kind: 'local', profileAddress: props.profileAddress, revision: 'editor', generation,
     entries: store.listWorkbenches().map(item => store.readWorkbench(item.id)) }), [store, props.profileAddress, generation]);
+  const activeCanvasId = store.getWorkbenchId();
+  const lastCanvas = editorPreferences.section('lastCanvasId');
+  // A legacy single-canvas draft can predate the picker. Its saved layout or
+  // artwork identifies the canvas; Reception alone does not establish a visit.
+  const [previousCanvas] = useState(() => {
+    if (lastCanvas.getSnapshot() !== undefined || store.getRecordState().status !== 'valid') return null;
+    const draft = store.getSnapshot();
+    const hasCanvas = store.isCollection() || draft.workbench || draft.shapes?.length || draft.imageModules?.length
+      || draft.texts?.length || draft.miniApps?.length || draft.displays?.length || draft.grids.some(grid => grid.placements.length);
+    return hasCanvas ? store.getWorkbenchId() : null;
+  });
+  useEffect(() => {
+    if (readyRequest !== request || openingError || !store.hasWriteAccess()) return;
+    if (!overview && !reception) {
+      if (lastCanvas.getSnapshot() !== activeCanvasId) lastCanvas.update(activeCanvasId);
+    } else if (lastCanvas.getSnapshot() === undefined) lastCanvas.update(previousCanvas);
+  }, [activeCanvasId, lastCanvas, openingError, overview, previousCanvas, readyRequest, reception, request, store]);
   const openReception = useCallback(() => {
-    if (!reception?.isCurrent()) setReception(createReceptionEditorScope(store));
+    if (!reception?.isCurrent()) setReception(createReceptionEditorScope(store, createReceptionTextMeasure()));
     setOpeningError(null); setOverview(false);
   }, [reception, store]);
   const openOverview = useCallback(source => {
@@ -98,7 +116,7 @@ function LocalWorkbenchSession({ component: Session, rootStore, ...props }) {
       try {
         if (!store.switchWorkbench(id)) throw workbenchSaveError(store);
       } catch (error) {
-        if (previous) setReception(createReceptionEditorScope(store));
+        if (previous) setReception(createReceptionEditorScope(store, createReceptionTextMeasure()));
         throw error;
       }
       setReception(null); setOverview(false); setOpeningError(null);
@@ -136,7 +154,7 @@ function LocalWorkbenchSession({ component: Session, rootStore, ...props }) {
           editorAction, onActionComplete: () => setEditorAction(null) }}
         onOpenWorkbenchOverview={openOverview}
         onEditReception={() => selectDocument('reception')}
-        documentNavigation={{ items: store.listWorkbenches(), activeId: scope.getWorkbenchId(), select: selectDocument }}
+        documentNavigation={{ items: store.listWorkbenches(), activeId: scope.getWorkbenchId(), lastCanvas: lastCanvas.getSnapshot, select: selectDocument }}
         reception={scope === reception ? { collection, backupControls: <WorkbenchBackupControls store={store}
           storage={props.reviewStorage ?? globalThis.localStorage} onRestored={props.onDraftRestored} /> } : undefined}
         editorPreferences={editorPreferences}

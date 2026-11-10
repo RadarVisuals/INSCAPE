@@ -53,10 +53,10 @@ export function createWorkbenchGestures({
   /**
    * @param {import('../../contracts/workbench.js').GestureStartEvent} event
    * @param {GestureOperation<Selection>} operation
+   * @param {HTMLElement | null} [host]
    */
-  const start = (event, operation) => {
+  const start = (event, operation, host = getHost()) => {
     if (event.button !== 0 || active) return false;
-    const host = getHost();
     if (!host) return false;
     // All callbacks are assigned synchronously below, before active ownership
     // or listener registration exposes this completed gesture object.
@@ -109,7 +109,7 @@ export function createWorkbenchGestures({
       if (!active || active.host.hasPointerCapture(active.pointerId)) return null;
       const pointerId = active.pointerId; cancel(); return pointerId;
     },
-    beginMove(event, { nodes, beforeTransforms, preview, commit, previewDrop, commitDrop, valid = () => true }) {
+    beginMove(event, { nodes, beforeTransforms, preview, commit, previewDrop, commitDrop, captureTarget, valid = () => true }) {
       const origin = { x: event.clientX, y: event.clientY };
       /** @type {WorkbenchTransforms | null} */ let moved = null;
       return start(event, {
@@ -123,7 +123,7 @@ export function createWorkbenchGestures({
           if (commitDrop(pointer)) { restoreTransforms(beforeTransforms); return true; }
           return commit(moved);
         },
-      });
+      }, captureTarget);
     },
     beginResize(event, { beforeTransforms, valid, preview, commit, onFinish }) {
       const origin = { x: event.clientX, y: event.clientY };

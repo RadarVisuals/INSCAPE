@@ -2,6 +2,7 @@ import { run } from 'node:test';
 import { tap } from 'node:test/reporters';
 import { fileURLToPath } from 'node:url';
 import { resolve } from 'node:path';
+import { globSync } from 'node:fs';
 
 // Node 24's CLI preloads run in workers, not in the --test coordinator. Use the
 // same native discovery and process isolation in an ordinary Node host so its
@@ -20,7 +21,12 @@ export function nativeTestOptions(args) {
     else throw Error(`Unsupported verification test argument: ${arg}`);
   }
   if (!test || !reporter) throw Error('Verification tests require --test and --test-reporter=tap');
-  if (files.length) options.files = files;
+  if (files.length) options.files = [...new Set(files.flatMap(file => {
+    if (!/[?*{[]/u.test(file)) return [file];
+    const matched = globSync(file, { cwd: options.cwd });
+    if (!matched.length) throw Error(`Verification test pattern matched no files: ${file}`);
+    return matched.sort();
+  }))];
   return options;
 }
 

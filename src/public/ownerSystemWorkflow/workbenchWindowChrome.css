@@ -1,3 +1,63 @@
+/* Editor object actions share one compact recipe, outside authored artwork. */
+.editor-toolbar-popover {
+  box-sizing: border-box; width: min(248px, calc(100dvw - 16px)); max-height: calc(100dvh - 16px); overflow: auto;
+  padding: 12px; border: 1px solid var(--editor-line); border-radius: 8px; background: var(--editor-panel);
+  color: var(--editor-ink); font: 11px/1.4 var(--font-interface); box-shadow: 0 4px 16px #0003;
+}
+.editor-toolbar-popover:popover-open { display: grid; gap: 10px; }
+@supports (position-area: bottom) {
+  .editor-toolbar-popover { inset: auto; margin: 6px; position-area: bottom span-right; position-try-fallbacks: flip-block, flip-inline, flip-block flip-inline; }
+}
+
+.editor-object-toolbar {
+  --tool-control-size: 28px; --tool-icon-size: 16px;
+  box-sizing: border-box; display: flex; align-items: center; gap: 2px;
+  width: max-content; max-width: calc(100vw - 16px); min-height: 34px; padding: 2px;
+  border: 1px solid var(--editor-line); border-radius: 8px;
+  background: var(--editor-panel); color: var(--editor-ink);
+  font: 400 11px/1.2 'Inscape Sora', sans-serif; pointer-events: auto;
+}
+.reception-bento-cell-actions.editor-object-toolbar, .image-module__editing-controls > .editor-object-toolbar, .workbench-window-controls > .editor-object-toolbar {
+  --toolbar-left: calc(var(--workbench-left-dock-width, 0px) + 8px);
+  --toolbar-right: calc(100dvw - var(--workbench-right-dock-width, 0px) - 8px);
+  max-width: max(0px, calc(var(--toolbar-right) - var(--toolbar-left)));
+  flex-wrap: wrap;
+  /* Percentages follow the actual toolbar, including touch targets and crop controls. */
+  translate: clamp(calc(var(--toolbar-left) - var(--toolbar-screen-x)), 0px, calc(var(--toolbar-right) - var(--toolbar-screen-x) - 100%)) 0;
+}
+.editor-object-toolbar-label {
+  display: inline-flex; align-items: center; flex-shrink: 0; gap: 4px;
+  min-height: var(--tool-control-size); padding-inline: 5px 8px; margin-right: 2px;
+  border-right: 1px solid var(--editor-line); white-space: nowrap;
+}
+.editor-object-toolbar svg { width: var(--tool-icon-size); height: var(--tool-icon-size); flex-shrink: 0; stroke-width: 1.6; }
+.editor-object-toolbar .editor-object-toolbar-name {
+  box-sizing: border-box; field-sizing: content; min-width: 6ch; max-width: 16ch; height: var(--tool-control-size); padding: 0 4px;
+  border: 1px solid transparent; border-radius: 4px; background: transparent; color: inherit;
+  font: inherit; text-overflow: ellipsis; cursor: text;
+}
+.editor-object-toolbar-name:hover { border-color: var(--editor-line); }
+.editor-object-toolbar-name:focus { outline: 1px solid var(--editor-accent); outline-offset: -1px; text-overflow: clip; }
+.editor-object-toolbar-button {
+  box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; gap: 4px;
+  min-width: var(--tool-control-size); height: var(--tool-control-size); padding: 0 6px;
+  border: 0; border-radius: 5px; color: inherit; background: transparent;
+  font: inherit; cursor: pointer; touch-action: none;
+}
+.editor-object-toolbar-button:is(:hover, [aria-pressed='true'], [aria-expanded='true']):not(:disabled) { color: var(--editor-accent); background: var(--editor-selection); }
+.editor-object-toolbar-button:focus-visible, .editor-object-toolbar:focus-visible { outline: 1px solid var(--editor-accent); outline-offset: 1px; }
+.editor-object-toolbar-button:disabled { opacity: .4; cursor: default; }
+.editor-object-toolbar .system-workflow__detached-window-controls { display: flex; align-items: center; gap: 2px; }
+.workbench-window--external-controls > .editor-object-toolbar {
+  position: absolute; inset: auto auto calc(100% + 28px) 0; z-index: 5;
+  zoom: var(--workbench-control-scale, 1); cursor: grab; touch-action: none;
+}
+.workbench-window-controls > .editor-object-toolbar { bottom: auto; }
+.workbench-window--external-controls > .editor-object-toolbar:active { cursor: grabbing; }
+.editor-object-toolbar-button.editor-object-toolbar-label { border-right: 1px solid var(--editor-line); cursor: grab; }
+.editor-object-toolbar-button.editor-object-toolbar-label:active { cursor: grabbing; }
+@media (pointer: coarse) { .editor-object-toolbar { --tool-control-size: 44px; } }
+
 /* Approved bevel chrome. Opt in through chrome="bevel" on the shared shell.
    Theme changes values; the window and control recipes remain identical. */
 [data-window-chrome="bevel"] {
@@ -35,7 +95,7 @@
   content: ''; position: absolute; inset: 0; z-index: 5; pointer-events: none;
   border-radius: inherit; box-shadow: var(--workflow-window-edge-sides);
 }
-.system-workflow__detached-window[data-window-chrome="bevel"] > .system-workflow__detached-window-titlebar {
+.system-workflow__detached-window[data-window-chrome="bevel"] > .system-workflow__detached-window-titlebar:not(.editor-object-toolbar) {
   background: var(--workflow-window-overlay);
 }
 .system-workflow__detached-window[data-window-chrome="bevel"] > .system-workflow__detached-window-surface {

@@ -1,5 +1,5 @@
 // Decode and resize away from the UI thread. Only one bounded job runs at a
-// time; the host owns queueing, source URLs and each side's lifetime.
+// time; the host owns queueing, source URLs and each artwork's lifetime.
 const MAX_BYTES = 8 * 1024 * 1024, MAX_PIXELS = 16_777_216;
 let current;
 

@@ -1,14 +1,15 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { chromium } from 'playwright-core';
-import { editorCommand, editorMenu } from './fixtures/editor-menu.mjs';
+import { choosePointer, editorCommand, editorMenu } from './fixtures/editor-menu.mjs';
 import { mkdir } from 'node:fs/promises';
 
 const origin = process.env.INSCAPE_TEXT_ROOT || 'http://127.0.0.1:5217';
 const executablePath = process.env.INSCAPE_BROWSER_EXECUTABLE || 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe';
 const output = process.env.INSCAPE_BROWSER_OUTPUT || '.browser-test-runtime';
 let browser;
-test.before(async () => { browser = await chromium.launch({ executablePath, headless: true }); });
+let initialContexts;
+test.before(async () => { browser = await chromium.launch({ executablePath, headless: true }); initialContexts = new Set(browser.contexts()); });
 test.after(async () => { await browser?.close(); });
 const settle = page => page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
 async function mount(page, theme = 'carbon') {
@@ -47,12 +48,10 @@ for (const [width, height, touch] of [[1576, 1244, false], [1440, 900, false], [
       for (const button of await buttons.all()) {
         await button.scrollIntoViewIfNeeded();
         const box = await button.boundingBox(); within(box, width, height, await button.getAttribute('aria-label'));
-        const persistent = ['Select tool', 'Hand tool', 'Text tool'].includes(await button.getAttribute('aria-label'));
-        const expanded = width > 520 && persistent && await button.getAttribute('aria-pressed') === 'true';
-        const target = touch || width <= 520 ? 44 : 36;
-        if (expanded) assert.ok(box.width >= 82, 'selected persistent tool shows its label');
-        else assert.equal(box.width, target, 'icon key retains its full input width');
-        assert.ok(box.height >= target, 'full input height');
+        const arrow = ['Pointer tools', 'Shapes'].includes(await button.getAttribute('aria-label'));
+        const target = touch ? 44 : 32;
+        assert.equal(box.width, arrow ? (touch ? 28 : 18) : target);
+        assert.ok(box.height >= target);
         assert.ok(box.x >= bar.x && box.x + box.width <= bar.x + bar.width + .5 && box.y >= bar.y && box.y + box.height <= bar.y + bar.height + .5, 'keys stay inside their shell');
       }
       assert.equal(await page.locator('.workbench-view-controls').count(), 0, 'one central toolbar in the Editor');
@@ -64,7 +63,7 @@ for (const [width, height, touch] of [[1576, 1244, false], [1440, 900, false], [
       assert.equal(await search.evaluate(node => node === document.activeElement), true);
       const popup = page.getByRole('dialog', { name: 'Search commands' });
       within(await popup.boundingBox(), width, height, 'popup');
-      assert.ok((await popup.boundingBox()).y + (await popup.boundingBox()).height <= bar.y - 7);
+      assert.ok((await popup.boundingBox()).y + (await popup.boundingBox()).height <= bar.y - 5);
       if (touch) assert.ok(Number.parseFloat(await search.evaluate(node => getComputedStyle(node).fontSize)) >= 16);
       await page.keyboard.press('ArrowDown'); await page.keyboard.press('End');
       const finalCommand = page.locator('.workbench-toolbar__command:not(:disabled)').last();
@@ -75,7 +74,7 @@ for (const [width, height, touch] of [[1576, 1244, false], [1440, 900, false], [
       await page.keyboard.press('Escape');
       assert.equal(await editorMenu(page, 'Edit').evaluate(node => node === document.activeElement), true, 'Escape restores trigger focus');
       assert.deepEqual(errors, []);
-    } finally { for (const context of browser.contexts()) await context.close(); }
+    } finally { for (const context of browser.contexts().filter(context => !initialContexts.has(context))) await context.close(); }
   });
 }
 
@@ -85,6 +84,9 @@ test('Flat states preserve selection, focus, creation and readable contrast', { 
     const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
     const errors = await mount(page);
     const hand = page.getByRole('button', { name: 'Hand tool', exact: true });
+    await choosePointer(page, 'Hand');
+    const textTool = page.getByRole('button', { name: 'Text tool', exact: true });
+    await textTool.click();
     const before = await hand.boundingBox(), resting = await appearance(hand);
     await hand.hover();
     assert.notEqual((await appearance(hand)).background, resting.background, 'available controls respond to hover');
@@ -116,7 +118,7 @@ test('Flat states preserve selection, focus, creation and readable contrast', { 
     await page.getByRole('textbox', { name: 'Search commands' }).fill('Horizontal');
     assert.equal(await page.locator('.workbench-toolbar__command').count(), 0, 'experimental Display creation is absent from search');
     await page.keyboard.press('Escape');
-    const action = page.getByRole('button', { name: 'Add module', exact: true });
+    const action = page.getByRole('button', { name: 'Actions', exact: true });
     await action.focus();
     assert.equal((await appearance(action)).outline, '2px', 'keyboard focus remains visible after closing');
     // Measure text/accent contrast against the actual flat surface.
@@ -140,10 +142,10 @@ test('Flat states preserve selection, focus, creation and readable contrast', { 
     await page.getByRole('button', { name: 'Select tool', exact: true }).focus();
     const highContrast = await appearance(page.getByRole('button', { name: 'Select tool', exact: true }));
     assert.equal(highContrast.marker, 'none'); assert.equal(highContrast.outline, '2px');
-    assert.notEqual(highContrast.background, (await appearance(hand)).background, 'system highlight identifies selection without an underline');
+    assert.notEqual(highContrast.background, (await appearance(textTool)).background, 'system highlight identifies selection without an underline');
     await page.screenshot({ path: `${output}/toolbar-forced-colors.png` });
     assert.deepEqual(errors, []);
-  } finally { for (const context of browser.contexts()) await context.close(); }
+  } finally { for (const context of browser.contexts().filter(context => !initialContexts.has(context))) await context.close(); }
 });
 
 for (const theme of ['carbon', 'mist']) for (const width of [1440, 800]) {
@@ -159,29 +161,29 @@ for (const theme of ['carbon', 'mist']) for (const width of [1440, 800]) {
         const icon = getComputedStyle(node.querySelector('svg.lucide > *'));
         return { scheme: s.colorScheme, face: s.getPropertyValue('--tactile-face').trim(), radius: key.borderRadius, shellRadius: shell.borderRadius, stroke: icon.strokeWidth, vector: icon.vectorEffect };
       });
-      assert.deepEqual(recipe, { scheme: theme === 'mist' ? 'light' : 'dark', face: theme === 'mist' ? '#ebece7' : '#080808', radius: '5px', shellRadius: '9px', stroke: '1.5px', vector: 'non-scaling-stroke' });
+      assert.deepEqual(recipe, { scheme: theme === 'mist' ? 'light' : 'dark', face: theme === 'mist' ? '#faf9f6' : '#343635', radius: '7px', shellRadius: '11px', stroke: '1.5px', vector: 'non-scaling-stroke' });
       // The accepted migrations now include the sidebar, switcher, Navigator and shared tools.
       // Keep an explicit surface boundary, including the otherwise classless dock material root.
       const migrated = await page.locator('main.system-workflow [data-workflow-finish="flat"]').evaluateAll(nodes => nodes.map(node => {
-        for (const name of ['workbench-toolbar', 'workbench-navigator', 'workbench-layers', 'context-toolbar', 'editor-menu-shell', 'workspace-navigation']) {
+        for (const name of ['workbench-toolbar', 'workbench-navigator', 'workbench-layers', 'context-toolbar', 'editor-menu-shell', 'workspace-navigation', 'workbench-side-dock', 'workbench-tool-dock', 'workspace-library-navigation']) {
           if (node.classList.contains(name)) return name;
         }
         if (node.matches('[data-workbench-navigator]')) return 'workbench-navigator';
         if (!node.className && node.matches('[data-workbench-selection-tools][data-system-workflow-overlay][data-lattice-menu-surface]') && (!node.children.length || node.querySelector(':scope > .workbench-tool-dock'))) return 'shared-tool-dock';
         return 'unrecognized:' + node.outerHTML.slice(0, 180);
       }));
-      assert.deepEqual(migrated.sort(), ['shared-tool-dock', 'context-toolbar', 'workbench-navigator', 'editor-menu-shell', 'workbench-toolbar', 'workspace-navigation', ...(width > 520 ? ['workbench-layers'] : [])].sort(), 'only the accepted mounted surfaces opt into flat styling');
+      assert.deepEqual(migrated.sort(), ['workspace-library-navigation', 'shared-tool-dock', 'context-toolbar', 'workbench-navigator', 'editor-menu-shell', 'workbench-toolbar', 'workspace-navigation', 'workbench-side-dock', 'workbench-side-dock', 'workbench-tool-dock', 'workbench-tool-dock', ...(width > 520 ? ['workbench-layers'] : [])].sort(), 'only the accepted mounted surfaces opt into flat styling');
       const select = page.getByRole('button', { name: 'Select tool', exact: true });
       await select.focus(); await page.keyboard.press('ArrowRight');
-      assert.equal(await page.getByRole('button', { name: 'Hand tool', exact: true }).evaluate(node => node === document.activeElement), true);
+      assert.equal(await page.getByRole('button', { name: 'Pointer tools', exact: true }).evaluate(node => node === document.activeElement), true);
       await page.keyboard.press('End');
-      const add = page.getByRole('button', { name: 'Add module', exact: true });
+      const add = page.getByRole('button', { name: 'Actions', exact: true });
       assert.equal(await add.evaluate(node => node === document.activeElement), true);
       await page.keyboard.press('Enter');
-      let dialog = page.getByRole('dialog', { name: 'Add module', exact: true });
+      let dialog = page.getByRole('dialog', { name: 'Search commands', exact: true });
       assert.equal(await dialog.locator('header').count(), 0);
       assert.equal(await dialog.getByRole('button', { name: /Close/ }).count(), 0);
-      assert.equal(await dialog.getByRole('button', { name: /Display|Horizontal|Vertical|Custom size/i }).count(), 0, 'Display is absent rather than disabled');
+      assert.equal(await dialog.getByRole('button', { name: /^(Display|Horizontal|Vertical|Custom size)$/i }).count(), 0, 'Display is absent rather than disabled');
       for (const name of ['Image', 'Text', 'Rectangle', 'Grid']) {
         assert.equal(await dialog.getByRole('button', { name, exact: true }).isEnabled(), true, `${name} remains available`);
       }
@@ -195,7 +197,7 @@ for (const theme of ['carbon', 'mist']) for (const width of [1440, 800]) {
       await editorCommand(page, 'Edit', 'Search commands');
       const search = page.getByRole('textbox', { name: 'Search commands' });
       const inset = await search.evaluate(node => { const a = node.getBoundingClientRect(), b = node.closest('[role="dialog"]').getBoundingClientRect(); return [a.left - b.left, b.right - a.right]; });
-      assert.deepEqual(inset, [4, 4]);
+      assert.deepEqual(inset, [6, 6]);
       await page.screenshot({ path: `${output}/toolbar-${theme}-${width}.png` });
       await search.fill('Workbench grid');
       const grid = root.getByRole('button', { name: 'Workbench grid', exact: true });
@@ -215,6 +217,6 @@ for (const theme of ['carbon', 'mist']) for (const width of [1440, 800]) {
       await page.locator('[data-image-module] .image-module__canvas').waitFor();
       assert.equal(await page.locator('[data-display-instance]').count(), 1, 'creating an Image does not replace an existing Display');
       assert.deepEqual(errors, []);
-    } finally { for (const context of browser.contexts()) await context.close(); }
+    } finally { for (const context of browser.contexts().filter(context => !initialContexts.has(context))) await context.close(); }
   });
 }

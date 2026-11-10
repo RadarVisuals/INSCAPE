@@ -14,7 +14,7 @@ test('Text body moves in Read, preserves selection in Write and cancels movement
     const errors = []; page.on('pageerror', error => errors.push(error.message));
     await mountTextToolsFixture(page, origin);
     const text = page.locator('.text-window'), body = text.getByRole('textbox', { name: 'Article text', exact: true });
-    await page.getByRole('button', { name: 'Close Text tools', exact: true }).click();
+    await page.getByRole('button', { name: 'Close Inspector', exact: true }).click();
     const initial = await text.boundingBox(), paragraph = await body.locator('p').boundingBox();
     await page.mouse.move(paragraph.x + 2, paragraph.y + 8); await page.mouse.down();
     await page.mouse.move(paragraph.x + 145, paragraph.y + 8, { steps: 8 }); await page.mouse.up();
@@ -47,7 +47,7 @@ test('Text body moves in Read, preserves selection in Write and cancels movement
     assert.deepEqual(await text.boundingBox(), committed, 'body placement survives reload');
     assert.equal(await text.getByRole('textbox').count(), 0, 'reading mode is restored');
     await text.getByRole('button', { name: 'Write', exact: true }).focus(); await page.keyboard.press('Enter');
-    await page.locator('.text-tools-window').waitFor();
+    await page.locator('.workbench-tool-dock:has([data-text-inspector])').waitFor();
     assert.deepEqual(await text.boundingBox(), committed);
     assert.deepEqual(errors, []);
   } finally { await browser.close(); }

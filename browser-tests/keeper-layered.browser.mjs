@@ -27,7 +27,7 @@ async function seed(page) {
     localStorage.setItem(systemWorkflowDraftKey(draft.profileAddress), JSON.stringify(draft));
   }, source);
   await page.reload(); await mount(page);
-  await page.getByRole('button', { name: 'Close Text tools', exact: true }).click();
+  await page.getByRole('button', { name: 'Close Inspector', exact: true }).click();
   await page.getByRole('button', { name: 'Release Keeper', exact: true }).waitFor();
 }
 const position = page => page.locator('.keeper-roamer').evaluate(node => {
@@ -63,7 +63,7 @@ test('Right-button hold follows across windows, releases at the final point and 
     assert.ok(await page.evaluate(() => window.keeperMenus.some(item => item.prevented)), 'native context menu is suppressed for the follow gesture');
     assert.deepEqual(await page.evaluate(() => window.savedDraft()), saved, 'following is never authored state');
     // A new right-click starting on a real control retains its normal context menu.
-    await page.getByRole('button', { name: 'Reset Workbench view', exact: true }).click({ button: 'right' });
+    await page.getByRole('button', { name: 'Fit canvas in view', exact: true }).click({ button: 'right' });
     assert.equal(await page.evaluate(() => window.keeperMenus.at(-1).prevented), false);
     await page.mouse.move(1200, 700); await page.waitForTimeout(200);
     assert.ok(Math.abs((await position(page)).x - 700) < 7);
@@ -352,7 +352,7 @@ test('Swim controls tune active flight, reject invalid/failed saves and survive 
     await page.getByRole('combobox', { name: 'Keeper movement', exact: true }).selectOption('swim');
     assert.equal(await field('swim speed').inputValue(), '650');
     await page.reload(); await mount(page);
-    const closeTextTools = page.getByRole('button', { name: 'Close Text tools', exact: true });
+    const closeTextTools = page.getByRole('button', { name: 'Close Inspector', exact: true });
     if (await closeTextTools.count()) await closeTextTools.click();
     await page.getByRole('button', { name: 'Release Keeper', exact: true }).click();
     await page.getByRole('button', { name: 'Keeper settings', exact: true }).click();

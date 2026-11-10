@@ -83,9 +83,9 @@ test('Display tools float without moving artwork, remember position, and reveal 
     assert.deepEqual(await board.boundingBox(), before);
     await page.getByRole('button', { name: 'Select MOON PURPLE', exact: true }).click();
     await page.locator('[data-shared-tool="layers"]').getByRole('button', { name: 'Artwork info', exact: true }).click();
-    await page.getByLabel('Move Artwork info window', { exact: true }).waitFor();
+    await page.getByRole('button', { name: 'Move Inspector panel', exact: true }).waitFor();
     assert.ok(await moveLayers.isVisible()); assert.deepEqual(await board.boundingBox(), before);
-    await page.getByRole('button', { name: 'Close Artwork info', exact: true }).click();
+    await page.getByRole('button', { name: 'Close Inspector', exact: true }).click();
     await page.mouse.move(1, 1); await page.screenshot({ path: join(shots, 'wide.png') });
     await page.setViewportSize({ width: 390, height: 844 });
     await page.screenshot({ path: join(shots, 'narrow.png') });

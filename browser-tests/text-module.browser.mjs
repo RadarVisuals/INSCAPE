@@ -1,4 +1,4 @@
-import { openTextToolSection } from './fixtures/text-tool-sections.mjs';
+import { openTextToolSection, chooseTextToolOption } from './fixtures/text-tool-sections.mjs';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { chromium } from 'playwright-core';
@@ -39,7 +39,7 @@ test('Text module authors, reloads, renders and contains content at wide/narrow 
     await workspace.focus(); await page.keyboard.press('Shift+F10');
     const menu = page.getByRole('menu', { name: 'Workbench commands', exact: true });
     await menu.getByRole('menuitem', { name: 'ADD', exact: true }).click(); await menu.getByRole('menuitem', { name: 'TEXT', exact: true }).click();
-    const text = page.locator('[data-workbench-module="text"]'), tools = page.locator('.text-tools-window');
+    const text = page.locator('[data-workbench-module="text"]'), tools = page.locator('.workbench-tool-dock:has([data-text-inspector])');
     await text.getByRole('textbox', { name: 'Article text', exact: true }).waitFor();
     assert.equal(await text.getByRole('textbox', { name: 'Article title', exact: true }).getAttribute('placeholder'), 'Title');
     assert.equal(await text.getByRole('textbox', { name: 'Article title', exact: true }).evaluate(node => node.tagName), 'TEXTAREA');
@@ -60,43 +60,50 @@ test('Text module authors, reloads, renders and contains content at wide/narrow 
     });
     assert.ok(readingGeometry.top < 5 && readingGeometry.height < 8, 'Read uses the full window without editor rails');
     await text.getByRole('button', { name: 'Write', exact: true }).focus(); await page.keyboard.press('Enter');
+    await openTextToolSection(page.locator('.workbench-tool-dock:has([data-text-inspector])'), 'More text tools');
     assert.equal(await tools.getByRole('button', { name: 'Undo', exact: true }).isEnabled(), true, 'reading preserves editing history');
+    await openTextToolSection(page.locator('.workbench-tool-dock:has([data-text-inspector])'), 'More text tools');
     await tools.getByRole('button', { name: 'Undo', exact: true }).click();
     assert.equal(await content.locator('strong').count(), 0, 'can undo formatting from before Read');
+    await openTextToolSection(page.locator('.workbench-tool-dock:has([data-text-inspector])'), 'More text tools');
     await tools.getByRole('button', { name: 'Redo', exact: true }).click();
     assert.equal(await content.locator('strong').innerText(), sampleText);
 
     assert.equal(await tools.getByRole('button', { name: 'Bold', exact: true }).innerText(), '');
     for (const ending of ['left', 'center', 'right', 'all']) {
-      if (await page.locator('.text-inspector-advanced').getAttribute('open') === null) await page.locator('.text-inspector-advanced summary').click();
-      await tools.getByRole('combobox', { name: 'Paragraph justification' }).selectOption(`justify-${ending}`);
+      if (await page.locator('.text-more-tools').getAttribute('open') === null) await page.locator('.text-more-tools summary').click();
+      await chooseTextToolOption(page, 'Paragraph justification', `Justify ${ending[0].toUpperCase()}${ending.slice(1)}`);
       const expected = ['justify', ending === 'all' ? 'justify' : ending];
       assert.deepEqual(await content.locator('p').evaluate(n => [getComputedStyle(n).textAlign, getComputedStyle(n).textAlignLast]), expected);
       await text.getByRole('button', { name: 'Read', exact: true }).click();
       assert.deepEqual(await text.locator('article p').evaluate(n => [getComputedStyle(n).textAlign, getComputedStyle(n).textAlignLast]), expected);
       await text.getByRole('button', { name: 'Write', exact: true }).click();
     }
+    await openTextToolSection(page.locator('.workbench-tool-dock:has([data-text-inspector])'), 'More text tools');
     await tools.getByRole('button', { name: 'Undo', exact: true }).click();
-    if (await page.locator('.text-inspector-advanced').getAttribute('open') === null) await page.locator('.text-inspector-advanced summary').click();
-    assert.equal(await tools.getByRole('combobox', { name: 'Paragraph justification' }).inputValue(), 'justify-right');
+    if (await page.locator('.text-more-tools').getAttribute('open') === null) await page.locator('.text-more-tools summary').click();
+    assert.equal(await tools.getByRole('button', { name: /^Paragraph justification:/ }).getAttribute('aria-label'), 'Paragraph justification: Justify Right');
+    await openTextToolSection(page.locator('.workbench-tool-dock:has([data-text-inspector])'), 'More text tools');
     await tools.getByRole('button', { name: 'Redo', exact: true }).click();
     for (const alignment of ['center', 'right', 'left']) {
       await tools.getByRole('button', { name: `Align ${alignment}`, exact: true }).click();
       assert.equal(await content.locator('p').evaluate(n => getComputedStyle(n).textAlign), alignment);
       assert.equal(await tools.getByRole('button', { name: `Align ${alignment}`, exact: true }).getAttribute('aria-pressed'), 'true');
     }
-    if (await page.locator('.text-inspector-advanced').getAttribute('open') === null) await page.locator('.text-inspector-advanced summary').click();
-    await tools.getByRole('combobox', { name: 'Paragraph justification' }).selectOption('justify-center');
+    if (await page.locator('.text-more-tools').getAttribute('open') === null) await page.locator('.text-more-tools summary').click();
+    await chooseTextToolOption(page, 'Paragraph justification', 'Justify Center');
+    await openTextToolSection(page.locator('.workbench-tool-dock:has([data-text-inspector])'), 'More text tools');
     await tools.getByRole('combobox', { name: 'Paragraph style' }).selectOption('2');
     await tools.getByRole('button', { name: 'Align right', exact: true }).click();
     assert.equal(await content.locator('h2').evaluate(n => getComputedStyle(n).textAlign), 'right');
+    await openTextToolSection(page.locator('.workbench-tool-dock:has([data-text-inspector])'), 'More text tools');
     await tools.getByRole('combobox', { name: 'Paragraph style' }).selectOption('paragraph');
-    if (await page.locator('.text-inspector-advanced').getAttribute('open') === null) await page.locator('.text-inspector-advanced summary').click();
-    await tools.getByRole('combobox', { name: 'Paragraph justification' }).selectOption('justify-center');
+    if (await page.locator('.text-more-tools').getAttribute('open') === null) await page.locator('.text-more-tools summary').click();
+    await chooseTextToolOption(page, 'Paragraph justification', 'Justify Center');
     await text.getByRole('button', { name: 'Read', exact: true }).click();
 
     await text.getByRole('button', { name: 'Text tools', exact: true }).click();
-    await openTextToolSection(page.locator('.text-tools-window'), 'Default text style');
+    await openTextToolSection(page.locator('.workbench-tool-dock:has([data-text-inspector])'), 'Default text style');
     await tools.getByRole('combobox', { name: 'Default font', exact: true }).selectOption('literata');
     await tools.getByRole('checkbox', { name: 'Include in Workbench publication' }).check();
     await text.getByRole('button', { name: 'Read', exact: true }).click();
@@ -106,9 +113,9 @@ test('Text module authors, reloads, renders and contains content at wide/narrow 
     assert.equal(await content.locator('strong').innerText(), sampleText);
 
     assert.equal(await content.locator('p').first().evaluate(n => getComputedStyle(n).textAlignLast), 'center', 'alignment survives reload');
-    await openTextToolSection(page.locator('.text-tools-window'), 'Default text style');
+    await openTextToolSection(page.locator('.workbench-tool-dock:has([data-text-inspector])'), 'Default text style');
     assert.equal(await tools.getByRole('combobox', { name: 'Default font', exact: true }).inputValue(), 'literata');
-    await tools.getByRole('button', { name: 'Close Text tools', exact: true }).click();
+    await tools.getByRole('button', { name: 'Close Inspector', exact: true }).click();
     // Close the other windows through their normal controls before testing a drop.
     const displayHeader = page.locator('[data-display-instance="display:primary"] .system-workflow__identity-strip');
     await displayHeader.focus(); await displayHeader.press('Shift+F10');

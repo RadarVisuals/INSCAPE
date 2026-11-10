@@ -24,6 +24,57 @@ async function libraryArtworkDragPoint(page, card) {
 const origin = process.env.INSCAPE_IMAGE_ROOT || 'http://127.0.0.1:5197';
 const output = process.env.INSCAPE_BROWSER_OUTPUT || '.browser-test-runtime';
 const settle = page => page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+
+for (const width of [1440, 900]) test(`Replace image chooses one Library artwork, cancels safely and supports Undo (${width}px)`, { timeout: 90000 }, async () => {
+  const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
+  try {
+    const page = await browser.newPage({ viewport: { width, height: 1000 }, reducedMotion: 'reduce' });
+    page.setDefaultTimeout(12000);
+    const errors = []; page.on('pageerror', error => errors.push(error.message));
+    await mount(page); await prepareDropView(page);
+    await page.getByRole('button', { name: 'Artwork library', exact: true }).click();
+    await page.getByRole('button', { name: 'Show 2 images of ABYSSAL STUDY', exact: true }).click();
+    await startDrag(page, null, true); await page.mouse.up();
+    await page.waitForFunction(() => window.readDraft().imageModules.length === 1);
+    await page.getByRole('button', { name: 'Artwork library', exact: true }).click();
+    const inspector = await openSharedTool(page, 'Image');
+    const replace = inspector.getByRole('button', { name: 'Replace image', exact: true });
+    const before = await page.evaluate(() => window.readDraft());
+    await replace.click();
+    const picker = page.getByRole('region', { name: 'Choose replacement image', exact: true });
+    await picker.waitFor();
+    await page.getByRole('button', { name: 'Close Library', exact: true }).click();
+    await picker.waitFor({ state: 'detached' });
+    assert.deepEqual(await page.evaluate(() => window.readDraft()), before);
+    assert.equal(await replace.evaluate(node => node === document.activeElement), true);
+    await replace.click();
+    await picker.getByRole('button', { name: 'ABYSSAL STUDY / INSCAPE STUDIES', exact: true }).click();
+    await page.evaluate(() => { window.failSave = true; });
+    await picker.getByRole('button', { name: 'Replace image', exact: true }).click();
+    await picker.getByText('Artwork could not be placed here.', { exact: true }).waitFor();
+    assert.deepEqual(await page.evaluate(() => window.readDraft()), before);
+    await page.evaluate(() => { window.failSave = false; });
+    await picker.getByRole('button', { name: 'Replace image', exact: true }).click();
+    await picker.waitFor({ state: 'detached' });
+    const after = await page.evaluate(() => window.readDraft());
+    assert.equal(after.imageModules.length, 1);
+    assert.notEqual(after.imageModules[0].artwork.asset.media.url, before.imageModules[0].artwork.asset.media.url);
+    assert.deepEqual({ ...after.imageModules[0], artwork: before.imageModules[0].artwork }, before.imageModules[0]);
+    assert.deepEqual(after.workbench, before.workbench);
+    await page.locator('main.system-workflow').focus(); await page.keyboard.press('Control+z');
+    assert.deepEqual(await page.evaluate(() => window.readDraft()), before);
+    await replace.click();
+    await picker.getByRole('button', { name: 'ABYSSAL STUDY / INSCAPE STUDIES', exact: true }).click();
+    await page.evaluate(() => { window.holdDimensions = true; delete window.releaseDimensions; });
+    await picker.getByRole('button', { name: 'Replace image', exact: true }).click();
+    await page.waitForFunction(() => typeof window.releaseDimensions === 'function');
+    await page.getByRole('button', { name: 'Close Library', exact: true }).click();
+    await picker.waitFor({ state: 'detached' });
+    await page.evaluate(() => window.releaseDimensions()); await settle(page);
+    assert.deepEqual(await page.evaluate(() => window.readDraft()), before, 'a closed picker cannot apply a delayed replacement');
+    assert.deepEqual(errors, []);
+  } finally { await browser.close(); }
+});
 const exposedWorkbenchPoint = page => page.evaluate(() => {
   for (let y = innerHeight - 180; y >= 200; y -= 30) for (let x = innerWidth - 30; x > 80; x -= 30) {
     if (document.elementFromPoint(x, y)?.matches('main.system-workflow')) return { x, y };
@@ -167,27 +218,28 @@ for (const width of [1440, 700]) test(`Library creates an Image at its preview, 
     assert.ok(Math.abs(actual.x + actual.width / 2 - point.x) < 1, 'centred on release, not default corner');
     const dropped = await page.evaluate(() => window.readDraft());
     assert.equal(dropped.imageModules.length, 1); assert.equal(dropped.imageModules[0].visibility, 'PUBLIC');
-    assert.equal(dropped.imageModules[0].sides[0].asset.media.url, 'https://images.inscape.test/attached.jpg');
-    assert.deepEqual(dropped.imageModules[0].sides[0].crop, { x: .5, y: .5, zoom: 1 }, 'new Image fills the canvas like any other Library side');
+    assert.equal(dropped.imageModules[0].artwork.asset.media.url, 'https://images.inscape.test/attached.jpg');
+    assert.deepEqual(dropped.imageModules[0].artwork.crop, { x: .5, y: .5, zoom: 1 }, 'new Image fills the canvas like any other Library side');
     assert.equal(await page.evaluate(() => window.draftWrites), 1);
     await page.getByRole('button', { name: 'Artwork library', exact: true }).click();
     await openSharedTool(page, 'Transform');
     assert.equal(await page.getByRole('spinbutton', { name: 'Transform Width', exact: true }).count(), 1, 'created Image is the active tools target');
     const published = await page.evaluate(() => window.publicDocument());
     assert.deepEqual(published.workbench.imageModules, dropped.workbench.imageModules);
-    assert.deepEqual(published.imageModules[0].sides, dropped.imageModules[0].sides);
+    assert.deepEqual(published.imageModules[0].artwork, dropped.imageModules[0].artwork);
     await page.locator('main.system-workflow').focus(); await page.keyboard.press('Control+z');
     await image.waitFor({ state: 'detached' }); assert.deepEqual(await page.evaluate(() => window.readDraft()), before);
     await page.keyboard.press('Control+Shift+z'); await image.waitFor(); await settle(page);
     assert.deepEqual(await page.evaluate(() => window.readDraft()), dropped);
-    // Existing Image is still an append destination, never another new module.
+    // Existing Image is a replacement destination, never another new module.
     await page.getByRole('button', { name: 'Artwork library', exact: true }).click();
     await startDrag(page, () => exposedModulePoint(page, image, point, `${width}-image`));
-    await page.getByText('Add Image side', { exact: true }).waitFor(); await page.mouse.up();
-    await page.waitForFunction(() => window.readDraft().imageModules[0].sides.length === 2);
+    await page.getByText('Replace image', { exact: true }).waitFor(); await page.mouse.up();
+    await page.waitForFunction(() => window.readDraft().imageModules[0].artwork.asset.media.url.endsWith('/art.jpg'));
     assert.equal((await page.evaluate(() => window.readDraft())).imageModules.length, 1);
+    assert.deepEqual((await page.evaluate(() => window.readDraft())).workbench.imageModules, dropped.workbench.imageModules, 'replacement retains the frame and layer');
     await page.getByRole('button', { name: 'Artwork library', exact: true }).click();
-    await page.getByRole('button', { name: 'Close Transform', exact: true }).click();
+    await page.getByRole('button', { name: 'Close Inspector', exact: true }).click();
     // Display remains the placement target; a locked Display is not empty space.
     // Move the Display below the screen navigation before targeting its artboard.
     await page.locator('main.system-workflow').dispatchEvent('wheel', {deltaY:-250,bubbles:true,cancelable:true}); await settle(page);

@@ -1,3 +1,4 @@
+import { openSharedTool } from './fixtures/shared-tools.mjs';
 import { editorCommand } from './fixtures/editor-menu.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -30,10 +31,11 @@ for (const theme of ['carbon', 'mist']) for (const [width, height] of [[1440, 90
     assert.equal(await nav.locator('[data-navigator-object^="shape:"]').count(), 1);
     assert.match(await nav.locator('[data-navigator-object^="text:"]').innerText(), /Navigator study/);
     assert.equal(await nav.locator('iframe, [contenteditable="true"], [data-navigator-object^="keeper:"]').count(), 0);
-    const n = await nav.boundingBox(), k = await keeper.boundingBox(), rail = await page.getByRole('group', { name: 'Workbench zoom', exact: true }).boundingBox();
+    const n = await nav.boundingBox(), k = await keeper.boundingBox();
     assert.ok(n.x + n.width <= k.x - 10 && k.x + k.width <= width - 8, JSON.stringify({ n, k }));
-    assert.ok(n.y + n.height <= rail.y - 7 && k.y + k.height <= rail.y - 7);
-    assert.equal(await page.getByRole('button', { name: 'Reset Workbench view', exact: true }).evaluate(hit), true);
+    for (const button of await page.getByRole('toolbar', { name: 'Creation tools', exact: true }).getByRole('button').all())
+      assert.equal(await button.evaluate(hit), true, 'creation controls stay clickable above floating and docked utilities');
+    assert.equal(await page.getByRole('button', { name: 'Fit canvas in view', exact: true }).evaluate(hit), true);
     await mkdir(output, { recursive: true });
     await page.screenshot({ path: `${output}/initial-${theme}-${width}.png` });
     const before = await page.evaluate(() => window.readToolChromeDraft());
@@ -60,7 +62,7 @@ for (const theme of ['carbon', 'mist']) for (const [width, height] of [[1440, 90
       await page.mouse.move(centre.x, centre.y); await page.mouse.down();
       await page.mouse.move(centre.x + 12, centre.y + 8);
       if (cancellation === 'capture') await map.evaluate(n => n.releasePointerCapture(Number(n.dataset.testPointer)));
-      else if (cancellation === 'focus') await page.getByRole('button', { name: 'Reset Workbench view', exact: true }).focus();
+      else if (cancellation === 'focus') await page.getByRole('button', { name: 'Fit canvas in view', exact: true }).focus();
       else await page.evaluate(() => window.dispatchEvent(new Event('blur')));
       await page.mouse.up(); await settle(page);
       assert.deepEqual(await camera(page), grabbed, `${cancellation} loss cancels navigation`);
@@ -68,13 +70,13 @@ for (const theme of ['carbon', 'mist']) for (const [width, height] of [[1440, 90
 
     await map.focus(); await map.press('ArrowLeft'); await settle(page);
     assert.ok((await camera(page)).x > grabbed.x);
-    await page.getByRole('button', { name: 'Reset Workbench view', exact: true }).click(); await settle(page);
+    await page.getByRole('button', { name: 'Fit canvas in view', exact: true }).click(); await settle(page);
     assert.deepEqual(await camera(page), homeCamera, 'Home uses the current Editor canvas framing');
     const slider = page.getByRole('slider', { name: 'Workbench zoom', exact: true });
     for (const percent of [25, 200]) { await slider.fill(String(percent)); await settle(page); assert.equal((await camera(page)).scale, percent / 100); }
     await map.focus(); await map.press('Control+0'); await settle(page);
     assert.equal((await camera(page)).scale, 1, 'the existing zoom shortcut remains available from Navigator');
-    await page.getByRole('button', { name: 'Reset Workbench view', exact: true }).click();
+    await page.getByRole('button', { name: 'Fit canvas in view', exact: true }).click();
 
     assert.deepEqual(await page.evaluate(() => window.readToolChromeDraft()), before, 'navigation leaves saved content/history alone');
     if (width === 1440) {
@@ -105,7 +107,7 @@ for (const theme of ['carbon', 'mist']) for (const [width, height] of [[1440, 90
   } finally { await browser.close(); }
 });
 
-test('miniatures follow edits, visibility, ordering and Image sides without changing selection', { timeout: 60000 }, async () => {
+test('miniatures follow edits, visibility, ordering and Image crops without changing selection', { timeout: 60000 }, async () => {
   const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
   try {
     const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, reducedMotion: 'reduce' });
@@ -118,10 +120,10 @@ test('miniatures follow edits, visibility, ordering and Image sides without chan
     const nav = page.locator('.workbench-navigator'); await nav.waitFor();
     const shape = nav.locator('[data-navigator-object^="shape:"]'), image = nav.locator('[data-navigator-object^="image:"]');
     await page.getByRole('button', { name: 'Select Shape 1', exact: true }).click();
-    await page.getByRole('tab', { name: 'Color', exact: true }).click();
+    await openSharedTool(page, 'Color');
     const colour = page.getByRole('textbox', { name: 'Color colour', exact: true }); await colour.fill('#228866'); await colour.press('Tab'); await settle(page);
-    assert.equal(await shape.locator('.navigator-object-content > div').evaluate(n => n.style.backgroundColor), 'rgb(34, 136, 102)');
-    await page.getByRole('tab', { name: 'Transform', exact: true }).click();
+    assert.equal(await shape.locator('.shape-fill').evaluate(n => getComputedStyle(n).backgroundColor), 'rgb(34, 136, 102)');
+    await openSharedTool(page, 'Transform');
     await page.getByRole('spinbutton', { name: 'Transform Width', exact: true }).fill('300'); await page.getByRole('spinbutton', { name: 'Transform Width', exact: true }).press('Enter'); await settle(page);
     assert.equal(await shape.evaluate(n => parseFloat(n.style.width)), 300);
     const left = await shape.evaluate(n => parseFloat(n.style.left));
@@ -135,15 +137,13 @@ test('miniatures follow edits, visibility, ordering and Image sides without chan
     const chosen = await page.getByRole('button', { name: 'Select Shape 1', exact: true }).getAttribute('aria-pressed');
     await page.getByRole('button', { name: 'Navigate Workbench', exact: true }).press('ArrowDown'); await settle(page);
     assert.equal(await page.getByRole('button', { name: 'Select Shape 1', exact: true }).getAttribute('aria-pressed'), chosen);
-    const first = await image.locator('image').getAttribute('href');
-    await page.getByRole('button', { name: 'Next Image side', exact: true }).press('Enter'); await settle(page);
-    assert.notEqual(await image.locator('image').getAttribute('href'), first);
     await page.getByRole('button', { name: 'Select Image', exact: true }).click();
-    await page.getByRole('button', { name: 'Crop', exact: true }).click();
+    const imageInspector = await openSharedTool(page, 'Image');
+    await imageInspector.getByRole('button', { name: 'Crop', exact: true }).click();
     const uncroppedWidth = await image.locator('image').getAttribute('width');
-    await page.getByRole('slider', { name: 'Crop zoom', exact: true }).fill('2'); await settle(page);
+    await imageInspector.getByRole('slider', { name: 'Crop zoom', exact: true }).fill('2'); await settle(page);
     assert.notEqual(await image.locator('image').getAttribute('width'), uncroppedWidth, 'live crop follows the module-owned preview');
-    await page.getByRole('button', { name: 'Done', exact: true }).click(); await settle(page);
+    await imageInspector.getByRole('button', { name: 'Done', exact: true }).click(); await settle(page);
     assert.notEqual(await image.locator('image').getAttribute('width'), uncroppedWidth, 'committed crop stays visible');
     await page.getByLabel('Article title', { exact: true }).fill('Changed miniature title'); await settle(page);
     assert.match(await nav.locator('[data-navigator-object^="text:"]').innerText(), /Changed miniature title/);

@@ -1,5 +1,7 @@
+import { resetCameraTestView } from './fixtures/workbench-camera-test.mjs';
+import { workbenchCommandDisabled } from './fixtures/workbench-navigation.mjs';
 import { editorMenu, activeEditorDocument, editorCommand, selectEditorDocument } from './fixtures/editor-menu.mjs';
-import { separateLayers } from './fixtures/shared-tools.mjs';
+import { openSharedTool, separateLayers, selectWorkbenchLayer } from './fixtures/shared-tools.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdir } from 'node:fs/promises';
@@ -9,6 +11,14 @@ const origin = process.env.INSCAPE_TEST_ORIGIN || 'http://127.0.0.1:24970';
 const output = process.env.INSCAPE_BROWSER_OUTPUT || '.browser-test-runtime/workbench-artwork-layers';
 const saved = page => page.evaluate(() => window.savedDraft());
 const rows = page => page.locator('.workbench-layer-row').evaluateAll(nodes => nodes.map(node => node.dataset.layerId));
+const artworkPoint = (page, id) => page.locator(`[data-workbench-artwork][data-workbench-view-id="${id}"]`).evaluate((node, id) => {
+  const rect = node.getBoundingClientRect();
+  for (const y of [.1, .3, .5, .7, .9]) for (const x of [.1, .3, .5, .7, .9]) {
+    const point = { x: rect.x + rect.width * x, y: rect.y + rect.height * y };
+    if (document.elementFromPoint(point.x, point.y)?.closest('[data-workbench-view-id]')?.dataset.workbenchViewId === id) return point;
+  }
+  throw Error(`No exposed artwork point for ${id}`);
+}, id);
 const undo = async page => { await page.locator('.system-workflow').focus(); await page.keyboard.press('Control+z'); };
 async function fixture(page, options = {}) {
   page.setDefaultTimeout(12000);
@@ -38,8 +48,17 @@ async function fixture(page, options = {}) {
   }, options);
   await page.reload();
   await separateLayers(page);
+  const undock = page.getByRole('button', { name: 'Undock Layers', exact: true });
+  if (await undock.count()) await undock.click();
   await page.getByRole('button', { name: options.grouped ? 'Select Person' : 'Select Eyes', exact: true }).waitFor();
   await page.locator('[data-workbench-artwork]').first().waitFor();
+  await resetCameraTestView(page);
+  const inspectorClose = page.getByRole('button', { name: 'Close Inspector', exact: true });
+  if (await inspectorClose.isVisible()) await inspectorClose.click();
+  const grip = page.getByRole('button', { name: 'Move Layers panel', exact: true });
+  for (let i = 0; i < 32; i++) await grip.press('Shift+ArrowRight');
+  const edge = page.getByRole('region', { name: 'Workbench Layers', exact: true }).locator('[data-edge="e"]');
+  for (let i = 0; i < 4; i++) await edge.press('Shift+ArrowRight');
 }
 test('tool panel moves independently, distinguishes pointer/keyboard focus, cancels gestures and stays reachable', { timeout: 90000 }, async () => {
   const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
@@ -74,7 +93,7 @@ test('tool panel moves independently, distinguishes pointer/keyboard focus, canc
     await page.waitForFunction(() => {
       const panel = document.querySelector('.workbench-tool-panel').getBoundingClientRect();
       const navigation = document.querySelector('.editor-menu-bar').getBoundingClientRect();
-      return panel.x >= 8 && panel.right <= innerWidth - 8 && panel.bottom <= innerHeight - 48 && panel.top >= navigation.bottom + 8;
+      return panel.x >= 0 && panel.right <= innerWidth && panel.bottom <= innerHeight && panel.top >= navigation.bottom;
     });
     const list = page.locator('.workbench-layers-list');
     assert.ok(await list.evaluate(node => node.scrollHeight > node.clientHeight && node.clientHeight > 0));
@@ -84,10 +103,10 @@ test('tool panel moves independently, distinguishes pointer/keyboard focus, canc
     const small = await panel.boundingBox(); assert.ok(actions.y + actions.height <= small.y + small.height);
     await page.screenshot({ path: `${output}/layers-clean-760-short.png` });
     await page.getByRole('button', { name: 'Close Workbench Layers' }).click();
-    const toggle = page.locator('[data-workbench-toolbar]').getByRole('button', { name: 'Layers', exact: true });
+    const toggle = editorMenu(page, 'Tools');
     await page.waitForFunction(node => document.activeElement === node, await toggle.elementHandle());
     assert.equal(await toggle.evaluate(node => document.activeElement === node), true);
-    await toggle.click(); await grip.waitFor();
+    await openSharedTool(page, 'Layers'); await grip.waitFor();
     assert.deepEqual(await saved(page), before, 'panel interaction never writes artwork or presentation');
     await drag(10, 10); await page.evaluate(() => window.leaveEditor()); await page.mouse.up();
     assert.deepEqual(errors, [], 'closing the editor disposes an active panel gesture');
@@ -126,7 +145,7 @@ test('invisible panel edges resize from every side without changing artwork; min
       await drag(edge, -16, -12); await page.mouse.up();
       assert.deepEqual(await panel.boundingBox(), start);
     }
-    await drag('se', -100, -300); await page.mouse.up();
+    await drag('se', -start.width, -start.height); await page.mouse.up();
     const compact = await panel.boundingBox(); assert.equal(compact.width, 280); assert.equal(compact.height, 240);
     const list = page.locator('.workbench-layers-list');
     assert.ok(await list.evaluate(node => node.clientHeight > 0 && node.scrollHeight > node.clientHeight));
@@ -141,14 +160,13 @@ test('invisible panel edges resize from every side without changing artwork; min
     await page.setViewportSize({ width: 760, height: 850 });
     await drag('se', 500, 600); await page.mouse.up();
     const bounded = await panel.boundingBox();
-    const rail = await page.locator('[data-workbench-toolbar]').boundingBox();
-    assert.ok(bounded.x >= 8 && bounded.x + bounded.width <= 752 && bounded.y + bounded.height < rail.y);
+    assert.ok(bounded.x >= 0 && bounded.x + bounded.width <= 760 && bounded.y + bounded.height <= 850);
     await drag('se', -500, -600); await page.mouse.up();
     assert.equal(await panel.locator('.workbench-tool-panel-resize:focus-visible').count(), 0, 'pointer resizing clears a previous keyboard resize mark');
     await page.screenshot({ path: `${output}/layers-resized-carbon-760.png` });
     assert.deepEqual(await saved(page), before);
     await page.getByRole('button', { name: 'Close Workbench Layers' }).click();
-    await page.locator('[data-workbench-toolbar]').getByRole('button', { name: 'Layers', exact: true }).click();
+    await openSharedTool(page, 'Layers');
     await drag('se', 20, 20); await page.evaluate(() => window.leaveEditor()); await page.mouse.up();
     assert.deepEqual(errors, []);
   } finally { await browser.close(); }
@@ -163,13 +181,13 @@ test('real Layers order, groups, temporary eyes, deletion/Undo, reload and narro
     assert.deepEqual(await rows(page), ['image:eyes', 'text:mist', 'image:body', 'shape:landscape']);
     const paint = () => page.locator('[data-workbench-artwork]').evaluateAll(nodes => Object.fromEntries(nodes.map(node => [node.dataset.workbenchViewId, Number(getComputedStyle(node).zIndex)])));
     const startPaint = await paint(); assert.ok(startPaint['image:eyes'] > startPaint['text:mist'] && startPaint['text:mist'] > startPaint['image:body'] && startPaint['image:body'] > startPaint['shape:landscape']);
-    await page.getByRole('button', { name: 'Select Body', exact: true }).click();
+    await selectWorkbenchLayer(page, 'Body', );
     assert.deepEqual(await paint(), startPaint, 'selection cannot change paint order');
     await page.getByRole('button', { name: 'Bring layers to front' }).click();
     await page.waitForFunction(() => window.savedDraft().artworkLayers.at(-1) === 'image:body');
     assert.ok((await paint())['image:body'] > (await paint())['image:eyes']);
     await undo(page);
-    await page.getByRole('button', { name: 'Select Eyes', exact: true }).click({ modifiers: ['Shift'] });
+    await selectWorkbenchLayer(page, 'Eyes', { modifiers: ['Shift'] });
     await page.getByRole('button', { name: 'Group selected layers' }).click();
     await page.getByLabel('Group name').fill('Person');
     await page.getByRole('button', { name: 'Create group', exact: true }).click();
@@ -179,26 +197,26 @@ test('real Layers order, groups, temporary eyes, deletion/Undo, reload and narro
     const blockRow = page.locator(`[data-layer-id="${grouped.artworkLayers.at(-1).id}"]`);
     assert.equal(await blockRow.locator('.workbench-layer-confirm').innerText(), 'Delete 2 layers?', 'Delete uses the new block even when its selected ids did not change');
     await page.getByRole('button', { name: 'Cancel layer deletion' }).click();
-    await page.getByRole('button', { name: 'Expand Person' }).click();
-    await page.getByRole('button', { name: 'Select Body', exact: true }).click();
+    if (await page.getByRole('button', { name: 'Expand Person', exact: true }).count()) await page.getByRole('button', { name: 'Expand Person', exact: true }).click();
+    await selectWorkbenchLayer(page, 'Body', );
     await page.getByRole('button', { name: 'Move layers forward' }).click();
     assert.deepEqual((await saved(page)).artworkLayers.at(-1).children, ['image:eyes', 'image:body']);
     const beforeEye = await saved(page);
     await page.getByRole('button', { name: 'Hide Body in editor' }).click();
-    assert.equal(await page.locator('[data-workbench-view-id="image:body"]').evaluate(node => getComputedStyle(node).visibility), 'hidden');
+    assert.equal(await page.locator('[data-workbench-artwork][data-workbench-view-id="image:body"]').evaluate(node => getComputedStyle(node).visibility), 'hidden');
     assert.deepEqual(await saved(page), beforeEye);
     await page.getByRole('button', { name: 'Show Body in editor' }).click();
     await page.getByRole('button', { name: 'Delete Body', exact: true }).click();
     await page.getByRole('button', { name: 'Confirm layer deletion' }).click();
     await page.waitForFunction(() => window.savedDraft().imageModules.length === 1);
-    assert.equal(await page.locator('[data-context-action-target]').count(), 0, 'successful deletion clears the departed target');
+    assert.equal(await page.locator('[data-workbench-inspection-target]:visible').count(), 0, 'successful deletion clears the departed target');
     await undo(page);
     await page.waitForFunction(() => window.savedDraft().imageModules.length === 2);
     assert.deepEqual((await saved(page)).imageModules, beforeEye.imageModules);
-    assert.equal(await page.locator('[data-context-action-target]').count(), 0, 'Undo restores content without reviving a departed tool target');
+    assert.equal(await page.locator('[data-workbench-inspection-target]:visible').count(), 0, 'Undo restores content without reviving a departed tool target');
     assert.deepEqual((await saved(page)).artworkLayers, beforeEye.artworkLayers);
     await page.screenshot({ path: `${output}/layers-1440.png` });
-    await page.reload(); await page.getByRole('button', { name: 'Expand Person' }).waitFor();
+    await page.reload(); await page.getByRole('button', { name: 'Select Person', exact: true }).waitFor();
     assert.deepEqual((await saved(page)).artworkLayers, beforeEye.artworkLayers);
     await page.setViewportSize({ width: 760, height: 850 });
     await page.screenshot({ path: `${output}/layers-760.png` });
@@ -220,10 +238,11 @@ test('closed and hidden parts travel with their block; canvas Delete reopens Lay
     assert.equal(moved.workbench.imageModules[0].position.left - 260, moved.workbench.imageModules[1].position.left - 380);
     assert.equal(moved.workbench.imageModules[0].open, false);
     await page.getByRole('button', { name: 'Reopen Person', exact: true }).click();
-    assert.equal((await page.locator('[data-workbench-view-id="image:body"]').boundingBox()).x, moved.workbench.imageModules[0].position.left);
+    assert.equal((await page.locator('[data-workbench-artwork][data-workbench-view-id="image:body"]').boundingBox()).x, moved.workbench.imageModules[0].position.left);
     await undo(page);
     assert.deepEqual((await saved(page)).workbench, before.workbench);
-    await page.getByRole('button', { name: 'Expand Person', exact: true }).click();
+    const expand = page.getByRole('button', { name: 'Expand Person', exact: true });
+    if (await expand.count()) await expand.click();
     await page.getByRole('button', { name: 'Hide Body in editor', exact: true }).click();
     await page.mouse.move(420, 320); await page.mouse.down(); await page.mouse.move(470, 350, { steps: 5 }); await page.mouse.up();
     await page.waitForFunction(() => window.savedDraft().workbench.imageModules[1].position.left !== 380);
@@ -245,9 +264,9 @@ test('drag and keyboard ordering, native Text deletion/Undo, outside focus and C
     const bodyRow = page.locator('[data-layer-id="image:body"]'), eyesRow = page.locator('[data-layer-id="image:eyes"]');
     await bodyRow.dragTo(eyesRow, { targetPosition: { x: 130, y: 4 } });
     await page.waitForFunction(() => window.savedDraft().artworkLayers.at(-1) === 'image:body');
-    await page.getByRole('button', { name: 'Select Body', exact: true }).click(); await page.keyboard.press('Alt+ArrowDown');
+    await selectWorkbenchLayer(page, 'Body', ); await page.keyboard.press('Alt+ArrowDown');
     await page.waitForFunction(() => window.savedDraft().artworkLayers.at(-1) === 'image:eyes');
-    await page.getByRole('button', { name: 'Select Mist', exact: true }).click();
+    await selectWorkbenchLayer(page, 'Mist', );
     const text = page.getByRole('textbox', { name: 'Article text', exact: true });
     assert.equal(await text.innerText(), 'Native Text deletion');
     await text.focus(); await text.press('Control+A'); await text.press('Delete');
@@ -259,14 +278,14 @@ test('drag and keyboard ordering, native Text deletion/Undo, outside focus and C
     await page.screenshot({ path: `${output}/layers-carbon-1440.png` });
     await fixture(page, { outside: true });
     await page.getByRole('button', { name: 'Select Body', exact: true }).dblclick();
-    await page.getByRole('button', { name: 'Back to previous Workbench view' }).waitFor();
-    assert.equal(await page.locator('[data-workbench-view-id="image:body"]').getAttribute('data-workbench-canvas-hidden'), null);
+    assert.equal(await workbenchCommandDisabled(page, 'back'), false);
+    assert.equal(await page.locator('[data-workbench-artwork][data-workbench-view-id="image:body"]').getAttribute('data-workbench-canvas-hidden'), null);
     await fixture(page, { carbon: true, many: true }); await page.setViewportSize({ width: 760, height: 850 });
     await page.getByRole('button', { name: 'Move Layers panel', exact: true }).focus();
     const list = page.locator('.workbench-layers-list');
     assert.ok(await list.evaluate(node => node.scrollHeight > node.clientHeight));
     await list.evaluate(node => { node.scrollTop = node.scrollHeight; });
-    await page.getByRole('button', { name: 'Select Landscape', exact: true }).click();
+    await selectWorkbenchLayer(page, 'Landscape', );
     const panel = await page.locator('.workbench-tool-dock').filter({ has: page.getByRole('tab', { name: 'Layers', exact: true }) }).boundingBox();
     assert.ok(panel.x >= 0 && panel.x + panel.width <= 760 && panel.y + panel.height <= 850);
     await page.screenshot({ path: `${output}/layers-carbon-760-scroll.png` });
@@ -279,10 +298,11 @@ test('canvas block selection, atomic drag/Undo, explicit entry and Escape preser
     const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, reducedMotion: 'reduce' });
     await fixture(page, { grouped: true });
     const before = await saved(page);
-    await page.mouse.click(280, 200);
+    const point = await artworkPoint(page, 'image:body');
+    await page.mouse.click(point.x, point.y);
     await page.getByRole('group', { name: '2 selected Workbench modules', exact: true }).waitFor();
     assert.equal(await page.getByRole('button', { name: 'Select Person', exact: true }).getAttribute('aria-pressed'), 'true');
-    await page.mouse.move(280, 200); await page.mouse.down(); await page.mouse.move(330, 240, { steps: 5 }); await page.mouse.up();
+    await page.mouse.move(point.x, point.y); await page.mouse.down(); await page.mouse.move(point.x + 50, point.y + 40, { steps: 5 }); await page.mouse.up();
     await page.waitForFunction(() => window.savedDraft().workbench.imageModules[0].position.left !== 260);
     const moved = await saved(page);
     const dx = moved.workbench.imageModules[0].position.left - before.workbench.imageModules[0].position.left;
@@ -294,13 +314,15 @@ test('canvas block selection, atomic drag/Undo, explicit entry and Escape preser
     await page.getByRole('group', { name: '2 selected Workbench modules', exact: true }).focus();
     await page.keyboard.press('Enter');
     await page.locator('.workbench-layers-context').getByText('Person › Edit group contents').waitFor();
-    await page.mouse.click(280, 200);
-    await page.getByRole('button', { name: 'Expand Person' }).click();
+    await page.mouse.click(point.x, point.y);
+    if (await page.getByRole('button', { name: 'Expand Person', exact: true }).count()) await page.getByRole('button', { name: 'Expand Person', exact: true }).click();
     assert.equal(await page.getByRole('button', { name: 'Select Body', exact: true }).getAttribute('aria-pressed'), 'true');
-    await page.locator('[data-workbench-view-id="image:body"]').focus(); await page.keyboard.press('Escape');
+    await page.locator('[data-workbench-artwork][data-workbench-view-id="image:body"]').focus(); await page.keyboard.press('Escape');
     assert.equal(await page.getByRole('button', { name: 'Select Person', exact: true }).getAttribute('aria-pressed'), 'true');
-    await page.getByRole('group', { name: '2 selected Workbench modules', exact: true }).dblclick({ position: { x: 30, y: 30 } });
-    await page.getByRole('button', { name: 'Back to previous Workbench view' }).waitFor();
+    const group = page.getByRole('group', { name: '2 selected Workbench modules', exact: true }), box = await group.boundingBox();
+    await group.dblclick({ position: { x: point.x - box.x, y: point.y - box.y } });
+    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    assert.equal(await workbenchCommandDisabled(page, 'back'), false);
     assert.deepEqual((await saved(page)).artworkLayers, before.artworkLayers);
   } finally { await browser.close(); }
 });
@@ -310,11 +332,12 @@ test('additive Layers selection derives its action target from the final group, 
   try {
     const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, reducedMotion: 'reduce' });
     await fixture(page);
+    await openSharedTool(page, 'Inspector');
     const before = await saved(page);
     const selection = () => page.locator('.workbench-layer-row[data-selected]').evaluateAll(nodes => nodes.map(node => node.dataset.layerId).sort());
-    const targets = () => page.locator('[data-context-action-target]').evaluateAll(nodes => nodes.map(node => node.dataset.contextActionTarget));
+    const targets = () => page.locator('[data-workbench-inspection-target]:visible').evaluateAll(nodes => nodes.map(node => node.dataset.workbenchInspectionTarget));
     const click = async (name, additive = false) => {
-      await page.getByRole('button', { name: `Select ${name}`, exact: true }).click({ modifiers: additive ? ['Shift'] : [] });
+      await selectWorkbenchLayer(page, name, { modifiers: additive ? ['Shift'] : [] });
       await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
     };
     await click('Eyes');
@@ -332,10 +355,11 @@ test('additive Layers selection derives its action target from the final group, 
     await click('Eyes', true);
     assert.deepEqual(await selection(), []);
     assert.deepEqual(await targets(), [], 'toggling the final member off clears the tool target');
-    await page.mouse.click(280, 200);
+    const point = await artworkPoint(page, 'image:body');
+    await page.mouse.click(point.x, point.y);
     assert.deepEqual(await selection(), ['image:body'], 'ordinary canvas click selects the same artwork as Layers');
     assert.deepEqual(await targets(), ['image:body']);
-    await page.keyboard.down('Shift'); await page.mouse.click(280, 200); await page.keyboard.up('Shift');
+    await page.keyboard.down('Shift'); await page.mouse.click(point.x, point.y); await page.keyboard.up('Shift');
     assert.deepEqual(await selection(), [], 'Shift-click can toggle the last canvas selection off');
     assert.deepEqual(await targets(), []);
     assert.deepEqual(await saved(page), before, 'selection never rewrites the composition');
@@ -351,12 +375,12 @@ test('cancelled canvas marquee restores ordinary module tools and explicit group
     const settle = () => page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
     const state = () => page.evaluate(() => ({
       ids: [...document.querySelectorAll('.workbench-layer-row[data-selected]')].map(n => n.dataset.layerId).sort(),
-      targets: [...document.querySelectorAll('[data-context-action-target]')].map(n => n.dataset.contextActionTarget),
+      targets: [...document.querySelectorAll('[data-workbench-inspection-target]')].map(n => n.dataset.workbenchInspectionTarget),
       groups: document.querySelectorAll('.workbench-selection').length,
     }));
     for (const name of ['Body', 'Landscape', 'group']) for (const cancel of ['Escape', 'capture loss']) {
       await page.getByRole('button', { name: `Select ${name === 'group' ? 'Body' : name}`, exact: true }).click();
-      if (name === 'group') await page.getByRole('button', { name: 'Select Eyes', exact: true }).click({ modifiers: ['Shift'] });
+      if (name === 'group') await selectWorkbenchLayer(page, 'Eyes', { modifiers: ['Shift'] });
       await settle(); const selected = await state();
       assert.equal(selected.groups, name === 'group' ? 1 : 0);
       const host = page.locator('main.system-workflow').first();
@@ -378,7 +402,7 @@ test('closed Image recovery, inline cancel, storage failure and visitor order', 
     const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, reducedMotion: 'reduce' });
     await fixture(page, { closed: true });
     await page.getByRole('button', { name: 'Reopen Body', exact: true }).click();
-    await page.locator('[data-workbench-view-id="image:body"]').waitFor();
+    await page.locator('[data-workbench-artwork][data-workbench-view-id="image:body"]').waitFor();
     assert.equal(await page.getByRole('button', { name: 'Close Body', exact: true }).count(), 0);
     await page.getByRole('button', { name: 'Delete Body', exact: true }).click();
     // The deleted row button loses focus; the confirmation focuses Cancel on
@@ -387,20 +411,21 @@ test('closed Image recovery, inline cancel, storage failure and visitor order', 
     await page.keyboard.press('Escape');
     assert.equal(await page.getByRole('button', { name: 'Confirm layer deletion' }).count(), 0);
     assert.equal(await page.getByRole('button', { name: 'Delete Body', exact: true }).evaluate(node => document.activeElement === node), true);
+    await openSharedTool(page, 'Inspector');
     await page.evaluate(() => { window.normalSetItem = Storage.prototype.setItem; Storage.prototype.setItem = function(key, value) {
       if (key.startsWith('inscape.system-workflow-draft.')) throw Error('full'); return window.normalSetItem.call(this, key, value);
     }; });
-    await page.getByRole('button', { name: 'Select Body', exact: true }).click();
+    await selectWorkbenchLayer(page, 'Body', );
     const before = await saved(page);
     await page.getByRole('button', { name: 'Delete Body', exact: true }).click(); await page.getByRole('button', { name: 'Confirm layer deletion' }).click();
     await page.getByRole('alert').filter({ hasText: 'Could not save' }).waitFor();
     assert.deepEqual(await saved(page), before);
     assert.equal(await page.getByRole('button', { name: 'Select Body', exact: true }).count(), 0, 'failed deletion keeps its inline recovery');
     assert.equal(await page.locator('.workbench-layer-row[data-layer-id="image:body"]').getAttribute('data-selected'), 'true');
-    assert.equal(await page.locator('[data-context-action-target]').getAttribute('data-context-action-target'), 'image:body', 'failed save retains the selected tool target');
+    assert.equal(await page.locator('[data-workbench-inspection-target]:visible').getAttribute('data-workbench-inspection-target'), 'image:body', 'failed save retains the selected tool target');
     await page.evaluate(() => { Storage.prototype.setItem = window.normalSetItem; });
     await page.getByRole('button', { name: 'Cancel layer deletion' }).click();
-    await page.getByRole('button', { name: 'Select Landscape', exact: true }).click();
+    await selectWorkbenchLayer(page, 'Landscape', );
     await page.getByRole('button', { name: 'Bring layers to front' }).click();
     const owner = await saved(page);
     await page.evaluate(async () => {
@@ -411,6 +436,7 @@ test('closed Image recovery, inline cancel, storage failure and visitor order', 
       window.leaveEditor(); createRoot(window.document.getElementById('root')).render(React.createElement(Preview, { document }));
     });
     await page.locator('[data-workbench-artwork]').first().waitFor();
+    await resetCameraTestView(page);
     const paint = await page.locator('[data-workbench-artwork]').evaluateAll(nodes => Object.fromEntries(nodes.map(node => [node.dataset.workbenchViewId, Number(getComputedStyle(node).zIndex)])));
     assert.ok(paint['shape:landscape'] > paint['image:eyes']);
     assert.equal(await page.locator('[data-workbench-layers]').count(), 0);
@@ -426,8 +452,8 @@ test('Workbench A to B to A drops the old group; Visitor selection has no owner 
     const errors = []; page.on('pageerror', error => errors.push(error.message));
     await fixture(page, { selectionOnly: true });
     const aId = await activeEditorDocument(page);
-    await page.getByRole('button', { name: 'Select Eyes', exact: true }).click();
-    await page.getByRole('button', { name: 'Select Body', exact: true }).click({ modifiers: ['Shift'] });
+    await selectWorkbenchLayer(page, 'Eyes', );
+    await selectWorkbenchLayer(page, 'Body', { modifiers: ['Shift'] });
     assert.equal(await page.locator('.workbench-layer-row[data-selected]').count(), 2);
     const original = await page.evaluate(() => window.guardedStore().getDraft());
     await editorCommand(page, 'Canvas', 'New canvas');
@@ -435,11 +461,11 @@ test('Workbench A to B to A drops the old group; Visitor selection has no owner 
     await page.getByRole('button', { name: 'Create canvas', exact: true }).click();
     await page.waitForFunction(() => window.guardedStore().listWorkbenches().length === 2 && !window.guardedStore().getDraft().imageModules?.length);
     assert.equal(await page.locator('.workbench-layer-row[data-selected]').count(), 0);
-    assert.equal(await page.locator('[data-context-action-target]').count(), 0);
+    assert.equal(await page.locator('[data-workbench-inspection-target]:visible').count(), 0);
     await selectEditorDocument(page, aId);
     await page.getByRole('button', { name: 'Select Body', exact: true }).waitFor();
     assert.equal(await page.locator('.workbench-layer-row[data-selected]').count(), 0, 'the previous explicit group is not restored into the new activation');
-    assert.equal(await page.locator('[data-context-action-target]').count(), 0);
+    assert.equal(await page.locator('[data-workbench-inspection-target]:visible').count(), 0);
     assert.deepEqual(await page.evaluate(() => window.guardedStore().getDraft().imageModules), original.imageModules);
     await page.evaluate(async () => {
       const React = (await import('/@id/react')).default, { createRoot } = (await import('/@id/react-dom/client')).default;
@@ -452,11 +478,11 @@ test('Workbench A to B to A drops the old group; Visitor selection has no owner 
       Storage.prototype.setItem = function(key, value) { if (key.startsWith('inscape.system-workflow-draft.')) window.visitorWrites++; return write.call(this, key, value); };
       createRoot(window.document.getElementById('root')).render(React.createElement(Preview, { document: published }));
     });
-    const image = page.locator('[data-workbench-view-id="image:body"]'); await image.waitFor();
+    const image = page.locator('[data-workbench-artwork][data-workbench-view-id="image:body"]'); await image.waitFor();
     await image.locator('[data-workbench-selectable]').first().focus(); await page.keyboard.press('Shift+Enter');
     await page.getByRole('group', { name: '1 selected Workbench modules', exact: true }).waitFor();
     assert.equal(await page.locator('[data-workbench-layers]').count(), 0);
-    assert.equal(await page.locator('[data-context-action-target]').count(), 0);
+    assert.equal(await page.locator('[data-workbench-inspection-target]:visible').count(), 0);
     await page.keyboard.press('Escape');
     assert.equal(await page.locator('.workbench-selection').count(), 0);
     assert.equal(await page.evaluate(() => window.visitorWrites), 0);

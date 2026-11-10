@@ -1,8 +1,15 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { resolve } from 'node:path';
-import { verificationPlan, verificationSteps, parseVerificationArgs, BROWSER_SHARDS } from './verificationPlan.mjs';
+import { verificationPlan, verificationSteps, parseVerificationArgs, BROWSER_SHARDS, UNIT_TEST_PATTERNS } from './verificationPlan.mjs';
+import { readFileSync } from 'node:fs';
 import { browserShards, browserSelection, loadBrowserSuiteCatalog, selectBrowserSuites } from './browserSuiteCatalog.mjs';
+
+test('release unit discovery matches npm test source roots instead of discovering audit outputs', () => {
+  const pkg = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
+  assert.deepEqual([...pkg.scripts.test.matchAll(/"([^"]+)"/gu)].map(match => match[1]), UNIT_TEST_PATTERNS);
+  assert.deepEqual(verificationSteps.find(step => step.name === 'unit').args.slice(3), UNIT_TEST_PATTERNS);
+});
 
 test('local full verification and CI groups share exactly the same mandatory definitions', () => {
   assert.deepEqual(verificationPlan(), verificationSteps);

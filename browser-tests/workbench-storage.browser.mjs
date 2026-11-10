@@ -56,7 +56,9 @@ for (const width of [1440, 390]) test(`full private backup downloads, validates,
     await page.waitForFunction(() => window.savedDraft().texts[0].article.title === 'Restored private composition');
     assert.deepEqual(await page.evaluate(() => window.savedDraft()), restored.draft);
     await page.reload(); await page.locator('.text-window').waitFor(); assert.deepEqual(await page.evaluate(() => window.savedDraft()), restored.draft);
-    assert.ok(Math.abs((await page.locator('.text-window').boundingBox()).x - 110) < 1, 'the restored window position survives the old layout cache and reload');
+    const projectedLeft = await page.locator('main.system-workflow').evaluate(host =>
+        110 * Number(host.dataset.workbenchCameraScale) + Number(host.dataset.workbenchCameraX));
+      assert.ok(Math.abs((await page.locator('.text-window').boundingBox()).x - projectedLeft) < 1, 'the restored authored position is painted through the current camera after reload');
     await page.screenshot({ path: path.join(output, `restored-${width}.png`) });
     assert.deepEqual(errors, []);
   } finally { await browser.close(); }

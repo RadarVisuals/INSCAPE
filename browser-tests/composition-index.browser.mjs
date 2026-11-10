@@ -1,4 +1,4 @@
-import { editorCommand, editorOverview } from './fixtures/editor-menu.mjs';
+import { editorCommand, editorOverview, editorDestination } from './fixtures/editor-menu.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdir } from 'node:fs/promises';
@@ -139,7 +139,7 @@ test('desktop owner index keeps browsing separate from activation and save failu
     await page.getByLabel('Canvas name', { exact: true }).fill('Discard this name');
     await page.getByLabel('Canvas name', { exact: true }).press('Escape');
     await page.getByRole('heading', { name: 'Lunar Desert', exact: true }).waitFor();
-    await page.getByRole('button', { name: 'Reception', exact: true }).click();
+    await editorDestination(page, 'Reception');
     await page.getByText('Published view requested', { exact: true }).waitFor();
     assert.deepEqual(errors, []);
   } finally { await browser.close(); }

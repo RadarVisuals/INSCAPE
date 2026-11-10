@@ -21,6 +21,36 @@
   --tactile-radius-row: var(--control-radius);
   --tactile-motion: 0ms;
 }
+/* The compact Editor migration shares the existing material and state owner.
+   Palette opt-in leaves other production tools on their current finish. */
+[data-workflow-material='tactile'][data-workflow-palette='editor'] {
+  --tactile-face: var(--editor-panel);
+  --tactile-ink: var(--editor-ink);
+  --tactile-muted: var(--editor-muted);
+  --tactile-accent: var(--editor-accent);
+  --tactile-edge: var(--editor-line);
+  --tactile-divider: var(--editor-line);
+  --tactile-header: var(--editor-panel);
+  --tactile-raised: var(--editor-field);
+  --tactile-well: var(--editor-field);
+  --tactile-selected: var(--editor-selection);
+  --tactile-selected-ink: var(--editor-accent);
+  --tactile-control-edge: transparent;
+  --tactile-state-mark: none;
+  --tactile-radius-control: var(--editor-control-radius);
+  --workflow-menu-radius: var(--editor-control-radius);
+  --workflow-menu-row-radius: var(--editor-control-radius);
+  --workflow-menu-row-height: 28px;
+  --workflow-menu-type: var(--workflow-type-control);
+  --workflow-menu-z: 90;
+  --workflow-menu-marker: none;
+}
+[data-workflow-palette='editor'] .workflow-tactile-control:where([data-primary]) {
+  --tactile-raised: var(--editor-accent);
+  --tactile-hover: color-mix(in srgb, var(--editor-accent) 86%, var(--editor-ink));
+  --tactile-ink: var(--editor-on-accent);
+  --tactile-selected: var(--editor-accent);
+}
 @media (forced-colors: active) {
   [data-workflow-material='tactile'][data-workflow-finish='flat'] {
     --tactile-face: Canvas;
@@ -35,6 +65,17 @@
     --tactile-hover: ButtonFace;
     --tactile-well: ButtonFace;
   }
+  [data-workflow-material='tactile'][data-workflow-palette='editor'] {
+    --tactile-selected: Highlight;
+    --tactile-selected-ink: HighlightText;
+    --tactile-control-edge: ButtonText;
+  }
+  [data-workflow-palette='editor'] .workflow-tactile-control:where([data-primary]) {
+    --tactile-raised: ButtonFace;
+    --tactile-hover: ButtonFace;
+    --tactile-ink: ButtonText;
+    --tactile-selected: Highlight;
+  }
 }
 
 /* One physical stroke weight for interface icons; artwork SVGs keep their own strokes. */
@@ -48,12 +89,12 @@
 
 /* Portalled selectors use the same flat material as their owning window. */
 [data-workflow-menu][data-workflow-finish='flat'] {
-  --workflow-selection: var(--tactile-hover);
-  --workflow-active-vertical: inset 2px 0 0 var(--tactile-ink);
+  --workflow-selection: var(--tactile-selected, var(--tactile-hover));
+  --workflow-active-vertical: var(--workflow-menu-marker, inset 2px 0 0 var(--tactile-ink));
   --lattice-menu-ink: var(--tactile-ink);
   --lattice-menu-muted: var(--tactile-muted);
   --lattice-menu-line: var(--tactile-edge);
   background: var(--tactile-face); color: var(--tactile-ink); border-color: var(--tactile-edge);
-  border-radius: var(--control-shell-radius); padding: 3px; box-shadow: none;
+  border-radius: var(--workflow-menu-radius, var(--control-shell-radius)); padding: 3px; box-shadow: none;
 }
-[data-workflow-menu] button { border-radius: var(--control-radius); }
+[data-workflow-menu] button { border-radius: var(--workflow-menu-row-radius, var(--control-radius)); }

@@ -116,7 +116,7 @@ test('Reception opens and returns Home centred without moving authored geometry;
     await page.screenshot({ path: `${output}/centred-preview.png` });
     await page.getByRole('button', { name: 'Back to editing', exact: true }).click(); await settle(page);
     assert.deepEqual(await readCamera(), panned, 'preview return preserves the chosen camera');
-    await page.getByRole('button', { name: 'Reset Workbench view', exact: true }).click(); await settle(page);
+    await page.getByRole('button', { name: 'Fit canvas in view', exact: true }).click(); await settle(page);
     assert.deepEqual(await readCamera(), initial, 'Home returns to the canvas rather than world origin');
     await page.screenshot({ path: `${output}/centred-editor.png` });
     await editorOverview(page);
@@ -156,8 +156,11 @@ async function assertPaint(page, native) {
   assert.ok(hits.slice(3).every(id => id !== 'image:art'), 'the image is clipped at the cell edge and rounded corner');
 }
 async function textPaint(page, native, id = 'text:nomad') {
-  return page.locator(native ? `[data-workbench-view-id="${id}"]` : `.reception-document-canvas [data-layer-id="${id}"]`).evaluate(node => {
-    const article = node.querySelector('.text-editor-page, .text-document');
+  const surface = page.locator(native ? `[data-workbench-view-id="${id}"]` : `.reception-document-canvas [data-layer-id="${id}"]`);
+  await surface.locator('.text-editor-page:visible, .text-document:visible').first().waitFor();
+  return surface.evaluate(node => {
+    const article = [...node.querySelectorAll('.text-editor-page, .text-document')].find(candidate => candidate.checkVisibility());
+    if (!article) throw new Error('No visible text surface to compare');
     const style = getComputedStyle(article), surface = getComputedStyle(node), body = getComputedStyle(node.querySelector('.text-module-body'));
     const matrix = body.transform === 'none' ? null : new DOMMatrixReadOnly(body.transform);
     // Native camera zoom changes the paint dimensions. Compare the quarter-turn
@@ -179,7 +182,7 @@ test('Reception Editor, preview and public reader preserve interleaved global la
   try {
     await page.goto(`${origin}/browser-tests/reception-layer-order-fixture.html?session=${crypto.randomUUID()}`, { waitUntil: 'domcontentloaded' });
     await page.getByRole('toolbar', { name: 'Creation tools', exact: true }).waitFor();
-    await page.locator('[data-workbench-view-id="text:nomad"] .text-editor-page').waitFor();
+    await page.locator('[data-workbench-view-id="text:nomad"] article.text-document:visible').waitFor();
     await page.evaluate(() => document.fonts.ready);
     await assertPaint(page, true);
     const nativeText = await textPaint(page, true);

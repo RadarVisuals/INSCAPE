@@ -1,12 +1,15 @@
-import { createContext, useContext, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { createContext, useContext, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
 import { WorkbenchWindow } from './DisplayInstrumentWindow.jsx';
 import { useWorkbenchView } from './WorkbenchViewContext.js';
 import ArtworkActionControls from './ArtworkActionControls.jsx';
+import { useSideDock } from './WorkbenchSideDock.jsx';
+import { dockSide, sideDockFrames } from './workbenchSideDockState.js';
 import './contextToolbar.css';
 
 const Context = createContext(null);
 const Target = createContext(null);
+const noSubscribe = () => () => {}, noSnapshot = () => null;
 // The host owns selection and DOM destinations only. Module-owned actions stay
 // mounted at their origin, with the same callbacks, save boundaries and undo.
 export function ContextToolbarProvider({ target, children }) {
@@ -24,9 +27,16 @@ const currentContent = context => context?.content?.target === context?.target ?
 export function ContextToolbar({ hidden }) {
   const context = useContext(Context), content = currentContent(context);
   const view = useWorkbenchView();
+  const sideDock = useSideDock();
+  const dockState = useSyncExternalStore(sideDock?.subscribe || noSubscribe, sideDock?.getSnapshot || noSnapshot);
+  const frames = dockState ? sideDockFrames(dockState.layout, dockState.windows, dockState.viewport) : {};
+  const insets = { left: 0, right: 0 };
+  for (const item of dockState?.layout.items || []) {
+    if (frames[item.id]) insets[dockSide(item)] = frames[item.id].width;
+  }
   const recoveryControls = view.entries.get(context?.target)?.querySelectorAll('[data-workbench-recovery-control]');
   return <div data-context-tools hidden={hidden || !content?.properties}>
-    <WorkbenchWindow label="Properties" title={content?.label || 'Selection'} width={320} initialHeight={132} minimumHeight={64}
+    <WorkbenchWindow label="Properties" title={content?.label || 'Selection'} width={320} initialHeight={132} minimumHeight={64} viewportInsets={insets}
       initialX={Math.max(8, globalThis.innerWidth - (view.toolSources ? 1020 : 336))} initialY={view.toolSources ? 88 : 24} avoidControls={recoveryControls} fitContent fitContentFromTop resizable={false} chrome="flat" className="context-toolbar workbench-tool-window">
       <div ref={context?.setHost} />
     </WorkbenchWindow>

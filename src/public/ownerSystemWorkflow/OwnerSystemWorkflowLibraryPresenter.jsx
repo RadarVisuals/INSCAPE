@@ -121,7 +121,7 @@ function contextAnchor(event) {
 }
 
 export default function OwnerSystemWorkflowLibraryPresenter({ categoryCommands, categoryDrag, data, dropFeedback, open = true,
-  navigationHost = null, onAssetActivate, onAssetPointerDown, onImageActivate, workspace }) {
+  navigationHost = null, onAssetActivate, onAssetPointerDown, onImageActivate, toolbar, workspace }) {
   // Temporary browsing state, retained across filtering and closing the drawer.
   // The workspace keys this presenter by profile; no authored data is changed.
   const [expandedImageIds, setExpandedImageIds] = useState(() => new Set());
@@ -243,6 +243,8 @@ export default function OwnerSystemWorkflowLibraryPresenter({ categoryCommands, 
   const filed = categoryAssetIds(categories); const related = relationshipView === 'owned'
     ? workspace.filteredAssets.filter((asset) => asset.owned) : relationshipView === 'created'
       ? workspace.filteredAssets.filter((asset) => asset.created) : workspace.filteredAssets;
+  const viewLabel = data.collectionContext?.name || (relationshipView === 'owned' ? 'Owned' : relationshipView === 'created' ? 'Created'
+    : workspace.selectedCategory?.name || (workspace.view.kind === BROWSER_VIEW_KINDS.UNSORTED ? 'Unsorted' : 'All assets'));
   const resultsRef = useRef(null);
   const visibleRef = useRef(new Set());
   const demand = data.onMetadataDemand;
@@ -384,6 +386,7 @@ export default function OwnerSystemWorkflowLibraryPresenter({ categoryCommands, 
     else if (contextMenu) { event.stopPropagation(); closeContextMenu(); }
     else if (workspace.selectedAssetIds.length) { event.stopPropagation(); workspace.clearSelection(); }
   }}>
+    {toolbar && <div className="system-workflow__library-browse">{toolbar}</div>}
     <div className="lattice-browser-panel" style={{ '--lattice-browser-sidebar-width': `${workspace.sidebarWidth}px` }}>
       {navigationHost ? createPortal(navigation, navigationHost) : navigation}
       {!navigationHost && <button aria-label="Resize Browser navigation" className="lattice-browser-sidebar-resize"
@@ -396,6 +399,7 @@ export default function OwnerSystemWorkflowLibraryPresenter({ categoryCommands, 
         if (open && data.hasMore && !data.loadingMore && !workspace.hasActiveFilters
           && node.scrollHeight - node.scrollTop - node.clientHeight < node.clientHeight * .75) data.onLoadMore?.();
       }}>
+        {toolbar && <header className="system-workflow__library-results-heading"><span>{viewLabel}</span><span>{related.length} {related.length === 1 ? 'asset' : 'assets'}</span></header>}
         {data.hasMore && <p className="lattice-browser-notice" role="status">
           {assets.length} assets loaded · More available. Search and sorting apply to loaded assets.
         </p>}

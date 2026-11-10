@@ -48,8 +48,7 @@ export function resolvePresentationSource(snapshot, reference, session = null) {
   }
   const image = draft.imageModules?.find(record => record.id === id);
   if (image) {
-    const side = reference.sideId ? image.sides.find(side => side.id === reference.sideId) : image.sides[0];
-    return side ? { ...result, kind: 'image', record: image, side } : unavailable('side');
+    return image.artwork ? { ...result, kind: 'image', record: image, artwork: image.artwork } : unavailable('image');
   }
   const text = draft.texts?.find(record => record.id === id);
   if (text) {

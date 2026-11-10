@@ -74,9 +74,9 @@ test('Color edits selected text while retaining title, mixed marks, history and 
   assert.equal(await body.innerHTML(),original,'cancel restores mixed colours exactly');
   await page.mouse.move(r.x+r.width*.5,r.y+r.height*.045);await page.mouse.down();await page.mouse.move(r.x+r.width*.95,r.y+r.height*.5,{steps:4});await page.mouse.up();
   const committed=await body.innerHTML();assert.notEqual(committed,original);
-  await tab('Text');await studio.getByRole('button',{name:'Undo',exact:true}).click();assert.equal(await body.innerHTML(),original,'one undo restores a whole wheel gesture');
-  await studio.getByRole('button',{name:'Redo',exact:true}).click();assert.equal(await body.innerHTML(),committed);
-  await studio.getByRole('button',{name:'Undo',exact:true}).click();await studio.getByRole('button',{name:'Undo',exact:true}).click();
+  await tab('Text');await body.press('Control+z');assert.equal(await body.innerHTML(),original,'one undo restores a whole wheel gesture');
+  await body.press('Control+Shift+z');assert.equal(await body.innerHTML(),committed);
+  await body.press('Control+z');await body.press('Control+z');
   assert.equal(await body.innerHTML(),'<p>red blue green</p>','earlier colour history survives live preview and cancellation');
   await studio.getByLabel('Text example',{exact:true}).selectOption('article');
   const title=studio.getByRole('textbox',{name:'Article title',exact:true});
@@ -126,9 +126,9 @@ test('zoomed canvas and overflowing tools scroll without trapping the page', {ti
    if(width<520){await page.mouse.wheel(120,0);await page.waitForTimeout(150);assert.ok(await viewport.evaluate(n=>n.scrollLeft>0));}
    await studio.getByLabel('Workspace selection').selectOption('text');await tab('Text');
    await studio.getByLabel('Text example',{exact:true}).selectOption('article');
-   await studio.locator('.text-tools-window .text-tools-content details').first().waitFor();
-   await studio.locator('.text-tools-window .text-tools-content details').evaluateAll(nodes=>nodes.forEach(n=>n.open=true));
-   const panel=studio.locator('.text-tools-content');assert.ok(await panel.evaluate(n=>n.scrollHeight>n.clientHeight));
+   await studio.locator('.text-isolated-inspector .text-tools-content details').first().waitFor();
+   await studio.locator('.text-isolated-inspector .text-tools-content details').evaluateAll(nodes=>nodes.forEach(n=>n.open=true));
+   const panel=studio.locator('.text-isolated-inspector');assert.ok(await panel.evaluate(n=>n.scrollHeight>n.clientHeight));
    await panel.scrollIntoViewIfNeeded();await panel.hover();await page.mouse.wheel(0,250);await page.waitForTimeout(150);
    assert.ok(await panel.evaluate(n=>n.scrollTop>0));
    await panel.evaluate(n=>n.scrollTop=n.scrollHeight);const before=await page.evaluate(()=>scrollY);

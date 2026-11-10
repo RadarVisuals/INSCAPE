@@ -2,7 +2,7 @@ import test from 'node:test';
 import { artworkCommand } from './fixtures/artwork-menu.mjs';
 import assert from 'node:assert/strict';
 import { mkdir } from 'node:fs/promises';
-import { openSharedTool } from './fixtures/shared-tools.mjs';
+import { openSharedTool, sharedToolPanel } from './fixtures/shared-tools.mjs';
 import { setEditorSidebarOpen } from './fixtures/editor-menu.mjs';
 import { chromium } from 'playwright-core';
 
@@ -31,7 +31,10 @@ async function mount(browser, viewport = { width: 1440, height: 1000 }, theme = 
 }
 async function activate(page, kind) {
   if (kind === 'image') await page.locator('.image-module__canvas').first().focus();
-  else if (kind === 'shape') await page.locator('.shape-window header').first().focus();
+  else if (kind === 'shape') {
+    const id = (await draft(page)).shapes[0].id;
+    await page.locator(`header[data-workbench-view-id="${id}"], [data-detached-window][data-workbench-view-id="${id}"] > header`).focus();
+  }
   else { await page.locator('.system-workflow__placement').first().focus(); await page.keyboard.press('Enter'); }
   await settle(page);
   if (kind !== 'display') await openSharedTool(page, kind === 'image' ? 'Image' : 'Shape');
@@ -78,14 +81,15 @@ test('Display, Image and Shape actions follow the active module and retain undo'
     await undo(page);
     const display = (await draft(page)).grids;
     await activate(page, 'image');
-    assert.equal(await button(inspection(page), 'In place').count(), 0);
-    await button(inspection(page), 'Fit inside').click();
-    assert.equal((await draft(page)).imageModules[0].sides[0].crop, null);
-    await button(selection(page), 'Rotate').click();
-    assert.equal((await draft(page)).imageModules[0].sides[0].transform.quarterTurns, 1);
+    const image = sharedToolPanel(page);
+    assert.equal(await button(image, 'In place').count(), 0);
+    await button(image, 'Fit inside').click();
+    assert.equal((await draft(page)).imageModules[0].artwork.crop, null);
+    await button(image, 'Rotate').click();
+    assert.equal((await draft(page)).imageModules[0].artwork.transform.quarterTurns, 1);
     assert.deepEqual((await draft(page)).grids, display, 'Image edits never touch Display');
     await undo(page);
-    assert.equal((await draft(page)).imageModules[0].sides[0].transform.quarterTurns, 0);
+    assert.equal((await draft(page)).imageModules[0].artwork.transform.quarterTurns, 0);
     await activate(page, 'shape');
     assert.equal(await inspection(page).count(), 0, 'Shape has no unrelated fit or inspection controls');
     assert.equal(await button(selection(page), 'Rotate').count(), 0);
@@ -107,28 +111,31 @@ test('crop stays in the module panel, cancels without saving and commits one und
     for (const kind of ['image', 'display']) {
       await activate(page, kind);
       const before = await draft(page);
-      await button(selection(page), 'Crop').click();
-      const zoom = inspection(page).getByRole('slider', { name: 'Crop zoom' });
+      const actions = kind === 'image' ? sharedToolPanel(page) : selection(page);
+      const cropPanel = kind === 'image' ? sharedToolPanel(page) : inspection(page);
+      await button(actions, 'Crop').click();
+      const zoom = cropPanel.getByRole('slider', { name: 'Crop zoom' });
       await zoom.waitFor();
-      assert.equal(await selection(page).count(), 0);
+      assert.equal(await (kind === 'image' ? actions.locator('.image-inspector-transforms') : selection(page)).count(), 0);
       assert.equal(await page.locator('[data-context-tools] aside').isVisible(), kind === 'display');
       await zoom.fill('2'); await zoom.focus(); await page.keyboard.press('ArrowRight');
       assert.equal(await zoom.evaluate(node => node === document.activeElement), true, 'toolbar arrows do not steal slider input');
       assert.deepEqual(await draft(page), before, 'crop preview never saves');
-      await button(inspection(page), 'Cancel').click();
+      await button(cropPanel, 'Cancel').click();
       assert.deepEqual(await draft(page), before);
-      assert.equal(await page.locator('.artwork-action-controls button:focus').count(), 1, 'focus returns to an available action');
-      await button(selection(page), 'Crop').click(); await zoom.fill('2');
-      await button(inspection(page), 'Done').click();
+      assert.equal(await (kind === 'image' ? actions : page.locator('.artwork-action-controls')).locator('button:focus').count(), 1, 'focus returns to an available action');
+      await button(actions, 'Crop').click(); await zoom.fill('2');
+      await button(cropPanel, 'Done').click();
       assert.notDeepEqual(await draft(page), before);
       await undo(page);
       assert.deepEqual(await draft(page), before, 'one undo restores the crop');
     }
     await activate(page, 'image');
     const beforeSwitch = await draft(page);
-    await button(selection(page), 'Crop').click(); await inspection(page).getByRole('slider').fill('3');
+    const image = sharedToolPanel(page);
+    await button(image, 'Crop').click(); await image.getByRole('slider').fill('3');
     await activate(page, 'shape'); await activate(page, 'image');
-    assert.equal(await inspection(page).getByRole('slider').count(), 0, 'changing modules cancels the old crop');
+    assert.equal(await image.getByRole('slider').count(), 0, 'changing modules cancels the old crop');
     assert.deepEqual(await draft(page), beforeSwitch);
     assert.deepEqual(errors, []);
   } finally { await browser.close(); }
@@ -169,6 +176,26 @@ for (const [width, height, touch, theme] of [[1440, 1000, false, 'carbon'], [144
       assert.equal(await button(selection(page), 'Rotate').evaluate(node => node === document.activeElement), true);
       assert.deepEqual(await draft(page), saved, 'layout and keyboard navigation never author content');
       await mkdir(output, { recursive: true }); await page.screenshot({ path: `${output}/context-${theme}-${width}.png` });
+      if (width === 1000) {
+        const rightPanels = page.locator('.workbench-tool-panel[data-side-docked="true"][data-dock-side="right"]');
+        while (await rightPanels.count()) await rightPanels.first().getByRole('button', { name: /^Close / }).last().click();
+        const leftPanel = page.locator('.workbench-tool-panel[data-side-docked="true"][data-dock-side="left"]').first();
+        const edge = await leftPanel.locator('[data-edge="e"]').boundingBox();
+        await page.mouse.move(edge.x + edge.width / 2, edge.y + edge.height / 2); await page.mouse.down();
+        await page.mouse.move(width - 1, edge.y + edge.height / 2, { steps: 8 }); await page.mouse.up();
+        await activate(page, 'display');
+        const panel = await page.locator('[data-context-tools] .context-toolbar').boundingBox();
+        const dock = await leftPanel.boundingBox();
+        assert.ok(panel.width >= 240 && panel.x >= dock.x + dock.width && panel.x + panel.width <= width,
+          'an oversized single dock leaves a usable Properties window');
+        await button(selection(page), 'Inspect artwork').focus(); await page.keyboard.press('End');
+        assert.equal(await button(selection(page), 'Crop').evaluate(node => {
+          const box = node.getBoundingClientRect();
+          return node.contains(document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2));
+        }), true, 'Properties remains pointer-accessible after the dock expands');
+        assert.deepEqual(await draft(page), saved, 'expanding a dock never authors content');
+        await page.screenshot({ path: `${output}/context-single-dock-expanded.png` });
+      }
       assert.deepEqual(errors, []);
     } finally { await browser.close(); }
   });

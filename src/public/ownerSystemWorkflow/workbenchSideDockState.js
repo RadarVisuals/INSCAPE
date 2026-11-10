@@ -23,8 +23,8 @@ export function sideDockFrames(layout, windows, viewport) {
       ...members.map(item => windows.get(item.id).minimumWidth)) : 0 };
   });
   const totalWidth = columns.reduce((sum, column) => sum + column.width, 0);
-  // Keep a central work area when both edges are occupied, including narrow screens.
-  const available = viewport.width - (columns.every(column => column.width) ? Math.min(320, viewport.width / 3) : 0);
+  // Keep a work area beside one or both dock columns, including narrow screens.
+  const available = viewport.width - Math.min(320, viewport.width / 3);
   const ratio = Math.min(1, available / totalWidth);
   const height = Math.max(1, viewport.height - viewport.top);
   return Object.fromEntries(columns.flatMap(({ side, members, width: desiredWidth }) => {
@@ -58,7 +58,10 @@ export function createSideDockStore(preferences) {
     preview: point => publish({ preview: point }),
     activate: id => { if (state.active !== id) publish({ active: id }); },
     restore: save,
-    detach: id => save({ ...state.layout, items: state.layout.items.filter(item => item.id !== id) }),
+    detach(id) {
+      const items = state.layout.items.filter(item => item.id !== id);
+      if (items.length !== state.layout.items.length) save({ ...state.layout, items });
+    },
     retainTools(ids) {
       const items = state.layout.items.filter(item => !item.id.startsWith('tools:') || ids.includes(item.id));
       if (items.length !== state.layout.items.length) save({ ...state.layout, items });

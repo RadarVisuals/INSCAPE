@@ -5,20 +5,20 @@ import { editPassage, textDisplays } from './scenePassages.js';
 import { useTextScene, SceneTextViewport, TextContentPage } from './SceneTextContent.jsx';
 import { lazy, memo, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Settings2 as Settings, Eye, Pencil, Plus, Hand } from 'lucide-react';
+import { X, Settings2 as Settings, Eye, Pencil, Plus, GripVertical } from 'lucide-react';
 import { WorkbenchWindow } from '../public/ownerSystemWorkflow/DisplayInstrumentWindow.jsx';
 import { useWorkbenchView, workbenchModuleTransform, useArtworkOpener, useClosedArtworkLayout, useWorkbenchToolSource } from '../public/ownerSystemWorkflow/WorkbenchViewContext.js';
-import { useWorkbenchCamera } from '../public/ownerSystemWorkflow/WorkbenchCamera.jsx';
 import { useEditorCells } from '../reception/EditorCellsContext.jsx';
+import { CellPositionButton } from '../reception/EditorCellPositionControls.jsx';
 import { clampWorkbenchPosition } from '../public/ownerSystemWorkflow/workbenchSpace.js';
-import { createTextPresentation, TEXT_WINDOW_LIMITS } from '../profileDocument/domain/workbenchPresentation.js';
+import { createTextPresentation, TEXT_WINDOW_LIMITS, CELL_TEXT_WINDOW_LIMITS } from '../profileDocument/domain/workbenchPresentation.js';
 import { createProfileDocumentV9AssetResolver } from '../profileDocument/domain/profileDocumentV9Asset.js';
 import useModuleShortcutMenu from '../public/ownerSystemWorkflow/useModuleShortcutMenu.jsx';
 import { textAppearance, textOutputStyle, textWindowStyle, MAX_TEXT_MODULES } from './domain/article.js';
 import { saveTextModuleResult, unlinkTextModuleResult, prepareTextResize, changeTextFrames, duplicateTextModule } from './textSession.js';
 import { commitWorkbenchSelectionResize } from '../systemWorkflow/resizeWorkbenchSelection.js';
-import TextTools from './TextTools.jsx';
-import { SharedTextToolsProvider, SharedTextToolsWindow, useSharedTextTools } from './SharedTextTools.jsx';
+import { TextToolsContent } from './TextTools.jsx';
+import { SharedTextToolsProvider, SharedTextToolsContent, SharedTextToolsInspectorContent, useSharedTextTools } from './SharedTextTools.jsx';
 import { restoreTextToolsView } from './sharedTextToolsState.js';
 import TextMoveHandle from './TextMoveHandle.jsx';
 import LinkedTextWindow, { TextFrameLinks } from './LinkedTextFrames.jsx';
@@ -38,10 +38,10 @@ const TextInstance = memo(function TextInstance({ record, index, store, profileA
   const workbenchView = useWorkbenchView();
   const cells = useEditorCells();
   const cell = cells?.cells.find(cell => cell.members.includes(record.id));
+  const limits = cell ? CELL_TEXT_WINDOW_LIMITS : TEXT_WINDOW_LIMITS;
   const editingCell = cell?.id === cells?.editingCellId ? cell : null;
   const reception = store?.getWorkbenchId?.() === 'reception';
   const view = workbenchModuleTransform(workbenchView, record.id);
-  const { offset } = useWorkbenchCamera();
   const scope = textRecoveryScope(profileAddress, record.id);
   const { value: working, failed, error, reason, session: edit } = useTextEditSession({ store, scope, record, valueOf: textValue, saveRecord: saveText });
   const { save: change, setError } = edit;
@@ -58,10 +58,16 @@ const TextInstance = memo(function TextInstance({ record, index, store, profileA
     setPresentation(current => { const next = { ...current }; if (savedFrames?.length) next.frames = savedFrames; else delete next.frames; return next; });
   }, [savedFramesKey, savedFrames]);
   const [editingMode, setMode] = useState(store ? initialView?.mode || 'write' : 'read');
-  const mode = view.presented || (cell && !editingCell) ? 'read' : editingMode;
+  const mode = view.presented || (cell && !editingCell) ? 'read' : editingCell && store ? 'write' : editingMode;
   const settings = Boolean(store && toolsOpen && active);
   const setSettings = open => { onActivate(); setToolsOpen?.(open); };
   const [controlsHost, setControlsHost] = useState(null), [destination, setDestination] = useState('');
+  const [quickToolsHost, setQuickToolsHost] = useState(null);
+  const [fontPreviewFrame, setFontPreviewFrame] = useState(null);
+  const cellId = cell?.id;
+  const fitFontPreview = useCallback(article => {
+    setFontPreviewFrame(article ? store.previewFittedTextFrame(cellId, record.id, article) : null);
+  }, [store, cellId, record.id]);
   const toolsTrigger = useRef(null);
   const scenes = useSceneNavigation();
   const [linkTarget, setLinkTarget] = useState('');
@@ -93,15 +99,7 @@ const TextInstance = memo(function TextInstance({ record, index, store, profileA
     return () => { colourEditor.off('focus', selectBody); colourEditor.off('selectionUpdate', selectBody); };
   }, [colourEditor]);
   useEffect(() => { setColourTarget('default'); setColourPreview(null); }, [gridId]);
-  const sharedColour = useWorkbenchToolSource(record.id, { actions: { disabled: !store || editBlocked || failed,
-    duplicate: { disabled: (workbenchView.content?.texts?.length || 0) >= MAX_TEXT_MODULES,
-      reason: (workbenchView.content?.texts?.length || 0) >= MAX_TEXT_MODULES ? 'At most sixteen Text modules are supported.' : undefined,
-      run: () => { const id = duplicateTextModule(store, profileAddress, edit.getSnapshot().value, workbenchView.getPresentation()); workbenchView.setSelection([id]); } } },
-    color: <Suspense fallback={<p>Opening Color…</p>}>
-    <TextColourTools key={gridId || 'article'} article={sectionLink ? working.article : savedArticle} editor={colourEditor} target={colourTarget} onTarget={setColourTarget}
-      store={store} scopeKey={`${profileAddress}:${record.id}:${gridId || 'article'}`} disabled={editBlocked || failed || !presentation.open} error={error} onRecovery={() => setSettings(true)} onChange={changeArticle}
-      onPreview={value => setColourPreview(value ? { source: working, gridId, article: value } : null)} />
-  </Suspense> });
+  const sharedColour = Boolean(workbenchView.store && workbenchView.toolSources);
   const acceptImage = useCallback((asset, point) => {
     if (!edit.isCurrent() || !editor.current || editBlocked || !presentation.open || mode !== 'write') return false;
     const id = asset.stableAssetId || asset.id;
@@ -132,10 +130,10 @@ const TextInstance = memo(function TextInstance({ record, index, store, profileA
     return { enabled: Boolean(store) && !editBlocked && !failed && (working === record || JSON.stringify(working) === JSON.stringify(record)),
       reflow: true, continuousGeometry: true,
       expected: record, store, profileAddress, layoutKey: 'texts', commit: commitWorkbenchSelectionResize, prepare: prepareTextResize,
-      applyFrame: applyGroupFrame, reportError: setError, minimumWidth: TEXT_WINDOW_LIMITS.minimumWidth, minimumHeight: TEXT_WINDOW_LIMITS.minimumHeight,
+      applyFrame: applyGroupFrame, reportError: setError, minimumWidth: limits.minimumWidth, minimumHeight: limits.minimumHeight,
       maximumWidth: 7992, maximumHeight: 7992,
     };
-  }, [store, profileAddress, editBlocked, failed, working, record, applyGroupFrame, setError]);
+  }, [store, profileAddress, editBlocked, failed, working, record, applyGroupFrame, setError, limits]);
   const name = article.title || 'Untitled article';
   const changeFrames = frames => {
     if (reception || editBlocked || failed) return;
@@ -165,50 +163,20 @@ const TextInstance = memo(function TextInstance({ record, index, store, profileA
     if (!result.saved) { setError(result.message, result.reason); return; }
     edit.accept(result.record); setLinkTarget(''); setMode('write');
   };
-  const module = <div className="text-workbench" hidden={suspended} data-workbench-module="text" data-text-id={record.id} data-text-tools-open={settings || undefined}
-    style={{ '--text-z': active ? 49 : 46, '--text-shortcut-bottom': `${64 + index * 38}px` }} onPointerDownCapture={onActivate} onFocusCapture={event => { onActivate(); if (event.target.matches('.text-document-title')) setColourTarget('title'); }}>
-    {shortcutMenu.content}
-    {store && active && linked && presentation.open && workbenchView.subscribe && <TextFrameLinks ids={[record.id, ...presentation.frames.map(frame => frame.id)]} />}
-    {!presentation.open && <button ref={shortcut} className="text-shortcut" onContextMenu={shortcutMenu.onContextMenu} onKeyDown={shortcutMenu.onKeyDown}
-      onClick={() => setPresentation(p => ({ ...p, open: true }))}>{name}</button>}
-    {presentation.open && <WorkbenchWindow label="Text" title={name} titleContent={<span className="text-window-grip" title="Drag to move this text box"><Hand aria-hidden="true" />Text{linked ? ` · 1/${flow.ranges.length}` : ''}</span>} chrome="bevel" externalControls minimumWidth={TEXT_WINDOW_LIMITS.minimumWidth} minimumHeight={TEXT_WINDOW_LIMITS.minimumHeight} resizableWidth viewId={record.id} active={active} snapToGrid={Boolean(store) && windowSnap}
-      externalControlsHost={editingCell && active && !suspended && !view.presented ? canvasHost?.parentElement : null} externalControlsClassName="text-workbench"
-      surfaceStyle={textWindowStyle(article, paintScale)} placementModule={Boolean(store)} className="text-window text-window--read"
-      background={<><span aria-hidden="true" className="text-window-bounds" />{appearance.edges?.grain > 0 && <span aria-hidden="true" className="module-surface-grain" />}
-        {appearance.frame && <span aria-hidden="true" className="module-surface-outline" style={{ boxShadow: `inset 0 0 0 ${paintScale}px ${article.appearance ? appearance.color : 'var(--workflow-border)'}` }} />}</>}
-      width={presentation.window.width} initialHeight={presentation.window.height} initialX={presentation.window.left} initialY={presentation.window.top} onLayoutChange={layout}
-      resizeTarget={resizeTarget} committedFrame={committedFrame}
-      moveFromContent={mode === 'read' && !suspended}
-      controls={<>{store && !view.presented && <><button type="button" className="text-window-control" aria-label={mode === 'write' ? 'Read' : 'Write'} title={mode === 'write' ? 'Read' : 'Write'}
-          onClick={() => { const next = mode === 'write' ? 'read' : 'write'; setMode(next); setSettings(next === 'write' || failed); }}>{mode === 'write' ? <Eye /> : <Pencil />}</button>
-        {!reception && <TextMoveHandle className="text-window-control" label="Drag Text into Display" disabled={suspended || linked || Boolean(working.sceneLink)} previewAt={(point, rectangle) => placementTargets?.current?.previewTextAt?.(point, rectangle)}
-          onDrop={preview => { if (preview) moveInto(preview); }} onKeyboardMove={() => setSettings(true)} onError={setError} />}
-        <button ref={toolsTrigger} type="button" className="text-window-control" aria-label="Text tools" title="Text tools" aria-expanded={settings} onClick={() => { if (!settings) setMode('write'); setSettings(!settings); }}><Settings /></button>
-        {!reception && <button className="text-window-control" type="button" aria-label="Add linked Text frame" title={working.sceneLink || working.pagination ? 'Unlink Follow Display and turn off Read as pages first' : 'Add linked frame'}
-          disabled={editBlocked || failed || Boolean(working.sceneLink || working.pagination) || flow.ranges.length >= 8} onClick={() => addFrame(record.id)}><Plus /></button>}
-        {error && <button type="button" className="text-save-error" aria-label="Text not saved — open recovery" onClick={() => setSettings(true)}>!</button>}</>}
-        <button type="button" className="text-window-control" aria-label={`Close ${name}`} onClick={close}><X /></button></>}>
-      <div className="text-module-body" ref={surface} style={textOutputStyle(article, view.frame || presentation.window)}>
-        {unavailable && <p className="text-status" role="status">{missingDisplay ? 'The linked Display was removed. Your text is preserved. Open Text tools to unlink it.' : sectionLink ? 'Open the linked Display to read its current section. You can still edit the full article in Write.' : 'Open the linked Display to read or edit its passage.'}</p>}
-        <SceneTextViewport record={working} state={sceneState} open={presentation.open} mode={mode}>
-          <TextContentPage article={article} paginated={paginated} mode={mode} flow={linked ? flow : null}
-            showOverflow={Boolean(store)} defaultOverflow={reception ? 'clip' : 'scroll'} resetKey={sectionRead || paginated ? gridId : null}>
-                  {store && <div hidden={mode !== 'write'}><Suspense fallback={<p role="status">Opening editor…</p>}><ArticleEditor sharedColour={sharedColour} titlePlaceholder={!reception} key={sectionLink ? 'article' : gridId || 'article'} article={sectionLink && colourPreview?.source !== working ? working.article : article}
-                    onChange={changeArticle} onEditor={setEditor} onFlowEditor={setFlowEditor} flowRange={linked ? flow.ranges[0] : null} controlsHost={controlsHost} disabled={editBlocked || mode !== 'write'} saveError={error}
-                    onFindRequest={() => { if (!editBlocked && mode === 'write') setSettings(true); }} /></Suspense></div>}
-          </TextContentPage>
-        </SceneTextViewport>
-      </div>
-    </WorkbenchWindow>}
-    {presentation.open && presentation.frames?.map((frame, index) => <LinkedTextWindow key={frame.id} {...{ frame, article, flow, active, store, resizeTarget, windowSnap, mode, flowEditor }} registerTarget={!editBlocked ? registerTarget : null} acceptImage={acceptImage}
-      index={index + 1} ownerId={record.id} onLayout={frameLayout} onAdd={addFrame} onRemove={id => { if (changeFrames(presentation.frames.filter(frame => frame.id !== id))) queueMicrotask(() => toolsTrigger.current?.focus()); }}
-      onEdit={() => { setMode('write'); setSettings(true); }} onTools={() => { setMode('write'); setSettings(true); }} />)}
-    {store && <TextTools sharedColour={sharedColour} titleInput={reception} defaultOverflow={reception ? 'clip' : 'scroll'} frameLayout={reception} targetId={record.id} available={presentation.open && !suspended} article={sectionLink ? working.article : article} onChange={changeArticle}
+  const colorTools = (target, compact = false) => <Suspense fallback={<p>Opening Color…</p>}>
+    <TextColourTools key={gridId || 'article'} article={sectionLink ? working.article : savedArticle} editor={colourEditor} target={target} compact={compact} onTarget={setColourTarget}
+      store={store} scopeKey={`${profileAddress}:${record.id}:${gridId || 'article'}`} disabled={editBlocked || failed || !presentation.open} error={error} onRecovery={() => setSettings(true)} onChange={changeArticle}
+      onPreview={value => setColourPreview(value ? { source: working, gridId, article: value } : null)} />
+  </Suspense>;
+  const textControls = (hostTools = {}) => <TextToolsContent {...hostTools} sharedColour={sharedColour} titleInput={reception} defaultOverflow={reception ? 'clip' : 'scroll'} frameLayout={reception} targetId={record.id} available={presentation.open && !suspended} article={sectionLink ? working.article : article} onChange={changeArticle}
+      onBackToCell={cell ? () => cells.leaveCell(true) : undefined}
+      onEditText={mode === 'read' ? () => {
+        if (editBlocked || failed || !presentation.open) return;
+        if (cell && !editingCell) cells.enterCell(cell.id);
+        setMode('write'); setSettings(true);
+      } : undefined}
       backupScope={JSON.stringify([profileAddress, record.id, sectionLink ? null : gridId])} recoveryPending={failed}
-      controlsRef={setControlsHost} onClose={closeTools} disabled={editBlocked}
-      anchor={{ left: (view.frame || presentation.window).left * view.scale + view.x + offset.x,
-        right: ((view.frame || presentation.window).left + (view.frame || presentation.window).width) * view.scale + view.x + offset.x,
-        top: (view.frame || presentation.window).top * view.scale + view.y + offset.y }}
+      controlsRef={setControlsHost} disabled={editBlocked || !presentation.open}
       footer={error ? <div className="text-status" role="alert">{error}
         {failed && <button type="button" onClick={() => change(edit.getSnapshot().value, { retry: true })}>Retry local save</button>}
         {reason === 'conflict' && <button type="button" onClick={() => change(edit.getSnapshot().value, { retry: true, replace: true })}>Replace saved Text with my edits</button>}
@@ -249,7 +217,59 @@ const TextInstance = memo(function TextInstance({ record, index, store, profileA
             moveInto({ ...preview, target });
           } catch (failure) { setError(failure.message); }
         }}>Move into Display</button></details>}
-    </TextTools>}
+    </TextToolsContent>;
+  useWorkbenchToolSource(record.id, { actions: { disabled: !store || editBlocked || failed,
+    duplicate: { disabled: (workbenchView.content?.texts?.length || 0) >= MAX_TEXT_MODULES,
+      reason: (workbenchView.content?.texts?.length || 0) >= MAX_TEXT_MODULES ? 'At most sixteen Text modules are supported.' : undefined,
+      run: () => { const id = duplicateTextModule(store, profileAddress, edit.getSnapshot().value, workbenchView.getPresentation()); workbenchView.setSelection([id]); } } },
+    text: hostTools => textControls(hostTools),
+    color: colorTools(colourTarget) });
+  const module = <div className="text-workbench" hidden={suspended} data-workbench-module="text" data-text-id={record.id} data-text-tools-open={settings || undefined}
+    style={{ '--text-z': active ? 49 : 46, '--text-shortcut-bottom': `${64 + index * 38}px` }} onPointerDownCapture={onActivate} onFocusCapture={event => { onActivate(); if (event.target.matches('.text-document-title')) setColourTarget('title'); }}>
+    {shortcutMenu.content}
+    {store && active && linked && presentation.open && workbenchView.subscribe && <TextFrameLinks ids={[record.id, ...presentation.frames.map(frame => frame.id)]} />}
+    {!presentation.open && <button ref={shortcut} className="text-shortcut" onContextMenu={shortcutMenu.onContextMenu} onKeyDown={shortcutMenu.onKeyDown}
+      onClick={() => setPresentation(p => ({ ...p, open: true }))}>{name}</button>}
+    {presentation.open && <WorkbenchWindow label="Text" title={name} titleContent={<span className="editor-object-toolbar-label" title="Drag to move this text box"><GripVertical aria-hidden="true" />Text{linked ? ` · 1/${flow.ranges.length}` : ''}</span>} chrome="bevel" objectToolbar externalControls minimumWidth={limits.minimumWidth} minimumHeight={limits.minimumHeight} resizableWidth viewId={record.id} active={active} snapToGrid={Boolean(store) && windowSnap}
+      externalControlsHost={editingCell && active && !suspended && !view.presented ? canvasHost?.parentElement : null} externalControlsClassName="text-workbench"
+      surfaceStyle={textWindowStyle(article, paintScale)} placementModule={Boolean(store)} className="text-window text-window--read"
+      background={<><span aria-hidden="true" className="text-window-bounds" />{appearance.edges?.grain > 0 && <span aria-hidden="true" className="module-surface-grain" />}
+        {appearance.frame && <span aria-hidden="true" className="module-surface-outline" style={{ boxShadow: `inset 0 0 0 ${paintScale}px ${article.appearance ? appearance.color : 'var(--workflow-border)'}` }} />}</>}
+      width={presentation.window.width} initialHeight={presentation.window.height} initialX={presentation.window.left} initialY={presentation.window.top} onLayoutChange={layout}
+      resizeTarget={resizeTarget} committedFrame={committedFrame} surfacePreviewFrame={fontPreviewFrame}
+      moveFromContent={mode === 'read' && !suspended}
+      controls={<>{store && !view.presented && <>{cell ? (editingCell && active && !suspended && <>
+        <span className="bento-text-toolbar" data-workbench-selection-tools ref={setQuickToolsHost} />
+        <CellPositionButton cellId={cell.id} memberIds={[record.id]} disabled={editBlocked || failed} />
+      </>) : <><button type="button" className="editor-object-toolbar-button" aria-label={mode === 'write' ? 'Read' : 'Write'} title={mode === 'write' ? 'Read' : 'Write'}
+          onClick={() => { const next = mode === 'write' ? 'read' : 'write'; setMode(next); setSettings(next === 'write' || failed); }}>{mode === 'write' ? <Eye /> : <Pencil />}</button>
+        {!reception && <TextMoveHandle className="editor-object-toolbar-button" label="Drag Text into Display" disabled={suspended || linked || Boolean(working.sceneLink)} previewAt={(point, rectangle) => placementTargets?.current?.previewTextAt?.(point, rectangle)}
+          onDrop={preview => { if (preview) moveInto(preview); }} onKeyboardMove={() => setSettings(true)} onError={setError} />}
+        <button ref={toolsTrigger} type="button" className="editor-object-toolbar-button" aria-label="Text tools" title="Text tools" aria-expanded={settings} onClick={() => { setMode('write'); setSettings(true); }}><Settings /></button>
+        {!reception && <button className="editor-object-toolbar-button" type="button" aria-label="Add linked Text frame" title={working.sceneLink || working.pagination ? 'Unlink Follow Display and turn off Read as pages first' : 'Add linked frame'}
+          disabled={editBlocked || failed || Boolean(working.sceneLink || working.pagination) || flow.ranges.length >= 8} onClick={() => addFrame(record.id)}><Plus /></button>}</>}
+        {error && <button type="button" className="text-save-error" aria-label="Text not saved — open recovery" onClick={() => setSettings(true)}>!</button>}</>}
+        <button type="button" className="editor-object-toolbar-button" aria-label={`Close ${name}`} onClick={close}><X /></button></>}>
+      <div className="text-module-body" ref={surface} style={textOutputStyle(article, fontPreviewFrame || view.frame || presentation.window)}>
+        {unavailable && <p className="text-status" role="status">{missingDisplay ? 'The linked Display was removed. Your text is preserved. Open Text tools to unlink it.' : sectionLink ? 'Open the linked Display to read its current section. You can still edit the full article in Write.' : 'Open the linked Display to read or edit its passage.'}</p>}
+        <SceneTextViewport record={working} state={sceneState} open={presentation.open} mode={mode}>
+          <TextContentPage article={article} paginated={paginated} mode={mode} flow={linked ? flow : null}
+            defaultOverflow={reception ? 'clip' : 'scroll'} resetKey={sectionRead || paginated ? gridId : null}>
+                  {store && <div hidden={mode !== 'write'}><Suspense fallback={<p role="status">Opening editor…</p>}><ArticleEditor sharedColour={sharedColour} titlePlaceholder={!reception} key={sectionLink ? 'article' : gridId || 'article'} article={sectionLink && colourPreview?.source !== working ? working.article : article}
+                    quickToolsHost={editingCell && active && !failed && !view.presented ? quickToolsHost : null} quickColor={target => colorTools(target, true)}
+                    onFitFontPreview={editingCell?.fitText?.includes(record.id) && store?.previewFittedTextFrame ? fitFontPreview : undefined}
+                    onChange={changeArticle} onEditor={setEditor} onFlowEditor={setFlowEditor} flowRange={linked ? flow.ranges[0] : null} controlsHost={controlsHost} disabled={editBlocked || mode !== 'write'} saveError={error}
+                    onFindRequest={() => { if (!editBlocked && mode === 'write') setSettings(true); }} /></Suspense></div>}
+          </TextContentPage>
+        </SceneTextViewport>
+      </div>
+    </WorkbenchWindow>}
+    {presentation.open && presentation.frames?.map((frame, index) => <LinkedTextWindow key={frame.id} {...{ frame, article, flow, active, store, resizeTarget, windowSnap, mode, flowEditor }} registerTarget={!editBlocked ? registerTarget : null} acceptImage={acceptImage}
+      index={index + 1} ownerId={record.id} onLayout={frameLayout} onAdd={addFrame} onRemove={id => { if (changeFrames(presentation.frames.filter(frame => frame.id !== id))) queueMicrotask(() => toolsTrigger.current?.focus()); }}
+      onEdit={() => { setMode('write'); setSettings(true); }} onTools={() => { setMode('write'); setSettings(true); }} />)}
+    {store && !sharedColour && <SharedTextToolsContent targetId={record.id} available={presentation.open && !suspended} label={name} onClose={closeTools}>
+      {textControls()}
+    </SharedTextToolsContent>}
   </div>;
   // A closed module is viewport navigation, outside the authored canvas clip
   // and camera transform. Its state, focus and context menu stay with Text.
@@ -266,7 +286,8 @@ function IsolatedTextWorkbench(props) {
   const [initial] = useState(() => restoreTextToolsView(props.views, props.records, props.presentations));
   const [active, setActive] = useState(initial.targetId || props.records[0]?.id), [open, setOpen] = useState(initial.open);
   return <SharedTextToolsProvider activeModuleId={active} onActivate={setActive} open={open} onOpenChange={setOpen}>
-    <SharedTextToolsWindow hidden={props.suspended} /><TextInstances {...props} />
+    {!props.suspended && <aside className="text-isolated-inspector" aria-label="Text inspector"><SharedTextToolsInspectorContent targetId={active} /></aside>}
+    <TextInstances {...props} />
   </SharedTextToolsProvider>;
 }
 function TextInstances({ records, presentations, store, profileAddress, registerTarget, placementTargets, onPresentationChange, suspended = false, windowSnap = false, views, onViewChange, initiallyOpenId }) {

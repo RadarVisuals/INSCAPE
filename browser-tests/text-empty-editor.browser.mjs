@@ -30,7 +30,7 @@ for (const width of [1600, 390]) test(`empty writing area is discoverable withou
       await mountTextToolsFixture(page, origin);
       const write = page.getByRole('button', { name: 'Write', exact: true });
       if (await write.count()) { await write.focus(); await page.keyboard.press('Enter'); }
-      const close = page.getByRole('button', { name: 'Close Text tools', exact: true });
+      const close = page.getByRole('button', { name: 'Close Inspector', exact: true });
       if (await close.isVisible()) await close.click();
       const win = page.locator('.text-window'), body = win.getByRole('textbox', { name: 'Article text', exact: true });
       const hint = win.getByText('Start writing…', { exact: true });
@@ -83,7 +83,7 @@ test('empty Display text and Focus writing share the same temporary writing guid
     await page.locator('main.system-workflow').focus();
     assert.equal(await target.getByText('Start writing…', { exact: true }).isVisible(), true);
     const before = await saved(page);
-    await page.locator('.text-tools-window').getByRole('button', { name: 'Focus writing', exact: true }).click();
+    await page.locator('.workbench-tool-dock:has([data-text-inspector])').getByRole('button', { name: 'Focus writing', exact: true }).click();
     const dialog = page.getByRole('dialog'); await dialog.waitFor();
     await dialog.getByRole('button', { name: 'Return to composition', exact: true }).focus();
     assert.equal(await dialog.getByText('Start writing…', { exact: true }).isVisible(), true);

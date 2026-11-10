@@ -7,7 +7,7 @@ const subscribeNone = () => () => {};
 
 // The host supplies explicit receivers. Browsing, click/drag threshold, fading,
 // cancellation and asynchronous destination capture are the Workbench's path.
-export default function ProfileLibraryPicker({ library, onClose, placementScope, placementTargetRef, preferences, framePreferences, boundsRef, initialTop = 16, selectionEnabled, active, onActivate, onPlacingChange }) {
+export default function ProfileLibraryPicker({ library, onClose, placementScope, placementTargetRef, preferences, framePreferences, boundsRef, initialTop = 16, selectionEnabled, active, onActivate, onPlacingChange, label = 'Choose Reception image', selectionAction = 'Use selected image' }) {
   const [localFrames, setLocalFrames] = useState({}), [placing, setPlacing] = useState(false);
   const frames = useSyncExternalStore(framePreferences?.subscribe || subscribeNone, framePreferences?.getSnapshot || (() => localFrames));
   const [initial] = useState(() => ({ left: 16, top: initialTop,
@@ -24,9 +24,9 @@ export default function ProfileLibraryPicker({ library, onClose, placementScope,
     className={`reception-library-window workbench-tool-controls${placing ? ' is-placing' : ''}`}
     frame={frames.library || initial} onFrameChange={updateFrame} boundsRef={boundsRef} active={active} onActivate={onActivate}
     minimumWidth={280} minimumHeight={300}>
-    {renderHeader => <>{renderHeader()}<LibraryWorkspace className="reception-library" label="Choose Reception image" phase="open" resizable={false} overlayPlacement embedded
+    {renderHeader => <>{renderHeader()}<LibraryWorkspace className="reception-library" label={label} phase="open" resizable={false} overlayPlacement embedded
       data={library.libraryData} categoryCommands={library.categoryCommands}
       placementScope={placementScope} placementTargetRef={placementTargetRef} preferenceStore={preferences}
-      selectionAction="Use selected image" selectionEnabled={selectionEnabled} onPlacingChange={handlePlacing} /></>}
+      selectionAction={selectionAction} selectionEnabled={selectionEnabled} onPlacingChange={handlePlacing} /></>}
   </ToolPanel>;
 }

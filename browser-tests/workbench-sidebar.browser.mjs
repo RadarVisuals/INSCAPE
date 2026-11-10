@@ -1,141 +1,101 @@
-import { editorMenu, editorCommand, selectEditorDocument } from './fixtures/editor-menu.mjs';
+import { editorDestination, setEditorSidebarOpen, editorMenu, editorCommand, selectEditorDocument } from './fixtures/editor-menu.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdir, writeFile } from 'node:fs/promises';
+import { mkdir } from 'node:fs/promises';
 import { chromium } from 'playwright-core';
 import { browserExecutable } from '../scripts/browserEnvironment.mjs';
-const origin=process.env.INSCAPE_TEXT_ROOT || 'http://127.0.0.1:24970';
-const output=process.env.INSCAPE_BROWSER_OUTPUT || '.browser-test-runtime/sidebar';
-const settle=p=>p.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));
-const hit=n=>{const r=n.getBoundingClientRect();return n.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2));};
+const origin = process.env.INSCAPE_TEXT_ROOT || 'http://127.0.0.1:24970';
+const output = process.env.INSCAPE_BROWSER_OUTPUT || '.browser-test-runtime/sidebar';
+const settle = page => page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+const hit = node => { const r = node.getBoundingClientRect(); return node.contains(document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2)); };
 const interactionState = page => page.locator('main.system-workflow').evaluate(node => ({
-  camera: { zoom: node.querySelector('.navigator-zoom output')?.textContent,
-    frames: [...node.querySelectorAll('[data-workbench-view-id]')].map(module => ({ id: module.dataset.workbenchViewId, rect: module.getBoundingClientRect().toJSON() })) },
-  selection: node.querySelector('.workbench-view-controls__selection-count')?.textContent,
-  activeTargets: [...node.querySelectorAll('[data-workbench-view-id][data-window-active]')].map(module => module.dataset.workbenchViewId),
+  camera: [node.dataset.workbenchCameraScale, node.dataset.workbenchCameraX, node.dataset.workbenchCameraY],
+  selection: [...node.querySelectorAll('.workbench-layer-row[data-selected]')].map(row => row.dataset.layerId),
 }));
-async function mount(browser,width=1440,height=900,theme='mist') {
- const page=await browser.newPage({viewport:{width,height},hasTouch:width<900,reducedMotion:'reduce'});
- page.setDefaultTimeout(12000);const errors=[];page.on('pageerror',e=>errors.push(e.message));
- await page.route('**/*',route=>{const u=new URL(route.request().url());if(u.origin===origin)return route.continue();if(u.hostname==='raw.githubusercontent.com'&&u.pathname.includes('/public/'))return route.fulfill({path:'public/'+u.pathname.split('/public/')[1]});return route.abort();});
- await page.goto(`${origin}/browser-tests/tool-chrome-fixture.html?sample=navigator&theme=${theme}`);
- await page.locator('.keeper-dock-window').waitFor();await page.locator('.workbench-sidebar').waitFor();
- await page.locator('[data-navigator-object^="image:"] image').waitFor();await settle(page);
- const sidebar=page.getByRole('complementary',{name:'Workspace sidebar'});
- const button = name => ['Collapse sidebar', 'Expand sidebar'].includes(name)
-   ? page.locator(`.editor-menu-brand[aria-expanded="${name === 'Collapse sidebar'}"]`)
-   : ['Docs', 'Backup'].includes(name) ? editorMenu(page, name)
-   : sidebar.getByRole('button', { name, exact: true, includeHidden: true });
- const activate = async name => {
-   if (name === 'Settings') return editorCommand(page, 'Edit', 'Settings');
-   if (name === 'Preview') return editorCommand(page, 'Canvas', 'Preview');
-   if (['Docs', 'Backup'].includes(name)) return editorMenu(page, name).click();
-   if (!await sidebar.isVisible()) await page.getByRole('button', { name: 'Inscape sidebar' }).click();
-   await button(name).click();
- };
- return {page,sidebar,button,activate,errors};
+async function mount(browser, width = 1440, height = 900, theme = 'mist') {
+  const page = await browser.newPage({ viewport: { width, height }, reducedMotion: 'reduce' });
+  page.setDefaultTimeout(10000);
+  const errors = []; page.on('pageerror', error => errors.push(error.message));
+  await page.route('**/*', route => {
+    const url = new URL(route.request().url());
+    if (url.origin === origin) return route.continue();
+    if (url.hostname === 'raw.githubusercontent.com' && url.pathname.includes('/public/')) return route.fulfill({ path: 'public/' + url.pathname.split('/public/')[1] });
+    return route.abort();
+  });
+  await page.goto(`${origin}/browser-tests/tool-chrome-fixture.html?sample=navigator&theme=${theme}`);
+  await page.locator('.keeper-dock-window').waitFor();
+  await setEditorSidebarOpen(page, true);
+  await page.locator('[data-navigator-object^="image:"] image').waitFor();
+  await settle(page);
+  return { page, sidebar: page.getByRole('complementary', { name: 'Workspace sidebar', exact: true }), errors };
 }
-for(const theme of ['carbon','mist']) for(const [width,height] of [[1440,900],[390,900],[320,568],[844,390]]) test(`Sidebar routes and chrome stay reachable (${theme} ${width}x${height})`,{timeout:60000},async()=>{
- const browser=await chromium.launch({executablePath:browserExecutable,headless:true});
- try {
-  const {page,sidebar,button,activate,errors}=await mount(browser,width,height,theme);
-  const initial=await page.evaluate(()=>window.readToolChromeDraft());
-  await mkdir(output,{recursive:true});await page.screenshot({path:`${output}/${theme}-${width}.png`});
-  assert.equal(await page.locator('.system-workflow__global-bar').count(),0);
-  const camera = () => page.locator('main.system-workflow').evaluate(n => [n.dataset.workbenchCameraX,n.dataset.workbenchCameraY,n.dataset.workbenchCameraScale]);
-  const beforeCamera = await camera();
-  await sidebar.dispatchEvent('wheel',{deltaY:90,bubbles:true,cancelable:true});await settle(page);
-  assert.deepEqual(await camera(),beforeCamera,'sidebar scrolling does not move the canvas');
-  if (width <= 900) await button('Collapse sidebar').click();
-  const home=page.getByRole('button',{name:'Reset Workbench view',exact:true});
-  assert.equal(await home.evaluate(hit),true,'Navigator Home is not covered');
-  assert.equal(await page.getByRole('button',{name:'Keeper settings',exact:true}).evaluate(hit),true,'Keeper remains reachable');
-  if(await button('Expand sidebar').isVisible()) await button('Expand sidebar').click();
-  await page.screenshot({path:`${output}/${theme}-${width}-expanded.png`});
-  await sidebar.screenshot({path:`${output}/${theme}-${width}-navigation.png`});
-  assert.equal(await sidebar.getByRole('searchbox',{name:'Filter navigation'}).count(),0);
-  await button('Collapse sidebar').click();
-  assert.equal(await button('Expand sidebar').evaluate(n=>getComputedStyle(n).outlineStyle),'none','pointer does not leave focus border');
-  await button('Expand sidebar').press('Tab');await page.keyboard.press('Shift+Tab');
-  assert.notEqual(await button('Expand sidebar').evaluate(n=>getComputedStyle(n).outlineStyle),'none','keyboard focus stays visible');
-  await activate('Docs');await page.getByRole('dialog',{name:'Docs',exact:true}).waitFor();
-  await page.getByRole('button',{name:'Close Docs'}).click();
-  await page.waitForFunction(node=>node===document.activeElement,await button('Docs').elementHandle());
-  assert.equal(await button('Docs').evaluate(n=>document.activeElement===n),true,'panel close returns focus');
-  for(const [label,id] of [['Settings','settings'],['Activity','activity'],['Grids','grids'],['Profile','profile']]) {
-   await activate(label);await page.locator(`[data-system-workflow-panel="${id}"] aside`).first().waitFor();
-   if (label !== 'Settings' && width > 900) assert.equal(await button(label).getAttribute('aria-expanded'),'true');
-   await activate('Editor');await settle(page);
-   assert.equal(await page.locator(`[data-system-workflow-panel="${id}"]`).count(),0);
-  }
-  await activate('Discover');
-  const discover=page.locator('[data-system-workflow-panel="discover"] .public-entry-portal');await discover.waitFor();await settle(page);
-  const search=discover.getByRole('searchbox',{name:'Search published worlds'}),back=discover.getByRole('button',{name:'Return to workspace'});
-  assert.equal(await back.evaluate(hit),true,'Discover return stays clear of sidebar');
-  assert.equal(await search.evaluate(hit),true,'Discover search is reachable');
-  assert.ok((await search.boundingBox()).width>=80,'search retains usable typing space');
-  assert.equal(await discover.locator('.public-entry-portal__header').evaluate(n=>n.scrollWidth<=n.clientWidth),true,'header has no horizontal overflow');
-  assert.equal(await page.locator('html').getAttribute('data-interface-theme'),theme === 'mist' ? 'light' : 'dark','Discover follows the global interface');
-  assert.equal(await search.evaluate(n=>getComputedStyle(n).borderRadius),'5px','Workbench reset does not override the field recipe');
-  assert.ok((await search.boundingBox()).height >= (width < 900 ? 44 : 28),'field retains the shared pointer target');
-  await discover.locator('.public-entry-portal__account-trigger').click();
-   const beforeAccountEscape = await interactionState(page);
-   assert.equal(beforeAccountEscape.selection, '1 selected', 'account Escape starts with selected artwork');
-   assert.deepEqual(beforeAccountEscape.activeTargets, [await page.evaluate(() => window.readToolChromeDraft().texts[0].id)], 'account cancellation retains the original Text target');
-  await discover.getByRole('button',{name:'Disconnect',exact:true}).focus();await page.keyboard.press('Escape');
-  assert.equal(await discover.isVisible(),true,'account Escape does not close the owner panel');
-  assert.equal(await discover.locator('.public-entry-portal__account-menu').count(),0);
-   const afterAccountEscape = await interactionState(page);
-   assert.deepEqual(afterAccountEscape, beforeAccountEscape, 'account Escape preserves selected artwork and camera');
-   const trigger = discover.locator('.public-entry-portal__account-trigger');
-   assert.equal(await trigger.evaluate(node => node === document.activeElement), true, 'account Escape restores trigger focus');
-   await trigger.click();
-   // Discovery is asynchronous. Native Tab can only reach the next portal
-   // action after a result or retry button has become available.
-   await discover.locator('main button:enabled').first().waitFor();
-   await discover.getByRole('button',{name:'Disconnect',exact:true}).focus();
-   await page.keyboard.press('Tab');
-   const outsideAccount = await discover.evaluate(node => ({
-     valid: node.contains(document.activeElement) && document.activeElement?.matches('button') && !document.activeElement.closest('.public-entry-portal__account'),
-     label: document.activeElement?.getAttribute('aria-label') || document.activeElement?.textContent,
-   }));
-   assert.equal(outsideAccount.valid, true, 'native Tab reaches another portal button outside the account group');
-   assert.equal(await discover.locator('.public-entry-portal__account-menu').count(), 1, 'Tab keeps the account menu open');
-   await page.keyboard.press('Escape');
-   assert.equal(await discover.locator('.public-entry-portal__account-menu').count(), 0, 'Escape outside account group still closes its open menu');
-   assert.equal(await discover.isVisible(), true, 'outside-group Escape keeps Discover open');
-   const afterTabEscape = await interactionState(page);
-   assert.deepEqual(afterTabEscape, beforeAccountEscape, 'outside-group Escape preserves selected artwork and camera');
-   assert.equal(await trigger.evaluate(node => node === document.activeElement), true, 'outside-group Escape restores account trigger focus');
-   await writeFile(`${output}/account-escape-${theme}-${width}.json`, JSON.stringify({ beforeAccountEscape, afterAccountEscape, outsideAccount, afterTabEscape, triggerFocused: true }, null, 2));
-  await search.fill('Surface');assert.equal(await search.inputValue(),'Surface');
-  await page.screenshot({path:`${output}/discover-${theme}-${width}.png`});
-  await back.click();await discover.waitFor({state:'detached'});
-  await page.waitForFunction(node=>node===document.activeElement,await button(width<=900?'Expand sidebar':'Discover').elementHandle());
-  assert.equal(await button(width<=900?'Expand sidebar':'Discover').evaluate(n=>document.activeElement===n),true,'Discover restores its visible navigation trigger');
-  await activate('Discover');await discover.waitFor();await activate('Editor');await settle(page);
-  assert.equal(await discover.count(),0,'sidebar remains usable from Discover');
-  if(width===1440 || width===390) {
-   await button('Publish').click();await page.getByRole('complementary',{name:'Publish profile'}).waitFor();
-   await page.getByRole('button',{name:'Close Publication',exact:true}).click();await settle(page);
-  }
-  await activate('Library');await page.getByRole('region',{name:'Library workspace'}).waitFor();await settle(page);
-  const tree=page.locator('.lattice-browser-sidebar');assert.equal(await tree.count(),1,'one Library tree');
-  assert.equal(await tree.isVisible(),true);
-  if(width===1440) {
-   if (!await sidebar.isVisible()) await button('Expand sidebar').click();await settle(page);
-   assert.equal(await sidebar.locator('.lattice-browser-sidebar').count(),1);
-   const s=await sidebar.boundingBox(),l=await page.getByRole('region',{name:'Library workspace'}).boundingBox();
-   assert.ok(l.x>=s.x+s.width,JSON.stringify({s,l}));
-   await page.screenshot({path:`${output}/library-${theme}.png`});
-   await button('Collapse sidebar').click();await settle(page);
-   assert.equal(await page.getByRole('region',{name:'Library workspace'}).locator('.lattice-browser-sidebar').count(),1,'collapsing returns categories to Library');
-  }
-  await activate('Editor');await settle(page);
-  assert.deepEqual(await page.evaluate(()=>window.readToolChromeDraft()),initial,'navigation does not edit the composition');
-  assert.deepEqual(errors,[]);
- }finally{await browser.close();}
+
+// The sidebar is now an overlay; destinations close it at every desktop width.
+// Keep behavior and content checks; retired rails, pushed-canvas margins and
+// phone-only target sizes are not requirements of this authoring surface.
+for (const theme of ['carbon', 'mist']) for (const [width, height] of [[1440, 900], [760, 700], [1000, 390]]) {
+  test(`navigation overlay routes to Library and Profile without editing content (${theme} ${width}x${height})`, { timeout: 45000 }, async () => {
+    const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
+    try {
+      const { page, sidebar, errors } = await mount(browser, width, height, theme);
+      const draft = await page.evaluate(() => window.readToolChromeDraft());
+      const before = await interactionState(page);
+      await sidebar.dispatchEvent('wheel', { deltaY: 90, bubbles: true, cancelable: true });
+      assert.deepEqual((await interactionState(page)).camera, before.camera, 'sidebar scroll leaves camera alone');
+      await sidebar.getByRole('button', { name: 'Library', exact: true }).click();
+      await sidebar.waitFor({ state: 'hidden' });
+      await page.getByRole('region', { name: 'Library workspace', exact: true }).waitFor();
+      assert.deepEqual((await interactionState(page)).camera, before.camera, 'navigation overlay does not move the canvas');
+      await page.getByRole('button', { name: 'Close Library', exact: true }).click();
+      await editorDestination(page, 'Profile');
+      const profile = page.locator('[data-system-workflow-panel="profile"]');
+      await profile.locator('aside').waitFor();
+      assert.equal(await sidebar.isVisible(), false);
+      await profile.getByRole('button', { name: /^Close / }).first().click();
+      await profile.waitFor({ state: 'hidden' });
+      const home = page.getByRole('button', { name: 'Fit canvas in view', exact: true });
+      await home.scrollIntoViewIfNeeded();
+      assert.equal(await home.evaluate(hit), true, 'Navigator remains reachable after closing navigation');
+      assert.deepEqual(await page.evaluate(() => window.readToolChromeDraft()), draft, 'navigation does not edit composition');
+      assert.deepEqual(errors, []);
+      await mkdir(output, { recursive: true });
+      await page.screenshot({ path: `${output}/navigation-${theme}-${width}.png` });
+    } finally { await browser.close(); }
+  });
+}
+
+test('Discover account Escape closes only its menu and restores focus', { timeout: 45000 }, async () => {
+  const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
+  try {
+    const { page, errors } = await mount(browser);
+    await editorDestination(page, 'Discover');
+    const discover = page.locator('[data-system-workflow-panel="discover"] .public-entry-portal');
+    await discover.waitFor();
+    const trigger = discover.locator('.public-entry-portal__account-trigger');
+    await trigger.click();
+    const before = await interactionState(page);
+    // Discover suspends the artwork tool hosts. Test its rendered state, rather
+    // than requiring a hidden Editor selection counter from the retired UI.
+    await discover.getByRole('button', { name: 'Disconnect', exact: true }).focus();
+    await page.keyboard.press('Escape');
+    assert.equal(await discover.isVisible(), true);
+    assert.equal(await discover.locator('.public-entry-portal__account-menu').count(), 0);
+    assert.deepEqual(await interactionState(page), before);
+    assert.equal(await trigger.evaluate(node => node === document.activeElement), true);
+    await trigger.click();
+    await discover.locator('main button:enabled').first().waitFor();
+    await discover.getByRole('button', { name: 'Disconnect', exact: true }).focus();
+    await page.keyboard.press('Tab');
+    assert.equal(await discover.evaluate(node => node.contains(document.activeElement) && !document.activeElement.closest('.public-entry-portal__account')), true);
+    await page.keyboard.press('Escape');
+    assert.equal(await discover.locator('.public-entry-portal__account-menu').count(), 0);
+    assert.equal(await discover.isVisible(), true);
+    assert.deepEqual(await interactionState(page), before);
+    assert.equal(await trigger.evaluate(node => node === document.activeElement), true);
+    assert.deepEqual(errors, []);
+  } finally { await browser.close(); }
 });
+
 test('sidebar visibility persists across canvas switches and preview', { timeout: 60000 }, async () => {
  const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
  try {

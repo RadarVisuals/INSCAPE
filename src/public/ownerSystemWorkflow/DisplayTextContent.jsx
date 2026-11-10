@@ -2,7 +2,7 @@ import { ARTICLE_FONTS, articleAlignmentStyle, textSurfaceStyle } from '../../te
 import { useContext, useRef } from 'react';
 import { DisplayStageSizeContext } from './DisplayStageSizeContext.js';
 import ArticleView from '../../text/ArticleView.jsx';
-import { TextFrameOverflow, useTextFrame } from '../../text/TextFrame.jsx';
+import { useTextFrame } from '../../text/TextFrame.jsx';
 import '../../text/fonts.css';
 import './displayText.css';
 import './moduleSurface.css';
@@ -12,7 +12,7 @@ export default function DisplayTextContent({ placement, cellSize,
   const stageSize = useContext(DisplayStageSizeContext);
   const { text, transform } = placement;
   const articleViewport = useRef(null);
-  const { framed, overflow } = useTextFrame(articleViewport, text.article, children ? 'write' : 'read');
+  const { framed } = useTextFrame(articleViewport, text.article, children ? 'write' : 'read');
   const rotated = transform.quarterTurns % 2 === 1;
   const [cos, sin] = [[1, 0], [0, 1], [-1, 0], [0, -1]][transform.quarterTurns];
   const mirrorX = transform.mirrorX ? -1 : 1, mirrorY = transform.mirrorY ? -1 : 1;
@@ -28,7 +28,7 @@ export default function DisplayTextContent({ placement, cellSize,
     ...textSurfaceStyle(text.article, stageSize?.contentScale ?? 1),
   }}><div ref={articleViewport} data-text-frame={framed || undefined} style={{ zoom: cellSize / 30, width: (rotated ? placement.rowSpan : placement.columnSpan) * 30,
     height: framed ? (rotated ? placement.columnSpan : placement.rowSpan) * 30 : undefined }}>{children || <ArticleView article={text.article} />}
-    {children && overflow && <TextFrameOverflow />}</div>{text.article.appearance?.edges && <span aria-hidden="true" className="module-surface-grain" />}</div>;
+    </div>{text.article.appearance?.edges && <span aria-hidden="true" className="module-surface-grain" />}</div>;
   return <div className="display-text-content" style={{
     ...surface,
     fontFamily: ARTICLE_FONTS.find(font => font.id === text.font).family,

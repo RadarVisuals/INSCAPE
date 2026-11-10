@@ -23,7 +23,7 @@ for (const width of [1440, 390]) test(`Keeper belongs to the screen and follows 
     await trigger.waitFor(); await settle(page);
     const initial = await dock.boundingBox();
     near(initial.x + initial.width, width - 16);
-    const rail = await page.getByRole('group', { name: 'Workbench zoom', exact: true }).boundingBox();
+    const rail = await page.getByRole('toolbar', { name: 'Creation tools', exact: true }).boundingBox();
     assert.ok(initial.y + initial.height <= rail.y - 7 && initial.y + initial.height >= rail.y - 20);
     assert.equal(await trigger.evaluate(hit), true);
     assert.equal(await dock.evaluate(node => Boolean(node.closest('.workbench-canvas-content'))), false);

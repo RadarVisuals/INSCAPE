@@ -1,4 +1,5 @@
 import { editorCommand, editorMenu } from './fixtures/editor-menu.mjs';
+import { resetCameraTestView } from './fixtures/workbench-camera-test.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { chromium } from 'playwright-core';
@@ -7,7 +8,8 @@ import { join } from 'node:path';
 import { browserExecutable } from '../scripts/browserEnvironment.mjs';
 import { openTextToolSection } from './fixtures/text-tool-sections.mjs';
 import { hideWorkspaceSidebar } from './fixtures/workspace-sidebar.mjs';
-import { openSharedTool } from './fixtures/shared-tools.mjs';
+import { parkGeometryTools } from './fixtures/geometry-tools.mjs';
+import { openSharedTool, sharedToolPanel } from './fixtures/shared-tools.mjs';
 const origin = process.env.INSCAPE_TEXT_ROOT || 'http://127.0.0.1:5297';
 
 test('reload restores local arrangement; failed Text survives editor disposal and blocks stale publication', { timeout: 120000 }, async () => {
@@ -57,10 +59,12 @@ test('reload restores local arrangement; failed Text survives editor disposal an
     await page.goto(`${origin}/__recovery__`); await mount();
     const board = page.getByRole('article', { name: 'Display Module', exact: true });
     const text = page.locator('.text-window');
-    await page.getByRole('button', { name: 'Close Text tools', exact: true }).click();
+    await page.getByRole('button', { name: 'Close Inspector', exact: true }).click();
     await openSharedTool(page, 'Layers');
     await page.getByRole('button', { name: 'Close Workbench Layers', exact: true }).click();
     await hideWorkspaceSidebar(page);
+    await resetCameraTestView(page);
+    await parkGeometryTools(page);
     await page.getByRole('button', { name: 'Read', exact: true }).focus(); await page.keyboard.press('Enter');
     const drag = async (handle, dx, dy) => {
       const b = await handle.boundingBox(); await page.mouse.move(b.x + 10, b.y + b.height / 2); await page.keyboard.down('Alt');
@@ -74,10 +78,10 @@ test('reload restores local arrangement; failed Text survives editor disposal an
     await page.waitForFunction(() => window.readPreferences()?.textOpen === false && window.readPreferences().docks.hidden.includes('Layers'));
     await page.screenshot({ path: join(shots, 'before-reload.png') });
     await page.reload(); await mount(); await text.waitFor();
-    await board.waitFor();
+    await board.waitFor(); await resetCameraTestView(page);
     const near = (actual, expected) => { for (const key of ['x', 'y', 'width', 'height']) assert.ok(Math.abs(actual[key] - expected[key]) < 1, `${key}: ${actual[key]} != ${expected[key]}`); };
     near(await text.boundingBox(), before.text); near(await board.boundingBox(), before.board);
-    assert.equal(await page.getByRole('button', { name: 'Close Text tools', exact: true }).count(), 0);
+    assert.equal(await page.getByRole('button', { name: 'Close Inspector', exact: true }).count(), 0);
     assert.equal(await page.getByRole('button', { name: 'Write', exact: true }).count(), 1);
     assert.equal(await page.getByRole('tab', { name: 'Layers', exact: true }).count(), 0);
     assert.equal(await page.evaluate(() => window.readPreferences().docks.hidden.includes('Layers')), true);
@@ -97,6 +101,7 @@ test('reload restores local arrangement; failed Text survives editor disposal an
     const shortcut = page.getByRole('button', { name: 'Arrival', exact: true });
     assert.equal(await shortcut.evaluate(node => node.closest('main.system-workflow') === node.parentElement.parentElement), true, 'Closed Text belongs to the viewport, outside authored clipping');
     await page.getByRole('button', { name: 'Arrival', exact: true }).click();
+    await resetCameraTestView(page);
     near(await text.boundingBox(), before.text); near(await board.boundingBox(), before.board);
     // Saving can fail independently from closing the Display's embedded editor.
     await page.getByLabel('Move Display Module: DISPLAY MODULE', { exact: true }).click();
@@ -108,11 +113,14 @@ test('reload restores local arrangement; failed Text survives editor disposal an
     const editor = page.getByRole('textbox', { name: 'Article text', exact: true });
     await editor.fill('Saved sentence.');
     await page.locator('.display-text-authoring').getByRole('textbox', { name: 'Article title', exact: true }).fill('// ARRIVAL');
-    await openTextToolSection(page.locator('.text-tools-window'), 'Title');
-    assert.equal(await page.getByLabel('Title size', { exact: true }).inputValue(), '28');
+    await openTextToolSection(sharedToolPanel(page), 'Title');
+    const titleSize = page.getByLabel('Title size', { exact: true });
+    assert.equal(await titleSize.inputValue(), '', 'automatic title size has no explicit override');
+    assert.equal(await titleSize.getAttribute('placeholder'), '28');
+    assert.equal(await page.locator('.display-text-authoring .text-document-title').evaluate(node => getComputedStyle(node).fontSize), '28px');
     await page.getByLabel('Title size', { exact: true }).fill('64');
     assert.equal(await page.locator('.display-text-authoring .text-document-title').evaluate(node => getComputedStyle(node).fontSize), '64px');
-    await openTextToolSection(page.locator('.text-tools-window'), 'Default text style');
+    await openTextToolSection(sharedToolPanel(page), 'Default text style');
     await page.getByLabel('Default font', { exact: true }).selectOption('literata');
     assert.match(await editor.evaluate(node => getComputedStyle(node).fontFamily), /Literata/);
     assert.match(await page.locator('.display-text-authoring .text-document-title').evaluate(node => getComputedStyle(node).fontFamily), /Literata/);
@@ -130,6 +138,7 @@ test('reload restores local arrangement; failed Text survives editor disposal an
     await page.keyboard.press('Escape');
     assert.equal(await page.locator('.visitor-grid-world').count(), 0);
     await hideWorkspaceSidebar(page);
+    await resetCameraTestView(page);
     await page.getByRole('button', { name: 'Unlock Display Module composition', exact: true }).focus(); await page.keyboard.press('Enter');
     assert.equal(await editor.innerText(), 'Keep this unsaved sentence.');
     await page.evaluate(() => { window.failDraft = false; });

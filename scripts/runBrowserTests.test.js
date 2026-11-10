@@ -16,7 +16,14 @@ test('browser verification disables project file watching while retaining Vite t
       optimizeDeps: { noDiscovery: true, include: [] },
     };`);
     await writeFile(resolve(root, 'entry.js'), 'export const fixture = "served";');
-    server = await createBrowserTestServer(root, 0);
+    let customPluginCalled = false;
+    const cacheDir = resolve(root, 'owned-cache');
+    server = await createBrowserTestServer(root, 0, { cacheDir, define: { __OWNED_FIXTURE__: 'true' }, plugins: [{
+      name: 'fixture-extension', configResolved() { customPluginCalled = true; },
+    }] });
+    assert.equal(customPluginCalled, true);
+    assert.equal(server.config.define.__OWNED_FIXTURE__, 'true');
+    assert.equal(resolve(server.config.cacheDir), cacheDir, 'each server retains its own dependency cache');
     assert.equal(server.config.server.watch, null, 'project watch options cannot survive configuration merging');
     const transformed = await server.transformRequest('/entry.js');
     assert.match(transformed.code, /export const fixture = "served"/u);

@@ -11,7 +11,7 @@ async function mount(browser,width=1440){
  await page.route('**/*',route=>{const url=new URL(route.request().url());if(url.origin===origin)return route.continue();remote.push(url.href);return route.abort();});
  await page.goto(origin+'/design-system.html#components');const studio=page.locator('.ds-studio');
  await studio.getByRole('button',{name:'Artwork library',exact:true}).click();const library=page.locator('.ds-library-preview');await library.waitFor();
- const clean=async()=>{assert.deepEqual(errors,[]);assert.deepEqual(remote,[]);assert.deepEqual(await page.evaluate(()=>Object.keys(localStorage)),[]);};
+ const clean=async()=>{assert.deepEqual(errors,[]);assert.deepEqual(remote,[]);assert.deepEqual(await page.evaluate(()=>Object.keys(localStorage).filter(key => key !== 'inscape:interface-theme')),[]);};
  return {page,studio,library,clean};
 }
 

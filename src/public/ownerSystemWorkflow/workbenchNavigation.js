@@ -13,6 +13,27 @@ export function workbenchDestinationCamera(bounds, viewport, minimumScale = .25,
   } };
 }
 
+// Reveal a spread around its current screen position. Normal reading zoom is
+// retained; only a distant overview or a spread too large for the view needs scaling.
+export function workbenchRevealCamera(bounds, viewport, camera) {
+  const margin = Math.min(16, viewport.width / 4, viewport.height / 4);
+  const fit = workbenchDestinationCamera(bounds, viewport, .25, margin);
+  if (!fit) return null;
+  const scale = Math.min(fit.scale, camera.scale < .5 ? .75 : camera.scale);
+  const revealAxis = (start, length, viewStart, viewLength, offset) => {
+    const center = start + length / 2;
+    const anchored = offset + center * (camera.scale - scale);
+    const min = viewStart + margin - start * scale;
+    const max = viewStart + viewLength - margin - (start + length) * scale;
+    // A very large group may exceed the viewport even at minimum zoom.
+    return min > max ? (min + max) / 2 : Math.min(max, Math.max(min, anchored));
+  };
+  return { scale, offset: {
+    x: revealAxis(bounds.left, bounds.width, viewport.left, viewport.width, camera.offset.x),
+    y: revealAxis(bounds.top, bounds.height, viewport.top, viewport.height, camera.offset.y),
+  } };
+}
+
 // Explicit navigation fits between fixed docks and above measured controls.
 // Floating windows do not reserve camera space.
 export function workbenchNavigationViewport(viewport, controlsTop) {

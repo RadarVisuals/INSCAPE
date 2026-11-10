@@ -70,8 +70,8 @@ try {
   await page.locator('.system-workflow__presentation-board').waitFor();
   console.log('Owner Workbench mounted');
   const addApp = async (name, url) => {
-    await page.getByRole('button', { name: 'Add module', exact: true }).click();
-    await page.getByRole('dialog', { name: 'Add module', exact: true }).getByRole('button', { name: /^Mini app$/i }).click();
+    await page.getByRole('button', { name: 'Actions', exact: true }).click();
+    await page.getByRole('dialog', { name: 'Search commands', exact: true }).getByRole('button', { name: /^Mini app$/i }).click();
     const settings = page.locator('.mini-app-settings');
     await settings.getByLabel('Name', { exact: true }).fill(name);
     await settings.getByLabel('App URL', { exact: true }).fill(url);
@@ -117,9 +117,24 @@ try {
   await first.waitForFunction(() => document.querySelector('#account').textContent.includes('222222'));
   await page.getByRole('button', { name: 'Close RADAR test', exact: true }).click();
   assert.equal(await page.locator('.mini-app-frame').count(), 0);
-  await page.getByRole('button', { name: 'RADAR test', exact: true }).click();
+  // Shortcuts are canvas-owned, while app windows are screen-owned. Bring a
+  // shortcut into free canvas space before clicking it, including with another app open.
+  const reopenApp = async name => {
+    const shortcut = page.getByRole('button', { name, exact: true });
+    const pan = await shortcut.evaluate(node => { const r = node.getBoundingClientRect(); return { deltaX: r.x - innerWidth * .65, deltaY: r.y - innerHeight * .75, bubbles: true, cancelable: true }; });
+    await page.locator('main.system-workflow').first().dispatchEvent('wheel', pan);
+    await shortcut.click();
+  };
+  await reopenApp('RADAR test');
   first = await clientFrame(); assert.deepEqual(await accounts(first), []);
   console.log('Close/reopen verified');
+  const layersBeforeMicrophone = page.getByRole('button', { name: 'Close Workbench Layers', exact: true });
+  if (await layersBeforeMicrophone.isVisible()) await layersBeforeMicrophone.click();
+  // Navigator can fill the vacated left dock; park it away from the app client.
+  const undockNavigator = page.getByRole('button', { name: 'Undock Navigator', exact: true });
+  if (await undockNavigator.isVisible()) await undockNavigator.click();
+  const navigatorGrip = page.getByRole('button', { name: 'Move Navigator window', exact: true });
+  for (let i = 0; i < 60; i++) await navigatorGrip.press('Shift+ArrowRight');
   await page.getByRole('button', { name: 'Connect app', exact: true }).click();
   await first.waitForFunction(() => miniAppFixture.provider.accounts.length === 1);
   await first.goto(first.url());
@@ -146,7 +161,7 @@ try {
   first = await clientFrame();
   await first.getByRole('button', { name: 'Start microphone' }).click();
   await first.getByText('Microphone active', { exact: true }).waitFor();
-  await page.getByRole('button', { name: 'Second app', exact: true }).click();
+  await reopenApp('Second app');
   second = await clientFrame('two');
   await second.getByRole('button', { name: 'Start microphone' }).click();
   await second.getByText('Microphone unavailable', { exact: true }).waitFor();

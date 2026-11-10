@@ -4,11 +4,12 @@ import { clampOwnerSystemWorkflowWindowPosition, resizeWorkbenchWindow, WORKBENC
 import '../public/ownerSystemWorkflow/workbenchToolPanel.css';
 
 // Screen-only tool chrome. Artwork, camera, selection and saving stay with callers.
-export default function ToolPanel({ label, title, titleContent, moveLabel, headerContent, headerActions, children, onClose, active = false, zIndex = active ? 85 : 84, onActivate, chrome, className = '', frame, onFrameChange: setFrame, panelRef, closeLabel, onMoveStart, onMove, onMoveEnd, minimumWidth = 280, minimumHeight = 240, topBoundaryRef, boundsRef, navigationTop = 0, contentSized = false, resizable = true, hidden = false, edgeMargin = 8, resizeEdges, ...surfaceProps }) {
+export default function ToolPanel({ label, title, titleContent, moveLabel, headerContent, headerActions, children, onClose, active = false, zIndex = active ? 85 : 84, onActivate, chrome, className = '', frame, onFrameChange: setFrame, panelRef, closeLabel, onMoveStart, onMove, onMoveEnd, minimumWidth = 280, minimumHeight = 240, topBoundaryRef, boundsRef, navigationTop = 0, fitContentHeight = false, preservePreferredFrame = false, resizable = true, hidden = false, edgeMargin = 8, resizeEdges, deferFrameChange, floatingFrame, ...surfaceProps }) {
   const [viewport, setViewport] = useState(() => ({ width: innerWidth, height: innerHeight }));
   const [hostSize, setHostSize] = useState(null);
   const [boundaryTop, setTop] = useState(0);
-  const [contentSize, setContentSize] = useState(null);
+  const [contentHeight, setContentHeight] = useState(null);
+  const [preview, setPreview] = useState(null);
   const element = useRef(null);
   const top = boundsRef ? 0 : Math.max(boundaryTop, navigationTop);
   const width = boundsRef ? (hostSize?.width || viewport.width) : viewport.width;
@@ -16,20 +17,26 @@ export default function ToolPanel({ label, title, titleContent, moveLabel, heade
   const bottom = boundsRef ? (hostSize?.height || viewport.height) : viewport.height;
   const bounds = { left: edgeMargin, top: top + edgeMargin, right: width - edgeMargin, bottom: bottom - edgeMargin };
   const clamp = candidate => {
-    const size = { width: Math.max(1, Math.min(candidate.width, bounds.right - bounds.left)), height: Math.max(1, Math.min(candidate.height, bounds.bottom - bounds.top)) };
+    const height = fitContentHeight ? contentHeight ?? 1 : candidate.height;
+    const size = { width: Math.max(1, Math.min(candidate.width, bounds.right - bounds.left)), height: Math.max(1, Math.min(height, bounds.bottom - bounds.top)) };
     const next = clampOwnerSystemWorkflowWindowPosition({ x: candidate.left, y: candidate.top - top }, size, { width, height: bottom - top }, edgeMargin);
     return { left: Math.max(bounds.left, Math.min(bounds.right - size.width, next.x)), top: next.y + top, ...size };
   };
-  const placed = clamp(contentSized && contentSize ? { ...frame, ...contentSize } : frame);
+  const placed = clamp(preview || frame);
+  const edges = resizeEdges || (fitContentHeight ? ['e', 'w'] : null);
   const resized = (start, edge, delta) => resizeWorkbenchWindow(start, edge, delta, { width: minimumWidth, height: minimumHeight }, bounds);
   const release = drag => { if (drag?.element.hasPointerCapture(drag.id)) drag.element.releasePointerCapture(drag.id); };
   const finish = (cancelled, event) => {
     const drag = gesture.current;
     if (!drag) return;
     gesture.current = null;
-    if (cancelled) setFrame(drag.frame);
+    if (cancelled && !drag.deferred) setFrame(drag.frame);
     release(drag);
-    if (!drag.edge) onMoveEnd?.(cancelled, event);
+    const docked = !drag.edge && onMoveEnd?.(cancelled, event);
+    if (drag.deferred) {
+      setPreview(null);
+      if (!cancelled && drag.next && !docked) setFrame(drag.next);
+    }
   };
   latest.current = { finish, clamp, setFrame };
 
@@ -43,14 +50,13 @@ export default function ToolPanel({ label, title, titleContent, moveLabel, heade
   }, [boundsRef]);
 
   useLayoutEffect(() => {
-    if (!contentSized || hidden) return;
+    if (!fitContentHeight || hidden) return;
     const measure = () => {
-      const box = element.current.getBoundingClientRect();
-      setContentSize(current => current?.width === box.width && current?.height === box.height ? current : { width: box.width, height: box.height });
+      setContentHeight(element.current.getBoundingClientRect().height);
     };
     const observer = new ResizeObserver(measure); observer.observe(element.current); measure();
     return () => observer.disconnect();
-  }, [contentSized, hidden]);
+  }, [fitContentHeight, hidden]);
 
   useLayoutEffect(() => {
     const boundary = topBoundaryRef?.current;
@@ -86,12 +92,21 @@ export default function ToolPanel({ label, title, titleContent, moveLabel, heade
   }, []);
   useLayoutEffect(() => {
     latest.current.finish(true);
-    if (hidden) return;
+    // Project saved geometry into the viewport without saving the temporary clamp.
+    if (hidden || preservePreferredFrame) return;
     latest.current.setFrame(current => {
-      const next = latest.current.clamp(contentSized && contentSize ? { ...current, ...contentSize } : current);
+      const next = latest.current.clamp(current);
       return Object.keys(next).every(key => next[key] === current[key]) ? current : next;
     });
-  }, [width, top, bottom, hidden, contentSized, contentSize]);
+  }, [width, top, bottom, hidden, preservePreferredFrame]);
+  useLayoutEffect(() => {
+    if (!fitContentHeight || preservePreferredFrame || hidden || contentHeight === null) return;
+    // Keep drag/dock geometry in sync without cancelling a width-resize gesture.
+    latest.current.setFrame(current => {
+      const next = latest.current.clamp(current);
+      return Object.keys(next).every(key => next[key] === current[key]) ? current : next;
+    });
+  }, [fitContentHeight, preservePreferredFrame, hidden, contentHeight]);
 
   const begin = (event, edge = null) => {
     if (event.button !== 0 || !event.isPrimary || gesture.current) return;
@@ -99,7 +114,10 @@ export default function ToolPanel({ label, title, titleContent, moveLabel, heade
     // Pointer resizing must stay invisible, even after keyboard resizing left
     // this same target focused. Tab can still reveal the keyboard resize target.
     if (edge) { event.preventDefault(); event.currentTarget.blur(); }
-    gesture.current = { id: event.pointerId, element: event.currentTarget, x: event.clientX, y: event.clientY, frame, start: placed, edge };
+    // A docked tool drags out at its floating size. Authored frames commit on release.
+    const preferred = !edge && floatingFrame ? floatingFrame : frame;
+    const start = !edge && floatingFrame ? { ...placed, width: preferred.width, height: preferred.height } : placed;
+    gesture.current = { id: event.pointerId, element: event.currentTarget, x: event.clientX, y: event.clientY, frame: preferred, start, edge, deferred: deferFrameChange?.(edge) };
     event.currentTarget.setPointerCapture(event.pointerId);
     if (!edge) onMoveStart?.(event);
     // The title button keeps native pointer-versus-keyboard focus behavior.
@@ -109,7 +127,12 @@ export default function ToolPanel({ label, title, titleContent, moveLabel, heade
     if (!drag || event.pointerId !== drag.id) return;
     event.stopPropagation();
     const delta = { x: event.clientX - drag.x, y: event.clientY - drag.y };
-    setFrame(drag.edge ? resized(drag.start, drag.edge, delta) : clamp({ ...drag.start, left: drag.start.left + delta.x, top: drag.start.top + delta.y }));
+    if (drag.deferred && !drag.edge && !drag.next && Math.hypot(delta.x, delta.y) < 6) return;
+    const next = drag.edge ? resized(drag.start, drag.edge, delta) : clamp({ ...drag.start, left: drag.start.left + delta.x, top: drag.start.top + delta.y });
+    if (drag.deferred) {
+      drag.next = drag.edge ? next : { ...drag.frame, left: next.left, top: next.top };
+      setPreview(drag.next);
+    } else setFrame(next);
     if (!drag.edge) onMove?.(event);
   };
   const end = (event, cancelled) => {
@@ -142,10 +165,10 @@ export default function ToolPanel({ label, title, titleContent, moveLabel, heade
     element.current = node;
     if (typeof panelRef === 'function') panelRef(node); else if (panelRef) panelRef.current = node;
   }} className={`workbench-tool-panel ${className}`} aria-label={label}
-    style={{ ...(contentSized ? { left: placed.left, top: placed.top } : placed), zIndex, position: boundsRef ? 'absolute' : 'fixed' }} onPointerDownCapture={onActivate} onFocusCapture={onActivate}>
+    style={{ ...placed, ...(fitContentHeight ? { height: 'auto', maxHeight: bounds.bottom - bounds.top } : {}), zIndex, position: boundsRef ? 'absolute' : 'fixed' }} onPointerDownCapture={onActivate} onFocusCapture={onActivate}>
     {typeof children === 'function' ? children(renderHeader, renderMoveHandle) : <>{renderHeader()}<div className="workbench-tool-panel-content">{children}</div></>}
-    {resizable && WORKBENCH_RESIZE_EDGES.filter(([edge]) => !resizeEdges || resizeEdges.includes(edge)).map(([edge, name]) => <button key={edge} type="button" className="workbench-tool-panel-resize"
-      data-edge={edge} tabIndex={resizeEdges ? 0 : edge === 'se' ? 0 : -1} aria-label={`Resize ${title} panel${name ? ` from ${name}` : ''}`}
+    {resizable && WORKBENCH_RESIZE_EDGES.filter(([edge]) => !edges || edges.includes(edge)).map(([edge, name]) => <button key={edge} type="button" className="workbench-tool-panel-resize"
+      data-edge={edge} tabIndex={edges ? 0 : edge === 'se' ? 0 : -1} aria-label={`Resize ${title} panel${name ? ` from ${name}` : ''}`}
       onKeyDown={event => key(event, edge)} onPointerDown={event => begin(event, edge)} onPointerMove={move}
       onPointerUp={event => end(event, false)} onPointerCancel={event => end(event, true)} onLostPointerCapture={event => end(event, true)} />)}
   </section>;

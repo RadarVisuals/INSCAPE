@@ -52,12 +52,13 @@ export const themes = ['dark', 'light'];
 export const tokenSources = [
   { path: 'src/reception/reception.css', role: 'Reception', purpose: 'Rectangular partition, responsive flow, navigation contour and separate editor geometry using shared material controls.' },
   { path: 'src/public/ownerSystemWorkflow/workbenchDestinationPanel.css', role: 'Destinations', purpose: 'Shared flat titlebar, stationary actions, contained scrolling and responsive Docs, Profile and Grids.' },
-  { path: 'src/public/ownerSystemWorkflow/workbenchNavigationTools.css', role: 'Navigation tools', purpose: 'Flat Groups and Index fields, keyboard focus and invisible resize targets.' },
+  { path: 'src/public/ownerSystemWorkflow/workbenchGroups.css', role: 'Groups', purpose: 'Compact Folio cards and group navigation using shared Editor materials.' },
+  { path: 'src/public/ownerSystemWorkflow/workbenchIndex.css', role: 'Index', purpose: 'Saved-view rows, compact navigation and shared Editor fields.' },
   { path: 'src/public/ownerLatticePublicationRack.css', role: 'Publication', purpose: 'Publication review, progress, recovery and support within the shared flat shell.' },
   { path: 'src/startveil/publicEntryPortal.css', role: 'Discover', purpose: 'Shared flat directory chrome, responsive search, cards and contained results.' },
   { path: 'src/public/ownerSystemWorkflow/activity.css', role: 'Activity', purpose: 'Shared flat window material, bounded history, filters and read-state presentation.' },
   { path: 'src/public/ownerSystemWorkflow/settings.css', role: 'Settings', purpose: 'Flat shared window chrome and independently scrolling preference controls.' },
-  { path: 'src/public/ownerSystemWorkflow/libraryWorkspace.css', role: 'Library', purpose: 'Flat Carbon/Mist Library cards and controls shared by the app and reference.' },
+  { path: 'src/public/ownerSystemWorkflow/libraryWorkspace.css', role: 'Library', purpose: 'Shared Library chrome with compact Editor Dark/Light controls and existing profile-picker presentation.' },
   { path: 'src/colour/colourControls.css', role: 'Color', purpose: 'Hue ring and triangle shared by the reference workspace and production Color tab.' },
   { path: 'src/public/ownerSystemWorkflow/workbenchSharedTools.css', role: 'Shared tools', purpose: 'Flat Transform and Color tabs, scoped fields and contained scrolling.' },
   { path: 'src/public/ownerSystemWorkflow/workbenchToolDocks.css', role: 'Tool docks', purpose: 'Detachable tabs, docking feedback and keyboard panel menu using the existing flat material.' },
@@ -95,7 +96,7 @@ export const tokenSources = [
   {
     path: 'src/public/ownerSystemWorkflow/workbenchWindowChrome.css',
     role: 'Window',
-    purpose: 'Bevel windows and their theme-aware controls; separate from Stage geometry.',
+    purpose: 'Bevel windows and the compact Editor object-toolbar recipe; separate from authored Stage geometry.',
   },
   {
     path: 'src/public/ownerSystemWorkflow/workbenchToolChrome.css',
@@ -121,7 +122,7 @@ export const tokenSources = [
   {
     path: 'src/public/ownerSystemWorkflow/workbenchLayers.css',
     role: 'Layers',
-    purpose: 'Workbench artwork order, composition blocks and temporary editor visibility inside the tool panel.',
+    purpose: 'Compact Editor layers with green selection, quiet accessible row actions, native order, cell membership and temporary visibility.',
   },
 ];
 export const colorRoles = [
@@ -173,19 +174,19 @@ export const components = [
     contract: 'The shared panel material, titlebar and flat fields host Activity, Workbench, Interface and backup controls. The body scrolls independently of the close control. Existing preference owners and backup validation remain unchanged.' },
   { id: 'workbench-tool-docks', name: 'Tool docking', kind: 'Tool host', material: 'Flat Carbon / Mist',
     source: owner + 'WorkbenchToolDocks.jsx', evidence: 'browser-tests/workbench-tool-docking.browser.mjs',
-    contract: 'Layers, Transform, Color, Image, Shape and FX each have one instance. Tabs detach, reorder and regroup; the whole dock moves and resizes. Narrow strips scroll to the selected tab. Layout is local editor state, separate from artwork and history.' },
-  { id: 'workbench-shared-tools', name: 'Transform and Color', kind: 'Shared tool', material: 'Flat Carbon / Mist',
+    contract: 'Layers and the selection-following Inspector each have one instance. Inspector sections move together; the whole host floats, docks and resizes. Layout is local editor state, separate from artwork and history.' },
+  { id: 'workbench-shared-tools', name: 'Selection inspector', kind: 'Shared tool', material: 'Compact Editor Dark / Light',
     source: owner + 'WorkbenchSharedTools.jsx', evidence: 'browser-tests/workbench-shared-tools.browser.mjs',
-    contract: 'Tools follow the Workbench selection without changing the active tab. Transform uses module geometry; Color uses module-owned Shape and Text edits, with no Image color target.' },
+    contract: 'One compact Inspector hosts Cell/Contents, Text, Image and Shape sections. Transform uses module geometry; Color uses module-owned edits and shared scoped gestures. Swatches open the rectangular picker, with pipette and a local Keep picker open preference. Image has no empty Color section.' },
   { id: 'workbench-image-tools', name: 'Image settings', kind: 'Module tool', material: 'Flat Carbon / Mist',
     source: 'src/imageModule/ImageWorkbench.jsx', evidence: 'browser-tests/workbench-image-tools.browser.mjs',
     contract: 'Image supplies its side/drop/publication settings to the shared dock. It retains selection, saving and Undo; its action and fit/crop bars keep their existing placement.' },
-  { id: 'workbench-shape-tools', name: 'Shape settings', kind: 'Module tool', material: 'Flat Carbon / Mist',
+  { id: 'workbench-shape-tools', name: 'Shape inspector', kind: 'Module tool', material: 'Compact Editor Dark / Light',
     source: 'src/shapes/ShapeWorkbench.jsx', evidence: 'browser-tests/workbench-shape-tools.browser.mjs',
-    contract: 'Shape supplies name, pattern and publication controls to the dock. Layers controls visibility; FX edits Grain and Blur. Edits and Undo remain module-owned; Color, Transform and toolbar actions retain their separate roles.' },
-  { id: 'workbench-fx-tools', name: 'Shape effects in FX', kind: 'Shared tool', material: 'Flat Carbon / Mist',
+    contract: 'Shape supplies compact identity/pattern, Appearance, Effects and publication controls in one Inspector. Fill and applicable Outline are direct swatches. Cell and shared inner lines reuse the same stroke editor. Shape owns edits and Undo; the host supplies Transform and placement sections.' },
+  { id: 'workbench-fx-tools', name: 'Shape effects', kind: 'Module tool', material: 'Compact Editor Dark / Light',
     source: 'src/shapes/ShapeEffectsControls.jsx', evidence: 'browser-tests/workbench-fx-tools.browser.mjs',
-    contract: 'FX follows one selected Shape: rectangle Grain and Shape Blur. Shape owns previews, validation and one saved edit per gesture; cancellation discards the preview. Blur scales with artwork and is retained in visitor rendering. Other module targets remain outside this slice.' },
+    contract: 'Effects follows one selected Shape: rectangle Grain and Shape Blur. Compact rows pair sliders with exact numeric entry. Shape owns preview, validation and one saved edit per gesture; Escape or stale edits cancel. Blur scales with artwork and is retained in visitor rendering. Image FX is outside this slice.' },
   {
     id: 'tactile-control',
     name: 'Tactile controls',
@@ -237,7 +238,7 @@ export const components = [
     material: 'Tactile / bevel',
     source: owner + 'OwnerSystemWorkflowDetachedWindow.jsx',
     contract:
-      'One shell for title, controls, surface and optional background. chrome selects material. The shell does not create an editor or save data.',
+      'One shell for title, controls, surface and optional background. chrome selects material; objectToolbar opts the header into compact Editor actions. The shell does not create an editor or save data.',
     evidence: 'browser-tests/companion-tool-viewport.browser.mjs',
     status: 'Production',
   },
@@ -248,7 +249,7 @@ export const components = [
     material: 'Contextual',
     source: owner + 'DisplayInstrumentWindow.jsx',
     contract:
-      'Owns window gestures and temporary geometry. Explicit module callbacks own authored resizing and saving. Fixed companion tools opt out of resize.',
+      'Owns window gestures, temporary geometry and measured viewport placement of external action bars. Explicit module callbacks own authored resizing and saving. Fixed companion tools opt out of resize.',
     evidence: 'browser-tests/companion-tool-viewport.browser.mjs',
     status: 'Production',
   },
@@ -281,7 +282,7 @@ export const components = [
     material: 'Flat Carbon / Mist',
     source: 'src/text/SharedTextTools.jsx',
     contract:
-      'One independent Text window using the Layers shell. Format text shows the active font and separates text and paragraph controls. Article settings keeps defaults behind Change default style, beside layout and management. Scope tabs retain selection and Undo. Color/Transform remain shared; Focus writing is unchanged.',
+      'Text uses the selection-following Inspector. Character and paragraph controls stay visible; extended writing, article defaults, search, links and recovery live in reachable sections. Position, Transform and Color share that same scrolling body. The existing editor, selection, Undo and Focus writing owners are retained; Display articles report through their module bridge.',
     evidence: 'browser-tests/text-hierarchy.browser.mjs',
     status: 'Production',
   },
@@ -314,7 +315,7 @@ export const components = [
     material: 'Six menu surfaces',
     source: 'src/public/menus/RackMenu.jsx',
     contract:
-      'Commands retain eligibility, accessible names and directional selection marks. Do not infer a dark-tactile migration from creation-menu styling.',
+      'Commands retain eligibility, accessible names, keyboard navigation and focus return. Editor object menus explicitly use rounded 28px rows and measured flyouts; other menu consumers retain their existing material.',
     evidence: 'src/public/menus/RackMenu.test.js',
     status: 'Retained',
   },
@@ -322,10 +323,10 @@ export const components = [
     id: 'library',
     name: 'Library',
     kind: 'Pattern',
-    material: 'Flat Carbon / Mist',
+    material: 'Editor Dark / Light; shared Library fallback',
     source: owner + 'OwnerSystemWorkflowLibraryWorkspace.jsx',
     contract:
-      'Shared reference chrome with profile-local browsing preferences across reloads. Attachments remain temporary; drops supply a resource and target, while the module owns interpretation.',
+      'Editor Library groups search/filter/sort above results and labels/size below. Browsing and selection survive host changes through the existing stable portal and profile-local preferences. Other consumers retain their presentation. Drops supply a resource and target; the module owns interpretation.',
     evidence: 'browser-tests/editor-preferences.browser.mjs',
     status: 'Production',
   },
@@ -391,7 +392,7 @@ export const components = [
     material: 'Authored media',
     source: 'src/imageModule/ImageWindow.jsx',
     contract:
-      'One artwork per side, source transparency, quiet action strip, activation bounds and separate Focus / Inspect actions. No interface texture on media.',
+      'One artwork per side, source transparency and activation bounds. Compact viewport toolbar reuses native move, Fit/Fill, Crop and Inspector actions; Focus / Inspect remain separate. No interface texture on media.',
     evidence: 'browser-tests/image-interaction.browser.mjs',
     status: 'Production',
   },

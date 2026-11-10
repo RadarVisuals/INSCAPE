@@ -52,7 +52,7 @@ async function seed(page, state = {}) {
     localStorage.setItem(systemWorkflowDraftKey(draft.profileAddress), JSON.stringify(draft));
   }, { source, contract, tokenId });
   await page.reload(); await mount(page, { state });
-  await page.getByRole('button', { name: 'Close Text tools', exact: true }).click();
+  await page.getByRole('button', { name: 'Close Inspector', exact: true }).click();
   await page.getByRole('button', { name: 'Release Keeper', exact: true }).click();
 }
 const talk = async page => {

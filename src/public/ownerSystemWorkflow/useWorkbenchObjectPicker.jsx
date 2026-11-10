@@ -47,7 +47,11 @@ export default function useWorkbenchObjectPicker({ hostRef, view, disabled, lock
         || event.target.closest?.(controls) && !event.target.matches?.('[data-editor-cell-surface]')) return;
       const keyboard = event.type === 'keydown';
       const object = event.target.closest?.('[data-workbench-view-id],[data-editor-cell-surface]');
-      const focused = object || current.current.view.entries.get(current.current.view.selection[0]);
+      const objectId = object?.dataset.editorCellSurface || object?.dataset.workbenchViewId;
+      // Object headers can live outside the artwork in the viewport overlay.
+      // Keyboard actions use the registered artwork's bounds, not its toolbar.
+      const focused = keyboard ? current.current.view.entries.get(objectId || current.current.view.selection[0]) || object
+        : object || current.current.view.entries.get(current.current.view.selection[0]);
       const rect = focused?.getBoundingClientRect();
       const anchor = !keyboard ? { x: event.clientX, y: event.clientY }
         : { x: rect ? rect.left + rect.width / 2 : 0, y: rect ? rect.top + rect.height / 2 : 0 };
@@ -61,7 +65,17 @@ export default function useWorkbenchObjectPicker({ hostRef, view, disabled, lock
       if (keyboard && !view.toolSources.get(target)?.current.actions) return;
       event.preventDefault(); event.stopPropagation();
       view.setSelection([target]);
-      setMenu({ anchor, hits, target, generation: view.store.getGeneration(), returnFocus: document.activeElement }); setPreview(null); setError('');
+      const trigger = document.activeElement, entry = view.entries.get(target);
+      // Selecting an object can move its header into viewport controls and
+      // replace the focused DOM node. Resolve that header within this host;
+      // a removed/replaced artwork must never return focus into another scene.
+      const returnFocus = { focus() {
+        if (!host.isConnected || entry && (!entry.isConnected || view.entries.get(target) !== entry)) return;
+        const live = trigger?.isConnected ? trigger : [...host.querySelectorAll('header[data-workbench-view-id]')]
+          .find(node => node.dataset.workbenchViewId === target);
+        (live || host).focus({ preventScroll: true });
+      } };
+      setMenu({ anchor, hits, target, generation: view.store.getGeneration(), returnFocus }); setPreview(null); setError('');
     };
     const key = event => {
       if ((event.key === 'ContextMenu' || event.shiftKey && event.key === 'F10')
@@ -104,8 +118,9 @@ export default function useWorkbenchObjectPicker({ hostRef, view, disabled, lock
         editArtworkLayers(view.store, view.profileAddress, { type: id === 'delete' ? 'delete' : 'order', ids: [menu.target], direction: id }, menu.generation, view.getPresentation());
         if (id === 'delete') view.clearSelection();
       } else {
-        const action = source.items?.find(item => item.id === id);
-        if (!action || action.disabled) return;
+        const group = source.items?.find(item => item.children?.some(child => child.id === id));
+        const action = group?.children?.find(item => item.id === id) || source.items?.find(item => item.id === id);
+        if (group?.disabled || !action || action.disabled || !action.run) return;
         action.run();
       }
       close();
@@ -120,8 +135,13 @@ export default function useWorkbenchObjectPicker({ hostRef, view, disabled, lock
   return { pick, element: hostRef.current && createPortal(<div data-workbench-selection-tools>
     {error && <p className="workbench-move-error" role="alert" onClick={() => setError('')}>{error}</p>}
     {frame && <div className="workbench-object-preview" style={{ left: frame.left, top: frame.top, width: frame.width, height: frame.height }} />}
-    {menu && <RackMenu key={menu.target} anchor={menu.anchor} label={actions ? `${target.name} actions` : 'Select object here'} className={`workbench-object-menu${actions ? '' : ' workbench-object-menu--picker'}`}
-      commands={commands} getSubmenuCommands={id => id === 'order' ? order.map(([id, label]) => ({ id, label, disabled: blocked })) : id === 'pick' ? candidates : []}
+    {menu && <RackMenu key={menu.target} palette="editor" anchor={menu.anchor} label={actions ? `${target.name} actions` : 'Select object here'} className={`workbench-object-menu${actions ? '' : ' workbench-object-menu--picker'}`}
+      commands={commands} getSubmenuCommands={id => {
+        if (id === 'order') return order.map(([id, label]) => ({ id, label, disabled: blocked }));
+        if (id === 'pick') return candidates;
+        const group = actions?.items?.find(item => item.id === id);
+        return group?.children?.map(item => ({ ...item, disabled: blocked || group.disabled || item.disabled })) || [];
+      }}
       returnFocus={menu.returnFocus} onPreviewCommand={id => setPreview(id?.startsWith('pick:') ? id.slice(5) : null)} onCommand={command} onClose={close} />}
   </div>, hostRef.current) };
 }

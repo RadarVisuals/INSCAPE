@@ -4,7 +4,9 @@ import { createSystemWorkflowDraftStore, systemWorkflowDraftKey } from '../syste
 import { createReceptionEditorScope } from './receptionEditorScope.js';
 import { addShape, editShape } from '../shapes/shapeSession.js';
 import { removeWorkbenchModule } from '../systemWorkflow/removeWorkbenchModule.js';
-import { receptionModuleWindow } from './receptionEditorDocument.js';
+import { moveWorkbenchSelection } from '../systemWorkflow/moveWorkbenchSelection.js';
+import { receptionModuleWindow, withReceptionModuleWindow } from './receptionEditorDocument.js';
+import { layerIds } from '../systemWorkflow/domain/artworkLayers.js';
 import { validReception, projectReception } from '../profileDocument/domain/receptionPresentation.js';
 import { addTextModule, saveTextModuleResult, changeTextFrames } from '../text/textSession.js';
 import { createReceptionExample } from '../../design-system/lab/receptionExample.js';
@@ -30,6 +32,86 @@ function fixture() {
 const canvasPart = ({ reception: _reception, ...rest }) => rest;
 const rectangle = (scope, left = 100) => addShape(scope, profile, { position: { left, top: 120 }, size: { width: 320, height: 240 } });
 
+function membershipFixture() {
+  const state = fixture(), { scope } = state, source = rectangle(scope), target = rectangle(scope, 600);
+  scope.turnShapeIntoCell(source); scope.turnShapeIntoCell(target); scope.setEditingCell(source);
+  const image = addImageModule(scope, profile, { position: { left: 120, top: 150 }, size: { width: 160, height: 100 },
+    artwork: createReceptionExample().imageModules[0].artwork });
+  const text = addTextModule(scope, profile, null, { visibility: 'PUBLIC' }), remaining = rectangle(scope, 160);
+  scope.setEditingCell(null);
+  scope.editBento('anchorMembers', [source, [image, text, remaining], { alignX: 'center', alignY: 'center', paddingX: 0, paddingY: 0 }], scope.getGeneration());
+  setCell(scope, source, { fitText: [text], mobile: { columns: 2, height: 240, placements: [
+    { id: text, window: { left: 10, top: 20, width: 100, height: 40 } },
+  ] } });
+  return { ...state, source, target, image, text, remaining };
+}
+
+test('explicit cell transfer preserves native identity, relative geometry and remaining artwork through Undo and reload', () => {
+  const { root, scope, storage, canvas, source, target, image, text, remaining } = membershipFixture();
+  const before = structuredClone(scope.getReception()), frame = id => receptionModuleWindow(scope.getReception(), id);
+  const oldImage = frame(image), oldText = frame(text), oldRemaining = frame(remaining);
+  scope.editBento('moveMembers', [[text, image], target], scope.getGeneration());
+  const after = structuredClone(scope.getReception());
+  for (const key of ['imageModules', 'texts', 'shapes']) assert.deepEqual(after[key], before[key]);
+  const cell = after.cells.find(cell => cell.id === target), origin = after.cells.find(cell => cell.id === source);
+  assert.deepEqual(cell.members, layerIds(before.artworkLayers).filter(id => [image, text].includes(id)));
+  assert.deepEqual(cell.fitText, [text]); assert.deepEqual(origin.members, [remaining]);
+  assert.equal(origin.memberAnchors, undefined); assert.deepEqual(origin.mobile.placements, []);
+  assert.equal(cell.mobile.placements, undefined); assert.deepEqual(frame(remaining), oldRemaining);
+  assert.equal(frame(image).left - oldImage.left, frame(text).left - oldText.left);
+  assert.equal(frame(image).top - oldImage.top, frame(text).top - oldText.top);
+  const bounds = frame(target), members = [frame(image), frame(text)];
+  assert.ok(Math.abs((Math.min(...members.map(r => r.left)) + Math.max(...members.map(r => r.left + r.width))) / 2 - bounds.left - bounds.width / 2) < 1e-9);
+  const order = layerIds(after.artworkLayers);
+  assert.ok([image, text].every(id => order.indexOf(target) < order.indexOf(id)));
+  assert.deepEqual(canvasPart(root.getSnapshot()), canvasPart(canvas));
+  assert.equal(scope.undo(), true); assert.deepEqual(scope.getReception(), before);
+  assert.equal(scope.redo(), true); assert.deepEqual(scope.getReception(), after);
+  const generation = scope.getGeneration();
+  scope.editBento('moveMembers', [[image, text], target], generation);
+  assert.equal(scope.getGeneration(), generation, 'moving to the current cell is a no-op');
+  scope.release();
+  const reopened = createReceptionEditorScope(createSystemWorkflowDraftStore({ profileAddress: profile, storage }));
+  assert.deepEqual(reopened.getReception(), after); reopened.release();
+});
+
+test('cell transfer rejects stale, locked, invalid and failed operations without partial ownership changes', () => {
+  const { scope, fail, source, target, image, remaining } = membershipFixture();
+  let before = structuredClone(scope.getReception()), generation = scope.getGeneration();
+  const move = (ids, destination = target, expected = scope.getGeneration()) => scope.editBento('moveMembers', [ids, destination], expected);
+  fail(true); assert.throws(() => move([image]), /saved/); fail(false);
+  assert.deepEqual(scope.getReception(), before); assert.equal(scope.getGeneration(), generation);
+  assert.throws(() => move([source]), /backgrounds/);
+  assert.throws(() => move([image], 'shape:missing'), /destination/);
+  assert.throws(() => move([image, image]), /Select/);
+  assert.deepEqual(scope.getReception(), before);
+  setCell(scope, source, { lockedMembers: [remaining] }); before = structuredClone(scope.getReception());
+  assert.throws(() => move([image]), /Unlock/, 'releasing a shared anchor also respects its locked companion');
+  assert.throws(() => move([image], target, generation), /changed/);
+  assert.deepEqual(scope.getReception(), before);
+  setCell(scope, source, { lockedMembers: [image] }); before = structuredClone(scope.getReception());
+  assert.throws(() => move([image], null), /Unlock/); assert.deepEqual(scope.getReception(), before);
+  scope.release(); assert.throws(() => move([image]), /active/);
+});
+
+test('releasing a cell member keeps its location and authored visibility, respects standalone size and can be undone', () => {
+  const { root, scope, source, text } = membershipFixture();
+  const candidate = root.getDraft();
+  candidate.reception.shapes.find(shape => shape.id === source).visibility = 'PRIVATE';
+  candidate.reception = withReceptionModuleWindow(candidate.reception, text, { left: 120, top: 160, width: 80, height: 24 });
+  // This explicitly free label has no placement constraint to restore on release.
+  candidate.reception.cells.find(cell => cell.id === source).memberAnchors = [];
+  assert.equal(root.commitCompletedOperation(candidate, { expectedGeneration: root.getGeneration() }), true);
+  const before = structuredClone(scope.getReception());
+  scope.editBento('moveMembers', [[text], null], scope.getGeneration());
+  const after = scope.getReception();
+  assert.equal(after.cells.some(cell => cell.members.includes(text)), false);
+  assert.deepEqual(receptionModuleWindow(after, text), { left: 120, top: 160, width: 180, height: 24 });
+  assert.deepEqual(after.texts, before.texts, 'explicit transfer preserves authored publication flags');
+  assert.ok(projectReception(after).texts.some(item => item.id === text));
+  scope.undo(); assert.deepEqual(scope.getReception(), before); scope.release();
+});
+
 test('cell editing has one observable owner and deletion does not reactivate it on Undo', () => {
   const { scope } = fixture(), cell = rectangle(scope); scope.turnShapeIntoCell(cell);
   const observed = [], unsubscribe = scope.subscribe(() => observed.push(scope.getEditingCell()));
@@ -45,6 +127,39 @@ test('cell editing has one observable owner and deletion does not reactivate it 
   assert.equal(observed.length, count); scope.release();
 });
 
+test('anchoring, free placement and clipping share native Reception history without touching the canvas', () => {
+  const { root, scope, canvas } = fixture(), cell = rectangle(scope);
+  scope.turnShapeIntoCell(cell); scope.setEditingCell(cell);
+  const first = addImageModule(scope, profile), second = rectangle(scope, 140);
+  scope.setEditingCell(null);
+  const placement = { alignX: 'center', alignY: 'center', paddingX: 12, paddingY: 8 };
+  scope.editBento('anchorMembers', [cell, [first, second], placement], scope.getGeneration());
+  const anchored = structuredClone(scope.getReception()), original = receptionModuleWindow(anchored, first);
+  moveWorkbenchSelection(scope, profile, [{ id: first, left: original.left + 20, top: original.top }], scope.getSnapshot().workbench);
+  assert.equal(scope.getCells()[0].memberAnchors, undefined);
+  assert.equal(scope.undo(), true); assert.deepEqual(scope.getReception(), anchored);
+  assert.deepEqual(receptionModuleWindow(scope.getReception(), first), original);
+  assert.equal(scope.redo(), true); assert.equal(scope.getCells()[0].memberAnchors, undefined);
+  scope.editBento('cellClip', [cell, false], scope.getGeneration());
+  assert.equal(scope.getCells()[0].clipContent, false);
+  assert.equal(scope.undo(), true); assert.equal(scope.getCells()[0].clipContent, undefined);
+  assert.deepEqual(canvasPart(root.getSnapshot()), canvasPart(canvas));
+  scope.release();
+});
+
+test('cell placement rejects locked members and stale scope generations without changing saved anchors', () => {
+  const { scope } = fixture(), cell = rectangle(scope);
+  scope.turnShapeIntoCell(cell); scope.setEditingCell(cell); const child = rectangle(scope);
+  scope.setEditingCell(null);
+  const placement = { alignX: 'left', alignY: 'top', paddingX: 4, paddingY: 6 };
+  scope.editBento('anchorMembers', [cell, [child], placement], scope.getGeneration());
+  const stale = scope.getGeneration(); setCell(scope, cell, { lockedMembers: [child] });
+  const saved = scope.getReception();
+  assert.throws(() => scope.editBento('anchorMembers', [cell, [child], null], scope.getGeneration()), /Unlock/);
+  assert.throws(() => scope.editBento('anchorMembers', [cell, [child], placement], stale), /changed/);
+  assert.deepEqual(scope.getReception(), saved); scope.release();
+});
+
 test('deletion invalidates editing before immediate Undo without any subscriber or intermediate read', () => {
   const { scope } = fixture(), cell = rectangle(scope); scope.turnShapeIntoCell(cell); scope.setEditingCell(cell);
   const expected = scope.getSnapshot().shapes.find(item => item.id === cell);
@@ -54,7 +169,7 @@ test('deletion invalidates editing before immediate Undo without any subscriber 
 
 test('deleting a private cell keeps Image, Text and Shape private atomically through failure, Undo, Redo and reload', () => {
   const { scope, storage, fail } = fixture(), cell = rectangle(scope); scope.turnShapeIntoCell(cell); scope.setEditingCell(cell);
-  const image = addImageModule(scope, profile, { position: { left: 120, top: 140 }, size: { width: 220, height: 180 }, side: createReceptionExample().imageModules[0].sides[0] });
+  const image = addImageModule(scope, profile, { position: { left: 120, top: 140 }, size: { width: 220, height: 180 }, artwork: createReceptionExample().imageModules[0].artwork });
   const text = addTextModule(scope, profile, null, { visibility: 'PUBLIC' });
   const shape = rectangle(scope), privateText = addTextModule(scope, profile);
   const candidate = scope.getDraft();
@@ -70,7 +185,10 @@ test('deleting a private cell keeps Image, Text and Shape private atomically thr
   for (const id of [image, text, shape, privateText]) {
     const key = ['imageModules', 'texts', 'shapes'].find(key => before[key].some(item => item.id === id));
     assert.deepEqual(after[key].find(item => item.id === id), { ...before[key].find(item => item.id === id), visibility: 'PRIVATE' });
-    assert.deepEqual(receptionModuleWindow(after, id), receptionModuleWindow(before, id));
+    const previousWindow = receptionModuleWindow(before, id);
+    assert.deepEqual(receptionModuleWindow(after, id), key === 'texts'
+      ? { ...previousWindow, width: Math.max(180, previousWindow.width), height: Math.max(24, previousWindow.height) }
+      : previousWindow, 'released content keeps its position and meets the standalone Text minimum');
   }
   assert.deepEqual(publicIds(after), []);
   assert.equal(scope.undo(), true); assert.deepEqual(scope.getReception(), before);
@@ -96,7 +214,7 @@ test('explicit Image drop authors the target cell atomically without changing th
   const { scope, root, canvas, fail } = fixture(), target = rectangle(scope), other = rectangle(scope, 600);
   scope.turnShapeIntoCell(target); scope.turnShapeIntoCell(other); scope.setEditingCell(other);
   const dropStore = { ...scope, commitCompletedOperation: (candidate, options) => scope.commitInCell(target, candidate, options) };
-  const placed = { position: { left: 140, top: 150 }, size: { width: 220, height: 180 }, side: createReceptionExample().imageModules[0].sides[0] };
+  const placed = { position: { left: 140, top: 150 }, size: { width: 220, height: 180 }, artwork: createReceptionExample().imageModules[0].artwork };
   const before = structuredClone(scope.getReception());
   fail(true); assert.throws(() => addImageModule(dropStore, profile, placed), /could not be saved/u);
   assert.deepEqual(scope.getReception(), before); fail(false);
@@ -116,8 +234,8 @@ test('a delayed explicit cell creation cannot commit after its document generati
   const { scope } = fixture(), target = rectangle(scope);
   scope.turnShapeIntoCell(target);
   const candidate = scope.getDraft(), expectedGeneration = scope.getGeneration();
-  const side = createReceptionExample().imageModules[0].sides[0];
-  candidate.imageModules.push({ id: 'image:delayed', name: 'Delayed Image', width: 100, height: 100, visibility: 'PUBLIC', sides: [side] });
+  const side = createReceptionExample().imageModules[0].artwork;
+  candidate.imageModules.push({ id: 'image:delayed', name: 'Delayed Image', width: 100, height: 100, visibility: 'PUBLIC', artwork: side });
   candidate.workbench.imageModules.push({ id: 'image:delayed', open: true, position: { left: 140, top: 150 } });
   await Promise.resolve();
   rectangle(scope, 600);

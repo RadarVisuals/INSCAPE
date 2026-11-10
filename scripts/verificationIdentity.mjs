@@ -38,7 +38,10 @@ export async function verificationIdentity(root, environment = process.env) {
 export async function probeBrowser({ root, output, environment, signal }) {
   const log = resolve(output, 'browser-environment.log'), fd = openSync(log, 'wx');
   try {
-    const result = await runOwnedCommand({ args: ['scripts/browserProbe.mjs'], cwd: root, env: environment,
+    // This probe's entire output is a strict identity document; detailed
+    // lifecycle logging belongs to suite evidence, not this JSON channel.
+    const result = await runOwnedCommand({ args: ['scripts/browserProbe.mjs'], cwd: root,
+      env: { ...environment, INSCAPE_BROWSER_LIFECYCLE_LOG: '0' },
       stdio: ['ignore', fd, fd], timeoutMs: 60_000, signal });
     requireSuccessfulCommand(result, 'Browser environment probe');
     const browser = JSON.parse((await readFile(log, 'utf8')).trim());

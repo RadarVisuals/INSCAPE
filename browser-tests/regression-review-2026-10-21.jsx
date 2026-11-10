@@ -7,7 +7,7 @@ import { createSystemWorkflowDraftStore, systemWorkflowDraftKey } from '../src/s
 import { createDefaultWorkbenchPresentation } from '../src/profileDocument/domain/workbenchPresentation.js';
 import { OWNER_SYSTEM_WORKFLOW_REVIEW_ASSETS } from '../src/public/ownerSystemWorkflow/ownerSystemWorkflowDevelopmentFixture.js';
 import { addImageModule } from '../src/imageModule/imageModuleSession.js';
-import { resolveImageLibrarySide } from '../src/imageModule/imageLibrarySide.js';
+import { resolveImageLibraryArtwork } from '../src/imageModule/imageLibraryArtwork.js';
 import { addTextModule } from '../src/text/textSession.js';
 import '../src/index.css';
 import '../src/inscapeTokens.css';
@@ -32,9 +32,9 @@ if (!localStorage.getItem(key)) {
   if (scene === 'images') {
     const workbench = createDefaultWorkbenchPresentation(); workbench.display.open = false;
     const square = { ...assets[0], selectedMedia: { url: assets[0].originalImageUrl.replace('actors/abyssal_eye/full.webp', 'PFP/PFP.webp'), width: 2000, height: 2000 } };
-    addImageModule(store, profile, { side: await resolveImageLibrarySide(square),
+    addImageModule(store, profile, { artwork: await resolveImageLibraryArtwork(square),
       size: { width: 720, height: 240 }, position: { left: 8, top: 160 }, workbench });
-    addImageModule(store, profile, { side: await resolveImageLibrarySide(assets[1]),
+    addImageModule(store, profile, { artwork: await resolveImageLibraryArtwork(assets[1]),
       size: { width: 320, height: 300 }, position: { left: params.has('narrow') ? 32 : 900, top: params.has('narrow') ? 470 : 160 } });
   } else addTextModule(store, profile);
 }

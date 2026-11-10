@@ -1,4 +1,6 @@
 import test from 'node:test';
+import { artworkHeader } from './fixtures/artwork-menu.mjs';
+import { resetCameraTestView } from './fixtures/workbench-camera-test.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -28,11 +30,13 @@ test('production Grid resize commits on release without a render loop', { timeou
     page.on('pageerror', error => errors.push(error.stack));
     await page.route('**/*', route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
     await page.goto(`${origin}/browser-tests/grid-resize-release-fixture.html`);
-    const grid = page.locator('.shape-window'); await grid.waitFor();
+    const grid = page.locator('aside.shape-window'); await grid.waitFor();
+    const id = await grid.getAttribute('data-workbench-view-id');
     await page.evaluate(() => document.fonts.ready);
+    await resetCameraTestView(page);
     const collapse = page.locator('.editor-menu-brand[aria-expanded="true"]');
     if (await collapse.count()) await collapse.click();
-    await grid.locator('header').focus(); await page.keyboard.press('Shift+Enter'); await settle(page);
+    await artworkHeader(page, id).focus(); await page.keyboard.press('Shift+Enter'); await settle(page);
     const before = await page.evaluate(() => gridResizeSaved().workbench.shapes[0].window);
     const b = await page.locator('.workbench-selection').boundingBox();
     await page.mouse.move(b.x + b.width, b.y + b.height); await page.mouse.down();
@@ -54,14 +58,19 @@ test('production Grid resize commits on release without a render loop', { timeou
     }
     for (const edge of ['se', 'nw', 'ne', 'sw']) for (let repeat = 0; repeat < 3; repeat++) {
       await page.locator('main.system-workflow').focus(); await page.keyboard.press('Escape');
-      await grid.locator('header').focus();
+      await artworkHeader(page, id).focus();
       await page.keyboard.press('Shift+Enter');
       await settle(page);
       const box = await page.locator('.workbench-selection').boundingBox();
       const x = edge.includes('w') ? box.x : box.x + box.width, y = edge.includes('n') ? box.y : box.y + box.height;
       const dx = 24, dy = edge.includes('n') ? 0 : 24;
-      const hit = await page.evaluate(({ x, y }) => document.elementFromPoint(x, y)?.getAttribute('aria-label'), { x, y });
-      assert.equal(hit, `Scale selected modules from ${edge}`, 'the real resize grip receives the pointer');
+      const hit = await page.evaluate(({ x, y }) => {
+        const element = document.elementFromPoint(x, y);
+        return { label: element?.getAttribute('aria-label'), edge: element?.dataset.resizeEdge,
+          owner: element?.closest('.workbench-window-controls')?.querySelector('header')?.dataset.workbenchViewId };
+      }, { x, y });
+      assert.ok(hit.label === `Scale selected modules from ${edge}` || hit.edge === edge && hit.owner === id,
+        'the actual Grid resize grip receives the pointer');
       const prior = await page.evaluate(() => gridResizeSaved().workbench.shapes[0].window);
       await page.mouse.move(x, y); await page.mouse.down(); await page.mouse.move(x + dx, y + dy, { steps: 4 });
       await page.mouse.up(); await settle(page);

@@ -2,9 +2,9 @@ import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 're
 import { Home } from 'lucide-react';
 import './navigator.css';
 
-export function NavigatorHome({ onClick, disabled, label = 'Reset Workbench view' }) {
+export function NavigatorHome({ onClick, disabled, label = 'Fit canvas in view' }) {
   return <button type="button" className="workflow-tactile-control navigator-home" aria-label={label}
-    title="Return to the starting view at 100%" disabled={disabled} onClick={onClick}><Home size={16} strokeWidth={1.6} /></button>;
+    title={label} disabled={disabled} onClick={onClick}><Home size={16} strokeWidth={1.6} /></button>;
 }
 
 // Both the reference and the real camera use this pointer/keyboard contract.

@@ -6,6 +6,7 @@ import { hideWorkspaceSidebar } from './fixtures/workspace-sidebar.mjs';
 import { mountGridMotionFixture } from './fixtures/grid-motion-fixture.mjs';
 import { setWorkbenchZoom } from './fixtures/workbench-zoom.mjs';
 import { prepareCameraTestView } from './fixtures/workbench-camera-test.mjs';
+import { parkGeometryTools } from './fixtures/geometry-tools.mjs';
 
 const origin = process.env.INSCAPE_TEXT_ROOT || 'http://127.0.0.1:5178';
 const settle = page => page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
@@ -68,7 +69,7 @@ for (const secondaryDisplay of [false, true]) for (const kind of ['native', 'gro
     const page = await browser.newPage({ viewport: { width: 390, height: 844 }, reducedMotion: 'reduce' });
     await mountGridMotionFixture(page, { origin, count: 1, textModes: true, adjoiningModules: { secondaryDisplay } });
     await prepareCameraTestView(page, false); await hideWorkspaceSidebar(page);
-    for (const name of ['Read', 'Close Text tools']) {
+    for (const name of ['Read', 'Close Inspector']) {
       const button = page.getByRole('button', { name, exact: true });
       if (await button.count()) { await button.focus(); await page.keyboard.press('Enter'); }
     }
@@ -107,8 +108,9 @@ for (const secondaryDisplay of [false, true]) for (const density of [1, 1.25, 2]
       artwork: { url: 'https://motion.invalid/opaque.png', width: 2560, height: 1440, contentType: 'image/png', body: Buffer.from(black, 'base64') } });
     await prepareCameraTestView(page, false);
     await hideWorkspaceSidebar(page);
+    await parkGeometryTools(page);
     await page.locator('.text-window').waitFor();
-    for (const name of ['Read', 'Close Text tools']) {
+    for (const name of ['Read', 'Close Inspector']) {
       const button = page.getByRole('button', { name, exact: true });
       if (await button.count()) { await button.focus(); await page.keyboard.press('Enter'); }
     }

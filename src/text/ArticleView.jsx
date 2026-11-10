@@ -31,7 +31,7 @@ function renderNode(node, key, positions) {
 export default function ArticleView({ article, flow, containerOwned = false }) {
   try { assertArticle(article); } catch (e) { return <p role="alert">{e.message}</p>; }
   const appearance = textAppearance(article);
-  return <article className={`text-document${appearance.compact ? ' text-document--compact' : ''}`} style={textContentStyle(article, { containerOwned })}>
+  return <article className={`text-document${appearance.compact ? ' text-document--compact' : ''}`} data-writing-direction={appearance.writingDirection} style={textContentStyle(article, { containerOwned })}>
     {article.title && flow?.title !== false && <h1 className="text-document-title" style={textTitleStyle(article)}>{article.title}</h1>}{renderNode(flow?.content || article.content, 'article', flow?.positions)}
   </article>;
 }

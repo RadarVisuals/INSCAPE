@@ -30,7 +30,7 @@ async function seedMirroredImages(page, transparentSvg = false) {
     draft.workbench.area = { left: 0, top: 0, width: 1200, height: 1200 };
     draft.texts = []; draft.workbench.texts = [];
     draft.imageModules = [0, 1, 2, 3].map(i => ({ id: `image:mirror${i}`, name: `Mirror ${i}`, width: 501, height: 501, visibility: 'PRIVATE',
-      sides: [{ id: `side:mirror${i}`, asset, crop: { x: .5, y: .5, zoom: 1 }, transform: { quarterTurns: 0, mirrorX: i % 2 === 1, mirrorY: i >= 2 } }] }));
+      artwork: { id: `artwork:mirror${i}`, asset, crop: { x: .5, y: .5, zoom: 1 }, transform: { quarterTurns: 0, mirrorX: i % 2 === 1, mirrorY: i >= 2 } } }));
     draft.workbench.imageModules = draft.imageModules.map((item, i) => ({ id: item.id, open: true,
       position: { left: 80.25 + (i % 2) * 501, top: 80.25 + Math.floor(i / 2) * 501 } }));
     draft.artworkLayers = draft.imageModules.map(item => item.id);
@@ -122,9 +122,11 @@ async function menuAction(page, name, touch = false) {
 async function revealCard(page, name, touch = false) {
   const button = page.getByRole('button', { name: 'Open ' + name, exact: true });
   await button.scrollIntoViewIfNeeded();
+  // The immersive Return command occupies the card's top-left corner. Exercise
+  // exposed artwork below it, keeping Playwright's hit-target checks enabled.
   if (touch) {
-    if (!await button.locator('..').getAttribute('data-revealed')) await button.tap({ position: { x: 20, y: 20 } });
-  } else await button.hover({ position: { x: 20, y: 20 } });
+    if (!await button.locator('..').getAttribute('data-revealed')) await button.tap({ position: { x: 20, y: 100 } });
+  } else await button.hover({ position: { x: 20, y: 100 } });
 }
 
 async function failWrites(page, fail) {
@@ -311,7 +313,9 @@ test('card size changes actual bounds for one canvas, and touch arrangement work
     await open(touch); await seedGallery(touch); await menuAction(touch, 'Grid', true); await menu(touch);
     await touch.getByRole('slider', { name: 'Card size' }).fill('1');
     await touch.getByRole('button', { name: 'Arrange canvases', exact: true }).tap();
-    const handle = await touch.getByRole('button', { name: 'Drag Workbench 1 to reorder' }).boundingBox();
+    const dragHandle = touch.getByRole('button', { name: 'Drag Workbench 1 to reorder' });
+    await dragHandle.scrollIntoViewIfNeeded(); await settlePreview(touch);
+    const handle = await dragHandle.boundingBox();
     const target = await touch.locator('[data-gallery-cycle="0"] .workbench-overview-card').nth(1).boundingBox();
     const cdp = await touch.context().newCDPSession(touch);
     await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: handle.x + handle.width / 2, y: handle.y + handle.height / 2 }] });
@@ -444,7 +448,8 @@ test('canvas inspection fits 5K, reuses source metadata and saved views, and ret
     const scroll = await gallery.evaluate(node => node.scrollTop);
     await page.getByRole('button', { name: 'Open Workbench 1', exact: true }).click();
     const dialog = page.getByRole('dialog', { name: 'View Workbench 1' }); await dialog.waitFor();
-    assert.equal(await page.locator('.text-window, .workbench-navigator, iframe').count(), 0);
+    assert.equal(await dialog.locator('.text-window, .workbench-navigator, iframe').count(), 0,
+      'presentation contains no editor or embedded artwork runtime');
     assert.equal(await dialog.evaluate(node => node === document.activeElement), true);
     assert.equal(await dialog.getAttribute('data-chrome-visible'), null, 'inspection opens with the artwork alone');
     await mkdir(output, { recursive: true }); await settlePreview(page);
@@ -492,10 +497,11 @@ test('canvas inspection fits 5K, reuses source metadata and saved views, and ret
       assert.ok(fit, `${width}: whole 5K canvas fits`);
       await page.screenshot({ path: path.join(output, `canvas-modal-${width}.png`) });
     }
-    await dialog.getByRole('button', { name: 'Canvas details', exact: true }).focus();
-    await page.keyboard.press('Escape');
+    await dialog.focus();
     await page.keyboard.press('Escape');
     await dialog.waitFor({ state: 'hidden' });
+    assert.equal(await page.locator('.workbench-overview[data-immersive]').count(), 1,
+      'one Escape closes inspection without leaving the overview');
     await page.waitForFunction(() => document.activeElement.getAttribute('aria-label') === 'Open Workbench 1');
     assert.equal(await page.evaluate(() => JSON.stringify(window.savedDraft())), saved);
     assert.equal(await gallery.evaluate(node => node.scrollTop), scroll);
@@ -514,10 +520,10 @@ test('inspection supports touch details, one info panel and closing during the l
     const trigger = page.getByRole('button', { name: 'Open Workbench 1', exact: true });
     await revealCard(page, 'Workbench 1', true);
     assert.equal(await page.getByRole('dialog').count(), 0, 'first touch reveals the existing card actions');
-    await trigger.tap({ position: { x: 20, y: 20 } });
+    await trigger.tap({ position: { x: 20, y: 100 } });
     const dialog = page.getByRole('dialog'); await dialog.waitFor();
     await page.keyboard.press('Escape'); await dialog.waitFor({ state: 'hidden' });
-    await trigger.tap({ position: { x: 20, y: 20 } });
+    await trigger.tap({ position: { x: 20, y: 100 } });
     await page.locator('.canvas-presentation-stage').tap();
     await page.getByRole('button', { name: 'Close canvas', exact: true }).waitFor();
     await dialog.getByRole('button', { name: 'Canvas details', exact: true }).tap();
@@ -599,6 +605,8 @@ test('thumbnail crop supports drag, touch, cancel, failed save, reload and retur
         return canvas.left >= stage.left - 1 && canvas.top >= stage.top - 1 && canvas.right <= stage.right + 1 && canvas.bottom <= stage.bottom + 1;
       }), 'opening ignores the thumbnail crop and fits the complete composition');
       await page.keyboard.press('Escape'); await dialog.waitFor({ state: 'hidden' });
+      assert.equal(await page.locator('.workbench-overview[data-immersive]').count(), 1,
+        'one Escape closes the modal without leaving the immersive overview behind it');
       await startCrop(); await page.getByRole('button', { name: 'Auto fill', exact: true }).click();
       await page.getByRole('button', { name: 'Save crop', exact: true }).click();
       const final = await page.evaluate(() => window.guardedStore().readWorkbench(window.guardedStore().getWorkbenchId()));
@@ -752,7 +760,7 @@ test('touch grid handles a single canvas, creation, details and opening without 
   try {
     const page = await browser.newPage({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, reducedMotion: 'reduce' });
     await open(page);
-    await page.getByRole('button', { name: 'My Inscape', exact: true }).tap();
+    await editorOverview(page);
     const before = await page.evaluate(() => JSON.stringify(window.savedDraft()));
     await menuAction(page, 'Grid', true);
     const gallery = page.getByRole('region', { name: 'Workbench gallery' });
@@ -778,7 +786,7 @@ test('touch grid handles a single canvas, creation, details and opening without 
     await mkdir(output, { recursive: true });
     await page.screenshot({ path: path.join(output, 'grid-touch-details.png') });
     await revealCard(page, 'Workbench 1', true);
-    await page.getByRole('button', { name: 'Open Workbench 1', exact: true }).tap({ position: { x: 20, y: 20 } });
+    await page.getByRole('button', { name: 'Open Workbench 1', exact: true }).tap({ position: { x: 20, y: 100 } });
     await revealPresentation(page);
     await page.getByRole('dialog').getByRole('button', { name: 'Edit canvas', exact: true }).tap();
     await page.locator('.text-window').waitFor();
@@ -808,7 +816,7 @@ test('failed departure keeps the live editor and mixed-content previews never st
       draft.workbench.texts[0].frames = [{ id: 'text-frame:continuation', window: { left: 50, top: 350, width: 340, height: 350 } }];
       draft.shapes = [{ id: 'shape:preview', name: 'Sand', color: '#c7c1b5', opacity: 1, visibility: 'PRIVATE' }];
       draft.workbench.shapes = [{ id: 'shape:preview', open: true, window: { left: 430, top: 30, width: 710, height: 400 } }];
-      draft.imageModules = [{ id: 'image:preview', name: 'Mountain study', width: 340, height: 340, visibility: 'PRIVATE', sides: [{ id: 'side:preview', asset, crop: null, transform: { quarterTurns: 0, mirrorX: false, mirrorY: false } }] }];
+      draft.imageModules = [{ id: 'image:preview', name: 'Mountain study', width: 340, height: 340, visibility: 'PRIVATE', artwork: { id: 'artwork:preview', asset, crop: null, transform: { quarterTurns: 0, mirrorX: false, mirrorY: false } } }];
       draft.workbench.imageModules = [{ id: 'image:preview', open: true, position: { left: 580, top: 40 } }];
       draft.miniApps = [{ id: 'miniapp:preview', name: 'Orbit study', url: 'https://example.com/never-run', visibility: 'PRIVATE', surface: 'artwork' }];
       draft.workbench.miniApps = [{ id: 'miniapp:preview', open: true, window: { left: 550, top: 470, width: 500, height: 250 } }];

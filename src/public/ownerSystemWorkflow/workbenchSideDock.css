@@ -1,6 +1,6 @@
-.workbench-side-dock { position: fixed; z-index: 80; box-sizing: border-box; background: var(--tactile-face); pointer-events: none; }
-.workbench-side-dock[data-dock-side='left'] { left: 0; border-right: 1px solid var(--tactile-edge); }
-.workbench-side-dock[data-dock-side='right'] { right: 0; border-left: 1px solid var(--tactile-edge); }
+.workbench-side-dock { position: fixed; z-index: 80; box-sizing: border-box; pointer-events: none; }
+.workbench-side-dock[data-dock-side='left'] { left: 0; }
+.workbench-side-dock[data-dock-side='right'] { right: 0; }
 .workbench-side-dock[data-drop-preview] { z-index: 109; background: color-mix(in srgb, var(--tactile-face) 85%, transparent); outline: 1px solid var(--tactile-ink); outline-offset: -1px; }
 .workbench-side-dock-hint { padding: 12px; color: var(--tactile-ink); font: var(--workflow-type-control); }
 .workbench-tool-panel[data-side-docked] { border-radius: 0; }

@@ -30,7 +30,7 @@ test('Keeper dock accepts Library artwork, releases/returns, persists, undoes an
     page.setDefaultTimeout(15000);
     const errors = []; page.on('pageerror', error => errors.push(error.message));
     await mountTextToolsFixture(page, origin);
-    await page.getByRole('button', { name: 'Close Text tools', exact: true }).click();
+    await page.getByRole('button', { name: 'Close Inspector', exact: true }).click();
     await addDock(page);
     const dock = page.locator('.keeper-dock-window'), instance = page.locator('.keeper-instance'), actor = page.locator('.keeper-roamer');
     const created = await dock.boundingBox(); assert.ok(created.x > 1200 && created.y > 500, 'new dock opens in the screen corner');
@@ -100,9 +100,11 @@ test('Keeper dock accepts Library artwork, releases/returns, persists, undoes an
     await page.screenshot({ path: `${output}/keeper-narrow.png` });
     assert.equal(await page.evaluate(() => window.savedDraft().keeperDocks[0].size), 384, 'narrow viewport does not rewrite size');
     assert.ok(await actor.locator('img').evaluate(node => parseFloat(getComputedStyle(node).width) < 384));
-    await page.setViewportSize({ width: 1440, height: 1000 });
+    await page.getByRole('button', { name: 'Close Keeper settings', exact: true }).press('Enter');
+    await page.setViewportSize({ width: 1440, height: 1000 }); await settle(page);
     await page.getByRole('button', { name: 'Return Keeper', exact: true }).click();
     await page.waitForFunction(() => document.querySelector('.keeper-instance')?.dataset.keeperPhase === 'docked');
+    await page.getByRole('button', { name: 'Keeper settings', exact: true }).click();
     await page.getByRole('button', { name: 'Delete dock', exact: true }).click();
     assert.equal(await dock.count(), 0);
     await page.keyboard.press('Control+z'); await dock.waitFor();
@@ -125,7 +127,7 @@ test('Keeper reduced motion is stationary, failed saves retain the inhabitant, a
     const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, reducedMotion: 'reduce' });
     page.setDefaultTimeout(15000);
     await mountTextToolsFixture(page, origin);
-    await page.getByRole('button', { name: 'Close Text tools', exact: true }).click(); await addDock(page);
+    await page.getByRole('button', { name: 'Close Inspector', exact: true }).click(); await addDock(page);
     await page.getByRole('button', { name: 'Artwork library', exact: true }).click(); await drop(page);
     await page.getByRole('button', { name: 'Release Keeper', exact: true }).waitFor();
     const before = await page.evaluate(() => window.savedDraft());
@@ -170,7 +172,7 @@ test('Deleting a dock cancels its delayed Library result; undo cannot revive tha
         'if (globalThis.holdKeeperAsset) await new Promise(resolve => { globalThis.releaseKeeperAsset = resolve; });\n  const id = input');
       await route.fulfill({ response, body });
     }) });
-    await page.getByRole('button', { name: 'Close Text tools', exact: true }).click(); await addDock(page);
+    await page.getByRole('button', { name: 'Close Inspector', exact: true }).click(); await addDock(page);
     await page.evaluate(() => { window.holdKeeperAsset = true; });
     await page.getByRole('button', { name: 'Artwork library', exact: true }).click(); await drop(page);
     await page.waitForFunction(() => typeof window.releaseKeeperAsset === 'function');

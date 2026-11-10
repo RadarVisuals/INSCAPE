@@ -24,8 +24,8 @@ export function createReceptionExample() {
   reception.branding.name = 'nomad';
   reception.imageModules = [{
     id: 'image:resident-zero', name: 'Human Underneath', width: 1200, height: 1000, visibility: 'PUBLIC',
-    sides: [{
-      id: 'side:resident-zero',
+    artwork: {
+      id: 'artwork:resident-zero',
       asset: { stableAssetId: createCanonicalAssetId({ chainId: 42, contractAddress, tokenId }),
         network: 'lukso-mainnet', chainId: 42, tokenStandard: 'LSP8', contractAddress, tokenId,
         name: 'Human Underneath', description: 'Resident Zero', collectionName: 'Human Underneath', creators: [], attributes: [],
@@ -33,7 +33,7 @@ export function createReceptionExample() {
           type: 'image', width: 1200, height: 1000 } },
       crop: { x: 2 / 3, y: 0.6425916505567129, zoom: 1.5 },
       transform: { quarterTurns: 0, mirrorX: false, mirrorY: false },
-    }],
+    },
   }];
   return reception;
 }

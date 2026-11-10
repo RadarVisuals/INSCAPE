@@ -27,12 +27,12 @@ draft.workbench.keeperDocks = [{ id: 'keeper:ai-preview', position: { left: 600,
 if (new URLSearchParams(location.search).has('artwork')) {
   const study = await resolveLibraryImageAsset(OWNER_SYSTEM_WORKFLOW_REVIEW_ASSETS[0]);
   draft.imageModules = [{ id: 'image:keeper-study', name: 'Abyssal study', width: 320, height: 320, visibility: 'PRIVATE',
-    sides: [{ id: 'side:keeper-study', asset: study,
-      crop: null, transform: { quarterTurns: 0, mirrorX: false, mirrorY: false } }] }];
+    artwork: { id: 'artwork:keeper-study', asset: study,
+      crop: null, transform: { quarterTurns: 0, mirrorX: false, mirrorY: false } } }];
   draft.workbench.imageModules = [{ id: 'image:keeper-study', open: true, position: { left: 110, top: 140 } }];
   if (new URLSearchParams(location.search).has('svg')) {
     draft.imageModules.push({ ...draft.imageModules[0], id: 'image:keeper-svg', name: 'SVG study',
-      sides: [{ ...draft.imageModules[0].sides[0], id: 'side:keeper-svg', asset }] });
+      artwork: { ...draft.imageModules[0].artwork, id: 'artwork:keeper-svg', asset } });
     draft.workbench.imageModules.push({ id: 'image:keeper-svg', open: true, position: { left: 420, top: 420 } });
   }
 }

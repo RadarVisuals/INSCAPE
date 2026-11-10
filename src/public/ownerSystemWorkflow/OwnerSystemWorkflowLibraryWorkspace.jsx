@@ -15,7 +15,8 @@ const sourceFor = (asset) => asset?.previewSrc || asset?.src || asset?.imageUrl 
 const ownerLibraryPreviewRecords = new Map();
 
 export default function OwnerSystemWorkflowLibraryWorkspace({ authoringLocked = false, categoryCommands, placementScope, data, onClose, phase, open = phase !== 'closing' && phase !== 'closed',
-  navigationHost = null, preferences, preferenceStore, previewRecords = ownerLibraryPreviewRecords, resolveAssetDimensions, workbenchImageTargetRef, moduleAssetTargetRef, placementTargetRef, shortcutTargetRef, workspaceRef, className = '', label = 'Library workspace', resizable = true, overlayPlacement = false, selectionAction, selectionEnabled = true, onPlacingChange, header, embedded = false }) {
+  navigationHost = null, preferences, preferenceStore, previewRecords = ownerLibraryPreviewRecords, resolveAssetDimensions, workbenchImageTargetRef, moduleAssetTargetRef, placementTargetRef, shortcutTargetRef, workspaceRef, className = '', label = 'Library workspace', resizable = true, overlayPlacement = false, selectionAction, selectionEnabled = true, onPlacingChange, header, embedded = false, presentation }) {
+  const editor = presentation === 'editor';
   // Host closure invalidates pending drops immediately, before exit animation.
   const libraryClosed = !open;
   const workspace = useBrowserWorkspace(data, previewRecords, preferences, preferenceStore, !libraryClosed);
@@ -233,8 +234,8 @@ export default function OwnerSystemWorkflowLibraryWorkspace({ authoringLocked = 
   };
   useEffect(() => { cleanup(); setDropFeedback(null); }, [placementContext]);
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; cleanup(); }; }, []);
-  return <OwnerSystemWorkflowWorkspaceShell className={`system-workflow__library ${className}`} label={label} phase={phase}
-    header={header} embedded={embedded}
+  return <OwnerSystemWorkflowWorkspaceShell className={`system-workflow__library${editor ? ' system-workflow__library-editor workbench-editor-panel' : ''} ${className}`} label={label} phase={phase}
+    header={header} embedded={embedded} palette={editor ? 'editor' : undefined}
     style={libraryWidth === null ? undefined : { '--workflow-library-width': `${libraryWidth}px` }}
     resizeHandle={resizable && <button aria-label="Resize Library" className="system-workflow__library-resize" type="button"
       onPointerDown={(event) => {
@@ -253,12 +254,14 @@ export default function OwnerSystemWorkflowLibraryWorkspace({ authoringLocked = 
         setLibraryWidth(clampWidth(event.key === 'Home' ? 300 : event.key === 'End' ? window.innerWidth
           : width + (event.key === 'ArrowLeft' ? -1 : 1) * (event.shiftKey ? 80 : 20)));
       }} />}
-    placing={placing} rail={<><OwnerSystemWorkflowWorkspaceRail  onClose={header ? undefined : onClose} workspace={workspace} />
+    placing={placing} rail={<><OwnerSystemWorkflowWorkspaceRail onClose={header ? undefined : onClose} workspace={workspace}
+      section={editor ? 'display' : undefined} palette={editor ? 'editor' : undefined} />
       {selectionAction && <button type="button" className="workflow-tactile-control system-workflow__library-selection-action"
         disabled={authoringLocked || !selectionEnabled || !selectedAsset}
         onClick={() => { if (selectedAsset) activate(selectedAsset); }}>{selectionAction}</button>}</>}
     sidebarCollapsed={workspace.sidebarWidth <= 72}>
     <OwnerSystemWorkflowLibraryPresenter key={data.ownerContext} categoryCommands={categoryCommands} data={data} open={!libraryClosed}
+      toolbar={editor ? <OwnerSystemWorkflowWorkspaceRail workspace={workspace} section="browse" palette="editor" /> : undefined}
       navigationHost={navigationHost} categoryDrag={categoryDrag} dropFeedback={dropFeedback}
        onAssetActivate={(_event, asset) => activate(asset)}
       onAssetPointerDown={beginAssetDrag} onImageActivate={(_event, asset) => place(asset)}
@@ -268,9 +271,9 @@ export default function OwnerSystemWorkflowLibraryWorkspace({ authoringLocked = 
           setImageSelection(media ? { assetId: id, ownerContext: data.ownerContext, media } : null);
         }
       } }} />
-    {dragPreview?.rectangle && createPortal(<div aria-hidden="true" className="system-workflow__placement-preview" style={dragPreview.rectangle}>
-      {sourceFor(dragPreview.asset) && <img alt="" src={sourceFor(dragPreview.asset)} />}
-      <span>{dragPreview.kind === 'workbench-image' ? 'Release to place Image' : dragPreview.kind === 'reception' ? dragPreview.label : dragPreview.kind === 'module' ? dragPreview.label : dragPreview.kind === 'shortcut' ? 'Release to replace icon' : 'Release to add layer'}</span>
+    {dragPreview?.rectangle && createPortal(<div aria-hidden="true" className="system-workflow__placement-preview" data-stack-drop={dragPreview.kind === 'stack' || undefined} style={dragPreview.rectangle}>
+      {dragPreview.kind !== 'stack' && sourceFor(dragPreview.asset) && <img alt="" src={sourceFor(dragPreview.asset)} />}
+      <span>{dragPreview.label || (dragPreview.kind === 'workbench-image' ? 'Release to place Image' : dragPreview.kind === 'shortcut' ? 'Release to replace icon' : 'Release to add layer')}</span>
     </div>, workspaceRef?.current || document.body)}
   </OwnerSystemWorkflowWorkspaceShell>;
 }

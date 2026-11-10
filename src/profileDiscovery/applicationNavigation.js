@@ -3,7 +3,7 @@ import { resolveOwnerAuthoringEnabled } from '../public/publicAccess.js';
 
 const profileIntent = value => value?.editor === 'reception' ? { editor: 'reception' } : ({
   ...(value?.canvas === true ? { canvas: true } : {}),
-  ...(value?.reception === true ? { reception: true } : {}),
+  ...((value?.reception === true || value?.reception === 'published') ? { reception: value.reception } : {}),
   ...(value?.target?.moduleId ? { target: { moduleId: String(value.target.moduleId).slice(0, 160),
     ...(value.target.gridId ? { gridId: String(value.target.gridId).slice(0, 160) } : {}) } } : {}),
 });
@@ -20,7 +20,7 @@ export function readApplicationRoute(locationLike, historyState = null) {
     return { kind: 'discover', returnTo };
   }
   const address = normalizeProfileAddress(params.get('view'));
-  return address ? { kind: 'profile', address, ...profileIntent({ editor: params.get('editor'), canvas: params.get('canvas') === '1', reception: params.get('reception') === '1',
+  return address ? { kind: 'profile', address, ...profileIntent({ editor: params.get('editor'), canvas: params.get('canvas') === '1', reception: params.get('reception') === 'published' ? 'published' : params.get('reception') === '1',
     target: { moduleId: params.get('module'), gridId: params.get('grid') } }) }
     : { kind: 'home', fallbackAddress: normalizeProfileAddress(params.get('profile')) };
 }
@@ -34,7 +34,7 @@ export function applicationRouteUrl(locationLike, route) {
     const intent = profileIntent(route);
     if (intent.editor) url.searchParams.set('editor', intent.editor);
     if (intent.canvas) url.searchParams.set('canvas', '1');
-    if (intent.reception) url.searchParams.set('reception', '1');
+    if (intent.reception) url.searchParams.set('reception', intent.reception === 'published' ? 'published' : '1');
     if (intent.target) {
       url.searchParams.set('module', intent.target.moduleId);
       if (intent.target.gridId) url.searchParams.set('grid', intent.target.gridId);

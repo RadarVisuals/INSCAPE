@@ -67,9 +67,10 @@ export function createWorkbenchCameraSurfaceMotion(host, entries, rasterCamera, 
           const mix = (a, b) => a + (b - a) * progress;
           // Uniformly fit the artwork into the compact cell; never stretch its
           // aspect ratio on the way into or out of a stack.
-          const size = Math.min(mix(from.width, to.width) / box.width, mix(from.height, to.height) / box.height) * camera.scale;
-          const left = mix(from.left, to.left) * camera.scale + camera.offset.x;
-          const top = mix(from.top, to.top) * camera.scale + camera.offset.y;
+          const width = mix(from.width, to.width) * camera.scale, height = mix(from.height, to.height) * camera.scale;
+          const size = Math.min(width / box.width, height / box.height);
+          const left = mix(from.left, to.left) * camera.scale + camera.offset.x + (width - box.width * size) / 2;
+          const top = mix(from.top, to.top) * camera.scale + camera.offset.y + (height - box.height * size) / 2;
           node.style.setProperty('--workbench-camera-transform', 'matrix(' + [matrix.a * size, matrix.b * size, matrix.c * size, matrix.d * size,
             (matrix.e - box.left) * size + left, (matrix.f - box.top) * size + top].join(',') + ')');
           continue;

@@ -5,6 +5,7 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { chromium } from 'playwright-core';
 import { browserExecutable } from '../scripts/browserEnvironment.mjs';
+import { openSharedTool } from './fixtures/shared-tools.mjs';
 
 const origin = process.env.INSCAPE_TEST_ORIGIN || 'http://127.0.0.1:5217';
 const output = process.env.INSCAPE_BROWSER_OUTPUT || '.browser-test-runtime/local-workbenches';
@@ -48,7 +49,9 @@ async function write(page, text) {
   const editor = page.getByRole('textbox', { name: 'Article text', exact: true });
   if (!await editor.isVisible()) {
     await page.locator('.text-window').click({ position: { x: 80, y: 90 } });
-    await page.getByRole('button', { name: 'Write', exact: true }).click();
+    const tools = await openSharedTool(page, 'Text');
+    const edit = tools.getByRole('button', { name: 'Edit text', exact: true });
+    if (await edit.count()) await edit.click();
   }
   await editor.fill(text);
   await editorMenu(page, 'Canvas').focus();
@@ -96,7 +99,7 @@ async function selectMixed(page) {
   if (await collapse.count()) await collapse.click();
   const read = page.getByRole('button', { name: 'Read', exact: true });
   if (await read.count()) { await read.focus(); await page.keyboard.press('Enter'); }
-  for (const name of ['Close Text tools', 'Close Transform', 'Close Color', 'Close Image', 'Close Shape', 'Close FX', 'Close Info']) {
+  for (const name of ['Close Inspector']) {
     const close = page.getByRole('button', { name, exact: true });
     if (await close.count()) await close.click();
   }
@@ -120,7 +123,7 @@ async function selectMixed(page) {
     await page.screenshot({ path: path.join(output, `mixed-selection-${diagnosticIndex}.png`) });
     throw error;
   }
-  const close = page.getByRole('button', { name: 'Close Transform', exact: true });
+  const close = page.getByRole('button', { name: 'Close Inspector', exact: true });
   if (await close.count()) await close.click();
 }
 async function beginMixedGesture(page, kind = 'resize') {

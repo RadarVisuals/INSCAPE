@@ -11,6 +11,8 @@ import {
   hsvHex,
   hexHsv,
   hsvHsl,
+  hslHsv,
+  clamp,
   hsvPoint,
   pointHsv,
   ringPoint,
@@ -78,7 +80,7 @@ function HexField({ value, onChange, disabled, labelPrefix }) {
   );
 }
 
-export default function ColourControls({ item, update, beginGesture, beginOpacityGesture, labelPrefix = 'Studio', showOpacity = true, scopeKey = item.id, getVersion = () => item.color }) {
+export default function ColourControls({ item, update, beginGesture, beginOpacityGesture, labelPrefix = 'Studio', showOpacity = true, scopeKey = item.id, getVersion = () => item.color, variant = 'wheel' }) {
   const instructions = useId(),
     canvas = useRef(null),
     drag = useRef(null),
@@ -95,7 +97,7 @@ export default function ColourControls({ item, update, beginGesture, beginOpacit
   const hueMarker = ringPoint(hsv.h),
     triangleMarker = hsvPoint(hsv);
   latest.current = { item, update, hsv, model };
-  useLayoutEffect(() => paintTriangle(canvas.current, hsv.h), [hsv.h]);
+  useLayoutEffect(() => { if (canvas.current) paintTriangle(canvas.current, hsv.h); }, [hsv.h, variant]);
 
   function changeColour(next) {
     const current = latest.current;
@@ -138,12 +140,23 @@ export default function ColourControls({ item, update, beginGesture, beginOpacit
   useEffect(() => {
     if (item.locked) finish(true);
   }, [item.locked]);
+  useEffect(() => { finish(true); }, [scopeKey, variant]);
 
   function move(event) {
     const active = drag.current,
       current = latest.current;
     if (!active || active.pointerId !== event.pointerId || current.item.locked) return;
     const rect = active.element.getBoundingClientRect();
+    if (!rect.width || !rect.height) return;
+    const x = clamp((event.clientX - rect.left) / rect.width), y = clamp((event.clientY - rect.top) / rect.height);
+    if (active.mode === 'field') {
+      changeColour({ ...current.hsv, s: x, v: 1 - y });
+      return;
+    }
+    if (active.mode === 'hue-strip') {
+      changeColour({ ...current.hsv, h: x * 359 });
+      return;
+    }
     const point = {
       x: ((event.clientX - rect.left) / rect.width) * 200,
       y: ((event.clientY - rect.top) / rect.height) * 200,
@@ -156,7 +169,7 @@ export default function ColourControls({ item, update, beginGesture, beginOpacit
   function start(event, mode) {
     if (item.locked || event.button !== 0 || !event.isPrimary || drag.current) return;
     event.preventDefault();
-    const element = event.currentTarget.ownerSVGElement;
+    const element = event.currentTarget.ownerSVGElement || event.currentTarget;
     drag.current = {
       mode,
       element,
@@ -168,8 +181,8 @@ export default function ColourControls({ item, update, beginGesture, beginOpacit
     };
     // Programmatic SVG focus can inherit :focus-visible from an editable field.
     // Pointer paint stays quiet; focus still supports Escape and arrow keys.
-    setPointerFocus(true);
     event.currentTarget.focus({ preventScroll: true });
+    setPointerFocus(true);
     element.setPointerCapture(event.pointerId);
     setDragging(mode);
     move(event);
@@ -180,10 +193,73 @@ export default function ColourControls({ item, update, beginGesture, beginOpacit
     setModel({ source: color, ...next });
     if (color !== item.color) update({ color });
   };
+  const pointerEvents = {
+    onPointerMove(event) {
+      if (drag.current?.pointerId !== event.pointerId) return;
+      if (!(event.buttons & 1)) finish(false); else move(event);
+    },
+    onPointerUp(event) {
+      if (drag.current?.pointerId === event.pointerId) { move(event); finish(false); }
+    },
+    onPointerCancel(event) { if (drag.current?.pointerId === event.pointerId) finish(true); },
+    onLostPointerCapture(event) { if (drag.current?.pointerId === event.pointerId) finish(true); },
+    onBlurCapture(event) { if (!event.currentTarget.contains(event.relatedTarget)) setPointerFocus(false); },
+    onKeyDownCapture(event) {
+      if (event.key === 'Escape' && drag.current) { event.preventDefault(); finish(true); }
+      if (['Tab', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'].includes(event.key)) setPointerFocus(false);
+    },
+  };
+  const hueKeyDown = event => {
+    if (item.locked || !['ArrowLeft', 'ArrowDown', 'ArrowRight', 'ArrowUp', 'Home', 'End'].includes(event.key)) return;
+    event.preventDefault(); finish(false);
+    const h = event.key === 'Home' ? 0 : event.key === 'End' ? 359
+      : hsv.h + (['ArrowLeft', 'ArrowDown'].includes(event.key) ? -1 : 1) * (event.shiftKey ? 15 : 5);
+    changeColour({ ...hsv, h });
+  };
+  const sampling = <ColourEyedropper color={item.color} disabled={item.locked} scopeKey={scopeKey} getVersion={getVersion} onChange={patch => setHex(patch.color)} />;
+  const hexField = <HexField labelPrefix={labelPrefix} value={item.color} onChange={setHex} disabled={item.locked} />;
+  const channels = [['h', 'hue', Math.round(hsv.h) % 360, 359], ['s', 'saturation', Math.round(hsl.s * 100), 100], ['l', 'lightness', Math.round(hsl.l * 100), 100]];
   return (
-    <div className="ds-colour-panel">
+    <div className="ds-colour-panel" data-variant={variant === 'inspector' ? 'inspector' : undefined}>
+      {variant === 'inspector' ? <>
+        <div className="ds-colour-field" {...pointerEvents} data-pointer-focus={pointerFocus || undefined}
+          role="group" aria-label="Colour saturation and value" aria-roledescription="two-dimensional colour selector" aria-describedby={instructions}
+          aria-disabled={item.locked} tabIndex={item.locked ? -1 : 0} style={{ '--colour-hue': hsvHex(hsv.h, 1, 1) }}
+          onPointerDown={event => start(event, 'field')} onKeyDown={event => {
+            if (item.locked || !['ArrowLeft', 'ArrowDown', 'ArrowRight', 'ArrowUp', 'Home', 'End'].includes(event.key)) return;
+            event.preventDefault(); finish(false);
+            const step = event.shiftKey ? .1 : .02;
+            changeColour({ ...hsv,
+              s: event.key === 'Home' ? 0 : clamp(hsv.s + (event.key === 'ArrowLeft' ? -step : event.key === 'ArrowRight' ? step : 0)),
+              v: event.key === 'Home' ? 1 : event.key === 'End' ? 0 : clamp(hsv.v + (event.key === 'ArrowDown' ? -step : event.key === 'ArrowUp' ? step : 0)),
+            });
+          }}>
+          <span className="ds-colour-field-marker" aria-hidden="true" style={{ '--colour-x': `${hsv.s * 100}%`, '--colour-y': `${(1 - hsv.v) * 100}%` }} />
+        </div>
+        <div className="ds-colour-hue-strip" {...pointerEvents} data-pointer-focus={pointerFocus || undefined}
+          role="slider" aria-label="Colour hue" aria-valuemin={0} aria-valuemax={359} aria-valuenow={Math.floor(hsv.h)} aria-valuetext={`${Math.round(hsv.h)} degrees`}
+          aria-disabled={item.locked} tabIndex={item.locked ? -1 : 0} onPointerDown={event => start(event, 'hue-strip')} onKeyDown={hueKeyDown}>
+          <span aria-hidden="true" style={{ '--colour-x': `${Math.min(hsv.h / 359, 1) * 100}%` }} />
+        </div>
+        <div className="ds-colour-sampling ds-colour-hex-row">{sampling}{hexField}</div>
+        <div className="ds-colour-channels" role="group" aria-label="Color values">
+          <span aria-hidden="true">H / S / L</span>
+          {channels.map(([channel, label, value, max]) => <input key={`${scopeKey}:${channel}:${value}`} type="number" min={0} max={max} step={1}
+            aria-label={`${labelPrefix} ${label}`} title={channel === 'h' ? 'Hue in degrees' : `${label[0].toUpperCase()}${label.slice(1)} in percent`}
+            defaultValue={value} disabled={item.locked} onBlur={event => {
+              const input = event.currentTarget;
+              if (!input.value || !input.validity.valid) { input.value = value; return; }
+              if (input.valueAsNumber === value) return;
+              const next = { h: hsv.h, ...hsl, [channel]: input.valueAsNumber / (channel === 'h' ? 1 : 100) };
+              changeColour(hslHsv(next.h, next.s, next.l));
+            }} onKeyDown={event => {
+              if (event.key === 'Enter') { event.preventDefault(); event.currentTarget.blur(); }
+              if (event.key === 'Escape') { event.preventDefault(); event.currentTarget.value = value; event.currentTarget.blur(); }
+            }} />)}
+        </div>
+      </> : <>
       <div className="ds-colour-sampling">
-        <ColourEyedropper color={item.color} disabled={item.locked} scopeKey={scopeKey} getVersion={getVersion} onChange={patch => setHex(patch.color)} />
+        {sampling}
         <span className="ds-colour-current" style={{ backgroundColor: item.color }} aria-hidden="true" />
       </div>
       <div className="ds-colour-wheel-row">
@@ -204,32 +280,7 @@ export default function ColourControls({ item, update, beginGesture, beginOpacit
         <svg
           viewBox="0 0 200 200"
           className="ds-colour-controls"
-          onPointerMove={(event) => {
-            if (drag.current?.pointerId !== event.pointerId) return;
-            if (!(event.buttons & 1)) {
-              finish(false);
-              return;
-            }
-            move(event);
-          }}
-          onPointerUp={(event) => {
-            if (drag.current?.pointerId === event.pointerId) {
-              move(event);
-              finish(false);
-            }
-          }}
-          onPointerCancel={(event) => {
-            if (drag.current?.pointerId === event.pointerId) finish(true);
-          }}
-          onLostPointerCapture={(event) => {
-            if (drag.current?.pointerId === event.pointerId) finish(true);
-          }}
-          onKeyDown={(event) => {
-            if (event.key === 'Escape' && drag.current) {
-              event.preventDefault();
-              finish(true);
-            }
-          }}
+          {...pointerEvents}
         >
           <circle
             className="ds-colour-hue"
@@ -248,26 +299,7 @@ export default function ColourControls({ item, update, beginGesture, beginOpacit
             aria-valuenow={Math.floor(hsv.h)}
             aria-valuetext={`${Math.round(hsv.h)} degrees`}
             onPointerDown={(event) => start(event, 'hue')}
-            onKeyDown={(event) => {
-              if (
-                item.locked ||
-                !['ArrowLeft', 'ArrowDown', 'ArrowRight', 'ArrowUp', 'Home', 'End'].includes(
-                  event.key,
-                )
-              )
-                return;
-              event.preventDefault();
-              finish(false);
-              const h =
-                event.key === 'Home'
-                  ? 0
-                  : event.key === 'End'
-                    ? 359
-                    : hsv.h +
-                      (['ArrowLeft', 'ArrowDown'].includes(event.key) ? -1 : 1) *
-                        (event.shiftKey ? 15 : 5);
-              changeColour({ ...hsv, h });
-            }}
+            onKeyDown={hueKeyDown}
           />
           <polygon
             className="ds-colour-triangle"
@@ -336,11 +368,12 @@ export default function ColourControls({ item, update, beginGesture, beginOpacit
         <span>S: <output aria-label={`${labelPrefix} saturation`}>{Math.round(hsl.s * 100)}</output></span>
         <span>L: <output aria-label={`${labelPrefix} lightness`}>{Math.round(hsl.l * 100)}</output></span>
       </div>
-      <HexField labelPrefix={labelPrefix} value={item.color} onChange={setHex} disabled={item.locked} />
+      {hexField}
       </div>
+      </>}
       <span id={instructions} className="ds-colour-instructions">
-        Drag or use arrow keys to move between white, colour and black. Shift moves faster. Home
-        selects white; End selects black. Current colour {item.color.toUpperCase()}.
+        {variant === 'inspector' ? 'Drag or use Left and Right to change saturation; Up and Down change brightness.' : 'Drag or use arrow keys to move between white, colour and black.'} Shift moves faster. Home
+        selects white; End selects black. Current colour {item.color.toUpperCase()}. Saturation {Math.round(hsv.s * 100)}%, brightness {Math.round(hsv.v * 100)}%.
       </span>
       {showOpacity && <ColourOpacity key={scopeKey} value={item.opacity} color={item.color} disabled={item.locked}
         labelPrefix={labelPrefix} update={update} beginGesture={beginOpacityGesture} />}

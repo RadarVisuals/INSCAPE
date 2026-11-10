@@ -4,13 +4,12 @@ const object = value => value && typeof value === 'object' && !Array.isArray(val
 const exact = (value, keys) => object(value) && Object.keys(value).length === keys.length && keys.every(key => Object.hasOwn(value, key));
 const id = (value, prefix) => typeof value === 'string' && new RegExp(`^${prefix}:[A-Za-z0-9_-]{1,80}$`, 'u').test(value);
 export function validPresentationReference(value, destination = false) {
-  const optional = destination ? ['destinationId'] : ['gridId', 'sideId'];
+  const optional = destination ? ['destinationId'] : ['gridId'];
   const required = destination ? ['profileAddress', 'canvasId'] : ['profileAddress', 'canvasId', 'moduleId'];
   return object(value) && exact(value, [...required, ...optional.filter(key => Object.hasOwn(value, key))])
     && /^0x[0-9a-f]{40}$/u.test(value.profileAddress) && id(value.canvasId, 'workbench')
     && (destination ? !Object.hasOwn(value, 'destinationId') || id(value.destinationId, 'workbench-view')
-      : id(value.moduleId, '(?:display|image|text)') && (!Object.hasOwn(value, 'gridId') || id(value.gridId, 'grid'))
-        && (!Object.hasOwn(value, 'sideId') || id(value.sideId, 'side')));
+      : id(value.moduleId, '(?:display|image|text)') && (!Object.hasOwn(value, 'gridId') || id(value.gridId, 'grid')));
 }
 export function validReceptionLinks(links) {
   if (!Array.isArray(links) || links.length > 32) return false;
@@ -22,7 +21,7 @@ export function validReceptionLinks(links) {
     if (link.kind === 'source') return exact(link, ['id', 'kind', 'source', 'destination']) && validPresentationReference(link.source);
     return link.kind === 'scene' && exact(link, ['id', 'kind', 'controller', 'sources', 'destination'])
       && validPresentationReference(link.controller) && link.controller.moduleId.startsWith('display:')
-      && !link.controller.gridId && !link.controller.sideId && object(link.sources)
+      && !link.controller.gridId && object(link.sources)
       && Object.keys(link.sources).length > 0 && Object.keys(link.sources).length <= 64
       && Object.entries(link.sources).every(([grid, source]) => id(grid, 'grid') && validPresentationReference(source) && !source.moduleId.startsWith('display:'));
   });
@@ -46,11 +45,11 @@ export function receptionLinkProblems(reception, snapshot) {
   const source = ref => {
     const draft = entry(ref)?.draft;
     if (!draft) return false;
-    if (displayModuleIds(draft).includes(ref.moduleId)) return !ref.sideId && (!ref.gridId || displayContent(draft, ref.moduleId).grids.some(grid => grid.id === ref.gridId));
+    if (displayModuleIds(draft).includes(ref.moduleId)) return !ref.gridId || displayContent(draft, ref.moduleId).grids.some(grid => grid.id === ref.gridId);
     const image = draft.imageModules?.find(item => item.id === ref.moduleId);
-    if (image) return !ref.gridId && (!ref.sideId || image.sides.some(side => side.id === ref.sideId));
+    if (image) return !ref.gridId && Boolean(image.artwork);
     const text = draft.texts?.find(item => item.id === ref.moduleId);
-    if (!text || ref.sideId) return false;
+    if (!text) return false;
     if (!text.sceneLink) return !ref.gridId;
     return displayModuleIds(draft).includes(text.sceneLink.displayId)
       && (!ref.gridId || displayContent(draft, text.sceneLink.displayId).grids.some(grid => grid.id === ref.gridId));

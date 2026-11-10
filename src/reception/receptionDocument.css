@@ -9,20 +9,3 @@
 .reception-document-layer .reception-image { min-height: 0; }
 .reception-document-canvas [data-selected] { outline: 1px solid var(--tactile-ink); outline-offset: -1px; }
 .reception-document-canvas [tabindex]:focus-visible { outline: 2px solid var(--tactile-ink); outline-offset: -2px; }
-.reception-document-preview { position: absolute; inset: 0; z-index: 100; display: flex; flex-direction: column; min-height: 0; color: var(--tactile-ink); background: var(--interface-environment); font: var(--workflow-type-control); pointer-events: auto; }
-.reception-document-preview > header { display: flex; align-items: center; gap: 12px; padding: 8px 12px; background: var(--tactile-face); border-bottom: 1px solid var(--tactile-edge); }
-.reception-document-preview .workflow-tactile-control { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: var(--tool-control-height, 32px); padding: 6px 8px; }
-.reception-document-preview-body { display: flex; flex: 1; min-height: 0; }
-.reception-document-preview-scroll { display: flex; flex-direction: column; flex: 1; min-width: 0; min-height: 0; overflow: auto; padding: 16px; }
-.reception-document-preview-scroll > .reception-document-viewport { margin-inline: auto; }
-.reception-document-preview-tools { flex: 0 0 240px; padding: 12px; overflow: auto; background: var(--tactile-face); border-left: 1px solid var(--tactile-edge); display: flex; flex-direction: column; gap: 12px; }
-.reception-document-preview-tools label { display: grid; gap: 6px; }
-.reception-document-preview-tools input, .reception-document-preview-tools select { min-width: 0; width: 100%; box-sizing: border-box; background: var(--tactile-well); color: inherit; border: 1px solid var(--tactile-edge); padding: 6px; font: inherit; }
-.reception-document-preview-tools p { margin: 0; color: var(--tactile-muted); line-height: 1.5; }
-.reception-document-preview-tools fieldset { display: grid; gap: 10px; margin: 0; padding: 0; border: 0; }
-.reception-document-preview-tools legend { margin-bottom: 10px; }
-.reception-document-preview-order { display: flex; gap: 4px; }
-@media (max-width: 700px) {
-  .reception-document-preview-body { flex-direction: column; }
-  .reception-document-preview-tools { flex-basis: 200px; border-left: 0; border-top: 1px solid var(--tactile-edge); }
-}

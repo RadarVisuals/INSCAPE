@@ -4,7 +4,7 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { randomUUID } from 'node:crypto';
 import test from 'node:test';
-import { createServer } from 'vite';
+import { availableBrowserTestPort, createBrowserTestServer } from '../scripts/runBrowserTests.mjs';
 import { createBrowserTestCleanup } from './browser-test-lifecycle.mjs';
 import { createPlaywrightRouteController, launchPlaywrightEdge } from './playwright-browser-adapter.mjs';
 import { FEATURED_WORLD_PROFILE_ADDRESS as featured } from '../src/startveil/featuredWorld.js';
@@ -20,7 +20,7 @@ test('automatic startup and the editorial landing world through the real App', {
   const problems = [];
   let testError;
   try {
-    resources.vite = await createServer({ root, logLevel: 'error', server: { host: '127.0.0.1', port: 0 } });
+    resources.vite = await createBrowserTestServer(root, await availableBrowserTestPort(), { logLevel: 'error', cacheDir: resolve(runtimePath, 'vite-cache') });
     await resources.vite.listen();
     const origin = `http://127.0.0.1:${resources.vite.httpServer.address().port}`;
     let edgePath;

@@ -1,9 +1,11 @@
+import { setBentoCellCount } from './fixtures/bento-layout.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdir } from 'node:fs/promises';
 import { chromium } from 'playwright-core';
 import { browserExecutable } from '../scripts/browserEnvironment.mjs';
 import { editorMenu, editorCommand, setEditorSidebarOpen } from './fixtures/editor-menu.mjs';
+import { openSharedTool } from './fixtures/shared-tools.mjs';
 
 const origin = process.env.INSCAPE_TEST_ROOT || 'http://127.0.0.1:5217';
 const output = process.env.INSCAPE_SCREENSHOT_DIR || '.browser-test-runtime/reception-cell-interaction';
@@ -68,7 +70,7 @@ test('image-covered cells enter on double-click and expose the owning cell setti
       const { createProfileDocumentV9AssetResolver } = await import('/src/profileDocument/domain/profileDocumentV9Asset.js');
       const asset = createProfileDocumentV9AssetResolver(assets)(assets[0].id), frame = value.workbench.shapes.find(item => item.id === id).window;
       value.imageModules = [{ id: 'image:covered-cell', name: 'Cover', width: Math.round(frame.width), height: Math.round(frame.height), visibility: 'PUBLIC',
-        sides: [{ id: 'side:cover', asset, crop: null, transform: { quarterTurns: 0, mirrorX: false, mirrorY: false } }] }];
+        artwork: { id: 'artwork:cover', asset, crop: null, transform: { quarterTurns: 0, mirrorX: false, mirrorY: false } } }];
       value.workbench.imageModules = [{ id: 'image:covered-cell', open: true, position: { left: frame.left, top: frame.top } }];
       value.cells[0].members = ['image:covered-cell']; value.artworkLayers = [id, 'image:covered-cell'];
       if (!root.commitCompletedOperation(draft, { expectedGeneration: root.getGeneration() })) throw Error('Invalid image-covered cell sample');
@@ -80,26 +82,28 @@ test('image-covered cells enter on double-click and expose the owning cell setti
     await page.mouse.click(540, 420, { button: 'right' });
     await page.getByRole('menuitem', { name: 'Bento settings', exact: true }).click();
     await page.getByRole('dialog', { name: 'Bento settings', exact: true }).waitFor();
-    await page.getByLabel('Selected cell radius (px)', { exact: true }).waitFor();
+    await page.getByRole('button', { name: 'Close Bento', exact: true }).click();
+    const inspector = await openSharedTool(page, 'Inspector');
+    await inspector.getByRole('tab', { name: 'Cell', exact: true }).click();
+    await inspector.getByLabel('Cell corner radius (px)', { exact: true }).waitFor();
     assert.deepEqual(errors, []);
   } finally { await browser.close(); }
 });
 
-test('Bento settings reuses split and merge actions and saves selected-cell styling', async () => {
+test('Cell Inspector reuses split and merge actions and saves selected-cell styling', async () => {
   const { browser, page, errors } = await setup();
   try {
     const first = await cell(page);
-    await page.mouse.click(540, 420, { button: 'right' });
-    await page.getByRole('menuitem', { name: 'Bento settings', exact: true }).click();
-    const panel = page.getByRole('dialog', { name: 'Bento settings', exact: true });
-    await panel.getByLabel('Selected cell radius (px)', { exact: true }).fill('32');
-    await panel.getByRole('button', { name: 'Apply cell radius', exact: true }).click();
-    await panel.getByText('Split or merge this cell', { exact: true }).click();
-    await panel.getByRole('button', { name: 'Split vertically', exact: true }).click();
+    const panel = await openSharedTool(page, 'Inspector');
+    await panel.getByRole('tab', { name: 'Cell', exact: true }).click();
+    const radius = panel.getByLabel('Cell corner radius (px)', { exact: true });
+    await radius.fill('32'); await radius.press('Enter');
+    await panel.getByRole('button', { name: 'Split cell', exact: true }).click();
+    await page.getByRole('listbox', { name: 'Split cell', exact: true }).getByRole('option', { name: 'Vertical', exact: true }).click();
     assert.equal((await reception(page)).cells.length, 2);
     assert.equal((await reception(page)).cells[0].id, first);
-    await panel.getByText('Split or merge this cell', { exact: true }).click();
-    await panel.getByRole('button', { name: 'Merge right', exact: true }).click();
+    await panel.getByRole('button', { name: 'Merge cell', exact: true }).click();
+    await page.getByRole('listbox', { name: 'Merge cell', exact: true }).getByRole('option', { name: 'Right', exact: true }).click();
     assert.equal((await reception(page)).cells.length, 1);
     assert.equal((await reception(page)).cells[0].radius, 32);
     await mkdir(output, { recursive: true });
@@ -113,7 +117,7 @@ for (const width of [1440, 900]) test(`Merge below aligns unequal rows with artw
   const surface = id => page.locator(`[data-editor-cell-surface="${id}"]`);
   const closeTools = async () => {
     const close = page.locator('.workbench-tool-dock').getByRole('button', { name: /^Close /u });
-    if (await close.isVisible()) await close.click();
+    while (await close.count()) await close.first().click();
   };
   try {
     if (width === 900) {
@@ -123,7 +127,7 @@ for (const width of [1440, 900]) test(`Merge below aligns unequal rows with artw
     await editorMenu(page, 'Bento').click();
     const panel = page.getByRole('dialog', { name: 'Bento settings', exact: true });
     await panel.getByRole('button', { name: 'New layout', exact: true }).click();
-    await panel.getByLabel('Number of cells', { exact: true }).fill('6');
+    await setBentoCellCount(panel, 6);
     await panel.getByRole('button', { name: /^(Create Bento|Replace layout)$/u }).click();
     await panel.getByRole('button', { name: 'Close Bento', exact: true }).click();
     await setEditorSidebarOpen(page, false); await closeTools();
@@ -150,8 +154,19 @@ for (const width of [1440, 900]) test(`Merge below aligns unequal rows with artw
     await back(page).click(); await closeTools();
     const before = await reception(page);
     if (width === 1440) { await surface(ids[0]).focus(); await page.keyboard.press('Shift+F10'); }
-    else await surface(ids[0]).click({ button: 'right' });
-    const merge = page.getByRole('menuitem', { name: 'Merge below', exact: true });
+    else {
+      const position = await surface(ids[0]).evaluate(node => {
+        const rect = node.getBoundingClientRect();
+        for (const x of [.25, .75]) for (const y of [.25, .75]) {
+          if (node.contains(document.elementFromPoint(rect.left + rect.width * x, rect.top + rect.height * y)))
+            return { x: rect.width * x, y: rect.height * y };
+        }
+        throw Error('Cell has no exposed context-menu point');
+      });
+      await surface(ids[0]).click({ button: 'right', position });
+    }
+    await page.getByRole('menuitem', { name: 'Merge cell', exact: true }).click();
+    const merge = page.getByRole('menuitem', { name: 'Below', exact: true });
     assert.ok(await merge.isEnabled());
     await mkdir(output, { recursive: true });
     await page.screenshot({ path: `${output}/unequal-merge-menu-${width}.png` });

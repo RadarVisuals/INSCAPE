@@ -24,7 +24,7 @@ test('filled Workbench retargets tools and reserves camera/popup space through v
       }));
       const { OWNER_SYSTEM_WORKFLOW_REVIEW_ASSETS: assets } = await import('/src/public/ownerSystemWorkflow/ownerSystemWorkflowDevelopmentFixture.js');
       const { buildProfileDocumentV9Asset } = await import('/src/profileDocument/domain/profileDocumentV9Asset.js');
-      draft.imageModules[0].sides = [{ id: 'side:activation', asset: buildProfileDocumentV9Asset(assets[0], assets[0].id), crop: null, transform: { quarterTurns: 0, mirrorX: false, mirrorY: false } }];
+      draft.imageModules[0].artwork = { id: 'artwork:activation', asset: buildProfileDocumentV9Asset(assets[0], assets[0].id), crop: null, transform: { quarterTurns: 0, mirrorX: false, mirrorY: false } };
       const { systemWorkflowDraftKey } = await import('/src/systemWorkflow/systemWorkflowDraftStore.js');
       localStorage.setItem(systemWorkflowDraftKey(draft.profileAddress), JSON.stringify(draft));
     });
@@ -54,7 +54,7 @@ test('filled Workbench retargets tools and reserves camera/popup space through v
         assert.equal(await page.locator('.workbench-view-controls').count(), 0);
         if (target === 'image') {
           await openSharedTool(page, 'Image');
-          assert.equal(await page.getByRole('group', { name: 'Selection tools', exact: true }).getByRole('button', { name: 'Rotate', exact: true }).isVisible(), true);
+          assert.equal(await page.getByRole('group', { name: 'Image transforms', exact: true }).getByRole('button', { name: 'Rotate', exact: true }).isVisible(), true);
           await editorCommand(page, 'Edit', 'Search commands');
           const search = page.getByRole('textbox', { name: 'Search commands' });
           await search.waitFor();

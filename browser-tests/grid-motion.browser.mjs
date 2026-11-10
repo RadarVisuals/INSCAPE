@@ -28,8 +28,6 @@ test('populated owner and Visitor scenes move without per-frame React commits', 
       await stage.waitFor();
       if (!visitor) await page.getByRole('button', { name: 'Lock Display Module composition', exact: true }).press('Enter');
       const companion = page.locator('[data-image-module="image:motion-0"]');
-      await companion.getByRole('button', { name: 'Next Image side' }).press('Enter');
-      await page.waitForFunction(() => document.querySelector('[data-image-module="image:motion-0"] .image-module__canvas')?.dataset.sideId === 'side:motion-1');
       assert.ok((await stage.boundingBox()).width > 200, 'measure a laid-out artwork Stage');
       await page.waitForTimeout(1800);
       await page.waitForFunction(expected => {
@@ -203,7 +201,7 @@ test('populated owner and Visitor scenes move without per-frame React commits', 
         }
       }
       assert.equal(await page.evaluate(() => localStorage.getItem(window.__motionKey) === window.__motionSaved), true);
-      assert.equal(await companion.locator('.image-module__canvas').getAttribute('data-side-id'), 'side:motion-1',
+      assert.equal(await companion.locator('.image-module__canvas').getAttribute('data-image-artwork-id'), 'artwork:motion-0',
         'Grid navigation preserves independent Image reading state');
       assert.deepEqual(errors, []);
       await page.close();

@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { editorDestination } from './fixtures/editor-menu.mjs';
 import test from 'node:test';
 import { chromium } from 'playwright-core';
 import { mountTextToolsFixture } from './fixtures/text-tools-fixture.mjs';
@@ -22,7 +23,7 @@ for (const width of [1440, 390]) test(`Library retains its live state while hidd
     await search.fill('ABYSSAL');
     assert.ok(await library.locator('.lattice-browser-asset').count() > 0);
     await search.evaluate(node => { window.retainedLibrarySearch = node; });
-    await library.getByRole('button', { name: 'Close workspace' }).click();
+    await page.getByRole('button', { name: 'Close Library', exact: true }).click();
     await library.waitFor({ state: 'hidden' }); await settle(page);
     assert.equal(await page.getByRole('searchbox', { name: 'Search', exact: true }).count(), 0,
       'closed Library controls leave the accessibility tree');
@@ -31,7 +32,7 @@ for (const width of [1440, 390]) test(`Library retains its live state while hidd
       search.focus();
       return search.isConnected && document.activeElement !== search;
     }), true, 'the retained field stays mounted but cannot take keyboard focus');
-    assert.equal(await trigger.evaluate(node => node === document.activeElement), true);
+    assert.equal(await page.locator('[data-tool-tab="Layers"]').evaluate(node => node === document.activeElement), true, 'closing the Library tab returns focus to the remaining Layers tab');
     await trigger.click(); await library.waitFor();
     assert.equal(await search.evaluate(node => node === window.retainedLibrarySearch), true, 'reopening retains the same live input');
     assert.equal(await search.inputValue(), 'ABYSSAL');
@@ -46,11 +47,11 @@ for (const width of [1440, 390]) test(`Library retains its live state while hidd
       assert.equal(await filters.locator('.system-workflow__filter-options').evaluate(node => getComputedStyle(node).overflowY), 'auto');
     }
     await page.keyboard.press('Escape'); await filters.waitFor({ state: 'hidden' });
-    await library.getByRole('button', { name: 'Close workspace' }).click(); await library.waitFor({ state: 'hidden' });
+    await page.getByRole('button', { name: 'Close Library', exact: true }).click(); await library.waitFor({ state: 'hidden' });
     await page.getByRole('button', { name: 'Publish', exact: true }).click();
     const publication = page.getByRole('complementary', { name: 'Publish profile' }); await publication.waitFor();
     assert.equal(await page.locator('main.system-workflow').evaluate(node => node.inert), false, 'Publish keeps the workspace interactive');
-    await page.getByRole('button', { name: 'Library', exact: true }).click(); await library.waitFor(); await publication.waitFor({ state: 'hidden' });
+    await editorDestination(page, 'Library'); await library.waitFor(); await publication.waitFor({ state: 'hidden' });
     assert.deepEqual(await page.evaluate(() => window.savedDraft()), before, 'browsing never writes the composition');
     assert.deepEqual(errors, []);
   } finally { await browser.close(); }

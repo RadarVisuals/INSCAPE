@@ -41,7 +41,7 @@ test('Image geometry-only history reaches a memoized module without replacing ar
   } finally { await browser.close(); }
 });
 
-test('Image menu duplicates the viewed cropped side and all other sides, recovers from failed save, and respects Visitor access', { timeout: 60000 }, async () => {
+test('Image menu duplicates the cropped artwork, recovers from failed save, and respects Visitor access', { timeout: 60000 }, async () => {
   const browser = await chromium.launch({ executablePath: process.env.INSCAPE_BROWSER_EXECUTABLE || 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', headless: true });
   try {
     await mkdir(process.env.INSCAPE_BROWSER_OUTPUT || '.browser-test-runtime', { recursive: true });
@@ -57,24 +57,22 @@ test('Image menu duplicates the viewed cropped side and all other sides, recover
       refresh.injectIntoGlobalHook(window); window.$RefreshReg$ = () => {}; window.$RefreshSig$ = () => type => type; window.__vite_plugin_react_preamble_installed__ = true;
       (await import('/browser-tests/image-fit-fixture.jsx')).mount();
     });
-    const tools = page.locator('.workbench-image-tools');
+    const tools = page.locator('.workbench-image-inspector');
     await page.locator('[data-image-module="image:one"] .image-module__canvas').waitFor();
     await page.evaluate(async () => {
       const { buildProfileDocumentV9Asset } = await import('/src/profileDocument/domain/profileDocumentV9Asset.js');
       const { OWNER_SYSTEM_WORKFLOW_REVIEW_ASSETS: assets } = await import('/src/public/ownerSystemWorkflow/ownerSystemWorkflowDevelopmentFixture.js');
       const store = imageFitFixture.store, draft = store.getDraft();
       const source = draft.imageModules[0];
-      const side = { ...source.sides[0], asset: buildProfileDocumentV9Asset(assets[0], assets[0].id), crop: null };
+      const side = { ...source.artwork, asset: buildProfileDocumentV9Asset(assets[0], assets[0].id), crop: { x: .4, y: .5, zoom: 2 } };
       draft.imageModules = [{ ...source, name: 'Cropped creature', width: 1032, height: 264,
-        sides: [side, { ...structuredClone(side), id: 'side:cropped', crop: { x: .4, y: .65, zoom: 1.4 }, transform: { quarterTurns: 2, mirrorX: true, mirrorY: false } }] }];
+        artwork: side }];
       draft.workbench.imageModules = [{ id: source.id, open: true, position: { left: 24, top: 130 } }];
       store.commitCompletedOperation(draft, { expectedGeneration: store.getGeneration() });
     });
     await settle(page);
     const original = page.locator('[data-image-module="image:one"]');
     await original.locator('.image-module__canvas').focus();
-    await original.getByRole('button', { name: 'Next Image side' }).click();
-    await page.waitForFunction(() => document.querySelector('[data-image-module="image:one"] .image-module__canvas').dataset.sideId === 'side:cropped');
     const before = await page.evaluate(() => imageFitFixture.store.getDraft());
     await page.evaluate(() => { imageFitFixture.failSave = true; });
     await artworkCommand(page, 'image:one', 'Duplicate');
@@ -88,13 +86,13 @@ test('Image menu duplicates the viewed cropped side and all other sides, recover
     const copyRecord = after.imageModules[1], copy = page.locator(`[data-image-module="${copyRecord.id}"]`);
     await settle(page);
     assert.deepEqual(after.imageModules[0], before.imageModules[0]);
-    assert.deepEqual(copyRecord.sides.map(({ id, ...side }) => side), before.imageModules[0].sides.map(({ id, ...side }) => side));
+    assert.deepEqual({ ...copyRecord.artwork, id: before.imageModules[0].artwork.id }, before.imageModules[0].artwork);
     assert.equal(copyRecord.width, 1032); assert.equal(copyRecord.height, 264);
-    assert.equal(await copy.locator('.image-module__canvas').getAttribute('data-side-id'), copyRecord.sides[1].id);
+    assert.equal(await copy.locator('.image-module__canvas').getAttribute('data-image-artwork-id'), copyRecord.artwork.id);
     assert.equal(await copy.locator('.image-module__canvas').evaluate(node => node === document.activeElement), true);
     const copyActions = tools;
     await copyActions.waitFor();
-    assert.equal(await copyActions.getAttribute('data-workbench-inspection-target'), copyRecord.id, 'tools follow the viewed side of the selected copy');
+    assert.equal(await copyActions.getAttribute('data-workbench-inspection-target'), copyRecord.id, 'tools follow the selected copy');
     const geometry = module => module.locator('.image-module__artwork').evaluate(node => ({
       viewBox: node.getAttribute('viewBox'), image: node.querySelector('image')?.outerHTML,
       transform: [...node.querySelectorAll('[transform]')].map(element => element.getAttribute('transform')),
@@ -103,7 +101,7 @@ test('Image menu duplicates the viewed cropped side and all other sides, recover
     await page.screenshot({ path: `${process.env.INSCAPE_BROWSER_OUTPUT || '.browser-test-runtime'}/image-duplicate-wide.png` });
     await tools.getByRole('button', { name: 'Fit inside', exact: true }).click();
     const edited = await page.evaluate(() => imageFitFixture.store.getDraft());
-    assert.equal(edited.imageModules[1].sides[1].crop, null);
+    assert.equal(edited.imageModules[1].artwork.crop, null);
     assert.deepEqual(edited.imageModules[0], before.imageModules[0]);
     await page.evaluate(() => { imageFitFixture.store.undo(); imageFitFixture.store.undo(); });
     await settle(page); assert.equal(await page.locator('[data-image-module]').count(), 1);

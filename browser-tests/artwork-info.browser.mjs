@@ -5,10 +5,10 @@ import { mkdir } from 'node:fs/promises';
 import { chromium } from 'playwright-core';
 import { browserExecutable } from '../scripts/browserEnvironment.mjs';
 import { openDisplayTool, activate } from './fixtures/display-controls.mjs';
+import { sharedToolTab as tab, sharedToolPanel, openSharedTool, closeSharedTool } from './fixtures/shared-tools.mjs';
 const origin = process.env.INSCAPE_TEXT_ROOT || 'http://127.0.0.1:24970';
 const output = process.env.INSCAPE_BROWSER_OUTPUT || '.browser-test-runtime/artwork-info';
-const tab = (page, name) => page.getByRole('tab', { name, exact: true });
-const toolbar = page => page.locator('[data-workbench-toolbar]').getByRole('button', { name: 'Artwork info', exact: true });
+const toolbar = page => page.locator('.editor-object-toolbar:visible').getByRole('button', { name: 'Artwork info', exact: true });
 const info = page => page.getByRole('article', { name: 'Artwork metadata', exact: true });
 const saved = page => page.evaluate(() => window.readToolChromeDraft());
 async function mount(browser, theme = 'light', width = 1440, height = 900) {
@@ -24,25 +24,34 @@ async function mount(browser, theme = 'light', width = 1440, height = 900) {
   await page.goto(`${origin}/browser-tests/tool-chrome-fixture.html?sample=navigator&theme=${theme}`);
   await editorMenu(page, 'Canvas').waitFor();
   await setEditorSidebarOpen(page, false);
-  if (!await tab(page, 'Layers').count()) await page.locator('[data-workbench-toolbar]').getByRole('button', { name: 'Layers', exact: true }).click();
-  await tab(page, 'Layers').click();
+  await openSharedTool(page, 'Layers');
   await page.locator('[data-layer-id^="image:"] .workbench-layer-name').click();
   // Floating tools can overlap the toolbar; close Layers before opening Info on a short, narrow screen.
   if (width < 600) await page.getByRole('button', { name: 'Close Workbench Layers', exact: true }).click();
   await toolbar(page).click(); await info(page).waitFor();
   return { page, errors };
 }
-test('Image info follows visible sides, detaches and rejoins without editing content or history', { timeout: 90000 }, async () => {
+test('Image info follows the selected artwork, detaches and rejoins without editing content or history', { timeout: 90000 }, async () => {
   const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
   try {
     const { page, errors } = await mount(browser);
-    const before = await saved(page), sides = before.imageModules[0].sides;
-    await info(page).getByRole('heading', { name: sides[0].asset.name, exact: true }).waitFor();
-    assert.ok((await info(page).innerText()).includes(sides[0].asset.description));
+    const before = await saved(page), artwork = before.imageModules[0].artwork;
+    await info(page).getByRole('heading', { name: artwork.asset.name, exact: true }).waitFor();
+    assert.ok((await info(page).innerText()).includes(artwork.asset.description));
+    const infoSection = sharedToolPanel(page).locator('[data-inspector-section="Info"]');
+    await infoSection.locator(':scope > summary').click();
+    await page.locator('[data-shared-tool="metadata"]').waitFor({ state: 'detached' });
+    assert.equal(await info(page).count(), 0, 'collapsed Info has no metadata content or identity consumers');
+    assert.equal(await tab(page, 'Inspector').isVisible(), true, 'collapsing Info leaves the Inspector available');
+    await openSharedTool(page, 'Info'); await info(page).waitFor();
     await info(page).getByText('Source details', { exact: true }).click();
-    assert.ok((await info(page).innerText()).includes(sides[0].asset.contractAddress));
+    assert.ok((await info(page).innerText()).includes(artwork.asset.contractAddress));
+    // The Inspector starts in its own host. Join first so detaching exercises a real transition.
+    await tab(page, 'Inspector').press('Shift+F10');
+    await page.getByRole('menuitem', { name: /^Dock with Layers/ }).click();
+    assert.equal(await page.locator('.workbench-tool-dock').count(), 1);
     await tab(page, 'Info').press('Shift+F10');
-    await page.getByRole('menuitem', { name: 'Detach Info', exact: true }).press('Enter');
+    await page.getByRole('menuitem', { name: 'Detach Inspector', exact: true }).press('Enter');
     assert.equal(await page.locator('.workbench-tool-dock').count(), 2);
     assert.equal(await info(page).count(), 1);
     assert.equal(await info(page).locator('details').getAttribute('open'), '');
@@ -50,19 +59,15 @@ test('Image info follows visible sides, detaches and rejoins without editing con
     await page.getByRole('menuitem', { name: /^Dock with Layers/ }).click();
     assert.equal(await page.locator('.workbench-tool-dock').count(), 1);
     assert.equal(await info(page).locator('details').getAttribute('open'), '');
-    const next = page.getByRole('button', { name: 'Next Image side', exact: true });
-    await activate(page, next);
-    await info(page).getByRole('heading', { name: sides[1].asset.name, exact: true }).waitFor();
-    assert.ok(!(await info(page).innerText()).includes(sides[0].asset.name));
-    await page.getByRole('button', { name: 'Close Info', exact: true }).click();
+    await closeSharedTool(page, 'Inspector');
     assert.equal(await info(page).count(), 0);
     await toolbar(page).click();
-    await info(page).getByRole('heading', { name: sides[1].asset.name, exact: true }).waitFor();
+    await info(page).getByRole('heading', { name: artwork.asset.name, exact: true }).waitFor();
     await tab(page, 'Layers').click();
     await page.locator('[data-layer-id^="shape:"] .workbench-layer-name').click();
-    assert.equal(await toolbar(page).isDisabled(), true);
+    assert.equal(await toolbar(page).isEnabled(), true);
     await tab(page, 'Info').click();
-    await page.getByText('Select one artwork with source information.', { exact: true }).waitFor();
+    await page.getByRole('article', { name: 'Shape information' }).waitFor();
     assert.equal(await info(page).count(), 0);
     await tab(page, 'Layers').click();
     await page.locator('[data-layer-id^="image:"] .workbench-layer-name').click({ modifiers: ['Control'] });
@@ -87,7 +92,7 @@ for (const theme of ['dark', 'light']) for (const [width, height] of [[1440, 900
     await info(page).getByText('Source details', { exact: true }).click();
     const source = info(page).getByRole('link', { name: 'View asset source', exact: true });
     await source.scrollIntoViewIfNeeded();
-    const dock = page.locator('.workbench-tool-dock').filter({ has: tab(page, 'Info') });
+    const dock = sharedToolPanel(page);
     const frame = await dock.boundingBox(), link = await source.boundingBox();
     assert.ok(frame.x >= 0 && frame.x + frame.width <= width + 1);
     assert.ok(frame.y >= 0 && frame.y + frame.height <= height + 1);
@@ -98,10 +103,10 @@ for (const theme of ['dark', 'light']) for (const [width, height] of [[1440, 900
     await info(page).locator('summary').press('Tab'); await page.keyboard.press('Shift+Tab');
     assert.notEqual(await info(page).locator('summary').evaluate(node => getComputedStyle(node).outlineStyle), 'none');
     await tab(page, 'Info').click();
-    await dock.locator('.workbench-tools-body').evaluate(node => { node.scrollTop = 0; });
+    await dock.locator('.workbench-inspector').evaluate(node => { node.scrollTop = 0; });
     await info(page).getByRole('heading').first().click();
     await page.screenshot({ path: `${output}/${theme}-${width}.png` });
-    await page.getByRole('button', { name: 'Close Info', exact: true }).click();
+    await closeSharedTool(page, 'Inspector');
     if (width < 600) {
       assert.equal(await page.getByRole('button', { name: 'Keeper settings', exact: true }).evaluate(node => {
         const r = node.getBoundingClientRect(); return node.contains(document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2));
@@ -123,20 +128,20 @@ test('reference Info shares the artwork presentation and follows selection in bo
       for (const theme of ['dark', 'light']) {
         await page.getByRole('group', { name: 'Interface appearance', exact: true }).getByRole('button', { name: theme.toUpperCase(), exact: true }).click();
         await studio.getByLabel('Workspace selection').selectOption('image');
-        await studio.getByRole('button', { name: 'Artwork info', exact: true }).click();
+        await studio.getByRole('tab', { name: 'Info', exact: true }).click();
         await studio.getByRole('article', { name: 'Artwork metadata', exact: true }).waitFor();
         assert.equal(await studio.locator('.ds-studio-auxiliary').count(), 0);
         await studio.screenshot({ path: `${output}/reference-${theme}-${width}.png` });
         await studio.getByLabel('Workspace selection').selectOption('shape');
         await studio.getByText('Select one artwork with source information.', { exact: true }).waitFor();
-        assert.equal(await studio.getByRole('button', { name: 'Artwork info', exact: true }).isDisabled(), true);
+        assert.equal(await studio.getByRole('article', { name: 'Artwork metadata', exact: true }).count(), 0);
       }
       assert.deepEqual(errors, []);
       await page.close();
     }
   } finally { await browser.close(); }
 });
-test('Display metadata routes to the same Info tab with no duplicate owner window', { timeout: 60000 }, async () => {
+test('Display metadata uses the Inspector Info section without an artwork record or duplicate owner window', { timeout: 60000 }, async () => {
   const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
   try {
     const { page, errors } = await mount(browser);
@@ -150,6 +155,15 @@ test('Display metadata routes to the same Info tab with no duplicate owner windo
     assert.equal(await page.locator('[data-shared-tool="metadata"]').count(), 1);
     assert.equal(await page.locator('[data-shared-display-tools] aside').count(), 0);
     assert.equal(await board.getAttribute('data-inspecting'), null);
+    await sharedToolPanel(page).locator('[data-inspector-section="Info"] > summary').click();
+    await page.locator('[data-shared-tool="metadata"]').waitFor({ state: 'detached' });
+    assert.equal(await board.getByRole('button', { name: /^Read metadata for / }).count(), 0,
+      'collapsed Info does not enable Display metadata picking just because Inspector is visible');
+    assert.equal(await tab(page, 'Inspector').isVisible(), true);
+    await openDisplayTool(page, board, 'METADATA');
+    await info(page).waitFor();
+    assert.equal(await sharedToolPanel(page).locator('[data-inspector-section="Info"]').evaluate(node => node.open), true);
+    assert.equal(await page.locator('[data-shared-tool="metadata"]').count(), 1);
     assert.deepEqual(await saved(page), before);
     assert.deepEqual(errors, []);
   } finally { await browser.close(); }

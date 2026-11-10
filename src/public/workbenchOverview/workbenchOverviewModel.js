@@ -38,7 +38,7 @@ export function workbenchOverviewModel(draft, assets = new Map(), scenes = {}) {
   for (const [index, record] of (draft.imageModules || []).entries()) {
     const layout = presentation.imageModules?.find(item => item.id === record.id) || createImagePresentation(record.id, index);
     artwork.set(record.id, add(record.id, { ...layout, window: { ...layout.position, width: record.width, height: record.height } },
-      { kind: 'image', record, side: record.sides[0], crop: record.sides[0]?.crop }));
+      { kind: 'image', record, artwork: record.artwork, crop: record.artwork?.crop }));
   }
   for (const [index, record] of (draft.texts || []).entries()) {
     const layout = presentation.texts?.find(item => item.id === record.id) || createTextPresentation(record.id, index);

@@ -46,7 +46,7 @@ test('saved zero/max rounded image cells clip transparent SVG beneath long navig
     for (const radius of [0, 160]) {
       await page.evaluate(radius => {
         const { root } = window.receptionFixture, draft = root.getDraft(), value = draft.reception, image = value.imageModules[0];
-        image.sides[0].asset.media = { ...image.sides[0].asset.media, url: 'https://reception.test/transparent.svg', width: 600, height: 600 };
+        image.artwork.asset.media = { ...image.artwork.asset.media, url: 'https://reception.test/transparent.svg', width: 600, height: 600 };
         value.regions = [{ ...value.regions[0], x: 0, y: 0, width: 10000, height: 10000, padding: 0, content: image.id, surface: '#45534b' }];
         value.mobile = [{ id: value.regions[0].id, height: 600, columns: 2 }];
         value.branding.name = 'Long authored studio name with many characters'; value.radius = radius;
@@ -71,7 +71,7 @@ test('saved SVG zoom below fill keeps its native viewport and centered margins',
     await page.route('https://reception.test/framing.svg', route => route.fulfill({ contentType: 'image/svg+xml',
       body: '<svg xmlns="http://www.w3.org/2000/svg" width="600" height="400" viewBox="0 0 600 400"><rect width="600" height="400" fill="gold"/><circle cx="300" cy="200" r="160" fill="teal"/></svg>' }));
     await page.evaluate(() => {
-      const { root } = window.receptionFixture, draft = root.getDraft(), side = draft.reception.imageModules[0].sides[0];
+      const { root } = window.receptionFixture, draft = root.getDraft(), side = draft.reception.imageModules[0].artwork;
       side.asset.media = { ...side.asset.media, url: 'https://reception.test/framing.svg', width: 600, height: 400 }; side.crop = { x: .5, y: .5, zoom: .25 };
       if (!root.commitCompletedOperation(draft, { expectedGeneration: root.getGeneration() })) throw Error('Invalid SVG crop');
     });
@@ -100,7 +100,7 @@ test('saved raster and SVG expose artwork identity and keyboard-accessible recov
     await page.route('https://reception.test/named.svg', route => route.fulfill({ contentType: 'image/svg+xml',
       body: '<svg xmlns="http://www.w3.org/2000/svg" width="600" height="600" viewBox="0 0 600 600"><circle cx="300" cy="300" r="200" fill="gold"/></svg>' }));
     await page.evaluate(() => {
-      const { root } = window.receptionFixture, draft = root.getDraft(), side = draft.reception.imageModules[0].sides[0];
+      const { root } = window.receptionFixture, draft = root.getDraft(), side = draft.reception.imageModules[0].artwork;
       side.asset.media = { ...side.asset.media, url: 'https://reception.test/named.svg', width: 600, height: 600 };
       if (!root.commitCompletedOperation(draft, { expectedGeneration: root.getGeneration() })) throw Error('Invalid named SVG');
     });
@@ -108,7 +108,7 @@ test('saved raster and SVG expose artwork identity and keyboard-accessible recov
     assert.match(await artwork.ariaSnapshot(), /img "SKULL REAPER"/);
     await page.route('https://reception.test/missing.webp', route => route.abort());
     await page.evaluate(() => {
-      const { root } = window.receptionFixture, draft = root.getDraft(); draft.reception.imageModules[0].sides[0].asset.media.url = 'https://reception.test/missing.webp';
+      const { root } = window.receptionFixture, draft = root.getDraft(); draft.reception.imageModules[0].artwork.asset.media.url = 'https://reception.test/missing.webp';
       if (!root.commitCompletedOperation(draft, { expectedGeneration: root.getGeneration() })) throw Error('Invalid recovery sample');
     });
     const retry = page.getByRole('button', { name: 'Retry artwork', exact: true }); await retry.waitFor();

@@ -1,4 +1,5 @@
 import test from 'node:test';
+import { artworkHeader } from './fixtures/artwork-menu.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { chromium } from 'playwright-core';
@@ -15,7 +16,7 @@ for (const width of [1440, 390]) test(`Shape corners stay free after first resiz
     page.setDefaultTimeout(8000);
     const errors = [], evidence = []; page.on('pageerror', error => errors.push(error.message));
     await mountTextToolsFixture(page, origin);
-    await page.getByRole('button', { name: 'Close Text tools', exact: true }).click();
+    await page.getByRole('button', { name: 'Close Inspector', exact: true }).click();
     await page.locator('.text-window').getByRole('button', { name: /^Close / }).press('Enter');
     const collapse = page.locator('.editor-menu-brand[aria-expanded="true"]');
     if (await collapse.count()) await collapse.click();
@@ -23,7 +24,7 @@ for (const width of [1440, 390]) test(`Shape corners stay free after first resiz
     await page.mouse.click(width === 390 ? 96 : 560, width === 390 ? 160 : 240, { button: 'right' });
     await page.getByRole('menuitem', { name: 'ADD', exact: true }).hover();
     await page.getByRole('menuitem', { name: 'SHAPE', exact: true }).click();
-    const shape = page.locator('.shape-window'); await shape.waitFor();
+    const shape = page.locator('aside.shape-window'); await shape.waitFor();
     const id = await shape.getAttribute('data-workbench-view-id');
     const saved = () => page.evaluate(id => window.savedDraft().workbench.shapes.find(s => s.id === id).window, id);
     const drag = async (edge, dx, dy, selected) => {
@@ -59,7 +60,7 @@ for (const width of [1440, 390]) test(`Shape corners stay free after first resiz
       return after;
     };
     const closeToolPanels = async () => {
-      for (const name of ['Close Shape', 'Close Transform', 'Close Color', 'Close Info']) {
+      for (const name of ['Close Inspector']) {
         const close = page.getByRole('button', { name, exact: true });
         if (await close.count()) await close.press('Enter');
       }
@@ -68,13 +69,13 @@ for (const width of [1440, 390]) test(`Shape corners stay free after first resiz
     await closeToolPanels();
     await drag('se', 12, 0, false);
     // Solo handles stay module-owned. Request group handles explicitly.
-    await shape.locator('header').focus(); await page.keyboard.press('Shift+Enter'); await settle(page);
+    await artworkHeader(page, id).focus(); await settle(page); await page.keyboard.press('Shift+Enter'); await settle(page);
     await page.locator('.workbench-selection').waitFor();
     await drag('se', 0, 12, true);
     // Repeated use and selection changes must never switch back to ratio locking.
     for (const edge of ['nw', 'ne', 'sw', 'se']) {
       await page.locator('main.system-workflow').focus(); await page.keyboard.press('Escape');
-      await shape.locator('header').focus(); await page.keyboard.press('Shift+Enter');
+      await artworkHeader(page, id).focus(); await settle(page); await page.keyboard.press('Shift+Enter');
       await settle(page);
       await drag(edge, edge.includes('w') ? -8 : 8, 0, true);
       await drag(edge, 0, edge.includes('n') ? 8 : -8, true);
@@ -95,11 +96,11 @@ for (const width of [1440, 390]) test(`Shape corners stay free after first resiz
       return addShape(store, profileAddress, { kind: 'grid', position: { left: 48, top: 240 }, size: { width: 192, height: 144 } });
     });
     await mountTextToolsFixture(page, origin, { waitForText: false });
-    const grid = page.locator(`[data-workbench-view-id="${gridId}"]`); await grid.waitFor();
+    const grid = page.locator(`aside[data-workbench-view-id="${gridId}"]`); await grid.waitFor();
     const g = await grid.boundingBox(); await page.mouse.click(g.x + g.width / 2, g.y + 1); await settle(page);
     await closeToolPanels();
     if (!await page.locator('.workbench-selection').count()) {
-      await grid.locator('header').focus(); await page.keyboard.press('Shift+Enter'); await settle(page);
+      await artworkHeader(page, gridId).focus(); await page.keyboard.press('Shift+Enter'); await settle(page);
     }
     const scale = await page.locator('main.system-workflow').evaluate(node => Number(node.dataset.workbenchCameraScale));
     for (const [dx, dy, w, h] of [[24, 0, 216, 144], [0, 24, 216, 168], [-24, 24, 192, 192]]) {

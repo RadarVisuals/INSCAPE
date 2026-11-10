@@ -18,9 +18,10 @@ export default function OwnerReception({ address, document, onEditReception, onC
     ? createProductionIdentityDossierViewModel({ identity, identityPresentation: draft?.identityPresentation, cachedIdentity: document?.profile.cachedIdentity })
     : createPublishedIdentityRackViewModel({ document, identity }), [draft, document, identity]);
   const failed = status === 'corrupt' || status === 'unavailable';
-  const notice = failed ? `Your local Reception could not be read. ${stale ? 'Showing the last saved view.' : document ? 'Showing the published version.' : 'No saved view is available.'} Open Edit Reception to recover your draft.` : null;
+  const notice = failed ? `Your local Reception could not be read. ${stale ? 'Showing the last saved view.' : document ? 'Showing the published version.' : 'No saved view is available.'} Open Reception Editor to recover your draft.` : null;
   const View = collection ? OwnerReceptionCollection : ReceptionOverview;
   return <Suspense fallback={<p role="status">Opening Reception…</p>}><View snapshot={collection || publicSnapshot} reception={reception} model={model} address={address}
-    notice={notice} onRetry={failed ? reader.refresh : undefined} ownerEditingAllowed onEdit={onEditReception}
+    notice={notice} onRetry={failed ? reader.refresh : undefined} ownerEditingAllowed
+    ownerDestinations={{ 'Reception Editor': onEditReception, 'My Inscape': onCanvases, 'Canvas Editor': onReturn }}
     onReturnToWorkbench={onReturn} onOpenCanvas={onCanvases} onOpenDirectory={onDiscover} /></Suspense>;
 }

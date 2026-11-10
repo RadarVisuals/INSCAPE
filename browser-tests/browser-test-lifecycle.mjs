@@ -9,7 +9,10 @@ export const BROWSER_LIFECYCLE_TIMEOUTS = Object.freeze({
   setupOverallMs: 60_000,
   serverSetupMs: 15_000,
   commandMs: 3_000,
-  processInventoryMs: 3_000,
+  // A fresh PowerShell/CIM snapshot includes process startup. Under browser
+  // load that can exceed the generic command budget; keep a separate bound.
+  processInventoryMs: 6_000,
+  processObservationMs: 1_000,
   processTerminationMs: 4_000,
   browserCloseMs: 3_000,
   resourceCloseMs: 2_000,
@@ -131,7 +134,9 @@ export function runBoundedCommand(command, args, options = {}) {
     child.stdout?.on('data', (chunk) => { stdout += chunk; });
     child.stderr?.on('data', (chunk) => { stderr += chunk; });
     child.once('error', (error) => finish(reject, error));
-    child.once('exit', (code) => finish(resolveRun, { code, stdout, stderr }));
+    // Process exit can precede the last stdout/stderr chunks. Inventory JSON
+    // and termination diagnostics are complete only once the pipes close.
+    child.once('close', (code) => finish(resolveRun, { code, stdout, stderr }));
   });
 }
 
@@ -219,9 +224,27 @@ export async function listWindowsProcesses({ run = runBoundedCommand, runtime, e
   return processes;
 }
 
-export async function terminateWindowsProcessTree(pid) {
-  if (!validPid(pid)) throw new Error(`Refusing ambiguous browser process target: ${pid}`);
-  return runBoundedCommand('taskkill', ['/PID', String(pid), '/T', '/F'], { stdio: ['ignore', 'pipe', 'pipe'], timeoutMs: BROWSER_LIFECYCLE_TIMEOUTS.processTerminationMs });
+function processStartedAt(identity) {
+  const windows = typeof identity === 'string' && identity.match(/^\/Date\((\d+)\)\/$/u);
+  if (windows) return Number(windows[1]);
+  // POSIX ps lstart has second precision. Opaque or malformed identities cannot
+  // establish the order of a parent and child and must not confer ownership.
+  if (typeof identity !== 'string' || !/^[A-Z][a-z]{2} [A-Z][a-z]{2}\s+\d{1,2} \d{2}:\d{2}:\d{2} \d{4}$/u.test(identity)) return NaN;
+  return Date.parse(identity);
+}
+
+export async function terminateWindowsProcess(entry, { run = runBoundedCommand, runtime, timeoutMs = BROWSER_LIFECYCLE_TIMEOUTS.processTerminationMs } = {}) {
+  const startedAt = processStartedAt(entry?.identity);
+  if (!validPid(entry?.pid) || !Number.isFinite(startedAt)) throw new Error('Refusing ambiguous browser process identity');
+  const selected = runtime || await resolveWindowsProcessRuntime();
+  // Retain the native handle before checking StartTime so a reused PID cannot
+  // redirect Kill. Never delegate descendant discovery to taskkill /T.
+  const script = `$ErrorActionPreference='Stop'; $targetProcess=Get-Process -Id ${entry.pid} -ErrorAction SilentlyContinue; if ($null -eq $targetProcess) { exit 0 }; try { $targetHandle=$targetProcess.SafeHandle; $targetStart=([DateTimeOffset]$targetProcess.StartTime).ToUnixTimeMilliseconds(); if ($targetStart -ne ${startedAt}) { throw 'Process creation identity changed' }; $targetProcess.Kill() } finally { $targetProcess.Dispose() }`;
+  const result = await run(selected.executable, ['-NoProfile', '-NonInteractive', '-Command', script], {
+    stdio: ['ignore', 'pipe', 'pipe'], timeoutMs,
+  });
+  if (result.code !== 0) throw new Error(`Verified process termination failed: ${result.stderr.trim() || `exit ${result.code}`}`);
+  return result;
 }
 
 export async function listPosixProcesses({ run = runBoundedCommand } = {}) {
@@ -235,57 +258,57 @@ export async function listPosixProcesses({ run = runBoundedCommand } = {}) {
   }).filter((entry) => entry && validPid(entry.pid));
 }
 
-export async function terminatePosixProcessTree(pid, {
+export async function terminatePosixProcess(entry, {
   inventory = listPosixProcesses,
   kill = process.kill,
 } = {}) {
-  if (!validPid(pid)) throw new Error(`Refusing ambiguous browser process target: ${pid}`);
-  const processes = await inventory();
-  const children = new Map();
-  for (const process of processes) {
-    if (!children.has(process.parentPid)) children.set(process.parentPid, []);
-    children.get(process.parentPid).push(process.pid);
-  }
-  const targets = []; const visited = new Set();
-  const visit = (currentPid) => {
-    if (visited.has(currentPid)) return;
-    visited.add(currentPid);
-    for (const childPid of children.get(currentPid) || []) visit(childPid);
-    targets.push(currentPid);
-  };
-  visit(pid);
-  for (const targetPid of targets) {
-    try { kill(targetPid, 'SIGKILL'); }
-    catch (error) { if (error?.code !== 'ESRCH') throw error; }
-  }
-  return { code: 0, stdout: '', stderr: '', targets };
+  if (!validPid(entry?.pid) || !Number.isFinite(processStartedAt(entry.identity))) throw new Error('Refusing ambiguous browser process identity');
+  const current = (await inventory()).find(process => process.pid === entry.pid);
+  if (!current) return;
+  if (current.identity !== entry.identity) throw new Error(`Refusing reused browser process target: ${entry.pid}`);
+  try { kill(entry.pid, 'SIGKILL'); }
+  catch (error) { if (error?.code !== 'ESRCH') throw error; }
 }
 
 export function createOwnedProcessTree({
   rootPid,
+  rootStartedAt,
+  rootParentPid,
+  isRootAlive = () => true,
   listProcesses,
-  terminateTree,
+  terminateProcess,
+  terminateWithIdentityCheck,
   inventoryTimeoutMs = BROWSER_LIFECYCLE_TIMEOUTS.processInventoryMs,
   terminationTimeoutMs = BROWSER_LIFECYCLE_TIMEOUTS.processTerminationMs
 }) {
   if (!validPid(rootPid)) throw new Error(`Cannot track browser with invalid root PID: ${rootPid}`);
   const owned = new Map();
+  let rootChecked = false;
 
-  async function inventory() {
-    return withinDeadline(listProcesses(), inventoryTimeoutMs, `Process inventory exceeded its ${inventoryTimeoutMs}ms deadline`);
+  async function inventory(timeoutMs = inventoryTimeoutMs) {
+    return withinDeadline(listProcesses(), timeoutMs, `Process inventory exceeded its ${timeoutMs}ms deadline`);
   }
 
   function record(processes) {
     const byPid = new Map(processes.map((entry) => [entry.pid, entry]));
     const root = byPid.get(rootPid);
-    if (root && !owned.has(rootPid)) owned.set(rootPid, { identity: root.identity, parentPid: root.parentPid });
+    if (!rootChecked) {
+      rootChecked = true;
+      const startedAt = processStartedAt(root?.identity);
+      const earliest = /^\/Date/u.test(root?.identity || '') ? rootStartedAt : Math.floor(rootStartedAt / 1000) * 1000;
+      if (root && isRootAlive() && (rootParentPid === undefined || root.parentPid === rootParentPid)
+          && Number.isFinite(startedAt) && (rootStartedAt === undefined || startedAt >= earliest))
+        owned.set(rootPid, { identity: root.identity, parentPid: root.parentPid, startedAt, depth: 0 });
+    }
     let changed = true;
     while (changed) {
       changed = false;
       for (const process of processes) {
         const parent = owned.get(process.parentPid);
-        if (parent && byPid.get(process.parentPid)?.identity === parent.identity && !owned.has(process.pid)) {
-          owned.set(process.pid, { identity: process.identity, parentPid: process.parentPid }); changed = true;
+        const startedAt = processStartedAt(process.identity);
+        if (parent && byPid.get(process.parentPid)?.identity === parent.identity && !owned.has(process.pid)
+            && Number.isFinite(startedAt) && startedAt >= parent.startedAt) {
+          owned.set(process.pid, { identity: process.identity, parentPid: process.parentPid, startedAt, depth: parent.depth + 1 }); changed = true;
         }
       }
     }
@@ -306,20 +329,37 @@ export function createOwnedProcessTree({
     return remaining;
   }
 
-  async function forceTerminate(remaining) {
-    const remainingIds = new Set(remaining.map((entry) => entry.pid));
-    const targets = remaining.filter((entry) => !remainingIds.has(owned.get(entry.pid)?.parentPid)).map((entry) => entry.pid);
+  async function forceTerminate(remaining, totalTimeoutMs = Infinity) {
+    if (totalTimeoutMs !== Infinity && (!Number.isFinite(totalTimeoutMs) || totalTimeoutMs <= 0))
+      throw new Error('Process termination requires a positive total deadline');
+    const deadline = Date.now() + totalTimeoutMs;
+    const budget = () => {
+      const left = deadline - Date.now();
+      if (left <= 0) throw new Error('Owned process termination total deadline exceeded');
+      return left;
+    };
+    const targets = [...remaining].sort((a, b) => (owned.get(b.pid)?.depth ?? 0) - (owned.get(a.pid)?.depth ?? 0)).map(entry => entry.pid);
     for (const pid of targets) {
       const expected = owned.get(pid);
       if (!validPid(pid) || expected?.identity !== remaining.find((entry) => entry.pid === pid)?.identity) {
         throw new Error(`Refusing unverified browser process target: ${pid}`);
       }
-      const current = (await inventory()).find((entry) => entry.pid === pid);
+      // The Windows native operation retains a handle and verifies its start
+      // identity itself. Repeating a whole-machine snapshot before every such
+      // operation adds no race protection and exhausts the total close budget.
+      if (terminateWithIdentityCheck) {
+        const timeoutMs = Math.min(terminationTimeoutMs, budget());
+        await withinDeadline(terminateWithIdentityCheck({ pid, ...expected }, timeoutMs), timeoutMs,
+          `Termination of owned browser PID ${pid} exceeded its ${timeoutMs}ms deadline`);
+        continue;
+      }
+      const current = (await inventory(Math.min(inventoryTimeoutMs, budget()))).find((entry) => entry.pid === pid);
       if (!current) continue;
       if (current.identity !== expected.identity) {
         throw new Error(`Refusing reused browser process target: PID ${pid} changed creation identity`);
       }
-      await withinDeadline(terminateTree(pid), terminationTimeoutMs, `Termination of owned browser PID ${pid} exceeded its ${terminationTimeoutMs}ms deadline`);
+      const timeoutMs = Math.min(terminationTimeoutMs, budget());
+      await withinDeadline(terminateProcess(current), timeoutMs, `Termination of owned browser PID ${pid} exceeded its ${timeoutMs}ms deadline`);
     }
     return targets;
   }
@@ -341,22 +381,16 @@ export function createBrowserTestCleanup({ rootPid, processTree, runtimePath, wo
       await attempt('cleanup:routes', async () => resources.routeController?.close?.({ cancel: async () => resources.context?.close?.() }));
       await attempt('cleanup:page-cdp', async () => resources.pageCdp?.detach?.());
       await attempt('cleanup:context', async () => resources.context && withinDeadline(resources.context.close(), BROWSER_LIFECYCLE_TIMEOUTS.browserCloseMs, 'Playwright context close deadline exceeded'));
-      await attempt('cleanup:browser', async () => resources.browser && withinDeadline(resources.browser.close(), BROWSER_LIFECYCLE_TIMEOUTS.browserCloseMs, 'Playwright browser close deadline exceeded'));
-      await attempt('cleanup:browser-server', async () => {
-        if (!resources.browserServer) return;
-        try {
-          await withinDeadline(resources.browserServer.close(), BROWSER_LIFECYCLE_TIMEOUTS.browserCloseMs, 'Playwright browser server close deadline exceeded');
-          shutdownMode = 'graceful';
-        } catch (closeError) {
-          await withinDeadline(resources.browserServer.kill(), BROWSER_LIFECYCLE_TIMEOUTS.browserCloseMs, 'Playwright browser server kill deadline exceeded');
-          shutdownMode = 'playwright-kill';
-          if (closeError.code !== 'ETIMEDOUT') throw closeError;
-        }
+      await attempt('cleanup:browser', async () => !resources.browserSession && resources.browser && withinDeadline(resources.browser.close(), BROWSER_LIFECYCLE_TIMEOUTS.browserCloseMs, 'Playwright browser close deadline exceeded'));
+      await attempt('cleanup:owned-browser', async () => {
+        if (!resources.browserSession) return;
+        await resources.browserSession.close();
+        shutdownMode = 'owned-processes';
       });
       if (processTree) await attempt('cleanup:edge-exit', async () => {
         remaining = await processTree.waitForExit(BROWSER_LIFECYCLE_TIMEOUTS.gracefulExitMs);
         if (remaining.length) {
-          forcedPids = await processTree.forceTerminate(remaining); shutdownMode = 'verified-taskkill';
+          forcedPids = await processTree.forceTerminate(remaining); shutdownMode = 'verified-processes';
           remaining = await processTree.waitForExit(BROWSER_LIFECYCLE_TIMEOUTS.forcedExitMs);
         }
         if (remaining.length) throw new Error(`Owned Edge tree remained alive: ${remaining.map((entry) => entry.pid).join(',')}`);

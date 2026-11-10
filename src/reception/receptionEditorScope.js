@@ -1,13 +1,18 @@
-import { projectReceptionMember } from './editorCellGeometry.js';
+import { insertReceptionBentoCell } from './receptionBentoInsertion.js';
+import { projectReceptionCellMembers } from './editorCellGeometry.js';
 import { createEmptySystemWorkflowDraft } from '../systemWorkflow/domain/systemWorkflowDraft.js';
 import { bindWorkbenchTextRecovery, textRecoveries, TEXT_RECOVERY_MESSAGE } from '../text/textEditRecovery.js';
 import { createTextPresentation } from '../profileDocument/domain/workbenchPresentation.js';
 import { createShapePresentation } from '../shapes/shapes.js';
 import { createImagePresentation } from '../imageModule/imageModule.js';
 import { applyReceptionLayout } from './receptionLayoutGenerator.js';
-import { resizeReceptionBento, swapReceptionBentoCells, addReceptionBentoCell, appendReceptionBentoRow, setReceptionBentoSettings, setReceptionCellRadius } from './receptionBento.js';
+import { resizeReceptionBento, addReceptionBentoCell, appendReceptionBentoRow, prependReceptionBentoCell, prependReceptionBentoRow, setReceptionBentoSettings,
+  setReceptionCellRadius, setReceptionCellClip, setReceptionCellMemberAnchor } from './receptionBento.js';
+import { setReceptionCellSize } from './receptionCellSizing.js';
+import { moveReceptionMembers } from './receptionCellMembership.js';
 import { mergeReceptionCells, splitReceptionCell } from './receptionCellStructure.js';
 import { fillDeletedReceptionCells } from './receptionCellDeletion.js';
+import { fitReceptionText, setReceptionTextFit } from './receptionTextFit.js';
 import { createReceptionEditorDocument, receptionModuleWindow, withReceptionModuleWindow, reconcileReceptionCells, receptionModuleLimits,
   RECEPTION_CELL_LIMIT } from './receptionEditorDocument.js';
 
@@ -60,7 +65,7 @@ export function createReceptionEditorScope(rootStore, options = {}) {
     }
     return snapshot;
   };
-  const convert = (candidate, rootDocument = underlying.getSnapshot(), previous = read(), targetCell = editingCell) => {
+  const convert = (candidate, rootDocument = underlying.getSnapshot(), previous = read(), targetCell = editingCell, fitNewText) => {
     if (!candidate || candidate.profileAddress !== profile) throw new Error('This Reception is no longer active.');
     const stable = value => Object.fromEntries(Object.entries(value).filter(([key]) => !nativeKeys.includes(key) && key !== 'identityPresentation'));
     if (!same(stable(candidate), stable(previous))) throw new Error('This command is unavailable inside Reception.');
@@ -90,6 +95,23 @@ export function createReceptionEditorScope(rootStore, options = {}) {
         next = withReceptionModuleWindow(next, id, { left: cell.left + (cell.width - width) / 2, top: cell.top + (cell.height - height) / 2, width, height });
       }
     }
+    if (targetCell && fitNewText && added.includes(fitNewText)) {
+      next = setReceptionTextFit(next, targetCell, fitNewText, true);
+      next = fitReceptionText(next, targetCell, fitNewText, options.measureText, true);
+    }
+    for (const cell of before.cells) for (const id of cell.fitText || []) {
+      const current = next.texts.find(text => text.id === id);
+      if (!current) continue;
+      const old = before.texts.find(text => text.id === id);
+      if (!same(old.article, current.article)) {
+        next = fitReceptionText(next, cell.id, id, options.measureText);
+      } else {
+        const prior = receptionModuleWindow(before, id), frame = receptionModuleWindow(next, id);
+        if (frame && (prior.width !== frame.width || prior.height !== frame.height)
+          && same(receptionModuleWindow(before, cell.id), receptionModuleWindow(next, cell.id)))
+          next = setReceptionTextFit(next, cell.id, id, false);
+      }
+    }
     assertLockedLayersUnchanged(before, next);
     next = reconcileReceptionCells(before, next);
     const filled = fillDeletedReceptionCells(before, next);
@@ -98,13 +120,13 @@ export function createReceptionEditorScope(rootStore, options = {}) {
   };
   const safeOptions = opts => {
     // Translate native live geometry to Reception history, never the active canvas.
-    const { historyPresentation, ...safe } = opts || {};
+    const { historyPresentation, fitNewText, ...safe } = opts || {};
     read();
     return { ...safe, ...(historyPresentation ? { historyReception: { ...projectedReception, workbench: receptionWorkbench(historyPresentation, projectedReception.workbench) } } : {}) };
   };
   const commit = (candidate, opts = {}, targetCell = editingCell) => {
     if (!writable()) return false;
-    try { return underlying.commitCompletedOperation(convert(candidate, undefined, undefined, targetCell), safeOptions(opts)); } catch { return false; }
+    try { return underlying.commitCompletedOperation(convert(candidate, undefined, undefined, targetCell, opts.fitNewText), safeOptions(opts)); } catch { return false; }
   };
   const mutate = (make, label, presentation, reconciliationOptions) => {
     if (!writable()) throw new Error('This Reception is no longer active.');
@@ -113,17 +135,25 @@ export function createReceptionEditorScope(rootStore, options = {}) {
     const before = presentation ? reconcileReceptionCells(original,
       { ...original, workbench: receptionWorkbench(structuredClone(presentation), original.workbench) }) : original;
     const reception = reconcileReceptionCells(before, make(before), reconciliationOptions);
+    if (same(reception, original)) return true;
     if (!underlying.commitCompletedOperation({ ...accepted, reception }, { expectedGeneration: generation, historyLabel: label,
       ...(presentation ? { historyReception: before } : {}) }))
       throw new Error('The Reception change could not be saved. Your saved work is unchanged.');
     return true;
   };
+  const checkTransition = () => {
+    for (const guard of guards) { const reason = guard(); if (reason) throw new Error(reason); }
+  };
   const api = Object.freeze({
+    checkTransition,
     isCurrent: current, hasWriteAccess: writable,
     getProfileAddress: () => profile, getWorkbenchId: () => 'reception', getRecoveryContext: () => 'reception',
     getSnapshot: read, getDraft: () => structuredClone(read()), getGeneration: underlying.getGeneration,
     getHistory: underlying.getHistory, getRecordState: underlying.getRecordState, getLastCommitFailure: underlying.getLastCommitFailure,
-    getBackupSnapshot: underlying.getBackupSnapshot,
+    getBackupSnapshot(candidate) {
+      if (!current()) throw new Error('This Reception is no longer active.');
+      return underlying.getBackupSnapshot(candidate ? convert(candidate) : undefined);
+    },
     subscribe: listener => {
       listeners.add(listener);
       return () => listeners.delete(listener);
@@ -146,6 +176,13 @@ export function createReceptionEditorScope(rootStore, options = {}) {
     guardWorkbenchTransition: check => { guards.add(check); return () => guards.delete(check); },
     getCells: () => { read(); return current() ? projectedReception.cells : []; },
     getReception: () => { read(); return current() ? projectedReception : null; },
+    previewFittedTextFrame(cellId, id, article) {
+      const before = api.getReception();
+      if (!before?.cells.some(cell => cell.id === cellId && cell.fitText?.includes(id))) return null;
+      const candidate = { ...before, texts: before.texts.map(text => text.id === id ? { ...text, article } : text) };
+      const fitted = fitReceptionText(candidate, cellId, id, options.measureText);
+      return receptionModuleWindow(reconcileReceptionCells(before, fitted), id);
+    },
     getEditingCell: () => { read(); return current() ? editingCell : null; },
     setEditingCell(id) {
       if (!current() || id !== null && !api.getCells().some(cell => cell.id === id)) return false;
@@ -162,12 +199,21 @@ export function createReceptionEditorScope(rootStore, options = {}) {
       if (!current()) throw new Error('This Reception is no longer active.');
       if (expectedGeneration !== underlying.getGeneration()) throw new Error('Reception changed. Try the change again.');
       if (textRecoveries(api, profile).length) throw new Error(TEXT_RECOVERY_MESSAGE);
-      const operations = { resize: resizeReceptionBento, swap: swapReceptionBentoCells, addCell: addReceptionBentoCell, appendRow: appendReceptionBentoRow,
-        settings: setReceptionBentoSettings, cellRadius: setReceptionCellRadius, merge: mergeReceptionCells, split: splitReceptionCell };
-      const labels = { resize: 'Resize Reception cells', swap: 'Swap Reception cells', addCell: 'Add Reception cell', appendRow: 'Add Reception row',
-        settings: 'Change bento settings', cellRadius: 'Change cell radius', merge: 'Merge Reception cells', split: 'Split Reception cell' };
+      const operations = { resize: resizeReceptionBento, insert: insertReceptionBentoCell, addCell: addReceptionBentoCell, appendRow: appendReceptionBentoRow,
+        prependCell: prependReceptionBentoCell, prependRow: prependReceptionBentoRow,
+        fitText: (value, cellId, id, enabled) => {
+          const next = setReceptionTextFit(value, cellId, id, enabled);
+          return enabled ? fitReceptionText(next, cellId, id, options.measureText) : next;
+        },
+        settings: setReceptionBentoSettings, cellRadius: setReceptionCellRadius, cellClip: setReceptionCellClip,
+        anchorMembers: setReceptionCellMemberAnchor, moveMembers: moveReceptionMembers, cellSize: setReceptionCellSize, merge: mergeReceptionCells, split: splitReceptionCell };
+      const labels = { resize: 'Resize Reception cells', insert: 'Move Reception cell', addCell: 'Add Reception cell', appendRow: 'Add Reception row',
+        prependCell: 'Add Reception cell', prependRow: 'Add Reception row',
+        settings: 'Change bento settings', cellRadius: 'Change cell radius', cellClip: 'Change cell clipping', anchorMembers: 'Position cell contents',
+        cellSize: 'Resize Reception cell', fitText: 'Fit box to text', moveMembers: 'Move Reception layers', merge: 'Merge Reception cells', split: 'Split Reception cell' };
       if (!operations[action]) throw new Error('Choose an available bento action.');
-      return mutate(value => operations[action](value, ...args), labels[action], presentation, { resizeContents: action !== 'merge' });
+      return mutate(value => operations[action](value, ...args), labels[action], presentation,
+        { resizeContents: action !== 'merge', preserveMemberAnchors: action === 'anchorMembers' });
     },
     turnShapeIntoCell(id, presentation) {
       mutate(value => {
@@ -202,8 +248,9 @@ export function createReceptionEditorScope(rootStore, options = {}) {
     release({ force = false } = {}) {
       if (released) return;
       if (current() && !force && textRecoveries(api, profile).length) throw new Error(TEXT_RECOVERY_MESSAGE);
-      if (current() && !force) for (const guard of guards) { const reason = guard(); if (reason) throw new Error(reason); }
+      if (current() && !force) checkTransition();
       read(); released = true; editingCell = null; guards.clear(); listeners.clear(); unsubscribeUnderlying(); underlying.release();
+      options.disposeTextMeasure?.();
     },
   });
   read();
@@ -227,7 +274,8 @@ function assertLockedLayersUnchanged(before, next) {
     if (same(oldFrame, newFrame)) continue;
     const oldCell = receptionModuleWindow(before, cell.id), newCell = receptionModuleWindow(next, cell.id);
     if (!oldCell || !newCell || same(oldCell, newCell)) throw new Error('Unlock this layer before moving it.');
-    const expected = projectReceptionMember(oldCell, newCell, oldFrame);
+    const frames = Object.fromEntries(cell.members.map(id => [id, receptionModuleWindow(before, id)]));
+    const expected = projectReceptionCellMembers(oldCell, newCell, frames, cell)[id];
     if (!newFrame || Object.keys(expected).some(key => Math.abs(newFrame[key] - expected[key]) > 1)) throw new Error('Unlock this layer before moving it.');
   }
 }

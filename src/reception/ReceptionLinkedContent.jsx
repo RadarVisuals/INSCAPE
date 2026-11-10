@@ -56,9 +56,9 @@ function LinkedSource({ link, onOpen }) {
   const session = { scope: { profileAddress: snapshot.profileAddress, canvasId: reference.canvasId, revision: snapshot.revision }, scenes };
   const result = link.kind === 'scene' ? resolveSceneBinding(snapshot, link, session) : resolvePresentationSource(snapshot, reference, session);
   if (result.status !== 'ready') return <p role="status">Linked content is unavailable.</p>;
-  return <div className="reception-linked-content" data-linked-kind={result.kind} data-linked-side={result.side?.id}>
+  return <div className="reception-linked-content" data-linked-kind={result.kind}>
     {result.kind === 'display' ? <Display result={result} reference={reference} />
-      : result.kind === 'image' ? <ReceptionImage record={{ ...result.record, sides: [result.side] }} />
+      : result.kind === 'image' ? <ReceptionImage record={result.record} />
         : link.kind === 'source' && result.record.sceneLink && !reference.gridId ? <LinkedText result={result} /> : <ArticleView article={result.article} containerOwned />}
     {link.destination && onOpen && <button type="button" className="reception-open-source workflow-tactile-control" onClick={event => onOpen(link.destination, event.currentTarget)}>Open canvas</button>}
   </div>;

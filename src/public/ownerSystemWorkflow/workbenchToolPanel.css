@@ -7,7 +7,9 @@
 .workbench-tool-panel-grip:active { cursor: grabbing; }
 .workbench-tool-panel-close { display: grid; place-items: center; width: var(--tool-icon-target, 28px); min-width: var(--tool-icon-target, 28px); height: var(--tool-icon-target, 28px); min-height: var(--tool-icon-target, 28px); padding: 4px; cursor: pointer; }
 .workbench-tool-panel-close:hover { background: var(--tactile-hover); }
-.workbench-tool-panel-close svg { width: var(--icon-size-interface); height: var(--icon-size-interface); }
+.workbench-tool-panel-close svg { width: var(--tool-icon-size, var(--icon-size-interface)); height: var(--tool-icon-size, var(--icon-size-interface)); color: var(--tool-icon-ink, inherit); }
+.workbench-tool-panel-dock { --tool-icon-size: 14px; --tool-icon-ink: var(--tactile-muted); }
+.workbench-tool-panel-dock:is(:hover, :focus-visible) { --tool-icon-ink: var(--tactile-ink); }
 .workbench-tool-panel-content { display: flex; flex: 1; min-width: 0; min-height: 0; overflow: hidden; }
 /* Invisible edge targets; native resize cursors reveal their purpose on hover. */
 .workbench-tool-panel > .workbench-tool-panel-resize { position: absolute; z-index: 1; display: block; padding: 0; margin: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; touch-action: none; }

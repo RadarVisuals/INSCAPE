@@ -6,7 +6,7 @@ import LibraryWorkspace from './OwnerSystemWorkflowLibraryWorkspace.jsx';
 
 // The same Library stays mounted while its screen host changes. Browsing,
 // selection and asset placement remain owned by LibraryWorkspace.
-export default function WorkbenchLibraryWindow({ windowPreferences, navigationHost, onClose, ...props }) {
+export default function WorkbenchLibraryWindow({ windowPreferences, navigationHost, dockHost, onDock, onClose, ...props }) {
   const saved = useSyncExternalStore(windowPreferences.subscribe, windowPreferences.getSnapshot);
   const detached = saved?.detached === true;
   const [container] = useState(() => document.createElement('div'));
@@ -22,6 +22,7 @@ export default function WorkbenchLibraryWindow({ windowPreferences, navigationHo
   const toggle = () => {
     const box = container.querySelector('.system-workflow__library')?.getBoundingClientRect();
     restoreFocus.current = true;
+    if (detached) onDock?.();
     windowPreferences.update(current => ({ detached: !detached, frame: current?.frame || {
       left: box.left + 24, top: box.top + 24, width: Math.max(360, box.width), height: Math.min(640, box.height),
     } }));
@@ -32,18 +33,20 @@ export default function WorkbenchLibraryWindow({ windowPreferences, navigationHo
     aria-label={detached ? 'Dock Library' : 'Detach Library'} title={detached ? 'Dock Library' : 'Detach Library'}>
     {detached ? <PanelLeft /> : <Maximize2 />}
   </button>;
-  return <div data-workflow-material="tactile" data-workflow-finish="flat" data-lattice-menu-surface>
+  return <div data-workflow-material="tactile" data-workflow-finish="flat" data-workflow-palette="editor" data-lattice-menu-surface>
     {detached ? <WorkbenchToolPanel title="Library" label="Library window" chrome="flat" panelRef={panel}
-      className={`workbench-library-window workbench-tool-controls${placing ? ' is-placing' : ''}`}
+      className={`workbench-library-window workbench-tool-controls workbench-editor-panel${placing ? ' is-placing' : ''}`}
+      data-workflow-material="tactile" data-workflow-finish="flat" data-workflow-palette="editor"
       frame={saved.frame} onFrameChange={changeFrame} minimumWidth={300} minimumHeight={300}
       headerActions={control} onClose={onClose} closeLabel="Close Library">
       {renderHeader => <>{renderHeader()}<div className="workbench-library-slot" ref={attach} /></>}
-    </WorkbenchToolPanel> : <div className="workbench-library-docked-slot" ref={attach} />}
-    {createPortal(<LibraryWorkspace {...props} navigationHost={detached ? null : navigationHost}
-      onClose={detached ? undefined : onClose} resizable={!detached} embedded={detached}
+    </WorkbenchToolPanel> : dockHost ? createPortal(<div className="workbench-library-slot" ref={attach} />, dockHost)
+      : <div className="workbench-library-docked-slot" ref={attach} />}
+    {createPortal(<LibraryWorkspace {...props} presentation="editor" navigationHost={detached || dockHost ? null : navigationHost}
+      onClose={detached ? undefined : onClose} resizable={!detached && !dockHost} embedded={detached || Boolean(dockHost)}
       onPlacingChange={setPlacing}
       header={detached ? undefined : <header className="workbench-tool-panel-header system-workflow__library-header">
-        <span>Library</span>{control}<button type="button" className="workbench-tool-panel-close" aria-label="Close workspace" title="Close Library" onClick={onClose}><X /></button>
+        {!dockHost && <span>Library</span>}{control}{!dockHost && <button type="button" className="workbench-tool-panel-close" aria-label="Close workspace" title="Close Library" onClick={onClose}><X /></button>}
       </header>} />, container)}
   </div>;
 }

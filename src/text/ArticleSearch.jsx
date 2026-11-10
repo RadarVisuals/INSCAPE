@@ -10,7 +10,12 @@ export default function ArticleSearch({ editor, article, disabled, focusRequest 
     try { replaceArticleMatches(editor, replacement, all, article); setError(''); }
     catch (failure) { setError(failure.message); }
   };
-  useLayoutEffect(() => { if (search.open) field.current?.focus(); }, [search.open, focusRequest]);
+  useLayoutEffect(() => {
+    if (!search.open) return;
+    const group = field.current?.closest('.text-writing-tools');
+    if (group) group.open = true;
+    field.current?.focus();
+  }, [search.open, focusRequest]);
   useLayoutEffect(() => { setError(''); if (!search.open) setReplacement(''); }, [search.open, search.query, replacement]);
   const close = () => { setArticleSearch(editor, { close: true }); trigger.current?.focus(); };
   return <div className="text-article-search">

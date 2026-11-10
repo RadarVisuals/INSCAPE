@@ -11,8 +11,8 @@ import { runOwnedCommand, requireSuccessfulCommand } from './verificationProcess
 import { assertEvidencePath, verificationIdentity, probeBrowser } from './verificationIdentity.mjs';
 import { closeViteWithinDeadline } from '../browser-tests/browser-test-lifecycle.mjs';
 
-export function createBrowserTestServer(root, port) {
-  return createServer({ root, server: { host: '127.0.0.1', port, strictPort: true, open: false }, plugins: [{
+export function createBrowserTestServer(root, port, options = {}) {
+  return createServer({ ...options, root, server: { ...options.server, host: '127.0.0.1', port, strictPort: true, open: false }, plugins: [...(options.plugins || []), {
     name: 'inscape-browser-verification',
     configResolved(config) {
       // Vite's config merge drops inline null overrides of the project's watch options.
@@ -20,6 +20,13 @@ export function createBrowserTestServer(root, port) {
       config.server.watch = null;
     },
   }] });
+}
+
+export function availableBrowserTestPort() {
+  return new Promise((resolvePort, reject) => {
+    const socket = createSocketServer(); socket.once('error', reject);
+    socket.listen(0, '127.0.0.1', () => { const port = socket.address().port; socket.close(error => error ? reject(error) : resolvePort(port)); });
+  });
 }
 
 export async function runBrowserTests({ root, output, args = [], environment = process.env }) {
@@ -48,11 +55,10 @@ export async function runBrowserTests({ root, output, args = [], environment = p
     // Vite treats configuration port 0 as its default 5173. Ask the OS for a
     // free port explicitly; strictPort rejects a race instead of sharing or
     // silently moving onto the user's development-server port.
-    const port = await new Promise((resolvePort, reject) => {
-      const socket = createSocketServer(); socket.once('error', reject);
-      socket.listen(0, '127.0.0.1', () => { const port = socket.address().port; socket.close(() => resolvePort(port)); });
-    });
-    server = await createBrowserTestServer(root, port);
+    const port = await availableBrowserTestPort();
+    // Concurrent shards own different Vite servers. Their dependency optimizer
+    // must not replace files underneath another shard's active browser imports.
+    server = await createBrowserTestServer(root, port, { cacheDir: resolve(output, 'vite-cache') });
     await server.listen();
     const origin = `http://127.0.0.1:${server.httpServer.address().port}`;
     console.log(`Browser: ${JSON.stringify(report.identity.runtime.browser)}\nFixtures: ${origin}\nEvidence: ${output}`);

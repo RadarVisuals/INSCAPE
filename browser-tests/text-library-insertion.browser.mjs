@@ -1,3 +1,4 @@
+import { openTextToolSection } from './fixtures/text-tool-sections.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { chromium } from 'playwright-core';
@@ -8,7 +9,7 @@ const settle = page => page.evaluate(() => new Promise(resolve => requestAnimati
 async function exposeText(page) {
   const collapse = page.locator('.editor-menu-brand[aria-expanded="true"]');
   if (await collapse.count()) await collapse.click();
-  const info = page.getByRole('button', { name: 'Close Info', exact: true });
+  const info = page.getByRole('button', { name: 'Close Inspector', exact: true });
   if (await info.count()) { await info.focus(); await info.press('Enter'); }
   const saved = await page.evaluate(() => window.savedDraft());
   await page.locator('main.system-workflow').focus();
@@ -58,7 +59,7 @@ for (const zoom of [1, .75]) test(`Library inserts at the drop point without rep
     const errors = []; page.on('pageerror', error => errors.push(error.message));
     await mountTextToolsFixture(page, origin);
     await exposeText(page);
-    const body = page.getByRole('textbox', { name: 'Article text', exact: true }), tools = page.locator('.text-tools-window');
+    const body = page.getByRole('textbox', { name: 'Article text', exact: true }), tools = page.locator('.workbench-tool-dock:has([data-text-inspector])');
     const lines = Array.from({ length: 18 }, (_, index) => `Paragraph ${index + 1}. Keep this written passage intact.`);
     await body.fill(lines[0]);
     for (const line of lines.slice(1)) { await body.press('End'); await body.press('Enter'); await page.keyboard.insertText(line); }
@@ -66,13 +67,14 @@ for (const zoom of [1, .75]) test(`Library inserts at the drop point without rep
       const range = document.createRange(); range.setStart(node.firstChild, 0); range.setEnd(node.firstChild, 9);
       const selection = getSelection(); selection.removeAllRanges(); selection.addRange(range);
     }); await settle(page);
+    await openTextToolSection(page.locator('.workbench-tool-dock:has([data-text-inspector])'), 'More text tools');
     await tools.getByRole('button', { name: 'Link', exact: true }).click();
     await tools.getByLabel('Link URL', { exact: true }).fill('https://example.com/article');
     await tools.getByRole('button', { name: 'Apply link', exact: true }).click();
     assert.equal(await body.locator('a').innerText(), 'Paragraph');
     assert.equal(await body.locator('a').getAttribute('href'), 'https://example.com/article');
     assert.equal(await page.evaluate(() => window.savedDraft().texts[0].article.content.content[0].content[0].marks[0].attrs.href), 'https://example.com/article');
-    await tools.getByRole('button', { name: 'Close Text tools', exact: true }).click();
+    await tools.getByRole('button', { name: 'Close Inspector', exact: true }).click();
     await setWorkbenchZoom(page, zoom);
     await body.focus(); await body.press('Control+A');
     const before = await page.evaluate(() => window.savedDraft().texts[0].article.content);

@@ -1,4 +1,4 @@
-import { editorDestination, setEditorSidebarOpen } from './fixtures/editor-menu.mjs';
+import { workspaceDestination, editorDestination, setEditorSidebarOpen } from './fixtures/editor-menu.mjs';
 import assert from 'node:assert/strict';
 import { after, before, describe, test } from 'node:test';
 import { dirname, resolve } from 'node:path';
@@ -163,7 +163,7 @@ describe('owner/viewed-profile routing through the real App', { concurrency: fal
     cleanupBrowserTest ||= createBrowserTestCleanup({ runtimePath: runtimeDir, workspaceRoot: root, diagnostic });
     await cleanupBrowserTest(resources);
   }, { timeoutMs: BROWSER_LIFECYCLE_TIMEOUTS.setupOverallMs, diagnostic,
-    cancelSetup: () => { setupAbortController?.abort(); void resources.browserServer?.kill?.(); } }));
+    cancelSetup: () => { setupAbortController?.abort(); void resources.browserSession?.close().catch(() => {}); } }));
 
   after(async () => {
     const failures = [];
@@ -276,6 +276,8 @@ describe('owner/viewed-profile routing through the real App', { concurrency: fal
     await waitForOwnerShell('Unpublished reception returns to owner');
     assert.doesNotMatch(page.url(), /[?&](view|reception)=/);
 
+    await openReception();
+    // Seed while the editor is unmounted, preserving its concurrent-write guard.
     // A local repository fixture supplies only public data; the real App,
     // navigation hook, owner menu and public boundary remain in use.
     await page.evaluate(async (address) => {
@@ -292,7 +294,7 @@ describe('owner/viewed-profile routing through the real App', { concurrency: fal
       const { createSystemWorkflowDraftStore } = await import('/src/systemWorkflow/systemWorkflowDraftStore.js');
       const { createReception } = await import('/src/profileDocument/domain/receptionPresentation.js');
       const { createArticle } = await import('/src/text/domain/article.js');
-      const local = createSystemWorkflowDraftStore({ profileAddress: address, storage: localStorage, requireEditor: true });
+      const local = createSystemWorkflowDraftStore({ profileAddress: address, storage: localStorage });
       const scope = local.acquireReceptionScope();
       try {
         const reception = createReception(), article = createArticle();
@@ -303,26 +305,27 @@ describe('owner/viewed-profile routing through the real App', { concurrency: fal
         if (!scope.commitCompletedOperation({ ...scope.getDraft(), reception: createReceptionEditorDocument(reception) }, { expectedGeneration: scope.getGeneration() })) throw Error('Could not seed local Reception');
       } finally { scope.release(); }
     }, PROFILE_A);
+    await back().click();
     await waitForOwnerShell('Owner after publication fixture');
     for (const width of [1440, 640, 390]) {
       await page.setViewportSize({ width, height: 900 });
       await editorDestination(page, 'Profile');
       await page.getByRole('button', { name: 'View my reception', exact: true }).focus();
       if (process.env.INSCAPE_RECEPTION_CAPTURE_DIR) await page.screenshot({ path: resolve(process.env.INSCAPE_RECEPTION_CAPTURE_DIR, `owner-menu-${width}.png`) });
-      const savedDraft = await page.evaluate(address => localStorage.getItem('inscape.system-workflow-draft.v1:' + address), PROFILE_A);
-      assert.ok(savedDraft, 'Fixture owner has a saved draft to preserve');
       await page.keyboard.press('Enter');
       await page.locator('.reception-page').waitFor();
       await page.getByRole('heading', { name: 'Saved local Reception', exact: true }).waitFor();
-      await page.getByRole('button', { name: 'Edit Reception', exact: true }).click();
+      await workspaceDestination(page, 'Reception Editor');
       await page.locator('[data-reception-editor]').waitFor();
       await editorDestination(page, 'Reception');
-      await page.locator('[data-reception-editor]').waitFor({ state: 'detached' });
-      await page.getByRole('heading', { name: 'Saved local Reception', exact: true }).waitFor();
+      await page.locator('.reception-page').waitFor();
+      assert.match(page.url(), /[?&]reception=published/u);
+      assert.equal(await page.getByRole('heading', { name: 'Saved local Reception', exact: true }).count(), 0);
       assert.equal(await page.locator('.reception-cell-actions, .reception-divider, .reception-tool-panel').count(), 0);
-      await page.getByRole('button', { name: 'Edit Reception', exact: true }).click();
-      await page.locator('[data-reception-editor]').waitFor();
-      await editorDestination(page, 'Reception');
+      await back().click();
+      await waitForOwnerShell('Return from the published Reception');
+      await editorDestination(page, 'Profile');
+      await page.getByRole('button', { name: 'View my reception', exact: true }).click();
       await page.getByRole('heading', { name: 'Saved local Reception', exact: true }).waitFor();
       const navigationBounds = await back().boundingBox();
       assert.equal(await back().evaluate(node => !!node.closest('.reception-page-actions')), true,
@@ -334,6 +337,8 @@ describe('owner/viewed-profile routing through the real App', { concurrency: fal
       const box = await back().boundingBox();
       assert.ok(box.x >= 0 && box.y >= 0 && box.x + box.width <= width && box.y + box.height <= 900);
       await page.evaluate(() => { window.__routingStorageOperations.length = 0; });
+      const savedDraft = await page.evaluate(address => localStorage.getItem('inscape.system-workflow-draft.v1:' + address), PROFILE_A);
+      assert.ok(savedDraft, 'Fixture owner has a saved draft to preserve after the editor round trip');
       await page.getByRole('button', { name: 'Enter Inscape', exact: true }).click();
       await page.locator('.workbench-overview').waitFor();
       assert.match(page.url(), /[?&]canvas=1/);
@@ -347,7 +352,8 @@ describe('owner/viewed-profile routing through the real App', { concurrency: fal
       await page.goBack(); await page.locator('.reception-page').waitFor();
       await page.goForward(); await page.locator('.workbench-overview').waitFor();
       assert.doesNotMatch(page.url(), /[?&]reception=1/);
-      await editorDestination(page, 'Reception');
+      await editorDestination(page, 'Profile');
+      await page.getByRole('button', { name: 'View my reception', exact: true }).click();
       await page.locator('.reception-page').waitFor();
       await page.getByRole('heading', { name: 'Saved local Reception', exact: true }).waitFor();
       const beforeRoom = await savedOwnerDraft();

@@ -1,3 +1,4 @@
+import { openSharedTool } from './shared-tools.mjs';
 export async function mountTextToolsFixture(page, origin, { visitor = false, textCount = 1, surfaces = false, displayTextCount = 0, beforeImports, waitForText = true } = {}) {
   await page.route('**/*', route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
   await page.route('https://raw.githubusercontent.com/RadarVisuals/INSCAPE/**', async route => {
@@ -79,9 +80,14 @@ export async function mountTextToolsFixture(page, origin, { visitor = false, tex
   if (await page.getByRole('button', { name: 'Read', exact: true }).count())
     await page.getByRole('textbox', { name: 'Article text', exact: true }).first().waitFor();
   await page.evaluate(() => document.fonts.ready);
-  // Arrange an unobstructed writing surface; suites open shared tools explicitly.
-  for (const name of ['Close Workbench Layers', 'Close Transform', 'Close Color', 'Close Image', 'Close Shape', 'Close FX']) {
+  // Leave the selected Text's unified Inspector open; hide Layers for the writing surface.
+  for (const name of ['Close Workbench Layers']) {
     const close = page.getByRole('button', { name, exact: true });
     if (await close.count()) { await close.focus(); await close.press('Enter'); }
+  }
+  if (!visitor) {
+    await openSharedTool(page, 'Inspector');
+    const undock = page.getByRole('button', { name: 'Undock Inspector', exact: true });
+    if (await undock.count()) await undock.click();
   }
 }

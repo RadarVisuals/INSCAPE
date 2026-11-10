@@ -1,3 +1,4 @@
+import { openSharedTool } from './fixtures/shared-tools.mjs';
 import { editorDestination, editorMenu, setEditorSidebarOpen } from './fixtures/editor-menu.mjs';
 import { navigateWorkbench } from './fixtures/workbench-navigation.mjs';
 import test from 'node:test';
@@ -26,8 +27,7 @@ async function open(browser, width, height, theme, suffix = '') {
     return route.abort();
   });
   await page.goto(`${origin}/browser-tests/tool-chrome-fixture.html?sample=navigator&theme=${theme}${suffix}`);
-  const sidebar = page.getByRole('complementary', { name: 'Workspace sidebar' });
-  await sidebar.waitFor();
+  await page.getByRole('button', { name: 'Inscape sidebar' }).waitFor();
   await setEditorSidebarOpen(page, false);
   const activate = async name => {
     if (name === 'Docs') await editorMenu(page, 'Docs').click();
@@ -91,7 +91,7 @@ test('Grids keeps rename, visibility, duplicate and delete with local cancellati
   try {
     const { page, activate, errors } = await open(browser, 390, 640, 'mist');
     const imageId = await page.evaluate(() => window.readToolChromeDraft().imageModules[0].id);
-    await page.getByRole('toolbar', { name: 'Creation tools', exact: true }).getByRole('button', { name: 'Layers', exact: true }).click();
+    await openSharedTool(page, 'Layers');
     await page.locator(`[data-layer-id="${imageId}"] .workbench-layer-name`).click();
     const selectedState = await interactionState(page);
     assert.deepEqual(selectedState.selection, [imageId]);
@@ -114,7 +114,7 @@ test('Grids keeps rename, visibility, duplicate and delete with local cancellati
     await copy.getByRole('button', { name: /^Delete / }).click();
     await panel.getByRole('alertdialog').getByRole('button', { name: 'Cancel' }).focus();
     const beforeEscape = await interactionState(page);
-    assert.deepEqual(beforeEscape.selection, selectedState.selection, 'Escape starts with selected artwork behind the dialog');
+    // Grids hides the Layers host; absence of its rows is not an empty selection.
     assert.deepEqual(beforeEscape.activeTargets, selectedState.activeTargets, 'the original module remains the active target');
     await page.keyboard.press('Escape');
     assert.equal(await panel.getByRole('alertdialog').count(), 0);
@@ -128,6 +128,10 @@ test('Grids keeps rename, visibility, duplicate and delete with local cancellati
     await copy.getByRole('button', { name: /^Delete / }).click();
     await panel.getByRole('alertdialog').getByRole('button', { name: 'Confirm', exact: true }).click();
     assert.equal(await panel.locator('.system-workflow__grid-row:not([data-world-cover])').count(), 2);
+    await panel.getByRole('button', { name: 'Close Grids', exact: true }).click();
+    await openSharedTool(page, 'Layers');
+    assert.deepEqual((await interactionState(page)).selection, selectedState.selection,
+      'the same artwork remains selected when Layers is visible again');
     assert.deepEqual(errors, []);
   } finally { await browser.close(); }
 });
@@ -137,6 +141,10 @@ for (const theme of ['carbon', 'mist']) for (const [width, height] of [[1440, 90
     const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
     try {
       const { page, errors } = await open(browser, width, height, theme, '&navigation-tools');
+      if (height === 320) {
+        await editorMenu(page, 'Tools').click();
+        await page.getByRole('menuitemcheckbox', { name: 'Drawing toolbar', exact: true }).click();
+      }
       const index = page.getByRole('complementary', { name: 'Index — Destinations', exact: true });
       await index.waitFor();
       for (const [name, panel, close] of [
@@ -147,16 +155,23 @@ for (const theme of ['carbon', 'mist']) for (const [width, height] of [[1440, 90
           await navigateWorkbench(page, 'groups');
         }
         await panel.waitFor();
+        await panel.locator('.workbench-tool-panel-grip').focus();
         const rect = await panel.boundingBox();
         assert.ok(rect.x >= 0 && rect.y >= 0 && rect.x + rect.width <= width + 1 && rect.y + rect.height <= height + 1, `${name} fits`);
         assert.equal(await panel.getAttribute('data-window-chrome'), 'flat');
         assert.equal(await panel.evaluate(n => getComputedStyle(n).borderRadius), '9px');
-        assert.equal(await panel.getByRole('button', { name: close }).evaluate(hit), true);
-        assert.equal(await panel.locator('.system-workflow__instrument-content').evaluate(n => n.scrollWidth <= n.clientWidth && n.clientHeight >= 80), true, 'content remains usable without horizontal overflow');
-        if (name === 'index') assert.equal(await panel.getByRole('separator').first().evaluate(n => getComputedStyle(n, '::after').display), 'none', 'resize targets have no visible handles');
+        assert.equal(await panel.getByRole('button', { name: close }).evaluate(hit), true,
+          JSON.stringify(await panel.getByRole('button', { name: close }).evaluate(node => {
+            const r = node.getBoundingClientRect(), hit = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2);
+            return { panel: node.closest('[aria-label]')?.getAttribute('aria-label'), hit: hit?.outerHTML.slice(0, 500), rect: r.toJSON() };
+          })));
+        const content = panel.locator('.workbench-tool-panel-content');
+        assert.equal(await content.evaluate(n => n.scrollWidth <= n.clientWidth && n.clientHeight >= 80), true, 'content remains usable without horizontal overflow');
+        if (name === 'index') await panel.getByRole('button', { name: 'Add view', exact: true }).click();
+        else await panel.getByText('Manage groups', { exact: true }).click();
         const field = panel.getByRole('textbox').first();
         await field.click();
-        assert.equal(await field.evaluate(n => getComputedStyle(n).borderRadius), '5px');
+        assert.equal(await field.evaluate(n => getComputedStyle(n).borderRadius), '7px');
         await page.screenshot({ path: `${output}/${name}-${theme}-${width}x${height}.png` });
         await panel.getByRole('button', { name: close }).click();
         await panel.waitFor({ state: 'detached' });

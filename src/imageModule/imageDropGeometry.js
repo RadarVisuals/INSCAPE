@@ -1,3 +1,4 @@
+import { IMAGE_SIZE_LIMITS } from './imageModule.js';
 import { clampWorkbenchPosition, WORKBENCH_BOUNDS } from '../public/ownerSystemWorkflow/workbenchSpace.js';
 import { imageWindowGeometry, imageWindowPosition, imagePaintGeometry } from './imageWindowGeometry.js';
 
@@ -8,11 +9,12 @@ export function imageDropGeometry(dimensions, point, host, scale, offset, densit
   if (centre.left < bounds.left || centre.top < bounds.top
     || centre.left > bounds.right || centre.top > bounds.bottom) return null;
   // Keep the first Image manageable, close to its source proportions. The same
-  // centred fill used by Library sides covers whole-pixel rounding/minimums.
-  const limit = Math.max(32, Math.min(360, host.width - 16, host.height - 70));
+  // centred fill used by Library artwork covers whole-pixel rounding/minimums.
+  const { minimumWidth, minimumHeight } = IMAGE_SIZE_LIMITS;
+  const limit = Math.max(minimumWidth, minimumHeight, Math.min(360, host.width - 16, host.height - 70));
   const factor = Math.min(1, limit / dimensions.width, limit / dimensions.height);
-  const size = targetFrame ? { width: Math.round(targetFrame.width), height: Math.round(targetFrame.height) } : { width: Math.max(32, Math.round(dimensions.width * factor)),
-    height: Math.max(32, Math.round(dimensions.height * factor)) };
+  const size = targetFrame ? { width: Math.round(targetFrame.width), height: Math.round(targetFrame.height) } : { width: Math.max(minimumWidth, Math.round(dimensions.width * factor)),
+    height: Math.max(minimumHeight, Math.round(dimensions.height * factor)) };
   const position = targetFrame ? { left: targetFrame.left, top: targetFrame.top }
     : clampWorkbenchPosition({ left: centre.left - size.width / 2, top: centre.top - size.height / 2 }, size, bounds);
   const paint = imagePaintGeometry(imageWindowGeometry(position, size, camera, offset), density);

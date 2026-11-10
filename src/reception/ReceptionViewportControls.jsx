@@ -1,15 +1,31 @@
+import { useState } from 'react';
 import { ReceptionButton as Button } from './ReceptionControls.jsx';
-import './receptionArrangement.css';
 
 // Viewport width belongs to this editor session, never to the authored Reception.
 export default function ReceptionViewportControls({ width, measuredWidth, onChange }) {
-  const effectiveWidth = width ?? measuredWidth;
+  const pixels = Math.round(width ?? measuredWidth ?? 1440);
+  const min = Math.min(320, pixels), max = Math.max(1920, pixels);
+  const [draft, setDraft] = useState(null);
   return <div className="reception-viewport-controls" role="group" aria-label="Responsive preview width">
-    <Button aria-pressed={width === null} onClick={() => onChange(null)}>Fit</Button>
-    {[[1440, 'Desktop'], [768, 'Tablet'], [390, 'Phone']].map(([size, label]) =>
-      <Button key={size} aria-pressed={width === size} onClick={() => onChange(size)}>{label}</Button>)}
-    <label><span>Preview width{effectiveWidth != null && ` · ${Math.round(effectiveWidth)} px`}</span>
-      <input type="range" aria-label="Preview width" min={Math.min(320, effectiveWidth ?? 320)} max={Math.max(1920, effectiveWidth ?? 1920)} step={1} value={effectiveWidth ?? 1440}
-        onChange={event => onChange(Number(event.target.value))} /></label>
+    <div className="reception-viewport-presets">
+      {[[null, 'Fit'], [1440, 'Desktop'], [768, 'Tablet'], [390, 'Phone']].map(([size, label]) =>
+        <Button key={label} aria-pressed={width === size} onClick={() => onChange(size)}>{label}</Button>)}
+    </div>
+    <div className="reception-viewport-width">
+      <input type="range" aria-label="Preview width" min={min} max={max} value={pixels}
+        onChange={event => onChange(event.target.valueAsNumber)} />
+      <label><input type="number" aria-label="Preview width in pixels" min={min} max={max}
+        value={draft ?? pixels} onChange={event => setDraft(event.target.value)}
+        onKeyDown={event => {
+          if (event.key === 'Escape') { event.stopPropagation(); setDraft(null); }
+          if (event.key === 'Enter') { event.preventDefault(); event.currentTarget.blur(); }
+        }}
+        onBlur={event => {
+          const input = event.currentTarget;
+          if (draft !== null && input.validity.valid && Number.isFinite(input.valueAsNumber) && input.valueAsNumber !== pixels)
+            onChange(input.valueAsNumber);
+          setDraft(null);
+        }} /><span aria-hidden="true">px</span></label>
+    </div>
   </div>;
 }

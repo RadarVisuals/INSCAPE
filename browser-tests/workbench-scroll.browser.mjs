@@ -39,7 +39,7 @@ for (const visitor of [false, true]) for (const width of [1440, 390]) {
         for (const mode of ['fit', 'overflow', 'pages']) {
           await text(mode).getByRole('button', { name: 'Read', exact: true }).focus(); await page.keyboard.press('Enter');
         }
-        const closeTools = page.getByRole('button', { name: 'Close Text tools', exact: true });
+        const closeTools = page.getByRole('button', { name: 'Close Inspector', exact: true });
         if (await closeTools.isVisible()) await closeTools.click();
       }
       await page.evaluate(() => document.fonts.ready); await page.waitForTimeout(400);
@@ -78,7 +78,7 @@ for (const visitor of [false, true]) for (const width of [1440, 390]) {
           if (!visitor) {
             await text(mode).getByRole('button', { name: 'Write', exact: true }).focus(); await page.keyboard.press('Enter');
             await text(mode).getByRole('textbox', { name: 'Article text', exact: true }).waitFor();
-            const closeTools = page.getByRole('button', { name: 'Close Text tools', exact: true });
+            const closeTools = page.getByRole('button', { name: 'Close Inspector', exact: true });
             if (await closeTools.isVisible()) await closeTools.click();
             await wheelOver(page, region, 0, 60);
             assert.ok(await region.evaluate(node => node.scrollTop > 0));

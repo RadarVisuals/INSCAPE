@@ -5,6 +5,7 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { chromium } from 'playwright-core';
 import { hideWorkspaceSidebar } from './fixtures/workspace-sidebar.mjs';
+import { parkGeometryTools } from './fixtures/geometry-tools.mjs';
 
 const origin = process.env.INSCAPE_TEST_ORIGIN || 'http://127.0.0.1:5173';
 const output = process.env.INSCAPE_BROWSER_OUTPUT || '.browser-test-runtime/canvas-crop';
@@ -23,6 +24,7 @@ async function mount(page, query = '') {
   await page.locator('[data-media-state="ready"]').first().waitFor();
   await imageAt(page, 0).locator('.artwork-svg-status').waitFor({ state: 'detached' });
   await hideWorkspaceSidebar(page);
+  await parkGeometryTools(page);
 }
 async function overview(page, belowToolbar = false) {
   const host = page.locator('main.system-workflow').first();
@@ -31,7 +33,7 @@ async function overview(page, belowToolbar = false) {
   await settle(page);
   assert.equal(await host.getAttribute('data-workbench-camera-scale'), '0.25', 'the crop fixture starts at quarter scale');
   // Put the probes below the open Canvas size panel. Normalise the camera
-  // through ordinary pan input, including after Center canvas has been used.
+  // through ordinary pan input, including after fitting the canvas in view.
   const x = Number(await host.getAttribute('data-workbench-camera-x'));
   const y = Number(await host.getAttribute('data-workbench-camera-y'));
   await host.dispatchEvent('wheel', { deltaX: x, deltaY: y - (belowToolbar ? 400 : 0), bubbles: true, cancelable: true });
@@ -159,7 +161,7 @@ for (const width of [1440, 390]) test(`canvas crops without loss; outside editin
     assert.equal(await visibleHit(page, 90, 180), false, 'inspection return reinstates cropping');
     await page.screenshot({ path: join(output, `clipped-${width}.png`) });
     await page.getByRole('slider', { name: 'Workbench zoom', exact: true }).fill('100');
-    await page.getByRole('button', { name: 'Reset Workbench view', exact: true }).click(); await settle(page);
+    await page.getByRole('button', { name: 'Fit canvas in view', exact: true }).click(); await settle(page);
     // Zooming around the viewport centre can briefly unload an offscreen SVG.
     // Wait for its existing document lifecycle before checking painted pixels.
     await imageAt(page, 0).locator('iframe.artwork-svg-document').waitFor({ state: 'attached' });

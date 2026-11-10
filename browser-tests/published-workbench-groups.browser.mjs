@@ -9,7 +9,7 @@ const arrived = page => page.waitForFunction(() => !document.querySelector('[dat
 const camera = page => page.locator('main.system-workflow').first().evaluate(node => [node.dataset.workbenchCameraScale || '1', node.dataset.workbenchCameraX || '0', node.dataset.workbenchCameraY || '0']);
 const groups = [
   { id: 'workbench-group:study', name: 'Public study', memberIds: ['image:motion-0', 'text:overflow', 'image:motion-1'], visibility: 'PUBLIC', position: { left: 80, top: 300 } },
-  { id: 'workbench-group:second', name: 'Second chapter', memberIds: ['display:primary', 'image:motion-2'], visibility: 'PUBLIC', position: { left: 460, top: 300 } },
+  { id: 'workbench-group:second', name: 'Second chapter', memberIds: ['display:primary', 'image:motion-2'], visibility: 'PUBLIC', position: { left: 200, top: 300 } },
   { id: 'workbench-group:private', name: 'Secret notebook', memberIds: ['image:motion-3'] },
   { id: 'workbench-group:empty', name: 'Private members only', memberIds: ['image:motion-4'], visibility: 'PUBLIC' },
 ];
@@ -102,6 +102,7 @@ test('owner group publication is explicit and undoable without changing content 
     if (await collapse.isVisible()) await collapse.click();
     await page.getByRole('button', { name: 'Open Public study group', exact: true }).click(); await arrived(page);
     await navigateWorkbench(page, 'groups');
+    await panel.getByText('Manage groups', { exact: true }).click();
     await panel.getByRole('button', { name: 'Unstack', exact: true }).click();
     assert.equal(await page.locator('[data-workbench-group-presented]').count(), 0, 'Unstack resumes the authored view');
   } finally { await browser.close(); }

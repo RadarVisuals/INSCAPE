@@ -22,11 +22,11 @@ function useBounds(ref) {
 
 export function ReceptionImage({ record, onRecoverFocus, decorative = false }) {
   const node = useRef(null), size = useBounds(node), [recoveryHost, setRecoveryHost] = useState(null);
-  const side = record?.sides[0];
+  const artwork = record?.artwork;
   return <div className="reception-image" ref={node}>
     <div className="reception-artwork" role={decorative ? undefined : 'img'} aria-hidden={decorative || undefined}
-      aria-label={decorative ? undefined : record?.name || side?.asset?.name || 'Artwork'} aria-description={decorative ? undefined : side?.asset?.description || undefined}>
-      {side && size.width > 0 && <ImageArtwork side={side} rectangle={{ left: 0, top: 0, ...size }} recoveryHost={recoveryHost} onRecoverFocus={onRecoverFocus} />}
+      aria-label={decorative ? undefined : record?.name || artwork?.asset?.name || 'Artwork'} aria-description={decorative ? undefined : artwork?.asset?.description || undefined}>
+      {artwork && size.width > 0 && <ImageArtwork artwork={artwork} rectangle={{ left: 0, top: 0, ...size }} recoveryHost={recoveryHost} onRecoverFocus={onRecoverFocus} />}
     </div>
     <div ref={setRecoveryHost} className="reception-media-status" />
   </div>;

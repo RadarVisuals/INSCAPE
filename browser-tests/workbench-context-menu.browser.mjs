@@ -1,10 +1,11 @@
 import assert from 'node:assert/strict';
 import { mkdir } from 'node:fs/promises';
 import { chromium } from 'playwright-core';
+import { browserExecutable } from '../scripts/browserEnvironment.mjs';
 
 const output = process.env.INSCAPE_BROWSER_OUTPUT || 'output';
 const origin = process.env.INSCAPE_SYSTEM_WORKFLOW_ROOT || 'http://127.0.0.1:5173';
-const browser = await chromium.launch({ executablePath: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', headless: true });
+const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
 try {
   await mkdir(output, { recursive: true });
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, reducedMotion: 'reduce' });
@@ -55,6 +56,7 @@ try {
   };
   const menu = () => page.getByRole('menu', { name: 'Workbench commands', exact: true });
   const rootLabels = () => menu().locator(':scope > button').allTextContents();
+  await page.getByRole('button', { name: 'Inscape sidebar', exact: true }).click();
   await desktop();
   assert.deepEqual((await rootLabels()).map(s => s.replace('›', '').trim()), ['TOOLS', 'ADD', 'IDENTITY', 'LIBRARY', 'DISCOVER', 'PREVIEW', 'PUBLISH', 'HIDE SIDEBAR']);
   // A background Workbench render replaces callback props while the menu is
@@ -91,12 +93,14 @@ try {
   assert.equal(height, page.viewportSize().height, 'sidebar does not reserve a bottom rail');
   await desktop();
   await page.getByRole('menuitem', { name: 'HIDE SIDEBAR', exact: true }).click();
-  await page.waitForFunction(() => !document.querySelector('.workbench-sidebar') && !review.dockVisible());
+  await page.locator('.workbench-sidebar').waitFor({ state: 'hidden' });
+  assert.equal(await page.evaluate(() => review.dockVisible()), false);
   assert.equal(await page.locator('[data-presentation-workbench]').first().evaluate(node => node.clientHeight), page.viewportSize().height, 'hiding the sidebar does not change canvas coordinates');
   assert.equal(await page.evaluate(() => JSON.stringify(review.getDraft())), before);
   await page.evaluate(() => review.render('remounted'));
   await page.locator('.system-workflow__presentation-board').first().waitFor();
-  assert.equal(await page.locator('.workbench-sidebar').count(), 0);
+  assert.equal(await page.locator('.workbench-sidebar').isVisible(), false);
+  assert.equal(await page.evaluate(() => review.dockVisible()), false);
   await page.locator('main.system-workflow').focus();
   await page.keyboard.press('Shift+F10');
   await page.getByRole('menuitem', { name: 'SHOW SIDEBAR', exact: true }).click();
@@ -131,7 +135,7 @@ try {
   await page.waitForFunction(() => review.getDraft().displays[0].geometry.rows === 32);
   assert.deepEqual(await page.evaluate(() => review.getDraft().geometry), firstGeometry);
   await second.locator('.system-workflow__identity-strip').focus();
-  await second.getByRole('button', { name: 'Minimize Display Module to shortcut', exact: true }).click();
+  await second.getByRole('button', { name: 'Minimize Display Module to shortcut', exact: true }).press('Enter');
   await second.locator('.system-workflow__desktop-shortcut').press('Shift+F10');
   await page.getByRole('menuitem', { name: 'FORMAT', exact: true }).click();
   assert.equal(await page.getByRole('menuitemcheckbox', { name: 'VERTICAL 9:16', exact: true }).getAttribute('aria-checked'), 'true');

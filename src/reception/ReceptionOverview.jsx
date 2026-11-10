@@ -2,7 +2,6 @@ import { lazy, Suspense, useLayoutEffect, useRef, useState } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { useStartupDestinationReady } from '../startveil/StartupDestinationContext.jsx';
 import ReceptionCanvas from './ReceptionCanvas.jsx';
-import ReceptionNavigation from './ReceptionNavigation.jsx';
 import ReceptionHeader from './ReceptionHeader.jsx';
 import ReceptionPresentation, { useReceptionPresentation } from './ReceptionPresentation.jsx';
 import { resolvePresentationDestination } from '../presentation/presentationSources.js';
@@ -21,7 +20,7 @@ export default function ReceptionOverview({ snapshot, assets, assetStatus, ...pr
   return <ReceptionPresentation snapshot={snapshot} assets={assets} assetStatus={assetStatus}><ReceptionPage {...props} /></ReceptionPresentation>;
 }
 function ReceptionPage({ reception, model, address, ownerEditingAllowed = false,
-  onEdit, onReturnToWorkbench, unavailableTarget = false, onOpenDirectory, onReturn, onOpenCanvas, notice, onRetry }) {
+  ownerDestinations, onEdit, onReturnToWorkbench, unavailableTarget = false, onOpenDirectory, onReturn, onOpenCanvas, notice, onRetry }) {
   useStartupDestinationReady();
   const [exploring, setExploring] = useState(false);
   const explore = useRef(null), roomTitle = useRef(null), flightArea = useRef(null), previous = useRef(false);
@@ -58,8 +57,12 @@ function ReceptionPage({ reception, model, address, ownerEditingAllowed = false,
     data-published-focus-fallback tabIndex={-1} aria-label={`${name} reception`}
     onKeyDown={event => { if (event.key === 'Escape' && !event.defaultPrevented && exploring) { event.preventDefault(); setExploring(false); } }}>
     <div className="reception-window" inert={opened ? '' : undefined}>
-      <ReceptionHeader navigation={<ReceptionNavigation reception={reception} model={model}
-        onAbout={() => { setExploring(false); scrollRoot.current?.scrollTo({ top: 0 }); }} onCanvases={onOpenCanvas} onDiscover={onOpenDirectory} onEdit={onEdit} />}>
+      <ReceptionHeader reception={reception} model={model} destinations={{
+        Reception: () => { setExploring(false); scrollRoot.current?.scrollTo({ top: 0 }); },
+        'Reception Editor': onEdit, ...ownerDestinations,
+        Canvases: ownerDestinations?.['My Inscape'] ? undefined : onOpenCanvas,
+        Discover: onOpenDirectory,
+      }}>
         {!frameless && actions}
       </ReceptionHeader>
       {notice && <div className="reception-notice" role="alert">{notice}{onRetry && <button type="button" onClick={onRetry}>Retry</button>}</div>}

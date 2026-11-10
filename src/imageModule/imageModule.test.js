@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { validImageModules, createImagePresentation, imageFocusEntry, nextImageSide } from './imageModule.js';
+import { validImageModules, createImagePresentation, imageFocusEntry } from './imageModule.js';
 import { addImageModule, saveImageModule, prepareImageResize, duplicateImageModule } from './imageModuleSession.js';
 import { commitWorkbenchSelectionResize } from '../systemWorkflow/resizeWorkbenchSelection.js';
 import { createSystemWorkflowDraftStore, systemWorkflowDraftKey } from '../systemWorkflow/systemWorkflowDraftStore.js';
@@ -14,10 +14,10 @@ import { removeWorkbenchModule } from '../systemWorkflow/removeWorkbenchModule.j
 import { createDisplayModuleSession, addDisplayModule } from '../systemWorkflow/displayModuleSession.js';
 import { OWNER_SYSTEM_WORKFLOW_REVIEW_ASSETS as assets } from '../public/ownerSystemWorkflow/ownerSystemWorkflowDevelopmentFixture.js';
 import { projectLatticeProductionFocusMediaMotion } from '../lattice/rendering/latticeProductionFocusArtworkMotion.js';
-import { resolveImageLibrarySide } from './imageLibrarySide.js';
+import { resolveImageLibraryArtwork } from './imageLibraryArtwork.js';
 const profile = `0x${'1'.repeat(40)}`;
 const asset = createProfileDocumentV9AssetResolver(assets, { compactContentReference: false })(assets[0].id);
-const side = id => ({ id: `side:${id}`, asset: structuredClone(asset), crop: { x: .4, y: .5, zoom: 2 }, transform: { quarterTurns: 1, mirrorX: true, mirrorY: false } });
+const artwork = id => ({ id: `artwork:${id}`, asset: structuredClone(asset), crop: { x: .4, y: .5, zoom: 2 }, transform: { quarterTurns: 1, mirrorX: true, mirrorY: false } });
 function fixture() {
   const entries = new Map(); let failed = false;
   const storage = { getItem: key => entries.get(key) ?? null, setItem: (key, value) => { if (failed) throw Error('full'); entries.set(key, value); } };
@@ -25,11 +25,43 @@ function fixture() {
 }
 const documentFor = draft => buildProfileDocumentV9({ profileAddress: profile, systemWorkflowDraft: draft, assetRecords: [] });
 
+test('Library replacement retains the Image frame and identity, never appends, and saves with Undo and reload', async () => {
+  const f = fixture();
+  addImageModule(f.store, profile, { position: { left: 180, top: 220 }, size: { width: 360, height: 240 }, artwork: artwork('visible') });
+  const before = f.store.getDraft(), original = before.imageModules[0];
+  const replacement = await resolveImageLibraryArtwork(assets[1], undefined, true);
+  const next = { ...original, artwork: replacement };
+  assert.ok(saveImageModule(f.store, profile, original, next));
+  const after = f.store.getDraft();
+  assert.equal(after.imageModules.length, 1);
+  assert.deepEqual(after.imageModules[0].artwork, replacement);
+  assert.deepEqual({ ...after.imageModules[0], artwork: original.artwork }, original);
+  assert.deepEqual(after.workbench, before.workbench);
+  assert.deepEqual(before.imageModules[0], original, 'replacement does not mutate the prior draft');
+  assert.ok(f.store.undo()); assert.deepEqual(f.store.getDraft(), before);
+  assert.ok(f.store.redo()); assert.deepEqual(f.store.getDraft(), after);
+  assert.deepEqual(createSystemWorkflowDraftStore({ profileAddress: profile, storage: f.storage }).getDraft(), after);
+});
+
+test('a failed or stale replacement preserves the current image and history', () => {
+  const f = fixture(); addImageModule(f.store, profile);
+  const original = f.store.getDraft().imageModules[0];
+  const next = { ...original, artwork: artwork('chosen') };
+  const before = f.store.getDraft(), history = f.store.getHistory();
+  f.fail(true);
+  assert.equal(saveImageModule(f.store, profile, original, next), false);
+  assert.deepEqual(f.store.getDraft(), before); assert.deepEqual(f.store.getHistory(), history);
+  f.fail(false); assert.ok(saveImageModule(f.store, profile, original, next));
+  const saved = f.store.getDraft(), savedHistory = f.store.getHistory();
+  assert.equal(saveImageModule(f.store, profile, original, { ...original, artwork: artwork('late') }), false);
+  assert.deepEqual(f.store.getDraft(), saved); assert.deepEqual(f.store.getHistory(), savedHistory);
+});
+
 test('Image duplication preserves every crop, transform, source and size through undo, reload and publication', () => {
   const f = fixture(); addImageModule(f.store, profile);
   const empty = f.store.getDraft().imageModules[0];
   const original = { ...empty, name: 'Cropped creature', width: 1032, height: 264, visibility: 'PUBLIC',
-    sides: [side('cropped'), { ...side('native'), crop: null }] };
+    artwork: artwork('cropped') };
   assert.ok(saveImageModule(f.store, profile, empty, original));
   const before = f.store.getDraft();
   const workbench = { ...createDefaultWorkbenchPresentation(), imageModules: [
@@ -42,8 +74,8 @@ test('Image duplication preserves every crop, transform, source and size through
   assert.equal(copy.width, original.width); assert.equal(copy.height, original.height);
   assert.equal(copy.visibility, original.visibility);
   assert.deepEqual(after.imageModules[0], original);
-  assert.equal(new Set([...copy.sides, ...original.sides].map(side => side.id)).size, 4);
-  for (let i = 0; i < copy.sides.length; i++) assert.deepEqual({ ...copy.sides[i], id: original.sides[i].id }, original.sides[i]);
+  assert.notEqual(copy.artwork.id, original.artwork.id);
+  assert.deepEqual({ ...copy.artwork, id: original.artwork.id }, original.artwork);
   assert.deepEqual(after.workbench.imageModules, [...workbench.imageModules,
     { id, open: true, position: { left: 724.25, top: 2124.5 } }]);
   assert.equal(f.store.getHistory().undo, 'Duplicate Image');
@@ -51,10 +83,10 @@ test('Image duplication preserves every crop, transform, source and size through
   assert.ok(f.store.redo()); assert.deepEqual(f.store.getDraft(), after);
   assert.deepEqual(createSystemWorkflowDraftStore({ profileAddress: profile, storage: f.storage }).getDraft(), after);
   const document = documentFor(after);
-  assert.deepEqual(document.imageModules[1].sides, copy.sides);
+  assert.deepEqual(document.imageModules[1].artwork, copy.artwork);
   assert.deepEqual(document.workbench.imageModules, after.workbench.imageModules);
   assert.deepEqual(reconcileSystemWorkflowDraftFromProfileDocumentV9(document, after).imageModules, after.imageModules);
-  const edited = structuredClone(copy); edited.sides[0].crop.x = .9;
+  const edited = structuredClone(copy); edited.artwork.crop.x = .9;
   assert.ok(saveImageModule(f.store, profile, copy, edited));
   assert.deepEqual(f.store.getDraft().imageModules[0], original, 'editing the copy cannot change its source');
 });
@@ -70,7 +102,7 @@ test('Image duplication rejects stale, wrong-profile and failed saves without a 
   f.fail(false);
   const id = duplicateImageModule(f.store, profile, record, { position: { left: 7990, top: 7990 } });
   const after = f.store.getDraft(), copy = after.imageModules.find(item => item.id === id);
-  assert.equal(copy.visibility, 'PRIVATE'); assert.deepEqual(copy.sides, []);
+  assert.equal(copy.visibility, 'PRIVATE'); assert.equal(copy.artwork, null);
   assert.deepEqual(after.workbench.imageModules[0].position, { left: 1992 - copy.width, top: 3992 - copy.height });
 });
 
@@ -84,16 +116,16 @@ test('Image duplication respects the existing sixteen-module limit', () => {
 test('Library drop creates artwork and its exact window in one undoable operation, ready for explicit publication', async () => {
   const f = fixture(), before = f.store.getDraft();
   const selectedMedia = { url: 'https://images.example/selected.webp', width: 1920, height: 1080 };
-  const resolved = await resolveImageLibrarySide({ ...assets[0], selectedMedia });
-  const placed = { side: resolved, size: { width: 360, height: 203 }, position: { left: 876.123, top: 234.567 } };
+  const resolved = await resolveImageLibraryArtwork({ ...assets[0], selectedMedia });
+  const placed = { artwork: resolved, size: { width: 360, height: 203 }, position: { left: 876.123, top: 234.567 } };
   const id = addImageModule(f.store, profile, placed);
   const after = f.store.getDraft(), record = after.imageModules[0];
   assert.equal(record.visibility, 'PUBLIC');
-  assert.equal(record.sides[0].asset.media.url, selectedMedia.url);
-  assert.equal(record.sides[0].asset.stableAssetId, assets[0].id);
-  assert.deepEqual(record.sides[0].crop, resolved.crop, 'new Image retains the same filling crop as a Library side');
+  assert.equal(record.artwork.asset.media.url, selectedMedia.url);
+  assert.equal(record.artwork.asset.stableAssetId, assets[0].id);
+  assert.deepEqual(record.artwork.crop, resolved.crop, 'new Image retains the same filling crop as a Library artwork');
   assert.deepEqual(after.workbench.imageModules, [{ id, open: true, position: placed.position }]);
-  assert.deepEqual(documentFor(after).imageModules[0].sides, record.sides);
+  assert.deepEqual(documentFor(after).imageModules[0].artwork, record.artwork);
   assert.deepEqual(documentFor(after).workbench.imageModules, after.workbench.imageModules);
   assert.ok(f.store.undo()); assert.deepEqual(f.store.getDraft(), before);
   assert.ok(f.store.redo()); assert.deepEqual(f.store.getDraft(), after);
@@ -103,13 +135,13 @@ test('Library drop creates artwork and its exact window in one undoable operatio
   assert.deepEqual(f.store.getDraft(), after, 'failed creation leaves no empty module or window');
   assert.throws(() => addImageModule(f.store, `0x${'2'.repeat(40)}`, placed), /no longer active/);
 });
-test('Image uses existing draft storage, rejects stale/profile/failed edits, and undo restores authored size and sides', () => {
+test('Image uses existing draft storage, rejects stale/profile/failed edits, and undo restores authored size and artwork', () => {
   const f = fixture(), before = f.store.getDraft();
   assert.deepEqual(assertValidSystemWorkflowDraft(before), before);
   assert.equal('imageModules' in documentFor(before), false);
   addImageModule(f.store, profile); const record = f.store.getDraft().imageModules[0];
   assert.equal(record.visibility, 'PRIVATE');
-  const next = { ...record, width: 640, height: 64, sides: [side('one'), side('two')] };
+  const next = { ...record, width: 640, height: 64, artwork: artwork('one') };
   assert.ok(saveImageModule(f.store, profile, record, next));
   assert.equal(saveImageModule(f.store, profile, record, next), false);
   assert.equal(saveImageModule(f.store, `0x${'2'.repeat(40)}`, next, record), false);
@@ -123,10 +155,10 @@ test('Image uses existing draft storage, rejects stale/profile/failed edits, and
 test('changing an Image canvas ratio preserves Fit inside and authored crops through save and undo', () => {
   const f = fixture(); addImageModule(f.store, profile);
   const empty = f.store.getDraft().imageModules[0];
-  const fitted = { ...empty, width: 984, height: 552, sides: [{ ...side('native'), crop: null }, side('cropped')] };
+  const fitted = { ...empty, width: 984, height: 552, artwork: { ...artwork('native'), crop: null } };
   assert.ok(saveImageModule(f.store, profile, empty, fitted));
   const before = f.store.getDraft();
-  assert.equal(createSystemWorkflowDraftStore({ profileAddress: profile, storage: f.storage }).getDraft().imageModules[0].sides[0].crop, null, 'loading preserves older fitting');
+  assert.equal(createSystemWorkflowDraftStore({ profileAddress: profile, storage: f.storage }).getDraft().imageModules[0].artwork.crop, null, 'loading preserves older fitting');
   const change = { id: fitted.id, expected: fitted, width: 978, height: 552, left: 3576, top: 1392,
     store: f.store, profileAddress: profile, layoutKey: 'imageModules', prepare: prepareImageResize };
   f.fail(true);
@@ -135,8 +167,7 @@ test('changing an Image canvas ratio preserves Fit inside and authored crops thr
   f.fail(false);
   assert.ok(commitWorkbenchSelectionResize([change]));
   const after = f.store.getDraft(), resized = after.imageModules[0];
-  assert.deepEqual(resized.sides[0], fitted.sides[0], 'the selected Fit inside mode remains selected');
-  assert.deepEqual(resized.sides[1], fitted.sides[1], 'custom crop and transforms remain authored');
+  assert.deepEqual(resized.artwork, fitted.artwork, 'the selected Fit inside mode remains selected');
   assert.equal(resized.width, 978);
   assert.equal(resized.height, 552);
   assert.deepEqual(after.workbench.imageModules[0].position, { left: 3576, top: 1392 });
@@ -147,13 +178,13 @@ test('changing an Image canvas ratio preserves Fit inside and authored crops thr
 test('proportional Image resizing preserves native fitting, crop, source and transforms through save and undo', () => {
   const f = fixture(); addImageModule(f.store, profile);
   const empty = f.store.getDraft().imageModules[0];
-  const fitted = { ...empty, width: 193, height: 289, sides: [{ ...side('native'), crop: null }, side('cropped')] };
+  const fitted = { ...empty, width: 193, height: 289, artwork: { ...artwork('native'), crop: null } };
   assert.ok(saveImageModule(f.store, profile, empty, fitted));
   const before = f.store.getDraft();
   const change = { id: fitted.id, expected: fitted, width: 241, height: 361, left: 3576, top: 1392,
     store: f.store, profileAddress: profile, layoutKey: 'imageModules', prepare: prepareImageResize };
   assert.ok(commitWorkbenchSelectionResize([change]));
-  assert.deepEqual(f.store.getDraft().imageModules[0].sides, fitted.sides);
+  assert.deepEqual(f.store.getDraft().imageModules[0].artwork, fitted.artwork);
   assert.equal(f.store.getDraft().imageModules[0].width, 241);
   assert.equal(f.store.getDraft().imageModules[0].height, 361);
   assert.ok(f.store.undo()); assert.deepEqual(f.store.getDraft(), before);
@@ -162,13 +193,13 @@ test('proportional Image resizing preserves native fitting, crop, source and tra
 test('public Image preserves crop, transforms and provenance; older publication restore retains local modules as private', () => {
   const f = fixture(); const old = documentFor(f.store.getDraft());
   addImageModule(f.store, profile); addImageModule(f.store, profile);
-  const draft = f.store.getDraft(); draft.imageModules[0] = { ...draft.imageModules[0], width: 64, height: 600, sides: [side('a'), side('b')], visibility: 'PUBLIC' };
-  draft.imageModules[1].sides = [side('private')];
+  const draft = f.store.getDraft(); draft.imageModules[0] = { ...draft.imageModules[0], width: 64, height: 600, artwork: artwork('a'), visibility: 'PUBLIC' };
+  draft.imageModules[1].artwork = artwork('private');
   draft.workbench = { ...createDefaultWorkbenchPresentation(), imageModules: draft.imageModules.map((item, index) => createImagePresentation(item.id, index)) };
   const doc = documentFor(draft);
   assert.equal(doc.imageModules.length, 1); assert.equal(doc.workbench.imageModules.length, 1);
-  assert.equal(countProfileDocumentV9Assets(doc), 2);
-  assert.deepEqual(doc.imageModules[0].sides, draft.imageModules[0].sides);
+  assert.equal(countProfileDocumentV9Assets(doc), 1);
+  assert.deepEqual(doc.imageModules[0].artwork, draft.imageModules[0].artwork);
   const restored = reconcileSystemWorkflowDraftFromProfileDocumentV9(doc, draft);
   assert.deepEqual(restored.imageModules, draft.imageModules);
   const previous = reconcileSystemWorkflowDraftFromProfileDocumentV9(old, draft);
@@ -188,13 +219,12 @@ test('Image survives Display edits and module deletion is atomic with its saved 
   assert.deepEqual(store.getDraft().imageModules, []); assert.deepEqual(store.getDraft().workbench.imageModules, []);
   assert.ok(store.undo()); assert.deepEqual(store.getDraft().imageModules[0], image);
 });
-test('bounds reject malformed content and side flips wrap without changing authored data', () => {
-  const { store } = fixture(); addImageModule(store, profile); const record = { ...store.getDraft().imageModules[0], sides: [side('a')] };
+test('bounds reject malformed content and inspection preserves authored data', () => {
+  const { store } = fixture(); addImageModule(store, profile); const record = { ...store.getDraft().imageModules[0], artwork: artwork('a') };
   assert.ok(validImageModules([record]));
-  for (const bad of [null, {}, { ...record, width: 0 }, { ...record, height: 4097 }, { ...record, sides: [null] }, { ...record, sides: [side('a'), side('a')] }, { ...record, sides: [{ ...side('x'), asset: null }] }]) assert.equal(validImageModules([bad]), false);
-  assert.deepEqual([nextImageSide(0, 3), nextImageSide(1, 3), nextImageSide(2, 3), nextImageSide(0, 1)], [1, 2, 0, 0]);
-  const entry = imageFocusEntry(record.sides[0]); const source = { left: 0, top: 0, width: 600, height: 64 };
-  const ipfsSide = side('ipfs'); ipfsSide.asset.media.url = 'ipfs://QmYwAPJzv5CZsnAzt8auVZRnGi2CWF7rP3pVYdWrJwEmQw/art.png';
+  for (const bad of [null, {}, { ...record, width: 0 }, { ...record, height: 4097 }, { ...record, artwork: [] }, { ...record, artwork: [artwork('a')] }, { ...record, artwork: { ...artwork('x'), asset: null } }]) assert.equal(validImageModules([bad]), false);
+  const entry = imageFocusEntry(record.artwork); const source = { left: 0, top: 0, width: 600, height: 64 };
+  const ipfsSide = artwork('ipfs'); ipfsSide.asset.media.url = 'ipfs://QmYwAPJzv5CZsnAzt8auVZRnGi2CWF7rP3pVYdWrJwEmQw/art.png';
   assert.match(imageFocusEntry(ipfsSide).media.src, /^https:\/\//u);
   assert.match(imageFocusEntry(ipfsSide).media.src, /art\.png$/u);
   assert.equal(Object.hasOwn(entry.placement, 'mat'), false);

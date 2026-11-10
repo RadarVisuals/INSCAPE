@@ -2,7 +2,7 @@ import { useLayoutEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import ArticleEditor from '../src/text/ArticleEditor.jsx';
 import TextTools from '../src/text/TextTools.jsx';
-import { SharedTextToolsProvider, SharedTextToolsWindow } from '../src/text/SharedTextTools.jsx';
+import { SharedTextToolsProvider, SharedTextToolsInspectorContent } from '../src/text/SharedTextTools.jsx';
 import { textSurfaceStyle } from '../src/text/domain/article.js';
 import useTextColourSelection from './textColourSelection.js';
 import './textPreview.css';
@@ -163,7 +163,11 @@ export default function TextPreview({
       open={open}
       onOpenChange={onOpenChange}
     >
-      <SharedTextToolsWindow />
+      {open && items.some(item => item.kind === 'text' && item.id === selectedId) && <aside className="text-isolated-inspector" aria-label="Text inspector"
+        data-workflow-material="tactile" data-workflow-finish="flat" data-system-workflow-overlay>
+        <header><strong>Text inspector</strong><button className="workflow-tactile-control" type="button" onClick={() => onOpenChange(false)}>Close Inspector</button></header>
+        <SharedTextToolsInspectorContent targetId={selectedId} />
+      </aside>}
       {items
         .filter((item) => item.kind === 'text')
         .map((item) => (

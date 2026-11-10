@@ -32,10 +32,10 @@ const article = title => ({ ...createArticle(title), content: { type: 'doc', con
 draft.texts = [{ id: 'text:story', visibility: 'PUBLIC', article: article('First passage'), sceneLink: { displayId: 'display:primary', gridId: first,
   passages: [{ gridId: 'grid:two', article: article('Second passage') }] } }, { id: 'text:static', visibility: 'PUBLIC', article: article('Always here') }];
 const resolveAsset = createProfileDocumentV9AssetResolver(assets);
-draft.imageModules = [{ id: 'image:study', name: 'Scene artwork', visibility: 'PUBLIC', width: 400, height: 400,
-  sides: [0, 1].map(index => ({ id: `side:${index}`, asset: resolveAsset(assets[index].id), crop: null, transform: { quarterTurns: 0, mirrorX: false, mirrorY: false } })) }];
+draft.imageModules = [0, 1].map(index => ({ id: `image:study-${index}`, name: 'Scene artwork', visibility: 'PUBLIC', width: 400, height: 400,
+  artwork: { id: `artwork:${index}`, asset: resolveAsset(assets[index].id), crop: null, transform: { quarterTurns: 0, mirrorX: false, mirrorY: false } } }));
 draft.workbench = { ...createDefaultWorkbenchPresentation(), area: { left: 0, top: 0, width: 850, height: 700 },
-  imageModules: [{ id: 'image:study', open: true, position: { left: 10, top: 180 } }],
+  imageModules: draft.imageModules.map(image => ({ id: image.id, open: true, position: { left: 10, top: 180 } })),
   texts: [{ ...createTextPresentation('text:story'), window: { left: 450, top: 150, width: 350, height: 400 } },
     { ...createTextPresentation('text:static'), open: false }] };
 draft.workbench.display.open = false;
@@ -55,7 +55,7 @@ function Study({ entry }) {
   const control = useSceneController('display:primary'), scenes = useSceneNavigation();
   const state = useTextScene(entry.draft.texts[0]);
   const binding = { controller: { profileAddress, canvasId: entry.id, moduleId: 'display:primary' }, sources: Object.fromEntries(
-    [first, 'grid:two'].map((id, index) => [id, { profileAddress, canvasId: entry.id, moduleId: missing ? 'image:missing' : 'image:study', sideId: `side:${index}` }])) };
+    [first, 'grid:two'].map((id, index) => [id, { profileAddress, canvasId: entry.id, moduleId: missing ? 'image:missing' : `image:study-${index}` }])) };
   const image = resolveSceneBinding(snapshot, binding, { scope: { profileAddress, canvasId: entry.id, revision: snapshot.revision }, scenes });
   return <section className="study-group" aria-label={entry.name}>
     <header><h2>{entry.name}</h2><span data-scene>{scenes['display:primary']?.gridId}</span></header>
@@ -67,8 +67,8 @@ function Study({ entry }) {
     </div>
     {mounted && <SharedDisplayToolsProvider><PublishedDisplayModule document={entry.draft} Frame={Frame} open={open} reducedMotion /></SharedDisplayToolsProvider>}
     <div className="study-cells">
-      <div className="study-cell study-image" data-side={image.side?.id}>{image.status === 'ready'
-        ? <ReceptionImage record={{ ...image.record, sides: [image.side] }} /> : <p role="status">Source unavailable</p>}</div>
+      <div className="study-cell study-image" data-artwork={image.artwork?.id}>{image.status === 'ready'
+        ? <ReceptionImage record={image.record} /> : <p role="status">Source unavailable</p>}</div>
       <div className="study-cell" data-linked-text><SceneTextViewport record={entry.draft.texts[0]} state={state}>
         <TextContentPage article={state.article} resetKey={state.gridId} /></SceneTextViewport></div>
       <div className="study-cell" data-static><ArticleView article={entry.draft.texts[1].article} containerOwned /></div>

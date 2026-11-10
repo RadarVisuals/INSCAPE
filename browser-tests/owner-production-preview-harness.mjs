@@ -677,7 +677,7 @@ export async function runOwnerProductionPreviewGate(executeGate, {
     }, async () => { cleanupResult = await cleanupWithProgress(); }, {
       timeoutMs: BROWSER_LIFECYCLE_TIMEOUTS.setupOverallMs,
       diagnostic: lifecycleDiagnostic(ledger),
-      cancelSetup: () => { setupAbortController?.abort(); void resources.browserServer?.kill?.(); },
+      cancelSetup: () => { setupAbortController?.abort(); void resources.browserSession?.close().catch(() => {}); },
     });
 
     const gateOutcome = await runPostSetupGateWithCleanup(async () => {

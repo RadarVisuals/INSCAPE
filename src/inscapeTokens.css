@@ -37,6 +37,19 @@
   --interface-ink: #ebece7;
   --interface-hover: color-mix(in srgb, var(--interface-ink) 10%, var(--interface-panel));
   --interface-line: color-mix(in srgb, var(--interface-ink) 18%, var(--interface-panel));
+  /* Accepted Editor finish; consumed only by migrated tool surfaces. */
+  --editor-header: #242527;
+  --editor-surround: var(--editor-header);
+  --editor-header-control: #343635;
+  --editor-panel: #343635;
+  --editor-field: #262827;
+  --editor-line: #464a48;
+  --editor-ink: #eceeeb;
+  --editor-muted: #b9beba;
+  --editor-accent: #00ff9f;
+  --editor-selection: #007247;
+  --editor-on-accent: #242527;
+  --editor-control-radius: 7px;
   --color-world: var(--interface-environment);
   --color-surface: var(--interface-panel);
   --color-surface-deep: var(--interface-panel);
@@ -135,6 +148,17 @@
   --interface-environment: #dedbd3;
   --interface-panel: #ebece7;
   --interface-ink: #171717;
+  --editor-header: #e5e5e0;
+  --editor-surround: #f4f3ef;
+  --editor-header-control: #dadbd6;
+  --editor-panel: #faf9f6;
+  --editor-field: #dadbd6;
+  --editor-line: #dadbd6;
+  --editor-ink: #252b27;
+  --editor-muted: #565f57;
+  --editor-accent: #007a50;
+  --editor-selection: #e5f6ef;
+  --editor-on-accent: #ffffff;
 }
 
 .interface-theme-toggle { display: inline-flex; padding: 3px; gap: 3px; border: 1px solid var(--interface-line); border-radius: var(--control-radius); background: var(--interface-panel); }

@@ -1,4 +1,4 @@
-// One worker for mounted Image sides, never one worker per image. Pending work
+// One worker for mounted Images, never one worker per image. Pending work
 // is replaceable and decoded pixels are not cached across Workbench lifetimes.
 let worker = null, nextId = 0, running = null;
 const clients = new Set(), pending = new Map();

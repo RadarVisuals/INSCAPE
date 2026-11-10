@@ -20,7 +20,7 @@ if (params.has('seed') && localStorage.getItem(key) === null) {
   draft.workbench.texts = [createTextPresentation('text:private', 0)];
   draft.workbench.texts[0].window = { left: 60, top: 100, width: 320, height: 400 };
   if (params.has('selection')) {
-    draft.imageModules = [{ id: 'image:gesture', name: 'Gesture Image', width: 240, height: 240, sides: [], visibility: 'PRIVATE' }];
+    draft.imageModules = [{ id: 'image:gesture', name: 'Gesture Image', width: 240, height: 240, artwork: null, visibility: 'PRIVATE' }];
     draft.workbench.imageModules = [{ id: 'image:gesture', open: true, position: { left: 420, top: 100 } }];
   }
   localStorage.setItem(key, JSON.stringify(draft));

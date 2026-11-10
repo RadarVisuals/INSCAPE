@@ -95,7 +95,7 @@ for (const width of [1440, 760]) test(`snap guides and release behavior at ${wid
     await page.evaluate(() => window.dispatchEvent(new Event('blur'))); await settle(page);
     assert.equal(await guide.count(), 0, 'blur clears guides'); await page.mouse.up();
     await page.locator('main').focus(); await page.keyboard.press('Control+0'); await settle(page);
-    await page.getByRole('button', { name: 'Reset Workbench view' }).click(); await settle(page);
+    await page.getByRole('button', { name: 'Fit canvas in view' }).click(); await settle(page);
 
     const text = page.locator('[data-workbench-view-id="text"]');
     start = await beginDrag(text); await moveTo(start, 103, 653);

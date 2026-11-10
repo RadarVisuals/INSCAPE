@@ -37,6 +37,28 @@ function fixture() {
   return {events,visibility,host,state,original,node,gestures,event,move,clean};
 }
 
+test('selection capture preserves its click target and owns commit, Escape and capture-loss cleanup', () => {
+  for (const ending of ['commit', 'Escape', 'capture loss']) {
+    const f = fixture(), target = fixture().host;
+    assert.equal(f.move({ captureTarget: target }), true);
+    assert.equal(target.hasPointerCapture(1), true);
+    assert.equal(f.host.hasPointerCapture(1), false);
+    f.host.emit('lostpointercapture');
+    assert.equal(f.gestures.isActive(), true);
+    f.events.emit('pointermove', { clientX: 30 });
+    if (ending === 'commit') f.events.emit('pointerup');
+    else if (ending === 'Escape') f.events.emit('keydown', { key: 'Escape' });
+    else { target.forgetCapture(); target.emit('lostpointercapture'); }
+    f.events.emit('pointerup');
+    assert.equal(f.state.attempts, ending === 'commit' ? 1 : 0);
+    if (ending !== 'commit') assert.equal(f.state.transforms, f.original);
+    if (ending === 'Escape') assert.equal(target.focused, 1);
+    assert.equal(target.hasPointerCapture(1), false);
+    assert.equal(target.count(), 0);
+    f.clean();
+  }
+});
+
 test('marquee cancellation restores the selection owner meaning, including ordinary handles and Display tools', () => {
   const content = { grids: [{}], shapes: [{ id: 'shape:a' }], imageModules: [{ id: 'image:a' }] };
   const initial = initialWorkbenchSelection(content);

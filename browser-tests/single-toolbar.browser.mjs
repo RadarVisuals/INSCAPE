@@ -5,7 +5,7 @@ import { mkdir } from 'node:fs/promises';
 import { chromium } from 'playwright-core';
 import { browserExecutable } from '../scripts/browserEnvironment.mjs';
 import { editorCommand, editorMenu, setEditorSidebarOpen } from './fixtures/editor-menu.mjs';
-import { openSharedTool } from './fixtures/shared-tools.mjs';
+import { openSharedTool, sharedToolTab, sharedToolPanel } from './fixtures/shared-tools.mjs';
 import { mountTextToolsFixture } from './fixtures/text-tools-fixture.mjs';
 
 const origin = process.env.INSCAPE_TEXT_ROOT || 'http://127.0.0.1:5217';
@@ -27,7 +27,7 @@ for (const width of [1440, 1000]) {
         assert.deepEqual((await menu.locator(':scope > button').allTextContents()).slice(0, 3), ['Duplicate', 'Layer order›', 'Delete']);
         await page.keyboard.press('Escape');
         assert.equal(await menu.count(), 0);
-        assert.equal(await page.locator(`[data-workbench-view-id="${id}"]`).evaluate(node => node.contains(document.activeElement)), true);
+        assert.equal(await page.evaluate(id => document.activeElement?.closest("[data-workbench-view-id]")?.dataset.workbenchViewId === id, id), true);
       }
       await artworkCommand(page, shapeId, 'Duplicate');
       const copied = await draft(page), copyId = copied.shapes.at(-1).id;
@@ -95,16 +95,16 @@ for (const [width, theme] of [[1440, 'carbon'], [1000, 'mist']]) {
     const { page, errors } = await mount(width, theme);
     try {
       const bar = page.getByRole('toolbar', { name: 'Creation tools', exact: true });
-      assert.deepEqual(await bar.locator(':scope > button').evaluateAll(nodes => nodes.map(node => node.getAttribute('aria-label'))),
-        ['Select tool', 'Hand tool', 'Text tool', 'Shapes', 'Artwork library', 'Layers', 'Add module']);
+      assert.deepEqual(await bar.getByRole('button').evaluateAll(nodes => nodes.map(node => node.getAttribute('aria-label'))),
+        ['Select tool', 'Pointer tools', 'Rectangle tool', 'Shapes', 'Text tool', 'Artwork library', 'Actions']);
       const bounds = await bar.boundingBox();
       assert.ok(bounds.height <= 44 && bounds.x >= 0 && bounds.x + bounds.width <= width);
       const image = await openSharedTool(page, 'Image');
       await button(image, 'Fit inside').click();
       const fitted = await draft(page);
-      assert.equal(fitted.imageModules[0].sides[0].crop, null);
+      assert.equal(fitted.imageModules[0].artwork.crop, null);
       await button(image, 'Rotate').click();
-      assert.equal((await draft(page)).imageModules[0].sides[0].transform.quarterTurns, 1);
+      assert.equal((await draft(page)).imageModules[0].artwork.transform.quarterTurns, 1);
       await page.locator('main.system-workflow').focus(); await page.keyboard.press('Control+z');
       assert.deepEqual(await draft(page), fitted);
       await button(image, 'Crop').click();
@@ -137,13 +137,14 @@ test('command search works from Edit and keyboard with the drawing toolbar hidde
   const { page, errors } = await mount(800, 'mist');
   try {
     const saved = await draft(page);
-    const trigger = button(page, 'Layers'); await trigger.focus(); await trigger.press('Control+k');
+    const trigger = sharedToolTab(page, 'Layers'); await trigger.focus(); await trigger.press('Control+k');
     const search = page.getByRole('dialog', { name: 'Search commands', exact: true });
     const input = search.getByRole('textbox', { name: 'Search commands', exact: true });
     await input.waitFor();
     assert.equal(await search.locator('.artwork-action-controls, input[type=range]').count(), 0);
     await input.fill('image settings'); await input.press('Enter');
-    assert.equal(await page.getByRole('tab', { name: 'Image', exact: true }).getAttribute('aria-selected'), 'true');
+    assert.equal(await sharedToolTab(page, 'Inspector').getAttribute('aria-selected'), 'true');
+    await sharedToolPanel(page).locator('.workbench-image-inspector').waitFor();
     await editorMenu(page, 'Tools').click();
     await page.getByRole('menuitemcheckbox', { name: 'Drawing toolbar', exact: true }).click();
     assert.equal(await page.getByRole('toolbar', { name: 'Creation tools' }).count(), 0);
@@ -152,7 +153,9 @@ test('command search works from Edit and keyboard with the drawing toolbar hidde
     assert.equal(await editorMenu(page, 'Edit').evaluate(node => node === document.activeElement), true);
     await page.locator('main.system-workflow').focus(); await page.keyboard.press('Control+k'); await input.waitFor();
     await input.fill('artwork info'); await input.press('Enter');
-    assert.equal(await page.getByRole('tab', { name: 'Info', exact: true }).getAttribute('aria-selected'), 'true');
+    assert.equal(await sharedToolTab(page, 'Inspector').getAttribute('aria-selected'), 'true');
+    assert.equal(await sharedToolPanel(page).locator('[data-inspector-section="Info"]').evaluate(node => node.open), true,
+      'Artwork info opens its section inside the same Inspector');
     assert.deepEqual(await draft(page), saved, 'search and panel navigation never change the composition');
     assert.deepEqual(errors, []);
   } finally { await page.close(); }

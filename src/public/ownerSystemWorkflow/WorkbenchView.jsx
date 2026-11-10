@@ -22,6 +22,7 @@ import {
   Suspense,
   useCallback,
   useEffect,
+  useImperativeHandle,
   useLayoutEffect,
   useMemo,
   useRef,
@@ -166,6 +167,9 @@ function WorkbenchViewStateProvider({
   const getSelection = useCallback(() => selectedRef.current.filter(id => entries.current.has(id)), []);
   // Content that only needs commands must not subscribe to camera geometry.
   const focusModulesRef = useRef(null);
+  const groupScene = useRef(null);
+  const groupDrop = useRef(null);
+  const cancelInteractionRef = useRef(null);
   const inspections = useRef(new Map());
   const registerInspection = useCallback((id, action) => {
     inspections.current.set(id, action);
@@ -254,6 +258,9 @@ function WorkbenchViewStateProvider({
       toolViewportBottom,
       setToolViewportBottom,
       focusModulesRef,
+      groupScene,
+      groupDrop,
+      cancelInteractionRef,
       inspections: inspections.current,
       entries: entries.current,
       frames: frames.current,
@@ -378,10 +385,11 @@ export function WorkbenchViewControls({
   const revision = useSyncExternalStore(view.subscribe, view.snapshot);
   const latest = useRef(view);
   latest.current = view;
-  const groupDrop = useRef(null),
-    groupScene = useRef(null);
+  const groupDrop = view.groupDrop;
+  const groupScene = view.groupScene;
   const [moveError, setMoveError] = useState('');
   const [groupsOpen, setGroupsOpen] = useState(false);
+  const canManageGroups = view.store && view.store.getWorkbenchId?.() !== 'reception';
   const groupsReturnFocus = useRef(null);
   const controlsRef = useRef(null),
     inspectionTarget = useRef(null);
@@ -426,7 +434,7 @@ export function WorkbenchViewControls({
       group: groupScene.current?.capture(),
       focusId: document.activeElement?.closest('[data-workbench-view-id]')?.dataset.workbenchViewId,
     }),
-    []
+    [groupScene]
   );
   const restoreContext = useCallback(
     context => {
@@ -443,7 +451,7 @@ export function WorkbenchViewControls({
         : node?.querySelector('[data-workbench-selectable]');
       (target || hostRef.current)?.focus({ preventScroll: true });
     },
-    [hostRef]
+    [hostRef, groupScene]
   );
   const navigation = useWorkbenchNavigation({
     hostRef,
@@ -465,6 +473,9 @@ export function WorkbenchViewControls({
     resetPresentation: () => groupScene.current?.restore(null),
     entries,
   });
+  useImperativeHandle(view.cancelInteractionRef, () => navigation.cancelInteraction, [
+    navigation.cancelInteraction,
+  ]);
   const { locked, focusDestination } = navigation;
   const objectPicker = useWorkbenchObjectPicker({
     hostRef,
@@ -647,7 +658,8 @@ export function WorkbenchViewControls({
     snapMovement.begin(event, operation.nodes);
     gestures.beginMove(event, {
       ...operation,
-      previewDrop: pointer => groupDrop.current?.preview(pointer),
+      captureTarget: event.target.matches?.('.workbench-selection') ? event.target : undefined,
+      previewDrop: pointer => groupDrop.current?.preview(pointer, operation.ids),
       commitDrop: pointer => groupDrop.current?.commit(pointer, operation.ids),
     });
   };
@@ -1121,7 +1133,7 @@ export function WorkbenchViewControls({
   }, [hostRef, disabled, locked, cancelGesture, gestures, setSelection, entries, focusModules]);
   const navigationTools = (
     <>
-      {view.store && (
+      {canManageGroups && (
         <Suspense fallback={null}>
           <WorkbenchGroups
             view={view}
@@ -1171,10 +1183,12 @@ export function WorkbenchViewControls({
         ...navigation,
         focusSelection,
         canFocusSelection: focusSelected.length > 0,
-        openGroups: () => {
-          groupsReturnFocus.current = document.activeElement;
-          setGroupsOpen(true);
-        },
+        openGroups: canManageGroups
+          ? () => {
+              groupsReturnFocus.current = document.activeElement;
+              setGroupsOpen(true);
+            }
+          : undefined,
       })}
       {cells && (
         <Suspense fallback={null}>

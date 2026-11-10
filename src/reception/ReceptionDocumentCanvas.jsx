@@ -3,8 +3,9 @@ import { layerIds } from '../systemWorkflow/domain/artworkLayers.js';
 import { TextContentPage } from '../text/SceneTextContent.jsx';
 import { textAppearance, textOutputStyle, textWindowStyle } from '../text/domain/article.js';
 import ShapeSurface from '../shapes/ShapeSurface.jsx';
+import { cssPaintRectangle, workbenchPaintGeometry, workbenchPaintStyle } from '../public/ownerSystemWorkflow/workbenchPaintGeometry.js';
 import { ReceptionImage, ReceptionProfileContent } from './ReceptionCanvas.jsx';
-import { receptionResponsiveLayout } from './receptionEditorDocument.js';
+import { receptionResponsiveLayout, visibleReceptionInnerLines } from './receptionEditorDocument.js';
 import { editorCellClip } from './editorCellGeometry.js';
 import ReceptionInnerLines from './ReceptionInnerLines.jsx';
 import './receptionDocument.css';
@@ -24,15 +25,16 @@ export default function ReceptionDocumentCanvas({ reception, width, model, addre
   const viewportWidth = width || measured;
   const layout = useMemo(() => viewportWidth > 0 ? receptionResponsiveLayout(reception, viewportWidth) : null, [reception, viewportWidth]);
   useLayoutEffect(() => { if (layout) onLayout?.(layout); }, [layout, onLayout]);
+  const innerLines = visibleReceptionInnerLines(reception.innerLines);
   const order = layerIds(reception.artworkLayers);
   const owners = new Map((layout?.cells || []).flatMap(cell => cell.members.map(id => [id, cell])));
   const record = id => reception.imageModules.find(item => item.id === id)
     || reception.texts.find(item => item.id === id) || reception.shapes.find(item => item.id === id);
-  const paint = (id, radius = 0) => {
+  const paint = (id, cell) => {
     const item = record(id);
     if (!item) return null;
-    if (id.startsWith('shape:')) return <ShapeSurface record={item} radius={radius}
-      hideOutline={Boolean(reception.innerLines && reception.cells.some(cell => cell.id === id))} />;
+    if (id.startsWith('shape:')) return <ShapeSurface record={item} continuousFill={Boolean(cell && reception.bento?.gap > 0)} radius={cell?.radius}
+      hideOutline={Boolean(innerLines && cell)} />;
     if (id.startsWith('image:')) return <ReceptionImage record={item} />;
     const article = item.article, appearance = textAppearance(article), rect = layout.windows[id];
     return <>
@@ -71,13 +73,17 @@ export default function ReceptionDocumentCanvas({ reception, width, model, addre
           data-selected={selected === id || undefined} data-text={text || undefined}
           style={{ ...rect, ...(article ? { ...textWindowStyle(article), '--workbench-content-width': `${rect.width}px`,
             '--workbench-paint-width': `${rect.width}px`, '--workbench-paint-height': `${rect.height}px`, '--workbench-content-scale': 1 } : {}),
-          zIndex, clipPath: parent ? editorCellClip(parent, rect, owner.radius || 0) : undefined }}
+          zIndex, clipPath: parent && owner.clipContent !== false ? editorCellClip(parent, rect, owner.radius || 0) : undefined }}
           {...(owner ? selectProps(owner.id, id) : {})}>{paint(id)}</div>;
       }
       const link = reception.links?.find(item => item.id === cell.content);
+      const density = globalThis.devicePixelRatio || 1;
+      const frame = reception.bento?.gap > 0
+        ? workbenchPaintStyle(rect, {scale:1,x:0,y:0}, {x:0,y:0}, density, true, true)
+        : cssPaintRectangle(workbenchPaintGeometry(rect, density), density);
       return <section key={id} className="reception-document-cell" data-cell-id={id} data-selected={selected === id || undefined}
-        style={{ ...rect, zIndex, borderRadius: cell.radius || 0 }} {...selectProps(id, id)}>
-        <div className="reception-document-cell-surface">{paint(id, cell.radius)}</div>
+        style={{ ...frame, zIndex, borderRadius: cell.radius || 0 }} {...selectProps(id, id)}>
+        <div className="reception-document-cell-surface">{paint(id, cell)}</div>
         {cell.content && <div className="reception-document-cell-content" style={{ padding: cell.contentLayout?.padding ?? 24,
           alignItems: { top: 'flex-start', center: 'center', bottom: 'flex-end' }[cell.contentLayout?.alignY || 'top'],
           justifyContent: { left: 'flex-start', center: 'center', right: 'flex-end' }[cell.contentLayout?.alignX || 'left'] }}>{link
@@ -87,7 +93,7 @@ export default function ReceptionDocumentCanvas({ reception, width, model, addre
     })}
     {layout && <ReceptionInnerLines frames={layout.cells.map(cell => cell.window)}
       gap={layout.mobile ? Math.min(12, Math.max(0, layout.width - 2)) : reception.bento ? reception.bento.gap * layout.scale : undefined}
-      appearance={reception.innerLines && { ...reception.innerLines, width: reception.innerLines.width * layout.scale }}
+      appearance={innerLines && { ...innerLines, width: innerLines.width * layout.scale }}
       bounds={{ left: 0, top: 0, width: layout.width, height: layout.height }} style={{ zIndex: order.length }} />}
     </section>
   </div>;

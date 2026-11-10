@@ -1,7 +1,7 @@
 // Historical v2 samples for saved-document, publication and recovery tests.
 // Production Reception authoring uses the native Editor scope.
 import { assertReception } from '../../src/profileDocument/domain/receptionPresentation.js';
-import { resolveImageLibrarySide } from '../../src/imageModule/imageLibrarySide.js';
+import { resolveImageLibraryArtwork } from '../../src/imageModule/imageLibraryArtwork.js';
 import { MAX_IMAGE_MODULES } from '../../src/imageModule/imageModule.js';
 import { createArticle, MAX_TEXT_MODULES } from '../../src/text/domain/article.js';
 import { saveTextRecordResult } from '../../src/text/textSession.js';
@@ -58,7 +58,7 @@ export function prepareReceptionImage(store, expected, regionId, initial = expec
   let active = true;
   const generation = store.getGeneration();
   return { cancel: () => { active = false; }, async choose(input, decoded, isCurrent = () => true) {
-    const side = await resolveImageLibrarySide(input, decoded);
+    const side = await resolveImageLibraryArtwork(input, decoded);
     if (!active || !isCurrent() || !store.isCurrent() || store.getGeneration() !== generation || store.getSnapshot().reception !== expected) return false;
     const value = initial, region = value?.regions.find(r => r.id === regionId);
     if (!region) return false;
@@ -66,7 +66,7 @@ export function prepareReceptionImage(store, expected, regionId, initial = expec
     if (value.imageModules.filter(item => layered || item.id !== region.content || item.id === value.branding.logo).length >= MAX_IMAGE_MODULES)
       throw new Error(`Reception holds up to ${MAX_IMAGE_MODULES} images. Delete an image before adding another.`);
     const id = `image:${crypto.randomUUID()}`;
-    const record = { id, name: (side.asset.name || 'Image').slice(0, 48), width: 800, height: 600, sides: [{ ...side, crop: { x: .5, y: .5, zoom: 1 } }], visibility: 'PUBLIC' };
+    const record = { id, name: (side.asset.name || 'Image').slice(0, 48), width: 800, height: 600, artwork: { ...side, crop: { x: .5, y: .5, zoom: 1 } }, visibility: 'PUBLIC' };
     const regions = value.regions.map(r => !layered && r.id === regionId ? { ...r, padding: 0 } : r);
     const content = { ...value, regions, imageModules: [...value.imageModules, record] };
     const next = layered ? addReceptionScenePlacement(content, regionId, id, options.geometry) : assignReceptionContent(content, regionId, id);

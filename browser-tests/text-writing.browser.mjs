@@ -1,3 +1,4 @@
+import { openTextToolSection } from './fixtures/text-tool-sections.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { chromium } from 'playwright-core';
@@ -12,7 +13,7 @@ for (const width of [1440, 390]) test(`writing, clipboard and artwork editing at
     page.setDefaultTimeout(10000); const errors = []; page.on('pageerror', error => errors.push(error.message));
     await mountTextToolsFixture(page, origin);
     const body = page.getByRole('textbox', { name: 'Article text', exact: true });
-    const tools = page.locator('.text-tools-window');
+    const tools = page.locator('.workbench-tool-dock:has([data-text-inspector])');
     await body.fill('Keep my writing'); await body.press('Control+A');
     const paste = data => body.evaluate((node, data) => {
       const clipboardData = new DataTransfer(); for (const [type, value] of Object.entries(data)) clipboardData.setData(type, value);
@@ -22,8 +23,10 @@ for (const width of [1440, 390]) test(`writing, clipboard and artwork editing at
     assert.equal(await body.innerText(), 'Keep my writing');
     await paste({ 'text/plain': 'First\rSecond\r\n\nLast', 'text/html': '<b>unwanted HTML</b>' }); await settle(page);
     assert.deepEqual(await body.locator('p').allTextContents(), ['First', 'Second', '', 'Last']);
+    await openTextToolSection(page.locator('.workbench-tool-dock:has([data-text-inspector])'), 'More text tools');
     await tools.getByRole('button', { name: 'Undo', exact: true }).click();
     assert.equal(await body.innerText(), 'Keep my writing');
+    await openTextToolSection(page.locator('.workbench-tool-dock:has([data-text-inspector])'), 'More text tools');
     await tools.getByRole('button', { name: 'Redo', exact: true }).click();
     assert.deepEqual(await body.locator('p').allTextContents(), ['First', 'Second', '', 'Last']);
     await body.focus(); await body.press('Control+End'); await body.press('Enter');
@@ -46,6 +49,7 @@ for (const width of [1440, 390]) test(`writing, clipboard and artwork editing at
       const original = await page.evaluate(() => window.savedDraft().texts[0].article.content);
       await body.locator('.text-artwork-editor img').dragTo(body.locator('p').first(), { targetPosition: { x: 1, y: 1 } }); await settle(page);
       assert.equal((await page.evaluate(() => window.savedDraft().texts[0].article.content.content))[0].type, 'artwork');
+      await openTextToolSection(page.locator('.workbench-tool-dock:has([data-text-inspector])'), 'More text tools');
       await tools.getByRole('button', { name: 'Undo', exact: true }).click();
       const restored = await page.evaluate(() => window.savedDraft().texts[0].article.content);
       assert.deepEqual(restored.content.map(node => node.type), original.content.map(node => node.type));
@@ -70,6 +74,7 @@ for (const width of [1440, 390]) test(`writing, clipboard and artwork editing at
     const moved = await page.evaluate(() => window.savedDraft().texts[0].article.content);
     assert.deepEqual(moved.content, [before.content[1], before.content[0], before.content[2]]);
     assert.equal(await tools.getByRole('button', { name: 'Move artwork up', exact: true }).isDisabled(), true);
+    await openTextToolSection(page.locator('.workbench-tool-dock:has([data-text-inspector])'), 'More text tools');
     await tools.getByRole('button', { name: 'Undo', exact: true }).click(); await settle(page);
     assert.deepEqual(await page.evaluate(() => window.savedDraft().texts[0].article.content), before);
     await tools.getByRole('button', { name: 'Move artwork down', exact: true }).click(); await settle(page);
@@ -77,6 +82,7 @@ for (const width of [1440, 390]) test(`writing, clipboard and artwork editing at
     await page.screenshot({ path: `.browser-test-runtime/text-writing-artwork-${width}.png` });
     await tools.getByRole('button', { name: 'Remove artwork', exact: true }).click();
     assert.equal(await body.locator('figure').count(), 0);
+    await openTextToolSection(page.locator('.workbench-tool-dock:has([data-text-inspector])'), 'More text tools');
     await tools.getByRole('button', { name: 'Undo', exact: true }).click();
     assert.equal(await body.locator('figcaption').innerText(), 'Authored caption');
     await mountTextToolsFixture(page, origin, { visitor: true });

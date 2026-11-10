@@ -1,38 +1,83 @@
-import { useWorkbenchArea } from './WorkbenchAreaContext.jsx';
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
-import { X } from '../InscapeIcons.jsx';
+import { GripVertical, List, Minimize2, X } from 'lucide-react';
+import WorkbenchIndexRows from './WorkbenchIndexRows.jsx';
 import { WorkbenchWindow } from './DisplayInstrumentWindow.jsx';
+import WorkbenchToolPanel from './WorkbenchToolPanel.jsx';
 import { useWorkbenchView } from './WorkbenchViewContext.js';
 import { editWorkbenchIndex } from '../../systemWorkflow/workbenchIndexSession.js';
-import { MAX_WORKBENCH_DESTINATIONS, resolveWorkbenchDestination, workbenchDestinationAnchor } from '../../systemWorkflow/domain/workbenchIndex.js';
+import { screenWorkbenchIndex, resolveWorkbenchDestination, workbenchDestinationAnchor } from '../../systemWorkflow/domain/workbenchIndex.js';
 import { workbenchGroupWindowIds } from '../../systemWorkflow/domain/workbenchGroups.js';
-import { clampWorkbenchPosition, unprojectWorkbenchPosition } from './workbenchSpace.js';
+import { workbenchDestinationCamera } from './workbenchNavigation.js';
 import './workbenchIndex.css';
-import './workbenchNavigationTools.css';
 
 const empty = Object.freeze({});
 const noSubscribe = () => () => {};
 
 export default function WorkbenchIndex({ hostRef, navigation, sceneRef, entryTarget, showTrigger = true }) {
-  const { bounds: areaBounds } = useWorkbenchArea();
   const view = useWorkbenchView(), owner = Boolean(view.store);
   const { setSelection } = view;
   const content = useSyncExternalStore(view.store?.subscribe || noSubscribe,
     view.store?.getSnapshot || (() => view.groupContent || empty));
-  const index = content.workbenchIndex;
-  const [visitorOpen, setVisitorOpen] = useState(null), [selected, setSelected] = useState(null);
-  const [error, setError] = useState(''), [name, setName] = useState('');
+  const storedIndex = content.workbenchIndex;
+  const index = useMemo(() => screenWorkbenchIndex(storedIndex), [storedIndex]);
+  const [visitorOpen, setVisitorOpen] = useState(null);
+  const [visitorPosition, setVisitorPosition] = useState(null);
+  const [compact, setCompact] = useState(false), [error, setError] = useState('');
+  const [preferredId, setPreferredId] = useState(null), [activeId, setActiveId] = useState(null);
+  const open = owner ? index?.open : visitorOpen ?? index?.open;
+  const panelRoot = useRef(null);
+  const returnToModeButton = useRef(false);
+  const modeButton = useCallback(button => {
+    if (button && returnToModeButton.current) {
+      returnToModeButton.current = false;
+      button.focus({ preventScroll: true });
+    }
+  }, []);
+  const frame = useMemo(() => {
+    if (!index) return null;
+    const full = visitorPosition && !owner ? { ...index.window, ...visitorPosition } : index.window;
+    if (!compact || !index.destinations.length) return full;
+    return { ...full, width: Math.min(480, 90 + index.destinations.length * 32), height: 40 };
+  }, [index, compact, visitorPosition, owner]);
   const started = useRef(false), current = useRef(null);
-  current.current = { content, index, navigation };
+  current.current = { content, index, navigation, preferredId };
   const getFrame = useCallback(id => view.frames.get(id)?.current, [view.frames]);
+  const refreshActive = useCallback(() => {
+    const { content, index, navigation, preferredId } = current.current;
+    let match = null;
+    if (!navigation.moving && index?.destinations.length) {
+      const camera = navigation.getCamera(), viewport = navigation.navigationViewport();
+      for (const item of index.destinations) {
+        const bounds = resolveWorkbenchDestination(item, content, getFrame);
+        const target = workbenchDestinationCamera(bounds, viewport, .25, 0);
+        if (!target || Math.abs(target.scale - camera.scale) > 1e-7
+          || Math.abs(target.offset.x - camera.offset.x) > .5 || Math.abs(target.offset.y - camera.offset.y) > .5) continue;
+        // Two names can frame the same spot. Keep the one the user just chose.
+        if (item.id === preferredId) { match = item.id; break; }
+        match ??= item.id;
+      }
+    }
+    setActiveId(match);
+  }, [getFrame]);
+  useLayoutEffect(() => {
+    if (open) refreshActive();
+  }, [open, navigation, content, preferredId, refreshActive, view.toolViewportBottom]);
+  useLayoutEffect(() => {
+    const host = hostRef.current;
+    if (!open || !host) return;
+    const size = new ResizeObserver(refreshActive), docks = new MutationObserver(refreshActive);
+    size.observe(host);
+    docks.observe(host, { attributes: true, attributeFilter: ['style'] });
+    return () => { size.disconnect(); docks.disconnect(); };
+  }, [hostRef, open, refreshActive]);
   const save = (next, label) => {
-    try { editWorkbenchIndex(view.store, view.profileAddress, index, next, label); setError(''); return true; }
+    try { editWorkbenchIndex(view.store, view.profileAddress, storedIndex, next, label); setError(''); return true; }
     catch (failure) { setError(failure.message); return false; }
   };
   const visit = useCallback(id => {
     const { navigation } = current.current;
-    return navigation.focusDestination({ padding: 0, onArrive: () => setSelection([]),
+    return navigation.focusDestination({ padding: 0, onArrive: () => { setPreferredId(id); setSelection([]); },
       prepare: () => sceneRef.current?.restore(null),
       getBounds: () => {
         const { index, content } = current.current;
@@ -47,11 +92,17 @@ export default function WorkbenchIndex({ hostRef, navigation, sceneRef, entryTar
     }); });
     return () => { cancelAnimationFrame(first); cancelAnimationFrame(second); };
   }, [owner, entryTarget, index?.landingId, navigation.locked, visit]);
+  useLayoutEffect(() => {
+    if (open && activeId) panelRoot.current?.querySelector('[data-active], [aria-current="location"]')
+      ?.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'instant' });
+  }, [open, activeId, compact]);
   if (!index) return null;
-  const open = owner ? index.open : visitorOpen ?? index.open;
   const toggle = () => owner ? save({ ...index, open: !open }, 'Toggle Index') : setVisitorOpen(!open);
-  const entry = index.destinations.find(item => item.id === selected);
-  const update = next => save({ ...index, landingId: next.visibility === 'PRIVATE' && index.landingId === next.id ? null : index.landingId, destinations: index.destinations.map(item => item.id === next.id ? next : item) }, 'Edit destination');
+  const update = (next, label = 'Edit destination') => {
+    const clearStart = next.visibility === 'PRIVATE' && index.landingId === next.id;
+    const destinations = index.destinations.map(item => item.id === next.id ? next : item);
+    return save({ ...index, destinations, landingId: clearStart ? null : index.landingId }, label);
+  };
   const withFollow = (item, groupId) => {
     const { follow: _follow, ...fixed } = item;
     if (!groupId) return fixed;
@@ -68,66 +119,64 @@ export default function WorkbenchIndex({ hostRef, navigation, sceneRef, entryTar
     if (!region) throw new Error('Let the camera settle before saving a view.');
     return region;
   };
-  const run = action => { try { action(); } catch (failure) { setError(failure.message); } };
-  const moveEntry = direction => {
-    const destinations = [...index.destinations], from = destinations.findIndex(item => item.id === selected), to = from + direction;
-    if (from < 0 || to < 0 || to >= destinations.length) return;
-    destinations.splice(to, 0, ...destinations.splice(from, 1)); save({ ...index, destinations }, 'Reorder destinations');
+  const run = action => { try { return action(); } catch (failure) { setError(failure.message); } };
+  const isStrip = compact && index.destinations.length > 0;
+  const go = id => {
+    if (visit(id)) setError('');
+    else { setError('This view is unavailable while another interaction is active.'); setCompact(false); }
   };
-  const pin = pinned => {
-    const { scale, offset } = navigation.getCamera(), frame = index.window;
-    const window = pinned ? { ...frame, left: Math.max(8, frame.left * scale + offset.x), top: Math.max(8, frame.top * scale + offset.y) }
-      : { ...frame, ...clampWorkbenchPosition(unprojectWorkbenchPosition(frame, scale, offset), frame, areaBounds) };
-    save({ ...index, pinned, window }, 'Pin Index');
+  const add = () => run(() => {
+    let number = index.destinations.length + 1;
+    while (index.destinations.some(item => item.name === `View ${number}`)) number++;
+    const item = { id: `workbench-view:${crypto.randomUUID()}`, name: `View ${number}`, view: capture(), visibility: 'PUBLIC' };
+    if (save({ ...index, destinations: [...index.destinations, item] }, 'Save view')) { setPreferredId(item.id); return item.id; }
+  });
+  const replace = item => run(() => {
+    if (update(withFollow({ ...item, view: capture() }, item.follow?.groupId), 'Replace saved view')) setPreferredId(item.id);
+  });
+  const commitFrame = next => {
+    const position = { left: next.left, top: next.top };
+    if (!owner) { setVisitorPosition(position); return true; }
+    const window = isStrip ? { ...index.window, ...position } : next;
+    const saved = save({ ...index, window }, 'Move or resize Index');
+    if (!saved) setCompact(false);
+    return saved;
   };
-  const panel = open && hostRef.current && createPortal(<div className="workbench-index" data-system-workflow-panel="index" data-workbench-index="true">
-    <WorkbenchWindow key={`${index.pinned}:${owner}`} label="Index" title="Destinations" titleContent={<strong>Index</strong>} viewportBottom={globalThis.innerHeight - 8} chrome="flat" className="workbench-tool-window workbench-navigation-tool"
-      viewId={index.pinned ? undefined : 'workbench:index'} registerView={false} screenSized
-      width={index.window.width} initialHeight={index.window.height} initialX={index.window.left} initialY={index.window.top}
-      minimumWidth={240} minimumHeight={180} resizableWidth resizable={owner} committedFrame={index.window}
-      onLayoutCommit={owner ? window => save({ ...index, window }, 'Move or resize Index') : undefined}
-      controls={<button type="button" aria-label="Close Index" className="system-workflow__window-cap" onClick={toggle}><X size={14} /></button>}>
-      <nav aria-label="Workbench destinations">
-        {index.destinations.length === 0 && <p>Frame a composition, then save its view here.</p>}
-        <ol>{index.destinations.map((item, order) => <li key={item.id}>
-          <button type="button" disabled={navigation.locked} onClick={() => { if (!visit(item.id)) setError('This view is unavailable while another interaction is active.'); else setError(''); }}
-            aria-label={`Go to ${item.name}`}><span>{String(order + 1).padStart(2, '0')}</span>{item.name}{index.landingId === item.id && <small>Start</small>}</button>
-          {owner && <button type="button" aria-label={`Edit ${item.name}`} aria-pressed={selected === item.id} onClick={() => setSelected(selected === item.id ? null : item.id)}>Edit</button>}
-        </li>)}</ol>
-      </nav>
-      {owner && <div className="workbench-index__editor">
-        <form onSubmit={event => { event.preventDefault(); run(() => {
-          const item = { id: `workbench-view:${crypto.randomUUID()}`, name: name.trim() || `View ${index.destinations.length + 1}`, view: capture(), visibility: 'PUBLIC' };
-          if (save({ ...index, destinations: [...index.destinations, item] }, 'Save view')) { setName(''); setSelected(item.id); }
-        }); }}>
-          <label>New destination<input aria-label="Destination name" value={name} maxLength={48} placeholder="Name this view" onChange={event => setName(event.target.value)} /></label>
-          <button type="submit" disabled={index.destinations.length >= MAX_WORKBENCH_DESTINATIONS || navigation.moving || navigation.locked}>Save current view</button>
-        </form>
-        {entry && <section aria-label={`Destination settings for ${entry.name}`}>
-          <label>Name<input key={`${entry.id}:${entry.name}`} aria-label="Rename destination" defaultValue={entry.name} maxLength={48}
-            onBlur={event => { const name = event.target.value.trim(); if (name && name !== entry.name) update({ ...entry, name }); }}
-            onKeyDown={event => { if (event.key === 'Enter') event.currentTarget.blur(); }} /></label>
-          <label>Follow group<select aria-label="Follow group" value={entry.follow?.groupId || ''} onChange={event => run(() =>
-            update(withFollow({ ...entry, view: resolveWorkbenchDestination(entry, content, getFrame) }, event.target.value)))}>
-            <option value="">Fixed view</option>
-            {entry.follow && !content.workbenchGroups?.some(group => group.id === entry.follow.groupId) && <option value={entry.follow.groupId}>Removed group</option>}
-            {(content.workbenchGroups || []).map(group => <option key={group.id} value={group.id}>{group.name}</option>)}
-          </select></label>
-          {entry.follow && !workbenchDestinationAnchor(content, entry.follow, getFrame) && <p>The linked member is unavailable. This destination uses its saved view; choose a group to reconnect it.</p>}
-          <label className="workbench-index__check"><input type="checkbox" checked={entry.visibility === 'PUBLIC'} onChange={event => update({ ...entry, visibility: event.target.checked ? 'PUBLIC' : 'PRIVATE' })} />Include in publication</label>
-          <div className="workbench-index__row">
-            <button type="button" disabled={navigation.moving || navigation.locked} onClick={() => run(() => update(withFollow({ ...entry, view: capture() }, entry.follow?.groupId)))}>Update view</button>
-            <button type="button" aria-label="Move destination up" disabled={index.destinations[0].id === entry.id} onClick={() => moveEntry(-1)}>↑</button>
-            <button type="button" aria-label="Move destination down" disabled={index.destinations.at(-1).id === entry.id} onClick={() => moveEntry(1)}>↓</button>
-            <button type="button" onClick={() => { if (save({ ...index, destinations: index.destinations.filter(item => item.id !== entry.id), landingId: index.landingId === entry.id ? null : index.landingId }, 'Delete destination')) setSelected(null); }}>Delete</button>
-          </div>
-        </section>}
-        <label>Profile starting view<select aria-label="Profile starting view" value={index.landingId || ''} onChange={event => save({ ...index, landingId: event.target.value || null }, 'Set starting view')}>
-          <option value="">Default</option>{index.destinations.filter(item => item.visibility === 'PUBLIC').map(item => <option key={item.id} value={item.id}>{item.name}</option>)}
-        </select></label>
-        <label className="workbench-index__check"><input type="checkbox" checked={index.pinned} onChange={event => pin(event.target.checked)} />Pin Index to screen</label>
-      </div>}
-      {error && <p role="alert">{error}</p>}
+  const modeLabel = isStrip ? 'Expand Index' : 'Show compact Index';
+  const dockable = owner && !isStrip;
+  const modeControl = <button type="button" ref={modeButton} aria-label={modeLabel} title={modeLabel}
+    className={dockable ? 'workbench-tool-panel-close' : 'system-workflow__window-cap'}
+    disabled={!index.destinations.length} onClick={() => { returnToModeButton.current = true; setCompact(!isStrip); }}>
+    {isStrip ? <List /> : <Minimize2 />}
+  </button>;
+  const list = !isStrip && <div className="workbench-index__body" data-workflow-material="tactile" data-workflow-finish="flat" data-workflow-palette="editor">
+    <WorkbenchIndexRows {...{ index, owner, content, getFrame, navigation, go, save, update, add, replace, activeId }}
+      follow={(item, groupId) => run(() => update(withFollow({ ...item, view: resolveWorkbenchDestination(item, content, getFrame) }, groupId)))} />
+    {error && <p role="alert">{error}</p>}
+  </div>;
+  const panel = open && hostRef.current && createPortal(dockable
+    ? <WorkbenchToolPanel dockId="Index" title="Index" label="Index — Destinations" role="complementary" moveLabel="Move Index window"
+        onClose={toggle} closeLabel="Close Index" headerActions={modeControl} panelRef={panelRoot}
+        chrome="flat" className="workbench-index__editor workbench-utility-panel workbench-editor-panel"
+        data-workbench-index="true" data-system-workflow-panel="index" data-workflow-material="tactile" data-workflow-finish="flat" data-workflow-palette="editor"
+        frame={frame} onFrameChange={commitFrame} minimumWidth={240} minimumHeight={180} commitFloatingFrameOnRelease>{list}</WorkbenchToolPanel>
+    : <div ref={panelRoot} className="workbench-index" data-system-workflow-panel="index" data-workbench-index="true">
+    <WorkbenchWindow key={isStrip ? 'strip' : 'panel'} label="Index" title="Destinations" viewportBottom={globalThis.innerHeight - 8}
+      chrome="flat" className={`workbench-tool-window workbench-index__window${isStrip ? ' workbench-index__strip' : ''}`}
+      registerView={false} preserveAuthoredLayout width={frame.width} initialHeight={frame.height} initialX={frame.left} initialY={frame.top}
+      minimumWidth={isStrip ? 80 : 240} minimumHeight={isStrip ? 40 : 180} resizableWidth resizable={false}
+      committedFrame={frame} onLayoutCommit={commitFrame}
+      titleContent={isStrip ? <>
+        <GripVertical aria-hidden="true" />
+        <nav className="workbench-index__numbers" aria-label="Saved views">{index.destinations.map((item, order) =>
+          <button type="button" key={item.id} aria-label={`Go to ${item.name}`} title={`${order + 1} · ${item.name}`} disabled={navigation.locked}
+            aria-current={activeId === item.id ? 'location' : undefined} onClick={() => go(item.id)}>{order + 1}</button>)}</nav>
+      </> : <strong>Index</strong>}
+      controls={<>
+        {modeControl}
+        {!isStrip && <button type="button" aria-label="Close Index" title="Close Index" className="system-workflow__window-cap" onClick={toggle}><X /></button>}
+      </>}>
+      {list}
     </WorkbenchWindow>
   </div>, hostRef.current);
   return <>{showTrigger && <button className="workflow-tactile-control" type="button" aria-label="Toggle Index" aria-expanded={open} disabled={navigation.locked} onClick={toggle}>Index</button>}{panel}</>;

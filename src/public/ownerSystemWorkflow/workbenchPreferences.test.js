@@ -27,7 +27,7 @@ test('Workbench preferences remain profile-scoped local editor state', () => {
   }, storage);
 
   assert.deepEqual(saved, {
-    galleryCardSize: 2, gridSpacing: 24, edgeSnap: true, moduleGap: 0, chromeNoise: false, compositionLocked: true, dockVisible: true, gridColor: '#aabbcc', gridMode: 'DOTS', shortcutSnap: false,
+    galleryCardSize: 2, gridSpacing: 24, edgeSnap: true, moduleGap: 0, chromeNoise: false, compositionLocked: true, dockVisible: false, gridColor: '#aabbcc', gridMode: 'DOTS', shortcutSnap: false,
   });
   assert.deepEqual(loadWorkbenchPreferences(profile, storage), saved);
   assert.equal(storage.values.size, 1);
@@ -120,17 +120,17 @@ test('unavailable storage and direct storage helpers cannot report a successful 
   store.dispose();
 });
 
-test('old preferences show the dock; hiding it persists only for that profile', () => {
+test('opening the sidebar persists only for its profile', () => {
   const storage = memoryStorage();
   const key = workbenchPreferencesStorageKey('0xabc');
   const legacy = JSON.stringify({ surfaceId: 'carbon', shortcutSnap: false });
   storage.setItem(key, legacy);
   const loaded = loadWorkbenchPreferences('0xabc', storage);
-  assert.equal(loaded.dockVisible, true);
+  assert.equal(loaded.dockVisible, false);
   assert.equal(storage.getItem(key), legacy);
-  saveWorkbenchPreferences('0xabc', { ...loaded, dockVisible: false }, storage);
-  assert.equal(loadWorkbenchPreferences('0xabc', storage).dockVisible, false);
-  assert.equal(loadWorkbenchPreferences('0xdef', storage).dockVisible, true);
+  saveWorkbenchPreferences('0xabc', { ...loaded, dockVisible: true }, storage);
+  assert.equal(loadWorkbenchPreferences('0xabc', storage).dockVisible, true);
+  assert.equal(loadWorkbenchPreferences('0xdef', storage).dockVisible, false);
 });
 
 test('retired frame preferences are ignored without changing other settings or rewriting on read', () => {

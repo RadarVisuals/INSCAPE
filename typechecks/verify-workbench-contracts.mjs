@@ -15,7 +15,7 @@ const operationProduction = [
   'src/public/ownerSystemWorkflow/workbenchMoveOperation.js',
   'src/public/ownerSystemWorkflow/workbenchResizeOperation.js',
   'src/public/ownerSystemWorkflow/workbenchGestures.js',
-  'src/systemWorkflow/moveWorkbenchGroup.js',
+  'src/systemWorkflow/moveWorkbenchSelection.js',
   'src/systemWorkflow/resizeWorkbenchSelection.js',
 ];
 const production = [
@@ -25,7 +25,7 @@ const production = [
   ...operationProduction,
 ];
 const proofs = [
-  ['typechecks/workbench-contracts.ts', 17],
+  ['typechecks/workbench-contracts.ts', 18],
   ['typechecks/workbench-operations.ts', 22],
 ];
 const read = file => fs.readFileSync(path.join(root, file), 'utf8');

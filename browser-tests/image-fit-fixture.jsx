@@ -34,8 +34,8 @@ export function mount({ persistent = false } = {}) {
   const draft = store.getDraft();
   draft.imageModules = ['one', 'two', 'three', 'four'].map((id, index) => ({
     id: `image:${id}`, name: `Image ${index + 1}`, width: index < 2 ? 984 : 978, height: 552, visibility: 'PUBLIC',
-    sides: [{ id: `side:${id}`, asset: { ...asset, media: { ...asset.media, url: 'https://image.fit.test/source.png', width: 2560, height: 1440 } },
-      crop: null, transform: { quarterTurns: 0, mirrorX: false, mirrorY: index % 2 === 1 } }],
+    artwork: { id: `artwork:${id}`, asset: { ...asset, media: { ...asset.media, url: 'https://image.fit.test/source.png', width: 2560, height: 1440 } },
+      crop: null, transform: { quarterTurns: 0, mirrorX: false, mirrorY: index % 2 === 1 } },
   }));
   draft.workbench = { ...createDefaultWorkbenchPresentation(), imageModules: draft.imageModules.map((image, index) => ({
     id: image.id, open: true, position: { left: index < 2 ? 3576 : 4560, top: index % 2 ? 1944 : 1392 },
@@ -45,8 +45,8 @@ export function mount({ persistent = false } = {}) {
   function Scene({ draft, owner }) {
     const hostRef = useRef(null), view = useWorkbenchView(), camera = useWorkbenchCamera();
     const [target, setTarget] = useState('image:one');
-    useEffect(() => { view.selectArtwork(target); }, [target, view.selectArtwork]);
-    const [dock] = useState(() => { const layout = createToolDockLayout(innerWidth); layout.hidden = ['Layers', 'Shape', 'FX']; layout.groups[0].panes[0].active = 'Image'; return createToolDockStore(layout); });
+    useEffect(() => { view.focusModule(target); }, [target, view.focusModule]);
+    const [dock] = useState(() => { const layout = createToolDockLayout(innerWidth); layout.hidden = ['Layers']; return createToolDockStore(layout); });
     const [preferences, setPreferences] = useState({ edge: true, grid: true });
     const [single, setSingle] = useState(false);
     Object.assign(api, { select: id => { setTarget(id); view.selectArtwork(id); }, single: setSingle, setPreferences, selection: view.setSelection,

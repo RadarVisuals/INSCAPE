@@ -1,6 +1,6 @@
 import { workbenchArea, workbenchAreaBounds } from '../systemWorkflow/domain/workbenchArea.js';
 import { createArticle, MAX_TEXT_MODULES } from './domain/article.js';
-import { createDefaultWorkbenchPresentation, createTextPresentation, TEXT_WINDOW_LIMITS } from '../profileDocument/domain/workbenchPresentation.js';
+import { createDefaultWorkbenchPresentation, createTextPresentation, TEXT_WINDOW_LIMITS, CELL_TEXT_WINDOW_LIMITS, MIN_RECEPTION_CELL_SIZE } from '../profileDocument/domain/workbenchPresentation.js';
 import { clampWorkbenchPosition } from '../public/ownerSystemWorkflow/workbenchSpace.js';
 
 export function prepareTextResize(draft, { expected }) {
@@ -48,27 +48,33 @@ export function unlinkTextModuleResult(store, profile, expected) {
       : textSaveFailure(store.getLastCommitFailure?.() || 'write_failed');
   } catch (error) { return { saved: false, reason: 'invalid', message: error.message }; }
 }
-export function addTextModule(store, profile, placed = null, { visibility = 'PRIVATE', appearance, alignment } = {}) {
+export function addTextModule(store, profile, placed = null, { visibility = 'PRIVATE', appearance } = {}) {
   if (store.getProfileAddress() !== profile) throw new Error('This profile is no longer active.');
   const draft = store.getDraft(), generation = store.getGeneration();
   if ((draft.texts?.length || 0) >= MAX_TEXT_MODULES) throw new Error(`At most ${MAX_TEXT_MODULES} Text modules are supported.`);
   const item = { id: `text:${crypto.randomUUID()}`, article: createArticle(), visibility };
   if (appearance) item.article.appearance = { ...item.article.appearance, ...appearance };
-  if (alignment) item.article.content.content[0].attrs = { textAlign: alignment };
   const next = { ...draft, texts: [...(draft.texts || []), item] };
   if (placed) {
     const presentation = createTextPresentation(item.id, draft.texts?.length || 0);
     if (placed.window) {
-      const { width, height } = placed.window, limits = TEXT_WINDOW_LIMITS;
-      if (!Number.isFinite(width) || !Number.isFinite(height) || width < limits.minimumWidth || height < limits.minimumHeight
+      const { width, height } = placed.window;
+      const cellId = placed.cellId ?? store.getEditingCell?.();
+      const inCell = cellId && store.getCells?.().some(cell => cell.id === cellId);
+      const limits = inCell ? CELL_TEXT_WINDOW_LIMITS : TEXT_WINDOW_LIMITS;
+      const minimumWidth = inCell ? MIN_RECEPTION_CELL_SIZE.width : limits.minimumWidth;
+      const minimumHeight = inCell ? MIN_RECEPTION_CELL_SIZE.height : limits.minimumHeight;
+      if (!Number.isFinite(width) || !Number.isFinite(height) || width < minimumWidth || height < minimumHeight
         || width > limits.maximumWidth || height > limits.maximumHeight)
-        throw new Error(`Text needs at least ${limits.minimumWidth} × ${limits.minimumHeight} px. Enlarge the cell before adding Text.`);
+        throw new Error(`Text needs at least ${minimumWidth} × ${minimumHeight} px. Enlarge the cell before adding Text.`);
       presentation.window = { ...placed.window };
     } else presentation.window = { ...presentation.window, ...clampWorkbenchPosition(placed.position, presentation.window, workbenchAreaBounds(workbenchArea(draft.workbench))) };
     const workbench = placed.workbench || draft.workbench || createDefaultWorkbenchPresentation();
     next.workbench = { ...workbench, texts: [...(workbench.texts || []), presentation] };
   }
-  if (!store.commitCompletedOperation(next, { expectedGeneration: generation, historyLabel: 'Add Text' })) throw new Error('Text module could not be saved.');
+  const cellId = placed?.cellId ?? store.getEditingCell?.();
+  if (!store.commitCompletedOperation(next, { expectedGeneration: generation, historyLabel: 'Add Text',
+    ...(cellId ? { fitNewText: item.id } : {}) })) throw new Error('Text module could not be saved.');
   return item.id;
 }
 export function saveTextModule(store, profile, expected, next) {

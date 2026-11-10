@@ -1,6 +1,6 @@
 import { avoidWorkbenchControl } from './avoidWorkbenchControl.js';
 import { useWorkbenchArea } from './WorkbenchAreaContext.jsx';
-import { useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { useWorkbenchPlacement } from './WorkbenchPlacement.jsx';
@@ -11,11 +11,11 @@ import { useWorkbenchCamera } from './WorkbenchCamera.jsx';
 import OwnerSystemWorkflowDetachedWindow from './OwnerSystemWorkflowDetachedWindow.jsx';
 import { snapWorkbenchCoordinate, WORKBENCH_GRID_STEP } from './workbenchGrid.js';
 import { clampWorkbenchPosition } from './workbenchSpace.js';
-import { clampOwnerSystemWorkflowWindowPosition, resizeWorkbenchWindow, workbenchResizeControl, WORKBENCH_RESIZE_EDGES } from './ownerSystemWorkflowWindowGeometry.js';
+import { clampOwnerSystemWorkflowWindowPosition, resizeWorkbenchWindow, paintWorkbenchResizeControls, workbenchResizeControl, WORKBENCH_RESIZE_EDGES } from './ownerSystemWorkflowWindowGeometry.js';
 
 // The host owns gestures and temporary geometry. A module's resize target owns
 // validation and persistence; companion tools retain only their screen layout.
-export function WorkbenchWindow({ avoidControls, children, background, compact, chrome, className = '', label, controls, title, titleContent, width = 320, resizable = true, resizableWidth = false, initialHeight = 420, minimumHeight = 180, minimumWidth = 240, initialX = 18, initialY = 72, fitContent = false, fitContentFromTop = false, onLayoutChange, snapToGrid = false, placementModule = false, viewId, active, surfaceStyle, resizeTarget, committedFrame, externalControls = false, externalControlsHost, externalControlsClassName = '', moveFromContent = false, registerView = true, screenSized = false, preserveAuthoredLayout = false, onLayoutCommit, viewportBottom }) {
+export function WorkbenchWindow({ avoidControls, children, background, compact, chrome, className = '', label, controls, title, titleContent, objectToolbar = false, width = 320, resizable = true, resizableWidth = false, initialHeight = 420, minimumHeight = 180, minimumWidth = 240, initialX = 18, initialY = 72, fitContent = false, fitContentFromTop = false, onLayoutChange, snapToGrid = false, placementModule = false, viewId, active, surfaceStyle, surfacePreviewFrame, resizeTarget, committedFrame, externalControls = false, cssPixelSurface = false, subpixelEdges = false, externalControlsHost, externalControlsClassName = '', moveFromContent = false, registerView = true, screenSized = false, preserveAuthoredLayout = false, onLayoutCommit, viewportBottom, viewportInsets }) {
   const { editingBounds: areaBounds, area, showOutside, canvasHost } = useWorkbenchArea();
   const view = useWorkbenchView();
   const { offset, getCamera, subscribeCameraPaint } = useWorkbenchCamera();
@@ -25,6 +25,15 @@ export function WorkbenchWindow({ avoidControls, children, background, compact, 
   const camera = transformed ? workbenchModuleTransform(view, viewId) : { scale: 1, x: 0, y: 0 };
   const node = useRef(null), measuredContent = useRef(null), gesture = useRef(null), latest = useRef(null);
   const header = useRef(null), externalControlNode = useRef(null);
+  const restoreHeaderFocus = useRef(false);
+  const setHeader = useCallback(element => {
+    if (!element && header.current === document.activeElement) restoreHeaderFocus.current = true;
+    header.current = element;
+    if (element && restoreHeaderFocus.current) {
+      restoreHeaderFocus.current = false;
+      element.focus({ preventScroll: true });
+    }
+  }, []);
   const [frame, setFrame] = useState(() => ({ left: initialX, top: initialY, width, height: initialHeight }));
   const [preview, setPreview] = useState(null);
   const hasPreview = Boolean(preview);
@@ -33,13 +42,14 @@ export function WorkbenchWindow({ avoidControls, children, background, compact, 
   // An anchored inspector keeps its chosen top while content scrolls below it.
   // Other floating tools retain their existing fit-to-viewport placement.
   const contentFromTop = fitContent && fitContentFromTop && !viewId && !compact;
-  const screenLeft = 8;
+  const screenLeft = 8 + (viewId ? 0 : viewportInsets?.left || 0);
+  const screenRight = viewport.width - (viewId ? 0 : viewportInsets?.right || 0);
   const screenTop = viewId ? 8 : Math.max(8, view.navigationTop || 0);
   const toolTop = contentFromTop ? Math.max(screenTop, Math.min(frame.top, toolViewportBottom - minimumHeight - 8)) : screenTop;
   const toolMaximumHeight = Math.max(1, toolViewportBottom - toolTop - 8);
   const base = { ...frame, width: resizableWidth ? frame.width : width };
   if ((!viewId || anchored) && !compact) {
-    if (resizableWidth) base.width = Math.min(base.width, viewport.width - screenLeft - 8);
+    if (resizableWidth || viewportInsets) base.width = Math.min(base.width, Math.max(1, screenRight - screenLeft - 8));
     if (contentFromTop) base.top = toolTop;
     base.height = Math.min(base.height, toolMaximumHeight);
   }
@@ -47,14 +57,16 @@ export function WorkbenchWindow({ avoidControls, children, background, compact, 
   // to the current viewport. This projection must not become module content.
   if (preserveAuthoredLayout && !viewId && !compact) {
     const position = clampOwnerSystemWorkflowWindowPosition({ x: base.left, y: base.top }, base,
-      { width: viewport.width, height: toolViewportBottom });
+      { width: screenRight, height: toolViewportBottom });
     base.left = Math.max(screenLeft, position.x); base.top = Math.max(screenTop, position.y);
   }
   const current = camera.frame || preview || base;
+  // A font audition may resize the painted text while its floating menu stays under the pointer.
+  const surfaceFrame = surfacePreviewFrame || current;
   const density = transformed && !anchored ? globalThis.devicePixelRatio || 1 : 1;
   const screen = transformed ? { left: current.left * camera.scale + camera.x + offset.x,
     top: current.top * camera.scale + camera.y + offset.y, width: current.width * (anchored ? 1 : camera.scale), height: current.height * (anchored ? 1 : camera.scale) }
-    : { ...current, width: Math.min(current.width, viewport.width - screenLeft - 8) };
+    : { ...current, width: Math.min(current.width, screenRight - screenLeft - 8) };
   const paint = workbenchPaintGeometry(screen, density);
   const painted = Object.fromEntries(Object.entries(paint).map(([key, value]) => [key, value / density]));
   // External module controls must clear both the viewport and their canvas clip.
@@ -62,6 +74,7 @@ export function WorkbenchWindow({ avoidControls, children, background, compact, 
   const clippedControls = externalControls && transformed && !anchored && !showOutside
     && !camera.presented && canvasHost?.contains(node.current);
   const controlsTop = clippedControls ? Math.max(0, offset.y + area.top * view.scale) : 0;
+  const controlsHeight = header.current?.offsetHeight || (objectToolbar ? 34 : 28);
   const placement = useWorkbenchPlacement(node, placementModule && !compact, camera.scale, true, screen);
   // A module can opt into the same free-corner geometry for its selection.
   // Keep snapping, constraints and camera conversion in this existing host.
@@ -87,29 +100,32 @@ export function WorkbenchWindow({ avoidControls, children, background, compact, 
     paint(getCamera());
     return subscribeCameraPaint(paint);
   }, [anchored, getCamera, subscribeCameraPaint, current.left, current.top, localScale, local?.x, local?.y, camera.scale, offset]);
-  // Cell clipping belongs to artwork. Project the same header into the existing
-  // viewport host, retaining its handlers and the shared authored-move owner.
+  // The cell clips artwork; the viewport hosts its header and resize handles.
   useLayoutEffect(() => {
     if (!externalControlsHost || !externalControlNode.current || !header.current) return;
     const element = externalControlNode.current, bar = header.current;
-    let width = bar.getBoundingClientRect().width;
+    let { height } = bar.getBoundingClientRect();
     const paintControls = ({ scale, offset }) => {
       const x = anchor.current.left * scale + offset.x, y = anchor.current.top * scale + offset.y;
-      element.style.left = `${Math.max(8, Math.min(x, viewport.width - width - 8))}px`;
-      // Text's existing external header sits 28px above its zero-height anchor.
-      element.style.top = `${Math.max((view.navigationTop || 0) + 8, y - 56) + 56}px`;
+      element.style.left = `${x}px`; element.style.top = `${y}px`;
+      const screen = { left: x, top: y, width: current.width * localScale * scale, height: current.height * localScale * scale };
+      paintWorkbenchResizeControls(element, screen, viewport);
+      bar.style.setProperty('--toolbar-screen-x', `${x}px`);
+      // Keep the header clear of the handles; the artwork retains its own clip.
+      const top = Math.max((view.navigationTop || 0) + 8, Math.min(y - height - 28, viewport.height - height - 8));
+      bar.style.top = `${top - y}px`;
     };
-    const update = () => { width = bar.getBoundingClientRect().width; paintControls(getCamera()); };
+    const update = () => { ({ height } = bar.getBoundingClientRect()); paintControls(getCamera()); };
     const resize = new ResizeObserver(update); resize.observe(bar); update();
     const unsubscribe = subscribeCameraPaint(paintControls);
     return () => { resize.disconnect(); unsubscribe(); };
-  }, [externalControlsHost, getCamera, subscribeCameraPaint, current.left, current.top, localScale, local?.x, local?.y, viewport.width, view.navigationTop]);
+  }, [externalControlsHost, getCamera, subscribeCameraPaint, current.left, current.top, current.width, current.height, localScale, local?.x, local?.y, viewport, view.navigationTop, canResize]);
   const bounds = viewId ? {
     left: (areaBounds.left - (local?.x || 0)) / localScale,
     top: (areaBounds.top - (local?.y || 0)) / localScale,
     right: (areaBounds.right - (local?.x || 0)) / localScale,
     bottom: (areaBounds.bottom - (local?.y || 0)) / localScale,
-  } : { left: screenLeft, top: screenTop, right: viewport.width - 8, bottom: toolViewportBottom - 8 };
+  } : { left: screenLeft, top: screenTop, right: screenRight - 8, bottom: toolViewportBottom - 8 };
   const commitResize = next => {
     if (resizeTarget?.store) {
       if (!resizeTarget.enabled) return false;
@@ -167,13 +183,13 @@ export function WorkbenchWindow({ avoidControls, children, background, compact, 
       if (committedFrame) { setFrame(committedFrame); return; }
     }
     if (viewId || preserveAuthoredLayout || isCompact || hasPreview) return;
-    const position = clampOwnerSystemWorkflowWindowPosition({ x: base.left, y: base.top }, base,
-      { width: viewport.width, height: toolViewportBottom });
+    const position = clampOwnerSystemWorkflowWindowPosition({ x: base.left, y: base.top }, { width: base.width, height: base.height },
+      { width: screenRight, height: toolViewportBottom });
     const x = Math.max(screenLeft, position.x), y = Math.max(screenTop, position.y);
     if (x !== frame.left || y !== frame.top || base.width !== frame.width || base.height !== frame.height)
-      setFrame({ ...base, left: x, top: y });
+      setFrame({ left: x, top: y, width: base.width, height: base.height });
   // Depend on geometry values, not the new derived base object on every render.
-  }, [committedFrame, viewId, preserveAuthoredLayout, isCompact, hasPreview, frame.left, frame.top, frame.width, frame.height, base.left, base.top, base.width, base.height, viewport.width, toolViewportBottom, screenLeft, screenTop]);
+  }, [committedFrame, viewId, preserveAuthoredLayout, isCompact, hasPreview, frame.left, frame.top, frame.width, frame.height, base.left, base.top, base.width, base.height, screenRight, toolViewportBottom, screenLeft, screenTop]);
   const { left: layoutLeft, top: layoutTop, width: layoutWidth, height: layoutHeight } = preserveAuthoredLayout ? frame : base;
   useLayoutEffect(() => {
     if (!isCompact && !camera.frame) onLayoutChange?.({ left: layoutLeft, top: layoutTop, width: layoutWidth, height: layoutHeight });
@@ -212,14 +228,14 @@ export function WorkbenchWindow({ avoidControls, children, background, compact, 
     const controlBounds = { left: Math.min(...controls.map(rect => rect.left)), right: Math.max(...controls.map(rect => rect.right)),
       top: Math.min(...controls.map(rect => rect.top)), bottom: Math.max(...controls.map(rect => rect.bottom)) };
     const next = avoidWorkbenchControl({ left: rectangle.left, top: rectangle.top, width: rectangle.width, height: rectangle.height },
-      controlBounds, bounds, 8, minimumHeight);
+      controlBounds, { left: bounds.left, top: bounds.top, right: bounds.right, bottom: bounds.bottom }, 8, minimumHeight);
     // DOM layout can round a fractional recovery-control edge. Do not schedule
     // another layout update when React already holds the requested position:
     // even a no-op updater can re-enter this effect while other updates commit.
     if ((next.left !== rectangle.left || next.top !== rectangle.top || next.height !== rectangle.height)
       && (frame.left !== next.left || frame.top !== next.top || frame.height !== next.height))
       setFrame({ ...frame, left: next.left, top: next.top, height: next.height });
-  });
+  }, [avoidControls, viewId, compact, bounds.left, bounds.top, bounds.right, bounds.bottom, minimumHeight, frame]);
   const positionFor = (candidate, altKey) => {
     const snapping = snapToGrid && !altKey;
     const placed = placement.position(candidate, current, {
@@ -228,7 +244,7 @@ export function WorkbenchWindow({ avoidControls, children, background, compact, 
     if (viewId) return { ...base, ...clampWorkbenchPosition(placed, anchored ? { width: base.width / camera.scale, height: base.height / camera.scale } : base, areaBounds) };
     const size = contentFromTop ? { ...base, height: Math.min(base.height, minimumHeight) } : base;
     const position = clampOwnerSystemWorkflowWindowPosition({ x: placed.left, y: placed.top }, size,
-      { width: viewport.width, height: toolViewportBottom });
+      { width: screenRight, height: toolViewportBottom });
     return { ...(preserveAuthoredLayout ? frame : base), left: Math.max(screenLeft, position.x), top: Math.max(screenTop, position.y) };
   };
   const resizeTo = (origin, edge, delta, altKey) => {
@@ -276,23 +292,23 @@ export function WorkbenchWindow({ avoidControls, children, background, compact, 
   const pointerProps = { onPointerMove: move, onPointerUp: () => finish(), onPointerCancel: () => finish(true), onLostPointerCapture: () => finish(true) };
   return <OwnerSystemWorkflowDetachedWindow ariaLabel={`${label} — ${title}`} ref={node} viewId={registerView ? viewId : undefined} active={active} workbenchPan={transformed && !anchored}
     className={`system-workflow__instrument-window ${externalControls ? 'workbench-window--external-controls' : ''} ${className}`} title={`${label} · ${title}`}
-    headerRef={header} renderHeader={externalControlsHost ? bar => createPortal(<div className={externalControlsClassName}>
-      <div ref={externalControlNode} className={`workbench-window--external-controls workbench-window-controls ${className}`} data-window-chrome={chrome}>{bar}</div>
+    objectToolbar={objectToolbar} headerRef={setHeader} renderChrome={externalControlsHost ? (bar, handles) => createPortal(<div className={externalControlsClassName}>
+      <div ref={externalControlNode} className={`workbench-window--external-controls workbench-window-controls ${className}`} data-window-chrome={chrome}>{bar}{handles}</div>
     </div>, externalControlsHost) : undefined}
     headerPointerProps={{ 'aria-label': `Move ${label} window`, 'data-workbench-selectable': registerView && viewId ? true : undefined,
       'data-workbench-view-id': externalControlsHost ? viewId : undefined,
-      'data-controls-below': !externalControlsHost && externalControls && painted.top < controlsTop + 56 || undefined, 'aria-keyshortcuts': registerView && viewId ? 'Shift+Enter' : undefined,
+      'data-controls-below': !externalControlsHost && externalControls && painted.top < controlsTop + controlsHeight + 28 || undefined, 'aria-keyshortcuts': registerView && viewId ? 'Shift+Enter' : undefined,
       tabIndex: 0, onKeyDown: event => key(event), onPointerDown: event => begin(event, 'move'), ...pointerProps }}
     controls={controls} titleContent={titleContent} background={background} compactContent={compact?.content} chrome={chrome}
     contentPointerProps={moveFromContent ? { 'data-content-move': true, 'data-workbench-selectable': Boolean(viewId) || undefined,
       onPointerDown: event => begin(event, 'content-move'), ...pointerProps } : undefined}
-    style={{ ...surfaceStyle, '--workbench-pan-scale': camera.scale, '--workbench-control-scale': density, '--detached-window-width': `${current.width}px`,
+    style={{ ...surfaceStyle, '--workbench-pan-scale': camera.scale, '--workbench-control-scale': density, '--detached-window-width': `${surfaceFrame.width}px`,
       '--workbench-tool-maximum-height': `${toolMaximumHeight}px`,
       left: current.left, top: current.top, height: current.height, maxHeight: viewId ? 'none' : toolMaximumHeight,
       ...(anchored ? { left: painted.left, top: painted.top, width: painted.width, height: painted.height }
-        : transformed ? workbenchViewStyle(camera.scale, current.left, current.top, current.width, current.height, camera.x, camera.y, offset) : {}), ...compact?.style }}
-    resizeHandles={canResize && WORKBENCH_RESIZE_EDGES.filter(([edge]) => resizableWidth || ['n', 's'].includes(edge)).map(([edge, name]) =>
-      <div key={edge} className={`system-workflow__detached-window-resize is-${edge}`}
+        : transformed ? workbenchViewStyle(camera.scale, surfaceFrame.left, surfaceFrame.top, surfaceFrame.width, surfaceFrame.height, camera.x, camera.y, offset, cssPixelSurface, subpixelEdges) : {}), ...compact?.style }}
+    resizeHandles={canResize && !surfacePreviewFrame && WORKBENCH_RESIZE_EDGES.filter(([edge]) => resizableWidth || ['n', 's'].includes(edge)).map(([edge, name]) =>
+      <div key={edge} className={`system-workflow__detached-window-resize is-${edge}`} data-resize-edge={externalControlsHost ? edge : undefined}
         aria-label={edge === 'se' ? `Resize ${label} window` : !resizableWidth && edge === 's' ? `Resize ${label} height` : `Resize ${label} from ${name}`}
         role="separator" tabIndex={0} aria-orientation={['w', 'e'].includes(edge) ? 'vertical' : 'horizontal'}
         aria-valuenow={Math.round(['w', 'e'].includes(edge) ? current.width : current.height)}

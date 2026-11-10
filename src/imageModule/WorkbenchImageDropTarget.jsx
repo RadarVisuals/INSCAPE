@@ -4,7 +4,7 @@ import { useWorkbenchView } from '../public/ownerSystemWorkflow/WorkbenchViewCon
 import { useWorkbenchCamera } from '../public/ownerSystemWorkflow/WorkbenchCamera.jsx';
 import { isWorkbenchBackground } from '../public/ownerSystemWorkflow/useWorkbenchPan.js';
 import { imageDropGeometry } from './imageDropGeometry.js';
-import { resolveImageLibrarySide } from './imageLibrarySide.js';
+import { resolveImageLibraryArtwork } from './imageLibraryArtwork.js';
 import { addImageModule } from './imageModuleSession.js';
 import { useEditorCells } from '../reception/EditorCellsContext.jsx';
 
@@ -17,11 +17,11 @@ function cellAt(hit, context) {
 // A scoped fallback destination. Existing module targets keep priority; the
 // Workbench supplies camera/layout inputs while Image owns creation and media.
 export default function WorkbenchImageDropTarget({ targetRef, hostRef, suspended, onCreated, onError }) {
-  const { bounds: areaBounds } = useWorkbenchArea();
+  const { bounds: areaBounds, editingBounds } = useWorkbenchArea();
   const view = useWorkbenchView(), camera = useWorkbenchCamera();
   const cells = useEditorCells();
   const latest = useRef(null);
-  latest.current = { view, camera, suspended, onCreated, onError, areaBounds, cells };
+  latest.current = { view, camera, suspended, onCreated, onError, areaBounds, editingBounds, cells };
   useLayoutEffect(() => {
     let live = true, request = 0;
     const target = {
@@ -30,22 +30,30 @@ export default function WorkbenchImageDropTarget({ targetRef, hostRef, suspended
         const host = hostRef.current;
         const hit = document.elementFromPoint(point.x, point.y);
         const cellId = cellAt(hit, cells), editingCell = cells?.editingCellId;
-        if (!live || suspended || camera.locked || !host || (editingCell ? cellId !== editingCell : !cellId && !isWorkbenchBackground(hit, host))) return null;
+        if (!live || suspended || camera.locked || !host) return null;
+        const stack = !cells && host.contains(hit) && hit?.closest('[data-workbench-stack][data-workbench-group-drop]');
+        const group = stack && view.content?.workbenchGroups?.find(item => item.position && item.id === stack.dataset.workbenchStack);
+        if (editingCell ? cellId !== editingCell : !group && !cellId && !isWorkbenchBackground(hit, host)) return null;
         const generation = view.store.getGeneration();
         const current = () => live && !latest.current.suspended && !latest.current.camera.locked
           && view.store.getGeneration() === generation && editingCell === latest.current.cells?.editingCellId
-          && (!cellId || latest.current.cells?.cells.some(cell => cell.id === cellId));
+          && (!cellId || latest.current.cells?.cells.some(cell => cell.id === cellId))
+          && (!group || stack.isConnected && stack.dataset.workbenchStack === group.id);
         const destinationTarget = {
           // At cell level an artwork-covered cell still receives a new layer.
           // Inside a cell, registered Image/Text targets keep their own actions.
-          acceptsModuleSurface: Boolean(cellId && !editingCell),
+          acceptsModuleSurface: Boolean(group || cellId && !editingCell),
           isCurrent: current,
           previewAt(point, dimensions) {
             if (!current()) return null;
             const { view, camera } = latest.current;
             const frame = cellId && !editingCell ? view.getPresentation().shapes.find(item => item.id === cellId)?.window : null;
             const preview = imageDropGeometry(dimensions, point, host.getBoundingClientRect(), view.scale, camera.offset,
-              devicePixelRatio || 1, latest.current.areaBounds, frame);
+              devicePixelRatio || 1, group ? latest.current.editingBounds : latest.current.areaBounds, frame);
+            if (group && preview) {
+              const { left, top, width, height } = stack.getBoundingClientRect();
+              return { ...preview, kind: 'stack', label: `Add to ${group.name}`, rectangle: { left, top, width, height } };
+            }
             return preview && { ...preview, kind: 'workbench-image', target: destinationTarget };
           },
           async placeAsset(input, dimensions, destination, isCurrent) {
@@ -53,11 +61,10 @@ export default function WorkbenchImageDropTarget({ targetRef, hostRef, suspended
             const active = () => request === token && current() && isCurrent();
             if (!destination || !active()) return false;
             try {
-              const side = await resolveImageLibrarySide(input, dimensions, Boolean(cellId));
+              const artwork = await resolveImageLibraryArtwork(input, dimensions, Boolean(cellId));
               if (!active()) return false;
-              const store = cellId ? { ...view.store, commitCompletedOperation: (candidate, opts) => view.store.commitInCell(cellId, candidate, opts) } : view.store;
-              const id = addImageModule(store, view.profileAddress, { ...destination, side, workbench: view.getPresentation() });
-              latest.current.onCreated(id);
+              const id = addImageModule(view.store, view.profileAddress, { ...destination, cellId, groupId: group?.id, artwork, workbench: view.getPresentation() });
+              if (!group) latest.current.onCreated(id);
               return true;
             } catch (error) { if (active()) latest.current.onError(error.message); return false; }
           },

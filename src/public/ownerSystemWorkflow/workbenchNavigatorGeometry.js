@@ -1,7 +1,4 @@
-export function navigatorViewport(camera, viewport) {
-  return { left: -camera.offset.x / camera.scale, top: -camera.offset.y / camera.scale,
-    width: viewport.width / camera.scale, height: viewport.height / camera.scale };
-}
+export { unprojectWorkbenchFrame as navigatorViewport } from './workbenchSpace.js';
 export function navigatorBounds(rectangles, size) {
   const valid = rectangles.filter(r => r && ['left', 'top', 'width', 'height'].every(k => Number.isFinite(r[k])) && r.width > 0 && r.height > 0);
   if (!valid.length || size.width <= 0 || size.height <= 0) return null;

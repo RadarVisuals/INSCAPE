@@ -1,8 +1,9 @@
 import { workbenchArea, validWorkbenchArea } from '../systemWorkflow/domain/workbenchArea.js';
-import { receptionModuleWindow, withReceptionModuleWindow, receptionCellResizeReason, receptionCellSizeLimits, MIN_RECEPTION_CELL_SIZE } from './receptionEditorDocument.js';
-import { receptionLayoutCountRange } from './receptionLayoutGenerator.js';
+import { receptionModuleWindow, withReceptionModuleWindow, receptionCellResizeReason, receptionCellSizeLimits,
+  validReceptionMemberAnchor, withReceptionMemberAnchors, validReceptionInnerLines, MIN_RECEPTION_CELL_SIZE } from './receptionEditorDocument.js';
+import { positionReceptionMembers } from './editorCellGeometry.js';
+import { receptionLayoutCountRange, validateReceptionBentoGeometry } from './receptionLayoutGenerator.js';
 import { inferredCellGap, partitionDividers } from './receptionPartition.js';
-import { validShapeOutline } from '../shapes/shapes.js';
 
 export function receptionBentoSettings(value) {
   const area = workbenchArea(value.workbench), frames = value.cells.map(cell => receptionModuleWindow(value, cell.id));
@@ -41,6 +42,16 @@ export function receptionBentoDividers(value) {
     return { ...d, min: Math.ceil(min), max: Math.floor(max) };
   }).filter(d => d.min <= d.max);
 }
+// Only snap a shared edge when both neighbouring strips have common outer
+// boundaries. A T junction with unequal outer edges has no single equal split.
+export function receptionBentoEqualPosition(value, divider) {
+  const axis = divider.axis === 'x' ? 'left' : 'top', size = divider.axis === 'x' ? 'width' : 'height';
+  const before = divider.before.map(id => receptionModuleWindow(value, id)[axis]);
+  const after = divider.after.map(id => { const r = receptionModuleWindow(value, id); return r[axis] + r[size]; });
+  if (!before.every(p => p === before[0]) || !after.every(p => p === after[0])) return null;
+  const position = Math.round((before[0] + after[0] + receptionBentoSettings(value).gap) / 2);
+  return position >= divider.min && position <= divider.max ? position : null;
+}
 export function resizeReceptionBento(value, id, position) {
   const d = receptionBentoDividers(value).find(item => item.id === id);
   if (!d || !Number.isFinite(position)) throw new Error('This shared edge is no longer available.');
@@ -49,78 +60,83 @@ export function resizeReceptionBento(value, id, position) {
   return applyTiles(value, tiles(value, gap).map(r => d.before.includes(r.id) ? { ...r, [size]: r[size] + delta }
     : d.after.includes(r.id) ? { ...r, [d.axis]: p, [size]: r[size] - delta } : r), gap);
 }
-export function swapReceptionBentoCells(value, first, second) {
-  if (first === second) return value;
-  if (![first, second].every(id => value.cells.some(cell => cell.id === id))) throw new Error('Choose two available cells.');
-  for (const [id, target] of [[first, second], [second, first]]) {
-    const reason = receptionCellResizeReason(value, id, receptionModuleWindow(value, target));
-    if (reason) throw new Error(reason);
+// A spanning cell joins the rows it crosses. Only complete, unbroken boundaries
+// are insertion targets; no persisted row tree or parallel layout is introduced.
+export function receptionBentoBands(value) {
+  const { gap } = receptionBentoSettings(value), result = [];
+  for (const r of value.cells.map(cell => ({ id: cell.id, ...receptionModuleWindow(value, cell.id) })).sort((a, b) => a.top - b.top || a.left - b.left)) {
+    const previous = result.at(-1);
+    if (previous && r.top < previous.bottom - 0.001) {
+      previous.cells.push(r); previous.bottom = Math.max(previous.bottom, r.top + r.height + gap);
+    } else result.push({ top: r.top, bottom: r.top + r.height + gap, cells: [r] });
   }
-  let next = withReceptionModuleWindow(value, first, receptionModuleWindow(value, second));
-  next = withReceptionModuleWindow(next, second, receptionModuleWindow(value, first));
-  return { ...next, cells: value.cells.map(cell => cell.id === first ? value.cells.find(c => c.id === second)
-    : cell.id === second ? value.cells.find(c => c.id === first) : cell) };
+  return result;
 }
-export function addReceptionBentoCell(value, id, newId = `shape:${crypto.randomUUID()}`) {
+// Shared by new-cell creation and drag insertion: preserve complete band
+// boundaries while reserving space within the existing content-aware limits.
+export function receptionBentoBandInsertion(value, regions, position, width, minimum = MIN_RECEPTION_CELL_SIZE.width, maximum = Infinity, axis = 'width') {
+  const { gap } = receptionBentoSettings(value);
+  if (regions.some(r => r.x < position - 0.001 && r.x + r.width > position + 0.001)) throw new Error('A spanning cell crosses this insertion boundary.');
+  const left = Math.min(...regions.map(r => r.x)), right = Math.max(...regions.map(r => r.x + r.width));
+  const edges = [...new Set(regions.flatMap(r => [r.x, r.x + r.width]))].sort((a, b) => a - b);
+  const offsets = new Map([[left, 0]]);
+  for (let i = 1; i < edges.length; i++) offsets.set(edges[i], Math.max(offsets.get(edges[i - 1]),
+    ...regions.filter(r => r.x + r.width === edges[i]).map(r => offsets.get(r.x) + Math.ceil(receptionCellSizeLimits(value, r.id)[axis === 'height' ? 'minimumHeight' : 'minimumWidth']) + gap)));
+  const available = right - left - offsets.get(right);
+  const reserved = Math.min(Math.max(minimum, width), maximum, available - gap) + gap;
+  if (reserved < minimum + gap) throw new Error(axis === 'height'
+    ? 'There is not enough room in this row band for the cell. Make room inside the Bento first.'
+    : 'This row is too full. There is not enough room for this cell. Use less gutter or a wider Bento.');
+  const extra = available - reserved;
+  const map = x => left + offsets.get(x) + Math.round((x - left) * extra / (right - left));
+  const top = Math.min(...regions.map(r => r.y)), bottom = Math.max(...regions.map(r => r.y + r.height));
+  return { regions: regions.map(r => ({ ...r, x: map(r.x) + (r.x >= position - 0.001 ? reserved : 0), width: map(r.x + r.width) - map(r.x) })),
+    added: { x: map(position), y: top, width: reserved, height: bottom - top } };
+}
+export function addReceptionBentoCell(value, id, newId = `shape:${crypto.randomUUID()}`, side = 'right') {
   const cell = value.cells.find(item => item.id === id), frame = receptionModuleWindow(value, id);
   if (!cell || !frame) throw new Error('Select a row by choosing one of its cells.');
   if (value.cells.length >= receptionLayoutCountRange(value).max) throw new Error('There is no room for another cell.');
-  const { gap } = receptionBentoSettings(value), regions = tiles(value, gap);
-  let top = frame.top, bottom = top + frame.height + gap, row, previous;
-  // A cell spanning several rows joins them into one band. Shrink that band
-  // together so adding its rightmost cell cannot tear a T junction apart.
-  do {
-    previous = `${top}:${bottom}`;
-    row = regions.filter(r => r.y < bottom && r.y + r.height > top);
-    top = Math.min(...row.map(r => r.y)); bottom = Math.max(...row.map(r => r.y + r.height));
-  } while (previous !== `${top}:${bottom}`);
+  const { gap } = receptionBentoSettings(value);
+  const band = receptionBentoBands(value).find(row => row.cells.some(cell => cell.id === id));
+  const row = band.cells.map(r => ({ id: r.id, x: r.left, y: r.top, width: r.width + gap, height: r.height + gap }));
   const left = Math.min(...row.map(r => r.x)), right = Math.max(...row.map(r => r.x + r.width));
-  const width = right - left, minimum = MIN_RECEPTION_CELL_SIZE.width + gap;
-  const edges = [...new Set(row.flatMap(r => [r.x, r.x + r.width]))].sort((a, b) => a - b);
-  const offsets = new Map([[left, 0]]);
-  for (let i = 1; i < edges.length; i++) offsets.set(edges[i], Math.max(offsets.get(edges[i - 1]),
-    ...row.filter(r => r.x + r.width === edges[i]).map(r => offsets.get(r.x) + Math.ceil(receptionCellSizeLimits(value, r.id).minimumWidth) + gap)));
-  const available = width - offsets.get(right);
-  if (available < minimum) throw new Error('This row is too full. Add a row below, use less gutter or make the bento wider.');
-  const addedWidth = Math.max(minimum, Math.min(available, Math.round(width * (frame.width + gap) / (width + frame.width + gap))));
-  const extra = available - addedWidth;
-  const map = x => left + offsets.get(x) + Math.round((x - left) * extra / width);
-  const resized = row.map(r => ({ ...r, x: map(r.x), width: map(r.x + r.width) - map(r.x) }));
-  const added = { id: newId, x: right - addedWidth, y: top, width: addedWidth, height: bottom - top };
-  if ([...resized, added].some(r => r.width - gap < MIN_RECEPTION_CELL_SIZE.width || r.height - gap < MIN_RECEPTION_CELL_SIZE.height))
-    throw new Error('This row is too full. Add a row below, use less gutter or make the bento wider.');
-  const after = Math.max(...row.map(r => value.cells.findIndex(item => item.id === r.id)));
+  const width = right - left;
+  const insertion = receptionBentoBandInsertion(value, row, side === 'left' ? left : right,
+    Math.round(width * (frame.width + gap) / (width + frame.width + gap)) - gap);
+  const resized = insertion.regions, added = { ...insertion.added, id: newId };
+  const after = (side === 'left' ? Math.min : Math.max)(...row.map(r => value.cells.findIndex(item => item.id === r.id)));
+  const addedCell = { id: newId, members: [], radius: cell.radius || 0, mobile: { columns: 2, height: cell.mobile.height } };
   const next = { ...value, shapes: [...value.shapes, { id: newId, name: `Cell ${value.cells.length + 1}`, color: '#808080', opacity: 0.25, visibility: 'PUBLIC' }],
-    cells: value.cells.flatMap((item, index) => index === after ? [item, { id: newId, members: [], radius: cell.radius || 0,
-      mobile: { columns: 2, height: cell.mobile.height } }] : [item]) };
+    cells: value.cells.flatMap((item, index) => index === after ? (side === 'left' ? [addedCell, item] : [item, addedCell]) : [item]) };
   return applyTiles(next, [...resized, added], gap);
 }
-export function appendReceptionBentoRow(value, newId = `shape:${crypto.randomUUID()}`) {
+export const prependReceptionBentoCell = (value, id, newId) => addReceptionBentoCell(value, id, newId, 'left');
+export function appendReceptionBentoRow(value, newId = `shape:${crypto.randomUUID()}`, side = 'below') {
   if (!value.cells.length) throw new Error('Create a layout before adding a row.');
   if (value.cells.length >= receptionLayoutCountRange(value).max) throw new Error('There is no room for another cell.');
-  const { gap, padding, radius } = receptionBentoSettings(value), area = workbenchArea(value.workbench);
-  const frames = value.cells.map(cell => receptionModuleWindow(value, cell.id));
-  const bottom = Math.max(...frames.map(r => r.top + r.height));
-  const lastRow = frames.filter(r => r.top + r.height === bottom);
-  const height = Math.round(Math.max(MIN_RECEPTION_CELL_SIZE.height, Math.min(...lastRow.map(r => r.height))));
-  const top = Math.max(area.top + area.height - padding, bottom) + gap;
-  const targetArea = { ...area, height: Math.ceil(top + height + padding - area.top) };
-  if (!validWorkbenchArea(targetArea)) throw new Error('There is no room for another row within the canvas editing limits.');
-  const width = area.width - 2 * padding;
-  if (width < MIN_RECEPTION_CELL_SIZE.width) throw new Error('Use a wider bento or less outer margin before adding a row.');
-  const next = { ...value, bento: { gap, padding }, workbench: { ...value.workbench, area: targetArea },
+  const { gap, padding, radius } = receptionBentoSettings(value), rows = receptionBentoBands(value);
+  const row = side === 'above' ? rows[0] : rows.at(-1);
+  const regions = row.cells.map(r => ({ id:r.id, x:r.top, y:r.left, width:r.height + gap, height:r.width + gap }));
+  const insertion = receptionBentoBandInsertion(value, regions, side === 'above' ? row.top : row.bottom,
+    Math.floor((row.bottom - row.top - 2 * gap) / 2), MIN_RECEPTION_CELL_SIZE.height, Infinity, 'height');
+  const height = insertion.added.width - gap;
+  const addedCell = { id: newId, members: [], radius: radius ?? 0, mobile: { columns: 2, height: Math.max(80, Math.min(1200, height)) } };
+  const next = { ...value, bento: { gap, padding },
     shapes: [...value.shapes, { id: newId, name: `Cell ${value.cells.length + 1}`, color: '#808080', opacity: 0.25, visibility: 'PUBLIC' }],
-    cells: [...value.cells, { id: newId, members: [], radius: radius ?? 0, mobile: { columns: 2, height: Math.max(80, Math.min(1200, height)) } }] };
-  return withReceptionModuleWindow(next, newId, { left: area.left + padding, top, width, height });
+    cells: side === 'above' ? [addedCell, ...value.cells] : [...value.cells, addedCell] };
+  return applyTiles(next, [...insertion.regions, { ...insertion.added, id: newId }].map(r =>
+    ({ id:r.id, x:r.y, y:r.x, width:r.height, height:r.width })), gap);
 }
+export const prependReceptionBentoRow = (value, newId) => appendReceptionBentoRow(value, newId, 'above');
 export function setReceptionBentoSettings(value, settings) {
   const old = receptionBentoSettings(value), next = { ...old, ...settings }, area = workbenchArea(value.workbench);
   const changeRadius = Object.hasOwn(settings, 'radius');
-  if (![next.width, next.height].every(n => Number.isInteger(n) && n >= 320 && n <= 16384)
-    || ![next.gap, next.padding].every(n => Number.isInteger(n) && n >= 0 && n <= 256)
-    || changeRadius && (!Number.isFinite(next.radius) || next.radius < 0 || next.radius > 160) || typeof next.showFrame !== 'boolean')
-    throw new Error('Choose a valid size, spacing and corner radius.');
-  if (next.innerLines !== null && !validShapeOutline(next.innerLines)) throw new Error('Choose valid Outline settings for the inner lines.');
+  validateReceptionBentoGeometry(next);
+  if (changeRadius && (!Number.isFinite(next.radius) || next.radius < 0 || next.radius > 160))
+    throw new Error('Corner radius must be between 0 and 160 px.');
+  if (typeof next.showFrame !== 'boolean') throw new Error('Choose whether to show the outer frame.');
+  if (next.innerLines !== null && !validReceptionInnerLines(next.innerLines)) throw new Error('Choose valid Stroke settings for the inner lines.');
   const appearance = { showFrame: next.showFrame, ...(Object.hasOwn(settings, 'innerLines') ? { innerLines: next.innerLines } : {}) };
   const targetArea = { ...area, width: next.width, height: next.height };
   if (!validWorkbenchArea(targetArea)) throw new Error('This size extends beyond the canvas editing limits.');
@@ -133,8 +149,15 @@ export function setReceptionBentoSettings(value, settings) {
     const x = map(r.x, 'left', 'width'), y = map(r.y, 'top', 'height');
     return { ...r, x, y, width: map(r.x + r.width, 'left', 'width') - x, height: map(r.y + r.height, 'top', 'height') - y };
   });
-  if (regions.some(r => r.width - next.gap < MIN_RECEPTION_CELL_SIZE.width || r.height - next.gap < MIN_RECEPTION_CELL_SIZE.height))
-    throw new Error(`Use a larger bento or less spacing. Each cell needs at least ${MIN_RECEPTION_CELL_SIZE.width} × ${MIN_RECEPTION_CELL_SIZE.height} pixels.`);
+  for (const axis of ['width', 'height']) {
+    const minimum = MIN_RECEPTION_CELL_SIZE[axis];
+    const cell = regions.find(region => region[axis] - next.gap < minimum);
+    if (cell) {
+      const name = value.shapes.find(shape => shape.id === cell.id)?.name || 'This cell';
+      const available = Math.max(0, cell[axis] - next.gap);
+      throw new Error(`${name} needs at least ${minimum} px of ${axis}. These settings leave ${available} px. Use a larger bento, reduce the gutter or outer margin, or ${axis === 'width' ? 'widen this cell' : 'make this cell taller'} first.`);
+    }
+  }
   return applyTiles({ ...value, ...appearance, bento: { gap: next.gap, padding: next.padding }, workbench: { ...value.workbench, area: targetArea },
     cells: changeRadius ? value.cells.map(cell => ({ ...cell, radius: next.radius })) : value.cells }, regions, next.gap);
 }
@@ -143,4 +166,29 @@ export function setReceptionCellRadius(value, id, radius) {
   if (!value.cells.some(cell => cell.id === id)) throw new Error('Select an available cell.');
   if (!Number.isFinite(radius) || radius < 0 || radius > 160) throw new Error('Choose a corner radius between 0 and 160 pixels.');
   return { ...value, cells: value.cells.map(cell => cell.id === id ? { ...cell, radius } : cell) };
+}
+
+export function setReceptionCellClip(value, id, clipContent) {
+  if (!value.cells.some(cell => cell.id === id)) throw new Error('Select an available cell.');
+  if (typeof clipContent !== 'boolean') throw new Error('Choose whether to clip cell contents.');
+  return { ...value, cells: value.cells.map(cell => cell.id === id ? { ...cell, clipContent } : cell) };
+}
+
+export function setReceptionCellMemberAnchor(value, id, members, placement) {
+  const cell = value.cells.find(item => item.id === id), frame = receptionModuleWindow(value, id);
+  if (!cell || !frame || !Array.isArray(members) || !members.length || new Set(members).size !== members.length
+    || members.some(id => !cell.members.includes(id))) throw new Error('Choose native contents in this cell.');
+  const anchor = placement === null ? null : { ...placement, members: [...members] };
+  if (anchor && !validReceptionMemberAnchor(anchor, cell.members)) throw new Error('Choose a cell position and horizontal/vertical padding between 0 and 512 pixels.');
+  const intersecting = (cell.memberAnchors || []).filter(item => item.members.some(id => members.includes(id)));
+  const affected = new Set([...members, ...intersecting.flatMap(item => item.members)]);
+  if (cell.lockedMembers?.some(id => affected.has(id))) throw new Error('Unlock these contents before changing their position.');
+  const retained = (cell.memberAnchors || []).filter(item => !intersecting.includes(item));
+  let next = { ...value, cells: value.cells.map(item => item.id === id
+    ? withReceptionMemberAnchors(item, anchor ? [...retained, anchor] : retained) : item) };
+  if (anchor) {
+    const frames = Object.fromEntries(members.map(id => [id, receptionModuleWindow(value, id)]));
+    for (const [id, window] of Object.entries(positionReceptionMembers(frame, frames, anchor))) next = withReceptionModuleWindow(next, id, window);
+  }
+  return next;
 }

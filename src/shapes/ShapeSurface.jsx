@@ -3,15 +3,19 @@ import { moduleGrainStyle } from '../systemWorkflow/domain/moduleSurfaceAppearan
 import './shapes.css';
 
 // Appearance belongs to the Shape. Editor and Reception paint the same record.
-export default function ShapeSurface({ record, children, radius = 0, hideOutline = false }) {
+export default function ShapeSurface({ record, children, radius = 0, hideOutline = false, continuousFill = false }) {
   const pattern = useId().replaceAll(':', '');
   const kind = record.kind || 'rectangle';
-  const borderRadius = radius || undefined;
+  const vectorFill = continuousFill && kind === 'rectangle';
+  const borderRadius = radius ? `calc(${radius}px * var(--workbench-content-scale, 1))` : undefined;
   return <div className="shape-paint" style={{ filter: record.blur ? `blur(calc(${record.blur}px * var(--workbench-content-scale, 1)))` : undefined }}>
-    <div className="shape-fill" data-shape-kind={kind} style={{ backgroundColor: kind === 'grid' ? 'transparent' : record.color,
+    <div className="shape-fill" data-shape-kind={kind} style={{ backgroundColor: kind === 'grid' || vectorFill ? 'transparent' : record.color,
       color: record.color, opacity: record.opacity, borderRadius, ...moduleGrainStyle(record.grain),
       ...(record.grid ? { '--shape-grid-spacing': `${record.grid.spacing}px`, '--shape-grid-line': `${record.grid.lineWidth}px` } : {}),
       ...(record.texture ? { '--shape-noise-scale': record.texture.scale } : {}) }}>
+      {vectorFill && <svg className="shape-rectangle-fill" aria-hidden="true" width="100%" height="100%">
+        <rect width="100%" height="100%" fill="currentColor" style={{ rx: borderRadius, ry: borderRadius }} />
+      </svg>}
       {children || (kind === 'grid' && <svg className="shape-grid-paint" aria-hidden="true" width="100%" height="100%">
         <defs><pattern id={pattern} width={record.grid.spacing} height={record.grid.spacing} patternUnits="userSpaceOnUse">
           <path d={`M0,${record.grid.spacing}V0H${record.grid.spacing}`} fill="none" stroke="currentColor" strokeWidth={record.grid.lineWidth * 2} />

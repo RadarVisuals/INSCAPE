@@ -6,18 +6,26 @@ const ROW_HEIGHT = 43;
 const SYSTEM_WORKFLOW_PANEL_WIDTH = 196;
 const SYSTEM_WORKFLOW_ROW_HEIGHT = 38;
 
-export default function DesktopMenu({ anchor, commands, label, onCommand, onClose, returnFocus, className = '', panelClassName = '', getSubmenuCommands, onPreviewCommand, systemWorkflowOverlay = false, menuBarRef, onNavigateMenu, focusLast = false }) {
+export default function DesktopMenu({ anchor, commands, label, onCommand, onClose, returnFocus, className = '', panelClassName = '', getSubmenuCommands, onPreviewCommand, systemWorkflowOverlay = false, menuBarRef, onNavigateMenu, focusLast = false, palette }) {
   const ref = useRef(null);
   const hoverTimerRef = useRef(0);
+  const editor = palette === 'editor';
+  const [metrics, setMetrics] = useState(null);
   const [position, setPosition] = useState(anchor);
   const [openPath, setOpenPath] = useState([]);
   useLayoutEffect(() => {
     window.clearTimeout(hoverTimerRef.current);
     const rect = ref.current?.getBoundingClientRect();
-    if (rect) setPosition(clampMenuPosition(anchor, rect, { width: window.innerWidth, height: window.innerHeight }));
+    if (rect) {
+      setPosition(clampMenuPosition(anchor, rect, { width: window.innerWidth, height: window.innerHeight }));
+      // The editor row and shell inset are styled by the shared compact recipe.
+      // Measure them so its flyouts follow that recipe rather than legacy heights.
+      const row = ref.current.querySelector(':scope > button')?.getBoundingClientRect();
+      if (editor && row) setMetrics({ width: rect.width, rowHeight: row.height, inset: row.top - rect.top });
+    }
     const buttons = ref.current?.querySelectorAll('button:not(:disabled)');
     (buttons?.[focusLast ? buttons.length - 1 : 0] || ref.current)?.focus();
-  }, [anchor, focusLast]);
+  }, [anchor, focusLast, editor]);
   useEffect(() => {
     const close = (event) => { if (event.key === 'Escape') { event.preventDefault(); onPreviewCommand?.(null); onClose(); returnFocus?.focus?.(); } };
     const outside = (event) => { if (!ref.current?.contains(event.target) && !menuBarRef?.current?.contains(event.target)) onClose(); };
@@ -68,18 +76,21 @@ export default function DesktopMenu({ anchor, commands, label, onCommand, onClos
     if (immediate) apply();
     else hoverTimerRef.current = window.setTimeout(apply, 110);
   };
-  const renderPanel = (panelCommands, depth = 0, panelViewportTop = position.y) => {
+  const renderPanel = (panelCommands, depth = 0, panelViewportTop = position.y, panelViewportLeft = position.x) => {
     const openId = openPath[depth];
     const openIndex = panelCommands.findIndex((command) => command.id === openId);
     const openCommand = openIndex >= 0 ? panelCommands[openIndex] : null;
     const submenu = openCommand ? submenuFor(openCommand) : [];
-    const panelWidth = systemWorkflowOverlay ? Math.min(SYSTEM_WORKFLOW_PANEL_WIDTH, (window.innerWidth - 20) / 2) : PANEL_WIDTH;
-    const rowHeight = systemWorkflowOverlay ? SYSTEM_WORKFLOW_ROW_HEIGHT : ROW_HEIGHT;
-    const opensLeft = position.x + panelWidth * (depth + 2) > window.innerWidth - 8;
-    const desiredChildTop = panelViewportTop + openIndex * rowHeight;
-    const childHeight = submenu.length * rowHeight + 2;
+    const panelWidth = editor ? metrics?.width || PANEL_WIDTH : systemWorkflowOverlay ? Math.min(SYSTEM_WORKFLOW_PANEL_WIDTH, (window.innerWidth - 20) / 2) : PANEL_WIDTH;
+    const rowHeight = editor ? metrics?.rowHeight || ROW_HEIGHT : systemWorkflowOverlay ? SYSTEM_WORKFLOW_ROW_HEIGHT : ROW_HEIGHT;
+    const opensLeft = editor ? panelViewportLeft + panelWidth * 2 - 1 > window.innerWidth - 8
+      : position.x + panelWidth * (depth + 2) > window.innerWidth - 8;
+    const desiredChildTop = panelViewportTop + (editor ? metrics?.inset || 0 : 0) + openIndex * rowHeight;
+    const childHeight = editor ? Math.min(submenu.length * rowHeight + (metrics?.inset || 0) * 2, window.innerHeight - 16)
+      : submenu.length * rowHeight + 2;
     const childViewportTop = Math.max(8, Math.min(desiredChildTop, window.innerHeight - childHeight - 8));
     const childTop = childViewportTop - panelViewportTop - 1;
+    const childViewportLeft = panelViewportLeft + (opensLeft ? -1 : 1) * (panelWidth - 1);
     return <>
       {panelCommands.map((command) => {
         const hasSubmenu = submenuFor(command).length > 0;
@@ -89,19 +100,21 @@ export default function DesktopMenu({ anchor, commands, label, onCommand, onClos
         const displayLabel = (legacySelected ? command.label.slice(2) : command.label).replace(/\s*>$/, '');
         return <button key={command.id} data-command-id={command.id} type="button" role={command.checkable ? 'menuitemcheckbox' : 'menuitem'} disabled={command.disabled} title={command.reason} data-submenu={hasSubmenu || undefined} data-selected={selected || undefined} data-mixed={mixed || undefined} aria-checked={command.checkable ? mixed ? 'mixed' : selected : undefined} aria-haspopup={hasSubmenu ? 'menu' : undefined} aria-expanded={hasSubmenu ? openId === command.id : undefined}
           onPointerEnter={() => openSubmenu(depth, command)} onFocus={() => { if (depth > 0) openSubmenu(depth, command, true); }}
-          onClick={() => { if (hasSubmenu) { openSubmenu(depth, command, true); return; } onPreviewCommand?.(null); onCommand(command.id); }}><i aria-hidden="true" /><span>{displayLabel}</span><b aria-hidden="true">{hasSubmenu ? '›' : mixed ? '−' : selected ? '·' : ''}</b></button>;
+          onClick={() => { if (hasSubmenu) { openSubmenu(depth, command, true); return; } onPreviewCommand?.(null); onCommand(command.id); }}><i aria-hidden="true" /><span>{displayLabel}</span><b aria-hidden="true">{hasSubmenu ? '›' : mixed ? '−' : selected ? (editor ? '✓' : '·') : ''}</b></button>;
       })}
       {submenu.length > 0 && <div className={`desktop-menu desktop-menu--flyout${panelClassName ? ` ${panelClassName}` : ''}`}
+        data-workflow-material={editor ? 'tactile' : undefined} data-workflow-finish={editor ? 'flat' : undefined} data-workflow-palette={palette}
         data-depth={depth + 1} data-system-workflow-overlay={systemWorkflowOverlay || undefined} role="menu" aria-label={`${openCommand.label} options`}
         style={{ position: 'absolute', width: panelWidth, top: childTop, left: opensLeft ? 'auto' : '100%', right: opensLeft ? '100%' : 'auto' }}>
-        {renderPanel(submenu, depth + 1, childViewportTop)}
+        {renderPanel(submenu, depth + 1, childViewportTop, childViewportLeft)}
       </div>}
     </>;
   };
   return <div ref={ref} className={`desktop-menu${getSubmenuCommands ? ' desktop-menu--cascade' : ''}${className ? ` ${className}` : ''}`}
     data-lattice-menu-surface
+    data-workflow-material={editor ? 'tactile' : undefined} data-workflow-finish={editor ? 'flat' : undefined} data-workflow-palette={palette}
     data-system-workflow-overlay={systemWorkflowOverlay || undefined}
-    role="menu" tabIndex={-1} aria-label={label} style={{ left: position.x, top: position.y, ...(systemWorkflowOverlay ? { width: menuBarRef ? Math.min(PANEL_WIDTH, window.innerWidth - 16) : Math.min(SYSTEM_WORKFLOW_PANEL_WIDTH, (window.innerWidth - 20) / 2) } : {}) }} onKeyDown={onKeyDown}
+    role="menu" tabIndex={-1} aria-label={label} style={{ left: position.x, top: position.y, ...(editor ? { width: Math.min(PANEL_WIDTH, (window.innerWidth - 20) / 2) } : systemWorkflowOverlay ? { width: menuBarRef ? Math.min(PANEL_WIDTH, window.innerWidth - 16) : Math.min(SYSTEM_WORKFLOW_PANEL_WIDTH, (window.innerWidth - 20) / 2) } : {}) }} onKeyDown={onKeyDown}
     onPointerLeave={() => {
       window.clearTimeout(hoverTimerRef.current);
       const focused = document.activeElement;

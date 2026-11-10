@@ -52,7 +52,6 @@ test('owner Display Module reuses the existing interactive canvas inside one cli
   assert.match(runtime, /<OwnerWorkbenchToolbar[\s\S]*commands=\{addCommands\}\s+onCommand=\{runCommand\}/);
   assert.match(display, /useOwnerSystemWorkflowFocusViewer/);
   assert.match(display, /<DisplayFocusViewer/);
-  assert.match(display, /renderInspection=\{viewer\.placementId \? \(container, controlsContainer, scene\) => <DisplayFocusViewer[\s\S]*container=\{container\} controlsContainer=\{controlsContainer\}/);
   assert.match(board, /resizePresentationBoardFromCorner/);
   assert.match(board, /corners\.map/);
   assert.match(board, /sidecarWidth: 0/);
@@ -68,8 +67,8 @@ test('owner Display Module reuses the existing interactive canvas inside one cli
   assert.match(shortcut, /shortcutAsset \? <ProgressiveArtworkImage[^\n]+ : 'DM'/);
   assert.match(shortcut, /RENAME/);
   assert.doesNotMatch(board, /aria-label="Artwork info"|aria-label="Layers"/);
-  assert.match(board, /system-workflow__board-inspection-controls-host/);
-  assert.match(board, /renderInspection\(inspectionHost, inspectionControlsHost, inspectionSceneRef\.current\)/);
+  // Owner/Visitor inspection and Return behavior are exercised in
+  // workbench-inspection-lock.browser.mjs, independently of portal-container spelling.
   assert.match(canvas, /system-workflow__stage-content/);
   assert.match(canvas, /system-workflow__artwork-plane/);
   assert.match(canvas, /onDoubleClick[\s\S]*onOpenViewer/);

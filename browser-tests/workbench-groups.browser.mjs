@@ -1,3 +1,4 @@
+import { resetCameraTestView } from './fixtures/workbench-camera-test.mjs';
 import { navigateWorkbench } from './fixtures/workbench-navigation.mjs';
 import assert from 'node:assert/strict';
 import test from 'node:test';
@@ -14,7 +15,7 @@ const camera = page => page.locator('main.system-workflow').first().evaluate(hos
 const choose = async (page, ids) => {
   await page.locator('main.system-workflow').first().focus(); await page.keyboard.press('Escape');
   for (const id of ids) {
-    const node = page.locator(`[data-workbench-view-id="${id}"]`);
+    const node = page.locator(`[data-workbench-artwork][data-workbench-view-id="${id}"]`);
     const target = await node.getAttribute('data-workbench-selectable') !== null ? node : node.locator('[data-workbench-selectable]').first();
     await target.focus(); await settle(page);
     await target.press('Shift+Enter'); await settle(page);
@@ -34,15 +35,19 @@ test('owner groups preserve the camera and artwork through editing, undo, moveme
       await page.getByRole('menubar', { name: 'Editor commands' }).waitFor();
       await page.evaluate(() => import('/src/lattice/rendering/latticeMenuSurface.css'));
       await page.evaluate(() => document.fonts.ready); await settle(page);
+      if (width > 1000) await resetCameraTestView(page);
       await page.locator('main.system-workflow').first().dispatchEvent('wheel', { deltaX: -160, deltaY: 80, bubbles: true, cancelable: true });
       await settle(page);
       const before = await draft(page), initialCamera = await camera(page);
       await page.evaluate(() => { window.groupModuleNodes = [...document.querySelectorAll('[data-workbench-view-id]')]; });
       await choose(page, ['image:motion-0', 'image:motion-1']);
       await navigateWorkbench(page, 'groups');
-      const panel = page.locator('[data-workbench-group-tools]');
+      const panel = page.getByRole('complementary', { name: 'Workbench groups — Groups', exact: true });
+      const selectedRows = panel.getByRole('region', { name: 'Selected layers' }).getByRole('listitem');
+      assert.deepEqual(await selectedRows.allTextContents(), before.imageModules.slice(0, 2).map(image => image.name));
+      await panel.getByText('Manage groups', { exact: true }).click();
       await panel.getByRole('textbox', { name: 'Group name', exact: true }).fill('Lunar Desert');
-      await panel.getByRole('button', { name: 'Create from selection', exact: true }).click();
+      await panel.getByRole('button', { name: 'Group selection', exact: true }).click();
       await page.waitForFunction(() => JSON.parse(localStorage.getItem(window.__motionKey)).workbenchGroups?.length === 1);
       assert.deepEqual((await groups(page))[0].memberIds, ['image:motion-0', 'image:motion-1']);
       assert.deepEqual(withoutGroups(await draft(page)), before);
@@ -61,7 +66,7 @@ test('owner groups preserve the camera and artwork through editing, undo, moveme
       await panel.getByRole('button', { name: 'Redo', exact: true }).click();
       assert.equal((await groups(page))[0].memberIds.length, 2);
       const authored = await draft(page);
-      await panel.getByRole('button', { name: 'Ungroup', exact: true }).click();
+      await panel.getByRole('button', { name: 'Ungroup · Chapter one', exact: true }).click();
       assert.equal((await groups(page)).length, 0);
       assert.deepEqual(withoutGroups(await draft(page)), withoutGroups(authored));
       await panel.getByRole('button', { name: 'Undo', exact: true }).click();
@@ -111,6 +116,7 @@ test('owner groups preserve the camera and artwork through editing, undo, moveme
       await page.evaluate(() => window.__motionRemount());
       await navigateWorkbench(page, 'groups');
       assert.deepEqual(await groups(page), savedGroups);
+      await panel.getByText('Manage groups', { exact: true }).click();
       await panel.locator('[data-workbench-group-drop]').first().click();
       assert.equal(await page.locator('.workbench-selection').count(), 1);
       assert.deepEqual(errors, []); await page.close();

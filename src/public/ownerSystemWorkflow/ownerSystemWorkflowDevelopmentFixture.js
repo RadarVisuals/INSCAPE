@@ -6,7 +6,8 @@ export const OWNER_SYSTEM_WORKFLOW_REVIEW_PROFILE = '0x1111111111111111111111111
 const REVISION = '226945490a3598b99ddb654f0b15c230348f866e';
 const RAW_ROOT = `https://raw.githubusercontent.com/RadarVisuals/INSCAPE/${REVISION}/public`;
 
-const fixtureAsset = ({ token, name, source, width, height, collectionName = 'INSCAPE STUDIES', owned = false, created = false }) => {
+export const fixtureAsset = ({ token, name, source, width, height, collectionName = 'INSCAPE STUDIES', owned = false, created = false }) => {
+  const url = source.startsWith('https://') ? source : `${RAW_ROOT}${source}`;
   const contractAddress = `0x${String(token).repeat(40)}`;
   const tokenId = `0x0${token}`;
   const id = `42:${contractAddress}:${tokenId}`;
@@ -22,9 +23,9 @@ const fixtureAsset = ({ token, name, source, width, height, collectionName = 'IN
     description: 'System Workflow parity review fixture',
     collectionName,
     collection: collectionName,
-    imageUrl: `${RAW_ROOT}${source}`,
-    thumbnailUrl: `${RAW_ROOT}${source}`,
-    originalImageUrl: `${RAW_ROOT}${source}`,
+    imageUrl: url,
+    thumbnailUrl: url,
+    originalImageUrl: url,
     src: source,
     previewSrc: source,
     imageWidth: width,

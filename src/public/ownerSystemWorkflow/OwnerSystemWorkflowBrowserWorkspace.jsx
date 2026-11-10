@@ -3,12 +3,13 @@ import { useEffect, useRef, useState } from 'react';
 import { categoryDialogInitialName } from '../../lattice/browser/browserWorkspaceModel.js';
 
 export function OwnerSystemWorkflowSidebarEditor({ dialog, entityLabel = 'item', onCancel, onConfirm }) {
-  const [name, setName] = useState(() => categoryDialogInitialName(dialog));
+  const initialName = categoryDialogInitialName(dialog);
+  const [name, setName] = useState(initialName);
   const inputRef = useRef(null);
   useEffect(() => {
-    setName(categoryDialogInitialName(dialog));
+    setName(initialName);
     inputRef.current?.focus({ preventScroll: true });
-  }, [dialog?.type, dialog?.category?.id, dialog?.section?.id]);
+  }, [initialName, dialog?.type, dialog?.category?.id, dialog?.section?.id]);
   if (!dialog) return null;
   const submit = (event) => {
     event.preventDefault();
@@ -37,7 +38,7 @@ export function OwnerSystemWorkflowSidebarDeleteConfirmation({ entityLabel, name
   </div>;
 }
 
-export function OwnerSystemWorkflowWorkspaceShell({ children, className, label, phase, placing = false, rail, sidebarCollapsed = false, style, resizeHandle, header, embedded = false }) {
+export function OwnerSystemWorkflowWorkspaceShell({ children, className, label, phase, placing = false, rail, sidebarCollapsed = false, style, resizeHandle, header, embedded = false, palette }) {
   const [hoverLabel, setHoverLabel] = useState(null);
   const showHoverLabel = (event) => {
     const button = event.target.closest?.('.lattice-browser-sidebar button');
@@ -55,7 +56,7 @@ export function OwnerSystemWorkflowWorkspaceShell({ children, className, label, 
   };
   return <section aria-hidden={phase === 'closing' || undefined} aria-label={label}
     data-library-chrome data-library-embedded={embedded || undefined} data-library-header={Boolean(header) || undefined}
-    data-workflow-material="tactile" data-workflow-finish="flat"
+    data-workflow-material="tactile" data-workflow-finish="flat" data-workflow-palette={palette}
     className={`system-workflow__workspace-window system-workflow__browser-workspace system-workflow__motion-panel ${className}`}
     data-placing={placing || undefined} style={style}
     data-sidebar-collapsed={sidebarCollapsed || undefined}

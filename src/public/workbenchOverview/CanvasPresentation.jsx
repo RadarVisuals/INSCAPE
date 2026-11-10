@@ -56,7 +56,9 @@ export default function CanvasPresentation({ selected, model, origin, onClose, o
     data-chrome-visible={chromeVisible || undefined}
     style={{ '--canvas-ratio': model.area.width / model.area.height }} data-expanded={expanded || undefined} onCancel={event => { event.preventDefault(); close(); }}
     onKeyDown={event => {
-      if (event.key === 'Escape') return;
+      // Let the native modal cancel without also triggering the surrounding
+      // overview's Escape action. Nested popovers consume their own Escape.
+      if (event.key === 'Escape') { event.stopPropagation(); return; }
       if (event.key === 'Tab') {
         if (!chromeVisible) { event.preventDefault(); requestAnimationFrame(() => closeButton.current?.focus()); }
         else {

@@ -154,7 +154,7 @@ test('one shared Layers and Metadata window follow explicit Display targets with
     assert.ok((await layers.innerText()).includes('MOON PURPLE'));
     await layers.getByRole('button', { name: 'MOON PURPLE', exact: true }).click();
     await metadata.waitFor();
-    await page.getByRole('button', { name: 'Close Info', exact: true }).click();
+    await page.getByRole('button', { name: 'Close Inspector', exact: true }).click();
     assert.equal(await metadata.count(), 0);
     assert.equal(await page.locator('.display-inspection-cue').count(), 0);
     await primary.getByRole('button', { name: 'Select MOON PURPLE', exact: true }).click();

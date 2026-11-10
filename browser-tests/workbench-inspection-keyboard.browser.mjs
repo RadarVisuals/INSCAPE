@@ -95,12 +95,12 @@ for (const visitor of [false, true]) for (const width of [1440, 390]) {
           await page.screenshot({ path: join(output, `inspection-keyboard-${visitor ? 'visitor' : 'owner'}-${width}.png`) });
         }
         if (key === 'Shift+F10') {
-          await page.getByRole('button', { name: visitor ? 'Close Artwork info' : 'Close Info', exact: true }).click();
+          await page.getByRole('button', { name: visitor ? 'Close Artwork info' : 'Close Inspector', exact: true }).click();
         } else {
           // A user can choose a new focus target before deferred close recovery.
           // Keep both actions in one frame to reproduce that race deterministically.
           await page.evaluate(([close, target]) => { close.click(); target.focus(); }, [
-            await page.getByRole('button', { name: visitor ? 'Close Artwork info' : 'Close Info', exact: true }).elementHandle(),
+            await page.getByRole('button', { name: visitor ? 'Close Artwork info' : 'Close Inspector', exact: true }).elementHandle(),
             await header.elementHandle(),
           ]);
         }

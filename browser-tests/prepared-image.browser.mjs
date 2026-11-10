@@ -99,7 +99,7 @@ async function mount(page) {
       React.useLayoutEffect(() => { listeners.forEach(listener => listener()); }, [config]);
       return React.createElement(ArtworkGeometry.Provider, { value: geometry }, ...['prepared', 'reference'].map(id =>
         React.createElement('div', { id, key: id, style: { position: 'relative', width: 200 * config.scale, height: 200 * config.scale, marginBottom: 20 } },
-          config.open && (id !== 'reference' || config.referenceOpen !== false) && React.createElement(ImageArtwork, { rectangle: { left: 0, top: 0, width: 200, height: 200 }, side: {
+          config.open && (id !== 'reference' || config.referenceOpen !== false) && React.createElement(ImageArtwork, { rectangle: { left: 0, top: 0, width: 200, height: 200 }, artwork: {
             asset: { media: { url: 'https://prepared.invalid/' + (id === 'reference' ? config.referenceSource || 'reference' : config.source), width: 2000, height: 2000 } },
             crop: config.crop, transform: { quarterTurns: config.quarterTurns, mirrorX: config.mirrorX, mirrorY: config.mirrorY },
           } }))));
@@ -186,7 +186,7 @@ test('animated, unreadable and truncated WebP remain native; stale work cannot r
     const current = await painted(page).getAttribute('href'); release(); await page.waitForTimeout(100);
     assert.equal(await painted(page).getAttribute('href'), current, 'obsolete header result cannot overwrite the current source');
     assert.equal(await page.locator('#reference image').getAttribute('href'), reference, 'changing one side preserves the other side\'s paint resource');
-    assert.equal(page.workers().length, 1, 'two Image sides share one worker');
+    assert.equal(page.workers().length, 1, 'two Image renderers share one worker');
     assert.equal(await page.evaluate(() => preparedTest.urls.size), 2);
     await page.evaluate(() => preparedTest.change({ referenceOpen: false })); await settle(page);
     assert.equal(page.workers().length, 1, 'closing one side retains the worker needed by the other');

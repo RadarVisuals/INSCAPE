@@ -4,9 +4,13 @@ import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import DisplayLiftArtwork from './DisplayLiftArtwork.jsx';
 import { useWorkbenchInspectionLock } from './WorkbenchCamera.jsx';
+import { useWorkbenchView } from './WorkbenchViewContext.js';
+import { useWorkbenchArea } from './WorkbenchAreaContext.jsx';
 
-export default function DisplayFocusViewer({ scene, controlsContainer, viewer }) {
+export default function DisplayFocusViewer({ scene, viewer }) {
   useWorkbenchInspectionLock();
+  const { navigationTop = 0 } = useWorkbenchView();
+  const { canvasHost } = useWorkbenchArea();
   const latest = useRef(viewer); latest.current = viewer;
   const closeRef = useRef(null);
   const timer = useRef(null);
@@ -75,7 +79,8 @@ export default function DisplayFocusViewer({ scene, controlsContainer, viewer })
     window.addEventListener('keydown', keydown, true);
     return () => window.removeEventListener('keydown', keydown, true);
   });
-  if (!controlsContainer) return null;
+  const controlsHost = canvasHost?.parentElement || scene?.closest('.system-workflow') || scene?.parentElement;
+  if (!controlsHost) return null;
   return <>{lift && <DisplayLiftArtwork key={viewer.placementId} scene={scene} source={viewer.returnFocus}
     entry={viewer.entry} closing={closing} reducedMotion={reducedMotion} onCloseComplete={finishClose}
     dimmingTarget={viewer.returnFocus?.parentElement} />}
@@ -85,9 +90,10 @@ export default function DisplayFocusViewer({ scene, controlsContainer, viewer })
       event.preventDefault(); event.stopPropagation();
       if (event.button === 0) close();
     }} onDoubleClick={event => { event.preventDefault(); event.stopPropagation(); }} />, scene.parentElement)}
-  {createPortal(<div className="system-workflow__scene-controls" role="group" aria-label="Artwork inspection">
+  {createPortal(<div className="system-workflow__scene-controls" role="group" aria-label="Artwork inspection"
+    data-workbench-selection-tools style={{ '--inspection-return-top': `${navigationTop + 8}px` }}>
     <button className="system-workflow__overlay-icon" title="Return to composition" aria-label="Close artwork viewer" disabled={closing}
       onClick={close} ref={closeRef} type="button"><X /></button>
-  </div>, controlsContainer)}</>;
+  </div>, controlsHost)}</>;
 }
 import { resolveInspectionMode } from '../../systemWorkflow/domain/systemWorkflowDraft.js';
