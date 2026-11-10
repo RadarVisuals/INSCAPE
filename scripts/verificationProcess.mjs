@@ -78,7 +78,13 @@ export async function runOwnedCommand({ args, cwd, env, stdio, timeoutMs, signal
     const hasStart = await withinDeadline(Promise.race([ready, outcome.then(() => false)]), 30_000, 'Owned command did not reach its startup handshake');
     if (hasStart) {
       await observe();
-      if (!tree.ownedPids().includes(child.pid)) throw Error('Owned root creation identity was not observed; command not released');
+      if (!tree.ownedPids().includes(child.pid)) {
+        const processes = windowsRuntime ? await listWindowsProcesses({ runtime: windowsRuntime }) : await listPosixProcesses();
+        throw Error(`Owned root creation identity was not observed; command not released: ${JSON.stringify({
+          rootPid: child.pid, rootParentPid: process.pid, rootStartedAt,
+          observedRoot: processes.find(entry => entry.pid === child.pid),
+        })}`);
+      }
       started = true; child.on('message', onComplete); await acknowledge('start');
       // Slow inventories must not build a periodic backlog. Explicit checkpoints
       // still queue fresh observations, including completion behind a pending poll.
