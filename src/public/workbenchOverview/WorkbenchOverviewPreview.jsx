@@ -41,6 +41,9 @@ export default function WorkbenchOverviewPreview({ model, name, region = model.a
     // outer rectangle would re-render every artwork on each animation frame.
     if (viewport) return;
     const measure = () => { const { width, height } = host.current.getBoundingClientRect(); setSize({ width, height }); };
+    // Switching back from the animated viewport must measure before paint;
+    // waiting for ResizeObserver briefly removes every artwork at scale zero.
+    measure();
     const observer = new ResizeObserver(measure);
     observer.observe(host.current); addEventListener('resize', measure);
     return () => { observer.disconnect(); removeEventListener('resize', measure); };
