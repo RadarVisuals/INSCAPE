@@ -43,7 +43,8 @@ test('Image settings use the shared dock while publication choice, toolbar and r
     await page.evaluate(() => { window.savedSetItem = Storage.prototype.setItem; Storage.prototype.setItem = function(key, value) {
       if (key.startsWith('inscape.system-workflow-draft.')) throw Error('full'); return window.savedSetItem.call(this, key, value);
     }; });
-    await include.uncheck(); await image.getByRole('alert').waitFor();
+    await include.click(); await image.getByRole('alert').waitFor();
+    assert.equal(await include.isChecked(), true, 'failed persistence keeps the authored publication choice');
     assert.deepEqual((await saved(page)).imageModules, original.imageModules);
     await page.evaluate(() => { Storage.prototype.setItem = window.savedSetItem; });
     await include.uncheck(); assert.equal((await saved(page)).imageModules[1].visibility, 'PRIVATE'); await undo(page);

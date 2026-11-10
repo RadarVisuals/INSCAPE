@@ -1,4 +1,5 @@
 import { editorMenu } from './editor-menu.mjs';
+import { settlePlaywrightAnimationFrames } from '../playwright-browser-adapter.mjs';
 
 const toolHost = tool => tool === 'Layers' ? 'Layers' : 'Inspector';
 export const sharedToolTab = (page, tool) => page.locator(`[role="tab"][data-tool-tab="${toolHost(tool)}"]`);
@@ -80,6 +81,7 @@ export async function openSharedColorPicker(page, label) {
     if (!await details.evaluate(node => node.open)) await details.locator(':scope > summary').click();
   }
   if (!await picker.evaluate(node => node.open)) await picker.locator(':scope > summary').click();
+  await picker.getByRole('textbox', { name: 'Color colour', exact: true }).waitFor();
   return picker;
 }
 export async function chooseSharedColorTarget(page, value) {
@@ -89,7 +91,12 @@ export async function chooseSharedColorTarget(page, value) {
   } else {
     const labels = { fill: 'Fill', outline: 'Outline', body: /^(Selected text|Text at cursor)$/, default: 'Article default text', title: 'Article title', background: 'Text box background',
       h1: 'Heading 1 (all)', h2: 'Heading 2 (all)', h3: 'Heading 3 (all)', caption: 'Caption (all)' };
-    await panel.getByRole('button', { name: /^Color target:/ }).click();
+    const trigger = panel.getByRole('button', { name: /^Color target:/ });
+    // Finish scrolling its owner before opening a menu that dismisses on an
+    // outside scroll. Click's automatic scroll can otherwise close that menu.
+    await trigger.scrollIntoViewIfNeeded();
+    await settlePlaywrightAnimationFrames(page);
+    await trigger.click();
     await page.getByRole('listbox', { name: 'Color target', exact: true }).getByRole('option', { name: labels[value] || value, exact: true }).click();
   }
   return openSharedColorPicker(page);

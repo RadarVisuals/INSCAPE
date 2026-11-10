@@ -27,10 +27,11 @@ export default function DesktopMenu({ anchor, commands, label, onCommand, onClos
     (buttons?.[focusLast ? buttons.length - 1 : 0] || ref.current)?.focus();
   }, [anchor, focusLast, editor]);
   useEffect(() => {
-    const close = (event) => { if (event.key === 'Escape') { event.preventDefault(); onPreviewCommand?.(null); onClose(); returnFocus?.focus?.(); } };
+    // The open menu owns Escape before a containing artwork can consume it.
+    const close = (event) => { if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); onPreviewCommand?.(null); onClose(); returnFocus?.focus?.(); } };
     const outside = (event) => { if (!ref.current?.contains(event.target) && !menuBarRef?.current?.contains(event.target)) onClose(); };
-    window.addEventListener('keydown', close); window.addEventListener('pointerdown', outside, true);
-    return () => { window.removeEventListener('keydown', close); window.removeEventListener('pointerdown', outside, true); };
+    window.addEventListener('keydown', close, true); window.addEventListener('pointerdown', outside, true);
+    return () => { window.removeEventListener('keydown', close, true); window.removeEventListener('pointerdown', outside, true); };
   }, [onClose, onPreviewCommand, returnFocus, menuBarRef]);
   // Refreshing listener callbacks must not discard an in-flight user hover.
   // The timer belongs to this menu instance, its anchor and pointer lifetime.

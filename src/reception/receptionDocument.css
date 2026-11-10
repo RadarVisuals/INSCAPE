@@ -2,9 +2,11 @@
 .reception-document-canvas { position: relative; flex: none; width: 100%; min-width: 0; margin-inline: auto; overflow: hidden; isolation: isolate; background: var(--interface-environment); }
 .reception-document-canvas[data-show-frame] { outline: 1px solid var(--tactile-edge); outline-offset: -1px; }
 .reception-document-layer, .reception-document-cell { position: absolute; box-sizing: border-box; min-width: 0; isolation: isolate; }
-.reception-document-cell { overflow: hidden; isolation: isolate; }
+/* ShapeSurface owns the fill boundary; clipping it again compounds fractional
+   edge alpha. Content keeps its independent rounded scroll clip below. */
+.reception-document-cell { overflow: visible; isolation: isolate; }
 .reception-document-cell-surface { position: absolute; inset: 0; }
-.reception-document-cell-content { position: absolute; inset: 0; display: flex; padding: 24px; box-sizing: border-box; overflow: auto; }
+.reception-document-cell-content { position: absolute; inset: 0; display: flex; padding: 24px; box-sizing: border-box; overflow: auto; border-radius: inherit; }
 .reception-document-layer[data-text] { overflow: hidden; overflow-wrap: anywhere; }
 .reception-document-layer .reception-image { min-height: 0; }
 .reception-document-canvas [data-selected] { outline: 1px solid var(--tactile-ink); outline-offset: -1px; }

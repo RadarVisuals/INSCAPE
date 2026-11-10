@@ -176,7 +176,7 @@ export default function ImageWindow({ id, title, position, size, viewport = { wi
     {content}
     {!controlsHost && editable && <div className="image-module__bounds" aria-hidden="true" />}
     {!view.store && <button type="button" data-workbench-recovery-control className="image-module__close" aria-label={`Close ${title}`} title="Close Image" onClick={onClose}><X size={14} /></button>}
-    {controlsHost ? <ImageEditingControls host={controlsHost} id={id} viewport={viewport} navigationTop={view.navigationTop}
+    {controlsHost ? <ImageEditingControls host={controlsHost} source={node} id={id} viewport={viewport} navigationTop={view.navigationTop}
       frame={{ left: (currentPosition.left * camera.scale + camera.x) / view.scale, top: (currentPosition.top * camera.scale + camera.y) / view.scale,
         width: currentSize.width * camera.scale / view.scale, height: currentSize.height * camera.scale / view.scale }}
       editable={editable} tools={quickTools} moveHandle={movable && <button type="button"

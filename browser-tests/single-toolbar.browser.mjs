@@ -26,6 +26,7 @@ for (const width of [1440, 1000]) {
         const menu = await artworkMenu(page, id);
         assert.deepEqual((await menu.locator(':scope > button').allTextContents()).slice(0, 3), ['Duplicate', 'Layer order›', 'Delete']);
         await page.keyboard.press('Escape');
+        await menu.waitFor({ state: 'detached' });
         assert.equal(await menu.count(), 0);
         assert.equal(await page.evaluate(id => document.activeElement?.closest("[data-workbench-view-id]")?.dataset.workbenchViewId === id, id), true);
       }
