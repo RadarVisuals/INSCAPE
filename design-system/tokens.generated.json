@@ -3459,11 +3459,12 @@
     {
       "path": "src/public/ownerSystemWorkflow/displayInspection.css",
       "role": "Local",
-      "sha256": "6e0fbdfadc362d9b36a8dbbc9ffaa822642c6ce50b50533d385462497ac06adf",
+      "sha256": "661c36914a76d86a813eae19d29ef4b8a004308fced91b7f8ae81aec083a60ef",
       "definitions": [],
       "references": [
         "--inspection-lift-progress",
         "--inspection-return-top",
+        "--workbench-right-dock-width",
         "--workflow-muted"
       ]
     },
@@ -8571,7 +8572,7 @@
     {
       "path": "src/reception/receptionDocument.css",
       "role": "Local",
-      "sha256": "c8d8eddbee431e3be9f456ddf5e2e853bc1f23db08a37748e88a6b0f4dfbf10d",
+      "sha256": "9579aa7c848633c35efb3bd9dd77d61978159cc060a958b9e86f6b1de66f0e1b",
       "definitions": [],
       "references": [
         "--interface-environment",
