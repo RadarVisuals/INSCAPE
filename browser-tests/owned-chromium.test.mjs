@@ -16,6 +16,7 @@ function fixture({ rootIdentity, connectError, endpointMissing = false } = {}) {
     newBrowserCDPSession: async () => ({ send: async method => { calls.push([method]); exit(); }, detach: async () => {} }),
   };
   return { calls, child, browser, get session() { return session; }, dependencies: {
+    captureLaunchTime: async () => Date.now(),
     spawnProcess: (executable, args, options) => {
       startedAt = Date.now(); calls.push(['spawn', executable, args, options]); return child;
     },

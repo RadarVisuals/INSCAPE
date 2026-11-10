@@ -1,6 +1,6 @@
 import { spawn } from 'node:child_process';
 import { basename, delimiter, dirname, isAbsolute, relative, resolve } from 'node:path';
-import { readFile, realpath, stat } from 'node:fs/promises';
+import { readFile, readdir, realpath, stat } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 
 const delay = (milliseconds) => new Promise((resolveDelay) => setTimeout(resolveDelay, milliseconds));
@@ -225,6 +225,8 @@ export async function listWindowsProcesses({ run = runBoundedCommand, runtime, e
 }
 
 function processStartedAt(identity) {
+  const linux = typeof identity === 'string' && identity.match(/^linux:(\d+)$/u);
+  if (linux) return Number.isSafeInteger(Number(linux[1])) ? Number(linux[1]) : NaN;
   const windows = typeof identity === 'string' && identity.match(/^\/Date\((\d+)\)\/$/u);
   if (windows) return Number(windows[1]);
   // POSIX ps lstart has second precision. Opaque or malformed identities cannot
@@ -247,7 +249,41 @@ export async function terminateWindowsProcess(entry, { run = runBoundedCommand, 
   return result;
 }
 
-export async function listPosixProcesses({ run = runBoundedCommand } = {}) {
+// Linux /proc starttime and uptime share the boot clock. ps lstart converts
+// kernel ticks to a rounded wall time, which can precede Date.now() by a second.
+// Keep birth ordering in ticks instead of widening the ownership time window.
+export async function captureProcessLaunchTime({ platform = process.platform, read = readFile, run = runBoundedCommand } = {}) {
+  if (platform !== 'linux') return Date.now();
+  const result = await run('getconf', ['CLK_TCK'], { stdio: ['ignore', 'pipe', 'pipe'], timeoutMs: BROWSER_LIFECYCLE_TIMEOUTS.processInventoryMs });
+  const hz = Number(result.stdout.trim());
+  if (result.code !== 0 || !Number.isSafeInteger(hz) || hz <= 0) throw Error('Unable to determine Linux process clock ticks');
+  const uptime = (await read('/proc/uptime', 'utf8')).match(/^(\d+)\.(\d+)\s/u);
+  if (!uptime) throw Error('Invalid Linux boot clock');
+  const ticks = BigInt(uptime[1]) * BigInt(hz) + BigInt(uptime[2]) * BigInt(hz) / 10n ** BigInt(uptime[2].length);
+  if (ticks > BigInt(Number.MAX_SAFE_INTEGER)) throw Error('Linux boot clock exceeds safe identity range');
+  return `linux:${ticks}`;
+}
+
+export async function listPosixProcesses({ run = runBoundedCommand, platform = process.platform, read = readFile, directories = readdir } = {}) {
+  if (platform === 'linux') {
+    const pids = (await directories('/proc')).filter(name => /^[1-9]\d*$/u.test(name));
+    const entries = [];
+    // Bound filesystem work even on hosts with large process inventories.
+    for (let index = 0; index < pids.length; index += 16) {
+      const batch = await Promise.all(pids.slice(index, index + 16).map(async name => {
+        let raw;
+        try { raw = await read(`/proc/${name}/stat`, 'utf8'); }
+        catch (error) { if (['ENOENT', 'ESRCH'].includes(error.code)) return null; throw error; }
+        const end = raw.lastIndexOf(') '), fields = raw.slice(end + 2).trim().split(/\s+/u);
+        const pid = Number(raw.slice(0, raw.indexOf(' '))), parentPid = Number(fields[1]), ticks = fields[19];
+        if (end < 0 || pid !== Number(name) || !validPid(pid) || !Number.isSafeInteger(parentPid) || parentPid < 0
+          || !/^\d+$/u.test(ticks || '') || !Number.isSafeInteger(Number(ticks))) throw Error(`Invalid Linux process identity for PID ${name}`);
+        return { pid, parentPid, identity: `linux:${ticks}` };
+      }));
+      entries.push(...batch.filter(Boolean));
+    }
+    return entries;
+  }
   const result = await run('ps', ['-axo', 'pid=,ppid=,lstart='], {
     stdio: ['ignore', 'pipe', 'pipe'], timeoutMs: BROWSER_LIFECYCLE_TIMEOUTS.processInventoryMs,
   });
@@ -295,8 +331,11 @@ export function createOwnedProcessTree({
     if (!rootChecked) {
       rootChecked = true;
       const startedAt = processStartedAt(root?.identity);
-      const earliest = /^\/Date/u.test(root?.identity || '') ? rootStartedAt : Math.floor(rootStartedAt / 1000) * 1000;
+      const linuxClock = typeof rootStartedAt === 'string' && rootStartedAt.startsWith('linux:');
+      const earliest = linuxClock ? processStartedAt(rootStartedAt)
+        : /^\/Date/u.test(root?.identity || '') ? rootStartedAt : Math.floor(rootStartedAt / 1000) * 1000;
       if (root && isRootAlive() && (rootParentPid === undefined || root.parentPid === rootParentPid)
+          && (!linuxClock || root.identity.startsWith('linux:'))
           && Number.isFinite(startedAt) && (rootStartedAt === undefined || startedAt >= earliest))
         owned.set(rootPid, { identity: root.identity, parentPid: root.parentPid, startedAt, depth: 0 });
     }

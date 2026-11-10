@@ -28,6 +28,7 @@ import {
   BROWSER_LIFECYCLE_TIMEOUTS,
   createBrowserTestCleanup,
   createOwnedProcessTree,
+  captureProcessLaunchTime,
   listPosixProcesses,
   listWindowsProcesses,
   resolveWindowsProcessRuntime,
@@ -46,6 +47,51 @@ import {
 } from './playwright-browser-adapter.mjs';
 
 const workspaceRoot = resolve('browser-lifecycle-fixture');
+
+test('Linux launch checkpoint uses boot ticks without wall-clock rounding', async () => {
+  const checkpoint = await captureProcessLaunchTime({ platform: 'linux',
+    read: async file => { assert.equal(file, '/proc/uptime'); return '2000.12 99.00\n'; },
+    run: async (command, args) => {
+      assert.equal(command, 'getconf'); assert.deepEqual(args, ['CLK_TCK']);
+      return { code: 0, stdout: '100\n', stderr: '' };
+    } });
+  assert.equal(checkpoint, 'linux:200012');
+  await assert.rejects(captureProcessLaunchTime({ platform: 'linux',
+    run: async () => ({ code: 1, stdout: '' }) }), /clock ticks/u);
+});
+
+test('Linux inventory reads kernel identity despite spaces and parentheses in process names', async () => {
+  const result = await listPosixProcesses({ platform: 'linux', directories: async () => ['self', '10', '11'],
+    read: async file => {
+      if (file === '/proc/11/stat') throw Object.assign(Error('exited'), { code: 'ENOENT' });
+      assert.equal(file, '/proc/10/stat');
+      return `10 (name with ) parentheses) S 1 ${Array(17).fill('0').join(' ')} 200012 0\n`;
+    } });
+  assert.deepEqual(result, [{ pid: 10, parentPid: 1, identity: 'linux:200012' }]);
+  await assert.rejects(listPosixProcesses({ platform: 'linux', directories: async () => ['10'],
+    read: async () => { throw Object.assign(Error('denied'), { code: 'EACCES' }); } }), /denied/u);
+  await assert.rejects(listPosixProcesses({ platform: 'linux', directories: async () => ['10'],
+    read: async () => 'malformed' }), /Invalid Linux process identity/u);
+});
+
+test('Linux boot-clock ownership rejects older roots, older children and reused PIDs', async () => {
+  let entries = [{ pid: 10, parentPid: 1, identity: 'linux:200012' },
+    { pid: 11, parentPid: 10, identity: 'linux:200011' },
+    { pid: 12, parentPid: 10, identity: 'linux:200013' }];
+  const killed = [];
+  const tree = createOwnedProcessTree({ rootPid: 10, rootParentPid: 1, rootStartedAt: 'linux:200012',
+    listProcesses: async () => entries, terminateProcess: async entry => killed.push(entry.pid) });
+  assert.deepEqual((await tree.observe()).map(entry => entry.pid), [10, 12]);
+  const remaining = await tree.observe();
+  entries = [{ pid: 10, parentPid: 1, identity: 'linux:300000' }];
+  await assert.rejects(tree.forceTerminate(remaining), /changed creation identity/u);
+  assert.deepEqual(killed, []);
+  for (const identity of ['linux:200011', '/Date(200012)/', 'unknown']) {
+    const old = createOwnedProcessTree({ rootPid: 10, rootStartedAt: 'linux:200012',
+      listProcesses: async () => [{ pid: 10, parentPid: 1, identity }], terminateProcess: () => assert.fail('unowned') });
+    assert.deepEqual(await old.observe(), []);
+  }
+});
 const codedError = (code) => Object.assign(new Error(code), { code });
 const mockWindowsRuntime = { executable: 'powershell.exe' };
 
@@ -134,7 +180,7 @@ describe('Playwright browser lifecycle', () => {
   });
 
   test('POSIX inventory records stable process creation identities', async () => {
-    const result = await listPosixProcesses({ run: async () => ({
+    const result = await listPosixProcesses({ platform: 'darwin', run: async () => ({
       code: 0, stderr: '', stdout: '  10   1 Fri Aug  7 12:00:00 2026\n  11  10 Fri Aug  7 12:00:01 2026\n',
     }) });
     assert.deepEqual(result, [

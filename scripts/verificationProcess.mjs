@@ -2,7 +2,7 @@ import { spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { createOwnedProcessTree, listWindowsProcesses, listPosixProcesses, terminateWindowsProcess,
-  terminatePosixProcess, withinDeadline, resolveWindowsProcessRuntime, BROWSER_LIFECYCLE_TIMEOUTS } from '../browser-tests/browser-test-lifecycle.mjs';
+  terminatePosixProcess, withinDeadline, captureProcessLaunchTime, resolveWindowsProcessRuntime, BROWSER_LIFECYCLE_TIMEOUTS } from '../browser-tests/browser-test-lifecycle.mjs';
 
 // Reuse the browser lifecycle's PID + creation-identity checks. Never kill by
 // process name, port, or an unverified PID, including on Windows.
@@ -17,7 +17,7 @@ export async function runOwnedCommand({ args, cwd, env, stdio, timeoutMs, signal
   // A verification command is its own coordinator, even when unit tests invoke
   // this helper from inside another Node test worker.
   delete childEnvironment.NODE_TEST_CONTEXT; delete childEnvironment.NODE_TEST_WORKER_ID;
-  const rootStartedAt = Date.now();
+  const rootStartedAt = await captureProcessLaunchTime();
   const child = spawn(process.execPath, ['--import', new URL('./verificationProcessGate.mjs', import.meta.url).href, ...command], {
     cwd, env: childEnvironment,
     stdio: [...descriptors, 'ipc'], windowsHide: true });

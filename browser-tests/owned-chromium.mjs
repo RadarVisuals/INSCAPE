@@ -4,7 +4,7 @@ import { basename, dirname, join, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
 import { chromium } from 'playwright-core';
 import { createOwnedProcessTree, listWindowsProcesses, listPosixProcesses, terminateWindowsProcess,
-  terminatePosixProcess, withinDeadline, BROWSER_LIFECYCLE_TIMEOUTS } from './browser-test-lifecycle.mjs';
+  terminatePosixProcess, withinDeadline, captureProcessLaunchTime, BROWSER_LIFECYCLE_TIMEOUTS } from './browser-test-lifecycle.mjs';
 
 const delay = ms => new Promise(done => setTimeout(done, ms));
 const supportedOptions = new Set(['executablePath', 'headless', 'args', 'timeout', 'env', 'slowMo', 'artifactsDir']);
@@ -49,6 +49,7 @@ export async function launchOwnedChromium(options, {
   terminateProcess = process.platform === 'win32' ? terminateWindowsProcess : terminatePosixProcess,
   connect = chromium.connectOverCDP.bind(chromium),
   readEndpoint = readFile,
+  captureLaunchTime = captureProcessLaunchTime,
 } = {}) {
   if (!options.executablePath) throw Error('Owned Chromium requires an explicit executable');
   const timeout = options.timeout ?? 20_000;
@@ -121,13 +122,14 @@ export async function launchOwnedChromium(options, {
   let exited = Promise.resolve();
   try {
     const args = ownedChromiumArguments(options, profile);
+    const rootStartedAt = await captureLaunchTime();
     child = spawnProcess(options.executablePath, args, { windowsHide: true, env: options.env || process.env,
       stdio: ['ignore', 'ignore', 'pipe'] });
     child.stderr?.resume();
     exited = new Promise(done => { child.once('exit', done); child.once('error', error => { launchError = error; done(); }); });
     activeSessions.add(session); onSession(session);
     if (!Number.isSafeInteger(child.pid) || child.pid <= 0) throw Error('Chromium did not expose an owned process ID');
-    tree = createOwnedProcessTree({ rootPid: child.pid, rootStartedAt: startedAt, rootParentPid: process.pid,
+    tree = createOwnedProcessTree({ rootPid: child.pid, rootStartedAt, rootParentPid: process.pid,
       isRootAlive: alive, listProcesses: inventory, terminateProcess,
       terminateWithIdentityCheck: terminateProcess === terminateWindowsProcess
         ? (entry, timeoutMs) => terminateWindowsProcess(entry, { timeoutMs }) : undefined });
