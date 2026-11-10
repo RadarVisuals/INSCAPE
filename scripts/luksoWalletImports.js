@@ -76,16 +76,13 @@ export function narrowLuksoWalletImportsPlugin() {
         return { code: `import { deferMobileWallet } from ${helper};\n` + code.replace('walletConnect({', 'deferMobileWallet(walletConnect)({'), map: null };
       }
       // Remove eager mobile preparation instead of leaving a disabled duplicate.
-      // Both SDK mobile branches use the tab reserved by the explicit tap.
+      // Prepare on selection, then require a fresh tap to launch a ready link.
       const eagerPreparation = '  updated(changedProperties) {\n    super.updated(changedProperties);\n    if (!this.hasPrewarmed && !this._pendingWalletConnect && changedProperties.has("connectors") && this.connectors.length > 0 && this.device?.isMobile) {\n      this.hasPrewarmed = true;\n      this.prewarmWalletConnectUri();\n    }\n  }\n';
-      return { code: `import { prepareMobileWalletOnDemand } from ${helper};\n` + code
+      return { code: `import { prepareMobileWalletOnDemand, cancelMobileWalletPreparation } from ${helper};\n` + code
         .replace(eagerPreparation, '')
-        .replace('if (this.device?.isMobile) {\n        if (this.prewarmedDeepLink', 'if (this.device?.isMobile) {\n        const reservedTab = await prepareMobileWalletOnDemand(this);\n        if (!reservedTab) return;\n        if (this.prewarmedDeepLink')
-        .replace('const tab = window.open(this.prewarmedDeepLink, "_blank");', 'const tab = reservedTab;\n          tab.location.href = this.prewarmedDeepLink;')
-        .replace('const tab = window.open("", "_blank");\n          if (!tab) return;', 'const tab = reservedTab;')
-        // A rejected pairing must not wait forever for a URI that cannot arrive.
-        .replace('const uri = await uriPromise;\n            tab.location.href = uri;', 'const uri = await Promise.race([uriPromise, connectPromise]);\n            if (uri) tab.location.href = uri;\n            else tab.close();')
-        .replace('} else {\n          if (this._pendingWalletConnect)', '} else {\n          reservedTab.close();\n          if (this._pendingWalletConnect)'), map: null };
+        .replace('if (this.device?.isMobile) {\n        if (this.prewarmedDeepLink', 'if (this.device?.isMobile) {\n        if (!prepareMobileWalletOnDemand(this)) return;\n        if (this.prewarmedDeepLink')
+        .replace('    super.disconnectedCallback();\n    document.removeEventListener("visibilitychange", this._handlePageVisible);', '    super.disconnectedCallback();\n    cancelMobileWalletPreparation(this);\n    document.removeEventListener("visibilitychange", this._handlePageVisible);')
+        .replace('this.formatMessage(\n            this.inUpAppBrowser ? "connect_modal_connectors_up_login" : "connect_modal_connectors_up_mobile"\n          )', 'this.device?.isMobile && this.prewarmedDeepLink && !this.inUpAppBrowser ? "Open UP! App" : this.formatMessage(\n            this.inUpAppBrowser ? "connect_modal_connectors_up_login" : "connect_modal_connectors_up_mobile"\n          )'), map: null };
     },
     buildStart() { reviews.clear(); facades.clear(); intercepted.clear(); },
     async resolveDynamicImport(source, importer) {
