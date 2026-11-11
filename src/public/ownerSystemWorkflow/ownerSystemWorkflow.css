@@ -610,7 +610,9 @@ html[data-system-workflow-grid-direction="previous"]::view-transition-new(inscap
   --detached-window-shadow-height: 45px;
   --workflow-window-inner-shadow-opacity: 18%;
 }
-.system-workflow__detached-window-surface > * { position: relative; z-index: 1; }
+/* Only legacy windows paint the dither shadow above. Authored module layers
+   retain their own positioning instead of being pulled into document flow. */
+:where(.system-workflow__detached-window:not([data-window-chrome])) > .system-workflow__detached-window-surface > * { position: relative; z-index: 1; }
 .system-workflow__detached-window-surface::-webkit-scrollbar { width: 0; height: 0; display: none; }
 .system-workflow__detached-window-titlebar:not(.editor-object-toolbar) { min-width: 0; height: var(--detached-window-titlebar-height); padding-inline: var(--detached-window-titlebar-padding); display: flex; align-items: center; justify-content: space-between; gap: 7px; border: 0; background: transparent; cursor: move; touch-action: none; }
 .system-workflow__detached-window-titlebar > strong { min-width: 0; overflow: hidden; translate: 0 1px; font: 500 11px/1 "Inscape Sora", sans-serif; font-variation-settings: "wght" 500; letter-spacing: .025em; text-overflow: ellipsis; text-transform: uppercase; white-space: nowrap; }
