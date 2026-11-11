@@ -1,7 +1,6 @@
 import { assertValidSystemWorkflowDraft } from './domain/systemWorkflowDraft.js';
 import { normalizeProfileAddress } from '../library/config.js';
 import { textRecoveries } from '../text/textEditRecovery.js';
-import { ownerPublicationBaselineKey } from '../profileDocument/storage/ownerPublicationBaselineStorage.js';
 import { workbenchLayoutKey } from '../public/ownerSystemWorkflow/workbenchLayoutStorage.js';
 import { isWorkbenchCollection, assertValidWorkbenchCollection, projectWorkbenchDraft, WORKBENCH_COLLECTION_LIMIT } from './domain/workbenchCollection.js';
 
@@ -42,10 +41,10 @@ export function summarizeWorkbenchBackup(draft) {
     ['Mini apps', draft.miniApps?.length || 0], ['Keeper docks', draft.keeperDocks?.length || 0],
     ['Groups', draft.workbenchGroups?.length || 0],
     ['Reception cells', draft.reception?.cells?.length ?? draft.reception?.regions?.length ?? 0],
-  ].map(([name, count]) => `${count} ${name}`).join(' · ');
+  ].map(([name, count]) => `${count} ${name}`).join(' � ');
 }
 
-// The canonical write is owned by the draft store. These two derived records
+// The canonical write is owned by the draft store. Derived layout records
 // cannot remain authoritative after an explicit replacement. Clear only after
 // confirmed persistence and report any cleanup failure separately from saving.
 export function restoreWorkbenchBackup(store, backup, options, storage) {
@@ -59,11 +58,10 @@ export function restoreWorkbenchBackup(store, backup, options, storage) {
   let warning = null;
   try {
     if (!storage?.removeItem) throw Error('Storage cleanup unavailable');
-    storage.removeItem(ownerPublicationBaselineKey(profile));
     storage.removeItem(workbenchLayoutKey(profile));
     for (const id of layoutIds) storage.removeItem(workbenchLayoutKey(profile, id));
   } catch {
-    warning = 'The draft was restored, but previous layout/publication tracking could not be cleared. Keep this tab open and download a backup before reloading.';
+    warning = 'The draft was restored. Layout could not be cleared; download a backup before reloading.';
   }
   return { saved: true, warning };
 }

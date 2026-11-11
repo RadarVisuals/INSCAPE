@@ -15,6 +15,103 @@ const shape = (page, id) => page.locator(`.shape-instance [data-workbench-view-i
 const withoutReception = ({ reception: _reception, ...draft }) => draft;
 const cellFrame = (value, id) => value.workbench.shapes.find(item => item.id === id).window;
 
+for (const width of [1440, 900]) test(`published Reception recovery previews, edits and restores the previous draft at ${width}`, { timeout: 90000 }, async () => {
+  const { browser, page, errors } = await setup({ width, height: 1000 });
+  try {
+    await page.goto(`${origin}/browser-tests/reception-recovery-fixture.html?session=${crypto.randomUUID()}`, { waitUntil: 'domcontentloaded' });
+    await page.getByRole('group', { name: 'Local study bento cell', exact: true }).waitFor();
+    const initial = await page.evaluate(() => window.receptionRecoveryFixture.root.getDraft().reception);
+    await editorMenu(page, 'Backup').click();
+    const load = () => page.getByRole('button', { name: 'Load published Reception', exact: true }).click();
+    const preview = page.getByRole('region', { name: 'Reception restore preview', exact: true });
+    await load(); await preview.waitFor();
+    assert.equal(await preview.locator('[data-cell-id]').count(), 2);
+    await page.getByRole('button', { name: 'Back to editing', exact: true }).click();
+    assert.deepEqual(await page.evaluate(() => window.receptionRecoveryFixture.root.getDraft().reception), initial);
+    await load(); await preview.waitFor();
+    await page.getByRole('button', { name: 'Back up current and load Reception', exact: true }).click();
+    await page.getByRole('group', { name: 'Published red bento cell', exact: true }).waitFor();
+    await page.getByRole('button', { name: 'Select Published red', exact: true }).click();
+    const name = page.getByRole('textbox', { name: 'Cell name', exact: true });
+    await name.fill('Edited published cell'); await name.press('Tab');
+    assert.ok(await page.evaluate(() => window.receptionRecoveryFixture.root.getDraft().reception.shapes.some(item => item.name === 'Edited published cell')));
+    await page.reload();
+    await page.getByRole('group', { name: 'Edited published cell bento cell', exact: true }).waitFor();
+    await editorMenu(page, 'Backup').click();
+    await page.getByRole('button', { name: 'Restore previous local Reception', exact: true }).click();
+    await preview.waitFor();
+    await page.getByRole('button', { name: 'Back up current and load Reception', exact: true }).click();
+    await page.getByRole('group', { name: 'Local study bento cell', exact: true }).waitFor();
+    assert.deepEqual(await page.evaluate(() => window.receptionRecoveryFixture.root.getDraft().reception), initial);
+    await mkdir(output, { recursive: true });
+    await page.screenshot({ path: `${output}/recovery-restored-${width}.png` });
+    assert.deepEqual(errors, []);
+  } finally { await browser.close(); }
+});
+
+test('Reception recovery refuses failed backup storage and a changed publication while preview is open', { timeout: 90000 }, async () => {
+  const { browser, page, errors } = await setup();
+  try {
+    await page.goto(`${origin}/browser-tests/reception-recovery-fixture.html?session=${crypto.randomUUID()}`, { waitUntil: 'domcontentloaded' });
+    await page.getByRole('group', { name: 'Local study bento cell', exact: true }).waitFor();
+    await editorMenu(page, 'Backup').click();
+    await page.getByRole('button', { name: 'Load published Reception', exact: true }).click();
+    await page.getByRole('region', { name: 'Reception restore preview', exact: true }).waitFor();
+    const before = await page.evaluate(() => {
+      window.receptionRecoveryFixture.fail(true);
+      return window.receptionRecoveryFixture.root.getDraft().reception;
+    });
+    const confirm = page.getByRole('button', { name: 'Back up current and load Reception', exact: true });
+    await confirm.click();
+    await page.getByRole('alert').filter({ hasText: 'could not be backed up' }).waitFor();
+    assert.deepEqual(await page.evaluate(() => window.receptionRecoveryFixture.root.getDraft().reception), before);
+    await page.evaluate(() => { window.receptionRecoveryFixture.fail(false); window.receptionRecoveryFixture.setStatus('STALE'); });
+    await confirm.click();
+    await page.getByRole('alert').filter({ hasText: 'publication changed' }).waitFor();
+    assert.deepEqual(await page.evaluate(() => window.receptionRecoveryFixture.root.getDraft().reception), before);
+    assert.deepEqual(errors, []);
+  } finally { await browser.close(); }
+});
+
+for (const width of [1440, 900]) test(`Reception cell fill survives late window styles at ${width}`, { timeout: 90000 }, async () => {
+  const { browser, page, errors } = await setup({ width, height: 1000 });
+  try {
+    await generateBento(page, 2);
+    // The full application can load these shared styles after Shape's styles.
+    // Exercise that order rather than relying on the fixture's eager imports.
+    await page.addStyleTag({ url: `${origin}/src/public/ownerSystemWorkflow/ownerSystemWorkflow.css` });
+    for (const gap of [0, 12]) {
+      await page.evaluate(gap => {
+        const { root } = window.nativeReceptionFixture, draft = root.getDraft();
+        draft.reception.bento.gap = gap;
+        draft.reception.cells.forEach((cell, index) => Object.assign(
+          draft.reception.shapes.find(record => record.id === cell.id),
+          { color: index ? '#000000' : '#cc2222', opacity: index ? 0.25 : 1 },
+        ));
+        if (!root.commitCompletedOperation(draft, { expectedGeneration: root.getGeneration() })) throw Error('Cannot save cell colours');
+      }, gap);
+      await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+      const surfaces = await page.locator('.shape-instance[data-cell-owner] .shape-paint').evaluateAll(nodes => nodes.map(node => {
+        const paint = node.getBoundingClientRect(), host = node.closest('.shape-window').getBoundingClientRect();
+        const fill = getComputedStyle(node.querySelector('.shape-fill'));
+        return { width: paint.width, height: paint.height, hostWidth: host.width, hostHeight: host.height,
+          color: fill.color, opacity: fill.opacity };
+      }));
+      assert.equal(surfaces.length, 2);
+      for (const surface of surfaces) {
+        assert.ok(surface.width > 0 && surface.height > 0, 'cell paint must have visible area');
+        assert.ok(Math.abs(surface.width - surface.hostWidth) < 1, 'paint fills cell width');
+        assert.ok(Math.abs(surface.height - surface.hostHeight) < 1, 'paint fills cell height');
+      }
+      assert.deepEqual(surfaces.map(({ color, opacity }) => ({ color, opacity })),
+        [{ color: 'rgb(204, 34, 34)', opacity: '1' }, { color: 'rgb(0, 0, 0)', opacity: '0.25' }]);
+    }
+    await mkdir(output, { recursive: true });
+    await page.screenshot({ path: `${output}/cell-fill-late-styles-${width}.png` });
+    assert.deepEqual(errors, []);
+  } finally { await browser.close(); }
+});
+
 async function openCellInspector(page) {
   const inspector = await openSharedTool(page, 'Inspector');
   await inspector.getByRole('tablist', { name: 'Cell settings', exact: true }).getByRole('tab', { name: 'Cell', exact: true }).click();

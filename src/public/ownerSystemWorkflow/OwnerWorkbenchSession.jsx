@@ -156,7 +156,8 @@ function LocalWorkbenchSession({ component: Session, rootStore, ...props }) {
         onEditReception={() => selectDocument('reception')}
         documentNavigation={{ items: store.listWorkbenches(), activeId: scope.getWorkbenchId(), lastCanvas: lastCanvas.getSnapshot, select: selectDocument }}
         reception={scope === reception ? { collection, backupControls: <WorkbenchBackupControls store={store}
-          storage={props.reviewStorage ?? globalThis.localStorage} onRestored={props.onDraftRestored} /> } : undefined}
+          storage={props.reviewStorage ?? globalThis.localStorage} receptionRecovery={{ scope: reception, collection, publishedResolution: props.publishedResolution }}
+          onRestored={props.onDraftRestored} /> } : undefined}
         editorPreferences={editorPreferences}
         workbenchPreferenceStore={workbenchPreferenceStore}
         keeperDockPositions={keeperDockPositions}

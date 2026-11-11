@@ -3,7 +3,6 @@ import test from 'node:test';
 import { createEmptySystemWorkflowDraft } from '../../systemWorkflow/domain/systemWorkflowDraft.js';
 import { createSystemWorkflowDraftStore, systemWorkflowDraftKey } from '../../systemWorkflow/systemWorkflowDraftStore.js';
 import { buildProfileDocumentV9 } from '../domain/profileDocumentV9Builder.js';
-import { ownerPublicationBaselineKey } from './ownerPublicationBaselineStorage.js';
 import {
   createOwnerDraftFromPublishedProfile,
   reconcileOwnerDraftWithPublishedProfile,
@@ -11,6 +10,7 @@ import {
 
 const PROFILE = '0x1111111111111111111111111111111111111111';
 const ASSET = '42:0x2222222222222222222222222222222222222222:0x01';
+const retiredTrackingKey = profile => `inscape.owner-publication-baseline.v1:${profile}`;
 
 function memoryStorage(initial = {}) {
   const records = new Map(Object.entries(initial));
@@ -73,7 +73,7 @@ test('a baseline-less origin preserves its existing local draft', () => {
   assert.equal(store.getDraft().grids[0].title, 'OLD LOCAL');
 });
 
-test('post-baseline local edits survive a newer publication until explicitly reconciled', () => {
+test('local edits survive a newer publication until explicitly restored', () => {
   const storage = memoryStorage();
   const store = createSystemWorkflowDraftStore({
     generateGridId: () => 'initial-home',
@@ -92,28 +92,28 @@ test('post-baseline local edits survive a newer publication until explicitly rec
   assert.equal(store.getDraft().grids[0].subtitle, 'UNPUBLISHED LOCAL EDIT');
 });
 
-test('corrupt and unreadable baselines never authorize replacing existing private work', () => {
+test('obsolete tracking metadata is never consulted to replace existing private work', () => {
   for (const denied of [false, true]) {
     const old = createEmptySystemWorkflowDraft(PROFILE, { generateId: () => 'private' });
     old.grids[0].visibility = 'PRIVATE';
     const raw = JSON.stringify(old);
-    const storage = memoryStorage({ [systemWorkflowDraftKey(PROFILE)]: raw, [ownerPublicationBaselineKey(PROFILE)]: '{broken' });
+    const storage = memoryStorage({ [systemWorkflowDraftKey(PROFILE)]: raw, [retiredTrackingKey(PROFILE)]: '{broken' });
     const read = storage.getItem;
-    if (denied) storage.getItem = key => { if (key === ownerPublicationBaselineKey(PROFILE)) throw Error('Denied'); return read(key); };
+    if (denied) storage.getItem = key => { if (key === retiredTrackingKey(PROFILE)) throw Error('Denied'); return read(key); };
     const store = createSystemWorkflowDraftStore({ profileAddress: PROFILE, storage });
     const result = reconcileOwnerDraftWithPublishedProfile({ document: publication(), profileAddress: PROFILE, storage, store });
     assert.equal(result.status, 'LOCAL_CHANGES_PRESERVED');
-    assert.equal(result.baselineStatus, denied ? 'unavailable' : 'corrupt');
     assert.equal(storage.records.get(systemWorkflowDraftKey(PROFILE)), raw);
   }
 });
 
-test('failed baseline persistence cannot authorize replacing later private edits', () => {
+test('initial hydration needs only the canonical save and never overwrites later edits', () => {
   const storage = memoryStorage();
   const write = storage.setItem;
-  storage.setItem = (key, value) => { if (key === ownerPublicationBaselineKey(PROFILE)) throw Error('Denied'); write(key, value); };
+  storage.setItem = (key, value) => { if (key === retiredTrackingKey(PROFILE)) throw Error('Denied'); write(key, value); };
   const store = createSystemWorkflowDraftStore({ profileAddress: PROFILE, storage });
-  assert.equal(reconcileOwnerDraftWithPublishedProfile({ document: publication(), profileAddress: PROFILE, storage, store }).status, 'HYDRATED_WITHOUT_BASELINE');
+  assert.equal(reconcileOwnerDraftWithPublishedProfile({ document: publication(), profileAddress: PROFILE, storage, store }).status, 'HYDRATED_FROM_PUBLISHED');
+  assert.equal(storage.getItem(retiredTrackingKey(PROFILE)), null);
   const edited = store.getDraft(); edited.grids[0].subtitle = 'Private edits';
   store.commitCompletedOperation(edited, { expectedGeneration: store.getGeneration() });
   assert.equal(reconcileOwnerDraftWithPublishedProfile({ document: publication(2), profileAddress: PROFILE, storage, store }).status, 'LOCAL_CHANGES_PRESERVED');
@@ -130,7 +130,7 @@ test('the storage restoration path retains alternate media and dimensions', () =
     { url: 'https://example.com/alternate.png', width: 900, height: 600 });
 });
 
-test('a retained baseline does not prevent restoring an absent draft', () => {
+test('removing the local draft allows initial hydration again', () => {
   const storage = memoryStorage();
   const initialStore = createSystemWorkflowDraftStore({ profileAddress: PROFILE, storage });
   reconcileOwnerDraftWithPublishedProfile({ document: publication(), profileAddress: PROFILE, storage, store: initialStore });

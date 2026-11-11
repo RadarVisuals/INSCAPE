@@ -1047,18 +1047,7 @@ export function WorkbenchSession({
                         onClose={closePublication}
                         onMotionComplete={publicationPresence.completeTransition}
                         onPublished={result => {
-                          const publishedDraft = overview.store.getSnapshot();
                           closePublication();
-                          import('../../profileDocument/storage/ownerDraftReconciliation.js')
-                            .then(({ recordOwnerPublicationBaseline }) => {
-                              recordOwnerPublicationBaseline({
-                                document: result?.document,
-                                draft: publishedDraft,
-                                profileAddress,
-                                storage: reviewStorage ?? globalThis.localStorage,
-                              });
-                            })
-                            .catch(() => {});
                           onPublicationConfirmed?.({ ...result });
                         }}
                         profile={publicationProfile}

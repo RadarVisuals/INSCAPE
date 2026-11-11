@@ -7,7 +7,6 @@ import { addImageModule } from '../imageModule/imageModuleSession.js';
 import { addShape } from '../shapes/shapeSession.js';
 import { parseWorkbenchBackup, serializeWorkbenchBackup, restoreWorkbenchBackup, WORKBENCH_BACKUP_LIMIT } from './workbenchBackup.js';
 import { workbenchLayoutKey } from '../public/ownerSystemWorkflow/workbenchLayoutStorage.js';
-import { ownerPublicationBaselineKey } from '../profileDocument/storage/ownerPublicationBaselineStorage.js';
 import { retainTextRecovery, clearTextRecovery } from '../text/textEditRecovery.js';
 
 const profile = `0x${'1'.repeat(40)}`, other = `0x${'2'.repeat(40)}`;
@@ -73,10 +72,10 @@ test('restore rejects profile switches and never accepts unreadable storage as e
   assert.equal(unavailable.restoreBackup(draft, { expectedGeneration: 0 }), false);
 });
 
-test('restoration invalidates derived layout and publication state only after confirmed save, and blocks pending Text', () => {
+test('restoration invalidates derived layout only after confirmed save, and blocks pending Text', () => {
   const f = setup(); addTextModule(f.store, profile);
   const backup = parseWorkbenchBackup(serializeWorkbenchBackup(f.store.getDraft()), profile), options = { expectedGeneration: f.store.getGeneration() };
-  const keys = [workbenchLayoutKey(profile), ownerPublicationBaselineKey(profile)];
+  const keys = [workbenchLayoutKey(profile)];
   keys.forEach(key => f.records.set(key, 'derived'));
   f.fail(true); assert.equal(restoreWorkbenchBackup(f.store, backup, options, f.storage).saved, false);
   keys.forEach(key => assert.equal(f.records.get(key), 'derived'));

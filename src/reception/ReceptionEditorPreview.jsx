@@ -22,7 +22,8 @@ function NumberSetting({ label, value, min = 0, max = 16384, onCommit }) {
     }} /></label>;
 }
 
-export default function ReceptionEditorPreview({ reception, model, snapshot, assets, onClose, store, workspaceDestinations }) {
+export default function ReceptionEditorPreview({ reception, model, snapshot, assets, onClose, store, workspaceDestinations,
+  label = 'Reception responsive preview', actions }) {
   const [width, setWidth] = useState(null), [selection, setSelection] = useState(null), [layout, setLayout] = useState(null), [error, setError] = useState('');
   const [settingsOpen, setSettingsOpen] = useState(false);
   const shown = useMemo(() => projectReception(reception), [reception]);
@@ -49,15 +50,17 @@ export default function ReceptionEditorPreview({ reception, model, snapshot, ass
     [ids[index], ids[next]] = [ids[next], ids[index]]; store.setCellMobileOrder(ids);
   });
   return <ReceptionPresentation snapshot={snapshot?.entries ? snapshot : undefined} assets={assets}>
-    <section className="reception-document-preview system-workflow__token-scope" aria-label="Reception responsive preview"
-      data-workflow-material="tactile" data-workflow-finish="flat">
+    <section className="reception-document-preview system-workflow__token-scope" aria-label={label}
+      data-workflow-material="tactile" data-workflow-finish="flat" data-system-workflow-overlay
+      onKeyDownCapture={event => { if (actions && event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); onClose(); } }}>
       <header className="reception-preview-bar" {...editorChrome}>
         <Button icon={ArrowLeft} label="Back to editing" onClick={onClose}>Back to editing</Button>
-        <WorkspaceSwitcher current="Reception preview" destinations={workspaceDestinations} onChoose={run} />
+        {workspaceDestinations ? <WorkspaceSwitcher current="Reception preview" destinations={workspaceDestinations} onChoose={run} /> : <span>{label}</span>}
         <div className="reception-preview-actions"><ReceptionViewportControls width={width} measuredWidth={layout?.viewportWidth} onChange={setWidth} />
         {store && <Button icon={SlidersHorizontal} label="Phone layout settings" aria-expanded={settingsOpen}
           onClick={() => setSettingsOpen(open => !open)} />}</div>
       </header>
+      {actions && <div className="reception-preview-restore">{actions}</div>}
       {error && <p role="alert">{error}</p>}
       <div className="reception-document-preview-body">
         <div className="reception-document-preview-scroll"><ReceptionDocumentCanvas reception={shown} width={width}

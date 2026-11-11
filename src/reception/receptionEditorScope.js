@@ -176,6 +176,17 @@ export function createReceptionEditorScope(rootStore, options = {}) {
     guardWorkbenchTransition: check => { guards.add(check); return () => guards.delete(check); },
     getCells: () => { read(); return current() ? projectedReception.cells : []; },
     getReception: () => { read(); return current() ? projectedReception : null; },
+    replaceReception(value, expectedGeneration) {
+      if (!writable()) throw new Error('This Reception is no longer active.');
+      checkTransition();
+      if (textRecoveries(api, profile).length) throw new Error(TEXT_RECOVERY_MESSAGE);
+      if (expectedGeneration !== underlying.getGeneration()) throw new Error('Reception changed. Open its restore preview again.');
+      const reception = createReceptionEditorDocument(value, options);
+      if (!underlying.commitCompletedOperation({ ...underlying.getSnapshot(), reception }, {
+        expectedGeneration, historyLabel: 'Restore Reception',
+      })) throw new Error('Reception could not be saved. Local work is unchanged.');
+      editingCell = null;
+    },
     previewFittedTextFrame(cellId, id, article) {
       const before = api.getReception();
       if (!before?.cells.some(cell => cell.id === cellId && cell.fitText?.includes(id))) return null;

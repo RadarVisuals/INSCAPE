@@ -2,6 +2,7 @@
 .reception-preview-bar { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 6px; padding: 8px 12px; border-bottom: 1px solid var(--tactile-divider); }
 .reception-preview-bar > button { justify-self: start; }
 .reception-preview-actions { display: flex; align-items: center; justify-self: end; gap: 6px; }
+.reception-preview-restore { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px; padding: 8px 12px; border-bottom: 1px solid var(--tactile-divider); }
 .reception-document-preview .workflow-tactile-control { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 28px; padding: 4px 10px; }
 .reception-preview-bar [data-icon-only] { width: 28px; padding: 0; }
 .reception-viewport-controls, .reception-viewport-presets, .reception-viewport-width, .reception-viewport-width label { display: flex; align-items: center; }

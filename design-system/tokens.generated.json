@@ -4517,7 +4517,7 @@
     {
       "path": "src/public/ownerSystemWorkflow/ownerSystemWorkflow.css",
       "role": "Workflow",
-      "sha256": "b34fcba14137e8123f6e6f67acfc09c426721a92d9c9f82898458f1fc58b4955",
+      "sha256": "900552a45a77e76593dbc58c61f8ddb516d746447182f80c0e6b42300161d7d2",
       "definitions": [
         {
           "name": "--study-surface",
@@ -4723,7 +4723,7 @@
           "scope": [
             ".system-workflow[data-layout=\"narrow\"]"
           ],
-          "line": 633,
+          "line": 635,
           "references": []
         }
       ],
@@ -8590,7 +8590,7 @@
     {
       "path": "src/reception/receptionPreview.css",
       "role": "Local",
-      "sha256": "15f83786cb94a16e2cc26cb3125ddf2164fff087476ed4389a91548573069b45",
+      "sha256": "8aca31ac432e9e89e947e5dc717116b8c545c210bc7487ffa9fa2fbdf3b1ef6e",
       "definitions": [
         {
           "name": "--tactile-selected",
@@ -8598,7 +8598,7 @@
           "scope": [
             ".reception-viewport-presets"
           ],
-          "line": 9,
+          "line": 10,
           "references": [
             "--editor-accent"
           ]
@@ -8609,7 +8609,7 @@
           "scope": [
             ".reception-viewport-presets"
           ],
-          "line": 9,
+          "line": 10,
           "references": [
             "--editor-on-accent"
           ]
@@ -8621,7 +8621,7 @@
             "@media (forced-colors: active)",
             ".reception-viewport-presets"
           ],
-          "line": 42,
+          "line": 43,
           "references": []
         },
         {
@@ -8631,7 +8631,7 @@
             "@media (forced-colors: active)",
             ".reception-viewport-presets"
           ],
-          "line": 42,
+          "line": 43,
           "references": []
         }
       ],

@@ -29,7 +29,6 @@ test('owner entry reconciles its origin-scoped draft before mounting the Keeper-
   assert.match(reconciliationSource, /ProfileEditingBoundary/u);
   assert.match(reconciliationSource, /getRecordState/u);
   assert.match(reconciliationSource, /<OwnerSystemWorkflowRuntime/u);
-  assert.match(runtimeSource, /recordOwnerPublicationBaseline/u);
   assert.match(appSource, /Resolving owner workspace/u);
   assert.doesNotMatch(appSource, /GridWalkerCanvas|KeeperDock|residentHandoff|keeperReactions|selectResidentActorVisible/u);
 });
