@@ -1,0 +1,22 @@
+TAP version 13
+# Subtest: owner and Visitor have free camera movement without custom-frame controls, refitting or constrained Focus
+ok 1 - owner and Visitor have free camera movement without custom-frame controls, refitting or constrained Focus
+  ---
+  duration_ms: 9025.3691
+  type: 'test'
+  ...
+# Subtest: the canvas clips outlying artwork without relocating it; Show outside canvas and Focus recover it
+ok 2 - the canvas clips outlying artwork without relocating it; Show outside canvas and Focus recover it
+  ---
+  duration_ms: 2674.233
+  type: 'test'
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 2
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 11977.122

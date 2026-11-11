@@ -1,0 +1,8 @@
+/* Reception uses the shared Library in an independent screen tool. */
+.reception-library-window.is-placing { opacity: .075; pointer-events: none; }
+.reception-library-window.is-placing .system-workflow__library { opacity: 1; }
+.reception-library-window.is-placing .lattice-browser-sidebar { pointer-events: none; }
+.reception-library-window .system-workflow__workspace-search { grid-column: 1 / -1; }
+.reception-library-window .system-workflow__library-selection-action { width: 100%; }
+.reception-library-window .system-workflow__library-create-row { grid-template-columns: 1fr; }
+.reception-library-window .system-workflow__library-create-row > .lattice-browser-sidebar__create + .lattice-browser-sidebar__create { border-left: 0; }

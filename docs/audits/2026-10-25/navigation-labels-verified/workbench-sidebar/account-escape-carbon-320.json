@@ -1,0 +1,196 @@
+{
+  "beforeAccountEscape": {
+    "camera": {
+      "zoom": "100%",
+      "frames": [
+        {
+          "id": "display:primary",
+          "rect": {
+            "x": 32,
+            "y": 64,
+            "width": 960,
+            "height": 540,
+            "top": 64,
+            "right": 992,
+            "bottom": 604,
+            "left": 32
+          }
+        },
+        {
+          "id": "shape:a72c86e8-042a-4cc1-b44d-23fe1d357d52",
+          "rect": {
+            "x": 200,
+            "y": 600,
+            "width": 288,
+            "height": 288,
+            "top": 600,
+            "right": 488,
+            "bottom": 888,
+            "left": 200
+          }
+        },
+        {
+          "id": "image:cc617f63-52e5-4e50-bdbc-9357d382d5ba",
+          "rect": {
+            "x": 520,
+            "y": 600,
+            "width": 420,
+            "height": 280,
+            "top": 600,
+            "right": 940,
+            "bottom": 880,
+            "left": 520
+          }
+        },
+        {
+          "id": "text:7d9a2137-6638-4314-a93f-8cc91dc2c8fc",
+          "rect": {
+            "x": 80,
+            "y": 900,
+            "width": 720,
+            "height": 680,
+            "top": 900,
+            "right": 800,
+            "bottom": 1580,
+            "left": 80
+          }
+        }
+      ]
+    },
+    "selection": "1 selected",
+    "activeTargets": [
+      "text:7d9a2137-6638-4314-a93f-8cc91dc2c8fc"
+    ]
+  },
+  "afterAccountEscape": {
+    "camera": {
+      "zoom": "100%",
+      "frames": [
+        {
+          "id": "display:primary",
+          "rect": {
+            "x": 32,
+            "y": 64,
+            "width": 960,
+            "height": 540,
+            "top": 64,
+            "right": 992,
+            "bottom": 604,
+            "left": 32
+          }
+        },
+        {
+          "id": "shape:a72c86e8-042a-4cc1-b44d-23fe1d357d52",
+          "rect": {
+            "x": 200,
+            "y": 600,
+            "width": 288,
+            "height": 288,
+            "top": 600,
+            "right": 488,
+            "bottom": 888,
+            "left": 200
+          }
+        },
+        {
+          "id": "image:cc617f63-52e5-4e50-bdbc-9357d382d5ba",
+          "rect": {
+            "x": 520,
+            "y": 600,
+            "width": 420,
+            "height": 280,
+            "top": 600,
+            "right": 940,
+            "bottom": 880,
+            "left": 520
+          }
+        },
+        {
+          "id": "text:7d9a2137-6638-4314-a93f-8cc91dc2c8fc",
+          "rect": {
+            "x": 80,
+            "y": 900,
+            "width": 720,
+            "height": 680,
+            "top": 900,
+            "right": 800,
+            "bottom": 1580,
+            "left": 80
+          }
+        }
+      ]
+    },
+    "selection": "1 selected",
+    "activeTargets": [
+      "text:7d9a2137-6638-4314-a93f-8cc91dc2c8fc"
+    ]
+  },
+  "outsideAccount": {
+    "valid": true,
+    "label": "Retry Discover"
+  },
+  "afterTabEscape": {
+    "camera": {
+      "zoom": "100%",
+      "frames": [
+        {
+          "id": "display:primary",
+          "rect": {
+            "x": 32,
+            "y": 64,
+            "width": 960,
+            "height": 540,
+            "top": 64,
+            "right": 992,
+            "bottom": 604,
+            "left": 32
+          }
+        },
+        {
+          "id": "shape:a72c86e8-042a-4cc1-b44d-23fe1d357d52",
+          "rect": {
+            "x": 200,
+            "y": 600,
+            "width": 288,
+            "height": 288,
+            "top": 600,
+            "right": 488,
+            "bottom": 888,
+            "left": 200
+          }
+        },
+        {
+          "id": "image:cc617f63-52e5-4e50-bdbc-9357d382d5ba",
+          "rect": {
+            "x": 520,
+            "y": 600,
+            "width": 420,
+            "height": 280,
+            "top": 600,
+            "right": 940,
+            "bottom": 880,
+            "left": 520
+          }
+        },
+        {
+          "id": "text:7d9a2137-6638-4314-a93f-8cc91dc2c8fc",
+          "rect": {
+            "x": 80,
+            "y": 900,
+            "width": 720,
+            "height": 680,
+            "top": 900,
+            "right": 800,
+            "bottom": 1580,
+            "left": 80
+          }
+        }
+      ]
+    },
+    "selection": "1 selected",
+    "activeTargets": [
+      "text:7d9a2137-6638-4314-a93f-8cc91dc2c8fc"
+    ]
+  },
+  "triggerFocused": true
+}

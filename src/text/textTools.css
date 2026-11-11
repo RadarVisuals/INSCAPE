@@ -1,0 +1,120 @@
+/* Text controls share the Inspector's surface, scroll owner and palette. */
+.workbench-text-inspector { --workflow-border: var(--tactile-divider); --workflow-muted: var(--tactile-muted); --workflow-ink: var(--tactile-ink); --workflow-panel: var(--tactile-face); min-width: 0; width: 100%; color: var(--tactile-ink); font: var(--workflow-type-control); }
+.workbench-text-inspector [hidden] { display: none !important; }
+.workbench-text-inspector .text-controls-body { min-width: 0; }
+.workbench-text-inspector :is(button, input, select) { box-sizing: border-box; min-width: 0; max-width: 100%; font: inherit; }
+.workbench-text-inspector :is(input:not([type=checkbox]):not([type=range]), select) { width: 100%; min-height: var(--tool-control-height, 28px); height: var(--tool-control-height, 28px); padding: 4px 6px; border: 1px solid var(--tactile-control-edge, var(--tactile-edge)); border-radius: var(--tactile-radius-control, var(--control-radius)); background: var(--tactile-well); color: inherit; }
+.workbench-text-inspector :is(input, select, summary):focus-visible { outline: 1px solid var(--tactile-accent); outline-offset: 1px; }
+.workbench-text-inspector :is(input, select, button):disabled { opacity: .45; }
+.workbench-text-inspector button { min-height: var(--tool-control-height, 28px); padding: 4px 7px; }
+.workbench-text-inspector .workflow-tactile-control[aria-pressed=true] { color: var(--tactile-accent); background: var(--tactile-selected); box-shadow: none; }
+.workbench-text-inspector .workflow-tactile-control[aria-pressed=true]::after { display: none; }
+.workbench-text-inspector .workflow-tactile-control svg { width: 14px; height: 14px; }
+.workbench-text-inspector .text-toolbar { display: flex; flex-direction: column; gap: 0; padding: 0; border: 0; background: transparent; }
+.text-formatting-scope { color: var(--tactile-muted); font-size: 10px; line-height: 1.3; margin-bottom: 6px; }
+.workbench-text-inspector .text-tool-group { display: grid; gap: 6px; padding: 10px 0; border-top: 1px solid var(--tactile-divider); }
+.workbench-text-inspector .text-tool-group:first-of-type { padding-top: 0; border-top: 0; }
+.workbench-text-inspector .text-tool-group > h3 { margin: 0 0 2px; font: inherit; font-weight: 500; }
+.workbench-text-inspector .text-toolbar-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+.workbench-text-inspector .text-toolbar-icons { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; padding: 0; }
+.workbench-text-inspector .text-toolbar-icons button { display: grid; place-items: center; padding: 4px; }
+.workbench-text-inspector .text-character-marks { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.workbench-text-inspector .text-format-field { display: grid; grid-template-columns: 78px minmax(0, 1fr); align-items: center; gap: 8px; min-width: 0; color: var(--tactile-muted); }
+.workbench-text-inspector .text-format-field select { color: var(--tactile-ink); }
+.workbench-text-inspector .text-selection-font { display: flex; align-items: center; gap: 4px; min-width: 0; }
+.workbench-text-inspector .text-selection-font .text-format-field { flex: 1; }
+.workbench-text-inspector .text-format-field > button, .workbench-text-inspector .text-paragraph-alignment > button { width: 100%; justify-content: space-between; color: var(--tactile-ink); }
+.workbench-text-inspector .text-format-field > button > span { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.workbench-text-inspector :is(.text-selection-font, .text-selection-number, .text-selection-colour) > button { display: grid; place-items: center; width: max(20px, var(--tool-touch-target, 0px)); flex: 0 0 max(20px, var(--tool-touch-target, 0px)); padding: 2px; }
+.workbench-text-inspector :is(.text-selection-font, .text-selection-number, .text-selection-colour) > button svg { width: 11px; height: 11px; }
+.workbench-text-inspector .text-selection-number { display: flex; align-items: center; gap: 4px; min-width: 0; }
+.workbench-text-inspector .text-selection-number label { flex: 1; display: grid; grid-template-columns: 78px minmax(0, 1fr); align-items: center; gap: 8px; min-width: 0; color: var(--tactile-muted); }
+.workbench-text-inspector .text-selection-number input { color: var(--tactile-ink); }
+.workbench-text-inspector .text-paragraph-alignment { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 6px; align-items: center; }
+.workbench-text-inspector .text-writing-shortcuts { margin-top: 2px; }
+.workbench-text-inspector .text-block-row:has(> select:only-child) { grid-template-columns: minmax(0, 1fr); }
+.workbench-text-inspector :is(.text-inspector-section, .text-style-controls, .text-backup-controls, .text-article-outline) { margin: 0; border: 0; border-top: 1px solid var(--tactile-divider); }
+.workbench-text-inspector :is(.text-inspector-section, .text-style-controls, .text-backup-controls, .text-article-outline, .text-tools-transfer) > summary { display: flex; align-items: center; justify-content: space-between; gap: 6px; box-sizing: border-box; min-height: var(--tool-control-height, 28px); padding: 7px 0; list-style: none; cursor: pointer; font: inherit; }
+.workbench-text-inspector :is(.text-inspector-section, .text-style-controls, .text-backup-controls, .text-article-outline, .text-tools-transfer) > summary::-webkit-details-marker { display: none; }
+.workbench-text-inspector :is(.text-inspector-section, .text-style-controls, .text-backup-controls, .text-article-outline, .text-tools-transfer) > summary::after { content: ''; flex: 0 0 4px; width: 4px; height: 4px; margin-right: 3px; border-right: 1px solid var(--tactile-muted); border-bottom: 1px solid var(--tactile-muted); transform: rotate(-45deg); }
+.workbench-text-inspector :is(.text-inspector-section, .text-style-controls, .text-backup-controls, .text-article-outline, .text-tools-transfer)[open] > summary::after { transform: rotate(45deg); }
+.workbench-text-inspector details[open] > :not(summary) { margin-bottom: 8px; }
+.workbench-text-inspector :is(.text-style-controls, .text-backup-controls)[open] { display: grid; gap: 6px; }
+.workbench-text-inspector .text-style-controls summary { padding-bottom: 0; }
+.workbench-text-inspector .text-settings { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; padding: 2px 0 8px; }
+.workbench-text-inspector .text-settings label { display: flex; flex-direction: column; gap: 5px; min-width: 0; color: var(--tactile-muted); }
+.workbench-text-inspector .text-settings label :is(input, select) { color: var(--tactile-ink); }
+.workbench-text-inspector .text-settings .text-selection-number label { display: flex; flex-direction: row; }
+.workbench-text-inspector .text-settings .text-selection-number input { width: 80px; flex: 0 1 80px; }
+.workbench-text-inspector .text-settings-wide { grid-column: 1 / -1; }
+.workbench-text-inspector p { margin: 0; overflow-wrap: anywhere; color: var(--tactile-muted); font: inherit; line-height: 1.45; }
+.workbench-text-inspector .text-settings p { grid-column: 1 / -1; }
+.workbench-text-inspector .text-default-preview { margin-bottom: 6px; }
+.workbench-text-inspector .text-title-controls { display: grid; gap: 6px; }
+.workbench-text-inspector .text-title-alignment { display: flex; gap: 4px; }
+.workbench-text-inspector .text-title-alignment button { flex: 1; display: grid; place-items: center; }
+.workbench-text-inspector .text-selection-colour { display: flex; gap: 4px; align-items: center; min-width: 0; }
+.workbench-text-inspector .text-selection-colour label { flex: 1; display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+.workbench-text-inspector input[type=color] { width: 36px; padding: 3px; justify-self: end; }
+.workbench-text-inspector :is(.text-padding-controls, .module-corner-controls) { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+.workbench-text-inspector .module-surface-controls { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; grid-column: 1 / -1; padding: 8px 0 0; border: 0; border-top: 1px solid var(--tactile-divider); margin: 0; }
+.workbench-text-inspector .module-surface-controls legend { color: var(--tactile-muted); padding-right: 6px; }
+.workbench-text-inspector .module-surface-controls > :not(.module-surface-check) { grid-column: 1 / -1; }
+.workbench-text-inspector :is(.module-surface-check, .text-settings .text-visibility) { flex-direction: row; align-items: center; gap: 6px; }
+.workbench-text-inspector input[type=checkbox] { width: 14px; min-height: 14px; height: 14px; margin: 0; accent-color: var(--tactile-accent); }
+.workbench-text-inspector input[type=range] { padding: 0; width: 100%; }
+.workbench-text-inspector label:has(output) { position: relative; }
+.workbench-text-inspector label > output { position: absolute; right: 0; top: 0; color: var(--tactile-muted); }
+.workbench-text-inspector .text-settings--connection { grid-template-columns: minmax(0, 1fr); }
+.workbench-text-inspector .text-connection-target { display: grid; grid-template-columns: minmax(0, 1fr) 52px; gap: 6px; align-items: end; }
+.workbench-text-inspector .text-settings--options > * { grid-column: 1 / -1; }
+.workbench-text-inspector .text-tools-transfer[open] { display: grid; gap: 6px; }
+.workbench-text-inspector .text-inspector-publication { padding: 10px 0; border-top: 1px solid var(--tactile-divider); }
+.workbench-text-inspector .text-inspector-publication label { display: flex; align-items: center; gap: 6px; }
+.workbench-text-inspector .text-back-to-cell { width: 100%; justify-content: flex-start; margin-bottom: 8px; }
+.workbench-text-inspector .text-edit-action { width: 100%; margin-bottom: 8px; }
+.workbench-text-inspector .text-inline-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; margin: 0; padding: 8px 0; border: 0; border-top: 1px solid var(--tactile-divider); }
+.workbench-text-inspector .text-inline-form label { display: grid; gap: 5px; grid-column: 1 / -1; }
+.workbench-text-inspector .text-inline-form p { grid-column: 1 / -1; }
+.workbench-text-inspector .text-backup-preview { display: grid; gap: 6px; }
+.workbench-text-inspector .text-article-outline summary span { margin-left: auto; color: var(--tactile-muted); }
+.workbench-text-inspector .text-article-outline nav { display: grid; gap: 3px; }
+.workbench-text-inspector .text-article-outline button { display: flex; gap: 6px; align-items: baseline; text-align: left; overflow-wrap: anywhere; }
+.workbench-text-inspector .text-article-outline button span { flex-shrink: 0; color: var(--tactile-muted); }
+.workbench-text-inspector .text-article-search > button { width: 100%; }
+.workbench-text-inspector .text-article-search section { display: grid; gap: 6px; padding-top: 8px; }
+.workbench-text-inspector .text-article-search label { display: grid; gap: 4px; }
+.workbench-text-inspector .text-search-navigation { display: flex; align-items: center; gap: 5px; }
+.workbench-text-inspector .text-search-navigation output { flex: 1; }
+.workbench-text-inspector .text-tools-footer { padding: 8px 0 0; border-top: 1px solid var(--tactile-divider); color: var(--tactile-muted); overflow-wrap: anywhere; }
+.workbench-text-inspector .text-tools-footer [role=alert] { display: flex; flex-wrap: wrap; gap: 6px; }
+.workbench-text-inspector .text-tools-footer .text-status { position: static; border: 0; padding: 0; }
+.text-isolated-inspector { position: fixed; top: 48px; right: 8px; bottom: 8px; width: min(290px, calc(100vw - 16px)); overflow: auto; overscroll-behavior: contain; padding: 12px; box-sizing: border-box; background: var(--tactile-face); z-index: 81; }
+.text-isolated-inspector:empty, .text-isolated-inspector:not(:has([data-text-inspector])) { display: none; }
+.text-editor-content .text-search-match { background: var(--workflow-selection); color: var(--workflow-ink); }
+.text-editor-content .text-search-match--active { background: var(--workflow-ink); color: var(--workflow-panel); outline: 2px solid var(--workflow-ink); outline-offset: -1px; }
+@media (pointer: coarse), (max-width: 520px) {
+  .workbench-text-inspector .text-paragraph-alignment { grid-template-columns: minmax(0, 1fr); }
+  .workbench-text-inspector .text-toolbar-icons { grid-template-columns: repeat(auto-fit, minmax(var(--tool-touch-target, 44px), 1fr)); }
+  .workbench-text-inspector label:has(> input[type=checkbox]) { min-height: var(--tool-touch-target, 44px); }
+}
+.bento-text-toolbar, .editor-object-toolbar .system-workflow__detached-window-controls:has(> .bento-text-toolbar) { display: contents; }
+.editor-object-toolbar:has(.bento-text-toolbar) { gap: 5px; }
+.editor-object-toolbar .bento-text-font { flex: none; width: 112px; justify-content: space-between; }
+.bento-text-font > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bento-text-toolbar .text-selection-number input, .bento-text-spacing input {
+  box-sizing: border-box; min-width: 0; border: 1px solid var(--tactile-control-edge);
+  border-radius: var(--tactile-radius-control); background: var(--tactile-well); color: var(--tactile-ink); font: inherit; padding: 3px 5px;
+}
+.bento-text-toolbar .text-selection-number label { display: grid; align-items: center; min-height: var(--tool-control-size); }
+.bento-text-toolbar .text-selection-number input { width: 5ch; height: calc(var(--tool-control-size) - 4px); padding: 0 2px; text-align: center; appearance: textfield; }
+.bento-text-toolbar .text-selection-number input:hover:enabled { background: var(--editor-selection); }
+.bento-text-toolbar .text-selection-number input:focus-visible { outline: 1px solid var(--editor-accent); outline-offset: -1px; }
+.bento-text-toolbar .text-selection-number input::-webkit-inner-spin-button { appearance: none; }
+.bento-text-toolbar [data-mixed='true'] { background-image: linear-gradient(135deg, transparent 45%, var(--editor-ink) 46% 54%, transparent 55%); }
+.bento-text-spacing { display: grid; gap: 6px; }
+.bento-text-spacing .text-selection-number, .bento-text-spacing label { display: flex; align-items: center; gap: 6px; }
+.bento-text-spacing label { flex: 1; justify-content: space-between; }
+.bento-text-spacing input { width: 8ch; height: var(--tool-control-height, 28px); }
+.bento-text-spacing button { display: grid; place-items: center; padding: 4px; }
+.editor-toolbar-popover svg { width: 16px; height: 16px; }

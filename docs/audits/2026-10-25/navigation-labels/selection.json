@@ -1,0 +1,7 @@
+{
+  "mode": "explicit",
+  "suites": [
+    "workbench-sidebar",
+    "design-system-library"
+  ]
+}

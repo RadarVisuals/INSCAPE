@@ -1,0 +1,68 @@
+[
+  {
+    "name": "local-workbenches",
+    "code": 0,
+    "seconds": 28.396,
+    "tests": 5,
+    "pass": 5,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  {
+    "name": "workbench-storage",
+    "code": 0,
+    "seconds": 18.197,
+    "tests": 6,
+    "pass": 6,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  {
+    "name": "workbench-recovery",
+    "code": 0,
+    "seconds": 5.226,
+    "tests": 1,
+    "pass": 1,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  {
+    "name": "workbench-layout-reload",
+    "code": 0,
+    "seconds": 11.473,
+    "tests": 3,
+    "pass": 3,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  {
+    "name": "workbench-sidebar",
+    "code": 0,
+    "seconds": 25.699,
+    "tests": 9,
+    "pass": 9,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  {
+    "name": "exploration-keeper",
+    "code": 0,
+    "seconds": 26.584,
+    "tests": 3,
+    "pass": 3,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  }
+]

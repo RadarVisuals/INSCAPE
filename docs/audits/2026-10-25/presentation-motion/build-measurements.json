@@ -1,0 +1,70 @@
+{
+  "budgets": {
+    "initialJavaScript": {
+      "raw": 1303524,
+      "gzip": 379811
+    },
+    "ownerJavaScript": {
+      "raw": 378237,
+      "gzip": 114888
+    },
+    "standaloneWalletJavaScript": {
+      "raw": 4600000,
+      "gzip": 1225000
+    },
+    "initialCss": {
+      "raw": 51807,
+      "gzip": 10301
+    },
+    "ownerCss": {
+      "raw": 143870,
+      "gzip": 21140
+    },
+    "coreJavaScript": {
+      "raw": 2572000,
+      "gzip": 830500
+    },
+    "publicAssets": {
+      "raw": 17960000
+    },
+    "largestPublicAsset": {
+      "raw": 2700000
+    }
+  },
+  "totals": {
+    "initialJavaScript": {
+      "raw": 826107,
+      "gzip": 239921
+    },
+    "ownerJavaScript": {
+      "raw": 113654,
+      "gzip": 38176
+    },
+    "standaloneWalletJavaScript": {
+      "raw": 4547250,
+      "gzip": 1209325
+    },
+    "initialCss": {
+      "raw": 32597,
+      "gzip": 6630
+    },
+    "ownerCss": {
+      "raw": 48220,
+      "gzip": 8859
+    },
+    "coreJavaScript": {
+      "raw": 2570375,
+      "gzip": 829627
+    },
+    "totalJavaScript": {
+      "raw": 7117625,
+      "gzip": 2038952
+    },
+    "publicAssets": {
+      "raw": 17502970
+    },
+    "largestPublicAsset": {
+      "raw": 2574306
+    }
+  }
+}

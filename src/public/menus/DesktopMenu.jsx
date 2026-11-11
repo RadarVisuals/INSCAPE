@@ -2,27 +2,65 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { clampMenuPosition } from './contextMenuModel.js';
 
 const PANEL_WIDTH = 224;
-const ROW_HEIGHT = 27;
+const ROW_HEIGHT = 43;
+const SYSTEM_WORKFLOW_PANEL_WIDTH = 196;
+const SYSTEM_WORKFLOW_ROW_HEIGHT = 38;
 
-export default function DesktopMenu({ anchor, commands, label, onCommand, onClose, returnFocus, className = '', panelClassName = '', getSubmenuCommands, onPreviewCommand }) {
+export default function DesktopMenu({ anchor, commands, label, onCommand, onClose, returnFocus, className = '', panelClassName = '', getSubmenuCommands, onPreviewCommand, systemWorkflowOverlay = false, menuBarRef, onNavigateMenu, focusLast = false, palette }) {
   const ref = useRef(null);
   const hoverTimerRef = useRef(0);
+  const editor = palette === 'editor';
+  const [metrics, setMetrics] = useState(null);
   const [position, setPosition] = useState(anchor);
   const [openPath, setOpenPath] = useState([]);
   useLayoutEffect(() => {
+    window.clearTimeout(hoverTimerRef.current);
     const rect = ref.current?.getBoundingClientRect();
-    if (rect) setPosition(clampMenuPosition(anchor, rect, { width: window.innerWidth, height: window.innerHeight }));
-    ref.current?.querySelector('button')?.focus();
-  }, [anchor]);
+    if (rect) {
+      setPosition(clampMenuPosition(anchor, rect, { width: window.innerWidth, height: window.innerHeight }));
+      // The editor row and shell inset are styled by the shared compact recipe.
+      // Measure them so its flyouts follow that recipe rather than legacy heights.
+      const row = ref.current.querySelector(':scope > button')?.getBoundingClientRect();
+      if (editor && row) setMetrics({ width: rect.width, rowHeight: row.height, inset: row.top - rect.top });
+    }
+    const buttons = ref.current?.querySelectorAll('button:not(:disabled)');
+    (buttons?.[focusLast ? buttons.length - 1 : 0] || ref.current)?.focus();
+  }, [anchor, focusLast, editor]);
   useEffect(() => {
-    const close = (event) => { if (event.key === 'Escape') { event.preventDefault(); onPreviewCommand?.(null); onClose(); returnFocus?.focus?.(); } };
-    const outside = (event) => { if (!ref.current?.contains(event.target)) onClose(); };
-    window.addEventListener('keydown', close); window.addEventListener('pointerdown', outside, true);
-    return () => { window.removeEventListener('keydown', close); window.removeEventListener('pointerdown', outside, true); window.clearTimeout(hoverTimerRef.current); };
-  }, [onClose, onPreviewCommand, returnFocus]);
+    // The open menu owns Escape before a containing artwork can consume it.
+    const close = (event) => { if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); onPreviewCommand?.(null); onClose(); returnFocus?.focus?.(); } };
+    const outside = (event) => { if (!ref.current?.contains(event.target) && !menuBarRef?.current?.contains(event.target)) onClose(); };
+    window.addEventListener('keydown', close, true); window.addEventListener('pointerdown', outside, true);
+    return () => { window.removeEventListener('keydown', close, true); window.removeEventListener('pointerdown', outside, true); };
+  }, [onClose, onPreviewCommand, returnFocus, menuBarRef]);
+  // Refreshing listener callbacks must not discard an in-flight user hover.
+  // The timer belongs to this menu instance, its anchor and pointer lifetime.
+  useEffect(() => () => window.clearTimeout(hoverTimerRef.current), []);
   const onKeyDown = (event) => {
-    if (!['ArrowDown', 'ArrowUp'].includes(event.key)) return;
-    event.preventDefault(); const buttons = [...ref.current.querySelectorAll('button:not(:disabled)')];
+    const button = event.target.closest('button');
+    const panel = button?.closest('[role="menu"]');
+    if (event.key === 'Tab') { if (menuBarRef) returnFocus?.focus?.(); onClose(); return; }
+    if (onNavigateMenu && panel === ref.current && ['ArrowLeft', 'ArrowRight'].includes(event.key) && button?.getAttribute('aria-haspopup') !== 'menu') {
+      event.preventDefault(); onNavigateMenu(event.key === 'ArrowRight' ? 1 : -1); return;
+    }
+    if (event.key === 'ArrowRight' && button?.getAttribute('aria-haspopup') === 'menu') {
+      event.preventDefault(); button.click();
+      requestAnimationFrame(() => panel?.querySelector(':scope > [role="menu"] > button:not(:disabled)')?.focus());
+      return;
+    }
+    if (event.key === 'ArrowLeft' && panel && panel !== ref.current) {
+      event.preventDefault();
+      const parent = panel.parentElement.closest('[role="menu"]');
+      const trigger = parent?.querySelector(':scope > button[aria-expanded="true"]');
+      // Returning focus can open the trigger's flyout. The explicit Back action
+      // closes that child after its focus handler, while retaining the parent.
+      trigger?.focus();
+      setOpenPath(current => current.slice(0, Number(panel.dataset.depth) - 1));
+      return;
+    }
+    if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) return;
+    event.preventDefault(); const buttons = [...(panel || ref.current).querySelectorAll(':scope > button:not(:disabled)')];
+    if (event.key === 'Home' || event.key === 'End') { buttons[event.key === 'Home' ? 0 : buttons.length - 1]?.focus(); return; }
     const offset = event.key === 'ArrowDown' ? 1 : -1; const index = buttons.indexOf(document.activeElement);
     buttons[(index + offset + buttons.length) % buttons.length]?.focus();
   };
@@ -39,16 +77,21 @@ export default function DesktopMenu({ anchor, commands, label, onCommand, onClos
     if (immediate) apply();
     else hoverTimerRef.current = window.setTimeout(apply, 110);
   };
-  const renderPanel = (panelCommands, depth = 0, panelViewportTop = position.y) => {
+  const renderPanel = (panelCommands, depth = 0, panelViewportTop = position.y, panelViewportLeft = position.x) => {
     const openId = openPath[depth];
     const openIndex = panelCommands.findIndex((command) => command.id === openId);
     const openCommand = openIndex >= 0 ? panelCommands[openIndex] : null;
     const submenu = openCommand ? submenuFor(openCommand) : [];
-    const opensLeft = position.x + PANEL_WIDTH * (depth + 2) > window.innerWidth - 8;
-    const desiredChildTop = panelViewportTop + 4 + openIndex * ROW_HEIGHT;
-    const childHeight = submenu.length * ROW_HEIGHT + 8;
+    const panelWidth = editor ? metrics?.width || PANEL_WIDTH : systemWorkflowOverlay ? Math.min(SYSTEM_WORKFLOW_PANEL_WIDTH, (window.innerWidth - 20) / 2) : PANEL_WIDTH;
+    const rowHeight = editor ? metrics?.rowHeight || ROW_HEIGHT : systemWorkflowOverlay ? SYSTEM_WORKFLOW_ROW_HEIGHT : ROW_HEIGHT;
+    const opensLeft = editor ? panelViewportLeft + panelWidth * 2 - 1 > window.innerWidth - 8
+      : position.x + panelWidth * (depth + 2) > window.innerWidth - 8;
+    const desiredChildTop = panelViewportTop + (editor ? metrics?.inset || 0 : 0) + openIndex * rowHeight;
+    const childHeight = editor ? Math.min(submenu.length * rowHeight + (metrics?.inset || 0) * 2, window.innerHeight - 16)
+      : submenu.length * rowHeight + 2;
     const childViewportTop = Math.max(8, Math.min(desiredChildTop, window.innerHeight - childHeight - 8));
-    const childTop = childViewportTop - panelViewportTop;
+    const childTop = childViewportTop - panelViewportTop - 1;
+    const childViewportLeft = panelViewportLeft + (opensLeft ? -1 : 1) * (panelWidth - 1);
     return <>
       {panelCommands.map((command) => {
         const hasSubmenu = submenuFor(command).length > 0;
@@ -56,16 +99,31 @@ export default function DesktopMenu({ anchor, commands, label, onCommand, onClos
         const selected = command.selected || legacySelected;
         const mixed = command.mixed === true;
         const displayLabel = (legacySelected ? command.label.slice(2) : command.label).replace(/\s*>$/, '');
-        return <button key={command.id} type="button" role={command.checkable ? 'menuitemcheckbox' : 'menuitem'} disabled={command.disabled} data-submenu={hasSubmenu || undefined} data-selected={selected || undefined} data-mixed={mixed || undefined} aria-checked={command.checkable ? mixed ? 'mixed' : selected : undefined} aria-haspopup={hasSubmenu ? 'menu' : undefined} aria-expanded={hasSubmenu ? openId === command.id : undefined}
-          onPointerEnter={() => openSubmenu(depth, command)} onFocus={() => openSubmenu(depth, command, true)}
-          onClick={() => { if (hasSubmenu) { openSubmenu(depth, command, true); return; } onPreviewCommand?.(null); onCommand(command.id); }}><i aria-hidden="true" /><span>{displayLabel}</span><b aria-hidden="true">{hasSubmenu ? '›' : mixed ? '−' : selected ? '·' : ''}</b></button>;
+        return <button key={command.id} data-command-id={command.id} type="button" role={command.checkable ? 'menuitemcheckbox' : 'menuitem'} disabled={command.disabled} title={command.reason} data-submenu={hasSubmenu || undefined} data-selected={selected || undefined} data-mixed={mixed || undefined} aria-checked={command.checkable ? mixed ? 'mixed' : selected : undefined} aria-haspopup={hasSubmenu ? 'menu' : undefined} aria-expanded={hasSubmenu ? openId === command.id : undefined}
+          onPointerEnter={() => openSubmenu(depth, command)} onFocus={() => { if (depth > 0) openSubmenu(depth, command, true); }}
+          onClick={() => { if (hasSubmenu) { openSubmenu(depth, command, true); return; } onPreviewCommand?.(null); onCommand(command.id); }}><i aria-hidden="true" /><span>{displayLabel}</span><b aria-hidden="true">{hasSubmenu ? '›' : mixed ? '−' : selected ? (editor ? '✓' : '·') : ''}</b></button>;
       })}
-      {submenu.length > 0 && <div className={`desktop-menu desktop-menu--flyout${panelClassName ? ` ${panelClassName}` : ''}`} role="menu" aria-label={`${openCommand.label} options`} style={{ position: 'absolute', top: childTop, left: opensLeft ? 'auto' : `calc(100% + 4px)`, right: opensLeft ? `calc(100% + 4px)` : 'auto' }}>
-        {renderPanel(submenu, depth + 1, childViewportTop)}
+      {submenu.length > 0 && <div className={`desktop-menu desktop-menu--flyout${panelClassName ? ` ${panelClassName}` : ''}`}
+        data-workflow-material={editor ? 'tactile' : undefined} data-workflow-finish={editor ? 'flat' : undefined} data-workflow-palette={palette}
+        data-depth={depth + 1} data-system-workflow-overlay={systemWorkflowOverlay || undefined} role="menu" aria-label={`${openCommand.label} options`}
+        style={{ position: 'absolute', width: panelWidth, top: childTop, left: opensLeft ? 'auto' : '100%', right: opensLeft ? '100%' : 'auto' }}>
+        {renderPanel(submenu, depth + 1, childViewportTop, childViewportLeft)}
       </div>}
     </>;
   };
-  return <div ref={ref} className={`desktop-menu${getSubmenuCommands ? ' desktop-menu--cascade' : ''}${className ? ` ${className}` : ''}`} role="menu" aria-label={label} style={{ left: position.x, top: position.y }} onKeyDown={onKeyDown} onPointerLeave={() => { window.clearTimeout(hoverTimerRef.current); onPreviewCommand?.(null); }}>
+  return <div ref={ref} className={`desktop-menu${getSubmenuCommands ? ' desktop-menu--cascade' : ''}${className ? ` ${className}` : ''}`}
+    data-lattice-menu-surface
+    data-workflow-material={editor ? 'tactile' : undefined} data-workflow-finish={editor ? 'flat' : undefined} data-workflow-palette={palette}
+    data-system-workflow-overlay={systemWorkflowOverlay || undefined}
+    role="menu" tabIndex={-1} aria-label={label} style={{ left: position.x, top: position.y, ...(editor ? { width: Math.min(PANEL_WIDTH, (window.innerWidth - 20) / 2) } : systemWorkflowOverlay ? { width: menuBarRef ? Math.min(PANEL_WIDTH, window.innerWidth - 16) : Math.min(SYSTEM_WORKFLOW_PANEL_WIDTH, (window.innerWidth - 20) / 2) } : {}) }} onKeyDown={onKeyDown}
+    onPointerLeave={() => {
+      window.clearTimeout(hoverTimerRef.current);
+      const focused = document.activeElement;
+      // Pointer departure must not remove the branch being used by keyboard.
+      const focusedBranch = ref.current?.contains(focused) &&
+        (focused.closest('[role="menu"]') !== ref.current || focused.getAttribute('aria-expanded') === 'true');
+      if (!focusedBranch) { setOpenPath([]); onPreviewCommand?.(null); }
+    }}>
     {renderPanel(commands)}
   </div>;
 }

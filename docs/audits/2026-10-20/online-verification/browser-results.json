@@ -1,0 +1,79 @@
+[
+  {
+    "name": "context-action-bars",
+    "code": 0,
+    "seconds": 46.16,
+    "tests": 12,
+    "pass": 12,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  {
+    "name": "workbench-inspection-keyboard",
+    "code": 0,
+    "seconds": 20.994,
+    "tests": 4,
+    "pass": 4,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  {
+    "name": "workbench-inspection-lock",
+    "code": 0,
+    "seconds": 13.84,
+    "tests": 1,
+    "pass": 1,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  {
+    "name": "display-inspection-session",
+    "code": 0,
+    "seconds": 16.801,
+    "tests": 12,
+    "pass": 12,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  {
+    "name": "visitor-display-inspection",
+    "code": 0,
+    "seconds": 10.857,
+    "tests": 4,
+    "pass": 4,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  {
+    "name": "svg-lifecycle",
+    "code": 0,
+    "seconds": 36.873,
+    "tests": 4,
+    "pass": 4,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  {
+    "name": "workbench-recovery",
+    "code": 0,
+    "seconds": 4.883,
+    "tests": 1,
+    "pass": 1,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  }
+]

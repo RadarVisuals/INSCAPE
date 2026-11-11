@@ -1,0 +1,64 @@
+TAP version 13
+# Subtest: flat camera and scrollable canvas menu fit carbon 1440×900
+ok 1 - flat camera and scrollable canvas menu fit carbon 1440×900
+  ---
+  duration_ms: 1761.0027
+  type: 'test'
+  ...
+# Subtest: flat camera and scrollable canvas menu fit carbon 390×844
+ok 2 - flat camera and scrollable canvas menu fit carbon 390×844
+  ---
+  duration_ms: 16186.8786
+  type: 'test'
+  ...
+# Subtest: flat camera and scrollable canvas menu fit carbon 320×568
+ok 3 - flat camera and scrollable canvas menu fit carbon 320×568
+  ---
+  duration_ms: 2707.2307
+  type: 'test'
+  ...
+# Subtest: flat camera and scrollable canvas menu fit carbon 844×390
+ok 4 - flat camera and scrollable canvas menu fit carbon 844×390
+  ---
+  duration_ms: 2178.2913
+  type: 'test'
+  ...
+# Subtest: flat camera and scrollable canvas menu fit mist 1440×900
+ok 5 - flat camera and scrollable canvas menu fit mist 1440×900
+  ---
+  duration_ms: 2277.5764
+  type: 'test'
+  ...
+# Subtest: flat camera and scrollable canvas menu fit mist 390×844
+ok 6 - flat camera and scrollable canvas menu fit mist 390×844
+  ---
+  duration_ms: 8654.3038
+  type: 'test'
+  ...
+# Subtest: flat camera and scrollable canvas menu fit mist 320×568
+ok 7 - flat camera and scrollable canvas menu fit mist 320×568
+  ---
+  duration_ms: 6442.2958
+  type: 'test'
+  ...
+# Subtest: flat camera and scrollable canvas menu fit mist 844×390
+ok 8 - flat camera and scrollable canvas menu fit mist 844×390
+  ---
+  duration_ms: 1822.3051
+  type: 'test'
+  ...
+# Subtest: Visitor uses the same flat camera with an inverted Hand tool and unchanged publication
+ok 9 - Visitor uses the same flat camera with an inverted Hand tool and unchanged publication
+  ---
+  duration_ms: 1266.2853
+  type: 'test'
+  ...
+1..9
+# tests 9
+# suites 0
+# pass 9
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 43604.7606

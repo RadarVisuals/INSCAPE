@@ -1,0 +1,86 @@
+{
+  "checkedAt": "2026-10-31T15:13:22.810Z",
+  "status": "implemented locally; not committed or deployed",
+  "branch": "codex/profile-work-index-2026-10-30",
+  "baseCommit": "d181c5496dcb53786cf9f2d10038e1e7e7eda3e2",
+  "scope": "Envio primary inventory and category reference reads; direct RPC fallback retained; Chillwhales adapter, configuration and CSP origin removed.",
+  "documentation": [
+    "https://docs.lukso.network/tools/apis/indexer-api/",
+    "https://docs.lukso.tech/learn/universal-profile/metadata/retrieve-owned-assets/",
+    "https://docs.lukso.network/learn/digital-assets/nft/read-nft-metadata/",
+    "https://github.com/lukso-network/LIPs/blob/main/LSPs/LSP-4-DigitalAsset-Metadata.md",
+    "https://github.com/lukso-network/LIPs/blob/main/LSPs/LSP-8-IdentifiableDigitalAsset.md#tokenidsof"
+  ],
+  "schema": "Hold, Token and Asset fields verified against the live official mainnet GraphQL schema. Metadata URL is preferred over a transformed src; resolution variants stay grouped. No filename-prefix identity inference.",
+  "liveCheck": {
+    "checkedAt": "2026-10-31T15:02:36.725Z",
+    "profile": "0x001048331cd14cef40dd5da644a738e7324fe691",
+    "collection": "0x611d3df50a3d930fba0a1f951e9d44bd9d3aea21",
+    "holdings": 7,
+    "pageSize": 2,
+    "failures": 0,
+    "targetedTokenRead": "passed",
+    "imageChoicesByToken": {
+      "1": 12,
+      "2": 3,
+      "3": 2,
+      "4": 7,
+      "5": 2,
+      "6": 8,
+      "7": 7
+    }
+  },
+  "checks": {
+    "focusedUnitTests": {
+      "passed": 58,
+      "failed": 0
+    },
+    "luksoStandards": {
+      "passed": 5,
+      "failed": 0
+    },
+    "productionBuild": "passed",
+    "productionBudgets": "passed; 799609 initial JS bytes",
+    "libraryLoading": {
+      "tests": 3,
+      "pass": 3,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0,
+      "evidence": ".browser-test-runtime/envio-check-1793459518079"
+    },
+    "libraryRecovery": {
+      "tests": 6,
+      "passed": 6,
+      "failed": 0,
+      "cleanup": "verified",
+      "evidence": ".browser-test-runtime/run-1793459231463"
+    },
+    "librarySourceUnchanged": true,
+    "visualInspection": "Recovered Library screenshots inspected at 1440px and 390px; cards and controls visible."
+  },
+  "limitations": [
+    "One live profile and its seven token IDs were verified; this does not establish chain-wide indexer completeness or availability.",
+    "The shared browser runner hit fixture startup timeouts, bundled Chromium launch failure and unrelated Reception source changes. Installed Chrome with an explicit fixture warmup passed all three loading behavior tests; all six recovery behavior tests passed in the shared runner.",
+    "The warmed loading run reported Windows process-inventory deadlines. It returned code 0 with all three assertions passing and no remaining owned PIDs, but overall process cleanup was marked unknown; it is not a clean full-runner pass.",
+    "Direct token metadata refresh and the Envio attribute enrichment remain existing consumers for their specific purposes. They do not duplicate inventory ownership.",
+    "Unrelated working-tree changes were preserved. No release checkpoint or deployment was performed."
+  ],
+  "changeCounts": {
+    "production": {
+      "added": 151,
+      "deleted": 222
+    },
+    "tests": {
+      "added": 207,
+      "deleted": 177
+    },
+    "activeContract": {
+      "added": 12,
+      "deleted": 0
+    },
+    "dependenciesAdded": 0,
+    "note": "Relative to the saved pre-task contents; excludes unrelated simultaneous edits and this generated evidence file."
+  }
+}

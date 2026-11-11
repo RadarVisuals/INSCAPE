@@ -1,0 +1,22 @@
+TAP version 13
+# Subtest: owner groups preserve the camera and artwork through editing, undo, movement, cancellation and reload
+ok 1 - owner groups preserve the camera and artwork through editing, undo, movement, cancellation and reload
+  ---
+  duration_ms: 6698.2118
+  type: 'test'
+  ...
+# Subtest: Visitor has no group authoring tools
+ok 2 - Visitor has no group authoring tools
+  ---
+  duration_ms: 1747.5395
+  type: 'test'
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 2
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 8787.0359

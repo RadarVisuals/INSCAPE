@@ -1,0 +1,40 @@
+TAP version 13
+# Subtest: named local Workbenches keep separate content and canvas geometry through UI switches, Undo and reload
+ok 1 - named local Workbenches keep separate content and canvas geometry through UI switches, Undo and reload
+  ---
+  duration_ms: 3747.519
+  type: 'test'
+  ...
+# Subtest: a local multi-Workbench collection cannot start publication or change its saved bytes
+ok 2 - a local multi-Workbench collection cannot start publication or change its saved bytes
+  ---
+  duration_ms: 1769.4164
+  type: 'test'
+  ...
+# Subtest: failed saves and pending Text keep the current Workbench open until recovery succeeds
+ok 3 - failed saves and pending Text keep the current Workbench open until recovery succeeds
+  ---
+  duration_ms: 2011.5737
+  type: 'test'
+  ...
+# Subtest: naming validates input, retries failed writes and commits the visible layout without remounting Text
+ok 4 - naming validates input, retries failed writes and commits the visible layout without remounting Text
+  ---
+  duration_ms: 2774.6422
+  type: 'test'
+  ...
+# Subtest: all eight local Workbenches stay reachable, with an explained limit and usable naming forms
+ok 5 - all eight local Workbenches stay reachable, with an explained limit and usable naming forms
+  ---
+  duration_ms: 3306.3265
+  type: 'test'
+  ...
+1..5
+# tests 5
+# suites 0
+# pass 5
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 13893.6084

@@ -1,0 +1,68 @@
+{
+  "checkedAt": "2026-11-04T11:22:13.896Z",
+  "baselineFiles": 1356,
+  "unchangedBaselineFiles": 1335,
+  "changedPaths": [
+    "src/public/ownerSystemWorkflow/OwnerSystemWorkflowRuntime.jsx",
+    "src/public/ownerSystemWorkflow/workbenchCommands.js",
+    "src/public/ownerSystemWorkflow/WorkbenchView.jsx",
+    "src/reception/EditorCellsContext.jsx",
+    "src/reception/ReceptionBentoEditor.jsx",
+    "src/reception/receptionEditorDocument.js",
+    "src/reception/receptionEditorDocument.test.js",
+    "src/reception/ReceptionEditorPreview.jsx",
+    "src/reception/receptionEditorScope.js",
+    "src/reception/receptionEditorScope.test.js",
+    "src/reception/ReceptionViewportControls.jsx",
+    "src/text/ArticleFocusWriting.jsx",
+    "src/text/text.css",
+    "src/text/TextWorkbench.jsx",
+    "browser-tests/owner-profile-routing.browser.mjs",
+    "browser-tests/playwright-browser-adapter.mjs",
+    "browser-tests/reception-boundaries-fixture.jsx",
+    "browser-tests/reception-boundaries.browser.mjs",
+    "browser-tests/reception-native-editor.browser.mjs",
+    "browser-tests/workbench-recovery.browser.mjs",
+    "docs/INSCAPE_ACTIVE_CONTRACT.md",
+    "src/reception/receptionTextDefaults.js",
+    "src/reception/receptionTextDefaults.test.js",
+    "src/ui/colorContrast.js"
+  ],
+  "beforeSnapshotMismatches": [],
+  "missingBaselinePaths": [],
+  "changesAfterFinalBrowserManifest": [],
+  "broadToFinalBrowserManifestChanges": [
+    "browser-tests/owner-profile-routing.browser.mjs",
+    "src/text/text.css"
+  ],
+  "broadBrowserSourceSha256": "721c87f188b457cf6da9863d5c3a8cb4ac379bd85e4d60db6347ad3c8a07847a",
+  "finalBrowserSourceSha256": "e3fcda77efae9012fa62e3490c7960a6322fb3c297a51e80de04195e45bba70e",
+  "initialStatusEntries": 1063,
+  "finalStatusEntries": 1077,
+  "initialDirtyPathsNowAbsentFromStatus": [],
+  "stagedStatusUnchanged": true,
+  "stagedEntries": 0,
+  "incrementalTotals": {
+    "production": {
+      "added": 101,
+      "removed": 58
+    },
+    "tests": {
+      "added": 207,
+      "removed": 49
+    },
+    "docs": {
+      "added": 14,
+      "removed": 0
+    }
+  },
+  "report": {
+    "path": "docs/audits/2026-11-04/reception-audit-improvements/README.md",
+    "sha256": "d8b9e5d0b779b84bcd91b5b94687ec51814ff21a2d947758cce1428974ca7b74",
+    "lines": 58,
+    "words": 1210,
+    "localLinks": 29,
+    "missingLinks": []
+  },
+  "whitespaceCheck": "passed"
+}

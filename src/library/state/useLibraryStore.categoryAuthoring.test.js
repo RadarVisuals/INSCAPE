@@ -4,12 +4,50 @@ import { createEmptyWorkspace } from '../domain/libraryWorkspace.js';
 import { loadLibraryWorkspace } from '../storage/libraryWorkspaceStorage.js';
 import { createOwnerLatticeCategoryCommands } from '../../public/useOwnerLatticeBrowser.js';
 import { flushLibraryWorkspace, resetLibraryStoreForTests, useLibraryStore } from './useLibraryStore.js';
+import { adaptLatticeProductionBrowserData } from '../../lattice/browser/latticeProductionBrowserAdapter.js';
+import { categoryMembershipState } from '../../lattice/browser/browserWorkspaceModel.js';
 
 const PROFILE = '0x1111111111111111111111111111111111111111';
 const OTHER_PROFILE = '0x2222222222222222222222222222222222222222';
 const ASSET_ID = '42:0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:contract';
 const SECOND_ASSET_ID = '42:0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb:contract';
 const delay = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
+
+test('a chosen image narrows a whole asset, persists independently, and removes without losing its sibling', () => {
+  const storage = memoryStorage();
+  resetLibraryStoreForTests(PROFILE, storage);
+  useLibraryStore.setState({ assets: [{ id: ASSET_ID }] });
+  const commands = createOwnerLatticeCategoryCommands(PROFILE);
+  const id = commands.createCategory('Chosen images');
+  commands.setCategoryAsset(id, ASSET_ID, true);
+  const first = 'https://art.test/pose-2.webp', second = 'https://art.test/pose-5.webp';
+  assert.equal(commands.setCategoryImage(id, ASSET_ID, first, true), true);
+  assert.equal(commands.setCategoryImage(id, ASSET_ID, first, true), false);
+  assert.equal(commands.setCategoryImage(id, ASSET_ID, second, true), true);
+  const loaded = loadLibraryWorkspace(storage, PROFILE).workspace;
+  const category = adaptLatticeProductionBrowserData({ profileAddress: PROFILE, workspace: loaded }).categories[0];
+  assert.deepEqual(category.assetIds, [ASSET_ID]);
+  assert.deepEqual(category.imageSelections, [{ assetId: ASSET_ID, url: first }, { assetId: ASSET_ID, url: second }]);
+  assert.equal(categoryMembershipState(category, [ASSET_ID], first), 'all');
+  assert.equal(categoryMembershipState(category, [ASSET_ID], 'https://art.test/cover.webp'), 'none');
+  assert.equal(commands.setCategoryImage(id, ASSET_ID, first, false), true);
+  assert.deepEqual(loadLibraryWorkspace(storage, PROFILE).workspace.folders[0].imageSelections, [{ assetId: ASSET_ID, url: second }]);
+  assert.equal(commands.setCategoryImage(id, ASSET_ID, second, false), true);
+  assert.deepEqual(loadLibraryWorkspace(storage, PROFILE).workspace.folders[0].assetIds, []);
+});
+
+test('image filing rejects unavailable identity, unsafe media and an obsolete profile without writes', () => {
+  const storage = memoryStorage();
+  resetLibraryStoreForTests(PROFILE, storage);
+  useLibraryStore.setState({ assets: [{ id: ASSET_ID }] });
+  const commands = createOwnerLatticeCategoryCommands(PROFILE);
+  const id = commands.createCategory('Images'); storage.writes.length = 0;
+  assert.equal(commands.setCategoryImage(id, SECOND_ASSET_ID, 'https://art.test/pose.webp', true), false);
+  assert.equal(commands.setCategoryImage(id, ASSET_ID, 'javascript:alert(1)', true), false);
+  useLibraryStore.getState().setProfileAddress(OTHER_PROFILE);
+  assert.equal(commands.setCategoryImage(id, ASSET_ID, 'https://art.test/pose.webp', true), false);
+  assert.deepEqual(storage.writes, []);
+});
 const memoryStorage = () => {
   const values = new Map(); const writes = [];
   return {
@@ -47,7 +85,7 @@ test('owner category boundary creates private, renames, changes visibility, and 
   assert.equal(useLibraryStore.getState().workspace.canvas, preservedCanvas);
   assert.equal(useLibraryStore.getState().workspace.tables, preservedTables);
   assert.equal(flushLibraryWorkspace(), true);
-  assert.deepEqual(loadLibraryWorkspace(storage, PROFILE).folders, []);
+  assert.deepEqual(loadLibraryWorkspace(storage, PROFILE).workspace.folders, []);
 });
 test('membership add/remove is stable-ID based and repeated commands perform no additional writes', async () => {
   const storage = memoryStorage();
@@ -67,6 +105,25 @@ test('membership add/remove is stable-ID based and repeated commands perform no 
   assert.equal(commands.setCategoryAsset(categoryId, ASSET_ID, false), false);
 });
 
+test('section commands persist profile-scoped category organization and return categories to root on delete', () => {
+  const storage = memoryStorage();
+  resetLibraryStoreForTests(PROFILE, storage);
+  const commands = createOwnerLatticeCategoryCommands(PROFILE);
+  const firstId = commands.createCategory('First'); const secondId = commands.createCategory('Second');
+  const archiveId = commands.createSection('Archive'); const currentId = commands.createSection('Current');
+  assert.ok(archiveId); assert.ok(currentId);
+  assert.equal(commands.moveCategory(secondId, archiveId), true);
+  assert.equal(commands.moveCategory(firstId, archiveId, secondId), true);
+  assert.equal(commands.renameSection(archiveId, 'Past'), true);
+  assert.equal(commands.moveSection(currentId, archiveId), true);
+  assert.equal(commands.deleteSection(archiveId), true);
+  assert.equal(flushLibraryWorkspace(), true);
+  assert.deepEqual(loadLibraryWorkspace(storage, PROFILE).workspace.categoryOrganization, {
+    rootCategoryIds: [firstId, secondId],
+    sections: [{ id: currentId, name: 'Current', categoryIds: [] }],
+  });
+});
+
 test('invalid input, cancellation, and stale captured callbacks produce zero writes', async () => {
   const storage = memoryStorage();
   resetLibraryStoreForTests(PROFILE, storage);
@@ -80,10 +137,11 @@ test('invalid input, cancellation, and stale captured callbacks produce zero wri
   storage.writes.length = 0;
   assert.equal(captured.createCategory('Must not cross profiles'), null);
   assert.equal(captured.setCategoryAsset('missing', ASSET_ID, true), false);
+  assert.equal(captured.createSection('Must not cross profiles'), null);
   await delay(220);
   assert.deepEqual(storage.writes, []);
   assert.deepEqual(useLibraryStore.getState().workspace.folders, []);
-  assert.deepEqual(loadLibraryWorkspace(storage, PROFILE).folders, []);
+  assert.deepEqual(loadLibraryWorkspace(storage, PROFILE).workspace.folders, []);
 });
 
 test('bulk category membership validates the canonical asset set and schedules one idempotent save', async () => {
@@ -102,4 +160,15 @@ test('bulk category membership validates the canonical asset set and schedules o
   assert.equal(commands.setCategoryAssets(categoryId, [ASSET_ID, 'missing'], false), false);
   await delay(220);
   assert.deepEqual(storage.writes, []);
+});
+
+test('bulk category membership accepts a created-only stable ID explicitly supplied by the relationship projection', () => {
+  const storage = memoryStorage();
+  resetLibraryStoreForTests(PROFILE, storage);
+  useLibraryStore.setState({ assets: [{ id: ASSET_ID }] });
+  const commands = createOwnerLatticeCategoryCommands(PROFILE);
+  const categoryId = commands.createCategory('Created works');
+  assert.equal(commands.setCategoryAssets(categoryId, [SECOND_ASSET_ID], true, [SECOND_ASSET_ID]), true);
+  assert.deepEqual(useLibraryStore.getState().workspace.folders[0].assetIds, [SECOND_ASSET_ID]);
+  assert.equal(commands.setCategoryAssets(categoryId, ['not-canonical'], true, [SECOND_ASSET_ID]), false);
 });

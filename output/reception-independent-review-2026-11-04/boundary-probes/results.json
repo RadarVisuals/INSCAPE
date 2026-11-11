@@ -1,0 +1,16 @@
+{
+  "errors": [],
+  "noticeAfterDelete": 0,
+  "undoEditingCell": {
+    "noticeAfterUndo": 1,
+    "addedId": "shape:7ab66ca3-a48e-4cb6-8445-decbde0e6011",
+    "members": [],
+    "addedBelongs": false,
+    "explicitReentryRestoresMembership": true
+  },
+  "leaseBlocksSecondEditor": true,
+  "retryAfterRelease": true,
+  "backupPreservesReception": "reception",
+  "backupReaderRestored": true,
+  "authorityLossUnmounts": true
+}

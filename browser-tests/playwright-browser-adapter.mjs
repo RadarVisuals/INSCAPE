@@ -1,14 +1,21 @@
 import { mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
-import { chromium } from 'playwright-core';
+import { launchOwnedChromium } from './owned-chromium.mjs';
 import {
   BROWSER_LIFECYCLE_TIMEOUTS,
-  createOwnedProcessTree,
-  listWindowsProcesses,
-  terminateWindowsProcessTree,
   validateBrowserRuntimePath,
   withinDeadline
 } from './browser-test-lifecycle.mjs';
+
+export const DEFAULT_PLAYWRIGHT_EDGE_ARGS = Object.freeze([
+  '--disable-gpu',
+  '--no-first-run',
+  '--no-default-browser-check',
+  '--disable-component-update',
+  '--disable-background-networking',
+  '--disk-cache-size=1',
+  '--media-cache-size=1',
+]);
 
 function boundedText(value, limit = 256) {
   return String(value || '').replace(/[\r\n\u0000-\u001f\u007f]+/gu, ' ').replace(/https?:\/\/\S+/gu, '[url]').slice(0, limit);
@@ -27,7 +34,12 @@ export function createPlaywrightRouteController({
     if (handled.has(route)) throw Object.assign(new Error('Playwright route was delivered more than once'), { code: 'DUPLICATE_ROUTE' });
     handled.add(route);
     if (closed) throw Object.assign(new Error('Playwright route arrived after routing closed'), { code: 'ROUTING_CLOSED' });
-    if (active.size >= maxOutstanding) throw Object.assign(new Error(`Playwright route ledger exceeded ${maxOutstanding}`), { code: 'ROUTE_LEDGER_LIMIT' });
+    if (active.size >= maxOutstanding) {
+      // Reject the request as well as the handler. Otherwise the browser can
+      // wait forever for a module whose intercepted request was abandoned.
+      await withinDeadline(route.abort('failed'), timeoutMs, 'Overflow route abort deadline exceeded');
+      throw Object.assign(new Error(`Playwright route ledger exceeded ${maxOutstanding}`), { code: 'ROUTE_LEDGER_LIMIT' });
+    }
     const request = route.request(); let parsed;
     try { parsed = new URL(request.url()); } catch { parsed = null; }
     const origin = parsed?.origin || 'invalid'; const id = ++sequence;
@@ -84,8 +96,9 @@ export async function waitForCspFixtureReady(page, {
   await page.waitForURL((url) => url.origin === fixtureOrigin
     && url.pathname === '/browser-tests/fixture.html'
     && url.searchParams.get('csp') === '1', { timeout: timeoutMs });
-  await page.locator('.published-home-world').waitFor({ state: 'attached', timeout: timeoutMs });
-  const fixtureHandle = await page.waitForFunction(() => Boolean(window.__fixture), undefined, { timeout: timeoutMs, polling: 50 });
+  await page.locator('[data-browser-fixture]').waitFor({ state: 'attached', timeout: timeoutMs });
+  const fixtureHandle = await page.waitForFunction(() => Boolean(window.__fixture?.ready
+    && document.querySelector('.visitor-grid-world,.visitor-lattice-world,.published-home-world')), undefined, { timeout: timeoutMs, polling: 50 });
   await fixtureHandle.dispose();
 }
 
@@ -99,9 +112,9 @@ export async function launchPlaywrightEdge({
   onOwnedProcess,
   onBrowserProblem = () => {},
   diagnostic = () => {},
-  browserType = chromium,
-  inventory = listWindowsProcesses,
-  terminateTree = terminateWindowsProcessTree,
+  launchBrowser = launchOwnedChromium,
+  browserArgs = DEFAULT_PLAYWRIGHT_EDGE_ARGS,
+  contextOptions = {},
   prepareRuntime = async (downloadsPath, artifactsDir) => {
     await mkdir(downloadsPath, { recursive: true }); await mkdir(artifactsDir, { recursive: true });
   }
@@ -109,35 +122,21 @@ export async function launchPlaywrightEdge({
   const exactRuntime = validateBrowserRuntimePath(runtimePath, workspaceRoot);
   const downloadsPath = join(exactRuntime, 'downloads'); const artifactsDir = join(exactRuntime, 'artifacts');
   await prepareRuntime(downloadsPath, artifactsDir);
-  const previousTemp = process.env.TEMP; const previousTmp = process.env.TMP;
-  let lateLaunch = false;
-  process.env.TEMP = exactRuntime; process.env.TMP = exactRuntime;
-  try {
-    const launch = browserType.launchServer({
-      executablePath: edgePath,
-      headless: true,
-      timeout: 20_000,
-      downloadsPath,
-      artifactsDir,
-      env: { ...process.env, TEMP: exactRuntime, TMP: exactRuntime },
-      args: ['--disable-gpu', '--no-first-run', '--no-default-browser-check', '--disable-component-update', '--disable-background-networking', '--disk-cache-size=1', '--media-cache-size=1']
-    });
-    launch.then((server) => { if (lateLaunch) void server.close().catch(() => server.kill().catch(() => {})); }).catch(() => {});
-    resources.browserServer = await withinDeadline(launch, 20_000, 'Playwright Edge launch deadline exceeded', () => { lateLaunch = true; });
-  } finally {
-    if (previousTemp === undefined) delete process.env.TEMP; else process.env.TEMP = previousTemp;
-    if (previousTmp === undefined) delete process.env.TMP; else process.env.TMP = previousTmp;
-  }
-  const child = resources.browserServer.process(); const rootPid = child?.pid;
-  if (!Number.isSafeInteger(rootPid) || rootPid <= 0) throw Object.assign(new Error('Playwright BrowserServer did not expose a valid owned Edge PID'), { code: 'EDGE_PID_MISSING' });
-  const processTree = createOwnedProcessTree({ rootPid, listProcesses: inventory, terminateTree });
-  const observed = await processTree.observe(); const root = observed.find((entry) => entry.pid === rootPid);
-  if (!root?.identity) throw Object.assign(new Error('Owned Playwright Edge creation identity was not recorded'), { code: 'EDGE_IDENTITY_MISSING' });
-  onOwnedProcess({ rootPid, processTree, identity: root.identity });
-  diagnostic('setup:edge-owned', { rootPid, descendants: observed.length });
-
-  resources.browser = await browserType.connect(resources.browserServer.wsEndpoint(), { timeout: 5_000 });
-  resources.context = await resources.browser.newContext({ viewport: { width: 1280, height: 720 }, serviceWorkers: 'block', bypassCSP: false, acceptDownloads: false });
+  const launched = await launchBrowser({ executablePath: edgePath, headless: true, timeout: 20_000,
+    artifactsDir, env: { ...process.env, TEMP: exactRuntime, TMP: exactRuntime }, args: [...browserArgs] }, {
+    profileParent: exactRuntime,
+    onSession: session => { resources.browserSession = session; },
+    onOwnedProcess: ownership => { onOwnedProcess(ownership); diagnostic('setup:edge-owned', { rootPid: ownership.rootPid }); },
+  });
+  const { rootPid, processTree, identity } = launched;
+  resources.browser = launched.browser;
+  resources.context = await resources.browser.newContext({
+    viewport: { width: 1280, height: 720 },
+    serviceWorkers: 'block',
+    bypassCSP: false,
+    acceptDownloads: false,
+    ...contextOptions,
+  });
   await resources.context.route('**/*', (route) => routeController.handle(route).catch((error) => onBrowserProblem(`Route handler: ${error.code || boundedText(error.message)}`)));
   resources.routeController = routeController;
   diagnostic('setup:routing-installed', { beforeNavigation: true });
@@ -149,5 +148,5 @@ export async function launchPlaywrightEdge({
     const failure = request.failure()?.errorText || 'unknown';
     if (!/BLOCKED_BY_CLIENT/iu.test(failure)) onBrowserProblem(`Request failed: ${origin} ${boundedText(failure)}`);
   });
-  return { rootPid, processTree, identity: root.identity, browserServer: resources.browserServer, browser: resources.browser, context: resources.context, page: resources.page };
+  return { rootPid, processTree, identity, browserSession: resources.browserSession, browser: resources.browser, context: resources.context, page: resources.page };
 }

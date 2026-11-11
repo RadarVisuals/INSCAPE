@@ -1,0 +1,83 @@
+TAP version 13
+# {"stage":"return","repeat":1,"width":390,"mode":"In place","trigger":"button"}
+# {"stage":"return","repeat":1,"width":390,"mode":"In place","trigger":"keyboard"}
+# {"stage":"return","repeat":1,"width":390,"mode":"Lift","trigger":"button"}
+# {"stage":"return","repeat":1,"width":390,"mode":"Lift","trigger":"keyboard"}
+# Subtest: Inspect button and I honour the selected Display mode (390px, repeat 1)
+ok 1 - Inspect button and I honour the selected Display mode (390px, repeat 1)
+  ---
+  duration_ms: 7772.6699
+  type: 'test'
+  ...
+# {"stage":"return","repeat":2,"width":390,"mode":"In place","trigger":"button"}
+# {"stage":"return","repeat":2,"width":390,"mode":"In place","trigger":"keyboard"}
+# {"stage":"return","repeat":2,"width":390,"mode":"Lift","trigger":"button"}
+# {"stage":"return","repeat":2,"width":390,"mode":"Lift","trigger":"keyboard"}
+# Subtest: Inspect button and I honour the selected Display mode (390px, repeat 2)
+ok 2 - Inspect button and I honour the selected Display mode (390px, repeat 2)
+  ---
+  duration_ms: 6280.8392
+  type: 'test'
+  ...
+# {"stage":"return","repeat":3,"width":390,"mode":"In place","trigger":"button"}
+# {"stage":"return","repeat":3,"width":390,"mode":"In place","trigger":"keyboard"}
+# {"stage":"return","repeat":3,"width":390,"mode":"Lift","trigger":"button"}
+# {"stage":"return","repeat":3,"width":390,"mode":"Lift","trigger":"keyboard"}
+# Subtest: Inspect button and I honour the selected Display mode (390px, repeat 3)
+ok 3 - Inspect button and I honour the selected Display mode (390px, repeat 3)
+  ---
+  duration_ms: 6234.7582
+  type: 'test'
+  ...
+# {"stage":"return","repeat":4,"width":390,"mode":"In place","trigger":"button"}
+# {"stage":"return","repeat":4,"width":390,"mode":"In place","trigger":"keyboard"}
+# {"stage":"return","repeat":4,"width":390,"mode":"Lift","trigger":"button"}
+# {"stage":"return","repeat":4,"width":390,"mode":"Lift","trigger":"keyboard"}
+# Subtest: Inspect button and I honour the selected Display mode (390px, repeat 4)
+ok 4 - Inspect button and I honour the selected Display mode (390px, repeat 4)
+  ---
+  duration_ms: 6572.2068
+  type: 'test'
+  ...
+# {"stage":"return","repeat":5,"width":390,"mode":"In place","trigger":"button"}
+# {"stage":"return","repeat":5,"width":390,"mode":"In place","trigger":"keyboard"}
+# {"stage":"return","repeat":5,"width":390,"mode":"Lift","trigger":"button"}
+# {"stage":"return","repeat":5,"width":390,"mode":"Lift","trigger":"keyboard"}
+# Subtest: Inspect button and I honour the selected Display mode (390px, repeat 5)
+ok 5 - Inspect button and I honour the selected Display mode (390px, repeat 5)
+  ---
+  duration_ms: 6844.4903
+  type: 'test'
+  ...
+# {"stage":"return","repeat":6,"width":390,"mode":"In place","trigger":"button"}
+# Subtest: Inspect button and I honour the selected Display mode (390px, repeat 6)
+not ok 6 - Inspect button and I honour the selected Display mode (390px, repeat 6)
+  ---
+  duration_ms: 5576.1899
+  type: 'test'
+  location: '<audit-workspace>/remediation-2026-10-19-shared-checkpoint\\work\\.browser-test-runtime\\online-inspection-probe\\probe.browser.mjs:53:72'
+  failureType: 'testCodeFailure'
+  error: |-
+    Escape restores source focus
+    
+    false !== true
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<audit-workspace>/remediation-2026-10-19-shared-checkpoint/work/.browser-test-runtime/online-inspection-probe/probe.browser.mjs:99:16)
+    async Test.run (node:internal/test_runner/test:1404:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:969:7)
+  ...
+1..6
+# tests 6
+# suites 0
+# pass 5
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 39597.7738

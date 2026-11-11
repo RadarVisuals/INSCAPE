@@ -1,10 +1,9 @@
 export const CANVAS_OBJECT_KIND = Object.freeze({ FRAMED_ARTWORK: 'framed-artwork' });
 
-const FRAMED_ARTWORK_PRESENTATION = Object.freeze({ fit: 'contain', frame: 'thin', mat: 'none', background: 'dark' });
+const FRAMED_ARTWORK_PRESENTATION = Object.freeze({ fit: 'contain', frame: 'thin', background: 'dark' });
 const ENUMS = Object.freeze({
   fit: Object.freeze(['contain', 'cover']),
   frame: Object.freeze(['none', 'thin', 'heavy']),
-  mat: Object.freeze(['none', 'light', 'dark']),
   background: Object.freeze(['dark', 'light', 'neutral', 'transparent'])
 });
 

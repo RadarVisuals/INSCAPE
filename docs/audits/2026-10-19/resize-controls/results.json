@@ -1,0 +1,215 @@
+{
+  "at": "2026-10-19T17:15:46.096Z",
+  "baseCommit": "a4907bd468a7ab8dd2c61598eb273253392b8978",
+  "userDecision": "Image frame and artwork retain their ratio together during corner resizing, without Shift.",
+  "node": {
+    "tests": 1239,
+    "pass": 1239,
+    "fail": 0,
+    "skipped": 0,
+    "cancelled": 0,
+    "todo": 0
+  },
+  "browsers": [
+    {
+      "name": "image-corner-resize",
+      "code": 0,
+      "seconds": 24.937,
+      "tests": 2,
+      "pass": 2,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0
+    },
+    {
+      "name": "workbench-resize-handles",
+      "code": 0,
+      "seconds": 20.09,
+      "tests": 2,
+      "pass": 2,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0
+    },
+    {
+      "name": "resize-mark-pixels",
+      "code": 0,
+      "seconds": 13.096,
+      "tests": 4,
+      "pass": 4,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0
+    },
+    {
+      "name": "image-resize-focus",
+      "code": 0,
+      "seconds": 4.283,
+      "tests": 2,
+      "pass": 2,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0
+    },
+    {
+      "name": "image-interaction",
+      "code": 0,
+      "seconds": 4.405,
+      "tests": 1,
+      "pass": 1,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0
+    },
+    {
+      "name": "workbench-text-display-resize",
+      "code": 0,
+      "seconds": 40.865,
+      "tests": 6,
+      "pass": 6,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0
+    },
+    {
+      "name": "image-fit",
+      "code": 0,
+      "seconds": 4.204,
+      "tests": 1,
+      "pass": 1,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0
+    }
+  ],
+  "browserCasesPassed": 18,
+  "baseline": {
+    "pixelCasesFailed": 4,
+    "cornerCasesFailed": 2,
+    "olderFittingFixtureAlsoFailedBeforeChange": true
+  },
+  "productionBuildPassed": true,
+  "productionBudgetPassed": true,
+  "initialJavaScriptBytes": 822709,
+  "activeCheckoutApplied": true,
+  "activeFilesByteVerified": 18,
+  "visualViewports": [
+    1440,
+    390
+  ],
+  "pixelDensities": [
+    1,
+    1.25,
+    1.5,
+    2
+  ],
+  "pointerDragsInCornerMatrix": 144,
+  "physicalMarksMeasured": 384,
+  "actualUserCompositionChanged": false,
+  "walletRequested": false,
+  "uploaded": false,
+  "limitations": [
+    "Synthetic artwork in isolated browsers; no user composition resize.",
+    "No claim of perfect antialiasing at every browser scale.",
+    "Hosted checks and publication remain separate."
+  ],
+  "files": [
+    {
+      "file": "browser-tests/image-fit.browser.mjs",
+      "before": "ed1226b116057a2d3da7bc37327e0a57b1d640979b2572071b6442af0269f1f2",
+      "after": "a195ae8a2ccb7e5f53b720bb56b21f68605683d18845b142cce5e7afc4acbe21"
+    },
+    {
+      "file": "browser-tests/workbench-resize-handles.browser.mjs",
+      "before": "f3bc3dad3c69c8026cf0149a7bd0868a96a697da199187b6c0141cd0eda7e081",
+      "after": "a0267ad8b64c2ed7bc8921f264eae8c05bec49ab5781ebdd0ba202212d2336b8"
+    },
+    {
+      "file": "docs/INSCAPE_ACTIVE_CONTRACT.md",
+      "before": "e08e8b8a08eef9490f203638c946f8ff65f940a14836152d29655a36d68c04d1",
+      "after": "5b5b861ecd3afac1436963a48e65aa5c366614dfcec7a79afbb68b5555399b0e"
+    },
+    {
+      "file": "scripts/runBrowserTests.mjs",
+      "before": "77653b1156c87b73f50779055eece97e937a0b3874a18ece2d066126db51296d",
+      "after": "2ec98bf6f01d061c76455973f1b96a6964c2ca699790353a5bd668ee2e7a520f"
+    },
+    {
+      "file": "src/imageModule/ImageWindow.jsx",
+      "before": "847f8300fcbc67dd03708a4392d0380e2707dc79c1302a4b492751e39e06f206",
+      "after": "b30689e0e7d349c2a07ed1e7eb788d3f754dab1f9727a851ea2a48e3b6b09fe0"
+    },
+    {
+      "file": "src/imageModule/imageModule.js",
+      "before": "c22d9271b74f5f564406244d4a1e313d75911f0227d0ee302cc45b6c687c125c",
+      "after": "576cc1c7f4f491091057435d135cfecffbf90a2c7db233c02a56f1e1d0791b1e"
+    },
+    {
+      "file": "src/imageModule/imageModule.test.js",
+      "before": "b5ae7783ed8cc5f598825c1ba96347589852fe2cb23ae0e3bd5baf0f6176e731",
+      "after": "f244fc65f2086a1bb2a16029b6df9e5a9e57b0d455160c900dce89d9680a31b1"
+    },
+    {
+      "file": "src/imageModule/imageWindowGeometry.js",
+      "before": "d36de8de331f5c62b853bfa83e4345cc7eaaa5f22b73dd391c614397b7837d55",
+      "after": "634f8faa7665e5e5e6b4c31a4ac8c4408400ce94aa1250fddd387d0653f6128e"
+    },
+    {
+      "file": "src/imageModule/imageWindowGeometry.test.js",
+      "before": "455ed2b4d00ae3f8bc08f0bbdaf637d5f04f668d61411a1d02b9c0d5eff2e4a7",
+      "after": "9e6624f6de80851c498ae01a1174ddb4f26ebe3bdc66f53c519d0fb119b90f5a"
+    },
+    {
+      "file": "src/public/ownerSystemWorkflow/DisplayInstrumentWindow.jsx",
+      "before": "3ae2a4736ae0864a0920813710ba12928460d8a8bf6c9bdc46c4dc93952cc628",
+      "after": "50f5e7edebf2471ffffd316468d174b854a9a16e8488dd6ff88d9877c4d3a24f"
+    },
+    {
+      "file": "src/public/ownerSystemWorkflow/WorkbenchView.jsx",
+      "before": "4857e3efeb967be83b692d966554dd80be088ed58b2f570da2abcb5a0f0e6a23",
+      "after": "1d5a2e2e7cd7048a34d0f7bc0e040c8c694b6ac05ec3b6827bf39f24d3abfcf4"
+    },
+    {
+      "file": "src/public/ownerSystemWorkflow/ownerSystemWorkflowWindowGeometry.js",
+      "before": "3b53f04003bdfcf6a574a4f8f5d52bca260c8c4722790a610af5bc120fe0acbf",
+      "after": "c782db7210652420fd3fb2d88ddb6efcb79a195e7f962542dfae83392dde6743"
+    },
+    {
+      "file": "src/public/ownerSystemWorkflow/ownerSystemWorkflowWindowGeometry.test.js",
+      "before": "dc1415689ca9070cbb02f2066ea15d2ab31e02b0755a7aaf61760656fc44f7bf",
+      "after": "6e9aa98ed1281e758447e74ef53e965d2228da013e2ed634724de76c18a0dc56"
+    },
+    {
+      "file": "src/public/ownerSystemWorkflow/workbenchViewScale.js",
+      "before": "e5d48fe140b0769524b4cfa6d433ca35dfba414c270b1d3fc2b7404353b70609",
+      "after": "6892d622b1bc9b037c5eff6e5f32d8579ee235611eada6175a0b66c58b72dd45"
+    },
+    {
+      "file": "src/public/ownerSystemWorkflow/workbenchViewScale.test.js",
+      "before": "69804a43f5ce7dc28113d0cdd6db35bfe7a70a0a8284ae31c44ee97a74fae93c",
+      "after": "133bbdbcfb67b43f3e6c1c04d06874d1746f35192a73db00051e1b59670cb7d0"
+    },
+    {
+      "file": "src/systemWorkflow/workbenchAreaSession.test.js",
+      "before": "084fe2ea970bda161f9a41998c31e4e82537d369b9486c54bb7c1f5a2e9a0978",
+      "after": "361fb2928ce45bcce1e092284045328d36c4c960a961311f81265514d93dfdb7"
+    },
+    {
+      "file": "browser-tests/image-corner-resize.browser.mjs",
+      "before": null,
+      "after": "69a5165b8e74747d7ae01ab552755241f3cf4eee026486e23e4838ac4214fd0b"
+    },
+    {
+      "file": "browser-tests/resize-mark-pixels.browser.mjs",
+      "before": null,
+      "after": "09ca09f1df936103e6b265819d9ac04365d25c51b326996e57a93a616b8bc434"
+    }
+  ]
+}

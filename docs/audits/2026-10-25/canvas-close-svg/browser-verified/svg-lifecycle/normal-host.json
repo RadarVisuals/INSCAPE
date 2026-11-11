@@ -1,0 +1,6 @@
+{
+  "status": "passed",
+  "browser": "155.0.8059.85",
+  "errors": [],
+  "text": "SVG lifecycle regression\n\nIn-memory rendering only. No profile, wallet or draft storage.\n\nUnmount artwork\nPlain host\nReady\nProjected host\nReady\nStrict projected host\nReady"
+}

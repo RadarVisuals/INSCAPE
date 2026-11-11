@@ -1,0 +1,52 @@
+✔ manifest classification survives hashed filename changes and current synthetic output passes (37.1732ms)
+✔ manifest classification accepts Vite internal owner facade keys after a nested lazy split (23.3262ms)
+✔ each independent budget category reports an actionable overage (0.907ms)
+✔ measured production allowances retain exact budget boundaries with the lazy article editor (0.7287ms)
+✔ owner leakage fails independently of byte budgets (0.2093ms)
+✔ missing manifest and graph inputs fail clearly (3.4957ms)
+✔ output validation rejects roots, profiles and unrelated directories (0.4332ms)
+✔ authoring pruning touches only the active verified output directory (11.8452ms)
+✔ artifact hygiene rejects representative lock and temporary files with actionable paths (4.1846ms)
+✔ artifact hygiene accepts ordinary intended production assets (3.5838ms)
+✔ authoring pruning rejects a path that escapes the verified output directory (1.4849ms)
+✔ the two historical public lock paths cannot survive artifact hygiene (11.6562ms)
+✔ production pruning excludes development-only prototype assets (0.2169ms)
+✔ manifest classification recognizes the sole System Workflow production owner entry (28.9145ms)
+✔ production pruning excludes unused font sources without removing active bundled fonts (0.1941ms)
+✔ the mini app bridge stays outside initial bytes while remaining in aggregate budgets (40.4145ms)
+✔ production font assets include approved article fonts while interface fonts stay constrained (15.6548ms)
+X [ERROR] Cannot read directory "../../../../..": Access is denied.
+
+X [ERROR] Could not resolve "C:\\Users\\Hidden Swarm\\Documents\\ChatGPT\\inscape\\remediation-2026-10-19-shared-checkpoint\\work\\vite.config.js"
+
+✖ an alternate-outDir production build writes reports there and strips diagnostics (235.1852ms)
+✔ artifact hygiene rejects development fixture markers (29.0758ms)
+ℹ tests 19
+ℹ suites 0
+ℹ pass 18
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 526.6184
+
+✖ failing tests:
+
+test at scripts\productionBuild.test.js:283:1
+✖ an alternate-outDir production build writes reports there and strips diagnostics (235.1852ms)
+  Error: Build failed with 2 errors:
+  error: Cannot read directory "../../../../..": Access is denied.
+  error: Could not resolve "C:\\Users\\Hidden Swarm\\Documents\\ChatGPT\\inscape\\remediation-2026-10-19-shared-checkpoint\\work\\vite.config.js"
+      at failureErrorWithLog (C:\Users\Hidden Swarm\Documents\ChatGPT\inscape\remediation-2026-10-19-shared-checkpoint\work\node_modules\esbuild\lib\main.js:1467:15)
+      at C:\Users\Hidden Swarm\Documents\ChatGPT\inscape\remediation-2026-10-19-shared-checkpoint\work\node_modules\esbuild\lib\main.js:926:25
+      at runOnEndCallbacks (C:\Users\Hidden Swarm\Documents\ChatGPT\inscape\remediation-2026-10-19-shared-checkpoint\work\node_modules\esbuild\lib\main.js:1307:45)
+      at buildResponseToResult (C:\Users\Hidden Swarm\Documents\ChatGPT\inscape\remediation-2026-10-19-shared-checkpoint\work\node_modules\esbuild\lib\main.js:924:7)
+      at C:\Users\Hidden Swarm\Documents\ChatGPT\inscape\remediation-2026-10-19-shared-checkpoint\work\node_modules\esbuild\lib\main.js:951:16
+      at responseCallbacks.<computed> (C:\Users\Hidden Swarm\Documents\ChatGPT\inscape\remediation-2026-10-19-shared-checkpoint\work\node_modules\esbuild\lib\main.js:603:9)
+      at handleIncomingPacket (C:\Users\Hidden Swarm\Documents\ChatGPT\inscape\remediation-2026-10-19-shared-checkpoint\work\node_modules\esbuild\lib\main.js:658:12)
+      at Socket.readFromStdout (C:\Users\Hidden Swarm\Documents\ChatGPT\inscape\remediation-2026-10-19-shared-checkpoint\work\node_modules\esbuild\lib\main.js:581:7)
+      at Socket.emit (node:events:514:28)
+      at addChunk (node:internal/streams/readable:567:12) {
+    errors: [ { detail: undefined, id: '', location: null, notes: [], pluginName: '', text: 'Cannot read directory "../../../../..": Access is denied.' }, { detail: undefined, id: '', location: null, notes: [], pluginName: '', text: 'Could not resolve "C:\\\\Users\\\\Hidden Swarm\\\\Documents\\\\ChatGPT\\\\inscape\\\\remediation-2026-10-19-shared-checkpoint\\\\work\\\\vite.config.js"' } ],
+    warnings: []
+  }

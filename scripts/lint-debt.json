@@ -1,0 +1,466 @@
+{
+  "version": 1,
+  "note": "Existing hook observations assigned to concrete plan steps, not certified safe. Exact source bytes and locations are checked. No automatic baseline refresh.",
+  "entries": [
+    {
+      "file": "src/keeper/KeeperConversation.jsx",
+      "ruleId": "react-hooks/exhaustive-deps",
+      "line": 83,
+      "column": 6,
+      "message": "React Hook useEffect has a missing dependency: 'asset'. Either include it or remove the dependency array.",
+      "sourceSha256": "d56993687f38923ca912f9b31fe4834668e665e5e6a3185e24ff634d53fc803e",
+      "planStep": "19",
+      "reason": "Dialogue request identity is stableAssetId plus explicit retry. Canonical ID encodes chain/contract/token; loadKeeperDialogue resolves current attachments from those identifiers, not stale attachment metadata. Abort and timeout belong to this attempt. Evidence: keeper-dialogue closing-cancels-pending and Retry scenarios exist; same-ID tokenStandard mutation is outside canonical validated asset assumptions. Limits: Current scoped ESLint rerun; source review. Prior browser evidence explicitly identified; no new lifecycle browser run for this proposal. 2026-11-07 review: viewport Return controls replace the old Display controls host; Keeper bounds use measured navigationTop. The existing memo/effect bodies and their identity/primitive dependencies retain the reviewed ownership described above. Only warning locations and whole-file fingerprints are refreshed; no new exception or expanded ceiling."
+    },
+    {
+      "file": "src/keeper/KeeperRigArtwork.jsx",
+      "ruleId": "react-hooks/exhaustive-deps",
+      "line": 27,
+      "column": 7,
+      "message": "React Hook useImperativeHandle has a missing dependency: 'snake'. Either include it or remove the dependency array.",
+      "sourceSha256": "c3e986b3e8ee2f27e6f59191e185043e815b510d86a391de8969748c28dfc079",
+      "planStep": "19",
+      "reason": "snake is derived only from immutable rig.kind; replacing rig recreates the imperative handle. Paint/reset own refs and the pose is reset by motion lifecycle. Evidence: step-19 Keeper layered7/7; rig motion unit coverage. Limits: Current scoped ESLint rerun; source review. Prior browser evidence explicitly identified; no new lifecycle browser run for this proposal."
+    },
+    {
+      "file": "src/keeper/useKeeperMotion.js",
+      "ruleId": "react-hooks/exhaustive-deps",
+      "line": 43,
+      "column": 6,
+      "message": "React Hook useCallback has unnecessary dependencies: 'movement' and 'size'. Either exclude them or remove the dependency array.",
+      "sourceSha256": "edff95fbdd8ccd45cd629c8019b86f057407909c6084cea2c9346b5f6acf8d9a",
+      "planStep": "19",
+      "reason": "Extra size/movement inputs cause bounded callback refresh, not stale state. Paint reads effective size from viewport and movement mode through rigged; leave optimization to measured step27 rather than deleting gates blindly. Evidence: Keeper motion/layered tests; no performance improvement claimed. Limits: Current scoped ESLint rerun; source review. Prior browser evidence explicitly identified; no new lifecycle browser run for this proposal."
+    },
+    {
+      "file": "src/profileDocument/components/GridProductionRenderer.jsx",
+      "ruleId": "react-hooks/exhaustive-deps",
+      "line": 72,
+      "column": 7,
+      "message": "React Hook useEffect has a missing dependency: 'dimensions'. Either include it or remove the dependency array.",
+      "sourceSha256": "72ca6c427cd0d32f6e8a0f6a7381602733ee180dbebcea2f3df5a4806e1c6e01",
+      "planStep": "19",
+      "reason": "Report semantics depend on dimensions width/height, not object identity. media,loaded,failed,gridId,placementId and callback all invalidate. Dimensions are a measured size pair. Evidence: Published visitor/media recovery evidence; no extra metadata fields consumed by size reporting. Limits: Current scoped ESLint rerun; source review. Prior browser evidence explicitly identified; no new lifecycle browser run for this proposal."
+    },
+    {
+      "file": "src/profileDocument/components/GridProductionRenderer.jsx",
+      "ruleId": "react-hooks/exhaustive-deps",
+      "line": 130,
+      "column": 44,
+      "message": "React Hook useEffect has a missing dependency: 'stageSize'. Either include it or remove the dependency array.",
+      "sourceSha256": "72ca6c427cd0d32f6e8a0f6a7381602733ee180dbebcea2f3df5a4806e1c6e01",
+      "planStep": "19",
+      "reason": "Observer is needed only when no supplied Stage exists. Presence toggles observer ownership; supplied Stage dimensions are used synchronously in render. Cleanup disconnects its own observer. Evidence: Visitor renderer/frame lifecycle evidence; Stage sizing projection checks. Limits: Current scoped ESLint rerun; source review. Prior browser evidence explicitly identified; no new lifecycle browser run for this proposal."
+    },
+    {
+      "file": "src/profileDocument/components/GridProductionRenderer.jsx",
+      "ruleId": "react-hooks/exhaustive-deps",
+      "line": 130,
+      "column": 68,
+      "message": "React Hook useEffect has a complex expression in the dependency array. Extract it to a separate variable so it can be statically checked.",
+      "sourceSha256": "72ca6c427cd0d32f6e8a0f6a7381602733ee180dbebcea2f3df5a4806e1c6e01",
+      "planStep": "19",
+      "reason": "Boolean(stageSize) intentionally chooses observer-vs-provider ownership; changing provider dimensions must not remount observer when observer is disabled. Evidence: Same Stage presence boundary as preceding observation. Limits: Current scoped ESLint rerun; source review. Prior browser evidence explicitly identified; no new lifecycle browser run for this proposal."
+    },
+    {
+      "file": "src/profileDocument/components/PublishedDisplayModule.jsx",
+      "ruleId": "react-hooks/exhaustive-deps",
+      "line": 122,
+      "column": 6,
+      "message": "React Hook useEffect has a missing dependency: 'playback'. Either include it or remove the dependency array.",
+      "sourceSha256": "d83f585f80817b4ed0e8ea3dffb2c04e8a32c7df88c10246a7a0ea67deb327f8",
+      "planStep": "18",
+      "reason": "Behouden: het playbackobject wordt per render gemaakt, maar isDragging/beginDrag/moveDrag/endDrag werken op de refs van dezelfde hookinstantie en latest.current. useGridSwipe levert een stabiele setSwipe op stabiele refs. De effect/dragcallback moet daarom niet op de wisselende objectidentiteit invalidateren. Relevante actieve Grid en blokkeerstatus staan wel in de dependencies. published-visitor controleert semantische bediening, keyboard en reduced-motion Grid-drag; geen cleanup of listenerwijziging nodig. Re-reviewed 2026-10-28 during scene-session separation: the retained hook body and its ref-owned playback/cancellation behavior are unchanged. Initial owner Grid is captured per authority and now applied after commit through the same session; selection-scope dependencies deliberately invalidate placement callbacks. Evidence and limits: docs/audits/2026-10-28/scene-boundary-implementation/README.md. 2026-10-30 theme cleanup review: only removed interface palette props/imports and unused surface-colour forwarding; the hook body and dependency identities are unchanged. 2026-11-07 review: only the renderInspection JSX callback changes from the retired three-argument interface to scene, and the obsolete container props are removed. Hook bodies, dependencies and lifecycle are unchanged."
+    },
+    {
+      "file": "src/profileDocument/components/PublishedDisplayModule.jsx",
+      "ruleId": "react-hooks/exhaustive-deps",
+      "line": 164,
+      "column": 6,
+      "message": "React Hook useCallback has a missing dependency: 'playback'. Either include it or remove the dependency array.",
+      "sourceSha256": "d83f585f80817b4ed0e8ea3dffb2c04e8a32c7df88c10246a7a0ea67deb327f8",
+      "planStep": "18",
+      "reason": "Behouden: het playbackobject wordt per render gemaakt, maar isDragging/beginDrag/moveDrag/endDrag werken op de refs van dezelfde hookinstantie en latest.current. useGridSwipe levert een stabiele setSwipe op stabiele refs. De effect/dragcallback moet daarom niet op de wisselende objectidentiteit invalidateren. Relevante actieve Grid en blokkeerstatus staan wel in de dependencies. published-visitor controleert semantische bediening, keyboard en reduced-motion Grid-drag; geen cleanup of listenerwijziging nodig. Re-reviewed 2026-10-28 during scene-session separation: the retained hook body and its ref-owned playback/cancellation behavior are unchanged. Initial owner Grid is captured per authority and now applied after commit through the same session; selection-scope dependencies deliberately invalidate placement callbacks. Evidence and limits: docs/audits/2026-10-28/scene-boundary-implementation/README.md. 2026-10-30 theme cleanup review: only removed interface palette props/imports and unused surface-colour forwarding; the hook body and dependency identities are unchanged. 2026-11-07 review: only the renderInspection JSX callback changes from the retired three-argument interface to scene, and the obsolete container props are removed. Hook bodies, dependencies and lifecycle are unchanged."
+    },
+    {
+      "file": "src/profileDocument/components/VisitorEntryFocus.jsx",
+      "ruleId": "react-hooks/exhaustive-deps",
+      "line": 23,
+      "column": 6,
+      "message": "React Hook useEffect has a missing dependency: 'target'. Either include it or remove the dependency array.",
+      "sourceSha256": "a7b488dd7a19de7fb158a169acbd5662381a23cf73d95de6eb59ed58504dddc6",
+      "planStep": "14",
+      "reason": "The effect reads target.moduleId only. That scalar, focusModules and all three registry/subscription objects are dependencies. A module change cancels its scheduled frame and subscription before scheduling the new module; successful focus marks complete and unsubscribes. ProfileDocumentV9Visitor mounts this inside its document/profile/revision-keyed provider. Changes to other target fields do not change this module-focus operation. Independent source/caller review: ProfileDocumentV9Visitor.jsx -> VisitorEntryFocus; WorkbenchView actions/entry/frame registry. No separate browser run by reviewer; final shared verification remains required."
+    },
+    {
+      "file": "src/profileDocument/state/usePublicationRecovery.js",
+      "ruleId": "react-hooks/exhaustive-deps",
+      "line": 13,
+      "column": 6,
+      "message": "React Hook useMemo has unnecessary dependencies: 'attempt', 'busy', and 'publicationStatus'. Either exclude them or remove the dependency array.",
+      "sourceSha256": "2e1989640f9c114bbb1b5489f97690f7c3e4950955f7bbd821df31d0aa37fa77",
+      "planStep": "18",
+      "reason": "Behouden: attempt, busy en publicationStatus zijn expliciete invalidaties van een externe journal-read; hun waarde hoeft niet in het read-body gebruikt te worden. De nieuwe echte usePublicationRecovery-browserproef wijzigt status en busy afzonderlijk, voert check uit, wijzigt profiel en laat oude resultaten laat arriveren. Alleen het actuele snapshot kan worden getoond of acknowledged."
+    },
+    {
+      "file": "src/public/identity/IdentityModule.jsx",
+      "ruleId": "react-hooks/exhaustive-deps",
+      "line": 67,
+      "column": 105,
+      "message": "React Hook useEffect has a missing dependency: 'minimized'. Either include it or remove the dependency array.",
+      "sourceSha256": "caa2cf7dde921731530044cff722f4f4fd9deea3ce36854ed5beabea01a0c151",
+      "planStep": "15",
+      "reason": "Focus uitsluitend bij openen: minimized kiest het initiële zichtbare focusdoel; restore en close bezitten latere focusterugkeer. Een minimized-dependency zou bij latere bediening focus stelen. Owner Identity is op profileAddress gekeyed; Visitor monteert een eigen read-only instantie. 2026-10-30 theme cleanup review: only removed interface palette props/imports and unused surface-colour forwarding; the hook body and dependency identities are unchanged."
+    },
+    {
+      "file": "src/public/identity/IdentityTitle.jsx",
+      "ruleId": "react-hooks/exhaustive-deps",
+      "line": 84,
+      "column": 28,
+      "message": "The ref value 'request.current' will likely have changed by the time this effect cleanup function runs. If this ref points to a node rendered by React, copy 'request.current' to a variable inside the effect, and use that variable in the cleanup function.",
+      "sourceSha256": "eb6adc09e1c92e10c490a663545c3a634cc1e71a0d9f63bab43ba6b9aa4abec8",
+      "planStep": "19",
+      "reason": "request is a cancellation generation, not an element. Address cleanup increments latest generation so an older clipboard result cannot report success for a newer identity. Evidence: Identity source request-ticket checks; Identity browser7/7 in styling tranche, specific late clipboard race not independently rerun. Limits: Current scoped ESLint rerun; source review. Prior browser evidence explicitly identified; no new lifecycle browser run for this proposal."
+    },
+    {
+      "file": "src/public/identity/useIdentityShortcut.js",
+      "ruleId": "react-hooks/exhaustive-deps",
+      "line": 40,
+      "column": 50,
+      "message": "React Hook useEffect has a missing dependency: 'persist'. Either include it or remove the dependency array.",
+      "sourceSha256": "ef643a17f28f00ab24cbafb65a35a24a57ce8435602124c9319218ff697592a1",
+      "planStep": "15",
+      "reason": "Bewuste eerste owner-prefwrite bij mount; persist wordt daarnaast rechtstreeks vanuit iedere bevestigde useractie aangeroepen. Profielwissel remount Identity via key=profileAddress; Visitor owner=false schrijft niet. Geen subscription/timer houdt deze callback vast. De oudere optionele shortcut-opslag blijft een aparte presentatievoorkeur, geen authored venstergeometrie."
+    },
+    {
+      "file": "src/public/ownerSystemWorkflow/DisplayFocusViewer.jsx",
+      "ruleId": "react-hooks/exhaustive-deps",
+      "line": 38,
+      "column": 6,
+      "message": "React Hook useLayoutEffect has a missing dependency: 'viewer.returnFocus'. Either include it or remove the dependency array.",
+      "sourceSha256": "a22cc801c06bb6ff46f6ace10d3390153236fd5f58ab0acc525e8969e51c5088",
+      "planStep": "14",
+      "reason": "The atmosphere layout effect marks sibling nodes of viewer.returnFocus, cleans the exact marked siblings, and reruns on scene, placementId or lift. Owner canvas keys the enclosing scene by grid+slot and each outer placement by id; public renderer also retains its outer placement by id. Inspection suspends Grid transport and scope changes clear inspection. Within this supported lifetime the returnFocus outer node is stable; media/editor child replacement does not replace it. Navigating another placement changes placementId; remounting its scene changes scene or ends scope. Independent source/caller review: DisplayModule.jsx198; OwnerSystemWorkflowCanvas.jsx298,313–360; useOwnerSystemWorkflowFocusViewer; PublishedDisplayModule.jsx71–79,225; GridProductionRenderer.jsx91,156. No separate browser run by reviewer; final shared verification remains required. 2026-11-07 review: viewport Return controls replace the old Display controls host; Keeper bounds use measured navigationTop. The existing memo/effect bodies and their identity/primitive dependencies retain the reviewed ownership described above. Only warning locations and whole-file fingerprints are refreshed; no new exception or expanded ceiling."
+    },
+    {
+      "file": "src/public/ownerSystemWorkflow/DisplayModuleLift.jsx",
+      "ruleId": "react-hooks/exhaustive-deps",
+      "line": 84,
+      "column": 6,
+      "message": "React Hook useLayoutEffect has a missing dependency: 'trigger'. Either include it or remove the dependency array.",
+      "sourceSha256": "988d0f7e5e74cc2e0ef4d381167d10f7d161da273069136cfafa43715e3a2550",
+      "planStep": "14",
+      "reason": "The animation effect captures the return trigger for one lift. PresentationBoardDefinitive creates {scope,trigger,phase} once at open; subsequent close/phase updates spread the existing object and preserve trigger. Scope/instance changes remove lift. Closing/reducedMotion cancel and replace requestAnimationFrame; latest.current supplies geometry/callback updates during the animation. A detached trigger is checked with isConnected before focus. A new trigger requires a new mounted lift. Independent source/caller review: PresentationBoardDefinitive.jsx54–70,276,305–309; DisplayModuleLift.jsx66–84. No separate browser run by reviewer; final shared verification remains required."
+    },
+    {
+      "file": "src/public/ownerSystemWorkflow/OwnerDisplayInstance.jsx",
+      "ruleId": "react-hooks/exhaustive-deps",
+      "line": 17,
+      "column": 110,
+      "message": "React Hook useMemo has missing dependencies: 'instanceId' and 'profileAddress'. Either include them or remove the dependency array.",
+      "sourceSha256": "8d46808e2d10353cce827e7d6a1d56302fbccceb1b93447913a0d09002729595",
+      "planStep": "10",
+      "reason": "Behouden: `storedShortcut` is een snapshot bij mount. Profiel/restored revision begrenzen LocalWorkbenchSession, activatie begrenst WorkbenchSession en `id` begrenst OwnerDisplayInstance. `profileAddress` en `instanceId` wisselen niet binnen die levensduur. S: Runtime keys; D owner/Visitor/reload; R release. Bij toekomstige hergebruikte instance over profielen heen vervalt deze uitzondering."
+    },
+    {
+      "file": "src/public/ownerSystemWorkflow/OwnerDisplayInstance.jsx",
+      "ruleId": "react-hooks/exhaustive-deps",
+      "line": 20,
+      "column": 6,
+      "message": "React Hook useMemo has missing dependencies: 'controller.draft.geometry', 'index', 'initialPresentation', 'storedShortcut?.name', and 'storedShortcut?.open'. Either include them or remove the dependency array.",
+      "sourceSha256": "8d46808e2d10353cce827e7d6a1d56302fbccceb1b93447913a0d09002729595",
+      "planStep": "10",
+      "reason": "Behouden: eerste presentatie wordt één keer uit expliciete presentatie of geometry/index/defaults samengesteld. Daarna is modulelokale `presentation` de eigenaar. Een veranderde index of controller-render mag de gebruikerpositie/openstatus niet terugzetten. S: `useState(initial)` en `changeWindow`; D, U."
+    },
+    {
+      "file": "src/public/ownerSystemWorkflow/OwnerDisplayInstance.jsx",
+      "ruleId": "react-hooks/exhaustive-deps",
+      "line": 25,
+      "column": 46,
+      "message": "React Hook useMemo has missing dependencies: 'initial', 'initialPresentation', 'instanceId', and 'storedShortcut'. Either include them or remove the dependency array.",
+      "sourceSha256": "8d46808e2d10353cce827e7d6a1d56302fbccceb1b93447913a0d09002729595",
+      "planStep": "10",
+      "reason": "Behouden: `initialWindow` is de eerste herstelwaarde van dezelfde keyed instance; shortcut-cache is alleen initiële fallback. Latere positie/openstatus gaat via `changeWindow`. S: instance-lifetime; D, R."
+    },
+    {
+      "file": "src/public/ownerSystemWorkflow/OwnerDisplayInstance.jsx",
+      "ruleId": "react-hooks/exhaustive-deps",
+      "line": 36,
+      "column": 5,
+      "message": "React Hook useLayoutEffect has a missing dependency: 'controller'. Either include it or remove the dependency array.",
+      "sourceSha256": "8d46808e2d10353cce827e7d6a1d56302fbccceb1b93447913a0d09002729595",
+      "planStep": "10",
+      "reason": "Behouden onder het bestaande controllercontract: de geregistreerde controller wordt vernieuwd bij generatie, gridselectie, placementselectie, verborgen placements, fout/clearError of lock. Profiel, store-scope en module-id staan vast onder dezelfde instance-key. De callable controllerhandelingen gebruiken die scope en de geselecteerde/generation-waarden; er is geen noodzaak iedere nieuw geconstrueerde controllerobjectidentiteit door te melden. S: controllerproducer en registratie; D release/lock, bestaande controllertests. Dit moet herzien worden als een nieuw controllerresultaat een zelfstandig veranderende waarde toevoegt."
+    },
+    {
+      "file": "src/public/ownerSystemWorkflow/OwnerDisplayInstance.jsx",
+      "ruleId": "react-hooks/exhaustive-deps",
+      "line": 36,
+      "column": 60,
+      "message": "React Hook useLayoutEffect has a complex expression in the dependency array. Extract it to a separate variable so it can be statically checked.",
+      "sourceSha256": "8d46808e2d10353cce827e7d6a1d56302fbccceb1b93447913a0d09002729595",
+      "planStep": "10",
+      "reason": "Behouden: `selectedPlacementIds.join(',')` is een volledige geordende inhoudssleutel. Geldige ids bevatten geen komma; lege selectie en één geldige id zijn niet ambigu. S: `SAFE_ID` in domain/systemWorkflowDraft.js; controllerselectiecontract."
+    },
+    {
+      "file": "src/public/ownerSystemWorkflow/PresentationBoardDefinitive.jsx",
+      "ruleId": "react-hooks/exhaustive-deps",
+      "line": 73,
+      "column": 161,
+      "message": "React Hook useMemo has missing dependencies: 'initialPresentation?.name' and 'readOnly'. Either include them or remove the dependency array.",
+      "sourceSha256": "7434e1813ef3d147d09c8526a735cfc6416f81681bdd1debf570534f99f4d763",
+      "planStep": "10",
+      "reason": "Actual owner caller OwnerDisplayInstance constructs initialWindow once for keyed instance lifetime; later shortcut rename updates local moduleName and onWindowChange. Runtime session keys isolate profile/restored session and per-instance id. Production Visitor passes readOnly continuously and remounts by profile/documentId/revision. Therefore these are initialization/authority inputs, not mutable fields omitted from an update subscription. Independently re-read current hook and actual OwnerDisplayInstance/PublishedDisplayModule callers. Hook source span is byte-identical to the Stage-reviewed before-copy. Only line76 displayName fallback changed; no effect body, dependency, persistence key or authority lifetime changed. Independent review: continuation/reviews/final-core/display-name-legacy-alias-review.json. 2026-10-30 theme cleanup review: only removed interface palette props/imports and unused surface-colour forwarding; the hook body and dependency identities are unchanged. 2026-11-07 review: viewport Return controls replace the old Display controls host; Keeper bounds use measured navigationTop. The existing memo/effect bodies and their identity/primitive dependencies retain the reviewed ownership described above. Only warning locations and whole-file fingerprints are refreshed; no new exception or expanded ceiling."
+    },
+    {
+      "file": "src/public/ownerSystemWorkflow/PresentationBoardDefinitive.jsx",
+      "ruleId": "react-hooks/exhaustive-deps",
+      "line": 126,
+      "column": 6,
+      "message": "React Hook useLayoutEffect has missing dependencies: 'documentGeometry' and 'initialPresentation?.window?.width'. Either include them or remove the dependency array. If 'setView' needs the current value of 'documentGeometry', you can also switch to useReducer instead of useState and read 'documentGeometry' in the reducer.",
+      "sourceSha256": "7434e1813ef3d147d09c8526a735cfc6416f81681bdd1debf570534f99f4d763",
+      "planStep": "10",
+      "reason": "geometryKey serializes documentGeometry, so every effective geometry change recreates measure and its observer with current geometry. host/layoutMode also invalidate. Captured initial width is read only when current view is absent; current frame width otherwise wins. Owner initialWindow and Visitor publication lifetime were checked above. Cleanup disconnects the matching ResizeObserver and global resize listener. Independently re-read current hook and actual OwnerDisplayInstance/PublishedDisplayModule callers. Hook source span is byte-identical to the Stage-reviewed before-copy. Only line76 displayName fallback changed; no effect body, dependency, persistence key or authority lifetime changed. Independent review: continuation/reviews/final-core/display-name-legacy-alias-review.json. 2026-10-30 theme cleanup review: only removed interface palette props/imports and unused surface-colour forwarding; the hook body and dependency identities are unchanged. 2026-11-07 review: viewport Return controls replace the old Display controls host; Keeper bounds use measured navigationTop. The existing memo/effect bodies and their identity/primitive dependencies retain the reviewed ownership described above. Only warning locations and whole-file fingerprints are refreshed; no new exception or expanded ceiling."
+    },
+    {
+      "file": "src/public/ownerSystemWorkflow/PresentationBoardDefinitive.jsx",
+      "ruleId": "react-hooks/exhaustive-deps",
+      "line": 147,
+      "column": 6,
+      "message": "React Hook useEffect has missing dependencies: 'boardPosition' and 'view'. Either include them or remove the dependency array.",
+      "sourceSha256": "7434e1813ef3d147d09c8526a735cfc6416f81681bdd1debf570534f99f4d763",
+      "planStep": "10",
+      "reason": "Exact emitted fields are displayName, boardPosition.left/top, view.frame.board.width/height. All five values and onWindowChange are dependencies. Object-null initialization changes the optional primitive values, so it also schedules emission. No additional object member affects the output. Independently re-read current hook and actual OwnerDisplayInstance/PublishedDisplayModule callers. Hook source span is byte-identical to the Stage-reviewed before-copy. Only line76 displayName fallback changed; no effect body, dependency, persistence key or authority lifetime changed. Independent review: continuation/reviews/final-core/display-name-legacy-alias-review.json. 2026-10-30 theme cleanup review: only removed interface palette props/imports and unused surface-colour forwarding; the hook body and dependency identities are unchanged. 2026-11-07 review: viewport Return controls replace the old Display controls host; Keeper bounds use measured navigationTop. The existing memo/effect bodies and their identity/primitive dependencies retain the reviewed ownership described above. Only warning locations and whole-file fingerprints are refreshed; no new exception or expanded ceiling."
+    },
+    {
+      "file": "src/public/ownerSystemWorkflow/PresentationBoardShortcut.jsx",
+      "ruleId": "react-hooks/exhaustive-deps",
+      "line": 42,
+      "column": 149,
+      "message": "React Hook useMemo has missing dependencies: 'initialShortcut' and 'readOnly'. Either include them or remove the dependency array.",
+      "sourceSha256": "190ca6a22949e1a94c68c032a3c51a77584248531bf0b76ea5ea30c6d6f8f2bf",
+      "planStep": "10",
+      "reason": "Behouden: de initiële shortcut/readOnly zijn lifetimewaarden. Latere naam/positie/openstatus wordt lokaal beheerd en mag niet door een nieuwe propobjectidentiteit worden teruggezet. S keyed owner/published lifetimes; D, R. 2026-10-30 theme cleanup review: only removed interface palette props/imports and unused surface-colour forwarding; the hook body and dependency identities are unchanged."
+    },
+    {
+      "file": "src/public/ownerSystemWorkflow/PresentationBoardShortcut.jsx",
+      "ruleId": "react-hooks/exhaustive-deps",
+      "line": 66,
+      "column": 6,
+      "message": "React Hook useEffect has missing dependencies: 'instanceId' and 'readOnly'. Either include them or remove the dependency array.",
+      "sourceSha256": "190ca6a22949e1a94c68c032a3c51a77584248531bf0b76ea5ea30c6d6f8f2bf",
+      "planStep": "10",
+      "reason": "Behouden: opslagkey instanceId en readOnly kunnen niet wisselen onder dezelfde module-instance. De werkelijk veranderlijke naam/positie/openstatus en profielkey staan wel in de save-effectdependencies. S: callerkeys en savebody; D, R. 2026-10-30 theme cleanup review: only removed interface palette props/imports and unused surface-colour forwarding; the hook body and dependency identities are unchanged."
+    },
+    {
+      "file": "src/public/ownerSystemWorkflow/useDisplayInspection.js",
+      "ruleId": "react-hooks/exhaustive-deps",
+      "line": 90,
+      "column": 6,
+      "message": "React Hook useEffect has a missing dependency: 'options'. Either include it or remove the dependency array.",
+      "sourceSha256": "601ee7eff471164a5942b591e8265586b883dc195fee3f4bd474b87398bd3ef7",
+      "planStep": "14",
+      "reason": "The validity effect uses options only to resolve the current placement DOM. Owner getElement wraps the same lifetime placementRefs map; its wrapper identity changes every render but its meaning does not. Owner entries/items invalidate when placements/assets change. Public findPlacementElement is stable and items/document scope invalidate publication/grid changes. Outer placement nodes remain keyed by id while media children change. Scope effect separately invalidates requests/session, and async open checks mounted, request, scope, connected source and membership. This retains this validity effect for existing callers, not arbitrary future getElement implementations. Independent source/caller review: useOwnerSystemWorkflowFocusViewer.js8–28,47–49; OwnerSystemWorkflowCanvas.jsx298,317,356; PublishedDisplayModule.jsx68–79; useDisplayInspection.js19–35,55–70. No separate browser run by reviewer; final shared verification remains required."
+    },
+    {
+      "file": "src/public/ownerSystemWorkflow/useGridPlayback.js",
+      "ruleId": "react-hooks/exhaustive-deps",
+      "line": 128,
+      "column": 6,
+      "message": "React Hook useLayoutEffect has missing dependencies: 'options.enabled', 'options.playing', 'options.reducedMotion', 'options.suspended', 'reset', and 'startTransport'. Either include them or remove the dependency array.",
+      "sourceSha256": "7b5e425ec9087ccb8e7c9d82731af42d7a153daaf38235e0f6d9583663df9f99",
+      "planStep": "19",
+      "reason": "This layout effect synchronizes a committed rail/source change. Other play/enabled/suspend/reduced-motion transitions are handled by the separate mode effect. Source change invokes functions from that render. Evidence: Grid playback loop/pause/local-state test; not an assertion that every lifecycle race has dedicated coverage. Limits: Current scoped ESLint rerun; source review. Prior browser evidence explicitly identified; no new lifecycle browser run for this proposal."
+    },
+    {
+      "file": "src/public/ownerSystemWorkflow/useGridPlayback.js",
+      "ruleId": "react-hooks/exhaustive-deps",
+      "line": 129,
+      "column": 73,
+      "message": "React Hook useEffect has a missing dependency: 'reset'. Either include it or remove the dependency array.",
+      "sourceSha256": "7b5e425ec9087ccb8e7c9d82731af42d7a153daaf38235e0f6d9583663df9f99",
+      "planStep": "19",
+      "reason": "Scope change resets current ref-owned transport/drag/frame and sets current grid from latest.current. Depending on per-render reset would reset on every render. Evidence: Grid playback scope and cleanup source paths; local Workbench switching evidence. Limits: Current scoped ESLint rerun; source review. Prior browser evidence explicitly identified; no new lifecycle browser run for this proposal."
+    },
+    {
+      "file": "src/public/ownerSystemWorkflow/useGridPlayback.js",
+      "ruleId": "react-hooks/exhaustive-deps",
+      "line": 145,
+      "column": 6,
+      "message": "React Hook useEffect has missing dependencies: 'options', 'paint', 'pause', 'reset', 'setSwipe', 'startTransport', and 'stopTransport'. Either include them or remove the dependency array.",
+      "sourceSha256": "7b5e425ec9087ccb8e7c9d82731af42d7a153daaf38235e0f6d9583663df9f99",
+      "planStep": "19",
+      "reason": "Mode effect lists all transition gates; transport helpers access shared refs/latest. onPause is called from the effect render when disabling, not by a stale scheduled callback. Evidence: Grid playback pause/reduced-motion tests; timer/transport cancellation source reviewed. Limits: Current scoped ESLint rerun; source review. Prior browser evidence explicitly identified; no new lifecycle browser run for this proposal."
+    },
+    {
+      "file": "src/public/ownerSystemWorkflow/useGridPlayback.js",
+      "ruleId": "react-hooks/exhaustive-deps",
+      "line": 164,
+      "column": 6,
+      "message": "React Hook useEffect has missing dependencies: 'paint', 'startTransport', 'stopTransport', and 'synchronize'. Either include them or remove the dependency array.",
+      "sourceSha256": "7b5e425ec9087ccb8e7c9d82731af42d7a153daaf38235e0f6d9583663df9f99",
+      "planStep": "19",
+      "reason": "Mount-scoped listeners and ResizeObserver call functions that operate on persistent refs/latest.current; cleanup cancels frame/transport and disconnects all listeners/observer. They must not reinstall every render. Evidence: Grid playback browser test plus source cleanup; mounted canvas ref replacement outside normal owner lifecycle not separately proven. Limits: Current scoped ESLint rerun; source review. Prior browser evidence explicitly identified; no new lifecycle browser run for this proposal."
+    },
+    {
+      "file": "src/public/ownerSystemWorkflow/useGridSwipe.js",
+      "ruleId": "react-hooks/exhaustive-deps",
+      "line": 76,
+      "column": 6,
+      "message": "React Hook useLayoutEffect has a missing dependency: 'swipe'. Either include it or remove the dependency array.",
+      "sourceSha256": "5706f118676424d062b35d5631f49b94dc185274d54b5ba04584f76e55ad03f2",
+      "planStep": "13",
+      "reason": "The observer effect needs swipe only as the active/inactive gate. It measures viewportRef.current.clientWidth and writes width.current, which paint reads. In useGridPlayback both Owner canvas and published stage supply a stable mounted viewport ref; changing swipe ids/deltas does not change the observed viewport. Boolean(swipe) starts/stops the observer; viewportRef replacement rebinds it; cleanup disconnects. Pixel motion is painted through current/committed refs independently of observer subscription. Independent source/caller review: useGridPlayback.js -> useGridSwipe; OwnerSystemWorkflowCanvas.jsx; PublishedDisplayModule.jsx stageRef/trackRef. No separate browser run by reviewer; final shared verification remains required."
+    },
+    {
+      "file": "src/public/ownerSystemWorkflow/useGridSwipe.js",
+      "ruleId": "react-hooks/exhaustive-deps",
+      "line": 76,
+      "column": 20,
+      "message": "React Hook useLayoutEffect has a complex expression in the dependency array. Extract it to a separate variable so it can be statically checked.",
+      "sourceSha256": "5706f118676424d062b35d5631f49b94dc185274d54b5ba04584f76e55ad03f2",
+      "planStep": "13",
+      "reason": "Boolean(swipe) is the exact lifecycle predicate of the resize observer, not an approximation of swipe contents. Its only branch is if (!swipe) return; callback reads viewport width and paint, no swipe field. Converting to a named scalar would only aid static analysis. Same caller/ref lifetime and disconnect invariant as the adjacent missing-swipe entry. Independent source/caller review: useGridSwipe.js65–76; useGridPlayback.js. No separate browser run by reviewer; final shared verification remains required."
+    },
+    {
+      "file": "src/public/ownerSystemWorkflow/useOwnerSystemWorkflowActivity.js",
+      "ruleId": "react-hooks/exhaustive-deps",
+      "line": 80,
+      "column": 5,
+      "message": "React Hook useMemo has an unnecessary dependency: 'identityRevision'. Either exclude it or remove the dependency array.",
+      "sourceSha256": "bee8e6e3cdd276f4166cf1ca1792c888e764307c23dad6c084b618b0a2974079",
+      "planStep": "19",
+      "reason": "identityRevision invalidates the memoized projection when the external identity cache changes without changing the history reference. The subscription still owns cache notifications and cleanup; removing this dependency would leave resolved names stale. On 2026-10-24 only the development fixture path was separated; the live cache invalidation contract is retained. Focused Activity browser and formatting tests recorded under runtime-boundaries-2026-10-24."
+    },
+    {
+      "file": "src/public/ownerSystemWorkflow/useOwnerSystemWorkflowController.js",
+      "ruleId": "react-hooks/exhaustive-deps",
+      "line": 32,
+      "column": 6,
+      "message": "React Hook useMemo has a missing dependency: 'initialGridId'. Either include it or remove the dependency array.",
+      "sourceSha256": "d1cd37e21b6a2d154c31d778dfe808df4d1c22738a5f779df328841e8b65fd6c",
+      "planStep": "08",
+      "reason": "initialGridId is a mount/authority initializer, validated against the new session grids. Subsequent preference/layout updates must not recreate the Display session or reset its current Grid. Authority identity is explicitly profile, selected storage, shared activation-scoped store and moduleId; caller remounts on profile/Workbench activation. Parent traced Runtime/Display instance callers and authority creation; scope units and current local-workbenches/routing/Display reload coverage support those boundaries. No asynchronous initialGridId callback is retained. Re-reviewed 2026-10-28 during scene-session separation: the retained hook body and its ref-owned playback/cancellation behavior are unchanged. Initial owner Grid is captured per authority and now applied after commit through the same session; selection-scope dependencies deliberately invalidate placement callbacks. Evidence and limits: docs/audits/2026-10-28/scene-boundary-implementation/README.md."
+    },
+    {
+      "file": "src/public/ownerSystemWorkflow/useOwnerSystemWorkflowController.js",
+      "ruleId": "react-hooks/exhaustive-deps",
+      "line": 71,
+      "column": 46,
+      "message": "React Hook useMemo has unnecessary dependencies: 'authority' and 'state.selectedGridId'. Either exclude them or remove the dependency array.",
+      "sourceSha256": "d1cd37e21b6a2d154c31d778dfe808df4d1c22738a5f779df328841e8b65fd6c",
+      "planStep": "08",
+      "reason": "The empty object is the selection epoch. Authority replacement and selectedGridId transitions intentionally invalidate old selection actions even though the factory reads neither value. liveSelectionScope and mounted guards reject captured actions after a scope switch; available placement IDs and visibility are filtered from the current Grid. Removing either dependency revives selection in a different editor context. Parent reviewed actual guards and caller lifetimes; scoped late-writer and Library-drop lifecycle checks provide related behavioral evidence. Re-reviewed 2026-10-28 during scene-session separation: the retained hook body and its ref-owned playback/cancellation behavior are unchanged. Initial owner Grid is captured per authority and now applied after commit through the same session; selection-scope dependencies deliberately invalidate placement callbacks. Evidence and limits: docs/audits/2026-10-28/scene-boundary-implementation/README.md."
+    },
+    {
+      "file": "src/public/ownerSystemWorkflow/useOwnerSystemWorkflowPlacementInteraction.js",
+      "ruleId": "react-hooks/exhaustive-deps",
+      "line": 240,
+      "column": 6,
+      "message": "React Hook useEffect has a missing dependency: 'clearGesture'. Either include it or remove the dependency array.",
+      "sourceSha256": "cf4960b8e004de183a5cf9b37ff38c5cf1fc84f3189e8a93293345d34c1c05cc",
+      "planStep": "13",
+      "reason": "Unmount cleanup cancels the current gesture and marquee by reading gestureRef/marqueeRef and removing the exact stored handlers. clearGesture additionally calls cropResize.finish(cancelled): DisplayModule always supplies useOwnerSystemWorkflowCrop's crop object from the first mount, and finish reads resizeRef/sessionRef plus setState only. Thus the initial cleanup closure can cancel a later crop resize. This depends on that actual unconditional caller; not a claim for changing crop providers. Independent source/caller review: DisplayModule.jsx101,202; OwnerSystemWorkflowCanvas.jsx166–170; useOwnerSystemWorkflowCrop.js73–101; PlacementInteraction.js41–50,237–240. No separate browser run by reviewer; final shared verification remains required."
+    },
+    {
+      "file": "src/public/ownerSystemWorkflow/useOwnerSystemWorkflowPlacementInteraction.js",
+      "ruleId": "react-hooks/exhaustive-deps",
+      "line": 248,
+      "column": 6,
+      "message": "React Hook useEffect has a missing dependency: 'clearGesture'. Either include it or remove the dependency array.",
+      "sourceSha256": "cf4960b8e004de183a5cf9b37ff38c5cf1fc84f3189e8a93293345d34c1c05cc",
+      "planStep": "13",
+      "reason": "Authoring-disabled or disabled becoming true cancels both current ref-owned gestures. clearGesture uses exact stored handler identities, current crop resize refs and state setters; no placement snapshot is read by this cancellation path. The render that observes either disable flag supplies its cancellation function, so disabling authoring does not wait for another pointer event. Independent source/caller review: PlacementInteraction.js244–248; useOwnerSystemWorkflowCrop.js96–105; OwnerSystemWorkflowCanvas.jsx166–170. No separate browser run by reviewer; final shared verification remains required."
+    },
+    {
+      "file": "src/public/ownerSystemWorkflow/useOwnerSystemWorkflowPlacementInteraction.js",
+      "ruleId": "react-hooks/exhaustive-deps",
+      "line": 243,
+      "column": 6,
+      "message": "React Hook useEffect has missing dependencies: 'clearGesture' and 'navigation'. Either include them or remove the dependency array.",
+      "sourceSha256": "cf4960b8e004de183a5cf9b37ff38c5cf1fc84f3189e8a93293345d34c1c05cc",
+      "planStep": "13",
+      "reason": "Profile address/Grid id change cancels placement edits. Marquee is retained only during Grid playback drag so its cross-grid rail handoff can finish; navigation.isDragging reads useGridPlayback's drag.current. It has no captured grid value. clearGesture uses current gesture refs and the crop resize ref-owner described at240. Adding navigation object identity would cancel ongoing handoffs because useGridPlayback returns a new facade each render. Independent source/caller review: PlacementInteraction.js241–243; useGridPlayback.js12,165–166; OwnerSystemWorkflowCanvas.jsx166–170. No separate browser run by reviewer; final shared verification remains required."
+    },
+    {
+      "file": "src/public/ownerSystemWorkflow/useOwnerSystemWorkflowPlacementInteraction.js",
+      "ruleId": "react-hooks/exhaustive-deps",
+      "line": 261,
+      "column": 6,
+      "message": "React Hook useEffect has missing dependencies: 'clearGesture' and 'navigation'. Either include them or remove the dependency array.",
+      "sourceSha256": "cf4960b8e004de183a5cf9b37ff38c5cf1fc84f3189e8a93293345d34c1c05cc",
+      "planStep": "13",
+      "reason": "Blur/hidden listeners call current gesture/marquee ref cleanup and navigation.endDrag(true). The captured navigation facade's endDrag reads drag/position/transport refs and latest.current options in useGridPlayback, so a new returned facade is not a new owner. cropSession/disabled changes rebind listeners; cleanup removes exact release/visibility closures. Unmount gesture cleanup independently releases the in-flight pointer callbacks. Independent source/caller review: PlacementInteraction.js249–261; useGridPlayback.js12,186–197; OwnerSystemWorkflowCanvas.jsx166–170. No separate browser run by reviewer; final shared verification remains required."
+    },
+    {
+      "file": "src/public/ownerSystemWorkflow/useWorkbenchPreview.js",
+      "ruleId": "react-hooks/exhaustive-deps",
+      "line": 13,
+      "column": 53,
+      "message": "The ref value 'request.current' will likely have changed by the time this effect cleanup function runs. If this ref points to a node rendered by React, copy 'request.current' to a variable inside the effect, and use that variable in the cleanup function.",
+      "sourceSha256": "b175d00732e9235449c5799b20e14d26d3c796d6a69dd4578bb0c5842bf44887",
+      "planStep": "18",
+      "reason": "Behouden: request is een actuele invalidatieteller, geen DOM-ref. Cleanup moet de meest recente teller verhogen om alle inmiddels gestarte requests in te trekken. Een gecapturede beginteller zou een later request missen. workbench-lifecycle controleert superseded/cancelled/disposed requests en failure/recovery met de echte hook. Aanvullende parentreview: alleen focus-RAF vervangen door bewaakte helper; request-teller en storegebonden cleanup blijven gelijk. preview-red-01 toont de focusrace; preview-green-01 lifecycle2/2 controleert oudere requests, annulering, herstel, nieuwe focus en heropenen."
+    },
+    {
+      "file": "src/public/ownerSystemWorkflow/WorkbenchAreaContext.jsx",
+      "ruleId": "react-hooks/exhaustive-deps",
+      "line": 17,
+      "column": 59,
+      "message": "React Hook useMemo has a missing dependency: 'area'. Either include it or remove the dependency array.",
+      "sourceSha256": "0130bdd78a6889112e139d764ae583fdca6a098ceaf5d9edacce6d39b52f818c",
+      "planStep": "10",
+      "reason": "Behouden: `workbenchAreaBounds` gebruikt uitsluitend left/top/width/height; alle vier worden gevolgd. Een preview is bovendien aan dezelfde draftidentiteit gebonden en vervalt bij een nieuwe accepted draft. S: area-helper en previewguard; U geometrie."
+    },
+    {
+      "file": "src/public/ownerSystemWorkflow/WorkbenchCanvasControls.jsx",
+      "ruleId": "react-hooks/exhaustive-deps",
+      "line": 65,
+      "column": 6,
+      "message": "React Hook useLayoutEffect has a missing dependency: 'camera'. Either include it or remove the dependency array.",
+      "sourceSha256": "9ccccfbb73f1bb31b6195a0071a9991f4783597ed458567c96b14ecef8d4e925",
+      "planStep": "13",
+      "reason": "The layout subscription reads only camera.subscribeCameraPaint, explicitly listed; it never reads camera.scale/offset/getCamera. Camera events pass next snapshot. Active resize stores its start camera; differing paint cancels it, and ResizeObserver cancellation happens before viewport update. finish is stable and clears current drag/unlocks/preview. open/hostRef/subscriber replacement disconnects observer and unsubscribes. Independent source/caller review: WorkbenchCanvasControls.jsx22–33,52–62; WorkbenchView.jsx1421; WorkbenchCamera.jsx API. No separate browser run by reviewer; final shared verification remains required. Numeric canvas input review (2026-10-29): hook body and dependency list are unchanged; the added form submits through the existing resize operation and does not subscribe to camera state. The camera-controls and workbench-canvas-crop browser suites passed 15/15, including desktop/mobile camera, fit, resize, undo and Visitor coverage. Re-reviewed 2026-11-01: menu bar replacement changes rail clearance and controlled canvas-panel visibility only. Existing reviewed camera/pan member dependencies and listener lifetimes are unchanged."
+    },
+    {
+      "file": "src/public/ownerSystemWorkflow/WorkbenchCanvasControls.jsx",
+      "ruleId": "react-hooks/exhaustive-deps",
+      "line": 66,
+      "column": 75,
+      "message": "React Hook useLayoutEffect has a missing dependency: 'camera'. Either include it or remove the dependency array.",
+      "sourceSha256": "9ccccfbb73f1bb31b6195a0071a9991f4783597ed458567c96b14ecef8d4e925",
+      "planStep": "13",
+      "reason": "The synchronization effect calls camera.getCamera and uses camera.scale/offset solely as invalidation signals; all these members plus open are explicitly listed. Other camera facade members cannot change its result. The camera paint subscription at52–62 supplies animation frames independently. This effect initializes/reconciles the snapshot when opening or React camera state changes. Independent source/caller review: WorkbenchCanvasControls.jsx63; WorkbenchCamera.jsx; WorkbenchView.jsx1421. No separate browser run by reviewer; final shared verification remains required. Numeric canvas input review (2026-10-29): hook body and dependency list are unchanged; the added form submits through the existing resize operation and does not subscribe to camera state. The camera-controls and workbench-canvas-crop browser suites passed 15/15, including desktop/mobile camera, fit, resize, undo and Visitor coverage. Re-reviewed 2026-11-01: menu bar replacement changes rail clearance and controlled canvas-panel visibility only. Existing reviewed camera/pan member dependencies and listener lifetimes are unchanged."
+    },
+    {
+      "file": "src/public/ownerSystemWorkflow/WorkbenchViewContext.js",
+      "ruleId": "react-hooks/exhaustive-deps",
+      "line": 57,
+      "column": 6,
+      "message": "React Hook useLayoutEffect has a missing dependency: 'saved'. Either include it or remove the dependency array.",
+      "sourceSha256": "3d91d40f9a4f6e464159d54f7416cea17f4b46e83a5e857cbfe38ce266207c5d",
+      "planStep": "10",
+      "reason": "Behouden: JSON-key representeert de volledige gevalideerde saved-presentatie. previousKey onderscheidt een echte opgeslagen verandering van gewoon renderen/heropenen. Alleen een gesloten module neemt de nieuwe saved-presentatie over en behoudt open=false. S; F closed Image/blockmove/Undo; U capture. Huidige annotaties hebben regels verplaatst. Parentreview op huidige bron: de twee geanalyseerde bodies blijven op serialized saved-content en frameprimitives sturen; typeannotaties en afzonderlijke openerregistratie veranderen deze invalidatie niet."
+    },
+    {
+      "file": "src/public/ownerSystemWorkflow/WorkbenchViewContext.js",
+      "ruleId": "react-hooks/exhaustive-deps",
+      "line": 119,
+      "column": 6,
+      "message": "React Hook useLayoutEffect has missing dependencies: 'frame' and 'savedFrame'. Either include them or remove the dependency array.",
+      "sourceSha256": "3d91d40f9a4f6e464159d54f7416cea17f4b46e83a5e857cbfe38ce266207c5d",
+      "planStep": "10",
+      "reason": "Behouden: savedKey representeert het volledige savedFrame; frame left/top/width/height, resizeTarget en previewFrame staan expliciet in deps. Tijdens gesturepreview wordt niet hersteld. De map bewaart hoogstens 51 oude frames voor Undo vóór de eerste authored frame-entry. S; U history/layout; F blockmove en Undo/reload. Dit is geen tweede persistente cache. Parentreview op huidige bron: de twee geanalyseerde bodies blijven op serialized saved-content en frameprimitives sturen; typeannotaties en afzonderlijke openerregistratie veranderen deze invalidatie niet."
+    },
+    {
+      "file": "src/text/useTextEditSession.js",
+      "ruleId": "react-hooks/exhaustive-deps",
+      "line": 6,
+      "column": 5,
+      "message": "React Hook useMemo has missing dependencies: 'record' and 'scope'. Either include them or remove the dependency array.",
+      "sourceSha256": "5a75a47604d1396718999517b13b4ccbac3a986a9afc944091b7e1396d3e7af2",
+      "planStep": "19",
+      "reason": "Session identity is store plus primitive recovery scope and value/save functions. Record changes must use session.receive in adjacent layout effect so edits/recovery buffers survive, rather than recreate the session. Evidence: textEditSession units and step19 Text module1/1; scope fields match recovery identity contract. Limits: Current scoped ESLint rerun; source review. Prior browser evidence explicitly identified; no new lifecycle browser run for this proposal."
+    }
+  ]
+}

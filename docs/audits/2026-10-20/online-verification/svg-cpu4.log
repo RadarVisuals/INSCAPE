@@ -1,0 +1,70 @@
+TAP version 13
+# Subtest: attempt 1: an unavailable SVG source fails visibly and a new attempt recovers
+ok 1 - attempt 1: an unavailable SVG source fails visibly and a new attempt recovers
+  ---
+  duration_ms: 1712.5668
+  type: 'test'
+  ...
+# Subtest: attempt 2: an unavailable SVG source fails visibly and a new attempt recovers
+ok 2 - attempt 2: an unavailable SVG source fails visibly and a new attempt recovers
+  ---
+  duration_ms: 1549.0847
+  type: 'test'
+  ...
+# Subtest: attempt 3: an unavailable SVG source fails visibly and a new attempt recovers
+ok 3 - attempt 3: an unavailable SVG source fails visibly and a new attempt recovers
+  ---
+  duration_ms: 1472.4102
+  type: 'test'
+  ...
+# Subtest: attempt 4: an unavailable SVG source fails visibly and a new attempt recovers
+ok 4 - attempt 4: an unavailable SVG source fails visibly and a new attempt recovers
+  ---
+  duration_ms: 1709.8617
+  type: 'test'
+  ...
+# Subtest: attempt 5: an unavailable SVG source fails visibly and a new attempt recovers
+ok 5 - attempt 5: an unavailable SVG source fails visibly and a new attempt recovers
+  ---
+  duration_ms: 1911.4899
+  type: 'test'
+  ...
+# Subtest: attempt 6: an unavailable SVG source fails visibly and a new attempt recovers
+ok 6 - attempt 6: an unavailable SVG source fails visibly and a new attempt recovers
+  ---
+  duration_ms: 1699.4172
+  type: 'test'
+  ...
+# Subtest: attempt 7: an unavailable SVG source fails visibly and a new attempt recovers
+ok 7 - attempt 7: an unavailable SVG source fails visibly and a new attempt recovers
+  ---
+  duration_ms: 2046.8504
+  type: 'test'
+  ...
+# Subtest: attempt 8: an unavailable SVG source fails visibly and a new attempt recovers
+ok 8 - attempt 8: an unavailable SVG source fails visibly and a new attempt recovers
+  ---
+  duration_ms: 1831.1621
+  type: 'test'
+  ...
+# Subtest: attempt 9: an unavailable SVG source fails visibly and a new attempt recovers
+ok 9 - attempt 9: an unavailable SVG source fails visibly and a new attempt recovers
+  ---
+  duration_ms: 1595.5489
+  type: 'test'
+  ...
+# Subtest: attempt 10: an unavailable SVG source fails visibly and a new attempt recovers
+ok 10 - attempt 10: an unavailable SVG source fails visibly and a new attempt recovers
+  ---
+  duration_ms: 1763.6632
+  type: 'test'
+  ...
+1..10
+# tests 10
+# suites 0
+# pass 10
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 17598.0821

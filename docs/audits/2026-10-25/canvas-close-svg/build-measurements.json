@@ -1,0 +1,36 @@
+{
+  "initialJavaScript": {
+    "raw": 826107,
+    "gzip": 239927
+  },
+  "ownerJavaScript": {
+    "raw": 113654,
+    "gzip": 38180
+  },
+  "standaloneWalletJavaScript": {
+    "raw": 4547250,
+    "gzip": 1209329
+  },
+  "initialCss": {
+    "raw": 32597,
+    "gzip": 6630
+  },
+  "ownerCss": {
+    "raw": 48220,
+    "gzip": 8859
+  },
+  "coreJavaScript": {
+    "raw": 2571327,
+    "gzip": 830139
+  },
+  "totalJavaScript": {
+    "raw": 7118577,
+    "gzip": 2039468
+  },
+  "publicAssets": {
+    "raw": 17502970
+  },
+  "largestPublicAsset": {
+    "raw": 2574306
+  }
+}

@@ -1,16 +1,8 @@
 import { createPublicClient, getAddress, http } from 'viem';
 import { lukso } from 'viem/chains';
+import { ERC165_ABI, LSP0_ERC165_INTERFACE_ID } from '../library/config.js';
 
 const LUKSO_MAINNET_RPC = 'https://rpc.mainnet.lukso.network';
-const LSP0_ERC165_INTERFACE_ID = '0x24871b3d';
-const ERC165_ABI = [{
-  type: 'function',
-  name: 'supportsInterface',
-  stateMutability: 'view',
-  inputs: [{ name: 'interfaceId', type: 'bytes4' }],
-  outputs: [{ name: '', type: 'bool' }]
-}];
-
 const publicClient = createPublicClient({
   chain: lukso,
   transport: http(LUKSO_MAINNET_RPC, { timeout: 30000 })

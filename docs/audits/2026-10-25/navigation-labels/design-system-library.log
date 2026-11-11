@@ -1,0 +1,34 @@
+TAP version 13
+# Subtest: Library browsing preserves filters, attachments and selection when closed, without touching the canvas
+ok 1 - Library browsing preserves filters, attachments and selection when closed, without touching the canvas
+  ---
+  duration_ms: 2171.2808
+  type: 'test'
+  ...
+# Subtest: Library organization uses real category commands, inline confirmation and drag membership
+ok 2 - Library organization uses real category commands, inline confirmation and drag membership
+  ---
+  duration_ms: 1780.9114
+  type: 'test'
+  ...
+# Subtest: Library empty, loading and recoverable failures fit both themes on wide and narrow screens
+ok 3 - Library empty, loading and recoverable failures fit both themes on wide and narrow screens
+  ---
+  duration_ms: 5495.8465
+  type: 'test'
+  ...
+# Subtest: Sidebar keeps one Library tree and preserves the canvas, camera and browsing state when collapsed
+ok 4 - Sidebar keeps one Library tree and preserves the canvas, camera and browsing state when collapsed
+  ---
+  duration_ms: 2080.4226
+  type: 'test'
+  ...
+1..4
+# tests 4
+# suites 0
+# pass 4
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 11853.9706

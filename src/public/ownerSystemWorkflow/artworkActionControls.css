@@ -1,0 +1,18 @@
+.artwork-action-controls { display: grid; gap: 8px; min-width: 0; }
+.artwork-action-controls__group { min-width: 0; font: var(--workflow-type-control); }
+.artwork-action-controls, .artwork-action-controls * { box-sizing: border-box; }
+.artwork-action-controls :is(nav, .system-workflow__inspection-selector, .system-workflow__placement-actions, footer) {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin: 0;
+}
+.artwork-action-controls .workflow-tactile-control {
+  display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto;
+  min-width: var(--control-target-toolbar); min-height: var(--control-target-toolbar);
+  padding: 4px 8px; border-color: transparent; border-radius: var(--control-radius); font: inherit;
+}
+.artwork-action-controls .workflow-tactile-control[aria-pressed='true'] { background: var(--tactile-ink); color: var(--tactile-face); }
+.artwork-action-controls .workflow-tactile-control[aria-pressed='true']::after { display: none; }
+.artwork-action-controls svg.lucide { width: var(--icon-size-interface); height: var(--icon-size-interface); flex: 0 0 var(--icon-size-interface); }
+.artwork-action-controls .system-workflow__inspection-selector > span { color: var(--tactile-muted); }
+.artwork-action-controls .system-workflow__crop-controls { display: grid; gap: 8px; }
+.artwork-action-controls .system-workflow__crop-controls > div { display: flex; justify-content: space-between; gap: 8px; }
+.artwork-action-controls input[type='range'] { width: 100%; min-width: 0; }

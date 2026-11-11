@@ -1,0 +1,9 @@
+# Centrale bron leesbaar gemaakt
+
+Alleen `OwnerSystemWorkflowRuntime.jsx` en `WorkbenchView.jsx` zijn mechanisch geformatteerd. Statements, callbacks en JSX staan nu op leesbare regels. Geen functie is verplaatst, geen verantwoordelijkheid opnieuw ontworpen en geen CSS gewijzigd. `npm run format:core` en `format:check` begrenzen toekomstige formattering tot deze twee bestanden.
+
+De exacte voor- en natekst, hashes en vergelijkingsscript staan in `technical-regie-2026-10-23/continuation/step-06/`. De gecompileerde view is byte-identiek. Bij de runtime splitst de formatter één JSX-tekstspatie af als aangrenzend string-child. De vergelijking van de gecompileerde syntaxbomen is gelijk na uitsluitend het weglaten van bronlocaties/raw quoting en samenvoegen van aangrenzende string-children in de JSX-`children`-array. Dat is expliciet vastgelegd; het is geen claim dat beide runtimebestanden gecompileerd byte-identiek zijn.
+
+Tien reeds geregistreerde lintobservaties in deze twee bestanden zijn uitsluitend naar hun nieuwe regel/kolom/hash verplaatst. Regel en melding blijven exact gelijk; de andere 145 entries blijven staan. Beide formatterchecks en de lintgate slagen op deze versie.
+
+De gezamenlijke unitrun telde 1350 resultaten: 1345 pass, vier bronpatroonfailures door witruimte/optionele arrowhaakjes, plus het bestaande bundelbudgetprobleem. De vier tests behouden hun inhoudelijke assertions en accepteren nu die twee equivalente schrijfwijzen. Alle acht tests uit de vier geraakte testbestanden slagen daarna. Het budget is **809575 > 809500 bytes** op die meetversie en blijft zichtbaar open. Bewijs: `combined-unit-01.log` en `source-checks-01.tap`. Een gezamenlijke eindrun en behoudcontrole volgen na de lopende afgebakende reparaties; de actuele status staat in [de voortgangslijst](../../2026-10-23/code-quality-progress.json).

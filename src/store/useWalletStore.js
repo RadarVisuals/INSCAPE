@@ -1,11 +1,12 @@
 // src/store/useWalletStore.js
 import { create } from 'zustand';
 import { createClientUPProvider } from "@lukso/up-provider";
-import { createWalletClient, createPublicClient, custom, http, numberToHex, getAddress } from "viem";
+import { createPublicClient, custom, http, numberToHex, getAddress } from "viem";
 import { lukso } from "viem/chains";
 import { ERC725 } from '@erc725/erc725.js';
 import lsp3ProfileSchema from '@erc725/erc725.js/schemas/LSP3ProfileMetadata.json' with { type: 'json' };
 import { createWalletProviderLifecycle } from './walletProviderLifecycle.js';
+import { createInscapeWalletClient } from './createInscapeWalletClient.js';
 import { developmentLog, installDevelopmentGlobal, reportControlledError } from '../diagnostics.js';
 
 const DEV_DIAGNOSTICS = typeof __DEVELOPMENT_DIAGNOSTICS__ !== 'undefined' && __DEVELOPMENT_DIAGNOSTICS__ === true;
@@ -73,6 +74,11 @@ export const useWalletStore = create((set, get) => ({
 
   disposeWallet: () => lifecycleManager(set, get).dispose(),
   scheduleWalletRelease: () => lifecycleManager(set, get).scheduleRelease(),
+  beginWalletTransition: () => {
+    const report = lifecycleManager(set, get).dispose();
+    set({ authorityLifecycleStatus: 'pending' });
+    return report;
+  },
   _recoverProviderContext: (reason) => lifecycleManager(set, get).recover(reason),
 
   _failClosedProviderContext: (initializationError = null) => {
@@ -214,7 +220,7 @@ export const useWalletStore = create((set, get) => ({
 
     if (!initializationError && provider && accounts.length > 0) {
       try {
-        const walletClient = createWalletClient({
+        const walletClient = createInscapeWalletClient({
           chain: currentChain,
           transport: custom(provider),
           account: accounts[0]

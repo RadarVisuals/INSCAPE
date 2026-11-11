@@ -1,0 +1,16 @@
+html, body { margin: 0; height: auto; overflow: auto; }
+#root { height: auto; min-height: 100dvh; }
+.scene-boundary-study { min-height: 100dvh; padding: 24px; background: var(--tactile-face); color: var(--tactile-ink); font-family: var(--font-interface); }
+.scene-boundary-study h1 { font-size: 24px; }
+.scene-boundary-study h2 { font-size: 18px; }
+.study-controls button, .scene-boundary-study > div > header button, .scene-boundary-study .visitor-grid-world__navigation button { min-height: 44px; padding: 8px 12px; background: var(--tactile-well); color: inherit; border: 1px solid var(--tactile-edge); border-radius: var(--control-radius); font: inherit; cursor: pointer; }
+.study-group { margin-block: 32px; }
+.study-group > header, .study-controls { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.study-controls { margin-block: 12px; }
+.study-display-stage { position: relative; height: 60px; }
+.study-cells { display: grid; grid-template-columns: 1.2fr 1fr 1fr; gap: 12px; margin-top: 12px; }
+.study-cell { height: 320px; min-width: 0; position: relative; overflow: hidden; border-radius: 16px; background: var(--tactile-well); }
+.study-cell:not(.study-image) { padding: 20px; }
+.study-cell .text-scene-viewport, .study-cell .text-authoring-viewport { height: 100%; }
+.scene-boundary-study .visitor-grid-world__navigation { display: flex; align-items: center; justify-content: center; gap: 16px; }
+@media (max-width: 640px) { .scene-boundary-study { padding: 12px; } .study-cells { grid-template-columns: 1fr; } .study-cell { height: 300px; } }

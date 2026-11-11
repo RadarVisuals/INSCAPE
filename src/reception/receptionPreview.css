@@ -1,0 +1,44 @@
+.reception-document-preview { position: absolute; inset: 0; z-index: 100; display: flex; flex-direction: column; min-height: 0; background: var(--editor-surround); font: var(--workflow-type-control); pointer-events: auto; }
+.reception-preview-bar { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 6px; padding: 8px 12px; border-bottom: 1px solid var(--tactile-divider); }
+.reception-preview-bar > button { justify-self: start; }
+.reception-preview-actions { display: flex; align-items: center; justify-self: end; gap: 6px; }
+.reception-preview-restore { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px; padding: 8px 12px; border-bottom: 1px solid var(--tactile-divider); }
+.reception-document-preview .workflow-tactile-control { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 28px; padding: 4px 10px; }
+.reception-preview-bar [data-icon-only] { width: 28px; padding: 0; }
+.reception-viewport-controls, .reception-viewport-presets, .reception-viewport-width, .reception-viewport-width label { display: flex; align-items: center; }
+.reception-viewport-controls { gap: 8px; flex-wrap: wrap; }
+.reception-viewport-presets { gap: 3px; --tactile-selected: var(--editor-accent); --tactile-selected-ink: var(--editor-on-accent); }
+.reception-viewport-presets button { min-width: 48px; }
+.reception-viewport-width { min-height: 28px; padding: 0 8px; gap: 8px; background: var(--tactile-well); border-radius: var(--tactile-radius-control); }
+.reception-viewport-width label { gap: 2px; color: var(--tactile-muted); }
+.reception-viewport-width input[type="range"] { width: 68px; margin: 0; accent-color: var(--tactile-accent); }
+.reception-viewport-width input[type="number"] { width: 5ch; padding: 0; border: 0; appearance: textfield; background: transparent; color: var(--tactile-ink); text-align: right; font: inherit; font-variant-numeric: tabular-nums; }
+.reception-viewport-width input::-webkit-inner-spin-button { appearance: none; }
+.reception-viewport-width input:focus-visible, .reception-document-preview-tools :is(input, select):focus-visible { outline: 2px solid var(--tactile-accent); outline-offset: 1px; }
+.reception-document-preview-body { display: flex; flex: 1; min-height: 0; }
+.reception-document-preview-scroll { display: flex; flex-direction: column; flex: 1; min-width: 0; min-height: 0; overflow: auto; padding: 16px; }
+.reception-document-preview-scroll > .reception-document-viewport { margin-inline: auto; }
+.reception-document-preview-tools { flex: 0 0 240px; padding: 12px; overflow: auto; background: var(--tactile-face); border-left: 1px solid var(--tactile-edge); display: flex; flex-direction: column; gap: 12px; }
+.reception-document-preview-tools label { display: grid; gap: 6px; }
+.reception-document-preview-tools input, .reception-document-preview-tools select { min-width: 0; width: 100%; box-sizing: border-box; background: var(--tactile-well); color: inherit; border: 1px solid var(--tactile-edge); border-radius: var(--tactile-radius-control); padding: 6px; font: inherit; }
+.reception-document-preview-tools p { margin: 0; color: var(--tactile-muted); line-height: 1.5; }
+.reception-document-preview-tools fieldset { display: grid; gap: 10px; margin: 0; padding: 0; border: 0; }
+.reception-document-preview-tools legend { margin-bottom: 10px; }
+.reception-document-preview-order { display: flex; gap: 4px; }
+@media (max-width: 1000px) {
+  .reception-preview-actions { display: contents; }
+  .reception-preview-actions > button { grid-area: 1 / 3; justify-self: end; }
+  .reception-viewport-controls { grid-area: 2 / 1 / 3 / -1; justify-self: end; }
+}
+@media (max-width: 700px) {
+  .reception-document-preview-body { flex-direction: column; }
+  .reception-document-preview-tools { flex-basis: 200px; border-left: 0; border-top: 1px solid var(--tactile-edge); }
+}
+@media (max-width: 440px) {
+  .reception-preview-bar > button span { display: none; }
+  .reception-viewport-controls { justify-self: start; gap: 4px; }
+  .reception-viewport-width input[type="range"] { width: 40px; }
+}
+@media (forced-colors: active) {
+  .reception-viewport-presets { --tactile-selected: Highlight; --tactile-selected-ink: HighlightText; }
+}

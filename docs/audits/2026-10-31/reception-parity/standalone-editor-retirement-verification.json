@@ -1,0 +1,51 @@
+{
+  "date": "2026-10-31",
+  "scope": "Current local application checkout and Design Lab; retirement of separate Reception authoring surfaces",
+  "branch": "codex/profile-work-index-2026-10-30",
+  "baseCommit": "d181c54",
+  "result": "Passed: Reception is a document in the shared native Editor. No separate Reception authoring surface remains in the checked source or production manifest.",
+  "cleanupThisPass": [
+    "Removed the obsolete reception-study Design Lab experiment, custom Bento editor, design controls, layout helper and tests.",
+    "Removed unused standalone Reception gesture, colour wrapper, range and editing-only canvas hooks/styles.",
+    "Removed the deleted editor's manual build chunk rule.",
+    "Updated Design Lab integration coverage to exercise the shared native Editor.",
+    "Updated production route measurement and built-entry coverage to identify the shared runtime through actual chunk module membership."
+  ],
+  "entryPointsChecked": [
+    "Public Edit Reception intent through normal owner authentication and reconciliation",
+    "My Inscape edit action",
+    "Shared Editor active-document selector",
+    "Reload and document history",
+    "Design Lab Reception sample mounting OwnerSystemWorkflowRuntime"
+  ],
+  "sharedOwner": "src/public/ownerSystemWorkflow/OwnerSystemWorkflowRuntime.jsx -> OwnerWorkbenchSession -> shared EditorDocument and WorkbenchSession",
+  "retainedByDesign": [
+    "Reception document scope and validation/conversion helpers",
+    "Native Editor cell tools",
+    "Responsive preview and phone-layout controls",
+    "Public Reception rendering, including saved-format compatibility"
+  ],
+  "checks": {
+    "source": "13 explicitly checked retired files absent; zero retired component or chunk references in active source/config; zero retired editor manifest entries",
+    "browser": "24 native Editor, boundary, reader and colour-control browser cases passed; shared Design Lab integration passed; built fresh-entry integration passed",
+    "unit": "Reception scope/routing 24 cases, Design Lab helpers 3 cases, owner runtime isolation 5 cases and merged-chunk route measurement 1 case passed",
+    "lint": "Passed; 536 source files and 83 recorded existing hook exceptions",
+    "typecheck": "Passed",
+    "designInventory": "Passed",
+    "whitespace": "git diff --check passed",
+    "production": "Rebuilt artifacts contain shared runtime editing entry; build:check passed with 799609 initial JavaScript bytes",
+    "editingBundle": "assets/OwnerSystemWorkflowRuntime-0r2oFbkm.js"
+  },
+  "evidence": [
+    "output/design-lab/verification/shared-reception-editor.png",
+    "output/design-lab/verification/editor-phone-preview.png",
+    "output/design-lab/verification/shared-editor-narrow.png",
+    "dist/bundle-report.json"
+  ],
+  "limits": [
+    "Local working-tree verification, not a new remote CI or deployment result.",
+    "The complete release suite was not run; focused affected-boundary checks were run.",
+    "Historical audit records and old saved-document compatibility remain intentionally.",
+    "The Design Lab uses sample-profile storage; switching to its ordinary canvas also uses the existing Display preference key for that sample profile, documented in DESIGN_LAB.md."
+  ]
+}

@@ -1,0 +1,58 @@
+{
+  "checkedAt": "2026-10-20T07:08:35.297Z",
+  "address": "0x001048331cd14cef40dd5da644a738e7324fe691",
+  "rpcUrl": "https://rpc.mainnet.lukso.network",
+  "key": "0x804dd24d51189d1d9e972f155541cead2653af105983d5acac1ec2b3478d9362",
+  "chainId": 42,
+  "value": "0x00006f357c6a0020fb48c27a290af03b1457de842df525a0360bc0c3c853ba07d069fdae30b4f786697066733a2f2f6261666b7265696176677674376e796b68666a796b686433376a79616c796d6966337466797a366b6e6174786d6c796d343534786f7076366f6365",
+  "pointer": {
+    "verification": {
+      "method": "keccak256(utf8)",
+      "data": "0xfb48c27a290af03b1457de842df525a0360bc0c3c853ba07d069fdae30b4f786"
+    },
+    "url": "ipfs://bafkreiavgvt7nykhfjykhd37jyalymif3tfyz6knatxmlym454xopv6oce"
+  },
+  "latestBlock": "8611961",
+  "events": [
+    {
+      "transactionHash": "0x526e37c7661508316acb59df8e9874adbc64e2ee20b098bb0c43eaac329e7fc1",
+      "blockNumber": "8611939",
+      "atUtc": "2026-10-20T07:03:36.000Z",
+      "status": "success",
+      "from": "0x0fd0e86bfbd6e3c0e8b113c1bff56927be2c3c2f",
+      "to": "0x5b42f4fa05c1aa655b8bcf66666cd98a248035a6",
+      "matchingProfileDataChanged": true
+    }
+  ],
+  "resolution": {
+    "status": "RESOLVED",
+    "pointer": {
+      "verification": {
+        "method": "keccak256(utf8)",
+        "data": "0xfb48c27a290af03b1457de842df525a0360bc0c3c853ba07d069fdae30b4f786"
+      },
+      "url": "ipfs://bafkreiavgvt7nykhfjykhd37jyalymif3tfyz6knatxmlym454xopv6oce"
+    },
+    "verifiedCanonicalBytesAndHash": true,
+    "profile": "0x001048331cd14cef40dd5da644a738e7324fe691",
+    "documentKeys": [
+      "appearance",
+      "artboard",
+      "createdAt",
+      "documentId",
+      "documentType",
+      "exportedAt",
+      "geometry",
+      "grids",
+      "identityPresentation",
+      "metadata",
+      "network",
+      "profile",
+      "revision",
+      "shapes",
+      "version",
+      "workbench",
+      "workbenchIndex"
+    ]
+  }
+}

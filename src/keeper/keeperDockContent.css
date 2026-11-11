@@ -1,0 +1,6 @@
+.keeper-dock-content { position: relative; display: flex; flex-direction: column; align-items: center; gap: 6px; box-sizing: border-box; width: 100%; height: 100%; padding: 14px; color: var(--tactile-ink); font: var(--workflow-type-control); }
+.keeper-dock-artwork { box-sizing: border-box; display: grid; place-items: center; width: 100%; height: 84px; min-height: 0; }
+.keeper-dock-artwork--empty { flex: none; width: 46px; height: 46px; border: 1px dashed var(--tactile-edge); border-radius: var(--control-radius); }
+.keeper-dock-artwork--empty > svg { width: 22px; height: 22px; }
+.keeper-dock-content > small { color: var(--tactile-muted); font: var(--workflow-type-panel-body); text-align: center; }
+.keeper-dock-content > .keeper-home { position: absolute; width: 14px; height: 14px; top: 6px; right: 6px; }

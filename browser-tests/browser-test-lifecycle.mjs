@@ -1,12 +1,18 @@
 import { spawn } from 'node:child_process';
-import { basename, dirname, isAbsolute, relative, resolve } from 'node:path';
+import { basename, delimiter, dirname, isAbsolute, relative, resolve } from 'node:path';
+import { readFile, readdir, realpath, stat } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
 
 const delay = (milliseconds) => new Promise((resolveDelay) => setTimeout(resolveDelay, milliseconds));
 
 export const BROWSER_LIFECYCLE_TIMEOUTS = Object.freeze({
   setupOverallMs: 60_000,
+  serverSetupMs: 15_000,
   commandMs: 3_000,
-  processInventoryMs: 3_000,
+  // A fresh PowerShell/CIM snapshot includes process startup. Under browser
+  // load that can exceed the generic command budget; keep a separate bound.
+  processInventoryMs: 6_000,
+  processObservationMs: 1_000,
   processTerminationMs: 4_000,
   browserCloseMs: 3_000,
   resourceCloseMs: 2_000,
@@ -92,10 +98,18 @@ function within(parent, child) {
 export function validateBrowserRuntimePath(runtimePath, workspaceRoot) {
   if (typeof runtimePath !== 'string' || typeof workspaceRoot !== 'string') throw new Error('Browser runtime cleanup requires resolved string paths');
   const exactWorkspace = resolve(workspaceRoot); const exactRuntime = resolve(runtimePath);
-  const expectedRuntime = resolve(exactWorkspace, '.browser-test-runtime');
+  const runtimeName = basename(exactRuntime);
+  const allowedRuntimeNames = new Set([
+    '.browser-test-runtime',
+    '.browser-test-runtime-task4a',
+    '.browser-test-runtime-task4a-isolation',
+  ]);
+  const uniqueOwnedRuntime = /^\.browser-test-runtime-(?:task4a|system-characterization|published-visitor|owner-routing|owner-identity)-\d+-\d+-[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u.test(runtimeName);
+  const expectedRuntime = resolve(exactWorkspace, basename(exactRuntime));
   const driveRoot = resolve(exactRuntime, dirname(exactRuntime) === exactRuntime ? '.' : '..');
   if (!isAbsolute(exactRuntime) || exactRuntime !== expectedRuntime || !within(exactWorkspace, exactRuntime)
-      || exactRuntime === exactWorkspace || exactRuntime === driveRoot || basename(exactRuntime) !== '.browser-test-runtime') {
+      || exactRuntime === exactWorkspace || exactRuntime === driveRoot
+      || (!allowedRuntimeNames.has(runtimeName) && !uniqueOwnedRuntime)) {
     throw new Error(`Refusing browser runtime cleanup outside the exact test artifact path: ${exactRuntime}`);
   }
   return exactRuntime;
@@ -120,7 +134,9 @@ export function runBoundedCommand(command, args, options = {}) {
     child.stdout?.on('data', (chunk) => { stdout += chunk; });
     child.stderr?.on('data', (chunk) => { stderr += chunk; });
     child.once('error', (error) => finish(reject, error));
-    child.once('exit', (code) => finish(resolveRun, { code, stdout, stderr }));
+    // Process exit can precede the last stdout/stderr chunks. Inventory JSON
+    // and termination diagnostics are complete only once the pipes close.
+    child.once('close', (code) => finish(resolveRun, { code, stdout, stderr }));
   });
 }
 
@@ -128,52 +144,210 @@ export async function removeBrowserRuntime({ runtimePath, workspaceRoot, timeout
   const exactRuntime = validateBrowserRuntimePath(runtimePath, workspaceRoot);
   const script = "const {rmSync}=require('node:fs');try{rmSync(process.argv[1],{recursive:true,force:true,maxRetries:0})}catch(e){console.error(e.code||'ERROR');process.exitCode=1}";
   const result = await run(process.execPath, ['-e', script, exactRuntime], { stdio: ['ignore', 'pipe', 'pipe'], timeoutMs });
-  if (result.code !== 0) throw Object.assign(new Error(`Browser runtime removal failed: ${result.stderr.trim() || `exit ${result.code}`}`), { code: 'RUNTIME_REMOVE_FAILED' });
-  return { runtimePath: exactRuntime };
+  if (result.code === 0) return { runtimePath: exactRuntime, mode: 'node-rm' };
+  if (process.platform !== 'win32') {
+    throw Object.assign(new Error(`Browser runtime removal failed: ${result.stderr.trim() || `exit ${result.code}`}`), { code: 'RUNTIME_REMOVE_FAILED' });
+  }
+  const windowsScript = '& { param([string]$Target) Remove-Item -LiteralPath $Target -Recurse -Force -ErrorAction Stop }';
+  const fallback = await run('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', windowsScript, exactRuntime], {
+    stdio: ['ignore', 'pipe', 'pipe'], timeoutMs,
+  });
+  if (fallback.code !== 0) throw Object.assign(new Error(`Browser runtime removal failed: ${fallback.stderr.trim() || result.stderr.trim() || `exit ${fallback.code}`}`), { code: 'RUNTIME_REMOVE_FAILED' });
+  return { runtimePath: exactRuntime, mode: 'powershell-fallback' };
 }
 
-export async function listWindowsProcesses() {
-  const script = 'Get-CimInstance Win32_Process | Select-Object ProcessId,ParentProcessId,CreationDate | ConvertTo-Json -Compress';
-  const result = await runBoundedCommand('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', script], { stdio: ['ignore', 'pipe', 'pipe'] });
+const windowsRuntimeCache = new Map();
+const windowsExecutableMetadata = new Map();
+
+// Pin metadata only. Every ownership checkpoint still executes a fresh query.
+export async function resolveWindowsProcessRuntime(environment = process.env, { run = runBoundedCommand, platform = process.platform } = {}) {
+  if (platform !== 'win32') return null;
+  const configured = environment.INSCAPE_PROCESS_POWERSHELL ?? process.env.INSCAPE_PROCESS_POWERSHELL;
+  const searchPath = environment.PATH ?? environment.Path ?? process.env.PATH ?? '';
+  const systemRoot = environment.SystemRoot ?? process.env.SystemRoot;
+  const key = JSON.stringify([configured || null, searchPath, systemRoot]);
+  if (!windowsRuntimeCache.has(key)) windowsRuntimeCache.set(key, (async () => {
+    const directories = searchPath.split(delimiter).map(value => value.replace(/^"|"$/gu, '')).filter(isAbsolute);
+    const locate = async name => {
+      if (!isAbsolute(name) && /[\\/]/u.test(name)) throw Error('PowerShell configuration requires an absolute path or executable name');
+      const paths = isAbsolute(name) ? [name] : directories.map(directory => resolve(directory, name));
+      if (!isAbsolute(name) && name === 'powershell.exe' && systemRoot)
+        paths.push(resolve(systemRoot, 'System32/WindowsPowerShell/v1.0/powershell.exe'));
+      for (const path of paths) {
+        const info = await stat(path).catch(error => { if (error.code === 'ENOENT' || error.code === 'ENOTDIR') return null; throw error; });
+        if (info?.isFile()) return realpath(path);
+      }
+      return null;
+    };
+    const executable = configured ? await locate(configured) : await locate('pwsh.exe') || await locate('powershell.exe');
+    if (!executable) throw Error('Windows process inventory requires an available PowerShell executable');
+    if (!windowsExecutableMetadata.has(executable)) windowsExecutableMetadata.set(executable, (async () => {
+      const sha256 = createHash('sha256').update(await readFile(executable)).digest('hex');
+      const result = await run(executable, ['-NoProfile', '-NonInteractive', '-Command', '$PSVersionTable.PSVersion.ToString()'], {
+        stdio: ['ignore', 'pipe', 'pipe'], timeoutMs: BROWSER_LIFECYCLE_TIMEOUTS.processInventoryMs,
+      });
+      const version = result.stdout.trim();
+      if (result.code !== 0 || !/^\d+\.\d+\.\d+(?:\.\d+)?(?:[-+][\da-z.-]+)?$/iu.test(version))
+        throw Error(`Unable to identify Windows process runtime: ${result.stderr.trim() || `exit ${result.code}; invalid version`}`);
+      return Object.freeze({ executable, version, sha256 });
+    })());
+    return windowsExecutableMetadata.get(executable);
+  })());
+  return windowsRuntimeCache.get(key);
+}
+
+export async function listWindowsProcesses({ run = runBoundedCommand, runtime, environment = process.env } = {}) {
+  const selected = runtime || await resolveWindowsProcessRuntime(environment);
+  if (!selected) throw Error('Windows process inventory requires a Windows runtime');
+  // JSON serializes DateTime differently in Windows PowerShell and PowerShell 7.
+  // Preserve the existing UTC millisecond identity explicitly in both runtimes.
+  const script = "$ErrorActionPreference='Stop'; Get-CimInstance Win32_Process -Property ProcessId,ParentProcessId,CreationDate -ErrorAction Stop | Select-Object ProcessId,ParentProcessId,@{Name='CreationDate';Expression={if ($null -ne $_.CreationDate) {'/Date(' + ([DateTimeOffset]$_.CreationDate).ToUnixTimeMilliseconds().ToString([Globalization.CultureInfo]::InvariantCulture) + ')/'}}} | ConvertTo-Json -Compress -ErrorAction Stop";
+  const result = await run(selected.executable, ['-NoProfile', '-NonInteractive', '-Command', script], {
+    stdio: ['ignore', 'pipe', 'pipe'], timeoutMs: BROWSER_LIFECYCLE_TIMEOUTS.processInventoryMs,
+  });
   if (result.code !== 0) throw new Error(`Unable to inspect Windows process ownership: ${result.stderr.trim() || `exit ${result.code}`}`);
-  const parsed = result.stdout.trim() ? JSON.parse(result.stdout) : [];
-  return (Array.isArray(parsed) ? parsed : [parsed]).map((entry) => ({
-    pid: Number(entry.ProcessId),
-    parentPid: Number(entry.ParentProcessId),
-    identity: String(entry.CreationDate || '')
-  })).filter((entry) => validPid(entry.pid));
+  if (!result.stdout.trim()) throw new Error('Windows process inventory was empty');
+  const parsed = JSON.parse(result.stdout), processes = [], seen = new Set();
+  for (const entry of Array.isArray(parsed) ? parsed : [parsed]) {
+    if (!entry || !Number.isSafeInteger(entry.ProcessId) || entry.ProcessId < 0)
+      throw new Error('Windows process inventory contains an invalid process ID');
+    // The idle process has PID 0 and no creation date; it cannot be owned.
+    if (entry.ProcessId === 0) continue;
+    if (!Number.isSafeInteger(entry.ParentProcessId) || entry.ParentProcessId < 0
+        || typeof entry.CreationDate !== 'string' || !entry.CreationDate.trim())
+      throw new Error(`Windows process inventory lacks ownership identity for PID ${entry.ProcessId}`);
+    if (seen.has(entry.ProcessId)) throw new Error(`Windows process inventory repeats PID ${entry.ProcessId}`);
+    seen.add(entry.ProcessId);
+    processes.push({ pid: entry.ProcessId, parentPid: entry.ParentProcessId, identity: entry.CreationDate });
+  }
+  if (!processes.length) throw new Error('Windows process inventory was empty');
+  return processes;
 }
 
-export async function terminateWindowsProcessTree(pid) {
-  if (!validPid(pid)) throw new Error(`Refusing ambiguous browser process target: ${pid}`);
-  return runBoundedCommand('taskkill', ['/PID', String(pid), '/T', '/F'], { stdio: ['ignore', 'pipe', 'pipe'], timeoutMs: BROWSER_LIFECYCLE_TIMEOUTS.processTerminationMs });
+function processStartedAt(identity) {
+  const linux = typeof identity === 'string' && identity.match(/^linux:(\d+)$/u);
+  if (linux) return Number.isSafeInteger(Number(linux[1])) ? Number(linux[1]) : NaN;
+  const windows = typeof identity === 'string' && identity.match(/^\/Date\((\d+)\)\/$/u);
+  if (windows) return Number(windows[1]);
+  // POSIX ps lstart has second precision. Opaque or malformed identities cannot
+  // establish the order of a parent and child and must not confer ownership.
+  if (typeof identity !== 'string' || !/^[A-Z][a-z]{2} [A-Z][a-z]{2}\s+\d{1,2} \d{2}:\d{2}:\d{2} \d{4}$/u.test(identity)) return NaN;
+  return Date.parse(identity);
+}
+
+export async function terminateWindowsProcess(entry, { run = runBoundedCommand, runtime, timeoutMs = BROWSER_LIFECYCLE_TIMEOUTS.processTerminationMs } = {}) {
+  const startedAt = processStartedAt(entry?.identity);
+  if (!validPid(entry?.pid) || !Number.isFinite(startedAt)) throw new Error('Refusing ambiguous browser process identity');
+  const selected = runtime || await resolveWindowsProcessRuntime();
+  // Retain the native handle before checking StartTime so a reused PID cannot
+  // redirect Kill. Never delegate descendant discovery to taskkill /T.
+  const script = `$ErrorActionPreference='Stop'; $targetProcess=Get-Process -Id ${entry.pid} -ErrorAction SilentlyContinue; if ($null -eq $targetProcess) { exit 0 }; try { $targetHandle=$targetProcess.SafeHandle; $targetStart=([DateTimeOffset]$targetProcess.StartTime).ToUnixTimeMilliseconds(); if ($targetStart -ne ${startedAt}) { throw 'Process creation identity changed' }; $targetProcess.Kill() } finally { $targetProcess.Dispose() }`;
+  const result = await run(selected.executable, ['-NoProfile', '-NonInteractive', '-Command', script], {
+    stdio: ['ignore', 'pipe', 'pipe'], timeoutMs,
+  });
+  if (result.code !== 0) throw new Error(`Verified process termination failed: ${result.stderr.trim() || `exit ${result.code}`}`);
+  return result;
+}
+
+// Linux /proc starttime and uptime share the boot clock. ps lstart converts
+// kernel ticks to a rounded wall time, which can precede Date.now() by a second.
+// Keep birth ordering in ticks instead of widening the ownership time window.
+export async function captureProcessLaunchTime({ platform = process.platform, read = readFile, run = runBoundedCommand } = {}) {
+  if (platform !== 'linux') return Date.now();
+  const result = await run('getconf', ['CLK_TCK'], { stdio: ['ignore', 'pipe', 'pipe'], timeoutMs: BROWSER_LIFECYCLE_TIMEOUTS.processInventoryMs });
+  const hz = Number(result.stdout.trim());
+  if (result.code !== 0 || !Number.isSafeInteger(hz) || hz <= 0) throw Error('Unable to determine Linux process clock ticks');
+  const uptime = (await read('/proc/uptime', 'utf8')).match(/^(\d+)\.(\d+)\s/u);
+  if (!uptime) throw Error('Invalid Linux boot clock');
+  const ticks = BigInt(uptime[1]) * BigInt(hz) + BigInt(uptime[2]) * BigInt(hz) / 10n ** BigInt(uptime[2].length);
+  if (ticks > BigInt(Number.MAX_SAFE_INTEGER)) throw Error('Linux boot clock exceeds safe identity range');
+  return `linux:${ticks}`;
+}
+
+export async function listPosixProcesses({ run = runBoundedCommand, platform = process.platform, read = readFile, directories = readdir } = {}) {
+  if (platform === 'linux') {
+    const pids = (await directories('/proc')).filter(name => /^[1-9]\d*$/u.test(name));
+    const entries = [];
+    // Bound filesystem work even on hosts with large process inventories.
+    for (let index = 0; index < pids.length; index += 16) {
+      const batch = await Promise.all(pids.slice(index, index + 16).map(async name => {
+        let raw;
+        try { raw = await read(`/proc/${name}/stat`, 'utf8'); }
+        catch (error) { if (['ENOENT', 'ESRCH'].includes(error.code)) return null; throw error; }
+        const end = raw.lastIndexOf(') '), fields = raw.slice(end + 2).trim().split(/\s+/u);
+        const pid = Number(raw.slice(0, raw.indexOf(' '))), parentPid = Number(fields[1]), ticks = fields[19];
+        if (end < 0 || pid !== Number(name) || !validPid(pid) || !Number.isSafeInteger(parentPid) || parentPid < 0
+          || !/^\d+$/u.test(ticks || '') || !Number.isSafeInteger(Number(ticks))) throw Error(`Invalid Linux process identity for PID ${name}`);
+        return { pid, parentPid, identity: `linux:${ticks}` };
+      }));
+      entries.push(...batch.filter(Boolean));
+    }
+    return entries;
+  }
+  const result = await run('ps', ['-axo', 'pid=,ppid=,lstart='], {
+    stdio: ['ignore', 'pipe', 'pipe'], timeoutMs: BROWSER_LIFECYCLE_TIMEOUTS.processInventoryMs,
+  });
+  if (result.code !== 0) throw new Error(`Unable to inspect POSIX process ownership: ${result.stderr.trim() || `exit ${result.code}`}`);
+  return result.stdout.split(/\r?\n/u).map((line) => {
+    const match = line.match(/^\s*(\d+)\s+(\d+)\s+(.+?)\s*$/u);
+    return match ? { pid: Number(match[1]), parentPid: Number(match[2]), identity: match[3] } : null;
+  }).filter((entry) => entry && validPid(entry.pid));
+}
+
+export async function terminatePosixProcess(entry, {
+  inventory = listPosixProcesses,
+  kill = process.kill,
+} = {}) {
+  if (!validPid(entry?.pid) || !Number.isFinite(processStartedAt(entry.identity))) throw new Error('Refusing ambiguous browser process identity');
+  const current = (await inventory()).find(process => process.pid === entry.pid);
+  if (!current) return;
+  if (current.identity !== entry.identity) throw new Error(`Refusing reused browser process target: ${entry.pid}`);
+  try { kill(entry.pid, 'SIGKILL'); }
+  catch (error) { if (error?.code !== 'ESRCH') throw error; }
 }
 
 export function createOwnedProcessTree({
   rootPid,
+  rootStartedAt,
+  rootParentPid,
+  isRootAlive = () => true,
   listProcesses,
-  terminateTree,
+  terminateProcess,
+  terminateWithIdentityCheck,
   inventoryTimeoutMs = BROWSER_LIFECYCLE_TIMEOUTS.processInventoryMs,
   terminationTimeoutMs = BROWSER_LIFECYCLE_TIMEOUTS.processTerminationMs
 }) {
   if (!validPid(rootPid)) throw new Error(`Cannot track browser with invalid root PID: ${rootPid}`);
   const owned = new Map();
+  let rootChecked = false;
 
-  async function inventory() {
-    return withinDeadline(listProcesses(), inventoryTimeoutMs, `Process inventory exceeded its ${inventoryTimeoutMs}ms deadline`);
+  async function inventory(timeoutMs = inventoryTimeoutMs) {
+    return withinDeadline(listProcesses(), timeoutMs, `Process inventory exceeded its ${timeoutMs}ms deadline`);
   }
 
   function record(processes) {
     const byPid = new Map(processes.map((entry) => [entry.pid, entry]));
     const root = byPid.get(rootPid);
-    if (root && !owned.has(rootPid)) owned.set(rootPid, { identity: root.identity, parentPid: root.parentPid });
+    if (!rootChecked) {
+      rootChecked = true;
+      const startedAt = processStartedAt(root?.identity);
+      const linuxClock = typeof rootStartedAt === 'string' && rootStartedAt.startsWith('linux:');
+      const earliest = linuxClock ? processStartedAt(rootStartedAt)
+        : /^\/Date/u.test(root?.identity || '') ? rootStartedAt : Math.floor(rootStartedAt / 1000) * 1000;
+      if (root && isRootAlive() && (rootParentPid === undefined || root.parentPid === rootParentPid)
+          && (!linuxClock || root.identity.startsWith('linux:'))
+          && Number.isFinite(startedAt) && (rootStartedAt === undefined || startedAt >= earliest))
+        owned.set(rootPid, { identity: root.identity, parentPid: root.parentPid, startedAt, depth: 0 });
+    }
     let changed = true;
     while (changed) {
       changed = false;
       for (const process of processes) {
         const parent = owned.get(process.parentPid);
-        if (parent && byPid.get(process.parentPid)?.identity === parent.identity && !owned.has(process.pid)) {
-          owned.set(process.pid, { identity: process.identity, parentPid: process.parentPid }); changed = true;
+        const startedAt = processStartedAt(process.identity);
+        if (parent && byPid.get(process.parentPid)?.identity === parent.identity && !owned.has(process.pid)
+            && Number.isFinite(startedAt) && startedAt >= parent.startedAt) {
+          owned.set(process.pid, { identity: process.identity, parentPid: process.parentPid, startedAt, depth: parent.depth + 1 }); changed = true;
         }
       }
     }
@@ -194,20 +368,37 @@ export function createOwnedProcessTree({
     return remaining;
   }
 
-  async function forceTerminate(remaining) {
-    const remainingIds = new Set(remaining.map((entry) => entry.pid));
-    const targets = remaining.filter((entry) => !remainingIds.has(owned.get(entry.pid)?.parentPid)).map((entry) => entry.pid);
+  async function forceTerminate(remaining, totalTimeoutMs = Infinity) {
+    if (totalTimeoutMs !== Infinity && (!Number.isFinite(totalTimeoutMs) || totalTimeoutMs <= 0))
+      throw new Error('Process termination requires a positive total deadline');
+    const deadline = Date.now() + totalTimeoutMs;
+    const budget = () => {
+      const left = deadline - Date.now();
+      if (left <= 0) throw new Error('Owned process termination total deadline exceeded');
+      return left;
+    };
+    const targets = [...remaining].sort((a, b) => (owned.get(b.pid)?.depth ?? 0) - (owned.get(a.pid)?.depth ?? 0)).map(entry => entry.pid);
     for (const pid of targets) {
       const expected = owned.get(pid);
       if (!validPid(pid) || expected?.identity !== remaining.find((entry) => entry.pid === pid)?.identity) {
         throw new Error(`Refusing unverified browser process target: ${pid}`);
       }
-      const current = (await inventory()).find((entry) => entry.pid === pid);
+      // The Windows native operation retains a handle and verifies its start
+      // identity itself. Repeating a whole-machine snapshot before every such
+      // operation adds no race protection and exhausts the total close budget.
+      if (terminateWithIdentityCheck) {
+        const timeoutMs = Math.min(terminationTimeoutMs, budget());
+        await withinDeadline(terminateWithIdentityCheck({ pid, ...expected }, timeoutMs), timeoutMs,
+          `Termination of owned browser PID ${pid} exceeded its ${timeoutMs}ms deadline`);
+        continue;
+      }
+      const current = (await inventory(Math.min(inventoryTimeoutMs, budget()))).find((entry) => entry.pid === pid);
       if (!current) continue;
       if (current.identity !== expected.identity) {
         throw new Error(`Refusing reused browser process target: PID ${pid} changed creation identity`);
       }
-      await withinDeadline(terminateTree(pid), terminationTimeoutMs, `Termination of owned browser PID ${pid} exceeded its ${terminationTimeoutMs}ms deadline`);
+      const timeoutMs = Math.min(terminationTimeoutMs, budget());
+      await withinDeadline(terminateProcess(current), timeoutMs, `Termination of owned browser PID ${pid} exceeded its ${timeoutMs}ms deadline`);
     }
     return targets;
   }
@@ -229,22 +420,16 @@ export function createBrowserTestCleanup({ rootPid, processTree, runtimePath, wo
       await attempt('cleanup:routes', async () => resources.routeController?.close?.({ cancel: async () => resources.context?.close?.() }));
       await attempt('cleanup:page-cdp', async () => resources.pageCdp?.detach?.());
       await attempt('cleanup:context', async () => resources.context && withinDeadline(resources.context.close(), BROWSER_LIFECYCLE_TIMEOUTS.browserCloseMs, 'Playwright context close deadline exceeded'));
-      await attempt('cleanup:browser', async () => resources.browser && withinDeadline(resources.browser.close(), BROWSER_LIFECYCLE_TIMEOUTS.browserCloseMs, 'Playwright browser close deadline exceeded'));
-      await attempt('cleanup:browser-server', async () => {
-        if (!resources.browserServer) return;
-        try {
-          await withinDeadline(resources.browserServer.close(), BROWSER_LIFECYCLE_TIMEOUTS.browserCloseMs, 'Playwright browser server close deadline exceeded');
-          shutdownMode = 'graceful';
-        } catch (closeError) {
-          await withinDeadline(resources.browserServer.kill(), BROWSER_LIFECYCLE_TIMEOUTS.browserCloseMs, 'Playwright browser server kill deadline exceeded');
-          shutdownMode = 'playwright-kill';
-          if (closeError.code !== 'ETIMEDOUT') throw closeError;
-        }
+      await attempt('cleanup:browser', async () => !resources.browserSession && resources.browser && withinDeadline(resources.browser.close(), BROWSER_LIFECYCLE_TIMEOUTS.browserCloseMs, 'Playwright browser close deadline exceeded'));
+      await attempt('cleanup:owned-browser', async () => {
+        if (!resources.browserSession) return;
+        await resources.browserSession.close();
+        shutdownMode = 'owned-processes';
       });
       if (processTree) await attempt('cleanup:edge-exit', async () => {
         remaining = await processTree.waitForExit(BROWSER_LIFECYCLE_TIMEOUTS.gracefulExitMs);
         if (remaining.length) {
-          forcedPids = await processTree.forceTerminate(remaining); shutdownMode = 'verified-taskkill';
+          forcedPids = await processTree.forceTerminate(remaining); shutdownMode = 'verified-processes';
           remaining = await processTree.waitForExit(BROWSER_LIFECYCLE_TIMEOUTS.forcedExitMs);
         }
         if (remaining.length) throw new Error(`Owned Edge tree remained alive: ${remaining.map((entry) => entry.pid).join(',')}`);

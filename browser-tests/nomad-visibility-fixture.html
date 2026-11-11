@@ -1,0 +1,27 @@
+<!doctype html><html><meta charset="utf-8"><title>Nomad pauzesignaal — afzonderlijke controle</title>
+<style>body{background:#222;color:#eee;font:16px system-ui}#scene{display:flex}iframe{width:220px;height:340px;border:0}pre{white-space:pre-wrap}</style>
+<h1>Nomad: pauzeren zonder opnieuw laden</h1><p>Afzonderlijke controle van de artworkzijde. Dit gebruikt geen Inscape SVG-documenthost.</p>
+<button id="test" disabled>Test pauzeren en hervatten</button><div id="scene"></div><pre id="result">Laden…</pre>
+<script>
+const scene=document.getElementById('scene'),out=document.getElementById('result'),events=[];let testing=false;
+const source=new URLSearchParams(location.search).get('asset')==='original'?'original':'compact';
+for(let i=0;i<4;i++){
+ const frame=document.createElement('iframe');frame.sandbox='allow-scripts';frame.src='/output/nomad-retention/'+source+'-probe.svg';
+ frame.onload=()=>frame.contentWindow.postMessage({type:'inscape:html-artwork-visibility',visible:true},'*');scene.append(frame);
+}
+addEventListener('message',e=>{if(e.data?.type==='retention-probe'){events.push(e.data);if(new Set(events.filter(x=>x.reason==='first-draw').map(x=>x.id)).size===4&&!testing)document.getElementById('test').disabled=false;out.textContent=JSON.stringify(events.slice(-4),null,2);}});
+const delay=ms=>new Promise(r=>setTimeout(r,ms));
+document.getElementById('test').onclick=async()=>{
+ const button=document.getElementById('test');button.disabled=true;testing=true;const cycles=[];
+ const set=visible=>{scene.style.transform=visible?'':'translateX(-2000px)';for(const f of scene.children)f.contentWindow.postMessage({type:'inscape:html-artwork-visibility',visible},'*');};
+ for(let i=0;i<3;i++){
+  const start=events.length;set(false);await delay(3200);
+  const off=events.slice(start).filter(e=>!e.visible),ids=[...new Set(off.map(e=>e.id))];
+  const paused=ids.length===4&&ids.every(id=>{const a=off.filter(e=>e.id===id);return a.length>=2&&a.at(-1).at-a.at(-2).at>=300&&a.at(-1).draws===a.at(-2).draws;});
+  set(true);await delay(3200);
+  const resumed=ids.length===4&&ids.every(id=>{const a=off.filter(e=>e.id===id).at(-1),b=events.slice(start).filter(e=>e.id===id&&e.visible).at(-1);return b&&b.draws>a.draws&&b.uploads===a.uploads;});
+  cycles.push({paused,resumedWithoutTextureUpload:resumed,hiddenSamples:off});
+ }
+ out.textContent=JSON.stringify({source,cycles,pass:cycles.every(c=>c.paused&&c.resumedWithoutTextureUpload)},null,2);button.disabled=false;testing=false;
+};
+</script></html>

@@ -1,0 +1,10 @@
+
+> underneath-os@0.0.0 design-system:tokens
+> node scripts/designSystemInventory.js
+
+Design-system inventory generated: { files: 83, definitions: 584, names: 297 }
+
+> underneath-os@0.0.0 design-system:check
+> node scripts/designSystemInventory.js --check
+
+Design-system inventory checked: { files: 83, definitions: 584, names: 297 }
