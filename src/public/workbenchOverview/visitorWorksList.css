@@ -39,8 +39,9 @@
   display: grid; grid-template-columns: minmax(0, 1fr) var(--works-rail);
   grid-template-areas: 'canvas details' 'controls details'; column-gap: var(--works-gap); align-items: start;
 }
+.workbench-overview[data-visitor-header] .composition-explorer-stage { grid-area: canvas; }
 .workbench-overview[data-visitor-header] .composition-explorer-viewport {
-  grid-area: canvas; height: clamp(320px, 69.5dvh, 1010px); min-width: 0;
+  height: clamp(320px, 69.5dvh, 1010px); min-width: 0;
   border-radius: 7px; background: color-mix(in srgb, var(--card-material) 40%, transparent);
 }
 .workbench-overview[data-visitor-header] .composition-explorer-viewport::after {
@@ -48,8 +49,7 @@
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--spread-heading) 11%, transparent);
 }
 .workbench-overview[data-visitor-header] .composition-explorer-controls { grid-area: controls; min-width: 0; flex-wrap: wrap; gap: 4px 12px; padding-top: 8px; }
-.workbench-overview[data-visitor-header] .composition-explorer-controls :is(button, output, summary, select) { font: 425 12px/1.45 'Visitor Google Sans', Arial, sans-serif; color: var(--spread-muted); }
-.workbench-overview[data-visitor-header] .composition-explorer-controls select { max-width: 16ch; background: var(--spread-panel); }
+.workbench-overview[data-visitor-header] .composition-explorer-controls :is(button, output, summary) { font: 425 12px/1.45 'Visitor Google Sans', Arial, sans-serif; color: var(--spread-muted); }
 .visitor-canvas-actions { display: flex; align-items: center; gap: 6px; }
 .visitor-canvas-actions .composition-explorer-help { position: relative; width: auto; max-width: none; }
 .visitor-canvas-actions .composition-explorer-help p {
