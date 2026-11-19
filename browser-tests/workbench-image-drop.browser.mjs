@@ -36,7 +36,7 @@ for (const width of [1440, 900]) test(`Replace image chooses one Library artwork
     await page.getByRole('button', { name: 'Show 2 images of ABYSSAL STUDY', exact: true }).click();
     await startDrag(page, null, true); await page.mouse.up();
     await page.waitForFunction(() => window.readDraft().imageModules.length === 1);
-    await page.getByRole('button', { name: 'Artwork library', exact: true }).click();
+    await page.getByRole('button', { name: 'Close Library', exact: true }).click();
     const inspector = await openSharedTool(page, 'Image');
     const replace = inspector.getByRole('button', { name: 'Replace image', exact: true });
     const before = await page.evaluate(() => window.readDraft());

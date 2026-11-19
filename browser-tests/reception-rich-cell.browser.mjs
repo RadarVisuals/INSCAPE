@@ -31,6 +31,8 @@ test('isolated rich cell uses shared selection, color, gestures, layer order and
     await page.getByRole('button', { name: 'Undo', exact: true }).click();
     assert.deepEqual(await scene(page), original);
     await page.getByRole('button', { name: 'Select Small worlds', exact: true }).click();
+    await page.getByRole('region', { name: 'Cell object tools' }).locator('summary').filter({ hasText: /^Text/ }).click();
+    assert.deepEqual(await scene(page), original, 'Opening the text picker does not change the saved scene');
     await page.getByRole('textbox', { name: 'Color colour', exact: true }).fill('#c87832');
     await page.getByRole('textbox', { name: 'Color colour', exact: true }).press('Enter');
     assert.equal((await scene(page)).texts[0].article.appearance.color.toLowerCase(), '#c87832');

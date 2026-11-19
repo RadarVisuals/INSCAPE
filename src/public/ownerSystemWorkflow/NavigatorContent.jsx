@@ -3,7 +3,7 @@ import { Home } from 'lucide-react';
 import './navigator.css';
 
 export function NavigatorHome({ onClick, disabled, label = 'Fit canvas in view' }) {
-  return <button type="button" className="workflow-tactile-control navigator-home" aria-label={label}
+  return <button type="button" className="workbench-tool-panel-close" aria-label={label}
     title={label} disabled={disabled} onClick={onClick}><Home size={16} strokeWidth={1.6} /></button>;
 }
 

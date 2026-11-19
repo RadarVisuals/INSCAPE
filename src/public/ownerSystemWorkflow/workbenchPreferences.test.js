@@ -27,7 +27,7 @@ test('Workbench preferences remain profile-scoped local editor state', () => {
   }, storage);
 
   assert.deepEqual(saved, {
-    galleryCardSize: 2, gridSpacing: 24, edgeSnap: true, moduleGap: 0, chromeNoise: false, compositionLocked: true, dockVisible: false, gridColor: '#aabbcc', gridMode: 'DOTS', shortcutSnap: false,
+    galleryCardSize: 2, gridSpacing: 24, edgeSnap: true, moduleGap: 0, chromeNoise: false, compositionLocked: true, gridColor: '#aabbcc', gridMode: 'DOTS', shortcutSnap: false,
   });
   assert.deepEqual(loadWorkbenchPreferences(profile, storage), saved);
   assert.equal(storage.values.size, 1);
@@ -42,7 +42,7 @@ test('failed writes keep the latest visible preferences and retry only their own
   assert.equal(store.flush(), true);
   assert.equal(store.getSnapshot().gridMode, 'NONE');
   storage.setItem = () => { throw Error('Quota'); };
-  store.update(current => ({ ...current, gridSpacing: 41, dockVisible: false }));
+  store.update(current => ({ ...current, gridSpacing: 41 }));
   store.update(current => ({ ...current, gridSpacing: 52 }));
   assert.match(store.getError(), /could not be saved/);
   assert.equal(store.getSnapshot().gridSpacing, 52);
@@ -52,7 +52,7 @@ test('failed writes keep the latest visible preferences and retry only their own
   assert.equal(store.retry(), true);
   assert.equal(store.getError(), null);
   assert.equal(loadWorkbenchPreferences('alice', storage).gridSpacing, 52);
-  assert.equal(loadWorkbenchPreferences('alice', storage).dockVisible, false);
+  assert.equal(Object.hasOwn(loadWorkbenchPreferences('alice', storage), 'dockVisible'), false);
   assert.equal(storage.getItem('composition'), 'unchanged');
   assert.equal(storage.getItem(workbenchPreferencesStorageKey('bob')), null);
   store.dispose();
@@ -120,22 +120,22 @@ test('unavailable storage and direct storage helpers cannot report a successful 
   store.dispose();
 });
 
-test('opening the sidebar persists only for its profile', () => {
+test('retired navigation visibility is ignored without rewriting stored preferences', () => {
   const storage = memoryStorage();
   const key = workbenchPreferencesStorageKey('0xabc');
-  const legacy = JSON.stringify({ surfaceId: 'carbon', shortcutSnap: false });
+  const legacy = JSON.stringify({ surfaceId: 'carbon', shortcutSnap: false, dockVisible: true });
   storage.setItem(key, legacy);
   const loaded = loadWorkbenchPreferences('0xabc', storage);
-  assert.equal(loaded.dockVisible, false);
+  assert.equal(Object.hasOwn(loaded, 'dockVisible'), false);
   assert.equal(storage.getItem(key), legacy);
   saveWorkbenchPreferences('0xabc', { ...loaded, dockVisible: true }, storage);
-  assert.equal(loadWorkbenchPreferences('0xabc', storage).dockVisible, true);
-  assert.equal(loadWorkbenchPreferences('0xdef', storage).dockVisible, false);
+  assert.equal(Object.hasOwn(loadWorkbenchPreferences('0xabc', storage), 'dockVisible'), false);
+  assert.equal(Object.hasOwn(loadWorkbenchPreferences('0xdef', storage), 'dockVisible'), false);
 });
 
 test('retired frame preferences are ignored without changing other settings or rewriting on read', () => {
   const storage = memoryStorage(), key = workbenchPreferencesStorageKey('0xabc');
-  const legacy = JSON.stringify({ surfaceId: 'carbon', shortcutSnap: false, dockVisible: false,
+  const legacy = JSON.stringify({ surfaceId: 'carbon', shortcutSnap: false,
     referenceFrameVisible: true, referenceFrameSize: { width: 1080, height: 1920 } });
   storage.setItem(key, legacy);
   const loaded = loadWorkbenchPreferences('0xabc', storage);
@@ -149,7 +149,7 @@ test('retired frame preferences are ignored without changing other settings or r
   assert.equal(restored.gridMode, 'DOTS');
   assert.equal(Object.hasOwn(restored, 'surfaceId'), false);
   assert.equal(restored.shortcutSnap, false);
-  assert.equal(restored.dockVisible, false);
+  assert.equal(Object.hasOwn(restored, 'dockVisible'), false);
   assert.equal(loadWorkbenchPreferences('0xdef', storage).gridMode, 'LINES');
   for (const width of [0, -1, 1.5, 7945, Infinity, NaN, '1920', null]) {
     assert.equal('referenceFrameSize' in normalizeWorkbenchPreferences({ referenceFrameSize: { width, height: 1080 } }), false);

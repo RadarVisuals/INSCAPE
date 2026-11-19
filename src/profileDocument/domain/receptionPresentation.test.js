@@ -81,7 +81,7 @@ function sample() {
   value.regions[0].content = 'image:one'; value.regions[1].content = 'text:one';
   return value;
 }
-test('Reception zoom below fill survives storage, history and public round trip without widening Workbench crops', () => {
+test('Reception zoom below fill survives storage, history and public round trip with native Image crop bounds', () => {
   const { root, store, storage } = fixture(), value = sample();
   const workbenches = structuredClone(root.getDraft().workbenches);
   saveReception(store, undefined, value);
@@ -89,7 +89,7 @@ test('Reception zoom below fill survives storage, history and public round trip 
     const before = store.getSnapshot().reception, next = structuredClone(before);
     next.imageModules[0].artwork.crop.zoom = zoom;
     assert.equal(validReception(next), true);
-    assert.equal(validImageModules(next.imageModules), false, 'Workbench Images still require fill zoom');
+    assert.equal(validImageModules(next.imageModules), true, 'native Images share the supported zoom-out range');
     saveReception(store, before, next);
     assert.ok(store.undo()); assert.deepEqual(store.getSnapshot().reception, before);
     assert.ok(store.redo()); assert.deepEqual(store.getSnapshot().reception, next);
@@ -193,11 +193,11 @@ test('shared publication choice preserves unselected canvases and independently 
   let record = createWorkbenchCollection(root.getDraft());
   record = appendWorkbench(record, 'workbench:second', 'Second', root.getDraft());
   const candidates = () => canvasPublicationCandidates({ record, assetRecords: [], profile: { name: 'Artist' } });
-  const first = buildCanvasPublication({ candidates: candidates(), selectedIds: ['workbench:main', 'workbench:second'], includeShared: true });
+  const first = buildCanvasPublication({ candidates: candidates(), selectedIds: ['workbench:main', 'workbench:second', 'reception'], includeShared: true });
   record.shared.reception.radius = 60;
   const selected = buildCanvasPublication({ candidates: candidates(), selectedIds: ['workbench:main'], includeShared: false, previousDocument: first });
   assert.deepEqual(selected.reception, first.reception); assert.deepEqual(selected.canvases, first.canvases);
-  const shared = buildCanvasPublication({ candidates: candidates(), selectedIds: [], includeShared: true, previousDocument: selected });
+  const shared = buildCanvasPublication({ candidates: candidates(), selectedIds: ['reception'], includeShared: true, previousDocument: selected });
   assert.equal(shared.reception.radius, 60);
   assert.deepEqual(shared.canvases, first.canvases); assert.deepEqual(shared.workbench, first.workbench);
 });

@@ -33,7 +33,7 @@ test('filled Workbench retargets tools and reserves camera/popup space through v
     const body = page.getByRole('textbox', { name: 'Article text', exact: true }).first();
     const originalEditor = await body.elementHandle();
     const toolbar = page.locator('[data-workbench-toolbar]');
-    const menu = page.getByRole('menubar', { name: 'Editor commands' });
+    const menu = page.locator('.editor-menu-bar');
     for (const width of [1440, 1000, 800, 1200]) {
       await page.setViewportSize({ width, height: 1000 }); await settle(page);
       // Occupied panels remove the toolbar. Its next instance must be observed

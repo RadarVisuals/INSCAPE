@@ -9,6 +9,10 @@ import { identityWorkbenchTransform } from './workbenchViewScale.js';
 // the host's selection controls, group tools or placement implementation.
 /** @type {import('react').Context<import('../../contracts/workbench.js').WorkbenchViewValue>} */
 export const WorkbenchView = createContext({ scale: 1, transforms: {}, entries: new Map() });
+// Host geometry and live registries change independently of authored content.
+/** @type {import('react').Context<import('../../contracts/workbench.js').WorkbenchViewValue>} */
+export const WorkbenchHostView = createContext({ scale: 1, transforms: {}, entries: new Map() });
+export const useWorkbenchHostView = () => useContext(WorkbenchHostView);
 /** @type {import('react').Context<import('../../contracts/workbench.js').WorkbenchActionsValue>} */
 export const WorkbenchActions = createContext({});
 export const useWorkbenchView = () => useContext(WorkbenchView);
@@ -25,7 +29,7 @@ export function useArtworkOpener(id, open) {
 // holds live references only; content and persistence never move into this host.
 /** @param {import('../../contracts/workbench.js').ModuleId} id @param {import('../../contracts/workbench.js').ToolSource} source */
 export function useWorkbenchToolSource(id, source) {
-  const { toolSources, toolsChanged: changed, store } = useWorkbenchView();
+  const { toolSources, toolsChanged: changed, store } = useWorkbenchHostView();
   const current = useRef(source); current.current = source;
   const shared = Boolean(store && toolSources);
   useLayoutEffect(() => {
@@ -82,7 +86,7 @@ export function workbenchModuleTransform(view, id) {
  * @param {((position: import('../../contracts/workbench.js').Position) => void) | null} onPosition
  */
 export function useWorkbenchViewRegistration(id, node, enabled, frame, resizeTarget = null, onPosition = null) {
-  const { register, changed, frames, resizeTargets, transforms } = useWorkbenchView();
+  const { register, changed, frames, resizeTargets, transforms } = useWorkbenchHostView();
   // Missing IDs are permitted for unregistered windows; these are read-only
   // lookups and JavaScript's missing-key result is undefined.
   const previewFrame = transforms?.[/** @type {import('../../contracts/workbench.js').WindowId} */ (id)]?.frame;

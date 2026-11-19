@@ -7,11 +7,98 @@ import { browserExecutable } from '../scripts/browserEnvironment.mjs';
 const origin = process.env.INSCAPE_TEST_ORIGIN || 'http://127.0.0.1:5173';
 const output = process.env.INSCAPE_BROWSER_OUTPUT || '.browser-test-runtime/published-gallery';
 const address = '0x' + '1'.repeat(40);
+test('open Profile shares its published Gallery selection, camera and layout and preserves the Bento', { timeout: 75000 }, async () => {
+  const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
+  try {
+    const page = await browser.newPage({ viewport: { width: 1600, height: 1000 } });
+    const errors = [];
+    page.on('pageerror', error => errors.push(error.message));
+    await page.route('**/*', route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
+    await page.goto(`${origin}/browser-tests/profile-overview-fixture.html?view=${address}&reception=published&collection=1`);
+    const button = name => page.getByRole('button', { name, exact: true });
+    await page.getByRole('heading', { name: 'Nomad', exact: true }).waitFor();
+    await page.locator('main.visitor-spread').getByText('Human underneath', { exact: true }).waitFor();
+    const profile = page.locator('main.visitor-spread');
+    assert.equal(await profile.getAttribute('data-layout'), 'card');
+    const checkPortrait = async () => {
+      const portrait = page.locator('.visitor-portrait');
+      const size = await portrait.locator('img').boundingBox();
+      assert.ok(size && size.width > 0 && Math.abs(size.width - size.height) < 1, 'The portrait is square');
+      assert.ok(await portrait.evaluate(node => [node, node.querySelector('img')].every(el =>
+        getComputedStyle(el).backgroundColor === 'rgba(0, 0, 0, 0)' && getComputedStyle(el).opacity === '1')));
+    };
+    await checkPortrait();
+    const rim = await profile.evaluate(root => {
+      const body = root.querySelector('.visitor-profile-body'), card = body.getBoundingClientRect();
+      const image = body.querySelector('.visitor-portrait img').getBoundingClientRect();
+      const inside = parseFloat(getComputedStyle(body, '::before').left) + 1;
+      return [image.left-card.left, image.top-card.top, card.bottom-image.bottom]
+        .every(inset => Math.abs(inset-inside) < 1);
+    });
+    assert.ok(rim, 'The portrait meets the inner stroke on all three exterior edges');
+    await button('Profile index').click();
+    await button('Open Spread').click();
+    assert.equal(await profile.getAttribute('data-layout'), 'open');
+    await checkPortrait();
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    const background = { clip: { x: 20, y: 125, width: 140, height: 70 } };
+    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    const still = await page.screenshot(background);
+    await page.waitForTimeout(250);
+    assert.deepEqual(await page.screenshot(background), still, 'Reduced motion holds the grain and lighting still');
+    await page.emulateMedia({ reducedMotion: 'no-preference' });
+    await profile.getByText('Underneath', { exact: true }).waitFor();
+    await button('Open Bento').click();
+    await page.getByRole('dialog', { name: 'View Bento' }).locator('.reception-canvas, .reception-document-canvas').first().waitFor();
+    await page.getByRole('dialog', { name: 'View Bento' }).press('Tab');
+    await button('Close canvas').click();
+    const theme = page.getByRole('button', { name: /^Switch to (Light|Dark)$/ });
+    const previous = await theme.getAttribute('aria-label');
+    await theme.click();
+    assert.notEqual(await theme.getAttribute('aria-label'), previous);
+    await button('Gallery').click();
+    await button('Open Anatomy').click();
+    const artwork = page.getByRole('group', { name: 'Anatomy canvas' });
+    await artwork.waitFor();
+    const details = page.getByRole('complementary', { name: 'Work details' });
+    await details.getByRole('heading', { name: 'Anatomy', exact: true }).waitFor();
+    const [indexBox, canvasBox, detailsBox] = await Promise.all([
+      page.getByRole('navigation', { name: 'Canvases', exact: true }).boundingBox(), artwork.boundingBox(), details.boundingBox(),
+    ]);
+    assert.ok(indexBox.x + indexBox.width <= canvasBox.x && canvasBox.x + canvasBox.width <= detailsBox.x,
+      'The public list keeps its index, artwork and matching details in three columns');
+    const controls = page.locator('.composition-explorer-controls');
+    const picker = await controls.getByRole('navigation', { name: 'Camera points' }).boundingBox();
+    assert.ok(picker.y >= canvasBox.y + canvasBox.height && Math.abs(picker.x + picker.width / 2 - canvasBox.x - canvasBox.width / 2) <= 1);
+    assert.ok(await controls.locator('button, summary').evaluateAll(items => items.every(item => !item.innerText.trim() && item.getAttribute('aria-label'))),
+      'Every footer action is an icon with an accessible name');
+    for (const name of ['Zoom out', 'Zoom in', 'Complete canvas', 'Expand canvas']) {
+      const icon = controls.getByRole('button', { name, exact: true }).locator('svg');
+      const box = await icon.boundingBox();
+      assert.equal(box?.width, Number(await icon.getAttribute('width')), `${name} renders at its intended width`);
+    }
+    await button('Zoom in').click();
+    const zoom = await page.getByLabel('Canvas zoom').textContent();
+    await button('Profile').click();
+    await page.getByRole('heading', { name: 'Nomad' }).waitFor();
+    assert.equal(await profile.getAttribute('data-layout'), 'open');
+    await button('Profile index').click();
+    await button('Profile Card').click();
+    assert.equal(await profile.getAttribute('data-layout'), 'card');
+    await button('Gallery').click();
+    await page.getByRole('group', { name: 'Anatomy canvas' }).waitFor();
+    assert.equal(await page.getByLabel('Canvas zoom').textContent(), zoom);
+    await button('Grid').click();
+    await page.locator('.workbench-overview-gallery').waitFor();
+    await button('Profile').click();
+    await button('Gallery').click();
+    await page.locator('.workbench-overview-gallery').waitFor();
+    assert.equal(await button('Open Private experiment').count(), 0);
+    assert.deepEqual(errors, []);
+  } finally { await browser.close(); }
+});
 async function enterGallery(page, width) {
-  if (width >= 900) {
-    await page.locator('.composition-explorer-viewport').waitFor();
-    await page.getByRole('button', { name: 'Grid', exact: true }).click();
-  }
+  if (width >= 900) await page.getByRole('button', { name: 'Grid', exact: true }).click();
   await page.locator('.workbench-overview-gallery').waitFor();
 }
 test('published wrap keeps every visible SVG preview painted through wheel and touch transitions', { timeout: 90000 }, async () => {
@@ -41,7 +128,7 @@ for (const width of [390, 1440]) test(`published gallery, wrap, modal, metadata 
     const errors = []; page.on('pageerror', error => errors.push(error.message));
     await page.route('**/*', route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
     await page.goto(`${origin}/browser-tests/profile-overview-fixture.html?view=${address}&reception=1&collection=1`, { waitUntil: 'domcontentloaded', timeout: 60000 });
-    await page.getByRole('button', { name: 'Enter Inscape', exact: true }).click();
+    await page.getByRole('button', { name: 'Gallery', exact: true }).click();
     await enterGallery(page, width);
     const before = await page.evaluate(() => ({ publication: JSON.stringify(window.__overviewPublication), local: JSON.stringify(window.__galleryStore.getBackupSnapshot()), storage: JSON.stringify({ ...localStorage }) }));
     assert.equal(await page.getByRole('button', { name: 'Open Private experiment', exact: true }).count(), 0);
@@ -64,7 +151,7 @@ for (const width of [390, 1440]) test(`published gallery, wrap, modal, metadata 
     await page.screenshot({ path: `${output}/canvas-${width}.png` });
     await modal.getByRole('button', { name: 'Close canvas', exact: true }).click();
     await modal.waitFor({ state: 'detached' });
-    await page.getByRole('button', { name: 'Inscape menu', exact: true }).click();
+    await page.getByRole('button', { name: 'Gallery options', exact: true }).click();
     await page.getByRole('button', { name: 'List', exact: true }).click();
     await page.locator('.workbench-overview-list').waitFor();
     await page.getByRole('button', { name: 'Grid', exact: true }).click();
@@ -73,15 +160,15 @@ for (const width of [390, 1440]) test(`published gallery, wrap, modal, metadata 
     await page.waitForTimeout(750);
     await page.screenshot({ path: `${output}/gallery-${width}.png` });
     assert.ok(await page.locator('.workbench-overview').evaluate(node => node.scrollWidth <= node.clientWidth + 1));
-    await page.getByRole('button', { name: 'Inscape menu', exact: true }).click();
-    await page.getByRole('button', { name: 'About', exact: true }).click();
-    await page.getByRole('button', { name: 'Enter Inscape', exact: true }).waitFor();
-    await page.goBack(); await enterGallery(page, width);
+    await page.getByRole('navigation', { name: 'Profile navigation' }).getByRole('button', { name: 'Profile', exact: true }).click();
+    await page.getByRole('heading', { name: 'Nomad', exact: true }).waitFor();
+    await page.goBack();
+    await page.locator('.workbench-overview-gallery').waitFor();
     assert.deepEqual(await page.evaluate(() => ({ publication: JSON.stringify(window.__overviewPublication), local: JSON.stringify(window.__galleryStore.getBackupSnapshot()), storage: JSON.stringify({ ...localStorage }) })), before);
     assert.deepEqual(errors, []);
     await page.reload({ waitUntil: 'domcontentloaded' });
     await enterGallery(page, width);
-    assert.ok(await page.locator('.workbench-overview').evaluate(node => getComputedStyle(node).backgroundColor !== 'rgba(0, 0, 0, 0)'));
+    assert.ok(await page.locator('.visitor-publication').evaluate(node => getComputedStyle(node).backgroundColor !== 'rgba(0, 0, 0, 0)'));
   } finally { await browser.close(); }
 });
 test('publication review defaults to the current canvas and names every explicitly selected addition', { timeout: 90000 }, async () => {
@@ -100,7 +187,7 @@ test('publication review defaults to the current canvas and names every explicit
     await page.getByRole('button', { name: 'Make presentation public', exact: true }).waitFor();
     await page.getByRole('checkbox', { name: /Anatomy/ }).uncheck();
     await page.getByRole('button', { name: 'Prepare publication', exact: true }).waitFor();
-    await page.getByRole('button', { name: 'Select all changed canvases', exact: true }).click();
+    await page.getByRole('button', { name: 'Select all changed compositions', exact: true }).click();
     assert.equal(await page.getByRole('checkbox', { name: /Private experiment/ }).isChecked(), true);
   } finally { await browser.close(); }
 });

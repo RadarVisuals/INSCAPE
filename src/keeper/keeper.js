@@ -1,3 +1,4 @@
+import { hasExactKeys as exact } from '../recordValidation.js';
 import { validateProfileDocumentV9Asset } from '../profileDocument/domain/profileDocumentV9Asset.js';
 import { validKeeperSwim } from './keeperSwim.js';
 
@@ -9,8 +10,6 @@ export const KEEPER_SIZE = Object.freeze({ min: 64, max: 384, default: 192, lega
 export const keeperSize = record => record.size ?? KEEPER_SIZE.legacy;
 // Omission is the original whole-image behavior; reading old drafts never rewrites them.
 export const keeperMovement = record => record.movement ?? 'flip';
-const exact = (v, keys) => v && typeof v === 'object' && !Array.isArray(v)
-  && Object.keys(v).length === keys.length && keys.every(k => Object.hasOwn(v, k));
 export const validKeeperAsset = asset => asset === null || validateProfileDocumentV9Asset(asset)
   && asset.media.type === 'image' && Boolean(asset.media.url)
   && Number.isSafeInteger(asset.media.width) && asset.media.width > 0

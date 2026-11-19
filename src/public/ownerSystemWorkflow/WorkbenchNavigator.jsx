@@ -17,7 +17,7 @@ export default function WorkbenchNavigator({ hostRef, navigation }) {
   const revision = useSyncExternalStore(view.subscribe, view.snapshot);
   const mediaRevision = useSyncExternalStore(view.miniatures.subscribe, view.miniatures.snapshot);
   const scene = useRef(null), map = useRef(null), zoom = useRef(null), root = useRef(null), mapping = useRef(null), dragging = useRef(false);
-  const current = useRef(null);
+  const current = useRef(null), resizeObserver = useRef(null), chromeNodes = useRef(new Set());
   const utility = useWorkbenchUtilityWindow(view.content?.keeperDocks?.length ? 1 : 0, view.navigatorPosition.current,
     position => { view.navigatorPosition.current = position; });
   const { items } = useMemo(() => {
@@ -35,6 +35,10 @@ export default function WorkbenchNavigator({ hostRef, navigation }) {
     }).sort((a, b) => a.order - b.order) };
   }, [revision, mediaRevision, view.layers, view.editorHiddenIds, view.transforms, view.presentationTransforms, view.content, view.frames, view.entries, view.miniatures]);
   current.current = { navigation, area, showOutside, items };
+  // Content still updates the miniatures, but only geometry can change the map
+  // projection. Compare coordinates rather than freshly allocated item objects.
+  const extent = JSON.stringify([area.left, area.top, area.width, area.height, showOutside,
+    showOutside ? items.map(item => item.frame) : null]);
   const paint = useCallback(camera => {
     const { navigation, area, showOutside, items } = current.current;
     const viewport = navigation.navigationViewport(), element = map.current?.node();
@@ -47,9 +51,9 @@ export default function WorkbenchNavigator({ hostRef, navigation }) {
     map.current.paint(navigatorFrame(visible, bounds)); zoom.current?.paint(camera.scale * 100);
   }, []);
   useLayoutEffect(() => {
-    paint(getCamera());
     const refresh = () => { map.current?.cancel(); paint(getCamera()); };
     const unsubscribe = subscribeCameraPaint(paint), observer = new ResizeObserver(refresh);
+    resizeObserver.current = observer;
     // The header and docks change the host's viewport insets without resizing the host.
     const insets = new MutationObserver(refresh);
     if (map.current?.node()) observer.observe(map.current.node());
@@ -57,9 +61,20 @@ export default function WorkbenchNavigator({ hostRef, navigation }) {
       observer.observe(hostRef.current);
       insets.observe(hostRef.current, { attributes: true, attributeFilter: ['style'] });
     }
-    return () => { insets.disconnect(); observer.disconnect(); unsubscribe(); };
+    return () => {
+      resizeObserver.current = null; chromeNodes.current.clear();
+      insets.disconnect(); observer.disconnect(); unsubscribe();
+    };
   }, [paint, getCamera, subscribeCameraPaint, hostRef]);
-  useLayoutEffect(() => { paint(camera.getCamera()); });
+  // Rails can wrap or mount independently of a host resize. Refresh their
+  // observed nodes after rendering without measuring layout on each text save.
+  useLayoutEffect(() => {
+    const nodes = new Set(hostRef.current?.querySelectorAll('.workbench-view-controls, [data-workbench-toolbar]'));
+    for (const node of chromeNodes.current) if (!nodes.has(node)) resizeObserver.current?.unobserve(node);
+    for (const node of nodes) if (!chromeNodes.current.has(node)) resizeObserver.current?.observe(node);
+    chromeNodes.current = nodes;
+  });
+  useLayoutEffect(() => { paint(getCamera()); }, [paint, getCamera, camera.scale, camera.offset.x, camera.offset.y, extent]);
   useLayoutEffect(() => {
     const node = root.current?.closest('.workbench-navigator');
     if (node) view.utilityWindows.set('navigator', node);

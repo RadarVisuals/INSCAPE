@@ -42,7 +42,7 @@ function CanvasDisplay({ item, entryTarget, active, onActivate, navigationHost, 
     onInspectionChange={onInspectionChange} navigationHost={navigationHost} reducedMotion={reducedMotion} />;
 }
 
-function ProfileDocumentV9Session({ document, onExit, onOpenDirectory, onReturn, onConnect, entryTarget }) {
+function ProfileDocumentV9Session({ document, onExit, onOpenDirectory, onReturn, onConnect, entryTarget, renderHeader }) {
   useStartupDestinationReady();
   const rootRef = useRef(null), identityControlRef = useRef(null), profileDockControlRef = useRef(null);
   const [navigationHost, setNavigationHost] = useState(null);
@@ -98,9 +98,10 @@ function ProfileDocumentV9Session({ document, onExit, onOpenDirectory, onReturn,
   }, [closeProfile, profileVisible]);
 
   const openIdentityRack = () => { if (identityRack) { setIdentityOpen(true); setProfileVisible(false); } };
-  return <main ref={rootRef} tabIndex={-1} className="visitor-grid-world system-workflow" data-workbench data-layout={layout.mode}
+  return <main ref={rootRef} tabIndex={-1} className="visitor-grid-world system-workflow" data-workbench data-public-header={renderHeader ? true : undefined} data-layout={layout.mode}
     aria-label="Published INSCAPE Grid visitor" data-lattice-menu-surface data-guide-mode={document.appearance.guideMode}
     >
+    {renderHeader?.(identityRack)}
     <WorkbenchViewControls entryTarget={entryTarget} hostRef={rootRef} />
     <SharedDisplayToolWindows readOnly  />
     {profileVisible && <LatticeProfileRail blocked={inspecting} identityDisabled={inspecting} collapsed entries={[]} identityControlRef={identityControlRef} identityOnly
@@ -113,12 +114,12 @@ function ProfileDocumentV9Session({ document, onExit, onOpenDirectory, onReturn,
       {displays.filter(item => !openDisplays[item.id]).map(item => <button key={item.id} aria-label={item.id === 'display:primary' ? 'Open Display' : 'Open ' + item.title}
         onClick={() => { setOpen(item.id, true); setActiveDisplay(item.id); }} type="button">{item.title}</button>)}
       <div className="visitor-grid-world__display-navigation" ref={setNavigationHost} />
-      {(onOpenDirectory || onReturn || onExit) && <div className="visitor-grid-world__actions">
-        {onOpenDirectory && <button onClick={onOpenDirectory} type="button">DISCOVER</button>}
-        {onReturn && <button onClick={onReturn} type="button">RETURN</button>}
+      {((!renderHeader && (onOpenDirectory || onReturn)) || onExit) && <div className="visitor-grid-world__actions">
+        {!renderHeader && onOpenDirectory && <button onClick={onOpenDirectory} type="button">DISCOVER</button>}
+        {!renderHeader && onReturn && <button onClick={onReturn} type="button">RETURN</button>}
         {onExit && <button onClick={onExit} type="button">EXIT</button>}
       </div>}
-    </nav><strong aria-label="INSCAPE" className="visitor-grid-world__brand"><span aria-hidden="true" /></strong></footer>
+    </nav>{!renderHeader && <strong aria-label="INSCAPE" className="visitor-grid-world__brand"><span aria-hidden="true" /></strong>}</footer>
     {identityOpen && identityRack && <div hidden={inspecting}><Suspense fallback={<p role="status">Opening Identity…</p>}>
       <IdentityModule key={document.profile.address} model={identityRack}
         initialWindow={identityWindow} onWindowChange={document.workbench ? changeIdentityWindow : undefined}

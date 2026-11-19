@@ -27,7 +27,7 @@ for (const primary of [true, false]) test(`Workbench theme and Display lifetimes
       const Runtime = (await import('/src/public/ownerSystemWorkflow/OwnerSystemWorkflowRuntime.jsx')).default;
       const EditingBoundary = (await import('/src/systemWorkflow/ProfileEditingBoundary.jsx')).default;
       const { captureProfileDraftWriteAccess, beforeProfileEditorRelease } = await import('/src/systemWorkflow/profileEditorLease.js');
-      const { workbenchLayoutKey } = await import('/src/public/ownerSystemWorkflow/workbenchLayoutStorage.js');
+      const { workbenchLayoutKey } = await import('/src/systemWorkflow/workbenchLayoutKey.js');
       const { createSystemWorkflowDraftStore, systemWorkflowDraftKey } = await import('/src/systemWorkflow/systemWorkflowDraftStore.js');
       const { addDisplayModule } = await import('/src/systemWorkflow/displayModuleSession.js');
       const { createDefaultWorkbenchPresentation, createNewDisplayPresentation } = await import('/src/profileDocument/domain/workbenchPresentation.js');
@@ -108,8 +108,7 @@ for (const primary of [true, false]) test(`Workbench theme and Display lifetimes
     // The accepted sidebar overlays the fixture's original shortcut position.
     // Reveal that canvas area through the real menu before exercising the pointer.
     await page.locator('main.system-workflow').press('Shift+F10');
-    await page.getByRole('menuitem', { name: 'HIDE SIDEBAR', exact: true }).click();
-    await page.getByRole('complementary', { name: 'Workspace sidebar', exact: true }).waitFor({ state: 'hidden' });
+    await page.keyboard.press('Escape');
     await instance.locator('.system-workflow__desktop-shortcut').dblclick();
     await instance.locator('header.system-workflow__identity-strip').focus();
     await instance.getByRole('button', { name: 'Unlock Display Module composition', exact: true }).waitFor();

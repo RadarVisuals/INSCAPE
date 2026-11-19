@@ -2,6 +2,7 @@
 .workbench-inspector :is(input, select):focus-visible { outline: 1px solid var(--tactile-accent, var(--tactile-ink)); outline-offset: 1px; }
 .workbench-inspector :is(input, select):disabled { opacity: .45; }
 .workbench-tools-empty { color: var(--tactile-muted); }
+.workbench-inspector > .workbench-tools-empty { align-self: center; max-width: 28ch; padding: 20px 8px; text-align: center; text-wrap: balance; }
 .workbench-color-target { margin-bottom: 0; }
 
 /* A single scroll owner contains the selection's sections in either dock mode. */
@@ -14,7 +15,7 @@
 .workbench-inspector input[type='checkbox'] { flex: none; margin: 0; }
 .workbench-inspector input[type='range'] { width: 100%; min-width: 0; margin-inline: 0; }
 .workbench-inspector-section { min-width: 0; margin: 0; padding-top: 12px; border: 0; border-top: 1px solid var(--tactile-divider); }
-.workbench-inspector-section > label { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.workbench-inspector-section > label:not(.workbench-inspector-check) { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
 .workbench-inspector-section:first-child { padding-top: 0; border-top: 0; }
 .workbench-inspector-section > summary { display: flex; align-items: center; justify-content: space-between; gap: 8px; box-sizing: border-box; min-height: var(--tool-control-height); margin: 0; padding: 4px 0; list-style: none; font-weight: 500; cursor: pointer; }
 .workbench-inspector-section > summary::-webkit-details-marker { display: none; }

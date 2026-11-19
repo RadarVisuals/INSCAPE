@@ -187,7 +187,8 @@ test('animated, unreadable and truncated WebP remain native; stale work cannot r
     assert.equal(await painted(page).getAttribute('href'), current, 'obsolete header result cannot overwrite the current source');
     assert.equal(await page.locator('#reference image').getAttribute('href'), reference, 'changing one side preserves the other side\'s paint resource');
     assert.equal(page.workers().length, 1, 'two Image renderers share one worker');
-    assert.equal(await page.evaluate(() => preparedTest.urls.size), 2);
+    assert.equal(current, reference, 'the same source and resolution share one prepared paint URL');
+    assert.equal(await page.evaluate(() => preparedTest.urls.size), 1, 'shared paint is owned by both live consumers');
     await page.evaluate(() => preparedTest.change({ referenceOpen: false })); await settle(page);
     assert.equal(page.workers().length, 1, 'closing one side retains the worker needed by the other');
     assert.equal(await page.evaluate(() => preparedTest.urls.size), 1);

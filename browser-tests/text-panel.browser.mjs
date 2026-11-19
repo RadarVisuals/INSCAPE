@@ -1,3 +1,4 @@
+import { undockWindow } from './fixtures/undock-window.mjs';
 import { editorCommand } from './fixtures/editor-menu.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -28,8 +29,7 @@ for (const [width, theme] of [[1440, 'Mist'], [390, 'Carbon']]) test(`unified Te
     const layers = await openSharedTool(page, 'Layers');
     // Compare the same floating-host variant; a filling side dock has square edges.
     for (const panel of [tools, layers]) {
-      const undock = panel.getByRole('button', { name: /^Undock / });
-      if (await undock.count()) await undock.click();
+      await undockWindow(page, panel);
     }
     assert.deepEqual(await tools.evaluate(material), await layers.evaluate(material));
     assert.equal(await page.getByRole('tab', { name: 'Text', exact: true }).count(), 0);

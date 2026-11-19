@@ -24,5 +24,6 @@ export function usePublishedProfile(address, store = publishedProfileResolutionS
     store.resolve(profileAddress).catch(() => {});
     return undefined;
   }, [profileAddress, store]);
-  return [state, () => profileAddress ? store.resolve(profileAddress) : Promise.resolve(NO_PROFILE_CONTEXT)];
+  return [state, () => profileAddress ? store.resolve(profileAddress) : Promise.resolve(NO_PROFILE_CONTEXT),
+    result => store.acceptConfirmed(profileAddress, result)];
 }

@@ -7,6 +7,7 @@ import WorkbenchArea from './WorkbenchArea.jsx';
 import { WorkbenchAreaProvider } from './WorkbenchAreaContext.jsx';
 import {
   WorkbenchView,
+  WorkbenchHostView,
   WorkbenchActions,
   useWorkbenchView,
   workbenchModuleTransform,
@@ -41,7 +42,7 @@ import {
 const WorkbenchCanvasControls = lazy(() => import('./WorkbenchCanvasControls.jsx'));
 const WorkbenchGroups = lazy(() => import('./WorkbenchGroups.jsx'));
 import { createWorkbenchMiniatures } from './workbenchMiniatures.js';
-import { WorkbenchSideDockProvider } from './WorkbenchSideDock.jsx';
+import { WorkbenchWorkspaceFrame, WorkbenchSideDockProvider } from './WorkbenchSideDock.jsx';
 import useWorkbenchSelection from './useWorkbenchSelection.js';
 import { createWorkbenchGestures } from './workbenchGestures.js';
 import { createWorkbenchMoveOperation } from './workbenchMoveOperation.js';
@@ -348,13 +349,15 @@ function WorkbenchViewStateProvider({
   );
   return (
     <WorkbenchView.Provider value={artworkView}>
-      <WorkbenchActions.Provider value={actions}>
-        <WorkbenchSideDockProvider preferences={sideDockPreferences}>
-          <EditorCellsProvider store={store} selection={selectionState}>
-            {children}
-          </EditorCellsProvider>
-        </WorkbenchSideDockProvider>
-      </WorkbenchActions.Provider>
+      <WorkbenchHostView.Provider value={value}>
+        <WorkbenchActions.Provider value={actions}>
+          <WorkbenchSideDockProvider preferences={sideDockPreferences}>
+            <EditorCellsProvider store={store} selection={selectionState}>
+              {children}
+            </EditorCellsProvider>
+          </WorkbenchSideDockProvider>
+        </WorkbenchActions.Provider>
+      </WorkbenchHostView.Provider>
     </WorkbenchView.Provider>
   );
 }
@@ -368,7 +371,6 @@ export function WorkbenchViewControls({
   renderMenuBar,
   disabled = false,
   exiting = false,
-  dockVisible = true,
   creationToolbarVisible = true,
   historyBlocked = null,
   showHandTool = true,
@@ -389,7 +391,7 @@ export function WorkbenchViewControls({
   const groupScene = view.groupScene;
   const [moveError, setMoveError] = useState('');
   const [groupsOpen, setGroupsOpen] = useState(false);
-  const canManageGroups = view.store && view.store.getWorkbenchId?.() !== 'reception';
+  const canManageGroups = view.store && !view.store.getCells;
   const groupsReturnFocus = useRef(null);
   const controlsRef = useRef(null),
     inspectionTarget = useRef(null);
@@ -457,7 +459,6 @@ export function WorkbenchViewControls({
     hostRef,
     controlsRef,
     disabled,
-    dockVisible,
     creationToolbarVisible,
     homeBounds: area,
     frameOnEntry: frameCanvas,
@@ -733,7 +734,7 @@ export function WorkbenchViewControls({
       const { navigation, moveByKey } = interactionActions.current;
       if (
         event.target.closest?.(
-          '[data-workbench-group-tools], [data-workbench-selection-tools], [data-workbench-layers]'
+          '[data-workbench-group-tools], [data-workbench-selection-tools], [data-workbench-layers], [data-system-workflow-panel], .workspace-header'
         )
       )
         return;
@@ -897,7 +898,7 @@ export function WorkbenchViewControls({
         event.defaultPrevented ||
         !host.contains(event.target) ||
         event.target.closest?.(
-          'input, textarea, select, [contenteditable="true"], [data-workbench-selection-tools]'
+          'input, textarea, select, [contenteditable="true"], [data-workbench-selection-tools], [data-system-workflow-panel], .workspace-header'
         )
       )
         return;
@@ -1193,6 +1194,7 @@ export function WorkbenchViewControls({
       {cells && (
         <Suspense fallback={null}>
           <ReceptionBentoEditor
+            hostRef={hostRef}
             disabled={disabled || Boolean(historyBlocked)}
             navigation={navigation}
             flushLayout={flushBentoLayout}
@@ -1204,6 +1206,7 @@ export function WorkbenchViewControls({
       {(!disabled || exiting) && (
         <>
           <WorkbenchArea hostRef={hostRef} />
+          {renderMenuBar && <WorkbenchWorkspaceFrame />}
           {objectPicker.element}
           {moveError && (
             <p className="workbench-move-error" role="alert" onClick={() => setMoveError('')}>

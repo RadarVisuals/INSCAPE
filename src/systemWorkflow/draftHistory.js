@@ -1,5 +1,5 @@
+import { isRecord as plain } from '../recordValidation.js';
 // Session-only edits. Patches preserve unrelated, later window/navigation state.
-const plain = value => value && typeof value === 'object' && !Array.isArray(value);
 // Drafts are validated JSON data. Compare branches once instead of serializing
 // every ancestor of a changed leaf (including all unrelated articles).
 const equal = (a, b) => {

@@ -42,7 +42,7 @@ export function categoryDialogInitialName(dialog) {
 }
 
 export const BROWSER_VIEW_KINDS = Object.freeze({
-  ALL: 'all', CATEGORY: 'category', UNSORTED: 'unsorted', USED: 'used',
+  FOLDERS: 'folders', ALL: 'all', CATEGORY: 'category', UNSORTED: 'unsorted', USED: 'used',
 });
 export const BROWSER_SORTS = Object.freeze({ TITLE_ASC: 'title-asc', TITLE_DESC: 'title-desc', COLLECTION: 'collection' });
 export const BROWSER_ASSET_SIZE = Object.freeze({

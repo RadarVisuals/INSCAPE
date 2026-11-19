@@ -1,3 +1,4 @@
+import { undockWindow } from './fixtures/undock-window.mjs';
 import { resetCameraTestView } from './fixtures/workbench-camera-test.mjs';
 import { workbenchCommandDisabled } from './fixtures/workbench-navigation.mjs';
 import { editorMenu, activeEditorDocument, editorCommand, selectEditorDocument } from './fixtures/editor-menu.mjs';
@@ -48,8 +49,7 @@ async function fixture(page, options = {}) {
   }, options);
   await page.reload();
   await separateLayers(page);
-  const undock = page.getByRole('button', { name: 'Undock Layers', exact: true });
-  if (await undock.count()) await undock.click();
+  await undockWindow(page, 'Layers');
   await page.getByRole('button', { name: options.grouped ? 'Select Person' : 'Select Eyes', exact: true }).waitFor();
   await page.locator('[data-workbench-artwork]').first().waitFor();
   await resetCameraTestView(page);
@@ -456,9 +456,9 @@ test('Workbench A to B to A drops the old group; Visitor selection has no owner 
     await selectWorkbenchLayer(page, 'Body', { modifiers: ['Shift'] });
     assert.equal(await page.locator('.workbench-layer-row[data-selected]').count(), 2);
     const original = await page.evaluate(() => window.guardedStore().getDraft());
-    await editorCommand(page, 'Canvas', 'New canvas');
-    await page.getByLabel('New canvas name', { exact: true }).fill('Selection B');
-    await page.getByRole('button', { name: 'Create canvas', exact: true }).click();
+    await editorCommand(page, 'Canvas', '+ New');
+    await page.getByLabel('Composition name', { exact: true }).fill('Selection B');
+    await page.getByRole('button', { name: 'Create composition', exact: true }).click();
     await page.waitForFunction(() => window.guardedStore().listWorkbenches().length === 2 && !window.guardedStore().getDraft().imageModules?.length);
     assert.equal(await page.locator('.workbench-layer-row[data-selected]').count(), 0);
     assert.equal(await page.locator('[data-workbench-inspection-target]:visible').count(), 0);

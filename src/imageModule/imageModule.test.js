@@ -1,3 +1,7 @@
+import { createSystemWorkflowCropSession, setSystemWorkflowCropZoom } from '../systemWorkflow/systemWorkflowCrop.js';
+import { projectCroppedMediaRectangle } from '../lattice/rendering/latticeCrop.js';
+import { fitNativeMediaRectangle } from '../lattice/rendering/latticeGeometry.js';
+import { projectSystemWorkflowTransform } from '../systemWorkflow/systemWorkflowTransform.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { validImageModules, createImagePresentation, imageFocusEntry } from './imageModule.js';
@@ -232,4 +236,38 @@ test('bounds reject malformed content and inspection preserves authored data', (
     const result = projectLatticeProductionFocusMediaMotion(entry.placement, entry.focusDimensions, { sourceRectangle: source, focusedRectangle: { ...source, width: 600, height: 600 }, currentRectangle: source, progress });
     assert.ok(Object.values(result.rectangle).every(Number.isFinite));
   }
+});
+
+test('native Image crop opens at its fitted size for rotated, mirrored and mismatched frames', () => {
+  for (const quarterTurns of [0,1,2,3]) for (const mirrorX of [false,true]) {
+    const image = artwork('fit'); image.crop = null; image.transform = { quarterTurns, mirrorX, mirrorY: true };
+    const media = { stableAssetId: image.asset.stableAssetId, width: 800, height: 400 };
+    const mask = { left: 0, top: 0, width: 400, height: 400 };
+    const before = structuredClone(image);
+    const session = createSystemWorkflowCropSession(image,media,mask,{ minimumZoom: .1, fit: true });
+    const projected = projectSystemWorkflowTransform(image.transform,media,session.previewCrop);
+    assert.deepEqual(projectCroppedMediaRectangle(mask,projected.dimensions,projected.crop),fitNativeMediaRectangle(mask,projected.dimensions));
+    assert.equal(session.previewCrop.zoom,.5);
+    assert.deepEqual(image,before);
+    assert.equal(createSystemWorkflowCropSession(image,media,mask).previewCrop.zoom,1,'Display default retains its fill baseline');
+  }
+});
+test('zoomed-out native Image survives save, history, reload, public projection and reopening crop', () => {
+  const f=fixture(); addImageModule(f.store,profile,{artwork:artwork('out'),position:{left:100,top:100},size:{width:400,height:300}});
+  const original=f.store.getDraft().imageModules[0], before=f.store.getDraft();
+  const media={stableAssetId:original.artwork.asset.stableAssetId,width:original.artwork.asset.media.width,height:original.artwork.asset.media.height};
+  const mask={left:0,top:0,width:original.width,height:original.height};
+  const crop=setSystemWorkflowCropZoom({x:.5,y:.5,zoom:1},media,mask,.25,.1);
+  assert.equal(crop.zoom,.25); assert.equal(setSystemWorkflowCropZoom(crop,media,mask,0,.1).zoom,.1);
+  assert.equal(setSystemWorkflowCropZoom(crop,media,mask,.25).zoom,1,'Display retains its minimum');
+  const next={...original,artwork:{...original.artwork,crop}};
+  assert.ok(saveImageModule(f.store,profile,original,next));
+  const after=f.store.getDraft();
+  assert.ok(f.store.undo());assert.deepEqual(f.store.getDraft(),before);
+  assert.ok(f.store.redo());assert.deepEqual(f.store.getDraft(),after);
+  assert.deepEqual(createSystemWorkflowDraftStore({profileAddress:profile,storage:f.storage}).getDraft(),after);
+  const doc=documentFor(after);assertValidProfileDocumentV9(doc);
+  assert.equal(doc.imageModules[0].artwork.crop.zoom,.25);
+  assert.equal(createSystemWorkflowCropSession(next.artwork,media,mask,{minimumZoom:.1,fit:true}).previewCrop.zoom,.25);
+  assert.equal(validImageModules([{...next,artwork:{...next.artwork,crop:{...crop,zoom:.09}}}]),false);
 });

@@ -296,7 +296,7 @@ test('layered free frames retain group spacing through deletion and roundtrip th
   assert.equal(value.regions[0].scene.placements.length, 3);
   saveReception(store, store.getSnapshot().reception, value);
   const candidates = () => canvasPublicationCandidates({ record: createWorkbenchCollection(root.getDraft()), assetRecords: [], profile: { name: 'Artist' } });
-  const first = buildCanvasPublication({ candidates: candidates(), selectedIds: ['workbench:main'], includeShared: true });
+  const first = buildCanvasPublication({ candidates: candidates(), selectedIds: ['workbench:main', 'reception'], includeShared: true });
   assertValidProfileDocumentV9(first);
   assert.deepEqual(first.reception.regions[0].scene.mobile, value.regions[0].scene.mobile);
   assert.deepEqual(first.reception.arrangement, value.arrangement);
@@ -304,7 +304,7 @@ test('layered free frames retain group spacing through deletion and roundtrip th
   saveReception(store, store.getSnapshot().reception, next);
   const retained = buildCanvasPublication({ candidates: candidates(), selectedIds: ['workbench:main'], includeShared: false, previousDocument: first });
   assert.deepEqual(retained.reception, first.reception, 'Publishing a canvas does not publish pending Reception edits');
-  const shared = buildCanvasPublication({ candidates: candidates(), selectedIds: [], includeShared: true, previousDocument: retained });
+  const shared = buildCanvasPublication({ candidates: candidates(), selectedIds: ['reception'], includeShared: true, previousDocument: retained });
   assert.deepEqual(shared.reception.shapes, []); assert.deepEqual(shared.reception.regions[0].scene.mobile, []);
   assert.deepEqual(shared.reception.arrangement, value.arrangement);
   const reader = createProfileDraftReader({ profileAddress: profile, storage });

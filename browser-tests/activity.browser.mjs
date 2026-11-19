@@ -32,7 +32,7 @@ async function mount(browser, width = 1440, height = 900, theme = 'light', motio
     return route.abort();
   });
   await page.goto(`${origin}/browser-tests/tool-chrome-fixture.html?sample=activity&persistent&theme=${theme}`);
-  await page.getByRole('button', { name: 'Inscape sidebar' }).waitFor();
+  await page.getByRole('button', { name: 'Inscape menu' }).waitFor();
   return { page, errors };
 }
 for (const theme of ['dark', 'light']) for (const [width, height] of [[1440,900], [390,900], [320,568], [844,390]]) {
@@ -74,7 +74,7 @@ for (const theme of ['dark', 'light']) for (const [width, height] of [[1440,900]
       assert.equal(await drawer(page).getByRole('button', { name: 'Open full activity history' }).evaluate(node => node === document.activeElement), true);
       await drawer(page).getByRole('button', { name: 'Close activity' }).click();
       await drawer(page).waitFor({ state: 'detached' }); await settle(page);
-      const returnTarget = await trigger.isVisible() ? trigger : page.getByRole('button', { name: 'Inscape sidebar' });
+      const returnTarget = await trigger.isVisible() ? trigger : page.getByRole('button', { name: 'Inscape menu' });
       assert.equal(await returnTarget.evaluate(node => node === document.activeElement), true);
       assert.deepEqual(await saved(page), before); assert.deepEqual(await camera(page), view);
       assert.deepEqual(errors, []);

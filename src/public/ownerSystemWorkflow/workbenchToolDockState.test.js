@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { changeToolDock, consolidateCurrentToolDockLayout, createToolDockLayout, createToolDockStore, toolIsVisible, dockTabs, toolPane, validToolDockLayout, WORKBENCH_TOOL_TABS } from './workbenchToolDockState.js';
+import { changeToolDock, integrateLibraryDockLayout, createToolDockLayout, createToolDockStore, toolIsVisible, dockTabs, toolPane, validToolDockLayout, WORKBENCH_TOOL_TABS } from './workbenchToolDockState.js';
 
 const names = state => state.groups.flatMap(dockTabs).sort();
 const joinedLayout = () => changeToolDock(createToolDockLayout(), { type: 'place', tabs: ['Inspector'], target: 'tools' });
@@ -15,7 +15,7 @@ test('Layers and Inspector start separately; tools can detach, reorder and rejoi
   assert.equal(original.groups.length, 1);
   assert.deepEqual(original.groups[0].panes[0].tabs, WORKBENCH_TOOL_TABS);
   const joined = changeToolDock(separate, { type: 'place', tabs: ['Layers'], target: toolPane(separate, 'Inspector').id, before: 'Inspector' });
-  assert.deepEqual(joined.groups[0].panes[0].tabs, ['Layers', 'Inspector']);
+  assert.deepEqual(joined.groups[0].panes[0].tabs, ['Library', 'Layers', 'Inspector']);
   assert.deepEqual(names(joined), [...WORKBENCH_TOOL_TABS].sort());
   assert.equal(joined.groups[0].panes[0].active, 'Layers');
   assert.ok(validToolDockLayout(joined));
@@ -63,7 +63,7 @@ test('whole docks move and merge; a closed Layers tab retains one owner', () => 
   state = changeToolDock(state, { type: 'place', tabs: ['Inspector'], target: layers.panes[0].id });
   assert.equal(state.groups.length, 1);
   assert.deepEqual(names(state), [...WORKBENCH_TOOL_TABS].sort());
-  assert.deepEqual(state.hidden, ['Layers']);
+  assert.deepEqual(state.hidden, ['Library', 'Layers']);
   state = changeToolDock(state, { type: 'frame', group: layers.id, frame: current => ({ ...current, left: 50 }) });
   assert.equal(state.groups[0].frame.left, 50);
   assert.equal(changeToolDock(state, { type: 'place', tabs: ['Unknown'] }), state);
@@ -78,7 +78,7 @@ test('stacking keeps both panels visible and can rejoin the whole inspector', ()
   assert.equal(original.groups.length, 2);
   state = changeToolDock(state, { type: 'place', tabs: ['Inspector'], target: 'tools', before: 'Layers' });
   assert.equal(state.groups[0].panes.length, 1);
-  assert.deepEqual(state.groups[0].panes[0].tabs, ['Inspector', 'Layers']);
+  assert.deepEqual(state.groups[0].panes[0].tabs, ['Inspector', 'Layers', 'Library']);
   assert.equal(toolIsVisible(state, 'Layers'), false);
   assert.equal(toolIsVisible(state, 'Inspector'), true);
   assert.deepEqual(names(state), [...WORKBENCH_TOOL_TABS].sort());
@@ -101,36 +101,40 @@ test('closed stacked panes retain their position and share; resizing is presenta
   assert.equal(changeToolDock(state, { type: 'place', tabs: ['Inspector'], target: 'missing', side: 'below' }), state);
 });
 
-test('the current seven-tab preference consolidates without replacing retained host identities or frames', () => {
-  const layerFrame = { left: 20, top: 100, width: 340, height: 480 };
-  const imageFrame = { left: 800, top: 120, width: 300, height: 600 };
-  const before = { nextId: 4, activeGroup: 'tools-2', hidden: ['FX'], groups: [
-    { id: 'tools', frame: layerFrame, panes: [{ id: 'layers', tabs: ['Layers'], active: 'Layers', share: 1 }] },
-    { id: 'tools-2', frame: imageFrame, panes: [{ id: 'selection', tabs: ['Image', 'Transform', 'Color', 'Shape', 'FX', 'Info'], active: 'Image', share: 1 }] },
-  ] };
-  const after = consolidateCurrentToolDockLayout(before);
-  assert.ok(validToolDockLayout(after));
-  assert.deepEqual(after.groups[0], before.groups[0]);
-  assert.equal(after.groups[1].id, 'tools-2');
-  assert.equal(after.groups[1].panes[0].id, 'selection');
-  assert.deepEqual(after.groups[1].frame, imageFrame);
-  assert.deepEqual(after.groups[1].panes[0].tabs, ['Inspector']);
-  assert.equal(after.inspectorSection, 'Image');
-  assert.deepEqual(before.groups[1].panes[0].tabs, ['Image', 'Transform', 'Color', 'Shape', 'FX', 'Info']);
-  assert.equal(consolidateCurrentToolDockLayout(after), after);
+test('Library detaches, joins Inspector and reopens without a second tab or moving its host', () => {
+  let state = changeToolDock(createToolDockLayout(), { type: 'open', tab: 'Library' });
+  assert.ok(toolIsVisible(state, 'Library'));
+  assert.equal(toolIsVisible(state, 'Layers'), false);
+  const frame = { left: 400, top: 100, width: 420, height: 560 };
+  state = changeToolDock(state, { type: 'place', tabs: ['Library'], frame });
+  assert.deepEqual(toolPane(state, 'Layers').tabs, ['Layers']);
+  assert.ok(toolIsVisible(state, 'Layers'));
+  const owner = state.groups.find(group => dockTabs(group).includes('Library')).id;
+  state = changeToolDock(state, { type: 'close', tab: 'Library' });
+  state = changeToolDock(state, { type: 'open', tab: 'Library', focus: true });
+  assert.deepEqual(state.groups.find(group => group.id === owner).frame, frame);
+  assert.equal(state.focusRequest.tab, 'Library');
+  const request = state.focusRequest;
+  state = changeToolDock(state, { type: 'open', tab: 'Library', focus: true });
+  assert.notEqual(state.focusRequest, request, 'repeat opens can focus the current panel');
+  state = changeToolDock(state, { type: 'place', tabs: ['Library'], target: toolPane(state, 'Inspector').id });
+  assert.deepEqual(toolPane(state, 'Inspector').tabs, ['Inspector', 'Library']);
+  assert.equal(names(state).filter(tab => tab === 'Library').length, 1);
+  assert.ok(validToolDockLayout(state));
 });
 
-test('a combined current seven-tab host retains Layers and closed selection tools remain closed', () => {
-  const frame = { left: 900, top: 90, width: 320, height: 480 };
-  const hidden = ['Transform', 'Color', 'Image', 'Shape', 'FX', 'Info'];
-  const before = { nextId: 1, activeGroup: null, hidden, groups: [
-    { id: 'tools', frame, panes: [{ id: 'tools', tabs: ['Layers', ...hidden], active: 'Layers', share: 1 }] },
-  ] };
-  const after = consolidateCurrentToolDockLayout(before);
-  assert.ok(validToolDockLayout(after));
-  assert.equal(after.groups[0].id, 'tools');
-  assert.deepEqual(after.groups[0].frame, frame);
-  assert.equal(after.groups.length, 2);
-  assert.deepEqual(after.hidden, ['Inspector']);
-  assert.equal(consolidateCurrentToolDockLayout({ ...before, hidden: ['Unknown'] }), null);
+test('current Library window placement joins the layout without discarding existing hosts', () => {
+  const current = createToolDockLayout();
+  const before = { ...current, hidden: [], groups: current.groups.map(group => ({ ...group,
+    panes: group.panes.map(pane => ({ ...pane, tabs: pane.tabs.filter(tab => tab !== 'Library') })) })) };
+  const frame = { left: 400, top: 120, width: 500, height: 600 };
+  const floating = integrateLibraryDockLayout(before, { detached: true, frame });
+  assert.ok(validToolDockLayout(floating));
+  assert.deepEqual(floating.groups.slice(0, 2), before.groups);
+  assert.deepEqual(floating.groups[2].frame, frame);
+  assert.deepEqual(floating.hidden, ['Library']);
+  const docked = integrateLibraryDockLayout(before, { detached: false, frame });
+  assert.deepEqual(toolPane(docked, 'Layers').tabs, ['Layers', 'Library']);
+  assert.equal(integrateLibraryDockLayout(floating), floating);
+  assert.equal(integrateLibraryDockLayout({ ...before, hidden: ['Unknown'] }), null);
 });

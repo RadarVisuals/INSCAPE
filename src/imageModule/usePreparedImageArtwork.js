@@ -14,17 +14,14 @@ export function usePreparedImageArtwork(source, enabled) {
     // The worker verifies actual bytes before it can flatten any image.
     if (!/\.webp$/i.test(path)) return undefined;
     const element = node.current, client = imagePaintClient();
-    let active = true, generation = 0, timer = 0, url = null, pendingUrl = null;
+    let active = true, generation = 0, timer = 0, url = null;
     let preparedWidth = 0, preparedHeight = 0, requested = '';
     const restore = () => {
       if (url && element.href.baseVal === url) element.setAttribute('href', source);
-      if (url) URL.revokeObjectURL(url);
       url = null; preparedWidth = preparedHeight = 0;
     };
     const invalidate = () => {
-      generation++; client.cancel();
-      if (pendingUrl) URL.revokeObjectURL(pendingUrl);
-      pendingUrl = null;
+      generation++; restore(); client.cancel();
     };
     const refresh = () => {
       if (!active || !element.getClientRects().length) return;
@@ -35,16 +32,12 @@ export function usePreparedImageArtwork(source, enabled) {
       if (!width || !height || preparedWidth >= width && preparedHeight >= height) return;
       const key = `${width}:${height}`;
       if (requested === key) return;
-      requested = key; invalidate(); restore();
+      requested = key; invalidate();
       const current = generation;
-      client.prepare({ source, width, height }, async result => {
-        if (!active || current !== generation || !result.blob) return;
-        const next = URL.createObjectURL(result.blob), image = new Image();
-        pendingUrl = next; image.src = next;
-        try { await image.decode(); } catch { URL.revokeObjectURL(next); if (pendingUrl === next) pendingUrl = null; return; }
-        if (!active || current !== generation) { URL.revokeObjectURL(next); return; }
-        pendingUrl = null; url = next; preparedWidth = result.width; preparedHeight = result.height;
-        element.setAttribute('href', next);
+      client.prepare({ source, width, height }, result => {
+        if (!active || current !== generation || !result.url) return;
+        url = result.url; preparedWidth = result.width; preparedHeight = result.height;
+        element.setAttribute('href', url);
       });
     };
     // Transform-only camera preparation must restore detail before the next
@@ -56,7 +49,7 @@ export function usePreparedImageArtwork(source, enabled) {
     addEventListener('resize', refresh); schedule();
     return () => {
       active = false; clearTimeout(timer); invalidate(); observer.disconnect();
-      unsubscribe(); removeEventListener('resize', refresh); client.dispose(); restore();
+      unsubscribe(); removeEventListener('resize', refresh); client.dispose();
     };
   }, [source, enabled, geometry]);
   return node;

@@ -1,7 +1,7 @@
 import { assertValidSystemWorkflowDraft } from './domain/systemWorkflowDraft.js';
 import { normalizeProfileAddress } from '../library/config.js';
 import { textRecoveries } from '../text/textEditRecovery.js';
-import { workbenchLayoutKey } from '../public/ownerSystemWorkflow/workbenchLayoutStorage.js';
+import { workbenchLayoutKey } from './workbenchLayoutKey.js';
 import { isWorkbenchCollection, assertValidWorkbenchCollection, projectWorkbenchDraft, WORKBENCH_COLLECTION_LIMIT } from './domain/workbenchCollection.js';
 
 export const WORKBENCH_BACKUP_TYPE = 'inscape-private-workbench';
@@ -40,8 +40,8 @@ export function summarizeWorkbenchBackup(draft) {
     ['Shapes', draft.shapes?.length || 0], ['Displays', (draft.grids.length ? 1 : 0) + (draft.displays?.length || 0)],
     ['Mini apps', draft.miniApps?.length || 0], ['Keeper docks', draft.keeperDocks?.length || 0],
     ['Groups', draft.workbenchGroups?.length || 0],
-    ['Reception cells', draft.reception?.cells?.length ?? draft.reception?.regions?.length ?? 0],
-  ].map(([name, count]) => `${count} ${name}`).join(' � ');
+    ['Bento cells', draft.reception?.cells?.length ?? draft.reception?.regions?.length ?? 0],
+  ].map(([name, count]) => `${count} ${name}`).join(' · ');
 }
 
 // The canonical write is owned by the draft store. Derived layout records

@@ -157,10 +157,11 @@ test('a category keeps individual images from one NFT through reload and removes
         return route.fulfill({ contentType: 'image/webp', path: 'public/assets/actors/abyssal_eye/full.webp' });
       });
       await page.goto(`${root}/browser-tests/library-progressive-fixture.html?images`);
-      await page.getByRole('button', { name: 'Create Category', exact: true }).click();
-      await page.getByRole('textbox', { name: 'category name', exact: true }).fill('Single image');
+      await page.getByRole('button', { name: 'New Library item', exact: true }).click();
+      await page.getByRole('menuitem', { name: 'Folder', exact: true }).click();
+      await page.getByRole('textbox', { name: 'folder name', exact: true }).fill('Single image');
       await page.keyboard.press('Enter');
-      const category = page.getByRole('button', { name: 'Single image', exact: true });
+      const category = page.getByRole('navigation', { name: 'Browser navigation' }).getByRole('button', { name: 'Single image', exact: true });
       await category.waitFor();
       await page.getByRole('button', { name: 'All Assets', exact: true }).click();
       await page.getByRole('button', { name: 'Show 2 images of A token 1', exact: true }).click();

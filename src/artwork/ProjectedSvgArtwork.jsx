@@ -27,7 +27,7 @@ export function projectedSvgArtworkFor(source, src) {
 
 // Geometry belongs to the containing module. One SVG viewport clips the
 // artwork document after applying that module's existing media transform.
-export default function ProjectedSvgArtwork({ src, width, height, dimensions, mediaStyle, onReady, renderStatus }) {
+export default function ProjectedSvgArtwork({ src, width, height, dimensions, mediaStyle, onReady, renderStatus, htmlViewport = false, inspecting = false }) {
   const root = useRef(null);
   const media = useRef(null);
   const host = useRef(null);
@@ -39,7 +39,18 @@ export default function ProjectedSvgArtwork({ src, width, height, dimensions, me
   const viewportRef = useRef(null);
   const loaded = useRef(false), liftReady = useRef(null);
   const documentControls = useRef(null);
-  const visible = useArtworkVisibility(root);
+  const inspectionRequested = useRef(inspecting); inspectionRequested.current = inspecting;
+  const prepareInspection = useCallback(() => {
+    if (!htmlViewport) return;
+    const controls = documentControls.current;
+    if (!controls) return;
+    if (!inspectionRequested.current) { controls.releaseInspection(); return; }
+    void controls.prepareInspection().then(() => {
+      if (inspectionRequested.current && documentControls.current === controls) controls.beginInspection();
+    });
+  }, [htmlViewport]);
+  useLayoutEffect(prepareInspection, [prepareInspection, inspecting]);
+  const visible = useArtworkVisibility(htmlViewport ? host : root);
   const prepared = useArtworkPreparation();
   const requested = Boolean(visible || prepared || lift);
   const retained = useRetainedArtwork(src, requested);
@@ -52,9 +63,17 @@ export default function ProjectedSvgArtwork({ src, width, height, dimensions, me
     // Camera motion has already prepared its largest layout. Measuring its
     // temporary shrinking transform would replace those pixels with a thumbnail.
     if (!loaded.current || !measuring.current || geometry.isProjected()) return;
-    const matrix = media.current?.getScreenCTM();
+    let matrix = media.current?.getScreenCTM?.();
+    if (htmlViewport && media.current && root.current) {
+      const bounds = root.current.getBoundingClientRect();
+      if (root.current.clientWidth > 0 && root.current.clientHeight > 0) {
+        const sx = bounds.width / root.current.clientWidth, sy = bounds.height / root.current.clientHeight;
+        const local = new DOMMatrix(getComputedStyle(media.current).transform);
+        matrix = { a: local.a * sx, b: local.b * sy, c: local.c * sx, d: local.d * sy };
+      }
+    }
     if (matrix) documentControls.current?.setPixelScale(Math.max(Math.hypot(matrix.a, matrix.b), Math.hypot(matrix.c, matrix.d)) * (devicePixelRatio || 1));
-  }, [geometry]);
+  }, [geometry, htmlViewport]);
   const schedulePixelScale = useCallback(() => {
     if (densityFrame.current === null) densityFrame.current = requestAnimationFrame(updatePixelScale);
   }, [updatePixelScale]);
@@ -80,6 +99,9 @@ export default function ProjectedSvgArtwork({ src, width, height, dimensions, me
     loaded.current = false;
     documentControls.current = null;
     home.appendChild(paintHost);
+    // Reception lifts its complete cell and never uses the editor's individual
+    // SVG lift registry. Keep that registry bound to the SVG coordinate path.
+    if (htmlViewport) return () => { active = false; loaded.current = false; documentControls.current = null; paintHost.remove(); };
     const paint = projection => {
       if (!active || !target) return;
       // Update the foreignObject and its crop together during SVG painting.
@@ -140,7 +162,7 @@ export default function ProjectedSvgArtwork({ src, width, height, dimensions, me
       active = false; target = null; liftReady.current = null;
       artworkHosts.delete(home); paintHost.remove();
     };
-  }, [paintHost, src]);
+  }, [paintHost, src, htmlViewport]);
   useLayoutEffect(() => {
     if (!retained) { loaded.current = false; documentControls.current = null; }
     else if (requested) schedulePixelScale();
@@ -159,14 +181,21 @@ export default function ProjectedSvgArtwork({ src, width, height, dimensions, me
   const svgWidth = lift ? lift.width : width;
   const svgHeight = lift ? lift.height : height;
   useLayoutEffect(schedulePixelScale, [schedulePixelScale, transform, svgWidth, svgHeight, viewport.width, viewport.height]);
-  return <span ref={host} className="artwork-svg-host" data-svg-artwork-host>{createPortal(
-    <svg ref={root} className="artwork-svg-viewport" data-interactive-svg viewBox={`0 0 ${svgWidth} ${svgHeight}`} preserveAspectRatio="none">
-      <foreignObject ref={media} width={viewport.width} height={viewport.height} transform={transform}>
-        {retained && <ArtworkSvgDocument key={src} src={src} visible={Boolean(visible || lift)} stretch paintOnly renderStatus={renderStatus}
+  const content = retained && <ArtworkSvgDocument key={src} src={src} visible={Boolean(visible || lift)} stretch paintOnly renderStatus={renderStatus}
           onViewport={viewport => setSourceViewport({ src, viewport })} onReady={controls => {
           documentControls.current = controls; loaded.current = true; schedulePixelScale();
-          liftReady.current?.(); onReady?.();
-        }} />}
+          prepareInspection(); liftReady.current?.(); onReady?.();
+        }} />;
+  // Responsive Reception uses a normal HTML viewport for the isolated iframe.
+  // Its native document size stays fixed while this outer plane scales/clips;
+  // no iframe is embedded inside a changing SVG foreignObject in that path.
+  return <span ref={host} className="artwork-svg-host" data-svg-artwork-host>{createPortal(htmlViewport
+    ? <div ref={root} className="artwork-svg-viewport" data-interactive-svg>
+      <div ref={media} className="artwork-svg-html-media" style={{ width: viewport.width, height: viewport.height, transform }}>{content}</div>
+    </div>
+    : <svg ref={root} className="artwork-svg-viewport" data-interactive-svg viewBox={`0 0 ${svgWidth} ${svgHeight}`} preserveAspectRatio="none">
+      <foreignObject ref={media} width={viewport.width} height={viewport.height} transform={transform}>
+        {content}
       </foreignObject>
     </svg>, paintHost)}</span>;
 }

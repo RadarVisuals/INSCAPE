@@ -2,7 +2,7 @@ import { useRef, useState } from 'react';
 import { ArrowLeft, ArrowRight, GripVertical } from 'lucide-react';
 import WorkbenchOverviewPreview from './WorkbenchOverviewPreview.jsx';
 
-export default function WorkbenchOverviewCard({ item, duplicate, selected, visible, onOpen, onEdit, onManage, revealed, onReveal, arranging, index, count, onMove, onDrag, dropTarget, moving }) {
+export default function WorkbenchOverviewCard({ item, duplicate, selected, visible, onOpen, onEdit, selection, onManage, revealed, onReveal, arranging, index, count, onMove, onDrag, dropTarget, moving }) {
   const host = useRef(null);
   const [information, setInformation] = useState(false);
   return <article className="workbench-overview-card" ref={host} data-revealed={revealed || undefined} data-card-id={item.id} data-drop-target={dropTarget || undefined}
@@ -10,7 +10,10 @@ export default function WorkbenchOverviewCard({ item, duplicate, selected, visib
     onPointerLeave={event => { if (event.pointerType === 'mouse' && !host.current.matches(':has(:focus-visible)')) setInformation(false); }}
     onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget)) setInformation(false); }}>
     {visible && <WorkbenchOverviewPreview model={item.model} name={item.name} thumbnail crop={item.thumbnailCrop} />}
-    <button type="button" className="workbench-overview-card-open" disabled={arranging} tabIndex={duplicate ? -1 : 0}
+    {selection ? <label className="gallery-card-selection" data-checked={selection.checked.has(item.id) || undefined}>
+      <span><input type="checkbox" tabIndex={duplicate ? -1 : 0} checked={selection.checked.has(item.id)}
+        aria-label={`Select ${item.name}`} onChange={() => selection.toggle(item.id)} />{item.name}</span>
+    </label> : <><button type="button" className="workbench-overview-card-open" disabled={arranging} tabIndex={duplicate ? -1 : 0}
       data-workbench-id={item.id} data-previewed={!duplicate && selected} onClick={event => {
         if (event.nativeEvent.pointerType === 'touch' && !revealed) { onReveal(); return; }
         onOpen(item.id, event.currentTarget);
@@ -29,7 +32,7 @@ export default function WorkbenchOverviewCard({ item, duplicate, selected, visib
         {item.introduction && <p>{item.introduction}</p>}
         {onManage && <button type="button" tabIndex={duplicate ? -1 : 0} onClick={event => onManage(item.id, 'details', event.currentTarget)}>Edit details</button>}
       </div>}
-    </div>
+    </div></>}
     {arranging && <div className="workbench-overview-card-arrange">
       <span>{item.name}</span>
       <div><button type="button" aria-label={`Move ${item.name} earlier`} disabled={index === 0} onClick={() => onMove(item.id, -1)}><ArrowLeft size={16} /></button>

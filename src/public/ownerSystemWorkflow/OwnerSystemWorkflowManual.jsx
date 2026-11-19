@@ -2,8 +2,9 @@ import { useId, useRef, useState } from 'react';
 import WorkbenchDestinationPanel from './WorkbenchDestinationPanel.jsx';
 
 const chapters = [
-  { id: 'workbench', label: 'Workbench', summary: 'Your desktop for composing and presenting your work.', sections: [
+  { id: 'workbench', label: 'Studio', summary: 'Create and publish your compositions.', sections: [
     ['Compose', 'Arrange Image, Text and Shape on your Workbench. Layers controls their order and visibility. Color changes text and shape colors; Transform changes the selected item’s dimensions.'],
+    ['Starting layouts', 'Choose Canvas for a blank composition or Bento to start with cells. Place artwork freely or add it to a cell in the same composition.'],
     ['Your tools', 'Tool tabs can share a dock or detach into separate windows. Text stays in its own window. Keeper and Navigator stay on screen as you move around the canvas.'],
     ['Your workspace', 'Library settings and tool-window layouts are saved in this browser for your profile. Settings controls your local workspace preferences. Discover lets you visit other profiles.'],
   ] },
@@ -26,6 +27,7 @@ const chapters = [
   ] },
   { id: 'publish', label: 'Publish', summary: 'Review the experience visitors will enter.', sections: [
     ['Preview', 'Preview shows your public composition and custom Identity card, with the current window arrangement. Check both expanded content and smaller screens.'],
+    ['Destinations', 'Choose Gallery, Profile or both for each composition you publish.'],
     ['Prepare', 'Arrange the windows and decide which should start open. Prepare Publication saves that starting setup and freezes a snapshot for review, including the Display name and shortcut. Preparing does not upload or ask your wallet to publish.'],
     ['Make it public', 'The next action uploads and verifies the prepared presentation. Publishing the verified result to your profile is a separate wallet action. Later edits need a new preparation and publication.'],
     ['What visitors receive', 'Public Images, Text, Shapes, Grids and Keeper content, the Identity card and the prepared Workbench setup are included. Private Grids, Library organisation, Layers tools and Activity stay private. Visitors can explore and rearrange their session without changing your saved work.'],

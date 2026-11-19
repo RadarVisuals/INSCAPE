@@ -1,3 +1,4 @@
+import { undockWindow } from './fixtures/undock-window.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdir } from 'node:fs/promises';
@@ -33,8 +34,7 @@ test('Owner Image Retry remains reachable beside Image settings on pointer and t
       const saved = await page.evaluate(() => localStorage.getItem(window.__motionKey));
       if (await sharedToolTab(page, 'Layers').count()) await closeSharedTool(page, 'Layers');
       if (width <= 640) {
-        const undockNavigator = page.getByRole('button', { name: 'Undock Navigator', exact: true });
-        if (await undockNavigator.count()) await undockNavigator.click();
+        await undockWindow(page, 'Navigator');
         const navigatorGrip = page.getByRole('button', { name: 'Move Navigator window', exact: true });
         const box = await navigatorGrip.boundingBox();
         for (let i = 0; i < Math.ceil((width - box.x) / 24); i++) await navigatorGrip.press('Shift+ArrowRight');
@@ -42,8 +42,7 @@ test('Owner Image Retry remains reachable beside Image settings on pointer and t
       await page.locator('.image-module__canvas').focus();
       const panel = await openSharedTool(page, 'Image');
       if (width <= 640) {
-        const undock = panel.getByRole('button', { name: 'Undock Inspector', exact: true });
-        if (await undock.count()) await undock.click();
+        await undockWindow(page, panel);
         // Park the real dock below the test artwork using its keyboard controls.
         const resize = panel.locator('.workbench-tool-panel-resize[data-edge="se"]');
         await resize.focus(); for (let i = 0; i < 10; i++) await resize.press('Shift+ArrowUp');

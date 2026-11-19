@@ -76,9 +76,9 @@ test('Image info follows the selected artwork, detaches and rejoins without edit
     assert.deepEqual(await saved(page), before, 'metadata and docking do not edit authored content');
     await page.locator('main.system-workflow').focus(); await page.keyboard.press('Control+z');
     assert.deepEqual(await saved(page), before, 'no metadata operation creates Undo history');
-    await editorCommand(page, 'Canvas', 'New canvas');
-    await page.getByLabel('New canvas name', { exact: true }).fill('Info check');
-    await page.getByRole('button', { name: 'Create canvas', exact: true }).click();
+    await editorCommand(page, 'Canvas', '+ New');
+    await page.getByLabel('Composition name', { exact: true }).fill('Info check');
+    await page.getByRole('button', { name: 'Create composition', exact: true }).click();
     await tab(page, 'Info').click();
     assert.equal(await info(page).count(), 0, 'new Workbench has no stale registration');
     assert.deepEqual(errors, []);

@@ -23,11 +23,10 @@ for (const width of [1440, 700, 390]) test(`Companion tools reserve live camera 
     const controls = page.getByRole('group', { name: 'Workbench zoom', exact: true });
     const draft = await page.evaluate(() => JSON.stringify(window.savedDraft()));
     const toggleSidebar = async label => {
-      await page.locator('main.system-workflow').focus(); await page.keyboard.press('Shift+F10');
-      await page.getByRole('menuitem', { name: label, exact: true }).click();
-      await page.locator('.workbench-sidebar').waitFor({ state: label === 'HIDE SIDEBAR' ? 'detached' : 'visible' });
+      const trigger = page.getByRole('button', { name: 'Inscape menu', exact: true });
+      const open = label === 'SHOW SIDEBAR';
+      if (await trigger.getAttribute('aria-expanded') !== String(open)) await trigger.click();
     };
-    // The old bottom dock is now a sidebar over this fixture's Text action strip.
     await toggleSidebar('HIDE SIDEBAR');
     const clearControls = async () => {
       await page.waitForFunction(() => {

@@ -2,7 +2,7 @@ import { BROWSER_ASSET_SIZE, BROWSER_SORTS, BROWSER_VIEW_KINDS } from './browser
 
 export const defaultBrowserPreferences = () => ({ view: { kind: BROWSER_VIEW_KINDS.ALL, id: null }, query: '',
   collection: 'all', sort: BROWSER_SORTS.TITLE_ASC, assetSize: BROWSER_ASSET_SIZE.DEFAULT,
-  sidebarWidth: 174, hideLabels: false, libraryWidth: null, relationshipView: 'all', collapsedSections: [], startCategoryId: null });
+  sidebarWidth: 174, navigationMode: 'names', hideLabels: false, libraryWidth: null, relationshipView: 'all', collapsedSections: [], startCategoryId: null });
 export function libraryOpeningPreferences(preferences, categories) {
   if (!preferences.startCategoryId) return preferences;
   const exists = categories.some(category => category.id === preferences.startCategoryId);
@@ -14,6 +14,7 @@ export function validBrowserPreferences(value) {
   return Boolean(value && value.view && Object.values(BROWSER_VIEW_KINDS).includes(value.view.kind)
     && (value.startCategoryId == null || typeof value.startCategoryId === 'string' && value.startCategoryId.length > 0 && value.startCategoryId.length <= 256)
     && (value.view.kind === BROWSER_VIEW_KINDS.CATEGORY ? typeof value.view.id === 'string' && value.view.id.length <= 256 : value.view.id === null)
+    && (value.navigationMode === undefined || ['names', 'icons'].includes(value.navigationMode))
     && typeof value.query === 'string' && value.query.length <= 1000
     && typeof value.collection === 'string' && value.collection.length <= 1000
     && Object.values(BROWSER_SORTS).includes(value.sort) && typeof value.hideLabels === 'boolean'

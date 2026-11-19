@@ -94,7 +94,7 @@ test('owner folders remain direct categories in the selected Library presenter',
 test('System Workflow routing contains no legacy Gallery destination controls', () => {
   const shellSource = readFileSync(new URL('./ownerSystemWorkflow/OwnerSystemWorkflowRuntime.jsx', import.meta.url), 'utf8');
   assert.doesNotMatch(shellSource, /GalleryNavigationCard|GalleryWorld|system-hud__destinations/u);
-  assert.match(shellSource, /<OwnerSystemWorkflowSidebar/u);
+  assert.doesNotMatch(shellSource, /<OwnerSystemWorkflowSidebar/u);
 });
 
 test('published navigation follows ordered v9 Grids without a spatial-world handoff', () => {
@@ -115,7 +115,7 @@ test('selected owner and Visitor omit the retired upper-world topology', () => {
 test('profile destinations mount the owner boundary only for an authorized Workbench', () => {
   const appSource = readFileSync(new URL('../App.jsx', import.meta.url), 'utf8');
   assert.match(appSource, /localOwnerRoute \? !ownerSourceReady \?[\s\S]*<OwnerRuntimeBoundary/);
-  assert.match(appSource, /: <PublishedProfileBoundary/);
+  assert.match(appSource, /localOwnerRoute \? ownerWorkspace : <Suspense[^]*?<PublishedProfileBoundary/);
   assert.match(appSource, /ownerAuthoringEnabled = content\?\.kind === 'workbench'/);
   assert.doesNotMatch(appSource, /viewingConnectedWorkspace \? <OwnerRuntimeBoundary/);
 });

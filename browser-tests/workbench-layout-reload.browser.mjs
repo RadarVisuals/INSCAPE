@@ -160,8 +160,12 @@ test('owner module placement survives real reload after individual, zoomed and g
     for (const id of ['display:primary','text:one','image:two','image:three']) assert.deepEqual(resized[id], movedBeforeResize[id]);
     await reload(); assert.deepEqual(await geometry(), resized, 'resizing one Image retains every recently moved module after reload');
     await page.waitForFunction(() => readLayout()?.layout.display.window.left === 442);
+    await selectMixed();
+    // Selection legitimately clears the Inspector target. Finish that view save
+    // before injecting the next placement-save failure.
+    await page.waitForFunction(() => readLayout()?.views?.['workbench:tools']?.targetId === null);
     const savedBeforeFailure = await page.evaluate(() => readLayout());
-    await selectMixed(); await page.evaluate(() => { window.failLayout = true; });
+    await page.evaluate(() => { window.failLayout = true; });
     await drag(mixed, 17, 21);
     await page.getByRole('button', { name:'Save current layout', exact:true }).waitFor();
     assert.deepEqual(await page.evaluate(() => readLayout()), savedBeforeFailure, 'failed saving retains the previous stored arrangement');

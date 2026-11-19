@@ -25,3 +25,18 @@ test('preview uses saved origin, open frames, artwork and authored layer order w
   assert.equal(result.items[0].source.url, undefined, 'interactive previews have no execution destination');
   assert.deepEqual(overviewAssetIds(draft), []); assert.deepEqual(draft, before);
 });
+
+test('a mixed composition uses one native layout for artwork and source details', () => {
+  const composition = { version: 3, cells: [{ id: 'shape:cell', members: [] }],
+    shapes: [{ id: 'shape:cell', name: 'Cell' }, { id: 'shape:free', name: 'Drawing' }],
+    imageModules: [], texts: [], artworkLayers: ['shape:cell', 'shape:free'],
+    workbench: { ...createDefaultWorkbenchPresentation(), area: { left: 0, top: 0, width: 1440, height: 900 },
+      shapes: ['shape:cell', 'shape:free'].map((id, index) => ({ id, open: true, window: { left: 80 + index * 200, top: 40, width: 160, height: 120 } })) },
+  };
+  const model = workbenchOverviewModel({ composition, grids: [], texts: [{ id: 'text:unused' }] });
+  assert.equal(model.composition, composition);
+  assert.deepEqual(model.area, composition.workbench.area);
+  assert.deepEqual(model.items.map(item => item.id), ['shape:cell', 'shape:free']);
+  assert.match(model.contains, /1 cell/);
+  assert.deepEqual(model.items[1].frame, { left: 280, top: 40, width: 160, height: 120 });
+});

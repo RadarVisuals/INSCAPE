@@ -1,4 +1,5 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react';
+import PublicWorkspaceHeader from '../profileDocument/components/PublicWorkspaceHeader.jsx';
 import { Search } from 'lucide-react';
 import useProfileDiscoveryController from '../profileDiscovery/useProfileDiscoveryController.js';
 import { usePublishedProfile } from '../profileDocument/state/usePublishedProfile.js';
@@ -6,6 +7,7 @@ import { PUBLISHED_PROFILE_STATUS } from '../profileDocument/storage/luksoPublis
 import { selectFeaturedWorld } from './featuredWorld.js';
 import '../public/ownerSystemWorkflow/workflowTactile.css';
 import '../public/ownerSystemWorkflow/workflowFlat.css';
+import './startveil.css';
 import './publicEntryPortal.css';
 
 const GridProductionRenderer = lazy(() => import('../profileDocument/components/GridProductionRenderer.jsx'));
@@ -60,14 +62,12 @@ function PublishedWorldCard({ compact = false, onVisit, profile, resolutionStore
   </article>;
 }
 
-export default function PublicEntryPortal({ connectedProfile, discoveryRepository, embedded = false, initialMode = 'landing', mode: controlledMode, onExplore, onHome, onClose,
+export default function PublicEntryPortal({ connectedProfile, ownerDestinations, discoveryRepository, embedded = false, initialMode = 'landing', mode: controlledMode, onExplore, onHome, onClose,
   onConnect, onDisconnect, onEnterMyWorld, onVisitProfile, resolutionStore }) {
   const [localMode, setMode] = useState(initialMode === 'explore' ? 'explore' : 'landing');
   const mode = controlledMode || localMode;
   const explore = () => { if (mode !== 'explore') onExplore ? onExplore() : setMode('explore'); };
-  const [accountOpen, setAccountOpen] = useState(false);
   const [visibleWorlds, setVisibleWorlds] = useState(MAX_EXPLORE_RESULTS);
-  const accountRef = useRef(null);
   const searchRef = useRef(null);
   const discovery = useProfileDiscoveryController({ repository: discoveryRepository });
   const featured = selectFeaturedWorld(discovery.profiles);
@@ -77,66 +77,35 @@ export default function PublicEntryPortal({ connectedProfile, discoveryRepositor
   }, [mode]);
   useEffect(() => {
     if (mode !== 'explore') return undefined;
-    const close = (event) => { if (event.key !== 'Escape' || event.defaultPrevented || accountOpen) return; (onClose || onHome) ? (onClose || onHome)() : setMode('landing'); };
+    const close = event => {
+      if (event.key !== 'Escape' || event.defaultPrevented || event.target?.closest?.('dialog[open]')) return;
+      if (onClose || onHome) (onClose || onHome)();
+      else setMode('landing');
+    };
     window.addEventListener('keydown', close);
     return () => window.removeEventListener('keydown', close);
-  }, [accountOpen, mode, onClose, onHome]);
-  useEffect(() => {
-    if (!accountOpen) return undefined;
-    const close = (event) => {
-      if (!accountRef.current?.contains(event.target)) setAccountOpen(false);
-    };
-    window.addEventListener('pointerdown', close);
-    return () => {
-      window.removeEventListener('pointerdown', close);
-    };
-  }, [accountOpen]);
-
+  }, [mode, onClose, onHome]);
   const returnHome = () => (onClose || onHome) ? (onClose || onHome)() : setMode('landing');
-  return <div className="public-entry-portal" data-embedded={embedded || undefined} data-workbench-selection-tools={accountOpen || undefined}
-    data-workflow-material="tactile" data-workflow-finish="flat"
-    data-lattice-menu-surface  data-mode={mode}
-    onKeyDown={event => {
-      if (event.key !== 'Escape' || !accountOpen) return;
-      event.preventDefault(); event.stopPropagation(); setAccountOpen(false);
-      accountRef.current?.querySelector('button')?.focus({ preventScroll: true });
-    }}>
-    <header className="public-entry-portal__header">
-      <button aria-label={onClose ? 'Return to workspace' : 'Return to INSCAPE landing'} className="public-entry-portal__header-wordmark"
-        onClick={returnHome} type="button"><i aria-hidden="true" /></button>
+  return <div className="public-entry-portal" data-embedded={embedded || undefined}
+    data-workflow-material="tactile" data-workflow-finish="flat" data-lattice-menu-surface data-mode={mode}>
+    <PublicWorkspaceHeader current="Discover" account={connectedProfile} ownerDestinations={ownerDestinations}
+      onDiscover={explore} onDisconnect={onDisconnect} onConnect={onConnect}>
       {mode === 'explore' && <label className="public-entry-portal__header-search">
         <Search aria-hidden="true" size={13} strokeWidth={2} />
         <input aria-label="Search published worlds" ref={searchRef} onChange={(event) => { setVisibleWorlds(MAX_EXPLORE_RESULTS); discovery.setQuery(event.target.value); }}
-          placeholder="Search worlds" type="search" value={discovery.query} />
+          placeholder="Search" type="search" value={discovery.query} />
       </label>}
-      <nav aria-label="Public entry">
-        <button aria-current={mode === 'explore' ? 'page' : undefined} onClick={explore} type="button">Discover</button>
-        {connectedProfile ? <div className="public-entry-portal__account" ref={accountRef}>
-          <button aria-expanded={accountOpen} className="public-entry-portal__account-trigger"
-            onClick={() => setAccountOpen((open) => !open)} type="button">
-            <span className="public-entry-portal__account-avatar">{connectedProfile.avatarUrl
-              ? <img alt="" referrerPolicy="no-referrer" src={connectedProfile.avatarUrl} />
-              : initials(connectedProfile.name)}</span>
-            <span>{connectedProfile.name || compactAddress(connectedProfile.address)}</span>
-          </button>
-          {accountOpen && <div className="public-entry-portal__account-menu">
-            <button onClick={() => { setAccountOpen(false); onEnterMyWorld?.(); }} type="button">Enter my world</button>
-            <code>{compactAddress(connectedProfile.address)}</code>
-            <button onClick={() => { setAccountOpen(false); onDisconnect?.(); }} type="button">Disconnect</button>
-          </div>}
-        </div> : onConnect && <button onClick={onConnect} type="button">Connect</button>}
-      </nav>
-    </header>
+    </PublicWorkspaceHeader>
 
     {mode === 'landing' ? <main className="public-entry-portal__main">
-      <div aria-label="INSCAPE" className="public-entry-portal__wordmark" role="img"><span aria-hidden="true" /></div>
+      <div aria-label="INSCAPE" className="public-entry-portal__wordmark" role="img"><span className="entry-wordmark" aria-hidden="true" /></div>
       <p className="public-entry-portal__statement">PUBLISHED WORLDS · SPATIAL STORIES · SHARED SIGNALS</p>
       <PublishedWorldCard onVisit={onVisitProfile} profile={featured}
         resolutionStore={resolutionStore} />
       <div className="public-entry-portal__actions">
         <button className="public-entry-portal__primary" onClick={explore} type="button"><span>Discover</span><b aria-hidden="true">→</b></button>
         {connectedProfile
-          ? <button onClick={onEnterMyWorld} type="button"><span>Enter my world</span><b aria-hidden="true">→</b></button>
+          ? <button onClick={ownerDestinations?.Studio || ownerDestinations?.Profile || onEnterMyWorld} type="button"><span>{ownerDestinations?.Studio ? 'Studio' : 'Profile'}</span><b aria-hidden="true">→</b></button>
           : onConnect && <button onClick={onConnect} type="button"><span>Connect profile</span><b aria-hidden="true">→</b></button>}
       </div>
     </main> : <main className="public-entry-portal__explore">
@@ -156,6 +125,6 @@ export default function PublicEntryPortal({ connectedProfile, discoveryRepositor
       </div>}
     </main>}
 
-    <footer className="public-entry-portal__footer"><span>ALPHA · LUKSO MAINNET</span></footer>
+    <footer className="public-entry-portal__footer">{mode === 'explore' && (onClose || onHome) && <button type="button" onClick={returnHome}>Back</button>}<span>ALPHA · LUKSO MAINNET</span></footer>
   </div>;
 }

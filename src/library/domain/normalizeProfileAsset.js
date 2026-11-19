@@ -43,6 +43,7 @@ export function normalizeProfileAsset(holding, ownerAddress, options = {}) {
     name, description: metadata.description || contractMetadata?.description || '', collectionName,
     imageUrl: urls.imageUrl, thumbnailUrl: urls.thumbnailUrl, originalImageUrl: urls.originalImageUrl,
     imageGroups,
+    fileAttachments: metadata.fileAttachments || contractMetadata?.fileAttachments || [],
     imageWidth: urls.width, imageHeight: urls.height,
     mediaFileType: urls.fileType || null,
     creators, attributes: attributes.map(({ key, value, attributeType }) => ({ key, value, type: attributeType })),

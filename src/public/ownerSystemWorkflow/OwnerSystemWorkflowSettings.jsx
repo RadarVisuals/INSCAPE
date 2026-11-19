@@ -1,6 +1,7 @@
 import { X } from 'lucide-react';
 import { useSignalStore } from '../../signals/state/useSignalStore.js';
 import InterfaceThemeToggle from '../../InterfaceThemeToggle.jsx';
+import EditorAppearanceControls from '../../EditorAppearanceControls.jsx';
 import { useInterfaceTheme } from '../../interfaceTheme.js';
 import { OwnerSystemWorkflowSelectMenu } from './OwnerSystemWorkflowWorkspaceControls.jsx';
 import { workbenchGridColorPreview } from './workbenchPreferences.js';
@@ -26,9 +27,9 @@ export default function OwnerSystemWorkflowSettings({ profileAddress: profile, o
   const signalPersistenceError = useSignalStore((state) => state.persistenceError);
   const updateSignalSetting = useSignalStore((state) => state.updateSetting);
   const { mode } = useInterfaceTheme();
-  const gap = workbenchPreferences.moduleGap;
+  const gap = workbenchPreferences?.moduleGap;
   return <aside aria-hidden={phase === 'closing' || undefined} aria-label="Settings"
-    data-workflow-material="tactile" data-workflow-finish="flat"
+    data-workflow-material="tactile" data-workflow-finish="flat" data-workflow-palette="editor"
     className="workbench-tool-panel system-workflow__settings system-workflow__motion-panel" inert={phase === 'closing' ? '' : undefined} role="dialog">
     <header className="workbench-tool-panel-header"><h2>Settings</h2>
       <button aria-label="Close Settings" className="workbench-tool-panel-close" onClick={onClose} title="Close Settings" type="button"><X /></button>
@@ -39,7 +40,7 @@ export default function OwnerSystemWorkflowSettings({ profileAddress: profile, o
         onChange={(checked) => updateSignalSetting(key, checked, profile)} />)}</div>
       {signalProfile === profile && signalPersistenceError && <p role="alert">{signalPersistenceError}</p>}
     </section>
-    {canvasGuides && <section className="system-workflow__settings-section system-workflow__settings-theme"><header><strong>Workbench</strong><span>Local to this device</span></header>
+    {canvasGuides && workbenchPreferences && <section className="system-workflow__settings-section system-workflow__settings-theme"><header><strong>Workbench</strong><span>Local to this device</span></header>
       <label><span>Grid display</span><OwnerSystemWorkflowSelectMenu flat label="Workbench grid display"  onChange={(gridMode) => onWorkbenchPreferencesChange({ gridMode })} options={guideOptions} value={workbenchPreferences.gridMode} /></label>
       <label><span>Grid color</span><span className="system-workflow__settings-color"><input aria-label="Workbench grid color" onChange={(event) => onWorkbenchPreferencesChange({ gridColor: event.target.value })} type="color" value={workbenchPreferences.gridColor || workbenchGridColorPreview(mode)} /><button disabled={!workbenchPreferences.gridColor} onClick={() => onWorkbenchPreferencesChange({ gridColor: null })} type="button">Auto</button></span></label>
       <label><span>Grid cell size</span><input key={workbenchPreferences.gridSpacing} aria-label="Workbench grid cell size" type="number" min="8" max="512" step="any" defaultValue={workbenchPreferences.gridSpacing}
@@ -60,8 +61,9 @@ export default function OwnerSystemWorkflowSettings({ profileAddress: profile, o
     </section>}
     <section className="system-workflow__settings-section system-workflow__settings-theme"><header><strong>Interface</strong><span>Everywhere on this device</span></header>
       <InterfaceThemeToggle />
-      <CheckControl checked={workbenchPreferences.chromeNoise} label="Chrome noise"
-        onChange={(chromeNoise) => onWorkbenchPreferencesChange({ chromeNoise })} />
+      <EditorAppearanceControls />
+      {onWorkbenchPreferencesChange && <CheckControl checked={workbenchPreferences.chromeNoise} label="Chrome noise"
+        onChange={(chromeNoise) => onWorkbenchPreferencesChange({ chromeNoise })} />}
     </section>
     </div>
   </aside>;

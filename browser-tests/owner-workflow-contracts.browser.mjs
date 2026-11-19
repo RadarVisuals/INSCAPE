@@ -48,7 +48,7 @@ for (const width of [1440, 390]) test(`Library retains its live state while hidd
     }
     await page.keyboard.press('Escape'); await filters.waitFor({ state: 'hidden' });
     await page.getByRole('button', { name: 'Close Library', exact: true }).click(); await library.waitFor({ state: 'hidden' });
-    await page.getByRole('button', { name: 'Publish', exact: true }).click();
+    await editorDestination(page, 'Publish');
     const publication = page.getByRole('complementary', { name: 'Publish profile' }); await publication.waitFor();
     assert.equal(await page.locator('main.system-workflow').evaluate(node => node.inert), false, 'Publish keeps the workspace interactive');
     await editorDestination(page, 'Library'); await library.waitFor(); await publication.waitFor({ state: 'hidden' });

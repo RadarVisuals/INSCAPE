@@ -7,16 +7,17 @@ const app = read('../App.jsx');
 const portal = read('./PublicEntryPortal.jsx');
 const startveil = read('./PortalStartveil.jsx');
 const styles = read('./publicEntryPortal.css');
+const introStyles = read('./startveil.css');
 const walletSession = read('../wallet/standaloneWalletSession.js');
 
 test('bare public entry resolves into a Portal without restoring the generic Enter gate', () => {
   assert.match(app, /portal=\{publicEntryPortal\}/);
-  assert.match(startveil, /portal && ready \? <PublicEntryPortal/);
+  assert.match(startveil, /portal && ready \? <Suspense fallback=\{intro\}><PublicEntryPortal/);
   assert.match(portal, />Discover</);
-  assert.match(portal, />Connect</);
+  assert.match(portal, /<PublicWorkspaceHeader[\s\S]*?onConnect=\{onConnect\}/);
   assert.doesNotMatch(portal, />ENTER</);
   assert.match(startveil, /onExplore/);
-  assert.match(startveil, /import '\.\/publicEntryPortal\.css'/);
+  assert.match(startveil, /import '\.\/startveil\.css'/);
   assert.doesNotMatch(startveil, /inscapeStartveil\.css/);
 });
 
@@ -32,14 +33,14 @@ test('the same Discover surface can be opened from owner and visitor workspaces'
   const panelLayer = read('../public/ownerSystemWorkflow/OwnerSystemWorkflowPanelLayer.jsx');
   const publishedBoundary = read('../profileDocument/components/PublishedProfileBoundary.jsx');
   assert.match(panelLayer, /<PublicEntryPortal[\s\S]*embedded initialMode="explore"/);
-  assert.match(publishedBoundary, /onOpenDirectory=\{onOpenDiscover\}/);
+  assert.match(publishedBoundary, /onOpenDirectory: onOpenDiscover/);
   assert.match(portal, /onHome/);
 });
 
 test('Portal reuses the dock wordmark, canonical menu tokens, and production Grid renderer', () => {
-  assert.match(styles, /url\('\/assets\/brand\/inscape-wordmark\.svg'\)/);
-  assert.match(styles, /var\(--interface-panel/);
-  assert.match(styles, /var\(--lattice-window-type-label\)/);
+  assert.match(introStyles, /url\('\/assets\/brand\/inscape-wordmark\.svg'\)/);
+  assert.match(introStyles, /var\(--interface-panel/);
+  assert.match(introStyles, /var\(--lattice-window-type-label\)/);
   assert.match(portal, /GridProductionRenderer/);
   assert.match(portal, /document\?\.metadata\?\.worldCover\?\.grid/);
   assert.match(portal, /data-surface=\{document\.appearance\.surfaceId\}/);
@@ -55,7 +56,7 @@ test('profile avatar remains a small publisher signature rather than the world c
 
 test('Connect Profile keeps the official UP Modal but presents it in the shared INSCAPE interface', () => {
   assert.match(walletSession, /theme: interfaceTheme.getSnapshot\(\).mode/);
-  assert.match(styles, /--up-modal-font-family:\s*"Inscape Sora"/);
-  assert.match(styles, /--up-modal-bg:\s*var\(--interface-panel/);
-  assert.match(styles, /--up-modal-border-radius:\s*0px/);
+  assert.match(introStyles, /--up-modal-font-family:\s*"Inscape Sora"/);
+  assert.match(introStyles, /--up-modal-bg:\s*var\(--interface-panel/);
+  assert.match(introStyles, /--up-modal-border-radius:\s*0px/);
 });

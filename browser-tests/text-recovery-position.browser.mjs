@@ -1,3 +1,4 @@
+import { undockWindow } from './fixtures/undock-window.mjs';
 import { openTextToolSection } from './fixtures/text-tool-sections.mjs';
 import assert from 'node:assert/strict';
 import test from 'node:test';
@@ -119,8 +120,7 @@ for (const [width, scale, method] of [[1600, 1, 'keyboard'], [1600, .5, 'drag'],
       const errors = []; page.on('pageerror', error => errors.push(error.message));
       await mountTextToolsFixture(page, origin, { displayTextCount: 1 });
       if (method === 'drag') {
-        const undockNavigator = page.getByRole('button', { name: 'Undock Navigator', exact: true });
-        if (await undockNavigator.count()) await undockNavigator.click();
+        await undockWindow(page, 'Navigator');
         const navigatorGrip = page.getByRole('button', { name: 'Move Navigator window', exact: true });
         for (let i = 0; i < 40; i++) await navigatorGrip.press('Shift+ArrowRight');
         // The pan setup below puts the Display beneath the expanded sidebar.

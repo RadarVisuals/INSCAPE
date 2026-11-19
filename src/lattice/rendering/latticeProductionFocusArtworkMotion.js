@@ -1,5 +1,23 @@
 export const LATTICE_PRODUCTION_FOCUS_OPENING_MS = 460;
 
+// One clock for Editor artwork inspection and whole-cell reading. Returning
+// resumes the last painted pose, including an interrupted opening.
+export function animateLatticeProductionFocus({ from, to, reducedMotion, paint, complete, env = globalThis }) {
+  let frame, disposed = false;
+  const start = env.performance.now();
+  if (reducedMotion) { paint(to); complete?.(); return () => {}; }
+  const tick = now => {
+    if (disposed) return;
+    const elapsed = Math.min(1, Math.max(0, (now - start) / LATTICE_PRODUCTION_FOCUS_OPENING_MS));
+    paint(from + (to - from) * latticeProductionFocusOpeningProgress(elapsed));
+    if (elapsed < 1) frame = env.requestAnimationFrame(tick);
+    else if (complete) frame = env.requestAnimationFrame(() => { if (!disposed) complete(); });
+  };
+  paint(from);
+  frame = env.requestAnimationFrame(tick);
+  return () => { disposed = true; env.cancelAnimationFrame(frame); };
+}
+
 const clampUnit = (value) => Math.min(1, Math.max(0, value));
 const curve = (time, point1, point2) => {
   const coefficientA = 1 - (3 * point2) + (3 * point1);

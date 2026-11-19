@@ -7,7 +7,7 @@ import { OwnerSystemWorkflowSelectMenu } from '../public/ownerSystemWorkflow/Own
 import ShapeOutlineControls, { PatternNumber } from './ShapeOutlineControls.jsx';
 import ShapeEffectsControls from './ShapeEffectsControls.jsx';
 import { gridShapeFrame } from './gridShapeGeometry.js';
-import { useCallback, useEffect, useMemo, useState, useId } from 'react';
+import { memo, useCallback, useEffect, useMemo, useState, useId } from 'react';
 import { GripVertical } from 'lucide-react';
 import { EditorCellTools, useEditorCells, editorCellStructureActions } from '../reception/EditorCellsContext.jsx';
 import { RECEPTION_CELL_LIMIT } from '../reception/receptionEditorDocument.js';
@@ -18,7 +18,7 @@ import { useContextToolTarget } from '../public/ownerSystemWorkflow/ContextToolb
 import { useWorkbenchArea } from '../public/ownerSystemWorkflow/WorkbenchAreaContext.jsx';
 import { SharedDisplayToolContent } from '../public/ownerSystemWorkflow/SharedDisplayTools.jsx';
 import { ArtworkInfoButton, LayerNameInput } from '../public/ownerSystemWorkflow/ArtworkToolbarControls.jsx';
-import { useWorkbenchView, workbenchModuleTransform, useArtworkOpener, useClosedArtworkLayout, useWorkbenchToolSource } from '../public/ownerSystemWorkflow/WorkbenchViewContext.js';
+import { useWorkbenchHostView, useWorkbenchView, workbenchModuleTransform, useArtworkOpener, useClosedArtworkLayout, useWorkbenchToolSource } from '../public/ownerSystemWorkflow/WorkbenchViewContext.js';
 import { commitWorkbenchSelectionResize } from '../systemWorkflow/resizeWorkbenchSelection.js';
 import { createShapePresentation, MAX_SHAPES } from './shapes.js';
 import { addShape, editShape, prepareShapeResize } from './shapeSession.js';
@@ -28,7 +28,7 @@ import './shapes.css';
 
 function GridPaint({ record }) {
   const id = useId().replace(/:/g, '');
-  const view = useWorkbenchView();
+  const view = useWorkbenchHostView();
   const scale = workbenchModuleTransform(view, record.id).scale * (globalThis.devicePixelRatio || 1);
   const spacing = record.grid.spacing * scale * (view.transforms?.[record.id]?.gridScale || 1), line = Math.max(1, record.grid.lineWidth * scale);
   return <svg className="shape-grid-paint" aria-hidden="true" width="100%" height="100%">
@@ -106,7 +106,10 @@ function ShapeInstance({ record, records, index, initialPresentation, store, pro
   </section>;
   const effects = <section key={record.id} aria-label={`${record.name} effects`}>
     <ShapeEffectsControls record={record} store={store} disabled={!editable || !presentation.open}
-      onPreview={patch => setFxPreview(patch ? { record, patch } : null)} onChange={patch => change(patch, 'fx')} />
+      onPreview={patch => {
+        setFxPreview(patch ? { record, patch } : null);
+        if (cell) cellContext.previewCellGrain(record.id, patch?.grain);
+      }} onChange={patch => change(patch, 'fx')} />
     {failure?.surface === 'fx' && <p role="alert">{failure.message}</p>}
   </section>;
   const appearance = <>
@@ -125,14 +128,15 @@ function ShapeInstance({ record, records, index, initialPresentation, store, pro
       onChange={patch => run(() => cellContext.changeInnerLines(patch), 'color')} onPreview={cellContext.previewInnerLines} />} /> : undefined, actions: {
     disabled: !editable,
     duplicate: { disabled: Boolean(cell) || records.length >= MAX_SHAPES,
-      reason: cell ? 'Duplicating a whole Reception cell is not available.' : records.length >= MAX_SHAPES ? 'At most 32 shapes are supported.' : undefined,
+      reason: cell ? 'Duplicating a whole Bento cell is not available.' : records.length >= MAX_SHAPES ? 'At most 32 shapes are supported.' : undefined,
       run: () => select(addShape(store, profileAddress, { workbench: view.getPresentation() }, record)) },
-    items: cellContext && kind === 'rectangle' ? cell ? [
+    // Structure checks run when the menu requests them, not on every body edit.
+    get items() { return cellContext && kind === 'rectangle' ? cell ? [
       { id: 'edit-cell', label: 'Edit cell contents', run: () => cellContext.enterCell(record.id) },
       { id: 'cell-settings', label: 'Bento settings', run: () => cellContext.openSettings(record.id) },
       ...editorCellStructureActions(store, record.id, view),
     ] : [{ id: 'make-cell', label: 'Turn into cell', disabled: Boolean(cellParent) || cellContext.cells.length >= RECEPTION_CELL_LIMIT,
-      run: () => { store.turnShapeIntoCell(record.id, view.getPresentation()); view.selectArtwork(record.id); } }] : [],
+      run: () => { store.turnShapeIntoCell(record.id, view.getPresentation()); view.selectArtwork(record.id); } }] : []; },
   }, shape: cell ? undefined : ({ section, transform, position, information }) => <>
     {shapeTools}
     {section('Color', appearance, 'Appearance', true)}
@@ -142,6 +146,12 @@ function ShapeInstance({ record, records, index, initialPresentation, store, pro
       onChange={event => change({ visibility: event.target.checked ? 'PUBLIC' : 'PRIVATE' })} />Include in publication</label>
     {information}
   </> });
+  const windowControls = toolbarVisible ? <>
+          <LayerNameInput compact label="Shape layer name" name={record.name} onRename={name => change({ name }, 'actions')} />
+          {fillButton}
+          <ArtworkInfoButton targetId={record.id} />
+          {failure?.surface === 'actions' && <span role="alert">{failure.message}</span>}
+        </> : undefined;
   return <>
     {store && !cell && <SharedDisplayToolContent id="metadata" targetId={record.id} label={record.name}
       available={!disabled && view.selection?.length === 1 && view.selection[0] === record.id}>
@@ -152,30 +162,34 @@ function ShapeInstance({ record, records, index, initialPresentation, store, pro
     </SharedDisplayToolContent>}
     <div className="shape-instance" data-shape-kind={kind} data-cell-owner={cell ? record.id : undefined} data-grid-selected={kind === 'grid' && view.selection?.includes(record.id) || undefined} data-workbench-select-on-pointer={editable || undefined} data-editable={editable || undefined} data-active={active || undefined}
       onPointerDownCapture={event => editable && event.button === 0 && onActivate?.(record.id)} onFocusCapture={() => editable && onActivate?.(record.id)}>
+      <ShapeArtworkWindow {...{ record, painted, cell, kind, toolbarVisible, editable, canvasHost, index, active, windowSnap, presentation, layout, resizeTarget, committedFrame }}
+        controls={windowControls} continuousFill={Boolean(cell && cellContext.store.getReception().bento?.gap > 0)} hideOutline={Boolean(cell && cellContext.innerLines)} />
+    </div>
+  </>;
+}
+
+// Tool sources keep their live generation-bound callbacks; unchanged artwork can
+// retain its window while those controls are refreshed. No custom prop comparison.
+const ShapeArtworkWindow = memo(function ShapeArtworkWindow({ record, painted, cell, kind, toolbarVisible, editable, canvasHost, controls, index, active, windowSnap, presentation, layout, resizeTarget, committedFrame, continuousFill, hideOutline }) {
+  return <>
       {presentation.open && <WorkbenchWindow label="Shape" title={record.name} className="shape-window" chrome="bevel"
-        objectToolbar={toolbarVisible} externalControls={toolbarVisible} cssPixelSurface={Boolean(cell)} subpixelEdges={Boolean(cell && cellContext.store.getReception().bento?.gap > 0)}
+        objectToolbar={toolbarVisible} externalControls={toolbarVisible} cssPixelSurface={Boolean(cell)} subpixelEdges={Boolean(cell && continuousFill)}
         externalControlsHost={toolbarVisible ? canvasHost?.parentElement : null}
         titleContent={toolbarVisible ? <span className="editor-object-toolbar-label" title="Drag to move this shape"><GripVertical aria-hidden="true" /></span> : undefined}
-        controls={toolbarVisible ? <>
-          <LayerNameInput compact label="Shape layer name" name={record.name} onRename={name => change({ name }, 'actions')} />
-          {fillButton}
-          <ArtworkInfoButton targetId={record.id} />
-          {failure?.surface === 'actions' && <span role="alert">{failure.message}</span>}
-        </> : undefined}
+        controls={controls}
         viewId={record.id} active={active} placementModule={editable && !cell} snapToGrid={editable && !cell && windowSnap} moveFromContent={editable && !cell}
         minimumWidth={8} minimumHeight={8} resizableWidth resizable={editable && !cell}
         width={presentation.window.width} initialHeight={presentation.window.height} initialX={presentation.window.left} initialY={presentation.window.top}
         onLayoutChange={layout} resizeTarget={resizeTarget} committedFrame={committedFrame}
         surfaceStyle={{ zIndex: index + 1 }}>
-        <ShapeSurface record={painted} continuousFill={Boolean(cell && cellContext.store.getReception().bento?.gap > 0)} radius={cell?.radius || 0} hideOutline={Boolean(cell && cellContext.innerLines)}>{kind === 'grid' && <GridPaint record={record} />}</ShapeSurface>
+        <ShapeSurface record={painted} hideGrain={Boolean(cell && cell.grainOverContent !== false)} continuousFill={Boolean(cell && continuousFill)} radius={cell?.radius || 0} hideOutline={Boolean(cell && hideOutline)}>{kind === 'grid' && <GridPaint record={painted} />}</ShapeSurface>
         {cell?.content && <span className="editor-cell-content-note">{cell.content.startsWith('link:') ? 'Linked canvas content' : 'Profile content'} · visible in Preview</span>}
         {kind === 'grid' && editable && <div className="shape-grid-border" aria-hidden="true">
           {['n', 'e', 's', 'w'].map(edge => <span key={edge} className={`is-${edge}`} />)}
         </div>}
       </WorkbenchWindow>}
-    </div>
   </>;
-}
+});
 
 export default function ShapeWorkbench({ records, presentations, store, profileAddress, onPresentationChange, onActivate, suspended = false, windowSnap = false }) {
   return <div className="shape-workbench" data-workbench-module="shape">

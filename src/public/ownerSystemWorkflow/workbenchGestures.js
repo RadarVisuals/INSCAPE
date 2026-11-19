@@ -128,7 +128,7 @@ export function createWorkbenchGestures({
     beginResize(event, { beforeTransforms, valid, preview, commit, onFinish }) {
       const origin = { x: event.clientX, y: event.clientY };
       return start(event, { beforeTransforms, valid, commit, onFinish,
-        preview: pointer => preview({ x: pointer.clientX - origin.x, y: pointer.clientY - origin.y }, pointer.altKey),
+        preview: pointer => preview({ x: pointer.clientX - origin.x, y: pointer.clientY - origin.y }, pointer.altKey, pointer.shiftKey),
       });
     },
     beginMarquee(event, { beforeSelection, previousSelection, hits }) {

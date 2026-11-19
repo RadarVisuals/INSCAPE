@@ -5,6 +5,7 @@ export const ERC165_ABI = [{ type: 'function', name: 'supportsInterface', stateM
   inputs: [{ name: 'interfaceId', type: 'bytes4' }], outputs: [{ name: '', type: 'bool' }] }];
 export const LUKSO_INDEXER_URL = import.meta.env?.VITE_LUKSO_INDEXER_URL
   || 'https://envio.lukso-mainnet.universal.tech/v1/graphql';
+export const UP_IMAGE_SERVICE_URL = 'https://api.universalprofile.cloud/image/';
 const DEFAULT_IPFS_GATEWAY_URL = 'https://api.universalprofile.cloud/ipfs/';
 const DEFAULT_IPFS_GATEWAY_FALLBACK_URLS = 'https://ipfs.io/ipfs/,https://dweb.link/ipfs/';
 

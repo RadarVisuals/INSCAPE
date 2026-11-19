@@ -37,6 +37,16 @@ function fixture() {
   return {events,visibility,host,state,original,node,gestures,event,move,clean};
 }
 
+test('resize previews receive live Shift push intent separately from Alt snapping', () => {
+  const f=fixture(), samples=[];
+  f.gestures.beginResize(f.event,{ beforeTransforms:f.original,valid:()=>true,
+    preview:(delta,bypass,push)=>samples.push({delta,bypass,push}),commit:()=>true });
+  f.events.emit('pointermove',{clientX:30,shiftKey:true,altKey:false});
+  f.events.emit('pointermove',{clientX:40,shiftKey:false,altKey:true});
+  assert.deepEqual(samples,[{delta:{x:20,y:0},bypass:false,push:true},{delta:{x:30,y:0},bypass:true,push:false}]);
+  f.events.emit('pointerup'); f.clean();
+});
+
 test('selection capture preserves its click target and owns commit, Escape and capture-loss cleanup', () => {
   for (const ending of ['commit', 'Escape', 'capture loss']) {
     const f = fixture(), target = fixture().host;

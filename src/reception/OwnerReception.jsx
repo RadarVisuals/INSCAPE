@@ -8,7 +8,7 @@ import { createReception, projectReception } from '../profileDocument/domain/rec
 import { publishedPresentationSnapshot } from '../presentation/presentationSources.js';
 const OwnerReceptionCollection = lazy(() => import('./OwnerReceptionCollection.jsx'));
 
-export default function OwnerReception({ address, document, onEditReception, onCanvases, onDiscover, onReturn }) {
+export default function OwnerReception({ address, document, ...navigation }) {
   const [reader] = useState(() => createProfileDraftReader({ profileAddress: address, storage: localStorage }));
   const { draft, collection, status, stale } = useSyncExternalStore(reader.subscribe, reader.getSnapshot);
   const publicSnapshot = useMemo(() => document ? publishedPresentationSnapshot(document) : null, [document]);
@@ -18,10 +18,9 @@ export default function OwnerReception({ address, document, onEditReception, onC
     ? createProductionIdentityDossierViewModel({ identity, identityPresentation: draft?.identityPresentation, cachedIdentity: document?.profile.cachedIdentity })
     : createPublishedIdentityRackViewModel({ document, identity }), [draft, document, identity]);
   const failed = status === 'corrupt' || status === 'unavailable';
-  const notice = failed ? `Your local Reception could not be read. ${stale ? 'Showing the last saved view.' : document ? 'Showing the published version.' : 'No saved view is available.'} Open Reception Editor to recover your draft.` : null;
+  const notice = failed ? `Your local Profile could not be read. ${stale ? 'Showing the last saved view.' : document ? 'Showing the published version.' : 'No saved view is available.'} Open Studio to recover your draft.` : null;
   const View = collection ? OwnerReceptionCollection : ReceptionOverview;
-  return <Suspense fallback={<p role="status">Opening Reception…</p>}><View snapshot={collection || publicSnapshot} reception={reception} model={model} address={address}
+  return <Suspense fallback={<p role="status">Opening Profile…</p>}><View snapshot={collection || publicSnapshot} reception={reception} model={model} address={address}
     notice={notice} onRetry={failed ? reader.refresh : undefined} ownerEditingAllowed
-    ownerDestinations={{ 'Reception Editor': onEditReception, 'My Inscape': onCanvases, 'Canvas Editor': onReturn }}
-    onReturnToWorkbench={onReturn} onOpenCanvas={onCanvases} onOpenDirectory={onDiscover} /></Suspense>;
+    {...navigation} /></Suspense>;
 }

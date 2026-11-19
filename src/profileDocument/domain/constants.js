@@ -1,5 +1,16 @@
 export const INSCAPE_PROFILE_DOCUMENT_TYPE = 'INSCAPE_PROFILE';
 export const INSCAPE_PROFILE_DOCUMENT_VERSION = 9;
+
+export const GALLERY_PUBLICATION_CAPABILITY = 'v9-gallery-placements';
+
+// A v9 service can support multiple named canvases without supporting Studio
+// placements. Check the shape of the verified artifact being uploaded.
+export function requiresGalleryPublicationCapability(document) {
+  return document.canvas === null || Object.hasOwn(document, 'receptionDestinations')
+    || Object.hasOwn(document, 'composition') || Boolean(document.canvas?.destinations)
+    || (document.canvases || []).some(item => Object.hasOwn(item, 'destinations') || Object.hasOwn(item.content, 'composition'));
+}
+
 export const PROFILE_DOCUMENT_PUBLICATION_VERSIONS = Object.freeze([
   INSCAPE_PROFILE_DOCUMENT_VERSION,
 ]);

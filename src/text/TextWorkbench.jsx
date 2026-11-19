@@ -7,9 +7,10 @@ import { lazy, memo, Suspense, useCallback, useEffect, useMemo, useRef, useState
 import { createPortal } from 'react-dom';
 import { X, Settings2 as Settings, Eye, Pencil, Plus, GripVertical } from 'lucide-react';
 import { WorkbenchWindow } from '../public/ownerSystemWorkflow/DisplayInstrumentWindow.jsx';
-import { useWorkbenchView, workbenchModuleTransform, useArtworkOpener, useClosedArtworkLayout, useWorkbenchToolSource } from '../public/ownerSystemWorkflow/WorkbenchViewContext.js';
-import { useEditorCells } from '../reception/EditorCellsContext.jsx';
+import { useWorkbenchHostView, workbenchModuleTransform, useArtworkOpener, useClosedArtworkLayout, useWorkbenchToolSource } from '../public/ownerSystemWorkflow/WorkbenchViewContext.js';
+import { useEditorCellLayout } from '../reception/EditorCellsContext.jsx';
 import { CellPositionButton } from '../reception/EditorCellPositionControls.jsx';
+import { transformedCellWindow } from '../reception/editorCellGeometry.js';
 import { clampWorkbenchPosition } from '../public/ownerSystemWorkflow/workbenchSpace.js';
 import { createTextPresentation, TEXT_WINDOW_LIMITS, CELL_TEXT_WINDOW_LIMITS } from '../profileDocument/domain/workbenchPresentation.js';
 import { createProfileDocumentV9AssetResolver } from '../profileDocument/domain/profileDocumentV9Asset.js';
@@ -32,15 +33,15 @@ const ArticleEditor = lazy(() => import('./ArticleEditor.jsx'));
 const textValue = record => record;
 const saveText = (store, scope, expected, next, options) => saveTextModuleResult(store, scope.profile, expected, next, options);
 
-const TextInstance = memo(function TextInstance({ record, index, store, profileAddress, registerTarget, placementTargets, destinations = [], initialPresentation, onPresentationChange, suspended, active, activateModule, toolsOpen, setToolsOpen, displays, savedLayout, windowSnap, initialView, onViewChange, initiallyOpenId }) {
+const TextInstance = memo(function TextInstance({ record, index, store, profileAddress, registerTarget, placementTargets, destinations = [], initialPresentation, onPresentationChange, suspended, active, activateModule, toolsOpen, setToolsOpen, displays, savedLayout, windowSnap, initialView, onViewChange, initiallyOpenId, canDuplicate }) {
   const onActivate = useCallback(() => activateModule(record.id), [activateModule, record.id]);
   const { bounds: areaBounds, canvasHost } = useWorkbenchArea();
-  const workbenchView = useWorkbenchView();
-  const cells = useEditorCells();
+  const workbenchView = useWorkbenchHostView();
+  const cells = useEditorCellLayout();
   const cell = cells?.cells.find(cell => cell.members.includes(record.id));
   const limits = cell ? CELL_TEXT_WINDOW_LIMITS : TEXT_WINDOW_LIMITS;
   const editingCell = cell?.id === cells?.editingCellId ? cell : null;
-  const reception = store?.getWorkbenchId?.() === 'reception';
+  const reception = Boolean(store?.getCells);
   const view = workbenchModuleTransform(workbenchView, record.id);
   const scope = textRecoveryScope(profileAddress, record.id);
   const { value: working, failed, error, reason, session: edit } = useTextEditSession({ store, scope, record, valueOf: textValue, saveRecord: saveText });
@@ -64,7 +65,7 @@ const TextInstance = memo(function TextInstance({ record, index, store, profileA
   const [controlsHost, setControlsHost] = useState(null), [destination, setDestination] = useState('');
   const [quickToolsHost, setQuickToolsHost] = useState(null);
   const [fontPreviewFrame, setFontPreviewFrame] = useState(null);
-  const cellId = cell?.id;
+  const cellId = editingCell?.id;
   const fitFontPreview = useCallback(article => {
     setFontPreviewFrame(article ? store.previewFittedTextFrame(cellId, record.id, article) : null);
   }, [store, cellId, record.id]);
@@ -86,12 +87,23 @@ const TextInstance = memo(function TextInstance({ record, index, store, profileA
     range: miniatureFrame ? { id: miniatureFrame, from: miniatureFrom, to: miniatureTo } : null, index: 0 }),
   [article, miniatureFrame, miniatureFrom, miniatureTo]));
   const paintScale = view.scale * (globalThis.devicePixelRatio || 1);
+  const parentFrame = cell && transformedCellWindow(savedLayout?.shapes?.find(item => item.id === cell.id)?.window, workbenchView.transforms[cell.id]);
+  const textFrame = transformedCellWindow(presentation.window, workbenchView.transforms[record.id]);
+  const transform = article.appearance?.transform;
+  const excerpt = cell && !transform?.quarterTurns && !transform?.mirrorX && !transform?.mirrorY ? {
+    singleLine: cell.singleLine,
+    clipBounds: parentFrame && cell.clipContent !== false ? { left: parentFrame.left - textFrame.left, top: parentFrame.top - textFrame.top,
+      right: parentFrame.left + parentFrame.width - textFrame.left, bottom: parentFrame.top + parentFrame.height - textFrame.top } : undefined,
+  } : undefined;
   const missingDisplay = Boolean(store && working.sceneLink && !displays.some(display => display.id === working.sceneLink.displayId));
   const editBlocked = view.presented || suspended || (!sectionLink && (unavailable || swiping));
   const changeArticle = value => {
     if (!editBlocked) change(editPassage(edit.getSnapshot().value, gridId, value));
   };
-  const setEditor = useCallback(value => { editor.current = value; setColourEditor(value); }, []);
+  const setEditor = useCallback(value => {
+    editor.current = value; setColourEditor(value);
+    if (cellId && active && !article.title && value?.isEmpty && value.isEditable) value.commands.focus();
+  }, [cellId, active, article.title]);
   useEffect(() => {
     if (!colourEditor || colourEditor.isDestroyed) return;
     const selectBody = () => setColourTarget('body');
@@ -152,7 +164,7 @@ const TextInstance = memo(function TextInstance({ record, index, store, profileA
   const close = () => { if (failed) { setSettings(true); return; } setPresentation(p => ({ ...p, open: false })); queueMicrotask(() => shortcut.current?.focus()); };
   const closeTools = () => { setSettings(false); queueMicrotask(() => toolsTrigger.current?.focus()); };
   const moveInto = preview => {
-    if (reception) throw new Error('Reception Text stays inside Reception.');
+    if (reception) throw new Error('This text belongs to the composition.');
     if (!preview?.target?.isCurrent()) throw new Error('Choose an open, unlocked Display.');
     if (!change(edit.getSnapshot().value, { retry: true })) return;
     preview.target.attachText(edit.getSnapshot().record, { ...preview, cellSize: preview.cellSize / view.scale });
@@ -203,7 +215,7 @@ const TextInstance = memo(function TextInstance({ record, index, store, profileA
       readOptions={!reception && !linked && !sectionLink && <label className="text-visibility text-settings-wide"><input type="checkbox" checked={working.pagination === 'pages'} onChange={e => {
         const next = { ...edit.getSnapshot().value }; if (e.target.checked) next.pagination = 'pages'; else delete next.pagination; change(next);
       }} />Read as pages</label>}
-      publication={<label className="text-visibility"><input type="checkbox" checked={working.visibility === 'PUBLIC'} onChange={e => change({ ...edit.getSnapshot().value, visibility: e.target.checked ? 'PUBLIC' : 'PRIVATE' })} />{reception ? 'Include in Reception' : 'Include in Workbench publication'}</label>}>
+      publication={<label className="text-visibility"><input type="checkbox" checked={working.visibility === 'PUBLIC'} onChange={e => change({ ...edit.getSnapshot().value, visibility: e.target.checked ? 'PUBLIC' : 'PRIVATE' })} />Include in publication</label>}>
 
       {!reception && !linked && !working.sceneLink && destinations.length > 0 && <details className="text-tools-transfer text-settings-wide"><summary>Move into Display</summary><label>Destination<select aria-label="Text destination" value={destination} onChange={e => setDestination(e.target.value)}>
         <option value="">Choose a Display…</option>{destinations.map(target => <option key={target.id} value={target.id}>{target.label}</option>)}</select></label>
@@ -219,8 +231,8 @@ const TextInstance = memo(function TextInstance({ record, index, store, profileA
         }}>Move into Display</button></details>}
     </TextToolsContent>;
   useWorkbenchToolSource(record.id, { actions: { disabled: !store || editBlocked || failed,
-    duplicate: { disabled: (workbenchView.content?.texts?.length || 0) >= MAX_TEXT_MODULES,
-      reason: (workbenchView.content?.texts?.length || 0) >= MAX_TEXT_MODULES ? 'At most sixteen Text modules are supported.' : undefined,
+    duplicate: { disabled: !canDuplicate,
+      reason: !canDuplicate ? 'At most sixteen Text modules are supported.' : undefined,
       run: () => { const id = duplicateTextModule(store, profileAddress, edit.getSnapshot().value, workbenchView.getPresentation()); workbenchView.setSelection([id]); } } },
     text: hostTools => textControls(hostTools),
     color: colorTools(colourTarget) });
@@ -250,11 +262,11 @@ const TextInstance = memo(function TextInstance({ record, index, store, profileA
           disabled={editBlocked || failed || Boolean(working.sceneLink || working.pagination) || flow.ranges.length >= 8} onClick={() => addFrame(record.id)}><Plus /></button>}</>}
         {error && <button type="button" className="text-save-error" aria-label="Text not saved — open recovery" onClick={() => setSettings(true)}>!</button>}</>}
         <button type="button" className="editor-object-toolbar-button" aria-label={`Close ${name}`} onClick={close}><X /></button></>}>
-      <div className="text-module-body" ref={surface} style={textOutputStyle(article, fontPreviewFrame || view.frame || presentation.window)}>
+      <div className="text-module-body" ref={surface} data-text-single-line={cell?.singleLine || undefined} style={textOutputStyle(article, fontPreviewFrame || view.frame || presentation.window)}>
         {unavailable && <p className="text-status" role="status">{missingDisplay ? 'The linked Display was removed. Your text is preserved. Open Text tools to unlink it.' : sectionLink ? 'Open the linked Display to read its current section. You can still edit the full article in Write.' : 'Open the linked Display to read or edit its passage.'}</p>}
         <SceneTextViewport record={working} state={sceneState} open={presentation.open} mode={mode}>
           <TextContentPage article={article} paginated={paginated} mode={mode} flow={linked ? flow : null}
-            defaultOverflow={reception ? 'clip' : 'scroll'} resetKey={sectionRead || paginated ? gridId : null}>
+            defaultOverflow={reception ? 'clip' : 'scroll'} excerpt={excerpt} resetKey={sectionRead || paginated ? gridId : null}>
                   {store && <div hidden={mode !== 'write'}><Suspense fallback={<p role="status">Opening editor…</p>}><ArticleEditor sharedColour={sharedColour} titlePlaceholder={!reception} key={sectionLink ? 'article' : gridId || 'article'} article={sectionLink && colourPreview?.source !== working ? working.article : article}
                     quickToolsHost={editingCell && active && !failed && !view.presented ? quickToolsHost : null} quickColor={target => colorTools(target, true)}
                     onFitFontPreview={editingCell?.fitText?.includes(record.id) && store?.previewFittedTextFrame ? fitFontPreview : undefined}
@@ -304,7 +316,7 @@ function TextInstances({ records, presentations, store, profileAddress, register
   // host refs on every host render without waking unrelated editors.
   const destinations = placementTargets?.current?.textTargets?.() || [];
   return records.map((record, index) => <TextInstance key={`${profileAddress}:${record.id}`} {...{ record, index, store, profileAddress, registerTarget, placementTargets, onPresentationChange, suspended, windowSnap }}
-    displays={displays} savedLayout={draft?.workbench} activateModule={tools ? tools.activate : setActive} toolsOpen={tools?.open} setToolsOpen={tools?.setOpen}
+    canDuplicate={records.length < MAX_TEXT_MODULES} displays={displays} savedLayout={draft?.workbench} activateModule={tools ? tools.activate : setActive} toolsOpen={tools?.open} setToolsOpen={tools?.setOpen}
     destinations={activeId === record.id ? destinations : undefined}
     initiallyOpenId={initiallyOpenId} initialView={views?.[record.id]} onViewChange={onViewChange} initialPresentation={presentations?.find(p => p.id === record.id)} active={activeId === record.id} />);
 }

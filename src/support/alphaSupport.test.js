@@ -1,4 +1,5 @@
 import test from 'node:test';
+import { publicationUploadIssue } from './publicationUploadIssue.js';
 import assert from 'node:assert/strict';
 import {
   ALPHA_SUPPORT_CODES,
@@ -58,4 +59,25 @@ test('post-hash recovery forbids duplicate publication while pre-hash guidance s
   assert.match(alphaRecoveryGuidance(ALPHA_SUPPORT_CODES.WALLET_REJECTED), /Nothing was submitted/iu);
   assert.match(alphaRecoveryGuidance(ALPHA_SUPPORT_CODES.PUBLICATION_RESOLUTION_FAILED), /No wallet action or publication transaction is involved/iu);
   assert.doesNotMatch(alphaRecoveryGuidance(ALPHA_SUPPORT_CODES.PUBLICATION_RESOLUTION_FAILED), /ambiguous wallet action/iu);
+});
+
+
+test('upload reports distinguish endpoint, challenge, wallet and transfer without retaining raw errors', () => {
+  const privateValue = 'arbitrary-provider-message/or-secret';
+  for (const [stage, receivedCode, code, phase] of [
+    ['CHECKING_ACCESS', 'UPLOAD_ORIGIN_INVALID', 'UPLOAD_ORIGIN_INVALID', 'UPLOAD_ENDPOINT'],
+    ['CHECKING_ACCESS', 'PUBLICATION_FUNCTION_UNAVAILABLE', 'PUBLICATION_FUNCTION_UNAVAILABLE', 'UPLOAD_CHALLENGE'],
+    ['CHECKING_ACCESS', 'PUBLICATION_SERVICE_UPDATE_REQUIRED', 'PUBLICATION_SERVICE_UPDATE_REQUIRED', 'UPLOAD_CHALLENGE'],
+    ['AUTHORIZING', 'UPLOAD_AUTH_NOT_COMPLETED', 'UPLOAD_AUTH_NOT_COMPLETED', 'UPLOAD_AUTHORIZATION'],
+    ['UPLOADING', 'UPLOAD_PROFILE_QUOTA', 'UPLOAD_PROFILE_QUOTA', 'IPFS_UPLOAD'],
+    ['UPLOADING', privateValue, 'IPFS_UPLOAD_FAILED', 'IPFS_UPLOAD'],
+    ['AUTHORIZING', 'toString', 'UPLOAD_AUTHORIZATION_FAILED', 'UPLOAD_AUTHORIZATION'],
+  ]) {
+    const issue = publicationUploadIssue({ code: receivedCode, message: privateValue }, stage);
+    assert.equal(issue.code, code);
+    assert.equal(issue.phase, phase);
+    const report = formatAlphaSupportEvidence(createAlphaSupportEvidence(issue));
+    assert.ok(report.includes('code: ' + code) && report.includes('phase: ' + phase));
+    assert.ok(!report.includes(privateValue) && !issue.message.includes(privateValue));
+  }
 });

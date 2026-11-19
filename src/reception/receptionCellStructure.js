@@ -1,6 +1,5 @@
 import { receptionBentoSettings, receptionBentoDividers, resizeReceptionBento } from './receptionBento.js';
-import { receptionLayoutCountRange } from './receptionLayoutGenerator.js';
-import { receptionModuleWindow, withReceptionModuleWindow, receptionCellResizeReason, receptionModuleSizeReason, reconcileReceptionCells, MIN_RECEPTION_CELL_SIZE } from './receptionEditorDocument.js';
+import { receptionModuleWindow, withReceptionModuleWindow, receptionModuleSizeReason, reconcileReceptionCells } from './receptionEditorDocument.js';
 
 const near = (a, b) => Math.abs(a - b) < 0.001;
 const directions = { above: ['top', 'height', 'left', 'width', -1], below: ['top', 'height', 'left', 'width', 1],
@@ -109,38 +108,7 @@ export function mergeReceptionCells(original, id, direction) {
   }, id, frame);
 }
 
-export function receptionCellSplit(value, id, direction) {
-  const cell = value.cells.find(item => item.id === id), frame = receptionModuleWindow(value, id);
-  if (!cell || !['horizontal', 'vertical'].includes(direction)) return { reason: 'Choose an available cell and split direction.' };
-  if (value.cells.length >= receptionLayoutCountRange(value).max) return { reason: 'There is no room for another cell.' };
-  const axis = direction === 'horizontal' ? 'top' : 'left', size = direction === 'horizontal' ? 'height' : 'width';
-  const { gap } = receptionBentoSettings(value), firstSize = Math.floor((frame[size] - gap) / 2);
-  if (firstSize < MIN_RECEPTION_CELL_SIZE[size]) return { reason: `Each half needs at least ${MIN_RECEPTION_CELL_SIZE[size]} pixels of ${size}. Enlarge this cell or reduce the gutter.` };
-  const first = { ...frame, [size]: firstSize }, reason = receptionCellResizeReason(value, id, first);
-  if (reason) return { reason };
-  return { first, second: { ...frame,
-    [axis]: frame[axis] + firstSize + gap, [size]: frame[size] - firstSize - gap } };
-}
-
-export function splitReceptionCell(value, id, direction, newId = `shape:${crypto.randomUUID()}`) {
-  const plan = receptionCellSplit(value, id, direction);
-  if (plan.reason) throw new Error(plan.reason);
-  if ([...value.shapes, ...value.imageModules, ...value.texts].some(item => item.id === newId)) throw new Error('This cell already exists.');
-  const cell = value.cells.find(item => item.id === id), shape = value.shapes.find(item => item.id === id);
-  const added = { id: newId, members: [], radius: cell.radius || 0,
-    ...(cell.clipContent !== undefined ? { clipContent: cell.clipContent } : {}),
-    mobile: { columns: cell.mobile.columns, height: cell.mobile.height } };
-  const insert = ids => ids.flatMap(item => item === id ? [item, newId] : [item]);
-  const next = { ...value, cells: value.cells.flatMap(item => item.id === id ? [item, added] : [item]),
-    shapes: [...value.shapes, { ...shape, id: newId, name: `Cell ${value.cells.length + 1}` }],
-    artworkLayers: value.artworkLayers.flatMap(layer => typeof layer === 'string' ? insert([layer]) : [{ ...layer, children: insert(layer.children) }]),
-  };
-  return withReceptionModuleWindow(withReceptionModuleWindow(next, id, plan.first), newId, plan.second);
-}
-
 export function receptionCellStructureActions(value, id) {
-  return [...Object.keys(directions).map(direction => ({ action: 'merge', direction,
-    ...receptionCellMerge(value, id, direction) })),
-  ...['horizontal', 'vertical'].map(direction => ({ action: 'split', direction,
-    ...receptionCellSplit(value, id, direction) }))];
+  return Object.keys(directions).map(direction => ({ direction,
+    ...receptionCellMerge(value, id, direction) }));
 }

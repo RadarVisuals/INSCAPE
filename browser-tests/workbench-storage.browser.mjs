@@ -1,4 +1,4 @@
-import { editorMenu } from './fixtures/editor-menu.mjs';
+import { openEditorMenu, editorMenu, editorCommand, activeEditorDocument } from './fixtures/editor-menu.mjs';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { readFile, mkdir, writeFile } from 'node:fs/promises';
@@ -10,7 +10,7 @@ const output = process.env.INSCAPE_BROWSER_OUTPUT || '.browser-test-runtime/work
 const url = `${origin}/browser-tests/workbench-storage-fixture.html?seed=1`;
 const route = route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort();
 async function open(page, target = url) { page.setDefaultTimeout(15000); await page.route('**/*', route); await page.goto(target); }
-async function settings(page) { await editorMenu(page, 'Backup').click(); return page.getByRole('region', { name: 'Workbench backup', exact: true }); }
+async function settings(page) { await openEditorMenu(page, 'Backup'); return page.getByRole('region', { name: 'Workbench backup', exact: true }); }
 const upload = (panel, source) => panel.getByLabel('Open Workbench backup', { exact: true }).setInputFiles({ name: 'workbench.json', mimeType: 'application/json', buffer: Buffer.from(source) });
 
 test('two real tabs have one editor, separate profiles remain independent, and closing releases access', { timeout: 90000 }, async () => {
@@ -102,7 +102,7 @@ test('restore errors retain saved bytes and a delayed file cannot replace subseq
     await upload(panel, source); await page.waitForFunction(() => Boolean(window.finishRead));
     await page.getByRole('button', { name: 'Close Backup' }).click();
     await page.evaluate(() => window.finishRead());
-    await editorMenu(page, 'Backup').click();
+    await openEditorMenu(page, 'Backup');
     // Closing disposes the controls and cancels its outstanding read.
     assert.equal(await page.getByRole('button', { name: 'Replace Workbench with backup' }).count(), 0);
   } finally { await browser.close(); }
@@ -117,5 +117,132 @@ test('without Web Locks the editor fails closed and the published-view action st
     assert.equal(await page.evaluate(() => { const store = window.guardedStore(); return store.restoreBackup(store.getDraft(), { expectedGeneration: 0 }); }), false);
     await page.getByRole('button', { name: 'View published workspace' }).click();
     await page.getByText('Published view requested').waitFor();
+  } finally { await browser.close(); }
+});
+
+test('an existing free canvas adopts Bento cells in Studio and restores its original layers with Undo', { timeout: 60000 }, async () => {
+  const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
+  try {
+    const page = await browser.newPage({ viewport: { width: 1280, height: 900 }, reducedMotion: 'reduce' });
+    const errors = []; page.on('pageerror', error => errors.push(error.message));
+    await open(page, url + '&selection=1');
+    await editorMenu(page).waitFor();
+    const activeId = await page.locator('.editor-menu-bar').getAttribute('data-document');
+    const before = await page.evaluate(() => window.savedDraft());
+    const choose = async (group, name) => (await openEditorMenu(page, group)).getByRole('menuitem', { name, exact: true }).click();
+    const inspect = async native => {
+      await page.waitForFunction(enabled => {
+        const record = window.savedDraft();
+        const content = record.workbenches?.find(item => item.id === record.activeId)?.content || record;
+        return Boolean(content.composition) === enabled;
+      }, native);
+      const record = await page.evaluate(() => window.savedDraft());
+      const content = record.workbenches?.find(item => item.id === record.activeId)?.content || record;
+      const draft = native ? content.composition : content;
+      assert.deepEqual(draft.texts, before.texts);
+      assert.deepEqual(draft.imageModules, before.imageModules);
+      assert.deepEqual(draft.workbench.texts, before.workbench.texts);
+      assert.deepEqual(draft.workbench.imageModules, before.workbench.imageModules);
+      assert.equal(await page.locator('.editor-menu-bar').getAttribute('data-document'), activeId);
+    };
+    await choose('Canvas', 'Use Bento cells'); await inspect(true);
+    await choose('Edit', 'Undo'); await inspect(false);
+    await choose('Edit', 'Redo'); await inspect(true);
+    await page.reload(); await editorMenu(page).waitFor(); await inspect(true);
+    assert.deepEqual(errors, []);
+  } finally { await browser.close(); }
+});
+
+async function createStudioDocument(page, layout, name) {
+  await editorCommand(page, 'Canvas', '+ New');
+  const form = page.getByRole('dialog', { name: 'New composition' });
+  await form.getByLabel('Starting layout').selectOption(layout);
+  await form.getByLabel('Composition name').fill(name);
+  await form.getByRole('button', { name: 'Create composition', exact: true }).click();
+}
+
+test('Studio creates one named Bento with free artwork and cell content, then renames and reopens it', { timeout: 90000 }, async () => {
+  const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
+  try {
+    const page = await browser.newPage({ viewport: { width: 1440, height: 900 }, reducedMotion: 'reduce' });
+    const errors = []; page.on('pageerror', error => errors.push(error.message));
+    await open(page);
+    await createStudioDocument(page, 'bento', 'With cells');
+    const studio = page.locator('main[data-reception-editor]');
+    await studio.waitFor();
+    const active = () => page.evaluate(() => {
+      const record = window.savedDraft();
+      return record.workbenches.find(item => item.id === record.activeId);
+    });
+    const original = await active(); assert.ok(original.content.composition.cells.length > 1);
+    await studio.focus(); await page.keyboard.press('r');
+    const draw = await studio.evaluate(main => {
+      for (let y = 160; y < innerHeight - 160; y += 20) for (let x = 320; x < innerWidth - 300; x += 20) {
+        const node = document.elementFromPoint(x, y);
+        if (node && main.contains(node) && !node.closest('button,aside,[data-editor-cell-surface],[data-workbench-window],.workbench-tool-dock') &&
+          (node === main || node.closest('.workbench-camera,.workbench-canvas,.system-workflow__surfaces') || node.className === 'workbench-creation-surface')) return {x,y};
+      }
+      return null;
+    });
+    assert.ok(draw, 'the Studio provides an exposed surface for drawing free artwork');
+    await page.mouse.move(draw.x, draw.y); await page.mouse.down();
+    await page.mouse.move(draw.x + 120, draw.y + 90, { steps: 8 }); await page.mouse.up();
+    await page.waitForFunction(before => {
+      const record = window.savedDraft();
+      return record.workbenches.find(item => item.id === record.activeId).content.composition.shapes.length > before;
+    }, original.content.composition.shapes.length);
+    const free = (await active()).content.composition.shapes.find(shape => !original.content.composition.shapes.some(cell => cell.id === shape.id));
+    await studio.focus(); await page.keyboard.press('v');
+    const cell = await page.locator('[data-editor-cell-surface]').evaluateAll(nodes => nodes.find(node => {
+      const r = node.getBoundingClientRect();
+      return node.contains(document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2));
+    })?.dataset.editorCellSurface);
+    assert.ok(cell, 'a starter cell is reachable within the workspace');
+    await page.locator('[data-editor-cell-surface="' + cell + '"]').click();
+    await page.getByRole('button', { name: '+ Text', exact: true }).click();
+    await page.getByRole('textbox', { name: 'Article text', exact: true }).fill('A closed loop');
+    await studio.focus();
+    await page.waitForFunction(() => JSON.stringify(window.savedDraft()).includes('A closed loop'));
+    const mixed = (await active()).content.composition;
+    assert.ok(mixed.shapes.some(shape => shape.id === free.id));
+    assert.equal(mixed.cells.some(entry => entry.members.includes(free.id)), false);
+    assert.ok(mixed.cells.find(entry => entry.id === cell).members.includes(mixed.texts[0].id));
+    await editorCommand(page, 'Canvas', 'Rename');
+    const rename = page.getByRole('dialog', { name: 'Rename composition' });
+    await rename.getByLabel('Composition name').fill('Mixed work');
+    await rename.getByRole('button', { name: 'Save name' }).click();
+    await editorCommand(page, 'Canvas', 'Workbench 1', 'menuitemcheckbox');
+    await editorCommand(page, 'Canvas', 'Mixed work', 'menuitemcheckbox');
+    const restored = await active();
+    assert.equal(restored.id, original.id);
+    assert.equal(restored.name, 'Mixed work');
+    assert.deepEqual(restored.content.composition, mixed);
+    await page.reload(); await studio.waitFor();
+    assert.equal((await active()).id, original.id);
+    assert.deepEqual(errors, []);
+  } finally { await browser.close(); }
+});
+
+
+test('a newly created Canvas opens its full module tools and can undo the transition in Studio', { timeout: 90000 }, async () => {
+  const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
+  try {
+    const page = await browser.newPage();
+    const errors = []; page.on('pageerror', error => errors.push(error.message));
+    await open(page);
+    await createStudioDocument(page, 'canvas', 'Module study');
+    const native = page.locator('main[data-reception-editor]');
+    await native.waitFor();
+    const id = await activeEditorDocument(page);
+    await editorCommand(page, 'Canvas', 'Use canvas modules');
+    await native.waitFor({ state: 'detached' });
+    assert.equal(await activeEditorDocument(page), id);
+    const tools = await openEditorMenu(page, 'Tools');
+    await tools.getByRole('menuitem', { name: 'Groups', exact: true }).waitFor();
+    await page.keyboard.press('Escape');
+    await editorCommand(page, 'Edit', 'Undo');
+    await native.waitFor();
+    assert.equal(await activeEditorDocument(page), id);
+    assert.deepEqual(errors, []);
   } finally { await browser.close(); }
 });

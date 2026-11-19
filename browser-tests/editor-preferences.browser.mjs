@@ -1,3 +1,4 @@
+import { undockWindow } from './fixtures/undock-window.mjs';
 import { editorMenu, editorCommand } from './fixtures/editor-menu.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -14,6 +15,10 @@ const key = `inscape:editor-preferences:v1:${profile}`;
 const prefs = page => page.evaluate(key => JSON.parse(localStorage.getItem(key))?.value, key);
 const saved = page => page.evaluate(() => window.readToolChromeDraft());
 const library = page => page.getByRole('region', { name: 'Library workspace', exact: true });
+const showDisplayOptions = async page => {
+  if (!await page.getByRole('dialog', { name: 'Library display options', exact: true }).isVisible())
+    await page.getByRole('button', { name: 'Library display options', exact: true }).click();
+};
 const libraryHost = page => page.locator('.workbench-tool-dock').filter({ has: page.getByRole('tab', { name: 'Library', exact: true }) });
 const closeLibrary = page => libraryHost(page).getByRole('button', { name: 'Close Library', exact: true });
 async function openLibrary(page) {
@@ -98,13 +103,13 @@ test('Library inline cancellation restores its replaced trigger and respects new
   const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
   try {
     const { page, errors } = await mount(browser); await openLibrary(page);
-    const before = await saved(page), create = page.getByRole('button', { name: 'Create Category', exact: true });
-    const input = page.getByRole('textbox', { name: 'category name', exact: true });
-    await create.click(); await input.fill('Cancelled category'); await input.press('Escape');
+    const before = await saved(page), create = page.getByRole('button', { name: 'New Library item', exact: true });
+    const input = page.getByRole('textbox', { name: 'folder name', exact: true });
+    await create.click(); await page.getByRole('menuitem', { name: 'Folder', exact: true }).click(); await input.fill('Cancelled category'); await input.press('Escape');
     await input.waitFor({ state: 'detached' });
     await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
-    assert.equal(await create.evaluate(n => n === document.activeElement), true, 'Escape returns to the newly rendered Create Category button');
-    await create.click(); await input.fill('Also cancelled'); await holdFrames(page); await input.press('Escape');
+    assert.equal(await create.evaluate(n => n === document.activeElement), true, 'Escape returns to the New Library item button');
+    await create.click(); await page.getByRole('menuitem', { name: 'Folder', exact: true }).click(); await input.fill('Also cancelled'); await holdFrames(page); await input.press('Escape');
     await input.waitFor({ state: 'detached' });
     const search = page.getByRole('searchbox', { name: 'Search', exact: true }); await search.focus();
     await page.evaluate(() => window.releaseHeldFrames());
@@ -125,8 +130,9 @@ test('Library preferences survive close, Workbench switching and reload without 
     await page.getByRole('radio', { name: 'INSCAPE STUDIES', exact: true }).click();
     await page.keyboard.press('Escape');
     const search = library(page).getByRole('searchbox', { name: 'Search', exact: true });
+    await showDisplayOptions(page);
     await library(page).getByLabel('Card size', { exact: true }).fill('230');
-    await library(page).getByLabel('Labels', { exact: true }).uncheck();
+    await library(page).getByLabel('Labels', { exact: true }).uncheck(); await page.keyboard.press('Escape');
     await library(page).getByRole('button', { name: 'Sort assets: A–Z', exact: true }).click();
     await page.getByRole('option', { name: 'Z–A', exact: true }).click();
     await search.fill('moon');
@@ -140,17 +146,19 @@ test('Library preferences survive close, Workbench switching and reload without 
     assert.equal(await search.inputValue(), 'moon');
     assert.equal(await page.getByRole('button', { name: 'Owned', exact: true }).getAttribute('aria-pressed'), 'true');
     assert.equal(await library(page).getByRole('button', { name: 'Filters: INSCAPE STUDIES', exact: true }).count(), 1);
+    await showDisplayOptions(page);
     assert.equal(await library(page).getByLabel('Card size', { exact: true }).inputValue(), '230');
-    assert.equal(await library(page).getByLabel('Labels', { exact: true }).isChecked(), false);
+    assert.equal(await library(page).getByLabel('Labels', { exact: true }).isChecked(), false); await page.keyboard.press('Escape');
     assert.equal(await library(page).getByRole('button', { name: 'Sort assets: Z–A', exact: true }).count(), 1);
     const settings = (await prefs(page)).library;
     assert.equal((await libraryHost(page).boundingBox()).width, resizedWidth, 'the shared Library host retains its width after reload');
     await closeLibrary(page).click();
     assert.deepEqual(await saved(page), before);
-    await editorCommand(page, 'Canvas', 'New canvas');
-    await page.getByLabel('New canvas name', { exact: true }).fill('Preference check');
-    await page.getByRole('button', { name: 'Create canvas', exact: true }).click();
+    await editorCommand(page, 'Canvas', '+ New');
+    await page.getByLabel('Composition name', { exact: true }).fill('Preference check');
+    await page.getByRole('button', { name: 'Create composition', exact: true }).click();
     await openLibrary(page); assert.equal(await search.inputValue(), 'moon');
+    await showDisplayOptions(page);
     assert.equal(await library(page).getByLabel('Card size', { exact: true }).inputValue(), '230');
     assert.deepEqual((await prefs(page)).library, settings);
     assert.deepEqual(errors, []);
@@ -183,8 +191,7 @@ test('stacked and detached Inspector follows Text selection and restores alongsi
     await text.locator('[data-edge="se"]').press('ArrowRight');
     await page.getByRole('button', { name: 'Close Inspector', exact: true }).click();
     for (const name of ['Navigator', 'Keeper']) {
-      const undock = page.getByRole('button', { name: `Undock ${name}`, exact: true });
-      if (await undock.count()) await undock.click();
+      await undockWindow(page, `${name}`);
     }
     const navigator = page.getByRole('button', { name: 'Move Navigator window', exact: true });
     await page.getByLabel('Move Navigator window', { exact: true }).press('ArrowLeft');
@@ -224,8 +231,10 @@ test(`a failed preference save is visible, retryable and independent of the auth
       window.restorePreferenceWrites = () => { Storage.prototype.setItem = write; };
       Storage.prototype.setItem = function(key, value) { if (key.startsWith('inscape:editor-preferences:')) throw new DOMException('Quota', 'QuotaExceededError'); return write.call(this, key, value); };
     });
+    await showDisplayOptions(page);
     await library(page).getByLabel('Card size', { exact: true }).fill('250');
     await page.getByText('Your editor preferences could not be saved. Keep this window open and retry.', { exact: false }).waitFor();
+    await showDisplayOptions(page);
     assert.equal(await library(page).getByLabel('Card size', { exact: true }).inputValue(), '250');
     // A persistent error must leave the ordinary Library opener usable, too.
     // R12-OBS01 previously covered this button on short landscape viewports.
@@ -234,6 +243,7 @@ test(`a failed preference save is visible, retryable and independent of the auth
     await library(page).waitFor({ state: 'hidden' });
     await pointerAction(page, opener);
     await library(page).waitFor();
+    await showDisplayOptions(page);
     assert.equal(await library(page).getByLabel('Card size', { exact: true }).inputValue(), '250');
     const retry = page.getByRole('button', { name: 'Save current editor preferences', exact: true });
     // Keep the failure in place until the actual retry: a pending layout save
@@ -245,6 +255,7 @@ test(`a failed preference save is visible, retryable and independent of the auth
     await retry.waitFor({ state: 'detached' });
     assert.equal((await prefs(page)).library.assetSize, 250);
     await page.reload(); await openLibrary(page);
+    await showDisplayOptions(page);
     assert.equal(await library(page).getByLabel('Card size', { exact: true }).inputValue(), '250');
     assert.deepEqual(await saved(page), before); assert.deepEqual(errors, []);
   } finally { await browser.close(); }
@@ -254,9 +265,10 @@ for (const departure of ['pagehide', 'unmount']) test(`pending preferences flush
   const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
   try {
     const { page, errors } = await mount(browser); await openLibrary(page);
+    await showDisplayOptions(page);
     // Change the real React input and depart in the same task, before the save timer.
     await page.evaluate(departure => {
-      const input = document.querySelector('.system-workflow__workspace-size input');
+      const input = document.querySelector('.library-thumbnail-size input');
       Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(input, '271');
       input.dispatchEvent(new Event('input', { bubbles: true }));
       if (departure === 'pagehide') dispatchEvent(new PageTransitionEvent('pagehide', { persisted: true }));
@@ -265,6 +277,7 @@ for (const departure of ['pagehide', 'unmount']) test(`pending preferences flush
     await page.getByText(departure === 'pagehide' ? 'This tab is view-only' : 'Editor closed', { exact: true }).waitFor();
     assert.equal((await prefs(page)).library.assetSize, 271);
     await page.reload(); await openLibrary(page);
+    await showDisplayOptions(page);
     assert.equal(await library(page).getByLabel('Card size', { exact: true }).inputValue(), '271');
     assert.deepEqual(errors, []);
   } finally { await browser.close(); }
@@ -305,9 +318,12 @@ for (const theme of ['carbon', 'mist']) for (const [width, height] of [[1440, 90
     await search.fill('');
     assert.equal(await panel.evaluate(node => node.scrollWidth <= node.clientWidth + 1), true);
     assert.equal(await panel.evaluate(node => getComputedStyle(node).boxShadow), 'none');
-    for (const control of [search, panel.getByLabel('Card size', { exact: true }), closeLibrary(page), page.getByRole('button', { name: 'Owned', exact: true }), page.getByRole('button', { name: 'Created', exact: true })]) {
+    for (const control of [search, panel.getByRole('button', { name: 'Library display options', exact: true }), closeLibrary(page), page.getByRole('button', { name: 'Owned', exact: true }), page.getByRole('button', { name: 'Created', exact: true })]) {
       assert.equal(await control.evaluate(node => { const box = node.getBoundingClientRect(); return node.contains(document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2)); }), true);
     }
+    await showDisplayOptions(page);
+    assert.equal(await panel.getByLabel('Card size', { exact: true }).evaluate(node => { const box = node.getBoundingClientRect(); return node.contains(document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2)); }), true, 'Size is reachable through View');
+    await page.keyboard.press('Escape');
     await page.screenshot({ path: `${output}/library-${theme}-${width}-${height}.png` });
     assert.deepEqual(errors, []);
   } finally { await browser.close(); }

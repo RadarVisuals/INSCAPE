@@ -126,7 +126,7 @@ export function projectPlacementRectangle(placement, artboard, viewport, framing
   };
 }
 
-export function fitNativeMediaRectangle(rectangle, media) {
+export function fitNativeMediaRectangle(rectangle, media, alignment) {
   if (!rectangle
     || !Number.isFinite(rectangle.left) || !Number.isFinite(rectangle.top)
     || !Number.isFinite(rectangle.width) || rectangle.width <= 0
@@ -139,12 +139,14 @@ export function fitNativeMediaRectangle(rectangle, media) {
   const scale = Math.min(rectangle.width / media.width, rectangle.height / media.height);
   const width = media.width * scale;
   const height = media.height * scale;
-  return {
-    left: rectangle.left + ((rectangle.width - width) / 2),
-    top: rectangle.top + ((rectangle.height - height) / 2),
-    width,
-    height,
-  };
+  return alignContainedMediaRectangle(rectangle, { left: rectangle.left, top: rectangle.top, width, height }, alignment);
+}
+
+// Only position letterboxed axes. Overflowing axes keep their authored crop.
+export function alignContainedMediaRectangle(frame, image, alignment) {
+  return { ...image,
+    left: image.width <= frame.width ? frame.left + (frame.width - image.width) * ({ left: 0, right: 1 }[alignment?.alignX] ?? .5) : image.left,
+    top: image.height <= frame.height ? frame.top + (frame.height - image.height) * ({ top: 0, bottom: 1 }[alignment?.alignY] ?? .5) : image.top };
 }
 
 export function semanticGridVariables(geometry, viewport, stageOrigin = { x: 0, y: 0 }, artboard = CANONICAL_LATTICE_ARTBOARD, framing) {

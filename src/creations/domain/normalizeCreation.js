@@ -1,3 +1,4 @@
+import { metadataFiles } from '../../library/data/metadataImages.js';
 import { LUKSO_CHAIN_ID, normalizeProfileAddress } from '../../library/config.js';
 import { selectImageGroups } from '../../library/data/resolveContentUrl.js';
 import { createStableAssetId } from '../../library/domain/normalizeProfileAsset.js';
@@ -71,6 +72,7 @@ export function normalizeCreatorAttribution(record, viewedProfileAddress, option
     name, description: token?.metadataResolved === true ? metadata.description || '' : metadata.description || asset?.description || '', collectionName,
     imageUrl: primaryImage.imageUrl, thumbnailUrl: primaryImage.thumbnailUrl, originalImageUrl: primaryImage.originalImageUrl,
     imageGroups,
+    fileAttachments: metadata.fileAttachments || metadataFiles(metadata),
     imageWidth: primaryImage.width || null, imageHeight: primaryImage.height || null,
     mediaFileType: primaryImage.fileType || null,
     creators, viewedProfileIsCreator, creatorAttributionLevel: viewedProfileIsCreator ? (token ? 'token' : 'contract') : null,

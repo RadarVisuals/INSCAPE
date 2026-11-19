@@ -66,3 +66,44 @@
 @media (max-width: 1600px) { :is(.workbench-overview-gallery, .canvas-gallery-section)[data-card-size="1"] { --gallery-columns: 4; } }
 @media (max-width: 1000px) { :is(.workbench-overview-gallery, .canvas-gallery-section)[data-card-size="1"] { --gallery-columns: 3; } :is(.workbench-overview-gallery, .canvas-gallery-section)[data-card-size="3"] { --gallery-columns: 1; } }
 @media (max-width: 520px) { :is(.workbench-overview-gallery, .canvas-gallery-section)[data-card-size="1"] { --gallery-columns: 2; } }
+
+/* The published tiles share the surfaces and type of the Works index. */
+.workbench-overview[data-visitor-header] .workbench-overview-grid-host {
+  inset: clamp(8px, 1.4vh, 18px) max(2.5%, calc((100% - 1824px) / 2));
+}
+.workbench-overview[data-visitor-header] .workbench-overview-gallery {
+  border-radius: 7px;
+}
+.workbench-overview[data-visitor-header] .workbench-overview-cycle {
+  --tile-gap: clamp(8px, 1vw, 16px);
+  grid-template-columns: repeat(min(var(--gallery-columns, 4), var(--gallery-count)), minmax(0, 1fr));
+  gap: var(--tile-gap);
+  padding-bottom: var(--tile-gap);
+}
+.workbench-overview[data-visitor-header] .workbench-overview-cycle:has(> :only-child) {
+  grid-template-columns: minmax(0, min(100%, clamp(240px, var(--gallery-height, 58dvh), 780px)));
+  justify-content: center;
+}
+.workbench-overview[data-visitor-header] .workbench-overview-card {
+  --thumbnail-background: transparent;
+  --overview-glass-ink: #f4f3ef;
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--card-material) 40%, transparent);
+}
+.workbench-overview[data-visitor-header] .workbench-overview-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--spread-heading) 11%, transparent);
+}
+.workbench-overview[data-visitor-header] .workbench-overview-card-open::before {
+  background: rgb(0 0 0 / 60%);
+}
+.workbench-overview[data-visitor-header] .workbench-overview-card-reveal {
+  font-family: 'Visitor Google Sans', Arial, sans-serif;
+}
+.workbench-overview[data-visitor-header] .workbench-overview-card-title {
+  font-weight: 480;
+}

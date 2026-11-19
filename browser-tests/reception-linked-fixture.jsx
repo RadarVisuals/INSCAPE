@@ -14,6 +14,8 @@ import { publishedPresentationSnapshot } from '../src/presentation/presentationS
 import { createDefaultWorkbenchPresentation, createTextPresentation } from '../src/profileDocument/domain/workbenchPresentation.js';
 import { createWorkbenchIndex } from '../src/systemWorkflow/domain/workbenchIndex.js';
 import ReceptionOverview from '../src/reception/ReceptionOverview.jsx';
+import PublicWorkspaceHeader from '../src/profileDocument/components/PublicWorkspaceHeader.jsx';
+import { publishedCompositionEntries } from '../src/profileDocument/domain/publishedCanvases.js';
 import PublishedCanvasGallery from '../src/profileDocument/components/PublishedCanvasGallery.jsx';
 import WorkbenchOverview from '../src/public/workbenchOverview/WorkbenchOverview.jsx';
 import { workbenchOverviewModel } from '../src/public/workbenchOverview/workbenchOverviewModel.js';
@@ -65,7 +67,7 @@ const reviewProfile = { status: 'RESOLVED', normalizedAddress: profileAddress, n
 const model = { profile: { displayName: 'Open studio' }, officialProfile: { name: 'Open studio' }, links: [], card: { fields: [] } };
 const assetMap = new Map(assets.map(asset => [asset.id, asset]));
 const publish = () => buildCanvasPublication({ candidates: canvasPublicationCandidates({ record: JSON.parse(storage.getItem(systemWorkflowDraftKey(profileAddress))), assetRecords: assets, profile: reviewProfile }),
-  selectedIds: root.listWorkbenches().map(item => item.id), includeShared: true });
+  selectedIds: [...root.listWorkbenches().map(item => item.id), 'reception'], includeShared: true });
 globalThis.linkedFixture = { root, publish, writes: () => writes, fail: value => { fail = value; } };
 function App() {
   const [surface, setSurface] = useState(new URLSearchParams(location.search).has('edit') ? 'edit' : 'reception');
@@ -77,9 +79,13 @@ function App() {
     : { kind: 'local', profileAddress, revision: `fixture:${generation}`, entries: root.listWorkbenches().map(item => root.readWorkbench(item.id)) }, [generation]);
   const previews = useMemo(() => snapshot.entries.map(entry => ({ ...entry, model: workbenchOverviewModel(entry.draft, assetMap) })), [snapshot]);
   const selected = previews.find(item => item.id === selectedId) || previews[0];
-  if (surface === 'canvases') return publicView ? <PublishedCanvasGallery document={publish()} onAbout={() => setSurface('reception')} />
-    : <WorkbenchOverview items={previews} previews={previews} selected={selected} model={selected.model} profile={reviewProfile}
-      onSelect={select} view={view} onViewChange={setView} cardSize={cardSize} onCardSize={setCardSize} onOpenReception={() => setSurface('reception')} />;
+  if (surface === 'canvases') return <div className="visitor-publication">
+    <PublicWorkspaceHeader model={model} current="Gallery" onProfile={() => setSurface('reception')} />
+    {publicView ? <PublishedCanvasGallery snapshot={snapshot} entries={publishedCompositionEntries(publish(), 'gallery')} persona={model} selectedId={selectedId} onSelect={select}
+      view={view} onViewChange={setView} cardSize={cardSize} onCardSize={setCardSize} />
+      : <WorkbenchOverview visitorHeader items={previews} previews={previews} selected={selected} model={selected.model} profile={reviewProfile}
+        onSelect={select} view={view} onViewChange={setView} cardSize={cardSize} onCardSize={setCardSize} />}
+  </div>;
   return surface === 'edit' ? <OwnerSystemWorkflowRuntime profileAddress={profileAddress} rootStore={root} reviewStorage={storage}
     receptionEditorRequested onOpenReception={() => setSurface('reception')}
     reviewAssets={assets} reviewCategories={[]} reviewProfile={reviewProfile} />

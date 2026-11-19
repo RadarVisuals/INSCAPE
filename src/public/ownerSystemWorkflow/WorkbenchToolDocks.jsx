@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import WorkbenchToolPanel from './WorkbenchToolPanel.jsx';
 import WorkbenchDockDivider from './WorkbenchDockDivider.jsx';
 import WorkbenchLayers from './WorkbenchLayers.jsx';
+import LibraryWorkspace from './OwnerSystemWorkflowLibraryWorkspace.jsx';
 import WorkbenchSharedTools, { WorkbenchInspectorTitle } from './WorkbenchSharedTools.jsx';
 import { dockTabs, toolPane, toolIsVisible, visibleToolTabs, WORKBENCH_TOOL_TABS } from './workbenchToolDockState.js';
 import './workbenchToolDocks.css';
@@ -10,10 +11,15 @@ import { useSideDock } from './WorkbenchSideDock.jsx';
 import { sideDockEdge } from './workbenchSideDockState.js';
 
 const groupName = tabs => tabs.length === 1 ? tabs[0] : `${tabs.slice(0, -1).join(', ')} and ${tabs.at(-1)}`;
+const rememberScroll = (node, positions) => {
+  if (!node.hidden && node.isConnected) positions.set(node,
+    [node, ...node.querySelectorAll('*')].filter(child => child.scrollTop || child.scrollLeft)
+      .map(child => [child, child.scrollLeft, child.scrollTop]));
+};
 
 // One layout owns the tools. Stable portal containers move between docks;
 // docking never creates a second tool instance or changes the artwork selection.
-export default function WorkbenchToolDocks({ controller, hidden, navigationRef, historyBlocked, hostRef, colourPreference, libraryActive, onOpenLibrary, onCloseLibrary, onLibraryHost }) {
+export default function WorkbenchToolDocks({ controller, hidden, navigationRef, historyBlocked, hostRef, colourPreference, libraryProps, libraryOnly = false, returnFocusRefs }) {
   const prefix = useId();
   const layout = useSyncExternalStore(controller.subscribe, controller.getSnapshot);
   const sideDock = useSideDock();
@@ -23,10 +29,35 @@ export default function WorkbenchToolDocks({ controller, hidden, navigationRef, 
   }, [layout, sideDock]);
   const [containers] = useState(() => Object.fromEntries(WORKBENCH_TOOL_TABS.map(tab => [tab, document.createElement('div')])));
   const panels = useRef(new Map()), panes = useRef(new Map()), slots = useRef(new Map()), tabs = useRef(new Map());
+  const scrollPositions = useRef(new Map()), slotCallbacks = useRef(new Map());
   const drag = useRef(null), latest = useRef(null), skipClick = useRef(false), menuRoot = useRef(null);
   const [preview, setPreview] = useState(null), [menu, setMenu] = useState(null);
   const dispatch = controller.change;
+  const visibleTabs = pane => visibleToolTabs(layout, pane).filter(tab => !libraryOnly || tab === 'Library');
+  const isVisible = tab => !hidden && (!libraryOnly || tab === 'Library') && toolIsVisible(layout, tab);
+  const libraryMounted = useRef(false);
+  if (isVisible('Library')) libraryMounted.current = true;
+  const slotRef = id => {
+    if (!slotCallbacks.current.has(id)) slotCallbacks.current.set(id, slot => {
+      const previous = slots.current.get(id);
+      if (previous && previous !== slot) for (const node of previous.children) rememberScroll(node, scrollPositions.current);
+      if (slot) slots.current.set(id, slot);
+      else { slots.current.delete(id); slotCallbacks.current.delete(id); }
+    });
+    return slotCallbacks.current.get(id);
+  };
   const focusTab = tab => tabs.current.get(tab)?.focus({ preventScroll: true });
+  const handledFocus = useRef(null);
+  useLayoutEffect(() => {
+    const tab = layout.focusRequest?.tab;
+    if (!tab || handledFocus.current === layout.focusRequest || hidden || libraryOnly && tab !== 'Library') return;
+    const group = controller.getSnapshot().groups.find(group => dockTabs(group).includes(tab));
+    if (!group) return;
+    handledFocus.current = layout.focusRequest;
+    sideDock?.reveal(`tools:${group.id}`);
+    const frame = requestAnimationFrame(() => focusTab(tab));
+    return () => cancelAnimationFrame(frame);
+  }, [layout.focusRequest, hidden, libraryOnly, sideDock, controller]);
   // Keep the selected tab reachable when a narrow dock has more tabs than fit.
   useLayoutEffect(() => {
     for (const group of layout.groups) for (const pane of group.panes) {
@@ -44,16 +75,15 @@ export default function WorkbenchToolDocks({ controller, hidden, navigationRef, 
   };
   const close = tab => {
     const pane = toolPane(layout, tab), group = layout.groups.find(item => item.panes.includes(pane));
-    const next = visibleToolTabs(layout, pane).find(item => item !== tab) || dockTabs(group).find(item => item !== tab && toolIsVisible(layout, item));
+    const next = visibleTabs(pane).find(item => item !== tab) || dockTabs(group).find(item => item !== tab && toolIsVisible(layout, item));
     const focused = document.activeElement, panel = panels.current.get(group.id);
-    if (tab === 'Layers' && libraryActive) onCloseLibrary();
     dispatch({ type: 'close', tab }); setMenu(null);
     requestAnimationFrame(() => {
       const active = document.activeElement;
       // A newer target, or focus already outside this dock, belongs to the user.
       if (active !== document.body && active?.isConnected && (active !== focused || !panel?.contains(active))) return;
       if (next) { focusTab(next); return; }
-      const fallback = navigationRef?.current?.querySelector('[data-menu="Tools"]');
+      const fallback = returnFocusRefs?.[tab]?.current || navigationRef?.current?.querySelector('[data-menu="Tools"]');
       (fallback || hostRef.current)?.focus({ preventScroll: true });
     });
   };
@@ -73,7 +103,7 @@ export default function WorkbenchToolDocks({ controller, hidden, navigationRef, 
           return { id: pane.id, side };
         }
         if (y > header.bottom) return null;
-        const before = visibleToolTabs(layout, pane).filter(tab => !current.tabs.includes(tab)).find(tab => {
+        const before = visibleTabs(pane).filter(tab => !current.tabs.includes(tab)).find(tab => {
           const rect = tabs.current.get(tab)?.getBoundingClientRect();
           return rect && x < rect.left + rect.width / 2;
         });
@@ -157,13 +187,19 @@ export default function WorkbenchToolDocks({ controller, hidden, navigationRef, 
     for (const tab of WORKBENCH_TOOL_TABS) {
       const node = containers[tab], pane = toolPane(layout, tab);
       const slot = slots.current.get(pane.id);
-      if (slot && node.parentNode !== slot) slot.appendChild(node);
-      node.hidden = hidden || !toolIsVisible(layout, tab) || tab === 'Layers' && libraryActive;
+      const moving = slot && node.parentNode !== slot, wasHidden = node.hidden;
+      const nextHidden = hidden || libraryOnly && tab !== 'Library' || !toolIsVisible(layout, tab);
+      if (moving || !wasHidden && nextHidden) rememberScroll(node, scrollPositions.current);
+      if (moving) slot.appendChild(node);
+      node.hidden = nextHidden;
+      if (!node.hidden && (moving || wasHidden)) for (const [child, left, top] of scrollPositions.current.get(node) || []) {
+        if (node.contains(child)) { child.scrollLeft = left; child.scrollTop = top; }
+      }
       node.className = 'workbench-docked-content';
       node.id = `${prefix}-panel-${tab}`; node.setAttribute('role', 'tabpanel'); node.setAttribute('aria-labelledby', `${prefix}-tab-${tab}`);
       if (tab === 'Layers') node.setAttribute('data-workbench-layers', '');
     }
-  }, [layout, hidden, containers, prefix, libraryActive]);
+  }, [layout, hidden, containers, prefix, libraryOnly]);
   useLayoutEffect(() => {
     if (!menu) return;
     menuRoot.current?.querySelector('button')?.focus();
@@ -178,20 +214,12 @@ export default function WorkbenchToolDocks({ controller, hidden, navigationRef, 
     setMenu({ tab, x: Math.min(innerWidth - 228, event.type === 'contextmenu' ? event.clientX : rect.left),
       y: Math.max(8, Math.min(innerHeight - 220, event.type === 'contextmenu' ? event.clientY : rect.bottom)) });
   };
-  const tabsForPane = pane => visibleToolTabs(layout, pane).flatMap(tab => tab === 'Layers' ? ['Layers', 'Library'] : [tab]);
-  const selectTab = (tab, trigger) => {
-    if (tab === 'Library') {
-      if (!libraryActive || toolPane(layout, 'Layers').active !== 'Layers') onOpenLibrary(trigger);
-      return;
-    }
-    if (libraryActive && toolPane(layout, tab) === toolPane(layout, 'Layers')) onCloseLibrary();
-    dispatch({ type: 'select', tab });
-  };
+  const selectTab = tab => dispatch({ type: 'select', tab });
   const keyboard = (event, group, tab) => {
     if (event.key === 'ContextMenu' || event.shiftKey && event.key === 'F10') { openMenu(event, tab); return; }
     if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
     event.preventDefault(); event.stopPropagation();
-    const visible = tabsForPane(group), index = visible.indexOf(tab);
+    const visible = visibleTabs(group), index = visible.indexOf(tab);
     const next = event.key === 'Home' ? visible[0] : event.key === 'End' ? visible.at(-1) : visible[(index + (event.key === 'ArrowRight' ? 1 : visible.length - 1)) % visible.length];
     selectTab(next, event.currentTarget);
     // These tabs already exist. Focus now so another key before the next
@@ -202,21 +230,26 @@ export default function WorkbenchToolDocks({ controller, hidden, navigationRef, 
   const menuGroup = menu && layout.groups.find(group => group.panes.includes(menuPane));
   return <div data-system-workflow-overlay data-workbench-selection-tools data-workflow-material="tactile" data-workflow-finish="flat" data-lattice-menu-surface >
     {!hidden && layout.groups.map(group => {
-      const visiblePanes = group.panes.filter(pane => visibleToolTabs(layout, pane).length);
+      const visiblePanes = group.panes.filter(pane => visibleTabs(pane).length);
       if (!visiblePanes.length) return null;
       // CSS flex-grow totals below one leave unused space after hiding/removing a pane.
       // Normalize visible shares without changing the proportions saved for reopening.
       const visibleShare = visiblePanes.reduce((total, pane) => total + pane.share, 0);
-      const title = groupName(visiblePanes.flatMap(pane => visibleToolTabs(layout, pane))), label = title === 'Layers' ? 'Workbench Layers' : title;
+      const title = groupName(visiblePanes.flatMap(pane => visibleTabs(pane))), label = title === 'Layers' ? 'Workbench Layers' : title;
       // Only an explicitly opened/activated dock rises above screen utilities.
       return <WorkbenchToolPanel key={group.id} label={label} title={title}
-        dockId={`tools:${group.id}`} fitWhenDocked={title === 'Inspector'}
+        dockId={`tools:${group.id}`}
         className="workbench-tool-dock workbench-editor-panel"
         data-workflow-material="tactile" data-workflow-finish="flat" data-workflow-palette="editor"
         frame={group.frame} onFrameChange={frame => dispatch({ type: 'frame', group: group.id, frame })}
         panelRef={node => { if (node) panels.current.set(group.id, node); else panels.current.delete(group.id); }}
         active={layout.activeGroup === group.id} onActivate={() => dispatch({ type: 'activate', group: group.id })}
         zIndex={layout.activeGroup === group.id ? 86 : 84}
+        locationCommands={dockTabs(group).length > 1 ? visiblePanes.flatMap(visibleTabs).map(tab => ({ id: tab, label: `Detach ${tab}` })) : []}
+        onLocationCommand={tab => {
+          const frame = tabFrame(group, tab);
+          place([tab], null, { ...frame, left: frame.left >= 348 ? frame.left - 340 : frame.left + 32, top: frame.top + 24 });
+        }}
         topBoundaryRef={navigationRef}
         onMoveStart={event => start(event, group, dockTabs(group), 'group')} onMove={move} onMoveEnd={finish}>
         {renderHeader => <div className="workbench-dock-stack">{visiblePanes.map((pane, index) => <Fragment key={pane.id}>
@@ -226,36 +259,29 @@ export default function WorkbenchToolDocks({ controller, hidden, navigationRef, 
             style={{ flexGrow: pane.share / visibleShare }} data-dock-pane={pane.id}
             data-drop-side={preview?.target === pane.id ? preview.side : undefined}
             ref={node => { if (node) panes.current.set(pane.id, node); else panes.current.delete(pane.id); }}>
-          {renderHeader(<div className="workbench-dock-tabs" role="tablist" aria-label="Artwork tools">{tabsForPane(pane).map(tab => tab === 'Library' ? <button key={tab} type="button" role="tab" id={`${prefix}-tab-Library`}
-            ref={node => { if (node) tabs.current.set(tab, node); else tabs.current.delete(tab); }}
-            aria-controls={`${prefix}-panel-Library`} aria-selected={Boolean(libraryActive && pane.active === 'Layers')}
-            tabIndex={libraryActive && pane.active === 'Layers' ? 0 : -1}
-            onKeyDown={event => { if (event.key !== 'ContextMenu' && event.key !== 'F10') keyboard(event, pane, tab); }}
-            onClick={event => selectTab(tab, event.currentTarget)}>Library</button> : <button key={tab} type="button" role="tab"
+          {renderHeader(<div className="workbench-dock-tabs" role="tablist" aria-label="Artwork tools">{visibleTabs(pane).map(tab => <button key={tab} type="button" role="tab"
           id={`${prefix}-tab-${tab}`} data-tool-tab={tab} data-drop-before={preview?.target === pane.id && preview?.before === tab || undefined}
           ref={node => { if (node) tabs.current.set(tab, node); else tabs.current.delete(tab); }}
-          aria-selected={pane.active === tab && !(tab === 'Layers' && libraryActive)} aria-controls={`${prefix}-panel-${tab}`} tabIndex={pane.active === tab && !(tab === 'Layers' && libraryActive) ? 0 : -1}
+          aria-selected={pane.active === tab} aria-controls={`${prefix}-panel-${tab}`} tabIndex={pane.active === tab ? 0 : -1}
           title="Drag to a tab strip to join, or a panel edge to stack; right-click for options" aria-keyshortcuts="Shift+F10"
           onClick={event => { if (skipClick.current && event.detail) { skipClick.current = false; return; } selectTab(tab, event.currentTarget); }}
           onKeyDown={event => keyboard(event, pane, tab)} onContextMenu={event => openMenu(event, tab)}
           onPointerDown={event => start(event, group, [tab], 'tab')} onPointerMove={move}
           onPointerUp={event => finish(false, event)} onPointerCancel={() => finish(true)} onLostPointerCapture={() => finish(true)}>{tab === 'Inspector' ? <WorkbenchInspectorTitle /> : tab}</button>)}</div>,
-          () => {
-            if (libraryActive && pane.active === 'Layers') { onCloseLibrary(); focusTab('Layers'); }
-            else close(pane.active);
-          }, `Close ${pane.active === 'Layers' ? libraryActive ? 'Library' : 'Workbench Layers' : pane.active}`)}
-          {pane.tabs.includes('Layers') && <div className="workbench-library-slot workbench-dock-library" ref={onLibraryHost}
-            role="tabpanel" id={`${prefix}-panel-Library`} aria-labelledby={`${prefix}-tab-Library`}
-            hidden={!libraryActive || pane.active !== 'Layers'} />}
-          <div className="workbench-dock-slot" hidden={libraryActive && pane.active === 'Layers'} ref={node => { if (node) slots.current.set(pane.id, node); else slots.current.delete(pane.id); }} />
+          () => close(pane.active), `Close ${pane.active === 'Layers' ? 'Workbench Layers' : pane.active}`)}
+          <div className="workbench-dock-slot" ref={slotRef(pane.id)} />
           </div>
         </Fragment>)}</div>}
       </WorkbenchToolPanel>;
     })}
     {WORKBENCH_TOOL_TABS.map(tab => createPortal(tab === 'Layers'
-      ? <WorkbenchLayers open={toolIsVisible(layout, tab) && !libraryActive} hidden={hidden} onOpen={() => dispatch({ type: 'open', tab })}
+      ? <WorkbenchLayers open={isVisible(tab)} hidden={hidden || libraryOnly} onOpen={() => dispatch({ type: 'open', tab })}
           historyBlocked={historyBlocked} hostRef={hostRef} />
-      : <WorkbenchSharedTools visible={!hidden && toolIsVisible(layout, tab)} historyBlocked={historyBlocked}
+      : tab === 'Library' ? libraryMounted.current && <div className="workbench-library-content" data-system-workflow-panel="library"
+          onKeyDown={event => { if (event.key === 'Escape' && !event.defaultPrevented) { event.preventDefault(); event.stopPropagation(); close(tab); } }}>
+          <LibraryWorkspace {...libraryProps} embedded resizable={false} phase={isVisible(tab) ? 'open' : 'closed'} open={isVisible(tab)} />
+        </div>
+      : <WorkbenchSharedTools visible={isVisible(tab)} historyBlocked={historyBlocked}
           requestedSection={layout.inspectorSection} request={layout.inspectorRequest} colourPreference={colourPreference} />, containers[tab], tab))}
     {preview?.kind === 'tab' && <div className="workbench-dock-ghost" aria-hidden="true" style={{ left: preview.left, top: preview.top, width: preview.width }}>{groupName(preview.tabs)}</div>}
     {menu && !hidden && <div ref={menuRoot} className="workbench-dock-menu" role="menu" aria-label={`${menu.tab} panel options`} style={{ left: Math.max(8, menu.x), top: menu.y, maxHeight: innerHeight - menu.y - 8 }}
@@ -268,12 +294,15 @@ export default function WorkbenchToolDocks({ controller, hidden, navigationRef, 
         }
         if (event.key === 'Tab') setMenu(null);
       }}>
+      {sideDock?.getSnapshot().layout.items.some(item => item.id === `tools:${menuGroup.id}`) && <button role="menuitem" type="button" onClick={() => {
+        sideDock.detach(`tools:${menuGroup.id}`); setMenu(null); requestAnimationFrame(() => focusTab(menu.tab));
+      }}>Undock {groupName(dockTabs(menuGroup))}</button>}
       {dockTabs(menuGroup).length > 1 && <button role="menuitem" type="button" onClick={() => {
         const frame = tabFrame(menuGroup, menu.tab);
         place([menu.tab], null, { ...frame, left: frame.left >= 348 ? frame.left - 340 : frame.left + 32, top: frame.top + 24 }); setMenu(null);
       }}>Detach {menu.tab}</button>}
-      {layout.groups.flatMap(group => group.panes).filter(pane => visibleToolTabs(layout, pane).some(tab => tab !== menu.tab)).map(pane => {
-        const name = groupName(visibleToolTabs(layout, pane).filter(tab => tab !== menu.tab));
+      {layout.groups.flatMap(group => group.panes).filter(pane => visibleTabs(pane).some(tab => tab !== menu.tab)).map(pane => {
+        const name = groupName(visibleTabs(pane).filter(tab => tab !== menu.tab));
         return <Fragment key={pane.id}>
           {pane !== menuPane && <button role="menuitem" type="button" onClick={() => { place([menu.tab], pane.id); setMenu(null); }}>Dock with {name}</button>}
           {['above', 'below'].map(side => <button role="menuitem" type="button" key={side}

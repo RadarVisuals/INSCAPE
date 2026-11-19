@@ -26,7 +26,7 @@ for (const width of [1920, 390]) for (const mode of ['local', 'public']) test(`R
   try {
     if (mode === 'public') {
       await workspacePicker(page).click();
-      assert.equal(await page.getByRole('menuitemcheckbox', { name: 'Reception Editor', exact: true }).count(), 0);
+      assert.equal(await page.getByRole('menuitemcheckbox', { name: 'Studio', exact: true }).count(), 0);
       await page.getByRole('menu', { name: 'Workspace menu' }).press('Escape');
     }
     const display = page.locator('.reception-display .visitor-grid-world__viewport');
@@ -66,7 +66,7 @@ for (const width of [1920, 390]) for (const mode of ['local', 'public']) test(`R
     assert.equal(await dialog.getByRole('button', { name: 'View Artwork detail' }).getAttribute('aria-pressed'), 'true');
     await page.keyboard.press('Escape'); await dialog.waitFor({ state: 'detached' });
     await page.waitForFunction(() => document.activeElement?.textContent === 'Open canvas');
-    await workspaceDestination(page, 'Canvases');
+    await workspaceDestination(page, 'Gallery');
     await page.locator('.workbench-overview').waitFor();
     if (await page.locator('.composition-index').count()) {
       await page.getByRole('button', { name: 'Grid', exact: true }).click();
@@ -87,8 +87,7 @@ for (const width of [1920, 390]) for (const mode of ['local', 'public']) test(`R
     await page.keyboard.press('Escape'); await second.waitFor({ state: 'detached' });
     assert.ok(Math.abs(await main.evaluate(node => node.scrollTop) - scroll) < 2, 'Closing a canvas restores the overview position');
     await page.waitForFunction(() => document.activeElement?.getAttribute('aria-label') === 'Open Second canvas');
-    await page.getByRole('button', { name: 'Inscape menu', exact: true }).click();
-    await page.getByRole('button', { name: 'About', exact: true }).click();
+    await page.getByRole('navigation', { name: 'Profile navigation' }).getByRole('button', { name: 'Profile', exact: true }).click();
     await page.locator('.reception-page').waitFor();
     assert.equal(await page.locator('.reception-canvases, .canvas-gallery-section').count(), 0);
     assert.deepEqual(await page.evaluate(() => ({ storage: JSON.stringify(localStorage), writes: linkedFixture.writes() })), before);

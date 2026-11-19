@@ -1,9 +1,9 @@
+import { workbenchSelectionBounds } from './workbenchViewScale.js';
 export { unprojectWorkbenchFrame as navigatorViewport } from './workbenchSpace.js';
 export function navigatorBounds(rectangles, size) {
   const valid = rectangles.filter(r => r && ['left', 'top', 'width', 'height'].every(k => Number.isFinite(r[k])) && r.width > 0 && r.height > 0);
   if (!valid.length || size.width <= 0 || size.height <= 0) return null;
-  let left = Math.min(...valid.map(r => r.left)), top = Math.min(...valid.map(r => r.top));
-  let width = Math.max(...valid.map(r => r.left + r.width)) - left, height = Math.max(...valid.map(r => r.top + r.height)) - top;
+  let { left, top, width, height } = workbenchSelectionBounds(valid);
   // A little breathing room, with one uniform scale in both directions.
   const scale = Math.min(size.width / (width * 1.08), size.height / (height * 1.08));
   const w = size.width / scale, h = size.height / scale;

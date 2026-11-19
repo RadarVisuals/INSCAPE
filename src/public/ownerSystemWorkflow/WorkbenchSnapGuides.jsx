@@ -4,7 +4,10 @@ import './workbenchSnapGuides.css';
 
 export default function WorkbenchSnapGuides({ host, hostRef }) {
   const guides = useSyncExternalStore(host.subscribe, host.snapshot);
-  const node = hostRef?.current;
+  return <WorkbenchSnapGuideOverlay guides={guides} node={hostRef?.current} />;
+}
+
+export function WorkbenchSnapGuideOverlay({ guides, node }) {
   if (!node || !guides.length) return null;
   const viewport = node.getBoundingClientRect();
   const paths = guides.map(match => {

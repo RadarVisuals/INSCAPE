@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useLayoutEffect, useRef, useState } from 'react';
 import WorkbenchMiniature from '../ownerSystemWorkflow/WorkbenchMiniature.jsx';
 import { useArticleFlow } from '../../text/TextFrame.jsx';
 import TextViewport from '../../text/TextViewport.jsx';
@@ -9,6 +9,8 @@ import '../../text/text.css';
 import { fitCanvasRegion } from './fitCanvasRegion.js';
 import { projectCroppedMediaRectangle } from '../../lattice/rendering/latticeCrop.js';
 import { workbenchPaintGeometry } from '../ownerSystemWorkflow/workbenchPaintGeometry.js';
+
+const NativeComposition = lazy(() => import('./NativeComposition.jsx'));
 
 function projectFrame(frame, area, scale) {
   return { left: (frame.left - area.left) * scale, top: (frame.top - area.top) * scale,
@@ -34,7 +36,7 @@ function TextPreview({ item, scale, area }) {
   </div>);
 }
 
-export default function WorkbenchOverviewPreview({ model, name, region = model.area, highlights = [], presenting = false, thumbnail = false, crop = null, viewport = null, camera = null }) {
+export default function WorkbenchOverviewPreview({ model, name, region = model.area, highlights = [], presenting = false, thumbnail = false, crop = null, viewport = null, camera = null, emptyHint = 'Open this Workbench to begin.' }) {
   const host = useRef(null), [measured, setSize] = useState({ width: 0, height: 0 });
   useLayoutEffect(() => {
     // An animated preview supplies its paint viewport. Measuring its changing
@@ -59,10 +61,16 @@ export default function WorkbenchOverviewPreview({ model, name, region = model.a
   // rounded-edge policy inside it; scaling separate clipped world-size images
   // produces antialiased seams, especially at fractional display densities.
   const density = globalThis.devicePixelRatio || 1, paintScale = scale * density;
-  return <div className="workbench-overview-preview" ref={host} role="img" aria-label={`${presenting ? 'Canvas' : 'Preview'} of ${name}`} data-presenting={presenting || undefined}>
-    <div className="workbench-overview-canvas" data-world-width={area.width} aria-hidden="true" inert="" style={{ width: area.width * paintScale, height: area.height * paintScale,
-      transform: `matrix(${1 / density},0,0,${1 / density},${left},${top})`, background: 'var(--interface-environment)' }}>
-        {scale > 0 && items.map(item => {
+  const native = model.composition;
+  const interactive = native && presenting && !thumbnail;
+  return <div className="workbench-overview-preview" ref={host} role={interactive ? 'group' : 'img'} aria-label={`${presenting ? 'Canvas' : 'Preview'} of ${name}`} data-presenting={presenting || undefined}>
+    <div className="workbench-overview-canvas" data-world-width={area.width} data-native-interactive={interactive || undefined}
+      aria-hidden={interactive ? undefined : true} inert={interactive ? undefined : ''} style={{ width: area.width * paintScale, height: area.height * paintScale,
+      transform: `matrix(${1 / density},0,0,${1 / density},${left},${top})`, background: 'var(--thumbnail-background, var(--interface-environment))' }}>
+        {scale > 0 && native && <div className="workbench-native-preview" style={{ width: area.width, height: area.height, transform: `scale(${paintScale})` }}>
+          <Suspense fallback={null}><NativeComposition composition={native} interactive={interactive} /></Suspense>
+        </div>}
+        {scale > 0 && !native && items.map(item => {
           const frame = projectFrame(item.frame, area, paintScale);
           return item.source.kind === 'text' ? <TextPreview key={item.id} item={item} scale={paintScale} area={area} />
           : item.source.kind === 'interactive' ? <div key={item.id} className="workbench-overview-interactive" style={contentFrame(item.frame, area, paintScale)}>
@@ -72,6 +80,6 @@ export default function WorkbenchOverviewPreview({ model, name, region = model.a
         })}
         {scale > 0 && highlights.map((frame, index) => <div key={index} className="canvas-presentation-highlight" style={{ ...projectFrame(frame, area, paintScale), outlineWidth: 2 * density }} />)}
     </div>
-    {!items.length && !thumbnail && <p className="workbench-overview-empty">Nothing on the canvas yet.<br /><span>Open this Workbench to begin.</span></p>}
+    {!native && !items.length && !thumbnail && <p className="workbench-overview-empty">Nothing on the canvas yet.{emptyHint && <><br /><span>{emptyHint}</span></>}</p>}
   </div>;
 }

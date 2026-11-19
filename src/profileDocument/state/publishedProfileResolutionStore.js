@@ -40,6 +40,20 @@ export class PublishedProfileResolutionStore {
     this.active.set(key, { controller, generation, promise });
     return promise;
   }
+  acceptConfirmed(address, result) {
+    const key = normalizeProfileAddress(address);
+    if (!key || result?.status !== PUBLISHED_PROFILE_STATUS.RESOLVED || normalizeProfileAddress(result.address) !== key
+      || result.document?.version !== 9 || normalizeProfileAddress(result.document.profile?.address) !== key || !/^0x[0-9a-f]{64}$/iu.test(result.transactionHash || '')) return false;
+    // The publisher supplies the resolver's schema-validated readback after
+    // matching its canonical hash to the submitted artifact. Keep a detached
+    // copy and discard any read that started before the receipt.
+    const document = structuredClone(result.document);
+    this.cancel(key);
+    this.lastValid.set(key, document);
+    this.entries.set(key, { status: result.status, address: key, document, pointer: result.pointer, busy: false, errorCode: null });
+    this.emit(key);
+    return true;
+  }
   cancel(address) {
     const key = normalizeProfileAddress(address); const active = this.active.get(key);
     if (!active) return;

@@ -22,7 +22,7 @@ function fixture() {
   return collection;
 }
 const publish = (record, selectedIds, previousDocument = null) => buildCanvasPublication({
-  candidates: canvasPublicationCandidates({ record, assetRecords: [], profile: {} }), selectedIds, previousDocument, includeShared: true,
+  candidates: canvasPublicationCandidates({ record, assetRecords: [], profile: {} }), selectedIds: [...selectedIds, 'reception'], previousDocument, includeShared: true,
 });
 
 test('native Reception retains linked sources through selective publication and validates the assembled document', () => {
@@ -54,5 +54,16 @@ test('native Reception can be backed up with the real canvas collection and summ
   const record = fixture();
   const restored = parseWorkbenchBackup(serializeWorkbenchBackup(record), profileAddress).draft;
   assert.deepEqual(restored, record);
-  assert.match(summarizeWorkbenchBackup(restored), /1 Reception cells/);
+  assert.match(summarizeWorkbenchBackup(restored), /1 Bento cells/);
+});
+
+for (const enabled of [true, false]) test(`Reception lighting (${enabled ? 'on' : 'off'}) survives full public document validation and backup recovery`, () => {
+  const record = fixture();
+  const lighting = { enabled, color: '#c7b58a', strength: .4, spread: .8, position: .3, direction: 'both' };
+  record.shared.reception.lighting = lighting;
+  const document = publish(record, ['workbench:main', 'workbench:story']);
+  assertValidProfileDocumentV9(document);
+  assert.deepEqual(document.reception.lighting, lighting);
+  const restored = parseWorkbenchBackup(serializeWorkbenchBackup(record), profileAddress).draft;
+  assert.deepEqual(restored.shared.reception.lighting, lighting);
 });

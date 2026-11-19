@@ -1,9 +1,7 @@
+import { isRecord as record, hasAllowedKeys as exact } from '../../recordValidation.js';
 import { validWorkbenchGroupName } from './workbenchGroups.js';
 
 export const MAX_WORKBENCH_DESTINATIONS = 32;
-const record = value => value && typeof value === 'object' && !Array.isArray(value);
-const exact = (value, required, optional = []) => record(value) && required.every(key => Object.hasOwn(value, key))
-  && Object.keys(value).every(key => required.includes(key) || optional.includes(key));
 const coordinate = value => Number.isFinite(value) && Math.abs(value) <= 1e7;
 const position = value => exact(value, ['left', 'top']) && coordinate(value.left) && coordinate(value.top);
 export const validWorkbenchViewRegion = value => exact(value, ['left', 'top', 'width', 'height'])

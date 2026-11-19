@@ -26,12 +26,11 @@ export default function workbenchCommands({
   setTextToolsOpen,
   revealInstruments,
   changeTool,
-  toggleLibrary,
+  openLibrary,
   openIdentity,
   openDockPanel,
   openPreview,
   togglePublication,
-  setWorkbenchPreferences,
   setWorkspaceMenu,
   reception = false,
 }) {
@@ -117,16 +116,12 @@ export default function workbenchCommands({
       revealInstruments();
       changeTool({ type: 'open', tab: id === 'tool-metadata' ? 'Inspector' : 'Layers', ...(id === 'tool-metadata' ? { section: 'Info' } : {}) });
     }
-    if (id === 'library') toggleLibrary();
+    if (id === 'library') openLibrary();
     if (id === 'identity') openIdentity(workspaceRef.current);
     if (id === 'discover') openDockPanel('discover', workspaceRef.current);
     if (id === 'preview') openPreview(workspaceRef.current);
     if (id === 'publish') togglePublication(workspaceRef.current);
     if (id.startsWith('shape:')) activateArtwork(id);
-    if (id === 'toggle-dock') {
-      setWorkbenchPreferences(current => ({ ...current, dockVisible: !current.dockVisible }));
-      requestAnimationFrame(() => workspaceRef.current?.focus());
-    }
     setWorkspaceMenu(null);
   };
 

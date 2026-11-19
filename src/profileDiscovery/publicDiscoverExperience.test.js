@@ -9,6 +9,6 @@ test('App uses the shared public portal rather than the legacy people directory'
 });
 test('public publication rendering delegates navigation without owning another directory', () => {
   const boundary = read('../profileDocument/components/PublishedProfileBoundary.jsx');
-  assert.match(boundary, /onOpenDirectory=\{onOpenDiscover\}/);
+  assert.match(boundary, /onOpenDirectory: onOpenDiscover/);
   assert.doesNotMatch(boundary, /directoryOpen|PublicEntryPortal|ProfileDiscoveryBoundary/);
 });

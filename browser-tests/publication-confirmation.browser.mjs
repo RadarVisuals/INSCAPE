@@ -1,3 +1,4 @@
+import { editorDestination } from './fixtures/editor-menu.mjs';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { mkdir } from 'node:fs/promises';
@@ -214,7 +215,7 @@ for (const width of [1440, 390]) {
         useWalletStore.setState(patch);
       }, { profile, signer: UPLOAD_TEST_SIGNER.address, transactionHash });
       await page.locator('.startveil').waitFor({ state: 'detached' });
-      await page.getByRole('button', { name: 'Publish', exact: true }).click();
+      await editorDestination(page, 'Publish');
       await page.getByRole('button', { name: 'Prepare publication', exact: true }).click();
       await page.getByRole('button', { name: 'Make presentation public', exact: true }).click();
       await page.getByRole('button', { name: 'Publish to profile', exact: true }).waitFor();

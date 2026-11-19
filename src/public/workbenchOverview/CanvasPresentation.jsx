@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Info, Tags, PanelRight, Maximize2, Minimize2, Pencil, X, Scan } from 'lucide-react';
+import CanvasPresentationBackdrop from './CanvasPresentationBackdrop.jsx';
 import WorkbenchOverviewPreview from './WorkbenchOverviewPreview.jsx';
 import { OwnerSystemWorkflowMetadataContent } from '../ownerSystemWorkflow/OwnerSystemWorkflowMetadataModule.jsx';
 import useCanvasPresentationMotion from './useCanvasPresentationMotion.js';
@@ -23,8 +24,11 @@ function Reveal({ label, icon: Icon, active, onActivate, children }) {
   </div>;
 }
 
-export default function CanvasPresentation({ selected, model, origin, onClose, onEdit, initialDestinationId = null }) {
+export default function CanvasPresentation({ selected, model, origin, onClose, onEdit, publishedWorks = false, initialDestinationId = null }) {
   const dialog = useRef(null), surface = useRef(null), closeButton = useRef(null), hideTimer = useRef(null);
+  const backdrop = useRef(null);
+  const dither = publishedWorks && typeof CSS !== 'undefined' && typeof CSS.registerProperty === 'function'
+    && CSS.supports('opacity', 'round(down, .5, .125)') && CSS.supports('mask-image', 'url(#mask)');
   const [expanded, setExpanded] = useState(false), [destinationId, setDestinationId] = useState(initialDestinationId), [sourceId, setSourceId] = useState(null);
   const [error, setError] = useState('');
   const [reveal, setReveal] = useState(null);
@@ -49,7 +53,7 @@ export default function CanvasPresentation({ selected, model, origin, onClose, o
   const destination = destinations.find(item => item.id === destinationId);
   const source = sources.find(item => item.id === sourceId);
   const choose = id => { if (id !== destinationId && beforeViewChange()) setDestinationId(id); if (innerWidth <= 800) setIndexOpen(false); };
-  const { viewport, close, beforeViewChange } = useCanvasPresentationMotion({ dialog, surface, origin, area: model.area,
+  const { viewport, close, beforeViewChange } = useCanvasPresentationMotion({ dialog, surface, backdrop, dither, publishedWorks, origin, area: model.area,
     region: destination?.view || model.area, expanded, onClose });
   const edit = () => { try { onEdit(selected.id, surface.current); } catch (failure) { setError(failure.message); } };
   return <dialog className="canvas-presentation" ref={dialog} tabIndex={-1} aria-modal="true" aria-label={`View ${selected.name}`}
@@ -75,7 +79,7 @@ export default function CanvasPresentation({ selected, model, origin, onClose, o
     }}
     onFocusCapture={event => { if (event.target !== dialog.current) showChrome(); }}
     onClick={event => { if (event.target === event.currentTarget) close(); }}>
-    <div className="canvas-presentation-backdrop" aria-hidden="true" />
+    <CanvasPresentationBackdrop backdropRef={backdrop} dither={dither} />
     <div className="canvas-presentation-surface" ref={surface} data-index-open={indexOpen || undefined}
       onPointerMove={event => { if (event.pointerType === 'mouse') showChrome(); }}
       onPointerUp={event => {

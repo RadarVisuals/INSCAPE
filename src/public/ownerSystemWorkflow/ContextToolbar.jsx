@@ -1,7 +1,7 @@
-import { createContext, useContext, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { createContext, memo, useContext, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
 import { WorkbenchWindow } from './DisplayInstrumentWindow.jsx';
-import { useWorkbenchView } from './WorkbenchViewContext.js';
+import { useWorkbenchHostView } from './WorkbenchViewContext.js';
 import ArtworkActionControls from './ArtworkActionControls.jsx';
 import { useSideDock } from './WorkbenchSideDock.jsx';
 import { dockSide, sideDockFrames } from './workbenchSideDockState.js';
@@ -24,9 +24,9 @@ export function ContextToolbarProvider({ target, children }) {
 export const useContextToolTarget = () => useContext(Target);
 const currentContent = context => context?.content?.target === context?.target ? context?.content : null;
 
-export function ContextToolbar({ hidden }) {
+export const ContextToolbar = memo(function ContextToolbar({ hidden }) {
   const context = useContext(Context), content = currentContent(context);
-  const view = useWorkbenchView();
+  const view = useWorkbenchHostView();
   const sideDock = useSideDock();
   const dockState = useSyncExternalStore(sideDock?.subscribe || noSubscribe, sideDock?.getSnapshot || noSnapshot);
   const frames = dockState ? sideDockFrames(dockState.layout, dockState.windows, dockState.viewport) : {};
@@ -41,7 +41,7 @@ export function ContextToolbar({ hidden }) {
       <div ref={context?.setHost} />
     </WorkbenchWindow>
   </div>;
-}
+});
 
 export function ContextToolContent({ target, label, available = true, actions, inspection, children }) {
   const context = useContext(Context), content = useRef(null), focused = useRef(null);

@@ -59,3 +59,12 @@ test('scene bindings use stable IDs and reject missing mappings, wrong canvas or
     assert.equal(resolveSceneBinding(snapshot, binding, { ...session, scope }).status, 'unavailable');
   assert.equal(resolveSceneBinding(snapshot, { ...binding, sources: {} }, session).status, 'unavailable');
 });
+
+test('a named native work resolves its own source layers in a Bento link', () => {
+  const native = { id: 'text:native', article: createArticle('Native article') };
+  const snapshot = { kind: 'published', profileAddress, revision: '1',
+    entries: [{ id: 'workbench:mixed', draft: { grids: [], composition: { texts: [native] } } }] };
+  const result = resolvePresentationSource(snapshot, ref('workbench:mixed', native.id));
+  assert.equal(result.status, 'ready');
+  assert.equal(result.article, native.article);
+});

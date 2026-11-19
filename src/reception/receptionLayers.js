@@ -1,10 +1,9 @@
+import { exact } from '../text/domain/article.js';
 import { reorderArtwork } from '../systemWorkflow/domain/artworkLayers.js';
 import { isSystemWorkflowGridCoordinate, quantizeSystemWorkflowGridCoordinate as quantize } from '../systemWorkflow/domain/gridCoordinates.js';
 
 export const RECEPTION_SCENE_GEOMETRY = Object.freeze({ columns: 32, rows: 18 });
 export const MAX_RECEPTION_LAYERS = 32;
-const exact = (value, keys) => value && typeof value === 'object' && !Array.isArray(value)
-  && Object.keys(value).length === keys.length && keys.every(key => Object.hasOwn(value, key));
 const finite = (value, minimum, maximum) => Number.isFinite(value) && value >= minimum && value <= maximum;
 const dimension = value => Number.isInteger(value) && finite(value, 1, 512);
 const geometryKeys = ['column', 'row', 'columnSpan', 'rowSpan'];
@@ -63,12 +62,12 @@ export function pruneReceptionContent(value) {
 }
 function regionOf(value, regionId) {
   const region = value.regions.find(item => item.id === regionId);
-  if (!region) throw new Error('This Reception cell is no longer available.');
+  if (!region) throw new Error('This Bento cell is no longer available.');
   return region;
 }
 function replaceScene(value, regionId, scene) {
   const available = new Set(records(value).map(item => item.id));
-  if (!validReceptionScene(scene, available)) throw new Error('The layer must stay inside its Reception cell.');
+  if (!validReceptionScene(scene, available)) throw new Error('The layer must stay inside its Bento cell.');
   return { ...value, regions: value.regions.map(region => region.id === regionId ? { ...region, content: null, scene } : region) };
 }
 export function promoteReceptionScene(value, regionId) {
@@ -83,9 +82,9 @@ export function promoteReceptionScene(value, regionId) {
 export function addReceptionScenePlacement(value, regionId, contentId, rectangle) {
   if (!isContent(value, contentId)) throw new Error('Choose an available Image, Text or Shape layer.');
   if (value.regions.some(region => receptionRegionContentIds(region).includes(contentId)))
-    throw new Error('This content already belongs to a Reception cell.');
+    throw new Error('This content already belongs to a Bento cell.');
   const next = promoteReceptionScene(value, regionId), { scene } = regionOf(next, regionId);
-  if (scene.placements.length >= MAX_RECEPTION_LAYERS) throw new Error(`A Reception cell holds up to ${MAX_RECEPTION_LAYERS} layers. Delete a layer before adding another.`);
+  if (scene.placements.length >= MAX_RECEPTION_LAYERS) throw new Error(`A Bento cell holds up to ${MAX_RECEPTION_LAYERS} layers. Delete a layer before adding another.`);
   const { columns, rows } = scene.geometry;
   if (rectangle && (!exact(rectangle, geometryKeys))) throw new Error('Choose a layer position and size inside its cell.');
   const initial = rectangle || (scene.placements.length ? {
@@ -96,7 +95,7 @@ export function addReceptionScenePlacement(value, regionId, contentId, rectangle
 }
 export function changeReceptionScenePlacement(value, regionId, contentId, patch, { mobile = false } = {}) {
   const { scene } = regionOf(value, regionId), item = scene?.placements.find(layer => layer.id === contentId);
-  if (!item) throw new Error('Select an available layer in this Reception cell.');
+  if (!item) throw new Error('Select an available layer in this Bento cell.');
   if (!patch || Object.keys(patch).some(key => ![...geometryKeys, 'locked'].includes(key))) throw new Error('Choose a layer position, size or lock setting.');
   if (item.locked && Object.keys(patch).some(key => key !== 'locked')) throw new Error('Unlock this layer before moving or resizing it.');
   const hasGeometry = geometryKeys.some(key => Object.hasOwn(patch, key));
@@ -113,21 +112,21 @@ export function changeReceptionScenePlacement(value, regionId, contentId, patch,
 }
 export function resetReceptionScenePlacement(value, regionId, contentId) {
   const { scene } = regionOf(value, regionId), item = scene?.placements.find(layer => layer.id === contentId);
-  if (!item) throw new Error('Select an available layer in this Reception cell.');
+  if (!item) throw new Error('Select an available layer in this Bento cell.');
   if (item.locked) throw new Error('Unlock this layer before resetting its mobile placement.');
   if (!scene.mobile?.some(layer => layer.id === contentId)) return value;
   return replaceScene(value, regionId, { ...scene, mobile: scene.mobile.filter(layer => layer.id !== contentId) });
 }
 export function reorderReceptionScenePlacement(value, regionId, contentId, direction, targetId, edge) {
   const { scene } = regionOf(value, regionId), item = scene?.placements.find(layer => layer.id === contentId);
-  if (!item) throw new Error('Select an available layer in this Reception cell.');
+  if (!item) throw new Error('Select an available layer in this Bento cell.');
   if (item.locked) throw new Error('Unlock this layer before changing its order.');
   const order = reorderArtwork(scene.placements.map(layer => layer.id), [contentId], direction, targetId, edge);
   return replaceScene(value, regionId, { ...scene, placements: order.map(id => scene.placements.find(layer => layer.id === id)) });
 }
 export function removeReceptionScenePlacement(value, regionId, contentId) {
   const { scene } = regionOf(value, regionId), item = scene?.placements.find(layer => layer.id === contentId);
-  if (!item) throw new Error('Select an available layer in this Reception cell.');
+  if (!item) throw new Error('Select an available layer in this Bento cell.');
   if (item.locked) throw new Error('Unlock this layer before deleting it.');
   return pruneReceptionContent(replaceScene(value, regionId, { ...scene, placements: scene.placements.filter(layer => layer.id !== contentId),
     ...(scene.mobile ? { mobile: scene.mobile.filter(layer => layer.id !== contentId) } : {}) }));

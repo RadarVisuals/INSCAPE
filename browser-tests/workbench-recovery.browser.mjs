@@ -1,4 +1,4 @@
-import { editorCommand, editorMenu } from './fixtures/editor-menu.mjs';
+import { openEditorMenu, editorCommand, editorMenu } from './fixtures/editor-menu.mjs';
 import { resetCameraTestView } from './fixtures/workbench-camera-test.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -132,9 +132,9 @@ test('reload restores local arrangement; failed Text survives editor disposal an
     assert.equal(await editor.count(), 0);
     await page.locator('main.system-workflow').first().focus();
     await page.keyboard.press('Shift+F10');
-    await page.getByRole('menuitem', { name: 'SHOW SIDEBAR', exact: true }).click();
-    await editorMenu(page, 'Canvas').click();
-    assert.equal(await page.getByRole('menu', { name: 'Canvas menu' }).getByRole('menuitem', { name: 'Preview', exact: true }).isDisabled(), true);
+    await page.keyboard.press('Escape');
+    await openEditorMenu(page, 'Canvas');
+    assert.equal(await page.getByRole('menu', { name: 'Canvas options' }).getByRole('menuitem', { name: 'Preview', exact: true }).isDisabled(), true);
     await page.keyboard.press('Escape');
     assert.equal(await page.locator('.visitor-grid-world').count(), 0);
     await hideWorkspaceSidebar(page);

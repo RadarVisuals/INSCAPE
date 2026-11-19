@@ -87,11 +87,11 @@
 /* Keep unfocused title-only Bento labels clean, without unmounting the editor. */
 .text-editor-page[data-title-only]:not(:focus-within) > .text-editor-body { display: none; }
 /* Editing guides use the same light/dark edges as module bounds, independently of authored ink and background. */
-.text-editor-content:focus-visible, .text-editor-body--empty .text-editor-content { outline: 1px solid #fff; outline-offset: 1px; box-shadow: 0 0 0 1px #111313; }
+.text-editor-content:focus-visible { outline: none; }
 .text-editor-page:not(.text-document--compact) .text-editor-body--empty .text-editor-content { min-height: 64px; }
 .text-editor-placeholder { position: absolute; top: 0; left: 0; max-width: 100%; box-sizing: border-box; padding: 6px 8px; font: var(--workflow-type-control); color: var(--workflow-ink); background: var(--workflow-panel); pointer-events: none; }
-.text-document--compact .text-editor-placeholder { padding: 0 4px; }
-.text-editor-body:focus-within .text-editor-placeholder { visibility: hidden; }
+.text-document--compact .text-editor-placeholder { padding: 0; font: inherit; color: inherit; background: none; opacity: .6; }
+.text-editor-page:not(.text-document--compact) .text-editor-body:focus-within .text-editor-placeholder { visibility: hidden; }
 .text-document p:empty::before { content: '\00a0'; }
 .text-status { flex-shrink: 0; border-top: 1px solid var(--workflow-border); padding: 6px 10px; margin: 0; font-family: 'Inscape IBM Plex Sans Condensed'; font-size: 12px; overflow-wrap: anywhere; }
 .text-artwork-editor { border: 0; padding: 0; margin: 0; }
@@ -111,8 +111,11 @@
 .text-workbench .workbench-window--external-controls:is(:hover, :focus-within)[data-window-chrome] > .system-workflow__detached-window-titlebar,
 .text-workbench .workbench-window-controls[data-window-chrome] > .system-workflow__detached-window-titlebar,
 .text-workbench[data-text-tools-open] > .text-window > .system-workflow__detached-window-titlebar { opacity: 1; pointer-events: auto; }
-.text-window-bounds { position: absolute; inset: 0; z-index: 4; pointer-events: none; border: 1px solid #fff; box-shadow: inset 0 0 0 1px #111313; opacity: 0; zoom: var(--workbench-control-scale, 1); }
+.text-window-bounds { position: absolute; inset: 0; z-index: 4; pointer-events: none; border: 1px solid var(--editor-accent); opacity: 0; zoom: var(--workbench-control-scale, 1); }
 .text-window[data-window-active] > .text-window-bounds { opacity: 1; }
+/* Text owns this selection finish; the shared window keeps all resize hit areas. */
+.text-window > .system-workflow__detached-window-resize::after { border-color: var(--editor-accent); border-radius: 50%; background: var(--workflow-panel); box-shadow: none; }
+.text-window > .system-workflow__detached-window-resize:focus-visible::after { background: var(--editor-accent); outline: 2px solid var(--workflow-panel); outline-offset: 1px; }
 @media (hover: none) { .text-workbench .workbench-window--external-controls[data-window-chrome] > .system-workflow__detached-window-titlebar { opacity: 1; pointer-events: auto; } }
 @media (max-width: 600px) { .text-document, .text-editor-page { --text-automatic-padding: 16px; padding: var(--text-automatic-padding); } }
 .text-workbench .text-window[data-window-chrome] { --detached-window-gutter: 0px; border: 0; background: transparent; box-shadow: none; border-radius: 0; }
@@ -143,6 +146,9 @@
   box-sizing: border-box;
 }
 .text-editor-page[data-writing-direction='stacked'] > .text-document-title { width: auto; }
+/* An explicit Reception cell choice; typography and article content stay authored. */
+[data-text-single-line] :is(.text-document, .text-editor-page) { writing-mode: horizontal-tb; inline-size: auto; max-inline-size: none; }
+[data-text-single-line] :is(.text-document-title, .text-editor-content, p, h1, h2, h3, figcaption) { white-space: nowrap; overflow-wrap: normal; }
 .reception-text-measure { position: fixed; top: 0; left: 0; width: max-content; visibility: hidden; pointer-events: none; }
 .reception-text-measure > article { display: flow-root; }
 

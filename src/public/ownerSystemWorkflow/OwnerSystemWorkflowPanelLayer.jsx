@@ -1,7 +1,6 @@
-import { cloneElement, lazy, Suspense, useRef } from 'react';
+import { cloneElement, lazy, Suspense } from 'react';
 import { X } from 'lucide-react';
 import PublicEntryPortal from '../../startveil/PublicEntryPortal.jsx';
-import WorkbenchLibraryWindow from './WorkbenchLibraryWindow.jsx';
 import OwnerSystemWorkflowManual from './OwnerSystemWorkflowManual.jsx';
 import OwnerSystemWorkflowProfile from './OwnerSystemWorkflowProfile.jsx';
 import OwnerSystemWorkflowSettings from './OwnerSystemWorkflowSettings.jsx';
@@ -9,30 +8,21 @@ import SystemWorkflowGridSwitcher from './SystemWorkflowGridSwitcher.jsx';
 
 const OwnerSystemWorkflowActivity = lazy(() => import('./OwnerSystemWorkflowActivity.jsx'));
 
-function PanelPresence({ children, id, panels, retained = false }) {
+function PanelPresence({ children, id, panels }) {
   const state = panels.presence[id];
   return <div aria-hidden={!state.present || undefined} className="system-workflow__panel-presence" data-panel-phase={state.phase} data-system-workflow-panel={id}
-    hidden={retained && !state.present} inert={retained && !state.present ? '' : undefined}
     onTransitionEnd={(event) => { if (event.propertyName === 'opacity') panels.completePanelTransition(id); }}>{children}</div>;
 }
 
-export default function OwnerSystemWorkflowPanelLayer({ libraryPreferences, libraryWindowPreferences, libraryDockHost, onDockLibrary, navigationHost, workbenchImageTargetRef, moduleAssetTargetRef, placementTargetRef, shortcutTargetRef, workspaceRef, activity, authoringLocked = false, categoryCommands, connectedProfile, controller, libraryData,
+export default function OwnerSystemWorkflowPanelLayer({ activity, connectedProfile, controller,
   profileAddress, onChangeGrid, onClose, onConnect, onDisconnect, onOpenIdentity, onOpenReception, onEditReception, onEnterMyWorld, onVisitProfile, panels, profileIdentity, profileModel,
-  resolveAssetDimensions, workbenchPreferences, onWorkbenchPreferencesChange, backupControls, canvasGuides = true }) {
+  workbenchPreferences, onWorkbenchPreferencesChange, backupControls, canvasGuides = true }) {
   const show = (id) => panels.presence[id];
-  const libraryMounted = useRef(false);
-  if (show('library').present) libraryMounted.current = true;
   return <>
     {show('grids').present && <PanelPresence id="grids" panels={panels}>
       <SystemWorkflowGridSwitcher controller={controller} onClose={onClose} onSelectGrid={onChangeGrid} />
     </PanelPresence>}
     {show('docs').present && <PanelPresence id="docs" panels={panels}><OwnerSystemWorkflowManual onClose={onClose} /></PanelPresence>}
-    {libraryMounted.current && <PanelPresence id="library" panels={panels} retained>
-      <WorkbenchLibraryWindow dockHost={libraryDockHost} onDock={onDockLibrary} windowPreferences={libraryWindowPreferences} preferenceStore={libraryPreferences} navigationHost={navigationHost} workbenchImageTargetRef={workbenchImageTargetRef} moduleAssetTargetRef={moduleAssetTargetRef} placementTargetRef={placementTargetRef} shortcutTargetRef={shortcutTargetRef} workspaceRef={workspaceRef}
-        placementScope={`${profileAddress}:${controller?.moduleId || ''}:${controller?.selectedGridId || ''}`}
-        authoringLocked={authoringLocked} categoryCommands={categoryCommands} data={libraryData}
-         onClose={() => panels.closePanel({ panelId: 'library' })} phase={show('library').phase} open={panels.isPanelOpen('library')}
-        resolveAssetDimensions={resolveAssetDimensions} /></PanelPresence>}
     {show('profile').present && <PanelPresence id="profile" panels={panels}><div className="system-workflow__profile-layer"
       onPointerDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
       <OwnerSystemWorkflowProfile identity={profileIdentity} model={profileModel} onClose={onClose} onOpenIdentity={onOpenIdentity}

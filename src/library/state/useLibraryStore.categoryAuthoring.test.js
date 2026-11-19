@@ -172,3 +172,28 @@ test('bulk category membership accepts a created-only stable ID explicitly suppl
   assert.deepEqual(useLibraryStore.getState().workspace.folders[0].assetIds, [SECOND_ASSET_ID]);
   assert.equal(commands.setCategoryAssets(categoryId, ['not-canonical'], true, [SECOND_ASSET_ID]), false);
 });
+
+
+test('creating within a section persists one complete organization and rejects stale destinations', () => {
+  const storage = memoryStorage();
+  resetLibraryStoreForTests(PROFILE, storage);
+  const commands = createOwnerLatticeCategoryCommands(PROFILE);
+  const sectionId = commands.createSection('Scenes');
+  storage.writes.length = 0;
+  const id = commands.createCategory('Lunar Desert', sectionId);
+  assert.ok(id);
+  const saved = loadLibraryWorkspace(storage, PROFILE).workspace;
+  assert.equal(storage.writes.length, 1);
+  assert.deepEqual(saved.categoryOrganization.sections[0].categoryIds, [id]);
+  assert.equal(saved.categoryOrganization.rootCategoryIds.includes(id), false);
+  assert.equal(saved.folders.find(folder => folder.id === id).name, 'Lunar Desert');
+  commands.deleteSection(sectionId);
+  storage.writes.length = 0;
+  const before = useLibraryStore.getState().workspace;
+  assert.equal(commands.createCategory('Stale destination', sectionId), null);
+  assert.equal(useLibraryStore.getState().workspace, before);
+  assert.equal(storage.writes.length, 0);
+  useLibraryStore.getState().setProfileAddress(OTHER_PROFILE);
+  assert.equal(commands.createCategory('Wrong profile', sectionId), null);
+  assert.equal(storage.writes.length, 0);
+});

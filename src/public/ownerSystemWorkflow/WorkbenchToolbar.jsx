@@ -43,6 +43,7 @@ export default function WorkbenchToolbar({
     { id: 'hand', label: 'Hand', icon: Hand, shortcut: 'H' },
   ].map(item => ({ ...item, selected: item.id === activeTool, onSelect: () => onToolChange?.(item.id) }));
   const pointer = pointerCommands.find(item => item.selected) || pointerCommands.find(item => item.id === lastPointer);
+  const cellTool = addCommands.find(item => item.id === 'cell');
   const textTool = addCommands.find(item => item.id === 'text');
   useEffect(() => {
     if (activeShapeId) {
@@ -233,13 +234,14 @@ export default function WorkbenchToolbar({
         {toolButton(`${pointer.label} tool`, pointer.icon, pointer.onSelect, { 'aria-pressed': pointer.selected, 'aria-keyshortcuts': pointer.shortcut })}
         {menuButton('pointer', ChevronDown, 'Pointer tools')}
       </div>
+      {cellTool && toolButton('Cell tool', cellTool.icon, cellTool.onSelect, { disabled: cellTool.disabled, 'aria-pressed': activeTool === 'cell', 'aria-keyshortcuts': 'C' })}
       <div className="workbench-toolbar__split">
         {toolButton(`${shape?.label || 'Rectangle'} tool`, shape?.icon || Square, shape?.onSelect,
           { disabled: !shape || shape.disabled, 'aria-pressed': Boolean(activeShape), 'aria-keyshortcuts': shape?.shortcut })}
         {menuButton('shapes', ChevronDown, 'Shapes')}
       </div>
       {toolButton('Text tool', Type, () => onToolChange?.('text'), { 'aria-keyshortcuts': 'T', 'aria-pressed': activeTool === 'text', disabled: textTool?.disabled })}
-      {toolButton('Artwork library', Image, onOpenLibrary, { 'aria-pressed': libraryOpen })}
+      {toolButton('Artwork library', Image, onOpenLibrary, { 'aria-expanded': libraryOpen })}
       <span className="workbench-toolbar__divider" aria-hidden="true" />
       {menuButton('commands', Zap, 'Actions', { 'aria-keyshortcuts': 'Control+k Meta+k', disabled: !searchEnabled })}
     </div>

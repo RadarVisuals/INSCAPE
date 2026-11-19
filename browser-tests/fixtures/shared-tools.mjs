@@ -1,7 +1,7 @@
-import { editorMenu } from './editor-menu.mjs';
+import { openEditorMenu } from './editor-menu.mjs';
 import { settlePlaywrightAnimationFrames } from '../playwright-browser-adapter.mjs';
 
-const toolHost = tool => tool === 'Layers' ? 'Layers' : 'Inspector';
+const toolHost = tool => ['Layers', 'Library'].includes(tool) ? tool : 'Inspector';
 export const sharedToolTab = (page, tool) => page.locator(`[role="tab"][data-tool-tab="${toolHost(tool)}"]`);
 export const sharedToolPanel = (page, tool = 'Inspector') => page.locator('.workbench-tool-dock').filter({ has: sharedToolTab(page, tool) });
 
@@ -32,12 +32,16 @@ export async function closeSharedTool(page, tool) {
 export async function openSharedTool(page, tool) {
   const hostName = toolHost(tool), button = sharedToolTab(page, hostName);
   if (!await button.count()) {
+    if (hostName === 'Library') {
+      await page.getByRole('button', { name: 'Artwork library', exact: true }).click();
+      await button.waitFor();
+      return sharedToolPanel(page, hostName);
+    }
     // The palette's Text action selects the drawing tool. Reopening Text
     // settings must restore the Inspector that owns the selected article.
     if (tool === hostName || tool === 'Text') {
-      const trigger = editorMenu(page, 'Tools');
-      if (await trigger.getAttribute('aria-expanded') !== 'true') await trigger.click();
-      const option = page.getByRole('menu', { name: 'Tools menu', exact: true }).getByRole('menuitemcheckbox', { name: hostName, exact: true });
+      await openEditorMenu(page, 'Tools');
+      const option = page.getByRole('menu', { name: 'Tools options', exact: true }).getByRole('menuitemcheckbox', { name: hostName, exact: true });
       // The menu renders before the dock's portal is placed. An already-open
       // tool must finish mounting; toggling it here would close it.
       if (await option.getAttribute('aria-checked') !== 'true') await option.click();

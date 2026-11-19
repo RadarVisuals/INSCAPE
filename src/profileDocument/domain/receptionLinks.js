@@ -1,12 +1,12 @@
+import { isRecord as object } from '../../recordValidation.js';
+import { exact } from '../../text/domain/article.js';
 import { displayContent, displayModuleIds } from '../../systemWorkflow/domain/displayModules.js';
 
-const object = value => value && typeof value === 'object' && !Array.isArray(value);
-const exact = (value, keys) => object(value) && Object.keys(value).length === keys.length && keys.every(key => Object.hasOwn(value, key));
 const id = (value, prefix) => typeof value === 'string' && new RegExp(`^${prefix}:[A-Za-z0-9_-]{1,80}$`, 'u').test(value);
 export function validPresentationReference(value, destination = false) {
   const optional = destination ? ['destinationId'] : ['gridId'];
   const required = destination ? ['profileAddress', 'canvasId'] : ['profileAddress', 'canvasId', 'moduleId'];
-  return object(value) && exact(value, [...required, ...optional.filter(key => Object.hasOwn(value, key))])
+  return exact(value, required, optional)
     && /^0x[0-9a-f]{40}$/u.test(value.profileAddress) && id(value.canvasId, 'workbench')
     && (destination ? !Object.hasOwn(value, 'destinationId') || id(value.destinationId, 'workbench-view')
       : id(value.moduleId, '(?:display|image|text)') && (!Object.hasOwn(value, 'gridId') || id(value.gridId, 'grid')));
@@ -46,9 +46,10 @@ export function receptionLinkProblems(reception, snapshot) {
     const draft = entry(ref)?.draft;
     if (!draft) return false;
     if (displayModuleIds(draft).includes(ref.moduleId)) return !ref.gridId || displayContent(draft, ref.moduleId).grids.some(grid => grid.id === ref.gridId);
-    const image = draft.imageModules?.find(item => item.id === ref.moduleId);
+    const native = draft.composition || draft;
+    const image = native.imageModules?.find(item => item.id === ref.moduleId);
     if (image) return !ref.gridId && Boolean(image.artwork);
-    const text = draft.texts?.find(item => item.id === ref.moduleId);
+    const text = native.texts?.find(item => item.id === ref.moduleId);
     if (!text) return false;
     if (!text.sceneLink) return !ref.gridId;
     return displayModuleIds(draft).includes(text.sceneLink.displayId)

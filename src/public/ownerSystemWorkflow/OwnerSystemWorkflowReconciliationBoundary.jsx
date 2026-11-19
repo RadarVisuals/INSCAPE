@@ -8,7 +8,7 @@ import { bindWorkbenchTextRecovery } from '../../text/textEditRecovery.js';
 const OwnerSystemWorkflowRuntime = lazy(() => import('./OwnerSystemWorkflowRuntime.jsx'));
 
 export default function OwnerSystemWorkflowReconciliationBoundary(props) {
-  return <ProfileEditingBoundary profileAddress={props.profileAddress} onView={props.onOpenReception}>
+  return <ProfileEditingBoundary profileAddress={props.profileAddress} onView={props.onOpenReception && (() => props.onOpenReception('published'))} viewLabel="View published profile">
     <ReconciliationSession key={props.profileAddress} {...props} />
   </ProfileEditingBoundary>;
 }
@@ -82,14 +82,14 @@ function ReconciliationSession(props) {
       ? 'The saved draft could not be read. It has not been replaced.'
       : 'The published workspace could not be aligned with the local draft.'}</p>
     <p>Details: {failure?.code}{failure?.reason ? ` / ${failure.reason}` : ''}</p>
-    {failure?.issues?.map((issue, index) => <p key={index}>{issue.path}: {issue.code}{issue.message ? ` - ${issue.message}` : ''}</p>)}
+    {failure?.issues?.map((issue, index) => <p key={index}>{issue.path}: {issue.code}{issue.message ? ` — ${issue.message}` : ''}</p>)}
     {failure?.store && <WorkbenchBackupControls store={failure.store} storage={reviewStorage ?? globalThis.localStorage}
       onRestored={warning => { if (!warning) { setState('LOADING'); setAttempt(value => value + 1); } }} />}
     {failure?.fingerprint && publishedDocument && <>
-      <p>Discard this profile's incompatible local draft and try restoring its published workspace.</p>
+      <p>Discard this profile’s incompatible local draft and try restoring its published workspace.</p>
       <button className="published-profile-retry" type="button" disabled={resetting}
         onClick={() => { setResetError(null); setResetting(true); }}>
-        {resetting ? 'RESETTING.' : 'RESET LOCAL DRAFT AND RELOAD'}
+        {resetting ? 'RESETTING…' : 'RESET LOCAL DRAFT AND RELOAD'}
       </button>
     </>}
     {resetError && <p role="alert">{resetError}</p>}

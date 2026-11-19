@@ -1,6 +1,6 @@
 import { useWorkbenchArea } from './WorkbenchAreaContext.jsx';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Grid2X2, Grid3X3, Image, Info, Redo2, Settings2, RectangleHorizontal, Type, Undo2, User, AppWindow, Folder } from 'lucide-react';
+import { Grid2X2, Grid3X3, Image, Info, Redo2, Settings2, RectangleHorizontal, SquarePlus, Type, Undo2, User, AppWindow, Folder } from 'lucide-react';
 import WorkbenchToolbar from './WorkbenchToolbar.jsx';
 import './workbenchCreation.css';
 import { useWorkbenchView } from './WorkbenchViewContext.js';
@@ -10,12 +10,13 @@ import { sameCreationCamera, workbenchCreationPlacement } from './workbenchCreat
 import { isWorkbenchBackground } from './useWorkbenchPan.js';
 import { artworkModuleId, artworkRecords } from '../../systemWorkflow/domain/artworkLayers.js';
 import { isShapeCommand, SHAPE_COMMAND_KINDS } from '../../shapes/shapes.js';
+import { receptionLayoutCountRange } from '../../reception/receptionLayoutGenerator.js';
 import { useEditorCells, isEditorCellSurface } from '../../reception/EditorCellsContext.jsx';
 
-const ICONS = { 'workbench-index': Folder, 'mini-app': AppWindow, text: Type, image: Image, shape: RectangleHorizontal, 'shape-grid': Grid2X2, keeper: Folder };
-const LABELS = { 'workbench-index': 'Index', 'mini-app': 'Mini app', text: 'Text', image: 'Image', shape: 'Rectangle', keeper: 'Keeper dock',
+const ICONS = { cell: SquarePlus, 'workbench-index': Folder, 'mini-app': AppWindow, text: Type, image: Image, shape: RectangleHorizontal, 'shape-grid': Grid2X2, keeper: Folder };
+const LABELS = { cell: 'Cell', 'workbench-index': 'Index', 'mini-app': 'Mini app', text: 'Text', image: 'Image', shape: 'Rectangle', keeper: 'Keeper dock',
   'shape-grid': 'Grid' };
-const isCreationTool = tool => tool === 'text' || isShapeCommand(tool);
+const isCreationTool = tool => tool === 'cell' || tool === 'text' || isShapeCommand(tool);
 const EDITING = 'input,textarea,select,[contenteditable=true],[role=textbox],[role=slider],[role=dialog],[role=menu],iframe,[data-mini-app-id],[data-immersive]';
 const OVERLAYS = '[data-workbench-toolbar],[data-system-workflow-overlay],[data-system-workflow-panel],[data-shared-display-tools],[data-shared-text-tools],[data-context-tools],.workbench-view-controls,[data-workbench-group-tools],[data-workbench-selection-tools]';
 const CREATION_CONTROLS = `${EDITING},button,a,summary,[role=separator]`;
@@ -41,7 +42,7 @@ export default function OwnerWorkbenchToolbar({ hostRef, placementTargets, shape
     cancel();
     cancelCanvasInteraction?.current?.();
   }, [cancel, cancelCanvasInteraction]);
-  const chooseTool = tool => { cancel(); if (isCreationTool(tool)) onRevealCreationTools?.(); view.setInteractionTool(tool); hostRef.current?.focus({ preventScroll: true }); };
+  const chooseTool = tool => { cancel(); if (tool === 'cell') cells?.leaveCell(false); if (isCreationTool(tool)) onRevealCreationTools?.(); view.setInteractionTool(tool); hostRef.current?.focus({ preventScroll: true }); };
 
   useEffect(() => {
     const host = hostRef.current;
@@ -60,9 +61,11 @@ export default function OwnerWorkbenchToolbar({ hostRef, placementTargets, shape
       if (event.code === 'Space' && !event.ctrlKey && !event.metaKey && !event.altKey) { space.current = true; cancel(); return; }
       if (event.defaultPrevented) return;
       if (event.ctrlKey || event.metaKey || event.altKey || event.shiftKey || event.repeat) return;
-      const tool = { v: 'select', h: 'hand', t: 'text', r: 'shape' }[event.key.toLowerCase()];
+      const tool = { v: 'select', h: 'hand', t: 'text', r: 'shape', ...(latest.current.cells ? { c: 'cell' } : {}) }[event.key.toLowerCase()];
       if (tool || event.key === 'Escape' && latest.current.view.interactionTool !== 'select') {
-        event.preventDefault(); event.stopPropagation(); cancel(); latest.current.view.setInteractionTool(tool || 'select');
+        event.preventDefault(); event.stopPropagation(); cancel();
+        if (tool === 'cell') latest.current.cells.leaveCell(false);
+        latest.current.view.setInteractionTool(tool || 'select');
       }
     };
     const up = event => { if (event.code === 'Space') space.current = false; };
@@ -70,7 +73,7 @@ export default function OwnerWorkbenchToolbar({ hostRef, placementTargets, shape
     const visibility = () => { if (document.hidden) blur(); };
     const down = event => {
       const current = latest.current, tool = current.view.interactionTool;
-      if (gesture.current || !isCreationTool(tool) || current.hidden || current.camera.locked || space.current
+      if (tool === 'cell' || gesture.current || !isCreationTool(tool) || current.hidden || current.camera.locked || space.current
         || host.hasAttribute('data-workbench-pan-ready') || event.button !== 0 || event.isPrimary === false
         || event.ctrlKey || event.metaKey || event.altKey || event.target.closest(`${OVERLAYS},${CREATION_CONTROLS}`)) return;
       const point = { x: event.clientX, y: event.clientY };
@@ -157,7 +160,8 @@ export default function OwnerWorkbenchToolbar({ hostRef, placementTargets, shape
       if (isCreationTool(command.id)) chooseTool(command.id);
       else { chooseTool('select'); onCommand(command.id); }
     } });
-  const addCommands = commands.map(adapt);
+  const addCommands = [...(cells ? [{ id: 'cell', label: 'Cell', shortcut: 'C',
+    disabled: cells.cells.length >= receptionLayoutCountRange(cells.store.getReception()).max }] : []), ...commands].map(adapt);
   const shapeCommands = addCommands.filter(command => isShapeCommand(command.id))
     .map(command => command.id === 'shape' ? { ...command, shortcut: 'R' } : command);
   const selectedId = view.selection.length === 1 ? artworkModuleId(view.content, view.selection[0]) : null;
@@ -186,7 +190,7 @@ export default function OwnerWorkbenchToolbar({ hostRef, placementTargets, shape
       shapeCommands={shapeCommands} layers={layers} searchScopeRef={hostRef} searchEnabled={searchEnabled && !camera.locked}
       onOpenLibrary={trigger => { chooseTool('select'); onOpenLibrary(trigger); }} libraryOpen={libraryOpen} hidden={hidden && !exiting} searchRequest={searchRequest} />
     {!hidden && creating && <p className="workbench-creation-hint" role="status" data-system-workflow-overlay>
-      {view.interactionTool === 'text' ? 'Click the Workbench or an unlocked Display to add Text.' : `Click or drag on the Workbench to draw a ${SHAPE_COMMAND_KINDS[view.interactionTool]}.`} <kbd>Esc</kbd> to cancel
+      {view.interactionTool === 'cell' ? 'Drag to draw a cell. Hold Alt to skip snapping.' : view.interactionTool === 'text' ? 'Click the Workbench or an unlocked Display to add Text.' : `Click or drag on the Workbench to draw a ${SHAPE_COMMAND_KINDS[view.interactionTool]}.`} <kbd>Esc</kbd> to cancel
     </p>}
     {!hidden && ghost && <div className="workbench-creation-ghost" style={ghost} aria-hidden="true" />}
   </>;

@@ -443,7 +443,7 @@ test('a Workbench scope exposes only its explicit editing contract, never root l
     'getGeneration', 'getHistory', 'getRecordState', 'getLastCommitFailure', 'isCollection',
     'listWorkbenches', 'getBackupSnapshot', 'subscribe', 'guardWorkbenchTransition',
     'beginHistoryGroup', 'endHistoryGroup', 'undo', 'redo', 'commitCompletedOperation',
-    'retryCompletedOperation', 'restoreBackup', 'createWorkbench', 'switchWorkbench', 'renameWorkbench', 'leaveWorkbench',
+    'retryCompletedOperation', 'restoreBackup', 'createWorkbench', 'deleteWorkbench', 'switchWorkbench', 'renameWorkbench', 'leaveWorkbench',
   ].sort());
   assert.ok(Object.isFrozen(scope));
   assert.equal(store.getWorkbenchScope(), scope);
@@ -510,6 +510,7 @@ const scopedWrites = {
   }, { expectedGeneration: live.getGeneration() }),
   restoreBackup: (scope, live) => scope.restoreBackup(live.getBackupSnapshot(), { expectedGeneration: live.getGeneration() }),
   createWorkbench: scope => scope.createWorkbench('Late Workbench'),
+  deleteWorkbench: scope => scope.deleteWorkbench(scope.getWorkbenchId()),
   switchWorkbench: (scope, live) => scope.switchWorkbench(live.listWorkbenches().find(item => item.id !== live.getWorkbenchId()).id),
   renameWorkbench: scope => scope.renameWorkbench('Late rename'),
   leaveWorkbench: scope => scope.leaveWorkbench(),

@@ -1,6 +1,28 @@
 .canvas-presentation { --tactile-ink: var(--overview-glass-ink); --tactile-muted: #c6c7c7; position: fixed; inset: 0; width: 100%; height: 100%; max-width: none; max-height: none; margin: 0; padding: 0; border: 0; overflow: hidden; background: transparent; color: var(--tactile-ink); }
 .canvas-presentation::backdrop { background: transparent; }
 .canvas-presentation-backdrop { position: absolute; inset: 0; background: color-mix(in srgb, var(--tactile-face) 55%, transparent); backdrop-filter: blur(10px); pointer-events: none; }
+/* A steady surround keeps the underlying tile silhouettes out of published work. */
+.workbench-overview[data-visitor-header] .canvas-presentation-backdrop {
+  background: color-mix(in srgb, var(--card-material) 65%, var(--tactile-face));
+  backdrop-filter: none;
+}
+.workbench-overview[data-visitor-header] .canvas-presentation-backdrop::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: url('/assets/visitor/output-dither.png') repeat;
+  opacity: .012;
+}
+@property --canvas-matte-coverage {
+  syntax: '<number>';
+  inherits: true;
+  initial-value: 1;
+}
+.canvas-presentation-backdrop[data-fading] { mask-image: var(--canvas-matte-mask); }
+.canvas-presentation-backdrop > svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.canvas-presentation-backdrop pattern rect {
+  opacity: calc(round(down, var(--canvas-matte-coverage) * 16 + var(--sample-offset), 1) / 16);
+}
 .canvas-presentation-surface:not([data-ready]) { visibility: hidden; }
 .canvas-presentation:focus { outline: none; }
 .canvas-presentation-surface { --presentation-height: max(min(320px, 86dvh), min(86dvh, calc(88vw / var(--canvas-ratio)))); position: absolute; inset: 0; margin: auto; width: max(min(320px, 88vw), min(88vw, calc(86dvh * var(--canvas-ratio)))); height: var(--presentation-height); overflow: hidden; border-radius: var(--overview-radius); background: var(--tactile-face); transform-origin: center; }

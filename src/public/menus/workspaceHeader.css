@@ -1,0 +1,22 @@
+:root { --workspace-header-height: 48px; --workspace-sage: #a8bc9e; }
+.workspace-header {
+  position: sticky; top: 0; z-index: 3; box-sizing: border-box;
+  display: grid; align-items: center; width: 100%; height: var(--workspace-header-height); min-height: var(--workspace-header-height);
+  padding: 0 16px; margin: 0; font-family: var(--font-interface);
+}
+.workspace-brand {
+  display: inline-flex; flex: none; align-items: center; gap: 5px; height: 32px;
+  margin: 0; padding: 0; color: inherit; border: 0; background: transparent; cursor: pointer;
+  text-decoration: none; --inscape-wordmark-accent: var(--workspace-sage);
+}
+.workspace-wordmark { display: block; width: 80px; height: 26px; }
+.workspace-brand:focus-visible, .workspace-theme-button:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
+.workspace-theme-button {
+  display: inline-grid; place-items: center; width: 28px; height: 28px; margin: 0; padding: 0; color: inherit;
+  background: transparent; border: 0; border-radius: var(--editor-control-radius); cursor: pointer;
+}
+.workspace-theme-button svg { stroke-width: 1.6; }
+.workspace-header-error { position: absolute; inset: 100% 16px auto auto; padding: 5px 8px; background: var(--interface-panel); color: var(--color-text-primary); }
+.workspace-command-menu, .workspace-command-menu .desktop-menu--flyout {
+  max-height: calc(100dvh - 16px); overflow-y: auto; overscroll-behavior: contain;
+}

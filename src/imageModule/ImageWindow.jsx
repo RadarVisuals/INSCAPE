@@ -28,8 +28,9 @@ export default function ImageWindow({ id, title, position, size, viewport = { wi
   const currentSize = camera.frame || preview?.size || size, currentPosition = camera.frame || preview?.position || position;
   // Camera zoom changes the window's real pixel dimensions. Its content and
   // event handlers only change when the module or authored rectangle changes.
-  const content = useMemo(() => children({ left: 0, top: 0, width: currentSize.width, height: currentSize.height }),
-    [children, currentSize.width, currentSize.height]);
+  const contentRectangle = useMemo(() => ({ left: 0, top: 0, width: currentSize.width, height: currentSize.height }),
+    [currentSize.width, currentSize.height]);
+  const content = useMemo(() => children(contentRectangle), [children, contentRectangle]);
   // Image dimensions are Workbench dimensions. Only the Workbench camera scales
   // them: fitting each Image to the viewport would cancel proportional resizing.
   const { width, height } = currentSize;

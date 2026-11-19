@@ -47,7 +47,8 @@ test('canvas links round-trip with targets, Discover return context, and authori
   assert.deepEqual(readApplicationRoute(new URL(href, location.href)), expected);
   assert.deepEqual(readApplicationRoute({ search: '?discover' }, { inscapeReturnRoute: expected }).returnTo, expected);
   assert.deepEqual(resolveApplicationDestination(expected, { status: 'complete' }), { kind: 'public', address, canvas: true, target: expected.target });
-  assert.deepEqual(resolveApplicationDestination(expected, { status: 'complete', profileAddress: address, ownershipVerified: true }), { kind: 'workbench', address });
+  assert.deepEqual(resolveApplicationDestination(expected, { status: 'complete', profileAddress: address, ownershipVerified: true }),
+    { kind: 'public', address, canvas: true, target: expected.target }, 'Opening a shared artwork link preserves its public target even for its owner');
   const overview = applicationRouteUrl({ href: new URL(href, location.href).href }, { kind: 'profile', address });
   assert.equal(overview.includes('canvas='), false);
   assert.equal(overview.includes('module='), false);

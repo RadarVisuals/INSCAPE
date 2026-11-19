@@ -1,4 +1,5 @@
-import { retiredInterfaceKeys, withoutRetiredInterfaceAppearance } from './retiredInterfaceAppearance.js';
+import { isRecord as record, hasExactKeys as exactKeys } from '../../recordValidation.js';
+import { retiredInterfaceKeys, stripRetiredInterfaceAppearance } from './retiredInterfaceAppearance.js';
 import { validReception, receptionReferenceCount } from '../../profileDocument/domain/receptionPresentation.js';
 import { validWorkbenchIndex } from './workbenchIndex.js';
 import { validArtworkLayers } from './artworkLayers.js';
@@ -61,10 +62,6 @@ const GRID_ID = /^grid:[A-Za-z0-9_-]+$/u;
 const HEX_COLOR = /^#[0-9a-f]{6}$/iu;
 const textEncoder = new TextEncoder();
 
-const record = (value) => Boolean(value && typeof value === 'object' && !Array.isArray(value));
-const exactKeys = (value, keys) => record(value)
-  && Object.keys(value).length === keys.length
-  && keys.every((key) => Object.hasOwn(value, key));
 const safeInteger = (value, minimum = 0) => Number.isSafeInteger(value) && value >= minimum;
 export function systemWorkflowSnapStep(density) {
   if (!Number.isSafeInteger(density)
@@ -261,7 +258,7 @@ function validatePlacement(value, path, fail) {
 export function validateSystemWorkflowDraft(input) {
   const errors = [];
   const fail = (path, code, message) => errors.push({ path, code, message });
-  const allowedKeys = [...DRAFT_KEYS, 'workbench', 'displays', 'miniApps', 'texts', 'imageModules', 'shapes', 'keeperDocks', 'workbenchGroups', 'workbenchIndex', 'artworkLayers', 'reception'];
+  const allowedKeys = [...DRAFT_KEYS, 'workbench', 'displays', 'miniApps', 'texts', 'imageModules', 'shapes', 'keeperDocks', 'workbenchGroups', 'workbenchIndex', 'artworkLayers', 'reception', 'composition'];
   if (!exactKeys(input, allowedKeys.filter(key => DRAFT_KEYS.includes(key) || Object.hasOwn(input || {}, key)))) {
     const missing = DRAFT_KEYS.filter(key => !Object.hasOwn(input || {}, key));
     const unexpected = record(input) ? Object.keys(input).filter(key => !allowedKeys.includes(key)) : [];
@@ -284,7 +281,9 @@ export function validateSystemWorkflowDraft(input) {
     || input.appearance.guideSize > SYSTEM_WORKFLOW_GRID_DENSITY.maximum
     || !HEX_COLOR.test(input.appearance?.guideColor || '')) fail('appearance', 'invalid_appearance', 'Invalid appearance');
   validateIdentity(input.identityPresentation, fail);
-  if (Object.hasOwn(input, 'reception') && !validReception(input.reception)) fail('reception', 'invalid_reception', 'Invalid Reception layout');
+  if (Object.hasOwn(input, 'composition') && (input.composition?.version !== 3 || !validReception(input.composition)))
+    fail('composition', 'invalid_composition', 'Invalid Studio composition');
+  if (Object.hasOwn(input, 'reception') && !validReception(input.reception)) fail('reception', 'invalid_reception', 'Invalid Bento layout');
   if (Object.hasOwn(input, 'workbenchIndex') && !validWorkbenchIndex(input.workbenchIndex, input)) fail('workbenchIndex', 'invalid_workbench_index', 'Invalid Workbench Index');
   if (Object.hasOwn(input, 'artworkLayers') && !validArtworkLayers(input.artworkLayers, input)) fail('artworkLayers', 'invalid_artwork_layers', 'Invalid artwork order or composition block');
   if (Object.hasOwn(input, 'workbenchGroups') && !validWorkbenchGroups(input.workbenchGroups, input)) fail('workbenchGroups', 'invalid_workbench_groups', 'Invalid Workbench groups');
@@ -320,7 +319,7 @@ export function validateSystemWorkflowDraft(input) {
     }
   }
   if (Object.hasOwn(input, 'workbench') && !isValidWorkbenchPresentation(input.workbench)) fail('workbench', 'invalid_workbench', 'Invalid Workbench configuration');
-  const allReferences = receptionReferenceCount(input.reception) + keeperReferenceCount(input.keeperDocks) + imageReferenceCount(input.imageModules) + (Array.isArray(input.grids) ? input.grids : []).reduce((sum, grid) => sum + (grid?.placements?.length || 0), 0)
+  const allReferences = receptionReferenceCount(input.composition) + receptionReferenceCount(input.reception) + keeperReferenceCount(input.keeperDocks) + imageReferenceCount(input.imageModules) + (Array.isArray(input.grids) ? input.grids : []).reduce((sum, grid) => sum + (grid?.placements?.length || 0), 0)
     + (Array.isArray(input.displays) ? input.displays : []).reduce((sum, module) => sum + (Array.isArray(module?.grids) ? module.grids : []).reduce((count, grid) => count + (grid?.placements?.length || 0), 0), 0)
     + (input.identityPresentation?.avatar?.stableAssetId ? 1 : 0) + (input.workbench?.display?.shortcut?.icon ? 1 : 0)
     + (input.workbench?.displays || []).filter(item => item?.shortcut?.icon).length;
@@ -382,7 +381,7 @@ export function validateSystemWorkflowDraft(input) {
   } catch {
     fail('$', 'draft_not_serializable', 'Draft is not serializable');
   }
-  return { valid: errors.length === 0, errors, value: errors.length ? null : withoutRetiredInterfaceAppearance(withoutRemovedArtworkPresentation(input)) };
+  return { valid: errors.length === 0, errors, value: errors.length ? null : stripRetiredInterfaceAppearance(withoutRemovedArtworkPresentation(input)) };
 }
 
 export function assertValidSystemWorkflowDraft(input) {

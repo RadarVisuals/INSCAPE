@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import WorkbenchDestinationPanel from './WorkbenchDestinationPanel.jsx';
 import { PROFILE_DOCUMENT_PUBLICATION_STATUS } from '../../profileDocument/domain/profileDocumentPublication.js';
 import { profileDocumentV9ContentFingerprint } from '../../profileDocument/domain/profileDocumentV9Serialization.js';
@@ -7,41 +7,42 @@ import { useProfileDocumentPublication } from '../../profileDocument/state/usePr
 import { usePublicationRecovery } from '../../profileDocument/state/usePublicationRecovery.js';
 import { uploadProfileDocument } from '../../profileDocument/storage/profileDocumentUploadClient.js';
 import AlphaSupportPanel from '../../support/AlphaSupportPanel.jsx';
+import { publicationUploadIssue } from '../../support/publicationUploadIssue.js';
 import { ALPHA_SUPPORT_CODES } from '../../support/alphaSupport.js';
 import { createOwnerLatticePublicationContext } from '../ownerLatticePublicationContext.js';
 import { buildOwnerSystemWorkflowPublicationDocument } from '../ownerSystemWorkflowPreviewDocument.js';
-import { canvasPublicationCandidates, canvasPublicationChanges, buildCanvasPublication, canReplaceInvalidPublication, resolvePublicationBaseline } from '../../profileDocument/domain/canvasPublication.js';
+import { canvasPublicationCandidates, canvasPublicationChanges, buildCanvasPublication, buildGalleryRemoval, canReplaceInvalidPublication, resolvePublicationBaseline } from '../../profileDocument/domain/canvasPublication.js';
+import { publicationDestinations } from '../../profileDocument/domain/publishedCanvases.js';
 import { isWorkbenchCollection, projectWorkbenchDraft } from '../../systemWorkflow/domain/workbenchCollection.js';
 import useOwnerLatticeBrowser from '../useOwnerLatticeBrowser.js';
 import '../ownerLatticePublicationRack.css';
 
-export default function OwnerSystemWorkflowPublicationRack({
-  assetRecords,
-  getWalletPublicationContext,
-  initialSnapshot = null,
-  onClose,
-  onMotionComplete,
-  onPublished,
-  profile,
-  profileAddress,
-  publishedResolution,
-  phase,
-  systemWorkflowDraft,
-  workbench,
-  onSaveWorkbench,
-  preparationError,
-  store,
-}) {
-  const [snapshot, setSnapshot] = useState(() => initialSnapshot ? assertValidProfileDocumentV9(initialSnapshot) : null);
-  const [message, setMessage] = useState('Ready to publish your current public presentation.');
-  const [operationPhase, setOperationPhase] = useState(null);
-  const [supportIssue, setSupportIssue] = useState(null);
-  const snapshotRef = useRef(snapshot);
-  const snapshotDraftFingerprintRef = useRef(null);
-  const snapshotGenerationRef = useRef(0);
-  const cidRef = useRef('');
-  const cidGenerationRef = useRef(0);
-  const draftGenerationRef = useRef({ fingerprint: null, generation: 0 });
+export default function OwnerSystemWorkflowPublicationRack({ galleryRemoval, ...props }) {
+  if (galleryRemoval) {
+    return <GalleryRemovalPublication key={props.profileAddress + ':' + galleryRemoval.ids.join(',') + ':' + galleryRemoval.document.revision}
+      galleryRemoval={galleryRemoval} {...props} />;
+  }
+  return <StudioPublication {...props} />;
+}
+
+function GalleryRemovalPublication({ galleryRemoval, ...props }) {
+  const { document, ids, entries } = galleryRemoval;
+  const buildSnapshot = useCallback((exportedAt = document.exportedAt) => {
+    if (document.profile.address !== props.profileAddress) throw new Error('This publication belongs to a different profile.');
+    return buildGalleryRemoval(document, ids, exportedAt);
+  }, [document, ids, props.profileAddress]);
+  return <PublicationDelivery {...props} galleryRemoval={galleryRemoval} buildSnapshot={buildSnapshot}>
+    {() => <section className="owner-lattice-publication-rack__summary">
+      <p>{entries.length === 1 ? 'This work will be removed from Gallery.' : `${entries.length} works will be removed from Gallery in one publication.`}</p>
+      <ul aria-label="Selected works" className="gallery-removal-selection">{entries.map(entry =>
+        <li key={entry.id}><strong>{entry.name}</strong> <span>{entry.keepOnProfile ? 'Stays on Profile' : 'Leaves the current publication'}</span></li>)}</ul>
+      <p>Any existing local Studio drafts stay on this device.</p>
+    </section>}
+  </PublicationDelivery>;
+}
+
+function StudioPublication({ assetRecords, profile, profileAddress, publishedResolution, systemWorkflowDraft, workbench,
+  preparationError, store, ...delivery }) {
   const [replacementConsent, setReplacementConsent] = useState(null);
   const replacementAvailable = canReplaceInvalidPublication(publishedResolution, profileAddress);
   const replaceInvalid = replacementAvailable && replacementConsent === publishedResolution;
@@ -50,9 +51,9 @@ export default function OwnerSystemWorkflowPublicationRack({
     catch (error) { return { document: null, error: error.message }; }
   }, [publishedResolution, profileAddress, replaceInvalid]);
   const previous = baseline.document;
-  const editingReception = store?.getWorkbenchId() === 'reception';
-  const [selectedIds, setSelectedIds] = useState(() => editingReception ? [] : [store?.getWorkbenchId()]);
-  const [includeShared, setIncludeShared] = useState(editingReception);
+  const [selectedIds, setSelectedIds] = useState(() => [store?.getWorkbenchId()]);
+  const [placements, setPlacements] = useState({});
+  const [includeShared, setIncludeShared] = useState(false);
   const firstPublication = publishedResolution?.status === 'UNAVAILABLE';
   const sharedRequired = firstPublication || replacementAvailable;
   const publishShared = sharedRequired || includeShared;
@@ -76,25 +77,85 @@ export default function OwnerSystemWorkflowPublicationRack({
   ].map(asset => [asset.id, asset])), [browser.records, assetRecords]);
   const candidates = useMemo(() => record ? canvasPublicationCandidates({ record, profile,
     assetRecords: publicationAssets }) : [], [record, profile, publicationAssets]);
-  const changes = useMemo(() => canvasPublicationChanges(candidates, previous), [candidates, previous]);
+  const changes = useMemo(() => canvasPublicationChanges(candidates, previous, placements), [candidates, previous, placements]);
   const selectedChanges = useMemo(() => selectedIds.filter(id => changes.some(item => item.id === id && item.changed)), [selectedIds, changes]);
-  const collectionInput = useMemo(() => ({ candidates, selectedIds: selectedChanges, includeShared: publishShared, previousDocument: previous }),
-    [candidates, selectedChanges, publishShared, previous]);
+  const collectionInput = useMemo(() => ({ candidates, selectedIds: selectedChanges, placements, includeShared: publishShared, previousDocument: previous }),
+    [candidates, selectedChanges, placements, publishShared, previous]);
+
+  const changeDestination = (item, destination, checked) => {
+    const destinations = publicationDestinations.filter(target => target === destination ? checked : item.destinations.includes(target));
+    setPlacements(current => ({ ...current, [item.id]: destinations }));
+    setSelectedIds(current => current.includes(item.id) ? current : [...current, item.id]);
+  };
 
   const builderInput = useMemo(() => ({ assetRecords: publicationAssets, profile, profileAddress, systemWorkflowDraft, workbench }),
     [publicationAssets, profile, profileAddress, systemWorkflowDraft, workbench]);
+  const buildSnapshot = useCallback((exportedAt = previous?.exportedAt || new Date(0), prepared) => {
+    if (preparationError) throw new Error(preparationError);
+    if (recordState.error) throw new Error(recordState.error);
+    if (store && baseline.error) throw new Error(baseline.error);
+    return store ? buildCanvasPublication({ ...collectionInput, exportedAt })
+      : buildOwnerSystemWorkflowPublicationDocument({ ...builderInput, exportedAt, previousDocument: prepared || previous });
+  }, [builderInput, preparationError, store, collectionInput, baseline.error, previous, recordState.error]);
+  return <PublicationDelivery {...delivery} profileAddress={profileAddress} buildSnapshot={buildSnapshot}>
+    {disabled => <>
+      {store && replacementAvailable && <section className="owner-lattice-publication-rack__summary">
+        <h3>Replace invalid publication</h3>
+        <p>The published document cannot be opened. You can publish a replacement from your local work.
+          The replacement includes your selected compositions, local profile details and shared Keeper.</p>
+        <label><input type="checkbox" checked={replaceInvalid} disabled={disabled}
+          onChange={event => setReplacementConsent(event.target.checked ? publishedResolution : null)} />{' '}
+          Replace the invalid publication with my selected local content</label>
+      </section>}
+      {store && <section className="owner-lattice-publication-rack__summary">
+        <h3>Compositions</h3>
+        <fieldset disabled={disabled}><legend>Publication scope</legend>
+          {changes.map(item => <div className="publication-work" role="group" aria-label={item.name} key={item.id}>
+            <label><input type="checkbox" checked={selectedChanges.includes(item.id)} disabled={!item.changed}
+              onChange={event => setSelectedIds(current => event.target.checked ? [...current, item.id] : current.filter(id => id !== item.id))} />{' '}
+              {item.name} · {item.first ? 'First publication' : item.changed ? 'Update' : 'Published'}</label>
+            <div className="publication-destinations">{publicationDestinations.map(destination =>
+              <label key={destination}><input type="checkbox" checked={item.destinations.includes(destination)}
+                onChange={event => changeDestination(item, destination, event.target.checked)} />
+                {destination === 'gallery' ? 'Gallery' : 'Profile'}</label>)}</div>
+            {item.error && <small>{item.error}</small>}
+          </div>)}
+          <button type="button" onClick={() => setSelectedIds(changes.filter(item => item.changed).map(item => item.id))}>Select all changed compositions</button>
+          <label className="publication-shared"><input type="checkbox" checked={publishShared} disabled={sharedRequired}
+            onChange={event => setIncludeShared(event.target.checked)} />{' '}Profile details and shared Keeper{sharedRequired ? ' (required)' : ''}</label>
+        </fieldset>
+        <p role="status">Selected: {changes.filter(item => selectedChanges.includes(item.id)).map(item => item.name).join(', ') || 'No compositions'}{publishShared ? ' · profile details included' : ''}</p>
+      </section>}
+      <section className="owner-lattice-publication-rack__summary">
+        <h3>What goes live</h3>
+        <p>Your public Images, Text and Shapes, <strong>Public Grids</strong>, Keeper content, custom Identity card and prepared Workbench setup: window positions, starting open state, Display name and shortcut.</p>
+        <h3>What stays private</h3>
+        <p>Private Grids, Library organisation, Layers tools, Activity, selections and local preferences stay private.</p>
+        <small>The NFTs already exist publicly on LUKSO. Publishing only updates how your INSCAPE profile presents them.</small>
+      </section>
+    </>}
+  </PublicationDelivery>;
+}
+
+function PublicationDelivery({ initialSnapshot = null, galleryRemoval, getWalletPublicationContext, profileAddress,
+  onClose, onMotionComplete, onPublished, onSaveWorkbench, phase, buildSnapshot, children }) {
+  const [snapshot, setSnapshot] = useState(() => initialSnapshot ? assertValidProfileDocumentV9(initialSnapshot) : null);
+  const [message, setMessage] = useState(galleryRemoval ? 'Prepare this change before making it public.' : 'Ready to publish your current public presentation.');
+  const [operationPhase, setOperationPhase] = useState(null);
+  const [supportIssue, setSupportIssue] = useState(null);
+  const snapshotRef = useRef(snapshot);
+  const snapshotDraftFingerprintRef = useRef(null);
+  const snapshotGenerationRef = useRef(0);
+  const cidRef = useRef('');
+  const cidGenerationRef = useRef(0);
+  const draftGenerationRef = useRef({ fingerprint: null, generation: 0 });
   const draftState = useMemo(() => {
     try {
-      if (preparationError) throw new Error(preparationError);
-      if (recordState.error) throw new Error(recordState.error);
-      if (store && baseline.error) throw new Error(baseline.error);
-      const candidate = store ? buildCanvasPublication({ ...collectionInput, exportedAt: previous?.exportedAt || new Date(0) })
-        : buildOwnerSystemWorkflowPublicationDocument({ ...builderInput, exportedAt: new Date(0) });
-      return { error: null, fingerprint: profileDocumentV9ContentFingerprint(candidate) };
+      return { error: null, fingerprint: profileDocumentV9ContentFingerprint(buildSnapshot()) };
     } catch (error) {
-      return { error: error?.message || 'The public System Workflow cannot be projected', fingerprint: null };
+      return { error: error?.message || 'The public presentation could not be prepared.', fingerprint: null };
     }
-  }, [builderInput, preparationError, store, collectionInput, baseline.error, previous, recordState.error]);
+  }, [buildSnapshot]);
   if (draftGenerationRef.current.fingerprint !== draftState.fingerprint) {
     draftGenerationRef.current = {
       fingerprint: draftState.fingerprint,
@@ -119,14 +180,19 @@ export default function OwnerSystemWorkflowPublicationRack({
   const uploadContextRef = useRef(getPublicationContext);
   uploadContextRef.current = getPublicationContext;
   const uploadControllerRef = useRef(null);
-  useEffect(() => () => uploadControllerRef.current?.abort(), []);
+  const mounted = useRef(false);
+  const publishing = useRef(false);
+  useLayoutEffect(() => {
+    mounted.current = true;
+    return () => { mounted.current = false; uploadControllerRef.current?.abort(); };
+  }, []);
   const publication = useProfileDocumentPublication(
     getPublicationContext,
     `${draftGenerationRef.current.generation}:${snapshotGenerationRef.current}:${cidGenerationRef.current}:${stale}`,
   );
   const publicationBusy = ['VERIFYING_CID', 'AWAITING_WALLET', 'CONFIRMING_TRANSACTION', 'VERIFYING_PUBLICATION']
     .includes(publication.status);
-  const busy = ['PREPARING', 'CHECKING_ACCESS', 'AUTHORIZING', 'UPLOADING', 'WALLET'].includes(operationPhase) || publicationBusy;
+  const busy = ['PREPARING', 'CHECKING_ACCESS', 'AUTHORIZING', 'UPLOADING', 'BASELINE', 'WALLET'].includes(operationPhase) || publicationBusy;
   const recovery = usePublicationRecovery(profileAddress, publication.status, busy);
 
   const prepareSnapshot = useCallback(() => {
@@ -134,12 +200,8 @@ export default function OwnerSystemWorkflowPublicationRack({
       setSupportIssue(null);
       setOperationPhase('PREPARING');
       if (!draftFingerprint) throw new Error(draftState.error || 'The public System Workflow is not ready');
-      const next = store ? buildCanvasPublication(collectionInput) : buildOwnerSystemWorkflowPublicationDocument({
-        ...builderInput,
-        exportedAt: new Date(),
-        previousDocument: snapshot || previous,
-      });
-      if (onSaveWorkbench && !onSaveWorkbench(next.workbench)) throw new Error('The Workbench setup could not be saved.');
+      const next = buildSnapshot(new Date(), snapshot);
+      if (!galleryRemoval && onSaveWorkbench && !onSaveWorkbench(next.workbench)) throw new Error('The Workbench setup could not be saved.');
       snapshotRef.current = next;
       snapshotDraftFingerprintRef.current = draftFingerprint;
       snapshotGenerationRef.current += 1;
@@ -153,15 +215,16 @@ export default function OwnerSystemWorkflowPublicationRack({
       const nextMessage = error?.message || 'The publication snapshot could not be prepared.';
       setMessage(nextMessage);
       setSupportIssue({ code: ALPHA_SUPPORT_CODES.PREVIEW_VALIDATION_FAILED,
-        phase: 'PUBLICATION_SNAPSHOT', providerCategory: 'LOCAL_VALIDATION', message: nextMessage });
+        phase: 'PUBLICATION_SNAPSHOT', providerCategory: 'LOCAL_VALIDATION' });
       setOperationPhase(null);
     }
-  }, [builderInput, draftFingerprint, draftState.error, onSaveWorkbench, publication, previous, snapshot, store, collectionInput]);
+  }, [buildSnapshot, draftFingerprint, draftState.error, galleryRemoval, onSaveWorkbench, publication, snapshot]);
 
   const uploadSnapshot = useCallback(async () => {
     if (uploadControllerRef.current) return;
     const controller = new AbortController();
     uploadControllerRef.current = controller;
+    let uploadPhase = 'CHECKING_ACCESS';
     try {
       setSupportIssue(null);
       if (!snapshot) throw new Error('Prepare a snapshot before uploading.');
@@ -171,22 +234,25 @@ export default function OwnerSystemWorkflowPublicationRack({
       const uploaded = await uploadProfileDocument(snapshot, {
         getContext: () => uploadContextRef.current(), signal: controller.signal,
         onPhase: phase => {
+          if (controller.signal.aborted) return;
+          uploadPhase = phase;
           setOperationPhase(phase);
           setMessage(phase === 'AUTHORIZING' ? 'Confirm upload access in your wallet. This signature authorizes only this presentation.' : 'Making your public presentation available…');
         },
       });
+      if (controller.signal.aborted) return;
       cidGenerationRef.current += 1;
       cidRef.current = uploaded.cid;
       const verified = await publication.verifyCid(snapshot, uploaded.cid, { stale: false });
+      if (controller.signal.aborted) return;
       setOperationPhase(verified ? 'VERIFIED' : null);
       setMessage(verified ? 'Everything is verified. Publish it to your profile when you are ready.'
         : 'The public presentation could not be verified.');
     } catch (error) {
       if (controller.signal.aborted) return;
-      const nextMessage = error?.message || 'The publication upload failed.';
-      setMessage(nextMessage);
-      setSupportIssue({ code: ALPHA_SUPPORT_CODES.IPFS_UPLOAD_FAILED,
-        phase: 'IPFS_UPLOAD', providerCategory: 'PUBLICATION_FUNCTION', message: nextMessage });
+      const issue = publicationUploadIssue(error, uploadPhase);
+      setMessage(issue.message);
+      setSupportIssue(issue);
       setOperationPhase(null);
     } finally {
       if (uploadControllerRef.current === controller) uploadControllerRef.current = null;
@@ -194,19 +260,38 @@ export default function OwnerSystemWorkflowPublicationRack({
   }, [publication, snapshot, stale]);
 
   const publish = useCallback(async () => {
+    if (publishing.current || uploadControllerRef.current) return;
+    publishing.current = true;
     setSupportIssue(null);
-    setOperationPhase('WALLET');
-    setMessage('Confirm the publication request in your wallet.');
-    const confirmed = await publication.publish();
-    if (!confirmed?.result?.document) {
-      setMessage('Publication was not confirmed.');
+    try {
+      if (galleryRemoval) {
+        setOperationPhase('BASELINE');
+        setMessage('Checking the latest Gallery publication.');
+        await galleryRemoval.verifyBaseline();
+        if (!mounted.current) return;
+      }
+      setOperationPhase('WALLET');
+      setMessage('Confirm the publication request in your wallet.');
+      const confirmed = await publication.publish();
+      // Studio delivers the original submitter's verified receipt even after
+      // switching workspaces. A closed Gallery review no longer owns its UI.
+      if (galleryRemoval && !mounted.current) return;
+      if (!confirmed?.result?.document) {
+        setMessage('Publication was not confirmed.');
+        setOperationPhase(null);
+        return;
+      }
+      setOperationPhase('PUBLISHED');
+      setMessage('Your public presentation is live.');
+      onPublished?.({ ...confirmed.result, transactionHash: confirmed.receipt?.transactionHash || confirmed.transactionHash });
+    } catch (error) {
+      if (!mounted.current) return;
+      setMessage(error?.message || 'The latest publication could not be verified. Try again.');
       setOperationPhase(null);
-      return;
+    } finally {
+      publishing.current = false;
     }
-    setOperationPhase('PUBLISHED');
-    setMessage('Your public presentation is live.');
-    onPublished?.({ ...confirmed.result, transactionHash: confirmed.receipt?.transactionHash || confirmed.transactionHash });
-  }, [onPublished, publication]);
+  }, [galleryRemoval, onPublished, publication]);
 
   const verifiedReady = publication.status === PROFILE_DOCUMENT_PUBLICATION_STATUS.CID_VERIFIED
     && Boolean(publication.verified);
@@ -215,7 +300,8 @@ export default function OwnerSystemWorkflowPublicationRack({
     : publication.status === PROFILE_DOCUMENT_PUBLICATION_STATUS.VERIFYING_PUBLICATION
       ? 'Transaction confirmed. Checking your public presentation…' : message;
   const action = !snapshot || stale ? prepareSnapshot : verifiedReady ? publish : uploadSnapshot;
-  const buttonLabel = operationPhase === 'PREPARING' ? 'Preparing…'
+  const buttonLabel = operationPhase === 'BASELINE' ? 'Checking publication.'
+    : operationPhase === 'PREPARING' ? 'Preparing…'
     : operationPhase === 'CHECKING_ACCESS' ? 'Checking access…'
       : operationPhase === 'AUTHORIZING' ? 'Authorize upload…'
     : operationPhase === 'UPLOADING' ? 'Making public…'
@@ -227,46 +313,21 @@ export default function OwnerSystemWorkflowPublicationRack({
             : verifiedReady ? 'Publish to profile' : 'Make presentation public';
   const showSupport = Boolean(publication.error || supportIssue);
 
-  return <WorkbenchDestinationPanel title="Publish" onClose={onClose} closeLabel="Close Publication" closeDisabled={busy}
-    aria-label="Publish profile" className="owner-lattice-publication-rack"
-    data-lattice-chrome data-lattice-menu-surface  data-panel-phase={phase} onKeyDown={(event) => {
-      if (event.key === 'Escape' && !busy) onClose?.();
+  const close = () => {
+    if (!busy && !publishing.current && !uploadControllerRef.current) onClose?.();
+  };
+  return <WorkbenchDestinationPanel title={galleryRemoval ? 'Remove from Gallery' : 'Publish'} onClose={close}
+    closeLabel={galleryRemoval ? 'Close removal' : 'Close Publication'} closeDisabled={busy} aria-busy={busy}
+    aria-label={galleryRemoval ? 'Remove from Gallery' : 'Publish profile'} className="owner-lattice-publication-rack"
+    data-lattice-chrome data-lattice-menu-surface data-panel-phase={phase} onKeyDown={event => {
+      if (event.key !== 'Escape') return;
+      if (galleryRemoval) { event.preventDefault(); event.stopPropagation(); }
+      close();
     }} onTransitionEnd={(event) => {
       if (event.target === event.currentTarget && event.propertyName === 'opacity') onMotionComplete?.();
     }}>
     <div className="workbench-destination-body">
-    {store && replacementAvailable && <section className="owner-lattice-publication-rack__summary">
-      <h3>Replace invalid publication</h3>
-      <p>The published document cannot be opened. You can publish a replacement from your local work.
-        Only selected canvases and your local profile details, Reception and shared Keeper will be included.
-        Unselected canvases from the previous publication cannot be retained.</p>
-      <label><input type="checkbox" checked={replaceInvalid} disabled={busy || operationPhase === 'PUBLISHED'}
-        onChange={event => setReplacementConsent(event.target.checked ? publishedResolution : null)} />{' '}
-        Replace the invalid publication with my selected local content</label>
-    </section>}
-    {store && <section className="owner-lattice-publication-rack__summary">
-      <h3>Choose canvases</h3>
-      <p>{replacementAvailable ? 'Only checked canvases go live in the replacement.' : 'Only checked changes go live. Other canvases keep their published version.'}</p>
-      <fieldset disabled={busy || operationPhase === 'PUBLISHED'}><legend>Publication scope</legend>
-        {changes.map(item => <label key={item.id} style={{ display: 'block', marginBlock: 12 }}>
-          <input type="checkbox" checked={selectedChanges.includes(item.id)} disabled={!item.changed}
-            onChange={event => setSelectedIds(current => event.target.checked ? [...current, item.id] : current.filter(id => id !== item.id))} />{' '}
-          {item.name} — {replacementAvailable ? 'Local version' : item.first ? 'First publication' : item.changed ? 'Update' : 'No changes'}
-          {item.error && <small>{item.error}</small>}
-        </label>)}
-        <button type="button" onClick={() => setSelectedIds(changes.filter(item => item.changed).map(item => item.id))}>Select all changed canvases</button>
-        <label style={{ display: 'block', marginBlock: 12 }}><input type="checkbox" checked={publishShared} disabled={sharedRequired}
-          onChange={event => setIncludeShared(event.target.checked)} />{' '}Profile details, Reception and shared Keeper{replacementAvailable ? ' · required for replacement' : firstPublication ? ' · required for first publication' : ''}</label>
-      </fieldset>
-      <p role="status">Selected: {changes.filter(item => selectedChanges.includes(item.id)).map(item => item.name).join(', ') || 'No canvases'}{publishShared ? ' · profile details included' : ''}</p>
-    </section>}
-    <section className="owner-lattice-publication-rack__summary">
-      <h3>What goes live</h3>
-      <p>Your public Images, Text and Shapes, <strong>Public Grids</strong>, Keeper content, custom Identity card and prepared Workbench setup: window positions, starting open state, Display name and shortcut.</p>
-      <h3>What stays private</h3>
-      <p>Private Grids, Library organisation, Layers tools, Activity, selections and local preferences stay private.</p>
-      <small>The NFTs already exist publicly on LUKSO. Publishing only updates how your INSCAPE profile presents them.</small>
-    </section>
+    {children(busy || operationPhase === 'PUBLISHED')}
     {draftState.error && <section><p role="alert">{draftState.error}</p></section>}
     {!busy && recovery.blocked && <section className="owner-lattice-publication-rack__recovery">
       <h3>Previous publication</h3>
@@ -286,20 +347,21 @@ export default function OwnerSystemWorkflowPublicationRack({
       </div>
     </section>}
     <section className="owner-lattice-publication-rack__status-copy">
-      <p role="status">{!busy && recovery.blocked ? 'Resolve the previous publication before preparing another one.' : publication.error || progressMessage}</p>
+      <p role="status">{!busy && recovery.blocked ? 'Resolve the previous publication before preparing another one.' : supportIssue ? message : publication.error || progressMessage}</p>
       <small>Making the presentation public stores it permanently. Upload access requires a wallet signature; publishing to your profile then requires a transaction confirmation.</small>
     </section>
     {showSupport && <section className="owner-lattice-publication-rack__support">
       <details><summary>Help with this error</summary><AlphaSupportPanel compact
-        code={publication.supportCode || supportIssue?.code || ALPHA_SUPPORT_CODES.ALPHA_SUPPORT_REQUEST}
-        phase={publication.supportCode === ALPHA_SUPPORT_CODES.CID_VERIFICATION_FAILED
-          ? 'CID_VERIFY' : supportIssue?.phase || 'PUBLICATION'}
+        code={supportIssue?.code || publication.supportCode || ALPHA_SUPPORT_CODES.ALPHA_SUPPORT_REQUEST}
+        phase={supportIssue?.phase || (publication.supportCode === ALPHA_SUPPORT_CODES.CID_VERIFICATION_FAILED
+          ? 'CID_VERIFY' : 'PUBLICATION')}
         providerCategory={supportIssue?.providerCategory || (publication.supportCode ? 'LUKSO_PROVIDER' : undefined)}
         profileAddress={profileAddress} routeClass="OWNER" transactionHash={publication.transactionHash}
-        message={publication.error || supportIssue?.message} /></details>
+         /></details>
     </section>}
     </div>
     <footer className="owner-lattice-publication-rack__rail">
+      {galleryRemoval && <button type="button" className="workbench-destination-action" disabled={busy} onClick={close}>Cancel</button>}
       <button type="button" className="owner-lattice-publication-rack__publish workbench-destination-action"
         disabled={busy || operationPhase === 'PUBLISHED' || recovery.blocked || Boolean(draftState.error) || Boolean(publication.transactionHash && publication.error)}
         onClick={action}>{buttonLabel}</button>

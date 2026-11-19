@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { loadWorkbenchLayout, saveWorkbenchLayout, workbenchLayoutKey } from './workbenchLayoutStorage.js';
+import { loadWorkbenchLayout, saveWorkbenchLayout } from './workbenchLayoutStorage.js';
+import { workbenchLayoutKey } from '../../systemWorkflow/workbenchLayoutKey.js';
 import { createEmptySystemWorkflowDraft } from '../../systemWorkflow/domain/systemWorkflowDraft.js';
 import { createDefaultWorkbenchPresentation, createTextPresentation } from '../../profileDocument/domain/workbenchPresentation.js';
 import { createArticle } from '../../text/domain/article.js';

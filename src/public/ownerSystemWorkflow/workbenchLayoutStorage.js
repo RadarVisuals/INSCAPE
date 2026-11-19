@@ -1,9 +1,8 @@
 import { validSharedTools } from './sharedDisplayToolsState.js';
 import { isValidWorkbenchPresentation } from '../../profileDocument/domain/workbenchPresentation.js';
 import { displayModuleIds } from '../../systemWorkflow/domain/displayModules.js';
+import { workbenchLayoutKey } from '../../systemWorkflow/workbenchLayoutKey.js';
 
-export const workbenchLayoutKey = (profile, workbenchId = 'workbench:main') =>
-  `inscape:workbench:layout:v1:${profile.toLowerCase()}${workbenchId === 'workbench:main' ? '' : `:${workbenchId}`}`;
 // A local view of existing modules, not authored content. An explicit restore of
 // draft.workbench invalidates it; deleted module IDs cannot be resurrected by it.
 export function loadWorkbenchLayout(profile, draft, storage, workbenchId, cells) {

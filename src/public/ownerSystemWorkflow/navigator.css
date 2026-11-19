@@ -15,8 +15,8 @@
 .navigator-media-missing, .navigator-object--missing { border: 1px solid var(--tactile-muted); background: color-mix(in srgb, var(--tactile-muted) 15%, transparent); }
 .navigator-media-missing > span, .navigator-object--missing > span { font: 12px var(--font-interface); color: var(--tactile-muted); }
 .navigator-zoom { display: grid; grid-template-columns: auto minmax(0, 1fr) 4ch; align-items: center; padding: 0 10px 10px; gap: 8px; color: var(--tactile-muted); font: var(--workflow-type-control); }
-.navigator-zoom > input { width: 100%; min-width: 0; margin: 0; accent-color: var(--tactile-ink); }
-.navigator-zoom > output { text-align: right; font-variant-numeric: tabular-nums; }
-.navigator-home { display: grid; place-items: center; padding: 0; min-height: 24px; min-width: 24px; border: 0; }
-@media (max-width: 520px), (pointer: coarse) { .navigator-zoom > input { min-height: 44px; } .navigator-home { min-height: 44px; min-width: 44px; } }
+.navigator-zoom > input { width: 100%; min-width: 0; height: 14px; margin: 0; accent-color: var(--tactile-accent); }
+.navigator-zoom > input:focus-visible { outline: 2px solid var(--tactile-accent); outline-offset: 2px; }
+.navigator-zoom > output { color: var(--tactile-ink); text-align: right; font-variant-numeric: tabular-nums; }
+@media (max-width: 520px), (pointer: coarse) { .navigator-zoom > input { min-height: 44px; } }
 @media (forced-colors: active) { .navigator-map-view { border-color: CanvasText; } }

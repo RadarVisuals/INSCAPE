@@ -75,11 +75,12 @@ test('saved SVG zoom below fill keeps its native viewport and centered margins',
       side.asset.media = { ...side.asset.media, url: 'https://reception.test/framing.svg', width: 600, height: 400 }; side.crop = { x: .5, y: .5, zoom: .25 };
       if (!root.commitCompletedOperation(draft, { expectedGeneration: root.getGeneration() })) throw Error('Invalid SVG crop');
     });
-    const native = page.locator('.reception-image foreignObject'); await native.waitFor();
+    const native = page.locator('.reception-image .artwork-svg-html-media'); await native.waitFor();
     const geometry = await native.evaluate(node => {
-      const mask = node.ownerSVGElement.viewBox.baseVal, matrix = node.transform.baseVal.consolidate().matrix;
-      return { width: node.width.baseVal.value, height: node.height.baseVal.value, x: matrix.e, y: matrix.f,
-        scaleX: matrix.a, scaleY: matrix.d, maskWidth: mask.width, maskHeight: mask.height };
+      const mask = node.closest('.artwork-svg-viewport'), style = getComputedStyle(node);
+      const matrix = new DOMMatrix(style.transform);
+      return { width: parseFloat(style.width), height: parseFloat(style.height), x: matrix.e, y: matrix.f,
+        scaleX: matrix.a, scaleY: matrix.d, maskWidth: parseFloat(getComputedStyle(mask).width), maskHeight: parseFloat(getComputedStyle(mask).height) };
     });
     assert.equal(geometry.width, 600); assert.equal(geometry.height, 400); assert.equal(geometry.scaleX, geometry.scaleY);
     const scale = Math.max(geometry.maskWidth / 600, geometry.maskHeight / 400) * .25;

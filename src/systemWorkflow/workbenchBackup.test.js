@@ -6,7 +6,7 @@ import { addTextModule } from '../text/textSession.js';
 import { addImageModule } from '../imageModule/imageModuleSession.js';
 import { addShape } from '../shapes/shapeSession.js';
 import { parseWorkbenchBackup, serializeWorkbenchBackup, restoreWorkbenchBackup, WORKBENCH_BACKUP_LIMIT } from './workbenchBackup.js';
-import { workbenchLayoutKey } from '../public/ownerSystemWorkflow/workbenchLayoutStorage.js';
+import { workbenchLayoutKey } from './workbenchLayoutKey.js';
 import { retainTextRecovery, clearTextRecovery } from '../text/textEditRecovery.js';
 
 const profile = `0x${'1'.repeat(40)}`, other = `0x${'2'.repeat(40)}`;

@@ -153,12 +153,12 @@ export default function ToolPanel({ label, title, titleContent, moveLabel, heade
       title="Drag to move; use arrow keys when focused" onKeyDown={event => key(event)} onPointerDown={event => begin(event)} onPointerMove={move}
       onPointerUp={event => end(event, false)} onPointerCancel={event => end(event, true)} onLostPointerCapture={event => end(event, true)}>{content}</button>
   );
-  const renderHeader = (content = headerContent, close = onClose, closeName = closeLabel || `Close ${label}`) => (
+  const renderHeader = (content = headerContent, close = onClose, closeName = closeLabel || `Close ${label}`, extraActions) => (
     <header className="workbench-tool-panel-header">
       {content}
       {renderMoveHandle(content ? null : titleContent || title)}
-      {headerActions}
-      {close && <button type="button" className="workbench-tool-panel-close" aria-label={closeName} onClick={close}><X /></button>}
+      {extraActions}{headerActions}
+      {close && <button type="button" className="workbench-tool-panel-close" aria-label={closeName} title={closeName} onClick={close}><X /></button>}
     </header>
   );
   return <section {...surfaceProps} data-window-chrome={chrome} hidden={hidden} ref={node => {

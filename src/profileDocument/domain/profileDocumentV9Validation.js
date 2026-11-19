@@ -1,8 +1,9 @@
+import { isRecord as record, hasExactKeys as exactKeys, hasAllowedKeys as allowedKeys } from '../../recordValidation.js';
 import { retiredInterfaceKeys } from '../../systemWorkflow/domain/retiredInterfaceAppearance.js';
 import { validReception, receptionReferenceCount } from './receptionPresentation.js';
 import { receptionLinkProblems } from './receptionLinks.js';
 import { publishedPresentationSnapshot } from '../../presentation/presentationSources.js';
-import { validatePublishedCanvases } from './publishedCanvases.js';
+import { validPublicationDestinations, validatePublishedCanvases } from './publishedCanvases.js';
 import { validWorkbenchIndex } from '../../systemWorkflow/domain/workbenchIndex.js';
 import { validArtworkLayers } from '../../systemWorkflow/domain/artworkLayers.js';
 import { validPublishedWorkbenchGroups } from './publishedWorkbenchGroups.js';
@@ -54,13 +55,6 @@ const WORLD_COVER_KEYS = ['width', 'height', 'grid'];
 const ID = /^[A-Za-z0-9:_-]+$/u;
 const GRID_ID = /^grid:[A-Za-z0-9_-]+$/u;
 const HEX_COLOR = /^#[0-9a-f]{6}$/iu;
-const record = (value) => Boolean(value && typeof value === 'object' && !Array.isArray(value));
-const exactKeys = (value, keys) => record(value)
-  && Object.keys(value).length === keys.length
-  && keys.every((key) => Object.hasOwn(value, key));
-const allowedKeys = (value, required, optional) => record(value)
-  && required.every((key) => Object.hasOwn(value, key))
-  && Object.keys(value).every((key) => required.includes(key) || optional.includes(key));
 const safeText = (value, maximum, { empty = true } = {}) => typeof value === 'string'
   && (empty || value.length > 0)
   && value.length <= maximum
@@ -202,7 +196,10 @@ export class ProfileDocumentV9ValidationError extends Error {
   }
 }
 
-export function validateProfileDocumentV9(input, { rawSize } = {}) {
+export function validateProfileDocumentV9(input, options) {
+  return validateDocument(input, options, true);
+}
+function validateDocument(input, { rawSize } = {}, checkLinks) {
   const errors = [];
   const fail = (path, code, message) => errors.push({ path, code, message });
   let measuredSize = rawSize;
@@ -212,7 +209,7 @@ export function validateProfileDocumentV9(input, { rawSize } = {}) {
   // collection envelope must not consume the composition's existing depth budget.
   const depthInput = record(input) ? Object.fromEntries(Object.entries(input).filter(([key]) => key !== 'canvases')) : input;
   if (depth(depthInput) > SYSTEM_WORKFLOW_LIMITS.maxDepth) fail('$', 'excessive_depth', 'Document nesting is too deep');
-  if (!allowedKeys(input, DOCUMENT_KEYS, ['workbench', 'displays', 'miniApps', 'texts', 'imageModules', 'shapes', 'keeperDocks', 'workbenchGroups', 'workbenchIndex', 'artworkLayers', 'reception', 'canvas', 'canvases'])) {
+  if (!allowedKeys(input, DOCUMENT_KEYS, ['workbench', 'displays', 'miniApps', 'texts', 'imageModules', 'shapes', 'keeperDocks', 'workbenchGroups', 'workbenchIndex', 'artworkLayers', 'reception', 'receptionDestinations', 'composition', 'canvas', 'canvases'])) {
     fail('$', 'unexpected_fields', 'Document contains unexpected or missing fields');
     return { valid: false, errors, value: null, size: measuredSize };
   }
@@ -250,7 +247,11 @@ export function validateProfileDocumentV9(input, { rawSize } = {}) {
     || input.appearance.guideSize > SYSTEM_WORKFLOW_GRID_DENSITY.maximum
     || !HEX_COLOR.test(input.appearance.guideColor || '')) fail('appearance', 'invalid_appearance', 'Invalid public appearance');
   validateIdentity(input.identityPresentation, fail);
-  if (Object.hasOwn(input, 'reception') && !validReception(input.reception, true)) fail('reception', 'invalid_reception', 'Invalid published Reception layout');
+  if (Object.hasOwn(input, 'composition') && (input.composition?.version !== 3 || !validReception(input.composition, true)))
+    fail('composition', 'invalid_composition', 'Invalid published Studio composition');
+  if (Object.hasOwn(input, 'receptionDestinations') && (!input.reception || !validPublicationDestinations(input.receptionDestinations)))
+    fail('receptionDestinations', 'invalid_destinations', 'Choose Gallery, Profile or both for the Bento.');
+  if (Object.hasOwn(input, 'reception') && !validReception(input.reception, true)) fail('reception', 'invalid_reception', 'Invalid published Bento layout');
   if (Object.hasOwn(input, 'keeperDocks') && !validKeeperDocks(input.keeperDocks, true)) fail('keeperDocks', 'invalid_keepers', 'Invalid published Keeper dock');
   if (Array.isArray(input.workbench?.keeperDocks) && input.workbench.keeperDocks.some(item => !Array.isArray(input.keeperDocks) || !input.keeperDocks.some(keeper => keeper?.id === item?.id))) fail('workbench.keeperDocks', 'unknown_keeper', 'Dock refers to an unavailable Keeper');
   if (Object.hasOwn(input, 'miniApps') && !validMiniApps(input.miniApps, true)) fail('miniApps', 'invalid_mini_apps', 'Invalid published mini app');
@@ -280,7 +281,7 @@ export function validateProfileDocumentV9(input, { rawSize } = {}) {
       fail('displays', 'invalid_display_count', 'Invalid Display count');
     } else {
       const ids = new Set([PRIMARY_DISPLAY_ID]);
-      const { displays: _displays, workbench: _workbench, miniApps: _miniApps, texts: _texts, imageModules: _images, shapes: _shapes, keeperDocks: _keepers, workbenchGroups: _groups, workbenchIndex: _index, artworkLayers: _layers, reception: _reception, canvas: _canvas, canvases: _canvases, ...shared } = input;
+      const { displays: _displays, workbench: _workbench, miniApps: _miniApps, texts: _texts, imageModules: _images, shapes: _shapes, keeperDocks: _keepers, workbenchGroups: _groups, workbenchIndex: _index, artworkLayers: _layers, reception: _reception, receptionDestinations: _receptionDestinations, composition: _composition, canvas: _canvas, canvases: _canvases, ...shared } = input;
       for (const module of input.displays) {
         if (!exactKeys(module, ['id', ...DISPLAY_CONTENT_KEYS]) || !/^display:[A-Za-z0-9_-]{1,80}$/u.test(module?.id) || ids.has(module.id)) {
           fail('displays', 'invalid_display', 'Invalid or duplicate Display'); continue;
@@ -354,14 +355,20 @@ export function validateProfileDocumentV9(input, { rawSize } = {}) {
   const documentAssetReferences = (input.grids || []).reduce((total, grid) => total + (grid?.placements?.length || 0), 0)
     + worldCoverAssetReferences + (input.identityPresentation?.avatar?.asset ? 1 : 0) + moduleReferences
     + (input.workbench?.display?.shortcut?.icon ? 1 : 0) + (input.workbench?.displays || []).filter(module => module.shortcut?.icon).length
-    + keeperReferenceCount(input.keeperDocks) + imageReferenceCount(input.imageModules) + receptionReferenceCount(input.reception);
+    + keeperReferenceCount(input.keeperDocks) + imageReferenceCount(input.imageModules) + receptionReferenceCount(input.reception) + receptionReferenceCount(input.composition);
   if (documentAssetReferences > SYSTEM_WORKFLOW_LIMITS.maxTotalAssetReferences) {
     fail('metadata.worldCover', 'too_many_asset_references', 'Too many total asset references');
   }
-  validatePublishedCanvases(input, validateProfileDocumentV9, fail);
-  if (!errors.length && input.reception?.links?.length) {
-    for (const problem of receptionLinkProblems(input.reception, publishedPresentationSnapshot(input)))
-      fail(`reception.links.${problem.id}`, 'unavailable_reception_link', problem.reason);
+  validatePublishedCanvases(input, document => validateDocument(document, {}, false), fail);
+  if (checkLinks && !errors.length) {
+    const linkedLayouts = [['reception', input.reception, 'Bento'], ['composition', input.composition, input.canvas?.name || 'Canvas'],
+      ...(input.canvases || []).map(item => ['canvases.' + item.id + '.composition', item.content.composition, item.name])]
+      .filter(([, layout]) => layout?.links?.length);
+    if (linkedLayouts.length) {
+      const snapshot = publishedPresentationSnapshot(input);
+      for (const [path, layout, compositionName] of linkedLayouts) for (const issue of receptionLinkProblems(layout, snapshot))
+        errors.push({ path: path + '.links.' + issue.id, code: 'unavailable_reception_link', message: issue.reason, compositionName });
+    }
   }
   // Published bytes are immutable and hash-verified. Accept legacy fields but
   // preserve them here; renderers ignore them and draft restoration removes them.

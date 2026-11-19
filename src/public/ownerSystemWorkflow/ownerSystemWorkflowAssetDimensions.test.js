@@ -180,3 +180,17 @@ test('a cached thumbnail cannot supply a missing source dimension or claim a sou
     selected.selectedMedia.url);
   assert.equal(requested, selected.selectedMedia.url);
 });
+
+test('metadata places a full-size image immediately without adopting its resized preview', async () => {
+  const source = 'https://api.universalprofile.cloud/ipfs/QmArtwork/full.webp';
+  class SlowImage { constructor() { throw Error('should not decode before placement'); } }
+  const asset = { src: source, imageWidth: 2000, imageHeight: 1500, previewSrc: 'https://api.universalprofile.cloud/image/QmArtwork/full.webp?width=256' };
+  assert.deepEqual(await decodeOwnerSystemWorkflowAssetDimensions(asset, { preferMetadata: true, ImageConstructor: SlowImage }), { source, width: 2000, height: 1500 });
+  class FailedImage { set src(_) { queueMicrotask(() => this.onerror()); } }
+  assert.equal(await decodeOwnerSystemWorkflowAssetDimensions({ ...asset, imageWidth: null, imageHeight: null }, { ImageConstructor: FailedImage, cache: new Map() }), null, 'a proxy never becomes the authored fallback');
+});
+test('fast placement still decodes JPEG orientation', async () => {
+  const source = 'https://assets.example/oriented.jpg';
+  class OrientedImage { naturalWidth = 1080; naturalHeight = 1920; decode() { return Promise.resolve(); } }
+  assert.deepEqual(await decodeOwnerSystemWorkflowAssetDimensions({ src: source, imageWidth: 1920, imageHeight: 1080 }, { preferMetadata: true, ImageConstructor: OrientedImage, cache: new Map() }), { source, width: 1080, height: 1920 });
+});

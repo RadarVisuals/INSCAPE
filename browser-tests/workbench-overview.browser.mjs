@@ -95,35 +95,28 @@ async function open(page) {
   page.setDefaultTimeout(15000);
   await page.route('**/*', route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
   await page.goto(`${origin}/browser-tests/workbench-storage-fixture.html?seed=1&shell=1`, { timeout: 45000, waitUntil: 'domcontentloaded' });
-  await editorMenu(page, 'Canvas').waitFor();
+  await editorMenu(page).waitFor();
   await page.locator('.text-window').waitFor();
 }
 async function menu(page, show = true) {
-  if (await page.locator('.workbench-overview[data-workspace]').count()) {
-    await page.getByRole('menubar').getByRole('menuitem', { name: 'View', exact: true }).click();
-    await page.getByRole('menuitem', { name: 'Immersive view', exact: true }).click();
-  }
-  const trigger = page.getByRole('button', { name: 'Inscape menu', exact: true });
+  const trigger = page.getByRole('button', { name: 'View options', exact: true });
   if ((await trigger.getAttribute('aria-expanded') === 'true') !== show) await trigger.click();
 }
 async function menuAction(page, name, touch = false) {
   await page.locator('.workbench-overview').waitFor();
   if (await page.locator('.composition-index').count()) {
-    const direct = name === 'About' ? 'Reception' : name;
-    await page.getByRole('button', { name: direct, exact: true })[touch ? 'tap' : 'click']();
-    if (name === 'Grid') { await menu(page); await menu(page, false); }
+    await page.getByRole('button', { name, exact: true })[touch ? 'tap' : 'click']();
+    if (name === 'Grid') await page.getByRole('region', { name: 'Workbench gallery' }).waitFor();
     return;
   }
   await menu(page);
   const button = page.getByRole('button', { name, exact: true });
   await button[touch ? 'tap' : 'click']();
-  if (['List', 'Grid', 'Wrap around'].includes(name) && await page.getByRole('button', { name: 'Inscape menu', exact: true }).count()) await menu(page, false);
+  if (['List', 'Grid', 'Wrap around'].includes(name) && await page.getByRole('button', { name: 'View options', exact: true }).count()) await menu(page, false);
 }
 async function revealCard(page, name, touch = false) {
   const button = page.getByRole('button', { name: 'Open ' + name, exact: true });
   await button.scrollIntoViewIfNeeded();
-  // The immersive Return command occupies the card's top-left corner. Exercise
-  // exposed artwork below it, keeping Playwright's hit-target checks enabled.
   if (touch) {
     if (!await button.locator('..').getAttribute('data-revealed')) await button.tap({ position: { x: 20, y: 100 } });
   } else await button.hover({ position: { x: 20, y: 100 } });
@@ -197,7 +190,7 @@ test('normal motion reverses a partial canvas lift without a jump and menu and d
     await open(page); await seedPresentation(page); await menuAction(page, 'Grid');
     const saved = await page.evaluate(() => JSON.stringify(window.savedDraft()));
     await page.locator('.workbench-overview-navigation').evaluate(async node => { await Promise.all(node.getAnimations({ subtree: true }).map(animation => animation.finished.catch(() => {}))); });
-    const menuSample = await page.getByRole('button', { name: 'Inscape menu', exact: true }).evaluate(async trigger => {
+    const menuSample = await page.getByRole('button', { name: 'View options', exact: true }).evaluate(async trigger => {
       const host = trigger.closest('header'); trigger.click();
       await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
       const animations = host.getAnimations({ subtree: true });
@@ -304,7 +297,7 @@ test('card size changes actual bounds for one canvas, and touch arrangement work
     assert.ok(sizes[0].width < sizes[1].width && sizes[1].width < sizes[2].width, JSON.stringify(sizes));
     assert.ok(sizes[0].height < sizes[1].height && sizes[1].height < sizes[2].height, JSON.stringify(sizes));
     await page.setViewportSize({ width: 390, height: 420 });
-    await page.getByRole('button', { name: 'New canvas', exact: true }).scrollIntoViewIfNeeded();
+    await page.getByRole('button', { name: '+ New', exact: true }).scrollIntoViewIfNeeded();
     assert.equal(await page.locator('.workbench-overview-menu').evaluate(node => getComputedStyle(node).scrollbarWidth), 'none');
     assert.ok(await page.locator('.workbench-overview-navigation').evaluate(node => {
       const box = node.getBoundingClientRect(); return box.top >= 0 && box.bottom <= innerHeight && box.width <= innerWidth;
@@ -411,10 +404,10 @@ test('gallery keeps artwork on hover, reveals bounded titles and actions, and co
     assert.equal(await page.locator('.workbench-overview-navigation').evaluate(node => getComputedStyle(node).backdropFilter), 'blur(10px)');
     await page.screenshot({ path: path.join(output, 'gallery-menu.png') });
     await page.keyboard.press('Escape');
-    assert.equal(await page.getByRole('button', { name: 'Inscape menu' }).getAttribute('aria-expanded'), 'false');
-    assert.equal(await page.evaluate(() => document.activeElement.getAttribute('aria-label')), 'Inscape menu');
+    assert.equal(await page.getByRole('button', { name: 'View options' }).getAttribute('aria-expanded'), 'false');
+    assert.equal(await page.evaluate(() => document.activeElement.getAttribute('aria-label')), 'View options');
     await menu(page); await page.mouse.click(1, 1);
-    assert.equal(await page.getByRole('region', { name: 'Inscape menu' }).count(), 0, 'outside press closes the menu');
+    assert.equal(await page.getByRole('region', { name: 'View options' }).count(), 0, 'outside press closes the menu');
     await page.keyboard.press('Tab');
     await page.getByRole('button', { name: 'Open Horizon', exact: true }).focus();
     await page.keyboard.press('Tab');
@@ -454,7 +447,7 @@ test('canvas inspection fits 5K, reuses source metadata and saved views, and ret
     assert.equal(await dialog.getAttribute('data-chrome-visible'), null, 'inspection opens with the artwork alone');
     await mkdir(output, { recursive: true }); await settlePreview(page);
     await page.screenshot({ path: path.join(output, 'canvas-clean-opening.png') });
-    await page.getByRole('button', { name: 'Inscape menu', exact: true }).evaluate(node => node.focus());
+    await page.getByRole('button', { name: 'View options', exact: true }).evaluate(node => node.focus());
     assert.equal(await dialog.evaluate(node => node.contains(document.activeElement)), true, 'background cannot take focus while modal is open');
     const stageBox = await dialog.locator('.canvas-presentation-stage').boundingBox();
     await page.mouse.move(stageBox.x + 40, stageBox.y + 80);
@@ -500,7 +493,7 @@ test('canvas inspection fits 5K, reuses source metadata and saved views, and ret
     await dialog.focus();
     await page.keyboard.press('Escape');
     await dialog.waitFor({ state: 'hidden' });
-    assert.equal(await page.locator('.workbench-overview[data-immersive]').count(), 1,
+    assert.equal(await page.locator('.owner-works .workbench-overview[data-layout="grid"]').count(), 1,
       'one Escape closes inspection without leaving the overview');
     await page.waitForFunction(() => document.activeElement.getAttribute('aria-label') === 'Open Workbench 1');
     assert.equal(await page.evaluate(() => JSON.stringify(window.savedDraft())), saved);
@@ -605,8 +598,8 @@ test('thumbnail crop supports drag, touch, cancel, failed save, reload and retur
         return canvas.left >= stage.left - 1 && canvas.top >= stage.top - 1 && canvas.right <= stage.right + 1 && canvas.bottom <= stage.bottom + 1;
       }), 'opening ignores the thumbnail crop and fits the complete composition');
       await page.keyboard.press('Escape'); await dialog.waitFor({ state: 'hidden' });
-      assert.equal(await page.locator('.workbench-overview[data-immersive]').count(), 1,
-        'one Escape closes the modal without leaving the immersive overview behind it');
+      assert.equal(await page.locator('.owner-works .workbench-overview[data-layout="grid"]').count(), 1,
+        'one Escape closes the modal without leaving the Works grid behind it');
       await startCrop(); await page.getByRole('button', { name: 'Auto fill', exact: true }).click();
       await page.getByRole('button', { name: 'Save crop', exact: true }).click();
       const final = await page.evaluate(() => window.guardedStore().readWorkbench(window.guardedStore().getWorkbenchId()));
@@ -648,7 +641,7 @@ test('grid wraps both ways without writes, exposes one keyboard collection and r
     assert.equal(await gallery.getByRole('button', { name: /^Open / }).count(), 8);
     assert.equal(await page.locator('[data-gallery-cycle]').count(), 3);
     await menu(page);
-    assert.equal(await page.getByRole('button', { name: 'New canvas', exact: true }).isDisabled(), true);
+    assert.equal(await page.getByRole('button', { name: '+ New', exact: true }).isDisabled(), false);
     await menu(page, false);
     for (const offset of [123, -123, 41, -41]) {
       await gallery.evaluate((node, offset) => {
@@ -677,7 +670,7 @@ test('grid wraps both ways without writes, exposes one keyboard collection and r
     assert.equal(await page.locator('.workbench-overview-detail').count(), 0, 'information remains inside the tile');
     await page.getByRole('button', { name: 'Edit details', exact: true }).click();
     await page.getByLabel(/Introduction/).fill('An introduction for the gallery.');
-    assert.equal(await page.getByRole('button', { name: 'Inscape menu', exact: true }).isDisabled(), true);
+    assert.equal(await page.getByRole('button', { name: 'View options', exact: true }).isDisabled(), true);
     assert.equal(await page.locator('.workbench-overview-grid-host[inert]').count(), 1);
     await failWrites(page, true); await page.getByRole('button', { name: 'Save details', exact: true }).click();
     assert.match(await page.getByRole('alert').innerText(), /Could not save/);
@@ -702,11 +695,13 @@ test('grid wraps both ways without writes, exposes one keyboard collection and r
         return canvas.left <= tile.left + 1 && canvas.top <= tile.top + 1 && canvas.right >= tile.right - 1 && canvas.bottom >= tile.bottom - 1;
       })), 'automatic crop fills every tile, including behind its floating caption');
       assert.ok(await page.locator('.workbench-overview').evaluate(node => node.scrollWidth <= node.clientWidth + 1));
-      assert.ok(await page.getByRole('button', { name: 'Inscape menu', exact: true }).evaluate(node => {
+      assert.ok(await page.getByRole('button', { name: 'View options', exact: true }).evaluate(node => {
         const controls = node.getBoundingClientRect(), gallery = document.querySelector('.workbench-overview-gallery').getBoundingClientRect();
-        return controls.width < 160 && gallery.bottom > controls.bottom && innerHeight - gallery.bottom <= 12 && gallery.top <= 12;
-      }), 'One compact menu floats over the gallery without a reserved header or footer');
-      assert.ok(await page.getByRole('button', { name: 'Inscape menu', exact: true }).evaluate(node => {
+        const header = document.querySelector('.visitor-header').getBoundingClientRect();
+        return controls.width < 160 && controls.top >= gallery.top && controls.bottom <= innerHeight &&
+          innerHeight - gallery.bottom <= 18 && gallery.top >= header.bottom && gallery.top - header.bottom <= 18;
+      }), 'The Studio header sits above the tiles and the compact view options menu floats over them');
+      assert.ok(await page.getByRole('button', { name: 'View options', exact: true }).evaluate(node => {
         const box = node.getBoundingClientRect(); return node.contains(document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2));
       }));
     }
@@ -736,7 +731,7 @@ test('grid wraps both ways without writes, exposes one keyboard collection and r
     await page.mouse.click(repeated.x, repeated.y);
     await revealPresentation(page);
     await page.getByRole('dialog').getByRole('button', { name: 'Edit canvas', exact: true }).click();
-    await editorMenu(page, 'Canvas').waitFor();
+    await editorMenu(page).waitFor();
     assert.equal(await activeEditorDocumentName(page), repeated.name);
     await editorOverview(page);
     await gallery.waitFor();
@@ -774,10 +769,10 @@ test('touch grid handles a single canvas, creation, details and opening without 
     await page.getByRole('button', { name: 'Information for Workbench 1', exact: true }).tap();
     assert.equal(await page.locator('.workbench-overview-detail').count(), 0);
     assert.equal(await page.evaluate(() => JSON.stringify(window.savedDraft())), before);
-    await menuAction(page, 'New canvas', true);
-    await page.getByLabel('Canvas name', { exact: true }).fill('An empty composition');
-    await page.getByRole('button', { name: 'Create canvas', exact: true }).tap();
-    await gallery.waitFor();
+    await menuAction(page, '+ New', true);
+    await page.getByLabel('Composition name', { exact: true }).fill('An empty composition');
+    await page.getByRole('button', { name: 'Create composition', exact: true }).tap();
+    await editorOverview(page); await gallery.waitFor();
     assert.equal(await gallery.getByRole('button', { name: /^Open / }).count(), 2);
     await revealCard(page, 'An empty composition', true);
     assert.equal(await gallery.locator('.workbench-overview-empty').count(), 0, 'empty thumbnail has no placeholder competing with its reveal');

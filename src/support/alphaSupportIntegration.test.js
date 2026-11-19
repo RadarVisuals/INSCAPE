@@ -22,7 +22,7 @@ test('bounded support surfaces cover authority, runtime, publication and visitor
   const visitor = source('../profileDocument/components/PublishedProfileBoundary.jsx');
   assert.match(app, /AUTHORITY_INITIALIZATION_FAILED/u);
   assert.match(owner, /UNEXPECTED_APPLICATION_ERROR/u);
-  assert.match(panel, /IPFS_UPLOAD_FAILED/u);
+  assert.match(panel, /publicationUploadIssue\(error, uploadPhase\)/u);
   assert.match(panel, /CID_VERIFICATION_FAILED/u);
   assert.match(visitor, /PUBLISHED_DOCUMENT_FAILED/u);
   assert.match(visitor, /PUBLICATION_RESOLUTION_FAILED/u);

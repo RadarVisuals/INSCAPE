@@ -2,7 +2,7 @@ import { openTextToolSection } from './fixtures/text-tool-sections.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { chromium } from 'playwright-core';
-import { mountTextToolsFixture } from './fixtures/text-tools-fixture.mjs';
+import { mountTextToolsFixture, focusFixtureText } from './fixtures/text-tools-fixture.mjs';
 const origin = process.env.INSCAPE_TEXT_ROOT || 'http://127.0.0.1:5173';
 const settle = page => page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
 
@@ -46,6 +46,7 @@ for (const width of [1440, 390]) test(`writing, clipboard and artwork editing at
     });
     await mountTextToolsFixture(page, origin);
     if (width === 1440) {
+      await focusFixtureText(page);
       const original = await page.evaluate(() => window.savedDraft().texts[0].article.content);
       await body.locator('.text-artwork-editor img').dragTo(body.locator('p').first(), { targetPosition: { x: 1, y: 1 } }); await settle(page);
       assert.equal((await page.evaluate(() => window.savedDraft().texts[0].article.content.content))[0].type, 'artwork');

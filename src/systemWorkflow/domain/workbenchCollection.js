@@ -1,9 +1,10 @@
+import { isRecord as object, hasExactKeys as exact } from '../../recordValidation.js';
 import { withoutRetiredInterfaceAppearance } from './retiredInterfaceAppearance.js';
 import { assertValidSystemWorkflowDraft, SYSTEM_WORKFLOW_DRAFT_VERSION, SYSTEM_WORKFLOW_LIMITS } from './systemWorkflowDraft.js';
 
 export const WORKBENCH_COLLECTION_TYPE = 'inscape-local-workbenches';
 export const FIRST_WORKBENCH_ID = 'workbench:main';
-export const MAX_WORKBENCHES = 8;
+export const MAX_WORKBENCHES = 30;
 export const MAX_WORKBENCH_INTRODUCTION = 280;
 export const WORKBENCH_COLLECTION_LIMIT = MAX_WORKBENCHES * SYSTEM_WORKFLOW_LIMITS.maxJsonBytes;
 export const validWorkbenchName = name => typeof name === 'string' && name === name.trim()
@@ -19,9 +20,6 @@ export function assertWorkbenchIntroduction(value) {
   return value;
 }
 const validId = id => typeof id === 'string' && /^workbench:[A-Za-z0-9_-]{1,80}$/u.test(id);
-const object = value => value && typeof value === 'object' && !Array.isArray(value);
-const exact = (value, keys) => object(value) && Object.keys(value).length === keys.length
-  && keys.every(key => Object.hasOwn(value, key));
 export function assertThumbnailCrop(crop) {
   if (crop !== null && (!exact(crop, ['x', 'y', 'zoom'])
     || !Number.isFinite(crop.x) || crop.x < 0 || crop.x > 1
@@ -66,12 +64,25 @@ export function replaceWorkbenchDraft(collection, id, draft) {
   return { ...collection, shared, workbenches: collection.workbenches.map(item => item.id === id ? { ...item, content } : item) };
 }
 
-export function appendWorkbench(collection, id, name, draft) {
+export function appendWorkbench(collection, id, name, draft, details = {}) {
   if (collection.workbenches.length >= MAX_WORKBENCHES) throw new Error(`You can keep up to ${MAX_WORKBENCHES} local Workbenches.`);
   // Build a candidate; the persistence boundary validates all IDs and names
   // together before writing or activating it.
   const { content } = splitDraft(draft);
-  return { ...collection, activeId: id, workbenches: [...collection.workbenches, { id, name, content }] };
+  return { ...collection, activeId: id, workbenches: [...collection.workbenches, { id, name, content, ...details }] };
+}
+
+export function removeActiveWorkbench(collection, id) {
+  if (id !== collection.activeId) throw new Error('Reopen the canvas you want to delete.');
+  if (collection.workbenches.length === 1) throw new Error('Create another canvas before deleting the last one.');
+  const links = [...(collection.shared.reception?.links || []),
+    ...collection.workbenches.filter(item => item.id !== id).flatMap(item => item.content.composition?.links || [])];
+  const refersToCanvas = ref => ref?.profileAddress === collection.profileAddress && ref.canvasId === id;
+  if (links.some(link => [link.destination, link.source, link.controller, ...Object.values(link.sources || {})].some(refersToCanvas)))
+    throw new Error('Remove the links to this canvas in the Bento editor first.');
+  const index = collection.workbenches.findIndex(item => item.id === id);
+  const workbenches = collection.workbenches.filter(item => item.id !== id);
+  return { ...collection, workbenches, activeId: workbenches[Math.min(index, workbenches.length - 1)].id };
 }
 
 export function assertValidWorkbenchCollection(input) {

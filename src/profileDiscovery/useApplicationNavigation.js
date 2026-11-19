@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { normalizeProfileAddress } from '../library/config.js';
-import { applicationRouteUrl, disconnectRoute, readApplicationRoute, resolveApplicationDestination } from './applicationNavigation.js';
+import { applicationRouteUrl, disconnectRoute, readApplicationRoute, resolveApplicationDestination, studioOrigin } from './applicationNavigation.js';
 import useDeferredFocusReturn from '../public/useDeferredFocusReturn.js';
 
 export default function useApplicationNavigation(authority) {
@@ -16,11 +16,14 @@ export default function useApplicationNavigation(authority) {
   const background = route.kind === 'discover' ? route.returnTo : route;
   const content = background ? resolveApplicationDestination(background, authority) : null;
 
-  const navigate = useCallback((next, { replace = false, receptionParent = null } = {}) => {
+  const navigate = useCallback((next, { replace = false, receptionParent = null, worksParent = null } = {}) => {
     cancelFocusReturn();
+    const previous = current.current;
+    const studioRoute = next.kind === 'discover' ? next.returnTo : next;
+    const origin = studioRoute?.editor ? studioOrigin(previous, studioRoute.address, window.history.state?.inscapeStudioOrigin) : null;
     current.current = next;
     window.history[replace ? 'replaceState' : 'pushState'](
-      { inscapeReturnRoute: next.kind === 'discover' ? next.returnTo : null, inscapeReceptionParent: receptionParent }, '',
+      { inscapeReturnRoute: next.kind === 'discover' ? next.returnTo : null, inscapeReceptionParent: receptionParent, inscapeWorksParent: worksParent, inscapeStudioOrigin: origin }, '',
       applicationRouteUrl(window.location, next));
     setRoute(next);
   }, [cancelFocusReturn]);
@@ -53,25 +56,55 @@ export default function useApplicationNavigation(authority) {
     const normalized = normalizeProfileAddress(address);
     if (normalized) navigate({ kind: 'profile', address: normalized, reception });
   }, [navigate]);
-  const editReception = useCallback((address) => {
+  const editReception = useCallback((address, options) => {
     const normalized = normalizeProfileAddress(address);
-    if (normalized) navigate({ kind: 'profile', address: normalized, editor: 'reception' });
+    if (normalized) navigate({ kind: 'profile', address: normalized, editor: 'reception' },
+      { replace: current.current.editor && current.current.address === normalized, ...options });
   }, [navigate]);
-  const openCanvas = useCallback((address, target, { ownerCollection = false } = {}) => {
+  const openStudio = useCallback((address, { create = false } = {}) => {
+    const normalized = normalizeProfileAddress(address);
+    if (normalized) navigate({ kind: 'profile', address: normalized, editor: 'studio', ...(create && { newComposition: true }) },
+      { worksParent: current.current.address === normalized && current.current.canvas && current.current.reception === 'published' ? normalized : null });
+  }, [navigate]);
+  const consumeNewComposition = useCallback(() => {
+    if (!current.current.newComposition) return;
+    const { newComposition, ...next } = current.current;
+    navigate(next, { replace: true, worksParent: window.history.state?.inscapeWorksParent });
+  }, [navigate]);
+  const manageCompositions = useCallback(address => {
+    const normalized = normalizeProfileAddress(address);
+    if (normalized) navigate({ kind: 'profile', address: normalized, canvas: true });
+  }, [navigate]);
+  const openWriting = useCallback(address => {
+    const normalized = normalizeProfileAddress(address);
+    if (normalized) navigate({ kind: 'profile', address: normalized, writing: true });
+  }, [navigate]);
+  const openCanvas = useCallback((address, target) => {
     const normalized = normalizeProfileAddress(address);
     if (!normalized) return;
-    const profile = { kind: 'profile', address: normalized, canvas: true };
-    // The owner's Canvases action returns to their existing local collection.
-    // Explicit public URLs and individual published-work links remain public.
-    const ownCollection = !target && (ownerCollection || current.current.reception !== 'published')
-      && resolveApplicationDestination(profile, authority).kind === 'workbench';
-    navigate({ ...profile, ...(!ownCollection && current.current.reception ? { reception: current.current.reception } : {}), ...(target ? { target } : {}) });
-  }, [authority, navigate]);
+    navigate({ kind: 'profile', address: normalized, canvas: true, reception: 'published', ...(target ? { target } : {}) });
+  }, [navigate]);
   const openWork = useCallback((address, target) => {
     const normalized = normalizeProfileAddress(address);
     if (!normalized || !target?.moduleId) return;
     navigate({ kind: 'profile', address: normalized, target, ...(current.current.reception ? { reception: current.current.reception } : {}) },
       { receptionParent: normalized });
+  }, [navigate]);
+  const editWork = useCallback((address, workId, { replace = false } = {}) => {
+    const next = { kind: 'profile', address: normalizeProfileAddress(address), editor: 'canvas', workId };
+    if (!workId || resolveApplicationDestination(next, authority).worksEditorId !== workId) return;
+    const previous = current.current;
+    const switching = Boolean(previous.editor) && previous.address === next.address;
+    if (switching && previous.workId === workId) return;
+    const fromWorks = previous.canvas && previous.reception === 'published' && !previous.target && previous.address === next.address;
+    const hasWorksParent = (!replace && fromWorks) || (switching && window.history.state?.inscapeWorksParent === next.address);
+    navigate(next, { replace: replace || switching, worksParent: hasWorksParent ? next.address : null });
+  }, [authority, navigate]);
+  const returnToWorks = useCallback(address => {
+    const normalized = normalizeProfileAddress(address);
+    if (!normalized || (current.current.canvas && current.current.reception === 'published' && !current.current.target && current.current.address === normalized)) return;
+    if (current.current.editor && window.history.state?.inscapeWorksParent === normalized) window.history.back();
+    else navigate({ kind: 'profile', address: normalized, canvas: true, reception: 'published' }, { replace: Boolean(current.current.editor) });
   }, [navigate]);
   const closeWork = useCallback((address) => {
     const normalized = normalizeProfileAddress(address);
@@ -81,7 +114,7 @@ export default function useApplicationNavigation(authority) {
   }, [navigate]);
   const openOverview = useCallback((address) => {
     const normalized = normalizeProfileAddress(address);
-    if (normalized) navigate({ kind: 'profile', address: normalized, ...(current.current.reception ? { reception: current.current.reception } : {}) });
+    if (normalized) navigate({ kind: 'profile', address: normalized, reception: 'published' });
   }, [navigate]);
   const openDiscover = useCallback((trigger) => {
     returnFocus.current = trigger || document.activeElement;
@@ -110,5 +143,6 @@ export default function useApplicationNavigation(authority) {
       if (success && current.current === origin && next !== origin) navigate(next, { replace: true });
     };
   }, [authority, navigate]);
-  return { route, destination, content, visitProfile, openReception, editReception, openCanvas, openWork, closeWork, openOverview, openDiscover, closeDiscover, beginSignIn, completeSignIn, beginDisconnect };
+  const studioReturnLabel = window.history.state?.inscapeStudioOrigin || (background?.editor === 'reception' ? 'Profile' : 'Gallery');
+  return { route, destination, content, studioReturnLabel, visitProfile, openReception, editReception, openCanvas, openStudio, openWriting, consumeNewComposition, manageCompositions, editWork, returnToWorks, openWork, closeWork, openOverview, openDiscover, closeDiscover, beginSignIn, completeSignIn, beginDisconnect };
 }

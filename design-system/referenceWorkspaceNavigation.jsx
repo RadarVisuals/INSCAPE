@@ -1,9 +1,10 @@
+// Historical design-system artboard only. Production uses OwnerEditorMenuBar.
 import { Bell, ChevronDown, ChevronRight, Compass, Eye, FileText, Grid3X3, Home, Images, Layers, List,
   PanelsTopLeft, Settings2, Upload, UserRound } from 'lucide-react';
-import './workspaceNavigation.css';
+import './referenceWorkspaceNavigation.css';
 
 // Presentation only. The host owns destinations, panel lifetimes and authority.
-export default function WorkspaceNavigation({ hidden, collapsed, onCollapse, onWorkbench, onLibrary, onLayers, onOverview, onReception,
+export default function ReferenceWorkspaceNavigation({ hidden, collapsed, onCollapse, onWorkbench, onLibrary, onLayers, onOverview, onReception,
   openPanels = [], onOpen, onPreview, onPublish, publicationOpen = false, unreadCount = 0,
   navigationHost, onNavigate, reference = false, documentControls = false, destination = 'editor', className = '', style }) {
   const editor = documentControls && destination === 'editor';

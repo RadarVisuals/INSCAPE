@@ -37,7 +37,7 @@ for (const theme of ['carbon', 'mist']) for (const [width, height, touch] of [[1
       await page.getByRole('menu', { name: 'Zoom menu', exact: true }).waitFor();
       await page.keyboard.press('Escape');
       assert.equal(await zoomTrigger.evaluate(node => node === document.activeElement), true);
-      if (await page.getByRole('button', { name: 'Inscape sidebar' }).getAttribute('aria-expanded') === 'true') await page.getByRole('button', { name: 'Inscape sidebar' }).click();
+      if (await page.getByRole('button', { name: 'Inscape menu' }).getAttribute('aria-expanded') === 'true') await page.getByRole('button', { name: 'Inscape menu' }).click();
       await page.getByRole('button', { name: 'Fit canvas in view', exact: true }).click(); await settle(page);
       await editorCommand(page, 'Canvas', 'Canvas size');
       const popup = page.getByRole('group', { name: 'Canvas size controls' });

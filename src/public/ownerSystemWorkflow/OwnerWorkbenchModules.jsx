@@ -29,7 +29,7 @@ export default function OwnerWorkbenchModules({
   panelOccupied,
   instrumentsObscured,
   revealInstruments,
-  toggleLibrary,
+  openLibrary, libraryOpen,
   panels,
   deleteDisplay,
   onConnect,
@@ -107,9 +107,9 @@ export default function OwnerWorkbenchModules({
               panelOccupied,
               instrumentsObscured,
               onRevealInstruments: revealInstruments,
-              onToggleLibrary: toggleLibrary,
+              onToggleLibrary: openLibrary,
               onInspect: () => {
-                if (!panels.isPanelOpen('library')) panels.closePanel({ returnFocus: false });
+                if (!libraryOpen) panels.closePanel({ returnFocus: false });
               },
               registerAssetDimensions,
               resolveAssetDimensions,

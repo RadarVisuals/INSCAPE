@@ -1,5 +1,5 @@
 // Editor-only layout. No artwork, selection or saved composition lives here.
-export const WORKBENCH_TOOL_TABS = Object.freeze(['Layers', 'Inspector']);
+export const WORKBENCH_TOOL_TABS = Object.freeze(['Layers', 'Library', 'Inspector']);
 export const WORKBENCH_INSPECTOR_SECTIONS = Object.freeze(['Transform', 'Color', 'Image', 'Text', 'Shape', 'Cell', 'Contents', 'FX', 'Info']);
 
 export const validToolFrame = value => Boolean(value && ['left', 'top', 'width', 'height'].every(key => Number.isFinite(value[key]))
@@ -28,52 +28,30 @@ export function validToolDockLayout(value) {
     && (value.inspectorRequest === undefined || Number.isSafeInteger(value.inspectorRequest) && value.inspectorRequest >= 0);
 }
 
-// Preserve the founder's current seven-tab layout while consolidating its six
-// selection tools. This is the current preference transition, not a versioned
-// compatibility framework. Artwork and the rest of the preference record stay out.
-export function consolidateCurrentToolDockLayout(value) {
+// Fold the current Library window preference into the same layout as its peers.
+// This consumes the existing two-host preference once; new saves have one owner.
+export function integrateLibraryDockLayout(value, libraryWindow) {
   if (validToolDockLayout(value)) return value;
-  const previousSections = ['Transform', 'Color', 'Image', 'Shape', 'FX', 'Info'];
-  if (!validDockLayout(value, ['Layers', ...previousSections])) return null;
-  const layerGroup = value.groups.find(group => dockTabs(group).includes('Layers'));
-  const layerPane = layerGroup.panes.find(pane => pane.tabs.includes('Layers'));
-  const selectionGroups = value.groups.filter(group => group !== layerGroup);
-  const selectionGroup = selectionGroups.find(group => group.id === value.activeGroup)
-    || selectionGroups.find(group => group.panes.some(pane => !value.hidden.includes(pane.active)))
-    || selectionGroups[0];
-  const selectionPane = selectionGroup?.panes.find(pane => !value.hidden.includes(pane.active))
-    || selectionGroup?.panes[0]
-    || layerGroup.panes.find(pane => pane !== layerPane)
-    || layerPane;
-  let nextId = value.nextId;
-  const usedIds = new Set(value.groups.flatMap(group => [group.id, ...group.panes.map(pane => pane.id)]));
-  const id = () => {
-    let next;
-    do { next = `tools-${nextId++}`; } while (usedIds.has(next));
-    usedIds.add(next); return next;
-  };
-  const inspectorId = selectionGroup?.id || id();
-  const frame = selectionGroup?.frame || { ...layerGroup.frame,
-    left: Math.max(8, layerGroup.frame.left - layerGroup.frame.width - 12) };
-  const inspectorSection = WORKBENCH_INSPECTOR_SECTIONS.includes(selectionPane.active) ? selectionPane.active : undefined;
-  const groups = [
-    { ...layerGroup, panes: [{ ...layerPane, tabs: ['Layers'], active: 'Layers' }] },
-    { id: inspectorId, frame, panes: [{ ...selectionPane, id: selectionPane === layerPane ? id() : selectionPane.id,
-      tabs: ['Inspector'], active: 'Inspector' }] },
-  ];
-  const hidden = [
-    ...(value.hidden.includes('Layers') ? ['Layers'] : []),
-    ...(previousSections.every(tab => value.hidden.includes(tab)) ? ['Inspector'] : []),
-  ];
-  const result = { ...value, nextId, groups, hidden, inspectorSection, inspectorRequest: 0,
-    activeGroup: value.activeGroup === null ? null : value.activeGroup === layerGroup.id ? layerGroup.id : inspectorId };
-  return validToolDockLayout(result) ? result : null;
+  if (!validDockLayout(value, ['Layers', 'Inspector'])) return null;
+  const next = { ...value, hidden: [...value.hidden, 'Library'], groups: value.groups.map(group => ({
+    ...group, panes: group.panes.map(pane => ({ ...pane, tabs: [...pane.tabs] })),
+  })) };
+  if (libraryWindow?.detached && validToolFrame(libraryWindow.frame)) {
+    const ids = new Set(next.groups.flatMap(group => [group.id, ...group.panes.map(pane => pane.id)]));
+    let id;
+    do { id = `tools-${next.nextId++}`; } while (ids.has(id));
+    next.groups.push({ id, frame: libraryWindow.frame, panes: [{ id, tabs: ['Library'], active: 'Library', share: 1 }] });
+  } else {
+    const pane = toolPane(next, 'Layers');
+    pane.tabs.splice(pane.tabs.indexOf('Layers') + 1, 0, 'Library');
+  }
+  return validToolDockLayout(next) ? next : null;
 }
 
 export function createToolDockLayout(width = 1440) {
-  return { nextId: 1, activeGroup: null, hidden: width < 600 ? [...WORKBENCH_TOOL_TABS] : [], inspectorRequest: 0,
+  return { nextId: 1, activeGroup: null, hidden: width < 600 ? [...WORKBENCH_TOOL_TABS] : ['Library'], inspectorRequest: 0,
     groups: [
-      { id: 'tools', panes: [{ id: 'tools', tabs: ['Layers'], active: 'Layers', share: 1 }],
+      { id: 'tools', panes: [{ id: 'tools', tabs: ['Layers', 'Library'], active: 'Layers', share: 1 }],
         frame: { left: 16, top: 88, width: 290, height: 480 } },
       { id: 'inspector', panes: [{ id: 'inspector', tabs: ['Inspector'], active: 'Inspector', share: 1 }],
         frame: { left: Math.max(8, width - 306), top: 88, width: 290, height: 640 } },
@@ -95,6 +73,7 @@ export function createToolDockStore(initialLayout = createToolDockLayout()) {
   return {
     getSnapshot: () => layout,
     layersVisible: () => toolIsVisible(layout, 'Layers'),
+    libraryVisible: () => toolIsVisible(layout, 'Library'),
     infoVisible: () => toolIsVisible(layout, 'Inspector'),
     subscribe: listener => { listeners.add(listener); return () => listeners.delete(listener); },
     change(action) {
@@ -116,7 +95,7 @@ export function changeToolDock(layout, action) {
       || (layout.inspectorRequest || 0) === Number.MAX_SAFE_INTEGER)) return layout;
     const hidden = action.type === 'close' ? [...new Set([...layout.hidden, action.tab])] : layout.hidden.filter(tab => tab !== action.tab);
     return { ...layout, ...(request ? { inspectorSection: action.section ?? layout.inspectorSection,
-      inspectorRequest: (layout.inspectorRequest || 0) + 1 } : {}), hidden, activeGroup: group.id, groups: layout.groups.map(item => item !== group ? item : {
+      inspectorRequest: (layout.inspectorRequest || 0) + 1 } : {}), hidden, ...(action.focus ? { focusRequest: { tab: action.tab, id: (layout.focusRequest?.id || 0) % Number.MAX_SAFE_INTEGER + 1 } } : {}), activeGroup: group.id, groups: layout.groups.map(item => item !== group ? item : {
       ...item, panes: item.panes.map(pane => !pane.tabs.includes(action.tab) ? pane : { ...pane,
         active: action.type === 'close' ? pane.tabs.find(tab => !hidden.includes(tab)) || action.tab : action.tab }),
     }) };

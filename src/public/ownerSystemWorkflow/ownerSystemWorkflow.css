@@ -19,6 +19,7 @@
   font-family: "Inscape Sora", sans-serif;
 }
 
+.system-workflow[data-editor-menu]:not([data-overview]) { --study-surface: var(--editor-surround); }
 .system-workflow[data-previewing] { visibility: hidden; }
 
 /* Baseline controls yield to their owning tool's material and geometry. */

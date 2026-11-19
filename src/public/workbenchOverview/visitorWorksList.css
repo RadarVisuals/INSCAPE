@@ -1,0 +1,100 @@
+/* The published Works list shares the Profile light field and the existing explorable canvas. */
+.workbench-overview[data-visitor-header][data-layout='list'] {
+  --works-rail: clamp(150px, 11.6vw, 220px);
+  --works-gap: clamp(20px, 1.8vw, 38px);
+  --works-label-height: 34px;
+  --works-row: 48px;
+  color: var(--spread-body);
+  font-family: 'Visitor Google Sans', Arial, sans-serif;
+}
+.workbench-overview[data-visitor-header] .composition-index-body {
+  max-width: 1920px; box-sizing: border-box; margin-inline: auto;
+  padding: clamp(24px, calc(16.2dvh - var(--spread-height)), 100px) 2.5% 40px;
+  grid-template-columns: var(--works-rail) minmax(0, 1fr); gap: var(--works-gap);
+}
+.workbench-overview[data-visitor-header] .composition-index-sidebar { position: static; max-height: none; overflow: visible; padding: 0; }
+.workbench-overview[data-visitor-header] .composition-index-label,
+.visitor-work-details > h2 {
+  box-sizing: border-box; height: var(--works-label-height); margin: 0 0 16px; padding: 0; display: flex; align-items: center;
+}
+.workbench-overview[data-visitor-header] .composition-index-label h2,
+.visitor-work-details > h2 { color: var(--spread-muted); font: 425 14px/1.4 'Visitor Google Sans', Arial, sans-serif; }
+.workbench-overview[data-visitor-header] .composition-index-label button,
+.visitor-index-pages button { width: 30px; min-height: 30px; padding: 0; color: var(--spread-muted); }
+.visitor-index-actions { display: flex; align-items: center; }
+.workbench-overview[data-visitor-header] .workbench-overview-list { gap: 0; }
+.workbench-overview[data-visitor-header] .workbench-overview-list button {
+  position: relative; min-height: var(--works-row); align-items: center; border: 0; padding: 8px 5px 8px 16px;
+  color: var(--spread-secondary); font: inherit; line-height: 1.45;
+}
+.workbench-overview[data-visitor-header] .workbench-overview-list span { font-size: 15px; }
+.workbench-overview[data-visitor-header] .workbench-overview-list button:is([aria-current], :hover:not(:disabled)) {
+  color: var(--spread-heading); background: transparent;
+}
+.workbench-overview[data-visitor-header] .workbench-overview-list button[aria-current]::before {
+  content: ''; position: absolute; left: 1px; top: calc(50% - 2px); width: 4px; height: 4px; border-radius: 50%; background: currentColor;
+}
+.workbench-overview[data-visitor-header] .composition-index-entry { display: flex; align-items: center; }
+.workbench-overview[data-visitor-header] .composition-index-entry:has(.visitor-index-edit) > [aria-current] {
+  width: auto; min-width: 0; flex: 0 1 auto; padding-inline-end: 2px;
+}
+.workbench-overview[data-visitor-header] .composition-index-entry .visitor-index-edit {
+  flex: none; width: 32px; min-height: 32px; padding: 0; justify-content: center; color: var(--spread-secondary);
+}
+@media (pointer: coarse) {
+  .workbench-overview[data-visitor-header] .composition-index-entry .visitor-index-edit { width: 44px; min-height: 44px; }
+}
+.visitor-index-pages { display: flex; align-items: center; margin: 26px 0 0 16px; color: var(--spread-muted); font-size: 12px; }
+.visitor-index-pages span { margin-inline-end: auto; font-variant-numeric: tabular-nums; }
+.workbench-overview[data-visitor-header] .composition-explorer {
+  display: grid; grid-template-columns: minmax(0, 1fr) var(--works-rail);
+  grid-template-areas: 'canvas details'; column-gap: var(--works-gap); align-items: start;
+}
+.workbench-overview[data-visitor-header] .composition-explorer-stage { grid-area: canvas; }
+.workbench-overview[data-visitor-header] .composition-explorer-viewport {
+  height: clamp(320px, 69.5dvh, 1010px); min-width: 0;
+  border-radius: 7px; background: color-mix(in srgb, var(--card-material) 40%, transparent);
+}
+.workbench-overview[data-visitor-header] .composition-explorer-viewport::after {
+  content: ''; position: absolute; inset: 0; pointer-events: none; border-radius: inherit;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--spread-heading) 11%, transparent);
+}
+.workbench-overview[data-visitor-header] .composition-explorer-controls :is(button, output, summary) { font: 425 12px/1.45 'Visitor Google Sans', Arial, sans-serif; color: var(--spread-muted); }
+.workbench-overview[data-visitor-header] .composition-explorer-controls button[aria-pressed="true"] { color: var(--spread-heading); }
+.visitor-canvas-actions { display: flex; align-items: center; justify-self: end; gap: 2px; }
+.visitor-canvas-actions .composition-explorer-help { position: relative; width: auto; max-width: none; }
+.visitor-canvas-actions .composition-explorer-help summary { width: 28px; min-height: 30px; justify-content: center; }
+.visitor-canvas-actions .composition-explorer-help p {
+  position: absolute; z-index: 2; right: 0; bottom: 100%; width: 22ch; box-sizing: content-box;
+  padding: 12px 15px; border-radius: 5px; background: var(--spread-panel); color: var(--spread-body); font: 13px/1.55 'Visitor Google Sans', Arial, sans-serif;
+}
+.visitor-work-details { grid-area: details; min-width: 0; overflow-wrap: anywhere; color: var(--spread-secondary); }
+.visitor-work-details h1 {
+  box-sizing: border-box; display: flex; align-items: center; min-height: var(--works-row); margin: 0; padding-block: 8px;
+  font: 480 16px/1.45 'Visitor Google Sans', Arial, sans-serif; color: var(--spread-heading);
+}
+.visitor-work-details .composition-explorer-information { display: flex; flex-direction: column; }
+.visitor-work-details .composition-explorer-secondary { order: -1; margin: 10px 0 0; color: var(--spread-secondary); font: 14px/1.6 'Visitor Google Sans', Arial, sans-serif; }
+.visitor-work-details .workbench-overview-introduction { margin: 24px 0 0; color: var(--spread-body); font-size: 14px; line-height: 1.65; }
+.visitor-work-details .composition-explorer-sources { margin-top: 22px; padding: 0; border: 0; color: var(--spread-muted); }
+.visitor-work-details .composition-explorer-sources label { flex-wrap: wrap; gap: 5px; padding: 4px 0; }
+.visitor-work-details .composition-explorer-sources select { max-width: 100%; }
+.visitor-work-details .composition-explorer-dossier { overflow-x: auto; }
+.workbench-overview[data-visitor-header] .composition-index[data-expanded] :is(.composition-index-body, .composition-explorer) { grid-template-columns: minmax(0, 1fr); }
+.workbench-overview[data-visitor-header] .composition-index[data-expanded] .composition-index-body { padding-top: 12px; }
+.workbench-overview[data-visitor-header] .composition-index[data-expanded] .composition-explorer { grid-template-areas: 'canvas'; }
+.workbench-overview[data-visitor-header] .composition-index[data-expanded] .visitor-work-details { display: none; }
+.workbench-overview[data-visitor-header] .composition-index[data-expanded] .composition-explorer-viewport { height: max(280px, calc(100dvh - var(--spread-height) - 80px)); }
+@media (max-width: 959px) {
+  .workbench-overview[data-visitor-header] .composition-explorer { grid-template-columns: minmax(0, 1fr); grid-template-areas: 'canvas' 'details'; }
+  .visitor-work-details { max-width: 56ch; margin-top: 24px; }
+}
+@media (max-width: 700px) {
+  .workbench-overview[data-visitor-header] .composition-index-body { grid-template-columns: minmax(0, 1fr); padding: 20px 16px 38px; gap: 16px; }
+  .workbench-overview[data-visitor-header] .composition-index-label { margin: 0; }
+  .workbench-overview[data-visitor-header] .workbench-overview-list { display: flex; overflow-x: auto; }
+  .workbench-overview[data-visitor-header] .composition-index-entry { flex: none; }
+  .workbench-overview[data-visitor-header] .workbench-overview-list button { width: auto; flex: none; }
+  .visitor-index-pages { margin-top: 4px; }
+  .workbench-overview[data-visitor-header] .composition-explorer-viewport { height: clamp(240px, 54dvh, 560px); }
+}

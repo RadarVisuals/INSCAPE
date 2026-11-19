@@ -1,3 +1,4 @@
+import { isRecord as record, hasExactKeys as exactKeys } from '../../recordValidation.js';
 import { normalizeProfileAddress } from '../../library/config.js';
 import { buildAssetReference, createCanonicalAssetId, normalizeTokenId } from './assetReference.js';
 import { isValidPublishedAssetUrl, parsePublishedAssetUrl } from './publishedAssetUrl.js';
@@ -7,10 +8,6 @@ const ASSET_KEYS = [
   'stableAssetId', 'network', 'chainId', 'tokenStandard', 'contractAddress', 'tokenId',
   'name', 'description', 'collectionName', 'media', 'creators', 'attributes',
 ];
-const record = (value) => Boolean(value && typeof value === 'object' && !Array.isArray(value));
-const exactKeys = (value, keys) => record(value)
-  && Object.keys(value).length === keys.length
-  && keys.every((key) => Object.hasOwn(value, key));
 const safeText = (value, maximum, { nullable = false } = {}) => nullable && value === null
   || typeof value === 'string' && value.length <= maximum && !/[\u0000-\u001f\u007f]/u.test(value);
 const CREATOR_SCOPES = new Set(['contract', 'tokenId']);

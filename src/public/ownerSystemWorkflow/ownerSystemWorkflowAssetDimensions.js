@@ -1,3 +1,5 @@
+import { libraryFileFormat, isResizedLibraryPreview } from '../../library/data/libraryImagePreview.js';
+import { readImageHeaderDimensions } from '../../library/data/imageHeaderDimensions.js';
 function positiveDimension(value) {
   return Number.isSafeInteger(value) && value > 0 ? value : null;
 }
@@ -12,7 +14,7 @@ export function ownerSystemWorkflowAssetSources(asset) {
     asset?.previewSrc,
     ...(Array.isArray(asset?.previewCandidates) ? asset.previewCandidates : []),
     asset?.thumbnailUrl,
-  ].filter((source) => typeof source === 'string' && source))];
+  ].filter((source) => typeof source === 'string' && source && !isResizedLibraryPreview(source)))];
 }
 
 export function ownerSystemWorkflowAssetSource(asset) {
@@ -84,6 +86,7 @@ export function decodeOwnerSystemWorkflowAssetDimensions(asset, {
   ImageConstructor = globalThis.Image,
   cache = decodedBySource,
   timeoutMs = 8_000,
+  preferMetadata = false,
 } = {}) {
   const accepted = ownerSystemWorkflowAssetDimensions(asset);
   // A selected SVG keeps the dimensions decoded by the Library with its
@@ -96,6 +99,7 @@ export function decodeOwnerSystemWorkflowAssetDimensions(asset, {
     && positiveDimension(asset.decodedImageWidth) && positiveDimension(asset.decodedImageHeight)) return Promise.resolve(Object.freeze({
     source: asset.decodedImageSource, ...accepted,
   }));
+  if (preferMetadata && accepted && ['PNG', 'WEBP', 'GIF', 'SVG'].includes(libraryFileFormat(ownerSystemWorkflowAssetSource(asset), asset?.mediaFileType))) return Promise.resolve(Object.freeze({ source: ownerSystemWorkflowAssetSource(asset), ...accepted }));
   const sources = ownerSystemWorkflowAssetSources(asset);
   if (!sources.length || typeof ImageConstructor !== 'function') return Promise.resolve(null);
   const decodeSource = (source) => {
@@ -113,6 +117,10 @@ export function decodeOwnerSystemWorkflowAssetDimensions(asset, {
     return pending;
   };
   return (async () => {
+    if (preferMetadata && sources[0] && !['JPG', 'JPEG', 'AVIF'].includes(libraryFileFormat(sources[0], asset?.mediaFileType))) {
+      const header = await readImageHeaderDimensions(sources[0]);
+      if (header) return header;
+    }
     for (const source of sources) {
       const dimensions = await decodeSource(source);
       if (dimensions) return dimensions;

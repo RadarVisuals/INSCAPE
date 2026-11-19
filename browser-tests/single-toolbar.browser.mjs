@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { mkdir } from 'node:fs/promises';
 import { chromium } from 'playwright-core';
 import { browserExecutable } from '../scripts/browserEnvironment.mjs';
-import { editorCommand, editorMenu, setEditorSidebarOpen } from './fixtures/editor-menu.mjs';
+import { openEditorMenu, editorCommand, editorMenu, setEditorSidebarOpen } from './fixtures/editor-menu.mjs';
 import { openSharedTool, sharedToolTab, sharedToolPanel } from './fixtures/shared-tools.mjs';
 import { mountTextToolsFixture } from './fixtures/text-tools-fixture.mjs';
 
@@ -146,7 +146,7 @@ test('command search works from Edit and keyboard with the drawing toolbar hidde
     await input.fill('image settings'); await input.press('Enter');
     assert.equal(await sharedToolTab(page, 'Inspector').getAttribute('aria-selected'), 'true');
     await sharedToolPanel(page).locator('.workbench-image-inspector').waitFor();
-    await editorMenu(page, 'Tools').click();
+    await openEditorMenu(page, 'Tools');
     await page.getByRole('menuitemcheckbox', { name: 'Drawing toolbar', exact: true }).click();
     assert.equal(await page.getByRole('toolbar', { name: 'Creation tools' }).count(), 0);
     await editorCommand(page, 'Edit', 'Search commands'); await input.waitFor();

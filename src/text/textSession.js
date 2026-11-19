@@ -74,7 +74,7 @@ export function addTextModule(store, profile, placed = null, { visibility = 'PRI
   }
   const cellId = placed?.cellId ?? store.getEditingCell?.();
   if (!store.commitCompletedOperation(next, { expectedGeneration: generation, historyLabel: 'Add Text',
-    ...(cellId ? { fitNewText: item.id } : {}) })) throw new Error('Text module could not be saved.');
+    ...(cellId ? { newText: item.id } : {}) })) throw new Error('Text module could not be saved.');
   return item.id;
 }
 export function saveTextModule(store, profile, expected, next) {
@@ -104,6 +104,8 @@ export function duplicateTextModule(store, profile, expected, workbench) {
 }
 
 const messages = {
+  locked: 'Unlock this layer before editing it. Your unsaved text is still here.',
+  reception_command: 'This command is unavailable in this Bento composition. Your unsaved text is still here.',
   editor_unavailable: 'This tab no longer has editing access. Your unsaved text is still here.',
   profile: 'This profile is no longer active. Your unsaved text is still here.',
   conflict: 'This Text was changed elsewhere. Your edits are still here. Retry checks the latest saved version.',

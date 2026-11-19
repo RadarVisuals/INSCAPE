@@ -6,14 +6,14 @@ import './workbenchOverviewGrid.css';
 
 // Bounded visual cycles, one accessible collection. Nearby compositions warm
 // every visual copy so a wrap never swaps a painted preview for an empty card.
-export default function WorkbenchOverviewGrid({ items, wrap, onOpen, onEdit, onManage, selectedId, hostRef: root, cardSize, arranging, onFinishArrange, onReorder, memory, movingCanvasId }) {
+export default function WorkbenchOverviewGrid({ items, wrap, onOpen, onEdit, selection, onManage, selectedId, hostRef: root, cardSize, arranging, onFinishArrange, onReorder, memory, movingCanvasId }) {
   const cycle = useRef(null), height = useRef(0), keyboard = useRef(false);
   const [revealed, setRevealed] = useState(null);
   const [repeatRadius, setRepeatRadius] = useState(1);
   const [visibleIds, setVisibleIds] = useState(() => new Set());
   const [drag, setDrag] = useState(null), [announcement, setAnnouncement] = useState('');
   const dragging = useRef(null), previous = useRef(new Map()), motions = useRef([]), dropFrame = useRef(0);
-  const looping = wrap && items.length > 1 && !arranging;
+  const looping = wrap && items.length > 1 && !arranging && !selection;
   useEffect(() => {
     const intersecting = new Map();
     const observer = new IntersectionObserver(entries => {
@@ -112,7 +112,7 @@ export default function WorkbenchOverviewGrid({ items, wrap, onOpen, onEdit, onM
           dragging.current = { id, target: id, pointer: event.pointerId, name: item.name, x: event.clientX, y: event.clientY };
           setDrag(dragging.current);
         }}
-        onOpen={onOpen} onEdit={onEdit} onManage={onManage} revealed={revealed === `${copy}:${item.id}`} onReveal={() => setRevealed(`${copy}:${item.id}`)} />)}
+        onOpen={onOpen} onEdit={onEdit} selection={selection} onManage={onManage} revealed={revealed === `${copy}:${item.id}`} onReveal={() => setRevealed(`${copy}:${item.id}`)} />)}
     </div>)}
     {arranging && <div className="workbench-overview-arrange-help"><span>Drag to arrange</span><button type="button" onClick={onFinishArrange}><Check size={16} />Done</button></div>}
     {drag && <div className="workbench-overview-drag-label" style={{ left: drag.x + 16, top: drag.y + 12 }}>{drag.name}</div>}

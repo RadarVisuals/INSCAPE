@@ -26,7 +26,7 @@ function controlsTop(host, controls) {
 
 // Navigation never receives a draft store or module transforms. Editing owns
 // its gestures and exposes only cancellation and input-ownership callbacks.
-export default function useWorkbenchNavigation({ hostRef, controlsRef, disabled, dockVisible, creationToolbarVisible, onControlsTopChange,
+export default function useWorkbenchNavigation({ hostRef, controlsRef, disabled, creationToolbarVisible, onControlsTopChange,
   homeBounds = null, frameOnEntry = false,
   interactionTool = 'select', setInteractionTool,
   isEditing, cancelEditing, releaseAbandonedGesture, captureContext, restoreContext, returnTargets, resetPresentation, entries }) {
@@ -246,7 +246,7 @@ export default function useWorkbenchNavigation({ hostRef, controlsRef, disabled,
     if (controls) observer.observe(controls);
     if (toolbar) observer.observe(toolbar);
     return () => observer.disconnect();
-  }, [hostRef, controlsRef, dockVisible, creationToolbarVisible, disabled, locked, readViewport, stopTravel, onControlsTopChange, shouldFrameOnEntry, homeCamera, updateCamera]);
+  }, [hostRef, controlsRef, creationToolbarVisible, disabled, locked, readViewport, stopTravel, onControlsTopChange, shouldFrameOnEntry, homeCamera, updateCamera]);
 
   const zoom = useCallback((point, factor) => {
     if (disabled || locked || interaction.current.isEditing() || isPanning()) return;

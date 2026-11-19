@@ -45,7 +45,9 @@ publishedDraft.reception.texts[0].article.title = 'PUBLIC ARTICLE';
 publishedDraft.reception.texts[0].article.content.content[0].content[0].text = 'Published introduction.';
 const identity = { status: 'RESOLVED', normalizedAddress: address, name: 'Audit profile', description: 'Synthetic audit profile', tags: [], links: [] };
 const document = buildProfileDocumentV9({ profileAddress: address, profileIdentity: identity, systemWorkflowDraft: publishedDraft, assetRecords: [] });
-const restored = structuredClone(draft); restored.reception.branding.name = 'RESTORED LOCAL';
+const restored = structuredClone(draft);
+restored.reception.branding.name = 'RESTORED LOCAL';
+restored.reception.texts[0].article.title = 'Restored local article';
 window.receptionBoundaryFixture = { address, key, document,
   backup: serializeWorkbenchBackup(restored),
   saved: () => store().getDraft(),
@@ -69,18 +71,28 @@ function RoutedFixture({ status, owner, onRetry }) {
   const navigation = useApplicationNavigation({ status: 'complete', profileAddress: owner ? address : null, ownershipVerified: owner });
   const resolution = useMemo(() => ({ status, address, ...(['RESOLVED', 'STALE'].includes(status) ? { document } : {}) }), [status]);
   const content = navigation.content;
-  const enterEditor = () => navigation.visitProfile(address, { returnToConnectedProfile: true });
+  const enterEditor = () => navigation.openStudio(address);
   const editReception = () => navigation.editReception(address);
+  const connectedProfile = owner ? { address, name: 'Audit profile' } : null;
+  const ownerDestinations = owner && {
+    Profile: () => navigation.openOverview(address), Gallery: () => navigation.openCanvas(address),
+    Writing: () => navigation.openWriting(address), Studio: enterEditor, Discover: navigation.openDiscover,
+  };
   const openReception = mode => navigation.openReception(address, mode === 'published' ? 'published' : true);
   return content?.kind === 'workbench' ? <OwnerRuntimeBoundary ownerAuthoringEnabled
     workspaceProfileAddress={address} viewedProfileAddress={address}
     receptionEditorRequested={content.receptionEditorRequested === true} canvasOverviewRequested={content.canvas === true}
+    ownerDestinations={ownerDestinations} returnLabel={navigation.studioReturnLabel}
+    onOpenGallery={() => navigation.openCanvas(address)} onManageCompositions={() => navigation.manageCompositions(address)}
+    requestedWorkId={content.worksEditorId} onReturnToWorks={() => navigation.returnToWorks(address)} connectedProfile={connectedProfile}
     publishedResolution={resolution} reviewAssets={[]} reviewCategories={[]} reviewActivity={[]}
     reviewProfile={{ name: 'Audit profile' }} interfaceVisible onOpenReception={openReception}
-    onEnterMyWorld={enterEditor} onEditorDocumentChange={kind => kind === 'reception' ? editReception() : enterEditor()} />
-    : <PublishedProfileBoundary address={address} resolution={resolution}
+    onEnterMyWorld={enterEditor} onEditorDocumentChange={(kind, id, options) => kind === 'reception' ? navigation.editReception(address, options) : navigation.editWork(address, id, options)} />
+    : <PublishedProfileBoundary address={address} resolution={resolution} connectedProfile={connectedProfile}
       returnProfileAddress={owner ? address : undefined} onReturnToWorkbench={owner ? enterEditor : undefined}
-      onEditReception={editReception} onMyInscape={() => navigation.openCanvas(address, undefined, { ownerCollection: true })} onRetry={onRetry}
+      ownerDestinations={ownerDestinations} onOpenOverview={() => navigation.openOverview(address)}
+      onEditComposition={owner ? id => navigation.editWork(address, id) : undefined}
+      onEditReception={owner ? editReception : undefined} onRetry={onRetry}
       entry={{ surface: content?.canvas ? 'canvas' : 'overview', reception: content?.reception, target: content?.target }}
       onOpenCanvas={() => navigation.openCanvas(address)} />;
 }

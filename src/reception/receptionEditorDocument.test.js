@@ -7,6 +7,126 @@ import { createReceptionEditorDocument, receptionModuleWindow, withReceptionModu
   receptionResponsiveLayout } from './receptionEditorDocument.js';
 import { setReceptionCellMemberAnchor, setReceptionCellClip } from './receptionBento.js';
 import { receptionMemberAnchor, editorCellPreviewTransforms } from './editorCellGeometry.js';
+import { fitNativeMediaRectangle } from '../lattice/rendering/latticeGeometry.js';
+import { progressiveReceptionFrames } from './receptionResponsiveImages.js';
+
+test('six columns wrap progressively while a vertical pair stays together and saved geometry remains unchanged', () => {
+  const cells = Array.from({ length: 7 }, (_, index) => ({ id: `shape:flow-${index}` }));
+  const frames = cells.map((cell, index) => ({ id: cell.id, open: true, window: index < 2
+    ? { left: 0, top: index * 150, width: 300, height: 150 }
+    : { left: (index - 1) * 300, top: 0, width: 300, height: 300 } }));
+  const value = { cells, bento: { gap: 0 }, workbench: { area: { width: 1800, height: 300 }, shapes: frames } };
+  const saved = structuredClone(value);
+  assert.equal(progressiveReceptionFrames(value, cells, 1, 0, () => 200), null);
+  for (const [width, count] of [[1200, 5], [1000, 4], [800, 3], [600, 2], [400, 1]]) {
+    const output = progressiveReceptionFrames(value, cells, width / 1800, 0, () => 200);
+    const columns = new Set(Object.values(output).filter(r => Math.abs(r.top) < .001).map(r => r.left));
+    assert.equal(columns.size, count);
+    const a = output[cells[0].id], b = output[cells[1].id];
+    assert.equal(a.left, b.left); assert.equal(a.width, b.width);
+    assert.ok(Math.abs(a.top + a.height - b.top) < .001);
+    for (const r of Object.values(output)) {
+      assert.ok(r.width > 0 && r.height > 0);
+      assert.ok(r.left >= 0 && r.left + r.width <= width + .001);
+    }
+  }
+  assert.deepEqual(value, saved);
+});
+
+function responsiveImages() {
+  let value = createReceptionEditorDocument();
+  value.bento = { gap: 0, padding: 0 };
+  const frames = { header: [0, 0, 1440, 120], character: [0, 120, 480, 660],
+    content: [480, 120, 480, 660], extra: [960, 120, 480, 660], footer: [0, 780, 1440, 120] };
+  // Deliberately different insertion order from desktop reading order.
+  for (const name of ['character', 'footer', 'extra', 'header', 'content']) {
+    const id = `shape:${name}`, [left, top, width, height] = frames[name];
+    value.shapes.push({ id, name, color: '#000000', opacity: 1, visibility: 'PUBLIC' });
+    value.cells.push({ id, members: [], mobile: { columns: 2, height: 600 } });
+    value.artworkLayers.push(id);
+    value = withReceptionModuleWindow(value, id, { left, top, width, height });
+  }
+  const asset = createReceptionExample().imageModules[0].artwork;
+  for (const [name, left, top, width, height] of [['header', 570, 35, 300, 50],
+    ['character', 20, 200, 160, 400], ['footer', 1200, 810, 220, 50]]) {
+    const id = `image:${name}`;
+    const artwork = structuredClone(asset);
+    artwork.crop = null; artwork.transform = { quarterTurns: 0, mirrorX: false, mirrorY: false };
+    artwork.asset.media.width = width; artwork.asset.media.height = height;
+    value.imageModules.push({ id, name, width, height, visibility: 'PUBLIC', artwork });
+    value.cells.find(cell => cell.id === `shape:${name}`).members.push(id);
+    value.artworkLayers.push(id);
+    value = withReceptionModuleWindow(value, id, { left, top, width, height });
+  }
+  return value;
+}
+
+test('stacked layouts keep desktop reading order, compact logos and a centred proportional character without writes', () => {
+  const value = responsiveImages(), saved = structuredClone(value);
+  assert.equal(validReception(value), true);
+  const desktop = receptionResponsiveLayout(value, 1440);
+  assert.deepEqual(desktop.windows['image:character'], receptionModuleWindow(value, 'image:character'));
+  for (const width of [650, 640, 390, 320, 650]) {
+    const layout = receptionResponsiveLayout(value, width);
+    assert.ok(layout.mobile || layout.stacked);
+    assert.deepEqual(layout.cells.map(cell => cell.id), ['shape:header', 'shape:character', 'shape:content', 'shape:extra', 'shape:footer']);
+    assert.ok(layout.windows['shape:header'].height <= 82);
+    assert.ok(layout.windows['shape:footer'].height <= 82);
+    for (const name of ['header', 'character', 'footer']) {
+      const image = layout.windows[`image:${name}`], parent = layout.windows[`shape:${name}`];
+      const media = value.imageModules.find(item => item.id === `image:${name}`).artwork.asset.media;
+      assert.ok(Math.abs(image.width / image.height - media.width / media.height) < .001);
+      assert.ok(image.left >= parent.left && image.top >= parent.top);
+      assert.ok(image.left + image.width <= parent.left + parent.width + .001);
+      assert.ok(image.top + image.height <= parent.top + parent.height + .001);
+    }
+    const image = layout.windows['image:character'], parent = layout.windows['shape:character'];
+    assert.ok(Math.abs(image.left + image.width / 2 - parent.left - parent.width / 2) < .001);
+    assert.ok(image.height >= 280);
+  }
+  assert.deepEqual(value, saved);
+});
+
+test('explicit stacked order, manual heights and phone image placements survive public projection', () => {
+  const value = responsiveImages();
+  value.stackOrder = 'manual';
+  const character = value.cells[0];
+  character.mobile.autoHeight = false; character.mobile.height = 500;
+  const published = projectReception(value), restored = restoreReception(published);
+  assert.equal(validReception(published, true), true);
+  assert.deepEqual(restored.cells, value.cells);
+  for (const width of [650, 390]) {
+    const layout = receptionResponsiveLayout(restored, width);
+    assert.deepEqual(layout.cells.map(cell => cell.id), value.cells.map(cell => cell.id));
+    assert.equal(layout.windows[character.id].height, 500);
+  }
+  character.mobile.referenceWidth = 390;
+  character.mobile.placements = [{ id: 'image:character', window: { left: 20, top: 30, width: 120, height: 300 } }];
+  const layout = receptionResponsiveLayout(value, 390);
+  assert.deepEqual(layout.windows['image:character'], { left: 20, top: 30, width: 120, height: 300 });
+  const bad = structuredClone(value); bad.cells[0].mobile.autoHeight = 'yes';
+  assert.equal(validReception(bad), false);
+});
+
+test('responsive images respect rotation, authored crops and explicit anchors', () => {
+  const value = responsiveImages(), image = value.imageModules.find(item => item.id === 'image:header');
+  image.artwork.transform.quarterTurns = 1;
+  const rotated = receptionResponsiveLayout(value, 390).windows[image.id];
+  assert.ok(Math.abs(rotated.width / rotated.height - 1 / 6) < .001);
+  const cell = value.cells.find(item => item.id === 'shape:header');
+  cell.memberAnchors = [{ members: [image.id], alignX: 'right', alignY: 'bottom', paddingX: 8, paddingY: 10 }];
+  const saved = structuredClone(value), anchored = receptionResponsiveLayout(value, 390);
+  const child = anchored.windows[image.id], parent = anchored.windows[cell.id];
+  assert.equal(child.width, image.width); assert.equal(child.height, image.height);
+  assert.equal(parent.left + parent.width - child.left - child.width, 8);
+  assert.equal(parent.top + parent.height - child.top - child.height, 10);
+  assert.deepEqual(value, saved);
+  delete cell.memberAnchors;
+  image.artwork.crop = { x: .5, y: .5, zoom: 2 };
+  const crop = structuredClone(image.artwork.crop), fitted = receptionResponsiveLayout(value, 390).windows[image.id];
+  assert.ok(Math.abs(fitted.width / fitted.height - image.width / image.height) < .001);
+  assert.deepEqual(image.artwork.crop, crop);
+});
 
 function sample() {
   const value = createReceptionExample(); value.radius = 24;
@@ -156,6 +276,42 @@ test('native group anchors preserve relative placement and size through cell res
   assert.deepEqual(preview['shape:a'].frame, a); assert.deepEqual(preview['shape:b'].frame, b);
 });
 
+test('aligned groups shrink with their cells and keep preview, saved geometry and responsive output consistent', () => {
+  const value = anchoredContents(), cell = value.cells[0], original = receptionModuleWindow(value, cell.id);
+  const frame = { ...original, width: original.width * .8, height: original.height * .8 };
+  const beforeA = receptionModuleWindow(value, 'shape:a'), beforeB = receptionModuleWindow(value, 'shape:b');
+  const next = reconcileReceptionCells(value, withReceptionModuleWindow(value, cell.id, frame));
+  const a = receptionModuleWindow(next, 'shape:a'), b = receptionModuleWindow(next, 'shape:b');
+  assert.equal(a.width, beforeA.width * .8); assert.equal(b.height, beforeB.height * .8);
+  assert.ok(Math.abs((b.left - a.left) - (beforeB.left - beforeA.left) * .8) < .001);
+  const preview = editorCellPreviewTransforms(value.cells, { [cell.id]: { frame } }, value.workbench, value);
+  assert.deepEqual(preview['shape:a'].frame, a); assert.deepEqual(preview['shape:b'].frame, b);
+  assert.deepEqual(next.cells[0].memberAnchors, cell.memberAnchors);
+  const smaller = receptionResponsiveLayout(value, 700);
+  assert.ok(Math.abs(smaller.windows['shape:a'].width - beforeA.width * .875) < .001);
+});
+
+test('a whole-image frame can remain aligned left across a wide-to-phone reflow without making the character tiny', () => {
+  let value = responsiveImages();
+  const keep = new Set(['shape:header', 'shape:character', 'shape:footer']);
+  value.cells = value.cells.filter(cell => keep.has(cell.id));
+  value.shapes = value.shapes.filter(shape => keep.has(shape.id));
+  value.workbench.shapes = value.workbench.shapes.filter(shape => keep.has(shape.id));
+  value.artworkLayers = value.artworkLayers.filter(id => id.startsWith('image:') || keep.has(id));
+  const cell = value.cells.find(item => item.id === 'shape:character'), image = value.imageModules.find(item => item.id === 'image:character');
+  const owner = { ...receptionModuleWindow(value, cell.id), width: 1440 };
+  value = withReceptionModuleWindow(value, cell.id, owner);
+  value = withReceptionModuleWindow(value, image.id, owner);
+  cell.memberAnchors = [{ members: [image.id], alignX: 'left', alignY: 'center', paddingX: 0, paddingY: 0 }];
+  const saved = structuredClone(value);
+  const layout = receptionResponsiveLayout(projectReception(value), 390), frame = layout.windows[image.id];
+  const paint = fitNativeMediaRectangle(frame, image.artwork.asset.media, cell.memberAnchors[0]);
+  assert.equal(paint.left, layout.windows[cell.id].left);
+  assert.ok(paint.height >= 390, 'the image uses the tall phone cell instead of shrinking by desktop frame width');
+  assert.ok(paint.left + paint.width <= layout.windows[cell.id].left + layout.windows[cell.id].width);
+  assert.deepEqual(value, saved);
+});
+
 test('free dragging releases the affected group; individual anchoring moves only its own member', () => {
   const value = anchoredContents(), cell = value.cells[0], a = receptionModuleWindow(value, 'shape:a'), b = receptionModuleWindow(value, 'shape:b');
   const moved = reconcileReceptionCells(value, withReceptionModuleWindow(value, 'shape:a', { ...a, left: a.left + 10 }));
@@ -254,4 +410,187 @@ test('two half-row cells retain positive widths inside a valid tiny authored can
   }
   assert.ok(layout.cells[0].window.left + layout.cells[0].window.width <= layout.cells[1].window.left);
   assert.deepEqual(value, before);
+});
+
+test('single-line height does not apply the saved narrow reading order to a wide composition', () => {
+  const value = responsiveImages();
+  value.stackOrder = 'manual'; value.cells.find(c => c.id === 'shape:header').singleLine = true;
+  const layout = receptionResponsiveLayout(value, 1100), header = layout.windows['shape:header'];
+  assert.equal(layout.stacked, false); assert.equal(header.top, 0); assert.equal(header.height, 120);
+  for (const id of ['shape:character', 'shape:content', 'shape:extra']) assert.ok(layout.windows[id].top >= header.top + header.height);
+});
+
+test('bottom-positioned text reflows inside a compact phone cell without multiplying its height', () => {
+  let value = authoredCanvas();
+  const id = 'text:bottom';
+  value.texts = [{ id }]; value.artworkLayers.push(id); value.cells[0].members = [id];
+  value = withReceptionModuleWindow(value, id, { left: 160, top: 310, width: 280, height: 20 });
+  const saved = structuredClone(value);
+  for (const width of [320,390,640,700,390]) {
+    const layout = receptionResponsiveLayout(value,width);
+    const frame = layout.windows[id], cell = layout.cells[0].window;
+    assert.ok(cell.height < 300);
+    assert.ok(frame.top >= cell.top);
+    assert.ok(frame.top + frame.height <= cell.top + cell.height + .001);
+  }
+  const phone = receptionResponsiveLayout(value,390);
+  assert.equal(phone.cells[0].window.height, value.cells[0].mobile.height, 'the saved phone height owns its preview cell');
+  assert.deepEqual(value,saved);
+});
+
+test('an explicitly fixed-height strip retains its height and shifts following rows at every width without classifying content', () => {
+  const value = responsiveImages(), header = value.cells.find(c => c.id === 'shape:header');
+  header.singleLine = true;
+  const before = structuredClone(value);
+  for (const width of [1440, 1100, 900, 700, 440, 390, 320]) {
+    const layout = receptionResponsiveLayout(value, width), h = layout.windows[header.id];
+    assert.equal(h.height, 120, `header at ${width}`);
+    for (const cell of layout.cells.filter(c => c.id !== header.id)) assert.ok(cell.window.top >= h.top + h.height - .001, 'following rows clear the fixed strip');
+    for (const a of layout.cells) for (const b of layout.cells) if (a.id !== b.id) {
+      const x = Math.min(a.window.left + a.window.width, b.window.left + b.window.width) - Math.max(a.window.left, b.window.left);
+      const y = Math.min(a.window.top + a.window.height, b.window.top + b.window.height) - Math.max(a.window.top, b.window.top);
+      assert.ok(x < .001 || y < .001, 'responsive cells never overlap');
+    }
+  }
+  assert.deepEqual(value, before);
+});
+
+test('shrinking a desktop card scales text frame height instead of lifting bottom text by its old height', () => {
+  let value = authoredCanvas(1440,900);
+  const cell=value.cells[0], id='text:quote';
+  value=withReceptionModuleWindow(value,cell.id,{left:100,top:50,width:1440,height:900});
+  value.cells[0].members=[id];value.texts=[{id}];value.artworkLayers.push(id);
+  const source={left:880,top:710,width:600,height:200};
+  value=withReceptionModuleWindow(value,id,source);
+  const saved=structuredClone(value);
+  for(const fitted of [false,true]) {
+    if(fitted)value.cells[0].fitText=[id];
+    for(const width of [1440,1080,720,672]) {
+      const scale=width/1440, layout=receptionResponsiveLayout(value,width);
+      const target=layout.windows[id];
+      assert.ok(Math.abs(target.height-source.height*scale)<.001);
+      assert.ok(Math.abs(target.top-(source.top-50)*scale)<.001,'text retains its vertical composition when the card scales');
+      const gap=layout.cells[0].window.top+layout.cells[0].window.height-target.top-target.height;
+      assert.ok(Math.abs(gap-40*scale)<.001,'bottom distance scales with the card');
+    }
+  }
+  delete value.cells[0].fitText;assert.deepEqual(value,saved);
+  const overflow=receptionResponsiveLayout(value,672);
+  const box=overflow.windows[id], parent=overflow.cells[0].window;
+  assert.equal(box.height,source.height*672/1440);
+  assert.ok(box.top>=parent.top && box.top+box.height<=parent.top+parent.height+.001);
+});
+
+test('narrow text preserves its authored vertical placement without an extra inset or moving explicit placements', () => {
+  let value=authoredCanvas(1440,900);const cell=value.cells[0],id='text:edge';
+  cell.members=[id];cell.mobile.height=80;value.texts=[{id}];value.artworkLayers.push(id);
+  const owner=receptionModuleWindow(value,cell.id);
+  value=withReceptionModuleWindow(value,id,{left:owner.left+20,top:owner.top+owner.height-25,width:280,height:24});
+  const saved=structuredClone(value);
+  for(const width of [320,390,640]) {
+    const layout=receptionResponsiveLayout(value,width),frame=layout.windows[id],parent=layout.cells[0].window;
+    assert.ok(Math.abs(frame.top-parent.top-(owner.height-25)*parent.height/owner.height)<.001);
+    assert.ok(Math.abs(frame.height-24*parent.height/owner.height)<.001);
+    assert.equal(parent.height,80,'long text uses the reader instead of growing the cell');
+    assert.ok(frame.height>0);
+  }
+  assert.deepEqual(value,saved);
+  value.cells[0].mobile={...cell.mobile,referenceWidth:390,placements:[{id,window:{left:20,top:0,width:280,height:80}}]};
+  const explicit=receptionResponsiveLayout(value,390);
+  assert.equal(explicit.windows[id].top,explicit.cells[0].window.top,'explicit phone geometry retains its authority');
+  const anchored=setReceptionCellMemberAnchor(saved,cell.id,[id],{alignX:'left',alignY:'bottom',paddingX:0,paddingY:4});
+  const anchoredLayout=receptionResponsiveLayout(anchored,390);
+  const a=anchoredLayout.windows[id],p=anchoredLayout.cells[0].window;
+  assert.equal(p.top+p.height-a.top-a.height,4,'authored anchors keep their own padding');
+});
+
+test('phone rows respect authored gaps including zero, and layered artwork fills its own content bounds', () => {
+  let value = responsiveImages();
+  const cell = value.cells.find(item => item.id === 'shape:extra');
+  for (const [id, left, top, width, height] of [['image:figure', 970, 140, 100, 400], ['image:companion', 1080, 160, 50, 80]]) {
+    const copy = structuredClone(value.imageModules[1]);
+    copy.id = id; copy.width = width; copy.height = height;
+    copy.artwork.asset.media.width = width; copy.artwork.asset.media.height = height;
+    value.imageModules.push(copy); cell.members.push(id); value.artworkLayers.push(id);
+    value = withReceptionModuleWindow(value, id, { left, top, width, height });
+  }
+  value.shapes.push({ id: 'shape:overlay', name: 'Visual overlay', color: '#ffffff', opacity: 1, visibility: 'PUBLIC' });
+  value.cells.find(item => item.id === cell.id).members.push('shape:overlay'); value.artworkLayers.push('shape:overlay');
+  value = withReceptionModuleWindow(value, 'shape:overlay', { left: 985, top: 180, width: 40, height: 40 });
+  const saved = structuredClone(value);
+  for (const gap of [0, 20]) {
+    value.bento.gap = gap;
+    const layout = receptionResponsiveLayout(value, 390), rows = layout.cells;
+    for (let i = 1; i < rows.length; i++) assert.ok(Math.abs(rows[i].window.top - rows[i - 1].window.top - rows[i - 1].window.height - layout.gap) < .001);
+    assert.equal(layout.gap, gap * layout.scale);
+    const figure = layout.windows['image:figure'], companion = layout.windows['image:companion'];
+    assert.ok(figure.height >= 300, 'a wide source cell does not miniaturize the character');
+    assert.equal(figure.width / figure.height, .25);
+    assert.equal(companion.width / companion.height, 50/80);
+    assert.ok(companion.left >= figure.left + figure.width);
+    const overlay = layout.windows['shape:overlay'], factor = figure.height / 400;
+    assert.ok(Math.abs(overlay.left - figure.left - 15 * factor) < .001);
+    assert.ok(Math.abs(overlay.top - figure.top - 40 * factor) < .001, 'shapes travel with the visual assembly');
+  }
+  value.bento.gap = 0; assert.deepEqual(value, saved);
+});
+
+
+test('a cell-filling crop stays edge-to-edge through progressive and phone reflow without draft writes', () => {
+  let value = responsiveImages();
+  const cell = value.cells.find(item => item.id === 'shape:character');
+  const image = value.imageModules.find(item => item.id === 'image:character');
+  image.artwork.crop = { x: .7, y: .4, zoom: 1.5 };
+  cell.mobile.autoHeight = false; cell.mobile.height = 500;
+  value = withReceptionModuleWindow(value, image.id, receptionModuleWindow(value, cell.id));
+  const saved = structuredClone(value);
+  for (const width of [1440, 1000, 650, 390, 320, 1440]) {
+    const layout = receptionResponsiveLayout(value, width);
+    assert.deepEqual(layout.windows[image.id], layout.windows[cell.id], 'crop fills its current cell at ' + width);
+  }
+  assert.deepEqual(value, saved);
+});
+
+
+test('cell-filling crops retain coverage with anchors while explicit phone placements win', () => {
+  let value = responsiveImages();
+  const cell = value.cells.find(item => item.id === 'shape:character');
+  const image = value.imageModules.find(item => item.id === 'image:character');
+  image.artwork.crop = { x: .7, y: .4, zoom: 1.5 };
+  cell.mobile.autoHeight = false; cell.mobile.height = 500;
+  cell.memberAnchors = [{ members: [image.id], alignX: 'right', alignY: 'bottom', paddingX: 0, paddingY: 0 }];
+  value = withReceptionModuleWindow(value, image.id, receptionModuleWindow(value, cell.id));
+  const saved = structuredClone(value);
+  for (const width of [1440, 1000, 650, 390, 320, 1440]) {
+    const layout = receptionResponsiveLayout(value, width);
+    assert.deepEqual(layout.windows[image.id], layout.windows[cell.id], 'anchored crop covers cell at ' + width);
+  }
+  assert.deepEqual(value, saved);
+  const current = value.cells.find(item => item.id === cell.id);
+  current.mobile.referenceWidth = 390;
+  current.mobile.placements = [{ id: image.id, window: { left: 20, top: 30, width: 200, height: 300 } }];
+  const layout = receptionResponsiveLayout(value, 390), parent = layout.windows[cell.id];
+  assert.deepEqual(layout.windows[image.id], { left: parent.left + 20, top: parent.top + 30, width: 200, height: 300 });
+});
+
+
+test('a cell crop over an oversized Fit image survives reflow without revealing source or margins', () => {
+  let value = responsiveImages();
+  const cell = value.cells.find(item => item.id === 'shape:character');
+  const image = value.imageModules.find(item => item.id === 'image:character');
+  image.artwork.crop = null; image.artwork.asset.media.width = 880; image.artwork.asset.media.height = 880;
+  const parent = receptionModuleWindow(value, cell.id);
+  const source = { left: parent.left - 300, top: parent.top - 130, width: 1236, height: 1000 };
+  value = withReceptionModuleWindow(value, image.id, source);
+  const saved = structuredClone(value);
+  for (const width of [1000, 650, 390, 320, 1440]) {
+    const layout = receptionResponsiveLayout(value, width), frame = layout.windows[image.id], owner = layout.windows[cell.id];
+    const media = fitNativeMediaRectangle(frame, image.artwork.asset.media);
+    assert.ok(media.left <= owner.left + 1 && media.top <= owner.top + 1);
+    assert.ok(media.left + media.width >= owner.left + owner.width - 1);
+    assert.ok(media.top + media.height >= owner.top + owner.height - 1);
+    assert.ok(frame.width > owner.width, 'the larger image frame retains the cell crop');
+    if (layout.mobile) assert.ok(Math.abs(owner.width / owner.height - parent.width / parent.height) < .001);
+  }
+  assert.deepEqual(value, saved);
 });

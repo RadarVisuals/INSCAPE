@@ -26,6 +26,15 @@ test('production CSP contains the complete enforced directive set without placeh
   assert.equal(directive(policy, 'frame-ancestors'), `frame-ancestors ${UNIVERSAL_PROFILE_PARENT_ORIGINS.join(' ')}`);
 });
 
+test('only the local built preview allows its configured publication service', () => {
+  const origin = 'https://inscape-uploads.test';
+  const env = { VITE_PUBLICATION_SERVICE_ORIGIN: origin };
+  const preview = productionResponseSecurityHeaders(env, { localPreview: true });
+  assert.ok(directive(preview['Content-Security-Policy'], 'connect-src').split(' ').includes(origin));
+  assert.ok(!createNetlifyHeaders({ env }).includes(origin));
+  assert.throws(() => productionResponseSecurityHeaders({ VITE_PUBLICATION_SERVICE_ORIGIN: 'http://outside.test' }, { localPreview: true }));
+});
+
 test('Pixi CSP compatibility retains self-only script authority without unsafe evaluation', () => {
   const scriptAuthority = directive(createProductionContentSecurityPolicy(), 'script-src');
 

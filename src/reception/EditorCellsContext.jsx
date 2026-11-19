@@ -5,25 +5,27 @@ import { receptionCellStructureActions } from './receptionCellStructure.js';
 import './editorCells.css';
 
 const EditorCellsContext = createContext(null);
+const EditorCellLayoutContext = createContext(null);
 const NO_CELLS = Object.freeze([]);
 const noSubscription = () => () => {};
 const noEditingCell = () => null;
 export const useEditorCells = () => useContext(EditorCellsContext);
+export const useEditorCellLayout = () => useContext(EditorCellLayoutContext);
 export function editorCellStructureActions(store, id, view) {
   const previewing = Object.keys(view.transforms).length > 0;
   const actions = receptionCellStructureActions(store.getReception(), id);
-  return ['merge', 'split'].map(action => ({
-    id: `cell-${action}`, label: action === 'merge' ? 'Merge cell' : 'Split cell',
-    children: actions.filter(item => item.action === action).map(({ direction, reason }) => ({
-      id: `cell-${action}-${direction}`, label: direction[0].toUpperCase() + direction.slice(1),
+  return [{
+    id: 'cell-merge', label: 'Merge cell',
+    children: actions.map(({ direction, reason }) => ({
+      id: `cell-merge-${direction}`, label: direction[0].toUpperCase() + direction.slice(1),
       disabled: previewing || Boolean(reason),
       reason: previewing ? 'Finish or cancel the current preview first.' : reason,
       run: () => {
-        store.editBento(action, [id, direction], store.getGeneration(), view.getPresentation());
+        store.editBento('merge', [id, direction], store.getGeneration(), view.getPresentation());
         view.selectArtwork(id);
       },
     })),
-  }));
+  }];
 }
 export function isEditorCellSurface(target, context) {
   const cell = context?.cells.find(item => item.id === context.editingCellId);
@@ -43,6 +45,14 @@ export function EditorCellsProvider({ store, selection, children }) {
   const nativeCells = store?.getCells?.() || NO_CELLS, transforms = useWorkbenchView()?.transforms;
   const innerLines = visibleReceptionInnerLines(store?.getReception?.()?.innerLines);
   const [linePreview, setLinePreview] = useState(null), generation = store?.getGeneration();
+  const [cellGrainPreview, setCellGrainPreview] = useState(null);
+  const previewCellGrain = useCallback((id, grain) => setCellGrainPreview(current => grain == null
+    ? current?.id === id && current.store === store ? null : current
+    : { store, generation, id, grain }), [store, generation]);
+  const paintedCellGrain = cellGrainPreview?.store === store && cellGrainPreview?.generation === generation ? cellGrainPreview : null;
+  const [appearancePreview, setAppearancePreview] = useState(null);
+  const previewAppearance = useCallback(patch => setAppearancePreview(patch ? { store, generation, patch } : null), [store, generation]);
+  const paintedAppearance = appearancePreview && appearancePreview.store === store && appearancePreview.generation === generation ? appearancePreview.patch : null;
   const previewInnerLines = useCallback(patch => setLinePreview(patch ? { store, generation, patch } : null), [store, generation]);
   const changeInnerLines = useCallback(patch => {
     if (!innerLines) throw new Error('Enable inner lines in Bento settings.');
@@ -52,22 +62,27 @@ export function EditorCellsProvider({ store, selection, children }) {
     ? { ...innerLines, ...linePreview.patch } : innerLines, [store, generation, linePreview, innerLines]);
   const cells = useMemo(() => nativeCells.map(cell => transforms?.[cell.id]?.cellRadius === undefined ? cell
     : { ...cell, radius: transforms[cell.id].cellRadius }), [nativeCells, transforms]);
+  const { setSelection, selectArtwork } = selection;
   const enterCell = useCallback(id => {
-    if (store?.setEditingCell?.(id)) selection.setSelection([]);
-  }, [store, selection]);
+    if (store?.setEditingCell?.(id)) setSelection([]);
+  }, [store, setSelection]);
   const leaveCell = useCallback((select = true) => {
     store?.setEditingCell?.(null);
-    if (select && editingCellId) selection.selectArtwork(editingCellId);
-  }, [store, selection, editingCellId]);
+    if (select && editingCellId) selectArtwork(editingCellId);
+  }, [store, selectArtwork, editingCellId]);
   const openSettings = useCallback(id => {
     if (cells.some(cell => cell.id === id)) selection.selectArtwork(id);
     setBentoOpen(true);
   }, [cells, selection]);
   useEffect(() => () => store?.setEditingCell?.(null), [store]);
   const value = useMemo(() => store?.getCells ? { cells, editingCellId, enterCell, leaveCell, openSettings,
-    bentoOpen, setBentoOpen, store, innerLines, paintedInnerLines, previewInnerLines, changeInnerLines, registerContentActions, addText, addImage } : null,
-  [store, cells, editingCellId, enterCell, leaveCell, openSettings, bentoOpen, innerLines, paintedInnerLines, previewInnerLines, changeInnerLines, registerContentActions, addText, addImage]);
-  return <EditorCellsContext.Provider value={value}>{children}</EditorCellsContext.Provider>;
+    bentoOpen, setBentoOpen, store, innerLines, paintedInnerLines, previewInnerLines, changeInnerLines, paintedAppearance, previewAppearance, paintedCellGrain, previewCellGrain, registerContentActions, addText, addImage } : null,
+  [store, cells, editingCellId, enterCell, leaveCell, openSettings, bentoOpen, innerLines, paintedInnerLines, previewInnerLines, changeInnerLines, paintedAppearance, previewAppearance, paintedCellGrain, previewCellGrain, registerContentActions, addText, addImage]);
+  const layout = useMemo(() => store?.getCells ? { cells, editingCellId, enterCell, leaveCell } : null,
+    [store, cells, editingCellId, enterCell, leaveCell]);
+  return <EditorCellsContext.Provider value={value}><EditorCellLayoutContext.Provider value={layout}>
+    {children}
+  </EditorCellLayoutContext.Provider></EditorCellsContext.Provider>;
 }
 export function EditorCellEditingNotice() {
   const context = useEditorCells();

@@ -1,4 +1,3 @@
-import { MIN_CROP_PROJECTION_ZOOM } from '../lattice/rendering/latticeCrop.js';
 import { workbenchArea, workbenchAreaBounds } from '../systemWorkflow/domain/workbenchArea.js';
 import { MAX_IMAGE_MODULES, validImageModules, createImagePresentation, IMAGE_SIZE_LIMITS } from './imageModule.js';
 import { createDefaultWorkbenchPresentation } from '../profileDocument/domain/workbenchPresentation.js';
@@ -10,7 +9,6 @@ import { MAX_WORKBENCH_GROUP_MEMBERS } from '../systemWorkflow/domain/workbenchG
 function validEditingImages(store, images, addedId, targetCell = store?.getEditingCell?.()) {
   const cells = store?.getCells?.();
   return validImageModules(images, false, {
-    minimumCropZoom: cells ? MIN_CROP_PROJECTION_ZOOM : 1,
     isCellMember: id => cells?.some(cell => id === addedId ? cell.id === targetCell : cell.members.includes(id)),
   });
 }

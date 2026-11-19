@@ -99,7 +99,8 @@ export interface WorkbenchScope {
   commitInCell?(cellId: ShapeId, candidate: WorkflowDraft, options?: CommitOptions): SaveResult;
   retryCompletedOperation(createCandidate: (draft: WorkflowDraft) => WorkflowDraft | null | false, options?: CommitOptions): SaveResult;
   restoreBackup(candidate: WorkbenchBackup, options?: RestoreOptions): SaveResult;
-  createWorkbench(name: string, options?: { workbench?: WorkbenchPresentation; generateId?: () => string }): WorkbenchId | false;
+  createWorkbench(name: string, options?: { workbench?: WorkbenchPresentation; layout?: 'canvas' | 'bento'; generateId?: () => string }): WorkbenchId | false;
+  deleteWorkbench(id: WorkbenchId): WorkbenchId | false;
   switchWorkbench(id: WorkbenchId, options?: { workbench?: WorkbenchPresentation }): SaveResult;
   renameWorkbench(name: string, options?: { workbench?: WorkbenchPresentation }): SaveResult;
   leaveWorkbench(value?: undefined, options?: { workbench?: WorkbenchPresentation; retainEditor?: boolean }): SaveResult;
@@ -321,7 +322,10 @@ export interface GestureMoveInput {
   previewDrop(event: PointerEvent): void;
   commitDrop(event: PointerEvent): boolean;
 }
-export type GestureResizeInput = Pick<WorkbenchResizeOperation, 'beforeTransforms' | 'valid' | 'preview' | 'commit'> & { onFinish?(): void };
+export type GestureResizeInput = Pick<WorkbenchResizeOperation, 'beforeTransforms' | 'valid' | 'commit'> & {
+  preview(delta: Vector, bypass?: boolean, push?: boolean): void;
+  onFinish?(): void;
+};
 export interface GestureMarqueeInput<Selection> {
   beforeSelection: Selection;
   previousSelection: WindowId[];

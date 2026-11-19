@@ -1,4 +1,4 @@
-import { editorMenu, editorCommand } from './fixtures/editor-menu.mjs';
+import { openEditorMenu, editorMenu, editorCommand } from './fixtures/editor-menu.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdir } from 'node:fs/promises';
@@ -129,7 +129,7 @@ test('Settings keeps existing local persistence, interface theme and backup vali
     assert.equal(await panel.getByLabel('Workbench grid color', { exact: true }).inputValue(), '#8d73c2');
     assert.equal(await panel.getByRole('button', { name: 'Workbench grid display: Dots', exact: true }).count(), 1);
     assert.equal(await panel.getByRole('button', { name: 'DARK', exact: true }).getAttribute('aria-pressed'), 'true');
-    await editorMenu(page, 'Backup').click();
+    await openEditorMenu(page, 'Backup');
     const backup = page.getByRole('dialog', { name: 'Backup', exact: true });
     await backup.getByLabel('Open Workbench backup', { exact: true }).setInputFiles({ name: 'invalid.json', mimeType: 'application/json', buffer: Buffer.from('{invalid') });
     await backup.getByRole('status').waitFor();

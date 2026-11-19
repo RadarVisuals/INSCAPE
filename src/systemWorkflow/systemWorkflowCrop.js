@@ -1,3 +1,4 @@
+import { exact } from '../text/domain/article.js';
 import {
   isSystemWorkflowGridCoordinate,
   SYSTEM_WORKFLOW_VISIBILITY,
@@ -37,14 +38,12 @@ function requireMedia(media) {
   return { stableAssetId: media.stableAssetId, width: media.width, height: media.height };
 }
 
-function exactCrop(value) {
-  return value && typeof value === 'object' && !Array.isArray(value)
-    && Object.keys(value).length === 3
-    && Object.hasOwn(value, 'x') && Object.hasOwn(value, 'y') && Object.hasOwn(value, 'zoom')
+function exactCrop(value, minimumZoom = SYSTEM_WORKFLOW_CROP_MIN_ZOOM) {
+  return exact(value, ['x', 'y', 'zoom'])
     && Number.isFinite(value.x) && value.x >= 0 && value.x <= 1
     && Number.isFinite(value.y) && value.y >= 0 && value.y <= 1
     && Number.isFinite(value.zoom)
-    && value.zoom >= SYSTEM_WORKFLOW_CROP_MIN_ZOOM
+    && value.zoom >= minimumZoom
     && value.zoom <= SYSTEM_WORKFLOW_CROP_MAX_ZOOM;
 }
 
@@ -64,11 +63,11 @@ export function systemWorkflowCropMask(placement) {
   return { left: 0, top: 0, width: placement.mediaFrameRatio === undefined ? columnSpan : rowSpan * placement.mediaFrameRatio, height: rowSpan };
 }
 
-export function createSystemWorkflowCropSession(placement, mediaInput, maskInput = null) {
+export function createSystemWorkflowCropSession(placement, mediaInput, maskInput, { minimumZoom = SYSTEM_WORKFLOW_CROP_MIN_ZOOM, fit } = {}) {
   const media = requireMedia(mediaInput);
   const mask = maskInput || systemWorkflowCropMask(placement);
   const startCrop = placement?.crop === null ? null : { ...placement.crop };
-  if (!(startCrop === null || exactCrop(startCrop))) {
+  if (!(startCrop === null || exactCrop(startCrop, minimumZoom))) {
     throw cropError('SYSTEM_WORKFLOW_CROP_START_INVALID', 'Crop authoring requires a canonical starting crop');
   }
   const projected = projectSystemWorkflowTransform(
@@ -76,7 +75,12 @@ export function createSystemWorkflowCropSession(placement, mediaInput, maskInput
     media,
     startCrop || SYSTEM_WORKFLOW_DEFAULT_CROP,
   );
-  const visualCrop = normalizeCropForMask(projected.crop, mask, projected.dimensions);
+  let visualCrop = projected.crop;
+  if (startCrop === null && fit) {
+    const x = mask.width / projected.dimensions.width, y = mask.height / projected.dimensions.height;
+    visualCrop = { ...visualCrop, zoom: Math.max(minimumZoom, Math.min(x, y) / Math.max(x, y)) };
+  }
+  visualCrop = normalizeCropForMask(visualCrop, mask, projected.dimensions);
   return {
     placementId: placement.id,
     startCrop,
@@ -151,12 +155,12 @@ export function nudgeSystemWorkflowCrop(crop, mediaInput, mask, delta) {
   };
 }
 
-export function setSystemWorkflowCropZoom(crop, mediaInput, mask, zoomInput) {
+export function setSystemWorkflowCropZoom(crop, mediaInput, mask, zoomInput, minimumZoom = SYSTEM_WORKFLOW_CROP_MIN_ZOOM) {
   const media = requireMedia(mediaInput);
   if (!Number.isFinite(zoomInput)) {
     throw cropError('SYSTEM_WORKFLOW_CROP_ZOOM_INVALID', 'Crop zoom must be finite');
   }
-  const zoom = clamp(zoomInput, SYSTEM_WORKFLOW_CROP_MIN_ZOOM, SYSTEM_WORKFLOW_CROP_MAX_ZOOM);
+  const zoom = clamp(zoomInput, minimumZoom, SYSTEM_WORKFLOW_CROP_MAX_ZOOM);
   return normalizeCropForMask({ ...crop, zoom }, mask, media);
 }
 

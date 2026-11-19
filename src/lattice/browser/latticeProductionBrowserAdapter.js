@@ -1,3 +1,4 @@
+import { libraryPreviewCandidates } from '../../library/data/libraryImagePreview.js';
 import { normalizeProfileAddress } from '../../library/config.js';
 import { creatorRelationshipForProfile } from '../../creations/domain/creatorRelationship.js';
 import { parseCanonicalAssetId } from '../../profileDocument/domain/assetReference.js';
@@ -32,17 +33,9 @@ export function adaptLatticeProductionBrowserAsset(asset, profileAddress, accept
     || normalizeProfileAddress(asset?.contractAddress) !== identity.contractAddress
     || (asset?.tokenId == null ? null : String(asset.tokenId).toLowerCase()) !== identity.tokenId) return null;
 
-  const sizedVariants = (asset.imageGroups?.[0]?.variants || [])
-    .filter((variant) => Number(variant.width) > 0 && resolveBrowserPreviewUrl(variant.url))
-    .sort((left, right) => Number(left.width) - Number(right.width));
-  const libraryThumbnail = (sizedVariants.find((variant) => Number(variant.width) >= 640)
-    || sizedVariants.at(-1))?.url || asset.thumbnailUrl;
-  const previewSource = [libraryThumbnail, asset.thumbnailUrl, asset.imageUrl, asset.originalImageUrl]
-    .map(resolveBrowserPreviewUrl)
-    .find(Boolean) || null;
-  const imageVariants = (asset.imageGroups?.[0]?.variants || []).map((variant) => variant?.url);
-  const previewCandidates = [...new Set([libraryThumbnail, asset.thumbnailUrl, asset.imageUrl, asset.originalImageUrl, ...imageVariants]
-    .map(resolveBrowserPreviewUrl).filter(Boolean))];
+  const previewCandidates = libraryPreviewCandidates({ ...asset.imageGroups?.[0], thumbnailUrl: asset.thumbnailUrl,
+    originalImageUrl: asset.originalImageUrl, imageUrl: asset.imageUrl, fileType: asset.mediaFileType }).map(resolveBrowserPreviewUrl).filter((url, index, all) => all.indexOf(url) === index);
+  const previewSource = previewCandidates[0] || null;
   const resolvedSource = [asset.originalImageUrl, asset.imageUrl, asset.thumbnailUrl]
     .map(resolveBrowserPreviewUrl)
     .find(Boolean) || null;
@@ -69,6 +62,8 @@ export function adaptLatticeProductionBrowserAsset(asset, profileAddress, accept
     previewSrc: previewSource,
     previewCandidates,
     imageGroups: asset.imageGroups || [],
+    mediaFileType: asset.mediaFileType,
+    fileAttachments: asset.fileAttachments || [],
     src: source,
     stableAssetId: identity.stableAssetId,
     title: typeof asset.name === 'string' && asset.name.trim()
@@ -119,6 +114,7 @@ export function adaptLatticeProductionBrowserData({
     ...(folder.imageSelections ? { imageSelections: folder.imageSelections.map(entry => ({ ...entry })) } : {}),
     id: folder.id,
     name: folder.name,
+    ...(folder.parentId ? { parentId: folder.parentId } : {}),
     public: folder.public === true,
   }));
   const categoryOrganization = workspace.categoryOrganization || {

@@ -186,3 +186,40 @@ test('draft validation accepts exactly 512 KiB and rejects limit plus one byte',
   assert.equal(encoder.encode(JSON.stringify(plusOne)).byteLength, SYSTEM_WORKFLOW_LIMITS.maxJsonBytes + 1);
   assert.ok(validateSystemWorkflowDraft(plusOne).errors.some(({ code }) => code === 'draft_too_large'));
 });
+
+
+test('normalization cleans both field families using one detached copy, including frozen input', t => {
+  const input = draftWithPlacementCounts([1]);
+  input.appearance.menuSurfaceId = 'mist';
+  input.appearance.dossierSurfaceId = 'mist';
+  const before = structuredClone(input), clone = globalThis.structuredClone;
+  const freeze = value => { if (value && typeof value === 'object') { Object.values(value).forEach(freeze); Object.freeze(value); } };
+  freeze(input);
+  let copies = 0;
+  t.mock.method(globalThis, 'structuredClone', (value, ...options) => { copies++; return clone(value, ...options); });
+  const result = validateSystemWorkflowDraft(input);
+  assert.equal(result.valid, true, JSON.stringify(result.errors));
+  assert.equal(copies, 1, 'validation retains one protective full-document copy');
+  assert.deepEqual(input, before, 'normalization never changes the caller or its history');
+  assert.equal(Object.hasOwn(result.value.appearance, 'menuSurfaceId'), false);
+  assert.equal(Object.hasOwn(result.value.appearance, 'dossierSurfaceId'), false);
+  for (const key of ['mat', 'frameId', 'backing', 'transparencyMode'])
+    assert.equal(Object.hasOwn(result.value.grids[0].placements[0], key), false);
+  result.value.appearance.guideColor = '#123456';
+  result.value.grids[0].placements[0].transform.mirrorX = true;
+  assert.deepEqual(input, before, 'returned nested values remain independently writable');
+});
+
+test('invalid artwork presentation is rejected before cloning or cleanup', t => {
+  const input = draftWithPlacementCounts([1]);
+  input.grids[0].placements[0].mat.enabled = true;
+  const before = structuredClone(input), clone = globalThis.structuredClone;
+  let copies = 0;
+  t.mock.method(globalThis, 'structuredClone', (value, ...options) => { copies++; return clone(value, ...options); });
+  const result = validateSystemWorkflowDraft(input);
+  assert.equal(result.valid, false);
+  assert.equal(result.value, null);
+  assert.ok(result.errors.some(error => error.code === 'removed_presentation'));
+  assert.equal(copies, 0, 'invalid data cannot be silently cleaned into a valid save');
+  assert.deepEqual(input, before);
+});

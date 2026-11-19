@@ -1,4 +1,4 @@
-import { metadataImages as collectMetadataImages } from './metadataImages.js';
+import { metadataFiles, metadataImages as collectMetadataImages } from './metadataImages.js';
 import { createPublicClient, fallback, getAddress, http } from 'viem';
 import { lukso } from 'viem/chains';
 import { IPFS_GATEWAY_URL, LUKSO_RPC_FALLBACK_URLS, LUKSO_RPC_URL, normalizeProfileAddress } from '../config.js';
@@ -121,7 +121,7 @@ export function createLsp8CollectionMetadataResolver({
         || metadata.assets != null && !Array.isArray(metadata.assets))) throw new Error('Token metadata has invalid assets.');
       if (includeAssets && metadata.assets?.length > 128) throw new Error('Token metadata has too many attachments.');
       return { tokenId, name: metadata.name || metadata.title || null, description: metadata.description || '',
-        images: metadataImages(document), attributes: metadataAttributes(document),
+        images: metadataImages(document), fileAttachments: metadataFiles(metadataRoot(document)), attributes: metadataAttributes(document),
         ...(includeAssets ? { assets: Array.isArray(metadata.assets) ? metadata.assets.slice(0, 128).map(asset => ({
           url: asset?.url, fileType: asset?.fileType, verification: asset?.verification,
         })) : [] } : {}),

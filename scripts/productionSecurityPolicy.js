@@ -1,5 +1,6 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
+import { localPublicationServiceOrigin } from '../src/profileDocument/domain/publicationOrigin.js';
 
 export const NETLIFY_HEADERS_FILE = '_headers';
 
@@ -76,7 +77,9 @@ export function productionConnectOrigins(env = {}) {
   return [...new Set(origins)].sort();
 }
 
-export function createProductionContentSecurityPolicy(env = {}) {
+export function createProductionContentSecurityPolicy(env = {}, { localPreview = false } = {}) {
+  const connectOrigins = productionConnectOrigins(env);
+  if (localPreview) connectOrigins.push(localPublicationServiceOrigin(env.VITE_PUBLICATION_SERVICE_ORIGIN || undefined));
   const directives = [
     "default-src 'self'",
     "base-uri 'none'",
@@ -85,7 +88,7 @@ export function createProductionContentSecurityPolicy(env = {}) {
     "style-src 'self' 'unsafe-inline'",
     "font-src 'self'",
     "img-src 'self' https: data: blob:",
-    `connect-src 'self' ${productionConnectOrigins(env).join(' ')}`,
+    `connect-src 'self' ${connectOrigins.join(' ')}`,
     // Bundled Image paint worker; remote and blob worker scripts stay excluded.
     "worker-src 'self'",
     "frame-src 'self' https:",
@@ -97,9 +100,9 @@ export function createProductionContentSecurityPolicy(env = {}) {
   return directives.join('; ');
 }
 
-export function productionResponseSecurityHeaders(env = {}) {
+export function productionResponseSecurityHeaders(env = {}, options) {
   return Object.freeze({
-    'Content-Security-Policy': createProductionContentSecurityPolicy(env),
+    'Content-Security-Policy': createProductionContentSecurityPolicy(env, options),
     'Referrer-Policy': 'no-referrer',
     // Microphone uses the browser default plus explicit per-frame delegation.
     // Both iframe levels start at microphone 'none'; enabling Mic delegates

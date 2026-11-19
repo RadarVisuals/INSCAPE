@@ -109,14 +109,19 @@ export const useLibraryStore = create((set, get) => ({
     const beforeSectionIds = command?.type === 'create-section'
       ? new Set(get().workspace?.categoryOrganization?.sections?.map(({ id }) => id) || []) : null;
     const workspace = commitProfileScopedCategory(set, get, expectedProfileAddress, (current) => {
-      if (command?.type === 'create') return createFolder(current, command.name);
+      if (command?.type === 'create') {
+        if (command.sectionId && !current.categoryOrganization?.sections.some(section => section.id === command.sectionId)) return current;
+        const created = createFolder(current, command.name, Date.now(), command.parentId);
+        return created === current || command.parentId || !command.sectionId ? created
+          : moveCategory(created, created.folders.at(-1).id, command.sectionId);
+      }
       if (command?.type === 'rename') return renameFolder(current, command.categoryId, command.name);
       if (command?.type === 'delete') return deleteFolder(current, command.categoryId);
       if (command?.type === 'public') return setFolderPublic(current, command.categoryId, command.value);
       if (command?.type === 'create-section') return createCategorySection(current, command.name);
       if (command?.type === 'rename-section') return renameCategorySection(current, command.sectionId, command.name);
       if (command?.type === 'delete-section') return deleteCategorySection(current, command.sectionId);
-      if (command?.type === 'move-category') return moveCategory(current, command.categoryId, command.sectionId, command.beforeId);
+      if (command?.type === 'move-category') return moveCategory(current, command.categoryId, command.sectionId, command.beforeId, command.parentId);
       if (command?.type === 'move-section') return moveCategorySection(current, command.sectionId, command.beforeId);
       if (command?.type === 'asset') return setFolderAsset(current, command.categoryId, command.assetId, command.value);
       if (command?.type === 'assets' || command?.type === 'image') {

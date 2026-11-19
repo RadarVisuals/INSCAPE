@@ -24,14 +24,15 @@
 .workbench-layer-visibility, .workbench-layer-delete { opacity: 0; }
 .workbench-layer-row:is(:hover, :focus-within) > :is(.workbench-layer-visibility, .workbench-layer-delete), .workbench-layer-visibility[aria-pressed='true'] { opacity: 1; }
 .workbench-layer-confirm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.workbench-layers-actions { display: flex; flex-wrap: wrap; gap: 2px; border-top: 1px solid var(--tactile-divider); padding-top: 6px; }
+.workbench-layers-actions { display: flex; flex-wrap: wrap; gap: 2px; border-bottom: 1px solid var(--tactile-divider); padding-bottom: 6px; }
 .workbench-layers-actions button { flex: 1; }
 .workbench-layers form { display: flex; flex-wrap: wrap; gap: 4px; }
 .workbench-layers label { display: flex; gap: 6px; width: 100%; align-items: center; }
 .workbench-layers input { box-sizing: border-box; min-width: 0; width: 100%; height: var(--control-height-sm); background: var(--tactile-well); color: inherit; border: 1px solid var(--tactile-control-edge); border-radius: var(--tactile-radius-control); padding: 4px 8px; font: inherit; }
 .workbench-layers input:focus-visible { outline: 1px solid var(--tactile-accent); outline-offset: 1px; }
 .workbench-layers p { margin: 4px 0; }
-.workbench-layer-reopen { margin-left: 20px; }
+/* Match the name after the 24px disclosure slot, 14px icon and 8px gap. */
+.workbench-layer-reopen { margin-left: 46px; max-width: calc(100% - 46px); text-align: left; }
 @media (hover: none) {
   .workbench-layer-visibility, .workbench-layer-delete { opacity: 1; }
 }

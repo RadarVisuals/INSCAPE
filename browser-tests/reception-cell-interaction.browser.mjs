@@ -1,10 +1,10 @@
-import { setBentoCellCount } from './fixtures/bento-layout.mjs';
+import { addBentoCell, setBentoCellCount } from './fixtures/bento-layout.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdir } from 'node:fs/promises';
 import { chromium } from 'playwright-core';
 import { browserExecutable } from '../scripts/browserEnvironment.mjs';
-import { editorMenu, editorCommand, setEditorSidebarOpen } from './fixtures/editor-menu.mjs';
+import { openEditorMenu, editorMenu, editorCommand, setEditorSidebarOpen } from './fixtures/editor-menu.mjs';
 import { openSharedTool } from './fixtures/shared-tools.mjs';
 
 const origin = process.env.INSCAPE_TEST_ROOT || 'http://127.0.0.1:5217';
@@ -90,7 +90,7 @@ test('image-covered cells enter on double-click and expose the owning cell setti
   } finally { await browser.close(); }
 });
 
-test('Cell Inspector reuses split and merge actions and saves selected-cell styling', async () => {
+test('Cell Inspector merges added cells, omits partition controls and saves selected-cell styling', async () => {
   const { browser, page, errors } = await setup();
   try {
     const first = await cell(page);
@@ -98,8 +98,9 @@ test('Cell Inspector reuses split and merge actions and saves selected-cell styl
     await panel.getByRole('tab', { name: 'Cell', exact: true }).click();
     const radius = panel.getByLabel('Cell corner radius (px)', { exact: true });
     await radius.fill('32'); await radius.press('Enter');
-    await panel.getByRole('button', { name: 'Split cell', exact: true }).click();
-    await page.getByRole('listbox', { name: 'Split cell', exact: true }).getByRole('option', { name: 'Vertical', exact: true }).click();
+    assert.equal(await panel.getByRole('button', { name: 'Split cell', exact: true }).count(), 0);
+    await page.locator('[data-editor-cell-surface="' + first + '"]').click();
+    await addBentoCell(page);
     assert.equal((await reception(page)).cells.length, 2);
     assert.equal((await reception(page)).cells[0].id, first);
     await panel.getByRole('button', { name: 'Merge cell', exact: true }).click();
@@ -124,7 +125,7 @@ for (const width of [1440, 900]) test(`Merge below aligns unequal rows with artw
       await editorCommand(page, 'Edit', 'Settings'); await page.getByRole('button', { name: 'LIGHT', exact: true }).click();
       await page.getByRole('button', { name: 'Close Settings', exact: true }).click();
     }
-    await editorMenu(page, 'Bento').click();
+    await openEditorMenu(page, 'Bento');
     const panel = page.getByRole('dialog', { name: 'Bento settings', exact: true });
     await panel.getByRole('button', { name: 'New layout', exact: true }).click();
     await setBentoCellCount(panel, 6);
@@ -181,7 +182,7 @@ for (const width of [1440, 900]) test(`Merge below aligns unequal rows with artw
     await editorCommand(page, 'Edit', 'Undo'); assert.deepEqual(await reception(page), before);
     await editorCommand(page, 'Edit', 'Redo'); assert.deepEqual(await reception(page), after);
     await editorCommand(page, 'Canvas', 'Preview');
-    const preview = page.getByRole('region', { name: 'Reception responsive preview', exact: true });
+    const preview = page.getByRole('region', { name: 'Studio responsive preview', exact: true });
     await preview.getByText('CONTENTS FROM THE LOWER CELL', { exact: true }).waitFor();
     assert.equal(await preview.locator(`[data-layer-id="${after.imageModules[0].id}"]`).count(), 1);
     await page.screenshot({ path: `${output}/unequal-merge-preview-${width}.png` });

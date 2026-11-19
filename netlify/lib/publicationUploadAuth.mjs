@@ -2,6 +2,7 @@ import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 import { createPublicClient, hashMessage, http } from 'viem';
 import { lukso } from 'viem/chains';
 import { ERC165_ABI, LUKSO_CHAIN_ID, LUKSO_RPC_URL, LSP0_ERC165_INTERFACE_ID } from '../../src/library/config.js';
+import { GALLERY_PUBLICATION_CAPABILITY } from '../../src/profileDocument/domain/constants.js';
 import { assertUploadPermit, uploadAuthorizationMessage, UPLOAD_AUTH_LIFETIME_MS } from '../../src/profileDocument/domain/uploadAuthorization.js';
 
 export class UploadServiceError extends Error {
@@ -33,7 +34,7 @@ export function createUploadChallenge({ profile, hash, bytes, origin, policy, no
   const permit = assertUploadPermit({ version: 1, profile, hash, bytes, origin, issuedAt: now,
     expiresAt: Math.min(now + UPLOAD_AUTH_LIFETIME_MS, nextMonth), nonce }, now);
   const payload = Buffer.from(JSON.stringify(permit)).toString('base64url');
-  return { permit, authorization: `${payload}.${mac(payload, policy.secret).toString('base64url')}`, message: uploadAuthorizationMessage(permit) };
+  return { capabilities: [GALLERY_PUBLICATION_CAPABILITY], permit, authorization: `${payload}.${mac(payload, policy.secret).toString('base64url')}`, message: uploadAuthorizationMessage(permit) };
 }
 
 export function verifyUploadAuthorization(authorization, expected, policy, now = Date.now()) {

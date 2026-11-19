@@ -12,7 +12,7 @@ import { HorizontalRule } from '@tiptap/extension-horizontal-rule';
 import { Italic } from '@tiptap/extension-italic';
 import { ListItem } from '@tiptap/extension-list/item';
 import { ListKeymap } from '@tiptap/extension-list/keymap';
-import { Link } from '@tiptap/extension-link';
+import { ArticleLink } from './articleLink.js';
 import { OrderedList } from '@tiptap/extension-list/ordered-list';
 import { Paragraph } from '@tiptap/extension-paragraph';
 import { Strike } from '@tiptap/extension-strike';
@@ -20,12 +20,12 @@ import { Text } from '@tiptap/extension-text';
 import { Underline } from '@tiptap/extension-underline';
 import { TrailingNode } from '@tiptap/extensions/trailing-node';
 
-// Preserve StarterKit's extension order, defaults and existing link options,
+// Preserve StarterKit's extension order and defaults, with explicit article links,
 // while importing only the extensions used by the article editor.
 export const articleExtensions = [
   Bold, Blockquote, BulletList, Code, Document, Dropcursor, Gapcursor,
   HardBreak, Heading.configure({ levels: [1, 2, 3] }), UndoRedo, HorizontalRule, Italic,
   ListItem, ListKeymap,
-  Link.configure({ openOnClick: false, autolink: false, linkOnPaste: false, protocols: ['https', 'mailto'] }),
+  ArticleLink,
   OrderedList, Paragraph, Strike, Text, Underline, TrailingNode,
 ];

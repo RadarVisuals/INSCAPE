@@ -9,6 +9,8 @@ export function sideDockEdge(event, viewport) {
 export const validSideDock = value => value == null || Boolean(value && Number.isFinite(value.width)
   && value.width >= 160 && value.width <= 8000 && Array.isArray(value.items) && value.items.length <= 32
   && (value.leftWidth == null || Number.isFinite(value.leftWidth) && value.leftWidth >= 160 && value.leftWidth <= 8000)
+  && (value.collapsed === undefined || value.collapsed && typeof value.collapsed === 'object' && !Array.isArray(value.collapsed)
+    && Object.entries(value.collapsed).every(([side, collapsed]) => ['left', 'right'].includes(side) && typeof collapsed === 'boolean'))
   && value.items.every(item => item && typeof item.id === 'string' && item.id.length <= 160
     && (item.side == null || ['left', 'right'].includes(item.side))
     && Number.isFinite(item.height) && item.height > 0 && item.height <= 8000)
@@ -57,6 +59,16 @@ export function createSideDockStore(preferences) {
     },
     preview: point => publish({ preview: point }),
     activate: id => { if (state.active !== id) publish({ active: id }); },
+    reveal(id) {
+      const item = state.layout.items.find(item => item.id === id), side = item && dockSide(item);
+      if (side && state.layout.collapsed?.[side]) save({ ...state.layout, collapsed: { ...state.layout.collapsed, [side]: false } });
+      if (state.active !== id) publish({ active: id });
+    },
+    setCollapsed(side, collapsed) {
+      if (!['left', 'right'].includes(side) || typeof collapsed !== 'boolean' || Boolean(state.layout.collapsed?.[side]) === collapsed) return;
+      // Presentation only: keep registrations, order, split heights and widths.
+      save({ ...state.layout, collapsed: { ...state.layout.collapsed, [side]: collapsed } });
+    },
     restore: save,
     detach(id) {
       const items = state.layout.items.filter(item => item.id !== id);
@@ -71,7 +83,8 @@ export function createSideDockStore(preferences) {
       const items = state.layout.items.filter(item => item.id !== id);
       const index = items.findIndex(item => dockSide(item) === side && frames[item.id] && y < frames[item.id].top + frames[item.id].height / 2);
       items.splice(index < 0 ? items.length : index, 0, { id, height: frame.height, side });
-      save({ ...state.layout, items });
+      save({ ...state.layout, items, ...(state.layout.collapsed?.[side]
+        ? { collapsed: { ...state.layout.collapsed, [side]: false } } : {}) });
     },
     resize(id, frame) {
       const frames = sideDockFrames(state.layout, state.windows, state.viewport), current = frames[id];

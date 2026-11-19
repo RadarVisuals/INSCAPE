@@ -2,21 +2,50 @@ import { openTextToolSection } from './fixtures/text-tool-sections.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { chromium } from 'playwright-core';
-import { mountTextToolsFixture } from './fixtures/text-tools-fixture.mjs';
+import { mountTextToolsFixture, focusFixtureText } from './fixtures/text-tools-fixture.mjs';
 import { setWorkbenchZoom } from './fixtures/workbench-zoom.mjs';
+import { editorDestination } from './fixtures/editor-menu.mjs';
 const origin = process.env.INSCAPE_TEXT_ROOT || 'http://127.0.0.1:5173';
 const settle = page => page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
 async function exposeText(page) {
-  const collapse = page.locator('.editor-menu-brand[aria-expanded="true"]');
-  if (await collapse.count()) await collapse.click();
-  const info = page.getByRole('button', { name: 'Close Inspector', exact: true });
-  if (await info.count()) { await info.focus(); await info.press('Enter'); }
-  const saved = await page.evaluate(() => window.savedDraft());
-  await page.locator('main.system-workflow').focus();
-  const x = page.viewportSize().width / 2;
-  await page.mouse.move(x, 780); await page.keyboard.down('Space'); await page.mouse.down();
-  await page.mouse.move(x + 300, 880, { steps: 4 }); await page.mouse.up(); await page.keyboard.up('Space'); await settle(page);
-  assert.deepEqual(await page.evaluate(() => window.savedDraft()), saved, 'camera setup preserves the authored Text frame');
+  await focusFixtureText(page, { closeInspector: true });
+}
+
+async function exposeReadAction(page) {
+  const win = page.locator('.text-window').first();
+  await win.hover();
+  const read = page.getByRole('button', { name: 'Read', exact: true });
+  const action = await read.boundingBox(), menu = await page.locator('.editor-menu-bar').boundingBox();
+  const delta = Math.ceil(menu.y + menu.height + 12 - action.y);
+  if (delta > 0) {
+    const before = await page.evaluate(() => window.savedDraft());
+    const host = page.locator('main.system-workflow');
+    const point = await host.evaluate((node, { top, delta }) => {
+      for (let y = top + 32; y < innerHeight - delta - 100; y += 40) {
+        for (let x = 20; x < innerWidth - 20; x += 40) {
+          const hit = document.elementFromPoint(x, y);
+          if (hit === node || hit?.matches('.system-workflow__workbench')) return { x, y };
+        }
+      }
+      throw Error('No exposed camera-pan background below the menu');
+    }, { top: menu.y + menu.height, delta });
+    await host.focus();
+    await page.mouse.move(point.x, point.y);
+    await page.keyboard.down('Space');
+    try {
+      await page.mouse.down();
+      await page.mouse.move(point.x, point.y + delta, { steps: 6 });
+    } finally { await page.mouse.up(); await page.keyboard.up('Space'); }
+    await settle(page);
+    assert.deepEqual(await page.evaluate(() => window.savedDraft()), before, 'toolbar-clearance panning does not move authored Text');
+    await win.hover();
+  }
+  const hit = await read.evaluate(node => {
+    const rect = node.getBoundingClientRect(), target = document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2);
+    return { reachable: node.contains(target), intercept: target?.getAttribute('class'), rect: rect.toJSON() };
+  });
+  assert.equal(hit.reachable, true, `Read must receive a real pointer click: ${JSON.stringify(hit)}`);
+  return read;
 }
 
 for (const width of [1440, 700]) test(`Rejected Library drop onto Read mode Text does not report an error in Display at ${width}px`, { timeout: 60000 }, async () => {
@@ -25,12 +54,10 @@ for (const width of [1440, 700]) test(`Rejected Library drop onto Read mode Text
     const page = await browser.newPage({ viewport: { width, height: 1000 }, reducedMotion: 'reduce' });
     await mountTextToolsFixture(page, origin);
     await exposeText(page);
-    await page.getByRole('button', { name: 'Read', exact: true }).click();
+    await (await exposeReadAction(page)).click();
     const before = await page.evaluate(() => JSON.stringify(window.savedDraft()));
-    await page.getByRole('button', { name: 'Library', exact: true }).click();
+    await editorDestination(page, 'Library');
     await page.getByRole('region', { name: 'Library workspace' }).waitFor();
-    const resizeLibrary = page.getByRole('button', { name: 'Resize Library', exact: true });
-    if (await resizeLibrary.count()) await resizeLibrary.press('Home');
     const card = page.getByRole('button', { name: 'ABYSSAL STUDY / INSCAPE STUDIES', exact: true });
     const source = await card.boundingBox();
     await page.mouse.move(source.x + source.width / 2, source.y + 35); await page.mouse.down();
@@ -79,8 +106,8 @@ for (const zoom of [1, .75]) test(`Library inserts at the drop point without rep
     await body.focus(); await body.press('Control+A');
     const before = await page.evaluate(() => window.savedDraft().texts[0].article.content);
     await page.locator('.text-module-scroll').first().evaluate(node => { node.scrollTop = node.scrollHeight; });
-    await page.getByRole('button', { name: 'Library', exact: true }).click();
-    await page.getByRole('button', { name: 'Resize Library', exact: true }).press('Home');
+    await editorDestination(page, 'Library');
+    await page.getByRole('region', { name: 'Library workspace' }).waitFor();
     const card = page.getByRole('region', { name: 'Library workspace' }).getByRole('button', { name: 'ABYSSAL STUDY / INSCAPE STUDIES', exact: true });
     await card.scrollIntoViewIfNeeded();
     const source = await card.boundingBox(), target = await body.locator('p').last().boundingBox();
@@ -100,7 +127,7 @@ for (const zoom of [1, .75]) test(`Library inserts at the drop point without rep
     assert.equal(text(after), text(before), 'a Library drop preserves all selected writing');
     assert.ok(after.content.findIndex(node => node.type === 'artwork') >= 16, 'inserts near the final paragraph, not at the old selection');
     assert.deepEqual(after.content[0], before.content[0], 'the link and first paragraph remain intact');
-    await page.getByRole('button', { name: 'Library', exact: true }).click();
+    await editorDestination(page, 'Library');
     await body.focus(); await body.press('Control+z'); await settle(page);
     assert.deepEqual(await page.evaluate(() => window.savedDraft().texts[0].article.content), before, 'one undo removes only the artwork insertion');
     await body.press('Control+Shift+z'); await settle(page);

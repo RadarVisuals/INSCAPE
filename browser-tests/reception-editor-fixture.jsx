@@ -1,9 +1,7 @@
-import React, { useMemo, useState, useSyncExternalStore } from 'react';
+import React, { useState, useSyncExternalStore } from 'react';
 import { createRoot } from 'react-dom/client';
 import OwnerSystemWorkflowRuntime from '../src/public/ownerSystemWorkflow/OwnerSystemWorkflowRuntime.jsx';
 import ProfileOverview from '../src/profileDocument/components/ProfileOverview.jsx';
-import WorkbenchOverview from '../src/public/workbenchOverview/WorkbenchOverview.jsx';
-import { workbenchOverviewModel } from '../src/public/workbenchOverview/workbenchOverviewModel.js';
 import { createSystemWorkflowDraftStore } from '../src/systemWorkflow/systemWorkflowDraftStore.js';
 import { createReception } from '../src/profileDocument/domain/receptionPresentation.js';
 import { splitReception } from '../src/reception/receptionLayout.js';
@@ -47,26 +45,14 @@ if (new URLSearchParams(location.search).has('sample') && !root.getSnapshot().re
   if (!root.commitCompletedOperation({ ...draft, reception }, { expectedGeneration: root.getGeneration() })) throw Error('Invalid sample');
 }
 window.receptionFixture = { root, fail: value => { failing = value; }, publish: () => buildProfileDocumentV9({ profileAddress, profileIdentity: reviewProfile, systemWorkflowDraft: root.getDraft(), assetRecords: assets }) };
-function CanvasOverview({ onAbout }) {
-  const generation = useSyncExternalStore(root.subscribe, root.getGeneration);
-  const previews = useMemo(() => {
-    const available = new Map(assets.map(asset => [asset.id, asset]));
-    return root.listWorkbenches().map(item => { const entry = root.readWorkbench(item.id);
-      return { ...entry, model: workbenchOverviewModel(entry.draft, available) }; });
-  }, [generation]);
-  const [selectedId, select] = useState(root.getWorkbenchId), [view, setView] = useState({ layout: 'grid', wrap: true });
-  const [cardSize, setCardSize] = useState(2), selected = previews.find(item => item.id === selectedId) || previews[0];
-  return <WorkbenchOverview items={previews} previews={previews} selected={selected} model={selected.model}
-    profile={reviewProfile} onSelect={select} view={view} onViewChange={setView} cardSize={cardSize} onCardSize={setCardSize} onOpenReception={onAbout} />;
-}
 function Fixture() {
   useSyncExternalStore(root.subscribe, root.getGeneration);
   const publicView = new URLSearchParams(location.search).has('public');
   const [surface, setSurface] = useState(publicView ? 'reception' : 'edit');
-  if (surface === 'canvases') return <CanvasOverview onAbout={() => setSurface(publicView ? 'reception' : 'edit')} />;
   return surface === 'edit' ? <OwnerSystemWorkflowRuntime profileAddress={profileAddress} rootStore={root} reviewStorage={storage}
     receptionEditorRequested onOpenReception={() => setSurface('reception')}
     reviewAssets={assets} reviewCategories={[]} reviewProfile={reviewProfile} />
-    : <ProfileOverview document={window.receptionFixture.publish()} onOpenCanvas={() => setSurface('canvases')} />;
+    : <ProfileOverview document={window.receptionFixture.publish()} reception={surface === 'reception'} works={surface === 'canvases'}
+        onOpenOverview={() => setSurface('reception')} onOpenCanvas={() => setSurface('canvases')} />;
 }
 createRoot(document.getElementById('root')).render(<Fixture />);

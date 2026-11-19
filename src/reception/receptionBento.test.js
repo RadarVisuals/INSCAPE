@@ -1,22 +1,54 @@
-import { insertReceptionBentoCell, receptionBentoInsertionTargets, receptionBentoInsertionDistance } from './receptionBentoInsertion.js';
+import { drawnCellArgs, drawOuterCell } from './fixtures/cellDrawing.js';
+import { moveReceptionBentoCell, receptionBentoKeyboardTarget } from './receptionBentoInsertion.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createSystemWorkflowDraftStore } from '../systemWorkflow/systemWorkflowDraftStore.js';
 import { createReceptionEditorScope } from './receptionEditorScope.js';
 import { RECEPTION_LAYOUT_DEFAULTS } from './receptionLayoutGenerator.js';
-import { receptionBentoSettings, receptionBentoDividers, receptionBentoEqualPosition, resizeReceptionBento, setReceptionBentoSettings } from './receptionBento.js';
-import { receptionModuleWindow, withReceptionModuleWindow, validReceptionEditorDocument, projectReceptionEditorDocument } from './receptionEditorDocument.js';
+import { receptionBentoSettings, receptionBentoDividers, resizeReceptionBento, setReceptionBentoSettings } from './receptionBento.js';
+import { receptionModuleWindow, withReceptionModuleWindow, validReceptionEditorDocument, projectReceptionEditorDocument, receptionResponsiveLayout } from './receptionEditorDocument.js';
 import { addImageModule, saveImageModule } from '../imageModule/imageModuleSession.js';
 import { createReceptionExample } from '../../design-system/lab/receptionExample.js';
 import { addShape, editShape } from '../shapes/shapeSession.js';
 import { restoreReceptionEditorDocument } from './receptionEditorDocument.js';
-import { receptionCellMerge, receptionCellSplit, mergeReceptionCells } from './receptionCellStructure.js';
+import { receptionCellMerge, mergeReceptionCells } from './receptionCellStructure.js';
 import { projectReceptionMember } from './editorCellGeometry.js';
 import { addTextModule } from '../text/textSession.js';
 import { editArtworkLayers } from '../systemWorkflow/artworkLayerSession.js';
 import { removeWorkbenchModule } from '../systemWorkflow/removeWorkbenchModule.js';
+import { DEFAULT_RECEPTION_LIGHT, receptionLight } from './receptionAtmosphere.js';
 
 const profile = '0x' + '7'.repeat(40);
+for (const direction of ['down', 'up', 'both']) for (const enabled of [true, false]) test(`${direction} page light (${enabled ? 'on' : 'off'}) is atomic, undoable and published without changing cells or other canvases`, () => {
+  const { root, scope, storage, edit, fail } = fixture();
+  const before = structuredClone(scope.getReception()), canvases = structuredClone(root.getDraft().workbenches);
+  assert.equal(receptionLight(before).direction, 'down');
+  assert.deepEqual(scope.getReception(), before, 'render defaults do not save anything');
+  const lighting = { enabled, color: '#9a67db', strength: .48, spread: .8, position: .25, direction };
+  edit('settings', { lighting });
+  const saved = structuredClone(scope.getReception());
+  assert.deepEqual(saved, { ...before, showFrame: true, lighting });
+  assert.deepEqual(root.getDraft().workbenches, canvases);
+  assert.ok(scope.undo()); assert.deepEqual(scope.getReception(), before);
+  assert.ok(scope.redo()); assert.deepEqual(scope.getReception(), saved);
+  const published = projectReceptionEditorDocument(saved);
+  assert.ok(validReceptionEditorDocument(published, true));
+  assert.deepEqual(restoreReceptionEditorDocument(published).lighting, lighting);
+  fail(true); assert.throws(() => edit('settings', { lighting: DEFAULT_RECEPTION_LIGHT })); fail(false);
+  assert.deepEqual(scope.getReception(), saved);
+  for (const invalid of [null, {}, { ...lighting, color: 'red' }, { ...lighting, strength: 2 },
+    { ...lighting, spread: NaN }, { ...lighting, position: -.1 }, { ...lighting, direction: 'sideways' },
+    { ...lighting, direction: null }, { ...lighting, enabled: 'false' }, { ...lighting, enabled: null }, { ...lighting, unknown: true }]) {
+    assert.throws(() => edit('settings', { lighting: invalid }));
+    assert.equal(validReceptionEditorDocument({ ...saved, lighting: invalid }), false);
+  }
+  scope.release();
+  const reopened = createReceptionEditorScope(createSystemWorkflowDraftStore({ profileAddress: profile, storage }));
+  assert.deepEqual(reopened.getReception(), saved);
+  reopened.generateCellLayout(RECEPTION_LAYOUT_DEFAULTS, 15, reopened.getGeneration());
+  assert.deepEqual(reopened.getReception().lighting, lighting);
+  reopened.release();
+});
 function fixture(count = 6, seed = 42) {
   const data = new Map(); let failure = false;
   const storage = { getItem: key => data.get(key) ?? null, setItem: (key, value) => { if (failure) throw Error('Full'); data.set(key, value); }, removeItem: key => data.delete(key) };
@@ -26,11 +58,10 @@ function fixture(count = 6, seed = 42) {
   scope.generateCellLayout({ ...RECEPTION_LAYOUT_DEFAULTS, columns, rows: count / columns }, seed, scope.getGeneration());
   return { root, scope, storage, fail: value => { failure = value; }, edit: (action, ...args) => scope.editBento(action, args, scope.getGeneration()) };
 }
-function closed(value) {
+function bounded(value) {
   assert.ok(validReceptionEditorDocument(value));
   const { width, height, gap, padding } = receptionBentoSettings(value), area = value.workbench.area;
   const rectangles = value.cells.map(cell => receptionModuleWindow(value, cell.id));
-  assert.equal(rectangles.reduce((sum, r) => sum + (r.width + gap) * (r.height + gap), 0), (width - padding * 2 + gap) * (height - padding * 2 + gap));
   for (const [i, a] of rectangles.entries()) {
     assert.ok(a.width >= 80 && a.height >= 24);
     assert.ok(a.left >= area.left + padding && a.top >= area.top + padding);
@@ -40,11 +71,29 @@ function closed(value) {
   }
 }
 
+function closed(value) {
+  bounded(value);
+  const { width, height, gap, padding } = receptionBentoSettings(value);
+  const rectangles = value.cells.map(cell => receptionModuleWindow(value, cell.id));
+  assert.equal(rectangles.reduce((sum, r) => sum + (r.width + gap) * (r.height + gap), 0), (width - padding * 2 + gap) * (height - padding * 2 + gap));
+}
+
+// Explicit empty geometry keeps merge/insertion fixtures independent of UI commands.
+function seedCellFrames(state, entries) {
+  const draft = state.root.getDraft(), value = draft.reception, shape = value.shapes[0], cell = value.cells[0];
+  value.shapes = entries.map(([id], index) => ({ ...shape, id, name: 'Cell ' + (index + 1) }));
+  value.cells = entries.map(([id]) => ({ ...structuredClone(cell), id, members: [] }));
+  value.workbench.shapes = entries.map(([id, window]) => ({ ...value.workbench.shapes[0], id, window }));
+  value.artworkLayers = entries.map(([id]) => id);
+  assert.ok(state.root.commitCompletedOperation(draft, { expectedGeneration: state.root.getGeneration() }));
+  closed(state.scope.getReception());
+}
 function fourCells() {
   const state = fixture(1), first = state.scope.getCells()[0].id;
-  state.edit('split', first, 'vertical', 'shape:right');
-  state.edit('split', first, 'horizontal', 'shape:bottom-left');
-  state.edit('split', 'shape:right', 'horizontal', 'shape:bottom-right');
+  seedCellFrames(state, [[first, { left: 24, top: 24, width: 684, height: 414 }],
+    ['shape:bottom-left', { left: 24, top: 462, width: 684, height: 414 }],
+    ['shape:right', { left: 732, top: 24, width: 684, height: 414 }],
+    ['shape:bottom-right', { left: 732, top: 462, width: 684, height: 414 }]]);
   return { ...state, first };
 }
 
@@ -71,7 +120,7 @@ test('one Bento cell retains overlapping independent Images when one artwork is 
   assert.deepEqual(reopened.getReception(), after); reopened.release(); scope.release();
 });
 
-test('cell deletion fills generated layouts, whole rows and multiple selections without gaps or overlaps', () => {
+test('cell deletion preserves every surviving frame across generated layouts, whole rows and selections', () => {
   for (const count of [3, 6, 10, 16]) for (const seed of [1, 12, 42, 77]) {
     const { scope } = fixture(count, seed), before = structuredClone(scope.getReception());
     const selections = [...before.cells.map(cell => [cell.id]), before.cells.filter((_, i) => i % 2 === 0).map(cell => cell.id),
@@ -79,14 +128,15 @@ test('cell deletion fills generated layouts, whole rows and multiple selections 
     for (const ids of selections) {
       editArtworkLayers(scope, profile, { type: 'delete', ids });
       assert.equal(scope.getCells().length, count - ids.length);
-      if (scope.getCells().length) closed(scope.getReception());
+      if (scope.getCells().length) bounded(scope.getReception());
+      for (const cell of scope.getCells()) assert.deepEqual(receptionModuleWindow(scope.getReception(), cell.id), receptionModuleWindow(before, cell.id));
       assert.equal(scope.undo(), true); assert.deepEqual(scope.getReception(), before);
     }
     scope.release();
   }
 });
 
-test('deleting a spanning cell fills its gap, fits live neighbouring artwork and remains one atomic history operation', () => {
+test('deleting a spanning cell preserves its gap and live neighbouring artwork and remains one atomic history operation', () => {
   const { root, scope, edit, fail, storage, first } = fourCells();
   edit('merge', first, 'below');
   const neighbour = 'shape:right', frame = receptionModuleWindow(scope.getReception(), neighbour);
@@ -100,10 +150,11 @@ test('deleting a spanning cell fills its gap, fits live neighbouring artwork and
   const presentation = structuredClone(scope.getSnapshot().workbench);
   presentation.imageModules.find(item => item.id === image).position.left += 10;
   editArtworkLayers(scope, profile, { type: 'delete', ids: [first] }, scope.getGeneration(), presentation);
-  const after = structuredClone(scope.getReception()); closed(after);
+  const after = structuredClone(scope.getReception()); bounded(after);
+  assert.deepEqual(receptionModuleWindow(after, neighbour), frame);
   const filled = receptionModuleWindow(after, neighbour), artwork = receptionModuleWindow(after, image);
   assert.equal(artwork.width, filled.width);
-  assert.ok(Math.abs(artwork.left - (filled.left + 10 * filled.width / frame.width)) < 1e-9, 'live content transforms with the expanded cell');
+  assert.ok(Math.abs(artwork.left - (filled.left + 10 * filled.width / frame.width)) < 1e-9, 'live content placement remains unchanged');
   assert.deepEqual(root.getDraft().workbenches, canvases);
   assert.equal(scope.undo(), true); assert.deepEqual(scope.getReception().cells, before.cells);
   assert.equal(receptionModuleWindow(scope.getReception(), image).left, frame.left + 10);
@@ -113,11 +164,12 @@ test('deleting a spanning cell fills its gap, fits live neighbouring artwork and
   const remaining = scope.getCells().map(cell => cell.id);
   editArtworkLayers(scope, profile, { type: 'delete', ids: remaining });
   assert.equal(scope.getCells().length, 0, 'deleting the final cells leaves an empty canvas');
-  assert.ok(scope.getReception().imageModules.some(item => item.id === image), 'cell deletion preserves independent artwork');
+  assert.equal(scope.getReception().imageModules.some(item => item.id === image), false, 'deleting the owning cell also removes its artwork');
+  assert.equal(scope.undo(), true); assert.deepEqual(scope.getReception(), after, 'one Undo restores the deleted cells and their artwork');
   scope.release();
 });
 
-test('deletion repairs interlocking spans without losing the remaining cell identities', () => {
+test('deletion leaves interlocking spans and remaining cell identities unchanged', () => {
   const { scope } = fixture(5), before = structuredClone(scope.getReception()), ids = before.cells.map(cell => cell.id);
   let next = before;
   // A pinwheel has no complete neighbour along any side of its central cell.
@@ -126,10 +178,12 @@ test('deletion repairs interlocking spans without losing the remaining cell iden
   const draft = scope.getDraft();
   assert.equal(scope.commitCompletedOperation({ ...draft, workbench: next.workbench }, { expectedGeneration: scope.getGeneration() }), true); closed(scope.getReception());
   editArtworkLayers(scope, profile, { type: 'delete', ids: [ids[4]] });
-  closed(scope.getReception()); assert.deepEqual(scope.getCells().map(cell => cell.id), ids.slice(0, 4)); scope.release();
+  bounded(scope.getReception());
+  for (const id of ids.slice(0, 4)) assert.deepEqual(receptionModuleWindow(scope.getReception(), id), receptionModuleWindow(next, id));
+  assert.deepEqual(scope.getCells().map(cell => cell.id), ids.slice(0, 4)); scope.release();
 });
 
-test('directional merges create spanning cells and split restores rectangular partitions without moving other cells', () => {
+test('directional merges create spanning cells without moving other cells', () => {
   for (const [direction, target, neighbour] of [['below', 'first', 'shape:bottom-left'], ['above', 'shape:bottom-left', 'first'],
     ['right', 'first', 'shape:right'], ['left', 'shape:right', 'first']]) {
     const { scope, edit, first } = fourCells(), before = structuredClone(scope.getReception());
@@ -144,8 +198,7 @@ test('directional merges create spanning cells and split restores rectangular pa
       assert.deepEqual(receptionModuleWindow(merged, cell.id), receptionModuleWindow(before, cell.id));
     assert.equal(scope.undo(), true); assert.deepEqual(scope.getReception(), before);
     assert.equal(scope.redo(), true); assert.deepEqual(scope.getReception(), merged);
-    edit('split', id, ['above', 'below'].includes(direction) ? 'horizontal' : 'vertical'); closed(scope.getReception());
-    assert.equal(scope.getCells().length, 4); scope.release();
+    scope.release();
   }
   const { scope, edit, first } = fourCells();
   edit('merge', first, 'below');
@@ -299,7 +352,7 @@ test('available merges keep generated partitions closed without mutating the pro
   assert.ok(alignedCount > 0);
 });
 
-test('merge preserves native content, locked members, ordering and publication; split carries content into the first half', () => {
+test('merge preserves native content, locked members, ordering, publication and reload', () => {
   const { root, scope, edit, storage, first } = fourCells(), neighbour = 'shape:bottom-left';
   for (const id of [first, neighbour]) {
     const frame = receptionModuleWindow(scope.getReception(), id);
@@ -325,31 +378,19 @@ test('merge preserves native content, locked members, ordering and publication; 
   assert.ok(validReceptionEditorDocument(projectReceptionEditorDocument(merged), true));
   assert.deepEqual(root.getDraft().workbenches, canvases);
   assert.ok(scope.undo()); assert.deepEqual(scope.getReception(), before); assert.ok(scope.redo());
-  edit('split', first, 'horizontal', 'shape:new-half');
-  const split = structuredClone(scope.getReception()); closed(split);
-  assert.deepEqual(split.cells.find(cell => cell.id === first).members, members);
-  assert.deepEqual(split.cells.find(cell => cell.id === 'shape:new-half').members, []);
-  const oldFrame = receptionModuleWindow(merged, first), newFrame = receptionModuleWindow(split, first);
-  for (const id of members) {
-    const old = receptionModuleWindow(merged, id), next = receptionModuleWindow(split, id);
-    assert.equal(next.left, old.left); assert.equal(next.width, old.width);
-    assert.ok(Math.abs(next.top - (newFrame.top + (old.top - oldFrame.top) * newFrame.height / oldFrame.height)) < 0.001);
-    assert.ok(Math.abs(next.height - old.height * newFrame.height / oldFrame.height) <= 0.5);
-  }
-  assert.ok(scope.undo()); assert.deepEqual(scope.getReception(), merged); assert.ok(scope.redo()); scope.release();
+  scope.release();
   const reopened = createReceptionEditorScope(createSystemWorkflowDraftStore({ profileAddress: profile, storage }));
-  assert.deepEqual(reopened.getReception(), split); reopened.release();
+  assert.deepEqual(reopened.getReception(), merged); reopened.release();
 });
 
-test('merge and split reject invalid geometry, conflicting content, hidden/private neighbours, capacity and stale saves', () => {
+test('merge rejects conflicting content, hidden/private neighbours and stale saves', () => {
   const { root, scope, edit, fail, first } = fourCells(), before = structuredClone(scope.getReception());
-  for (const [action, args] of [['merge', [first, 'below']], ['split', [first, 'horizontal']]]) {
+  for (const [action, args] of [['merge', [first, 'below']]]) {
     fail(true); assert.throws(() => edit(action, ...args), /could not be saved/u); fail(false);
     assert.deepEqual(scope.getReception(), before);
     assert.throws(() => scope.editBento(action, args, scope.getGeneration() - 1), /changed/u);
   }
   assert.throws(() => edit('merge', first, 'above'), /no neighbouring/u);
-  assert.throws(() => edit('split', first, 'diagonal'), /direction/u);
   const patch = make => { const draft = root.getDraft(); make(draft.reception); assert.ok(root.commitCompletedOperation(draft, { expectedGeneration: root.getGeneration() })); };
   patch(value => { value.cells[0].content = 'profile'; value.cells[1].content = 'links'; });
   assert.throws(() => edit('merge', first, 'below'), /separate profile/u); assert.ok(scope.undo());
@@ -359,23 +400,20 @@ test('merge and split reject invalid geometry, conflicting content, hidden/priva
   assert.throws(() => edit('merge', first, 'below'), /publication visibility/u); assert.ok(scope.undo());
   patch(value => { value.workbench.shapes.find(item => item.id === 'shape:bottom-left').open = false; });
   assert.throws(() => edit('merge', first, 'below'), /Show the neighbouring/u); assert.ok(scope.undo());
-  patch(value => { value.workbench.shapes.find(item => item.id === first).window.height = 71; });
-  assert.ok(receptionCellSplit(scope.getReception(), first, 'horizontal').reason.includes('24')); assert.ok(scope.undo());
   const generation = scope.getGeneration(); scope.release();
   assert.throws(() => scope.editBento('merge', [first, 'below'], generation), /no longer active/u);
-  const full = fixture(16); assert.ok(receptionCellSplit(full.scope.getReception(), full.scope.getCells()[0].id, 'vertical').reason.includes('room')); full.scope.release();
 });
 
-test('split includes live artwork placement in its history and then scales it once', () => {
+test('adding a cell includes live artwork placement in its history and preserves its size', () => {
   const { scope } = fixture(1), id = scope.getCells()[0].id, frame = receptionModuleWindow(scope.getReception(), id);
   const target = { ...scope, commitCompletedOperation: (candidate, opts) => scope.commitInCell(id, candidate, opts) };
   const child = addShape(target, profile, { position: { left: frame.left + 20, top: frame.top + 20 }, size: { width: 100, height: 100 } });
   const presentation = structuredClone(scope.getSnapshot().workbench);
-  presentation.shapes.find(item => item.id === child).window.top += 60;
+  presentation.shapes.find(item => item.id === child).window.left += 60;
   const live = presentation.shapes.find(item => item.id === child).window;
-  scope.editBento('split', [id, 'horizontal'], scope.getGeneration(), presentation);
-  const ratio = receptionModuleWindow(scope.getReception(), id).height / frame.height;
-  assert.equal(receptionModuleWindow(scope.getReception(), child).top, frame.top + (live.top - frame.top) * ratio);
+  drawOuterCell(scope, 'right', undefined, presentation);
+  assert.deepEqual(receptionModuleWindow(scope.getReception(), id), frame);
+  assert.deepEqual(receptionModuleWindow(scope.getReception(), child), live);
   assert.ok(scope.undo()); assert.deepEqual(receptionModuleWindow(scope.getReception(), child), live);
   scope.release();
 });
@@ -432,12 +470,12 @@ test('shared boundaries preserve a closed partition across rows and T junctions'
     scope.release();
   }
   const { scope, edit } = fixture(1);
-  edit('settings', { width: 4000, height: 900 });
+  edit('settings', { width: 400, height: 900 });
   for (let i = 1; i < 16; i++) {
-    edit('addCell', scope.getCells()[0].id); closed(scope.getReception());
+    drawOuterCell(scope, 'right'); closed(scope.getReception());
   }
   const before = scope.getReception();
-  assert.throws(() => edit('addCell', before.cells[0].id), /room/u); assert.deepEqual(scope.getReception(), before);
+  assert.throws(() => drawOuterCell(scope, 'right'), /room/u); assert.deepEqual(scope.getReception(), before);
   scope.release();
 });
 test('insertion moves the whole cell and native image content in one undo without touching canvas', () => {
@@ -447,20 +485,24 @@ test('insertion moves the whole cell and native image content in one undo withou
   const image = addImageModule(target, profile, { artwork: createReceptionExample().imageModules[0].artwork,
     position: { left: frame.left, top: frame.top }, size: { width: frame.width, height: frame.height } });
   const before = structuredClone(scope.getReception()), otherCanvas = root.getDraft().workbenches;
-  edit('insert', first, { targetId: second, side: 'right' });
-  assert.equal(receptionModuleWindow(scope.getReception(), first).width, frame.width);
-  assert.ok(receptionModuleWindow(scope.getReception(), first).left > receptionModuleWindow(scope.getReception(), second).left);
+  edit('moveCell', first, { left: receptionModuleWindow(before, second).left, top: receptionModuleWindow(before, second).top });
+  assert.equal(receptionModuleWindow(scope.getReception(), first).width, receptionModuleWindow(before, first).width);
+  assert.ok(receptionModuleWindow(scope.getReception(), first).left < receptionModuleWindow(scope.getReception(), second).left);
   assert.deepEqual(receptionModuleWindow(scope.getReception(), image), receptionModuleWindow(scope.getReception(), first));
-  assert.deepEqual(scope.getCells().find(cell => cell.id === first).members, [image]); closed(scope.getReception());
+  assert.deepEqual(scope.getCells().find(cell => cell.id === first).members, [image]); bounded(scope.getReception());
   assert.deepEqual(root.getDraft().workbenches, otherCanvas);
   assert.equal(scope.undo(), true); assert.deepEqual(scope.getReception(), before);
-  assert.equal(scope.redo(), true); assert.equal(scope.getCells()[1].id, first);
+  assert.equal(scope.redo(), true); assert.ok(receptionModuleWindow(scope.getReception(), first).left < receptionModuleWindow(scope.getReception(), second).left);
   assert.equal(canvas.profileAddress, profile); scope.release();
 });
-test('size, gutter, margin and radius preserve the partition and survive publication and reload', () => {
+test('size, gutter, margin and radius preserve cell dimensions and survive publication and reload', () => {
   const { scope, storage, edit } = fixture(8), before = structuredClone(scope.getReception());
   edit('settings', { width: 1920, height: 1080, gap: 32, padding: 40, radius: 24 });
-  const value = structuredClone(scope.getReception()); closed(value);
+  const value = structuredClone(scope.getReception()); bounded(value);
+  for (const cell of before.cells) {
+    assert.equal(receptionModuleWindow(value, cell.id).width, receptionModuleWindow(before, cell.id).width);
+    assert.equal(receptionModuleWindow(value, cell.id).height, receptionModuleWindow(before, cell.id).height);
+  }
   assert.deepEqual(value.bento, { gap: 32, padding: 40 }); assert.ok(value.cells.every(cell => cell.radius === 24));
   assert.ok(validReceptionEditorDocument(projectReceptionEditorDocument(value), true));
   assert.equal(scope.undo(), true); assert.deepEqual(scope.getReception(), before);
@@ -471,42 +513,44 @@ test('size, gutter, margin and radius preserve the partition and survive publica
 test('existing generator geometry supplies initial spacing without changing saved work', () => {
   const { scope } = fixture(), value = structuredClone(scope.getReception()); delete value.bento;
   const { columns, rows, ...geometry } = RECEPTION_LAYOUT_DEFAULTS;
-  assert.deepEqual(receptionBentoSettings(value), { ...geometry, count: columns * rows, showFrame: true, innerLines: null });
-  closed(setReceptionBentoSettings(value, { gap: 12, padding: 16 }));
+  assert.deepEqual(receptionBentoSettings(value), { ...geometry, count: columns * rows, showFrame: true, innerLines: null, surfaceOpacity: 1, frameOpacity: 1, frameRadius: 0, surface: null, frameColor: null, backgroundColor: null });
+  bounded(setReceptionBentoSettings(value, { gap: 12, padding: 16 }));
   assert.equal(value.bento, undefined); scope.release();
 });
 test('stale gestures, invalid settings, failed storage and released scopes never partially change cells', () => {
-  const { scope, edit, fail } = fixture(), before = structuredClone(scope.getReception()), d = receptionBentoDividers(before)[0];
+  const { scope, edit, fail } = fixture(), before = structuredClone(scope.getReception()), id = before.cells[0].id;
   const generation = scope.getGeneration();
-  fail(true); assert.throws(() => edit('resize', d.id, d.position + 10), /could not be saved/u);
+  fail(true); assert.throws(() => edit('resizeCell', id, 'e', 10, 0), /could not be saved/u);
   assert.deepEqual(scope.getReception(), before); fail(false);
-  assert.throws(() => edit('settings', { width: 320, height: 320, gap: 256 }), /larger bento/u);
+  assert.throws(() => edit('settings', { gap: 257 }), /Gap must/u);
   assert.deepEqual(scope.getReception(), before);
-  edit('appendRow');
+  drawOuterCell(scope, 'bottom');
   const changed = scope.getReception();
-  assert.throws(() => scope.editBento('resize', [d.id, d.position + 20], generation), /changed/u);
+  assert.throws(() => scope.editBento('resizeCell', [id, 'e', 20, 0], generation), /changed/u);
   assert.deepEqual(scope.getReception(), changed);
   scope.release(); assert.throws(() => edit('settings', { radius: 16 }), /no longer active/u);
 });
 
-test('adding a cell shares the entire row width, keeps other rows still and carries artwork', () => {
+test('adding a full-height column grows the canvas, preserves sizes and carries artwork', () => {
   const { scope, edit, root, storage } = fixture(1);
-  edit('addCell', scope.getCells()[0].id); edit('addCell', scope.getCells()[0].id);
-  edit('appendRow');
-  const first = scope.getCells()[0].id, frame = receptionModuleWindow(scope.getReception(), first);
+  const first = scope.getCells()[0].id;
+  drawOuterCell(scope, 'right'); drawOuterCell(scope, 'right'); drawOuterCell(scope, 'bottom');
+  const frame = receptionModuleWindow(scope.getReception(), first);
   const image = addImageModule({ ...scope, commitCompletedOperation: (candidate, opts) => scope.commitInCell(first, candidate, opts) }, profile,
     { artwork: createReceptionExample().imageModules[0].artwork, position: { left: frame.left, top: frame.top }, size: { width: frame.width, height: frame.height } });
-  const before = structuredClone(scope.getReception()), canvas = root.getDraft().workbenches;
-  edit('addCell', first);
-  const after = structuredClone(scope.getReception()); closed(after);
-  assert.deepEqual(after.workbench.area, before.workbench.area);
-  for (const cell of before.cells.slice(0, 3)) {
-    assert.ok(receptionModuleWindow(after, cell.id).width < receptionModuleWindow(before, cell.id).width);
-    assert.equal(receptionModuleWindow(after, cell.id).height, receptionModuleWindow(before, cell.id).height);
+  const before = structuredClone(scope.getReception()), canvas = root.getDraft().workbenches, delta = 320 + before.bento.gap;
+  drawOuterCell(scope, 'right');
+  const after = structuredClone(scope.getReception()); bounded(after);
+  assert.deepEqual(after.workbench.area, { ...before.workbench.area, width: before.workbench.area.width + delta });
+  for (const cell of before.cells) {
+    assert.deepEqual(receptionModuleWindow(after, cell.id), receptionModuleWindow(before, cell.id));
   }
-  assert.deepEqual(receptionModuleWindow(after, before.cells.at(-1).id), receptionModuleWindow(before, before.cells.at(-1).id));
-  assert.deepEqual(receptionModuleWindow(after, image), receptionModuleWindow(after, first));
-  assert.equal(after.cells[3].members.length, 0); assert.deepEqual(root.getDraft().workbenches, canvas);
+  assert.deepEqual(receptionModuleWindow(after, image), receptionModuleWindow(before, image));
+  assert.deepEqual(after.imageModules, before.imageModules); assert.deepEqual(after.texts, before.texts);
+  assert.deepEqual(root.getDraft().workbenches, canvas);
+  const added = after.cells.find(cell => !before.cells.some(old => old.id === cell.id));
+  assert.deepEqual(added.members, []);
+  assert.equal(receptionModuleWindow(after, added.id).left, before.workbench.area.width - before.bento.padding + before.bento.gap);
   assert.ok(validReceptionEditorDocument(projectReceptionEditorDocument(after), true));
   assert.equal(scope.undo(), true); assert.deepEqual(scope.getReception(), before);
   assert.equal(scope.redo(), true); assert.deepEqual(scope.getReception(), after); scope.release();
@@ -514,27 +558,25 @@ test('adding a cell shares the entire row width, keeps other rows still and carr
   assert.deepEqual(reopened.getReception(), after); reopened.release();
 });
 
-test('a new bottom row shares the last band inside the fixed frame and preserves other rows and contents', () => {
+test('a new bottom row extends the canvas without resizing existing rows or contents', () => {
   const { scope, edit, storage } = fixture(6);
   const first = scope.getCells()[0].id, frame = receptionModuleWindow(scope.getReception(), first);
   const image = addImageModule({ ...scope, commitCompletedOperation: (candidate, opts) => scope.commitInCell(first, candidate, opts) }, profile,
     { artwork: createReceptionExample().imageModules[0].artwork, position: { left: frame.left, top: frame.top }, size: { width: frame.width, height: frame.height } });
-  const before = structuredClone(scope.getReception()); edit('appendRow');
+  const before = structuredClone(scope.getReception()); drawOuterCell(scope, 'bottom');
   const after = structuredClone(scope.getReception()); closed(after);
   assert.equal(after.cells.length, before.cells.length + 1);
-  const lastTop = Math.max(...before.cells.map(cell => receptionModuleWindow(before,cell.id).top));
   for (const cell of before.cells) {
     const old = receptionModuleWindow(before,cell.id), next = receptionModuleWindow(after,cell.id);
-    if (old.top < lastTop) assert.deepEqual(next,old);
-    else { assert.equal(next.width,old.width); assert.equal(next.top,old.top); assert.ok(next.height < old.height); }
+    assert.deepEqual(next,old);
   }
   assert.deepEqual(receptionModuleWindow(after,image),receptionModuleWindow(before,image));
   assert.deepEqual(after.cells.slice(0, -1), before.cells);
   assert.equal(after.workbench.area.width, before.workbench.area.width);
-  assert.deepEqual(after.workbench.area,before.workbench.area);
   const last = receptionModuleWindow(after, after.cells.at(-1).id), { gap, padding } = receptionBentoSettings(before);
   assert.equal(last.width, before.workbench.area.width - 2 * padding);
-  assert.equal(last.top + last.height, before.workbench.area.top + before.workbench.area.height - padding);
+  assert.deepEqual(after.workbench.area, { ...before.workbench.area, height: before.workbench.area.height + last.height + gap });
+  assert.equal(last.top + last.height, after.workbench.area.top + after.workbench.area.height - padding);
   assert.ok(receptionBentoDividers(after).some(d => d.axis === 'y' && d.after.includes(after.cells.at(-1).id)));
   assert.equal(scope.undo(), true); assert.deepEqual(scope.getReception(), before);
   assert.equal(scope.redo(), true); scope.release();
@@ -549,29 +591,32 @@ test('adding beside a cell in a T junction preserves the closed band and valid s
     { left: 648, top: 24, width: 768, height: 414 }, { left: 648, top: 462, width: 768, height: 414 }];
   value.cells.forEach((cell, index) => { value = withReceptionModuleWindow(value, cell.id, frames[index]); });
   assert.equal(root.commitCompletedOperation({ ...draft, reception: value }, { expectedGeneration: root.getGeneration() }), true);
-  edit('addCell', value.cells[1].id);
+  drawOuterCell(scope, 'right');
   const after = scope.getReception(); closed(after);
-  assert.deepEqual(after.workbench.area, value.workbench.area);
+  assert.deepEqual(after.workbench.area, { ...value.workbench.area, width: value.workbench.area.width + 320 + value.bento.gap });
+  for (const cell of value.cells) assert.deepEqual(receptionModuleWindow(after, cell.id), receptionModuleWindow(value, cell.id));
   assert.equal(receptionModuleWindow(after, after.cells.at(-1).id).height, 852);
   for (const d of receptionBentoDividers(after)) closed(resizeReceptionBento(after, d.id, d.position + 50));
   scope.release();
 });
 
-test('row/cell insertion rejects insufficient space, failed storage and stale authority atomically', () => {
-  const { scope, edit, fail } = fixture(1);
-  edit('settings', { width: 320, height: 320 }); edit('addCell', scope.getCells()[0].id); edit('appendRow');
-  const edge = receptionBentoDividers(scope.getReception()).find(d => d.axis === 'y'); edit('resize',edge.id,edge.max);
-  const before = structuredClone(scope.getReception()), generation = scope.getGeneration();
-  assert.throws(() => edit('addCell', before.cells[0].id), /too full/u);
-  assert.throws(() => edit('appendRow'), /not enough room/u); assert.deepEqual(scope.getReception(), before);
-  edit('settings', { width: 1440, height: 900 });
+test('row/cell growth rejects size limits, failed storage and stale authority atomically', () => {
+  const { scope, root, edit, fail } = fixture(1);
+  const large = root.getDraft(); large.reception.workbench.area = { ...large.reception.workbench.area, width: 16384, height: 16384 };
+  assert.ok(root.commitCompletedOperation(large, { expectedGeneration: root.getGeneration() }));
+  const before = structuredClone(scope.getReception()), generation = scope.getGeneration(), history = scope.getHistory();
+  assert.throws(() => edit('drawCell', 'shape:overflow-x', {left:16384,top:24,width:320,height:240}, 'right'), /maximum Bento size/);
+  assert.throws(() => edit('drawCell', 'shape:overflow-y', {left:24,top:16384,width:320,height:240}, 'bottom'), /maximum Bento size/);
+  assert.deepEqual(scope.getReception(), before); assert.deepEqual(scope.getHistory(), history);
+  assert.ok(scope.undo());
   const current = structuredClone(scope.getReception());
-  for (const [action, args] of [['addCell', [before.cells[0].id]], ['appendRow', []]]) {
+  for (const side of ['right', 'bottom']) {
+    const action='drawCell', args=drawnCellArgs(current,side);
     fail(true); assert.throws(() => edit(action, ...args), /could not be saved/u); fail(false);
     assert.deepEqual(scope.getReception(), current);
     assert.throws(() => scope.editBento(action, args, generation), /changed/u);
   }
-  scope.release(); assert.throws(() => edit('appendRow'), /no longer active/u);
+  scope.release(); assert.throws(() => edit('drawCell', ...drawnCellArgs(current,'bottom')), /no longer active/u);
 });
 
 test('Bento preserves mixed radii through geometry, replacement and explicit per-cell styling', () => {
@@ -589,7 +634,7 @@ test('Bento preserves mixed radii through geometry, replacement and explicit per
   scope.release();
 });
 
-test('Text in a split cell keeps its transparent article and can use a narrow native frame', () => {
+test('adding beside Text keeps its transparent article and supports a narrow native frame', () => {
   const { scope, edit } = fixture(1);
   edit('settings', { width: 320, height: 320 });
   const cell = scope.getCells()[0].id, frame = receptionModuleWindow(scope.getReception(), cell);
@@ -598,7 +643,10 @@ test('Text in a split cell keeps its transparent article and can use a narrow na
   assert.deepEqual(receptionModuleWindow(scope.getReception(), text), frame);
   assert.equal(scope.getReception().texts[0].article.appearance.background, null);
   const before = structuredClone(scope.getReception());
-  edit('split', cell, 'vertical');
+  drawOuterCell(scope, 'right');
+  assert.deepEqual(receptionModuleWindow(scope.getReception(), cell), frame);
+  assert.deepEqual(receptionModuleWindow(scope.getReception(), text), frame);
+  edit('cellSize', cell, { width: 100 });
   const small = receptionModuleWindow(scope.getReception(), cell);
   assert.ok(small.width >= 80 && small.width < 180);
   assert.deepEqual(receptionModuleWindow(scope.getReception(), text), small);
@@ -611,17 +659,43 @@ test('Text in a split cell keeps its transparent article and can use a narrow na
 test('a manually sized text box stays proportional when its cell reaches the minimum width', () => {
   const { scope, edit } = fixture(1);
   const cell = scope.getCells()[0].id;
-  edit('split', cell, 'vertical', 'shape:other');
+  drawOuterCell(scope, 'right');
   const frame = receptionModuleWindow(scope.getReception(), cell);
   const target = { ...scope, commitCompletedOperation: (candidate, options) => scope.commitInCell(cell, candidate, options) };
   const text = addTextModule(target, profile, { window: { ...frame, width: frame.width / 2 } });
-  const edge = receptionBentoDividers(scope.getReception()).find(edge => edge.axis === 'x');
-  edit('resize', edge.id, -1000);
+  edit('resizeCell', cell, 'e', -20000, 0);
   assert.equal(receptionModuleWindow(scope.getReception(), cell).width, 80);
   assert.equal(receptionModuleWindow(scope.getReception(), text).width, 40);
   assert.ok(validReceptionEditorDocument(scope.getReception()));
-  edit('resize', edge.id, edge.position);
+  edit('cellSize', cell, { width: frame.width });
   assert.equal(receptionModuleWindow(scope.getReception(), text).width, frame.width / 2);
+  scope.release();
+});
+
+test('cell height changes crop stationary text through preview, save, Undo and reload', () => {
+  const { scope, edit, storage, first } = fourCells();
+  const frame = receptionModuleWindow(scope.getReception(), first);
+  const target = { ...scope, commitCompletedOperation: (candidate, options) => scope.commitInCell(first, candidate, options) };
+  const text = addTextModule(target, profile, { window: { ...frame, top: frame.top + 30, width: frame.width - 60, height: 180 } });
+  const before = structuredClone(scope.getReception());
+  for (const height of [240, 100, 500]) {
+    edit('cellSize', first, { height });
+    const saved = scope.getReception(), cell = receptionModuleWindow(saved, first), child = receptionModuleWindow(saved, text);
+    const original = receptionModuleWindow(before, text);
+    assert.deepEqual(child, original, 'cell height edits never move or resize the authored text');
+    const gap = cell.top + cell.height - child.top - child.height;
+    assert.deepEqual(saved.texts, before.texts, 'resizing does not rewrite the article');
+    for (const width of [1440, 1100, 900]) {
+      const layout = receptionResponsiveLayout(saved, width), r = layout.windows[first], t = layout.windows[text];
+      assert.ok(Math.abs((r.top + r.height - t.top - t.height) / r.height - gap / cell.height) < .001,
+        'the public projection preserves the overflow instead of pulling text back inside');
+    }
+    const reopened = createReceptionEditorScope(createSystemWorkflowDraftStore({ profileAddress: profile, storage }));
+    assert.deepEqual(reopened.getReception(), saved); reopened.release();
+    assert.ok(scope.undo()); assert.deepEqual(scope.getReception(), before);
+    assert.ok(scope.redo()); assert.deepEqual(scope.getReception(), saved);
+    assert.ok(scope.undo());
+  }
   scope.release();
 });
 
@@ -631,179 +705,342 @@ test('minimum Image content rejects proportional shrink with a useful error and 
   const target = { ...scope, commitCompletedOperation: (candidate, options) => scope.commitInCell(cell, candidate, options) };
   addImageModule(target, profile, { artwork: createReceptionExample().imageModules[0].artwork, position: { left: frame.left, top: frame.top }, size: { width: 32, height: 32 } });
   const before = structuredClone(scope.getReception()), history = structuredClone(scope.getHistory());
-  assert.throws(() => edit('settings', { width: 720, height: 450 }), /Image needs a frame/);
+  assert.throws(() => edit('cellSize', cell, { width: frame.width / 2 }), /between|Image needs a frame/);
   assert.deepEqual(scope.getReception(), before); assert.deepEqual(scope.getHistory(), history);
   scope.release();
 });
 
 
-test('equal divider targets balance adjacent cells on both axes and respect geometry limits', () => {
-  const { scope, edit } = fourCells();
-  for (const d of receptionBentoDividers(scope.getReception())) {
-    const source = scope.getReception(), target = receptionBentoEqualPosition(source, d);
-    assert.notEqual(target, null);
-    const resized = resizeReceptionBento(source, d.id, target), key = d.axis === 'x' ? 'width' : 'height';
-    assert.ok(Math.abs(receptionModuleWindow(resized, d.before[0])[key] - receptionModuleWindow(resized, d.after[0])[key]) <= 1);
-    assert.equal(receptionBentoEqualPosition(source, { ...d, min: target + 1 }), null);
-    closed(resized);
-  }
-  scope.release();
+test('numeric shrinking leaves adjacent geometry and canvas bounds unchanged', () => {
+  const { scope, edit, first } = fourCells(), before = scope.getReception();
+  edit('cellSize', first, { width: 400, height: 250 });
+  const after = scope.getReception(); bounded(after);
+  assert.deepEqual(after.workbench.area, before.workbench.area);
+  for (const cell of before.cells.filter(c => c.id !== first)) assert.deepEqual(receptionModuleWindow(after, cell.id), receptionModuleWindow(before, cell.id));
+  assert.ok(scope.undo()); assert.deepEqual(scope.getReception(), before); scope.release();
 });
 
 test('left insertion and an upper row preserve a closed grid, authored content and Undo', () => {
   const { scope, root, edit } = fixture(2);
   const first = scope.getCells()[0].id;
   const before = scope.getReception();
-  edit('prependCell', first, 'shape:left-added');
+  drawOuterCell(scope, 'left', 'shape:left-added');
   let next = scope.getReception(); closed(next);
-  assert.equal(receptionModuleWindow(next, 'shape:left-added').left, receptionModuleWindow(before, first).left);
-  assert.ok(next.cells.indexOf(next.cells.find(c => c.id === 'shape:left-added')) < next.cells.indexOf(next.cells.find(c => c.id === first)));
+  assert.equal(receptionModuleWindow(next, 'shape:left-added').left, receptionModuleWindow(before, first).left - 344);
+  assert.deepEqual(receptionModuleWindow(next,first),receptionModuleWindow(before,first));
   assert.deepEqual(next.texts, before.texts); assert.deepEqual(next.imageModules, before.imageModules);
   root.undo(); assert.deepEqual(scope.getReception(), before);
-  edit('prependRow', 'shape:upper'); next = scope.getReception(); closed(next);
+  drawOuterCell(scope, 'top', 'shape:upper'); next = scope.getReception(); closed(next);
   const upper = receptionModuleWindow(next, 'shape:upper'), gap = next.bento.gap;
-  for (const cell of before.cells) assert.deepEqual(receptionModuleWindow(next, cell.id), {
-    ...receptionModuleWindow(before, cell.id), top: receptionModuleWindow(before, cell.id).top + upper.height + gap,
-    height: receptionModuleWindow(before,cell.id).height - upper.height - gap });
-  assert.deepEqual(next.workbench.area,before.workbench.area);
+  for (const cell of before.cells) assert.deepEqual(receptionModuleWindow(next, cell.id), receptionModuleWindow(before,cell.id));
+  assert.deepEqual(next.workbench.area, { ...before.workbench.area, top: before.workbench.area.top - upper.height - gap, height: before.workbench.area.height + upper.height + gap });
   root.undo(); assert.deepEqual(scope.getReception(), before);
   scope.release();
 });
 
-test('a thin full-width strip moves to the top and bottom with its text, one Undo and atomic failed saves', () => {
-  const { scope, root, edit, fail } = fixture(2);
-  edit('appendRow', 'shape:strip');
-  let source = scope.getReception();
-  const edge = receptionBentoDividers(source).find(d => d.axis === 'y');
-  edit('resize', edge.id, edge.max - 16);
-  source = scope.getReception();
-  const strip = receptionModuleWindow(source, 'shape:strip');
-  const target = { ...scope, commitCompletedOperation: (candidate, options) => scope.commitInCell('shape:strip', candidate, options) };
-  const text = addTextModule(target, profile, { cellId: 'shape:strip', window: { ...strip, width: 180, height: 24 } });
-  const before = scope.getReception(), textBefore = receptionModuleWindow(before, text);
-  edit('insert', 'shape:strip', { targetId: before.cells[0].id, side: 'above' });
-  const moved = scope.getReception(), frame = receptionModuleWindow(moved, 'shape:strip'); closed(moved);
-  assert.equal(frame.height, strip.height); assert.equal(frame.width, strip.width);
-  assert.equal(frame.top, before.bento.padding);
-  assert.equal(receptionModuleWindow(moved, text).top - frame.top, textBefore.top - strip.top);
-  assert.deepEqual(moved.texts, before.texts); assert.deepEqual(moved.workbench.area, before.workbench.area);
-  root.undo(); assert.deepEqual(scope.getReception(), before);
-  fail(true); assert.throws(() => edit('insert', 'shape:strip', { targetId: before.cells[0].id, side: 'above' }), /could not be saved/u);
-  assert.deepEqual(scope.getReception(), before); fail(false);
-  edit('insert', 'shape:strip', { targetId: before.cells[0].id, side: 'above' }); edit('insert', 'shape:strip', { targetId: before.cells[0].id, side: 'below' });
-  assert.deepEqual(scope.getReception(), before);
-  assert.deepEqual(scope.getReception().cells.find(cell => cell.id === 'shape:strip').members, [text]);
-  scope.release();
+// A spanning cell beside two stacked cells exercises independent placement.
+function threeCells() {
+  const state = fixture(1), left = state.scope.getCells()[0].id;
+  seedCellFrames(state, [[left, { left: 24, top: 24, width: 684, height: 852 }],
+    ['shape:right', { left: 732, top: 24, width: 684, height: 414 }],
+    ['shape:bottom-right', { left: 732, top: 462, width: 684, height: 414 }]]);
+  return { ...state, left, top: 'shape:right', bottom: 'shape:bottom-right' };
+}
+test('moving below the right column leaves a gap without touching the left cell', () => {
+  const { scope, edit, left, top, bottom } = threeCells(), before = scope.getReception();
+  edit('moveCell', top, { left: 732, top: 900 });
+  const after = scope.getReception(); bounded(after);
+  assert.deepEqual(receptionModuleWindow(after, left), receptionModuleWindow(before, left));
+  assert.equal(receptionModuleWindow(after, top).left, receptionModuleWindow(before, top).left);
+  assert.ok(receptionModuleWindow(after, top).top > receptionModuleWindow(after, bottom).top);
+  assert.ok(after.workbench.area.height > before.workbench.area.height);
+  assert.ok(scope.undo()); assert.deepEqual(scope.getReception(), before); scope.release();
 });
-
-
-test('a full-width strip inserts between rows, preserving its size and every other cell size', () => {
-  const { scope, edit } = fixture(4);
-  edit('appendRow', 'shape:strip');
-  let before = scope.getReception();
-  const edge = receptionBentoDividers(before).find(d => d.after.includes('shape:strip'));
-  edit('resize', edge.id, edge.max - 16); before = scope.getReception();
-  const rows = [...new Set(before.cells.filter(c => c.id !== 'shape:strip').map(c => receptionModuleWindow(before, c.id).top))].sort((a,b) => a-b);
-  const target = before.cells.find(c => receptionModuleWindow(before, c.id).top === rows[1]);
-  edit('insert', 'shape:strip', { targetId: target.id, side: 'above' });
-  const after = scope.getReception(), strip = receptionModuleWindow(after, 'shape:strip'); closed(after);
-  assert.equal(strip.width, receptionModuleWindow(before, 'shape:strip').width);
-  assert.equal(strip.height, 40);
-  assert.ok(strip.top > rows[0] && strip.top < receptionModuleWindow(after, target.id).top);
-  for (const cell of before.cells) {
-    assert.equal(receptionModuleWindow(after, cell.id).width, receptionModuleWindow(before, cell.id).width);
-    assert.equal(receptionModuleWindow(after, cell.id).height, receptionModuleWindow(before, cell.id).height);
+test('moving past the right edge keeps both text slots stacked in place, with reload and Undo', () => {
+  const { scope, edit, storage, root, left, top, bottom } = threeCells();
+  const before = scope.getReception(), other = structuredClone(root.getDraft().workbenches);
+  const cellStore = { ...scope, commitCompletedOperation: (candidate, options) => scope.commitInCell(top, candidate, options) };
+  const text = addTextModule(cellStore, profile, { cellId: top, window: receptionModuleWindow(before, top) });
+  const origin = scope.getReception();
+  edit('moveCell', left, { left: 1440, top: 24 });
+  const after = scope.getReception(); bounded(after);
+  const a = receptionModuleWindow(after, left), b = receptionModuleWindow(after, top), c = receptionModuleWindow(after, bottom);
+  assert.equal(a.height, receptionModuleWindow(origin, left).height); assert.equal(b.left, c.left);
+  assert.ok(b.left < a.left); assert.ok(b.top < c.top);
+  assert.deepEqual(after.texts, origin.texts); assert.equal(after.cells.find(c => c.id === top).members.includes(text), true);
+  assert.ok(after.workbench.area.width > origin.workbench.area.width);
+  assert.deepEqual(b, receptionModuleWindow(origin, top)); assert.deepEqual(c, receptionModuleWindow(origin, bottom)); assert.deepEqual(root.getDraft().workbenches, other);
+  const reopened = createReceptionEditorScope(createSystemWorkflowDraftStore({ profileAddress: profile, storage }));
+  assert.deepEqual(reopened.getReception(), after); reopened.release();
+  assert.ok(scope.undo()); assert.deepEqual(scope.getReception(), origin); assert.ok(scope.redo()); assert.deepEqual(scope.getReception(), after); scope.release();
+});
+test('moving above and below the canvas preserves sizes, contents and authored responsive order', () => {
+  for (const y of [-500, 1000]) {
+    const { scope, edit, top } = threeCells(), before = scope.getReception();
+    edit('moveCell', top, { left: 732, top: y });
+    const after = scope.getReception(); bounded(after);
+    for (const cell of before.cells) {
+      assert.equal(receptionModuleWindow(after, cell.id).width, receptionModuleWindow(before, cell.id).width);
+      assert.equal(receptionModuleWindow(after, cell.id).height, receptionModuleWindow(before, cell.id).height);
+    }
+    assert.deepEqual(after.cells, before.cells); assert.deepEqual(after.shapes, before.shapes);
+    assert.ok(scope.undo()); assert.deepEqual(scope.getReception(), before); scope.release();
   }
-  assert.deepEqual(after.workbench.area, before.workbench.area);
-  scope.release();
 });
-
-test('insertion targets keep generated partitions closed across rows and spanning cells', () => {
+test('free destinations preserve generated cell dimensions and source documents with bounded nonoverlap', () => {
   let applied = 0;
   for (const count of [2, 4, 6, 10]) for (const seed of [1, 42]) {
-    const { scope } = fixture(count, seed), source = scope.getReception();
-    for (const cell of source.cells) for (const target of receptionBentoInsertionTargets(source, cell.id)) {
-      try { const next = insertReceptionBentoCell(source, cell.id, target); closed(next); assert.deepEqual(next.workbench.area, source.workbench.area); applied++; }
-      catch (error) { assert.match(error.message, /not enough room|spanning cell|needs|limits|at least|too small|enlarge/i); }
+    const { scope } = fixture(count, seed), before = scope.getReception(), copy = structuredClone(before);
+    for (const cell of before.cells) for (const destination of [{left:-300,top:24},{left:1600,top:24},{left:24,top:-400},{left:24,top:1000}, ...before.cells.map(c=>receptionModuleWindow(before,c.id))]) {
+      const next = moveReceptionBentoCell(before, cell.id, destination); bounded(next);
+      for (const other of before.cells) {
+        assert.equal(receptionModuleWindow(next,other.id).width, receptionModuleWindow(before,other.id).width);
+        assert.equal(receptionModuleWindow(next,other.id).height, receptionModuleWindow(before,other.id).height);
+      }
+      applied++;
     }
-    scope.release();
+    assert.deepEqual(before, copy); scope.release();
   }
   assert.ok(applied > 100);
-  const { scope, edit, first } = fourCells();
-  edit('merge', first, 'below');
-  const source = scope.getReception();
-  for (const target of receptionBentoInsertionTargets(source, first)) {
-    try { const next = insertReceptionBentoCell(source, first, target); closed(next); assert.deepEqual(next.workbench.area, source.workbench.area); }
-    catch (error) { assert.match(error.message, /not enough room/); }
-  }
+});
+test('keyboard cell movement uses fixed world distances in every direction', () => {
+  const { scope, left } = threeCells(), value = scope.getReception(), r = receptionModuleWindow(value,left);
+  for (const [side,axis,sign] of [['left','left',-1],['right','left',1],['top','top',-1],['bottom','top',1]]) for (const large of [false,true])
+    assert.deepEqual(receptionBentoKeyboardTarget(value,left,side,large), {left:r.left,top:r.top,[axis]:r[axis]+sign*(large?50:10)});
   scope.release();
+});
+test('failed, stale and released moves leave the accepted reception and history unchanged', () => {
+  const { scope, edit, fail, left } = threeCells(), before = scope.getReception(), generation = scope.getGeneration();
+  fail(true); assert.throws(() => edit('moveCell', left, { left: 1440, top: 24 }), /could not be saved/);
+  assert.deepEqual(scope.getReception(), before); fail(false);
+  edit('moveCell', left, { left: 1440, top: 24 });
+  assert.throws(() => scope.editBento('moveCell', [left, { left: -720, top: 24 }], generation), /changed/);
+  assert.ok(scope.undo()); assert.deepEqual(scope.getReception(), before); scope.release();
+  assert.throws(() => edit('moveCell', left, { left: 1440, top: 24 }), /no longer active/);
+});
+
+test('readable desktop reflow adds rows before the phone breakpoint without changing authored geometry', () => {
+  const { scope } = fixture(16), before = scope.getReception(), copy = structuredClone(before);
+  const full = receptionResponsiveLayout(before, 1440), narrow = receptionResponsiveLayout(before, 700), phone = receptionResponsiveLayout(before, 390);
+  assert.equal(full.stacked, false); assert.equal(narrow.stacked, true);
+  assert.ok(narrow.height > 900 * 700 / 1440);
+  assert.equal(narrow.cells.length, 16); assert.equal(phone.cells.length, 16);
+  for (const cell of narrow.cells) { assert.ok(cell.window.width >= 220 - .01); assert.ok(cell.window.height >= 80 - 1e-8); }
+  assert.deepEqual(before, copy); scope.release();
+});
+test('long native text retains a bounded responsive preview and its complete saved article', () => {
+  const { scope, top } = threeCells(), frame = receptionModuleWindow(scope.getReception(), top);
+  const target = { ...scope, commitCompletedOperation: (candidate, options) => scope.commitInCell(top, candidate, options) };
+  const text = addTextModule(target, profile, { cellId: top, window: frame });
+  const value = scope.getReception(), saved = structuredClone(value);
+  const layout = receptionResponsiveLayout(value, 390), long = structuredClone(value);
+  long.texts.find(item => item.id === text).article.content = { type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'A complete long article. '.repeat(200) }] }] };
+  const longer = receptionResponsiveLayout(long, 390);
+  assert.deepEqual(longer.windows, layout.windows, 'adding text does not stretch the preview or move neighbouring cells');
+  assert.ok(layout.windows[text].height <= layout.windows[top].height);
+  assert.deepEqual(value, saved); scope.release();
 });
 
 
-test('reordering unequal neighbours repeatedly preserves every cell and the image inside the shifted cell', () => {
-  const { scope, root, edit } = fixture(4);
-  scope.generateCellLayout({ ...RECEPTION_LAYOUT_DEFAULTS, columns: 4, rows: 1 }, 42, scope.getGeneration());
-  const draft = root.getDraft(), widths = [180, 620, 160, 360]; let left = 24;
-  draft.reception.cells.forEach((cell, i) => {
-    draft.reception.workbench.shapes.find(item => item.id === cell.id).window = { left, top: 24, width: widths[i], height: 852 };
-    left += widths[i] + 24;
-  });
-  assert.equal(root.commitCompletedOperation(draft, { expectedGeneration: root.getGeneration() }), true);
-  const imageCell = scope.getCells()[0].id, frame = receptionModuleWindow(scope.getReception(), imageCell);
-  const target = { ...scope, commitCompletedOperation: (candidate, options) => scope.commitInCell(imageCell, candidate, options) };
+test('Reception frame colors save atomically with undo, publication, recovery and canvas isolation', () => {
+  const { root, scope, storage, edit, fail } = fixture();
+  const before = structuredClone(scope.getReception()), canvases = structuredClone(root.getDraft().workbenches);
+  const colors = { frameColor: '#ff5500', surface: '#112233', backgroundColor: '#345678' };
+  edit('settings', colors);
+  const saved = structuredClone(scope.getReception());
+  assert.deepEqual(saved, { ...before, showFrame: true, ...colors });
+  assert.deepEqual(root.getDraft().workbenches, canvases);
+  assert.ok(scope.undo()); assert.deepEqual(scope.getReception(), before);
+  assert.ok(scope.redo()); assert.deepEqual(scope.getReception(), saved);
+  const published = projectReceptionEditorDocument(saved);
+  assert.ok(validReceptionEditorDocument(published, true));
+  const restored = restoreReceptionEditorDocument(published);
+  for (const key of Object.keys(colors)) assert.equal(restored[key], colors[key]);
+  fail(true); assert.throws(() => edit('settings', { surface: '#abcdef' })); fail(false);
+  assert.deepEqual(scope.getReception(), saved);
+  for (const key of Object.keys(colors)) for (const invalid of ['red', '#abc', '#12345678', 123, ['#abcdef']]) {
+    assert.throws(() => edit('settings', { [key]: invalid }));
+    assert.equal(validReceptionEditorDocument({ ...saved, [key]: invalid }), false);
+  }
+  scope.release();
+  const reopened = createReceptionEditorScope(createSystemWorkflowDraftStore({ profileAddress: profile, storage }));
+  assert.deepEqual(reopened.getReception(), saved);
+  reopened.generateCellLayout(RECEPTION_LAYOUT_DEFAULTS, 15, reopened.getGeneration());
+  for (const key of Object.keys(colors)) assert.equal(reopened.getReception()[key], colors[key]);
+  reopened.editBento('settings', [{ surface: null, frameColor: null, backgroundColor: null }], reopened.getGeneration());
+  assert.equal(reopened.getReception().surface, null);
+  assert.ok(reopened.undo()); assert.equal(reopened.getReception().surface, colors.surface);
+  reopened.release();
+});
+
+
+test('outer frame radius is independent of cell radii and survives history, storage and publication', () => {
+  const { root, scope, storage, edit, fail } = fixture();
+  const before = structuredClone(scope.getReception()), canvases = structuredClone(root.getDraft().workbenches);
+  edit('settings', { frameRadius: 32 });
+  const saved = structuredClone(scope.getReception());
+  assert.deepEqual(saved, { ...before, showFrame: true, frameRadius: 32 });
+  assert.deepEqual(root.getDraft().workbenches, canvases);
+  assert.ok(scope.undo()); assert.deepEqual(scope.getReception(), before);
+  assert.ok(scope.redo()); assert.deepEqual(scope.getReception(), saved);
+  const published = projectReceptionEditorDocument(saved);
+  assert.ok(validReceptionEditorDocument(published, true));
+  assert.equal(restoreReceptionEditorDocument(published).frameRadius, 32);
+  fail(true); assert.throws(() => edit('settings', { frameRadius: 64 })); fail(false);
+  assert.deepEqual(scope.getReception(), saved);
+  for (const frameRadius of [-1, 161, null, '32', Infinity, NaN]) {
+    assert.throws(() => edit('settings', { frameRadius }));
+    assert.equal(validReceptionEditorDocument({ ...saved, frameRadius }), false);
+  }
+  edit('settings', { showFrame: false }); assert.equal(scope.getReception().frameRadius, 32);
+  edit('settings', { radius: 12 }); assert.equal(scope.getReception().frameRadius, 32);
+  edit('settings', { frameRadius: 0 }); assert.ok(scope.getReception().cells.every(cell => cell.radius === 12));
+  assert.ok(scope.undo());
+  const last = structuredClone(scope.getReception()); scope.release();
+  const reopened = createReceptionEditorScope(createSystemWorkflowDraftStore({ profileAddress: profile, storage }));
+  assert.deepEqual(reopened.getReception(), last);
+  reopened.generateCellLayout(RECEPTION_LAYOUT_DEFAULTS, 15, reopened.getGeneration());
+  assert.equal(reopened.getReception().frameRadius, 32); reopened.release();
+});
+
+
+for (const opacityKey of ['surfaceOpacity', 'frameOpacity']) test(`${opacityKey} preserves geometry and saves transparent and partial appearance`, () => {
+  const { root, scope, storage, edit, fail } = fixture();
+  edit('settings', { surface: '#ffffff', frameColor: '#ff5500', backgroundColor: '#001120', frameRadius: 32 });
+  const before = structuredClone(scope.getReception()), canvases = structuredClone(root.getDraft().workbenches);
+  for (const surfaceOpacity of [0, .35, 1]) {
+    edit('settings', { [opacityKey]: surfaceOpacity });
+    const saved = structuredClone(scope.getReception());
+    assert.deepEqual(saved, { ...before, [opacityKey]: surfaceOpacity });
+    assert.deepEqual(root.getDraft().workbenches, canvases);
+    assert.ok(scope.undo()); assert.ok(scope.redo()); assert.deepEqual(scope.getReception(), saved);
+    const published = projectReceptionEditorDocument(saved);
+    assert.ok(validReceptionEditorDocument(published, true));
+    assert.equal(restoreReceptionEditorDocument(published)[opacityKey], surfaceOpacity);
+  }
+  edit('settings', { [opacityKey]: 0 });
+  const transparent = structuredClone(scope.getReception());
+  fail(true); assert.throws(() => edit('settings', { [opacityKey]: .5 })); fail(false);
+  assert.deepEqual(scope.getReception(), transparent);
+  for (const surfaceOpacity of [-1, 1.01, null, '0', Infinity, NaN]) {
+    assert.throws(() => edit('settings', { [opacityKey]: surfaceOpacity }));
+    assert.equal(validReceptionEditorDocument({ ...transparent, [opacityKey]: surfaceOpacity }), false);
+  }
+  scope.release();
+  const reopened = createReceptionEditorScope(createSystemWorkflowDraftStore({ profileAddress: profile, storage }));
+  assert.deepEqual(reopened.getReception(), transparent); reopened.release();
+});
+
+
+test('cell grain coverage is independent of fill opacity and survives history, publication and reload', () => {
+  const { root, scope, storage, edit, fail } = fixture(2), id = scope.getCells()[0].id;
+  editShape(scope, profile, scope.getSnapshot().shapes.find(item => item.id === id), { grain: .8, opacity: 0 });
+  const before = structuredClone(scope.getReception()), canvases = structuredClone(root.getDraft().workbenches);
+  assert.equal(before.cells.find(cell => cell.id === id).grainOverContent, undefined);
+  edit('cellGrain', id, false);
+  const saved = structuredClone(scope.getReception());
+  assert.equal(saved.cells.find(cell => cell.id === id).grainOverContent, false);
+  assert.deepEqual(saved.shapes, before.shapes);
+  assert.deepEqual(root.getDraft().workbenches, canvases);
+  assert.ok(scope.undo()); assert.deepEqual(scope.getReception(), before);
+  assert.ok(scope.redo()); assert.deepEqual(scope.getReception(), saved);
+  for (const grainOverContent of [null, 'false', 0]) {
+    assert.throws(() => edit('cellGrain', id, grainOverContent));
+    assert.equal(validReceptionEditorDocument({ ...saved, cells: saved.cells.map(cell => cell.id === id ? { ...cell, grainOverContent } : cell) }), false);
+  }
+  fail(true); assert.throws(() => edit('cellGrain', id, true)); fail(false);
+  assert.deepEqual(scope.getReception(), saved);
+  const published = projectReceptionEditorDocument(saved);
+  assert.ok(validReceptionEditorDocument(published, true));
+  assert.equal(restoreReceptionEditorDocument(published).cells.find(cell => cell.id === id).grainOverContent, false);
+  scope.release();
+  const reopened = createReceptionEditorScope(createSystemWorkflowDraftStore({ profileAddress: profile, storage }));
+  assert.deepEqual(reopened.getReception(), saved); reopened.release();
+});
+
+test('removed cell partition command rejects without changing content, generation or history', () => {
+  const { scope, edit } = fixture(2), before = structuredClone(scope.getReception()), generation = scope.getGeneration();
+  assert.throws(() => edit('split', before.cells[0].id, 'vertical'), /available bento action/u);
+  assert.deepEqual(scope.getReception(), before); assert.equal(scope.getGeneration(), generation);
+  assert.ok(scope.undo()); assert.equal(scope.getCells().length, 0, 'rejection adds no history entry');
+  scope.release();
+});
+
+for (const side of ['top', 'bottom']) test('Drawing ' + side + ' accepts odd-height rows, saves and survives Undo and reload', () => {
+  const { scope, root, edit, storage } = fixture(1);
+  edit('settings', { height: 901 });
+  const before = structuredClone(scope.getReception());
+  drawOuterCell(scope, side, 'shape:odd-row');
+  const after = structuredClone(scope.getReception()); bounded(after);
+  for (const cell of before.cells) {
+    assert.equal(receptionModuleWindow(after,cell.id).width,receptionModuleWindow(before,cell.id).width);
+    assert.equal(receptionModuleWindow(after,cell.id).height,receptionModuleWindow(before,cell.id).height);
+  }
+  const added = after.cells.find(cell => cell.id === 'shape:odd-row');
+  assert.equal(after.cells.length, 2);
+  assert.ok(Number.isInteger(added.mobile.height) && added.mobile.height >= 80 && added.mobile.height <= 1200);
+  assert.deepEqual(after.workbench.area, { ...before.workbench.area, top: before.workbench.area.top - (side === 'top' ? receptionModuleWindow(after,added.id).height + before.bento.gap : 0), height: before.workbench.area.height + receptionModuleWindow(after, added.id).height + before.bento.gap });
+  root.undo(); assert.deepEqual(scope.getReception(), before);
+  root.redo(); assert.deepEqual(scope.getReception(), after);
+  scope.release();
+  const reopened = createSystemWorkflowDraftStore({ profileAddress: profile, storage });
+  assert.deepEqual(reopened.getDraft().reception, after);
+});
+
+for (const side of ['left', 'right', 'top', 'bottom']) test('Drawing ' + side + ' preserves locked artwork without scaling, with history and reload', () => {
+  const { scope, root, edit, storage, first } = fourCells();
+  const frame = receptionModuleWindow(scope.getReception(), first);
+  const target = { ...scope, commitCompletedOperation: (candidate, options) => scope.commitInCell(first, candidate, options) };
   const image = addImageModule(target, profile, { artwork: createReceptionExample().imageModules[0].artwork,
-    position: { left: frame.left + 10, top: frame.top + 12 }, size: { width: 80, height: 100 } });
-  const original = scope.getReception(), imageFrame = receptionModuleWindow(original, image);
-  for (let i = 0; i < 12; i++) {
-    const before = scope.getReception(), order = before.cells.slice().sort((a,b) => receptionModuleWindow(before,a.id).left - receptionModuleWindow(before,b.id).left);
-    const index = order.findIndex(cell => cell.id === imageCell), neighbour = order[index + 1] || order[index - 1];
-    edit('insert', neighbour.id, { targetId: imageCell, side: index + 1 < order.length ? 'left' : 'right' });
-    const after = scope.getReception(); closed(after);
-    for (const cell of after.cells) {
-      assert.equal(receptionModuleWindow(after, cell.id).width, receptionModuleWindow(original, cell.id).width, 'reordering must not resize a neighbour');
-      assert.equal(receptionModuleWindow(after, cell.id).height, receptionModuleWindow(original, cell.id).height);
-    }
-    const current = receptionModuleWindow(after, image), owner = receptionModuleWindow(after, imageCell);
-    assert.equal(current.width, imageFrame.width); assert.equal(current.height, imageFrame.height);
-    assert.equal(current.left - owner.left, imageFrame.left - frame.left);
-    assert.equal(current.top - owner.top, imageFrame.top - frame.top);
+    position: { left: frame.left + 10, top: frame.top + 10 }, size: { width: 200, height: 160 } });
+  const text = addTextModule(target, profile, { window: { left: frame.left + 20, top: frame.top + 20, width: 240, height: 120 } });
+  const draft = root.getDraft(); draft.reception.cells.find(cell => cell.id === first).lockedMembers = [image, text];
+  assert.ok(root.commitCompletedOperation(draft, { expectedGeneration: root.getGeneration() }));
+  const before = structuredClone(scope.getReception()), canvases = root.getDraft().workbenches;
+  drawOuterCell(scope, side);
+  const after = structuredClone(scope.getReception()); closed(after);
+  const horizontal = ['left','right'].includes(side);
+  const added = after.cells.find(cell => !before.cells.some(old => old.id === cell.id)), addedFrame = receptionModuleWindow(after, added.id);
+  assert.equal(addedFrame.width, horizontal ? 320 : before.workbench.area.width - before.bento.padding * 2);
+  assert.equal(addedFrame.height, horizontal ? before.workbench.area.height - before.bento.padding * 2 : 240);
+  for (const id of [...before.cells.map(cell => cell.id), image, text]) {
+    const old = receptionModuleWindow(before, id);
+    assert.deepEqual(receptionModuleWindow(after, id), old);
   }
-  const changed = scope.getReception(); scope.undo(); scope.redo(); assert.deepEqual(scope.getReception(), changed);
-  scope.release();
+  assert.deepEqual(after.imageModules, before.imageModules); assert.deepEqual(after.texts, before.texts);
+  assert.deepEqual(after.cells.find(cell => cell.id === first), before.cells.find(cell => cell.id === first));
+  assert.deepEqual(root.getDraft().workbenches, canvases);
+  assert.ok(scope.undo()); assert.deepEqual(scope.getReception(), before);
+  assert.ok(scope.redo()); assert.deepEqual(scope.getReception(), after); scope.release();
+  const reopened = createReceptionEditorScope(createSystemWorkflowDraftStore({ profileAddress: profile, storage }));
+  assert.deepEqual(reopened.getReception(), after); reopened.release();
 });
 
-
-test('moving a cell below its row carves a strip from the target band without growing the Bento', () => {
-  assert.equal(RECEPTION_LAYOUT_DEFAULTS.width, 1440); assert.equal(RECEPTION_LAYOUT_DEFAULTS.height, 900);
-  const { scope, root, edit, fail } = fixture(5), draft = root.getDraft();
-  const rectangles = [[24,24,1392,40], [24,88,300,160], [348,88,500,160], [872,88,544,160], [24,272,1392,604]];
-  draft.reception.cells.forEach((cell,i) => {
-    const [left,top,width,height] = rectangles[i];
-    draft.reception.workbench.shapes.find(item => item.id === cell.id).window = {left,top,width,height};
-  });
-  assert.equal(root.commitCompletedOperation(draft, { expectedGeneration: root.getGeneration() }), true);
-  const before = scope.getReception(), source = before.cells[1].id, body = before.cells[4].id;
-  for (const side of ['above','below']) {
-    edit('insert', source, { targetId: body, side });
-    const after = scope.getReception(); closed(after);
-    assert.deepEqual(after.workbench.area, before.workbench.area, 'repositioning must not resize the work surface');
-    assert.equal(receptionModuleWindow(after,source).height, 160);
-    assert.equal(receptionModuleWindow(after,body).height, 420);
-    assert.deepEqual(receptionModuleWindow(after,before.cells[0].id), receptionModuleWindow(before,before.cells[0].id));
-    assert.equal(scope.undo(),true); assert.deepEqual(scope.getReception(),before);
-  }
-  fail(true); assert.throws(() => edit('insert', source, {targetId:body,side:'above'}), /could not be saved/);
-  assert.deepEqual(scope.getReception(),before); fail(false);
-  const tight = withReceptionModuleWindow(before,body,{...receptionModuleWindow(before,body),height:100});
-  assert.throws(() => insertReceptionBentoCell(tight,source,{targetId:body,side:'above'}), /not enough room/);
-  scope.release();
+for (const edge of ['n', 'ne', 'e', 'se', 's', 'sw', 'w', 'nw']) test('outer frame ' + edge + ' resize anchors opposite edges and saves one reversible operation', () => {
+  const { scope, edit, fail, storage } = fixture(6);
+  const dx = edge.includes('w') ? -40 : 40, dy = edge.includes('n') ? -30 : 30;
+  const before = structuredClone(scope.getReception()), history = scope.getHistory();
+  fail(true); assert.throws(() => edit('resizeFrame', edge, dx, dy), /could not be saved/); fail(false);
+  assert.deepEqual(scope.getReception(), before); assert.deepEqual(scope.getHistory(), history);
+  edit('resizeFrame', edge, dx, dy);
+  const after = structuredClone(scope.getReception()), old = before.workbench.area, next = after.workbench.area;
+  bounded(after);
+  assert.deepEqual(after.workbench.shapes, before.workbench.shapes);
+  assert.equal(next.left, old.left + (edge.includes('w') ? -40 : 0));
+  assert.equal(next.top, old.top + (edge.includes('n') ? -30 : 0));
+  assert.equal(next.width, old.width + (/[we]/.test(edge) ? 40 : 0));
+  assert.equal(next.height, old.height + (/[ns]/.test(edge) ? 30 : 0));
+  assert.ok(scope.undo()); assert.deepEqual(scope.getReception(), before);
+  assert.ok(scope.redo()); assert.deepEqual(scope.getReception(), after); scope.release();
+  const reopened = createReceptionEditorScope(createSystemWorkflowDraftStore({ profileAddress: profile, storage }));
+  assert.deepEqual(reopened.getReception(), after); reopened.release();
 });
 
-
-test('a thin neighbouring row cannot steal a drop on the intended row boundary', () => {
-  const upper={axis:'x',position:24,from:24,to:64}, intended={axis:'x',position:24,from:88,to:128};
-  const point={x:24,y:108}, targets=[upper,intended];
-  assert.equal(receptionBentoInsertionDistance(intended,point,.5),0);
-  assert.equal(receptionBentoInsertionDistance(upper,point,.5),22);
-  assert.equal(targets.sort((a,b)=>receptionBentoInsertionDistance(a,point,.5)-receptionBentoInsertionDistance(b,point,.5))[0],intended);
+test('fractional shared edges retain their resize handles and preserve adjoining cells', () => {
+  const { scope } = fixture(3), value = structuredClone(scope.getReception());
+  const [a, b, c] = value.cells.map(cell => cell.id);
+  const regions = [[a, { left: 24, top: 24, width: 100.3, height: 852 }], [b, { left: 148.3000000001, top: 24, width: 600, height: 852 }], [c, { left: 772.3, top: 24, width: 643.7, height: 852 }]];
+  for (const [id, frame] of regions) Object.assign(value.workbench.shapes.find(item => item.id === id).window, frame);
+  assert.ok(receptionBentoDividers(value).some(d => d.before.includes(a) && d.after.includes(b)));
+  scope.release();
 });

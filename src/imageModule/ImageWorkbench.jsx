@@ -1,3 +1,4 @@
+import { MIN_CROP_PROJECTION_ZOOM } from '../lattice/rendering/latticeCrop.js';
 import { lazy, Suspense, memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Crop, ChevronLeft, ZoomIn, Shrink, Expand } from 'lucide-react';
 import ImageWindow from './ImageWindow.jsx';
@@ -56,10 +57,20 @@ const ImageInstance = memo(function ImageInstance({ record, index, store, profil
   const artwork = record.artwork;
   const crop = cropState?.expected === record && cropState?.placementId === artwork?.id ? cropState : null;
   const cropping = Boolean(crop);
-  useWorkbenchMiniature(record.id, useMemo(() => ({ kind: 'image', record, artwork, crop: crop?.previewCrop ?? artwork?.crop }), [record, artwork, crop?.previewCrop]));
+  // Keep recovery live through its ref without invalidating unchanged artwork.
+  const recoverArtworkFocus = useCallback(() => {
+    const canvas = source.current;
+    const stop = event => event.stopPropagation();
+    canvas?.addEventListener('focusin', stop);
+    try { canvas?.focus({ preventScroll: true }); }
+    finally { canvas?.removeEventListener('focusin', stop); }
+  }, []);
+  const displayedCrop = crop?.dirty ? crop.previewCrop : artwork?.crop;
+  useWorkbenchMiniature(record.id, useMemo(() => ({ kind: 'image', record, artwork, crop: displayedCrop }), [record, artwork, displayedCrop]));
   const workbenchView = useWorkbenchView();
   const cells = useEditorCells();
   const ownerCell = cells?.cells.find(cell => cell.members.includes(record.id));
+  const cellAnchor = useMemo(() => receptionMemberAnchor(ownerCell, [record.id]), [ownerCell, record.id]);
   const sizeLimits = imageSizeLimits(Boolean(ownerCell));
   const presented = Boolean(workbenchView.presentationTransforms?.[record.id]);
   const dossier = useMemo(() => createProfileDocumentV9AssetDossier(artwork?.asset), [artwork?.asset]);
@@ -136,7 +147,7 @@ const ImageInstance = memo(function ImageInstance({ record, index, store, profil
     if (!artwork || !editable) return;
     const workbench = getPresentation?.() || store.getDraft().workbench;
     const ownerFrame = ownerCell && workbench.shapes?.find(item => item.id === ownerCell.id)?.window;
-    const anchor = receptionMemberAnchor(ownerCell, [record.id]);
+    const anchor = cellAnchor;
     const frame = ownerFrame && anchor ? { left: ownerFrame.left + anchor.paddingX, top: ownerFrame.top + anchor.paddingY,
       width: ownerFrame.width - 2 * anchor.paddingX, height: ownerFrame.height - 2 * anchor.paddingY } : ownerFrame;
     if (frame && (frame.width < sizeLimits.minimumWidth || frame.height < sizeLimits.minimumHeight)) {
@@ -200,11 +211,11 @@ const ImageInstance = memo(function ImageInstance({ record, index, store, profil
     if (!artwork || !editable) return;
     cropFocusHost.current = event?.currentTarget.closest('[data-workbench-inspector], [role="toolbar"]');
     const session = createSystemWorkflowCropSession(artwork, { stableAssetId: artwork.asset.stableAssetId, width: artwork.asset.media.width, height: artwork.asset.media.height },
-      { left: 0, top: 0, width: record.width, height: record.height });
-    setCrop({ ...session, expected: record });
+      { left: 0, top: 0, width: record.width, height: record.height }, { minimumZoom: MIN_CROP_PROJECTION_ZOOM, fit: true });
+    setCrop({ ...session, dirty: false, expected: record });
   };
   const visualCrop = crop && projectSystemWorkflowTransform(artwork.transform, crop.media, crop.previewCrop);
-  const updateVisualCrop = value => setCrop(current => current && ({ ...current, previewCrop: unprojectSystemWorkflowCrop(artwork.transform, value) }));
+  const updateVisualCrop = value => setCrop(current => current && ({ ...current, dirty: true, previewCrop: unprojectSystemWorkflowCrop(artwork.transform, value) }));
   const restoreCropFocus = () => {
     const host = cropFocusHost.current;
     cropFocusHost.current = null;
@@ -213,26 +224,26 @@ const ImageInstance = memo(function ImageInstance({ record, index, store, profil
         host.querySelector('[data-image-crop-trigger]:not(:disabled)')?.focus({ preventScroll: true });
     });
   };
-  const applyCrop = value => { if (crop && changeArtwork({ crop: value }, crop.expected)) { setCrop(null); drag.current = null; restoreCropFocus(); } };
+  const applyCrop = value => { if (crop && (value === crop.previewCrop && !crop.dirty || changeArtwork({ crop: value }, crop.expected))) cancelCrop(); };
   const cancelCrop = () => { setCrop(null); drag.current = null; restoreCropFocus(); };
   const cropKeyDown = event => { if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); cancelCrop(); } };
   const fitControls = (compact = false) => <>
     <button className={compact ? 'editor-object-toolbar-button' : 'workflow-tactile-control'} type="button" disabled={!artwork} aria-pressed={Boolean(artwork && artwork.crop === null)}
       aria-label={ownerCell ? 'Fit cell' : 'Fit inside'}
-      title={ownerCell ? 'Show the complete image centred inside this cell.' : 'Show the complete image inside its frame.'}
-      onClick={() => fitImage(null)}><Shrink size={16} />{compact ? 'Fit' : ownerCell ? 'Fit cell' : 'Fit inside'}</button>
-    <button className={compact ? 'editor-object-toolbar-button' : 'workflow-tactile-control'} type="button" disabled={!artwork} aria-pressed={Boolean(artwork?.crop)}
+      title={ownerCell ? 'Show the whole image; keep its chosen alignment.' : 'Show the complete image inside its frame.'}
+      onClick={() => fitImage(null)}><Shrink size={16} />Fit</button>
+    <button className={compact ? 'editor-object-toolbar-button' : 'workflow-tactile-control'} type="button" disabled={!artwork} aria-pressed={artwork?.crop?.zoom >= 1}
       aria-label={ownerCell ? 'Fill cell' : 'Fill canvas'}
       title={ownerCell ? 'Fill this cell with a centred crop. Edges may be cropped.' : 'Fill the image frame with a centred crop. Edges may be cropped.'}
-      onClick={() => fitImage({ ...IMAGE_FILL_CROP })}><Expand size={16} />{compact ? 'Fill' : ownerCell ? 'Fill cell' : 'Fill canvas'}</button>
+      onClick={() => fitImage({ ...IMAGE_FILL_CROP })}><Expand size={16} />Fill</button>
   </>;
   const cropButton = <button className="editor-object-toolbar-button" type="button" data-image-crop-trigger aria-label="Crop" title="Crop" disabled={!artwork} onClick={beginCrop}><Crop size={16} />Crop</button>;
   const cropCompletion = (compact = false) => <>
     <button className={compact ? 'editor-object-toolbar-button' : 'workflow-tactile-control'} type="button" onKeyDown={cropKeyDown} onClick={cancelCrop}>Cancel</button>
     <button className={compact ? 'editor-object-toolbar-button' : 'workflow-tactile-control'} type="button" onKeyDown={cropKeyDown} onClick={() => applyCrop(crop.previewCrop)}>Done</button>
   </>;
-  const cropZoom = crop && <input type="range" aria-label="Crop zoom" min="1" max="4" step="0.05" value={visualCrop.crop.zoom} onKeyDown={cropKeyDown}
-    onChange={event => updateVisualCrop(setSystemWorkflowCropZoom(visualCrop.crop, { ...crop.media, ...visualCrop.dimensions }, rectangle, Number(event.target.value)))} />;
+  const cropZoom = crop && <input type="range" aria-label="Crop zoom" min={MIN_CROP_PROJECTION_ZOOM} max="4" step="0.05" value={visualCrop.crop.zoom} onKeyDown={cropKeyDown}
+    onChange={event => updateVisualCrop(setSystemWorkflowCropZoom(visualCrop.crop, { ...crop.media, ...visualCrop.dimensions }, rectangle, Number(event.target.value), MIN_CROP_PROJECTION_ZOOM))} />;
   const resize = (newSize, position) => {
     cancelCrop();
     const saved = commitWorkbenchSelectionResize([{ ...resizeTarget, id: record.id, ...position, ...newSize, getPresentation }]);
@@ -349,24 +360,18 @@ const ImageInstance = memo(function ImageInstance({ record, index, store, profil
           event.preventDefault(); event.currentTarget.setPointerCapture(event.pointerId);
           const bounds = event.currentTarget.getBoundingClientRect();
           const coordinateScale = { x: rectangle.width / bounds.width, y: rectangle.height / bounds.height };
-          drag.current = { id: event.pointerId, start: crop.previewCrop, coordinateScale, gesture: createSystemWorkflowCropPanGesture({ ...crop, mask: rectangle, media: { ...crop.media, ...visualCrop.dimensions }, previewCrop: visualCrop.crop }, { x: event.clientX * coordinateScale.x, y: event.clientY * coordinateScale.y }) };
+          drag.current = { id: event.pointerId, start: crop.previewCrop, dirty: crop.dirty, coordinateScale, gesture: createSystemWorkflowCropPanGesture({ ...crop, mask: rectangle, media: { ...crop.media, ...visualCrop.dimensions }, previewCrop: visualCrop.crop }, { x: event.clientX * coordinateScale.x, y: event.clientY * coordinateScale.y }) };
         }} onPointerMove={event => {
           if (!crop || drag.current?.id !== event.pointerId) return;
           drag.current.gesture = updateSystemWorkflowCropPanGesture(drag.current.gesture, { x: event.clientX * drag.current.coordinateScale.x, y: event.clientY * drag.current.coordinateScale.y });
-          updateVisualCrop(drag.current.gesture.previewCrop);
-        }} onPointerUp={() => { drag.current = null; }} onPointerCancel={() => { const start = drag.current?.start; if (start) setCrop(c => c && ({ ...c, previewCrop: start })); drag.current = null; }}
+          if (drag.current.gesture.activated) updateVisualCrop(drag.current.gesture.previewCrop);
+        }} onPointerUp={() => { drag.current = null; }} onPointerCancel={() => { const start = drag.current; if (start) setCrop(c => c && ({ ...c, dirty: start.dirty, previewCrop: start.start })); drag.current = null; }}
         onLostPointerCapture={() => { drag.current = null; }}>
         {!artwork ? <span className="image-module__empty">{store ? 'Drop artwork from Library' : 'No artwork'}</span>
-          : <ImageArtwork artwork={artwork} rectangle={renderRectangle}
+          : <ImageArtwork artwork={artwork} rectangle={renderRectangle} alignment={cellAnchor?.members.length === 1 ? cellAnchor : undefined}
             recoveryHost={!inactive ? inspect ? inspectionRecoveryHost : recoveryHost : null} recoveryMode={inspect ? 'inspect' : undefined}
-            onRecoverFocus={() => {
-              const canvas = source.current;
-              const stop = event => event.stopPropagation();
-              canvas?.addEventListener('focusin', stop);
-              try { canvas?.focus({ preventScroll: true }); }
-              finally { canvas?.removeEventListener('focusin', stop); }
-            }}
-            crop={crop?.previewCrop ?? artwork.crop} />}
+            onRecoverFocus={recoverArtworkFocus}
+            crop={displayedCrop} />}
       </button>
       <span ref={setRecoveryHost} className="image-module__recovery" data-workbench-selection-tools />
       {!crop && <button type="button" data-workbench-recovery-control className="workflow-tactile-control image-module__inspect" aria-label="Inspect Image" aria-keyshortcuts="I"

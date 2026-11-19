@@ -174,16 +174,16 @@ export default function WorkbenchLayers({ open, hidden, onOpen, historyBlocked, 
           }
         }}>
         {partBlock && <div className="workbench-layers-context"><span>{partBlock.name}{selected.length === 1 ? ` › ${byId.get(selected[0])?.name}` : ' › Edit group contents'}</span><button type="button" onClick={() => select(partBlock.children)}>Done</button></div>}
-        <div className="workbench-layers-list" aria-label="Artwork layers">
-          {groups.length ? workbenchLayerOutline(layers, groups, groupOwners).map(entry => entry.group ? folderRow(entry) : row(entry.layer, entry.parent))
-            : layers.length ? outline().reverse().map(layer => row(layer)) : <p>No artwork yet. Add an Image, Text or Shape to this Workbench.</p>}
-        </div>
         <nav className="workbench-layers-actions" aria-label="Layer actions">
           <ArtworkOrderControls disabled={!selected.length || Boolean(historyBlocked)} onOrder={direction => run({ type: 'order', ids: selected, direction })} />
           <button type="button" aria-label="Group selected layers" title="Group selected layers" disabled={selected.length < 2 || selected.some(id => layers.some(layer => layer.children?.includes(id)))} onClick={() => setGrouping(true)}><Group /></button>
           <button type="button" aria-label="Ungroup selected group" title="Ungroup; keep all artwork" disabled={!block} onClick={() => run({ type: 'ungroup', id: block.id })}><Ungroup /></button>
           <button type="button" aria-label="Focus selected layers" title="Focus selected layers" disabled={!selected.length} onClick={() => view.focusModulesRef.current?.(artworkWindowIds(content, selected))}><Scan /></button>
         </nav>
+        <div className="workbench-layers-list" aria-label="Artwork layers">
+          {groups.length ? workbenchLayerOutline(layers, groups, groupOwners).map(entry => entry.group ? folderRow(entry) : row(entry.layer, entry.parent))
+            : layers.length ? outline().reverse().map(layer => row(layer)) : <p>No artwork yet. Add an Image, Text or Shape to this Workbench.</p>}
+        </div>
         {transferable && <OwnerSystemWorkflowSelectMenu flat compact palette="editor" className="workflow-tactile-control"
           label="Move to cell" triggerPrefix="Move to cell" value="" defaultValue=""
           disabled={Boolean(historyBlocked) || Object.keys(view.transforms).length > 0}

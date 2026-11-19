@@ -30,7 +30,7 @@
   --tactile-accent: var(--editor-accent);
   --tactile-edge: var(--editor-line);
   --tactile-divider: var(--editor-line);
-  --tactile-header: var(--editor-panel);
+  --tactile-header: var(--editor-header);
   --tactile-raised: var(--editor-field);
   --tactile-well: var(--editor-field);
   --tactile-selected: var(--editor-selection);

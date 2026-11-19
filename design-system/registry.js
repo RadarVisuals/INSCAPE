@@ -332,13 +332,13 @@ export const components = [
   },
   {
     id: 'dock',
-    name: 'Workspace sidebar',
+    name: 'Inscape wordmark menu',
     kind: 'Navigation',
     material: 'Flat Carbon / Mist',
-    source: owner + 'WorkspaceNavigation.jsx',
+    source: owner + 'OwnerEditorMenuBar.jsx',
     contract:
-      'Shared reference and production navigation with folding and the existing Library tree. The host owns destinations, inspection locks and explicit publication; sidebar folding is a profile-local browser preference.',
-    evidence: 'browser-tests/workbench-sidebar.browser.mjs',
+      'One owner wordmark menu presents workspace destinations and existing editor commands. The host retains saving, departure guards and panel lifetimes; tool docks are independent.',
+    evidence: 'browser-tests/editor-menu-bar.browser.mjs',
     status: 'Production',
   },
   {
@@ -426,7 +426,7 @@ export const components = [
     source: 'src/public/identity/IdentityModule.jsx',
     contract:
       'Trusted profile header, authored presentation and optional animated background have different owners. Save / Cancel is an explicit edit session.',
-    evidence: 'browser-tests/workbench-sidebar.browser.mjs',
+    evidence: 'browser-tests/editor-menu-bar.browser.mjs',
     status: 'Production',
   },
   {

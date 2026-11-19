@@ -2,6 +2,50 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createSideDockStore, sideDockEdge, sideDockFrames, validSideDock } from './workbenchSideDockState.js';
 import { createEditorPreferencesStore } from './editorPreferencesStore.js';
+
+test('whole-side collapse preserves live registrations, geometry and profile-local preferences', () => {
+  const data = new Map(), storage = { getItem: key => data.get(key) ?? null, setItem: (key, value) => data.set(key, value) };
+  const prefs = createEditorPreferencesStore({ profile: 'alice', storage, delay: 100000 });
+  const dock = createSideDockStore(prefs.section('sideDock'));
+  for (const [id, side, height] of [['Library', 'left', 300], ['Layers', 'left', 500], ['Inspector', 'right', 600]]) {
+    dock.register(id, 280); dock.attach(id, { height }, Infinity, side);
+  }
+  const frames = () => { const s = dock.getSnapshot(); return sideDockFrames(s.layout, s.windows, s.viewport); };
+  dock.resize('Library', { ...frames().Library, width: 410, height: frames().Library.height + 40 });
+  const before = frames(), items = dock.getSnapshot().layout.items, windows = dock.getSnapshot().windows;
+  dock.setCollapsed('left', true); dock.setCollapsed('right', true);
+  assert.equal(dock.getSnapshot().windows, windows, 'hiding never unregisters a live tool');
+  assert.equal(dock.getSnapshot().layout.items, items, 'the saved stack is untouched');
+  assert.deepEqual(frames(), before, 'hidden windows retain their projected geometry for restoration');
+  const collapsed = dock.getSnapshot();
+  dock.setCollapsed('left', true);
+  assert.equal(dock.getSnapshot(), collapsed, 'repeated hide is a no-op');
+  prefs.dispose();
+  const restored = createEditorPreferencesStore({ profile: 'alice', storage });
+  assert.deepEqual(restored.getSnapshot().sideDock.collapsed, { left: true, right: true });
+  assert.deepEqual(restored.getSnapshot().sideDock.items, items); restored.dispose();
+  const other = createEditorPreferencesStore({ profile: 'bob', storage });
+  assert.equal(other.getSnapshot().sideDock.collapsed, undefined); other.dispose();
+  dock.setCollapsed('left', false);
+  assert.equal(dock.getSnapshot().layout.collapsed.right, true, 'each side restores independently');
+  assert.deepEqual(frames(), before);
+});
+
+test('dropping into a collapsed side reveals only that side and cancellation restores collapse', () => {
+  const dock = createSideDockStore();
+  dock.register('Navigator', 160);
+  dock.setCollapsed('left', true); dock.setCollapsed('right', true);
+  const before = dock.getSnapshot().layout;
+  dock.attach('Navigator', { height: 240 }, Infinity, 'left');
+  assert.deepEqual(dock.getSnapshot().layout.collapsed, { left: false, right: true });
+  dock.restore(before);
+  assert.deepEqual(dock.getSnapshot().layout.collapsed, { left: true, right: true });
+  for (const collapsed of [null, true, 1, 'left', [], { left: 1 }, { bottom: true }]) {
+    assert.equal(validSideDock({ width: 320, items: [], collapsed }), false);
+  }
+  assert.equal(validSideDock({ width: 320, items: [] }), true, 'the default layout needs no collapsed sides');
+});
+
 test('docked windows resize together, divide height, restore cancellation and retain hidden slots', () => {
   const dock = createSideDockStore();
   dock.viewport({ width: 1440, height: 900, top: 36, left: 0 });
@@ -110,4 +154,15 @@ test('edge drops share the measured workspace boundary', () => {
   assert.equal(sideDockEdge({ clientX: 1438, clientY: 70 }, viewport), 'right');
   for (const [clientX, clientY] of [[4, 20], [1438, 20], [500, 200], [-2, 100], [1441, 100], [4, 901]])
     assert.equal(sideDockEdge({ clientX, clientY }, viewport), null);
+});
+
+test('opening a grouped tool reveals its existing sidebar without moving it', () => {
+  const dock = createSideDockStore();
+  dock.register('tools:library', 280); dock.attach('tools:library', { height: 500 }, Infinity, 'right');
+  const items = dock.getSnapshot().layout.items;
+  dock.setCollapsed('left', true); dock.setCollapsed('right', true);
+  dock.reveal('tools:library');
+  assert.deepEqual(dock.getSnapshot().layout.collapsed, { left: true, right: false });
+  assert.equal(dock.getSnapshot().active, 'tools:library');
+  assert.equal(dock.getSnapshot().layout.items, items);
 });

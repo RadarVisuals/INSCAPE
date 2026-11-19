@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { metadataImages } from './metadataImages.js';
+import { metadataImages, metadataFiles } from './metadataImages.js';
 import { selectImageGroups } from './resolveContentUrl.js';
 import { normalizeEnvioHolding } from './luksoEnvioProfileRepository.js';
 
@@ -75,4 +75,20 @@ test('XML SVG detection uses the path, preserves duplicates as one choice and ex
 test('attachment discovery has no four- or eight-image cap', () => {
   const assets = Array.from({ length: 64 }, (_, i) => ({ url: `https://art.test/pose-${i}.svg`, fileType: 'application/xml' }));
   assert.equal(selectImageGroups(metadataImages({ assets })).length, assets.length);
+});
+
+test('file attachments stay distinct from image groups and retain their formats through normalization', () => {
+  const metadata = { images: [{ url: 'https://art.test/cover.webp', width: 320, height: 320 }], assets: [
+    { url: 'https://art.test/animated.svg', file_type: 'application/xml' },
+    { url: 'https://art.test/notes.txt', file_type: 'text/plain' },
+    { url: 'https://art.test/scene.html', fileType: 'text/html' },
+    { url: 'https://art.test/missing.txt', fileType: 'text/plain', error: true },
+  ] };
+  assert.deepEqual(metadataFiles(metadata), [
+    { url: 'https://art.test/notes.txt', fileType: 'text/plain' },
+    { url: 'https://art.test/scene.html', fileType: 'text/html' },
+  ]);
+  const asset = indexedToken(19, metadata);
+  assert.deepEqual(asset.fileAttachments, metadataFiles(metadata));
+  assert.equal(asset.imageGroups.length, 2);
 });

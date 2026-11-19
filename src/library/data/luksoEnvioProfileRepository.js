@@ -1,6 +1,6 @@
 import { LUKSO_CHAIN_ID, LUKSO_INDEXER_URL, IPFS_GATEWAY_URL, LIBRARY_PAGE_SIZE, normalizeProfileAddress } from '../config.js';
 import { normalizeProfileAsset } from '../domain/normalizeProfileAsset.js';
-import { metadataImages } from './metadataImages.js';
+import { metadataImages, metadataFiles } from './metadataImages.js';
 import { parseCanonicalAssetId } from '../../profileDocument/domain/assetReference.js';
 
 // Official HTTP API: https://docs.lukso.network/tools/apis/indexer-api/
@@ -51,7 +51,7 @@ function metadataFor(record = {}) {
   return {
     id: record.id, name: record.name || record.lsp4TokenName || null,
     lsp4TokenName: record.lsp4TokenName || null, description: record.description || '',
-    images: imagesFor(record),
+    images: imagesFor(record), fileAttachments: metadataFiles(record),
     attributes: (record.attributes || []).map(entry => ({ key: entry.key, value: entry.value, attributeType: entry.attributeType })),
     lsp4Creators: (record.lsp4Creators || []).filter(entry => normalizeProfileAddress(entry.profile_id)),
     lsp4TokenType: ['TOKEN', 'NFT', 'COLLECTION'][record.lsp4TokenType] || null,

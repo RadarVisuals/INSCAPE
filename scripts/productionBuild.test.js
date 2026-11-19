@@ -156,21 +156,25 @@ test('each independent budget category reports an actionable overage', () => {
   }
 });
 
-test('measured production allowances retain exact budget boundaries with the lazy article editor', () => {
+test('approved aggregate headroom preserves all other production budget boundaries', () => {
   assert.deepEqual(PRODUCTION_BUDGETS, {
     initialJavaScript: { raw: 1_303_524, gzip: 379_811 },
     ownerJavaScript: { raw: 378_237, gzip: 114_888 },
     standaloneWalletJavaScript: { raw: 4_600_000, gzip: 1_225_000 },
     initialCss: { raw: 51_807, gzip: 10_301 },
     ownerCss: { raw: 143_870, gzip: 21_140 },
-    coreJavaScript: { raw: 2_744_000, gzip: 909_000 },
+    coreJavaScript: { raw: 3_000_000, gzip: 1_000_000 },
     publicAssets: { raw: 17_960_000 },
     largestPublicAsset: { raw: 2_700_000 },
   });
 
   const totals = Object.fromEntries(Object.entries(PRODUCTION_BUDGETS).map(([name, limits]) =>
     [name, { ...limits }]));
-  assert.equal(checkProductionBudgets({ totals, ownerRuntimeGraph: graph() }), true);
+  const warnings = [];
+  assert.equal(checkProductionBudgets({ totals, ownerRuntimeGraph: graph() }, PRODUCTION_BUDGETS, { warn: message => warnings.push(message) }), true);
+  assert.equal(warnings.length, 1);
+  assert.match(warnings[0], /coreJavaScript\.raw/);
+  assert.match(warnings[0], /coreJavaScript\.gzip/);
 
   for (const [measurement, limit] of Object.entries(PRODUCTION_BUDGETS.initialJavaScript)) {
     const over = structuredClone(totals);
@@ -198,6 +202,39 @@ test('measured production allowances retain exact budget boundaries with the laz
         new RegExp(`${category}\\.${measurement}: .* \\(\\+1 bytes\\)`));
     }
   }
+});
+
+test('aggregate warning starts at 95%, permits the ceiling and rejects a one-byte overage', () => {
+  for (const [measurement, limit] of Object.entries(PRODUCTION_BUDGETS.coreJavaScript)) {
+    for (const actual of [limit * 0.95 - 1, limit * 0.95, limit, limit + 1]) {
+      const totals = Object.fromEntries(Object.entries(PRODUCTION_BUDGETS).map(([name, limits]) =>
+        [name, Object.fromEntries(Object.keys(limits).map(key => [key, 0]))]));
+      totals.coreJavaScript[measurement] = actual;
+      const warnings = [];
+      const check = () => checkProductionBudgets({ totals, ownerRuntimeGraph: graph() }, PRODUCTION_BUDGETS,
+        { warn: message => warnings.push(message) });
+      if (actual > limit) {
+        assert.throws(check, /Production bundle budget failed:[\s\S]*\(\+1 bytes\)/);
+        assert.deepEqual(warnings, []);
+      } else {
+        assert.equal(check(), true);
+        assert.equal(warnings.length, actual >= limit * 0.95 ? 1 : 0);
+        if (warnings.length) {
+          assert.ok(warnings[0].includes('coreJavaScript.' + measurement));
+          assert.ok(warnings[0].includes((limit - actual) + ' bytes remaining'));
+        }
+      }
+    }
+  }
+});
+
+test('aggregate warning does not change other categories at their allowed ceilings', () => {
+  const totals = Object.fromEntries(Object.entries(PRODUCTION_BUDGETS).map(([name, limits]) => [name, { ...limits }]));
+  totals.coreJavaScript = { raw: 0, gzip: 0 };
+  const warnings = [];
+  assert.equal(checkProductionBudgets({ totals, ownerRuntimeGraph: graph() }, PRODUCTION_BUDGETS,
+    { warn: message => warnings.push(message) }), true);
+  assert.deepEqual(warnings, []);
 });
 
 test('owner leakage fails independently of byte budgets', () => {

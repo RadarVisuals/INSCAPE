@@ -147,7 +147,7 @@ test('a disposed tool source cannot unregister its same-ID replacement or anothe
       refresh.injectIntoGlobalHook(window); window.$RefreshReg$ = () => {}; window.$RefreshSig$ = () => type => type; window.__vite_plugin_react_preamble_installed__ = true;
       const React = (await import('/@id/react')).default;
       const { createRoot } = (await import('/@id/react-dom/client')).default;
-      const { WorkbenchView, useWorkbenchToolSource } = await import('/src/public/ownerSystemWorkflow/WorkbenchViewContext.js');
+      const { WorkbenchHostView, useWorkbenchToolSource } = await import('/src/public/ownerSystemWorkflow/WorkbenchViewContext.js');
       const maps = { A: new Map(), B: new Map() };
       const views = Object.fromEntries(Object.entries(maps).map(([id, toolSources]) => [id, { store: {}, toolSources, toolsChanged() {} }]));
       window.registrationValue = activation => maps[activation].get('text:replacement')?.current.label || null;
@@ -155,7 +155,7 @@ test('a disposed tool source cannot unregister its same-ID replacement or anothe
       function Fixture() {
         const [old, setOld] = React.useState(true), [next, setNext] = React.useState(false), [activation, setActivation] = React.useState('A');
         window.replaceSource = () => setNext(true); window.removeOldSource = () => setOld(false); window.switchRegistration = setActivation;
-        return React.createElement(WorkbenchView.Provider, { value: views[activation] }, React.createElement(React.StrictMode, { key: activation },
+        return React.createElement(WorkbenchHostView.Provider, { value: views[activation] }, React.createElement(React.StrictMode, { key: activation },
           old && React.createElement(Source, { key: 'old', label: 'old' }),
           next && React.createElement(Source, { key: 'new', label: 'new' })));
       }

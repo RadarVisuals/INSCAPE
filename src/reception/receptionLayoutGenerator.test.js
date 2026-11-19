@@ -98,7 +98,7 @@ test('occupied cells, failed storage, stale proposals, exhausted shape capacity 
   fail(true); assert.throws(() => apply(), /could not be saved/u); fail(false);
   assert.deepEqual(root.getSnapshot(), saved);
   const generation = scope.getGeneration(); apply({ columns: 3, rows: 1 }); saved = structuredClone(root.getSnapshot());
-  assert.throws(() => scope.generateCellLayout(defaults, 42, generation), /Reception changed/u);
+  assert.throws(() => scope.generateCellLayout(defaults, 42, generation), /composition changed/u);
   assert.deepEqual(root.getSnapshot(), saved);
   for (let index = scope.getReception().shapes.length; index < 32; index++) addShape(scope, profile);
   saved = structuredClone(root.getSnapshot());

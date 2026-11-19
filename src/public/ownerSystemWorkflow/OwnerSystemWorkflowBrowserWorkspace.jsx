@@ -38,38 +38,16 @@ export function OwnerSystemWorkflowSidebarDeleteConfirmation({ entityLabel, name
   </div>;
 }
 
-export function OwnerSystemWorkflowWorkspaceShell({ children, className, label, phase, placing = false, rail, sidebarCollapsed = false, style, resizeHandle, header, embedded = false, palette }) {
-  const [hoverLabel, setHoverLabel] = useState(null);
-  const showHoverLabel = (event) => {
-    const button = event.target.closest?.('.lattice-browser-sidebar button');
-    const sidebar = button?.closest?.('.lattice-browser-sidebar');
-    if (!button || !sidebar || sidebar.getBoundingClientRect().width > 72) return;
-    const rect = button.getBoundingClientRect();
-    const workspaceRect = event.currentTarget.getBoundingClientRect();
-    setHoverLabel({
-      active: button.matches('[aria-pressed="true"], [data-active]'),
-      height: rect.height,
-      label: button.getAttribute('aria-label'),
-      left: rect.right - workspaceRect.left - 1,
-      top: rect.top - workspaceRect.top - 1,
-    });
-  };
+export function OwnerSystemWorkflowWorkspaceShell({ children, className, label, phase, placing = false, rail, style, resizeHandle, header, embedded = false, palette }) {
   return <section aria-hidden={phase === 'closing' || undefined} aria-label={label}
-    data-library-chrome data-library-embedded={embedded || undefined} data-library-header={Boolean(header) || undefined}
+    data-library-rail={Boolean(rail) || undefined} data-library-chrome data-library-embedded={embedded || undefined} data-library-header={Boolean(header) || undefined}
     data-workflow-material="tactile" data-workflow-finish="flat" data-workflow-palette={palette}
     className={`system-workflow__workspace-window system-workflow__browser-workspace system-workflow__motion-panel ${className}`}
     data-placing={placing || undefined} style={style}
-    data-sidebar-collapsed={sidebarCollapsed || undefined}
-    inert={phase === 'closing' ? '' : undefined}
-    onBlurCapture={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setHoverLabel(null); }}
-    onFocusCapture={showHoverLabel}
-    onPointerOver={showHoverLabel} onPointerLeave={() => setHoverLabel(null)}>
+    inert={phase === 'closing' ? '' : undefined}>
     {header}
     <div className="system-workflow__browser-body">{children}</div>
-    <footer className="system-workflow__local-rail">{rail}</footer>
+    {rail && <footer className="system-workflow__local-rail">{rail}</footer>}
     {resizeHandle}
-    {hoverLabel?.label && <output aria-hidden="true" className="system-workflow__sidebar-hover-label"
-      data-active={hoverLabel.active || undefined}
-      style={{ height: hoverLabel.height, left: hoverLabel.left, top: hoverLabel.top }}>{hoverLabel.label}</output>}
   </section>;
 }

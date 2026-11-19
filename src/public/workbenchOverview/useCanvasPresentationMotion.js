@@ -11,14 +11,19 @@ const projection = (canvas, frame) => {
   return { left: `${box.left - frame.left}px`, top: `${box.top - frame.top}px`, scale: box.width / Number(canvas.dataset.worldWidth) };
 };
 
-export default function useCanvasPresentationMotion({ dialog, surface, origin, area, region, expanded, onClose }) {
+export default function useCanvasPresentationMotion({ dialog, surface, backdrop, dither, publishedWorks, origin, area, region, expanded, onClose }) {
   const [viewport, setViewport] = useState(null);
   const state = useRef({ animations: [], closing: false, pending: null, before: null });
   const latest = useRef({ onClose, region, area }); latest.current = { onClose, region, area };
-  const cancel = useCallback(() => { state.current.animations.forEach(animation => animation.cancel()); state.current.animations = []; }, []);
+  const shadeProperty = dither ? '--canvas-matte-coverage' : 'opacity';
+  const cancel = useCallback(() => {
+    state.current.animations.forEach(animation => animation.cancel());
+    state.current.animations = [];
+    backdrop.current?.removeAttribute('data-fading');
+  }, [backdrop]);
   const snapshot = () => {
     const frame = rect(surface.current), canvas = surface.current.querySelector('.workbench-overview-canvas');
-    return { frame, canvas: projection(canvas, frame), shade: getComputedStyle(dialog.current.querySelector('.canvas-presentation-backdrop')).opacity };
+    return { frame, canvas: projection(canvas, frame), shade: getComputedStyle(backdrop.current).getPropertyValue(shadeProperty) };
   };
   const plan = useCallback((from, returning = false) => {
     const host = surface.current;
@@ -58,11 +63,17 @@ export default function useCanvasPresentationMotion({ dialog, surface, origin, a
     const baseScale = parseFloat(canvas.style.width) / latest.current.area.width;
     const keyframe = value => ({ left: value.left, top: value.top, transform: `scale(${value.scale / baseScale})` });
     const options = { duration: matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 700, easing: PRESENTATION_EASING, fill: 'both' };
+    const endShade = returning ? 0 : 1;
+    const fading = returning || Number(from.shade) !== 1;
+    if (dither && fading && options.duration) backdrop.current.setAttribute('data-fading', '');
     const animations = [
       host.animate([geometry(from.frame), geometry(to)], options),
       canvas.animate([keyframe(from.canvas || destination), keyframe(destination)], options),
-      dialog.current.querySelector('.canvas-presentation-backdrop').animate([{ opacity: from.shade }, { opacity: returning ? 0 : 1 }], options),
     ];
+    if (fading) animations.push(backdrop.current.animate(
+      [{ [shadeProperty]: from.shade }, { [shadeProperty]: endShade }],
+      { ...options, easing: publishedWorks ? 'cubic-bezier(.25,0,.75,1)' : options.easing }
+    ));
     state.current.animations = animations;
     Promise.all(animations.map(animation => animation.finished)).then(() => {
       if (state.current.animations !== animations) return;
@@ -70,7 +81,7 @@ export default function useCanvasPresentationMotion({ dialog, surface, origin, a
       else { cancel(); delete host.dataset.moving; setViewport(null); }
     }).catch(() => {});
     // Frame and camera changes share this motion owner and its interruption path.
-  }, [viewport, cancel, dialog, surface]);
+  }, [viewport, cancel, backdrop, dither, publishedWorks, shadeProperty, surface]);
   useLayoutEffect(() => {
     const resize = () => {
       if (state.current.closing) { latest.current.onClose(); return; }

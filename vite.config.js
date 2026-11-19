@@ -45,7 +45,7 @@ export default defineConfig(({ mode, command }) => {
       // CommonJS dependencies optimized when those lazy components are opened.
       ? { entries: ['design-lab.html'], include: ['react', 'react-dom/client', 'react/jsx-runtime', 'react/jsx-dev-runtime', 'lucide-react', '@tiptap/react', '@tiptap/core', '@tiptap/extension-text-style', 'buffer', 'qrcode-generator'] }
       : { entries: ['index.html', 'mini-app-host.html', 'browser-tests/*.html'] },
-    preview: { headers: productionResponseSecurityHeaders(productionEnvironment) },
+    preview: { headers: productionResponseSecurityHeaders(productionEnvironment, { localPreview: true }) },
     server: {
       watch: {
         ignored: [

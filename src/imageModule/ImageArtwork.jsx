@@ -1,29 +1,31 @@
-import { cloneElement, useEffect, useState } from 'react';
+import { artworkPreview } from '../library/data/libraryImagePreview.js';
+import { cloneElement, memo, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { projectSystemWorkflowTransform, projectSystemWorkflowImageRenderRectangle } from '../systemWorkflow/systemWorkflowTransform.js';
 import { projectCroppedMediaRectangle } from '../lattice/rendering/latticeCrop.js';
-import { fitNativeMediaRectangle } from '../lattice/rendering/latticeGeometry.js';
+import { fitNativeMediaRectangle, alignContainedMediaRectangle } from '../lattice/rendering/latticeGeometry.js';
 import { resolvePublishedAssetUrl } from '../profileDocument/domain/publishedAssetUrl.js';
 import { useArtworkMediaType } from '../artwork/useSvgArtwork.js';
 import ProjectedSvgArtwork from '../artwork/ProjectedSvgArtwork.jsx';
 import { usePreparedImageArtwork } from './usePreparedImageArtwork.js';
 
 // One SVG viewport owns projection and clipping, in canvas coordinates.
-export default function ImageArtwork(props) {
+export default memo(function ImageArtwork(props) {
   const src = resolvePublishedAssetUrl(props.artwork.asset.media.url);
   const [attempt, setAttempt] = useState(0);
   // Retry only this artwork's media. Remounting its attempt also cancels type
   // detection and disposable WebP preparation, without replacing the artwork plane.
   return <ImageArtworkAttempt key={`${src}:${attempt}`} {...props} src={src}
     onRetry={() => setAttempt(current => current === attempt ? current + 1 : current)} />;
-}
+});
 
-function ImageArtworkAttempt({ artwork, src, rectangle, crop = artwork.crop, recoveryHost, recoveryMode, onRetry, onRecoverFocus }) {
+function ImageArtworkAttempt({ artwork, src, rectangle, alignment, crop = artwork.crop, recoveryHost, recoveryMode, onRetry, onRecoverFocus, htmlSvgViewport = false, inspecting = false }) {
   const media = artwork.asset.media;
+  const preview = artworkPreview(src);
   const { svg, pending } = useArtworkMediaType(src);
-  const raster = usePreparedImageArtwork(src, !pending && !svg);
   // The keyed attempt owns one source for its entire lifetime.
   const [loadState, setLoadState] = useState({ status: 'loading', show: false });
+  const raster = usePreparedImageArtwork(src, !pending && !svg && !inspecting && loadState.status === 'ready');
   useEffect(() => {
     if (pending || svg) return undefined;
     let active = true;
@@ -45,8 +47,8 @@ function ImageArtworkAttempt({ artwork, src, rectangle, crop = artwork.crop, rec
   const status = loadState.status;
   const projection = projectSystemWorkflowTransform(artwork.transform, media, crop);
   const { quarterTurns, mirrorX, mirrorY } = artwork.transform;
-  const fitted = crop ? projectCroppedMediaRectangle(rectangle, projection.dimensions, projection.crop)
-    : fitNativeMediaRectangle(rectangle, projection.dimensions);
+  const fitted = crop ? alignContainedMediaRectangle(rectangle, projectCroppedMediaRectangle(rectangle, projection.dimensions, projection.crop), alignment)
+    : fitNativeMediaRectangle(rectangle, projection.dimensions, alignment);
   const image = projectSystemWorkflowImageRenderRectangle(fitted, projection);
   // Status belongs beside the canvas button, outside transformed artwork and
   // its interaction tree. SVG retains its existing loader and retry lifecycle.
@@ -69,12 +71,12 @@ function ImageArtworkAttempt({ artwork, src, rectangle, crop = artwork.crop, rec
     onKeyDown: event => event.stopPropagation(),
   }), recoveryHost) : null;
   if (svg) return <ProjectedSvgArtwork src={src} width={rectangle.width} height={rectangle.height}
-    dimensions={media} mediaStyle={{ ...image, transform: projection.css }} renderStatus={renderStatus} />;
+    dimensions={media} mediaStyle={{ ...image, transform: projection.css }} renderStatus={renderStatus} htmlViewport={htmlSvgViewport} inspecting={inspecting} />;
   return <><svg className="image-module__artwork" data-media-state={status} viewBox={`0 0 ${rectangle.width} ${rectangle.height}`} preserveAspectRatio="none" aria-hidden="true">
-    <image ref={raster} href={src} x={image.left} y={image.top} width={image.width} height={image.height}
+    <image ref={raster} href={status === 'ready' || !preview ? src : preview.url} x={image.left} y={image.top} width={image.width} height={image.height}
       preserveAspectRatio="none" transform={`translate(${fitted.left + fitted.width / 2} ${fitted.top + fitted.height / 2}) scale(${mirrorX ? -1 : 1} ${mirrorY ? -1 : 1}) rotate(${quarterTurns * 90}) translate(${-image.left - image.width / 2} ${-image.top - image.height / 2})`} />
   </svg>
-    {status !== 'ready' && loadState.show
+    {status !== 'ready' && loadState.show && (!preview || status === 'failed')
       && renderStatus(<span role="status">
         {status === 'failed' ? <>Artwork unavailable.<button type="button" className="workflow-tactile-control"
           data-workbench-recovery-control onClick={onRetry}>Retry artwork</button></> : 'Loading artwork…'}

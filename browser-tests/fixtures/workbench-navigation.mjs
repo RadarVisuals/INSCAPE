@@ -1,4 +1,4 @@
-import { editorMenu } from './editor-menu.mjs';
+import { editorMenu, openEditorMenu } from './editor-menu.mjs';
 
 const commands = {
   focus: ['View', 'Focus selection', 'Focus selected Workbench modules'],
@@ -12,8 +12,8 @@ export async function workbenchCommand(page, action) {
   const [menu, name, railName] = commands[action];
   const trigger = editorMenu(page, menu);
   if (!await trigger.count()) return page.getByRole('button', { name: railName, exact: true });
-  if (await trigger.getAttribute('aria-expanded') !== 'true') await trigger.click();
-  return page.getByRole('menu', { name: `${menu} menu` }).getByRole('menuitem', { name, exact: true });
+  await openEditorMenu(page, menu);
+  return page.getByRole('menu', { name: `${menu} options` }).getByRole('menuitem', { name, exact: true });
 }
 
 export async function navigateWorkbench(page, action) {
@@ -22,7 +22,7 @@ export async function navigateWorkbench(page, action) {
 
 export async function workbenchCommandDisabled(page, action) {
   const [, , railName] = commands[action];
-  const menuBar = page.locator('[role="menubar"][aria-label="Editor commands"]');
+  const menuBar = page.locator('.editor-menu-bar');
   if (!await menuBar.count()) return page.getByRole('button', { name: railName, exact: true }).isDisabled();
   if (!await menuBar.isVisible()) return true; // Immersive inspection suspends Editor commands.
   // A completed drop can remove the focused selection overlay. In that case

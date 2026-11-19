@@ -45,8 +45,7 @@ for (const { theme, width, height } of r12Cases) {
           reviewStorage: storage, reviewAssets: [], reviewCategories: [], reviewActivity: [], reviewProfile: { name: 'R12 Preview' } }));
       }, theme);
       const trigger = editorMenu(page, 'Canvas');
-      const sidebar = page.getByRole('complementary', { name: 'Workspace sidebar', exact: true });
-      await sidebar.waitFor();
+      await page.getByRole('button', { name: 'Inscape menu', exact: true }).waitFor();
       if (!await trigger.isVisible()) await pointerAction(page, page.locator('.editor-menu-brand[aria-expanded="false"]'));
       await trigger.waitFor();
       const returnFocus = trigger;
@@ -129,8 +128,7 @@ try {
   // This lifecycle fixture places its shortcuts at the canvas origin. Use the
   // normal workspace command to reveal them beneath the optional sidebar.
   await page.locator('main.system-workflow').press('Shift+F10');
-  await page.getByRole('menuitem', { name: 'HIDE SIDEBAR', exact: true }).click();
-  await page.locator('aside.workspace-navigation').waitFor({ state: 'hidden' });
+    await page.keyboard.press('Escape');
   const additional = page.locator(`[data-display-instance="${await page.evaluate(() => window.second)}"]`);
   const openDisplayMenu = async () => {
     const header = additional.locator('.system-workflow__identity-strip');
@@ -180,7 +178,7 @@ try {
   const owner = page.locator('main.system-workflow');
   assert.equal(await owner.locator('[aria-label="Pause Grids"]').count(), 2);
   await owner.press('Shift+F10');
-  await page.getByRole('menuitem', { name: 'SHOW SIDEBAR', exact: true }).click();
+    await page.keyboard.press('Escape');
   await page.locator('aside.workspace-navigation').waitFor({ state: 'visible' });
   let releasePreview;
   let markRequested;

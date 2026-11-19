@@ -4,7 +4,12 @@ export const RETIRED_INTERFACE_APPEARANCE_KEYS = ['menuSurfaceId', 'dossierSurfa
 export const retiredInterfaceKeys = value => RETIRED_INTERFACE_APPEARANCE_KEYS.filter(key => Object.hasOwn(value || {}, key));
 
 export function withoutRetiredInterfaceAppearance(input) {
-  const result = structuredClone(input);
+  return stripRetiredInterfaceAppearance(structuredClone(input));
+}
+
+// Only call on an owned, detached value. Draft validation already created its
+// protective copy while removing artwork presentation fields.
+export function stripRetiredInterfaceAppearance(result) {
   const clean = value => {
     if (!value || typeof value !== 'object') return;
     for (const key of RETIRED_INTERFACE_APPEARANCE_KEYS) if (value.appearance) delete value.appearance[key];

@@ -1,13 +1,13 @@
-import { useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { STARTVEIL_STATES, STARTVEIL_REVEAL_MS, STARTVEIL_RETURN_REVEAL_MS } from './startveilMachine.js';
 import { useStartveil } from './useStartveil.js';
-import PublicEntryPortal from './PublicEntryPortal.jsx';
 import '../lattice/rendering/latticeMenuSurface.css';
-import './publicEntryPortal.css';
+import './startveil.css';
 
+const PublicEntryPortal = lazy(() => import('./PublicEntryPortal.jsx'));
 const INTRO_MS = 720;
 
-export default function PortalStartveil({ connectedProfile, portal = false, onConnect, onDisconnect, onEnterMyWorld, onVisitProfile, onExplore, ...props }) {
+export default function PortalStartveil({ connectedProfile, ownerDestinations, portal = false, onConnect, onDisconnect, onEnterMyWorld, onVisitProfile, onExplore, ...props }) {
   const [sequenceReady, setSequenceReady] = useState(false);
   const { state, enter, reducedMotion, shortened, canEnter } = useStartveil({
     ...props,
@@ -35,18 +35,19 @@ export default function PortalStartveil({ connectedProfile, portal = false, onCo
     onVisitProfile?.(address);
   };
 
+  const intro = <div className="startveil__intro">
+    <span aria-hidden="true" className="startveil__intro-wordmark" />
+    <small>{props.ready ? 'PUBLIC NETWORK · LUKSO MAINNET' : 'PREPARING INSCAPE'}</small>
+  </div>;
+
   return <section aria-busy={!ready && !exiting} aria-label="INSCAPE entry" className="startveil"
     style={{ '--startveil-reveal-duration': `${reducedMotion ? 0 : shortened ? STARTVEIL_RETURN_REVEAL_MS : STARTVEIL_REVEAL_MS}ms` }}
     data-portal={portal || undefined} data-ready={ready || undefined}
     data-reduced-motion={reducedMotion || undefined} data-sequence={shortened ? 'short' : 'full'}
     data-state={state} data-exiting={exiting || undefined} data-lattice-menu-surface >
-    <div aria-hidden="true" className="startveil__grid" />
-    {portal && ready ? <PublicEntryPortal connectedProfile={connectedProfile} onConnect={onConnect} onExplore={onExplore}
-      onDisconnect={onDisconnect} onEnterMyWorld={onEnterMyWorld} onVisitProfile={visitProfile} />
-      : <div className="startveil__intro">
-        <span aria-hidden="true" className="startveil__intro-wordmark" />
-        <small>{props.ready ? 'PUBLIC NETWORK · LUKSO MAINNET' : 'PREPARING INSCAPE'}</small>
-      </div>}
+    {portal && ready ? <Suspense fallback={intro}><PublicEntryPortal ownerDestinations={ownerDestinations} connectedProfile={connectedProfile} onConnect={onConnect} onExplore={onExplore}
+      onDisconnect={onDisconnect} onEnterMyWorld={onEnterMyWorld} onVisitProfile={visitProfile} /></Suspense>
+      : intro}
     <span aria-live="polite" className="startveil__status">
       {exiting ? 'Opening INSCAPE.' : portal && ready ? 'Choose Discover or Connect Profile.'
         : ready ? 'INSCAPE ready.' : props.ready ? 'Resolving INSCAPE.' : 'Preparing INSCAPE.'}

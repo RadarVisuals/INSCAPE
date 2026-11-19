@@ -1,13 +1,33 @@
 .reception-document-viewport { flex: none; width: 100%; min-width: 0; margin-block: auto; }
-.reception-document-canvas { position: relative; flex: none; width: 100%; min-width: 0; margin-inline: auto; overflow: hidden; isolation: isolate; background: var(--interface-environment); }
-.reception-document-canvas[data-show-frame] { outline: 1px solid var(--tactile-edge); outline-offset: -1px; }
+.reception-document-canvas { position: relative; flex: none; width: 100%; min-width: 0; margin-inline: auto; overflow: hidden; isolation: isolate; background: color-mix(in srgb, var(--reception-frame-fill, var(--reception-page-background, var(--interface-environment))) var(--reception-frame-fill-opacity, 100%), transparent); }
+.reception-document-canvas[data-show-frame] { outline: 1px solid color-mix(in srgb, var(--reception-frame-line, color-mix(in srgb, currentColor 6%, transparent)) var(--reception-frame-line-opacity, 100%), transparent); outline-offset: -1px; }
 .reception-document-layer, .reception-document-cell { position: absolute; box-sizing: border-box; min-width: 0; isolation: isolate; }
 /* ShapeSurface owns the fill boundary; clipping it again compounds fractional
    edge alpha. Content keeps its independent rounded scroll clip below. */
 .reception-document-cell { overflow: visible; isolation: isolate; }
 .reception-document-cell-surface { position: absolute; inset: 0; }
-.reception-document-cell-content { position: absolute; inset: 0; display: flex; padding: 24px; box-sizing: border-box; overflow: auto; border-radius: inherit; }
+.reception-document-cell-content { position: absolute; inset: 0; display: flex; padding: 24px; box-sizing: border-box; overflow: auto; scrollbar-width: none; border-radius: inherit; }
 .reception-document-layer[data-text] { overflow: hidden; overflow-wrap: anywhere; }
 .reception-document-layer .reception-image { min-height: 0; }
 .reception-document-canvas [data-selected] { outline: 1px solid var(--tactile-ink); outline-offset: -1px; }
-.reception-document-canvas [tabindex]:focus-visible { outline: 2px solid var(--tactile-ink); outline-offset: -2px; }
+.reception-document-layer[tabindex]:focus-visible, .reception-document-cell[tabindex]:focus-visible { outline: 2px solid var(--tactile-ink); outline-offset: -2px; }
+.reception-text-preview { height: 100%; min-height: 0; }
+.reception-text-preview[data-stacked] { container-type: size; --text-stack-height: 100cqh; }
+.reception-text-excerpt { max-height: 100%; overflow: hidden; }
+.reception-text-excerpt > div { display: flow-root; }
+.reception-read-text { position: absolute; right: 16px; bottom: 16px; display: grid; place-items: end; width: 32px; height: 32px; padding: 0; border: 0; background: none; color: inherit; cursor: pointer; opacity: .65; }
+.reception-read-dots { display: flex; gap: 4px; padding-block: 2px; }
+.reception-read-dots > span { width: 3px; height: 3px; border-radius: 50%; background: currentColor; }
+.reception-read-text:hover, .reception-read-text:focus-visible { opacity: 1; }
+.reception-read-text:focus-visible, .reception-reader-close:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
+/* No stacking context at rest: each layer retains its global paint index. */
+.reception-cell-group { position: absolute; }
+.reception-text-reader { font: inherit; box-sizing: border-box; width: min(calc(66ch + 64px), calc(100vw - 32px)); max-height: calc(100dvh - 64px); margin: auto; padding: 0; border: 0; overflow: hidden; background: var(--reception-page-background, var(--interface-window, #080808)); isolation: isolate; }
+.reception-text-reader[open] { display: flex; }
+.reception-text-reader::backdrop { background: rgb(0 0 0 / .78); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+.reception-reader-surface { position: absolute; inset: 0; pointer-events: none; }
+.reception-reader-scroll { position: relative; box-sizing: border-box; width: 100%; min-height: 0; padding: 48px 32px 32px; overflow: auto; overscroll-behavior: contain; scrollbar-width: none; }
+.reception-reader-scroll:focus-visible { outline: 1px solid color-mix(in srgb, currentColor 20%, transparent); outline-offset: -1px; }
+.reception-reader-scroll > div + div { margin-top: 32px; }
+.reception-reader-close { position: absolute; z-index: 1; top: 8px; right: 8px; display: grid; place-items: center; width: 32px; height: 32px; padding: 0; border: 0; background: none; color: inherit; cursor: pointer; }
+.reception-reader-scroll::-webkit-scrollbar, .reception-document-cell-content::-webkit-scrollbar { display: none; }

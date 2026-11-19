@@ -5,6 +5,7 @@ import { ARTWORK_DOCUMENT_HTML } from './artworkDocumentHost.js';
 
 function host() {
   const listeners = {}, forwarded = [], upward = [], loads = [];
+  const urls = [], revoked = [];
   const parent = { postMessage: data => upward.push(data) };
   const child = { postMessage: data => forwarded.push(JSON.parse(JSON.stringify(data))) };
   const svg = { createElementNS: () => ({}), documentElement: { append() {} } };
@@ -13,12 +14,15 @@ function host() {
     document: { createElement: () => ({ contentWindow: child, addEventListener: (_, callback) => loads.push(callback) }), body: { append() {} } },
     DOMParser: class { parseFromString() { return svg; } },
     XMLSerializer: class { serializeToString() { return '<svg/>'; } },
-    Blob, URL: { createObjectURL: () => 'blob:test', revokeObjectURL() {} },
+    Blob, URL: {
+      createObjectURL() { const url = `blob:test-${urls.length + 1}`; urls.push(url); return url; },
+      revokeObjectURL: url => revoked.push(url),
+    },
   };
   vm.runInNewContext(ARTWORK_DOCUMENT_HTML.match(/<script>([\s\S]*)<\/script>/)[1], context);
   const send = (data, source = parent) => listeners.message({ source, data });
   const source = visible => send({ type: 'inscape:artwork-source', svg: '<svg/>', visible });
-  return { send, source, load: () => loads[0](), forwarded, upward };
+  return { send, source, load: () => loads[0](), forwarded, upward, urls, revoked, unload: () => listeners.pagehide() };
 }
 const visibility = visible => ({ type: 'inscape:html-artwork-visibility', visible });
 test('the latest visibility survives source preparation and child navigation', () => {
@@ -42,4 +46,20 @@ test('density and inspection still reach the same document without reloading it'
   h.send({ type: 'inscape:inspect-artwork' }); h.send({ type: 'inscape:release-artwork' });
   assert.deepEqual(h.forwarded.slice(-4), [{ type: 'inscape:artwork-density', scale: 2 }, visibility(true),
     { type: 'inscape:inspect-artwork' }, { type: 'inscape:release-artwork' }]);
+});
+
+test('one hundred artwork host lifetimes revoke their source URL without inspection creating copies', () => {
+  for (let cycle = 0; cycle < 100; cycle++) {
+    const h = host(); h.source(true); h.load();
+    for (let inspection = 0; inspection < 10; inspection++) {
+      h.send({ type: 'inscape:prepare-artwork', requestId: inspection });
+      h.send({ type: 'inscape:inspect-artwork' });
+      h.send({ type: 'inscape:release-artwork' });
+    }
+    h.source(true);
+    assert.equal(h.urls.length, 1, 'the host keeps one document through inspection and duplicate source messages');
+    assert.equal(h.revoked.length, 0, 'the live document still owns its source');
+    h.unload();
+    assert.deepEqual(h.revoked, h.urls, 'leaving the host releases its source URL');
+  }
 });

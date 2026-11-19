@@ -1,5 +1,5 @@
 import { openSharedTool } from './fixtures/shared-tools.mjs';
-import { editorDestination, editorMenu, setEditorSidebarOpen } from './fixtures/editor-menu.mjs';
+import { openEditorMenu, editorDestination, editorMenu, setEditorSidebarOpen } from './fixtures/editor-menu.mjs';
 import { navigateWorkbench } from './fixtures/workbench-navigation.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -27,10 +27,10 @@ async function open(browser, width, height, theme, suffix = '') {
     return route.abort();
   });
   await page.goto(`${origin}/browser-tests/tool-chrome-fixture.html?sample=navigator&theme=${theme}${suffix}`);
-  await page.getByRole('button', { name: 'Inscape sidebar' }).waitFor();
+  await page.getByRole('button', { name: 'Inscape menu' }).waitFor();
   await setEditorSidebarOpen(page, false);
   const activate = async name => {
-    if (name === 'Docs') await editorMenu(page, 'Docs').click();
+    if (name === 'Docs') await openEditorMenu(page, 'Docs');
     else await editorDestination(page, name);
   };
   return { page, activate, errors };
@@ -142,7 +142,7 @@ for (const theme of ['carbon', 'mist']) for (const [width, height] of [[1440, 90
     try {
       const { page, errors } = await open(browser, width, height, theme, '&navigation-tools');
       if (height === 320) {
-        await editorMenu(page, 'Tools').click();
+        await openEditorMenu(page, 'Tools');
         await page.getByRole('menuitemcheckbox', { name: 'Drawing toolbar', exact: true }).click();
       }
       const index = page.getByRole('complementary', { name: 'Index — Destinations', exact: true });

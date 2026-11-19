@@ -10,7 +10,7 @@ const output = process.env.INSCAPE_BROWSER_OUTPUT || '.browser-test-runtime/tool
 const saved = page => page.evaluate(() => window.savedDraft());
 const dock = sharedToolPanel;
 const tab = sharedToolTab;
-// Library shares the Layers dock slot; this inventory measures dockable tools.
+// Every visible tab belongs to exactly one dock group.
 const groups = page => page.locator('.workbench-tool-dock').evaluateAll(nodes => nodes.map(node => [...node.querySelectorAll('[role="tab"][data-tool-tab]')].map(tab => tab.dataset.toolTab)));
 async function drag(page, source, point, cancel) {
   const box = await source.boundingBox();
@@ -59,7 +59,7 @@ test('Layers fills the dock again after hiding, detaching or rejoining a resized
       const frame = await dock(page, 'Layers').boundingBox(), content = await pane(page, 'Layers').boundingBox();
       const actions = await page.getByRole('navigation', { name: 'Layer actions', exact: true }).boundingBox();
       assert.ok(frame.y + frame.height - content.y - content.height < 3, `${stage}: pane fills its remaining frame`);
-      assert.ok(frame.y + frame.height - actions.y - actions.height < 14, `${stage}: layer actions stay at the lower edge`);
+      assert.ok(actions.y >= content.y && actions.y - content.y < 90 && actions.y + actions.height <= content.y + content.height, `${stage}: layer actions stay inside their upper toolbar`);
     };
     const stackedHeight = (await pane(page, 'Layers').boundingBox()).height;
     await page.getByRole('button', { name: 'Close Inspector', exact: true }).click();
@@ -319,6 +319,8 @@ test('keyboard docking keeps text selection, color history and the two host targ
     await field.fill('#336699'); await field.press('Tab');
     content = (await saved(page)).texts[0].article.content.content[0].content;
     assert.equal(content[0].marks[0].attrs.color, '#336699'); assert.equal(content[1].marks, undefined);
+    await page.getByRole('button', { name: 'Artwork library', exact: true }).click();
+    await tab(page, 'Inspector').click();
     await tab(page, 'Inspector').press('ArrowLeft');
     const library = page.getByRole('tab', { name: 'Library', exact: true });
     assert.equal(await library.getAttribute('aria-selected'), 'true');

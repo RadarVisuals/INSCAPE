@@ -4,7 +4,7 @@ import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { useWorkbenchPlacement } from './WorkbenchPlacement.jsx';
-import { useWorkbenchView, workbenchModuleTransform, useWorkbenchViewRegistration } from './WorkbenchViewContext.js';
+import { useWorkbenchHostView, workbenchModuleTransform, useWorkbenchViewRegistration } from './WorkbenchViewContext.js';
 import { workbenchViewStyle } from './workbenchViewScale.js';
 import { workbenchPaintGeometry } from './workbenchPaintGeometry.js';
 import { useWorkbenchCamera } from './WorkbenchCamera.jsx';
@@ -17,7 +17,7 @@ import { clampOwnerSystemWorkflowWindowPosition, resizeWorkbenchWindow, paintWor
 // validation and persistence; companion tools retain only their screen layout.
 export function WorkbenchWindow({ avoidControls, children, background, compact, chrome, className = '', label, controls, title, titleContent, objectToolbar = false, width = 320, resizable = true, resizableWidth = false, initialHeight = 420, minimumHeight = 180, minimumWidth = 240, initialX = 18, initialY = 72, fitContent = false, fitContentFromTop = false, onLayoutChange, snapToGrid = false, placementModule = false, viewId, active, surfaceStyle, surfacePreviewFrame, resizeTarget, committedFrame, externalControls = false, cssPixelSurface = false, subpixelEdges = false, externalControlsHost, externalControlsClassName = '', moveFromContent = false, registerView = true, screenSized = false, preserveAuthoredLayout = false, onLayoutCommit, viewportBottom, viewportInsets }) {
   const { editingBounds: areaBounds, area, showOutside, canvasHost } = useWorkbenchArea();
-  const view = useWorkbenchView();
+  const view = useWorkbenchHostView();
   const { offset, getCamera, subscribeCameraPaint } = useWorkbenchCamera();
   const isCompact = Boolean(compact);
   const transformed = Boolean(viewId) && !compact;
@@ -101,6 +101,7 @@ export function WorkbenchWindow({ avoidControls, children, background, compact, 
     return subscribeCameraPaint(paint);
   }, [anchored, getCamera, subscribeCameraPaint, current.left, current.top, localScale, local?.x, local?.y, camera.scale, offset]);
   // The cell clips artwork; the viewport hosts its header and resize handles.
+  // Repaint for settled zoom/pan as well as subscribed camera-journey frames.
   useLayoutEffect(() => {
     if (!externalControlsHost || !externalControlNode.current || !header.current) return;
     const element = externalControlNode.current, bar = header.current;
@@ -119,7 +120,7 @@ export function WorkbenchWindow({ avoidControls, children, background, compact, 
     const resize = new ResizeObserver(update); resize.observe(bar); update();
     const unsubscribe = subscribeCameraPaint(paintControls);
     return () => { resize.disconnect(); unsubscribe(); };
-  }, [externalControlsHost, getCamera, subscribeCameraPaint, current.left, current.top, current.width, current.height, localScale, local?.x, local?.y, viewport, view.navigationTop, canResize]);
+  }, [externalControlsHost, getCamera, subscribeCameraPaint, current.left, current.top, current.width, current.height, localScale, local?.x, local?.y, camera.scale, offset.x, offset.y, viewport, view.navigationTop, canResize]);
   const bounds = viewId ? {
     left: (areaBounds.left - (local?.x || 0)) / localScale,
     top: (areaBounds.top - (local?.y || 0)) / localScale,

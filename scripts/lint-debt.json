@@ -435,20 +435,20 @@
     {
       "file": "src/public/ownerSystemWorkflow/WorkbenchViewContext.js",
       "ruleId": "react-hooks/exhaustive-deps",
-      "line": 57,
+      "line": 61,
       "column": 6,
       "message": "React Hook useLayoutEffect has a missing dependency: 'saved'. Either include it or remove the dependency array.",
-      "sourceSha256": "3d91d40f9a4f6e464159d54f7416cea17f4b46e83a5e857cbfe38ce266207c5d",
+      "sourceSha256": "2e71821e2b4a0c4ed0c76e1100a0516a09b6ee8d1729dad30a9f2c07efc0915a",
       "planStep": "10",
       "reason": "Behouden: JSON-key representeert de volledige gevalideerde saved-presentatie. previousKey onderscheidt een echte opgeslagen verandering van gewoon renderen/heropenen. Alleen een gesloten module neemt de nieuwe saved-presentatie over en behoudt open=false. S; F closed Image/blockmove/Undo; U capture. Huidige annotaties hebben regels verplaatst. Parentreview op huidige bron: de twee geanalyseerde bodies blijven op serialized saved-content en frameprimitives sturen; typeannotaties en afzonderlijke openerregistratie veranderen deze invalidatie niet."
     },
     {
       "file": "src/public/ownerSystemWorkflow/WorkbenchViewContext.js",
       "ruleId": "react-hooks/exhaustive-deps",
-      "line": 119,
+      "line": 123,
       "column": 6,
       "message": "React Hook useLayoutEffect has missing dependencies: 'frame' and 'savedFrame'. Either include them or remove the dependency array.",
-      "sourceSha256": "3d91d40f9a4f6e464159d54f7416cea17f4b46e83a5e857cbfe38ce266207c5d",
+      "sourceSha256": "2e71821e2b4a0c4ed0c76e1100a0516a09b6ee8d1729dad30a9f2c07efc0915a",
       "planStep": "10",
       "reason": "Behouden: savedKey representeert het volledige savedFrame; frame left/top/width/height, resizeTarget en previewFrame staan expliciet in deps. Tijdens gesturepreview wordt niet hersteld. De map bewaart hoogstens 51 oude frames voor Undo vóór de eerste authored frame-entry. S; U history/layout; F blockmove en Undo/reload. Dit is geen tweede persistente cache. Parentreview op huidige bron: de twee geanalyseerde bodies blijven op serialized saved-content en frameprimitives sturen; typeannotaties en afzonderlijke openerregistratie veranderen deze invalidatie niet."
     },

@@ -11,7 +11,7 @@ export async function verifyMiniAppWindowBoundary(browser, origin) {
       refresh.injectIntoGlobalHook(window); window.$RefreshReg$ = () => {}; window.$RefreshSig$ = () => type => type; window.__vite_plugin_react_preamble_installed__ = true;
       const React = (await import('/@id/react')).default, { createRoot } = (await import('/@id/react-dom/client')).default;
       const MiniApps = (await import('/src/miniApps/MiniAppsWorkbench.jsx')).default;
-      const { WorkbenchView } = await import('/src/public/ownerSystemWorkflow/WorkbenchViewContext.js');
+      const { WorkbenchView, WorkbenchHostView } = await import('/src/public/ownerSystemWorkflow/WorkbenchViewContext.js');
       const { captureWorkbenchPresentation } = await import('/src/public/ownerSystemWorkflow/workbenchPresentationCapture.js');
       const { createDefaultWorkbenchPresentation } = await import('/src/profileDocument/domain/workbenchPresentation.js');
       await import('/src/index.css'); await import('/src/inscapeTokens.css');
@@ -20,9 +20,11 @@ export async function verifyMiniAppWindowBoundary(browser, origin) {
       window.windowReports = {};
       window.captureMiniWindow = () => captureWorkbenchPresentation({ layout: createDefaultWorkbenchPresentation(), hasPrimaryDisplay: false,
         miniApps: records, miniAppPresentations: window.windowReports }).value.miniApps[0];
-      createRoot(document.getElementById('root')).render(React.createElement(WorkbenchView.Provider, { value: { scale: 1, transforms: {}, entries: new Map(), navigationInset: 232 } },
+      const view = { scale: 1, transforms: {}, entries: new Map(), navigationInset: 232 };
+      createRoot(document.getElementById('root')).render(React.createElement(WorkbenchView.Provider, { value: view },
+        React.createElement(WorkbenchHostView.Provider, { value: view },
         React.createElement(MiniApps, { records, profileAddress: `0x${'1'.repeat(40)}`, presentations: [{ id: records[0].id, open: true, window: { left: 320, top: 100, width: 600, height: 500 } }],
-          onPresentationChange: (id, value) => { window.windowReports[id] = value; } })));
+          onPresentationChange: (id, value) => { window.windowReports[id] = value; } }))));
     });
     const frame = page.locator('.mini-app-workbench .system-workflow__instrument-window');
     await frame.waitFor();

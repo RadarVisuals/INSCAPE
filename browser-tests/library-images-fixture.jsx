@@ -7,7 +7,7 @@ import { createOwnerSystemWorkflowReviewStorage, OWNER_SYSTEM_WORKFLOW_REVIEW_PR
 import { systemWorkflowDraftKey } from '../src/systemWorkflow/systemWorkflowDraftStore.js';
 import { buildOwnerSystemWorkflowPreviewDocument } from '../src/public/ownerSystemWorkflowPreviewDocument.js';
 import '../src/index.css';
-import { metadataImages } from '../src/library/data/metadataImages.js';
+import { metadataImages, metadataFiles } from '../src/library/data/metadataImages.js';
 import { selectImageGroups, selectImageUrls } from '../src/library/data/resolveContentUrl.js';
 
 let fixtures = assets.map((asset, index) => index === 1 || index === 2 ? { ...asset,
@@ -21,6 +21,11 @@ let fixtures = assets.map((asset, index) => index === 1 || index === 2 ? { ...as
   })),
 });
 const seed = createOwnerSystemWorkflowReviewStorage();
+if (new URLSearchParams(location.search).has('empty')) {
+  const key = systemWorkflowDraftKey(profile), draft = JSON.parse(seed.getItem(key));
+  draft.grids = draft.grids.map(grid => ({ ...grid, placements: [] }));
+  seed.setItem(key, JSON.stringify(draft));
+}
 const storage = {
   getItem: (key) => localStorage.getItem(`image-test:${key}`) || seed.getItem(key),
   setItem: (key, value) => localStorage.setItem(`image-test:${key}`, value),
@@ -45,7 +50,8 @@ window.__imageTest.replaceCover = (url) => {
 window.__imageTest.replaceMetadata = metadata => {
   const images = metadataImages(metadata), urls = selectImageUrls(images);
   fixtures = fixtures.map((asset, index) => index ? asset : { ...asset, ...urls,
-    src: urls.imageUrl, previewSrc: urls.imageUrl, previewCandidates: [urls.imageUrl], imageGroups: selectImageGroups(images) });
+    src: urls.imageUrl, imageWidth: urls.width, imageHeight: urls.height, mediaFileType: urls.fileType,
+    previewSrc: urls.imageUrl, previewCandidates: [urls.imageUrl], imageGroups: selectImageGroups(images), fileAttachments: metadataFiles(metadata) });
   render();
 };
 render();

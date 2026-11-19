@@ -1,3 +1,5 @@
+import { editorDestination } from './fixtures/editor-menu.mjs';
+import { undockWindow } from './fixtures/undock-window.mjs';
 import assert from 'node:assert/strict';
 import { verifyMiniAppWindowBoundary } from './fixtures/mini-app-window-boundary.mjs';
 import { mkdir } from 'node:fs/promises';
@@ -131,8 +133,7 @@ try {
   const layersBeforeMicrophone = page.getByRole('button', { name: 'Close Workbench Layers', exact: true });
   if (await layersBeforeMicrophone.isVisible()) await layersBeforeMicrophone.click();
   // Navigator can fill the vacated left dock; park it away from the app client.
-  const undockNavigator = page.getByRole('button', { name: 'Undock Navigator', exact: true });
-  if (await undockNavigator.isVisible()) await undockNavigator.click();
+  await undockWindow(page, 'Navigator');
   const navigatorGrip = page.getByRole('button', { name: 'Move Navigator window', exact: true });
   for (let i = 0; i < 60; i++) await navigatorGrip.press('Shift+ArrowRight');
   await page.getByRole('button', { name: 'Connect app', exact: true }).click();
@@ -226,7 +227,7 @@ try {
   const capturedBounds = await page.locator('.mini-app-workbench .system-workflow__instrument-window').boundingBox();
   let uploads = 0;
   await page.route('**/api/profile-publications', route => { uploads += 1; return route.abort(); });
-  await page.getByRole('button', { name: 'Publish', exact: true }).click();
+  await editorDestination(page, 'Publish');
   const publication = page.getByRole('complementary', { name: 'Publish profile' });
   await publication.getByRole('button', { name: 'Prepare publication', exact: true }).click();
   await publication.getByRole('status').filter({ hasText: 'ready to be made public' }).waitFor();
@@ -238,7 +239,7 @@ try {
   assert.ok(Math.abs(captured[0].window.left - capturedBounds.x) < 1);
   assert.equal(uploads, 0);
   await page.screenshot({ path: `${output}/capture-prepared-wide.png` });
-  await page.getByRole('button', { name: 'Publish', exact: true }).click();
+  await editorDestination(page, 'Publish');
   await publication.waitFor({ state: 'detached' });
   console.log('Prepare Publication captured live window geometry and closed app state without an upload');
   await page.evaluate(async () => {

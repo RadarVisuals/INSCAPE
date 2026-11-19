@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdir } from 'node:fs/promises';
 import { chromium } from 'playwright-core';
 import { browserExecutable } from '../scripts/browserEnvironment.mjs';
-import { editorMenu, setEditorSidebarOpen } from './fixtures/editor-menu.mjs';
+import { openEditorMenu, editorMenu, setEditorSidebarOpen } from './fixtures/editor-menu.mjs';
 const origin = process.env.INSCAPE_TEST_ROOT || 'http://127.0.0.1:5217';
 const output = process.env.INSCAPE_SCREENSHOT_DIR || '.browser-test-runtime/reception-gutter-pixels';
 test('small positive Bento gutters retain fractional coverage at different zooms and camera phases', { timeout:90000 }, async () => {
@@ -13,7 +13,7 @@ test('small positive Bento gutters retain fractional coverage at different zooms
     page.setDefaultTimeout(10000);
     await page.route('**/*',route=>new URL(route.request().url()).origin===origin?route.continue():route.abort());
     await page.goto(`${origin}/browser-tests/reception-native-editor-fixture.html?session=${crypto.randomUUID()}`,{waitUntil:'domcontentloaded',timeout:45000});
-    await editorMenu(page,'Bento').click();
+    await openEditorMenu(page, 'Bento');
     const panel=page.getByRole('dialog',{name:'Bento settings',exact:true});
     await panel.getByRole('button',{name:'New layout',exact:true}).click();
     await panel.getByLabel('Columns',{exact:true}).fill('2'); await panel.getByLabel('Rows',{exact:true}).fill('1');
@@ -42,7 +42,7 @@ test('small positive Bento gutters retain fractional coverage at different zooms
             const host=document.querySelector('main[data-reception-editor]');
             if(mode==='editor') host.dispatchEvent(new WheelEvent('wheel',{deltaX:Number(host.dataset.workbenchCameraX)-400-phase,
               deltaY:Number(host.dataset.workbenchCameraY)-250,bubbles:true,cancelable:true}));
-            return {x:400+phase+400*scale,y:250+100*scale};
+            return mode === 'editor' ? {x:400+phase+400*scale,y:250+100*scale} : {x:800+phase,y:350};
           },{scale,phase,mode});
           await settle();
           const edges=await page.evaluate(mode=>{
@@ -80,7 +80,7 @@ test('small positive Bento gutters retain fractional coverage at different zooms
     // rectangle renderer replacement in both hosts.
     await page.evaluate(()=>{
       const {root}=window.nativeReceptionFixture,draft=root.getDraft(),value=draft.reception;
-      value.cells[0].radius=24;value.shapes.find(r=>r.id===value.cells[0].id).grain=.4;
+      value.cells[0].radius=24;value.cells[0].grainOverContent=false;value.shapes.find(r=>r.id===value.cells[0].id).grain=.4;
       if(!root.commitCompletedOperation(draft,{expectedGeneration:root.getGeneration()}))throw Error('Cannot seed rounded fill');
       document.getElementById('gutter-reader').style.display='none';
     });

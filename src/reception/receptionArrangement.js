@@ -1,9 +1,8 @@
+import { exact } from '../text/domain/article.js';
 // Frame geometry is authored once on regions. A group retains only membership,
 // direction and spacing; moving/resizing it updates its member regions together.
 const EXTENT = 10000, MIN = 200;
 export const RECEPTION_FRAME_CREATION_LIMIT = 8;
-const exact = (value, keys) => value && typeof value === 'object' && !Array.isArray(value)
-  && Object.keys(value).length === keys.length && keys.every(key => Object.hasOwn(value, key));
 const integer = (value, min, max) => Number.isInteger(value) && value >= min && value <= max;
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 const bounds = regions => {

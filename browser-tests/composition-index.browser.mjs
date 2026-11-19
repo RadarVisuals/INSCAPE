@@ -1,4 +1,4 @@
-import { editorCommand, editorOverview, editorDestination } from './fixtures/editor-menu.mjs';
+import { editorCommand, editorOverview, selectEditorDocument, editSelectedWork } from './fixtures/editor-menu.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdir } from 'node:fs/promises';
@@ -64,10 +64,24 @@ test('desktop index explores real artwork, retains each camera and never edits i
     near((expanded.width / 2 - expanded.x) / expanded.scale, (zoomed.width / 2 - zoomed.x) / zoomed.scale, 'expansion preserves world centre');
     assert.equal(await page.getByRole('navigation', { name: 'Canvases' }).isVisible(), false);
     await page.keyboard.press('Escape'); await page.getByRole('navigation', { name: 'Canvases' }).waitFor();
-    await page.getByRole('combobox', { name: 'Camera point', exact: true }).selectOption('workbench-view:detail');
-    assert.equal(await page.getByRole('combobox', { name: 'Camera point', exact: true }).inputValue(), 'workbench-view:detail');
+    const points = page.getByRole('navigation', { name: 'Camera points' });
+    const detail = points.getByRole('button', { name: 'A closer look', exact: true });
+    const whole = points.getByRole('button', { name: 'Complete canvas' });
+    assert.ok(await detail.evaluate(button => {
+      const dot = getComputedStyle(button, '::before');
+      return parseFloat(dot.width) > 0 && dot.width === dot.height;
+    }), 'The camera point renders as a circle');
+    await detail.click();
+    assert.equal(await detail.getAttribute('aria-pressed'), 'true');
+    assert.ok((await camera(page)).scale > first.scale, 'The dot opens the authored detail');
+    await page.getByRole('button', { name: 'Zoom in', exact: true }).click();
+    assert.equal(await detail.getAttribute('aria-pressed'), 'false', 'Free zoom clears the selected dot');
+    await whole.focus(); await page.keyboard.press('Space');
+    near((await camera(page)).scale, first.scale, 'The overview icon restores the complete canvas');
+    await detail.focus(); await page.keyboard.press('Enter');
     await host.focus(); await page.keyboard.press('Home');
     near((await camera(page)).scale, first.scale, 'Home returns to whole composition');
+    assert.equal(await whole.getAttribute('aria-pressed'), 'true');
     await page.getByText('Artwork sources', { exact: false }).first().click();
     await page.getByRole('combobox', { name: 'Artwork source', exact: true }).selectOption({ index: 1 });
     await page.locator('.composition-explorer-dossier').waitFor();
@@ -80,6 +94,9 @@ test('desktop index explores real artwork, retains each camera and never edits i
     for (const width of [1920, 1440, 1024]) {
       await page.setViewportSize({ width, height: 1080 }); await page.evaluate(() => document.fonts.ready);
       await page.locator('.workbench-overview').evaluate(node => { node.scrollTop = 0; });
+      const [viewport, picker] = await Promise.all([host.boundingBox(), points.boundingBox()]);
+      assert.ok(picker.y >= viewport.y + viewport.height, 'Camera points are below the artwork');
+      assert.ok(Math.abs((picker.x + picker.width / 2) - (viewport.x + viewport.width / 2)) <= 1, 'Camera points are centered on the artwork');
       await page.screenshot({ path: `${output}/index-${width}.png`, fullPage: true });
       assert.ok(await page.locator('.workbench-overview').evaluate(node => node.scrollWidth <= node.clientWidth + 1));
     }
@@ -99,7 +116,7 @@ test('desktop owner index keeps browsing separate from activation and save failu
     await page.locator('.composition-explorer-viewport').waitFor();
     const originalId = await page.evaluate(() => window.savedDraft().activeId);
     await page.getByRole('button', { name: 'Edit details', exact: true }).click();
-    await page.getByLabel('Canvas name', { exact: true }).fill('Lunar Desert');
+    await page.getByLabel('Composition name', { exact: true }).fill('Lunar Desert');
     await page.getByLabel(/Introduction/).fill('A saved description.');
     await failWrites(page, true);
     await page.getByRole('button', { name: 'Save details', exact: true }).click();
@@ -108,10 +125,10 @@ test('desktop owner index keeps browsing separate from activation and save failu
     await failWrites(page, false);
     await page.getByRole('button', { name: 'Save details', exact: true }).click();
     await page.getByRole('heading', { name: 'Lunar Desert', exact: true }).waitFor();
-    await page.getByRole('menuitem', { name: 'My Inscape', exact: true }).click();
-    await page.getByRole('menuitem', { name: 'New canvas', exact: true }).click();
-    await page.getByLabel('Canvas name', { exact: true }).fill('Studies');
-    await page.getByRole('button', { name: 'Create canvas', exact: true }).click();
+    await page.getByRole('button', { name: '+ New', exact: true }).click();
+    await page.getByLabel('Composition name', { exact: true }).fill('Studies');
+    await page.getByRole('button', { name: 'Create composition', exact: true }).click();
+    await editorOverview(page);
     await page.getByRole('heading', { name: 'Studies', exact: true }).waitFor();
     const saved = await page.evaluate(() => JSON.stringify(window.savedDraft()));
     await page.getByRole('button', { name: 'Open Lunar Desert', exact: true }).click();
@@ -119,11 +136,11 @@ test('desktop owner index keeps browsing separate from activation and save failu
     assert.equal(await page.evaluate(() => JSON.stringify(window.savedDraft())), saved);
     assert.equal(await page.locator('.workbench-overview-introduction').innerText(), 'A saved description.');
     await failWrites(page, true);
-    await page.getByRole('button', { name: 'Edit canvas', exact: true }).click();
+    await editSelectedWork(page);
     assert.match(await page.getByRole('alert').innerText(), /Could not save/);
     assert.equal(await page.evaluate(() => JSON.stringify(window.savedDraft())), saved);
     await failWrites(page, false);
-    await page.getByRole('button', { name: 'Edit canvas', exact: true }).click();
+    await editSelectedWork(page);
     await page.locator('.text-window').waitFor();
     assert.equal(await page.evaluate(() => window.savedDraft().activeId), originalId);
     await page.reload({ waitUntil: 'domcontentloaded' });
@@ -136,16 +153,16 @@ test('desktop owner index keeps browsing separate from activation and save failu
     await page.waitForFunction(() => document.activeElement?.textContent === 'Edit details');
     assert.equal(await page.locator('.workbench-overview-introduction').count(), 0);
     await page.getByRole('button', { name: 'Edit details', exact: true }).click();
-    await page.getByLabel('Canvas name', { exact: true }).fill('Discard this name');
-    await page.getByLabel('Canvas name', { exact: true }).press('Escape');
+    await page.getByLabel('Composition name', { exact: true }).fill('Discard this name');
+    await page.getByLabel('Composition name', { exact: true }).press('Escape');
     await page.getByRole('heading', { name: 'Lunar Desert', exact: true }).waitFor();
-    await editorDestination(page, 'Reception');
+    await page.getByRole('navigation', { name: 'Profile navigation' }).getByRole('button', { name: 'Profile', exact: true }).click();
     await page.getByText('Published view requested', { exact: true }).waitFor();
     assert.deepEqual(errors, []);
   } finally { await browser.close(); }
 });
 
-test('My Inscape opens the Reception editor in the same session without changing its canvases', { timeout: 90000 }, async () => {
+test('the Studio manager opens the Profile Bento without changing other compositions', { timeout: 90000 }, async () => {
   const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
   try {
     const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, reducedMotion: 'reduce' });
@@ -153,12 +170,12 @@ test('My Inscape opens the Reception editor in the same session without changing
     await prepare(page, '/browser-tests/workbench-storage-fixture.html?seed=1&shell=1');
     await editorOverview(page);
     await page.locator('.composition-index').waitFor();
-    assert.equal(await page.locator('.composition-index-brand').innerText(), 'My Inscape');
+    await page.getByRole('button', { name: 'Edit', exact: true }).waitFor();
     const before = await page.evaluate(() => window.savedDraft());
     await mkdir(output, { recursive: true });
-    await page.screenshot({ path: `${output}/my-inscape-reception-entry.png`, fullPage: true });
-    await page.getByRole('menuitem', { name: 'My Inscape', exact: true }).click();
-    await page.getByRole('menuitem', { name: 'Edit Reception', exact: true }).click();
+    await page.screenshot({ path: `${output}/works-reception-entry.png`, fullPage: true });
+    await page.getByRole('button', { name: 'Edit', exact: true }).click();
+    await selectEditorDocument(page, 'reception');
     await page.locator('[data-reception-editor]').waitFor();
     await editorCommand(page, 'Edit', 'Settings');
     await page.getByRole('dialog', { name: 'Settings', exact: true }).waitFor();
@@ -169,15 +186,15 @@ test('My Inscape opens the Reception editor in the same session without changing
     await editorOverview(page);
     await page.locator('.composition-index').waitFor();
     await page.getByRole('button', { name: 'Grid', exact: true }).click();
-    await page.getByRole('heading', { name: 'My Inscape', exact: true }).waitFor();
+    await page.getByRole('region', { name: 'Workbench gallery' }).waitFor();
     await page.setViewportSize({ width: 390, height: 844 });
-    await page.getByRole('menuitem', { name: 'My Inscape', exact: true }).click();
-    await page.screenshot({ path: `${output}/my-inscape-reception-entry-390.png`, fullPage: true });
-    await page.getByRole('menuitem', { name: 'Edit Reception', exact: true }).click();
+    await page.getByRole('button', { name: 'Edit', exact: true }).click();
+    await page.screenshot({ path: `${output}/works-reception-entry-390.png`, fullPage: true });
+    await selectEditorDocument(page, 'reception');
     await page.locator('[data-reception-editor]').waitFor();
     assert.equal(await page.getByRole('alert').count(), 0, 'returning reacquires the Reception scope without losing the editor lease');
     await editorOverview(page);
-    await page.getByRole('heading', { name: 'My Inscape', exact: true }).waitFor();
+    await page.getByRole('region', { name: 'Workbench gallery' }).waitFor();
     assert.deepEqual(await page.evaluate(() => window.savedDraft().workbenches), before.workbenches);
     assert.deepEqual(errors, []);
   } finally { await browser.close(); }

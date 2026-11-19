@@ -3,6 +3,21 @@
   "notes": "Classification is not a passing test result. Release suites run by default; every other suite remains explicitly selectable. production-startup is separately required after the build by verifyRelease.mjs.",
   "suites": [
     {
+      "name": "reception-text-cell-height",
+      "category": "release",
+      "rationale": "Shared cell edges crop stationary text; numeric height preserves its local inset while growing the Bento, with Undo, reload and matching public preview."
+    },
+    {
+      "name": "reception-local-editing",
+      "category": "release",
+      "rationale": "Local cell creation and numeric sizing preserve text placement across keyboard previews, cancellation, failed saves, Undo/Redo and reload at wide and narrow desktop sizes."
+    },
+    {
+      "name": "reception-single-line",
+      "category": "release",
+      "rationale": "An explicit single-line cell keeps its height, fades horizontally without a reading action, and persists through Reception Undo/Redo and reload."
+    },
+    {
       "name": "interface-theme",
       "category": "release",
       "rationale": "One persistent Dark/Light preference across Settings, portal menus, Reception, canvas overview, login and Discover without editing compositions.",
@@ -23,7 +38,7 @@
     {
       "name": "publication-local",
       "category": "release",
-      "rationale": "Eight canvases with overlapping Library/reference records prepare and upload from the local origin through the hosted publication service without an on-chain write."
+      "rationale": "Thirty canvases with overlapping Library/reference records prepare and upload from the local origin through the hosted publication service without an on-chain write."
     },
     {
       "name": "svg-pan-retention",
@@ -41,9 +56,19 @@
       "rationale": "Owner draft/public isolation, cross-tab refresh, backup recovery, focus, authored typography and touch controls."
     },
     {
+      "name": "mixed-composition",
+      "category": "release",
+      "rationale": "Published mixed compositions preserve free layers and Bento cells in Gallery and Profile, with owner-only editing."
+    },
+    {
       "name": "published-gallery",
       "category": "release",
       "rationale": "Published-only mobile and desktop gallery, wrap, inspection and explicit publication scope."
+    },
+    {
+      "name": "published-works-editor",
+      "category": "release",
+      "rationale": "Studio creates and reopens local compositions while Gallery limits owners and visitors to published placements."
     },
     {
       "name": "workbench-overview",
@@ -1914,9 +1939,39 @@
       "rationale": "Bento equal-edge snapping and cancellation, left/upper insertion and full-width strip relocation with Undo and reload at desktop sizes."
     },
     {
+      "name": "reception-frame-opacity",
+      "category": "release",
+      "rationale": "Frame line opacity uses shared controls and survives undo, reload and Preview without changing geometry."
+    },
+    {
+      "name": "reception-inspect",
+      "category": "release",
+      "rationale": "Introductory text excerpts, fixed ellipsis, compact scrollbar-free reading, keyboard return and unchanged saved content."
+    },
+    {
+      "name": "reception-text-resize",
+      "category": "release",
+      "rationale": "Bento text keeps resize axes independent and clips complete lines in native Editor at different zooms, including live preview, Undo and reload."
+    },
+    {
       "name": "reception-native-editor",
       "category": "release",
       "rationale": "Reception in the existing Editor: native rectangles, cell membership, Library and Text, movement, history, isolated persistence and responsive preview."
+    },
+    {
+      "name": "reception-atmosphere",
+      "category": "release",
+      "rationale": "Reception page lighting saves atomically, survives history and reload, and reaches public presentation without changing authored cells."
+    },
+    {
+      "name": "reception-image-inspect",
+      "category": "release",
+      "rationale": "Passive introductory artwork preserves crops and live media; stacked text reading and document replacement preserve the draft."
+    },
+    {
+      "name": "reception-svg-breakpoints",
+      "category": "release",
+      "rationale": "Live SVG documents survive repeated narrow/wide Reception reflow and artwork clicks without disappearing, restarting animation or changing the draft."
     },
     {
       "name": "reception-reader",
@@ -1951,6 +2006,26 @@
       "name": "owner-workspace",
       "category": "release",
       "rationale": "Shared owner frame, contextual menus, bidirectional canvas presentation, retained camera and save guards, reduced motion and narrow viewport behavior."
+    },
+    {
+      "name": "reception-tiling",
+      "category": "release",
+      "rationale": "Native Bento centre swap, local/outer insertion, exact preview, cancellation and atomic save/Undo/reload."
+    },
+    {
+      "name": "library-divider",
+      "category": "release",
+      "rationale": "Library navigation and hidden scrolling retain stable width across panel resizing."
+    },
+    {
+      "name": "library-organization",
+      "category": "release",
+      "rationale": "Library folder and section authoring persist atomically and retain naming focus."
+    },
+    {
+      "name": "library-panels",
+      "category": "release",
+      "rationale": "One retained Library instance through toolbar opening, detaching, joining Inspector, sidebar reveal, closure and layout reload in wide/narrow editor views."
     }
   ]
 }

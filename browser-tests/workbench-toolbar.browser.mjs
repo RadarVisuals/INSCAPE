@@ -114,6 +114,15 @@ test('Flat states preserve selection, focus, creation and readable contrast', { 
     assert.equal(await page.getByRole('button', { name: 'Text tool', exact: true }).getAttribute('aria-pressed'), 'true');
     await page.keyboard.press('Escape');
     assert.equal(await page.getByRole('button', { name: 'Select tool', exact: true }).getAttribute('aria-pressed'), 'true');
+    const library = page.getByRole('button', { name: 'Artwork library', exact: true });
+    if (await library.getAttribute('aria-expanded') !== 'true') await library.click();
+    assert.equal(await library.getAttribute('aria-pressed'), null, 'Library is a panel toggle, not a cursor tool');
+    assert.equal(await page.getByRole('toolbar', { name: 'Creation tools' }).locator('[aria-pressed="true"]').count(), 1);
+    const selectTool = page.getByRole('button', { name: 'Select tool', exact: true });
+    assert.notEqual((await appearance(library)).background, (await appearance(selectTool)).background, 'open Library stays distinct from the selected cursor');
+    await library.click();
+    assert.equal(await library.getAttribute('aria-expanded'), 'false');
+    assert.equal(await selectTool.getAttribute('aria-pressed'), 'true', 'closing Library preserves the cursor tool');
     await editorCommand(page, 'Edit', 'Search commands');
     await page.getByRole('textbox', { name: 'Search commands' }).fill('Horizontal');
     assert.equal(await page.locator('.workbench-toolbar__command').count(), 0, 'experimental Display creation is absent from search');
@@ -161,18 +170,18 @@ for (const theme of ['carbon', 'mist']) for (const width of [1440, 800]) {
         const icon = getComputedStyle(node.querySelector('svg.lucide > *'));
         return { scheme: s.colorScheme, face: s.getPropertyValue('--tactile-face').trim(), radius: key.borderRadius, shellRadius: shell.borderRadius, stroke: icon.strokeWidth, vector: icon.vectorEffect };
       });
-      assert.deepEqual(recipe, { scheme: theme === 'mist' ? 'light' : 'dark', face: theme === 'mist' ? '#faf9f6' : '#343635', radius: '7px', shellRadius: '11px', stroke: '1.5px', vector: 'non-scaling-stroke' });
-      // The accepted migrations now include the sidebar, switcher, Navigator and shared tools.
+      assert.deepEqual(recipe, { scheme: theme === 'mist' ? 'light' : 'dark', face: theme === 'mist' ? '#faf9f6' : '#2a2c2b', radius: '5px 0px 0px 5px', shellRadius: '11px', stroke: '1.5px', vector: 'non-scaling-stroke' });
+      // The shared header replaced the navigation sidebar; Navigator and tools remain.
       // Keep an explicit surface boundary, including the otherwise classless dock material root.
       const migrated = await page.locator('main.system-workflow [data-workflow-finish="flat"]').evaluateAll(nodes => nodes.map(node => {
-        for (const name of ['workbench-toolbar', 'workbench-navigator', 'workbench-layers', 'context-toolbar', 'editor-menu-shell', 'workspace-navigation', 'workbench-side-dock', 'workbench-tool-dock', 'workspace-library-navigation']) {
+        for (const name of ['workbench-toolbar', 'workbench-navigator', 'workbench-layers', 'context-toolbar', 'editor-menu-shell', 'workbench-side-dock', 'workbench-tool-dock']) {
           if (node.classList.contains(name)) return name;
         }
         if (node.matches('[data-workbench-navigator]')) return 'workbench-navigator';
         if (!node.className && node.matches('[data-workbench-selection-tools][data-system-workflow-overlay][data-lattice-menu-surface]') && (!node.children.length || node.querySelector(':scope > .workbench-tool-dock'))) return 'shared-tool-dock';
         return 'unrecognized:' + node.outerHTML.slice(0, 180);
       }));
-      assert.deepEqual(migrated.sort(), ['workspace-library-navigation', 'shared-tool-dock', 'context-toolbar', 'workbench-navigator', 'editor-menu-shell', 'workbench-toolbar', 'workspace-navigation', 'workbench-side-dock', 'workbench-side-dock', 'workbench-tool-dock', 'workbench-tool-dock', ...(width > 520 ? ['workbench-layers'] : [])].sort(), 'only the accepted mounted surfaces opt into flat styling');
+      assert.deepEqual(migrated.sort(), ['shared-tool-dock', 'context-toolbar', 'workbench-navigator', 'editor-menu-shell', 'workbench-toolbar', 'workbench-side-dock', 'workbench-side-dock', 'workbench-tool-dock', 'workbench-tool-dock', ...(width > 520 ? ['workbench-layers'] : [])].sort(), 'only the accepted mounted surfaces opt into flat styling');
       const select = page.getByRole('button', { name: 'Select tool', exact: true });
       await select.focus(); await page.keyboard.press('ArrowRight');
       assert.equal(await page.getByRole('button', { name: 'Pointer tools', exact: true }).evaluate(node => node === document.activeElement), true);
@@ -191,7 +200,7 @@ for (const theme of ['carbon', 'mist']) for (const width of [1440, 800]) {
       await page.screenshot({ path: `${output}/add-modules-${theme}-${width}.png` });
       await add.click();
       assert.equal(await root.getByRole('dialog').count(), 0, 'trigger toggles the menu closed');
-      await add.click(); await page.mouse.click(width - 12, 12);
+      await add.click(); await page.mouse.click(width / 2, 80);
       assert.equal(await root.getByRole('dialog').count(), 0, 'outside dismissal');
       const actions = editorMenu(page, 'Edit');
       await editorCommand(page, 'Edit', 'Search commands');

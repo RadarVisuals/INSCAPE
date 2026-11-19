@@ -6,7 +6,9 @@ import { OwnerSystemWorkflowSelectMenu } from '../public/ownerSystemWorkflow/Own
 import { artworkRecords, layerIds } from '../systemWorkflow/domain/artworkLayers.js';
 import { receptionModuleWindow, receptionModuleSizeReason } from './receptionEditorDocument.js';
 import { receptionCellSizeControl } from './receptionCellSizing.js';
-import EditorCellPositionControls, { CellNumber } from './EditorCellPositionControls.jsx';
+import EditorCellPositionControls from './EditorCellPositionControls.jsx';
+import CellNumber from './CellNumber.jsx';
+import ReceptionCellReadingControls from './ReceptionCellReadingControls.jsx';
 
 export default function EditorCellInspector({ record, change, disabled, historyBlocked, section, appearance, effects, innerLines, requestedSection, request }) {
   const context = useEditorCells(), view = useWorkbenchView(), tabsId = useId();
@@ -26,7 +28,7 @@ export default function EditorCellInspector({ record, change, disabled, historyB
   const size = (axis, label) => {
     const control = receptionCellSizeControl(reception, cell.id, axis), key = axis === 'x' ? 'width' : 'height';
     return <CellNumber prefix={label} label={`Cell ${key}`} value={frame[key]} min={control?.min || frame[key]} max={control?.max || frame[key]}
-      disabled={blocked || !control} title={!control ? `Use Whole Bento settings to change this outer ${key}` : 'Resizes the shared edge and adjacent cells'}
+      disabled={blocked || !control} title={'Resizes this cell and pushes neighbours without changing their sizes'}
       onChange={value => run('cellSize', [cell.id, { [key]: value, ...(ratio ? axis === 'x' ? { height: Math.round(value / ratio) } : { width: Math.round(value * ratio) } : {}) }])} />;
   };
   const selectMember = id => { context.store.setEditingCell(cell.id); view.selectLayers([id], false, null); };
@@ -43,10 +45,11 @@ export default function EditorCellInspector({ record, change, disabled, historyB
     <div className="workbench-inspector-row"><span>Size</span><div className="workbench-inspector-fields">{size('x', 'W')}
       <button type="button" className="workflow-tactile-control" aria-label="Keep cell proportions" aria-pressed={Boolean(ratio)} title={ratio ? 'Unlink width and height' : 'Link width and height'}
         disabled={blocked || !receptionCellSizeControl(reception, cell.id, 'x') || !receptionCellSizeControl(reception, cell.id, 'y')} onClick={() => setRatio(ratio ? null : frame.width / frame.height)}><Link2 /></button>{size('y', 'H')}</div></div>
+    <p className="workbench-inspector-muted">Resize this cell; neighbours move aside and keep their size.</p>
     <div className="workbench-inspector-row"><span>Radius</span><CellNumber label="Cell corner radius (px)" prefix="" value={cell.radius || 0} max={160} disabled={blocked} onChange={value => run('cellRadius', [cell.id, value])} /></div>
     <label className="workbench-inspector-check"><input type="checkbox" checked={cell.clipContent !== false} disabled={blocked} onChange={event => run('cellClip', [cell.id, event.target.checked])} />Clip content</label>
-    {section('Structure', <div className="workbench-inspector-actions">{editorCellStructureActions(context.store, cell.id, view).reverse().map(action =>
-      <OwnerSystemWorkflowSelectMenu key={action.id} flat compact palette="editor" className="workflow-tactile-control" label={action.label} triggerPrefix={action.id === 'cell-split' ? 'Split' : 'Merge'} defaultValue="" value=""
+    {section('Structure', <div className="workbench-inspector-actions">{editorCellStructureActions(context.store, cell.id, view).map(action =>
+      <OwnerSystemWorkflowSelectMenu key={action.id} flat compact palette="editor" className="workflow-tactile-control" label={action.label} triggerPrefix="Merge" defaultValue="" value=""
         disabled={blocked} options={action.children.map(item => ({ value: item.id, label: item.label, disabled: item.disabled, reason: item.reason }))}
         onChange={id => { try { action.children.find(item => item.id === id)?.run(); setError(''); } catch (failure) { setError(failure.message); } }} />)}</div>, 'Structure', true)}
   </>;
@@ -62,8 +65,11 @@ export default function EditorCellInspector({ record, change, disabled, historyB
     <div key={tab} className="workbench-inspector-cell-panel" role="tabpanel" id={`${tabsId}-panel`} aria-labelledby={`${tabsId}-${tab}`}>
       {cell.members.length > 0 && <EditorCellPositionControls cellId={cell.id} disabled={blocked} showPadding={tab === 'Contents'} />}
       {tab === 'Cell' ? cellTab : contentsTab}
+      {tab === 'Cell' && section('Responsive', <ReceptionCellReadingControls cell={cell} disabled={blocked}
+        onChange={enabled => run('cellSingleLine', [cell.id, enabled])} />, 'Responsive reading')}
       {section('Color', appearance, tab === 'Cell' ? 'Appearance' : 'Cell appearance', tab === 'Cell')}
-      {section('FX', effects, 'Effects')}
+      {section('FX', <>{effects}<label className="workbench-inspector-check"><input type="checkbox" checked={cell.grainOverContent !== false} disabled={blocked}
+        onChange={event => run('cellGrain', [cell.id, event.target.checked])} />Grain over entire cell</label></>, 'Effects')}
       {section('Bento', <><button type="button" className="workflow-tactile-control workbench-inspector-full" onClick={() => context.openSettings(cell.id)}><Grid2X2 />Whole Bento settings</button>
         {innerLines ? <details className="workbench-inspector-inline"><summary><SlidersHorizontal />Inner-line style</summary>{innerLines}</details>
           : <button type="button" className="workflow-tactile-control workbench-inspector-full" onClick={() => context.openSettings(cell.id)}><SlidersHorizontal />Enable inner lines</button>}</>, 'Bento', true)}

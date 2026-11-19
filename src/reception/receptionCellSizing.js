@@ -1,28 +1,45 @@
-import { receptionModuleWindow } from './receptionEditorDocument.js';
-import { receptionBentoDividers, resizeReceptionBento } from './receptionBento.js';
+import { receptionModuleWindow, receptionCellSizeLimits } from './receptionEditorDocument.js';
+import { pushReceptionBentoCell, receptionBentoSettings, receptionCellFrames } from './receptionBento.js';
+import { stopReceptionCellFrame } from './receptionCellPush.js';
 
-// Numeric dimensions use the same shared-edge operation as the canvas handles.
-// Prefer the trailing edge; on the outer boundary use the leading edge instead.
 export function receptionCellSizeControl(value, id, axis) {
   const frame = receptionModuleWindow(value, id), size = axis === 'x' ? 'width' : 'height';
-  const dividers = receptionBentoDividers(value).filter(item => item.axis === axis);
-  const divider = dividers.find(item => item.before.includes(id)) || dividers.find(item => item.after.includes(id));
-  if (!frame || !divider) return null;
-  const direction = divider.before.includes(id) ? 1 : -1;
-  const limits = [divider.min, divider.max].map(position => frame[size] + direction * (position - divider.position));
-  return { divider, direction, min: Math.min(...limits), max: Math.max(...limits), value: frame[size] };
+  if (!frame || !value.cells.some(cell => cell.id === id)) return null;
+  const limits = receptionCellSizeLimits(value, id);
+  return { value: frame[size], min: Math.ceil(limits[axis === 'x' ? 'minimumWidth' : 'minimumHeight']),
+    max: Math.floor(limits[axis === 'x' ? 'maximumWidth' : 'maximumHeight']) };
 }
-
 export function setReceptionCellSize(value, id, dimensions) {
   if (!value.cells.some(cell => cell.id === id)) throw new Error('Select an available cell.');
   let next = value;
-  for (const [size, axis] of [['width', 'x'], ['height', 'y']]) {
-    if (dimensions[size] === undefined || dimensions[size] === receptionModuleWindow(next, id)[size]) continue;
+  for (const [size, axis, direction] of [['width', 'x', 'right'], ['height', 'y', 'bottom']]) {
+    if (dimensions[size] === undefined) continue;
     const control = receptionCellSizeControl(next, id, axis), requested = dimensions[size];
-    if (!control) throw new Error(`Change the Bento ${size} to resize this outer edge.`);
     if (!Number.isFinite(requested) || requested < control.min || requested > control.max)
-      throw new Error(`Cell ${size} must be between ${Math.ceil(control.min)} and ${Math.floor(control.max)} px.`);
-    next = resizeReceptionBento(next, control.divider.id, control.divider.position + control.direction * (requested - control.value));
+      throw new Error('Cell ' + size + ' must be between ' + control.min + ' and ' + control.max + ' px.');
+    const frame = receptionModuleWindow(next, id), rounded = Math.round(requested);
+    if (rounded !== frame[size]) next = pushReceptionBentoCell(next, id, { ...frame, [size]: rounded }, direction);
+  }
+  return next;
+}
+// Opposite edges stay fixed. Corner gestures resolve each axis independently.
+export function resizeReceptionCell(value, id, edge, dx, dy, push = true) {
+  if (!['n', 'ne', 'e', 'se', 's', 'sw', 'w', 'nw'].includes(edge) || !Number.isFinite(dx) || !Number.isFinite(dy))
+    throw new Error('Choose a cell resize handle.');
+  let next = value;
+  for (const [axis, position, size, leading, trailing, delta, before, after] of [
+    ['x', 'left', 'width', 'w', 'e', dx, 'left', 'right'], ['y', 'top', 'height', 'n', 's', dy, 'top', 'bottom'],
+  ]) {
+    if (!edge.includes(leading) && !edge.includes(trailing)) continue;
+    const control = receptionCellSizeControl(next, id, axis);
+    if (!control) throw new Error('Select an available cell.');
+    const frame = receptionModuleWindow(next, id), fromStart = edge.includes(leading);
+    const length = Math.max(control.min, Math.min(control.max, Math.round(frame[size] + (fromStart ? -delta : delta))));
+    if (length === frame[size]) continue;
+    let requested = { ...frame, [size]: length,
+      [position]: frame[position] + (fromStart ? frame[size] - length : 0) };
+    if (!push) requested = stopReceptionCellFrame(receptionCellFrames(next), id, frame, requested, receptionBentoSettings(next).gap);
+    next = pushReceptionBentoCell(next, id, requested, fromStart ? before : after);
   }
   return next;
 }

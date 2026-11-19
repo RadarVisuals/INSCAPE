@@ -141,9 +141,14 @@
   color: var(--tactile-selected-ink);
   box-shadow: none;
 }
+.workspace-command-menu[data-workflow-palette='editor'] button[data-command-id^="destination:"][data-selected] {
+  background: var(--workspace-sage); color: #172117;
+}
 .rack-menu-command-surface.desktop-menu[data-workflow-palette='editor'] button:disabled {
   background: transparent;
   color: var(--rack-menu-muted);
   box-shadow: none;
 }
 .rack-menu-command-surface.desktop-menu[data-workflow-palette='editor'] button::before { display: none; }
+
+.desktop-menu[data-workflow-palette="editor"] > .desktop-menu-section { margin-top: 5px; padding: 8px 9px 4px; border-top: 1px solid var(--tactile-divider); color: var(--tactile-muted); font: var(--workflow-type-micro); letter-spacing: .04em; text-transform: uppercase; }

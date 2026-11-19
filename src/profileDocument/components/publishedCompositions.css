@@ -1,0 +1,15 @@
+.published-work-list { width: min(100%, 1120px); margin-inline: auto; box-sizing: border-box; padding: 40px 24px; color: var(--spread-heading); }
+.published-work-list :is(h1,h2) { margin: 0 0 20px; font: 450 clamp(22px, 2vw, 32px)/1.25 var(--font-interface); }
+.profile-linked-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr)); gap: 20px; }
+.profile-linked-grid > article { position: relative; display: grid; gap: 8px; }
+.profile-linked-grid > article > button::after { content: ''; position: absolute; inset: 0; }
+.profile-linked-grid > article > button:focus-visible::after { outline: 2px solid currentColor; }
+.profile-linked-grid > article > button { text-align: left; padding: 0; color: inherit; background: none; border: 0; font: inherit; cursor: pointer; }
+.profile-linked-thumb { display: block; width: 100%; aspect-ratio: 16/10; background: var(--interface-environment); overflow: hidden; }
+.published-writing details { border-top: 1px solid var(--spread-line); padding-block: 12px; max-width: 75ch; }
+.published-writing summary { cursor: pointer; }
+.published-writing .text-document { padding-block: 16px; }
+.visitor-profile-facts { display: grid; gap: 8px; margin: 1em 0 0; }
+.visitor-profile-facts dt { color: var(--spread-muted); font-size: .85em; }
+.visitor-profile-facts dd { margin: 0; white-space: pre-line; }
+.visitor-publication > .reception-page { top: var(--spread-height); }

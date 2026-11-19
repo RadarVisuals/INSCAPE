@@ -1,13 +1,16 @@
+import { receptionReadingOrder, progressiveReceptionFrames, RECEPTION_READING_WIDTH, responsiveCellImage, responsiveImageHeight, responsiveImageFrame,
+  responsiveCellArtwork, responsiveArtworkHeight, responsiveArtworkFrames } from './receptionResponsiveImages.js';
 import { MIN_RECEPTION_CELL_SIZE, editorCellWindow, projectReceptionCellMembers, positionReceptionMembers, receptionMemberAnchor } from './editorCellGeometry.js';
 import { validShapes, validShapeOutline, projectShapes, restoreShapes, MAX_SHAPES } from '../shapes/shapes.js';
 import { validImageModules, projectImageModules, restoreImageModules, imageSizeLimits } from '../imageModule/imageModule.js';
-import { validTextModules, projectTextModules, restoreTextModules } from '../text/domain/article.js';
+import { validTextModules, projectTextModules, restoreTextModules, exact } from '../text/domain/article.js';
 import { createDefaultWorkbenchPresentation, isValidWorkbenchPresentation, TEXT_WINDOW_LIMITS, CELL_TEXT_WINDOW_LIMITS, SHAPE_WINDOW_LIMITS } from '../profileDocument/domain/workbenchPresentation.js';
 import { validReceptionLinks } from '../profileDocument/domain/receptionLinks.js';
 import { artworkLayers, layerIds, validArtworkLayers, reconcileArtworkLayers } from '../systemWorkflow/domain/artworkLayers.js';
 import { workbenchArea } from '../systemWorkflow/domain/workbenchArea.js';
 import { validReceptionArrangement, pruneReceptionArrangement } from './receptionArrangement.js';
 import { MIN_CROP_PROJECTION_ZOOM } from '../lattice/rendering/latticeCrop.js';
+import { validReceptionLight } from './receptionAtmosphere.js';
 
 export const RECEPTION_CELL_LIMIT = 16;
 export { MIN_RECEPTION_CELL_SIZE };
@@ -35,6 +38,7 @@ export function receptionCellSizeLimits(value, id) {
     const content = receptionModuleWindow(value, member), native = receptionModuleLimits(member);
     if (!content) continue;
     for (const [axis, minimum, maximum] of [['width', 'minimumWidth', 'maximumWidth'], ['height', 'minimumHeight', 'maximumHeight']]) {
+      if (axis === 'height' && member.startsWith('text:')) continue;
       limits[minimum] = Math.max(limits[minimum], native[minimum] * frame[axis] / content[axis]);
       limits[maximum] = Math.min(limits[maximum], native[maximum] * frame[axis] / content[axis]);
     }
@@ -53,8 +57,6 @@ export function receptionCellResizeReason(value, id, nextFrame) {
 }
 const keys = ['shapes', 'imageModules', 'texts'];
 const builtins = new Set(['profile', 'links', 'introduction', 'details']);
-const exact = (v, required, optional = []) => v && typeof v === 'object' && !Array.isArray(v)
-  && required.every(key => Object.hasOwn(v, key)) && Object.keys(v).every(key => [...required, ...optional].includes(key));
 const number = (v, min, max) => Number.isFinite(v) && v >= min && v <= max;
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 const idsOf = value => keys.flatMap(key => value[key].map(item => item.id));
@@ -100,7 +102,9 @@ export function validReceptionInnerLines(lines) {
 export const visibleReceptionInnerLines = lines => lines?.hidden ? null : lines;
 
 export function validReceptionEditorDocument(value, published = false) {
-  if (!exact(value, ['version', 'branding', 'workbench', 'imageModules', 'texts', 'shapes', 'artworkLayers', 'cells'], ['surface', 'links', 'arrangement', 'bento', 'showFrame', 'innerLines'])
+  if (!exact(value, ['version', 'branding', 'workbench', 'imageModules', 'texts', 'shapes', 'artworkLayers', 'cells'], ['surface', 'surfaceOpacity', 'frameOpacity', 'frameColor', 'backgroundColor', 'frameRadius', 'links', 'arrangement', 'bento', 'showFrame', 'innerLines', 'stackOrder', 'lighting'])
+    || Object.hasOwn(value, 'lighting') && !validReceptionLight(value.lighting)
+    || Object.hasOwn(value, 'stackOrder') && value.stackOrder !== 'manual'
     || value.version !== 3 || !Array.isArray(value.cells) || value.cells.length > 32
     || !isValidWorkbenchPresentation(value.workbench, value.cells)
     || !validShapes(value.shapes, published) || !validImageModules(value.imageModules, published, { minimumCropZoom: MIN_CROP_PROJECTION_ZOOM,
@@ -110,8 +114,10 @@ export function validReceptionEditorDocument(value, published = false) {
     || !validArtworkLayers(value.artworkLayers, value, published)
     || !exact(value.branding, ['name', 'logo']) || typeof value.branding.name !== 'string' || value.branding.name.length > 64
     || /[\u0000-\u001f\u007f]/u.test(value.branding.name) || value.branding.logo !== null && !value.imageModules.some(item => item.id === value.branding.logo)
-    || Object.hasOwn(value, 'surface') && value.surface !== null && !/^#[0-9a-f]{6}$/iu.test(value.surface)
+    || ['surface', 'frameColor', 'backgroundColor'].some(key => Object.hasOwn(value, key) && value[key] !== null && (typeof value[key] !== 'string' || !/^#[0-9a-f]{6}$/iu.test(value[key])))
     || Object.hasOwn(value, 'links') && !validReceptionLinks(value.links)
+    || ['surfaceOpacity', 'frameOpacity'].some(key => Object.hasOwn(value, key) && !number(value[key], 0, 1))
+    || Object.hasOwn(value, 'frameRadius') && !number(value.frameRadius, 0, 160)
     || Object.hasOwn(value, 'showFrame') && typeof value.showFrame !== 'boolean'
     || Object.hasOwn(value, 'innerLines') && value.innerLines !== null && !validReceptionInnerLines(value.innerLines)
     || Object.hasOwn(value, 'bento') && (!exact(value.bento, ['gap', 'padding']) || ![value.bento.gap, value.bento.padding].every(n => Number.isInteger(n) && number(n, 0, 256)))) return false;
@@ -122,12 +128,15 @@ export function validReceptionEditorDocument(value, published = false) {
     if (placed.length !== value[key].length || placed.some(item => !value[key].some(record => record.id === item.id))) return false;
   }
   for (const cell of value.cells) {
-    if (!exact(cell, ['id', 'members', 'mobile'], ['radius', 'content', 'contentLayout', 'lockedMembers', 'memberAnchors', 'clipContent', 'fitText']) || cellIds.has(cell.id)
+    if (!exact(cell, ['id', 'members', 'mobile'], ['radius', 'content', 'contentLayout', 'lockedMembers', 'memberAnchors', 'clipContent', 'grainOverContent', 'fitText', 'singleLine']) || cellIds.has(cell.id)
       || !value.shapes.some(item => item.id === cell.id && !item.kind) || !Array.isArray(cell.members)
       || Object.hasOwn(cell, 'radius') && !number(cell.radius, 0, 160)
-      || Object.hasOwn(cell, 'clipContent') && typeof cell.clipContent !== 'boolean'
+      || Object.hasOwn(cell, 'singleLine') && typeof cell.singleLine !== 'boolean'
+      || Object.hasOwn(cell, 'grainOverContent') && typeof cell.grainOverContent !== 'boolean'
+    || Object.hasOwn(cell, 'clipContent') && typeof cell.clipContent !== 'boolean'
       || Object.hasOwn(cell, 'content') && cell.content !== null && !builtins.has(cell.content) && !value.links?.some(link => link.id === cell.content)
-      || !exact(cell.mobile, ['columns', 'height'], ['placements', 'referenceWidth']) || ![1, 2].includes(cell.mobile.columns)
+      || !exact(cell.mobile, ['columns', 'height'], ['placements', 'referenceWidth', 'autoHeight']) || ![1, 2].includes(cell.mobile.columns)
+      || Object.hasOwn(cell.mobile, 'autoHeight') && typeof cell.mobile.autoHeight !== 'boolean'
       || Object.hasOwn(cell.mobile, 'referenceWidth') && !number(cell.mobile.referenceWidth, 1, 16384)
       || !Number.isInteger(cell.mobile.height) || !number(cell.mobile.height, 80, 1200)) return false;
     cellIds.add(cell.id);
@@ -160,7 +169,7 @@ export function validReceptionEditorDocument(value, published = false) {
   return !Object.hasOwn(value, 'arrangement') || validReceptionArrangement(value.arrangement, value.cells);
 }
 export function assertReceptionEditorDocument(value) {
-  if (!validReceptionEditorDocument(value)) throw new Error('The Reception cells or artwork are invalid. Your saved work is unchanged.');
+  if (!validReceptionEditorDocument(value)) throw new Error('The Bento cells or artwork are invalid. Your saved work is unchanged.');
   return value;
 }
 const filterLayout = (workbench, allowed) => ({ ...workbench, ...Object.fromEntries(keys.map(key => [key, (workbench[key] || []).filter(item => allowed.has(item.id))])) });
@@ -198,7 +207,7 @@ export function createReceptionEditorDocument(value, { width = 1440 } = {}) {
     imageModules: structuredClone(value?.imageModules || []), texts: structuredClone(value?.texts || []), shapes: structuredClone(value?.shapes || []), artworkLayers: [], cells: [],
     ...(Object.hasOwn(value || {}, 'surface') ? { surface: value.surface } : {}), ...(value?.links ? { links: structuredClone(value.links) } : {}) };
   if (!value) return next;
-  if (next.shapes.length + value.regions.length > MAX_SHAPES) throw new Error('This Reception needs more shapes than the Editor supports. Your existing Reception is unchanged.');
+  if (next.shapes.length + value.regions.length > MAX_SHAPES) throw new Error('This Bento layout exceeds the Studio shape limit. Your saved composition is unchanged.');
   const remap = new Map(), ordered = value.mobile.map(item => value.regions.find(region => region.id === item.id));
   for (const region of ordered) {
     let id = `shape:cell-${region.id.slice(7, 72)}`;
@@ -247,32 +256,36 @@ export function createReceptionEditorDocument(value, { width = 1440 } = {}) {
 
 // Deleting content prunes membership; changing a cell rect carries untouched
 // children once. Explicit child transforms from a group gesture win unchanged.
-export function reconcileReceptionCells(previous, candidate, { resizeContents = true, preserveMemberAnchors = false } = {}) {
-  let next = reconcileArtworkLayers(previous, candidate);
+export function reconcileReceptionCells(previous, candidate, { resizeContents = true, preserveMemberAnchors = false, moveContents = false } = {}) {
+  const backgrounds = new Set(candidate.shapes.map(shape => shape.id));
+  const retained = new Set(candidate.cells.filter(cell => backgrounds.has(cell.id)).flatMap(cell => cell.members));
+  // Deleting a cell also deletes its native contents. Merges explicitly transfer
+  // members to a surviving cell, so those records remain owned and intact.
+  const removed = new Set(previous.cells.filter(cell => !backgrounds.has(cell.id))
+    .flatMap(cell => cell.members).filter(id => !retained.has(id)));
+  const records = removed.size ? Object.fromEntries(keys.map(key => [key, candidate[key].filter(item => !removed.has(item.id))])) : null;
+  let next = records ? { ...candidate, ...records, workbench: filterLayout(candidate.workbench, new Set(idsOf(records))) } : candidate;
+  next = reconcileArtworkLayers(previous, next);
   const available = new Set(idsOf(next));
   next = { ...next, cells: next.cells.filter(cell => next.shapes.some(shape => shape.id === cell.id)).map(cell => pruneCellMembers(cell, available)) };
   const contained = new Set(next.cells.flatMap(cell => cell.members));
-  // Removing a cell keeps its contents. Free frames must meet their native Canvas minima.
+  // Explicitly released members must meet their native Canvas minima.
   for (const id of previous.cells.flatMap(cell => cell.members)) {
     if (contained.has(id) || !available.has(id)) continue;
     const limits = receptionModuleLimits(id, false), frame = receptionModuleWindow(next, id);
     if (frame && (frame.width < limits.minimumWidth || frame.height < limits.minimumHeight))
       next = withReceptionModuleWindow(next, id, { ...frame, width: Math.max(frame.width, limits.minimumWidth), height: Math.max(frame.height, limits.minimumHeight) });
   }
-  // Removing a private background keeps its native content and effective privacy.
-  const newlyIndependentPrivate = new Set(privateCells(previous).filter(cell => !available.has(cell.id))
-    .flatMap(cell => cell.members).filter(id => !contained.has(id)));
-  if (newlyIndependentPrivate.size) for (const key of keys) {
-    next[key] = next[key].map(item => newlyIndependentPrivate.has(item.id) ? { ...item, visibility: 'PRIVATE' } : item);
-  }
   if (next.arrangement) next.arrangement = pruneReceptionArrangement(next.arrangement, next.cells.map(cell => cell.id));
   for (const cell of next.cells) {
     const before = receptionModuleWindow(previous, cell.id), after = receptionModuleWindow(next, cell.id);
     if (!before || !after) continue;
-    const parentChanged = !same(before, after), oldCell = previous.cells.find(item => item.id === cell.id);
+    const parentChanged = !same(before, after);
+    if (!parentChanged && !cell.memberAnchors?.length) continue;
+    const oldCell = previous.cells.find(item => item.id === cell.id);
     const oldFrames = Object.fromEntries(cell.members.map(id => [id, receptionModuleWindow(previous, id)]));
     const currentFrames = Object.fromEntries(cell.members.map(id => [id, receptionModuleWindow(next, id)]));
-    const expected = projectReceptionCellMembers(before, after, oldFrames, cell);
+    const expected = projectReceptionCellMembers(before, after, oldFrames, cell, { moveContents });
     const near = (a, b) => a && b && Object.keys(a).every(key => Math.abs(a[key] - b[key]) < 0.001);
     // A native free move releases the affected anchor in the same operation.
     // Changing a member's size keeps its anchor and centres the new bounds.
@@ -293,9 +306,11 @@ export function reconcileReceptionCells(previous, candidate, { resizeContents = 
       next = withReceptionModuleWindow(next, id, expected[id]);
     }
     for (const anchor of anchors) {
-      const frames = parentChanged && oldCell?.memberAnchors?.some(old => same(old, anchor)) ? oldFrames : currentFrames;
-      for (const [id, frame] of Object.entries(positionReceptionMembers(after, frames, anchor))) {
-        if (!near(frame, receptionModuleWindow(next, id))) next = withReceptionModuleWindow(next, id, frame);
+      const positioned = parentChanged && oldCell?.memberAnchors?.some(old => same(old, anchor))
+        ? expected : positionReceptionMembers(after, currentFrames, anchor);
+      for (const id of anchor.members) {
+        const frame = positioned[id];
+        if (frame && !near(frame, receptionModuleWindow(next, id))) next = withReceptionModuleWindow(next, id, frame);
       }
     }
   }
@@ -304,49 +319,90 @@ export function reconcileReceptionCells(previous, candidate, { resizeContents = 
 }
 
 export function receptionResponsiveLayout(value, viewportWidth) {
-  const area = workbenchArea(value.workbench), mobile = viewportWidth <= 640;
-  // A wider screen gives the authored canvas room; it does not magnify it.
-  // Keep the viewport separate so centering a small canvas cannot select the
-  // phone layout merely because its own authored width is below the breakpoint.
+  const area = workbenchArea(value.workbench);
+  const mobile = value.bento && value.cells.length > 1 ? viewportWidth < RECEPTION_READING_WIDTH * 2 : viewportWidth <= 640;
   const width = Math.min(viewportWidth, area.width), scale = width / area.width;
   const open = id => keys.some(key => value.workbench[key]?.some(item => item.id === id && item.open));
+  let visible = value.cells.filter(cell => open(cell.id));
   const hidden = new Set(value.cells.filter(cell => !open(cell.id)).flatMap(cell => [cell.id, ...cell.members]));
   const windows = Object.fromEntries(idsOf(value).filter(id => open(id) && !hidden.has(id)).map(id => {
-    const rect = receptionModuleWindow(value, id);
-    return [id, { left: (rect.left - area.left) * scale, top: (rect.top - area.top) * scale, width: rect.width * scale, height: rect.height * scale }];
+    const r = receptionModuleWindow(value, id);
+    return [id, { left: (r.left - area.left) * scale, top: (r.top - area.top) * scale, width: r.width * scale, height: r.height * scale }];
   }));
+  const originalGap = value.bento?.gap ?? 0;
+  const gap = Math.min(originalGap * scale, Math.max(0, width - 2));
+  const height = area.height * scale;
+  const progressive = !mobile && scale < 1 && visible.length > 1 && value.bento
+    ? progressiveReceptionFrames(value, visible, scale, gap, (cell, cellWidth) => {
+      const original = receptionModuleWindow(value, cell.id), image = responsiveCellImage(value, cell), artwork = responsiveCellArtwork(value, cell);
+      return cell.mobile.autoHeight === false ? cell.mobile.height
+        : image ? responsiveImageHeight(image, cellWidth) : artwork ? responsiveArtworkHeight(artwork, cellWidth)
+        : Math.max(80, original.height * cellWidth / original.width);
+    }) : null;
+  const stacked = Boolean(progressive && visible.some(cell => receptionModuleWindow(value, cell.id).width * scale < RECEPTION_READING_WIDTH));
   let bottom = 0, rowTop = 0, column = 0, rowHeight = 0;
-  const gap = Math.min(12, Math.max(0, width - 2));
-  const cells = value.cells.filter(cell => open(cell.id)).map(cell => {
+  const reflowed = mobile || stacked;
+  if (reflowed) visible = receptionReadingOrder(value, visible);
+  const cells = visible.map(cell => {
     const original = receptionModuleWindow(value, cell.id);
+    const image = responsiveCellImage(value, cell);
+    const artwork = responsiveCellArtwork(value, cell);
     let window = windows[cell.id];
-    if (mobile) {
+    if (progressive) {
+      window = progressive[cell.id]; windows[cell.id] = window;
+      bottom = Math.max(bottom, window.top + window.height);
+    } else if (mobile) {
       const columns = cell.mobile.columns;
       if (column + columns > 2) { rowTop += rowHeight + gap; column = 0; rowHeight = 0; }
-      window = { left: column * (width + gap) / 2, top: rowTop, width: columns === 2 ? width : (width - gap) / 2, height: cell.mobile.height };
+      const cellWidth = columns === 2 ? width : (width - gap) / 2;
+      const baseHeight = cell.singleLine ? original.height : image && cell.mobile.autoHeight !== false ? responsiveImageHeight(image, cellWidth)
+        : artwork && cell.mobile.autoHeight !== false ? responsiveArtworkHeight(artwork, cellWidth)
+        : mobile || cell.mobile.autoHeight === false ? cell.mobile.height : Math.max(80, original.height * scale);
+      window = { left: column * (width + gap) / 2, top: rowTop, width: cellWidth,
+        height: baseHeight };
       column += columns; rowHeight = Math.max(rowHeight, window.height); bottom = Math.max(bottom, window.top + window.height);
       if (column === 2) { rowTop += rowHeight + gap; column = 0; rowHeight = 0; }
       windows[cell.id] = window;
     }
-    if (mobile || scale !== 1 && cell.fitText?.length) {
+    if (mobile || scale !== 1) {
       const frames = Object.fromEntries(cell.members.map(id => [id, receptionModuleWindow(value, id)]));
-      const projected = projectReceptionCellMembers(original, window, frames, cell);
+      // Reflow fits content to a new cell shape; proportional views shrink the
+      // authored group with its cell while preserving the chosen alignment.
+      const projected = projectReceptionCellMembers(original, window, frames, cell,
+        { responsive: true, anchorScale: reflowed || cell.singleLine ? 1 : undefined });
+      const artworkFrames = reflowed && artwork ? responsiveArtworkFrames(artwork, frames, original, window) : {};
       for (const id of cell.members) {
         if (!windows[id]) continue;
-        // Desktop fonts keep their size. Preserve a fitted label's measured
-        // frame, including companions positioned by the same group anchor.
-        if (!mobile && !cell.fitText.includes(id)
-          && !receptionMemberAnchor(cell, [id])?.members.some(member => cell.fitText.includes(member))) continue;
         const override = mobile && cell.mobile.placements?.find(item => item.id === id)?.window;
         const overrideScale = window.width / (cell.mobile.referenceWidth || (cell.mobile.columns === 2 ? 390 : 189));
-        windows[id] = override ? { left: window.left + override.left * overrideScale, top: window.top + override.top * overrideScale,
-          width: override.width * overrideScale, height: override.height * overrideScale }
-          : projected[id];
+        let frame = override ? { left: window.left + override.left * overrideScale, top: window.top + override.top * overrideScale,
+          width: override.width * overrideScale, height: override.height * overrideScale } : projected[id];
+        // A desktop crop covering its cell remains cell-filling after reflow.
+        // Position anchors must not shrink that viewport; explicit phone edits win.
+        if (!override && reflowed && image?.id === id && (image.fillsCell || !receptionMemberAnchor(cell, [id])))
+          frame = responsiveImageFrame(image, original, window);
+        if (!override && artworkFrames[id] && !receptionMemberAnchor(cell, [id])) frame = artworkFrames[id];
+        if (!override && id.startsWith('text:') && !receptionMemberAnchor(cell, [id])) {
+          const oldWidth = frame.width, source = frames[id], fitted = cell.fitText?.includes(id);
+          frame = { ...frame, width: fitted ? Math.min(source.width, window.width) : source.width / original.width * window.width,
+            height: source.height * (reflowed || cell.singleLine ? window.height / original.height : scale),
+            top: window.top + (source.top - original.top) * window.height / original.height };
+          if (fitted) frame.left += (oldWidth - frame.width) / 2;
+        }
+        if (!override && cell.singleLine && id.startsWith('text:')) {
+          const source = frames[id], anchor = receptionMemberAnchor(cell, [id]);
+          const padding = anchor?.members.length === 1 ? anchor.paddingX : 0;
+          const room = Math.max(1, window.width - padding * 2), width = Math.min(source.width, room);
+          const position = anchor?.members.length === 1 ? { left: 0, center: .5, right: 1 }[anchor.alignX]
+            : Math.max(0, Math.min(1, (source.left - original.left) / Math.max(1, original.width - source.width)));
+          frame = { ...frame, left: window.left + padding + (room - width) * position, width, height: source.height };
+        }
+        windows[id] = frame;
       }
     }
     return { ...cell, radius: (cell.radius || 0) * (mobile ? 1 : scale), window };
   });
   const contained = new Set(value.cells.flatMap(cell => [cell.id, ...cell.members]));
-  const freeBottom = Math.max(0, ...Object.entries(windows).filter(([id]) => !contained.has(id)).map(([, rect]) => rect.top + rect.height));
-  return { viewportWidth, width, height: mobile && cells.length ? Math.max(bottom, freeBottom) : area.height * scale, scale, windows, cells, mobile };
+  const freeBottom = Math.max(0, ...Object.entries(windows).map(([id, r]) => contained.has(id) ? 0 : r.top + r.height));
+  return { viewportWidth, width, height: Math.max((mobile || progressive) && cells.length ? bottom : height, freeBottom), scale, gap, windows, cells, mobile, stacked };
 }

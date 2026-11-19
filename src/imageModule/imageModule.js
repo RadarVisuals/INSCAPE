@@ -1,3 +1,5 @@
+import { exact } from '../text/domain/article.js';
+import { MIN_CROP_PROJECTION_ZOOM } from '../lattice/rendering/latticeCrop.js';
 import { MIN_RECEPTION_CELL_SIZE } from '../reception/editorCellGeometry.js';
 import { validateProfileDocumentV9Asset } from '../profileDocument/domain/profileDocumentV9Asset.js';
 import { resolvePublishedAssetUrl } from '../profileDocument/domain/publishedAssetUrl.js';
@@ -5,14 +7,13 @@ import { resolvePublishedAssetUrl } from '../profileDocument/domain/publishedAss
 export const MAX_IMAGE_MODULES = 16;
 export const IMAGE_FILL_CROP = Object.freeze({ x: .5, y: .5, zoom: 1 });
 export const IMAGE_MODULE_ID = /^image:[A-Za-z0-9_-]{1,80}$/u;
-const exact = (v, keys) => v && typeof v === 'object' && !Array.isArray(v) && Object.keys(v).length === keys.length && keys.every(k => Object.hasOwn(v, k));
 const number = (v, min, max) => Number.isFinite(v) && v >= min && v <= max;
 const validCrop = (crop, minimumZoom) => crop === null || exact(crop, ['x', 'y', 'zoom']) && number(crop.x, 0, 1) && number(crop.y, 0, 1) && number(crop.zoom, minimumZoom, 4);
 export const IMAGE_SIZE_LIMITS = Object.freeze({ minimumWidth: 32, minimumHeight: 32, maximumWidth: 4096, maximumHeight: 4096 });
 const CELL_IMAGE_LIMITS = Object.freeze({ ...IMAGE_SIZE_LIMITS, minimumHeight: MIN_RECEPTION_CELL_SIZE.height });
 export const imageSizeLimits = inCell => inCell ? CELL_IMAGE_LIMITS : IMAGE_SIZE_LIMITS;
 export const imageSize = (v, min = IMAGE_SIZE_LIMITS.minimumWidth, max = IMAGE_SIZE_LIMITS.maximumWidth) => Number.isInteger(v) && number(v, min, max);
-export function validImageModules(items, published = false, { minimumCropZoom = 1, isCellMember } = {}) {
+export function validImageModules(items, published = false, { minimumCropZoom = MIN_CROP_PROJECTION_ZOOM, isCellMember } = {}) {
   if (!Array.isArray(items) || items.length > MAX_IMAGE_MODULES) return false;
   const ids = new Set();
   return items.every(item => {

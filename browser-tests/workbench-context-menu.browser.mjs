@@ -39,8 +39,7 @@ try {
     const preferences = await import('/src/public/ownerSystemWorkflow/workbenchPreferences.js');
     preferences.saveWorkbenchPreferences(profile, { ...preferences.DEFAULT_WORKBENCH_PREFERENCES, surfaceId: 'carbon' }, storage);
     const root = createRoot(document.getElementById('root'));
-    window.review = { root, storage, profile, getDraft: () => JSON.parse(storage.getItem(systemWorkflowDraftKey(profile))),
-      dockVisible: () => preferences.loadWorkbenchPreferences(profile, undefined, storage, true).dockVisible };
+    window.review = { root, storage, profile, getDraft: () => JSON.parse(storage.getItem(systemWorkflowDraftKey(profile))) };
     const props = { profileAddress: profile, reviewStorage: storage, reviewAssets: fixture.OWNER_SYSTEM_WORKFLOW_REVIEW_ASSETS,
       reviewCategories: [], reviewActivity: [], reviewProfile: { name: 'Menu review' } };
     review.render = key => root.render(React.createElement(Runtime, { ...props, key }));
@@ -56,9 +55,8 @@ try {
   };
   const menu = () => page.getByRole('menu', { name: 'Workbench commands', exact: true });
   const rootLabels = () => menu().locator(':scope > button').allTextContents();
-  await page.getByRole('button', { name: 'Inscape sidebar', exact: true }).click();
   await desktop();
-  assert.deepEqual((await rootLabels()).map(s => s.replace('›', '').trim()), ['TOOLS', 'ADD', 'IDENTITY', 'LIBRARY', 'DISCOVER', 'PREVIEW', 'PUBLISH', 'HIDE SIDEBAR']);
+  assert.deepEqual((await rootLabels()).map(s => s.replace('›', '').trim()), ['TOOLS', 'ADD', 'IDENTITY', 'LIBRARY', 'DISCOVER', 'PREVIEW', 'PUBLISH']);
   // A background Workbench render replaces callback props while the menu is
   // still open. It must not cancel the user's pending submenu hover.
   await page.clock.install();
@@ -91,20 +89,10 @@ try {
   const before = await page.evaluate(() => JSON.stringify(review.getDraft()));
   const height = await page.locator('[data-presentation-workbench]').first().evaluate(node => node.clientHeight);
   assert.equal(height, page.viewportSize().height, 'sidebar does not reserve a bottom rail');
-  await desktop();
-  await page.getByRole('menuitem', { name: 'HIDE SIDEBAR', exact: true }).click();
-  await page.locator('.workbench-sidebar').waitFor({ state: 'hidden' });
-  assert.equal(await page.evaluate(() => review.dockVisible()), false);
-  assert.equal(await page.locator('[data-presentation-workbench]').first().evaluate(node => node.clientHeight), page.viewportSize().height, 'hiding the sidebar does not change canvas coordinates');
+  assert.equal(await page.locator('.workbench-sidebar').count(), 0);
   assert.equal(await page.evaluate(() => JSON.stringify(review.getDraft())), before);
   await page.evaluate(() => review.render('remounted'));
   await page.locator('.system-workflow__presentation-board').first().waitFor();
-  assert.equal(await page.locator('.workbench-sidebar').isVisible(), false);
-  assert.equal(await page.evaluate(() => review.dockVisible()), false);
-  await page.locator('main.system-workflow').focus();
-  await page.keyboard.press('Shift+F10');
-  await page.getByRole('menuitem', { name: 'SHOW SIDEBAR', exact: true }).click();
-  await page.locator('.workbench-sidebar').waitFor();
   await desktop();
   await menu().waitFor();
   await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
@@ -152,10 +140,8 @@ try {
   }))) assert.ok(bounds.left >= 0 && bounds.right <= 390 && bounds.bottom <= 844, JSON.stringify(bounds));
   await page.screenshot({ path: `${output}/workbench-menu-narrow.png` });
   await page.keyboard.press('Escape');
-  await desktop(380, 12);
-  await page.getByRole('menuitem', { name: 'HIDE SIDEBAR', exact: true }).click();
   assert.equal(await page.locator('[data-presentation-workbench]').first().evaluate(node => node.clientHeight), 844);
   await page.screenshot({ path: `${output}/workbench-hidden-dock-narrow.png` });
   assert.deepEqual(errors, []);
-  console.log('Workbench menu: gap traversal, dock persistence/layout, keyboard, scoped Display formats and narrow bounds passed.');
+  console.log('Workbench menu: gap traversal, menu remount/layout, keyboard, scoped Display formats and narrow bounds passed.');
 } finally { await browser.close(); }

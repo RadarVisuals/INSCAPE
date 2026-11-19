@@ -2,6 +2,8 @@
 import { reconcileRemovedWorkbenchMembers } from './domain/workbenchGroups.js';
 import { reconcileArtworkLayers } from './domain/artworkLayers.js';
 import { captureProfileDraftWriteAccess } from './profileEditorLease.js';
+import { canvasModuleDraft, createStudioComposition, enableStudioCells } from './domain/studioComposition.js';
+import { workbenchLayoutKey } from './workbenchLayoutKey.js';
 import { keccak256, stringToHex } from 'viem';
 import { normalizeProfileAddress } from '../library/config.js';
 import { draftChanges, applyDraftChanges, draftChangeLabel } from './draftHistory.js';
@@ -10,7 +12,7 @@ import { DEFAULT_WORKBENCH_AREA } from './domain/workbenchArea.js';
 import { bindWorkbenchTextRecovery, textRecoveries, TEXT_RECOVERY_MESSAGE } from '../text/textEditRecovery.js';
 import {
   FIRST_WORKBENCH_ID, WORKBENCH_COLLECTION_LIMIT, isWorkbenchCollection, createWorkbenchCollection, assertValidWorkbenchCollection,
-  projectWorkbenchDraft, replaceWorkbenchDraft, appendWorkbench, assertWorkbenchName, assertWorkbenchIntroduction, assertThumbnailCrop,
+  projectWorkbenchDraft, replaceWorkbenchDraft, appendWorkbench, removeActiveWorkbench, assertWorkbenchName, assertWorkbenchIntroduction, assertThumbnailCrop,
 } from './domain/workbenchCollection.js';
 import {
   createEmptySystemWorkflowDraft,
@@ -104,13 +106,14 @@ function validateStoredDraft(candidate, profileAddress) {
 
 /**
  * @param {{generateGridId?: () => string, profileAddress?: import('../contracts/workbench.js').ProfileAddress,
- * storage?: import('../contracts/workbench.js').DraftStorage, requireEditor?: boolean}} [options]
+ * storage?: import('../contracts/workbench.js').DraftStorage, requireEditor?: boolean, initialStudio?: boolean}} [options]
  */
 export function createSystemWorkflowDraftStore({
   generateGridId,
   profileAddress,
   storage,
   requireEditor = false,
+  initialStudio = false,
 } = {}) {
   let activeProfileAddress = requireProfileAddress(profileAddress);
   let writeAccess = requireEditor ? captureProfileDraftWriteAccess(activeProfileAddress, storage) : () => true;
@@ -148,10 +151,10 @@ export function createSystemWorkflowDraftStore({
   };
 
   /** @param {string} profile @returns {WorkflowDraft} */
-  const createEmpty = (profile) => deepFreeze(createEmptySystemWorkflowDraft(
-    profile,
-    generateGridId ? { generateId: generateGridId } : undefined,
-  ));
+  const createEmpty = profile => {
+    const blank = createEmptySystemWorkflowDraft(profile, generateGridId ? { generateId: generateGridId } : undefined);
+    return deepFreeze(initialStudio ? { ...blank, grids: [], composition: createStudioComposition('canvas') } : blank);
+  };
 
   /** @param {string} profile @returns {LoadedDraft} */
   const load = (profile) => {
@@ -308,25 +311,60 @@ export function createSystemWorkflowDraftStore({
         ? assertValidWorkbenchCollection(replaceWorkbenchDraft(currentRecord, workbenchId(), draft))
         : detached(draft);
     },
-    /** @param {string} name @param {{workbench?: import('../contracts/workbench.js').WorkbenchPresentation, generateId?: () => string}} [options] */
-    createWorkbench(name, { workbench, generateId = () => globalThis.crypto.randomUUID() } = {}) {
+    enableCurrentCanvasModules() {
+      if (editorTarget !== 'composition' || !receptionScope) return false;
+      if (textRecoveries(receptionScope, activeProfileAddress).length) throw new Error(TEXT_RECOVERY_MESSAGE);
+      const next = canvasModuleDraft(api.getSnapshot());
+      return next ? commit(next, { expectedGeneration: generation, historyLabel: 'Use canvas modules' }) : false;
+    },
+    enableCurrentWorkbenchCells() {
+      if (editorTarget !== 'workbench' || api.getSnapshot().composition) return false;
+      for (const guard of transitionGuards.values()) if (guard.activation === activation) {
+        const reason = guard.check(); if (reason) throw new Error(reason);
+      }
+      if (textRecoveries(api.getWorkbenchScope(), activeProfileAddress).length) throw new Error(TEXT_RECOVERY_MESSAGE);
+      return commit(enableStudioCells(api.getSnapshot()), { expectedGeneration: generation, historyLabel: 'Use Bento cells' });
+    },
+    /** @param {string} name @param {{workbench?: import('../contracts/workbench.js').WorkbenchPresentation, layout?: 'canvas' | 'bento', generateId?: () => string}} [options] */
+    createWorkbench(name, { workbench, layout, generateId = () => globalThis.crypto.randomUUID() } = {}) {
       assertWorkbenchName(name);
       const collection = withCurrentLayout(workbench);
       /** @type {WorkflowDraft} */ const fresh = createEmptySystemWorkflowDraft(activeProfileAddress);
       fresh.grids = []; // Ordinary new canvases do not create a parked Display.
-      fresh.workbench = { ...createDefaultWorkbenchPresentation(), area: { ...DEFAULT_WORKBENCH_AREA } };
-      fresh.workbench.display.open = false;
+      if (layout !== undefined) {
+        fresh.composition = createStudioComposition(layout);
+      } else {
+        fresh.workbench = { ...createDefaultWorkbenchPresentation(), area: { ...DEFAULT_WORKBENCH_AREA } };
+        fresh.workbench.display.open = false;
+      }
       /** @type {import('../contracts/workbench.js').WorkbenchId} */
       const id = `workbench:${generateId()}`;
       const next = appendWorkbench(collection, id, name, fresh);
       return persistCollection(next, { changeContext: true }) ? id : false;
     },
-    /** @param {import('../contracts/workbench.js').WorkbenchId} id @param {{workbench?: import('../contracts/workbench.js').WorkbenchPresentation}} [options] */
-    switchWorkbench(id, { workbench } = {}) {
+    /** @param {import('../contracts/workbench.js').WorkbenchId} id @param {{workbench?: import('../contracts/workbench.js').WorkbenchPresentation,
+     * recovered?: { id: string, name: string, draft: WorkflowDraft, introduction: string, thumbnailCrop: import('../contracts/workbench.js').ThumbnailCrop | null }[]}} [options] */
+    switchWorkbench(id, { workbench, recovered = [] } = {}) {
       if (id === workbenchId()) return true;
-      const collection = withCurrentLayout(workbench);
+      let collection = withCurrentLayout(workbench);
+      for (const item of recovered) {
+        if (item.draft.profileAddress !== activeProfileAddress) return reject('invalid');
+        collection = appendWorkbench(collection, item.id, item.name, item.draft,
+          { introduction: item.introduction, thumbnailCrop: item.thumbnailCrop });
+      }
       if (!collection.workbenches.some(item => item.id === id)) return false;
       return persistCollection({ ...collection, activeId: id }, { changeContext: true });
+    },
+    /** @param {import('../contracts/workbench.js').WorkbenchId} id */
+    deleteWorkbench(id) {
+      const next = removeActiveWorkbench(withCurrentLayout(), id);
+      const removedHistory = historyKey();
+      const layoutKey = workbenchLayoutKey(activeProfileAddress, id);
+      if (!persistCollection(next, { changeContext: true })) return false;
+      histories.delete(removedHistory);
+      // The draft deletion is already durable; a cache cleanup cannot undo it.
+      try { storage?.removeItem?.(layoutKey); } catch { /* The orphaned cache is never read. */ }
+      return next.activeId;
     },
     /** @param {string} name @param {{workbench?: import('../contracts/workbench.js').WorkbenchPresentation}} [options] */
     renameWorkbench(name, { workbench } = {}) {
@@ -351,7 +389,7 @@ export function createSystemWorkflowDraftStore({
     // readable snapshot, but can never write after A → B → A.
     /** @returns {import('../contracts/workbench.js').WorkbenchScope} */
     getWorkbenchScope() {
-      if (editorTarget !== 'workbench') throw new Error('Reception is the active editor. Close it before opening a Workbench.');
+      if (editorTarget !== 'workbench') throw new Error('Close the active composition before switching workspaces.');
       if (scopedSession?.activation === activation) return /** @type {WorkbenchScope} */ (scopedSession.api);
       /** @type {ScopedSession} */ const session = { activation, snapshot: currentDraft, generation, profile: activeProfileAddress, id: workbenchId() };
       const current = () => session.activation === activation;
@@ -375,6 +413,7 @@ export function createSystemWorkflowDraftStore({
         retryCompletedOperation: write(api.retryCompletedOperation),
         restoreBackup: write(api.restoreBackup),
         createWorkbench: write(api.createWorkbench),
+        deleteWorkbench: write(api.deleteWorkbench),
         switchWorkbench: write(api.switchWorkbench),
         renameWorkbench: write(api.renameWorkbench),
         leaveWorkbench: write(api.leaveWorkbench),
@@ -400,27 +439,30 @@ export function createSystemWorkflowDraftStore({
 
     // A distinct capability set over this same canonical store. Reception cannot
     // create/switch canvases or change free-canvas geometry through this handle.
-    acquireReceptionScope() {
-      if (editorTarget === 'reception') throw new Error('Reception is already open.');
+    /** @param {'composition' | 'reception'} [field] */
+    acquireReceptionScope(field = 'reception') {
+      if (!['composition', 'reception'].includes(field) || editorTarget !== 'workbench')
+        throw new Error('Close the active document before switching.');
+      if (field === 'composition' && !api.getSnapshot().composition) throw new Error('This composition is unavailable.');
       api.getSnapshot();
       if (!api.hasWriteAccess()) throw new Error('This tab no longer has editing access. Return to your profile to reopen the editor.');
       if (textRecoveries(api.getWorkbenchScope(), activeProfileAddress).length) throw new Error(TEXT_RECOVERY_MESSAGE);
       for (const guard of transitionGuards.values()) if (guard.activation === activation) {
         const reason = guard.check(); if (reason) throw new Error(reason);
       }
-      historyGroup = null; editorTarget = 'reception'; activation++;
+      historyGroup = null; editorTarget = field; activation++;
       const scopeActivation = activation, profile = activeProfileAddress;
       let released = false;
       const current = () => !released && activation === scopeActivation && activeProfileAddress === profile;
       const writable = () => current() && api.hasWriteAccess();
       /** @param {WorkflowDraft} draft */
-      const canvasPart = ({ reception, identityPresentation, ...canvas }) => JSON.stringify(canvas);
+      const canvasPart = ({ [field]: document, identityPresentation, ...canvas }) => JSON.stringify(canvas);
       /** @param {WorkflowDraft} candidate @param {import('../contracts/workbench.js').CommitOptions} [options] */
       const save = (candidate, options) => writable() && canvasPart(candidate) === canvasPart(api.getSnapshot())
         && api.commitCompletedOperation(candidate, options);
       const scope = Object.freeze({
         isCurrent: current, hasWriteAccess: writable,
-        getProfileAddress: () => profile, getRecoveryContext: () => 'reception',
+        getProfileAddress: () => profile, getRecoveryContext: () => field === 'reception' ? field : workbenchId(),
         getSnapshot: api.getSnapshot, getDraft: api.getDraft, getGeneration: api.getGeneration,
         getHistory: api.getHistory, getRecordState: api.getRecordState, getLastCommitFailure: api.getLastCommitFailure,
         getBackupSnapshot: api.getBackupSnapshot, subscribe: api.subscribe,
@@ -586,7 +628,7 @@ export function createSystemWorkflowDraftStore({
   /** @param {unknown} candidate @param {import('../contracts/workbench.js').CommitOptions} [options] @param {ReturnType<typeof load> | null} [recovered] @param {boolean} [restore] @param {(() => void) | null} [acceptHistory] */
   function commit(candidate, { expectedGeneration, historyLabel, recordHistory = true, historyPresentation, historyReception } = {}, recovered = null, restore = false, acceptHistory = null) {
       if (!writeAccess()) return reject('editor_unavailable');
-      if (historyReception !== undefined && (editorTarget !== 'reception' || historyPresentation)) return reject('invalid');
+      if (historyReception !== undefined && (editorTarget === 'workbench' || historyPresentation)) return reject('invalid');
       if (expectedGeneration !== generation || (!currentDraft && !restore)) return reject('stale');
       const validated = validateStoredDraft(restore ? candidate : reconcileArtworkLayers(recovered?.draft || currentDraft,
         reconcileRemovedWorkbenchMembers(recovered?.draft || currentDraft, candidate)), activeProfileAddress).value;
@@ -618,7 +660,7 @@ export function createSystemWorkflowDraftStore({
         && new TextEncoder().encode(raw).length > WORKBENCH_COLLECTION_LIMIT) return reject('invalid');
       // A destructive composition edit captures the departing live layout for
       // Undo in this same write. It cannot mutate content or claim a prior save.
-      const historyBefore = historyReception !== undefined ? validateStoredDraft({ ...currentDraft, reception: historyReception }, activeProfileAddress).value
+      const historyBefore = historyReception !== undefined ? validateStoredDraft({ ...currentDraft, [editorTarget]: historyReception }, activeProfileAddress).value
         : historyPresentation ? validateStoredDraft({ ...currentDraft, workbench: historyPresentation }, activeProfileAddress).value
         : recovered?.draft || currentDraft;
       if ((historyPresentation || historyReception !== undefined) && !historyBefore) return reject('invalid');
@@ -632,7 +674,7 @@ export function createSystemWorkflowDraftStore({
         const h = history(); h.redo = [];
         if (historyGroup?.entry && h.undo.at(-1) === historyGroup.entry) {
           if (historyPresentation) historyGroup.before = { ...historyGroup.before, workbench: historyPresentation };
-          if (historyReception !== undefined) historyGroup.before = { ...historyGroup.before, reception: historyReception };
+          if (historyReception !== undefined) historyGroup.before = { ...historyGroup.before, [editorTarget]: historyReception };
           historyGroup.entry.changes = draftChanges(historyGroup.before, draft);
           historySizes.delete(historyGroup.entry);
           if (!historyGroup.entry.changes.length) { h.undo.pop(); historyGroup.entry = null; }

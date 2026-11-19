@@ -1,5 +1,6 @@
-import { setBentoCellCount, bentoCellCount, setBentoFormat, addBentoCell, setCurrentBentoField } from './fixtures/bento-layout.mjs';
-import { workspacePicker, editorMenu, activeEditorDocument, editorCommand, selectEditorDocument, editorOverview, editorDestination } from './fixtures/editor-menu.mjs';
+import { undockWindow } from './fixtures/undock-window.mjs';
+import { setBentoCellCount, bentoCellCount, setBentoFormat, addBentoCell, setCurrentBentoField, seedBentoGrid } from './fixtures/bento-layout.mjs';
+import { openEditorMenu, receptionPreviewControls, workspacePicker, editorMenu, activeEditorDocument, editorCommand, selectEditorDocument } from './fixtures/editor-menu.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdir } from 'node:fs/promises';
@@ -15,21 +16,108 @@ const shape = (page, id) => page.locator(`.shape-instance [data-workbench-view-i
 const withoutReception = ({ reception: _reception, ...draft }) => draft;
 const cellFrame = (value, id) => value.workbench.shapes.find(item => item.id === id).window;
 
+for (const width of [1440,900]) test(`Studio Preview Space-pan preserves responsive geometry, cancels and resets (${width})`, { timeout:90000 }, async () => {
+  const { browser,page,errors }=await setup({width,height:1000});
+  try {
+    await editorCommand(page,'Canvas','Preview');
+    const viewport=page.locator('.reception-preview-content');
+    const plane=page.locator('.reception-preview-pan-plane');
+    const canvas=page.locator('.reception-document-canvas');
+    await canvas.locator('[data-cell-id]').first().waitFor();
+    const geometry=()=>canvas.locator('[data-cell-id], [data-layer-id]').evaluateAll(nodes=>nodes.map(node=>({
+      cell:node.dataset.cellId,layer:node.dataset.layerId,style:node.getAttribute('style'),
+    })));
+    const original=await reception(page), beforeGeometry=await geometry();
+    const originalWidth=await canvas.evaluate(node=>node.clientWidth);
+    const header=page.locator('.reception-preview-page > .reception-window-header');
+    const beforeHeader=await header.boundingBox();
+    const box=await viewport.boundingBox(), start={x:box.x+box.width/2,y:box.y+Math.min(120,box.height/2)};
+    const drag=async(dx,dy)=>{
+      await page.mouse.move(start.x,start.y);
+      await page.keyboard.down('Space'); await page.mouse.down();
+      await page.mouse.move(start.x+dx,start.y+dy,{steps:8});
+      await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+    };
+    await drag(100,-80); await page.mouse.up(); await page.keyboard.up('Space');
+    assert.equal(await plane.evaluate(node=>node.style.translate),'100px -80px');
+    assert.deepEqual(await geometry(),beforeGeometry);
+    assert.equal(await canvas.evaluate(node=>node.clientWidth),originalWidth);
+    assert.deepEqual(await reception(page),original);
+    assert.deepEqual(await header.boundingBox(),beforeHeader);
+    await drag(-160,90); await page.keyboard.press('Escape'); await page.mouse.up(); await page.keyboard.up('Space');
+    await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(resolve)));
+    assert.equal(await plane.evaluate(node=>node.style.translate),'100px -80px');
+    const menu=await receptionPreviewControls(page);
+    await menu.getByRole('button',{name:'Reset preview position',exact:true}).click();
+    assert.equal(await plane.evaluate(node=>node.style.translate),'0px 0px');
+    assert.deepEqual(await reception(page),original);
+    await page.getByRole('button',{name:'Back to editing',exact:true}).click();
+    await editorCommand(page,'Canvas','Preview');
+    assert.equal(await plane.evaluate(node=>node.style.translate),'');
+    assert.deepEqual(errors,[]);
+  } finally {await browser.close();}
+});
+
+test('cell alignment toggles directly and positions the fitted image in Editor and Preview through Undo and reload', { timeout: 90000 }, async () => {
+  const { browser, page, errors } = await setup();
+  try {
+    await page.goto(`${origin}/browser-tests/reception-native-editor-fixture.html?tiling=1&session=${crypto.randomUUID()}`);
+    await page.getByRole('group', { name: 'Artwork bento cell', exact: true }).waitFor();
+    const initial = await reception(page), image = initial.imageModules[0];
+    const cell = initial.cells.find(item => item.members.includes(image.id));
+    await bentoCell(page, cell.id).click({ position: { x: 16, y: 20 } });
+    const inspector = await openCellInspector(page);
+    const dot = inspector.getByRole('button', { name: 'Position bottom right', exact: true });
+    await dot.click();
+    const anchored = await reception(page);
+    assert.equal(anchored.cells.find(item => item.id === cell.id).memberAnchors[0].alignY, 'bottom');
+    assert.equal(await inspector.getByRole('button', { name: 'Release cell positioning', exact: true }).count(), 0);
+    const paint = () => page.locator(`[data-image-artwork-id="${image.artwork.id}"] svg.image-module__artwork > image`);
+    const assertBottom = async node => {
+      await node.waitFor();
+      await page.waitForFunction(node => Math.abs(node.y.baseVal.value + node.height.baseVal.value - node.ownerSVGElement.viewBox.baseVal.height) < .01, await node.elementHandle());
+      return Number(await node.getAttribute('y'));
+    };
+    const bottom = await assertBottom(paint());
+    assert.ok(bottom > 0, 'the fitted square moves to the bottom of its taller frame');
+    await dot.click();
+    assert.equal((await reception(page)).cells.find(item => item.id === cell.id).memberAnchors?.length || 0, 0);
+    assert.ok(Number(await paint().getAttribute('y')) < bottom, 'free placement restores ordinary centred fitting');
+    await editorCommand(page, 'Edit', 'Undo');
+    await assertBottom(paint());
+    await page.reload();
+    await page.getByRole('toolbar', { name: 'Creation tools', exact: true }).waitFor();
+    await assertBottom(paint());
+    assert.deepEqual(await reception(page), anchored);
+    await editorCommand(page, 'Canvas', 'Preview');
+    await assertBottom(page.locator(`.reception-document-canvas [data-layer-id="${image.id}"] svg.image-module__artwork > image`));
+    assert.deepEqual(await reception(page), anchored, 'preview does not rewrite the alignment');
+    assert.deepEqual(errors, []);
+  } finally { await browser.close(); }
+});
+
 for (const width of [1440, 900]) test(`published Reception recovery previews, edits and restores the previous draft at ${width}`, { timeout: 90000 }, async () => {
   const { browser, page, errors } = await setup({ width, height: 1000 });
   try {
     await page.goto(`${origin}/browser-tests/reception-recovery-fixture.html?session=${crypto.randomUUID()}`, { waitUntil: 'domcontentloaded' });
     await page.getByRole('group', { name: 'Local study bento cell', exact: true }).waitFor();
     const initial = await page.evaluate(() => window.receptionRecoveryFixture.root.getDraft().reception);
-    await editorMenu(page, 'Backup').click();
-    const load = () => page.getByRole('button', { name: 'Load published Reception', exact: true }).click();
-    const preview = page.getByRole('region', { name: 'Reception restore preview', exact: true });
+    await openEditorMenu(page, 'Backup');
+    const load = () => page.getByRole('button', { name: 'Load published Profile Bento', exact: true }).click();
+    const preview = page.getByRole('region', { name: 'Profile Bento restore preview', exact: true });
     await load(); await preview.waitFor();
+    assert.equal(await (await receptionPreviewControls(page)).getByRole('button', { name: 'Responsive layout settings', exact: true }).count(), 0);
+    assert.equal(await preview.getByRole('group', { name: 'Studio edit history', exact: true }).count(), 0);
+    assert.equal(await (await receptionPreviewControls(page)).getByRole('slider', { name: 'Preview width', exact: true }).count(), 1);
+    await (await receptionPreviewControls(page)).getByRole('button', { name: 'Fit', exact: true }).press('Escape');
+    await page.getByRole('dialog', { name: 'Studio preview controls', exact: true }).waitFor({ state: 'hidden' });
+    assert.equal(await preview.isVisible(), true, 'Escape dismisses the menu before leaving recovery preview');
+    assert.deepEqual(await page.evaluate(() => window.receptionRecoveryFixture.root.getDraft().reception), initial);
     assert.equal(await preview.locator('[data-cell-id]').count(), 2);
     await page.getByRole('button', { name: 'Back to editing', exact: true }).click();
     assert.deepEqual(await page.evaluate(() => window.receptionRecoveryFixture.root.getDraft().reception), initial);
     await load(); await preview.waitFor();
-    await page.getByRole('button', { name: 'Back up current and load Reception', exact: true }).click();
+    await page.getByRole('button', { name: 'Back up current and load Profile Bento', exact: true }).click();
     await page.getByRole('group', { name: 'Published red bento cell', exact: true }).waitFor();
     await page.getByRole('button', { name: 'Select Published red', exact: true }).click();
     const name = page.getByRole('textbox', { name: 'Cell name', exact: true });
@@ -37,10 +125,10 @@ for (const width of [1440, 900]) test(`published Reception recovery previews, ed
     assert.ok(await page.evaluate(() => window.receptionRecoveryFixture.root.getDraft().reception.shapes.some(item => item.name === 'Edited published cell')));
     await page.reload();
     await page.getByRole('group', { name: 'Edited published cell bento cell', exact: true }).waitFor();
-    await editorMenu(page, 'Backup').click();
-    await page.getByRole('button', { name: 'Restore previous local Reception', exact: true }).click();
+    await openEditorMenu(page, 'Backup');
+    await page.getByRole('button', { name: 'Restore previous local Profile Bento', exact: true }).click();
     await preview.waitFor();
-    await page.getByRole('button', { name: 'Back up current and load Reception', exact: true }).click();
+    await page.getByRole('button', { name: 'Back up current and load Profile Bento', exact: true }).click();
     await page.getByRole('group', { name: 'Local study bento cell', exact: true }).waitFor();
     assert.deepEqual(await page.evaluate(() => window.receptionRecoveryFixture.root.getDraft().reception), initial);
     await mkdir(output, { recursive: true });
@@ -54,14 +142,14 @@ test('Reception recovery refuses failed backup storage and a changed publication
   try {
     await page.goto(`${origin}/browser-tests/reception-recovery-fixture.html?session=${crypto.randomUUID()}`, { waitUntil: 'domcontentloaded' });
     await page.getByRole('group', { name: 'Local study bento cell', exact: true }).waitFor();
-    await editorMenu(page, 'Backup').click();
-    await page.getByRole('button', { name: 'Load published Reception', exact: true }).click();
-    await page.getByRole('region', { name: 'Reception restore preview', exact: true }).waitFor();
+    await openEditorMenu(page, 'Backup');
+    await page.getByRole('button', { name: 'Load published Profile Bento', exact: true }).click();
+    await page.getByRole('region', { name: 'Profile Bento restore preview', exact: true }).waitFor();
     const before = await page.evaluate(() => {
       window.receptionRecoveryFixture.fail(true);
       return window.receptionRecoveryFixture.root.getDraft().reception;
     });
-    const confirm = page.getByRole('button', { name: 'Back up current and load Reception', exact: true });
+    const confirm = page.getByRole('button', { name: 'Back up current and load Profile Bento', exact: true });
     await confirm.click();
     await page.getByRole('alert').filter({ hasText: 'could not be backed up' }).waitFor();
     assert.deepEqual(await page.evaluate(() => window.receptionRecoveryFixture.root.getDraft().reception), before);
@@ -172,15 +260,15 @@ test('Fit uses the available desktop width and new Light Text keeps authored con
     const appearance = (await reception(page)).texts[0].article.appearance;
     assert.equal(appearance.color, '#000000'); assert.equal(appearance.background, null);
     await editorCommand(page, 'Canvas', 'Preview');
-    const preview = page.getByRole('region', { name: 'Reception responsive preview', exact: true });
+    const preview = page.getByRole('region', { name: 'Studio responsive preview', exact: true });
     const viewport = preview.locator('.reception-document-viewport');
     await preview.locator('.reception-document-canvas:not([data-mobile])').waitFor();
-    assert.equal(await preview.getByRole('button', { name: 'Fit', exact: true }).getAttribute('aria-pressed'), 'true');
+    assert.equal(await (await receptionPreviewControls(page)).getByRole('button', { name: 'Fit', exact: true }).getAttribute('aria-pressed'), 'true');
     assert.equal(await preview.getByRole('complementary', { name: 'Responsive cell settings' }).count(), 0);
     const effective = Math.round((await viewport.boundingBox()).width);
     assert.ok(effective > 800);
-    assert.equal(Number(await preview.getByRole('spinbutton', { name: 'Preview width in pixels' }).inputValue()), effective);
-    assert.equal(Number(await preview.getByRole('slider', { name: 'Preview width' }).inputValue()), effective);
+    assert.equal(Number(await (await receptionPreviewControls(page)).getByRole('spinbutton', { name: 'Preview width in pixels' }).inputValue()), effective);
+    assert.equal(Number(await (await receptionPreviewControls(page)).getByRole('slider', { name: 'Preview width' }).inputValue()), effective);
     await preview.getByRole('button', { name: 'Back to editing', exact: true }).click();
     await editorCommand(page, 'Edit', 'Settings'); await page.getByRole('button', { name: 'DARK', exact: true }).click();
     await page.getByRole('button', { name: 'Close Settings', exact: true }).click();
@@ -193,19 +281,13 @@ test('Inner lines form an open six-cell grid, follow resizing and agree in Edito
   const { browser, page, errors } = await setup();
   try {
     await mkdir(output, { recursive: true });
-    await generateBento(page, 1);
+    await generateBento(page, 6);
     const panel = page.getByRole('dialog', { name: 'Bento settings', exact: true });
-    await editorMenu(page, 'Bento').click();
+    await openEditorMenu(page, 'Bento');
     for (const [name, value] of [['Width (px)', '1200'], ['Height (px)', '400'], ['Gutter (px)', '0'], ['Outer margin (px)', '0']])
       await setCurrentBentoField(panel, name, value);
     await panel.getByRole('button', { name: 'Close Bento', exact: true }).click();
-    await bentoCell(page, (await reception(page)).cells[0].id).click();
-    await addBentoCell(page);
-    await addBentoCell(page);
-    await addBentoCell(page, 'Below Bento');
-    await bentoCell(page, (await reception(page)).cells.at(-1).id).click();
-    await addBentoCell(page);
-    await addBentoCell(page);
+    await seedBentoGrid(page, 3, 2);
     for (const cell of (await reception(page)).cells) {
       await bentoCell(page, cell.id).click();
       const colour = await openCellInspector(page);
@@ -217,12 +299,12 @@ test('Inner lines form an open six-cell grid, follow resizing and agree in Edito
     }
     const before = await reception(page), otherCanvas = withoutReception(await snapshot(page));
     const lines = page.locator('.reception-bento-line-layer .reception-inner-lines path');
-    await editorMenu(page, 'Bento').click();
+    await openEditorMenu(page, 'Bento');
     await panel.getByLabel('Show inner lines', { exact: true }).check();
     await panel.getByRole('button', { name: 'Close Bento', exact: true }).click();
     assert.deepEqual((await reception(page)).innerLines, { color: '#ebece7', width: 1, opacity: 1 }, 'checkboxes save immediately and survive closing');
     assert.equal(await lines.count(), 1);
-    await editorMenu(page, 'Bento').click();
+    await openEditorMenu(page, 'Bento');
     await panel.getByLabel('Show inner lines', { exact: true }).uncheck();
     await panel.getByLabel('Show inner lines', { exact: true }).check();
     await panel.getByLabel('Show outer frame', { exact: true }).uncheck();
@@ -230,17 +312,18 @@ test('Inner lines form an open six-cell grid, follow resizing and agree in Edito
     const saved = await reception(page);
     assert.deepEqual(saved, { ...before, showFrame: false, innerLines: { color: '#ebece7', width: 1, opacity: 1 } });
     assert.equal(saved.workbench.area.width, 1200);
-    assert.equal(saved.workbench.area.height, 400, 'adding a row preserves the authored Bento bounds');
+    assert.equal(saved.workbench.area.height, 400, 'the generated layout uses the authored Bento height');
     const expected = 'M400,0V400 M800,0V400 M0,200H1200';
     assert.equal(await lines.getAttribute('d'), expected);
     assert.equal(await page.locator('.shape-instance[data-cell-owner] .shape-outline').count(), 0);
-    await panel.getByLabel('Gutter (px)', { exact: true }).fill('20');
+    await panel.getByLabel('Gutter (px)', { exact: true }).fill('40');
     assert.notEqual(await lines.getAttribute('d'), expected, 'lines follow temporary gutter geometry');
     assert.deepEqual(await reception(page), saved);
     await panel.getByLabel('Gutter (px)', { exact: true }).press('Escape');
     await panel.getByRole('button', { name: 'Close Bento', exact: true }).click();
     assert.equal(await lines.getAttribute('d'), expected);
-    const divider = page.getByRole('separator', { name: 'Resize adjacent columns', exact: true }).first();
+    await bentoCell(page, (await reception(page)).cells[0].id).click();
+    const divider = page.getByRole('button', { name: 'Resize cell right', exact: true });
     await divider.focus(); await divider.press('ArrowRight');
     assert.notEqual(await lines.getAttribute('d'), expected);
     await editorCommand(page, 'Edit', 'Undo'); assert.equal(await lines.getAttribute('d'), expected);
@@ -288,24 +371,40 @@ test('Inner lines form an open six-cell grid, follow resizing and agree in Edito
       await page.screenshot({ path: `${output}/inner-lines-colour-wheel-${width}.png` });
       await colour.getByRole('button', { name: 'Close Inspector', exact: true }).click();
       assert.equal(await lines.evaluate(node => getComputedStyle(node).stroke), theme === 'DARK' ? 'rgb(235, 236, 231)' : 'rgb(23, 23, 23)');
-      await editorMenu(page, 'Bento').click();
+      await openEditorMenu(page, 'Bento');
       const box = await panel.getByLabel('Show inner lines', { exact: true }).boundingBox();
       assert.ok(box.x >= 0 && box.x + box.width <= width && box.y + box.height <= 1000);
       await page.screenshot({ path: `${output}/inner-lines-editor-${width}.png` });
       await panel.getByRole('button', { name: 'Close Bento', exact: true }).click();
       await editorCommand(page, 'Canvas', 'Preview');
-      const preview = page.getByRole('region', { name: 'Reception responsive preview', exact: true });
-      await preview.getByRole('button', { name: 'Desktop', exact: true }).click();
+      const preview = page.getByRole('region', { name: 'Studio responsive preview', exact: true });
+      await (await receptionPreviewControls(page)).getByRole('button', { name: 'Desktop', exact: true }).click();
       const paint = preview.locator('.reception-inner-lines path');
-      assert.equal(await paint.getAttribute('d'), expected);
-      assert.equal(await paint.getAttribute('stroke-width'), '2');
+      const edges = await preview.locator('.reception-document-canvas').evaluate(node => {
+        const canvas = node.getBoundingClientRect();
+        const cells = [...node.querySelectorAll('.reception-document-cell')].map(cell => cell.getBoundingClientRect())
+          .sort((a, b) => a.top - b.top || a.left - b.left);
+        if (cells.length !== 6) throw Error('Expected the complete six-cell grid');
+        return [cells[0].right - canvas.left, cells[0].top - canvas.top, cells[5].bottom - canvas.top,
+          cells[1].right - canvas.left, cells[0].top - canvas.top, cells[5].bottom - canvas.top,
+          cells[0].left - canvas.left, cells[0].bottom - canvas.top, cells[5].right - canvas.left];
+      });
+      const path = await paint.getAttribute('d');
+      assert.match(path, /^M[^MVH]+V[^MVH]+ M[^MVH]+V[^MVH]+ M[^MVH]+H[^MVH]+$/u);
+      const coordinates = path.match(/-?\d+(?:\.\d+)?/gu).map(Number);
+      assert.equal(coordinates.length, edges.length);
+      coordinates.forEach((value, index) => assert.ok(Math.abs(value - edges[index]) < .02,
+        'preview strokes meet the actual painted cell edges, including fractional canvas origins'));
+      const paintedWidth = await preview.locator('.reception-document-canvas').evaluate(node => node.getBoundingClientRect().width);
+      const scale = paintedWidth / saved.workbench.area.width;
+      assert.ok(Math.abs(Number(await paint.getAttribute('stroke-width')) - 2 * scale) < .00001, 'stroke width follows the actual preview scale');
       assert.equal(await preview.locator('.shape-outline').count(), 0);
       assert.equal(await preview.locator('.reception-document-canvas').evaluate(node => getComputedStyle(node).outlineStyle), 'none');
-      await preview.getByRole('button', { name: 'Fit', exact: true }).click();
+      await (await receptionPreviewControls(page)).getByRole('button', { name: 'Fit', exact: true }).click();
       await page.screenshot({ path: `${output}/inner-lines-preview-${width}.png` });
       await preview.getByRole('button', { name: 'Back to editing', exact: true }).click();
     }
-    await editorMenu(page, 'Bento').click();
+    await openEditorMenu(page, 'Bento');
     await panel.getByLabel('Show inner lines', { exact: true }).uncheck();
     assert.equal(await lines.count(), 0);
     assert.equal(await page.locator('.shape-instance[data-cell-owner] .shape-outline').count(), 6);
@@ -340,13 +439,13 @@ test('Wireframe outlines and the optional outer frame save through native contro
     assert.equal(await shape(page, id).locator('.shape-fill').evaluate(node => getComputedStyle(node).opacity), '0');
     await page.screenshot({ path: `${output}/wireframe-color-1440.png` });
     await color.getByRole('button', { name: 'Close Inspector', exact: true }).click();
-    await editorMenu(page, 'Bento').click();
+    await openEditorMenu(page, 'Bento');
     const panel = page.getByRole('dialog', { name: 'Bento settings', exact: true });
     const frame = panel.getByRole('checkbox', { name: 'Show outer frame', exact: true });
     await frame.uncheck();
     await panel.getByRole('button', { name: 'Close Bento', exact: true }).click();
     assert.deepEqual(await reception(page), { ...outlined, showFrame: false }, 'the frame choice saves immediately');
-    await editorMenu(page, 'Bento').click(); assert.equal(await frame.isChecked(), false);
+    await openEditorMenu(page, 'Bento'); assert.equal(await frame.isChecked(), false);
     const frameless = await reception(page);
     assert.deepEqual(frameless, { ...outlined, showFrame: false });
     assert.equal(await page.locator('canvas[data-workbench-area]').getAttribute('data-show-frame'), 'false');
@@ -358,14 +457,14 @@ test('Wireframe outlines and the optional outer frame save through native contro
     assert.deepEqual(await reception(page), frameless);
     for (const viewportWidth of [1440, 1024]) {
       await page.setViewportSize({ width: viewportWidth, height: 1000 });
-      await editorMenu(page, 'Bento').click();
+      await openEditorMenu(page, 'Bento');
       const checkboxBounds = await frame.boundingBox();
       assert.ok(checkboxBounds.x >= 0 && checkboxBounds.x + checkboxBounds.width <= viewportWidth);
       assert.equal(await frame.isChecked(), false);
       await page.screenshot({ path: `${output}/wireframe-bento-${viewportWidth}.png` });
       await panel.getByRole('button', { name: 'Close Bento', exact: true }).click();
       await editorCommand(page, 'Canvas', 'Preview');
-      const preview = page.getByRole('region', { name: 'Reception responsive preview', exact: true });
+      const preview = page.getByRole('region', { name: 'Studio responsive preview', exact: true });
       const canvas = preview.locator('.reception-document-canvas');
       assert.equal(await canvas.evaluate(node => getComputedStyle(node).outlineStyle), 'none');
       const outlinePaint = preview.locator(`[data-cell-id="${id}"] .shape-outline`);
@@ -379,14 +478,14 @@ test('Wireframe outlines and the optional outer frame save through native contro
   } finally { await browser.close(); }
 });
 async function generateBento(page, count = 6) {
-  await editorMenu(page, 'Bento').click();
+  await openEditorMenu(page, 'Bento');
   const panel = page.getByRole('dialog', { name: 'Bento settings', exact: true });
   await panel.getByRole('button', { name: 'New layout', exact: true }).click();
 
   await setBentoCellCount(panel, count);
   await panel.getByRole('button', { name: /^(Create Bento|Replace layout)$/u }).click();
   await panel.getByRole('button', { name: 'Close Bento', exact: true }).click();
-  const sidebar = page.getByRole('button', { name: 'Inscape sidebar', exact: true });
+  const sidebar = page.getByRole('button', { name: 'Inscape menu', exact: true });
   if (await sidebar.getAttribute('aria-expanded') === 'true') await sidebar.click();
   const tools = page.locator('.workbench-tool-dock').getByRole('button', { name: /^Close /u });
   while (await tools.count()) await tools.first().click();
@@ -394,8 +493,8 @@ async function generateBento(page, count = 6) {
 const bentoCell = (page, id) => page.locator(`.reception-bento-cell[data-editor-cell-surface="${id}"]`);
 
 async function openSavedReception(page) {
-  await editorOverview(page);
-  await editorDestination(page, 'Reception');
+  const menu = await openEditorMenu(page);
+  await menu.getByRole('menuitemcheckbox', { name: 'Profile', exact: true }).click();
 }
 
 async function setup(viewport = { width: 1440, height: 1000 }) {
@@ -508,12 +607,179 @@ test('Cell numeric fields preserve untouched precision and recover saved values 
   } finally { await browser.close(); }
 });
 
+
+
+for (const width of [1440, 900]) test(`Studio Preview exposes saved responsive edits and shared history at ${width}px`, { timeout: 90000 }, async () => {
+  const { browser, page, errors } = await setup({ width, height: 1000 });
+  try {
+    await page.goto(origin + '/browser-tests/reception-native-editor-fixture.html?tiling=1&session=' + crypto.randomUUID());
+    await page.getByRole('toolbar', { name: 'Creation tools', exact: true }).waitFor();
+    if (width === 900) {
+      await editorCommand(page, 'Edit', 'Settings');
+      await page.getByRole('button', { name: 'LIGHT', exact: true }).click();
+      await page.getByRole('button', { name: 'Close Settings', exact: true }).click();
+    }
+    await editorCommand(page, 'Canvas', 'Preview');
+    const preview = page.getByRole('region', { name: 'Studio responsive preview', exact: true });
+    await preview.waitFor();
+    const original = await snapshot(page), history = () => page.evaluate(() => window.nativeReceptionFixture.root.getHistory());
+    const originalHistory = await history(), id = original.reception.cells[0].id;
+    for (const preset of ['Fit', 'Desktop', 'Tablet', 'Phone']) assert.equal(await (await receptionPreviewControls(page)).getByRole('button', { name: preset, exact: true }).count(), 1);
+    const slider = (await receptionPreviewControls(page)).getByRole('slider', { name: 'Preview width', exact: true });
+    await slider.focus(); await slider.press('Home'); await slider.press('ArrowRight');
+    assert.deepEqual(await snapshot(page), original); assert.deepEqual(await history(), originalHistory);
+    await (await receptionPreviewControls(page)).getByRole('button', { name: 'Phone', exact: true }).click();
+    await page.waitForFunction(() => document.querySelector('.reception-viewport-width input[type=number]')?.value === '390');
+    assert.deepEqual(await snapshot(page), original); assert.deepEqual(await history(), originalHistory);
+    await (await receptionPreviewControls(page)).getByRole('button', { name: 'Responsive layout settings', exact: true }).click();
+    const settings = preview.getByRole('complementary', { name: 'Responsive cell settings', exact: true });
+    await settings.waitFor();
+    assert.equal(await settings.getByText('Responsive editing', { exact: true }).count(), 1);
+    assert.match(await settings.innerText(), /Layout changes save to this Reception. Width only changes this view./);
+    const status = settings.getByRole('status', { name: 'Responsive edit status', exact: true });
+    assert.equal(await status.innerText(), 'Saved locally');
+    await settings.getByRole('combobox', { name: 'Preview cell', exact: true }).selectOption(id);
+    const columns = settings.getByRole('combobox', { name: 'Phone cell width', exact: true });
+    const undo = settings.getByRole('button', { name: 'Undo', exact: true }), redo = settings.getByRole('button', { name: 'Redo', exact: true });
+    await columns.selectOption('1');
+    const changed = await snapshot(page);
+    assert.equal(changed.reception.cells.find(cell => cell.id === id).mobile.columns, 1);
+    assert.deepEqual(withoutReception(changed), withoutReception(original));
+    assert.deepEqual(changed.reception.workbench, original.reception.workbench);
+    assert.deepEqual(changed.reception.texts, original.reception.texts);
+    assert.deepEqual(changed.reception.imageModules, original.reception.imageModules);
+    assert.equal(await status.innerText(), 'Saved locally');
+    assert.match(await undo.getAttribute('title'), /Arrange Reception/);
+    await undo.click(); assert.deepEqual(await snapshot(page), original);
+    assert.equal(await status.innerText(), 'Saved locally');
+    assert.equal(await redo.isEnabled(), true);
+    await redo.click(); assert.deepEqual(await snapshot(page), changed);
+    await undo.focus(); await page.keyboard.press('Control+z');
+    assert.deepEqual(await snapshot(page), original);
+    await page.keyboard.press('Control+Shift+z'); assert.deepEqual(await snapshot(page), changed);
+    const changedHistory = await history();
+    await page.evaluate(() => window.nativeReceptionFixture.fail(true));
+    await columns.selectOption('2');
+    await preview.getByRole('alert').filter({ hasText: 'could not be saved' }).waitFor();
+    assert.equal(await status.innerText(), 'Changes need attention');
+    assert.deepEqual(await snapshot(page), changed); assert.deepEqual(await history(), changedHistory);
+    await page.evaluate(() => window.nativeReceptionFixture.fail(false));
+    await columns.selectOption('2');
+    assert.deepEqual(await snapshot(page), original); assert.equal(await status.innerText(), 'Saved locally');
+    const acceptedHistory = await history();
+    await page.evaluate(() => window.nativeReceptionFixture.fail(true));
+    await undo.click();
+    await preview.getByRole('alert').filter({ hasText: 'could not be saved' }).waitFor();
+    assert.equal(await status.innerText(), 'Changes need attention');
+    assert.deepEqual(await snapshot(page), original); assert.deepEqual(await history(), acceptedHistory);
+    await mkdir(output, { recursive: true });
+    await page.screenshot({ path: `${output}/responsive-history-error-${width}.png` });
+    await page.evaluate(() => window.nativeReceptionFixture.fail(false));
+    await undo.click(); assert.deepEqual(await snapshot(page), changed);
+    assert.equal(await status.innerText(), 'Saved locally');
+    assert.equal(await preview.getByRole('alert').count(), 0);
+    await redo.click(); assert.deepEqual(await snapshot(page), original);
+    await settings.getByRole('button', { name: 'Move later', exact: true }).click();
+    const ordered = await snapshot(page); assert.notEqual(ordered.reception.cells[0].id, id);
+    assert.deepEqual(withoutReception(ordered), withoutReception(original));
+    await undo.click(); assert.deepEqual(await snapshot(page), original);
+    await redo.click(); assert.deepEqual(await snapshot(page), ordered);
+    const height = settings.getByRole('spinbutton', { name: 'Stacked cell height', exact: true });
+    await height.fill('350'); await height.press('Enter');
+    const saved = await snapshot(page);
+    assert.equal(saved.reception.cells.find(cell => cell.id === id).mobile.height, 350);
+    assert.equal(saved.reception.cells.find(cell => cell.id === id).mobile.autoHeight, false);
+    assert.deepEqual(saved.reception.workbench, original.reception.workbench);
+    assert.deepEqual(withoutReception(saved), withoutReception(original));
+    await undo.click(); assert.deepEqual(await snapshot(page), ordered);
+    await redo.click(); assert.deepEqual(await snapshot(page), saved);
+    assert.equal(await settings.evaluate(node => node.scrollWidth <= node.clientWidth), true);
+    assert.equal(await preview.locator('header').evaluate(node => node.scrollWidth <= node.clientWidth), true);
+    await page.screenshot({ path: `${output}/responsive-history-${width}.png` });
+    await preview.getByRole('button', { name: 'Back to editing', exact: true }).click();
+    await page.getByRole('toolbar', { name: 'Creation tools', exact: true }).waitFor();
+    assert.deepEqual(await snapshot(page), saved);
+    await page.reload(); await page.getByRole('toolbar', { name: 'Creation tools', exact: true }).waitFor();
+    assert.deepEqual(await reception(page), saved.reception);
+    assert.deepEqual(withoutReception(await snapshot(page)), withoutReception(saved));
+    await editorCommand(page, 'Canvas', 'Preview');
+    await (await receptionPreviewControls(page)).getByRole('button', { name: 'Responsive layout settings', exact: true }).click();
+    assert.equal(await status.innerText(), 'Saved locally');
+    assert.equal(await (await receptionPreviewControls(page)).getByRole('slider', { name: 'Preview width', exact: true }).count(), 1);
+    assert.deepEqual(errors, []);
+  } finally { await browser.close(); }
+});
+
+for (const width of [1440, 900]) test(`invalid Reception numeric input explains its range without saving at ${width}px`, { timeout: 90000 }, async () => {
+  const { browser, page, errors } = await setup({ width, height: 1000 });
+  try {
+    if (width === 900) {
+      await editorCommand(page, 'Edit', 'Settings');
+      await page.getByRole('button', { name: 'LIGHT', exact: true }).click();
+      await page.getByRole('button', { name: 'Close Settings', exact: true }).click();
+    }
+    await generateBento(page, 2);
+    const id = (await reception(page)).cells[0].id;
+    await bentoCell(page, id).click();
+    const inspector = await openCellInspector(page);
+    const radius = inspector.getByRole('spinbutton', { name: 'Cell corner radius (px)', exact: true });
+    const shown = await radius.inputValue(), original = await snapshot(page);
+    const history = () => page.evaluate(() => window.nativeReceptionFixture.root.getHistory());
+    const initialHistory = await history();
+    for (const invalid of ['161', '-1', '']) {
+      await radius.fill(invalid); await radius.press('Tab');
+      assert.equal(await radius.getAttribute('aria-invalid'), 'true');
+      assert.equal(await radius.inputValue(), invalid, 'Invalid text stays available to correct or cancel');
+      assert.equal(await radius.evaluate(node => document.getElementById(node.getAttribute('aria-describedby'))?.textContent), 'Enter a number from 0 to 160.');
+      assert.deepEqual(await snapshot(page), original);
+      assert.deepEqual(await history(), initialHistory, 'Invalid input adds no history operation');
+      if (invalid === '161') {
+        await mkdir(output, { recursive: true });
+        await page.screenshot({ path: `${output}/cell-number-invalid-${width}.png` });
+        assert.equal(await inspector.evaluate(node => node.scrollWidth <= node.clientWidth), true);
+      }
+      await radius.press('Escape');
+      assert.equal(await radius.inputValue(), shown);
+      assert.equal(await radius.getAttribute('aria-invalid'), null);
+      assert.equal(await inspector.getByRole('alert').count(), 0);
+      assert.deepEqual(await snapshot(page), original);
+    }
+    await radius.fill('161'); await radius.press('Tab');
+    await radius.fill('24'); await radius.press('Enter');
+    assert.equal(await radius.getAttribute('aria-invalid'), null);
+    assert.equal((await reception(page)).cells.find(cell => cell.id === id).radius, 24);
+    await editorCommand(page, 'Edit', 'Undo'); assert.deepEqual(await reception(page), original.reception);
+    await editorCommand(page, 'Edit', 'Redo');
+    assert.equal((await reception(page)).cells.find(cell => cell.id === id).radius, 24);
+    await page.reload(); await bentoCell(page, id).waitFor();
+    assert.equal((await reception(page)).cells.find(cell => cell.id === id).radius, 24);
+    await editorCommand(page, 'Canvas', 'Preview');
+    const preview = page.getByRole('region', { name: 'Studio responsive preview', exact: true });
+    const pixels = (await receptionPreviewControls(page)).getByRole('spinbutton', { name: 'Preview width in pixels', exact: true });
+    const previewWidth = await pixels.inputValue(), saved = await snapshot(page), savedHistory = await history();
+    await pixels.fill('800.5'); await pixels.press('Tab');
+    assert.equal(await pixels.getAttribute('aria-invalid'), 'true');
+    assert.match(await pixels.evaluate(node => document.getElementById(node.getAttribute('aria-describedby'))?.textContent), /whole number/);
+    assert.deepEqual(await snapshot(page), saved); assert.deepEqual(await history(), savedHistory);
+    assert.equal(await preview.locator('header').evaluate(node => node.scrollWidth <= node.clientWidth), true);
+    await page.screenshot({ path: `${output}/preview-width-invalid-${width}.png` });
+    await pixels.press('Escape'); assert.equal(await pixels.inputValue(), previewWidth);
+    assert.equal(await pixels.getAttribute('aria-invalid'), null);
+    await pixels.fill('768'); await pixels.press('Enter');
+    await page.waitForFunction(() => document.querySelector('.reception-viewport-width input[type=number]')?.value === '768');
+    assert.equal(await pixels.inputValue(), '768');
+    assert.deepEqual(await snapshot(page), saved, 'A valid preview width stays temporary');
+    assert.deepEqual(await history(), savedHistory);
+    assert.deepEqual(errors, []);
+  } finally { await browser.close(); }
+});
+
 test('Reception layout generator previews without saving, applies native cells and supports undo, reload and failure recovery', { timeout: 90000 }, async () => {
   const { browser, page, errors } = await setup();
   try {
     await mkdir(output, { recursive: true });
     const original = await snapshot(page);
-    await editorMenu(page, 'Bento').click();
+    await openEditorMenu(page, 'Bento');
     const dialog = page.getByRole('dialog', { name: 'Bento settings', exact: true });
     await dialog.waitFor();
     assert.equal(await dialog.getByLabel('Width (px)', { exact: true }).inputValue(), '1440');
@@ -535,7 +801,7 @@ test('Reception layout generator previews without saving, applies native cells a
     await page.getByRole('button', { name: 'LIGHT', exact: true }).click();
     await page.getByRole('button', { name: 'Close Settings', exact: true }).click();
     await page.setViewportSize({ width: 900, height: 800 });
-    await editorMenu(page, 'Bento').click();
+    await openEditorMenu(page, 'Bento');
     await dialog.getByRole('button', { name: 'New layout', exact: true }).click();
 
     await setBentoCellCount(dialog, 10);
@@ -578,7 +844,7 @@ test('Reception layout generator previews without saving, applies native cells a
     assert.deepEqual(await reception(page), saved);
     await page.reload(); await page.getByRole('toolbar', { name: 'Creation tools', exact: true }).waitFor();
     assert.deepEqual(await reception(page), saved);
-    await editorMenu(page, 'Bento').click();
+    await openEditorMenu(page, 'Bento');
     await dialog.getByRole('button', { name: 'New layout', exact: true }).click();
 
     await setBentoCellCount(dialog, 4);
@@ -587,12 +853,12 @@ test('Reception layout generator previews without saving, applies native cells a
     assert.equal((await reception(page)).cells.length, 4);
     await editorCommand(page, 'Edit', 'Undo'); assert.deepEqual(await reception(page), saved);
     await editorCommand(page, 'Canvas', 'Preview');
-    await page.getByRole('region', { name: 'Reception responsive preview', exact: true }).waitFor();
+    await page.getByRole('region', { name: 'Studio responsive preview', exact: true }).waitFor();
     await page.screenshot({ path: `${output}/layout-preview-900-light.png` });
     await page.getByRole('button', { name: 'Back to editing', exact: true }).click();
     const id = (await page.evaluate(() => window.nativeReceptionFixture.root.listWorkbenches()))[0].id;
     await selectEditorDocument(page, id);
-    await editorMenu(page, 'Canvas').click();
+    await openEditorMenu(page, 'Canvas');
     assert.equal(await page.getByRole('menuitem', { name: 'Generate cell layout', exact: true }).count(), 0);
     assert.deepEqual(errors, []);
   } finally { await browser.close(); }
@@ -602,7 +868,7 @@ test('replacing a zero-gap layout preserves hidden frames and inner lines and st
   const { browser, page, errors } = await setup();
   try {
     await generateBento(page, 4);
-    await editorMenu(page, 'Bento').click();
+    await openEditorMenu(page, 'Bento');
     const panel = page.getByRole('dialog', { name: 'Bento settings', exact: true });
     await setCurrentBentoField(panel, 'Gutter (px)', 0);
     await panel.getByLabel('Show outer frame', { exact: true }).uncheck();
@@ -626,7 +892,7 @@ test('replacing a zero-gap layout preserves hidden frames and inner lines and st
     await editorCommand(page, 'Edit', 'Redo'); assert.deepEqual(await reception(page), replaced);
     await page.reload(); await page.getByRole('toolbar', { name: 'Creation tools', exact: true }).waitFor();
     assert.deepEqual(await reception(page), replaced);
-    await editorMenu(page, 'Bento').click();
+    await openEditorMenu(page, 'Bento');
     assert.equal(await panel.getByLabel('Show inner lines', { exact: true }).isChecked(), false);
     assert.equal(await panel.getByLabel('Show outer frame', { exact: true }).isChecked(), false);
     assert.deepEqual(errors, []);
@@ -638,7 +904,7 @@ test('Bento previous variants and start formats remain temporary and restore the
   try {
     await generateBento(page, 4);
     const before = await reception(page);
-    await editorMenu(page, 'Bento').click();
+    await openEditorMenu(page, 'Bento');
     const panel = page.getByRole('dialog', { name: 'Bento settings', exact: true });
     await panel.getByRole('button', { name: 'New layout', exact: true }).click();
     const previous = panel.getByRole('button', { name: 'Previous layout', exact: true });
@@ -680,7 +946,7 @@ test('Bento gutter and radius preview while typing, Escape cancels, and each acc
     await page.getByRole('button', { name: 'Back to cells', exact: true }).click();
     const before = await reception(page), id = before.cells[0].id, initialBox = await bentoCell(page, id).boundingBox();
     const artwork = page.locator(`[data-workbench-view-id="${before.imageModules[0].id}"]`), imageBox = await artwork.boundingBox();
-    await editorMenu(page, 'Bento').click();
+    await openEditorMenu(page, 'Bento');
     const panel = page.getByRole('dialog', { name: 'Bento settings', exact: true });
     const gap = panel.getByLabel('Gutter (px)', { exact: true });
     const radius = panel.getByLabel('Corner radius for all cells (px)', { exact: true });
@@ -719,7 +985,7 @@ test('Bento gutter and radius preview while typing, Escape cancels, and each acc
     await editorCommand(page, 'Edit', 'Redo'); assert.deepEqual(await reception(page), after);
     await page.reload(); await page.getByRole('toolbar', { name: 'Creation tools', exact: true }).waitFor();
     assert.deepEqual(await reception(page), after);
-    await editorMenu(page, 'Bento').click();
+    await openEditorMenu(page, 'Bento');
     await gap.fill('60'); await gap.press('Escape');
     const canvasId = (await page.evaluate(() => window.nativeReceptionFixture.root.listWorkbenches()))[0].id;
     await selectEditorDocument(page, canvasId); await selectEditorDocument(page, 'reception');
@@ -729,7 +995,7 @@ test('Bento gutter and radius preview while typing, Escape cancels, and each acc
   } finally { await browser.close(); }
 });
 
-test('Bento adds cells and bottom rows inside the fixed frame with Undo and reload', { timeout: 90000 }, async () => {
+test('Bento additions grow the canvas and preserve cell sizes with Undo and reload', { timeout: 90000 }, async () => {
   const { browser, page, errors } = await setup();
   try {
     await generateBento(page, 1);
@@ -739,14 +1005,15 @@ test('Bento adds cells and bottom rows inside the fixed frame with Undo and relo
     const row = await reception(page);
     await addBentoCell(page);
     const added = await reception(page);
-    assert.deepEqual(added.workbench.area, row.workbench.area);
-    for (const cell of row.cells) assert.ok(cellFrame(added, cell.id).width < cellFrame(row, cell.id).width);
+    assert.deepEqual(added.workbench.area, { ...row.workbench.area, width: row.workbench.area.width + 320 + row.bento.gap });
+    for (const cell of row.cells) {
+      assert.deepEqual(cellFrame(added, cell.id), cellFrame(row, cell.id));
+    }
     const panel = page.getByRole('dialog', { name: 'Bento settings', exact: true });
-    await addBentoCell(page, 'Below Bento');
+    await addBentoCell(page, 'bottom');
     const taller = await reception(page);
-    assert.deepEqual(taller.workbench.area, added.workbench.area);
-    assert.equal(taller.workbench.area.width, added.workbench.area.width);
-    for (const cell of added.cells) { assert.equal(cellFrame(taller,cell.id).width,cellFrame(added,cell.id).width); assert.ok(cellFrame(taller,cell.id).height < cellFrame(added,cell.id).height); }
+    assert.deepEqual(taller.workbench.area, { ...added.workbench.area, height: added.workbench.area.height + cellFrame(taller, taller.cells.at(-1).id).height + added.bento.gap });
+    for (const cell of added.cells) assert.deepEqual(cellFrame(taller,cell.id),cellFrame(added,cell.id));
     await mkdir(output, { recursive: true });
     await page.screenshot({ path: `${output}/bento-followup-1440-dark.png` });
     await editorCommand(page, 'Edit', 'Undo'); assert.deepEqual(await reception(page), added);
@@ -755,7 +1022,7 @@ test('Bento adds cells and bottom rows inside the fixed frame with Undo and relo
     await page.getByRole('button', { name: 'LIGHT', exact: true }).click();
     await page.getByRole('button', { name: 'Close Settings', exact: true }).click();
     await page.setViewportSize({ width: 900, height: 800 });
-    await editorMenu(page, 'Bento').click();
+    await openEditorMenu(page, 'Bento');
     assert.equal(await panel.evaluate(node => node.scrollWidth <= node.clientWidth && node.getBoundingClientRect().bottom <= innerHeight), true);
     for (const label of ['Previous layout', 'Replace layout']) {
       await panel.getByRole('button', { name: 'New layout', exact: true }).click();
@@ -774,36 +1041,55 @@ test('Bento adds cells and bottom rows inside the fixed frame with Undo and relo
   } finally { await browser.close(); }
 });
 
-test('Bento insertion and shared edges preview without saving, cancel cleanly, and commit one reversible operation', { timeout: 90000 }, async () => {
+test('Bento free placement and independent handles preview without saving, cancel cleanly, and commit one reversible operation', { timeout: 90000 }, async () => {
   const { browser, page, errors } = await setup();
   try {
     await generateBento(page, 4);
     const original = await reception(page), [first, second] = original.cells;
     const a = await bentoCell(page, first.id).boundingBox(), b = await bentoCell(page, second.id).boundingBox();
+    await page.keyboard.down('Shift');
     await page.mouse.move(a.x + a.width / 2, a.y + a.height / 2); await page.mouse.down();
     await page.mouse.move(b.x + b.width + original.bento.gap * b.width / cellFrame(original, second.id).width / 2, b.y + b.height / 2, { steps: 6 });
     assert.deepEqual(await reception(page), original, 'insertion preview is temporary');
     await page.keyboard.press('Escape'); await page.mouse.up();
     assert.deepEqual(await reception(page), original);
     await page.mouse.move(a.x + a.width / 2, a.y + a.height / 2); await page.mouse.down();
-    await page.mouse.move(b.x + b.width + original.bento.gap * b.width / cellFrame(original, second.id).width / 2, b.y + b.height / 2, { steps: 6 }); await page.mouse.up();
+    await page.mouse.move(b.x + b.width + original.bento.gap * b.width / cellFrame(original, second.id).width / 2, b.y + b.height / 2, { steps: 6 });
+    const planned = await Promise.all(original.cells.map(async cell => [cell.id, await bentoCell(page, cell.id).boundingBox()]));
+    await page.mouse.up();
     const inserted = await reception(page);
-    assert.ok(cellFrame(inserted, first.id).left > cellFrame(inserted, second.id).left);
-    assert.equal(cellFrame(inserted, first.id).width, cellFrame(original, first.id).width);
+    await page.keyboard.up('Shift');
+    assert.ok(cellFrame(inserted, first.id).left > cellFrame(original, first.id).left);
+    for (const cell of original.cells) {
+      assert.equal(cellFrame(inserted, cell.id).width, cellFrame(original, cell.id).width);
+      assert.equal(cellFrame(inserted, cell.id).height, cellFrame(original, cell.id).height);
+    }
+    assert.deepEqual(inserted.cells.map(cell => [cell.id, cell.members]), original.cells.map(cell => [cell.id, cell.members]));
+    for (const [id, plannedFrame] of planned) {
+      const accepted = await bentoCell(page, id).boundingBox();
+      for (const key of ['x', 'y', 'width', 'height']) assert.ok(Math.abs(accepted[key] - plannedFrame[key]) < 1,
+        'release accepts the complete preview, including pushed neighbours');
+    }
     await editorCommand(page, 'Edit', 'Undo'); assert.deepEqual(await reception(page), original);
-    const seam = page.getByRole('separator', { name: /Resize adjacent/ }).first();
-    const box = await seam.boundingBox(), vertical = await seam.getAttribute('aria-orientation') === 'vertical';
+    await bentoCell(page, first.id).click();
+    const seam = page.getByRole('button', { name: 'Resize cell right', exact: true });
+    const box = await seam.boundingBox(), vertical = true;
     const point = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
     const move = async () => {
+      await page.keyboard.down('Shift');
       await page.mouse.move(point.x, point.y); await page.mouse.down();
       await page.mouse.move(point.x + (vertical ? 27 : 0), point.y + (vertical ? 0 : 27), { steps: 8 });
     };
     await move(); assert.deepEqual(await reception(page), original);
-    await page.evaluate(() => window.dispatchEvent(new Event('blur'))); await page.mouse.up();
-    assert.deepEqual(await reception(page), original, 'blur cancels shared-edge previews');
-    await move(); await page.mouse.up();
+    await page.evaluate(() => window.dispatchEvent(new Event('blur'))); await page.mouse.up(); await page.keyboard.up('Shift');
+    assert.deepEqual(await reception(page), original, 'blur cancels independent resize previews');
+    await move(); await page.mouse.up(); await page.keyboard.up('Shift');
     const resized = await reception(page);
-    assert.ok(resized.cells.filter(cell => JSON.stringify(cellFrame(resized, cell.id)) !== JSON.stringify(cellFrame(original, cell.id))).length >= 2);
+    assert.ok(cellFrame(resized, first.id).width > cellFrame(original, first.id).width);
+    for (const cell of original.cells.filter(c => c.id !== first.id)) {
+      assert.equal(cellFrame(resized, cell.id).width, cellFrame(original, cell.id).width);
+      assert.equal(cellFrame(resized, cell.id).height, cellFrame(original, cell.id).height);
+    }
     await editorCommand(page, 'Edit', 'Undo'); assert.deepEqual(await reception(page), original);
     await editorCommand(page, 'Edit', 'Redo'); assert.deepEqual(await reception(page), resized);
     await page.evaluate(() => window.nativeReceptionFixture.fail(true));
@@ -822,7 +1108,7 @@ test('Bento insertion and shared edges preview without saving, cancel cleanly, a
     await addBentoCell(page);
     assert.equal((await reception(page)).cells.length, 5);
     await editorCommand(page, 'Edit', 'Undo'); assert.deepEqual(await reception(page), resized);
-    assert.equal(await page.locator('.workbench-selection__handle').count(), 0, 'outer cells have shared edges rather than free canvas resize handles');
+    assert.equal(await page.locator('.reception-bento-cell-handle').count(), 8, 'selected cell has eight independent handles');
     await page.screenshot({ path: `${output}/bento-direct-controls-1440.png` });
     await page.reload(); await page.getByRole('toolbar', { name: 'Creation tools', exact: true }).waitFor();
     assert.deepEqual(await reception(page), resized);
@@ -830,7 +1116,10 @@ test('Bento insertion and shared edges preview without saving, cancel cleanly, a
   } finally { await browser.close(); }
 });
 
-for (const width of [1440, 900]) test(`Bento merge and split preserve artwork, history and keyboard access at ${width}px`, { timeout: 90000 }, async () => {
+
+const alignFourCells = page => seedBentoGrid(page, 2, 2);
+
+for (const width of [1440, 900]) test(`Bento merges preserve artwork, history and keyboard access at ${width}px`, { timeout: 90000 }, async () => {
   const { browser, page, errors } = await setup({ width, height: 900 });
   // Native presentations may enumerate windows in record order. Authored paint
   // order is the separate artworkLayers list and must remain byte-for-byte intact.
@@ -849,15 +1138,14 @@ for (const width of [1440, 900]) test(`Bento merge and split preserve artwork, h
     await page.getByRole('menuitem', { name: label, exact: true }).click();
   };
   try {
-    await generateBento(page, 1);
+    await generateBento(page, 4);
     if (width === 900) {
       await editorCommand(page, 'Edit', 'Settings');
       await page.getByRole('button', { name: 'LIGHT', exact: true }).click();
       await page.getByRole('button', { name: 'Close Settings', exact: true }).click();
     }
-    const first = (await reception(page)).cells[0].id, canvas = withoutReception(await snapshot(page));
-    await command(first, 'Split cell', 'Vertical');
-    const right = (await reception(page)).cells[1].id;
+    const ids = await alignFourCells(page);
+    const [first, , below] = ids, canvas = withoutReception(await snapshot(page));
     await bentoCell(page, first).click();
     await page.getByRole('button', { name: '+ Image', exact: true }).click();
     const picker = page.locator('.reception-library-window');
@@ -865,15 +1153,12 @@ for (const width of [1440, 900]) test(`Bento merge and split preserve artwork, h
     await picker.getByRole('button', { name: 'Use selected image', exact: true }).click();
     await picker.waitFor({ state: 'detached' });
     await page.getByRole('button', { name: 'Back to cells', exact: true }).click(); await closeTools();
-    await command(first, 'Split cell', 'Horizontal');
-    const below = (await reception(page)).cells[1].id;
     await bentoCell(page, below).click();
     await page.getByRole('button', { name: '+ Text', exact: true }).click();
     await page.getByRole('textbox', { name: 'Article text', exact: true }).fill('MERGED ARTWORK');
     await page.locator('main[data-reception-editor]').focus();
     await page.waitForFunction(() => JSON.stringify(window.nativeReceptionFixture.root.getDraft().reception.texts).includes('MERGED ARTWORK'));
     await page.getByRole('button', { name: 'Back to cells', exact: true }).click(); await closeTools();
-    await command(right, 'Split cell', 'Horizontal');
     const before = await reception(page);
     assert.equal(before.cells.length, 4);
     await command(first, 'Merge cell', 'Below');
@@ -893,25 +1178,25 @@ for (const width of [1440, 900]) test(`Bento merge and split preserve artwork, h
     await mkdir(output, { recursive: true });
     await page.screenshot({ path: `${output}/bento-merge-menu-${width}.png` });
     await page.keyboard.press('ArrowLeft');
-    await page.getByRole('menuitem', { name: 'Split cell', exact: true }).focus(); await page.keyboard.press('ArrowRight');
-    await page.getByRole('menuitem', { name: 'Horizontal', exact: true }).focus(); await page.keyboard.press('Enter');
-    const split = await reception(page), index = split.cells.findIndex(cell => cell.id === first);
-    assert.equal(split.cells.length, 4);
-    assert.deepEqual(split.cells[index].members, members); assert.deepEqual(split.cells[index + 1].members, []);
-    assert.ok(split.imageModules[0].height < merged.imageModules[0].height);
+    assert.equal(await page.getByRole('menuitem', { name: 'Split cell', exact: true }).count(), 0);
+    await page.getByRole('menuitem', { name: 'Merge cell', exact: true }).focus(); await page.keyboard.press('ArrowRight');
+    await page.getByRole('menuitem', { name: 'Right', exact: true }).focus(); await page.keyboard.press('Enter');
+    const joined = await reception(page); assert.equal(joined.cells.length, 1);
+    assert.deepEqual(joined.cells[0].members, members);
     await editorCommand(page, 'Edit', 'Undo'); await expectReception(merged);
-    await editorCommand(page, 'Edit', 'Redo'); await expectReception(split);
+    await editorCommand(page, 'Edit', 'Redo'); await expectReception(joined);
+    await editorCommand(page, 'Edit', 'Undo'); await expectReception(merged);
     await page.evaluate(() => window.nativeReceptionFixture.fail(true));
-    await command(first, 'Merge cell', 'Below');
+    await command(first, 'Merge cell', 'Right');
     await page.getByRole('alert').filter({ hasText: 'The Reception change could not be saved' }).waitFor();
-    assert.deepEqual(await reception(page), split, 'failed storage does not partially merge cells');
+    await expectReception(merged); // Failed storage does not partially merge cells.
     await page.evaluate(() => window.nativeReceptionFixture.fail(false));
     await page.getByRole('alert').filter({ hasText: 'The Reception change could not be saved' }).click();
-    await command(first, 'Merge cell', 'Below');
+    await command(first, 'Merge cell', 'Right');
     const saved = await reception(page);
     assert.deepEqual(withoutReception(await snapshot(page)), canvas);
     await editorCommand(page, 'Canvas', 'Preview');
-    const preview = page.getByRole('region', { name: 'Reception responsive preview', exact: true });
+    const preview = page.getByRole('region', { name: 'Studio responsive preview', exact: true });
     await preview.getByText('MERGED ARTWORK', { exact: true }).waitFor();
     assert.equal(await preview.locator(`[data-layer-id="${saved.imageModules[0].id}"]`).count(), 1);
     await page.screenshot({ path: `${output}/bento-merge-preview-${width}.png` });
@@ -933,13 +1218,13 @@ for (const [width, gap] of [[1440, 32], [900, 64], [900, 0]]) test(`Bento cell b
     await picker.getByRole('button', { name: 'Use selected image', exact: true }).click();
     await picker.waitFor({ state: 'detached' });
     await page.getByRole('button', { name: 'Back to cells', exact: true }).click();
-    await editorMenu(page, 'Bento').click();
+    await openEditorMenu(page, 'Bento');
     const panel = page.getByRole('dialog', { name: 'Bento settings', exact: true });
     await setCurrentBentoField(panel, 'Height (px)', 480);
     await setCurrentBentoField(panel, 'Gutter (px)', gap);
     await panel.getByRole('button', { name: 'Close Bento', exact: true }).click();
     await bentoCell(page, first).click();
-    await addBentoCell(page, 'Below Bento');
+    await addBentoCell(page, 'bottom');
     if (width === 900) {
       await editorCommand(page, 'Edit', 'Settings');
       await page.getByRole('button', { name: 'LIGHT', exact: true }).click();
@@ -948,17 +1233,17 @@ for (const [width, gap] of [[1440, 32], [900, 64], [900, 0]]) test(`Bento cell b
     const original = await reception(page), [, second, third] = original.cells;
     const otherCanvas = withoutReception(await snapshot(page));
     for (const [id, edge, axis] of [[first, 'right', 'x'], [second.id, 'left', 'x'], [first, 'bottom', 'y'], [third.id, 'top', 'y']]) {
+      await bentoCell(page, id).click();
       const box = await bentoCell(page, id).boundingBox();
-      // Start just inside the visible cell border, away from the gutter centre.
-      const point = { x: edge === 'right' ? box.x + box.width - 2 : edge === 'left' ? box.x + 2 : box.x + box.width / 3,
-        y: edge === 'bottom' ? box.y + box.height - 2 : edge === 'top' ? box.y + 2 : box.y + box.height / 2 };
+      const grip = await page.getByRole('button', { name: 'Resize cell ' + edge, exact: true }).boundingBox();
+      const point = { x: grip.x + grip.width / 2, y: grip.y + grip.height / 2 };
       const drag = async () => {
         await page.mouse.move(point.x, point.y);
         await page.mouse.down();
         await page.mouse.move(point.x + (axis === 'x' ? 24 : 0), point.y + (axis === 'y' ? 24 : 0), { steps: 6 });
       };
       await page.mouse.move(point.x, point.y);
-      assert.equal(await page.evaluate(p => getComputedStyle(document.elementFromPoint(p.x, p.y)).cursor, point), axis === 'x' ? 'col-resize' : 'row-resize');
+      assert.equal(await page.evaluate(p => getComputedStyle(document.elementFromPoint(p.x, p.y)).cursor, point), axis === 'x' ? 'ew-resize' : 'ns-resize');
       await drag();
       assert.deepEqual(await reception(page), original, 'drag previews do not save');
       assert.notDeepEqual(await bentoCell(page, id).boundingBox(), box, `${edge} border previews its new dimensions`);
@@ -967,9 +1252,10 @@ for (const [width, gap] of [[1440, 32], [900, 64], [900, 0]]) test(`Bento cell b
       await drag(); await page.mouse.up();
       const resized = await reception(page);
       assert.deepEqual(resized.cells, original.cells, 'resizing never swaps cell identities or contents');
-      assert.deepEqual(resized.workbench.area, original.workbench.area, 'the outside bento size stays fixed');
-      assert.equal(resized.cells.filter(cell => JSON.stringify(cellFrame(resized, cell.id)) !== JSON.stringify(cellFrame(original, cell.id))).length, axis === 'x' ? 2 : 3,
-        'both sides resize, including every neighbour at the T junction');
+      for (const cell of original.cells.filter(c => c.id !== id)) {
+        assert.equal(cellFrame(resized,cell.id).width,cellFrame(original,cell.id).width);
+        assert.equal(cellFrame(resized,cell.id).height,cellFrame(original,cell.id).height);
+      }
       const imageId = original.imageModules[0].id;
       const imageFrame = value => {
         const image = value.imageModules.find(item => item.id === imageId);
@@ -980,7 +1266,7 @@ for (const [width, gap] of [[1440, 32], [900, 64], [900, 0]]) test(`Bento cell b
       await editorCommand(page, 'Edit', 'Redo'); assert.deepEqual(await reception(page), resized);
       if (edge === 'bottom') {
         await mkdir(output, { recursive: true });
-        const seam = page.getByRole('separator', { name: 'Resize adjacent rows' });
+        const seam = page.getByRole('button', { name: 'Resize cell bottom', exact: true });
         await seam.focus();
         const seamBox = await seam.boundingBox();
         await page.mouse.move(seamBox.x + seamBox.width / 2, seamBox.y + seamBox.height / 2);
@@ -1020,12 +1306,16 @@ test('Bento cell buttons add native Image and Text directly, retain content when
     assert.deepEqual(new Set(value.cells.find(cell => cell.id === id).members), new Set([value.imageModules[0].id, value.texts[0].id]));
     const members = value.cells.find(cell => cell.id === id).members;
     await addBentoCell(page);
+    const grown = await reception(page);
+    for (const key of ['texts', 'imageModules']) assert.deepEqual(grown[key], value[key]);
+    assert.deepEqual(cellFrame(grown, id), cellFrame(value, id));
+    for (const key of ['texts', 'imageModules']) assert.deepEqual(grown.workbench[key], value.workbench[key]);
     assert.deepEqual((await reception(page)).cells.find(cell => cell.id === id).members, members);
-    await editorMenu(page, 'Bento').click();
+    await openEditorMenu(page, 'Bento');
     await page.screenshot({ path: `${output}/bento-artwork-menu-1440.png` });
     await page.getByRole('button', { name: 'Close Bento', exact: true }).click();
     await editorCommand(page, 'Canvas', 'Preview');
-    const preview = page.getByRole('region', { name: 'Reception responsive preview', exact: true });
+    const preview = page.getByRole('region', { name: 'Studio responsive preview', exact: true });
     await preview.getByText('BENTO INSCAPE', { exact: true }).waitFor();
     assert.equal(await preview.locator(`[data-layer-id="${value.imageModules[0].id}"]`).count(), 1);
     await page.screenshot({ path: `${output}/bento-artwork-preview.png` });
@@ -1039,12 +1329,12 @@ test('Reception has no grid or snapping controls and preserves the ordinary canv
     const id = (await page.evaluate(() => window.nativeReceptionFixture.root.listWorkbenches()))[0].id;
     await selectEditorDocument(page, id);
     for (const label of ['Grid', 'Snap to grid', 'Snap to edges']) {
-      await editorMenu(page, 'View').click();
+      await openEditorMenu(page, 'View');
       const item = page.getByRole('menuitemcheckbox', { name: label, exact: true });
       if (await item.getAttribute('aria-checked') !== 'true') await item.click(); else await page.keyboard.press('Escape');
     }
     await selectEditorDocument(page, 'reception');
-    await editorMenu(page, 'View').click();
+    await openEditorMenu(page, 'View');
     assert.equal(await page.getByRole('menuitemcheckbox', { name: /Grid|Snap to/ }).count(), 0);
     await page.keyboard.press('Escape');
     await editorCommand(page, 'Edit', 'Settings');
@@ -1055,7 +1345,7 @@ test('Reception has no grid or snapping controls and preserves the ordinary canv
     assert.equal(await page.locator('.workbench-alignment-grid').count(), 0);
     await selectEditorDocument(page, id);
     for (const label of ['Grid', 'Snap to grid', 'Snap to edges']) {
-      await editorMenu(page, 'View').click();
+      await openEditorMenu(page, 'View');
       assert.equal(await page.getByRole('menuitemcheckbox', { name: label, exact: true }).getAttribute('aria-checked'), 'true');
       await page.keyboard.press('Escape');
     }
@@ -1075,7 +1365,7 @@ test('generated arrangements carry existing artwork visibly and retain it when r
     await page.getByRole('button', { name: 'Artwork library', exact: true }).click();
     const before = await reception(page), imageId = before.imageModules[0].id;
     for (const count of [6, 1]) {
-      await editorMenu(page, 'Bento').click();
+      await openEditorMenu(page, 'Bento');
       const dialog = page.getByRole('dialog', { name: 'Bento settings', exact: true });
       await dialog.getByRole('button', { name: 'New layout', exact: true }).click();
 
@@ -1111,9 +1401,9 @@ test('direct Reception entry accepts pointer clicks on controls outside the canv
     try {
       const preview = editorMenu(page, 'Canvas');
       const documentLabel = workspacePicker(page);
-      assert.equal(await documentLabel.innerText(), 'Reception Editor');
-      await editorMenu(page, 'Tools').click();
-      const tools = page.getByRole('menu', { name: 'Tools menu' });
+      assert.equal(await documentLabel.innerText(), '// STUDIO · Profile');
+      await openEditorMenu(page, 'Tools');
+      const tools = page.getByRole('menu', { name: 'Tools options' });
       await tools.waitFor();
       assert.equal(await tools.getByRole('menuitem', { name: 'Groups', exact: true }).count(), 0);
       await page.keyboard.press('Escape');
@@ -1131,10 +1421,10 @@ test('direct Reception entry accepts pointer clicks on controls outside the canv
       await page.getByRole('region', { name: 'Library workspace', exact: true }).waitFor();
       await page.getByRole('button', { name: 'Close Library', exact: true }).click();
       await editorCommand(page, 'Canvas', 'Preview');
-      await page.getByRole('region', { name: 'Reception responsive preview', exact: true }).waitFor();
+      await page.getByRole('region', { name: 'Studio responsive preview', exact: true }).waitFor();
       await page.getByRole('button', { name: 'Back to editing', exact: true }).click();
       await openSavedReception(page);
-      await page.getByRole('button', { name: 'Edit Reception', exact: true }).click();
+      await page.getByRole('button', { name: 'Studio', exact: true }).click();
       await preview.waitFor();
       assert.deepEqual(errors, []);
     } finally { await browser.close(); }
@@ -1146,9 +1436,7 @@ async function rectangle(page, from = { x: 300, y: 230 }, to = { x: 780, y: 610 
   // the default docked tools through their controls before using that area.
   const tools = page.locator('.workbench-tool-dock').getByRole('button', { name: /^Close /u });
   while (await tools.count()) await tools.first().click();
-  const undockNavigator = page.getByRole('button', { name: 'Undock Navigator', exact: true });
-  if (await undockNavigator.count()) {
-    await undockNavigator.click();
+  if (await undockWindow(page, 'Navigator')) {
     const grip = await page.getByRole('button', { name: 'Move Navigator window', exact: true }).boundingBox();
     const viewport = page.viewportSize();
     await page.mouse.move(grip.x + 20, grip.y + grip.height / 2); await page.mouse.down();
@@ -1201,12 +1489,6 @@ for (const width of [1440, 900]) test(`Library fills an unselected Bento cell an
     const close = page.locator('.workbench-tool-dock').getByRole('button', { name: /^Close /u });
     while (await close.count()) await close.first().click();
   };
-  const split = async (id, direction) => {
-    await closeTools(); const box = await bentoCell(page, id).boundingBox();
-    await bentoCell(page, id).click({ button: 'right', position: { x: 16, y: box.height / 2 } });
-    await page.getByRole('menuitem', { name: 'Split cell', exact: true }).click();
-    await page.getByRole('menuitem', { name: direction[0].toUpperCase() + direction.slice(1), exact: true }).click();
-  };
   const assertImageFits = async id => {
     const value = await reception(page), image = value.imageModules[0], frame = cellFrame(value, id);
     assert.deepEqual(value.cells.find(cell => cell.id === id).members, [image.id]);
@@ -1214,11 +1496,10 @@ for (const width of [1440, 900]) test(`Library fills an unselected Bento cell an
     assert.equal(image.width, Math.round(frame.width)); assert.equal(image.height, Math.round(frame.height));
   };
   try {
-    await mkdir(output, { recursive: true }); await generateBento(page, 1);
-    const first = (await reception(page)).cells[0].id, canvas = withoutReception(await snapshot(page));
-    await split(first, 'vertical'); const right = (await reception(page)).cells[1].id;
-    await split(right, 'horizontal'); await split(first, 'horizontal'); await closeTools();
-    // The last split selected the left cell; the drop must target the right cell itself.
+    await mkdir(output, { recursive: true }); await generateBento(page, 4);
+    const [first, right, , deleted] = await alignFourCells(page), canvas = withoutReception(await snapshot(page));
+    await closeTools(); await bentoCell(page, first).click({ position: { x: 16, y: 30 } });
+    // The selected left cell must not take a drop aimed at its right neighbour.
     const target = await bentoCell(page, right).boundingBox();
     await dropArtwork(page, { x: target.x + 20, y: target.y + target.height / 2 }, async () => {
       await page.screenshot({ path: `${output}/bento-library-preview-${width}.png` });
@@ -1226,23 +1507,27 @@ for (const width of [1440, 900]) test(`Library fills an unselected Bento cell an
     await page.waitForFunction(() => window.nativeReceptionFixture.root.getDraft().reception.imageModules.length === 1);
     await assertImageFits(right);
     await page.getByRole('button', { name: 'Artwork library', exact: true }).click(); await closeTools();
-    const beforeResize = await reception(page), divider = page.getByRole('separator', { name: 'Resize adjacent columns', exact: true }).first();
+    await bentoCell(page, right).click();
+    const beforeResize = await reception(page), divider = page.getByRole('button', { name: 'Resize cell right', exact: true });
     await divider.focus(); await divider.press('ArrowRight'); await assertImageFits(right);
     assert.notDeepEqual(cellFrame(await reception(page), right), cellFrame(beforeResize, right));
     await editorCommand(page, 'Edit', 'Undo'); await assertImageFits(right);
-    const beforeDelete = await reception(page), otherRow = beforeDelete.cells.filter(cell => cellFrame(beforeDelete, cell.id).top !== cellFrame(beforeDelete, first).top);
-    await bentoCell(page, first).click({ position: { x: 16, y: 30 } });
-    await editorMenu(page, 'Tools').click();
+    const beforeDelete = await reception(page), otherColumn = beforeDelete.cells.filter(cell => cellFrame(beforeDelete, cell.id).left !== cellFrame(beforeDelete, right).left);
+    // Deleting a sibling leaves the filled cell and its artwork untouched.
+    await bentoCell(page, deleted).click({ position: { x: 16, y: 30 } });
+    await openEditorMenu(page, 'Tools');
     await page.getByRole('menuitemcheckbox', { name: 'Layers', exact: true }).click();
-    const name = beforeDelete.shapes.find(item => item.id === first).name;
+    const name = beforeDelete.shapes.find(item => item.id === deleted).name;
     await page.getByRole('button', { name: `Delete ${name}`, exact: true }).click();
     await page.getByRole('button', { name: 'Confirm layer deletion', exact: true }).click();
     await page.waitForFunction(() => window.nativeReceptionFixture.root.getDraft().reception.cells.length === 3);
     const filled = await reception(page); await assertImageFits(right);
-    assert.equal(cellFrame(filled, right).left, cellFrame(beforeDelete, first).left);
-    assert.equal(cellFrame(filled, right).width, cellFrame(beforeDelete, first).width + beforeDelete.bento.gap + cellFrame(beforeDelete, right).width);
-    for (const cell of otherRow) assert.deepEqual(cellFrame(filled, cell.id), cellFrame(beforeDelete, cell.id));
-    await editorMenu(page, 'Tools').click();
+    assert.equal(cellFrame(filled, right).top, cellFrame(beforeDelete, right).top);
+    assert.equal(cellFrame(filled, right).height, cellFrame(beforeDelete, right).height);
+    assert.equal(cellFrame(filled, right).left, cellFrame(beforeDelete, right).left);
+    assert.equal(cellFrame(filled, right).width, cellFrame(beforeDelete, right).width);
+    for (const cell of otherColumn) assert.deepEqual(cellFrame(filled, cell.id), cellFrame(beforeDelete, cell.id));
+    await openEditorMenu(page, 'Tools');
     await page.getByRole('menuitemcheckbox', { name: 'Layers', exact: true }).click();
     await page.screenshot({ path: `${output}/bento-delete-filled-${width}.png` });
     await editorCommand(page, 'Edit', 'Undo');
@@ -1314,7 +1599,7 @@ test('Reception uses native Rectangle drawing and cell conversion with undo, rel
     await mkdir(output, { recursive: true });
     await page.screenshot({ path: `${output}/native-rectangle-cell.png`, fullPage: true });
     await openSavedReception(page);
-    await page.getByRole('button', { name: 'Edit Reception', exact: true }).click();
+    await page.getByRole('button', { name: 'Studio', exact: true }).click();
     await page.getByRole('toolbar', { name: 'Creation tools', exact: true }).waitFor();
     assert.equal((await reception(page)).cells[0].id, id);
     assert.deepEqual(errors, []);
@@ -1364,8 +1649,8 @@ test('Cell settings save rounded corners with undo, clipping and reload at wide 
       await mkdir(output, { recursive: true });
       await page.screenshot({ path: `${output}/cell-radius-settings-${width}.png`, fullPage: true });
       await editorCommand(page, 'Canvas', 'Preview');
-      const preview = page.getByRole('region', { name: 'Reception responsive preview', exact: true });
-      await preview.getByRole('button', { name: 'Desktop', exact: true }).click();
+      const preview = page.getByRole('region', { name: 'Studio responsive preview', exact: true });
+      await (await receptionPreviewControls(page)).getByRole('button', { name: 'Desktop', exact: true }).click();
       const previewCell = preview.locator(`[data-cell-id="${id}"]`), previewWidth = (await previewCell.boundingBox()).width;
       const previewRadius = await previewCell.evaluate(node => parseFloat(getComputedStyle(node).borderRadius));
       assert.ok(Math.abs(previewRadius - 48 * previewWidth / cellFrame(before, id).width) < 0.1, 'the preview radius follows its projected cell size');
@@ -1381,7 +1666,7 @@ test('Cell settings save rounded corners with undo, clipping and reload at wide 
   }
 });
 
-test('one Editor switches Reception and canvas documents and reopens Reception from My Inscape without mixing layers', { timeout: 120000 }, async () => {
+test('one Editor switches Reception and canvas documents and reopens Reception from Works without mixing layers', { timeout: 120000 }, async () => {
   const { browser, page, errors } = await setup();
   try {
     const selector = editorMenu(page, 'Canvas');
@@ -1401,7 +1686,7 @@ test('one Editor switches Reception and canvas documents and reopens Reception f
 
     await selectEditorDocument(page, canvasId);
     await shape(page, originalCanvas.shapes[0].id).waitFor();
-    assert.match(await workspacePicker(page).innerText(), /^Canvas Editor · /u);
+    assert.match(await workspacePicker(page).innerText(), /^\/\/ STUDIO · /u);
     assert.equal(await page.locator('main[data-reception-editor]').count(), 0);
     assert.equal(await shape(page, cellId).count(), 0);
     assert.deepEqual(withoutReception(await snapshot(page)), originalCanvas, 'selecting the ordinary canvas preserves its original records');
@@ -1416,22 +1701,22 @@ test('one Editor switches Reception and canvas documents and reopens Reception f
 
     await selectEditorDocument(page, 'reception');
     await shape(page, cellId).waitFor();
-    assert.equal(await workspacePicker(page).innerText(), 'Reception Editor');
+    assert.equal(await workspacePicker(page).innerText(), '// STUDIO · Profile');
     assert.equal(await shape(page, canvasShape.id).count(), 0);
     assert.deepEqual(await reception(page), authoredReception, 'switching back preserves Reception layers, membership and geometry');
     await openSavedReception(page);
-    await page.getByRole('button', { name: 'Edit Reception', exact: true }).click();
+    await page.getByRole('button', { name: 'Studio', exact: true }).click();
     await selector.waitFor();
     assert.equal(await activeEditorDocument(page), 'reception');
     await shape(page, memberId).waitFor();
-    assert.deepEqual(await reception(page), authoredReception, 'My Inscape edits the same Reception document');
+    assert.deepEqual(await reception(page), authoredReception, 'Works reopens the same Reception document');
     await selectEditorDocument(page, canvasId);
     await shape(page, canvasShape.id).waitFor();
     assert.deepEqual(withoutReception(await snapshot(page)), authoredCanvas, 'Reception navigation never rewrites the canvas');
 
     await page.reload();
     await selector.waitFor();
-    await page.waitForFunction(() => document.querySelector('[role="menubar"]')?.dataset.document === 'reception');
+    await page.waitForFunction(() => document.querySelector('.editor-menu-bar')?.dataset.document === 'reception');
     assert.deepEqual(await reception(page), authoredReception, 'fresh Reception entry retains the same saved composition');
     assert.deepEqual(withoutReception(await snapshot(page)), authoredCanvas, 'fresh Reception entry preserves the separately saved canvas');
     await selectEditorDocument(page, canvasId);
@@ -1557,15 +1842,15 @@ test('native Library Image and Text belong to the cell and render in Desktop and
     await mkdir(output, { recursive: true });
     await page.screenshot({ path: `${output}/native-image-text-editor.png`, fullPage: true });
     await editorCommand(page, 'Canvas', 'Preview');
-    const preview = page.getByRole('region', { name: 'Reception responsive preview', exact: true }); await preview.waitFor();
+    const preview = page.getByRole('region', { name: 'Studio responsive preview', exact: true }); await preview.waitFor();
     await preview.getByText('Welcome to my Reception. This is a real Text layer.', { exact: true }).waitFor().catch(async error => {
       console.log('preview evidence', await reception(page), await preview.innerText(), errors);
       await page.screenshot({ path: `${output}/native-preview-debug.png`, fullPage: true }); throw error;
     });
     assert.equal(await preview.locator(`[data-layer-id="${imageId}"]`).count(), 1);
     await page.screenshot({ path: `${output}/native-preview-desktop-1440.png`, fullPage: true });
-    await preview.getByRole('button', { name: 'Phone', exact: true }).click();
-    await preview.getByRole('button', { name: 'Phone layout settings', exact: true }).click();
+    await (await receptionPreviewControls(page)).getByRole('button', { name: 'Phone', exact: true }).click();
+    await (await receptionPreviewControls(page)).getByRole('button', { name: 'Responsive layout settings', exact: true }).click();
     await preview.locator('.reception-document-canvas[data-mobile="true"]').waitFor();
     await preview.getByRole('combobox', { name: 'Preview cell', exact: true }).selectOption(id);
     await preview.getByRole('combobox', { name: 'Phone layer', exact: true }).selectOption(textId);
@@ -1598,11 +1883,11 @@ test('new Reception Text appears above its Shape in preview while explicitly pri
     const closeTools = page.getByRole('button', { name: 'Close Inspector', exact: true });
     if (await closeTools.isVisible()) { await closeTools.focus(); await page.keyboard.press('Enter'); }
     await editorCommand(page, 'Canvas', 'Preview');
-    let preview = page.getByRole('region', { name: 'Reception responsive preview', exact: true });
+    let preview = page.getByRole('region', { name: 'Studio responsive preview', exact: true });
     await preview.getByText('NOMAD', { exact: true }).waitFor();
     const textLayer = preview.locator(`[data-layer-id="${textId}"]`);
     assert.equal(await textLayer.evaluate(node => {
-      const surface = node.parentElement.querySelector('.reception-document-cell-surface');
+      const surface = node.closest('.reception-cell-group').querySelector('.reception-document-cell-surface');
       return Boolean(surface.compareDocumentPosition(node) & Node.DOCUMENT_POSITION_FOLLOWING);
     }), true, 'the published Text layer follows its Shape surface in paint order');
     await mkdir(output, { recursive: true });
@@ -1622,7 +1907,7 @@ test('new Reception Text appears above its Shape in preview while explicitly pri
     await page.waitForFunction(() => window.nativeReceptionFixture.root.getDraft().reception.texts[0].visibility === 'PRIVATE');
     await page.getByRole('button', { name: 'Close Inspector', exact: true }).focus(); await page.keyboard.press('Enter');
     await editorCommand(page, 'Canvas', 'Preview');
-    preview = page.getByRole('region', { name: 'Reception responsive preview', exact: true }); await preview.waitFor();
+    preview = page.getByRole('region', { name: 'Studio responsive preview', exact: true }); await preview.waitFor();
     assert.equal(await preview.locator(`[data-layer-id="${textId}"]`).count(), 0, 'explicitly private Text is absent from the public projection');
     assert.equal(await preview.getByText('NOMAD', { exact: true }).count(), 0);
     assert.match(JSON.stringify((await reception(page)).texts[0].article), /NOMAD/, 'hiding Text preserves its actual writing');
@@ -1635,7 +1920,7 @@ test('new Reception Text appears above its Shape in preview while explicitly pri
 test('Bento keeps proposal count separate, preserves mixed cell style and scales desktop radius with its clip', { timeout: 90000 }, async () => {
   const { browser, page, errors } = await setup({ width: 1280, height: 800 });
   try {
-    await editorMenu(page, 'Bento').click();
+    await openEditorMenu(page, 'Bento');
     const panel = page.getByRole('dialog', { name: 'Bento settings', exact: true });
     const create = panel.getByRole('button', { name: 'Create Bento', exact: true });
     assert.equal(await create.evaluate(node => {
@@ -1661,7 +1946,7 @@ test('Bento keeps proposal count separate, preserves mixed cell style and scales
       await field.fill(String(radius)); await field.press('Enter');
       await closeSharedTool(page, 'Inspector');
     }
-    await editorMenu(page, 'Bento').click();
+    await openEditorMenu(page, 'Bento');
     assert.equal(await panel.getByLabel('Corner radius for all cells (px)', { exact: true }).getAttribute('placeholder'), 'Per cell');
     assert.equal(await panel.getByLabel('Corner radius for all cells (px)', { exact: true }).inputValue(), '');
     await setCurrentBentoField(panel, 'Width (px)', 1440);
@@ -1671,14 +1956,20 @@ test('Bento keeps proposal count separate, preserves mixed cell style and scales
     await bentoCell(page, ids[1]).click(); await page.getByRole('button', { name: '+ Text', exact: true }).click();
     await backToCells(page);
     await editorCommand(page, 'Canvas', 'Preview');
-    const preview = page.getByRole('region', { name: 'Reception responsive preview', exact: true });
-    await preview.getByRole('slider', { name: 'Preview width', exact: true }).fill('900');
+    const preview = page.getByRole('region', { name: 'Studio responsive preview', exact: true });
+    await (await receptionPreviewControls(page)).getByRole('slider', { name: 'Preview width', exact: true }).fill('900');
     const cell = preview.locator(`[data-cell-id="${ids[1]}"]`);
     assert.equal(await cell.evaluate(node => getComputedStyle(node).borderRadius), '40px');
     assert.equal(await cell.locator('.shape-fill').evaluate(node => getComputedStyle(node).borderRadius), '40px');
     const member = (await reception(page)).cells[1].members[0];
-    const clip = await preview.locator(`[data-layer-id="${member}"]`).evaluate(node => node.style.clipPath);
-    assert.match(clip, /^path\(/u);
+    const inset = await preview.locator(`[data-layer-id="${member}"]`).evaluate(node => {
+      const owner = node.closest('.reception-cell-group').querySelector('[data-cell-id]');
+      const cell = owner.getBoundingClientRect(), text = node.getBoundingClientRect();
+      return { clip: node.style.clipPath, clearance: Math.min(text.left - cell.left, text.top - cell.top,
+        cell.right - text.right, cell.bottom - text.bottom) };
+    });
+    assert.ok(inset.clearance >= 40, 'the text lies wholly inside the clear part of the rounded cell');
+    assert.equal(inset.clip, '', 'inset text needs no second rounded clip');
     await mkdir(output, { recursive: true });
     await page.screenshot({ path: `${output}/mixed-radius-900.png` });
     assert.deepEqual(errors, []);
@@ -1713,18 +2004,19 @@ test('Bento released buttons and failed capture restore preview and leave the ne
   } finally { await browser.close(); }
 });
 
-test('a filled cell can split below article width and its smaller half can receive Text', { timeout: 60000 }, async () => {
+test('adding beside a filled cell supports Text below the standalone article width', { timeout: 60000 }, async () => {
   const { browser, page, errors } = await setup();
   try {
     await generateBento(page, 1);
-    await editorMenu(page, 'Bento').click();
+    await openEditorMenu(page, 'Bento');
     const panel = page.getByRole('dialog', { name: 'Bento settings', exact: true });
     for (const label of ['Width (px)', 'Height (px)']) await setCurrentBentoField(panel, label, 320);
     await panel.getByRole('button', { name: 'Close Bento', exact: true }).click();
     const cell = (await reception(page)).cells[0].id;
     await bentoCell(page, cell).click(); await page.getByRole('button', { name: '+ Text', exact: true }).click();
     await backToCells(page);
-    await cellMenu(page, cell, 'Split cell', 'Vertical');
+    await bentoCell(page, cell).click();
+    await addBentoCell(page);
     await bentoCell(page, cell).click();
     const text = page.getByRole('button', { name: '+ Text', exact: true });
     assert.equal(await text.isEnabled(), true);
@@ -1733,6 +2025,360 @@ test('a filled cell can split below article width and its smaller half can recei
     assert.ok(t.y + t.height <= r.y || t.y >= r.y + r.height, 'small cell keeps its contents free of action buttons');
     await mkdir(output, { recursive: true });
     await page.screenshot({ path: `${output}/small-cell-limits.png` });
+    assert.deepEqual(errors, []);
+  } finally { await browser.close(); }
+});
+
+
+test('cropped preview fills aligned cells and follows window resizing after slider use', { timeout: 90000 }, async () => {
+  const { browser, page, errors } = await setup();
+  try {
+    await page.goto(origin + '/browser-tests/reception-native-editor-fixture.html?tiling=1&session=' + crypto.randomUUID());
+    await page.getByRole('group', { name: 'Artwork bento cell', exact: true }).waitFor();
+    const ids = await page.evaluate(() => {
+      const { root } = window.nativeReceptionFixture, draft = root.getDraft(), value = draft.reception;
+      const image = value.imageModules[0], cell = value.cells.find(cell => cell.members.includes(image.id));
+      const frame = value.workbench.shapes.find(item => item.id === cell.id).window;
+      image.width = frame.width; image.height = frame.height; image.artwork.crop = { x: .6, y: .4, zoom: 1.2 };
+      value.workbench.imageModules.find(item => item.id === image.id).position = { left: frame.left, top: frame.top };
+      cell.memberAnchors = [{ members: [image.id], alignX: 'center', alignY: 'center', paddingX: 0, paddingY: 0 }];
+      if (!root.commitCompletedOperation(draft, { expectedGeneration: root.getGeneration() })) throw Error('Crop fixture did not save');
+      return { image: image.id, cell: cell.id };
+    });
+    const saved = await reception(page);
+    await editorCommand(page, 'Canvas', 'Preview');
+    const preview = page.getByRole('region', { name: 'Studio responsive preview', exact: true });
+    const slider = (await receptionPreviewControls(page)).getByRole('slider', { name: 'Preview width', exact: true });
+    await slider.fill('1200');
+    for (const width of [1440, 900, 600, 390, 1440]) {
+      await page.setViewportSize({ width, height: 1000 });
+      await page.waitForFunction(() => {
+        const preview = document.querySelector('.reception-document-preview');
+        const host = preview.querySelector('.reception-document-viewport');
+        const scroll = preview.querySelector('.reception-document-preview-scroll');
+        const style = getComputedStyle(scroll), available = scroll.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
+        const shown = Number(preview.querySelector('input[type="range"]').value);
+        return Math.abs(host.clientWidth - Math.min(1200, available)) < 2 && Math.abs(shown - host.clientWidth) < 2;
+      });
+      const geometry = await preview.evaluate((node, ids) => {
+        const image = [...node.querySelectorAll('[data-layer-id]')].find(el => el.dataset.layerId === ids.image).getBoundingClientRect();
+        const cell = [...node.querySelectorAll('[data-cell-anchor]')].find(el => el.dataset.cellAnchor === ids.cell).getBoundingClientRect();
+        return { image: { x: image.x, y: image.y, width: image.width, height: image.height }, cell: { x: cell.x, y: cell.y, width: cell.width, height: cell.height }, overflow: document.documentElement.scrollWidth > innerWidth + 1 };
+      }, ids);
+      for (const key of ['x', 'y', 'width', 'height']) assert.ok(Math.abs(geometry.image[key] - geometry.cell[key]) < 1, key + ' matches cell at ' + width);
+      assert.equal(geometry.overflow, false);
+      if ([900, 1440].includes(width)) { await mkdir(output, { recursive: true }); await page.screenshot({ path: output + '/responsive-crop-' + width + '.png' }); }
+    }
+    await slider.fill('650');
+    await page.waitForFunction(() => Number(document.querySelector('.reception-document-preview input[type="range"]').value) === 650);
+    assert.equal(Number(await slider.inputValue()), 650);
+    await (await receptionPreviewControls(page)).getByRole('button', { name: 'Fit', exact: true }).click();
+    await page.waitForFunction(() => Number(document.querySelector('.reception-document-preview input[type="range"]').value) > 1200);
+    assert.deepEqual(await reception(page), saved, 'viewing never changes authored geometry or crop');
+    assert.deepEqual(errors, []);
+  } finally { await browser.close(); }
+});
+
+
+for (const [width, theme] of [[1440, 'DARK'], [900, 'LIGHT']]) test(`Reception frame colors persist through Undo, reload and preview at ${width}`, { timeout: 90000 }, async () => {
+  const { browser, page, errors } = await setup({ width, height: 1000 });
+  try {
+    await generateBento(page, 2);
+    if (theme === 'LIGHT') {
+      await editorCommand(page, 'Edit', 'Settings');
+      await page.getByRole('button', { name: theme, exact: true }).click();
+      await page.getByRole('button', { name: 'Close Settings', exact: true }).click();
+    }
+    const before = await reception(page);
+    await openEditorMenu(page, 'Bento');
+    const panel = page.getByRole('dialog', { name: 'Bento settings', exact: true });
+    for (const [label, hex] of [['Frame line', 'ff5500'], ['Frame fill', '112233'], ['Page background', '345678']]) {
+      const button = panel.getByRole('button', { name: `${label} color`, exact: true });
+      await button.click();
+      const picker = page.getByRole('dialog', { name: `${label} color`, exact: true });
+      await picker.getByRole('textbox', { name: 'Color colour', exact: true }).fill(hex);
+      await picker.getByRole('textbox', { name: 'Color colour', exact: true }).press('Tab');
+      await picker.press('Escape'); await picker.waitFor({ state: 'hidden' });
+      await page.waitForFunction(node => node.getAttribute('aria-expanded') === 'false', await button.elementHandle());
+      assert.equal(await button.getAttribute('aria-expanded'), 'false');
+    }
+    assert.equal(await panel.locator('details').count(), 0, 'color pickers no longer expand inside Bento');
+    await panel.getByRole('button', { name: 'Frame fill color', exact: true }).click();
+    const fillPicker = page.getByRole('dialog', { name: 'Frame fill color', exact: true });
+    await fillPicker.getByRole('spinbutton', { name: 'Frame fill opacity (%)', exact: true }).fill('0');
+    await fillPicker.getByRole('spinbutton', { name: 'Frame fill opacity (%)', exact: true }).press('Tab');
+    assert.equal((await reception(page)).surfaceOpacity, 0);
+    await panel.getByRole('button', { name: 'Frame line color', exact: true }).click();
+    await fillPicker.waitFor({ state: 'hidden' });
+    const linePicker = page.getByRole('dialog', { name: 'Frame line color', exact: true });
+    await panel.getByRole('spinbutton', { name: 'Width (px)', exact: true }).click();
+    await linePicker.waitFor({ state: 'hidden' });
+    await panel.getByRole('spinbutton', { name: 'Outer frame radius (px)', exact: true }).fill('32');
+    await panel.getByRole('spinbutton', { name: 'Outer frame radius (px)', exact: true }).press('Tab');
+    const saved = await reception(page);
+    assert.equal(saved.frameColor, '#ff5500'); assert.equal(saved.surface, '#112233'); assert.equal(saved.backgroundColor, '#345678');
+    assert.deepEqual(saved.cells, before.cells); assert.deepEqual(saved.workbench, before.workbench);
+    await panel.getByRole('button', { name: 'Close Bento', exact: true }).click();
+    await editorCommand(page, 'Edit', 'Undo');
+    assert.equal((await reception(page)).frameRadius ?? 0, 0);
+    await editorCommand(page, 'Edit', 'Redo');
+    assert.deepEqual(await reception(page), saved);
+    await page.reload();
+    await page.getByRole('toolbar', { name: 'Creation tools', exact: true }).waitFor();
+    assert.deepEqual(await reception(page), saved);
+    const pixels = await page.locator('canvas[data-workbench-area]').evaluate(canvas => {
+      const ctx = canvas.getContext('2d'), rect = canvas.getBoundingClientRect(), density = canvas.width / rect.width;
+      const pixel = (x, y) => [...ctx.getImageData(Math.round(x * density), Math.round(y * density), 1, 1).data].slice(0, 3);
+      return { outside: pixel(5, rect.height - 5) };
+    });
+    assert.deepEqual(pixels.outside, [52, 86, 120]);
+    await editorCommand(page, 'Canvas', 'Preview');
+    const canvas = page.locator('.reception-document-canvas'); await canvas.waitFor();
+    const style = await canvas.evaluate(node => {
+      const paint = document.createElement('canvas'); paint.width = paint.height = 1;
+      const ctx = paint.getContext('2d'); ctx.fillStyle = getComputedStyle(node).backgroundColor; ctx.fillRect(0, 0, 1, 1);
+      const fill = [...ctx.getImageData(0, 0, 1, 1).data];
+      ctx.clearRect(0, 0, 1, 1); ctx.fillStyle = getComputedStyle(node).outlineColor; ctx.fillRect(0, 0, 1, 1);
+      return { fill, line: [...ctx.getImageData(0, 0, 1, 1).data] };
+    });
+    assert.deepEqual(style, { fill: [0, 0, 0, 0], line: [255, 85, 0, 255] });
+    assert.ok(await canvas.evaluate(node => parseFloat(getComputedStyle(node).borderRadius) > 0));
+    assert.equal(await page.locator('.reception-document-preview-body').evaluate(node => getComputedStyle(node).backgroundColor), 'rgb(52, 86, 120)');
+    await mkdir(output, { recursive: true });
+    await page.screenshot({ path: `${output}/frame-colors-${width}.png` });
+    assert.deepEqual(errors, []);
+  } finally { await browser.close(); }
+});
+
+
+test('cell grain coverage previews above content, survives zero fill, and switches back to fill-only through Undo', { timeout: 90000 }, async () => {
+  const { browser, page, errors } = await setup();
+  try {
+    await page.goto(`${origin}/browser-tests/reception-native-editor-fixture.html?tiling=1&session=${crypto.randomUUID()}`);
+    await page.getByRole('group', { name: 'Artwork bento cell', exact: true }).waitFor();
+    const initial = await reception(page), image = initial.imageModules[0];
+    const id = initial.cells.find(cell => cell.members.includes(image.id)).id;
+    await bentoCell(page, id).click({ position: { x: 16, y: 20 } });
+    const inspector = await openCellInspector(page), fx = inspector.locator('[data-inspector-section="FX"]');
+    await inspector.getByRole('spinbutton', { name: 'Fill opacity (%)', exact: true }).fill('0');
+    await inspector.getByRole('spinbutton', { name: 'Fill opacity (%)', exact: true }).press('Enter');
+    if (!await fx.evaluate(node => node.open)) await fx.locator(':scope > summary').click();
+    const check = fx.getByRole('checkbox', { name: 'Grain over entire cell', exact: true });
+    assert.equal(await check.isChecked(), true);
+    const strength = fx.getByRole('spinbutton', { name: 'Grain (%)', exact: true });
+    await strength.fill('80'); await strength.press('Enter');
+    const grain = page.locator(`.reception-cell-grain-layer [data-cell-grain="${id}"]`);
+    await grain.waitFor();
+    assert.equal(Number(await grain.evaluate(node => getComputedStyle(node).opacity)), .8);
+    assert.equal(await page.locator(`.shape-instance[data-cell-owner="${id}"] .module-surface-grain`).count(), 0);
+    await check.uncheck(); await grain.waitFor({ state: 'hidden' });
+    await page.locator(`.shape-instance[data-cell-owner="${id}"] .module-surface-grain`).waitFor();
+    await editorCommand(page, 'Edit', 'Undo'); await grain.waitFor();
+    const saved = await reception(page);
+    await page.reload(); await page.getByRole('toolbar', { name: 'Creation tools', exact: true }).waitFor();
+    assert.deepEqual(await reception(page), saved); await grain.waitFor();
+    await editorCommand(page, 'Canvas', 'Preview');
+    await page.locator(`.reception-document-canvas [data-cell-grain="${id}"]`).waitFor();
+    assert.deepEqual(errors, []);
+  } finally { await browser.close(); }
+});
+
+for (const width of [1440, 900]) test(`typing retains divider geometry; resize refreshes limits and Undo preserves text at ${width}px`, { timeout: 60000 }, async () => {
+  const { browser, page, errors } = await setup({ width, height: 900 });
+  try {
+    await generateBento(page, 2);
+    const first = (await reception(page)).cells[0].id;
+    await bentoCell(page, first).click();
+    await page.getByRole('button', { name: '+ Text', exact: true }).click();
+    const text = page.getByRole('textbox', { name: 'Article text', exact: true });
+    await text.fill('Retain this article through geometry edits.');
+    await backToCells(page);
+    const before = await reception(page);
+    await bentoCell(page, first).click();
+    const divider = page.getByRole('button', { name: 'Resize cell right', exact: true });
+    await divider.press('ArrowRight');
+    const resized = await reception(page);
+    assert.equal(cellFrame(resized, first).width, cellFrame(before, first).width + 1);
+    assert.deepEqual(resized.texts, before.texts);
+    assert.deepEqual(resized.cells, before.cells);
+    await editorCommand(page, 'Edit', 'Undo');
+    assert.deepEqual(await reception(page), before);
+    await editorCommand(page, 'Edit', 'Redo');
+    assert.deepEqual(await reception(page), resized);
+    await editorCommand(page, 'Canvas', 'Preview');
+    await page.getByRole('region', { name: 'Studio responsive preview', exact: true }).getByText('Retain this article through geometry edits.', { exact: true }).waitFor();
+    assert.deepEqual(errors, []);
+  } finally { await browser.close(); }
+});
+
+for (const [width, theme] of [[1440, 'DARK'], [900, 'LIGHT']]) test(`new cell Text starts spacious with restrained selection chrome at ${width}px ${theme}`, { timeout: 90000 }, async () => {
+  const { browser, page, errors } = await setup({ width, height: 900 });
+  try {
+    await generateBento(page, 1);
+    if (theme === 'LIGHT') {
+      await editorCommand(page, 'Edit', 'Settings'); await page.getByRole('button', { name: 'LIGHT', exact: true }).click();
+      await page.getByRole('button', { name: 'Close Settings', exact: true }).click();
+    }
+    const cell = (await reception(page)).cells[0].id, other = withoutReception(await snapshot(page));
+    await bentoCell(page, cell).click(); await page.getByRole('button', { name: '+ Text', exact: true }).click();
+    const text = page.getByRole('textbox', { name: 'Article text', exact: true }); await text.waitFor();
+    await page.evaluate(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))));
+    assert.equal(await text.evaluate(node => node === document.activeElement), true, 'new empty Text is ready to type');
+    assert.equal(await page.locator('.text-editor-placeholder').isVisible(), true, 'the empty prompt stays readable at the cursor');
+    assert.equal(await text.evaluate(node => getComputedStyle(node).outlineStyle), 'none');
+    const created = await reception(page), record = created.texts.at(-1), frame = created.workbench.texts.find(x => x.id === record.id).window;
+    assert.equal(frame.width, 560); assert.equal(frame.height, 160);
+    assert.equal(record.article.appearance.fontSize, 28);
+    assert.equal(created.cells.find(x => x.id === cell).fitText?.includes(record.id) || false, false);
+    const host = page.locator(`.text-window[data-workbench-view-id="${record.id}"]`);
+    const chrome = await host.evaluate(node => {
+      const bounds = getComputedStyle(node.querySelector('.text-window-bounds'));
+      const probe = document.createElement('span'); probe.style.color = 'var(--editor-accent)'; node.append(probe); const accent = getComputedStyle(probe).color; probe.remove();
+      return { border: bounds.borderColor, accent, shadow: bounds.boxShadow };
+    });
+    assert.equal(chrome.border, chrome.accent); assert.equal(chrome.shadow, 'none');
+    const grip = page.getByRole('separator', { name: 'Resize Text window', exact: true });
+    const handle = await grip.evaluate(node => { const style = getComputedStyle(node, '::after'); return { radius: style.borderRadius, border: style.borderColor }; });
+    assert.equal(handle.radius, '50%'); assert.equal(handle.border, chrome.accent);
+    await mkdir(output, { recursive: true }); await page.screenshot({ path: `${output}/text-start-${width}-${theme}.png` });
+    const words = 'I feel out of place here. I cannot remember being anywhere else. '.repeat(3);
+    await page.keyboard.insertText(words);
+    await page.waitForFunction(words => window.nativeReceptionFixture.root.getDraft().reception.texts.some(t => JSON.stringify(t.article.content).includes(words)), words);
+    assert.deepEqual((await reception(page)).workbench.texts.find(x => x.id === record.id).window, frame, 'typing keeps the useful line width');
+    assert.deepEqual(withoutReception(await snapshot(page)), other);
+    await editorCommand(page, 'Edit', 'Undo');
+    assert.equal(JSON.stringify((await reception(page)).texts.find(x => x.id === record.id).article.content).includes(words), false);
+    await editorCommand(page, 'Edit', 'Redo');
+    assert.equal(JSON.stringify((await reception(page)).texts.find(x => x.id === record.id).article.content).includes(words), true);
+    await grip.focus(); await grip.press('ArrowRight');
+    assert.equal(await grip.evaluate(node => node === document.activeElement), true, 'resize retains keyboard focus');
+    await editorCommand(page, 'Edit', 'Undo');
+    assert.deepEqual((await reception(page)).workbench.texts.find(x => x.id === record.id).window, frame);
+    const accepted = await reception(page); await page.reload(); await page.getByRole('toolbar', { name: 'Creation tools', exact: true }).waitFor();
+    assert.deepEqual(await reception(page), accepted);
+    assert.deepEqual(errors, []);
+  } finally { await browser.close(); }
+});
+
+
+for (const width of [1440, 900]) test(`full-height side columns retain working dividers and outer frame drag resizes are reversible (${width})`, { timeout: 90000 }, async () => {
+  const { browser, page, errors } = await setup({ width, height: 1000 });
+  try {
+    await generateBento(page, 4); await seedBentoGrid(page, 2, 2);
+    const original = await reception(page), first = original.cells[0].id;
+    await bentoCell(page, first).click();
+    await addBentoCell(page);
+    const added = await reception(page), column = added.cells.at(-1), frame = cellFrame(added, column.id);
+    assert.equal(frame.width, 320); assert.equal(frame.height, original.workbench.area.height - original.bento.padding * 2);
+    for (const cell of original.cells) assert.deepEqual(cellFrame(added, cell.id), cellFrame(original, cell.id));
+    await bentoCell(page, column.id).click();
+    const divider = page.getByRole('button', { name: 'Resize cell left', exact: true });
+    await divider.focus(); await divider.press('ArrowLeft');
+    assert.notDeepEqual(await reception(page), added, 'the new column has an independent resize handle');
+    await editorCommand(page, 'Edit', 'Undo'); assert.deepEqual(await reception(page), added);
+    await editorCommand(page, 'Edit', 'Undo'); assert.deepEqual(await reception(page), original);
+    if (width === 900) await page.getByRole('button', { name: 'Switch to Light', exact: true }).click();
+    const label = page.getByLabel('Bento dimensions', { exact: true });
+    const dimensions = area => Math.round(area.width) + ' × ' + Math.round(area.height) + ' px';
+    const assertGap = async () => {
+      const outer = await page.locator('.workbench-area-frame').boundingBox(), resize = await page.locator('.reception-bento-frame-handles').boundingBox();
+      for (const gap of [outer.x - resize.x, outer.y - resize.y, resize.x + resize.width - outer.x - outer.width, resize.y + resize.height - outer.y - outer.height])
+        assert.ok(Math.abs(gap - 12) < 1, 'resize outline stays 12 screen pixels outside the authored frame');
+      const text = await label.boundingBox(); assert.ok(text.y + text.height < resize.y, 'dimensions sit above the top-right edge');
+    };
+    assert.equal(await label.innerText(), dimensions(original.workbench.area)); await assertGap();
+    const handle = page.getByRole('button', { name: 'Resize Bento bottom right', exact: true });
+    const box = await handle.boundingBox(), x = box.x + box.width / 2, y = box.y + box.height / 2;
+    const drag = async () => { await page.mouse.move(x, y); await page.mouse.down(); await page.mouse.move(x + 40, y + 30, { steps: 8 }); };
+    await drag(); assert.deepEqual(await reception(page), original, 'frame preview does not save');
+    assert.notEqual(await label.innerText(), dimensions(original.workbench.area), 'dimensions update during the unsaved drag'); await assertGap();
+    await page.keyboard.press('Escape'); await page.mouse.up(); assert.deepEqual(await reception(page), original);
+    assert.equal(await label.innerText(), dimensions(original.workbench.area));
+    await drag(); await page.mouse.up();
+    const resized = await reception(page);
+    assert.equal(await label.innerText(), dimensions(resized.workbench.area)); await assertGap();
+    assert.ok(resized.workbench.area.width > original.workbench.area.width);
+    assert.ok(resized.workbench.area.height > original.workbench.area.height);
+    assert.equal(resized.workbench.area.left, original.workbench.area.left);
+    assert.equal(resized.workbench.area.top, original.workbench.area.top);
+    await editorCommand(page, 'Edit', 'Undo'); assert.deepEqual(await reception(page), original);
+    await editorCommand(page, 'Edit', 'Redo'); assert.deepEqual(await reception(page), resized);
+    await mkdir(output, { recursive: true }); await page.screenshot({ path: output + '/bento-outer-resize-' + width + '.png' });
+    await page.reload(); await page.getByRole('toolbar', { name: 'Creation tools', exact: true }).waitFor();
+    assert.deepEqual(await reception(page), resized);
+    assert.ok(oldPosition > 0); assert.deepEqual(errors, []);
+  } finally { await browser.close(); }
+});
+
+test('deleting populated cells removes their rendered contents and restores them together with Undo', { timeout: 60000 }, async () => {
+  const { browser, page, errors } = await setup();
+  try {
+    await page.goto(origin + '/browser-tests/reception-native-editor-fixture.html?tiling=1&session=' + crypto.randomUUID());
+    await page.getByRole('group', { name: 'Artwork bento cell', exact: true }).waitFor();
+    const original = await reception(page), canvas = withoutReception(await snapshot(page));
+    const cells = [original.cells.find(cell => cell.members.includes(original.imageModules[0].id)), original.cells.find(cell => cell.members.includes(original.texts[0].id))];
+    for (const [index, cell] of cells.entries()) {
+      const layers = await openSharedTool(page, 'Layers');
+      const name = original.shapes.find(item => item.id === cell.id).name;
+      await layers.getByRole('button', { name: 'Delete ' + name, exact: true }).click();
+      await page.getByRole('button', { name: 'Confirm layer deletion', exact: true }).click();
+      const after = await reception(page), removed = [cell.id, ...cell.members];
+      for (const key of ['imageModules', 'texts', 'shapes']) {
+        assert.equal(after[key].some(item => removed.includes(item.id)), false);
+        assert.equal(after.workbench[key].some(item => removed.includes(item.id)), false);
+      }
+      for (const id of removed) assert.equal(await page.locator('[data-workbench-view-id="' + id + '"]').count(), 0);
+      assert.deepEqual(withoutReception(await snapshot(page)), canvas);
+      await editorCommand(page, 'Edit', 'Undo'); assert.deepEqual(await reception(page), original);
+      await editorCommand(page, 'Edit', 'Redo'); assert.deepEqual(await reception(page), after);
+      if (index === 0) { await editorCommand(page, 'Edit', 'Undo'); }
+      else { await page.reload(); await page.getByRole('toolbar', { name: 'Creation tools', exact: true }).waitFor(); assert.deepEqual(await reception(page), after); }
+    }
+    assert.deepEqual(errors, []);
+  } finally { await browser.close(); }
+});
+
+test('Bento sliders preview live, commit once, cancel safely and retain exact values', { timeout: 60000 }, async () => {
+  const { browser, page, errors } = await setup();
+  try {
+    await generateBento(page, 4);
+    await openEditorMenu(page, 'Bento');
+    const panel = page.getByRole('dialog', { name: 'Bento settings', exact: true });
+    const fields = [['Gap', 'gap'], ['Spacing', 'padding'], ['Cell radius', 'radius'], ['Frame radius', 'frameRadius']];
+    for (const [label, key] of fields) {
+      const before = await reception(page), slider = panel.getByRole('slider', { name: label, exact: true });
+      const box = await slider.boundingBox();
+      await page.mouse.move(box.x + box.width * .25, box.y + box.height / 2); await page.mouse.down();
+      await page.mouse.move(box.x + box.width * .3, box.y + box.height / 2, { steps: 4 });
+      assert.deepEqual(await reception(page), before, label + ' preview must not save');
+      if (key === 'frameRadius') assert.ok(parseFloat(await page.locator('.workbench-area-frame').evaluate(node => getComputedStyle(node).borderTopLeftRadius)) > 0, 'frame corner previews live');
+      await page.keyboard.press('Escape'); await page.mouse.up();
+      assert.equal(await panel.isVisible(), true); assert.deepEqual(await reception(page), before);
+      await slider.focus(); await slider.press('ArrowRight');
+      const after = await reception(page); assert.notDeepEqual(after, before);
+      await editorCommand(page, 'Edit', 'Undo'); assert.deepEqual(await reception(page), before, label + ' is one Undo step');
+      await editorCommand(page, 'Edit', 'Redo'); assert.deepEqual(await reception(page), after);
+    }
+    const radiusNumber = panel.getByRole('spinbutton', { name: 'Outer frame radius (px)', exact: true }), beforeEmpty = await reception(page), acceptedRadius = await radiusNumber.inputValue();
+    await radiusNumber.fill(''); await radiusNumber.press('Escape');
+    assert.deepEqual(await reception(page), beforeEmpty, 'clearing and cancelling exact radius keeps accepted state');
+    assert.equal(await radiusNumber.inputValue(), acceptedRadius);
+    const beforeDrag = await reception(page), gap = panel.getByRole('slider', { name: 'Gap', exact: true }), bounds = await gap.boundingBox();
+    await page.mouse.move(bounds.x + bounds.width * .2, bounds.y + bounds.height / 2); await page.mouse.down();
+    await page.mouse.move(bounds.x + bounds.width * .35, bounds.y + bounds.height / 2, { steps: 6 });
+    assert.deepEqual(await reception(page), beforeDrag); const draggedValue = Number(await gap.inputValue());
+    await page.mouse.up(); const afterDrag = await reception(page); assert.equal(afterDrag.bento.gap, draggedValue);
+    await editorCommand(page, 'Edit', 'Undo'); assert.deepEqual(await reception(page), beforeDrag, 'a pointer drag commits in one Undo step');
+    await editorCommand(page, 'Edit', 'Redo'); assert.deepEqual(await reception(page), afterDrag);
+    const exact = panel.getByRole('spinbutton', { name: 'Outer margin (px)', exact: true });
+    await exact.fill('36'); await exact.press('Enter'); assert.equal((await reception(page)).bento.padding, 36);
+    await page.mouse.move(900, 800); await panel.getByRole('button', { name: 'Move Bento panel', exact: true }).click();
+    await mkdir(output, { recursive: true }); await page.screenshot({ path: output + '/bento-sliders.png' });
+    const accepted = await reception(page); await page.evaluate(() => window.nativeReceptionFixture.fail(true));
+    await panel.getByRole('slider', { name: 'Gap', exact: true }).press('ArrowRight');
+    await panel.getByRole('alert').waitFor(); assert.deepEqual(await reception(page), accepted);
+    await page.evaluate(() => window.nativeReceptionFixture.fail(false));
+    await page.reload(); await page.getByRole('toolbar', { name: 'Creation tools', exact: true }).waitFor(); assert.deepEqual(await reception(page), accepted);
     assert.deepEqual(errors, []);
   } finally { await browser.close(); }
 });

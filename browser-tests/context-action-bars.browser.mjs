@@ -83,6 +83,16 @@ test('Display, Image and Shape actions follow the active module and retain undo'
     await activate(page, 'image');
     const image = sharedToolPanel(page);
     assert.equal(await button(image, 'In place').count(), 0);
+    assert.equal(await button(image, 'Fit inside').innerText(), 'Fit');
+    assert.equal(await button(image, 'Fill canvas').innerText(), 'Fill');
+    await button(image, 'Fit inside').click();
+    const fittedImage = await draft(page);
+    assert.equal(fittedImage.imageModules[0].artwork.crop, null);
+    await button(image, 'Fill canvas').click();
+    assert.ok((await draft(page)).imageModules[0].artwork.crop.zoom >= 1);
+    await undo(page);
+    assert.deepEqual(await draft(page), fittedImage, 'Undo restores the real Image fit operation');
+    await activate(page, 'image');
     await button(image, 'Fit inside').click();
     assert.equal((await draft(page)).imageModules[0].artwork.crop, null);
     await button(image, 'Rotate').click();
