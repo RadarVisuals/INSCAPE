@@ -1,13 +1,20 @@
 import { useEffect, useRef, useState } from 'react';
-import { LayoutGrid, Plus, ArrowUpLeft, Pencil } from 'lucide-react';
+import { LayoutGrid, Plus, ArrowUpLeft, ChevronLeft, ChevronRight, Pencil } from 'lucide-react';
 import CanvasExplorer from './CanvasExplorer.jsx';
 import { MAX_WORKBENCHES } from '../../systemWorkflow/domain/workbenchCollection.js';
 import './compositionIndex.css';
+import './visitorWorksList.css';
+
+const worksPerPage = 6;
 
 // This index reads the supplied owner/public collection. It never switches the
 // editor's active Workbench; only the explicit Edit action may do that.
 export default function CompositionIndex({ items, selected, model, profile, listRef, onSelect, onEdit, onDetails, onCreate, onOpenReception, onEditReception, onGrid, settings, disabled, memory: workspaceMemory, framed, visitorHeader, movingCanvasId }) {
   const [expanded, setExpanded] = useState(workspaceMemory?.expanded || false);
+  const [page, setPage] = useState(() => Math.floor(Math.max(0, items.findIndex(item => item.id === selected.id)) / worksPerPage));
+  const pageCount = Math.ceil(items.length / worksPerPage);
+  const start = visitorHeader ? Math.min(page, Math.max(0, pageCount - 1)) * worksPerPage : 0;
+  const visibleItems = visitorHeader ? items.slice(start, start + worksPerPage) : items;
   const localMemories = useRef(new Map()), root = useRef(null);
   const memories = workspaceMemory?.cameras || localMemories.current;
   const profileAddress = selected.draft.profileAddress;
@@ -37,16 +44,21 @@ export default function CompositionIndex({ items, selected, model, profile, list
         </div>}
         <div className="composition-index-label"><h2>{visitorHeader ? 'Index' : 'Canvases'}</h2>{visitorHeader ? <button type="button" onClick={onGrid} aria-label="Grid" title="Tile view"><LayoutGrid size={16} /></button> : <span>{items.length}</span>}</div>
         <nav className="workbench-overview-list" aria-label="Canvases" ref={listRef}>
-          {items.map((item, index) => <button type="button" key={item.id} data-previewed={selected.id === item.id} aria-current={selected.id === item.id ? 'page' : undefined}
+          {visibleItems.map((item, index) => <button type="button" key={item.id} data-previewed={selected.id === item.id} aria-current={selected.id === item.id ? 'page' : undefined}
             aria-label={`Open ${item.name}`} onClick={() => select(item.id)}>
-            <small>{String(index + 1).padStart(2, '0')}</small><span>{item.name}</span>
+            {!visitorHeader && <small>{String(index + 1).padStart(2, '0')}</small>}<span>{item.name}</span>
           </button>)}
         </nav>
+        {visitorHeader && pageCount > 1 && <nav className="visitor-index-pages" aria-label="Index pages">
+          <span aria-live="polite">{start + 1}–{start + visibleItems.length} / {items.length}</span>
+          <button type="button" aria-label="Previous index page" disabled={start === 0} onClick={() => setPage(start / worksPerPage - 1)}><ChevronLeft size={15} /></button>
+          <button type="button" aria-label="Next index page" disabled={start + visibleItems.length >= items.length} onClick={() => setPage(start / worksPerPage + 1)}><ChevronRight size={15} /></button>
+        </nav>}
         {onCreate && <button className="composition-index-create" type="button" onClick={onCreate} disabled={items.length >= MAX_WORKBENCHES}><Plus size={14} />New canvas</button>}
       </aside>
       <section className="composition-index-main">
         {settings ? <section className="composition-index-settings" aria-label="Canvas settings">{settings}</section>
-          : <CanvasExplorer key={key} selected={selected} model={model} memory={memory} disabled={disabled} expanded={expanded} moving={movingCanvasId === selected.id}
+          : <CanvasExplorer key={key} selected={selected} model={model} memory={memory} disabled={disabled} expanded={expanded} visitorHeader={visitorHeader} moving={movingCanvasId === selected.id}
             onExpand={toggleExpanded} onEdit={onEdit} onDetails={onDetails} />}
       </section>
     </div>

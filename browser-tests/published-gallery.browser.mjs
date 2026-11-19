@@ -58,7 +58,15 @@ test('open Profile shares its published Works selection, camera and layout and p
     assert.notEqual(await theme.getAttribute('aria-checked'), previous);
     await button('Works').click();
     await button('Open Anatomy').click();
-    await page.getByRole('group', { name: 'Anatomy canvas' }).waitFor();
+    const artwork = page.getByRole('group', { name: 'Anatomy canvas' });
+    await artwork.waitFor();
+    const details = page.getByRole('complementary', { name: 'Work details' });
+    await details.getByRole('heading', { name: 'Anatomy', exact: true }).waitFor();
+    const [indexBox, canvasBox, detailsBox] = await Promise.all([
+      page.getByRole('navigation', { name: 'Canvases', exact: true }).boundingBox(), artwork.boundingBox(), details.boundingBox(),
+    ]);
+    assert.ok(indexBox.x + indexBox.width <= canvasBox.x && canvasBox.x + canvasBox.width <= detailsBox.x,
+      'The public list keeps its index, artwork and matching details in three columns');
     await button('Zoom in').click();
     const zoom = await page.getByLabel('Canvas zoom').textContent();
     await button('Profile').click();

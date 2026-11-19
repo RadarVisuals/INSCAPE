@@ -45,6 +45,14 @@ export default function WorkbenchOverview({ items, selected, model, previews, vi
   const registerControls = workspace?.onControls, memory = workspace?.memory;
   const list = useRef(null), menuButton = useRef(null), returnFocus = useRef(null);
   const grid = view.layout === 'grid';
+  const lastLayout = useRef(view.layout);
+  useLayoutEffect(() => {
+    const switched = lastLayout.current !== view.layout;
+    lastLayout.current = view.layout;
+    if (!visitorHeader || !switched || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const fade = root.current.animate([{ opacity: .72 }, { opacity: 1 }], { duration: 160, easing: 'ease-out' });
+    return () => fade.cancel();
+  }, [view.layout, visitorHeader]);
   const { restoreFocus } = useDeferredFocusReturn();
   const selectedButton = () => list.current?.querySelector('button[data-previewed="true"]');
   useEffect(() => { if (!workspace) selectedButton()?.focus({ preventScroll: true }); }, [workspace]);

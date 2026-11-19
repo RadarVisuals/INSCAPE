@@ -34,7 +34,7 @@ function TextPreview({ item, scale, area }) {
   </div>);
 }
 
-export default function WorkbenchOverviewPreview({ model, name, region = model.area, highlights = [], presenting = false, thumbnail = false, crop = null, viewport = null, camera = null }) {
+export default function WorkbenchOverviewPreview({ model, name, region = model.area, highlights = [], presenting = false, thumbnail = false, crop = null, viewport = null, camera = null, emptyHint = 'Open this Workbench to begin.' }) {
   const host = useRef(null), [measured, setSize] = useState({ width: 0, height: 0 });
   useLayoutEffect(() => {
     // An animated preview supplies its paint viewport. Measuring its changing
@@ -69,6 +69,6 @@ export default function WorkbenchOverviewPreview({ model, name, region = model.a
         })}
         {scale > 0 && highlights.map((frame, index) => <div key={index} className="canvas-presentation-highlight" style={{ ...projectFrame(frame, area, paintScale), outlineWidth: 2 * density }} />)}
     </div>
-    {!items.length && !thumbnail && <p className="workbench-overview-empty">Nothing on the canvas yet.<br /><span>Open this Workbench to begin.</span></p>}
+    {!items.length && !thumbnail && <p className="workbench-overview-empty">Nothing on the canvas yet.{emptyHint && <><br /><span>{emptyHint}</span></>}</p>}
   </div>;
 }
