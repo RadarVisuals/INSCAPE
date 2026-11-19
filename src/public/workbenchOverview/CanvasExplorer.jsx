@@ -12,13 +12,11 @@ export default function CanvasExplorer({ selected, model, memory, disabled, expa
   const sources = useMemo(() => canvasArtworkSources(model), [model]);
   const source = sources.find(item => item.id === sourceId);
   const navigation = useCanvasViewport({ hostRef: host, area: model.area, destinations, memory, disabled });
-  const hasPoints = destinations.length > 0;
-  const fitButton = <button type="button" title="Whole canvas" aria-label="Complete canvas" aria-pressed={navigation.fitted}
-    onClick={() => navigation.choose(null)}><Scan size={15} />{!hasPoints && <span>Whole canvas</span>}</button>;
-  const expandButton = <button type="button" onClick={onExpand} aria-label={expanded ? 'Return to index' : 'Expand canvas'} aria-pressed={expanded}>
-    {expanded ? <Minimize2 size={16} /> : <Maximize2 size={16} />}<span>{expanded ? 'Return to index' : 'Expand'}</span>
+  const expandLabel = expanded ? 'Return to index' : 'Expand canvas';
+  const expandButton = <button type="button" onClick={onExpand} aria-label={expandLabel} title={expandLabel} aria-pressed={expanded}>
+    {expanded ? <Minimize2 size={16} /> : <Maximize2 size={16} />}{!visitorHeader && <span>{expanded ? 'Return to index' : 'Expand'}</span>}
   </button>;
-  const help = <details className="composition-explorer-help"><summary><Info size={14} />Viewing controls</summary><p id={helpId}>Drag or Space + drag to move. Ctrl + scroll to zoom. Use the arrow keys to move, + / - to zoom, and Home to return to the whole canvas.</p></details>;
+  const help = <details className="composition-explorer-help"><summary aria-label="Viewing controls" title="Viewing controls"><Info size={15} />{!visitorHeader && 'Viewing controls'}</summary><p id={helpId}>Drag or Space + drag to move. Ctrl + scroll to zoom. Use the arrow keys to move, + / - to zoom, and Home to return to the whole canvas.</p></details>;
   const information = <div className="composition-explorer-information">
     {selected.introduction && <p className="workbench-overview-introduction">{selected.introduction}</p>}
     <div className="composition-explorer-secondary"><span>{model.area.width} × {model.area.height}{visitorHeader && ' px'}</span>{onDetails && <button type="button" onClick={onDetails}>Edit details</button>}</div>
@@ -42,19 +40,20 @@ export default function CanvasExplorer({ selected, model, memory, disabled, expa
         <WorkbenchOverviewPreview model={model} name={selected.name}
           camera={navigation.camera} highlights={source?.frames} emptyHint={visitorHeader ? null : undefined} presenting />
       </div>
-      {hasPoints && <nav className="composition-camera-points" aria-label="Camera points">
-        {fitButton}
-        {destinations.map(item => <button key={item.id} type="button" className="composition-camera-point" title={item.name} aria-label={item.name}
-          aria-pressed={navigation.destinationId === item.id} onClick={() => navigation.choose(item.id)} />)}
-      </nav>}
-    </div>
-    <div className="composition-explorer-controls">
-      {!hasPoints && fitButton}
-      <div className="composition-explorer-zoom"><button type="button" aria-label="Zoom out" onClick={() => navigation.zoom(.8)}><Minus size={15} /></button>
-        <output aria-label="Canvas zoom">{Math.round((navigation.camera?.scale || 0) * 100)}%</output>
-        <button type="button" aria-label="Zoom in" onClick={() => navigation.zoom(1.25)}><Plus size={15} /></button>
+      <div className="composition-explorer-controls">
+        <div className="composition-explorer-zoom">
+          <button type="button" aria-label="Zoom out" title="Zoom out" onClick={() => navigation.zoom(.8)}><Minus size={15} /></button>
+          <output aria-label="Canvas zoom">{Math.round((navigation.camera?.scale || 0) * 100)}%</output>
+          <button type="button" aria-label="Zoom in" title="Zoom in" onClick={() => navigation.zoom(1.25)}><Plus size={15} /></button>
+        </div>
+        <nav className="composition-camera-points" aria-label="Camera points">
+          <button type="button" title="Whole canvas" aria-label="Complete canvas" aria-pressed={navigation.fitted}
+            onClick={() => navigation.choose(null)}><Scan size={15} /></button>
+          {destinations.map(item => <button key={item.id} type="button" className="composition-camera-point" title={item.name} aria-label={item.name}
+            aria-pressed={navigation.destinationId === item.id} onClick={() => navigation.choose(item.id)} />)}
+        </nav>
+        {visitorHeader && <div className="visitor-canvas-actions">{help}{expandButton}</div>}
       </div>
-      {visitorHeader && <div className="visitor-canvas-actions">{help}{expandButton}</div>}
     </div>
     {visitorHeader ? <aside className="visitor-work-details" aria-label="Work details">
       <h2>Details</h2><h1>{selected.name}</h1>{information}{artworkSources}

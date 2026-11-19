@@ -67,6 +67,11 @@ test('open Profile shares its published Works selection, camera and layout and p
     ]);
     assert.ok(indexBox.x + indexBox.width <= canvasBox.x && canvasBox.x + canvasBox.width <= detailsBox.x,
       'The public list keeps its index, artwork and matching details in three columns');
+    const controls = page.locator('.composition-explorer-controls');
+    const picker = await controls.getByRole('navigation', { name: 'Camera points' }).boundingBox();
+    assert.ok(picker.y >= canvasBox.y + canvasBox.height && Math.abs(picker.x + picker.width / 2 - canvasBox.x - canvasBox.width / 2) <= 1);
+    assert.ok(await controls.locator('button, summary').evaluateAll(items => items.every(item => !item.innerText.trim() && item.getAttribute('aria-label'))),
+      'Every footer action is an icon with an accessible name');
     await button('Zoom in').click();
     const zoom = await page.getByLabel('Canvas zoom').textContent();
     await button('Profile').click();

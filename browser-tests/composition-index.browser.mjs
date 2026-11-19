@@ -90,6 +90,9 @@ test('desktop index explores real artwork, retains each camera and never edits i
     for (const width of [1920, 1440, 1024]) {
       await page.setViewportSize({ width, height: 1080 }); await page.evaluate(() => document.fonts.ready);
       await page.locator('.workbench-overview').evaluate(node => { node.scrollTop = 0; });
+      const [viewport, picker] = await Promise.all([host.boundingBox(), points.boundingBox()]);
+      assert.ok(picker.y >= viewport.y + viewport.height, 'Camera points are below the artwork');
+      assert.ok(Math.abs((picker.x + picker.width / 2) - (viewport.x + viewport.width / 2)) <= 1, 'Camera points are centered on the artwork');
       await page.screenshot({ path: `${output}/index-${width}.png`, fullPage: true });
       assert.ok(await page.locator('.workbench-overview').evaluate(node => node.scrollWidth <= node.clientWidth + 1));
     }
