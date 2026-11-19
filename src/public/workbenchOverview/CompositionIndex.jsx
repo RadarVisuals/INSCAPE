@@ -6,7 +6,7 @@ import './compositionIndex.css';
 
 // This index reads the supplied owner/public collection. It never switches the
 // editor's active Workbench; only the explicit Edit action may do that.
-export default function CompositionIndex({ items, selected, model, profile, listRef, onSelect, onEdit, onDetails, onCreate, onOpenReception, onEditReception, onGrid, settings, disabled, memory: workspaceMemory, framed, movingCanvasId }) {
+export default function CompositionIndex({ items, selected, model, profile, listRef, onSelect, onEdit, onDetails, onCreate, onOpenReception, onEditReception, onGrid, settings, disabled, memory: workspaceMemory, framed, visitorHeader, movingCanvasId }) {
   const [expanded, setExpanded] = useState(workspaceMemory?.expanded || false);
   const localMemories = useRef(new Map()), root = useRef(null);
   const memories = workspaceMemory?.cameras || localMemories.current;
@@ -24,18 +24,18 @@ export default function CompositionIndex({ items, selected, model, profile, list
   return <div className="composition-index" ref={root} data-expanded={expanded || undefined} onKeyDown={event => {
     if (event.key === 'Escape' && expanded && !event.defaultPrevented) { event.preventDefault(); expand(false); }
   }}>
-    <header className="composition-index-header" inert={disabled ? '' : undefined}>
+    {!visitorHeader && <header className="composition-index-header" inert={disabled ? '' : undefined}>
       <span className="composition-index-brand">{onEdit ? 'My Inscape' : 'inscape'}</span>
       <span className="composition-index-maker">{profile?.name || 'Unnamed profile'}</span>
       <button type="button" onClick={onGrid} aria-label="Grid" title="Thumbnail grid"><LayoutGrid size={17} /><span>Grid view</span></button>
-    </header>
+    </header>}
     <div className="composition-index-body">
       <aside className="composition-index-sidebar" inert={disabled || expanded ? '' : undefined}>
         {!framed && (onOpenReception || onEditReception) && <div className="composition-index-reception">
           {onOpenReception && <button className="composition-index-about" type="button" onClick={onOpenReception}><ArrowUpLeft size={14} />Reception</button>}
           {onEditReception && <button type="button" className="composition-index-edit-reception" aria-label="Edit Reception" title="Edit Reception" onClick={onEditReception}><Pencil size={14} />{onOpenReception ? 'Edit' : 'Edit Reception'}</button>}
         </div>}
-        <div className="composition-index-label"><h2>Canvases</h2><span>{items.length}</span></div>
+        <div className="composition-index-label"><h2>{visitorHeader ? 'Index' : 'Canvases'}</h2>{visitorHeader ? <button type="button" onClick={onGrid} aria-label="Grid" title="Tile view"><LayoutGrid size={16} /></button> : <span>{items.length}</span>}</div>
         <nav className="workbench-overview-list" aria-label="Canvases" ref={listRef}>
           {items.map((item, index) => <button type="button" key={item.id} data-previewed={selected.id === item.id} aria-current={selected.id === item.id ? 'page' : undefined}
             aria-label={`Open ${item.name}`} onClick={() => select(item.id)}>

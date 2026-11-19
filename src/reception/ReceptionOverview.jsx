@@ -21,7 +21,7 @@ export default function ReceptionOverview({ snapshot, assets, assetStatus, ...pr
   return <ReceptionPresentation snapshot={snapshot} assets={assets} assetStatus={assetStatus}><ReceptionPage {...props} /></ReceptionPresentation>;
 }
 function ReceptionPage({ reception, model, address, ownerEditingAllowed = false,
-  onEdit, onReturnToWorkbench, unavailableTarget = false, onOpenDirectory, onReturn, onOpenCanvas, notice, onRetry }) {
+  ownerDestinations, onEdit, onReturnToWorkbench, onCloseBento, unavailableTarget = false, onOpenDirectory, onReturn, onOpenCanvas, notice, onRetry }) {
   useStartupDestinationReady();
   const [exploring, setExploring] = useState(false);
   const explore = useRef(null), roomTitle = useRef(null), flightArea = useRef(null), previous = useRef(false);
@@ -45,9 +45,9 @@ function ReceptionPage({ reception, model, address, ownerEditingAllowed = false,
   const name = model?.profile?.displayName || 'Unnamed profile';
   const frameless = reception.version === 3 || Boolean(reception.arrangement);
   const actions = <>
-    {(onReturnToWorkbench || onReturn) && <button className="workflow-tactile-control" type="button"
-      aria-label={onReturnToWorkbench ? 'Back to Editor' : 'Back to My Inscape'}
-      onClick={onReturnToWorkbench || onReturn}>{onReturnToWorkbench ? 'Editor' : 'My Inscape'}</button>}
+    {(onCloseBento || onReturnToWorkbench || onReturn) && <button className="workflow-tactile-control" type="button"
+      aria-label={onCloseBento ? 'Back to profile' : onReturnToWorkbench ? 'Back to Editor' : 'Back to My Inscape'}
+      onClick={onCloseBento || onReturnToWorkbench || onReturn}>{onCloseBento ? 'Profile' : onReturnToWorkbench ? 'Editor' : 'My Inscape'}</button>}
     {!exploring && <>
       <button className="workflow-tactile-control" type="button" ref={explore} onClick={() => setExploring(true)}>Explore</button>
       <button className="workflow-tactile-control" type="button" onClick={onOpenCanvas} disabled={!onOpenCanvas}>Enter Inscape</button>

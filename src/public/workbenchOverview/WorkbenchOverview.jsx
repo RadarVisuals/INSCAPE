@@ -34,7 +34,7 @@ function DetailsForm({ selected, onSave, onCancel, creating }) {
 }
 
 export default function WorkbenchOverview({ items, selected, model, previews, view, onViewChange, profile, onSelect, onEdit, onCreate, onSave, onOpenReception, onEditReception,
-  cardSize, onCardSize, onReorder, preferenceError, onRetryPreferences, workspace }) {
+  cardSize, onCardSize, onReorder, preferenceError, onRetryPreferences, workspace, visitorHeader, cameraMemory }) {
   const [editing, setEditing] = useState(null), [error, setError] = useState('');
   const [arranging, setArranging] = useState(false);
   const [presentation, setPresentation] = useState(null);
@@ -94,14 +94,14 @@ export default function WorkbenchOverview({ items, selected, model, previews, vi
     : editing ? <DetailsForm key={`${selected.id}:${editing}`} creating={editing === 'new'} selected={selected} onCancel={closeForm}
       onSave={details => { if (editing === 'new') onCreate(details.name); else onSave(details); closeForm(); }} /> : null;
   return <div ref={root} className="workbench-overview system-workflow__token-scope" data-workflow-material="tactile" data-workflow-finish="flat"
-     data-layout={view.layout} data-workspace={workspace && !immersive || undefined} data-immersive={immersive || undefined}
+     data-layout={view.layout} data-visitor-header={visitorHeader || undefined} data-workspace={workspace && !immersive || undefined} data-immersive={immersive || undefined}
      data-workspace-exiting={workspace?.exiting || undefined} inert={workspace?.exiting || workspace?.entering ? '' : undefined} aria-hidden={workspace?.exiting || undefined}
      data-workspace-entering={workspace?.entering || undefined}
      onKeyDown={event => { if (immersive && event.key === 'Escape' && !event.defaultPrevented) { event.preventDefault(); setImmersive(false); } }}>
     {workspace && immersive && <button className="workbench-overview-return" type="button" onClick={() => setImmersive(false)}>Return to workspace</button>}
     {grid ? <div className="workbench-overview-browse" inert={presentation ? '' : undefined}>
     {(!workspace || immersive) && <OverviewNavigation profile={profile} address={selected.draft.profileAddress} disabled={Boolean(editing)}
-      onAbout={onOpenReception} onEditReception={onEditReception} onCanvases={() => restoreFocus(selectedButton)}
+      onAbout={visitorHeader ? undefined : onOpenReception} onEditReception={onEditReception} onCanvases={() => restoreFocus(selectedButton)}
       view={view} onViewChange={next => { setError(''); onViewChange(next); }} count={items.length} triggerRef={menuButton}
       arranging={arranging} onArrange={onReorder ? () => setArranging(!arranging) : undefined} cardSize={cardSize} onCardSize={onCardSize}
       onCreate={onCreate ? () => { returnFocus.current = menuButton.current; setEditing('new'); } : undefined} />}
@@ -119,7 +119,7 @@ export default function WorkbenchOverview({ items, selected, model, previews, vi
       </div>
     </section>
     </div> : <CompositionIndex items={items} selected={selected} model={model} profile={profile} listRef={list} settings={settings} disabled={Boolean(editing)}
-      memory={memory} framed={Boolean(workspace && !immersive)} movingCanvasId={workspace?.movingCanvasId}
+      memory={memory || cameraMemory} visitorHeader={visitorHeader} framed={Boolean(visitorHeader || workspace && !immersive)} movingCanvasId={workspace?.movingCanvasId}
       onSelect={preview} onEdit={onEdit ? edit : undefined} onOpenReception={onOpenReception} onEditReception={onEditReception}
       onGrid={() => onViewChange({ ...view, layout: 'grid' })}
       onDetails={onSave ? event => manage(selected.id, 'details', event.currentTarget) : undefined}

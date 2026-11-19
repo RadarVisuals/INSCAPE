@@ -7,6 +7,85 @@ import { browserExecutable } from '../scripts/browserEnvironment.mjs';
 const origin = process.env.INSCAPE_TEST_ORIGIN || 'http://127.0.0.1:5173';
 const output = process.env.INSCAPE_BROWSER_OUTPUT || '.browser-test-runtime/published-gallery';
 const address = '0x' + '1'.repeat(40);
+test('open Profile shares its published Works selection, camera and layout and preserves the Bento', { timeout: 75000 }, async () => {
+  const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
+  try {
+    const page = await browser.newPage({ viewport: { width: 1600, height: 1000 } });
+    const errors = [];
+    page.on('pageerror', error => errors.push(error.message));
+    await page.route('**/*', route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
+    await page.goto(`${origin}/browser-tests/profile-overview-fixture.html?view=${address}&reception=published&collection=1`);
+    const button = name => page.getByRole('button', { name, exact: true });
+    await page.getByRole('heading', { name: 'Nomad', exact: true }).waitFor();
+    await page.getByText('Human underneath', { exact: true }).waitFor();
+    const profile = page.locator('main.visitor-spread');
+    assert.equal(await profile.getAttribute('data-layout'), 'card');
+    const checkPortrait = async () => {
+      const portrait = page.locator('.visitor-portrait');
+      const size = await portrait.locator('img').boundingBox();
+      assert.ok(size && size.width > 0 && Math.abs(size.width - size.height) < 1, 'The portrait is square');
+      assert.ok(await portrait.evaluate(node => [node, node.querySelector('img')].every(el =>
+        getComputedStyle(el).backgroundColor === 'rgba(0, 0, 0, 0)' && getComputedStyle(el).opacity === '1')));
+    };
+    await checkPortrait();
+    const rim = await profile.evaluate(root => {
+      const body = root.querySelector('.visitor-profile-body'), card = body.getBoundingClientRect();
+      const image = body.querySelector('.visitor-portrait img').getBoundingClientRect();
+      const inside = parseFloat(getComputedStyle(body, '::before').left) + 1;
+      return [image.left-card.left, image.top-card.top, card.bottom-image.bottom]
+        .every(inset => Math.abs(inset-inside) < 1);
+    });
+    assert.ok(rim, 'The portrait meets the inner stroke on all three exterior edges');
+    await button('Profile index').click();
+    await button('Open Spread').click();
+    assert.equal(await profile.getAttribute('data-layout'), 'open');
+    await checkPortrait();
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    const background = { clip: { x: 20, y: 125, width: 140, height: 70 } };
+    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    const still = await page.screenshot(background);
+    await page.waitForTimeout(250);
+    assert.deepEqual(await page.screenshot(background), still, 'Reduced motion holds the grain and lighting still');
+    await page.emulateMedia({ reducedMotion: 'no-preference' });
+    await button('Nomad profile actions').click();
+    await page.getByText('Underneath', { exact: true }).waitFor();
+    await button('View published Bento').click();
+    await page.getByRole('region', { name: 'Reception layout' }).waitFor();
+    await button('Back to profile').click();
+    const theme = page.getByRole('switch', { name: 'Dark mode' });
+    const previous = await theme.getAttribute('aria-checked');
+    await theme.click();
+    assert.notEqual(await theme.getAttribute('aria-checked'), previous);
+    await button('Works').click();
+    await button('Open Anatomy').click();
+    await page.getByRole('group', { name: 'Anatomy canvas' }).waitFor();
+    await button('Zoom in').click();
+    const zoom = await page.getByLabel('Canvas zoom').textContent();
+    await button('Profile').click();
+    await page.getByRole('heading', { name: 'Nomad' }).waitFor();
+    assert.equal(await profile.getAttribute('data-layout'), 'open');
+    await button('Profile index').click();
+    await button('Profile Card').click();
+    assert.equal(await profile.getAttribute('data-layout'), 'card');
+    await button('Works').click();
+    await page.getByRole('group', { name: 'Anatomy canvas' }).waitFor();
+    assert.equal(await page.getByLabel('Canvas zoom').textContent(), zoom);
+    await button('Grid').click();
+    await page.locator('.workbench-overview-gallery').waitFor();
+    await button('Profile').click();
+    await button('Works').click();
+    await page.locator('.workbench-overview-gallery').waitFor();
+    assert.equal(await button('Open Private experiment').count(), 0);
+    assert.deepEqual(errors, []);
+  } finally { await browser.close(); }
+});
+async function enterGallery(page, width) {
+  if (width >= 900) {
+    await page.locator('.composition-explorer-viewport').waitFor();
+    await page.getByRole('button', { name: 'Grid', exact: true }).click();
+  }
+  await page.locator('.workbench-overview-gallery').waitFor();
+}
 test('published wrap keeps every visible SVG preview painted through wheel and touch transitions', { timeout: 90000 }, async () => {
   const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
   try {
