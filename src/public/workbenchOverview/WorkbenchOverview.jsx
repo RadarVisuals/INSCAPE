@@ -18,7 +18,6 @@ import { GalleryStudioMotion, useGalleryStudioDestination, useGalleryStudioEndpo
 import { fitCanvasRegion } from './fitCanvasRegion.js';
 import { captureOverviewCanvas, overviewCanvasNode } from './overviewCanvasFrame.js';
 
-import GalleryWall from './GalleryWall.jsx';
 import WorkbenchOverviewGrid from './WorkbenchOverviewGrid.jsx';
 const CanvasPresentation = lazy(() => import('./CanvasPresentation.jsx'));
 const ThumbnailCropForm = lazy(() => import('./ThumbnailCropForm.jsx'));
@@ -90,7 +89,6 @@ export default function WorkbenchOverview({ toolbarHost, items, selected, model,
   const list = useRef(null), menuButton = useRef(null), returnFocus = useRef(null);
   const published = visitorHeader && !collectionManager;
   const viewportSize = view.viewportSize ?? 65;
-  const wall = published && view.layout === 'wall';
   const grid = view.layout === 'grid';
   const layoutFlight = useGalleryLayoutJourney({ root, selected, model, layout: view.layout, onViewChange });
   const lastLayout = useRef(view.layout);
@@ -154,11 +152,11 @@ export default function WorkbenchOverview({ toolbarHost, items, selected, model,
     if (!galleryAddress) setPresentation(null);
   });
   useLayoutEffect(() => {
-    if (!memory || grid || wall) return;
+    if (!memory || grid) return;
     const node = root.current;
     node.scrollTop = memory.scroll?.list || 0;
     return () => { memory.scroll = { ...memory.scroll, list: node.scrollTop }; };
-  }, [grid, wall, memory]);
+  }, [grid, memory]);
   const settings = editing === 'crop' ? <Suspense fallback={<p role="status">Opening crop controls…</p>}><ThumbnailCropForm key={selected.id} selected={selected} model={model} ratio={cropRatio}
     onCancel={closeForm} onSave={thumbnailCrop => { onSave({ name: selected.name, introduction: selected.introduction, thumbnailCrop }); closeForm(); }} /></Suspense>
     : editing ? <DetailsForm key={`${selected.id}:${editing}`} creating={editing === 'new'} selected={selected} onCancel={closeForm}
@@ -182,14 +180,14 @@ export default function WorkbenchOverview({ toolbarHost, items, selected, model,
     <div className="gallery-header-toolbar" role="group" aria-label="Gallery controls" inert={presentation ? '' : undefined}>
       {galleryControls}
       <div className="gallery-layout-switch" role="radiogroup" aria-label="Gallery layout">
-        {[['wall', GalleryHorizontalEnd, 'Wall view'], ['list', Rows3, 'List view'], ['grid', Grid2X2, 'Grid view']].map(([layout, Icon, label]) =>
+        {[['list', Rows3, 'List view'], ['grid', Grid2X2, 'Grid view']].map(([layout, Icon, label]) =>
           <label key={layout} title={label}>
             <input type="radio" name="published-gallery-layout" aria-label={label} checked={layoutFlight.requestedLayout === layout}
-              onChange={() => wall || layout === 'wall' ? onViewChange({ ...view, layout }) : layoutFlight.switchView({ ...view, layout })} />
+              onChange={() => layoutFlight.switchView({ ...view, layout })} />
             <Icon aria-hidden="true" />
           </label>)}
       </div>
-      {!wall && <><button type="button" aria-label="Wrap around" title="Horizontal wraparound" disabled={!grid || selection.active || items.length < 2}
+      <button type="button" aria-label="Wrap around" title="Horizontal wraparound" disabled={!grid || selection.active || items.length < 2}
         aria-pressed={grid && view.wrap && !selection.active && items.length > 1} onClick={() => onViewChange({ ...view, wrap: !view.wrap })}><WrapIcon /></button>
       <button type="button" aria-label="Quick view" title="Open tiles in quick view" disabled={!grid || selection.active}
         aria-pressed={grid && !selection.active && view.quickView} onClick={() => onViewChange({ ...view, quickView: !view.quickView })}><GalleryHorizontalEnd /></button>
@@ -200,7 +198,7 @@ export default function WorkbenchOverview({ toolbarHost, items, selected, model,
             if (grid) onCardSize(size);
             else onViewChange({ ...view, viewportSize: size });
           }} /></label>
-      </VisitorMenu></>}
+      </VisitorMenu>
     </div>, toolbarHost);
   return <div ref={root} data-published-gallery={published || undefined} style={published ? { '--gallery-width-fraction': 0.55 + viewportSize * 0.0045, '--gallery-height-fill': Math.max(0, (viewportSize - 65) / 35) } : undefined} className="workbench-overview system-workflow__token-scope" data-workflow-material="tactile" data-workflow-finish="flat"
      data-layout={view.layout} data-layout-journey={layoutFlight.journey?.direction} data-visitor-header={visitorHeader || undefined} data-selecting={selection.active || undefined}>
@@ -209,7 +207,7 @@ export default function WorkbenchOverview({ toolbarHost, items, selected, model,
     {visitorHeader && !published && <div className="gallery-layout-toolbar" inert={presentation ? '' : undefined}>{galleryControls}{navigation}
       {layoutSwitch}
     </div>}
-    {wall ? <GalleryWall items={previews} selected={selected} selection={selection} memory={memory} onSelect={preview} onEdit={onEdit ? edit : undefined} /> : grid ? <div className="workbench-overview-browse" inert={presentation ? '' : undefined}>
+    {grid ? <div className="workbench-overview-browse" inert={presentation ? '' : undefined}>
     {!visitorHeader && navigation}
     <section className="workbench-overview-main">
       <div className="workbench-overview-grid-host" inert={editing ? '' : undefined}>

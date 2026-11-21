@@ -184,6 +184,9 @@ test('Quick view returns to the clicked wrap copy and keeps the grid position', 
     const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
     await page.route('**/*', route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
     await page.goto(`${origin}/browser-tests/profile-overview-fixture.html?view=${address}&canvas=1&collection=1&large-gallery=1&landscape-gallery=1&reception=published`);
+    const switcher = page.getByRole('radiogroup', { name: 'Gallery layout' });
+    assert.ok(await switcher.getByRole('radio', { name: 'List view' }).isChecked());
+    assert.equal(await switcher.getByRole('radio').count(), 2);
     const layout = page.getByRole('radio', { name: 'Grid view' }), quick = page.getByRole('button', { name: 'Quick view' });
     await layout.check();
     assert.ok(await layout.isChecked());

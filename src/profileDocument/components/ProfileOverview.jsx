@@ -24,7 +24,7 @@ export default function ProfileOverview({ document: publication, works, writing,
   const snapshot = useMemo(() => publishedPresentationSnapshot(publication), [publication]);
   const address = publication.profile.address;
   const [gallery, setGallery] = useState(() => ({
-    layout: 'wall', wrap: true, quickView: false, selectedId: null, cardSize: 2, viewportSize: 65,
+    layout: 'list', wrap: true, quickView: false, selectedId: null, cardSize: 2, viewportSize: 65,
     ...(onReturnToWorkbench && readGalleryView(address)),
   }));
   const changeGallery = patch => {

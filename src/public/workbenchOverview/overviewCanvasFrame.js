@@ -20,7 +20,7 @@ export function overviewCanvasNode(host, id, preferredCycle) {
       distance = centre;
     }
   }
-  return best || cards.find(card => card.classList.contains('wall-piece')) || cards.find(card => card.closest('[data-gallery-cycle="0"]'));
+  return best || cards.find(card => card.closest('[data-gallery-cycle="0"]'));
 }
 
 export function captureOverviewCanvas(node, model, name, id) {

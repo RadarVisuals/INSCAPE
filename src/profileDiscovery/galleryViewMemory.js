@@ -4,7 +4,7 @@ export function readGalleryView(address) {
     const value = JSON.parse(sessionStorage.getItem('inscape.gallery.view.' + address));
     if (!value || typeof value !== 'object') return {};
     return {
-      ...(['wall', 'grid', 'list'].includes(value.layout) && { layout: value.layout }),
+      ...(['grid', 'list'].includes(value.layout) && { layout: value.layout }),
       ...(typeof value.quickView === 'boolean' && { quickView: value.quickView }),
       ...(typeof value.wrap === 'boolean' && { wrap: value.wrap }),
       ...([1, 2, 3].includes(value.cardSize) && { cardSize: value.cardSize }),
