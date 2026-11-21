@@ -1,5 +1,6 @@
 import { existsSync } from 'node:fs';
 import { chromium } from 'playwright-core';
+import { launchOwnedChromium } from '../browser-tests/owned-chromium.mjs';
 
 // One explicit override for every suite, including older direct launch calls.
 const configured = process.env.INSCAPE_BROWSER_EXECUTABLE || process.env.BROWSER_PATH;
@@ -16,5 +17,4 @@ export const browserExecutable = candidates.find(candidate => existsSync(candida
 if (!browserExecutable) throw new Error('Chromium not found. Set INSCAPE_BROWSER_EXECUTABLE to an installed Chrome, Edge or Chromium executable.');
 process.env.INSCAPE_BROWSER_EXECUTABLE = browserExecutable;
 process.env.BROWSER_PATH = browserExecutable;
-const launch = chromium.launch.bind(chromium);
-chromium.launch = options => launch({ ...options, executablePath: browserExecutable });
+chromium.launch = async options => (await launchOwnedChromium({ ...options, executablePath: browserExecutable })).browser;

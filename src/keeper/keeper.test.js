@@ -15,7 +15,7 @@ import { workbenchGroupModules } from '../systemWorkflow/domain/workbenchGroups.
 import { loadWorkbenchLayout, saveWorkbenchLayout } from '../public/ownerSystemWorkflow/workbenchLayoutStorage.js';
 import { createDisplayModuleSession } from '../systemWorkflow/displayModuleSession.js';
 import { resolveLibraryImageAsset } from '../library/resolveLibraryImageAsset.js';
-import { resolveImageLibrarySide } from '../imageModule/imageLibrarySide.js';
+import { resolveImageLibraryArtwork } from '../imageModule/imageLibraryArtwork.js';
 import { OWNER_SYSTEM_WORKFLOW_REVIEW_ASSETS as assets } from '../public/ownerSystemWorkflow/ownerSystemWorkflowDevelopmentFixture.js';
 const profile = `0x${'1'.repeat(40)}`;
 function fixture() {
@@ -177,7 +177,7 @@ test('Keeper screen positions never enter canvas capture or its saved layout', (
 
 test('Library resolver preserves selected attachment metadata for both Image and Keeper', async () => {
   const input = { ...assets[0], selectedMedia: { url: 'https://example.com/creature.svg', width: 600, height: 900 } };
-  const asset = await resolveLibraryImageAsset(input), side = await resolveImageLibrarySide(input);
+  const asset = await resolveLibraryImageAsset(input), side = await resolveImageLibraryArtwork(input);
   assert.deepEqual(side.asset, asset); assert.equal(asset.media.url, input.selectedMedia.url);
   assert.equal(asset.media.width, 600); assert.equal(asset.media.height, 900);
   assert.equal(asset.stableAssetId, assets[0].id);

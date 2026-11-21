@@ -1,7 +1,6 @@
+import { isRecord as record, hasExactKeys as keys } from '../recordValidation.js';
 export const KEEPER_DIALOGUE_FORMAT = 'inscape.keeper-dialogue';
 export const KEEPER_DIALOGUE_MAX_BYTES = 256 * 1024;
-const record = value => value && typeof value === 'object' && !Array.isArray(value);
-const keys = (value, names) => record(value) && Object.keys(value).length === names.length && names.every(name => Object.hasOwn(value, name));
 const id = value => typeof value === 'string' && /^[a-zA-Z0-9_-]{1,64}$/u.test(value) && !['__proto__', 'constructor', 'prototype'].includes(value);
 const text = (value, max) => typeof value === 'string' && value.trim().length > 0 && value.length <= max && !/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/u.test(value);
 

@@ -1,6 +1,7 @@
-import { openSharedTool } from './fixtures/shared-tools.mjs';
+import { openSharedTool, closeSharedTool, sharedToolTab } from './fixtures/shared-tools.mjs';
 import { navigateWorkbench, workbenchCommandDisabled } from './fixtures/workbench-navigation.mjs';
 import assert from 'node:assert/strict';
+import { setEditorSidebarOpen } from './fixtures/editor-menu.mjs';
 import test from 'node:test';
 import { mkdir } from 'node:fs/promises';
 import { chromium } from 'playwright-core';
@@ -28,7 +29,7 @@ for (const visitor of [false, true]) for (const width of [1440, 390]) {
         const draft = JSON.parse(localStorage.getItem(window.__motionKey)), original = draft.imageModules[0];
         draft.displays = []; draft.grids[0].placements = []; draft.workbench.display.open = false;
         draft.imageModules = [0, 1].map(index => ({ ...original, id: `image:click-${index}`, name: `Click ${index}`, width: 200, height: 180 }));
-        draft.workbench.imageModules = draft.imageModules.map((image, index) => ({ id: image.id, open: true, position: { left: 32, top: 64 + index * 250 } }));
+        draft.workbench.imageModules = draft.imageModules.map((image, index) => ({ id: image.id, open: true, position: { left: visitor ? 32 : 900, top: (visitor ? 64 : 780) + index * 250 } }));
         localStorage.setItem(window.__motionKey, JSON.stringify(draft));
         // Visitor reads its publication object, while owner remounts from draft storage.
         if (visitor) {
@@ -42,7 +43,8 @@ for (const visitor of [false, true]) for (const width of [1440, 390]) {
       const source = first.locator('.image-module__canvas');
       await source.waitFor(); await page.evaluate(() => document.fonts.ready); await settled(page);
       // The owner sidebar overlays the historical fixture position.
-      if (!visitor && width === 1440) { await page.locator('.editor-menu-brand[aria-expanded="true"]').click(); await settled(page); }
+      if (!visitor) await setEditorSidebarOpen(page, false);
+      if (!visitor && await sharedToolTab(page, 'Layers').count()) await closeSharedTool(page, 'Layers');
       const initial = await camera(page), geometry = await first.boundingBox();
       const saved = await page.evaluate(() => localStorage.getItem(window.__motionKey));
       if (width === 390) await source.tap(); else await source.click();
@@ -54,9 +56,11 @@ for (const visitor of [false, true]) for (const width of [1440, 390]) {
       if (!visitor) {
         assert.equal(await first.getAttribute('data-active'), 'true', 'click activates the Image and bounds');
         await openSharedTool(page, 'Image');
-    const actions = page.locator('.workbench-image-tools');
+        const actions = page.locator('.workbench-image-inspector');
         await actions.waitFor();
         assert.equal(await actions.getAttribute('data-workbench-inspection-target'), 'image:click-0');
+        // Keep the actual canvas exposed for the subsequent pointer gestures.
+        await closeSharedTool(page, 'Inspector');
       }
       await source.click(); await settled(page);
       assert.deepEqual(await camera(page), initial, 'another ordinary click on the active Image still does not zoom');
@@ -64,9 +68,9 @@ for (const visitor of [false, true]) for (const width of [1440, 390]) {
       await page.screenshot({ path: `${output}/image-selected-${visitor ? 'visitor' : 'owner'}-${width}.png` });
 
       // A gesture carrying the second-click count still belongs to drag/cancel.
-      await page.mouse.move(geometry.x + 50, geometry.y + 70);
+      await page.mouse.move(geometry.x + geometry.width / 2, geometry.y + geometry.height / 2);
       await page.mouse.down({ clickCount: 2 });
-      await page.mouse.move(geometry.x + 90, geometry.y + 100, { steps: 5 });
+      await page.mouse.move(geometry.x + geometry.width / 2 + 40, geometry.y + geometry.height / 2 + 30, { steps: 5 });
       assert.notDeepEqual(await first.boundingBox(), geometry, 'actual Image drag previews movement');
       await page.keyboard.press('Escape'); await page.mouse.up({ clickCount: 2 }); await settled(page);
       assert.deepEqual(await first.boundingBox(), geometry);

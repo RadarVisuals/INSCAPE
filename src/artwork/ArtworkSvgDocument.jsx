@@ -10,7 +10,7 @@ export default function ArtworkSvgDocument({ src, title = 'Interactive artwork',
   const readyCallback = useRef(onReady); readyCallback.current = onReady;
   const viewportCallback = useRef(onViewport); viewportCallback.current = onViewport;
   const visibility = useRef(visible); visibility.current = visible;
-  const [hostReady, setHostReady] = useState(false);
+  const [hostLoad, setHostLoad] = useState(0);
   const [document, setDocument] = useState(null);
   const [status, setStatus] = useState('loading');
   const [attempt, setAttempt] = useState(0);
@@ -85,23 +85,27 @@ export default function ArtworkSvgDocument({ src, title = 'Interactive artwork',
     return () => removeEventListener('message', loaded);
   }, []);
   useEffect(() => {
-    if (!hostReady || document?.src !== src) return undefined;
+    if (!hostLoad || document?.src !== src) return undefined;
     const request = loading.current;
     if (!request || request.failed) return undefined;
     request.sent = true;
     frame.current.contentWindow.postMessage({ type: 'inscape:artwork-source', svg: document.text, visible: visibility.current }, '*');
-  }, [hostReady, document, src]);
+  }, [hostLoad, document, src]);
   useEffect(() => {
-    if (hostReady) frame.current?.contentWindow?.postMessage({ type: 'inscape:html-artwork-visibility', visible }, '*');
-  }, [visible, hostReady]);
+    if (hostLoad) frame.current?.contentWindow?.postMessage({ type: 'inscape:html-artwork-visibility', visible }, '*');
+  }, [visible, hostLoad]);
   const statusContent = status !== 'ready' && <span className="artwork-svg-status" role="status" data-artwork-loading={status === 'loading' || undefined}>
     {status === 'loading' ? 'Loading artwork…' : <button type="button" style={{ pointerEvents: 'auto' }}
-      onClick={() => { setHostReady(false); setAttempt(value => value + 1); }}>Artwork unavailable — retry</button>}
+      onClick={() => { setHostLoad(0); setAttempt(value => value + 1); }}>Artwork unavailable — retry</button>}
   </span>;
   return <>
     <iframe key={attempt} ref={frame} className={`artwork-svg-document ${className}`} tabIndex={paintOnly ? -1 : undefined}
       style={paintOnly ? { pointerEvents: 'none' } : undefined}
-      src="/.netlify/functions/artwork-document" title={title} onLoad={() => setHostReady(true)}
+      src="/.netlify/functions/artwork-document" title={title} onLoad={() => {
+        // Moving a responsive cell can reload its iframe without remounting
+        // this component. Every new host document needs the retained source.
+        setHostLoad(value => value + 1);
+      }}
       sandbox="allow-scripts" referrerPolicy="no-referrer"
       allow="camera 'none'; microphone 'none'; geolocation 'none'; clipboard-read 'none'; clipboard-write 'none'" />
     {statusContent && (renderStatus ? renderStatus(statusContent, status) : statusContent)}

@@ -268,8 +268,8 @@ const PublishedDisplayModule = forwardRef(function PublishedDisplayModule({ docu
       inspectionAtmosphere={viewer.atmosphereActive}
       renderCues={host => <DisplayInspectionCues key={`${document.profile.address}:${activeGrid.id}`}
         host={host} items={activeGrid.placements} viewer={viewer} contentVersion={viewerEntries} onSelect={selectMetadata} disabled={!tools.state.metadata || playing || Boolean(gridSwipe?.moving || gridSwipe?.offset)} />}
-      renderInspection={viewer.placementId && viewer.entry ? (container, controlsContainer, scene) => <DisplayFocusViewer
-        scene={scene} container={container} controlsContainer={controlsContainer} viewer={viewer}
+      renderInspection={viewer.placementId && viewer.entry ? scene => <DisplayFocusViewer
+        scene={scene} viewer={viewer}
          /> : null}
 >
       {stage}

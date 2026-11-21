@@ -20,7 +20,7 @@ const withLink = () => {
   const reception = createReception(); record.shared.reception = placeReceptionLink(reception, reception.regions[0].id, link()); return record;
 };
 const publish = (record, selectedIds, previousDocument = null, includeShared = true) => buildCanvasPublication({
-  candidates: canvasPublicationCandidates({ record, assetRecords: [], profile: {} }), selectedIds, previousDocument, includeShared });
+  candidates: canvasPublicationCandidates({ record, assetRecords: [], profile: {} }), selectedIds: includeShared ? [...selectedIds, 'reception'] : selectedIds, previousDocument, includeShared });
 
 test('links validate exact bounded references and preserve unresolved local sources for repair', () => {
   const value = withLink().shared.reception;

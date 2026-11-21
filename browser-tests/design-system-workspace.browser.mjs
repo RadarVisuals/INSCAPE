@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { existsSync } from 'node:fs';
 import { mkdir } from 'node:fs/promises';
 import { chromium } from 'playwright-core';
-import { openTextToolSection } from './fixtures/text-tool-sections.mjs';
+import { openTextToolSection, chooseTextToolOption } from './fixtures/text-tool-sections.mjs';
 
 const origin = process.env.INSCAPE_TEXT_ROOT || 'http://127.0.0.1:5217';
 const executablePath = process.env.INSCAPE_BROWSER_EXECUTABLE || [
@@ -89,7 +89,7 @@ test('workspace tabs preserve selection scope and local values across editing an
     await studio.getByRole('tab', { name: 'FX', exact: true }).click();
     assert.equal(await studio.getByLabel('Studio grain', { exact: true }).count(), 0);
     assert.equal(await studio.getByLabel('Studio blur', { exact: true }).count(), 1);
-    assert.deepEqual(await page.evaluate(() => Object.keys(localStorage)), []);
+    assert.deepEqual(await page.evaluate(() => Object.keys(localStorage).filter(key => key !== 'inscape:interface-theme')), []);
     assert.deepEqual(errors, []);
   } finally { await browser.close(); }
 });
@@ -128,7 +128,7 @@ test('workspace locking, tab keyboard navigation and minimap keep independent st
     assert.equal(await studio.getByLabel('Preview zoom', { exact: true }).inputValue(), '100');
     assert.equal(await studio.getByRole('textbox', { name: 'Article text', exact: true }).textContent(), 'A different story');
     assert.deepEqual(errors, []);
-    assert.deepEqual(await page.evaluate(() => Object.keys(localStorage)), []);
+    assert.deepEqual(await page.evaluate(() => Object.keys(localStorage).filter(key => key !== 'inscape:interface-theme')), []);
   } finally { await browser.close(); }
 });
 test('workspace themes and tabs fit wide and narrow containers with legible toolbar labels', { timeout: 90000 }, async () => {
@@ -148,7 +148,7 @@ test('workspace themes and tabs fit wide and narrow containers with legible tool
         assert.ok(overflow <= 1);
         if (width > 520) {
           const geometry = await studio.getByRole('button', { name: 'Select tool' }).evaluate(n => {
-            const b=n.getBoundingClientRect(), l=n.querySelector('span').getBoundingClientRect();
+            const b=n.getBoundingClientRect(), l=n.querySelector('svg').getBoundingClientRect();
             return { inside:l.left>=b.left && l.right<=b.right && l.top>=b.top && l.bottom<=b.bottom, height:b.height };
           });
           assert.ok(geometry.inside, 'selected tool label stays inside its background');
@@ -227,7 +227,7 @@ test('Layers selection, grouping, visibility, ordering and confirmed removal sta
     assert.ok(await studio.getByRole('tab',{name:'Color',exact:true}).evaluate(n=>n===document.activeElement));
     await studio.getByRole('tab',{name:'Layers',exact:true}).click();
     assert.equal(await list.locator('.ds-layer-row').count(),2);
-    assert.deepEqual(errors,[]); assert.deepEqual(await page.evaluate(()=>Object.keys(localStorage)),[]);
+    assert.deepEqual(errors,[]); assert.deepEqual(await page.evaluate(()=>Object.keys(localStorage).filter(key => key !== 'inscape:interface-theme')),[]);
   } finally { await browser.close(); }
 });
 test('Layers spacing uses real validation and empty/read-only examples preserve safe controls', { timeout: 60000 }, async () => {
@@ -359,7 +359,7 @@ test('Navigator pans live while held and ends or cancels pointer gestures cleanl
         await cdp.detach();
       }
       assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth+1));
-      assert.deepEqual(errors,[]);assert.deepEqual(await page.evaluate(()=>Object.keys(localStorage)),[]);
+      assert.deepEqual(errors,[]);assert.deepEqual(await page.evaluate(()=>Object.keys(localStorage).filter(key => key !== 'inscape:interface-theme')),[]);
       await page.close();
     }
   } finally {await browser.close();}
@@ -372,12 +372,12 @@ test('Text preview reuses rich editing, selection history, focus writing and sea
     await studio.getByLabel('Workspace selection').selectOption('text');
     await studio.getByRole('button',{name:'Text tools',exact:true}).click();
     await studio.getByLabel('Text example',{exact:true}).selectOption('article');
-    const tools=studio.locator('.text-tools-window'), body=page.getByRole('textbox',{name:'Article text',exact:true});
+    const tools=studio.locator('.text-isolated-inspector'), body=page.getByRole('textbox',{name:'Article text',exact:true});
     await body.fill('Hello world. Hello light.');await body.press('Control+A');
     const original=await body.elementHandle();
     await tools.getByRole('button',{name:'Bold',exact:true}).click();
     assert.equal(await body.locator('strong').textContent(),'Hello world. Hello light.');
-    await tools.getByLabel('Selected text font',{exact:true}).selectOption('Inscape Article Literata');
+    await chooseTextToolOption(page, 'Selected text font', 'Literata');
     const size=tools.getByLabel('Selected text size',{exact:true});await size.fill('24');await size.press('Enter');
     assert.ok(await body.locator('span').evaluateAll(nodes=>nodes.some(n=>n.style.fontSize==='24px')));
     await studio.getByRole('tab',{name:'Color',exact:true}).click();
@@ -386,7 +386,9 @@ test('Text preview reuses rich editing, selection history, focus writing and sea
     await studio.getByLabel('Workspace selection').selectOption('text');
     await studio.getByRole('button',{name:'Text tools',exact:true}).click();
     assert.ok(await body.evaluate((n,old)=>n===old,original),'tab/selection changes retain the editor DOM');
+    await openTextToolSection(tools, 'More text tools');
     assert.ok(await tools.getByRole('button',{name:'Undo',exact:true}).isEnabled());
+    await openTextToolSection(tools, 'More text tools');
     await tools.getByRole('button',{name:'Undo',exact:true}).click();
     assert.ok(await tools.getByRole('button',{name:'Redo',exact:true}).isEnabled());
     await tools.getByRole('button',{name:'Redo',exact:true}).click();
@@ -417,6 +419,7 @@ test('Text preview reuses rich editing, selection history, focus writing and sea
     assert.ok(await pageBreak.isVisible(),'page break stays visible outside collapsed Writing tools');
     await pageBreak.click();
     assert.equal(await body.locator('[data-text-page-break]').count(),1);
+    await openTextToolSection(tools, 'More text tools');
     await tools.getByRole('button',{name:'Undo',exact:true}).click();
     assert.equal(await body.locator('[data-text-page-break]').count(),0);
     await tools.getByRole('button',{name:'Redo',exact:true}).click();
@@ -424,7 +427,7 @@ test('Text preview reuses rich editing, selection history, focus writing and sea
     await openTextToolSection(tools, 'Default text style');
     assert.equal(await body.evaluate(node=>getComputedStyle(node).color),'rgb(35, 44, 38)','selected colour leaves the document default untouched');
     assert.ok(await body.locator('span[style*="color"]').count(), 'shared Color edits the selected text marks');
-    assert.deepEqual(errors,[]);assert.deepEqual(await page.evaluate(()=>Object.keys(localStorage)),[]);
+    assert.deepEqual(errors,[]);assert.deepEqual(await page.evaluate(()=>Object.keys(localStorage).filter(key => key !== 'inscape:interface-theme')),[]);
   } finally {await browser.close();}
 });
 
@@ -433,7 +436,7 @@ test('Text examples retain appearance, artwork and validated backup controls wit
   try {
     const {page,studio,errors}=await mount(browser,390);
     await studio.getByLabel('Workspace selection').selectOption('text');await studio.getByRole('button',{name:'Text tools',exact:true}).click();
-    const scenario=studio.getByLabel('Text example',{exact:true}), tools=studio.locator('.text-tools-window');
+    const scenario=studio.getByLabel('Text example',{exact:true}), tools=studio.locator('.text-isolated-inspector');
     await scenario.selectOption('article');
     const open = name => openTextToolSection(tools, name);
     await open('Default text style');await tools.getByLabel('Default font',{exact:true}).selectOption('literata');
@@ -464,24 +467,27 @@ test('Text examples retain appearance, artwork and validated backup controls wit
     await tools.getByRole('button',{name:'Replace article with backup',exact:true}).click();
     assert.equal(await page.getByLabel('Article title',{exact:true}).inputValue(),'A quiet place');
     await scenario.selectOption('illustrated');
+    await tools.getByRole('button', { name: 'Close Inspector', exact: true }).click();
     await studio.locator('.text-artwork-editor img').click();
-    await tools.getByRole('tab', { name: 'Format text', exact: true }).click();
+    await studio.getByRole('button', { name: 'Text tools', exact: true }).click();
+    await tools.locator('.text-formatting-host').scrollIntoViewIfNeeded();
     await tools.getByLabel('Caption',{exact:true}).fill('A changed caption');
     await tools.getByLabel('Alternative text',{exact:true}).fill('Two arches and a moon');
     assert.equal(await studio.locator('.text-artwork-editor img').getAttribute('alt'),'Two arches and a moon');
     await tools.getByRole('button',{name:'Move artwork down',exact:true}).click();
     await tools.getByRole('button',{name:'Remove artwork',exact:true}).click();
     assert.equal(await studio.locator('.text-artwork-editor').count(),0);
+    await openTextToolSection(tools, 'More text tools');
     await tools.getByRole('button',{name:'Undo',exact:true}).click();
     assert.equal(await studio.locator('.text-artwork-editor').count(),1);
     await scenario.selectOption('empty');await open('Title');
     assert.ok(await tools.getByLabel('Title size',{exact:true}).isDisabled());
     await scenario.selectOption('readonly');
-    await tools.getByRole('tab', { name: 'Format text', exact: true }).click();
+    await tools.locator('.text-formatting-host').scrollIntoViewIfNeeded();
     assert.ok(await tools.getByRole('button',{name:'Bold',exact:true}).isDisabled());
     assert.equal(await page.getByRole('textbox',{name:'Article text',exact:true}).getAttribute('contenteditable'),'false');
     await open('Article backup');assert.ok(await tools.getByLabel('Open article backup',{exact:true}).isDisabled());
-    assert.deepEqual(errors,[]);assert.deepEqual(await page.evaluate(()=>Object.keys(localStorage)),[]);
+    assert.deepEqual(errors,[]);assert.deepEqual(await page.evaluate(()=>Object.keys(localStorage).filter(key => key !== 'inscape:interface-theme')),[]);
   } finally {await browser.close();}
 });
 
@@ -508,6 +514,7 @@ test('Text examples keep articles and undo independent across duplicates and sce
     assert.equal(new Set(ids).size,ids.length,'fresh Layers samples cannot collide with standalone article IDs');
     await selection.selectOption(duplicate);await studio.getByRole('button',{name:'Text tools',exact:true}).click();
     assert.equal(await body.textContent(),'Independent copy');
+    await openTextToolSection(studio.locator('.text-isolated-inspector'), 'More text tools');
     await studio.getByRole('button',{name:'Undo',exact:true}).click();
     assert.equal(await body.textContent(),'Original article');
     await studio.getByLabel('Text example',{exact:true}).selectOption('readonly');
@@ -516,7 +523,8 @@ test('Text examples keep articles and undo independent across duplicates and sce
     await studio.getByRole('button',{name:'Reset workspace',exact:true}).click();
     await selection.selectOption('text');await studio.getByRole('button',{name:'Text tools',exact:true}).click();
     assert.equal(await body.textContent(),'A quiet place');
+    await openTextToolSection(studio.locator('.text-isolated-inspector'), 'More text tools');
     assert.ok(await studio.getByRole('button',{name:'Undo',exact:true}).isDisabled());
-    assert.deepEqual(errors,[]);assert.deepEqual(await page.evaluate(()=>Object.keys(localStorage)),[]);
+    assert.deepEqual(errors,[]);assert.deepEqual(await page.evaluate(()=>Object.keys(localStorage).filter(key => key !== 'inscape:interface-theme')),[]);
   } finally {await browser.close();}
 });

@@ -12,8 +12,9 @@ const presentation = page => page.evaluate(() => workbenchPerf.record().workbenc
 const near = (actual, expected, label) => assert.ok(Math.abs(actual - expected) <= 2, label + ': ' + actual + ' ≈ ' + expected);
 async function zoom(page, target) {
   for (let i = 0; i < 24; i++) {
-    const current = parseFloat(await page.locator('.navigator-zoom output').textContent()) / 100;
-    if (Math.abs(current - target) < .006) return;
+    // The displayed percentage is rounded; distant artwork makes that error visible.
+    const current = Number(await page.locator('main.system-workflow').getAttribute('data-workbench-camera-scale'));
+    if (Math.abs(current - target) < 1e-8) return;
     await page.locator('main.system-workflow').dispatchEvent('wheel', {
       deltaY: Math.max(-100, Math.min(100, -Math.log(target / current) / .003)),
       ctrlKey: true, clientX: 0, clientY: 0, bubbles: true, cancelable: true,
@@ -22,6 +23,50 @@ async function zoom(page, target) {
   }
   throw new Error('Camera did not reach the requested zoom');
 }
+
+async function actualSizeAtOrigin(page) {
+  // The editor now starts by fitting the canvas. This geometry scenario needs
+  // the distant artwork offscreen at 100%, so establish that view explicitly.
+  await zoom(page, 1);
+  const host = page.locator('main.system-workflow');
+  const offset = await host.evaluate(node => ({
+    x: Number(node.dataset.workbenchCameraX), y: Number(node.dataset.workbenchCameraY),
+  }));
+  await host.dispatchEvent('wheel', { deltaX: offset.x, deltaY: offset.y, bubbles: true, cancelable: true });
+  await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+}
+
+test('switching a Mini app to HTML artwork preserves its visible frame and Undo restores its screen coordinates', async () => {
+  const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
+  try {
+    const page = await browser.newPage({ viewport: { width: 1440, height: 880 }, reducedMotion: 'reduce' });
+    await page.route('**/*', route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
+    await page.goto(origin + '/browser-tests/tool-chrome-fixture.html?theme=dark');
+    await page.getByRole('button', { name: 'Actions', exact: true }).click();
+    await page.getByRole('dialog', { name: 'Search commands' }).getByRole('button', { name: /^Mini app$/i }).click();
+    const form = page.locator('.mini-app-settings'), shell = page.locator('.mini-app-workbench [data-detached-window]');
+    const snapshot = () => page.evaluate(() => window.readToolChromeDraft().workbench.miniApps[0].window);
+    await form.getByLabel('App URL').fill('https://example.org/artwork');
+    await form.getByLabel('Transparent HTML artwork').press('Space');
+    const before = await shell.boundingBox();
+    await form.getByRole('button', { name: 'Save', exact: true }).press('Enter');
+    await page.locator('.html-artwork-frame').waitFor({ state: 'attached' });
+    const checkScreen = async () => {
+      const painted = await shell.boundingBox();
+      for (const key of ['x', 'y', 'width', 'height']) near(painted[key], before[key], key);
+    };
+    await checkScreen();
+    const canvas = await snapshot();
+    assert.ok(canvas.width > before.width, 'at the zoomed-out fixture camera, canvas units differ from screen pixels');
+    for (const [key, artwork] of [['Control+z', false], ['Control+y', true]]) {
+      await shell.locator('header').focus();
+      await page.keyboard.press(key);
+      await page.waitForFunction(art => (window.readToolChromeDraft().miniApps[0].surface === 'artwork') === art, artwork);
+      await checkScreen();
+      assert.deepEqual(await snapshot(), artwork ? canvas : { left: before.x, top: before.y, width: before.width, height: before.height });
+    }
+  } finally { await browser.close(); }
+});
 
 test('HTML artwork uses authored canvas geometry through zoom, pan, edits, narrow viewports, switching and reload', { timeout: 90000 }, async () => {
   const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
@@ -43,10 +88,11 @@ test('HTML artwork uses authored canvas geometry through zoom, pan, edits, narro
     await page.goto(origin + '/browser-tests/filled-workbench-performance-fixture.html?size=filled&count=2&animated=0');
     const selector = editorMenu(page, 'Canvas');
     await selector.waitFor();
-    const closeTools = page.getByRole('button', { name: 'Close Text tools', exact: true });
+    const closeTools = page.getByRole('button', { name: 'Close Inspector', exact: true });
     if (await closeTools.isVisible()) await closeTools.click();
     const artwork = page.locator('[data-workbench-view-id="miniapp:perf-0"]');
     await artwork.waitFor({ state: 'attached' });
+    await actualSizeAtOrigin(page);
     const initial = await presentation(page);
     const start = await artwork.boundingBox();
     near(start.x, 480, 'initial left'); near(start.y, 2450, 'initial top');
@@ -96,15 +142,17 @@ test('HTML artwork uses authored canvas geometry through zoom, pan, edits, narro
     await selectEditorDocument(page, 'workbench:perf-1');
     const saved = await presentation(page);
     near(saved.window.left, edited.window.left, 'switch saves movement in canvas units');
-    assert.equal(saved.window.top, edited.window.top);
-    assert.equal(saved.window.width, edited.window.width);
-    assert.equal(saved.window.height, edited.window.height);
+    for (const axis of ['top', 'width', 'height']) {
+      assert.ok(Math.abs(saved.window[axis] - edited.window[axis]) < 1e-9,
+        `switch preserves authored ${axis} through floating-point camera transforms`);
+    }
     edited = saved;
     assert.equal(await page.locator('.html-artwork-frame').count(), 0);
     await selectEditorDocument(page, 'workbench:main'); await artwork.waitFor({ state: 'attached' });
     assert.deepEqual(await presentation(page), edited);
     await page.reload(); await selector.waitFor(); await artwork.waitFor({ state: 'attached' });
     assert.deepEqual(await presentation(page), edited, 'reload keeps authored geometry');
+    await actualSizeAtOrigin(page);
     near((await artwork.boundingBox()).y, edited.window.top, 'reopened at full canvas coordinates');
     assert.equal(await artwork.locator('iframe').count(), 0);
     assert.deepEqual(errors, []);

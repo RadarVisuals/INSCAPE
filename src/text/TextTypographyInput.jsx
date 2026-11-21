@@ -1,10 +1,23 @@
 import { useEffect, useRef, useState } from 'react';
 import { X } from 'lucide-react';
+import { ARTICLE_FONT_SIZE, ARTICLE_TRACKING, textAppearance } from './domain/article.js';
+
+export function TitleTypographyInput({ article, onChange, disabled, tracking = false, compact = false }) {
+  const appearance = textAppearance(article), property = tracking ? 'titleLetterSpacing' : 'titleFontSize';
+  return <TextTypographyInput label={tracking ? 'Title tracking (em)' : 'Title size'} accessibleLabel={tracking ? 'Title tracking' : 'Title size'}
+    compact={compact} value={appearance[property]} placeholder={tracking ? 'Default' : '28'} limits={tracking ? ARTICLE_TRACKING : ARTICLE_FONT_SIZE}
+    disabled={disabled || !article.title} resetLabel={tracking ? 'Use default title tracking' : 'Use default title size'}
+    onChange={value => {
+      const next = { ...appearance };
+      if (value === null) delete next[property]; else next[property] = value;
+      onChange({ ...article, appearance: next });
+    }} />;
+}
 
 // Valid values apply immediately. Keep incomplete input local while typing;
 // Escape restores the formatting captured before this field was edited.
 export default function TextTypographyInput({ label, accessibleLabel = label, value, mixed = false, hasOverride = value != null,
-  limits, disabled, onChange, onReturn, onStart, resetLabel, placeholder = 'Default' }) {
+  limits, disabled, onChange, onReturn, onStart, resetLabel, placeholder = 'Default', compact = false }) {
   const [input, setInput] = useState(value == null ? '' : String(value));
   const editing = useRef(null);
   useEffect(() => { if (!editing.current) setInput(value == null ? '' : String(value)); }, [value, mixed]);
@@ -17,7 +30,7 @@ export default function TextTypographyInput({ label, accessibleLabel = label, va
     else setInput(value == null ? '' : String(value));
   };
   return <div className="text-selection-number">
-    <label>{label}<input type="number" aria-label={accessibleLabel} {...limits} disabled={disabled}
+    <label>{!compact && label}<input type="number" aria-label={accessibleLabel} title={accessibleLabel} {...limits} disabled={disabled}
       placeholder={mixed ? 'Mixed' : placeholder} value={input}
       onChange={event => {
         if (!editing.current) editing.current = { value, restore: onStart?.() };
@@ -40,7 +53,7 @@ export default function TextTypographyInput({ label, accessibleLabel = label, va
           setInput(restored == null ? '' : String(restored));
         }
       }} /></label>
-    <button className="workflow-tactile-control" type="button" aria-label={resetLabel} title={resetLabel} disabled={disabled || !hasOverride}
-      onMouseDown={event => event.preventDefault()} onClick={() => { editing.current = null; setInput(''); onChange(null); onReturn?.(); }}><X /></button>
+    {!compact && <button className="workflow-tactile-control" type="button" aria-label={resetLabel} title={resetLabel} disabled={disabled || !hasOverride}
+      onMouseDown={event => event.preventDefault()} onClick={() => { editing.current = null; setInput(''); onChange(null); onReturn?.(); }}><X /></button>}
   </div>;
 }

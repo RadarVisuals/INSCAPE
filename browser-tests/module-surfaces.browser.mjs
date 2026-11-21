@@ -1,3 +1,4 @@
+import { sharedToolPanel } from './fixtures/shared-tools.mjs';
 import { editorCommand } from './fixtures/editor-menu.mjs';
 import { openTextToolSection } from './fixtures/text-tool-sections.mjs';
 import assert from 'node:assert/strict';
@@ -55,7 +56,7 @@ test('module edges, appearance, keyboard controls and public rendering', async (
         reviewAssets: fixture.OWNER_SYSTEM_WORKFLOW_REVIEW_ASSETS, reviewCategories: [], reviewActivity: [], reviewProfile: { name: 'Module composition' } }));
     });
     const text = page.locator('.text-window'), board = page.getByRole('article', { name: 'Display Module', exact: true });
-    const tools = page.getByRole('complementary', { name: /Text tools/ });
+    const tools = sharedToolPanel(page);
     await openTextToolSection(tools, 'Background & edges');
     await tools.getByLabel('Module corners', { exact: true }).selectOption('custom');
     await tools.getByLabel('Top left corner radius', { exact: true }).fill('12');
@@ -142,10 +143,11 @@ test('module edges, appearance, keyboard controls and public rendering', async (
     await page.screenshot({ path: join(screenshots, 'preview-narrow.png') });
     await page.getByRole('button', { name: 'RETURN', exact: true }).click();
     await page.getByRole('button', { name: 'Text tools', exact: true }).focus(); await page.keyboard.press('Enter');
+    await openTextToolSection(tools, 'Background & edges');
     await tools.getByLabel('Bottom left corner radius', { exact: true }).scrollIntoViewIfNeeded();
     await page.screenshot({ path: join(screenshots, 'tools-narrow.png') });
     const tb = await tools.boundingBox(); assert.ok(tb.x >= 0 && tb.x + tb.width <= 390, 'tools fit narrow viewport');
-    await page.getByRole('button', { name: 'Close Text tools', exact: true }).focus(); await page.keyboard.press('Enter');
+    await page.getByRole('button', { name: 'Close Inspector', exact: true }).focus(); await page.keyboard.press('Enter');
     await editorCommand(page, 'Edit', 'Settings');
     await page.getByLabel('Space between modules', { exact: true }).scrollIntoViewIfNeeded();
     await page.getByLabel('Space between modules', { exact: true }).fill('0');

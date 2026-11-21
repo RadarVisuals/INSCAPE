@@ -1,8 +1,7 @@
+import { hasExactKeys as exact } from '../../recordValidation.js';
 // Declarative INSCAPE Identity settings, distinct from official profile metadata.
 // Shared by draft, publication and rendering; accepts no executable shader code.
 export const IDENTITY_CARD_LIMITS = Object.freeze({ fields: 16, label: 60, text: 2000, items: 16, item: 160 });
-const exact = (value, keys) => Boolean(value && typeof value === 'object' && !Array.isArray(value))
-  && Object.keys(value).length === keys.length && keys.every(key => Object.hasOwn(value, key));
 const text = (value, max, multiline = false) => typeof value === 'string' && value.length <= max
   && !(multiline ? /[\u0000-\u0009\u000b-\u001f\u007f]/u : /[\u0000-\u001f\u007f]/u).test(value);
 

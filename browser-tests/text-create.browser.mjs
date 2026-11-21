@@ -13,7 +13,7 @@ test('Add Text uses the context-menu invocation point through pan, zoom, undo an
     const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, deviceScaleFactor: 1.25 });
     const errors = []; page.on('pageerror', error => errors.push(error.message));
     await mountTextToolsFixture(page, origin);
-    await page.getByRole('button', { name: 'Close Text tools', exact: true }).click();
+    await page.getByRole('button', { name: 'Close Inspector', exact: true }).click();
     await setWorkbenchZoom(page, .5);
     await page.locator('main.system-workflow').focus(); await page.keyboard.down('Space');
     await page.mouse.move(1380, 800); await page.mouse.down();
@@ -43,7 +43,7 @@ test('Add Text uses the context-menu invocation point through pan, zoom, undo an
     // A menu repositioned to fit near the viewport edge keeps its original
     // invocation point, rather than using its own clamped menu coordinates.
     await text.getByLabel('Move Text window', { exact: true }).focus();
-    await page.locator('.text-tools-window').getByRole('button', { name: 'Close Text tools', exact: true }).click();
+    await page.locator('.workbench-tool-dock:has([data-text-inspector])').getByRole('button', { name: 'Close Inspector', exact: true }).click();
     const edge = { x: 1420, y: 800 };
     await page.mouse.click(edge.x, edge.y, { button: 'right' });
     await page.getByRole('menuitem', { name: 'ADD', exact: true }).hover();

@@ -18,8 +18,8 @@ export function publicDisplayModules(document) {
 export function publicCanvasItems(document) {
   const displays = publicDisplayModules(document);
   const images = (document.imageModules || []).map(record => ({
-    key: record.id, kind: 'image', title: record.name, description: record.sides[0]?.asset.description || '',
-    target: { moduleId: record.id }, asset: record.sides[0]?.asset, record,
+    key: record.id, kind: 'image', title: record.name, description: record.artwork?.asset.description || '',
+    target: { moduleId: record.id }, asset: record.artwork?.asset, record,
   }));
   const texts = (document.texts || []).map(record => ({
     key: record.id, kind: 'text', title: record.article.title || 'Untitled article',
@@ -60,10 +60,7 @@ export function resolvePublicCanvasTarget(document, target) {
 export function publicReadingPages(document, moduleId) {
   return publicCanvasItems(document).filter(item => item.kind !== 'display' && !item.record?.sceneLink
     && (!moduleId || item.target.moduleId === moduleId)).flatMap(item => {
-    if (item.kind === 'image') return item.record.sides.map((side, index) => ({ ...item,
-      key: item.key + '/' + side.id, side, description: side.asset.description || '',
-      title: item.record.sides.length > 1 ? item.title + ' · ' + (index + 1) : item.title,
-    }));
+    if (item.kind === 'image') return item.record.artwork ? [{ ...item, artwork: item.record.artwork }] : [];
     const article = item.record.article;
     return [{ ...item, key: item.key + '/0', article,
       title: article.title || item.title, description: articleExcerpt(article.content) }];

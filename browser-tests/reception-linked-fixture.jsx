@@ -14,6 +14,8 @@ import { publishedPresentationSnapshot } from '../src/presentation/presentationS
 import { createDefaultWorkbenchPresentation, createTextPresentation } from '../src/profileDocument/domain/workbenchPresentation.js';
 import { createWorkbenchIndex } from '../src/systemWorkflow/domain/workbenchIndex.js';
 import ReceptionOverview from '../src/reception/ReceptionOverview.jsx';
+import PublicWorkspaceHeader from '../src/profileDocument/components/PublicWorkspaceHeader.jsx';
+import { publishedCompositionEntries } from '../src/profileDocument/domain/publishedCanvases.js';
 import PublishedCanvasGallery from '../src/profileDocument/components/PublishedCanvasGallery.jsx';
 import WorkbenchOverview from '../src/public/workbenchOverview/WorkbenchOverview.jsx';
 import { workbenchOverviewModel } from '../src/public/workbenchOverview/workbenchOverviewModel.js';
@@ -32,9 +34,9 @@ draft.grids.forEach((grid, index) => { grid.placements = [{ id: `placement:${ind
 draft.texts = [{ id: 'text:story', article: article('Night', 'A quiet world, held in the dark.'), visibility: 'PUBLIC',
   sceneLink: { displayId: 'display:primary', gridId: 'grid:first', passages: [{ gridId: 'grid:second', article: article('Dawn', 'A new light changes the scene.') }] } }];
 const resolve = createProfileDocumentV9AssetResolver(assets);
-draft.imageModules = [{ id: 'image:study', name: 'Study', width: 400, height: 400, visibility: 'PUBLIC', sides: [0, 1].map(index => ({ id: `side:${index}`, asset: resolve(assets[index].id), crop: null, transform: { quarterTurns: 0, mirrorX: false, mirrorY: false } })) }];
+draft.imageModules = [0, 1].map(index => ({ id: `image:study-${index}`, name: `Study ${index + 1}`, width: 400, height: 400, visibility: 'PUBLIC', artwork: { id: `artwork:${index}`, asset: resolve(assets[index].id), crop: null, transform: { quarterTurns: 0, mirrorX: false, mirrorY: false } } }));
 draft.workbench = { ...createDefaultWorkbenchPresentation(), area: { left: 0, top: 0, width: 1200, height: 800 },
-  imageModules: [{ id: 'image:study', open: true, position: { left: 700, top: 320 } }],
+  imageModules: draft.imageModules.map(image => ({ id: image.id, open: true, position: { left: 700, top: 320 } })),
   texts: [{ ...createTextPresentation('text:story'), window: { left: 700, top: 30, width: 400, height: 280 } }] };
 draft.workbench.display.window = { left: 0, top: 0, width: 640, height: 400 };
 draft.workbenchIndex = { ...createWorkbenchIndex(), destinations: [{ id: 'workbench-view:detail', name: 'Artwork detail', view: { left: 700, top: 320, width: 400, height: 400 }, visibility: 'PUBLIC' }] };
@@ -47,7 +49,7 @@ const ref = moduleId => ({ profileAddress, canvasId: 'workbench:main', moduleId 
 reception = placeReceptionLink(reception, first, { id: 'link:display', kind: 'source', source: ref('display:primary'), destination: null });
 reception = placeReceptionLink(reception, 'region:right', { id: 'link:story', kind: 'source', source: ref('text:story'), destination: null });
 reception = placeReceptionLink(reception, 'region:lower-left', { id: 'link:image', kind: 'scene', controller: ref('display:primary'),
-  sources: { 'grid:first': { ...ref('image:study'), sideId: 'side:0' }, 'grid:second': { ...ref('image:study'), sideId: 'side:1' } },
+  sources: { 'grid:first': ref('image:study-0'), 'grid:second': ref('image:study-1') },
   destination: { profileAddress, canvasId: 'workbench:main', destinationId: 'workbench-view:detail' } });
 reception.texts = [{ id: 'text:welcome', article: article('Small worlds.', 'Swipe the Display to move between scenes. Choose Canvases to explore the collection.'), visibility: 'PUBLIC' }];
 reception.regions = reception.regions.map(region => ({ ...region, content: region.id === 'region:lower-right' ? 'text:welcome' : region.content,
@@ -65,7 +67,7 @@ const reviewProfile = { status: 'RESOLVED', normalizedAddress: profileAddress, n
 const model = { profile: { displayName: 'Open studio' }, officialProfile: { name: 'Open studio' }, links: [], card: { fields: [] } };
 const assetMap = new Map(assets.map(asset => [asset.id, asset]));
 const publish = () => buildCanvasPublication({ candidates: canvasPublicationCandidates({ record: JSON.parse(storage.getItem(systemWorkflowDraftKey(profileAddress))), assetRecords: assets, profile: reviewProfile }),
-  selectedIds: root.listWorkbenches().map(item => item.id), includeShared: true });
+  selectedIds: [...root.listWorkbenches().map(item => item.id), 'reception'], includeShared: true });
 globalThis.linkedFixture = { root, publish, writes: () => writes, fail: value => { fail = value; } };
 function App() {
   const [surface, setSurface] = useState(new URLSearchParams(location.search).has('edit') ? 'edit' : 'reception');
@@ -77,9 +79,13 @@ function App() {
     : { kind: 'local', profileAddress, revision: `fixture:${generation}`, entries: root.listWorkbenches().map(item => root.readWorkbench(item.id)) }, [generation]);
   const previews = useMemo(() => snapshot.entries.map(entry => ({ ...entry, model: workbenchOverviewModel(entry.draft, assetMap) })), [snapshot]);
   const selected = previews.find(item => item.id === selectedId) || previews[0];
-  if (surface === 'canvases') return publicView ? <PublishedCanvasGallery document={publish()} onAbout={() => setSurface('reception')} />
-    : <WorkbenchOverview items={previews} previews={previews} selected={selected} model={selected.model} profile={reviewProfile}
-      onSelect={select} view={view} onViewChange={setView} cardSize={cardSize} onCardSize={setCardSize} onOpenReception={() => setSurface('reception')} />;
+  if (surface === 'canvases') return <div className="visitor-publication">
+    <PublicWorkspaceHeader model={model} current="Gallery" onProfile={() => setSurface('reception')} />
+    {publicView ? <PublishedCanvasGallery snapshot={snapshot} entries={publishedCompositionEntries(publish(), 'gallery')} persona={model} selectedId={selectedId} onSelect={select}
+      view={view} onViewChange={setView} cardSize={cardSize} onCardSize={setCardSize} />
+      : <WorkbenchOverview visitorHeader items={previews} previews={previews} selected={selected} model={selected.model} profile={reviewProfile}
+        onSelect={select} view={view} onViewChange={setView} cardSize={cardSize} onCardSize={setCardSize} />}
+  </div>;
   return surface === 'edit' ? <OwnerSystemWorkflowRuntime profileAddress={profileAddress} rootStore={root} reviewStorage={storage}
     receptionEditorRequested onOpenReception={() => setSurface('reception')}
     reviewAssets={assets} reviewCategories={[]} reviewProfile={reviewProfile} />

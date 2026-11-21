@@ -11,7 +11,7 @@ export async function verifyMiniAppWindowBoundary(browser, origin) {
       refresh.injectIntoGlobalHook(window); window.$RefreshReg$ = () => {}; window.$RefreshSig$ = () => type => type; window.__vite_plugin_react_preamble_installed__ = true;
       const React = (await import('/@id/react')).default, { createRoot } = (await import('/@id/react-dom/client')).default;
       const MiniApps = (await import('/src/miniApps/MiniAppsWorkbench.jsx')).default;
-      const { WorkbenchView } = await import('/src/public/ownerSystemWorkflow/WorkbenchViewContext.js');
+      const { WorkbenchView, WorkbenchHostView } = await import('/src/public/ownerSystemWorkflow/WorkbenchViewContext.js');
       const { captureWorkbenchPresentation } = await import('/src/public/ownerSystemWorkflow/workbenchPresentationCapture.js');
       const { createDefaultWorkbenchPresentation } = await import('/src/profileDocument/domain/workbenchPresentation.js');
       await import('/src/index.css'); await import('/src/inscapeTokens.css');
@@ -20,9 +20,11 @@ export async function verifyMiniAppWindowBoundary(browser, origin) {
       window.windowReports = {};
       window.captureMiniWindow = () => captureWorkbenchPresentation({ layout: createDefaultWorkbenchPresentation(), hasPrimaryDisplay: false,
         miniApps: records, miniAppPresentations: window.windowReports }).value.miniApps[0];
-      createRoot(document.getElementById('root')).render(React.createElement(WorkbenchView.Provider, { value: { scale: 1, transforms: {}, entries: new Map(), navigationInset: 232 } },
+      const view = { scale: 1, transforms: {}, entries: new Map(), navigationInset: 232 };
+      createRoot(document.getElementById('root')).render(React.createElement(WorkbenchView.Provider, { value: view },
+        React.createElement(WorkbenchHostView.Provider, { value: view },
         React.createElement(MiniApps, { records, profileAddress: `0x${'1'.repeat(40)}`, presentations: [{ id: records[0].id, open: true, window: { left: 320, top: 100, width: 600, height: 500 } }],
-          onPresentationChange: (id, value) => { window.windowReports[id] = value; } })));
+          onPresentationChange: (id, value) => { window.windowReports[id] = value; } }))));
     });
     const frame = page.locator('.mini-app-workbench .system-workflow__instrument-window');
     await frame.waitFor();
@@ -37,7 +39,14 @@ export async function verifyMiniAppWindowBoundary(browser, origin) {
     console.log('Mini app narrow measurement', JSON.stringify({ initial, resized, narrow }));
     assert.deepEqual(narrow.captured, resized, 'viewport projection cannot replace authored presentation or capture');
     assert.ok(narrow.painted.x >= 0 && narrow.painted.x + narrow.painted.width <= 391);
-    assert.equal(await page.getByLabel('Resize Mini app window', { exact: true }).count(), 0, 'undersized viewport cannot commit a below-minimum resize');
+    assert.equal(await page.getByLabel('Resize Mini app window', { exact: true }).count(), 1, '390px still has room for the current minimum');
+    await page.setViewportSize({ width: 160, height: 844 });
+    await page.waitForFunction(() => document.querySelector('.mini-app-workbench .system-workflow__instrument-window').getBoundingClientRect().width <= 160);
+    await page.getByLabel('Resize Mini app window', { exact: true }).waitFor({ state: 'detached' });
+    assert.equal(await page.getByLabel('Resize Mini app window', { exact: true }).count(), 0, 'a genuinely below-minimum viewport cannot commit a resize');
+    assert.deepEqual(await page.evaluate(() => window.captureMiniWindow()), resized);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.waitForFunction(() => document.querySelector('.mini-app-workbench .system-workflow__instrument-window').getBoundingClientRect().width > 300);
     const grip = await page.getByLabel('Move Mini app window', { exact: true }).boundingBox();
     await page.mouse.move(grip.x + 10, grip.y + grip.height / 2);
     await page.mouse.down(); await page.mouse.move(grip.x + 10, grip.y + grip.height / 2 + 24);

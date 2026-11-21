@@ -1,3 +1,4 @@
+import { sharedToolPanel } from './fixtures/shared-tools.mjs';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { chromium } from 'playwright-core';
@@ -19,7 +20,7 @@ const closeBrowser = async browser => {
   await browser.close();
 };
 async function closeSelectionTools(page) {
-  for (const name of ['Close Transform', 'Close Color', 'Close Image', 'Close Shape', 'Close FX', 'Close Info']) {
+  for (const name of ['Close Inspector']) {
     const close = page.getByRole('button', { name, exact: true });
     if (await close.count()) await close.click();
   }
@@ -153,7 +154,7 @@ test('fractional adjoining windows leave no painted seam while zooming and scrol
       await mount(page, visitor, true);
       if (!visitor) {
         await page.getByRole('button', { name: 'Read', exact: true }).focus(); await page.keyboard.press('Enter');
-        await page.locator('.text-tools-window').waitFor({ state: 'detached' });
+        await sharedToolPanel(page).waitFor({ state: 'detached' });
         await closeSelectionTools(page);
         await page.locator('main').first().focus();
       }
@@ -222,11 +223,11 @@ for (const visitor of [false, true]) test(`${visitor ? 'Visitor' : 'Owner'} sepa
     const errors = []; page.on('pageerror', error => { errors.push(error.message); console.error(error.stack); });
     await mount(page, visitor);
     if (!visitor) {
-      const tools = page.locator('.text-tools-window'); const before = await tools.boundingBox();
+      const tools = sharedToolPanel(page); const before = await tools.boundingBox();
       await zoomToHalf(page);
       assert.deepEqual(await tools.boundingBox(), before, 'Text tools retain their size and position');
       await page.getByRole('slider', { name: 'Workbench zoom', exact: true }).fill('100');
-      await page.getByRole('button', { name: 'Reset Workbench view' }).click(); await settle(page);
+      await page.getByRole('button', { name: 'Fit canvas in view' }).click(); await settle(page);
       await page.getByRole('button', { name: 'Read', exact: true }).focus(); await page.keyboard.press('Enter');
       await closeSelectionTools(page);
     }
@@ -247,7 +248,7 @@ for (const visitor of [false, true]) test(`${visitor ? 'Visitor' : 'Owner'} sepa
       assert.equal(await page.evaluate(() => JSON.stringify({ ...localStorage })), storage, 'zoom writes no content or local layout');
       await page.screenshot({ path: `${output}/workbench-scale-${visitor ? 'visitor' : 'owner'}-${name}-50.png` });
       const host = page.locator('main').first(); await host.focus(); await page.keyboard.press('Control+0'); await settle(page);
-      await page.getByRole('button', { name: 'Reset Workbench view' }).click(); await settle(page);
+      await page.getByRole('button', { name: 'Fit canvas in view' }).click(); await settle(page);
       assert.deepEqual(await measure(page), before, 'reset restores exact composition');
     }
     // Give proportional resizing its own wide composition. The narrow viewport
@@ -260,7 +261,7 @@ for (const visitor of [false, true]) test(`${visitor ? 'Visitor' : 'Owner'} sepa
     await mount(page, visitor);
     if (!visitor) {
       await page.getByRole('button', { name: 'Read', exact: true }).focus(); await page.keyboard.press('Enter');
-      await page.locator('.text-tools-window').waitFor({ state: 'detached' });
+      await sharedToolPanel(page).waitFor({ state: 'detached' });
       await closeSelectionTools(page);
     }
     const board = page.locator('.system-workflow__presentation-board');
@@ -357,7 +358,7 @@ for (const visitor of [false, true]) test(`${visitor ? 'Visitor' : 'Owner'} sepa
     await selection.waitFor();
     await page.locator('main').first().focus(); await page.keyboard.press('Escape'); await selection.waitFor({ state: 'detached' });
     await page.locator('main').first().focus(); await page.keyboard.press('Control+0'); await page.keyboard.press('Escape'); await settle(page);
-    await page.getByRole('button', { name: 'Reset Workbench view' }).click(); await settle(page);
+    await page.getByRole('button', { name: 'Fit canvas in view' }).click(); await settle(page);
     // Selecting Text does not change the scope of camera zoom.
     await page.getByLabel('Move Text window', { exact: true }).focus(); await page.keyboard.press('Shift+Enter');
     await page.getByRole('group', { name: '1 selected Workbench modules', exact: true }).waitFor();
@@ -365,7 +366,7 @@ for (const visitor of [false, true]) test(`${visitor ? 'Visitor' : 'Owner'} sepa
     await page.locator('.text-window').dispatchEvent('wheel', { deltaY: 100, ctrlKey: true, bubbles: true, cancelable: true }); await settle(page);
     closeTo((await board.boundingBox()).width, untouched.width * Math.exp(-.3), 'wheel zoom includes unselected modules');
     await page.locator('main').first().focus(); await page.keyboard.press('Control+0'); await page.keyboard.press('Escape');
-    await page.getByRole('button', { name: 'Reset Workbench view' }).click(); await settle(page);
+    await page.getByRole('button', { name: 'Fit canvas in view' }).click(); await settle(page);
     await zoomToHalf(page);
     for (const name of ['Move Text window', 'Move Display Module: DISPLAY MODULE']) {
       await page.getByLabel(name, { exact: true }).focus(); await page.keyboard.press('Shift+Enter');

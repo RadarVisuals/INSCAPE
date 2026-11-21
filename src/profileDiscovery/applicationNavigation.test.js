@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { readApplicationRoute, applicationRouteUrl, resolveApplicationDestination, disconnectRoute } from './applicationNavigation.js';
+import { readApplicationRoute, applicationRouteUrl, resolveApplicationDestination, disconnectRoute, studioOrigin } from './applicationNavigation.js';
 const A = '0x1111111111111111111111111111111111111111';
 const B = '0x2222222222222222222222222222222222222222';
 const signedOut = { status: 'complete', profileAddress: null, ownershipVerified: false };
@@ -62,15 +62,21 @@ test('reception links retain the viewing route and focused destinations for a co
   assert.equal(home, '/?keep=1');
 });
 
-test('canvas entry opens the verified owner collection while visitor and explicit public routes remain public', () => {
+test('the public Gallery always reads published work and the private manager requires verified ownership', () => {
   const canvases = route('?view=' + A + '&canvas=1');
-  assert.deepEqual(resolveApplicationDestination(canvases, owner), { kind: 'workbench', address: A, canvas: true });
-  for (const authority of [signedOut, { ...owner, status: 'pending' }, { ...owner, ownershipVerified: false }, { ...owner, profileAddress: B }]) {
-    assert.deepEqual(resolveApplicationDestination(canvases, authority), { kind: 'public', address: A, canvas: true });
+  const published = { ...canvases, reception: 'published' };
+  assert.deepEqual(route('?view=' + A + '&tab=gallery'), published);
+  assert.deepEqual(route('?view=' + A + '&canvas=1&reception=published'), published);
+  for (const authority of [signedOut, owner, { ...owner, profileAddress: B }])
+    assert.deepEqual(resolveApplicationDestination(published, authority), { ...published, kind: 'public' });
+  for (const intent of [canvases, { ...canvases, reception: true }]) {
+    assert.deepEqual(resolveApplicationDestination(intent, owner), { kind: 'workbench', address: A, canvas: true });
+    for (const authority of [signedOut, { ...owner, status: 'pending' }, { ...owner, ownershipVerified: false }, { ...owner, profileAddress: B }]) {
+      assert.deepEqual(resolveApplicationDestination(intent, authority), { ...intent, kind: 'public' });
+    }
+    const deepLink = { ...intent, target: { moduleId: 'display:primary' } };
+    assert.deepEqual(resolveApplicationDestination(deepLink, owner), { ...deepLink, kind: 'public' });
   }
-  assert.deepEqual(resolveApplicationDestination({ ...canvases, reception: true }, owner), {
-    kind: 'public', address: A, canvas: true, reception: true,
-  });
   assert.deepEqual(readApplicationRoute({ search: '?discover' }, { inscapeReturnRoute: canvases }).returnTo, canvases);
   assert.deepEqual(resolveApplicationDestination(route('?view=' + A), owner), { kind: 'workbench', address: A });
 });
@@ -82,11 +88,27 @@ test('Edit Reception uses the normal authorized Editor route and survives reload
     kind: 'workbench', address: A, receptionEditorRequested: true,
   });
   const href = applicationRouteUrl({ href: 'https://example.test/?keep=1&canvas=1&reception=1#art' }, edit);
-  assert.equal(href, '/?keep=1&view=' + A + '&editor=reception#art');
+  assert.equal(href, '/?keep=1&view=' + A + '&editor=studio&work=reception#art');
   assert.deepEqual(readApplicationRoute(new URL(href, 'https://example.test')), edit);
   assert.deepEqual(readApplicationRoute({ search: '?discover' }, { inscapeReturnRoute: edit }).returnTo, edit);
   assert.equal(applicationRouteUrl({ href: 'https://example.test' + href }, { kind: 'home' }), '/?keep=1#art');
   assert.deepEqual(disconnectRoute(edit, resolveApplicationDestination(edit, owner)), { kind: 'discover', returnTo: null });
+});
+
+test('a selected published canvas opens only for its verified owner and round-trips through the URL', () => {
+  const edit = route('?view=' + A + '&editor=canvas&work=workbench%3Aanatomy');
+  const publicWorks = { kind: 'public', address: A, reception: 'published', canvas: true };
+  assert.deepEqual(resolveApplicationDestination(edit, owner), { kind: 'workbench', address: A, worksEditorId: 'workbench:anatomy' });
+  const href = applicationRouteUrl({ href: 'https://example.test/?canvas=1&reception=published' }, edit);
+  assert.deepEqual(readApplicationRoute(new URL(href, 'https://example.test')), edit);
+  for (const authority of [signedOut, { ...owner, status: 'pending' }, { ...owner, ownershipVerified: false }, { ...owner, profileAddress: B }]) {
+    assert.deepEqual(resolveApplicationDestination(edit, authority), publicWorks);
+  }
+  for (const value of ['', 'reception', 'workbench:']) {
+    const malformed = route('?view=' + A + '&editor=canvas&work=' + value);
+    assert.deepEqual(resolveApplicationDestination(malformed, owner), publicWorks);
+    assert.deepEqual(resolveApplicationDestination(malformed, signedOut), publicWorks);
+  }
 });
 
 test('Reception editor intent never grants authority or exposes the editor to another account', () => {
@@ -98,4 +120,29 @@ test('Reception editor intent never grants authority or exposes the editor to an
   assert.deepEqual(competing, edit);
   assert.deepEqual(resolveApplicationDestination(competing, owner), { kind: 'workbench', address: A, receptionEditorRequested: true });
   assert.deepEqual(route('?view=' + A + '&editor=unknown&reception=1'), { kind: 'profile', address: A, reception: true });
+});
+
+test('Writing keeps the viewed identity and opens public content even for the owner', () => {
+  const writing = { kind: 'profile', address: A, writing: true };
+  const href = applicationRouteUrl({ href: 'https://example.test/?editor=studio&work=reception' }, writing);
+  assert.deepEqual(route(new URL(href, 'https://example.test').search), writing);
+  for (const viewer of [owner, signedOut]) {
+    assert.deepEqual(resolveApplicationDestination(writing, viewer), { kind: 'public', address: A, writing: true });
+  }
+});
+
+test('Studio opens the last document under verified authority and retains the public return destination when switching works', () => {
+  const studio = route('?view=' + A + '&editor=studio');
+  assert.deepEqual(resolveApplicationDestination(studio, owner), { kind: 'workbench', address: A });
+  assert.equal(resolveApplicationDestination(studio, signedOut).kind, 'public');
+  const profile = route('?view=' + A + '&reception=published');
+  const gallery = route('?view=' + A + '&canvas=1');
+  assert.equal(studioOrigin(profile, A), 'Profile');
+  assert.equal(studioOrigin(gallery, A), 'Gallery');
+  assert.equal(studioOrigin(studio, A, 'Profile'), 'Profile');
+  assert.equal(studioOrigin({ kind: 'discover', returnTo: studio }, A, 'Profile'), 'Profile');
+  assert.equal(studioOrigin(profile, B), 'Gallery');
+  const create = route('?view=' + A + '&editor=studio&new=1');
+  assert.equal(resolveApplicationDestination(create, owner).newComposition, true);
+  assert.equal(resolveApplicationDestination(create, signedOut).newComposition, undefined);
 });

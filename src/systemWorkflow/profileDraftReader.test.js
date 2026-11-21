@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { getEventListeners } from 'node:events';
 import { createProfileDraftReader } from './profileDraftReader.js';
 import { createSystemWorkflowDraftStore, systemWorkflowDraftKey } from './systemWorkflowDraftStore.js';
 import { createReception } from '../profileDocument/domain/receptionPresentation.js';
@@ -72,4 +73,22 @@ test('collection reader exposes all validated canvases without activation, write
   assert.equal(reader.getSnapshot().collection.revision, collection.revision);
   f.records.delete(key); reader.refresh();
   assert.equal(reader.getSnapshot().collection, null);
+});
+
+test('one hundred Reception reader lifetimes leave no storage, focus or visibility listeners', () => {
+  const f = setup(); f.save('Saved');
+  const raw = f.records.get(key);
+  const targets = [[f.events, 'storage'], [f.events, 'focus'], [f.visibility, 'visibilitychange']];
+  for (let cycle = 0; cycle < 100; cycle++) {
+    const reader = createProfileDraftReader({ profileAddress: address, ...f });
+    const first = reader.subscribe(() => assert.fail('unchanged content should not notify'));
+    const second = reader.subscribe(() => assert.fail('unchanged content should not notify'));
+    for (const [target, name] of targets) assert.equal(getEventListeners(target, name).length, 1);
+    f.changed(); f.events.dispatchEvent(new Event('focus'));
+    first();
+    for (const [target, name] of targets) assert.equal(getEventListeners(target, name).length, 1);
+    second();
+    for (const [target, name] of targets) assert.equal(getEventListeners(target, name).length, 0);
+    assert.equal(f.records.get(key), raw, 'read-only navigation never rewrites the draft');
+  }
 });

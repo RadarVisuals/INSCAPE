@@ -4,11 +4,11 @@ import { mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { chromium } from 'playwright-core';
 import { mountPublicationBoundary } from './fixtures/publication-boundary.mjs';
-import { publishedCanvasEntries } from '../src/profileDocument/domain/publishedCanvases.js';
-import { DEVELOPMENT_PUBLICATION_SERVICE } from '../src/profileDocument/storage/publicationUploadEndpoint.js';
+import { publishedCanvasEntries, publishedCompositionEntries } from '../src/profileDocument/domain/publishedCanvases.js';
+import { DEVELOPMENT_PUBLICATION_SERVICE } from '../src/profileDocument/domain/publicationOrigin.js';
 
 const origin = process.env.INSCAPE_SYSTEM_WORKFLOW_ROOT || 'http://127.0.0.1:5173';
-for (const width of [1440, 390]) test(`local publication prepares eight canvases with overlapping asset inventories (${width}px)`, { timeout: 60000 }, async () => {
+for (const width of [1440, 390]) test(`local publication prepares 30 canvases with overlapping asset inventories (${width}px)`, { timeout: 60000 }, async () => {
   const browser = await chromium.launch({ headless: true });
   try {
     const page = await browser.newPage({ viewport: { width, height: 1000 } });
@@ -16,8 +16,11 @@ for (const width of [1440, 390]) test(`local publication prepares eight canvases
     const state = await mountPublicationBoundary(page, origin, null, 'carbon', true);
     const rack = page.getByRole('complementary', { name: 'Publish profile' });
     assert.ok(await page.evaluate(() => window.publicationBoundary.referenceRecordCount) > 0, 'the reference reader contains the same assets as the current canvas');
-    await rack.getByRole('button', { name: 'Select all changed canvases' }).click();
+    await rack.getByRole('button', { name: 'Select all changed compositions' }).click();
     assert.equal(await rack.getByText(/Duplicate production asset record/).count(), 0);
+    const work = rack.getByRole('group', { name: 'Canvas 2', exact: true });
+    await work.getByRole('checkbox', { name: 'Profile', exact: true }).check();
+    await work.getByRole('checkbox', { name: 'Gallery', exact: true }).uncheck();
     const prepare = rack.getByRole('button', { name: 'Prepare publication', exact: true });
     assert.equal(await prepare.isEnabled(), true);
     await prepare.click();
@@ -30,7 +33,9 @@ for (const width of [1440, 390]) test(`local publication prepares eight canvases
     assert.equal(state.uploads, 1);
     assert.equal(state.writes, 0, 'upload does not publish an on-chain pointer');
     const document = JSON.parse(state.bytes), entries = publishedCanvasEntries(document);
-    assert.equal(entries.length, 8);
+    assert.equal(entries.length, 30);
+    assert.deepEqual(publishedCompositionEntries(document, 'profile').map(item => item.name), ['Canvas 2']);
+    assert.equal(publishedCompositionEntries(document, 'gallery').length, 29);
     for (const entry of entries) for (const placement of entry.content.grids[0].placements) {
       assert.match(placement.asset.name, /^Current /, 'current canvas records win over overlapping reference records');
     }

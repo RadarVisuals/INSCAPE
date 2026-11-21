@@ -1,3 +1,4 @@
+import { libraryPreviewCandidates } from '../../library/data/libraryImagePreview.js';
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { defaultBrowserPreferences, libraryOpeningPreferences } from './browserPreferences.js';
 import {
@@ -43,7 +44,6 @@ export default function useBrowserWorkspace(data, sharedPreviewRecords = null, i
   const [dialog, setDialog] = useState(null);
   const floatingWindow = useLatticeFloatingWindow();
   const sidebarResizeGestureRef = useRef(null);
-  const expandedSidebarWidthRef = useRef(sidebarWidth >= 152 ? sidebarWidth : 174);
   const [previewSnapshot, setPreviewSnapshot] = useState(() => ({ records: sharedPreviewRecords || new Map() }));
 
   const categories = Array.isArray(data?.categories) ? data.categories : EMPTY_ITEMS;
@@ -51,8 +51,14 @@ export default function useBrowserWorkspace(data, sharedPreviewRecords = null, i
     ? categories.find((category) => category.id === view.id) || null : null;
   const sourceAssets = useMemo(() => (Array.isArray(data?.assets) ? data.assets : EMPTY_ITEMS).map(asset => {
     const image = selectedCategory?.imageSelections?.find(entry => entry.assetId === browserAssetId(asset));
-    return image ? assetForPlacement(asset, { selectedMedia: { url: image.url, width: null, height: null } }) : asset;
-  }), [data?.assets, selectedCategory?.imageSelections]);
+    const source = image ? assetForPlacement(asset, { selectedMedia: { url: image.url, width: null, height: null } }) : asset;
+    const record = source.assetRecord || source;
+    const group = image ? { ...(source.imageGroups || []).find(group => group.originalImageUrl === image.url), originalImageUrl: image.url }
+      : { ...source.imageGroups?.[0], thumbnailUrl: record.thumbnailUrl, imageUrl: record.imageUrl,
+        originalImageUrl: record.originalImageUrl || source.src, fileType: record.mediaFileType };
+    const candidates = group ? libraryPreviewCandidates(group, assetSize, globalThis.devicePixelRatio || 1) : source.previewCandidates;
+    return candidates?.length ? { ...source, previewSrc: candidates[0], previewCandidates: candidates } : source;
+  }), [data?.assets, selectedCategory?.imageSelections, assetSize]);
   useEffect(() => {
     const liveIds = new Set(sourceAssets.map(browserAssetId));
     if (!sharedPreviewRecords) for (const id of previewSnapshot.records.keys()) {
@@ -121,19 +127,14 @@ export default function useBrowserWorkspace(data, sharedPreviewRecords = null, i
   const beginSidebarResize = (event) => {
     if (event.button !== 0) return;
     event.preventDefault();
-    sidebarResizeGestureRef.current = { pointerId: event.pointerId, startWidth: sidebarWidth, startX: event.clientX };
+    sidebarResizeGestureRef.current = { pointerId: event.pointerId, startWidth: event.currentTarget.parentElement?.querySelector('.lattice-browser-sidebar')?.getBoundingClientRect().width || sidebarWidth, startX: event.clientX, maximum: Math.max(160, (event.currentTarget.parentElement?.getBoundingClientRect().width || 520) - 120) };
     event.currentTarget.setPointerCapture?.(event.pointerId);
   };
   const updateSidebarResize = (event) => {
     const gesture = sidebarResizeGestureRef.current;
     if (!gesture || gesture.pointerId !== event.pointerId) return;
-    const next = clampSidebarWidth(gesture.startWidth + event.clientX - gesture.startX);
-    if (next >= 152) expandedSidebarWidthRef.current = next;
+    const next = clampSidebarWidth(Math.min(gesture.maximum, gesture.startWidth + event.clientX - gesture.startX));
     setSidebarWidth(next);
-  };
-  const ensureSidebarWidth = (minimum = 152) => {
-    if (sidebarWidth >= minimum) return;
-    setSidebarWidth(Math.max(minimum, expandedSidebarWidthRef.current));
   };
   const finishSidebarResize = (event) => {
     const gesture = sidebarResizeGestureRef.current;
@@ -176,7 +177,7 @@ export default function useBrowserWorkspace(data, sharedPreviewRecords = null, i
     collapsedSections: preferences.collapsedSections, setCollapsedSections: change('collapsedSections'),
     collection, collections, setCollection, assetSize,
     assetSizeBounds: BROWSER_ASSET_SIZE, setAssetSize,
-    sidebarWidth, ensureSidebarWidth,
+    sidebarWidth, navigationMode: preferences.navigationMode || 'names', setNavigationMode: change('navigationMode'),
     sidebarResize: { begin: beginSidebarResize, finish: finishSidebarResize, update: updateSidebarResize },
     hideLabels, setHideLabels, query, setQuery,
     sort, setSort, view, selectView, selectCategoriesDestination, lastCategoryId,

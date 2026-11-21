@@ -1,94 +1,109 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { deferMobileWallet, prepareMobileWalletOnDemand } from './deferredMobileWallet.js';
-
+import { deferMobileWallet, prepareMobileWalletOnDemand, cancelMobileWalletPreparation } from './deferredMobileWallet.js';
+const tick = () => new Promise(resolve => setImmediate(resolve));
+function fixture() {
+  let emit, approve, reject;
+  const view = {
+    isConnected: true, events: [], removed: 0,
+    walletConnectConnector: { rdns: 'walletConnect' },
+    dispatchEvent(event) { this.events.push(event.detail.error.message); },
+    async prewarmWalletConnectUri() {
+      this.prewarmUriPromise = new Promise(resolve => { emit = resolve; });
+      this.prewarmConnectPromise = new Promise((resolve, fail) => { approve = resolve; reject = fail; });
+      this.prewarmResult = { handler: () => {}, provider: { off: () => { this.removed++; } } };
+    },
+  };
+  return { view, emit() { view.prewarmedDeepLink = 'io.universaleverything.universalprofiles://wallet-connect/test'; emit(view.prewarmedDeepLink); },
+    approve: () => approve(), reject: () => reject(new Error('Pairing rejected')) };
+}
 test('mobile setup stays dormant until provider acquisition and initializes once', async () => {
   let loads = 0, setups = 0;
   const provider = {};
-  const connector = deferMobileWallet(() => () => ({
-    id: 'walletConnect',
-    async getProvider() { loads++; return provider; },
-    async setup() { setups++; },
+  const connector = deferMobileWallet(() => () => ({ id: 'walletConnect',
+    async getProvider() { loads++; return provider; }, async setup() { setups++; },
   }))({})({});
   connector.setup();
   assert.equal(loads, 0);
   assert.deepEqual(await Promise.all([connector.getProvider(), connector.getProvider()]), [provider, provider]);
   assert.equal(setups, 1);
 });
-
-test('mobile tap reserves navigation before preparation and leaves approval to the SDK', async () => {
+test('first tap prepares without a tab; a fresh tap passes the same ready pairing synchronously', async () => {
   const previous = globalThis.window;
+  globalThis.window = { open() { assert.fail('Preparation must never open about:blank'); } };
   try {
-    const calls = [], tab = { close() { calls.push('close'); } };
-    globalThis.window = { open() { calls.push('open'); return tab; } };
-    const view = { isConnected: true, walletConnectConnector: { rdns: 'walletConnect' },
-      async prewarmWalletConnectUri() { calls.push('prepare'); },
-      dispatchEvent() { assert.fail('SDK must own connection events'); } };
-    assert.equal(await prepareMobileWalletOnDemand(view), tab);
-    assert.deepEqual(calls, ['open', 'prepare']);
+    const probe = fixture(), { view } = probe;
+    assert.equal(prepareMobileWalletOnDemand(view), false);
     assert.equal(view.isConnecting, true);
-    assert.equal(view.connectingRdns, 'walletConnect');
-    assert.equal(await prepareMobileWalletOnDemand(view), null, 'Repeated taps stay dormant');
-    assert.deepEqual(calls, ['open', 'prepare']);
-  } finally { globalThis.window = previous; }
-});
-
-test('blocked mobile popup does not acquire a provider', async () => {
-  const previous = globalThis.window;
-  try {
-    globalThis.window = { open: () => null };
-    assert.equal(await prepareMobileWalletOnDemand({ prewarmWalletConnectUri() { assert.fail('Must remain unloaded'); } }), null);
-  } finally { globalThis.window = previous; }
-});
-
-test('pending or prepared pairings are not replaced by another preparation', async () => {
-  const previous = globalThis.window;
-  try {
-    const tab = {};
-    globalThis.window = { open: () => tab };
-    for (const pending of [{ _pendingWalletConnect: Promise.resolve() }, { prewarmConnectPromise: Promise.resolve() }]) {
-      assert.equal(await prepareMobileWalletOnDemand({ isConnected: true, ...pending,
-        prewarmWalletConnectUri() { assert.fail('Would replace the pending pairing'); } }), tab);
-    }
-  } finally { globalThis.window = previous; }
-});
-
-test('failed provider download closes the reserved tab and permits retry', async () => {
-  const previous = globalThis.window;
-  try {
-    let closed = 0;
-    const events = [], tab = { close() { closed++; } };
-    globalThis.window = { open: () => tab };
-    const view = { isConnected: true, async prewarmWalletConnectUri() { throw new Error('download failed'); },
-      dispatchEvent(event) { events.push(event.type); } };
-    assert.equal(await prepareMobileWalletOnDemand(view), null);
-    assert.equal(closed, 1);
+    assert.equal(prepareMobileWalletOnDemand(view), false);
+    probe.emit();
+    await tick();
     assert.equal(view.isConnecting, false);
-    assert.deepEqual(events, ['on-error']);
-    view.prewarmWalletConnectUri = async () => {};
-    assert.equal(await prepareMobileWalletOnDemand(view), tab);
+    assert.equal(prepareMobileWalletOnDemand(view), true);
+    assert.deepEqual(view.events, []);
+    assert.equal(view.removed, 0);
+    probe.approve();
   } finally { globalThis.window = previous; }
 });
-
-test('closing during preparation cleans a late listener and suppresses events', async () => {
-  const previous = globalThis.window;
-  try {
-    let finish, closed = 0, removed = 0;
-    const handler = () => {};
-    globalThis.window = { open: () => ({ close() { closed++; } }) };
-    const view = { isConnected: true, async prewarmWalletConnectUri() {
-      await new Promise(resolve => { finish = resolve; });
-      view.prewarmResult = { handler, provider: { off(event, listener) {
-        assert.equal(event, 'display_uri'); assert.equal(listener, handler); removed++;
-      } } };
-      view.prewarmConnectPromise = Promise.reject(new Error('removed'));
-    }, dispatchEvent() { assert.fail('Removed view cannot dispatch'); } };
-    const preparing = prepareMobileWalletOnDemand(view);
-    view.isConnected = false;
-    finish();
-    assert.equal(await preparing, null);
-    assert.equal(closed, 1);
-    assert.equal(removed, 1);
-    assert.equal(view.prewarmConnectPromise, null);
-  } finally { globalThis.window = previous; }
+test('rejection before URI reports failure, cleans the listener and permits retry', async () => {
+  const probe = fixture(), { view } = probe;
+  prepareMobileWalletOnDemand(view);
+  probe.reject();
+  await tick();
+  assert.deepEqual(view.events, ['Pairing rejected']);
+  assert.equal(view.isConnecting, false);
+  assert.equal(view.removed, 1);
+  assert.equal(view.prewarmConnectPromise, null);
+  assert.equal(prepareMobileWalletOnDemand(view), false);
+  probe.emit();
+  await tick();
+  assert.equal(prepareMobileWalletOnDemand(view), true);
+  probe.approve();
+});
+test('failed provider download releases busy state', async () => {
+  const { view } = fixture();
+  view.prewarmWalletConnectUri = async () => { throw new Error('download failed'); };
+  assert.equal(prepareMobileWalletOnDemand(view), false);
+  await tick();
+  assert.equal(view.isConnecting, false);
+  assert.deepEqual(view.events, ['download failed']);
+});
+test('URI timeout cleans up and permits retry', async context => {
+  context.mock.timers.enable({ apis: ['setTimeout'] });
+  const probe = fixture(), { view } = probe;
+  prepareMobileWalletOnDemand(view);
+  await tick();
+  context.mock.timers.tick(20000);
+  await tick();
+  assert.match(view.events[0], /could not be prepared/);
+  assert.equal(view.isConnecting, false);
+  assert.equal(view.removed, 1);
+  prepareMobileWalletOnDemand(view);
+  probe.emit();
+  await tick();
+  assert.equal(prepareMobileWalletOnDemand(view), true);
+  probe.approve();
+});
+test('closing during download cleans the late listener and suppresses errors', async () => {
+  const probe = fixture(), { view } = probe;
+  let finish;
+  const prepare = view.prewarmWalletConnectUri;
+  view.prewarmWalletConnectUri = async () => {
+    await new Promise(resolve => { finish = resolve; });
+    await prepare.call(view);
+  };
+  prepareMobileWalletOnDemand(view);
+  view.isConnected = false;
+  cancelMobileWalletPreparation(view);
+  await tick();
+  finish();
+  await tick();
+  assert.equal(view.removed, 1);
+  assert.equal(view.prewarmConnectPromise, null);
+  assert.deepEqual(view.events, []);
+  probe.reject();
+  await tick();
+});
+test('pending SDK approval passes through without another preparation', () => {
+  assert.equal(prepareMobileWalletOnDemand({ _pendingWalletConnect: Promise.resolve() }), true);
 });

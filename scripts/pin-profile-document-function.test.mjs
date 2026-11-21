@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { createEmptySystemWorkflowDraft } from '../src/systemWorkflow/domain/systemWorkflowDraft.js';
 import { buildProfileDocumentV9 } from '../src/profileDocument/domain/profileDocumentV9Builder.js';
+import { buildGalleryRemoval } from '../src/profileDocument/domain/canvasPublication.js';
 import { canonicalSerializeProfileDocumentV9 } from '../src/profileDocument/domain/profileDocumentV9Serialization.js';
 import { createPinProfileDocumentHandler } from '../netlify/functions/pin-profile-document.mjs';
 import { memoryQuotaStore, uploadTestPolicy, uploadTestChallenge, uploadTestVerifier, UPLOAD_TEST_NOW, UPLOAD_TEST_SIGNER } from './fixtures/publicationUpload.mjs';
@@ -27,9 +28,12 @@ function requestFor(body, overrides = {}) {
   });
 }
 
-test('Netlify publication upload accepts only canonical profile documents and returns Pinata CID', async () => {
-  const body = canonicalSerializeProfileDocumentV9(publication());
-  const challenge = uploadTestChallenge(publication());
+for (const [description, document] of [
+  ['an authored profile', publication()],
+  ['the verified profile after its last Gallery work was removed', buildGalleryRemoval(publication(), 'workbench:main', 3)],
+]) test('Netlify accepts the canonical document for ' + description, async () => {
+  const body = canonicalSerializeProfileDocumentV9(document);
+  const challenge = uploadTestChallenge(document);
   const signature = await UPLOAD_TEST_SIGNER.signMessage({ message: challenge.message });
   let pinataRequest;
   const handler = createPinProfileDocumentHandler({ now: () => UPLOAD_TEST_NOW,

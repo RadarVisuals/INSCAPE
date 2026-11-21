@@ -1,7 +1,8 @@
 # Editor finish at the existing Inscape scale
 
-Founder-reviewed direction, 5 November 2026. This is a pre-implementation
-checkpoint, not a claim that the application has adopted these designs.
+Founder-reviewed direction, 5 November 2026. These specimens remain design
+references. The first real Bento-panel styling slice is recorded separately in
+[the implementation note](../../../audits/2026-11-05/bento-ui.md).
 
 The founder liked the second study's graphite panels, inset rounded fields,
 grouped controls and restrained selection accent. Both Dark and Light are
@@ -31,9 +32,11 @@ current control and menu styles. Actual panels remain resizable and their saved
 arrangements must not be replaced by fixed mockup coordinates. Browser zoom and
 display scaling change screenshot pixel sizes.
 
-The first cell-settings block reduces from 428 to 232 px including its header.
-The complete inspector example reduces from 868 to 512 px. Repeated alignment
-controls are consolidated in the content-alignment example.
+The first cell-settings block is 268 px including its header and the restored
+object-alignment row, versus 428 px in the earlier study. The complete compact
+inspector is 548 px rather than 868 px. The founder corrected the omission of
+the six object-alignment icons: keep that row separate from the nine-point
+content-position control. Neither control is implicitly an implemented feature.
 
 The specimens are static designs. Example canvas content and saved-state labels
 are not the user's current document or operational evidence. Proposed cell

@@ -34,7 +34,7 @@ for (const width of [1440, 390]) test(`Image resize controls expose transparent,
       const { createSystemWorkflowDraftStore, systemWorkflowDraftKey } = await import('/src/systemWorkflow/systemWorkflowDraftStore.js');
       const { createDefaultWorkbenchPresentation } = await import('/src/profileDocument/domain/workbenchPresentation.js');
       const { addImageModule } = await import('/src/imageModule/imageModuleSession.js');
-      const { resolveImageLibrarySide } = await import('/src/imageModule/imageLibrarySide.js');
+      const { resolveImageLibraryArtwork } = await import('/src/imageModule/imageLibraryArtwork.js');
       const { saveWorkbenchPreferences } = await import('/src/public/ownerSystemWorkflow/workbenchPreferences.js');
       const profileAddress = fixture.OWNER_SYSTEM_WORKFLOW_REVIEW_PROFILE, key = systemWorkflowDraftKey(profileAddress);
       window.writes = 0;
@@ -47,8 +47,8 @@ for (const width of [1440, 390]) test(`Image resize controls expose transparent,
       const assets = fixture.OWNER_SYSTEM_WORKFLOW_REVIEW_ASSETS;
       const square = { ...assets[0], selectedMedia: { url: assets[0].originalImageUrl.replace('actors/abyssal_eye/full.webp', 'PFP/PFP.webp'), width: 2000, height: 2000 } };
       const workbench = createDefaultWorkbenchPresentation(); workbench.display.open = false;
-      addImageModule(store, profileAddress, { side: await resolveImageLibrarySide(square), size: { width: 720, height: 240 }, position: { left: 8, top: 160 }, workbench });
-      addImageModule(store, profileAddress, { side: await resolveImageLibrarySide(assets[1]), size: { width: 320, height: 300 }, position: { left: innerWidth > 700 ? 900 : 32, top: innerWidth > 700 ? 160 : 470 } });
+      addImageModule(store, profileAddress, { artwork: await resolveImageLibraryArtwork(square), size: { width: 720, height: 240 }, position: { left: 8, top: 160 }, workbench });
+      addImageModule(store, profileAddress, { artwork: await resolveImageLibraryArtwork(assets[1]), size: { width: 320, height: 300 }, position: { left: innerWidth > 700 ? 900 : 32, top: innerWidth > 700 ? 160 : 470 } });
       window.readDraft = () => JSON.parse(storage.getItem(key));
       await import('/src/index.css'); await import('/src/inscapeTokens.css'); await import('/src/public/ownerSystemWorkflow/ownerSystemWorkflow.css'); await import('/src/lattice/rendering/latticeMenuSurface.css');
       createRoot(document.getElementById('root')).render(React.createElement(Runtime, { profileAddress, reviewStorage: storage, reviewAssets: assets,
@@ -78,7 +78,7 @@ for (const width of [1440, 390]) test(`Image resize controls expose transparent,
     await transform.getByRole('spinbutton', { name: 'Transform Width', exact: true }).focus();
     assert.equal(await opacity(bounds), '1', 'active Image stays outlined while its tools have focus');
     await page.screenshot({ path: `.browser-test-runtime/image-resize-${width}-wide.png` });
-    await transform.getByRole('button', { name: 'Close Transform', exact: true }).click();
+    await transform.getByRole('button', { name: 'Close Inspector', exact: true }).click();
     const transparentCanvas = transparent.locator('.image-module__canvas');
     // Companion tools may cover this fixture's centre on a narrow Workbench.
     // Hover a real exposed part of the canvas; never bypass its hit testing.
@@ -123,7 +123,7 @@ for (const width of [1440, 390]) test(`Image resize controls expose transparent,
     // A one-cell-high canvas leaves distinct top and bottom targets, outside the art.
     await grip.focus();
     await setTransform(page, 'Height', 32);
-    await transform.getByRole('button', { name: 'Close Transform', exact: true }).click(); await settle(page);
+    await transform.getByRole('button', { name: 'Close Inspector', exact: true }).click(); await settle(page);
     await page.screenshot({ path: `.browser-test-runtime/image-resize-${width}-thin.png` });
     const thin = await page.evaluate(() => window.readDraft()), writes = await page.evaluate(() => window.writes);
     const top = controls.getByRole('separator', { name: 'Resize Image top', exact: true });

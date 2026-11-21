@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Settings2, X } from 'lucide-react';
+import { ChevronRight, Settings2, X } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import { WorkbenchWindow } from '../public/ownerSystemWorkflow/DisplayInstrumentWindow.jsx';
 import WorkbenchUtilityPanel from '../public/ownerSystemWorkflow/WorkbenchUtilityPanel.jsx';
@@ -18,6 +18,7 @@ import KeeperDockContent from './KeeperDockContent.jsx';
 import { KeeperConversation } from './KeeperConversation.jsx';
 import { keeperSwim } from './keeperSwim.js';
 import '../public/ownerSystemWorkflow/displayInstruments.css';
+import '../public/ownerSystemWorkflow/workbenchSharedTools.css';
 import './keeper.css';
 
 function KeeperDock({ record, index, initialPresentation, store, profileAddress, hostRef, registerTarget,
@@ -30,11 +31,12 @@ function KeeperDock({ record, index, initialPresentation, store, profileAddress,
   const [imageState, setImageState] = useState({ src: null, status: 'loading' });
   const [talking, setTalking] = useState(false);
   const [settings, setSettings] = useState(false);
+  const { setUtilitySettings } = view;
   useEffect(() => {
-    if (!settings || !view.setUtilitySettings) return;
-    view.setUtilitySettings(current => new Set(current).add(record.id));
-    return () => view.setUtilitySettings(current => { const next = new Set(current); next.delete(record.id); return next; });
-  }, [settings, record.id, view.setUtilitySettings]);
+    if (!settings || !setUtilitySettings) return;
+    setUtilitySettings(current => new Set(current).add(record.id));
+    return () => setUtilitySettings(current => { const next = new Set(current); next.delete(record.id); return next; });
+  }, [settings, record.id, setUtilitySettings]);
   const settingsButton = useRef(null);
   const closeSettings = () => { setSettings(false); settingsButton.current?.focus({ preventScroll: true }); };
   const head = useRef(null), conversationPosition = useRef(null);
@@ -52,7 +54,11 @@ function KeeperDock({ record, index, initialPresentation, store, profileAddress,
   const { phase, toggle, settle, captureReaction, cancelReaction, nudge } = useKeeperMotion({ dock, actor, rigActor, hostRef, flightAreaRef, motionSpace, enabled: Boolean(src) && status === 'ready' && !suspended,
     reducedMotion, faces: record.faces, size, movement, swim, paused: talking, onPosition: conversationPosition, getSelection });
   useEffect(() => { setTalking(false); }, [src, record.asset?.stableAssetId, movement, suspended, phase]);
-  useEffect(() => { live.current = true; return () => { live.current = false; request.current++; }; }, []);
+  useEffect(() => {
+    live.current = true;
+    const invalidateRequest = () => { request.current++; };
+    return () => { live.current = false; invalidateRequest(); };
+  }, []);
   useEffect(() => { request.current++; setLoading(false); }, [record, suspended]);
   useEffect(() => { settle(); }, [src, record.asset?.stableAssetId, movement, suspended, settle]);
   // The screen-window host owns live geometry. Keep its last position across
@@ -87,11 +93,12 @@ function KeeperDock({ record, index, initialPresentation, store, profileAddress,
       return false;
     } finally { if (live.current && ticket === request.current) setLoading(false); }
   }, [editable, change]);
+  const hasAsset = Boolean(record.asset);
   useEffect(() => {
     if (!editable || !registerTarget) return;
-    registerTarget(record.id, { get node() { return dock.current; }, label: record.asset ? 'Replace Keeper artwork' : 'Give Keeper dock an inhabitant', placeAsset: acceptImage });
+    registerTarget(record.id, { get node() { return dock.current; }, label: hasAsset ? 'Replace Keeper artwork' : 'Give Keeper dock an inhabitant', placeAsset: acceptImage });
     return () => registerTarget(record.id, null);
-  }, [editable, registerTarget, record.id, Boolean(record.asset), acceptImage]);
+  }, [editable, registerTarget, record.id, hasAsset, acceptImage]);
   const retry = () => { setImageState({ src, status: 'loading' }); setAttempt(value => value + 1); };
   const navigatorFrame = editable && settings ? view.utilityWindows?.get('navigator')?.getBoundingClientRect() : null;
   const settingsBeside = navigatorFrame && navigatorFrame.left >= 320 && innerWidth >= 700;
@@ -144,18 +151,19 @@ function KeeperDock({ record, index, initialPresentation, store, profileAddress,
         viewportBottom={settingsAbove ? settingsBottom : undefined}
         initialX={settingsBeside ? navigatorFrame.left - 308 : position.left >= 324 ? position.left - 308 : Math.max(8, Math.min(position.left + KEEPER_DOCK_SIZE.width + 8, innerWidth - 308))}
         initialY={Math.max(view.navigationTop || 8, settingsAbove ? (hostRef.current?.getBoundingClientRect().top || 0) + 8 : Math.min(position.top, innerHeight - 240))}
-        controls={<button className="workflow-tactile-control" type="button" aria-label="Close Keeper settings" onClick={closeSettings}><X /></button>}>
-      <div className="keeper-tools" onKeyDown={event => { if (event.key === 'Escape' && !event.defaultPrevented) { event.preventDefault(); event.stopPropagation(); closeSettings(); } }}>
-        <label>Name<input aria-label="Keeper name" key={record.name} defaultValue={record.name} maxLength={48}
+        controls={<button className="workflow-tactile-control workflow-tactile-control--quiet" type="button" aria-label="Close Keeper settings" onClick={closeSettings}><X /></button>}>
+      <div className="keeper-tools workbench-inspector" data-workflow-material="tactile" data-workflow-finish="flat" data-workflow-palette="editor"
+        onKeyDown={event => { if (event.key === 'Escape' && !event.defaultPrevented) { event.preventDefault(); event.stopPropagation(); closeSettings(); } }}>
+        <label className="workbench-inspector-row"><span>Name</span><input aria-label="Keeper name" key={record.name} defaultValue={record.name} maxLength={48}
           onBlur={event => { const name = event.target.value.trim(); if (name && name !== record.name) change({ name }); }}
           onKeyDown={event => { if (event.key === 'Enter') event.currentTarget.blur(); }} /></label>
-        <label>Movement<select aria-label="Keeper movement" value={movement} onChange={event => change({ movement: event.target.value })}>
+        <label className="workbench-inspector-row"><span>Movement</span><select aria-label="Keeper movement" value={movement} onChange={event => change({ movement: event.target.value })}>
           <option value="flip">Flip</option><option value="swim">Layered swim</option><option value="svg">SVG float</option>
         </select></label>
-        {!snake && movement !== 'svg' && <label>Artwork faces<select aria-label="Keeper artwork faces" value={record.faces} onChange={event => change({ faces: event.target.value })}>
+        {!snake && movement !== 'svg' && <label className="workbench-inspector-row"><span>Facing</span><select aria-label="Keeper artwork faces" value={record.faces} onChange={event => change({ faces: event.target.value })}>
           <option value="right">Right</option><option value="left">Left</option>
         </select></label>}
-        <label>Size (px)<input aria-label="Keeper size" type="number" key={size} min={KEEPER_SIZE.min} max={KEEPER_SIZE.max} step="1" defaultValue={size}
+        <label className="workbench-inspector-row"><span>Size (px)</span><input aria-label="Keeper size" type="number" key={size} min={KEEPER_SIZE.min} max={KEEPER_SIZE.max} step="1" defaultValue={size}
           onBlur={event => {
             const next = Number(event.target.value);
             if (event.target.value && event.target.validity.valid && next !== size) {
@@ -165,24 +173,28 @@ function KeeperDock({ record, index, initialPresentation, store, profileAddress,
             if (event.key === 'Enter') event.currentTarget.blur();
             if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); event.currentTarget.value = String(size); event.currentTarget.blur(); }
           }} /></label>
-        {rigged && <KeeperSwimControls value={swim} snake={snake} onChange={next => change({ swim: next }, record)} />}
-        <details><summary>Using Keeper</summary>
-        <p>Drop an image from Library onto the dock to {record.asset ? 'replace its inhabitant' : 'give it an inhabitant'}.</p>
-        {movement === 'swim' && <p>{snake ? 'Snake chain detected.' : layered.rig?.kind === 'octopus' ? 'Octopus detected.' : 'Use a prepared Keeper SVG with image layers or vector octopus parts.'}</p>}
-        {movement === 'svg' && <p>Requires a prepared SVG with vector tentacles and eyes.</p>}
-        {rigged && <p>Release, then click empty Workbench space to swim there. Hold the right mouse button to follow your cursor.</p>}
-        {record.asset && <p>Click the released character's head to open its dialogue.</p>}
+        <label className="workbench-inspector-check"><input type="checkbox" checked={record.visibility === 'PUBLIC'} onChange={event => change({ visibility: event.target.checked ? 'PUBLIC' : 'PRIVATE' })} />Include in publication</label>
+        <details className="workbench-inspector-section"><summary>Using Keeper<ChevronRight aria-hidden="true" /></summary>
+          <p>Drop an image from Library onto the dock to {record.asset ? 'replace its inhabitant' : 'give it an inhabitant'}.</p>
+          {movement === 'swim' && <p>{snake ? 'Snake chain detected.' : layered.rig?.kind === 'octopus' ? 'Octopus detected.' : 'Use a prepared Keeper SVG with image layers or vector octopus parts.'}</p>}
+          {movement === 'svg' && <p>Requires a prepared SVG with vector tentacles and eyes.</p>}
+          {rigged && <p>Release, then click empty Workbench space to swim there. Hold the right mouse button to follow your cursor.</p>}
+          {record.asset && <p>Click the released character's head to open its dialogue.</p>}
         </details>
-        <label className="keeper-check"><input type="checkbox" checked={record.visibility === 'PUBLIC'} onChange={event => change({ visibility: event.target.checked ? 'PUBLIC' : 'PRIVATE' })} />Include in publication</label>
-        {record.asset && <button className="workflow-tactile-control" type="button" onClick={() => change({ asset: null })}>Empty dock</button>}
-        <button className="workflow-tactile-control" type="button" onClick={() => {
-          try {
-            if (!removeWorkbenchModule(store, profileAddress, 'keeper', record)) throw new Error('The dock could not be deleted. Try again.');
-            hostRef.current?.focus({ preventScroll: true });
-          } catch (failure) { setError(failure.message); }
-        }}>Delete dock</button>
-        {error && <p role="alert">{error}</p>}
         {src && status === 'failed' && <p role="alert">{wrongSvg ? 'SVG float needs a prepared SVG with vector tentacles and eyes. Use Layered swim for image-layer tentacles or a snake.' : rigged ? layered.error : 'The artwork could not be loaded.'} Use Retry on the dock.</p>}
+        {rigged && <KeeperSwimControls value={swim} snake={snake} onChange={next => change({ swim: next }, record)} />}
+        <div className="workbench-inspector-section">
+          <div className="workbench-inspector-actions">
+            {record.asset && <button className="workflow-tactile-control" type="button" onClick={() => change({ asset: null })}>Empty dock</button>}
+            <button className="workflow-tactile-control" type="button" onClick={() => {
+              try {
+                if (!removeWorkbenchModule(store, profileAddress, 'keeper', record)) throw new Error('The dock could not be deleted. Try again.');
+                hostRef.current?.focus({ preventScroll: true });
+              } catch (failure) { setError(failure.message); }
+            }}>Delete dock</button>
+          </div>
+        </div>
+        {error && <p role="alert">{error}</p>}
       </div>
       </WorkbenchWindow>
     </div>, hostRef.current || document.body)}

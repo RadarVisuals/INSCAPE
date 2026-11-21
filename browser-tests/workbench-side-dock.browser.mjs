@@ -1,11 +1,18 @@
+import { undockWindow } from './fixtures/undock-window.mjs';
+import { sharedToolTab, sharedToolPanel, detachTool } from './fixtures/shared-tools.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdir } from 'node:fs/promises';
 import { chromium } from 'playwright-core';
 import { browserExecutable } from '../scripts/browserEnvironment.mjs';
-import { editorDestination, setEditorSidebarOpen } from './fixtures/editor-menu.mjs';
+import { editorDestination, setEditorSidebarOpen, openEditorMenu } from './fixtures/editor-menu.mjs';
 const origin = process.env.INSCAPE_TEST_ORIGIN || 'http://127.0.0.1:24970';
 const output = process.env.INSCAPE_BROWSER_OUTPUT || '.browser-test-runtime/side-dock';
+async function dockWindow(page, panel, side) {
+  const trigger = panel.getByRole('button', { name: / window options$/ });
+  await trigger.focus(); await trigger.click();
+  await page.getByRole('menuitemcheckbox', { name: 'Dock on ' + side, exact: true }).click();
+}
 const settle = page => page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
 const near = (a, b) => assert.ok(Math.abs(a - b) < 2, `${a} != ${b}`);
 async function stableToolbar(page, original) {
@@ -27,6 +34,99 @@ async function drag(page, locator, point, cancel) {
   if (cancel === 'blur') await page.evaluate(() => window.dispatchEvent(new Event('blur')));
   await page.mouse.up(); await settle(page);
 }
+for (const [width, theme] of [[1440, 'dark'], [760, 'light']]) test(`whole sidebars collapse without closing tools and retain their enclosure (${theme}, ${width})`, { timeout: 60000 }, async () => {
+  const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
+  try {
+    const page = await browser.newPage({ viewport: { width, height: 900 }, reducedMotion: 'reduce' });
+    page.setDefaultTimeout(10000);
+    const errors = []; page.on('pageerror', error => errors.push(error.message));
+    await page.goto(`${origin}/browser-tests/reception-editor-fixture.html?sample&session=sidebar-${theme}`);
+    const layers = sharedToolPanel(page, 'Layers');
+    const inspector = page.getByRole('region', { name: 'Inspector', exact: true });
+    const navigator = page.getByRole('region', { name: 'Navigator', exact: true });
+    await layers.waitFor(); await navigator.waitFor(); await settle(page);
+    if (theme === 'light') await page.getByRole('switch', { name: 'Dark mode' }).uncheck();
+    const original = await layers.boundingBox();
+    await page.locator('main.system-workflow').press('Escape');
+    assert.match(await inspector.innerText(), /Select a cell or artwork/);
+    const emptyInspector = await inspector.boundingBox();
+    near(emptyInspector.y + emptyInspector.height, 900);
+    assert.equal(await inspector.evaluate(node => getComputedStyle(node).backgroundColor === getComputedStyle(node.querySelector('header')).backgroundColor), false, 'headers have their own derived tone');
+    assert.equal(await inspector.evaluate(node => getComputedStyle(node).borderTopWidth), '0px');
+    const enclosure = page.locator('.editor-workspace-frame');
+    assert.deepEqual(await enclosure.evaluate(node => {
+      const s = getComputedStyle(node);
+      return [s.borderTopLeftRadius, s.borderBottomLeftRadius, s.borderTopRightRadius, s.borderBottomRightRadius];
+    }), ['0px', '0px', '0px', '0px'], 'attached edges meet the panels without nested corners');
+    assert.equal(await inspector.getByRole('tab', { name: 'Inspector', exact: true }).evaluate(node => getComputedStyle(node).boxShadow), 'none', 'a sole panel title has no selection underline');
+    const draft = await page.evaluate(() => {
+      window.sidebarOriginalNodes = [...document.querySelectorAll('.workbench-tool-panel')];
+      return window.receptionFixture.root.getDraft();
+    });
+    await page.getByRole('button', { name: 'Collapse left sidebar', exact: true }).click(); await settle(page);
+    assert.equal(await layers.isVisible(), false); assert.equal(await navigator.isVisible(), false);
+    assert.equal(await inspector.isVisible(), true);
+    assert.equal(await page.evaluate(() => document.activeElement.getAttribute('aria-label')), 'Expand left sidebar');
+    await page.getByRole('button', { name: 'Collapse right sidebar', exact: true }).click(); await settle(page);
+    assert.equal(await page.evaluate(() => window.sidebarOriginalNodes.every(node => node.isConnected && node.hidden)), true, 'all original tools remain mounted');
+    const frame = await page.locator('.editor-workspace-frame').boundingBox();
+    near(frame.x, 2); near(width - frame.x - frame.width, 2); near(900 - frame.y - frame.height, 2);
+    assert.equal(await enclosure.evaluate(node => getComputedStyle(node).borderTopWidth), '1px');
+    assert.deepEqual(await enclosure.evaluate(node => {
+      const s = getComputedStyle(node);
+      return [s.borderTopLeftRadius, s.borderBottomLeftRadius, s.borderTopRightRadius, s.borderBottomRightRadius];
+    }), ['12px', '10px', '12px', '10px'], 'exposed edges retain the outer enclosure');
+    for (const side of ['left', 'right']) {
+      const reopen = page.getByRole('button', { name: `Expand ${side} sidebar`, exact: true });
+      const button = await reopen.boundingBox();
+      near(button.y - frame.y, 6);
+      near(side === 'left' ? button.x - frame.x : frame.x + frame.width - button.x - button.width, 4);
+      assert.equal(await reopen.evaluate(node => getComputedStyle(node).borderTopLeftRadius), '50%');
+    }
+    await page.getByRole('button', { name: 'Expand left sidebar', exact: true }).press('Enter'); await settle(page);
+    assert.equal(await page.evaluate(() => document.activeElement.getAttribute('aria-label')), 'Collapse left sidebar');
+    assert.deepEqual(await layers.boundingBox(), original);
+    assert.equal(await inspector.isVisible(), false);
+    const collapse = page.getByRole('button', { name: 'Collapse left sidebar', exact: true });
+    const controlBounds = await collapse.boundingBox();
+    await page.getByRole('button', { name: 'Artwork library', exact: true }).click();
+    assert.deepEqual(await collapse.boundingBox(), controlBounds, 'panel controls do not move between Layers and Library');
+    const search = page.getByRole('searchbox', { name: 'Search', exact: true });
+    const labels = await page.getByRole('button', { name: 'Library display options', exact: true }).boundingBox();
+    const assets = await layers.locator('.lattice-browser-results').boundingBox();
+    assert.ok(labels.y < assets.y, 'display controls stay above assets');
+    assert.equal(await layers.locator('header').getByRole('button', { name: 'Layers and Library window options', exact: true }).count(), 1);
+    assert.equal(await layers.locator('.system-workflow__library-header').count(), 0, 'no empty detach row');
+    assert.equal(await layers.locator('.lattice-browser-sidebar-resize').isVisible(), true);
+    assert.equal(await layers.getByRole('button', { name: /^Undock / }).count(), 0);
+    await search.fill('skull');
+    await page.getByRole('button', { name: 'Collapse left sidebar', exact: true }).click();
+    await page.getByRole('button', { name: 'Expand left sidebar', exact: true }).press('Space');
+    assert.equal(await search.inputValue(), 'skull', 'Library content survives collapse');
+    await page.getByRole('button', { name: 'Collapse left sidebar', exact: true }).click();
+    await page.waitForFunction(key => {
+      const stored = localStorage.getItem(key);
+      const collapsed = stored && JSON.parse(stored).value.sideDock.collapsed;
+      return collapsed?.left && collapsed?.right;
+    }, `reception-test:sidebar-${theme}:inscape:editor-preferences:v1:0x${'1'.repeat(40)}`);
+    await page.reload();
+    await page.getByRole('button', { name: 'Expand left sidebar', exact: true }).waitFor();
+    assert.equal(await page.getByRole('button', { name: 'Expand right sidebar', exact: true }).isVisible(), true);
+    await page.getByRole('button', { name: 'Expand right sidebar', exact: true }).click();
+    await editorDestination(page, 'Preview');
+    assert.equal(await page.getByRole('button', { name: 'Expand left sidebar', exact: true }).isVisible(), false, 'Preview has no editor handles');
+    await page.getByRole('button', { name: 'Back to editing', exact: true }).click();
+    await page.getByRole('button', { name: 'Expand left sidebar', exact: true }).waitFor();
+    assert.equal(await inspector.isVisible(), true, 'Preview restores the previous independent sides');
+    await page.getByRole('button', { name: 'Expand left sidebar', exact: true }).click();
+    await layers.getByRole('tab', { name: 'Layers', exact: true }).click();
+    await layers.getByRole('button', { name: 'Close Workbench Layers', exact: true }).click();
+    assert.equal(await navigator.isVisible(), true, 'X closes a panel, not its sidebar');
+    assert.deepEqual(await page.evaluate(() => window.receptionFixture.root.getDraft()), draft, 'shell actions never alter the Reception');
+    assert.deepEqual(errors, []);
+  } finally { await browser.close(); }
+});
+
 for (const side of ['left', 'right']) for (const [width, height, theme] of [[1440, 900, 'dark'], [700, 650, 'light']]) test(`screen windows reach edges and share a reversible ${side} dock (${width})`, { timeout: 90000 }, async () => {
   const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
   try {
@@ -42,10 +142,14 @@ for (const side of ['left', 'right']) for (const [width, height, theme] of [[144
     await page.goto(`${origin}/browser-tests/tool-chrome-fixture.html?sample=navigator&persistent&theme=${theme}`);
     const nav = page.locator('.workbench-navigator'), keeper = page.locator('.keeper-dock-window'), tools = page.locator('.workbench-tool-dock').first();
     await page.getByRole('button', { name: 'Navigate Workbench', exact: true }).waitFor(); await settle(page);
-    const sidebar = page.getByRole('button', { name: 'Inscape sidebar', exact: true });
+    const sidebar = page.getByRole('button', { name: 'Inscape menu', exact: true });
     if (await sidebar.getAttribute('aria-expanded') === 'true') await sidebar.click();
     const toolbar = await stableToolbar(page);
+    const menu = await page.locator('.editor-menu-bar').boundingBox(), dockY = menu.y + menu.height + 40;
     const before = await page.evaluate(() => window.readToolChromeDraft());
+    for (const window of [nav, keeper, ...await page.locator('.workbench-tool-dock').all()]) {
+      await undockWindow(page, window);
+    }
     await page.evaluate(() => { window.originalNavigator = document.querySelector('.navigator-map'); });
     // Keyboard movement can reach exact corners without dropping into the rail.
     for (const window of [nav, keeper]) {
@@ -54,11 +158,11 @@ for (const side of ['left', 'right']) for (const [width, height, theme] of [[144
       for (let i = 0; i < 65; i++) await grip.press('Shift+ArrowDown');
       for (let i = 0; i < 65; i++) await grip.press(side === 'left' ? 'Shift+ArrowLeft' : 'Shift+ArrowRight');
       const box = await window.boundingBox(); near(side === 'left' ? box.x : box.x + box.width, side === 'left' ? 0 : width); near(box.y + box.height, height);
-      await window.getByRole('button', { name: new RegExp(`Dock .* on ${side}`) }).click();
+      await dockWindow(page, window, side);
       assert.equal(await window.getAttribute('data-side-docked'), 'true');
     }
-    await tools.getByRole('button', { name: new RegExp(`Dock .* on ${side}`) }).focus();
-    await tools.getByRole('button', { name: new RegExp(`Dock .* on ${side}`) }).click(); await settle(page);
+
+    await dockWindow(page, tools, side); await settle(page);
     const n = await nav.boundingBox(), k = await keeper.boundingBox(), t = await tools.boundingBox();
     near(side === 'left' ? n.x : n.x + n.width, side === 'left' ? 0 : width); near(k.x, n.x); near(t.x, n.x); near(k.y, n.y + n.height); near(t.y, k.y + k.height); near(t.y + t.height, height);
     const stable = await nav.boundingBox();
@@ -90,21 +194,21 @@ for (const side of ['left', 'right']) for (const [width, height, theme] of [[144
     const east = await nav.locator('[data-edge="e"]').boundingBox();
     await drag(page, nav.locator('[data-edge="e"]'), { x: east.x + east.width / 2 + 35, y: floating.y + 60 });
     near((await nav.boundingBox()).width, floating.width + 35);
-    await drag(page, nav.locator('.workbench-tool-panel-grip'), { x: side === 'left' ? 2 : width - 2, y: 100 });
+    await drag(page, nav.locator('.workbench-tool-panel-grip'), { x: side === 'left' ? 2 : width - 2, y: dockY });
     await page.screenshot({ path: `${output}/redocked-${side}-${width}.png` });
     assert.equal(await nav.getAttribute('data-dock-side'), side);
     await page.getByRole('slider', { name: 'Workbench zoom', exact: true }).fill('150');
-    await page.getByRole('button', { name: 'Reset Workbench view', exact: true }).click();
+    await page.getByRole('button', { name: 'Fit canvas in view', exact: true }).click();
     await keeper.getByRole('button', { name: 'Keeper settings', exact: true }).click();
     await page.getByRole('button', { name: 'Close Keeper settings', exact: true }).click();
-    const text = page.locator('.text-tools-window');
-    await text.getByRole('button', { name: `Dock Text on ${side}`, exact: true }).focus();
-    await text.getByRole('button', { name: `Dock Text on ${side}`, exact: true }).click();
+    const text = sharedToolPanel(page);
+
+    await dockWindow(page, text, side);
     assert.equal(await text.getAttribute('data-side-docked'), 'true');
-    const color = page.getByRole('tab', { name: 'Color', exact: true });
-    await color.scrollIntoViewIfNeeded();
-    await drag(page, color, { x: side === 'left' ? 2 : width - 2, y: height - 80 });
-    assert.equal(await color.evaluate(node => node.closest('.workbench-tool-panel').hasAttribute('data-side-docked')), true, 'individual tool tabs can slot into either dock');
+    const inspector = sharedToolTab(page, 'Inspector');
+    await inspector.scrollIntoViewIfNeeded();
+    await drag(page, inspector, { x: side === 'left' ? 2 : width - 2, y: height - 80 });
+    assert.equal(await inspector.evaluate(node => node.closest('.workbench-tool-panel').hasAttribute('data-side-docked')), true, 'the complete Inspector can slot into either dock');
     await stableToolbar(page, toolbar);
     assert.deepEqual(await page.evaluate(() => window.readToolChromeDraft()), before, 'docking and resizing never author artwork');
     assert.deepEqual(errors, []);
@@ -127,18 +231,22 @@ for (const width of [1440, 700]) test(`both docks keep Library live beneath the 
     await page.getByRole('button', { name: 'Navigate Workbench', exact: true }).waitFor();
     await setEditorSidebarOpen(page, false);
     const toolbar = await stableToolbar(page);
+    const menu = await page.locator('.editor-menu-bar').boundingBox(), dockY = menu.y + menu.height + 40;
     const before = await page.evaluate(() => window.readToolChromeDraft());
     const nav = page.locator('.workbench-navigator'), keeper = page.locator('.keeper-dock-window'), tools = page.locator('.workbench-tool-dock').first();
-    await nav.getByRole('button', { name: 'Dock Navigator on left', exact: true }).click();
-    await keeper.getByRole('button', { name: /Dock .* on right/ }).click();
-    await tools.getByRole('button', { name: /Dock .* on right/ }).focus();
-    await tools.getByRole('button', { name: /Dock .* on right/ }).click();
+    for (const window of [nav, keeper, tools]) {
+      await undockWindow(page, window);
+    }
+    await dockWindow(page, nav, 'left');
+    await dockWindow(page, keeper, 'right');
+
+    await dockWindow(page, tools, 'right');
     await editorDestination(page, 'Library');
-    assert.ok((await page.getByRole('button', { name: 'Detach Library', exact: true }).boundingBox()).y >= 40, 'Library opens below the measured menu');
-    await page.getByRole('button', { name: 'Detach Library', exact: true }).click();
-    const library = page.locator('.workbench-library-window');
+    assert.ok((await sharedToolTab(page, 'Library').boundingBox()).y >= 40, 'Library opens below the measured menu');
+    await detachTool(page, 'Library');
+    const library = sharedToolPanel(page, 'Library');
     await page.evaluate(() => { window.originalLibrary = document.querySelector('.system-workflow__library'); });
-    await library.getByRole('button', { name: 'Dock Library on left', exact: true }).click();
+    await dockWindow(page, library, 'left');
     await settle(page);
     const read = async () => ({ nav: await nav.boundingBox(), keeper: await keeper.boundingBox(), library: await library.boundingBox(), tools: await tools.boundingBox() });
     const initial = await read();
@@ -152,8 +260,8 @@ for (const width of [1440, 700]) test(`both docks keep Library live beneath the 
       const enlarged = await read();
       near(enlarged.nav.width, initial.nav.width + 400); near(enlarged.keeper.width, initial.keeper.width);
       await stableToolbar(page, toolbar);
-      await page.getByRole('button', { name: 'Add module', exact: true }).click();
-      await page.getByRole('dialog', { name: 'Add module', exact: true }).waitFor();
+      await page.getByRole('button', { name: 'Actions', exact: true }).click();
+      await page.getByRole('dialog', { name: 'Search commands', exact: true }).waitFor();
       await page.keyboard.press('Escape');
       await page.screenshot({ path: `${output}/both-resized-${width}.png` });
       const resizedHandle = await edge.boundingBox();
@@ -162,20 +270,21 @@ for (const width of [1440, 700]) test(`both docks keep Library live beneath the 
     await setEditorSidebarOpen(page, true); await settle(page);
     assert.deepEqual(await read(), initial, 'opening navigation does not move docked windows');
     await stableToolbar(page, toolbar);
-    assert.equal(await page.getByRole('button', { name: 'Inscape sidebar', exact: true }).getAttribute('aria-expanded'), 'true');
-    const reception = page.locator('.workbench-sidebar').getByRole('button', { name: 'Editor', exact: true });
-    assert.equal(await reception.evaluate(node => { const r = node.getBoundingClientRect(); return node.contains(document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2)); }), true, 'navigation receives input above the left dock');
+    assert.equal(await page.getByRole('button', { name: 'Inscape menu', exact: true }).getAttribute('aria-expanded'), 'true');
+    await openEditorMenu(page, 'Tools');
+    const libraryLink = page.getByRole('menuitemcheckbox', { name: 'Library', exact: true });
+    assert.equal(await libraryLink.evaluate(node => { const r = node.getBoundingClientRect(); return node.contains(document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2)); }), true, 'navigation receives input above the left dock');
     await page.screenshot({ path: `${output}/both-navigation-${width}.png` });
     await setEditorSidebarOpen(page, false);
     assert.equal(await page.evaluate(() => window.originalLibrary === document.querySelector('.system-workflow__library')), true);
     // Cross-edge moves use the same live Library; cancellation restores both stacks.
     for (const cancel of ['escape', 'blur']) {
-      await drag(page, library.locator('.workbench-tool-panel-grip'), { x: width - 2, y: 100 }, cancel);
+      await drag(page, library.locator('.workbench-tool-panel-grip'), { x: width - 2, y: dockY }, cancel);
       assert.equal(await library.getAttribute('data-dock-side'), 'left');
       const after = await read();
       for (const id of Object.keys(initial)) { near(after[id].x, initial[id].x); near(after[id].height, initial[id].height); }
     }
-    await drag(page, library.locator('.workbench-tool-panel-grip'), { x: width - 2, y: 100 });
+    await drag(page, library.locator('.workbench-tool-panel-grip'), { x: width - 2, y: dockY });
     assert.equal(await library.getAttribute('data-dock-side'), 'right');
     await drag(page, library.locator('.workbench-tool-panel-grip'), { x: 2, y: 800 });
     assert.equal(await library.getAttribute('data-dock-side'), 'left');
@@ -183,8 +292,8 @@ for (const width of [1440, 700]) test(`both docks keep Library live beneath the 
     await page.screenshot({ path: `${output}/both-docks-${width}.png` });
     // A destination closes the overlay at all sizes; reopening Library retains its edge.
     await editorDestination(page, 'Activity');
-    assert.equal(await page.getByRole('button', { name: 'Inscape sidebar', exact: true }).getAttribute('aria-expanded'), 'false');
-    await editorDestination(page, 'Editor');
+    assert.equal(await page.getByRole('button', { name: 'Inscape menu', exact: true }).getAttribute('aria-expanded'), 'false');
+    await page.getByRole('button', { name: 'Close activity', exact: true }).click();
     await editorDestination(page, 'Library'); await library.waitFor();
     assert.equal(await library.getAttribute('data-dock-side'), 'left');
     await page.reload(); await nav.waitFor(); await editorDestination(page, 'Library'); await library.waitFor(); await settle(page);

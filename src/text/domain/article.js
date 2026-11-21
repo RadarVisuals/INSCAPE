@@ -1,3 +1,4 @@
+import { hasAllowedKeys as exact } from '../../recordValidation.js';
 import { validateProfileDocumentV9Asset } from '../../profileDocument/domain/profileDocumentV9Asset.js';
 import { validModuleEdges, moduleEdgeStyle } from '../../systemWorkflow/domain/moduleSurfaceAppearance.js';
 import { articleSections, joinArticleSections } from '../articleSections.js';
@@ -93,8 +94,6 @@ export const ARTICLE_FONTS = Object.freeze([
   { id: 'cormorant', label: 'Cormorant Garamond', family: 'Inscape Article Cormorant' },
   { id: 'mono', label: 'IBM Plex Mono', family: 'Inscape Article Mono' },
 ]);
-export const exact = (v, keys, optional = []) => Boolean(v && typeof v === 'object' && !Array.isArray(v)
-  && keys.every(k => Object.hasOwn(v, k)) && Object.keys(v).every(k => keys.includes(k) || optional.includes(k)));
 const string = (v, max) => typeof v === 'string' && v.length <= max;
 export function safeArticleLink(value) {
   if (!string(value, 2048) || /[\u0000-\u0020\u007f]/u.test(value)) return false;
@@ -136,7 +135,7 @@ export function assertArticle(article) {
     || article.version !== 1 || !string(article.title, 160) || !ARTICLE_FONTS.some(f => f.id === article.font)) throw new Error('Unsupported article format. The source has not been changed.');
   if (article.appearance !== undefined) {
     const a = article.appearance;
-    if (!exact(a, ['background', 'opacity', 'frame', 'scale', 'fontSize', 'color'], ['transform', 'compact', 'padding', 'edges', 'titleFontSize', 'titleLetterSpacing', 'titleGap', 'titleAlignment', 'titleColor', 'columns', 'columnGap', 'lineHeight', 'textStyles', 'verticalAlign', 'overflow'])
+    if (!exact(a, ['background', 'opacity', 'frame', 'scale', 'fontSize', 'color'], ['transform', 'compact', 'padding', 'edges', 'titleFontSize', 'titleLetterSpacing', 'titleGap', 'titleAlignment', 'titleColor', 'columns', 'columnGap', 'lineHeight', 'textStyles', 'verticalAlign', 'writingDirection', 'overflow'])
       || !(a.background === null || /^#[\da-f]{6}$/iu.test(a.background)) || !/^#[\da-f]{6}$/iu.test(a.color)
       || !Number.isFinite(a.opacity) || a.opacity < 0 || a.opacity > 1 || typeof a.frame !== 'boolean'
       || !Number.isFinite(a.scale) || a.scale < .01 || a.scale > 100
@@ -163,6 +162,7 @@ export function assertArticle(article) {
     if (a.edges !== undefined && !validModuleEdges(a.edges)) throw new Error('Unsupported Text edges.');
     if (a.compact !== undefined && typeof a.compact !== 'boolean') throw new Error('Unsupported Text spacing.');
     if (a.verticalAlign !== undefined && !['top', 'center', 'bottom'].includes(a.verticalAlign)) throw new Error('Unsupported Text vertical alignment.');
+    if (a.writingDirection !== undefined && !['horizontal', 'stacked'].includes(a.writingDirection)) throw new Error('Unsupported Text writing direction.');
     if (a.overflow !== undefined && !['clip', 'scroll'].includes(a.overflow)) throw new Error('Unsupported Text overflow.');
     if (a.padding !== undefined && (!exact(a.padding, ['top', 'right', 'bottom', 'left'])
       || Object.values(a.padding).some(value => !Number.isFinite(value) || value < 0 || value > 512))) throw new Error('Unsupported Text inner spacing.');
@@ -292,3 +292,5 @@ export const restoreTextModules = (published = [], local = [], sectionDisplays =
   }),
   ...local.filter(i => !published.some(p => p.id === i.id)).map(i => ({ ...structuredClone(i), visibility: 'PRIVATE' })),
 ];
+
+export { exact };

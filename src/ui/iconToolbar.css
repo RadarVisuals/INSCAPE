@@ -1,0 +1,11 @@
+/* Shared Studio and Gallery control geometry. Each surface owns its placement. */
+.workbench-toolbar, .gallery-header-toolbar {
+  --toolbar-target: 32px;
+  --toolbar-icon: 16px;
+  --toolbar-height: 44px;
+  --toolbar-column-gap: 2px;
+  --toolbar-padding-block: 6px;
+  --toolbar-padding-inline: 6px;
+  --toolbar-radius: 11px;
+  --toolbar-key-radius: calc(var(--toolbar-radius) - var(--toolbar-padding-inline));
+}

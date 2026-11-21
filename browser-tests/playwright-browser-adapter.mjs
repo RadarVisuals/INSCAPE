@@ -1,13 +1,8 @@
 import { mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
-import { chromium } from 'playwright-core';
+import { launchOwnedChromium } from './owned-chromium.mjs';
 import {
   BROWSER_LIFECYCLE_TIMEOUTS,
-  createOwnedProcessTree,
-  listPosixProcesses,
-  listWindowsProcesses,
-  terminatePosixProcessTree,
-  terminateWindowsProcessTree,
   validateBrowserRuntimePath,
   withinDeadline
 } from './browser-test-lifecycle.mjs';
@@ -117,9 +112,7 @@ export async function launchPlaywrightEdge({
   onOwnedProcess,
   onBrowserProblem = () => {},
   diagnostic = () => {},
-  browserType = chromium,
-  inventory = process.platform === 'win32' ? listWindowsProcesses : listPosixProcesses,
-  terminateTree = process.platform === 'win32' ? terminateWindowsProcessTree : terminatePosixProcessTree,
+  launchBrowser = launchOwnedChromium,
   browserArgs = DEFAULT_PLAYWRIGHT_EDGE_ARGS,
   contextOptions = {},
   prepareRuntime = async (downloadsPath, artifactsDir) => {
@@ -129,35 +122,14 @@ export async function launchPlaywrightEdge({
   const exactRuntime = validateBrowserRuntimePath(runtimePath, workspaceRoot);
   const downloadsPath = join(exactRuntime, 'downloads'); const artifactsDir = join(exactRuntime, 'artifacts');
   await prepareRuntime(downloadsPath, artifactsDir);
-  const previousTemp = process.env.TEMP; const previousTmp = process.env.TMP;
-  let lateLaunch = false;
-  process.env.TEMP = exactRuntime; process.env.TMP = exactRuntime;
-  try {
-    const launch = browserType.launchServer({
-      executablePath: edgePath,
-      headless: true,
-      timeout: 20_000,
-      downloadsPath,
-      artifactsDir,
-      env: { ...process.env, TEMP: exactRuntime, TMP: exactRuntime },
-      args: [...browserArgs]
-    });
-    launch.then((server) => { if (lateLaunch) void server.close().catch(() => server.kill().catch(() => {})); }).catch(() => {});
-    resources.browserServer = await withinDeadline(launch, 20_000, 'Playwright Edge launch deadline exceeded', () => { lateLaunch = true; });
-  } finally {
-    if (previousTemp === undefined) delete process.env.TEMP; else process.env.TEMP = previousTemp;
-    if (previousTmp === undefined) delete process.env.TMP; else process.env.TMP = previousTmp;
-  }
-  const child = resources.browserServer.process(); const rootPid = child?.pid;
-  diagnostic('setup:browser-server-ready', { rootPid });
-  if (!Number.isSafeInteger(rootPid) || rootPid <= 0) throw Object.assign(new Error('Playwright BrowserServer did not expose a valid owned Edge PID'), { code: 'EDGE_PID_MISSING' });
-  const processTree = createOwnedProcessTree({ rootPid, listProcesses: inventory, terminateTree });
-  const observed = await processTree.observe(); const root = observed.find((entry) => entry.pid === rootPid);
-  if (!root?.identity) throw Object.assign(new Error('Owned Playwright Edge creation identity was not recorded'), { code: 'EDGE_IDENTITY_MISSING' });
-  onOwnedProcess({ rootPid, processTree, identity: root.identity });
-  diagnostic('setup:edge-owned', { rootPid, descendants: observed.length });
-
-  resources.browser = await browserType.connect(resources.browserServer.wsEndpoint(), { timeout: 5_000 });
+  const launched = await launchBrowser({ executablePath: edgePath, headless: true, timeout: 20_000,
+    artifactsDir, env: { ...process.env, TEMP: exactRuntime, TMP: exactRuntime }, args: [...browserArgs] }, {
+    profileParent: exactRuntime,
+    onSession: session => { resources.browserSession = session; },
+    onOwnedProcess: ownership => { onOwnedProcess(ownership); diagnostic('setup:edge-owned', { rootPid: ownership.rootPid }); },
+  });
+  const { rootPid, processTree, identity } = launched;
+  resources.browser = launched.browser;
   resources.context = await resources.browser.newContext({
     viewport: { width: 1280, height: 720 },
     serviceWorkers: 'block',
@@ -176,5 +148,5 @@ export async function launchPlaywrightEdge({
     const failure = request.failure()?.errorText || 'unknown';
     if (!/BLOCKED_BY_CLIENT/iu.test(failure)) onBrowserProblem(`Request failed: ${origin} ${boundedText(failure)}`);
   });
-  return { rootPid, processTree, identity: root.identity, browserServer: resources.browserServer, browser: resources.browser, context: resources.context, page: resources.page };
+  return { rootPid, processTree, identity, browserSession: resources.browserSession, browser: resources.browser, context: resources.context, page: resources.page };
 }

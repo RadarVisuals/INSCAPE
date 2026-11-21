@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test, { afterEach } from 'node:test';
 import { ERC725 } from '@erc725/erc725.js';
-import { resetWalletStoreForTests, useWalletStore } from './useWalletStore.js';
+import { getConnectedProfileAddress, resetWalletStoreForTests, useWalletStore } from './useWalletStore.js';
 
 const PROFILE_A = '0x1111111111111111111111111111111111111111';
 const PROFILE_B = '0x2222222222222222222222222222222222222222';
@@ -91,4 +91,23 @@ test('failed metadata resolution clears deduplication and can be retried', async
   await useWalletStore.getState().fetchProfileMetadata();
   assert.equal(attempts, 2);
   assert.equal(useWalletStore.getState().profileMetadata.name, 'Retried profile');
+});
+
+test('the account badge uses the connected visitor or the profile they are authorized to control', () => {
+  const state = { isWalletConnected: true, authorityLifecycleStatus: 'complete', hostProfileAddress: PROFILE_A,
+    accounts: [PROFILE_B], loggedInUserUPAddress: null };
+  assert.equal(getConnectedProfileAddress(state), PROFILE_B);
+  assert.equal(getConnectedProfileAddress({ ...state, accounts: [CONTROLLER_A], loggedInUserUPAddress: PROFILE_A }), PROFILE_A);
+  assert.equal(getConnectedProfileAddress({ ...state, isWalletConnected: false }), null);
+  assert.equal(getConnectedProfileAddress({ ...state, authorityLifecycleStatus: 'pending' }), null);
+});
+
+test('wallet metadata selects a badge-sized official avatar from nested LSP3 image variants', async () => {
+  const profile = profileResult('nomad');
+  profile.value.LSP3Profile.profileImage = [[{ width: 2000, url: 'https://example.org/full.png' },
+    { width: 180, url: 'https://example.org/portrait.png' }]];
+  ERC725.prototype.fetchData = async () => profile;
+  useWalletStore.setState({ hostProfileAddress: PROFILE_A, publicClient: { transport: { url: 'http://chain-a' } }, chainId: '0x2a' });
+  await useWalletStore.getState().fetchProfileMetadata();
+  assert.equal(useWalletStore.getState().profileMetadata.avatarUrl, 'https://example.org/portrait.png');
 });

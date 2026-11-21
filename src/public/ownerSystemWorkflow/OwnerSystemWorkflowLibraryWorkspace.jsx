@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import useBrowserWorkspace from '../../lattice/browser/useBrowserWorkspace.js';
 import '../../lattice/browser/browserWorkspace.css';
-import OwnerSystemWorkflowWorkspaceRail from './OwnerSystemWorkflowWorkspaceControls.jsx';
+import { X } from 'lucide-react';
 import { OwnerSystemWorkflowWorkspaceShell } from './OwnerSystemWorkflowBrowserWorkspace.jsx';
 import { decodeOwnerSystemWorkflowAssetDimensions, ownerSystemWorkflowAssetDimensions } from './ownerSystemWorkflowAssetDimensions.js';
 import OwnerSystemWorkflowLibraryPresenter from './OwnerSystemWorkflowLibraryPresenter.jsx';
@@ -15,7 +15,7 @@ const sourceFor = (asset) => asset?.previewSrc || asset?.src || asset?.imageUrl 
 const ownerLibraryPreviewRecords = new Map();
 
 export default function OwnerSystemWorkflowLibraryWorkspace({ authoringLocked = false, categoryCommands, placementScope, data, onClose, phase, open = phase !== 'closing' && phase !== 'closed',
-  navigationHost = null, preferences, preferenceStore, previewRecords = ownerLibraryPreviewRecords, resolveAssetDimensions, workbenchImageTargetRef, moduleAssetTargetRef, placementTargetRef, shortcutTargetRef, workspaceRef, className = '', label = 'Library workspace', resizable = true, overlayPlacement = false, selectionAction, selectionEnabled = true, onPlacingChange, header, embedded = false }) {
+  preferences, preferenceStore, previewRecords = ownerLibraryPreviewRecords, resolveAssetDimensions, workbenchImageTargetRef, moduleAssetTargetRef, placementTargetRef, shortcutTargetRef, workspaceRef, className = '', label = 'Library workspace', resizable = true, overlayPlacement = false, selectionAction, selectionEnabled = true, onPlacingChange, header, embedded = false }) {
   // Host closure invalidates pending drops immediately, before exit animation.
   const libraryClosed = !open;
   const workspace = useBrowserWorkspace(data, previewRecords, preferences, preferenceStore, !libraryClosed);
@@ -32,11 +32,12 @@ export default function OwnerSystemWorkflowLibraryWorkspace({ authoringLocked = 
     && (libraryImageChoices(source).some(choice => choice.sources.includes(imageChoice.media.url))
       || workspace.selectedCategory?.imageSelections?.some(entry => entry.assetId === imageChoice.assetId && entry.url === imageChoice.media.url))
       ? assetForPlacement(source, { selectedMedia: imageChoice.media }) : null : source;
-  const resolveDimensions = resolveAssetDimensions || decodeOwnerSystemWorkflowAssetDimensions;
+  const resolveDimensions = asset => decodeOwnerSystemWorkflowAssetDimensions(asset, { preferMetadata: true });
+  const preload = asset => { void (resolveAssetDimensions || decodeOwnerSystemWorkflowAssetDimensions)(asset).catch(() => {}); };
   const [dragPreview, setDragPreview] = useState(null);
   const [categoryDrag, setCategoryDrag] = useState(null);
   const [dropFeedback, setDropFeedback] = useState(null);
-  const dragRef = useRef(null);
+  const dragRef = useRef(null), navigationTargetRef = useRef(null);
   const suppressSelection = useRef(false);
   const latestLibrary = useRef(null);
   latestLibrary.current = { data, categoryCommands };
@@ -54,13 +55,14 @@ export default function OwnerSystemWorkflowLibraryWorkspace({ authoringLocked = 
     if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
   };
   const [placing, setPlacing] = useState(false);
-  useEffect(() => { onPlacingChange?.(placing); }, [placing, onPlacingChange]);
+  useEffect(() => { onPlacingChange?.(placing); return () => onPlacingChange?.(false); }, [placing, onPlacingChange]);
   const place = async (asset) => {
     if (authoringLocked || libraryClosed) return false;
     // Registry wrappers follow selection. Retain the receiving module/Grid
     // before asynchronous media work, rather than selecting again afterward.
     const target = placementTargetRef?.current?.captureTarget();
     if (!target) return false;
+    preload(asset);
     let dimensions;
     try { dimensions = await resolveDimensions(asset); } catch { return false; }
     if (!dimensions || !mounted.current || currentPlacementContext.current !== placementContext) return false;
@@ -89,6 +91,7 @@ export default function OwnerSystemWorkflowLibraryWorkspace({ authoringLocked = 
     setPlacing(false);
     setDragPreview(null);
     setCategoryDrag(null);
+    navigationTargetRef.current?.finish();
   };
   const beginAssetDrag = (event, asset, workspaceState, options = {}) => {
     const id = asset?.stableAssetId || asset?.id;
@@ -103,25 +106,24 @@ export default function OwnerSystemWorkflowLibraryWorkspace({ authoringLocked = 
       pointerId: event.pointerId, moved: false, source: event.currentTarget };
     const library = event.currentTarget.closest('.system-workflow__library');
     const overLibraryNavigation = (pointerEvent) => {
-      // A covering Library must reveal every pixel of its host's destinations.
-      // The ordinary side-by-side Workbench keeps its category receivers.
-      if (overlayPlacement && canPlace) return false;
-      const bounds = (navigationHost || library)?.querySelector('.lattice-browser-sidebar')?.getBoundingClientRect();
-      return bounds && pointerEvent.clientX >= bounds.left && pointerEvent.clientX <= bounds.right
-        && pointerEvent.clientY >= bounds.top && pointerEvent.clientY <= bounds.bottom;
+      return [...(library?.querySelectorAll('.lattice-browser-sidebar, .library-folder-drop-picker') || [])].some(node => {
+        const bounds = node.getBoundingClientRect();
+        return pointerEvent.clientX >= bounds.left && pointerEvent.clientX <= bounds.right
+          && pointerEvent.clientY >= bounds.top && pointerEvent.clientY <= bounds.bottom;
+      });
     };
     // Hover and release use the same routing decision. Each receiver supplies
     // its preview, validity check and action; only module code authors content.
     const receiverAt = (pointerEvent) => {
       const point = { x: pointerEvent.clientX, y: pointerEvent.clientY };
       const hit = document.elementFromPoint(point.x, point.y);
-      if (overLibraryNavigation(pointerEvent)) {
+      if (overLibraryNavigation(pointerEvent) || hit?.closest('[data-library-folder-tile]')) {
         const categoryId = hit?.closest('[data-browser-category-id]')?.dataset.browserCategoryId;
         if (!categoryId) return null;
         return { kind: 'category', categoryId, point, preview: () => null,
           isCurrent: () => latestLibrary.current.data.categories.some(({ id }) => id === categoryId)
             && assetIds.every(id => latestLibrary.current.data.assets.some(asset => (asset.stableAssetId || asset.id) === id)),
-          place: () => assetIds.length === 1 && libraryCategoryImage(asset)
+          place: () => assetIds.length === 1 && asset.selectedMedia && libraryCategoryImage(asset)
             ? latestLibrary.current.categoryCommands?.setCategoryImage(categoryId, id, libraryCategoryImage(asset), true)
             : latestLibrary.current.categoryCommands?.setCategoryAssets(categoryId, assetIds, true),
           rejection: 'Artwork could not be added to this category.' };
@@ -161,6 +163,7 @@ export default function OwnerSystemWorkflowLibraryWorkspace({ authoringLocked = 
         reject: target.rejectDrop, rejection: 'Artwork could not be placed here.' };
     };
     const updatePreview = (pointerEvent) => {
+      navigationTargetRef.current?.hover({ x: pointerEvent.clientX, y: pointerEvent.clientY });
       const receiver = receiverAt(pointerEvent);
       const category = receiver?.kind === 'category';
       setCategoryDrag(category ? { assetIds, categoryId: receiver.categoryId, point: receiver.point } : null);
@@ -173,7 +176,13 @@ export default function OwnerSystemWorkflowLibraryWorkspace({ authoringLocked = 
       if (!active.moved) return;
       pointerEvent.preventDefault();
       suppressSelection.current = true;
-      if (canPlace) setPlacing(true);
+      if (canPlace) {
+        if (!active.preloaded) { active.preloaded = true; preload(asset); }
+        const bounds = library?.getBoundingClientRect();
+        const inside = bounds && pointerEvent.clientX >= bounds.left && pointerEvent.clientX <= bounds.right
+          && pointerEvent.clientY >= bounds.top && pointerEvent.clientY <= bounds.bottom;
+        setPlacing(!inside);
+      }
       active.lastPointer = pointerEvent;
       active.source?.setAttribute('data-workflow-dragging', '');
       updatePreview(pointerEvent);
@@ -233,8 +242,9 @@ export default function OwnerSystemWorkflowLibraryWorkspace({ authoringLocked = 
   };
   useEffect(() => { cleanup(); setDropFeedback(null); }, [placementContext]);
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; cleanup(); }; }, []);
-  return <OwnerSystemWorkflowWorkspaceShell className={`system-workflow__library ${className}`} label={label} phase={phase}
-    header={header} embedded={embedded}
+  return <OwnerSystemWorkflowWorkspaceShell className={`system-workflow__library system-workflow__library-editor workbench-editor-panel ${className}`} label={label} phase={phase}
+    header={header || (onClose && <header className="workbench-tool-panel-header system-workflow__library-header"><span>Library</span>
+      <button type="button" className="workbench-tool-panel-close" aria-label="Close Library" onClick={onClose}><X /></button></header>)} embedded={embedded} palette="editor"
     style={libraryWidth === null ? undefined : { '--workflow-library-width': `${libraryWidth}px` }}
     resizeHandle={resizable && <button aria-label="Resize Library" className="system-workflow__library-resize" type="button"
       onPointerDown={(event) => {
@@ -253,13 +263,13 @@ export default function OwnerSystemWorkflowLibraryWorkspace({ authoringLocked = 
         setLibraryWidth(clampWidth(event.key === 'Home' ? 300 : event.key === 'End' ? window.innerWidth
           : width + (event.key === 'ArrowLeft' ? -1 : 1) * (event.shiftKey ? 80 : 20)));
       }} />}
-    placing={placing} rail={<><OwnerSystemWorkflowWorkspaceRail  onClose={header ? undefined : onClose} workspace={workspace} />
-      {selectionAction && <button type="button" className="workflow-tactile-control system-workflow__library-selection-action"
+    placing={placing} rail={selectionAction ? <button type="button" className="workflow-tactile-control system-workflow__library-selection-action"
         disabled={authoringLocked || !selectionEnabled || !selectedAsset}
-        onClick={() => { if (selectedAsset) activate(selectedAsset); }}>{selectionAction}</button>}</>}
-    sidebarCollapsed={workspace.sidebarWidth <= 72}>
+        onClick={() => { if (selectedAsset) activate(selectedAsset); }}>{selectionAction}</button> : null}
+    >
     <OwnerSystemWorkflowLibraryPresenter key={data.ownerContext} categoryCommands={categoryCommands} data={data} open={!libraryClosed}
-      navigationHost={navigationHost} categoryDrag={categoryDrag} dropFeedback={dropFeedback}
+      navigationTargetRef={navigationTargetRef}
+      categoryDrag={categoryDrag} dropFeedback={dropFeedback}
        onAssetActivate={(_event, asset) => activate(asset)}
       onAssetPointerDown={beginAssetDrag} onImageActivate={(_event, asset) => place(asset)}
       workspace={{ ...workspace, selectedImage: imageChoice, selectAsset: (id, event, media = null) => {
@@ -268,9 +278,9 @@ export default function OwnerSystemWorkflowLibraryWorkspace({ authoringLocked = 
           setImageSelection(media ? { assetId: id, ownerContext: data.ownerContext, media } : null);
         }
       } }} />
-    {dragPreview?.rectangle && createPortal(<div aria-hidden="true" className="system-workflow__placement-preview" style={dragPreview.rectangle}>
-      {sourceFor(dragPreview.asset) && <img alt="" src={sourceFor(dragPreview.asset)} />}
-      <span>{dragPreview.kind === 'workbench-image' ? 'Release to place Image' : dragPreview.kind === 'reception' ? dragPreview.label : dragPreview.kind === 'module' ? dragPreview.label : dragPreview.kind === 'shortcut' ? 'Release to replace icon' : 'Release to add layer'}</span>
+    {dragPreview?.rectangle && createPortal(<div aria-hidden="true" className="system-workflow__placement-preview" data-stack-drop={dragPreview.kind === 'stack' || undefined} style={dragPreview.rectangle}>
+      {dragPreview.kind !== 'stack' && sourceFor(dragPreview.asset) && <img alt="" src={sourceFor(dragPreview.asset)} />}
+      <span>{dragPreview.label || (dragPreview.kind === 'workbench-image' ? 'Release to place Image' : dragPreview.kind === 'shortcut' ? 'Release to replace icon' : 'Release to add layer')}</span>
     </div>, workspaceRef?.current || document.body)}
   </OwnerSystemWorkflowWorkspaceShell>;
 }

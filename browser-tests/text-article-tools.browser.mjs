@@ -13,7 +13,7 @@ test('a delayed backup read is discarded when Text tools switch articles', { tim
   try {
     const page = await browser.newPage({ viewport: { width: 1600, height: 1000 } }); page.setDefaultTimeout(10000);
     await mountTextToolsFixture(page, origin, { textCount: 2 });
-    const tools = page.locator('.text-tools-window'), windows = page.locator('.text-window');
+    const tools = page.locator('.workbench-tool-dock:has([data-text-inspector])'), windows = page.locator('.text-window');
     // Focus activation is the same keyboard path used to target a second Text.
     await windows.first().getByRole('button', { name: 'Text tools', exact: true }).focus();
     if (!await tools.count()) await page.keyboard.press('Enter');
@@ -61,7 +61,7 @@ for (const width of [1440, 390]) test(`article styles, outline and portable reco
       localStorage.setItem(systemWorkflowDraftKey(draft.profileAddress), JSON.stringify(draft));
     });
     await mountTextToolsFixture(page, origin);
-    const tools = page.locator('.text-tools-window'), win = page.locator('.text-window');
+    const tools = page.locator('.workbench-tool-dock:has([data-text-inspector])'), win = page.locator('.text-window');
     const body = win.getByRole('textbox', { name: 'Article text', exact: true });
     const number = async (name, value) => { const field = tools.getByRole('spinbutton', { name, exact: true }); await field.fill(String(value)); await field.press('Enter'); await settle(page); };
     const style = (locator, property) => locator.evaluate((node, property) => getComputedStyle(node)[property], property);
@@ -90,13 +90,16 @@ for (const width of [1440, 390]) test(`article styles, outline and portable reco
     assert.equal(await body.evaluate(node => node.contains(getSelection().anchorNode) && getSelection().anchorNode.parentElement.closest('h2')?.textContent === 'Last study'), true);
     assert.equal(await win.locator('.text-module-scroll').first().evaluate(node => node.scrollTop > 100), true);
     assert.deepEqual(await win.boundingBox(), frame, 'outline navigation does not move the module');
+    await openTextToolSection(page.locator('.workbench-tool-dock:has([data-text-inspector])'), 'More text tools');
     await tools.getByLabel('Paragraph style', { exact: true }).selectOption('paragraph'); await settle(page);
     assert.equal(await outline.getByRole('button').count(), 1, 'changing heading type updates the outline');
+    await openTextToolSection(page.locator('.workbench-tool-dock:has([data-text-inspector])'), 'More text tools');
     await tools.getByRole('button', { name: 'Undo', exact: true }).click(); await settle(page);
     assert.equal(await outline.getByRole('button').count(), 2);
     await outline.getByRole('button', { name: 'Last study', exact: true }).click();
     await page.keyboard.type('Changed '); await settle(page);
     assert.equal(await outline.getByRole('button', { name: 'Changed Last study', exact: true }).count(), 1);
+    await openTextToolSection(page.locator('.workbench-tool-dock:has([data-text-inspector])'), 'More text tools');
     await tools.getByRole('button', { name: 'Undo', exact: true }).click(); await settle(page);
     assert.equal(await outline.getByRole('button', { name: 'Last study', exact: true }).count(), 1);
     await page.screenshot({ path: `.browser-test-runtime/text-article-outline-${width}.png` });
@@ -132,7 +135,7 @@ for (const width of [1440, 390]) test(`article styles, outline and portable reco
     assert.equal(await page.evaluate(() => window.savedDraft().texts[0].article.title), failedBackup.title);
     assert.equal(await tools.evaluate(node => node.scrollWidth <= node.clientWidth + 1), true);
     await page.screenshot({ path: `.browser-test-runtime/text-article-backup-${width}.png` });
-    await tools.getByRole('button', { name: 'Close Text tools', exact: true }).click();
+    await tools.getByRole('button', { name: 'Close Inspector', exact: true }).click();
     await win.getByRole('button', { name: 'Read', exact: true }).focus(); await page.keyboard.press('Enter');
     assert.equal(await style(win.locator('article h2').first(), 'fontSize'), '32px');
     assert.equal(await style(win.locator('article figcaption'), 'fontSize'), '12px');

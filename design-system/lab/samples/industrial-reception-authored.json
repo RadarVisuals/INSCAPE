@@ -340,228 +340,220 @@
       "name": "Image",
       "width": 1100,
       "height": 584,
-      "sides": [
-        {
-          "id": "side:471124ee-f9fe-4156-8e84-f57a5d8a8cdc",
-          "asset": {
-            "stableAssetId": "42:0x0000000000000000000000000000000000000000:0x0000000000000000000000000000000000000000000000000000000001de00bb",
-            "network": "lukso-mainnet",
-            "chainId": 42,
-            "tokenStandard": "UNKNOWN",
-            "contractAddress": "0x0000000000000000000000000000000000000000",
-            "tokenId": "0x0000000000000000000000000000000000000000000000000000000001de00bb",
-            "name": "THE QUIET SHIFT",
-            "description": "Design-library photo by Mike Norris, Pexels 31326395. Not a token or ownership claim.",
-            "collectionName": "INDUSTRIAL STUDIES",
-            "media": {
-              "url": "https://images.pexels.com/photos/31326395/pexels-photo-31326395.jpeg?auto=compress&cs=tinysrgb&w=1920",
-              "width": 5808,
-              "height": 3872,
-              "type": "image"
+      "visibility": "PUBLIC",
+      "artwork": {
+        "id": "artwork:471124ee-f9fe-4156-8e84-f57a5d8a8cdc",
+        "asset": {
+          "stableAssetId": "42:0x0000000000000000000000000000000000000000:0x0000000000000000000000000000000000000000000000000000000001de00bb",
+          "network": "lukso-mainnet",
+          "chainId": 42,
+          "tokenStandard": "UNKNOWN",
+          "contractAddress": "0x0000000000000000000000000000000000000000",
+          "tokenId": "0x0000000000000000000000000000000000000000000000000000000001de00bb",
+          "name": "THE QUIET SHIFT",
+          "description": "Design-library photo by Mike Norris, Pexels 31326395. Not a token or ownership claim.",
+          "collectionName": "INDUSTRIAL STUDIES",
+          "media": {
+            "url": "https://images.pexels.com/photos/31326395/pexels-photo-31326395.jpeg?auto=compress&cs=tinysrgb&w=1920",
+            "width": 5808,
+            "height": 3872,
+            "type": "image"
+          },
+          "creators": [],
+          "attributes": [
+            {
+              "key": "Photographer",
+              "value": "Mike Norris",
+              "type": null
             },
-            "creators": [],
-            "attributes": [
-              {
-                "key": "Photographer",
-                "value": "Mike Norris",
-                "type": null
-              },
-              {
-                "key": "Source",
-                "value": "https://www.pexels.com/photo/31326395/",
-                "type": null
-              },
-              {
-                "key": "License",
-                "value": "https://www.pexels.com/license/",
-                "type": null
-              }
-            ]
-          },
-          "crop": {
-            "x": 0.5,
-            "y": 0.5,
-            "zoom": 1
-          },
-          "transform": {
-            "quarterTurns": 0,
-            "mirrorX": false,
-            "mirrorY": false
-          }
+            {
+              "key": "Source",
+              "value": "https://www.pexels.com/photo/31326395/",
+              "type": null
+            },
+            {
+              "key": "License",
+              "value": "https://www.pexels.com/license/",
+              "type": null
+            }
+          ]
+        },
+        "crop": {
+          "x": 0.5,
+          "y": 0.5,
+          "zoom": 1
+        },
+        "transform": {
+          "quarterTurns": 0,
+          "mirrorX": false,
+          "mirrorY": false
         }
-      ],
-      "visibility": "PUBLIC"
+      }
     },
     {
       "id": "image:81ed5412-c1a4-4c1e-8427-8a43a36d32f5",
       "name": "Image",
       "width": 332,
       "height": 584,
-      "sides": [
-        {
-          "id": "side:80422c0b-2976-4dd3-bf1f-74f0f3442df5",
-          "asset": {
-            "stableAssetId": "42:0x0000000000000000000000000000000000000000:0x0000000000000000000000000000000000000000000000000000000001ddcafd",
-            "network": "lukso-mainnet",
-            "chainId": 42,
-            "tokenStandard": "UNKNOWN",
-            "contractAddress": "0x0000000000000000000000000000000000000000",
-            "tokenId": "0x0000000000000000000000000000000000000000000000000000000001ddcafd",
-            "name": "MACHINES AT REST",
-            "description": "Design-library photo by Mike Norris, Pexels 31312637. Not a token or ownership claim.",
-            "collectionName": "INDUSTRIAL STUDIES",
-            "media": {
-              "url": "https://images.pexels.com/photos/31312637/pexels-photo-31312637.jpeg?auto=compress&cs=tinysrgb&w=1920",
-              "width": 4000,
-              "height": 6000,
-              "type": "image"
+      "visibility": "PUBLIC",
+      "artwork": {
+        "id": "artwork:80422c0b-2976-4dd3-bf1f-74f0f3442df5",
+        "asset": {
+          "stableAssetId": "42:0x0000000000000000000000000000000000000000:0x0000000000000000000000000000000000000000000000000000000001ddcafd",
+          "network": "lukso-mainnet",
+          "chainId": 42,
+          "tokenStandard": "UNKNOWN",
+          "contractAddress": "0x0000000000000000000000000000000000000000",
+          "tokenId": "0x0000000000000000000000000000000000000000000000000000000001ddcafd",
+          "name": "MACHINES AT REST",
+          "description": "Design-library photo by Mike Norris, Pexels 31312637. Not a token or ownership claim.",
+          "collectionName": "INDUSTRIAL STUDIES",
+          "media": {
+            "url": "https://images.pexels.com/photos/31312637/pexels-photo-31312637.jpeg?auto=compress&cs=tinysrgb&w=1920",
+            "width": 4000,
+            "height": 6000,
+            "type": "image"
+          },
+          "creators": [],
+          "attributes": [
+            {
+              "key": "Photographer",
+              "value": "Mike Norris",
+              "type": null
             },
-            "creators": [],
-            "attributes": [
-              {
-                "key": "Photographer",
-                "value": "Mike Norris",
-                "type": null
-              },
-              {
-                "key": "Source",
-                "value": "https://www.pexels.com/photo/31312637/",
-                "type": null
-              },
-              {
-                "key": "License",
-                "value": "https://www.pexels.com/license/",
-                "type": null
-              }
-            ]
-          },
-          "crop": {
-            "x": 0.5,
-            "y": 0.5,
-            "zoom": 1
-          },
-          "transform": {
-            "quarterTurns": 0,
-            "mirrorX": false,
-            "mirrorY": false
-          }
+            {
+              "key": "Source",
+              "value": "https://www.pexels.com/photo/31312637/",
+              "type": null
+            },
+            {
+              "key": "License",
+              "value": "https://www.pexels.com/license/",
+              "type": null
+            }
+          ]
+        },
+        "crop": {
+          "x": 0.5,
+          "y": 0.5,
+          "zoom": 1
+        },
+        "transform": {
+          "quarterTurns": 0,
+          "mirrorX": false,
+          "mirrorY": false
         }
-      ],
-      "visibility": "PUBLIC"
+      }
     },
     {
       "id": "image:967c07c6-d0ad-461c-8b47-4ac2fb40791a",
       "name": "Image",
       "width": 536,
       "height": 292,
-      "sides": [
-        {
-          "id": "side:12280857-356b-4047-ae77-ed8e8f0838ec",
-          "asset": {
-            "stableAssetId": "42:0x0000000000000000000000000000000000000000:0x0000000000000000000000000000000000000000000000000000000000bcec15",
-            "network": "lukso-mainnet",
-            "chainId": 42,
-            "tokenStandard": "UNKNOWN",
-            "contractAddress": "0x0000000000000000000000000000000000000000",
-            "tokenId": "0x0000000000000000000000000000000000000000000000000000000000bcec15",
-            "name": "REMAINING LIGHT",
-            "description": "Design-library photo by Andy Lee, Pexels 12381205. Not a token or ownership claim.",
-            "collectionName": "INDUSTRIAL STUDIES",
-            "media": {
-              "url": "https://images.pexels.com/photos/12381205/pexels-photo-12381205.jpeg?auto=compress&cs=tinysrgb&w=1920",
-              "width": 3840,
-              "height": 5760,
-              "type": "image"
+      "visibility": "PUBLIC",
+      "artwork": {
+        "id": "artwork:12280857-356b-4047-ae77-ed8e8f0838ec",
+        "asset": {
+          "stableAssetId": "42:0x0000000000000000000000000000000000000000:0x0000000000000000000000000000000000000000000000000000000000bcec15",
+          "network": "lukso-mainnet",
+          "chainId": 42,
+          "tokenStandard": "UNKNOWN",
+          "contractAddress": "0x0000000000000000000000000000000000000000",
+          "tokenId": "0x0000000000000000000000000000000000000000000000000000000000bcec15",
+          "name": "REMAINING LIGHT",
+          "description": "Design-library photo by Andy Lee, Pexels 12381205. Not a token or ownership claim.",
+          "collectionName": "INDUSTRIAL STUDIES",
+          "media": {
+            "url": "https://images.pexels.com/photos/12381205/pexels-photo-12381205.jpeg?auto=compress&cs=tinysrgb&w=1920",
+            "width": 3840,
+            "height": 5760,
+            "type": "image"
+          },
+          "creators": [],
+          "attributes": [
+            {
+              "key": "Photographer",
+              "value": "Andy Lee",
+              "type": null
             },
-            "creators": [],
-            "attributes": [
-              {
-                "key": "Photographer",
-                "value": "Andy Lee",
-                "type": null
-              },
-              {
-                "key": "Source",
-                "value": "https://www.pexels.com/photo/12381205/",
-                "type": null
-              },
-              {
-                "key": "License",
-                "value": "https://www.pexels.com/license/",
-                "type": null
-              }
-            ]
-          },
-          "crop": {
-            "x": 0.5,
-            "y": 0.5,
-            "zoom": 1
-          },
-          "transform": {
-            "quarterTurns": 0,
-            "mirrorX": false,
-            "mirrorY": false
-          }
+            {
+              "key": "Source",
+              "value": "https://www.pexels.com/photo/12381205/",
+              "type": null
+            },
+            {
+              "key": "License",
+              "value": "https://www.pexels.com/license/",
+              "type": null
+            }
+          ]
+        },
+        "crop": {
+          "x": 0.5,
+          "y": 0.5,
+          "zoom": 1
+        },
+        "transform": {
+          "quarterTurns": 0,
+          "mirrorX": false,
+          "mirrorY": false
         }
-      ],
-      "visibility": "PUBLIC"
+      }
     },
     {
       "id": "image:b32a21c9-c295-4bef-9006-20d57a5355cd",
       "name": "Image",
       "width": 740,
       "height": 292,
-      "sides": [
-        {
-          "id": "side:3587bff6-1540-4d4b-88b8-a43732bfaca9",
-          "asset": {
-            "stableAssetId": "42:0x0000000000000000000000000000000000000000:0x0000000000000000000000000000000000000000000000000000000000540090",
-            "network": "lukso-mainnet",
-            "chainId": 42,
-            "tokenStandard": "UNKNOWN",
-            "contractAddress": "0x0000000000000000000000000000000000000000",
-            "tokenId": "0x0000000000000000000000000000000000000000000000000000000000540090",
-            "name": "THE OUTSIDE REMAINS",
-            "description": "Design-library photo by Mike van Schoonderwalt, Pexels 5505168. Not a token or ownership claim.",
-            "collectionName": "INDUSTRIAL STUDIES",
-            "media": {
-              "url": "https://images.pexels.com/photos/5505168/pexels-photo-5505168.jpeg?auto=compress&cs=tinysrgb&w=1920",
-              "width": 4981,
-              "height": 3796,
-              "type": "image"
+      "visibility": "PUBLIC",
+      "artwork": {
+        "id": "artwork:3587bff6-1540-4d4b-88b8-a43732bfaca9",
+        "asset": {
+          "stableAssetId": "42:0x0000000000000000000000000000000000000000:0x0000000000000000000000000000000000000000000000000000000000540090",
+          "network": "lukso-mainnet",
+          "chainId": 42,
+          "tokenStandard": "UNKNOWN",
+          "contractAddress": "0x0000000000000000000000000000000000000000",
+          "tokenId": "0x0000000000000000000000000000000000000000000000000000000000540090",
+          "name": "THE OUTSIDE REMAINS",
+          "description": "Design-library photo by Mike van Schoonderwalt, Pexels 5505168. Not a token or ownership claim.",
+          "collectionName": "INDUSTRIAL STUDIES",
+          "media": {
+            "url": "https://images.pexels.com/photos/5505168/pexels-photo-5505168.jpeg?auto=compress&cs=tinysrgb&w=1920",
+            "width": 4981,
+            "height": 3796,
+            "type": "image"
+          },
+          "creators": [],
+          "attributes": [
+            {
+              "key": "Photographer",
+              "value": "Mike van Schoonderwalt",
+              "type": null
             },
-            "creators": [],
-            "attributes": [
-              {
-                "key": "Photographer",
-                "value": "Mike van Schoonderwalt",
-                "type": null
-              },
-              {
-                "key": "Source",
-                "value": "https://www.pexels.com/photo/5505168/",
-                "type": null
-              },
-              {
-                "key": "License",
-                "value": "https://www.pexels.com/license/",
-                "type": null
-              }
-            ]
-          },
-          "crop": {
-            "x": 0.5,
-            "y": 0.5,
-            "zoom": 1
-          },
-          "transform": {
-            "quarterTurns": 0,
-            "mirrorX": false,
-            "mirrorY": false
-          }
+            {
+              "key": "Source",
+              "value": "https://www.pexels.com/photo/5505168/",
+              "type": null
+            },
+            {
+              "key": "License",
+              "value": "https://www.pexels.com/license/",
+              "type": null
+            }
+          ]
+        },
+        "crop": {
+          "x": 0.5,
+          "y": 0.5,
+          "zoom": 1
+        },
+        "transform": {
+          "quarterTurns": 0,
+          "mirrorX": false,
+          "mirrorY": false
         }
-      ],
-      "visibility": "PUBLIC"
+      }
     }
   ],
   "texts": [

@@ -23,7 +23,7 @@ for (const [width, density, zoom, below] of [[1440, 1, 1, false], [1440, 1.25, .
       }, { width, below });
       await mountTextToolsFixture(page, origin); await setWorkbenchZoom(page, zoom); await settle(page);
       const article = await page.evaluate(() => window.savedDraft().texts[0].article);
-      await page.getByRole('button', { name: 'Close Text tools', exact: true }).click();
+      await page.getByRole('button', { name: 'Close Inspector', exact: true }).click();
       await page.evaluate(() => document.activeElement?.blur());
       for (const index of [0, 1]) {
         const window = page.locator('.text-window').nth(index), bar = window.locator(':scope > header');
@@ -44,7 +44,7 @@ for (const [width, density, zoom, below] of [[1440, 1, 1, false], [1440, 1.25, .
         await page.mouse.move(x, gap); await page.waitForTimeout(500);
         assert.equal(await bar.evaluate(n => getComputedStyle(n).opacity), '1', 'resting in the gap keeps the toolbar available');
         if (index === 1) await page.screenshot({ path: `.browser-test-runtime/text-toolbar-hover-${width}-${density}.png` });
-        const grip = await window.locator('.text-window-grip').boundingBox();
+        const grip = await window.locator('.editor-object-toolbar-label').boundingBox();
         await page.mouse.move(grip.x + 12, grip.y + grip.height / 2);
         await page.keyboard.down('Alt'); await page.mouse.down();
         await page.mouse.move(grip.x + 44, grip.y + grip.height / 2 + 16, { steps: 8 });

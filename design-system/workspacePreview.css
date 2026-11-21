@@ -293,30 +293,6 @@
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
-.ds-studio-sides {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: var(--space-2);
-}
-.ds-studio-sides > button {
-  display: grid;
-  place-items: center;
-  gap: 6px;
-  padding: 6px;
-  min-height: 78px;
-  border: 1px solid var(--tactile-edge);
-  border-radius: var(--ds-control-radius);
-  color: var(--tactile-ink);
-  background: transparent;
-  font-size: var(--ds-text-micro);
-}
-.ds-studio-sides > button[aria-pressed='true'] {
-  border-color: var(--tactile-ink);
-}
-.ds-studio-sides svg {
-  width: 100%;
-  max-height: 42px;
-}
 
 .ds-studio-utilities {
   display: grid;

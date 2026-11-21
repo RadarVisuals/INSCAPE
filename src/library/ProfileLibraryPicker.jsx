@@ -1,3 +1,5 @@
+import { createPortal } from 'react-dom';
+import { useWorkbenchArea } from '../public/ownerSystemWorkflow/WorkbenchAreaContext.jsx';
 import { useCallback, useState, useSyncExternalStore } from 'react';
 import LibraryWorkspace from '../public/ownerSystemWorkflow/OwnerSystemWorkflowLibraryWorkspace.jsx';
 import ToolPanel from '../public/ownerSystemWorkflow/WorkbenchToolPanel.jsx';
@@ -7,7 +9,8 @@ const subscribeNone = () => () => {};
 
 // The host supplies explicit receivers. Browsing, click/drag threshold, fading,
 // cancellation and asynchronous destination capture are the Workbench's path.
-export default function ProfileLibraryPicker({ library, onClose, placementScope, placementTargetRef, preferences, framePreferences, boundsRef, initialTop = 16, selectionEnabled, active, onActivate, onPlacingChange }) {
+export default function ProfileLibraryPicker({ library, onClose, placementScope, placementTargetRef, preferences, framePreferences, boundsRef, initialTop = 16, selectionEnabled, active = true, onActivate, onPlacingChange, label = 'Choose Profile image', selectionAction = 'Use selected image' }) {
+  const { canvasHost } = useWorkbenchArea();
   const [localFrames, setLocalFrames] = useState({}), [placing, setPlacing] = useState(false);
   const frames = useSyncExternalStore(framePreferences?.subscribe || subscribeNone, framePreferences?.getSnapshot || (() => localFrames));
   const [initial] = useState(() => ({ left: 16, top: initialTop,
@@ -19,14 +22,16 @@ export default function ProfileLibraryPicker({ library, onClose, placementScope,
     if (framePreferences) framePreferences.update(update); else setLocalFrames(update);
   };
   const handlePlacing = useCallback(next => { setPlacing(next); onPlacingChange?.(next); }, [onPlacingChange]);
-  return <ToolPanel title="Library" label="Library" closeLabel="Close Library" onClose={onClose} chrome="flat"
+  const panel = <ToolPanel title="Library" label="Library" closeLabel="Close Library" onClose={onClose} chrome="flat"
     data-workflow-material="tactile" data-workflow-finish="flat" data-workbench-selection-tools
     className={`reception-library-window workbench-tool-controls${placing ? ' is-placing' : ''}`}
     frame={frames.library || initial} onFrameChange={updateFrame} boundsRef={boundsRef} active={active} onActivate={onActivate}
     minimumWidth={280} minimumHeight={300}>
-    {renderHeader => <>{renderHeader()}<LibraryWorkspace className="reception-library" label="Choose Reception image" phase="open" resizable={false} overlayPlacement embedded
+    {renderHeader => <>{renderHeader()}<LibraryWorkspace className="reception-library" label={label} phase="open" resizable={false} overlayPlacement embedded
       data={library.libraryData} categoryCommands={library.categoryCommands}
       placementScope={placementScope} placementTargetRef={placementTargetRef} preferenceStore={preferences}
-      selectionAction="Use selected image" selectionEnabled={selectionEnabled} onPlacingChange={handlePlacing} /></>}
+      selectionAction={selectionAction} selectionEnabled={selectionEnabled} onPlacingChange={handlePlacing} /></>}
   </ToolPanel>;
+  // The picker is a screen tool, outside clipped/non-interactive artwork planes.
+  return canvasHost?.parentElement ? createPortal(panel, canvasHost.parentElement) : panel;
 }

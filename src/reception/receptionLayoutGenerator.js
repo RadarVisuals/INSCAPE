@@ -1,25 +1,31 @@
-import { MAX_SHAPES, validShapeOutline } from '../shapes/shapes.js';
+import { MAX_SHAPES } from '../shapes/shapes.js';
 import { validWorkbenchArea, workbenchArea } from '../systemWorkflow/domain/workbenchArea.js';
 import { RECEPTION_CELL_LIMIT, MIN_RECEPTION_CELL_SIZE, withReceptionModuleWindow, receptionCellResizeReason } from './receptionEditorDocument.js';
 
-export const RECEPTION_LAYOUT_DEFAULTS = Object.freeze({ width: 1440, height: 900, count: 6, gap: 24, padding: 24, radius: 0 });
+export const RECEPTION_LAYOUT_DEFAULTS = Object.freeze({ width: 1440, height: 900, columns: 3, rows: 2, gap: 24, padding: 24, radius: 0 });
 const occupied = cell => cell.members.length > 0 || Boolean(cell.content);
 export const receptionLayoutCountRange = value => ({
   min: Math.max(1, value.cells.filter(occupied).length),
   max: Math.min(RECEPTION_CELL_LIMIT, MAX_SHAPES - value.shapes.length + value.cells.length),
 });
 
-// A seed keeps the proposal stable while settings change. Only applying its
-// rectangles creates authored state. Spacing persists for subsequent bento edits;
-// the seed and temporary proposals never enter the document.
+export function validateReceptionBentoGeometry(settings) {
+  for (const [key, label, min, max] of [['width', 'Width', 320, 16384], ['height', 'Height', 320, 16384],
+    ['gap', 'Gap', 0, 256], ['padding', 'Outer margin', 0, 256]]) {
+    if (!Number.isInteger(settings[key]) || settings[key] < min || settings[key] > max)
+      throw new Error(`${label} must be a whole number between ${min} and ${max} px.`);
+  }
+}
+// A seed keeps proportions stable while settings change. Rows and columns are
+// explicit; only applying the proposal creates authored rectangles.
 export function generateReceptionLayout(settings, seed = 1) {
-  const { width, height, count, gap, padding, radius } = settings;
-  if (![width, height].every(value => Number.isInteger(value) && value >= 320 && value <= 16384))
-    throw new Error('Choose a width and height between 320 and 16384 pixels.');
-  if (!Number.isInteger(count) || count < 1 || count > RECEPTION_CELL_LIMIT)
-    throw new Error(`Choose between 1 and ${RECEPTION_CELL_LIMIT} cells.`);
-  if (![gap, padding].every(value => Number.isInteger(value) && value >= 0 && value <= 256))
-    throw new Error('Choose spacing and outer margin between 0 and 256 pixels.');
+  const { width, height, columns, rows, gap, padding, radius } = settings, count = columns * rows;
+  validateReceptionBentoGeometry(settings);
+  for (const [label, value] of [['Columns', columns], ['Rows', rows]]) {
+    if (!Number.isInteger(value) || value < 1 || value > RECEPTION_CELL_LIMIT)
+      throw new Error(`${label} must be a whole number between 1 and ${RECEPTION_CELL_LIMIT}.`);
+  }
+  if (count > RECEPTION_CELL_LIMIT) throw new Error(`Use at most ${RECEPTION_CELL_LIMIT} cells in total (columns × rows).`);
   if (!Number.isFinite(radius) || radius < 0 || radius > 160) throw new Error('Choose a corner radius between 0 and 160 pixels.');
   let state = seed >>> 0;
   const random = () => {
@@ -31,19 +37,8 @@ export function generateReceptionLayout(settings, seed = 1) {
   const innerWidth = width - 2 * padding, innerHeight = height - 2 * padding;
   const maxColumns = Math.floor((innerWidth + gap) / (MIN_RECEPTION_CELL_SIZE.width + gap));
   const maxRows = Math.floor((innerHeight + gap) / (MIN_RECEPTION_CELL_SIZE.height + gap));
-  if (maxColumns < 1 || maxRows < 1 || maxColumns * maxRows < count)
+  if (columns > maxColumns || rows > maxRows)
     throw new Error(`Use a larger canvas, fewer cells or less spacing. Each cell needs at least ${MIN_RECEPTION_CELL_SIZE.width} × ${MIN_RECEPTION_CELL_SIZE.height} pixels.`);
-  const minRows = Math.ceil(count / maxColumns);
-  const idealRows = Math.ceil(Math.sqrt(count * innerHeight / innerWidth));
-  const preferredRows = Math.min(maxRows, Math.ceil(count / 4));
-  const rows = Math.max(minRows, preferredRows, Math.min(count, maxRows, idealRows + Math.floor(random() * 3) - 1));
-  const columns = Array(rows).fill(1);
-  for (let remaining = count - rows; remaining > 0; remaining--) {
-    const available = columns.map((size, index) => ({ size, index })).filter(row => row.size < maxColumns);
-    const smallest = Math.min(...available.map(row => row.size));
-    const candidates = available.filter(row => row.size <= smallest + 1);
-    columns[candidates[Math.floor(random() * candidates.length)].index]++;
-  }
   const distribute = (total, amount, emphasis, minimum) => {
     const free = total - amount * minimum;
     const weights = Array.from({ length: amount }, (_, index) => (0.5 + random()) * (index === emphasis ? 2.4 : 1));
@@ -58,11 +53,11 @@ export function generateReceptionLayout(settings, seed = 1) {
   const heights = distribute(innerHeight - gap * (rows - 1), rows, dominantRow, MIN_RECEPTION_CELL_SIZE.height);
   const rectangles = [];
   let top = padding;
-  columns.forEach((amount, row) => {
-    const widths = distribute(innerWidth - gap * (amount - 1), amount, Math.floor(random() * amount), MIN_RECEPTION_CELL_SIZE.width);
+  heights.forEach(height => {
+    const widths = distribute(innerWidth - gap * (columns - 1), columns, Math.floor(random() * columns), MIN_RECEPTION_CELL_SIZE.width);
     let left = padding;
-    widths.forEach(cellWidth => { rectangles.push({ left, top, width: cellWidth, height: heights[row] }); left += cellWidth + gap; });
-    top += heights[row] + gap;
+    widths.forEach(cellWidth => { rectangles.push({ left, top, width: cellWidth, height }); left += cellWidth + gap; });
+    top += height + gap;
   });
   return { width, height, radius, rectangles };
 }
@@ -70,22 +65,19 @@ export function generateReceptionLayout(settings, seed = 1) {
 // Reuse occupied cells first, then empty cells in their existing reading order.
 // Artwork records stay intact; the normal cell reconciler carries their geometry.
 export function applyReceptionLayout(value, settings, seed) {
-  const layout = generateReceptionLayout(settings, seed), range = receptionLayoutCountRange(value);
-  if (Object.hasOwn(settings, 'showFrame') && typeof settings.showFrame !== 'boolean') throw new Error('Choose whether to show the outer frame.');
-  if (Object.hasOwn(settings, 'innerLines') && settings.innerLines !== null && !validShapeOutline(settings.innerLines)) throw new Error('Choose valid Outline settings for the inner lines.');
-  if (settings.count < range.min) throw new Error(`Keep at least ${range.min} cells to retain their content.`);
-  if (settings.count > range.max) throw new Error(`There is room for ${range.max} cells alongside your other shapes.`);
-  let emptySlots = settings.count - value.cells.filter(occupied).length;
+  const layout = generateReceptionLayout(settings, seed), range = receptionLayoutCountRange(value), count = layout.rectangles.length;
+  if (count < range.min) throw new Error(`Keep at least ${range.min} cells to retain their content.`);
+  if (count > range.max) throw new Error(`There is room for ${range.max} cells alongside your other shapes.`);
+  let emptySlots = count - value.cells.filter(occupied).length;
   const cells = value.cells.filter(cell => occupied(cell) || emptySlots-- > 0);
   const removed = new Set(value.cells.filter(cell => !cells.includes(cell)).map(cell => cell.id));
   const area = { ...workbenchArea(value.workbench), width: layout.width, height: layout.height };
   if (!validWorkbenchArea(area)) throw new Error('This size extends beyond the canvas editing limits.');
-  let next = { ...value, ...(Object.hasOwn(settings, 'showFrame') ? { showFrame: settings.showFrame } : {}),
-    ...(Object.hasOwn(settings, 'innerLines') ? { innerLines: settings.innerLines } : {}),
+  let next = { ...value,
     bento: { gap: settings.gap, padding: settings.padding }, cells: [...cells], shapes: value.shapes.filter(shape => !removed.has(shape.id)),
     workbench: { ...value.workbench, area, shapes: value.workbench.shapes.filter(shape => !removed.has(shape.id)) },
     ...(value.arrangement ? { arrangement: { groups: [] } } : {}) };
-  while (next.cells.length < settings.count) {
+  while (next.cells.length < count) {
     const id = `shape:${crypto.randomUUID()}`;
     next.shapes.push({ id, name: `Cell ${next.cells.length + 1}`, color: '#808080', opacity: 0.25, visibility: 'PUBLIC' });
     next.cells.push({ id, members: [], mobile: { columns: 2, height: 240 } });

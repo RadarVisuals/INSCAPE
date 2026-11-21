@@ -92,3 +92,16 @@ test('v9 category organization removes malformed references and assigns unmentio
     sections: [{ id: 'archive', name: 'Archive', categoryIds: ['two'] }],
   });
 });
+
+
+test('nested folder references survive a save/read round trip', async () => {
+  const { createEmptyWorkspace, createFolder } = await import('../domain/libraryWorkspace.js');
+  const profile = '0x1111111111111111111111111111111111111111';
+  let workspace = createFolder(createEmptyWorkspace(profile), 'Artwork', 1);
+  workspace = createFolder(workspace, 'Characters', 2, workspace.folders[0].id);
+  const loaded = normalizeWorkspace(JSON.parse(JSON.stringify(workspace)), profile);
+  assert.equal(loaded.folders[1].parentId, loaded.folders[0].id);
+  assert.deepEqual(loaded.categoryOrganization.rootCategoryIds, [loaded.folders[0].id]);
+  const cyclic = structuredClone(workspace); cyclic.folders[0].parentId = cyclic.folders[1].id;
+  assert.throws(() => normalizeWorkspace(cyclic, profile), /hierarchy/);
+});

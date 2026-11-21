@@ -52,14 +52,14 @@ test('Library replacement discards orphaned records, preserves source identity a
   const { store } = fixture(), initial = createReception(), cell = initial.regions[0].id;
   await prepareReceptionImage(store, undefined, cell, initial).choose({ ...assets[0], assetRecord: assets[0] });
   let value = store.getSnapshot().reception;
-  assert.deepEqual(value.imageModules[0].sides[0].crop, { x: .5, y: .5, zoom: 1 });
+  assert.deepEqual(value.imageModules[0].artwork.crop, { x: .5, y: .5, zoom: 1 });
   assert.equal(value.regions[0].padding, 0);
   const original = structuredClone(value.imageModules[0]);
   await prepareReceptionImage(store, value, cell).choose({ ...assets[0], assetRecord: assets[0] });
   value = store.getSnapshot().reception;
   assert.notEqual(value.imageModules[0].id, original.id);
   assert.equal(value.imageModules.length, 1);
-  assert.deepEqual(value.imageModules[0].sides[0].asset, original.sides[0].asset);
+  assert.deepEqual(value.imageModules[0].artwork.asset, original.artwork.asset);
   const logo = value.imageModules[0];
   saveReception(store, value, { ...value, branding: { ...value.branding, logo: logo.id } });
   value = store.getSnapshot().reception;
@@ -76,20 +76,20 @@ function sample() {
   let value = createReception(), first = value.regions[0].id;
   value = splitReception(value, first, 'x', 'region:right');
   value.imageModules = [{ id: 'image:one', name: 'Source artwork', visibility: 'PUBLIC', width: 800, height: 600,
-    sides: [{ id: 'side:one', asset, crop: { x: .3, y: .5, zoom: 2 }, transform: { quarterTurns: 1, mirrorX: true, mirrorY: false } }] }];
+    artwork: { id: 'artwork:one', asset, crop: { x: .3, y: .5, zoom: 2 }, transform: { quarterTurns: 1, mirrorX: true, mirrorY: false } } }];
   value.texts = [{ id: 'text:one', article: { ...createArticle(), title: 'A story' }, visibility: 'PUBLIC' }];
   value.regions[0].content = 'image:one'; value.regions[1].content = 'text:one';
   return value;
 }
-test('Reception zoom below fill survives storage, history and public round trip without widening Workbench crops', () => {
+test('Reception zoom below fill survives storage, history and public round trip with native Image crop bounds', () => {
   const { root, store, storage } = fixture(), value = sample();
   const workbenches = structuredClone(root.getDraft().workbenches);
   saveReception(store, undefined, value);
   for (const zoom of [.1, .25, .75]) {
     const before = store.getSnapshot().reception, next = structuredClone(before);
-    next.imageModules[0].sides[0].crop.zoom = zoom;
+    next.imageModules[0].artwork.crop.zoom = zoom;
     assert.equal(validReception(next), true);
-    assert.equal(validImageModules(next.imageModules), false, 'Workbench Images still require fill zoom');
+    assert.equal(validImageModules(next.imageModules), true, 'native Images share the supported zoom-out range');
     saveReception(store, before, next);
     assert.ok(store.undo()); assert.deepEqual(store.getSnapshot().reception, before);
     assert.ok(store.redo()); assert.deepEqual(store.getSnapshot().reception, next);
@@ -97,13 +97,13 @@ test('Reception zoom below fill survives storage, history and public round trip 
     assert.deepEqual(reloaded.getDraft().reception, next);
     const document = publish(root.getDraft());
     assertValidProfileDocumentV9(document);
-    assert.deepEqual(document.reception.imageModules[0].sides, next.imageModules[0].sides);
+    assert.deepEqual(document.reception.imageModules[0].artwork, next.imageModules[0].artwork);
     const fresh = fixture(); fresh.store.release();
     assert.equal(reconcileOwnerDraftWithPublishedProfile({ document, profileAddress: profile, storage: fresh.storage, store: fresh.root }).status, 'HYDRATED_FROM_PUBLISHED');
     assert.deepEqual(projectReception(fresh.root.getDraft().reception), document.reception);
   }
   for (const zoom of [0, .09, 4.01, NaN]) {
-    const invalid = structuredClone(value); invalid.imageModules[0].sides[0].crop.zoom = zoom;
+    const invalid = structuredClone(value); invalid.imageModules[0].artwork.crop.zoom = zoom;
     assert.equal(validReception(invalid), false);
     assert.equal(validReception(projectReception(invalid), true), false);
   }
@@ -119,7 +119,7 @@ test('partition splits and resizes T junctions without losing records or accepti
   value = resizeReception(value, divider.id, 6500);
   assert.equal(value.regions.find(item => item.id === left).height, 6500);
   assert.equal(value.regions.find(item => item.id === 'region:bottom-left').y, 6500);
-  assert.equal(value.imageModules[0].sides[0].crop.zoom, 2);
+  assert.equal(value.imageModules[0].artwork.crop.zoom, 2);
   assert.equal(value.texts.length, 1);
   assert.equal(validReception(value), true);
   for (const corrupt of [item => item.regions[0].width++, item => item.mobile.pop(), item => item.regions.push(item.regions[0]), item => item.branding.theme = 'unknown']) {
@@ -183,7 +183,7 @@ test('public round trip retains Reception geometry and source records, excludes 
   assert.equal(document.reception.imageModules.length, 1);
   assert.equal(countProfileDocumentV9Assets(document), 1);
   assert.equal(JSON.stringify(document).includes('Unplaced secret'), false);
-  assert.deepEqual(document.reception.imageModules[0].sides, value.imageModules[0].sides);
+  assert.deepEqual(document.reception.imageModules[0].artwork, value.imageModules[0].artwork);
   const fresh = fixture(); fresh.store.release();
   assert.equal(reconcileOwnerDraftWithPublishedProfile({ document, profileAddress: profile, storage: fresh.storage, store: fresh.root }).status, 'HYDRATED_FROM_PUBLISHED');
   assert.deepEqual(projectReception(fresh.root.getDraft().reception), document.reception);
@@ -193,11 +193,11 @@ test('shared publication choice preserves unselected canvases and independently 
   let record = createWorkbenchCollection(root.getDraft());
   record = appendWorkbench(record, 'workbench:second', 'Second', root.getDraft());
   const candidates = () => canvasPublicationCandidates({ record, assetRecords: [], profile: { name: 'Artist' } });
-  const first = buildCanvasPublication({ candidates: candidates(), selectedIds: ['workbench:main', 'workbench:second'], includeShared: true });
+  const first = buildCanvasPublication({ candidates: candidates(), selectedIds: ['workbench:main', 'workbench:second', 'reception'], includeShared: true });
   record.shared.reception.radius = 60;
   const selected = buildCanvasPublication({ candidates: candidates(), selectedIds: ['workbench:main'], includeShared: false, previousDocument: first });
   assert.deepEqual(selected.reception, first.reception); assert.deepEqual(selected.canvases, first.canvases);
-  const shared = buildCanvasPublication({ candidates: candidates(), selectedIds: [], includeShared: true, previousDocument: selected });
+  const shared = buildCanvasPublication({ candidates: candidates(), selectedIds: ['reception'], includeShared: true, previousDocument: selected });
   assert.equal(shared.reception.radius, 60);
   assert.deepEqual(shared.canvases, first.canvases); assert.deepEqual(shared.workbench, first.workbench);
 });

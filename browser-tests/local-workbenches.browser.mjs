@@ -1,10 +1,11 @@
-import { editorDocumentNames, editorMenu, activeEditorDocument, editorCommand, selectEditorDocument, activeEditorDocumentName } from './fixtures/editor-menu.mjs';
+import { editorDestination, openEditorMenu, editorDocumentNames, editorMenu, activeEditorDocument, editorCommand, selectEditorDocument, activeEditorDocumentName } from './fixtures/editor-menu.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { chromium } from 'playwright-core';
 import { browserExecutable } from '../scripts/browserEnvironment.mjs';
+import { openSharedTool } from './fixtures/shared-tools.mjs';
 
 const origin = process.env.INSCAPE_TEST_ORIGIN || 'http://127.0.0.1:5217';
 const output = process.env.INSCAPE_BROWSER_OUTPUT || '.browser-test-runtime/local-workbenches';
@@ -36,19 +37,21 @@ async function open(page, selection = false) {
 }
 async function rename(page, name) {
   await editorCommand(page, 'Canvas', 'Rename');
-  await page.getByLabel('Canvas name', { exact: true }).fill(name);
+  await page.getByLabel('Composition name', { exact: true }).fill(name);
   await page.getByRole('button', { name: 'Save name', exact: true }).click();
 }
 async function create(page, name) {
-  await editorCommand(page, 'Canvas', 'New canvas');
-  await page.getByLabel('New canvas name', { exact: true }).fill(name);
-  await page.getByRole('button', { name: 'Create canvas', exact: true }).click();
+  await editorCommand(page, 'Canvas', '+ New');
+  await page.getByLabel('Composition name', { exact: true }).fill(name);
+  await page.getByRole('button', { name: 'Create composition', exact: true }).click();
 }
 async function write(page, text) {
   const editor = page.getByRole('textbox', { name: 'Article text', exact: true });
   if (!await editor.isVisible()) {
     await page.locator('.text-window').click({ position: { x: 80, y: 90 } });
-    await page.getByRole('button', { name: 'Write', exact: true }).click();
+    const tools = await openSharedTool(page, 'Text');
+    const edit = tools.getByRole('button', { name: 'Edit text', exact: true });
+    if (await edit.count()) await edit.click();
   }
   await editor.fill(text);
   await editorMenu(page, 'Canvas').focus();
@@ -64,6 +67,30 @@ async function failWrites(page, fail) {
 }
 
 const settle = page => page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+
+test('canvas deletion confirms the named local work, permits cancel and opens the surviving canvas', { timeout: 60000 }, async () => {
+  const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
+  try {
+    const page = await browser.newPage({ viewport: { width: 1440, height: 900 }, reducedMotion: 'reduce' });
+    await open(page);
+    await create(page, 'Disposable study');
+    const original = await record(page);
+    await editorCommand(page, 'Canvas', 'Delete canvas');
+    const confirm = page.getByRole('alertdialog', { name: 'Delete local canvas' });
+    assert.match(await confirm.innerText(), /Disposable study/);
+    assert.ok(await confirm.getByRole('button', { name: 'Cancel' }).evaluate(node => node === document.activeElement));
+    await page.keyboard.press('Escape');
+    assert.deepEqual(await record(page), original);
+    await editorCommand(page, 'Canvas', 'Delete canvas');
+    await confirm.getByRole('button', { name: 'Delete local canvas' }).click();
+    await page.locator('.text-window').waitFor();
+    const after = await record(page);
+    assert.deepEqual(after.workbenches, original.workbenches.filter(item => item.id !== original.activeId));
+    assert.equal(await activeEditorDocument(page), after.activeId);
+    const menu = await openEditorMenu(page, 'Canvas');
+    assert.ok(await menu.getByRole('menuitem', { name: 'Delete canvas (last canvas)' }).isDisabled());
+  } finally { await browser.close(); }
+});
 
 test('fixed menu retains named canvases through reload and stays above the workspace', { timeout: 60000 }, async () => {
   const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
@@ -81,7 +108,7 @@ test('fixed menu retains named canvases through reload and stays above the works
     assert.equal(await activeEditorDocumentName(page), 'Another canvas');
     await page.setViewportSize({ width: 390, height: 700 }); await settle(page);
     await editorCommand(page, 'Canvas', 'Rename');
-    const form = await page.getByRole('dialog', { name: 'Rename canvas' }).boundingBox();
+    const form = await page.getByRole('dialog', { name: 'Rename composition' }).boundingBox();
     assert.ok(form.x >= 0 && form.x + form.width <= 390 && form.y + form.height <= 700);
     await page.getByRole('button', { name: 'Cancel', exact: true }).click();
   } finally { await browser.close(); }
@@ -96,7 +123,7 @@ async function selectMixed(page) {
   if (await collapse.count()) await collapse.click();
   const read = page.getByRole('button', { name: 'Read', exact: true });
   if (await read.count()) { await read.focus(); await page.keyboard.press('Enter'); }
-  for (const name of ['Close Text tools', 'Close Transform', 'Close Color', 'Close Image', 'Close Shape', 'Close FX', 'Close Info']) {
+  for (const name of ['Close Inspector']) {
     const close = page.getByRole('button', { name, exact: true });
     if (await close.count()) await close.click();
   }
@@ -120,7 +147,7 @@ async function selectMixed(page) {
     await page.screenshot({ path: path.join(output, `mixed-selection-${diagnosticIndex}.png`) });
     throw error;
   }
-  const close = page.getByRole('button', { name: 'Close Transform', exact: true });
+  const close = page.getByRole('button', { name: 'Close Inspector', exact: true });
   if (await close.count()) await close.click();
 }
 async function beginMixedGesture(page, kind = 'resize') {
@@ -269,7 +296,7 @@ test('named local Workbenches keep separate content and canvas geometry through 
     await selectEditorDocument(page, aId);
     assert.deepEqual((await current(page)).texts, a.texts);
     const beforeReview = await record(page);
-    await page.getByRole('button', { name: 'Publish', exact: true }).click();
+    await editorDestination(page, 'Publish');
     const publication = page.getByRole('complementary', { name: 'Publish profile' });
     await publication.waitFor();
     assert.equal(await publication.getByRole('checkbox', { name: /Lunar Desert/ }).isChecked(), true);
@@ -285,7 +312,7 @@ test('named local Workbenches keep separate content and canvas geometry through 
       await page.screenshot({ path: path.join(output, `workbenches-${width}.png`) });
     }
     await page.setViewportSize({ width: 1440, height: 1000 });
-    await editorMenu(page, 'Backup').click();
+    await openEditorMenu(page, 'Backup');
     const downloading = page.waitForEvent('download');
     await page.getByRole('button', { name: 'Download all Workbenches', exact: true }).click();
     const backup = JSON.parse(await readFile(await (await downloading).path(), 'utf8'));
@@ -308,7 +335,7 @@ test('multi-Workbench publication review selects the active canvas and changes s
     await page.waitForFunction(() => window.guardedStore().listWorkbenches().length === 2);
     const saved = await record(page), requests = [];
     page.on('request', request => { if (/pin-profile-document|ipfs|rpc/.test(request.url())) requests.push(request.url()); });
-    await page.getByRole('button', { name: 'Publish', exact: true }).click();
+    await editorDestination(page, 'Publish');
     const publication = page.getByRole('complementary', { name: 'Publish profile' });
     await publication.waitFor();
     const original = publication.getByRole('checkbox', { name: /Workbench 1/ });
@@ -340,9 +367,9 @@ test('failed saves and pending Text keep the current Workbench open until recove
     await page.getByRole('alert').waitFor();
     assert.deepEqual(await record(page), before);
     assert.equal(await activeEditorDocument(page), aId);
-    assert.equal(await page.getByLabel('New canvas name').inputValue(), 'B');
+    assert.equal(await page.getByLabel('Composition name').inputValue(), 'B');
     await failWrites(page, false);
-    await page.getByRole('button', { name: 'Create canvas', exact: true }).click();
+    await page.getByRole('button', { name: 'Create composition', exact: true }).click();
     await page.waitForFunction(() => window.guardedStore().listWorkbenches().length === 2);
     const bId = await activeEditorDocument(page);
     await selectEditorDocument(page, aId);
@@ -370,7 +397,7 @@ test('naming validates input, retries failed writes and commits the visible layo
     await page.getByRole('alert').filter({ hasText: '1–64' }).waitFor();
     assert.deepEqual(await record(page), before);
     await page.keyboard.press('Escape');
-    assert.equal(await page.getByLabel('Canvas name', { exact: true }).count(), 0);
+    assert.equal(await page.getByLabel('Composition name', { exact: true }).count(), 0);
     assert.ok(await editorMenu(page, 'Canvas').evaluate(node => document.activeElement === node));
     const header = page.locator('.text-window header[data-workbench-selectable]');
     const original = await page.locator('.text-window').boundingBox();
@@ -387,7 +414,7 @@ test('naming validates input, retries failed writes and commits the visible layo
     await rename(page, 'Lunar Desert');
     await page.getByRole('alert').filter({ hasText: 'Could not save the Workbench' }).waitFor();
     assert.deepEqual(await record(page), beforeRename);
-    assert.equal(await page.getByLabel('Canvas name', { exact: true }).inputValue(), 'Lunar Desert');
+    assert.equal(await page.getByLabel('Composition name', { exact: true }).inputValue(), 'Lunar Desert');
     await failWrites(page, false);
     await page.getByRole('button', { name: 'Save name', exact: true }).click();
     assert.ok(await page.evaluate(() => window.originalTextWindow === document.querySelector('.text-window')));
@@ -402,22 +429,22 @@ test('naming validates input, retries failed writes and commits the visible layo
   } finally { await browser.close(); }
 });
 
-test('all eight local Workbenches stay reachable, with an explained limit and usable naming forms', { timeout: 60000 }, async () => {
+test('all 30 local Workbenches stay reachable, with an explained limit and usable naming forms', { timeout: 60000 }, async () => {
   const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
   try {
     const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, reducedMotion: 'reduce' });
     await open(page);
     const firstId = await activeEditorDocument(page);
-    for (let index = 2; index <= 8; index++) await create(page, `Composition ${index}`);
-    assert.equal((await editorDocumentNames(page)).length, 8);
-    await editorMenu(page, 'Canvas').click();
-    assert.ok(await page.getByRole('menuitem', { name: 'New canvas (8/8 used)', exact: true }).isDisabled());
+    for (let index = 2; index <= 30; index++) await create(page, `Composition ${index}`);
+    assert.equal((await editorDocumentNames(page)).length, 30);
+    await openEditorMenu(page, 'Canvas');
+    assert.ok(await page.getByRole('menuitem', { name: '+ New', exact: true }).isDisabled());
     await page.keyboard.press('Escape');
     const lastId = await activeEditorDocument(page);
     await selectEditorDocument(page, firstId);
     await page.locator('.text-window').waitFor();
     await editorCommand(page, 'Canvas', 'Rename');
-    await page.getByLabel('Canvas name', { exact: true }).fill('Lunar Desert — a long composition name for a narrow screen');
+    await page.getByLabel('Composition name', { exact: true }).fill('Lunar Desert — a long composition name for a narrow screen');
     await mkdir(output, { recursive: true });
     for (const width of [1440, 390]) {
       await page.setViewportSize({ width, height: 900 });
@@ -425,7 +452,7 @@ test('all eight local Workbenches stay reachable, with an explained limit and us
       const box = await form.boundingBox();
       assert.ok(box.x >= 0 && box.x + box.width <= width);
       assert.ok(await form.evaluate(node => node.scrollWidth <= node.clientWidth));
-      assert.ok(await page.getByLabel('Canvas name', { exact: true }).evaluate(node => {
+      assert.ok(await page.getByLabel('Composition name', { exact: true }).evaluate(node => {
         const box = node.getBoundingClientRect();
         return document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2) === node;
       }), 'the sidebar cannot cover the name field');
@@ -437,6 +464,6 @@ test('all eight local Workbenches stay reachable, with an explained limit and us
     await page.reload();
     await editorMenu(page, 'Canvas').waitFor();
     assert.equal(await activeEditorDocument(page), lastId);
-    assert.equal((await record(page)).workbenches.length, 8);
+    assert.equal((await record(page)).workbenches.length, 30);
   } finally { await browser.close(); }
 });

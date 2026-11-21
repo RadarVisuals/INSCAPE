@@ -1,5 +1,5 @@
 import { validImageModules, projectImageModules, restoreImageModules, imageReferenceCount } from '../../imageModule/imageModule.js';
-import { validTextModules, projectTextModules, restoreTextModules } from '../../text/domain/article.js';
+import { validTextModules, projectTextModules, restoreTextModules, exact } from '../../text/domain/article.js';
 import { MIN_CROP_PROJECTION_ZOOM } from '../../lattice/rendering/latticeCrop.js';
 import { validReceptionLinks } from './receptionLinks.js';
 import { receptionContentIds, receptionRegionContentIds, validReceptionScene } from '../../reception/receptionLayers.js';
@@ -12,7 +12,6 @@ export const RECEPTION_MIN = 200;
 export const RECEPTION_LIMIT = 32;
 export const RECEPTION_IMAGE_MIN_ZOOM = MIN_CROP_PROJECTION_ZOOM;
 const E = RECEPTION_EXTENT;
-const exact = (v, keys) => v && typeof v === 'object' && !Array.isArray(v) && Object.keys(v).length === keys.length && keys.every(k => Object.hasOwn(v, k));
 const number = (v, min, max) => Number.isFinite(v) && v >= min && v <= max;
 const integer = (v, min, max) => Number.isInteger(v) && number(v, min, max);
 const colour = v => v === null || typeof v === 'string' && /^#[0-9a-f]{6}$/iu.test(v);
@@ -69,7 +68,7 @@ export function validReception(value, published = false) {
   return true;
 }
 export function assertReception(value) {
-  if (!validReception(value)) throw new Error('The Reception layout or content is invalid. Your saved layout is unchanged.');
+  if (!validReception(value)) throw new Error('The Bento layout or content is invalid. Your saved layout is unchanged.');
   return value;
 }
 export function projectReception(value) {

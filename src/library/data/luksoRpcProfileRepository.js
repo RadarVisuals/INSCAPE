@@ -1,6 +1,6 @@
 import { fetchMetadataJson } from './fetchMetadataJson.js';
 import { ERC725 } from '@erc725/erc725.js';
-import { metadataImages as collectMetadataImages } from './metadataImages.js';
+import { metadataFiles, metadataImages as collectMetadataImages } from './metadataImages.js';
 import { createPublicClient, fallback, getAddress, http } from 'viem';
 import { lukso } from 'viem/chains';
 import { IPFS_GATEWAY_URL, LIBRARY_PAGE_SIZE, LUKSO_CHAIN_ID, LUKSO_RPC_FALLBACK_URLS, LUKSO_RPC_URL,
@@ -238,7 +238,7 @@ function toNormalizedAsset(holding, ownerAddress, tokenDocument, collectionDocum
   const contractMetadata = {
     id: holding.address, name: collection.name || collection.title || null,
     lsp4TokenName: collection.name || null, description: collection.description || '',
-    images: metadataImages(collectionDocument), lsp4Creators: contractFacts.creators,
+    images: metadataImages(collectionDocument), fileAttachments: metadataFiles(metadataRoot(collectionDocument)), lsp4Creators: contractFacts.creators,
     attributes: metadataAttributes(collectionDocument), isLSP7: holding.standard === 'LSP7',
     isCollection: contractFacts.tokenType === 'COLLECTION', lsp4TokenType: contractFacts.tokenType,
     metadataSource: 'LSP4Metadata', tokenTypeSource: 'LSP4TokenType'
@@ -247,7 +247,7 @@ function toNormalizedAsset(holding, ownerAddress, tokenDocument, collectionDocum
     id: `rpc:${holding.address}:${holding.tokenId}`, balance: '1', asset_id: holding.address,
     token: { tokenId: holding.tokenId, name: token.name || token.title || null,
       lsp4TokenName: token.name || null, description: token.description || '',
-      images: metadataImages(tokenDocument?.document), lsp4Creators: contractFacts.creators,
+      images: metadataImages(tokenDocument?.document), fileAttachments: metadataFiles(metadataRoot(tokenDocument?.document)), lsp4Creators: contractFacts.creators,
       attributes: metadataAttributes(tokenDocument?.document), asset: contractMetadata,
       metadataSource: tokenDocument?.source || 'LSP4MetadataForTokenId' }
   } : { id: `rpc:${holding.address}`, balance: holding.balance, asset_id: holding.address, asset: contractMetadata };

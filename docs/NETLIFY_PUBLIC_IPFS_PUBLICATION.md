@@ -49,12 +49,13 @@ override when activation is limited to that branch.
 
 These are provisional service limits, not a hosting billing cap. The founder chose access for all valid Universal Profiles on 19 October 2026. The monthly limits are shared by everyone; reaching one temporarily stops new uploads across the site. Failed and uncertain attempts still count. Successfully cached results reuse their CID in the same month without another upload. Stored files can accumulate across months; RPC, Functions, Blobs and gateway usage also have costs. Review the provider's own plan limits and alerts as usage grows.
 
-The ordinary Vite editor can publish without leaving its local origin. In a
-development build on `localhost`, `127.0.0.1` or IPv6 loopback, the upload client
+Both the Vite development server and the built local preview publish from the current browser origin. On `localhost`, `127.0.0.1` or IPv6 loopback, the upload client
 uses `https://deploy-preview-5--enterinscape.netlify.app` as the service. Set the
 public, nonsecret `VITE_PUBLICATION_SERVICE_ORIGIN` to another configured HTTPS
-service origin if that development target changes. Hosted production builds
+service origin if that development target changes. Vite preview includes that one service in its local connection policy. Hosted production builds
 ignore this development override and use their own same-origin function.
+
+For documents with Gallery placements, native Studio compositions or an empty Gallery, the challenge response must advertise `v9-gallery-placements`. Updating the preview requires deploying the matching function and public reader. Older compatible documents still use the existing service.
 
 The service must include the 30 October loopback CORS support. It allows POST
 and only the content-type/upload-authorization/upload-signature request headers;

@@ -46,7 +46,7 @@ test('active public and owner boundaries remain separated after legacy shell rem
   const app = source('../App.jsx');
   const boundary = source('./OwnerRuntimeBoundary.jsx');
   assert.match(app, /localOwnerRoute \? !ownerSourceReady \?[\s\S]*<OwnerRuntimeBoundary/u);
-  assert.match(app, /: <PublishedProfileBoundary/u);
+  assert.match(app, /localOwnerRoute \? ownerWorkspace : <Suspense[^]*?<PublishedProfileBoundary/u);
   assert.match(boundary, /workspace && workspace === viewed/u);
   assert.doesNotMatch(boundary, /PublishedProfileBoundary|localStorage|useLibraryStore|useSignalStore/u);
 });

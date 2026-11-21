@@ -17,7 +17,7 @@ const store = createSystemWorkflowDraftStore({ profileAddress, storage });
 if (!store.getDraft().shapes?.length) {
   for (let i = 0; i < 5; i++) addImageModule(store, profileAddress);
   for (let i = 0; i < 2; i++) addTextModule(store, profileAddress);
-  addShape(store, profileAddress, { kind: 'grid', position: { left: 80, top: 200 }, size: { width: 192, height: 144 } });
+  addShape(store, profileAddress, { kind: 'grid', position: { left: 600, top: 240 }, size: { width: 192, height: 144 } });
 }
 window.gridResizeSaved = () => JSON.parse(localStorage.getItem(systemWorkflowDraftKey(profileAddress)));
 createRoot(document.getElementById('root')).render(<Runtime profileAddress={profileAddress} reviewStorage={storage}

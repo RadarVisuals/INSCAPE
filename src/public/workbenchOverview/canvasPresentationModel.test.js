@@ -33,7 +33,7 @@ test('presentation uses saved Index order and anchor resolution without writing 
 test('source metadata stays distinct and repeated placements share one dossier', () => {
   const asset = { stableAssetId: 'source:a', name: 'First work', description: 'First description', creators: [], attributes: [{ key: 'Mood', value: 'Quiet' }], tokenStandard: 'UNKNOWN', network: 'lukso-mainnet' };
   const other = { ...asset, stableAssetId: 'source:b', name: 'Other work', description: 'Other description', attributes: [{ key: 'Material', value: 'Paper' }] };
-  const items = [asset, asset, other].map((asset, i) => ({ id: `image:${i}`, source: { kind: 'image', side: { asset } }, frame: { left: i * 100, top: 0, width: 50, height: 50 } }));
+  const items = [asset, asset, other].map((asset, i) => ({ id: `image:${i}`, source: { kind: 'image', artwork: { asset } }, frame: { left: i * 100, top: 0, width: 50, height: 50 } }));
   const before = structuredClone(items), result = canvasArtworkSources({ items });
   assert.equal(result.length, 2); assert.equal(result[0].frames.length, 2);
   assert.deepEqual(result[0].dossier.traits, [{ label: 'Mood', value: 'Quiet' }]);

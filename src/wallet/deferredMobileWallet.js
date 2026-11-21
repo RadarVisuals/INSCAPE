@@ -21,32 +21,61 @@ export function deferMobileWallet(factory) {
   };
 }
 
-// Reserve navigation during the tap, then let the SDK's connection handler own
-// approval, return-to-page recovery and the pending-request toast.
-export async function prepareMobileWalletOnDemand(view) {
-  if (view.isConnecting) return null;
-  const tab = window.open('', '_blank');
-  if (!tab) return null;
+const preparations = new WeakMap();
+
+function clearPreparation(view) {
+  const pending = view.prewarmResult;
+  pending?.provider.off('display_uri', pending.handler);
+  view.prewarmResult = null;
+  view.prewarmConnectPromise?.catch(() => {});
+  view.prewarmConnectPromise = null;
+  view.prewarmUriPromise = null;
+  view.prewarmedDeepLink = '';
+}
+
+export function cancelMobileWalletPreparation(view) {
+  preparations.get(view)?.cancel();
+}
+
+// The first tap prepares a link in the existing modal. A fresh second tap lets
+// the SDK open that link synchronously, preserving mobile user activation.
+// Never reserve about:blank and navigate it after downloading the provider.
+export function prepareMobileWalletOnDemand(view) {
+  if (view.isConnecting || preparations.has(view)) return false;
+  if ((view.prewarmedDeepLink && view.prewarmConnectPromise) || view._pendingWalletConnect) return true;
   view.isConnecting = true;
   view.connectingRdns = view.walletConnectConnector?.rdns;
-  try {
-    if (!view._pendingWalletConnect && !view.prewarmConnectPromise) {
-      await view.prewarmWalletConnectUri();
+  let cancel, timer;
+  const interrupted = new Promise((_, reject) => {
+    cancel = () => reject(new Error('Mobile connection preparation cancelled.'));
+    timer = setTimeout(() => reject(new Error('The UP! App connection could not be prepared. Please try again.')), 20000);
+  });
+  const preparation = { cancel };
+  preparations.set(view, preparation);
+  let abandoned = false;
+  const ready = (async () => {
+    if (!view.prewarmConnectPromise) await view.prewarmWalletConnectUri();
+    if (abandoned || !view.isConnected) {
+      clearPreparation(view);
+      return;
     }
-    if (view.isConnected) return tab;
-    // Removal can happen while getProvider() is still downloading. The SDK's
-    // disconnectedCallback ran before this late listener was registered.
-    const pending = view.prewarmResult;
-    pending?.provider.off('display_uri', pending.handler);
-    view.prewarmResult = null;
-    view.prewarmConnectPromise?.catch(() => {});
-    view.prewarmConnectPromise = null;
-    view.prewarmUriPromise = null;
-  } catch (error) {
+    if (!view.prewarmConnectPromise || !view.prewarmUriPromise) throw new Error('The UP! App connection is unavailable. Please try again.');
+    await Promise.race([view.prewarmUriPromise, view.prewarmConnectPromise, interrupted]);
+    if (!view.prewarmedDeepLink) throw new Error('No UP! App connection link was received. Please try again.');
+  })();
+  // Do not let a retry race a provider download that cannot be aborted. A late
+  // SDK result must be cleaned before this same view starts another attempt.
+  void ready.finally(() => {
+    if (preparations.get(view) === preparation) preparations.delete(view);
+  }).catch(() => {});
+  void Promise.race([ready, interrupted]).catch(error => {
+    abandoned = true;
+    clearPreparation(view);
     if (view.isConnected) view.dispatchEvent(new CustomEvent('on-error', { detail: { error }, bubbles: true, composed: true }));
-  }
-  tab.close();
-  view.isConnecting = false;
-  view.connectingRdns = undefined;
-  return null;
+  }).finally(() => {
+    clearTimeout(timer);
+    view.isConnecting = false;
+    view.connectingRdns = undefined;
+  });
+  return false;
 }

@@ -77,7 +77,7 @@ export default function WorkbenchCanvasContent({ children, suspended = false }) 
         const cell = cells.find(value => value.members.includes(moduleId));
         // Inspection stays viewport-owned; ordinary cell paint is clipped by
         // its owner's native window, regardless of temporary editor focus.
-        const clip = cell && !presentationTransforms?.[id] && !element.hasAttribute('data-svg-inspection')
+        const clip = cell && cell.clipContent !== false && !presentationTransforms?.[id] && !element.hasAttribute('data-svg-inspection')
           ? editorCellClip(frame(cell.id), frame(id), cell.radius || 0, scale * (globalThis.devicePixelRatio || 1)) : null;
         if (clip) { element.style.clipPath = clip; element.dataset.editorCell = cell.id; }
         else if (element.hasAttribute('data-editor-cell')) { element.style.removeProperty('clip-path'); element.removeAttribute('data-editor-cell'); }

@@ -1,0 +1,26 @@
+.workbench-overview[data-layout="wall"] { padding: 0; overflow: hidden; }
+.gallery-wall { position: absolute; inset: 0; overflow: clip; container-type: size; color: var(--interface-ink); }
+.wall-camera, .wall-perspective, .wall-scroll { position: absolute; inset: 0; width: 100%; height: 100%; }
+.wall-camera { transform-origin: 0 0; transition: transform 580ms cubic-bezier(.22,.75,.18,1); }
+.wall-perspective { pointer-events: none; }
+.wall-back { fill: color-mix(in srgb, var(--interface-environment) 76%, #383736); }
+.wall-side { fill: color-mix(in srgb, var(--interface-environment) 70%, #181818); }
+.wall-floor { fill: color-mix(in srgb, var(--interface-environment) 68%, #242321); }
+.wall-lines, .wall-depth-lines { fill: none; stroke: var(--interface-ink); stroke-width: .8; opacity: .105; }
+.wall-depth-lines { opacity: .075; }
+.wall-scroll { overflow: auto hidden; scrollbar-width: none; overscroll-behavior: contain; touch-action: pan-x; user-select: none; cursor: grab; }
+.wall-scroll:active { cursor: grabbing; }
+.gallery-wall[data-inspecting] .wall-scroll { overflow: hidden; cursor: default; }
+.wall-hang { display: flex; position: relative; width: max-content; height: 88%; padding: 0 20cqw 0 24cqw; gap: clamp(48px,10cqw,220px); align-items: center; }
+.wall-piece { position: relative; flex: none; width: min(56cqh * var(--ratio), 66cqw); aspect-ratio: var(--ratio); background: var(--interface-environment); }
+.wall-piece > .workbench-overview-preview { position: absolute; inset: 0; }
+.gallery-wall button.wall-open { position: absolute; inset: 0; width: 100%; padding: 0; border: 0; border-radius: 0; background: transparent; cursor: inherit; touch-action: pan-x; }
+.gallery-wall button.wall-open:hover { background: transparent; }
+.gallery-wall[data-inspecting] .wall-open { pointer-events: none; }
+.wall-open[aria-pressed="true"] { outline: 3px solid var(--interface-ink); }
+.wall-caption { position: absolute; top: calc(100% + 12px); left: 0; font: 12px/1.4 var(--font-technical); }
+.gallery-wall[data-inspecting] .wall-caption { visibility: hidden; }
+.wall-controls { position: absolute; bottom: 2.5%; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 8px; white-space: nowrap; font: 12px/1.4 var(--font-technical); }
+.wall-controls button { min-height: 32px; padding: 4px 8px; }
+.wall-controls select { background: var(--interface-panel); }
+@media (prefers-reduced-motion: reduce) { .wall-camera { transition: none; } }

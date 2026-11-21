@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { getSchema } from '@tiptap/core';
-import StarterKit from '@tiptap/starter-kit';
+import { articleExtensions } from './articleExtensions.js';
 import { EditorState, TextSelection } from '@tiptap/pm/state';
 import { history, undo, redo } from '@tiptap/pm/history';
 import { ArticleSpacing, articleLineToSeparate, separateArticleLine } from './articleSpacing.js';
@@ -9,7 +9,7 @@ import { ArticleAlignment } from './articleAlignment.js';
 import { ArticleTextStyle, ArticleTypography } from './articleTypography.js';
 import { assertArticle, createArticle } from './domain/article.js';
 
-const schema = getSchema([StarterKit, ArticleTextStyle, ArticleTypography, ArticleAlignment, ArticleSpacing]);
+const schema = getSchema([...articleExtensions, ArticleTextStyle, ArticleTypography, ArticleAlignment, ArticleSpacing]);
 const text = (value, marks) => ({ type: 'text', text: value, ...(marks ? { marks } : {}) });
 function stateFor(content, from, to = from) {
   const doc = schema.nodeFromJSON({ type: 'doc', content });

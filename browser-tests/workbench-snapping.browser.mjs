@@ -1,3 +1,4 @@
+import { sharedToolPanel } from './fixtures/shared-tools.mjs';
 import { editorCommand } from './fixtures/editor-menu.mjs';
 import { openTextToolSection } from './fixtures/text-tool-sections.mjs';
 import assert from 'node:assert/strict';
@@ -39,7 +40,7 @@ test('owner Display and Text windows snap to the Workbench, with free movement a
       createRoot(document.getElementById('root')).render(React.createElement(Runtime, { profileAddress, reviewStorage: localStorage,
         reviewAssets: fixture.OWNER_SYSTEM_WORKFLOW_REVIEW_ASSETS, reviewCategories: [], reviewActivity: [], reviewProfile: { name: 'Grid snapping' } }));
     });
-    await openTextToolSection(page.locator('.text-tools-window'), 'Text box layout');
+    await openTextToolSection(sharedToolPanel(page), 'Text box layout');
     await page.getByLabel('Text inner spacing', { exact: true }).selectOption('custom');
     for (const [side, value] of Object.entries({ top: 8, right: 0, bottom: 16, left: 12 })) await page.getByLabel(`Text padding ${side}`, { exact: true }).fill(String(value));
     assert.deepEqual(await page.evaluate(() => window.readSnapDraft().texts[0].article.appearance.padding), { top: 8, right: 0, bottom: 16, left: 12 });
@@ -48,7 +49,7 @@ test('owner Display and Text windows snap to the Workbench, with free movement a
     await page.getByRole('button', { name: 'Read', exact: true }).focus(); await page.keyboard.press('Enter');
     assert.deepEqual(await paddingStyle(page.locator('article.text-document')), ['8px', '0px', '16px', '12px']);
     await page.getByRole('button', { name: 'Write', exact: true }).focus(); await page.keyboard.press('Enter');
-    await openTextToolSection(page.locator('.text-tools-window'), 'Text box layout');
+    await openTextToolSection(sharedToolPanel(page), 'Text box layout');
     await page.getByLabel('Text padding bottom', { exact: true }).scrollIntoViewIfNeeded();
     await page.screenshot({ path: '.browser-test-runtime/text-padding-tools-wide.png' });
     await page.setViewportSize({ width: 390, height: 844 });
@@ -57,7 +58,7 @@ test('owner Display and Text windows snap to the Workbench, with free movement a
     await page.setViewportSize({ width: 1440, height: 1000 });
     await page.getByLabel('Text inner spacing', { exact: true }).selectOption('auto');
     assert.equal(await page.evaluate(() => window.readSnapDraft().texts[0].article.appearance.padding), undefined);
-    await page.getByRole('button', { name: 'Close Text tools', exact: true }).click();
+    await page.getByRole('button', { name: 'Close Inspector', exact: true }).click();
     const before = await page.evaluate(() => window.readSnapDraft());
     const text = page.locator('.text-window');
     const textHeader = page.getByLabel('Move Text window', { exact: true });

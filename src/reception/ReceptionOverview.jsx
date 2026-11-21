@@ -1,9 +1,11 @@
-import { lazy, Suspense, useLayoutEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { useStartupDestinationReady } from '../startveil/StartupDestinationContext.jsx';
 import ReceptionCanvas from './ReceptionCanvas.jsx';
-import ReceptionNavigation from './ReceptionNavigation.jsx';
+import PublicWorkspaceHeader from '../profileDocument/components/PublicWorkspaceHeader.jsx';
 import ReceptionHeader from './ReceptionHeader.jsx';
+import { workbenchOverviewModel } from '../public/workbenchOverview/workbenchOverviewModel.js';
+import { workbenchArea } from '../systemWorkflow/domain/workbenchArea.js';
 import ReceptionPresentation, { useReceptionPresentation } from './ReceptionPresentation.jsx';
 import { resolvePresentationDestination } from '../presentation/presentationSources.js';
 import useDeferredFocusReturn from '../public/useDeferredFocusReturn.js';
@@ -20,8 +22,9 @@ const ReceptionDocumentCanvas = lazy(() => import('./ReceptionDocumentCanvas.jsx
 export default function ReceptionOverview({ snapshot, assets, assetStatus, ...props }) {
   return <ReceptionPresentation snapshot={snapshot} assets={assets} assetStatus={assetStatus}><ReceptionPage {...props} /></ReceptionPresentation>;
 }
-function ReceptionPage({ reception, model, address, ownerEditingAllowed = false,
-  ownerDestinations, onEdit, onReturnToWorkbench, onCloseBento, unavailableTarget = false, onOpenDirectory, onReturn, onOpenCanvas, notice, onRetry }) {
+function ReceptionPage({ reception, model, address, ownerEditingAllowed = false, embedded = false,
+  ownerDestinations, account, onEditReception, onOpenOverview, onCloseBento, unavailableTarget = false,
+  onOpenDirectory, onOpenCanvas, onOpenWriting, onConnect, onDisconnect, notice, onRetry }) {
   useStartupDestinationReady();
   const [exploring, setExploring] = useState(false);
   const explore = useRef(null), roomTitle = useRef(null), flightArea = useRef(null), previous = useRef(false);
@@ -35,7 +38,9 @@ function ReceptionPage({ reception, model, address, ownerEditingAllowed = false,
     trigger.current = button; setSourceError('');
     setOpened({ id: destination.entry.id, destinationId: reference.destinationId, origin: button?.closest('.workbench-overview-card, .reception-region, .reception-document-cell') });
   };
-  const selectedCanvas = presentation?.previews.find(entry => entry.id === opened?.id);
+  const selectedCanvas = presentation?.snapshot.entries.find(entry => entry.id === opened?.id);
+  const selectedModel = useMemo(() => selectedCanvas && workbenchOverviewModel(selectedCanvas.draft, presentation?.assets),
+    [selectedCanvas, presentation?.assets]);
   const close = () => { setOpened(null); restoreFocus(() => trigger.current?.isConnected ? trigger.current : pageRoot.current); };
   useLayoutEffect(() => {
     if (exploring) roomTitle.current?.focus({ preventScroll: true });
@@ -44,41 +49,40 @@ function ReceptionPage({ reception, model, address, ownerEditingAllowed = false,
   }, [exploring]);
   const name = model?.profile?.displayName || 'Unnamed profile';
   const frameless = reception.version === 3 || Boolean(reception.arrangement);
-  const actions = <>
-    {(onCloseBento || onReturnToWorkbench || onReturn) && <button className="workflow-tactile-control" type="button"
-      aria-label={onCloseBento ? 'Back to profile' : onReturnToWorkbench ? 'Back to Editor' : 'Back to My Inscape'}
-      onClick={onCloseBento || onReturnToWorkbench || onReturn}>{onCloseBento ? 'Profile' : onReturnToWorkbench ? 'Editor' : 'My Inscape'}</button>}
-    {!exploring && <>
-      <button className="workflow-tactile-control" type="button" ref={explore} onClick={() => setExploring(true)}>Explore</button>
-      <button className="workflow-tactile-control" type="button" onClick={onOpenCanvas} disabled={!onOpenCanvas}>Enter Inscape</button>
-    </>}
-  </>;
-  return <main ref={pageRoot} className="reception-page system-workflow__token-scope"
+  const actions = !exploring && <button className="workflow-tactile-control" type="button" ref={explore}
+    onClick={() => setExploring(true)}>Explore</button>;
+  const home = onCloseBento || onOpenOverview || (() => { setExploring(false); scrollRoot.current?.scrollTo({ top: 0 }); });
+  return <>
+    {!embedded && <PublicWorkspaceHeader model={model} account={account} current="Profile" ownerDestinations={ownerDestinations}
+      onProfile={home} onWorks={onOpenCanvas} onWriting={onOpenWriting}
+      onDiscover={onOpenDirectory} onConnect={onConnect} onDisconnect={onDisconnect} />}
+    <main data-public-header={!embedded || undefined} ref={pageRoot} className="reception-page system-workflow__token-scope"
     data-lattice-menu-surface data-workflow-material="tactile" data-workflow-finish="flat" data-frameless={frameless || undefined}
-    data-published-focus-fallback tabIndex={-1} aria-label={`${name} reception`}
+    data-profile-page={reception.version === 3 || undefined} data-published-focus-fallback tabIndex={-1} aria-label={`${name} profile`} style={{ '--reception-page-background': reception.backgroundColor || undefined,
+      '--reception-bento-width': `${workbenchArea(reception.workbench).width}px` }}
     onKeyDown={event => { if (event.key === 'Escape' && !event.defaultPrevented && exploring) { event.preventDefault(); setExploring(false); } }}>
     <div className="reception-window" inert={opened ? '' : undefined}>
-      <ReceptionHeader navigation={<ReceptionNavigation reception={reception} model={model}
-        onAbout={() => { setExploring(false); scrollRoot.current?.scrollTo({ top: 0 }); }} onCanvases={onOpenCanvas} onDiscover={onOpenDirectory} onEdit={onEdit} />}>
+      <ReceptionHeader reception={reception} model={model}>
         {!frameless && actions}
       </ReceptionHeader>
       {notice && <div className="reception-notice" role="alert">{notice}{onRetry && <button type="button" onClick={onRetry}>Retry</button>}</div>}
-      <div className="reception-window-workspace"><div className="reception-window-main" data-document={reception.version === 3 && !exploring || undefined} ref={scrollRoot}>
+      <div className="reception-window-workspace"><div className="reception-window-main"
+        data-document={reception.version === 3 && !exploring || undefined} ref={scrollRoot}>
       {exploring ? <section className="exploration-room" aria-label="Exploration room">
-        <header><button type="button" onClick={() => setExploring(false)}><ArrowLeft aria-hidden="true" />Back to Reception</button><span>01 / EXPLORATION</span></header>
+        <header><button type="button" onClick={() => setExploring(false)}><ArrowLeft aria-hidden="true" />Back to Profile</button><span>01 / EXPLORATION</span></header>
         <div className="exploration-room__canvas" ref={flightArea}><div className="exploration-room__origin">
           <span className="reception-kicker">{name}</span><h1 ref={roomTitle} tabIndex={-1}>A space to explore.</h1><p>The world starts here.</p>
           <span className="exploration-room__marker" aria-hidden="true" />
         </div>
           {ownerEditingAllowed && <Suspense fallback={<p role="status">Opening Keeper dock…</p>}>
-            <ExplorationKeeper profileAddress={address} flightAreaRef={flightArea}  onReturn={() => setExploring(false)} />
+            <ExplorationKeeper profileAddress={address} flightAreaRef={flightArea} onEdit={onEditReception} onReturn={() => setExploring(false)} />
           </Suspense>}
         </div>
         <footer>{ownerEditingAllowed ? '2800 × 1800 · Camera follows Keeper · Metal beams only · Direct recall.' : 'Exploration wireframe · The profile owner can configure a Keeper here.'}</footer>
       </section> : <>
         {unavailableTarget && <p className="reception-notice" role="status">That destination is no longer in this publication.</p>}
         {reception.version === 3
-          ? <Suspense fallback={<p role="status">Opening Reception…</p>}><ReceptionDocumentCanvas reception={reception} model={model} address={address} onOpenSource={open} /></Suspense>
+          ? <Suspense fallback={<p role="status">Opening Profile…</p>}><ReceptionDocumentCanvas reception={reception} model={model} address={address} onOpenSource={open} /></Suspense>
           : <ReceptionCanvas reception={reception} model={model} address={address} onOpenSource={open} />}
         {sourceError && <p role="status">{sourceError}</p>}
       </>}
@@ -86,6 +90,6 @@ function ReceptionPage({ reception, model, address, ownerEditingAllowed = false,
       {frameless && <footer className="reception-page-actions">{actions}</footer>}
     </div>
     {selectedCanvas && <Suspense fallback={<p role="status">Opening canvas…</p>}><CanvasPresentation key={selectedCanvas.id}
-      selected={selectedCanvas} model={selectedCanvas.model} origin={opened.origin} initialDestinationId={opened.destinationId} onClose={close} /></Suspense>}
-  </main>;
+      selected={selectedCanvas} model={selectedModel} origin={opened.origin} initialDestinationId={opened.destinationId} onClose={close} /></Suspense>}
+  </main></>;
 }

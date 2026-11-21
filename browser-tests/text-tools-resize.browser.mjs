@@ -1,4 +1,4 @@
-import { setTextBackground } from './fixtures/shared-tools.mjs';
+import { setTextBackground, sharedToolPanel, sharedToolTab } from './fixtures/shared-tools.mjs';
 import { openTextToolSection } from './fixtures/text-tool-sections.mjs';
 import assert from 'node:assert/strict';
 import test from 'node:test';
@@ -56,7 +56,7 @@ for (const width of [1440, 390]) test(`Text columns, inline title and module res
     page.setDefaultTimeout(10000);
     const errors = []; page.on('pageerror', error => errors.push(error.message));
     await mountTextToolsFixture(page, origin);
-    const tools = page.locator('.text-tools-window'), text = page.locator('.text-window');
+    const tools = page.locator('.workbench-tool-dock:has([data-text-inspector])'), text = page.locator('.text-window');
     // The fixture's original frame starts underneath current navigation chrome.
     // Pan the camera through a clear canvas point, preserving authored geometry.
     if (width === 1440) await page.locator('.editor-menu-brand[aria-expanded="true"]').click();
@@ -76,7 +76,7 @@ for (const width of [1440, 390]) test(`Text columns, inline title and module res
     assert.equal(await page.getByRole('combobox', { name: 'Insert Library artwork' }).count(), 0);
     const layout = await tools.boundingBox();
     assert.ok(layout.x >= 0 && layout.x + layout.width <= width);
-    const settings = tools.locator('.text-tools-content');
+    const settings = tools.locator('.workbench-inspector');
     const overflow = await settings.evaluate(n => ({ x: n.scrollWidth - n.clientWidth, y: n.scrollHeight - n.clientHeight,
       overflowY: getComputedStyle(n).overflowY, bottom: n.getBoundingClientRect().bottom }));
     assert.ok(overflow.x <= 1, 'both settings columns fit without horizontal clipping');
@@ -87,27 +87,27 @@ for (const width of [1440, 390]) test(`Text columns, inline title and module res
       assert.ok(await settings.evaluate(n => n.scrollTop > 0), 'the lower settings are reachable');
     }
     assert.equal(await tools.locator('.workbench-tool-panel-resize').count(), 8, 'tools retain invisible resize edges');
-    assert.deepEqual(await tools.getByRole('tab').allTextContents(), ['Format text', 'Article settings'], 'Text retains its two accepted settings scopes');
-    assert.equal(await tools.getByRole('tab', { name: 'Format text', exact: true }).getAttribute('aria-selected'), 'true');
+    assert.equal(await sharedToolTab(page, 'Inspector').getAttribute('aria-selected'), 'true');
+    assert.equal(await tools.getByLabel('Selected text size', { exact: true }).isVisible(), true, 'formatting stays inside the complete Inspector');
     assert.equal(await tools.getByRole('textbox', { name: 'Article title', exact: true }).count(), 0, 'title is edited in the document');
     const beforeSectionChange = await saved(page);
     await openTextToolSection(tools, 'Display connection');
-    assert.equal(await tools.getByRole('tab', { name: 'Article settings', exact: true }).getAttribute('aria-selected'), 'true');
+    assert.equal(await tools.locator('.text-inspector-connections').evaluate(node => node.open), true);
     assert.deepEqual(await saved(page), beforeSectionChange, 'switching settings scopes does not author the article');
     assert.equal(await page.getByRole('combobox', { name: 'Follow Display', exact: true }).isVisible(), true);
     const follow = page.getByRole('combobox', { name: 'Follow Display', exact: true });
     await follow.scrollIntoViewIfNeeded();
     assert.equal(await follow.evaluate(n => { const r = n.getBoundingClientRect(); return n.contains(document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2)); }), true, 'lower settings receive pointer input after contained scrolling');
     await page.screenshot({ path: path.join(output, `text-tools-${width}.png`) });
-    await openTextToolSection(page.locator('.text-tools-window'), 'Background & edges');
+    await openTextToolSection(page.locator('.workbench-tool-dock:has([data-text-inspector])'), 'Background & edges');
     assert.notEqual((await page.evaluate(() => window.savedDraft())).texts[0].article.appearance.background, null);
-    await openTextToolSection(page.locator('.text-tools-window'), 'Background & edges');
+    await openTextToolSection(page.locator('.workbench-tool-dock:has([data-text-inspector])'), 'Background & edges');
     await setTextBackground(page, 'none');
     assert.equal((await saved(page)).texts[0].article.appearance.background, null);
-    await openTextToolSection(page.locator('.text-tools-window'), 'Background & edges');
+    await openTextToolSection(page.locator('.workbench-tool-dock:has([data-text-inspector])'), 'Background & edges');
     await setTextBackground(page, 'colour');
     await page.screenshot({ path: path.join(output, `text-appearance-${width}.png`) });
-    await tools.getByRole('button', { name: 'Close Text tools', exact: true }).click();
+    await tools.getByRole('button', { name: 'Close Inspector', exact: true }).click();
     const title = text.getByRole('textbox', { name: 'Article title', exact: true });
     await title.fill('Titel rechtstreeks in het document'); await title.press('Enter');
     assert.equal(await body.evaluate(node => node === document.activeElement), true, 'Enter continues in the body');
@@ -120,7 +120,7 @@ for (const width of [1440, 390]) test(`Text columns, inline title and module res
     await text.getByRole('button', { name: 'Write', exact: true }).click();
     await tools.waitFor();
     assert.deepEqual(await text.boundingBox(), frameBeforeRead, 'opening the tools does not reflow or move the module');
-    await tools.getByRole('button', { name: 'Close Text tools', exact: true }).click();
+    await tools.getByRole('button', { name: 'Close Inspector', exact: true }).click();
     await body.focus(); await page.keyboard.press('Control+End'); await page.keyboard.type(' Extra tekst.');
     const article = (await saved(page)).texts[0].article;
     const grip = text.getByLabel('Move Text window', { exact: true });
@@ -176,41 +176,37 @@ for (const width of [1440, 390]) test(`Text columns, inline title and module res
   } finally { await browser.close(); }
 });
 
-test('Display Layers keeps content sizing; Text tools and Info recover within the viewport', { timeout: 90000 }, async () => {
+test('Display Layers keeps content sizing; unified Text and Info inspector recover within the viewport', { timeout: 90000 }, async () => {
   const browser = await chromium.launch({ executablePath: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', headless: true });
   try {
     const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
     await mountTextToolsFixture(page, origin);
     const before = await saved(page);
-    for (const [command, label] of [[null, 'Text tools'], ['LAYERS', 'Layers'], ['METADATA', 'Info']]) {
+    for (const [command, label] of [[null, 'Inspector'], ['LAYERS', 'Layers'], ['METADATA', 'Inspector']]) {
       if (command) {
         await page.locator('[data-display-instance="display:primary"]').getByLabel(/Move Display Module:/).focus(); await page.keyboard.press('Shift+F10');
         await page.getByRole('menuitem', { name: 'TOOLS', exact: true }).click();
         await page.getByRole('menuitem', { name: command, exact: true }).click();
       }
-      const grip = page.getByLabel(`Move ${label} ${label === 'Info' ? 'panel' : 'window'}`, { exact: true });
-      const win = label === 'Text tools' ? page.locator('.text-tools-window') : label === 'Info' ? page.getByRole('region', { name: 'Info', exact: true }) : page.locator('.system-workflow__instrument-window').filter({ has: grip });
+      const grip = page.getByLabel(`Move ${label} ${label === 'Inspector' ? 'panel' : 'window'}`, { exact: true });
+      const win = label === 'Inspector' ? sharedToolPanel(page) : page.locator('.system-workflow__instrument-window').filter({ has: grip });
       await grip.focus(); await page.keyboard.press('ArrowRight'); await page.keyboard.press('ArrowDown');
-      if (label === 'Text tools') {
+      if (!command) {
         assert.equal(await win.locator('.workbench-tool-panel-resize').count(), 8);
         await page.setViewportSize({ width: 390, height: 844 }); await settle(page);
         const narrow = await win.boundingBox(); assert.ok(narrow.x >= 0 && narrow.x + narrow.width <= 390 && narrow.y + narrow.height <= 796);
-        // The shared Info dock can sit above the independent Text window after
-        // viewport fitting. Dismiss that visible window before using Text's close.
-        const closeInfo = page.getByRole('button', { name: 'Close Info', exact: true });
-        if (await closeInfo.isVisible()) await closeInfo.click();
-        const closeText = win.getByRole('button', { name: 'Close Text tools', exact: true });
-        assert.equal(await closeText.evaluate(node => { const r = node.getBoundingClientRect(); return node.contains(document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2)); }), true, 'Text close receives pointer input after dismissing Info');
+        const closeText = win.getByRole('button', { name: 'Close Inspector', exact: true });
+        assert.equal(await closeText.evaluate(node => { const r = node.getBoundingClientRect(); return node.contains(document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2)); }), true, 'Inspector close receives pointer input at the fitted viewport');
         await closeText.click();
         assert.equal(await win.count(), 0);
-        assert.deepEqual(await saved(page), before, 'closing the stacked tool windows does not author the composition');
+        assert.deepEqual(await saved(page), before, 'closing the unified Inspector does not author the composition');
         await page.setViewportSize({ width: 1440, height: 1000 });
         continue;
       }
       if (label === 'Layers') assert.equal(await win.getByRole('separator').count(), 0, 'Display Layers retains its existing content-sized shell');
       else {
         assert.equal(await win.locator('.workbench-tool-panel-resize').count(), 8, 'Info uses the accepted resizable shared dock');
-        assert.equal(await win.getByRole('tab', { name: 'Info', exact: true }).getAttribute('aria-selected'), 'true');
+        assert.equal(await sharedToolTab(page, 'Inspector').getAttribute('aria-selected'), 'true');
         assert.equal(await win.getByText('MOUNTAIN SIGNAL II', { exact: true }).isVisible(), true, 'Display Metadata still shows the selected artwork');
       }
       if (label === 'Layers') {

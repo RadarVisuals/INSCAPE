@@ -3,9 +3,10 @@ import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } fro
 import OwnerRuntimeBoundary from './public/OwnerRuntimeBoundary.jsx';
 import { Startveil } from './startveil/index.js';
 import { StartupDestinationBoundary, StartupDestinationContext, StartupDestinationReady } from './startveil/StartupDestinationContext.jsx';
-import { useWalletStore } from './store/useWalletStore.js';
+import { getConnectedProfileAddress, useWalletStore } from './store/useWalletStore.js';
+import { GalleryStudioMotion } from './profileDiscovery/galleryStudioMotion.js';
+import GalleryStudioStage from './profileDiscovery/GalleryStudioStage.jsx';
 import useApplicationNavigation from './profileDiscovery/useApplicationNavigation.js';
-import PublishedProfileBoundary from './profileDocument/components/PublishedProfileBoundary.jsx';
 import { usePublishedProfile } from './profileDocument/state/usePublishedProfile.js';
 import { PUBLISHED_PROFILE_STATUS } from './profileDocument/storage/luksoPublishedProfileRepository.js';
 import { reportControlledError } from './diagnostics.js';
@@ -15,6 +16,7 @@ import { createStandaloneWalletLoader, hasPersistedStandaloneConnection } from '
 import { normalizeProfileAddress } from './library/config.js';
 
 const PublicEntryPortal = lazy(() => import('./startveil/PublicEntryPortal.jsx'));
+const PublishedProfileBoundary = lazy(() => import('./profileDocument/components/PublishedProfileBoundary.jsx'));
 const PublicationConfirmation = lazy(() => import('./public/PublicationConfirmation.jsx'));
 const CreepsMetadataRecoveryPanel = import.meta.env.DEV
   ? lazy(() => import('./recovery/CreepsMetadataRecoveryPanel.jsx'))
@@ -32,6 +34,7 @@ function App() {
   const [galleryActive, setGalleryActive] = useState(false);
   const [publicationConfirmation, setPublicationConfirmation] = useState(null);
   const visitorWalletConnected = useWalletStore((state) => state.isWalletConnected);
+  const connectedProfileAddress = useWalletStore(getConnectedProfileAddress);
   const walletProfileMetadata = useWalletStore((state) => state.profileMetadata);
   const ownershipVerified = useWalletStore((state) => state.isHostProfileOwner);
   const verifiedOwnerProfileAddress = useWalletStore((state) => state.hostProfileAddress);
@@ -50,24 +53,28 @@ function App() {
   const getWalletPublicationContext = useCallback(() => useWalletStore.getState(), []);
   const localOwnerRoute = ownerAuthoringEnabled;
   const publicEntryPortal = destination.kind === 'entry' && revealStage !== 'complete';
-  const [publishedResolution, retryPublishedProfile] = usePublishedProfile(viewedProfileAddress);
+  const canOpenStudio = Boolean(connectedProfileAddress && ownershipVerified && authorityLifecycleStatus === 'complete'
+    && normalizeProfileAddress(connectedProfileAddress) === normalizeProfileAddress(verifiedOwnerProfileAddress));
+  const ownViewedProfile = canOpenStudio && normalizeProfileAddress(viewedProfileAddress) === normalizeProfileAddress(connectedProfileAddress);
+  const publicationAddress = ownViewedProfile && destination.kind !== 'discover' ? viewedProfileAddress : null;
+  const [publishedResolution, retryPublishedProfile, acceptConfirmedPublication] = usePublishedProfile(viewedProfileAddress);
   // A confirmed publication belongs to the application session: refreshing the
   // owner runtime must not dispose its receipt or success message.
-  const publicationProfileRef = useRef(connectedWorkspaceProfileAddress);
-  publicationProfileRef.current = connectedWorkspaceProfileAddress;
-  useEffect(() => setPublicationConfirmation(null), [connectedWorkspaceProfileAddress]);
-  const onPublicationConfirmed = (result) => {
+  const publicationProfileRef = useRef(publicationAddress);
+  publicationProfileRef.current = publicationAddress;
+  useEffect(() => setPublicationConfirmation(null), [publicationAddress]);
+  const onPublicationConfirmed = (result, removedTitles) => {
     const address = normalizeProfileAddress(result?.document?.profile?.address);
     if (result?.status !== PUBLISHED_PROFILE_STATUS.RESOLVED || !address
-      || address !== connectedWorkspaceProfileAddress || address !== publicationProfileRef.current) return;
-    setPublicationConfirmation({ profileAddress: address, transactionHash: result.transactionHash });
-    retryPublishedProfile();
+      || address !== publicationAddress || address !== publicationProfileRef.current || !acceptConfirmedPublication(result)) return;
+    setPublicationConfirmation({ profileAddress: address, transactionHash: result.transactionHash, removedTitles });
   };
   const ownerSourceReady = publishedResolution?.status !== PUBLISHED_PROFILE_STATUS.LOADING;
-  const connectedProfile = verifiedOwnerProfileAddress ? {
-    address: verifiedOwnerProfileAddress,
-    name: walletProfileMetadata?.name || '',
-    avatarUrl: walletProfileMetadata?.avatarUrl || null,
+  const accountMetadata = connectedProfileAddress?.toLowerCase() === verifiedOwnerProfileAddress?.toLowerCase() ? walletProfileMetadata : null;
+  const connectedProfile = connectedProfileAddress ? {
+    address: connectedProfileAddress,
+    name: accountMetadata?.name || '',
+    avatarUrl: accountMetadata?.avatarUrl || null,
   } : null;
 
   // Reveal a resolved destination or its recovery UI; optional artwork media
@@ -82,7 +89,7 @@ function App() {
     if (!node) return;
     if (document.activeElement !== node && node.contains(document.activeElement)
       && !document.activeElement.closest('[inert]')) return;
-    const focusTarget = [...node.querySelectorAll('[data-published-focus-fallback], .visitor-grid-world, .workspace-navigation button, .public-entry-portal__header-wordmark')]
+    const focusTarget = [...node.querySelectorAll('[data-published-focus-fallback], .visitor-grid-world, .workspace-header .workspace-brand')]
       .find((target) => !target.closest('[inert]') && target.getClientRects().length && !target.disabled);
     (focusTarget || node).focus({ preventScroll: true });
   }, [revealStage, destinationKey, readyDestinationKey]);
@@ -165,12 +172,53 @@ function App() {
   }, [beginDisconnect]);
 
   const enterConnectedWorld = useCallback(() => {
-    if (verifiedOwnerProfileAddress) visitProfile(verifiedOwnerProfileAddress, { returnToConnectedProfile: true });
-  }, [verifiedOwnerProfileAddress, visitProfile]);
+    if (connectedProfileAddress) visitProfile(connectedProfileAddress, { returnToConnectedProfile: true });
+  }, [connectedProfileAddress, visitProfile]);
+
+  const ownerDestinations = connectedProfileAddress ? {
+    Profile: () => navigation.openOverview(connectedProfileAddress),
+    Gallery: () => navigation.openCanvas(connectedProfileAddress),
+    Writing: () => navigation.openWriting(connectedProfileAddress),
+    Studio: canOpenStudio ? () => navigation.openStudio(connectedProfileAddress) : undefined,
+    Discover: navigation.openDiscover,
+  } : undefined;
 
   const registerDesktopContextMenu = useCallback((handler) => {
     desktopContextMenuRef.current = handler;
   }, []);
+
+  const ownerWorkspace = localOwnerRoute ? !ownerSourceReady ? <div className="mode-loading" role="status">Resolving owner workspace...</div> : <OwnerRuntimeBoundary
+            requestedWorkId={content.worksEditorId}
+            onReturnToWorks={() => navigation.returnToWorks(viewedProfileAddress)}
+            onOpenGallery={() => navigation.openCanvas(viewedProfileAddress)}
+            onManageCompositions={() => navigation.manageCompositions(viewedProfileAddress)}
+            initialNew={content.newComposition === true}
+            onNewOpened={navigation.consumeNewComposition}
+            returnLabel={navigation.studioReturnLabel}
+            onOpenWriting={() => navigation.openWriting(viewedProfileAddress)}
+            ownerDestinations={ownerDestinations}
+            ownerAuthoringEnabled={ownerAuthoringEnabled}
+            canvasOverviewRequested={content.canvas === true}
+            receptionEditorRequested={content.receptionEditorRequested === true}
+            workspaceProfileAddress={connectedWorkspaceProfileAddress}
+            getWalletPublicationContext={getWalletPublicationContext}
+            visitorWalletConnected={visitorWalletConnected}
+            viewedProfileAddress={viewedProfileAddress}
+            onVisitProfile={visitProfile}
+            onOpenDiscover={navigation.openDiscover}
+            onOpenReception={mode => navigation.openReception(viewedProfileAddress, mode === 'published' ? 'published' : true)}
+            onEditorDocumentChange={(kind, id, options) => kind === 'reception'
+              ? navigation.editReception(viewedProfileAddress, options) : navigation.editWork(viewedProfileAddress, id, options)}
+            connectedProfile={connectedProfile}
+            onConnect={requestStandaloneSignIn}
+            onDisconnect={disconnectStandalone}
+            onEnterMyWorld={enterConnectedWorld}
+            interfaceVisible={interfaceVisible}
+            registerWorldContextMenu={registerDesktopContextMenu}
+            onGalleryOpenChange={setGalleryActive}
+            publishedResolution={publishedResolution}
+            onPublicationConfirmed={onPublicationConfirmed}
+          /> : null;
 
   if (creepsMetadataRecoveryRoute && CreepsMetadataRecoveryPanel) return <Suspense
     fallback={<div className="mode-loading">Opening CREEPS recovery control…</div>}
@@ -179,7 +227,7 @@ function App() {
   </Suspense>;
 
   return (
-    <div className="application-root" data-application-mode="public" data-startveil-stage={revealStage} data-gallery-active={galleryActive || undefined}>
+    <GalleryStudioMotion.Provider value={navigation.motion}><div className="application-root" data-application-mode="public" data-startveil-stage={revealStage} data-gallery-active={galleryActive || undefined}>
       <div
         className="application-world"
         data-visible={interfaceVisible || undefined}
@@ -198,48 +246,34 @@ function App() {
         {authorityLifecycleStatus === 'complete' && initializationError && <AlphaSupportPanel compact
           code={ALPHA_SUPPORT_CODES.AUTHORITY_INITIALIZATION_FAILED} phase="OWNER_AUTHORITY"
           providerCategory="UP_PROVIDER" profileAddress={viewedProfileAddress} routeClass="AUTHORITY_ENTRY"
-          message={initializationError.message} />}
+           />}
         <div aria-hidden={destination.kind === 'discover' || undefined} inert={destination.kind === 'discover' ? '' : undefined}>
         {standaloneSignInActive || publicEntryPortal || !content ? null : content.kind === 'pending'
             ? <div className="mode-loading" role="status">Resolving profile...</div>
             : content.kind === 'entry' ? null
-            : localOwnerRoute ? !ownerSourceReady ? <div className="mode-loading" role="status">Resolving owner workspace...</div> : <OwnerRuntimeBoundary
-            ownerAuthoringEnabled={ownerAuthoringEnabled}
-            canvasOverviewRequested={content.canvas === true}
-            receptionEditorRequested={content.receptionEditorRequested === true}
-            workspaceProfileAddress={connectedWorkspaceProfileAddress}
-            getWalletPublicationContext={getWalletPublicationContext}
-            visitorWalletConnected={visitorWalletConnected}
-            viewedProfileAddress={viewedProfileAddress}
-            onVisitProfile={visitProfile}
-            onOpenDiscover={navigation.openDiscover}
-            onOpenReception={mode => navigation.openReception(viewedProfileAddress, mode === 'published' ? 'published' : true)}
-            onEditorDocumentChange={kind => kind === 'reception'
-              ? navigation.editReception(viewedProfileAddress) : enterConnectedWorld()}
-            connectedProfile={connectedProfile}
-            onConnect={requestStandaloneSignIn}
-            onDisconnect={disconnectStandalone}
-            onEnterMyWorld={enterConnectedWorld}
-            interfaceVisible={interfaceVisible}
-            registerWorldContextMenu={registerDesktopContextMenu}
-            onGalleryOpenChange={setGalleryActive}
-            publishedResolution={publishedResolution}
-            onPublicationConfirmed={onPublicationConfirmed}
-          /> : <PublishedProfileBoundary address={viewedProfileAddress} resolution={publishedResolution}
-            connectedProfile={connectedProfile} onConnect={requestStandaloneSignIn}
+            : localOwnerRoute ? ownerWorkspace : <Suspense fallback={<div className="mode-loading" role="status">Opening profile…</div>}>
+            <PublishedProfileBoundary address={viewedProfileAddress} resolution={publishedResolution}
+            connectedProfile={connectedProfile} onConnect={requestStandaloneSignIn} ownerDestinations={ownerDestinations}
             onDisconnect={disconnectStandalone} onEnterMyWorld={enterConnectedWorld}
             onRetry={retryPublishedProfile}
-            returnProfileAddress={verifiedOwnerProfileAddress}
-            onReturnToWorkbench={ownershipVerified && authorityLifecycleStatus === 'complete' ? enterConnectedWorld : undefined}
-            onEditReception={() => navigation.editReception(viewedProfileAddress)}
-            onMyInscape={() => navigation.openCanvas(viewedProfileAddress, undefined, { ownerCollection: true })}
+            getWalletPublicationContext={publicationAddress ? getWalletPublicationContext : undefined}
+            onPublicationConfirmed={publicationAddress ? onPublicationConfirmed : undefined}
+            returnProfileAddress={connectedProfileAddress}
+            onReturnToWorkbench={ownViewedProfile ? ownerDestinations.Studio : undefined}
+            onEditReception={ownViewedProfile ? () => navigation.editReception(viewedProfileAddress) : undefined}
+            onEditComposition={ownViewedProfile ? id => id === 'reception' ? navigation.editReception(viewedProfileAddress)
+              : navigation.editWork(viewedProfileAddress, id) : undefined}
+            onManageWorks={ownViewedProfile ? () => navigation.manageCompositions(viewedProfileAddress) : undefined}
+            onNewComposition={ownViewedProfile ? () => navigation.openStudio(viewedProfileAddress, { create: true }) : undefined}
             onOpenDiscover={navigation.openDiscover} onVisitProfile={visitProfile}
-            entry={{ surface: content.canvas ? 'canvas' : 'overview', target: content.target, reception: content.reception }}
+            entry={{ surface: content.writing ? 'writing' : content.canvas ? 'canvas' : 'overview', target: content.target, reception: content.reception }}
+            onOpenWriting={() => navigation.openWriting(viewedProfileAddress)}
             onOpenCanvas={() => navigation.openCanvas(viewedProfileAddress)}
-            onOpenOverview={() => navigation.openOverview(viewedProfileAddress)} />}
+            onOpenOverview={() => navigation.openOverview(viewedProfileAddress)} /></Suspense>}
         </div>
         {!standaloneSignInActive && !publicEntryPortal && ['entry', 'discover'].includes(destination.kind) && <Suspense fallback={<div className="mode-loading">Opening Discover...</div>}>
           <PublicEntryPortal embedded mode={destination.kind === 'discover' ? 'explore' : 'landing'}
+            ownerDestinations={ownerDestinations}
             onExplore={navigation.openDiscover} onClose={content?.address ? navigation.closeDiscover : undefined} onHome={navigation.closeDiscover}
             connectedProfile={connectedProfile} onConnect={requestStandaloneSignIn}
             onDisconnect={disconnectStandalone} onEnterMyWorld={enterConnectedWorld} onVisitProfile={visitProfile} />
@@ -247,14 +281,16 @@ function App() {
         </Suspense>}
       </StartupDestinationBoundary>
       </StartupDestinationContext.Provider>
-      {publicationConfirmation?.profileAddress === connectedWorkspaceProfileAddress && <Suspense fallback={null}>
+      <GalleryStudioStage />
+      {publicationConfirmation && publicationConfirmation.profileAddress === publicationAddress && <Suspense fallback={null}>
         <PublicationConfirmation confirmation={publicationConfirmation} onClose={() => {
           setPublicationConfirmation(null);
-          (interfaceRef.current?.querySelector('button[aria-label="Publish"]') || interfaceRef.current)?.focus({ preventScroll: true });
+          (interfaceRef.current?.querySelector('button[aria-label="Publish"], .visitor-tabs [aria-current="page"]') || interfaceRef.current)?.focus({ preventScroll: true });
         }} />
       </Suspense>}
       </div>
       <Startveil
+        ownerDestinations={ownerDestinations}
         connectedProfile={connectedProfile}
         ready={entryDestinationReady}
         portal={publicEntryPortal}
@@ -266,7 +302,7 @@ function App() {
         onRevealInterface={() => setRevealStage('interface')}
         onComplete={() => setRevealStage('complete')}
       />
-    </div>
+    </div></GalleryStudioMotion.Provider>
   );
 }
 

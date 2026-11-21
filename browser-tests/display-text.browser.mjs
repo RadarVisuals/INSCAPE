@@ -1,3 +1,4 @@
+import { sharedToolPanel } from './fixtures/shared-tools.mjs';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { chromium } from 'playwright-core';
@@ -55,12 +56,12 @@ test('Display text belongs to the Grid, saves and matches Visitor at wide and na
     if (await unlock.count()) await unlock.click();
     await page.getByRole('button', { name: 'Add text', exact: true }).click();
     await page.getByRole('textbox', { name: 'Article text' }).fill('//ARRIVAL');
-    await openTextToolSection(page.locator('.text-tools-window'), 'Default text style');
+    await openTextToolSection(sharedToolPanel(page), 'Default text style');
     await page.getByRole('spinbutton', { name: 'Default text size' }).fill('76');
-    await page.locator('.text-tools-window').getByRole('tab', { name: 'Format text', exact: true }).click();
+    await sharedToolPanel(page).locator('.text-formatting-host').scrollIntoViewIfNeeded();
     await page.getByRole('button', { name: 'Align center', exact: true }).click();
     await page.getByRole('button', { name: 'Align left', exact: true }).click();
-    await page.getByRole('button', { name: 'Close Text tools', exact: true }).click();
+    await page.getByRole('button', { name: 'Close Inspector', exact: true }).click();
     const text = page.locator('.system-workflow__grid-plane--current .display-text-content');
     assert.equal(await text.innerText(), '//ARRIVAL');
     assert.equal(await page.getByRole('button', { name: 'Crop', exact: true }).count(), 0, 'image-only tools are absent for text');

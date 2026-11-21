@@ -47,7 +47,7 @@
   padding: 4px;
 }
 [data-window-chrome="tactile"] .system-workflow__detached-window-controls > button { border-radius: 50%; }
-:is([data-window-chrome="tactile"], [data-window-chrome="flat"]) svg:where(.lucide) { width: 18px; height: 18px; stroke-width: 1.6; flex-shrink: 0; }
+:is([data-window-chrome="tactile"], [data-window-chrome="flat"]) svg:where(.lucide) { width: var(--tool-icon-size, 18px); height: var(--tool-icon-size, 18px); stroke-width: 1.6; flex-shrink: 0; }
 :is([data-window-chrome="tactile"], [data-window-chrome="flat"]) :where(input:not([type=checkbox]):not([type=radio]):not([type=range]), select, textarea) {
   min-height: var(--tool-control-height, 32px); padding: 5px 7px; border: 1px solid var(--tactile-edge);
   color: var(--tactile-ink);

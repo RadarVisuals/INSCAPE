@@ -1,5 +1,5 @@
 import { useLayoutEffect, useRef } from 'react';
-import { useWorkbenchView } from './WorkbenchViewContext.js';
+import { useWorkbenchHostView } from './WorkbenchViewContext.js';
 
 // Live module-owned reading projections, scoped to this mounted Workbench.
 // No saved copies, editor instances or independent media state live here.
@@ -10,7 +10,7 @@ export function createWorkbenchMiniatures() {
     snapshot: () => revision, changed() { revision++; listeners.forEach(listener => listener()); } };
 }
 export function useWorkbenchMiniature(id, source) {
-  const { miniatures } = useWorkbenchView();
+  const { miniatures } = useWorkbenchHostView();
   const current = useRef(source); current.current = source;
   useLayoutEffect(() => {
     if (!miniatures) return;

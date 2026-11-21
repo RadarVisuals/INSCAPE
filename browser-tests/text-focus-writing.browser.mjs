@@ -1,3 +1,4 @@
+import { openTextToolSection } from './fixtures/text-tool-sections.mjs';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { mkdir } from 'node:fs/promises';
@@ -33,7 +34,7 @@ for (const width of [1440, 390]) test(`focused writing preserves editor identity
     const errors = []; page.on('pageerror', error => errors.push(error.message));
     await seedLongArticle(page);
     if (width === 1440) await setWorkbenchZoom(page, .75);
-    const win = page.locator('.text-window'), tools = page.locator('.text-tools-window');
+    const win = page.locator('.text-window'), tools = page.locator('.workbench-tool-dock:has([data-text-inspector])');
     const before = await saved(page), originalBody = await bodyIn(win).elementHandle();
     const originalText = await originalBody.innerText();
     await bodyIn(win).focus(); await bodyIn(win).press('Control+End');
@@ -81,6 +82,7 @@ for (const width of [1440, 390]) test(`focused writing preserves editor identity
     await dialog.waitFor({ state: 'detached' }); await settle(page);
     assert.equal(await bodyIn(win).evaluate((node, previous) => node === previous, originalBody), true);
     assert.equal(await tools.getByRole('button', { name: 'Focus writing', exact: true }).evaluate(node => node === document.activeElement), true, 'return restores trigger focus');
+    await openTextToolSection(page.locator('.workbench-tool-dock:has([data-text-inspector])'), 'More text tools');
     await tools.getByRole('button', { name: 'Undo', exact: true }).click(); await settle(page);
     assert.equal(await bodyIn(win).innerText(), originalText, 'history survives focus mode exit');
     assert.equal((await saved(page)).texts[0].article.title, focusedTitle, 'body undo does not erase separate title edit');
@@ -94,7 +96,7 @@ for (const width of [1440, 390]) test(`focused writing preserves editor identity
     assert.equal(await tools.getByRole('textbox', { name: 'Find in article', exact: true }).evaluate(node => node === document.activeElement), true, 'find returns to the usable shared inspector');
     await tools.getByRole('button', { name: 'Close search', exact: true }).click();
     await win.getByRole('button', { name: 'Read', exact: true }).focus(); await page.keyboard.press('Enter'); await settle(page);
-    assert.equal(await page.getByRole('button', { name: 'Focus writing', exact: true }).count(), 0, 'Read does not expose writing mode');
+    assert.equal(await page.getByRole('button', { name: 'Focus writing', exact: true }).isDisabled(), true, 'the shared Inspector cannot enter Focus writing in Read mode');
     await mountTextToolsFixture(page, origin, { visitor: true });
     assert.equal(await page.getByRole('button', { name: 'Focus writing', exact: true }).count(), 0);
     assert.deepEqual(errors, []);
@@ -115,7 +117,7 @@ test('transparent light text retains readable focus background without changing 
     });
     await mountTextToolsFixture(page, origin);
     const before = await saved(page);
-    await page.locator('.text-tools-window').getByRole('button', { name: 'Focus writing', exact: true }).click();
+    await page.locator('.workbench-tool-dock:has([data-text-inspector])').getByRole('button', { name: 'Focus writing', exact: true }).click();
     const dialog = page.getByRole('dialog'); await dialog.waitFor();
     const ratio = await bodyIn(dialog).evaluate(node => {
       const rgb = value => value.match(/[\d.]+/g)?.map(Number) || [];
@@ -141,7 +143,7 @@ test('failed local saving remains visible in focused writing and recoverable aft
   try {
     const page = await browser.newPage({ viewport: { width: 390, height: 900 } }); page.setDefaultTimeout(10000);
     await mountTextToolsFixture(page, origin);
-    const before = await saved(page), tools = page.locator('.text-tools-window');
+    const before = await saved(page), tools = page.locator('.workbench-tool-dock:has([data-text-inspector])');
     await tools.getByRole('button', { name: 'Focus writing', exact: true }).click();
     const dialog = page.getByRole('dialog'); await dialog.waitFor();
     await page.evaluate(() => { window.failSave = true; });
@@ -170,7 +172,7 @@ test('Display text uses the same focused editor without changing placement or ot
     const before = await saved(page), original = await bodyIn(target).elementHandle();
     const placement = draft => draft.grids.flatMap(grid => grid.placements).find(item => item.kind === 'text');
     const geometry = item => ({ column: item.column, row: item.row, columnSpan: item.columnSpan, rowSpan: item.rowSpan, rotation: item.rotation, locked: item.locked });
-    await page.locator('.text-tools-window').getByRole('button', { name: 'Focus writing', exact: true }).click();
+    await page.locator('.workbench-tool-dock:has([data-text-inspector])').getByRole('button', { name: 'Focus writing', exact: true }).click();
     const dialog = page.getByRole('dialog'); await dialog.waitFor();
     assert.equal(await bodyIn(dialog).evaluate((node, previous) => node === previous, original), true);
     await bodyIn(dialog).fill('Focused writing inside a Display.');

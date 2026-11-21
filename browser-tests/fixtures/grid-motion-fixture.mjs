@@ -72,8 +72,8 @@ export async function mountGridMotionFixture(page, { origin, visitor = false, he
       ? buildProfileDocumentV9Asset(inspectionAsset, inspectionAsset.id) : imageAsset;
     draft.imageModules = Array.from({ length: 7 }, (_, index) => ({
       id: `image:motion-${index}`, name: 'Motion companion', width: 120, height: 96, visibility: 'PUBLIC',
-      sides: [0, 1].map(side => ({ id: `side:motion-${side}`, asset: index === 0 ? inspectionImageAsset : imageAsset, crop: { x: .5, y: .5, zoom: 1 },
-        transform: artwork?.transform || { quarterTurns: 0, mirrorX: false, mirrorY: false } })),
+      artwork: { id: `artwork:motion-${index}`, asset: index === 0 ? inspectionImageAsset : imageAsset, crop: { x: .5, y: .5, zoom: 1 },
+        transform: artwork?.transform || { quarterTurns: 0, mirrorX: false, mirrorY: false } },
     }));
     draft.workbench.imageModules = draft.imageModules.map((image, index) => ({
       id: image.id, open: true, position: { left: 20 + index * 130, top: 780 },

@@ -4,7 +4,7 @@ import { mkdir } from 'node:fs/promises';
 import { chromium } from 'playwright-core';
 import { browserExecutable } from '../scripts/browserEnvironment.mjs';
 import { mountToolDockFixture } from './fixtures/tool-docks.mjs';
-import { openSharedTool, detachTool } from './fixtures/shared-tools.mjs';
+import { openSharedTool, detachTool, sharedToolTab, selectWorkbenchLayer } from './fixtures/shared-tools.mjs';
 const output = process.env.INSCAPE_BROWSER_OUTPUT || '.browser-test-runtime/fx-tools';
 const saved = page => page.evaluate(() => window.savedDraft());
 const undo = async page => { await page.locator('main.system-workflow').focus(); await page.keyboard.press('Control+z'); };
@@ -20,6 +20,7 @@ async function zoom(page, scale) {
   throw Error('Camera did not reach the requested scale');
 }
 async function beginDrag(page, slider, fraction) {
+  await slider.scrollIntoViewIfNeeded();
   const box = await slider.boundingBox();
   await page.mouse.move(box.x + 8, box.y + box.height / 2); await page.mouse.down();
   await page.mouse.move(box.x + box.width * fraction, box.y + box.height / 2, { steps: 7 });
@@ -32,7 +33,7 @@ test('FX previews one Shape gesture, commits once, cancels safely, survives dock
     const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, reducedMotion: 'reduce' });
     const errors = []; page.on('pageerror', error => errors.push(error.message));
     await mountToolDockFixture(page);
-    await page.getByRole('button', { name: 'Select Landscape', exact: true }).click();
+    await selectWorkbenchLayer(page, 'Landscape');
     let fx = await openSharedTool(page, 'FX');
     const original = await saved(page), blur = fx.getByRole('slider', { name: 'FX Blur', exact: true });
     await beginDrag(page, blur, .6);
@@ -51,7 +52,8 @@ test('FX previews one Shape gesture, commits once, cancels safely, survives dock
     await beginDrag(page, blur, .5); await page.keyboard.press('Tab'); await page.mouse.up();
     assert.deepEqual(await saved(page), original, 'leaving the slider cancels an unfinished gesture');
     await beginDrag(page, blur, .5);
-    await fx.getByRole('button', { name: 'Close FX', exact: true }).dispatchEvent('click');
+    assert.deepEqual(await saved(page), original, 'switching from a numeric field to the slider still previews without saving');
+    await fx.getByRole('button', { name: 'Close Inspector', exact: true }).dispatchEvent('click');
     await page.mouse.up();
     // Closing the dock unmounts the slider; its cleanup clears the Shape's
     // preview in a subsequent React commit without changing the saved draft.
@@ -69,30 +71,34 @@ test('FX previews one Shape gesture, commits once, cancels safely, survives dock
     await zoom(page, .5);
     assert.equal(await paint(page).evaluate(node => getComputedStyle(node).filter), 'blur(6px)');
     await zoom(page, 1);
-    const frame = page.locator('[data-workbench-view-id="shape:landscape"]');
+    const frame = page.locator('aside[data-workbench-view-id="shape:landscape"]');
     const paintBounds = await paint(page).boundingBox(), frameBounds = await frame.boundingBox();
     assert.equal(paintBounds.height, frameBounds.height, 'the paint wrapper retains the full artwork extent');
     assert.equal(await frame.evaluate(node => getComputedStyle(node).filter), 'none', 'selection bounds do not blur');
     assert.equal(await paint(page).evaluate(node => getComputedStyle(node.parentElement).overflow), 'visible', 'soft edges are not clipped');
-    await detachTool(page, 'FX');
+    await sharedToolTab(page, 'Inspector').click({ button: 'right' });
+    await page.getByRole('menuitem', { name: 'Dock with Layers', exact: true }).click();
+    await detachTool(page, 'Inspector');
+    await openSharedTool(page, 'FX');
     const beforeRetarget = await saved(page);
     await beginDrag(page, fx.getByRole('slider', { name: 'FX Blur' }), .4);
-    await page.getByRole('button', { name: 'Select Eyes', exact: true }).dispatchEvent('click');
+    await selectWorkbenchLayer(page, 'Eyes');
     await page.mouse.up();
     assert.deepEqual(await saved(page), beforeRetarget, 'retargeting cannot save the departing preview');
     assert.equal(await paint(page).evaluate(node => getComputedStyle(node).filter), 'blur(12px)');
-    await page.getByRole('button', { name: 'Select Landscape', exact: true }).click();
+    await selectWorkbenchLayer(page, 'Landscape');
+    await openSharedTool(page, 'FX');
     await page.screenshot({ path: `${output}/fx-mist-independent.png` });
-    await fx.getByRole('tab', { name: 'FX', exact: true }).click({ button: 'right' });
-    await page.getByRole('menuitem', { name: 'Dock with Layers, Transform, Color, Image, Shape and Info', exact: true }).click();
-    await fx.getByRole('button', { name: 'Close FX', exact: true }).click();
+    await sharedToolTab(page, 'Inspector').click({ button: 'right' });
+    await page.getByRole('menuitem', { name: 'Dock with Layers', exact: true }).click();
+    await fx.getByRole('button', { name: 'Close Inspector', exact: true }).click();
     fx = await openSharedTool(page, 'FX');
     assert.equal(await fx.getByRole('slider', { name: 'FX Blur' }).inputValue(), '12');
     await page.screenshot({ path: `${output}/fx-mist-docked.png` });
     const finalShape = (await saved(page)).shapes[0];
     await page.reload();
     await openSharedTool(page, 'Layers');
-    await page.getByRole('button', { name: 'Select Landscape', exact: true }).click();
+    await selectWorkbenchLayer(page, 'Landscape');
     await openSharedTool(page, 'FX');
     assert.equal(await page.getByRole('slider', { name: 'FX Blur' }).inputValue(), '12');
     await page.evaluate(async () => {
@@ -118,7 +124,8 @@ test('FX keeps failed edits recoverable, clears stale targets and fits a compact
   try {
     const page = await browser.newPage({ viewport: { width: 760, height: 620 }, deviceScaleFactor: 2, reducedMotion: 'reduce' });
     await mountToolDockFixture(page, { shapes: true, carbon: true });
-    await page.getByRole('button', { name: 'Select Landscape', exact: true }).click();
+    await zoom(page, 1);
+    await selectWorkbenchLayer(page, 'Landscape');
     const fx = await openSharedTool(page, 'FX'), original = await saved(page);
     await page.evaluate(() => {
       window.originalSetItem = Storage.prototype.setItem;
@@ -135,11 +142,11 @@ test('FX keeps failed edits recoverable, clears stale targets and fits a compact
     await fx.getByRole('alert').waitFor({ state: 'detached' });
     await page.locator('main.system-workflow').focus();
     await page.screenshot({ path: `${output}/fx-carbon-narrow.png`, scale: 'css' });
-    await page.locator('[data-image-module="image:body"] .image-module__canvas').click({ position: { x: 20, y: 20 } });
-    await fx.getByText('Select one Shape to edit its effects.').waitFor();
-    assert.equal(await fx.getByRole('slider').count(), 0);
+    await selectWorkbenchLayer(page, 'Body');
+    await fx.getByRole('group', { name: 'Image fit', exact: true }).waitFor();
+    assert.equal(await fx.getByRole('slider', { name: /^FX / }).count(), 0, 'Image selection removes the old Shape effects');
     await openSharedTool(page, 'Layers');
-    await page.getByRole('button', { name: 'Select Grid', exact: true }).click();
+    await selectWorkbenchLayer(page, 'Grid');
     await openSharedTool(page, 'FX');
     assert.equal(await fx.getByRole('slider', { name: 'FX Grain' }).count(), 0, 'Grid retains its existing pattern model');
     assert.equal(await fx.getByRole('slider', { name: 'FX Blur' }).isDisabled(), true);

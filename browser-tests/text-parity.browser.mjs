@@ -95,7 +95,7 @@ test('illustrated Text has matching title, glyph positions and line breaks in Wr
       { spacing: true, columns: 2, width: 760 }, { lineHeight: 2, width: 600 }, { lineHeight: 1.4, compact: true, width: 600 }]) {
       await seed(page, options);
       if (options.font === 'literata') await setWorkbenchZoom(page, .5);
-      await page.getByRole('button', { name: 'Close Text tools', exact: true }).click(); await settle(page);
+      await page.getByRole('button', { name: 'Close Inspector', exact: true }).click(); await settle(page);
       const before = await measure(page, true);
       if (!options.font) await page.screenshot({ path: '.browser-test-runtime/text-parity-write.png' });
       await page.getByRole('button', { name: 'Read', exact: true }).click();
@@ -134,12 +134,14 @@ test('selection colour and title alignment/colour persist, undo and render after
     await settle(page);
     await setSharedColor(page, '#ff8800', 'body');
     assert.equal(await body.locator('span').innerText(), 'Colour');
+    await openTextToolSection(page.locator('.workbench-tool-dock:has([data-text-inspector])'), 'More text tools');
     await page.getByRole('button', { name: 'Undo', exact: true }).click(); assert.equal(await body.locator('span').count(), 0);
+    await openTextToolSection(page.locator('.workbench-tool-dock:has([data-text-inspector])'), 'More text tools');
     await page.getByRole('button', { name: 'Redo', exact: true }).click();
-    await openTextToolSection(page.locator('.text-tools-window'), 'Title');
+    await openTextToolSection(page.locator('.workbench-tool-dock:has([data-text-inspector])'), 'Title');
     await page.getByRole('button', { name: 'Align title right', exact: true }).click();
     await setSharedColor(page, '#9876ff', 'title');
-    await openTextToolSection(page.locator('.text-tools-window'), 'Text box layout');
+    await openTextToolSection(page.locator('.workbench-tool-dock:has([data-text-inspector])'), 'Text box layout');
     await page.getByLabel('Text columns', { exact: true }).selectOption('2');
     await page.getByLabel('Text column gap', { exact: true }).fill('32');
     const check = async write => {
@@ -153,7 +155,7 @@ test('selection colour and title alignment/colour persist, undo and render after
     assert.equal(article.appearance.titleAlignment, 'right'); assert.equal(article.appearance.titleColor, '#9876ff');
     assert.equal(article.appearance.columns, 2); assert.equal(article.appearance.columnGap, 32);
     await page.getByRole('button', { name: 'Write', exact: true }).focus(); await page.keyboard.press('Enter');
-    await openTextToolSection(page.locator('.text-tools-window'), 'Title');
+    await openTextToolSection(page.locator('.workbench-tool-dock:has([data-text-inspector])'), 'Title');
     await resetSharedColor(page, 'title');
     assert.equal(await page.getByLabel('Article title', { exact: true }).evaluate(n => getComputedStyle(n).color), 'rgb(255, 255, 255)');
     await body.focus(); await body.press('Control+Home'); await body.press('ArrowRight');
@@ -181,7 +183,7 @@ test('column text remains reachable when Read as pages is enabled', { timeout: 9
       localStorage.setItem(systemWorkflowDraftKey(d.profileAddress), JSON.stringify(d));
     });
     await mountTextToolsFixture(page, origin);
-    await openTextToolSection(page.locator('.text-tools-window'), 'Text box layout');
+    await openTextToolSection(page.locator('.workbench-tool-dock:has([data-text-inspector])'), 'Text box layout');
     await page.getByRole('checkbox', { name: 'Read as pages', exact: true }).check();
     await page.getByRole('button', { name: 'Read', exact: true }).click(); await settle(page);
     const seen = new Set(); let pageCount = 0;

@@ -21,6 +21,7 @@ async function fixture(page, scenario) {
   await page.route('**/*', route => new URL(route.request().url()).origin === origin ? route.fallback() : route.abort());
   await page.route('**/api/profile-publications**', async route => {
     const request = route.request(); state.requests.push(new URL(request.url()).pathname);
+    if (scenario === 'missing-challenge') return route.fulfill({ status: 404, body: '' });
     if (scenario === 'quota' && !request.url().endsWith('/challenge')) return route.fulfill({ status: 429,
       contentType: 'application/json', body: JSON.stringify({ error: { code: 'UPLOAD_PROFILE_QUOTA', message: 'Your profile has reached its hourly upload limit. Try again next hour.' } }) });
     const response = await handler(new Request(request.url(), { method: request.method(), headers: request.headers(), body: request.postDataBuffer() }));
@@ -57,7 +58,7 @@ async function fixture(page, scenario) {
   return state;
 }
 
-for (const [scenario, width] of [['accepted', 1440], ['accepted', 390], ['refused', 1440], ['unconfigured', 390],
+for (const [scenario, width] of [['accepted', 1440], ['accepted', 390], ['refused', 1440], ['unconfigured', 390], ['missing-challenge', 390],
   ['invalid-profile', 390], ['profile-change', 1440], ['unmount', 1440], ['quota', 390], ['wrong-cid', 1440]]) {
   test(`publication upload ${scenario}, ${width}px`, { timeout: 60_000 }, async () => {
     const browser = await chromium.launch({ headless: true });
@@ -70,8 +71,8 @@ for (const [scenario, width] of [['accepted', 1440], ['accepted', 390], ['refuse
       assert.equal(state.requests.length, 0, 'opening and preparing require no request or signature');
       assert.equal(await page.evaluate(() => window.__uploadState.signatures), 0);
       await page.getByRole('button', { name: 'Make presentation public', exact: true }).click();
-      if (scenario === 'unconfigured') {
-        await rack.getByRole('status').filter({ hasText: 'not configured' }).waitFor();
+      if (['unconfigured', 'missing-challenge'].includes(scenario)) {
+        await rack.getByRole('status').filter({ hasText: scenario === 'unconfigured' ? 'not configured' : 'endpoint did not return a service response' }).waitFor();
         assert.equal(await page.evaluate(() => window.__uploadState.signatures), 0);
       } else {
         await page.waitForFunction(() => window.__uploadState.signatures === 1);
@@ -101,8 +102,19 @@ for (const [scenario, width] of [['accepted', 1440], ['accepted', 390], ['refuse
           assert.equal(await rack.count(), 0);
         }
       }
+      const diagnostics = {
+        'missing-challenge': ['PUBLICATION_FUNCTION_UNAVAILABLE', 'UPLOAD_CHALLENGE'],
+        refused: ['UPLOAD_AUTH_NOT_COMPLETED', 'UPLOAD_AUTHORIZATION'],
+        quota: ['UPLOAD_PROFILE_QUOTA', 'IPFS_UPLOAD'],
+      }[scenario];
+      if (diagnostics) {
+        await rack.getByText('Help with this error', { exact: true }).click();
+        await rack.getByText('REVIEW', { exact: true }).click();
+        const report = await rack.locator('.alpha-support pre').innerText();
+        assert.ok(report.includes('code: ' + diagnostics[0]) && report.includes('phase: ' + diagnostics[1]), report);
+      }
       if (!['accepted', 'wrong-cid'].includes(scenario)) assert.equal(state.uploads, 0);
-      if (['refused', 'unconfigured', 'profile-change', 'unmount'].includes(scenario)) assert.equal(state.requests.length, 1);
+      if (['refused', 'unconfigured', 'missing-challenge', 'profile-change', 'unmount'].includes(scenario)) assert.equal(state.requests.length, 1);
       if (scenario === 'invalid-profile') assert.equal(state.requests.length, 2);
       assert.equal(await page.evaluate(() => window.__uploadState.writes), 0, 'no chain write before a separate explicit Publish action');
       if (scenario !== 'unmount') {

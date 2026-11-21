@@ -58,7 +58,9 @@ for (const width of [1440, 390]) test(`Workbench and editor save failures stay v
     assert.notEqual(await page.evaluate(key => JSON.parse(localStorage.getItem(key)).gridSpacing, key), 52);
     await settings(page).getByRole('button', { name: 'Close Settings', exact: true }).click();
     await page.getByRole('button', { name: 'Artwork library', exact: true }).click();
+    await page.getByRole('button', { name: 'Library display options', exact: true }).click();
     await page.getByRole('region', { name: 'Library workspace', exact: true }).getByLabel('Card size', { exact: true }).fill('250');
+    await page.keyboard.press('Escape');
     const editorRetry = page.getByRole('button', { name: 'Save current editor preferences', exact: true });
     await editorRetry.waitFor();
     const a = await retry.boundingBox(), b = await editorRetry.boundingBox();
@@ -99,9 +101,9 @@ test('pending Workbench preferences survive a composition switch in the same pro
     const { page, errors } = await mount(browser, 1440);
     await openSettings(page); await failWrites(page); await setSpacing(page, 73);
     await settings(page).getByRole('button', { name: 'Close Settings', exact: true }).click();
-    await editorCommand(page, 'Canvas', 'New canvas');
-    await page.getByRole('textbox', { name: 'New canvas name', exact: true }).fill('Other composition');
-    await page.getByRole('button', { name: 'Create canvas', exact: true }).click();
+    await editorCommand(page, 'Canvas', '+ New');
+    await page.getByRole('textbox', { name: 'Composition name', exact: true }).fill('Other composition');
+    await page.getByRole('button', { name: 'Create composition', exact: true }).click();
     await openSettings(page);
     assert.equal(await settings(page).getByLabel('Workbench grid cell size', { exact: true }).inputValue(), '73');
     const retry = page.getByRole('button', { name: retryName, exact: true }); await retry.waitFor();

@@ -1,3 +1,4 @@
+import { choosePointer } from './fixtures/editor-menu.mjs';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { chromium } from 'playwright-core';
@@ -29,15 +30,15 @@ for (const visitor of [false, true]) for (const lost of ['control', 'hand', 'mod
       await image.locator('.image-module__artwork[data-media-state="ready"]').waitFor();
       await settle(page);
       const saved = await page.evaluate(() => localStorage.getItem(window.__motionKey));
-      if (lost === 'hand') await page.getByRole('button', { name: 'Hand tool', exact: true }).click();
-      const target = lost === 'control' ? page.getByRole('button', { name: 'Reset Workbench view', exact: true })
+      if (lost === 'hand') await choosePointer(page, 'Hand', visitor);
+      const target = lost === 'control' ? page.getByRole('button', { name: 'Fit canvas in view', exact: true })
         : lost === 'module' ? image.locator('.image-module__canvas') : host;
       if (lost === 'hand') await page.mouse.move(1150, 650);
       else await target.hover();
       await page.mouse.down();
       if (lost === 'hand') await page.mouse.move(1180, 670, { steps: 4 });
       const held = await camera(page);
-      if (lost === 'module') await page.getByRole('button', { name: 'Reset Workbench view', exact: true })
+      if (lost === 'module') await page.getByRole('button', { name: 'Fit canvas in view', exact: true })
         .dispatchEvent('pointerdown', { pointerId: 901, pointerType: 'pen', button: 0, buttons: 1 });
       if (lost !== 'control') {
         await zoom(page);

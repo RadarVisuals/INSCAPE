@@ -1,3 +1,4 @@
+import { hasExactKeys } from '../recordValidation.js';
 // One set of bounds/defaults for authored settings, tools and the motion model.
 export const KEEPER_SWIM_FIELDS = Object.freeze({
   speed: { label: 'Swim speed', unit: 'px/s', min: 80, max: 900, step: 10, default: 420 },
@@ -11,7 +12,5 @@ export const KEEPER_SWIM_DEFAULTS = Object.freeze(Object.fromEntries(
 ));
 // Older drafts/publications read the new swim defaults without a data rewrite.
 export const keeperSwim = record => record.swim ?? KEEPER_SWIM_DEFAULTS;
-export const validKeeperSwim = value => value && typeof value === 'object' && !Array.isArray(value)
-  && Object.keys(value).length === Object.keys(KEEPER_SWIM_FIELDS).length
-  && Object.entries(KEEPER_SWIM_FIELDS).every(([key, field]) => Object.hasOwn(value, key)
-    && Number.isFinite(value[key]) && value[key] >= field.min && value[key] <= field.max);
+export const validKeeperSwim = value => hasExactKeys(value, Object.keys(KEEPER_SWIM_FIELDS))
+  && Object.entries(KEEPER_SWIM_FIELDS).every(([key, field]) => Number.isFinite(value[key]) && value[key] >= field.min && value[key] <= field.max);

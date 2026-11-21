@@ -76,7 +76,7 @@ async function resizeHeight(page, delta) {
   await page.mouse.up(); await page.keyboard.up('Alt'); await settle(page);
 }
 
-test('frame height fills columns sequentially, preserves text and reports excess content through resize and reload', { timeout: 90000 }, async () => {
+test('frame height fills columns sequentially, preserves text and retains excess content through resize and reload', { timeout: 90000 }, async () => {
   const browser = await launch();
   try {
     const page = await browser.newPage({ viewport: { width: 1440, height: 1100 } }); page.setDefaultTimeout(10000);
@@ -86,12 +86,12 @@ test('frame height fills columns sequentially, preserves text and reports excess
     await page.locator('.editor-menu-brand[aria-expanded="true"]').click();
     const savedArticle = await page.evaluate(() => window.savedDraft().texts[0].article);
     const editor = await bodyIn(page).elementHandle();
-    await page.getByRole('button', { name: 'Close Text tools', exact: true }).click();
+    await page.getByRole('button', { name: 'Close Inspector', exact: true }).click();
     const short = await measure(bodyIn(page));
     assert.ok(short.scrollWidth > short.width, 'short frame retains excess text in additional clipped columns');
     assert.equal(short.cut, 0, 'frame breaks between complete lines');
     assert.ok(Math.abs(short.bottomGap) < 1, `body uses the full frame height inside authored padding: ${short.bottomGap}`);
-    await page.locator('.text-window .text-frame-overflow').waitFor();
+    assert.equal(await page.locator('.text-window .text-frame-overflow').count(), 0, 'no warning covers the text');
     await mkdir('.browser-test-runtime', { recursive: true });
     await page.screenshot({ path: '.browser-test-runtime/text-columns-short-1440.png' });
     await resizeHeight(page, 470);
@@ -106,7 +106,7 @@ test('frame height fills columns sequentially, preserves text and reports excess
     await resizeHeight(page, -470);
     const shrunk = await measure(bodyIn(page));
     assert.deepEqual(shrunk.glyphs, short.glyphs, 'returning to the original height restores exact line breaks');
-    await page.locator('.text-window .text-frame-overflow').waitFor();
+    assert.equal(await page.locator('.text-window .text-frame-overflow').count(), 0, 'no warning covers the text');
     assert.deepEqual(await page.locator('.text-window [data-text-frame]').evaluate(node => {
       node.scrollTop = 999; node.scrollLeft = 999; return [node.scrollTop, node.scrollLeft];
     }), [0, 0], 'composition clips overflow instead of scrolling it');
@@ -132,8 +132,8 @@ test('narrow three-column frames support scaling, full-content Focus writing and
     const geometry = await page.evaluate(() => window.savedDraft().workbench);
     assert.equal(before.count, 3); assert.equal(before.cut, 0);
     assert.ok(Math.abs(before.bottomGap) < 1, 'article and camera scaling preserve the authored bottom padding');
-    await page.locator('.text-window .text-frame-overflow').waitFor();
-    await page.locator('.text-tools-window').getByRole('button', { name: 'Focus writing', exact: true }).click();
+    assert.equal(await page.locator('.text-window .text-frame-overflow').count(), 0, 'no warning covers the text');
+    await page.locator('.workbench-tool-dock:has([data-text-inspector])').getByRole('button', { name: 'Focus writing', exact: true }).click();
     const dialog = page.getByRole('dialog'), body = dialog.getByRole('textbox', { name: 'Article text', exact: true });
     await body.waitFor(); await settle(page);
     assert.equal(await body.evaluate((node, previous) => node === previous, original), true);
@@ -148,8 +148,8 @@ test('narrow three-column frames support scaling, full-content Focus writing and
     const after = await measure(bodyIn(page));
     assert.equal(after.height, before.height); assert.equal(after.left, before.left); assert.match(after.text, / THE END\.$/);
     assert.deepEqual(await page.evaluate(() => window.savedDraft().workbench), geometry);
-    await page.locator('.text-window .text-frame-overflow').waitFor();
-    const tools = page.locator('.text-tools-window');
+    assert.equal(await page.locator('.text-window .text-frame-overflow').count(), 0, 'no warning covers the text');
+    const tools = page.locator('.workbench-tool-dock:has([data-text-inspector])');
     await openTextToolSection(tools, 'Text box layout');
     await tools.getByLabel('Text columns', { exact: true }).selectOption('1'); await settle(page);
     assert.equal(await page.locator('.text-window [data-text-frame]').count(), 0);
@@ -160,7 +160,7 @@ test('narrow three-column frames support scaling, full-content Focus writing and
     await tools.getByLabel('Text columns', { exact: true }).selectOption('3'); await settle(page);
     assert.deepEqual((await measure(bodyIn(page))).glyphs, after.glyphs, 'switching back restores frame flow');
     assert.equal(await page.locator('.text-window .text-module-scroll').evaluate(node => node.scrollTop), 0);
-    await page.getByRole('button', { name: 'Close Text tools', exact: true }).click();
+    await page.getByRole('button', { name: 'Close Inspector', exact: true }).click();
     await page.screenshot({ path: '.browser-test-runtime/text-columns-short-390.png' });
   } finally { await browser.close(); }
 });
@@ -177,7 +177,7 @@ test('Display uses the same bounded column flow in authoring and public reading'
     const body = target.getByRole('textbox', { name: 'Article text', exact: true }); await body.waitFor(); await settle(page);
     const write = await measure(body);
     assert.ok(write.scrollWidth > write.width); assert.equal(write.cut, 0);
-    await target.locator('.text-frame-overflow').waitFor();
+    assert.equal(await target.locator('.text-frame-overflow').count(), 0, 'no warning covers the text');
     await page.screenshot({ path: '.browser-test-runtime/text-columns-display-write.png' });
     await mountTextToolsFixture(page, origin, { visitor: true }); await settle(page);
     const read = await measure(page.locator('.display-text-content article > .text-document-body'));

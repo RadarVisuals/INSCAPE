@@ -1,7 +1,8 @@
 import { useEffect, useId, useRef, useState } from 'react';
 
-export default function VisitorMenu({ name, trigger, children }) {
-  const id = useId(), root = useRef(null), button = useRef(null);
+export default function VisitorMenu({ name, trigger, buttonRef, children }) {
+  const id = useId(), root = useRef(null), localButton = useRef(null);
+  const button = buttonRef || localButton;
   const [open, setOpen] = useState(false);
   useEffect(() => {
     if (!open) return;

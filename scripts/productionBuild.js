@@ -296,7 +296,10 @@ export const PRODUCTION_BUDGETS = Object.freeze({
   // drafts and scoped styling. Initial measurement: 2,742,972 / 907,080 raw/gzip
   // versus 2,737,346 / 905,189 before. Bound aggregate growth; startup, owner,
   // wallet, CSS, asset and runtime-isolation ceilings remain unchanged.
-  coreJavaScript: Object.freeze({ raw: 2_744_000, gzip: 909_000 }),
+  // Founder-approved development headroom (2026-11-15): 3 MB raw / 1 MB gzip.
+  // Optional app modules remain included; wallet classification is unchanged.
+  // Warn at 95% of either aggregate limit and fail only above its ceiling.
+  coreJavaScript: Object.freeze({ raw: 3_000_000, gzip: 1_000_000 }),
   // Approved local article fonts plus the creation bar's Inter variable face.
   // Inter and its license/provenance add 357,042 bytes; measured copied assets:
   // 17,811,402 bytes. Retain the previous margin, rounded up by less than 3 kB.
@@ -509,7 +512,7 @@ function publicAssetFile(file) {
     && !GENERATED_BUILD_FILES.includes(file);
 }
 
-export function checkProductionBudgets(report, budgets = PRODUCTION_BUDGETS) {
+export function checkProductionBudgets(report, budgets = PRODUCTION_BUDGETS, { warn = console.warn } = {}) {
   assertOwnerRuntimeGraph(report.ownerRuntimeGraph);
   const failures = [];
   for (const [name, limits] of Object.entries(budgets)) {
@@ -524,6 +527,13 @@ export function checkProductionBudgets(report, budgets = PRODUCTION_BUDGETS) {
     throw new Error(`Production bundle budget failed:\n${failures.map((failure) =>
       `- ${failure.name}.${failure.measurement}: ${failure.actual} > ${failure.allowed} (+${failure.difference} bytes)`).join('\n')}`);
   }
+  const warnings = Object.entries(budgets.coreJavaScript || {}).flatMap(([measurement, allowed]) => {
+    const actual = report.totals.coreJavaScript[measurement];
+    return actual >= allowed * 0.95
+      ? [`- coreJavaScript.${measurement}: ${actual} / ${allowed} bytes (${(actual / allowed * 100).toFixed(1)}%; ${allowed - actual} bytes remaining)`]
+      : [];
+  });
+  if (warnings.length) warn(`Production bundle budget warning (95% threshold):\n${warnings.join('\n')}`);
   return true;
 }
 

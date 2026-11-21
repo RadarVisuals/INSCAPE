@@ -28,7 +28,7 @@ for (const width of [1920, 390]) test(`scene lifetime, linked cells, isolation a
     const first = await a.locator('[data-scene]').textContent();
     await a.getByRole('button', { name: 'Next Grid', exact: true }).click();
     await a.locator('[data-linked-text]').getByText('Second passage', { exact: true }).waitFor();
-    assert.equal(await a.locator('[data-side]').getAttribute('data-side'), 'side:1');
+    assert.equal(await a.locator('[data-artwork]').getAttribute('data-artwork'), 'artwork:1');
     assert.equal(await b.locator('[data-scene]').textContent(), first);
     assert.ok(await a.locator('[data-static]').getByText('Always here', { exact: true }).isVisible());
     await a.getByRole('button', { name: 'Hide Display', exact: true }).click();
@@ -53,7 +53,7 @@ for (const width of [1920, 390]) test(`scene lifetime, linked cells, isolation a
     assert.equal(await page.locator('.canvas-gallery-section').evaluate(node => getComputedStyle(node).overflowY), 'visible');
     assert.equal(await page.locator('.canvas-gallery-section .workbench-overview-card').count(), 2);
     assert.equal(await card.evaluate(node => getComputedStyle(node).backgroundColor), 'rgba(0, 0, 0, 0)');
-    await page.locator('.canvas-gallery-section [data-navigator-object="image:study"] svg image').first().waitFor();
+    await page.locator('.canvas-gallery-section [data-navigator-object="image:study-0"] svg image').first().waitFor();
     await mkdir(output, { recursive: true });
     await page.screenshot({ path: `${output}/${width}-gallery.png` });
     if (width === 390) {

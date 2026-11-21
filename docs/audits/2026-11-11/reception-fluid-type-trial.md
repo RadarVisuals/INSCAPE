@@ -1,0 +1,11 @@
+# Reception fluid typography trial
+
+The founder asked to try width-dependent typography after comparing a large desktop quote with the same quote on a phone.
+
+ReceptionDocumentCanvas now derives a read-only article projection from each contained text layer's rendered width relative to its authored width. It reuses the article's zoom, preserves inline formatting, roles and relative type hierarchy, and stops shrinking when the smallest visible authored text reaches 16 screen pixels. Text already authored smaller stays at its authored size. Wider views restore the authored size; the trial does not upscale beyond it. No schema, storage, new dependency, authoring control, or publication action was added. The same shared renderer serves preview and readers. Independent free text outside cells keeps its current path.
+
+To retain the existing production ceiling, duplicate exact-field validators in the Reception document, scene, arrangement, link and Workbench paths now reuse the existing article exact-field validator. Optional fields use its existing optional argument. Removed the duplicated inline text-width function and its repeated native frame reads; the projection uses the already available source frames. Native validation, persistence, public projection, history and strict Workbench tests exercise those paths. No ceilings or chunk classifications changed.
+
+Validation: 1,813 tests passed; lint and strict Workbench contracts passed; production build and unchanged package budgets passed. Added a browser regression for inline font marks, width changes, restoration and no document writes; the standalone automated browser suite was not run in this environment. Manual IAB check used a native three-cell fixture with a 28 px inline quote and 28 px article-default text: effective sizes 28 px at 1440, 21 px at 1080, approximately 16 px at 768/390/320, and 28 px again on returning to 1440. Actual browser viewport 390x844 was visually checked; the phone canvas stayed 744 px. This verifies representative fixture content, not the founder's saved Reception.
+
+The result is local and reversible, without commits, pushes or deployment. Per-format controls and separate motion/layout authoring remain outside this trial.

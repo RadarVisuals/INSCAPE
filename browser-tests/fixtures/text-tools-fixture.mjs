@@ -1,3 +1,23 @@
+import { openSharedTool } from './shared-tools.mjs';
+import assert from 'node:assert/strict';
+import { setEditorSidebarOpen } from './editor-menu.mjs';
+import { navigateWorkbench } from './workbench-navigation.mjs';
+
+// Use the Editor's camera command instead of assuming a viewport-dependent
+// starting pan/zoom. This must never move or resize the authored Text itself.
+export async function focusFixtureText(page, { closeInspector = false } = {}) {
+  const before = await page.evaluate(() => window.savedDraft());
+  await setEditorSidebarOpen(page, false);
+  if (closeInspector) {
+    const close = page.getByRole('button', { name: 'Close Inspector', exact: true });
+    if (await close.count()) { await close.focus(); await close.press('Enter'); }
+  }
+  await page.getByRole('textbox', { name: 'Article text', exact: true }).first().focus();
+  await navigateWorkbench(page, 'focus');
+  await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  assert.deepEqual(await page.evaluate(() => window.savedDraft()), before, 'camera focus preserves authored Text and document geometry');
+}
+
 export async function mountTextToolsFixture(page, origin, { visitor = false, textCount = 1, surfaces = false, displayTextCount = 0, beforeImports, waitForText = true } = {}) {
   await page.route('**/*', route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
   await page.route('https://raw.githubusercontent.com/RadarVisuals/INSCAPE/**', async route => {
@@ -79,9 +99,14 @@ export async function mountTextToolsFixture(page, origin, { visitor = false, tex
   if (await page.getByRole('button', { name: 'Read', exact: true }).count())
     await page.getByRole('textbox', { name: 'Article text', exact: true }).first().waitFor();
   await page.evaluate(() => document.fonts.ready);
-  // Arrange an unobstructed writing surface; suites open shared tools explicitly.
-  for (const name of ['Close Workbench Layers', 'Close Transform', 'Close Color', 'Close Image', 'Close Shape', 'Close FX']) {
+  // Leave the selected Text's unified Inspector open; hide Layers for the writing surface.
+  for (const name of ['Close Workbench Layers']) {
     const close = page.getByRole('button', { name, exact: true });
     if (await close.count()) { await close.focus(); await close.press('Enter'); }
+  }
+  if (!visitor) {
+    await openSharedTool(page, 'Inspector');
+    const undock = page.getByRole('button', { name: 'Undock Inspector', exact: true });
+    if (await undock.count()) await undock.click();
   }
 }

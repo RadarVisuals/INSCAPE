@@ -1,3 +1,4 @@
+import { openTextToolSection } from './fixtures/text-tool-sections.mjs';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { mkdir } from 'node:fs/promises';
@@ -50,7 +51,7 @@ for (const width of [1440, 390]) test(`article search and replacement preserve c
     page.setDefaultTimeout(10000);
     const errors = []; page.on('pageerror', error => errors.push(error.message));
     await seed(page);
-    const win = page.locator('.text-window'), body = bodyFor(win), tools = page.locator('.text-tools-window');
+    const win = page.locator('.text-window'), body = bodyFor(win), tools = page.locator('.workbench-tool-dock:has([data-text-inspector])');
     const baseline = await article(page);
     await body.focus(); await body.press('Control+f');
     const query = tools.getByRole('textbox', { name: 'Find in article', exact: true });
@@ -70,6 +71,7 @@ for (const width of [1440, 390]) test(`article search and replacement preserve c
     await tools.getByRole('button', { name: 'Replace match', exact: true }).click(); await settle(page);
     assert.equal(flatten(await article(page))[0], '🌙 Sun moon MOON untouched link a.b');
     assert.equal(await body.locator('strong').innerText(), 'Sun', 'replacement inherits first matched character formatting');
+    await openTextToolSection(page.locator('.workbench-tool-dock:has([data-text-inspector])'), 'More text tools');
     await tools.getByRole('button', { name: 'Undo', exact: true }).click(); await settle(page);
     assert.deepEqual(await article(page), baseline, 'single replacement has a complete independent undo');
     await query.fill('moon'); await replacement.fill('Star');
@@ -80,6 +82,7 @@ for (const width of [1440, 390]) test(`article search and replacement preserve c
     assert.deepEqual(replaced.content.content.find(node => node.type === 'artwork'), baseline.content.content.find(node => node.type === 'artwork'));
     assert.equal(await body.locator('a').getAttribute('href'), 'https://example.com/article');
     assert.equal(await body.locator('a').innerText(), 'untouched link');
+    await openTextToolSection(page.locator('.workbench-tool-dock:has([data-text-inspector])'), 'More text tools');
     await tools.getByRole('button', { name: 'Undo', exact: true }).click(); await settle(page);
     assert.deepEqual(await article(page), baseline, 'replace all is one undo step');
     for (const term of ['edgeboundary', 'boundaryafter artwork', 'hardbreak', 'Moon caption', 'not present']) {
@@ -113,10 +116,10 @@ test('search remains scoped to its editor across module changes and native find 
   try {
     const page = await browser.newPage({ viewport: { width: 1600, height: 1000 } }); page.setDefaultTimeout(10000);
     await seed(page, 2);
-    const tools = page.locator('.text-tools-window'), wins = page.locator('.text-window');
+    const tools = page.locator('.workbench-tool-dock:has([data-text-inspector])'), wins = page.locator('.text-window');
     const first = bodyFor(wins.nth(0)), second = bodyFor(wins.nth(1));
     const firstBefore = await article(page), secondBefore = await article(page, 1);
-    await tools.getByRole('button', { name: 'Close Text tools', exact: true }).click();
+    await tools.getByRole('button', { name: 'Close Inspector', exact: true }).click();
     await first.focus(); await first.press('Control+f');
     await tools.getByRole('textbox', { name: 'Find in article', exact: true }).fill('moon');
     await tools.getByRole('textbox', { name: 'Replace with', exact: true }).fill('Wrong article');
@@ -126,6 +129,7 @@ test('search remains scoped to its editor across module changes and native find 
     await tools.getByRole('button', { name: 'Replace all', exact: true }).click(); await settle(page);
     assert.deepEqual(await article(page), firstBefore);
     assert.equal(flatten(await article(page, 1))[0], 'Updated 2');
+    await openTextToolSection(page.locator('.workbench-tool-dock:has([data-text-inspector])'), 'More text tools');
     await tools.getByRole('button', { name: 'Undo', exact: true }).click(); await settle(page);
     assert.deepEqual(await article(page, 1), secondBefore);
     const outsidePrevented = await wins.nth(1).getByRole('textbox', { name: 'Article title', exact: true }).evaluate(node => {
@@ -146,7 +150,7 @@ test('oversized replacement preserves live and saved text and permits a correcte
   try {
     const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } }); page.setDefaultTimeout(10000);
     await mountTextToolsFixture(page, origin);
-    const body = bodyFor(page.locator('.text-window')), tools = page.locator('.text-tools-window');
+    const body = bodyFor(page.locator('.text-window')), tools = page.locator('.workbench-tool-dock:has([data-text-inspector])');
     const text = 'x '.repeat(110).trim();
     await body.fill(text); await settle(page);
     const before = await article(page);
@@ -161,6 +165,7 @@ test('oversized replacement preserves live and saved text and permits a correcte
     await replacement.fill('word');
     await tools.getByRole('button', { name: 'Replace all', exact: true }).click(); await settle(page);
     assert.equal(await body.innerText(), 'word '.repeat(110).trim());
+    await openTextToolSection(page.locator('.workbench-tool-dock:has([data-text-inspector])'), 'More text tools');
     await tools.getByRole('button', { name: 'Undo', exact: true }).click(); await settle(page);
     assert.deepEqual(await article(page), before);
     const numerous = 'x '.repeat(1001).trim();
@@ -175,6 +180,7 @@ test('oversized replacement preserves live and saved text and permits a correcte
     assert.deepEqual(await article(page), beforeBounded);
     await tools.getByRole('button', { name: 'Replace match', exact: true }).click(); await settle(page);
     assert.equal(await body.innerText(), `z ${'x '.repeat(1000).trim()}`, 'single replacement remains available');
+    await openTextToolSection(page.locator('.workbench-tool-dock:has([data-text-inspector])'), 'More text tools');
     await tools.getByRole('button', { name: 'Undo', exact: true }).click(); await settle(page);
     assert.deepEqual(await article(page), beforeBounded, 'rejected edit creates no extra undo step');
   } finally { await browser.close(); }

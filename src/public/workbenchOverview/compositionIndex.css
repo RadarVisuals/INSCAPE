@@ -18,7 +18,6 @@
 .composition-index .workbench-overview-list small { flex: none; width: 18px; font: 11px/1.5 var(--font-technical); opacity: .65; }
 .composition-index .workbench-overview-list span { overflow-wrap: anywhere; font-size: 13px; }
 .composition-index .workbench-overview-list button[aria-current] { color: var(--tactile-ink); background: var(--tactile-well); }
-.composition-index .composition-index-create { font-size: 12px; padding-left: 0; margin-top: 28px; color: var(--tactile-muted); justify-content: start; }
 .composition-index-main { min-width: 0; }
 .composition-index-settings { max-width: 740px; margin: 24px auto; }
 .composition-explorer { min-width: 0; }
@@ -28,7 +27,6 @@
 .composition-explorer-heading button { font-size: 12px; color: var(--tactile-muted); padding: 8px 10px; min-height: 36px; }
 .composition-explorer-stage { min-width: 0; }
 .composition-explorer-viewport { height: clamp(400px, calc(100dvh - 242px), 1100px); position: relative; overflow: hidden; border-radius: 14px; background: var(--tactile-face); cursor: grab; outline-offset: 3px; }
-.workbench-overview[data-workspace] .composition-explorer-viewport { height: clamp(300px, calc(100dvh - 282px), 1100px); }
 .composition-explorer-viewport[data-workbench-panning] { cursor: grabbing; user-select: none; }
 .composition-explorer-viewport > .workbench-overview-preview { width: 100%; height: 100%; margin: 0; pointer-events: none; }
 .composition-explorer-controls {
@@ -43,9 +41,9 @@
 }
 .composition-camera-point[aria-pressed="true"]::before { background: currentColor; opacity: 1; }
 .composition-explorer-zoom { display: flex; align-items: center; justify-self: start; gap: 2px; }
-.composition-explorer-controls button { flex: none; width: 28px; min-height: 30px; padding: 0; color: var(--tactile-muted); }
+.composition-explorer-controls button { --overview-button-padding: 0; --overview-button-min-height: 30px; flex: none; width: 28px; color: var(--tactile-muted); }
 .composition-explorer-controls button[aria-pressed="true"] { color: var(--tactile-ink); }
-.composition-explorer-zoom output { min-width: 36px; text-align: center; color: var(--tactile-muted); font: 12px/1.4 var(--font-technical); font-variant-numeric: tabular-nums; }
+.composition-explorer-zoom .composition-fit-artwork { min-width: 36px; text-align: center; color: var(--tactile-muted); font: 12px/1.4 var(--font-technical); font-variant-numeric: tabular-nums; }
 .composition-explorer select { max-width: 230px; min-width: 0; border: 1px solid var(--tactile-edge); background: var(--tactile-face); color: var(--tactile-ink); border-radius: var(--control-radius); padding: 7px; font: 12px/1.5 var(--font-interface); }
 .composition-explorer-bottom { display: flex; justify-content: space-between; align-items: start; gap: 36px; margin-top: 24px; }
 .composition-explorer-information { min-width: 0; max-width: 64ch; font-size: 13px; }
@@ -63,7 +61,6 @@
 .composition-index[data-expanded] .composition-index-body { grid-template-columns: minmax(0, 1fr); }
 .composition-index[data-expanded] .composition-index-sidebar { display: none; }
 .composition-index[data-expanded] .composition-explorer-viewport { height: calc(100dvh - 194px); min-height: 400px; }
-.workbench-overview[data-workspace] .composition-index[data-expanded] .composition-explorer-viewport { height: calc(100dvh - 234px); }
 @media (max-width: 800px) {
   .composition-index { --index-gutter: 16px; }
   .composition-index-body { grid-template-columns: minmax(0, 1fr); }

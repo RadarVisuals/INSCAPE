@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef } from 'react';
 import { workbenchPanVelocity } from './workbenchInertia.js';
 
 export const isWorkbenchBackground = (target, host) => target === host
-  || Boolean(target?.matches?.('.system-workflow__workbench, .system-workflow__display-instance'));
+  || Boolean(target?.matches?.('.system-workflow__workbench, .system-workflow__display-instance, [data-workbench-pan-surface]'));
 
 // Space-drag and the Hand tool share one camera gesture. Navigation owns the camera;
 // this gesture retains its cancellation offset and bounded release samples.
@@ -12,7 +12,21 @@ export function isWorkbenchHandSurface(target, host) {
   if (button && !button.matches('.image-module__canvas, [data-workbench-selectable], .system-workflow__resize-handle, .workbench-selection__handle')) return false;
   if (target.closest?.('.system-workflow__detached-window-titlebar, .system-workflow__detached-window-resize')) return true;
   if (target.closest?.('[data-shared-display-tools], [data-context-tools], [data-shared-text-tools], [data-system-workflow-panel]')) return false;
-  return isWorkbenchBackground(target, host) || Boolean(target.closest?.('[data-workbench-view-id], [data-workbench-module], .system-workflow__canvas, .workbench-selection'));
+  return isWorkbenchBackground(target, host) || Boolean(target.closest?.('[data-workbench-view-id], [data-workbench-module], .system-workflow__canvas, .workbench-selection, [data-workbench-pan-surface]'));
+}
+
+// Keyboard focus can remain on a toolbar after the pointer returns to the
+// workspace. The hovered canvas may claim Space, but never a typing field or
+// an open dialog. Keep ordinary keyboard button activation when hovering UI.
+export function workbenchSpacePanIntent(event, host) {
+  const target = event.target;
+  if (event.code !== 'Space' || event.isComposing || event.ctrlKey || event.metaKey || event.altKey
+    || target?.isContentEditable || target?.closest?.('input, textarea, select, [role="textbox"], [role="slider"], [role="dialog"], [role="menu"]')) return null;
+  const hovered = [...host.querySelectorAll(':hover')].at(-1) || (host.matches(':hover') ? host : null);
+  const overCanvas = isWorkbenchHandSurface(hovered, host);
+  if (!host.contains(target) && !overCanvas) return null;
+  return { preventDefault: overCanvas || isWorkbenchBackground(target, host)
+    || target === host.ownerDocument.body || Boolean(target?.matches?.('[data-workbench-selectable]')) };
 }
 
 export default function useWorkbenchPan(hostRef, disabled, { getOffset, update, onBegin, onEnd, hand = false }) {
@@ -43,14 +57,12 @@ export default function useWorkbenchPan(hostRef, disabled, { getOffset, update, 
       if (event.key === 'Escape' && active.current) {
         event.preventDefault(); event.stopPropagation(); finish(true); return;
       }
-      if (event.code !== 'Space' || event.isComposing || event.ctrlKey || event.metaKey || event.altKey
-        || event.target?.isContentEditable || event.target?.closest?.('input, textarea, select, [role="textbox"], [role="slider"]')) return;
-      if (!host.contains(event.target) && !(event.target === document.body && host.matches(':hover'))) return;
+      const intent = workbenchSpacePanIntent(event, host);
+      if (!intent) return;
       // Interface buttons keep native Space activation. A subsequent camera drag
       // moves focus to the host, so releasing Space does not click that button.
       space.current = true; host.dataset.workbenchPanReady = '';
-      if (isWorkbenchBackground(event.target, host) || event.target === document.body
-        || event.target?.matches?.('[data-workbench-selectable]')) event.preventDefault();
+      if (intent.preventDefault) event.preventDefault();
     };
     const keyup = event => { if (event.code === 'Space') release(); };
     const hidden = () => { if (document.hidden) cancel(); };

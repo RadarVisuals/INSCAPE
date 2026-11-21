@@ -11,7 +11,7 @@ export function splitReception(value, id, axis, newId = `region:${crypto.randomU
   const r = value.regions.find(r => r.id === id), key = axis === 'x' ? 'width' : 'height';
   if (!r || !['x', 'y'].includes(axis)) throw new Error('Select a region to split.');
   if (value.arrangement?.groups.some(group => group.members.includes(id))) throw new Error('Unlink this cell before dividing it.');
-  if (value.regions.length >= RECEPTION_LIMIT) throw new Error(`Reception supports up to ${RECEPTION_LIMIT} regions.`);
+  if (value.regions.length >= RECEPTION_LIMIT) throw new Error(`Bento supports up to ${RECEPTION_LIMIT} regions.`);
   if (r[key] < RECEPTION_MIN * 2) throw new Error('This region is too small to split. Enlarge it first.');
   const { scene: _scene, ...empty } = r;
   const first = Math.floor(r[key] / 2), second = { ...empty, id: newId, content: null, [axis]: r[axis] + first, [key]: r[key] - first };

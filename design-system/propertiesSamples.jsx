@@ -29,7 +29,7 @@ const examples = {
   image: [
     ['artwork', 'With artwork'],
     ['empty', 'Empty Image'],
-    ['busy', 'Turning a side'],
+    ['busy', 'Editing an image'],
   ],
   display: [
     ['single', 'One artwork'],
@@ -100,16 +100,15 @@ function CropSample({ onFinish }) {
   );
 }
 function ImageSample({ example, report, setTitle }) {
-  const [hasSide, setHasSide] = useState(example !== 'empty'),
+  const [hasArtwork, setHasArtwork] = useState(example !== 'empty'),
     [fit, setFit] = useState('cover');
-  const [drop, setDrop] = useState('append'),
-    [included, setIncluded] = useState(example !== 'empty'),
+  const [included, setIncluded] = useState(example !== 'empty'),
     [cropping, setCropping] = useState(false);
   const [size, setSize] = useState({ width: '288', height: '192' });
   const [rotation, setRotation] = useState(0);
   const cropButton = useRef(null),
     busy = example === 'busy';
-  useEffect(() => setTitle(`Image / ${hasSide ? 'Side 1' : 'Empty'}`), [hasSide, setTitle]);
+  useEffect(() => setTitle(`Image / ${hasArtwork ? 'Artwork' : 'Empty'}`), [hasArtwork, setTitle]);
   const finishCrop = (action, zoom) => {
     setCropping(false);
     if (action === 'native') setFit('contain');
@@ -133,11 +132,11 @@ function ImageSample({ example, report, setTitle }) {
         <IconButton
           label="Inspect Image"
           icon={ZoomIn}
-          disabled={!hasSide || busy}
+          disabled={!hasArtwork || busy}
           onClick={() => report('Inspect Image opens the full artwork in the app')}
         />
         <ArtworkTransformTools
-          disabled={!hasSide || busy}
+          disabled={!hasArtwork || busy}
           onTransform={(operation) => {
             if (operation === 'ROTATE') {
               const next = (rotation + 90) % 360;
@@ -152,7 +151,7 @@ function ImageSample({ example, report, setTitle }) {
           className={control}
           aria-label="Crop"
           title="Crop"
-          disabled={!hasSide || busy}
+          disabled={!hasArtwork || busy}
           onClick={() => setCropping(true)}
         >
           <Crop />
@@ -166,8 +165,8 @@ function ImageSample({ example, report, setTitle }) {
         <button
           type="button"
           className={control}
-          disabled={!hasSide || busy}
-          aria-pressed={hasSide && fit === 'contain'}
+          disabled={!hasArtwork || busy}
+          aria-pressed={hasArtwork && fit === 'contain'}
           onClick={() => {
             setFit('contain');
             report('Fit inside · complete image');
@@ -178,8 +177,8 @@ function ImageSample({ example, report, setTitle }) {
         <button
           type="button"
           className={control}
-          disabled={!hasSide || busy}
-          aria-pressed={hasSide && fit === 'cover'}
+          disabled={!hasArtwork || busy}
+          aria-pressed={hasArtwork && fit === 'cover'}
           onClick={() => {
             setFit('cover');
             report('Fill canvas · centred crop');
@@ -217,25 +216,14 @@ function ImageSample({ example, report, setTitle }) {
           </button>
         </form>
       </details>
-      <div className="image-module__side-tools">
-        <label>
-          When dropping from Library
-          <select
-            aria-label="When dropping from Library"
-            value={drop}
-            onChange={(event) => setDrop(event.target.value)}
-          >
-            <option value="append">Add as a new side</option>
-            <option value="replace">Replace current side</option>
-          </select>
-        </label>
+      <div className="image-module__artwork-tools">
         <IconButton
-          label="Remove current Image side"
+          label="Remove image"
           icon={Trash2}
-          disabled={!hasSide || busy}
+          disabled={!hasArtwork || busy}
           onClick={() => {
-            setHasSide(false);
-            report('Current side removed; the example Image is empty');
+            setHasArtwork(false);
+            report('Image removed; the example Image is empty');
           }}
         />
       </div>
@@ -662,7 +650,7 @@ export function PropertiesPreview({ onAction, status }) {
   const [variant, setVariant] = useState('image'),
     [example, setExample] = useState('artwork'),
     [revision, setRevision] = useState(0);
-  const [title, setTitle] = useState('Image / Side 1'),
+  const [title, setTitle] = useState('Image / Artwork'),
     [open, setOpen] = useState(true),
     [message, setMessage] = useState('Choose a control to try it.');
   const windowRef = useRef(null),
@@ -781,7 +769,7 @@ export function PropertiesPreview({ onAction, status }) {
       </p>
       <p className="ds-caption">
         {variant === 'image'
-          ? 'Image keeps its six actions, direct Fit choices, exact size, Library drop and publication setting.'
+          ? 'Image keeps its actions, direct Fit choices, exact size and publication setting.'
           : variant === 'display'
             ? 'Selection changes the available actions. Grouping, locked layers, text and no selection each have their own state.'
             : 'Rectangle has grain; Grid has snapping and line settings. Retained texture represents existing saved work; it is not a new creation option.'}

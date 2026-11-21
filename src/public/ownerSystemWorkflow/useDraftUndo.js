@@ -2,12 +2,13 @@ import { useCallback, useEffect } from 'react';
 
 export default function useDraftUndo(store, suspended, notify, blockedReason = null) {
   const perform = useCallback(direction => {
-    if (!store || suspended || !['undo', 'redo'].includes(direction)) return;
-    if (blockedReason) { notify(blockedReason); return; }
+    if (!store || suspended || !['undo', 'redo'].includes(direction)) return false;
+    if (blockedReason) { notify(blockedReason); return false; }
     const label = store.getHistory()[direction];
-    if (!label) { notify(`Nothing to ${direction}.`); return; }
+    if (!label) { notify(`Nothing to ${direction}.`); return false; }
     const ok = store[direction]();
     notify(ok ? `${direction === 'undo' ? 'Undid' : 'Redid'}: ${label}` : 'The edit could not be saved. Your draft is unchanged.');
+    return ok;
   }, [store, suspended, notify, blockedReason]);
   useEffect(() => {
     if (!store || suspended) return undefined;

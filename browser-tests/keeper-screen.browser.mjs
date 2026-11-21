@@ -23,7 +23,7 @@ for (const width of [1440, 390]) test(`Keeper belongs to the screen and follows 
     await trigger.waitFor(); await settle(page);
     const initial = await dock.boundingBox();
     near(initial.x + initial.width, width - 16);
-    const rail = await page.getByRole('group', { name: 'Workbench zoom', exact: true }).boundingBox();
+    const rail = await page.getByRole('toolbar', { name: 'Creation tools', exact: true }).boundingBox();
     assert.ok(initial.y + initial.height <= rail.y - 7 && initial.y + initial.height >= rail.y - 20);
     assert.equal(await trigger.evaluate(hit), true);
     assert.equal(await dock.evaluate(node => Boolean(node.closest('.workbench-canvas-content'))), false);
@@ -44,9 +44,9 @@ for (const width of [1440, 390]) test(`Keeper belongs to the screen and follows 
     assert.deepEqual(await page.evaluate(() => window.readToolChromeDraft()), before, 'moving the dock does not author canvas content');
     const selector = editorMenu(page, 'Canvas');
     const first = await activeEditorDocument(page);
-    await editorCommand(page, 'Canvas', 'New canvas');
-    await page.getByLabel('New canvas name').fill('Second composition');
-    await page.getByRole('button', { name: 'Create canvas', exact: true }).click();
+    await editorCommand(page, 'Canvas', '+ New');
+    await page.getByLabel('Composition name').fill('Second composition');
+    await page.getByRole('button', { name: 'Create composition', exact: true }).click();
     await trigger.waitFor(); await settle(page);
     const second = await activeEditorDocument(page); assert.notEqual(second, first);
     assert.deepEqual((await page.evaluate(() => window.readToolChromeDraft())).keeperDocks, before.keeperDocks);

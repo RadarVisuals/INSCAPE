@@ -7,7 +7,7 @@ export const otherBoundaryProfile = `0x${'2'.repeat(40)}`;
 const cid = 'QmYwAPJzv5CZsnAzt8auVZRnGi2CWF7rP3pVYdWrJwEmQw';
 const transactionHash = `0x${'a'.repeat(64)}`;
 
-export async function mountPublicationBoundary(page, origin, pauseAt, menuSurface = 'mist', collection = false) {
+export async function interceptPublicationBoundary(page, origin, pauseAt = null) {
   let arrive, release, deliver;
   const reached = new Promise(resolve => { arrive = resolve; });
   const gate = new Promise(resolve => { release = resolve; });
@@ -41,9 +41,20 @@ export async function mountPublicationBoundary(page, origin, pauseAt, menuSurfac
   await page.exposeFunction('boundarySign', message => UPLOAD_TEST_SIGNER.signMessage({ message }));
   await page.exposeFunction('boundaryWrite', args => { state.writes++; state.value = args[1]; return transactionHash; });
   await page.exposeFunction('boundaryReceipt', async () => { await pause('receipt'); return { status: 'success', transactionHash }; });
+  await page.addInitScript(({ profile, signer }) => {
+    window.publicationBoundaryWallet = { isWalletConnected: true, isHostProfileOwner: true, hostProfileAddress: profile,
+      chainId: 42, publicationContextGeneration: 1, provider: {},
+      walletClient: { account: signer, signMessage: ({ message }) => window.boundarySign(message), writeContract: ({ args }) => window.boundaryWrite(args) },
+      publicClient: { waitForTransactionReceipt: () => window.boundaryReceipt() } };
+  }, { profile: boundaryProfile, signer: UPLOAD_TEST_SIGNER.address });
+  return state;
+}
+
+export async function mountPublicationBoundary(page, origin, pauseAt, menuSurface = 'mist', collection = false) {
+  const state = await interceptPublicationBoundary(page, origin, pauseAt);
   await page.route(`${origin}/__publication_boundary__`, route => route.fulfill({ contentType: 'text/html', body: '<div id="root"></div>' }));
   await page.goto(`${origin}/__publication_boundary__`);
-  await page.evaluate(async ({ profile, signer, menuSurface, collection }) => {
+  await page.evaluate(async ({ profile, menuSurface, collection }) => {
     const refresh = (await import('/@react-refresh')).default;
     refresh.injectIntoGlobalHook(window); window.$RefreshReg$ = () => {}; window.$RefreshSig$ = () => type => type; window.__vite_plugin_react_preamble_installed__ = true;
     const React = (await import('/@id/react')).default, { createRoot } = (await import('/@id/react-dom/client')).default;
@@ -52,10 +63,7 @@ export async function mountPublicationBoundary(page, origin, pauseAt, menuSurfac
     await import('/src/index.css'); await import('/src/inscapeTokens.css');
     const probe = window.publicationBoundary = { saves: 0, confirmed: [], settled: false };
     const root = createRoot(document.getElementById('root'));
-    const wallet = { isWalletConnected: true, isHostProfileOwner: true, hostProfileAddress: profile,
-      chainId: 42, publicationContextGeneration: 1, provider: {},
-      walletClient: { account: signer, signMessage: ({ message }) => window.boundarySign(message), writeContract: ({ args }) => window.boundaryWrite(args) },
-      publicClient: { waitForTransactionReceipt: () => window.boundaryReceipt() } };
+    const wallet = window.publicationBoundaryWallet;
     let props = { profileAddress: profile, profile: { name: 'Original profile' }, assetRecords: [],
       systemWorkflowDraft: createEmptySystemWorkflowDraft(profile), menuSurface, phase: 'open',
       getWalletPublicationContext: () => wallet, onSaveWorkbench: () => { probe.saves++; return true; },
@@ -73,7 +81,7 @@ export async function mountPublicationBoundary(page, origin, pauseAt, menuSurfac
       useLibraryStore.setState({ assets: records, referencedAssets: [], status: 'ready' });
       probe.referenceRecordCount = projectLibraryAssetUnion({ ownedAssets: records, profileAddress: profile }).records.length;
       let record = createWorkbenchCollection(draft);
-      for (let i = 2; i <= 8; i++) record = appendWorkbench(record, `workbench:${i}`, `Canvas ${i}`, draft);
+      for (let i = 2; i <= 30; i++) record = appendWorkbench(record, `workbench:${i}`, `Canvas ${i}`, draft);
       props = { ...props, systemWorkflowDraft: draft, publishedResolution: { status: 'UNAVAILABLE' },
         assetRecords: records.map(asset => ({ ...asset, name: `Current ${asset.name}` })),
         store: { getBackupSnapshot: () => record, getWorkbenchId: () => record.activeId } };
@@ -87,7 +95,7 @@ export async function mountPublicationBoundary(page, origin, pauseAt, menuSurfac
     };
     probe.close = () => root.render(null);
     probe.render();
-  }, { profile: boundaryProfile, signer: UPLOAD_TEST_SIGNER.address, menuSurface, collection });
+  }, { profile: boundaryProfile, menuSurface, collection });
   await page.getByRole('button', { name: 'Prepare publication', exact: true }).waitFor();
   return state;
 }

@@ -1,3 +1,5 @@
+import { isPublicationUploadCode } from './publicationUploadIssue.js';
+
 const RELEASE_COMMIT = typeof __INSCAPE_RELEASE_COMMIT__ !== 'undefined'
   ? String(__INSCAPE_RELEASE_COMMIT__)
   : 'development';
@@ -61,8 +63,17 @@ export function resolveAlphaBrowserClass(userAgent = globalThis.navigator?.userA
   return safari ? `SAFARI/${safari[1]}` : 'UNKNOWN';
 }
 
+export function applicationErrorCause(error) {
+  const message = typeof error?.message === 'string' ? error.message : '';
+  if (/Maximum update depth exceeded|Minified React error #185/i.test(message)) return 'REACT_UPDATE_LOOP';
+  if (/Too many re-renders|Minified React error #301/i.test(message)) return 'REACT_RENDER_LOOP';
+  if (/Maximum call stack size exceeded/i.test(message)) return 'CALL_STACK_EXCEEDED';
+  return ['TypeError', 'ReferenceError', 'RangeError', 'SyntaxError'].includes(error?.name) ? error.name : 'UNCLASSIFIED_ERROR';
+}
+
 export function createAlphaSupportEvidence({
   code,
+  error,
   phase,
   providerCategory,
   profileAddress,
@@ -78,8 +89,9 @@ export function createAlphaSupportEvidence({
     route: boundedText(routeClass, 40) || resolveAlphaRouteClass(globalThis.location),
     viewport: resolveAlphaViewportClass(viewportWidth),
     browser: resolveAlphaBrowserClass(userAgent),
-    code: CODES.has(code) ? code : ALPHA_SUPPORT_CODES.UNEXPECTED_APPLICATION_ERROR,
+    code: CODES.has(code) || isPublicationUploadCode(code) ? code : ALPHA_SUPPORT_CODES.UNEXPECTED_APPLICATION_ERROR,
   };
+  if (error) evidence.cause = applicationErrorCause(error);
   const safePhase = boundedText(phase, 48);
   const safeProvider = boundedText(providerCategory, 48);
   if (safePhase) evidence.phase = safePhase;
@@ -107,6 +119,7 @@ export function alphaRecoveryGuidance(code, transactionHash = null) {
   if (transactionHash && TRANSACTION_HASH.test(transactionHash)) {
     return 'A transaction hash exists. Do not submit another publication transaction. Copy these details and ask support to investigate the existing hash.';
   }
+  if (isPublicationUploadCode(code)) return 'The upload step runs before the profile transaction. Copy these details if you need help completing the upload.';
   if (code === ALPHA_SUPPORT_CODES.WALLET_REJECTED) return 'Nothing was submitted. Review the request before trying again.';
   if ([ALPHA_SUPPORT_CODES.PUBLICATION_RESOLUTION_FAILED, ALPHA_SUPPORT_CODES.PUBLISHED_DOCUMENT_FAILED,
     ALPHA_SUPPORT_CODES.PUBLISHED_MEDIA_FAILED].includes(code)) {

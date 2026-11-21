@@ -103,8 +103,15 @@ test('save boundary rejects storage faults without accepting content, history or
         const { root, scope, records, storage, faults } = fixture();
         action.prepare?.(scope);
         const before = acceptedState(root), snapshot = root.getSnapshot();
-        let notifications = 0, writes = 0;
-        root.subscribe(() => notifications++); scope.subscribe(() => notifications++);
+        let writes = 0;
+        const notifications = [];
+        const observeFailure = () => {
+          assert.deepEqual(acceptedState(root), before, 'failure notifications retain accepted content, history and context');
+          assert.equal(root.getSnapshot(), snapshot);
+          assert.equal(scope.getSnapshot(), snapshot);
+          notifications.push(root.getLastCommitFailure());
+        };
+        root.subscribe(observeFailure); scope.subscribe(observeFailure);
         const setItem = storage.setItem;
         storage.setItem = (...args) => { writes++; return setItem(...args); };
         if (fault === 'read') faults.read = true;
@@ -119,7 +126,7 @@ test('save boundary rejects storage faults without accepting content, history or
         assert.deepEqual(acceptedState(root), before, 'failed operations retain all accepted state');
         assert.equal(root.getSnapshot(), snapshot); assert.equal(scope.getSnapshot(), snapshot);
         assert.equal(scope.isCurrent(), true); assert.equal(records.get(key), stored);
-        assert.equal(notifications, 0, 'failed operations do not announce acceptance');
+        assert.deepEqual(notifications, [reason, reason], 'root and active scope announce the recovery cause');
         assert.equal(writes, fault === 'quota' ? 1 : 0);
         assert.equal(root.getLastCommitFailure(), reason, 'the failure identifies its actual recovery cause');
       });
@@ -135,13 +142,16 @@ test('save boundary retry retains old acceptance until recovery saves and undoes
   external.workbenches[1].content.texts[0].article.title = 'External active change';
   records.set(key, JSON.stringify(external));
   const before = acceptedState(root), snapshot = root.getSnapshot();
-  let calls = 0, notifications = 0;
-  root.subscribe(() => notifications++);
+  let calls = 0;
+  const notifications = [];
+  root.subscribe(() => notifications.push({ failure: root.getLastCommitFailure(), snapshot: root.getSnapshot() }));
   const candidate = draft => { calls++; draft.texts[0].article.title = 'Recovered edit'; return draft; };
   const options = { expectedGeneration: scope.getGeneration(), historyLabel: 'Recovered Text' };
   const unchanged = () => {
     assert.deepEqual(acceptedState(root), before); assert.equal(root.getSnapshot(), snapshot);
-    assert.equal(scope.getSnapshot(), snapshot); assert.equal(notifications, 0);
+    assert.equal(scope.getSnapshot(), snapshot);
+    assert.ok(notifications.every(event => event.snapshot === snapshot), 'retry failures only announce status, not new accepted content');
+    assert.equal(notifications.at(-1).failure, root.getLastCommitFailure());
   };
   faults.read = true;
   assert.equal(scope.retryCompletedOperation(candidate, options), false);
@@ -158,7 +168,9 @@ test('save boundary retry retains old acceptance until recovery saves and undoes
   }, options), false);
   assert.equal(root.getLastCommitFailure(), 'changed'); assert.equal(calls, 2); unchanged();
   assert.equal(scope.retryCompletedOperation(candidate, options), true);
-  assert.equal(calls, 3); assert.equal(notifications, 1);
+  assert.equal(calls, 3);
+  assert.deepEqual(notifications.map(event => event.failure), ['read_failed', 'write_failed', 'changed', null]);
+  assert.equal(notifications.at(-1).snapshot, root.getSnapshot(), 'successful recovery announces the saved content');
   assert.equal(root.getGeneration(), before.generation + 1);
   assert.equal(root.getActivation(), before.activation);
   assert.equal(root.getDraft().identityPresentation.alias, 'Changed again during retry');

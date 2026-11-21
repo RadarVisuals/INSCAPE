@@ -23,7 +23,7 @@ scope.guardWorkbenchTransition(() => 'Finish editing');
 scope.subscribe(() => {});
 const selection: WorkbenchSelection = ['image:one', 'text-frame:two', 'workbench:index'];
 const activation: ModuleActivation = 'image:one';
-useWorkbenchToolSource('shape:one', { color: 'module-owned control', fx: null });
+useWorkbenchToolSource('shape:one', { color: 'module-owned control', shape: ({ transform }) => transform });
 useArtworkOpener('image:one', () => {});
 useWorkbenchInspectionAction('display:primary', () => true);
 workbenchModuleTransform(view, 'text-frame:two');
@@ -61,6 +61,8 @@ const indexActivation: ModuleActivation = 'workbench:index';
 useWorkbenchToolSource('workbench:main', { color: 'wrong target' });
 // @ts-expect-error Host tool fields cannot silently accept arbitrary module data.
 useWorkbenchToolSource('shape:one', { crop: { zoom: 2 } });
+// @ts-expect-error Effects are owned by the Shape inspector, not a separate host tool.
+useWorkbenchToolSource('shape:one', { fx: null });
 // @ts-expect-error Opening requires an action, not an availability flag.
 useArtworkOpener('image:one', false);
 // @ts-expect-error A nullable old/unavailable snapshot must be narrowed.

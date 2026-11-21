@@ -37,7 +37,7 @@ export default function DisplayArticleEditor({ placement, controller, cellSize, 
     const board = canvasElement.closest('.system-workflow__presentation-board')?.getBoundingClientRect() || canvas;
     const scale = screenCellSize / cellSize;
     setActions({ top: Math.max(8, (Math.max(board.top + 56, canvas.top + 8) - bounds.top) / scale), right: Math.max(8, (bounds.right - canvas.right + 8) / scale) });
-  }, [placement.column, placement.row, placement.columnSpan, placement.rowSpan, screenCellSize, cellSize]);
+  }, [canvasRef, placement.column, placement.row, placement.columnSpan, placement.rowSpan, screenCellSize, cellSize]);
   const detach = rectangle => {
     if (!save(edit.getSnapshot().value)) return;
     const size = { width: Math.max(240, rectangle.width / standaloneScale), height: Math.max(180, rectangle.height / standaloneScale) };
@@ -69,7 +69,7 @@ export default function DisplayArticleEditor({ placement, controller, cellSize, 
     </div>
     {canvasRef.current && <TextTools targetId={controller.moduleId} available={!suspended} article={article} onChange={save} controlsRef={setHost} disabled={placement.locked} onClose={close}
         backupScope={JSON.stringify(scope)} recoveryPending={failed}
-        anchor={canvasRef.current.getBoundingClientRect()} footer={error ? <div role="alert">{error}<button type="button" onClick={() => save(edit.getSnapshot().value, { retry: true })}>Retry local save</button>
+        footer={error ? <div role="alert">{error}<button type="button" onClick={() => save(edit.getSnapshot().value, { retry: true })}>Retry local save</button>
           {reason === 'conflict' && <button type="button" onClick={() => save(edit.getSnapshot().value, { retry: true, replace: true })}>Replace saved Text with my edits</button>}
         </div> : <p role="status">Saved in this browser</p>}>
         <button type="button" disabled={placement.locked} onClick={detachBeside}>Move onto Workbench</button>

@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import ColourControls from './ColourControls.jsx';
+import ColourOpacity from './ColourOpacity.jsx';
 
 // One completed gesture is one authored edit. Preview is temporary and belongs
 // to the calling module; scope changes/unmount never commit its last pointer.
-export default function CommittedColourControls({ color, opacity, disabled, onChange, onPreview, beginPreview, getVersion, scopeKey }) {
+function useColourEdit({ color, opacity, disabled, onChange, onPreview, beginPreview, getVersion, scopeKey }) {
   const [preview, setPreview] = useState(null), active = useRef(null);
   const version = getVersion();
   const cancel = () => active.current?.finish(true);
@@ -32,7 +33,19 @@ export default function CommittedColourControls({ color, opacity, disabled, onCh
     active.current = gesture;
     return gesture;
   };
-  return <ColourControls item={{ color: preview?.color || color, opacity: (preview?.opacity ?? opacity) * 100, locked: disabled }}
-    labelPrefix="Color" showOpacity={opacity !== undefined} scopeKey={scopeKey} getVersion={getVersion}
-    beginGesture={begin} beginOpacityGesture={begin} update={patch => { if (!disabled) onChange(normalise(patch)); }} />;
+  return { color: preview?.color ?? color, percent: (preview?.opacity ?? opacity) * 100, begin,
+    update: patch => { if (!disabled) onChange(normalise(patch)); } };
+}
+
+export default function CommittedColourControls(props) {
+  const { color, percent, begin, update } = useColourEdit(props);
+  return <ColourControls item={{ color, opacity: percent, locked: props.disabled }}
+    labelPrefix="Color" showOpacity={props.opacity !== undefined} scopeKey={props.scopeKey} getVersion={props.getVersion} variant={props.variant}
+    beginGesture={begin} beginOpacityGesture={begin} update={update} />;
+}
+
+export function CommittedOpacityControl({ label, caption = 'Opacity', ...props }) {
+  const { color, percent, begin, update } = useColourEdit(props);
+  return <ColourOpacity value={percent} color={color} disabled={props.disabled} label={label}
+    caption={caption} exact update={update} beginGesture={begin} />;
 }

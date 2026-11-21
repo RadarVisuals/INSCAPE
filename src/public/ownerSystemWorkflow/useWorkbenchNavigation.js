@@ -26,16 +26,15 @@ function controlsTop(host, controls) {
 
 // Navigation never receives a draft store or module transforms. Editing owns
 // its gestures and exposes only cancellation and input-ownership callbacks.
-export default function useWorkbenchNavigation({ hostRef, controlsRef, disabled, dockVisible, creationToolbarVisible, onControlsTopChange,
+export default function useWorkbenchNavigation({ hostRef, controlsRef, disabled, creationToolbarVisible, onControlsTopChange,
   homeBounds = null, frameOnEntry = false,
   interactionTool = 'select', setInteractionTool,
   isEditing, cancelEditing, releaseAbandonedGesture, captureContext, restoreContext, returnTargets, resetPresentation, entries }) {
   const camera = useWorkbenchCamera();
-  const { offset, locked, getCamera, updateCamera } = camera;
+  const { offset, locked, entryFramed, setEntryFramed, getCamera, updateCamera } = camera;
   const navigatorGesture = useRef(null);
   const interaction = useRef(null);
   interaction.current = { isEditing, cancelEditing, releaseAbandonedGesture, captureContext, restoreContext, returnTargets, resetPresentation, homeBounds };
-  const framedHome = useRef(false);
   const shouldFrameOnEntry = frameOnEntry && Boolean(homeBounds);
   const [history, setHistory] = useState([]);
   const hand = interactionTool === 'hand';
@@ -51,9 +50,10 @@ export default function useWorkbenchNavigation({ hostRef, controlsRef, disabled,
   const afterPan = useCallback(velocity => releasePan(hand ? velocity : null), [releasePan, hand]);
   const { active: panActive, cancel: cancelPan, releaseAbandonedGesture: releaseAbandonedPan } = useWorkbenchPan(hostRef, disabled || locked, { getOffset, update: previewPan, onBegin: beforePan, onEnd: afterPan, hand });
   const toggleHand = useCallback(() => { stopTravel(true); cancelPan(); interaction.current.cancelEditing(); setInteractionTool?.(hand ? 'select' : 'hand'); }, [stopTravel, cancelPan, hand, setInteractionTool]);
-  useLayoutEffect(() => {
+  const cancelInteraction = useCallback(() => {
     stopTravel(); cancelPan(true); interaction.current.cancelEditing();
-  }, [interactionTool, stopTravel, cancelPan]);
+  }, [stopTravel, cancelPan]);
+  useLayoutEffect(() => { cancelInteraction(); }, [interactionTool, cancelInteraction]);
   useEffect(() => {
     const reset = () => { cancelPan(true); setInteractionTool?.('select'); };
     const hidden = () => { if (document.hidden) reset(); };
@@ -144,7 +144,9 @@ export default function useWorkbenchNavigation({ hostRef, controlsRef, disabled,
     const available = workbenchNavigationViewport(viewport,
       Number.isFinite(chromeTop) ? chromeTop - hostRect.top : undefined);
     const camera = getCamera();
-    const end = workbenchDestinationCamera(bounds, available, .25, destination.padding ?? 32);
+    const end = destination.cameraForBounds
+      ? destination.cameraForBounds(bounds, available, camera)
+      : workbenchDestinationCamera(bounds, available, .25, destination.padding ?? 32);
     if (!end) return unavailable();
     if (!destination.remember && Math.abs(end.scale - camera.scale) < 1e-7 && Math.abs(end.offset.x - camera.offset.x) < 1e-7
       && Math.abs(end.offset.y - camera.offset.y) < 1e-7) {
@@ -225,10 +227,10 @@ export default function useWorkbenchNavigation({ hostRef, controlsRef, disabled,
       // The owner Editor frames each document once when its session opens.
       // Other hosts may supply Home bounds without opting into entry framing.
       // Edits and resizes keep the user's camera and saved module coordinates.
-      if (!shouldFrameOnEntry) framedHome.current = false;
-      else if (!framedHome.current && !locked) {
+      if (!shouldFrameOnEntry) setEntryFramed(false);
+      else if (!entryFramed && !locked) {
         const home = homeCamera();
-        if (home) { framedHome.current = true; updateCamera(home); }
+        if (home) { updateCamera(home); setEntryFramed(true); }
       }
       const controlsHeight = controls?.offsetHeight || 32;
       if (previous?.width === viewport.width && previous?.height === viewport.height && previous?.controlsHeight === controlsHeight) return;
@@ -237,13 +239,13 @@ export default function useWorkbenchNavigation({ hostRef, controlsRef, disabled,
       // camera or moves authored windows to fit a screen or composition frame.
       if (!locked) stopTravel();
     };
-    measure();
+    // The first layout measurement includes the registered docks and measured header.
     const observer = new ResizeObserver(measure);
     observer.observe(host);
     if (controls) observer.observe(controls);
     if (toolbar) observer.observe(toolbar);
     return () => observer.disconnect();
-  }, [hostRef, controlsRef, dockVisible, creationToolbarVisible, disabled, locked, readViewport, stopTravel, onControlsTopChange, shouldFrameOnEntry, homeCamera, updateCamera]);
+  }, [hostRef, controlsRef, creationToolbarVisible, disabled, locked, readViewport, stopTravel, onControlsTopChange, shouldFrameOnEntry, entryFramed, setEntryFramed, homeCamera, updateCamera]);
 
   const zoom = useCallback((point, factor) => {
     if (disabled || locked || interaction.current.isEditing() || isPanning()) return;
@@ -254,13 +256,6 @@ export default function useWorkbenchNavigation({ hostRef, controlsRef, disabled,
     const camera = getCamera();
     updateCamera(zoomWorkbenchCamera(camera.scale, camera.offset, camera.scale * factor, anchor));
   }, [disabled, locked, hostRef, getCamera, updateCamera, isPanning, stopTravel]);
-  const resetZoom = useCallback(() => {
-    const host = hostRef.current, rect = host?.getBoundingClientRect();
-    if (!rect) return;
-    const dock = parseFloat(getComputedStyle(host).getPropertyValue('--workflow-dock-height')) || 0;
-    zoom({ x: rect.left + rect.width / 2, y: rect.top + (rect.height - dock) / 2 }, 1 / getCamera().scale);
-    host.focus({ preventScroll: true });
-  }, [hostRef, zoom, getCamera]);
   const resetView = useCallback(() => {
     if (disabled || locked) return;
     stopTravel(); remember([]); interaction.current.resetPresentation?.(); cancelPan(); panTo({ x: 0, y: 0 });
@@ -272,6 +267,10 @@ export default function useWorkbenchNavigation({ hostRef, controlsRef, disabled,
     if (!viewport || !rect) return;
     zoom({ x: rect.left + viewport.left + viewport.width / 2, y: rect.top + viewport.top + viewport.height / 2 }, percent / 100 / getCamera().scale);
   }, [navigationViewport, hostRef, zoom, getCamera]);
+  const resetZoom = useCallback(() => {
+    navigatorZoom(100);
+    hostRef.current?.focus({ preventScroll: true });
+  }, [navigatorZoom, hostRef]);
   const navigatorHome = useCallback(() => {
     if (disabled || locked || interaction.current.isEditing() || isPanning()) return;
     resetView(); updateCamera(homeCamera() || { scale: 1, offset: { x: 0, y: 0 } });
@@ -384,6 +383,6 @@ export default function useWorkbenchNavigation({ hostRef, controlsRef, disabled,
     };
   }, [hostRef, disabled, locked, hand, getCamera, isPanning, hasCapturedPointer, releaseAbandonedPan, panTo, zoom, resetZoom, stopTravel, endNavigator]);
 
-  return { navigationViewport, beginNavigator, moveNavigator, endNavigator, navigatorZoom, navigatorHome, offset, locked, getCamera, isPanning, hasCapturedPointer, resetView, resetZoom, moving, hand, toggleHand,
+  return { cancelInteraction, navigationViewport, beginNavigator, moveNavigator, endNavigator, navigatorZoom, navigatorHome, offset, locked, getCamera, isPanning, hasCapturedPointer, resetView, resetZoom, moving, hand, toggleHand,
     captureView, focusDestination, goBack, canGoBack: history.length > 0, stopTravel };
 }

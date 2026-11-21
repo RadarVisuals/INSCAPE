@@ -1,3 +1,4 @@
+import { openEditorMenu, workspacePicker } from './fixtures/editor-menu.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdir } from 'node:fs/promises';
@@ -17,7 +18,9 @@ for (const [width, theme] of [[1440, 'carbon'], [640, 'carbon'], [390, 'carbon']
     const before = await page.evaluate(() => ({ publication: JSON.stringify(window.__overviewPublication), storage: JSON.stringify({ ...localStorage }) }));
     const canvasEntry = page.getByRole('button', { name: 'Enter Inscape', exact: true });
     assert.equal(await canvasEntry.isEnabled(), true);
-    assert.equal(await page.getByRole('button', { name: 'Edit Reception', exact: true }).count(), 1);
+    await openEditorMenu(page);
+    assert.equal(await page.getByRole('menuitemcheckbox', { name: 'Studio', exact: true }).count(), 1);
+    await page.getByRole('menu', { name: 'Inscape menu' }).press('Escape');
     assert.equal(await page.locator('.profile-overview__gallery, .bento-stage, .identity-module__clouds').count(), 0);
     await page.getByText('Illustration, stories and small worlds.', { exact: true }).waitFor();
     await mkdir(output, { recursive: true });
@@ -43,8 +46,12 @@ for (const [width, theme] of [[1440, 'carbon'], [640, 'carbon'], [390, 'carbon']
     assert.match(page.url(), /[?&]reception=1/);
     assert.equal(await page.locator('main.system-workflow:not(.visitor-grid-world)').count(), 0);
     await page.screenshot({ path: `${output}/entered-canvas-${width}-${theme}.png` });
-    await page.getByRole('button', { name: 'Inscape menu', exact: true }).click();
-    await page.getByRole('button', { name: 'About', exact: true }).click();
+    const reception = page.locator('.composition-index-about');
+    if (await reception.count()) await reception.click();
+    else {
+      await page.getByRole('button', { name: 'Inscape menu', exact: true }).click();
+      await page.getByRole('button', { name: 'About', exact: true }).click();
+    }
     await canvasEntry.waitFor();
     assert.doesNotMatch(page.url(), /[?&]canvas=/);
     await page.goBack(); await page.locator('.workbench-overview').waitFor();
@@ -54,7 +61,7 @@ for (const [width, theme] of [[1440, 'carbon'], [640, 'carbon'], [390, 'carbon']
     await page.close();
   } finally { await browser.close(); }
 });
-test('existing work links use the canonical visitor canvas; missing destinations return to Reception', { timeout: 60000 }, async () => {
+test('existing work links use the canonical visitor canvas; missing destinations return to Profile', { timeout: 60000 }, async () => {
   const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
   try {
     const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
@@ -63,7 +70,7 @@ test('existing work links use the canonical visitor canvas; missing destinations
     await page.locator('.visitor-grid-world').waitFor();
     assert.equal(await page.locator('.reception-canvas').count(), 0);
     await page.getByRole('link', { name: '← Profile overview', exact: true }).click();
-    await page.getByRole('region', { name: 'Reception layout' }).waitFor();
+    await page.locator('.visitor-profile-card').waitFor();
     await page.goto(`${origin}/browser-tests/profile-overview-fixture.html?view=${address}&module=image%3Amissing`);
     await page.getByRole('status').filter({ hasText: 'That destination is no longer' }).waitFor();
   } finally { await browser.close(); }

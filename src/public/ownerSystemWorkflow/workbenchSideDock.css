@@ -1,9 +1,15 @@
-.workbench-side-dock { position: fixed; z-index: 80; box-sizing: border-box; background: var(--tactile-face); pointer-events: none; }
-.workbench-side-dock[data-dock-side='left'] { left: 0; border-right: 1px solid var(--tactile-edge); }
-.workbench-side-dock[data-dock-side='right'] { right: 0; border-left: 1px solid var(--tactile-edge); }
+.workbench-side-dock { position: fixed; z-index: 80; box-sizing: border-box; pointer-events: none; }
+.workbench-side-dock[data-dock-side='left'] { left: 0; }
+.workbench-side-dock[data-dock-side='right'] { right: 0; }
 .workbench-side-dock[data-drop-preview] { z-index: 109; background: color-mix(in srgb, var(--tactile-face) 85%, transparent); outline: 1px solid var(--tactile-ink); outline-offset: -1px; }
 .workbench-side-dock-hint { padding: 12px; color: var(--tactile-ink); font: var(--workflow-type-control); }
-.workbench-tool-panel[data-side-docked] { border-radius: 0; }
+.workbench-side-dock-toggle { position: absolute; top: 6px; display: grid; place-items: center; width: 28px; height: 28px; padding: 0; border: 0; border-radius: 50%; background: transparent; color: var(--editor-muted); cursor: pointer; pointer-events: auto; }
+.workbench-side-dock[data-dock-side='left'] .workbench-side-dock-toggle { left: calc(100% + 6px); }
+.workbench-side-dock[data-dock-side='right'] .workbench-side-dock-toggle { right: calc(100% + 6px); }
+.workbench-side-dock-toggle span { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.workbench-side-dock-toggle:hover { color: var(--editor-accent); background: var(--editor-field); }
+.workbench-side-dock-toggle:focus-visible { outline: 2px solid var(--editor-accent); outline-offset: -2px; }
+.workbench-tool-panel[data-side-docked] { border: 0; border-radius: 0; }
 .workbench-utility-panel > .workbench-tool-panel-content { overflow: auto; overscroll-behavior: contain; }
 .workbench-navigator .workbench-tool-panel-content > div { display: flex; flex-direction: column; flex: 1; min-width: 0; }
 .workbench-navigator .navigator-map { flex: 1; min-height: 24px; }

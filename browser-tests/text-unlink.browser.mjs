@@ -62,7 +62,7 @@ test('Text can unlink after its Display was deleted, reload independently, and r
         addDisplayModule(createSystemWorkflowDraftStore({ profileAddress: `0x${'1'.repeat(40)}`, storage: localStorage }));
       });
       await page.reload(); await mount();
-      const primary = page.locator('.text-tools-window');
+      const primary = page.locator('.workbench-tool-dock:has([data-text-inspector])');
       await openTextToolSection(primary, 'Display connection');
       await primary.getByRole('combobox', { name: 'Follow Display', exact: true }).selectOption('display:primary');
       await primary.getByRole('button', { name: 'Link Text to Display', exact: true }).click();

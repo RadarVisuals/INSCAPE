@@ -1,0 +1,47 @@
+:root {
+  --up-modal-font-family: "Inscape Sora", sans-serif;
+  --up-modal-font-color: var(--interface-ink);
+  --up-modal-btn-color: var(--interface-hover);
+  --up-modal-btn-text: var(--interface-ink);
+  --up-modal-btn-radius: 0px;
+  --up-modal-border-radius: 0px;
+  --up-modal-bg: var(--interface-panel);
+}
+
+.startveil {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background-color: var(--interface-environment);
+  color: var(--interface-ink);
+  cursor: default;
+  isolation: isolate;
+}
+.startveil[data-ready] { cursor: default; }
+
+
+.startveil__intro {
+  width: min(68vw, 430px);
+  display: grid;
+  justify-items: center;
+  gap: 20px;
+  animation: public-entry-intro 720ms cubic-bezier(.2, .72, .2, 1) both;
+}
+.startveil__intro-wordmark, .entry-wordmark {
+  display: block;
+  background: currentColor;
+  -webkit-mask: url('/assets/brand/inscape-wordmark.svg') center / contain no-repeat;
+  mask: url('/assets/brand/inscape-wordmark.svg') center / contain no-repeat;
+}
+.startveil__intro-wordmark { width: 100%; aspect-ratio: 8 / 1; }
+.startveil__intro small { color: var(--lattice-menu-muted); font: var(--lattice-window-type-label); letter-spacing: .14em; }
+
+.startveil { transition: opacity var(--startveil-reveal-duration, 200ms) ease-out; }
+.startveil[data-exiting] { opacity: 0; pointer-events: none; }
+.startveil[data-sequence='short'] .startveil__intro { animation: none; }
+
+@keyframes public-entry-intro { from { opacity: 0; clip-path: inset(44% 0); } to { opacity: 1; clip-path: inset(0); } }
+@media (prefers-reduced-motion: reduce) { .startveil__intro { animation: none !important; } }

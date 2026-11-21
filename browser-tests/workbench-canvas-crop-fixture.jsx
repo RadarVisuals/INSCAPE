@@ -28,7 +28,7 @@ const asset = buildProfileDocumentV9Asset({
 if (!store.getDraft().imageModules?.length) {
   for (const [left, top] of [[60, 60], [260, 180], [620, 150]]) {
     addImageModule(store, profileAddress, { position: { left, top }, size: { width: 160, height: 160 },
-      side: { id: `side:${left}`, asset: left === 60 ? { ...asset, media: { ...asset.media, url: 'https://assets.example/crop-proof.svg' } } : asset,
+      artwork: { id: `artwork:${left}`, asset: left === 60 ? { ...asset, media: { ...asset.media, url: 'https://assets.example/crop-proof.svg' } } : asset,
         crop: null, transform: { quarterTurns: 0, mirrorX: false, mirrorY: false } } });
   }
   addShape(store, profileAddress, { kind: 'grid', position: { left: 260, top: 400 }, size: { width: 192, height: 144 } });

@@ -2,12 +2,13 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
-import { preview } from 'vite';
+import { preview as vitePreview } from 'vite';
 import { chromium } from 'playwright-core';
 import { analyzeProductionBuild } from '../scripts/productionBuild.js';
 const root=resolve(import.meta.dirname,'..');
 const productionDirectory=resolve(root,process.env.INSCAPE_PRODUCTION_DIR || 'dist');
 const output=resolve(process.env.INSCAPE_BROWSER_OUTPUT || '.browser-test-runtime/production-startup');
+const preview = options => vitePreview({ configLoader: 'runner', ...options });
 
 test('mobile runtime loads only after explicit choice on desktop and phone, and load failure remains recoverable', { timeout: 30000 }, async () => {
   const report = await analyzeProductionBuild(productionDirectory);
@@ -99,7 +100,12 @@ test('built mobile SDK preserves one pending pairing, its approval toast and can
           };
           probe.emit = (name, value) => { for (const callback of [...(listeners.get(name) || [])]) callback(value); };
           probe.listeners = () => [...listeners.values()].reduce((sum, callbacks) => sum + callbacks.size, 0);
-          window.open = () => { probe.tabs++; return { location: { set href(value) { probe.link = value; } }, close() { probe.closed++; } }; };
+          window.open = url => {
+            if (!navigator.userActivation.isActive) throw new Error('UP app launch lost user activation');
+            if (!url || url === 'about:blank') throw new Error('Must never open a blank tab');
+            probe.tabs++; probe.link = url;
+            return { close() { probe.closed++; } };
+          };
           const view = probe.view = document.createElement('connection-view');
           view.connectors = [{ type: 'mobile', id: 'test-mobile-uid', rdns: 'walletConnect',
             async getProvider() { probe.providers++; return provider; },
@@ -110,8 +116,8 @@ test('built mobile SDK preserves one pending pairing, its approval toast and can
           await view.updateComplete;
         }, report.standaloneWalletEntry.file);
         assert.deepEqual(await page.evaluate(() => ({ connects: window.__mobileSdk.connects, providers: window.__mobileSdk.providers })), { connects: 0, providers: 0 });
-        await page.evaluate(() => { window.__mobileSdk.result = window.__mobileSdk.view.handleConnectMobile(); });
-        await page.waitForFunction(() => !!window.__mobileSdk.view._pendingWalletConnect).catch(async error => {
+        await page.locator('connection-view').getByText('Wallet Connect to the UP! App', { exact: true }).click();
+        await page.waitForFunction(() => window.__mobileSdk.connects === 1).catch(async error => {
           console.error('Mobile SDK preparation', await page.evaluate(() => ({
             connects: window.__mobileSdk.connects, providers: window.__mobileSdk.providers, events: window.__mobileSdk.events,
             connected: window.__mobileSdk.view.isConnected, mobile: window.__mobileSdk.view.device?.isMobile,
@@ -120,17 +126,24 @@ test('built mobile SDK preserves one pending pairing, its approval toast and can
           throw error;
         });
         const toast = page.locator('[data-up-wc-approval-toast]').locator('[part="toast"]');
-        await toast.waitFor();
-        await mkdir(output, { recursive: true });
-        await page.screenshot({ path: resolve(output, `wallet-pending-${cancelled ? 'cancel' : 'approve'}.png`), animations: 'disabled' });
+        assert.equal(await page.evaluate(() => window.__mobileSdk.tabs), 0, 'Preparing stays in the current page');
         if (cancelled) {
           // Reject before display_uri: waiting for the URI must not hang forever.
           await page.evaluate(() => window.__mobileSdk.attempts[0].reject(new Error('User rejected connection')));
           await page.waitForFunction(() => window.__mobileSdk.events.includes('on-error') && !window.__mobileSdk.view.isConnecting);
-          assert.equal(await page.evaluate(() => window.__mobileSdk.closed), 1);
+          assert.equal(await page.evaluate(() => window.__mobileSdk.tabs), 0);
         } else {
           await page.evaluate(() => {
             window.__mobileSdk.emit('display_uri', 'wc:test-pairing@2?relay-protocol=irn&symKey=test');
+          });
+          await page.waitForFunction(() => !window.__mobileSdk.view.isConnecting);
+          await mkdir(output, { recursive: true });
+          await page.screenshot({ path: resolve(output, 'wallet-ready-phone.png'), animations: 'disabled' });
+          await page.getByText('Open UP! App', { exact: true }).click();
+          await toast.waitFor();
+          await mkdir(output, { recursive: true });
+          await page.screenshot({ path: resolve(output, 'wallet-pending-approve.png'), animations: 'disabled' });
+          await page.evaluate(() => {
             document.dispatchEvent(new Event('visibilitychange'));
             window.dispatchEvent(new Event('pageshow'));
           });
@@ -146,7 +159,7 @@ test('built mobile SDK preserves one pending pairing, its approval toast and can
         await page.evaluate(async () => { await window.__mobileSdk.result; window.__mobileSdk.view.remove(); });
         const result = await page.evaluate(() => ({ events: window.__mobileSdk.events, tabs: window.__mobileSdk.tabs, listeners: window.__mobileSdk.listeners() }));
         assert.deepEqual(result.events, [cancelled ? 'on-error' : 'on-connect']);
-        assert.equal(result.tabs, 1);
+        assert.equal(result.tabs, cancelled ? 0 : 1);
         assert.equal(result.listeners, 0);
         assert.deepEqual(errors, []);
       } finally { await context.close(); }

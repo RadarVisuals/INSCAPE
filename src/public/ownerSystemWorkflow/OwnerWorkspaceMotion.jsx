@@ -1,15 +1,18 @@
-import { useLayoutEffect, useRef, useState } from 'react';
+import { useContext, useLayoutEffect, useRef } from 'react';
+import { GalleryStudioMotion, useGalleryStudioDestination } from '../../profileDiscovery/galleryStudioMotion.js';
+import { fitCanvasRegion } from '../workbenchOverview/fitCanvasRegion.js';
 import { useWorkbenchCamera } from './WorkbenchCamera.jsx';
-import WorkbenchOverviewPreview from '../workbenchOverview/WorkbenchOverviewPreview.jsx';
+import CanvasJourney from '../workbenchOverview/CanvasJourney.jsx';
 import { captureOverviewCanvas, overviewCanvasNode } from '../workbenchOverview/overviewCanvasFrame.js';
 import '../workbenchOverview/workbenchOverview.css';
 
 // A temporary read-only paint surface joins the two existing views. It never
 // changes the editor camera, authored geometry, or the overview's crop.
 export default function OwnerWorkspaceMotion({ hostRef, motionRef, journey, onComplete }) {
-  const { getCamera } = useWorkbenchCamera();
-  const surface = useRef(null), [plan, setPlan] = useState(null);
-  const latest = useRef(null); latest.current = { onComplete };
+  const { getCamera, entryFramed } = useWorkbenchCamera();
+  const surface = useRef(null);
+  const routeMotion = useContext(GalleryStudioMotion);
+  const publicSurface = routeMotion?.surface;
   useLayoutEffect(() => {
     if (journey?.direction !== 'overview') return;
     // Retain the actual outgoing windows for their fade, but remove their input
@@ -20,8 +23,10 @@ export default function OwnerWorkspaceMotion({ hostRef, motionRef, journey, onCo
     return () => tools.forEach(({ node, inert }) => { node.inert = inert; });
   }, [journey, hostRef]);
   useLayoutEffect(() => {
-    const captureActive = (model, name, id) => surface.current?.dataset.canvasId === id
-      ? captureOverviewCanvas(surface.current, model, name, id) : null;
+    const captureActive = (model, name, id) => {
+      const active = publicSurface?.current || surface.current;
+      return active?.dataset.canvasId === id ? captureOverviewCanvas(active, model, name, id) : null;
+    };
     const capture = (model, name, id) => {
       const host = hostRef.current.getBoundingClientRect(), camera = getCamera();
       // Close the preview's empty margins around the actual canvas. A full-screen
@@ -34,47 +39,23 @@ export default function OwnerWorkspaceMotion({ hostRef, motionRef, journey, onCo
     };
     motionRef.current = { capture: (...args) => captureActive(...args) || capture(...args), captureEditor: capture, captureActive };
     return () => { motionRef.current = null; };
-  }, [getCamera, hostRef, motionRef]);
-  useLayoutEffect(() => {
-    setPlan(null);
-    if (!journey) return;
-    if (matchMedia('(prefers-reduced-motion: reduce)').matches) { latest.current.onComplete(); return; }
-    let frame = 0, attempts = 0;
-    const prepare = () => {
-      const source = journey.source;
-      const node = overviewCanvasNode(hostRef.current, source.id);
-      const target = journey.direction === 'editor' ? motionRef.current?.captureEditor(source.model, source.name, source.id)
-        : captureOverviewCanvas(node, source.model, source.name, source.id);
-      if (!target && attempts++ < 120) { frame = requestAnimationFrame(prepare); return; }
-      if (!target) { latest.current.onComplete(); return; }
-      setPlan({ from: source, to: target, scale: Math.max(source.paint.scale, target.paint.scale) });
-    };
-    frame = requestAnimationFrame(() => { frame = requestAnimationFrame(prepare); });
-    return () => cancelAnimationFrame(frame);
-  }, [journey, hostRef, motionRef]);
-  useLayoutEffect(() => {
-    if (!plan) return;
-    const node = surface.current, canvas = node.querySelector('.workbench-overview-canvas');
-    const density = devicePixelRatio || 1;
-    const frame = value => ({ left: `${value.frame.left}px`, top: `${value.frame.top}px`, width: `${value.frame.width}px`,
-      height: `${value.frame.height}px`, borderRadius: `${value.radius}px`, backgroundColor: value.background });
-    const paint = value => ({ transform: `translate(${value.paint.left}px, ${value.paint.top}px) scale(${value.paint.scale / (plan.scale * density)})` });
-    const options = { duration: 650, easing: 'cubic-bezier(.4,0,.2,1)', fill: 'both' };
-    const animations = [node.animate([frame(plan.from), frame(plan.to)], options), canvas.animate([paint(plan.from), paint(plan.to)], options)];
-    let current = true;
-    const finish = () => { if (current) { setPlan(null); latest.current.onComplete();
-      if (document.activeElement === document.body) hostRef.current?.focus({ preventScroll: true });
-    } };
-    Promise.all(animations.map(animation => animation.finished)).then(finish, () => {});
-    addEventListener('resize', finish);
-    return () => { current = false; animations.forEach(animation => animation.cancel()); removeEventListener('resize', finish); };
-  }, [plan, hostRef]);
-  if (!journey) return null;
-  const source = journey.source, { model, name } = source;
-  const scale = plan?.scale || source.paint.scale;
-  return <div className="owner-canvas-journey" ref={surface} aria-hidden="true" inert="" data-direction={journey.direction} data-canvas-id={source.id}
-    style={{ left: source.frame.left, top: source.frame.top, width: source.frame.width, height: source.frame.height, borderRadius: source.radius, background: source.background }}>
-    <WorkbenchOverviewPreview model={model} name={name} viewport={plan?.to.frame || source.frame}
-      camera={{ scale, offset: { x: source.paint.left - model.area.left * scale, y: source.paint.top - model.area.top * scale } }} presenting />
-  </div>;
+  }, [getCamera, hostRef, motionRef, publicSurface]);
+  const routeTrip = journey?.address ? journey : null;
+  const layers = () => hostRef.current.querySelectorAll('.workbench-canvas-content:not([data-suspended])');
+  useGalleryStudioDestination(routeTrip, entryFramed ? routeTrip : null, hostRef, source => {
+    const plane = hostRef.current.querySelector('.workbench-canvas-content:not([data-suspended])');
+    if (!plane) return null;
+    const style = plane.style, host = hostRef.current.getBoundingClientRect();
+    const size = key => parseFloat(style.getPropertyValue('--canvas-' + key));
+    const frame = { left: host.left + size('left'), top: host.top + size('top'), width: size('width'), height: size('height') };
+    if (!(frame.width > 0 && frame.height > 0)) return null;
+    return { frame, paint: fitCanvasRegion(source.model.area, source.model.area, frame, 0), radius: 0,
+      background: getComputedStyle(hostRef.current).backgroundColor };
+  }, layers);
+  if (routeTrip) return null;
+  return <CanvasJourney journey={journey} hostRef={hostRef} surface={surface} onComplete={onComplete}
+    targetReady={journey?.direction !== 'editor' || entryFramed}
+    resolveTarget={source => journey.direction === 'overview'
+      ? captureOverviewCanvas(overviewCanvasNode(hostRef.current, source.id), source.model, source.name, source.id)
+      : motionRef.current?.captureEditor(source.model, source.name, source.id)} />;
 }

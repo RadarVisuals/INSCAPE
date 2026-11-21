@@ -1,7 +1,7 @@
-import { setSharedColor, setTransform, openSharedTool } from './fixtures/shared-tools.mjs';
+import { setSharedColor, setTransform, openSharedTool, chooseSharedShape } from './fixtures/shared-tools.mjs';
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { artworkCommand } from './fixtures/artwork-menu.mjs';
+import { artworkCommand, artworkHeader } from './fixtures/artwork-menu.mjs';
 import { chromium } from 'playwright-core';
 import { mountTextToolsFixture } from './fixtures/text-tools-fixture.mjs';
 import { setWorkbenchZoom } from './fixtures/workbench-zoom.mjs';
@@ -28,22 +28,23 @@ test('Shapes create at cursor, resize, layer beneath content, recover covered sh
     page.setDefaultTimeout(8000);
     const errors = []; page.on('pageerror', error => errors.push(error.message));
     await mountTextToolsFixture(page, origin);
-    await page.getByRole('button', { name: 'Close Text tools', exact: true }).click();
+    await page.getByRole('button', { name: 'Close Inspector', exact: true }).click();
     await actualCoordinates(page);
     await page.mouse.click(560, 240, { button: 'right' });
     await page.getByRole('menuitem', { name: 'ADD', exact: true }).hover();
     await page.getByRole('menuitem', { name: 'SHAPE', exact: true }).click();
-    await page.locator('.shape-window').waitFor();
+    await page.locator('aside.shape-window').waitFor();
     const id = await page.evaluate(() => window.savedDraft().shapes[0].id);
-    const shape = page.locator(`[data-workbench-view-id="${id}"]`);
+    const shape = page.locator(`aside[data-workbench-view-id="${id}"]`);
     await openSharedTool(page, 'Shape');
-    const tools = page.locator('.shape-tools'); await tools.waitFor();
+    const tools = page.locator('section.shape-inspector-properties'); await tools.waitFor();
     const created = await shape.boundingBox(); near(created.x, 560); near(created.y, 240);
     await setSharedColor(page, '#ff6600');
+    await openSharedTool(page, 'Shape');
     assert.equal(await tools.getByRole('slider', { name: 'Grain strength', exact: true }).count(), 0);
     assert.equal(await tools.getByRole('checkbox', { name: 'Show shape', exact: true }).count(), 0);
     await setTransform(page, 'Width', 700); await setTransform(page, 'Height', 450);
-    await page.getByRole('button', { name: 'Close Transform', exact: true }).click(); await settle(page);
+    await page.getByRole('button', { name: 'Close Inspector', exact: true }).click(); await settle(page);
     near((await shape.boundingBox()).width, 700);
     const fill = await shape.locator('.shape-fill').boundingBox();
     near(fill.width, 700); near(fill.height, 450);
@@ -81,23 +82,24 @@ test('Shapes create at cursor, resize, layer beneath content, recover covered sh
     await page.getByRole('button', { name: 'Select Shape 1 copy', exact: true }).click();
     await page.getByRole('button', { name: 'Close Workbench Layers', exact: true }).click();
     await openSharedTool(page, 'Shape');
-    await tools.getByLabel('Selected shape').focus();
+    await tools.getByRole('button', { name: /^Selected shape:/ }).focus();
     const squareWidth = await page.evaluate(id => window.savedDraft().workbench.shapes.find(s => s.id === id).window.width, duplicate);
     await setTransform(page, 'Height', squareWidth);
-    await page.getByRole('button', { name: 'Close Transform', exact: true }).click();
+    await page.getByRole('button', { name: 'Close Inspector', exact: true }).click();
     await page.waitForFunction(id => { const w = window.savedDraft().workbench.shapes.find(s => s.id === id).window; return w.width === w.height; }, duplicate);
     // Dimensions follow pointer resize, not only numeric fields.
-    await tools.getByLabel('Selected shape').selectOption(id);
+    await openSharedTool(page, 'Shape');
+    await chooseSharedShape(page, await page.evaluate(id => `${window.savedDraft().shapes.find(shape => shape.id === id).name} · Rectangle`, id));
     // The chooser also selects the Shape for proportional Workbench scaling.
     // Clear that selection from the Workbench before testing its solo grip.
     await page.locator('main.system-workflow').focus(); await page.keyboard.press('Escape');
     await page.locator('.workbench-selection').waitFor({ state: 'detached' });
-    for (const name of ['Close Shape', 'Close Info']) {
+    for (const name of ['Close Inspector']) {
       const close = page.getByRole('button', { name, exact: true });
       if (await close.count()) await close.press('Enter');
     }
-    await shape.locator('header').focus(); await settle(page);
-    const handle = shape.getByRole('separator', { name: 'Resize Shape window', exact: true });
+    await artworkHeader(page, id).focus(); await settle(page);
+    const handle = page.locator(`[data-detached-window][data-workbench-view-id="${id}"], .workbench-window-controls:has(header[data-workbench-view-id="${id}"])`).getByRole('separator', { name: 'Resize Shape window', exact: true });
     assert.equal(await handle.evaluate(node => {
       const b = node.getBoundingClientRect();
       return node.contains(document.elementFromPoint(b.x + b.width / 2, b.y + b.height / 2));
@@ -127,7 +129,7 @@ test('Shapes create at cursor, resize, layer beneath content, recover covered sh
     assert.equal(await shape.locator('.shape-fill').evaluate(node => getComputedStyle(node).backgroundColor), 'rgb(255, 102, 0)');
     await page.screenshot({ path: '.browser-test-runtime/shapes-visitor.png' });
     near((await shape.boundingBox()).width, 740);
-    assert.equal(await page.locator('.shape-tools').count(), 0);
+    assert.equal(await page.locator('section.shape-inspector-properties').count(), 0);
     assert.equal(await shape.getByRole('separator').count(), 0);
     assert.deepEqual(errors, []);
   } finally { await browser.close(); }

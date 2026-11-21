@@ -1,6 +1,9 @@
+export const artworkHeader = (page, id) => page.locator(`header[data-workbench-view-id="${id}"], [data-detached-window][data-workbench-view-id="${id}"] > header`);
+
 export async function artworkMenu(page, id) {
   const window = page.locator(`[data-workbench-view-id="${id}"]`).first();
-  const target = id.startsWith('image:') ? window.locator('.image-module__canvas') : window.locator('header').first();
+  const target = id.startsWith('image:') ? window.locator('.image-module__canvas')
+    : artworkHeader(page, id);
   await target.focus(); await target.press('Shift+F10');
   const menu = page.locator('.workbench-object-menu');
   await menu.waitFor();

@@ -26,3 +26,10 @@ export function metadataImages(root = {}, { indexed = false } = {}) {
   }).map((entry) => ({ ...entry, index: index++ }));
   return [...primary, ...attachments];
 }
+
+
+export function metadataFiles(root = {}) {
+  const images = new Set(metadataImages(root).map(entry => entry.url || entry.src));
+  return (Array.isArray(root.assets) ? root.assets : []).filter(entry => entry && !entry.error && !images.has(entry.url || entry.src))
+    .slice(0, 128).map(entry => ({ url: entry.url || entry.src, fileType: entry.fileType || entry.file_type || null })).filter(entry => entry.url);
+}

@@ -6,6 +6,8 @@ import { MAX_WORKBENCHES } from '../../systemWorkflow/domain/workbenchCollection
 import { addTextModule } from '../../text/textSession.js';
 import { createDefaultWorkbenchPresentation, createTextPresentation } from '../../profileDocument/domain/workbenchPresentation.js';
 import { retainTextRecovery, clearTextRecovery, textRecoveryScope } from '../../text/textEditRecovery.js';
+import { createReception } from '../../profileDocument/domain/receptionPresentation.js';
+import { workbenchLayoutKey } from '../../systemWorkflow/workbenchLayoutKey.js';
 
 const profile = `0x${'a'.repeat(40)}`;
 test('leaving the workspace saves the live layout and revokes its editor', () => {
@@ -46,6 +48,7 @@ function fixture() {
   const storage = {
     getItem(key) { if (faults.read) throw Error('unavailable'); return records.get(key) ?? null; },
     setItem(key, value) { if (faults.write) throw Error('full'); records.set(key, value); },
+    removeItem(key) { records.delete(key); },
   };
   const root = createSystemWorkflowDraftStore({ profileAddress: profile, storage });
   addTextModule(root, profile);
@@ -76,6 +79,53 @@ test('renaming saves the visible layout and name together, including backup and 
   assert.deepEqual(store.getBackupSnapshot().workbenches[0].content.workbench, projection.value);
   assert.equal(root.getActivation(), activation, 'renaming does not remount the canvas');
   assert.deepEqual(store.getHistory(), history, 'renaming does not replace content Undo');
+});
+
+test('deleting a local canvas retains its neighbors, checks pending changes, and only departs after storage accepts it', () => {
+  const { root, store, actions, actionsWith, storage, faults, raw } = fixture();
+  const first = store.getWorkbenchId(), before = raw();
+  assert.throws(() => actions.remove(first), /last one/);
+  assert.equal(raw(), before);
+  const second = actions.create('Study'), third = root.createWorkbench('Another study');
+  root.switchWorkbench(second);
+  const scope = root.getWorkbenchScope(), remove = actionsWith({ store: scope, projection: { value: scope.getDraft().workbench } }).remove;
+  const saved = raw(), survivor = root.readWorkbench(first), shared = JSON.parse(saved).shared;
+  const removedLayout = workbenchLayoutKey(profile, second);
+  const retainedLayouts = [workbenchLayoutKey(profile, first), workbenchLayoutKey('0x' + 'b'.repeat(40), second)];
+  for (const key of [removedLayout, ...retainedLayouts]) storage.setItem(key, 'cached layout');
+  assert.throws(() => remove(third), /Reopen/);
+  const release = scope.guardWorkbenchTransition(() => 'Finish the crop.');
+  assert.throws(() => remove(second), /Finish the crop/);
+  release();
+  faults.write = true;
+  assert.throws(() => remove(second), /Could not save/);
+  assert.equal(raw(), saved); assert.ok(scope.isCurrent());
+  assert.equal(storage.getItem(removedLayout), 'cached layout');
+  faults.write = false;
+  assert.equal(remove(second), third);
+  assert.equal(storage.getItem(removedLayout), null);
+  for (const key of retainedLayouts) assert.equal(storage.getItem(key), 'cached layout');
+  assert.equal(scope.isCurrent(), false);
+  assert.throws(() => remove(third), /cannot save/);
+  const reopened = createSystemWorkflowDraftStore({ profileAddress: profile, storage });
+  assert.equal(reopened.getWorkbenchId(), third);
+  assert.equal(reopened.readWorkbench(second), null);
+  assert.deepEqual(reopened.readWorkbench(first), survivor);
+  assert.deepEqual(JSON.parse(raw()).shared, shared);
+});
+
+test('a local Bento link to the canvas prevents deletion', () => {
+  const { root, actions, raw } = fixture();
+  const added = actions.create('Linked canvas');
+  const draft = root.getDraft();
+  draft.reception = createReception();
+  draft.reception.regions[0].content = 'link:study';
+  draft.reception.links = [{ id: 'link:study', kind: 'source', destination: null,
+    source: { profileAddress: profile, canvasId: added, moduleId: 'text:study' } }];
+  assert.ok(root.commitCompletedOperation(draft, { expectedGeneration: root.getGeneration() }));
+  const saved = raw();
+  assert.throws(() => root.getWorkbenchScope().deleteWorkbench(added), /links to this canvas/);
+  assert.equal(raw(), saved);
 });
 
 test('failed rename preserves name, layout and history, and retry commits both', () => {
@@ -116,7 +166,7 @@ test('invalid names and the collection limit preserve saved content', () => {
   for (let index = 1; index < MAX_WORKBENCHES; index++) root.createWorkbench(`Workbench ${index + 1}`);
   const full = raw();
   assert.throws(() => actionsWith({ store: root.getWorkbenchScope(),
-    projection: { value: root.getDraft().workbench } }).create('Overflow'), /up to 8/);
+    projection: { value: root.getDraft().workbench } }).create('Overflow'), /up to 30/);
   assert.equal(raw(), full);
 });
 

@@ -1,3 +1,4 @@
+import { workspacePicker, editorMenu, openEditorMenu, editorCommand } from './fixtures/editor-menu.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdir } from 'node:fs/promises';
@@ -6,68 +7,80 @@ import { browserExecutable } from '../scripts/browserEnvironment.mjs';
 
 const origin = process.env.INSCAPE_TEST_ROOT || 'http://127.0.0.1:5227';
 const output = process.env.INSCAPE_SCREENSHOT_DIR || '.browser-test-runtime/editor-menu-bar';
-const top = (page, name) => page.getByRole('menubar', { name: 'Editor commands' }).getByRole('menuitem', { name, exact: true });
-async function choose(page, menu, name, role = 'menuitem') {
-  await top(page, menu).click();
-  await page.getByRole('menu', { name: `${menu} menu` }).getByRole(role, { name, exact: true }).click();
-}
+const top = editorMenu;
+const choose = editorCommand;
 
-test('fixed menu, full sidebar toggle, keyboard menus, tool preferences and destinations at wide and narrow sizes', { timeout: 120000 }, async () => {
+test('one wordmark menu keeps keyboard access, tools and destinations at wide and narrow computer sizes', { timeout: 120000 }, async () => {
   const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
   await mkdir(output, { recursive: true });
   try {
-    for (const width of [1440, 390, 320]) {
+    for (const width of [1440, 760]) {
       const page = await browser.newPage({ viewport: { width, height: 900 }, reducedMotion: 'reduce' });
       page.setDefaultTimeout(10000);
-      if (width === 390) await page.addInitScript(() => localStorage.setItem('inscape:interface-theme', 'light'));
       const errors = []; page.on('pageerror', error => errors.push(error.message));
       await page.route('**/*', route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
       try {
         await page.goto(`${origin}/browser-tests/workbench-storage-fixture.html?seed=1`, { waitUntil: 'domcontentloaded' });
-        await top(page, 'Canvas').waitFor();
-        await page.evaluate(() => document.fonts.ready);
+        await top(page).waitFor(); await page.evaluate(() => document.fonts.ready);
         const rect = await page.locator('.editor-menu-bar').boundingBox();
-        assert.equal(rect.y, 0);
-        assert.equal(rect.height, 40);
-        const labels = await page.getByRole('menubar').getByRole('menuitem').evaluateAll(nodes => nodes.map(node => node.getAttribute('aria-label')));
-        assert.deepEqual(labels, ['Canvas', 'Edit', 'View', 'Tools', 'Docs', 'Backup']);
-        if (width === 1440) assert.match(await page.getByRole('status', { name: 'Editing document', exact: true }).innerText(), /^Editing canvas · /u);
-        const last = await top(page, 'Backup').boundingBox();
-        assert.ok(last.x + last.width <= width, `all menu titles fit at ${width}`);
+        assert.equal(rect.y, 0); assert.equal(rect.height, 48);
+        assert.equal(await page.getByRole('menubar').count(), 0);
+        assert.equal(await page.getByRole('complementary', { name: 'Workspace sidebar' }).count(), 0);
+        assert.match(await workspacePicker(page).textContent(), /STUDIO · /u);
         const draft = await page.evaluate(() => window.savedDraft());
-        const logo = page.getByRole('button', { name: 'Inscape sidebar' });
-        await logo.click();
-        assert.equal(await page.getByRole('complementary', { name: 'Workspace sidebar' }).isVisible(), false);
-        await logo.click();
-        assert.equal(await page.getByRole('complementary', { name: 'Workspace sidebar' }).isVisible(), true);
-        assert.deepEqual(await page.evaluate(() => window.savedDraft()), draft, 'sidebar preference does not edit artwork');
-        await top(page, 'Canvas').press('ArrowDown');
+        await top(page).press('ArrowDown');
+        const menu = page.getByRole('menu', { name: 'Inscape menu', exact: true });
+        assert.deepEqual(await menu.locator(':scope > button > span').allTextContents(), [
+          'Search commands...', 'Profile', 'Gallery', 'Writing', 'Exhibition', 'Studio', 'Discover',
+          'Canvas', 'Edit', 'View', 'Tools', 'Activity', 'Settings', 'Help & Docs', 'Backup',
+        ]);
+        assert.equal(await menu.getByRole('menuitemcheckbox', { name: 'Studio', checked: true }).count(), 1);
+        assert.equal(await menu.getByRole('menuitemcheckbox', { name: 'Exhibition' }).isDisabled(), true);
+        const anchor = await page.locator('.editor-menu-bar .workspace-wordmark').boundingBox();
+        assert.deepEqual([anchor.x, anchor.y], [16, 11]);
+        await page.getByRole('menuitem', { name: 'Edit', exact: true }).focus();
         await page.keyboard.press('ArrowRight');
-        await page.getByRole('menu', { name: 'Edit menu' }).waitFor();
+        await page.getByRole('menu', { name: 'Edit options', exact: true }).waitFor();
         await page.keyboard.press('Escape');
-        assert.equal(await top(page, 'Edit').evaluate(node => node === document.activeElement), true);
+        assert.equal(await top(page).evaluate(node => node === document.activeElement), true);
         await choose(page, 'Tools', 'Drawing toolbar', 'menuitemcheckbox');
-        assert.equal(await page.locator('.workbench-view-controls').count(), 0, 'Editor has one central toolbar');
-        await choose(page, 'Tools', 'Groups');
-        const groupName = page.getByRole('textbox', { name: 'Group name', exact: true });
-        await groupName.waitFor();
-        assert.equal(await groupName.evaluate(node => node === document.activeElement), true);
-        await groupName.press('Escape');
-        assert.equal(await top(page, 'Tools').evaluate(node => node === document.activeElement), true, 'closing Groups returns to its menu trigger');
-        assert.deepEqual(await page.evaluate(() => window.savedDraft()), draft, 'opening Groups never edits the canvas');
         assert.equal(await page.getByRole('toolbar', { name: 'Creation tools', exact: true }).isVisible(), false);
         await choose(page, 'Tools', 'Drawing toolbar', 'menuitemcheckbox');
+        await choose(page, 'Tools', 'Groups');
+        const groupSelection = page.getByRole('heading', { name: 'Selected layers', exact: true });
+        await groupSelection.waitFor(); await groupSelection.press('Escape');
+        assert.equal(await top(page).evaluate(node => node === document.activeElement), true);
         await choose(page, 'Edit', 'Settings');
         await page.getByRole('dialog', { name: 'Settings', exact: true }).waitFor();
-        assert.equal(await page.getByRole('button', { name: 'Download backup', exact: true }).count(), 0);
-        await top(page, 'Backup').click();
-        await page.getByRole('dialog', { name: 'Backup', exact: true }).waitFor();
+        await page.getByRole('button', { name: 'Close Settings', exact: true }).click();
+        await openEditorMenu(page, 'Backup');
         await page.getByRole('button', { name: 'Close Backup', exact: true }).click();
-        await top(page, 'Docs').click();
+        await openEditorMenu(page, 'Docs');
         await page.getByRole('button', { name: 'Close Docs', exact: true }).click();
-        await top(page, 'Tools').click();
+        await openEditorMenu(page, 'Tools');
         await page.screenshot({ path: `${output}/tools-${width}.png` });
         await page.keyboard.press('Escape');
+        const frame = page.locator('.editor-workspace-frame');
+        const geometry = await frame.evaluate(node => {
+          const rect = node.getBoundingClientRect(), style = getComputedStyle(node);
+          return { top: rect.top, bottom: innerHeight - rect.bottom, border: style.borderTopWidth, pointer: style.pointerEvents };
+        });
+        assert.deepEqual(geometry, { top: 48, bottom: 2, border: '1px', pointer: 'none' });
+        if (width === 760) {
+          await page.setViewportSize({ width, height: 500 });
+          await openEditorMenu(page, 'Canvas');
+          const child = await page.getByRole('menu', { name: 'Canvas options' }).boundingBox();
+          assert.ok(child.x >= 0 && child.x + child.width <= width && child.y >= 0 && child.y + child.height <= 500);
+          await page.getByRole('menu', { name: 'Canvas options' }).getByRole('menuitem', { name: 'Rename', exact: true }).click();
+          await page.getByRole('dialog', { name: 'Rename composition' }).getByRole('button', { name: 'Cancel' }).click();
+          const root = await openEditorMenu(page);
+          const backup = root.getByRole('menuitem', { name: 'Backup' });
+          await backup.scrollIntoViewIfNeeded();
+          const visible = await backup.boundingBox();
+          assert.ok(visible.y >= 0 && visible.y + visible.height <= 500);
+          await page.keyboard.press('Escape');
+        }
+        assert.deepEqual(await page.evaluate(() => window.savedDraft()), draft);
         assert.deepEqual(errors, []);
       } catch (error) { await page.screenshot({ path: `${output}/failure-${width}.png` }); throw error; }
       finally { await page.close(); }
@@ -83,18 +96,18 @@ test('canvas commands retain save failures, rename, dimensions and Undo', { time
     await page.route('**/*', route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
     await page.goto(`${origin}/browser-tests/workbench-storage-fixture.html?seed=1`, { waitUntil: 'domcontentloaded' });
     await choose(page, 'Canvas', 'Rename');
-    await page.getByLabel('Canvas name', { exact: true }).fill('First canvas');
+    await page.getByLabel('Composition name', { exact: true }).fill('First canvas');
     await page.getByRole('button', { name: 'Save name', exact: true }).click();
-    const documentLabel = page.getByRole('status', { name: 'Editing document', exact: true });
-    assert.equal(await documentLabel.innerText(), 'Editing canvas · First canvas');
+    const documentLabel = workspacePicker(page);
+    assert.equal(await documentLabel.textContent(), '// STUDIO · First canvas');
     const first = await page.evaluate(() => window.guardedStore().getWorkbenchId());
-    await choose(page, 'Canvas', 'New canvas');
-    await page.getByLabel('New canvas name', { exact: true }).fill('Second canvas');
-    await page.getByRole('button', { name: 'Create canvas', exact: true }).click();
-    assert.equal(await documentLabel.innerText(), 'Editing canvas · Second canvas');
+    await choose(page, 'Canvas', '+ New');
+    await page.getByLabel('Composition name', { exact: true }).fill('Second canvas');
+    await page.getByRole('button', { name: 'Create composition', exact: true }).click();
+    assert.equal(await documentLabel.textContent(), '// STUDIO · Second canvas');
     assert.notEqual(await page.evaluate(() => window.guardedStore().getWorkbenchId()), first);
     await choose(page, 'Canvas', 'First canvas', 'menuitemcheckbox');
-    assert.equal(await documentLabel.innerText(), 'Editing canvas · First canvas');
+    assert.equal(await documentLabel.textContent(), '// STUDIO · First canvas');
     assert.equal(await page.evaluate(() => window.guardedStore().getWorkbenchId()), first);
     await choose(page, 'Canvas', 'Canvas size');
     await page.getByLabel('Width (px)', { exact: true }).fill('1600');
@@ -110,11 +123,11 @@ test('canvas commands retain save failures, rename, dimensions and Undo', { time
       Storage.prototype.setItem = function(key, value) { if (key.startsWith('inscape.system-workflow-draft.')) throw Error('Full'); return set.call(this, key, value); };
     });
     await choose(page, 'Canvas', 'Rename');
-    await page.getByLabel('Canvas name', { exact: true }).fill('Unsaved name');
+    await page.getByLabel('Composition name', { exact: true }).fill('Unsaved name');
     await page.getByRole('button', { name: 'Save name', exact: true }).click();
     assert.match(await page.getByRole('alert').innerText(), /save/i);
-    assert.equal(await page.getByRole('dialog', { name: 'Rename canvas' }).isVisible(), true);
-    assert.equal(await documentLabel.innerText(), 'Editing canvas · First canvas', 'the indicator only shows the saved document name');
+    assert.equal(await page.getByRole('dialog', { name: 'Rename composition' }).isVisible(), true);
+    assert.equal(await documentLabel.textContent(), '// STUDIO · First canvas', 'the indicator only shows the saved document name');
   } finally { await browser.close(); }
 });
 
@@ -129,7 +142,7 @@ test('the single toolbar retains camera return, Groups and Index in Dark and Lig
       const image = page.locator('.image-module__canvas').first();
       await image.waitFor();
       await page.evaluate(() => document.fonts.ready);
-      const brand = page.getByRole('button', { name: 'Inscape sidebar' });
+      const brand = page.getByRole('button', { name: 'Inscape menu' });
       if (await brand.getAttribute('aria-expanded') === 'true') await brand.click();
       const camera = () => page.locator('main.system-workflow').evaluate(node =>
         ['workbenchCameraScale', 'workbenchCameraX', 'workbenchCameraY'].map(key => node.dataset[key]));
@@ -144,15 +157,15 @@ test('the single toolbar retains camera return, Groups and Index in Dark and Lig
       assert.deepEqual(await camera(), before);
       assert.deepEqual(await page.evaluate(() => window.readToolChromeDraft()), saved);
       await choose(page, 'Tools', 'Groups');
-      await page.getByRole('textbox', { name: 'Group name', exact: true }).press('Escape');
+      await page.getByRole('heading', { name: 'Selected layers', exact: true }).press('Escape');
       assert.equal(await top(page, 'Tools').evaluate(node => node === document.activeElement), true);
-      await page.getByRole('button', { name: 'Add module', exact: true }).click();
-      await page.getByRole('dialog', { name: 'Add module', exact: true }).getByRole('button', { name: 'Index', exact: true }).click();
+      await page.getByRole('button', { name: 'Actions', exact: true }).click();
+      await page.getByRole('dialog', { name: 'Search commands', exact: true }).getByRole('button', { name: 'Index', exact: true }).click();
       const index = page.getByRole('complementary', { name: 'Index — Destinations', exact: true });
       await index.waitFor();
       await index.getByRole('button', { name: 'Close Index', exact: true }).click();
-      await page.getByRole('button', { name: 'Add module', exact: true }).click();
-      await page.getByRole('dialog', { name: 'Add module', exact: true }).getByRole('button', { name: 'Index', exact: true }).click();
+      await page.getByRole('button', { name: 'Actions', exact: true }).click();
+      await page.getByRole('dialog', { name: 'Search commands', exact: true }).getByRole('button', { name: 'Index', exact: true }).click();
       await index.waitFor();
       assert.equal(await page.locator('.workbench-view-controls').count(), 0);
       assert.equal(await page.getByRole('button', { name: 'Meet Grid-naad', exact: true }).count(), 0);

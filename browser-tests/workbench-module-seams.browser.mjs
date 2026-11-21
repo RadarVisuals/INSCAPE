@@ -85,7 +85,7 @@ for (const visitor of [false, true]) for (const density of [1, 1.25, 1.5, 2]) {
         if (!visitor) {
           const read = page.getByRole('button', { name: 'Read', exact: true });
           if (await read.count()) { await read.focus(); await page.keyboard.press('Enter'); }
-          const close = page.getByRole('button', { name: 'Close Text tools', exact: true });
+          const close = page.getByRole('button', { name: 'Close Inspector', exact: true });
           if (await close.count()) await close.click();
           await page.getByRole('button', { name: 'Lock Display Module composition', exact: true }).focus(); await page.keyboard.press('Enter');
         }

@@ -1,9 +1,11 @@
 import { lazy, Suspense, useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { Settings2, X } from 'lucide-react';
+import { useWorkbenchView } from '../public/ownerSystemWorkflow/WorkbenchViewContext.js';
 
 const KeeperAIConversation = import.meta.env.DEV ? lazy(() => import('./KeeperAIConversation.jsx')) : null;
 
 export function KeeperConversation({ asset, name, anchor, dock, onClose, conversationScope, captureReaction, cancelReaction, onPosition }) {
+  const { navigationTop = 0 } = useWorkbenchView();
   const panel = useRef(null), passage = useRef(null), closeButton = useRef(null), titleId = useId();
   const [attempt, setAttempt] = useState(0), [state, setState] = useState({ status: 'loading' });
   const [mode, setMode] = useState('dialogue');
@@ -24,7 +26,7 @@ export function KeeperConversation({ asset, name, anchor, dock, onClose, convers
       { tail: 'top', left: above, top: box.bottom + gap },
     ].map(({ tail, left, top }) => ({ tail,
       x: Math.max(margin, Math.min(innerWidth - width - margin, left)),
-      y: Math.max(margin, Math.min(innerHeight - height - 58, top)),
+      y: Math.max(navigationTop + margin, Math.min(innerHeight - height - 58, top)),
     }));
     const overlaps = (candidate, target) => target && candidate.x < target.right + margin
       && candidate.x + width > target.left - margin && candidate.y < target.bottom + margin
@@ -37,7 +39,7 @@ export function KeeperConversation({ asset, name, anchor, dock, onClose, convers
     bubble.dataset.tail = tail;
     bubble.style.setProperty('--keeper-tail-x', `${Math.max(18, Math.min(width - 40, box.left + box.width * .4 - x))}px`);
     bubble.style.setProperty('--keeper-tail-y', `${Math.max(24, Math.min(height - 24, box.top + box.height / 2 - y))}px`);
-  }, [anchor, dock]);
+  }, [anchor, dock, navigationTop]);
   useLayoutEffect(() => { reposition(); }, [state, mode, reposition]);
   useEffect(() => {
     closeButton.current?.focus({ preventScroll: true });
@@ -81,6 +83,7 @@ export function KeeperConversation({ asset, name, anchor, dock, onClose, convers
   }, [asset.stableAssetId, attempt]);
   const node = state.document?.nodes[state.node];
   return <section ref={panel} data-workbench-selection-tools className={`keeper-conversation${mode === 'ai' ? ' keeper-conversation--ai' : ''}`} role="dialog" aria-labelledby={titleId}
+    style={{ '--keeper-conversation-top': `${navigationTop}px` }}
     onKeyDown={event => { if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); onClose(); } }}>
     <svg className="keeper-conversation__tail" width="32" height="24" aria-hidden="true"><path d="M1 0H21Q12 14 31 23Q4 20 1 0Z" /></svg>
     <header><span id={titleId}>{name}</span>

@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { chromium } from 'playwright-core';
 import { mkdir, writeFile } from 'node:fs/promises';
-import { openSharedTool } from './fixtures/shared-tools.mjs';
+import { openSharedTool, sharedToolTab } from './fixtures/shared-tools.mjs';
 
 const origin = process.env.INSCAPE_IMAGE_ROOT || 'http://127.0.0.1:5197';
 const settle = page => page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
@@ -30,7 +30,7 @@ test('captured native-fit seams can be filled without moving frames; Image resiz
       draft.workbench.imageModules.forEach(module => { module.position.left -= 3552; });
       imageFitFixture.store.commitCompletedOperation(draft, { expectedGeneration: imageFitFixture.store.getGeneration() });
     });
-    const dock = page.locator('.workbench-image-tools');
+    const dock = page.locator('.workbench-image-inspector');
     await dock.getByRole('button', { name: 'Fill canvas', exact: true }).waitFor();
     await page.evaluate(async () => { const image = new Image(); image.src = 'https://image.fit.test/source.png'; await image.decode(); });
     const scale = 1.0976232973106559, offset = { x: -3541.289770546675 + 3552 * scale, y: -1519.0376733143444 };
@@ -53,9 +53,9 @@ test('captured native-fit seams can be filled without moving frames; Image resiz
     assert.deepEqual(await geometry(), beforeFrames, 'filling changes no window geometry');
     assert.deepEqual(filled.workbench, initial.workbench, 'no layout rewrite');
     for (let i = 0; i < filled.imageModules.length; i++) {
-      assert.deepEqual(filled.imageModules[i].sides[0].crop, { x: .5, y: .5, zoom: 1 });
-      assert.deepEqual(filled.imageModules[i].sides[0].asset, initial.imageModules[i].sides[0].asset);
-      assert.deepEqual(filled.imageModules[i].sides[0].transform, initial.imageModules[i].sides[0].transform);
+      assert.deepEqual(filled.imageModules[i].artwork.crop, { x: .5, y: .5, zoom: 1 });
+      assert.deepEqual(filled.imageModules[i].artwork.asset, initial.imageModules[i].artwork.asset);
+      assert.deepEqual(filled.imageModules[i].artwork.transform, initial.imageModules[i].artwork.transform);
     }
     await page.evaluate(() => imageFitFixture.select('image:one')); await settle(page);
     const clean = await page.addStyleTag({ content: '.image-module__close,.image-module__bounds,.image-module__resize {visibility:hidden!important;}' });
@@ -72,7 +72,7 @@ test('captured native-fit seams can be filled without moving frames; Image resiz
     assert.ok(pixels.every(pixel => pixel.slice(0, 3).join() === '222,118,51'), JSON.stringify(pixels));
     await clean.evaluate(node => node.remove());
     await dock.getByRole('button', { name: 'Fit inside', exact: true }).focus(); await page.keyboard.press('Enter');
-    assert.equal((await page.evaluate(() => imageFitFixture.store.getDraft())).imageModules[0].sides[0].crop, null);
+    assert.equal((await page.evaluate(() => imageFitFixture.store.getDraft())).imageModules[0].artwork.crop, null);
     await page.evaluate(() => imageFitFixture.store.undo()); await settle(page);
     assert.deepEqual(await page.evaluate(() => imageFitFixture.store.getDraft()), filled, 'fit choice is one undoable edit');
     await page.evaluate(() => { imageFitFixture.failSave = true; });
@@ -105,7 +105,7 @@ test('captured native-fit seams can be filled without moving frames; Image resiz
     await page.mouse.up(); await settle(page);
     assert.equal((await geometry())[0].right, Math.round(target), 'release preserves the snapped edge');
     assert.equal(await covers(), false, 'committed resize retains its Fit inside preview');
-    assert.equal((await page.evaluate(() => imageFitFixture.store.getDraft())).imageModules[0].sides[0].crop, null);
+    assert.equal((await page.evaluate(() => imageFitFixture.store.getDraft())).imageModules[0].artwork.crop, null);
     await page.screenshot({ path: `${process.env.INSCAPE_BROWSER_OUTPUT || '.browser-test-runtime'}/image-fit-resize-grid.png` });
     await page.evaluate(() => imageFitFixture.store.undo()); await settle(page);
     assert.deepEqual(await page.evaluate(() => imageFitFixture.store.getDraft()), beforeResize, 'undo restores dimensions, layout and legacy native fitting together');
@@ -142,7 +142,7 @@ test('captured native-fit seams can be filled without moving frames; Image resiz
     await page.mouse.up(); await settle(page);
     assert.deepEqual(await geometry(), groupPreview, 'selection preview and commit paint exactly the same frames');
     assert.equal(await covers(), false, 'selection commit retains its native-fit preview');
-    assert.equal((await page.evaluate(() => imageFitFixture.store.getDraft())).imageModules[0].sides[0].crop, null);
+    assert.equal((await page.evaluate(() => imageFitFixture.store.getDraft())).imageModules[0].artwork.crop, null);
     await page.evaluate(() => imageFitFixture.store.undo()); await settle(page);
     assert.deepEqual(await page.evaluate(() => imageFitFixture.store.getDraft()), beforeResize, 'one undo restores the entire resized selection and its fitting');
     assert.deepEqual(await geometry(), beforeGroupFrames);
@@ -202,13 +202,13 @@ test('isolated Image fixture opens and closes real Info content without changing
     await page.locator('.image-module__window').first().waitFor();
     await page.locator('.image-module__canvas').first().focus(); await settle(page);
     const saved = await page.evaluate(() => imageFitFixture.store.getDraft());
-    await page.getByRole('tab', { name: 'Info', exact: true }).click(); await settle(page);
+    await openSharedTool(page, 'Info'); await settle(page);
     assert.deepEqual(errors, [], 'activating Info has its provider context');
     const info = page.locator('[data-shared-tool="metadata"]');
     await info.waitFor();
     assert.ok((await info.innerText()).includes('ABYSSAL STUDY'), 'Info renders the selected Image source information');
-    await page.getByRole('button', { name: 'Close Info', exact: true }).click(); await settle(page);
-    assert.equal(await page.getByRole('tab', { name: 'Info', exact: true }).count(), 0);
+    await page.getByRole('button', { name: 'Close Inspector', exact: true }).click(); await settle(page);
+    assert.equal(await sharedToolTab(page, 'Inspector').count(), 0);
     assert.equal(await page.locator('.image-module__window').count(), 4, 'closing Info leaves the artwork mounted');
     assert.deepEqual(await page.evaluate(() => imageFitFixture.store.getDraft()), saved, 'opening and closing Info saves no content');
     assert.deepEqual(errors, []);

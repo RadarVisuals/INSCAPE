@@ -5,10 +5,10 @@ import { createDefaultWorkbenchPresentation } from '../../profileDocument/domain
 import { createArticle } from '../../text/domain/article.js';
 import { workbenchOverviewModel, overviewAssetIds } from './workbenchOverviewModel.js';
 
-test('preview uses saved origin, open frames, first sides and authored layer order without mutating its input', () => {
+test('preview uses saved origin, open frames, artwork and authored layer order without mutating its input', () => {
   const draft = createEmptySystemWorkflowDraft(`0x${'1'.repeat(40)}`); draft.grids = [];
   draft.shapes = [{ id: 'shape:a' }, { id: 'shape:closed' }];
-  draft.imageModules = [{ id: 'image:a', width: 120, height: 80, sides: [{ crop: { x: .3, y: .6, zoom: 2 } }] }];
+  draft.imageModules = [{ id: 'image:a', width: 120, height: 80, artwork: { crop: { x: .3, y: .6, zoom: 2 } } }];
   draft.texts = [{ id: 'text:a', article: createArticle('Title') }];
   draft.miniApps = [{ id: 'miniapp:a', name: 'Interactive study', url: 'https://example.com/' }];
   draft.artworkLayers = ['image:a', { id: 'composition:a', name: 'A block', children: ['shape:a', 'text:a'] }, 'shape:closed'];
@@ -20,8 +20,23 @@ test('preview uses saved origin, open frames, first sides and authored layer ord
   assert.deepEqual(result.area, draft.workbench.area);
   assert.deepEqual(result.items.map(item => item.id), ['miniapp:a', 'image:a', 'shape:a', 'text:a']);
   assert.deepEqual(result.items[1].frame, { left: 100, top: 80, width: 120, height: 80 });
-  assert.deepEqual(result.items[1].source.crop, draft.imageModules[0].sides[0].crop);
+  assert.deepEqual(result.items[1].source.crop, draft.imageModules[0].artwork.crop);
   assert.deepEqual(result.items[3].source.frames, draft.workbench.texts[0].frames);
   assert.equal(result.items[0].source.url, undefined, 'interactive previews have no execution destination');
   assert.deepEqual(overviewAssetIds(draft), []); assert.deepEqual(draft, before);
+});
+
+test('a mixed composition uses one native layout for artwork and source details', () => {
+  const composition = { version: 3, cells: [{ id: 'shape:cell', members: [] }],
+    shapes: [{ id: 'shape:cell', name: 'Cell' }, { id: 'shape:free', name: 'Drawing' }],
+    imageModules: [], texts: [], artworkLayers: ['shape:cell', 'shape:free'],
+    workbench: { ...createDefaultWorkbenchPresentation(), area: { left: 0, top: 0, width: 1440, height: 900 },
+      shapes: ['shape:cell', 'shape:free'].map((id, index) => ({ id, open: true, window: { left: 80 + index * 200, top: 40, width: 160, height: 120 } })) },
+  };
+  const model = workbenchOverviewModel({ composition, grids: [], texts: [{ id: 'text:unused' }] });
+  assert.equal(model.composition, composition);
+  assert.deepEqual(model.area, composition.workbench.area);
+  assert.deepEqual(model.items.map(item => item.id), ['shape:cell', 'shape:free']);
+  assert.match(model.contains, /1 cell/);
+  assert.deepEqual(model.items[1].frame, { left: 280, top: 40, width: 160, height: 120 });
 });

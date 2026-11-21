@@ -81,7 +81,7 @@ export default function OwnerSystemWorkflowCanvas({ assetsById, authoringLocked 
   const worldViewport = useMemo(() => stageSize
     ? worldCover ? measureOwnerSystemWorkflowHeroArtboard(stageSize.width, stageSize.height, stageSize.contentScale)
       : projectDisplayStageViewport(controller.draft.geometry, stageSize)
-    : null, [stageSize?.width, stageSize?.height, stageSize?.contentScale, worldCover, controller.draft.geometry]);
+    : null, [stageSize, worldCover, controller.draft.geometry]);
   const artboardMode = worldCover ? OWNER_SYSTEM_WORKFLOW_ARTBOARD_MODES.HERO : OWNER_SYSTEM_WORKFLOW_ARTBOARD_MODES.GRID;
   const cropSession = crop?.cropSession || null;
   const appearance = controller.draft?.appearance;
@@ -101,7 +101,9 @@ export default function OwnerSystemWorkflowCanvas({ assetsById, authoringLocked 
     adjacentGrid: (id, direction) => adjacentSystemWorkflowGridIdInOrder(gridOrder, id, direction),
     gridId: grid?.id, nextGridId: adjacentGrid('next'), canvasRef, trackRef, viewScale: pointerScale, reducedMotion,
     onPause: onPauseGrids || (() => {}), onAdvance: onChangeGrid });
-  const placementContext = useMemo(() => ({}), [grid?.id, controller.draft.profileAddress, authoringLocked, interactionDisabled, playingGrids, playback.swipe, suspended, viewerOpen, cropSession]);
+  const placementContext = useMemo(() => ({ gridId: grid?.id, profile: controller.draft.profileAddress, authoringLocked,
+    interactionDisabled, playingGrids, swipe: playback.swipe, suspended, viewerOpen, cropSession }),
+  [grid?.id, controller.draft.profileAddress, authoringLocked, interactionDisabled, playingGrids, playback.swipe, suspended, viewerOpen, cropSession]);
   const currentPlacementContext = useRef(placementContext);
   currentPlacementContext.current = placementContext;
   const reportRejectedDrop = () => {
@@ -157,11 +159,12 @@ export default function OwnerSystemWorkflowCanvas({ assetsById, authoringLocked 
   };
   useImperativeHandle(placementTargetRef, () => placementTarget);
   const previousAuthoringLocked = useRef(authoringLocked);
+  const pausePlayback = playback.pause;
   useLayoutEffect(() => {
     // Unlock returns to editing at the existing camera position.
-    if (previousAuthoringLocked.current && !authoringLocked) playback.pause();
+    if (previousAuthoringLocked.current && !authoringLocked) pausePlayback();
     previousAuthoringLocked.current = authoringLocked;
-  }, [authoringLocked]);
+  }, [authoringLocked, pausePlayback]);
   const interaction = useOwnerSystemWorkflowPlacementInteraction({
     artboardMode, authoringDisabled: authoringLocked, canvasRef, sceneRef, canNavigateGrid: adjacentGrid, controller,
     cropResize: crop?.cropResize, cropSession, disabled: interactionDisabled,
@@ -255,7 +258,7 @@ export default function OwnerSystemWorkflowCanvas({ assetsById, authoringLocked 
     };
     globalThis.addEventListener?.('keydown', onKeyDown);
     return () => globalThis.removeEventListener?.('keydown', onKeyDown);
-  }, [authoringLocked, controller, cropSession, grid, interaction, interactionDisabled, snapStep, viewerOpen, playingGrids, playback.swipe]);
+  }, [authoringLocked, controller, cropSession, grid, interaction, interactionDisabled, snapStep, viewerOpen, playingGrids, playback]);
 
   if (!grid) return null;
   return <section className="system-workflow__stage-content" aria-label={`${grid.title} Grid`} data-system-workflow-stage data-world-cover={worldCover || undefined}>
@@ -314,7 +317,7 @@ export default function OwnerSystemWorkflowCanvas({ assetsById, authoringLocked 
           data-artwork-context-selected={isSelected || undefined}
           data-viewing={viewerPlacementId === placement.id || undefined}
           key={placement.id} onClick={(event) => {
-            if (event.target.closest('.text-editor-page, .text-tools-window, .display-text-edit-actions')) { event.stopPropagation(); return; }
+            if (event.target.closest('.text-editor-page, .workbench-text-inspector, .display-text-edit-actions')) { event.stopPropagation(); return; }
             if (cropSession || interactionDisabled || interaction.clickSuppressedRef.current) return;
             const hit = pickPlacement(event);
             event.stopPropagation();
@@ -322,7 +325,7 @@ export default function OwnerSystemWorkflowCanvas({ assetsById, authoringLocked 
             if (!hit.placement.locked) controller.selectPlacement(hit.placement.id, event.shiftKey);
           }}
           onDoubleClick={(event) => {
-            if (event.target.closest('.text-editor-page, .text-tools-window')) return;
+            if (event.target.closest('.text-editor-page, .workbench-text-inspector')) return;
             if (cropSession || interactionDisabled) return;
             event.stopPropagation();
             const hit = pickPlacement(event);
@@ -337,7 +340,7 @@ export default function OwnerSystemWorkflowCanvas({ assetsById, authoringLocked 
             controller.selectPlacement(placement.id, event.shiftKey);
           }}
           onPointerDown={(event) => {
-            if (event.target.closest('.text-editor-page, .text-tools-window, .display-text-edit-actions')) { event.stopPropagation(); return; }
+            if (event.target.closest('.text-editor-page, .workbench-text-inspector, .display-text-edit-actions')) { event.stopPropagation(); return; }
             if (interactionDisabled) return;
             const hit = pickPlacement(event);
             if (!hit) {

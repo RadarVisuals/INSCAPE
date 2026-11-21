@@ -7,7 +7,7 @@ import { validateSystemWorkflowDraft } from './domain/systemWorkflowDraft.js';
 import { addShape } from '../shapes/shapeSession.js';
 import { addDisplayModule, createDisplayModuleSession } from './displayModuleSession.js';
 import { removeWorkbenchModule } from './removeWorkbenchModule.js';
-import { moveWorkbenchGroup } from './moveWorkbenchGroup.js';
+import { moveWorkbenchSelection } from './moveWorkbenchSelection.js';
 import { buildProfileDocumentV9 } from '../profileDocument/domain/profileDocumentV9Builder.js';
 import { reconcileSystemWorkflowDraftFromProfileDocumentV9 } from '../profileDocument/domain/profileDocumentV9Reconciliation.js';
 import { createArticle } from '../text/domain/article.js';
@@ -79,13 +79,13 @@ test('deleting a module removes only its membership in the same undo operation; 
 
 test('group movement commits positions together, preserves module content and undoes together', () => {
   const f = fixture(); f.create(); const before = f.store.getDraft(), writes = f.writes();
-  moveWorkbenchGroup(f.store, profile, [{ id: f.a, left: 900, top: 850 }, { id: f.b, left: 924, top: 874 }], before.workbench);
+  moveWorkbenchSelection(f.store, profile, [{ id: f.a, left: 900, top: 850 }, { id: f.b, left: 924, top: 874 }], before.workbench);
   assert.equal(f.writes(), writes + 1);
   assert.deepEqual(f.store.getDraft().shapes, before.shapes); assert.deepEqual(f.store.getDraft().workbenchGroups, before.workbenchGroups);
   assert.equal(f.store.getDraft().workbench.shapes[1].window.left, 924);
   assert.ok(f.store.undo()); assert.deepEqual(f.store.getDraft(), before); assert.ok(f.store.redo());
   const moved = f.store.getDraft(); f.fail(true);
-  assert.throws(() => moveWorkbenchGroup(f.store, profile, [{ id: f.a, left: 800, top: 850 }], moved.workbench));
+  assert.throws(() => moveWorkbenchSelection(f.store, profile, [{ id: f.a, left: 800, top: 850 }], moved.workbench));
   assert.deepEqual(f.store.getDraft(), moved);
 });
 

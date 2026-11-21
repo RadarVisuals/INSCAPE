@@ -1,3 +1,4 @@
+import { workbenchPaintStyle } from './workbenchPaintGeometry.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { clampWorkbenchMove, identityWorkbenchTransform, proportionalCornerResize, scaleWorkbenchTransform, stepWorkbenchViewScale, workbenchSelectionBounds, workbenchViewStyle, zoomWorkbenchCamera } from './workbenchViewScale.js';
@@ -62,4 +63,18 @@ test('view zoom steps stop at their limits and return to 100%', () => {
   assert.equal(stepWorkbenchViewScale(1, 1), 1);
   assert.equal(stepWorkbenchViewScale(.67, -1), .5);
   assert.equal(stepWorkbenchViewScale(.9, 1), 1);
+});
+
+
+test('cell surfaces retain positive fractional gutters without changing pixel-aligned module painting', () => {
+  for (const density of [1, 1.25, 2]) for (const scale of [.25,.33,.5,1]) for (const offset of [0,.25,.5,.75]) {
+    const camera={scale,x:offset,y:0}, translation={x:0,y:0};
+    const a=workbenchPaintStyle({left:0,top:0,width:400,height:200},camera,translation,density,true,true);
+    const b=workbenchPaintStyle({left:401,top:0,width:400,height:200},camera,translation,density,true,true);
+    const x=style=>Number(style.transform.slice(7,-1).split(',')[4]);
+    assert.ok(Math.abs(x(b)-x(a)-a.width-scale)<1e-9);
+    assert.equal(a.width,400*scale); assert.equal(a.height,200*scale);
+    const crisp=workbenchPaintStyle({left:0,top:0,width:400,height:200},camera,translation,density,true);
+    assert.ok(Math.abs(x(crisp)*density-Math.round(x(crisp)*density))<1e-9);
+  }
 });

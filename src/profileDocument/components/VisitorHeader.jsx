@@ -1,52 +1,55 @@
-import { useState } from 'react';
-import { ChevronDown, Moon, Settings, Sun } from 'lucide-react';
-import { interfaceTheme, useInterfaceTheme } from '../../interfaceTheme.js';
-import { VisitorPortrait } from './VisitorProfile.jsx';
-import VisitorMenu from './VisitorMenu.jsx';
+import { useLayoutEffect, useRef } from 'react';
+import { ArrowLeft, Settings } from 'lucide-react';
+import { DiscoverLink, HeaderThemeButton, StudioHeaderTools, profileTabs, WorkspaceBrand } from '../../public/menus/WorkspaceHeader.jsx';
+import ProfileStrip from './ProfileStrip.jsx';
+import './visitorProfile.css';
 
-export default function VisitorHeader({ model, account, works, onProfile, onWorks, onBento, ownerDestinations,
-  onDiscover, onReturn, onConnect }) {
-  const { mode, error } = useInterfaceTheme();
-  const [copyMessage, setCopyMessage] = useState('');
-  const name = model.officialProfile.name;
-  const accountName = account?.name || (account?.address ? account.address.slice(0, 6) + '…' + account.address.slice(-4) : '');
-  const initials = accountName.trim().split(/\s+/u).slice(0, 2).map(word => word[0]).join('');
-  async function copyAddress() {
-    try { await navigator.clipboard.writeText(model.address); setCopyMessage('Address copied.'); }
-    catch { setCopyMessage('Clipboard unavailable. Open Universal Profile to copy the address.'); }
-  }
-  return <header className="visitor-header">
-    <div className="visitor-signature"><VisitorMenu key={model.address} name={name + ' profile actions'} trigger={<>
-      <VisitorPortrait src={model.profile.avatarUrl} className="visitor-avatar" /><span>{name}</span><ChevronDown size={13} /></>}>
-      <button type="button" onClick={copyAddress}>Copy address</button>
-      <a href={model.officialProfile.url} target="_blank" rel="noreferrer">Universal Profile</a>
-      {onBento && <button type="button" onClick={onBento}>View published Bento</button>}
-      {model.card.fields.length > 0 && <dl className="visitor-facts">{model.card.fields.map(field => <div key={field.id}>
-        <dt>{field.label}</dt><dd>{field.type === 'list' ? field.value.join(' · ') : field.value}</dd>
-      </div>)}</dl>}
-    </VisitorMenu></div>
-    <nav aria-label="Profile navigation" className="visitor-tabs">
-      <button type="button" aria-current={!works ? 'page' : undefined} onClick={onProfile}>Profile</button>
-      <button type="button" aria-current={works ? 'page' : undefined} onClick={onWorks}>Works</button>
-      <button type="button" disabled title="Writing is not available in this preview">Writing</button>
-      <button type="button" disabled title="Gallery is not available in this preview">Gallery</button>
-    </nav>
-    <div className="visitor-tools">
-      {account ? <VisitorMenu name={accountName + ' account'} trigger={<><span className="visitor-account-avatar">{initials}</span>
-        <span>{accountName}</span><ChevronDown size={12} /></>}>
-        {Object.entries(ownerDestinations || {}).filter(([, go]) => go).map(([label, go]) =>
-          <button key={label} type="button" onClick={go}>{label}</button>)}
-        {onReturn && !ownerDestinations && <button type="button" onClick={onReturn}>Return to my Inscape</button>}
-      </VisitorMenu> : onConnect && <button className="visitor-connect" type="button" onClick={onConnect}>Connect profile</button>}
-      <span className="visitor-wordmark" role="img" aria-label="Inscape" />
-      <button className="visitor-theme" type="button" role="switch" aria-label="Dark mode" aria-checked={mode === 'dark'}
-        onClick={() => interfaceTheme.setMode(mode === 'dark' ? 'light' : 'dark')}><Sun /><i aria-hidden="true" /><Moon /></button>
-      <VisitorMenu name="Settings" trigger={<Settings size={19} />}>
-        <button type="button" onClick={() => interfaceTheme.setMode(mode === 'dark' ? 'light' : 'dark')}>{mode === 'dark' ? 'Light' : 'Dark'} appearance</button>
-        {onDiscover && <button type="button" onClick={onDiscover}>Discover</button>}
-      </VisitorMenu>
+export default function VisitorHeader({ model, account, works, current = works ? 'Gallery' : 'Profile',
+  toolbarRef, onProfile, onWorks, onWriting, ownerDestinations, onDiscover, onReturnFromDiscover, onPanel, onDisconnect, onConnect, children }) {
+  const trigger = useRef(null);
+  const tabList = useRef(null);
+  const hasProfile = Boolean(model);
+  useLayoutEffect(() => {
+    const list = tabList.current, active = list?.querySelector('[aria-current="page"]');
+    if (!active) return;
+    const revealActiveTab = () => {
+      const tab = active.getBoundingClientRect(), bounds = list.getBoundingClientRect();
+      if (tab.left < bounds.left) list.scrollLeft += tab.left - bounds.left;
+      else if (tab.right > bounds.right) list.scrollLeft += tab.right - bounds.right;
+    };
+    revealActiveTab();
+    const resize = new ResizeObserver(revealActiveTab);
+    resize.observe(list);
+    return () => resize.disconnect();
+  }, [current, hasProfile]);
+
+  const own = Boolean(account?.address && account.address.toLowerCase() === model?.address?.toLowerCase());
+  const tabs = { Profile: onProfile, Gallery: onWorks, Writing: onWriting };
+  const destinations = account && { ...(own && tabs), Discover: onDiscover, ...ownerDestinations };
+  const accountMenu = account?.address && <ProfileStrip key={account.address} address={account.address} accountStrip {...{ account, model, onPanel, onDisconnect }} />;
+  return <header className="workspace-header visitor-header">
+    <div className={model ? "visitor-navigation" : "visitor-navigation-unprofiled"}>
+    <div className="visitor-signature">
+      <WorkspaceBrand trigger={trigger} current={own || current === 'Discover' ? current : null} onDiscover={onDiscover}
+        destinations={destinations} onPanel={onPanel} />
+      {onReturnFromDiscover
+        ? <button type="button" className="visitor-discover" aria-label="Back from Discover" onClick={onReturnFromDiscover}>
+          <ArrowLeft size={14} aria-hidden="true" />Discover</button>
+        : <DiscoverLink className="visitor-discover" onDiscover={onDiscover}>Discover</DiscoverLink>}
+      {model?.address && <ProfileStrip key={model.address} address={model.address} {...{ account, model, onProfile, onConnect }} />}
     </div>
-    {copyMessage && <span className="visitor-feedback" role="status" onAnimationEnd={() => setCopyMessage('')}>{copyMessage}</span>}
-    {error && <span className="visitor-notice" role="alert">{error}</span>}
+    {model ? <nav ref={tabList} aria-label="Profile navigation" className="visitor-tabs">
+      {profileTabs.map(label => <button type="button" key={label} disabled={label !== current && !tabs[label]}
+        aria-current={label === current ? 'page' : undefined} onClick={tabs[label]}>{label}</button>)}
+    </nav> : null}
+    </div>
+    {!model && children}
+    {toolbarRef && <div className="visitor-toolbar-slot" ref={toolbarRef} />}
+    <div className="visitor-tools">
+      {own && ownerDestinations?.Studio ? <StudioHeaderTools onStudio={ownerDestinations.Studio}>{accountMenu}</StudioHeaderTools> : <><HeaderThemeButton />
+      {!account?.address && onPanel && <button className="workspace-theme-button" type="button" aria-label="Settings" title="Settings"
+        onClick={event => onPanel('settings', event.currentTarget)}><Settings size={16} aria-hidden="true" /></button>}
+      {accountMenu || (onConnect && <button className="visitor-connect" type="button" onClick={onConnect}>Sign in</button>)}</>}
+    </div>
   </header>;
 }

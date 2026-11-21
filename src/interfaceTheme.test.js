@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createInterfaceThemeStore, INTERFACE_THEME_KEY } from './interfaceTheme.js';
+import { createInterfaceThemeStore, INTERFACE_THEME_KEY, INTERFACE_PALETTE_KEY, interfacePalettes } from './interfaceTheme.js';
 import { createEmptySystemWorkflowDraft, assertValidSystemWorkflowDraft } from './systemWorkflow/domain/systemWorkflowDraft.js';
 import { createWorkbenchCollection, assertValidWorkbenchCollection } from './systemWorkflow/domain/workbenchCollection.js';
 import { createReception } from './profileDocument/domain/receptionPresentation.js';
@@ -48,4 +48,47 @@ test('existing drafts discard retired interface choices without rewriting artwor
   assert.equal(Object.hasOwn(result.shared, 'menuSurfaceId'), false);
   assert.equal(Object.hasOwn(result.shared.reception.branding, 'theme'), false);
   assert.deepEqual(result.workbenches, collection.workbenches);
+});
+
+test('only curated palettes persist, independently of mode, artwork and legacy editor colors', () => {
+  const legacy = '{"dark":{"panel":"#ff0044"}}';
+  const records = new Map([['inscape:editor-colors', legacy], ['composition', 'original']]);
+  const storage = { getItem: key => records.get(key) ?? null, setItem: (key, value) => records.set(key, value) };
+  const target = { dataset: {} }, store = createInterfaceThemeStore({ storage, target });
+  assert.equal(target.dataset.palette, 'charcoal');
+  for (const id of Object.keys(interfacePalettes)) {
+    store.setPalette(id);
+    assert.equal(records.get(INTERFACE_PALETTE_KEY), id);
+    store.setMode('light');
+    assert.equal(target.dataset.palette, id);
+    store.setMode('dark');
+    assert.equal(target.dataset.palette, id);
+    assert.equal(createInterfaceThemeStore({ storage }).getSnapshot().palette, id);
+  }
+  for (const value of ['custom', '#12ab34', '__proto__']) assert.throws(() => store.setPalette(value), /Inscape palette/);
+  assert.equal(records.get('composition'), 'original');
+  assert.equal(records.get('inscape:editor-colors'), legacy);
+  records.set(INTERFACE_PALETTE_KEY, '#badbad');
+  assert.equal(createInterfaceThemeStore({ storage }).getSnapshot().palette, 'charcoal');
+  store.dispose();
+});
+
+test('palette writes are retryable and valid cross-window changes and clears update the view', () => {
+  let broken = true;
+  const storage = { getItem: () => null, setItem: key => { if (key === INTERFACE_PALETTE_KEY && broken) throw Error('Full'); } };
+  const target = { dataset: {} }, events = new EventTarget(), store = createInterfaceThemeStore({ storage, target, events });
+  store.setPalette('oxblood');
+  assert.match(store.getSnapshot().error, /could not be saved/);
+  store.setMode('light'); assert.match(store.getSnapshot().error, /could not be saved/);
+  assert.equal(target.dataset.palette, 'oxblood');
+  broken = false; store.setPalette('oxblood'); assert.equal(store.getSnapshot().error, null);
+  const event = new Event('storage');
+  Object.assign(event, { key: INTERFACE_PALETTE_KEY, newValue: 'storm-glass' });
+  events.dispatchEvent(event); assert.equal(target.dataset.palette, 'storm-glass');
+  assert.equal(target.dataset.interfaceTheme, 'light');
+  Object.assign(event, { newValue: '#ab0010' }); events.dispatchEvent(event);
+  assert.equal(target.dataset.palette, 'charcoal');
+  Object.assign(event, { key: null, newValue: null }); events.dispatchEvent(event);
+  assert.deepEqual(target.dataset, { interfaceTheme: 'dark', palette: 'charcoal' });
+  store.dispose();
 });

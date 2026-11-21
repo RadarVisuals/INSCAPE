@@ -1,3 +1,4 @@
+import { closeSharedTool } from './fixtures/shared-tools.mjs';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { chromium } from 'playwright-core';
@@ -10,11 +11,7 @@ const origin = process.env.INSCAPE_SYSTEM_WORKFLOW_ROOT || 'http://127.0.0.1:517
 // default window through its real control before exercising the profile card.
 async function closeArtworkTools(page) {
   await page.getByRole('tab', { name: 'Layers', exact: true }).waitFor();
-  for (const name of ['Layers', 'Transform', 'Color', 'Image', 'Shape', 'FX', 'Info']) {
-    const tab = page.getByRole('tab', { name, exact: true });
-    await tab.press('Enter');
-    await page.getByRole('button', { name: `Close ${name === 'Layers' ? 'Workbench Layers' : name}`, exact: true }).click();
-  }
+  for (const name of ['Layers', 'Inspector']) await closeSharedTool(page, name);
 }
 async function toggleLibrary(page) {
   const sidebar = page.getByRole('complementary', { name: 'Workspace sidebar' });

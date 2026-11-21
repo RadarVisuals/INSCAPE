@@ -19,12 +19,15 @@ export function createNamedWorkbenchActions({ store, projection, flushLayout, bu
     if (busy) throw new Error('Close publication or finish the preview first.');
     if (!projection.value) throw new Error(projection.error || 'The layout is not ready.');
     if (!flushLayout()) throw new Error('The layout could not be saved. Retry its save first.');
-    if (!store[command](value, { ...options, workbench: projection.value })) throw workbenchSaveError(store);
+    const result = store[command](value, { ...options, workbench: projection.value });
+    if (!result) throw workbenchSaveError(store);
+    return result;
   };
   return {
     create(value) {
-      perform('createWorkbench', value.trim());
+      return perform('createWorkbench', value.trim());
     },
+    remove(id) { return perform('deleteWorkbench', id); },
     rename(value) {
       perform('renameWorkbench', value.trim());
     },

@@ -63,11 +63,11 @@ for (const sections of [false, true]) test(sections ? 'article sections link fro
       }
     }, { visitor, sections });
     await page.goto(`${origin}/__scene_review__`); console.log('Scene review loaded'); await mount(); console.log('Scene review mounted');
-    const text = page.locator('[data-workbench-module="text"]'), tools = page.locator('.text-tools-window');
+    const text = page.locator('[data-workbench-module="text"]'), tools = page.locator('.workbench-tool-dock:has([data-text-inspector])');
     const editor = text.getByRole('textbox', { name: 'Article text', exact: true });
     await editor.waitFor();
     await page.locator('.editor-menu-brand[aria-expanded="true"]').click();
-    for (const name of ['Close Workbench Layers', 'Close Transform', 'Close Color', 'Close Image', 'Close Shape', 'Close FX', 'Close Info']) {
+    for (const name of ['Close Workbench Layers', 'Close Inspector']) {
       const close = page.getByRole('button', { name, exact: true });
       if (await close.count()) { await close.focus(); await close.press('Enter'); }
     }
@@ -142,7 +142,7 @@ for (const sections of [false, true]) test(sections ? 'article sections link fro
     await editor.blur(); await navigateOwner('next');
     await page.screenshot({ path: '.browser-test-runtime/text-scene-authoring.png' });
     await editor.focus();
-    await page.waitForFunction(() => document.querySelector('.text-tools-window')?.textContent.includes('Silence'));
+    await page.waitForFunction(() => document.querySelector('.workbench-tool-dock:has([data-text-inspector])')?.textContent.includes('Silence'));
     assert.equal((await editor.innerText()).trim(), '', 'new scene starts with an empty passage');
     const passage = 'There is a low pressure somewhere inside my head. Not a sound exactly. More like something running underneath one. ';
     await editor.fill(passage.repeat(20));

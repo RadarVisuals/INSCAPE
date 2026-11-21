@@ -5,6 +5,13 @@
   --tool-action-target: 40px;
   --tool-touch-target: 0px;
 }
+/* Keep the compact Editor variant with its defaults so importing this shared recipe
+   from another tool cannot restore the larger control size. */
+.workbench-editor-panel {
+  --tool-control-height: var(--control-height-sm);
+  --tool-icon-target: var(--control-height-sm);
+  --tool-icon-size: 16px;
+}
 @media (pointer: coarse), (max-width: 520px) {
   :is(.workbench-tool-window, .keeper-dock-window, .workbench-tool-controls, .workbench-tool-panel, .identity-editor-content) {
     --tool-control-height: 44px;

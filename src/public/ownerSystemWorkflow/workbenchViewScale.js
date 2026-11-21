@@ -16,8 +16,8 @@ export function stepWorkbenchViewScale(scale, direction) {
 
 // Scale the window and its distance from the Workbench origin. Saved geometry
 // and logical content width stay unchanged; only the painted frame is rounded.
-export function workbenchViewStyle(scale, left, top, width, height, x = 0, y = 0, offset = { x: 0, y: 0 }) {
-  return { ...workbenchPaintStyle({ left, top, width, height }, { scale, x, y }, offset),
+export function workbenchViewStyle(scale, left, top, width, height, x = 0, y = 0, offset = { x: 0, y: 0 }, cssPixelSurface = false, subpixelEdges = false) {
+  return { ...workbenchPaintStyle({ left, top, width, height }, { scale, x, y }, offset, undefined, cssPixelSurface, subpixelEdges),
     '--workbench-content-width': `${width}px` };
 }
 

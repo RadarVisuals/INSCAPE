@@ -19,8 +19,8 @@ export default function OwnerSystemWorkflowProfile({ identity, model, onClose, o
         </span>
         <span><b>{sourceIdentity.displayName}</b><small>{sourceIdentity.secondaryLabel}</small></span>
       </button>
-      {onOpenReception && <button className="system-workflow__profile-action" onClick={onOpenReception} type="button">View my reception</button>}
-      {onEditReception && <button className="system-workflow__profile-action" onClick={onEditReception} type="button">Edit Reception</button>}
+      {onOpenReception && <button className="system-workflow__profile-action" onClick={onOpenReception} type="button">Profile</button>}
+      {onEditReception && <button className="system-workflow__profile-action" onClick={onEditReception} type="button">Studio</button>}
       {onDisconnect && <button className="system-workflow__profile-action" onClick={onDisconnect} type="button">Disconnect</button>}
       </div>
     </WorkbenchDestinationPanel>

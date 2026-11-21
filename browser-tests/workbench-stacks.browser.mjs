@@ -4,6 +4,8 @@ import test from 'node:test';
 import { mkdir } from 'node:fs/promises';
 import { chromium } from 'playwright-core';
 import { hideWorkspaceSidebar } from './fixtures/workspace-sidebar.mjs';
+import { parkGeometryTools } from './fixtures/geometry-tools.mjs';
+import { resetCameraTestView } from './fixtures/workbench-camera-test.mjs';
 import { mountGridMotionFixture } from './fixtures/grid-motion-fixture.mjs';
 const origin = process.env.INSCAPE_TEXT_ROOT || 'http://127.0.0.1:5217';
 const saved = page => page.evaluate(() => localStorage.getItem(window.__motionKey));
@@ -30,6 +32,9 @@ test('compact groups move and cancel independently, open live members, return, u
       await navigateWorkbench(page, 'groups');
       const panel = page.locator('.workbench-groups');
       await hideWorkspaceSidebar(page);
+      await parkGeometryTools(page);
+      await resetCameraTestView(page);
+      await panel.getByText('Manage groups', { exact: true }).click();
       await panel.locator('[data-workbench-group-drop]').click();
       const before = JSON.parse(await saved(page)), originalCamera = await camera(page);
       await page.evaluate(() => { window.stackNodes = [...document.querySelectorAll('[data-workbench-view-id]')]; });
@@ -57,6 +62,7 @@ test('compact groups move and cancel independently, open live members, return, u
       assert.equal(await page.locator('[data-workbench-group-hidden]').count(), 2);
       assert.equal(await page.evaluate(() => window.stackNodes.every(node => node.isConnected)), true);
       await navigateWorkbench(page, 'groups');
+      await panel.getByText('Manage groups', { exact: true }).click();
       await panel.getByRole('button', { name: 'Undo', exact: true }).click();
       assert.deepEqual(JSON.parse(await saved(page)).workbenchGroups, stacked.workbenchGroups);
       await panel.getByRole('button', { name: 'Redo', exact: true }).click();
@@ -65,7 +71,7 @@ test('compact groups move and cancel independently, open live members, return, u
       assert.equal(await page.locator('[data-workbench-group-hidden]').count(), 2);
       assert.equal(await saved(page), moved);
       await page.screenshot({ path: '.browser-test-runtime/workbench-stack-compact-' + width + '.png' });
-      await stack.getByRole('button', { name: 'Manage Chapter one group', exact: true }).click();
+      await stack.getByRole('button', { name: 'Manage Chapter one group', exact: true }).press('Enter');
       await panel.getByRole('button', { name: 'Unstack', exact: true }).click();
       assert.equal(await page.locator('[data-workbench-group-hidden]').count(), 0);
       assert.deepEqual(JSON.parse(await saved(page)).workbench, before.workbench);
@@ -93,7 +99,7 @@ test('mixed groups preserve live editors and saved geometry through reading, ins
       await hideWorkspaceSidebar(page);
       const initial = await saved(page);
       await page.evaluate(() => { window.mixedNodes = [...document.querySelectorAll('[data-workbench-view-id], .tiptap')]; });
-      const closeTools = page.getByRole('button', { name: 'Close Text tools', exact: true });
+      const closeTools = page.getByRole('button', { name: 'Close Inspector', exact: true });
       if (await closeTools.isVisible()) await closeTools.click();
       const open = async () => { await stack.getByRole('button', { name: 'Open Mixed study group', exact: true }).click(); await settle(page); };
       await open();
@@ -124,7 +130,7 @@ test('mixed groups preserve live editors and saved geometry through reading, ins
       if (await closeInspection.isVisible()) await closeInspection.click();
       await page.keyboard.press('Escape'); await settle(page);
       assert.equal(await saved(page), initial);
-      await page.getByRole('button', { name: 'Reset Workbench view', exact: true }).click(); await settle(page); await stack.waitFor();
+      await page.getByRole('button', { name: 'Fit canvas in view', exact: true }).click(); await settle(page); await stack.waitFor();
       assert.equal(await page.locator('[data-workbench-group-presented]').count(), 0);
       assert.equal(await page.evaluate(() => window.mixedNodes.every(node => node.isConnected)), true);
       assert.equal(await reading.locator('.tiptap').getAttribute('contenteditable'), 'true');
@@ -137,7 +143,7 @@ test('mixed groups preserve live editors and saved geometry through reading, ins
       assert.equal(await saved(page), initial);
       await open(); await select.selectOption('display:primary'); await settle(page);
       await page.screenshot({ path: '.browser-test-runtime/workbench-group-mixed-' + width + '.png' });
-      await page.getByRole('button', { name: 'Reset Workbench view', exact: true }).click(); await settle(page); await stack.waitFor();
+      await page.getByRole('button', { name: 'Fit canvas in view', exact: true }).click(); await settle(page); await stack.waitFor();
       assert.equal(await saved(page), initial);
       assert.equal(await page.evaluate(() => window.mixedNodes.every(node => node.isConnected)), true);
       assert.deepEqual(errors, []); await page.close();
@@ -161,6 +167,8 @@ test('spatial stack drops clear hidden selection and named routes restore item a
     });
     const stack = page.locator('[data-workbench-stack="workbench-group:a"]'); await stack.waitFor();
     await hideWorkspaceSidebar(page);
+    await parkGeometryTools(page);
+    await resetCameraTestView(page);
     const initial = JSON.parse(await saved(page));
     await page.locator('[data-workbench-view-id="image:motion-0"]').evaluate(node => {
       const target = node.matches('[data-workbench-selectable]') ? node : node.querySelector('[data-workbench-selectable]');

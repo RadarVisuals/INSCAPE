@@ -7,10 +7,25 @@ import childProcess, { spawn } from 'node:child_process';
 import { syncBuiltinESMExports } from 'node:module';
 import { randomUUID } from 'node:crypto';
 import { runOwnedCommand, requireSuccessfulCommand } from './verificationProcess.mjs';
-import { createOwnedProcessTree, resolveWindowsProcessRuntime } from '../browser-tests/browser-test-lifecycle.mjs';
+import { createOwnedProcessTree, listWindowsProcesses, resolveWindowsProcessRuntime, terminateWindowsProcess } from '../browser-tests/browser-test-lifecycle.mjs';
 
 const run = options => runOwnedCommand({ cwd: process.cwd(), env: process.env, stdio: 'ignore', timeoutMs: 15_000, ...options });
 const alive = pid => { try { process.kill(pid, 0); return true; } catch (error) { if (error.code === 'ESRCH') return false; throw error; } };
+
+test('Windows termination rejects a mismatched identity and accepts a proven process that already exited', { timeout: 15_000 }, async t => {
+  if (process.platform !== 'win32') return;
+  const child = spawn(process.execPath, ['-e', 'process.stdin.resume()'], { stdio: ['pipe', 'ignore', 'ignore'], windowsHide: true });
+  const closed = new Promise(resolve => child.once('close', resolve));
+  t.after(async () => { if (child.exitCode === null && child.signalCode === null) child.kill(); await closed; });
+  const entry = (await listWindowsProcesses()).find(entry => entry.pid === child.pid);
+  assert.ok(entry);
+  await assert.rejects(terminateWindowsProcess({ ...entry, identity: '/Date(1)/' }), /Process creation identity changed/u);
+  assert.equal(alive(child.pid), true, 'a mismatched identity cannot terminate even the owned disposable process');
+  child.stdin.end(); await closed;
+  assert.equal(alive(child.pid), false);
+  const result = await terminateWindowsProcess(entry);
+  assert.equal(result.code, 0, 'the process disappeared before the native handle checkpoint');
+});
 async function treeFixture(t, { exitAfter } = {}) {
   const output = await mkdtemp(resolve(tmpdir(), 'inscape-process-'));
   t.after(() => rm(output, { recursive: true, force: true }));

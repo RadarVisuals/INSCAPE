@@ -67,8 +67,8 @@ test('owner and Visitor pan all modules equally at native and zoomed sizes witho
       await mountGridMotionFixture(page, { origin, visitor, heavy: true, textModes: true, displayWidth: Math.min(600, width - 40) });
       await prepareCameraTestView(page, visitor);
       await page.locator('[data-workbench-view-id]').nth(7).waitFor();
-      if (!visitor && await page.getByRole('button', { name: 'Close Text tools', exact: true }).isVisible())
-        await page.getByRole('button', { name: 'Close Text tools', exact: true }).click();
+      if (!visitor && await page.getByRole('button', { name: 'Close Inspector', exact: true }).isVisible())
+        await page.getByRole('button', { name: 'Close Inspector', exact: true }).click();
       const collapse = page.locator('.editor-menu-brand[aria-expanded="true"]');
       if (await collapse.isVisible()) await collapse.click();
       await page.waitForTimeout(1000);
@@ -130,8 +130,6 @@ test('owner and Visitor pan all modules equally at native and zoomed sizes witho
       await page.getByRole('button', { name: 'Return to Image', exact: true }).waitFor();
       await page.keyboard.press('Escape');
       await page.locator('.image-lift').waitFor({ state: 'detached' });
-      await page.getByRole('button', { name: 'Next Image side', exact: true }).first().press('Space');
-      await page.waitForFunction(() => document.querySelector('.image-module__canvas')?.dataset.sideId === 'side:motion-1');
       assert.deepEqual(errors, []);
       await page.close();
     }
@@ -181,7 +179,7 @@ test('pan respects editable controls and clears gestures on suspension and Workb
       const after = await frame.boundingBox();
       assert.deepEqual(after, { ...before, x: before.x + 70, y: before.y + 35 }, 'armed Space overrides text and resize input without editing geometry');
       assert.equal(await page.getByRole('textbox', { name: 'Text entry' }).inputValue(), 'Two words');
-      await page.getByRole('button', { name: 'Reset Workbench view', exact: true }).click(); await settle(page);
+      await page.getByRole('button', { name: 'Fit canvas in view', exact: true }).click(); await settle(page);
     }
     const windows = page.locator('[data-workbench-pan]');
     const tools = page.getByRole('complementary', { name: 'Tools — Test', exact: true });

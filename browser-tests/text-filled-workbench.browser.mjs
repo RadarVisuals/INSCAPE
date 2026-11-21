@@ -57,8 +57,8 @@ for(const width of [1440,390]) test(`filled Workbench keeps Text targets, histor
     await page.evaluate(()=>{window.failSave=true;});
     await page.keyboard.type(' Recover the second article.'); await settle(page);
     assert.deepEqual(await saved(page),firstSaved,'failed input does not claim persistence');
-    const tools=page.locator('.text-tools-window');
-    await tools.getByRole('alert').waitFor();
+    const tools=page.locator('.workbench-tool-dock:has([data-text-inspector])');
+    await tools.getByRole('alert').filter({ has: page.getByRole('button', { name: 'Retry local save', exact: true }) }).waitFor();
     await page.evaluate(()=>{window.failSave=false;});
     // Keyboard access remains usable even when the target window is offscreen.
     await tools.getByRole('button',{name:'Retry local save',exact:true}).focus(); await page.keyboard.press('Enter'); await settle(page);

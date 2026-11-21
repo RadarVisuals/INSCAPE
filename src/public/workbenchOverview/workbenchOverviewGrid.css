@@ -4,6 +4,7 @@
 .workbench-overview[data-layout="grid"] .workbench-overview-heading { position: absolute; width: 1px; height: 1px; min-height: 0; padding: 0; overflow: hidden; clip-path: inset(50%); }
 .workbench-overview-grid-host { position: absolute; inset: 12px; }
 .workbench-overview-gallery { height: 100%; overflow: auto; overscroll-behavior: contain; scroll-behavior: auto; overflow-anchor: none; scrollbar-width: none; border-radius: var(--overview-radius); }
+.workbench-overview-browse[inert] .workbench-overview-gallery { overflow: hidden; }
 .workbench-overview-gallery::-webkit-scrollbar { display: none; }
 .workbench-overview-cycle { display: grid; grid-template-columns: repeat(var(--gallery-columns, 4), minmax(0, 1fr)); grid-auto-rows: clamp(240px, var(--gallery-height, 58dvh), 780px); gap: var(--space-3); padding-bottom: var(--space-3); }
 .workbench-overview-card { position: relative; min-width: 0; overflow: hidden; border-radius: var(--overview-radius); background: var(--tactile-well); }
@@ -66,3 +67,58 @@
 @media (max-width: 1600px) { :is(.workbench-overview-gallery, .canvas-gallery-section)[data-card-size="1"] { --gallery-columns: 4; } }
 @media (max-width: 1000px) { :is(.workbench-overview-gallery, .canvas-gallery-section)[data-card-size="1"] { --gallery-columns: 3; } :is(.workbench-overview-gallery, .canvas-gallery-section)[data-card-size="3"] { --gallery-columns: 1; } }
 @media (max-width: 520px) { :is(.workbench-overview-gallery, .canvas-gallery-section)[data-card-size="1"] { --gallery-columns: 2; } }
+
+/* The published tiles share the surfaces and type of the Works index. */
+.workbench-overview[data-visitor-header] .workbench-overview-grid-host {
+  inset: clamp(8px, 1.4vh, 18px) max(2.5%, calc((100% - 1824px) / 2));
+}
+.workbench-overview[data-visitor-header] .workbench-overview-gallery {
+  border-radius: 7px;
+}
+.workbench-overview[data-visitor-header] .workbench-overview-gallery { --tile-size: clamp(170px, 23vw, 320px); }
+.workbench-overview[data-visitor-header] [data-card-size="1"] { --tile-size: clamp(108px, 9vw, 152px); }
+.workbench-overview[data-visitor-header] [data-card-size="3"] { --tile-size: clamp(300px, 38vw, 620px); }
+.workbench-overview[data-visitor-header] .workbench-overview-cycle {
+  --tile-gap: clamp(8px, 1vw, 16px);
+  grid-template-columns: repeat(auto-fit, min(100%, var(--tile-size)));
+  grid-auto-rows: auto; justify-content: center;
+  gap: var(--tile-gap); padding-bottom: var(--tile-gap);
+}
+.workbench-overview-gallery[data-horizontal] > .workbench-overview-cycle:only-of-type { margin-inline: auto; }
+.workbench-overview-gallery[data-horizontal] { display: flex; container-type: size; overflow-y: hidden; }
+.workbench-overview[data-visitor-header] [data-horizontal] .workbench-overview-cycle {
+  flex: none; box-sizing: border-box; height: 100%; grid-auto-flow: column;
+  --side: min(var(--tile-size), 100cqh, 100cqw);
+  grid-template-columns: none; grid-auto-columns: var(--side);
+  grid-template-rows: repeat(auto-fit, var(--side)); align-content: center;
+  padding: 0 var(--tile-gap) 0 0;
+}
+.workbench-overview[data-visitor-header] .workbench-overview-card {
+  aspect-ratio: 1;
+  --thumbnail-background: transparent;
+  --overview-glass-ink: #f4f3ef;
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--card-material) 40%, transparent);
+}
+.workbench-overview[data-visitor-header] .workbench-overview-card-open { border: 0; }
+.workbench-overview[data-visitor-header] .workbench-overview-card-open::before {
+  background: rgb(0 0 0 / 60%);
+}
+.workbench-overview[data-visitor-header] .workbench-overview-card-reveal {
+  font-family: 'Visitor Google Sans', Arial, sans-serif;
+}
+.workbench-overview[data-visitor-header] .workbench-overview-card-title {
+  font-weight: 480;
+}
+
+.workbench-overview[data-visitor-header] [data-card-size="1"] .workbench-overview-card-reveal {
+  padding: 5px; gap: 2px; justify-content: safe center; overflow: auto;
+}
+.workbench-overview[data-visitor-header] [data-card-size="1"] .workbench-overview-card-title { font-size: 13px; flex: none; }
+
+/* A tile being inspected hands off its artwork without a late hover caption. */
+.workbench-overview-card[data-layout-flight-source] .workbench-overview-card-open::before,
+.workbench-overview-card[data-layout-flight-source] .workbench-overview-card-reveal {
+  opacity: 0;
+  transition: none;
+}

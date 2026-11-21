@@ -1,27 +1,64 @@
+import { hasAllowedKeys } from '../../recordValidation.js';
 import { FIRST_WORKBENCH_ID, MAX_WORKBENCHES, assertWorkbenchName, assertWorkbenchIntroduction, assertThumbnailCrop } from '../../systemWorkflow/domain/workbenchCollection.js';
 
 // The root is the entry canvas. Additional canvases contain composition facts
 // only; profile identity, and Keeper have one owner at the root.
-export const CANVAS_CONTENT_KEYS = ['artboard', 'geometry', 'appearance', 'grids', 'metadata', 'workbench', 'displays', 'miniApps', 'texts', 'imageModules', 'shapes', 'workbenchGroups', 'workbenchIndex', 'artworkLayers'];
+export const CANVAS_CONTENT_KEYS = ['artboard', 'geometry', 'appearance', 'grids', 'metadata', 'workbench', 'displays', 'miniApps', 'texts', 'imageModules', 'shapes', 'workbenchGroups', 'workbenchIndex', 'artworkLayers', 'composition'];
 export function canvasContent(document) {
   const content = Object.fromEntries(CANVAS_CONTENT_KEYS.filter(key => Object.hasOwn(document, key)).map(key => [key, structuredClone(document[key])]));
   delete content.appearance.menuSurfaceId;
   return content;
 }
 export function canvasDetails(item) {
-  return { id: item.id, name: item.name, introduction: item.introduction || '', thumbnailCrop: item.thumbnailCrop || null };
+  return { id: item.id, name: item.name, introduction: item.introduction || '', thumbnailCrop: item.thumbnailCrop || null,
+    ...(item.destinations ? { destinations: item.destinations } : {}) };
 }
 export function publishedCanvasEntries(document) {
+  if (document.canvas === null) return [];
   return [{ ...canvasDetails(document.canvas || { id: FIRST_WORKBENCH_ID, name: 'Canvas' }), content: canvasContent(document) }, ...(document.canvases || [])];
 }
+export const publicationDestinations = Object.freeze(['gallery', 'profile']);
+export function validPublicationDestinations(value) {
+  return Array.isArray(value) && value.length > 0 && value.length <= publicationDestinations.length
+    && value.every((target, index) => publicationDestinations.includes(target) && value.indexOf(target) === index);
+}
+function compositionDestinations(id, destinations) {
+  return destinations || (id === 'reception' ? ['profile'] : ['gallery']);
+}
+
+// Read placement from publication metadata without cloning any artwork into Studio.
+export function publishedCompositionDestinations(document, id) {
+  if (id === 'reception') return document.reception ? compositionDestinations(id, document.receptionDestinations) : [];
+  if (document.canvas === null) return [];
+  const first = document.canvas || { id: FIRST_WORKBENCH_ID };
+  const entry = first.id === id ? first : document.canvases?.find(item => item.id === id);
+  return entry ? compositionDestinations(id, entry.destinations) : [];
+}
+
+export function publishedCompositionEntries(document, destination) {
+  const entries = publishedCanvasEntries(document).map(item => ({ ...item, destinations: compositionDestinations(item.id, item.destinations) }));
+  if (document.reception) entries.push({ id: 'reception', name: 'Bento', reception: document.reception,
+    destinations: compositionDestinations('reception', document.receptionDestinations) });
+  return destination ? entries.filter(item => item.destinations.includes(destination)) : entries;
+}
 export function canvasDocument(document, entry) {
-  const shared = Object.fromEntries(Object.entries(document).filter(([key]) => !CANVAS_CONTENT_KEYS.includes(key) && !['canvas', 'canvases', 'reception'].includes(key)));
+  const shared = Object.fromEntries(Object.entries(document).filter(([key]) => !CANVAS_CONTENT_KEYS.includes(key) && !['canvas', 'canvases', 'reception', 'receptionDestinations'].includes(key)));
   return { ...shared, ...entry.content, appearance: { ...entry.content.appearance } };
 }
 export function validatePublishedCanvases(document, validate, fail) {
   if (!Object.hasOwn(document, 'canvas') && !Object.hasOwn(document, 'canvases')) return;
+  if (document.canvas === null) {
+    // A Profile may have no named compositions, including after removing its last work.
+    if (!Array.isArray(document.canvases) || document.canvases.length
+      || document.grids?.length || Object.keys(document.metadata || {}).length
+      || CANVAS_CONTENT_KEYS.slice(5).some(key => Object.hasOwn(document, key)))
+      fail('canvas', 'invalid_canvas', 'A publication with no named compositions cannot contain canvas artwork.');
+    return;
+  }
   const details = value => {
-    if (!value || Object.keys(value).length !== 4 || !/^workbench:[A-Za-z0-9_-]{1,80}$/u.test(value.id)) throw new Error('Invalid canvas identity');
+    if (!hasAllowedKeys(value, ['id', 'name', 'introduction', 'thumbnailCrop'], ['destinations'])
+      || Object.hasOwn(value, 'destinations') && !validPublicationDestinations(value.destinations)
+      || !/^workbench:[A-Za-z0-9_-]{1,80}$/u.test(value.id)) throw new Error('Invalid canvas identity');
     assertWorkbenchName(value.name); assertWorkbenchIntroduction(value.introduction); assertThumbnailCrop(value.thumbnailCrop);
   };
   try { details(document.canvas); } catch (error) { fail('canvas', 'invalid_canvas', error.message); }

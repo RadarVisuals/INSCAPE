@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { setFolderAssets, setFolderImage } from '../../library/domain/libraryWorkspace.js';
+import { setFolderAssets, setFolderImage, moveCategory } from '../../library/domain/libraryWorkspace.js';
 
 const cleanName = (value) => String(value || '').trim().replace(/\s+/gu, ' ').slice(0, 80);
 const createId = (prefix) => `${prefix}:${globalThis.crypto?.randomUUID?.() || Math.random().toString(36).slice(2)}`;
@@ -15,22 +15,25 @@ function useOwnerSystemWorkflowDevelopmentAuthorities({ categories, enabled }) {
     setCategoryOrganization((current) => {
       const sections = current.sections.map((section) => ({ ...section,
         categoryIds: section.categoryIds.filter((id) => validIds.has(id)) }));
-      const organized = new Set(sections.flatMap(({ categoryIds }) => categoryIds));
+      const organized = new Set([...sections.flatMap(({ categoryIds }) => categoryIds), ...reviewCategories.filter(folder => folder.parentId).map(folder => folder.id)]);
       const rootCategoryIds = current.rootCategoryIds.filter((id) => validIds.has(id) && !organized.has(id));
       for (const { id } of reviewCategories) if (!organized.has(id) && !rootCategoryIds.includes(id)) rootCategoryIds.push(id);
       return { rootCategoryIds, sections };
     });
   }, [enabled, reviewCategories]);
   const categoryCommands = useMemo(() => enabled ? {
-    createCategory(name) {
-      const value = cleanName(name); if (!value) return null;
+    createCategory(name, sectionId = null, parentId = null) {
+      const value = cleanName(name); if (!value || parentId && !reviewCategories.some(folder => folder.id === parentId) || sectionId && !categoryOrganization.sections.some(section => section.id === sectionId)) return null;
       const id = createId('review-category');
-      setReviewCategories((current) => [...current, { id, name: value, public: false, assetIds: [] }]);
-      setCategoryOrganization((current) => ({ ...current, rootCategoryIds: [...current.rootCategoryIds, id] }));
+      setReviewCategories((current) => [...current, { id, name: value, parentId, public: false, assetIds: [] }]);
+      setCategoryOrganization((current) => parentId ? current : sectionId ? { ...current,
+        sections: current.sections.map(section => section.id === sectionId
+          ? { ...section, categoryIds: [...section.categoryIds, id] } : section) }
+        : { ...current, rootCategoryIds: [...current.rootCategoryIds, id] });
       return id;
     },
     deleteCategory(id) {
-      setReviewCategories((current) => current.filter((entry) => entry.id !== id));
+      setReviewCategories((current) => current.filter((entry) => entry.id !== id).map(folder => folder.parentId === id ? { ...folder, parentId: null } : folder));
       setCategoryOrganization((current) => ({
         rootCategoryIds: current.rootCategoryIds.filter((categoryId) => categoryId !== id),
         sections: current.sections.map((section) => ({ ...section,
@@ -70,18 +73,11 @@ function useOwnerSystemWorkflowDevelopmentAuthorities({ categories, enabled }) {
       });
       return true;
     },
-    moveCategory(id, sectionId = null, beforeId = null) {
-      setCategoryOrganization((current) => {
-        if (id === beforeId) return current;
-        const sections = current.sections.map((section) => ({ ...section,
-          categoryIds: section.categoryIds.filter((categoryId) => categoryId !== id) }));
-        const rootCategoryIds = current.rootCategoryIds.filter((categoryId) => categoryId !== id);
-        const target = sectionId ? sections.find((section) => section.id === sectionId)?.categoryIds : rootCategoryIds;
-        if (!target) return current;
-        const index = beforeId ? target.indexOf(beforeId) : -1;
-        target.splice(index < 0 ? target.length : index, 0, id);
-        return { rootCategoryIds, sections };
-      });
+    moveCategory(id, sectionId = null, beforeId = null, parentId = null) {
+      const current = { folders: reviewCategories, categoryOrganization };
+      const next = moveCategory(current, id, sectionId, beforeId, parentId);
+      if (next === current) return false;
+      setReviewCategories(next.folders); setCategoryOrganization(next.categoryOrganization);
       return true;
     },
     moveSection(id, beforeId = null) {
@@ -95,7 +91,7 @@ function useOwnerSystemWorkflowDevelopmentAuthorities({ categories, enabled }) {
       });
       return true;
     },
-  } : null, [enabled]);
+  } : null, [enabled, reviewCategories, categoryOrganization]);
   return { categories: enabled ? reviewCategories : categories,
     categoryOrganization: enabled ? categoryOrganization : null, categoryCommands };
 }

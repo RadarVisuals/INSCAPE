@@ -57,7 +57,7 @@ for (const width of [1440, 390]) test(`Library Filter consumes Escape before Lib
     assert.equal(await library.isVisible(), true);
     await filter.focus();
     await page.keyboard.press('Escape'); await library.waitFor({ state: 'hidden' });
-    await page.waitForFunction(() => document.activeElement?.getAttribute('aria-label') === 'Artwork library');
+    await page.waitForFunction(width => width >= 600 ? document.activeElement?.dataset.toolTab === 'Layers' : document.activeElement?.getAttribute('aria-label') === 'Artwork library', width);
     assert.equal(await popup.count(), 0, 'closing Library leaves no orphaned Filter portal');
     assert.equal(await page.evaluate(() => window.filterDraftWrites), 0);
     assert.deepEqual(errors, []);

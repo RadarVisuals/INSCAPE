@@ -295,7 +295,7 @@ test('live group spreading, item focus and pointer pan retain SVG pixel density 
       await page.mouse.move(920, 660, { steps: 8 }); await page.mouse.up(); await page.keyboard.up('Space');
       await settled(); await correctPixels();
       await bench.dispatchEvent('wheel', { ctrlKey: true, deltaY: 120, clientX: 700, clientY: 450, bubbles: true, cancelable: true }); await correctPixels();
-      await page.getByRole('button', { name: 'Reset Workbench view', exact: true }).click(); await settled();
+      await page.getByRole('button', { name: 'Fit canvas in view', exact: true }).click(); await settled();
       // Reset may retain an idle document under the current bounded retention
       // policy. The next journey must render correctly with either a retained
       // document or a fresh one; expiry is covered by artworkRetention tests.

@@ -37,6 +37,7 @@ function Review() {
  return <><button id="discover-trigger" onClick={() => setOpen(true)}>Open Discover</button>
  {open && <Portal initialMode={params.has('landing') ? 'landing' : 'explore'}
    connectedProfile={params.has('connected') ? { address: source, name: 'Artist with a long profile name' } : null}
+   ownerDestinations={{ Studio: () => window.discoverReview.entered++ }}
    discoveryRepository={repository} resolutionStore={resolutionStore}
    onConnect={() => window.discoverReview.connects++} onDisconnect={() => window.discoverReview.disconnects++}
    onEnterMyWorld={() => window.discoverReview.entered++}

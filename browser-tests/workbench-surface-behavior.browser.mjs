@@ -1,3 +1,4 @@
+import { sharedToolPanel } from './fixtures/shared-tools.mjs';
 ﻿import assert from 'node:assert/strict';
 import test from 'node:test';
 import { mkdir } from 'node:fs/promises';
@@ -21,7 +22,7 @@ for (const visitor of [false, true]) for (const density of [1.25, 1.5]) {
       const text = page.locator('.text-window'); await text.waitFor();
       if (!visitor) {
         await page.getByRole('button', { name: 'Read', exact: true }).focus(); await page.keyboard.press('Enter');
-        await page.locator('.text-tools-window').waitFor({ state: 'detached' });
+        await sharedToolPanel(page).waitFor({ state: 'detached' });
       }
       await page.addStyleTag({ content: '.system-workflow,.visitor-grid-world,.system-workflow__workbench{background:#00ff00!important;background-image:none!important}' });
       await page.evaluate(async () => { document.activeElement?.blur(); await document.fonts.ready; });

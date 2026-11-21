@@ -31,6 +31,14 @@ for (const visitor of [false, true]) for (const width of [1440, 390]) {
       const first = page.locator('[data-workbench-view-id="image:motion-0"]');
       const source = first.locator('.image-module__canvas');
       const camera = () => host.evaluate(node => ({ scale: Number(node.dataset.workbenchCameraScale), x: Number(node.dataset.workbenchCameraX), y: Number(node.dataset.workbenchCameraY) }));
+      if (!visitor) {
+        for (const name of ['Close Inspector', 'Close Workbench Layers']) {
+          const close = page.getByRole('button', { name, exact: true });
+          if (await close.count()) await close.click();
+        }
+        const pan = await source.evaluate((node, width) => { const r = node.getBoundingClientRect(); return { deltaX: r.x + r.width / 2 - width * .55, deltaY: r.y + r.height / 2 - 300, bubbles: true, cancelable: true }; }, width);
+        await host.dispatchEvent('wheel', pan); await settled(page);
+      }
       const original = await camera();
       const measurements = [];
       for (const entry of ['F', 'double-click']) for (let repeat = 0; repeat < 2; repeat++) {
@@ -70,7 +78,10 @@ for (const visitor of [false, true]) for (const width of [1440, 390]) {
         for (let i = 1; i < samples.length; i++) assert.ok(samples[i].scale >= samples[i - 1].scale - 1e-7, 'Focus never reverses direction');
         if (entry === 'F' && repeat === 0) await page.screenshot({ path: `${output}/focused-${visitor ? 'visitor' : 'owner'}-${width}.png` });
         await page.keyboard.press('f'); await settled(page);
-        assert.deepEqual(await camera(), original, 'F still returns exactly');
+        const returned = await camera();
+        assert.equal(returned.scale, original.scale, 'F restores the same zoom');
+        // Camera interpolation can round its last binary digit; reject any real drift.
+        for (const axis of ['x', 'y']) assert.ok(Math.abs(returned[axis] - original[axis]) < 1e-6, `F returns without pixel drift on ${axis}`);
         if (entry === 'F' && repeat === 0) await page.screenshot({ path: `${output}/returned-${visitor ? 'visitor' : 'owner'}-${width}.png` });
       }
       assert.equal(await page.evaluate(() => localStorage.getItem(window.__motionKey)), saved);

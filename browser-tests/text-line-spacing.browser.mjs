@@ -26,7 +26,7 @@ for (const width of [1440, 390]) test(`line spacing and long illustrated text re
       localStorage.setItem(systemWorkflowDraftKey(draft.profileAddress), JSON.stringify(draft));
     });
     await mountTextToolsFixture(page, origin);
-    const tools = page.locator('.text-tools-window'), win = page.locator('.text-window');
+    const tools = page.locator('.workbench-tool-dock:has([data-text-inspector])'), win = page.locator('.text-window');
     const body = win.getByRole('textbox', { name: 'Article text', exact: true });
     const setNumber = async (name, value) => { const field = tools.getByRole('spinbutton', { name, exact: true }); await field.fill(String(value)); await field.press('Enter'); await settle(page); };
     const line = node => node.evaluate(n => getComputedStyle(n).lineHeight);
@@ -37,7 +37,7 @@ for (const width of [1440, 390]) test(`line spacing and long illustrated text re
     assert.equal(await line(win.getByLabel('Article title', { exact: true })), titleLineHeight, 'body spacing leaves title leading alone');
     await setNumber('Default line spacing', 2);
 
-    await tools.locator('.text-inspector-advanced summary').click();
+    await openTextToolSection(page.locator('.workbench-tool-dock:has([data-text-inspector])'), 'More text tools');
     await body.focus(); await body.locator('p').first().evaluate(node => {
       const range = document.createRange(); range.selectNodeContents(node);
       const selection = getSelection(); selection.removeAllRanges(); selection.addRange(range);
@@ -54,6 +54,7 @@ for (const width of [1440, 390]) test(`line spacing and long illustrated text re
     assert.equal(await field.getAttribute('placeholder'), 'Mixed');
     await setNumber('Paragraph line spacing', 1.8);
     assert.equal(await body.locator('p').evaluateAll(nodes => nodes.every(n => n.style.lineHeight === '1.8')), true);
+    await openTextToolSection(page.locator('.workbench-tool-dock:has([data-text-inspector])'), 'More text tools');
     await tools.getByRole('button', { name: 'Undo', exact: true }).click();
     assert.equal(await line(body.locator('p').first()), '20px');
     assert.equal(await line(body.locator('p').nth(1)), '32px');
@@ -63,7 +64,7 @@ for (const width of [1440, 390]) test(`line spacing and long illustrated text re
     assert.equal(await line(body.locator('p').first()), '26.4px');
     await setNumber('Default line spacing', 1.9);
     const savedArticle = await page.evaluate(() => window.savedDraft().texts[0].article);
-    await tools.getByRole('button', { name: 'Close Text tools', exact: true }).click();
+    await tools.getByRole('button', { name: 'Close Inspector', exact: true }).click();
     const readable = async () => {
       const scroll = win.locator('.text-authoring-viewport:not([hidden]) .text-module-scroll, .text-module-scroll').filter({ visible: true }).first();
       await scroll.evaluate(n => { n.scrollTop = n.scrollHeight; }); await settle(page);

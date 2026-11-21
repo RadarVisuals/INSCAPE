@@ -46,12 +46,12 @@ export function resolvePresentationSource(snapshot, reference, session = null) {
     const grid = content.grids.find(grid => grid.id === gridId);
     return grid ? { ...result, kind: 'display', content, grid } : unavailable('scene');
   }
-  const image = draft.imageModules?.find(record => record.id === id);
+  const native = draft.composition || draft;
+  const image = native.imageModules?.find(record => record.id === id);
   if (image) {
-    const side = reference.sideId ? image.sides.find(side => side.id === reference.sideId) : image.sides[0];
-    return side ? { ...result, kind: 'image', record: image, side } : unavailable('side');
+    return image.artwork ? { ...result, kind: 'image', record: image, artwork: image.artwork } : unavailable('image');
   }
-  const text = draft.texts?.find(record => record.id === id);
+  const text = native.texts?.find(record => record.id === id);
   if (text) {
     const link = text.sceneLink;
     const display = link && displayModuleIds(draft).includes(link.displayId) ? displayContent(draft, link.displayId) : null;

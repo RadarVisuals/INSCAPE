@@ -27,12 +27,13 @@ export function createEmptyWorkspace(profileAddress) {
     canvas: { launchers: [], objects: [] }, tables: { placements: [] } };
 }
 
-export function createFolder(workspace, name, now = Date.now()) {
+export function createFolder(workspace, name, now = Date.now(), parentId = null) {
+  if (parentId && !workspace.folders.some(folder => folder.id === parentId)) return workspace;
   const trimmed = String(name || '').trim();
   if (!trimmed) return workspace;
   const id = folderId(); const current = organization(workspace);
-  return { ...workspace, folders: [...workspace.folders, { id, name: trimmed, assetIds: [], public: false, createdAt: now, updatedAt: now }],
-    categoryOrganization: { ...current, rootCategoryIds: [...current.rootCategoryIds, id] } };
+  return { ...workspace, folders: [...workspace.folders, { id, name: trimmed, ...(parentId ? { parentId } : {}), assetIds: [], public: false, createdAt: now, updatedAt: now }],
+    categoryOrganization: { ...current, rootCategoryIds: parentId ? current.rootCategoryIds : [...current.rootCategoryIds, id] } };
 }
 
 export function renameFolder(workspace, id, name, now = Date.now()) {
@@ -46,9 +47,10 @@ export function deleteFolder(workspace, id) {
   const current = organization(workspace);
   return {
     ...workspace,
-    folders: workspace.folders.filter((folder) => folder.id !== id),
+    folders: workspace.folders.filter((folder) => folder.id !== id).map(folder => folder.parentId === id
+      ? { ...folder, parentId: null } : folder),
     categoryOrganization: {
-      rootCategoryIds: current.rootCategoryIds.filter((categoryId) => categoryId !== id),
+      rootCategoryIds: [...current.rootCategoryIds.filter((categoryId) => categoryId !== id), ...workspace.folders.filter(folder => folder.parentId === id).map(folder => folder.id)],
       sections: current.sections.map((section) => ({ ...section,
         categoryIds: section.categoryIds.filter((categoryId) => categoryId !== id) })),
     },
@@ -79,19 +81,23 @@ export function deleteCategorySection(workspace, id) {
   } };
 }
 
-export function moveCategory(workspace, id, sectionIdValue = null, beforeId = null) {
+export function moveCategory(workspace, id, sectionIdValue = null, beforeId = null, parentId = null) {
+  const byId = new Map(workspace.folders.map(folder => [folder.id, folder]));
+  if (parentId && !byId.has(parentId)) return workspace;
+  for (let ancestor = parentId; ancestor; ancestor = byId.get(ancestor)?.parentId) if (ancestor === id) return workspace;
   if (!workspace.folders.some((folder) => folder.id === id) || id === beforeId) return workspace;
   const current = organization(workspace);
   if (sectionIdValue && !current.sections.some((section) => section.id === sectionIdValue)) return workspace;
   const rootCategoryIds = current.rootCategoryIds.filter((categoryId) => categoryId !== id);
   const sections = current.sections.map((section) => ({ ...section,
     categoryIds: section.categoryIds.filter((categoryId) => categoryId !== id) }));
-  const target = sectionIdValue ? sections.find((section) => section.id === sectionIdValue).categoryIds : rootCategoryIds;
+  const target = parentId ? [] : sectionIdValue ? sections.find((section) => section.id === sectionIdValue).categoryIds : rootCategoryIds;
   const index = beforeId ? target.indexOf(beforeId) : -1;
   target.splice(index < 0 ? target.length : index, 0, id);
-  const unchanged = sameIds(rootCategoryIds, current.rootCategoryIds)
+  const unchanged = (byId.get(id)?.parentId || null) === parentId && sameIds(rootCategoryIds, current.rootCategoryIds)
     && sections.every((section, sectionIndex) => sameIds(section.categoryIds, current.sections[sectionIndex].categoryIds));
-  return unchanged ? workspace : { ...workspace, categoryOrganization: { rootCategoryIds, sections } };
+  return unchanged ? workspace : { ...workspace, folders: workspace.folders.map(folder => folder.id === id
+    ? { ...folder, ...(parentId ? { parentId } : folder.parentId ? { parentId: null } : {}) } : folder), categoryOrganization: { rootCategoryIds, sections } };
 }
 
 export function moveCategorySection(workspace, id, beforeId = null) {

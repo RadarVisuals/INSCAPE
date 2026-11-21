@@ -20,7 +20,10 @@ async function fixture(page, visitor) {
     const draft = JSON.parse(localStorage.getItem(window.__motionKey)), original = draft.imageModules[0];
     draft.displays = []; draft.grids[0].placements = []; draft.workbench.display.open = false;
     draft.imageModules = [0, 1].map(index => ({ ...original, id: `image:toggle-${index}`, name: `Toggle ${index}`, width: 200, height: 180 }));
-    draft.workbench.imageModules = draft.imageModules.map((image, index) => ({ id: image.id, open: true, position: { left: 32, top: 64 + index * 250 } }));
+    // Owner starts with the canvas fitted at 25%; old origin coordinates put
+    // the first Image above the viewport. Keep both test targets in that view.
+    draft.workbench.imageModules = draft.imageModules.map((image, index) => ({ id: image.id, open: true,
+      position: { left: visitor ? 32 : 900, top: (visitor ? 64 : 780) + index * 250 } }));
     localStorage.setItem(window.__motionKey, JSON.stringify(draft));
     if (visitor) {
       const { buildProfileDocumentV9 } = await import('/src/profileDocument/domain/profileDocumentV9Builder.js');

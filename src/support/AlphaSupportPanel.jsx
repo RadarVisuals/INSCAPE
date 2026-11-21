@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import {
   ALPHA_SUPPORT_CODES,
   alphaRecoveryGuidance,
@@ -14,14 +14,16 @@ export default function AlphaSupportPanel({
   profileAddress,
   routeClass,
   transactionHash,
-  message,
+  error,
+  developmentDetails,
   compact = false,
 }) {
   const [copyState, setCopyState] = useState('idle');
-  const evidence = useMemo(() => createAlphaSupportEvidence({
-    code, phase, providerCategory, profileAddress, routeClass, transactionHash, message,
-  }), [code, message, phase, profileAddress, providerCategory, routeClass, transactionHash]);
-  const report = useMemo(() => formatAlphaSupportEvidence(evidence), [evidence]);
+  const evidence = createAlphaSupportEvidence({
+    code, phase, providerCategory, profileAddress, routeClass, transactionHash, error,
+  });
+  const report = formatAlphaSupportEvidence(evidence)
+    + (import.meta.env.DEV && developmentDetails ? '\n\nLOCAL DEVELOPMENT ERROR\n' + developmentDetails : '');
   const recovery = alphaRecoveryGuidance(evidence.code, evidence.transactionHash);
   const showCompactRecovery = compact && evidence.code !== ALPHA_SUPPORT_CODES.ALPHA_SUPPORT_REQUEST;
 

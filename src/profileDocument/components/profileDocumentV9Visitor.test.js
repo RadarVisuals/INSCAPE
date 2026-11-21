@@ -77,7 +77,7 @@ test('v9 Visitor retains media state, retry/recovery, focus, identity, input own
   assert.match(display, /visitor-grid-world__grid-plane--adjacent/);
   assert.match(display, /Previous Grid/);
   assert.match(display, /Next Grid/);
-  assert.match(visitor, /onOpenDirectory \|\| onReturn \|\| onExit/);
+  assert.match(visitor, /!renderHeader && \(onOpenDirectory \|\| onReturn\)\) \|\| onExit/);
   assert.match(visitor, /onReturn && <button onClick=\{onReturn\} type="button">RETURN<\/button>/);
   assert.match(visitorCss, /@media \(max-width: 640px\)[\s\S]*\.visitor-grid-world__dock button \{[^}]*width: 64px;[^}]*min-width: 64px;[^}]*flex-basis: 64px;/);
   assert.match(visitorCss, /\.visitor-grid-world__dock > nav > button \{ width: 56px; min-width: 56px; flex-basis: 56px; \}/);

@@ -191,6 +191,7 @@ export function buildProfileDocumentV9({
     ...(workbenchGroups.length ? { workbenchGroups } : {}),
     ...(workbenchIndex ? { workbenchIndex } : {}),
     ...(draft.reception ? { reception: projectReception(draft.reception) } : {}),
+    ...(draft.composition ? { composition: projectReception(draft.composition) } : {}),
     metadata: worldCover ? { worldCover } : {},
     ...(displays ? { displays } : {}),
     ...(miniApps?.length ? { miniApps } : {}),
@@ -209,7 +210,7 @@ export function countProfileDocumentV9Assets(document) {
     + (value.workbench?.display.shortcut.icon ? 1 : 0)
     + (value.displays || []).reduce((sum, module) => sum + module.grids.reduce((count, grid) => count + grid.placements.length, 0), 0)
     + (value.workbench?.displays || []).filter(module => module.shortcut.icon).length
-    + imageReferenceCount(value.imageModules);
+    + imageReferenceCount(value.imageModules) + receptionReferenceCount(value.composition);
   return receptionReferenceCount(value.reception) + countCanvas(value) + (value.canvases || []).reduce((sum, item) => sum + countCanvas(item.content), 0)
     + (value.identityPresentation.avatar.asset ? 1 : 0) + keeperReferenceCount(value.keeperDocks);
 }

@@ -31,6 +31,16 @@ export function workbenchResizeControl(edge, screen, viewport, density = 1) {
     '--resize-mark-x': mark(screen.left, x, left), '--resize-mark-y': mark(screen.top, y, top) };
 }
 
+// Viewport controls follow the same camera projection as their clipped artwork.
+export function paintWorkbenchResizeControls(root, screen, viewport) {
+  for (const handle of root.querySelectorAll(':scope > [data-resize-edge]')) {
+    const style = workbenchResizeControl(handle.dataset.resizeEdge, screen, viewport, globalThis.devicePixelRatio || 1);
+    handle.style.left = `${style.left}px`; handle.style.top = `${style.top}px`;
+    handle.style.setProperty('--resize-mark-x', style['--resize-mark-x']);
+    handle.style.setProperty('--resize-mark-y', style['--resize-mark-y']);
+  }
+}
+
 export function resizeWorkbenchWindow(frame, edge, delta, minimum, bounds, snap) {
   const next = { ...frame };
   for (const [axis, key, start, end, before, after] of [

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { resolvePublishedAssetUrl } from '../../profileDocument/domain/publishedAssetUrl.js';
 import { assetForPlacement } from '../../systemWorkflow/domain/placementMedia.js';
 import LibraryArtworkImage from './LibraryArtworkImage.jsx';
-import { ownerSystemWorkflowDecodedAsset } from './ownerSystemWorkflowAssetDimensions.js';
+import { libraryFileFormat, libraryFilename, libraryPreviewCandidates, rememberArtworkPreview } from '../../library/data/libraryImagePreview.js';
 
 export function libraryImageChoices(asset) {
   const seen = new Set();
@@ -10,7 +10,7 @@ export function libraryImageChoices(asset) {
     const sources = [...new Set([group.originalImageUrl, group.imageUrl, ...(group.variants || []).map(({ url }) => url)]
       .map(resolvePublishedAssetUrl).filter(Boolean))];
     if (!sources.length || seen.has(sources[0])) return [];
-    seen.add(sources[0]); return [{ sources, index: group.index, fileType: group.fileType }];
+    seen.add(sources[0]); return [{ ...group, sources, index: group.index, fileType: group.fileType }];
   });
 }
 
@@ -20,16 +20,28 @@ export function libraryCategoryImage(asset) {
     || libraryImageChoices(asset)[0]?.sources[0] || null;
 }
 
-export function ImageChoice({ asset, choice, number, onActivate, onPointerDown, workspace, onContext }) {
+export function ImageChoice(props) {
+  const { choice, workspace } = props;
+  const candidates = libraryPreviewCandidates({ ...choice, originalImageUrl: choice.sources[0] }, workspace?.assetSize, globalThis.devicePixelRatio || 1);
+  return <ImageChoicePreview key={candidates.join("|")} {...props} candidates={candidates} />;
+}
+
+function ImageChoicePreview({ asset, choice, number, onActivate, onPointerDown, workspace, onContext, candidates }) {
   const [candidate, setCandidate] = useState(0);
   const [dimensions, setDimensions] = useState(null);
-  const src = choice.sources[candidate];
+  const originalSource = choice.sources[0];
+  const src = candidates[candidate];
+  const original = candidate > 0 && candidates.slice(0, candidate).includes(originalSource) && choice.sources.includes(src) ? src : originalSource;
+  const format = libraryFileFormat(original, choice.fileType);
+  const filename = libraryFilename(original);
   const id = asset.stableAssetId || asset.id;
-  const selected = workspace?.selectedAssetIds.includes(id) && workspace.selectedImage?.assetId === id && workspace.selectedImage.media.url === src;
-  const selectedAsset = dimensions && ownerSystemWorkflowDecodedAsset(
-    assetForPlacement(asset, { selectedMedia: { url: src, ...dimensions } }), { source: src, ...dimensions });
+  const selected = workspace?.selectedAssetIds.includes(id) && workspace.selectedImage?.assetId === id && workspace.selectedImage.media.url === original;
+  const selectedAsset = dimensions && { ...assetForPlacement(asset, { selectedMedia: {
+    url: original, width: choice.width || (src === original ? dimensions.width : null),
+    height: choice.height || (src === original ? dimensions.height : null) } }),
+    previewSrc: src, thumbnailUrl: src, previewCandidates: candidates };
   return <button className="lattice-browser-asset" type="button" aria-label={`Image ${number} of ${asset.title || asset.name}`}
-    data-selected={selected || undefined} aria-pressed={workspace ? selected : undefined}
+    title={filename + " · " + format} data-selected={selected || undefined} aria-pressed={workspace ? selected : undefined}
     onClick={(event) => selectedAsset && workspace?.selectAsset(id, event, selectedAsset.selectedMedia)}
     onContextMenu={(event) => { if (onContext && selectedAsset) { event.preventDefault(); event.stopPropagation(); onContext(event, selectedAsset); } }}
     aria-disabled={!selectedAsset} onDoubleClick={(event) => selectedAsset && onActivate(event, selectedAsset)}
@@ -41,10 +53,13 @@ export function ImageChoice({ asset, choice, number, onActivate, onPointerDown, 
     onPointerDown={(event) => selectedAsset && onPointerDown?.(event, selectedAsset, { isAssetRenderable: () => true })}>
     <span className="lattice-browser-asset__media">
       {src ? <LibraryArtworkImage key={src} fileType={choice.fileType} alt="" draggable="false" loading="lazy" src={src} onLoad={(event) => {
-        setDimensions({ width: event.currentTarget.naturalWidth, height: event.currentTarget.naturalHeight });
+        const { naturalWidth: width, naturalHeight: height } = event.currentTarget;
+        setDimensions({ width, height });
+        rememberArtworkPreview(original, src, width, height);
       }} onError={() => { setDimensions(null); setCandidate((value) => value + 1); }} /> : <span>Image unavailable</span>}
+      <small className="library-file-format">{format}</small>
     </span>
-    {!workspace?.hideLabels && <span className="lattice-browser-asset__record"><strong>Image {number}</strong>
+    {!workspace?.hideLabels && <span className="lattice-browser-asset__record"><strong title={filename}>{filename}</strong>
       {workspace && <small>{librarySourceLabel(asset)}</small>}
       {dimensions && <small>{dimensions.width} × {dimensions.height}</small>}</span>}
   </button>;

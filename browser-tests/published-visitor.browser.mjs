@@ -5,7 +5,7 @@ import { access } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { createServer } from 'node:net';
 import { fileURLToPath } from 'node:url';
-import { createServer as createViteServer } from 'vite';
+import { createBrowserTestServer } from '../scripts/runBrowserTests.mjs';
 import {
   BROWSER_LIFECYCLE_TIMEOUTS,
   createBrowserTestCleanup,
@@ -32,7 +32,6 @@ const browserCandidates = [
 ].filter(Boolean);
 
 let vite;
-let browserServer;
 let browser;
 let context;
 let page;
@@ -206,12 +205,12 @@ before(async () => runBrowserSetupWithCleanup(async () => {
   lifecycleDiagnostic('setup:vite-create:start');
   // The fixture never edits source. Avoid scanning the user's workspace and
   // sharing optimizer state with an already running development server.
-  const viteCreation = createViteServer({ root, cacheDir: resolve(runtimeDir, 'vite-cache'), logLevel: 'error', define: { 'import.meta.env.VITE_PROFILE_DOCUMENT_IPFS_GATEWAY_URL': JSON.stringify('https://published-images.invalid/ipfs/') }, plugins: [{ name: 'published-csp-browser-fixture', configureServer(server) {
+  const viteCreation = createBrowserTestServer(root, vitePort, { cacheDir: resolve(runtimeDir, 'vite-cache'), logLevel: 'error', define: { 'import.meta.env.VITE_PROFILE_DOCUMENT_IPFS_GATEWAY_URL': JSON.stringify('https://published-images.invalid/ipfs/') }, plugins: [{ name: 'published-csp-browser-fixture', configureServer(server) {
     server.middlewares.use((request, response, next) => {
       if (request.url?.startsWith('/browser-tests/fixture.html') && request.url.includes('csp=1')) response.setHeader('Content-Security-Policy', "default-src 'self'; base-uri 'none'; object-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: https://published-images.invalid; connect-src 'self' ws:; frame-ancestors 'self'");
       next();
     });
-  } }], server: { host: '127.0.0.1', port: vitePort, strictPort: true, watch: null } });
+  } }] });
   let viteCreationExpired = false;
   viteCreation.then((lateVite) => {
     if (!viteCreationExpired) return;
@@ -254,7 +253,7 @@ before(async () => runBrowserSetupWithCleanup(async () => {
       cleanupBrowserTest = createBrowserTestCleanup({ rootPid, processTree, runtimePath: runtimeDir, workspaceRoot: root, diagnostic: lifecycleDiagnostic });
     }
   });
-  ({ browserServer, browser, context, page } = resources);
+  ({ browser, context, page } = resources);
   pageCdp = await context.newCDPSession(page);
   resources.pageCdp = pageCdp;
   interceptionInstalled = true;
@@ -269,7 +268,7 @@ before(async () => runBrowserSetupWithCleanup(async () => {
   }, {
     timeoutMs: BROWSER_LIFECYCLE_TIMEOUTS.setupOverallMs,
     diagnostic: lifecycleDiagnostic,
-    cancelSetup: () => { setupAbortController?.abort(); void resources.browserServer?.kill?.(); }
+    cancelSetup: () => { setupAbortController?.abort(); void resources.browserSession?.close().catch(() => {}); }
   }));
 
 after(async () => {
@@ -302,9 +301,10 @@ test('Directory visits a published workspace, Close remains Close, and Return re
   await click('.visitor-grid-world__actions button');
   await waitFor(`!!document.querySelector('.public-entry-portal[data-embedded][data-mode="explore"]')`, 'directory opens');
   const directoryStyle = await evaluate(`(()=>{const root=document.querySelector('.public-entry-portal');const rect=root.getBoundingClientRect();return{menuSurface:root.dataset.menuSurface,background:getComputedStyle(root).backgroundColor,color:getComputedStyle(root).color,pointerEvents:getComputedStyle(root).pointerEvents,hitRoot:document.elementFromPoint(innerWidth/2,innerHeight/2)?.closest('.public-entry-portal')===root,width:rect.width,height:rect.height}})()`);
-  assert.equal(directoryStyle.menuSurface, 'mist');
-  assert.equal(directoryStyle.background, 'rgb(235, 236, 231)', 'embedded Discover uses the approved flat Mist face');
-  assert.equal(directoryStyle.color, 'rgb(25, 27, 27)', 'embedded Discover uses the approved flat Mist ink');
+  assert.equal(directoryStyle.menuSurface, undefined, 'Directory does not restore the retired per-window palette');
+  assert.equal(await evaluate(`document.documentElement.dataset.interfaceTheme`), 'dark');
+  assert.equal(directoryStyle.background, 'rgb(23, 23, 23)', 'embedded Discover inherits the device environment');
+  assert.equal(directoryStyle.color, 'rgb(235, 236, 231)', 'embedded Discover inherits the device ink');
   assert.equal(directoryStyle.pointerEvents, 'auto');
   assert.equal(directoryStyle.hitRoot, true);
   assert.equal(directoryStyle.width, 1280);
@@ -488,5 +488,9 @@ test('390px visitor exposes no misleading resize control', async () => {
   assert.equal(tree.nodes.some((node) => /^Resize .* window$/.test(node.name?.value || '')), false);
 });
 
-test('visitor load performs no owner storage reads or writes', async () => { assert.deepEqual(await evaluate(`window.__visitorStorageOps`), []); });
+test('visitor load reads only the device theme and performs no owner storage reads or writes', async () => {
+  assert.deepEqual(await evaluate(`window.__visitorStorageOps`), [
+    { storage: 'localStorage', method: 'getItem', args: ['inscape:interface-theme'] }
+  ]);
+});
 });

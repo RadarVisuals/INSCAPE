@@ -1,4 +1,4 @@
-import { editorCommand, editorOverview } from './fixtures/editor-menu.mjs';
+import { editorCommand, editorOverview, selectEditorDocument, editSelectedWork } from './fixtures/editor-menu.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdir } from 'node:fs/promises';
@@ -67,6 +67,10 @@ test('desktop index explores real artwork, retains each camera and never edits i
     const points = page.getByRole('navigation', { name: 'Camera points' });
     const detail = points.getByRole('button', { name: 'A closer look', exact: true });
     const whole = points.getByRole('button', { name: 'Complete canvas' });
+    assert.ok(await detail.evaluate(button => {
+      const dot = getComputedStyle(button, '::before');
+      return parseFloat(dot.width) > 0 && dot.width === dot.height;
+    }), 'The camera point renders as a circle');
     await detail.click();
     assert.equal(await detail.getAttribute('aria-pressed'), 'true');
     assert.ok((await camera(page)).scale > first.scale, 'The dot opens the authored detail');
@@ -112,7 +116,7 @@ test('desktop owner index keeps browsing separate from activation and save failu
     await page.locator('.composition-explorer-viewport').waitFor();
     const originalId = await page.evaluate(() => window.savedDraft().activeId);
     await page.getByRole('button', { name: 'Edit details', exact: true }).click();
-    await page.getByLabel('Canvas name', { exact: true }).fill('Lunar Desert');
+    await page.getByLabel('Composition name', { exact: true }).fill('Lunar Desert');
     await page.getByLabel(/Introduction/).fill('A saved description.');
     await failWrites(page, true);
     await page.getByRole('button', { name: 'Save details', exact: true }).click();
@@ -121,44 +125,46 @@ test('desktop owner index keeps browsing separate from activation and save failu
     await failWrites(page, false);
     await page.getByRole('button', { name: 'Save details', exact: true }).click();
     await page.getByRole('heading', { name: 'Lunar Desert', exact: true }).waitFor();
-    await page.getByRole('menuitem', { name: 'My Inscape', exact: true }).click();
-    await page.getByRole('menuitem', { name: 'New canvas', exact: true }).click();
-    await page.getByLabel('Canvas name', { exact: true }).fill('Studies');
-    await page.getByRole('button', { name: 'Create canvas', exact: true }).click();
+    await page.getByRole('button', { name: 'Composition actions' }).click();
+    await page.getByRole('button', { name: 'New composition', exact: true }).click();
+    await page.getByLabel('Composition name', { exact: true }).fill('Studies');
+    await page.getByRole('button', { name: 'Create composition', exact: true }).click();
+    await editorOverview(page);
     await page.getByRole('heading', { name: 'Studies', exact: true }).waitFor();
     const saved = await page.evaluate(() => JSON.stringify(window.savedDraft()));
     await page.getByRole('button', { name: 'Open Lunar Desert', exact: true }).click();
     await page.getByRole('button', { name: 'Zoom in', exact: true }).click();
     assert.equal(await page.evaluate(() => JSON.stringify(window.savedDraft())), saved);
-    assert.equal(await page.locator('.workbench-overview-introduction').innerText(), 'A saved description.');
+    assert.equal(await page.locator('.workbench-overview-introduction').innerText(), 'Description\nA saved description.');
     await failWrites(page, true);
-    await page.getByRole('button', { name: 'Edit canvas', exact: true }).click();
+    await editSelectedWork(page);
     assert.match(await page.getByRole('alert').innerText(), /Could not save/);
     assert.equal(await page.evaluate(() => JSON.stringify(window.savedDraft())), saved);
     await failWrites(page, false);
-    await page.getByRole('button', { name: 'Edit canvas', exact: true }).click();
+    await editSelectedWork(page);
     await page.locator('.text-window').waitFor();
     assert.equal(await page.evaluate(() => window.savedDraft().activeId), originalId);
     await page.reload({ waitUntil: 'domcontentloaded' });
     await editorOverview(page);
     await page.getByRole('heading', { name: 'Lunar Desert', exact: true }).waitFor();
-    assert.equal(await page.locator('.workbench-overview-introduction').innerText(), 'A saved description.');
+    assert.equal(await page.locator('.workbench-overview-introduction').innerText(), 'Description\nA saved description.');
     await page.getByRole('button', { name: 'Edit details', exact: true }).click();
     await page.getByLabel(/Introduction/).fill('');
     await page.getByRole('button', { name: 'Save details', exact: true }).click();
     await page.waitForFunction(() => document.activeElement?.textContent === 'Edit details');
     assert.equal(await page.locator('.workbench-overview-introduction').count(), 0);
     await page.getByRole('button', { name: 'Edit details', exact: true }).click();
-    await page.getByLabel('Canvas name', { exact: true }).fill('Discard this name');
-    await page.getByLabel('Canvas name', { exact: true }).press('Escape');
+    await page.getByLabel('Composition name', { exact: true }).fill('Discard this name');
+    await page.getByLabel('Composition name', { exact: true }).press('Escape');
     await page.getByRole('heading', { name: 'Lunar Desert', exact: true }).waitFor();
-    await page.getByRole('button', { name: 'Reception', exact: true }).click();
+    await page.getByRole('button', { name: 'Inscape menu', exact: true }).click();
+    await page.getByRole('menuitemcheckbox', { name: 'Profile', exact: true }).click();
     await page.getByText('Published view requested', { exact: true }).waitFor();
     assert.deepEqual(errors, []);
   } finally { await browser.close(); }
 });
 
-test('My Inscape opens the Reception editor in the same session without changing its canvases', { timeout: 90000 }, async () => {
+test('the Studio manager opens the Profile Bento without changing other compositions', { timeout: 90000 }, async () => {
   const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
   try {
     const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, reducedMotion: 'reduce' });
@@ -166,12 +172,12 @@ test('My Inscape opens the Reception editor in the same session without changing
     await prepare(page, '/browser-tests/workbench-storage-fixture.html?seed=1&shell=1');
     await editorOverview(page);
     await page.locator('.composition-index').waitFor();
-    assert.equal(await page.locator('.composition-index-brand').innerText(), 'My Inscape');
+    await page.getByRole('button', { name: 'Edit', exact: true }).waitFor();
     const before = await page.evaluate(() => window.savedDraft());
     await mkdir(output, { recursive: true });
-    await page.screenshot({ path: `${output}/my-inscape-reception-entry.png`, fullPage: true });
-    await page.getByRole('menuitem', { name: 'My Inscape', exact: true }).click();
-    await page.getByRole('menuitem', { name: 'Edit Reception', exact: true }).click();
+    await page.screenshot({ path: `${output}/works-reception-entry.png`, fullPage: true });
+    await page.getByRole('button', { name: 'Edit', exact: true }).click();
+    await selectEditorDocument(page, 'reception');
     await page.locator('[data-reception-editor]').waitFor();
     await editorCommand(page, 'Edit', 'Settings');
     await page.getByRole('dialog', { name: 'Settings', exact: true }).waitFor();
@@ -182,15 +188,15 @@ test('My Inscape opens the Reception editor in the same session without changing
     await editorOverview(page);
     await page.locator('.composition-index').waitFor();
     await page.getByRole('button', { name: 'Grid', exact: true }).click();
-    await page.getByRole('heading', { name: 'My Inscape', exact: true }).waitFor();
+    await page.getByRole('region', { name: 'Workbench gallery' }).waitFor();
     await page.setViewportSize({ width: 390, height: 844 });
-    await page.getByRole('menuitem', { name: 'My Inscape', exact: true }).click();
-    await page.screenshot({ path: `${output}/my-inscape-reception-entry-390.png`, fullPage: true });
-    await page.getByRole('menuitem', { name: 'Edit Reception', exact: true }).click();
+    await page.getByRole('button', { name: 'Edit', exact: true }).click();
+    await page.screenshot({ path: `${output}/works-reception-entry-390.png`, fullPage: true });
+    await selectEditorDocument(page, 'reception');
     await page.locator('[data-reception-editor]').waitFor();
     assert.equal(await page.getByRole('alert').count(), 0, 'returning reacquires the Reception scope without losing the editor lease');
     await editorOverview(page);
-    await page.getByRole('heading', { name: 'My Inscape', exact: true }).waitFor();
+    await page.getByRole('region', { name: 'Workbench gallery' }).waitFor();
     assert.deepEqual(await page.evaluate(() => window.savedDraft().workbenches), before.workbenches);
     assert.deepEqual(errors, []);
   } finally { await browser.close(); }

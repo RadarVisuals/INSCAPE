@@ -361,56 +361,54 @@
       "width": 1100,
       "height": 584,
       "visibility": "PUBLIC",
-      "sides": [
-        {
-          "id": "side:hall",
-          "asset": {
-            "stableAssetId": "42:0x0000000000000000000000000000000000000000:0x0000000000000000000000000000000000000000000000000000000001de00bb",
-            "network": "lukso-mainnet",
-            "chainId": 42,
-            "tokenStandard": "UNKNOWN",
-            "contractAddress": "0x0000000000000000000000000000000000000000",
-            "tokenId": "0x0000000000000000000000000000000000000000000000000000000001de00bb",
-            "name": "The quiet shift",
-            "description": "Design sample only; not a token or ownership claim. Photo by Mike Norris. https://www.pexels.com/photo/moody-interior-of-an-abandoned-industrial-building-31326395/",
-            "collectionName": "Pexels photography — design sample",
-            "creators": [],
-            "attributes": [
-              {
-                "key": "Photographer",
-                "value": "Mike Norris",
-                "type": null
-              },
-              {
-                "key": "Source",
-                "value": "https://www.pexels.com/photo/moody-interior-of-an-abandoned-industrial-building-31326395/",
-                "type": null
-              },
-              {
-                "key": "License",
-                "value": "https://www.pexels.com/license/",
-                "type": null
-              }
-            ],
-            "media": {
-              "url": "https://images.pexels.com/photos/31326395/pexels-photo-31326395.jpeg?auto=compress&cs=tinysrgb&w=1920",
-              "type": "image",
-              "width": 5808,
-              "height": 3872
+      "artwork": {
+        "id": "artwork:hall",
+        "asset": {
+          "stableAssetId": "42:0x0000000000000000000000000000000000000000:0x0000000000000000000000000000000000000000000000000000000001de00bb",
+          "network": "lukso-mainnet",
+          "chainId": 42,
+          "tokenStandard": "UNKNOWN",
+          "contractAddress": "0x0000000000000000000000000000000000000000",
+          "tokenId": "0x0000000000000000000000000000000000000000000000000000000001de00bb",
+          "name": "The quiet shift",
+          "description": "Design sample only; not a token or ownership claim. Photo by Mike Norris. https://www.pexels.com/photo/moody-interior-of-an-abandoned-industrial-building-31326395/",
+          "collectionName": "Pexels photography — design sample",
+          "creators": [],
+          "attributes": [
+            {
+              "key": "Photographer",
+              "value": "Mike Norris",
+              "type": null
+            },
+            {
+              "key": "Source",
+              "value": "https://www.pexels.com/photo/moody-interior-of-an-abandoned-industrial-building-31326395/",
+              "type": null
+            },
+            {
+              "key": "License",
+              "value": "https://www.pexels.com/license/",
+              "type": null
             }
-          },
-          "crop": {
-            "x": 0.5,
-            "y": 0.5,
-            "zoom": 1
-          },
-          "transform": {
-            "quarterTurns": 0,
-            "mirrorX": false,
-            "mirrorY": false
+          ],
+          "media": {
+            "url": "https://images.pexels.com/photos/31326395/pexels-photo-31326395.jpeg?auto=compress&cs=tinysrgb&w=1920",
+            "type": "image",
+            "width": 5808,
+            "height": 3872
           }
+        },
+        "crop": {
+          "x": 0.5,
+          "y": 0.5,
+          "zoom": 1
+        },
+        "transform": {
+          "quarterTurns": 0,
+          "mirrorX": false,
+          "mirrorY": false
         }
-      ]
+      }
     },
     {
       "id": "image:machinery",
@@ -418,56 +416,54 @@
       "width": 332,
       "height": 584,
       "visibility": "PUBLIC",
-      "sides": [
-        {
-          "id": "side:machinery",
-          "asset": {
-            "stableAssetId": "42:0x0000000000000000000000000000000000000000:0x0000000000000000000000000000000000000000000000000000000001ddcafd",
-            "network": "lukso-mainnet",
-            "chainId": 42,
-            "tokenStandard": "UNKNOWN",
-            "contractAddress": "0x0000000000000000000000000000000000000000",
-            "tokenId": "0x0000000000000000000000000000000000000000000000000000000001ddcafd",
-            "name": "Machines at rest",
-            "description": "Design sample only; not a token or ownership claim. Photo by Mike Norris. https://www.pexels.com/photo/eerie-abandoned-factory-interior-with-broken-windows-31312637/",
-            "collectionName": "Pexels photography — design sample",
-            "creators": [],
-            "attributes": [
-              {
-                "key": "Photographer",
-                "value": "Mike Norris",
-                "type": null
-              },
-              {
-                "key": "Source",
-                "value": "https://www.pexels.com/photo/eerie-abandoned-factory-interior-with-broken-windows-31312637/",
-                "type": null
-              },
-              {
-                "key": "License",
-                "value": "https://www.pexels.com/license/",
-                "type": null
-              }
-            ],
-            "media": {
-              "url": "https://images.pexels.com/photos/31312637/pexels-photo-31312637.jpeg?auto=compress&cs=tinysrgb&w=1920",
-              "type": "image",
-              "width": 4000,
-              "height": 6000
+      "artwork": {
+        "id": "artwork:machinery",
+        "asset": {
+          "stableAssetId": "42:0x0000000000000000000000000000000000000000:0x0000000000000000000000000000000000000000000000000000000001ddcafd",
+          "network": "lukso-mainnet",
+          "chainId": 42,
+          "tokenStandard": "UNKNOWN",
+          "contractAddress": "0x0000000000000000000000000000000000000000",
+          "tokenId": "0x0000000000000000000000000000000000000000000000000000000001ddcafd",
+          "name": "Machines at rest",
+          "description": "Design sample only; not a token or ownership claim. Photo by Mike Norris. https://www.pexels.com/photo/eerie-abandoned-factory-interior-with-broken-windows-31312637/",
+          "collectionName": "Pexels photography — design sample",
+          "creators": [],
+          "attributes": [
+            {
+              "key": "Photographer",
+              "value": "Mike Norris",
+              "type": null
+            },
+            {
+              "key": "Source",
+              "value": "https://www.pexels.com/photo/eerie-abandoned-factory-interior-with-broken-windows-31312637/",
+              "type": null
+            },
+            {
+              "key": "License",
+              "value": "https://www.pexels.com/license/",
+              "type": null
             }
-          },
-          "crop": {
-            "x": 0.5,
-            "y": 0.5,
-            "zoom": 1
-          },
-          "transform": {
-            "quarterTurns": 0,
-            "mirrorX": false,
-            "mirrorY": false
+          ],
+          "media": {
+            "url": "https://images.pexels.com/photos/31312637/pexels-photo-31312637.jpeg?auto=compress&cs=tinysrgb&w=1920",
+            "type": "image",
+            "width": 4000,
+            "height": 6000
           }
+        },
+        "crop": {
+          "x": 0.5,
+          "y": 0.5,
+          "zoom": 1
+        },
+        "transform": {
+          "quarterTurns": 0,
+          "mirrorX": false,
+          "mirrorY": false
         }
-      ]
+      }
     },
     {
       "id": "image:light",
@@ -475,56 +471,54 @@
       "width": 536,
       "height": 292,
       "visibility": "PUBLIC",
-      "sides": [
-        {
-          "id": "side:light",
-          "asset": {
-            "stableAssetId": "42:0x0000000000000000000000000000000000000000:0x0000000000000000000000000000000000000000000000000000000000bcec15",
-            "network": "lukso-mainnet",
-            "chainId": 42,
-            "tokenStandard": "UNKNOWN",
-            "contractAddress": "0x0000000000000000000000000000000000000000",
-            "tokenId": "0x0000000000000000000000000000000000000000000000000000000000bcec15",
-            "name": "Remaining light",
-            "description": "Design sample only; not a token or ownership claim. Photo by Andy Lee. https://www.pexels.com/photo/photo-of-an-interior-of-an-abandoned-factory-12381205/",
-            "collectionName": "Pexels photography — design sample",
-            "creators": [],
-            "attributes": [
-              {
-                "key": "Photographer",
-                "value": "Andy Lee",
-                "type": null
-              },
-              {
-                "key": "Source",
-                "value": "https://www.pexels.com/photo/photo-of-an-interior-of-an-abandoned-factory-12381205/",
-                "type": null
-              },
-              {
-                "key": "License",
-                "value": "https://www.pexels.com/license/",
-                "type": null
-              }
-            ],
-            "media": {
-              "url": "https://images.pexels.com/photos/12381205/pexels-photo-12381205.jpeg?auto=compress&cs=tinysrgb&w=1920",
-              "type": "image",
-              "width": 3840,
-              "height": 5760
+      "artwork": {
+        "id": "artwork:light",
+        "asset": {
+          "stableAssetId": "42:0x0000000000000000000000000000000000000000:0x0000000000000000000000000000000000000000000000000000000000bcec15",
+          "network": "lukso-mainnet",
+          "chainId": 42,
+          "tokenStandard": "UNKNOWN",
+          "contractAddress": "0x0000000000000000000000000000000000000000",
+          "tokenId": "0x0000000000000000000000000000000000000000000000000000000000bcec15",
+          "name": "Remaining light",
+          "description": "Design sample only; not a token or ownership claim. Photo by Andy Lee. https://www.pexels.com/photo/photo-of-an-interior-of-an-abandoned-factory-12381205/",
+          "collectionName": "Pexels photography — design sample",
+          "creators": [],
+          "attributes": [
+            {
+              "key": "Photographer",
+              "value": "Andy Lee",
+              "type": null
+            },
+            {
+              "key": "Source",
+              "value": "https://www.pexels.com/photo/photo-of-an-interior-of-an-abandoned-factory-12381205/",
+              "type": null
+            },
+            {
+              "key": "License",
+              "value": "https://www.pexels.com/license/",
+              "type": null
             }
-          },
-          "crop": {
-            "x": 0.5,
-            "y": 0.5,
-            "zoom": 1
-          },
-          "transform": {
-            "quarterTurns": 0,
-            "mirrorX": false,
-            "mirrorY": false
+          ],
+          "media": {
+            "url": "https://images.pexels.com/photos/12381205/pexels-photo-12381205.jpeg?auto=compress&cs=tinysrgb&w=1920",
+            "type": "image",
+            "width": 3840,
+            "height": 5760
           }
+        },
+        "crop": {
+          "x": 0.5,
+          "y": 0.5,
+          "zoom": 1
+        },
+        "transform": {
+          "quarterTurns": 0,
+          "mirrorX": false,
+          "mirrorY": false
         }
-      ]
+      }
     },
     {
       "id": "image:exterior",
@@ -532,56 +526,54 @@
       "width": 740,
       "height": 292,
       "visibility": "PUBLIC",
-      "sides": [
-        {
-          "id": "side:exterior",
-          "asset": {
-            "stableAssetId": "42:0x0000000000000000000000000000000000000000:0x0000000000000000000000000000000000000000000000000000000000540090",
-            "network": "lukso-mainnet",
-            "chainId": 42,
-            "tokenStandard": "UNKNOWN",
-            "contractAddress": "0x0000000000000000000000000000000000000000",
-            "tokenId": "0x0000000000000000000000000000000000000000000000000000000000540090",
-            "name": "The outside remains",
-            "description": "Design sample only; not a token or ownership claim. Photo by Mike van Schoonderwalt. https://www.pexels.com/photo/abandoned-factory-building-5505168/",
-            "collectionName": "Pexels photography — design sample",
-            "creators": [],
-            "attributes": [
-              {
-                "key": "Photographer",
-                "value": "Mike van Schoonderwalt",
-                "type": null
-              },
-              {
-                "key": "Source",
-                "value": "https://www.pexels.com/photo/abandoned-factory-building-5505168/",
-                "type": null
-              },
-              {
-                "key": "License",
-                "value": "https://www.pexels.com/license/",
-                "type": null
-              }
-            ],
-            "media": {
-              "url": "https://images.pexels.com/photos/5505168/pexels-photo-5505168.jpeg?auto=compress&cs=tinysrgb&w=1920",
-              "type": "image",
-              "width": 4981,
-              "height": 3796
+      "artwork": {
+        "id": "artwork:exterior",
+        "asset": {
+          "stableAssetId": "42:0x0000000000000000000000000000000000000000:0x0000000000000000000000000000000000000000000000000000000000540090",
+          "network": "lukso-mainnet",
+          "chainId": 42,
+          "tokenStandard": "UNKNOWN",
+          "contractAddress": "0x0000000000000000000000000000000000000000",
+          "tokenId": "0x0000000000000000000000000000000000000000000000000000000000540090",
+          "name": "The outside remains",
+          "description": "Design sample only; not a token or ownership claim. Photo by Mike van Schoonderwalt. https://www.pexels.com/photo/abandoned-factory-building-5505168/",
+          "collectionName": "Pexels photography — design sample",
+          "creators": [],
+          "attributes": [
+            {
+              "key": "Photographer",
+              "value": "Mike van Schoonderwalt",
+              "type": null
+            },
+            {
+              "key": "Source",
+              "value": "https://www.pexels.com/photo/abandoned-factory-building-5505168/",
+              "type": null
+            },
+            {
+              "key": "License",
+              "value": "https://www.pexels.com/license/",
+              "type": null
             }
-          },
-          "crop": {
-            "x": 0.5,
-            "y": 0.5,
-            "zoom": 1
-          },
-          "transform": {
-            "quarterTurns": 0,
-            "mirrorX": false,
-            "mirrorY": false
+          ],
+          "media": {
+            "url": "https://images.pexels.com/photos/5505168/pexels-photo-5505168.jpeg?auto=compress&cs=tinysrgb&w=1920",
+            "type": "image",
+            "width": 4981,
+            "height": 3796
           }
+        },
+        "crop": {
+          "x": 0.5,
+          "y": 0.5,
+          "zoom": 1
+        },
+        "transform": {
+          "quarterTurns": 0,
+          "mirrorX": false,
+          "mirrorY": false
         }
-      ]
+      }
     }
   ],
   "texts": [

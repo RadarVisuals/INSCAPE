@@ -1,9 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { navigatorBounds, navigatorCentre, navigatorFrame, navigatorViewport } from './workbenchNavigatorGeometry.js';
-test('minimap round trips a nonzero canvas and camera without changing its proportions', () => {
-  const camera = { scale: .75, offset: { x: 210, y: -480 } }, viewport = { width: 900, height: 600 };
+test('minimap maps the free viewport below the header and beside the dock into canvas coordinates', () => {
+  const camera = { scale: .75, offset: { x: 210, y: -480 } }, viewport = { left: 270, top: 45, width: 900, height: 600 };
   const visible = navigatorViewport(camera, viewport);
+  assert.deepEqual(visible, { left: 80, top: 700, width: 1200, height: 800 });
   const bounds = navigatorBounds([{ left: -1000, top: 250, width: 2000, height: 3000 }, visible], { width: 150, height: 85 });
   const frame = navigatorFrame(visible, bounds), centre = navigatorCentre(frame.view, bounds);
   assert.ok(Math.abs(centre.x - visible.left - visible.width / 2) < 1e-8);

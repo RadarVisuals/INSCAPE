@@ -90,12 +90,9 @@ test('live examples retain real control states, theme separation, field access a
     assert.notEqual(await material.evaluate(node => getComputedStyle(node).background), light, 'reference instruments invert between Carbon and Mist');
     await page.getByRole('complementary', { name: 'Properties preview', exact: true }).getByRole('button', { name: 'Rotate', exact: true }).click();
     await page.locator('.ds-properties-feedback').filter({ hasText: 'ROTATE' }).waitFor();
-    await page.getByRole('complementary', { name: 'Properties preview', exact: true }).getByLabel('When dropping from Library').selectOption('replace');
-    assert.equal(await page.getByRole('complementary', { name: 'Properties preview', exact: true }).getByLabel('When dropping from Library').inputValue(), 'replace');
     await page.getByRole('button', { name: 'Close example Properties' }).click();
     assert.equal(await page.getByRole('button', { name: 'Reopen example Properties' }).evaluate(node => document.activeElement === node), true);
     await page.getByRole('button', { name: 'Reopen example Properties' }).click();
-    await page.getByRole('complementary', { name: 'Properties preview', exact: true }).getByLabel('When dropping from Library').waitFor();
     assert.equal(await page.getByRole('button', { name: 'Inspect Image', exact: true }).evaluate(node => document.activeElement === node), true);
     await page.emulateMedia({ reducedMotion: 'reduce' });
     assert.equal(await toggle.evaluate(node => getComputedStyle(node).transitionDuration), '0s');
@@ -145,7 +142,7 @@ test('overview and component minimal popups preserve dismissal, nested navigatio
           return { left: Math.min(...buttons.map(button => button.left)) - bar.left,
             right: bar.right - Math.max(...buttons.map(button => button.right)) };
         });
-        assert.deepEqual(edges, { left: 4, right: 4 }, 'all seven controls sit inside the same evenly padded shell');
+        assert.deepEqual(edges, { left: 6, right: 6 }, 'all seven controls sit inside the same evenly padded shell');
         const shapes = page.getByRole('button', { name: 'Shapes', exact: true });
         await shapes.click();
         let popup = page.getByRole('dialog', { name: 'Shapes', exact: true });
@@ -160,9 +157,9 @@ test('overview and component minimal popups preserve dismissal, nested navigatio
         await popup.screenshot({ path: `${output}/${section}-minimal-shapes-${width}.png` });
         await page.keyboard.press('Escape');
         assert.equal(await shapes.evaluate(node => node === document.activeElement), true);
-        const add = page.getByRole('button', { name: 'Add module', exact: true });
+        const add = page.getByRole('button', { name: 'Actions', exact: true });
         await add.click();
-        popup = page.getByRole('dialog', { name: 'Add module', exact: true });
+        popup = page.getByRole('dialog', { name: 'Search commands', exact: true });
         assert.equal(await popup.locator('header').count(), 0);
         assert.equal(await popup.getByRole('button', { name: /Close/ }).count(), 0);
         await popup.getByRole('button', { name: 'Image', exact: true }).click();
@@ -175,7 +172,7 @@ test('overview and component minimal popups preserve dismissal, nested navigatio
           const field = node.getBoundingClientRect(), popup = node.closest('[role="dialog"]').getBoundingClientRect();
           return { left: field.left - popup.left, right: popup.right - field.right, divider: getComputedStyle(node.parentElement).borderBottomWidth };
         });
-        assert.deepEqual(searchGeometry, { left: 4, right: 4, divider: '0px' }, 'search fills its row with balanced insets and no divider');
+        assert.deepEqual(searchGeometry, { left: 6, right: 6, divider: '0px' }, 'search fills its row with balanced insets and no divider');
         assert.equal(await page.getByRole('button', { name: 'Close Search commands', exact: true }).count(), 0);
         await page.getByRole('dialog', { name: 'Search commands', exact: true }).screenshot({ path: `${output}/${section}-minimal-actions-${width}.png` });
         await page.getByRole('button', { name: 'Align', exact: true }).click();
@@ -210,9 +207,9 @@ test('review fixes preserve contrast, enlarged labels and readable source links'
     });
     const select = page.getByRole('button', { name: 'Select tool', exact: true });
     assert.ok(await select.evaluate(node => {
-      const button = node.getBoundingClientRect(), label = node.querySelector('span').getBoundingClientRect();
+      const button = node.getBoundingClientRect(), label = node.querySelector('svg').getBoundingClientRect();
       return label.left >= button.left && label.right <= button.right;
-    }), 'enlarged label stays inside its selected background');
+    }), 'the icon-only Select control stays inside its selected background with enlarged surrounding text');
     await page.goto(`${origin}/design-system.html#foundations`); await page.reload();
     const contrast = await page.locator('.ds-themes article > small').evaluate(node => {
       const canvas = document.createElement('canvas'), ctx = canvas.getContext('2d');
@@ -275,7 +272,6 @@ test('complete Properties examples preserve Image actions, fields, crop and loca
       const state = page.getByLabel('Properties example state');
       assert.equal(await panel.getByRole('navigation', { name: 'Image actions' }).getByRole('button').count(), 5);
       await panel.getByRole('button', { name: 'Fit inside', exact: true }).click();
-      await page.getByRole('complementary', { name: 'Properties preview', exact: true }).getByLabel('When dropping from Library').selectOption('replace');
       await page.getByRole('complementary', { name: 'Properties preview', exact: true }).getByLabel('Include Image in publication').uncheck();
       await panel.getByText('Dimensions…', { exact: true }).click();
       const size = panel.getByLabel('Image width');
@@ -289,7 +285,6 @@ test('complete Properties examples preserve Image actions, fields, crop and loca
       assert.ok(await reopen.evaluate(node => document.activeElement === node)); await reopen.click();
       assert.ok(await panel.getByRole('button', { name: 'Inspect Image', exact: true }).evaluate(node => document.activeElement === node));
       assert.equal(await size.inputValue(), '512');
-      assert.equal(await page.getByRole('complementary', { name: 'Properties preview', exact: true }).getByLabel('When dropping from Library').inputValue(), 'replace');
       assert.equal(await page.getByRole('complementary', { name: 'Properties preview', exact: true }).getByLabel('Include Image in publication').isChecked(), false);
       assert.equal(await panel.getByRole('button', { name: 'Fit inside', exact: true }).getAttribute('aria-pressed'), 'true');
       await panel.getByRole('button', { name: 'Crop', exact: true }).click();
@@ -302,13 +297,12 @@ test('complete Properties examples preserve Image actions, fields, crop and loca
       await panel.getByRole('button', { name: 'Done', exact: true }).click();
       assert.match(await feedback.innerText(), /105%/);
       assert.equal(await panel.getByRole('button', { name: 'Fill canvas', exact: true }).getAttribute('aria-pressed'), 'true');
-      await panel.getByRole('button', { name: 'Remove current Image side' }).click();
+      await panel.getByRole('button', { name: 'Remove image' }).click();
       assert.equal(await panel.getByRole('button', { name: 'Inspect Image', exact: true }).isDisabled(), true);
       assert.equal(await panel.getByRole('button', { name: 'Duplicate', exact: true }).count(), 0, 'duplication belongs in the object menu');
       await state.selectOption('busy'); assert.equal(await panel.getByRole('button', { name: 'Crop', exact: true }).isDisabled(), true);
       await state.selectOption('empty'); assert.equal(await page.getByRole('complementary', { name: 'Properties preview', exact: true }).getByLabel('Include Image in publication').isChecked(), false);
       await state.selectOption('artwork'); await page.getByRole('button', { name: 'Reset example', exact: true }).click();
-      assert.equal(await page.getByRole('complementary', { name: 'Properties preview', exact: true }).getByLabel('When dropping from Library').inputValue(), 'append');
       assert.deepEqual(await page.evaluate(() => Object.keys(localStorage).filter(key => key !== 'inscape:interface-theme')), []); assert.deepEqual(errors, []);
       await page.close();
     }

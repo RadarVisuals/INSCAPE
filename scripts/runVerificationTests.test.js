@@ -58,3 +58,15 @@ test('native API and CLI run the same real catalog and verification-plan tests',
   assert.equal(compare(root, ['--test', '--test-reporter=tap', '--test-concurrency=1',
     'scripts/browserSuiteCatalog.test.js', 'scripts/verificationPlan.test.js']).code, 0);
 });
+
+test('explicit source globs match CLI selection and exclude historical tests', async t => {
+  const root = await mkdtemp(resolve(tmpdir(), 'inscape-glob-tests-'));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  for (const directory of ['src/nested', 'outputs/old/src']) await mkdir(resolve(root, directory), { recursive: true });
+  const testBody = "import test from 'node:test'; test('maintained source',()=>{});";
+  await writeFile(resolve(root, 'src/nested/active.test.mjs'), testBody);
+  await writeFile(resolve(root, 'outputs/old/src/stale.test.mjs'), "throw Error('Historical output was executed');");
+  const result = compare(root, ['--test', '--test-reporter=tap', 'src/**/*.test.{js,mjs}']);
+  assert.equal(result.code, 0); assert.equal(result.counts.tests, 1);
+  assert.throws(() => nativeTestOptions(['--test', '--test-reporter=tap', 'definitely-missing/**/*.test.mjs']), /matched no files/u);
+});

@@ -305,94 +305,90 @@
         "name": "Image",
         "width": 1248,
         "height": 792,
-        "sides": [
-          {
-            "id": "side:f5c68490-15a3-4c2e-8f84-008775f36b28",
-            "asset": {
-              "stableAssetId": "42:0x0000000000000000000000000000000000000000:0x0000000000000000000000000000000000000000000000000000000000000065",
-              "network": "lukso-mainnet",
-              "chainId": 42,
-              "tokenStandard": "UNKNOWN",
-              "contractAddress": "0x0000000000000000000000000000000000000000",
-              "tokenId": "0x0000000000000000000000000000000000000000000000000000000000000065",
-              "name": "wind-world",
-              "description": "AI-generated original sample artwork. Fictional editorial study; no affiliation or token ownership claimed.",
-              "collectionName": "RECEPTION WORLDS",
-              "media": {
-                "url": "https://127.0.0.1:5181/design-system/lab/assets/reception-vibes/wind-world.png",
-                "width": 1536,
-                "height": 1024,
-                "type": "image"
-              },
-              "creators": [],
-              "attributes": [
-                {
-                  "key": "Source",
-                  "value": "Built-in image_gen; prompt set saved with verification evidence",
-                  "type": null
-                }
-              ]
+        "visibility": "PUBLIC",
+        "artwork": {
+          "id": "artwork:f5c68490-15a3-4c2e-8f84-008775f36b28",
+          "asset": {
+            "stableAssetId": "42:0x0000000000000000000000000000000000000000:0x0000000000000000000000000000000000000000000000000000000000000065",
+            "network": "lukso-mainnet",
+            "chainId": 42,
+            "tokenStandard": "UNKNOWN",
+            "contractAddress": "0x0000000000000000000000000000000000000000",
+            "tokenId": "0x0000000000000000000000000000000000000000000000000000000000000065",
+            "name": "wind-world",
+            "description": "AI-generated original sample artwork. Fictional editorial study; no affiliation or token ownership claimed.",
+            "collectionName": "RECEPTION WORLDS",
+            "media": {
+              "url": "https://127.0.0.1:5181/design-system/lab/assets/reception-vibes/wind-world.png",
+              "width": 1536,
+              "height": 1024,
+              "type": "image"
             },
-            "crop": {
-              "x": 0.5,
-              "y": 0.5,
-              "zoom": 1
-            },
-            "transform": {
-              "quarterTurns": 0,
-              "mirrorX": false,
-              "mirrorY": false
-            }
+            "creators": [],
+            "attributes": [
+              {
+                "key": "Source",
+                "value": "Built-in image_gen; prompt set saved with verification evidence",
+                "type": null
+              }
+            ]
+          },
+          "crop": {
+            "x": 0.5,
+            "y": 0.5,
+            "zoom": 1
+          },
+          "transform": {
+            "quarterTurns": 0,
+            "mirrorX": false,
+            "mirrorY": false
           }
-        ],
-        "visibility": "PUBLIC"
+        }
       },
       {
         "id": "image:68ac2dca-4a43-4d79-82bd-33f72db2a5f9",
         "name": "Image",
         "width": 608,
         "height": 448,
-        "sides": [
-          {
-            "id": "side:084fe7f3-2547-47b2-8486-95c25fe95ccb",
-            "asset": {
-              "stableAssetId": "42:0x0000000000000000000000000000000000000000:0x0000000000000000000000000000000000000000000000000000000000000066",
-              "network": "lukso-mainnet",
-              "chainId": 42,
-              "tokenStandard": "UNKNOWN",
-              "contractAddress": "0x0000000000000000000000000000000000000000",
-              "tokenId": "0x0000000000000000000000000000000000000000000000000000000000000066",
-              "name": "wind-studies",
-              "description": "AI-generated original sample artwork. Fictional editorial study; no affiliation or token ownership claimed.",
-              "collectionName": "RECEPTION WORLDS",
-              "media": {
-                "url": "https://127.0.0.1:5181/design-system/lab/assets/reception-vibes/wind-studies.png",
-                "width": 1536,
-                "height": 1024,
-                "type": "image"
-              },
-              "creators": [],
-              "attributes": [
-                {
-                  "key": "Source",
-                  "value": "Built-in image_gen; prompt set saved with verification evidence",
-                  "type": null
-                }
-              ]
+        "visibility": "PUBLIC",
+        "artwork": {
+          "id": "artwork:084fe7f3-2547-47b2-8486-95c25fe95ccb",
+          "asset": {
+            "stableAssetId": "42:0x0000000000000000000000000000000000000000:0x0000000000000000000000000000000000000000000000000000000000000066",
+            "network": "lukso-mainnet",
+            "chainId": 42,
+            "tokenStandard": "UNKNOWN",
+            "contractAddress": "0x0000000000000000000000000000000000000000",
+            "tokenId": "0x0000000000000000000000000000000000000000000000000000000000000066",
+            "name": "wind-studies",
+            "description": "AI-generated original sample artwork. Fictional editorial study; no affiliation or token ownership claimed.",
+            "collectionName": "RECEPTION WORLDS",
+            "media": {
+              "url": "https://127.0.0.1:5181/design-system/lab/assets/reception-vibes/wind-studies.png",
+              "width": 1536,
+              "height": 1024,
+              "type": "image"
             },
-            "crop": {
-              "x": 0.5,
-              "y": 0.5,
-              "zoom": 1
-            },
-            "transform": {
-              "quarterTurns": 0,
-              "mirrorX": false,
-              "mirrorY": false
-            }
+            "creators": [],
+            "attributes": [
+              {
+                "key": "Source",
+                "value": "Built-in image_gen; prompt set saved with verification evidence",
+                "type": null
+              }
+            ]
+          },
+          "crop": {
+            "x": 0.5,
+            "y": 0.5,
+            "zoom": 1
+          },
+          "transform": {
+            "quarterTurns": 0,
+            "mirrorX": false,
+            "mirrorY": false
           }
-        ],
-        "visibility": "PUBLIC"
+        }
       }
     ],
     "texts": [
@@ -1587,94 +1583,90 @@
         "name": "Image",
         "width": 760,
         "height": 1032,
-        "sides": [
-          {
-            "id": "side:b4cd2b06-cded-460f-9256-4d230aa1abf6",
-            "asset": {
-              "stableAssetId": "42:0x0000000000000000000000000000000000000000:0x0000000000000000000000000000000000000000000000000000000000000067",
-              "network": "lukso-mainnet",
-              "chainId": 42,
-              "tokenStandard": "UNKNOWN",
-              "contractAddress": "0x0000000000000000000000000000000000000000",
-              "tokenId": "0x0000000000000000000000000000000000000000000000000000000000000067",
-              "name": "collector-totem",
-              "description": "AI-generated original sample artwork. Fictional editorial study; no affiliation or token ownership claimed.",
-              "collectionName": "RECEPTION WORLDS",
-              "media": {
-                "url": "https://127.0.0.1:5181/design-system/lab/assets/reception-vibes/collector-totem.png",
-                "width": 1086,
-                "height": 1448,
-                "type": "image"
-              },
-              "creators": [],
-              "attributes": [
-                {
-                  "key": "Source",
-                  "value": "Built-in image_gen; prompt set saved with verification evidence",
-                  "type": null
-                }
-              ]
+        "visibility": "PUBLIC",
+        "artwork": {
+          "id": "artwork:b4cd2b06-cded-460f-9256-4d230aa1abf6",
+          "asset": {
+            "stableAssetId": "42:0x0000000000000000000000000000000000000000:0x0000000000000000000000000000000000000000000000000000000000000067",
+            "network": "lukso-mainnet",
+            "chainId": 42,
+            "tokenStandard": "UNKNOWN",
+            "contractAddress": "0x0000000000000000000000000000000000000000",
+            "tokenId": "0x0000000000000000000000000000000000000000000000000000000000000067",
+            "name": "collector-totem",
+            "description": "AI-generated original sample artwork. Fictional editorial study; no affiliation or token ownership claimed.",
+            "collectionName": "RECEPTION WORLDS",
+            "media": {
+              "url": "https://127.0.0.1:5181/design-system/lab/assets/reception-vibes/collector-totem.png",
+              "width": 1086,
+              "height": 1448,
+              "type": "image"
             },
-            "crop": {
-              "x": 0.5,
-              "y": 0.5,
-              "zoom": 1
-            },
-            "transform": {
-              "quarterTurns": 0,
-              "mirrorX": false,
-              "mirrorY": false
-            }
+            "creators": [],
+            "attributes": [
+              {
+                "key": "Source",
+                "value": "Built-in image_gen; prompt set saved with verification evidence",
+                "type": null
+              }
+            ]
+          },
+          "crop": {
+            "x": 0.5,
+            "y": 0.5,
+            "zoom": 1
+          },
+          "transform": {
+            "quarterTurns": 0,
+            "mirrorX": false,
+            "mirrorY": false
           }
-        ],
-        "visibility": "PUBLIC"
+        }
       },
       {
         "id": "image:215b5c6d-56a7-47c8-9ef7-650bbf2c6814",
         "name": "Image",
         "width": 448,
         "height": 448,
-        "sides": [
-          {
-            "id": "side:043723b0-727d-49e0-b300-222e41d5c9ea",
-            "asset": {
-              "stableAssetId": "42:0x0000000000000000000000000000000000000000:0x0000000000000000000000000000000000000000000000000000000000000068",
-              "network": "lukso-mainnet",
-              "chainId": 42,
-              "tokenStandard": "UNKNOWN",
-              "contractAddress": "0x0000000000000000000000000000000000000000",
-              "tokenId": "0x0000000000000000000000000000000000000000000000000000000000000068",
-              "name": "collector-objects",
-              "description": "AI-generated original sample artwork. Fictional editorial study; no affiliation or token ownership claimed.",
-              "collectionName": "RECEPTION WORLDS",
-              "media": {
-                "url": "https://127.0.0.1:5181/design-system/lab/assets/reception-vibes/collector-objects.png",
-                "width": 1254,
-                "height": 1254,
-                "type": "image"
-              },
-              "creators": [],
-              "attributes": [
-                {
-                  "key": "Source",
-                  "value": "Built-in image_gen; prompt set saved with verification evidence",
-                  "type": null
-                }
-              ]
+        "visibility": "PUBLIC",
+        "artwork": {
+          "id": "artwork:043723b0-727d-49e0-b300-222e41d5c9ea",
+          "asset": {
+            "stableAssetId": "42:0x0000000000000000000000000000000000000000:0x0000000000000000000000000000000000000000000000000000000000000068",
+            "network": "lukso-mainnet",
+            "chainId": 42,
+            "tokenStandard": "UNKNOWN",
+            "contractAddress": "0x0000000000000000000000000000000000000000",
+            "tokenId": "0x0000000000000000000000000000000000000000000000000000000000000068",
+            "name": "collector-objects",
+            "description": "AI-generated original sample artwork. Fictional editorial study; no affiliation or token ownership claimed.",
+            "collectionName": "RECEPTION WORLDS",
+            "media": {
+              "url": "https://127.0.0.1:5181/design-system/lab/assets/reception-vibes/collector-objects.png",
+              "width": 1254,
+              "height": 1254,
+              "type": "image"
             },
-            "crop": {
-              "x": 0.5,
-              "y": 0.5,
-              "zoom": 1
-            },
-            "transform": {
-              "quarterTurns": 0,
-              "mirrorX": false,
-              "mirrorY": false
-            }
+            "creators": [],
+            "attributes": [
+              {
+                "key": "Source",
+                "value": "Built-in image_gen; prompt set saved with verification evidence",
+                "type": null
+              }
+            ]
+          },
+          "crop": {
+            "x": 0.5,
+            "y": 0.5,
+            "zoom": 1
+          },
+          "transform": {
+            "quarterTurns": 0,
+            "mirrorX": false,
+            "mirrorY": false
           }
-        ],
-        "visibility": "PUBLIC"
+        }
       }
     ],
     "texts": [
@@ -2748,94 +2740,90 @@
         "name": "Image",
         "width": 816,
         "height": 1032,
-        "sides": [
-          {
-            "id": "side:dc5e6698-1aae-46cd-8274-62ecca76c4ec",
-            "asset": {
-              "stableAssetId": "42:0x0000000000000000000000000000000000000000:0x0000000000000000000000000000000000000000000000000000000000000069",
-              "network": "lukso-mainnet",
-              "chainId": 42,
-              "tokenStandard": "UNKNOWN",
-              "contractAddress": "0x0000000000000000000000000000000000000000",
-              "tokenId": "0x0000000000000000000000000000000000000000000000000000000000000069",
-              "name": "pop-monument",
-              "description": "AI-generated original sample artwork. Fictional editorial study; no affiliation or token ownership claimed.",
-              "collectionName": "RECEPTION WORLDS",
-              "media": {
-                "url": "https://127.0.0.1:5181/design-system/lab/assets/reception-vibes/pop-monument.png",
-                "width": 1086,
-                "height": 1448,
-                "type": "image"
-              },
-              "creators": [],
-              "attributes": [
-                {
-                  "key": "Source",
-                  "value": "Built-in image_gen; prompt set saved with verification evidence",
-                  "type": null
-                }
-              ]
+        "visibility": "PUBLIC",
+        "artwork": {
+          "id": "artwork:dc5e6698-1aae-46cd-8274-62ecca76c4ec",
+          "asset": {
+            "stableAssetId": "42:0x0000000000000000000000000000000000000000:0x0000000000000000000000000000000000000000000000000000000000000069",
+            "network": "lukso-mainnet",
+            "chainId": 42,
+            "tokenStandard": "UNKNOWN",
+            "contractAddress": "0x0000000000000000000000000000000000000000",
+            "tokenId": "0x0000000000000000000000000000000000000000000000000000000000000069",
+            "name": "pop-monument",
+            "description": "AI-generated original sample artwork. Fictional editorial study; no affiliation or token ownership claimed.",
+            "collectionName": "RECEPTION WORLDS",
+            "media": {
+              "url": "https://127.0.0.1:5181/design-system/lab/assets/reception-vibes/pop-monument.png",
+              "width": 1086,
+              "height": 1448,
+              "type": "image"
             },
-            "crop": {
-              "x": 0.5,
-              "y": 0.5,
-              "zoom": 1
-            },
-            "transform": {
-              "quarterTurns": 0,
-              "mirrorX": false,
-              "mirrorY": false
-            }
+            "creators": [],
+            "attributes": [
+              {
+                "key": "Source",
+                "value": "Built-in image_gen; prompt set saved with verification evidence",
+                "type": null
+              }
+            ]
+          },
+          "crop": {
+            "x": 0.5,
+            "y": 0.5,
+            "zoom": 1
+          },
+          "transform": {
+            "quarterTurns": 0,
+            "mirrorX": false,
+            "mirrorY": false
           }
-        ],
-        "visibility": "PUBLIC"
+        }
       },
       {
         "id": "image:9f206ec4-f131-439e-b5b4-c7f131953090",
         "name": "Image",
         "width": 496,
         "height": 560,
-        "sides": [
-          {
-            "id": "side:fd13637f-fe04-409a-ad69-57cfbff828a4",
-            "asset": {
-              "stableAssetId": "42:0x0000000000000000000000000000000000000000:0x000000000000000000000000000000000000000000000000000000000000006a",
-              "network": "lukso-mainnet",
-              "chainId": 42,
-              "tokenStandard": "UNKNOWN",
-              "contractAddress": "0x0000000000000000000000000000000000000000",
-              "tokenId": "0x000000000000000000000000000000000000000000000000000000000000006a",
-              "name": "pop-detail",
-              "description": "AI-generated original sample artwork. Fictional editorial study; no affiliation or token ownership claimed.",
-              "collectionName": "RECEPTION WORLDS",
-              "media": {
-                "url": "https://127.0.0.1:5181/design-system/lab/assets/reception-vibes/pop-detail.png",
-                "width": 1254,
-                "height": 1254,
-                "type": "image"
-              },
-              "creators": [],
-              "attributes": [
-                {
-                  "key": "Source",
-                  "value": "Built-in image_gen; prompt set saved with verification evidence",
-                  "type": null
-                }
-              ]
+        "visibility": "PUBLIC",
+        "artwork": {
+          "id": "artwork:fd13637f-fe04-409a-ad69-57cfbff828a4",
+          "asset": {
+            "stableAssetId": "42:0x0000000000000000000000000000000000000000:0x000000000000000000000000000000000000000000000000000000000000006a",
+            "network": "lukso-mainnet",
+            "chainId": 42,
+            "tokenStandard": "UNKNOWN",
+            "contractAddress": "0x0000000000000000000000000000000000000000",
+            "tokenId": "0x000000000000000000000000000000000000000000000000000000000000006a",
+            "name": "pop-detail",
+            "description": "AI-generated original sample artwork. Fictional editorial study; no affiliation or token ownership claimed.",
+            "collectionName": "RECEPTION WORLDS",
+            "media": {
+              "url": "https://127.0.0.1:5181/design-system/lab/assets/reception-vibes/pop-detail.png",
+              "width": 1254,
+              "height": 1254,
+              "type": "image"
             },
-            "crop": {
-              "x": 0.5,
-              "y": 0.5,
-              "zoom": 1
-            },
-            "transform": {
-              "quarterTurns": 0,
-              "mirrorX": false,
-              "mirrorY": false
-            }
+            "creators": [],
+            "attributes": [
+              {
+                "key": "Source",
+                "value": "Built-in image_gen; prompt set saved with verification evidence",
+                "type": null
+              }
+            ]
+          },
+          "crop": {
+            "x": 0.5,
+            "y": 0.5,
+            "zoom": 1
+          },
+          "transform": {
+            "quarterTurns": 0,
+            "mirrorX": false,
+            "mirrorY": false
           }
-        ],
-        "visibility": "PUBLIC"
+        }
       }
     ],
     "texts": [

@@ -39,7 +39,7 @@ export default function TextBackupControls({ article, onChange, disabled, recove
     onChange(pending.article); setPending(null); setMessage('Backup applied. Check the save status below.');
   };
   return <details className="text-backup-controls text-settings-wide">
-    <summary>Article backup</summary>
+    <summary>Text backup and recovery</summary>
     <p>Save a file of this article, including edits waiting to be saved. Artwork links are included; image files and Display connections are not.</p>
     <button className="workflow-tactile-control" type="button" onClick={download}>Download article backup</button>
     <label>Open article backup<input aria-label="Open article backup" type="file" accept=".json,application/json" disabled={disabled || recoveryPending}

@@ -8,7 +8,7 @@ import { bindWorkbenchTextRecovery } from '../../text/textEditRecovery.js';
 const OwnerSystemWorkflowRuntime = lazy(() => import('./OwnerSystemWorkflowRuntime.jsx'));
 
 export default function OwnerSystemWorkflowReconciliationBoundary(props) {
-  return <ProfileEditingBoundary profileAddress={props.profileAddress} onView={props.onOpenReception}>
+  return <ProfileEditingBoundary profileAddress={props.profileAddress} onView={props.onOpenReception && (() => props.onOpenReception('published'))} viewLabel="View published profile">
     <ReconciliationSession key={props.profileAddress} {...props} />
   </ProfileEditingBoundary>;
 }
@@ -40,13 +40,12 @@ function ReconciliationSession(props) {
         return reconcileOwnerDraftWithPublishedProfile({
           document: publishedDocument,
           profileAddress,
-          storage: reviewStorage ?? globalThis.localStorage,
           store,
         });
       })
       .then(result => {
         if (!active) return;
-        if (['HYDRATION_FAILED', 'LOCAL_DRAFT_UNAVAILABLE', 'HYDRATED_WITHOUT_BASELINE'].includes(result?.status)) {
+        if (['HYDRATION_FAILED', 'LOCAL_DRAFT_UNAVAILABLE'].includes(result?.status)) {
           setFailure({ code: result.status, reason: result.reason, issues: result.issues, fingerprint: result.fingerprint, store });
           setState('ERROR');
         } else setState('READY');
@@ -81,9 +80,7 @@ function ReconciliationSession(props) {
   if (state === 'ERROR') return <StartupDestinationFailure title="Local workspace could not be opened">
     <p>{failure?.code === 'LOCAL_DRAFT_UNAVAILABLE'
       ? 'The saved draft could not be read. It has not been replaced.'
-      : failure?.code === 'HYDRATED_WITHOUT_BASELINE'
-        ? 'The published workspace was saved locally, but its reconciliation record could not be saved.'
-        : 'The published workspace could not be aligned with the local draft.'}</p>
+      : 'The published workspace could not be aligned with the local draft.'}</p>
     <p>Details: {failure?.code}{failure?.reason ? ` / ${failure.reason}` : ''}</p>
     {failure?.issues?.map((issue, index) => <p key={index}>{issue.path}: {issue.code}{issue.message ? ` — ${issue.message}` : ''}</p>)}
     {failure?.store && <WorkbenchBackupControls store={failure.store} storage={reviewStorage ?? globalThis.localStorage}

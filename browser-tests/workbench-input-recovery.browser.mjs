@@ -47,7 +47,7 @@ test('Workbench pan and zoom recover from a missing selection release after edit
     await body.press('Control+A'); await page.getByRole('button', { name: 'Bold', exact: true }).click();
     await openTextToolSection(page, 'Text box layout');
     await page.getByLabel('Text columns', { exact: true }).selectOption('2');
-    await page.getByRole('button', { name: 'Close Text tools', exact: true }).click();
+    await page.getByRole('button', { name: 'Close Inspector', exact: true }).click();
     const saved = await page.evaluate(() => window.savedDraft());
     const host = page.locator('main.system-workflow');
     const point = await exposedMainPoint(page, 'missing-release');
@@ -78,7 +78,7 @@ test('selection captures its pointer, cancels on lost capture, and does not bloc
     const page = await browser.newPage({ viewport: { width: 1440, height: 1100 } });
     await mountTextToolsFixture(page, origin);
     await prepareNavigation(page);
-    await page.getByRole('button', { name: 'Close Text tools', exact: true }).click();
+    await page.getByRole('button', { name: 'Close Inspector', exact: true }).click();
     const host = page.locator('main.system-workflow');
     const point = await exposedMainPoint(page, 'lost-capture');
     assert.ok(await page.evaluate(p => document.elementFromPoint(p.x, p.y).matches('main.system-workflow'), point));

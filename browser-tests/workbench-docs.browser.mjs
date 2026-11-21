@@ -1,4 +1,4 @@
-import { editorMenu } from './fixtures/editor-menu.mjs';
+import { openEditorMenu, editorMenu } from './fixtures/editor-menu.mjs';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { chromium } from 'playwright-core';
@@ -11,7 +11,7 @@ test('Docs tabs explain the current modules and remain usable at wide and narrow
     await page.goto(`${process.env.INSCAPE_SYSTEM_WORKFLOW_ROOT || 'http://127.0.0.1:5174'}/development/owner/system-workflow`);
     for (const width of [1440, 390]) {
       await page.setViewportSize({ width, height: 780 });
-      await editorMenu(page, 'Docs').click();
+      await openEditorMenu(page, 'Docs');
       const docs = page.getByRole('dialog', { name: 'Docs' });
       await docs.getByRole('tab', { name: 'Workbench', exact: true }).click();
       await page.keyboard.press('ArrowRight');

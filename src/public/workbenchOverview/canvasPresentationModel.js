@@ -20,7 +20,7 @@ export function canvasArtworkSources(model) {
     sources.set(key, { id: key, name: dossier?.title || 'Artwork source unavailable', dossier, frames: [frame] });
   };
   for (const item of model.items) {
-    if (item.source.kind === 'image') add(item.source.side?.asset, item.id, item.frame, true);
+    if (item.source.kind === 'image') add(item.source.artwork?.asset, item.id, item.frame, true);
     if (item.source.kind === 'display') {
       const { source, frame } = item, field = projectSystemWorkflowViewport(source.geometry, frame);
       for (const placement of source.grid?.placements || []) {

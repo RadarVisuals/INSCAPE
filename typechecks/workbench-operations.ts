@@ -2,7 +2,7 @@
 import { createWorkbenchMoveOperation } from '../src/public/ownerSystemWorkflow/workbenchMoveOperation.js';
 import { createWorkbenchResizeOperation } from '../src/public/ownerSystemWorkflow/workbenchResizeOperation.js';
 import { createWorkbenchGestures } from '../src/public/ownerSystemWorkflow/workbenchGestures.js';
-import { moveWorkbenchGroup } from '../src/systemWorkflow/moveWorkbenchGroup.js';
+import { moveWorkbenchSelection } from '../src/systemWorkflow/moveWorkbenchSelection.js';
 import { commitWorkbenchSelectionResize, prepareWindowResize } from '../src/systemWorkflow/resizeWorkbenchSelection.js';
 import { DISPLAY_WINDOW_LIMITS } from '../src/profileDocument/domain/workbenchPresentation.js';
 import { useWorkbenchViewRegistration } from '../src/public/ownerSystemWorkflow/WorkbenchViewContext.js';
@@ -58,7 +58,7 @@ if (resize) {
 gestures.beginMarquee(event, { beforeSelection: { ids: ['image:one'] }, previousSelection: [], hits: () => ['text:two'] });
 gestures.cancel(false);
 commitWorkbenchSelectionResize([change]);
-moveWorkbenchGroup(store, '0x123', [{ id: 'image:one', left: 20, top: 30 }], presentation, 1);
+moveWorkbenchSelection(store, '0x123', [{ id: 'image:one', left: 20, top: 30 }], presentation, 1);
 
 // @ts-expect-error Owner preparation requires its captured scoped writer.
 const missingWriter: WorkbenchOperationOrigin = { kind: 'owner', isCurrent: () => true, profileAddress: '0x123', getPresentation: () => presentation };
@@ -86,7 +86,7 @@ commitWorkbenchSelectionResize([withoutWriter]);
 // @ts-expect-error Commit candidates preserve window identity.
 commitWorkbenchSelectionResize([{ ...change, id: 'workbench:other' }]);
 // @ts-expect-error The move's captured generation is numeric.
-moveWorkbenchGroup(store, '0x123', [], presentation, 'latest');
+moveWorkbenchSelection(store, '0x123', [], presentation, 'latest');
 // @ts-expect-error Preparation may fail; callers must narrow the operation first.
 move.commit();
 // @ts-expect-error Preview coordinates are numeric.

@@ -4,6 +4,9 @@ import { createEmptySystemWorkflowDraft } from '../../systemWorkflow/domain/syst
 import { buildProfileDocumentV9 } from '../domain/profileDocumentV9Builder.js';
 import { canonicalSerializeProfileDocumentV9 } from '../domain/profileDocumentV9Serialization.js';
 import { uploadProfileDocument } from './profileDocumentUploadClient.js';
+import { buildGalleryRemoval } from '../domain/canvasPublication.js';
+import { GALLERY_PUBLICATION_CAPABILITY } from '../domain/constants.js';
+import { FIRST_WORKBENCH_ID } from '../../systemWorkflow/domain/workbenchCollection.js';
 import { uploadTestContext, uploadTestChallenge, UPLOAD_TEST_NOW, UPLOAD_TEST_ORIGIN } from '../../../scripts/fixtures/publicationUpload.mjs';
 
 const PROFILE = '0x1111111111111111111111111111111111111111';
@@ -14,8 +17,8 @@ const document = buildProfileDocumentV9({
   systemWorkflowDraft: createEmptySystemWorkflowDraft(PROFILE, { generateId: () => 'home' }),
 });
 
-function clientFixture({ challenge = uploadTestChallenge(document), upload = () => Response.json({ cid: CID }, { status: 201 }) } = {}) {
-  const context = uploadTestContext(document);
+function clientFixture({ snapshot = document, challenge = uploadTestChallenge(snapshot), upload = () => Response.json({ cid: CID }, { status: 201 }) } = {}) {
+  const context = uploadTestContext(snapshot);
   const requests = [], phases = [], signatures = [];
   const sign = context.walletClient.signMessage;
   context.walletClient.signMessage = async args => { signatures.push(args); return sign(args); };
@@ -43,6 +46,19 @@ test('upload client sends canonical bytes and validates the returned CID', async
   assert.equal(request.init.body, canonicalSerializeProfileDocumentV9(document));
   assert.equal(result.cid, CID);
   assert.equal(result.ipfsUri, `ipfs://${CID}`);
+});
+
+test('removing the last Gallery work asks for a signature only when the service accepts empty Galleries', async () => {
+  const empty = buildGalleryRemoval(document, [FIRST_WORKBENCH_ID], 3);
+  const challenge = uploadTestChallenge(empty);
+  delete challenge.capabilities;
+  const olderService = clientFixture({ snapshot: empty, challenge });
+  await assert.rejects(uploadProfileDocument(empty, olderService.options), { code: 'PUBLICATION_SERVICE_UPDATE_REQUIRED' });
+  assert.equal(olderService.requests.length, 1);
+  assert.equal(olderService.signatures.length, 0);
+  const updated = clientFixture({ snapshot: empty, challenge: { ...challenge, capabilities: [GALLERY_PUBLICATION_CAPABILITY] } });
+  assert.equal((await uploadProfileDocument(empty, updated.options)).cid, CID);
+  assert.equal(updated.signatures.length, 1);
 });
 
 test('a local draft uses the hosted service while signing authorization for the local page', async () => {

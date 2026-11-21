@@ -10,7 +10,7 @@ export function inferredCellGap(frames) {
 }
 
 export function partitionDividers(regions, minimum = {}) {
-  const found = new Map();
+  const found = new Map(), near = (a, b) => Math.abs(a - b) < .001;
   for (const axis of ['x', 'y']) {
     const cross = axis === 'x' ? 'y' : 'x', size = axis === 'x' ? 'width' : 'height', crossSize = axis === 'x' ? 'height' : 'width';
     for (const seed of regions) {
@@ -18,13 +18,13 @@ export function partitionDividers(regions, minimum = {}) {
       let from = seed[cross], to = from + seed[crossSize], previous, members;
       do {
         previous = `${from}:${to}`;
-        members = regions.filter(r => (r[axis] === position || r[axis] + r[size] === position)
+        members = regions.filter(r => (near(r[axis], position) || near(r[axis] + r[size], position))
           && Math.max(from, r[cross]) < Math.min(to, r[cross] + r[crossSize]));
         from = Math.min(from, ...members.map(r => r[cross])); to = Math.max(to, ...members.map(r => r[cross] + r[crossSize]));
       } while (previous !== `${from}:${to}`);
-      const before = members.filter(r => r[axis] + r[size] === position), after = members.filter(r => r[axis] === position);
+      const before = members.filter(r => near(r[axis] + r[size], position)), after = members.filter(r => near(r[axis], position));
       // An outside edge or an incomplete strip cannot resize its neighbours.
-      if ([before, after].some(side => side.reduce((sum, r) => sum + r[crossSize], 0) !== to - from)) continue;
+      if ([before, after].some(side => !near(side.reduce((sum, r) => sum + r[crossSize], 0), to - from))) continue;
       const id = `${axis}:${before.map(r => r.id).sort().join(',')}:${after.map(r => r.id).sort().join(',')}`;
       found.set(id, { id, axis, position, from, to, before: before.map(r => r.id), after: after.map(r => r.id),
         min: Math.max(...before.map(r => r[axis] + minimum[axis])), max: Math.min(...after.map(r => r[axis] + r[size] - minimum[axis])) });

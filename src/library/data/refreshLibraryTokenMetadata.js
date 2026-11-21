@@ -28,7 +28,7 @@ export async function* refreshLibraryTokenMetadata(assets, { signal, resolver = 
           name: record.name || asset.name, description: record.description,
           imageUrl: urls.imageUrl, thumbnailUrl: urls.thumbnailUrl, originalImageUrl: urls.originalImageUrl,
           imageWidth: urls.width, imageHeight: urls.height, mediaFileType: urls.fileType || null,
-          imageGroups: selectImageGroups(record.images),
+          imageGroups: selectImageGroups(record.images), fileAttachments: record.fileAttachments || asset.fileAttachments || [],
           attributes: record.attributes.map(({ key, value, attributeType, type }) => ({ key, value, type: attributeType || type })),
           metadataStatus: urls.imageUrl ? 'ready' : 'partial',
           fieldProvenance: { ...asset.fieldProvenance, ...(record.name ? { name: provenance } : {}),

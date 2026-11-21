@@ -11,7 +11,7 @@ export function createOwnerLatticeCategoryCommands(profileAddress, getStore = us
   const profile = normalizeProfileAddress(profileAddress);
   const commit = (command) => getStore().commitCategoryForProfile(profile, command);
   return Object.freeze({
-    createCategory: (name) => commit({ name, type: 'create' }),
+    createCategory: (name, sectionId = null, parentId = null) => commit({ name, sectionId, parentId, type: 'create' }),
     deleteCategory: (categoryId) => commit({ categoryId, type: 'delete' }),
     renameCategory: (categoryId, name) => commit({ categoryId, name, type: 'rename' }),
     setCategoryAsset: (categoryId, assetId, value, acceptedAssetIds) => commit({ acceptedAssetIds, assetId, categoryId, type: 'asset', value }),
@@ -21,7 +21,7 @@ export function createOwnerLatticeCategoryCommands(profileAddress, getStore = us
     createSection: (name) => commit({ name, type: 'create-section' }),
     renameSection: (sectionId, name) => commit({ name, sectionId, type: 'rename-section' }),
     deleteSection: (sectionId) => commit({ sectionId, type: 'delete-section' }),
-    moveCategory: (categoryId, sectionId = null, beforeId = null) => commit({ beforeId, categoryId, sectionId, type: 'move-category' }),
+    moveCategory: (categoryId, sectionId = null, beforeId = null, parentId = null) => commit({ beforeId, categoryId, sectionId, parentId, type: 'move-category' }),
     moveSection: (sectionId, beforeId = null) => commit({ beforeId, sectionId, type: 'move-section' }),
   });
 }

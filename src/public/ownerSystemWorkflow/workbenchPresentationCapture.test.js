@@ -9,7 +9,8 @@ import { createSystemWorkflowDraftStore, systemWorkflowDraftKey } from '../../sy
 import { createWorkbenchSession } from '../../systemWorkflow/workbenchSession.js';
 import { createImagePresentation } from '../../imageModule/imageModule.js';
 import { createShapePresentation } from '../../shapes/shapes.js';
-import { loadWorkbenchLayout, saveWorkbenchLayout, workbenchLayoutKey } from './workbenchLayoutStorage.js';
+import { loadWorkbenchLayout, saveWorkbenchLayout } from './workbenchLayoutStorage.js';
+import { workbenchLayoutKey } from '../../systemWorkflow/workbenchLayoutKey.js';
 import { buildProfileDocumentV9 } from '../../profileDocument/domain/profileDocumentV9Builder.js';
 
 const input = overrides => ({ layout: createDefaultWorkbenchPresentation(), identityOpen: false, ...overrides });

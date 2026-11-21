@@ -4,6 +4,7 @@ import { parseCanonicalAssetId } from '../../profileDocument/domain/assetReferen
 
 const CREATION_ASSET_FIELDS = `
   id name lsp4TokenName standard isLSP7 isCollection description error
+  assets(order_by: {id: asc}) { url src fileType error }
   images(where: { error: { _is_null: true } }, order_by: [{ index: asc }, { width: asc }]) { index src url width height fileType error }
   lsp4Creators { profile_id profile { name } }
   attributes { key value attributeType }
@@ -11,6 +12,7 @@ const CREATION_ASSET_FIELDS = `
 
 const CREATION_TOKEN_FIELDS = `
   id tokenId formattedTokenId name lsp4TokenName description error
+  assets(order_by: {id: asc}) { url src fileType error }
   images(where: { error: { _is_null: true } }, order_by: [{ index: asc }, { width: asc }]) { index src url width height fileType error }
   lsp4Creators { profile_id profile { name } }
   attributes { key value attributeType }

@@ -122,7 +122,7 @@ test('owner and Visitor focus live modules, activate them idempotently and retur
       assert.equal(await page.locator('.navigator-zoom output').textContent(),
         `${Math.round(before.scale * 100)}%`, 'zoom readout matches the restored camera');
       assert.equal(await workbenchCommandDisabled(page, 'back'), true);
-      assert.equal(await page.locator('[data-workbench-view-id="image:motion-0"]').evaluate(node => node === document.activeElement || node.contains(document.activeElement)), true);
+      assert.equal(await page.evaluate(() => document.activeElement?.closest('[data-workbench-view-id]')?.dataset.workbenchViewId === 'image:motion-0'), true);
       const restored = await page.evaluate(() => ({ draft: localStorage.getItem(window.__motionKey), layouts: Object.fromEntries(Object.keys(localStorage)
         .filter(key => key.startsWith('inscape:workbench:layout:')).map(key => [key, JSON.parse(localStorage.getItem(key)).layout])) }));
       assert.equal(JSON.stringify(restored), JSON.stringify(saved), 'draft and authored layout remain unchanged');
@@ -188,6 +188,12 @@ const arrivalCamera = page => page.locator('main.system-workflow').first().evalu
   scale: Number(host.dataset.workbenchCameraScale || 1),
   offset: { x: Number(host.dataset.workbenchCameraX || 0), y: Number(host.dataset.workbenchCameraY || 0) },
 }));
+const viewportCentreX = page => page.locator('main.system-workflow').first().evaluate(host => {
+  const style = getComputedStyle(host);
+  const left = parseFloat(style.getPropertyValue('--workbench-left-dock-width')) || 0;
+  const right = parseFloat(style.getPropertyValue('--workbench-right-dock-width')) || 0;
+  return (host.clientWidth + left - right) / 2;
+});
 async function mountArrivalReview(page, visitor) {
   await mountGridMotionFixture(page, { origin, visitor, count: 1, displayWidth: 320, seamReview: 'single' });
   await page.evaluate(async visitor => {
@@ -259,13 +265,15 @@ for (const width of [1440, 390]) test(`arrival releases Groups while Layers, Shi
     const { openSharedTool, closeSharedTool } = await import('./fixtures/shared-tools.mjs');
     const panel = page.locator('.workbench-groups');
     await navigateWorkbench(page, 'groups');
+    await panel.getByText('Manage groups', { exact: true }).click();
     await panel.locator('[data-workbench-group-drop="workbench-group:arrival-empty"]').press('Enter');
     await page.getByRole('button', { name: 'Close Workbench groups', exact: true }).press('Enter');
     await openSharedTool(page, 'Layers');
     await page.getByRole('button', { name: 'Select Arrival A', exact: true }).press('Enter'); await settle(page);
     assert.equal(!await workbenchCommandDisabled(page, 'focus'), true, 'single Layers choice enables the global Focus control');
-    assert.match(await page.locator('.workbench-selection').getAttribute('aria-label'), /1 selected/);
+    assert.equal(await page.locator('[data-image-module="image:arrival-a"] .image-module__window').getAttribute('data-active'), 'true', 'a single Layers choice uses native module bounds');
     const initial = await arrivalCamera(page), saved = await page.evaluate(() => localStorage.getItem(window.__motionKey));
+    const initialCentre = await viewportCentreX(page);
     await (await focus(page)).press('Enter'); await arrived(page);
     const first = await arrivalCamera(page); assert.notDeepEqual(first, initial);
     assert.equal(await workbenchCommandDisabled(page, 'focus'), true);
@@ -278,6 +286,7 @@ for (const width of [1440, 390]) test(`arrival releases Groups while Layers, Shi
     assert.equal(Number(await widthInput.inputValue()), 200);
     await closeSharedTool(page, 'Transform');
     await navigateWorkbench(page, 'groups'); await settle(page);
+    await panel.getByText('Manage groups', { exact: true }).click();
     assert.equal(await panel.getByRole('button', { name: 'Add selection (0)', exact: true }).isDisabled(), true);
     sameCamera(await arrivalCamera(page), first);
     assert.equal(await page.evaluate(() => localStorage.getItem(window.__motionKey)), saved, 'opening Groups does not write content');
@@ -292,17 +301,21 @@ for (const width of [1440, 390]) test(`arrival releases Groups while Layers, Shi
     await b.focus(); await b.press('Shift+Enter'); await settle(page);
     assert.equal(await panel.getByRole('button', { name: 'Add selection (1)', exact: true }).isEnabled(), true, 'first Shift after arrival selects B instead of removing it');
     await panel.getByRole('button', { name: 'New group', exact: true }).press('Enter');
-    assert.equal(await panel.getByRole('button', { name: 'Create from selection', exact: true }).isEnabled(), true);
+    assert.equal(await panel.getByRole('button', { name: 'Group selection', exact: true }).isEnabled(), true);
     await (await focus(page)).press('Enter'); await arrived(page);
-    assert.equal(await panel.getByRole('button', { name: 'Create from selection', exact: true }).isDisabled(), true);
+    assert.equal(await panel.getByRole('button', { name: 'Group selection', exact: true }).isDisabled(), true);
     assert.doesNotMatch(await panel.innerText(), /1 selected/);
     await page.getByRole('button', { name: 'Close Workbench groups', exact: true }).press('Enter');
     await (await back(page)).press('Enter'); await arrived(page);
     sameCamera(await arrivalCamera(page), first);
-    assert.match(await page.locator('.workbench-selection').getAttribute('aria-label'), /1 selected/, 'Back restores the prior conscious module selection');
+    assert.equal(await page.locator('[data-image-module="image:arrival-b"] .image-module__window').getAttribute('data-active'), 'true', 'Back restores the prior conscious module selection');
     assert.equal(await b.evaluate(node => node === document.activeElement || node.closest('.image-module__window') === document.activeElement), true);
     await page.locator('main.system-workflow').first().focus(); await page.keyboard.press('f'); await arrived(page);
-    sameCamera(await arrivalCamera(page), initial);
+    const returned = await arrivalCamera(page);
+    // Back preserves the world point at the centre when closing tools changes
+    // the usable viewport. A fixed screen offset would shift the composition.
+    sameCamera(returned, { ...initial, offset: { ...initial.offset,
+      x: initial.offset.x + await viewportCentreX(page) - initialCentre } });
     assert.equal(await workbenchCommandDisabled(page, 'back'), true);
     assert.equal(await page.evaluate(() => localStorage.getItem(window.__motionKey)), saved);
     assert.deepEqual(errors, []);

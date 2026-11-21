@@ -105,3 +105,19 @@ test('folder publication is independent from asset membership', () => {
   assert.equal(workspace.folders[0].public, false);
 });
 
+
+
+test('subfolders retain content, reject cycles and promote children when a parent is removed', () => {
+  let workspace = createFolder(createEmptyWorkspace('0xprofile'), 'Characters', 1);
+  const parent = workspace.folders[0].id;
+  workspace = createFolder(workspace, 'Nomad', 2, parent);
+  const child = workspace.folders[1].id;
+  workspace = setFolderAsset(workspace, child, 'asset-1', true);
+  assert.deepEqual(workspace.categoryOrganization.rootCategoryIds, [parent]);
+  assert.equal(workspace.folders[1].parentId, parent);
+  assert.equal(moveCategory(workspace, parent, null, null, child), workspace);
+  const promoted = deleteFolder(workspace, parent);
+  assert.equal(promoted.folders[0].id, child);
+  assert.deepEqual(promoted.folders[0].assetIds, ['asset-1']);
+  assert.deepEqual(promoted.categoryOrganization.rootCategoryIds, [child]);
+});

@@ -9,8 +9,9 @@ test('Library reports failed storage, preserves the form, saves before reload an
       const page = await browser.newPage({ viewport: { width, height: 900 } });
       const errors = []; page.on('pageerror', error => errors.push(error.message));
       await page.goto(`${process.env.INSCAPE_SYSTEM_WORKFLOW_ROOT || 'http://127.0.0.1:5173'}/browser-tests/library-storage-fixture.html`);
-      await page.getByRole('button', { name: 'Create Category', exact: true }).click();
-      const input = page.getByRole('textbox', { name: 'category name', exact: true });
+      await page.getByRole('button', { name: 'New Library item', exact: true }).click();
+      await page.getByRole('menuitem', { name: 'Folder', exact: true }).click();
+      const input = page.getByRole('textbox', { name: 'folder name', exact: true });
       await input.fill('Keep my category');
       await page.evaluate(() => { window.storageTest.denied = true; });
       await input.press('Enter');
@@ -26,7 +27,8 @@ test('Library reports failed storage, preserves the form, saves before reload an
       await page.reload();
       await page.waitForFunction(() => window.storageTest?.store.getState().workspace.folders.length === 1);
       await page.evaluate(() => window.storageTest.externalChange());
-      await page.getByRole('button', { name: 'Create Category', exact: true }).click();
+      await page.getByRole('button', { name: 'New Library item', exact: true }).click();
+      await page.getByRole('menuitem', { name: 'Folder', exact: true }).click();
       await input.fill('Must not overwrite'); await input.press('Enter');
       await page.getByRole('alert').waitFor();
       assert.match(await page.getByRole('alert').innerText(), /another tab/);

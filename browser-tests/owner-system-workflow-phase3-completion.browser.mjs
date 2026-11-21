@@ -298,7 +298,7 @@ test('contained inspection and v9 Preview preserve source, metadata, navigation,
     await metadata.getByRole('heading', { name: 'MOUNTAIN SIGNAL II', exact: true }).waitFor();
     await metadata.getByText('Source details', { exact: true }).click();
     assert.match(await metadata.innerText(), /Description[\s\S]*Creator[\s\S]*RADAR VISUALS[\s\S]*Source details/);
-    await page.getByRole('button', { name: 'Close Info', exact: true }).click();
+    await page.getByRole('button', { name: 'Close Inspector', exact: true }).click();
     if (SCREENSHOT_DIR) await page.screenshot({ path: resolve(SCREENSHOT_DIR, 'phase3-inspection-wide.png') });
     await activate(page, page.getByRole('button', { name: 'Close artwork viewer', exact: true }));
     await inspection.waitFor({ state: 'detached' });

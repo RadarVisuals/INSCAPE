@@ -61,7 +61,12 @@ test('reference values and production defaults remain separately scoped and disc
   assert.ok(foundation.definitions.some(token => token.name === '--control-shell-radius' && token.references.includes('--control-radius')));
   const flat = inventory.sources.find(source => source.path.endsWith('/workflowFlat.css'));
   assert.equal(flat.role, 'Flat material');
-  assert.ok(flat.definitions.every(token => token.scope.some(scope => scope.includes('[data-workflow-finish='))));
+  assert.ok(flat.definitions.every(token => token.scope.some(scope =>
+    scope.includes("[data-workflow-finish='flat']") || scope.includes("[data-workflow-palette='editor']"),
+  )), 'flat material and the Editor palette remain explicit opt-ins');
+  assert.ok(flat.definitions.some(token => token.name === '--tactile-face'
+    && token.references.includes('--editor-panel')
+    && token.scope.some(scope => scope.includes("[data-workflow-palette='editor']"))));
   const focus = inventory.sources.flatMap((source) =>
     source.definitions
       .filter((token) => token.name === '--color-focus')

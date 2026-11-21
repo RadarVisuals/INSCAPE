@@ -1,3 +1,4 @@
+import { drawOuterCell } from './fixtures/cellDrawing.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { partitionInnerLines } from './receptionPartition.js';
@@ -64,8 +65,8 @@ test('inner line appearance persists through undo, reload, publication, restorat
     assert.throws(() => edit('settings', { innerLines: invalid }));
   }
   assert.deepEqual(scope.getReception(), saved);
-  edit('appendRow'); assert.deepEqual(scope.getReception().innerLines, innerLines);
-  scope.generateCellLayout(receptionBentoSettings(scope.getReception()), 57, scope.getGeneration());
+  drawOuterCell(scope, 'bottom'); assert.deepEqual(scope.getReception().innerLines, innerLines);
+  scope.generateCellLayout({ ...RECEPTION_LAYOUT_DEFAULTS, ...receptionBentoSettings(scope.getReception()), columns: 1, rows: 7 }, 57, scope.getGeneration());
   assert.deepEqual(scope.getReception().innerLines, innerLines);
   edit('settings', { innerLines: null });
   for (const shape of saved.shapes) assert.deepEqual(scope.getReception().shapes.find(item => item.id === shape.id), shape);

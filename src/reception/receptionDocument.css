@@ -1,28 +1,33 @@
 .reception-document-viewport { flex: none; width: 100%; min-width: 0; margin-block: auto; }
-.reception-document-canvas { position: relative; flex: none; width: 100%; min-width: 0; margin-inline: auto; overflow: hidden; isolation: isolate; background: var(--interface-environment); }
-.reception-document-canvas[data-show-frame] { outline: 1px solid var(--tactile-edge); outline-offset: -1px; }
+.reception-document-canvas { position: relative; flex: none; width: 100%; min-width: 0; margin-inline: auto; overflow: hidden; isolation: isolate; background: color-mix(in srgb, var(--reception-frame-fill, var(--reception-page-background, var(--interface-environment))) var(--reception-frame-fill-opacity, 100%), transparent); }
+.reception-document-canvas[data-show-frame] { outline: 1px solid color-mix(in srgb, var(--reception-frame-line, color-mix(in srgb, currentColor 6%, transparent)) var(--reception-frame-line-opacity, 100%), transparent); outline-offset: -1px; }
 .reception-document-layer, .reception-document-cell { position: absolute; box-sizing: border-box; min-width: 0; isolation: isolate; }
-.reception-document-cell { overflow: hidden; isolation: isolate; }
+/* ShapeSurface owns the fill boundary; clipping it again compounds fractional
+   edge alpha. Content keeps its independent rounded scroll clip below. */
+.reception-document-cell { overflow: visible; isolation: isolate; }
 .reception-document-cell-surface { position: absolute; inset: 0; }
-.reception-document-cell-content { position: absolute; inset: 0; display: flex; padding: 24px; box-sizing: border-box; overflow: auto; }
+.reception-document-cell-content { position: absolute; inset: 0; display: flex; padding: 24px; box-sizing: border-box; overflow: auto; scrollbar-width: none; border-radius: inherit; }
 .reception-document-layer[data-text] { overflow: hidden; overflow-wrap: anywhere; }
 .reception-document-layer .reception-image { min-height: 0; }
 .reception-document-canvas [data-selected] { outline: 1px solid var(--tactile-ink); outline-offset: -1px; }
-.reception-document-canvas [tabindex]:focus-visible { outline: 2px solid var(--tactile-ink); outline-offset: -2px; }
-.reception-document-preview { position: absolute; inset: 0; z-index: 100; display: flex; flex-direction: column; min-height: 0; color: var(--tactile-ink); background: var(--interface-environment); font: var(--workflow-type-control); pointer-events: auto; }
-.reception-document-preview > header { display: flex; align-items: center; gap: 12px; padding: 8px 12px; background: var(--tactile-face); border-bottom: 1px solid var(--tactile-edge); }
-.reception-document-preview .workflow-tactile-control { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: var(--tool-control-height, 32px); padding: 6px 8px; }
-.reception-document-preview-body { display: flex; flex: 1; min-height: 0; }
-.reception-document-preview-scroll { display: flex; flex-direction: column; flex: 1; min-width: 0; min-height: 0; overflow: auto; padding: 16px; }
-.reception-document-preview-scroll > .reception-document-viewport { margin-inline: auto; }
-.reception-document-preview-tools { flex: 0 0 240px; padding: 12px; overflow: auto; background: var(--tactile-face); border-left: 1px solid var(--tactile-edge); display: flex; flex-direction: column; gap: 12px; }
-.reception-document-preview-tools label { display: grid; gap: 6px; }
-.reception-document-preview-tools input, .reception-document-preview-tools select { min-width: 0; width: 100%; box-sizing: border-box; background: var(--tactile-well); color: inherit; border: 1px solid var(--tactile-edge); padding: 6px; font: inherit; }
-.reception-document-preview-tools p { margin: 0; color: var(--tactile-muted); line-height: 1.5; }
-.reception-document-preview-tools fieldset { display: grid; gap: 10px; margin: 0; padding: 0; border: 0; }
-.reception-document-preview-tools legend { margin-bottom: 10px; }
-.reception-document-preview-order { display: flex; gap: 4px; }
-@media (max-width: 700px) {
-  .reception-document-preview-body { flex-direction: column; }
-  .reception-document-preview-tools { flex-basis: 200px; border-left: 0; border-top: 1px solid var(--tactile-edge); }
-}
+.reception-document-layer[tabindex]:focus-visible, .reception-document-cell[tabindex]:focus-visible { outline: 2px solid var(--tactile-ink); outline-offset: -2px; }
+.reception-text-preview { height: 100%; min-height: 0; }
+.reception-text-preview[data-stacked] { container-type: size; --text-stack-height: 100cqh; }
+.reception-text-excerpt { max-height: 100%; overflow: hidden; }
+.reception-text-excerpt > div { display: flow-root; }
+.reception-read-text { position: absolute; right: 16px; bottom: 16px; display: grid; place-items: end; width: 32px; height: 32px; padding: 0; border: 0; background: none; color: inherit; cursor: pointer; opacity: .65; }
+.reception-read-dots { display: flex; gap: 4px; padding-block: 2px; }
+.reception-read-dots > span { width: 3px; height: 3px; border-radius: 50%; background: currentColor; }
+.reception-read-text:hover, .reception-read-text:focus-visible { opacity: 1; }
+.reception-read-text:focus-visible, .reception-reader-close:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
+/* No stacking context at rest: each layer retains its global paint index. */
+.reception-cell-group { position: absolute; }
+.reception-text-reader { font: inherit; box-sizing: border-box; width: min(calc(66ch + 64px), calc(100vw - 32px)); max-height: calc(100dvh - 64px); margin: auto; padding: 0; border: 0; overflow: hidden; background: var(--reception-page-background, var(--interface-window, #080808)); isolation: isolate; }
+.reception-text-reader[open] { display: flex; }
+.reception-text-reader::backdrop { background: rgb(0 0 0 / .78); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+.reception-reader-surface { position: absolute; inset: 0; pointer-events: none; }
+.reception-reader-scroll { position: relative; box-sizing: border-box; width: 100%; min-height: 0; padding: 48px 32px 32px; overflow: auto; overscroll-behavior: contain; scrollbar-width: none; }
+.reception-reader-scroll:focus-visible { outline: 1px solid color-mix(in srgb, currentColor 20%, transparent); outline-offset: -1px; }
+.reception-reader-scroll > div + div { margin-top: 32px; }
+.reception-reader-close { position: absolute; z-index: 1; top: 8px; right: 8px; display: grid; place-items: center; width: 32px; height: 32px; padding: 0; border: 0; background: none; color: inherit; cursor: pointer; }
+.reception-reader-scroll::-webkit-scrollbar, .reception-document-cell-content::-webkit-scrollbar { display: none; }

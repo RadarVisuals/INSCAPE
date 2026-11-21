@@ -6,7 +6,7 @@ import { chromium } from 'playwright-core';
 import { withinDeadline } from './browser-test-lifecycle.mjs';
 import { browserExecutable } from '../scripts/browserEnvironment.mjs';
 import { mountToolDockFixture } from './fixtures/tool-docks.mjs';
-import { openSharedTool, detachTool } from './fixtures/shared-tools.mjs';
+import { openSharedTool, detachTool, sharedToolTab, sharedToolPanel, openSharedColorPicker, chooseSharedShape } from './fixtures/shared-tools.mjs';
 
 const output = process.env.INSCAPE_BROWSER_OUTPUT || '.browser-test-runtime/shape-tools';
 const saved = page => page.evaluate(() => window.savedDraft());
@@ -38,14 +38,16 @@ test('Shape settings replace Properties, follow selection, preserve saved edits 
     const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, reducedMotion: 'reduce' });
     const errors = []; page.on('pageerror', error => errors.push(error.message));
     await mountToolDockFixture(page, { shapes: true, shapeGrain: .65 });
-    assert.deepEqual(await page.getByRole('tablist', { name: 'Artwork tools' }).getByRole('tab').allTextContents(), ['Layers', 'Transform', 'Color', 'Image', 'Shape', 'FX', 'Info']);
+    assert.deepEqual(await page.getByRole('tablist', { name: 'Artwork tools' }).getByRole('tab').evaluateAll(nodes => nodes.map(node => node.dataset.toolTab || node.textContent)), ['Layers', 'Library', 'Inspector']);
     await page.getByRole('button', { name: 'Select Landscape', exact: true }).click();
     let panel = await openSharedTool(page, 'Shape');
     const original = await saved(page);
     assert.equal(await page.locator('[data-context-tools]').isVisible(), false);
-    assert.equal(await page.getByRole('combobox', { name: 'Selected shape', exact: true }).count(), 1);
-    assert.equal(await panel.getByRole('textbox', { name: 'Color colour', exact: true }).count(), 0);
-    assert.equal(await panel.getByRole('spinbutton', { name: /Transform/ }).count(), 0);
+    assert.equal(await page.getByRole('button', { name: /^Selected shape:/ }).count(), 1);
+    const fillPicker = await openSharedColorPicker(page, 'Fill');
+    assert.equal(await fillPicker.getByRole('textbox', { name: 'Color colour', exact: true }).count(), 1);
+    await openSharedTool(page, 'Transform');
+    assert.equal(await panel.getByRole('spinbutton', { name: /Transform/ }).count(), 4);
     const name = panel.getByRole('textbox', { name: 'Shape name', exact: true });
     await name.fill('Backdrop'); await name.press('Enter');
     assert.equal((await saved(page)).shapes[0].name, 'Backdrop');
@@ -59,8 +61,10 @@ test('Shape settings replace Properties, follow selection, preserve saved edits 
     assert.equal((await saved(page)).shapes[1].visibility, 'PUBLIC');
     await undo(page); assert.equal(await include.isChecked(), true);
 
-    // Settings and Color may both be detached: only the originating tool reports failure.
-    await detachTool(page, 'Shape');
+    // Settings and Color travel together; only the originating section reports failure.
+    await sharedToolTab(page, 'Inspector').click({ button: 'right' });
+    await page.getByRole('menuitem', { name: 'Dock with Layers', exact: true }).click();
+    await detachTool(page, 'Inspector');
     await openSharedTool(page, 'Color');
     await failStorage(page, true);
     await include.click();
@@ -71,11 +75,11 @@ test('Shape settings replace Properties, follow selection, preserve saved edits 
     await include.uncheck(); assert.equal((await saved(page)).shapes[0].visibility, 'PRIVATE');
     await undo(page);
     await page.screenshot({ path: `${output}/shape-mist-independent.png` });
-    await panel.getByRole('tab', { name: 'Shape', exact: true }).click({ button: 'right' });
-    await page.getByRole('menuitem', { name: 'Dock with Layers, Transform, Color, Image, FX and Info', exact: true }).click();
+    await sharedToolTab(page, 'Inspector').click({ button: 'right' });
+    await page.getByRole('menuitem', { name: 'Dock with Layers', exact: true }).click();
     assert.equal(await page.locator('.workbench-tool-dock').count(), 1);
     panel = await openSharedTool(page, 'Shape');
-    await panel.getByRole('button', { name: 'Close Shape', exact: true }).click();
+    await panel.getByRole('button', { name: 'Close Inspector', exact: true }).click();
     panel = await openSharedTool(page, 'Shape');
     await failStorage(page, true);
     await artworkCommand(page, (await saved(page)).shapes[0].id, 'Duplicate');
@@ -88,21 +92,22 @@ test('Shape settings replace Properties, follow selection, preserve saved edits 
     await undo(page);
     await page.screenshot({ path: `${output}/shape-mist-docked.png` });
 
-    await panel.getByRole('combobox', { name: 'Selected shape', exact: true }).selectOption('shape:grid');
-    assert.equal(await panel.getByRole('tab', { name: 'Shape', exact: true }).getAttribute('aria-selected'), 'true');
+    await chooseSharedShape(page, 'Grid · Grid');
+    assert.equal(await sharedToolTab(page, 'Inspector').getAttribute('aria-selected'), 'true');
     assert.equal(await panel.getByRole('textbox', { name: 'Shape name', exact: true }).inputValue(), 'Grid');
-    assert.equal(await panel.getByRole('slider').count(), 0);
+    assert.equal(await panel.locator('section.shape-inspector-properties').getByRole('slider').count(), 0);
     await openSharedTool(page, 'Layers');
     await page.getByRole('button', { name: 'Select Body', exact: true }).click();
     panel = await openSharedTool(page, 'Shape');
-    await panel.getByText('Select one Shape to edit its settings.').waitFor();
-    assert.equal(await panel.getByRole('combobox').count(), 0);
+    await panel.getByRole('group', { name: 'Image fit', exact: true }).waitFor();
+    assert.equal(await panel.getByRole('button', { name: /^Selected shape:/ }).count(), 0);
+    assert.equal(await panel.getByRole('textbox', { name: 'Shape name', exact: true }).count(), 0, 'the Inspector no longer edits the previous Shape');
     assert.deepEqual((await saved(page)).shapes, original.shapes);
     assert.deepEqual(errors, []);
   } finally { await browser.close(); }
 });
 
-test('Grid and texture settings retain their behavior in a narrow dock, including hidden shapes and keyboard tab overflow', { timeout: 60000 }, async () => {
+test('Grid and texture settings retain their behavior in a narrow dock, including hidden shapes and keyboard navigation between hosts', { timeout: 60000 }, async () => {
   const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
   let page;
   try {
@@ -131,6 +136,9 @@ test('Grid and texture settings retain their behavior in a narrow dock, includin
         if (tab) record('focusin', null, tab);
       }, true);
     });
+    await sharedToolTab(page, 'Inspector').click({ button: 'right' });
+    await page.getByRole('menuitem', { name: 'Dock with Layers', exact: true }).click();
+    await sharedToolTab(page, 'Layers').click();
     await page.getByRole('button', { name: 'Select Grid', exact: true }).click();
     const beforeKeyboard = await saved(page);
     // Deliver a burst before the next animation frame. Each event must target
@@ -140,43 +148,44 @@ test('Grid and texture settings retain their behavior in a narrow dock, includin
       return ['End', 'ArrowLeft', 'ArrowLeft', 'Home', 'ArrowLeft', 'ArrowRight'].map(key => {
         const target = document.activeElement;
         target.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }));
-        return { key, target: target.dataset.toolTab, focus: document.activeElement?.dataset.toolTab };
+        const tabName = node => node.dataset.toolTab || node.textContent;
+        return { key, target: tabName(target), focus: tabName(document.activeElement) };
       });
     });
     await writeFile(`${output}/shape-keyboard-burst.json`, JSON.stringify(rapid, null, 2));
     assert.deepEqual(rapid, [
-      { key: 'End', target: 'Layers', focus: 'Info' },
-      { key: 'ArrowLeft', target: 'Info', focus: 'FX' },
-      { key: 'ArrowLeft', target: 'FX', focus: 'Shape' },
-      { key: 'Home', target: 'Shape', focus: 'Layers' },
-      { key: 'ArrowLeft', target: 'Layers', focus: 'Info' },
-      { key: 'ArrowRight', target: 'Info', focus: 'Layers' },
+      { key: 'End', target: 'Layers', focus: 'Inspector' },
+      { key: 'ArrowLeft', target: 'Inspector', focus: 'Library' },
+      { key: 'ArrowLeft', target: 'Library', focus: 'Layers' },
+      { key: 'Home', target: 'Layers', focus: 'Layers' },
+      { key: 'ArrowLeft', target: 'Layers', focus: 'Inspector' },
+      { key: 'ArrowRight', target: 'Inspector', focus: 'Layers' },
     ]);
     await page.getByRole('tab', { name: 'Layers', exact: true }).focus();
-    await page.keyboard.press('End'); await page.keyboard.press('ArrowLeft'); await page.keyboard.press('ArrowLeft');
-    let panel = page.locator('.workbench-tool-dock');
+    await page.keyboard.press('End');
+    let panel = sharedToolPanel(page);
     await panel.getByRole('textbox', { name: 'Shape name', exact: true }).waitFor();
-    await drag(page, panel.locator('[data-edge="w"]'), 40, 0);
+    await drag(page, panel.locator('[data-edge="e"]'), -40, 0);
     const checkTab = async name => {
-      const target = page.getByRole('tab', { name, exact: true });
+      const target = sharedToolTab(page, name);
       const tab = await target.boundingBox();
-      const strip = await page.getByRole('tablist', { name: 'Artwork tools' }).boundingBox();
+      const strip = await panel.getByRole('tablist', { name: 'Artwork tools' }).boundingBox();
       assert.ok(tab.x >= strip.x - 1 && tab.x + tab.width <= strip.x + strip.width + 1, `${name} is scrolled into view`);
       assert.equal(await target.getAttribute('aria-selected'), 'true');
       assert.equal(await target.evaluate(node => node === document.activeElement), true, `${name} owns keyboard focus`);
       assert.equal(await panel.getByRole('button', { name: /^Close / }).getAttribute('aria-label'), `Close ${name === 'Layers' ? 'Workbench Layers' : name}`);
     };
-    await checkTab('Shape');
-    await page.getByRole('tab', { name: 'Shape', exact: true }).focus(); await page.keyboard.press('Home');
-    await checkTab('Layers'); await page.keyboard.press('End'); await page.keyboard.press('ArrowLeft'); await page.keyboard.press('ArrowLeft'); await checkTab('Shape');
-    const bounds = await panel.boundingBox(), close = await panel.getByRole('button', { name: 'Close Shape', exact: true }).boundingBox();
+    await checkTab('Inspector');
+    await sharedToolTab(page, 'Inspector').focus(); await page.keyboard.press('Home');
+    await checkTab('Layers'); await page.keyboard.press('End'); await checkTab('Inspector');
+    const bounds = await panel.boundingBox(), close = await panel.getByRole('button', { name: 'Close Inspector', exact: true }).boundingBox();
     assert.ok(close.x >= bounds.x && close.x + close.width <= bounds.x + bounds.width);
     assert.deepEqual(await saved(page), beforeKeyboard, 'tab navigation and dock resizing do not author Shape content');
     await page.screenshot({ path: `${output}/shape-keyboard-overflow.png` });
     assert.equal(await panel.getByRole('checkbox', { name: 'Show shape', exact: true }).count(), 0);
     await openSharedTool(page, 'Layers');
     await page.getByRole('button', { name: 'Reopen Grid', exact: true }).click();
-    await page.locator('[data-workbench-view-id="shape:grid"]').waitFor();
+    await page.locator('[data-detached-window][data-workbench-view-id="shape:grid"]').waitFor();
     panel = await openSharedTool(page, 'Shape');
     await field(panel, 'Grid spacing', 35);
     let draft = await saved(page);
@@ -192,25 +201,25 @@ test('Grid and texture settings retain their behavior in a narrow dock, includin
     const beforeVisibility = await saved(page);
     await openSharedTool(page, 'Layers');
     await page.getByRole('button', { name: 'Hide Grid in editor', exact: true }).click();
-    assert.equal(await page.locator('[data-workbench-view-id="shape:grid"]').isVisible(), false);
+    assert.equal(await page.locator('[data-detached-window][data-workbench-view-id="shape:grid"]').isVisible(), false);
     await page.getByRole('button', { name: 'Show Grid in editor', exact: true }).click();
-    assert.equal(await page.locator('[data-workbench-view-id="shape:grid"]').isVisible(), true);
+    assert.equal(await page.locator('[data-detached-window][data-workbench-view-id="shape:grid"]').isVisible(), true);
     assert.deepEqual(await saved(page), beforeVisibility, 'Layers visibility does not change publication or authored data');
     panel = await openSharedTool(page, 'Shape');
     assert.equal(await panel.getByRole('textbox', { name: 'Shape name', exact: true }).inputValue(), 'Grid');
 
-    await panel.getByRole('combobox', { name: 'Selected shape', exact: true }).selectOption('shape:texture');
-    await field(panel, 'Noise strength (%)', 40); await field(panel, 'Noise scale', 3);
+    await chooseSharedShape(page, 'Texture · Texture');
     await openSharedTool(page, 'Layers');
     await page.getByRole('button', { name: 'Reopen Texture', exact: true }).click();
     panel = await openSharedTool(page, 'Shape');
+    await field(panel, 'Noise strength (%)', 40); await field(panel, 'Noise scale', 3);
     draft = await saved(page);
     assert.equal(draft.shapes.find(item => item.id === 'shape:texture').opacity, .4);
     assert.equal(draft.shapes.find(item => item.id === 'shape:texture').texture.scale, 3);
     assert.equal(draft.shapes.find(item => item.id === 'shape:grid').grid.lineWidth, 2.5);
     await drag(page, panel.locator('[data-edge="s"]'), 0, -180);
     await panel.getByRole('checkbox', { name: 'Include in publication', exact: true }).scrollIntoViewIfNeeded();
-    assert.equal(await panel.locator('.workbench-tools-body').evaluate(node => node.scrollWidth <= node.clientWidth && node.scrollHeight > node.clientHeight), true);
+    assert.equal(await panel.locator('.workbench-inspector').evaluate(node => node.scrollWidth <= node.clientWidth && node.scrollHeight > node.clientHeight), true);
     await page.screenshot({ path: `${output}/shape-carbon-texture.png` });
     assert.deepEqual(errors, []);
   } finally {

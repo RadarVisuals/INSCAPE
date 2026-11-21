@@ -40,7 +40,7 @@ async function mount(page, { visitor = false, pinned = false, entryTarget = null
     const { WorkbenchWindow } = await import('/src/public/ownerSystemWorkflow/DisplayInstrumentWindow.jsx');
     const { createSystemWorkflowDraftStore } = await import('/src/systemWorkflow/systemWorkflowDraftStore.js');
     const { addImageModule } = await import('/src/imageModule/imageModuleSession.js');
-    const { openWorkbenchIndex, editWorkbenchIndex } = await import('/src/systemWorkflow/workbenchIndexSession.js');
+    const { openWorkbenchIndex } = await import('/src/systemWorkflow/workbenchIndexSession.js');
     await import('/src/inscapeTokens.css'); await import('/src/public/ownerSystemWorkflow/ownerSystemWorkflow.css');
     await import('/src/lattice/rendering/latticeMenuSurface.css');
     const profile = `0x${'3'.repeat(40)}`, values = new Map();
@@ -54,10 +54,11 @@ async function mount(page, { visitor = false, pinned = false, entryTarget = null
     // alone does not make a missing/deleted module selectable.
     const artworkId = fixture.artworkId = addImageModule(store, profile);
     const index = store.getSnapshot().workbenchIndex;
-    editWorkbenchIndex(store, profile, index, { ...index, pinned, destinations: [
+    // Seed the stored record directly so legacy unpinned documents reach the reader intact.
+    store.commitCompletedOperation({ ...store.getDraft(), workbenchIndex: { ...index, pinned, destinations: [
       { id: 'workbench-view:one', name: 'bottom 01', visibility: 'PUBLIC', view: { left: 100, top: 50, width: 600, height: 350 } },
       { id: 'workbench-view:two', name: 'bottom 02', visibility: 'PUBLIC', view: { left: 10, top: 0, width: 2400, height: 1600 } },
-    ] });
+    ] } }, { expectedGeneration: store.getGeneration() });
     function Lock() { useWorkbenchInspectionLock(); return null; }
     function Bench() {
       const host = React.useRef(null), [late, setLate] = React.useState(0), [locked, setLocked] = React.useState(false), [removed, setRemoved] = React.useState(false);
@@ -97,7 +98,7 @@ async function zoomAtIndex(page, scale) {
 }
 
 for (const visitor of [false, true]) for (const width of [1440, 390]) {
-  test(`Index stays readable and follows the canvas at 25–200% (${visitor ? 'Visitor' : 'Owner'}, ${width}px)`, { timeout: 45000 }, async () => {
+  test(`Index stays readable and screen-pinned at 25–200% (${visitor ? 'Visitor' : 'Owner'}, ${width}px)`, { timeout: 45000 }, async () => {
     const browser = await launch();
     try {
       const page = await browser.newPage({ viewport: { width, height: 900 }, deviceScaleFactor: width === 390 ? 2 : 1 });
@@ -106,19 +107,17 @@ for (const visitor of [false, true]) for (const width of [1440, 390]) {
       for (const scale of [.25, .5, 1, 2]) {
         await zoomAtIndex(page, scale);
         const current = await read(page);
-        near(current.rect.left, 40, 'anchor x'); near(current.rect.top, 55, 'anchor y');
-        near(current.rect.width, 300, 'readable width'); near(current.rect.height, 440, 'screen height');
+        assert.deepEqual(current.rect, original.rect, 'panning and zooming leave the panel fixed');
+        near(current.rect.width, original.frame.width, 'readable width'); near(current.rect.height, original.frame.height, 'screen height');
         assert.equal(current.registered, false, 'Index is not a composition member');
         assert.deepEqual(current.draft, original.draft, 'camera projection never saves geometry');
         const layout = await panel(page).evaluate(node => {
-          const content = node.querySelector('.system-workflow__instrument-content'), button = node.querySelector('nav li button');
-          const text = [...button.childNodes].find(child => child.nodeType === Node.TEXT_NODE);
-          const range = document.createRange(); range.selectNodeContents(text);
+          const content = node.querySelector('.workbench-tool-panel-content, .system-workflow__instrument-content');
+          const name = node.querySelector('li button[aria-label^="Go to "]');
           const close = node.querySelector('[aria-label="Close Index"]');
-          return { lines: range.getClientRects().length, overflow: content.scrollWidth - content.clientWidth,
-            close: close.getBoundingClientRect().width, font: getComputedStyle(button).fontSize };
+          return { nameWidth: name.clientWidth, overflow: content.scrollWidth - content.clientWidth, close: close.getBoundingClientRect().width };
         });
-        assert.equal(layout.lines, 1, 'destination labels do not collapse into vertical letters');
+        assert.ok(layout.nameWidth >= 64, 'the destination name has room beside the row actions');
         assert.ok(layout.overflow <= 1, 'all fields remain inside the scroll surface');
         assert.ok(layout.close >= 26, 'close control retains its shared window size');
         await mkdir(output, { recursive: true });
@@ -129,7 +128,7 @@ for (const visitor of [false, true]) for (const width of [1440, 390]) {
   });
 }
 
-test('Index dragging, resizing, pinning and failed saves use one consistent frame at reduced zoom', { timeout: 45000 }, async () => {
+test('Index dragging, resizing, compact navigation and failed saves use screen coordinates', { timeout: 45000 }, async () => {
   const browser = await launch();
   try {
     const page = await browser.newPage({ viewport: { width: 1200, height: 900 } });
@@ -140,30 +139,57 @@ test('Index dragging, resizing, pinning and failed saves use one consistent fram
     await page.mouse.move(box.x + 55, box.y + 12); await page.mouse.down();
     await page.mouse.move(box.x + 95, box.y + 32); await page.mouse.up(); await settle(page);
     let after = await read(page);
-    near(after.rect.left - before.rect.left, 40, 'drag screen x'); near(after.frame.left - before.frame.left, 80, 'drag world x');
-    near(after.frame.top - before.frame.top, 40, 'drag world y');
+    near(after.rect.left - before.rect.left, 40, 'drag screen x'); near(after.frame.left - before.frame.left, 40, 'saved screen x');
+    near(after.frame.top - before.frame.top, 20, 'saved screen y');
     assert.equal(after.generation, before.generation + 1, 'move commits once');
     before = after;
-    const resize = page.getByRole('separator', { name: 'Resize Index from right', exact: true });
+    const resize = page.getByRole('button', { name: 'Resize Index panel from right', exact: true });
     await resize.focus(); await resize.press('ArrowRight'); await settle(page);
     after = await read(page); near(after.rect.width - before.rect.width, 8, 'keyboard resize screen width');
     near(after.frame.width - before.frame.width, 8, 'persisted screen width');
     await page.evaluate(() => window.__indexFixture.store.undo()); await settle(page);
     near((await read(page)).rect.width, before.rect.width, 'undo width');
-    await page.getByLabel('Pin Index to screen', { exact: true }).check(); await settle(page);
+    await page.getByRole('button', { name: 'Show compact Index' }).click(); await settle(page);
     const pinned = await read(page);
+    assert.equal(await go(page).innerText(), '1');
     await page.evaluate(() => window.__indexFixture.camera.updateCamera({ scale: .25, offset: { x: 100, y: 100 } })); await settle(page);
     assert.deepEqual((await read(page)).rect, pinned.rect, 'pinned Index remains fixed');
-    await page.getByLabel('Pin Index to screen', { exact: true }).uncheck(); await settle(page);
-    const unpinned = await read(page);
-    near(unpinned.rect.width, pinned.rect.width, 'unpin preserves width');
-    before = unpinned;
+    await page.getByRole('button', { name: 'Expand Index' }).click(); await settle(page);
+    before = await read(page);
+    assert.deepEqual(before.frame, pinned.frame, 'compact mode never overwrites the window size');
     await page.evaluate(() => { window.__indexFixture.failSave = true; });
-    await page.getByRole('separator', { name: 'Resize Index from right', exact: true }).press('ArrowRight'); await settle(page);
+    await resize.press('ArrowRight'); await settle(page);
     after = await read(page);
     assert.deepEqual(after.frame, before.frame); assert.deepEqual(after.rect, before.rect);
     assert.ok(await panel(page).getByRole('alert').isVisible());
     assert.deepEqual(errors, []);
+  } finally { await browser.close(); }
+});
+
+test('Index row navigation, inline rename and the compact strip share the current camera view', { timeout: 45000 }, async () => {
+  const browser = await launch();
+  try {
+    const page = await browser.newPage({ viewport: { width: 1200, height: 900 }, reducedMotion: 'reduce' });
+    await mount(page);
+    const index = panel(page), name = go(page).locator('span'), initial = await read(page);
+    await name.dblclick();
+    const input = index.getByRole('textbox', { name: 'Rename bottom 01' });
+    await input.fill('Cover'); await input.press('Enter');
+    assert.deepEqual((await read(page)).camera, initial.camera, 'renaming leaves the camera in place');
+
+    const cover = index.getByRole('button', { name: 'Go to Cover', exact: true });
+    await index.locator('.workbench-index__view-row').first().click({ position: { x: 1, y: 12 } });
+    await index.locator('[aria-current="location"]').waitFor();
+    assert.equal(await cover.getAttribute('aria-current'), 'location');
+    await index.getByRole('button', { name: 'Show compact Index' }).click();
+    assert.equal(await cover.innerText(), '1');
+    assert.equal(await cover.getAttribute('aria-current'), 'location');
+    await index.getByRole('button', { name: 'Go to bottom 02' }).click();
+    await back(page).click(); await settle(page);
+    assert.equal(await cover.getAttribute('aria-current'), 'location', 'Back marks the restored view');
+    await page.locator('main').dispatchEvent('wheel', { deltaY: 80, bubbles: true, cancelable: true });
+    await settle(page);
+    assert.equal(await index.locator('[aria-current="location"]').count(), 0, 'free pan clears the mark');
   } finally { await browser.close(); }
 });
 
@@ -175,9 +201,9 @@ test('Index pointer resize preserves its opposite edge; cancellation and remount
     for (const scale of [.25, 2]) {
       await zoomAtIndex(page, scale);
       const before = await read(page);
-      const handle = page.getByRole('separator', { name: 'Resize Index from left', exact: true });
+      const handle = page.getByRole('button', { name: 'Resize Index panel from left', exact: true });
       const box = await handle.boundingBox(), x = box.x + box.width / 2, y = box.y + box.height / 2;
-      assert.equal(await page.evaluate(({ x, y }) => document.elementFromPoint(x, y)?.getAttribute('aria-label'), { x, y }), 'Resize Index from left');
+      assert.equal(await page.evaluate(({ x, y }) => document.elementFromPoint(x, y)?.getAttribute('aria-label'), { x, y }), 'Resize Index panel from left');
       await page.mouse.move(x, y); await page.mouse.down(); await page.mouse.move(x + 16, y);
       await page.keyboard.press('Escape'); await page.mouse.up(); await settle(page);
       assert.deepEqual((await read(page)).frame, before.frame, 'cancel does not persist the resize');
@@ -185,7 +211,7 @@ test('Index pointer resize preserves its opposite edge; cancellation and remount
       const after = await read(page);
       near(after.rect.left + after.rect.width, before.rect.left + before.rect.width, 'opposite edge');
       near(after.frame.width, before.frame.width - 16, 'screen width after pointer resize');
-      near(after.frame.left, before.frame.left + 16 / scale, 'canvas position after pointer resize');
+      near(after.frame.left, before.frame.left + 16, 'screen position after pointer resize');
       assert.equal(after.generation, before.generation + 1);
     }
     const saved = (await read(page)).frame;
@@ -208,8 +234,8 @@ for (const visitor of [false, true]) {
       const midway = await read(page);
       assert.ok(midway.travelling); assert.ok(midway.camera.scale > 1 && midway.camera.scale < 2);
       near(midway.rect.width, 300, 'Index stays screen-sized during native camera effects');
-      near(midway.rect.left, midway.frame.left * midway.camera.scale + midway.camera.offset.x, 'live anchor x');
-      near(midway.rect.top, midway.frame.top * midway.camera.scale + midway.camera.offset.y, 'live anchor y');
+      near(midway.rect.left, original.rect.left, 'fixed x during travel');
+      near(midway.rect.top, original.rect.top, 'fixed y during travel');
       await page.evaluate(() => window.__indexFixture.addModule()); await page.clock.runFor(64);
       assert.ok((await read(page)).camera.scale > midway.camera.scale, 'late registration does not stop or rewind travel');
       await page.evaluate(() => window.__indexFixture.addModule()); await page.clock.runFor(300);

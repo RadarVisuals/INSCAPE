@@ -3,9 +3,15 @@ import './displayInstruments.css';
 import '../../lattice/rendering/latticeMenuSurface.css';
 import useWorkbenchPublicationPanel from './useWorkbenchPublicationPanel.js';
 import useWorkbenchPresentation, { useWorkbenchLayoutSession } from './useWorkbenchPresentation.js';
+import { publishedCompositionDestinations } from '../../profileDocument/domain/publishedCanvases.js';
+import CanvasJourney from '../workbenchOverview/CanvasJourney.jsx';
+import { useGalleryStudioEndpoint } from '../../profileDiscovery/galleryStudioMotion.js';
+import { workbenchArea } from '../../systemWorkflow/domain/workbenchArea.js';
+import { rememberGalleryView } from '../../profileDiscovery/galleryViewMemory.js';
 import OwnerWorkbenchSession from './OwnerWorkbenchSession.jsx';
 import useWorkbenchModuleRegistry from './useWorkbenchModuleRegistry.js';
 import useOwnerWorkbenchLibrary from './useOwnerWorkbenchLibrary.js';
+import { enableStudioCells, studioCellsUnavailableReason } from '../../systemWorkflow/domain/studioComposition.js';
 import prepareWorkbenchPreview from './prepareWorkbenchPreview.js';
 import workbenchCommands from './workbenchCommands.js';
 import OwnerWorkbenchModules from './OwnerWorkbenchModules.jsx';
@@ -16,6 +22,7 @@ import {
   Suspense,
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -37,12 +44,11 @@ import {
   displayToolCommands,
 } from './SharedDisplayTools.jsx';
 import { ContextToolbarProvider, ContextToolbar } from './ContextToolbar.jsx';
-import { SharedTextToolsProvider, SharedTextToolsWindow } from '../../text/SharedTextTools.jsx';
+import { SharedTextToolsProvider } from '../../text/SharedTextTools.jsx';
 import WorkbenchAlignmentGrid from './WorkbenchAlignmentGrid.jsx';
 import WorkbenchImageDropTarget from '../../imageModule/WorkbenchImageDropTarget.jsx';
 import useDraftUndo from './useDraftUndo.js';
 import { PRIMARY_DISPLAY_ID, displayModuleIds } from '../../systemWorkflow/domain/displayModules.js';
-import OwnerSystemWorkflowSidebar from './OwnerSystemWorkflowSidebar.jsx';
 import OwnerSystemWorkflowPanelLayer from './OwnerSystemWorkflowPanelLayer.jsx';
 import useOwnerSystemWorkflowActivity from './useOwnerSystemWorkflowActivity.js';
 import useWorkbenchController from './useWorkbenchController.js';
@@ -111,6 +117,13 @@ export function WorkbenchSession({
   onEnterMyWorld,
   onOpenDiscover,
   onOpenReception,
+  onOpenWriting,
+  onOpenGallery,
+  onReturnToWorks,
+  initialNew,
+  onNewOpened,
+  ownerDestinations,
+  returnLabel = 'Gallery',
   onEditReception,
   onOpenWorkbenchOverview,
   onPublicationConfirmed,
@@ -142,6 +155,7 @@ export function WorkbenchSession({
     draft: workbenchController.draft,
     storage: workbenchController.storage,
     workbenchId: sharedStore.getWorkbenchId(),
+    cells: sharedStore.getCells?.(),
     restored,
   });
   const {
@@ -156,22 +170,30 @@ export function WorkbenchSession({
   const pendingText = useTextRecovery(workbenchController.store, profileAddress);
   const browsing = overview?.active === true;
   const leavingEditor = overview?.journey?.direction === 'overview';
-  const [overviewControls, setOverviewControls] = useState(null);
   const [commandSearchRequest, setCommandSearchRequest] = useState(null);
   const requestCommandSearch = trigger => setCommandSearchRequest({ trigger });
   const workspaceMotion = useRef(null);
-  const [receptionPreview, setReceptionPreview] = useState(false);
+  const [responsivePreview, setResponsivePreview] = useState(null);
+  const receptionPreview = responsivePreview !== null;
   const receptionPreviewTrigger = useRef(null);
   const textPreference = editorPreferences.section('textOpen');
   const textToolsOpen =
     useSyncExternalStore(textPreference.subscribe, textPreference.getSnapshot) ?? initialTextTools.open;
-  const setTextToolsOpen = textPreference.update;
+  const setTextToolsOpen = useCallback(
+    open => {
+      textPreference.update(open);
+      if (open) editorPreferences.tools.change({ type: 'open', tab: 'Inspector', section: 'Text' });
+    },
+    [textPreference, editorPreferences]
+  );
   const preferenceError = useSyncExternalStore(editorPreferences.subscribe, editorPreferences.getError);
   const creationBarPreference = editorPreferences.section('creationBar');
   const creationBarVisible =
     useSyncExternalStore(creationBarPreference.subscribe, creationBarPreference.getSnapshot) ?? true;
   const toolDocks = editorPreferences.tools;
-  const artworkLayersOpen = useSyncExternalStore(toolDocks.subscribe, toolDocks.layersVisible);
+  const layersVisible = useSyncExternalStore(toolDocks.subscribe, toolDocks.layersVisible);
+  const inspectorVisible = useSyncExternalStore(toolDocks.subscribe, toolDocks.infoVisible);
+  const libraryOpen = useSyncExternalStore(toolDocks.subscribe, toolDocks.libraryVisible);
   const changeTool = toolDocks.change;
   const selectionState = useWorkbenchSelection(workbenchController.draft, {
     initialTargetId: workbenchController.draft.texts?.some(text => text.id === sharedTools.targetId)
@@ -227,7 +249,7 @@ export function WorkbenchSession({
   const { preview, close: closePreview, returnFocus: previewReturnFocus } = previewSession;
   const performHistory = useDraftUndo(
     workbenchController.store,
-    Boolean(preview) || browsing,
+    Boolean(preview) || Boolean(receptionPreview && !reception) || browsing,
     setNotice,
     pendingText.length ? TEXT_RECOVERY_MESSAGE : null
   );
@@ -248,7 +270,7 @@ export function WorkbenchSession({
   };
   const workspaceRef = useRef(null);
   const workbenchNavigationRef = useRef(null);
-  const [libraryNavigationHost, setLibraryNavigationHost] = useState(null);
+  const libraryTrigger = useRef(null);
   const workbenchImageTargetRef = useRef(null);
   const [workspaceMenu, setWorkspaceMenu] = useState(null);
   const layout = useOwnerSystemWorkflowLayout();
@@ -259,7 +281,7 @@ export function WorkbenchSession({
   const contractFacts = useProfileContractFacts(profileAddress, { enabled: !fixtureProfile });
   const profileIdentity =
     (import.meta.env.DEV ? reviewIdentity(profileAddress, fixtureProfile) : null) || liveIdentity;
-  const panels = useOwnerSystemWorkflowPanels({ blocked: Boolean(preview) || receptionPreview });
+  const panels = useOwnerSystemWorkflowPanels({ blocked: Boolean(preview) || receptionPreview, libraryOpen });
   const {
     open: publicationOpen,
     presence: publicationPresence,
@@ -269,7 +291,8 @@ export function WorkbenchSession({
     closePanel: panels.closePanel,
   });
   const panel = panels.activePanel;
-  const libraryOpen = panels.isPanelOpen('library');
+  const artworkLayersOpen = layersVisible;
+  const toggleArtworkLayers = () => changeTool({ type: artworkLayersOpen ? 'close' : 'open', tab: 'Layers' });
   const library = useOwnerWorkbenchLibrary({
     profileAddress,
     draft: workbenchController.draft,
@@ -294,6 +317,7 @@ export function WorkbenchSession({
   const workbench = workbenchProjection.value;
   const saveBeforeDeparture = (browsing = false) => {
     if (reception) {
+      sharedStore.checkTransition();
       if (textRecoveries(sharedStore, profileAddress).length) throw new Error(TEXT_RECOVERY_MESSAGE);
       if (!workbenchProjection.value)
         throw new Error(workbenchProjection.error || 'The layout is not ready.');
@@ -317,21 +341,63 @@ export function WorkbenchSession({
       setNotice(error.message);
     }
   };
-  const openWorkbenchOverview = () => {
+  const showWorkbenchOverview = () => {
     if (browsing) {
       panels.closePanel({ returnFocus: false });
       return;
     }
-    leaveForDestination(() => {
-      panels.closePanel({ returnFocus: false });
-      const draft = { ...workbenchController.draft, workbench };
-      const item = sharedStore.listWorkbenches().find(item => item.id === sharedStore.getWorkbenchId());
-      const source =
-        !reception && item
-          ? workspaceMotion.current?.capture(workbenchOverviewModel(draft, assetsById), item.name, item.id)
-          : null;
-      onOpenWorkbenchOverview(source);
-    }, true);
+    saveBeforeDeparture(true);
+    panels.closePanel({ returnFocus: false });
+    const draft = { ...workbenchController.draft, workbench };
+    const item = sharedStore.listWorkbenches().find(item => item.id === sharedStore.getWorkbenchId());
+    const source =
+      !reception && item
+        ? workspaceMotion.current?.capture(workbenchOverviewModel(draft, assetsById), item.name, item.id)
+        : null;
+    onOpenWorkbenchOverview(source);
+    setResponsivePreview(null);
+  };
+  const closeReceptionPreview = () => {
+    setResponsivePreview(null);
+    requestAnimationFrame(() => receptionPreviewTrigger.current?.focus({ preventScroll: true }));
+  };
+  const selectDocument = id => {
+    if (id !== documentNavigation.activeId) {
+      saveBeforeDeparture(true);
+      documentNavigation.select(id);
+      setResponsivePreview(null);
+    } else if (receptionPreview) closeReceptionPreview();
+  };
+  const compositionId = documentNavigation?.activeId;
+  const resolution = publishedResolution;
+  const verified = !resolution?.busy && resolution?.status === 'RESOLVED' &&
+    resolution.document?.profile.address === profileAddress;
+  const placements = verified ? publishedCompositionDestinations(resolution.document, compositionId) : [];
+  const inGallery = placements.includes('gallery');
+  const incoming = useGalleryStudioEndpoint('editor', browsing ? null : profileAddress, id => {
+    if (!inGallery || (id && id !== compositionId)) return null;
+    rememberGalleryView(profileAddress, { selectedId: compositionId });
+    // Only geometry crosses back into the published view. Gallery supplies its verified artwork.
+    const model = { area: workbenchArea(workbench) };
+    const moving = workspaceMotion.current?.captureActive(model, '', compositionId);
+    const frame = moving || workspaceMotion.current?.captureEditor(model, '', compositionId);
+    return frame && { id: compositionId, frame: frame.frame, paint: frame.paint, fitPublished: !moving, radius: frame.radius, background: frame.background };
+  }, workspaceRef, CanvasJourney);
+  const routeJourney = incoming?.source.id === compositionId ? incoming : null;
+  const journey = overview?.journey || routeJourney;
+  const onProfile = placements.includes('profile');
+  const knownEmpty = !resolution?.busy && resolution?.status === 'UNAVAILABLE' && resolution.address === profileAddress;
+  let publicationState = resolution?.busy ? 'Checking publication' : 'Publication unverified';
+  if (verified || knownEmpty) {
+    if (inGallery) publicationState = onProfile ? 'In Gallery and on Profile' : 'In Gallery';
+    else publicationState = onProfile ? 'On Profile' : 'Studio only';
+  }
+  const workspaceDestinations = {
+    Profile: onOpenReception && (() => { saveBeforeDeparture(); onOpenReception('published'); }),
+    Gallery: onOpenGallery ? () => leaveForDestination(onOpenGallery, true) : showWorkbenchOverview,
+    Writing: onOpenWriting && (() => { saveBeforeDeparture(); onOpenWriting(); }),
+    Studio: () => { if (receptionPreview) closeReceptionPreview(); },
+    Discover: trigger => { saveBeforeDeparture(true); openDockPanel('discover', trigger); },
   };
   const activity = useOwnerSystemWorkflowActivity({
     active: panel === 'activity',
@@ -340,7 +406,7 @@ export function WorkbenchSession({
   });
   // Grids acts as a destination picker alongside Library, so it must not
   // disable the Display's existing drop targets or authoring interactions.
-  const panelBlocksAuthoring = id => id !== 'library' && !(id === 'grids' && libraryOpen);
+  const panelBlocksAuthoring = id => !(id === 'grids' && libraryOpen);
   const panelOccupied = Boolean(
     publicationPresence.present ||
     (panel && panelBlocksAuthoring(panel)) ||
@@ -358,15 +424,18 @@ export function WorkbenchSession({
     return () => globalThis.clearTimeout(timeout);
   }, [noticeMessage, dismissNotice, restoreWarning]);
   const changeGrid = (...args) => selectedInstance?.displayRef.current?.changeGrid(...args) ?? false;
+  const publishedProfile = ['RESOLVED', 'STALE'].includes(publishedResolution?.status) ? publishedResolution.document?.profile : null;
+  const cachedIdentity = publishedProfile?.address === profileAddress ? publishedProfile.cachedIdentity : null;
   const profileModel = useMemo(
     () =>
       createProductionIdentityDossierViewModel({
         assetRecords: assetsById,
         contractFacts,
         identity: profileIdentity,
+        cachedIdentity,
         identityPresentation: workbenchController.draft?.identityPresentation,
       }),
-    [assetsById, contractFacts, workbenchController.draft?.identityPresentation, profileIdentity]
+    [assetsById, contractFacts, workbenchController.draft?.identityPresentation, profileIdentity, cachedIdentity]
   );
   const publicationProfile = useMemo(
     () => ({
@@ -401,14 +470,7 @@ export function WorkbenchSession({
       trigger
     );
   };
-  const destinationTrigger = trigger => {
-    setWorkbenchPreferences(current => ({ ...current, dockVisible: false }));
-    return trigger?.closest('.workbench-sidebar')
-      ? workbenchNavigationRef.current?.querySelector('.editor-menu-brand')
-      : trigger;
-  };
   const openDockPanel = (name, trigger) => {
-    trigger = destinationTrigger(trigger);
     if (publicationOpen) closePublication({ returnFocus: false });
     if (name === 'discover' && onOpenDiscover) {
       panels.closePanel({ returnFocus: false });
@@ -417,20 +479,36 @@ export function WorkbenchSession({
     }
     panels.togglePanel(name, trigger);
   };
-  const toggleLibrary = trigger => {
-    trigger = destinationTrigger(trigger);
+  const openLibrary = trigger => {
     if (publicationOpen) closePublication({ returnFocus: false });
-    panels.togglePanel('library', trigger?.isConnected ? trigger : workspaceRef.current);
+    if (panel !== 'grids') panels.closePanel({ returnFocus: false });
+    libraryTrigger.current = trigger?.isConnected ? trigger : workspaceRef.current;
+    changeTool({ type: 'open', tab: 'Library', focus: true });
   };
   const openPreview = trigger => {
     if (reception) {
       leaveForDestination(() => {
         receptionPreviewTrigger.current = trigger;
-        setReceptionPreview(true);
+        setResponsivePreview({});
       });
       return;
     }
     if (publicationOpen) closePublication({ returnFocus: false });
+    const draft = { ...workbenchController.draft, workbench };
+    if (!studioCellsUnavailableReason(draft)) {
+      if (workbenchProjection.error || !workbench) {
+        setNotice(workbenchProjection.error || 'The layout is not ready.');
+        return;
+      }
+      if (textRecoveries(workbenchController.store, profileAddress).length) {
+        setNotice(TEXT_RECOVERY_MESSAGE);
+        return;
+      }
+      panels.closePanel({ returnFocus: false });
+      receptionPreviewTrigger.current = trigger;
+      setResponsivePreview({ snapshot: enableStudioCells(draft).composition });
+      return;
+    }
     startPreview(trigger);
   };
 
@@ -450,26 +528,41 @@ export function WorkbenchSession({
     setTextToolsOpen,
     revealInstruments,
     changeTool,
-    toggleLibrary,
+    openLibrary,
     openIdentity,
     openDockPanel,
     openPreview,
     togglePublication,
-    setWorkbenchPreferences,
     setWorkspaceMenu,
     reception: Boolean(reception),
   });
   const previewing = Boolean(preview) || receptionPreview;
+  const canvasSuspended = previewing || browsing || leavingEditor;
+  const recordStatus = sharedStore.getRecordState().status;
+  const commitFailure = useSyncExternalStore(sharedStore.subscribe, sharedStore.getLastCommitFailure);
+  const saveState =
+    pendingText.length ||
+    commitFailure ||
+    workbenchController.error ||
+    layoutPersistence.error ||
+    workbenchProjection.error ||
+    !sharedStore.hasWriteAccess()
+      ? 'Changes need attention'
+      : layoutPersistence.pending
+        ? 'Saving layout'
+        : recordStatus === 'valid'
+          ? 'Saved locally'
+          : 'No saved draft';
   const toolbarHidden = previewing || instrumentsObscured || !creationBarVisible;
-  const finishOverviewAction = useRef(null);
-  finishOverviewAction.current = () => {
-    if (overview.editorAction === 'publish') togglePublication(workspaceRef.current);
-    else if (overview.editorAction === 'grids') openDockPanel('grids', workspaceRef.current);
-    overview.onActionComplete();
-  };
-  useEffect(() => {
-    if (!browsing && !overview?.journey && overview?.editorAction) finishOverviewAction.current();
-  }, [browsing, overview?.journey, overview?.editorAction]);
+  useLayoutEffect(() => {
+    if (!overview?.saveBeforeRoute) return;
+    const ref = overview.saveBeforeRoute;
+    ref.current = () => {
+      try { saveBeforeDeparture(true); return true; }
+      catch (failure) { setNotice(failure.message); return false; }
+    };
+    return () => { ref.current = null; };
+  });
   return (
     <>
       <ContextToolbarProvider target={activeModuleId}>
@@ -481,11 +574,9 @@ export function WorkbenchSession({
           onTargetChange={selectionState.selectArtwork}
         >
           <SharedTextToolsProvider
-            editorPreferences={editorPreferences}
-
             activeModuleId={activeModuleId}
             onActivate={selectionState.focusModule}
-            open={textToolsOpen}
+            open={textToolsOpen && inspectorVisible}
             onOpenChange={setTextToolsOpen}
           >
             <WorkbenchViewProvider
@@ -512,7 +603,8 @@ export function WorkbenchSession({
                   className="system-workflow"
                   data-editor-menu
                   data-overview={browsing || undefined}
-                  data-workspace-journey={overview?.journey?.direction}
+                  data-workspace-journey={journey?.direction}
+                    data-gallery-entry={routeJourney?.direction === 'editor' || undefined}
                   data-creation-toolbar={!toolbarHidden || undefined}
                   data-canvas-context={reception ? 'reception' : 'canvas'}
                   data-reception-editor={reception ? true : undefined}
@@ -532,7 +624,6 @@ export function WorkbenchSession({
                       setWorkspaceMenu({ x: event.clientX, y: event.clientY });
                     }
                   }}
-                  data-workspace-sidebar={workbenchPreferences.dockVisible || undefined}
                   style={{ '--workflow-dock-height': '0px' }}
                   onKeyDown={event => {
                     if (
@@ -565,6 +656,8 @@ export function WorkbenchSession({
                         hostRef={workspaceRef}
                         navigation={navigation}
                         editorPreferences={editorPreferences}
+                        artworkLayersOpen={artworkLayersOpen}
+                        onToggleLayers={toggleArtworkLayers}
                         creationBarVisible={creationBarVisible}
                         onCreationBarChange={creationBarPreference.update}
                         onSearchCommands={
@@ -575,29 +668,27 @@ export function WorkbenchSession({
                         history={workbenchController.store.getHistory()}
                         onHistory={performHistory}
                         historyBlocked={pendingText.length ? TEXT_RECOVERY_MESSAGE : null}
-                        store={sharedStore}
                         navigationRef={workbenchNavigationRef}
                         focusOnMount={focusWorkbench}
-                        hidden={previewing || (browsing && overviewControls?.immersive)}
-                        overview={browsing}
-                        overviewControls={overviewControls}
-                        animateEntry={overview?.journey?.direction === 'editor'}
+                        hidden={previewing || browsing}
                         documentNavigation={
-                          documentNavigation && {
-                            ...documentNavigation,
-                            select: id => {
-                              if (id !== documentNavigation.activeId) {
-                                saveBeforeDeparture();
-                                documentNavigation.select(id);
-                              }
-                            },
-                          }
+                          documentNavigation && { ...documentNavigation, select: selectDocument }
                         }
+                        onReturnToWorks={returnLabel === 'Profile' && workspaceDestinations.Profile ? workspaceDestinations.Profile
+                          : onReturnToWorks ? () => leaveForDestination(onReturnToWorks, true) : showWorkbenchOverview}
+                        onManageCompositions={showWorkbenchOverview}
+                        initialNew={initialNew}
+                        onNewOpened={onNewOpened}
+                        returnLabel={returnLabel}
+                        workspaceDestinations={workspaceDestinations}
+                        onPublish={togglePublication}
+                        publicationOpen={publicationOpen}
+                        saveState={saveState}
+                        publicationState={publicationState}
                         onPreview={openPreview}
+                        onLibrary={openLibrary}
                         onOpenPanel={openDockPanel}
-                        openPanels={panels.openPanels}
-                        projection={workbenchProjection}
-                        flushLayout={layoutPersistence.flush}
+                        openPanels={libraryOpen ? [...panels.openPanels, 'library'] : panels.openPanels}
                         busy={publicationPresence.present || previewSession.preparing}
                       />
                     )}
@@ -606,24 +697,25 @@ export function WorkbenchSession({
                     showHandTool={false}
                     disabled={previewing || browsing}
                     exiting={leavingEditor}
-                    dockVisible={workbenchPreferences.dockVisible}
                     creationToolbarVisible={!toolbarHidden}
                     historyBlocked={pendingText.length ? TEXT_RECOVERY_MESSAGE : null}
                   />
                   <OwnerWorkbenchToolbar
+                    shapePreference={editorPreferences.section('lastShape')}
                     searchRequest={commandSearchRequest}
                     searchEnabled={!previewing && !browsing && !instrumentsObscured}
+                    onRevealCreationTools={() => {
+                      if (!creationBarVisible) creationBarPreference.update(true);
+                    }}
                     showIdentity={!reception}
-                    onOpenSharedTool={tab => changeTool({ type: 'open', tab })}
+                    onOpenSharedTool={section => changeTool({ type: 'open', tab: 'Inspector', section })}
                     hostRef={workspaceRef}
                     placementTargets={allPlacementTargetsRef}
                     artworkLayersOpen={artworkLayersOpen}
-                    onToggleArtworkLayers={() =>
-                      changeTool({ type: artworkLayersOpen ? 'close' : 'open', tab: 'Layers' })
-                    }
+                    onToggleArtworkLayers={toggleArtworkLayers}
                     commands={addCommands}
                     onCommand={runCommand}
-                    onOpenLibrary={toggleLibrary}
+                    onOpenLibrary={openLibrary}
                     libraryOpen={libraryOpen}
                     preferences={workbenchPreferences}
                     onPreferencesChange={change =>
@@ -639,7 +731,7 @@ export function WorkbenchSession({
                   <WorkbenchImageDropTarget
                     targetRef={workbenchImageTargetRef}
                     hostRef={workspaceRef}
-                    suspended={previewing || browsing}
+                    suspended={canvasSuspended}
                     onCreated={activateArtwork}
                     onError={setNotice}
                   />
@@ -649,13 +741,20 @@ export function WorkbenchSession({
                     hidden={Boolean(preview) || instrumentsObscured}
                   />
                   <ContextToolbar hidden={Boolean(preview) || instrumentsObscured} />
-                  <SharedTextToolsWindow
-                    hidden={Boolean(preview) || instrumentsObscured}
-                    navigationRef={workbenchNavigationRef}
-                  />
                   <WorkbenchToolDocks
                     controller={toolDocks}
-                    hidden={Boolean(preview) || instrumentsObscured}
+                    libraryOnly={browsing}
+                    returnFocusRefs={{ Library: libraryTrigger }}
+                    libraryProps={{
+                      preferenceStore: editorPreferences.section('library'),
+                      workbenchImageTargetRef, moduleAssetTargetRef: moduleTargetsRef,
+                      placementTargetRef: allPlacementTargetsRef, shortcutTargetRef: allShortcutTargetsRef,
+                      workspaceRef, placementScope: `${profileAddress}:${activeController?.moduleId || ''}:${activeController?.selectedGridId || ''}`,
+                      authoringLocked: browsing, categoryCommands: library.categoryCommands,
+                      data: libraryData, resolveAssetDimensions,
+                    }}
+                    colourPreference={editorPreferences.section('colourPickers')}
+                    hidden={Boolean(preview) || receptionPreview || panelOccupied}
 
                     navigationRef={workbenchNavigationRef}
                     hostRef={workspaceRef}
@@ -680,27 +779,18 @@ export function WorkbenchSession({
                     workspaceRef={workspaceRef}
                     workbenchNavigationRef={workbenchNavigationRef}
                     keeperDockPositions={keeperDockPositions}
-                    suspended={previewing || browsing}
+                    suspended={canvasSuspended}
                     exiting={leavingEditor}
                     panelOccupied={panelOccupied}
                     instrumentsObscured={instrumentsObscured}
                     revealInstruments={revealInstruments}
-                    toggleLibrary={toggleLibrary}
+                    openLibrary={openLibrary} libraryOpen={libraryOpen}
                     panels={panels}
                     deleteDisplay={deleteDisplay}
                     onConnect={onConnect}
                   />
                   <OwnerSystemWorkflowPanelLayer
-                    libraryPreferences={editorPreferences.section('library')}
-                    libraryWindowPreferences={editorPreferences.section('libraryWindow')}
-                    navigationHost={libraryNavigationHost}
-                    workbenchImageTargetRef={workbenchImageTargetRef}
-                    moduleAssetTargetRef={moduleTargetsRef}
-                    placementTargetRef={allPlacementTargetsRef}
-                    shortcutTargetRef={allShortcutTargetsRef}
-                    workspaceRef={workspaceRef}
                     activity={activity}
-                    authoringLocked={browsing}
                     connectedProfile={connectedProfile}
                     onConnect={onConnect}
                     onDisconnect={onDisconnect}
@@ -708,7 +798,6 @@ export function WorkbenchSession({
                     controller={activeController}
                     profileAddress={profileAddress}
 
-                    libraryData={libraryData}
 
                     onChangeGrid={changeGrid}
                     backupControls={
@@ -740,7 +829,7 @@ export function WorkbenchSession({
                     }
                     onClose={() => panels.closePanel()}
                     onVisitProfile={onVisitProfile}
-                    onOpenReception={onOpenReception}
+                    onOpenReception={onOpenReception && (() => leaveForDestination(onOpenReception))}
                     onEditReception={reception ? undefined : () => leaveForDestination(onEditReception)}
                     onOpenIdentity={event => {
                       openIdentity(
@@ -752,8 +841,6 @@ export function WorkbenchSession({
                     panels={panels}
                     profileIdentity={profileIdentity}
                     profileModel={profileModel}
-                    resolveAssetDimensions={resolveAssetDimensions}
-                    categoryCommands={library.categoryCommands}
                   />
                   {!browsing && identityOpen && profileModel && (
                     <Suspense fallback={<p role="status">Opening Identity…</p>}>
@@ -779,52 +866,11 @@ export function WorkbenchSession({
                       />
                     </Suspense>
                   )}
-                  <OwnerSystemWorkflowSidebar
-                    documentControls
-                    onNavigate={destinationTrigger}
-                    destination={browsing ? 'overview' : 'editor'}
-                    onOverview={openWorkbenchOverview}
-                    onReception={onOpenReception ? () => leaveForDestination(onOpenReception) : undefined}
-                    hidden={
-                      previewing ||
-                      !workbenchPreferences.dockVisible ||
-                      (browsing && overviewControls?.immersive)
-                    }
-                    onNavigationHost={setLibraryNavigationHost}
-                    onWorkbench={() => {
-                      closePublication({ returnFocus: false });
-                      panels.closePanel({ returnFocus: false });
-                      if (browsing) {
-                        if (overviewControls) overviewControls.dispatch('edit');
-                        else overview.onResume();
-                        return;
-                      }
-                      workspaceRef.current?.focus({ preventScroll: true });
-                    }}
-                    onLibrary={event => toggleLibrary(event.currentTarget)}
-                    openPanels={panels.openPanels}
-                    onOpen={(id, trigger) =>
-                      browsing && id === 'grids'
-                        ? overviewControls?.dispatch('edit', 'grids')
-                        : openDockPanel(id, trigger)
-                    }
-                    onPreview={event => openPreview(event.currentTarget)}
-                    onPublish={
-                      reception && !browsing
-                        ? undefined
-                        : event =>
-                            browsing
-                              ? overviewControls?.dispatch('edit', 'publish')
-                              : togglePublication(event.currentTarget)
-                    }
-                    publicationOpen={publicationOpen}
-                    unreadCount={activity.unreadCount}
-                  />
                   {(browsing || overview?.journey?.direction === 'editor') && (
                     <Suspense
                       fallback={
                         <p className="owner-overview-loading" role="status">
-                          Opening My Inscape…
+                          Opening Gallery…
                         </p>
                       }
                     >
@@ -832,25 +878,31 @@ export function WorkbenchSession({
                         store={overview.store}
                         preferences={workbenchPreferenceStore}
                         reviewAssets={reviewAssets}
-                        reviewProfile={reviewProfile}
                         view={overview.view}
                         onViewChange={overview.onViewChange}
-                        onEdit={(id, source, action) =>
+                        onEdit={(id, source) =>
                           overview.onEdit(
                             id,
                             (source &&
                               workspaceMotion.current?.captureActive(source.model, source.name, id)) ||
-                              source,
-                            action
+                              source
                           )
                         }
-                        onOpenReception={onOpenReception}
+                        profileModel={profileModel}
+                        account={connectedProfile}
+                        ownerDestinations={ownerDestinations}
+                        onConnect={onConnect}
+                        onDisconnect={onDisconnect}
+                        onOpenWriting={onOpenWriting}
+                        onOpenGallery={onOpenGallery}
+                        onOpenDiscover={onOpenDiscover}
+                        onOpenReception={onOpenReception && (() => onOpenReception('published'))}
                         onEditReception={onEditReception}
                         workspace={{
-                          onControls: setOverviewControls,
                           memory: overview.memory,
                           exiting: !browsing,
                           entering: leavingEditor,
+                          returning: overview.returning,
                           movingCanvasId: overview.journey?.source.id,
                         }}
                       />
@@ -859,7 +911,7 @@ export function WorkbenchSession({
                   <OwnerWorkspaceMotion
                     hostRef={workspaceRef}
                     motionRef={workspaceMotion}
-                    journey={overview?.journey}
+                    journey={journey}
                     onComplete={overview?.onJourneyComplete}
                   />
                   {noticeMessage && (
@@ -888,10 +940,6 @@ export function WorkbenchSession({
                           { id: 'discover', label: 'DISCOVER' },
                           { id: 'preview', label: 'PREVIEW' },
                           ...(!reception ? [{ id: 'publish', label: 'PUBLISH' }] : []),
-                          {
-                            id: 'toggle-dock',
-                            label: workbenchPreferences.dockVisible ? 'HIDE SIDEBAR' : 'SHOW SIDEBAR',
-                          },
                         ]}
                         getSubmenuCommands={id =>
                           id === 'tools'
@@ -962,16 +1010,6 @@ export function WorkbenchSession({
                         onMotionComplete={publicationPresence.completeTransition}
                         onPublished={result => {
                           closePublication();
-                          import('../../profileDocument/storage/ownerDraftReconciliation.js')
-                            .then(({ recordOwnerPublicationBaseline }) => {
-                              recordOwnerPublicationBaseline({
-                                document: result?.document,
-                                draft: workbenchController.draft,
-                                profileAddress,
-                                storage: reviewStorage ?? globalThis.localStorage,
-                              });
-                            })
-                            .catch(() => {});
                           onPublicationConfirmed?.({ ...result });
                         }}
                         profile={publicationProfile}
@@ -1011,19 +1049,19 @@ export function WorkbenchSession({
         </Suspense>
       )}
       {receptionPreview && (
-        <Suspense fallback={<p role="status">Opening responsive preview…</p>}>
+        <Suspense fallback={<p role="status">Opening Studio Preview.</p>}>
           <ReceptionEditorPreview
-            reception={sharedStore.getReception()}
+            reception={reception ? sharedStore.getReception() : responsivePreview.snapshot}
             model={profileModel}
             assets={assetsById}
-            snapshot={reception.collection}
-            store={sharedStore}
-            onClose={() => {
-              setReceptionPreview(false);
-              requestAnimationFrame(
-                () => receptionPreviewTrigger.current?.isConnected && receptionPreviewTrigger.current.focus()
-              );
-            }}
+            snapshot={reception?.collection}
+            store={reception ? sharedStore : undefined}
+            history={workbenchController.store.getHistory()}
+            onHistory={performHistory}
+            historyBlocked={pendingText.length ? TEXT_RECOVERY_MESSAGE : null}
+            saveState={saveState}
+            workspaceDestinations={workspaceDestinations}
+            onClose={closeReceptionPreview}
           />
         </Suspense>
       )}

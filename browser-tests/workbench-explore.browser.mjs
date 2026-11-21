@@ -1,3 +1,4 @@
+import { choosePointer } from './fixtures/editor-menu.mjs';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { chromium } from 'playwright-core';
@@ -17,20 +18,20 @@ test('Hand pans live owner and Visitor scenes without per-frame React commits or
       page.on('console', message => { if (/flushSync was called|Maximum update depth|unmounted component/.test(message.text())) errors.push(message.text()); });
       await mountGridMotionFixture(page, { origin, visitor, heavy: true, count: 3, textModes: true, displayWidth: 600 });
       await page.evaluate(() => import('/src/lattice/rendering/latticeMenuSurface.css'));
-      const toggle = page.getByRole('button', { name: 'Hand tool', exact: true }); await toggle.waitFor();
+      const toggle = page.getByRole('button', { name: visitor ? 'Hand tool' : 'Select tool', exact: true }); await toggle.waitFor();
       await page.waitForFunction(() => document.querySelectorAll('[data-workbench-view-id^="text:"]').length === 3);
       await page.evaluate(() => document.fonts.ready); await settle(page);
       const host = page.locator('main.system-workflow').first();
       const saved = await page.evaluate(() => localStorage.getItem(window.__motionKey));
       await page.evaluate(() => { window.exploreNodes = [...document.querySelectorAll('[data-workbench-view-id], .tiptap, iframe')]; });
-      assert.equal(await toggle.getAttribute('aria-pressed'), 'false');
+      assert.equal(await toggle.getAttribute('aria-pressed'), visitor ? 'false' : 'true');
       // Put empty Workbench beneath the pointer without changing the authored scene.
       await host.dispatchEvent('wheel', { deltaX: 5000, deltaY: 5000, bubbles: true, cancelable: true }); await settle(page);
       const before = await camera(page);
       await page.mouse.move(800, 450); await page.mouse.down(); await page.mouse.move(900, 530, { steps: 4 });
       assert.equal(await page.locator('.workbench-marquee').count(), 1); await page.mouse.up();
       assert.deepEqual(await camera(page), before);
-      await toggle.click(); await settle(page);
+      await choosePointer(page, 'Hand', visitor); await settle(page);
       await page.mouse.move(700, 420); await page.mouse.down(); await settle(page);
       const dragCommits = await page.evaluate(() => window.__motionCommits);
       // Snapshot at release: assertion roundtrips before mouseup can themselves
@@ -63,7 +64,7 @@ test('Hand pans live owner and Visitor scenes without per-frame React commits or
       assert.deepEqual(await camera(page), stopped);
       assert.equal(await page.evaluate(() => localStorage.getItem(window.__motionKey)), saved);
       assert.equal(await page.evaluate(() => window.exploreNodes.every(node => node.isConnected)), true);
-      await page.getByRole('button', { name: 'Reset Workbench view', exact: true }).click(); await settle(page);
+      await page.getByRole('button', { name: 'Fit canvas in view', exact: true }).click(); await settle(page);
       assert.deepEqual(await camera(page), { scale: 1, x: 0, y: 0 });
       // Hand preserves module positions. A long reader keeps native wheel scroll.
       const textWindow = page.locator('[data-workbench-view-id="text:overflow"]');
@@ -89,7 +90,7 @@ test('reduced motion and paused releases omit inertia, and input cancels a new c
   try {
     const page = await browser.newPage({ viewport: { width: 390, height: 1000 }, reducedMotion: 'reduce' });
     await mountGridMotionFixture(page, { origin, count: 1, displayWidth: 320 });
-    const toggle = page.getByRole('button', { name: 'Hand tool', exact: true }); await toggle.click();
+    await choosePointer(page, 'Hand');
     const host = page.locator('main.system-workflow').first();
     await host.dispatchEvent('wheel', { deltaX: 5000, deltaY: 5000, bubbles: true, cancelable: true }); await settle(page);
     const drag = async pause => {
@@ -103,7 +104,7 @@ test('reduced motion and paused releases omit inertia, and input cancels a new c
     await drag(); await page.waitForTimeout(80);
     await host.dispatchEvent('wheel', { deltaX: 20, deltaY: 10, bubbles: true, cancelable: true }); await arrived(page);
     const stopped = await camera(page); await page.waitForTimeout(170); assert.deepEqual(await camera(page), stopped);
-    await page.getByRole('button', { name: 'Reset Workbench view', exact: true }).click(); await settle(page);
+    await page.getByRole('button', { name: 'Fit canvas in view', exact: true }).click(); await settle(page);
     await page.screenshot({ path: '.browser-test-runtime/workbench-explore-390.png' });
   } finally { await browser.close(); }
 });

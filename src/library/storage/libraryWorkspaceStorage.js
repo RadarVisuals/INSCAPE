@@ -21,12 +21,21 @@ export function normalizeWorkspace(candidate, profileAddress) {
     if (!name) return [];
     seen.add(folder.id);
     return [{ id: folder.id, name, assetIds: [...new Set((Array.isArray(folder.assetIds) ? folder.assetIds : []).filter((id) => typeof id === 'string' && id.length <= 300))], public: folder.public === true,
+      ...(folder.parentId ? { parentId: folder.parentId } : {}),
       ...normalizeCategoryImageSelections(folder),
       createdAt: Number.isFinite(folder.createdAt) ? folder.createdAt : 0, updatedAt: Number.isFinite(folder.updatedAt) ? folder.updatedAt : 0 }];
   });
+  const folderMap = new Map(folders.map(folder => [folder.id, folder]));
+  for (const folder of folders) {
+    const ancestors = new Set([folder.id]);
+    for (let parent = folder.parentId; parent; parent = folderMap.get(parent)?.parentId) {
+      if (!folderMap.has(parent) || ancestors.has(parent)) throw new TypeError('Saved folder hierarchy is invalid.');
+      ancestors.add(parent);
+    }
+  }
   const objects = normalizeCanvasObjects(candidate.canvas?.objects);
   const placements = normalizeTablePlacements(candidate.tables?.placements);
-  const validCategoryIds = new Set(folders.map(({ id }) => id)); const organized = new Set(); const sectionIds = new Set();
+  const validCategoryIds = new Set(folders.map(({ id }) => id)); const organized = new Set(folders.filter(folder => folder.parentId).map(folder => folder.id)); const sectionIds = new Set();
   const sections = (Array.isArray(candidate.categoryOrganization?.sections)
     ? candidate.categoryOrganization.sections : []).flatMap((section) => {
     if (!section || typeof section.id !== 'string' || !section.id || section.id.length > 200 || sectionIds.has(section.id)) return [];

@@ -1,6 +1,4 @@
-import { Plus } from 'lucide-react';
 import ColourControls from './colourPreview.jsx';
-import SampleArtwork from './sampleArtwork.jsx';
 import { NumberField, CheckField } from './previewControls.jsx';
 import { OwnerSystemWorkflowMetadataContent } from '../src/public/ownerSystemWorkflow/OwnerSystemWorkflowMetadataModule.jsx';
 const typeHint = (kind) => (
@@ -158,41 +156,6 @@ export default function SelectionPanels({
       typeHint('an Image')
     ) : (
       <>
-        <p className="ds-studio-section-label">Sides</p>
-        <div className="ds-studio-sides">
-          {Array.from({ length: item.sides }, (_, i) => (
-            <button
-              key={i}
-              type="button"
-              aria-pressed={(item.side || 0) === i}
-              onClick={() => update({ side: i, name: `Image · Side ${i + 1}` })}
-            >
-              <span>
-                <SampleArtwork item={item} />
-              </span>
-              Side {i + 1}
-            </button>
-          ))}
-          <button
-            type="button"
-            onClick={() => update({ sides: Math.min(8, item.sides + 1) })}
-            disabled={item.sides >= 8}
-          >
-            <Plus aria-hidden="true" size={20} />
-            Add side
-          </button>
-        </div>
-        <label>
-          When dropping from Library
-          <select
-            aria-label="When dropping from Library"
-            value={item.drop || 'append'}
-            onChange={(event) => update({ drop: event.target.value })}
-          >
-            <option value="append">Add as a new side</option>
-            <option value="replace">Replace current side</option>
-          </select>
-        </label>
         <CheckField
           label="Include in publication"
           value={item.included}

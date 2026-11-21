@@ -47,7 +47,8 @@ test('canvas links round-trip with targets, Discover return context, and authori
   assert.deepEqual(readApplicationRoute(new URL(href, location.href)), expected);
   assert.deepEqual(readApplicationRoute({ search: '?discover' }, { inscapeReturnRoute: expected }).returnTo, expected);
   assert.deepEqual(resolveApplicationDestination(expected, { status: 'complete' }), { kind: 'public', address, canvas: true, target: expected.target });
-  assert.deepEqual(resolveApplicationDestination(expected, { status: 'complete', profileAddress: address, ownershipVerified: true }), { kind: 'workbench', address });
+  assert.deepEqual(resolveApplicationDestination(expected, { status: 'complete', profileAddress: address, ownershipVerified: true }),
+    { kind: 'public', address, canvas: true, target: expected.target }, 'Opening a shared artwork link preserves its public target even for its owner');
   const overview = applicationRouteUrl({ href: new URL(href, location.href).href }, { kind: 'profile', address });
   assert.equal(overview.includes('canvas='), false);
   assert.equal(overview.includes('module='), false);
@@ -65,17 +66,17 @@ test('reading pages retain published sources and article appearance without muta
   assert.equal(JSON.stringify(doc), before);
   assert.equal(publicReadingPages({ ...doc, grids: [], texts: [] }).length, 0);
 });
-test('multi-sided images and scene-linked writing retain every published entry', () => {
+test('independent image layers and scene-linked writing retain every published entry', () => {
   const doc = publication();
-  doc.imageModules = [{ id: 'image:one', name: 'Sides', width: 300, height: 200,
-    sides: [{ id: 'a', asset: { description: 'Front' } }, { id: 'b', asset: { description: 'Back' } }] }];
+  doc.imageModules = ['one', 'two'].map(id => ({ id: `image:${id}`, name: id, width: 300, height: 200,
+    artwork: { id: `artwork:${id}`, asset: { description: id } } }));
   doc.texts[0].sceneLink = { passages: [{ gridId: 'other', article: createArticle('Second passage') }] };
   const pages = publicReadingPages(doc);
   assert.equal(pages.filter(p => p.kind === 'image').length, 2);
-  assert.equal(pages.find(p => p.title === 'Sides · 2').side, doc.imageModules[0].sides[1]);
+  assert.equal(pages.find(p => p.title === 'two').artwork, doc.imageModules[1].artwork);
   assert.equal(pages.some(p => p.kind === 'text'), false, 'scene-linked Text stays connected to its Display');
   assert.equal(publicCanvasItems(doc).find(p => p.kind === 'text').record, doc.texts[0]);
-  assert.equal(publicReadingPages(doc, 'image:one').length, 2);
+  assert.equal(publicReadingPages(doc, 'image:one').length, 1);
   assert.equal(new Set(pages.map(p => p.key)).size, pages.length);
 });
 

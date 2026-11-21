@@ -1,17 +1,20 @@
-import { ArrowLeft, ChevronDown, ChevronRight, Folder, Images, Layers3, Plus, SquareStack, UserRound, WandSparkles } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { ArrowLeft, ChevronDown, ChevronRight, Folder, FolderPlus, Images, Layers3, SquareStack, UserRound, WandSparkles } from 'lucide-react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { BROWSER_ASSET_SIZE, BROWSER_VIEW_KINDS, categoryAssetIds, categoryMembershipState } from '../../lattice/browser/browserWorkspaceModel.js';
+import LibraryBrowseControls from './LibraryBrowseControls.jsx';
 import RackMenu from '../menus/RackMenu.jsx';
 import { clearOwnerSystemWorkflowDocumentSelection } from './ownerSystemWorkflowSelection.js';
 import { ImageChoice, libraryCategoryImage, libraryImageChoices, librarySourceLabel } from './OwnerSystemWorkflowLibraryImages.jsx';
 import LibraryArtworkImage from './LibraryArtworkImage.jsx';
+import { resolvePublishedAssetUrl } from '../../profileDocument/domain/publishedAssetUrl.js';
+import { libraryFileFormat, libraryFilename, libraryPreviewUrl, rememberArtworkPreview } from '../../library/data/libraryImagePreview.js';
 import { OwnerSystemWorkflowSidebarDeleteConfirmation, OwnerSystemWorkflowSidebarEditor } from './OwnerSystemWorkflowBrowserWorkspace.jsx';
 import useDeferredFocusReturn from '../useDeferredFocusReturn.js';
 
 const assetId = (asset) => asset?.stableAssetId || asset?.id;
 
-function LazyLibraryArtwork({ asset, id, onRatio, workspace }) {
+function LazyLibraryArtwork({ asset, id, workspace }) {
   const candidates = [...new Set([asset.previewSrc, ...(asset.previewCandidates || [])].filter(Boolean))];
   const signature = candidates.join('\n');
   const [candidateIndex, setCandidateIndex] = useState(0);
@@ -27,16 +30,16 @@ function LazyLibraryArtwork({ asset, id, onRatio, workspace }) {
       const { naturalHeight: height, naturalWidth: width } = event.currentTarget;
       if (!width || !height) return;
       workspace.markAssetReady(id, source, width, height);
-      onRatio(`${width} / ${height}`);
+      rememberArtworkPreview(asset.src, source, width, height);
     }} src={source} />;
 }
 
 function LibraryNavigationButton({ active, categoryId, count, draggable = false, dropTarget, icon: Icon = Folder,
-  label, onClick, onContextMenu, onDragEnd, onDragStart, unresolved = 0 }) {
+  label, onClick, onContextMenu, onDragEnd, onDragStart, unresolved = 0, showTooltip = true }) {
   return <button aria-label={label} aria-pressed={active} data-active={active || undefined}
     data-browser-category-id={categoryId} data-drop-target={dropTarget || undefined} draggable={draggable}
     onClick={onClick} onContextMenu={onContextMenu} onDragEnd={onDragEnd} onDragStart={onDragStart}
-    title={label} type="button">
+    title={showTooltip ? label : undefined} type="button">
     <span><Icon aria-hidden="true" size={14} strokeWidth={2} /><b>{label}</b></span>
     <i title={unresolved ? `${count} visible / ${unresolved} unresolved` : `${count} visible`}>
       {count}{unresolved ? ` / ${unresolved} U` : ''}
@@ -45,7 +48,6 @@ function LibraryNavigationButton({ active, categoryId, count, draggable = false,
 }
 
 function LibraryResults({ assets, emptyLabel, expandedImageIds, onActivate, onContext, onPointerDown, onToggleImages, onImageActivate, workspace }) {
-  const [decodedRatios, setDecodedRatios] = useState(() => new Map());
   if (!assets.length) return <p className="lattice-browser-status">{emptyLabel}</p>;
   const selected = new Set(workspace.selectedAssetIds);
   const size = Math.min(BROWSER_ASSET_SIZE.MAXIMUM, Math.max(BROWSER_ASSET_SIZE.MINIMUM,
@@ -53,17 +55,15 @@ function LibraryResults({ assets, emptyLabel, expandedImageIds, onActivate, onCo
   return <div className="lattice-browser-assets" data-labels={workspace.hideLabels ? 'hidden' : 'visible'} data-size="grid"
     onKeyDown={(event) => { if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'a') {
       event.preventDefault(); event.stopPropagation(); workspace.selectAllVisible();
-    } }} style={{ '--lattice-browser-asset-media-max': `${Math.round(size * 1.15)}px`, '--lattice-browser-asset-min': `${size}px` }}>
+    } }} style={{ '--library-tile-size': `${size}px` }}>
     {assets.flatMap((asset) => {
       const id = assetId(asset); const isSelected = selected.has(id) && workspace.selectedImage?.assetId !== id;
       const curated = (workspace.selectedCategory?.imageSelections || []).filter(entry => entry.assetId === id);
       if (curated.length) return curated.map(({ url }, index) =>
         <div className="system-workflow__library-item" data-library-asset-id={id} key={`${id}:${url}`}>
-          <ImageChoice asset={asset} choice={{ sources: [url] }} number={index + 1} onActivate={onImageActivate}
+          <ImageChoice asset={asset} choice={{ ...libraryImageChoices(asset).find(choice => choice.sources.includes(url)), sources: [url], originalImageUrl: url, imageUrl: url }} number={index + 1} onActivate={onImageActivate}
             onPointerDown={onPointerDown} workspace={workspace} onContext={onContext} />
         </div>);
-      const ratio = decodedRatios.get(id)
-        || (Number(asset.width) > 0 && Number(asset.height) > 0 ? `${asset.width} / ${asset.height}` : undefined);
       const opensCollection = asset.isCollection && asset.collectionRole !== 'cover';
       const relationships = asset.collectionRole === 'cover'
         ? [asset.collectionPreviewTokenId ? 'COLLECTION · TOKEN PREVIEW' : 'COLLECTION COVER']
@@ -71,6 +71,7 @@ function LibraryResults({ assets, emptyLabel, expandedImageIds, onActivate, onCo
           asset.creatorRelationship === 'collection' ? 'FROM CREATED COLLECTION' : asset.created ? 'CREATED' : null,
           asset.created && !asset.owned ? 'NOT OWNED' : null].filter(Boolean);
       const choices = opensCollection ? [] : libraryImageChoices(asset);
+      const files = (asset.fileAttachments || asset.assetRecord?.fileAttachments || []).filter(file => resolvePublishedAssetUrl(file.url));
       const imageCount = choices.length;
       const expanded = expandedImageIds.has(id);
       return [<div className="system-workflow__library-item" data-library-asset-id={id} key={id}><button aria-label={[asset.title || id, asset.collection].filter(Boolean).join(' / ')} aria-pressed={isSelected}
@@ -86,11 +87,8 @@ function LibraryResults({ assets, emptyLabel, expandedImageIds, onActivate, onCo
         onKeyDown={(event) => { if (event.key === 'ContextMenu' || event.shiftKey && event.key === 'F10') {
           event.preventDefault(); event.stopPropagation(); onContext?.(event, asset);
         } }} type="button">
-        <span className="lattice-browser-asset__media" style={ratio ? { aspectRatio: ratio } : undefined}>
-          <LazyLibraryArtwork asset={asset} id={id} workspace={workspace} onRatio={(value) => setDecodedRatios((current) => {
-            if (current.get(id) === value) return current;
-            const next = new Map(current); next.set(id, value); return next;
-          })} />
+        <span className="lattice-browser-asset__media">
+          <LazyLibraryArtwork asset={asset} id={id} workspace={workspace} />
         </span>
         {!workspace.hideLabels && <span className="lattice-browser-asset__record"><strong>{librarySourceLabel(asset) || id}</strong>
           {asset.collection && <small>{asset.collection}</small>}
@@ -99,7 +97,7 @@ function LibraryResults({ assets, emptyLabel, expandedImageIds, onActivate, onCo
           </span>}
         </span>}
       </button>
-        {imageCount > 1 && <button className="system-workflow__library-images-trigger" type="button"
+        {(imageCount > 1 || files.length > 0) && <button className="system-workflow__library-images-trigger" type="button"
           data-library-images-for={id} aria-expanded={expanded}
           title={`${expanded ? 'Fold' : 'Show'} ${imageCount} images in Library`}
           aria-label={`${expanded ? 'Fold' : 'Show'} ${imageCount} images of ${asset.title || id}`}
@@ -109,7 +107,9 @@ function LibraryResults({ assets, emptyLabel, expandedImageIds, onActivate, onCo
         <div className="system-workflow__library-item" key={id + ':' + choice.sources.join('|')}>
           <ImageChoice asset={asset} choice={choice} number={index + 2} onActivate={onImageActivate}
             onPointerDown={onPointerDown} workspace={workspace} onContext={onContext} />
-        </div>) : [])];
+        </div>) : []), ...(expanded ? files.map(file => <a className="library-file-card" key={file.url}
+          href={resolvePublishedAssetUrl(file.url)} target="_blank" rel="noopener noreferrer" title="Open attachment">
+          <span>{libraryFileFormat(file.url, file.fileType)}</span><strong>{libraryFilename(file.url)}</strong></a>) : [])];
     })}
   </div>;
 }
@@ -121,7 +121,7 @@ function contextAnchor(event) {
 }
 
 export default function OwnerSystemWorkflowLibraryPresenter({ categoryCommands, categoryDrag, data, dropFeedback, open = true,
-  navigationHost = null, onAssetActivate, onAssetPointerDown, onImageActivate, workspace }) {
+  onAssetActivate, onAssetPointerDown, onImageActivate, navigationTargetRef, workspace }) {
   // Temporary browsing state, retained across filtering and closing the drawer.
   // The workspace keys this presenter by profile; no authored data is changed.
   const [expandedImageIds, setExpandedImageIds] = useState(() => new Set());
@@ -130,7 +130,28 @@ export default function OwnerSystemWorkflowLibraryPresenter({ categoryCommands, 
     if (next.has(id)) next.delete(id); else next.add(id);
     return next;
   });
-  const categorySectionRef = useRef(null);
+  const categorySectionRef = useRef(null), panelRef = useRef(null), foldersButton = useRef(null);
+  const compact = workspace.navigationMode === 'icons';
+  const [foldersOpen, setFoldersOpen] = useState(false), [treeDrop, setTreeDrop] = useState(null);
+  const closeFolders = (focus = false) => { setFoldersOpen(false); if (focus) foldersButton.current?.focus(); };
+  useEffect(() => { if (!open || !compact) setFoldersOpen(false); }, [open, compact]);
+  const [dropPickerBounds, setDropPickerBounds] = useState(null);
+  useLayoutEffect(() => {
+    if (!foldersOpen) return;
+    const panel = panelRef.current?.getBoundingClientRect(), trigger = foldersButton.current?.getBoundingClientRect();
+    if (!panel || !trigger) return;
+    const maxHeight = Math.min(300, panel.height - 16);
+    setDropPickerBounds({ top: Math.max(8, Math.min(trigger.top - panel.top, panel.height - maxHeight - 8)), maxHeight });
+  }, [foldersOpen]);
+  useLayoutEffect(() => {
+    if (!navigationTargetRef) return;
+    navigationTargetRef.current = {
+      hover(point) { const box = foldersButton.current?.getBoundingClientRect();
+        if (compact && box && point.x >= box.left && point.x <= box.right && point.y >= box.top && point.y <= box.bottom) setFoldersOpen(true); },
+      finish() { setFoldersOpen(false); },
+    };
+    return () => { navigationTargetRef.current = null; };
+  }, [compact, navigationTargetRef]);
   const [contextMenu, setContextMenu] = useState(null); const [organizationDrag, setOrganizationDrag] = useState(null);
   const collapsedSections = new Set(workspace.collapsedSections);
   const setCollapsedSections = change => workspace.setCollapsedSections(current => [...change(new Set(current))]);
@@ -142,10 +163,13 @@ export default function OwnerSystemWorkflowLibraryPresenter({ categoryCommands, 
     cancelFocusReturn();
     const parent = trigger?.parentElement, index = parent ? [...parent.children].indexOf(trigger) : -1;
     workspace.setDialog({ ...dialog, returnFocus: () => trigger?.isConnected ? trigger
-      : parent?.isConnected ? parent.children[index] : categorySectionRef.current?.querySelector('button') });
+      : parent?.isConnected ? parent.children[index] : categorySectionRef.current?.querySelector('button') || foldersButton.current });
   };
-  const openCreateDialog = (event, kind = 'category') => { workspace.ensureSidebarWidth?.();
-    openDialog(event.currentTarget, { type: `create-${kind}` }); };
+  const openCreateDialog = (event, kind = 'category', sectionId = null, parentId = null) => {
+    if (compact) { setRelationshipView('all'); workspace.selectView({ kind: parentId ? BROWSER_VIEW_KINDS.CATEGORY : BROWSER_VIEW_KINDS.FOLDERS, id: parentId }); }
+    if (parentId) setCollapsedSections(current => { const next = new Set(current); next.delete('folder:' + parentId); return next; });
+    if (sectionId) setCollapsedSections(current => { const next = new Set(current); next.delete(sectionId); return next; });
+    openDialog(event.currentTarget, { type: `create-${kind}`, sectionId, parentId }); };
   const openCategoryContext = (event, category) => { cancelFocusReturn(); setContextMenu({ anchor: contextAnchor(event), categoryId: category.id, kind: 'category', trigger: event.currentTarget }); };
   const openSectionContext = (event, section) => { cancelFocusReturn(); setContextMenu({ anchor: contextAnchor(event), sectionId: section.id, kind: 'section', trigger: event.currentTarget }); };
   const openAssetContext = (event, asset) => {
@@ -157,7 +181,7 @@ export default function OwnerSystemWorkflowLibraryPresenter({ categoryCommands, 
   const categoryMenuCommands = contextMenu?.kind === 'category' ? (() => {
     const category = data.categories.find(({ id }) => id === contextMenu.categoryId);
     return category ? [{ id: 'start-category', label: 'Open Library here', checkable: true, selected: workspace.startCategoryId === category.id },
-      { id: 'rename', label: 'Rename' },
+      { id: 'new-folder', label: 'New subfolder' }, { id: 'rename', label: 'Rename' },
       ...(categoryCommands?.moveCategory ? [{ id: 'move-root', label: 'Move / Outside sections' },
         ...(data.categoryOrganization?.sections || []).map((section) => ({ id: `move-section:${section.id}`, label: `Move / ${section.name}` }))] : []),
       { id: 'delete', label: 'Delete' }] : [];
@@ -186,6 +210,10 @@ export default function OwnerSystemWorkflowLibraryPresenter({ categoryCommands, 
       const category = data.categories.find(({ id }) => id === contextMenu.categoryId);
       if (!category) return closeContextMenu();
       const trigger = contextMenu.trigger; closeContextMenu(false);
+      if (commandId === 'new-folder') {
+        setCollapsedSections(current => { const next = new Set(current); next.delete('folder:' + category.id); return next; });
+        openCreateDialog({ currentTarget: trigger }, 'category', null, category.id); return;
+      }
       if (commandId === 'start-category') {
         workspace.setStartCategory(workspace.startCategoryId === category.id ? null : category.id);
         restoreFocus(trigger); return;
@@ -194,7 +222,6 @@ export default function OwnerSystemWorkflowLibraryPresenter({ categoryCommands, 
         categoryCommands.moveCategory?.(category.id, commandId === 'move-root' ? null : commandId.slice('move-section:'.length));
         restoreFocus(trigger); return;
       }
-      if (commandId === 'rename') workspace.ensureSidebarWidth?.();
       openDialog(trigger, { category, type: commandId === 'rename' ? 'rename-category' : commandId }); return;
     }
     if (contextMenu?.kind !== 'membership' || !contextMenu.imageReady && !workspace.areAssetsRenderable(contextMenu.assetIds)) return closeContextMenu();
@@ -217,7 +244,7 @@ export default function OwnerSystemWorkflowLibraryPresenter({ categoryCommands, 
   };
   const confirmDialog = (name) => {
     const dialog = workspace.dialog; if (!dialog) return;
-    const result = dialog.type === 'create-category' ? categoryCommands.createCategory(name)
+    const result = dialog.type === 'create-category' ? categoryCommands.createCategory(name, dialog.sectionId, dialog.parentId)
       : dialog.type === 'create-section' ? categoryCommands.createSection?.(name)
         : dialog.type === 'rename-category' ? categoryCommands.renameCategory(dialog.category.id, name)
           : dialog.type === 'rename-section' ? categoryCommands.renameSection?.(dialog.section.id, name)
@@ -239,10 +266,12 @@ export default function OwnerSystemWorkflowLibraryPresenter({ categoryCommands, 
   const organization = data.categoryOrganization || { rootCategoryIds: categories.map(({ id }) => id), sections: [] };
   const organizedIds = new Set([...(organization.rootCategoryIds || []),
     ...(organization.sections || []).flatMap(({ categoryIds }) => categoryIds || [])]);
-  const rootCategoryIds = [...(organization.rootCategoryIds || []), ...categories.filter(({ id }) => !organizedIds.has(id)).map(({ id }) => id)];
+  const rootCategoryIds = [...(organization.rootCategoryIds || []), ...categories.filter(({ id, parentId }) => !parentId && !organizedIds.has(id)).map(({ id }) => id)];
   const filed = categoryAssetIds(categories); const related = relationshipView === 'owned'
     ? workspace.filteredAssets.filter((asset) => asset.owned) : relationshipView === 'created'
       ? workspace.filteredAssets.filter((asset) => asset.created) : workspace.filteredAssets;
+  const viewLabel = data.collectionContext?.name || (relationshipView === 'owned' ? 'Owned' : relationshipView === 'created' ? 'Created'
+    : workspace.view.kind === BROWSER_VIEW_KINDS.FOLDERS ? 'Folders' : workspace.selectedCategory?.name || (workspace.view.kind === BROWSER_VIEW_KINDS.UNSORTED ? 'Unsorted' : 'All assets'));
   const resultsRef = useRef(null);
   const visibleRef = useRef(new Set());
   const demand = data.onMetadataDemand;
@@ -264,7 +293,7 @@ export default function OwnerSystemWorkflowLibraryPresenter({ categoryCommands, 
     publish();
     return () => { observer.disconnect(); demand([]); };
   }, [open, demand, selectedKey, assetKey]);
-  const selectBuiltIn = (view) => { setRelationshipView('all'); workspace.selectView(view); };
+  const selectBuiltIn = (view) => { setRelationshipView('all'); workspace.selectView(view); closeFolders(); };
   const beginTreeDrag = (event, payload) => {
     event.stopPropagation(); event.dataTransfer.effectAllowed = 'move';
     event.dataTransfer.setData('application/x-inscape-library-tree', JSON.stringify(payload));
@@ -272,8 +301,8 @@ export default function OwnerSystemWorkflowLibraryPresenter({ categoryCommands, 
   };
   const readTreeDrag = (event) => { try { return JSON.parse(event.dataTransfer.getData('application/x-inscape-library-tree')); } catch { return null; } };
   const acceptTreeDrop = (event, target) => {
-    event.preventDefault(); event.stopPropagation(); const payload = readTreeDrag(event); setOrganizationDrag(null); if (!payload) return;
-    if (payload.kind === 'category') categoryCommands.moveCategory?.(payload.id, target.sectionId || null, target.beforeId || null);
+    event.preventDefault(); event.stopPropagation(); const payload = readTreeDrag(event); setOrganizationDrag(null); setTreeDrop(null); if (!payload) return;
+    if (payload.kind === 'category') categoryCommands.moveCategory?.(payload.id, target.sectionId || null, target.beforeId || null, target.parentId || null);
     if (payload.kind === 'section' && target.kind === 'section') categoryCommands.moveSection?.(payload.id, target.beforeId || null);
   };
   const renderCategory = (categoryId, sectionId = null) => {
@@ -282,13 +311,28 @@ export default function OwnerSystemWorkflowLibraryPresenter({ categoryCommands, 
     const deleting = workspace.dialog?.type === 'delete' && workspace.dialog.category?.id === category.id;
     const active = relationshipView === 'all' && workspace.view.kind === BROWSER_VIEW_KINDS.CATEGORY
       && workspace.view.id === category.id;
-    return <div className="system-workflow__library-tree-category" data-nested={sectionId ? true : undefined}
+    const children = categories.filter(folder => folder.parentId === categoryId);
+    const collapsed = collapsedSections.has('folder:' + categoryId);
+    const naming = workspace.dialog?.type === 'create-category' && workspace.dialog.parentId === categoryId;
+    return <div className="system-workflow__library-tree-category" data-nested={sectionId || category.parentId ? true : undefined}
       data-active={active || undefined} key={category.id}
-      onDragOver={(event) => { if (organizationDrag?.tree?.kind === 'category') event.preventDefault(); }}
-      onDrop={(event) => acceptTreeDrop(event, { sectionId, beforeId: category.id })}>
-      {deleting ? <OwnerSystemWorkflowSidebarDeleteConfirmation entityLabel="category" name={category.name}
+      data-tree-drop={treeDrop?.id === category.id ? treeDrop.kind : undefined}
+      onDragOver={event => { if (organizationDrag?.tree?.kind !== 'category') return;
+        event.preventDefault(); event.stopPropagation();
+        setTreeDrop({ id: category.id, kind: event.clientY < event.currentTarget.getBoundingClientRect().top + 7 ? 'before' : 'inside' }); }}
+      onDragLeave={event => { if (!event.currentTarget.contains(event.relatedTarget)) setTreeDrop(null); }}
+      onDrop={event => acceptTreeDrop(event, treeDrop?.id === category.id && treeDrop.kind === 'before'
+        ? { sectionId, parentId: category.parentId, beforeId: category.id } : { parentId: category.id })}>
+      <div className="library-folder-row">
+      {(children.length > 0 || naming) && <button type="button" className="library-folder-disclosure"
+        aria-label={(collapsed ? 'Expand ' : 'Collapse ') + category.name} aria-expanded={!collapsed}
+        onClick={() => setCollapsedSections(current => { const next = new Set(current);
+          if (collapsed) next.delete('folder:' + categoryId); else next.add('folder:' + categoryId); return next; })}>
+        {collapsed ? <ChevronRight size={12} /> : <ChevronDown size={12} />}</button>}
+      {!children.length && !naming && <span className="library-folder-disclosure-space" aria-hidden="true" />}
+      {deleting ? <OwnerSystemWorkflowSidebarDeleteConfirmation entityLabel="folder" name={category.name}
         onCancel={closeDialog} onConfirm={confirmDeleteDialog} />
-        : editing ? <OwnerSystemWorkflowSidebarEditor dialog={workspace.dialog} entityLabel="category"
+        : editing ? <OwnerSystemWorkflowSidebarEditor dialog={workspace.dialog} entityLabel="folder"
           onCancel={closeDialog} onConfirm={confirmDialog} /> : <LibraryNavigationButton
         active={active}
         categoryId={category.id} count={category.assetIds.filter((id) => renderableIds.has(id))
@@ -296,9 +340,14 @@ export default function OwnerSystemWorkflowLibraryPresenter({ categoryCommands, 
         draggable dropTarget={categoryDrag?.categoryId === category.id} label={category.name}
         onClick={() => selectBuiltIn({ kind: BROWSER_VIEW_KINDS.CATEGORY, id: category.id })}
         onContextMenu={(event) => { event.preventDefault(); openCategoryContext(event, category); }}
-        onDragEnd={() => setOrganizationDrag(null)}
+        onDragEnd={() => { setOrganizationDrag(null); setTreeDrop(null); }}
         onDragStart={(event) => beginTreeDrag(event, { kind: 'category', id: category.id })}
         unresolved={category.assetIds.filter((id) => !renderableIds.has(id)).length} />}
+      </div>
+      {!collapsed && (children.length > 0 || naming) && <div className="library-folder-children">
+        {naming && <OwnerSystemWorkflowSidebarEditor dialog={workspace.dialog} entityLabel="folder" onCancel={closeDialog} onConfirm={confirmDialog} />}
+        {children.map(folder => renderCategory(folder.id, sectionId))}
+      </div>}
     </div>;
   };
   const emptyLabel = data.status === 'loading' ? (data.collectionContext ? 'Loading collection tokens' : 'Loading assets')
@@ -308,90 +357,131 @@ export default function OwnerSystemWorkflowLibraryPresenter({ categoryCommands, 
         : relationshipView === 'created' && data.createdStatus === 'loading' ? 'Loading creator-attributed works'
           : relationshipView === 'created' && data.createdStatus === 'error' ? 'Created source unavailable'
             : data.hasMore ? 'No matches in loaded assets' : 'No assets in this view';
-  const navigation = (
-      <nav aria-label="Browser navigation" className="lattice-browser-sidebar">
-        {data.collectionContext ? <>
-          <LibraryNavigationButton count={null} icon={ArrowLeft} label="Back to Created"
-            onClick={() => { setRelationshipView('created'); data.onCloseCollection?.(); }} />
-          <LibraryNavigationButton active count={data.collectionContext.total ?? assets.length} icon={Images}
-            label={data.collectionContext.name || 'Collection'} onClick={() => {}} />
-        </> : <>
-        <LibraryNavigationButton active={relationshipView === 'all' && workspace.view.kind === BROWSER_VIEW_KINDS.ALL}
-          count={`${assets.length}${data.hasMore ? '+' : ''}`} icon={Layers3} label="All Assets" onClick={() => selectBuiltIn({ kind: BROWSER_VIEW_KINDS.ALL, id: null })} />
-        <LibraryNavigationButton active={relationshipView === 'owned'} count={assets.filter((asset) => asset.owned).length}
-          icon={UserRound} label="Owned" onClick={() => { setRelationshipView('owned'); workspace.selectView({ kind: BROWSER_VIEW_KINDS.ALL, id: null }); }} />
-        <LibraryNavigationButton active={relationshipView === 'created'} count={assets.filter((asset) => asset.created).length}
-          icon={WandSparkles} label="Created" onClick={() => { setRelationshipView('created'); workspace.selectView({ kind: BROWSER_VIEW_KINDS.ALL, id: null }); }} />
-        <LibraryNavigationButton active={relationshipView === 'all' && workspace.view.kind === BROWSER_VIEW_KINDS.UNSORTED}
-          count={assets.filter((asset) => !filed.has(assetId(asset))).length} icon={SquareStack} label="Unsorted"
-          onClick={() => selectBuiltIn({ kind: BROWSER_VIEW_KINDS.UNSORTED, id: null })} />
-        <div className="lattice-browser-sidebar__category-heading system-workflow__library-create-row"
-          data-single={!categoryCommands?.createSection || undefined}
-          onDragOver={(event) => { if (organizationDrag?.tree?.kind === 'category') event.preventDefault(); }}
-          onDrop={(event) => acceptTreeDrop(event, { sectionId: null })} ref={categorySectionRef} tabIndex={-1}>
-          {workspace.dialog?.type === 'create-category' || workspace.dialog?.type === 'create-section'
-            ? <OwnerSystemWorkflowSidebarEditor dialog={workspace.dialog}
-              entityLabel={workspace.dialog.type === 'create-section' ? 'section' : 'category'}
-              onCancel={closeDialog} onConfirm={confirmDialog} /> : <>
-              <button aria-label="Create Category" className="lattice-browser-sidebar__create"
-                onClick={(event) => openCreateDialog(event, 'category')} type="button">
-                <Plus aria-hidden="true" size={13} /><span>Category</span></button>
-              {categoryCommands?.createSection && <button aria-label="Create Section" className="lattice-browser-sidebar__create"
-                onClick={(event) => openCreateDialog(event, 'section')} type="button">
-                <Plus aria-hidden="true" size={13} /><span>Section</span></button>}
-            </>}
-        </div>
-        <div className="lattice-browser-category-list system-workflow__library-tree">
-          {rootCategoryIds.map((id) => renderCategory(id))}
-          {(organization.sections || []).map((section) => {
-            const collapsed = collapsedSections.has(section.id);
-            const editing = workspace.dialog?.type === 'rename-section' && workspace.dialog.section?.id === section.id;
-            const deleting = workspace.dialog?.type === 'delete-section' && workspace.dialog.section?.id === section.id;
-            return <section className="system-workflow__library-section" data-collapsed={collapsed || undefined}
-              data-drop-target={organizationDrag?.tree?.kind === 'category' ? true : undefined} key={section.id}
-              onDragOver={(event) => event.preventDefault()} onDrop={(event) => acceptTreeDrop(event,
-                organizationDrag?.tree?.kind === 'section' ? { kind: 'section', beforeId: section.id } : { sectionId: section.id })}>
-              <header>
+  const folderHome = workspace.view.kind === BROWSER_VIEW_KINDS.FOLDERS;
+  const visibleFolders = folderHome ? categories.filter(folder => !folder.parentId)
+    : workspace.selectedCategory ? categories.filter(folder => folder.parentId === workspace.selectedCategory.id) : [];
+  const breadcrumbs = [];
+  for (let folder = workspace.selectedCategory; folder && breadcrumbs.length < categories.length; folder = categoriesById.get(folder.parentId)) breadcrumbs.unshift(folder);
+  const folderTiles = folders => <div className="library-folder-grid">{folders.map(folder => {
+    const images = (folder.imageSelections || []).map(image => libraryPreviewUrl(image.url, 128));
+    const previews = images.length ? images : folder.assetIds.map(id => assets.find(asset => assetId(asset) === id)?.previewSrc).filter(Boolean);
+    return <button type="button" className="library-folder-tile" data-library-folder-tile data-browser-category-id={folder.id}
+      data-drop-target={categoryDrag?.categoryId === folder.id || undefined} key={folder.id}
+      onClick={() => selectBuiltIn({ kind: BROWSER_VIEW_KINDS.CATEGORY, id: folder.id })}
+      onContextMenu={event => { event.preventDefault(); openCategoryContext(event, folder); }}
+      onDragOver={event => { if (organizationDrag?.tree?.kind === 'category') event.preventDefault(); }}
+      onDrop={event => acceptTreeDrop(event, { parentId: folder.id })}>
+      <span className="library-folder-cover" data-preview-count={Math.min(previews.length, 4)}><Folder size={16} strokeWidth={1.5} />
+        {previews.slice(0, 4).map(url => <LibraryArtworkImage key={url} alt="" loading="lazy" draggable="false" src={url} />)}</span>
+      <strong>{folder.name}</strong><small>{folder.assetIds.length} assets</small>
+    </button>;
+  })}</div>;
+  const sectionHeader = section => {
+    const collapsed = collapsedSections.has(section.id);
+    const editing = !compact && workspace.dialog?.type === 'rename-section' && workspace.dialog.section?.id === section.id;
+    const deleting = !compact && workspace.dialog?.type === 'delete-section' && workspace.dialog.section?.id === section.id;
+    return <header>
                 {deleting ? <OwnerSystemWorkflowSidebarDeleteConfirmation entityLabel="section" name={section.name}
                   onCancel={closeDialog} onConfirm={confirmDeleteDialog} />
                   : editing ? <OwnerSystemWorkflowSidebarEditor dialog={workspace.dialog} entityLabel="section"
-                    onCancel={closeDialog} onConfirm={confirmDialog} /> : <button aria-expanded={!collapsed}
+                    onCancel={closeDialog} onConfirm={confirmDialog} /> : <><button className="system-workflow__library-section-toggle" title={section.name} aria-expanded={!collapsed}
                     draggable="true"
                     onClick={() => setCollapsedSections((current) => { const next = new Set(current);
                       if (next.has(section.id)) next.delete(section.id); else next.add(section.id); return next; })}
                     onContextMenu={(event) => { event.preventDefault(); openSectionContext(event, section); }}
-                    onDragEnd={() => setOrganizationDrag(null)}
+                    onDragEnd={() => { setOrganizationDrag(null); setTreeDrop(null); }}
                     onDragStart={(event) => beginTreeDrag(event, { kind: 'section', id: section.id })}
                     type="button">
                     <span>{collapsed ? <ChevronRight aria-hidden="true" size={12} /> : <ChevronDown aria-hidden="true" size={12} />}
-                      <b>{section.name}</b></span><i>{section.categoryIds.length}</i>
-                  </button>}
-              </header>
+                      <b>{section.name}</b></span>
+                  </button>
+                  <button type="button" className="system-workflow__library-section-add"
+                    aria-label={`Add folder to ${section.name}`} title="Add folder"
+                    disabled={!categoryCommands?.createCategory}
+                    onClick={event => openCreateDialog(event, 'category', section.id)}>
+                    <FolderPlus aria-hidden="true" size={16} strokeWidth={1.5} />
+                  </button></>}
+              </header>;
+  };
+  const folderTree = <div className="library-folder-tree" ref={categorySectionRef}>
+    <header className="library-tree-heading" data-tree-drop={treeDrop?.id === 'root' ? 'section' : undefined}
+      onDragOver={event => { if (organizationDrag?.tree?.kind === 'category') { event.preventDefault(); setTreeDrop({ id: 'root', kind: 'section' }); } }}
+      onDragLeave={() => setTreeDrop(null)} onDrop={event => acceptTreeDrop(event, { sectionId: null })}>
+      <span>{compact ? 'Drop into a folder' : 'My folders'}</span>
+    </header>
+    {workspace.dialog?.type === 'create-category' && !workspace.dialog.sectionId && !workspace.dialog.parentId
+      && <OwnerSystemWorkflowSidebarEditor dialog={workspace.dialog} entityLabel="folder" onCancel={closeDialog} onConfirm={confirmDialog} />}
+    <div className="lattice-browser-category-list system-workflow__library-tree">
+      {rootCategoryIds.map(id => renderCategory(id))}
+          {(organization.sections || []).map((section) => {
+            const collapsed = collapsedSections.has(section.id);
+            return <section className="system-workflow__library-section" data-collapsed={collapsed || undefined}
+              data-tree-drop={treeDrop?.id === section.id ? 'section' : undefined} key={section.id}
+              onDragOver={event => { if (!organizationDrag?.tree) return; event.preventDefault(); event.stopPropagation(); setTreeDrop({ id: section.id, kind: 'section' }); }}
+              onDragLeave={event => { if (!event.currentTarget.contains(event.relatedTarget)) setTreeDrop(null); }} onDrop={(event) => acceptTreeDrop(event,
+                organizationDrag?.tree?.kind === 'section' ? { kind: 'section', beforeId: section.id } : { sectionId: section.id })}>
+              {sectionHeader(section)}
               {!collapsed && <div className="system-workflow__library-section-children">
+                {workspace.dialog?.type === 'create-category' && workspace.dialog.sectionId === section.id
+                  && <OwnerSystemWorkflowSidebarEditor dialog={workspace.dialog} entityLabel="folder"
+                    onCancel={closeDialog} onConfirm={confirmDialog} />}
                 {section.categoryIds.map((id) => renderCategory(id, section.id))}
                 {!section.categoryIds.length && organizationDrag?.tree?.kind === 'category'
-                  && <span className="system-workflow__library-section-empty">Drop category here</span>}
+                  && <span className="system-workflow__library-section-empty">Drop folder here</span>}
               </div>}
             </section>;
           })}
-        </div>
-        </>}
-      </nav>
-  );
-  return <div className="system-workflow__library-presenter" onKeyDown={(event) => {
+    </div>
+    {workspace.dialog?.type === 'create-section' && <OwnerSystemWorkflowSidebarEditor dialog={workspace.dialog} entityLabel="section" onCancel={closeDialog} onConfirm={confirmDialog} />}
+    {!categories.length && !organization.sections.length && !workspace.dialog && <p className="library-tree-empty">Create a folder using New.</p>}
+  </div>;
+  const navigationKeys = event => {
+    if (!['ArrowDown', 'ArrowUp'].includes(event.key) || event.target.matches('input')) return;
+    const buttons = [...event.currentTarget.querySelectorAll('button:not(:disabled)')];
+    const index = buttons.indexOf(document.activeElement); if (index < 0) return;
+    event.preventDefault(); buttons[Math.max(0, Math.min(buttons.length - 1, index + (event.key === 'ArrowDown' ? 1 : -1)))]?.focus();
+  };
+  const navigation = <nav aria-label="Browser navigation" className="lattice-browser-sidebar" onKeyDown={navigationKeys}>
+    {data.collectionContext ? <>
+      <LibraryNavigationButton showTooltip={!foldersOpen} count={null} icon={ArrowLeft} label="Back to Created" onClick={() => { setRelationshipView('created'); data.onCloseCollection?.(); }} />
+      <LibraryNavigationButton showTooltip={!foldersOpen} active count={data.collectionContext.total ?? assets.length} icon={Images} label={data.collectionContext.name || 'Collection'} onClick={() => {}} />
+    </> : <>
+      <LibraryNavigationButton showTooltip={!foldersOpen} active={relationshipView === 'all' && workspace.view.kind === BROWSER_VIEW_KINDS.ALL}
+        count={assets.length + (data.hasMore ? '+' : '')} icon={Layers3} label="All Assets" onClick={() => selectBuiltIn({ kind: BROWSER_VIEW_KINDS.ALL, id: null })} />
+      <LibraryNavigationButton showTooltip={!foldersOpen} active={relationshipView === 'owned'} count={assets.filter(asset => asset.owned).length} icon={UserRound} label="Owned"
+        onClick={() => { setRelationshipView('owned'); workspace.selectView({ kind: BROWSER_VIEW_KINDS.ALL, id: null }); closeFolders(); }} />
+      <LibraryNavigationButton showTooltip={!foldersOpen} active={relationshipView === 'created'} count={assets.filter(asset => asset.created).length} icon={WandSparkles} label="Created"
+        onClick={() => { setRelationshipView('created'); workspace.selectView({ kind: BROWSER_VIEW_KINDS.ALL, id: null }); closeFolders(); }} />
+      <LibraryNavigationButton showTooltip={!foldersOpen} active={relationshipView === 'all' && workspace.view.kind === BROWSER_VIEW_KINDS.UNSORTED}
+        count={assets.filter(asset => !filed.has(assetId(asset))).length} icon={SquareStack} label="Unsorted" onClick={() => selectBuiltIn({ kind: BROWSER_VIEW_KINDS.UNSORTED, id: null })} />
+      <button type="button" ref={foldersButton} className="library-folders-destination" aria-label="Folders" title={foldersOpen ? undefined : 'Folders'}
+        data-active={folderHome || workspace.view.kind === BROWSER_VIEW_KINDS.CATEGORY || undefined}
+        onClick={() => selectBuiltIn({ kind: BROWSER_VIEW_KINDS.FOLDERS, id: null })}>
+        <span><Folder size={14} strokeWidth={1.5} /><b>Folders</b></span><i>{categories.length}</i>
+      </button>
+      {!compact && folderTree}
+    </>}
+  </nav>;
+  return <div className="system-workflow__library-presenter" data-navigation={compact ? 'icons' : 'names'} onKeyDown={(event) => {
     if (event.key !== 'Escape') return;
     if (workspace.dialog) { event.stopPropagation(); closeDialog(); }
     else if (contextMenu) { event.stopPropagation(); closeContextMenu(); }
+    else if (foldersOpen) { event.stopPropagation(); closeFolders(true); }
     else if (workspace.selectedAssetIds.length) { event.stopPropagation(); workspace.clearSelection(); }
   }}>
-    <div className="lattice-browser-panel" style={{ '--lattice-browser-sidebar-width': `${workspace.sidebarWidth}px` }}>
-      {navigationHost ? createPortal(navigation, navigationHost) : navigation}
-      {!navigationHost && <button aria-label="Resize Browser navigation" className="lattice-browser-sidebar-resize"
-        disabled={Boolean(workspace.dialog)}
+    <LibraryBrowseControls workspace={workspace} onCreate={openCreateDialog}
+      canCreateFolder={Boolean(categoryCommands?.createCategory)} canCreateSection={Boolean(categoryCommands?.createSection)} />
+    <div className="lattice-browser-panel" ref={panelRef} style={{ '--lattice-browser-sidebar-width': `${workspace.sidebarWidth}px` }}>
+      {navigation}
+      <button aria-label="Resize Browser navigation" className="lattice-browser-sidebar-resize"
+        disabled={compact || Boolean(workspace.dialog)}
         onLostPointerCapture={workspace.sidebarResize.finish} onPointerCancel={workspace.sidebarResize.finish}
         onPointerDown={workspace.sidebarResize.begin} onPointerMove={workspace.sidebarResize.update}
-        onPointerUp={workspace.sidebarResize.finish} title="Resize Browser navigation" type="button" />}
-      <main className="lattice-browser-results" ref={resultsRef} onScroll={event => {
+        onPointerUp={workspace.sidebarResize.finish} title="Resize Browser navigation" type="button" />
+      {compact && foldersOpen && <div className="library-folder-drop-picker" role="dialog" aria-label="File artwork into folder" style={dropPickerBounds} onKeyDown={navigationKeys}>
+        {folderTree}
+      </div>}
+      <main aria-label={viewLabel} className="lattice-browser-results" ref={resultsRef} onScroll={event => {
         const node = event.currentTarget;
         if (open && data.hasMore && !data.loadingMore && !workspace.hasActiveFilters
           && node.scrollHeight - node.scrollTop - node.clientHeight < node.clientHeight * .75) data.onLoadMore?.();
@@ -415,10 +505,25 @@ export default function OwnerSystemWorkflowLibraryPresenter({ categoryCommands, 
           && <button className="lattice-browser-notice" onClick={data.onRetryCreated} type="button">Retry created works</button>}
         {data.createdStatus === 'loading' && <p className="lattice-browser-notice" role="status">Loading created {data.createdProgress?.resolved || 0} / {data.createdProgress?.total || 0}</p>}
         {data.collectionContext && data.status === 'loading' && <p className="lattice-browser-notice" role="status">Loading collection tokens {data.progress?.resolved || 0} / {data.progress?.total || 0}</p>}
-        <LibraryResults assets={related} emptyLabel={emptyLabel} onActivate={onAssetActivate} onImageActivate={onImageActivate}
+        <div className="library-breadcrumbs" aria-label="Library location">
+          {folderHome || breadcrumbs.length ? <><button type="button" onClick={() => selectBuiltIn({ kind: BROWSER_VIEW_KINDS.FOLDERS, id: null })}>Folders</button>
+          {breadcrumbs.length ? breadcrumbs.map(folder => <span key={folder.id}><span aria-hidden="true">/</span><button type="button"
+            onClick={() => selectBuiltIn({ kind: BROWSER_VIEW_KINDS.CATEGORY, id: folder.id })}>{folder.name}</button></span>)
+            : null}</> : <span>{viewLabel}</span>}
+        </div>
+        {compact && workspace.dialog && (workspace.dialog.type.startsWith('delete')
+          ? <OwnerSystemWorkflowSidebarDeleteConfirmation entityLabel={workspace.dialog.section ? 'section' : 'folder'}
+              name={workspace.dialog.section?.name || workspace.dialog.category?.name} onCancel={closeDialog} onConfirm={confirmDeleteDialog} />
+          : <OwnerSystemWorkflowSidebarEditor dialog={workspace.dialog} entityLabel={workspace.dialog.type.includes('section') ? 'section' : 'folder'} onCancel={closeDialog} onConfirm={confirmDialog} />)}
+        {folderHome ? <>
+          {folderTiles(visibleFolders.filter(folder => rootCategoryIds.includes(folder.id)))}
+          {(organization.sections || []).map(section => <section className="system-workflow__library-section" key={section.id}>{sectionHeader(section)}
+            {!collapsedSections.has(section.id) && folderTiles(visibleFolders.filter(folder => section.categoryIds.includes(folder.id)))}</section>)}
+          {!categories.length && <p className="lattice-browser-status">Create a folder, then drag artwork into it from All Assets.</p>}
+        </> : <>{visibleFolders.length > 0 && folderTiles(visibleFolders)}<LibraryResults assets={related} emptyLabel={emptyLabel} onActivate={onAssetActivate} onImageActivate={onImageActivate}
           expandedImageIds={expandedImageIds} onToggleImages={toggleImages}
           onContext={openAssetContext} onPointerDown={beginOrganizationDrag}
-          workspace={workspace} />
+          workspace={workspace} /></>}
         {data.hasMore && <button className="workflow-tactile-control" type="button" disabled={data.loadingMore}
           onClick={data.onLoadMore}>{data.loadingMore ? 'Loading more assets' : 'Load more assets'}</button>}
       </main>

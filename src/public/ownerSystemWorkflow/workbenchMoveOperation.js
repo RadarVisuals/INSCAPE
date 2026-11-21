@@ -1,5 +1,5 @@
 // @ts-check
-import { moveWorkbenchGroup } from '../../systemWorkflow/moveWorkbenchGroup.js';
+import { moveWorkbenchSelection } from '../../systemWorkflow/moveWorkbenchSelection.js';
 import { workbenchMemberIds } from '../../systemWorkflow/domain/workbenchGroups.js';
 import { artworkWindowIds } from '../../systemWorkflow/domain/artworkLayers.js';
 import { clampWorkbenchMove, identityWorkbenchTransform } from './workbenchViewScale.js';
@@ -10,7 +10,7 @@ import { clampWorkbenchMove, identityWorkbenchTransform } from './workbenchViewS
 
 // One prepared selection move is shared by pointer and keyboard input. The
 // gesture owns cancellation; modules still own presentation and the draft store
-// still owns authored group movement. A plain window move never enters Undo.
+// still owns Image and group movement history.
 /**
  * @param {import('../../contracts/workbench.js').MoveOperationInput} input
  * @returns {import('../../contracts/workbench.js').WorkbenchMoveOperation | null}
@@ -36,7 +36,8 @@ export function createWorkbenchMoveOperation({
   const generation = owner ? origin.store.getGeneration() : null;
   const draft = owner ? origin.store.getSnapshot() : null;
   const members = draft ? workbenchMemberIds(draft, ids) : [];
-  const authored = owner && (blocks.some(windows => windows.every(id => ids.includes(id)))
+  const authored = owner && (members.some(id => id.startsWith('image:'))
+    || blocks.some(windows => windows.every(id => ids.includes(id)))
     || draft?.workbenchGroups?.some(group => group.memberIds.some(id => members.includes(id))));
   const mode = !owner ? 'visitor' : authored ? 'authored' : 'presentation';
   const valid = () => origin.isCurrent()
@@ -72,6 +73,7 @@ export function createWorkbenchMoveOperation({
       if (authored) {
         const presentation = origin.getPresentation();
         const changes = ids.flatMap((id, index) => {
+          if (id === 'workbench:index') return [];
           // commit checked the captured preview before entering these callbacks.
           const transform = /** @type {WorkbenchTransforms} */ (moved)[id];
           /** @type {{id: WindowId, position?: Position, window?: Position} | undefined} */
@@ -81,13 +83,13 @@ export function createWorkbenchMoveOperation({
             || presentation?.texts?.flatMap(text => text.frames || []).find(frame => frame.id === id);
           const frame = registrations[index]?.current || saved?.position || saved?.window;
           if (!frame || !transform || (!transform.x && !transform.y)) return [];
-          return [{ id, left: frame.left + transform.x / transform.scale,
+          return [{ id, from: frame, left: frame.left + transform.x / transform.scale,
             top: frame.top + transform.y / transform.scale }];
         });
         if (changes.length) {
           try {
             // Authored movement can only come from the owner branch that captured a generation.
-            moveWorkbenchGroup(origin.store, origin.profileAddress, changes, presentation, /** @type {number} */ (generation));
+            moveWorkbenchSelection(origin.store, origin.profileAddress, changes, presentation, /** @type {number} */ (generation));
             reportError('');
           } catch (error) {
             reportError(/** @type {Error} */ (error).message);

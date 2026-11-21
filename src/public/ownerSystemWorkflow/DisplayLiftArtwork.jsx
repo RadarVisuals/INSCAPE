@@ -2,8 +2,8 @@ import { useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import LatticeProductionFocusArtwork from '../../lattice/rendering/LatticeProductionFocusArtwork.jsx';
 import { displayLiftRectangle } from './displayLiftGeometry.js';
-import { interpolateLatticeProductionFocusRectangle, latticeProductionFocusOpeningProgress,
-  projectLatticeProductionFocusMediaMotion, LATTICE_PRODUCTION_FOCUS_OPENING_MS } from '../../lattice/rendering/latticeProductionFocusArtworkMotion.js';
+import { interpolateLatticeProductionFocusRectangle, animateLatticeProductionFocus,
+  projectLatticeProductionFocusMediaMotion } from '../../lattice/rendering/latticeProductionFocusArtworkMotion.js';
 import { renderedSystemWorkflowCssTransform } from '../../systemWorkflow/systemWorkflowTransform.js';
 import { projectedSvgArtworkFor } from '../../artwork/ProjectedSvgArtwork.jsx';
 
@@ -142,35 +142,8 @@ export default function DisplayLiftArtwork({ scene, source, entry, closing, redu
       }
       else setProgress(value);
     };
-    if (reducedMotion) {
-      paintProgress(closing ? 0 : 1);
-      if (closing) completeRef.current();
-      return undefined;
-    }
-    let frame;
-    const start = performance.now();
-    // Closing can interrupt the opening animation without jumping to full size.
-    const from = progressRef.current, to = closing ? 0 : 1;
-    const duration = LATTICE_PRODUCTION_FOCUS_OPENING_MS;
-    const sample = now => {
-      const elapsed = Math.min(1, (now - start) / duration);
-      const eased = latticeProductionFocusOpeningProgress(elapsed);
-      const value = from + (to - from) * eased;
-      paintProgress(value);
-      return elapsed;
-    };
-    const tick = now => {
-      const elapsed = sample(now);
-      if (elapsed < 1) frame = requestAnimationFrame(tick);
-      else if (closing) frame = requestAnimationFrame(() => completeRef.current());
-    };
-    paintProgress(from);
-    frame = requestAnimationFrame(tick);
-    return () => {
-      cancelAnimationFrame(frame);
-      // The last painted progress is already the visible pose. An interrupted
-      // return resumes there without advancing an independent animation clock.
-    };
+    return animateLatticeProductionFocus({ from: progressRef.current, to: closing ? 0 : 1, reducedMotion,
+      paint: paintProgress, complete: closing ? () => completeRef.current() : undefined });
   }, [closing, reducedMotion, entry, ready, geometry, host, liveSvg, progressTarget]);
 
   if (!geometry || !host) return null;

@@ -78,7 +78,6 @@ export default function PresentationBoardDefinitive({ assetsById = new Map(), ch
   const [view, setView] = useState(null);
   const [boardPosition, setBoardPosition] = useState(initialPresentation?.window ? { left: initialPresentation.window.left, top: initialPresentation.window.top } : null);
   const [inspectionHost, setInspectionHost] = useState(null);
-  const [inspectionControlsHost, setInspectionControlsHost] = useState(null);
   const [selectionOverlayHost, setSelectionOverlayHost] = useState(null);
   const workbenchView = useWorkbenchView();
   const { offset: cameraOffset, locked: cameraLocked } = useWorkbenchCamera();
@@ -263,7 +262,6 @@ export default function PresentationBoardDefinitive({ assetsById = new Map(), ch
         }} onPointerCancel={stopBoardDrag} onLostPointerCapture={stopBoardDrag} onPointerDown={beginBoardDrag}
         onPointerMove={moveBoardDrag} onPointerUp={stopBoardDrag}>
         <span className="system-workflow__board-title" title={displayName}>
-          {renderInspection && <span className="system-workflow__board-inspection-controls-host" ref={setInspectionControlsHost} />}
           <BoardWorkspaceControls playing={playing && !liftActive} onTogglePlayback={onTogglePlayback} />
           {!readOnly && !liftActive && <span className="system-workflow__composition-lock-controls">
             <button aria-label={authoringLocked ? 'Unlock Display Module composition' : 'Lock Display Module composition'}
@@ -298,8 +296,8 @@ export default function PresentationBoardDefinitive({ assetsById = new Map(), ch
         onKeyDown={(event) => resizeBoardFromKeyboard(corner, event)} onPointerUp={stopBoardResize} type="button" />)}
       <div className="system-workflow__board-inspection-host" ref={setInspectionHost}>
         {resizeError && <p role="alert" className="system-workflow__notice">{resizeError}</p>}
-        {renderInspection && inspectionHost && inspectionControlsHost
-          ? renderInspection(inspectionHost, inspectionControlsHost, inspectionSceneRef.current) : null}
+        {renderInspection && inspectionHost
+          ? renderInspection(inspectionSceneRef.current) : null}
       </div>
     </article>}
     {liftActive && paintFrame && boardNodeRef.current && <DisplayModuleLift source={boardNodeRef.current}

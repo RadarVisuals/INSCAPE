@@ -4,13 +4,20 @@ import assert from 'node:assert/strict';
 import { mkdir } from 'node:fs/promises';
 import { chromium } from 'playwright-core';
 import { browserExecutable } from '../scripts/browserEnvironment.mjs';
-import { separateLayers } from './fixtures/shared-tools.mjs';
+import { separateLayers, openSharedTool, sharedToolPanel, sharedToolTab, chooseSharedColorTarget, openSharedColorPicker } from './fixtures/shared-tools.mjs';
 import { settlePlaywrightAnimationFrames } from './playwright-browser-adapter.mjs';
 const origin = process.env.INSCAPE_TEST_ORIGIN || 'http://127.0.0.1:24970';
 const output = process.env.INSCAPE_BROWSER_OUTPUT || '.browser-test-runtime/workbench-shared-tools';
 const saved = page => page.evaluate(() => window.savedDraft());
 const rows = page => page.locator('.workbench-layer-row').evaluateAll(nodes => nodes.map(node => node.dataset.layerId));
 const undo = async page => { await page.locator('.system-workflow').focus(); await page.keyboard.press('Control+z'); };
+async function beginColourDrag(page) {
+  const field = (await openSharedColorPicker(page)).getByRole('group', { name: 'Colour saturation and value', exact: true });
+  await field.scrollIntoViewIfNeeded();
+  const box = await field.boundingBox();
+  await page.mouse.move(box.x + box.width * .25, box.y + box.height * .25); await page.mouse.down();
+  await page.mouse.move(box.x + box.width * .75, box.y + box.height * .5, { steps: 8 });
+}
 async function fixture(page, options = {}) {
   page.setDefaultTimeout(12000);
   await page.route('**/*', route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
@@ -42,7 +49,7 @@ async function fixture(page, options = {}) {
   await separateLayers(page);
 }
 
-test('Workbench pipette follows Shape/Text targets and opacity previews commit once with undo', { timeout: 90000 }, async () => {
+test('Workbench pipette follows Shape/Text targets and opacity entry commits once with undo', { timeout: 90000 }, async () => {
   const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
   try {
     const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, reducedMotion: 'reduce' });
@@ -51,32 +58,26 @@ test('Workbench pipette follows Shape/Text targets and opacity previews commit o
       window.EyeDropper = class { open({ signal }) { return new Promise(resolve => window.drops.push({ signal, resolve })); } };
     });
     await fixture(page, { writing: true });
-    const panel = page.getByRole('region', { name: 'Transform and Color', exact: true });
+    const panel = sharedToolPanel(page);
     await page.getByRole('button', { name: 'Select Landscape', exact: true }).click();
-    await panel.getByRole('tab', { name: 'Color', exact: true }).click();
-    const picker = panel.getByRole('button', { name: 'Pick color from screen', exact: true });
+    await openSharedTool(page, 'Color');
+    let picker = (await openSharedColorPicker(page, 'Fill')).getByRole('button', { name: 'Pick color from screen', exact: true });
     const original = await saved(page);
     await picker.click();
     await page.evaluate(() => window.drops.at(-1).resolve({ sRGBHex: '#336699' }));
     await page.waitForFunction(() => window.savedDraft().shapes[0].color === '#336699');
-    assert.deepEqual(await panel.locator('.ds-colour-readouts output').allTextContents(), ['210', '50', '40']);
+    assert.deepEqual(await panel.locator('.ds-colour-channels input').evaluateAll(nodes => nodes.map(node => node.value)), ['210', '50', '40']);
     await undo(page); assert.deepEqual((await saved(page)).shapes, original.shapes);
-    const slider = panel.getByRole('slider', { name: 'Color opacity', exact: true });
-    const box = await slider.boundingBox();
-    const dragOpacity = async () => {
-      await page.mouse.move(box.x + box.width - 6, box.y + box.height / 2); await page.mouse.down();
-      await page.mouse.move(box.x + box.width * .35, box.y + box.height / 2, { steps: 8 });
-    };
-    await dragOpacity();
-    assert.equal((await saved(page)).shapes[0].opacity, 1, 'drag previews do not save');
-    const chosen = Number(await slider.inputValue()) / 100;
+    const opacity = panel.getByRole('spinbutton', { name: 'Fill opacity (%)', exact: true });
+    await opacity.fill('35');
+    assert.equal((await saved(page)).shapes[0].opacity, 1, 'typing does not save before confirmation');
+    const chosen = Number(await opacity.inputValue()) / 100;
     assert.ok(chosen > .2 && chosen < .5);
-    await page.mouse.up(); assert.equal((await saved(page)).shapes[0].opacity, chosen);
+    await opacity.press('Enter'); assert.equal((await saved(page)).shapes[0].opacity, chosen);
     await undo(page); assert.equal((await saved(page)).shapes[0].opacity, 1, 'one undo restores opacity');
-    await dragOpacity(); await page.keyboard.press('Escape');
-    await page.mouse.move(box.x + box.width * .7, box.y + box.height / 2, { steps: 5 }); await page.mouse.up();
+    await opacity.fill('70'); await opacity.press('Escape');
     assert.equal((await saved(page)).shapes[0].opacity, 1);
-    await slider.focus(); await slider.press('ArrowLeft');
+    await opacity.focus(); await opacity.press('ArrowDown'); await opacity.press('Enter');
     assert.equal((await saved(page)).shapes[0].opacity, .99);
     await undo(page); assert.equal((await saved(page)).shapes[0].opacity, 1);
     await picker.click();
@@ -84,57 +85,55 @@ test('Workbench pipette follows Shape/Text targets and opacity previews commit o
     assert.equal(await page.evaluate(() => window.drops.at(-1).signal.aborted), true);
     await page.evaluate(() => window.drops.at(-1).resolve({ sRGBHex: '#ff0000' }));
     assert.deepEqual((await saved(page)).shapes, original.shapes);
-    await panel.getByRole('combobox', { name: 'Color target', exact: true }).selectOption('title');
+    picker = (await chooseSharedColorTarget(page, 'title')).getByRole('button', { name: 'Pick color from screen', exact: true });
     await picker.click(); await page.evaluate(() => window.drops.at(-1).resolve({ sRGBHex: '#336699' }));
     await page.waitForFunction(() => window.savedDraft().texts[0].article.appearance.titleColor === '#336699');
     await undo(page); assert.equal((await saved(page)).texts[0].article.appearance.titleColor, original.texts[0].article.appearance.titleColor);
     await page.getByRole('button', { name: 'Select Landscape', exact: true }).click();
-    await panel.getByRole('textbox', { name: 'Color colour', exact: true }).fill('336699');
-    await panel.getByRole('textbox', { name: 'Color colour', exact: true }).press('Tab');
+    const hex = (await openSharedColorPicker(page, 'Fill')).getByRole('textbox', { name: 'Color colour', exact: true });
+    await hex.fill('336699'); await hex.press('Tab');
     await mkdir(output, { recursive: true });
     await page.locator('.system-workflow').focus();
     await panel.screenshot({ path: `${output}/shared-color-layout.png` });
     await page.setViewportSize({ width: 760, height: 540 });
-    assert.equal(await panel.locator('.workbench-tools-body').evaluate(node => node.scrollWidth <= node.clientWidth), true);
+    assert.equal(await panel.locator('.workbench-inspector').evaluate(node => node.scrollWidth <= node.clientWidth), true);
     await panel.screenshot({ path: `${output}/shared-color-layout-narrow.png` });
   } finally { await browser.close(); }
 });
 
-test('shared Transform and Color follow selection, save one gesture, cancel, undo and exclude Image', { timeout: 90000 }, async () => {
+test('shared Transform and Color follow selection, save one gesture, cancel, undo and switch to Image controls', { timeout: 90000 }, async () => {
   const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
   try {
     const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, reducedMotion: 'reduce' });
     const errors = []; page.on('pageerror', error => errors.push(error.message));
     await fixture(page, { carbon: true, writing: true }); await mkdir(output, { recursive: true });
-    const panel = page.getByRole('region', { name: 'Transform and Color', exact: true });
+    const panel = sharedToolPanel(page);
     await page.getByRole('button', { name: 'Select Landscape', exact: true }).click();
+    await openSharedTool(page, 'Transform');
     assert.equal(await panel.getByRole('spinbutton', { name: 'Transform Width', exact: true }).inputValue(), '540');
     await panel.getByRole('spinbutton', { name: 'Transform Width', exact: true }).fill('480');
     await panel.getByRole('spinbutton', { name: 'Transform Width', exact: true }).press('Enter');
     assert.equal((await saved(page)).workbench.shapes[0].window.width, 480);
     await undo(page);
     await page.waitForFunction(() => document.querySelector('[aria-label="Transform Width"]')?.value === '540');
-    await panel.getByRole('tab', { name: 'Color', exact: true }).click();
+    await openSharedTool(page, 'Color');
     await panel.getByRole('textbox', { name: 'Color colour', exact: true }).fill('#336699');
     await panel.getByRole('textbox', { name: 'Color colour', exact: true }).press('Tab');
     assert.equal((await saved(page)).shapes[0].color, '#336699');
     const beforeDrag = await saved(page);
-    const wheel = await panel.locator('.ds-studio-colour-wheel').boundingBox();
-    await page.mouse.move(wheel.x + wheel.width / 2, wheel.y + 7); await page.mouse.down();
-    await page.mouse.move(wheel.x + wheel.width - 7, wheel.y + wheel.height / 2, { steps: 8 });
+    await beginColourDrag(page);
     assert.deepEqual(await saved(page), beforeDrag, 'live preview does not save intermediate colors');
     await page.keyboard.press('Escape'); await page.mouse.up();
     assert.deepEqual(await saved(page), beforeDrag);
-    await page.mouse.move(wheel.x + wheel.width / 2, wheel.y + 7); await page.mouse.down();
-    await page.mouse.move(wheel.x + wheel.width - 7, wheel.y + wheel.height / 2, { steps: 8 }); await page.mouse.up();
+    await beginColourDrag(page); await page.mouse.up();
     assert.notEqual((await saved(page)).shapes[0].color, '#336699');
     await undo(page); assert.equal((await saved(page)).shapes[0].color, '#336699');
     await page.screenshot({ path: `${output}/color-carbon.png` });
     await page.getByRole('button', { name: 'Select Eyes', exact: true }).click();
-    assert.equal(await panel.getByRole('tab', { name: 'Color', exact: true }).getAttribute('aria-selected'), 'true');
-    await panel.getByText('Images have no color settings.', { exact: true }).waitFor();
-    assert.equal(await panel.locator('input').count(), 0);
-    await panel.getByRole('tab', { name: 'Transform', exact: true }).click();
+    assert.equal(await sharedToolTab(page, 'Inspector').getAttribute('aria-selected'), 'true');
+    await panel.getByRole('group', { name: 'Image fit', exact: true }).waitFor();
+    assert.equal(await panel.getByRole('textbox', { name: 'Color colour', exact: true }).count(), 0, 'Image selection removes the previous Color controls');
+    await openSharedTool(page, 'Transform');
     await panel.getByRole('spinbutton', { name: 'Transform X', exact: true }).fill('401');
     await panel.getByRole('spinbutton', { name: 'Transform X', exact: true }).press('Enter');
     assert.equal((await saved(page)).workbench.imageModules.find(item => item.id === 'image:eyes').position.left, 401);
@@ -149,7 +148,7 @@ test('Text Color preserves words, caret, mixed marks and typing history; documen
     const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, reducedMotion: 'reduce' });
     const errors = []; page.on('pageerror', error => errors.push(error.message));
     await fixture(page, { writing: true }); await mkdir(output, { recursive: true });
-    const panel = page.getByRole('region', { name: 'Transform and Color', exact: true });
+    const panel = sharedToolPanel(page);
     // The fixture's Eyes layer covers the text caret; hide it through the UI
     // so returning to the article exercises a real pointer interaction.
     await page.getByRole('button', { name: 'Hide Eyes in editor', exact: true }).click();
@@ -161,10 +160,10 @@ test('Text Color preserves words, caret, mixed marks and typing history; documen
     for (let i = 0; i < 'Native '.length; i++) await text.press('Shift+ArrowRight');
     await page.waitForFunction(() => getSelection()?.toString() === 'Native ');
     assert.equal(await page.evaluate(() => window.getSelection()?.toString()), 'Native ');
-    await panel.getByRole('tab', { name: 'Color', exact: true }).click();
-    await panel.getByRole('combobox', { name: 'Color target', exact: true }).waitFor();
-    await page.waitForFunction(() => document.querySelector('[aria-label="Color target"]')?.selectedOptions[0]?.textContent === 'Selected text');
-    assert.equal(await panel.getByRole('combobox', { name: 'Color target', exact: true }).inputValue(), 'body');
+    await openSharedTool(page, 'Color');
+    await panel.getByRole('button', { name: /^Color target:/ }).waitFor();
+    await page.waitForFunction(() => document.querySelector('button[aria-label="Color target: Selected text"]'));
+    assert.equal(await panel.getByRole('button', { name: /^Color target:/ }).getAttribute('aria-label'), 'Color target: Selected text');
     await panel.getByRole('textbox', { name: 'Color colour', exact: true }).fill('#ff0000');
     await panel.getByRole('textbox', { name: 'Color colour', exact: true }).press('Tab');
     const colored = (await saved(page)).texts[0].article.content;
@@ -172,13 +171,11 @@ test('Text Color preserves words, caret, mixed marks and typing history; documen
     assert.equal(colored.content[0].content[0].marks[0].attrs.color, '#ff0000');
     assert.equal(colored.content[0].content[1].marks, undefined);
     await text.focus(); await text.press('Control+a');
-    await panel.getByRole('tab', { name: 'Transform', exact: true }).click();
-    await panel.getByRole('tab', { name: 'Color', exact: true }).click();
+    await openSharedTool(page, 'Transform');
+    await openSharedTool(page, 'Color');
     await panel.getByText('Mixed colors', { exact: true }).waitFor();
     const beforeDrag = (await saved(page)).texts[0].article;
-    const wheel = await panel.locator('.ds-studio-colour-wheel').boundingBox();
-    await page.mouse.move(wheel.x + wheel.width / 2, wheel.y + 7); await page.mouse.down();
-    await page.mouse.move(wheel.x + wheel.width - 7, wheel.y + wheel.height / 2, { steps: 8 });
+    await beginColourDrag(page);
     assert.deepEqual((await saved(page)).texts[0].article, beforeDrag);
     await page.keyboard.press('Escape'); await page.mouse.up();
     assert.deepEqual((await saved(page)).texts[0].article, beforeDrag);
@@ -192,8 +189,9 @@ test('Text Color preserves words, caret, mixed marks and typing history; documen
       return editor?.contains(selection?.anchorNode) && selection.isCollapsed
         && selection.anchorOffset === 'Native Text deletion'.length;
     });
-    await page.waitForFunction(() => document.querySelector('[aria-label="Color target"]')?.selectedOptions[0]?.textContent === 'Text at cursor');
+    await page.waitForFunction(() => document.querySelector('button[aria-label="Color target: Text at cursor"]'));
     const caret = await text.evaluate(() => getSelection().getRangeAt(0).getBoundingClientRect().toJSON());
+    await openSharedColorPicker(page);
     await panel.getByRole('textbox', { name: 'Color colour', exact: true }).fill('#336699');
     await panel.getByRole('textbox', { name: 'Color colour', exact: true }).press('Tab');
     // Resume at the same visible caret as a user would. Locator.press on an
@@ -202,7 +200,7 @@ test('Text Color preserves words, caret, mixed marks and typing history; documen
     await page.keyboard.press('!');
     const last = (await saved(page)).texts[0].article.content.content[0].content.at(-1);
     assert.equal(last.text, '!'); assert.equal(last.marks[0].attrs.color, '#336699');
-    await panel.getByRole('combobox', { name: 'Color target', exact: true }).selectOption('title');
+    await chooseSharedColorTarget(page, 'title');
     await panel.getByRole('textbox', { name: 'Color colour', exact: true }).fill('#224466');
     await panel.getByRole('textbox', { name: 'Color colour', exact: true }).press('Tab');
     assert.equal((await saved(page)).texts[0].article.appearance.titleColor, '#224466');
@@ -213,19 +211,19 @@ test('Text Color preserves words, caret, mixed marks and typing history; documen
     const afterReset = (await saved(page)).texts[0].article;
     assert.equal(afterReset.appearance.titleColor, undefined);
     assert.deepEqual(afterReset.content, beforeReset.content, 'title reset preserves selected-text colours');
-    await panel.getByRole('combobox', { name: 'Color target', exact: true }).selectOption('background');
+    await chooseSharedColorTarget(page, 'background');
     await panel.getByRole('textbox', { name: 'Color colour', exact: true }).fill('#c0c0c0');
     await panel.getByRole('textbox', { name: 'Color colour', exact: true }).press('Tab');
     assert.equal((await saved(page)).texts[0].article.appearance.background, '#c0c0c0');
-    await panel.getByRole('combobox', { name: 'Color target', exact: true }).selectOption('h1');
+    await chooseSharedColorTarget(page, 'h1');
     await panel.getByRole('textbox', { name: 'Color colour', exact: true }).fill('#669933');
     await panel.getByRole('textbox', { name: 'Color colour', exact: true }).press('Tab');
     assert.equal((await saved(page)).texts[0].article.appearance.textStyles.h1.color, '#669933');
     await page.screenshot({ path: `${output}/color-text-mist.png` });
     await page.setViewportSize({ width: 760, height: 540 });
-    await panel.getByRole('combobox', { name: 'Color target', exact: true }).selectOption('body');
-    const box = await panel.boundingBox(); assert.ok(box.x >= 8 && box.x + box.width <= 752 && box.y + box.height <= 492);
-    assert.equal(await panel.locator('.workbench-tools-body').evaluate(node => node.scrollWidth <= node.clientWidth), true);
+    await chooseSharedColorTarget(page, 'body');
+    const box = await panel.boundingBox(); assert.ok(box.x >= 0 && box.x + box.width <= 760 && box.y + box.height <= 540);
+    assert.equal(await panel.locator('.workbench-inspector').evaluate(node => node.scrollWidth <= node.clientWidth), true);
     await page.screenshot({ path: `${output}/color-text-narrow.png` });
     assert.deepEqual(errors, []);
   } finally { await browser.close(); }
@@ -237,24 +235,24 @@ test('tool recovery, retarget cancellation, storage failure and geometry at came
     const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, reducedMotion: 'reduce' });
     const errors = []; page.on('pageerror', error => errors.push(error.message));
     await fixture(page, { closed: true });
-    let panel = page.getByRole('region', { name: 'Transform and Color', exact: true });
+    let panel = sharedToolPanel(page);
     await page.getByRole('button', { name: 'Select Body', exact: true }).click();
     await panel.getByRole('button', { name: 'Open artwork', exact: true }).click();
     await panel.getByRole('spinbutton', { name: 'Transform Width', exact: true }).waitFor();
-    await panel.getByRole('button', { name: 'Close Transform', exact: true }).click();
+    await panel.getByRole('button', { name: 'Close Inspector', exact: true }).click();
     await page.keyboard.press('Control+k');
     await page.getByRole('button', { name: 'Transform', exact: true }).click();
     await panel.waitFor();
     await page.getByRole('button', { name: 'Select Landscape', exact: true }).click();
-    await panel.getByRole('tab', { name: 'Color', exact: true }).click();
-    const original = await saved(page), wheel = await panel.locator('.ds-studio-colour-wheel').boundingBox();
-    await page.mouse.move(wheel.x + wheel.width / 2, wheel.y + 7); await page.mouse.down();
-    await page.mouse.move(wheel.x + wheel.width - 7, wheel.y + wheel.height / 2, { steps: 8 });
+    await openSharedTool(page, 'Color');
+    const original = await saved(page);
+    await beginColourDrag(page);
     await page.getByRole('button', { name: 'Select Eyes', exact: true }).focus();
     await page.getByRole('button', { name: 'Select Eyes', exact: true }).press('Enter'); await page.mouse.up();
     assert.deepEqual((await saved(page)).shapes, original.shapes, 'retargeting cancels the originating preview');
-    await panel.getByText('Images have no color settings.', { exact: true }).waitFor();
-    await panel.getByRole('tab', { name: 'Transform', exact: true }).click();
+    await panel.getByRole('group', { name: 'Image fit', exact: true }).waitFor();
+    assert.equal(await panel.getByRole('textbox', { name: 'Color colour', exact: true }).count(), 0, 'Image selection removes the previous Color controls');
+    await openSharedTool(page, 'Transform');
     await page.evaluate(() => { window.normalSetItem = Storage.prototype.setItem; Storage.prototype.setItem = function(key, value) {
       if (key.startsWith('inscape.system-workflow-draft.')) throw Error('full'); return window.normalSetItem.call(this, key, value);
     }; });
@@ -266,14 +264,14 @@ test('tool recovery, retarget cancellation, storage failure and geometry at came
     await panel.getByRole('spinbutton', { name: 'Transform Width', exact: true }).fill('310');
     await panel.getByRole('spinbutton', { name: 'Transform Width', exact: true }).press('Enter');
     assert.equal((await saved(page)).imageModules.find(item => item.id === 'image:eyes').width, 310);
-    const imageActions = page.getByRole('navigation', { name: 'Image actions', exact: true });
+    const imageActions = panel.getByRole('group', { name: 'Image transforms', exact: true });
     for (const action of ['Rotate', 'Mirror horizontal', 'Mirror vertical']) {
-      assert.equal(await panel.getByRole('button', { name: action, exact: true }).count(), 0);
+      assert.equal(await panel.getByRole('button', { name: action, exact: true }).count(), 1);
       await imageActions.getByRole('button', { name: action, exact: true }).click();
     }
-    assert.equal((await saved(page)).imageModules.find(item => item.id === 'image:eyes').sides[0].transform.quarterTurns, 1);
-    assert.equal((await saved(page)).imageModules.find(item => item.id === 'image:eyes').sides[0].transform.mirrorX, true);
-    assert.equal((await saved(page)).imageModules.find(item => item.id === 'image:eyes').sides[0].transform.mirrorY, true);
+    assert.equal((await saved(page)).imageModules.find(item => item.id === 'image:eyes').artwork.transform.quarterTurns, 1);
+    assert.equal((await saved(page)).imageModules.find(item => item.id === 'image:eyes').artwork.transform.mirrorX, true);
+    assert.equal((await saved(page)).imageModules.find(item => item.id === 'image:eyes').artwork.transform.mirrorY, true);
     await page.locator('.system-workflow').focus(); await page.keyboard.press('Control+-');
     await panel.getByRole('spinbutton', { name: 'Transform Width', exact: true }).fill('320');
     await panel.getByRole('spinbutton', { name: 'Transform Width', exact: true }).press('Enter');
@@ -287,10 +285,11 @@ test('tool recovery, retarget cancellation, storage failure and geometry at came
     assert.equal(await panel.getByRole('spinbutton', { name: 'Transform Y', exact: true }).inputValue(), '345.25');
     await page.setViewportSize({ width: 760, height: 620 });
     for (const action of ['Rotate', 'Mirror horizontal', 'Mirror vertical', 'Crop']) {
-      const button = imageActions.getByRole('button', { name: action, exact: true });
+      const button = panel.getByRole('button', { name: action, exact: true });
+      await button.scrollIntoViewIfNeeded();
       const box = await button.boundingBox();
       assert.ok(box && box.x >= 0 && box.x + box.width <= 760 && box.y >= 0 && box.y + box.height <= 620,
-        `${action} stays reachable in the narrow Image toolbar`);
+        `${action} stays reachable in the narrow Inspector`);
     }
     await page.screenshot({ path: `${output}/image-toolbar-narrow.png` });
     assert.deepEqual(errors, []);

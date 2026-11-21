@@ -1,9 +1,7 @@
+import { isRecord as record, hasAllowedKeys as exact } from '../../recordValidation.js';
 import { validWorkbenchGroupName } from './workbenchGroups.js';
 
 export const MAX_WORKBENCH_DESTINATIONS = 32;
-const record = value => value && typeof value === 'object' && !Array.isArray(value);
-const exact = (value, required, optional = []) => record(value) && required.every(key => Object.hasOwn(value, key))
-  && Object.keys(value).every(key => required.includes(key) || optional.includes(key));
 const coordinate = value => Number.isFinite(value) && Math.abs(value) <= 1e7;
 const position = value => exact(value, ['left', 'top']) && coordinate(value.left) && coordinate(value.top);
 export const validWorkbenchViewRegion = value => exact(value, ['left', 'top', 'width', 'height'])
@@ -65,8 +63,15 @@ export function validWorkbenchIndex(index, content, published = false) {
   return index.landingId === null || ids.has(index.landingId);
 }
 
+const screenOrigin = { left: 24, top: 80 };
 export const createWorkbenchIndex = () => ({ open: true, pinned: true,
-  window: { left: 24, top: 80, width: 300, height: 440 }, destinations: [], landingId: null });
+  window: { ...screenOrigin, width: 300, height: 200 }, destinations: [], landingId: null });
+
+// Older unpinned windows stored canvas coordinates, sometimes far outside the screen.
+export function screenWorkbenchIndex(index) {
+  if (!index || index.pinned) return index;
+  return { ...index, pinned: true, window: { ...index.window, ...screenOrigin } };
+}
 
 export function projectWorkbenchIndex(index, publicContent) {
   if (!index) return undefined;
@@ -75,7 +80,7 @@ export function projectWorkbenchIndex(index, publicContent) {
     .map(({ visibility: _visibility, ...item }) => structuredClone(item));
   // Empty/private-only indexes should not reveal their existence or layout.
   if (!destinations.length) return undefined;
-  return { ...structuredClone(index), destinations,
+  return { ...structuredClone(screenWorkbenchIndex(index)), destinations,
     landingId: destinations.some(item => item.id === index.landingId) ? index.landingId : null };
 }
 

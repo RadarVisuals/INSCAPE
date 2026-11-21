@@ -1,3 +1,4 @@
+import { choosePointer } from './fixtures/editor-menu.mjs';
 import { navigateWorkbench } from './fixtures/workbench-navigation.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -8,7 +9,7 @@ const origin = process.env.INSCAPE_TEXT_ROOT || 'http://127.0.0.1:5217';
 const settle = page => page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
 const camera = page => page.locator('main.system-workflow').first().evaluate(node => ({
   x: Number(node.dataset.workbenchCameraX || 0), y: Number(node.dataset.workbenchCameraY || 0) }));
-const reset = async page => { await page.getByRole('button', { name: 'Reset Workbench view', exact: true }).click(); await settle(page); };
+const reset = async page => { await page.getByRole('button', { name: 'Fit canvas in view', exact: true }).click(); await settle(page); };
 
 for (const visitor of [false, true]) for (const width of [1440, 390]) {
   test(`Hand preserves module geometry and focus (${visitor ? 'Visitor' : 'owner'}, ${width}px)`, { timeout: 90000 }, async () => {
@@ -19,7 +20,8 @@ for (const visitor of [false, true]) for (const width of [1440, 390]) {
       const errors = []; page.on('pageerror', error => errors.push(error.message));
       await mountGridMotionFixture(page, { origin, visitor, count: 2, textModes: true, displayWidth: 320 });
       const hand = page.getByRole('button', { name: 'Hand tool', exact: true });
-      await hand.waitFor();
+      const initialTool = visitor ? hand : page.getByRole('button', { name: 'Select tool', exact: true });
+      await initialTool.waitFor();
       await page.waitForFunction(() => document.querySelectorAll('[data-workbench-view-id^="text:"]').length === 3);
       const firstImage = page.locator('[data-workbench-view-id="image:motion-0"]');
       await firstImage.locator('.image-module__artwork[data-media-state="ready"]').waitFor();
@@ -33,10 +35,10 @@ for (const visitor of [false, true]) for (const width of [1440, 390]) {
         assert.equal(await page.evaluate(()=>localStorage.getItem(window.__motionKey)),savedBeforePan);
       }
       if (!visitor) { const read=page.locator('[data-workbench-view-id="text:fit"]').getByRole('button',{name:'Read',exact:true});await read.focus();await read.press('Enter'); }
-      assert.equal(await hand.count(), 1, 'one navigation tool');
+      assert.equal(await initialTool.count(), 1, 'one navigation tool');
       assert.equal(await page.getByRole('button', { name: 'Explore Workbench', exact: true }).count(), 0, 'redundant Explore control removed');
       const saved = await page.evaluate(() => localStorage.getItem(window.__motionKey));
-      await hand.click(); await settle(page);
+      await choosePointer(page, 'Hand', visitor); await settle(page);
       await page.locator('main.system-workflow').first().dispatchEvent('wheel', { deltaY: 300, bubbles: true, cancelable: true }); await settle(page);
       assert.equal(await hand.getAttribute('aria-pressed'), 'true');
       const drag = async target => {
@@ -134,8 +136,8 @@ for (const visitor of [false, true]) for (const width of [1440, 390]) {
       assert.equal(await page.evaluate(() => localStorage.getItem(window.__motionKey)), saved);
       await page.screenshot({ path: `.browser-test-runtime/hand-${visitor ? 'visitor' : 'owner'}-${width}.png` });
       // Returning to Select restores ordinary window movement.
-      if (visitor) await hand.click(); else await page.getByRole('button', { name: 'Select tool', exact: true }).click();
-      assert.equal(await hand.getAttribute('aria-pressed'), 'false');
+      await choosePointer(page, 'Select', visitor);
+      assert.equal(await initialTool.getAttribute('aria-pressed'), visitor ? 'false' : 'true');
       await page.locator('main.system-workflow').first().dispatchEvent('wheel', { deltaY: 300, bubbles: true, cancelable: true }); await settle(page);
       const movable = await firstImage.boundingBox();
       await page.mouse.move(movable.x + 50, movable.y + 40); await page.mouse.down();

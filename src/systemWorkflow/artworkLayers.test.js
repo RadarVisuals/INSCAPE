@@ -8,7 +8,7 @@ import { buildProfileDocumentV9 } from '../profileDocument/domain/profileDocumen
 import { validateProfileDocumentV9 } from '../profileDocument/domain/profileDocumentV9Validation.js';
 import { reconcileSystemWorkflowDraftFromProfileDocumentV9 } from '../profileDocument/domain/profileDocumentV9Reconciliation.js';
 import { addImageModule } from '../imageModule/imageModuleSession.js';
-import { moveWorkbenchGroup } from './moveWorkbenchGroup.js';
+import { moveWorkbenchSelection } from './moveWorkbenchSelection.js';
 import { FIRST_WORKBENCH_ID } from './domain/workbenchCollection.js';
 function setup() {
   const values = new Map([[systemWorkflowDraftKey(profile), JSON.stringify(layersDraft())]]);
@@ -53,7 +53,7 @@ test('failed and stale operations preserve accepted bytes, history and the whole
   f.fail(false); const generation = f.store.getGeneration(); f.edit(group);
   assert.throws(() => editArtworkLayers(f.store, profile, { type: 'delete', ids: group.ids }, generation), /changed/);
 });
-test('batch deletion and Undo preserve sides, shared source, live layout, blocks and navigation membership', () => {
+test('batch deletion and Undo preserve artwork, shared source, live layout, blocks and navigation membership', () => {
   const f = setup(); f.edit(group);
   const draft = f.store.getDraft(); draft.workbenchGroups = [{ id: 'workbench-group:old', name: 'Old navigation', memberIds: group.ids }];
   assert.ok(f.store.commitCompletedOperation(draft, { expectedGeneration: f.store.getGeneration() }));
@@ -77,10 +77,10 @@ test('additions append once; public order filters private content and never expo
 test('block movement is atomic, restores geometry and rejects failed storage', () => {
   const f = setup(); f.edit(group); const before = f.store.getDraft();
   const changes = before.workbench.imageModules.map(item => ({ id: item.id, left: item.position.left + 50, top: item.position.top + 30 }));
-  moveWorkbenchGroup(f.store, profile, changes, before.workbench);
+  moveWorkbenchSelection(f.store, profile, changes, before.workbench);
   assert.equal(f.store.getDraft().workbench.imageModules[1].position.left, 430);
   assert.ok(f.store.undo()); assert.deepEqual(f.store.getDraft(), before);
-  f.fail(true); assert.throws(() => moveWorkbenchGroup(f.store, profile, changes, before.workbench)); assert.deepEqual(f.store.getDraft(), before);
+  f.fail(true); assert.throws(() => moveWorkbenchSelection(f.store, profile, changes, before.workbench)); assert.deepEqual(f.store.getDraft(), before);
 });
 test('delete captures a live unsaved layout in the same write and Undo restores it', () => {
   const f = setup(), live = structuredClone(f.store.getDraft().workbench);
@@ -115,8 +115,26 @@ test('a private block member is filtered without losing local grouping on reconc
 test('block movement rejects a stale gesture and restores unsaved live positions with Undo', () => {
   const f = setup(); f.edit(group); const generation = f.store.getGeneration();
   f.edit({ type: 'order', ids: group.ids, direction: 'back' });
-  assert.throws(() => moveWorkbenchGroup(f.store, profile, [], f.store.getDraft().workbench, generation), /changed/);
+  assert.throws(() => moveWorkbenchSelection(f.store, profile, [], f.store.getDraft().workbench, generation), /changed/);
   const live = structuredClone(f.store.getDraft().workbench); live.imageModules[0].position.left = 800;
-  moveWorkbenchGroup(f.store, profile, [{ id: 'image:body', left: 850, top: 180 }, { id: 'image:eyes', left: 430, top: 280 }], live);
+  moveWorkbenchSelection(f.store, profile, [{ id: 'image:body', left: 850, top: 180 }, { id: 'image:eyes', left: 430, top: 280 }], live);
   assert.ok(f.store.undo()); assert.deepEqual(f.store.getDraft().workbench, live);
+});
+
+test('moving a new Image captures its visible start without saving another Image’s local position', () => {
+  const { store } = setup(), id = addImageModule(store, profile);
+  const saved = store.getDraft().workbench, live = structuredClone(saved);
+  const start = { left: 180, top: 140 };
+  live.imageModules.push({ id, open: true, position: start });
+  live.imageModules[0].position.left += 100;
+  const move = position => moveWorkbenchSelection(store, profile, [{ id, from: start, ...position }], live);
+  const generation = store.getGeneration();
+  move(start);
+  assert.equal(store.getGeneration(), generation);
+  move({ left: 240, top: 140 });
+  assert.deepEqual(store.getDraft().workbench.imageModules.at(-1).position, { left: 240, top: 140 });
+  assert.deepEqual(store.getDraft().workbench.imageModules[0], saved.imageModules[0]);
+  assert.equal(store.getHistory().undo, 'Move Image');
+  assert.ok(store.undo());
+  assert.deepEqual(store.getDraft().workbench.imageModules.at(-1).position, start);
 });

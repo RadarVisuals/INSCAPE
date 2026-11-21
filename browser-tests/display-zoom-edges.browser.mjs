@@ -17,7 +17,7 @@ test('neighboring Display grids stay clipped while holding after navigation at f
       const saved = await page.evaluate(() => localStorage.getItem(window.__motionKey));
       if (!visitor) {
         await page.locator('.editor-menu-brand[aria-expanded="true"]').click();
-        for (const name of ['Close Workbench Layers', 'Close Transform', 'Close Color', 'Close Image', 'Close Shape', 'Close FX', 'Close Info']) {
+        for (const name of ['Close Workbench Layers', 'Close Inspector']) {
           const close = page.getByRole('button', { name, exact: true });
           if (await close.count()) { await close.focus(); await close.press('Enter'); }
         }

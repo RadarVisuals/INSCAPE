@@ -1,9 +1,8 @@
+import { hasExactKeys as exact } from '../recordValidation.js';
 export const MAX_SHAPES = 32;
 export const SHAPE_COMMAND_KINDS = Object.freeze({ shape: 'rectangle', 'shape-grid': 'grid' });
 export const isShapeCommand = id => Object.hasOwn(SHAPE_COMMAND_KINDS, id);
 export const SHAPE_ID = /^shape:[A-Za-z0-9_-]{1,80}$/u;
-const exact = (value, keys) => value && typeof value === 'object' && !Array.isArray(value)
-  && Object.keys(value).length === keys.length && keys.every(key => Object.hasOwn(value, key));
 
 export const validShapeOutline = outline => Boolean(exact(outline, ['width', 'color', 'opacity'])
   && Number.isFinite(outline.width) && outline.width >= 0 && outline.width <= 64

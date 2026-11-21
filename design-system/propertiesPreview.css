@@ -272,24 +272,19 @@
 .ds-properties-window .image-module__size > button {
   grid-column: 1 / -1;
 }
-.ds-properties-window .image-module__side-tools {
-  grid-template-columns: minmax(0, 1fr) var(--tool-control-height);
-  align-items: end;
-}
-.ds-properties-window .image-module__side-tools > button {
+.ds-properties-window .image-module__artwork-tools > button {
   display: grid;
   place-items: center;
   min-width: var(--tool-control-height);
   height: var(--tool-control-height);
   padding: 0;
 }
-.ds-properties-window :is(.image-module__size, .image-module__side-tools) label {
+.ds-properties-window .image-module__size label {
   display: grid;
   gap: var(--space-1);
   font: inherit;
 }
-.ds-properties-window :is(.image-module__size, .image-module__side-tools) input,
-.ds-properties-window .image-module__side-tools select {
+.ds-properties-window .image-module__size input {
   font: inherit;
 }
 .ds-properties-window .image-module__publication,

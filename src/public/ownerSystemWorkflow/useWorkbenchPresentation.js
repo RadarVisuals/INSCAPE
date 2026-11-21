@@ -8,9 +8,9 @@ import { captureWorkbenchPresentation } from './workbenchPresentationCapture.js'
 
 // Initialized once within the existing keyed Workbench lifetime. Restoring a
 // backup discards the old layout cache; module and selection owners stay separate.
-export function useWorkbenchLayoutSession({ profileAddress, draft, storage, workbenchId, restored }) {
+export function useWorkbenchLayoutSession({ profileAddress, draft, storage, workbenchId, cells, restored }) {
   const [restoredWorkspace] = useState(() =>
-    restored ? { layout: null, views: {} } : loadWorkbenchLayout(profileAddress, draft, storage, workbenchId)
+    restored ? { layout: null, views: {} } : loadWorkbenchLayout(profileAddress, draft, storage, workbenchId, cells)
   );
   const [sharedTools, setSharedTools] = useState(() => restoreSharedTools(restoredWorkspace.views));
   const [initialTextTools] = useState(() =>
@@ -120,6 +120,7 @@ export default function useWorkbenchPresentation({
     profile: profileAddress,
     draft,
     workbenchId,
+    cells: store.getCells?.(),
     layout: workbench,
     views: workspaceViews,
     storage,

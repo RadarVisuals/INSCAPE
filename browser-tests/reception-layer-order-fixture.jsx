@@ -22,10 +22,10 @@ if (!root.getDraft().reception?.shapes?.length) {
   reception.shapes = [rectangle('cell', '#101111', 'Artwork cell'),
     { ...rectangle('grid', '#eeeeee', 'Free Grid'), kind: 'grid', grid: { spacing: 32, lineWidth: 1 } },
     rectangle('overlay', '#ffffff', 'White overlay'), rectangle('backdrop', '#3b1639', 'Text backdrop'), rectangle('source', '#101111', 'Linked source')];
-  reception.imageModules = [{ id: 'image:art', name: 'Layered artwork', width: 600, height: 520, visibility: 'PUBLIC', sides: [{
-    id: 'side:art', asset: createProfileDocumentV9AssetResolver(assets)(assets[0].id), crop: null,
+  reception.imageModules = [{ id: 'image:art', name: 'Layered artwork', width: 600, height: 520, visibility: 'PUBLIC', artwork: {
+    id: 'artwork:art', asset: createProfileDocumentV9AssetResolver(assets)(assets[0].id), crop: null,
     transform: { quarterTurns: 0, mirrorX: false, mirrorY: false },
-  }] }];
+  } }];
   reception.texts = [{ id: 'text:nomad', article: article('NOMAD', 'Public layered text'), visibility: 'PUBLIC' },
     { id: 'text:private', article: article('Private note', 'Never published'), visibility: 'PRIVATE' }];
   const rotated = article('', 'Turned text');
