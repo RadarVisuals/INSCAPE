@@ -6,26 +6,20 @@ import './workbenchOverviewGrid.css';
 
 // Bounded visual cycles, one accessible collection. Nearby compositions warm
 // every visual copy so a wrap never swaps a painted preview for an empty card.
-export default function WorkbenchOverviewGrid({ items, wrap, onOpen, onEdit, selection, onManage, selectedId, hostRef: root, cardSize, arranging, onFinishArrange, onReorder, memory, movingCanvasId }) {
-  const cycle = useRef(null), height = useRef(0), keyboard = useRef(false);
+export default function WorkbenchOverviewGrid({ horizontalWrap, items, wrap, onOpen, onEdit, selection, onManage, selectedId, hostRef: root, cardSize, arranging, onFinishArrange, onReorder, memory, movingCanvasId }) {
+  const cycle = useRef(null), cycleSize = useRef(0), keyboard = useRef(false);
   const [revealed, setRevealed] = useState(null);
   const [repeatRadius, setRepeatRadius] = useState(1);
   const [visibleIds, setVisibleIds] = useState(() => new Set());
   const [drag, setDrag] = useState(null), [announcement, setAnnouncement] = useState('');
   const dragging = useRef(null), previous = useRef(new Map()), motions = useRef([]), dropFrame = useRef(0);
   const looping = wrap && items.length > 1 && !arranging && !selection;
-  useEffect(() => {
-    const intersecting = new Map();
-    const observer = new IntersectionObserver(entries => {
-      // A scroll normalization can queue several entries for one card. Keep
-      // its latest position, then derive visibility across all equivalent copies.
-      for (const entry of entries) intersecting.set(entry.target, entry.isIntersecting);
-      const next = new Set([...intersecting].filter(([, near]) => near).map(([card]) => card.dataset.cardId));
-      setVisibleIds(current => current.size === next.size && [...next].every(id => current.has(id)) ? current : next);
-    }, { root: root.current, rootMargin: '160px' });
-    root.current.querySelectorAll('.workbench-overview-card').forEach(card => observer.observe(card));
-    return () => observer.disconnect();
-  }, [items, looping, repeatRadius, root]);
+  const horizontal = horizontalWrap && looping;
+  const offset = horizontal ? 'scrollLeft' : 'scrollTop';
+  const scrollKey = horizontal ? 'gridHorizontal' : 'grid';
+  const dimension = horizontal ? 'width' : 'height';
+  const viewport = horizontal ? 'clientWidth' : 'clientHeight';
+  const initialSelection = useRef(selectedId);
   const reorder = (id, targetId) => {
     const ids = items.map(item => item.id), from = ids.indexOf(id), to = ids.indexOf(targetId);
     if (from < 0 || to < 0 || from === to) return;
@@ -63,31 +57,85 @@ export default function WorkbenchOverviewGrid({ items, wrap, onOpen, onEdit, sel
     return () => node.removeEventListener('touchstart', claimDrag);
   }, [root]);
 
+  useEffect(() => {
+    if (!horizontal) return;
+    const host = root.current;
+    const wheel = event => {
+      if (event.ctrlKey || event.shiftKey || event.deltaX || !event.deltaY) return;
+      event.preventDefault();
+      const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? host.clientWidth : 1;
+      host.scrollLeft += event.deltaY * unit;
+    };
+    host.addEventListener('wheel', wheel, { passive: false });
+    return () => host.removeEventListener('wheel', wheel);
+  }, [horizontal, root]);
+
   useLayoutEffect(() => {
     const measure = () => {
-      height.current = cycle.current.getBoundingClientRect().height;
-      const radius = Math.min(8, Math.max(1, Math.ceil(root.current.clientHeight / height.current)));
-      setRepeatRadius(radius);
-      root.current.scrollTop = (looping ? height.current * radius : 0) + (memory?.scroll?.grid || 0);
+      const host = root.current;
+      const size = cycle.current.getBoundingClientRect()[dimension];
+      if (!size) return;
+      cycleSize.current = size;
+      const radius = Math.min(16, Math.max(1, Math.ceil(host[viewport] / size)));
+      if (looping && repeatRadius !== radius) {
+        setRepeatRadius(radius);
+        return;
+      }
+      host[offset] = (looping ? size * radius : 0) + (memory?.scroll?.[scrollKey] || 0);
+      if (initialSelection.current && horizontalWrap) {
+        const id = CSS.escape(initialSelection.current);
+        const bounds = host.getBoundingClientRect();
+        const visible = [...host.querySelectorAll(`[data-card-id="${id}"]`)].some(card => {
+          const box = card.getBoundingClientRect();
+          return box.left >= bounds.left - 1 && box.right <= bounds.right + 1 && box.top >= bounds.top - 1 && box.bottom <= bounds.bottom + 1;
+        });
+        if (!visible) cycle.current.querySelector(`[data-card-id="${id}"]`)?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+        if (memory) memory.scroll = { ...memory.scroll, [scrollKey]: host[offset] - (looping ? size * radius : 0) };
+        initialSelection.current = null;
+      }
     };
     measure();
     const observer = new ResizeObserver(measure);
     observer.observe(cycle.current);
+    observer.observe(root.current);
     return () => observer.disconnect();
-  }, [looping, items.length, root, repeatRadius, memory]);
+  }, [looping, items.length, root, repeatRadius, memory, offset, dimension, viewport, horizontalWrap, scrollKey]);
+  useLayoutEffect(() => {
+    const intersecting = new Map();
+    const updateVisible = () => {
+      const next = new Set([...intersecting].filter(([, near]) => near).map(([card]) => card.dataset.cardId));
+      setVisibleIds(current => current.size === next.size && [...next].every(id => current.has(id)) ? current : next);
+    };
+    const observer = new IntersectionObserver(entries => {
+      // A scroll normalization can queue several entries for one card. Keep
+      // its latest position, then derive visibility across all equivalent copies.
+      for (const entry of entries) intersecting.set(entry.target, entry.isIntersecting);
+      updateVisible();
+    }, { root: root.current, rootMargin: '160px' });
+    // The first observer delivery can follow a paint. Seed only the cards in
+    // the restored viewport so switching layouts never exposes empty tiles.
+    const bounds = root.current.getBoundingClientRect();
+    for (const card of root.current.querySelectorAll('.workbench-overview-card')) {
+      const box = card.getBoundingClientRect();
+      intersecting.set(card, box.right > bounds.left && box.left < bounds.right && box.bottom > bounds.top && box.top < bounds.bottom);
+      observer.observe(card);
+    }
+    updateVisible();
+    return () => observer.disconnect();
+  }, [items, looping, repeatRadius, root]);
   const normalize = () => {
-    const host = root.current, size = height.current;
-    if (memory) memory.scroll = { ...memory.scroll, grid: host.scrollTop - (looping ? size * repeatRadius : 0) };
+    const host = root.current, size = cycleSize.current;
+    if (memory) memory.scroll = { ...memory.scroll, [scrollKey]: host[offset] - (looping ? size * repeatRadius : 0) };
     if (!looping || !size || keyboard.current) return;
     // Keep the viewport centre in the middle cycle. Browser focus scrolling can
     // then centre its first or last card without moving the target to a copy.
-    const start = size * repeatRadius - host.clientHeight / 2;
-    if (host.scrollTop < start || host.scrollTop >= start + size) {
-      host.scrollTop = start + ((host.scrollTop - start) % size + size) % size;
-      if (memory) memory.scroll.grid = host.scrollTop - size * repeatRadius;
+    const start = size * repeatRadius - host[viewport] / 2;
+    if (host[offset] < start || host[offset] >= start + size) {
+      host[offset] = start + ((host[offset] - start) % size + size) % size;
+      if (memory) memory.scroll[scrollKey] = host[offset] - size * repeatRadius;
     }
   };
-  return <section className="workbench-overview-gallery" aria-label="Workbench gallery" ref={root}
+  return <section className="workbench-overview-gallery" aria-label="Workbench gallery" ref={root} data-horizontal={horizontal || undefined}
     style={{ '--gallery-count': items.length }} data-card-size={cardSize} data-arranging={arranging || undefined} onScroll={normalize}
     onKeyDown={event => { keyboard.current = true; if (event.key === 'Escape' && arranging) { event.preventDefault(); if (dragging.current) endDrag(false); else onFinishArrange(); } }}
     onPointerMove={event => {

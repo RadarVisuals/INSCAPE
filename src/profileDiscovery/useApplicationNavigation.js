@@ -1,17 +1,19 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { normalizeProfileAddress } from '../library/config.js';
 import { applicationRouteUrl, disconnectRoute, readApplicationRoute, resolveApplicationDestination, studioOrigin } from './applicationNavigation.js';
+import { useGalleryStudioMotion } from './galleryStudioMotion.js';
 import useDeferredFocusReturn from '../public/useDeferredFocusReturn.js';
 
 export default function useApplicationNavigation(authority) {
   const [route, setRoute] = useState(() => readApplicationRoute(window.location, window.history.state));
   const current = useRef(route);
-  current.current = route;
   const returnFocus = useRef(null);
   const previousAccount = useRef(null);
   const disconnecting = useRef(false);
   const signInOrigin = useRef(null);
   const { restoreFocus, cancelFocusReturn } = useDeferredFocusReturn();
+  const motion = useGalleryStudioMotion(authority);
+  const { changeRoute } = motion;
   const destination = resolveApplicationDestination(route, authority);
   const background = route.kind === 'discover' ? route.returnTo : route;
   const content = background ? resolveApplicationDestination(background, authority) : null;
@@ -25,13 +27,18 @@ export default function useApplicationNavigation(authority) {
     window.history[replace ? 'replaceState' : 'pushState'](
       { inscapeReturnRoute: next.kind === 'discover' ? next.returnTo : null, inscapeReceptionParent: receptionParent, inscapeWorksParent: worksParent, inscapeStudioOrigin: origin }, '',
       applicationRouteUrl(window.location, next));
-    setRoute(next);
-  }, [cancelFocusReturn]);
+    changeRoute(previous, next, setRoute);
+  }, [cancelFocusReturn, changeRoute]);
   useEffect(() => {
-    const sync = () => { cancelFocusReturn(); const next = readApplicationRoute(window.location, window.history.state); current.current = next; setRoute(next); };
+    const sync = () => {
+      cancelFocusReturn();
+      const previous = current.current, next = readApplicationRoute(window.location, window.history.state);
+      current.current = next;
+      changeRoute(previous, next, setRoute);
+    };
     window.addEventListener('popstate', sync);
     return () => window.removeEventListener('popstate', sync);
-  }, [cancelFocusReturn]);
+  }, [cancelFocusReturn, changeRoute]);
 
   // Preserve the existing implicit-owner fallback on an external wallet loss.
   // Explicit Disconnect follows disconnectRoute instead. No remembered account
@@ -144,5 +151,5 @@ export default function useApplicationNavigation(authority) {
     };
   }, [authority, navigate]);
   const studioReturnLabel = window.history.state?.inscapeStudioOrigin || (background?.editor === 'reception' ? 'Profile' : 'Gallery');
-  return { route, destination, content, studioReturnLabel, visitProfile, openReception, editReception, openCanvas, openStudio, openWriting, consumeNewComposition, manageCompositions, editWork, returnToWorks, openWork, closeWork, openOverview, openDiscover, closeDiscover, beginSignIn, completeSignIn, beginDisconnect };
+  return { motion, route, destination, content, studioReturnLabel, visitProfile, openReception, editReception, openCanvas, openStudio, openWriting, consumeNewComposition, manageCompositions, editWork, returnToWorks, openWork, closeWork, openOverview, openDiscover, closeDiscover, beginSignIn, completeSignIn, beginDisconnect };
 }

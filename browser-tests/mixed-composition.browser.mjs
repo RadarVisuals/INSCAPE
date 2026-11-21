@@ -36,7 +36,7 @@ test('one published composition keeps free layers and Bento cells in Profile, Ga
     await open('Expand canvas').click();
     await assertMixed(gallery);
     await open('Return to index').click();
-    await open('Grid').click();
+    await page.getByRole('radio', { name: 'Grid view' }).check();
     await page.locator('[data-gallery-cycle="0"] [data-card-id="workbench:mixed"] [data-layer-id="text:free-caption"]').waitFor();
     await page.setViewportSize({ width: 900, height: 720 });
     await open('Writing').click();
@@ -47,7 +47,7 @@ test('one published composition keeps free layers and Bento cells in Profile, Ga
   } finally { await browser.close(); }
 });
 
-test('Studio opens the current published writing source or a new document on empty selection', { timeout: 45000 }, async () => {
+test('The shared Studio header resumes the active document from Profile and Writing', { timeout: 45000 }, async () => {
   const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
   try {
     const page = await browser.newPage({ viewport: { width: 1365, height: 820 }, reducedMotion: 'reduce' });
@@ -56,7 +56,7 @@ test('Studio opens the current published writing source or a new document on emp
     const button = name => page.getByRole('button', { name, exact: true });
     await page.goto(profile);
     await button('Studio').click();
-    await button('Create composition').waitFor();
+    await page.locator('.editor-menu-bar[data-document="workbench:mixed"]').waitFor();
     await page.goto(profile);
     await button('Writing').click();
     await page.locator('.published-writing summary').filter({ hasText: 'Free caption' }).click();

@@ -20,6 +20,10 @@ test('open a published Gallery work missing from Studio beside an existing priva
     await page.goto(url + '&owner=1&publishedOnly=1');
     await page.getByRole('button', { name: 'Open Anatomy' }).click();
     assert.equal(await page.evaluate(() => window.__galleryStore.readWorkbench('workbench:anatomy')), null);
+    await page.getByRole('button', { name: 'Studio', exact: true }).click();
+    await page.locator('.editor-menu-bar[data-document="workbench:main"]').waitFor();
+    await page.getByRole('button', { name: 'Back to Gallery' }).click();
+    await page.getByRole('button', { name: 'Open Anatomy' }).click();
     const original = await page.evaluate(() => window.__galleryStore.readWorkbench('workbench:private'));
     await page.getByRole('button', { name: 'Edit Anatomy in Studio' }).click();
     const editor = page.locator('.editor-menu-bar[data-document="workbench:anatomy"]');
@@ -28,6 +32,350 @@ test('open a published Gallery work missing from Studio beside an existing priva
     await editor.waitFor();
     assert.deepEqual(await page.evaluate(() => window.__galleryStore.readWorkbench('workbench:private')), original);
     assert.equal(await page.evaluate(() => window.__galleryStore.readWorkbench('workbench:anatomy').name), 'Anatomy');
+    const button = name => page.getByRole('button', { name, exact: true });
+    await button('Back to Gallery').click();
+    const editWork = button('Edit Anatomy in Studio');
+    await editWork.waitFor();
+    const gallery = page.locator('.workbench-overview');
+    assert.equal(await gallery.evaluate(node => node.scrollHeight - node.clientHeight), 0);
+    await page.setViewportSize({ width: 940, height: 680 });
+    await page.locator('.composition-explorer-sources summary').press('Enter');
+    await page.getByLabel('Artwork source', { exact: true }).selectOption({ index: 1 });
+    await page.getByLabel('Artwork source', { exact: true }).press('Tab');
+    const detailsRail = page.getByRole('complementary', { name: 'Work details' });
+    assert.ok(await detailsRail.evaluate(node => {
+      const focus = document.activeElement.getBoundingClientRect(), bounds = node.getBoundingClientRect();
+      return node.contains(document.activeElement) && focus.top >= bounds.top && focus.bottom <= bounds.bottom + 1;
+    }));
+    assert.equal(await gallery.evaluate(node => node.scrollHeight - node.clientHeight), 0);
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.getByRole('radio', { name: 'Grid view' }).check();
+    await button('Wrap around').click();
+    await button('Gallery options').click();
+    await page.getByRole('slider', { name: 'Tile size' }).press('End');
+    await button('Gallery options').click();
+    await button('Open Vision').hover({ position: { x: 10, y: 10 } });
+    await button('Edit Vision').click();
+    await page.locator('.editor-menu-bar[data-document="workbench:main"]').waitFor();
+    await button('Back to Gallery').click();
+    await page.locator('.workbench-overview-gallery').waitFor();
+    await button('Gallery options').click();
+    assert.equal(await button('Wrap around').getAttribute('aria-pressed'), 'false');
+    assert.equal(await page.getByRole('slider', { name: 'Tile size' }).inputValue(), '3');
+    await page.getByRole('radio', { name: 'List view' }).check();
+    await button('Edit Vision in Studio').waitFor();
+  } finally { await browser.close(); }
+});
+
+test('published Gallery and Studio move the same canvas from the list, tile and enlarged view', { timeout: 75000 }, async () => {
+  const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
+  try {
+    const page = await browser.newPage({ viewport: { width: 1440, height: 900 }, reducedMotion: 'no-preference' });
+    page.setDefaultTimeout(8000);
+    const errors = [];
+    page.on('pageerror', error => errors.push(error.message));
+    await page.route('**/*', route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
+    const button = name => page.getByRole('button', { name, exact: true });
+    await page.goto(url + '&owner=1');
+    const flight = async (direction, id) => {
+      const handle = await page.waitForFunction(({ direction, id }) => {
+        const node = document.querySelector('.owner-canvas-journey');
+        if (node?.dataset.direction !== direction || node.dataset.canvasId !== id) return;
+        const move = node.getAnimations().find(animation => animation.effect.getTiming().duration === 650);
+        const frames = move?.effect.getKeyframes();
+        return frames && { from: frames[0], to: frames[frames.length - 1], copies: document.querySelectorAll('.owner-canvas-journey').length };
+      }, { direction, id });
+      const { from, to, copies } = await handle.jsonValue();
+      assert.equal(copies, 1);
+      assert.notDeepEqual([from.left, from.top, from.width, from.height], [to.left, to.top, to.width, to.height]);
+      await page.locator('.owner-canvas-journey').waitFor({ state: 'detached' });
+      return { from, to };
+    };
+    await button('Open Anatomy').click();
+    await button('Zoom in').click();
+    const viewport = page.locator('.composition-explorer-viewport');
+    const originalScale = await viewport.getAttribute('data-camera-scale');
+    await button('Edit Anatomy in Studio').click();
+    const enter = await flight('editor', 'workbench:anatomy');
+    await button('Back to Gallery').click();
+    const back = await flight('overview', 'workbench:anatomy');
+    assert.equal(enter.from.width, back.to.width);
+    assert.ok(await button('Edit Anatomy in Studio').evaluate(node => node === document.activeElement));
+    assert.equal(await viewport.getAttribute('data-camera-scale'), originalScale);
+    await page.getByRole('radio', { name: 'Grid view' }).check();
+    const copies = page.locator('[data-card-id="workbench:main"]');
+    await copies.first().waitFor({ state: 'attached' });
+    const copyIndex = await copies.evaluateAll(cards => cards.findLastIndex(card => {
+      const box = card.getBoundingClientRect();
+      return box.left >= 0 && box.right <= innerWidth;
+    }));
+    assert.ok(copyIndex >= 0);
+    const copy = copies.nth(copyIndex);
+    const cycle = await copy.evaluate(card => card.closest('[data-gallery-cycle]').dataset.galleryCycle);
+    await copy.hover();
+    await copy.locator('button[aria-label="Edit Vision"]').click();
+    await flight('editor', 'workbench:main');
+    await page.goBack();
+    const landing = page.locator('[data-studio-return-tile]');
+    await landing.waitFor({ state: 'attached' });
+    assert.equal(await landing.evaluate(card => card.closest('[data-gallery-cycle]').dataset.galleryCycle), cycle);
+    assert.equal(await copies.evaluateAll(cards => cards.filter(card => getComputedStyle(card).opacity === '0').length), 1);
+    await flight('overview', 'workbench:main');
+    assert.equal(await landing.count(), 0);
+    await button('Quick view').click();
+    await button('Open Anatomy').click();
+    const expanded = page.getByRole('dialog', { name: 'View Anatomy' });
+    await expanded.press('Tab');
+    await expanded.getByRole('button', { name: 'Edit canvas' }).click();
+    await flight('editor', 'workbench:anatomy');
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await button('Back to Gallery').click();
+    await button('Open Anatomy').waitFor();
+    assert.equal(await page.locator('.owner-canvas-journey').count(), 0);
+    assert.deepEqual(errors, []);
+  } finally { await browser.close(); }
+});
+
+test('one artwork surface holds the Gallery crop across a cold Studio route mount', { timeout: 30000 }, async () => {
+  const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
+  let release;
+  const chunk = new Promise(resolve => { release = resolve; });
+  try {
+    const page = await browser.newPage({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1.25 });
+    const pending = page.waitForRequest(request => /OwnerSystemWorkflowRuntime[^/]*\.(js|jsx)(\?|$)/.test(request.url()));
+    await page.route('**/*', async route => {
+      const asset = new URL(route.request().url());
+      if (asset.origin !== origin) return route.abort();
+      if (/OwnerSystemWorkflowRuntime[^/]*\.(js|jsx)$/.test(asset.pathname)) await chunk;
+      await route.continue();
+    });
+    const button = name => page.getByRole('button', { name, exact: true });
+    await page.goto(url + '&owner=1');
+    await button('Open Anatomy').click();
+    await button('Zoom in').click();
+    const published = page.locator('.composition-explorer-viewport .workbench-overview-canvas');
+    const box = await published.boundingBox();
+    await button('Edit Anatomy in Studio').click();
+    await pending;
+    const stage = page.locator('.owner-canvas-journey[data-direction="editor"]');
+    await stage.waitFor({ timeout: 2000 });
+    // Exercise a cold load longer than the former transition watchdog.
+    await page.waitForTimeout(4000);
+    const hold = await stage.elementHandle();
+    const before = await stage.locator('.workbench-overview-canvas').boundingBox();
+    for (const key of ['x', 'y', 'width', 'height']) assert.ok(Math.abs(before[key] - box[key]) < 1);
+    release();
+    await page.waitForFunction(el => el.isConnected && el.getAnimations().length > 0, hold);
+    await stage.waitFor({ state: 'detached' });
+    await button('Back to Gallery').click();
+    await button('Edit Anatomy in Studio').waitFor();
+    await page.locator('.owner-canvas-journey').waitFor({ state: 'detached' });
+    const returned = await published.boundingBox();
+    for (const key of ['x', 'y', 'width', 'height']) assert.ok(Math.abs(returned[key] - box[key]) < 1);
+  } finally { release(); await browser.close(); }
+});
+
+test('first Gallery visit to Studio holds the artwork until the editor camera has fitted the canvas', { timeout: 30000 }, async () => {
+  const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
+  try {
+    const page = await browser.newPage({ viewport: { width: 1366, height: 900 }, deviceScaleFactor: 1.25 });
+    page.setDefaultTimeout(6000);
+    // Hold the first editor layout notification to reproduce a cold start independently of machine speed.
+    await page.addInitScript(() => {
+      const NativeObserver = window.ResizeObserver, pending = new Set();
+      let released = false;
+      window.releaseEditorLayout = () => { released = true; for (const notify of pending) notify(); pending.clear(); };
+      window.ResizeObserver = class extends NativeObserver {
+        constructor(notify) {
+          super((entries, observer) => {
+            if (!released && entries.some(entry => entry.target.matches('.system-workflow[data-editor-menu]'))) {
+              pending.add(() => notify(entries, observer));
+            } else notify(entries, observer);
+          });
+        }
+      };
+    });
+    await page.route('**/*', route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
+    const button = name => page.getByRole('button', { name, exact: true });
+    const flying = page.locator('.owner-canvas-journey[data-direction="editor"]');
+    await page.goto(url + '&owner=1');
+    await button('Open Anatomy').click();
+    const published = await page.locator('.composition-explorer-viewport .workbench-overview-canvas').boundingBox();
+    await button('Edit Anatomy in Studio').click();
+    await flying.waitFor();
+    const held = await flying.evaluate(async node => {
+      for (let i = 0; i < 5; i++) await new Promise(requestAnimationFrame);
+      const box = node.querySelector('.workbench-overview-canvas').getBoundingClientRect();
+      return { moving: node.getAnimations().length > 0, x: box.x, y: box.y };
+    });
+    assert.equal(held.moving, false, 'The default camera must never become the flight destination');
+    assert.ok(Math.abs(held.x - published.x) < 1 && Math.abs(held.y - published.y) < 1);
+    await page.evaluate(() => window.releaseEditorLayout());
+    const landing = await page.waitForFunction(() => {
+      const node = document.querySelector('.owner-canvas-journey');
+      const key = node?.getAnimations().map(a => a.effect.getKeyframes().at(-1)).find(k => k.left);
+      return key && ['left', 'top', 'width', 'height'].map(k => parseFloat(key[k]));
+    });
+    const expected = await landing.jsonValue();
+    await flying.waitFor({ state: 'detached' });
+    const actual = await page.locator('.system-workflow .workbench-canvas-content:not([data-suspended])').evaluate(node => {
+      const style = getComputedStyle(node), host = node.closest('.system-workflow').getBoundingClientRect();
+      return ['left', 'top', 'width', 'height'].map((k, i) => parseFloat(style.getPropertyValue('--canvas-' + k)) + (i === 0 ? host.x : i === 1 ? host.y : 0));
+    });
+    actual.forEach((value, i) => assert.ok(Math.abs(value - expected[i]) < 1, 'The editor must paint at the landing frame'));
+    await button('Back to Gallery').click();
+    await button('Edit Anatomy in Studio').waitFor();
+  } finally { await browser.close(); }
+});
+
+test('Gallery blends a published portrait into a resized, rearranged Studio draft in both directions', { timeout: 45000 }, async () => {
+  const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
+  try {
+    const page = await browser.newPage({ viewport: { width: 1440, height: 900 }, reducedMotion: 'no-preference' });
+    page.setDefaultTimeout(8000);
+    await page.route('**/*', route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
+    const button = name => page.getByRole('button', { name, exact: true });
+    const draft = () => page.evaluate(() => window.__galleryStore.readWorkbench('workbench:anatomy').draft);
+    const assertPublished = async () => {
+      await page.locator('.composition-explorer-viewport .workbench-overview-canvas[data-world-width="800"]').waitFor();
+      assert.equal(await page.getByText('Unpublished studio revision', { exact: true }).count(), 0);
+    };
+    await page.goto(url + '&owner=1&revised=1');
+    await button('Open Anatomy').click();
+    await assertPublished();
+    const revision = await draft();
+    assert.deepEqual(revision.workbench.imageModules[0].position, { left: 720, top: 160 });
+    await button('Edit Anatomy in Studio').click();
+    // Sample the composited frame halfway through the dissolve, independent of machine frame rate.
+    const sample = await page.waitForFunction(() => {
+      const node = document.querySelector('.owner-canvas-journey[data-direction="editor"]');
+      const layer = document.querySelector('.workbench-canvas-content:not([data-suspended])');
+      if (!node?.getAnimations().length || !layer?.getAnimations().length) return;
+      const animations = [...node.getAnimations({ subtree: true }), ...layer.getAnimations()];
+      animations.forEach(animation => { animation.pause(); animation.currentTime = 570; });
+      const rect = node.getBoundingClientRect();
+      const result = { opacity: Number(getComputedStyle(node).opacity), live: getComputedStyle(layer).visibility,
+        liveOpacity: Number(getComputedStyle(layer).opacity), aspect: rect.width / rect.height,
+        publishedWidth: node.querySelector('.workbench-overview-canvas').dataset.worldWidth };
+      animations.forEach(animation => animation.play());
+      return result;
+    });
+    const frame = await sample.jsonValue();
+    assert.ok(frame.opacity > 0 && frame.opacity < 1);
+    assert.equal(frame.live, 'visible');
+    assert.equal(frame.liveOpacity, 1);
+    assert.ok(Math.abs(frame.aspect - 1200 / 800) < 0.01);
+    assert.equal(frame.publishedWidth, '800');
+    await page.locator('.owner-canvas-journey').waitFor({ state: 'detached' });
+    // Observe the browser's outgoing Studio snapshot while the published canvas is on screen.
+    const dissolve = page.waitForFunction(() => document.getAnimations().some(a => a.animationName === 'studio-draft-dissolve'));
+    await Promise.all([dissolve, button('Back to Gallery').click()]);
+    await page.locator('.owner-canvas-journey').waitFor({ state: 'detached' });
+    await assertPublished();
+    await page.reload();
+    await button('Open Anatomy').click();
+    await assertPublished();
+    const saved = await draft();
+    assert.deepEqual(saved.workbench.area, revision.workbench.area);
+    assert.deepEqual(saved.imageModules, revision.imageModules);
+    assert.deepEqual(saved.workbench.imageModules, revision.workbench.imageModules);
+    await page.goto(url + '&revised=1');
+    await button('Open Anatomy').click();
+    await assertPublished();
+    assert.equal(await button('Edit Anatomy in Studio').count(), 0);
+  } finally { await browser.close(); }
+});
+
+test('Gallery handoff blends exposed draft pixels continuously without dimming unchanged artwork', { timeout: 90000 }, async () => {
+  const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
+  try {
+    await mkdir(output, { recursive: true });
+    for (const [width, revised, theme] of [[1440, true, 'dark'], [960, true, 'dark'], [1440, true, 'light'],
+      [1440, false, 'dark'], [960, false, 'dark']]) {
+      const page = await browser.newPage({ viewport: { width, height: 900 }, reducedMotion: 'no-preference' });
+      page.setDefaultTimeout(8000);
+      await page.route('**/*', route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
+      await page.goto(url + `&owner=1&theme=${theme}${revised ? '&revised=1' : ''}`);
+      await page.getByRole('button', { name: 'Open Anatomy', exact: true }).click();
+      await page.getByRole('button', { name: 'Edit Anatomy in Studio', exact: true }).click();
+      await page.waitForFunction(() => {
+        const stage = document.querySelector('.owner-canvas-journey[data-direction="editor"]');
+        const layer = document.querySelector('.workbench-canvas-content:not([data-suspended])');
+        if (!stage?.getAnimations().length || !layer?.getAnimations().length) return false;
+        [...stage.getAnimations({ subtree: true }), ...layer.getAnimations()].forEach(a => a.pause());
+        return true;
+      });
+      await page.waitForFunction(() => !document.documentElement.matches(':active-view-transition'));
+      const samples = [];
+      for (const time of [493, 494, 533, 572, 611, 649]) {
+        const points = await page.evaluate(({ time, revised }) => {
+          const stage = document.querySelector('.owner-canvas-journey');
+          const layer = document.querySelector('.workbench-canvas-content:not([data-suspended])');
+          [...stage.getAnimations({ subtree: true }), ...layer.getAnimations()].forEach(a => { a.currentTime = time; });
+          const box = stage.getBoundingClientRect();
+          // The moved portrait extends beyond the old portrait's opaque pixels.
+          // Also sample unchanged artwork and the empty canvas beside it.
+          return [[revised ? .77 : .55, .70], [.05, .50]].map(([x, y]) => ({
+            x: Math.round(box.x + x * box.width), y: Math.round(box.y + y * box.height),
+          }));
+        }, { time, revised });
+        const png = await page.screenshot({ path: `${output}/handoff-${width}-${revised ? 'revised' : 'same'}-${theme}-${time}.png` });
+        const pixels = await page.evaluate(async ({ data, points }) => {
+          const image = new Image(); image.src = `data:image/png;base64,${data}`; await image.decode();
+          const canvas = document.createElement('canvas'); canvas.width = image.width; canvas.height = image.height;
+          const ctx = canvas.getContext('2d'); ctx.drawImage(image, 0, 0);
+          return points.map(({ x, y }) => {
+            const values = ctx.getImageData(x - 1, y - 1, 3, 3).data;
+            return [0, 1, 2].map(channel => {
+              let sum = 0; for (let i = channel; i < values.length; i += 4) sum += values[i];
+              return sum / 9;
+            });
+          });
+        }, { data: png.toString('base64'), points });
+        samples.push(pixels);
+      }
+      const delta = (a, b) => Math.max(...a.map((value, channel) => Math.abs(value - b[channel])));
+      assert.ok(delta(samples[0][0], samples[1][0]) < 4, `${width}/${theme}: no visible cut at the draft handoff`);
+      if (revised) assert.ok(delta(samples[1][0], samples.at(-1)[0]) > 20, 'The probe must cover actual changed artwork');
+      for (let i = 2; i < samples.length - 1; i++) {
+        const progress = ([493, 494, 533, 572, 611, 649][i] - 494) / (649 - 494);
+        for (const point of [0, 1]) {
+          const expected = samples[1][point].map((value, c) => value + progress * (samples.at(-1)[point][c] - value));
+          assert.ok(delta(samples[i][point], expected) < 5, `${width}/${theme}: pixels follow the dissolve without a dark dip`);
+        }
+      }
+      if (!revised) assert.ok(delta(samples[1][0], samples.at(-1)[0]) < 5, 'Identical artwork stays equally bright');
+      await page.evaluate(() => document.getAnimations().forEach(a => a.play()));
+      await page.locator('.owner-canvas-journey').waitFor({ state: 'detached' });
+      await page.close();
+    }
+  } finally { await browser.close(); }
+});
+
+test('reversing a Gallery flight or requesting reduced motion retires the moving surface', { timeout: 30000 }, async () => {
+  const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
+  try {
+    const page = await browser.newPage({ viewport: { width: 390, height: 850 }, reducedMotion: 'no-preference' });
+    page.setDefaultTimeout(5000);
+    await page.addInitScript(() => Object.defineProperty(document, 'startViewTransition', { value: undefined }));
+    await page.route('**/*', route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
+    const button = name => page.getByRole('button', { name, exact: true });
+    const flying = page.locator('.owner-canvas-journey');
+    await page.goto(url + '&owner=1');
+    await button('Open Anatomy').hover({ position: { x: 10, y: 10 } });
+    await button('Edit Anatomy').click();
+    await page.waitForFunction(() => document.querySelector('.owner-canvas-journey[data-direction="editor"]')?.getAnimations().length);
+    await page.goBack();
+    await page.waitForFunction(() => document.querySelector('.owner-canvas-journey[data-direction="overview"]')?.getAnimations().length);
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await flying.waitFor({ state: 'detached' });
+    await page.goForward();
+    await page.locator('.editor-menu-bar[data-document="workbench:anatomy"]').waitFor();
+    assert.equal(await flying.count(), 0);
+    await button('Back to Gallery').click();
+    await button('Open Anatomy').waitFor();
+    assert.equal(await flying.count(), 0);
+    assert.equal(await page.locator('[data-canvas-journey-target]').count(), 0);
   } finally { await browser.close(); }
 });
 
@@ -42,15 +390,15 @@ test('Gallery shows only published work to its owner and Studio preserves draft 
     await page.getByRole('button', { name: 'Open Anatomy' }).click();
     const index = page.getByRole('navigation', { name: 'Canvases', exact: true });
     const editButtons = page.getByRole('button', { name: /^Edit .+ in Studio$/ });
-    const pencil = index.getByRole('button', { name: 'Edit Anatomy in Studio' });
+    const editWork = page.getByRole('complementary', { name: 'Work details' }).getByRole('button', { name: 'Edit Anatomy in Studio' });
     assert.equal(await editButtons.count(), 0);
-    assert.equal(await page.getByRole('button', { name: '+ New', exact: true }).count(), 0);
+    assert.equal(await page.getByRole('button', { name: 'Gallery actions', exact: true }).count(), 0);
     assert.equal(await index.getByRole('button', { name: 'Open Private experiment' }).count(), 0);
     await page.goto(url + '&owner=1');
-    await index.getByRole('button', { name: 'Edit Vision in Studio' }).waitFor();
+    await page.getByRole('complementary', { name: 'Work details' }).getByRole('button', { name: 'Edit Vision in Studio' }).waitFor();
     assert.equal(await index.getByRole('button', { name: 'Open Private experiment' }).count(), 0);
     await page.getByRole('button', { name: 'Open Anatomy' }).click();
-    await page.getByRole('button', { name: 'Studio', exact: true }).click();
+    await page.getByRole('button', { name: 'Edit Anatomy in Studio', exact: true }).click();
     await page.locator('.editor-menu-bar[data-document="workbench:anatomy"]').waitFor();
     await page.getByRole('button', { name: 'Back to Gallery' }).click();
     await index.getByRole('button', { name: 'Open Vision' }).waitFor();
@@ -58,9 +406,9 @@ test('Gallery shows only published work to its owner and Studio preserves draft 
     await index.getByRole('button', { name: 'Open Vision' }).waitFor();
     assert.equal(await editButtons.count(), 1);
     await page.getByRole('button', { name: 'Open Anatomy' }).click();
-    await pencil.waitFor();
+    await editWork.waitFor();
     assert.equal(await editButtons.count(), 1);
-    assert.ok(await pencil.evaluate(el => el.previousElementSibling?.getAttribute('aria-current') === 'page'));
+    assert.equal(await index.getByRole('button', { name: 'Open Anatomy' }).getAttribute('aria-current'), 'page');
     await page.getByRole('button', { name: 'Zoom in', exact: true }).click();
     const camera = () => page.locator('.composition-explorer-viewport').evaluate(el =>
       [el.dataset.canvasId, el.dataset.cameraScale, el.dataset.cameraX, el.dataset.cameraY]);
@@ -70,7 +418,7 @@ test('Gallery shows only published work to its owner and Studio preserves draft 
     const back = page.getByRole('button', { name: 'Back to Gallery', exact: true });
     for (const motion of ['no-preference', 'reduce']) {
       await page.emulateMedia({ reducedMotion: motion });
-      await pencil.click();
+      await editWork.click();
       await editor.waitFor();
       assert.equal(await page.locator('.editor-menu-bar[data-document]').getAttribute('data-document'), 'workbench:anatomy');
       assert.equal(new URL(page.url()).searchParams.get('work'), 'workbench:anatomy');
@@ -78,14 +426,14 @@ test('Gallery shows only published work to its owner and Studio preserves draft 
         await page.waitForFunction(() => document.querySelector('.owner-canvas-journey[data-direction="editor"]')?.getAnimations().some(a => a.effect.getTiming().duration === 650));
       }
       await page.locator('.owner-canvas-journey').waitFor({ state: 'detached' });
-      await editorCommand(page, 'Canvas', 'Manage compositions');
+      await editorCommand(page, 'Canvas', 'Manage works');
       if (motion === 'no-preference') {
         await page.waitForFunction(() => document.querySelector('.owner-canvas-journey[data-direction="overview"]')?.getAnimations().some(a => a.effect.getTiming().duration === 650));
       }
-      await pencil.waitFor();
+      await editWork.waitFor();
       await page.locator('.owner-canvas-journey').waitFor({ state: 'detached' });
       assert.deepEqual(await camera(), original);
-      assert.ok(await pencil.evaluate(el => el === document.activeElement));
+      assert.ok(await editWork.evaluate(el => el === document.activeElement));
       assert.equal(new URL(page.url()).searchParams.get('canvas'), '1');
     }
     await page.goto(url + '&owner=1&editor=canvas&work=workbench:missing');
@@ -112,7 +460,8 @@ test('create from Profile → Gallery, compose, and reopen the saved local work 
     await page.goto(url.replace('&canvas=1', '') + '&owner=1');
     await page.getByRole('heading', { name: 'Nomad', exact: true }).waitFor();
     await button('Gallery').click();
-    await button('+ New').click();
+    await button('Gallery actions').click();
+    await button('New composition').click();
     await page.getByLabel('Composition name', { exact: true }).fill(name);
     await button('Create composition').click();
     await button('Text tool').click();
@@ -128,12 +477,12 @@ test('create from Profile → Gallery, compose, and reopen the saved local work 
       if (await edit.count()) await edit.click();
     }
     await textbox.fill(text);
-    await editorCommand(page, 'Canvas', 'Manage compositions');
+    await editorCommand(page, 'Canvas', 'Manage works');
     const index = page.getByRole('navigation', { name: 'Canvases', exact: true });
     const selected = index.getByRole('button', { name: `Open ${name}`, exact: true });
     await selected.waitFor();
     assert.equal(await selected.getAttribute('aria-current'), 'page');
-    await button('Grid').click();
+    await page.getByRole('switch', { name: 'Grid view' }).check();
     await button(`Open ${name}`).hover({ position: { x: 10, y: 10 } });
     await button(`Edit ${name}`).click();
     await page.locator('.text-window').getByText(text, { exact: true }).waitFor();
@@ -154,10 +503,9 @@ test('create from Profile → Gallery, compose, and reopen the saved local work 
     assert.equal(new URL(page.url()).searchParams.get('work'), id, 'Failed browser Back restores the editor URL');
     await page.locator('.text-window').getByText(text, { exact: true }).waitFor();
     await page.evaluate(() => window.allowFixtureSave());
-    await editorCommand(page, 'Canvas', 'Manage compositions');
+    await editorCommand(page, 'Canvas', 'Manage works');
     await button(`Open ${name}`).waitFor();
-    await button('View options').click();
-    await button('List').click();
+    await page.getByRole('switch', { name: 'Grid view' }).uncheck();
     await selected.waitFor();
     await page.reload();
     await index.getByRole('button', { name: `Open ${name}` }).click();
@@ -171,11 +519,85 @@ test('create from Profile → Gallery, compose, and reopen the saved local work 
   } finally { await browser.close(); }
 });
 
+test('Studio saves privately, publishes to Gallery, and returns to that composition after editing', { timeout: 90000 }, async () => {
+  const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
+  try {
+    const page = await browser.newPage({ viewport: { width: 1440, height: 900 }, reducedMotion: 'reduce' });
+    page.setDefaultTimeout(10000);
+    const network = await interceptPublicationBoundary(page, origin);
+    const button = name => page.getByRole('button', { name, exact: true });
+    const name = 'Evening study';
+    await page.goto(url + '&owner=1');
+    await button('Gallery actions').click();
+    await button('New composition').click();
+    await page.getByLabel('Composition name').fill(name);
+    await button('Create composition').click();
+    const editor = page.locator('.editor-menu-bar:visible');
+    const local = editor.getByRole('status', { name: 'Saved locally' });
+    await local.getByText('Studio only').waitFor();
+    const id = await editor.getAttribute('data-document');
+    await button('Text tool').click();
+    await page.mouse.click(720, 240);
+    await page.locator('.text-window').waitFor();
+    const textbox = page.getByRole('textbox', { name: 'Article text', exact: true });
+    if (!await textbox.isVisible()) {
+      await page.locator('.text-window').click({ position: { x: 80, y: 90 } });
+      const tools = await openSharedTool(page, 'Text');
+      const edit = tools.getByRole('button', { name: 'Edit text', exact: true });
+      if (await edit.count()) await edit.click();
+    }
+    await textbox.fill('Light over the fields.');
+    await editorCommand(page, 'Canvas', 'Rename');
+    await button('Cancel').click();
+    await page.reload();
+    await local.getByText('Studio only').waitFor();
+    assert.equal(await editor.getAttribute('data-document'), id);
+    await button('Publish').click();
+    const candidate = page.getByRole('checkbox', { name: new RegExp(name) });
+    await candidate.waitFor();
+    assert.ok(await candidate.isChecked(), await page.locator('.owner-lattice-publication-rack__summary').locator('..').innerText());
+    assert.ok(await button('Prepare publication').isEnabled(), await page.locator('.owner-lattice-publication-rack__summary').locator('..').innerText());
+    await button('Prepare publication').click();
+    await button('Make presentation public').click();
+    await button('Publish to profile').waitFor();
+    assert.equal(network.writes, 0);
+    await local.getByText('Studio only').waitFor();
+    await button('Publish to profile').click();
+    await button('Dismiss publication confirmation').click();
+    await local.getByText('In Gallery', { exact: true }).waitFor();
+    assert.equal(network.writes, 1);
+    await button('Back to Gallery').click();
+    const selected = button('Edit ' + name + ' in Studio');
+    await selected.waitFor();
+    await selected.click();
+    await editorCommand(page, 'Canvas', 'Rename');
+    await page.getByLabel('Composition name').fill(name + ' II');
+    await button('Save name').click();
+    await local.getByText('In Gallery', { exact: true }).waitFor();
+    await button('Back to Gallery').click();
+    await selected.waitFor();
+    await page.reload();
+    await selected.click();
+    await editor.getByText(name + ' II', { exact: true }).waitFor();
+    await editorCommand(page, 'Canvas', 'Delete Studio draft');
+    const removal = page.getByRole('alertdialog', { name: 'Delete local composition' });
+    await removal.getByText(/Published versions stay online/).waitFor();
+    await removal.getByRole('button', { name: 'Delete local composition' }).click();
+    await removal.waitFor({ state: 'detached' });
+    await button('Back to Gallery').click();
+    await button('Open ' + name).waitFor();
+    await page.reload();
+    await button('Open ' + name).waitFor();
+    assert.equal(await page.evaluate(id => window.__galleryStore.readWorkbench(id), id), null);
+    assert.equal(network.writes, 1);
+  } finally { await browser.close(); }
+});
+
 test('the public header and Studio share one anchor and keep account actions scoped to the signed-in reader', { timeout: 90000 }, async () => {
   const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
   try {
     await mkdir(output, { recursive: true });
-    for (const width of [1440, 760, 390, 320]) {
+    for (const width of [1440, 1280, 760, 390, 320]) {
       const page = await browser.newPage({ viewport: { width, height: 900 }, reducedMotion: 'reduce' });
       page.setDefaultTimeout(8000);
       await page.route('**/*', route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
@@ -209,6 +631,31 @@ test('the public header and Studio share one anchor and keep account actions sco
       await expectAvatar('PFP.png');
       const header = page.locator('.visitor-header');
       const publicBox = await metrics(header);
+      if (width >= 1280) {
+        assert.ok(await tabs.evaluate(node => node.scrollWidth <= node.clientWidth),
+          'All desktop navigation labels fit beside the Gallery toolbar');
+      }
+      const discover = header.getByRole('link', { name: 'Discover', exact: true });
+      assert.equal(await discover.isVisible(), width > 700);
+      if (width > 700) {
+        const brand = await button('Inscape menu').boundingBox(), link = await discover.boundingBox();
+        const maker = await header.locator('.visitor-breadcrumb').boundingBox();
+        const text = await discover.evaluate(node => {
+          const range = document.createRange();
+          range.selectNodeContents(node);
+          const { left, right } = range.getBoundingClientRect();
+          return { left, right };
+        });
+        assert.ok(brand.x + brand.width < link.x && link.x + link.width < maker.x);
+        assert.ok(Math.abs((text.left - brand.x - brand.width) - (maker.x - text.right)) <= 1,
+          'Discover has equal visible space between the brand and the maker');
+        await discover.click();
+        assert.ok(new URL(page.url()).searchParams.has('discover'));
+        await page.goBack();
+        await discover.waitFor();
+      }
+      const studioLabel = header.getByRole('button', { name: 'Studio', exact: true });
+      const publicLabel = await studioLabel.boundingBox();
       if (width <= 390) {
         assert.ok(await tabs.evaluate(list => list.scrollWidth > list.clientWidth), 'The mobile tabs can scroll');
         const tabBox = await tabs.boundingBox(), controls = await header.locator('.visitor-tools').boundingBox();
@@ -230,7 +677,7 @@ test('the public header and Studio share one anchor and keep account actions sco
         await tabs.getByRole('button', { name: 'Gallery', exact: true }).click();
         await tabs.getByRole('button', { name: 'Gallery', exact: true }).waitFor();
       }
-      assert.equal(publicBox.height, 48); assert.equal(publicBox.top, 0); assert.equal(publicBox.x, 16);
+      assert.equal(publicBox.height, width > 1250 ? 64 : 92); assert.equal(publicBox.top, 0); assert.equal(publicBox.x, 16);
       assert.equal(publicBox.left, '16px'); assert.equal(publicBox.right, '16px');
       assert.equal(publicBox.border, '0px'); assert.equal(publicBox.background, 'rgba(0, 0, 0, 0)');
       await button('Inscape menu').click();
@@ -241,15 +688,29 @@ test('the public header and Studio share one anchor and keep account actions sco
       assert.equal(await menu.getByRole('menuitem', { name: 'Canvas' }).count(), 0);
       assert.equal(await menu.getByRole('menuitem', { name: 'Backup' }).count(), 0);
       await page.screenshot({ path: output + '/gallery-menu-' + width + '.png' });
-      await page.keyboard.press('Escape');
-      await button('Studio').click();
+      await menu.getByRole('menuitemcheckbox', { name: 'Studio' }).click();
       const studio = page.locator('.editor-menu-bar[data-document]:visible');
       await studio.waitFor(); await page.locator('.owner-canvas-journey').waitFor({ state: 'detached' });
       const editorBox = await metrics(studio);
-      const { border, background, ...publicGeometry } = publicBox;
-      const { border: studioBorder, background: studioBackground, ...studioGeometry } = editorBox;
-      assert.deepEqual(studioGeometry, publicGeometry);
-      assert.equal(studioBorder, '1px'); assert.notEqual(studioBackground, background);
+      const activeLabel = await studio.locator('.studio-header-label[aria-current="page"]').boundingBox();
+      for (const key of ['x', 'width', 'height']) {
+        assert.ok(Math.abs(activeLabel[key] - publicLabel[key]) <= 1, `Studio keeps its ${key} at ${width}px (Gallery ${publicLabel[key]}, Studio ${activeLabel[key]})`);
+      }
+      assert.equal(editorBox.height, 48);
+      for (const key of ['x', 'width', 'top', 'left', 'right']) {
+        assert.equal(editorBox[key], publicBox[key], `Shared header anchor ${key} at ${width}px`);
+      }
+      const studioButton = studio.getByRole('button', { name: 'Studio', exact: true });
+      await studioButton.press('ArrowDown');
+      const studioMenu = page.getByRole('menu', { name: 'Studio', exact: true });
+      await studioMenu.getByRole('menuitem', { name: 'New composition', exact: true }).click();
+      const newWork = page.getByRole('dialog', { name: 'New composition', exact: true });
+      await newWork.getByRole('button', { name: 'Cancel' }).click();
+      assert.ok(await studioButton.evaluate(node => node === document.activeElement));
+      await studioButton.click();
+      await studioMenu.getByRole('menuitem', { name: 'Rename composition' }).click();
+      await page.getByRole('dialog', { name: 'Rename composition' }).press('Escape');
+      assert.equal(editorBox.border, '1px'); assert.notEqual(editorBox.background, publicBox.background);
       assert.equal(await studio.locator('.visitor-account-avatar, .visitor-tabs').count(), 0);
       await button('Inscape menu').click();
       assert.equal(await menu.getByRole('menuitemcheckbox', { name: 'Studio' }).getAttribute('aria-checked'), 'true');
@@ -273,7 +734,7 @@ test('unpublished Gallery and Writing remain navigable with creation available t
     page.on('pageerror', error => errors.push(error.message));
     await page.route('**/*', route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
     const tabs = page.getByRole('navigation', { name: 'Profile navigation' });
-    const create = page.getByRole('button', { name: '+ New', exact: true });
+    const create = page.getByRole('button', { name: 'New composition', exact: true });
     for (const session of ['', '&viewer=1', '&owner=1']) {
       await page.goto(url + '&unpublished=1' + session);
       await page.getByRole('heading', { name: 'Gallery', exact: true }).waitFor();
@@ -306,22 +767,23 @@ for (const [title, flag, width, linked] of [
     const network = await interceptPublicationBoundary(page, origin);
     const gallery = url + '&' + flag + '=1';
     const openWork = page.getByRole('button', { name: 'Open ' + title, exact: true });
-    const select = page.getByRole('button', { name: 'Select', exact: true });
-    const remove = page.getByRole('button', { name: 'Remove selected (1)', exact: true });
+    const actions = page.getByRole('button', { name: 'Gallery actions', exact: true });
+    const remove = page.getByRole('button', { name: 'Remove from Gallery (1)', exact: true });
     const sheet = page.getByRole('dialog', { name: 'Remove from Gallery', exact: true });
     const draft = () => page.evaluate(() => window.__galleryStore.getBackupSnapshot());
     const names = document => publishedCompositionEntries(document, 'profile').map(entry => entry.name);
     for (const reader of ['', '&viewer=1']) {
       await page.goto(gallery + reader);
       await openWork.waitFor();
-      assert.equal(await select.count(), 0);
+      assert.equal(await actions.count(), 0);
     }
     await page.goto(gallery + '&owner=1');
     await openWork.waitFor();
     const snapshot = await draft();
     const previous = await page.evaluate(() => window.__overviewPublication);
     const showRemove = async () => {
-      await select.click();
+      await actions.click();
+      await page.getByRole('button', { name: 'Select works…', exact: true }).click();
       await page.getByRole('checkbox', { name: 'Select ' + title, exact: true }).check();
       await remove.click();
       await sheet.waitFor();
@@ -365,7 +827,7 @@ for (const [title, flag, width, linked] of [
     await page.getByRole('navigation', { name: 'Profile navigation' }).getByRole('button', { name: 'Profile', exact: true }).click();
     await page.getByRole('heading', { name: 'Nomad', exact: true }).waitFor();
     assert.equal(await openWork.count(), linked ? 1 : 0);
-    assert.equal(await select.count(), 0);
+    assert.equal(await actions.count(), 0);
     assert.deepEqual(errors, []);
   } finally { await browser.close(); }
 });
@@ -377,9 +839,10 @@ test('a changed verified Gallery stops removal before the wallet write', { timeo
     page.setDefaultTimeout(8000);
     const network = await interceptPublicationBoundary(page, origin);
     await page.goto(url + '&owner=1&bulk=1&changed-publication=1');
-    await page.getByRole('button', { name: 'Select', exact: true }).click();
+    await page.getByRole('button', { name: 'Gallery actions', exact: true }).click();
+    await page.getByRole('button', { name: 'Select works…', exact: true }).click();
     await page.getByRole('button', { name: 'Select all', exact: true }).click();
-    await page.getByRole('button', { name: 'Remove selected (3)', exact: true }).click();
+    await page.getByRole('button', { name: 'Remove from Gallery (3)', exact: true }).click();
     const sheet = page.getByRole('dialog', { name: 'Remove from Gallery', exact: true });
     await page.evaluate(() => {
       window.__pausePublicationVerification = () => new Promise(resolve => { window.__finishPublicationVerification = resolve; });
@@ -398,7 +861,7 @@ test('a changed verified Gallery stops removal before the wallet write', { timeo
     assert.equal(network.writes, 0);
     await sheet.getByRole('button', { name: 'Cancel', exact: true }).click();
     const selection = page.getByRole('group', { name: 'Gallery selection', exact: true });
-    await selection.getByRole('button', { name: 'Remove selected (3)' }).waitFor();
+    await selection.getByRole('button', { name: 'Remove from Gallery (3)' }).waitFor();
     assert.equal(await page.getByRole('checkbox', { name: 'Select Vision', exact: true }).isChecked(), true);
     await selection.getByRole('button', { name: 'Cancel', exact: true }).click();
     await page.getByRole('button', { name: 'Open Vision', exact: true }).waitFor();
@@ -419,31 +882,37 @@ for (const [width, removeEverything] of [[1440, false], [390, true]]) {
       const checkbox = name => page.getByRole('checkbox', { name: 'Select ' + name, exact: true });
       const sheet = page.getByRole('dialog', { name: 'Remove from Gallery', exact: true });
       const snapshot = () => page.evaluate(() => window.__galleryStore.getBackupSnapshot());
-      await button('Select').waitFor();
+      await button('Gallery actions').waitFor();
       await page.locator(removeEverything ? '.workbench-overview-gallery' : '.composition-index').waitFor();
       const before = await snapshot();
       const original = await page.evaluate(() => window.__overviewPublication);
 
-      await button('Select').click();
+      await button('Gallery actions').click();
+      await button('Select works…').click();
       assert.equal(await page.getByRole('checkbox').count(), 3);
       assert.equal(await checkbox('Private experiment').count(), 0);
       assert.equal(await checkbox('Profile link').count(), 0);
-      assert.equal(await button('Remove selected (0)').isDisabled(), true);
+      assert.equal(await button('Remove from Gallery (0)').isDisabled(), true);
       await checkbox('Bento').check();
+      await page.getByRole('radio', { name: !removeEverything ? 'Grid view' : 'List view' }).check();
+      assert.ok(await checkbox('Bento').isChecked());
+      await page.getByRole('radio', { name: removeEverything ? 'Grid view' : 'List view' }).check();
+      assert.ok(await checkbox('Bento').isChecked());
       await button('Cancel').click();
-      await button('Select').waitFor();
+      await button('Gallery actions').waitFor();
       assert.equal(network.writes, 0);
       assert.deepEqual(await snapshot(), before);
 
-      await button('Select').click();
+      await button('Gallery actions').click();
+      await button('Select works…').click();
       await button('Select all').click();
       for (const name of ['Vision', 'Anatomy', 'Bento']) assert.equal(await checkbox(name).isChecked(), true);
       await button('Deselect all').click();
-      assert.equal(await button('Remove selected (0)').isDisabled(), true);
+      assert.equal(await button('Remove from Gallery (0)').isDisabled(), true);
       await button('Select all').click();
       if (!removeEverything) await checkbox('Anatomy').uncheck();
       const selected = removeEverything ? ['Vision', 'Anatomy', 'Bento'] : ['Vision', 'Bento'];
-      const remove = button('Remove selected (' + selected.length + ')');
+      const remove = button('Remove from Gallery (' + selected.length + ')');
       await remove.click();
       const impacts = sheet.getByRole('list', { name: 'Selected works' });
       await impacts.waitFor();
@@ -454,7 +923,7 @@ for (const [width, removeEverything] of [[1440, false], [390, true]]) {
       }
       await sheet.getByRole('button', { name: 'Cancel', exact: true }).click();
       await remove.waitFor();
-      await page.waitForFunction(() => document.activeElement?.textContent.includes('Remove selected'));
+      await page.waitForFunction(() => document.activeElement?.textContent.includes('Remove from Gallery'));
       for (const name of selected) assert.equal(await checkbox(name).isChecked(), true);
       assert.equal(network.uploads, 0); assert.equal(network.writes, 0);
       await remove.click();
@@ -508,7 +977,7 @@ test('a rejected bulk upload includes the server error code and upload phase in 
         body: JSON.stringify({ error: { code: 'UPLOAD_PROFILE_QUOTA', message: providerDetail } }) });
     });
     await page.goto(url + '&bulk=1&owner=1');
-    for (const label of ['Select', 'Select all', 'Remove selected (3)']) await page.getByRole('button', { name: label, exact: true }).click();
+    for (const label of ['Gallery actions', 'Select works…', 'Select all', 'Remove from Gallery (3)']) await page.getByRole('button', { name: label, exact: true }).click();
     const sheet = page.getByRole('dialog', { name: 'Remove from Gallery', exact: true });
     await sheet.getByRole('button', { name: 'Prepare publication', exact: true }).click();
     await sheet.getByRole('button', { name: 'Make presentation public', exact: true }).click();

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { ChevronDown, Moon, Sun } from 'lucide-react';
 import { interfaceTheme, useInterfaceTheme } from '../../interfaceTheme.js';
+import IconSwitch from '../../ui/IconSwitch.jsx';
 import RackMenu from './RackMenu.jsx';
 import '../ownerSystemWorkflow/workflowTokens.css';
 import '../ownerSystemWorkflow/workflowTactile.css';
@@ -11,11 +12,25 @@ export const profileTabs = ['Profile', 'Gallery', 'Writing', 'Exhibition'];
 
 export function HeaderThemeButton() {
   const { mode, error } = useInterfaceTheme();
-  const dark = mode === 'dark', label = dark ? 'Switch to Light' : 'Switch to Dark';
-  const Icon = dark ? Sun : Moon;
-  return <><button className="workspace-theme-button" type="button" aria-label={label} title={label}
-    onClick={() => interfaceTheme.setMode(dark ? 'light' : 'dark')}><Icon size={16} aria-hidden="true" /></button>
+  return <><IconSwitch label="Dark mode" checked={mode === 'dark'} offIcon={Sun} onIcon={Moon}
+    title={mode === 'dark' ? 'Switch to Light' : 'Switch to Dark'} onChange={dark => interfaceTheme.setMode(dark ? 'dark' : 'light')} />
     {error && <span className="workspace-header-error" role="alert">{error}</span>}</>;
+}
+
+export function StudioHeaderTools({ onStudio, studioMenu, children }) {
+  return <div className="studio-header-tools">
+    {studioMenu || (onStudio ? <button type="button" className="studio-header-label" onClick={onStudio}>Studio</button>
+      : <span className="studio-header-label" aria-current="page">Studio</span>)}
+    <HeaderThemeButton />
+    {children}
+  </div>;
+}
+
+export function DiscoverLink({ onDiscover, children, ...props }) {
+  return <a {...props} href="?discover" onClick={event => {
+    if (!onDiscover || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    event.preventDefault(); onDiscover(event.currentTarget);
+  }}>{children}</a>;
 }
 
 export function WorkspaceBrand({ trigger, current, destinations, groups, onPanel, onSearch, blocked,
@@ -29,11 +44,7 @@ export function WorkspaceBrand({ trigger, current, destinations, groups, onPanel
   }, [menu, trigger]);
   const logo = <svg className="workspace-wordmark" viewBox="0 0 480 154" aria-hidden="true">
     <use href="/assets/brand/inscape-wordmark-new.svg#inscape-wordmark" /></svg>;
-  if (!destinations) return <a className="workspace-brand" aria-label="Inscape — Discover" href="?discover"
-    onClick={event => {
-      if (!onDiscover || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
-      event.preventDefault(); onDiscover(event.currentTarget);
-    }}>{logo}</a>;
+  if (!destinations) return <DiscoverLink className="workspace-brand" aria-label="Inscape — Discover" onDiscover={onDiscover}>{logo}</DiscoverLink>;
   const open = focusLast => {
     onOpen?.();
     const rect = trigger.current.getBoundingClientRect();

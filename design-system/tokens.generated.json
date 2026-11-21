@@ -4,9 +4,9 @@
   "systemVersion": "1.0.0",
   "note": "Generated from production and design-system reference CSS. Reference roles are preview-only. Values remain CSS expressions, with selector and media scopes; this is not a DTCG interchange file. Runtime custom properties and local overrides are included and are not automatically public design tokens.",
   "counts": {
-    "files": 108,
-    "definitions": 751,
-    "names": 426
+    "files": 110,
+    "definitions": 798,
+    "names": 452
   },
   "sources": [
     {
@@ -3164,15 +3164,123 @@
     {
       "path": "src/profileDocument/components/visitorProfile.css",
       "role": "Local",
-      "sha256": "9043920ecb4c8e184743677090cd9930148210fc4a20d20177833d19e1d3bacb",
+      "sha256": "2db3061332760e026239cef8995b9db29563e72c3800967bcee1f89ba87f41ec",
       "definitions": [
+        {
+          "name": "--field-tint",
+          "value": "rgb(0 0 0 / 12%)",
+          "scope": [
+            ":root"
+          ],
+          "line": 15,
+          "references": []
+        },
+        {
+          "name": "--field-glow",
+          "value": "#5e5e5e",
+          "scope": [
+            ":root"
+          ],
+          "line": 16,
+          "references": []
+        },
+        {
+          "name": "--field-shade",
+          "value": "#000",
+          "scope": [
+            ":root"
+          ],
+          "line": 17,
+          "references": []
+        },
+        {
+          "name": "--field-glow-strength",
+          "value": ".11",
+          "scope": [
+            ":root"
+          ],
+          "line": 18,
+          "references": []
+        },
+        {
+          "name": "--field-shade-strength",
+          "value": ".30",
+          "scope": [
+            ":root"
+          ],
+          "line": 19,
+          "references": []
+        },
+        {
+          "name": "--field-speed",
+          "value": "1",
+          "scope": [
+            ":root"
+          ],
+          "line": 20,
+          "references": []
+        },
+        {
+          "name": "--field-travel",
+          "value": "1",
+          "scope": [
+            ":root"
+          ],
+          "line": 21,
+          "references": []
+        },
+        {
+          "name": "--field-tint",
+          "value": "transparent",
+          "scope": [
+            ":root[data-interface-theme='light']"
+          ],
+          "line": 24,
+          "references": []
+        },
+        {
+          "name": "--field-glow",
+          "value": "#f9efda",
+          "scope": [
+            ":root[data-interface-theme='light']"
+          ],
+          "line": 25,
+          "references": []
+        },
+        {
+          "name": "--field-shade",
+          "value": "#393d39",
+          "scope": [
+            ":root[data-interface-theme='light']"
+          ],
+          "line": 26,
+          "references": []
+        },
+        {
+          "name": "--field-glow-strength",
+          "value": ".27",
+          "scope": [
+            ":root[data-interface-theme='light']"
+          ],
+          "line": 27,
+          "references": []
+        },
+        {
+          "name": "--field-shade-strength",
+          "value": ".18",
+          "scope": [
+            ":root[data-interface-theme='light']"
+          ],
+          "line": 28,
+          "references": []
+        },
         {
           "name": "--spread-heading",
           "value": "#eee",
           "scope": [
             ".visitor-publication"
           ],
-          "line": 14,
+          "line": 31,
           "references": []
         },
         {
@@ -3181,7 +3289,7 @@
           "scope": [
             ".visitor-publication"
           ],
-          "line": 14,
+          "line": 31,
           "references": []
         },
         {
@@ -3190,7 +3298,7 @@
           "scope": [
             ".visitor-publication"
           ],
-          "line": 14,
+          "line": 31,
           "references": []
         },
         {
@@ -3199,7 +3307,7 @@
           "scope": [
             ".visitor-publication"
           ],
-          "line": 15,
+          "line": 32,
           "references": []
         },
         {
@@ -3208,7 +3316,7 @@
           "scope": [
             ".visitor-publication"
           ],
-          "line": 15,
+          "line": 32,
           "references": []
         },
         {
@@ -3217,7 +3325,7 @@
           "scope": [
             ".visitor-publication"
           ],
-          "line": 15,
+          "line": 32,
           "references": []
         },
         {
@@ -3226,7 +3334,7 @@
           "scope": [
             ".visitor-publication"
           ],
-          "line": 16,
+          "line": 33,
           "references": []
         },
         {
@@ -3235,7 +3343,7 @@
           "scope": [
             ".visitor-publication"
           ],
-          "line": 16,
+          "line": 33,
           "references": []
         },
         {
@@ -3244,7 +3352,7 @@
           "scope": [
             ".visitor-publication"
           ],
-          "line": 16,
+          "line": 33,
           "references": []
         },
         {
@@ -3253,7 +3361,7 @@
           "scope": [
             ".visitor-publication"
           ],
-          "line": 17,
+          "line": 34,
           "references": []
         },
         {
@@ -3262,7 +3370,16 @@
           "scope": [
             ".visitor-publication"
           ],
-          "line": 17,
+          "line": 34,
+          "references": []
+        },
+        {
+          "name": "--gallery-mat",
+          "value": "rgb(16 16 16 / 68%)",
+          "scope": [
+            ".visitor-publication"
+          ],
+          "line": 35,
           "references": []
         },
         {
@@ -3271,7 +3388,7 @@
           "scope": [
             ".visitor-publication"
           ],
-          "line": 18,
+          "line": 36,
           "references": []
         },
         {
@@ -3280,7 +3397,7 @@
           "scope": [
             ".visitor-publication"
           ],
-          "line": 18,
+          "line": 36,
           "references": []
         },
         {
@@ -3289,7 +3406,7 @@
           "scope": [
             ".visitor-publication"
           ],
-          "line": 18,
+          "line": 36,
           "references": []
         },
         {
@@ -3298,7 +3415,7 @@
           "scope": [
             ".visitor-publication"
           ],
-          "line": 19,
+          "line": 37,
           "references": []
         },
         {
@@ -3307,7 +3424,7 @@
           "scope": [
             ".visitor-publication"
           ],
-          "line": 19,
+          "line": 37,
           "references": []
         },
         {
@@ -3316,25 +3433,25 @@
           "scope": [
             ".visitor-publication"
           ],
-          "line": 19,
+          "line": 37,
           "references": []
         },
         {
           "name": "--spread-tab",
-          "value": "#acaba6",
+          "value": "#acacac",
           "scope": [
             ".visitor-publication"
           ],
-          "line": 20,
+          "line": 38,
           "references": []
         },
         {
           "name": "--spread-active",
-          "value": "#e7e6e0",
+          "value": "#e7e7e7",
           "scope": [
             ".visitor-publication"
           ],
-          "line": 20,
+          "line": 38,
           "references": []
         },
         {
@@ -3343,7 +3460,7 @@
           "scope": [
             ".visitor-publication"
           ],
-          "line": 20,
+          "line": 38,
           "references": [
             "--workspace-header-height"
           ]
@@ -3354,7 +3471,7 @@
           "scope": [
             "[data-interface-theme='light'] .visitor-publication"
           ],
-          "line": 26,
+          "line": 46,
           "references": []
         },
         {
@@ -3363,7 +3480,7 @@
           "scope": [
             "[data-interface-theme='light'] .visitor-publication"
           ],
-          "line": 26,
+          "line": 46,
           "references": []
         },
         {
@@ -3372,7 +3489,7 @@
           "scope": [
             "[data-interface-theme='light'] .visitor-publication"
           ],
-          "line": 26,
+          "line": 46,
           "references": []
         },
         {
@@ -3381,7 +3498,7 @@
           "scope": [
             "[data-interface-theme='light'] .visitor-publication"
           ],
-          "line": 27,
+          "line": 47,
           "references": []
         },
         {
@@ -3390,7 +3507,7 @@
           "scope": [
             "[data-interface-theme='light'] .visitor-publication"
           ],
-          "line": 27,
+          "line": 47,
           "references": []
         },
         {
@@ -3399,7 +3516,7 @@
           "scope": [
             "[data-interface-theme='light'] .visitor-publication"
           ],
-          "line": 27,
+          "line": 47,
           "references": []
         },
         {
@@ -3408,7 +3525,7 @@
           "scope": [
             "[data-interface-theme='light'] .visitor-publication"
           ],
-          "line": 28,
+          "line": 48,
           "references": []
         },
         {
@@ -3417,8 +3534,19 @@
           "scope": [
             "[data-interface-theme='light'] .visitor-publication"
           ],
-          "line": 28,
+          "line": 48,
           "references": []
+        },
+        {
+          "name": "--gallery-mat",
+          "value": "color-mix(in srgb, var(--spread-heading) 8%, transparent)",
+          "scope": [
+            "[data-interface-theme='light'] .visitor-publication"
+          ],
+          "line": 49,
+          "references": [
+            "--spread-heading"
+          ]
         },
         {
           "name": "--card-edge",
@@ -3426,7 +3554,7 @@
           "scope": [
             "[data-interface-theme='light'] .visitor-publication"
           ],
-          "line": 29,
+          "line": 50,
           "references": []
         },
         {
@@ -3435,7 +3563,7 @@
           "scope": [
             "[data-interface-theme='light'] .visitor-publication"
           ],
-          "line": 29,
+          "line": 50,
           "references": []
         },
         {
@@ -3444,7 +3572,7 @@
           "scope": [
             "[data-interface-theme='light'] .visitor-publication"
           ],
-          "line": 29,
+          "line": 50,
           "references": []
         },
         {
@@ -3453,7 +3581,7 @@
           "scope": [
             "[data-interface-theme='light'] .visitor-publication"
           ],
-          "line": 30,
+          "line": 51,
           "references": []
         },
         {
@@ -3462,7 +3590,7 @@
           "scope": [
             "[data-interface-theme='light'] .visitor-publication"
           ],
-          "line": 30,
+          "line": 51,
           "references": []
         },
         {
@@ -3471,7 +3599,7 @@
           "scope": [
             "[data-interface-theme='light'] .visitor-publication"
           ],
-          "line": 30,
+          "line": 51,
           "references": []
         },
         {
@@ -3480,7 +3608,7 @@
           "scope": [
             "[data-interface-theme='light'] .visitor-publication"
           ],
-          "line": 31,
+          "line": 52,
           "references": []
         },
         {
@@ -3489,7 +3617,7 @@
           "scope": [
             "[data-interface-theme='light'] .visitor-publication"
           ],
-          "line": 31,
+          "line": 52,
           "references": []
         },
         {
@@ -3498,7 +3626,7 @@
           "scope": [
             "[data-interface-theme='light'] .visitor-publication"
           ],
-          "line": 31,
+          "line": 52,
           "references": []
         },
         {
@@ -3507,7 +3635,7 @@
           "scope": [
             "[data-interface-theme='light'] .visitor-publication"
           ],
-          "line": 31,
+          "line": 52,
           "references": []
         },
         {
@@ -3516,7 +3644,26 @@
           "scope": [
             "[data-interface-theme='light'] .visitor-publication"
           ],
-          "line": 32,
+          "line": 53,
+          "references": []
+        },
+        {
+          "name": "--spread-height",
+          "value": "64px",
+          "scope": [
+            ".visitor-publication:has(.visitor-toolbar-slot:not(:empty))"
+          ],
+          "line": 73,
+          "references": []
+        },
+        {
+          "name": "--spread-height",
+          "value": "92px",
+          "scope": [
+            "@media (max-width: 1250px)",
+            ".visitor-publication:has(.visitor-toolbar-slot:not(:empty))"
+          ],
+          "line": 89,
           "references": []
         },
         {
@@ -3525,7 +3672,7 @@
           "scope": [
             "[data-layout='card'] .visitor-profile-body"
           ],
-          "line": 118,
+          "line": 169,
           "references": []
         },
         {
@@ -3534,7 +3681,7 @@
           "scope": [
             "[data-layout='card'] .visitor-profile-body"
           ],
-          "line": 118,
+          "line": 169,
           "references": [
             "--inner-rim"
           ]
@@ -3551,7 +3698,9 @@
         "--card-shadow",
         "--color-text-primary",
         "--color-text-secondary",
-        "--editor-control-radius",
+        "--field-fallback-mask",
+        "--field-fallback-opacity",
+        "--field-tint",
         "--font-interface",
         "--image-inset",
         "--inner-rim",
@@ -3883,7 +4032,7 @@
     {
       "path": "src/public/menus/workspaceHeader.css",
       "role": "Local",
-      "sha256": "043a95e75cee43fce1e470aecce1ebde6043d845df3669a74abe94037b60860a",
+      "sha256": "99d3269c3351d62db3e5b80a0288ba4f58d8bf27449f00ae8678bed0bf811866",
       "definitions": [
         {
           "name": "--workspace-header-height",
@@ -3896,12 +4045,14 @@
         },
         {
           "name": "--workspace-sage",
-          "value": "#a8bc9e",
+          "value": "var(--editor-accent)",
           "scope": [
             ":root"
           ],
           "line": 1,
-          "references": []
+          "references": [
+            "--editor-accent"
+          ]
         },
         {
           "name": "--inscape-wordmark-accent",
@@ -3913,13 +4064,127 @@
           "references": [
             "--workspace-sage"
           ]
+        },
+        {
+          "name": "--studio-end-width",
+          "value": "41px",
+          "scope": [
+            ".studio-header-tools"
+          ],
+          "line": 13,
+          "references": []
+        },
+        {
+          "name": "--studio-tools-gap",
+          "value": "12px",
+          "scope": [
+            ".studio-header-tools"
+          ],
+          "line": 13,
+          "references": []
+        },
+        {
+          "name": "--studio-tools-gap",
+          "value": "8px",
+          "scope": [
+            "@media (max-width: 900px)",
+            ".studio-header-tools"
+          ],
+          "line": 31,
+          "references": []
+        },
+        {
+          "name": "--studio-tools-gap",
+          "value": "4px",
+          "scope": [
+            "@media (max-width: 700px)",
+            ".studio-header-tools"
+          ],
+          "line": 32,
+          "references": []
+        },
+        {
+          "name": "--studio-end-width",
+          "value": "35px",
+          "scope": [
+            "@media (max-width: 480px)",
+            ".studio-header-tools"
+          ],
+          "line": 34,
+          "references": []
+        },
+        {
+          "name": "--studio-tools-gap",
+          "value": "2px",
+          "scope": [
+            "@media (max-width: 480px)",
+            ".studio-header-tools"
+          ],
+          "line": 34,
+          "references": []
+        },
+        {
+          "name": "--studio-end-width",
+          "value": "24px",
+          "scope": [
+            "@media (max-width: 360px)",
+            ".studio-header-tools"
+          ],
+          "line": 38,
+          "references": []
+        },
+        {
+          "name": "--editor-menu-face",
+          "value": "Canvas",
+          "scope": [
+            "@media (forced-colors: active)",
+            ".workspace-header :is(.workspace-command-menu,.strip-drawer)"
+          ],
+          "line": 63,
+          "references": []
+        },
+        {
+          "name": "--editor-menu-heading",
+          "value": "CanvasText",
+          "scope": [
+            "@media (forced-colors: active)",
+            ".workspace-header :is(.workspace-command-menu,.strip-drawer)"
+          ],
+          "line": 64,
+          "references": []
+        },
+        {
+          "name": "--editor-menu-edge",
+          "value": "ButtonText",
+          "scope": [
+            "@media (forced-colors: active)",
+            ".workspace-header :is(.workspace-command-menu,.strip-drawer)"
+          ],
+          "line": 65,
+          "references": []
+        },
+        {
+          "name": "--editor-menu-shadow",
+          "value": "none",
+          "scope": [
+            "@media (forced-colors: active)",
+            ".workspace-header :is(.workspace-command-menu,.strip-drawer)"
+          ],
+          "line": 66,
+          "references": []
         }
       ],
       "references": [
         "--color-text-primary",
+        "--editor-accent",
         "--editor-control-radius",
+        "--editor-menu-edge",
+        "--editor-menu-face",
+        "--editor-menu-shadow",
         "--font-interface",
         "--interface-panel",
+        "--studio-end-width",
+        "--studio-tools-gap",
         "--workspace-header-height",
         "--workspace-sage"
       ]
@@ -4171,7 +4436,7 @@
     {
       "path": "src/public/ownerSystemWorkflow/editorMenuBar.css",
       "role": "Local",
-      "sha256": "ff58fafe12ed9ef3c83313e07f31fa2c7bbce06c9310260ec010e2027376cfdb",
+      "sha256": "5c5e3e884daa0f13758741be313064213cddf8216182cdd918f5be77b119ca2c",
       "definitions": [
         {
           "name": "--editor-workspace-radius",
@@ -4179,14 +4444,18 @@
           "scope": [
             ".system-workflow[data-editor-menu]"
           ],
-          "line": 21,
+          "line": 22,
           "references": []
         }
       ],
       "references": [
         "--editor-accent",
         "--editor-control-radius",
+        "--editor-field",
+        "--editor-ink",
         "--editor-line",
+        "--editor-muted",
+        "--editor-on-accent",
         "--editor-panel",
         "--editor-workspace-radius",
         "--font-interface",
@@ -6273,90 +6542,15 @@
     {
       "path": "src/public/ownerSystemWorkflow/workbenchToolbar.css",
       "role": "Creation",
-      "sha256": "7a99d0cb5ccbdbd8159edec4cf31d8889402032e080e4453b873d917242f0217",
+      "sha256": "0cbb7c9e41817a9c19dbe80aaf8b6261272fb2339d94ae7e4ce8ff1ac699d66e",
       "definitions": [
-        {
-          "name": "--toolbar-target",
-          "value": "32px",
-          "scope": [
-            ".workbench-toolbar"
-          ],
-          "line": 3,
-          "references": []
-        },
-        {
-          "name": "--toolbar-icon",
-          "value": "16px",
-          "scope": [
-            ".workbench-toolbar"
-          ],
-          "line": 4,
-          "references": []
-        },
-        {
-          "name": "--toolbar-height",
-          "value": "44px",
-          "scope": [
-            ".workbench-toolbar"
-          ],
-          "line": 5,
-          "references": []
-        },
-        {
-          "name": "--toolbar-column-gap",
-          "value": "2px",
-          "scope": [
-            ".workbench-toolbar"
-          ],
-          "line": 6,
-          "references": []
-        },
-        {
-          "name": "--toolbar-padding-block",
-          "value": "6px",
-          "scope": [
-            ".workbench-toolbar"
-          ],
-          "line": 7,
-          "references": []
-        },
-        {
-          "name": "--toolbar-padding-inline",
-          "value": "6px",
-          "scope": [
-            ".workbench-toolbar"
-          ],
-          "line": 8,
-          "references": []
-        },
-        {
-          "name": "--toolbar-radius",
-          "value": "11px",
-          "scope": [
-            ".workbench-toolbar"
-          ],
-          "line": 9,
-          "references": []
-        },
-        {
-          "name": "--toolbar-key-radius",
-          "value": "calc(var(--toolbar-radius) - var(--toolbar-padding-inline))",
-          "scope": [
-            ".workbench-toolbar"
-          ],
-          "line": 10,
-          "references": [
-            "--toolbar-radius",
-            "--toolbar-padding-inline"
-          ]
-        },
         {
           "name": "--toolbar-popup-radius",
           "value": "var(--toolbar-radius)",
           "scope": [
             ".workbench-toolbar"
           ],
-          "line": 11,
+          "line": 5,
           "references": [
             "--toolbar-radius"
           ]
@@ -6367,7 +6561,7 @@
           "scope": [
             ".workbench-toolbar"
           ],
-          "line": 26,
+          "line": 20,
           "references": []
         },
         {
@@ -6376,7 +6570,7 @@
           "scope": [
             ".workbench-toolbar"
           ],
-          "line": 27,
+          "line": 21,
           "references": [
             "--toolbar-padding-block",
             "--toolbar-popup-border"
@@ -6388,7 +6582,7 @@
           "scope": [
             ".workbench-toolbar"
           ],
-          "line": 28,
+          "line": 22,
           "references": [
             "--toolbar-padding-inline",
             "--toolbar-popup-border"
@@ -6400,7 +6594,7 @@
           "scope": [
             ".workbench-toolbar"
           ],
-          "line": 29,
+          "line": 23,
           "references": [
             "--toolbar-key-radius"
           ]
@@ -6411,7 +6605,7 @@
           "scope": [
             ".workbench-toolbar__bar"
           ],
-          "line": 49,
+          "line": 43,
           "references": [
             "--toolbar-key-radius"
           ]
@@ -6423,7 +6617,7 @@
             "@media (pointer: coarse)",
             ".workbench-toolbar"
           ],
-          "line": 227,
+          "line": 221,
           "references": [
             "--control-target-touch"
           ]
@@ -8410,7 +8604,7 @@
     {
       "path": "src/public/workbenchOverview/canvasPresentation.css",
       "role": "Local",
-      "sha256": "658cdebce2fdbb5b4b5b4c891776af033c6537dc570af22d28855414cca83ad5",
+      "sha256": "5b1a842c08716fbf756509a9c775ae4cb02405dfdaca3a7be71abb70ad4b1eab",
       "definitions": [
         {
           "name": "--tactile-ink",
@@ -8425,12 +8619,15 @@
         },
         {
           "name": "--tactile-muted",
-          "value": "#c6c7c7",
+          "value": "color-mix(in srgb, var(--overview-glass-ink) 84%, var(--overview-glass))",
           "scope": [
             ".canvas-presentation"
           ],
           "line": 1,
-          "references": []
+          "references": [
+            "--overview-glass-ink",
+            "--overview-glass"
+          ]
         },
         {
           "name": "--presentation-height",
@@ -8463,6 +8660,85 @@
           "references": [
             "--canvas-ratio"
           ]
+        },
+        {
+          "name": "--quick-peek",
+          "value": "clamp(22px, 2.5vw, 48px)",
+          "scope": [
+            ".canvas-presentation[data-tile-viewer]"
+          ],
+          "line": 99,
+          "references": []
+        },
+        {
+          "name": "--quick-shrink",
+          "value": ".56",
+          "scope": [
+            ".canvas-presentation[data-tile-viewer]"
+          ],
+          "line": 100,
+          "references": []
+        },
+        {
+          "name": "--quick-height",
+          "value": "min(86dvh, calc(88vw / var(--canvas-ratio)))",
+          "scope": [
+            ".canvas-presentation[data-tile-viewer]:not([data-expanded]) :is(.canvas-presentation-surface, .quick-view-neighbor)"
+          ],
+          "line": 104,
+          "references": [
+            "--canvas-ratio"
+          ]
+        },
+        {
+          "name": "--edge-distance",
+          "value": "calc(50vw + 50% * var(--quick-shrink) - var(--quick-peek))",
+          "scope": [
+            ".canvas-presentation[data-tile-viewer]:not([data-expanded]) :is(.canvas-presentation-surface, .quick-view-neighbor)"
+          ],
+          "line": 107,
+          "references": [
+            "--quick-shrink",
+            "--quick-peek"
+          ]
+        },
+        {
+          "name": "--remaining",
+          "value": "1",
+          "scope": [
+            ".workbench-overview .canvas-presentation .quick-view-neighbor"
+          ],
+          "line": 111,
+          "references": []
+        },
+        {
+          "name": "--side",
+          "value": "-1",
+          "scope": [
+            ".quick-view-neighbor[data-side='Previous'], .canvas-presentation[data-travel='Next']"
+          ],
+          "line": 115,
+          "references": []
+        },
+        {
+          "name": "--side",
+          "value": "1",
+          "scope": [
+            ".quick-view-neighbor[data-side='Next'], .canvas-presentation[data-travel='Previous']"
+          ],
+          "line": 116,
+          "references": []
+        },
+        {
+          "name": "--remaining",
+          "value": "calc(1 - var(--quick-progress))",
+          "scope": [
+            ".canvas-presentation[data-travel='Next'] .quick-view-neighbor[data-side='Next'],\n.canvas-presentation[data-travel='Previous'] .quick-view-neighbor[data-side='Previous']"
+          ],
+          "line": 118,
+          "references": [
+            "--quick-progress"
+          ]
         }
       ],
       "references": [
@@ -8472,6 +8748,7 @@
         "--card-material",
         "--control-radius",
         "--control-shell-radius",
+        "--edge-distance",
         "--font-technical",
         "--overview-ease",
         "--overview-glass",
@@ -8482,7 +8759,13 @@
         "--overview-panel-duration",
         "--overview-radius",
         "--presentation-height",
+        "--quick-height",
+        "--quick-peek",
+        "--quick-progress",
+        "--quick-shrink",
+        "--remaining",
         "--sample-offset",
+        "--side",
         "--space-2",
         "--tactile-edge",
         "--tactile-face",
@@ -8495,7 +8778,7 @@
     {
       "path": "src/public/workbenchOverview/compositionIndex.css",
       "role": "Local",
-      "sha256": "04b2a4aa0fa00a1cff1735cea9d681408fb265b58dd54993891b7f67bb44859a",
+      "sha256": "75df68a570b944566964156fb348529b142e91ed46f245f0175b17cd72f3f901",
       "definitions": [
         {
           "name": "--index-width",
@@ -8572,24 +8855,56 @@
     {
       "path": "src/public/workbenchOverview/visitorWorksList.css",
       "role": "Local",
-      "sha256": "6fb33b65645e118b566a0d7308cdc9fe3f9cf8ed61a5ac191541aaa047ff9902",
+      "sha256": "10cc45802509e8c51894a18c8e454d568a7fad1bf4238020712838dafae79e7c",
       "definitions": [
+        {
+          "name": "--gallery-toolbar-inset",
+          "value": "clamp(42px, calc(16.2dvh - var(--spread-height)), 100px)",
+          "scope": [
+            ".workbench-overview[data-visitor-header]"
+          ],
+          "line": 35,
+          "references": [
+            "--spread-height"
+          ]
+        },
+        {
+          "name": "--gallery-gutter",
+          "value": "2.5%",
+          "scope": [
+            ".workbench-overview[data-visitor-header]"
+          ],
+          "line": 36,
+          "references": []
+        },
+        {
+          "name": "--gallery-detail-space",
+          "value": "calc(var(--works-rail) + var(--works-gap))",
+          "scope": [
+            ".workbench-overview[data-visitor-header]"
+          ],
+          "line": 37,
+          "references": [
+            "--works-rail",
+            "--works-gap"
+          ]
+        },
         {
           "name": "--works-rail",
           "value": "clamp(150px, 11.6vw, 220px)",
           "scope": [
-            ".workbench-overview[data-visitor-header][data-layout='list']"
+            ".workbench-overview[data-visitor-header]"
           ],
-          "line": 3,
+          "line": 38,
           "references": []
         },
         {
           "name": "--works-gap",
           "value": "clamp(20px, 1.8vw, 38px)",
           "scope": [
-            ".workbench-overview[data-visitor-header][data-layout='list']"
+            ".workbench-overview[data-visitor-header]"
           ],
-          "line": 4,
+          "line": 39,
           "references": []
         },
         {
@@ -8598,7 +8913,7 @@
           "scope": [
             ".workbench-overview[data-visitor-header][data-layout='list']"
           ],
-          "line": 5,
+          "line": 42,
           "references": []
         },
         {
@@ -8607,18 +8922,95 @@
           "scope": [
             ".workbench-overview[data-visitor-header][data-layout='list']"
           ],
-          "line": 6,
+          "line": 43,
           "references": []
+        },
+        {
+          "name": "--gallery-detail-space",
+          "value": "0px",
+          "scope": [
+            "@media (max-width: 959px)",
+            ".workbench-overview[data-visitor-header]"
+          ],
+          "line": 139,
+          "references": []
+        },
+        {
+          "name": "--gallery-gutter",
+          "value": "16px",
+          "scope": [
+            "@media (max-width: 700px)",
+            ".workbench-overview[data-visitor-header]"
+          ],
+          "line": 144,
+          "references": []
+        },
+        {
+          "name": "--gallery-toolbar-inset",
+          "value": "12px",
+          "scope": [
+            "@media (max-width: 700px)",
+            ".workbench-overview[data-visitor-header]"
+          ],
+          "line": 144,
+          "references": []
+        },
+        {
+          "name": "--gallery-stage-height",
+          "value": "calc(100dvh - var(--spread-height) - 24px - var(--gallery-tools-height, 0px))",
+          "scope": [
+            ".workbench-overview[data-published-gallery][data-layout='list']"
+          ],
+          "line": 158,
+          "references": [
+            "--spread-height",
+            "--gallery-tools-height"
+          ]
+        },
+        {
+          "name": "--rails-and-gaps",
+          "value": "calc(2 * (var(--works-rail) + var(--works-gap)))",
+          "scope": [
+            ".workbench-overview[data-published-gallery] .composition-index:not([data-expanded]) .composition-index-body"
+          ],
+          "line": 162,
+          "references": [
+            "--works-rail",
+            "--works-gap"
+          ]
         }
       ],
       "references": [
-        "--card-material",
+        "--editor-accent",
+        "--editor-field",
+        "--editor-ink",
+        "--editor-line",
+        "--editor-on-accent",
+        "--editor-panel",
+        "--editor-selection",
+        "--gallery-gutter",
+        "--gallery-height-fill",
+        "--gallery-mat",
+        "--gallery-stage-height",
+        "--gallery-toolbar-inset",
+        "--gallery-tools-height",
+        "--gallery-width-fraction",
+        "--rails-and-gaps",
         "--spread-body",
         "--spread-heading",
         "--spread-height",
+        "--spread-line",
         "--spread-muted",
         "--spread-panel",
         "--spread-secondary",
+        "--toolbar-column-gap",
+        "--toolbar-height",
+        "--toolbar-icon",
+        "--toolbar-key-radius",
+        "--toolbar-padding-block",
+        "--toolbar-padding-inline",
+        "--toolbar-radius",
+        "--toolbar-target",
         "--works-gap",
         "--works-label-height",
         "--works-rail",
@@ -8628,7 +9020,7 @@
     {
       "path": "src/public/workbenchOverview/workbenchOverview.css",
       "role": "Local",
-      "sha256": "21fde94434d9e41553c04ddf0270bfb900e9a6be16dd637aecd3cad6e5a202c8",
+      "sha256": "309eaafbe3eb552ec84cf90eb0f806d55da322eb9de0f6371c223947f30eec3d",
       "definitions": [
         {
           "name": "--overview-ease",
@@ -8724,7 +9116,7 @@
           "scope": [
             ".workbench-overview-navigation"
           ],
-          "line": 27,
+          "line": 45,
           "references": [
             "--interface-panel"
           ]
@@ -8736,7 +9128,7 @@
             "@media (prefers-reduced-transparency: reduce)",
             ".workbench-overview, .workbench-overview-navigation"
           ],
-          "line": 80,
+          "line": 98,
           "references": [
             "--interface-panel"
           ]
@@ -8748,7 +9140,7 @@
             "@media (prefers-reduced-transparency: reduce)",
             ".workbench-overview, .workbench-overview-navigation"
           ],
-          "line": 80,
+          "line": 98,
           "references": []
         },
         {
@@ -8758,16 +9150,16 @@
             "@media (prefers-reduced-transparency: reduce)",
             ".workbench-overview, .workbench-overview-navigation"
           ],
-          "line": 80,
+          "line": 98,
           "references": []
         },
         {
           "name": "--gallery-tools-height",
           "value": "48px",
           "scope": [
-            ".workbench-overview[data-selectable-gallery]"
+            ".workbench-overview[data-visitor-header][data-selecting]"
           ],
-          "line": 88,
+          "line": 106,
           "references": []
         }
       ],
@@ -8777,6 +9169,9 @@
         "--control-target-touch",
         "--font-interface",
         "--font-technical",
+        "--gallery-detail-space",
+        "--gallery-gutter",
+        "--gallery-toolbar-inset",
         "--gallery-tools-height",
         "--interface-environment",
         "--interface-hover",
@@ -8798,6 +9193,7 @@
         "--spread-heading",
         "--spread-height",
         "--spread-line",
+        "--spread-muted",
         "--spread-panel",
         "--tactile-edge",
         "--tactile-face",
@@ -8813,7 +9209,7 @@
     {
       "path": "src/public/workbenchOverview/workbenchOverviewGrid.css",
       "role": "Local",
-      "sha256": "39afa441d0c433d13ad7d19fcc23dd0cd01e93953b32a883373ff5668c842695",
+      "sha256": "b22155216a99fb93364e305b8d6ecb835f1dbe82896fd346e767b395f8a521b2",
       "definitions": [
         {
           "name": "--gallery-columns",
@@ -8822,7 +9218,7 @@
             "@media (max-width: 1600px)",
             ":is(.workbench-overview-gallery, .canvas-gallery-section)"
           ],
-          "line": 38,
+          "line": 39,
           "references": []
         },
         {
@@ -8832,7 +9228,7 @@
             "@media (max-width: 1000px)",
             ":is(.workbench-overview-gallery, .canvas-gallery-section)"
           ],
-          "line": 41,
+          "line": 42,
           "references": []
         },
         {
@@ -8842,7 +9238,7 @@
             "@media (max-width: 520px)",
             ":is(.workbench-overview-gallery, .canvas-gallery-section)"
           ],
-          "line": 49,
+          "line": 50,
           "references": []
         },
         {
@@ -8851,7 +9247,7 @@
           "scope": [
             ":is(.workbench-overview-gallery, .canvas-gallery-section)[data-card-size=\"1\"]"
           ],
-          "line": 52,
+          "line": 53,
           "references": []
         },
         {
@@ -8860,7 +9256,7 @@
           "scope": [
             ":is(.workbench-overview-gallery, .canvas-gallery-section)[data-card-size=\"1\"]"
           ],
-          "line": 52,
+          "line": 53,
           "references": []
         },
         {
@@ -8869,7 +9265,7 @@
           "scope": [
             ":is(.workbench-overview-gallery, .canvas-gallery-section)[data-card-size=\"3\"]"
           ],
-          "line": 53,
+          "line": 54,
           "references": []
         },
         {
@@ -8878,7 +9274,7 @@
           "scope": [
             ":is(.workbench-overview-gallery, .canvas-gallery-section)[data-card-size=\"3\"]"
           ],
-          "line": 53,
+          "line": 54,
           "references": []
         },
         {
@@ -8888,7 +9284,7 @@
             "@media (max-width: 1600px)",
             ":is(.workbench-overview-gallery, .canvas-gallery-section)[data-card-size=\"1\"]"
           ],
-          "line": 66,
+          "line": 67,
           "references": []
         },
         {
@@ -8898,7 +9294,7 @@
             "@media (max-width: 1000px)",
             ":is(.workbench-overview-gallery, .canvas-gallery-section)[data-card-size=\"1\"]"
           ],
-          "line": 67,
+          "line": 68,
           "references": []
         },
         {
@@ -8908,7 +9304,7 @@
             "@media (max-width: 1000px)",
             ":is(.workbench-overview-gallery, .canvas-gallery-section)[data-card-size=\"3\"]"
           ],
-          "line": 67,
+          "line": 68,
           "references": []
         },
         {
@@ -8918,7 +9314,34 @@
             "@media (max-width: 520px)",
             ":is(.workbench-overview-gallery, .canvas-gallery-section)[data-card-size=\"1\"]"
           ],
-          "line": 68,
+          "line": 69,
+          "references": []
+        },
+        {
+          "name": "--tile-size",
+          "value": "clamp(170px, 23vw, 320px)",
+          "scope": [
+            ".workbench-overview[data-visitor-header] .workbench-overview-gallery"
+          ],
+          "line": 78,
+          "references": []
+        },
+        {
+          "name": "--tile-size",
+          "value": "clamp(108px, 9vw, 152px)",
+          "scope": [
+            ".workbench-overview[data-visitor-header] [data-card-size=\"1\"]"
+          ],
+          "line": 79,
+          "references": []
+        },
+        {
+          "name": "--tile-size",
+          "value": "clamp(300px, 38vw, 620px)",
+          "scope": [
+            ".workbench-overview[data-visitor-header] [data-card-size=\"3\"]"
+          ],
+          "line": 80,
           "references": []
         },
         {
@@ -8927,8 +9350,19 @@
           "scope": [
             ".workbench-overview[data-visitor-header] .workbench-overview-cycle"
           ],
-          "line": 78,
+          "line": 82,
           "references": []
+        },
+        {
+          "name": "--side",
+          "value": "min(var(--tile-size), 100cqh, 100cqw)",
+          "scope": [
+            ".workbench-overview[data-visitor-header] [data-horizontal] .workbench-overview-cycle"
+          ],
+          "line": 90,
+          "references": [
+            "--tile-size"
+          ]
         },
         {
           "name": "--thumbnail-background",
@@ -8936,7 +9370,7 @@
           "scope": [
             ".workbench-overview[data-visitor-header] .workbench-overview-card"
           ],
-          "line": 88,
+          "line": 97,
           "references": []
         },
         {
@@ -8945,27 +9379,27 @@
           "scope": [
             ".workbench-overview[data-visitor-header] .workbench-overview-card"
           ],
-          "line": 89,
+          "line": 98,
           "references": []
         }
       ],
       "references": [
         "--card-material",
         "--gallery-columns",
-        "--gallery-count",
         "--gallery-height",
         "--overview-ease",
         "--overview-glass",
         "--overview-glass-filter",
         "--overview-glass-ink",
         "--overview-radius",
+        "--side",
         "--space-2",
         "--space-3",
-        "--spread-heading",
         "--tactile-edge",
         "--tactile-face",
         "--tactile-well",
-        "--tile-gap"
+        "--tile-gap",
+        "--tile-size"
       ]
     },
     {
@@ -9771,6 +10205,103 @@
         "--workflow-panel",
         "--workflow-selection",
         "--workflow-type-control"
+      ]
+    },
+    {
+      "path": "src/ui/iconSwitch.css",
+      "role": "Local",
+      "sha256": "e6eee840bc217aeb2b0243385e3ba05e5c996b97ca2a1973a978a76a3b968442",
+      "definitions": [],
+      "references": [
+        "--interface-ink",
+        "--interface-line",
+        "--interface-panel"
+      ]
+    },
+    {
+      "path": "src/ui/iconToolbar.css",
+      "role": "Local",
+      "sha256": "5c51d6e40dc06fc3a34a7d8a9d2c50aaa5ce89db5c608fe5999f4b9931ab2e6d",
+      "definitions": [
+        {
+          "name": "--toolbar-target",
+          "value": "32px",
+          "scope": [
+            ".workbench-toolbar, .gallery-header-toolbar"
+          ],
+          "line": 3,
+          "references": []
+        },
+        {
+          "name": "--toolbar-icon",
+          "value": "16px",
+          "scope": [
+            ".workbench-toolbar, .gallery-header-toolbar"
+          ],
+          "line": 4,
+          "references": []
+        },
+        {
+          "name": "--toolbar-height",
+          "value": "44px",
+          "scope": [
+            ".workbench-toolbar, .gallery-header-toolbar"
+          ],
+          "line": 5,
+          "references": []
+        },
+        {
+          "name": "--toolbar-column-gap",
+          "value": "2px",
+          "scope": [
+            ".workbench-toolbar, .gallery-header-toolbar"
+          ],
+          "line": 6,
+          "references": []
+        },
+        {
+          "name": "--toolbar-padding-block",
+          "value": "6px",
+          "scope": [
+            ".workbench-toolbar, .gallery-header-toolbar"
+          ],
+          "line": 7,
+          "references": []
+        },
+        {
+          "name": "--toolbar-padding-inline",
+          "value": "6px",
+          "scope": [
+            ".workbench-toolbar, .gallery-header-toolbar"
+          ],
+          "line": 8,
+          "references": []
+        },
+        {
+          "name": "--toolbar-radius",
+          "value": "11px",
+          "scope": [
+            ".workbench-toolbar, .gallery-header-toolbar"
+          ],
+          "line": 9,
+          "references": []
+        },
+        {
+          "name": "--toolbar-key-radius",
+          "value": "calc(var(--toolbar-radius) - var(--toolbar-padding-inline))",
+          "scope": [
+            ".workbench-toolbar, .gallery-header-toolbar"
+          ],
+          "line": 10,
+          "references": [
+            "--toolbar-radius",
+            "--toolbar-padding-inline"
+          ]
+        }
+      ],
+      "references": [
+        "--toolbar-padding-inline",
+        "--toolbar-radius"
       ]
     },
     {

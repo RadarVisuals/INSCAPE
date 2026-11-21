@@ -17,6 +17,7 @@ export function useWorkbenchInspectionLock() {
 export function WorkbenchCameraProvider({ children }) {
   const [camera, setCamera] = useState({ scale: 1, offset: { x: 0, y: 0 } });
   const current = useRef(camera);
+  const [entryFramed, setEntryFramed] = useState(false);
   const projection = useRef(null), painters = useRef(new Set());
   const planes = useRef(new Set());
   const registerCameraPlane = useCallback(node => { planes.current.add(node); return () => planes.current.delete(node); }, []);
@@ -64,8 +65,8 @@ export function WorkbenchCameraProvider({ children }) {
     setLocks(current => new Set(current).add(token));
     return () => setLocks(current => { const next = new Set(current); next.delete(token); return next; });
   }, []);
-  const value = useMemo(() => ({ ...camera, getCamera, updateCamera, prepareCamera, projectCamera, previewCamera, subscribeCameraPaint, registerCameraPlane, getCameraPlanes, setOffset, locked: locks.size > 0, lock }),
-    [camera, getCamera, updateCamera, prepareCamera, projectCamera, previewCamera, subscribeCameraPaint, registerCameraPlane, getCameraPlanes, setOffset, locks.size, lock]);
+  const value = useMemo(() => ({ ...camera, entryFramed, setEntryFramed, getCamera, updateCamera, prepareCamera, projectCamera, previewCamera, subscribeCameraPaint, registerCameraPlane, getCameraPlanes, setOffset, locked: locks.size > 0, lock }),
+    [camera, entryFramed, getCamera, updateCamera, prepareCamera, projectCamera, previewCamera, subscribeCameraPaint, registerCameraPlane, getCameraPlanes, setOffset, locks.size, lock]);
   return <Camera.Provider value={value}>
     <CameraScale.Provider value={scale}><ArtworkGeometry.Provider value={artworkGeometry}>{children}</ArtworkGeometry.Provider></CameraScale.Provider>
   </Camera.Provider>;

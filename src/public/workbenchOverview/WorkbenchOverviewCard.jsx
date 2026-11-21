@@ -42,4 +42,3 @@ export default function WorkbenchOverviewCard({ item, duplicate, selected, visib
     </div>}
   </article>;
 }
-

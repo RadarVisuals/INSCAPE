@@ -31,11 +31,10 @@ export default function useWorkbenchNavigation({ hostRef, controlsRef, disabled,
   interactionTool = 'select', setInteractionTool,
   isEditing, cancelEditing, releaseAbandonedGesture, captureContext, restoreContext, returnTargets, resetPresentation, entries }) {
   const camera = useWorkbenchCamera();
-  const { offset, locked, getCamera, updateCamera } = camera;
+  const { offset, locked, entryFramed, setEntryFramed, getCamera, updateCamera } = camera;
   const navigatorGesture = useRef(null);
   const interaction = useRef(null);
   interaction.current = { isEditing, cancelEditing, releaseAbandonedGesture, captureContext, restoreContext, returnTargets, resetPresentation, homeBounds };
-  const framedHome = useRef(false);
   const shouldFrameOnEntry = frameOnEntry && Boolean(homeBounds);
   const [history, setHistory] = useState([]);
   const hand = interactionTool === 'hand';
@@ -228,10 +227,10 @@ export default function useWorkbenchNavigation({ hostRef, controlsRef, disabled,
       // The owner Editor frames each document once when its session opens.
       // Other hosts may supply Home bounds without opting into entry framing.
       // Edits and resizes keep the user's camera and saved module coordinates.
-      if (!shouldFrameOnEntry) framedHome.current = false;
-      else if (!framedHome.current && !locked) {
+      if (!shouldFrameOnEntry) setEntryFramed(false);
+      else if (!entryFramed && !locked) {
         const home = homeCamera();
-        if (home) { framedHome.current = true; updateCamera(home); }
+        if (home) { updateCamera(home); setEntryFramed(true); }
       }
       const controlsHeight = controls?.offsetHeight || 32;
       if (previous?.width === viewport.width && previous?.height === viewport.height && previous?.controlsHeight === controlsHeight) return;
@@ -246,7 +245,7 @@ export default function useWorkbenchNavigation({ hostRef, controlsRef, disabled,
     if (controls) observer.observe(controls);
     if (toolbar) observer.observe(toolbar);
     return () => observer.disconnect();
-  }, [hostRef, controlsRef, creationToolbarVisible, disabled, locked, readViewport, stopTravel, onControlsTopChange, shouldFrameOnEntry, homeCamera, updateCamera]);
+  }, [hostRef, controlsRef, creationToolbarVisible, disabled, locked, readViewport, stopTravel, onControlsTopChange, shouldFrameOnEntry, entryFramed, setEntryFramed, homeCamera, updateCamera]);
 
   const zoom = useCallback((point, factor) => {
     if (disabled || locked || interaction.current.isEditing() || isPanning()) return;

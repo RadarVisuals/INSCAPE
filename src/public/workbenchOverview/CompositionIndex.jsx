@@ -1,8 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { LayoutGrid, Plus, ArrowUpLeft, ChevronLeft, ChevronRight, Pencil } from 'lucide-react';
-import { overviewCanvasNode } from './overviewCanvasFrame.js';
+import { LayoutGrid, ArrowUpLeft, ChevronLeft, ChevronRight, Pencil } from 'lucide-react';
 import CanvasExplorer from './CanvasExplorer.jsx';
-import { MAX_WORKBENCHES } from '../../systemWorkflow/domain/workbenchCollection.js';
 import './compositionIndex.css';
 import './visitorWorksList.css';
 
@@ -10,14 +8,14 @@ const worksPerPage = 6;
 
 // This index reads the supplied owner/public collection. It never switches the
 // editor's active Workbench; only the explicit Edit action may do that.
-export default function CompositionIndex({ items, selected, model, profile, listRef, onSelect, onEdit, selection, onDetails, onCreate, onOpenReception, onEditReception, onGrid, settings, disabled, limited, memory: workspaceMemory, visitorHeader, movingCanvasId }) {
+export default function CompositionIndex({ items, selected, model, profile, listRef, onSelect, onEdit, selection, onDetails, onOpenReception, onEditReception, onGrid, settings, disabled, memory: workspaceMemory, visitorHeader, movingCanvasId }) {
   const [expandRequested, setExpanded] = useState(workspaceMemory?.expanded || false);
   const expanded = !selection && expandRequested;
   const [page, setPage] = useState(() => Math.floor(Math.max(0, items.findIndex(item => item.id === selected.id)) / worksPerPage));
   const pageCount = Math.ceil(items.length / worksPerPage);
   const start = visitorHeader ? Math.min(page, Math.max(0, pageCount - 1)) * worksPerPage : 0;
   const visibleItems = visitorHeader ? items.slice(start, start + worksPerPage) : items;
-  const localMemories = useRef(new Map()), root = useRef(null);
+  const localMemories = useRef(new Map());
   const memories = workspaceMemory?.cameras || localMemories.current;
   const profileAddress = selected.draft.profileAddress;
   const key = `${profileAddress}:${selected.id}:${JSON.stringify(model.area)}`;
@@ -30,7 +28,7 @@ export default function CompositionIndex({ items, selected, model, profile, list
   const expand = value => { setExpanded(value); if (workspaceMemory) workspaceMemory.expanded = value; };
   const toggleExpanded = () => expand(!expanded);
   const select = id => { if (!disabled) onSelect(id); };
-  return <div className="composition-index" ref={root} data-expanded={expanded || undefined} onKeyDown={event => {
+  return <div className="composition-index" data-expanded={expanded || undefined} onKeyDown={event => {
     if (event.key === 'Escape' && expanded && !event.defaultPrevented) { event.preventDefault(); expand(false); }
   }}>
     {!visitorHeader && <header className="composition-index-header" inert={disabled ? '' : undefined}>
@@ -45,10 +43,7 @@ export default function CompositionIndex({ items, selected, model, profile, list
           {onEditReception && <button type="button" className="composition-index-edit-reception" aria-label="Studio" title="Studio" onClick={onEditReception}><Pencil size={14} />{onOpenReception ? 'Edit' : 'Studio'}</button>}
         </div>}
         <div className="composition-index-label"><h2>{visitorHeader ? 'Index' : 'Canvases'}</h2>
-          {visitorHeader ? <div className="visitor-index-actions">
-            {onCreate && <button type="button" onClick={onCreate} aria-label="+ New" title={limited && items.length >= MAX_WORKBENCHES ? `All ${MAX_WORKBENCHES} canvases are in use` : '+ New'} disabled={limited && items.length >= MAX_WORKBENCHES}><Plus size={15} /></button>}
-            <button type="button" onClick={onGrid} aria-label="Grid" title="Tile view"><LayoutGrid size={16} /></button>
-          </div> : <span>{items.length}</span>}
+          {!visitorHeader && <span>{items.length}</span>}
         </div>
         <nav className="workbench-overview-list" aria-label="Canvases" ref={listRef}>
           {visibleItems.map((item, index) => {
@@ -57,16 +52,11 @@ export default function CompositionIndex({ items, selected, model, profile, list
               <input type="checkbox" checked={selection.checked.has(item.id)} aria-label={`Select ${item.name}`} onChange={() => selection.toggle(item.id)} />
               <span>{item.name}</span>
             </label>;
-            return <div key={item.id} className="composition-index-entry">
+            return <div key={item.id} data-work-id={item.id} className="composition-index-entry">
               <button type="button" data-previewed={active} aria-current={active ? 'page' : undefined}
                 aria-label={`Open ${item.name}`} onClick={() => select(item.id)}>
                 {!visitorHeader && <small>{String(index + 1).padStart(2, '0')}</small>}<span>{item.name}</span>
               </button>
-              {visitorHeader && active && onEdit && <button type="button" className="visitor-index-edit"
-                aria-label={`Edit ${item.name} in Studio`} title="Open in Studio"
-                onClick={() => onEdit(item.id, overviewCanvasNode(root.current, item.id))}>
-                <Pencil size={15} aria-hidden="true" />
-              </button>}
             </div>;
           })}
         </nav>
@@ -79,7 +69,7 @@ export default function CompositionIndex({ items, selected, model, profile, list
       <section className="composition-index-main">
         {settings ? <section className="composition-index-settings" aria-label="Canvas settings">{settings}</section>
           : <CanvasExplorer key={key} selected={selected} model={model} memory={memory} disabled={disabled} expanded={expanded} visitorHeader={visitorHeader} moving={movingCanvasId === selected.id}
-            onExpand={selection ? undefined : toggleExpanded} onEdit={onEdit} onDetails={onDetails} />}
+            onExpand={selection ? undefined : toggleExpanded} onEdit={selection ? undefined : onEdit} onDetails={onDetails} />}
       </section>
     </div>
   </div>;

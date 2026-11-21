@@ -1,8 +1,8 @@
 import { useLayoutEffect, useRef, useState } from 'react';
-import { ChevronDown, UserRound } from 'lucide-react';
+import { ChevronDown, Settings, UserRound } from 'lucide-react';
 import { getOfficialProfileUrl } from '../../profileIdentity/domain/profileIdentity.js';
 import { useProfileIdentity } from '../../profileIdentity/state/useProfileIdentity.js';
-import { HeaderThemeButton, profileTabs, WorkspaceBrand } from '../../public/menus/WorkspaceHeader.jsx';
+import { DiscoverLink, HeaderThemeButton, StudioHeaderTools, profileTabs, WorkspaceBrand } from '../../public/menus/WorkspaceHeader.jsx';
 import AccountAvatar from '../../ui/AccountAvatar.jsx';
 import { VisitorPortrait } from './VisitorProfile.jsx';
 import VisitorMenu from './VisitorMenu.jsx';
@@ -32,7 +32,7 @@ function AccountMenu({ account, model, onPanel, onDisconnect }) {
 }
 
 export default function VisitorHeader({ model, account, works, current = works ? 'Gallery' : 'Profile',
-  onProfile, onWorks, onWriting, onEdit, ownerDestinations, onDiscover, onPanel, onDisconnect, onConnect, children }) {
+  toolbarRef, onProfile, onWorks, onWriting, onEdit, ownerDestinations, onDiscover, onPanel, onDisconnect, onConnect, children }) {
   const trigger = useRef(null);
   const tabList = useRef(null);
   const hasProfile = Boolean(model);
@@ -54,11 +54,14 @@ export default function VisitorHeader({ model, account, works, current = works ?
   const tabs = { Profile: onProfile, Gallery: onWorks, Writing: onWriting };
   const destinations = account && { ...(own && tabs), Discover: onDiscover, ...ownerDestinations };
   const name = model?.officialProfile?.name || model?.profile?.displayName || model?.address;
+  const accountMenu = account?.address && <AccountMenu key={account.address} {...{ account, model, onPanel, onDisconnect }} />;
   return <header className="workspace-header visitor-header">
+    <div className={model ? "visitor-navigation" : "visitor-navigation-unprofiled"}>
     <div className="visitor-signature">
       <WorkspaceBrand trigger={trigger} current={own || current === 'Discover' ? current : null} onDiscover={onDiscover}
         destinations={destinations} onPanel={onPanel} />
-      {model && <><span className="visitor-path-separator" aria-hidden="true">/</span>
+      <DiscoverLink className="visitor-discover" onDiscover={onDiscover}>Discover</DiscoverLink>
+      {model && <>
         <button className="visitor-breadcrumb" type="button" onClick={onProfile} aria-label={'Profile of ' + name} title={name}>
           <VisitorPortrait src={model.profile?.avatarUrl} className="visitor-avatar" /><span>{name}</span>
         </button></>}
@@ -66,12 +69,17 @@ export default function VisitorHeader({ model, account, works, current = works ?
     {model ? <nav ref={tabList} aria-label="Profile navigation" className="visitor-tabs">
       {profileTabs.map(label => <button type="button" key={label} disabled={label !== current && !tabs[label]}
         aria-current={label === current ? 'page' : undefined} onClick={tabs[label]}>{label}</button>)}
-    </nav> : children}
+    </nav> : null}
+    </div>
+    {!model && children}
+    {toolbarRef && <div className="visitor-toolbar-slot" ref={toolbarRef} />}
     <div className="visitor-tools">
-      {own && onEdit && <button className="visitor-edit" type="button" onClick={onEdit}>Studio</button>}
-      <HeaderThemeButton />
-      {account?.address ? <AccountMenu key={account.address} {...{ account, model, onPanel, onDisconnect }} />
-        : onConnect && <button className="visitor-connect" type="button" onClick={onConnect}>Sign in</button>}
+      {own && (ownerDestinations?.Studio || onEdit)
+        ? <StudioHeaderTools onStudio={ownerDestinations?.Studio || onEdit}>{accountMenu}</StudioHeaderTools>
+        : <><HeaderThemeButton />
+          {!account?.address && onPanel && <button className="workspace-theme-button" type="button" aria-label="Settings" title="Settings"
+            onClick={event => onPanel('settings', event.currentTarget)}><Settings size={16} aria-hidden="true" /></button>}
+          {accountMenu || (onConnect && <button className="visitor-connect" type="button" onClick={onConnect}>Sign in</button>)}</>}
     </div>
   </header>;
 }

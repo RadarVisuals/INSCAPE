@@ -3,6 +3,11 @@ import './displayInstruments.css';
 import '../../lattice/rendering/latticeMenuSurface.css';
 import useWorkbenchPublicationPanel from './useWorkbenchPublicationPanel.js';
 import useWorkbenchPresentation, { useWorkbenchLayoutSession } from './useWorkbenchPresentation.js';
+import { publishedCompositionDestinations } from '../../profileDocument/domain/publishedCanvases.js';
+import CanvasJourney from '../workbenchOverview/CanvasJourney.jsx';
+import { useGalleryStudioEndpoint } from '../../profileDiscovery/galleryStudioMotion.js';
+import { workbenchArea } from '../../systemWorkflow/domain/workbenchArea.js';
+import { rememberGalleryView } from '../../profileDiscovery/galleryViewMemory.js';
 import OwnerWorkbenchSession from './OwnerWorkbenchSession.jsx';
 import useWorkbenchModuleRegistry from './useWorkbenchModuleRegistry.js';
 import useOwnerWorkbenchLibrary from './useOwnerWorkbenchLibrary.js';
@@ -361,9 +366,33 @@ export function WorkbenchSession({
       setReceptionPreview(false);
     } else if (receptionPreview) closeReceptionPreview();
   };
+  const compositionId = documentNavigation?.activeId;
+  const resolution = publishedResolution;
+  const verified = !resolution?.busy && resolution?.status === 'RESOLVED' &&
+    resolution.document?.profile.address === profileAddress;
+  const placements = verified ? publishedCompositionDestinations(resolution.document, compositionId) : [];
+  const inGallery = placements.includes('gallery');
+  const incoming = useGalleryStudioEndpoint('editor', browsing ? null : profileAddress, id => {
+    if (!inGallery || (id && id !== compositionId)) return null;
+    rememberGalleryView(profileAddress, { selectedId: compositionId });
+    // Only geometry crosses back into the published view. Gallery supplies its verified artwork.
+    const model = { area: workbenchArea(workbench) };
+    const moving = workspaceMotion.current?.captureActive(model, '', compositionId);
+    const frame = moving || workspaceMotion.current?.captureEditor(model, '', compositionId);
+    return frame && { id: compositionId, frame: frame.frame, paint: frame.paint, fitPublished: !moving, radius: frame.radius, background: frame.background };
+  }, workspaceRef, CanvasJourney);
+  const routeJourney = incoming?.source.id === compositionId ? incoming : null;
+  const journey = overview?.journey || routeJourney;
+  const onProfile = placements.includes('profile');
+  const knownEmpty = !resolution?.busy && resolution?.status === 'UNAVAILABLE' && resolution.address === profileAddress;
+  let publicationState = resolution?.busy ? 'Checking publication' : 'Publication unverified';
+  if (verified || knownEmpty) {
+    if (inGallery) publicationState = onProfile ? 'In Gallery and on Profile' : 'In Gallery';
+    else publicationState = onProfile ? 'On Profile' : 'Studio only';
+  }
   const workspaceDestinations = {
     Profile: onOpenReception && (() => { saveBeforeDeparture(); onOpenReception('published'); }),
-    Gallery: onOpenGallery ? () => { saveBeforeDeparture(true); onOpenGallery(); } : showWorkbenchOverview,
+    Gallery: onOpenGallery ? () => leaveForDestination(onOpenGallery, true) : showWorkbenchOverview,
     Writing: onOpenWriting && (() => { saveBeforeDeparture(); onOpenWriting(); }),
     Studio: () => { if (receptionPreview) closeReceptionPreview(); },
     Discover: trigger => { saveBeforeDeparture(true); openDockPanel('discover', trigger); },
@@ -557,7 +586,8 @@ export function WorkbenchSession({
                   className="system-workflow"
                   data-editor-menu
                   data-overview={browsing || undefined}
-                  data-workspace-journey={overview?.journey?.direction}
+                  data-workspace-journey={journey?.direction}
+                    data-gallery-entry={routeJourney?.direction === 'editor' || undefined}
                   data-creation-toolbar={!toolbarHidden || undefined}
                   data-canvas-context={reception ? 'reception' : 'canvas'}
                   data-reception-editor={reception ? true : undefined}
@@ -628,7 +658,7 @@ export function WorkbenchSession({
                           documentNavigation && { ...documentNavigation, select: selectDocument }
                         }
                         onReturnToWorks={returnLabel === 'Profile' && workspaceDestinations.Profile ? workspaceDestinations.Profile
-                          : onReturnToWorks ? () => { saveBeforeDeparture(true); onReturnToWorks(); } : showWorkbenchOverview}
+                          : onReturnToWorks ? () => leaveForDestination(onReturnToWorks, true) : showWorkbenchOverview}
                         onManageCompositions={showWorkbenchOverview}
                         initialNew={initialNew}
                         onNewOpened={onNewOpened}
@@ -637,6 +667,7 @@ export function WorkbenchSession({
                         onPublish={togglePublication}
                         publicationOpen={publicationOpen}
                         saveState={saveState}
+                        publicationState={publicationState}
                         onPreview={openPreview}
                         onLibrary={openLibrary}
                         onOpenPanel={openDockPanel}
@@ -863,7 +894,7 @@ export function WorkbenchSession({
                   <OwnerWorkspaceMotion
                     hostRef={workspaceRef}
                     motionRef={workspaceMotion}
-                    journey={overview?.journey}
+                    journey={journey}
                     onComplete={overview?.onJourneyComplete}
                   />
                   {noticeMessage && (
