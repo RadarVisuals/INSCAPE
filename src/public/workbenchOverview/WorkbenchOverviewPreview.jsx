@@ -36,20 +36,24 @@ function TextPreview({ item, scale, area }) {
   </div>);
 }
 
-export default function WorkbenchOverviewPreview({ model, name, region = model.area, highlights = [], presenting = false, thumbnail = false, crop = null, viewport = null, camera = null, emptyHint = 'Open this Workbench to begin.' }) {
+export default function WorkbenchOverviewPreview({ model, name, region = model.area, highlights = [], presenting = false, sidePreview = false, thumbnail = false, crop = null, viewport = null, camera = null, emptyHint = 'Open this Workbench to begin.' }) {
   const host = useRef(null), [measured, setSize] = useState({ width: 0, height: 0 });
   useLayoutEffect(() => {
     // An animated preview supplies its paint viewport. Measuring its changing
     // outer rectangle would re-render every artwork on each animation frame.
     if (viewport) return;
-    const measure = () => { const { width, height } = host.current.getBoundingClientRect(); setSize({ width, height }); };
+    const measure = () => {
+      const node = host.current;
+      if (sidePreview) setSize({ width: node.clientWidth, height: node.clientHeight });
+      else { const { width, height } = node.getBoundingClientRect(); setSize({ width, height }); }
+    };
     // Switching back from the animated viewport must measure before paint;
     // waiting for ResizeObserver briefly removes every artwork at scale zero.
     measure();
     const observer = new ResizeObserver(measure);
     observer.observe(host.current); addEventListener('resize', measure);
     return () => { observer.disconnect(); removeEventListener('resize', measure); };
-  }, [viewport]);
+  }, [viewport, sidePreview]);
   const size = viewport || measured;
   const { area, items } = model;
   const covered = thumbnail && size.width > 0 && size.height > 0
@@ -62,7 +66,7 @@ export default function WorkbenchOverviewPreview({ model, name, region = model.a
   // produces antialiased seams, especially at fractional display densities.
   const density = globalThis.devicePixelRatio || 1, paintScale = scale * density;
   const native = model.composition;
-  const interactive = native && presenting && !thumbnail;
+  const interactive = native && presenting && !thumbnail && !sidePreview;
   return <div className="workbench-overview-preview" ref={host} role={interactive ? 'group' : 'img'} aria-label={`${presenting ? 'Canvas' : 'Preview'} of ${name}`} data-presenting={presenting || undefined}>
     <div className="workbench-overview-canvas" data-world-width={area.width} data-native-interactive={interactive || undefined}
       aria-hidden={interactive ? undefined : true} inert={interactive ? undefined : ''} style={{ width: area.width * paintScale, height: area.height * paintScale,

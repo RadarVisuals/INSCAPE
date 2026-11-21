@@ -43,7 +43,7 @@
 .composition-explorer-zoom { display: flex; align-items: center; justify-self: start; gap: 2px; }
 .composition-explorer-controls button { --overview-button-padding: 0; --overview-button-min-height: 30px; flex: none; width: 28px; color: var(--tactile-muted); }
 .composition-explorer-controls button[aria-pressed="true"] { color: var(--tactile-ink); }
-.composition-explorer-zoom output { min-width: 36px; text-align: center; color: var(--tactile-muted); font: 12px/1.4 var(--font-technical); font-variant-numeric: tabular-nums; }
+.composition-explorer-zoom .composition-fit-artwork { min-width: 36px; text-align: center; color: var(--tactile-muted); font: 12px/1.4 var(--font-technical); font-variant-numeric: tabular-nums; }
 .composition-explorer select { max-width: 230px; min-width: 0; border: 1px solid var(--tactile-edge); background: var(--tactile-face); color: var(--tactile-ink); border-radius: var(--control-radius); padding: 7px; font: 12px/1.5 var(--font-interface); }
 .composition-explorer-bottom { display: flex; justify-content: space-between; align-items: start; gap: 36px; margin-top: 24px; }
 .composition-explorer-information { min-width: 0; max-width: 64ch; font-size: 13px; }

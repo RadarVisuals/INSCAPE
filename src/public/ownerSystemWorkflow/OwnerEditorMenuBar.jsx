@@ -16,7 +16,7 @@ const CanvasControls = lazy(() => import('./WorkbenchCanvasControls.jsx'));
 // The bar owns its screen boundary and name form. The document session saves
 // composition changes and guards every transition.
 export default function OwnerEditorMenuBar({ busy, hidden, documentNavigation, initialNew, onNewOpened, onManageCompositions,
-  navigationRef, hostRef, navigation, focusOnMount, onPreview, onOpenPanel, onLibrary, onPublish, publicationOpen, onReturnToWorks, workspaceDestinations, returnLabel = 'Gallery', saveState, dirty, history, onHistory, historyBlocked,
+  navigationRef, hostRef, navigation, focusOnMount, onPreview, onOpenPanel, onLibrary, onPublish, publicationOpen, onReturnToWorks, workspaceDestinations, returnLabel = 'Gallery', saveState, publicationState, dirty, history, onHistory, historyBlocked,
   preferences, onPreferencesChange, editorPreferences, artworkLayersOpen, onToggleLayers, creationBarVisible, onCreationBarChange, onSearchCommands, openPanels }) {
   const cells = useEditorCells();
   const camera = useWorkbenchCamera();
@@ -53,9 +53,11 @@ export default function OwnerEditorMenuBar({ busy, hidden, documentNavigation, i
     setName('Composition ' + (items.length + 1)); setStartLayout('canvas'); setForm('new');
     onNewOpened?.();
   }, [initialNew, hidden, items.length, onNewOpened]);
-  const closeForm = () => { setForm(null); setError(''); trigger.current?.focus(); };
+  const formTrigger = useRef(null);
+  const closeForm = () => { setForm(null); setError(''); (formTrigger.current || trigger.current)?.focus(); formTrigger.current = null; };
   const perform = action => { try { action(); setError(''); return true; } catch (failure) { setError(failure.message); return false; } };
-  const startForm = kind => {
+  const startForm = (kind, source = trigger.current) => {
+    formTrigger.current = source;
     setName(kind === 'new' ? 'Composition ' + (items.length + 1) : documentName);
     setStartLayout('canvas'); setForm(kind);
   };
@@ -70,14 +72,17 @@ export default function OwnerEditorMenuBar({ busy, hidden, documentNavigation, i
     command('fit-canvas', 'Fit canvas in view', navigation.navigatorHome, { disabled: camera.locked }),
     command('actual-size', 'Actual size · 100%', navigation.resetZoom, { disabled: camera.locked }),
   ];
+  const studioCommands = [
+    command('new', 'New composition', source => startForm('new', source), { disabled: blocked || items.length >= MAX_WORKBENCHES }),
+    ...(onManageCompositions ? [command('manage', 'Manage works', onManageCompositions, { disabled: blocked })] : []),
+    command('rename', 'Rename composition', source => startForm('rename', source), { disabled: profileBento || blocked }),
+  ];
   const commands = {
     Canvas: [
       check('profile-bento', 'Profile', profileBento, () => documentNavigation.select('reception')),
       ...items.map(item => check(`canvas:${item.id}`, item.name, activeId === item.id, () => documentNavigation.select(item.id))),
-      command('new', '+ New', () => startForm('new'), { disabled: blocked || items.length >= MAX_WORKBENCHES }),
-      ...(onManageCompositions ? [command('manage', 'Manage compositions', onManageCompositions, { disabled: blocked })] : []),
-      command('rename', 'Rename', () => startForm('rename'), { disabled: profileBento || blocked }),
-      command('delete', items.length === 1 ? 'Delete composition (last composition)' : 'Delete composition', () => setForm('delete'), { disabled: profileBento || blocked || items.length < 2 }),
+      ...studioCommands.map(entry => ({ ...entry, label: ({ new: '+ New', rename: 'Rename' })[entry.id] || entry.label })),
+      command('delete', items.length === 1 ? 'Delete Studio draft (last composition)' : 'Delete Studio draft', () => setForm('delete'), { disabled: profileBento || blocked || items.length < 2 }),
       ...(documentNavigation.enableCells || documentNavigation.cellsUnavailableReason ? [command('enable-cells', 'Use Bento cells',
         documentNavigation.enableCells, { disabled: blocked || Boolean(documentNavigation.cellsUnavailableReason), reason: documentNavigation.cellsUnavailableReason })] : []),
       ...(documentNavigation.enableCanvasModules ? [command('enable-canvas-modules', 'Use canvas modules',
@@ -113,10 +118,10 @@ export default function OwnerEditorMenuBar({ busy, hidden, documentNavigation, i
           blocked={blocked} onPanel={onOpenPanel} onError={setError} onSearch={!camera.locked && onSearchCommands}
           onOpen={() => { setForm(null); setSizeOpen(false); setError(''); }} />}
         {onReturnToWorks && <button className="editor-return-link" type="button" aria-label={'Back to ' + returnLabel}
-          disabled={blocked} onClick={() => perform(onReturnToWorks)}><ArrowLeft size={15} aria-hidden="true" />{returnLabel}</button>}
-        <span className="editor-workspace-context" title={documentName}>// STUDIO · <span className="editor-workspace-name">{documentName}</span></span>
+          disabled={blocked} onClick={() => perform(onReturnToWorks)}><ArrowLeft size={15} aria-hidden="true" /><span>{returnLabel}</span></button>}
+        <span className="editor-workspace-context" title={documentName}><span className="editor-workspace-name">{documentName}</span></span>
       </div>
-      <EditorHeaderActions {...{ saveState, dirty, onPreview, onPublish, publicationOpen, blocked }} />
+      <EditorHeaderActions key={activeId} studioCommands={studioCommands} runStudioCommand={(entry, source) => perform(() => entry.run(source))} {...{ saveState, publicationState, dirty, onPreview, onPublish, publicationOpen, blocked }} />
     </header>
     {form === 'delete' && <section role="alertdialog" aria-label="Delete local composition" aria-describedby="delete-canvas-question" className="editor-menu-form"
       onKeyDown={event => { if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); closeForm(); } }}>

@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { ArrowLeft } from 'lucide-react';
-import { HeaderThemeButton, WorkspaceBrand } from '../menus/WorkspaceHeader.jsx';
+import { StudioHeaderTools, WorkspaceBrand } from '../menus/WorkspaceHeader.jsx';
 import '../ownerSystemWorkflow/editorMenuBar.css';
 import useOwnerLatticeBrowser from '../useOwnerLatticeBrowser.js';
 import { workbenchSaveError } from '../ownerSystemWorkflow/namedWorkbenchActions.js';
@@ -18,9 +18,9 @@ function StudioCollectionHeader({ ownerDestinations, onEdit, onPanel }) {
       <WorkspaceBrand current="Studio" destinations={ownerDestinations} trigger={trigger} onPanel={onPanel} />
       {ownerDestinations.Gallery && <button type="button" className="editor-return-link" aria-label="Back to Gallery" onClick={ownerDestinations.Gallery}>
         <ArrowLeft size={15} aria-hidden="true" />Gallery</button>}
-      <span className="editor-workspace-context">// Studio · <span className="editor-workspace-name">Compositions</span></span>
+      <span className="editor-workspace-context"><span className="editor-workspace-name">Works</span></span>
     </div>
-    <div className="editor-header-actions"><HeaderThemeButton /><button type="button" onClick={onEdit}>Edit</button></div>
+    <div className="editor-header-actions"><StudioHeaderTools><button type="button" onClick={onEdit}>Edit</button></StudioHeaderTools></div>
   </header>;
 }
 

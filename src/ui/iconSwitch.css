@@ -1,0 +1,20 @@
+.icon-switch:is(button) {
+  display: inline-flex; flex: none; align-items: center; justify-content: center; gap: 7px;
+  width: auto; min-height: 32px; padding: 0; margin: 0; border: 0; background: transparent;
+  color: var(--interface-ink); cursor: pointer; font: inherit;
+}
+.icon-switch-track {
+  box-sizing: border-box; display: flex; flex: none; align-items: center; width: 48px; height: 26px;
+  padding: 2px; border-radius: 99px; border: 1px solid var(--interface-line);
+  background: color-mix(in srgb, var(--interface-ink) 9%, var(--interface-panel));
+}
+.icon-switch-thumb {
+  display: grid; place-items: center; width: 20px; height: 20px; border-radius: 50%;
+  background: white; color: #27282a; box-shadow: 0 1px 3px #0003;
+  transition: transform 160ms ease;
+}
+[data-interface-theme='dark'] .icon-switch-thumb { background: #101012; color: #f4f4f5; }
+.icon-switch[aria-checked='true'] .icon-switch-thumb { transform: translateX(22px); }
+.icon-switch:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) { .icon-switch-thumb { transition: none; } }
+@media (forced-colors: active) { .icon-switch-thumb { border: 1px solid ButtonText; box-sizing: border-box; } }

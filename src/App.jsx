@@ -4,6 +4,8 @@ import OwnerRuntimeBoundary from './public/OwnerRuntimeBoundary.jsx';
 import { Startveil } from './startveil/index.js';
 import { StartupDestinationBoundary, StartupDestinationContext, StartupDestinationReady } from './startveil/StartupDestinationContext.jsx';
 import { getConnectedProfileAddress, useWalletStore } from './store/useWalletStore.js';
+import { GalleryStudioMotion } from './profileDiscovery/galleryStudioMotion.js';
+import GalleryStudioStage from './profileDiscovery/GalleryStudioStage.jsx';
 import useApplicationNavigation from './profileDiscovery/useApplicationNavigation.js';
 import { usePublishedProfile } from './profileDocument/state/usePublishedProfile.js';
 import { PUBLISHED_PROFILE_STATUS } from './profileDocument/storage/luksoPublishedProfileRepository.js';
@@ -225,7 +227,7 @@ function App() {
   </Suspense>;
 
   return (
-    <div className="application-root" data-application-mode="public" data-startveil-stage={revealStage} data-gallery-active={galleryActive || undefined}>
+    <GalleryStudioMotion.Provider value={navigation.motion}><div className="application-root" data-application-mode="public" data-startveil-stage={revealStage} data-gallery-active={galleryActive || undefined}>
       <div
         className="application-world"
         data-visible={interfaceVisible || undefined}
@@ -261,6 +263,7 @@ function App() {
             onEditReception={ownViewedProfile ? () => navigation.editReception(viewedProfileAddress) : undefined}
             onEditComposition={ownViewedProfile ? id => id === 'reception' ? navigation.editReception(viewedProfileAddress)
               : navigation.editWork(viewedProfileAddress, id) : undefined}
+            onManageWorks={ownViewedProfile ? () => navigation.manageCompositions(viewedProfileAddress) : undefined}
             onNewComposition={ownViewedProfile ? () => navigation.openStudio(viewedProfileAddress, { create: true }) : undefined}
             onOpenDiscover={navigation.openDiscover} onVisitProfile={visitProfile}
             entry={{ surface: content.writing ? 'writing' : content.canvas ? 'canvas' : 'overview', target: content.target, reception: content.reception }}
@@ -278,6 +281,7 @@ function App() {
         </Suspense>}
       </StartupDestinationBoundary>
       </StartupDestinationContext.Provider>
+      <GalleryStudioStage />
       {publicationConfirmation && publicationConfirmation.profileAddress === publicationAddress && <Suspense fallback={null}>
         <PublicationConfirmation confirmation={publicationConfirmation} onClose={() => {
           setPublicationConfirmation(null);
@@ -298,7 +302,7 @@ function App() {
         onRevealInterface={() => setRevealStage('interface')}
         onComplete={() => setRevealStage('complete')}
       />
-    </div>
+    </div></GalleryStudioMotion.Provider>
   );
 }
 

@@ -7,6 +7,9 @@ import { createRoot } from 'react-dom/client';
 const PublicationConfirmation = lazy(() => import('../src/public/PublicationConfirmation.jsx'));
 const OwnerWorkspace = lazy(() => import('../src/public/ownerSystemWorkflow/OwnerSystemWorkflowReconciliationBoundary.jsx'));
 import PublishedProfileBoundary from '../src/profileDocument/components/PublishedProfileBoundary.jsx';
+import { useLibraryStore } from '../src/library/state/useLibraryStore.js';
+import { GalleryStudioMotion } from '../src/profileDiscovery/galleryStudioMotion.js';
+import GalleryStudioStage from '../src/profileDiscovery/GalleryStudioStage.jsx';
 import useApplicationNavigation from '../src/profileDiscovery/useApplicationNavigation.js';
 import { buildProfileDocumentV9 } from '../src/profileDocument/domain/profileDocumentV9Builder.js';
 import { createEmptySystemWorkflowDraft } from '../src/systemWorkflow/domain/systemWorkflowDraft.js';
@@ -33,6 +36,10 @@ draft.identityPresentation.card = { version: 1, columns: 2, background: { type: 
 const portrait = 'data:image/svg+xml;base64,' + btoa('<svg xmlns="http://www.w3.org/2000/svg" width="800" height="1200" viewBox="0 0 800 1200"><path fill="#d3d0c8" d="M400 120c-120 0-180 110-180 230l-90 660h540l-90-660c0-120-60-230-180-230Z"/><ellipse cx="400" cy="345" rx="108" ry="145" fill="#252828"/><path fill="none" stroke="#8b8b82" stroke-width="10" d="m220 530 180 180 180-180M270 1050l55-410m205 410-55-410"/></svg>');
 const asset = { id: assetId, chainId: 42, contractAddress: contract, tokenId: '0x01', standard: 'LSP8', name: 'Source artwork',
   imageUrl: portrait, originalImageUrl: portrait, imageWidth: 800, imageHeight: 1200, creators: [], attributes: [] };
+if (new URLSearchParams(location.search).has('owner')) {
+  useLibraryStore.getState().setProfileAddress(address);
+  useLibraryStore.setState({ assets: [{ ...asset, ownerAddress: address }], referencedAssets: [], status: 'ready' });
+}
 draft.identityPresentation.avatar = { mode: 'inscape', stableAssetId: assetId, shape: 'square' };
 draft.imageModules = [{ id: 'image:study', visibility: 'PUBLIC', name: 'A closer look', width: 320, height: 480,
   artwork: { id: 'artwork:first', asset: createProfileDocumentV9AssetResolver([asset])(assetId), crop: null, transform: { quarterTurns: 0, mirrorX: false, mirrorY: false } } }];
@@ -54,9 +61,15 @@ draft.reception.imageModules = [{ ...structuredClone(draft.imageModules[0]), id:
 let published = buildProfileDocumentV9({ profileAddress: address, profileIdentity: { name: 'Nomad' }, assetRecords: [asset], systemWorkflowDraft: draft });
 let collection = createWorkbenchCollection(draft);
 collection.workbenches[0].name = 'Vision';
+collection.workbenches[0].introduction = 'A study of the figure in shadow.';
 collection = appendWorkbench(collection, 'workbench:anatomy', 'Anatomy', draft);
 collection = appendWorkbench(collection, 'workbench:private', 'Private experiment', draft);
 collection.activeId = 'workbench:main';
+if (new URLSearchParams(location.search).has('landscape-gallery')) {
+  const anatomy = collection.workbenches.find(item => item.id === 'workbench:anatomy');
+  anatomy.content = structuredClone(anatomy.content);
+  anatomy.content.workbench.area = { left: 0, top: 0, width: 1600, height: 900 };
+}
 if (new URLSearchParams(location.search).has('collection')) {
   published = buildCanvasPublication({ candidates: canvasPublicationCandidates({ record: collection, assetRecords: [asset], profile: { name: 'Nomad' } }),
     selectedIds: ['workbench:main', 'workbench:anatomy', 'reception'], includeShared: true });
@@ -86,6 +99,14 @@ if (new URLSearchParams(location.search).has('bulk')) {
 if (new URLSearchParams(location.search).has('last-gallery')) {
   published = buildCanvasPublication({ candidates: canvasPublicationCandidates({ record: collection, assetRecords: [asset], profile: { name: 'Nomad' } }),
     selectedIds: ['workbench:main'], includeShared: true, placements: { 'workbench:main': ['gallery'] } });
+}
+if (new URLSearchParams(location.search).has('revised')) {
+  const anatomy = collection.workbenches.find(item => item.id === 'workbench:anatomy');
+  const content = structuredClone(anatomy.content);
+  content.workbench.area = { left: 0, top: 0, width: 1200, height: 800 };
+  content.imageModules[0] = { ...content.imageModules[0], name: 'Unpublished studio revision', width: 320, height: 480 };
+  content.workbench.imageModules[0].position = { left: 720, top: 160 };
+  anatomy.content = content;
 }
 // Isolate fixture drafts from application data while retaining saves across reloads.
 const storage = {
@@ -139,7 +160,7 @@ function Fixture() {
     Writing: () => navigation.openWriting(account.address), Studio: owner ? () => navigation.openStudio(address) : undefined,
     Discover: navigation.openDiscover,
   };
-  return <div className="application-root" data-application-mode="public"><div className="application-interface" data-visible>
+  return <GalleryStudioMotion.Provider value={navigation.motion}><div className="application-root" data-application-mode="public"><div className="application-interface" data-visible>
     {content?.kind === 'workbench' ? <Suspense fallback={null}>
       <OwnerWorkspace profileAddress={address} canvasOverviewRequested={content.canvas === true}
         requestedWorkId={content.worksEditorId} receptionEditorRequested={content.receptionEditorRequested}
@@ -149,9 +170,10 @@ function Fixture() {
         returnLabel={navigation.studioReturnLabel} onOpenWriting={() => navigation.openWriting(address)}
         onOpenReception={mode => navigation.openReception(address, mode === 'published' ? 'published' : true)}
         onEditorDocumentChange={(kind, id, options) => kind === 'reception' ? navigation.editReception(address, options) : navigation.editWork(address, id, options)}
+        getWalletPublicationContext={() => window.publicationBoundaryWallet} onPublicationConfirmed={publicationConfirmed}
         onReturnToWorks={() => navigation.returnToWorks(address)}
         reviewStorage={storage} reviewProfile={{ name: 'Nomad' }} reviewAssets={[asset]} />
-    </Suspense> : <PublishedProfileBoundary address={address} resolution={resolution} connectedProfile={account}
+    </Suspense> : <PublishedProfileBoundary onOpenDiscover={navigation.openDiscover} address={address} resolution={resolution} connectedProfile={account}
       getWalletPublicationContext={() => window.publicationBoundaryWallet}
       onPublicationConfirmed={publicationConfirmed} onRetry={async () => {
         if (!new URLSearchParams(location.search).has('changed-publication')) return resolution;
@@ -161,13 +183,14 @@ function Fixture() {
         return { ...resolution, document: newerDocument };
       }}
       returnProfileAddress={account?.address} ownerDestinations={ownerDestinations} onReturnToWorkbench={owner ? ownerDestinations.Studio : undefined}
-      onNewComposition={owner ? () => navigation.openStudio(address, { create: true }) : undefined}
+      onManageWorks={owner ? () => navigation.manageCompositions(address) : undefined}
+            onNewComposition={owner ? () => navigation.openStudio(address, { create: true }) : undefined}
       onEditComposition={owner ? id => id === 'reception' ? navigation.editReception(address) : navigation.editWork(address, id) : undefined}
       onOpenWriting={() => navigation.openWriting(address)} onDisconnect={() => { window.__fixtureDisconnected = true; }}
       onEditReception={owner ? () => navigation.editReception(address) : undefined}
       entry={{ surface: content?.writing ? 'writing' : content?.canvas ? 'canvas' : 'overview', target: content?.target, reception: content?.reception }}
       onOpenCanvas={() => navigation.openCanvas(address)} onOpenOverview={() => navigation.openOverview(address)} />}
     {confirmation && <Suspense fallback={null}><PublicationConfirmation confirmation={confirmation} onClose={() => setConfirmation(null)} /></Suspense>}
-  </div></div>;
+  <GalleryStudioStage /></div></div></GalleryStudioMotion.Provider>;
 }
 createRoot(document.getElementById('root')).render(<Fixture />);

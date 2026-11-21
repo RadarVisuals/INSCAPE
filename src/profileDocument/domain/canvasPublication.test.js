@@ -8,7 +8,7 @@ import { createReceptionEditorDocument } from '../../reception/receptionEditorDo
 import { createStudioComposition } from '../../systemWorkflow/domain/studioComposition.js';
 import { createTextPresentation } from './workbenchPresentation.js';
 import { createArticle } from '../../text/domain/article.js';
-import { publishedCanvasEntries, publishedCompositionEntries, canvasDocument, CANVAS_CONTENT_KEYS } from './publishedCanvases.js';
+import { publishedCanvasEntries, publishedCompositionEntries, publishedCompositionDestinations, canvasDocument, CANVAS_CONTENT_KEYS } from './publishedCanvases.js';
 import { validateProfileDocumentV9, parseProfileDocumentV9Json } from './profileDocumentV9Validation.js';
 import { canonicalSerializeProfileDocumentV9 } from './profileDocumentV9Serialization.js';
 import { createSystemWorkflowDraftStore } from '../../systemWorkflow/systemWorkflowDraftStore.js';
@@ -187,6 +187,12 @@ test('Gallery and Profile reference one published work and retain independent se
   delete old.canvas.destinations; delete old.canvases[0].destinations; delete old.receptionDestinations;
   assert.deepEqual(shown(old, 'gallery'), ['workbench:main', 'workbench:second']);
   assert.deepEqual(shown(old, 'profile'), ['reception']);
+  for (const document of [first, next, old]) {
+    for (const entry of publishedCompositionEntries(document)) {
+      assert.deepEqual(publishedCompositionDestinations(document, entry.id), entry.destinations);
+    }
+    assert.deepEqual(publishedCompositionDestinations(document, 'workbench:private'), []);
+  }
   for (const invalid of [[], ['profile', 'profile'], ['editor'], false, null]) {
     const malformed = structuredClone(next); malformed.canvas.destinations = invalid;
     assert.equal(validateProfileDocumentV9(malformed).valid, false);

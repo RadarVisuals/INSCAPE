@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
-import { Plus, List, LayoutGrid, Repeat, GripVertical } from 'lucide-react';
+import { Plus, List, LayoutGrid, Repeat, GripVertical, SlidersHorizontal } from 'lucide-react';
 import { MAX_WORKBENCHES } from '../../systemWorkflow/domain/workbenchCollection.js';
 
-export default function OverviewNavigation({ disabled, limited, label, view, onViewChange, count, onCreate, triggerRef, arranging, selecting, onArrange, cardSize, onCardSize }) {
+export default function OverviewNavigation({ showLayouts = true, disabled, limited, label, view, onViewChange, count, onCreate, triggerRef, arranging, selecting, onArrange, cardSize, onCardSize }) {
   const [open, setOpen] = useState(false);
   const root = useRef(null);
   useEffect(() => {
@@ -18,8 +18,8 @@ export default function OverviewNavigation({ disabled, limited, label, view, onV
     onKeyDown={event => { if (event.key === 'Escape') { event.preventDefault(); setOpen(false); triggerRef.current?.focus(); } }}>
     <div className="workbench-overview-menu-fold" inert={open ? undefined : ''} aria-hidden={!open}><section className="workbench-overview-menu" aria-label={label}>
     <div className="workbench-overview-view-controls" role="group" aria-label="Overview layout">
-      <button type="button" aria-label="List" title="List" aria-pressed={view.layout === 'list'} onClick={() => onViewChange({ ...view, layout: 'list' })}><List size={16} /></button>
-      <button type="button" aria-label="Grid" title="Grid" aria-pressed={view.layout === 'grid'} onClick={() => onViewChange({ ...view, layout: 'grid' })}><LayoutGrid size={16} /></button>
+      {showLayouts && <><button type="button" aria-label="List" title="List" aria-pressed={view.layout === 'list'} onClick={() => onViewChange({ ...view, layout: 'list' })}><List size={16} /></button>
+      <button type="button" aria-label="Grid" title="Grid" aria-pressed={view.layout === 'grid'} onClick={() => onViewChange({ ...view, layout: 'grid' })}><LayoutGrid size={16} /></button></>}
       <button type="button" aria-label="Wrap around" title="Wrap around" aria-pressed={view.wrap && !selecting} disabled={selecting || view.layout !== 'grid' || count < 2}
         onClick={() => onViewChange({ ...view, wrap: !view.wrap })}><Repeat size={16} /></button>
     </div>
@@ -33,7 +33,7 @@ export default function OverviewNavigation({ disabled, limited, label, view, onV
     </section></div>
     <button ref={triggerRef} className="workbench-overview-menu-trigger" type="button" disabled={disabled} aria-label={label} aria-expanded={open}
       onClick={() => setOpen(!open)}>
-      <LayoutGrid size={16} aria-hidden="true" /><span>{label}</span>
+      {showLayouts ? <><LayoutGrid size={16} aria-hidden="true" /><span>{label}</span></> : <SlidersHorizontal size={15} aria-hidden="true" />}
     </button>
   </header>;
 }

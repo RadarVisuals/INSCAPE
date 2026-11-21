@@ -52,7 +52,7 @@ function PublishedStatusSurface({ state, onRetry }) {
   </main>;
 }
 
-function UnpublishedProfilePage({ address, account, state, entry, onRetry, onNewComposition, ...header }) {
+function UnpublishedProfilePage({ address, account, state, entry, onRetry, onNewComposition, onManageWorks, ...header }) {
   const identity = useProfileIdentity(address);
   const own = address && account?.address?.toLowerCase() === address.toLowerCase();
   const name = identity?.name || (own && account.name);
@@ -64,7 +64,7 @@ function UnpublishedProfilePage({ address, account, state, entry, onRetry, onNew
     <PublicWorkspaceHeader model={model} account={account} current={current} {...header} />
     {emptyCollection ? <Suspense fallback={<p role="status">Opening {current}.</p>}>
       <StartupDestinationReady />
-      {current === 'Gallery' ? <PublishedCanvasGallery entries={emptyEntries} snapshot={emptySnapshot} onNewComposition={onNewComposition} />
+      {current === 'Gallery' ? <PublishedCanvasGallery entries={emptyEntries} snapshot={emptySnapshot} onManageWorks={onManageWorks} onNewComposition={onNewComposition} />
         : <PublishedWriting snapshot={emptySnapshot} />}
     </Suspense> : <PublishedStatusSurface state={state} onRetry={onRetry} />}
   </div>;
@@ -94,7 +94,7 @@ function OwnerGallery({ resolution, getWalletPublicationContext, onRetry, onPubl
 export default function PublishedProfileBoundary({
   address, resolution, onRetry, connectedProfile, returnProfileAddress, ownerDestinations, onReturnToWorkbench,
   getWalletPublicationContext, onPublicationConfirmed,
-  onNewComposition, onEditComposition, onEditReception, onVisitProfile, onOpenDiscover, onConnect, onDisconnect,
+  onManageWorks, onNewComposition, onEditComposition, onEditReception, onVisitProfile, onOpenDiscover, onConnect, onDisconnect,
   entry, onOpenOverview, onOpenCanvas, onOpenWriting,
 }) {
   const visibleDocument = [PUBLISHED_PROFILE_STATUS.RESOLVED, PUBLISHED_PROFILE_STATUS.STALE].includes(resolution?.status) ? resolution.document : null;
@@ -104,7 +104,8 @@ export default function PublishedProfileBoundary({
   const editComposition = returnToWorkbench ? onEditComposition : undefined;
   const editProfile = returnToWorkbench ? onEditReception : undefined;
   const createComposition = returnToWorkbench ? onNewComposition : undefined;
-  const navigation = { onNewComposition: createComposition, account: connectedProfile, ownerDestinations, onConnect, onDisconnect, onOpenWriting, onOpenOverview, onOpenCanvas,
+  const manageWorks = returnToWorkbench ? onManageWorks : undefined;
+  const navigation = { onManageWorks: manageWorks, onNewComposition: createComposition, account: connectedProfile, ownerDestinations, onConnect, onDisconnect, onOpenWriting, onOpenOverview, onOpenCanvas,
     onOpenDirectory: onOpenDiscover, onReturnToWorkbench: returnToWorkbench, onEditReception: editProfile, onEditComposition: editComposition };
   if (returnToWorkbench && entry?.surface === 'overview' && !entry.target && entry?.reception !== 'published') {
     return <Suspense fallback={<p role="status">Opening Profile…</p>}>
@@ -112,8 +113,8 @@ export default function PublishedProfileBoundary({
     </Suspense>;
   }
   if (!visibleDocument) return <UnpublishedProfilePage address={address} account={connectedProfile} entry={entry}
-    state={resolution} onRetry={onRetry} onNewComposition={createComposition}
-    onProfile={onOpenOverview} onWorks={onOpenCanvas} onWriting={onOpenWriting} onEdit={returnToWorkbench}
+    state={resolution} onRetry={onRetry} onNewComposition={createComposition} onManageWorks={manageWorks}
+    onProfile={onOpenOverview} onWorks={onOpenCanvas} onWriting={onOpenWriting}
     ownerDestinations={ownerDestinations} onDiscover={onOpenDiscover} onConnect={onConnect} onDisconnect={onDisconnect} />;
   const editableGallery = returnToWorkbench && connectedProfile?.address?.toLowerCase() === address.toLowerCase()
     && entry?.surface === 'canvas' && !entry.target && getWalletPublicationContext && onPublicationConfirmed && onRetry;

@@ -1,4 +1,4 @@
-:root { --workspace-header-height: 48px; --workspace-sage: #a8bc9e; }
+:root { --workspace-header-height: 48px; --workspace-sage: var(--editor-accent); }
 .workspace-header {
   position: sticky; top: 0; z-index: 3; box-sizing: border-box;
   display: grid; align-items: center; width: 100%; height: var(--workspace-header-height); min-height: var(--workspace-header-height);
@@ -9,7 +9,36 @@
   margin: 0; padding: 0; color: inherit; border: 0; background: transparent; cursor: pointer;
   text-decoration: none; --inscape-wordmark-accent: var(--workspace-sage);
 }
+.studio-header-tools {
+  --studio-end-width: 41px; --studio-tools-gap: 12px;
+  display: grid; grid-template-columns: auto auto var(--studio-end-width); align-items: center; gap: var(--studio-tools-gap);
+}
+.workspace-header .studio-header-label {
+  display: inline-flex; justify-content: center; align-items: center; padding: 0 2px; height: 32px;
+  font: 500 14px/1.4 var(--font-interface); color: inherit; border: 0; background: transparent;
+}
+@media (min-width: 901px) {
+  .studio-header-tools .icon-switch { margin-inline-start: 12px; }
+  .studio-header-label[aria-haspopup] { position: relative; }
+  .studio-header-label[aria-haspopup]::after {
+    content: ''; position: absolute; right: -5px; top: calc(50% - 2px); width: 3px; height: 3px;
+    border: solid currentColor; border-width: 0 1px 1px 0; transform: rotate(45deg);
+  }
+}
+.workspace-header .studio-header-tools .icon-switch { padding-inline: 0; }
+.studio-header-label[aria-current] { text-decoration: underline; text-underline-offset: 5px; }
+@media (min-width: 601px) and (max-width: 900px) { .studio-header-tools .icon-switch { margin-inline-start: 8px; } }
+@media (max-width: 900px) { .studio-header-tools { --studio-tools-gap: 8px; } }
+@media (max-width: 700px) { .studio-header-tools { --studio-tools-gap: 4px; } }
+@media (max-width: 480px) {
+  .studio-header-tools { --studio-end-width: 35px; --studio-tools-gap: 2px; }
+  .workspace-header .studio-header-label { font-size: 11px; }
+}
+@media (max-width: 360px) {
+  .studio-header-tools { --studio-end-width: 24px; }
+}
 .workspace-wordmark { display: block; width: 80px; height: 26px; }
+@media (max-width: 360px) { .workspace-header .workspace-wordmark { width: 60px; } }
 .workspace-brand:focus-visible, .workspace-theme-button:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
 .workspace-theme-button {
   display: inline-grid; place-items: center; width: 28px; height: 28px; margin: 0; padding: 0; color: inherit;
@@ -17,6 +46,23 @@
 }
 .workspace-theme-button svg { stroke-width: 1.6; }
 .workspace-header-error { position: absolute; inset: 100% 16px auto auto; padding: 5px 8px; background: var(--interface-panel); color: var(--color-text-primary); }
-.workspace-command-menu, .workspace-command-menu .desktop-menu--flyout {
+.workspace-header .workspace-command-menu.desktop-menu[data-workflow-palette='editor'],
+.workspace-header .workspace-command-menu .desktop-menu--flyout[data-workflow-palette='editor'],
+.workspace-header .strip-drawer {
   max-height: calc(100dvh - 16px); overflow-y: auto; overscroll-behavior: contain;
+  background: var(--editor-menu-face);
+  border: 1px solid var(--editor-menu-edge);
+  box-shadow: var(--editor-menu-shadow);
+}
+.workspace-header .workspace-command-menu button:enabled:focus-visible {
+  outline: 1px solid currentColor;
+  outline-offset: -2px;
+}
+@media (forced-colors: active) {
+  .workspace-header :is(.workspace-command-menu,.strip-drawer) {
+    --editor-menu-face: Canvas;
+    --editor-menu-heading: CanvasText;
+    --editor-menu-edge: ButtonText;
+    --editor-menu-shadow: none;
+  }
 }
