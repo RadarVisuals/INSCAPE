@@ -7,6 +7,32 @@ import { browserExecutable } from '../scripts/browserEnvironment.mjs';
 const origin = process.env.INSCAPE_TEST_ORIGIN || 'http://127.0.0.1:5173';
 const output = process.env.INSCAPE_BROWSER_OUTPUT || '.browser-test-runtime/published-gallery';
 const address = '0x' + '1'.repeat(40);
+test('Profile and Gallery keep header controls on the same row', async () => {
+  const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
+  try {
+    const page = await browser.newPage({ reducedMotion: 'reduce' });
+    await page.goto(`${origin}/browser-tests/profile-overview-fixture.html?view=${address}&reception=published&collection=1`);
+    const header = page.locator('.visitor-header');
+    const tab = name => header.getByRole('button', { name, exact: true });
+    const positions = () => header.locator('.workspace-brand, .visitor-tabs, .visitor-tools').evaluateAll(nodes =>
+      nodes.map(node => node.getBoundingClientRect().top));
+    await tab('Gallery').waitFor();
+    for (const width of [1600, 1251, 1250, 940, 390]) {
+      await page.setViewportSize({ width, height: 900 });
+      const before = await positions();
+      await tab('Gallery').click();
+      const toolbar = header.getByRole('group', { name: 'Gallery controls' });
+      await toolbar.waitFor();
+      assert.deepEqual(await positions(), before, `Header positions at ${width}px`);
+      const box = await toolbar.boundingBox();
+      const frame = await header.boundingBox();
+      assert.ok(box.y >= frame.y && box.y + box.height <= frame.y + frame.height + 1);
+      await tab('Profile').click();
+      await toolbar.waitFor({ state: 'detached' });
+      assert.deepEqual(await positions(), before);
+    }
+  } finally { await browser.close(); }
+});
 test('open Profile shares its published Gallery selection, camera and layout and preserves the Bento', { timeout: 75000 }, async () => {
   const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
   try {
@@ -121,6 +147,7 @@ test('open Profile shares its published Gallery selection, camera and layout and
       }, fittedCamera);
     }
     await button('Zoom in').click();
+    await page.waitForFunction(expected => Math.abs(Number(document.querySelector('.composition-explorer-viewport').dataset.cameraScale) - expected) < 1e-8, Math.min(4, Number(fittedCamera[0]) * 1.25));
     const zoom = await fit.textContent();
     await button('Profile').click();
     await page.getByRole('heading', { name: 'Nomad' }).waitFor();
@@ -136,6 +163,100 @@ test('open Profile shares its published Gallery selection, camera and layout and
     await page.locator('.workbench-overview-gallery').waitFor();
     assert.equal(await button('Open Private experiment').count(), 0);
     assert.deepEqual(errors, []);
+  } finally { await browser.close(); }
+});
+test('stepped Gallery zoom accumulates around the pointer and reverses from the visible scale', async () => {
+  const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
+  try {
+    const page = await browser.newPage({ viewport: { width: 1440, height: 900 }, reducedMotion: 'no-preference' });
+    await page.goto(`${origin}/browser-tests/profile-overview-fixture.html?view=${address}&canvas=1&collection=1&reception=published`);
+    await page.getByRole('radio', { name: 'List view' }).check();
+    const frame = page.locator('.composition-explorer-viewport[data-camera-scale]');
+    const results = await frame.evaluate(async el => {
+      const scale = () => Number(el.dataset.cameraScale);
+      const box = el.getBoundingClientRect(), x = 123, y = 97;
+      const wheel = deltaY => el.dispatchEvent(new WheelEvent('wheel', {
+        deltaY, ctrlKey: true, clientX: box.left + x, clientY: box.top + y, cancelable: true
+      }));
+      const worldX = () => (x - Number(el.dataset.cameraX)) / scale();
+      const initial = scale(), anchor = worldX();
+      wheel(-100); wheel(-100);
+      const immediate = scale();
+      await new Promise(resolve => setTimeout(resolve, 240));
+      const final = scale(), drift = Math.abs(worldX() - anchor);
+      wheel(-100); wheel(100);
+      await new Promise(resolve => setTimeout(resolve, 240));
+      return { initial, immediate, final, drift, reversed: scale() };
+    });
+    assert.equal(results.immediate, results.initial);
+    assert.ok(Math.abs(results.final - results.initial * Math.exp(.4)) < .00001);
+    assert.ok(results.drift < 1);
+    assert.ok(Math.abs(results.reversed - results.final * Math.exp(-.2)) < .00001);
+  } finally { await browser.close(); }
+});
+test('tile inspection returns by Escape or backdrop while direct List browsing stays open', async () => {
+  const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
+  try {
+    const page = await browser.newPage({ viewport: { width: 1440, height: 900 }, reducedMotion: 'reduce' });
+    await page.goto(`${origin}/browser-tests/profile-overview-fixture.html?view=${address}&canvas=1&collection=1&reception=published`);
+    const layout = name => page.getByRole('radio', { name });
+    const frame = page.locator('.composition-explorer-viewport');
+    await layout('Grid view').check();
+    for (const method of ['Escape', 'background']) {
+      const tile = page.locator('.workbench-overview-card-open:visible').first();
+      await tile.click();
+      await frame.waitFor();
+      await frame.click();
+      await page.getByRole('button', { name: 'Zoom in', exact: true }).click();
+      assert.ok(await layout('List view').isChecked());
+      if (method === 'Escape') await page.keyboard.press('Escape');
+      else await page.locator('.workbench-overview').click({ position: { x: 3, y: 3 } });
+      await page.locator('.workbench-overview-gallery').waitFor();
+      assert.ok(await layout('Grid view').isChecked());
+    }
+    await layout('List view').check();
+    await frame.waitFor();
+    await page.keyboard.press('Escape');
+    await page.locator('.workbench-overview').click({ position: { x: 3, y: 3 } });
+    assert.ok(await layout('List view').isChecked());
+  } finally { await browser.close(); }
+});
+test('Gallery remembers independent rails without moving the zoomed canvas', async () => {
+  const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
+  try {
+    const page = await browser.newPage({ viewport: { width: 1440, height: 900 }, reducedMotion: 'reduce' });
+    await page.goto(`${origin}/browser-tests/profile-overview-fixture.html?view=${address}&canvas=1&collection=1&reception=published`);
+    const layout = name => page.getByRole('radio', { name });
+    const button = name => page.getByRole('button', { name, exact: true });
+    await layout('List view').check();
+    const frame = page.locator('.composition-explorer-viewport');
+    const geometry = () => frame.evaluate(node => {
+      const { x, y, width, height } = node.getBoundingClientRect();
+      return [x, y, width, height, node.dataset.cameraX, node.dataset.cameraY, node.dataset.cameraScale];
+    });
+    await button('Zoom in').click();
+    const before = await geometry();
+    await button('Hide info').locator('.lucide-chevron-left').waitFor();
+    await button('Hide index').locator('.lucide-chevron-right').waitFor();
+    await button('Hide info').focus();
+    await button('Hide info').press('Enter');
+    assert.ok(await button('Show info').evaluate(node => node === document.activeElement));
+    assert.ok(await page.locator('.visitor-work-details').isHidden());
+    assert.deepEqual(await geometry(), before);
+    await layout('Grid view').check();
+    assert.equal(await page.locator('.gallery-rail-toggle').count(), 0);
+    await layout('List view').check();
+    assert.ok(await button('Show info').isVisible());
+    assert.ok(await button('Hide index').isVisible());
+    await button('Hide index').click();
+    await page.reload();
+    await layout('List view').check();
+    await button('Show index').locator('.lucide-chevron-left').waitFor();
+    await button('Show info').locator('.lucide-chevron-right').waitFor();
+    assert.ok(await page.locator('.composition-index-sidebar').isHidden());
+    await button('Show info').click();
+    assert.ok(await page.locator('.visitor-work-details').isVisible());
+    assert.ok(await button('Show index').isVisible());
   } finally { await browser.close(); }
 });
 test('List frame grows outward, keeps both rails and caps height above the camera controls', async () => {
@@ -154,6 +275,12 @@ test('List frame grows outward, keeps both rails and caps height above the camer
       const index = page.locator('.composition-index-sidebar'), info = page.locator('.visitor-work-details');
       const left = await index.boundingBox(), right = await info.boundingBox();
       assert.ok(Math.abs(small.width / small.height - 16 / 9) < .01);
+      assert.ok(Math.abs(left.y - small.y) < 1 && Math.abs(right.y - small.y) < 1,
+        'Both rails start at the artwork frame');
+      const stage = await page.locator('.composition-explorer-stage').boundingBox();
+      const body = await page.locator('.composition-index-body').boundingBox();
+      assert.ok(Math.abs(stage.y + stage.height / 2 - body.y - body.height / 2) < 1,
+        'The frame and controls are centered together');
       await slider.fill('80');
       const large = await frame.boundingBox();
       await slider.fill('100');

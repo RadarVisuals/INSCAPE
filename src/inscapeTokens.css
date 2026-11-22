@@ -165,6 +165,12 @@
   --editor-menu-shadow: 0 2px 5px rgb(0 0 0 / .10), 0 8px 18px rgb(0 0 0 / .13);
 }
 
+:root[data-palette='charcoal'][data-interface-theme='light'] {
+  --editor-surround: var(--interface-environment);
+  --editor-panel: var(--interface-panel);
+  --editor-ink: #292927;
+}
+
 /* Field endpoints sampled from the light and shadow in the FigCraft palette board. */
 :root[data-palette='oxblood'] {
   --field-low: #201418; --field-high: #563138;

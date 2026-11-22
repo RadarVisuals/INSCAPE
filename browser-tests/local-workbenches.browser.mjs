@@ -36,7 +36,7 @@ async function open(page, selection = false) {
   await page.locator('.text-window').waitFor();
 }
 async function rename(page, name) {
-  await editorCommand(page, 'Canvas', 'Rename');
+  await editorCommand(page, 'Studio', 'Rename composition');
   await page.getByLabel('Composition name', { exact: true }).fill(name);
   await page.getByRole('button', { name: 'Save name', exact: true }).click();
 }
@@ -107,7 +107,7 @@ test('fixed menu retains named canvases through reload and stays above the works
     await create(page, 'Another canvas');
     assert.equal(await activeEditorDocumentName(page), 'Another canvas');
     await page.setViewportSize({ width: 390, height: 700 }); await settle(page);
-    await editorCommand(page, 'Canvas', 'Rename');
+    await editorCommand(page, 'Studio', 'Rename composition');
     const form = await page.getByRole('dialog', { name: 'Rename composition' }).boundingBox();
     assert.ok(form.x >= 0 && form.x + form.width <= 390 && form.y + form.height <= 700);
     await page.getByRole('button', { name: 'Cancel', exact: true }).click();
@@ -443,7 +443,7 @@ test('all 30 local Workbenches stay reachable, with an explained limit and usabl
     const lastId = await activeEditorDocument(page);
     await selectEditorDocument(page, firstId);
     await page.locator('.text-window').waitFor();
-    await editorCommand(page, 'Canvas', 'Rename');
+    await editorCommand(page, 'Studio', 'Rename composition');
     await page.getByLabel('Composition name', { exact: true }).fill('Lunar Desert — a long composition name for a narrow screen');
     await mkdir(output, { recursive: true });
     for (const width of [1440, 390]) {

@@ -1,11 +1,11 @@
-import { layerIds } from '../systemWorkflow/domain/artworkLayers.js';
+import { layerIds, reorderArtwork } from '../systemWorkflow/domain/artworkLayers.js';
 import { receptionModuleWindow, withReceptionModuleWindow, pruneCellMembers, withReceptionMemberAnchors } from './receptionEditorDocument.js';
 import { backgroundsBehindContents } from './receptionLayerOrder.js';
 import { positionReceptionMembers } from './editorCellGeometry.js';
 
 // Explicit ownership changes keep native identities, sizes and relative offsets.
-// Moving to a cell centres the selection; releasing it keeps its world position.
-export function moveReceptionMembers(value, ids, targetId) {
+// Canvas drops preserve the drag offset. List drops centre the selection in the cell.
+export function moveReceptionMembers(value, ids, targetId, placement, offsets) {
   const selected = new Set(ids), order = layerIds(value.artworkLayers);
   const target = targetId === null ? null : value.cells.find(cell => cell.id === targetId);
   if (!selected.size || selected.size !== ids.length || ids.some(id => !order.includes(id) || value.cells.some(cell => cell.id === id)))
@@ -27,11 +27,19 @@ export function moveReceptionMembers(value, ids, targetId) {
       ...(fitted.length ? { fitText: [...(next.fitText || []), ...fitted] } : {}) };
   });
   let next = { ...value, cells, artworkLayers: backgroundsBehindContents(value.artworkLayers, cells) };
-  if (target) {
+  if (offsets && target) {
+    for (const id of moving) {
+      const frame = receptionModuleWindow(value, id), delta = offsets[id];
+      if (!frame || !Number.isFinite(delta?.x) || !Number.isFinite(delta?.y)) throw Error('Invalid drop position.');
+      next = withReceptionModuleWindow(next, id, { ...frame, left: frame.left + delta.x, top: frame.top + delta.y });
+    }
+  } else if (target) {
     const frames = Object.fromEntries(moving.map(id => [id, receptionModuleWindow(value, id)]));
     const placed = positionReceptionMembers(receptionModuleWindow(value, targetId), frames,
       { members: moving, alignX: 'center', alignY: 'center', paddingX: 0, paddingY: 0 });
     for (const [id, frame] of Object.entries(placed)) next = withReceptionModuleWindow(next, id, frame);
   }
+  if (placement) next.artworkLayers = backgroundsBehindContents(
+    reorderArtwork(next.artworkLayers, ids, placement.direction, placement.targetId, placement.edge), cells);
   return next;
 }

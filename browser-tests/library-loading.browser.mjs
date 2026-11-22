@@ -108,7 +108,7 @@ test('5000 assets stay paged, visible metadata preserves selection, and a chosen
       const updated = page.getByRole('button', { name: /^Fresh A token 1(?: \/|$)/ });
       await updated.waitFor();
       assert.equal(await updated.getAttribute('aria-pressed'), 'true');
-      await page.getByRole('button', { name: 'Created', exact: true }).click();
+      await page.getByRole('button', { name: 'All Assets', exact: true }).click();
       await page.getByRole('button', { name: /^My collection(?: \/|$)/ }).dblclick();
       await page.waitForFunction(() => Boolean(window.libraryDemandTest.data.collectionContext));
       assert.equal(await page.evaluate(() => window.libraryDemandTest.collectionPages), 1);

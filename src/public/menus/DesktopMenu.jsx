@@ -6,7 +6,7 @@ const ROW_HEIGHT = 43;
 const SYSTEM_WORKFLOW_PANEL_WIDTH = 196;
 const SYSTEM_WORKFLOW_ROW_HEIGHT = 38;
 
-export default function DesktopMenu({ anchor, commands, label, onCommand, onClose, returnFocus, className = '', panelClassName = '', getSubmenuCommands, onPreviewCommand, systemWorkflowOverlay = false, menuBarRef, onNavigateMenu, focusLast = false, palette, viewportSubmenus = false }) {
+export default function DesktopMenu({ anchor, commands, label, onCommand, onClose, returnFocus, className = '', panelClassName = '', getSubmenuCommands, onPreviewCommand, systemWorkflowOverlay = false, menuBarRef, onNavigateMenu, focusLast = false, palette, preferredWidth = PANEL_WIDTH, viewportSubmenus = false }) {
   const ref = useRef(null);
   const rows = useRef(new Map());
   const hoverTimerRef = useRef(0);
@@ -121,7 +121,7 @@ export default function DesktopMenu({ anchor, commands, label, onCommand, onClos
     data-lattice-menu-surface
     data-workflow-material={editor ? 'tactile' : undefined} data-workflow-finish={editor ? 'flat' : undefined} data-workflow-palette={palette}
     data-system-workflow-overlay={systemWorkflowOverlay || undefined}
-    role="menu" tabIndex={-1} aria-label={label} style={{ left: position.x, top: position.y, ...(editor ? { width: Math.min(PANEL_WIDTH, (window.innerWidth - 20) / 2) } : systemWorkflowOverlay ? { width: menuBarRef ? Math.min(PANEL_WIDTH, window.innerWidth - 16) : Math.min(SYSTEM_WORKFLOW_PANEL_WIDTH, (window.innerWidth - 20) / 2) } : {}) }} onKeyDown={onKeyDown}
+    role="menu" tabIndex={-1} aria-label={label} style={{ left: position.x, top: position.y, ...(editor ? { width: Math.min(preferredWidth, (window.innerWidth - 20) / 2) } : systemWorkflowOverlay ? { width: menuBarRef ? Math.min(PANEL_WIDTH, window.innerWidth - 16) : Math.min(SYSTEM_WORKFLOW_PANEL_WIDTH, (window.innerWidth - 20) / 2) } : {}) }} onKeyDown={onKeyDown}
     onScroll={viewportSubmenus ? event => {
       if (event.target === ref.current) setOpenPath([]);
     } : undefined}

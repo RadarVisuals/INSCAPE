@@ -146,7 +146,7 @@ test('Studio switches between Profile and saved compositions through reload and 
     await selector.waitFor();
     assert.equal(await activeEditorDocument(page), 'reception');
     const canvasId = canvases[0].id;
-    await editorCommand(page, 'Canvas', 'Manage works');
+    await editorCommand(page, 'Inscape', 'Manage compositions');
     const edit = page.getByRole('complementary', { name: 'Work details' }).getByRole('button', { name: `Edit ${canvases[0].name} in Studio`, exact: true });
     await edit.click();
     await page.waitForFunction(id => new URLSearchParams(location.search).get('work') === id, canvasId);

@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { LayoutGrid, ArrowUpLeft, ChevronLeft, ChevronRight, Check, Ellipsis, Pencil, X } from 'lucide-react';
 import VisitorMenu from '../../profileDocument/components/VisitorMenu.jsx';
 import CanvasExplorer from './CanvasExplorer.jsx';
@@ -9,9 +9,24 @@ const worksPerPage = 6;
 
 // This index reads the supplied owner/public collection. It never switches the
 // editor's active Workbench; only the explicit Edit action may do that.
-export default function CompositionIndex({ onDeleteDraft, onRename, onReorder, items, selected, model, profile, listRef, onSelect, onEdit, selection, onDetails, onOpenReception, onEditReception, onGrid, settings, disabled, memory: workspaceMemory, visitorHeader, movingCanvasId }) {
+export default function CompositionIndex({ onDeleteDraft, onRename, onReorder, items, selected, model, profile, listRef, onSelect, onEdit, selection, onDetails, onOpenReception, onEditReception, onGrid, settings, disabled, memory: workspaceMemory, visitorHeader, movingCanvasId, hiddenRails, onToggleRail, smoothZoom }) {
   const [expandRequested, setExpanded] = useState(workspaceMemory?.expanded || false);
   const expanded = !selection && expandRequested;
+  const railId = useId();
+  const showToggles = onToggleRail && !expanded && !selection && !settings;
+  const hideIndex = Boolean(showToggles && (hiddenRails & 1));
+  const hideInfo = Boolean(showToggles && (hiddenRails & 2));
+  const railButtons = showToggles && ['index', 'info'].map((rail, index) => {
+    const open = rail === 'index' ? !hideIndex : !hideInfo;
+    const Chevron = (rail === 'index') === open ? ChevronRight : ChevronLeft;
+    const label = (open ? 'Hide ' : 'Show ') + rail;
+    return <button key={rail} type="button" className="gallery-rail-toggle" data-rail={rail}
+      aria-label={label} aria-expanded={open} aria-controls={railId + rail}
+      onClick={() => onToggleRail(1 << index)}>
+      <Chevron size={12} aria-hidden="true" />
+      <span className="gallery-rail-hint" aria-hidden="true">{label}</span>
+    </button>;
+  });
   const [page, setPage] = useState(() => Math.floor(Math.max(0, items.findIndex(item => item.id === selected.id)) / worksPerPage));
   const [rename, setRename] = useState(null), [rowError, setRowError] = useState('');
   const input = useRef(null);
@@ -69,7 +84,7 @@ export default function CompositionIndex({ onDeleteDraft, onRename, onReorder, i
       <button type="button" onClick={onGrid} aria-label="Grid" title="Thumbnail grid"><LayoutGrid size={17} /><span>Grid view</span></button>
     </header>}
     <div className="composition-index-body">
-      <aside className="composition-index-sidebar" inert={disabled || expanded ? '' : undefined}>
+      <aside id={railId + 'index'} data-rail-hidden={hideIndex || undefined} className="composition-index-sidebar" inert={disabled || expanded ? '' : undefined}>
         {!visitorHeader && (onOpenReception || onEditReception) && <div className="composition-index-reception">
           {onOpenReception && <button className="composition-index-about" type="button" onClick={onOpenReception}><ArrowUpLeft size={14} />Profile</button>}
           {onEditReception && <button type="button" className="composition-index-edit-reception" aria-label="Studio" title="Studio" onClick={onEditReception}><Pencil size={14} />{onOpenReception ? 'Edit' : 'Studio'}</button>}
@@ -97,7 +112,7 @@ export default function CompositionIndex({ onDeleteDraft, onRename, onReorder, i
             return <div key={item.id} data-work-id={item.id} className="composition-index-entry">
               <button type="button" data-previewed={active} aria-current={active ? 'page' : undefined}
                 aria-label={`Open ${item.name}`} onClick={() => select(item.id)} onDoubleClick={onRename ? () => beginRename(item) : undefined}>
-                {!visitorHeader && <small>{String(index + 1).padStart(2, '0')}</small>}<span>{item.name}</span>
+                <small>{String(start + index + 1).padStart(2, '0')}</small><span>{item.name}</span>
               </button>
               {onRename && <VisitorMenu name={`Actions for ${item.name}`} trigger={<Ellipsis size={15} />}>
                 <button type="button" onClick={() => beginRename(item)}>Rename</button>
@@ -125,7 +140,7 @@ export default function CompositionIndex({ onDeleteDraft, onRename, onReorder, i
       </aside>
       <section className="composition-index-main" ref={inspector}>
         {settings ? <section className="composition-index-settings" aria-label="Canvas settings">{settings}</section>
-          : <CanvasExplorer key={key} selected={selected} model={model} memory={memory} disabled={disabled} expanded={expanded} visitorHeader={visitorHeader} moving={movingCanvasId === selected.id}
+          : <CanvasExplorer smoothZoom={smoothZoom} railButtons={railButtons} infoId={railId + 'info'} hideInfo={hideInfo} key={key} selected={selected} model={model} memory={memory} disabled={disabled} expanded={expanded} visitorHeader={visitorHeader} moving={movingCanvasId === selected.id}
             onExpand={selection ? undefined : toggleExpanded} onEdit={selection ? undefined : onEdit} onDetails={onDetails} />}
       </section>
     </div>

@@ -44,7 +44,7 @@ const fragment = `
   uniform sampler2D noiseTile;
   varying highp vec3 colour;
   void main() {
-    float grain = (texture2D(noiseTile, gl_FragCoord.xy / 128.).r - .5) * (3.0/255.);
+    float grain = (texture2D(noiseTile, gl_FragCoord.xy / 128.).r - .5) * (6.0/255.);
     gl_FragColor = vec4(colour + grain, 1.);
   }`;
 

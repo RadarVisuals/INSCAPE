@@ -167,3 +167,8 @@
   flex: 1;
   border-top: 1px solid var(--tactile-divider);
 }
+
+.library-new-menu[data-workflow-palette='editor'] {
+  --workflow-menu-row-height: 24px;
+  --workflow-type-control: 500 11px/1.3 var(--font-interface);
+}

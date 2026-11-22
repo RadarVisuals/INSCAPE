@@ -5,13 +5,13 @@ import useCanvasViewport from './useCanvasViewport.js';
 import { canvasArtworkSources, canvasDestinations } from './canvasPresentationModel.js';
 import { OwnerSystemWorkflowMetadataContent } from '../ownerSystemWorkflow/OwnerSystemWorkflowMetadataModule.jsx';
 
-export default function CanvasExplorer({ selected, model, memory, disabled, expanded, onExpand, onEdit, onDetails, moving, visitorHeader }) {
+export default function CanvasExplorer({ selected, model, memory, disabled, expanded, onExpand, onEdit, onDetails, moving, visitorHeader, railButtons, infoId, hideInfo, smoothZoom }) {
   const host = useRef(null), helpId = useId();
   const [sourceId, setSourceId] = useState('');
   const destinations = useMemo(() => canvasDestinations(selected.draft).filter(item => item.view), [selected.draft]);
   const sources = useMemo(() => canvasArtworkSources(model), [model]);
   const source = sources.find(item => item.id === sourceId);
-  const navigation = useCanvasViewport({ hostRef: host, area: model.area, destinations, memory, disabled });
+  const navigation = useCanvasViewport({ hostRef: host, area: model.area, destinations, memory, disabled, smoothZoom });
   const zoomLabel = `${Math.round((navigation.camera?.scale || 0) * 100)}%`;
   const expandLabel = expanded ? 'Return to index' : 'Expand canvas';
   const expandButton = <button type="button" disabled={!onExpand} onClick={onExpand} aria-label={expandLabel} title={expandLabel} aria-pressed={expanded}>
@@ -36,6 +36,7 @@ export default function CanvasExplorer({ selected, model, memory, disabled, expa
       {onEdit && <button type="button" onClick={() => onEdit(selected.id, host.current)} aria-label="Edit canvas"><Pencil size={15} /><span>Edit canvas</span></button>}
       {expandButton}</div></header>}
     <div className="composition-explorer-stage">
+      {railButtons}
       <div ref={host} className="composition-explorer-viewport" data-canvas-id={selected.id} tabIndex={0} role="group" aria-label={`${selected.name} canvas`}
         data-canvas-journey-target={moving || undefined}
         aria-describedby={helpId} onKeyDown={navigation.onKeyDown}
@@ -61,7 +62,7 @@ export default function CanvasExplorer({ selected, model, memory, disabled, expa
         {visitorHeader && <div className="visitor-canvas-actions">{help}{expandButton}</div>}
       </div>
     </div>
-    {visitorHeader ? <aside className="visitor-work-details" aria-label="Work details">
+    {visitorHeader ? <aside id={infoId} data-rail-hidden={hideInfo || undefined} className="visitor-work-details" aria-label="Work details">
       <h1>{selected.name}</h1>
       {onEdit && <button type="button" className="gallery-edit-work"
         aria-label={`Edit ${selected.name} in Studio`} onClick={() => onEdit(selected.id, host.current)}>Edit in Studio</button>}

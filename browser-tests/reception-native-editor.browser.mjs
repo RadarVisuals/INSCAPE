@@ -58,6 +58,171 @@ for (const width of [1440,900]) test(`Studio Preview Space-pan preserves respons
   } finally {await browser.close();}
 });
 
+test('marquee moves two cells together before and after grouping', async () => {
+  const { browser, page, errors } = await setup();
+  try {
+    await page.goto(origin + '/browser-tests/reception-native-editor-fixture.html?tiling=1');
+    const cells = page.locator('[data-editor-cell-surface]');
+    await cells.first().waitFor();
+    const before = await reception(page);
+    const [left, top, bottom] = before.cells.map(cell => cell.id);
+    const drag = async (x, y, dx, dy) => {
+      await page.mouse.move(x, y);
+      await page.mouse.down();
+      await page.mouse.move(x + dx, y + dy, { steps: 8 });
+      await page.mouse.up();
+    };
+    await drag(718, 190, 407, 549);
+    assert.equal(await page.locator('[data-editor-cell-surface][data-selected]').count(), 2);
+    const assertMoved = async original => {
+      await drag(760, 280, 45, 30);
+      const after = await reception(page);
+      const delta = id => ['left', 'top'].map(k => cellFrame(after, id)[k] - cellFrame(original, id)[k]);
+      assert.ok(delta(top).every(n => n > 0));
+      assert.deepEqual(delta(bottom), delta(top));
+      assert.deepEqual(delta(left), [0, 0]);
+      await editorCommand(page, 'Edit', 'Undo');
+      assert.deepEqual(await reception(page), original);
+    };
+    await assertMoved(before);
+    await drag(718, 190, 407, 549);
+    await openSharedTool(page, 'Layers');
+    await page.getByRole('button', { name: 'Group selected layers', exact: true }).click();
+    await page.getByLabel('Group name').fill('Pair');
+    await page.getByRole('button', { name: 'Create group' }).click();
+    await closeSharedTool(page, 'Layers');
+    await page.mouse.click(718, 190);
+    await assertMoved(await reception(page));
+    await page.mouse.dblclick(760, 280);
+    assert.equal(await page.locator('[data-editor-cell-surface][data-selected]').count(), 1);
+    const grouped = await reception(page);
+    await drag(760, 280, 100, -40);
+    const moved = await reception(page);
+    assert.notDeepEqual(cellFrame(moved, top), cellFrame(grouped, top));
+    assert.deepEqual(cellFrame(moved, bottom), cellFrame(grouped, bottom));
+    const surface = page.locator(`[data-editor-cell-surface="${top}"]`);
+    await surface.dblclick({ position: { x: 36, y: 30 } });
+    await page.getByRole('button', { name: 'Back to cells' }).waitFor();
+    await page.keyboard.press('Escape');
+    await surface.waitFor();
+    assert.deepEqual(errors, []);
+  } finally { await browser.close(); }
+});
+
+test('mixed marquee moves free artwork and cells from either surface', async () => {
+  const { browser, page, errors } = await setup();
+  try {
+    await page.goto(origin + '/browser-tests/reception-native-editor-fixture.html?tiling=1');
+    await page.locator('[data-editor-cell-surface]').first().waitFor();
+    await page.evaluate(() => {
+      const root = window.nativeReceptionFixture.root, draft = root.getDraft();
+      draft.reception.cells = draft.reception.cells.filter(cell => !cell.members.includes(draft.reception.imageModules[0].id));
+      root.commitCompletedOperation(draft, { expectedGeneration: root.getGeneration() });
+    });
+    const original = await reception(page);
+    const drag = async (x, y, endX, endY) => {
+      await page.mouse.move(x, y);
+      await page.mouse.down();
+      await page.mouse.move(endX, endY, { steps: 8 });
+      await page.mouse.up();
+    };
+    for (const [x, y] of [[450, 400], [760, 280]]) {
+      await drag(300, 190, 1140, 750);
+      assert.equal(await page.locator('[data-editor-cell-surface][data-selected]').count(), 2);
+      await drag(x, y, x + 45, y + 30);
+      const moved = await reception(page);
+      const image = value => value.workbench.imageModules[0].position;
+      for (const axis of ['left', 'top']) {
+        const delta = image(moved)[axis] - image(original)[axis];
+        assert.ok(delta > 0);
+        for (const { id } of original.cells)
+          assert.equal(cellFrame(moved, id)[axis] - cellFrame(original, id)[axis], delta);
+      }
+      assert.deepEqual(moved.cells, original.cells);
+      await editorCommand(page, 'Edit', 'Undo');
+      assert.deepEqual(await reception(page), original);
+    }
+    await drag(300, 190, 1140, 750);
+    await openSharedTool(page, 'Layers');
+    await page.getByRole('button', { name: 'Group selected layers', exact: true }).click();
+    await page.getByLabel('Group name').fill('Mixed');
+    await page.getByRole('button', { name: 'Create group' }).click();
+    await closeSharedTool(page, 'Layers');
+    await page.mouse.click(300, 190);
+    await drag(450, 400, 495, 430);
+    const grouped = await reception(page);
+    assert.notDeepEqual(cellFrame(grouped, original.cells[0].id), cellFrame(original, original.cells[0].id));
+    await editorCommand(page, 'Edit', 'Undo');
+    await page.mouse.dblclick(450, 400);
+    await drag(450, 400, 495, 430);
+    const individual = await reception(page);
+    assert.notDeepEqual(individual.workbench.imageModules, original.workbench.imageModules);
+    assert.deepEqual(individual.workbench.shapes, original.workbench.shapes);
+    assert.deepEqual(errors, []);
+  } finally { await browser.close(); }
+});
+
+test('free image drops directly onto the canvas cell with Undo', async () => {
+  const { browser, page, errors } = await setup();
+  try {
+    await page.goto(origin + '/browser-tests/reception-native-editor-fixture.html?tiling=1');
+    await page.locator('[data-editor-cell-surface]').first().waitFor();
+    await page.evaluate(() => {
+      const root = window.nativeReceptionFixture.root, draft = root.getDraft();
+      draft.reception.cells = draft.reception.cells.filter(cell => !cell.members.includes(draft.reception.imageModules[0].id));
+      root.commitCompletedOperation(draft, { expectedGeneration: root.getGeneration() });
+    });
+    const before = await reception(page), image = before.imageModules[0].id;
+    await page.mouse.move(450, 400);
+    await page.mouse.down();
+    await page.mouse.move(820, 380, { steps: 8 });
+    const target = await page.locator('[data-cell-drop]').getAttribute('data-editor-cell-surface', { timeout: 4000 });
+    await page.mouse.up();
+    const after = await reception(page);
+    assert.ok(after.cells.find(cell => cell.id === target).members.includes(image));
+    assert.notDeepEqual(after.workbench.imageModules, before.workbench.imageModules);
+    assert.equal(await page.locator('[data-cell-drop]').count(), 0);
+    await editorCommand(page, 'Edit', 'Undo');
+    assert.deepEqual(await reception(page), before);
+    assert.deepEqual(errors, []);
+  } finally { await browser.close(); }
+});
+
+test('Layers releases and adopts the same image by drag, with Undo', async () => {
+  const { browser, page } = await setup();
+  try {
+    await page.goto(`${origin}/browser-tests/reception-native-editor-fixture.html?tiling=1&session=${crypto.randomUUID()}`);
+    await page.locator('[data-editor-cell-surface]').first().waitFor();
+    const initial = await reception(page), id = initial.imageModules[0].id;
+    const source = initial.cells.find(cell => cell.members.includes(id));
+    const target = initial.cells.find(cell => cell.id !== source.id);
+    await openSharedTool(page, 'Layers');
+    const layers = page.locator('.workbench-layers');
+    const row = id => layers.locator(`[data-layer-id="${id}"]`);
+    await row(source.id).getByRole('button', { name: /^Expand / }).click();
+    const image = row(id);
+    await image.getByRole('button', { name: /^Select / }).click();
+    // Drop on the upper edge of a top-level row, outside the destination cell.
+    await image.dragTo(row(target.id), { targetPosition: { x: 40, y: 2 } });
+    const released = await reception(page);
+    assert.ok(released.cells.every(cell => !cell.members.includes(id)));
+    assert.deepEqual(released.workbench.imageModules, initial.workbench.imageModules);
+    const topLevel = await layers.locator('.workbench-layers-list > div > [data-layer-id]').evaluateAll(rows => rows.map(row => row.dataset.layerId));
+    assert.equal(topLevel[topLevel.indexOf(target.id) - 1], id);
+    await image.dragTo(row(target.id));
+    assert.ok((await reception(page)).cells.find(cell => cell.id === target.id).members.includes(id));
+    const adopted = await reception(page);
+    const list = layers.locator('.workbench-layers-list');
+    const box = await list.boundingBox();
+    await image.dragTo(list, { targetPosition: { x: 12, y: Math.floor(box.height) - 4 } });
+    assert.ok((await reception(page)).cells.every(cell => !cell.members.includes(id)));
+    await editorCommand(page, 'Edit', 'Undo');
+    assert.deepEqual(await reception(page), adopted);
+    await editorCommand(page, 'Edit', 'Undo');
+    assert.deepEqual(await reception(page), released);
+  } finally { await browser.close(); }
+});
+
 test('cell alignment toggles directly and positions the fitted image in Editor and Preview through Undo and reload', { timeout: 90000 }, async () => {
   const { browser, page, errors } = await setup();
   try {
@@ -534,7 +699,7 @@ for (const [width, theme] of [[1440, 'DARK'], [900, 'LIGHT']]) test(`Reception l
       if (!root.commitCompletedOperation(draft, { expectedGeneration: root.getGeneration() })) throw Error('Fixture layers could not be saved');
     }, source);
     let layers = await openSharedTool(page, 'Layers');
-    const sourceName = initial.shapes.find(item => item.id === source).name, targetName = initial.shapes.find(item => item.id === target).name;
+    const sourceName = initial.shapes.find(item => item.id === source).name;
     await layers.getByRole('button', { name: `Expand ${sourceName}`, exact: true }).click();
     await layers.getByRole('button', { name: 'Select Transfer A', exact: true }).click();
     await layers.getByRole('button', { name: 'Bring layers to front', exact: true }).click();
@@ -546,25 +711,22 @@ for (const [width, theme] of [[1440, 'DARK'], [900, 'LIGHT']]) test(`Reception l
     await inspector.getByRole('button', { name: 'Select Transfer A', exact: true }).click();
     layers = await openSharedTool(page, 'Layers');
     const before = await reception(page);
-    await layers.getByRole('button', { name: 'Move to cell', exact: true }).click();
-    await page.getByRole('option', { name: targetName, exact: true }).click();
+    const member = layers.locator('[data-layer-id="shape:transfer-0"]');
+    await member.dragTo(layers.locator(`[data-layer-id="${target}"]`));
     const moved = await reception(page);
     assert.deepEqual(moved.cells.find(cell => cell.id === target).members, ['shape:transfer-0']);
     assert.deepEqual(moved.cells.find(cell => cell.id === source).members, ['shape:transfer-1']);
     assert.deepEqual(moved.shapes, before.shapes);
-    await page.waitForFunction(node => document.activeElement === node,
-      await layers.getByRole('button', { name: 'Move to cell', exact: true }).elementHandle());
+    assert.ok(await member.getByRole('button', { name: 'Select Transfer A' }).evaluate(node => document.activeElement === node));
     await editorCommand(page, 'Edit', 'Undo'); assert.deepEqual(await reception(page), before);
     await editorCommand(page, 'Edit', 'Redo'); assert.deepEqual(await reception(page), moved);
     await layers.getByRole('button', { name: 'Select Transfer A', exact: true }).click();
     await page.evaluate(() => window.nativeReceptionFixture.fail(true));
-    await layers.getByRole('button', { name: 'Move to cell', exact: true }).click();
-    await page.getByRole('option', { name: 'Move out of cell', exact: true }).click();
+    await member.dragTo(layers.locator(`[data-layer-id="${source}"]`), { targetPosition: { x: 42, y: 2 } });
     assert.deepEqual(await reception(page), moved);
     assert.match(await layers.getByRole('alert').innerText(), /could not be saved/);
     await page.evaluate(() => window.nativeReceptionFixture.fail(false));
-    await layers.getByRole('button', { name: 'Move to cell', exact: true }).click();
-    await page.getByRole('option', { name: 'Move out of cell', exact: true }).click();
+    await member.dragTo(layers.locator(`[data-layer-id="${source}"]`), { targetPosition: { x: 42, y: 2 } });
     const released = await reception(page);
     assert.equal(released.cells.some(cell => cell.members.includes('shape:transfer-0')), false);
     assert.deepEqual(cellFrame(released, 'shape:transfer-0'), cellFrame(moved, 'shape:transfer-0'));
@@ -1323,37 +1485,86 @@ test('Bento cell buttons add native Image and Text directly, retain content when
   } finally { await browser.close(); }
 });
 
-test('Reception has no grid or snapping controls and preserves the ordinary canvas preferences', { timeout: 60000 }, async () => {
+test('Studio canvas color applies inside the frame and resets to Charcoal light', async () => {
   const { browser, page, errors } = await setup();
   try {
-    const id = (await page.evaluate(() => window.nativeReceptionFixture.root.listWorkbenches()))[0].id;
-    await selectEditorDocument(page, id);
-    for (const label of ['Grid', 'Snap to grid', 'Snap to edges']) {
-      await openEditorMenu(page, 'View');
-      const item = page.getByRole('menuitemcheckbox', { name: label, exact: true });
-      if (await item.getAttribute('aria-checked') !== 'true') await item.click(); else await page.keyboard.press('Escape');
-    }
-    await selectEditorDocument(page, 'reception');
-    await openEditorMenu(page, 'View');
-    assert.equal(await page.getByRole('menuitemcheckbox', { name: /Grid|Snap to/ }).count(), 0);
-    await page.keyboard.press('Escape');
-    await editorCommand(page, 'Edit', 'Settings');
-    assert.equal(await page.getByRole('checkbox', { name: 'Grid snapping', exact: true }).count(), 0);
-    await page.getByRole('button', { name: 'Close Settings', exact: true }).click();
-    await generateBento(page, 2);
-    const value = await reception(page);
-    assert.equal(await page.locator('.workbench-alignment-grid').count(), 0);
-    await selectEditorDocument(page, id);
-    for (const label of ['Grid', 'Snap to grid', 'Snap to edges']) {
-      await openEditorMenu(page, 'View');
-      assert.equal(await page.getByRole('menuitemcheckbox', { name: label, exact: true }).getAttribute('aria-checked'), 'true');
-      await page.keyboard.press('Escape');
-    }
-    assert.deepEqual(await reception(page), value);
+    await openEditorMenu(page, 'Settings');
+    await page.getByRole('button', { name: 'LIGHT', exact: true }).click();
+    const canvas = page.locator('[data-workbench-area]');
+    const pixels = () => canvas.evaluate(node => {
+      const ctx = node.getContext('2d');
+      const read = (x, y) => [...ctx.getImageData(x, y, 1, 1).data];
+      return [read(node.width / 2, node.height / 2), read(1, 1)];
+    });
+    const original = await pixels(), draft = await reception(page);
+    const input = page.getByLabel('Canvas color', { exact: true });
+    assert.equal(await page.locator('main.system-workflow').evaluate(node => getComputedStyle(node).backgroundColor), 'rgb(222, 219, 211)');
+    await input.fill('#205677');
+    assert.deepEqual(await pixels(), [[32, 86, 119, 255], original[1]]);
+    await page.reload();
+    await openEditorMenu(page, 'Settings');
+    assert.equal(await input.inputValue(), '#205677');
+    await page.getByRole('button', { name: 'Reset canvas color' }).click();
+    assert.deepEqual(await pixels(), original);
+    assert.deepEqual(await reception(page), draft);
     assert.deepEqual(errors, []);
   } finally { await browser.close(); }
 });
 
+test('loose-layer grid snapping is shared between View and Settings on a canvas with cells', async () => {
+  const { browser, page, errors } = await setup();
+  try {
+    await page.goto(origin + '/browser-tests/reception-native-editor-fixture.html?tiling=1');
+    await page.locator('[data-editor-cell-surface]').first().waitFor();
+    const original = await reception(page);
+    const snap = page.getByRole('menuitemcheckbox', { name: 'Snap to grid', exact: true });
+    await openEditorMenu(page, 'View');
+    const initial = await snap.getAttribute('aria-checked') === 'true';
+    await snap.click();
+    await openEditorMenu(page, 'Settings');
+    const checkbox = page.getByRole('checkbox', { name: 'Grid snapping', exact: true });
+    assert.equal(await checkbox.isChecked(), !initial);
+    await checkbox.setChecked(initial);
+    await page.getByRole('button', { name: 'Close Settings', exact: true }).click();
+    await page.reload();
+    await openEditorMenu(page, 'View');
+    assert.equal(await snap.getAttribute('aria-checked'), String(initial));
+    assert.deepEqual(await reception(page), original);
+    assert.deepEqual(errors, []);
+  } finally { await browser.close(); }
+});
+
+test('Alt inverts grid snapping while moving artwork inside a cell', async () => {
+  const { browser, page } = await setup();
+  try {
+    const positions = [];
+    for (const [enabled, alt] of [[true, false], [true, true], [false, false], [false, true]]) {
+      await page.goto(origin + '/browser-tests/reception-native-editor-fixture.html?tiling=1&session=' + crypto.randomUUID());
+      await page.locator('[data-editor-cell-surface]').first().waitFor();
+      await openEditorMenu(page, 'Settings');
+      await page.getByRole('checkbox', { name: 'Grid snapping', exact: true }).setChecked(enabled);
+      await page.getByRole('button', { name: 'Close Settings', exact: true }).click();
+      const before = await reception(page);
+      const image = before.imageModules[0].id;
+      const owner = before.cells.find(cell => cell.members.includes(image)).id;
+      await page.locator(`[data-editor-cell-surface="${owner}"]`).dblclick({ position: { x: 115, y: 147 } });
+      await page.mouse.move(450, 400);
+      await page.mouse.down();
+      if (alt) await page.keyboard.down('Alt');
+      await page.mouse.move(461, 409, { steps: 5 });
+      await page.mouse.up();
+      if (alt) await page.keyboard.up('Alt');
+      const after = await reception(page);
+      const position = value => value.workbench.imageModules.find(item => item.id === image).position;
+      assert.notDeepEqual(position(after), position(before));
+      assert.ok(after.cells.find(cell => cell.id === owner).members.includes(image));
+      positions.push(position(after));
+    }
+    assert.notDeepEqual(positions[0], positions[1]);
+    assert.deepEqual(positions[0], positions[3]);
+    assert.deepEqual(positions[1], positions[2]);
+  } finally { await browser.close(); }
+});
 
 test('generated arrangements carry existing artwork visibly and retain it when reducing the cell count', { timeout: 90000 }, async () => {
   const { browser, page, errors } = await setup();
@@ -1401,7 +1612,7 @@ test('direct Reception entry accepts pointer clicks on controls outside the canv
     try {
       const preview = editorMenu(page, 'Canvas');
       const documentLabel = workspacePicker(page);
-      assert.equal(await documentLabel.innerText(), '// STUDIO · Profile');
+      assert.equal(await documentLabel.innerText(), '// STUDIO Ã‚Â· Profile');
       await openEditorMenu(page, 'Tools');
       const tools = page.getByRole('menu', { name: 'Tools options' });
       await tools.waitFor();
@@ -1414,7 +1625,7 @@ test('direct Reception entry accepts pointer clicks on controls outside the canv
         const rect = node.getBoundingClientRect();
         return node.contains(document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2));
       }), true, `the document controls receive the pointer at ${width}px`);
-      await editorCommand(page, 'Canvas', 'Bento settings');
+      await editorCommand(page, 'Canvas', 'Cell settings');
       await page.getByRole('dialog', { name: 'Bento settings', exact: true }).waitFor();
       await page.getByRole('button', { name: 'Close Bento', exact: true }).click();
       await page.getByRole('button', { name: 'Artwork library', exact: true }).click();
@@ -1686,7 +1897,7 @@ test('one Editor switches Reception and canvas documents and reopens Reception f
 
     await selectEditorDocument(page, canvasId);
     await shape(page, originalCanvas.shapes[0].id).waitFor();
-    assert.match(await workspacePicker(page).innerText(), /^\/\/ STUDIO · /u);
+    assert.match(await workspacePicker(page).innerText(), /^\/\/ STUDIO Ã‚Â· /u);
     assert.equal(await page.locator('main[data-reception-editor]').count(), 0);
     assert.equal(await shape(page, cellId).count(), 0);
     assert.deepEqual(withoutReception(await snapshot(page)), originalCanvas, 'selecting the ordinary canvas preserves its original records');
@@ -1701,7 +1912,7 @@ test('one Editor switches Reception and canvas documents and reopens Reception f
 
     await selectEditorDocument(page, 'reception');
     await shape(page, cellId).waitFor();
-    assert.equal(await workspacePicker(page).innerText(), '// STUDIO · Profile');
+    assert.equal(await workspacePicker(page).innerText(), '// STUDIO Ã‚Â· Profile');
     assert.equal(await shape(page, canvasShape.id).count(), 0);
     assert.deepEqual(await reception(page), authoredReception, 'switching back preserves Reception layers, membership and geometry');
     await openSavedReception(page);
@@ -2279,7 +2490,7 @@ for (const width of [1440, 900]) test(`full-height side columns retain working d
     await editorCommand(page, 'Edit', 'Undo'); assert.deepEqual(await reception(page), original);
     if (width === 900) await page.getByRole('switch', { name: 'Dark mode' }).uncheck();
     const label = page.getByLabel('Bento dimensions', { exact: true });
-    const dimensions = area => Math.round(area.width) + ' × ' + Math.round(area.height) + ' px';
+    const dimensions = area => Math.round(area.width) + ' Ãƒâ€” ' + Math.round(area.height) + ' px';
     const assertGap = async () => {
       const outer = await page.locator('.workbench-area-frame').boundingBox(), resize = await page.locator('.reception-bento-frame-handles').boundingBox();
       for (const gap of [outer.x - resize.x, outer.y - resize.y, resize.x + resize.width - outer.x - outer.width, resize.y + resize.height - outer.y - outer.height])

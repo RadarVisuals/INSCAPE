@@ -40,8 +40,8 @@ export default function useGalleryLayoutJourney({ root, selected, model, layout,
     const moving = surface.current?.dataset.canvasId === item.id ? surface.current : null;
     const node = tile || moving || overviewCanvasNode(root.current, item.id);
     if (next.layout === 'list') {
-      const departure = node?.closest('[data-gallery-cycle]') || destination.current?.closest('[data-gallery-cycle]');
-      tileOrigin.current = departure ? { id: item.id, cycle: departure.dataset.galleryCycle } : null;
+      const departure = tile?.closest('[data-gallery-cycle]');
+      tileOrigin.current = tile ? { id: item.id, cycle: departure?.dataset.galleryCycle } : null;
     }
     const source = captureOverviewCanvas(node, item.model, item.name, item.id);
     const bounds = node?.getBoundingClientRect();

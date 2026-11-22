@@ -32,7 +32,7 @@ test('one wordmark menu keeps keyboard access, tools and destinations at wide an
         const menu = page.getByRole('menu', { name: 'Inscape menu', exact: true });
         assert.deepEqual(await menu.locator(':scope > button > span').allTextContents(), [
           'Search commands...', 'Profile', 'Gallery', 'Writing', 'Exhibition', 'Studio', 'Discover',
-          'Canvas', 'Edit', 'View', 'Tools', 'Activity', 'Settings', 'Help & Docs', 'Backup',
+          'Canvas', 'Edit', 'View', 'Tools', 'Manage compositions', 'Activity', 'Settings', 'Help & Docs', 'Backup',
         ]);
         assert.equal(await menu.getByRole('menuitemcheckbox', { name: 'Studio', checked: true }).count(), 1);
         assert.equal(await menu.getByRole('menuitemcheckbox', { name: 'Exhibition' }).isDisabled(), true);
@@ -71,7 +71,8 @@ test('one wordmark menu keeps keyboard access, tools and destinations at wide an
           await openEditorMenu(page, 'Canvas');
           const child = await page.getByRole('menu', { name: 'Canvas options' }).boundingBox();
           assert.ok(child.x >= 0 && child.x + child.width <= width && child.y >= 0 && child.y + child.height <= 500);
-          await page.getByRole('menu', { name: 'Canvas options' }).getByRole('menuitem', { name: 'Rename', exact: true }).click();
+          await page.keyboard.press('Escape');
+          await choose(page, 'Studio', 'Rename composition');
           await page.getByRole('dialog', { name: 'Rename composition' }).getByRole('button', { name: 'Cancel' }).click();
           const root = await openEditorMenu(page);
           const backup = root.getByRole('menuitem', { name: 'Backup' });
@@ -95,7 +96,7 @@ test('canvas commands retain save failures, rename, dimensions and Undo', { time
     page.setDefaultTimeout(10000);
     await page.route('**/*', route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
     await page.goto(`${origin}/browser-tests/workbench-storage-fixture.html?seed=1`, { waitUntil: 'domcontentloaded' });
-    await choose(page, 'Canvas', 'Rename');
+    await choose(page, 'Studio', 'Rename composition');
     await page.getByLabel('Composition name', { exact: true }).fill('First canvas');
     await page.getByRole('button', { name: 'Save name', exact: true }).click();
     const documentLabel = workspacePicker(page);
@@ -106,7 +107,7 @@ test('canvas commands retain save failures, rename, dimensions and Undo', { time
     await page.getByRole('button', { name: 'Create composition', exact: true }).click();
     assert.equal(await documentLabel.textContent(), '// STUDIO · Second canvas');
     assert.notEqual(await page.evaluate(() => window.guardedStore().getWorkbenchId()), first);
-    await choose(page, 'Canvas', 'First canvas', 'menuitemcheckbox');
+    await choose(page, 'Compositions', 'First canvas', 'menuitemcheckbox');
     assert.equal(await documentLabel.textContent(), '// STUDIO · First canvas');
     assert.equal(await page.evaluate(() => window.guardedStore().getWorkbenchId()), first);
     await choose(page, 'Canvas', 'Canvas size');
@@ -122,7 +123,7 @@ test('canvas commands retain save failures, rename, dimensions and Undo', { time
       const set = Storage.prototype.setItem;
       Storage.prototype.setItem = function(key, value) { if (key.startsWith('inscape.system-workflow-draft.')) throw Error('Full'); return set.call(this, key, value); };
     });
-    await choose(page, 'Canvas', 'Rename');
+    await choose(page, 'Studio', 'Rename composition');
     await page.getByLabel('Composition name', { exact: true }).fill('Unsaved name');
     await page.getByRole('button', { name: 'Save name', exact: true }).click();
     assert.match(await page.getByRole('alert').innerText(), /save/i);

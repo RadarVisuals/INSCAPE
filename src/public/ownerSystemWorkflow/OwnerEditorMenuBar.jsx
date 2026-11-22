@@ -79,15 +79,17 @@ export default function OwnerEditorMenuBar({ busy, hidden, documentNavigation, i
   ];
   const commands = {
     Canvas: [
-      check('profile-bento', 'Profile', profileBento, () => documentNavigation.select('reception')),
-      ...items.map(item => check(`canvas:${item.id}`, item.name, activeId === item.id, () => documentNavigation.select(item.id))),
-      ...studioCommands.map(entry => ({ ...entry, label: ({ new: '+ New', rename: 'Rename' })[entry.id] || entry.label })),
-      command('delete', items.length === 1 ? 'Delete Studio draft (last composition)' : 'Delete Studio draft', () => setForm('delete'), { disabled: profileBento || blocked || items.length < 2 }),
-      ...(documentNavigation.enableCells || documentNavigation.cellsUnavailableReason ? [command('enable-cells', 'Use Bento cells',
+      { ...studioCommands[0], label: '+ New' },
+      { id: 'compositions', label: 'Compositions', children: items.length
+        ? items.map(item => check(item.id, item.name, activeId === item.id, () => documentNavigation.select(item.id)))
+        : [command('empty', 'Create your first composition with + New.', undefined, { disabled: true })] },
+      command('delete', 'Delete local composition…', () => setForm('delete'), { disabled: profileBento || blocked || items.length < 2,
+        reason: items.length === 1 ? 'Studio keeps at least one composition.' : undefined }),
+      ...(documentNavigation.enableCells || documentNavigation.cellsUnavailableReason ? [command('enable-cells', 'Use cells',
         documentNavigation.enableCells, { disabled: blocked || Boolean(documentNavigation.cellsUnavailableReason), reason: documentNavigation.cellsUnavailableReason })] : []),
       ...(documentNavigation.enableCanvasModules ? [command('enable-canvas-modules', 'Use canvas modules',
         documentNavigation.enableCanvasModules, { disabled: blocked })] : []),
-      command('size', cells ? 'Bento settings' : 'Canvas size', () => cells ? cells.openSettings() : setSizeOpen(true), { disabled: blocked }),
+      command('size', cells ? 'Cell settings' : 'Canvas size', () => cells ? cells.openSettings() : setSizeOpen(true), { disabled: blocked }),
       command('preview', 'Preview', () => onPreview(trigger.current), { disabled: blocked }),
     ],
     Edit: historyCommands,
@@ -95,8 +97,8 @@ export default function OwnerEditorMenuBar({ busy, hidden, documentNavigation, i
       ...zoomCommands,
       command('focus', 'Focus selection', navigation.focusSelection, { disabled: camera.locked || !navigation.canFocusSelection }),
       command('back', 'Previous view', navigation.goBack, { disabled: camera.locked || !navigation.canGoBack }),
-      ...(!cells ? [check('grid', 'Grid', preferences.gridMode !== 'NONE', () => change({ gridMode: preferences.gridMode === 'NONE' ? 'DOTS' : 'NONE' })),
       check('snap-grid', 'Snap to grid', preferences.shortcutSnap, () => change({ shortcutSnap: !preferences.shortcutSnap })),
+      ...(!cells ? [check('grid', 'Grid', preferences.gridMode !== 'NONE', () => change({ gridMode: preferences.gridMode === 'NONE' ? 'DOTS' : 'NONE' })),
       check('snap-edges', 'Snap to edges', preferences.edgeSnap, () => change({ edgeSnap: !preferences.edgeSnap }))] : []),
     ],
     Tools: [
@@ -114,6 +116,7 @@ export default function OwnerEditorMenuBar({ busy, hidden, documentNavigation, i
     <header className="workspace-header editor-menu-bar" data-document={activeId} ref={node => { bar.current = node; navigationRef.current = node; }}>
       <div className="editor-menu-start">
         {!hidden && <WorkspaceBrand key={activeId} current="Studio" trigger={trigger} groups={commands}
+          editorActions={onManageCompositions ? [command('manage', 'Manage compositions', onManageCompositions, { disabled: blocked })] : []}
           destinations={{ Discover: source => onOpenPanel('discover', source), ...workspaceDestinations }}
           blocked={blocked} onPanel={onOpenPanel} onError={setError} onSearch={!camera.locked && onSearchCommands}
           onOpen={() => { setForm(null); setSizeOpen(false); setError(''); }} />}

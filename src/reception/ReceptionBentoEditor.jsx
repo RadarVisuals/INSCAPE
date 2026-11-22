@@ -1,4 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { artworkModuleId } from '../systemWorkflow/domain/artworkLayers.js';
 import { Image, Type, CornerDownRight, Grid2X2 } from 'lucide-react';
 import { useWorkbenchView } from '../public/ownerSystemWorkflow/WorkbenchViewContext.js';
 import { useWorkbenchCamera } from '../public/ownerSystemWorkflow/WorkbenchCamera.jsx';
@@ -14,7 +15,7 @@ import { CellPositionButton } from './EditorCellPositionControls.jsx';
 import { receptionModuleWindow, receptionModuleSizeReason } from './receptionEditorDocument.js';
 import { receptionBentoSettings, resizeReceptionBentoFrame, setReceptionBentoSettings } from './receptionBento.js';
 import { receptionBentoKeyboardTarget } from './receptionBentoInsertion.js';
-import { createReceptionCellGesture } from './receptionCellGesture.js';
+import { createCellClusterGesture, createReceptionCellGesture } from './receptionCellGesture.js';
 import { createReceptionCellDrawGesture } from './receptionCellDrawing.js';
 import { createReceptionNeighbourMotion } from './receptionNeighbourMotion.js';
 import { isWorkbenchHandSurface } from '../public/ownerSystemWorkflow/useWorkbenchPan.js';
@@ -37,7 +38,7 @@ export default function ReceptionBentoEditor(props) {
   const context = useEditorCells();
   return context ? <BentoEditor key={context.store.getProfileAddress()} context={context} {...props} /> : null;
 }
-function BentoEditor({ context, hostRef, disabled, navigation, flushLayout, library, libraryPreferences }) {
+function BentoEditor({ context, hostRef, clusterDrag, gridSnap = true, gridSpacing, disabled, navigation, flushLayout, library, libraryPreferences }) {
   const view = useWorkbenchView(), camera = useWorkbenchCamera(), store = context.store;
   const reception = store.getReception(), gestureHost = useRef(null), live = useRef(null), imageRequest = useRef(null);
   const { area, setPreview: setAreaPreview } = useWorkbenchArea();
@@ -96,11 +97,14 @@ function BentoEditor({ context, hostRef, disabled, navigation, flushLayout, libr
       const { scale, offset } = camera.getCamera(), target = event.currentTarget, previous = view.transforms;
       const drawing = edge === 'draw';
       if (drawing) cellId = 'shape:' + crypto.randomUUID();
-      const cellGesture = drawing ? createReceptionCellDrawGesture(origin, cellId,
-        { x: (event.clientX - offset.x) / scale, y: (event.clientY - offset.y) / scale }, scale, selectedId)
-        : cellId && createReceptionCellGesture(origin, cellId, edge, scale);
+      const block = view.layers.find(layer => layer.children?.includes(cellId));
+      const cluster = !edge && view.selection.includes(cellId) && view.selection.length > 1
+        ? [...new Set(view.selection.map(id => artworkModuleId(view.content, id)))] : !edge && block && block.id !== view.editingBlockId ? block.children : [];
+      const cellGesture = cluster.length > 1 ? createCellClusterGesture(origin, cluster, scale, gridSpacing) : drawing ? createReceptionCellDrawGesture(origin, cellId,
+        { x: (event.clientX - offset.x) / scale, y: (event.clientY - offset.y) / scale }, scale, selectedId, gridSpacing)
+        : cellId && createReceptionCellGesture(origin, cellId, edge, scale, gridSpacing);
       let moved = false, accepted = false, unlock, proposal;
-      if (cellId) { context.leaveCell(false); if (!drawing) view.selectArtwork(cellId); setDragging({ id: cellId }); }
+      if (cellId) { context.leaveCell(false); if (!drawing) view.selectLayers(cluster.length > 1 ? cluster : [cellId], false, block?.id === view.editingBlockId ? block?.id : null); setDragging({ id: cellId }); }
       target.focus({ preventScroll: true }); gestureHost.current = target;
       const started = gestures.beginResize(event, {
         beforeTransforms: previous,
@@ -108,7 +112,7 @@ function BentoEditor({ context, hostRef, disabled, navigation, flushLayout, libr
           && store.getGeneration() === generation && !live.current.disabled,
         preview: (delta, bypass, push) => {
           try {
-            if (cellGesture) proposal = cellGesture(delta, bypass, push);
+            if (cellGesture) proposal = cellGesture(delta, gridSnap === Boolean(bypass), push);
             else {
               moved ||= Math.hypot(delta.x, delta.y) > 4;
               if (!moved) return;
@@ -121,7 +125,7 @@ function BentoEditor({ context, hostRef, disabled, navigation, flushLayout, libr
             }
             const { next, guides } = proposal;
             const neighbourIds = origin.cells.filter(cell => {
-              if (cell.id === cellId) return false;
+              if (cell.id === cellId || cluster.includes(cell.id)) return false;
               const before = live.current.view.transforms[cell.id]?.frame || receptionModuleWindow(origin, cell.id);
               const after = receptionModuleWindow(next, cell.id);
               return before.left !== after.left || before.top !== after.top;
@@ -135,7 +139,11 @@ function BentoEditor({ context, hostRef, disabled, navigation, flushLayout, libr
             setSnapGuides(guides.map(m => ({ ...m, rect: screenRect(m.rect), target: screenRect(m.target),
               value: m.value + offset[m.axis], targetEdge: m.targetEdge + offset[m.axis] })));
             setAreaPreview(next.workbench.area);
-            view.setTransforms({ ...previous, ...Object.fromEntries(origin.cells.map(cell => [cell.id,
+            const layerTransforms = (proposal.action === 'placeCells' ? proposal.args[1] || [] : []).map(({ id, left, top }) => {
+              const frame = receptionModuleWindow(origin, id);
+              return [id, { scale: 1, x: left - frame.left, y: top - frame.top }];
+            });
+            view.setTransforms({ ...previous, ...Object.fromEntries(layerTransforms), ...Object.fromEntries(origin.cells.map(cell => [cell.id,
               { scale: 1, x: 0, y: 0, frame: receptionModuleWindow(next, cell.id), cellMoveContents: true }])) });
             setError('');
           } catch (failure) { setError(failure.message); gestures.cancel(); }
@@ -157,6 +165,10 @@ function BentoEditor({ context, hostRef, disabled, navigation, flushLayout, libr
     });
   };
   live.current.start = start;
+  useLayoutEffect(() => {
+    clusterDrag.current = (event, cellId) => live.current.start(event, cellId);
+    return () => { clusterDrag.current = null; };
+  }, [clusterDrag]);
   useEffect(() => { cancel(); }, [view.interactionTool, cancel]);
   useEffect(() => {
     const host = hostRef.current;
@@ -237,15 +249,18 @@ function BentoEditor({ context, hostRef, disabled, navigation, flushLayout, libr
     </div>
     {!disabled && ['select', 'cell'].includes(view.interactionTool) && !navigation.moving && <div ref={snapHost} className="reception-bento-overlay" data-previewing={previewing || undefined} data-workbench-selection-tools
       style={{ clipPath: `inset(${view.navigationTop}px 0 0 0)` }}>
-      {view.interactionTool === 'select' && context.cells.filter(cell => cell.id !== context.editingCellId && reception.workbench.shapes.find(item => item.id === cell.id)?.open).map(cell => {
+      {view.interactionTool === 'select' && context.cells.filter(cell => cell.id !== context.editingCellId && !view.editorHiddenIds.includes(cell.id) && reception.workbench.shapes.find(item => item.id === cell.id)?.open).map(cell => {
         const r = view.transforms[cell.id]?.frame || receptionModuleWindow(reception, cell.id), active = selected?.id === cell.id;
-        return <div key={cell.id} className="reception-bento-cell" data-selected={active || undefined} data-dragging={dragging?.id === cell.id || undefined}
+        return <div key={cell.id} className="reception-bento-cell" data-selected={view.selection.includes(cell.id) || undefined} data-dragging={dragging?.id === cell.id || undefined}
           data-editor-cell-surface={cell.id} style={{ ...project(r), borderRadius: (cell.radius || 0) * view.scale }} tabIndex={0}
-          title="Drag to snap; stops at neighbours. Hold Shift to push, Alt for free placement. Alt+Arrow moves 10 px; Alt+Shift+Arrow moves 50 px."
+          title="Drag to snap; stops at neighbours. Hold Shift to push, Alt to invert grid snapping. Alt+Arrow moves 10 px; Alt+Shift+Arrow moves 50 px."
           role="group" aria-label={`${reception.shapes.find(item => item.id === cell.id)?.name || 'Cell'} bento cell`}
           onPointerDown={event => { if (event.target === event.currentTarget) start(event, cell.id); }}
-          onClick={event => { if (event.target === event.currentTarget && !gestures.isActive()) view.selectArtwork(cell.id); }}
-          onDoubleClick={event => { if (event.target === event.currentTarget && !previewing) context.enterCell(cell.id); }}
+
+          onDoubleClick={event => { if (event.target !== event.currentTarget || previewing) return;
+            const group = view.layers.find(layer => layer.children?.includes(cell.id));
+            if (group && group.id !== view.editingBlockId) view.selectLayers([cell.id], false, group.id);
+            else { context.enterCell(cell.id); hostRef.current?.focus({ preventScroll: true }); } }}
           onKeyDown={event => {
             if (event.target !== event.currentTarget || previewing) return;
             if (event.key === 'Enter') { event.preventDefault(); event.stopPropagation(); context.enterCell(cell.id); }
@@ -270,7 +285,7 @@ function BentoEditor({ context, hostRef, disabled, navigation, flushLayout, libr
         </div>;
       })}
       {view.interactionTool === 'select' && !context.editingCellId && !dragging && !previewing && <div className="reception-bento-frame-handles" style={project(area, BENTO_RESIZE_OUTSET)}>
-        <span className="reception-bento-dimensions" aria-label="Bento dimensions">{Math.round(area.width)} × {Math.round(area.height)} px</span>
+        <span className="reception-bento-dimensions" aria-label="Bento dimensions">{Math.round(area.width)} Ãƒâ€” {Math.round(area.height)} px</span>
         {['n', 'ne', 'e', 'se', 's', 'sw', 'w', 'nw'].map(edge => <button key={edge} type="button" className="reception-bento-frame-handle" data-edge={edge}
           aria-label={'Resize Bento ' + { n: 'top', ne: 'top right', e: 'right', se: 'bottom right', s: 'bottom', sw: 'bottom left', w: 'left', nw: 'top left' }[edge]}
           title="Drag to resize Bento" onPointerDown={event => start(event, null, edge)}

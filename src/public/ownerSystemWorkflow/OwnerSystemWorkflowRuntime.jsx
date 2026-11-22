@@ -227,7 +227,7 @@ export function WorkbenchSession({
   const workbenchPreferences = useMemo(
     () =>
       reception
-        ? { ...savedWorkbenchPreferences, gridMode: 'NONE', shortcutSnap: false, edgeSnap: false }
+        ? { ...savedWorkbenchPreferences, gridMode: 'NONE', edgeSnap: false }
         : savedWorkbenchPreferences,
     [reception, savedWorkbenchPreferences]
   );
@@ -595,6 +595,7 @@ export function WorkbenchSession({
               <WorkbenchPlacement
                 hostRef={workspaceRef}
                 enabled={workbenchPreferences.edgeSnap && !previewing && !browsing}
+                editable={!previewing && !browsing}
                 gridEnabled={workbenchPreferences.shortcutSnap && !previewing && !browsing}
                 gridSpacing={workbenchPreferences.gridSpacing}
                 gap={workbenchPreferences.moduleGap}
@@ -652,6 +653,9 @@ export function WorkbenchSession({
                 >
                   <WorkbenchViewControls
                     bentoLibrary={library}
+                    canvasColor={browsing || previewing ? null : workbenchPreferences.canvasColor}
+                    gridSnap={workbenchPreferences.shortcutSnap}
+                    gridSpacing={workbenchPreferences.gridSpacing}
                     bentoLibraryPreferences={editorPreferences.section('library')}
                     flushBentoLayout={layoutPersistence.flush}
                     renderMenuBar={navigation => (

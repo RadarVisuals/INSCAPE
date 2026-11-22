@@ -436,7 +436,7 @@ test('Gallery shows only published work to its owner and Studio preserves draft 
         await page.waitForFunction(() => document.querySelector('.owner-canvas-journey[data-direction="editor"]')?.getAnimations().some(a => a.effect.getTiming().duration === 650));
       }
       await page.locator('.owner-canvas-journey').waitFor({ state: 'detached' });
-      await editorCommand(page, 'Canvas', 'Manage works');
+      await editorCommand(page, 'Inscape', 'Manage compositions');
       if (motion === 'no-preference') {
         await page.waitForFunction(() => document.querySelector('.owner-canvas-journey[data-direction="overview"]')?.getAnimations().some(a => a.effect.getTiming().duration === 650));
       }
@@ -521,7 +521,7 @@ test('create from Profile → Gallery, compose, and reopen the saved local work 
       if (await edit.count()) await edit.click();
     }
     await textbox.fill(text);
-    await editorCommand(page, 'Canvas', 'Manage works');
+    await editorCommand(page, 'Inscape', 'Manage compositions');
     const index = page.getByRole('navigation', { name: 'Canvases', exact: true });
     const selected = index.getByRole('button', { name: `Open ${name}`, exact: true });
     await selected.waitFor();
@@ -547,7 +547,7 @@ test('create from Profile → Gallery, compose, and reopen the saved local work 
     assert.equal(new URL(page.url()).searchParams.get('work'), id, 'Failed browser Back restores the editor URL');
     await page.locator('.text-window').getByText(text, { exact: true }).waitFor();
     await page.evaluate(() => window.allowFixtureSave());
-    await editorCommand(page, 'Canvas', 'Manage works');
+    await editorCommand(page, 'Inscape', 'Manage compositions');
     await button(`Open ${name}`).waitFor();
     await page.getByRole('switch', { name: 'Grid view' }).uncheck();
     await selected.waitFor();
@@ -593,7 +593,7 @@ test('Studio saves privately, publishes to Gallery, and returns to that composit
       if (await edit.count()) await edit.click();
     }
     await textbox.fill('Light over the fields.');
-    await editorCommand(page, 'Canvas', 'Rename');
+    await editorCommand(page, 'Studio', 'Rename composition');
     await button('Cancel').click();
     await page.reload();
     await local.getByText('Studio only').waitFor();
@@ -616,7 +616,7 @@ test('Studio saves privately, publishes to Gallery, and returns to that composit
     const selected = button('Edit ' + name + ' in Studio');
     await selected.waitFor();
     await selected.click();
-    await editorCommand(page, 'Canvas', 'Rename');
+    await editorCommand(page, 'Studio', 'Rename composition');
     await page.getByLabel('Composition name').fill(name + ' II');
     await button('Save name').click();
     await local.getByText('In Gallery', { exact: true }).waitFor();
@@ -625,7 +625,7 @@ test('Studio saves privately, publishes to Gallery, and returns to that composit
     await page.reload();
     await selected.click();
     await editor.getByText(name + ' II', { exact: true }).waitFor();
-    await editorCommand(page, 'Canvas', 'Delete Studio draft');
+    await editorCommand(page, 'Canvas', 'Delete local composition…');
     const removal = page.getByRole('alertdialog', { name: 'Delete local composition' });
     await removal.getByText(/Published versions stay online/).waitFor();
     await removal.getByRole('button', { name: 'Delete local composition' }).click();

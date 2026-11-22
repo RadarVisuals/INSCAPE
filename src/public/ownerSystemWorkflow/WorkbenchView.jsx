@@ -366,7 +366,7 @@ const emptySubscribe = () => () => {};
 export function WorkbenchViewControls({
   hostRef,
   bentoLibrary,
-  bentoLibraryPreferences,
+  canvasColor, gridSnap, gridSpacing, bentoLibraryPreferences,
   flushBentoLayout,
   renderMenuBar,
   disabled = false,
@@ -379,6 +379,7 @@ export function WorkbenchViewControls({
 }) {
   const { editingBounds: areaBounds, area, showOutside, setShowOutside } = useWorkbenchArea();
   const view = useWorkbenchView();
+  const clusterDrag = useRef(null);
   const cells = useEditorCells(),
     latestCells = useRef(cells);
   latestCells.current = cells;
@@ -388,6 +389,7 @@ export function WorkbenchViewControls({
   const latest = useRef(view);
   latest.current = view;
   const groupDrop = view.groupDrop;
+  const cellDropNode = useRef(null);
   const groupScene = view.groupScene;
   const [moveError, setMoveError] = useState('');
   const [groupsOpen, setGroupsOpen] = useState(false);
@@ -417,7 +419,10 @@ export function WorkbenchViewControls({
       restoreSelection: state => latest.current.restoreSelection(state),
       previewMarquee: setMarquee,
       finishSnap: () => currentSnap.current.finish(),
-      cancelDrop: () => groupDrop.current?.cancel(),
+      cancelDrop: () => {
+        cellDropNode.current?.removeAttribute('data-cell-drop'); cellDropNode.current = null;
+        groupDrop.current?.cancel();
+      },
     })
   );
   const cancelGesture = gestures.cancel,
@@ -657,11 +662,46 @@ export function WorkbenchViewControls({
     const operation = moveOperation(latest.current, ids);
     if (!operation) return;
     snapMovement.begin(event, operation.nodes);
+    const context = latestCells.current;
+    const generation = context?.store.getGeneration();
+    const memberIds = operation.ids.map(id => artworkModuleId(latest.current.content, id));
+    const targetAt = pointer => {
+      if (!context) return null;
+      const hit = document.elementsFromPoint(pointer.clientX, pointer.clientY);
+      if (hit[0]?.closest('.workspace-header, [data-workbench-toolbar], .workbench-tool-dock')) return null;
+      return hit.find(node => node.hasAttribute('data-editor-cell-surface') && hostRef.current.contains(node)
+        && context.cells.some(cell => cell.id === node.dataset.editorCellSurface &&
+          memberIds.some(id => !cell.members.includes(id)))) || null;
+    };
+    let previewTransforms;
     gestures.beginMove(event, {
       ...operation,
       captureTarget: event.target.matches?.('.workbench-selection') ? event.target : undefined,
-      previewDrop: pointer => groupDrop.current?.preview(pointer, operation.ids),
-      commitDrop: pointer => groupDrop.current?.commit(pointer, operation.ids),
+      preview: (delta, bypass) => (previewTransforms = operation.preview(delta, bypass)),
+      previewDrop: pointer => {
+        if (!context) return groupDrop.current?.preview(pointer, operation.ids);
+        const target = targetAt(pointer);
+        if (target !== cellDropNode.current) {
+          cellDropNode.current?.removeAttribute('data-cell-drop');
+          target?.setAttribute('data-cell-drop', ''); cellDropNode.current = target;
+        }
+      },
+      commitDrop: pointer => {
+        if (!context) return groupDrop.current?.commit(pointer, operation.ids);
+        const target = targetAt(pointer)?.dataset.editorCellSurface;
+        if (!target || !previewTransforms) return false;
+        try {
+          const offsets = Object.fromEntries(operation.ids.map((id, index) => {
+            const transform = previewTransforms[id];
+            return [memberIds[index], { x: transform.x / transform.scale, y: transform.y / transform.scale }];
+          }));
+          context.store.editBento('moveMembers', [memberIds, target, undefined, offsets], generation, latest.current.getPresentation());
+          context.store.setEditingCell(target);
+          latest.current.selectLayers(memberIds);
+          setMoveError('');
+        } catch (error) { setMoveError(error.message); }
+        return true;
+      },
     });
   };
   const moveByKey = (event, current, ids, step) => {
@@ -978,6 +1018,28 @@ export function WorkbenchViewControls({
           return;
         }
       } else if (background && cellContext?.editingCellId) cellContext.leaveCell(false);
+      const block =
+        current.store &&
+        current.layers?.find(layer => typeof layer !== 'string' && layer.children.includes(moduleId));
+      if (
+        block &&
+        current.editingBlockId !== block.id &&
+        (!cell || cellContext.editingCellId !== cell.id) &&
+        !target.closest(
+          'input,textarea,[contenteditable="true"],[role="separator"],button:not([data-workbench-selectable])'
+        )
+      ) {
+        const ids = artworkWindowIds(current.content, block.children);
+        const groupedCell = cellContext?.cells.find(item => ids.includes(item.id));
+        if (groupedCell && !event.shiftKey) {
+          clusterDrag.current?.(event, groupedCell.id);
+          return;
+        }
+        if (current.editingBlockId) current.leaveBlock(false);
+        setSelection(event.shiftKey ? values => [...new Set([...values, ...ids])] : ids);
+        beginMove(event, ids);
+        return;
+      }
       // In a Reception document placement is authored content, including a
       // single free shape or inner layer. Use the same atomic gesture as cells.
       if (
@@ -989,23 +1051,14 @@ export function WorkbenchViewControls({
         ) &&
         !event.shiftKey
       ) {
-        current.selectArtwork(moduleId);
-        beginMove(event, [moduleId]);
-        return;
-      }
-      const block =
-        current.store &&
-        current.layers?.find(layer => typeof layer !== 'string' && layer.children.includes(moduleId));
-      if (
-        block &&
-        current.editingBlockId !== block.id &&
-        !target.closest(
-          'input,textarea,[contenteditable="true"],[role="separator"],button:not([data-workbench-selectable])'
-        )
-      ) {
-        const ids = artworkWindowIds(current.content, block.children);
-        setSelection(event.shiftKey ? values => [...new Set([...values, ...ids])] : ids);
-        beginMove(event, ids);
+        const selectedLayer = current.selection.includes(module.dataset.workbenchViewId);
+        const selectedCell = selectedLayer && cellContext.cells.find(item => current.selection.includes(item.id));
+        if (selectedCell) {
+          clusterDrag.current?.(event, selectedCell.id);
+          return;
+        }
+        if (!selectedLayer) current.selectArtwork(moduleId);
+        beginMove(event, selectedLayer ? current.selection : [moduleId]);
         return;
       }
       if (
@@ -1065,9 +1118,11 @@ export function WorkbenchViewControls({
           event.shiftKey && latest.current.selectionMode !== 'activation' ? latest.current.selection : [],
         hits: rectangle =>
           [...entries]
-            .filter(([, node]) => {
+            .filter(([id, node]) => {
+              const owner = editorCellForModule(cellContext?.cells || [], artworkModuleId(current.content, id));
+              if (owner && owner.id !== id) return false;
               if (
-                node.matches('[data-workbench-group-hidden], [data-workbench-canvas-hidden]') ||
+                node.matches('[data-editor-hidden], [data-workbench-group-hidden], [data-workbench-canvas-hidden]') ||
                 latest.current.presentationTransforms[node.dataset.workbenchViewId]
               )
                 return false;
@@ -1079,7 +1134,7 @@ export function WorkbenchViewControls({
     const doubleClick = event => {
       const current = latest.current,
         context = latestCells.current;
-      if (!context || locked || current.interactionTool !== 'select' || event.button !== 0) return;
+      if (locked || current.interactionTool !== 'select' || event.button !== 0) return;
       // Authored movement captures pointers on the host. The click sequence can
       // therefore end here even when it began on a cell or its selection frame.
       const target =
@@ -1091,14 +1146,26 @@ export function WorkbenchViewControls({
         )
       )
         return;
-      const id =
-        target.closest('[data-editor-cell-surface]')?.dataset.editorCellSurface ||
-        target.closest('[data-workbench-view-id]')?.dataset.workbenchViewId;
+      const surface = target.matches('.workbench-selection')
+        ? document.elementsFromPoint(event.clientX, event.clientY).find(node => node.hasAttribute('data-workbench-view-id') && host.contains(node))
+        : target;
+      const id = surface?.closest('[data-editor-cell-surface]')?.dataset.editorCellSurface ||
+        surface?.closest('[data-workbench-view-id]')?.dataset.workbenchViewId;
+      const member = artworkModuleId(current.content, id);
+      const group = current.layers?.find(layer => layer.children?.includes(member));
+      if (group && current.editingBlockId !== group.id) {
+        event.preventDefault();
+        event.stopPropagation();
+        current.selectLayers([member], false, group.id);
+        return;
+      }
+      if (!context) return;
       const cell = editorCellForModule(context.cells, id);
       if (!cell || context.editingCellId === cell.id || current.presentationTransforms[id]) return;
       event.preventDefault();
       event.stopPropagation();
       context.enterCell(cell.id);
+      host.focus({ preventScroll: true });
     };
     const activateInspection = event => {
       const node = event.target.closest?.('[data-workbench-view-id], [data-workbench-inspection-target]');
@@ -1194,6 +1261,7 @@ export function WorkbenchViewControls({
       {cells && (
         <Suspense fallback={null}>
           <ReceptionBentoEditor
+            gridSnap={gridSnap} gridSpacing={gridSpacing} clusterDrag={clusterDrag}
             hostRef={hostRef}
             disabled={disabled || Boolean(historyBlocked)}
             navigation={navigation}
@@ -1205,7 +1273,7 @@ export function WorkbenchViewControls({
       )}
       {(!disabled || exiting) && (
         <>
-          <WorkbenchArea hostRef={hostRef} />
+          <WorkbenchArea hostRef={hostRef} canvasColor={canvasColor} />
           {renderMenuBar && <WorkbenchWorkspaceFrame />}
           {objectPicker.element}
           {moveError && (
@@ -1231,17 +1299,11 @@ export function WorkbenchViewControls({
                 aria-label={`${selected.length} selected Workbench modules`}
                 aria-description="Drag to move the selection. Arrow keys move it; Shift moves further. Escape clears selection."
                 onDoubleClick={event => {
-                  if (
-                    !view.layers.some(
-                      layer =>
-                        typeof layer !== 'string' &&
-                        artworkWindowIds(view.content, layer.children).every(id => selection.includes(id))
-                    )
-                  )
-                    return;
+                  const group = view.layers.find(layer => layer.children?.every(id => selection.includes(id)));
+                  if (!group) return;
                   event.preventDefault();
                   event.stopPropagation();
-                  focusModules(selected);
+                  view.enterBlock(group.id);
                 }}
                 onPointerDown={event => {
                   if (event.target === event.currentTarget) beginMove(event);

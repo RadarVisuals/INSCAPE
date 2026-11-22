@@ -88,15 +88,52 @@ export default function WorkbenchOverview({ toolbarHost, items, selected, model,
   const movingCanvasId = workspace?.movingCanvasId || routeJourney?.source.id;
   const list = useRef(null), menuButton = useRef(null), returnFocus = useRef(null);
   const published = visitorHeader && !collectionManager;
+  const [hiddenRails, setHiddenRails] = useState(() => {
+    try { return Number(localStorage.getItem('inscape.gallery.hiddenRails')) & 3; }
+    catch { return 0; }
+  });
+  function toggleRail(bit) {
+    const next = hiddenRails ^ bit;
+    setHiddenRails(next);
+    try { localStorage.setItem('inscape.gallery.hiddenRails', String(next)); }
+    catch { /* Retain the choice for this visit when storage is unavailable. */ }
+  }
   const viewportSize = view.viewportSize ?? 65;
   const grid = view.layout === 'grid';
   const layoutFlight = useGalleryLayoutJourney({ root, selected, model, layout: view.layout, onViewChange });
+  const inspectingTile = published && layoutFlight.fromTile && !editing && !presentation && !selection.active;
+  const backgroundPress = useRef(false);
+  const isInspectorBackground = target => root.current?.contains(target) && !target.closest(
+    '.composition-explorer-stage, .composition-index-sidebar > *, .visitor-work-details > *, button, a, input, select, textarea, summary, [role="dialog"], [popover]'
+  );
+  const restoreTileFocus = useRef(false);
+  const backToTiles = () => {
+    restoreTileFocus.current = true;
+    layoutFlight.switchView({ ...view, layout: 'grid' });
+  };
+  useEffect(() => {
+    if (!inspectingTile) return;
+    const escape = event => {
+      if (event.key !== 'Escape' || event.repeat || event.defaultPrevented ||
+          document.querySelector('dialog[open], :popover-open') ||
+          root.current?.querySelector('.composition-index[data-expanded]')) return;
+      event.preventDefault();
+      backToTiles();
+    };
+    window.addEventListener('keydown', escape);
+    return () => window.removeEventListener('keydown', escape);
+  });
   const lastLayout = useRef(view.layout);
   useLayoutEffect(() => {
     const switched = lastLayout.current !== view.layout;
     lastLayout.current = view.layout;
+    if (switched && grid && restoreTileFocus.current) {
+      restoreTileFocus.current = false;
+      const tile = overviewCanvasNode(root.current, selected.id)?.querySelector('.workbench-overview-card-open');
+      if (tile) { tile.focus({ preventScroll: true }); return; }
+    }
     if (switched) (toolbarHost || root.current)?.querySelector('.gallery-layout-switch input:checked, button.gallery-layout-switch')?.focus({ preventScroll: true });
-  }, [view.layout, toolbarHost]);
+  }, [view.layout, toolbarHost, grid, selected.id]);
   const { restoreFocus } = useDeferredFocusReturn();
   const selectedButton = () => list.current?.querySelector('button[data-previewed="true"]');
   const returning = Boolean(workspace?.returning), entering = Boolean(workspace?.entering);
@@ -200,7 +237,14 @@ export default function WorkbenchOverview({ toolbarHost, items, selected, model,
           }} /></label>
       </VisitorMenu>
     </div>, toolbarHost);
-  return <div ref={root} data-published-gallery={published || undefined} style={published ? { '--gallery-width-fraction': 0.55 + viewportSize * 0.0045, '--gallery-height-fill': Math.max(0, (viewportSize - 65) / 35) } : undefined} className="workbench-overview system-workflow__token-scope" data-workflow-material="tactile" data-workflow-finish="flat"
+  return <div ref={root}
+    onPointerDownCapture={inspectingTile ? event => { backgroundPress.current = event.button === 0 && isInspectorBackground(event.target); } : undefined}
+    onClick={inspectingTile ? event => {
+      const dismiss = backgroundPress.current && isInspectorBackground(event.target);
+      backgroundPress.current = false;
+      if (dismiss) backToTiles();
+    } : undefined}
+    data-published-gallery={published || undefined} style={published ? { '--gallery-width-fraction': 0.55 + viewportSize * 0.0045, '--gallery-height-fill': Math.max(0, (viewportSize - 65) / 35) } : undefined} className="workbench-overview system-workflow__token-scope" data-workflow-material="tactile" data-workflow-finish="flat"
      data-layout={view.layout} data-layout-journey={layoutFlight.journey?.direction} data-visitor-header={visitorHeader || undefined} data-selecting={selection.active || undefined}>
     {selection.active && !presentation && <GallerySelectionTools selection={selection} onRemove={onRemoveFromGallery} returnFocus={actionsTrigger} />}
     {publishedToolbar}
@@ -223,7 +267,7 @@ export default function WorkbenchOverview({ toolbarHost, items, selected, model,
       </div>
     </section>
     </div> : <CompositionIndex onDeleteDraft={onDeleteDraft} onRename={onRename} onReorder={onReorder} items={items} selected={selected} model={model} profile={profile} listRef={list} settings={settings} disabled={Boolean(editing)}
-      memory={memory} visitorHeader={visitorHeader} movingCanvasId={movingCanvasId}
+      memory={memory} visitorHeader={visitorHeader} smoothZoom={published} hiddenRails={hiddenRails} onToggleRail={published ? toggleRail : undefined} movingCanvasId={movingCanvasId}
       onSelect={preview} selection={selection.active ? selection : null} onEdit={onEdit ? edit : undefined} onOpenReception={onOpenReception} onEditReception={onEditReception}
       onGrid={() => onViewChange({ ...view, layout: 'grid' })}
       onDetails={onSave ? event => manage(selected.id, 'details', event.currentTarget) : undefined}

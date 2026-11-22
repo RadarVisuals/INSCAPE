@@ -125,7 +125,7 @@ test('Library preferences survive close, Workbench switching and reload without 
   try {
     const { page, errors } = await mount(browser); const before = await saved(page);
     await openLibrary(page);
-    await page.getByRole('button', { name: 'Owned', exact: true }).click();
+    await page.getByRole('button', { name: 'All Assets', exact: true }).click();
     await library(page).getByRole('button', { name: 'Filters: All', exact: true }).click();
     await page.getByRole('radio', { name: 'INSCAPE STUDIES', exact: true }).click();
     await page.keyboard.press('Escape');
@@ -144,7 +144,7 @@ test('Library preferences survive close, Workbench switching and reload without 
     await openLibrary(page); assert.equal(await search.inputValue(), 'moon');
     await page.reload(); await openLibrary(page);
     assert.equal(await search.inputValue(), 'moon');
-    assert.equal(await page.getByRole('button', { name: 'Owned', exact: true }).getAttribute('aria-pressed'), 'true');
+    assert.equal(await page.getByRole('button', { name: 'All Assets', exact: true }).getAttribute('aria-pressed'), 'true');
     assert.equal(await library(page).getByRole('button', { name: 'Filters: INSCAPE STUDIES', exact: true }).count(), 1);
     await showDisplayOptions(page);
     assert.equal(await library(page).getByLabel('Card size', { exact: true }).inputValue(), '230');
@@ -318,7 +318,7 @@ for (const theme of ['carbon', 'mist']) for (const [width, height] of [[1440, 90
     await search.fill('');
     assert.equal(await panel.evaluate(node => node.scrollWidth <= node.clientWidth + 1), true);
     assert.equal(await panel.evaluate(node => getComputedStyle(node).boxShadow), 'none');
-    for (const control of [search, panel.getByRole('button', { name: 'Library display options', exact: true }), closeLibrary(page), page.getByRole('button', { name: 'Owned', exact: true }), page.getByRole('button', { name: 'Created', exact: true })]) {
+    for (const control of [search, panel.getByRole('button', { name: 'Library display options', exact: true }), closeLibrary(page), page.getByRole('button', { name: 'All Assets', exact: true }), page.getByRole('button', { name: 'Folders', exact: true })]) {
       assert.equal(await control.evaluate(node => { const box = node.getBoundingClientRect(); return node.contains(document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2)); }), true);
     }
     await showDisplayOptions(page);

@@ -6,6 +6,7 @@ import { createLocalPreferencesStore } from './localPreferencesStore.js';
 export const DEFAULT_WORKBENCH_PREFERENCES = Object.freeze({
   chromeNoise: true,
   compositionLocked: false,
+  canvasColor: null,
   gridColor: null,
   gridSpacing: 24,
   gridMode: 'LINES',
@@ -31,6 +32,7 @@ export function normalizeWorkbenchPreferences(value) {
     chromeNoise: typeof source.chromeNoise === 'boolean' ? source.chromeNoise : true,
     compositionLocked: typeof source.compositionLocked === 'boolean' ? source.compositionLocked : false,
     gridSpacing: Number.isFinite(source.gridSpacing) && source.gridSpacing >= 8 && source.gridSpacing <= 512 ? source.gridSpacing : 24,
+    canvasColor: validHexColor(source.canvasColor) ? source.canvasColor.toLowerCase() : null,
     gridColor: validHexColor(source.gridColor) ? source.gridColor.toLowerCase() : null,
     gridMode: SYSTEM_WORKFLOW_GUIDE_MODES.includes(source.gridMode) ? source.gridMode : DEFAULT_WORKBENCH_PREFERENCES.gridMode,
     shortcutSnap: typeof source.shortcutSnap === 'boolean' ? source.shortcutSnap : DEFAULT_WORKBENCH_PREFERENCES.shortcutSnap,

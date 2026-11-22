@@ -33,7 +33,7 @@ export function DiscoverLink({ onDiscover, children, ...props }) {
   }}>{children}</a>;
 }
 
-export function WorkspaceBrand({ trigger, current, destinations, groups, onPanel, onSearch, blocked,
+export function WorkspaceBrand({ trigger, current, destinations, groups, editorActions = [], onPanel, onSearch, blocked,
   onOpen, onError, onDiscover }) {
   const [menu, setMenu] = useState(null);
   useEffect(() => {
@@ -50,15 +50,22 @@ export function WorkspaceBrand({ trigger, current, destinations, groups, onPanel
     const rect = trigger.current.getBoundingClientRect();
     setMenu({ anchor: { x: rect.left, y: rect.bottom }, focusLast });
   };
-  const sections = Object.fromEntries(Object.entries(groups || {}).map(([group, entries]) => [
-    'group:' + group, entries.map(entry => ({ ...entry, id: group + ':' + entry.id })),
-  ]));
+  const sections = {};
+  function registerGroup(id, entries) {
+    sections[id] = entries.map(({ children, ...entry }) => {
+      const childId = id + ':' + entry.id;
+      if (children?.length) registerGroup(childId, children);
+      return { ...entry, id: childId };
+    });
+  }
+  for (const [label, entries] of Object.entries(groups || {})) registerGroup(label, entries);
   const commands = [
     ...(groups ? [{ id: 'search', label: 'Search commands...', disabled: !onSearch, run: onSearch }] : []),
     ...[...profileTabs, 'Studio', ...(destinations.Curation ? ['Curation'] : []), 'Discover'].map((label, index) => ({ id: 'destination:' + label, label,
       checkable: true, selected: label === current, disabled: !destinations[label] || blocked,
       section: index === 0 ? 'Workspace' : undefined, run: destinations[label] })),
-    ...Object.keys(groups || {}).map((label, index) => ({ id: 'group:' + label, label, section: index === 0 ? 'Editor' : undefined })),
+    ...Object.keys(groups || {}).map((label, index) => ({ id: label, label, section: index === 0 ? 'Editor' : undefined })),
+    ...editorActions,
     ...Object.entries({ activity: 'Activity', settings: 'Settings', docs: 'Help & Docs', ...(groups && { backup: 'Backup' }) })
       .map(([id, label], index) => ({ id, label, section: index === 0 ? 'More' : undefined,
         disabled: !onPanel, run: source => onPanel(id, source) })),

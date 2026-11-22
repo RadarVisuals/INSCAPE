@@ -147,7 +147,7 @@ test('an existing free canvas adopts Bento cells in Studio and restores its orig
       assert.deepEqual(draft.workbench.imageModules, before.workbench.imageModules);
       assert.equal(await page.locator('.editor-menu-bar').getAttribute('data-document'), activeId);
     };
-    await choose('Canvas', 'Use Bento cells'); await inspect(true);
+    await choose('Canvas', 'Use cells'); await inspect(true);
     await choose('Edit', 'Undo'); await inspect(false);
     await choose('Edit', 'Redo'); await inspect(true);
     await page.reload(); await editorMenu(page).waitFor(); await inspect(true);
@@ -209,7 +209,7 @@ test('Studio creates one named Bento with free artwork and cell content, then re
     assert.ok(mixed.shapes.some(shape => shape.id === free.id));
     assert.equal(mixed.cells.some(entry => entry.members.includes(free.id)), false);
     assert.ok(mixed.cells.find(entry => entry.id === cell).members.includes(mixed.texts[0].id));
-    await editorCommand(page, 'Canvas', 'Rename');
+    await editorCommand(page, 'Studio', 'Rename composition');
     const rename = page.getByRole('dialog', { name: 'Rename composition' });
     await rename.getByLabel('Composition name').fill('Mixed work');
     await rename.getByRole('button', { name: 'Save name' }).click();

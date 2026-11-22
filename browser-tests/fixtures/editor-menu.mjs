@@ -3,6 +3,11 @@ export async function openEditorMenu(page, name) {
   const trigger = editorMenu(page);
   if (await trigger.getAttribute('aria-expanded') !== 'true') await trigger.click();
   if (!name) return page.getByRole('menu', { name: 'Inscape menu', exact: true });
+  if (name === 'Compositions') {
+    const canvas = await openEditorMenu(page, 'Canvas');
+    await canvas.getByRole('menuitem', { name, exact: true }).click();
+    return page.getByRole('menu', { name: 'Compositions options', exact: true });
+  }
   const direct = { Docs: 'Help & Docs', Backup: 'Backup', Settings: 'Settings' };
   if (name === 'Bento') {
     await openEditorMenu(page, 'Tools');
@@ -21,6 +26,11 @@ export async function receptionPreviewControls(page) {
 }
 export const activeEditorDocument = page => page.locator('.editor-menu-bar[data-document]').getAttribute('data-document');
 export async function editorCommand(page, menu, name, role = 'menuitem') {
+  if (menu === 'Studio') {
+    await page.getByRole('button', { name: 'Studio', exact: true }).click();
+    return page.getByRole('menu', { name: 'Studio', exact: true }).getByRole(role, { name, exact: true }).click();
+  }
+  if (menu === 'Inscape') return (await openEditorMenu(page)).getByRole(role, { name, exact: true }).click();
   if (name === 'Bento settings') return openEditorMenu(page, 'Bento');
   if (name === 'Settings') return openEditorMenu(page, 'Settings');
   if (name === 'Search commands') {
@@ -37,19 +47,24 @@ export async function workspaceDestination(page, name) {
   return editorMenu(page);
 }
 export async function selectEditorDocument(page, id) {
-  const menu = await openEditorMenu(page, 'Canvas');
-  if (id === 'reception') return menu.locator('[data-command-id="Canvas:profile-bento"]').press('Enter');
+  if (id === 'reception') {
+    if (await activeEditorDocument(page) === id) return;
+    await editorOverview(page);
+    await page.getByRole('button', { name: 'Edit', exact: true }).click();
+    return;
+  }
+  const menu = await openEditorMenu(page, 'Compositions');
   await (typeof id === 'object' ? menu.getByRole('menuitemcheckbox', { name: id.label, exact: true })
-    : menu.locator(`[data-command-id="Canvas:canvas:${id}"]`)).press('Enter');
+    : menu.locator(`[data-command-id="Canvas:compositions:${id}"]`)).press('Enter');
 }
 export async function editorDocumentNames(page) {
-  const menu = await openEditorMenu(page, 'Canvas');
-  const names = await menu.locator('[data-command-id^="Canvas:canvas:"] > span').allTextContents();
+  const menu = await openEditorMenu(page, 'Compositions');
+  const names = await menu.locator('[data-command-id^="Canvas:compositions:"] > span').allTextContents();
   await page.keyboard.press('Escape');
   return names;
 }
 export async function activeEditorDocumentName(page) {
-  const menu = await openEditorMenu(page, 'Canvas');
+  const menu = await openEditorMenu(page, 'Compositions');
   const name = await menu.getByRole('menuitemcheckbox', { checked: true }).locator('span').innerText();
   await page.keyboard.press('Escape');
   return name;

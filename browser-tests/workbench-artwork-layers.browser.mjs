@@ -322,7 +322,7 @@ test('canvas block selection, atomic drag/Undo, explicit entry and Escape preser
     const group = page.getByRole('group', { name: '2 selected Workbench modules', exact: true }), box = await group.boundingBox();
     await group.dblclick({ position: { x: point.x - box.x, y: point.y - box.y } });
     await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
-    assert.equal(await workbenchCommandDisabled(page, 'back'), false);
+    await page.locator('.workbench-layers-context').getByText('Person > Body').waitFor();
     assert.deepEqual((await saved(page)).artworkLayers, before.artworkLayers);
   } finally { await browser.close(); }
 });

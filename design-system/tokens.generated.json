@@ -4,9 +4,9 @@
   "systemVersion": "1.0.0",
   "note": "Generated from production and design-system reference CSS. Reference roles are preview-only. Values remain CSS expressions, with selector and media scopes; this is not a DTCG interchange file. Runtime custom properties and local overrides are included and are not automatically public design tokens.",
   "counts": {
-    "files": 109,
-    "definitions": 859,
-    "names": 450
+    "files": 113,
+    "definitions": 895,
+    "names": 466
   },
   "sources": [
     {
@@ -845,7 +845,7 @@
     {
       "path": "src/inscapeTokens.css",
       "role": "Foundation",
-      "sha256": "8b30f23983743a40762004adb0e373f0dbc3d9936c1ec3ddf24f81ea72597c7b",
+      "sha256": "f2f528bf51a6fd785131bd6c9b2fbac605d8935bed48f4667efb6fe8d2dbd152",
       "definitions": [
         {
           "name": "--font-creation-toolbar",
@@ -2159,12 +2159,43 @@
           "references": []
         },
         {
+          "name": "--editor-surround",
+          "value": "var(--interface-environment)",
+          "scope": [
+            ":root[data-palette='charcoal'][data-interface-theme='light']"
+          ],
+          "line": 169,
+          "references": [
+            "--interface-environment"
+          ]
+        },
+        {
+          "name": "--editor-panel",
+          "value": "var(--interface-panel)",
+          "scope": [
+            ":root[data-palette='charcoal'][data-interface-theme='light']"
+          ],
+          "line": 170,
+          "references": [
+            "--interface-panel"
+          ]
+        },
+        {
+          "name": "--editor-ink",
+          "value": "#292927",
+          "scope": [
+            ":root[data-palette='charcoal'][data-interface-theme='light']"
+          ],
+          "line": 171,
+          "references": []
+        },
+        {
           "name": "--field-low",
           "value": "#201418",
           "scope": [
             ":root[data-palette='oxblood']"
           ],
-          "line": 170,
+          "line": 176,
           "references": []
         },
         {
@@ -2173,7 +2204,7 @@
           "scope": [
             ":root[data-palette='oxblood']"
           ],
-          "line": 170,
+          "line": 176,
           "references": []
         },
         {
@@ -2182,7 +2213,7 @@
           "scope": [
             ":root[data-palette='oxblood']"
           ],
-          "line": 171,
+          "line": 177,
           "references": []
         },
         {
@@ -2191,7 +2222,7 @@
           "scope": [
             ":root[data-palette='oxblood']"
           ],
-          "line": 171,
+          "line": 177,
           "references": []
         },
         {
@@ -2200,7 +2231,7 @@
           "scope": [
             ":root[data-palette='oxblood']"
           ],
-          "line": 171,
+          "line": 177,
           "references": []
         },
         {
@@ -2209,7 +2240,7 @@
           "scope": [
             ":root[data-palette='oxblood']"
           ],
-          "line": 171,
+          "line": 177,
           "references": []
         },
         {
@@ -2218,7 +2249,7 @@
           "scope": [
             ":root[data-palette='saffron']"
           ],
-          "line": 174,
+          "line": 180,
           "references": []
         },
         {
@@ -2227,7 +2258,7 @@
           "scope": [
             ":root[data-palette='saffron']"
           ],
-          "line": 174,
+          "line": 180,
           "references": []
         },
         {
@@ -2236,7 +2267,7 @@
           "scope": [
             ":root[data-palette='saffron']"
           ],
-          "line": 175,
+          "line": 181,
           "references": []
         },
         {
@@ -2245,7 +2276,7 @@
           "scope": [
             ":root[data-palette='saffron']"
           ],
-          "line": 175,
+          "line": 181,
           "references": []
         },
         {
@@ -2254,7 +2285,7 @@
           "scope": [
             ":root[data-palette='saffron']"
           ],
-          "line": 175,
+          "line": 181,
           "references": []
         },
         {
@@ -2263,7 +2294,7 @@
           "scope": [
             ":root[data-palette='saffron']"
           ],
-          "line": 175,
+          "line": 181,
           "references": []
         },
         {
@@ -2272,7 +2303,7 @@
           "scope": [
             ":root[data-palette='storm-glass']"
           ],
-          "line": 178,
+          "line": 184,
           "references": []
         },
         {
@@ -2281,7 +2312,7 @@
           "scope": [
             ":root[data-palette='storm-glass']"
           ],
-          "line": 178,
+          "line": 184,
           "references": []
         },
         {
@@ -2290,7 +2321,7 @@
           "scope": [
             ":root[data-palette='storm-glass']"
           ],
-          "line": 179,
+          "line": 185,
           "references": []
         },
         {
@@ -2299,7 +2330,7 @@
           "scope": [
             ":root[data-palette='storm-glass']"
           ],
-          "line": 179,
+          "line": 185,
           "references": []
         },
         {
@@ -2308,7 +2339,7 @@
           "scope": [
             ":root[data-palette='storm-glass']"
           ],
-          "line": 179,
+          "line": 185,
           "references": []
         },
         {
@@ -2317,7 +2348,7 @@
           "scope": [
             ":root[data-palette='storm-glass']"
           ],
-          "line": 179,
+          "line": 185,
           "references": []
         },
         {
@@ -2326,7 +2357,7 @@
           "scope": [
             ":root[data-palette='brass-ink']"
           ],
-          "line": 182,
+          "line": 188,
           "references": []
         },
         {
@@ -2335,7 +2366,7 @@
           "scope": [
             ":root[data-palette='brass-ink']"
           ],
-          "line": 182,
+          "line": 188,
           "references": []
         },
         {
@@ -2344,7 +2375,7 @@
           "scope": [
             ":root[data-palette='brass-ink']"
           ],
-          "line": 183,
+          "line": 189,
           "references": []
         },
         {
@@ -2353,7 +2384,7 @@
           "scope": [
             ":root[data-palette='brass-ink']"
           ],
-          "line": 183,
+          "line": 189,
           "references": []
         },
         {
@@ -2362,7 +2393,7 @@
           "scope": [
             ":root[data-palette='brass-ink']"
           ],
-          "line": 183,
+          "line": 189,
           "references": []
         },
         {
@@ -2371,7 +2402,7 @@
           "scope": [
             ":root[data-palette='brass-ink']"
           ],
-          "line": 183,
+          "line": 189,
           "references": []
         },
         {
@@ -2380,7 +2411,7 @@
           "scope": [
             ":root[data-palette='oxblood'][data-interface-theme='light']"
           ],
-          "line": 186,
+          "line": 192,
           "references": []
         },
         {
@@ -2389,7 +2420,7 @@
           "scope": [
             ":root[data-palette='oxblood'][data-interface-theme='light']"
           ],
-          "line": 186,
+          "line": 192,
           "references": []
         },
         {
@@ -2398,7 +2429,7 @@
           "scope": [
             ":root[data-palette='oxblood'][data-interface-theme='light']"
           ],
-          "line": 187,
+          "line": 193,
           "references": []
         },
         {
@@ -2407,7 +2438,7 @@
           "scope": [
             ":root[data-palette='oxblood'][data-interface-theme='light']"
           ],
-          "line": 187,
+          "line": 193,
           "references": []
         },
         {
@@ -2416,7 +2447,7 @@
           "scope": [
             ":root[data-palette='oxblood'][data-interface-theme='light']"
           ],
-          "line": 187,
+          "line": 193,
           "references": []
         },
         {
@@ -2425,7 +2456,7 @@
           "scope": [
             ":root[data-palette='oxblood'][data-interface-theme='light']"
           ],
-          "line": 187,
+          "line": 193,
           "references": []
         },
         {
@@ -2434,7 +2465,7 @@
           "scope": [
             ":root[data-palette='saffron'][data-interface-theme='light']"
           ],
-          "line": 190,
+          "line": 196,
           "references": []
         },
         {
@@ -2443,7 +2474,7 @@
           "scope": [
             ":root[data-palette='saffron'][data-interface-theme='light']"
           ],
-          "line": 190,
+          "line": 196,
           "references": []
         },
         {
@@ -2452,7 +2483,7 @@
           "scope": [
             ":root[data-palette='saffron'][data-interface-theme='light']"
           ],
-          "line": 191,
+          "line": 197,
           "references": []
         },
         {
@@ -2461,7 +2492,7 @@
           "scope": [
             ":root[data-palette='saffron'][data-interface-theme='light']"
           ],
-          "line": 191,
+          "line": 197,
           "references": []
         },
         {
@@ -2470,7 +2501,7 @@
           "scope": [
             ":root[data-palette='saffron'][data-interface-theme='light']"
           ],
-          "line": 191,
+          "line": 197,
           "references": []
         },
         {
@@ -2479,7 +2510,7 @@
           "scope": [
             ":root[data-palette='saffron'][data-interface-theme='light']"
           ],
-          "line": 191,
+          "line": 197,
           "references": []
         },
         {
@@ -2488,7 +2519,7 @@
           "scope": [
             ":root[data-palette='storm-glass'][data-interface-theme='light']"
           ],
-          "line": 194,
+          "line": 200,
           "references": []
         },
         {
@@ -2497,7 +2528,7 @@
           "scope": [
             ":root[data-palette='storm-glass'][data-interface-theme='light']"
           ],
-          "line": 194,
+          "line": 200,
           "references": []
         },
         {
@@ -2506,7 +2537,7 @@
           "scope": [
             ":root[data-palette='storm-glass'][data-interface-theme='light']"
           ],
-          "line": 195,
+          "line": 201,
           "references": []
         },
         {
@@ -2515,7 +2546,7 @@
           "scope": [
             ":root[data-palette='storm-glass'][data-interface-theme='light']"
           ],
-          "line": 195,
+          "line": 201,
           "references": []
         },
         {
@@ -2524,7 +2555,7 @@
           "scope": [
             ":root[data-palette='storm-glass'][data-interface-theme='light']"
           ],
-          "line": 195,
+          "line": 201,
           "references": []
         },
         {
@@ -2533,7 +2564,7 @@
           "scope": [
             ":root[data-palette='storm-glass'][data-interface-theme='light']"
           ],
-          "line": 195,
+          "line": 201,
           "references": []
         },
         {
@@ -2542,7 +2573,7 @@
           "scope": [
             ":root[data-palette='brass-ink'][data-interface-theme='light']"
           ],
-          "line": 198,
+          "line": 204,
           "references": []
         },
         {
@@ -2551,7 +2582,7 @@
           "scope": [
             ":root[data-palette='brass-ink'][data-interface-theme='light']"
           ],
-          "line": 198,
+          "line": 204,
           "references": []
         },
         {
@@ -2560,7 +2591,7 @@
           "scope": [
             ":root[data-palette='brass-ink'][data-interface-theme='light']"
           ],
-          "line": 199,
+          "line": 205,
           "references": []
         },
         {
@@ -2569,7 +2600,7 @@
           "scope": [
             ":root[data-palette='brass-ink'][data-interface-theme='light']"
           ],
-          "line": 199,
+          "line": 205,
           "references": []
         },
         {
@@ -2578,7 +2609,7 @@
           "scope": [
             ":root[data-palette='brass-ink'][data-interface-theme='light']"
           ],
-          "line": 199,
+          "line": 205,
           "references": []
         },
         {
@@ -2587,7 +2618,7 @@
           "scope": [
             ":root[data-palette='brass-ink'][data-interface-theme='light']"
           ],
-          "line": 199,
+          "line": 205,
           "references": []
         },
         {
@@ -2596,7 +2627,7 @@
           "scope": [
             ":root[data-palette]:not([data-palette='charcoal'])"
           ],
-          "line": 202,
+          "line": 208,
           "references": [
             "--palette-canvas"
           ]
@@ -2607,7 +2638,7 @@
           "scope": [
             ":root[data-palette]:not([data-palette='charcoal'])"
           ],
-          "line": 202,
+          "line": 208,
           "references": [
             "--palette-glass"
           ]
@@ -2618,7 +2649,7 @@
           "scope": [
             ":root[data-palette]:not([data-palette='charcoal'])"
           ],
-          "line": 202,
+          "line": 208,
           "references": [
             "--palette-ink"
           ]
@@ -2629,7 +2660,7 @@
           "scope": [
             ":root[data-palette]:not([data-palette='charcoal'])"
           ],
-          "line": 203,
+          "line": 209,
           "references": [
             "--palette-glass"
           ]
@@ -2640,7 +2671,7 @@
           "scope": [
             ":root[data-palette]:not([data-palette='charcoal'])"
           ],
-          "line": 203,
+          "line": 209,
           "references": [
             "--palette-canvas"
           ]
@@ -2651,7 +2682,7 @@
           "scope": [
             ":root[data-palette]:not([data-palette='charcoal'])"
           ],
-          "line": 203,
+          "line": 209,
           "references": [
             "--palette-ink"
           ]
@@ -2662,7 +2693,7 @@
           "scope": [
             ":root[data-palette]:not([data-palette='charcoal'])"
           ],
-          "line": 204,
+          "line": 210,
           "references": [
             "--palette-accent"
           ]
@@ -2673,7 +2704,7 @@
           "scope": [
             ":root[data-palette]:not([data-palette='charcoal'])"
           ],
-          "line": 204,
+          "line": 210,
           "references": [
             "--palette-canvas"
           ]
@@ -2684,7 +2715,7 @@
           "scope": [
             ":root[data-palette]:not([data-palette='charcoal'])"
           ],
-          "line": 205,
+          "line": 211,
           "references": [
             "--palette-accent"
           ]
@@ -2696,7 +2727,7 @@
             "@media (prefers-reduced-motion: reduce)",
             ":root"
           ],
-          "line": 232,
+          "line": 238,
           "references": []
         },
         {
@@ -2706,7 +2737,7 @@
             "@media (prefers-reduced-motion: reduce)",
             ":root"
           ],
-          "line": 232,
+          "line": 238,
           "references": []
         },
         {
@@ -2716,7 +2747,7 @@
             "@media (prefers-reduced-motion: reduce)",
             ":root"
           ],
-          "line": 232,
+          "line": 238,
           "references": []
         }
       ],
@@ -3357,6 +3388,22 @@
       ]
     },
     {
+      "path": "src/library/curation.css",
+      "role": "Local",
+      "sha256": "0b3dc3259f3f50ee09ae44b2a1f1b1a9a23ebef4573c49ea3db2e1dc986e9d00",
+      "definitions": [],
+      "references": [
+        "--editor-accent",
+        "--editor-field",
+        "--editor-ink",
+        "--editor-selection",
+        "--font-interface",
+        "--interface-environment",
+        "--interface-ink",
+        "--library-tile-size"
+      ]
+    },
+    {
       "path": "src/library/profileLibraryPicker.css",
       "role": "Local",
       "sha256": "6a59d76d366727dcb7b9757e6202a22b35dc41935e31f2ce0a8adc1d3056b610",
@@ -3471,6 +3518,57 @@
         "--tactile-face",
         "--tactile-muted",
         "--tactile-well"
+      ]
+    },
+    {
+      "path": "src/profileDocument/components/profileStrip.css",
+      "role": "Local",
+      "sha256": "1b79eb2d88b3e62eeb55063a3f45f0b7cf005d90228b364cb7b5b6963c164208",
+      "definitions": [
+        {
+          "name": "--strip-outline",
+          "value": "color-mix(in srgb, var(--editor-default-ink) 32%, var(--editor-default-panel))",
+          "scope": [
+            ".visitor-header .profile-strip:not([data-account]) .strip-trigger"
+          ],
+          "line": 4,
+          "references": [
+            "--editor-default-ink",
+            "--editor-default-panel"
+          ]
+        },
+        {
+          "name": "--strip-outline",
+          "value": "rgb(248 248 248 / 87.5%)",
+          "scope": [
+            "@media (min-width: 481px)",
+            ":root[data-interface-theme='light'] .visitor-header .profile-strip:not([data-account]) .strip-trigger"
+          ],
+          "line": 11,
+          "references": []
+        }
+      ],
+      "references": [
+        "--card-material",
+        "--color-text-primary",
+        "--editor-control-radius",
+        "--editor-default-ink",
+        "--editor-default-panel",
+        "--editor-ink",
+        "--editor-line",
+        "--editor-menu-face",
+        "--editor-menu-heading",
+        "--font-technical",
+        "--interface-line",
+        "--interface-panel",
+        "--spread-active",
+        "--spread-line",
+        "--strip-outline",
+        "--tactile-ink",
+        "--tactile-selected",
+        "--tactile-selected-ink",
+        "--workflow-menu-row-height",
+        "--workflow-type-control"
       ]
     },
     {
@@ -3742,7 +3840,7 @@
     {
       "path": "src/profileDocument/components/visitorProfile.css",
       "role": "Local",
-      "sha256": "eaf6d0d0f979fee13dac5b7f3a80af96b2ebc520237e93b1466bf049eb3c81cd",
+      "sha256": "09812a6b4fab80a0fb68c367f498e8a85dae0418bb7d1dbc3aa501ecec945646",
       "definitions": [
         {
           "name": "--field-tint",
@@ -4539,21 +4637,31 @@
           ]
         },
         {
+          "name": "--spread-height",
+          "value": "92px",
+          "scope": [
+            "@media (max-width: 1250px)",
+            ".visitor-publication:has(.visitor-toolbar-slot:not(:empty))"
+          ],
+          "line": 114,
+          "references": []
+        },
+        {
           "name": "--inner-rim",
           "value": "5px",
           "scope": [
-            "[data-layout='card'] .visitor-profile-body"
+            ".visitor-profile-card .visitor-profile-body"
           ],
-          "line": 168,
+          "line": 179,
           "references": []
         },
         {
           "name": "--image-inset",
           "value": "calc(var(--inner-rim) + 1px)",
           "scope": [
-            "[data-layout='card'] .visitor-profile-body"
+            ".visitor-profile-card .visitor-profile-body"
           ],
-          "line": 168,
+          "line": 179,
           "references": [
             "--inner-rim"
           ]
@@ -4573,7 +4681,6 @@
         "--card-shadow",
         "--color-text-primary",
         "--color-text-secondary",
-        "--editor-control-radius",
         "--field-fallback-face",
         "--field-fallback-mask",
         "--field-fallback-opacity",
@@ -4719,7 +4826,7 @@
     {
       "path": "src/public/menus/rackMenu.css",
       "role": "Local",
-      "sha256": "0f933eda0ba1ee2c59a9d11fdf08f8fb7795b5a9f3531b659d02837a49201b45",
+      "sha256": "276b80a775084b6fe5da3eb0152e3361224f1173bf9c11f40e797aace9a0c222",
       "definitions": [
         {
           "name": "--rack-menu-panel",
@@ -4871,6 +4978,26 @@
           "references": [
             "--tactile-selected"
           ]
+        },
+        {
+          "name": "--workflow-menu-row-height",
+          "value": "24px",
+          "scope": [
+            ".library-new-menu[data-workflow-palette='editor']"
+          ],
+          "line": 172,
+          "references": []
+        },
+        {
+          "name": "--workflow-type-control",
+          "value": "500 11px/1.3 var(--font-interface)",
+          "scope": [
+            ".library-new-menu[data-workflow-palette='editor']"
+          ],
+          "line": 173,
+          "references": [
+            "--font-interface"
+          ]
         }
       ],
       "references": [
@@ -4916,7 +5043,7 @@
     {
       "path": "src/public/menus/workspaceHeader.css",
       "role": "Local",
-      "sha256": "8005ed6d47362f275cafb9f31e9e14f74df78a94cf2f888a65e1a89b86f45450",
+      "sha256": "99d3269c3351d62db3e5b80a0288ba4f58d8bf27449f00ae8678bed0bf811866",
       "definitions": [
         {
           "name": "--workspace-header-height",
@@ -4950,13 +5077,81 @@
           ]
         },
         {
+          "name": "--studio-end-width",
+          "value": "41px",
+          "scope": [
+            ".studio-header-tools"
+          ],
+          "line": 13,
+          "references": []
+        },
+        {
+          "name": "--studio-tools-gap",
+          "value": "12px",
+          "scope": [
+            ".studio-header-tools"
+          ],
+          "line": 13,
+          "references": []
+        },
+        {
+          "name": "--studio-tools-gap",
+          "value": "8px",
+          "scope": [
+            "@media (max-width: 900px)",
+            ".studio-header-tools"
+          ],
+          "line": 31,
+          "references": []
+        },
+        {
+          "name": "--studio-tools-gap",
+          "value": "4px",
+          "scope": [
+            "@media (max-width: 700px)",
+            ".studio-header-tools"
+          ],
+          "line": 32,
+          "references": []
+        },
+        {
+          "name": "--studio-end-width",
+          "value": "35px",
+          "scope": [
+            "@media (max-width: 480px)",
+            ".studio-header-tools"
+          ],
+          "line": 34,
+          "references": []
+        },
+        {
+          "name": "--studio-tools-gap",
+          "value": "2px",
+          "scope": [
+            "@media (max-width: 480px)",
+            ".studio-header-tools"
+          ],
+          "line": 34,
+          "references": []
+        },
+        {
+          "name": "--studio-end-width",
+          "value": "24px",
+          "scope": [
+            "@media (max-width: 360px)",
+            ".studio-header-tools"
+          ],
+          "line": 38,
+          "references": []
+        },
+        {
           "name": "--editor-menu-face",
           "value": "Canvas",
           "scope": [
             "@media (forced-colors: active)",
-            ".workspace-header .workspace-command-menu"
+            ".workspace-header :is(.workspace-command-menu,.strip-drawer)"
           ],
-          "line": 33,
+          "line": 63,
           "references": []
         },
         {
@@ -4964,9 +5159,9 @@
           "value": "CanvasText",
           "scope": [
             "@media (forced-colors: active)",
-            ".workspace-header .workspace-command-menu"
+            ".workspace-header :is(.workspace-command-menu,.strip-drawer)"
           ],
-          "line": 34,
+          "line": 64,
           "references": []
         },
         {
@@ -4974,9 +5169,9 @@
           "value": "ButtonText",
           "scope": [
             "@media (forced-colors: active)",
-            ".workspace-header .workspace-command-menu"
+            ".workspace-header :is(.workspace-command-menu,.strip-drawer)"
           ],
-          "line": 35,
+          "line": 65,
           "references": []
         },
         {
@@ -4984,9 +5179,9 @@
           "value": "none",
           "scope": [
             "@media (forced-colors: active)",
-            ".workspace-header .workspace-command-menu"
+            ".workspace-header :is(.workspace-command-menu,.strip-drawer)"
           ],
-          "line": 36,
+          "line": 66,
           "references": []
         }
       ],
@@ -4999,6 +5194,8 @@
         "--editor-menu-shadow",
         "--font-interface",
         "--interface-panel",
+        "--studio-end-width",
+        "--studio-tools-gap",
         "--workspace-header-height",
         "--workspace-sage"
       ]
@@ -5250,7 +5447,7 @@
     {
       "path": "src/public/ownerSystemWorkflow/editorMenuBar.css",
       "role": "Local",
-      "sha256": "b897a9129296c283c921499f1068c7e56919b352da7230a8169e400fe61b511f",
+      "sha256": "5c5e3e884daa0f13758741be313064213cddf8216182cdd918f5be77b119ca2c",
       "definitions": [
         {
           "name": "--editor-workspace-radius",
@@ -5288,7 +5485,7 @@
     {
       "path": "src/public/ownerSystemWorkflow/libraryWorkspace.css",
       "role": "Library",
-      "sha256": "ac72f4922c5c8d177b2dddfef6a93d338768d1f499d40883c60b644071a22076",
+      "sha256": "fa889644e787d8e15aa0fd90b6b144960d6b1b99129cf423617f67b20f4c01f4",
       "definitions": [
         {
           "name": "--library-row-height",
@@ -6423,7 +6620,7 @@
     {
       "path": "src/public/ownerSystemWorkflow/settings.css",
       "role": "Settings",
-      "sha256": "e74e7cd028ced669369ec4b4c48fd1e5e38b8c4204a9174fcea03c0ccb7734ac",
+      "sha256": "3a5b264f7684d24de3b35be896eaa76f13680e53fab1237aaea1da5b110f06e6",
       "definitions": [
         {
           "name": "--workflow-panel",
@@ -6540,7 +6737,7 @@
             "@media (max-width: 520px), (pointer: coarse)",
             ".system-workflow__settings.workbench-tool-panel"
           ],
-          "line": 66,
+          "line": 67,
           "references": []
         }
       ],
@@ -7023,7 +7220,7 @@
     {
       "path": "src/public/ownerSystemWorkflow/workbenchLayers.css",
       "role": "Layers",
-      "sha256": "a7e080616ebf49d2aec92d3b90fa2b58411e20929b0d7f37938e1e44f4783ce3",
+      "sha256": "a66deb60e843e8e7628907e79f6089099d73428499cb5a8af7a6f89250189929",
       "definitions": [],
       "references": [
         "--control-height-sm",
@@ -7356,90 +7553,15 @@
     {
       "path": "src/public/ownerSystemWorkflow/workbenchToolbar.css",
       "role": "Creation",
-      "sha256": "7a99d0cb5ccbdbd8159edec4cf31d8889402032e080e4453b873d917242f0217",
+      "sha256": "0cbb7c9e41817a9c19dbe80aaf8b6261272fb2339d94ae7e4ce8ff1ac699d66e",
       "definitions": [
-        {
-          "name": "--toolbar-target",
-          "value": "32px",
-          "scope": [
-            ".workbench-toolbar"
-          ],
-          "line": 3,
-          "references": []
-        },
-        {
-          "name": "--toolbar-icon",
-          "value": "16px",
-          "scope": [
-            ".workbench-toolbar"
-          ],
-          "line": 4,
-          "references": []
-        },
-        {
-          "name": "--toolbar-height",
-          "value": "44px",
-          "scope": [
-            ".workbench-toolbar"
-          ],
-          "line": 5,
-          "references": []
-        },
-        {
-          "name": "--toolbar-column-gap",
-          "value": "2px",
-          "scope": [
-            ".workbench-toolbar"
-          ],
-          "line": 6,
-          "references": []
-        },
-        {
-          "name": "--toolbar-padding-block",
-          "value": "6px",
-          "scope": [
-            ".workbench-toolbar"
-          ],
-          "line": 7,
-          "references": []
-        },
-        {
-          "name": "--toolbar-padding-inline",
-          "value": "6px",
-          "scope": [
-            ".workbench-toolbar"
-          ],
-          "line": 8,
-          "references": []
-        },
-        {
-          "name": "--toolbar-radius",
-          "value": "11px",
-          "scope": [
-            ".workbench-toolbar"
-          ],
-          "line": 9,
-          "references": []
-        },
-        {
-          "name": "--toolbar-key-radius",
-          "value": "calc(var(--toolbar-radius) - var(--toolbar-padding-inline))",
-          "scope": [
-            ".workbench-toolbar"
-          ],
-          "line": 10,
-          "references": [
-            "--toolbar-radius",
-            "--toolbar-padding-inline"
-          ]
-        },
         {
           "name": "--toolbar-popup-radius",
           "value": "var(--toolbar-radius)",
           "scope": [
             ".workbench-toolbar"
           ],
-          "line": 11,
+          "line": 5,
           "references": [
             "--toolbar-radius"
           ]
@@ -7450,7 +7572,7 @@
           "scope": [
             ".workbench-toolbar"
           ],
-          "line": 26,
+          "line": 20,
           "references": []
         },
         {
@@ -7459,7 +7581,7 @@
           "scope": [
             ".workbench-toolbar"
           ],
-          "line": 27,
+          "line": 21,
           "references": [
             "--toolbar-padding-block",
             "--toolbar-popup-border"
@@ -7471,7 +7593,7 @@
           "scope": [
             ".workbench-toolbar"
           ],
-          "line": 28,
+          "line": 22,
           "references": [
             "--toolbar-padding-inline",
             "--toolbar-popup-border"
@@ -7483,7 +7605,7 @@
           "scope": [
             ".workbench-toolbar"
           ],
-          "line": 29,
+          "line": 23,
           "references": [
             "--toolbar-key-radius"
           ]
@@ -7494,7 +7616,7 @@
           "scope": [
             ".workbench-toolbar__bar"
           ],
-          "line": 49,
+          "line": 43,
           "references": [
             "--toolbar-key-radius"
           ]
@@ -7506,7 +7628,7 @@
             "@media (pointer: coarse)",
             ".workbench-toolbar"
           ],
-          "line": 227,
+          "line": 221,
           "references": [
             "--control-target-touch"
           ]
@@ -9493,7 +9615,7 @@
     {
       "path": "src/public/workbenchOverview/canvasPresentation.css",
       "role": "Local",
-      "sha256": "658cdebce2fdbb5b4b5b4c891776af033c6537dc570af22d28855414cca83ad5",
+      "sha256": "5b1a842c08716fbf756509a9c775ae4cb02405dfdaca3a7be71abb70ad4b1eab",
       "definitions": [
         {
           "name": "--tactile-ink",
@@ -9508,12 +9630,15 @@
         },
         {
           "name": "--tactile-muted",
-          "value": "#c6c7c7",
+          "value": "color-mix(in srgb, var(--overview-glass-ink) 84%, var(--overview-glass))",
           "scope": [
             ".canvas-presentation"
           ],
           "line": 1,
-          "references": []
+          "references": [
+            "--overview-glass-ink",
+            "--overview-glass"
+          ]
         },
         {
           "name": "--presentation-height",
@@ -9546,6 +9671,85 @@
           "references": [
             "--canvas-ratio"
           ]
+        },
+        {
+          "name": "--quick-peek",
+          "value": "clamp(22px, 2.5vw, 48px)",
+          "scope": [
+            ".canvas-presentation[data-tile-viewer]"
+          ],
+          "line": 99,
+          "references": []
+        },
+        {
+          "name": "--quick-shrink",
+          "value": ".56",
+          "scope": [
+            ".canvas-presentation[data-tile-viewer]"
+          ],
+          "line": 100,
+          "references": []
+        },
+        {
+          "name": "--quick-height",
+          "value": "min(86dvh, calc(88vw / var(--canvas-ratio)))",
+          "scope": [
+            ".canvas-presentation[data-tile-viewer]:not([data-expanded]) :is(.canvas-presentation-surface, .quick-view-neighbor)"
+          ],
+          "line": 104,
+          "references": [
+            "--canvas-ratio"
+          ]
+        },
+        {
+          "name": "--edge-distance",
+          "value": "calc(50vw + 50% * var(--quick-shrink) - var(--quick-peek))",
+          "scope": [
+            ".canvas-presentation[data-tile-viewer]:not([data-expanded]) :is(.canvas-presentation-surface, .quick-view-neighbor)"
+          ],
+          "line": 107,
+          "references": [
+            "--quick-shrink",
+            "--quick-peek"
+          ]
+        },
+        {
+          "name": "--remaining",
+          "value": "1",
+          "scope": [
+            ".workbench-overview .canvas-presentation .quick-view-neighbor"
+          ],
+          "line": 111,
+          "references": []
+        },
+        {
+          "name": "--side",
+          "value": "-1",
+          "scope": [
+            ".quick-view-neighbor[data-side='Previous'], .canvas-presentation[data-travel='Next']"
+          ],
+          "line": 115,
+          "references": []
+        },
+        {
+          "name": "--side",
+          "value": "1",
+          "scope": [
+            ".quick-view-neighbor[data-side='Next'], .canvas-presentation[data-travel='Previous']"
+          ],
+          "line": 116,
+          "references": []
+        },
+        {
+          "name": "--remaining",
+          "value": "calc(1 - var(--quick-progress))",
+          "scope": [
+            ".canvas-presentation[data-travel='Next'] .quick-view-neighbor[data-side='Next'],\n.canvas-presentation[data-travel='Previous'] .quick-view-neighbor[data-side='Previous']"
+          ],
+          "line": 118,
+          "references": [
+            "--quick-progress"
+          ]
         }
       ],
       "references": [
@@ -9555,6 +9759,7 @@
         "--card-material",
         "--control-radius",
         "--control-shell-radius",
+        "--edge-distance",
         "--font-technical",
         "--overview-ease",
         "--overview-glass",
@@ -9565,7 +9770,13 @@
         "--overview-panel-duration",
         "--overview-radius",
         "--presentation-height",
+        "--quick-height",
+        "--quick-peek",
+        "--quick-progress",
+        "--quick-shrink",
+        "--remaining",
         "--sample-offset",
+        "--side",
         "--space-2",
         "--tactile-edge",
         "--tactile-face",
@@ -9578,7 +9789,7 @@
     {
       "path": "src/public/workbenchOverview/compositionIndex.css",
       "role": "Local",
-      "sha256": "04b2a4aa0fa00a1cff1735cea9d681408fb265b58dd54993891b7f67bb44859a",
+      "sha256": "75df68a570b944566964156fb348529b142e91ed46f245f0175b17cd72f3f901",
       "definitions": [
         {
           "name": "--index-width",
@@ -9655,24 +9866,56 @@
     {
       "path": "src/public/workbenchOverview/visitorWorksList.css",
       "role": "Local",
-      "sha256": "74dc437b7f143ade4194453266824f5ee87061f6ff73cedd64305c0869dc7018",
+      "sha256": "7635ed0adfefa0b3fb0485f72ca2a71634b2e83a37fb1c33bb156eced2628232",
       "definitions": [
+        {
+          "name": "--gallery-toolbar-inset",
+          "value": "clamp(42px, calc(16.2dvh - var(--spread-height)), 100px)",
+          "scope": [
+            ".workbench-overview[data-visitor-header]"
+          ],
+          "line": 35,
+          "references": [
+            "--spread-height"
+          ]
+        },
+        {
+          "name": "--gallery-gutter",
+          "value": "2.5%",
+          "scope": [
+            ".workbench-overview[data-visitor-header]"
+          ],
+          "line": 36,
+          "references": []
+        },
+        {
+          "name": "--gallery-detail-space",
+          "value": "calc(var(--works-rail) + var(--works-gap))",
+          "scope": [
+            ".workbench-overview[data-visitor-header]"
+          ],
+          "line": 37,
+          "references": [
+            "--works-rail",
+            "--works-gap"
+          ]
+        },
         {
           "name": "--works-rail",
           "value": "clamp(150px, 11.6vw, 220px)",
           "scope": [
-            ".workbench-overview[data-visitor-header][data-layout='list']"
+            ".workbench-overview[data-visitor-header]"
           ],
-          "line": 3,
+          "line": 38,
           "references": []
         },
         {
           "name": "--works-gap",
           "value": "clamp(20px, 1.8vw, 38px)",
           "scope": [
-            ".workbench-overview[data-visitor-header][data-layout='list']"
+            ".workbench-overview[data-visitor-header]"
           ],
-          "line": 4,
+          "line": 39,
           "references": []
         },
         {
@@ -9681,7 +9924,7 @@
           "scope": [
             ".workbench-overview[data-visitor-header][data-layout='list']"
           ],
-          "line": 5,
+          "line": 42,
           "references": []
         },
         {
@@ -9690,18 +9933,112 @@
           "scope": [
             ".workbench-overview[data-visitor-header][data-layout='list']"
           ],
-          "line": 6,
+          "line": 43,
           "references": []
+        },
+        {
+          "name": "--gallery-detail-space",
+          "value": "0px",
+          "scope": [
+            "@media (max-width: 959px)",
+            ".workbench-overview[data-visitor-header]"
+          ],
+          "line": 166,
+          "references": []
+        },
+        {
+          "name": "--gallery-gutter",
+          "value": "16px",
+          "scope": [
+            "@media (max-width: 700px)",
+            ".workbench-overview[data-visitor-header]"
+          ],
+          "line": 171,
+          "references": []
+        },
+        {
+          "name": "--gallery-toolbar-inset",
+          "value": "12px",
+          "scope": [
+            "@media (max-width: 700px)",
+            ".workbench-overview[data-visitor-header]"
+          ],
+          "line": 171,
+          "references": []
+        },
+        {
+          "name": "--gallery-stage-height",
+          "value": "calc(100dvh - var(--spread-height) - 24px - var(--gallery-tools-height, 0px))",
+          "scope": [
+            ".workbench-overview[data-published-gallery][data-layout='list']"
+          ],
+          "line": 188,
+          "references": [
+            "--spread-height",
+            "--gallery-tools-height"
+          ]
+        },
+        {
+          "name": "--rails-and-gaps",
+          "value": "calc(2 * (var(--works-rail) + var(--works-gap)))",
+          "scope": [
+            ".workbench-overview[data-published-gallery] .composition-index:not([data-expanded]) .composition-index-body"
+          ],
+          "line": 192,
+          "references": [
+            "--works-rail",
+            "--works-gap"
+          ]
+        },
+        {
+          "name": "--maximum",
+          "value": "calc(var(--gallery-stage-height) - 36px)",
+          "scope": [
+            "@media (min-width: 701px)",
+            ".workbench-overview[data-published-gallery] .composition-index:not([data-expanded]) .composition-explorer-viewport"
+          ],
+          "line": 212,
+          "references": [
+            "--gallery-stage-height"
+          ]
         }
       ],
       "references": [
+        "--card-base",
+        "--card-edge",
+        "--card-inner-edge",
+        "--editor-accent",
+        "--editor-field",
+        "--editor-ink",
+        "--editor-line",
+        "--editor-muted",
+        "--editor-on-accent",
+        "--editor-panel",
+        "--editor-selection",
+        "--gallery-gutter",
+        "--gallery-height-fill",
         "--gallery-mat",
+        "--gallery-stage-height",
+        "--gallery-toolbar-inset",
+        "--gallery-tools-height",
+        "--gallery-width-fraction",
+        "--maximum",
+        "--rails-and-gaps",
         "--spread-body",
         "--spread-heading",
         "--spread-height",
+        "--spread-line",
         "--spread-muted",
         "--spread-panel",
         "--spread-secondary",
+        "--toolbar-column-gap",
+        "--toolbar-height",
+        "--toolbar-icon",
+        "--toolbar-key-radius",
+        "--toolbar-padding-block",
+        "--toolbar-padding-inline",
+        "--toolbar-radius",
+        "--toolbar-target",
         "--works-gap",
         "--works-label-height",
         "--works-rail",
@@ -9711,7 +10048,7 @@
     {
       "path": "src/public/workbenchOverview/workbenchOverview.css",
       "role": "Local",
-      "sha256": "fd82665f05850cc6fadfe6fae0e3bafe4c51db5af93db1f18bfcf09c78dba2b8",
+      "sha256": "a5f422c79135d2a539d08d58c6de08c182f3f04593166f9e99f5108d657b27f7",
       "definitions": [
         {
           "name": "--overview-ease",
@@ -9807,7 +10144,7 @@
           "scope": [
             ".workbench-overview-navigation"
           ],
-          "line": 43,
+          "line": 45,
           "references": [
             "--interface-panel"
           ]
@@ -9819,7 +10156,7 @@
             "@media (prefers-reduced-transparency: reduce)",
             ".workbench-overview, .workbench-overview-navigation"
           ],
-          "line": 96,
+          "line": 98,
           "references": [
             "--interface-panel"
           ]
@@ -9831,7 +10168,7 @@
             "@media (prefers-reduced-transparency: reduce)",
             ".workbench-overview, .workbench-overview-navigation"
           ],
-          "line": 96,
+          "line": 98,
           "references": []
         },
         {
@@ -9841,16 +10178,16 @@
             "@media (prefers-reduced-transparency: reduce)",
             ".workbench-overview, .workbench-overview-navigation"
           ],
-          "line": 96,
+          "line": 98,
           "references": []
         },
         {
           "name": "--gallery-tools-height",
           "value": "48px",
           "scope": [
-            ".workbench-overview[data-selectable-gallery]"
+            ".workbench-overview[data-visitor-header][data-selecting]"
           ],
-          "line": 104,
+          "line": 106,
           "references": []
         }
       ],
@@ -9860,6 +10197,9 @@
         "--control-target-touch",
         "--font-interface",
         "--font-technical",
+        "--gallery-detail-space",
+        "--gallery-gutter",
+        "--gallery-toolbar-inset",
         "--gallery-tools-height",
         "--interface-environment",
         "--interface-hover",
@@ -9881,6 +10221,7 @@
         "--spread-heading",
         "--spread-height",
         "--spread-line",
+        "--spread-muted",
         "--spread-panel",
         "--tactile-edge",
         "--tactile-face",
@@ -9896,7 +10237,7 @@
     {
       "path": "src/public/workbenchOverview/workbenchOverviewGrid.css",
       "role": "Local",
-      "sha256": "39afa441d0c433d13ad7d19fcc23dd0cd01e93953b32a883373ff5668c842695",
+      "sha256": "4ea21f15e1fd0c0da4d20021632dcb3efc6e2868efcfe15ddbe7535061316fec",
       "definitions": [
         {
           "name": "--gallery-columns",
@@ -9905,7 +10246,7 @@
             "@media (max-width: 1600px)",
             ":is(.workbench-overview-gallery, .canvas-gallery-section)"
           ],
-          "line": 38,
+          "line": 39,
           "references": []
         },
         {
@@ -9915,7 +10256,7 @@
             "@media (max-width: 1000px)",
             ":is(.workbench-overview-gallery, .canvas-gallery-section)"
           ],
-          "line": 41,
+          "line": 42,
           "references": []
         },
         {
@@ -9925,7 +10266,7 @@
             "@media (max-width: 520px)",
             ":is(.workbench-overview-gallery, .canvas-gallery-section)"
           ],
-          "line": 49,
+          "line": 50,
           "references": []
         },
         {
@@ -9934,7 +10275,7 @@
           "scope": [
             ":is(.workbench-overview-gallery, .canvas-gallery-section)[data-card-size=\"1\"]"
           ],
-          "line": 52,
+          "line": 53,
           "references": []
         },
         {
@@ -9943,7 +10284,7 @@
           "scope": [
             ":is(.workbench-overview-gallery, .canvas-gallery-section)[data-card-size=\"1\"]"
           ],
-          "line": 52,
+          "line": 53,
           "references": []
         },
         {
@@ -9952,7 +10293,7 @@
           "scope": [
             ":is(.workbench-overview-gallery, .canvas-gallery-section)[data-card-size=\"3\"]"
           ],
-          "line": 53,
+          "line": 54,
           "references": []
         },
         {
@@ -9961,7 +10302,7 @@
           "scope": [
             ":is(.workbench-overview-gallery, .canvas-gallery-section)[data-card-size=\"3\"]"
           ],
-          "line": 53,
+          "line": 54,
           "references": []
         },
         {
@@ -9971,7 +10312,7 @@
             "@media (max-width: 1600px)",
             ":is(.workbench-overview-gallery, .canvas-gallery-section)[data-card-size=\"1\"]"
           ],
-          "line": 66,
+          "line": 67,
           "references": []
         },
         {
@@ -9981,7 +10322,7 @@
             "@media (max-width: 1000px)",
             ":is(.workbench-overview-gallery, .canvas-gallery-section)[data-card-size=\"1\"]"
           ],
-          "line": 67,
+          "line": 68,
           "references": []
         },
         {
@@ -9991,7 +10332,7 @@
             "@media (max-width: 1000px)",
             ":is(.workbench-overview-gallery, .canvas-gallery-section)[data-card-size=\"3\"]"
           ],
-          "line": 67,
+          "line": 68,
           "references": []
         },
         {
@@ -10001,7 +10342,34 @@
             "@media (max-width: 520px)",
             ":is(.workbench-overview-gallery, .canvas-gallery-section)[data-card-size=\"1\"]"
           ],
-          "line": 68,
+          "line": 69,
+          "references": []
+        },
+        {
+          "name": "--tile-size",
+          "value": "clamp(170px, 23vw, 320px)",
+          "scope": [
+            ".workbench-overview[data-visitor-header] .workbench-overview-gallery"
+          ],
+          "line": 78,
+          "references": []
+        },
+        {
+          "name": "--tile-size",
+          "value": "clamp(108px, 9vw, 152px)",
+          "scope": [
+            ".workbench-overview[data-visitor-header] [data-card-size=\"1\"]"
+          ],
+          "line": 79,
+          "references": []
+        },
+        {
+          "name": "--tile-size",
+          "value": "clamp(300px, 38vw, 620px)",
+          "scope": [
+            ".workbench-overview[data-visitor-header] [data-card-size=\"3\"]"
+          ],
+          "line": 80,
           "references": []
         },
         {
@@ -10010,8 +10378,19 @@
           "scope": [
             ".workbench-overview[data-visitor-header] .workbench-overview-cycle"
           ],
-          "line": 78,
+          "line": 82,
           "references": []
+        },
+        {
+          "name": "--side",
+          "value": "min(var(--tile-size), 100cqh, 100cqw)",
+          "scope": [
+            ".workbench-overview[data-visitor-header] [data-horizontal] .workbench-overview-cycle"
+          ],
+          "line": 91,
+          "references": [
+            "--tile-size"
+          ]
         },
         {
           "name": "--thumbnail-background",
@@ -10019,7 +10398,7 @@
           "scope": [
             ".workbench-overview[data-visitor-header] .workbench-overview-card"
           ],
-          "line": 88,
+          "line": 98,
           "references": []
         },
         {
@@ -10028,27 +10407,27 @@
           "scope": [
             ".workbench-overview[data-visitor-header] .workbench-overview-card"
           ],
-          "line": 89,
+          "line": 99,
           "references": []
         }
       ],
       "references": [
         "--card-material",
         "--gallery-columns",
-        "--gallery-count",
         "--gallery-height",
         "--overview-ease",
         "--overview-glass",
         "--overview-glass-filter",
         "--overview-glass-ink",
         "--overview-radius",
+        "--side",
         "--space-2",
         "--space-3",
-        "--spread-heading",
         "--tactile-edge",
         "--tactile-face",
         "--tactile-well",
-        "--tile-gap"
+        "--tile-gap",
+        "--tile-size"
       ]
     },
     {
@@ -10224,7 +10603,7 @@
     {
       "path": "src/reception/receptionBento.css",
       "role": "Local",
-      "sha256": "f622545673f28f7e024b7068f32ac9dd6efd3edba6b4ad0945a44dc7cb4f894f",
+      "sha256": "333de6eb3f2328c7562bdc6852c3b6044c93ad22007aa9fdf7fd6b02621650ed",
       "definitions": [
         {
           "name": "--tool-control-height",
@@ -10232,7 +10611,7 @@
           "scope": [
             ".reception-bento-panel"
           ],
-          "line": 10,
+          "line": 11,
           "references": [
             "--control-height-sm",
             "--tool-touch-target"
@@ -10244,7 +10623,7 @@
           "scope": [
             ".reception-bento-panel"
           ],
-          "line": 10,
+          "line": 11,
           "references": [
             "--control-height-sm",
             "--tool-touch-target"
@@ -10854,6 +11233,103 @@
         "--workflow-panel",
         "--workflow-selection",
         "--workflow-type-control"
+      ]
+    },
+    {
+      "path": "src/ui/iconSwitch.css",
+      "role": "Local",
+      "sha256": "e6eee840bc217aeb2b0243385e3ba05e5c996b97ca2a1973a978a76a3b968442",
+      "definitions": [],
+      "references": [
+        "--interface-ink",
+        "--interface-line",
+        "--interface-panel"
+      ]
+    },
+    {
+      "path": "src/ui/iconToolbar.css",
+      "role": "Local",
+      "sha256": "5c51d6e40dc06fc3a34a7d8a9d2c50aaa5ce89db5c608fe5999f4b9931ab2e6d",
+      "definitions": [
+        {
+          "name": "--toolbar-target",
+          "value": "32px",
+          "scope": [
+            ".workbench-toolbar, .gallery-header-toolbar"
+          ],
+          "line": 3,
+          "references": []
+        },
+        {
+          "name": "--toolbar-icon",
+          "value": "16px",
+          "scope": [
+            ".workbench-toolbar, .gallery-header-toolbar"
+          ],
+          "line": 4,
+          "references": []
+        },
+        {
+          "name": "--toolbar-height",
+          "value": "44px",
+          "scope": [
+            ".workbench-toolbar, .gallery-header-toolbar"
+          ],
+          "line": 5,
+          "references": []
+        },
+        {
+          "name": "--toolbar-column-gap",
+          "value": "2px",
+          "scope": [
+            ".workbench-toolbar, .gallery-header-toolbar"
+          ],
+          "line": 6,
+          "references": []
+        },
+        {
+          "name": "--toolbar-padding-block",
+          "value": "6px",
+          "scope": [
+            ".workbench-toolbar, .gallery-header-toolbar"
+          ],
+          "line": 7,
+          "references": []
+        },
+        {
+          "name": "--toolbar-padding-inline",
+          "value": "6px",
+          "scope": [
+            ".workbench-toolbar, .gallery-header-toolbar"
+          ],
+          "line": 8,
+          "references": []
+        },
+        {
+          "name": "--toolbar-radius",
+          "value": "11px",
+          "scope": [
+            ".workbench-toolbar, .gallery-header-toolbar"
+          ],
+          "line": 9,
+          "references": []
+        },
+        {
+          "name": "--toolbar-key-radius",
+          "value": "calc(var(--toolbar-radius) - var(--toolbar-padding-inline))",
+          "scope": [
+            ".workbench-toolbar, .gallery-header-toolbar"
+          ],
+          "line": 10,
+          "references": [
+            "--toolbar-radius",
+            "--toolbar-padding-inline"
+          ]
+        }
+      ],
+      "references": [
+        "--toolbar-padding-inline",
+        "--toolbar-radius"
       ]
     },
     {

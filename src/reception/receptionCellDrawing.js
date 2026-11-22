@@ -29,7 +29,7 @@ export function drawReceptionBentoCell(value, id, frame, direction, sourceId) {
 // The same world grid, edge magnets and screen-space retention as moving/resizing.
 // This owns only a temporary proposal; the editor's existing gesture owns capture,
 // cancellation and the single guarded save on release.
-export function createReceptionCellDrawGesture(origin, id, start, scale, sourceId) {
+export function createReceptionCellDrawGesture(origin, id, start, scale, sourceId, gridStep = WORKBENCH_GRID_STEP) {
   if (![start.x,start.y,scale].every(Number.isFinite) || scale <= 0) throw new Error('Choose a valid drawing position.');
   const { gap, padding } = receptionBentoSettings(origin), area = workbenchArea(origin.workbench);
   const grid = { x: (area.left + padding) * scale, y: (area.top + padding) * scale };
@@ -44,14 +44,14 @@ export function createReceptionCellDrawGesture(origin, id, start, scale, sourceI
     const anchorMatches = !bypass && modulePositionMatch(point,targets,gap*scale).matches;
     const anchor = { x: point.left, y: point.top };
     if (!bypass) for (const [axis,side] of [['x','left'],['y','top']])
-      anchor[axis] = (anchorMatches[axis] || gridEdgeMatch(axis,side,anchor[axis],grid[axis],WORKBENCH_GRID_STEP*scale)).value;
+      anchor[axis] = (anchorMatches[axis] || gridEdgeMatch(axis,side,anchor[axis],grid[axis],gridStep*scale)).value;
     const end = { x: start.x*scale + delta.x, y: start.y*scale + delta.y };
     const screenRect = { left: Math.min(anchor.x,end.x), top: Math.min(anchor.y,end.y), width: Math.abs(end.x-anchor.x), height: Math.abs(end.y-anchor.y) };
     const nextMatches = {}, rect = {};
     for (const [axis,low,high,size,min,max] of [['x','left','right','width',limits.minimumWidth,limits.maximumWidth],['y','top','bottom','height',limits.minimumHeight,limits.maximumHeight]]) {
       const negative = end[axis] < anchor[axis], side = negative ? low : high;
       const match = !bypass && (moduleEdgeMatch(screenRect,targets,axis,side,end[axis],gap*scale,matches[axis])
-        || gridEdgeMatch(axis,side,end[axis],grid[axis],WORKBENCH_GRID_STEP*scale,matches[axis]));
+        || gridEdgeMatch(axis,side,end[axis],grid[axis],gridStep*scale,matches[axis]));
       const requested = match ? match.value : end[axis];
       const length = Math.max(min,Math.min(max,Math.round(Math.abs(requested-anchor[axis])/scale)));
       rect[low] = anchor[axis]/scale - (negative ? length : 0); rect[size] = length;

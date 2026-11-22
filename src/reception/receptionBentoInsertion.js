@@ -1,7 +1,7 @@
 import { receptionBentoSettings, pushReceptionBentoCell, receptionCellFrames, applyReceptionBentoFrames } from './receptionBento.js';
 import { containReceptionFrames, receptionFramesOverlap } from './receptionCellPush.js';
 import { workbenchArea } from '../systemWorkflow/domain/workbenchArea.js';
-import { receptionModuleWindow } from './receptionEditorDocument.js';
+import { receptionModuleWindow, withReceptionModuleWindow } from './receptionEditorDocument.js';
 
 export function moveReceptionBentoCell(value, id, destination) {
   const frame = receptionModuleWindow(value, id);
@@ -22,7 +22,7 @@ export function receptionBentoKeyboardTarget(value, id, side, large = false) {
 
 // Accept the final positions of a continuous drag through the same atomic save
 // boundary. Sizes and contents always come from the current authored document.
-export function placeReceptionBentoCells(value, positions) {
+export function placeReceptionBentoCells(value, positions, layers = []) {
   if (!Array.isArray(positions) || positions.length !== value.cells.length
     || new Set(positions.map(p => p?.id)).size !== positions.length
     || positions.some(p => !p || !value.cells.some(c => c.id === p.id)
@@ -32,6 +32,15 @@ export function placeReceptionBentoCells(value, positions) {
   const { gap, padding } = receptionBentoSettings(value);
   if (frames.some((r, i) => frames.slice(i + 1).some(other => receptionFramesOverlap(r, other, gap))))
     throw new Error('Cells must keep their spacing.');
-  const area = containReceptionFrames(workbenchArea(value.workbench), frames, padding);
+  const layerFrames = [];
+  for (const { id, left, top } of layers) {
+    const frame = receptionModuleWindow(value, id);
+    if (!frame || value.cells.some(cell => cell.id === id || cell.members.includes(id)))
+      throw new Error('Choose a free artwork layer.');
+    const moved = { ...frame, left, top };
+    value = withReceptionModuleWindow(value, id, moved);
+    layerFrames.push(moved);
+  }
+  const area = containReceptionFrames(workbenchArea(value.workbench), [...frames, ...layerFrames], padding);
   return applyReceptionBentoFrames({ ...value, workbench: { ...value.workbench, area } }, frames);
 }

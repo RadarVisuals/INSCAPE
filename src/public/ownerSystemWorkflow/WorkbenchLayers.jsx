@@ -8,7 +8,6 @@ import { workbenchLayerOutline } from './workbenchLayerOutline.js';
 import './workbenchLayers.css';
 import ArtworkOrderControls from '../../ui/ArtworkOrderControls.jsx';
 import { useEditorCells } from '../../reception/EditorCellsContext.jsx';
-import { OwnerSystemWorkflowSelectMenu } from './OwnerSystemWorkflowWorkspaceControls.jsx';
 
 export default function WorkbenchLayers({ open, hidden, onOpen, historyBlocked, hostRef }) {
   const view = useWorkbenchView(), { store, profileAddress, layers, content } = view;
@@ -44,13 +43,34 @@ export default function WorkbenchLayers({ open, hidden, onOpen, historyBlocked, 
     if (ids.length) setExpanded(current => ids.every(id => current.includes(id)) ? current : [...new Set([...current, ...ids])]);
   }, [revealKey, selectionKey, store]);
   const block = layers.find(layer => typeof layer !== 'string' && layer.children.length === selected.length && layer.children.every(id => selected.includes(id)));
-  const transferable = cellContext && selected.length > 0 && selected.every(id => !cellsById.has(id));
-  const transferGeneration = store.getGeneration();
+  const transferBlocked = Boolean(historyBlocked) || Object.keys(view.transforms).length > 0;
   const partBlock = layers.find(layer => layer.id === view.editingBlockId);
   const run = (action, generation = store.getGeneration()) => {
     if (historyBlocked) { setError(historyBlocked); return false; }
     try { editArtworkLayers(store, profileAddress, action, generation, view.getPresentation()); setError(''); return true; }
     catch (failure) { setError(failure.message); return false; }
+  };
+  const focusAfterTransfer = useRef(null);
+  useLayoutEffect(() => {
+    const id = focusAfterTransfer.current;
+    if (!id) return;
+    const button = root.current?.querySelector(`[data-layer-id="${CSS.escape(id)}"] > .workbench-layer-name`);
+    if (button) { button.focus({ preventScroll: true }); focusAfterTransfer.current = null; }
+  });
+  const transfer = (ids, target, generation, placement) => {
+    if (transferBlocked || !cellContext) return;
+    try {
+      cellContext.store.editBento('moveMembers', [ids, target, placement], generation, view.getPresentation());
+      focusAfterTransfer.current = ids[0];
+      select(ids, false, null, target); setError('');
+    } catch (failure) { setError(failure.message); }
+  };
+  const endDrag = () => { drag.current = null; setDrop(null); };
+  const canTransferDrag = target => {
+    const moving = drag.current;
+    return cellContext && !transferBlocked && moving?.store === store && moving.ids.length &&
+      moving.ids.every(id => byId.has(id) && !cellsById.has(id)) &&
+      moving.ids.some(id => (cellOwners.get(id) ?? null) !== target);
   };
   const cancel = () => {
     const rowId = pending?.rowId; setPending(null);
@@ -123,13 +143,38 @@ export default function WorkbenchLayers({ open, hidden, onOpen, historyBlocked, 
       if (moving.some(id => cellOwners.get(id) !== owner)) return false;
       return owner ? cellParent === owner || id === owner : !cellParent;
     };
+    const dropEdge = event => {
+      const rect = event.currentTarget.getBoundingClientRect();
+      const fraction = (event.clientY - rect.top) / rect.height;
+      if (cell && fraction >= .2 && fraction <= .8 && canTransferDrag(id)) return 'inside';
+      if (!cellParent && !parent && canTransferDrag(null) && !drag.current.ids.includes(id))
+        return fraction < .5 ? 'after' : 'before';
+      return acceptsDrop() ? (fraction < .5 ? 'after' : 'before') : null;
+    };
     return <div key={id}>
       <div className="workbench-layer-row" data-layer-id={id} data-layer-key={rowKey} data-selected={chosen || undefined} data-part={Boolean(parent || cellParent) || undefined}
         data-drop={drop?.rowKey === rowKey ? drop.edge : undefined} draggable={!deleting}
-        onDragStart={event => { drag.current = { ids: chosen ? selected : ids, generation: store.getGeneration() }; event.dataTransfer.effectAllowed = 'move'; event.dataTransfer.setData('text/plain', id); }}
-        onDragEnd={() => { drag.current = null; setDrop(null); }}
-        onDragOver={event => { if (!acceptsDrop()) { setDrop(null); return; } event.preventDefault(); const rect = event.currentTarget.getBoundingClientRect(); setDrop({ rowKey, edge: event.clientY < rect.top + rect.height / 2 ? 'after' : 'before' }); }}
-        onDrop={event => { event.preventDefault(); if (acceptsDrop() && drop?.rowKey === rowKey) run({ type: 'order', direction: 'drop', ids: drag.current.ids, targetId: id, edge: drop.edge }, drag.current.generation); drag.current = null; setDrop(null); }}>
+        onDragStart={event => {
+          const moving = chosen ? selected : ids;
+          drag.current = { ids: moving, store, generation: store.getGeneration() };
+          event.dataTransfer.effectAllowed = 'move'; event.dataTransfer.setData('text/plain', id);
+        }}
+        onDragEnd={endDrag}
+        onDragOver={event => {
+          const edge = dropEdge(event);
+          if (edge) event.preventDefault();
+          setDrop(edge ? { rowKey, edge } : null);
+        }}
+        onDragLeave={event => { if (!event.currentTarget.contains(event.relatedTarget)) setDrop(null); }}
+        onDrop={event => {
+          event.preventDefault();
+          const edge = dropEdge(event), moving = drag.current;
+          if (edge === 'inside') transfer(moving.ids, id, moving.generation);
+          else if (edge && !cellParent && !parent && canTransferDrag(null))
+            transfer(moving.ids, null, moving.generation, { direction: 'drop', targetId: id, edge });
+          else if (edge && moving?.store === store) run({ type: 'order', direction: 'drop', ids: moving.ids, targetId: id, edge }, moving.generation);
+          endDrag();
+        }}>
         {deleting ? <><span className="workbench-layer-confirm">Delete {pending.ids.length === 1 ? name : `${pending.ids.length} layers`}?</span>
           <button type="button" aria-label="Cancel layer deletion" onClick={cancel}><X /></button>
           <button type="button" aria-label="Confirm layer deletion" onClick={() => { if (run({ type: 'delete', ids: pending.ids }, pending.generation)) { setPending(null); view.clearSelection(); root.current?.focus(); } }}><Check /></button></>
@@ -180,24 +225,22 @@ export default function WorkbenchLayers({ open, hidden, onOpen, historyBlocked, 
           <button type="button" aria-label="Ungroup selected group" title="Ungroup; keep all artwork" disabled={!block} onClick={() => run({ type: 'ungroup', id: block.id })}><Ungroup /></button>
           <button type="button" aria-label="Focus selected layers" title="Focus selected layers" disabled={!selected.length} onClick={() => view.focusModulesRef.current?.(artworkWindowIds(content, selected))}><Scan /></button>
         </nav>
-        <div className="workbench-layers-list" aria-label="Artwork layers">
+        <div className="workbench-layers-list" aria-label="Artwork layers" data-cell-list={cells.length > 0 || undefined}
+          onDragOver={event => {
+            if (event.target !== event.currentTarget || !canTransferDrag(null)) return;
+            event.preventDefault(); setDrop({ edge: 'end' });
+          }}
+          onDragLeave={event => { if (!event.currentTarget.contains(event.relatedTarget)) setDrop(null); }}
+          onDrop={event => {
+            if (event.target !== event.currentTarget || !canTransferDrag(null)) return;
+            event.preventDefault();
+            transfer(drag.current.ids, null, drag.current.generation, { direction: 'back' });
+            endDrag();
+          }}>
           {groups.length ? workbenchLayerOutline(layers, groups, groupOwners).map(entry => entry.group ? folderRow(entry) : row(entry.layer, entry.parent))
             : layers.length ? outline().reverse().map(layer => row(layer)) : <p>No artwork yet. Add an Image, Text or Shape to this Workbench.</p>}
+          {drop?.edge === 'end' && <div className="workbench-list-insertion" aria-hidden="true" />}
         </div>
-        {transferable && <OwnerSystemWorkflowSelectMenu flat compact palette="editor" className="workflow-tactile-control"
-          label="Move to cell" triggerPrefix="Move to cell" value="" defaultValue=""
-          disabled={Boolean(historyBlocked) || Object.keys(view.transforms).length > 0}
-          options={[...cells.map(cell => ({ value: cell.id, label: byId.get(cell.id)?.name || 'Cell',
-            disabled: selected.every(id => cellOwners.get(id) === cell.id) })),
-          { value: 'outside', label: 'Move out of cell', disabled: selected.every(id => !cellOwners.has(id)) }]} onChange={id => {
-            const target = id === 'outside' ? null : id;
-            try {
-              cellContext.store.editBento('moveMembers', [selected, target], transferGeneration, view.getPresentation());
-              cellContext.store.setEditingCell(target); view.selectLayers(selected, false, null); setError('');
-            }
-            catch (failure) { setError(failure.message); }
-          }} />}
-        {block && <button type="button" onClick={() => view.enterBlock(block.id)}>Edit group contents</button>}
         {partBlock && selected.length === 1 && <button type="button" title="Keep this layer on the Workbench" onClick={() => { if (run({ type: 'leave', id: selected[0] })) view.leaveBlock(false); }}>Move out of group</button>}
         {grouping && <form onSubmit={event => { event.preventDefault(); if (run({ type: 'group', ids: selected, id: `composition:${crypto.randomUUID()}`, name: groupName.trim() })) setGrouping(false); }}><label>Group name<input autoFocus value={groupName} maxLength={48} onChange={event => setGroupName(event.target.value)} /></label><button type="submit">Create group</button><button type="button" onClick={() => setGrouping(false)}>Cancel</button></form>}
         {error && <p role="alert">{error}</p>}

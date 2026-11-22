@@ -53,7 +53,7 @@ for (const theme of ['dark', 'light']) test(`Library divider retains its chosen 
     await page.waitForFunction(() => document.querySelector('.lattice-browser-sidebar').scrollTop > 0);
     await rail.getByRole('button', { name: 'All Assets', exact: true }).focus();
     await page.keyboard.press('Tab');
-    assert.equal(await page.getByRole('button', { name: 'Owned', exact: true }).evaluate(node => document.activeElement === node), true);
+    assert.equal(await page.getByRole('button', { name: 'Folders', exact: true }).evaluate(node => document.activeElement === node), true);
     await page.screenshot({ path: '.browser-test-runtime/library-divider/' + theme + '-rail-overflow.png' });
     const compactBottom = await bottom.boundingBox();
     await page.mouse.move(compactBottom.x + compactBottom.width / 2, compactBottom.y + compactBottom.height / 2);
@@ -153,7 +153,7 @@ for (const theme of ['dark', 'light']) test(`Library keeps square tiles, explici
     await flyout.waitFor();
     const pickerBox = await flyout.boundingBox(), panelBox = await panel.boundingBox();
     assert.ok(pickerBox.height <= 300 && pickerBox.y >= panelBox.y && pickerBox.y + pickerBox.height <= panelBox.y + panelBox.height, 'drag picker stays content-sized and inside Library');
-    assert.equal(await navigation.getByRole('button', { name: 'Owned', exact: true }).getAttribute('title'), null);
+    assert.equal(await navigation.getByRole('button', { name: 'Folders', exact: true }).getAttribute('title'), null);
     const destination = flyout.getByRole('button', { name: 'FIELD NOTES', exact: true });
     const to = await destination.boundingBox();
     await page.mouse.move(to.x + 45, to.y + to.height / 2, { steps: 10 }); await page.mouse.up();

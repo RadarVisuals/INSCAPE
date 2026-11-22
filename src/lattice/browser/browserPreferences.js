@@ -4,7 +4,12 @@ export const defaultBrowserPreferences = () => ({ view: { kind: BROWSER_VIEW_KIN
   collection: 'all', sort: BROWSER_SORTS.TITLE_ASC, assetSize: BROWSER_ASSET_SIZE.DEFAULT,
   sidebarWidth: 174, navigationMode: 'names', hideLabels: false, libraryWidth: null, relationshipView: 'all', collapsedSections: [], startCategoryId: null });
 export function libraryOpeningPreferences(preferences, categories) {
-  if (!preferences.startCategoryId) return preferences;
+  if (!preferences.startCategoryId) {
+    if (preferences.view.kind === BROWSER_VIEW_KINDS.UNSORTED || preferences.relationshipView !== 'all') {
+      return { ...preferences, view: { kind: BROWSER_VIEW_KINDS.ALL, id: null }, relationshipView: 'all' };
+    }
+    return preferences;
+  }
   const exists = categories.some(category => category.id === preferences.startCategoryId);
   return { ...preferences, startCategoryId: exists ? preferences.startCategoryId : null,
     view: { kind: exists ? BROWSER_VIEW_KINDS.CATEGORY : BROWSER_VIEW_KINDS.ALL, id: exists ? preferences.startCategoryId : null },
