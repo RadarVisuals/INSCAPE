@@ -55,7 +55,7 @@ export function WorkspaceBrand({ trigger, current, destinations, groups, onPanel
   ]));
   const commands = [
     ...(groups ? [{ id: 'search', label: 'Search commands...', disabled: !onSearch, run: onSearch }] : []),
-    ...[...profileTabs, 'Studio', 'Discover'].map((label, index) => ({ id: 'destination:' + label, label,
+    ...[...profileTabs, 'Studio', ...(destinations.Curation ? ['Curation'] : []), 'Discover'].map((label, index) => ({ id: 'destination:' + label, label,
       checkable: true, selected: label === current, disabled: !destinations[label] || blocked,
       section: index === 0 ? 'Workspace' : undefined, run: destinations[label] })),
     ...Object.keys(groups || {}).map((label, index) => ({ id: 'group:' + label, label, section: index === 0 ? 'Editor' : undefined })),

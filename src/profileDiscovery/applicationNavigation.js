@@ -12,6 +12,7 @@ function profileIntent(value) {
       ? { editor: 'canvas', workId: value.workId } : { canvas: true, reception: 'published' };
   }
   if (value?.editor === 'reception') return { editor: 'reception' };
+  if (value?.curation) return { curation: true };
   if (value?.writing) return { writing: true };
   return {
     ...(value?.canvas === true ? { canvas: true } : {}),
@@ -35,7 +36,7 @@ export function readApplicationRoute(locationLike, historyState = null) {
   const address = normalizeProfileAddress(params.get('view'));
   const gallery = params.get('tab') === 'gallery';
   return address ? { kind: 'profile', address, ...profileIntent({ editor: params.get('editor'), workId: params.get('work'),
-    newComposition: params.get('new') === '1', writing: params.get('tab') === 'writing', canvas: gallery || params.get('canvas') === '1',
+    newComposition: params.get('new') === '1', curation: params.get('tab') === 'curation', writing: params.get('tab') === 'writing', canvas: gallery || params.get('canvas') === '1',
     reception: gallery || params.get('reception') === 'published' ? 'published' : params.get('reception') === '1',
     target: { moduleId: params.get('module'), gridId: params.get('grid') } }) }
     : { kind: 'home', fallbackAddress: normalizeProfileAddress(params.get('profile')) };
@@ -50,6 +51,7 @@ export function applicationRouteUrl(locationLike, route) {
     const intent = profileIntent(route);
     if (intent.editor) url.searchParams.set('editor', 'studio');
     if (intent.editor === 'reception') url.searchParams.set('work', 'reception');
+    if (intent.curation) url.searchParams.set('tab', 'curation');
     if (intent.writing) url.searchParams.set('tab', 'writing');
     if (intent.newComposition) url.searchParams.set('new', '1');
     if (intent.workId) url.searchParams.set('work', intent.workId);
@@ -85,6 +87,7 @@ export function resolveApplicationDestination(route, authority) {
     ownershipVerified: authority.ownershipVerified, verifiedOwnerProfileAddress: connected,
     workspaceProfileAddress: connected, viewedProfileAddress: address,
   });
+  if (intent.curation) return owner ? { kind: 'curation', address } : { kind: 'public', address, reception: 'published' };
   if (intent.editor === 'canvas') return owner ? { kind: 'workbench', address, worksEditorId: intent.workId }
     : { kind: 'public', address, reception: 'published', canvas: true };
   if (intent.editor === 'studio') return owner ? { kind: 'workbench', address, ...(intent.newComposition && { newComposition: true }) }
@@ -106,6 +109,6 @@ export function studioOrigin(previous, address, saved) {
 
 export function disconnectRoute(route, destination) {
   // Discover loses its private return destination when the session ends.
-  return destination.kind === 'workbench'
+  return ['workbench', 'curation'].includes(destination.kind)
     ? { kind: 'discover', returnTo: null } : route;
 }

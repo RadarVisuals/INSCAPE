@@ -33,6 +33,10 @@ export function adaptLatticeProductionBrowserAsset(asset, profileAddress, accept
     || normalizeProfileAddress(asset?.contractAddress) !== identity.contractAddress
     || (asset?.tokenId == null ? null : String(asset.tokenId).toLowerCase()) !== identity.tokenId) return null;
 
+  return projectLibraryDisplayAsset(asset, identity);
+}
+
+export function projectLibraryDisplayAsset(asset, identity) {
   const previewCandidates = libraryPreviewCandidates({ ...asset.imageGroups?.[0], thumbnailUrl: asset.thumbnailUrl,
     originalImageUrl: asset.originalImageUrl, imageUrl: asset.imageUrl, fileType: asset.mediaFileType }).map(resolveBrowserPreviewUrl).filter((url, index, all) => all.indexOf(url) === index);
   const previewSource = previewCandidates[0] || null;

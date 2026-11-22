@@ -26,4 +26,10 @@ function Fixture() {
       workspaceRef={workspaceRef} placementTargetRef={placementTargetRef} shortcutTargetRef={shortcutTargetRef} moduleAssetTargetRef={moduleAssetTargetRef} onClose={() => {}} phase="open" />
   </main>;
 }
-createRoot(document.getElementById('root')).render(<Fixture />);
+const root = createRoot(document.getElementById('root'));
+if (new URLSearchParams(location.search).has('curation')) {
+  const { default: CurationPage } = await import('../src/library/CurationPage.jsx');
+  const leave = () => root.render(<button onClick={window.storageTest.openCuration}>Open Curation</button>);
+  window.storageTest.openCuration = () => root.render(<CurationPage profileAddress={profile} destinations={{}} onBack={leave} />);
+  leave();
+} else root.render(<Fixture />);

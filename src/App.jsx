@@ -15,6 +15,7 @@ import { ALPHA_SUPPORT_CODES } from './support/alphaSupport.js';
 import { createStandaloneWalletLoader, hasPersistedStandaloneConnection } from './wallet/standaloneWalletLoader.js';
 import { normalizeProfileAddress } from './library/config.js';
 
+const CurationPage = lazy(() => import('./library/CurationPage.jsx'));
 const PublicEntryPortal = lazy(() => import('./startveil/PublicEntryPortal.jsx'));
 const PublishedProfileBoundary = lazy(() => import('./profileDocument/components/PublishedProfileBoundary.jsx'));
 const PublicationConfirmation = lazy(() => import('./public/PublicationConfirmation.jsx'));
@@ -82,7 +83,7 @@ function App() {
   const destinationKey = `${destination.kind}:${destination.address || ''}`;
   const onDestinationReady = useCallback(() => setReadyDestinationKey(destinationKey), [destinationKey]);
   const entryDestinationReady = publicEntryPortal || (destination.kind !== 'pending'
-    && (destination.kind === 'discover' || ownerSourceReady) && readyDestinationKey === destinationKey);
+    && (destination.kind === 'discover' || destination.kind === 'curation' || ownerSourceReady) && readyDestinationKey === destinationKey);
   useEffect(() => {
     if (revealStage !== 'complete') return;
     const node = interfaceRef.current;
@@ -179,6 +180,7 @@ function App() {
     Profile: () => navigation.openOverview(connectedProfileAddress),
     Gallery: () => navigation.openCanvas(connectedProfileAddress),
     Writing: () => navigation.openWriting(connectedProfileAddress),
+    Curation: canOpenStudio ? () => navigation.openCuration(connectedProfileAddress) : undefined,
     Studio: canOpenStudio ? () => navigation.openStudio(connectedProfileAddress) : undefined,
     Discover: navigation.openDiscover,
   } : undefined;
@@ -251,7 +253,10 @@ function App() {
         {standaloneSignInActive || publicEntryPortal || !content ? null : content.kind === 'pending'
             ? <div className="mode-loading" role="status">Resolving profile...</div>
             : content.kind === 'entry' ? null
-            : localOwnerRoute ? ownerWorkspace : <Suspense fallback={<div className="mode-loading" role="status">Opening profile…</div>}>
+            : content.kind === 'curation' && canOpenStudio ? <Suspense fallback={<div className="mode-loading" role="status">Opening Curation...</div>}>
+              <CurationPage key={content.address} profileAddress={content.address} destinations={ownerDestinations} onBack={navigation.closeCuration} />
+              <StartupDestinationReady />
+            </Suspense> : localOwnerRoute ? ownerWorkspace : <Suspense fallback={<div className="mode-loading" role="status">Opening profile…</div>}>
             <PublishedProfileBoundary address={viewedProfileAddress} resolution={publishedResolution}
             connectedProfile={connectedProfile} onConnect={requestStandaloneSignIn} ownerDestinations={ownerDestinations}
             onDisconnect={disconnectStandalone} onEnterMyWorld={enterConnectedWorld}

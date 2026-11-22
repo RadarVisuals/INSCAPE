@@ -66,7 +66,7 @@ export default function useBrowserWorkspace(data, sharedPreviewRecords = null, i
     }
   }, [sharedPreviewRecords, sourceAssets, previewSnapshot]);
   // The snapshot identity changes when this workspace records a decoded preview.
-  const assets = useMemo(() => sourceAssets.filter((asset) => browserAssetHasPreviewCandidate(asset)
+  const assets = useMemo(() => sourceAssets.filter((asset) => data?.curationRole === 'destination' || browserAssetHasPreviewCandidate(asset)
     && (!browserAssetPreviewUnavailable(previewSnapshot.records.get(browserAssetId(asset)), asset)
       || asset.imageGroups?.length > 1)).map((asset) => {
     const cachedPreview = previewSnapshot.records.get(browserAssetId(asset));
@@ -79,7 +79,7 @@ export default function useBrowserWorkspace(data, sharedPreviewRecords = null, i
       decodedImageWidth: preview.width,
       previewSrc: preview.source,
     } : { ...asset, previewSrc: preview?.status === 'unavailable' ? null : fallback };
-  }), [sourceAssets, previewSnapshot]);
+  }), [sourceAssets, previewSnapshot, data?.curationRole]);
   const unavailableCount = sourceAssets.filter((asset) => !browserAssetHasPreviewCandidate(asset)
     || browserAssetPreviewUnavailable(previewSnapshot.records.get(browserAssetId(asset)), asset)).length;
   const markAssetReady = useCallback((id, source, width, height) => {

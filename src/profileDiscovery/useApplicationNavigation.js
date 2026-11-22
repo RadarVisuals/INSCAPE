@@ -25,7 +25,7 @@ export default function useApplicationNavigation(authority) {
     const origin = studioRoute?.editor ? studioOrigin(previous, studioRoute.address, window.history.state?.inscapeStudioOrigin) : null;
     current.current = next;
     window.history[replace ? 'replaceState' : 'pushState'](
-      { inscapeReturnRoute: next.kind === 'discover' ? next.returnTo : null, inscapeReceptionParent: receptionParent, inscapeWorksParent: worksParent, inscapeStudioOrigin: origin }, '',
+      { inscapeReturnRoute: next.kind === 'discover' ? next.returnTo : null, inscapeReceptionParent: receptionParent, inscapeWorksParent: worksParent, inscapeStudioOrigin: origin, ...(next.curation && { inscapeCurationParent: true }) }, '',
       applicationRouteUrl(window.location, next));
     changeRoute(previous, next, setRoute);
   }, [cancelFocusReturn, changeRoute]);
@@ -81,6 +81,14 @@ export default function useApplicationNavigation(authority) {
   const manageCompositions = useCallback(address => {
     const normalized = normalizeProfileAddress(address);
     if (normalized) navigate({ kind: 'profile', address: normalized, canvas: true });
+  }, [navigate]);
+  const openCuration = useCallback(address => {
+    const normalized = normalizeProfileAddress(address);
+    if (normalized) navigate({ kind: 'profile', address: normalized, curation: true });
+  }, [navigate]);
+  const closeCuration = useCallback(() => {
+    if (window.history.state?.inscapeCurationParent) window.history.back();
+    else navigate({ kind: 'profile', address: current.current.address, reception: 'published' }, { replace: true });
   }, [navigate]);
   const openWriting = useCallback(address => {
     const normalized = normalizeProfileAddress(address);
@@ -151,5 +159,5 @@ export default function useApplicationNavigation(authority) {
     };
   }, [authority, navigate]);
   const studioReturnLabel = window.history.state?.inscapeStudioOrigin || (background?.editor === 'reception' ? 'Profile' : 'Gallery');
-  return { motion, route, destination, content, studioReturnLabel, visitProfile, openReception, editReception, openCanvas, openStudio, openWriting, consumeNewComposition, manageCompositions, editWork, returnToWorks, openWork, closeWork, openOverview, openDiscover, closeDiscover, beginSignIn, completeSignIn, beginDisconnect };
+  return { motion, route, destination, content, openCuration, closeCuration, studioReturnLabel, visitProfile, openReception, editReception, openCanvas, openStudio, openWriting, consumeNewComposition, manageCompositions, editWork, returnToWorks, openWork, closeWork, openOverview, openDiscover, closeDiscover, beginSignIn, completeSignIn, beginDisconnect };
 }

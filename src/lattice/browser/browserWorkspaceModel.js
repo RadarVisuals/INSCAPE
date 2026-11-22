@@ -86,6 +86,7 @@ export function filterAndSortBrowserAssets(assets, {
       .filter(Boolean).join(' ').toLocaleLowerCase();
     return tokens.every((token) => searchable.includes(token));
   });
+  if (sort === 'curated') return filtered;
   const compare = (left, right) => String(left || '').localeCompare(String(right || ''), undefined,
     { numeric: true, sensitivity: 'base' });
   return [...filtered].sort((left, right) => {

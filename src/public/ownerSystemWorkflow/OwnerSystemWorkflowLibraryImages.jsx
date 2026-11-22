@@ -1,3 +1,5 @@
+import { Check, Minus } from 'lucide-react';
+import { imageResourceIdentity } from '../../library/data/resolveContentUrl.js';
 import { useState } from 'react';
 import { resolvePublishedAssetUrl } from '../../profileDocument/domain/publishedAssetUrl.js';
 import { assetForPlacement } from '../../systemWorkflow/domain/placementMedia.js';
@@ -18,6 +20,14 @@ export function libraryCategoryImage(asset) {
   if (asset.isCollection) return null;
   return asset.selectedMedia?.url || resolvePublishedAssetUrl(asset.src || asset.originalImageUrl || asset.previewSrc)
     || libraryImageChoices(asset)[0]?.sources[0] || null;
+}
+
+export function CurationMark({ entries, url }) {
+  if (!entries || (url && entries.length && !entries.some(entry => imageResourceIdentity(entry.url) === imageResourceIdentity(url)))) return null;
+  const partial = !url && entries.length > 0;
+  const Icon = partial ? Minus : Check;
+  const label = partial ? `${entries.length} selected in Inscape Library` : 'In Inscape Library';
+  return <span className="curation-included" aria-label={label} title={label}><Icon size={12} strokeWidth={2.5} aria-hidden="true" /></span>;
 }
 
 export function ImageChoice(props) {
@@ -56,7 +66,8 @@ function ImageChoicePreview({ asset, choice, number, onActivate, onPointerDown, 
         const { naturalWidth: width, naturalHeight: height } = event.currentTarget;
         setDimensions({ width, height });
         rememberArtworkPreview(original, src, width, height);
-      }} onError={() => { setDimensions(null); setCandidate((value) => value + 1); }} /> : <span>Image unavailable</span>}
+      }} onError={() => { setDimensions(null); setCandidate((value) => value + 1); }} /> : <span>{workspace?.curationRole === 'destination' ? [asset.title || id, filename].filter(Boolean).join(' / ') : 'Image unavailable'}</span>}
+      {workspace?.curationRole === 'source' && <CurationMark entries={workspace.curatedImages?.get(id)} url={original} />}
       <small className="library-file-format">{format}</small>
     </span>
     {!workspace?.hideLabels && <span className="lattice-browser-asset__record"><strong title={filename}>{filename}</strong>

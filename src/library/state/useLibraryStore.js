@@ -1,3 +1,4 @@
+import { saveMissingSnapshots } from '../curatedSnapshots.js';
 import { create } from 'zustand';
 import { createLibraryInventoryActions } from './libraryInventoryActions.js';
 import { normalizeProfileAddress, resolveWorkspaceProfile } from '../config.js';
@@ -9,6 +10,7 @@ import {
   deleteCategorySection,
   deleteFolder,
   moveCategory,
+  moveFolderAssets,
   moveCategorySection,
   renameCategorySection,
   renameFolder,
@@ -104,7 +106,7 @@ export const useLibraryStore = create((set, get) => ({
   setFolderPublic(folderId, isPublic) {
     const workspace = setFolderPublic(get().workspace, folderId, isPublic); commitWorkspace(set, get, workspace);
   },
-  commitCategoryForProfile(expectedProfileAddress, command) {
+  commitCategoryForProfile(expectedProfileAddress, command, records) {
     const beforeIds = command?.type === 'create' ? new Set(get().workspace?.folders?.map(({ id }) => id) || []) : null;
     const beforeSectionIds = command?.type === 'create-section'
       ? new Set(get().workspace?.categoryOrganization?.sections?.map(({ id }) => id) || []) : null;
@@ -115,6 +117,7 @@ export const useLibraryStore = create((set, get) => ({
         return created === current || command.parentId || !command.sectionId ? created
           : moveCategory(created, created.folders.at(-1).id, command.sectionId);
       }
+      if (command?.type === 'move-assets') return moveFolderAssets(current, command.fromId, command.toId, command.assetIds, command.imageUrl);
       if (command?.type === 'rename') return renameFolder(current, command.categoryId, command.name);
       if (command?.type === 'delete') return deleteFolder(current, command.categoryId);
       if (command?.type === 'public') return setFolderPublic(current, command.categoryId, command.value);
@@ -123,15 +126,17 @@ export const useLibraryStore = create((set, get) => ({
       if (command?.type === 'delete-section') return deleteCategorySection(current, command.sectionId);
       if (command?.type === 'move-category') return moveCategory(current, command.categoryId, command.sectionId, command.beforeId, command.parentId);
       if (command?.type === 'move-section') return moveCategorySection(current, command.sectionId, command.beforeId);
-      if (command?.type === 'asset') return setFolderAsset(current, command.categoryId, command.assetId, command.value);
+      const capture = (next, ids) => next !== current && records && command.value
+        ? saveMissingSnapshots(next, ids, records) : next;
+      if (command?.type === 'asset') return capture(setFolderAsset(current, command.categoryId, command.assetId, command.value), [command.assetId]);
       if (command?.type === 'assets' || command?.type === 'image') {
         const acceptedIds = new Set([...get().assets.map(({ id }) => id),
           ...(command.acceptedAssetIds || [])]);
         const assetIds = Array.isArray(command.assetIds) ? [...new Set(command.assetIds)] : [];
         if (!assetIds.length || assetIds.some((id) => typeof id !== 'string' || !acceptedIds.has(id))) return current;
         if (command.type === 'image') return assetIds.length === 1
-          ? setFolderImage(current, command.categoryId, assetIds[0], command.url, command.value) : current;
-        return setFolderAssets(current, command.categoryId, assetIds, command.value);
+          ? capture(setFolderImage(current, command.categoryId, assetIds[0], command.url, command.value), assetIds) : current;
+        return capture(setFolderAssets(current, command.categoryId, assetIds, command.value), assetIds);
       }
       return current;
     });

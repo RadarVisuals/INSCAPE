@@ -393,6 +393,7 @@ export function WorkbenchSession({
     else publicationState = onProfile ? 'On Profile' : 'Studio only';
   }
   const workspaceDestinations = {
+    Curation: ownerDestinations?.Curation && (() => leaveForDestination(ownerDestinations.Curation)),
     Profile: onOpenReception && (() => { saveBeforeDeparture(); onOpenReception('published'); }),
     Gallery: onOpenGallery ? () => leaveForDestination(onOpenGallery, true) : showWorkbenchOverview,
     Writing: onOpenWriting && (() => { saveBeforeDeparture(); onOpenWriting(); }),
