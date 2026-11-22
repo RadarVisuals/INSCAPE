@@ -17,7 +17,7 @@ export default function LibraryBrowseControls({ workspace, onCreate, canCreateFo
     return () => document.removeEventListener('pointerdown', dismiss, true);
   }, [menu?.kind]);
   const collections = [{ label: 'All', value: 'all' }, ...workspace.collections.map(value => ({ label: value, value }))];
-  const sorts = [...(curationRole === 'destination' ? [{ label: 'Custom order', value: 'curated' }] : []), { label: 'A–Z', value: 'title-asc' }, { label: 'Z–A', value: 'title-desc' }, { label: 'Collection', value: 'collection' }];
+  const sorts = [...(curationRole === 'destination' || workspace.curatedPicker ? [{ label: 'Custom order', value: 'curated' }] : []), { label: 'A–Z', value: 'title-asc' }, { label: 'Z–A', value: 'title-desc' }, { label: 'Collection', value: 'collection' }];
   return <div className="library-browse-controls" ref={root} onKeyDown={event => {
     if (event.key === 'Escape' && menu) { event.preventDefault(); event.stopPropagation(); close(true); }
   }}>
@@ -28,7 +28,7 @@ export default function LibraryBrowseControls({ workspace, onCreate, canCreateFo
         value={workspace.relationshipView} onChange={event => workspace.setRelationshipView(event.target.value)}>
         <option value="all">All</option><option value="owned">Owned</option><option value="created">Created</option>
       </select>}
-      {!curationRole && <button type="button" ref={newButton} aria-label="New Library item" aria-haspopup="menu" aria-expanded={menu?.kind === 'new'}
+      {!curationRole && !workspace.curatedPicker && <button type="button" ref={newButton} aria-label="New Library item" aria-haspopup="menu" aria-expanded={menu?.kind === 'new'}
         disabled={!canCreateFolder && !canCreateSection} onClick={() => {
           const rect = newButton.current.getBoundingClientRect();
           setMenu(menu?.kind === 'new' ? null : { kind: 'new', anchor: { x: rect.left, y: rect.bottom + 4 } });

@@ -39,7 +39,7 @@ export function retryLibraryForProfile(profileAddress, getStore = useLibraryStor
   return state.unresolvedAssetIds?.length ? state.repair() : state.load({ forceLive: true });
 }
 
-export default function useOwnerLatticeBrowser(profileAddress, inventoryEnabled = true, referencedAssetIds = []) {
+export default function useOwnerLatticeBrowser(profileAddress, inventoryEnabled = true, referencedAssetIds = [], referencesOnly = false) {
   const profile = normalizeProfileAddress(profileAddress);
   const [useRelatedCreationsStore] = useState(() => createCreationsStore({ retainOnRetry: true, pageOnDemand: true }));
   const [useCollectionTokensStore] = useState(() => createCollectionTokensStore());
@@ -123,11 +123,12 @@ export default function useOwnerLatticeBrowser(profileAddress, inventoryEnabled 
     return () => controller.abort();
   }, [inventoryEnabled, profileReady, createdReady, categoryKey, category?.assetIds, categoryLimit, resolveReferences, retryVersion]);
 
-  const ownedAssets = useMemo(() => profileReady ? [...owned.assets, ...owned.referencedAssets] : [],
-    [profileReady, owned.assets, owned.referencedAssets]);
+  const ownedAssets = useMemo(() => profileReady
+    ? referencesOnly ? owned.referencedAssets : [...owned.assets, ...owned.referencedAssets] : [],
+    [profileReady, referencesOnly, owned.assets, owned.referencedAssets]);
   const union = useMemo(() => projectLibraryAssetUnion({ profileAddress: profile, ownedAssets,
-    createdAssets: createdReady ? [...created.assets, ...created.referencedAssets] : [] }),
-  [profile, ownedAssets, createdReady, created.assets, created.referencedAssets]);
+    createdAssets: createdReady ? referencesOnly ? created.referencedAssets : [...created.assets, ...created.referencedAssets] : [] }),
+  [profile, ownedAssets, createdReady, referencesOnly, created.assets, created.referencedAssets]);
   const collectionUnion = useMemo(() => activeCollection ? projectLibraryAssetUnion({ profileAddress: profile,
     createdAssets: [activeCollection, ...collection.assets],
     ownedAssets: ownedAssets.filter(asset => asset.contractAddress === activeCollection.contractAddress) })

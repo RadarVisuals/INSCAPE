@@ -41,12 +41,12 @@ function ImageChoicePreview({ asset, choice, number, onActivate, onPointerDown, 
   const [dimensions, setDimensions] = useState(null);
   const originalSource = choice.sources[0];
   const src = candidates[candidate];
-  const original = candidate > 0 && candidates.slice(0, candidate).includes(originalSource) && choice.sources.includes(src) ? src : originalSource;
+  const original = !workspace?.curatedPicker && candidate > 0 && candidates.slice(0, candidate).includes(originalSource) && choice.sources.includes(src) ? src : originalSource;
   const format = libraryFileFormat(original, choice.fileType);
   const filename = libraryFilename(original);
   const id = asset.stableAssetId || asset.id;
   const selected = workspace?.selectedAssetIds.includes(id) && workspace.selectedImage?.assetId === id && workspace.selectedImage.media.url === original;
-  const selectedAsset = dimensions && { ...assetForPlacement(asset, { selectedMedia: {
+  const selectedAsset = (dimensions || (workspace?.curatedPicker && choice.width && choice.height)) && { ...assetForPlacement(asset, { selectedMedia: {
     url: original, width: choice.width || (src === original ? dimensions.width : null),
     height: choice.height || (src === original ? dimensions.height : null) } }),
     previewSrc: src, thumbnailUrl: src, previewCandidates: candidates };
@@ -66,7 +66,7 @@ function ImageChoicePreview({ asset, choice, number, onActivate, onPointerDown, 
         const { naturalWidth: width, naturalHeight: height } = event.currentTarget;
         setDimensions({ width, height });
         rememberArtworkPreview(original, src, width, height);
-      }} onError={() => { setDimensions(null); setCandidate((value) => value + 1); }} /> : <span>{workspace?.curationRole === 'destination' ? [asset.title || id, filename].filter(Boolean).join(' / ') : 'Image unavailable'}</span>}
+      }} onError={() => { setDimensions(null); setCandidate((value) => value + 1); }} /> : <span>{workspace?.curationRole === 'destination' || workspace?.curatedPicker ? [asset.title || id, filename].filter(Boolean).join(' / ') : 'Image unavailable'}</span>}
       {workspace?.curationRole === 'source' && <CurationMark entries={workspace.curatedImages?.get(id)} url={original} />}
       <small className="library-file-format">{format}</small>
     </span>

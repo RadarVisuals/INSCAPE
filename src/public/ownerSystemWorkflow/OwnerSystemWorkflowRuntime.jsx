@@ -754,7 +754,7 @@ export function WorkbenchSession({
                       placementTargetRef: allPlacementTargetsRef, shortcutTargetRef: allShortcutTargetsRef,
                       workspaceRef, placementScope: `${profileAddress}:${activeController?.moduleId || ''}:${activeController?.selectedGridId || ''}`,
                       authoringLocked: browsing, categoryCommands: library.categoryCommands,
-                      data: libraryData, resolveAssetDimensions,
+                      data: { ...libraryData, onOpenCuration: workspaceDestinations.Curation }, resolveAssetDimensions,
                     }}
                     colourPreference={editorPreferences.section('colourPickers')}
                     hidden={Boolean(preview) || receptionPreview || panelOccupied}

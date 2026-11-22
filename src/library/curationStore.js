@@ -18,7 +18,12 @@ export function curatedImages(workspace, id) {
 export function curatedDisplayAssets(workspace, ids) {
   return ids.map(id => {
     const record = Object.hasOwn(workspace.curatedSnapshots || {}, id) && workspace.curatedSnapshots[id];
-    if (record) return { ...projectLibraryDisplayAsset(record, parseCanonicalAssetId(id)), assetRecord: record };
+    if (record) {
+      const cover = record.imageGroups?.[0];
+      const display = { ...record, originalImageUrl: record.originalImageUrl || record.imageUrl || cover?.originalImageUrl,
+        imageWidth: record.imageWidth || cover?.width, imageHeight: record.imageHeight || cover?.height };
+      return { ...projectLibraryDisplayAsset(display, parseCanonicalAssetId(id)), assetRecord: display };
+    }
     const folders = workspace.folders.filter(folder => folder.assetIds.includes(id)).map(folder => folder.name);
     return { stableAssetId: id, title: id, missingSnapshot: true, folderContext: folders.join(', '), placeable: false };
   });

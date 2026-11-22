@@ -80,7 +80,7 @@ test('cold workspace and deep source scroll on a synthetic 3000-asset profile', 
     await page.goto(fixtureUrl);
     await page.evaluate(() => window.restoreLibraryDock());
     await page.goto(origin + '/browser-tests/workbench-storage-fixture.html?profile=' + profile + '&shell&source-benchmark');
-    await page.getByRole('button',{name:'Load profile inventory'}).waitFor();
+    await page.locator('[data-library-asset-id]').first().waitFor();
     await page.waitForTimeout(350);
     assert.deepEqual(requests.splice(0), [], 'restored Studio Library dock');
     await page.goto(fixtureUrl);
@@ -159,5 +159,75 @@ test('cold workspace and deep source scroll on a synthetic 3000-asset profile', 
     assert.deepEqual(boot,[]);
     assert.deepEqual([...opening].sort(),['created','owned']);
     assert.ok(metrics.cards > 0 && metrics.cards < 150);
+  } finally {await browser.close();}
+});
+
+test('Studio places a saved folder image offline and retains its identity on reload', async () => {
+  const browser = await chromium.launch({executablePath:process.env.INSCAPE_BROWSER_EXECUTABLE});
+  try {
+    const context = await browser.newContext({viewport:{width:1440,height:1000}});
+    const page = await context.newPage();
+    page.setDefaultTimeout(8000);
+    const errors = [];
+    page.on('pageerror', error => errors.push(error.message));
+    await page.goto(origin + '/browser-tests/workspace-idb-fixture.html');
+    const expected = await page.evaluate(async () => {
+      fixture.seed({pendingRecovery:false}); await fixture.start(); fixture.nestedLibrary();
+      await fixture.confirmWorkspaceSaved(fixture.profile);
+      await window.restoreLibraryDock();
+      return fixture.library().workspace.folders.at(-1).imageSelections[1];
+    });
+    const inventory = [];
+    // Supply only the application shell from localhost across the offline reload.
+    await context.route('**/*', async route => {
+      const req = route.request();
+      if (req.url().startsWith(origin + '/')) return route.fulfill({response:await route.fetch()});
+      if (req.url().includes('graphql') || /6460ee3c|7c8c3416/.test(req.postData() || '')
+        && !req.postData().includes('0x54f6127f')) inventory.push(req.url());
+      return route.abort('internetdisconnected');
+    });
+    await context.setOffline(true);
+    await page.goto(origin + '/browser-tests/workbench-storage-fixture.html?profile=' + profile + '&shell&source-benchmark');
+    await page.getByRole('button',{name:'Props',exact:true}).first().click();
+    await page.locator('[data-library-folder-tile]').filter({hasText:'Heads'}).click();
+    const card = page.getByRole('button',{name:'Image 2 of Prop 1',exact:true});
+    await card.scrollIntoViewIfNeeded();
+    assert.equal(await card.getAttribute('aria-disabled'),'false');
+    const {x,y} = await card.evaluate(node => {
+      const r = node.getBoundingClientRect(), x = r.x+r.width/2;
+      for(let y=Math.max(10,r.y+8); y<Math.min(innerHeight-10,r.bottom); y+=6)
+        if(node.contains(document.elementFromPoint(x,y))) return {x,y};
+      throw Error('Image card is covered');
+    });
+    await page.mouse.move(x,y); await page.mouse.down(); await page.mouse.move(x+18,y+18,{steps:4});
+    const point = await page.evaluate(() => {
+      const host = document.querySelector('main.system-workflow'), rect = host.getBoundingClientRect();
+      const style = getComputedStyle(host.querySelector('.workbench-canvas-content'));
+      const left = rect.left + parseFloat(style.getPropertyValue('--canvas-left'));
+      const top = rect.top + parseFloat(style.getPropertyValue('--canvas-top'));
+      const canvas = {left, top, right:left+parseFloat(style.getPropertyValue('--canvas-width')),bottom:top+parseFloat(style.getPropertyValue('--canvas-height'))};
+      for (let y=Math.max(350,canvas.top+90);y<Math.min(innerHeight-60,canvas.bottom-90);y+=24)
+        for (let x=Math.min(innerWidth-60,canvas.right-90);x>Math.max(50,canvas.left+90);x-=24)
+          if (document.elementFromPoint(x,y)?.matches('.system-workflow,.system-workflow__workbench,.system-workflow__display-instance')) return {x,y};
+      throw Error('No exposed canvas');
+    });
+    await page.mouse.move(point.x,point.y,{steps:12});
+    await page.getByText('Release to place Image',{exact:true}).waitFor();
+    await page.mouse.up();
+    const saved = ({assetId,url}) => {
+      const work = window.savedDraft?.();
+      const draft = work?.workbenches.find(w => w.id === work.activeId)?.content;
+      return draft?.imageModules?.some(module => {
+        const image = module.artwork;
+        return image?.asset.stableAssetId === assetId && image.asset.media.url === url;
+      });
+    };
+    await page.waitForFunction(saved,expected,{timeout:8000});
+    await page.reload();
+    await page.waitForFunction(saved,expected);
+    await page.getByRole('button',{name:'Open Curation',exact:true}).click();
+    await page.getByText('Curation opened',{exact:true}).waitFor();
+    assert.deepEqual(inventory,[]);
+    assert.deepEqual(errors,[]);
   } finally {await browser.close();}
 });

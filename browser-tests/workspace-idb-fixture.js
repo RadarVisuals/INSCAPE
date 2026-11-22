@@ -34,7 +34,7 @@ function addSnapshots(workspace, count) {
   const ids = [...records.keys()];
   return saveMissingSnapshots(changeCuratedAssets(workspace, 'add', ids, workspace.folders[0].id), ids, records);
 }
-function seed() {
+function seed({ pendingRecovery = true } = {}) {
   const workspace = addSnapshots(createFolder(createEmptyWorkspace(profile), 'Props'), 1);
   const draft = createEmptySystemWorkflowDraft(profile);
   const article = { ...createArticle(), title: 'Unpublished field notes' };
@@ -44,7 +44,7 @@ function seed() {
   localStorage.setItem(keys[1], JSON.stringify(collection));
   const buffer = {getProfileAddress: () => profile, getWorkbenchId: () => collection.activeId};
   bindWorkbenchTextRecovery(buffer);
-  retainTextRecovery(buffer, {profile, id:'text:author'}, draft.texts[0], {...draft.texts[0], article:{...article, title:'Pending revision'}}, {message:'Interrupted', reason:'write_failed'});
+  if (pendingRecovery) retainTextRecovery(buffer, {profile, id:'text:author'}, draft.texts[0], {...draft.texts[0], article:{...article, title:'Pending revision'}}, {message:'Interrupted', reason:'write_failed'});
   return legacy();
 }
 async function start() {

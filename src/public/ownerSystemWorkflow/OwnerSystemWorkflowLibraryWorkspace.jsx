@@ -36,8 +36,9 @@ export default function OwnerSystemWorkflowLibraryWorkspace({ authoringLocked = 
     && (libraryImageChoices(source).some(choice => choice.sources.includes(imageChoice.media.url))
       || workspace.selectedCategory?.imageSelections?.some(entry => entry.assetId === imageChoice.assetId && entry.url === imageChoice.media.url))
       ? assetForPlacement(source, { selectedMedia: imageChoice.media }) : null : source;
-  const resolveDimensions = asset => decodeOwnerSystemWorkflowAssetDimensions(asset, { preferMetadata: true });
-  const preload = asset => { void (resolveAssetDimensions || decodeOwnerSystemWorkflowAssetDimensions)(asset).catch(() => {}); };
+  const resolveDimensions = asset => (data.curatedPicker && ownerSystemWorkflowAssetDimensions(asset))
+    || decodeOwnerSystemWorkflowAssetDimensions(asset, { preferMetadata: true });
+  const preload = asset => { if (data.curatedPicker && ownerSystemWorkflowAssetDimensions(asset)) return; void (resolveAssetDimensions || decodeOwnerSystemWorkflowAssetDimensions)(asset).catch(() => {}); };
   const [dragPreview, setDragPreview] = useState(null);
   const [categoryDrag, setCategoryDrag] = useState(null);
   const [dropFeedback, setDropFeedback] = useState(null);
@@ -139,7 +140,7 @@ export default function OwnerSystemWorkflowLibraryWorkspace({ authoringLocked = 
       if (overLibraryNavigation(pointerEvent) || hit?.closest('[data-library-folder-tile]')) {
         const categoryId = hit?.closest('[data-browser-category-id]')?.dataset.browserCategoryId;
         const fromId = options.sourceFolderId;
-        if (!categoryId || categoryId === fromId) return null;
+        if (!categoryCommands || !categoryId || categoryId === fromId) return null;
         const imageUrl = assetIds.length === 1 && asset.selectedMedia ? libraryCategoryImage(asset) : null;
         return { kind: 'category', categoryId, point, preview: () => null,
           isCurrent: () => latestLibrary.current.data.categories.some(({ id }) => id === categoryId)
@@ -302,7 +303,7 @@ export default function OwnerSystemWorkflowLibraryWorkspace({ authoringLocked = 
        onAssetActivate={(_event, asset) => data.curationRole === 'source' && !asset.isCollection ? data.onCurationAction([asset.stableAssetId || asset.id]) : activate(asset)}
       onAssetPointerDown={beginAssetDrag} onImageActivate={(_event, asset) => data.curationRole === 'source'
         ? data.onCurationAction([asset.stableAssetId || asset.id], null, asset.selectedMedia.url) : place(asset)}
-      workspace={{ ...workspace, curationRole: data.curationRole, collectionContext:data.collectionContext, curatedImages: data.curatedImages, selectedImage: imageChoice, selectAsset: (id, event, media = null) => {
+      workspace={{ ...workspace, curatedPicker: data.curatedPicker, curationRole: data.curationRole, collectionContext:data.collectionContext, curatedImages: data.curatedImages, selectedImage: imageChoice, selectAsset: (id, event, media = null) => {
         if (!suppressSelection.current || event.detail === 0) {
           workspace.selectAsset(id, event);
           setImageSelection(media ? { assetId: id, ownerContext: data.ownerContext, media } : null);

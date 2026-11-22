@@ -25,7 +25,9 @@ export default function useBrowserWorkspace(data, sharedPreviewRecords = null, i
   const openingProfile = useRef(null);
   const opening = open && data.workspaceReady !== false && openingProfile.current !== data.ownerContext;
   const preferences = opening ? libraryOpeningPreferences(savedPreferences, data.categories || []) : savedPreferences;
-  const { view, query, collection, sort, assetSize, sidebarWidth, hideLabels, libraryWidth } = preferences;
+  const { view, query, collection, sort: savedSort, assetSize, sidebarWidth, hideLabels, libraryWidth } = preferences;
+  const [pickerSort, setPickerSort] = useState('curated');
+  const sort = data.curatedPicker ? pickerSort : savedSort;
   const updatePreferences = preferenceStore?.update || setLocalPreferences;
   useEffect(() => {
     if (!open) openingProfile.current = null;
@@ -36,7 +38,7 @@ export default function useBrowserWorkspace(data, sharedPreviewRecords = null, i
   }, [open, opening, data.ownerContext, preferences, savedPreferences, updatePreferences]);
   const change = key => value => updatePreferences(current => ({ ...current, [key]: typeof value === 'function' ? value(current[key]) : value }));
   const setView = useCallback(view => updatePreferences(current => ({ ...current, view })), [updatePreferences]);
-  const setQuery = change('query'), setCollection = change('collection'), setSort = change('sort');
+  const setQuery = change('query'), setCollection = change('collection'), setSort = data.curatedPicker ? setPickerSort : change('sort');
   const setAssetSize = change('assetSize'), setSidebarWidth = change('sidebarWidth'), setHideLabels = change('hideLabels');
   const [selectedAssetIds, setSelectedAssetIds] = useState([]);
   const [selectionAnchorId, setSelectionAnchorId] = useState(null);
@@ -51,9 +53,13 @@ export default function useBrowserWorkspace(data, sharedPreviewRecords = null, i
     ? categories.find((category) => category.id === view.id) || null : null;
   const sourceAssets = useMemo(() => (Array.isArray(data?.assets) ? data.assets : EMPTY_ITEMS).map(asset => {
     const image = selectedCategory?.imageSelections?.find(entry => entry.assetId === browserAssetId(asset));
-    const source = image ? assetForPlacement(asset, { selectedMedia: { url: image.url, width: null, height: null } }) : asset;
+    const savedGroup = image && asset.imageGroups?.find(group => group.originalImageUrl === image.url
+      || group.imageUrl === image.url || group.variants?.some(variant => variant.url === image.url));
+    const source = image ? assetForPlacement(asset, { selectedMedia: {
+      url: image.url, width: savedGroup?.width || null, height: savedGroup?.height || null,
+    } }) : asset;
     const record = source.assetRecord || source;
-    const group = image ? { ...(source.imageGroups || []).find(group => group.originalImageUrl === image.url), originalImageUrl: image.url }
+    const group = image ? { ...savedGroup, originalImageUrl: image.url }
       : { ...source.imageGroups?.[0], thumbnailUrl: record.thumbnailUrl, imageUrl: record.imageUrl,
         originalImageUrl: record.originalImageUrl || source.src, fileType: record.mediaFileType };
     const candidates = group ? libraryPreviewCandidates(group, assetSize, globalThis.devicePixelRatio || 1) : source.previewCandidates;
@@ -66,7 +72,7 @@ export default function useBrowserWorkspace(data, sharedPreviewRecords = null, i
     }
   }, [sharedPreviewRecords, sourceAssets, previewSnapshot]);
   // The snapshot identity changes when this workspace records a decoded preview.
-  const assets = useMemo(() => sourceAssets.filter((asset) => data?.curationRole === 'destination' || browserAssetHasPreviewCandidate(asset)
+  const assets = useMemo(() => sourceAssets.filter((asset) => data.curatedPicker || data?.curationRole === 'destination' || browserAssetHasPreviewCandidate(asset)
     && (!browserAssetPreviewUnavailable(previewSnapshot.records.get(browserAssetId(asset)), asset)
       || asset.imageGroups?.length > 1)).map((asset) => {
     const cachedPreview = previewSnapshot.records.get(browserAssetId(asset));
@@ -79,7 +85,7 @@ export default function useBrowserWorkspace(data, sharedPreviewRecords = null, i
       decodedImageWidth: preview.width,
       previewSrc: preview.source,
     } : { ...asset, previewSrc: preview?.status === 'unavailable' ? null : fallback };
-  }), [sourceAssets, previewSnapshot, data?.curationRole]);
+  }), [sourceAssets, previewSnapshot, data?.curationRole, data.curatedPicker]);
   const unavailableCount = sourceAssets.filter((asset) => !browserAssetHasPreviewCandidate(asset)
     || browserAssetPreviewUnavailable(previewSnapshot.records.get(browserAssetId(asset)), asset)).length;
   const markAssetReady = useCallback((id, source, width, height) => {
@@ -98,8 +104,8 @@ export default function useBrowserWorkspace(data, sharedPreviewRecords = null, i
       signature: browserPreviewCandidates(asset).join('\n'), status: 'unavailable' });
     setPreviewSnapshot(value => ({ records: value.records }));
   }, [sourceAssets, previewSnapshot]);
-  const renderableIds = useMemo(() => new Set(assets.filter((asset) => asset.previewSrc
-    && browserAssetSupportsPreview(asset)).map(browserAssetId)), [assets]);
+  const renderableIds = useMemo(() => new Set(assets.filter((asset) => (data.curatedPicker && asset.placeable && asset.width && asset.height) || asset.previewSrc
+    && browserAssetSupportsPreview(asset)).map(browserAssetId)), [assets, data.curatedPicker]);
   const isAssetRenderable = useCallback((id) => renderableIds.has(id), [renderableIds]);
   const areAssetsRenderable = useCallback((ids) => Array.isArray(ids)
     && ids.length > 0 && ids.every((id) => renderableIds.has(id)), [renderableIds]);

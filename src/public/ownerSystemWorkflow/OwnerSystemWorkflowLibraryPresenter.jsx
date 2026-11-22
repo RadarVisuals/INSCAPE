@@ -21,7 +21,7 @@ function LazyLibraryArtwork({ asset, id, workspace }) {
   const [candidateIndex, setCandidateIndex] = useState(0);
   useEffect(() => setCandidateIndex(0), [signature]);
   const source = candidates[candidateIndex] || null;
-  if (!source && workspace.curationRole === 'destination') return <span className="curation-fallback" title={id}>
+  if (!source && (workspace.curationRole === 'destination' || workspace.curatedPicker)) return <span className="curation-fallback" title={id}>
     <strong>{asset.title || id}</strong>{asset.folderContext && <small>{asset.folderContext}</small>}
   </span>;
   if (!source) return <span>Media unavailable</span>;
@@ -66,7 +66,7 @@ function LibraryResults({ assets, emptyLabel, expandedImageIds, onActivate, onCo
   function renderAsset(asset) {
       const id = assetId(asset); const isSelected = selected.has(id) && workspace.selectedImage?.assetId !== id;
       const curated = workspace.selectedCategory ? (workspace.selectedCategory.imageSelections || []).filter(entry => entry.assetId === id)
-        : workspace.curationRole === 'destination' ? workspace.curatedImages?.get(id) || [] : [];
+        : workspace.curationRole === 'destination' || workspace.curatedPicker ? workspace.curatedImages?.get(id) || [] : [];
       if (curated.length && !asset.missingSnapshot) return curated.map(({ url }, index) =>
         <div className="system-workflow__library-item" data-library-asset-id={id} key={`${id}:${url}`}>
           <ImageChoice asset={asset} choice={{ ...libraryImageChoices(asset).find(choice => choice.sources.includes(url)), sources: [url], originalImageUrl: url, imageUrl: url }} number={index + 1} onActivate={onImageActivate}
@@ -185,8 +185,9 @@ export default function OwnerSystemWorkflowLibraryPresenter({ categoryCommands, 
     if (sectionId) setCollapsedSections(current => { const next = new Set(current); next.delete(sectionId); return next; });
     openDialog(event.currentTarget, { type: `create-${kind}`, sectionId, parentId }); };
   const openCategoryContext = (event, category) => { cancelFocusReturn(); setContextMenu({ anchor: contextAnchor(event), categoryId: category.id, kind: 'category', trigger: event.currentTarget }); };
-  const openSectionContext = (event, section) => { cancelFocusReturn(); setContextMenu({ anchor: contextAnchor(event), sectionId: section.id, kind: 'section', trigger: event.currentTarget }); };
+  const openSectionContext = (event, section) => { if (data.curatedPicker) return; cancelFocusReturn(); setContextMenu({ anchor: contextAnchor(event), sectionId: section.id, kind: 'section', trigger: event.currentTarget }); };
   const openAssetContext = (event, asset) => {
+    if (data.curatedPicker) return;
     cancelFocusReturn();
     const imageUrl = libraryCategoryImage(asset);
     const ids = imageUrl ? [assetId(asset)] : workspace.selectForContext(assetId(asset));
@@ -195,10 +196,10 @@ export default function OwnerSystemWorkflowLibraryPresenter({ categoryCommands, 
   const categoryMenuCommands = contextMenu?.kind === 'category' ? (() => {
     const category = data.categories.find(({ id }) => id === contextMenu.categoryId);
     return category ? [{ id: 'start-category', label: 'Open Library here', checkable: true, selected: workspace.startCategoryId === category.id },
-      { id: 'new-folder', label: 'New subfolder' }, { id: 'rename', label: 'Rename' },
+      ...(data.curatedPicker ? [] : [{ id: 'new-folder', label: 'New subfolder' }, { id: 'rename', label: 'Rename' },
       ...(categoryCommands?.moveCategory ? [{ id: 'move-root', label: 'Move / Outside sections' },
         ...(data.categoryOrganization?.sections || []).map((section) => ({ id: `move-section:${section.id}`, label: `Move / ${section.name}` }))] : []),
-      { id: 'delete', label: 'Delete' }] : [];
+      { id: 'delete', label: 'Delete' }])] : [];
   })() : [];
   const sectionMenuCommands = contextMenu?.kind === 'section' ? [{ id: 'rename-section', label: 'Rename' },
     { id: 'delete-section', label: 'Delete section / keep categories' }] : [];
@@ -368,7 +369,7 @@ export default function OwnerSystemWorkflowLibraryPresenter({ categoryCommands, 
         active={active}
         categoryId={category.id} count={category.assetIds.filter((id) => renderableIds.has(id))
           .reduce((count, id) => count + ((category.imageSelections || []).filter(entry => entry.assetId === id).length || 1), 0)}
-        draggable dropTarget={categoryDrag?.categoryId === category.id} label={category.name}
+        draggable={!data.curatedPicker} dropTarget={categoryDrag?.categoryId === category.id} label={category.name}
         onClick={() => selectBuiltIn({ kind: BROWSER_VIEW_KINDS.CATEGORY, id: category.id })}
         onContextMenu={(event) => { event.preventDefault(); openCategoryContext(event, category); }}
         onDragEnd={() => { setOrganizationDrag(null); setTreeDrop(null); }}
@@ -415,7 +416,7 @@ export default function OwnerSystemWorkflowLibraryPresenter({ categoryCommands, 
                   onCancel={closeDialog} onConfirm={confirmDeleteDialog} />
                   : editing ? <OwnerSystemWorkflowSidebarEditor dialog={workspace.dialog} entityLabel="section"
                     onCancel={closeDialog} onConfirm={confirmDialog} /> : <><button className="system-workflow__library-section-toggle" title={section.name} aria-expanded={!collapsed}
-                    draggable="true"
+                    draggable={!data.curatedPicker}
                     onClick={() => setCollapsedSections((current) => { const next = new Set(current);
                       if (next.has(section.id)) next.delete(section.id); else next.add(section.id); return next; })}
                     onContextMenu={(event) => { event.preventDefault(); openSectionContext(event, section); }}
@@ -463,7 +464,7 @@ export default function OwnerSystemWorkflowLibraryPresenter({ categoryCommands, 
           })}
     </div>
     {workspace.dialog?.type === 'create-section' && <OwnerSystemWorkflowSidebarEditor dialog={workspace.dialog} entityLabel="section" onCancel={closeDialog} onConfirm={confirmDialog} />}
-    {!data.curationRole && !categories.length && !organization.sections.length && !workspace.dialog && <p className="library-tree-empty">Create a folder using New.</p>}
+    {!data.curationRole && !data.curatedPicker && !categories.length && !organization.sections.length && !workspace.dialog && <p className="library-tree-empty">Create a folder using New.</p>}
   </div>;
   const navigationKeys = event => {
     if (!['ArrowDown', 'ArrowUp'].includes(event.key) || event.target.matches('input')) return;
@@ -523,7 +524,7 @@ export default function OwnerSystemWorkflowLibraryPresenter({ categoryCommands, 
         if (open && data.hasMore && !data.loadingMore && !workspace.hasActiveFilters
           && node.scrollHeight - node.scrollTop - node.clientHeight < node.clientHeight * .75) data.onLoadMore?.();
       }}>
-        {data.onLoadInventory && <button type="button" onClick={data.onLoadInventory}>Load profile inventory</button>}
+        {data.curatedPicker && data.onOpenCuration && <button type="button" onClick={data.onOpenCuration}>Open Curation</button>}
         {data.curationRole === 'source' && (workspace.hasActiveFilters || data.hasMore || data.sourceMode === 'RPC') &&
           <p className="lattice-browser-notice" role="status">{data.remoteSearch
             ? data.loadingMore ? 'Searching profile inventory...' : 'Profile search / ' + workspace.viewAssetCount + ' matches loaded'

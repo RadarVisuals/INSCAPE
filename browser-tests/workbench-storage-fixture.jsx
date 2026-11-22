@@ -38,6 +38,7 @@ window.guardedStore = () => createSystemWorkflowDraftStore({ profileAddress: pro
 const root = createRoot(document.getElementById('root'));
 window.leaveEditor = () => root.unmount();
 const content = <Boundary profileAddress={profile} reviewStorage={localStorage} reviewAssets={params.has('source-benchmark') ? undefined : []} reviewCategories={[]} reviewActivity={[]}
+  ownerDestinations={params.has('source-benchmark') ? { Curation: () => root.render(<p>Curation opened</p>) } : undefined}
   publishedResolution={{ status: 'UNAVAILABLE', address: profile, document: null }}
   reviewProfile={{ name: 'Local storage verification' }} onOpenReception={() => root.render(<p>Published view requested</p>)} />;
 // Use the production shell's CSS boundary when checking route-level interaction.
