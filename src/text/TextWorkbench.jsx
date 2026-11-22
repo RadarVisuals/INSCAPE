@@ -1,3 +1,4 @@
+import { useWorkspaceSaveLabel } from '../workspace/WorkspaceBoundary.jsx';
 import { useWorkbenchMiniature } from '../public/ownerSystemWorkflow/workbenchMiniatures.js';
 import { useWorkbenchArea } from '../public/ownerSystemWorkflow/WorkbenchAreaContext.jsx';
 import { useSceneNavigation } from './SceneNavigation.jsx';
@@ -44,6 +45,7 @@ const TextInstance = memo(function TextInstance({ record, index, store, profileA
   const reception = Boolean(store?.getCells);
   const view = workbenchModuleTransform(workbenchView, record.id);
   const scope = textRecoveryScope(profileAddress, record.id);
+  const saveLabel = useWorkspaceSaveLabel(scope.profile, 'Saved in this browser');
   const { value: working, failed, error, reason, session: edit } = useTextEditSession({ store, scope, record, valueOf: textValue, saveRecord: saveText });
   const { save: change, setError } = edit;
   const [presentation, setPresentation] = useState(() => ({ ...(initialPresentation || createTextPresentation(record.id, index)), ...(initiallyOpenId === record.id ? { open: true } : {}) }));
@@ -192,7 +194,7 @@ const TextInstance = memo(function TextInstance({ record, index, store, profileA
       footer={error ? <div className="text-status" role="alert">{error}
         {failed && <button type="button" onClick={() => change(edit.getSnapshot().value, { retry: true })}>Retry local save</button>}
         {reason === 'conflict' && <button type="button" onClick={() => change(edit.getSnapshot().value, { retry: true, replace: true })}>Replace saved Text with my edits</button>}
-      </div> : <p className="text-save-summary" role="status">Saved in this browser</p>}
+      </div> : <p className="text-save-summary" role="status">{saveLabel}</p>}
       connection={!reception && (linked ? <p>This article flows through {flow.ranges.length} linked frames. Remove the continuation frames to use Follow Display or move into Display. The full text is kept.</p> : <>
       {!working.sceneLink ? <><div className="text-connection-target"><label>Follow Display<select aria-label="Follow Display" value={linkTarget} onChange={e => setLinkTarget(e.target.value)}>
         <option value="">Choose a Display…</option>{displays.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
@@ -267,7 +269,7 @@ const TextInstance = memo(function TextInstance({ record, index, store, profileA
         <SceneTextViewport record={working} state={sceneState} open={presentation.open} mode={mode}>
           <TextContentPage article={article} paginated={paginated} mode={mode} flow={linked ? flow : null}
             defaultOverflow={reception ? 'clip' : 'scroll'} excerpt={excerpt} resetKey={sectionRead || paginated ? gridId : null}>
-                  {store && <div hidden={mode !== 'write'}><Suspense fallback={<p role="status">Opening editor…</p>}><ArticleEditor sharedColour={sharedColour} titlePlaceholder={!reception} key={sectionLink ? 'article' : gridId || 'article'} article={sectionLink && colourPreview?.source !== working ? working.article : article}
+                  {store && <div hidden={mode !== 'write'}><Suspense fallback={<p role="status">Opening editor…</p>}><ArticleEditor saveStatus={saveLabel} sharedColour={sharedColour} titlePlaceholder={!reception} key={sectionLink ? 'article' : gridId || 'article'} article={sectionLink && colourPreview?.source !== working ? working.article : article}
                     quickToolsHost={editingCell && active && !failed && !view.presented ? quickToolsHost : null} quickColor={target => colorTools(target, true)}
                     onFitFontPreview={editingCell?.fitText?.includes(record.id) && store?.previewFittedTextFrame ? fitFontPreview : undefined}
                     onChange={changeArticle} onEditor={setEditor} onFlowEditor={setFlowEditor} flowRange={linked ? flow.ranges[0] : null} controlsHost={controlsHost} disabled={editBlocked || mode !== 'write'} saveError={error}

@@ -1,3 +1,4 @@
+import { authoredStorage } from '../workspace/profileWorkspace.js';
 import { normalizeProfileAddress } from '../library/config.js';
 import { restoreReception } from '../profileDocument/domain/receptionPresentation.js';
 import { serializeWorkbenchBackup, parseWorkbenchBackup } from '../systemWorkflow/workbenchBackup.js';
@@ -32,7 +33,7 @@ export function preparePublishedReception(scope, resolution) {
 export function readReceptionRecovery(storage, profile) {
   try {
     if (!storage?.getItem) throw new Error('Local recovery storage is unavailable.');
-    const source = storage.getItem(receptionRecoveryKey(profile));
+    const source = authoredStorage(storage).getItem(receptionRecoveryKey(profile));
     if (source === null) return { status: 'absent' };
     const backup = parseWorkbenchBackup(source, profile);
     const reception = backup.draft.shared?.reception || backup.draft.reception;
@@ -56,8 +57,8 @@ export function restorePreparedReception(scope, prepared, storage) {
   const source = serializeWorkbenchBackup(scope.getBackupSnapshot());
   const key = receptionRecoveryKey(prepared.profileAddress);
   try {
-    storage.setItem(key, source);
-    if (storage.getItem(key) !== source) throw new Error();
+    authoredStorage(storage).setItem(key, source);
+    if (authoredStorage(storage).getItem(key) !== source) throw new Error();
   } catch { throw new Error('Profile Bento could not be backed up. Nothing was replaced.'); }
   scope.replaceReception(prepared.reception, prepared.generation);
   try { storage.removeItem(workbenchLayoutKey(prepared.profileAddress, 'reception')); }

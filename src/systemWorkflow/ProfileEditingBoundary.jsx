@@ -1,10 +1,11 @@
+import WorkspaceBoundary from '../workspace/WorkspaceBoundary.jsx';
 import { useEffect, useState } from 'react';
 import { StartupDestinationReady } from '../startveil/StartupDestinationContext.jsx';
 import { acquireProfileEditor } from './profileEditorLease.js';
 import './workbenchBackup.css';
 
 export default function ProfileEditingBoundary(props) {
-  return <EditingSession key={props.profileAddress.toLowerCase()} {...props} />;
+  return <WorkspaceBoundary profile={props.profileAddress}><EditingSession key={props.profileAddress.toLowerCase()} {...props} /></WorkspaceBoundary>;
 }
 
 function EditingSession({ profileAddress, children, onView, viewLabel = 'View published workspace' }) {

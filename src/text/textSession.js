@@ -78,7 +78,8 @@ export function addTextModule(store, profile, placed = null, { visibility = 'PRI
   return item.id;
 }
 export function saveTextModule(store, profile, expected, next) {
-  return saveTextModuleResult(store, profile, expected, next).saved;
+  const result = saveTextModuleResult(store, profile, expected, next);
+  return result.committed ?? result.saved;
 }
 
 export function duplicateTextModule(store, profile, expected, workbench) {
@@ -118,6 +119,10 @@ const messages = {
   write_failed: 'Browser storage could not save your changes. It may be full or blocked. Your unsaved text is still here.',
 };
 export const textSaveFailure = code => ({ saved: false, reason: code, message: messages[code] || messages.write_failed });
+export function acceptedTextRecord(store, record) {
+  const committed = store.whenCommitted?.() ?? true;
+  return committed === true ? { saved: true, record } : { accepted: true, saved: false, record, committed };
+}
 const workbenchTexts = { read: draft => draft.texts, replace: (draft, texts) => ({ ...draft, texts }) };
 export function saveTextModuleResult(store, profile, expected, next, options) {
   return saveTextRecordResult(store, profile, expected, next, options, workbenchTexts);
@@ -152,7 +157,7 @@ export function saveTextRecordResult(store, profile, expected, next, { retry = f
     // the edited record. The store still validates and detaches before accepting.
     const nextDraft = retry ? null : candidate(store.getSnapshot());
     const saved = retry ? store.retryCompletedOperation(candidate, options) : nextDraft && store.commitCompletedOperation(nextDraft, options);
-    return saved ? { saved: true, record: structuredClone(collection.read(store.getSnapshot()).find(item => item.id === expected.id)) }
+    return saved ? acceptedTextRecord(store, structuredClone(collection.read(store.getSnapshot()).find(item => item.id === expected.id)))
       : failed(reason || store.getLastCommitFailure?.() || 'write_failed');
   } catch (error) { return { saved: false, reason: 'invalid', message: error.message }; }
 }

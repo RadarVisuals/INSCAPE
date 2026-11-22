@@ -4,7 +4,7 @@ import { readTextRecovery, retainTextRecovery, clearTextRecovery } from './textE
 // edits survive this session through the profile/placement-scoped recovery store.
 export function createTextEditSession({ store, scope, record, valueOf, saveRecord }) {
   const recovered = readTextRecovery(store, scope);
-  let active = true;
+  let active = true, sequence = 0;
   let snapshot = { record: recovered?.expected || record, value: recovered?.value || valueOf(record),
     failed: Boolean(recovered), error: recovered?.failure.message || '', reason: recovered?.failure.reason || null };
   const listeners = new Set();
@@ -27,9 +27,20 @@ export function createTextEditSession({ store, scope, record, valueOf, saveRecor
     setError(error, reason = null) { if (active) publish({ error, reason }); },
     save(value, options) {
       if (!current()) return false;
+      const attempt = ++sequence;
       let result;
       try { result = saveRecord(store, scope, snapshot.record, value, options); }
       catch (error) { result = { saved: false, reason: 'invalid', message: error.message || 'The Text could not be saved.' }; }
+      if (result.accepted) {
+        accept(result.record);
+        void Promise.resolve(result.committed).then(saved => {
+          if (saved || sequence !== attempt || store.getProfileAddress() !== scope.profile) return;
+          const failure = { reason: 'write_failed', message: 'Text is in this tab. Retry saving before closing it.' };
+          retainTextRecovery(store, scope, result.record, value, failure);
+          if (active) publish({ value, failed: true, error: failure.message, reason: failure.reason });
+        });
+        return true;
+      }
       if (result.saved) { accept(result.record); return true; }
       // Retain before notifying the host so preview/navigation sees the failure.
       retainTextRecovery(store, scope, snapshot.record, value, result);

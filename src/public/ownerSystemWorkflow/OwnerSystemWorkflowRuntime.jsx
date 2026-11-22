@@ -1,3 +1,4 @@
+import { useWorkspaceSaveLabel } from '../../workspace/WorkspaceBoundary.jsx';
 import './ownerSystemWorkflow.css';
 import './displayInstruments.css';
 import '../../lattice/rendering/latticeMenuSurface.css';
@@ -539,6 +540,7 @@ export function WorkbenchSession({
   });
   const previewing = Boolean(preview) || receptionPreview;
   const canvasSuspended = previewing || browsing || leavingEditor;
+  const committedLabel = useWorkspaceSaveLabel(profileAddress, 'Saved locally');
   const recordStatus = sharedStore.getRecordState().status;
   const commitFailure = useSyncExternalStore(sharedStore.subscribe, sharedStore.getLastCommitFailure);
   const saveState =
@@ -552,7 +554,7 @@ export function WorkbenchSession({
       : layoutPersistence.pending
         ? 'Saving layout'
         : recordStatus === 'valid'
-          ? 'Saved locally'
+          ? committedLabel
           : 'No saved draft';
   const toolbarHidden = previewing || instrumentsObscured || !creationBarVisible;
   useLayoutEffect(() => {

@@ -4,7 +4,7 @@
   "systemVersion": "1.0.0",
   "note": "Generated from production and design-system reference CSS. Reference roles are preview-only. Values remain CSS expressions, with selector and media scopes; this is not a DTCG interchange file. Runtime custom properties and local overrides are included and are not automatically public design tokens.",
   "counts": {
-    "files": 108,
+    "files": 109,
     "definitions": 859,
     "names": 450
   },
@@ -10993,6 +10993,16 @@
         "--control-height-sm",
         "--tool-field-font-size",
         "--tool-touch-target"
+      ]
+    },
+    {
+      "path": "src/workspace/workspaceStatus.css",
+      "role": "Local",
+      "sha256": "19576701725ffc2abc033acb487c280ce76904cbe7b72f124be29522757984e7",
+      "definitions": [],
+      "references": [
+        "--interface-ink",
+        "--interface-surface"
       ]
     }
   ]

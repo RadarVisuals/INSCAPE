@@ -62,7 +62,7 @@ export default function WorkbenchBackupControls({ store, storage, getDraft = () 
     } catch (error) { if (token === request.current) setMessage(error.message); }
     finally { if (token === request.current) setReading(false); }
   };
-  const restore = () => {
+  const restore = async () => {
     if (disabled || !pending) return;
     if (hasRecovery()) { setMessage('Save pending Text edits or download their article backups before restoring this Workbench.'); return; }
     if (store.getProfileAddress() !== pending.profile || store.getGeneration() !== pending.generation || currentBase() !== pending.base) {
@@ -74,11 +74,14 @@ export default function WorkbenchBackupControls({ store, storage, getDraft = () 
         if (scope !== pending.scope || pending.source && (publishedResolution?.status !== 'RESOLVED' || publishedResolution.document !== pending.source))
           throw Error('The publication changed. Reopen this preview.');
         const warning = restorePreparedReception(scope, pending.reception, storage);
+        if (store.whenCommitted && !await store.whenCommitted()) throw Error('Profile Bento is in memory. Keep this tab open and retry saving.');
+        if (live.current.store !== store) return;
         live.current.onRestored?.(warning || 'Profile Bento loaded. Previous local work is in Backup. Nothing published.');
       } catch (error) { setMessage(error.message); }
       return;
     }
-    const { saved, warning, error } = restoreWorkbenchBackup(store, pending.backup, { expectedGeneration: pending.generation, expectedFingerprint: pending.fingerprint }, storage);
+    const { saved, warning, error } = await restoreWorkbenchBackup(store, pending.backup, { expectedGeneration: pending.generation, expectedFingerprint: pending.fingerprint }, storage);
+    if (live.current.store !== store) return;
     if (!saved) { setMessage(error || 'The backup was not restored. The saved draft changed or browser storage is unavailable. Your previous work has not been replaced.'); return; }
     setPending(null); setMessage('Workbench restored and saved locally. Nothing was published.');
     live.current.onRestored?.(warning);

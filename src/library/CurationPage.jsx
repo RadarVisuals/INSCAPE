@@ -1,3 +1,4 @@
+import WorkspaceBoundary from '../workspace/WorkspaceBoundary.jsx';
 import { saveMissingSnapshots } from './curatedSnapshots.js';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import ToolPanel from '../ui/ToolPanel.jsx';
@@ -36,7 +37,11 @@ function LibraryPane({ role, boundsRef, active, onActivate, data, commands }) {
   </ToolPanel>;
 }
 
-export default function CurationPage({ profileAddress, destinations, onBack }) {
+export default function CurationPage(props) {
+  return <WorkspaceBoundary profile={props.profileAddress}><CurationWorkspace {...props} /></WorkspaceBoundary>;
+}
+
+function CurationWorkspace({ profileAddress, destinations, onBack }) {
   const bounds = useRef(null), trigger = useRef(null);
   const [active, setActive] = useState('source');
   useLayoutEffect(() => { useLibraryStore.getState().setProfileAddress(profileAddress); }, [profileAddress]);

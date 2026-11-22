@@ -55,7 +55,7 @@ export function normalizeWorkspace(candidate, profileAddress) {
   for (const { id } of folders) if (!organized.has(id)) rootCategoryIds.push(id);
   const members = new Set([...(Array.isArray(candidate.curatedAssetIds) ? candidate.curatedAssetIds : []), ...folders.flatMap(folder => folder.assetIds)]);
   const snapshots = Object.entries(candidate.curatedSnapshots || {}).flatMap(([id, record]) => {
-    const snapshot = members.has(id) && id === record?.id && curatedSnapshot(record);
+    const snapshot = members.has(id) && id === record?.id && curatedSnapshot(record, { existing: true });
     return snapshot ? [[id, snapshot]] : [];
   });
   return { ...(snapshots.length && { curatedSnapshots: Object.fromEntries(snapshots) }), version: LIBRARY_WORKSPACE_VERSION, profileAddress: profile, favorites, folders,

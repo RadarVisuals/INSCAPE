@@ -5,14 +5,15 @@ import { createStableAssetId } from './domain/normalizeProfileAsset.js';
 
 const string = value => typeof value === 'string' ? value : null;
 const dimension = value => Number.isSafeInteger(value) && value > 0 ? value : null;
-const url = value => isValidPublishedAssetUrl(value) ? value : null;
 const list = value => Array.isArray(value) ? value : [];
 const creators = value => list(value).filter(entry => normalizeProfileAddress(entry?.address)).map(entry => ({
   address: normalizeProfileAddress(entry.address), name: string(entry.name),
 }));
 
 // Only display facts belong here. Holding, placement, selection and filing have separate owners.
-export function curatedSnapshot(record) {
+export function curatedSnapshot(record, { existing = false } = {}) {
+  // Existing v9 work may reference a validated on-chain SVG data URI.
+  const url = value => (existing || !/^data:/i.test(value)) && isValidPublishedAssetUrl(value) ? value : null;
   const identity = parseCanonicalAssetId(record?.id);
   if (!identity || record.id !== createStableAssetId(identity)
     || record.chainId !== identity.chainId || normalizeProfileAddress(record.contractAddress) !== identity.contractAddress
@@ -31,7 +32,7 @@ export function curatedSnapshot(record) {
     fieldProvenance: provenance ? { creators: { source: string(provenance.source), scope: string(provenance.scope) } } : {},
     fileAttachments: list(record.fileAttachments).filter(file => url(file?.url)).map(file => ({ url: file.url, fileType: string(file.fileType) })),
     imageGroups: list(record.imageGroups).filter(Boolean).map(group => ({
-      index: group.index, resourceId: string(group.resourceId), thumbnailUrl: url(group.thumbnailUrl),
+      index: group.index, resourceId: !existing && /^data:/i.test(group.resourceId) ? null : string(group.resourceId), thumbnailUrl: url(group.thumbnailUrl),
       originalImageUrl: url(group.originalImageUrl), imageUrl: url(group.imageUrl), fileType: string(group.fileType),
       width: dimension(group.width), height: dimension(group.height),
       variants: list(group.variants).filter(item => url(item?.url)).map(item => ({

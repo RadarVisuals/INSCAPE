@@ -1,3 +1,4 @@
+import { useWorkspaceSaveLabel } from '../workspace/WorkspaceBoundary.jsx';
 import { useWorkbenchArea } from '../public/ownerSystemWorkflow/WorkbenchAreaContext.jsx';
 import { lazy, Suspense, useLayoutEffect, useRef, useState } from 'react';
 import { Eye } from 'lucide-react';
@@ -23,6 +24,7 @@ export default function DisplayArticleEditor({ placement, controller, cellSize, 
   const { scale: standaloneScale } = useWorkbenchView();
   const { offset } = useWorkbenchCamera();
   const scope = textRecoveryScope(controller.draft.profileAddress, placement.id, controller.moduleId, controller.selectedGridId);
+  const saveLabel = useWorkspaceSaveLabel(scope.profile, 'Saved in this browser');
   const { value: article, failed, error, reason, session: edit } = useTextEditSession({ store: controller.store, scope, record: placement, valueOf: articleValue, saveRecord: saveArticle });
   const { save, setError } = edit;
   const [host, setHost] = useState(null);
@@ -59,7 +61,7 @@ export default function DisplayArticleEditor({ placement, controller, cellSize, 
   };
   return <div ref={root} className="text-workbench display-text-authoring">
     <DisplayTextContent placement={{ ...placement, text: { article } }} cellSize={cellSize} width={width} height={height}>
-      <Suspense fallback={<p role="status">Opening editor…</p>}><ArticleEditor article={article} onChange={save} controlsHost={host} disabled={placement.locked || suspended} saveError={error}
+      <Suspense fallback={<p role="status">Opening editor…</p>}><ArticleEditor saveStatus={saveLabel} article={article} onChange={save} controlsHost={host} disabled={placement.locked || suspended} saveError={error}
         onFindRequest={() => { if (!placement.locked && !suspended) { tools?.activate(controller.moduleId); tools?.setOpen(true); } }} /></Suspense>
     </DisplayTextContent>
     <div className="display-text-edit-actions" style={actions}>
@@ -71,7 +73,7 @@ export default function DisplayArticleEditor({ placement, controller, cellSize, 
         backupScope={JSON.stringify(scope)} recoveryPending={failed}
         footer={error ? <div role="alert">{error}<button type="button" onClick={() => save(edit.getSnapshot().value, { retry: true })}>Retry local save</button>
           {reason === 'conflict' && <button type="button" onClick={() => save(edit.getSnapshot().value, { retry: true, replace: true })}>Replace saved Text with my edits</button>}
-        </div> : <p role="status">Saved in this browser</p>}>
+        </div> : <p role="status">{saveLabel}</p>}>
         <button type="button" disabled={placement.locked} onClick={detachBeside}>Move onto Workbench</button>
 
       </TextTools>}

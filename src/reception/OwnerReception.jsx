@@ -1,3 +1,4 @@
+import WorkspaceBoundary from '../workspace/WorkspaceBoundary.jsx';
 import { lazy, Suspense, useMemo, useState, useSyncExternalStore } from 'react';
 import { createProfileDraftReader } from '../systemWorkflow/profileDraftReader.js';
 import { useProfileIdentity } from '../profileIdentity/state/useProfileIdentity.js';
@@ -8,7 +9,10 @@ import { createReception, projectReception } from '../profileDocument/domain/rec
 import { publishedPresentationSnapshot } from '../presentation/presentationSources.js';
 const OwnerReceptionCollection = lazy(() => import('./OwnerReceptionCollection.jsx'));
 
-export default function OwnerReception({ address, document, ...navigation }) {
+export default function OwnerReception(props) {
+  return <WorkspaceBoundary profile={props.address}><LocalReception key={props.address} {...props} /></WorkspaceBoundary>;
+}
+function LocalReception({ address, document, ...navigation }) {
   const [reader] = useState(() => createProfileDraftReader({ profileAddress: address, storage: localStorage }));
   const { draft, collection, status, stale } = useSyncExternalStore(reader.subscribe, reader.getSnapshot);
   const publicSnapshot = useMemo(() => document ? publishedPresentationSnapshot(document) : null, [document]);

@@ -1,4 +1,6 @@
 import React from 'react';
+import { commitWorkspaceRows } from '../src/workspace/database.js';
+import { workspaceSession } from '../src/workspace/profileWorkspace.js';
 import { createRoot } from 'react-dom/client';
 import Boundary from '../src/public/ownerSystemWorkflow/OwnerSystemWorkflowReconciliationBoundary.jsx';
 import { createSystemWorkflowDraftStore, systemWorkflowDraftKey } from '../src/systemWorkflow/systemWorkflowDraftStore.js';
@@ -26,7 +28,12 @@ if (params.has('seed') && localStorage.getItem(key) === null) {
   localStorage.setItem(key, JSON.stringify(draft));
 }
 window.fixtureProfile = profile;
-window.savedDraft = () => JSON.parse(localStorage.getItem(key));
+window.externalWorkbenchWrite = raw => {
+  const session = workspaceSession(profile);
+  return commitWorkspaceRows(session.db, session.scope, [['workbenches', { before: session.committed.workbenches, after: raw }]]);
+};
+window.committedRaw = () => workspaceSession(profile)?.committed?.workbenches;
+window.savedDraft = () => JSON.parse(workspaceSession(profile)?.committed?.workbenches ?? localStorage.getItem(key));
 window.guardedStore = () => createSystemWorkflowDraftStore({ profileAddress: profile, storage: localStorage, requireEditor: true });
 const root = createRoot(document.getElementById('root'));
 window.leaveEditor = () => root.unmount();

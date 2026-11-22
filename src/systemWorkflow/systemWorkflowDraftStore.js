@@ -1,4 +1,5 @@
 // @ts-check
+import { authoredStorage, confirmWorkspaceSaved, hydrateWorkspace, workspaceSession } from '../workspace/profileWorkspace.js';
 import { reconcileRemovedWorkbenchMembers } from './domain/workbenchGroups.js';
 import { reconcileArtworkLayers } from './domain/artworkLayers.js';
 import { captureProfileDraftWriteAccess } from './profileEditorLease.js';
@@ -115,8 +116,10 @@ export function createSystemWorkflowDraftStore({
   requireEditor = false,
   initialStudio = false,
 } = {}) {
+  const leaseStorage = storage;
+  storage = authoredStorage(storage);
   let activeProfileAddress = requireProfileAddress(profileAddress);
-  let writeAccess = requireEditor ? captureProfileDraftWriteAccess(activeProfileAddress, storage) : () => true;
+  let writeAccess = requireEditor ? captureProfileDraftWriteAccess(activeProfileAddress, leaseStorage) : () => true;
   let generation = 0;
   /** @type {WorkflowDraft | null} */ let currentDraft = null;
   /** @type {WorkflowDraft | WorkbenchCollection | null} */ let currentRecord = null;
@@ -227,17 +230,27 @@ export function createSystemWorkflowDraftStore({
     listeners.forEach(listener => listener());
   };
 
+  let hydrationRequest = 0;
+  function hydrateCurrentProfile() {
+    const profile = activeProfileAddress, request = ++hydrationRequest;
+    if (storage === leaseStorage || workspaceSession(profile)?.rows) return;
+    void hydrateWorkspace(profile).then(() => {
+      if (request !== hydrationRequest || profile !== activeProfileAddress || !workspaceSession(profile)?.rows) return;
+      acceptLoaded(load(profile));
+      activation++; generation++; notify();
+    });
+  }
   acceptLoaded(load(activeProfileAddress));
+  hydrateCurrentProfile();
 
-  // Compare the persisted record, not just this store's in-memory generation.
-  // localStorage has no atomic compare-and-swap; this rejects already-visible
-  // external edits without pretending to provide simultaneous writer locking.
+  // Reject stale commands locally. The database rechecks the bytes inside the write transaction.
   const storageStillCurrent = () => {
     try { return Boolean(storage?.getItem) && /** @type {import('../contracts/workbench.js').DraftStorage} */ (storage).getItem(systemWorkflowDraftKey(activeProfileAddress)) === acceptedRaw; }
     catch { return false; }
   };
 
   const api = {
+    whenCommitted() { return storage === leaseStorage ? true : confirmWorkspaceSaved(activeProfileAddress); },
     hasWriteAccess() { return writeAccess(); },
     beginHistoryGroup() { if (!historyGroup && currentDraft) historyGroup = { before: currentDraft, entry: null }; },
     endHistoryGroup() { historyGroup = null; },
@@ -423,6 +436,7 @@ export function createSystemWorkflowDraftStore({
         isCollection: api.isCollection,
         listWorkbenches: api.listWorkbenches,
         getBackupSnapshot: api.getBackupSnapshot,
+        whenCommitted: () => storage === leaseStorage || confirmWorkspaceSaved(session.profile),
         getProfileAddress: () => session.profile,
         getWorkbenchId: () => session.id,
         getSnapshot: () => current() ? api.getSnapshot() : session.snapshot,
@@ -465,7 +479,8 @@ export function createSystemWorkflowDraftStore({
         getProfileAddress: () => profile, getRecoveryContext: () => field === 'reception' ? field : workbenchId(),
         getSnapshot: api.getSnapshot, getDraft: api.getDraft, getGeneration: api.getGeneration,
         getHistory: api.getHistory, getRecordState: api.getRecordState, getLastCommitFailure: api.getLastCommitFailure,
-        getBackupSnapshot: api.getBackupSnapshot, subscribe: api.subscribe,
+        getBackupSnapshot: api.getBackupSnapshot,
+        whenCommitted: () => storage === leaseStorage || confirmWorkspaceSaved(profile), subscribe: api.subscribe,
         commitCompletedOperation: save,
         /** @param {(draft: WorkflowDraft) => WorkflowDraft | null | false} make @param {import('../contracts/workbench.js').CommitOptions} [options] */
         retryCompletedOperation: (make, options) => writable() && api.retryCompletedOperation(draft => {
@@ -492,6 +507,7 @@ export function createSystemWorkflowDraftStore({
       editorTarget = 'workbench'; receptionScope = null;
       clearProfileHistory();
       acceptLoaded(load(activeProfileAddress));
+      hydrateCurrentProfile();
       activation++;
       generation += 1;
       notify();
@@ -536,8 +552,9 @@ export function createSystemWorkflowDraftStore({
       if (receptionHistory && receptionHistory.acceptedRaw !== loaded.raw) histories.delete(`${next}/reception`);
       activeProfileAddress = next;
       editorTarget = 'workbench'; receptionScope = null;
-      writeAccess = requireEditor ? captureProfileDraftWriteAccess(activeProfileAddress, storage) : () => true;
+      writeAccess = requireEditor ? captureProfileDraftWriteAccess(activeProfileAddress, leaseStorage) : () => true;
       acceptLoaded(loaded);
+      hydrateCurrentProfile();
       activation++;
       generation += 1;
       notify();

@@ -75,6 +75,7 @@ export type TransitionGuard = () => string | null;
 export interface RecordState { status: 'absent' | 'valid' | 'corrupt' | 'unavailable'; reason?: string; fingerprint?: string; issues?: unknown[] }
 /** Current unreadable snapshots throw. An old scope created without a draft can retain null. */
 export interface WorkbenchScope {
+  whenCommitted?(): boolean | Promise<boolean>;
   hasWriteAccess(): boolean;
   isCurrent(): boolean;
   getProfileAddress(): string;

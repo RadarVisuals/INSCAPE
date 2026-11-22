@@ -55,6 +55,15 @@ export function restoreWorkbenchBackup(store, backup, options, storage) {
     if (!store.restoreBackup(backup.draft, options)) return { saved: false };
   } catch (error) { return { saved: false, error: error.message }; }
   store.listWorkbenches?.().forEach(item => layoutIds.add(item.id));
+  const complete = committed => {
+    if (!committed) return { saved: false, error: 'Restore is in memory. Keep this tab open and retry the workspace save.' };
+    return finishRestore(storage, profile, layoutIds);
+  };
+  const committed = store.whenCommitted?.() ?? true;
+  return typeof committed?.then === 'function' ? committed.then(complete) : complete(committed);
+}
+
+function finishRestore(storage, profile, layoutIds) {
   let warning = null;
   try {
     if (!storage?.removeItem) throw Error('Storage cleanup unavailable');

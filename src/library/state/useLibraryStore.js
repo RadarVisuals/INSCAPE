@@ -1,3 +1,4 @@
+import { authoredStorage, hydrateWorkspace, workspaceSession } from '../../workspace/profileWorkspace.js';
 import { saveMissingSnapshots } from '../curatedSnapshots.js';
 import { create } from 'zustand';
 import { createLibraryInventoryActions } from './libraryInventoryActions.js';
@@ -25,14 +26,15 @@ import { loadLibraryAssetCache, saveLibraryAssetCache } from '../storage/library
 
 const profileAddress = resolveWorkspaceProfile(useWalletStore.getState().hostProfileAddress);
 let workspaceStorage = browserLibraryStorage();
-let workspacePersistence = createLibraryWorkspacePersistence(workspaceStorage);
-const initialWorkspace = workspacePersistence.load(profileAddress);
+let workspacePersistence = createLibraryWorkspacePersistence(authoredStorage(workspaceStorage));
+let injected = false;
+const initialWorkspace = { workspace: null, persistenceError: null };
 
 function commitWorkspace(set, get, workspace) {
   if (workspace === get().workspace) return false;
-  if (workspace?.profileAddress !== get().profileAddress) return false;
+  if (!get().workspace || workspace?.profileAddress !== get().profileAddress) return false;
   const result = workspacePersistence.save(workspace);
-  if (!result.ok) { set({ persistenceError: result.error }); return false; }
+  if (!result.accepted && !result.ok) { set({ persistenceError: result.error }); return false; }
   set({ workspace, persistenceError: null });
   return true;
 }
@@ -64,7 +66,17 @@ export const useLibraryStore = create((set, get) => ({
   setProfileAddress(nextProfileAddress) {
     const profile = normalizeProfileAddress(nextProfileAddress);
     if (!profile) return false;
-    if (profile === get().profileAddress) return true;
+    if (profile === get().profileAddress && get().workspace) return true;
+    if (!injected && !workspaceSession(profile)?.rows) {
+      if (get().profileAddress !== profile) { get().cancel(); set({ loadGeneration: get().loadGeneration + 1 }); }
+      set({ profileAddress: profile, workspace: null, assets: [], referencedAssets: [], persistenceError: null });
+      void hydrateWorkspace(profile).then(session => {
+        if (get().profileAddress !== profile) return;
+        if (session.rows) get().setProfileAddress(profile);
+        else set({ persistenceError: session.state.message });
+      });
+      return false;
+    }
     developmentLog('[asset-index] profile changed', {
       previousProfileAddress: get().profileAddress,
       profileAddress: profile
@@ -85,25 +97,31 @@ export const useLibraryStore = create((set, get) => ({
     return true;
   },
   createFolder(name) {
+    if (!get().workspace) return false;
     const workspace = createFolder(get().workspace, name);
     const created = workspace.folders.length > get().workspace.folders.length ? workspace.folders.at(-1) : null;
     const committed = commitWorkspace(set, get, workspace);
     return committed ? created?.id || null : null;
   },
   renameFolder(id, name) {
+    if (!get().workspace) return false;
     const workspace = renameFolder(get().workspace, id, name); commitWorkspace(set, get, workspace);
   },
   deleteFolder(id) {
+    if (!get().workspace) return false;
     const workspace = deleteFolder(get().workspace, id);
     commitWorkspace(set, get, workspace);
   },
   setFolderAsset(folderId, assetId, included) {
+    if (!get().workspace) return false;
     const workspace = setFolderAsset(get().workspace, folderId, assetId, included); commitWorkspace(set, get, workspace);
   },
   toggleFavorite(assetId) {
+    if (!get().workspace) return false;
     const workspace = toggleFavorite(get().workspace, assetId); commitWorkspace(set, get, workspace);
   },
   setFolderPublic(folderId, isPublic) {
+    if (!get().workspace) return false;
     const workspace = setFolderPublic(get().workspace, folderId, isPublic); commitWorkspace(set, get, workspace);
   },
   commitCategoryForProfile(expectedProfileAddress, command, records) {
@@ -145,14 +163,21 @@ export const useLibraryStore = create((set, get) => ({
     return Boolean(workspace);
   },
   replaceWorkspace(workspace, { persist = true } = {}) {
-    if (workspace?.profileAddress !== get().profileAddress) return false;
+    if (!get().workspace || workspace?.profileAddress !== get().profileAddress) return false;
     if (persist) return commitWorkspace(set, get, workspace);
     set({ workspace });
     return true;
   }
 }));
 
+if (typeof window !== 'undefined') window.addEventListener('inscape-workspace-change', ({ detail }) => {
+  if (!injected && detail.kind === 'library' && detail.profile === useLibraryStore.getState().profileAddress) {
+    useLibraryStore.setState(workspacePersistence.load(detail.profile));
+  }
+});
+
 export function resetLibraryStoreForTests(nextProfileAddress, nextStorage) {
+  injected = true;
   workspaceStorage = nextStorage;
   useLibraryStore.getState().cancel();
   workspacePersistence = createLibraryWorkspacePersistence(nextStorage);
@@ -163,7 +188,7 @@ export function resetLibraryStoreForTests(nextProfileAddress, nextStorage) {
 export function flushLibraryWorkspace() {
   const result = workspacePersistence.save(useLibraryStore.getState().workspace);
   useLibraryStore.setState({ persistenceError: result.error });
-  return result.ok;
+  return result.committed ?? result.ok;
 }
 
 export const flushLibraryWorkspaceForTests = flushLibraryWorkspace;

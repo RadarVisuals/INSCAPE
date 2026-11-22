@@ -69,9 +69,9 @@ test('an unpublished corrupt draft exposes backup recovery without deleting the 
   try {
     const page = await browser.newPage(); await open(page); await page.locator('.text-window').waitFor();
     const draft = await page.evaluate(() => window.savedDraft());
-    await page.evaluate(async () => { const { systemWorkflowDraftKey } = await import('/src/systemWorkflow/systemWorkflowDraftStore.js'); localStorage.setItem(systemWorkflowDraftKey(window.fixtureProfile), '{broken'); });
+    await page.evaluate(() => window.externalWorkbenchWrite('{broken'));
     await page.reload(); await page.getByRole('heading', { name: 'Local workspace could not be opened' }).waitFor();
-    assert.equal(await page.evaluate(async () => { const { systemWorkflowDraftKey } = await import('/src/systemWorkflow/systemWorkflowDraftStore.js'); return localStorage.getItem(systemWorkflowDraftKey(window.fixtureProfile)); }), '{broken');
+    assert.equal(await page.evaluate(() => window.committedRaw()), '{broken');
     const panel = page.getByRole('region', { name: 'Workbench backup', exact: true });
     await upload(panel, JSON.stringify({ type: 'inscape-private-workbench', version: 1, createdAt: new Date().toISOString(), draft }));
     await panel.getByRole('button', { name: 'Replace Workbench with backup' }).click();
@@ -88,13 +88,15 @@ test('restore errors retain saved bytes and a delayed file cannot replace subseq
     const changed = structuredClone(original); changed.texts[0].article.title = 'Backup replacement';
     const source = JSON.stringify({ type: 'inscape-private-workbench', version: 1, createdAt: new Date().toISOString(), draft: changed });
     await upload(panel, source);
-    await page.evaluate(() => { const set = Storage.prototype.setItem; Storage.prototype.setItem = function(key, value) { if (key.startsWith('inscape.system-workflow-draft.')) throw new DOMException('Full', 'QuotaExceededError'); return set.call(this, key, value); }; window.restoreWrites = () => { Storage.prototype.setItem = set; }; });
+    await page.evaluate(() => { const put = IDBObjectStore.prototype.put; IDBObjectStore.prototype.put = function(...args) { if (this.name === 'records') throw new DOMException('Full', 'QuotaExceededError'); return put.apply(this, args); }; window.restoreWrites = () => { IDBObjectStore.prototype.put = put; }; });
     await panel.getByRole('button', { name: 'Replace Workbench with backup' }).click();
-    await panel.getByText(/The backup was not restored/).waitFor(); assert.deepEqual(await page.evaluate(() => window.savedDraft()), original);
+    await page.getByRole('alert').filter({hasText:'Browser storage is full'}).waitFor(); assert.deepEqual(await page.evaluate(() => window.savedDraft()), original);
     await page.evaluate(() => window.restoreWrites());
     // A visible concurrent change must still be refused, even with the editor lock.
-    await page.evaluate(async () => { const { systemWorkflowDraftKey } = await import('/src/systemWorkflow/systemWorkflowDraftStore.js'); const draft = window.savedDraft(); draft.identityPresentation.alias = 'Externally changed'; localStorage.setItem(systemWorkflowDraftKey(window.fixtureProfile), JSON.stringify(draft)); });
-    await panel.getByRole('button', { name: 'Replace Workbench with backup' }).click();
+    await page.evaluate(() => { const draft = window.savedDraft(); draft.identityPresentation.alias = 'Externally changed'; return window.externalWorkbenchWrite(JSON.stringify(draft)); });
+    await page.getByRole('button', { name: 'Retry save' }).click();
+    await page.getByRole('alert').filter({hasText:'another tab'}).waitFor();
+    await page.reload(); await page.locator('.text-window').waitFor();
     assert.equal(await page.evaluate(() => window.savedDraft().identityPresentation.alias), 'Externally changed');
     assert.equal(await page.evaluate(() => window.savedDraft().texts[0].article.title), 'Private draft');
     await page.reload(); await page.locator('.text-window').waitFor(); panel = await settings(page);

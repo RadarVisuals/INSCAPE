@@ -161,6 +161,7 @@ export function createReceptionEditorScope(rootStore, options = {}) {
     getProfileAddress: () => profile, getWorkbenchId: () => documentId, getRecoveryContext: () => documentId,
     getSnapshot: read, getDraft: () => structuredClone(read()), getGeneration: underlying.getGeneration,
     getHistory: underlying.getHistory, getRecordState: underlying.getRecordState, getLastCommitFailure: () => commitFailure || underlying.getLastCommitFailure(),
+    whenCommitted: underlying.whenCommitted,
     getBackupSnapshot(candidate) {
       if (!current()) throw new Error('This composition is no longer active.');
       return underlying.getBackupSnapshot(candidate ? convert(candidate) : undefined);

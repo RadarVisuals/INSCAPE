@@ -1,3 +1,4 @@
+import { authoredStorage, hydrateWorkspace, workspaceSession } from '../workspace/profileWorkspace.js';
 import { createSystemWorkflowDraftStore, systemWorkflowDraftKey } from './systemWorkflowDraftStore.js';
 
 // A read-only subscription to canonical storage. Never reload an editor store:
@@ -6,12 +7,15 @@ export function createProfileDraftReader({ profileAddress, storage, events = glo
   const key = systemWorkflowDraftKey(profileAddress), listeners = new Set();
   const readerId = globalThis.crypto.randomUUID();
   let revision = 0, raw, snapshot = { status: 'absent', draft: null, collection: null, stale: false };
+  const native = authoredStorage(storage) !== storage;
   const refresh = () => {
     let nextRaw;
-    try { nextRaw = storage.getItem(key); }
+    try { nextRaw = native ? workspaceSession(profileAddress)?.committed?.workbenches : storage.getItem(key); }
     catch { nextRaw = undefined; }
     if (nextRaw !== undefined && nextRaw === raw) return;
-    const store = createSystemWorkflowDraftStore({ profileAddress, storage, requireEditor: true });
+    const store = createSystemWorkflowDraftStore({ profileAddress, storage: {
+      getItem() { if (nextRaw === undefined) throw Error('Workspace unavailable.'); return nextRaw; },
+    }, requireEditor: true });
     const { status } = store.getRecordState();
     const failed = status === 'corrupt' || status === 'unavailable';
     raw = nextRaw;
@@ -23,20 +27,26 @@ export function createProfileDraftReader({ profileAddress, storage, events = glo
     listeners.forEach(listener => listener());
   };
   const storageChanged = event => { if ((!event.storageArea || event.storageArea === storage) && (event.key === null || event.key === key)) refresh(); };
+  const changed = event => {
+    if (event.detail.profile === profileAddress.toLowerCase() && event.detail.kind === 'workbenches') refresh();
+  };
   const visible = () => { if (visibility?.visibilityState !== 'hidden') refresh(); };
   refresh();
+  if (native) void hydrateWorkspace(profileAddress).then(refresh);
   return {
     getSnapshot: () => snapshot, refresh,
     subscribe(listener) {
       listeners.add(listener);
       if (listeners.size === 1) {
-        events.addEventListener?.('storage', storageChanged); events.addEventListener?.('focus', visible);
+        events.addEventListener?.('inscape-workspace-commit', changed);
+        events.addEventListener?.('inscape-workspace-change', changed); events.addEventListener?.('storage', storageChanged); events.addEventListener?.('focus', visible);
         visibility?.addEventListener?.('visibilitychange', visible); refresh();
       }
       return () => {
         listeners.delete(listener);
         if (!listeners.size) {
-          events.removeEventListener?.('storage', storageChanged); events.removeEventListener?.('focus', visible);
+          events.removeEventListener?.('inscape-workspace-commit', changed);
+          events.removeEventListener?.('inscape-workspace-change', changed); events.removeEventListener?.('storage', storageChanged); events.removeEventListener?.('focus', visible);
           visibility?.removeEventListener?.('visibilitychange', visible);
         }
       };

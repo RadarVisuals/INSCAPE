@@ -6,8 +6,8 @@ export function browserLibraryStorage() {
   try { return globalThis.window?.localStorage || null; } catch { return null; }
 }
 
-// One persistence authority per storage installation. A successful command is
-// saved before it becomes visible; no pending timer can outlive its profile.
+// Commands update the profile buffer synchronously. Native storage also supplies
+// a commit promise for callers that need confirmation of durable persistence.
 export function createLibraryWorkspacePersistence(storage) {
   const records = new Map();
   const unavailable = 'Library storage is unavailable. Your changes were not saved.';
@@ -36,6 +36,7 @@ export function createLibraryWorkspacePersistence(storage) {
         const raw = JSON.stringify(normalizeWorkspace(workspace, profile));
         storage.setItem(key, raw);
         records.set(profile, { raw });
+        if (storage.whenCommitted) return { accepted: true, committed: storage.whenCommitted(profile), error: null };
         return { ok: true, error: null };
       } catch { return { ok: false, error: unavailable }; }
     },

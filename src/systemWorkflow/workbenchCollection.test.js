@@ -441,7 +441,7 @@ test('a Workbench scope exposes only its explicit editing contract, never root l
   assert.deepEqual(Object.keys(scope).sort(), [
     'hasWriteAccess', 'isCurrent', 'getProfileAddress', 'getWorkbenchId', 'getSnapshot', 'getDraft',
     'getGeneration', 'getHistory', 'getRecordState', 'getLastCommitFailure', 'isCollection',
-    'listWorkbenches', 'getBackupSnapshot', 'subscribe', 'guardWorkbenchTransition',
+    'listWorkbenches', 'getBackupSnapshot', 'whenCommitted', 'subscribe', 'guardWorkbenchTransition',
     'beginHistoryGroup', 'endHistoryGroup', 'undo', 'redo', 'commitCompletedOperation',
     'retryCompletedOperation', 'restoreBackup', 'createWorkbench', 'deleteWorkbench', 'switchWorkbench', 'renameWorkbench', 'leaveWorkbench',
   ].sort());

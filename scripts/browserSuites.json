@@ -3,6 +3,11 @@
   "notes": "Classification is not a passing test result. Release suites run by default; every other suite remains explicitly selectable. production-startup is separately required after the build by verifyRelease.mjs.",
   "suites": [
     {
+      "name": "workspace-idb",
+      "category": "release",
+      "rationale": "Profile-scoped migration, committed revisions, reload, backup restore, quota recovery and stale hydration preserve authored work."
+    },
+    {
       "name": "reception-text-cell-height",
       "category": "release",
       "rationale": "Shared cell edges crop stationary text; numeric height preserves its local inset while growing the Bento, with Undo, reload and matching public preview."

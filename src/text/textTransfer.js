@@ -4,7 +4,7 @@ import { displayContent, PRIMARY_DISPLAY_ID } from '../systemWorkflow/domain/dis
 import { assertValidSystemWorkflowDraft } from '../systemWorkflow/domain/systemWorkflowDraft.js';
 import { createSystemWorkflowPlacementId, assertSystemWorkflowDropGeometry } from '../systemWorkflow/systemWorkflowPlacement.js';
 import { createDefaultWorkbenchPresentation, createTextPresentation } from '../profileDocument/domain/workbenchPresentation.js';
-import { textSaveFailure } from './textSession.js';
+import { acceptedTextRecord, textSaveFailure } from './textSession.js';
 
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 export function saveDisplayArticleResult(store, profile, { moduleId, gridId, expected, article }, { retry = false, replace = false } = {}) {
@@ -22,7 +22,7 @@ export function saveDisplayArticleResult(store, profile, { moduleId, gridId, exp
     const options = { expectedGeneration: generation, historyLabel: 'Edit Text layer' };
     const draft = retry ? null : candidate(store.getDraft());
     const saved = retry ? store.retryCompletedOperation(candidate, options) : draft && store.commitCompletedOperation(draft, options);
-    return saved ? { saved: true, record: displayContent(store.getDraft(), moduleId).grids.find(grid => grid.id === gridId).placements.find(item => item.id === expected.id) }
+    return saved ? acceptedTextRecord(store, displayContent(store.getDraft(), moduleId).grids.find(grid => grid.id === gridId).placements.find(item => item.id === expected.id))
       : textSaveFailure(reason || store.getLastCommitFailure?.() || 'write_failed');
   } catch (error) { return { saved: false, reason: 'invalid', message: error.message }; }
 }
