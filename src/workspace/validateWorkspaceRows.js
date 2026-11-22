@@ -1,6 +1,6 @@
 import { normalizeWorkspace } from '../library/storage/libraryWorkspaceStorage.js';
 import { createSystemWorkflowDraftStore } from '../systemWorkflow/systemWorkflowDraftStore.js';
-import { parseWorkbenchBackup } from '../systemWorkflow/workbenchBackup.js';
+import { parseLegacyWorkbenchBackup } from '../systemWorkflow/workbenchBackup.js';
 
 export { pendingProfileText } from '../text/textEditRecovery.js';
 
@@ -20,7 +20,7 @@ export function validateWorkspaceRows(rows, profile, verified = false) {
     const store = createSystemWorkflowDraftStore({ profileAddress: profile, storage: { getItem: () => rows.workbenches } });
     if (store.getRecordState().status !== 'valid') throw Error('Invalid saved Workbench or article draft.');
   }
-  if (rows.receptionRecovery !== null) parseWorkbenchBackup(rows.receptionRecovery, profile);
+  if (rows.receptionRecovery !== null) parseLegacyWorkbenchBackup(rows.receptionRecovery, profile);
   if (rows.textRecovery !== null) {
     const contexts = JSON.parse(rows.textRecovery);
     if (!Array.isArray(contexts) || contexts.some(pair => !Array.isArray(pair) || pair.length !== 2

@@ -1,5 +1,5 @@
 import './workspaceStatus.css';
-import { useEffect, useSyncExternalStore } from 'react';
+import { Fragment, useEffect, useSyncExternalStore } from 'react';
 import { StartupDestinationReady } from '../startveil/StartupDestinationContext.jsx';
 import { confirmWorkspaceSaved, hydrateWorkspace, subscribeWorkspace, workspaceSession } from './profileWorkspace.js';
 
@@ -19,7 +19,7 @@ export default function WorkspaceBoundary({ profile, children }) {
   useEffect(() => { void hydrateWorkspace(profile); }, [profile]);
   if (!state || state.status === 'loading') return <p role="status">Opening your saved workspace…</p>;
   if (state.status === 'blocked') return <><StartupDestinationReady /><p role="alert">{state.message}</p></>;
-  return <>{children}{state.message && <aside role="alert" className="workspace-save-warning">{state.message}
+  return <><Fragment key={state.restoreRevision}>{children}</Fragment>{state.message && <aside role="alert" className="workspace-save-warning">{state.message}
     {state.status === 'unsaved' && <button onClick={() => void confirmWorkspaceSaved(profile)}>Retry save</button>}
   </aside>}</>;
 }

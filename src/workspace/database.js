@@ -2,6 +2,16 @@ const DATABASE = 'inscape-workspaces';
 const META = 'profiles', DATA = 'records';
 const kinds = ['library', 'workbenches', 'receptionRecovery', 'textRecovery'];
 
+function bookkeeping(header) {
+  return {
+    revision: header.revision,
+    lastCommittedWorkspaceRevision: header.lastCommittedWorkspaceRevision ?? header.revision,
+    lastExportedRevision: header.lastExportedRevision ?? null,
+    lastExportedAt: header.lastExportedAt ?? null,
+    restoreRevision: header.restoreRevision ?? 0,
+  };
+}
+
 function open(factory) {
   return new Promise((resolve, reject) => {
     const request = factory.open(DATABASE, 1);
@@ -82,9 +92,10 @@ export async function openWorkspaceDatabase(factory, scope, readLegacy, validate
               || rows[kind] !== (original?.[kind] ?? null))) throw Error('Workspace migration read-back differs from the original.');
             header.verified = true;
             header.revision = 1;
+            Object.assign(header, bookkeeping(header));
             meta.put(header, scope);
           }
-          finish({ rows, revision: header.revision });
+          finish({ rows, ...bookkeeping(header) });
         });
       });
     });
@@ -97,24 +108,50 @@ export function readCommittedRows(db, scope, afterRevision) {
     meta.get(scope).onsuccess = run(header => {
       if (!header?.verified) throw Error('Workspace has no verified revision.');
       if (header.revision <= afterRevision) finish(null);
-      else readRows(data, scope, run, rows => finish({ revision: header.revision, rows }));
+      else readRows(data, scope, run, rows => finish({ ...bookkeeping(header), rows }));
     });
   });
 }
 
-export function commitWorkspaceRows(db, scope, changes) {
+export function commitWorkspaceRows(db, scope, changes, { expectedRevision, guard, authored = true } = {}) {
   return transaction(db, 'readwrite', (meta, data, run, finish) => {
     meta.get(scope).onsuccess = run(header => {
       if (!header?.verified) throw Error('Workspace migration is incomplete.');
+      if (expectedRevision !== undefined && (header.revision !== expectedRevision || !guard?.()))
+        throw Error('Workspace changed since preview. Open the file again.');
       for (const [kind, { before, after }] of changes) {
         const key = [...scope, kind];
         data.get(key).onsuccess = run(raw => {
+          if (guard && !guard()) throw Error('Restore cancelled before commit.');
           if ((raw ?? null) !== before) throw Error('Workspace changed in another tab. Keep this tab open to recover your edits.');
           if (after === null) data.delete(key); else data.put(after, key);
         });
       }
-      meta.put({ ...header, revision: header.revision + 1 }, scope);
-      finish(header.revision + 1);
+      const next = bookkeeping(header);
+      if (changes.length) {
+        next.revision++;
+        if (authored) next.lastCommittedWorkspaceRevision++;
+        if (expectedRevision !== undefined) next.restoreRevision = next.revision;
+        meta.put({ ...header, ...next }, scope);
+      }
+      finish(next);
+    });
+  });
+}
+
+export function markWorkspaceExported(db, scope, revision, exportedAt) {
+  return transaction(db, 'readwrite', (meta, data, run, finish) => {
+    meta.get(scope).onsuccess = run(header => {
+      if (!header?.verified) throw Error('Workspace unavailable.');
+      const next = bookkeeping(header);
+      if (revision > next.lastCommittedWorkspaceRevision) throw Error('Invalid export revision.');
+      if (next.lastExportedRevision === null || revision > next.lastExportedRevision
+        || revision === next.lastExportedRevision && exportedAt >= next.lastExportedAt) {
+        next.lastExportedRevision = revision;
+        next.lastExportedAt = exportedAt;
+        meta.put({ ...header, ...next }, scope);
+      }
+      finish(next);
     });
   });
 }

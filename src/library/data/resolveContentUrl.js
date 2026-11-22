@@ -1,5 +1,6 @@
+import { sha256 } from 'viem';
 import { IPFS_GATEWAY_FALLBACK_URLS, IPFS_GATEWAY_URL, normalizePublicHttpsEndpointList } from '../config.js';
-import { resolveVerifiedOnchainSvgDataUri } from './onchainDataUri.js';
+import { inspectOnchainSvgDataUri, resolveVerifiedOnchainSvgDataUri } from './onchainDataUri.js';
 
 function gatewayBase(gateway) {
   return `${String(gateway || IPFS_GATEWAY_URL).replace(/\/+$/, '')}/`;
@@ -96,9 +97,18 @@ export function selectImageGroups(images, options) {
   });
 }
 
+export const isInlineImageIdentity = value => typeof value === 'string' && /^ni:\/\/\/sha-256;[A-Za-z0-9_-]{43}$/.test(value);
+
 // Identity is separate from the transport URL and its verification parameters.
 export function imageResourceIdentity(value) {
   if (typeof value !== 'string') return null;
+  if (value.startsWith('data:image/svg+xml;base64,')) {
+    const inspected = inspectOnchainSvgDataUri(value);
+    if (!inspected) return null;
+    const { bytes } = inspected;
+    const digest = sha256(bytes, 'bytes');
+    return 'ni:///sha-256;' + btoa(String.fromCharCode(...digest)).replaceAll('+', '-').replaceAll('/', '_').replace(/=+$/, '');
+  }
   if (/^ipfs:\/\//i.test(value)) return value.replace(/^ipfs:\/\/(?:ipfs\/)?/i, 'ipfs://');
   try {
     const url = new URL(value);

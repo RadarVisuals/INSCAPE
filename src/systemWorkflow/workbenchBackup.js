@@ -1,8 +1,16 @@
 import { assertValidSystemWorkflowDraft } from './domain/systemWorkflowDraft.js';
-import { normalizeProfileAddress } from '../library/config.js';
+import { LUKSO_CHAIN_ID, normalizeProfileAddress } from '../library/config.js';
 import { textRecoveries } from '../text/textEditRecovery.js';
 import { workbenchLayoutKey } from './workbenchLayoutKey.js';
-import { isWorkbenchCollection, assertValidWorkbenchCollection, projectWorkbenchDraft, WORKBENCH_COLLECTION_LIMIT } from './domain/workbenchCollection.js';
+import { normalizeWorkspace } from '../library/storage/libraryWorkspaceStorage.js';
+import { imageResourceIdentity } from '../library/data/resolveContentUrl.js';
+import { assertArticle, validTextModules } from '../text/domain/article.js';
+import { receptionLinkProblems } from '../profileDocument/domain/receptionLinks.js';
+import { curatedSnapshot } from '../library/curatedSnapshots.js';
+import { validateWorkspaceRows } from '../workspace/validateWorkspaceRows.js';
+import { committedWorkspace, recordExport, restoreWorkspaceRows } from '../workspace/profileWorkspace.js';
+import { assetIds, equivalent, mergeBackup, visitCanvasReferences } from './workspaceBackupMerge.js';
+import { createWorkbenchCollection, isWorkbenchCollection, assertValidWorkbenchCollection, projectWorkbenchDraft, WORKBENCH_COLLECTION_LIMIT } from './domain/workbenchCollection.js';
 
 export const WORKBENCH_BACKUP_TYPE = 'inscape-private-workbench';
 export const WORKBENCH_BACKUP_LIMIT = WORKBENCH_COLLECTION_LIMIT + 2048;
@@ -13,11 +21,11 @@ export function serializeWorkbenchBackup(draft, createdAt = new Date().toISOStri
   const backup = { type: WORKBENCH_BACKUP_TYPE, version: collection ? 2 : 1, createdAt,
     draft: collection ? assertValidWorkbenchCollection(draft) : assertValidSystemWorkflowDraft(draft) };
   const source = JSON.stringify(backup);
-  parseWorkbenchBackup(source, draft.profileAddress);
+  parseLegacyWorkbenchBackup(source, draft.profileAddress);
   return source;
 }
 
-export function parseWorkbenchBackup(source, profile) {
+export function parseLegacyWorkbenchBackup(source, profile) {
   if (typeof source !== 'string' || new TextEncoder().encode(source).length > WORKBENCH_BACKUP_LIMIT)
     throw new Error('This Workbench backup is too large.');
   let value;
@@ -73,4 +81,160 @@ function finishRestore(storage, profile, layoutIds) {
     warning = 'The draft was restored. Layout could not be cleared; download a backup before reloading.';
   }
   return { saved: true, warning };
+}
+
+const workspaceKind = 'inscape-workspace-backup';
+const recordKinds = ['library', 'workbenches', 'textRecovery', 'receptionRecovery'];
+const decoded = rows => Object.fromEntries(recordKinds.map(key => [key, JSON.parse(rows[key])]));
+const encoded = workspace => Object.fromEntries(recordKinds.map(key => [key, workspace[key] === null ? null : JSON.stringify(workspace[key])]));
+function exactRecord(value, keys) {
+  return value && typeof value === 'object' && !Array.isArray(value) && Object.keys(value).length === keys.length && keys.every(key => Object.hasOwn(value, key));
+}
+function validatePortable(workspace, profile) {
+  if (!exactRecord(workspace, recordKinds)) throw Error('Incomplete workspace backup.');
+  validateWorkspaceRows(encoded(workspace), profile);
+  const { library, workbenches } = workspace;
+  if (library !== null) {
+    const normalized = normalizeWorkspace(library, profile);
+    for (const selections of [library.curatedImageSelections, ...library.folders.map(folder => folder.imageSelections)])
+      if (selections?.some(item => /^data:/i.test(item.url))) throw Error('Inline image selections must use portable identifiers.');
+    if (!equivalent(normalized, library)) throw Error('Invalid or dangling Library reference.');
+    for (const snapshot of Object.values(library.curatedSnapshots || {}))
+      if (!equivalent(snapshot, curatedSnapshot(snapshot))) throw Error('Snapshots must use portable media URLs.');
+  }
+  const recoveryContexts = new Set();
+  if (workbenches !== null) {
+    const group = isWorkbenchCollection(workbenches) ? assertValidWorkbenchCollection(workbenches) : createWorkbenchCollection(workbenches);
+    if (group.profileAddress !== profile) throw Error('Workbench profile mismatch.');
+    const ids = new Set(group.workbenches.map(item => item.id));
+    for (const id of ids) recoveryContexts.add(profile + '/' + id);
+    if (group.shared.reception) recoveryContexts.add(profile + '/reception');
+    const view = { profileAddress: profile, entries: group.workbenches.map(item => ({ id: item.id, draft: projectWorkbenchDraft(group, item.id) })) };
+    for (const surface of [group.shared.reception, ...group.workbenches.map(item => item.content.composition)]) {
+      const [issue] = receptionLinkProblems(surface, view);
+      if (issue) throw Error('Unresolved canvas link ' + issue.id + '. ' + issue.reason);
+    }
+    visitCanvasReferences(group, ref => { if (!ids.has(ref.canvasId)) throw Error('Dangling Workbench reference: ' + ref.canvasId); });
+  }
+  const contexts = new Set();
+  for (const [context, entries] of workspace.textRecovery || []) {
+    if (!recoveryContexts.has(context) || contexts.has(context)) throw Error('Missing or duplicate article recovery context.');
+    contexts.add(context);
+    const seen = new Set();
+    for (const { expected, scope, value } of entries) {
+      const key = JSON.stringify([scope.moduleId, scope.gridId, scope.id]);
+      if (seen.has(key) || expected.id !== scope.id) throw Error('Invalid pending article reference.');
+      seen.add(key);
+      if (scope.gridId && scope.moduleId) assertArticle(value);
+      else if (!validTextModules([expected]) || !validTextModules([value]) || value.id !== scope.id)
+        throw Error('Invalid pending article.');
+    }
+  }
+  return workspace;
+}
+
+export function parseWorkbenchBackup(source, profile) {
+  let value;
+  try { value = JSON.parse(source); } catch { throw Error('Choose a valid INSCAPE Workbench JSON backup.'); }
+  if (value?.kind !== workspaceKind) return parseLegacyWorkbenchBackup(source, profile);
+  if (value.schemaVersion !== 1) throw Error('Unsupported workspace backup schema version: ' + value.schemaVersion);
+  const active = normalizeProfileAddress(profile);
+  if (!active || value.chainId !== LUKSO_CHAIN_ID || value.profileAddress !== active)
+    throw Error('Open the matching workspace for profile ' + value.profileAddress + ' on chain ' + value.chainId + '.');
+  if (!exactRecord(value, ['kind','schemaVersion','chainId','profileAddress','exportedAt','workspaceRevision','workspace'])
+    || !Number.isSafeInteger(value.workspaceRevision) || value.workspaceRevision < 0
+    || typeof value.exportedAt !== 'string' || !Number.isFinite(Date.parse(value.exportedAt))) throw Error('Invalid workspace backup envelope.');
+  validatePortable(value.workspace, value.profileAddress);
+  return value;
+}
+
+export async function exportWorkspaceBackup(address, requestDownload) {
+  const profileAddress = normalizeProfileAddress(address);
+  const base = await committedWorkspace(profileAddress);
+  const workspace = decoded(base.rows);
+  validateWorkspaceRows(base.rows, profileAddress);
+  if (workspace.workbenches && !isWorkbenchCollection(workspace.workbenches))
+    workspace.workbenches = createWorkbenchCollection(workspace.workbenches);
+  if (workspace.library) {
+    workspace.library = normalizeWorkspace(workspace.library, profileAddress);
+    const library = workspace.library;
+    for (const selections of [library.curatedImageSelections, ...library.folders.map(folder => folder.imageSelections)])
+      for (const selection of selections || []) if (/^data:/i.test(selection.url)) selection.url = imageResourceIdentity(selection.url);
+    for (const [id, snapshot] of Object.entries(library.curatedSnapshots || {})) {
+      for (const group of snapshot.imageGroups) if (/^data:/i.test(group.resourceId)) group.resourceId = imageResourceIdentity(group.resourceId);
+      library.curatedSnapshots[id] = curatedSnapshot(snapshot);
+    }
+  }
+  validatePortable(workspace, profileAddress);
+  const exportedAt = new Date().toISOString(), workspaceRevision = base.lastCommittedWorkspaceRevision;
+  const source = JSON.stringify({ kind: workspaceKind, schemaVersion: 1, chainId: LUKSO_CHAIN_ID, profileAddress,
+    exportedAt, workspaceRevision, workspace });
+  await requestDownload(source);
+  await recordExport(profileAddress, workspaceRevision, exportedAt);
+}
+
+export function workspaceCounts(workspace) {
+  const draft = workspace.workbenches;
+  return (workspace.library?.folders.length || 0) + ' folders, ' + assetIds(workspace.library).length + ' assets, '
+    + (draft?.workbenches?.length ?? (draft ? 1 : 0)) + ' Workbench drafts';
+}
+
+async function checkCapacity(rows, before) {
+  const bytes = raw => raw === null ? 0 : new Blob([raw]).size;
+  const increase = recordKinds.reduce((total, key) => total + bytes(rows[key]) - bytes(before[key]), 0);
+  let estimate;
+  try { estimate = await globalThis.navigator?.storage?.estimate?.(); }
+  catch { /* The atomic write still enforces quota when estimates are unavailable. */ }
+  if (estimate && increase > Math.max(0, estimate.quota - estimate.usage)) throw Error('Insufficient device storage for this restore.');
+}
+
+export async function previewWorkspaceRestore(source, address, mode = 'replace') {
+  if (!['replace','merge'].includes(mode)) throw Error('Choose Replace or Merge.');
+  const profile = normalizeProfileAddress(address);
+  const backup = parseWorkbenchBackup(source, profile);
+  const base = await committedWorkspace(profile);
+  const legacy = backup.kind !== workspaceKind;
+  // A valid file can repair an unreadable Workbench with explicit Replace.
+  const local = Object.fromEntries(recordKinds.map(key => {
+    try { return [key, JSON.parse(base.rows[key])]; }
+    catch (error) { if (mode === 'replace' && key === 'workbenches') return [key, null]; throw error; }
+  }));
+  const incoming = legacy ? { library: null, workbenches: backup.draft, receptionRecovery: null, textRecovery: null } : backup.workspace;
+  let workspace, stats;
+  if (mode === 'merge') ({ workspace, stats } = mergeBackup(local, incoming));
+  else workspace = legacy ? { ...local, workbenches: backup.draft } : incoming;
+  const blocked = legacy && mode === 'replace' && local.textRecovery
+    ? 'Resolve pending text before replacing Workbenches from a legacy file, or choose Merge.' : null;
+  const rows = encoded(workspace);
+  for (const key of recordKinds) if (equivalent(workspace[key], local[key]) && base.rows[key] !== null && local[key] !== null) rows[key] = base.rows[key];
+  if (local.workbenches && !isWorkbenchCollection(local.workbenches) && isWorkbenchCollection(workspace.workbenches)) {
+    try {
+      if (equivalent(createWorkbenchCollection(local.workbenches), workspace.workbenches)) rows.workbenches = base.rows.workbenches;
+    } catch { /* Explicit Replace can repair an invalid local draft. */ }
+  }
+  if (legacy) { validateWorkspaceRows(rows, profile); validatePortable({ ...incoming, workbenches: workspace.workbenches }, profile); }
+  else if (mode === 'merge') {
+    validateWorkspaceRows(rows, profile);
+    validatePortable({ ...workspace, library: null }, profile);
+  }
+  await checkCapacity(rows, base.rows);
+  Object.freeze(base.rows);
+  return Object.freeze({ profile, mode, base: Object.freeze(base), rows: Object.freeze(rows), stats, legacy, blocked,
+    localCounts: workspaceCounts(local), incomingCounts: workspaceCounts(incoming) });
+}
+
+export async function applyWorkspaceRestore(plan, isCurrent) {
+  await checkCapacity(plan.rows, plan.base.rows);
+  if (plan.blocked) throw Error(plan.blocked);
+  let warning;
+  try { await restoreWorkspaceRows(plan.profile, plan.base, plan.rows, isCurrent, () => {
+    if (plan.mode !== 'replace' || plan.rows.workbenches === plan.base.rows.workbenches) return;
+    try {
+      const restored = JSON.parse(plan.rows.workbenches);
+      for (const id of [undefined, 'workbench:main', 'reception', ...(restored?.workbenches || []).map(item => item.id)])
+        globalThis.localStorage.removeItem(workbenchLayoutKey(plan.profile, id));
+    } catch { warning = 'Workspace restored. Some cached layouts could not be cleared.'; }
+  }); }
+  catch (error) { if (error.name === 'QuotaExceededError') throw Error('Device storage is full. The current workspace is intact.'); throw error; }
+  return warning;
 }

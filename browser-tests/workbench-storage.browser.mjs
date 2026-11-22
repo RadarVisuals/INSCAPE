@@ -40,22 +40,22 @@ for (const width of [1440, 390]) test(`full private backup downloads, validates,
     const page = await browser.newPage({ viewport: { width, height: 1000 } }); const errors = []; page.on('pageerror', e => errors.push(e.message));
     await open(page); await page.locator('.text-window').waitFor();
     let panel = await settings(page);
-    const downloading = page.waitForEvent('download'); await panel.getByRole('button', { name: 'Download Workbench backup', exact: true }).click();
+    const downloading = page.waitForEvent('download'); await panel.getByRole('button', { name: 'Download workspace backup', exact: true }).click();
     const source = await readFile(await (await downloading).path(), 'utf8'), backup = JSON.parse(source);
-    assert.equal(backup.draft.texts[0].visibility, 'PRIVATE'); assert.equal(backup.draft.texts[0].article.title, 'Private draft');
+    assert.equal(backup.workspace.workbenches.workbenches[0].content.texts[0].visibility, 'PRIVATE'); assert.equal(backup.workspace.workbenches.workbenches[0].content.texts[0].article.title, 'Private draft');
     const before = await page.evaluate(() => window.savedDraft());
     await upload(panel, '{broken'); await panel.getByText('Choose a valid INSCAPE Workbench JSON backup.').waitFor();
-    await upload(panel, source); await panel.getByRole('button', { name: 'Cancel Workbench restore' }).click(); assert.deepEqual(await page.evaluate(() => window.savedDraft()), before);
-    const foreign = structuredClone(backup); foreign.draft.profileAddress = `0x${'2'.repeat(40)}`;
-    await upload(panel, JSON.stringify(foreign)); await panel.getByText('This backup belongs to a different Universal Profile.').waitFor();
-    const restored = structuredClone(backup); restored.draft.texts[0].article.title = 'Restored private composition'; restored.draft.workbench.texts[0].window.left = 110;
+    await upload(panel, source); await panel.getByRole('button', { name: 'Cancel restore' }).click(); assert.deepEqual(await page.evaluate(() => window.savedDraft()), before);
+    const foreign = structuredClone(backup); foreign.profileAddress = `0x${'2'.repeat(40)}`;
+    await upload(panel, JSON.stringify(foreign)); await panel.getByText(/Open the matching workspace/).waitFor();
+    const restored = structuredClone(backup); restored.workspace.workbenches.workbenches[0].content.texts[0].article.title = 'Restored private composition'; restored.workspace.workbenches.workbenches[0].content.workbench.texts[0].window.left = 110;
     await upload(panel, JSON.stringify(restored));
-    await mkdir(output, { recursive: true }); await panel.getByRole('button', { name: 'Replace Workbench with backup' }).scrollIntoViewIfNeeded();
+    await mkdir(output, { recursive: true }); await panel.getByRole('button', { name: 'Confirm Replace' }).scrollIntoViewIfNeeded();
     await page.screenshot({ path: path.join(output, `backup-confirm-${width}.png`) });
-    await panel.getByRole('button', { name: 'Replace Workbench with backup' }).click();
-    await page.waitForFunction(() => window.savedDraft().texts[0].article.title === 'Restored private composition');
-    assert.deepEqual(await page.evaluate(() => window.savedDraft()), restored.draft);
-    await page.reload(); await page.locator('.text-window').waitFor(); assert.deepEqual(await page.evaluate(() => window.savedDraft()), restored.draft);
+    await panel.getByRole('button', { name: 'Confirm Replace' }).click();
+    await page.waitForFunction(() => window.savedDraft()?.workbenches?.[0].content.texts[0].article.title === 'Restored private composition');
+    assert.deepEqual(await page.evaluate(() => window.savedDraft()), restored.workspace.workbenches);
+    await page.reload(); await page.locator('.text-window').waitFor(); assert.deepEqual(await page.evaluate(() => window.savedDraft()), restored.workspace.workbenches);
     const projectedLeft = await page.locator('main.system-workflow').evaluate(host =>
         110 * Number(host.dataset.workbenchCameraScale) + Number(host.dataset.workbenchCameraX));
       assert.ok(Math.abs((await page.locator('.text-window').boundingBox()).x - projectedLeft) < 1, 'the restored authored position is painted through the current camera after reload');
@@ -74,7 +74,7 @@ test('an unpublished corrupt draft exposes backup recovery without deleting the 
     assert.equal(await page.evaluate(() => window.committedRaw()), '{broken');
     const panel = page.getByRole('region', { name: 'Workbench backup', exact: true });
     await upload(panel, JSON.stringify({ type: 'inscape-private-workbench', version: 1, createdAt: new Date().toISOString(), draft }));
-    await panel.getByRole('button', { name: 'Replace Workbench with backup' }).click();
+    await panel.getByRole('button', { name: 'Confirm Replace' }).click();
     await page.locator('.text-window').waitFor(); assert.deepEqual(await page.evaluate(() => window.savedDraft()), draft);
   } finally { await browser.close(); }
 });
@@ -89,13 +89,13 @@ test('restore errors retain saved bytes and a delayed file cannot replace subseq
     const source = JSON.stringify({ type: 'inscape-private-workbench', version: 1, createdAt: new Date().toISOString(), draft: changed });
     await upload(panel, source);
     await page.evaluate(() => { const put = IDBObjectStore.prototype.put; IDBObjectStore.prototype.put = function(...args) { if (this.name === 'records') throw new DOMException('Full', 'QuotaExceededError'); return put.apply(this, args); }; window.restoreWrites = () => { IDBObjectStore.prototype.put = put; }; });
-    await panel.getByRole('button', { name: 'Replace Workbench with backup' }).click();
-    await page.getByRole('alert').filter({hasText:'Browser storage is full'}).waitFor(); assert.deepEqual(await page.evaluate(() => window.savedDraft()), original);
+    await panel.getByRole('button', { name: 'Confirm Replace' }).click();
+    await panel.getByText(/Device storage is full/).waitFor(); assert.deepEqual(await page.evaluate(() => window.savedDraft()), original);
     await page.evaluate(() => window.restoreWrites());
     // A visible concurrent change must still be refused, even with the editor lock.
     await page.evaluate(() => { const draft = window.savedDraft(); draft.identityPresentation.alias = 'Externally changed'; return window.externalWorkbenchWrite(JSON.stringify(draft)); });
-    await page.getByRole('button', { name: 'Retry save' }).click();
-    await page.getByRole('alert').filter({hasText:'another tab'}).waitFor();
+    await panel.getByRole('button', { name: 'Confirm Replace' }).click();
+    await panel.getByText(/Workspace changed since preview/).waitFor();
     await page.reload(); await page.locator('.text-window').waitFor();
     assert.equal(await page.evaluate(() => window.savedDraft().identityPresentation.alias), 'Externally changed');
     assert.equal(await page.evaluate(() => window.savedDraft().texts[0].article.title), 'Private draft');
@@ -106,7 +106,7 @@ test('restore errors retain saved bytes and a delayed file cannot replace subseq
     await page.evaluate(() => window.finishRead());
     await openEditorMenu(page, 'Backup');
     // Closing disposes the controls and cancels its outstanding read.
-    assert.equal(await page.getByRole('button', { name: 'Replace Workbench with backup' }).count(), 0);
+    assert.equal(await page.getByRole('button', { name: 'Confirm Replace' }).count(), 0);
   } finally { await browser.close(); }
 });
 
@@ -246,5 +246,31 @@ test('a newly created Canvas opens its full module tools and can undo the transi
     await native.waitFor();
     assert.equal(await activeEditorDocument(page), id);
     assert.deepEqual(errors, []);
+  } finally { await browser.close(); }
+});
+
+test('workspace backup previews merge conflicts and exports the current revision before confirmation', async () => {
+  const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
+  try {
+    const page = await browser.newPage(); await open(page); await page.locator('.text-window').waitFor();
+    const panel = await settings(page);
+    const original = await page.evaluate(() => window.savedDraft());
+    const incoming = structuredClone(original);
+    incoming.texts[0].article.title = 'Imported article';
+    await upload(panel, JSON.stringify({type:'inscape-private-workbench',version:1,createdAt:new Date().toISOString(),draft:incoming}));
+    const download = page.waitForEvent('download');
+    await panel.getByRole('button', {name:'Export current workspace first'}).click();
+    const file = JSON.parse(await readFile(await (await download).path(), 'utf8'));
+    assert.deepEqual(file.workspace.workbenches.workbenches[0].content.texts, original.texts);
+    assert.deepEqual(file.workspace.workbenches.shared.identityPresentation, original.identityPresentation);
+    await panel.getByLabel('Restore mode').selectOption('merge');
+    await panel.getByText('conflicts (1)', {exact:true}).waitFor();
+    assert.deepEqual(await page.evaluate(() => window.savedDraft()), original);
+    await panel.getByRole('button', {name:'Confirm Merge'}).click();
+    await page.waitForFunction(() => window.savedDraft()?.workbenches?.length === 2);
+    const merged = await page.evaluate(() => window.savedDraft());
+    assert.equal(merged.workbenches[0].content.texts[0].article.title,'Private draft');
+    assert.equal(merged.workbenches[1].content.texts[0].article.title,'Imported article');
+    await settings(page); await panel.getByText(/Changes since last export/).waitFor();
   } finally { await browser.close(); }
 });

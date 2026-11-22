@@ -11,8 +11,9 @@ import { saveMissingSnapshots } from '../src/library/curatedSnapshots.js';
 import { systemWorkflowDraftKey, createSystemWorkflowDraftStore } from '../src/systemWorkflow/systemWorkflowDraftStore.js';
 import { createWorkbenchCollection, appendWorkbench } from '../src/systemWorkflow/domain/workbenchCollection.js';
 import { createEmptySystemWorkflowDraft } from '../src/systemWorkflow/domain/systemWorkflowDraft.js';
+import { createReception } from '../src/profileDocument/domain/receptionPresentation.js';
 import { createArticle } from '../src/text/domain/article.js';
-import { serializeWorkbenchBackup, parseWorkbenchBackup, restoreWorkbenchBackup } from '../src/systemWorkflow/workbenchBackup.js';
+import { applyWorkspaceRestore, exportWorkspaceBackup, previewWorkspaceRestore, serializeWorkbenchBackup, parseWorkbenchBackup, restoreWorkbenchBackup } from '../src/systemWorkflow/workbenchBackup.js';
 import { bindWorkbenchTextRecovery, retainTextRecovery, clearTextRecovery, textRecoveries } from '../src/text/textEditRecovery.js';
 
 const profile = '0x' + 'a'.repeat(40), second = '0x' + 'b'.repeat(40);
@@ -43,7 +44,7 @@ function seed() {
   localStorage.setItem(keys[1], JSON.stringify(collection));
   const buffer = {getProfileAddress: () => profile, getWorkbenchId: () => collection.activeId};
   bindWorkbenchTextRecovery(buffer);
-  retainTextRecovery(buffer, {profile, id:'text:author'}, draft.texts[0], {title:'Pending revision'}, {message:'Interrupted', reason:'write_failed'});
+  retainTextRecovery(buffer, {profile, id:'text:author'}, draft.texts[0], {...draft.texts[0], article:{...article, title:'Pending revision'}}, {message:'Interrupted', reason:'write_failed'});
   return legacy();
 }
 async function start() {
@@ -54,7 +55,7 @@ async function start() {
   return {revision:session.revision, status:session.state.status, count:library().workspace.curatedAssetIds.length,
     folder:library().workspace.folders[0].name, snapshotCount:Object.keys(library().workspace.curatedSnapshots).length,
     active:store.getWorkbenchId(), works:store.listWorkbenches().length, title:store.getDraft().texts[0].article.title,
-    recovery:textRecoveries(scope, profile)[0]?.value.title};
+    recovery:textRecoveries(scope, profile)[0]?.value.article?.title ?? textRecoveries(scope, profile)[0]?.value.title};
 }
 async function grow() {
   const workspace = addSnapshots(library().workspace, 760);
@@ -73,4 +74,21 @@ function mount(address = profile) {
   const root = createRoot(document.getElementById('root'));
   root.render(React.createElement(CurationPage, {profileAddress:address, destinations:{}, onBack() { root.unmount(); }}));
 }
-window.fixture = {mount, commitWorkspaceRows, openWorkspaceDatabase, profile, second, seed, start, grow, restore, legacy, keys, library, hydrateWorkspace, confirmWorkspaceSaved, workspaceSession};
+function seedReceptionRecovery() {
+  const draft = createEmptySystemWorkflowDraft(profile);
+  draft.reception = createReception();
+  draft.reception.branding.name = 'Previous Reception';
+  localStorage.setItem('inscape.reception-recovery.v1:' + profile, serializeWorkbenchBackup(draft));
+}
+function nestedLibrary() {
+  const state = library(), ws = state.workspace;
+  const parent = ws.folders[0].id;
+  const next = createFolder(ws, 'Heads', 10, parent);
+  const asset = next.curatedAssetIds[0], images = next.curatedSnapshots[asset].imageGroups;
+  const selections = images.slice(0, 2).map(image => ({ assetId: asset, url: image.imageUrl || image.thumbnailUrl }));
+  next.curatedImageSelections = selections;
+  next.folders.at(-1).assetIds = [asset];
+  next.folders.at(-1).imageSelections = selections;
+  return state.replaceWorkspace(next);
+}
+window.fixture = {mount, nestedLibrary, seedReceptionRecovery, exportWorkspaceBackup, previewWorkspaceRestore, applyWorkspaceRestore, commitWorkspaceRows, openWorkspaceDatabase, profile, second, seed, start, grow, restore, legacy, keys, library, hydrateWorkspace, confirmWorkspaceSaved, workspaceSession};

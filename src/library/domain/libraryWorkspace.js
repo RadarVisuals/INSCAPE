@@ -1,5 +1,5 @@
 import { isValidPublishedAssetUrl } from '../../profileDocument/domain/publishedAssetUrl.js';
-import { imageResourceIdentity } from '../data/resolveContentUrl.js';
+import { imageResourceIdentity, isInlineImageIdentity } from '../data/resolveContentUrl.js';
 
 export const LIBRARY_WORKSPACE_VERSION = 9;
 
@@ -175,7 +175,7 @@ export function moveFolderAssets(workspace, fromId, toId, ids, imageUrl = null) 
 export function normalizeCategoryImageSelections(folder) {
   if (folder.imageSelections === undefined) return {};
   if (!Array.isArray(folder.imageSelections) || folder.imageSelections.some(entry => !entry
-    || !folder.assetIds.includes(entry.assetId) || !isValidPublishedAssetUrl(entry.url)))
+    || !folder.assetIds.includes(entry.assetId) || !(isValidPublishedAssetUrl(entry.url) || isInlineImageIdentity(entry.url))))
     throw new TypeError('Saved category image selections are invalid.');
   return { imageSelections: [...new Map(folder.imageSelections.map(({ assetId, url }) =>
     [`${assetId}\n${imageResourceIdentity(url)}`, { assetId, url }])).values()] };

@@ -79,11 +79,11 @@ test('successful private recovery immediately renders the restored local Recepti
   const { browser, open, errors } = await setup();
   try {
     const page = await open(), backup = await page.evaluate(() => window.receptionBoundaryFixture.backup);
-    await page.evaluate(() => { window.receptionBoundaryFixture.corrupt(); window.receptionBoundaryFixture.remount(); });
+    await page.evaluate(async () => { await window.receptionBoundaryFixture.corrupt(); window.receptionBoundaryFixture.remount(); });
     await page.getByText('Your local Profile could not be read.', { exact: false }).waitFor();
     await page.getByRole('button', { name: 'Studio', exact: true }).click();
     await page.getByLabel('Open Workbench backup', { exact: true }).setInputFiles({ name: 'synthetic-backup.json', mimeType: 'application/json', buffer: Buffer.from(backup) });
-    await page.getByRole('button', { name: 'Replace Workbench with backup', exact: true }).click();
+    await page.getByRole('button', { name: 'Confirm Replace', exact: true }).click();
     await viewReception(page);
     await page.getByRole('heading', { name: 'Restored local article', exact: true }).waitFor();
     assert.equal(await page.evaluate(() => window.receptionBoundaryFixture.saved().reception.branding.name), 'RESTORED LOCAL');
@@ -95,10 +95,13 @@ test('backup recovery from an open editor retains the document target and refres
   const { browser, open, errors } = await setup();
   try {
     const page = await open(), backup = await page.evaluate(() => window.receptionBoundaryFixture.backup);
-    await page.getByRole('button', { name: 'Studio', exact: true }).click();
+    const target = new URL(page.url());
+    target.searchParams.set('editor', 'studio'); target.searchParams.set('work', 'reception');
+    await page.goto(target.href);
     await openEditorMenu(page, 'Backup');
+    assert.equal(await activeEditorDocument(page), 'reception');
     await page.getByLabel('Open Workbench backup', { exact: true }).setInputFiles({ name: 'synthetic-backup.json', mimeType: 'application/json', buffer: Buffer.from(backup) });
-    await page.getByRole('button', { name: 'Replace Workbench with backup', exact: true }).click();
+    await page.getByRole('button', { name: 'Confirm Replace', exact: true }).click();
     await editorMenu(page, 'Canvas').waitFor();
     assert.equal(await activeEditorDocument(page), 'reception');
     await viewReception(page);

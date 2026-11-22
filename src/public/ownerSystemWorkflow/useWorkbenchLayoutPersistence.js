@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useReducer, useState } from 'react';
+import { workspaceSession } from '../../workspace/profileWorkspace.js';
 import { beforeProfileEditorRelease } from '../../systemWorkflow/profileEditorLease.js';
 import { saveWorkbenchLayout } from './workbenchLayoutStorage.js';
 
 export default function useWorkbenchLayoutPersistence({ profile, workbenchId, draft, cells, layout, views, storage, initial, canSave }) {
+  const mountedRevision = useRef(workspaceSession(profile)?.restoreRevision);
   const latest = useRef(null), blocked = useRef(Boolean(initial.blocked));
   const [error, setError] = useState(initial.error || null);
   const serialized = layout ? JSON.stringify({ baseline: draft.workbench || null, layout, views }) : null;
@@ -12,6 +14,8 @@ export default function useWorkbenchLayoutPersistence({ profile, workbenchId, dr
   useLayoutEffect(() => { latest.current = { draft, cells, layout, views, serialized }; });
   const flush = useCallback((report = true) => {
     const next = latest.current;
+    // A restore remounts the editor. Its departing layout must not repopulate the old cache.
+    if (mountedRevision.current !== workspaceSession(profile)?.restoreRevision) return false;
     if (blocked.current || (canSave && !canSave()) || !next?.layout) return false;
     if (next.serialized === written.current) return true;
     const saved = saveWorkbenchLayout(profile, next.draft, next.layout, next.views, storage, workbenchId, next.cells);

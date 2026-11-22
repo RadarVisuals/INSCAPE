@@ -314,10 +314,10 @@ test('named local Workbenches keep separate content and canvas geometry through 
     await page.setViewportSize({ width: 1440, height: 1000 });
     await openEditorMenu(page, 'Backup');
     const downloading = page.waitForEvent('download');
-    await page.getByRole('button', { name: 'Download all Workbenches', exact: true }).click();
+    await page.getByRole('button', { name: 'Download workspace backup', exact: true }).click();
     const backup = JSON.parse(await readFile(await (await downloading).path(), 'utf8'));
-    assert.equal(backup.draft.workbenches.length, 2);
-    assert.deepEqual(backup.draft.workbenches.map(item => item.name), ['Lunar Desert', 'Studies']);
+    assert.equal(backup.workspace.workbenches.workbenches.length, 2);
+    assert.deepEqual(backup.workspace.workbenches.workbenches.map(item => item.name), ['Lunar Desert', 'Studies']);
     const other = await context.newPage();
     await other.goto(url);
     await other.getByRole('heading', { name: 'This tab is view-only' }).waitFor();

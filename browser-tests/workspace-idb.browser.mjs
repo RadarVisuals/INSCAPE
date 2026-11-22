@@ -184,3 +184,162 @@ test('Curation waits for delayed hydration before mounting its editable destinat
   await right.getByRole('button',{name:'Prop 1',exact:true}).waitFor();
   assert.equal(await page.evaluate(() => fixture.workspaceSession(fixture.profile).revision),1);
 }));
+
+test('offline restore into empty origin storage preserves a complete portable workspace', () => withPage(async page => {
+  const source = await page.evaluate(async () => {
+    fixture.seed(); fixture.seedReceptionRecovery(); await fixture.start(); fixture.nestedLibrary();
+    let source;
+    await fixture.exportWorkspaceBackup(fixture.profile, value => { source = value; });
+    return source;
+  });
+  const copy = JSON.parse(source);
+  assert.equal(copy.kind, 'inscape-workspace-backup');
+  assert.equal(copy.workspace.receptionRecovery.draft.reception.branding.name, 'Previous Reception');
+  assert.equal(copy.workspace.library.folders[1].parentId, copy.workspace.library.folders[0].id);
+  assert.equal(copy.workspace.library.curatedImageSelections.length, 2);
+  assert.equal(copy.workspace.workbenches.workbenches.length, 2);
+  // Close the writer, then clear this disposable origin exactly as DevTools does.
+  const clean = page.context(), fixtureUrl = page.url();
+  await page.close();
+  try {
+    const tab = await clean.newPage();
+    const devtools = await clean.newCDPSession(tab);
+    await devtools.send('Storage.clearDataForOrigin', { origin: new URL(fixtureUrl).origin, storageTypes: 'all' });
+    await devtools.detach();
+    await tab.goto(fixtureUrl); await tab.waitForFunction(() => !!window.fixture);
+    await clean.setOffline(true);
+    const result = await tab.evaluate(async source => {
+      const before = await fixture.hydrateWorkspace(fixture.profile);
+      if (Object.values(before.rows).some(Boolean)) throw Error('Dirty test context.');
+      const plan = await fixture.previewWorkspaceRestore(source, fixture.profile);
+      await fixture.applyWorkspaceRestore(plan, () => true);
+      let restored;
+      await fixture.exportWorkspaceBackup(fixture.profile, value => { restored = JSON.parse(value); });
+      return { workspace: restored.workspace, active: await fixture.start() };
+    }, source);
+    assert.deepEqual(result.workspace, copy.workspace);
+    assert.equal(result.active.recovery, 'Pending revision');
+    assert.equal(result.active.title, 'Unpublished field notes');
+    await clean.setOffline(false);
+    await tab.reload(); await tab.waitForFunction(() => !!window.fixture);
+    assert.deepEqual(await tab.evaluate(() => fixture.start()), result.active);
+  } finally { await clean.close(); }
+}));
+
+test('preview rejects corrupt backups; merge preserves the local article and copies a conflicting Workbench', () => withPage(async page => {
+  const result = await page.evaluate(async () => {
+    fixture.seed(); await fixture.start(); fixture.nestedLibrary();
+    let backup;
+    await fixture.exportWorkspaceBackup(fixture.profile, value => { backup = JSON.parse(value); });
+    const session = fixture.workspaceSession(fixture.profile);
+    const before = JSON.stringify(session.rows);
+    const rejected = [];
+    for (const change of [
+      file => { file.profileAddress = fixture.second; },
+      file => { file.schemaVersion++; },
+      file => { file.chainId++; },
+      file => { file.workspace.library.folders[0].parentId = file.workspace.library.folders[1].id; },
+      file => { file.workspace.library.categoryOrganization.rootCategoryIds.push('missing-folder'); },
+      file => { file.workspace.workbenches.activeId = 'workbench:missing'; },
+    ]) {
+      const file = structuredClone(backup); change(file);
+      try { await fixture.previewWorkspaceRestore(JSON.stringify(file), fixture.profile); }
+      catch (error) { rejected.push(error.message); }
+    }
+    if (before !== JSON.stringify(session.rows)) throw Error('Rejected preview changed a row.');
+    backup.workspace.workbenches.workbenches[1].content.texts[0].article.title = 'Other copy';
+    const plan = await fixture.previewWorkspaceRestore(JSON.stringify(backup), fixture.profile, 'merge');
+    await fixture.applyWorkspaceRestore(plan, () => true);
+    const merged = JSON.parse(session.rows.workbenches);
+    return { rejected, stats: plan.stats, active: merged.activeId, works: merged.workbenches,
+      assetCount: Object.keys(JSON.parse(session.rows.library).curatedSnapshots).length };
+  });
+  assert.equal(result.rejected.length, 6);
+  assert.equal(result.assetCount, 1);
+  assert.equal(result.active, 'workbench:second');
+  assert.equal(result.works.length, 3);
+  assert.equal(result.works[1].content.texts[0].article.title, 'Unpublished field notes');
+  assert.notEqual(result.works[1].id, result.works[2].id);
+  assert.match(result.works[2].name, /imported/);
+  assert.equal(result.works[2].content.texts[0].article.title, 'Other copy');
+  assert.ok(result.stats.conflicts.length && result.stats.identical.length);
+}));
+
+test('export records the captured authored revision; metadata refresh and failed restores preserve it', () => withPage(async page => {
+  const results = await page.evaluate(async () => {
+    fixture.seed(); await fixture.start();
+    const session = fixture.workspaceSession(fixture.profile);
+    let file;
+    await fixture.exportWorkspaceBackup(fixture.profile, async value => {
+      file = value;
+      fixture.library().createFolder('After download began');
+      await fixture.confirmWorkspaceSaved(fixture.profile);
+    });
+    const revision = session.lastCommittedWorkspaceRevision;
+    const workspace = structuredClone(fixture.library().workspace);
+    Object.values(workspace.curatedSnapshots)[0].name = 'Refreshed metadata';
+    fixture.library().replaceWorkspace(workspace);
+    await fixture.confirmWorkspaceSaved(fixture.profile);
+    const plan = await fixture.previewWorkspaceRestore(file, fixture.profile);
+    const bytes = JSON.stringify(session.rows), errors = [];
+    for (const stop of ['cancel', 'quota']) {
+      const put = IDBObjectStore.prototype.put;
+      if (stop === 'quota') IDBObjectStore.prototype.put = function(...args) {
+        if (this.name === 'records') throw new DOMException('Disk full','QuotaExceededError');
+        return put.apply(this,args);
+      };
+      try { await fixture.applyWorkspaceRestore(plan, () => stop !== 'cancel'); }
+      catch (error) { errors.push(error.message); }
+      finally { IDBObjectStore.prototype.put = put; }
+    }
+    return { revision, authored:session.lastCommittedWorkspaceRevision, exported:session.lastExportedRevision,
+      errors, intact:JSON.stringify(session.rows) === bytes, status:session.state.status };
+  });
+  assert.equal(results.authored, results.revision);
+  assert.ok(results.exported < results.authored);
+  assert.equal(results.errors.length,2); assert.equal(results.intact,true); assert.equal(results.status,'ready');
+}));
+
+test('another tab committing after Replace preview invalidates the whole plan', () => withPage(async a => {
+  await a.evaluate(async () => {
+    fixture.seed(); await fixture.start(); let file;
+    await fixture.exportWorkspaceBackup(fixture.profile, value => { file = value; });
+    window.plan = await fixture.previewWorkspaceRestore(file, fixture.profile);
+  });
+  const b = await a.context().newPage(); await b.goto(a.url()); await b.waitForFunction(() => !!window.fixture);
+  await b.evaluate(async () => { await fixture.start(); fixture.library().createFolder('Second tab'); await fixture.confirmWorkspaceSaved(fixture.profile); });
+  const message = await a.evaluate(async () => {
+    try { await fixture.applyWorkspaceRestore(window.plan, () => true); } catch (error) { return error.message; }
+  });
+  assert.match(message, /changed since preview/);
+  await a.reload(); await a.waitForFunction(() => !!window.fixture);
+  assert.equal(await a.evaluate(async () => { await fixture.start(); return fixture.library().workspace.folders.at(-1).name; }), 'Second tab');
+}));
+
+
+test('legacy inline artwork exports its selection identity without image bytes and checks quota before writes', () => withPage(async page => {
+  const result = await page.evaluate(async () => {
+    fixture.seed();
+    const library = JSON.parse(localStorage.getItem(fixture.keys[0]));
+    const id = library.curatedAssetIds[0], snapshot = library.curatedSnapshots[id];
+    const inline = 'data:image/svg+xml;base64,' + btoa('<svg xmlns="http://www.w3.org/2000/svg"><path d="M0 0"/></svg>');
+    snapshot.thumbnailUrl = inline; snapshot.imageGroups[0].resourceId = inline;
+    library.curatedImageSelections = [{assetId:id, url:inline}];
+    localStorage.setItem(fixture.keys[0], JSON.stringify(library));
+    await fixture.start();
+    let source;
+    await fixture.exportWorkspaceBackup(fixture.profile, value => { source = value; });
+    const file = JSON.parse(source);
+    const session = fixture.workspaceSession(fixture.profile), before = JSON.stringify(session.rows);
+    file.workspace.library.curatedSnapshots[id].name = 'new title'.repeat(500);
+    Object.defineProperty(navigator.storage, 'estimate', { value:async () => ({usage:100,quota:100}) });
+    let message;
+    try { await fixture.previewWorkspaceRestore(JSON.stringify(file), fixture.profile); }
+    catch (error) { message = error.message; }
+    return { inline:source.includes(inline), identity:file.workspace.library.curatedImageSelections[0].url,
+      resource:file.workspace.library.curatedSnapshots[id].imageGroups[0].resourceId,
+      message, intact:JSON.stringify(session.rows) === before };
+  });
+  assert.equal(result.inline,false); assert.match(result.identity,/^ni:\/\/\/sha-256;/);
+  assert.equal(result.identity,result.resource); assert.match(result.message,/Insufficient/); assert.ok(result.intact);
+}));

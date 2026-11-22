@@ -9,6 +9,7 @@ import { createReception } from '/src/profileDocument/domain/receptionPresentati
 import { splitReception } from '/src/reception/receptionLayout.js';
 import { createArticle } from '/src/text/domain/article.js';
 import { buildProfileDocumentV9 } from '/src/profileDocument/domain/profileDocumentV9Builder.js';
+import { authoredStorage, confirmWorkspaceSaved } from '/src/workspace/profileWorkspace.js';
 import { serializeWorkbenchBackup } from '/src/systemWorkflow/workbenchBackup.js';
 import { createDefaultWorkbenchPresentation } from '/src/profileDocument/domain/workbenchPresentation.js';
 import '/src/index.css';
@@ -36,8 +37,7 @@ const draft = { ...base, workbench: createDefaultWorkbenchPresentation(), recept
 // The native Display frame excludes the retired 32px titlebar height.
 draft.workbench.display.window.height = 540;
 if (!localStorage.getItem(key)) {
-  const root = store();
-  if (!root.commitCompletedOperation(draft, { expectedGeneration: root.getGeneration() })) throw Error('Audit seed failed');
+  localStorage.setItem(key, JSON.stringify(draft));
 }
 const publishedDraft = structuredClone(draft);
 publishedDraft.reception.branding.name = 'PUBLIC ONLY';
@@ -58,7 +58,7 @@ window.receptionBoundaryFixture = { address, key, document,
       return { ...meta, draft };
     });
   },
-  corrupt: () => localStorage.setItem(key, '{broken'),
+  corrupt: async () => { authoredStorage(localStorage).setItem(key, '{broken'); await confirmWorkspaceSaved(address); },
 };
 function Fixture() {
   const [status, setStatus] = useState('RESOLVED'), [owner, setOwner] = useState(true), [revision, setRevision] = useState(0);

@@ -6,6 +6,8 @@ import { addTextModule } from '../text/textSession.js';
 import { addImageModule } from '../imageModule/imageModuleSession.js';
 import { addShape } from '../shapes/shapeSession.js';
 import { parseWorkbenchBackup, serializeWorkbenchBackup, restoreWorkbenchBackup, WORKBENCH_BACKUP_LIMIT } from './workbenchBackup.js';
+import { createEmptyWorkspace, createFolder } from '../library/domain/libraryWorkspace.js';
+import { mergeBackup } from './workspaceBackupMerge.js';
 import { workbenchLayoutKey } from './workbenchLayoutKey.js';
 import { retainTextRecovery, clearTextRecovery } from '../text/textEditRecovery.js';
 
@@ -89,4 +91,27 @@ test('restoration invalidates derived layout only after confirmed save, and bloc
   f.storage.removeItem = () => { throw Error('blocked'); };
   const result = restoreWorkbenchBackup(f.store, backup, { expectedGeneration: f.store.getGeneration() }, f.storage);
   assert.equal(result.saved, true); assert.match(result.warning, /draft was restored.*could not be cleared/);
+});
+
+test('merge keeps local order, nested filing, selections and shared work when a backup omits them', () => {
+  const local = createFolder(createEmptyWorkspace(profile), 'Props');
+  const [props] = local.folders;
+  props.assetIds = ['one']; props.imageSelections = [{ assetId:'one', url:'https://example.test/a.webp' }];
+  local.curatedAssetIds = ['one','local-only']; local.favorites = ['local-only'];
+  local.curatedImageSelections = structuredClone(props.imageSelections);
+  const incoming = createFolder(structuredClone(local), 'Heads', 2, props.id);
+  incoming.curatedAssetIds = ['two','one']; incoming.favorites = ['two'];
+  incoming.curatedImageSelections = [{ assetId:'one', url:'https://example.test/incoming.webp' }];
+  incoming.folders[0].name = 'Other name'; incoming.folders[0].assetIds.push('two');
+  incoming.folders[1].assetIds = ['two'];
+  const rows = library => ({library, workbenches:null, textRecovery:null, receptionRecovery:null});
+  const { workspace, stats } = mergeBackup(rows(local), rows(incoming));
+  assert.deepEqual(workspace.library.curatedAssetIds, ['one','local-only','two']);
+  assert.deepEqual(workspace.library.favorites, ['local-only','two']);
+  assert.deepEqual(workspace.library.curatedImageSelections,local.curatedImageSelections);
+  assert.deepEqual(workspace.library.folders.map(folder => folder.name), ['Props','Heads']);
+  assert.equal(workspace.library.folders[1].parentId,props.id);
+  assert.deepEqual(workspace.library.folders[0].assetIds,['one','two']);
+  assert.deepEqual(props.assetIds,['one']);
+  assert.ok(stats.conflicts.some(item => item.includes('Image selection')));
 });
