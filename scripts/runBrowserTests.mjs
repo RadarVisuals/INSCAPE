@@ -12,7 +12,7 @@ import { assertEvidencePath, verificationIdentity, probeBrowser } from './verifi
 import { closeViteWithinDeadline } from '../browser-tests/browser-test-lifecycle.mjs';
 
 export function createBrowserTestServer(root, port, options = {}) {
-  return createServer({ ...options, root, server: { ...options.server, host: '127.0.0.1', port, strictPort: true, open: false }, plugins: [...(options.plugins || []), {
+  return createServer({ configLoader: 'native', ...options, root, server: { ...options.server, host: '127.0.0.1', port, strictPort: true, open: false }, plugins: [...(options.plugins || []), {
     name: 'inscape-browser-verification',
     configResolved(config) {
       // Vite's config merge drops inline null overrides of the project's watch options.

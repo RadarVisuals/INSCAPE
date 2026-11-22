@@ -413,7 +413,7 @@ test('an alternate-outDir production build writes reports there and strips diagn
     await writeFile(resolve(alternate, 'owner-runtime-graph.json'), 'stale');
     await writeFile(resolve(alternate, 'bundle-report.json'), 'stale');
     const { build } = await import('vite');
-    await build({ configFile: resolve(project, 'vite.config.js'), root: project, logLevel: 'silent',
+    await build({ configLoader: 'native', configFile: resolve(project, 'vite.config.js'), root: project, logLevel: 'silent',
       build: { outDir: alternate, emptyOutDir: true, manifest: true } });
     const report = JSON.parse(await readFile(resolve(alternate, 'bundle-report.json'), 'utf8'));
     assert.deepEqual(Object.keys(report.receptionRoutes).sort(), ['ownerAbout', 'publicAbout', 'receptionEditing']);
