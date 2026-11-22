@@ -12,7 +12,7 @@ import { ALPHA_SUPPORT_CODES } from '../../support/alphaSupport.js';
 import { createOwnerLatticePublicationContext } from '../ownerLatticePublicationContext.js';
 import { buildOwnerSystemWorkflowPublicationDocument } from '../ownerSystemWorkflowPreviewDocument.js';
 import { canvasPublicationCandidates, canvasPublicationChanges, buildCanvasPublication, buildGalleryRemoval, canReplaceInvalidPublication, resolvePublicationBaseline } from '../../profileDocument/domain/canvasPublication.js';
-import { publicationDestinations } from '../../profileDocument/domain/publishedCanvases.js';
+import { publicationDestinations, publicationViewDestination } from '../../profileDocument/domain/publishedCanvases.js';
 import { isWorkbenchCollection, projectWorkbenchDraft } from '../../systemWorkflow/domain/workbenchCollection.js';
 import useOwnerLatticeBrowser from '../useOwnerLatticeBrowser.js';
 import '../ownerLatticePublicationRack.css';
@@ -97,7 +97,7 @@ function StudioPublication({ assetRecords, profile, profileAddress, publishedRes
     return store ? buildCanvasPublication({ ...collectionInput, exportedAt })
       : buildOwnerSystemWorkflowPublicationDocument({ ...builderInput, exportedAt, previousDocument: prepared || previous });
   }, [builderInput, preparationError, store, collectionInput, baseline.error, previous, recordState.error]);
-  return <PublicationDelivery {...delivery} profileAddress={profileAddress} buildSnapshot={buildSnapshot}>
+  return <PublicationDelivery {...delivery} profileAddress={profileAddress} buildSnapshot={buildSnapshot} selectedIds={store ? selectedChanges : undefined}>
     {disabled => <>
       {store && replacementAvailable && <section className="owner-lattice-publication-rack__summary">
         <h3>Replace invalid publication</h3>
@@ -138,7 +138,7 @@ function StudioPublication({ assetRecords, profile, profileAddress, publishedRes
 }
 
 function PublicationDelivery({ initialSnapshot = null, galleryRemoval, getWalletPublicationContext, profileAddress,
-  onClose, onMotionComplete, onPublished, onSaveWorkbench, phase, buildSnapshot, children }) {
+  onClose, onMotionComplete, onPublished, onSaveWorkbench, phase, buildSnapshot, selectedIds, children }) {
   const [snapshot, setSnapshot] = useState(() => initialSnapshot ? assertValidProfileDocumentV9(initialSnapshot) : null);
   const [message, setMessage] = useState(galleryRemoval ? 'Prepare this change before making it public.' : 'Ready to publish your current public presentation.');
   const [operationPhase, setOperationPhase] = useState(null);
@@ -283,7 +283,8 @@ function PublicationDelivery({ initialSnapshot = null, galleryRemoval, getWallet
       }
       setOperationPhase('PUBLISHED');
       setMessage('Your public presentation is live.');
-      onPublished?.({ ...confirmed.result, transactionHash: confirmed.receipt?.transactionHash || confirmed.transactionHash });
+      onPublished?.({ ...confirmed.result, transactionHash: confirmed.receipt?.transactionHash || confirmed.transactionHash },
+        { destination: publicationViewDestination(confirmed.result.document, selectedIds) });
     } catch (error) {
       if (!mounted.current) return;
       setMessage(error?.message || 'The latest publication could not be verified. Try again.');
@@ -291,7 +292,7 @@ function PublicationDelivery({ initialSnapshot = null, galleryRemoval, getWallet
     } finally {
       publishing.current = false;
     }
-  }, [galleryRemoval, onPublished, publication]);
+  }, [galleryRemoval, onPublished, publication, selectedIds]);
 
   const verifiedReady = publication.status === PROFILE_DOCUMENT_PUBLICATION_STATUS.CID_VERIFIED
     && Boolean(publication.verified);
@@ -341,7 +342,8 @@ function PublicationDelivery({ initialSnapshot = null, galleryRemoval, getWallet
             publication.reset();
             setOperationPhase(null);
             setMessage(recovery.message);
-            if (acknowledged.result) onPublished?.({ ...acknowledged.result, transactionHash: recovery.record?.transactionHash });
+            if (acknowledged.result) onPublished?.({ ...acknowledged.result, transactionHash: recovery.record?.transactionHash },
+              { destination: publicationViewDestination(acknowledged.result.document) });
           }}>ACKNOWLEDGE RESULT</button>
           : <button type="button" className="workbench-destination-action" disabled={recovery.status === 'CHECKING'} onClick={recovery.check}>CHECK AGAIN</button>}
       </div>

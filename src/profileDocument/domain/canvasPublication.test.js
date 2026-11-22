@@ -8,7 +8,7 @@ import { createReceptionEditorDocument } from '../../reception/receptionEditorDo
 import { createStudioComposition } from '../../systemWorkflow/domain/studioComposition.js';
 import { createTextPresentation } from './workbenchPresentation.js';
 import { createArticle } from '../../text/domain/article.js';
-import { publishedCanvasEntries, publishedCompositionEntries, publishedCompositionDestinations, canvasDocument, CANVAS_CONTENT_KEYS } from './publishedCanvases.js';
+import { publishedCanvasEntries, publishedCompositionEntries, publishedCompositionDestinations, publicationViewDestination, canvasDocument, CANVAS_CONTENT_KEYS } from './publishedCanvases.js';
 import { validateProfileDocumentV9, parseProfileDocumentV9Json } from './profileDocumentV9Validation.js';
 import { canonicalSerializeProfileDocumentV9 } from './profileDocumentV9Serialization.js';
 import { createSystemWorkflowDraftStore } from '../../systemWorkflow/systemWorkflowDraftStore.js';
@@ -27,6 +27,19 @@ function fixture() {
 }
 const project = record => canvasPublicationCandidates({ record, profile: { name: 'Artist' }, assetRecords: [] });
 const publish = (record, selectedIds, previousDocument = null, includeShared = !previousDocument) => buildCanvasPublication({ candidates: project(record), selectedIds, previousDocument, includeShared, exportedAt: new Date('2026-10-26T12:00:00Z') });
+
+test('confirmation uses the confirmed placements of the selected works, including shared-only and recovered publications', () => {
+  const record = fixture();
+  const [gallery, profile, both] = record.workbenches.map(item => item.id);
+  const document = buildCanvasPublication({ candidates: project(record), selectedIds: [gallery, profile, both],
+    placements: { [profile]: ['profile'], [both]: ['profile', 'gallery'] }, includeShared: true });
+  assert.equal(publicationViewDestination(document, [gallery]), 'gallery');
+  assert.equal(publicationViewDestination(document, [profile]), 'profile');
+  assert.equal(publicationViewDestination(document, [both]), 'profile');
+  assert.equal(publicationViewDestination(document, [profile, gallery]), 'gallery');
+  assert.equal(publicationViewDestination(document, []), 'profile');
+  assert.equal(publicationViewDestination(document), 'gallery');
+});
 
 test('Studio opens a published-only work and its linked source in one local save, preserving private drafts', () => {
   const record = fixture();

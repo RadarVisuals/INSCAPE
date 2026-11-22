@@ -2,6 +2,7 @@ import './workspaceStatus.css';
 import { Fragment, useEffect, useSyncExternalStore } from 'react';
 import { StartupDestinationReady } from '../startveil/StartupDestinationContext.jsx';
 import { confirmWorkspaceSaved, hydrateWorkspace, subscribeWorkspace, workspaceSession } from './profileWorkspace.js';
+import WorkspaceRecoveryButton from './WorkspaceRecoveryButton.jsx';
 
 export function useWorkspaceStatus(profile) {
   return useSyncExternalStore(subscribeWorkspace, () => workspaceSession(profile)?.state);
@@ -21,5 +22,6 @@ export default function WorkspaceBoundary({ profile, children }) {
   if (state.status === 'blocked') return <><StartupDestinationReady /><p role="alert">{state.message}</p></>;
   return <><Fragment key={state.restoreRevision}>{children}</Fragment>{state.message && <aside role="alert" className="workspace-save-warning">{state.message}
     {state.status === 'unsaved' && <button onClick={() => void confirmWorkspaceSaved(profile)}>Retry save</button>}
+    {['unsaved', 'memory'].includes(state.status) && <WorkspaceRecoveryButton key={profile} profile={profile} />}
   </aside>}</>;
 }

@@ -6,7 +6,9 @@ import { addShape, editShape } from '../shapes/shapeSession.js';
 import { removeWorkbenchModule } from '../systemWorkflow/removeWorkbenchModule.js';
 import { moveWorkbenchSelection } from '../systemWorkflow/moveWorkbenchSelection.js';
 import { receptionModuleWindow, withReceptionModuleWindow } from './receptionEditorDocument.js';
-import { layerIds } from '../systemWorkflow/domain/artworkLayers.js';
+import { cellLayerOutline } from '../public/ownerSystemWorkflow/workbenchLayerOutline.js';
+import { editArtworkLayers } from '../systemWorkflow/artworkLayerSession.js';
+import { layerIds, layerMembers } from '../systemWorkflow/domain/artworkLayers.js';
 import { validReception, projectReception } from '../profileDocument/domain/receptionPresentation.js';
 import { addTextModule, saveTextModuleResult, changeTextFrames } from '../text/textSession.js';
 import { createReceptionExample } from '../../design-system/lab/receptionExample.js';
@@ -90,6 +92,34 @@ function membershipFixture() {
   ] } });
   return { ...state, source, target, image, text, remaining };
 }
+
+test('cell outline selects whole saved groups across different owners and inside one cell', () => {
+  for (const placement of ['free', 'other cell', 'same cell']) {
+    const { scope } = fixture(), first = rectangle(scope), second = rectangle(scope, 600);
+    scope.turnShapeIntoCell(first); scope.turnShapeIntoCell(second);
+    scope.setEditingCell(first);
+    const a = rectangle(scope, 120);
+    scope.setEditingCell(placement === 'other cell' ? second : placement === 'same cell' ? first : null);
+    const b = rectangle(scope, 180);
+    const before = structuredClone(scope.getReception());
+    const edit = action => editArtworkLayers(scope, profile, action);
+    edit({ type: 'group', ids: [a, b], id: 'composition:pair', name: 'Pair' });
+    const grouped = structuredClone(scope.getReception());
+    const owners = new Map(grouped.cells.flatMap(cell => cell.members.map(id => [id, cell.id])));
+    const { outline, blockOwners } = cellLayerOutline(grouped.artworkLayers, owners);
+    const row = outline.get(placement === 'same cell' ? first : undefined).find(layer => layer.id === 'composition:pair');
+    assert.deepEqual(layerMembers(row), [a, b]);
+    assert.equal([...outline.values()].flat().filter(layer => layer.id === row.id).length, 1);
+    assert.equal(blockOwners.get(a), row.id);
+    if (placement !== 'same cell') assert.ok(outline.get(first).includes(a));
+    if (placement === 'other cell') assert.ok(outline.get(second).includes(b));
+    edit({ type: 'ungroup', id: row.id });
+    assert.deepEqual(scope.getReception(), before);
+    assert.ok(scope.undo()); assert.deepEqual(scope.getReception(), grouped);
+    assert.ok(scope.redo()); assert.deepEqual(scope.getReception(), before);
+    scope.release();
+  }
+});
 
 test('explicit cell transfer preserves native identity, relative geometry and remaining artwork through Undo and reload', () => {
   const { root, scope, storage, canvas, source, target, image, text, remaining } = membershipFixture();

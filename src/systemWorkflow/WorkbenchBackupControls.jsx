@@ -1,6 +1,8 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useWorkspaceStatus } from '../workspace/WorkspaceBoundary.jsx';
+import WorkspaceRecoveryButton from '../workspace/WorkspaceRecoveryButton.jsx';
+import { useJsonDownload } from '../workspace/useJsonDownload.js';
 import { authoredStorage } from '../workspace/profileWorkspace.js';
 import { applyWorkspaceRestore, exportWorkspaceBackup, previewWorkspaceRestore, parseWorkbenchBackup, serializeWorkbenchBackup, summarizeWorkbenchBackup, restoreWorkbenchBackup, WORKBENCH_BACKUP_LIMIT } from './workbenchBackup.js';
 import { textRecoveries } from '../text/textEditRecovery.js';
@@ -12,15 +14,15 @@ const ReceptionEditorPreview = lazy(() => import('../reception/ReceptionEditorPr
 export default function WorkbenchBackupControls({ store, storage, getDraft = () => store.getDraft(), onRestored, recoveryPending = false, disabled = false, receptionRecovery }) {
   const [pending, setPending] = useState(null), [message, setMessage] = useState(''), [reading, setReading] = useState(false);
   const [mode, setMode] = useState('replace');
-  const live = useRef(null), request = useRef(0), resources = useRef(new Map()), opener = useRef(null);
+  const live = useRef(null), request = useRef(0), opener = useRef(null);
   const [previous] = useState(() => receptionRecovery && readReceptionRecovery(storage, store.getProfileAddress()));
   const profile = store.getProfileAddress();
+  const downloadJson = useJsonDownload(store);
   const native = authoredStorage(storage) !== storage;
   const workspaceState = useWorkspaceStatus(profile);
   live.current = { store, getDraft, onRestored, disabled };
   useEffect(() => () => {
     request.current++;
-    resources.current.forEach((timer, url) => { clearTimeout(timer); URL.revokeObjectURL(url); }); resources.current.clear();
   }, [store]);
   useEffect(() => { if (disabled) { request.current++; setPending(null); setReading(false); } }, [disabled]);
   const hasRecovery = () => recoveryPending || textRecoveries(store, store.getProfileAddress()).length > 0;
@@ -41,11 +43,7 @@ export default function WorkbenchBackupControls({ store, storage, getDraft = () 
   };
   const downloadFile = source => {
     if (live.current.store !== store || live.current.disabled) throw Error('The active workspace changed.');
-    const url = URL.createObjectURL(new Blob([source], { type: 'application/json' }));
-    const link = document.createElement('a'); link.href = url;
-    link.download = `inscape-${native ? 'workspace' : 'workbench'}-${store.getProfileAddress().slice(2, 10)}.json`;
-    document.body.append(link); link.click(); link.remove();
-    resources.current.set(url, setTimeout(() => { URL.revokeObjectURL(url); resources.current.delete(url); }, 60000));
+    downloadJson(source, `inscape-${native ? 'workspace' : 'workbench'}-${profile.slice(2, 10)}.json`);
   };
   const download = async () => {
     if (disabled) return;
@@ -134,7 +132,7 @@ export default function WorkbenchBackupControls({ store, storage, getDraft = () 
       {workspaceState?.lastExportedAt && ' · Last exported ' + new Date(workspaceState.lastExportedAt).toLocaleString()}
       {workspaceState?.lastExportedRevision !== workspaceState?.authoredRevision && (workspaceState?.lastExportedAt ? ' · Changes since last export' : ' · No export yet')}</p>}
     {native ? <p>Includes your curated Library, Workbenches, articles and recovery copies. Artwork uses media references. Keep this file private.</p> : <p>A private file of {collection ? 'all your local compositions, Profile Bento and shared Keeper settings' : 'your complete saved composition and Profile Bento'}, including private modules and artwork references. Media files, wallet credentials, Library caches and interface preferences are not included. Keep this file private.</p>}
-    {store.getRecordState().status !== 'corrupt' && <button className="workflow-tactile-control" type="button" disabled={disabled} onClick={download}>{native ? 'Download workspace backup' : collection ? 'Download all Workbenches' : 'Download Workbench backup'}</button>}
+    {native && ['memory', 'unsaved'].includes(workspaceState?.status) ? <WorkspaceRecoveryButton key={profile} profile={profile} disabled={disabled} /> : store.getRecordState().status !== 'corrupt' && <button className="workflow-tactile-control" type="button" disabled={disabled} onClick={download}>{native ? 'Download workspace backup' : collection ? 'Download all Workbenches' : 'Download Workbench backup'}</button>}
     <label>Open Workbench backup<input type="file" accept=".json,application/json" aria-label="Open Workbench backup" disabled={disabled || (!native && recoveryPending)}
       onChange={event => { const file = event.target.files[0]; event.target.value = ''; if (file) void read(file); }} /></label>
     {native && <label>Restore mode <select value={mode} disabled={disabled || reading} onChange={async event => {

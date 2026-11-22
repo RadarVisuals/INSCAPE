@@ -8,9 +8,19 @@ function normalizeCreator(entry) {
   return address ? { address, name: entry?.profile?.name || entry?.name || null } : null;
 }
 
-function hasPositiveBalance(holding) {
-  if (holding?.balance == null) return true;
-  try { return BigInt(holding.balance) > 0n; } catch { return Number(holding.balance) > 0; }
+function indexedHolding(metadata, viewedProfile, token) {
+  const unknown = { isOwnedByViewedProfile: null, currentOwnerAddress: null };
+  if (!Array.isArray(metadata.holders) || (!token && !metadata.isLSP7)) return unknown;
+  // Contract queries return holdings filtered to this profile. Token queries return its holders.
+  for (const holding of metadata.holders) {
+    const address = normalizeProfileAddress(holding?.profile_id);
+    const balance = holding?.balance;
+    if (!address || !/^\d+$/.test(balance)) return unknown;
+    if (BigInt(balance) > 0n && (token || address === viewedProfile)) {
+      return { isOwnedByViewedProfile: address === viewedProfile, currentOwnerAddress: address };
+    }
+  }
+  return token ? unknown : { ...unknown, isOwnedByViewedProfile: false };
 }
 
 function indexedFieldSource(token, tokenValue, contractValue) {
@@ -57,11 +67,7 @@ export function normalizeCreatorAttribution(record, viewedProfileAddress, option
   const name = metadata.name || metadata.lsp4TokenName || asset?.name || asset?.lsp4TokenName
     || (tokenId ? `Token ${tokenId.slice(0, 10)}…` : 'Unnamed creation');
   const collectionName = token ? (asset?.name || asset?.lsp4TokenName || null) : (asset?.isCollection ? asset?.name || asset?.lsp4TokenName || null : null);
-  const holders = Array.isArray(metadata.holders) ? metadata.holders : [];
-  const isOwnedByViewedProfile = holders.some((holding) => normalizeProfileAddress(holding?.profile_id) === viewedProfile && hasPositiveBalance(holding));
-  const currentOwnerAddress = token
-    ? normalizeProfileAddress(holders.find(hasPositiveBalance)?.profile_id)
-    : isOwnedByViewedProfile ? viewedProfile : null;
+  const { isOwnedByViewedProfile, currentOwnerAddress } = indexedHolding(metadata, viewedProfile, token);
   const metadataStatus = metadata.error ? 'unavailable'
     : collectionPreview || !primaryImage.imageUrl || !metadata.description || name === 'Unnamed creation' ? 'partial' : 'ready';
 
@@ -81,7 +87,7 @@ export function normalizeCreatorAttribution(record, viewedProfileAddress, option
     isCollection: Boolean(!token && asset?.isCollection),
     collectionPreviewTokenId: collectionPreview?.tokenId || null,
     currentOwnerAddress,
-    isOwnedByViewedProfile, ownershipKnown: true,
+    isOwnedByViewedProfile, ownershipKnown: isOwnedByViewedProfile !== null,
     attributes: (metadata.attributes || []).map(({ key, value, attributeType }) => ({ key, value, type: attributeType })),
     metadataStatus,
     fieldProvenance: {
@@ -128,8 +134,9 @@ export function deduplicateCreations(creations) {
       originalImageUrl: primaryImage.originalImageUrl || null,
       viewedProfileIsCreator: previous.viewedProfileIsCreator || creation.viewedProfileIsCreator,
       viewedProfileIsCollectionCreator: previous.viewedProfileIsCollectionCreator || creation.viewedProfileIsCollectionCreator,
-      isOwnedByViewedProfile: previous.isOwnedByViewedProfile || creation.isOwnedByViewedProfile,
-      currentOwnerAddress: previous.currentOwnerAddress || creation.currentOwnerAddress,
+      ownershipKnown: creation.ownershipKnown || previous.ownershipKnown,
+      isOwnedByViewedProfile: creation.isOwnedByViewedProfile ?? previous.isOwnedByViewedProfile,
+      currentOwnerAddress: creation.ownershipKnown ? creation.currentOwnerAddress : previous.currentOwnerAddress,
       collectionCreators: [...new Map([...(previous.collectionCreators || []), ...(creation.collectionCreators || [])]
         .map((creator) => [creator.address, creator])).values()],
       collectionCreatorAttributionLevel: previous.collectionCreatorAttributionLevel || creation.collectionCreatorAttributionLevel || null,

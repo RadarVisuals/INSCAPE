@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import test from 'node:test';
 
 const projectRoot = fileURLToPath(new URL('..', import.meta.url));
@@ -30,11 +30,10 @@ test('legacy ownership fallback discovers through LSP5 and then verifies each as
   assert.doesNotMatch(source, /LSP5[\s\S]{0,160}ownershipVerified\s*:\s*true/u);
 });
 
-test('issued, creator-attributed and currently held relationships remain separate', () => {
+test('issued, creator-attributed and currently held relationships remain separate', async () => {
   const facts = readTarget('src/profileIdentity/data/luksoProfileContractRepository.js');
   const creations = readTarget('src/creations/data/luksoCreationsRepository.js');
   const normalized = readTarget('src/creations/domain/normalizeCreation.js');
-  const union = readTarget('src/lattice/browser/libraryAssetUnion.js');
   assert.match(facts, /LSP12IssuedAssets\.json/u);
   assert.match(facts, /readRegisterLength\(lsp12Schema\.find\(s => s\.name === 'LSP12IssuedAssets\[\]'\)\.key/u);
   assert.doesNotMatch(facts, /\.getData\(\s*['"]LSP(?:5Received|12Issued)Assets\[\]/u);
@@ -43,8 +42,16 @@ test('issued, creator-attributed and currently held relationships remain separat
   assert.doesNotMatch(creations, /\bHold\s*\(/u);
   for (const field of ['viewedProfileIsCreator', 'creatorAttributionLevel', 'ownershipKnown',
     'isOwnedByViewedProfile', 'currentOwnerAddress']) assert.match(normalized, new RegExp(`\\b${field}\\b`, 'u'));
-  assert.match(union, /created:\s*true,\s*owned:\s*false/u);
-  assert.match(union, /isOwnedByViewedProfile:\s*false/u);
+  const { projectLibraryAssetUnion } = await import(pathToFileURL(resolve(targetRoot, 'src/lattice/browser/libraryAssetUnion.js')).href);
+  const profileAddress = '0x1111111111111111111111111111111111111111';
+  const contractAddress = '0x2222222222222222222222222222222222222222';
+  const [created] = projectLibraryAssetUnion({ profileAddress, createdAssets: [{
+    id: `42:${contractAddress}:contract`, chainId: 42, contractAddress,
+    viewedProfileIsCreator: true, creatorAttributionLevel: 'contract', creators: [{ address: profileAddress }],
+  }] }).assets;
+  assert.equal(created.created, true);
+  assert.equal(created.owned, false);
+  assert.equal(created.isOwnedByViewedProfile, null);
 });
 
 test('metadata dossiers require provenance and do not convert creator evidence into owner authority', () => {

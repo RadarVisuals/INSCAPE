@@ -173,14 +173,14 @@ for (const width of [1440, 390]) {
           state.uploads++; state.bytes = await init.body.get('file').text();
           return Response.json({ data: { cid } });
         } });
-      await page.route('**/*', route => new URL(route.request().url()).origin === origin ? route.fallback() : route.abort());
+      await page.context().route('**/*', route => new URL(route.request().url()).origin === origin ? route.fallback() : route.abort());
       await page.route('**/api/profile-publications**', async route => {
         const request = route.request();
         const response = await handler(new Request(request.url(), { method: request.method(), headers: request.headers(), body: request.postDataBuffer() }));
         await route.fulfill({ status: response.status, headers: Object.fromEntries(response.headers), body: await response.text() });
       });
-      await page.route(`**/ipfs/${cid}`, route => route.fulfill({ contentType: 'application/json', body: state.bytes }));
-      await page.route('https://rpc.mainnet.lukso.network/**', route => route.fulfill({ contentType: 'application/json',
+      await page.context().route(`**/ipfs/${cid}`, route => route.fulfill({ contentType: 'application/json', body: state.bytes }));
+      await page.context().route('https://rpc.mainnet.lukso.network/**', route => route.fulfill({ contentType: 'application/json',
         body: JSON.stringify({ jsonrpc: '2.0', id: 1, result: encodeAbiParameters([{ type: 'bytes' }], [state.value]) }) }));
       await page.exposeFunction('fixtureSign', message => {
         state.signatures++; return UPLOAD_TEST_SIGNER.signMessage({ message });
@@ -198,7 +198,7 @@ for (const width of [1440, 390]) {
         store.clear();
         const patch = {
           authorityLifecycleStatus: 'complete', isWalletConnected: true, isHostProfileOwner: true,
-          hostProfileAddress: profile, chainId: 42, publicationContextGeneration: 1, provider: {},
+          hostProfileAddress: profile, loggedInUserUPAddress: profile, chainId: 42, publicationContextGeneration: 1, provider: {},
           profileMetadata: { name: 'Publication test' },
           walletClient: { account: signer, signMessage: ({ message }) => window.fixtureSign(message),
             writeContract: ({ args }) => window.fixtureWrite(args) },
@@ -216,6 +216,11 @@ for (const width of [1440, 390]) {
       }, { profile, signer: UPLOAD_TEST_SIGNER.address, transactionHash });
       await page.locator('.startveil').waitFor({ state: 'detached' });
       await editorDestination(page, 'Publish');
+      if (width === 390) {
+        const work = page.locator('.publication-work:has(> label > input:checked)');
+        await work.getByRole('checkbox', { name: 'Profile', exact: true }).check();
+        await work.getByRole('checkbox', { name: 'Gallery', exact: true }).uncheck();
+      }
       await page.getByRole('button', { name: 'Prepare publication', exact: true }).click();
       await page.getByRole('button', { name: 'Make presentation public', exact: true }).click();
       await page.getByRole('button', { name: 'Publish to profile', exact: true }).waitFor();
@@ -224,21 +229,30 @@ for (const width of [1440, 390]) {
       await page.getByRole('button', { name: 'Publish to profile', exact: true }).click();
       await page.waitForFunction(() => typeof window.confirmFixtureReceipt === 'function');
       assert.equal(await notice.count(), 0, 'a submitted but unconfirmed transaction is not success');
-      await page.evaluate(async () => {
+      await page.evaluate(async address => {
         const { publishedProfileResolutionStore: store } = await import(performance.getEntriesByType('resource').find(entry => new URL(entry.name).pathname === '/src/profileDocument/state/publishedProfileResolutionStore.js')?.name || '/src/profileDocument/state/publishedProfileResolutionStore.js');
         store.repository = { resolve: address => new Promise(resolve => {
           window.finishFixtureRefresh = async () => resolve({ status: 'RESOLVED', address, document: await window.fixtureDocument() });
         }) };
+        window.startFixtureRefresh = () => { void store.resolve(address); };
         window.confirmFixtureReceipt();
-      });
+      }, profile);
       await notice.waitFor();
+      // A verified receipt is already resolved. Start a separate refresh and
+      // check that the receipt remains visible while that read is pending.
+      await page.evaluate(() => window.startFixtureRefresh());
       await page.waitForFunction(() => typeof window.finishFixtureRefresh === 'function');
       assert.match(await notice.innerText(), /Published successfully[\s\S]*transaction is confirmed/);
       assert.equal(await notice.getByRole('link', { name: 'View transaction' }).getAttribute('href'),
         `https://explorer.execution.mainnet.lukso.network/tx/${transactionHash}`);
       const viewUrl = await notice.getByRole('link', { name: 'View publication' }).getAttribute('href');
       assert.match(viewUrl, new RegExp(`view=${profile}`));
-      assert.match(viewUrl, /reception=1/);
+      const publicLink = new URL(viewUrl, origin);
+      if (width === 1440) assert.equal(publicLink.searchParams.get('tab'), 'gallery');
+      else {
+        assert.equal(publicLink.searchParams.get('reception'), 'published');
+        assert.equal(publicLink.searchParams.has('tab'), false);
+      }
       await page.evaluate(() => window.finishFixtureRefresh());
       await page.getByRole('button', { name: 'Publish', exact: true }).waitFor();
       await notice.waitFor();
@@ -254,6 +268,22 @@ for (const width of [1440, 390]) {
       }), true, 'confirmation is opaque and above the portaled editing tools');
       await mkdir(output, { recursive: true });
       await page.screenshot({ path: `${output}/success-${width}.png` });
+      const [viewer] = await Promise.all([
+        page.waitForEvent('popup'), notice.getByRole('link', { name: 'View publication' }).click(),
+      ]);
+      const section = viewer.locator(`.visitor-publication[data-section="${width === 1440 ? 'works' : 'profile'}"]`);
+      const work = JSON.parse(state.bytes).canvas.name;
+      const visibleWork = section.getByText(work, { exact: true }).first();
+      await visibleWork.waitFor();
+      await section.getByRole('button', { name: 'Sign in', exact: true }).waitFor();
+      await viewer.evaluate(async address => {
+        const { useWalletStore } = await import('/src/store/useWalletStore.js');
+        useWalletStore.setState({ authorityLifecycleStatus: 'complete', isWalletConnected: true,
+          isHostProfileOwner: true, hostProfileAddress: address, loggedInUserUPAddress: address });
+      }, profile);
+      await section.getByRole('button', { name: 'Studio', exact: true }).waitFor();
+      await visibleWork.waitFor();
+      await viewer.close();
       if (width === 1440) {
         await notice.getByRole('button', { name: 'Dismiss publication confirmation' }).focus();
         await page.keyboard.press('Enter');

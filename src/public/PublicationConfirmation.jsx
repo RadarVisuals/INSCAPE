@@ -7,10 +7,10 @@ import '../lattice/rendering/latticeMenuSurface.css';
 import './publicationConfirmation.css';
 
 export default function PublicationConfirmation({ confirmation, onClose }) {
-  const { profileAddress, transactionHash, removedTitles = [] } = confirmation;
+  const { profileAddress, transactionHash, destination, removedTitles = [] } = confirmation;
   const removed = removedTitles.length > 0;
   const viewUrl = applicationRouteUrl(window.location, { kind: 'profile', address: profileAddress,
-    ...(removed ? { canvas: true, reception: 'published' } : { reception: true }) });
+    reception: 'published', canvas: destination === 'gallery' });
   const transactionUrl = /^0x[0-9a-f]{64}$/i.test(transactionHash || '')
     ? `${lukso.blockExplorers.default.url}/tx/${transactionHash}` : null;
   return createPortal(<WorkbenchDestinationPanel title={removed ? 'Removed from Gallery' : 'Published successfully'} onClose={onClose} closeLabel="Dismiss publication confirmation"

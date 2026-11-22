@@ -77,7 +77,7 @@ function LibraryResults({ assets, emptyLabel, expandedImageIds, onActivate, onCo
         ? [asset.collectionPreviewTokenId ? 'COLLECTION Â· TOKEN PREVIEW' : 'COLLECTION COVER']
         : [asset.owned ? 'OWNED' : null, asset.collectionPreviewTokenId ? 'TOKEN PREVIEW' : null,
           asset.creatorRelationship === 'collection' ? 'FROM CREATED COLLECTION' : asset.created ? 'CREATED' : null,
-          asset.created && !asset.owned ? 'NOT OWNED' : null].filter(Boolean);
+          asset.created && asset.isOwnedByViewedProfile === false ? 'NOT OWNED' : null].filter(Boolean);
       const choices = opensCollection ? [] : libraryImageChoices(asset);
       const files = (asset.fileAttachments || asset.assetRecord?.fileAttachments || []).filter(file => resolvePublishedAssetUrl(file.url));
       const imageCount = choices.length;

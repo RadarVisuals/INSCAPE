@@ -1015,9 +1015,9 @@ export function WorkbenchSession({
 
                         onClose={closePublication}
                         onMotionComplete={publicationPresence.completeTransition}
-                        onPublished={result => {
+                        onPublished={(result, context) => {
                           closePublication();
-                          onPublicationConfirmed?.({ ...result });
+                          onPublicationConfirmed?.(result, context);
                         }}
                         profile={publicationProfile}
                         profileAddress={profileAddress}

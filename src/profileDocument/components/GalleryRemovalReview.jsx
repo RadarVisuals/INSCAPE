@@ -30,10 +30,10 @@ export default function GalleryRemovalReview({ removal, getWalletPublicationCont
     data-workflow-material="tactile" data-workflow-finish="flat" aria-label="Remove from Gallery"
     onCancel={event => event.preventDefault()}>
     <OwnerSystemWorkflowPublicationRack galleryRemoval={request} profileAddress={removal.document.profile.address}
-      getWalletPublicationContext={getWalletPublicationContext} onClose={onClose} onPublished={result => {
+      getWalletPublicationContext={getWalletPublicationContext} onClose={onClose} onPublished={(result, context) => {
         const listed = new Set(publishedCompositionEntries(result.document, 'gallery').map(entry => entry.id));
         const allRemoved = request.ids.every(id => !listed.has(id));
-        onPublished(result, allRemoved ? request.entries.map(entry => entry.name) : undefined);
+        onPublished(result, allRemoved ? { destination: 'gallery', removedTitles: request.entries.map(entry => entry.name) } : context);
       }} />
   </dialog>;
 }

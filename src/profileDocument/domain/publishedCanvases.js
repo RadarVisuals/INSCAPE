@@ -35,6 +35,20 @@ export function publishedCompositionDestinations(document, id) {
   return entry ? compositionDestinations(id, entry.destinations) : [];
 }
 
+// A receipt recovered after reload has no Studio selection. Use the placements
+// in its verified document. A details-only Studio publication opens Profile.
+export function publicationViewDestination(document, selectedIds) {
+  const ids = selectedIds ?? [
+    ...(document.canvas === null ? [] : [document.canvas?.id || FIRST_WORKBENCH_ID]),
+    ...(document.canvases || []).map(entry => entry.id),
+    ...(document.reception ? ['reception'] : []),
+  ];
+  return ids.some(id => {
+    const placements = publishedCompositionDestinations(document, id);
+    return placements.includes('gallery') && !placements.includes('profile');
+  }) ? 'gallery' : 'profile';
+}
+
 export function publishedCompositionEntries(document, destination) {
   const entries = publishedCanvasEntries(document).map(item => ({ ...item, destinations: compositionDestinations(item.id, item.destinations) }));
   if (document.reception) entries.push({ id: 'reception', name: 'Bento', reception: document.reception,

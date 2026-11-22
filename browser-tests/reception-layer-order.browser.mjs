@@ -1,4 +1,5 @@
 import { editorCommand, editorOverview } from './fixtures/editor-menu.mjs';
+import { openSharedTool } from './fixtures/shared-tools.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdir } from 'node:fs/promises';
@@ -243,5 +244,58 @@ test('Reception Editor, preview and public reader preserve interleaved global la
       ['area', 'shapes', 'imageModules', 'texts'].map(key => [key, workbench[key]])) });
     assert.deepEqual(composition(after), composition(before), 'viewing does not reorder, reparent or reposition saved content');
     assert.deepEqual(errors, []);
+  } finally { await browser.close(); }
+});
+
+
+for (const width of [1440, 900]) test(`Layers selects and ungroups an entire composition across a Bento cell boundary at ${width}px`, { timeout: 90000 }, async () => {
+  const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
+  try {
+    const page = await browser.newPage({ viewport: { width, height: 1000 }, reducedMotion: 'reduce' });
+    page.setDefaultTimeout(15000);
+    await page.route('**/*', route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
+    await page.goto(`${origin}/browser-tests/reception-layer-order-fixture.html?session=${crypto.randomUUID()}`);
+    const layers = await openSharedTool(page, 'Layers');
+    const button = name => layers.getByRole('button', { name, exact: true });
+    const saved = () => page.evaluate(() => window.receptionLayerFixture.root.getDraft().reception);
+    const before = await saved();
+    if (await button('Expand Artwork cell').count()) await button('Expand Artwork cell').click();
+    await button('Select Layered artwork').click();
+    await button('Select White overlay').click({ modifiers: ['Shift'] });
+    await button('Group selected layers').click();
+    await layers.getByLabel('Group name').fill('Across the cell');
+    await button('Create group').click();
+    const grouped = await saved();
+    const group = grouped.artworkLayers.find(layer => layer.name === 'Across the cell');
+    assert.deepEqual(group.children, ['image:art', 'shape:overlay']);
+    const selectGroup = button('Select Across the cell');
+    assert.equal(await selectGroup.count(), 1);
+    await button('Select Free Grid').click();
+    await selectGroup.click();
+    assert.equal(await selectGroup.getAttribute('aria-description'), '2 layers inside');
+    assert.equal(await button('Ungroup selected group').isEnabled(), true);
+    await selectGroup.press('Delete');
+    const groupRow = layers.locator(`[data-layer-id="${group.id}"]`);
+    await groupRow.getByText('Delete 2 layers?', { exact: true }).waitFor();
+    await groupRow.getByRole('button', { name: 'Cancel layer deletion' }).click();
+    const cellImage = layers.locator('[data-layer-key="shape:cell/image:art"]');
+    await cellImage.getByRole('button', { name: 'Select Layered artwork' }).click();
+    await layers.getByText('Across the cell \u203a Layered artwork', { exact: true }).waitFor();
+    assert.equal(await button('Ungroup selected group').isEnabled(), false);
+    await selectGroup.click();
+    await button('Ungroup selected group').click();
+    const ungrouped = await saved();
+    assert.deepEqual(ungrouped.artworkLayers, before.artworkLayers);
+    for (const value of [grouped, ungrouped]) {
+      assert.deepEqual(value.cells, before.cells);
+      for (const key of ['imageModules', 'texts', 'shapes']) assert.deepEqual(value.workbench[key], before.workbench[key]);
+    }
+    await editorCommand(page, 'Edit', 'Undo');
+    assert.deepEqual((await saved()).artworkLayers, grouped.artworkLayers);
+    await selectGroup.click();
+    assert.equal(await button('Ungroup selected group').isEnabled(), true);
+    await editorCommand(page, 'Edit', 'Redo');
+    assert.deepEqual((await saved()).artworkLayers, ungrouped.artworkLayers);
+    assert.equal(await selectGroup.count(), 0);
   } finally { await browser.close(); }
 });

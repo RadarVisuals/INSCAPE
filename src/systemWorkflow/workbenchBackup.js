@@ -8,7 +8,7 @@ import { assertArticle, validTextModules } from '../text/domain/article.js';
 import { receptionLinkProblems } from '../profileDocument/domain/receptionLinks.js';
 import { curatedSnapshot } from '../library/curatedSnapshots.js';
 import { validateWorkspaceRows } from '../workspace/validateWorkspaceRows.js';
-import { committedWorkspace, recordExport, restoreWorkspaceRows } from '../workspace/profileWorkspace.js';
+import { committedWorkspace, recordExport, restoreWorkspaceRows, workspaceSession } from '../workspace/profileWorkspace.js';
 import { assetIds, equivalent, mergeBackup, visitCanvasReferences } from './workspaceBackupMerge.js';
 import { createWorkbenchCollection, isWorkbenchCollection, assertValidWorkbenchCollection, projectWorkbenchDraft, WORKBENCH_COLLECTION_LIMIT } from './domain/workbenchCollection.js';
 
@@ -148,11 +148,9 @@ export function parseWorkbenchBackup(source, profile) {
   return value;
 }
 
-export async function exportWorkspaceBackup(address, requestDownload) {
-  const profileAddress = normalizeProfileAddress(address);
-  const base = await committedWorkspace(profileAddress);
-  const workspace = decoded(base.rows);
-  validateWorkspaceRows(base.rows, profileAddress);
+function serializeWorkspaceRows(profileAddress, rows, workspaceRevision, exportedAt) {
+  const workspace = decoded(rows);
+  validateWorkspaceRows(rows, profileAddress);
   if (workspace.workbenches && !isWorkbenchCollection(workspace.workbenches))
     workspace.workbenches = createWorkbenchCollection(workspace.workbenches);
   if (workspace.library) {
@@ -166,10 +164,23 @@ export async function exportWorkspaceBackup(address, requestDownload) {
     }
   }
   validatePortable(workspace, profileAddress);
-  const exportedAt = new Date().toISOString(), workspaceRevision = base.lastCommittedWorkspaceRevision;
-  const source = JSON.stringify({ kind: workspaceKind, schemaVersion: 1, chainId: LUKSO_CHAIN_ID, profileAddress,
+  return JSON.stringify({ kind: workspaceKind, schemaVersion: 1, chainId: LUKSO_CHAIN_ID, profileAddress,
     exportedAt, workspaceRevision, workspace });
-  await requestDownload(source);
+}
+
+export function serializeWorkspaceRecovery(address) {
+  const profile = normalizeProfileAddress(address);
+  const session = workspaceSession(profile);
+  if (!['memory', 'unsaved'].includes(session?.state.status)) throw Error('Workspace recovery is no longer needed.');
+  // The envelope identifies the last confirmed base, or zero for a memory-only session.
+  return serializeWorkspaceRows(profile, session.rows, session.lastCommittedWorkspaceRevision ?? 0, new Date().toISOString());
+}
+
+export async function exportWorkspaceBackup(address, requestDownload) {
+  const profileAddress = normalizeProfileAddress(address);
+  const base = await committedWorkspace(profileAddress);
+  const exportedAt = new Date().toISOString(), workspaceRevision = base.lastCommittedWorkspaceRevision;
+  await requestDownload(serializeWorkspaceRows(profileAddress, base.rows, workspaceRevision, exportedAt));
   await recordExport(profileAddress, workspaceRevision, exportedAt);
 }
 

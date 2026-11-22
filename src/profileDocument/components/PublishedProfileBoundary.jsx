@@ -86,7 +86,7 @@ function OwnerGallery({ resolution, getWalletPublicationContext, onRetry, onPubl
     onRemoveFromGallery={verified ? reviewRemoval : undefined} />
     {removal && <Suspense fallback={<span role="status">Opening publication review.</span>}>
       <GalleryRemovalReview removal={removal} onRetry={onRetry} getWalletPublicationContext={getWalletPublicationContext}
-        onClose={close} onPublished={(result, removedTitles) => { close(); onPublicationConfirmed(result, removedTitles); }} />
+        onClose={close} onPublished={(result, context) => { close(); onPublicationConfirmed(result, context); }} />
     </Suspense>}
   </>;
 }

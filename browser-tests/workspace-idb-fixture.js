@@ -13,7 +13,7 @@ import { createWorkbenchCollection, appendWorkbench } from '../src/systemWorkflo
 import { createEmptySystemWorkflowDraft } from '../src/systemWorkflow/domain/systemWorkflowDraft.js';
 import { createReception } from '../src/profileDocument/domain/receptionPresentation.js';
 import { createArticle } from '../src/text/domain/article.js';
-import { applyWorkspaceRestore, exportWorkspaceBackup, previewWorkspaceRestore, serializeWorkbenchBackup, parseWorkbenchBackup, restoreWorkbenchBackup } from '../src/systemWorkflow/workbenchBackup.js';
+import { applyWorkspaceRestore, exportWorkspaceBackup, serializeWorkspaceRecovery, previewWorkspaceRestore, serializeWorkbenchBackup, parseWorkbenchBackup, restoreWorkbenchBackup } from '../src/systemWorkflow/workbenchBackup.js';
 import { bindWorkbenchTextRecovery, retainTextRecovery, clearTextRecovery, textRecoveries } from '../src/text/textEditRecovery.js';
 
 const profile = '0x' + 'a'.repeat(40), second = '0x' + 'b'.repeat(40);
@@ -101,4 +101,12 @@ window.restoreLibraryDock = async () => {
   const store = createEditorPreferencesStore({profile,storage:localStorage});
   store.tools.change({type:'open',tab:'Library',focus:true}); store.flush(); store.dispose();
 };
-window.fixture = {mount, nestedLibrary, seedReceptionRecovery, exportWorkspaceBackup, previewWorkspaceRestore, applyWorkspaceRestore, commitWorkspaceRows, openWorkspaceDatabase, profile, second, seed, start, grow, restore, legacy, keys, library, hydrateWorkspace, confirmWorkspaceSaved, workspaceSession};
+function editTabWork() {
+  const store = wb(), scope = store.getWorkbenchScope();
+  if (!store.renameWorkbench('Tab composition')) throw Error('Rename was rejected.');
+  const expected = scope.getDraft().texts[0];
+  retainTextRecovery(scope, { profile, id: expected.id }, expected, {
+    ...expected, article: { ...expected.article, title: 'Tab article recovery' },
+  }, { message: 'Interrupted', reason: 'write_failed' });
+}
+window.fixture = {mount, editTabWork, nestedLibrary, seedReceptionRecovery, exportWorkspaceBackup, serializeWorkspaceRecovery, previewWorkspaceRestore, applyWorkspaceRestore, commitWorkspaceRows, openWorkspaceDatabase, profile, second, seed, start, grow, restore, legacy, keys, library, hydrateWorkspace, confirmWorkspaceSaved, workspaceSession};

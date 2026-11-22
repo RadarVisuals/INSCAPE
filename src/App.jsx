@@ -64,11 +64,11 @@ function App() {
   const publicationProfileRef = useRef(publicationAddress);
   publicationProfileRef.current = publicationAddress;
   useEffect(() => setPublicationConfirmation(null), [publicationAddress]);
-  const onPublicationConfirmed = (result, removedTitles) => {
+  const onPublicationConfirmed = (result, context) => {
     const address = normalizeProfileAddress(result?.document?.profile?.address);
     if (result?.status !== PUBLISHED_PROFILE_STATUS.RESOLVED || !address
       || address !== publicationAddress || address !== publicationProfileRef.current || !acceptConfirmedPublication(result)) return;
-    setPublicationConfirmation({ profileAddress: address, transactionHash: result.transactionHash, removedTitles });
+    setPublicationConfirmation({ profileAddress: address, transactionHash: result.transactionHash, ...context });
   };
   const ownerSourceReady = publishedResolution?.status !== PUBLISHED_PROFILE_STATUS.LOADING;
   const accountMetadata = connectedProfileAddress?.toLowerCase() === verifiedOwnerProfileAddress?.toLowerCase() ? walletProfileMetadata : null;

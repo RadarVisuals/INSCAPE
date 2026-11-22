@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 import { chromium } from 'playwright-core';
 
@@ -68,9 +69,10 @@ test('quota abort retains the edit in memory and advances the revision only on r
     state.createFolder('Retained edit');
     const rejected = await fixture.confirmWorkspaceSaved(fixture.profile);
     const failed = fixture.workspaceSession(fixture.profile).state;
+    const backup = JSON.parse(fixture.serializeWorkspaceRecovery(fixture.profile));
     IDBObjectStore.prototype.put = put;
     const retry = await fixture.confirmWorkspaceSaved(fixture.profile);
-    return {rejected, failed, retry, revision:fixture.workspaceSession(fixture.profile).revision,
+    return {rejected, failed, retry, recoveryFolders:backup.workspace.library.folders.map(folder => folder.name), revision:fixture.workspaceSession(fixture.profile).revision,
       names:fixture.library().workspace.folders.map(folder => folder.name)};
   });
   assert.equal(result.rejected,false);
@@ -78,6 +80,8 @@ test('quota abort retains the edit in memory and advances the revision only on r
   assert.equal(result.failed.revision,1);
   assert.equal(result.retry,true); assert.equal(result.revision,2);
   assert.deepEqual(result.names,['Props','Retained edit']);
+  assert.deepEqual(result.recoveryFolders, result.names);
+  assert.equal(result.failed.lastExportedAt, null);
 }));
 
 test('obsolete hydration cannot switch the active Library back or seed invalid legacy records', () => withPage(async page => {
@@ -126,6 +130,71 @@ test('denied IndexedDB keeps verified legacy data and subsequent edits in this t
   assert.equal(result.status,'memory'); assert.match(result.message,/stay in this tab/);
   assert.equal(result.saved,false); assert.equal(result.same,true);
   assert.deepEqual(result.names,['Props','Unsaved folder']);
+  await page.route('https://**/*', route => route.abort());
+  await page.evaluate(() => { fixture.mount(); fixture.editTabWork(); });
+  const file = JSON.parse(await downloadTabRecovery(page));
+  assert.equal(file.workspaceRevision, 0);
+  assert.deepEqual(file.workspace.library.folders.map(folder => folder.name), result.names);
+  assert.equal(file.workspace.workbenches.workbenches[1].name, 'Tab composition');
+  assert.equal(file.workspace.textRecovery[0][1][0].value.article.title, 'Tab article recovery');
+  assert.equal(await page.evaluate(() => fixture.workspaceSession(fixture.profile).state.status), 'memory');
+}));
+
+async function downloadTabRecovery(page) {
+  const button = page.getByRole('button', { name: 'Download tab recovery' });
+  const [download] = await Promise.all([page.waitForEvent('download'), button.click()]);
+  assert.match(download.suggestedFilename(), /^inscape-workspace-recovery-.*\.json$/);
+  return readFile(await download.path(), 'utf8');
+}
+
+test('Curation downloads the losing writer and restores its edits without touching the winning tab', () => withPage(async a => {
+  await a.context().route('https://**/*', route => route.abort());
+  await a.evaluate(async () => { fixture.seed(); fixture.seedReceptionRecovery(); await fixture.start(); fixture.mount(); });
+  const b = await a.context().newPage();
+  // A suspended tab can miss a commit notification. Keep its hydrated revision stale.
+  await b.addInitScript(() => { window.BroadcastChannel = undefined; });
+  await b.goto(a.url()); await b.waitForFunction(() => !!window.fixture);
+  await b.evaluate(async () => { await fixture.start(); fixture.mount(); });
+  await b.locator('[data-curation-pane="destination"]').waitFor();
+  assert.equal(await a.evaluate(async () => {
+    fixture.library().createFolder('Winning folder');
+    return fixture.confirmWorkspaceSaved(fixture.profile);
+  }), true);
+  assert.equal(await b.evaluate(async () => {
+    fixture.library().createFolder('Tab folder');
+    fixture.editTabWork();
+    return fixture.confirmWorkspaceSaved(fixture.profile);
+  }), false);
+  const source = await downloadTabRecovery(b), file = JSON.parse(source);
+  assert.deepEqual(file.workspace.library.folders.map(folder => folder.name), ['Props', 'Tab folder']);
+  assert.equal(file.workspace.workbenches.workbenches[1].name, 'Tab composition');
+  assert.equal(file.workspace.textRecovery[0][1][0].value.article.title, 'Tab article recovery');
+  assert.equal(file.workspace.receptionRecovery.draft.reception.branding.name, 'Previous Reception');
+  assert.equal(file.workspaceRevision, 1);
+  assert.equal(await b.evaluate(() => fixture.workspaceSession(fixture.profile).state.status), 'unsaved');
+  await a.reload(); await a.waitForFunction(() => !!window.fixture);
+  const winner = await a.evaluate(async () => {
+    await fixture.start();
+    const { rows, lastExportedAt, revision } = fixture.workspaceSession(fixture.profile);
+    return { names: JSON.parse(rows.library).folders.map(folder => folder.name), lastExportedAt, revision };
+  });
+  assert.deepEqual(winner, { names: ['Props', 'Winning folder'], lastExportedAt: null, revision: 2 });
+
+  const fresh = await a.context().browser().newContext();
+  try {
+    const restored = await fresh.newPage();
+    await restored.goto(a.url()); await restored.waitForFunction(() => !!window.fixture);
+    await restored.evaluate(async source => {
+      await fixture.applyWorkspaceRestore(await fixture.previewWorkspaceRestore(source, fixture.profile), () => true);
+    }, source);
+    await restored.reload(); await restored.waitForFunction(() => !!window.fixture);
+    assert.deepEqual(await restored.evaluate(async () => {
+      await fixture.start();
+      let workspace;
+      await fixture.exportWorkspaceBackup(fixture.profile, value => { workspace = JSON.parse(value).workspace; });
+      return workspace;
+    }), file.workspace);
+  } finally { await fresh.close(); }
 }));
 
 test('two writers with the same starting bytes cannot overwrite each other', () => withPage(async a => {

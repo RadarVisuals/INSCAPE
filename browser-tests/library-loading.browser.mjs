@@ -83,6 +83,20 @@ test('Library retains cached cards after failed RPC discovery and Retry assets r
   } finally { await browser.close(); }
 });
 
+test('Library labels only the creator relationship while holding evidence is unavailable', async () => {
+  const root = process.env.INSCAPE_SYSTEM_WORKFLOW_ROOT || 'http://127.0.0.1:5173';
+  const browser = await chromium.launch({ executablePath: process.env.INSCAPE_BROWSER_EXECUTABLE, headless: true });
+  try {
+    const page = await browser.newPage();
+    await page.route('https://**/*', route => route.abort());
+    await page.goto(`${root}/browser-tests/library-progressive-fixture.html`);
+    const collection = page.getByRole('button', { name: /^My collection(?: \/|$)/ });
+    await collection.waitFor();
+    assert.deepEqual(await collection.locator('.lattice-browser-asset__relationships small').allTextContents(), ['CREATED']);
+    assert.equal(await page.evaluate(() => window.libraryDemandTest.ownedPages), 1);
+  } finally { await browser.close(); }
+});
+
 test('5000 assets stay paged, visible metadata preserves selection, and a chosen category opens directly after reload', { timeout: 90000 }, async () => {
   const root = process.env.INSCAPE_SYSTEM_WORKFLOW_ROOT || 'http://127.0.0.1:5173';
   const browser = await chromium.launch({ executablePath: process.env.INSCAPE_BROWSER_EXECUTABLE || 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', headless: true });

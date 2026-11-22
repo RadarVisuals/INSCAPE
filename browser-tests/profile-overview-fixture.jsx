@@ -140,11 +140,11 @@ function Fixture() {
     return stored ? { status: 'RESOLVED', document: JSON.parse(stored), address } : initialResolution;
   });
   const [confirmation, setConfirmation] = useState(null);
-  const publicationConfirmed = (result, removedTitles) => {
+  const publicationConfirmed = (result, context) => {
     if (result?.status !== 'RESOLVED') return;
     sessionStorage.setItem('profile-overview-fixture:verified-publication', JSON.stringify(result.document));
     setResolution(result);
-    setConfirmation({ profileAddress: address, transactionHash: result.transactionHash, removedTitles });
+    setConfirmation({ profileAddress: address, transactionHash: result.transactionHash, ...context });
   };
   const replacementTest = new URLSearchParams(location.search).has('invalid-publication');
   const [publicationResolution, setPublicationResolution] = useState(() => replacementTest
