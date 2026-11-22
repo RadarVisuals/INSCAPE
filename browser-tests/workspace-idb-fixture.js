@@ -91,4 +91,14 @@ function nestedLibrary() {
   next.folders.at(-1).imageSelections = selections;
   return state.replaceWorkspace(next);
 }
+// Bulk hydration isolates scroll rendering from the timing of 125 network pages.
+window.populateBenchmarkInventory = async rows => {
+  const { normalizeEnvioHolding } = await import('../src/library/data/luksoEnvioProfileRepository.js');
+  useLibraryStore.setState({ assets: rows.map(row => normalizeEnvioHolding(row, profile, {})), hasMore: false });
+};
+window.restoreLibraryDock = async () => {
+  const {createEditorPreferencesStore} = await import('../src/public/ownerSystemWorkflow/editorPreferencesStore.js');
+  const store = createEditorPreferencesStore({profile,storage:localStorage});
+  store.tools.change({type:'open',tab:'Library',focus:true}); store.flush(); store.dispose();
+};
 window.fixture = {mount, nestedLibrary, seedReceptionRecovery, exportWorkspaceBackup, previewWorkspaceRestore, applyWorkspaceRestore, commitWorkspaceRows, openWorkspaceDatabase, profile, second, seed, start, grow, restore, legacy, keys, library, hydrateWorkspace, confirmWorkspaceSaved, workspaceSession};

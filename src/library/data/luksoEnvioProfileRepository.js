@@ -93,7 +93,7 @@ export function createLuksoEnvioProfileRepository({ endpoint = LUKSO_INDEXER_URL
   if (!Number.isInteger(pageSize) || pageSize < 1 || pageSize > 100) throw new TypeError('Invalid inventory page size');
   return {
     source: 'INDEXER', endpoint,
-    async *loadProfileAssets(profileAddress, { signal, requestedAssetIds = null } = {}) {
+    async *loadProfileAssets(profileAddress, { signal, requestedAssetIds = null, searchFilter = null } = {}) {
       const profile = normalizeProfileAddress(profileAddress);
       if (!profile) throw new TypeError('A valid Universal Profile address is required');
       const references = requestedAssetIds === null ? null : requestedAssetIds.map(parseCanonicalAssetId);
@@ -106,7 +106,7 @@ export function createLuksoEnvioProfileRepository({ endpoint = LUKSO_INDEXER_URL
       }
       const filter = references ? { _or: references.map(ref => ref.tokenId
         ? { token_id: { _eq: `${ref.contractAddress}-${ref.tokenId}` } }
-        : { asset_id: { _eq: ref.contractAddress }, token_id: { _is_null: true } }) } : {};
+        : { asset_id: { _eq: ref.contractAddress }, token_id: { _is_null: true } }) } : searchFilter || {};
       const seen = new Set(); let offset = 0;
       for (;;) {
         signal?.throwIfAborted();
@@ -123,10 +123,13 @@ export function createLuksoEnvioProfileRepository({ endpoint = LUKSO_INDEXER_URL
           || offset + rows.length > total || !rows.length && offset < total)
           throw new Error('Envio inventory is incomplete or invalid. Retry to refresh.');
         const records = rows.map(row => normalizeEnvioHolding(row, profile, { ipfsGateway }));
+        const unique = [];
         for (const asset of records) {
+          if (searchFilter && seen.has(asset.id)) continue;
           if (seen.has(asset.id) || requested && !requested.has(asset.id))
             throw new Error('Envio returned duplicate or unexpected holdings. Retry to refresh.');
           seen.add(asset.id);
+          unique.push(asset);
         }
         offset += rows.length;
         const complete = offset >= total;
@@ -134,7 +137,7 @@ export function createLuksoEnvioProfileRepository({ endpoint = LUKSO_INDEXER_URL
         // A category reference missing from the indexer still gets a direct
         // holding check through the existing referenced-asset RPC fallback.
         if (complete && requested) unresolvedAssetIds.push(...[...requested].filter(id => !seen.has(id)));
-        yield { assets: records.filter(asset => asset.imageUrl), unresolvedAssetIds, resolved: offset, total,
+        yield { assets: unique.filter(asset => asset.imageUrl), unresolvedAssetIds, resolved: offset, total,
           failures: unresolvedAssetIds.length, complete };
         if (complete) return;
       }

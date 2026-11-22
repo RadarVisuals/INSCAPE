@@ -103,11 +103,16 @@ export default function useBrowserWorkspace(data, sharedPreviewRecords = null, i
   const isAssetRenderable = useCallback((id) => renderableIds.has(id), [renderableIds]);
   const areAssetsRenderable = useCallback((ids) => Array.isArray(ids)
     && ids.length > 0 && ids.every((id) => renderableIds.has(id)), [renderableIds]);
-  const scopedAssets = useMemo(() => browserViewAssets(assets, categories, view, data?.usedAssetIds),
-    [assets, categories, data?.usedAssetIds, view]);
+  const scopedAssets = useMemo(() => {
+    const items = browserViewAssets(assets, categories, view, data?.usedAssetIds);
+    const relationship = preferences.relationshipView;
+    return data.curationRole === 'source' && !data.collectionContext && ['owned','created'].includes(relationship)
+      ? items.filter(asset => asset[relationship]) : items;
+  }, [assets, categories, data?.usedAssetIds, view, data.curationRole, data.collectionContext, preferences.relationshipView]);
   const filteredAssets = useMemo(() => filterAndSortBrowserAssets(scopedAssets,
-    { collection, query, sort }), [collection, query, scopedAssets, sort]);
-  const collections = useMemo(() => [...new Set(assets.map((asset) => String(asset?.collection || '').trim()).filter(Boolean))].sort(), [assets]);
+    { collection: data.remoteSearch ? 'all' : collection, query: data.remoteSearch ? '' : query, sort }),
+    [collection, query, scopedAssets, sort, data.remoteSearch]);
+  const collections = useMemo(() => [...new Set([...(data.collectionOptions || []), ...assets.map((asset) => String(asset?.collection || '').trim()).filter(Boolean)])].sort(), [assets, data.collectionOptions]);
   const selectedAssets = selectedAssetIds.map((id) => assets.find((asset) => browserAssetId(asset) === id)).filter(Boolean);
   const selectedAsset = selectedAssets.length === 1 ? selectedAssets[0] : null;
 

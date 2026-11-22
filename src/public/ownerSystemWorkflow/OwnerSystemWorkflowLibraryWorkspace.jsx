@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import useBrowserWorkspace from '../../lattice/browser/useBrowserWorkspace.js';
 import '../../lattice/browser/browserWorkspace.css';
@@ -19,6 +19,10 @@ export default function OwnerSystemWorkflowLibraryWorkspace({ authoringLocked = 
   // Host closure invalidates pending drops immediately, before exit animation.
   const libraryClosed = !open;
   const workspace = useBrowserWorkspace(data, previewRecords, preferences, preferenceStore, !libraryClosed);
+  const onSourceCriteria = data.onSourceCriteria;
+  useLayoutEffect(() => {
+    onSourceCriteria?.({query:workspace.query.trim(), collection:workspace.collection, relationship:workspace.relationshipView});
+  }, [onSourceCriteria, workspace.query, workspace.collection, workspace.relationshipView]);
   const onBrowse = data.onBrowse;
   useEffect(() => {
     if (!libraryClosed && data.workspaceReady !== false && !data.collectionContext) onBrowse?.({ ...workspace.view, relationship: workspace.relationshipView });
@@ -298,7 +302,7 @@ export default function OwnerSystemWorkflowLibraryWorkspace({ authoringLocked = 
        onAssetActivate={(_event, asset) => data.curationRole === 'source' && !asset.isCollection ? data.onCurationAction([asset.stableAssetId || asset.id]) : activate(asset)}
       onAssetPointerDown={beginAssetDrag} onImageActivate={(_event, asset) => data.curationRole === 'source'
         ? data.onCurationAction([asset.stableAssetId || asset.id], null, asset.selectedMedia.url) : place(asset)}
-      workspace={{ ...workspace, curationRole: data.curationRole, curatedImages: data.curatedImages, selectedImage: imageChoice, selectAsset: (id, event, media = null) => {
+      workspace={{ ...workspace, curationRole: data.curationRole, collectionContext:data.collectionContext, curatedImages: data.curatedImages, selectedImage: imageChoice, selectAsset: (id, event, media = null) => {
         if (!suppressSelection.current || event.detail === 0) {
           workspace.selectAsset(id, event);
           setImageSelection(media ? { assetId: id, ownerContext: data.ownerContext, media } : null);

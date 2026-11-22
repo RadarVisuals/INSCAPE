@@ -1,7 +1,8 @@
 import { ArrowLeft, ChevronDown, ChevronRight, Folder, FolderPlus, Images, Layers3 } from 'lucide-react';
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { isValidElement, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { BROWSER_ASSET_SIZE, BROWSER_VIEW_KINDS, categoryMembershipState } from '../../lattice/browser/browserWorkspaceModel.js';
+import SourceCardGrid from '../../library/SourceCardGrid.jsx';
 import LibraryBrowseControls from './LibraryBrowseControls.jsx';
 import RackMenu from '../menus/RackMenu.jsx';
 import { clearOwnerSystemWorkflowDocumentSelection } from './ownerSystemWorkflowSelection.js';
@@ -55,11 +56,14 @@ function LibraryResults({ assets, emptyLabel, expandedImageIds, onActivate, onCo
   const selected = new Set(workspace.selectedAssetIds);
   const size = Math.min(BROWSER_ASSET_SIZE.MAXIMUM, Math.max(BROWSER_ASSET_SIZE.MINIMUM,
     Number(workspace.assetSize) || BROWSER_ASSET_SIZE.DEFAULT));
-  return <div className="lattice-browser-assets" data-labels={workspace.hideLabels ? 'hidden' : 'visible'} data-size="grid"
-    onKeyDown={(event) => { if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'a') {
-      event.preventDefault(); event.stopPropagation(); workspace.selectAllVisible();
-    } }} style={{ '--library-tile-size': `${size}px` }}>
-    {assets.flatMap((asset) => {
+  const gridProps = {className:'lattice-browser-assets', 'data-labels':workspace.hideLabels ? 'hidden' : 'visible',
+    'data-size':'grid', style:{'--library-tile-size':size + 'px'},
+    onKeyDown(event) {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'a') {
+        event.preventDefault(); event.stopPropagation(); workspace.selectAllVisible();
+      }
+    }};
+  function renderAsset(asset) {
       const id = assetId(asset); const isSelected = selected.has(id) && workspace.selectedImage?.assetId !== id;
       const curated = workspace.selectedCategory ? (workspace.selectedCategory.imageSelections || []).filter(entry => entry.assetId === id)
         : workspace.curationRole === 'destination' ? workspace.curatedImages?.get(id) || [] : [];
@@ -115,8 +119,13 @@ function LibraryResults({ assets, emptyLabel, expandedImageIds, onActivate, onCo
         </div>) : []), ...(expanded ? files.map(file => <a className="library-file-card" key={file.url}
           href={resolvePublishedAssetUrl(file.url)} target="_blank" rel="noopener noreferrer" title="Open attachment">
           <span>{libraryFileFormat(file.url, file.fileType)}</span><strong>{libraryFilename(file.url)}</strong></a>) : [])];
-    })}
-  </div>;
+  }
+  if (workspace.curationRole === 'source' && assets.length > 60) {
+    // Expanded image/file cells share the same virtual row sequence as their parent.
+    const cells = assets.flatMap(asset => expandedImageIds.has(assetId(asset)) ? renderAsset(asset) : [asset]);
+    return <SourceCardGrid {...gridProps} cells={cells} renderCell={cell => isValidElement(cell) ? cell : renderAsset(cell)[0]} />;
+  }
+  return <div {...gridProps}>{assets.flatMap(renderAsset)}</div>;
 }
 
 function contextAnchor(event) {
@@ -281,6 +290,9 @@ export default function OwnerSystemWorkflowLibraryPresenter({ categoryCommands, 
   const viewLabel = data.collectionContext?.name || (workspace.view.kind === BROWSER_VIEW_KINDS.FOLDERS
     ? 'Folders' : workspace.selectedCategory?.name || 'All assets');
   const resultsRef = useRef(null);
+  useLayoutEffect(() => {
+    if (data.curationRole === 'source' && resultsRef.current) resultsRef.current.scrollTop = 0;
+  }, [data.curationRole, data.ownerContext, workspace.query, workspace.collection, relationshipView]);
   const visibleRef = useRef(new Set());
   const demand = data.onMetadataDemand;
   const selectedKey = workspace.selectedAssetIds.join(',');
@@ -297,9 +309,20 @@ export default function OwnerSystemWorkflowLibraryPresenter({ categoryCommands, 
       }
       publish();
     }, { root: resultsRef.current, rootMargin: '150px' });
-    resultsRef.current.querySelectorAll('[data-library-asset-id]').forEach(node => observer.observe(node));
+    const root = resultsRef.current;
+    const selector = '[data-library-asset-id]';
+    root.querySelectorAll(selector).forEach(node => observer.observe(node));
+    const mutations = new MutationObserver(changes => {
+      for (const {addedNodes, removedNodes} of changes) {
+        for (const node of removedNodes) if (node.matches?.(selector)) {
+          observer.unobserve(node); visibleRef.current.delete(node.dataset.libraryAssetId);
+        }
+        for (const node of addedNodes) if (node.matches?.(selector)) observer.observe(node);
+      }
+    });
+    mutations.observe(root, {childList:true, subtree:true});
     publish();
-    return () => { observer.disconnect(); demand([]); };
+    return () => { mutations.disconnect(); observer.disconnect(); demand([]); };
   }, [open, demand, selectedKey, assetKey]);
   const selectBuiltIn = (view) => { setRelationshipView('all'); workspace.selectView(view); closeFolders(); };
   const beginTreeDrag = (event, payload) => {
@@ -360,6 +383,7 @@ export default function OwnerSystemWorkflowLibraryPresenter({ categoryCommands, 
   };
   const emptyLabel = data.status === 'loading' ? (data.collectionContext ? 'Loading collection tokens' : 'Loading assets')
     : data.collectionContext && data.status === 'error' ? 'Collection tokens unavailable'
+      : data.remoteSearch ? 'No matching assets in this profile view'
       : workspace.hasActiveFilters && workspace.viewAssetCount
         ? `${workspace.viewAssetCount} assets are in this view / none match the active search or filters`
         : data.hasMore ? 'No matches in loaded assets' : 'No assets in this view';
@@ -499,9 +523,15 @@ export default function OwnerSystemWorkflowLibraryPresenter({ categoryCommands, 
         if (open && data.hasMore && !data.loadingMore && !workspace.hasActiveFilters
           && node.scrollHeight - node.scrollTop - node.clientHeight < node.clientHeight * .75) data.onLoadMore?.();
       }}>
-        {data.hasMore && <p className="lattice-browser-notice" role="status">
-          {assets.length} assets loaded Â· More available. Search and sorting apply to loaded assets.
-        </p>}
+        {data.onLoadInventory && <button type="button" onClick={data.onLoadInventory}>Load profile inventory</button>}
+        {data.curationRole === 'source' && (workspace.hasActiveFilters || data.hasMore || data.sourceMode === 'RPC') &&
+          <p className="lattice-browser-notice" role="status">{data.remoteSearch
+            ? data.loadingMore ? 'Searching profile inventory...' : 'Profile search / ' + workspace.viewAssetCount + ' matches loaded'
+            : (workspace.hasActiveFilters || data.collectionContext || data.sourceMode === 'RPC' ? 'Search loaded items / ' : '')
+              + workspace.viewAssetCount + ' loaded'}
+            {data.hasMore && <button type="button" disabled={data.loadingMore} onClick={data.onLoadMore}>Load more</button>}
+          </p>}
+        {data.curationRole !== 'source' && data.hasMore && <p className="lattice-browser-notice">{assets.length} assets loaded</p>}
         {dropFeedback && <div className="lattice-browser-notice" data-error role="status">{dropFeedback}</div>}
         {data.persistenceError && <div className="lattice-browser-notice" data-error role="alert">{data.persistenceError}</div>}
         {data.curationRole === 'source' && data.collectionContext && <button type="button" onClick={data.onCloseCollection}>Back to all assets</button>}
@@ -538,7 +568,7 @@ export default function OwnerSystemWorkflowLibraryPresenter({ categoryCommands, 
           expandedImageIds={expandedImageIds} onToggleImages={toggleImages}
           onContext={openAssetContext} onPointerDown={beginOrganizationDrag}
           workspace={workspace} /></>}
-        {data.hasMore && <button className="workflow-tactile-control" type="button" disabled={data.loadingMore}
+        {data.hasMore && data.curationRole !== 'source' && <button className="workflow-tactile-control" type="button" disabled={data.loadingMore}
           onClick={data.onLoadMore}>{data.loadingMore ? 'Loading more assets' : 'Load more assets'}</button>}
       </main>
     </div>

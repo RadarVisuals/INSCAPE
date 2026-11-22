@@ -24,6 +24,10 @@ export default function LibraryBrowseControls({ workspace, onCreate, canCreateFo
     <label className="system-workflow__workspace-search"><Search size={14} aria-hidden="true" />
       <input type="search" aria-label="Search" placeholder="Search assets" value={workspace.query} onChange={event => workspace.setQuery(event.target.value)} /></label>
     <div className="library-browse-actions">
+      {curationRole === 'source' && !workspace.collectionContext && <select aria-label="Inventory relationship"
+        value={workspace.relationshipView} onChange={event => workspace.setRelationshipView(event.target.value)}>
+        <option value="all">All</option><option value="owned">Owned</option><option value="created">Created</option>
+      </select>}
       {!curationRole && <button type="button" ref={newButton} aria-label="New Library item" aria-haspopup="menu" aria-expanded={menu?.kind === 'new'}
         disabled={!canCreateFolder && !canCreateSection} onClick={() => {
           const rect = newButton.current.getBoundingClientRect();

@@ -14,3 +14,16 @@
 .curation-new button { display: inline-flex; align-items: center; gap: 6px; }
 .curation-included { position: absolute; z-index: 1; top: 4px; left: 4px; border-radius: 50%; display: grid; place-items: center; width: 16px; height: 16px; color: #fff; background: rgb(18 18 18 / 85%); pointer-events: none; }
 .curation-fallback { display: grid; gap: 2px; padding: 4px; min-width: 0; overflow-wrap: anywhere; }
+
+/* A common row pitch keeps expanded file cards and wrapped labels on the same
+   scroll track as ordinary artwork, including after a panel resize. */
+[data-curation-pane="source"] .lattice-browser-assets[data-windowed] {
+  grid-auto-rows: var(--library-tile-size);
+}
+[data-curation-pane="source"] .lattice-browser-assets[data-windowed][data-labels="visible"] {
+  grid-auto-rows: calc(var(--library-tile-size) + 76px);
+}
+[data-curation-pane="source"] .lattice-browser-assets[data-windowed] > * {
+  min-height: 0;
+  overflow: hidden;
+}

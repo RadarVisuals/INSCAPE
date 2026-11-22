@@ -36,7 +36,8 @@ test('issued, creator-attributed and currently held relationships remain separat
   const normalized = readTarget('src/creations/domain/normalizeCreation.js');
   const union = readTarget('src/lattice/browser/libraryAssetUnion.js');
   assert.match(facts, /LSP12IssuedAssets\.json/u);
-  assert.match(facts, /readArrayLength\('LSP12IssuedAssets\[\]'\)/u);
+  assert.match(facts, /readRegisterLength\(lsp12Schema\.find\(s => s\.name === 'LSP12IssuedAssets\[\]'\)\.key/u);
+  assert.doesNotMatch(facts, /\.getData\(\s*['"]LSP(?:5Received|12Issued)Assets\[\]/u);
   assert.match(creations, /AssetCreators/u);
   assert.match(creations, /TokenCreators/u);
   assert.doesNotMatch(creations, /\bHold\s*\(/u);

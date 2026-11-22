@@ -3,6 +3,11 @@
   "notes": "Classification is not a passing test result. Release suites run by default; every other suite remains explicitly selectable. production-startup is separately required after the build by verifyRelease.mjs.",
   "suites": [
     {
+      "name": "source-performance",
+      "category": "performance",
+      "rationale": "Synthetic cold launch, restored Studio picker, paged profile search and deep-scroll rendering with 3,000 source assets."
+    },
+    {
       "name": "workspace-idb",
       "category": "release",
       "rationale": "Profile-scoped migration, committed revisions, reload, backup restore, quota recovery and stale hydration preserve authored work."

@@ -22,8 +22,8 @@ const CREATION_TOKEN_FIELDS = `
 `;
 
 export const CREATIONS_QUERY = `
-query ProfileCreations($profile: String!, $limit: Int!, $assetOffset: Int!, $tokenOffset: Int!) {
-  AssetCreators(where: { profile_id: { _eq: $profile } }, limit: $limit, offset: $assetOffset, order_by: { id: asc }) {
+query ProfileCreations($profile: String!, $limit: Int!, $assetOffset: Int!, $tokenOffset: Int!, $assetFilter: AssetCreators_bool_exp! = {}, $tokenFilter: TokenCreators_bool_exp! = {}) {
+  AssetCreators(where: { profile_id: { _eq: $profile }, _and: [$assetFilter] }, limit: $limit, offset: $assetOffset, order_by: { id: asc }) {
     id profile_id asset_id
     asset {
       ${CREATION_ASSET_FIELDS}
@@ -31,12 +31,12 @@ query ProfileCreations($profile: String!, $limit: Int!, $assetOffset: Int!, $tok
       tokens(limit: 1, order_by: { id: asc }) { tokenId }
     }
   }
-  AssetCreators_aggregate(where: { profile_id: { _eq: $profile } }) { aggregate { count } }
-  TokenCreators(where: { profile_id: { _eq: $profile } }, limit: $limit, offset: $tokenOffset, order_by: { id: asc }) {
+  AssetCreators_aggregate(where: { profile_id: { _eq: $profile }, _and: [$assetFilter] }) { aggregate { count } }
+  TokenCreators(where: { profile_id: { _eq: $profile }, _and: [$tokenFilter] }, limit: $limit, offset: $tokenOffset, order_by: { id: asc }) {
     id profile_id token_id
     token { ${CREATION_TOKEN_FIELDS} }
   }
-  TokenCreators_aggregate(where: { profile_id: { _eq: $profile } }) { aggregate { count } }
+  TokenCreators_aggregate(where: { profile_id: { _eq: $profile }, _and: [$tokenFilter] }) { aggregate { count } }
 }`;
 
 export const COLLECTION_TOKENS_QUERY = `
@@ -72,11 +72,11 @@ query ReferencedCreations($profile: String!, $contracts: [String!]!, $tokenIds: 
   }
 }`;
 
-async function requestPage({ endpoint, fetchImpl, profile, limit, assetOffset, tokenOffset, signal }) {
+async function requestPage({ endpoint, fetchImpl, profile, limit, assetOffset, tokenOffset, filters, signal }) {
   const response = await fetchImpl(endpoint, {
     method: 'POST', signal,
     headers: { 'content-type': 'application/json', accept: 'application/json' },
-    body: JSON.stringify({ query: CREATIONS_QUERY, variables: { profile, limit, assetOffset, tokenOffset } })
+    body: JSON.stringify({ query: CREATIONS_QUERY, variables: { profile, limit, assetOffset, tokenOffset, ...(filters && { assetFilter: filters.asset, tokenFilter: filters.token }) } })
   });
   if (!response.ok) throw new Error(`LUKSO indexer responded ${response.status}`);
   const payload = await response.json();
@@ -179,7 +179,7 @@ export function createLuksoCreationsRepository({
       } while (offset < total);
       if (offset < total) throw new Error('Collection inventory is incomplete. Retry to refresh.');
     },
-    async *loadCreations(viewedProfileAddress, { signal } = {}) {
+    async *loadCreations(viewedProfileAddress, { signal, filters } = {}) {
       const profile = normalizeProfileAddress(viewedProfileAddress);
       if (!profile) throw new TypeError('A valid viewed Universal Profile address is required');
       let assetOffset = 0;
@@ -187,7 +187,7 @@ export function createLuksoCreationsRepository({
       let assetTotal = null;
       let tokenTotal = null;
       do {
-        const data = await requestPage({ endpoint, fetchImpl, profile, limit: pageSize, assetOffset, tokenOffset, signal });
+        const data = await requestPage({ endpoint, fetchImpl, profile, limit: pageSize, assetOffset, tokenOffset, filters, signal });
         let assetRows = Array.isArray(data?.AssetCreators) ? data.AssetCreators : [];
         const tokenRows = Array.isArray(data?.TokenCreators) ? data.TokenCreators : [];
         assetTotal = Number(data?.AssetCreators_aggregate?.aggregate?.count) || 0;

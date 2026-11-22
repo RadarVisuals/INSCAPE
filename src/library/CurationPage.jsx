@@ -4,6 +4,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import ToolPanel from '../ui/ToolPanel.jsx';
 import LibraryWorkspace from '../public/ownerSystemWorkflow/OwnerSystemWorkflowLibraryWorkspace.jsx';
 import { WorkspaceBrand } from '../public/menus/WorkspaceHeader.jsx';
+import useEnvioSourceSearch from './useEnvioSourceSearch.js';
 import useProfileLibrary from './useProfileLibrary.js';
 import { ArrowLeft } from 'lucide-react';
 import { useLibraryStore } from './state/useLibraryStore.js';
@@ -51,7 +52,12 @@ function CurationWorkspace({ profileAddress, destinations, onBack }) {
   const persistenceError = useLibraryStore(state => state.profileAddress === profileAddress.toLowerCase() ? state.persistenceError : null);
   const missing = useMemo(() => ids.filter(id => !Object.hasOwn(workspace?.curatedSnapshots || {}, id) && parseCanonicalAssetId(id)), [ids, workspace]);
   const library = useProfileLibrary({ profileAddress, libraryOpen: true, referencedAssetIds: missing });
-  const records = useMemo(() => new Map(library.canonicalRecords.map(record => [record.id, record])), [library.canonicalRecords]);
+  const [criteria, setCriteria] = useState({});
+  const mode = useLibraryStore(state => state.sourceMode);
+  const search = useEnvioSourceSearch(profileAddress, criteria, !library.libraryData.collectionContext
+    && (criteria.relationship === 'created' || mode !== 'RPC'));
+  const records = useMemo(() => new Map([...library.canonicalRecords, ...(search?.records || [])]
+    .map(record => [record.id, record])), [library.canonicalRecords, search?.records]);
   useEffect(() => {
     const state = useLibraryStore.getState();
     if (!missing.length || state.workspace !== workspace || state.persistenceError) return;
@@ -74,7 +80,11 @@ function CurationWorkspace({ profileAddress, destinations, onBack }) {
     if (!items.every(id => Object.hasOwn(captured.curatedSnapshots || {}, id))) return false;
     return state.replaceWorkspace(captured);
   };
-  const source = { ...library.libraryData, categories: [], categoryOrganization: { rootCategoryIds: [], sections: [] },
+  const collectionOptions = useMemo(() => [...new Set(library.resolvedAssets.map(asset => asset.collection).filter(Boolean))], [library.resolvedAssets]);
+  const source = { collectionOptions, ...library.libraryData, categories: [], categoryOrganization: { rootCategoryIds: [], sections: [] },
+    onSourceCriteria: setCriteria, remoteSearch: Boolean(search), sourceMode: mode,
+    ...(search && { assets: search.assets || [], status: search.loading ? 'loading' : 'ready',
+      loadingMore: search.loading, hasMore: search.more, onLoadMore: search.loadMore }),
     curationRole: 'source', curatedImages: images, onCurationAction: (items, folder, url) => change('add', items, folder, url) };
   const assets = useMemo(() => workspace ? curatedDisplayAssets(workspace, ids) : [], [workspace, ids]);
   const destination = { ownerContext: profileAddress, favorites: workspace?.favorites || [],

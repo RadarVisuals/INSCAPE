@@ -1,3 +1,4 @@
+import { encodeFunctionData, decodeFunctionResult, parseAbi } from 'viem';
 import { ERC725 } from '@erc725/erc725.js';
 import lsp5Schema from '@erc725/erc725.js/schemas/LSP5ReceivedAssets.json' with { type: 'json' };
 import lsp12Schema from '@erc725/erc725.js/schemas/LSP12IssuedAssets.json' with { type: 'json' };
@@ -20,6 +21,21 @@ async function readChainId({ rpcUrl, fetchImpl, signal }) {
   return chainId;
 }
 
+const storageAbi = parseAbi(['function getData(bytes32 key) view returns (bytes)']);
+async function readRegisterLength(key, address, rpcUrl, fetchImpl, signal) {
+  const data = encodeFunctionData({abi:storageAbi, functionName:'getData', args:[key]});
+  const response = await fetchImpl(rpcUrl, {method:'POST', signal, headers:{'content-type':'application/json'},
+    body:JSON.stringify({jsonrpc:'2.0', id:1, method:'eth_call', params:[{to:address, data}, 'latest']})});
+  if (!response.ok) throw Error('Register length unavailable');
+  const {result} = await response.json();
+  const value = decodeFunctionResult({abi:storageAbi, functionName:'getData', data:result});
+  if (value === '0x') return 0;
+  if (!/^0x[0-9a-f]{32}$/i.test(value)) throw Error('Invalid register length');
+  const length = Number(BigInt(value));
+  if (!Number.isSafeInteger(length)) throw Error('Register length exceeds supported range');
+  return length;
+}
+
 const settledFact = (outcome) => outcome.status === 'fulfilled'
   ? resolvedContractFact(outcome.value)
   : errorContractFact('RPC_ERROR');
@@ -38,17 +54,11 @@ export function createLuksoProfileContractRepository({
       if (!normalizedAddress) throw new TypeError('A valid address is required');
       throwIfAborted(signal);
       const erc725 = erc725Factory(normalizedAddress);
-      const readArrayLength = async (key) => {
-        const result = await erc725.getData(key);
-        throwIfAborted(signal);
-        if (!Array.isArray(result?.value)) throw new Error(`${key} did not resolve to an array`);
-        return result.value.length;
-      };
       const outcomes = await Promise.allSettled([
         chainReader({ signal }),
         erc725.supportsInterface('LSP0ERC725Account'),
-        readArrayLength('LSP5ReceivedAssets[]'),
-        readArrayLength('LSP12IssuedAssets[]')
+        readRegisterLength(lsp5Schema.find(s => s.name === 'LSP5ReceivedAssets[]').key, normalizedAddress, rpcUrl, fetchImpl, signal),
+        readRegisterLength(lsp12Schema.find(s => s.name === 'LSP12IssuedAssets[]').key, normalizedAddress, rpcUrl, fetchImpl, signal)
       ]);
       throwIfAborted(signal);
       return createProfileContractFacts(normalizedAddress, {
