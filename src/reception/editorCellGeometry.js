@@ -59,14 +59,6 @@ export function projectReceptionCellMembers(before, after, frames, cell,
 // projections; persisted geometry remains in the Reception document's workbench.
 export const editorCellForModule = (cells, id) => cells.find(cell => cell.id === id || cell.members.includes(id));
 
-export function editorCellMoveIds(cells, ids, editingCellId) {
-  return [...new Set(ids.flatMap(id => {
-    const cell = editorCellForModule(cells, id);
-    if (!cell || cell.id !== id && cell.id === editingCellId) return [id];
-    return [cell.id, ...cell.members];
-  }))];
-}
-
 export function editorCellWindow(presentation, id, content) {
   const image = content?.imageModules?.find(item => item.id === id);
   if (image) {

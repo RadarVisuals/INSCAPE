@@ -27,7 +27,7 @@ export function moveReceptionMembers(value, ids, targetId, placement, offsets) {
       ...(fitted.length ? { fitText: [...(next.fitText || []), ...fitted] } : {}) };
   });
   let next = { ...value, cells, artworkLayers: backgroundsBehindContents(value.artworkLayers, cells) };
-  if (offsets && target) {
+  if (offsets) {
     for (const id of moving) {
       const frame = receptionModuleWindow(value, id), delta = offsets[id];
       if (!frame || !Number.isFinite(delta?.x) || !Number.isFinite(delta?.y)) throw Error('Invalid drop position.');

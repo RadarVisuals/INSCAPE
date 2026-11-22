@@ -217,6 +217,7 @@ export interface OperationGeometry {
 export interface MoveOperationInput {
   origin: WorkbenchOperationOrigin;
   selection: {
+    authoredPositions?: boolean;
     ids: readonly WindowId[];
     selectedIds: readonly WindowId[];
     content: WorkflowDraft;

@@ -274,6 +274,18 @@ for (const width of [1440, 900]) test(`Layers selects and ungroups an entire com
     await selectGroup.click();
     assert.equal(await selectGroup.getAttribute('aria-description'), '2 layers inside');
     assert.equal(await button('Ungroup selected group').isEnabled(), true);
+    await page.getByRole('group', { name: '2 selected Workbench modules', exact: true }).press('Alt+ArrowRight');
+    const moved = await saved();
+    assert.deepEqual(moved.cells, grouped.cells);
+    assert.deepEqual(moved.workbench.texts, grouped.workbench.texts);
+    assert.deepEqual(moved.workbench.shapes.filter(item => item.id !== 'shape:overlay'),
+      grouped.workbench.shapes.filter(item => item.id !== 'shape:overlay'), 'the containing cell stays put');
+    const left = doc => doc.workbench.shapes.find(item => item.id === 'shape:overlay').window.left;
+    const delta = left(moved) - left(grouped);
+    assert.ok(delta > 0);
+    assert.equal(moved.workbench.imageModules[0].position.left - grouped.workbench.imageModules[0].position.left, delta);
+    await editorCommand(page, 'Edit', 'Undo'); assert.deepEqual(await saved(), grouped);
+    await selectGroup.click();
     await selectGroup.press('Delete');
     const groupRow = layers.locator(`[data-layer-id="${group.id}"]`);
     await groupRow.getByText('Delete 2 layers?', { exact: true }).waitFor();
@@ -297,5 +309,73 @@ for (const width of [1440, 900]) test(`Layers selects and ungroups an entire com
     await editorCommand(page, 'Edit', 'Redo');
     assert.deepEqual((await saved()).artworkLayers, ungrouped.artworkLayers);
     assert.equal(await selectGroup.count(), 0);
+  } finally { await browser.close(); }
+});
+
+test('a free shape and two cells share canvas selection, Layers transfers and durable drag-out history', { timeout: 60000 }, async () => {
+  const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
+  try {
+    const page = await browser.newPage({ viewport: { width: 1600, height: 1000 }, reducedMotion: 'reduce' });
+    page.setDefaultTimeout(8000);
+    await page.route('**/*', route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
+    await page.goto(origin + '/browser-tests/reception-layer-order-fixture.html?session=' + crypto.randomUUID());
+    const saved = () => page.evaluate(() => window.receptionLayerFixture.root.getDraft().reception);
+    const id = 'shape:overlay', cell = 'shape:cell';
+    await page.evaluate(() => {
+      const root = window.receptionLayerFixture.root, draft = root.getDraft(), doc = draft.reception;
+      const boxes = { 'shape:cell': [480, 240, 250, 230], 'shape:source': [800, 240, 250, 230], 'shape:overlay': [460, 560, 90, 70] };
+      doc.shapes = doc.shapes.filter(shape => boxes[shape.id]);
+      doc.workbench.shapes = doc.workbench.shapes.filter(shape => boxes[shape.id]).map(shape => {
+        const [left, top, width, height] = boxes[shape.id];
+        return { ...shape, window: { left, top, width, height } };
+      });
+      doc.cells = doc.cells.map(({ id, mobile }) => ({ id, mobile, members: [] }));
+      doc.artworkLayers = Object.keys(boxes);
+      doc.imageModules = []; doc.texts = []; doc.workbench.imageModules = []; doc.workbench.texts = [];
+      delete doc.links;
+      if (!root.commitCompletedOperation(draft, { expectedGeneration: root.getGeneration() })) throw Error('Could not seed two cells');
+    });
+    const shape = page.locator('aside[data-workbench-view-id="shape:overlay"]');
+    await shape.click();
+    const layers = await openSharedTool(page, 'Layers');
+    const row = layers.getByRole('button', { name: 'Select White overlay', exact: true });
+    assert.equal(await row.getAttribute('aria-pressed'), 'true');
+    await row.click();
+    const move = layers.getByRole('combobox', { name: 'Move selected layers' });
+    await move.selectOption(cell);
+    const inside = await saved();
+    assert.deepEqual(inside.cells.find(item => item.id === cell).members, [id]);
+    await move.selectOption('free');
+    const released = await saved();
+    assert.deepEqual(released.workbench.shapes, inside.workbench.shapes);
+    assert.ok(released.cells.every(item => !item.members.includes(id)));
+    await move.selectOption(cell);
+    await row.click();
+    const bounds = await shape.boundingBox();
+    const cellBox = await page.locator('aside[data-workbench-view-id="shape:cell"]').boundingBox();
+    const centre = { x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height / 2 };
+    await page.mouse.move(centre.x, centre.y); await page.mouse.down();
+    await page.mouse.move(cellBox.x + cellBox.width - 5, centre.y, { steps: 8 }); await page.mouse.up();
+    const partial = await saved();
+    assert.deepEqual(partial.cells, inside.cells, 'pointer inside the source keeps the cell assignment');
+    const frame = doc => doc.workbench.shapes.find(item => item.id === id).window;
+    const cellFrame = inside.workbench.shapes.find(item => item.id === cell).window;
+    assert.ok(frame(partial).left + frame(partial).width > cellFrame.left + cellFrame.width);
+    await editorCommand(page, 'Edit', 'Undo'); assert.deepEqual(await saved(), inside);
+    await row.click();
+    const box = await shape.boundingBox();
+    const x = box.x + box.width / 2, y = box.y + box.height / 2;
+    await page.mouse.move(x, y); await page.mouse.down();
+    await page.mouse.move(x, y + 260, { steps: 12 }); await page.mouse.up();
+    const outside = await saved();
+    assert.ok(outside.cells.every(item => !item.members.includes(id)), 'empty canvas releases the layer');
+    assert.ok(frame(outside).top > frame(inside).top + 150);
+    assert.equal(frame(outside).width, frame(inside).width);
+    assert.equal(frame(outside).height, frame(inside).height);
+    assert.deepEqual(outside.artworkLayers, inside.artworkLayers);
+    await editorCommand(page, 'Edit', 'Undo'); assert.deepEqual(await saved(), inside);
+    await editorCommand(page, 'Edit', 'Redo'); assert.deepEqual(await saved(), outside);
+    await page.reload(); await row.waitFor();
+    assert.deepEqual(await saved(), outside);
   } finally { await browser.close(); }
 });

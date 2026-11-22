@@ -4,6 +4,7 @@ import { receptionModuleWindow } from '../src/reception/receptionEditorDocument.
 import { addImageModule } from '../src/imageModule/imageModuleSession.js';
 import { addTextModule } from '../src/text/textSession.js';
 import { createReceptionExample } from '../design-system/lab/receptionExample.js';
+import WorkspaceBoundary from '../src/workspace/WorkspaceBoundary.jsx';
 import React, { useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import OwnerSystemWorkflowRuntime from '../src/public/ownerSystemWorkflow/OwnerSystemWorkflowRuntime.jsx';
@@ -126,5 +127,5 @@ function Fixture() {
 // Match the real application's pointer-transparent interface. The Editor must
 // load its own base styles when opened directly, without visiting another route.
 createRoot(document.getElementById('root')).render(<div className="application-root" data-application-mode="public">
-  <div className="application-interface" data-visible><Fixture /></div>
+  <div className="application-interface" data-visible><WorkspaceBoundary profile={profileAddress}><Fixture /></WorkspaceBoundary></div>
 </div>);

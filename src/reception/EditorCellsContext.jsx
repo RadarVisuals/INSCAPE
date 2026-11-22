@@ -62,7 +62,12 @@ export function EditorCellsProvider({ store, selection, children }) {
     ? { ...innerLines, ...linePreview.patch } : innerLines, [store, generation, linePreview, innerLines]);
   const cells = useMemo(() => nativeCells.map(cell => transforms?.[cell.id]?.cellRadius === undefined ? cell
     : { ...cell, radius: transforms[cell.id].cellRadius }), [nativeCells, transforms]);
-  const { setSelection, selectArtwork } = selection;
+  const { setSelection, selectArtwork, selectLayers } = selection;
+  const moveLayers = useCallback((ids, target, generation, presentation, { placement, offsets } = {}) => {
+    store.editBento('moveMembers', [ids, target, placement, offsets], generation, presentation);
+    store.setEditingCell(target);
+    selectLayers(ids);
+  }, [store, selectLayers]);
   const enterCell = useCallback(id => {
     if (store?.setEditingCell?.(id)) setSelection([]);
   }, [store, setSelection]);
@@ -75,9 +80,9 @@ export function EditorCellsProvider({ store, selection, children }) {
     setBentoOpen(true);
   }, [cells, selection]);
   useEffect(() => () => store?.setEditingCell?.(null), [store]);
-  const value = useMemo(() => store?.getCells ? { cells, editingCellId, enterCell, leaveCell, openSettings,
+  const value = useMemo(() => store?.getCells ? { cells, editingCellId, enterCell, leaveCell, moveLayers, openSettings,
     bentoOpen, setBentoOpen, store, innerLines, paintedInnerLines, previewInnerLines, changeInnerLines, paintedAppearance, previewAppearance, paintedCellGrain, previewCellGrain, registerContentActions, addText, addImage } : null,
-  [store, cells, editingCellId, enterCell, leaveCell, openSettings, bentoOpen, innerLines, paintedInnerLines, previewInnerLines, changeInnerLines, paintedAppearance, previewAppearance, paintedCellGrain, previewCellGrain, registerContentActions, addText, addImage]);
+  [store, cells, editingCellId, enterCell, leaveCell, moveLayers, openSettings, bentoOpen, innerLines, paintedInnerLines, previewInnerLines, changeInnerLines, paintedAppearance, previewAppearance, paintedCellGrain, previewCellGrain, registerContentActions, addText, addImage]);
   const layout = useMemo(() => store?.getCells ? { cells, editingCellId, enterCell, leaveCell } : null,
     [store, cells, editingCellId, enterCell, leaveCell]);
   return <EditorCellsContext.Provider value={value}><EditorCellLayoutContext.Provider value={layout}>

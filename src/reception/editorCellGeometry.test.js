@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { editorCellMoveIds, editorCellPreviewTransforms, editorCellClip, transformedCellWindow, projectReceptionCellMembers } from './editorCellGeometry.js';
+import { editorCellPreviewTransforms, editorCellClip, transformedCellWindow, projectReceptionCellMembers } from './editorCellGeometry.js';
 
 const cells = [{ id: 'shape:cell', members: ['image:child', 'shape:child'] }];
 const presentation = { shapes: [
@@ -8,13 +8,6 @@ const presentation = { shapes: [
   { id: 'shape:child', window: { left: 200, top: 120, width: 40, height: 50 } },
 ], imageModules: [{ id: 'image:child', position: { left: 120, top: 130 } }] };
 const content = { imageModules: [{ id: 'image:child', width: 100, height: 80 }] };
-
-test('outer cell gestures include content; editing a child keeps it independent', () => {
-  assert.deepEqual(editorCellMoveIds(cells, ['shape:cell'], null), ['shape:cell', 'image:child', 'shape:child']);
-  assert.deepEqual(editorCellMoveIds(cells, ['image:child'], null), ['shape:cell', 'image:child', 'shape:child']);
-  assert.deepEqual(editorCellMoveIds(cells, ['image:child'], 'shape:cell'), ['image:child']);
-  assert.deepEqual(editorCellMoveIds(cells, ['shape:cell', 'image:child'], 'shape:cell'), ['shape:cell', 'image:child', 'shape:child']);
-});
 
 test('cell resize previews transform child geometry without changing authored windows', () => {
   const original = structuredClone(presentation);

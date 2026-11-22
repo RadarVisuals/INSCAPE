@@ -213,8 +213,9 @@ test('Studio creates one named Bento with free artwork and cell content, then re
     const rename = page.getByRole('dialog', { name: 'Rename composition' });
     await rename.getByLabel('Composition name').fill('Mixed work');
     await rename.getByRole('button', { name: 'Save name' }).click();
-    await editorCommand(page, 'Canvas', 'Workbench 1', 'menuitemcheckbox');
-    await editorCommand(page, 'Canvas', 'Mixed work', 'menuitemcheckbox');
+    await editorCommand(page, 'Compositions', 'Workbench 1', 'menuitemcheckbox');
+    await editorCommand(page, 'Compositions', 'Mixed work', 'menuitemcheckbox');
+    await page.waitForFunction(id => window.savedDraft().activeId === id, original.id);
     const restored = await active();
     assert.equal(restored.id, original.id);
     assert.equal(restored.name, 'Mixed work');

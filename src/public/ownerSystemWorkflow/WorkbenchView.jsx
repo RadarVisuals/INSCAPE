@@ -52,13 +52,14 @@ const WorkbenchIndex = lazy(() => import('./WorkbenchIndex.jsx'));
 const PublishedWorkbenchGroups = lazy(() => import('./PublishedWorkbenchGroups.jsx'));
 import { useWorkbenchMovementSnap } from './WorkbenchPlacement.jsx';
 import useWorkbenchNavigation from './useWorkbenchNavigation.js';
+import { isWorkbenchBackground } from './useWorkbenchPan.js';
+import { pointInWorkbenchFrame } from './workbenchObjectPicking.js';
 import { projectWorkbenchBounds } from './workbenchSpace.js';
 import { marqueeContains } from './workbenchGrid.js';
 import { workbenchPaintGeometry } from './workbenchPaintGeometry.js';
 import { EditorCellsProvider, useEditorCells } from '../../reception/EditorCellsContext.jsx';
 import {
   editorCellForModule,
-  editorCellMoveIds,
   editorCellPreviewTransforms,
 } from '../../reception/editorCellGeometry.js';
 const ReceptionBentoEditor = lazy(() => import('../../reception/ReceptionBentoEditor.jsx'));
@@ -629,17 +630,14 @@ export function WorkbenchViewControls({
   const moveOperation = (current, ids) => {
     const cells = latestCells.current;
     if (cells?.cells.some(cell => ids.includes(cell.id))) return null;
-    const moving = editorCellMoveIds(cells?.cells || [], ids, cells?.editingCellId);
-    // Reuse the existing authored group gesture without persisting a second
-    // group or order list. Cell membership remains owned by Reception.
-    const cellGroups = cells && moving.length ? [{ id: 'reception:selection', children: moving }] : [];
     return createWorkbenchMoveOperation({
       origin: operationOrigin(current),
       selection: {
-        ids: moving,
-        selectedIds: cells ? moving : current.selection,
+        ids,
+        selectedIds: cells ? ids : current.selection,
+        authoredPositions: Boolean(cells),
         content: current.content,
-        layers: [...(current.layers || []), ...cellGroups],
+        layers: current.layers,
       },
       registry: current,
       geometry: {
@@ -665,9 +663,7 @@ export function WorkbenchViewControls({
     const context = latestCells.current;
     const generation = context?.store.getGeneration();
     const memberIds = operation.ids.map(id => artworkModuleId(latest.current.content, id));
-    const targetAt = pointer => {
-      if (!context) return null;
-      const hit = document.elementsFromPoint(pointer.clientX, pointer.clientY);
+    const targetAt = hit => {
       if (hit[0]?.closest('.workspace-header, [data-workbench-toolbar], .workbench-tool-dock')) return null;
       return hit.find(node => node.hasAttribute('data-editor-cell-surface') && hostRef.current.contains(node)
         && context.cells.some(cell => cell.id === node.dataset.editorCellSurface &&
@@ -680,7 +676,7 @@ export function WorkbenchViewControls({
       preview: (delta, bypass) => (previewTransforms = operation.preview(delta, bypass)),
       previewDrop: pointer => {
         if (!context) return groupDrop.current?.preview(pointer, operation.ids);
-        const target = targetAt(pointer);
+        const target = targetAt(document.elementsFromPoint(pointer.clientX, pointer.clientY));
         if (target !== cellDropNode.current) {
           cellDropNode.current?.removeAttribute('data-cell-drop');
           target?.setAttribute('data-cell-drop', ''); cellDropNode.current = target;
@@ -688,16 +684,28 @@ export function WorkbenchViewControls({
       },
       commitDrop: pointer => {
         if (!context) return groupDrop.current?.commit(pointer, operation.ids);
-        const target = targetAt(pointer)?.dataset.editorCellSurface;
-        if (!target || !previewTransforms) return false;
+        if (!previewTransforms) return false;
+        const hit = document.elementsFromPoint(pointer.clientX, pointer.clientY);
+        const target = targetAt(hit)?.dataset.editorCellSurface ?? null;
+        if (!target) {
+          if (!context.cells.some(cell => cell.members.some(id => memberIds.includes(id)))) return false;
+          const host = hostRef.current;
+          const surface = hit.find(node => !node.closest('.workbench-selection') &&
+            !operation.ids.includes(node.closest('[data-workbench-view-id]')?.dataset.workbenchViewId));
+          if (!isWorkbenchBackground(surface, host)) return false;
+          const rect = host.getBoundingClientRect(), camera = navigation.getCamera();
+          const point = { x: (pointer.clientX - rect.left - camera.offset.x) / camera.scale,
+            y: (pointer.clientY - rect.top - camera.offset.y) / camera.scale };
+          const editingFrame = latest.current.frames.get(context.editingCellId)?.current;
+          if (!pointInWorkbenchFrame(point, area) ||
+            editingFrame && pointInWorkbenchFrame(point, editingFrame)) return false;
+        }
         try {
           const offsets = Object.fromEntries(operation.ids.map((id, index) => {
             const transform = previewTransforms[id];
             return [memberIds[index], { x: transform.x / transform.scale, y: transform.y / transform.scale }];
           }));
-          context.store.editBento('moveMembers', [memberIds, target, undefined, offsets], generation, latest.current.getPresentation());
-          context.store.setEditingCell(target);
-          latest.current.selectLayers(memberIds);
+          context.moveLayers(memberIds, target, generation, latest.current.getPresentation(), { offsets });
           setMoveError('');
         } catch (error) { setMoveError(error.message); }
         return true;
@@ -1290,9 +1298,6 @@ export function WorkbenchViewControls({
             !view.moduleSelectionBounds && (
               <div
                 className="workbench-selection"
-                data-editor-cell-surface={
-                  cells?.cells.find(cell => selected.length === 1 && selected[0] === cell.id)?.id
-                }
                 style={travellingBounds || bounds}
                 role="group"
                 tabIndex={0}

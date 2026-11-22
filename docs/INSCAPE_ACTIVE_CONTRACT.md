@@ -92,6 +92,17 @@ overrides and parallel paths are not an acceptable substitute for fixing the
 existing owner. Follow the concrete replacement, style-ownership and completion
 checks in `AGENTS.md`; preserve useful behavior and current authored work.
 
+## Studio layer transfer (2026-11-22)
+
+Dropping a cell member on empty space inside the composition releases it at
+the dragged position. The pointer determines the destination. A drop inside
+the source cell keeps membership, including when part of the layer extends
+beyond its edge. Membership and geometry share one Undo operation.
+In Layers, choosing a destination cell centres the selection there. Choosing
+Move out of cell keeps its world position. Moving an artwork group across a
+cell boundary moves the selected artwork. Moving a selected cell carries its
+contents with it.
+
 ## Independent Reception cells (2026-11-16)
 
 The founder chose to adapt the existing native Bento instead of migrating to a

@@ -56,18 +56,16 @@ export default function WorkbenchLayers({ open, hidden, onOpen, historyBlocked, 
   const transfer = (ids, target, generation, placement) => {
     if (transferBlocked || !cellContext) return;
     try {
-      cellContext.store.editBento('moveMembers', [ids, target, placement], generation, view.getPresentation());
+      cellContext.moveLayers(ids, target, generation, view.getPresentation(), { placement });
       focusAfterTransfer.current = `${target || ''}/${ids[0]}`;
-      select(ids, false, null, target); setError('');
+      setError('');
     } catch (failure) { setError(failure.message); }
   };
   const endDrag = () => { drag.current = null; setDrop(null); };
-  const canTransferDrag = target => {
-    const moving = drag.current;
-    return cellContext && !transferBlocked && moving?.store === store && moving.ids.length &&
-      moving.ids.every(id => byId.has(id) && !cellsById.has(id)) &&
-      moving.ids.some(id => (cellOwners.get(id) ?? null) !== target);
-  };
+  const canTransfer = (ids, target) => !transferBlocked && ids.length > 0 &&
+    ids.every(id => byId.has(id) && !cellsById.has(id)) &&
+    ids.some(id => (cellOwners.get(id) ?? null) !== target);
+  const canTransferDrag = target => cellContext && drag.current?.store === store && canTransfer(drag.current.ids, target);
   const cancel = () => {
     const rowId = pending?.rowId; setPending(null);
     queueMicrotask(() => {
@@ -214,7 +212,7 @@ export default function WorkbenchLayers({ open, hidden, onOpen, historyBlocked, 
         onKeyDown={event => {
           if (event.key === 'Escape' && pending) { event.preventDefault(); event.stopPropagation(); cancel(); }
           if (event.key === 'Escape' && grouping) { event.preventDefault(); event.stopPropagation(); setGrouping(false); }
-          if (event.altKey && ['ArrowUp', 'ArrowDown'].includes(event.key) && selected.length && !event.target.matches('input')) {
+          if (event.altKey && ['ArrowUp', 'ArrowDown'].includes(event.key) && selected.length && !event.target.matches('input,select')) {
             event.preventDefault(); event.stopPropagation(); run({ type: 'order', ids: selected, direction: event.key === 'ArrowUp' ? 'forward' : 'backward' });
           }
         }}>
@@ -241,6 +239,15 @@ export default function WorkbenchLayers({ open, hidden, onOpen, historyBlocked, 
             : layers.length ? [...(outline.get(undefined) || [])].reverse().map(layer => row(layer)) : <p>No artwork yet. Add an Image, Text or Shape to this Workbench.</p>}
           {drop?.edge === 'end' && <div className="workbench-list-insertion" aria-hidden="true" />}
         </div>
+        {cells.length > 0 && selected.length > 0 && !selected.some(id => cellsById.has(id)) &&
+          <select aria-label="Move selected layers" value="" disabled={transferBlocked}
+            onChange={event => transfer(selected, event.target.value === 'free' ? null : event.target.value, store.getGeneration())}>
+            <option value="" disabled>Move selected layers...</option>
+            <option value="free" disabled={!canTransfer(selected, null)}>Move out of cell</option>
+            {cells.map(cell => <option key={cell.id} value={cell.id} disabled={!canTransfer(selected, cell.id)}>
+              {byId.get(cell.id)?.name || 'Cell'}
+            </option>)}
+          </select>}
         {partBlock && selected.length === 1 && <button type="button" title="Keep this layer on the Workbench" onClick={() => { if (run({ type: 'leave', id: selected[0] })) view.leaveBlock(false); }}>Move out of group</button>}
         {grouping && <form onSubmit={event => { event.preventDefault(); if (run({ type: 'group', ids: selected, id: `composition:${crypto.randomUUID()}`, name: groupName.trim() })) setGrouping(false); }}><label>Group name<input autoFocus value={groupName} maxLength={48} onChange={event => setGroupName(event.target.value)} /></label><button type="submit">Create group</button><button type="button" onClick={() => setGrouping(false)}>Cancel</button></form>}
         {error && <p role="alert">{error}</p>}
