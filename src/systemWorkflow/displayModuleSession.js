@@ -46,31 +46,3 @@ export function addDisplayModule(store, orientation = 'LANDSCAPE', appearance = 
   if (!store.commitCompletedOperation(candidate, { expectedGeneration: store.getGeneration() })) throw new Error('The new Display could not be saved');
   return id;
 }
-
-export function setDisplayModuleFormat(store, id, orientation, expectedGeometry, appearance, expectedAppearance) {
-  const draft = store.getDraft();
-  const scoped = projectDisplayDraft(draft, id);
-  if (expectedGeometry && (expectedGeometry.columns !== scoped.geometry.columns || expectedGeometry.rows !== scoped.geometry.rows))
-    throw new Error('The canvas size changed while this form was open. Reopen Custom size to use the current dimensions.');
-  const format = displayFormat(orientation);
-  const themed = appearance && Object.keys(appearance).length
-    ? createSystemWorkflowAppearanceCandidate(scoped, { expectedAppearance: expectedAppearance || scoped.appearance, appearance }) : null;
-  if (!themed && scoped.geometry.columns === format.geometry.columns && scoped.geometry.rows === format.geometry.rows) return true;
-  return store.commitCompletedOperation(assertValidSystemWorkflowDraft(mergeDisplayDraft(draft, id, { ...(themed || scoped), ...format })),
-    { expectedGeneration: store.getGeneration(), historyLabel: themed ? 'Change Display settings' : 'Change Display canvas size' });
-}
-
-// The menu supplies its observed value and explicit destination. A late action
-// must never turn into the opposite toggle after the draft changes elsewhere.
-export function setDisplayModuleVisibility(store, profile, id, expectedVisibility, visibility) {
-  if (store.getProfileAddress() !== profile || id === PRIMARY_DISPLAY_ID
-    || !['PUBLIC', 'PRIVATE'].includes(expectedVisibility) || !['PUBLIC', 'PRIVATE'].includes(visibility)) return false;
-  const generation = store.getGeneration();
-  const draft = store.getDraft();
-  const current = draft.displays?.find(module => module.id === id);
-  if (!current || current.visibility !== expectedVisibility) return false;
-  if (current.visibility === visibility) return true;
-  return store.commitCompletedOperation({ ...draft,
-    displays: draft.displays.map(module => module.id === id ? { ...module, visibility } : module),
-  }, { expectedGeneration: generation, historyLabel: 'Change Display publication inclusion' });
-}

@@ -31,7 +31,7 @@ test('delete every module, undo, persist empty desktop and recreate original Dis
   const reopened = createSystemWorkflowDraftStore({ profileAddress: profile, storage });
   assert.deepEqual(reopened.getDraft().grids, []);
   const document = buildProfileDocumentV9({ profileAddress: profile, systemWorkflowDraft: reopened.getDraft(), assetRecords: [] });
-  assert.deepEqual(document.grids, []);
+  assert.equal(Object.hasOwn(document, 'grids'), false);
   assert.deepEqual(ownerSystemWorkflowPreviewEntryMediaUrls(document), []);
   assert.deepEqual(reconcileSystemWorkflowDraftFromProfileDocumentV9(document).grids, []);
   store.undo(); assert.deepEqual(store.getDraft().grids, original.grids); store.redo();

@@ -3,7 +3,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, use
 import { normalizeProfileAddress } from '../../library/config.js';
 import { systemWorkflowGridFingerprint, systemWorkflowGridOrder } from '../../systemWorkflow/domain/systemWorkflowGrid.js';
 import { createSystemWorkflowDraftStore } from '../../systemWorkflow/systemWorkflowDraftStore.js';
-import { createDisplayModuleSession, setDisplayModuleFormat, setDisplayModuleVisibility } from '../../systemWorkflow/displayModuleSession.js';
+import { createDisplayModuleSession } from '../../systemWorkflow/displayModuleSession.js';
 import { textRecoveries, TEXT_RECOVERY_MESSAGE } from '../../text/textEditRecovery.js';
 import { PRIMARY_DISPLAY_ID } from '../../systemWorkflow/domain/displayModules.js';
 import { useSceneController } from '../../text/SceneNavigation.jsx';
@@ -20,15 +20,7 @@ export default function useOwnerSystemWorkflowController(profileAddress, { stora
     if (!profile) return null;
     const store = sharedStore || createSystemWorkflowDraftStore({ profileAddress: profile, storage: selectedStorage, requireEditor: true });
     const session = createDisplayModuleSession(store, moduleId, navigation);
-    let snapshot;
-    const getSnapshot = () => {
-      const draft = session.getSnapshot().draft;
-      const visibility = moduleId === PRIMARY_DISPLAY_ID ? null
-        : store.getSnapshot().displays?.find(module => module.id === moduleId)?.visibility;
-      if (!snapshot || snapshot.draft !== draft || snapshot.visibility !== visibility) snapshot = { draft, visibility };
-      return snapshot;
-    };
-    return { store, session, getSnapshot, initialGridId };
+    return { store, session, getSnapshot: () => session.getSnapshot().draft, initialGridId };
   }, [profile, selectedStorage, sharedStore, moduleId, navigation]);
   useSyncExternalStore(navigation?.subscribe || noSubscription, navigation?.getSnapshot || emptySnapshot);
   const liveAuthority = useRef(authority);
@@ -42,9 +34,7 @@ export default function useOwnerSystemWorkflowController(profileAddress, { stora
     if (navigation) navigation.enter(id);
     else { authority.session.selectGrid(id); render(value => value + 1); }
   }, [authority, navigation]);
-  // The store remains the transaction/undo owner. React observes only this
-  // Display's content and publication choice, including undo and external reload.
-  const snapshot = useSyncExternalStore(authority?.store.subscribe || noSubscription,
+  useSyncExternalStore(authority?.store.subscribe || noSubscription,
     authority?.getSnapshot || emptySnapshot, authority?.getSnapshot || emptySnapshot);
   const [failure, setFailure] = useState(null);
   const error = failure?.authority === authority ? failure.message : null;
@@ -102,17 +92,7 @@ export default function useOwnerSystemWorkflowController(profileAddress, { stora
   // A notice may outlive the operation it describes. Dismiss only that failure.
   const clearError = useCallback(() => setFailure(current => current === failure ? null : current), [failure]);
   const gridRequest = (grid, extra = {}) => ({ gridId: grid.id, expectedGridFingerprint: systemWorkflowGridFingerprint(grid), ...extra });
-  return { ...state, visibility: snapshot?.visibility, store: authority?.store, moduleId, selectedGrid, selectedPlacements, selectedPlacementIds, error, clearError,
-    setDisplayVisibility: (expected, visibility) => run(() => {
-      if (!setDisplayModuleVisibility(authority.store, profile, moduleId, expected, visibility)) {
-        throw new Error('The Display publication choice could not be saved. Reopen its menu and try again.');
-      }
-      return true;
-    }),
-    setDisplayFormat: (orientation, expectedGeometry = state.draft?.geometry, appearance, expectedAppearance) => run(() => {
-      if (!setDisplayModuleFormat(authority.store, moduleId, orientation, expectedGeometry, appearance, expectedAppearance)) throw new Error('The Display settings could not be saved');
-      return true;
-    }),
+  return { ...state, store: authority?.store, moduleId, selectedGrid, selectedPlacements, selectedPlacementIds, error, clearError,
     run, selectPlacement, replaceSelection, hiddenPlacementIds, togglePlacementVisibility,
     placeAsset: (request) => run((session) => {
       const before = new Set(session.getState().draft.grids.find(({ id }) => id === request.gridId)?.placements.map(({ id }) => id));

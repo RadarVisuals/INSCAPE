@@ -1,7 +1,7 @@
 import { drawReceptionBentoCell } from './receptionCellDrawing.js';
 import { moveReceptionBentoCell, placeReceptionBentoCells } from './receptionBentoInsertion.js';
 import { projectReceptionCellMembers } from './editorCellGeometry.js';
-import { createEmptySystemWorkflowDraft } from '../systemWorkflow/domain/systemWorkflowDraft.js';
+import { createBlankWorkbenchDraft } from '../systemWorkflow/domain/systemWorkflowDraft.js';
 import { bindWorkbenchTextRecovery, textRecoveries, TEXT_RECOVERY_MESSAGE } from '../text/textEditRecovery.js';
 import { createTextPresentation } from '../profileDocument/domain/workbenchPresentation.js';
 import { createShapePresentation } from '../shapes/shapes.js';
@@ -53,9 +53,8 @@ export function createReceptionEditorScope(rootStore, options = {}) {
         throw new Error('Studio could not open the profile Bento. Your saved work is unchanged.');
     }
   } catch (error) { underlying.release(); throw error; }
-  const profile = underlying.getProfileAddress(), base = createEmptySystemWorkflowDraft(profile);
-  base.grids = []; base.displays = [];
-  freeze(base);
+  const profile = underlying.getProfileAddress();
+  const base = freeze({ ...createBlankWorkbenchDraft(profile), displays: [] });
   let snapshot, source, projectedReception, released = false, editingCell = null, commitFailure = null;
   const guards = new Set(), listeners = new Set();
   const current = () => !released && underlying.isCurrent();

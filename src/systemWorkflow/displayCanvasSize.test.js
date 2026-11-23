@@ -2,14 +2,13 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { displayFormat, displayPreset, isDisplayFormat, PRIMARY_DISPLAY_ID } from './domain/displayModules.js';
 import { createSystemWorkflowDraftStore } from './systemWorkflowDraftStore.js';
-import { addDisplayModule, createDisplayModuleSession, setDisplayModuleFormat } from './displayModuleSession.js';
+import { addDisplayModule } from './displayModuleSession.js';
 import { createEmptySystemWorkflowDraft, assertValidSystemWorkflowDraft, validateSystemWorkflowDraft } from './domain/systemWorkflowDraft.js';
 import { createNewDisplayPresentation, isValidWorkbenchPresentation } from '../profileDocument/domain/workbenchPresentation.js';
 import { buildProfileDocumentV9 } from '../profileDocument/domain/profileDocumentV9Builder.js';
 import { validateProfileDocumentV9, parseProfileDocumentV9Json } from '../profileDocument/domain/profileDocumentV9Validation.js';
 import { canonicalSerializeProfileDocumentV9 } from '../profileDocument/domain/profileDocumentV9Serialization.js';
 import { reconcileSystemWorkflowDraftFromProfileDocumentV9 } from '../profileDocument/domain/profileDocumentV9Reconciliation.js';
-import { addArticleToDisplay } from '../text/textTransfer.js';
 import { createOwnerSystemWorkflowReviewStorage, OWNER_SYSTEM_WORKFLOW_REVIEW_PROFILE as profile, OWNER_SYSTEM_WORKFLOW_REVIEW_ASSETS as assets } from '../public/ownerSystemWorkflow/ownerSystemWorkflowDevelopmentFixture.js';
 
 function fixture() {
@@ -60,39 +59,11 @@ for (const primary of [true, false]) test(`custom ${primary ? 'primary' : 'addit
   assert.ok(store.redo()); assert.deepEqual(store.getDraft(), draft);
 });
 
-for (const primary of [true, false]) test(`resizing ${primary ? 'primary' : 'additional'} preserves all scenes, artwork and text; failure and stale forms are atomic`, () => {
-  const { store, storage } = fixture();
-  const secondary = addDisplayModule(store), id = primary ? PRIMARY_DISPLAY_ID : secondary;
-  const session = createDisplayModuleSession(store, id);
-  session.createGrid();
-  addArticleToDisplay(store, profile, { moduleId: id, gridId: session.getState().draft.grids[0].id });
-  const before = store.getDraft();
-  const originalGeometry = session.getState().draft.geometry;
-  assert.ok(setDisplayModuleFormat(store, id, { width: 12, height: 12 }, originalGeometry));
-  const after = store.getDraft();
-  const expected = structuredClone(before);
-  Object.assign(primary ? expected : expected.displays[0], displayFormat({ width: 12, height: 12 }));
-  assert.deepEqual(after, expected, 'dimensions are the only authored changes, including World Cover and sibling modules');
-  assert.deepEqual(createSystemWorkflowDraftStore({ profileAddress: profile, storage }).getDraft(), after);
-  assert.ok(store.undo()); assert.deepEqual(store.getDraft(), before);
-  assert.ok(store.redo()); assert.deepEqual(store.getDraft(), after);
-  const generation = store.getGeneration(), history = store.getHistory();
-  assert.ok(setDisplayModuleFormat(store, id, { width: 12, height: 12 }));
-  assert.equal(store.getGeneration(), generation);
-  assert.throws(() => setDisplayModuleFormat(store, id, { width: 20, height: 20 }, originalGeometry), /changed/);
-  const write = storage.setItem; storage.setItem = () => { throw Error('full'); };
-  assert.equal(setDisplayModuleFormat(store, id, { width: 24, height: 24 }), false);
-  assert.deepEqual(store.getDraft(), after); assert.deepEqual(store.getHistory(), history);
-  storage.setItem = write;
-  assert.ok(setDisplayModuleFormat(store, id, { width: 24, height: 24 }));
-  assert.deepEqual(session.getState().draft.geometry, { columns: 24, rows: 24 }, 'same ratio with different dimensions is an edit');
-});
-
 test('public custom canvases clip fully outside layers, retain partial geometry and valid groups, and restore their dimensions', () => {
   const { store } = fixture();
   const id = addDisplayModule(store, { width: 40, height: 8 });
-  setDisplayModuleFormat(store, PRIMARY_DISPLAY_ID, { width: 20, height: 20 });
-  const draft = store.getDraft(), grid = draft.grids[0], first = grid.placements[0];
+  const draft = { ...store.getDraft(), ...displayFormat({ width: 20, height: 20 }) };
+  const grid = draft.grids[0], first = grid.placements[0];
   grid.placements = [first, { ...first, id: 'partly-visible', column: 19, layer: 1, navigationOrder: 1 },
     { ...first, id: 'off-right', column: 20, layer: 2, navigationOrder: 2 },
     { ...first, id: 'off-left', column: -4, layer: 3, navigationOrder: 3 }];

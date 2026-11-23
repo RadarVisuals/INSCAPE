@@ -5,7 +5,7 @@ import { chromium } from 'playwright-core';
 const origin = process.env.INSCAPE_SYSTEM_WORKFLOW_ROOT || 'http://127.0.0.1:5189';
 const settle = page => page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
 
-test('Display subscriptions ignore sibling content while following own edits, visibility, undo and navigation', { timeout: 45000 }, async () => {
+test('Display subscriptions ignore sibling content while following own edits, undo and navigation', { timeout: 45000 }, async () => {
   const browser = await chromium.launch({ executablePath: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', headless: true });
   try {
     const page = await browser.newPage();
@@ -22,7 +22,7 @@ test('Display subscriptions ignore sibling content while following own edits, vi
       const { createRoot } = (await import('/@id/react-dom/client')).default;
       const useController = (await import('/src/public/ownerSystemWorkflow/useOwnerSystemWorkflowController.js')).default;
       const { createSystemWorkflowDraftStore } = await import('/src/systemWorkflow/systemWorkflowDraftStore.js');
-      const { addDisplayModule, createDisplayModuleSession, setDisplayModuleVisibility } = await import('/src/systemWorkflow/displayModuleSession.js');
+      const { addDisplayModule, createDisplayModuleSession } = await import('/src/systemWorkflow/displayModuleSession.js');
       const { addShape, editShape } = await import('/src/shapes/shapeSession.js');
       const profile = `0x${'1'.repeat(40)}`, records = new Map();
       const storage = { getItem: key => records.get(key) ?? null, setItem: (key, value) => records.set(key, value) };
@@ -35,13 +35,12 @@ test('Display subscriptions ignore sibling content while following own edits, vi
         controllers[id] = controller; renders[id] = (renders[id] || 0) + 1;
         return React.createElement('output', { 'data-display': id }, JSON.stringify({
           title: controller.selectedGrid.title, grid: controller.selectedGridId,
-          count: controller.draft.grids.length, visibility: controller.visibility,
+          count: controller.draft.grids.length,
         }));
       }
       window.isolation = { sibling, renders, controllers, store,
         editShape: () => editShape(store, profile, store.getSnapshot().shapes[0], { color: '#abcdef' }),
         addGrid: () => createDisplayModuleSession(store, sibling).createGrid(),
-        publishChoice: () => setDisplayModuleVisibility(store, profile, sibling, 'PRIVATE', 'PUBLIC'),
       };
       createRoot(document.getElementById('root')).render(React.createElement(React.Fragment, null,
         React.createElement(Display, { id: 'display:primary' }), React.createElement(Display, { id: sibling })));
@@ -65,14 +64,6 @@ test('Display subscriptions ignore sibling content while following own edits, vi
     await page.evaluate(() => window.isolation.store.undo());
     await settle(page);
     assert.equal((await readSibling()).count, originalCount);
-
-    await page.evaluate(() => window.isolation.publishChoice());
-    await settle(page);
-    assert.equal((await readSibling()).visibility, 'PUBLIC', 'publication inclusion is observed separately from composition content');
-    await page.evaluate(() => window.isolation.store.undo());
-    await settle(page);
-    assert.equal((await readSibling()).visibility, 'PRIVATE');
-    assert.equal((await counts())['display:primary'], initial['display:primary']);
 
     const target = await page.evaluate(() => {
       const controller = window.isolation.controllers['display:primary'];

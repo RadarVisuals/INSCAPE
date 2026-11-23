@@ -1,5 +1,5 @@
 import { FIRST_WORKBENCH_ID, isWorkbenchCollection, createWorkbenchCollection, projectWorkbenchDraft } from '../../systemWorkflow/domain/workbenchCollection.js';
-import { createEmptySystemWorkflowDraft } from '../../systemWorkflow/domain/systemWorkflowDraft.js';
+import { createBlankWorkbenchDraft } from '../../systemWorkflow/domain/systemWorkflowDraft.js';
 import { buildProfileDocumentV9 } from './profileDocumentV9Builder.js';
 import { assertValidProfileDocumentV9 } from './profileDocumentV9Validation.js';
 import { CANVAS_CONTENT_KEYS, canvasContent, canvasDetails, canvasDocument, publishedCanvasEntries, publishedCompositionEntries, validPublicationDestinations } from './publishedCanvases.js';
@@ -54,7 +54,7 @@ export function canvasPublicationCandidates({ record, assetRecords, profile }) {
       // from an unselected canvas just to satisfy the v9 document envelope.
       const { reception, ...shared } = collection.shared;
       if (!validReception(reception)) throw new Error('Invalid local Bento.');
-      const document = build({ ...createEmptySystemWorkflowDraft(collection.profileAddress), ...shared, grids: [] });
+      const document = build({ ...createBlankWorkbenchDraft(collection.profileAddress), ...shared });
       candidates.push({ id: 'reception', name: 'Bento', reception: projectReception(reception), document });
     } catch (error) { candidates.push({ id: 'reception', name: 'Bento', error: error.message }); }
   }
@@ -146,8 +146,7 @@ export function buildGalleryRemoval(previousVerifiedDocument, workIds, exportedA
       Object.assign(document, content);
       document.canvas = details;
     } else {
-      const { artboard, geometry, appearance } = createEmptySystemWorkflowDraft(document.profile.address, { generateId: () => 'empty' });
-      Object.assign(document, { artboard, geometry, appearance, grids: [], metadata: {}, canvas: null });
+      Object.assign(document, { metadata: {}, canvas: null });
     }
   } else if (document.canvas && selection.has(document.canvas.id)) {
     document.canvas.destinations = ['profile'];

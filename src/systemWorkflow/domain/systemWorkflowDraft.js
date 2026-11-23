@@ -154,7 +154,7 @@ export function ensureSystemWorkflowWorldCoverGrid(draftInput) {
   return draftInput;
 }
 
-export function createEmptySystemWorkflowDraft(profileAddress, options = {}) {
+export function createBlankWorkbenchDraft(profileAddress) {
   const profile = normalizeProfileAddress(profileAddress);
   if (!profile) throw operationError('SYSTEM_WORKFLOW_PROFILE_INVALID', 'A valid profile address is required');
   return {
@@ -167,6 +167,13 @@ export function createEmptySystemWorkflowDraft(profileAddress, options = {}) {
       guideMode: 'LINES', guideSize: SYSTEM_WORKFLOW_GRID_DENSITY.default, guideColor: '#6f746f',
     },
     identityPresentation: createEmptySystemWorkflowIdentityPresentation(),
+    grids: [],
+  };
+}
+
+export function createEmptySystemWorkflowDraft(profileAddress, options = {}) {
+  return {
+    ...createBlankWorkbenchDraft(profileAddress),
     grids: [{
       id: createSystemWorkflowGridId([], options),
       title: 'HOME', subtitle: '', visibility: SYSTEM_WORKFLOW_VISIBILITY.PUBLIC,

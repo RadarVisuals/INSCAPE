@@ -285,22 +285,22 @@
     {
       "file": "src/public/ownerSystemWorkflow/useOwnerSystemWorkflowController.js",
       "ruleId": "react-hooks/exhaustive-deps",
-      "line": 32,
+      "line": 24,
       "column": 6,
       "message": "React Hook useMemo has a missing dependency: 'initialGridId'. Either include it or remove the dependency array.",
-      "sourceSha256": "d1cd37e21b6a2d154c31d778dfe808df4d1c22738a5f779df328841e8b65fd6c",
+      "sourceSha256": "9f5fc143474778047675aa89ee5ee0a7657dddf674af6694b1e0b0dd4d678f1c",
       "planStep": "08",
-      "reason": "initialGridId is a mount/authority initializer, validated against the new session grids. Subsequent preference/layout updates must not recreate the Display session or reset its current Grid. Authority identity is explicitly profile, selected storage, shared activation-scoped store and moduleId; caller remounts on profile/Workbench activation. Parent traced Runtime/Display instance callers and authority creation; scope units and current local-workbenches/routing/Display reload coverage support those boundaries. No asynchronous initialGridId callback is retained. Re-reviewed 2026-10-28 during scene-session separation: the retained hook body and its ref-owned playback/cancellation behavior are unchanged. Initial owner Grid is captured per authority and now applied after commit through the same session; selection-scope dependencies deliberately invalidate placement callbacks. Evidence and limits: docs/audits/2026-10-28/scene-boundary-implementation/README.md."
+      "reason": "initialGridId is a mount/authority initializer, validated against the new session grids. Subsequent preference/layout updates must not recreate the Display session or reset its current Grid. Authority identity is explicitly profile, selected storage, shared activation-scoped store and moduleId; caller remounts on profile/Workbench activation. Parent traced Runtime/Display instance callers and authority creation; scope units and current local-workbenches/routing/Display reload coverage support those boundaries. No asynchronous initialGridId callback is retained. Re-reviewed 2026-10-28 during scene-session separation: the retained hook body and its ref-owned playback/cancellation behavior are unchanged. Initial owner Grid is captured per authority and now applied after commit through the same session; selection-scope dependencies deliberately invalidate placement callbacks. Evidence and limits: docs/audits/2026-10-28/scene-boundary-implementation/README.md. Reviewed 2026-11-23 after removing Display settings writes. Initial grid capture and selection invalidation still use the same dependencies."
     },
     {
       "file": "src/public/ownerSystemWorkflow/useOwnerSystemWorkflowController.js",
       "ruleId": "react-hooks/exhaustive-deps",
-      "line": 71,
+      "line": 61,
       "column": 46,
       "message": "React Hook useMemo has unnecessary dependencies: 'authority' and 'state.selectedGridId'. Either exclude them or remove the dependency array.",
-      "sourceSha256": "d1cd37e21b6a2d154c31d778dfe808df4d1c22738a5f779df328841e8b65fd6c",
+      "sourceSha256": "9f5fc143474778047675aa89ee5ee0a7657dddf674af6694b1e0b0dd4d678f1c",
       "planStep": "08",
-      "reason": "The empty object is the selection epoch. Authority replacement and selectedGridId transitions intentionally invalidate old selection actions even though the factory reads neither value. liveSelectionScope and mounted guards reject captured actions after a scope switch; available placement IDs and visibility are filtered from the current Grid. Removing either dependency revives selection in a different editor context. Parent reviewed actual guards and caller lifetimes; scoped late-writer and Library-drop lifecycle checks provide related behavioral evidence. Re-reviewed 2026-10-28 during scene-session separation: the retained hook body and its ref-owned playback/cancellation behavior are unchanged. Initial owner Grid is captured per authority and now applied after commit through the same session; selection-scope dependencies deliberately invalidate placement callbacks. Evidence and limits: docs/audits/2026-10-28/scene-boundary-implementation/README.md."
+      "reason": "The empty object is the selection epoch. Authority replacement and selectedGridId transitions intentionally invalidate old selection actions even though the factory reads neither value. liveSelectionScope and mounted guards reject captured actions after a scope switch; available placement IDs and visibility are filtered from the current Grid. Removing either dependency revives selection in a different editor context. Parent reviewed actual guards and caller lifetimes; scoped late-writer and Library-drop lifecycle checks provide related behavioral evidence. Re-reviewed 2026-10-28 during scene-session separation: the retained hook body and its ref-owned playback/cancellation behavior are unchanged. Initial owner Grid is captured per authority and now applied after commit through the same session; selection-scope dependencies deliberately invalidate placement callbacks. Evidence and limits: docs/audits/2026-10-28/scene-boundary-implementation/README.md. Reviewed 2026-11-23 after removing Display settings writes. Initial grid capture and selection invalidation still use the same dependencies."
     },
     {
       "file": "src/public/ownerSystemWorkflow/useOwnerSystemWorkflowPlacementInteraction.js",

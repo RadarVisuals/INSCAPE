@@ -9,9 +9,11 @@ const origin = process.env.INSCAPE_TEST_ORIGIN || 'http://127.0.0.1:5217';
 const output = process.env.INSCAPE_BROWSER_OUTPUT || '.browser-test-runtime/composition-index';
 async function prepare(page, path = '/browser-tests/composition-index-fixture.html') {
   page.setDefaultTimeout(15000);
-  await page.route('**/*', route => {
+  await page.route('**/*', async route => {
     const url = new URL(route.request().url());
     if (url.origin === origin) return route.continue();
+    const artwork = url.pathname.match(/^\/RadarVisuals\/INSCAPE\/[a-f0-9]{40}\/public(\/assets\/.*\.webp)$/);
+    if (url.hostname === 'raw.githubusercontent.com' && artwork) return route.fulfill({ response: await page.request.get(origin + artwork[1]) });
     return route.abort();
   });
   await page.goto(origin + path, { waitUntil: 'domcontentloaded', timeout: 45000 });
@@ -38,7 +40,12 @@ test('desktop index explores real artwork, retains each camera and never edits i
     await prepare(page);
     const host = page.locator('.composition-explorer-viewport'); await host.waitFor();
     await page.waitForFunction(() => Number(document.querySelector('.composition-explorer-viewport')?.dataset.cameraScale) > 0);
-    await page.locator('.composition-explorer-viewport img').evaluateAll(images => Promise.all(images.map(image => image.decode())));
+    const images = host.locator('svg image');
+    await images.first().waitFor();
+    assert.equal(await images.count(), 3);
+    await images.evaluateAll(nodes => Promise.all(nodes.map(node => {
+      const image = new Image(); image.src = node.href.baseVal; return image.decode();
+    })));
     const saved = await page.evaluate(() => JSON.stringify(window.reviewEntries));
     const first = await camera(page), bounds = await host.boundingBox();
     await page.getByRole('button', { name: 'Open Abyssal Study', exact: true }).hover();

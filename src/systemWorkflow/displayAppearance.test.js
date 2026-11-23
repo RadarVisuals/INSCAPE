@@ -1,8 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { createSystemWorkflowDraftStore } from './systemWorkflowDraftStore.js';
-import { addDisplayModule, createDisplayModuleSession, setDisplayModuleFormat } from './displayModuleSession.js';
-import { PRIMARY_DISPLAY_ID } from './domain/displayModules.js';
+import { addDisplayModule, createDisplayModuleSession } from './displayModuleSession.js';
 import { assertValidSystemWorkflowDraft, validateSystemWorkflowDraft, systemWorkflowPlacementSnapStep } from './domain/systemWorkflowDraft.js';
 import { displayGuideMode } from './domain/displayAppearance.js';
 import { createSystemWorkflowDropGeometry } from './systemWorkflowPlacement.js';
@@ -11,7 +10,6 @@ import { createSystemWorkflowResizeGesture, updateSystemWorkflowResizeGesture } 
 import { buildProfileDocumentV9 } from '../profileDocument/domain/profileDocumentV9Builder.js';
 import { validateProfileDocumentV9, parseProfileDocumentV9Json } from '../profileDocument/domain/profileDocumentV9Validation.js';
 import { canonicalSerializeProfileDocumentV9 } from '../profileDocument/domain/profileDocumentV9Serialization.js';
-import { reconcileSystemWorkflowDraftFromProfileDocumentV9 } from '../profileDocument/domain/profileDocumentV9Reconciliation.js';
 import { createOwnerSystemWorkflowReviewStorage, OWNER_SYSTEM_WORKFLOW_REVIEW_PROFILE as profile, OWNER_SYSTEM_WORKFLOW_REVIEW_ASSETS as assets } from '../public/ownerSystemWorkflow/ownerSystemWorkflowDevelopmentFixture.js';
 
 const fixture = () => {
@@ -33,30 +31,6 @@ test('old draft and public appearance read without rewriting; malformed new fiel
     assert.equal(validateSystemWorkflowDraft({ ...draft, appearance: { ...draft.appearance, ...invalid } }).valid, false);
     assert.equal(validateProfileDocumentV9({ ...doc, appearance: { ...doc.appearance, ...invalid } }).valid, false);
   }
-});
-
-for (const primary of [true, false]) test(`${primary ? 'primary' : 'additional'} Display settings save atomically, undo, reload, publish and restore`, () => {
-  const { store, storage } = fixture();
-  const secondary = addDisplayModule(store), id = primary ? PRIMARY_DISPLAY_ID : secondary;
-  const session = createDisplayModuleSession(store, id), before = store.getDraft(), initial = session.getState().draft;
-  const write = storage.setItem;
-  storage.setItem = () => { throw Error('full'); };
-  assert.equal(setDisplayModuleFormat(store, id, { width: 24, height: 24 }, initial.geometry, patch, initial.appearance), false);
-  assert.deepEqual(store.getDraft(), before);
-  storage.setItem = write;
-  assert.ok(setDisplayModuleFormat(store, id, { width: 24, height: 24 }, initial.geometry, patch, initial.appearance));
-  const after = store.getDraft(), result = session.getState().draft;
-  assert.deepEqual(result.appearance, { ...initial.appearance, ...patch });
-  assert.deepEqual(result.grids, initial.grids);
-  assert.deepEqual(primary ? after.displays : after.appearance, primary ? before.displays : before.appearance);
-  assert.deepEqual(createSystemWorkflowDraftStore({ profileAddress: profile, storage }).getDraft(), after);
-  assert.ok(store.undo()); assert.deepEqual(store.getDraft(), before);
-  assert.ok(store.redo()); assert.deepEqual(store.getDraft(), after);
-  assert.throws(() => setDisplayModuleFormat(store, id, { width: 20, height: 20 }, result.geometry, { guideVisible: true }, initial.appearance), /changed/);
-  after.displays[0].visibility = 'PUBLIC';
-  const doc = parseProfileDocumentV9Json(canonicalSerializeProfileDocumentV9(publish(after)));
-  const restored = reconcileSystemWorkflowDraftFromProfileDocumentV9(doc);
-  assert.deepEqual(primary ? restored.appearance : restored.displays[0].appearance, result.appearance);
 });
 
 test('new Display settings are applied at creation, and preset colour resets remain valid', () => {

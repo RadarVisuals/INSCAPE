@@ -78,7 +78,7 @@ function ProfileDocumentV9Session({ document, onExit, onOpenDirectory, onReturn,
 
   const openIdentityRack = () => { if (identityRack) { setIdentityOpen(true); setProfileVisible(false); } };
   return <main ref={rootRef} tabIndex={-1} className="visitor-grid-world system-workflow" data-workbench data-public-header={renderHeader ? true : undefined} data-layout={layout.mode}
-    aria-label="Published INSCAPE composition" data-lattice-menu-surface data-guide-mode={document.appearance.guideMode}
+    aria-label="Published INSCAPE composition" data-lattice-menu-surface data-guide-mode={document.appearance?.guideMode}
     >
     {renderHeader?.(identityRack)}
     <WorkbenchViewControls entryTarget={entryTarget} hostRef={rootRef} />

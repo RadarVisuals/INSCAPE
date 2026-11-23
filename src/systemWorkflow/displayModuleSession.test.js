@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createSystemWorkflowDraftStore } from './systemWorkflowDraftStore.js';
-import { addDisplayModule, createDisplayModuleSession, setDisplayModuleFormat, setDisplayModuleVisibility } from './displayModuleSession.js';
+import { addDisplayModule, createDisplayModuleSession } from './displayModuleSession.js';
 import { PRIMARY_DISPLAY_ID, projectDisplayDraft } from './domain/displayModules.js';
 import { addShape, editShape } from '../shapes/shapeSession.js';
 import { buildProfileDocumentV9 } from '../profileDocument/domain/profileDocumentV9Builder.js';
@@ -37,33 +37,6 @@ test('Grid navigation reads accepted snapshots without copying content and rejec
   assert.throws(() => session.selectGrid(accepted.draft.grids.find(grid => !reconciled.draft.grids.some(current => current.id === grid.id)).id), /does not exist/);
 });
 
-test('Display publication inclusion rejects stale menus and failed writes, preserving history and other modules', () => {
-  const { store, storage } = fixture();
-  const id = addDisplayModule(store);
-  const before = store.getDraft(), history = store.getHistory();
-  const write = storage.setItem;
-  storage.setItem = () => { throw Error('full'); };
-  assert.equal(setDisplayModuleVisibility(store, profile, id, 'PRIVATE', 'PUBLIC'), false);
-  assert.deepEqual(store.getDraft(), before);
-  assert.deepEqual(store.getHistory(), history);
-  assert.deepEqual(buildProfileDocumentV9({ profileAddress: profile, systemWorkflowDraft: store.getDraft() }).displays, []);
-  storage.setItem = write;
-  assert.equal(setDisplayModuleVisibility(store, profile, id, 'PRIVATE', 'PUBLIC'), true);
-  assert.equal(createSystemWorkflowDraftStore({ profileAddress: profile, storage }).getDraft().displays[0].visibility, 'PUBLIC');
-  assert.equal(buildProfileDocumentV9({ profileAddress: profile, systemWorkflowDraft: store.getDraft() }).displays[0].id, id);
-  assert.deepEqual(store.getDraft().grids, before.grids);
-  const generation = store.getGeneration();
-  assert.equal(setDisplayModuleVisibility(store, profile, id, 'PRIVATE', 'PUBLIC'), false);
-  assert.equal(setDisplayModuleVisibility(store, 'another-profile', id, 'PUBLIC', 'PRIVATE'), false);
-  assert.equal(setDisplayModuleVisibility(store, profile, 'missing', 'PUBLIC', 'PRIVATE'), false);
-  assert.equal(setDisplayModuleVisibility(store, profile, PRIMARY_DISPLAY_ID, 'PUBLIC', 'PRIVATE'), false);
-  assert.equal(setDisplayModuleVisibility(store, profile, id, 'PUBLIC', 'invalid'), false);
-  assert.equal(store.getGeneration(), generation);
-  assert.ok(store.undo());
-  assert.deepEqual(store.getDraft(), before);
-  assert.ok(store.redo());
-  assert.equal(store.getDraft().displays[0].visibility, 'PUBLIC');
-});
 function fixture() {
   const records = new Map();
   const storage = { getItem: key => records.get(key) ?? null, setItem: (key, value) => records.set(key, value) };
@@ -234,19 +207,6 @@ test('Display sessions edit independently through one storage generation', () =>
   assert.equal(store.getDraft().displays[0].grids.length, 3);
   assert.deepEqual(portrait.getState().draft.geometry, { columns: 18, rows: 32 });
   assert.deepEqual(createSystemWorkflowDraftStore({ profileAddress: profile, storage }).getDraft(), store.getDraft());
-});
-test('Portrait changes preserve artwork geometry and old drafts need no rewrite', () => {
-  const { store } = fixture();
-  const session = createDisplayModuleSession(store, PRIMARY_DISPLAY_ID);
-  session.placeAsset({ gridId: session.getState().selectedGridId, stableAssetId: '42:0x1111111111111111111111111111111111111111:0x01', nativeWidth: 800, nativeHeight: 400 });
-  const original = store.getDraft();
-  assert.equal(Object.hasOwn(original, 'displays'), false);
-  setDisplayModuleFormat(store, PRIMARY_DISPLAY_ID, 'PORTRAIT');
-  assert.deepEqual(store.getDraft().grids, original.grids);
-  assert.deepEqual(store.getDraft().geometry, { columns: 18, rows: 32 });
-  const generation = store.getGeneration();
-  setDisplayModuleFormat(store, PRIMARY_DISPLAY_ID, 'PORTRAIT');
-  assert.equal(store.getGeneration(), generation);
 });
 test('Publication omits private instances and recovers public orientation plus private work', () => {
   const { store } = fixture();

@@ -6,7 +6,7 @@ import { FIRST_WORKBENCH_ID, MAX_WORKBENCHES, assertWorkbenchName, assertWorkben
 export const CANVAS_CONTENT_KEYS = ['artboard', 'geometry', 'appearance', 'grids', 'metadata', 'workbench', 'displays', 'miniApps', 'texts', 'imageModules', 'shapes', 'workbenchGroups', 'workbenchIndex', 'artworkLayers', 'composition'];
 export function canvasContent(document) {
   const content = Object.fromEntries(CANVAS_CONTENT_KEYS.filter(key => Object.hasOwn(document, key)).map(key => [key, structuredClone(document[key])]));
-  delete content.appearance.menuSurfaceId;
+  if (content.appearance) delete content.appearance.menuSurfaceId;
   return content;
 }
 export function canvasDetails(item) {
@@ -57,7 +57,7 @@ export function publishedCompositionEntries(document, destination) {
 }
 export function canvasDocument(document, entry) {
   const shared = Object.fromEntries(Object.entries(document).filter(([key]) => !CANVAS_CONTENT_KEYS.includes(key) && !['canvas', 'canvases', 'reception', 'receptionDestinations'].includes(key)));
-  return { ...shared, ...entry.content, appearance: { ...entry.content.appearance } };
+  return { ...shared, ...entry.content };
 }
 export function validatePublishedCanvases(document, validate, fail) {
   if (!Object.hasOwn(document, 'canvas') && !Object.hasOwn(document, 'canvases')) return;
@@ -87,7 +87,7 @@ export function validatePublishedCanvases(document, validate, fail) {
       if (ids.has(entry.id)) throw new Error('Duplicate canvas');
       ids.add(entry.id);
       if (!content || typeof content !== 'object' || Object.keys(content).some(key => !CANVAS_CONTENT_KEYS.includes(key))
-        || !['artboard', 'geometry', 'appearance', 'grids', 'metadata'].every(key => Object.hasOwn(content, key))
+        || !Object.hasOwn(content, 'metadata')
         || Object.hasOwn(content.appearance || {}, 'menuSurfaceId')) throw new Error('Invalid canvas content');
       const result = validate(canvasDocument(document, entry));
       result.errors.forEach(error => fail(`canvases.${entry.id}.${error.path}`, error.code, error.message));

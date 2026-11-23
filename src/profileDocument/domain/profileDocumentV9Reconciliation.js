@@ -4,7 +4,7 @@ import { artworkLayers, artworkRecords, projectArtworkLayers, reconcileArtworkLa
 import { restorePublishedWorkbenchGroups } from './publishedWorkbenchGroups.js';
 import { reconcileRemovedWorkbenchMembers } from '../../systemWorkflow/domain/workbenchGroups.js';
 import {
-  SYSTEM_WORKFLOW_DRAFT_VERSION,
+  createBlankWorkbenchDraft,
   SYSTEM_WORKFLOW_VISIBILITY,
   SYSTEM_WORKFLOW_WORLD_COVER_GRID_ID,
   assertValidSystemWorkflowDraft,
@@ -65,13 +65,14 @@ function restoredIdentity(identity) {
 // Public content restores through the same module boundaries while local private work is retained.
 export function reconcileSystemWorkflowDraftFromProfileDocumentV9(documentInput, currentDraftInput = null) {
   const document = assertValidProfileDocumentV9(documentInput);
+  const publicGrids = document.grids || [];
   let privateGrids = [];
   if (currentDraftInput !== null) {
     const current = assertValidSystemWorkflowDraft(currentDraftInput);
     if (current.profileAddress !== document.profile.address) {
       throw new TypeError('The local draft and published document belong to different profiles');
     }
-    const publishedIds = new Set(document.grids.map(({ id }) => id));
+    const publishedIds = new Set(publicGrids.map(({ id }) => id));
     privateGrids = current.grids
       .filter(({ visibility, id }) => visibility === SYSTEM_WORKFLOW_VISIBILITY.PRIVATE && id !== SYSTEM_WORKFLOW_WORLD_COVER_GRID_ID && !publishedIds.has(id))
       .map((grid) => structuredClone(grid));
@@ -100,8 +101,8 @@ export function reconcileSystemWorkflowDraftFromProfileDocumentV9(documentInput,
     .map(d => ({ id: d.id, grids: d.grids.filter(g => g.id !== SYSTEM_WORKFLOW_WORLD_COVER_GRID_ID) }));
   const texts = restoreTextModules(document.texts, currentDraftInput?.texts, {
     previous: sectionDisplays(currentDraftInput?.grids, currentDraftInput?.displays),
-    published: sectionDisplays(document.grids, document.displays),
-    restored: sectionDisplays([...document.grids, ...privateGrids], [...publishedDisplays, ...privateDisplays]),
+    published: sectionDisplays(publicGrids, document.displays),
+    restored: sectionDisplays([...publicGrids, ...privateGrids], [...publishedDisplays, ...privateDisplays]),
   });
   const privateMiniAppWindows = (currentDraftInput?.workbench?.miniApps || []).filter(window =>
     miniApps.some(app => app.id === window.id && app.visibility === 'PRIVATE'));
@@ -125,11 +126,8 @@ export function reconcileSystemWorkflowDraftFromProfileDocumentV9(documentInput,
     workbench.imageModules = [...(workbench.imageModules || []), ...structuredClone(privateImageWindows)];
   }
   const restored = {
-    profileAddress: document.profile.address,
-    draftVersion: SYSTEM_WORKFLOW_DRAFT_VERSION,
-    artboard: { ...document.artboard },
-    geometry: { ...document.geometry },
-    appearance: { ...document.appearance },
+    ...createBlankWorkbenchDraft(document.profile.address),
+    ...(document.grids ? { artboard: document.artboard, geometry: document.geometry, appearance: document.appearance } : {}),
     identityPresentation: restoredIdentity(document.identityPresentation),
     ...(document.reception ? { reception: restoreReception(document.reception) } : {}),
     ...(document.composition ? { composition: restoreReception(document.composition) } : {}),
@@ -140,8 +138,8 @@ export function reconcileSystemWorkflowDraftFromProfileDocumentV9(documentInput,
     ...((document.imageModules || currentDraftInput?.imageModules) ? { imageModules } : {}),
     ...((document.texts || currentDraftInput?.texts) ? { texts } : {}),
     ...((document.displays || currentDraftInput?.displays) ? { displays: [...publishedDisplays, ...structuredClone(privateDisplays)] } : {}),
-    grids: document.grids.length || privateGrids.length
-      ? [...document.grids.map(restoredPublicGrid), ...privateGrids, worldCover] : [],
+    grids: publicGrids.length || privateGrids.length
+      ? [...publicGrids.map(restoredPublicGrid), ...privateGrids, worldCover] : [],
   };
   const workbenchGroups = restorePublishedWorkbenchGroups(document, currentDraftInput, restored);
   if (workbenchGroups) restored.workbenchGroups = workbenchGroups;

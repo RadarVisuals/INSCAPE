@@ -16,7 +16,7 @@ export function displayPreset(geometry) {
 }
 
 export function displayModuleIds(draft) {
-  return [...(draft.grids.length ? [PRIMARY_DISPLAY_ID] : []), ...(draft.displays || []).map(module => module.id)];
+  return [...(draft.grids?.length ? [PRIMARY_DISPLAY_ID] : []), ...(draft.displays || []).map(module => module.id)];
 }
 
 export function displayContent(draft, id = PRIMARY_DISPLAY_ID) {

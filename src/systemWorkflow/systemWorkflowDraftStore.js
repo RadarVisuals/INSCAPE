@@ -17,6 +17,7 @@ import {
   projectWorkbenchDraft, replaceWorkbenchDraft, appendWorkbench, removeActiveWorkbench, assertWorkbenchName, assertWorkbenchIntroduction, assertThumbnailCrop,
 } from './domain/workbenchCollection.js';
 import {
+  createBlankWorkbenchDraft,
   createEmptySystemWorkflowDraft,
   ensureSystemWorkflowWorldCoverGrid,
   validateSystemWorkflowDraft,
@@ -156,8 +157,8 @@ export function createSystemWorkflowDraftStore({
 
   /** @param {string} profile @returns {WorkflowDraft} */
   const createEmpty = profile => {
-    const blank = createEmptySystemWorkflowDraft(profile, generateGridId ? { generateId: generateGridId } : undefined);
-    return deepFreeze(initialStudio ? { ...blank, grids: [], composition: createStudioComposition('canvas') } : blank);
+    if (initialStudio) return deepFreeze({ ...createBlankWorkbenchDraft(profile), composition: createStudioComposition('canvas') });
+    return deepFreeze(createEmptySystemWorkflowDraft(profile, generateGridId ? { generateId: generateGridId } : undefined));
   };
 
   /** @param {string} profile @returns {LoadedDraft} */
@@ -365,8 +366,7 @@ export function createSystemWorkflowDraftStore({
     createWorkbench(name, { workbench, layout, generateId = () => globalThis.crypto.randomUUID() } = {}) {
       assertWorkbenchName(name);
       const collection = withCurrentLayout(workbench);
-      /** @type {WorkflowDraft} */ const fresh = createEmptySystemWorkflowDraft(activeProfileAddress);
-      fresh.grids = []; // Ordinary new canvases do not create a parked Display.
+      /** @type {WorkflowDraft} */ const fresh = createBlankWorkbenchDraft(activeProfileAddress);
       if (layout !== undefined) {
         fresh.composition = createStudioComposition(layout);
       } else {

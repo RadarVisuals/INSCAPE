@@ -5,7 +5,6 @@ import { createWorkbenchCollection, appendWorkbench } from '../systemWorkflow/do
 import { buildCanvasPublication, canvasPublicationCandidates } from '../profileDocument/domain/canvasPublication.js';
 import { createArticle } from '../text/domain/article.js';
 import { publishedPresentationSnapshot, resolvePresentationSource, resolvePresentationDestination, resolveSceneBinding } from './presentationSources.js';
-import { workbenchOverviewModel } from '../public/workbenchOverview/workbenchOverviewModel.js';
 import { createDefaultWorkbenchPresentation, createTextPresentation } from '../profileDocument/domain/workbenchPresentation.js';
 
 const profileAddress = '0x' + '1'.repeat(40);
@@ -38,15 +37,6 @@ test('references resolve only against the assembled public versions, including r
   assert.equal(resolvePresentationSource(snapshot, { ...ref(), gridId: 'grid:removed' }).status, 'unavailable');
   assert.equal(resolvePresentationDestination(snapshot, { ...ref(), destinationId: 'camera:missing' }).status, 'unavailable');
   assert.equal(resolvePresentationDestination(snapshot, ref()).status, 'ready');
-});
-test('selected scenes project content explicitly; thumbnails keep their starting view and static articles stay unchanged', () => {
-  const { draft } = fixture(), before = structuredClone(draft);
-  const thumbnail = workbenchOverviewModel(draft), active = workbenchOverviewModel(draft, new Map(), { 'display:primary': { gridId: 'grid:two' } });
-  assert.equal(thumbnail.items.find(item => item.id === 'text:story').source.article.title, 'First');
-  assert.equal(active.items.find(item => item.id === 'display:primary').source.grid.id, 'grid:two');
-  assert.equal(active.items.find(item => item.id === 'text:story').source.article.title, 'Second');
-  assert.equal(active.items.find(item => item.id === 'text:static').source.article.title, 'Static');
-  assert.deepEqual(draft, before);
 });
 test('scene bindings use stable IDs and reject missing mappings, wrong canvas or publication sessions', () => {
   const { record, first } = fixture(), snapshot = publishedPresentationSnapshot(publish(record, ['workbench:main']));

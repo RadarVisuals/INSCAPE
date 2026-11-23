@@ -16,7 +16,7 @@ export default function PublishedCanvasGallery({ toolbarHost, entries, snapshot,
   const previews = useMemo(() => {
     const byId = new Map(snapshot.entries.map(entry => [entry.id, entry]));
     return entries.map(item => {
-      const entry = item.reception ? { ...item, draft: { profileAddress: snapshot.profileAddress, grids: [], composition: item.reception } }
+      const entry = item.reception ? { ...item, draft: { profileAddress: snapshot.profileAddress, composition: item.reception } }
         : byId.get(item.id);
       return { ...entry, model: workbenchOverviewModel(entry.draft) };
     });

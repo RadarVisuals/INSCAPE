@@ -677,7 +677,9 @@ test('an advanced Display canvas retains its original editable record and reject
 test('a first Studio session opens a mixed canvas while preserving an existing draft on subsequent loads', () => {
   const data = new Map();
   const storage = { getItem: key => data.get(key) ?? null, setItem: (key, value) => data.set(key, value) };
-  const root = createSystemWorkflowDraftStore({ profileAddress: profile, storage, initialStudio: true });
+  const root = createSystemWorkflowDraftStore({ profileAddress: profile, storage, initialStudio: true,
+    generateGridId: () => { throw new Error('Studio tried to create a Display grid'); } });
+  assert.deepEqual(root.getSnapshot().grids, []);
   assert.equal(data.size, 0);
   assert.deepEqual(root.getSnapshot().composition.cells, []);
   const native = createReceptionEditorScope(root, { documentId: root.getWorkbenchId() });

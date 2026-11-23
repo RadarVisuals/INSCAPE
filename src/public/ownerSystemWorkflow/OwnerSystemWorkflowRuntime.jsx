@@ -340,7 +340,7 @@ export function WorkbenchSession({
     const item = sharedStore.listWorkbenches().find(item => item.id === sharedStore.getWorkbenchId());
     const source =
       !reception && item
-        ? workspaceMotion.current?.capture(workbenchOverviewModel(draft, assetsById), item.name, item.id)
+        ? workspaceMotion.current?.capture(workbenchOverviewModel(draft), item.name, item.id)
         : null;
     onOpenWorkbenchOverview(source);
     setResponsivePreview(null);
@@ -844,7 +844,6 @@ export function WorkbenchSession({
                       <OwnerWorkbenchOverview
                         store={overview.store}
                         preferences={workbenchPreferenceStore}
-                        reviewAssets={reviewAssets}
                         view={overview.view}
                         onViewChange={overview.onViewChange}
                         onEdit={(id, source) =>

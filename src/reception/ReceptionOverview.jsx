@@ -39,8 +39,8 @@ function ReceptionPage({ reception, model, address, ownerEditingAllowed = false,
     setOpened({ id: destination.entry.id, destinationId: reference.destinationId, origin: button?.closest('.workbench-overview-card, .reception-region, .reception-document-cell') });
   };
   const selectedCanvas = presentation?.snapshot.entries.find(entry => entry.id === opened?.id);
-  const selectedModel = useMemo(() => selectedCanvas && workbenchOverviewModel(selectedCanvas.draft, presentation?.assets),
-    [selectedCanvas, presentation?.assets]);
+  const selectedModel = useMemo(() => selectedCanvas && workbenchOverviewModel(selectedCanvas.draft),
+    [selectedCanvas]);
   const close = () => { setOpened(null); restoreFocus(() => trigger.current?.isConnected ? trigger.current : pageRoot.current); };
   useLayoutEffect(() => {
     if (exploring) roomTitle.current?.focus({ preventScroll: true });

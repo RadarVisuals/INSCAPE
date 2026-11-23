@@ -558,15 +558,6 @@
       ]
     },
     {
-      "name": "display-canvas-size",
-      "category": "targeted",
-      "rationale": "Behoud als gerichte regressie van de aanwezige experimentele Display/scenegrens; geparkeerde creatie is geen vervangingsbewijs. Concreet: Snap to grid controls actual Display dragging and keyboard resizing.",
-      "prerequisites": [
-        "Host: runner_vite.",
-        "INSCAPE_TEXT_ROOT={origin}"
-      ]
-    },
-    {
       "name": "display-core",
       "category": "targeted",
       "rationale": "Behoud als gerichte regressie van de aanwezige experimentele Display/scenegrens; geparkeerde creatie is geen vervangingsbewijs. Concreet: Display has corner resize and Workbench zoom without independent enlargement.",

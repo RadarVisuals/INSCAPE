@@ -6,8 +6,7 @@ import { useSharedTextTools } from '../../text/SharedTextTools.jsx';
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import { createPortal, flushSync } from 'react-dom';
 import RackMenu from '../menus/RackMenu.jsx';
-import { PRIMARY_DISPLAY_ID, displayPreset } from '../../systemWorkflow/domain/displayModules.js';
-import DisplaySizeDialog from './DisplaySizeDialog.jsx';
+import { PRIMARY_DISPLAY_ID } from '../../systemWorkflow/domain/displayModules.js';
 import { isSystemWorkflowWorldCoverGrid } from '../../systemWorkflow/domain/systemWorkflowDraft.js';
 import OwnerSystemWorkflowCanvas from './OwnerSystemWorkflowCanvas.jsx';
 import DisplayFocusViewer from './DisplayFocusViewer.jsx';
@@ -42,7 +41,6 @@ export default forwardRef(function DisplayModule({ assetsById, controller, autho
   const inactive = suspended || !toolAvailable;
   const toolScope = `${displayName || windowProps.initialPresentation?.name || 'Display Module'} / ${controller.selectedGrid?.title || 'Untitled Grid'}`;
   const [moduleMenu, setModuleMenu] = useState(null);
-  const [sizeDialog, setSizeDialog] = useState(null);
   const [playingGrids, setPlayingGrids] = useState(false);
   const [editingText, setEditingText] = useState(null);
   const [liftInspection, setLiftInspection] = useState(false);
@@ -58,11 +56,6 @@ export default forwardRef(function DisplayModule({ assetsById, controller, autho
     setEditingText(current => selectedTextId ? current?.id === selectedTextId && current.gridId === controller.selectedGridId
       ? current : { gridId: controller.selectedGridId, id: selectedTextId } : null);
   }, [textTools?.open, textTools?.activeModuleId, targetId, inactive, authoringLocked, selectedTextId, controller.selectedGridId]);
-  const formatCommands = [
-    { id: 'landscape', label: 'HORIZONTAL 16:9', checkable: true, selected: displayPreset(controller.draft.geometry) === 'LANDSCAPE', disabled: authoringLocked },
-    { id: 'portrait', label: 'VERTICAL 9:16', checkable: true, selected: displayPreset(controller.draft.geometry) === 'PORTRAIT', disabled: authoringLocked },
-    { id: 'custom-size', label: 'CUSTOM SIZE…', checkable: true, selected: displayPreset(controller.draft.geometry) === 'CUSTOM', disabled: authoringLocked },
-  ];
   const moduleCommand = id => {
     if (id === 'tool-layers' || id === 'tool-metadata') {
       onRevealInstruments();
@@ -71,13 +64,6 @@ export default forwardRef(function DisplayModule({ assetsById, controller, autho
     if (id === 'play-grids' && !playbackDisabled) { controller.replaceSelection([]); setPlayingGrids(current => !current); }
     if (id === 'appearance' && !authoringLocked) tools.command('appearance', true, moduleMenu?.trigger || document.activeElement, targetId);
     if (id === 'toggle-library') onToggleLibrary?.();
-    if ((id === 'landscape' || id === 'portrait') && !authoringLocked) controller.setDisplayFormat(id.toUpperCase());
-    if (id === 'custom-size' && !authoringLocked) {
-      controller.clearError();
-      setSizeDialog({ geometry: controller.draft.geometry, appearance: controller.draft.appearance, trigger: moduleMenu?.trigger || shortcutTargetRef.current?.node });
-    }
-    if (id === 'include-display') controller.setDisplayVisibility('PRIVATE', 'PUBLIC');
-    if (id === 'exclude-display') controller.setDisplayVisibility('PUBLIC', 'PRIVATE');
     if (id === 'close-module') {
       viewer.close();
       shortcutTargetRef.current?.show();
@@ -103,7 +89,7 @@ export default forwardRef(function DisplayModule({ assetsById, controller, autho
     onOpen: onInspect, resolveAssetDimensions });
   const inspectionPlacement = controller.selectedPlacements.length === 1 ? controller.selectedPlacements[0] : null;
   const inspectDisabled = inactive || panelOccupied || playingGrids || liftMoving || playbackState.moving || playbackState.offset
-    || Boolean(viewer.placementId || crop.cropSession || editingText || sizeDialog);
+    || Boolean(viewer.placementId || crop.cropSession || editingText);
   const inspectArtwork = source => {
     const id = source?.closest?.('[data-system-workflow-placement-id]')?.dataset.systemWorkflowPlacementId || inspectionPlacement?.id;
     const placement = controller.selectedGrid?.placements.find(item => item.id === id);
@@ -151,12 +137,9 @@ export default forwardRef(function DisplayModule({ assetsById, controller, autho
   const playbackDisabled = controller.draft.grids.filter((grid) => !isSystemWorkflowWorldCoverGrid(grid)).length < 2
     || inactive || isSystemWorkflowWorldCoverGrid(controller.selectedGrid) || panelOccupied || Boolean(viewer.placementId || crop.cropSession);
   const moduleCommands = [{ id: 'tools', label: 'TOOLS' },
-    ...(controller.draft.grids.filter(grid => !isSystemWorkflowWorldCoverGrid(grid)).length > 1 ? [{ id: 'play-grids', label: playingGrids ? 'PAUSE GRIDS' : 'PLAY GRIDS', disabled: playbackDisabled }] : []),{ id: 'appearance', label: 'APPEARANCE', disabled: authoringLocked }, { id: 'format', label: 'FORMAT', disabled: authoringLocked },
-    ...(onToggleLibrary ? [{ id: 'toggle-library', label: 'LIBRARY' }] : []),
-    ...(controller.moduleId !== PRIMARY_DISPLAY_ID ? [controller.visibility === 'PUBLIC'
-      ? { id: 'exclude-display', label: 'MAKE DISPLAY PRIVATE' }
-      : { id: 'include-display', label: 'INCLUDE DISPLAY IN PUBLICATION' }] : [])];
-  const moduleSubmenu = id => id === 'tools' ? displayToolCommands() : id === 'format' ? formatCommands : [];
+    ...(controller.draft.grids.filter(grid => !isSystemWorkflowWorldCoverGrid(grid)).length > 1 ? [{ id: 'play-grids', label: playingGrids ? 'PAUSE GRIDS' : 'PLAY GRIDS', disabled: playbackDisabled }] : []),{ id: 'appearance', label: 'APPEARANCE', disabled: authoringLocked },
+    ...(onToggleLibrary ? [{ id: 'toggle-library', label: 'LIBRARY' }] : [])];
+  const moduleSubmenu = id => id === 'tools' ? displayToolCommands() : [];
   useEffect(() => {
     if (playbackDisabled) pauseGrids();
   }, [playbackDisabled, pauseGrids]);
@@ -169,7 +152,6 @@ export default forwardRef(function DisplayModule({ assetsById, controller, autho
     cancellation.current.crop();
     cancellation.current.viewer();
     setModuleMenu(null);
-    setSizeDialog(null);
   }, [inactive]);
   useEffect(() => {
     if (toolTarget !== targetId) cancellation.current.crop();
@@ -185,7 +167,7 @@ export default forwardRef(function DisplayModule({ assetsById, controller, autho
       reducedMotion={reducedMotion} onLiftInspectionChange={setLiftInspection} onLiftTransitionChange={setLiftMoving}
       onLiftReturn={viewer.close}
       onInspect={() => inspectArtwork()} inspectDisabled={!canInspect}
-      liftDisabled={inactive || panelOccupied || Boolean(crop.cropSession || editingText || sizeDialog)}
+      liftDisabled={inactive || panelOccupied || Boolean(crop.cropSession || editingText)}
       moduleCommands={moduleCommands} moduleSubmenu={moduleSubmenu} onModuleCommand={moduleCommand}
       shortcutTargetRef={shortcutTargetRef} assetsById={assetsById} authoringLocked={authoringLocked}
       displaySurface={controller.draft?.appearance.surfaceId} moduleAppearance={controller.draft.appearance}
@@ -232,9 +214,6 @@ export default forwardRef(function DisplayModule({ assetsById, controller, autho
       <ModuleSurfaceControls display value={controller.draft.appearance.edges} frame={controller.draft.appearance.frame !== false}
         onChange={edges => controller.setAppearance({ edges })} onFrameChange={frame => controller.setAppearance({ frame })} />
     </SharedDisplayToolContent>
-    {sizeDialog && !suspended && !authoringLocked && <DisplaySizeDialog geometry={sizeDialog.geometry} appearance={sizeDialog.appearance}
-      returnFocus={sizeDialog.trigger} error={controller.error} onClose={() => setSizeDialog(null)}
-      onConfirm={(size, appearance) => controller.setDisplayFormat(size, sizeDialog.geometry, appearance, sizeDialog.appearance)} />}
     {moduleMenu && createPortal(<RackMenu anchor={moduleMenu} commands={[...moduleCommands,
       { id: 'close-module', label: 'CLOSE MODULE' },
       ...(moduleMenu.onDelete ? [{ id: 'delete-module', label: 'DELETE MODULE' }] : []),

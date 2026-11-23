@@ -77,7 +77,7 @@ function App() {
   const generation = useSyncExternalStore(root.subscribe, root.getGeneration);
   const snapshot = useMemo(() => new URLSearchParams(location.search).has('public') ? publishedPresentationSnapshot(publish())
     : { kind: 'local', profileAddress, revision: `fixture:${generation}`, entries: root.listWorkbenches().map(item => root.readWorkbench(item.id)) }, [generation]);
-  const previews = useMemo(() => snapshot.entries.map(entry => ({ ...entry, model: workbenchOverviewModel(entry.draft, assetMap) })), [snapshot]);
+  const previews = useMemo(() => snapshot.entries.map(entry => ({ ...entry, model: workbenchOverviewModel(entry.draft) })), [snapshot]);
   const selected = previews.find(item => item.id === selectedId) || previews[0];
   if (surface === 'canvases') return <div className="visitor-publication">
     <PublicWorkspaceHeader model={model} current="Gallery" onProfile={() => setSurface('reception')} />

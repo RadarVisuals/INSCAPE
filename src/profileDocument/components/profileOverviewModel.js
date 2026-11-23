@@ -5,7 +5,7 @@ import { createDefaultWorkbenchPresentation } from '../domain/workbenchPresentat
 export function publicDisplayModules(document) {
   const { displays, miniApps, texts, imageModules, shapes, keeperDocks, workbenchGroups, reception, canvas, canvases, ...shared } = document;
   return [{ id: 'display:primary', geometry: document.geometry, appearance: document.appearance, grids: document.grids }, ...(displays || [])]
-    .filter(module => module.grids.length > 0).map(module => {
+    .filter(module => module.grids?.length > 0).map(module => {
       const presentation = module.id === 'display:primary' ? document.workbench?.display
         : document.workbench?.displays?.find(item => item.id === module.id);
       const { id: presentationId, ...display } = presentation || createDefaultWorkbenchPresentation().display;

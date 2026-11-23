@@ -41,8 +41,7 @@ import { DISPLAY_TEXT_KEYS, isTextPlacement, validDisplayText } from '../../syst
 
 const DOCUMENT_KEYS = [
   'documentType', 'version', 'documentId', 'revision', 'createdAt', 'exportedAt',
-  'network', 'profile', 'artboard', 'geometry', 'appearance', 'identityPresentation',
-  'grids', 'metadata',
+  'network', 'profile', 'identityPresentation', 'metadata',
 ];
 const APPEARANCE_KEYS = ['surfaceId', 'guideMode', 'guideSize', 'guideColor'];
 const GRID_KEYS = ['id', 'title', 'subtitle', 'visibility', 'labelVisible', 'labelAnchor', 'labelOffset', 'placements'];
@@ -209,7 +208,9 @@ function validateDocument(input, { rawSize } = {}, checkLinks) {
   // collection envelope must not consume the composition's existing depth budget.
   const depthInput = record(input) ? Object.fromEntries(Object.entries(input).filter(([key]) => key !== 'canvases')) : input;
   if (depth(depthInput) > SYSTEM_WORKFLOW_LIMITS.maxDepth) fail('$', 'excessive_depth', 'Document nesting is too deep');
-  if (!allowedKeys(input, DOCUMENT_KEYS, ['workbench', 'displays', 'miniApps', 'texts', 'imageModules', 'shapes', 'keeperDocks', 'workbenchGroups', 'workbenchIndex', 'artworkLayers', 'reception', 'receptionDestinations', 'composition', 'canvas', 'canvases'])) {
+  const hasDisplay = DISPLAY_CONTENT_KEYS.some(key => Object.hasOwn(input || {}, key));
+  const required = hasDisplay ? [...DOCUMENT_KEYS, ...DISPLAY_CONTENT_KEYS] : DOCUMENT_KEYS;
+  if (!allowedKeys(input, required, ['workbench', 'displays', 'miniApps', 'texts', 'imageModules', 'shapes', 'keeperDocks', 'workbenchGroups', 'workbenchIndex', 'artworkLayers', 'reception', 'receptionDestinations', 'composition', 'canvas', 'canvases'])) {
     fail('$', 'unexpected_fields', 'Document contains unexpected or missing fields');
     return { valid: false, errors, value: null, size: measuredSize };
   }
@@ -233,19 +234,21 @@ function validateDocument(input, { rawSize } = {}, checkLinks) {
     || Object.hasOwn(cached || {}, 'avatarUrl') && !(safeText(cached.avatarUrl, SYSTEM_WORKFLOW_LIMITS.maxUrlLength, { empty: false }) && isValidPublishedAssetUrl(cached.avatarUrl))) {
     fail('profile.cachedIdentity', 'invalid_identity', 'Invalid cached public identity fallback');
   }
-  if (!isDisplayFormat(input.artboard, input.geometry)) fail('artboard', 'invalid_artboard', 'Invalid Display format');
-  if (!exactKeys(input.appearance, [...APPEARANCE_KEYS, ...retiredInterfaceKeys(input.appearance), ...['edges', 'frame', ...DISPLAY_CANVAS_APPEARANCE_KEYS].filter(key => Object.hasOwn(input.appearance || {}, key))])
-    || !validDisplayCanvasAppearance(input.appearance)
-    || input.appearance?.edges !== undefined && !validModuleEdges(input.appearance.edges)
-    || input.appearance?.frame !== undefined && typeof input.appearance.frame !== 'boolean'
-    || !sets.surfaces.has(input.appearance.surfaceId)
-    || Object.hasOwn(input.appearance || {}, 'menuSurfaceId') && !sets.surfaces.has(input.appearance.menuSurfaceId)
-    || Object.hasOwn(input.appearance || {}, 'dossierSurfaceId') && !sets.surfaces.has(input.appearance.dossierSurfaceId)
-    || !sets.guides.has(input.appearance.guideMode)
-    || !Number.isSafeInteger(input.appearance.guideSize)
-    || input.appearance.guideSize < SYSTEM_WORKFLOW_GRID_DENSITY.minimum
-    || input.appearance.guideSize > SYSTEM_WORKFLOW_GRID_DENSITY.maximum
-    || !HEX_COLOR.test(input.appearance.guideColor || '')) fail('appearance', 'invalid_appearance', 'Invalid public appearance');
+  if (hasDisplay) {
+    if (!isDisplayFormat(input.artboard, input.geometry)) fail('artboard', 'invalid_artboard', 'Invalid Display format');
+    if (!exactKeys(input.appearance, [...APPEARANCE_KEYS, ...retiredInterfaceKeys(input.appearance), ...['edges', 'frame', ...DISPLAY_CANVAS_APPEARANCE_KEYS].filter(key => Object.hasOwn(input.appearance || {}, key))])
+      || !validDisplayCanvasAppearance(input.appearance)
+      || input.appearance?.edges !== undefined && !validModuleEdges(input.appearance.edges)
+      || input.appearance?.frame !== undefined && typeof input.appearance.frame !== 'boolean'
+      || !sets.surfaces.has(input.appearance.surfaceId)
+      || Object.hasOwn(input.appearance || {}, 'menuSurfaceId') && !sets.surfaces.has(input.appearance.menuSurfaceId)
+      || Object.hasOwn(input.appearance || {}, 'dossierSurfaceId') && !sets.surfaces.has(input.appearance.dossierSurfaceId)
+      || !sets.guides.has(input.appearance.guideMode)
+      || !Number.isSafeInteger(input.appearance.guideSize)
+      || input.appearance.guideSize < SYSTEM_WORKFLOW_GRID_DENSITY.minimum
+      || input.appearance.guideSize > SYSTEM_WORKFLOW_GRID_DENSITY.maximum
+      || !HEX_COLOR.test(input.appearance.guideColor || '')) fail('appearance', 'invalid_appearance', 'Invalid public appearance');
+  }
   validateIdentity(input.identityPresentation, fail);
   if (Object.hasOwn(input, 'composition') && (input.composition?.version !== 3 || !validReception(input.composition, true)))
     fail('composition', 'invalid_composition', 'Invalid published Studio composition');
@@ -300,9 +303,9 @@ function validateDocument(input, { rawSize } = {}, checkLinks) {
   if (Object.hasOwn(input, 'artworkLayers') && !validArtworkLayers(input.artworkLayers, input, true)) fail('artworkLayers', 'invalid_artwork_layers', 'Invalid public artwork order');
   if (Object.hasOwn(input, 'workbenchGroups') && !validPublishedWorkbenchGroups(input.workbenchGroups, input)) fail('workbenchGroups', 'invalid_workbench_groups', 'Invalid public Workbench groups or unavailable members');
   if (Object.hasOwn(input, 'workbench') && !isValidWorkbenchPresentation(input.workbench)) fail('workbench', 'invalid_workbench', 'Invalid public Workbench configuration');
-  if (!Array.isArray(input.grids) || input.grids.length > SYSTEM_WORKFLOW_LIMITS.maxGrids) {
+  if (hasDisplay && (!Array.isArray(input.grids) || input.grids.length > SYSTEM_WORKFLOW_LIMITS.maxGrids)) {
     fail('grids', 'invalid_grid_count', 'One to 24 public Grids required');
-  } else {
+  } else if (hasDisplay) {
     const gridIds = new Set();
     const placementIds = new Set();
     let totalAssetReferences = input.identityPresentation?.avatar?.asset == null ? 0 : 1;
@@ -347,12 +350,12 @@ function validateDocument(input, { rawSize } = {}, checkLinks) {
   if (exactKeys(input.metadata, [])) {
     // Older v9 publications without an authored World Cover remain valid.
   } else if (exactKeys(input.metadata, ['worldCover'])) {
-    if (input.grids?.length === 0) fail('metadata.worldCover', 'invalid_world_cover', 'An absent Display cannot retain a World Cover');
+    if (!input.grids?.length) fail('metadata.worldCover', 'invalid_world_cover', 'An absent Display cannot retain a World Cover');
     worldCoverAssetReferences = validateWorldCover(input.metadata.worldCover, fail);
   } else {
     fail('metadata', 'unexpected_fields', 'Profile metadata contains unsupported fields');
   }
-  const documentAssetReferences = (input.grids || []).reduce((total, grid) => total + (grid?.placements?.length || 0), 0)
+  const documentAssetReferences = (Array.isArray(input.grids) ? input.grids : []).reduce((total, grid) => total + (grid?.placements?.length || 0), 0)
     + worldCoverAssetReferences + (input.identityPresentation?.avatar?.asset ? 1 : 0) + moduleReferences
     + (input.workbench?.display?.shortcut?.icon ? 1 : 0) + (input.workbench?.displays || []).filter(module => module.shortcut?.icon).length
     + keeperReferenceCount(input.keeperDocks) + imageReferenceCount(input.imageModules) + receptionReferenceCount(input.reception) + receptionReferenceCount(input.composition);

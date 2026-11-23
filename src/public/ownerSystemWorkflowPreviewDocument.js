@@ -6,7 +6,7 @@ export const OWNER_SYSTEM_WORKFLOW_PREVIEW_MEDIA_TIMEOUT = 8_000;
 
 export function profileDocumentV9EntryGrid(documentInput) {
   const document = assertValidProfileDocumentV9(documentInput);
-  return document.grids[0];
+  return document.grids?.[0];
 }
 
 export function ownerSystemWorkflowPreviewEntryMediaUrls(previewDocument) {

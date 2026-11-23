@@ -229,6 +229,7 @@ test('publishing the existing Bento on its own never publishes the active canvas
 
 test('named Studio composition survives publication and fresh restore with private layers excluded', () => {
   const record = fixture();
+  for (const item of record.workbenches) item.content.grids = [];
   const composition = createStudioComposition('bento');
   const free = { id: 'text:free', article: createArticle('Free title'), visibility: 'PUBLIC' };
   const member = { id: 'text:cell', article: createArticle('Cell caption'), visibility: 'PUBLIC' };
@@ -240,7 +241,15 @@ test('named Studio composition survives publication and fresh restore with priva
   }
   composition.cells[0].members = [member.id];
   record.workbenches[1].content.composition = composition;
-  const doc = publish(record, ['workbench:main', 'workbench:second']);
+  const bytes = canonicalSerializeProfileDocumentV9(publish(record, ['workbench:main', 'workbench:second']));
+  const doc = parseProfileDocumentV9Json(bytes);
+  for (const content of [doc, doc.canvases[0].content]) {
+    for (const key of ['grids', 'artboard', 'appearance', 'geometry']) assert.equal(Object.hasOwn(content, key), false);
+  }
+  assert.equal(canonicalSerializeProfileDocumentV9(doc), bytes);
+  const partial = structuredClone(doc);
+  partial.canvases[0].content.grids = [];
+  assert.equal(validateProfileDocumentV9(partial).valid, false);
   const published = doc.canvases[0].content.composition;
   assert.equal(published.version, 3);
   assert.deepEqual(published.texts.map(t => t.id), [free.id, member.id]);
@@ -347,9 +356,9 @@ test('removing the last work leaves an empty verified profile and supports a lat
     const empty = buildGalleryRemoval(doc, id, doc.exportedAt);
     assert.equal(empty.canvas, null);
     assert.deepEqual(empty.canvases, []);
-    assert.deepEqual(empty.grids, []);
+    assert.equal(Object.hasOwn(empty, 'grids'), false);
     assert.deepEqual(empty.metadata, {});
-    assert.ok(CANVAS_CONTENT_KEYS.slice(5).every(key => !Object.hasOwn(empty, key)));
+    assert.deepEqual(CANVAS_CONTENT_KEYS.filter(key => Object.hasOwn(empty, key)), ['metadata']);
     assert.doesNotMatch(canonicalSerializeProfileDocumentV9(empty), /Public scene|First canvas/);
     assert.deepEqual(parseProfileDocumentV9Json(canonicalSerializeProfileDocumentV9(empty)), empty);
     assert.deepEqual(publishedCompositionEntries(empty), []);
@@ -396,7 +405,7 @@ test('batch Gallery removal promotes the first surviving work and commits mixed 
   const empty = buildGalleryRemoval(allGallery, ids);
   assert.deepEqual(publishedCompositionEntries(empty), []);
   assert.equal(empty.revision, allGallery.revision + 1);
-  assert.deepEqual(empty.grids, []);
+  assert.equal(Object.hasOwn(empty, 'grids'), false);
   assert.equal(empty.canvas, null);
   assert.equal(Object.hasOwn(empty, 'reception'), false);
 });

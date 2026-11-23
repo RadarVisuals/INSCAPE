@@ -4,7 +4,7 @@
   "systemVersion": "1.0.0",
   "note": "Generated from production and design-system reference CSS. Reference roles are preview-only. Values remain CSS expressions, with selector and media scopes; this is not a DTCG interchange file. Runtime custom properties and local overrides are included and are not automatically public design tokens.",
   "counts": {
-    "files": 113,
+    "files": 112,
     "definitions": 895,
     "names": 466
   },
@@ -5353,7 +5353,7 @@
     {
       "path": "src/public/ownerSystemWorkflow/displayCanvasControls.css",
       "role": "Local",
-      "sha256": "a9795357ce97dd18b1d9320250279ad7d59fc6c4802777f6ca53c0c8d8383147",
+      "sha256": "ecd40ad6eaa731b25f3c46d1f47b8824f6fb1842be62f8ead1fcc6aa000dcd48",
       "definitions": [],
       "references": [
         "--workflow-ink",
@@ -5420,21 +5420,6 @@
       "definitions": [],
       "references": [
         "--workbench-control-scale"
-      ]
-    },
-    {
-      "path": "src/public/ownerSystemWorkflow/displaySize.css",
-      "role": "Local",
-      "sha256": "576ac64d0472beb2c2e3a11abf57e5a7077f012f97cc37557fa55185498d83c9",
-      "definitions": [],
-      "references": [
-        "--workflow-border",
-        "--workflow-hover",
-        "--workflow-ink",
-        "--workflow-panel",
-        "--workflow-type-control",
-        "--workflow-type-panel-body",
-        "--workflow-type-panel-heading"
       ]
     },
     {
