@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createSystemWorkflowDraftStore, systemWorkflowDraftKey } from '../systemWorkflow/systemWorkflowDraftStore.js';
+import { drawReceptionBentoCell } from './receptionCellDrawing.js';
 import { createReceptionEditorScope } from './receptionEditorScope.js';
 import { addShape, editShape } from '../shapes/shapeSession.js';
 import { removeWorkbenchModule } from '../systemWorkflow/removeWorkbenchModule.js';
@@ -597,24 +598,27 @@ test('adopting a saved free canvas keeps its identity, native frames, layers, pr
     shapes: before.shapes.map(shape => shape.id === a ? { ...shape, visibility: 'PRIVATE' } : shape) };
   assert.ok(root.commitCompletedOperation(saved, { expectedGeneration: root.getGeneration() }));
   const name = root.readWorkbench(id).name;
+  const first = root.beginFirstCell();
+  const cellId = 'shape:first-cell';
+  const placed = drawReceptionBentoCell(first.composition, cellId, { left: 200, top: 300, width: 200, height: 180 }, 'right');
+  assert.deepEqual(root.getDraft(), saved);
   fail(true);
-  assert.equal(root.enableCurrentWorkbenchCells(), false);
+  assert.equal(first.place(placed), false);
   assert.deepEqual(root.getDraft(), saved);
   fail(false);
-  assert.equal(root.enableCurrentWorkbenchCells(), true);
+  assert.equal(first.place(placed), true);
+  assert.throws(() => first.place(placed), /changed/);
   assert.equal(root.getWorkbenchId(), id);
   assert.equal(root.readWorkbench(id).name, name);
   const native = createReceptionEditorScope(root, { documentId: id });
   assert.deepEqual(native.getSnapshot().imageModules, saved.imageModules);
   assert.deepEqual(native.getSnapshot().workbench.imageModules, saved.workbench.imageModules);
-  assert.deepEqual(native.getSnapshot().shapes, saved.shapes);
-  assert.deepEqual(native.getSnapshot().artworkLayers, saved.artworkLayers);
+  assert.deepEqual(native.getSnapshot().shapes.filter(item => item.id !== cellId), saved.shapes);
+  assert.deepEqual(native.getSnapshot().artworkLayers, [...saved.artworkLayers, cellId]);
+  assert.deepEqual(native.getCells().map(cell => cell.id), [cellId]);
   for (const shape of saved.workbench.shapes)
     assert.deepEqual(receptionModuleWindow(native.getReception(), shape.id), shape.window);
   assert.ok(!projectReception(native.getReception()).shapes.some(shape => shape.id === a));
-  native.turnShapeIntoCell(b);
-  assert.ok(native.undo());
-  assert.equal(native.getCells().length, 0);
   assert.ok(native.undo());
   native.release();
   assert.deepEqual(root.getDraft(), saved);
@@ -628,11 +632,28 @@ test('adopting a saved free canvas keeps its identity, native frames, layers, pr
   assert.deepEqual(restored.getDraft().composition, root.getDraft().composition);
 });
 
+test('placing the first cell and undoing it retain the live Canvas image position', () => {
+  const { root, scope } = fixture();
+  scope.release();
+  root.createWorkbench('Cached layout');
+  addImageModule(root.getWorkbenchScope(), profile, { position: { left: 75, top: 92 }, size: { width: 220, height: 180 } });
+  const saved = root.getDraft();
+  const live = structuredClone(saved.workbench);
+  live.imageModules[0].position = { left: 180, top: 260 };
+  const first = root.beginFirstCell(live);
+  const placed = drawReceptionBentoCell(first.composition, 'shape:first-cell', { left: 500, top: 300, width: 200, height: 180 }, 'right');
+  assert.deepEqual(root.getDraft(), saved);
+  assert.ok(first.place(placed));
+  assert.deepEqual(root.getDraft().composition.workbench.imageModules, live.imageModules);
+  assert.ok(root.undo());
+  assert.deepEqual(root.getDraft(), { ...saved, workbench: live });
+});
+
 test('an advanced Display canvas retains its original editable record and rejects incompatible adoption', () => {
   const { root, scope, canvas } = fixture();
   scope.release();
   const before = root.getDraft();
-  assert.throws(() => root.enableCurrentWorkbenchCells(), /uses Display/);
+  assert.throws(() => root.beginFirstCell(), /uses Display/);
   assert.deepEqual(root.getDraft(), before);
   assert.deepEqual(root.getDraft().grids, canvas.grids);
 });
@@ -677,10 +698,13 @@ test('a Canvas starter can use full canvas modules under the same name, ID and u
   assert.deepEqual(root.getDraft(), before);
   assert.ok(root.redo());
   const canvas = root.getWorkbenchScope();
+  const group = editWorkbenchGroups(canvas, profile, { type: 'create', name: 'Shapes', memberIds: [shape] });
+  const grouped = root.getDraft();
+  assert.throws(() => root.beginFirstCell(), /workspace groups/);
+  assert.deepEqual(root.getDraft(), grouped);
   const app = addMiniApp(canvas, profile);
   openWorkbenchIndex(canvas, profile);
-  const group = editWorkbenchGroups(canvas, profile, { type: 'create', name: 'Shapes', memberIds: [shape] });
-  assert.throws(() => root.enableCurrentWorkbenchCells(), /uses an interactive module/);
+  assert.throws(() => root.beginFirstCell(), /uses an interactive module/);
   const reloaded = createSystemWorkflowDraftStore({ profileAddress: profile, storage }).readWorkbench(id);
   assert.equal(reloaded.name, 'Modules');
   assert.equal(reloaded.draft.miniApps[0].id, app);

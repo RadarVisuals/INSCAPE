@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import OwnerSystemWorkflowRuntime from '../src/public/ownerSystemWorkflow/OwnerSystemWorkflowRuntime.jsx';
+import { interfaceTheme } from '../src/interfaceTheme.js';
 import ProfileOverview from '../src/profileDocument/components/ProfileOverview.jsx';
 import { createSystemWorkflowDraftStore } from '../src/systemWorkflow/systemWorkflowDraftStore.js';
 import { createReceptionEditorDocument, withReceptionModuleWindow } from '../src/reception/receptionEditorDocument.js';
@@ -48,12 +49,12 @@ if (!root.getDraft().reception?.shapes?.length) {
     workbench: { ...(current.workbench || createDefaultWorkbenchPresentation()), texts: [{ id: 'text:source', open: true, window: { left: 100, top: 100, width: 500, height: 300 } }] } },
   { expectedGeneration: root.getGeneration(), recordHistory: false })) throw new Error('Could not seed the Reception layer fixture');
 }
-window.receptionLayerFixture = { root };
+window.receptionLayerFixture = { root, theme: interfaceTheme };
 function Fixture() {
   const [editing, setEditing] = useState(true);
   return editing ? <OwnerSystemWorkflowRuntime profileAddress={profileAddress} rootStore={root} reviewStorage={storage}
-    receptionEditorRequested onOpenReception={() => setEditing(false)}
+    receptionEditorRequested returnLabel="Profile" onOpenReception={() => setEditing(false)}
     reviewAssets={assets} reviewCategories={[]} reviewActivity={[]} reviewProfile={{ name: 'Layer parity' }} />
-    : <ProfileOverview document={buildProfileDocumentV9({ profileAddress, systemWorkflowDraft: root.getDraft(), assetRecords: assets })} />;
+    : <ProfileOverview reception document={buildProfileDocumentV9({ profileAddress, systemWorkflowDraft: root.getDraft(), assetRecords: assets })} />;
 }
 createRoot(document.getElementById('root')).render(<Fixture />);

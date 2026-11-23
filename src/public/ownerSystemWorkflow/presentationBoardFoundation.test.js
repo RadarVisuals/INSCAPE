@@ -9,7 +9,7 @@ test('owner Display Module reuses the existing interactive canvas inside one cli
   const display = read('./DisplayModule.jsx');
   const modules = read('./OwnerWorkbenchModules.jsx');
   assert.match(runtime, /<OwnerWorkbenchModules/);
-  assert.match(modules, /<OwnerDisplayInstance/);
+  assert.doesNotMatch(modules, /OwnerDisplayInstance/);
   assert.doesNotMatch(runtime, /selectedPlacements|useOwnerSystemWorkflowCrop|useOwnerSystemWorkflowFocusViewer|transitionDisplayInstruments/);
   assert.doesNotMatch(modules, /selectedPlacements|useOwnerSystemWorkflowCrop|useOwnerSystemWorkflowFocusViewer|transitionDisplayInstruments/);
   const canonicalExport = read('./PresentationBoard.jsx');
@@ -140,7 +140,6 @@ test('owner Display Module reuses the existing interactive canvas inside one cli
   assert.doesNotMatch(board, /<strong>\{authoringLocked \? 'LOCKED' : 'LOCK'\}<\/strong>/);
   assert.match(board, /authoringLocked \? <LockKeyhole \/> : <Lock \/>/);
   assert.match(styles, /\[data-authoring-locked\] \.system-workflow__composition-lock \{[^}]*border-color: #ef4d55;[^}]*color: #ff5a62;[^}]*box-shadow:/s);
-  assert.match(read('./OwnerDisplayInstance.jsx'), /authoringLocked=\{locked\}/);
   assert.match(display, /if \(!authoringLocked\) crop\.cancelCrop\(\);/);
   assert.match(canvas, /authoringDisabled: authoringLocked[\s\S]*disabled: interactionDisabled/);
   assert.match(canvas, /onClick=\{\(event\) => \{[\s\S]*controller\.selectPlacement/);

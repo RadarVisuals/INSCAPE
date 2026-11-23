@@ -153,56 +153,6 @@
       "reason": "The animation effect captures the return trigger for one lift. PresentationBoardDefinitive creates {scope,trigger,phase} once at open; subsequent close/phase updates spread the existing object and preserve trigger. Scope/instance changes remove lift. Closing/reducedMotion cancel and replace requestAnimationFrame; latest.current supplies geometry/callback updates during the animation. A detached trigger is checked with isConnected before focus. A new trigger requires a new mounted lift. Independent source/caller review: PresentationBoardDefinitive.jsx54–70,276,305–309; DisplayModuleLift.jsx66–84. No separate browser run by reviewer; final shared verification remains required."
     },
     {
-      "file": "src/public/ownerSystemWorkflow/OwnerDisplayInstance.jsx",
-      "ruleId": "react-hooks/exhaustive-deps",
-      "line": 17,
-      "column": 110,
-      "message": "React Hook useMemo has missing dependencies: 'instanceId' and 'profileAddress'. Either include them or remove the dependency array.",
-      "sourceSha256": "8d46808e2d10353cce827e7d6a1d56302fbccceb1b93447913a0d09002729595",
-      "planStep": "10",
-      "reason": "Behouden: `storedShortcut` is een snapshot bij mount. Profiel/restored revision begrenzen LocalWorkbenchSession, activatie begrenst WorkbenchSession en `id` begrenst OwnerDisplayInstance. `profileAddress` en `instanceId` wisselen niet binnen die levensduur. S: Runtime keys; D owner/Visitor/reload; R release. Bij toekomstige hergebruikte instance over profielen heen vervalt deze uitzondering."
-    },
-    {
-      "file": "src/public/ownerSystemWorkflow/OwnerDisplayInstance.jsx",
-      "ruleId": "react-hooks/exhaustive-deps",
-      "line": 20,
-      "column": 6,
-      "message": "React Hook useMemo has missing dependencies: 'controller.draft.geometry', 'index', 'initialPresentation', 'storedShortcut?.name', and 'storedShortcut?.open'. Either include them or remove the dependency array.",
-      "sourceSha256": "8d46808e2d10353cce827e7d6a1d56302fbccceb1b93447913a0d09002729595",
-      "planStep": "10",
-      "reason": "Behouden: eerste presentatie wordt één keer uit expliciete presentatie of geometry/index/defaults samengesteld. Daarna is modulelokale `presentation` de eigenaar. Een veranderde index of controller-render mag de gebruikerpositie/openstatus niet terugzetten. S: `useState(initial)` en `changeWindow`; D, U."
-    },
-    {
-      "file": "src/public/ownerSystemWorkflow/OwnerDisplayInstance.jsx",
-      "ruleId": "react-hooks/exhaustive-deps",
-      "line": 25,
-      "column": 46,
-      "message": "React Hook useMemo has missing dependencies: 'initial', 'initialPresentation', 'instanceId', and 'storedShortcut'. Either include them or remove the dependency array.",
-      "sourceSha256": "8d46808e2d10353cce827e7d6a1d56302fbccceb1b93447913a0d09002729595",
-      "planStep": "10",
-      "reason": "Behouden: `initialWindow` is de eerste herstelwaarde van dezelfde keyed instance; shortcut-cache is alleen initiële fallback. Latere positie/openstatus gaat via `changeWindow`. S: instance-lifetime; D, R."
-    },
-    {
-      "file": "src/public/ownerSystemWorkflow/OwnerDisplayInstance.jsx",
-      "ruleId": "react-hooks/exhaustive-deps",
-      "line": 36,
-      "column": 5,
-      "message": "React Hook useLayoutEffect has a missing dependency: 'controller'. Either include it or remove the dependency array.",
-      "sourceSha256": "8d46808e2d10353cce827e7d6a1d56302fbccceb1b93447913a0d09002729595",
-      "planStep": "10",
-      "reason": "Behouden onder het bestaande controllercontract: de geregistreerde controller wordt vernieuwd bij generatie, gridselectie, placementselectie, verborgen placements, fout/clearError of lock. Profiel, store-scope en module-id staan vast onder dezelfde instance-key. De callable controllerhandelingen gebruiken die scope en de geselecteerde/generation-waarden; er is geen noodzaak iedere nieuw geconstrueerde controllerobjectidentiteit door te melden. S: controllerproducer en registratie; D release/lock, bestaande controllertests. Dit moet herzien worden als een nieuw controllerresultaat een zelfstandig veranderende waarde toevoegt."
-    },
-    {
-      "file": "src/public/ownerSystemWorkflow/OwnerDisplayInstance.jsx",
-      "ruleId": "react-hooks/exhaustive-deps",
-      "line": 36,
-      "column": 60,
-      "message": "React Hook useLayoutEffect has a complex expression in the dependency array. Extract it to a separate variable so it can be statically checked.",
-      "sourceSha256": "8d46808e2d10353cce827e7d6a1d56302fbccceb1b93447913a0d09002729595",
-      "planStep": "10",
-      "reason": "Behouden: `selectedPlacementIds.join(',')` is een volledige geordende inhoudssleutel. Geldige ids bevatten geen komma; lege selectie en één geldige id zijn niet ambigu. S: `SAFE_ID` in domain/systemWorkflowDraft.js; controllerselectiecontract."
-    },
-    {
       "file": "src/public/ownerSystemWorkflow/PresentationBoardDefinitive.jsx",
       "ruleId": "react-hooks/exhaustive-deps",
       "line": 73,

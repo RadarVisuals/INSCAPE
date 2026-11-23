@@ -127,7 +127,11 @@ test('an existing free canvas adopts Bento cells in Studio and restores its orig
   try {
     const page = await browser.newPage({ viewport: { width: 1280, height: 900 }, reducedMotion: 'reduce' });
     const errors = []; page.on('pageerror', error => errors.push(error.message));
-    await open(page, url + '&selection=1');
+    page.setDefaultTimeout(10000);
+    await page.route('**/*', request => request.request().url() === 'https://studio.example.invalid/red.png'
+      ? request.fulfill({ contentType: 'image/png', body: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAANSURBVBhXY/jPwPAfAAUAAf+mXJtdAAAAAElFTkSuQmCC', 'base64') })
+      : route(request));
+    await page.goto(url + '&selection=1&firstCell=1');
     await editorMenu(page).waitFor();
     const activeId = await page.locator('.editor-menu-bar').getAttribute('data-document');
     const before = await page.evaluate(() => window.savedDraft());
@@ -145,12 +149,60 @@ test('an existing free canvas adopts Bento cells in Studio and restores its orig
       assert.deepEqual(draft.imageModules, before.imageModules);
       assert.deepEqual(draft.workbench.texts, before.workbench.texts);
       assert.deepEqual(draft.workbench.imageModules, before.workbench.imageModules);
-      assert.equal(await page.locator('.editor-menu-bar').getAttribute('data-document'), activeId);
+      assert.equal(await activeEditorDocument(page), activeId);
+      return draft;
     };
-    await choose('Canvas', 'Use cells'); await inspect(true);
+    const draw = async () => {
+      await page.mouse.move(760, 300); await page.mouse.down();
+      await page.mouse.move(920, 480, { steps: 8 });
+    };
+    await choose('Canvas', 'Add cell'); await draw();
+    await page.locator('.workbench-creation-ghost').waitFor();
+    await page.keyboard.press('Escape'); await page.mouse.up();
+    assert.deepEqual(await page.evaluate(() => window.savedDraft()), before);
+    await page.getByRole('button', { name: 'Cell tool', exact: true }).click();
+    await draw(); await page.mouse.up();
+    const placed = await inspect(true);
+    assert.equal(placed.cells.length, 1);
+    const [cell] = placed.cells;
+    assert.deepEqual(cell.members, []);
+    const target = page.locator('[data-editor-cell-surface="' + cell.id + '"]');
+    const source = page.locator('[data-image-module="image:gesture"] .image-module__canvas');
+    await source.locator('[data-media-state=ready]').waitFor();
+    const from = await source.boundingBox(), to = await target.boundingBox();
+    await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2); await page.mouse.down();
+    await page.mouse.move(to.x + to.width / 2, to.y + to.height / 2, { steps: 10 });
+    await page.locator('[data-cell-drop]').waitFor(); await page.mouse.up();
+    const current = () => page.evaluate(() => {
+      const record = window.savedDraft();
+      return record.workbenches?.find(item => item.id === record.activeId)?.content || record;
+    });
+    await page.waitForFunction(() => {
+      const record = window.savedDraft();
+      const content = record.workbenches?.find(item => item.id === record.activeId)?.content || record;
+      return content.composition?.cells[0].members.includes('image:gesture');
+    });
+    const moved = (await current()).composition;
+    assert.deepEqual(moved.imageModules, before.imageModules);
+    assert.deepEqual(moved.workbench.texts, before.workbench.texts);
+    assert.notDeepEqual(moved.workbench.imageModules[0].position, placed.workbench.imageModules[0].position);
+    await choose('Edit', 'Undo');
+    await page.waitForFunction(() => {
+      const record = window.savedDraft();
+      const content = record.workbenches?.find(item => item.id === record.activeId)?.content || record;
+      return content.composition?.cells[0].members.length === 0;
+    });
+    assert.deepEqual(await inspect(true), placed);
     await choose('Edit', 'Undo'); await inspect(false);
-    await choose('Edit', 'Redo'); await inspect(true);
-    await page.reload(); await editorMenu(page).waitFor(); await inspect(true);
+    await page.reload(); await editorMenu(page).waitFor(); await inspect(false);
+    assert.equal((await current()).composition, undefined);
+
+    await choose('Canvas', 'Add cell'); await draw(); await page.mouse.up();
+    const redrawn = await inspect(true);
+    await choose('Edit', 'Undo'); await inspect(false);
+    await choose('Edit', 'Redo'); assert.deepEqual(await inspect(true), redrawn);
+    await page.reload(); await editorMenu(page).waitFor();
+    assert.deepEqual(await inspect(true), redrawn);
     assert.deepEqual(errors, []);
   } finally { await browser.close(); }
 });

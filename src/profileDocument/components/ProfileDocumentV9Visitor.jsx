@@ -1,17 +1,13 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { SceneNavigationProvider } from '../../text/SceneNavigation.jsx';
-import { WorkbenchViewProvider, WorkbenchViewControls, useWorkbenchActions } from '../../public/ownerSystemWorkflow/WorkbenchView.jsx';
+import { WorkbenchViewProvider, WorkbenchViewControls } from '../../public/ownerSystemWorkflow/WorkbenchView.jsx';
 import WorkbenchCanvasContent from '../../public/ownerSystemWorkflow/WorkbenchCanvasContent.jsx';
-import { useWorkbenchInspectionAction } from '../../public/ownerSystemWorkflow/WorkbenchViewContext.js';
 import { useStartupDestinationReady } from '../../startveil/StartupDestinationContext.jsx';
 import { useProfileContractFacts, useProfileIdentity } from '../../profileIdentity/index.js';
 import LatticeProfileRail from '../../lattice/rendering/LatticeProfileRail.jsx';
 import { createPublishedIdentityRackViewModel } from './publishedIdentityRackViewModel.js';
-import PresentationBoard from '../../public/ownerSystemWorkflow/PresentationBoard.jsx';
 import { SharedDisplayToolsProvider, SharedDisplayToolWindows, SharedDisplayToolsLauncher } from '../../public/ownerSystemWorkflow/SharedDisplayTools.jsx';
 import useOwnerSystemWorkflowLayout from '../../public/ownerSystemWorkflow/useOwnerSystemWorkflowLayout.js';
-import PublishedDisplayModule from './PublishedDisplayModule.jsx';
-import { publicDisplayModules } from './profileOverviewModel.js';
 import VisitorEntryFocus from './VisitorEntryFocus.jsx';
 import '../../lattice/rendering/latticeMenuSurface.css';
 import '../../public/ownerSystemWorkflow/ownerSystemWorkflow.css';
@@ -32,27 +28,10 @@ export default function ProfileDocumentV9Visitor(props) {
     <WorkbenchViewProvider groupContent={props.document}><ProfileDocumentV9Session {...props} /><VisitorEntryFocus target={props.entryTarget} /></WorkbenchViewProvider></SceneNavigationProvider></SharedDisplayToolsProvider>;
 }
 
-function CanvasDisplay({ item, entryTarget, active, onActivate, navigationHost, reducedMotion, open, onOpenChange, layoutMode, onInspectionChange }) {
-  const module = useRef(null);
-  const { focusModules } = useWorkbenchActions();
-  useWorkbenchInspectionAction(item.id, source => module.current?.inspect(source));
-  return <PublishedDisplayModule ref={module} document={item.document} instanceId={item.id}
-    Frame={PresentationBoard} frameProps={{ layoutMode }} entryTarget={entryTarget} active={active} onActivate={onActivate}
-    onFocusModule={id => focusModules?.([id])} open={open} onOpenChange={onOpenChange}
-    onInspectionChange={onInspectionChange} navigationHost={navigationHost} reducedMotion={reducedMotion} />;
-}
-
 function ProfileDocumentV9Session({ document, onExit, onOpenDirectory, onReturn, onConnect, entryTarget, renderHeader }) {
   useStartupDestinationReady();
   const rootRef = useRef(null), identityControlRef = useRef(null), profileDockControlRef = useRef(null);
-  const [navigationHost, setNavigationHost] = useState(null);
-  const [inspecting, setInspecting] = useState(false);
   useEffect(() => { rootRef.current?.focus({ preventScroll: true }); }, []);
-  const [activeDisplay, setActiveDisplay] = useState(entryTarget?.moduleId?.startsWith('display:') ? entryTarget.moduleId : 'display:primary');
-  const displays = useMemo(() => publicDisplayModules(document), [document]);
-  const [openDisplays, setOpenDisplays] = useState(() => Object.fromEntries(displays.map(item => [item.id,
-    entryTarget?.moduleId === item.id || item.document.workbench?.display.open !== false])));
-  const setOpen = (id, value) => setOpenDisplays(current => ({ ...current, [id]: value }));
   const layout = useOwnerSystemWorkflowLayout();
   const [profileVisible, setProfileVisible] = useState(false);
   const [identityOpen, setIdentityOpen] = useState(Boolean(document.workbench?.identity.open));
@@ -99,38 +78,29 @@ function ProfileDocumentV9Session({ document, onExit, onOpenDirectory, onReturn,
 
   const openIdentityRack = () => { if (identityRack) { setIdentityOpen(true); setProfileVisible(false); } };
   return <main ref={rootRef} tabIndex={-1} className="visitor-grid-world system-workflow" data-workbench data-public-header={renderHeader ? true : undefined} data-layout={layout.mode}
-    aria-label="Published INSCAPE Grid visitor" data-lattice-menu-surface data-guide-mode={document.appearance.guideMode}
+    aria-label="Published INSCAPE composition" data-lattice-menu-surface data-guide-mode={document.appearance.guideMode}
     >
     {renderHeader?.(identityRack)}
     <WorkbenchViewControls entryTarget={entryTarget} hostRef={rootRef} />
     <SharedDisplayToolWindows readOnly  />
-    {profileVisible && <LatticeProfileRail blocked={inspecting} identityDisabled={inspecting} collapsed entries={[]} identityControlRef={identityControlRef} identityOnly
+    {profileVisible && <LatticeProfileRail collapsed entries={[]} identityControlRef={identityControlRef} identityOnly
       identityExpanded={identityOpen} officialIdentity={officialIdentity} onIdentityActivate={openIdentityRack} />}
     <footer className="visitor-grid-world__dock"><nav aria-label="Published profile navigation">
       <SharedDisplayToolsLauncher readOnly  />
       <button aria-expanded={document.workbench ? identityOpen : profileVisible} aria-label="Profile" data-visitor-profile-trigger
-        disabled={inspecting}
         onClick={document.workbench ? () => setIdentityOpen(current => !current) : toggleProfile} ref={profileDockControlRef} type="button">PROFILE</button>
-      {displays.filter(item => !openDisplays[item.id]).map(item => <button key={item.id} aria-label={item.id === 'display:primary' ? 'Open Display' : 'Open ' + item.title}
-        onClick={() => { setOpen(item.id, true); setActiveDisplay(item.id); }} type="button">{item.title}</button>)}
-      <div className="visitor-grid-world__display-navigation" ref={setNavigationHost} />
       {((!renderHeader && (onOpenDirectory || onReturn)) || onExit) && <div className="visitor-grid-world__actions">
         {!renderHeader && onOpenDirectory && <button onClick={onOpenDirectory} type="button">DISCOVER</button>}
         {!renderHeader && onReturn && <button onClick={onReturn} type="button">RETURN</button>}
         {onExit && <button onClick={onExit} type="button">EXIT</button>}
       </div>}
     </nav>{!renderHeader && <strong aria-label="INSCAPE" className="visitor-grid-world__brand"><span aria-hidden="true" /></strong>}</footer>
-    {identityOpen && identityRack && <div hidden={inspecting}><Suspense fallback={<p role="status">Opening Identity…</p>}>
+    {identityOpen && identityRack && <Suspense fallback={<p role="status">Opening Identity…</p>}>
       <IdentityModule key={document.profile.address} model={identityRack}
         initialWindow={identityWindow} onWindowChange={document.workbench ? changeIdentityWindow : undefined}
         onClose={() => setIdentityOpen(false)} returnFocus={profileDockControlRef.current} />
-    </Suspense></div>}
+    </Suspense>}
     <WorkbenchCanvasContent>
-    {displays.map(item => <CanvasDisplay key={item.id} item={item} entryTarget={entryTarget}
-      active={activeDisplay === item.id} onActivate={() => setActiveDisplay(item.id)}
-      open={openDisplays[item.id]} onOpenChange={value => setOpen(item.id, value)}
-      navigationHost={activeDisplay === item.id ? navigationHost : null} reducedMotion={layout.reducedMotion}
-      layoutMode={layout.mode} onInspectionChange={activeDisplay === item.id ? setInspecting : undefined} />)}
     {document.keeperDocks?.length > 0 && <Suspense fallback={null}>
       <KeeperWorkbench records={document.keeperDocks} profileAddress={document.profile.address}
         hostRef={rootRef} reducedMotion={layout.reducedMotion} />

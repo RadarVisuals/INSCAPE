@@ -61,7 +61,6 @@ export default function useWorkbenchPresentation({
 }) {
   const { restoredWorkspace, workbenchLayout, sharedTools } = layoutSession;
   const { views: textViews, presentations: textPresentations } = modules.text;
-  const { records: instanceRecords, presentations: instancePresentations } = modules.display;
   const { presentations: miniAppPresentations } = modules.miniApps;
   const { presentations: imagePresentations } = modules.images;
   const { presentations: shapePresentations } = modules.shapes;
@@ -78,7 +77,6 @@ export default function useWorkbenchPresentation({
         displays: draft.displays,
         miniApps: draft.miniApps,
         texts: draft.texts,
-        displayPresentations: instancePresentations,
         miniAppPresentations,
         textPresentations,
         imageModules: draft.imageModules,
@@ -93,7 +91,6 @@ export default function useWorkbenchPresentation({
       hasPrimaryDisplay,
       workbenchLayout,
       identityOpen,
-      instancePresentations,
       draft.displays,
       draft.miniApps,
       miniAppPresentations,
@@ -110,10 +107,6 @@ export default function useWorkbenchPresentation({
   const workbench = workbenchProjection.value;
   const workspaceViews = Object.fromEntries([
     ['workbench:tools', { ...sharedTools, targetId: activeModuleId }],
-    ...Object.entries(instanceRecords).map(([id, record]) => [
-      id,
-      { gridId: record.controller.selectedGridId, locked: record.locked },
-    ]),
     ...Object.entries(textViews),
   ]);
   const layoutPersistence = useWorkbenchLayoutPersistence({

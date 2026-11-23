@@ -161,11 +161,6 @@ function LocalWorkbenchSession({ component: Session, rootStore, ...props }) {
     if (!id) throw workbenchSaveError(store);
     selectDocument(id);
   };
-  const enableCells = () => {
-    prepareDocumentChange();
-    if (!store.enableCurrentWorkbenchCells()) throw workbenchSaveError(store);
-    selectDocument(store.getWorkbenchId());
-  };
   const enableCanvasModules = () => {
     prepareDocumentChange();
     if (!store.enableCurrentCanvasModules()) throw workbenchSaveError(store);
@@ -241,7 +236,7 @@ function LocalWorkbenchSession({ component: Session, rootStore, ...props }) {
         onEditReception={() => selectDocument('reception')}
         documentNavigation={{ items: store.listWorkbenches(), activeId: scope.getWorkbenchId(), lastCanvas: lastCanvas.getSnapshot, select: selectDocument, create: createDocument, rename: renameDocument, remove: removeDocument,
           enableCanvasModules: canUseCanvasModules ? enableCanvasModules : undefined,
-          enableCells: scope !== reception && !cellsUnavailableReason ? enableCells : undefined, cellsUnavailableReason,
+          beginFirstCell: scope !== reception && !cellsUnavailableReason ? store.beginFirstCell : undefined, cellsUnavailableReason,
           onCanvasChange: updateEditorRoute }}
         reception={scope === reception ? { collection, backupControls: <WorkbenchBackupControls store={store}
           storage={props.reviewStorage ?? globalThis.localStorage} receptionRecovery={scope.getWorkbenchId() === 'reception' ? { scope: reception, collection, publishedResolution: props.publishedResolution } : undefined}

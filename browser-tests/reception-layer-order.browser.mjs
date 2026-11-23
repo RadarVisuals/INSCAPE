@@ -1,4 +1,4 @@
-import { editorCommand, editorOverview } from './fixtures/editor-menu.mjs';
+import { editorCommand } from './fixtures/editor-menu.mjs';
 import { openSharedTool } from './fixtures/shared-tools.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -34,18 +34,19 @@ test('Reception canvas follows the theme through transparent artwork without cha
       if (!root.commitCompletedOperation({ ...draft, reception }, { expectedGeneration: root.getGeneration(), recordHistory: false })) throw new Error('Could not seed transparency');
       return reception;
     });
-    for (const [mode, expected] of [['dark', 'rgb(23, 23, 23)'], ['light', 'rgb(222, 219, 211)']]) {
-      await page.evaluate(async mode => (await import('/src/interfaceTheme.js')).interfaceTheme.setMode(mode), mode);
+    for (const mode of ['dark', 'light']) {
+      await page.evaluate(mode => window.receptionLayerFixture.theme.setMode(mode), mode);
+      await settle(page);
       const pixel = await page.locator('canvas[data-workbench-area]').evaluate(canvas =>
         [...canvas.getContext('2d').getImageData(canvas.width - 4, canvas.height - 4, 1, 1).data]);
-      assert.deepEqual(pixel, mode === 'dark' ? [23, 23, 23, 255] : [222, 219, 211, 255]);
+      assert.deepEqual(pixel, mode === 'dark' ? [20, 20, 20, 255] : [222, 219, 211, 255], 'outside the frame uses the Studio surround');
     }
     await editorCommand(page, 'Canvas', 'Preview');
     const canvas = page.locator('.reception-document-canvas');
     await canvas.waitFor();
     await mkdir(output, { recursive: true });
     const checkTheme = async (mode, expected, view) => {
-      await page.evaluate(async mode => (await import('/src/interfaceTheme.js')).interfaceTheme.setMode(mode), mode);
+      await page.evaluate(mode => window.receptionLayerFixture.theme.setMode(mode), mode);
       await settle(page);
       const background = await canvas.evaluate(node => {
         const context = document.createElement('canvas').getContext('2d');
@@ -66,8 +67,7 @@ test('Reception canvas follows the theme through transparent artwork without cha
       await checkTheme('light', 'rgb(222, 219, 211)', 'preview');
     }
     await page.getByRole('button', { name: 'Back to editing', exact: true }).click();
-    await editorOverview(page);
-    await page.getByRole('navigation', { name: 'Profile navigation' }).getByRole('button', { name: 'Profile', exact: true }).click();
+    await page.getByRole('button', { name: 'Back to Profile', exact: true }).click();
     await canvas.waitFor();
     for (const width of [1600, 390]) {
       await page.setViewportSize({ width, height: 1000 });
@@ -129,7 +129,7 @@ test('Reception opens and returns Home centred without moving authored geometry;
     assert.notEqual(panned.x, initial.x);
     await editorCommand(page, 'Canvas', 'Preview');
     await page.locator('.reception-document-canvas').waitFor(); await settle(page);
-    const preview = await assertDocumentCentered(page, '.reception-document-preview-scroll');
+    const preview = await assertDocumentCentered(page, '.reception-preview-content');
     assert.equal(preview.width, 947); assert.equal(preview.height, 575);
     await mkdir(output, { recursive: true });
     await page.screenshot({ path: `${output}/centred-preview.png` });
@@ -138,8 +138,7 @@ test('Reception opens and returns Home centred without moving authored geometry;
     await page.getByRole('button', { name: 'Fit canvas in view', exact: true }).click(); await settle(page);
     assert.deepEqual(await readCamera(), initial, 'Home returns to the canvas rather than world origin');
     await page.screenshot({ path: `${output}/centred-editor.png` });
-    await editorOverview(page);
-    await page.getByRole('navigation', { name: 'Profile navigation' }).getByRole('button', { name: 'Profile', exact: true }).click();
+    await page.getByRole('button', { name: 'Back to Profile', exact: true }).click();
     await page.locator('.reception-document-canvas').waitFor(); await settle(page);
     const published = await assertDocumentCentered(page, '.reception-window-main');
     assert.equal(published.width, 947); assert.equal(published.height, 575);
@@ -217,8 +216,7 @@ test('Reception Editor, preview and public reader preserve interleaved global la
     await editorCommand(page, 'Canvas', 'Preview');
     await page.locator('[data-layer-id="text:nomad"] .text-document').waitFor();
     await assertPaint(page, false);
-    const readerText = { ...nativeText, padding: '0px' }; // The cell supplies the excerpt's reading inset.
-    assert.deepEqual(await textPaint(page, false), readerText, 'the cell owns padding while font and surface match native Text');
+    assert.deepEqual(await textPaint(page, false), nativeText, 'the cell preserves the text layerâ€™s authored padding, font and surface');
     assert.deepEqual(await textPaint(page, false, 'text:rotated'), nativeRotatedText, 'authored padding, colored surface and quarter-turn match native Text');
     assert.equal(await page.locator('.reception-document-canvas [data-layer-id="text:private"]').count(), 0);
     assert.deepEqual(await page.locator('.reception-document-canvas [data-layer-id], .reception-document-canvas [data-cell-id]').evaluateAll(nodes => nodes
@@ -226,11 +224,10 @@ test('Reception Editor, preview and public reader preserve interleaved global la
       .map(node => node.dataset.layerId || node.dataset.cellId)), before.artworkLayers.filter(id => id !== 'text:private'));
     await page.screenshot({ path: `${output}/preview.png` });
     await page.getByRole('button', { name: 'Back to editing', exact: true }).click();
-    await editorOverview(page);
-    await page.getByRole('navigation', { name: 'Profile navigation' }).getByRole('button', { name: 'Profile', exact: true }).click();
+    await page.getByRole('button', { name: 'Back to Profile', exact: true }).click();
     await page.locator('[data-layer-id="text:nomad"] .text-document').waitFor();
     await assertPaint(page, false);
-    assert.deepEqual(await textPaint(page, false), readerText);
+    assert.deepEqual(await textPaint(page, false), nativeText);
     assert.deepEqual(await textPaint(page, false, 'text:rotated'), nativeRotatedText);
     assert.equal(await page.locator('.reception-document-canvas [data-layer-id="text:private"]').count(), 0);
     await page.screenshot({ path: `${output}/public.png` });

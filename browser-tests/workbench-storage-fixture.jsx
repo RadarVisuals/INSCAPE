@@ -1,4 +1,6 @@
 import React from 'react';
+import { fixtureAsset } from '../src/public/ownerSystemWorkflow/ownerSystemWorkflowDevelopmentFixture.js';
+import { createProfileDocumentV9AssetResolver } from '../src/profileDocument/domain/profileDocumentV9Asset.js';
 import { commitWorkspaceRows } from '../src/workspace/database.js';
 import { workspaceSession } from '../src/workspace/profileWorkspace.js';
 import { createRoot } from 'react-dom/client';
@@ -16,13 +18,21 @@ import '../src/lattice/rendering/latticeMenuSurface.css';
 const params = new URLSearchParams(location.search);
 const profile = params.get('profile') || `0x${'1'.repeat(40)}`, key = systemWorkflowDraftKey(profile);
 if (params.has('seed') && localStorage.getItem(key) === null) {
-  const draft = createEmptySystemWorkflowDraft(profile); draft.grids = [];
+  const draft = createEmptySystemWorkflowDraft(profile);
+  if (!params.has('legacyDisplay')) draft.grids = [];
   draft.texts = [{ id: 'text:private', article: createArticle('Private draft'), visibility: 'PRIVATE' }];
   draft.workbench = createDefaultWorkbenchPresentation();
   draft.workbench.texts = [createTextPresentation('text:private', 0)];
   draft.workbench.texts[0].window = { left: 60, top: 100, width: 320, height: 400 };
   if (params.has('selection')) {
-    draft.imageModules = [{ id: 'image:gesture', name: 'Gesture Image', width: 240, height: 240, artwork: null, visibility: 'PRIVATE' }];
+    let artwork = null;
+    if (params.has('firstCell')) {
+      draft.workbench.area = { left: 0, top: 0, width: 1280, height: 800 };
+      const asset = fixtureAsset({ token: 4, name: 'Red square', width: 240, height: 240, source: 'https://studio.example.invalid/red.png' });
+      artwork = { id: 'artwork:square', asset: createProfileDocumentV9AssetResolver([asset])(asset.id),
+        crop: null, transform: { quarterTurns: 0, mirrorX: false, mirrorY: false } };
+    }
+    draft.imageModules = [{ id: 'image:gesture', name: 'Gesture Image', width: 240, height: 240, artwork, visibility: 'PRIVATE' }];
     draft.workbench.imageModules = [{ id: 'image:gesture', open: true, position: { left: 420, top: 100 } }];
   }
   localStorage.setItem(key, JSON.stringify(draft));

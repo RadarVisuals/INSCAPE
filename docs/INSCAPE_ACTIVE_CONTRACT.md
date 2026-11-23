@@ -12,12 +12,30 @@ Read the current focus and product map first, then the affected detailed
 section. Section dates identify decisions, not today's release status. Execution
 history belongs in dated audits; check the current checkout and CI for status.
 
+## Studio groups, stacks and Display (2026-11-23)
+
+Studio uses one kind of layer group. Grouping preserves the members' positions,
+layer order and cell assignments. Stack is an optional action on that same
+group. It folds the members into a stack on the canvas. Opening the stack
+temporarily spreads them for browsing. Unstack restores their authored layout.
+
+Retire the Display module, its Stage and its internal Grids. The founder has
+no Display works to migrate. Studio keeps its canvas alignment grid and cells.
+This decision supersedes the earlier decision to keep Display experimental.
+Studio and its public composition viewers no longer mount the Display Stage.
+The current implementation still has separate layer and workspace groups.
+A future cell interaction may synchronize a swipe across explicitly linked
+cells. Group membership and stack presentation stay independent of those links.
+
 ## Studio and public navigation (2026-11-19)
 
 The public tabs are Profile, Gallery, Writing and Exhibition, in that order.
 Exhibition is reserved and inactive. Studio is the single authoring destination.
 Canvas and Bento are starting layouts for a composition. Free layers and cell
-contents can coexist in that work. Moving or resizing a cell affects its own
+contents can coexist in that work. In a compatible older Canvas, Add cell starts
+drawing the first cell. Placing it keeps the composition ID and existing artwork.
+One Undo restores the original Canvas. Works with Display or workspace groups
+keep their full Canvas tools. Moving or resizing a cell affects its own
 members according to their authored positions and constraints. Explicit Publish
 selects Gallery, Profile or both for the same work. In their published Gallery,
 owners can select one or more works and remove them in a single publication.

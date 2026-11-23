@@ -2,20 +2,26 @@ import { openEditorMenu, editorMenu } from './fixtures/editor-menu.mjs';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { chromium } from 'playwright-core';
+import { browserExecutable } from '../scripts/browserEnvironment.mjs';
 
 test('Docs tabs explain the current modules and remain usable at wide and narrow widths', async () => {
-  const browser = await chromium.launch({ executablePath: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', headless: true });
+  const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
   try {
     const page = await browser.newPage({ reducedMotion: 'reduce' });
     const errors = []; page.on('pageerror', error => errors.push(error.message));
-    await page.goto(`${process.env.INSCAPE_SYSTEM_WORKFLOW_ROOT || 'http://127.0.0.1:5174'}/development/owner/system-workflow`);
+    await page.route('**/*', route => new URL(route.request().url()).origin === (process.env.INSCAPE_TEST_ORIGIN || 'http://127.0.0.1:5173') ? route.continue() : route.abort());
+    await page.goto(`${process.env.INSCAPE_TEST_ORIGIN || 'http://127.0.0.1:5173'}/browser-tests/workbench-storage-fixture.html?seed=1&legacyDisplay=1`);
+    await page.locator('.text-window').waitFor();
+    assert.ok((await page.evaluate(() => window.savedDraft())).grids.length > 0);
+    assert.equal(await page.locator('[data-display-instance]').count(), 0);
     for (const width of [1440, 390]) {
       await page.setViewportSize({ width, height: 780 });
       await openEditorMenu(page, 'Docs');
       const docs = page.getByRole('dialog', { name: 'Docs' });
-      await docs.getByRole('tab', { name: 'Workbench', exact: true }).click();
+      assert.equal(await docs.getByRole('tab', { name: /Display/ }).count(), 0);
+      await docs.getByRole('tab', { name: 'Studio', exact: true }).click();
       await page.keyboard.press('ArrowRight');
-      assert.equal(await docs.getByRole('tab', { name: 'Display · Experimental', exact: true }).getAttribute('aria-selected'), 'true');
+      assert.equal(await docs.getByRole('tab', { name: 'Identity', exact: true }).getAttribute('aria-selected'), 'true');
       await page.keyboard.press('End');
       assert.match(await docs.getByRole('tabpanel').innerText(), /Preparing does not upload/);
       const bounds = await docs.boundingBox();

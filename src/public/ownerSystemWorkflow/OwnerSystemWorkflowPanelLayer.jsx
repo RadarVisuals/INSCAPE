@@ -4,7 +4,6 @@ import PublicEntryPortal from '../../startveil/PublicEntryPortal.jsx';
 import OwnerSystemWorkflowManual from './OwnerSystemWorkflowManual.jsx';
 import OwnerSystemWorkflowProfile from './OwnerSystemWorkflowProfile.jsx';
 import OwnerSystemWorkflowSettings from './OwnerSystemWorkflowSettings.jsx';
-import SystemWorkflowGridSwitcher from './SystemWorkflowGridSwitcher.jsx';
 
 const OwnerSystemWorkflowActivity = lazy(() => import('./OwnerSystemWorkflowActivity.jsx'));
 
@@ -14,14 +13,11 @@ function PanelPresence({ children, id, panels }) {
     onTransitionEnd={(event) => { if (event.propertyName === 'opacity') panels.completePanelTransition(id); }}>{children}</div>;
 }
 
-export default function OwnerSystemWorkflowPanelLayer({ activity, connectedProfile, controller,
-  profileAddress, onChangeGrid, onClose, onConnect, onDisconnect, onOpenIdentity, onOpenReception, onEditReception, onEnterMyWorld, onVisitProfile, panels, profileIdentity, profileModel,
+export default function OwnerSystemWorkflowPanelLayer({ activity, connectedProfile,
+  profileAddress, onClose, onConnect, onDisconnect, onOpenIdentity, onOpenReception, onEditReception, onEnterMyWorld, onVisitProfile, panels, profileIdentity, profileModel,
   workbenchPreferences, onWorkbenchPreferencesChange, backupControls, canvasGuides = true }) {
   const show = (id) => panels.presence[id];
   return <>
-    {show('grids').present && <PanelPresence id="grids" panels={panels}>
-      <SystemWorkflowGridSwitcher controller={controller} onClose={onClose} onSelectGrid={onChangeGrid} />
-    </PanelPresence>}
     {show('docs').present && <PanelPresence id="docs" panels={panels}><OwnerSystemWorkflowManual onClose={onClose} /></PanelPresence>}
     {show('profile').present && <PanelPresence id="profile" panels={panels}><div className="system-workflow__profile-layer"
       onPointerDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>

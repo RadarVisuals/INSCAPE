@@ -23,7 +23,7 @@ export default function OwnerEditorMenuBar({ busy, hidden, documentNavigation, i
   const docks = editorPreferences.tools;
   const layout = useSyncExternalStore(docks.subscribe, docks.getSnapshot);
   const bar = useRef(null), trigger = useRef(null), input = useRef(null);
-  const { setNavigationTop } = useWorkbenchView();
+  const { setNavigationTop, setInteractionTool } = useWorkbenchView();
   useLayoutEffect(() => {
     const host = bar.current.closest('main') || hostRef.current;
     const measure = () => {
@@ -85,8 +85,11 @@ export default function OwnerEditorMenuBar({ busy, hidden, documentNavigation, i
         : [command('empty', 'Create your first composition with + New.', undefined, { disabled: true })] },
       command('delete', 'Delete local composition…', () => setForm('delete'), { disabled: profileBento || blocked || items.length < 2,
         reason: items.length === 1 ? 'Studio keeps at least one composition.' : undefined }),
-      ...(documentNavigation.enableCells || documentNavigation.cellsUnavailableReason ? [command('enable-cells', 'Use cells',
-        documentNavigation.enableCells, { disabled: blocked || Boolean(documentNavigation.cellsUnavailableReason), reason: documentNavigation.cellsUnavailableReason })] : []),
+      ...(documentNavigation.beginFirstCell || documentNavigation.cellsUnavailableReason ? [command('add-cell', 'Add cell', () => {
+        if (!creationBarVisible) onCreationBarChange(true);
+        setInteractionTool('cell');
+        hostRef.current?.focus({ preventScroll: true });
+      }, { disabled: blocked || Boolean(documentNavigation.cellsUnavailableReason), reason: documentNavigation.cellsUnavailableReason })] : []),
       ...(documentNavigation.enableCanvasModules ? [command('enable-canvas-modules', 'Use canvas modules',
         documentNavigation.enableCanvasModules, { disabled: blocked })] : []),
       command('size', cells ? 'Cell settings' : 'Canvas size', () => cells ? cells.openSettings() : setSizeOpen(true), { disabled: blocked }),

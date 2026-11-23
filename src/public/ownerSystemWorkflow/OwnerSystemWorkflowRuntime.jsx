@@ -49,7 +49,6 @@ import { SharedTextToolsProvider } from '../../text/SharedTextTools.jsx';
 import WorkbenchAlignmentGrid from './WorkbenchAlignmentGrid.jsx';
 import WorkbenchImageDropTarget from '../../imageModule/WorkbenchImageDropTarget.jsx';
 import useDraftUndo from './useDraftUndo.js';
-import { PRIMARY_DISPLAY_ID, displayModuleIds } from '../../systemWorkflow/domain/displayModules.js';
 import OwnerSystemWorkflowPanelLayer from './OwnerSystemWorkflowPanelLayer.jsx';
 import useOwnerSystemWorkflowActivity from './useOwnerSystemWorkflowActivity.js';
 import useWorkbenchController from './useWorkbenchController.js';
@@ -199,27 +198,16 @@ export function WorkbenchSession({
   const selectionState = useWorkbenchSelection(workbenchController.draft, {
     initialTargetId: workbenchController.draft.texts?.some(text => text.id === sharedTools.targetId)
       ? sharedTools.targetId
-      : (initialTextTools.targetId ??
-        (sharedTools.targetId === undefined ? PRIMARY_DISPLAY_ID : sharedTools.targetId)),
+      : initialTextTools.targetId ?? sharedTools.targetId,
     readContent: workbenchController.store.getSnapshot,
   });
   const activeModuleId = selectionState.targetId;
   const activateArtwork = selectionState.selectArtwork;
-  const displayIds = displayModuleIds(workbenchController.draft);
-  const selectedDisplayId = displayIds.includes(activeModuleId) ? activeModuleId : displayIds[0];
-  const modules = useWorkbenchModuleRegistry({ displayIds, selectedDisplayId });
+  const modules = useWorkbenchModuleRegistry();
   const {
-    records: instanceRecords,
-    presentations: instancePresentations,
-    selected: selectedInstance,
-  } = modules.display;
-  const {
-    placement: allPlacementTargetsRef,
-    shortcut: allShortcutTargetsRef,
     identity: identityTargetRef,
     module: moduleTargetsRef,
   } = modules.targets;
-  const activeController = selectedInstance?.controller;
   const savedWorkbenchPreferences = useSyncExternalStore(
     workbenchPreferenceStore.subscribe,
     workbenchPreferenceStore.getSnapshot
@@ -299,7 +287,6 @@ export function WorkbenchSession({
     draft: workbenchController.draft,
     workbenchLayout,
     libraryOpen,
-    selectedGrid: activeController?.selectedGrid,
     reviewAssets,
     reviewCategories,
   });
@@ -414,10 +401,8 @@ export function WorkbenchSession({
     (panel && panelBlocksAuthoring(panel)) ||
     Object.entries(panels.presence).some(([id, { present }]) => panelBlocksAuthoring(id) && present)
   );
-  const noticeMessage = activeController?.error || workbenchController.error || notice?.message;
-  const dismissNotice = activeController?.error
-    ? activeController.clearError
-    : workbenchController.error
+  const noticeMessage = workbenchController.error || notice?.message;
+  const dismissNotice = workbenchController.error
       ? workbenchController.clearError
       : dismissHostNotice;
   useEffect(() => {
@@ -425,7 +410,6 @@ export function WorkbenchSession({
     const timeout = globalThis.setTimeout(dismissNotice, 4_500);
     return () => globalThis.clearTimeout(timeout);
   }, [noticeMessage, dismissNotice, restoreWarning]);
-  const changeGrid = (...args) => selectedInstance?.displayRef.current?.changeGrid(...args) ?? false;
   const publishedProfile = ['RESOLVED', 'STALE'].includes(publishedResolution?.status) ? publishedResolution.document?.profile : null;
   const cachedIdentity = publishedProfile?.address === profileAddress ? publishedProfile.cachedIdentity : null;
   const profileModel = useMemo(
@@ -514,13 +498,12 @@ export function WorkbenchSession({
     startPreview(trigger);
   };
 
-  const authoringLocked = selectedInstance?.locked || false;
   const instrumentsObscured = panelOccupied || (browsing && !leavingEditor);
   const revealInstruments = () => {
     if (publicationOpen) closePublication({ returnFocus: false });
     if (instrumentsObscured) panels.closePanel({ returnFocus: false });
   };
-  const { addCommands, runCommand, deleteDisplay } = workbenchCommands({
+  const { addCommands, runCommand } = workbenchCommands({
     store: workbenchController.store,
     draft: workbenchController.draft,
     profileAddress,
@@ -613,15 +596,6 @@ export function WorkbenchSession({
                   data-canvas-context={reception ? 'reception' : 'canvas'}
                   data-reception-editor={reception ? true : undefined}
                   data-layout={layout.mode}
-                  onPointerDownCapture={event => {
-                    if (!browsing && event.target === event.currentTarget && event.button === 0) {
-                      for (const display of displayIds
-                        .map(id => instanceRecords[id]?.controller)
-                        .filter(Boolean)) {
-                        if (display.selectedPlacementIds.length) display.replaceSelection([]);
-                      }
-                    }
-                  }}
                   onContextMenu={event => {
                     if (!browsing && event.target === event.currentTarget) {
                       event.preventDefault();
@@ -639,10 +613,6 @@ export function WorkbenchSession({
                       setWorkspaceMenu({ x: 16, y: 16 });
                     }
                   }}
-                  data-authoring-locked={authoringLocked || undefined}
-                  data-board-instance-state={
-                    instancePresentations[PRIMARY_DISPLAY_ID]?.open === false ? 'minimized' : 'window'
-                  }
                   data-chrome-noise={workbenchPreferences.chromeNoise ? 'on' : 'off'}
                   data-lattice-menu-surface
 
@@ -708,6 +678,7 @@ export function WorkbenchSession({
                     historyBlocked={pendingText.length ? TEXT_RECOVERY_MESSAGE : null}
                   />
                   <OwnerWorkbenchToolbar
+                    beginFirstCell={documentNavigation?.beginFirstCell}
                     shapePreference={editorPreferences.section('lastShape')}
                     searchRequest={commandSearchRequest}
                     searchEnabled={!previewing && !browsing && !instrumentsObscured}
@@ -717,7 +688,6 @@ export function WorkbenchSession({
                     showIdentity={!reception}
                     onOpenSharedTool={section => changeTool({ type: 'open', tab: 'Inspector', section })}
                     hostRef={workspaceRef}
-                    placementTargets={allPlacementTargetsRef}
                     artworkLayersOpen={artworkLayersOpen}
                     onToggleArtworkLayers={toggleArtworkLayers}
                     commands={addCommands}
@@ -755,8 +725,7 @@ export function WorkbenchSession({
                     libraryProps={{
                       preferenceStore: editorPreferences.section('library'),
                       workbenchImageTargetRef, moduleAssetTargetRef: moduleTargetsRef,
-                      placementTargetRef: allPlacementTargetsRef, shortcutTargetRef: allShortcutTargetsRef,
-                      workspaceRef, placementScope: `${profileAddress}:${activeController?.moduleId || ''}:${activeController?.selectedGridId || ''}`,
+                      workspaceRef, placementScope: profileAddress,
                       authoringLocked: browsing, categoryCommands: library.categoryCommands,
                       data: { ...libraryData, onOpenCuration: workspaceDestinations.Curation }, resolveAssetDimensions,
                     }}
@@ -773,27 +742,20 @@ export function WorkbenchSession({
                     mode={workbenchPreferences.gridMode}
                   />
                   <OwnerWorkbenchModules
+                    reducedMotion={layout.reducedMotion}
                     workbenchController={workbenchController}
                     profileAddress={profileAddress}
                     modules={modules}
                     initialWorkbench={initialWorkbench}
                     restoredWorkspace={restoredWorkspace}
                     preferences={workbenchPreferences}
-                    onPreferencesChange={setWorkbenchPreferences}
                     selectionState={selectionState}
                     library={library}
-                    layout={layout}
                     workspaceRef={workspaceRef}
                     workbenchNavigationRef={workbenchNavigationRef}
                     keeperDockPositions={keeperDockPositions}
                     suspended={canvasSuspended}
                     exiting={leavingEditor}
-                    panelOccupied={panelOccupied}
-                    instrumentsObscured={instrumentsObscured}
-                    revealInstruments={revealInstruments}
-                    openLibrary={openLibrary} libraryOpen={libraryOpen}
-                    panels={panels}
-                    deleteDisplay={deleteDisplay}
                     onConnect={onConnect}
                   />
                   <OwnerSystemWorkflowPanelLayer
@@ -802,11 +764,9 @@ export function WorkbenchSession({
                     onConnect={onConnect}
                     onDisconnect={onDisconnect}
                     onEnterMyWorld={onEnterMyWorld}
-                    controller={activeController}
                     profileAddress={profileAddress}
 
 
-                    onChangeGrid={changeGrid}
                     backupControls={
                       reception ? (
                         reception.backupControls

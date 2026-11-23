@@ -1,8 +1,6 @@
 import { lazy, Suspense, useRef } from 'react';
 import WorkbenchCanvasContent from './WorkbenchCanvasContent.jsx';
-import OwnerDisplayInstance from './OwnerDisplayInstance.jsx';
 
-import { PRIMARY_DISPLAY_ID, displayModuleIds } from '../../systemWorkflow/domain/displayModules.js';
 const MiniAppsWorkbench = lazy(() => import('../../miniApps/MiniAppsWorkbench.jsx'));
 const TextWorkbench = lazy(() => import('../../text/TextWorkbench.jsx'));
 const ImageWorkbench = lazy(() => import('../../imageModule/ImageWorkbench.jsx'));
@@ -17,32 +15,21 @@ export default function OwnerWorkbenchModules({
   initialWorkbench,
   restoredWorkspace,
   preferences: workbenchPreferences,
-  onPreferencesChange: setWorkbenchPreferences,
   selectionState,
   library,
-  layout,
+  reducedMotion,
   workspaceRef,
   workbenchNavigationRef,
   keeperDockPositions,
   suspended,
   exiting,
-  panelOccupied,
-  instrumentsObscured,
-  revealInstruments,
-  openLibrary, libraryOpen,
-  panels,
-  deleteDisplay,
   onConnect,
 }) {
-  const { onController: registerController, onPresentation: registerPresentation } = modules.display;
   const { onPresentation: registerMiniAppPresentation } = modules.miniApps;
   const { onPresentation: registerTextPresentation, onView: registerTextView } = modules.text;
   const { onPresentation: registerImagePresentation } = modules.images;
   const { onPresentation: registerShapePresentation } = modules.shapes;
-  const { register: registerModuleAssetTarget, placement: allPlacementTargetsRef } = modules.targets;
-  const { assetsById, registerAssetDimensions, resolveAssetDimensions } = library;
-  const displayIds = displayModuleIds(workbenchController.draft);
-  const activeModuleId = selectionState.targetId;
+  const { register: registerModuleAssetTarget } = modules.targets;
   const savedLayout = workbenchController.draft.workbench;
   const layoutAtEntry = useRef(savedLayout);
   const modulePresentations = key => {
@@ -53,76 +40,9 @@ export default function OwnerWorkbenchModules({
     return [...(initialWorkbench.current?.[key] || []), ...saved];
   };
 
-  const initialPrimary = useRef(true);
-  if (!workbenchController.draft.grids.length) initialPrimary.current = false;
   return (
     <>
       <WorkbenchCanvasContent suspended={suspended}>
-        {displayIds.map(id => (
-          <OwnerDisplayInstance
-            key={id}
-            id={id}
-            index={
-              id === PRIMARY_DISPLAY_ID
-                ? 0
-                : workbenchController.draft.displays.findIndex(module => module.id === id) + 1
-            }
-            initialView={{
-              ...(id === PRIMARY_DISPLAY_ID ? { locked: workbenchPreferences.compositionLocked } : {}),
-              ...restoredWorkspace.views[id],
-            }}
-            onLockChange={
-              id === PRIMARY_DISPLAY_ID
-                ? locked =>
-                    setWorkbenchPreferences(current => ({
-                      ...current,
-                      compositionLocked: locked,
-                    }))
-                : undefined
-            }
-            onDelete={() =>
-              deleteDisplay(
-                id === PRIMARY_DISPLAY_ID
-                  ? { id, grids: workbenchController.draft.grids }
-                  : workbenchController.draft.displays.find(module => module.id === id)
-              )
-            }
-            store={workbenchController.store}
-            profileAddress={profileAddress}
-            initialPresentation={
-              id === PRIMARY_DISPLAY_ID
-                ? initialPrimary.current
-                  ? initialWorkbench.current?.display
-                  : workbenchController.draft.workbench?.display
-                : initialWorkbench.current?.displays?.find(item => item.id === id) ||
-                  workbenchController.draft.workbench?.displays?.find(item => item.id === id)
-            }
-            active={activeModuleId === id}
-            onActivate={selectionState.focusModule}
-            onController={registerController}
-            onPresentation={registerPresentation}
-            shared={{
-              assetsById,
-              suspended: suspended,
-              panelOccupied,
-              instrumentsObscured,
-              onRevealInstruments: revealInstruments,
-              onToggleLibrary: openLibrary,
-              onInspect: () => {
-                if (!libraryOpen) panels.closePanel({ returnFocus: false });
-              },
-              registerAssetDimensions,
-              resolveAssetDimensions,
-              reducedMotion: layout.reducedMotion,
-              windowProps: {
-                layoutMode: layout.mode,
-                reducedMotion: layout.reducedMotion,
-                shortcutSnap: workbenchPreferences.shortcutSnap,
-                windowSnap: workbenchPreferences.shortcutSnap,
-              },
-            }}
-          />
-        ))}
         {workbenchController.draft.keeperDocks?.length > 0 && (
           <Suspense fallback={null}>
             <KeeperWorkbench
@@ -133,7 +53,7 @@ export default function OwnerWorkbenchModules({
               hostRef={workspaceRef}
               dockPositions={keeperDockPositions}
               registerTarget={registerModuleAssetTarget}
-              reducedMotion={layout.reducedMotion}
+              reducedMotion={reducedMotion}
               suspended={suspended}
               exiting={exiting}
             />
@@ -180,7 +100,6 @@ export default function OwnerWorkbenchModules({
               presentations={modulePresentations('texts')}
               onPresentationChange={registerTextPresentation}
               registerTarget={registerModuleAssetTarget}
-              placementTargets={allPlacementTargetsRef}
               suspended={suspended}
             />
           </Suspense>

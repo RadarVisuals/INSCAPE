@@ -11,8 +11,6 @@ import { MAX_SHAPES, isShapeCommand, SHAPE_COMMAND_KINDS } from '../../shapes/sh
 import { addShape } from '../../shapes/shapeSession.js';
 import { MAX_KEEPER_DOCKS } from '../../keeper/keeper.js';
 import { addKeeperDock } from '../../keeper/keeperSession.js';
-import { removeWorkbenchModule } from '../../systemWorkflow/removeWorkbenchModule.js';
-import { textRecoveries, TEXT_RECOVERY_MESSAGE } from '../../text/textEditRecovery.js';
 
 // Receives the active composition's scoped writer and explicit host actions.
 // Module sessions keep validation, persistence and undo authority.
@@ -34,21 +32,6 @@ export default function workbenchCommands({
   setWorkspaceMenu,
   reception = false,
 }) {
-  const deleteDisplay = expected => {
-    try {
-      if (textRecoveries(store, profileAddress).length) {
-        setNotice(TEXT_RECOVERY_MESSAGE);
-        return;
-      }
-      if (!removeWorkbenchModule(store, profileAddress, 'display', expected)) {
-        setNotice('Could not delete this Display. Reopen its menu and try again.');
-        return;
-      }
-      requestAnimationFrame(() => workspaceRef.current?.focus());
-    } catch (error) {
-      setNotice(error.message || 'Could not delete this Display');
-    }
-  };
   // One creation menu/dispatcher serves both the context menu and toolbar.
   const addCommands = [
     { id: 'workbench-index', label: draft.workbenchIndex ? 'OPEN INDEX' : 'INDEX' },
@@ -125,5 +108,5 @@ export default function workbenchCommands({
     setWorkspaceMenu(null);
   };
 
-  return { addCommands, runCommand, deleteDisplay };
+  return { addCommands, runCommand };
 }

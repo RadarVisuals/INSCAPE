@@ -15,7 +15,10 @@ export default function useWorkbenchLayoutPersistence({ profile, workbenchId, dr
   const flush = useCallback((report = true) => {
     const next = latest.current;
     // A restore remounts the editor. Its departing layout must not repopulate the old cache.
-    if (mountedRevision.current !== workspaceSession(profile)?.restoreRevision) return false;
+    const restoreRevision = workspaceSession(profile)?.restoreRevision;
+    // A session first hydrated after mount starts at zero, before any restore.
+    if (mountedRevision.current === undefined && restoreRevision === 0) mountedRevision.current = 0;
+    if (mountedRevision.current !== restoreRevision) return false;
     if (blocked.current || (canSave && !canSave()) || !next?.layout) return false;
     if (next.serialized === written.current) return true;
     const saved = saveWorkbenchLayout(profile, next.draft, next.layout, next.views, storage, workbenchId, next.cells);

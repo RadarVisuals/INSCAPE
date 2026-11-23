@@ -1,6 +1,7 @@
 // @ts-check
 import { authoredStorage, confirmWorkspaceSaved, hydrateWorkspace, workspaceSession } from '../workspace/profileWorkspace.js';
 import { reconcileRemovedWorkbenchMembers } from './domain/workbenchGroups.js';
+import { reconcileReceptionCells } from '../reception/receptionEditorDocument.js';
 import { reconcileArtworkLayers } from './domain/artworkLayers.js';
 import { captureProfileDraftWriteAccess } from './profileEditorLease.js';
 import { canvasModuleDraft, createStudioComposition, enableStudioCells } from './domain/studioComposition.js';
@@ -330,13 +331,35 @@ export function createSystemWorkflowDraftStore({
       const next = canvasModuleDraft(api.getSnapshot());
       return next ? commit(next, { expectedGeneration: generation, historyLabel: 'Use canvas modules' }) : false;
     },
-    enableCurrentWorkbenchCells() {
-      if (editorTarget !== 'workbench' || api.getSnapshot().composition) return false;
-      for (const guard of transitionGuards.values()) if (guard.activation === activation) {
-        const reason = guard.check(); if (reason) throw new Error(reason);
+    /** @param {import('../contracts/workbench.js').WorkbenchPresentation} [presentation] */
+    beginFirstCell(presentation) {
+      const draft = api.getSnapshot();
+      if (editorTarget !== 'workbench' || draft.composition) throw new Error('Reopen the active canvas.');
+      const converted = enableStudioCells(draft);
+      const before = converted.composition;
+      // Classic Canvas can keep live module windows in its local layout cache.
+      // Capture those artwork positions for both the conversion and its Undo.
+      /** @type {import('../contracts/workbench.js').WorkbenchPresentation | undefined} */
+      let historyPresentation;
+      for (const key of /** @type {const} */ (['imageModules', 'shapes', 'texts'])) {
+        const live = presentation?.[key];
+        if (!live || JSON.stringify(live) === JSON.stringify(before.workbench[key])) continue;
+        historyPresentation = { ...(historyPresentation || draft.workbench || before.workbench), [key]: live };
+        before.workbench[key] = live;
       }
-      if (textRecoveries(api.getWorkbenchScope(), activeProfileAddress).length) throw new Error(TEXT_RECOVERY_MESSAGE);
-      return commit(enableStudioCells(api.getSnapshot()), { expectedGeneration: generation, historyLabel: 'Use Bento cells' });
+      const expectedGeneration = generation, originalActivation = activation;
+      /** @param {typeof before} candidate */
+      const place = candidate => {
+        if (editorTarget !== 'workbench' || activation !== originalActivation || generation !== expectedGeneration)
+          throw new Error('The canvas changed. Draw the cell again.');
+        for (const guard of transitionGuards.values()) if (guard.activation === activation) {
+          const reason = guard.check(); if (reason) throw new Error(reason);
+        }
+        if (textRecoveries(api.getWorkbenchScope(), activeProfileAddress).length) throw new Error(TEXT_RECOVERY_MESSAGE);
+        return commit({ ...converted, composition: reconcileReceptionCells(before, candidate) },
+          { expectedGeneration, historyPresentation, historyLabel: 'Add cell' });
+      };
+      return { composition: before, place };
     },
     /** @param {string} name @param {{workbench?: import('../contracts/workbench.js').WorkbenchPresentation, layout?: 'canvas' | 'bento', generateId?: () => string}} [options] */
     createWorkbench(name, { workbench, layout, generateId = () => globalThis.crypto.randomUUID() } = {}) {

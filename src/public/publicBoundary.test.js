@@ -57,7 +57,7 @@ test('selected owner workflow does not restore the legacy Gallery workspace', ()
   const runtimeSource = readFileSync(new URL('./ownerSystemWorkflow/OwnerSystemWorkflowRuntime.jsx', import.meta.url), 'utf8');
   const modulesSource = readFileSync(new URL('./ownerSystemWorkflow/OwnerWorkbenchModules.jsx', import.meta.url), 'utf8');
   assert.match(runtimeSource, /<OwnerWorkbenchModules/u);
-  assert.match(modulesSource, /<OwnerDisplayInstance/u);
+  assert.doesNotMatch(modulesSource, /OwnerDisplayInstance/u);
   const displaySource = readFileSync(new URL('./ownerSystemWorkflow/DisplayModule.jsx', import.meta.url), 'utf8');
   assert.match(displaySource, /<OwnerSystemWorkflowCanvas/u);
   assert.doesNotMatch(displaySource, /GalleryWorld|CreationsBrowser|UpperWorldSurface|SpatialLevelNavigation/u);
