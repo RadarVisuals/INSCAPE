@@ -1,3 +1,4 @@
+import { validSlides, pruneSwipeLinks } from './cellSlides.js';
 import { receptionReadingOrder, progressiveReceptionFrames, RECEPTION_READING_WIDTH, responsiveCellImage, responsiveImageHeight, responsiveImageFrame,
   responsiveCellArtwork, responsiveArtworkHeight, responsiveArtworkFrames } from './receptionResponsiveImages.js';
 import { MIN_RECEPTION_CELL_SIZE, editorCellWindow, projectReceptionCellMembers, positionReceptionMembers, receptionMemberAnchor } from './editorCellGeometry.js';
@@ -24,7 +25,7 @@ export function receptionModuleSizeReason(id, frame, inCell = true) {
   return ['width', 'height'].some(axis => !Number.isFinite(frame[axis])
     || frame[axis] < limits[axis === 'width' ? 'minimumWidth' : 'minimumHeight']
     || frame[axis] > limits[axis === 'width' ? 'maximumWidth' : 'maximumHeight'])
-    ? `${name} needs a frame between ${limits.minimumWidth} × ${limits.minimumHeight} and ${limits.maximumWidth} × ${limits.maximumHeight} px. Enlarge the cell or resize its contents first.` : null;
+    ? `${name} needs a frame between ${limits.minimumWidth} \u00d7 ${limits.minimumHeight} and ${limits.maximumWidth} \u00d7 ${limits.maximumHeight} px. Enlarge the cell or resize its contents first.` : null;
 }
 
 // Bound the cell by the proportional size of every native member. Empty cells
@@ -128,7 +129,7 @@ export function validReceptionEditorDocument(value, published = false) {
     if (placed.length !== value[key].length || placed.some(item => !value[key].some(record => record.id === item.id))) return false;
   }
   for (const cell of value.cells) {
-    if (!exact(cell, ['id', 'members', 'mobile'], ['radius', 'content', 'contentLayout', 'lockedMembers', 'memberAnchors', 'clipContent', 'grainOverContent', 'fitText', 'singleLine']) || cellIds.has(cell.id)
+    if (!exact(cell, ['id', 'members', 'mobile'], ['radius', 'content', 'contentLayout', 'lockedMembers', 'slides', 'swipeLink', 'swipeDirection', 'memberAnchors', 'clipContent', 'grainOverContent', 'fitText', 'singleLine']) || cellIds.has(cell.id)
       || !value.shapes.some(item => item.id === cell.id && !item.kind) || !Array.isArray(cell.members)
       || Object.hasOwn(cell, 'radius') && !number(cell.radius, 0, 160)
       || Object.hasOwn(cell, 'singleLine') && typeof cell.singleLine !== 'boolean'
@@ -139,6 +140,7 @@ export function validReceptionEditorDocument(value, published = false) {
       || Object.hasOwn(cell.mobile, 'autoHeight') && typeof cell.mobile.autoHeight !== 'boolean'
       || Object.hasOwn(cell.mobile, 'referenceWidth') && !number(cell.mobile.referenceWidth, 1, 16384)
       || !Number.isInteger(cell.mobile.height) || !number(cell.mobile.height, 80, 1200)) return false;
+    if (!validSlides(cell)) return false;
     cellIds.add(cell.id);
     if (Object.hasOwn(cell, 'contentLayout') && (!exact(cell.contentLayout, ['padding', 'alignX', 'alignY'])
       || !number(cell.contentLayout.padding, 0, 128) || !['left', 'center', 'right'].includes(cell.contentLayout.alignX)
@@ -165,6 +167,11 @@ export function validReceptionEditorDocument(value, published = false) {
       }
     }
   }
+  const counts = new Map();
+  for (const cell of value.cells.filter(cell => cell.swipeLink)) {
+    if (counts.has(cell.swipeLink) && counts.get(cell.swipeLink) !== cell.slides.length) return false;
+    counts.set(cell.swipeLink, cell.slides.length);
+  }
   if ([...cellIds].some(id => members.has(id))) return false;
   return !Object.hasOwn(value, 'arrangement') || validReceptionArrangement(value.arrangement, value.cells);
 }
@@ -178,6 +185,7 @@ export const pruneCellMembers = (cell, allowed) => {
   const members = cell.members.filter(id => allowed.has(id)), included = new Set(members);
   return { ...withReceptionMemberAnchors(cell, (cell.memberAnchors || []).map(anchor => ({ ...anchor,
     members: anchor.members.filter(id => included.has(id)) })).filter(anchor => anchor.members.length)), members,
+  ...(cell.slides ? { slides: cell.slides.map(slide => slide.filter(id => included.has(id))) } : {}),
   ...(cell.lockedMembers ? { lockedMembers: cell.lockedMembers.filter(id => included.has(id)) } : {}),
   ...(cell.fitText ? { fitText: cell.fitText.filter(id => included.has(id)) } : {}),
   mobile: { ...cell.mobile, ...(cell.mobile.placements ? { placements: cell.mobile.placements.filter(item => included.has(item.id)) } : {}) } };
@@ -187,8 +195,10 @@ export function projectReceptionEditorDocument(value) {
   const project = (items, fn) => fn(items.filter(item => !hidden.has(item.id)).map(item => ({ ...item, visibility: item.visibility || 'PUBLIC' })));
   const records = { shapes: project(value.shapes, projectShapes), imageModules: project(value.imageModules, projectImageModules), texts: project(value.texts, projectTextModules) };
   const allowed = new Set(idsOf(records));
-  const cells = value.cells.filter(cell => allowed.has(cell.id)).map(cell => pruneCellMembers(cell, allowed));
-  return structuredClone({ ...value, ...records, cells, workbench: filterLayout(value.workbench, allowed),
+  const cells = pruneSwipeLinks(value.cells.filter(cell => allowed.has(cell.id)).map(cell => pruneCellMembers(cell, allowed)));
+  const workbench = filterLayout(value.workbench, allowed);
+  delete workbench.lockedLayerIds;
+  return structuredClone({ ...value, ...records, cells, workbench,
     artworkLayers: layerIds(artworkLayers(value)).filter(id => allowed.has(id)),
     ...(value.arrangement ? { arrangement: pruneReceptionArrangement(value.arrangement, cells.map(cell => cell.id)) } : {}),
     branding: { ...value.branding, logo: allowed.has(value.branding.logo) ? value.branding.logo : null },
@@ -267,7 +277,7 @@ export function reconcileReceptionCells(previous, candidate, { resizeContents = 
   let next = records ? { ...candidate, ...records, workbench: filterLayout(candidate.workbench, new Set(idsOf(records))) } : candidate;
   next = reconcileArtworkLayers(previous, next);
   const available = new Set(idsOf(next));
-  next = { ...next, cells: next.cells.filter(cell => next.shapes.some(shape => shape.id === cell.id)).map(cell => pruneCellMembers(cell, available)) };
+  next = { ...next, cells: pruneSwipeLinks(next.cells.filter(cell => next.shapes.some(shape => shape.id === cell.id)).map(cell => pruneCellMembers(cell, available))) };
   const contained = new Set(next.cells.flatMap(cell => cell.members));
   // Explicitly released members must meet their native Canvas minima.
   for (const id of previous.cells.flatMap(cell => cell.members)) {

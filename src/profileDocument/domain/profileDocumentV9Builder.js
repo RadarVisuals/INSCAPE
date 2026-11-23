@@ -5,7 +5,6 @@ import { projectPublishedWorkbenchGroups } from './publishedWorkbenchGroups.js';
 import { normalizeProfileAddress } from '../../library/config.js';
 import {
   SYSTEM_WORKFLOW_VISIBILITY,
-  SYSTEM_WORKFLOW_WORLD_COVER_SIZE,
   assertValidSystemWorkflowDraft,
   isSystemWorkflowWorldCoverGrid,
 } from '../../systemWorkflow/domain/systemWorkflowDraft.js';
@@ -86,34 +85,6 @@ export function projectSystemWorkflowPublicGrids(draftInput, assetRecords = []) 
   return grids;
 }
 
-function projectSystemWorkflowWorldCover(draft, assetRecords) {
-  const cover = draft.grids.find(isSystemWorkflowWorldCoverGrid);
-  if (!cover?.placements.length) return null;
-  const resolveAsset = createProfileDocumentV9AssetResolver(assetRecords);
-  return {
-    width: SYSTEM_WORKFLOW_WORLD_COVER_SIZE.width,
-    height: SYSTEM_WORKFLOW_WORLD_COVER_SIZE.height,
-    grid: {
-      id: cover.id,
-      title: cover.title,
-      subtitle: cover.subtitle,
-      visibility: SYSTEM_WORKFLOW_VISIBILITY.PUBLIC,
-      labelVisible: false,
-      labelAnchor: cover.labelAnchor,
-      labelOffset: { ...cover.labelOffset },
-      ...(cover.groups ? { groups: structuredClone(cover.groups) } : {}),
-      placements: cover.placements
-        .filter(({ visibility }) => visibility === SYSTEM_WORKFLOW_VISIBILITY.PUBLIC)
-        .sort((left, right) => left.navigationOrder - right.navigationOrder || left.id.localeCompare(right.id))
-        .map(({ locked: _locked, stableAssetId, selectedMedia, ...placement }) => ({
-          ...structuredClone(placement),
-          visibility: SYSTEM_WORKFLOW_VISIBILITY.PUBLIC,
-          ...(placement.kind === 'text' ? {} : { asset: resolveAsset(stableAssetId, selectedMedia) }),
-        })),
-    },
-  };
-}
-
 export function buildProfileDocumentV9({
   assetRecords = [],
   createdAt,
@@ -142,7 +113,6 @@ export function buildProfileDocumentV9({
   const avatarAsset = identity.avatar.mode === 'inscape' && identity.avatar.stableAssetId
     ? resolveAvatarAsset(identity.avatar.stableAssetId, identity.avatar.selectedMedia)
     : null;
-  const worldCover = projectSystemWorkflowWorldCover(draft, assetRecords);
   const displays = draft.displays?.filter(module => module.visibility === 'PUBLIC' && module.grids.some(grid => !isSystemWorkflowWorldCoverGrid(grid) && grid.visibility === 'PUBLIC'))
     .map(module => ({ id: module.id, artboard: { ...module.artboard }, geometry: { ...module.geometry }, appearance: { ...module.appearance },
       grids: projectSystemWorkflowPublicGrids(projectDisplayDraft(draft, module.id), assetRecords) }));
@@ -192,7 +162,6 @@ export function buildProfileDocumentV9({
     ...(workbenchIndex ? { workbenchIndex } : {}),
     ...(draft.reception ? { reception: projectReception(draft.reception) } : {}),
     ...(draft.composition ? { composition: projectReception(draft.composition) } : {}),
-    metadata: worldCover ? { worldCover } : {},
     ...(displays ? { displays } : {}),
     ...(miniApps?.length ? { miniApps } : {}),
     ...(shapes?.length ? { shapes } : {}),
@@ -206,7 +175,6 @@ export function buildProfileDocumentV9({
 export function countProfileDocumentV9Assets(document) {
   const value = assertValidProfileDocumentV9(document);
   const countCanvas = value => value.grids.reduce((total, grid) => total + grid.placements.length, 0)
-    + (value.metadata.worldCover?.grid.placements.length || 0)
     + (value.workbench?.display.shortcut.icon ? 1 : 0)
     + (value.displays || []).reduce((sum, module) => sum + module.grids.reduce((count, grid) => count + grid.placements.length, 0), 0)
     + (value.workbench?.displays || []).filter(module => module.shortcut.icon).length

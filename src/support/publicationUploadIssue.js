@@ -12,7 +12,7 @@ const messages = {
   ORIGIN_NOT_ALLOWED: 'The publication service does not accept this site’s origin.',
   PREFLIGHT_NOT_ALLOWED: 'The publication endpoint does not allow this upload request.',
   PUBLICATION_FUNCTION_UNAVAILABLE: 'The publication endpoint did not return a service response.',
-  PUBLICATION_SERVICE_UPDATE_REQUIRED: 'The hosted publication service needs an update to support this Gallery change.',
+  PUBLICATION_SERVICE_UPDATE_REQUIRED: 'The publication service must be updated for this document format. No wallet signature was requested.',
   UNSUPPORTED_MEDIA_TYPE: 'The service could not read the publication format.',
   UPLOAD_AUTH_INVALID: 'Upload authorization is invalid or expired. Authorize the upload again.',
   UPLOAD_AUTH_NOT_COMPLETED: 'Upload authorization was not completed in the wallet.',

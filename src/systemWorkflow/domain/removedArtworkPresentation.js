@@ -25,7 +25,6 @@ export function withoutRemovedArtworkPresentation(input) {
     }
   };
   clean(result.grids);
-  if (result.metadata?.worldCover?.grid) clean([result.metadata.worldCover.grid]);
   for (const display of result.displays || []) clean(display.grids);
   return result;
 }

@@ -2,7 +2,6 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createEmptySystemWorkflowDraft } from '../../systemWorkflow/domain/systemWorkflowDraft.js';
 import { createWorkbenchCollection, appendWorkbench } from '../../systemWorkflow/domain/workbenchCollection.js';
-import { requiresGalleryPublicationCapability } from './constants.js';
 import { canvasPublicationCandidates, canvasPublicationChanges, buildCanvasPublication, buildGalleryRemoval, canReplaceInvalidPublication, resolvePublicationBaseline } from './canvasPublication.js';
 import { createReceptionEditorDocument } from '../../reception/receptionEditorDocument.js';
 import { createStudioComposition } from '../../systemWorkflow/domain/studioComposition.js';
@@ -329,7 +328,7 @@ test('removing the last work leaves an empty verified profile and supports a lat
     assert.equal(empty.canvas, null);
     assert.deepEqual(empty.canvases, []);
     assert.deepEqual(empty.grids, []);
-    assert.deepEqual(empty.metadata, {});
+    assert.equal(Object.hasOwn(empty, 'metadata'), false);
     assert.ok(CANVAS_CONTENT_KEYS.slice(5).every(key => !Object.hasOwn(empty, key)));
     assert.doesNotMatch(canonicalSerializeProfileDocumentV9(empty), /Public scene|First canvas/);
     assert.deepEqual(parseProfileDocumentV9Json(canonicalSerializeProfileDocumentV9(empty)), empty);
@@ -417,7 +416,7 @@ test('mutually linked Gallery works can be removed together, and only surviving 
   assert.throws(() => buildGalleryRemoval(dual, [first, second]), /break published links in .*First canvas/);
 });
 
-test('upload capability is required only for v9 artifacts that use Studio Gallery extensions', () => {
+test('current v9 documents validate with optional Gallery destinations and Studio composition content', () => {
   const record = fixture();
   record.shared.reception = createReceptionEditorDocument();
   const [first, second] = record.workbenches.map(item => item.id);
@@ -431,7 +430,6 @@ test('upload capability is required only for v9 artifacts that use Studio Galler
   delete implicit.canvases;
   for (const compatible of [implicit, legacy]) {
     assert.equal(validateProfileDocumentV9(compatible).valid, true);
-    assert.equal(requiresGalleryPublicationCapability(compatible), false);
   }
 
   const native = createStudioComposition('canvas');
@@ -445,9 +443,8 @@ test('upload capability is required only for v9 artifacts that use Studio Galler
     const updated = structuredClone(legacy);
     change(updated);
     assert.equal(validateProfileDocumentV9(updated).valid, true);
-    assert.equal(requiresGalleryPublicationCapability(updated), true);
   }
   const empty = buildGalleryRemoval(legacy, [first, second]);
   assert.equal(empty.canvas, null);
-  assert.equal(requiresGalleryPublicationCapability(empty), true);
+  assert.equal(validateProfileDocumentV9(empty).valid, true);
 });

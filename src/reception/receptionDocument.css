@@ -9,8 +9,6 @@
 .reception-document-cell-content { position: absolute; inset: 0; display: flex; padding: 24px; box-sizing: border-box; overflow: auto; scrollbar-width: none; border-radius: inherit; }
 .reception-document-layer[data-text] { overflow: hidden; overflow-wrap: anywhere; }
 .reception-document-layer .reception-image { min-height: 0; }
-.reception-document-canvas [data-selected] { outline: 1px solid var(--tactile-ink); outline-offset: -1px; }
-.reception-document-layer[tabindex]:focus-visible, .reception-document-cell[tabindex]:focus-visible { outline: 2px solid var(--tactile-ink); outline-offset: -2px; }
 .reception-text-preview { height: 100%; min-height: 0; }
 .reception-text-preview[data-stacked] { container-type: size; --text-stack-height: 100cqh; }
 .reception-text-excerpt { max-height: 100%; overflow: hidden; }
@@ -20,8 +18,46 @@
 .reception-read-dots > span { width: 3px; height: 3px; border-radius: 50%; background: currentColor; }
 .reception-read-text:hover, .reception-read-text:focus-visible { opacity: 1; }
 .reception-read-text:focus-visible, .reception-reader-close:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
+/* Only the translated layer needs the changing position. Keep it out of
+   nested article, image and SVG styles throughout a drag or coast. */
+@property --slide-position { syntax: "<number>"; inherits: false; initial-value: 0; }
+@property --cell-slide-offset { syntax: "<number>"; inherits: false; initial-value: 0; }
+.reception-cell-group[data-swiping] > .reception-document-cell { --slide-position: inherit; }
 /* No stacking context at rest: each layer retains its global paint index. */
 .reception-cell-group { position: absolute; }
+.reception-cell-group[data-swiping] { overflow: clip; }
+.reception-cell-group[data-swiping] > .reception-document-layer,
+.reception-cell-group[data-swiping] > .reception-document-cell > .reception-document-cell-content {
+  /* Recycle the layer only when it is completely outside the cell. Position
+     depends on the continuous gesture, independently of React's render clock. */
+  --slide-position: inherit;
+  --cell-slide-offset: calc(mod(var(--layer-slide, 0) - var(--slide-position) + 1, var(--slide-count)) - 1);
+  translate: calc(var(--cell-slide-offset) * var(--slide-x)) calc(var(--cell-slide-offset) * var(--slide-y));
+  will-change: translate;
+}
+/* A scrollable article can be the nearest touch scroller inside a cell. */
+.reception-cell-group[data-slide], .reception-cell-group[data-slide] :where(*) { touch-action: var(--swipe-pan, pan-y) pinch-zoom; }
+.reception-cell-group[data-slide] { -webkit-user-select: none; user-select: none; }
+.reception-cell-group[data-slide] :is(input, textarea, [contenteditable="true"]) { -webkit-user-select: text; user-select: text; }
+.reception-cell-group[data-vertical-swipe] { --swipe-pan: pan-x; }
+.reception-swipe-glow {
+  position: absolute; inset: 0; pointer-events: none; opacity: 0;
+  background: radial-gradient(ellipse var(--glow-size) at var(--glow-edge), rgb(255 255 255 / .7), transparent);
+}
+.reception-swipe-glow[data-advance="left"] { --glow-size: 4px 38%; --glow-edge: right center; }
+.reception-swipe-glow[data-advance="right"] { --glow-size: 4px 38%; --glow-edge: left center; }
+.reception-swipe-glow[data-advance="up"] { --glow-size: 38% 4px; --glow-edge: center bottom; }
+.reception-swipe-glow[data-advance="down"] { --glow-size: 38% 4px; --glow-edge: center top; }
+@media (any-hover: hover) {
+  .reception-cell-group:hover:not(:active, [data-swiping]) > .reception-swipe-glow { opacity: 1; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .reception-swipe-glow { transition: opacity 160ms ease-out; }
+  .reception-cell-group:is(:active, [data-swiping]) > .reception-swipe-glow { transition: none; }
+}
+.reception-slide-status {
+  position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%);
+}
 .reception-text-reader { font: inherit; box-sizing: border-box; width: min(calc(66ch + 64px), calc(100vw - 32px)); max-height: calc(100dvh - 64px); margin: auto; padding: 0; border: 0; overflow: hidden; background: var(--reception-page-background, var(--interface-window, #080808)); isolation: isolate; }
 .reception-text-reader[open] { display: flex; }
 .reception-text-reader::backdrop { background: rgb(0 0 0 / .78); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
@@ -31,3 +67,5 @@
 .reception-reader-scroll > div + div { margin-top: 32px; }
 .reception-reader-close { position: absolute; z-index: 1; top: 8px; right: 8px; display: grid; place-items: center; width: 32px; height: 32px; padding: 0; border: 0; background: none; color: inherit; cursor: pointer; }
 .reception-reader-scroll::-webkit-scrollbar, .reception-document-cell-content::-webkit-scrollbar { display: none; }
+
+.reception-document-canvas [data-selected] { outline: 1px solid var(--tactile-ink); outline-offset: -1px; }

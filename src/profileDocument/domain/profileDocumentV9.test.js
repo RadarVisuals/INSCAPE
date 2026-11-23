@@ -245,7 +245,7 @@ test('v9 builder emits only the clean INSCAPE envelope and ordered public Grids'
   const value = document();
   assert.deepEqual(Object.keys(value), [
     'documentType', 'version', 'documentId', 'revision', 'createdAt', 'exportedAt',
-    'network', 'profile', 'artboard', 'geometry', 'appearance', 'identityPresentation', 'grids', 'metadata',
+    'network', 'profile', 'artboard', 'geometry', 'appearance', 'identityPresentation', 'grids',
   ]);
   assert.equal(value.documentType, 'INSCAPE_PROFILE');
   assert.equal(value.version, 9);
@@ -281,17 +281,15 @@ test('public placement projection preserves canonical asset and presentation whi
   assert.deepEqual(input, draft(), 'projection must not mutate the canonical draft');
 });
 
-test('an authored World Cover is published separately from visitor Grids at the canonical 16:9 size', () => {
+test('publication omits the editor cover and rejects a retired metadata envelope', () => {
   const systemWorkflowDraft = draft();
   systemWorkflowDraft.grids.find(({ id }) => id === 'grid:world-cover').placements = [
     placement('world-cover-placement', 0, { locked: false }),
   ];
   const value = document({ systemWorkflowDraft });
   assert.deepEqual(value.grids.map(({ id }) => id), ['grid:home', 'grid:second']);
-  assert.equal(value.metadata.worldCover.width, 768);
-  assert.equal(value.metadata.worldCover.height, 432);
-  assert.equal(value.metadata.worldCover.grid.id, 'grid:world-cover');
-  assert.deepEqual(value.metadata.worldCover.grid.placements.map(({ id }) => id), ['world-cover-placement']);
+  assert.equal(Object.hasOwn(value, 'metadata'), false);
+  assert.equal(validateProfileDocumentV9({ ...value, metadata: {} }).valid, false);
   assert.equal(validateProfileDocumentV9(value).valid, true);
 });
 

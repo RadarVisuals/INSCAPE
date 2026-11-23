@@ -108,7 +108,7 @@ test('public custom canvases clip fully outside layers, retain partial geometry 
   assert.deepEqual(doc.grids[0].groups[0].placementIds, [first.id, 'partly-visible']);
   assert.deepEqual(doc.displays[0].geometry, { columns: 40, rows: 8 });
   assert.equal(doc.displays[0].id, id);
-  assert.equal(doc.metadata.worldCover.width / doc.metadata.worldCover.height, 16 / 9);
+  assert.equal(Object.hasOwn(doc, 'metadata'), false);
   const parsed = parseProfileDocumentV9Json(canonicalSerializeProfileDocumentV9(doc));
   const restored = reconcileSystemWorkflowDraftFromProfileDocumentV9(parsed);
   assert.deepEqual(restored.geometry, draft.geometry);

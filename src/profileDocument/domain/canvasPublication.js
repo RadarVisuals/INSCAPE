@@ -147,7 +147,7 @@ export function buildGalleryRemoval(previousVerifiedDocument, workIds, exportedA
       document.canvas = details;
     } else {
       const { artboard, geometry, appearance } = createEmptySystemWorkflowDraft(document.profile.address, { generateId: () => 'empty' });
-      Object.assign(document, { artboard, geometry, appearance, grids: [], metadata: {}, canvas: null });
+      Object.assign(document, { artboard, geometry, appearance, grids: [], canvas: null });
     }
   } else if (document.canvas && selection.has(document.canvas.id)) {
     document.canvas.destinations = ['profile'];

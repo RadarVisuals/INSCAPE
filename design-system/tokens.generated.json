@@ -5,8 +5,8 @@
   "note": "Generated from production and design-system reference CSS. Reference roles are preview-only. Values remain CSS expressions, with selector and media scopes; this is not a DTCG interchange file. Runtime custom properties and local overrides are included and are not automatically public design tokens.",
   "counts": {
     "files": 108,
-    "definitions": 751,
-    "names": 426
+    "definitions": 763,
+    "names": 431
   },
   "sources": [
     {
@@ -9198,7 +9198,7 @@
     {
       "path": "src/reception/receptionDocument.css",
       "role": "Local",
-      "sha256": "50452b5934d7bc950183f7631cfd33c979f36353e2c3c41b6fbb679221b90a4b",
+      "sha256": "21137b81bd0bf7850e0cf1af75916bb988ef26d29f76430c4d7fb378c8c52121",
       "definitions": [
         {
           "name": "--text-stack-height",
@@ -9206,18 +9206,139 @@
           "scope": [
             ".reception-text-preview[data-stacked]"
           ],
-          "line": 15,
+          "line": 13,
+          "references": []
+        },
+        {
+          "name": "--slide-position",
+          "value": "inherit",
+          "scope": [
+            ".reception-cell-group[data-swiping] > .reception-document-cell"
+          ],
+          "line": 25,
+          "references": []
+        },
+        {
+          "name": "--slide-position",
+          "value": "inherit",
+          "scope": [
+            ".reception-cell-group[data-swiping] > .reception-document-layer,\n.reception-cell-group[data-swiping] > .reception-document-cell > .reception-document-cell-content"
+          ],
+          "line": 33,
+          "references": []
+        },
+        {
+          "name": "--cell-slide-offset",
+          "value": "calc(mod(var(--layer-slide, 0) - var(--slide-position) + 1, var(--slide-count)) - 1)",
+          "scope": [
+            ".reception-cell-group[data-swiping] > .reception-document-layer,\n.reception-cell-group[data-swiping] > .reception-document-cell > .reception-document-cell-content"
+          ],
+          "line": 34,
+          "references": [
+            "--layer-slide",
+            "--slide-position",
+            "--slide-count"
+          ]
+        },
+        {
+          "name": "--swipe-pan",
+          "value": "pan-x",
+          "scope": [
+            ".reception-cell-group[data-vertical-swipe]"
+          ],
+          "line": 42,
+          "references": []
+        },
+        {
+          "name": "--glow-size",
+          "value": "4px 38%",
+          "scope": [
+            ".reception-swipe-glow[data-advance=\"left\"]"
+          ],
+          "line": 47,
+          "references": []
+        },
+        {
+          "name": "--glow-edge",
+          "value": "right center",
+          "scope": [
+            ".reception-swipe-glow[data-advance=\"left\"]"
+          ],
+          "line": 47,
+          "references": []
+        },
+        {
+          "name": "--glow-size",
+          "value": "4px 38%",
+          "scope": [
+            ".reception-swipe-glow[data-advance=\"right\"]"
+          ],
+          "line": 48,
+          "references": []
+        },
+        {
+          "name": "--glow-edge",
+          "value": "left center",
+          "scope": [
+            ".reception-swipe-glow[data-advance=\"right\"]"
+          ],
+          "line": 48,
+          "references": []
+        },
+        {
+          "name": "--glow-size",
+          "value": "38% 4px",
+          "scope": [
+            ".reception-swipe-glow[data-advance=\"up\"]"
+          ],
+          "line": 49,
+          "references": []
+        },
+        {
+          "name": "--glow-edge",
+          "value": "center bottom",
+          "scope": [
+            ".reception-swipe-glow[data-advance=\"up\"]"
+          ],
+          "line": 49,
+          "references": []
+        },
+        {
+          "name": "--glow-size",
+          "value": "38% 4px",
+          "scope": [
+            ".reception-swipe-glow[data-advance=\"down\"]"
+          ],
+          "line": 50,
+          "references": []
+        },
+        {
+          "name": "--glow-edge",
+          "value": "center top",
+          "scope": [
+            ".reception-swipe-glow[data-advance=\"down\"]"
+          ],
+          "line": 50,
           "references": []
         }
       ],
       "references": [
+        "--cell-slide-offset",
+        "--glow-edge",
+        "--glow-size",
         "--interface-environment",
         "--interface-window",
+        "--layer-slide",
         "--reception-frame-fill",
         "--reception-frame-fill-opacity",
         "--reception-frame-line",
         "--reception-frame-line-opacity",
         "--reception-page-background",
+        "--slide-count",
+        "--slide-position",
+        "--slide-x",
+        "--slide-y",
+        "--swipe-pan",
         "--tactile-ink"
       ]
     },

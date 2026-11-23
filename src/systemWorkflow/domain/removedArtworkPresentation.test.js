@@ -19,15 +19,13 @@ test('old presentation fields preserve immutable published bytes while new draft
   const artwork = { id: 'a', stableAssetId: OWNER_SYSTEM_WORKFLOW_REVIEW_ASSETS[0].id, column: 0, row: 0, columnSpan: 4, rowSpan: 4,
     layer: 0, navigationOrder: 0, crop: null, visibility: 'PUBLIC', locked: false, transform: { quarterTurns: 0, mirrorX: false, mirrorY: false } };
   draft.grids[0].placements = [{ ...artwork, ...legacy }];
-  draft.grids.find(grid => grid.id === 'grid:world-cover').placements = [{ ...artwork, id: 'cover', ...legacy }];
   const before = structuredClone(draft);
   const normalized = assertValidSystemWorkflowDraft(draft);
   assert.deepEqual(draft, before);
   assert.deepEqual(normalized.grids[0].placements[0], artwork);
   const published = buildProfileDocumentV9({ profileAddress, systemWorkflowDraft: draft, assetRecords: OWNER_SYSTEM_WORKFLOW_REVIEW_ASSETS });
-  // Exercise old public bytes too, including the separately nested cover.
+  // Exercise old public bytes too.
   Object.assign(published.grids[0].placements[0], legacy);
-  Object.assign(published.metadata.worldCover.grid.placements[0], legacy);
   const publicBefore = structuredClone(published);
   const parsed = assertValidProfileDocumentV9(published);
   assert.deepEqual(published, publicBefore);
@@ -43,7 +41,7 @@ test('old presentation fields preserve immutable published bytes while new draft
     fetchImpl: async () => new Response(bytes, { headers: { 'content-type': 'application/json' } }), ipfsGateway: 'https://gateway.test/ipfs/' });
   const result = await repository.resolve(profileAddress);
   assert.equal(result.status, PUBLISHED_PROFILE_STATUS.RESOLVED);
-  assert.equal(result.document.metadata.worldCover.grid.placements[0].asset.stableAssetId, artwork.stableAssetId);
+  assert.equal(result.document.grids[0].placements[0].asset.stableAssetId, artwork.stableAssetId);
   const restored = createOwnerDraftFromPublishedProfile(parsed);
   for (const grid of restored.grids) for (const placement of grid.placements) {
     for (const key of REMOVED_ARTWORK_PRESENTATION_KEYS) assert.equal(Object.hasOwn(placement, key), false);

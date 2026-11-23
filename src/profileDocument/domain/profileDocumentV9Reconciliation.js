@@ -76,9 +76,7 @@ export function reconcileSystemWorkflowDraftFromProfileDocumentV9(documentInput,
       .filter(({ visibility, id }) => visibility === SYSTEM_WORKFLOW_VISIBILITY.PRIVATE && id !== SYSTEM_WORKFLOW_WORLD_COVER_GRID_ID && !publishedIds.has(id))
       .map((grid) => structuredClone(grid));
   }
-  const worldCover = document.metadata.worldCover
-    ? restoredPublicGrid(document.metadata.worldCover.grid)
-    : createEmptySystemWorkflowWorldCoverGrid();
+  const worldCover = createEmptySystemWorkflowWorldCoverGrid();
   const publishedDisplays = (document.displays || []).map(module => {
     const local = currentDraftInput?.displays?.find(item => item.id === module.id);
     const publicIds = new Set(module.grids.map(grid => grid.id));

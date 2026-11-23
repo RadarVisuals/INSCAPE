@@ -116,14 +116,14 @@ test('groups belong to the originating Display', () => {
   assert.deepEqual(reconcileSystemWorkflowDraftFromProfileDocumentV9(document).displays[0].grids[0].groups, draft.displays[0].grids[0].groups);
 });
 
-test('World Cover groups survive publication and restore with their asset identities', () => {
-  const f = setup(), gridId = 'grid:world-cover';
+test('public Grid groups survive publication and restore with their asset identities', () => {
+  const f = setup(), gridId = f.store.getDraft().grids[0].id;
   for (let i = 0; i < 2; i++) f.session.placeAsset({ gridId, stableAssetId: assets[i].id, nativeWidth: 200, nativeHeight: 200 });
   const placements = f.store.getDraft().grids.find(grid => grid.id === gridId).placements;
   f.session.groupPlacements({ gridId, placementIds: placements.map(p => p.id), expectedPlacements: placements });
   const draft = f.store.getDraft(), group = draft.grids.find(grid => grid.id === gridId).groups[0];
   const document = buildProfileDocumentV9({ profileAddress, systemWorkflowDraft: draft, assetRecords: assets });
-  assert.deepEqual(document.metadata.worldCover.grid.groups, [group]);
+  assert.deepEqual(document.grids.find(grid => grid.id === gridId).groups, [group]);
   const restored = reconcileSystemWorkflowDraftFromProfileDocumentV9(document).grids.find(grid => grid.id === gridId);
   assert.deepEqual(restored.groups, [group]);
   assert.deepEqual(restored.placements.map(p => p.stableAssetId), placements.map(p => p.stableAssetId));

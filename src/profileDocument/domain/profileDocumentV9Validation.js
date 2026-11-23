@@ -19,7 +19,6 @@ import {
   SYSTEM_WORKFLOW_SURFACE_IDS,
   SYSTEM_WORKFLOW_VISIBILITY,
   SYSTEM_WORKFLOW_WORLD_COVER_GRID_ID,
-  SYSTEM_WORKFLOW_WORLD_COVER_SIZE,
   isValidSystemWorkflowPlacementGeometry,
 } from '../../systemWorkflow/domain/systemWorkflowDraft.js';
 import {
@@ -42,7 +41,7 @@ import { DISPLAY_TEXT_KEYS, isTextPlacement, validDisplayText } from '../../syst
 const DOCUMENT_KEYS = [
   'documentType', 'version', 'documentId', 'revision', 'createdAt', 'exportedAt',
   'network', 'profile', 'artboard', 'geometry', 'appearance', 'identityPresentation',
-  'grids', 'metadata',
+  'grids',
 ];
 const APPEARANCE_KEYS = ['surfaceId', 'guideMode', 'guideSize', 'guideColor'];
 const GRID_KEYS = ['id', 'title', 'subtitle', 'visibility', 'labelVisible', 'labelAnchor', 'labelOffset', 'placements'];
@@ -51,7 +50,6 @@ const PLACEMENT_KEYS = [
   'crop', 'visibility', 'transform',
 ];
 const IDENTITY_KEYS = ['alias', 'avatar', 'bio', 'tags', 'visibility'];
-const WORLD_COVER_KEYS = ['width', 'height', 'grid'];
 const ID = /^[A-Za-z0-9:_-]+$/u;
 const GRID_ID = /^grid:[A-Za-z0-9_-]+$/u;
 const HEX_COLOR = /^#[0-9a-f]{6}$/iu;
@@ -146,46 +144,6 @@ function validatePlacement(value, path, fail) {
     || value.transform.quarterTurns < 0 || value.transform.quarterTurns > 3
     || typeof value.transform?.mirrorX !== 'boolean'
     || typeof value.transform?.mirrorY !== 'boolean') fail(`${path}.transform`, 'invalid_transform', 'Invalid placement transform');
-}
-
-function validateWorldCover(value, fail) {
-  if (!exactKeys(value, WORLD_COVER_KEYS)
-    || value.width !== SYSTEM_WORKFLOW_WORLD_COVER_SIZE.width
-    || value.height !== SYSTEM_WORKFLOW_WORLD_COVER_SIZE.height) {
-    fail('metadata.worldCover', 'invalid_world_cover', 'World Cover must use the canonical 768 by 432 aperture');
-    return 0;
-  }
-  const grid = value.grid;
-  if (!exactKeys(grid, [...GRID_KEYS, ...(Object.hasOwn(grid || {}, 'groups') ? ['groups'] : [])])
-    || grid.id !== SYSTEM_WORKFLOW_WORLD_COVER_GRID_ID
-    || grid.title !== 'WORLD COVER' || grid.subtitle !== ''
-    || grid.visibility !== SYSTEM_WORKFLOW_VISIBILITY.PUBLIC
-    || grid.labelVisible !== false || grid.labelAnchor !== 'top-left'
-    || !exactKeys(grid.labelOffset, ['column', 'row'])
-    || grid.labelOffset.column !== 0 || grid.labelOffset.row !== 0
-    || !Array.isArray(grid.placements)
-    || grid.placements.length > SYSTEM_WORKFLOW_LIMITS.maxPlacementsPerGrid) {
-    fail('metadata.worldCover.grid', 'invalid_world_cover_grid', 'Invalid canonical World Cover Grid');
-    return 0;
-  }
-  if (!validPlacementGroups(grid)) fail('metadata.worldCover.grid.groups', 'invalid_groups', 'Invalid placement groups');
-  const ids = new Set();
-  const layers = new Set();
-  const navigationOrders = new Set();
-  let previousNavigationOrder = -1;
-  grid.placements.forEach((placement, index) => {
-    const path = `metadata.worldCover.grid.placements[${index}]`;
-    validatePlacement(placement, path, fail);
-    if (ids.has(placement?.id)) fail(`${path}.id`, 'duplicate_placement_id', 'Duplicate World Cover placement ID');
-    ids.add(placement?.id);
-    if (layers.has(placement?.layer)) fail(`${path}.layer`, 'duplicate_layer', 'Duplicate World Cover layer');
-    layers.add(placement?.layer);
-    if (navigationOrders.has(placement?.navigationOrder)) fail(`${path}.navigationOrder`, 'duplicate_navigation_order', 'Duplicate World Cover navigation order');
-    navigationOrders.add(placement?.navigationOrder);
-    if (placement?.navigationOrder <= previousNavigationOrder) fail(`${path}.navigationOrder`, 'non_canonical_navigation_order', 'World Cover placements must be sorted by navigation order');
-    previousNavigationOrder = placement?.navigationOrder;
-  });
-  return grid.placements.length;
 }
 
 export class ProfileDocumentV9ValidationError extends Error {
@@ -289,7 +247,7 @@ function validateDocument(input, { rawSize } = {}, checkLinks) {
         ids.add(module.id);
         const { id, ...content } = module;
         if (!content.grids?.length) fail('displays', 'invalid_grid_count', 'An additional Display must contain Grids');
-        const result = validateProfileDocumentV9({ ...shared, ...content, metadata: {} });
+        const result = validateProfileDocumentV9({ ...shared, ...content });
         result.errors.forEach(error => fail(`displays.${id}.${error.path}`, error.code, error.message));
         moduleReferences += (module.grids || []).reduce((sum, grid) => sum + (grid?.placements?.length || 0), 0);
       }
@@ -310,7 +268,7 @@ function validateDocument(input, { rawSize } = {}, checkLinks) {
     input.grids.forEach((grid, gridIndex) => {
       const path = `grids[${gridIndex}]`;
       if (!exactKeys(grid, [...GRID_KEYS, ...(Object.hasOwn(grid || {}, 'groups') ? ['groups'] : [])])) return fail(path, 'invalid_grid_structure', 'Invalid public Grid');
-      if (!GRID_ID.test(grid.id || '') || grid.id.length > SYSTEM_WORKFLOW_LIMITS.maxIdLength) fail(`${path}.id`, 'invalid_grid_id', 'Invalid Grid ID');
+      if (typeof grid.id !== 'string' || grid.id === SYSTEM_WORKFLOW_WORLD_COVER_GRID_ID || !GRID_ID.test(grid.id) || grid.id.length > SYSTEM_WORKFLOW_LIMITS.maxIdLength) fail(`${path}.id`, 'invalid_grid_id', 'Invalid Grid ID');
       if (gridIds.has(grid.id)) fail(`${path}.id`, 'duplicate_grid_id', 'Duplicate Grid ID');
       gridIds.add(grid.id);
       if (!safeText(grid.title, 80, { empty: false }) || !safeText(grid.subtitle, 160)) fail(path, 'invalid_grid_text', 'Invalid Grid text');
@@ -343,21 +301,12 @@ function validateDocument(input, { rawSize } = {}, checkLinks) {
     });
     if (totalAssetReferences > SYSTEM_WORKFLOW_LIMITS.maxTotalAssetReferences) fail('grids', 'too_many_asset_references', 'Too many total asset references');
   }
-  let worldCoverAssetReferences = 0;
-  if (exactKeys(input.metadata, [])) {
-    // Older v9 publications without an authored World Cover remain valid.
-  } else if (exactKeys(input.metadata, ['worldCover'])) {
-    if (input.grids?.length === 0) fail('metadata.worldCover', 'invalid_world_cover', 'An absent Display cannot retain a World Cover');
-    worldCoverAssetReferences = validateWorldCover(input.metadata.worldCover, fail);
-  } else {
-    fail('metadata', 'unexpected_fields', 'Profile metadata contains unsupported fields');
-  }
   const documentAssetReferences = (input.grids || []).reduce((total, grid) => total + (grid?.placements?.length || 0), 0)
-    + worldCoverAssetReferences + (input.identityPresentation?.avatar?.asset ? 1 : 0) + moduleReferences
+    + (input.identityPresentation?.avatar?.asset ? 1 : 0) + moduleReferences
     + (input.workbench?.display?.shortcut?.icon ? 1 : 0) + (input.workbench?.displays || []).filter(module => module.shortcut?.icon).length
     + keeperReferenceCount(input.keeperDocks) + imageReferenceCount(input.imageModules) + receptionReferenceCount(input.reception) + receptionReferenceCount(input.composition);
   if (documentAssetReferences > SYSTEM_WORKFLOW_LIMITS.maxTotalAssetReferences) {
-    fail('metadata.worldCover', 'too_many_asset_references', 'Too many total asset references');
+    fail('$', 'too_many_asset_references', 'Too many total asset references');
   }
   validatePublishedCanvases(input, document => validateDocument(document, {}, false), fail);
   if (checkLinks && !errors.length) {
