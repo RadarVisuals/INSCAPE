@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createSystemWorkflowDraftStore } from './systemWorkflowDraftStore.js';
-import { addMiniApp, saveMiniApp } from '../miniApps/miniAppSession.js';
+import { addShape, editShape } from '../shapes/shapeSession.js';
 import { createSystemWorkflowAuthoringSession } from './systemWorkflowAuthoringSession.js';
 import { createArticle } from '../text/domain/article.js';
 import { draftChanges, applyDraftChanges } from './draftHistory.js';
@@ -11,20 +11,20 @@ function setup() {
   return { storage, values, store: createSystemWorkflowDraftStore({ profileAddress: profile, storage }) };
 }
 function rename(store, name) {
-  const current = store.getDraft().miniApps[0];
-  return saveMiniApp(store, profile, current, { ...current, name });
+  const current = store.getDraft().shapes[0];
+  editShape(store, profile, current, { name });
 }
 
-test('chronological undo crosses Mini app and Display and persists successful restoration', () => {
-  const { store, storage } = setup(); addMiniApp(store, profile);
+test('chronological undo crosses Shape and Display and persists successful restoration', () => {
+  const { store, storage } = setup(); addShape(store, profile);
   const before = store.getDraft();
-  rename(store, 'My app');
+  rename(store, 'My shape');
   const session = createSystemWorkflowAuthoringSession({ store }); session.createGrid();
   assert.equal(store.undo(), true); assert.equal(store.getDraft().grids.length, before.grids.length);
   assert.ok(session.getState().draft.grids.some(grid => grid.id === session.getState().selectedGridId));
-  assert.equal(store.getDraft().miniApps[0].name, 'My app');
+  assert.equal(store.getDraft().shapes[0].name, 'My shape');
   assert.equal(store.undo(), true); assert.deepEqual(store.getDraft(), before);
-  assert.equal(store.redo(), true); assert.equal(store.getDraft().miniApps[0].name, 'My app');
+  assert.equal(store.redo(), true); assert.equal(store.getDraft().shapes[0].name, 'My shape');
   assert.equal(store.redo(), true); assert.equal(store.getDraft().grids.length, before.grids.length + 1);
   assert.deepEqual(createSystemWorkflowDraftStore({ profileAddress: profile, storage }).getDraft(), store.getDraft());
 });
@@ -33,14 +33,14 @@ test('preview navigation is not an undo step and does not prevent undoing module
   const { store } = setup();
   const session = createSystemWorkflowAuthoringSession({ store });
   session.createGrid();
-  addMiniApp(store, profile);
+  addShape(store, profile);
   session.selectGrid(store.getDraft().grids[0].id);
-  assert.equal(store.undo(), true); assert.equal(store.getDraft().miniApps, undefined);
-  assert.equal(store.redo(), true); assert.equal(store.getDraft().miniApps.length, 1);
+  assert.equal(store.undo(), true); assert.equal(store.getDraft().shapes, undefined);
+  assert.equal(store.redo(), true); assert.equal(store.getDraft().shapes.length, 1);
 });
 
 test('failed writes and external edits preserve both draft and history', () => {
-  const { store, storage, values } = setup(); addMiniApp(store, profile);
+  const { store, storage, values } = setup(); addShape(store, profile);
   const before = store.getDraft(), history = store.getHistory(), setItem = storage.setItem;
   storage.setItem = () => { throw new Error('quota'); };
   assert.equal(store.undo(), false); assert.deepEqual(store.getDraft(), before); assert.deepEqual(store.getHistory(), history);
@@ -50,7 +50,7 @@ test('failed writes and external edits preserve both draft and history', () => {
 });
 
 test('a new edit clears redo; profile history is isolated and reload clears it', () => {
-  const { store } = setup(); addMiniApp(store, profile); rename(store, 'First');
+  const { store } = setup(); addShape(store, profile); rename(store, 'First');
   store.undo(); rename(store, 'Replacement');
   assert.equal(store.redo(), false);
   store.setProfileAddress('0x2222222222222222222222222222222222222222'); assert.equal(store.undo(), false);
@@ -58,11 +58,11 @@ test('a new edit clears redo; profile history is isolated and reload clears it',
 });
 
 test('continuous updates group into one gesture and cannot cross an undo boundary', () => {
-  const { store } = setup(); addMiniApp(store, profile);
+  const { store } = setup(); addShape(store, profile);
   const before = store.getDraft(); store.beginHistoryGroup();
   for (const name of ['First', 'Second', 'Final']) rename(store, name);
   store.endHistoryGroup(); assert.equal(store.undo(), true); assert.deepEqual(store.getDraft(), before);
-  assert.equal(store.redo(), true); assert.equal(store.getDraft().miniApps[0].name, 'Final');
+  assert.equal(store.redo(), true); assert.equal(store.getDraft().shapes[0].name, 'Final');
 });
 
 test('history preserves deletion, array replacement and detached values with shared branches', () => {

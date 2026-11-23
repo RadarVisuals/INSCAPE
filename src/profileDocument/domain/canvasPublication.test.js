@@ -135,6 +135,7 @@ test('publication rejects empty/unknown scope and invalid shared, nested, duplic
     doc => { doc.canvases[0].id = doc.canvas.id; },
     doc => { doc.canvases[0].content.profile = { address }; },
     doc => { doc.canvases[0].content.canvases = []; },
+    doc => { doc.canvases[0].content.miniApps = []; },
     doc => { doc.canvases[0].content.appearance.menuSurfaceId = 'mist'; },
     doc => { doc.canvases[0].content.grids[0].visibility = 'PRIVATE'; },
     doc => { doc.canvases = Array.from({ length: 30 }, (_, i) => ({ ...doc.canvases[0], id: `workbench:extra-${i}` })); },

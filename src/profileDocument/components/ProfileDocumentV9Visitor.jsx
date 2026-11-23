@@ -18,7 +18,6 @@ import '../../public/ownerSystemWorkflow/ownerSystemWorkflow.css';
 import './visitorGridWorld.css';
 
 const IdentityModule = lazy(() => import('../../public/identity/IdentityModule.jsx'));
-const MiniAppsWorkbench = lazy(() => import('../../miniApps/MiniAppsWorkbench.jsx'));
 const ImageWorkbench = lazy(() => import('../../imageModule/ImageWorkbench.jsx'));
 const ShapeWorkbench = lazy(() => import('../../shapes/ShapeWorkbench.jsx'));
 const KeeperWorkbench = lazy(() => import('../../keeper/KeeperWorkbench.jsx'));
@@ -42,7 +41,7 @@ function CanvasDisplay({ item, entryTarget, active, onActivate, navigationHost, 
     onInspectionChange={onInspectionChange} navigationHost={navigationHost} reducedMotion={reducedMotion} />;
 }
 
-function ProfileDocumentV9Session({ document, onExit, onOpenDirectory, onReturn, onConnect, entryTarget, renderHeader }) {
+function ProfileDocumentV9Session({ document, onExit, onOpenDirectory, onReturn, entryTarget, renderHeader }) {
   useStartupDestinationReady();
   const rootRef = useRef(null), identityControlRef = useRef(null), profileDockControlRef = useRef(null);
   const [navigationHost, setNavigationHost] = useState(null);
@@ -145,10 +144,6 @@ function ProfileDocumentV9Session({ document, onExit, onOpenDirectory, onReturn,
       <TextWorkbench initiallyOpenId={entryTarget?.moduleId} records={document.texts} presentations={document.workbench?.texts} profileAddress={document.profile.address} />
     </Suspense>}
     </WorkbenchCanvasContent>
-    {document.miniApps?.length > 0 && <Suspense fallback={<p role="status">Opening mini apps…</p>}>
-      <MiniAppsWorkbench records={document.miniApps} presentations={document.workbench?.miniApps}
-        profileAddress={document.profile.address} onConnect={onConnect} />
-    </Suspense>}
 
   </main>;
 }

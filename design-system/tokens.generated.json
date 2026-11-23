@@ -4,8 +4,8 @@
   "systemVersion": "1.0.0",
   "note": "Generated from production and design-system reference CSS. Reference roles are preview-only. Values remain CSS expressions, with selector and media scopes; this is not a DTCG interchange file. Runtime custom properties and local overrides are included and are not automatically public design tokens.",
   "counts": {
-    "files": 108,
-    "definitions": 763,
+    "files": 106,
+    "definitions": 757,
     "names": 431
   },
   "sources": [
@@ -2786,102 +2786,6 @@
       "references": []
     },
     {
-      "path": "src/miniApps/bridge.css",
-      "role": "Local",
-      "sha256": "3a48031cc17e71e4e146edd84f6aa0e9575a43ae0b6a83ff8cd3deb12dc3b638",
-      "definitions": [],
-      "references": []
-    },
-    {
-      "path": "src/miniApps/miniApps.css",
-      "role": "Local",
-      "sha256": "7a194f1b926812eaea4be67af63f7c2fe6f3f95ba9d80c44c804c24e1ae13d86",
-      "definitions": [
-        {
-          "name": "--tactile-face",
-          "value": "var(--editor-panel)",
-          "scope": [
-            ".mini-app-settings-window[data-window-chrome='flat']"
-          ],
-          "line": 17,
-          "references": [
-            "--editor-panel"
-          ]
-        },
-        {
-          "name": "--tactile-header",
-          "value": "var(--editor-panel)",
-          "scope": [
-            ".mini-app-settings-window[data-window-chrome='flat']"
-          ],
-          "line": 18,
-          "references": [
-            "--editor-panel"
-          ]
-        },
-        {
-          "name": "--tactile-edge",
-          "value": "var(--editor-line)",
-          "scope": [
-            ".mini-app-settings-window[data-window-chrome='flat']"
-          ],
-          "line": 19,
-          "references": [
-            "--editor-line"
-          ]
-        },
-        {
-          "name": "--tactile-ink",
-          "value": "var(--editor-ink)",
-          "scope": [
-            ".mini-app-settings-window[data-window-chrome='flat']"
-          ],
-          "line": 20,
-          "references": [
-            "--editor-ink"
-          ]
-        },
-        {
-          "name": "--tactile-accent",
-          "value": "var(--editor-accent)",
-          "scope": [
-            ".mini-app-settings-window[data-window-chrome='flat']"
-          ],
-          "line": 21,
-          "references": [
-            "--editor-accent"
-          ]
-        },
-        {
-          "name": "--detached-window-gutter",
-          "value": "0px",
-          "scope": [
-            ".mini-app-workbench .mini-app-artwork-window"
-          ],
-          "line": 31,
-          "references": []
-        }
-      ],
-      "references": [
-        "--editor-accent",
-        "--editor-ink",
-        "--editor-line",
-        "--editor-panel",
-        "--mini-app-shortcut-bottom",
-        "--mini-app-z",
-        "--tactile-divider",
-        "--workbench-content-scale",
-        "--workflow-board-radius",
-        "--workflow-border",
-        "--workflow-hover",
-        "--workflow-ink",
-        "--workflow-muted",
-        "--workflow-panel",
-        "--workflow-type-control",
-        "--workflow-type-micro"
-      ]
-    },
-    {
       "path": "src/profileDocument/components/profileOverview.css",
       "role": "Local",
       "sha256": "eeab700ddabdb239fc65560a437ed6c44e86321b96e2d66db059496509953239",
@@ -2921,14 +2825,13 @@
     {
       "path": "src/profileDocument/components/publishedCompositions.css",
       "role": "Local",
-      "sha256": "bafd163af3d08729579c2ba3fc9d8339fd7dab0843cf0117b9ea54774ada3424",
+      "sha256": "7aa818d7b901affb10ef287875c40fb5aaaa0c33126c79daf2a0dbe17bdb6e59",
       "definitions": [],
       "references": [
         "--font-interface",
         "--interface-environment",
         "--spread-heading",
         "--spread-height",
-        "--spread-line",
         "--spread-muted"
       ]
     },
@@ -8410,7 +8313,7 @@
     {
       "path": "src/public/workbenchOverview/canvasPresentation.css",
       "role": "Local",
-      "sha256": "658cdebce2fdbb5b4b5b4c891776af033c6537dc570af22d28855414cca83ad5",
+      "sha256": "07a31a07cdc8ce0d64e2daeffaff5bfda63a626abffb6c7576ab15b90555f19f",
       "definitions": [
         {
           "name": "--tactile-ink",
@@ -8628,7 +8531,7 @@
     {
       "path": "src/public/workbenchOverview/workbenchOverview.css",
       "role": "Local",
-      "sha256": "21fde94434d9e41553c04ddf0270bfb900e9a6be16dd637aecd3cad6e5a202c8",
+      "sha256": "7075e83c2770440671fec03e55a936dff5c0bfe147e05791f0df9606b2adc5ad",
       "definitions": [
         {
           "name": "--overview-ease",
@@ -8736,7 +8639,7 @@
             "@media (prefers-reduced-transparency: reduce)",
             ".workbench-overview, .workbench-overview-navigation"
           ],
-          "line": 80,
+          "line": 77,
           "references": [
             "--interface-panel"
           ]
@@ -8748,7 +8651,7 @@
             "@media (prefers-reduced-transparency: reduce)",
             ".workbench-overview, .workbench-overview-navigation"
           ],
-          "line": 80,
+          "line": 77,
           "references": []
         },
         {
@@ -8758,7 +8661,7 @@
             "@media (prefers-reduced-transparency: reduce)",
             ".workbench-overview, .workbench-overview-navigation"
           ],
-          "line": 80,
+          "line": 77,
           "references": []
         },
         {
@@ -8767,7 +8670,7 @@
           "scope": [
             ".workbench-overview[data-selectable-gallery]"
           ],
-          "line": 88,
+          "line": 85,
           "references": []
         }
       ],

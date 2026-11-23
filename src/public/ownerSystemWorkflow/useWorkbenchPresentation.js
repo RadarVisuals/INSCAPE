@@ -62,7 +62,6 @@ export default function useWorkbenchPresentation({
   const { restoredWorkspace, workbenchLayout, sharedTools } = layoutSession;
   const { views: textViews, presentations: textPresentations } = modules.text;
   const { records: instanceRecords, presentations: instancePresentations } = modules.display;
-  const { presentations: miniAppPresentations } = modules.miniApps;
   const { presentations: imagePresentations } = modules.images;
   const { presentations: shapePresentations } = modules.shapes;
   const hasPrimaryDisplay = draft.grids.length > 0;
@@ -76,10 +75,8 @@ export default function useWorkbenchPresentation({
         hasPrimaryDisplay,
         identityOpen,
         displays: draft.displays,
-        miniApps: draft.miniApps,
         texts: draft.texts,
         displayPresentations: instancePresentations,
-        miniAppPresentations,
         textPresentations,
         imageModules: draft.imageModules,
         imagePresentations,
@@ -95,8 +92,6 @@ export default function useWorkbenchPresentation({
       identityOpen,
       instancePresentations,
       draft.displays,
-      draft.miniApps,
-      miniAppPresentations,
       draft.texts,
       textPresentations,
       draft.imageModules,

@@ -7,9 +7,8 @@ export type DisplayId = `display:${string}`;
 export type ImageId = `image:${string}`;
 export type ShapeId = `shape:${string}`;
 export type TextId = `text:${string}`;
-export type MiniAppId = `miniapp:${string}`;
 export type KeeperId = `keeper:${string}`;
-export type ModuleId = DisplayId | ImageId | ShapeId | TextId | MiniAppId | KeeperId;
+export type ModuleId = DisplayId | ImageId | ShapeId | TextId | KeeperId;
 export type TextFrameId = `text-frame:${string}`;
 export type SelectionId = ModuleId | TextFrameId | 'workbench:index';
 export type WindowId = SelectionId;
@@ -21,7 +20,6 @@ export interface Frame extends Position { width: number; height: number }
 export interface ImagePresentation { id: ImageId; open: boolean; position: Position }
 export interface ShapePresentation { id: ShapeId; open: boolean; window: Frame }
 export interface TextPresentation { id: TextId; open: boolean; window: Frame; frames?: { id: TextFrameId; window: Frame }[] }
-export interface MiniAppPresentation { id: MiniAppId; open: boolean; window: Frame }
 export interface DisplayPresentation {
   name: string; open: boolean; window: Frame;
   shortcut: { position: Position; visible: boolean; icon: unknown;
@@ -33,7 +31,6 @@ export interface WorkbenchPresentation {
   identity: { open: boolean; window: Position & { width: number; height?: number } };
   area?: { width: number; height: number };
   displays?: (DisplayPresentation & { id: DisplayId })[];
-  miniApps?: MiniAppPresentation[];
   texts?: TextPresentation[];
   imageModules?: ImagePresentation[];
   shapes?: ShapePresentation[];
@@ -124,7 +121,7 @@ export interface ToolSource {
   actions?: { disabled?: boolean; duplicate: { disabled?: boolean; reason?: string; run: () => void }; items?: ArtworkMenuAction[] };
 }
 export interface ViewTransform { scale: number; x: number; y: number; frame?: Frame; gridScale?: number; cellRadius?: number }
-export type ResizeLayoutKey = 'display' | 'displays' | 'texts' | 'miniApps' | 'imageModules' | 'shapes';
+export type ResizeLayoutKey = 'display' | 'displays' | 'texts' | 'imageModules' | 'shapes';
 /** The registration hook and operation adapters use the same complete capability. */
 export type ResizeTarget = WorkbenchResizeTarget;
 export interface WorkbenchActionsValue {
@@ -169,12 +166,10 @@ export interface CapturePresentationInput {
   identityOpen: boolean;
   hasPrimaryDisplay?: boolean;
   displays?: { id: DisplayId }[];
-  miniApps?: { id: MiniAppId }[];
   texts?: { id: TextId }[];
   imageModules?: { id: ImageId }[];
   shapes?: { id: ShapeId }[];
   displayPresentations?: Partial<Record<DisplayId, DisplayPresentation | null>>;
-  miniAppPresentations?: Partial<Record<MiniAppId, MiniAppPresentation>>;
   textPresentations?: Partial<Record<TextId, TextPresentation>>;
   imagePresentations?: Partial<Record<ImageId, ImagePresentation>>;
   shapePresentations?: Partial<Record<ShapeId, ShapePresentation>>;

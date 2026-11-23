@@ -122,7 +122,7 @@ export function validReceptionEditorDocument(value, published = false) {
     || Object.hasOwn(value, 'showFrame') && typeof value.showFrame !== 'boolean'
     || Object.hasOwn(value, 'innerLines') && value.innerLines !== null && !validReceptionInnerLines(value.innerLines)
     || Object.hasOwn(value, 'bento') && (!exact(value.bento, ['gap', 'padding']) || ![value.bento.gap, value.bento.padding].every(n => Number.isInteger(n) && number(n, 0, 256)))) return false;
-  if (['miniApps', 'displays', 'keeperDocks'].some(key => value.workbench[key]?.length)) return false;
+  if (['displays', 'keeperDocks'].some(key => value.workbench[key]?.length)) return false;
   const all = new Set(idsOf(value)), cellIds = new Set(), members = new Set();
   for (const key of keys) {
     const placed = value.workbench[key] || [];

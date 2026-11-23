@@ -1,7 +1,6 @@
 import { MIN_RECEPTION_CELL_SIZE } from '../../reception/editorCellGeometry.js';
 import { validWorkbenchArea } from '../../systemWorkflow/domain/workbenchArea.js';
 import { validateProfileDocumentV9Asset } from './profileDocumentV9Asset.js';
-import { MAX_MINI_APPS, MINI_APP_ID } from '../../miniApps/domain/miniApps.js';
 import { MAX_TEXT_MODULES, TEXT_ID, exact } from '../../text/domain/article.js';
 import { MAX_IMAGE_MODULES, IMAGE_MODULE_ID } from '../../imageModule/imageModule.js';
 import { MAX_SHAPES, SHAPE_ID } from '../../shapes/shapes.js';
@@ -10,7 +9,6 @@ import { displayFormat, displayPreset } from '../../systemWorkflow/domain/displa
 
 const number = (value, min, max) => Number.isFinite(value) && value >= min && value <= max;
 const maximumWindowSize = 16384;
-export const MINI_APP_WINDOW_LIMITS = Object.freeze({ minimumWidth: 180, minimumHeight: 100, maximumSize: maximumWindowSize });
 export const TEXT_WINDOW_LIMITS = Object.freeze({ minimumWidth: 180, minimumHeight: 24, maximumWidth: maximumWindowSize, maximumHeight: maximumWindowSize });
 export { MIN_RECEPTION_CELL_SIZE };
 export const CELL_TEXT_WINDOW_LIMITS = Object.freeze({ ...TEXT_WINDOW_LIMITS, minimumWidth: 1, minimumHeight: 1 });
@@ -24,7 +22,7 @@ const windowFrame = (value, height, minimumWidth = 180, minimumHeight = 100) => 
 // The currently implemented modules only. Content remains owned by their existing
 // validated Grid/Identity envelopes; this describes their public starting layout.
 export function isValidWorkbenchPresentation(value, cells = []) {
-  if (!exact(value, ['version', 'display', 'identity'], ['area', 'displays', 'miniApps', 'texts', 'imageModules', 'shapes', 'keeperDocks']) || value.version !== 1) return false;
+  if (!exact(value, ['version', 'display', 'identity'], ['area', 'displays', 'texts', 'imageModules', 'shapes', 'keeperDocks']) || value.version !== 1) return false;
   if (Object.hasOwn(value, 'area') && !validWorkbenchArea(value.area)) return false;
   if (Object.hasOwn(value, 'keeperDocks')) {
     if (!Array.isArray(value.keeperDocks) || value.keeperDocks.length > MAX_KEEPER_DOCKS) return false;
@@ -75,15 +73,6 @@ export function isValidWorkbenchPresentation(value, cells = []) {
       ids.add(item.id);
     }
   }
-  if (Object.hasOwn(value, 'miniApps')) {
-    if (!Array.isArray(value.miniApps) || value.miniApps.length > MAX_MINI_APPS) return false;
-    const ids = new Set();
-    for (const item of value.miniApps) {
-      if (!exact(item, ['id', 'open', 'window']) || !MINI_APP_ID.test(item.id) || ids.has(item.id)
-        || typeof item.open !== 'boolean' || !windowFrame(item.window, true, MINI_APP_WINDOW_LIMITS.minimumWidth, MINI_APP_WINDOW_LIMITS.minimumHeight)) return false;
-      ids.add(item.id);
-    }
-  }
   if (Object.hasOwn(value, 'displays')) {
     if (!Array.isArray(value.displays) || value.displays.length > 7) return false;
     const ids = new Set(['display:primary']);
@@ -120,10 +109,6 @@ export function createDefaultWorkbenchPresentation() {
       shortcut: { position: { left: 24, top: 72 }, visible: true, icon: null,
         iconPresentation: { labelSize: 8, offsetX: 0, offsetY: 0, scale: 1, size: 60 } } },
     identity: { open: false, window: { left: 28, top: 72, width: 840 } } };
-}
-
-export function createMiniAppPresentation(id, index = 0) {
-  return { id, open: true, window: { left: 96 + index * 32, top: 88 + index * 24, width: 720, height: 540 } };
 }
 
 export function createTextPresentation(id, index = 0) {

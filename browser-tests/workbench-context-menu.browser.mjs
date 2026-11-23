@@ -101,8 +101,11 @@ try {
   await page.keyboard.press('ArrowRight');
   await page.getByRole('menu', { name: 'ADD options' }).waitFor();
   await page.waitForFunction(() => document.activeElement?.closest('[role="menu"]')?.getAttribute('aria-label') === 'ADD options');
+  const addItems = page.getByRole('menu', { name: 'ADD options' }).getByRole('menuitem');
+  const focused = await addItems.evaluateAll(items => items.indexOf(document.activeElement));
+  assert.ok(focused >= 0);
   await page.keyboard.press('ArrowDown');
-  assert.equal(await page.getByRole('menuitem', { name: 'MINI APP', exact: true }).evaluate(node => node === document.activeElement), true);
+  assert.equal(await addItems.evaluateAll(items => items.indexOf(document.activeElement)), (focused + 1) % await addItems.count());
   await page.keyboard.press('ArrowLeft');
   await page.getByRole('menu', { name: 'ADD options' }).waitFor({ state: 'hidden' });
   assert.equal(await page.getByRole('menu', { name: 'ADD options' }).count(), 0);

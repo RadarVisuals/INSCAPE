@@ -65,7 +65,7 @@ function UnpublishedProfilePage({ address, account, state, entry, onRetry, onNew
     {emptyCollection ? <Suspense fallback={<p role="status">Opening {current}.</p>}>
       <StartupDestinationReady />
       {current === 'Gallery' ? <PublishedCanvasGallery entries={emptyEntries} snapshot={emptySnapshot} onNewComposition={onNewComposition} />
-        : <PublishedWriting snapshot={emptySnapshot} />}
+        : <PublishedWriting />}
     </Suspense> : <PublishedStatusSurface state={state} onRetry={onRetry} />}
   </div>;
 }

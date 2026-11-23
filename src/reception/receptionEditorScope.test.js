@@ -10,7 +10,6 @@ import { layerIds } from '../systemWorkflow/domain/artworkLayers.js';
 import { validReception, projectReception } from '../profileDocument/domain/receptionPresentation.js';
 import { addTextModule, saveTextModuleResult, changeTextFrames } from '../text/textSession.js';
 import { createReceptionExample } from '../../design-system/lab/receptionExample.js';
-import { addMiniApp } from '../miniApps/miniAppSession.js';
 import { editWorkbenchGroups } from '../systemWorkflow/workbenchGroupSession.js';
 import { openWorkbenchIndex } from '../systemWorkflow/workbenchIndexSession.js';
 import { addImageModule } from '../imageModule/imageModuleSession.js';
@@ -243,7 +242,7 @@ test('deleting a private cell removes Image, Text and Shape atomically through f
 test('shared Editor Display defaults never become Reception edits or undo history', () => {
   const { scope } = fixture(), id = rectangle(scope), before = structuredClone(scope.getReception());
   const candidate = scope.getDraft(), presentation = structuredClone(candidate.workbench);
-  presentation.display.shortcut.visible = true; presentation.displays = []; presentation.miniApps = [];
+  presentation.display.shortcut.visible = true; presentation.displays = [];
   candidate.workbench = structuredClone(presentation);
   candidate.workbench.shapes.find(item => item.id === id).window.left += 50;
   assert.equal(scope.commitCompletedOperation(candidate, { expectedGeneration: scope.getGeneration(), historyPresentation: presentation }), true);
@@ -647,13 +646,11 @@ test('a Canvas starter can use full canvas modules under the same name, ID and u
   assert.deepEqual(root.getDraft(), before);
   assert.ok(root.redo());
   const canvas = root.getWorkbenchScope();
-  const app = addMiniApp(canvas, profile);
   openWorkbenchIndex(canvas, profile);
   const group = editWorkbenchGroups(canvas, profile, { type: 'create', name: 'Shapes', memberIds: [shape] });
-  assert.throws(() => root.enableCurrentWorkbenchCells(), /uses an interactive module/);
+  assert.throws(() => root.enableCurrentWorkbenchCells(), /workspace groups or a camera index/);
   const reloaded = createSystemWorkflowDraftStore({ profileAddress: profile, storage }).readWorkbench(id);
   assert.equal(reloaded.name, 'Modules');
-  assert.equal(reloaded.draft.miniApps[0].id, app);
   assert.equal(reloaded.draft.workbenchIndex.open, true);
   assert.equal(reloaded.draft.workbenchGroups[0].id, group);
   assert.deepEqual(reloaded.draft.workbenchGroups[0].memberIds, [shape]);

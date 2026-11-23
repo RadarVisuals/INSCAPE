@@ -7,7 +7,7 @@ import { artworkLayers, artworkModuleId, artworkWindowIds } from '../../systemWo
 const sameIds = (left, right) => left.length === right.length && left.every((id, index) => id === right[index]);
 const modules = content => [
   ...(content?.grids?.length ? ['display:primary'] : []),
-  ...['displays', 'imageModules', 'shapes', 'texts', 'miniApps', 'keeperDocks'].flatMap(key => (content?.[key] || []).map(item => item.id)),
+  ...['displays', 'imageModules', 'shapes', 'texts', 'keeperDocks'].flatMap(key => (content?.[key] || []).map(item => item.id)),
 ];
 function availableIds(content) {
   const ids = new Set(modules(content));

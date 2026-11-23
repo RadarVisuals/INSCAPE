@@ -11,7 +11,6 @@ import {
   createEmptySystemWorkflowWorldCoverGrid,
 } from '../../systemWorkflow/domain/systemWorkflowDraft.js';
 import { assertValidProfileDocumentV9 } from './profileDocumentV9Validation.js';
-import { restoreMiniApps } from '../../miniApps/domain/miniApps.js';
 import { restoreImageModules } from '../../imageModule/imageModule.js';
 import { restoreShapes } from '../../shapes/shapes.js';
 import { restoreKeeperDocks } from '../../keeper/keeper.js';
@@ -90,7 +89,6 @@ export function reconcileSystemWorkflowDraftFromProfileDocumentV9(documentInput,
       const grids = module.grids.filter(grid => grid.visibility === 'PRIVATE');
       return grids.length ? [{ ...module, visibility: 'PRIVATE', grids: [...grids, createEmptySystemWorkflowWorldCoverGrid()] }] : [];
     });
-  const miniApps = restoreMiniApps(document.miniApps, currentDraftInput?.miniApps);
   const shapes = restoreShapes(document.shapes, currentDraftInput?.shapes);
   const keeperDocks = restoreKeeperDocks(document.keeperDocks, currentDraftInput?.keeperDocks);
   const imageModules = restoreImageModules(document.imageModules, currentDraftInput?.imageModules);
@@ -101,11 +99,7 @@ export function reconcileSystemWorkflowDraftFromProfileDocumentV9(documentInput,
     published: sectionDisplays(document.grids, document.displays),
     restored: sectionDisplays([...document.grids, ...privateGrids], [...publishedDisplays, ...privateDisplays]),
   });
-  const privateMiniAppWindows = (currentDraftInput?.workbench?.miniApps || []).filter(window =>
-    miniApps.some(app => app.id === window.id && app.visibility === 'PRIVATE'));
-  let workbench = document.workbench ? structuredClone(document.workbench)
-    : privateMiniAppWindows.length ? createDefaultWorkbenchPresentation() : null;
-  if (privateMiniAppWindows.length) workbench.miniApps = [...(workbench.miniApps || []), ...structuredClone(privateMiniAppWindows)];
+  let workbench = document.workbench ? structuredClone(document.workbench) : null;
   const privateTextWindows = (currentDraftInput?.workbench?.texts || []).filter(w => texts.some(t => t.id === w.id && t.visibility === 'PRIVATE'));
   if (privateTextWindows.length) {
     workbench ||= createDefaultWorkbenchPresentation();
@@ -132,7 +126,6 @@ export function reconcileSystemWorkflowDraftFromProfileDocumentV9(documentInput,
     ...(document.reception ? { reception: restoreReception(document.reception) } : {}),
     ...(document.composition ? { composition: restoreReception(document.composition) } : {}),
     ...(workbench ? { workbench } : {}),
-    ...((document.miniApps || currentDraftInput?.miniApps) ? { miniApps } : {}),
     ...((document.shapes || currentDraftInput?.shapes) ? { shapes } : {}),
     ...((document.keeperDocks || currentDraftInput?.keeperDocks) ? { keeperDocks } : {}),
     ...((document.imageModules || currentDraftInput?.imageModules) ? { imageModules } : {}),

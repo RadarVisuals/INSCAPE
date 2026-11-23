@@ -9,7 +9,7 @@ export const SOURCE_INPUTS = Object.freeze([
   '.github', '.gitignore', '.node-version', '.npmrc', 'AGENTS.md',
   'package.json', 'package-lock.json', 'vite.config.js', 'netlify.toml',
   'eslint.config.js', '.prettierrc.json', 'tsconfig.contracts.json', 'typechecks',
-  'index.html', 'mini-app-host.html', 'design-system.html',
+  'index.html', 'design-system.html',
   'src', 'scripts', 'netlify', 'public', 'browser-tests', 'design-system', 'docs',
   'prototypes/visitor-mint',
 ]);

@@ -4,7 +4,7 @@ import { FIRST_WORKBENCH_ID, MAX_WORKBENCHES, assertWorkbenchName, assertWorkben
 // The root is the entry canvas. Additional canvases contain composition facts
 // only; profile identity, and Keeper have one owner at the root.
 const REQUIRED_CANVAS_KEYS = ['artboard', 'geometry', 'appearance', 'grids'];
-const OPTIONAL_CANVAS_KEYS = ['workbench', 'displays', 'miniApps', 'texts', 'imageModules', 'shapes', 'workbenchGroups', 'workbenchIndex', 'artworkLayers', 'composition'];
+const OPTIONAL_CANVAS_KEYS = ['workbench', 'displays', 'texts', 'imageModules', 'shapes', 'workbenchGroups', 'workbenchIndex', 'artworkLayers', 'composition'];
 export const CANVAS_CONTENT_KEYS = [...REQUIRED_CANVAS_KEYS, ...OPTIONAL_CANVAS_KEYS];
 export function canvasContent(document) {
   const content = Object.fromEntries(CANVAS_CONTENT_KEYS.filter(key => Object.hasOwn(document, key)).map(key => [key, structuredClone(document[key])]));

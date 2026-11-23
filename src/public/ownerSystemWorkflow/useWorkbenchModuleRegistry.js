@@ -6,7 +6,6 @@ export default function useWorkbenchModuleRegistry({ displayIds, selectedDisplay
   const [textViews, registerTextView] = useModuleReports();
   const [instanceRecords, registerController] = useModuleReports();
   const [instancePresentations, registerPresentation] = useModuleReports(true);
-  const [miniAppPresentations, registerMiniAppPresentation] = useModuleReports();
   const [textPresentations, registerTextPresentation] = useModuleReports();
   const [imagePresentations, registerImagePresentation] = useModuleReports();
   const [shapePresentations, registerShapePresentation] = useModuleReports();
@@ -78,7 +77,6 @@ export default function useWorkbenchModuleRegistry({ displayIds, selectedDisplay
       presentations: textPresentations,
       onPresentation: registerTextPresentation,
     },
-    miniApps: { presentations: miniAppPresentations, onPresentation: registerMiniAppPresentation },
     images: { presentations: imagePresentations, onPresentation: registerImagePresentation },
     shapes: { presentations: shapePresentations, onPresentation: registerShapePresentation },
     targets: {

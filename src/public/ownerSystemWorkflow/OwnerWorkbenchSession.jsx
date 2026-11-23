@@ -97,7 +97,7 @@ function LocalWorkbenchSession({ component: Session, rootStore, ...props }) {
     if (lastCanvas.getSnapshot() !== undefined || store.getRecordState().status !== 'valid') return null;
     const draft = store.getSnapshot();
     const hasCanvas = store.isCollection() || draft.workbench || draft.shapes?.length || draft.imageModules?.length
-      || draft.texts?.length || draft.miniApps?.length || draft.displays?.length || draft.grids.some(grid => grid.placements.length);
+      || draft.texts?.length || draft.displays?.length || draft.grids.some(grid => grid.placements.length);
     return hasCanvas ? store.getWorkbenchId() : null;
   });
   useEffect(() => {

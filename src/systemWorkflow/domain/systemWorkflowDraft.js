@@ -14,7 +14,6 @@ import { isValidPlacementMedia } from './placementMedia.js';
 import { isValidIdentityCard } from '../../profileIdentity/domain/identityCard.js';
 import { isValidWorkbenchPresentation } from '../../profileDocument/domain/workbenchPresentation.js';
 import { DISPLAY_CONTENT_KEYS, MAX_DISPLAY_MODULES, PRIMARY_DISPLAY_ID, isDisplayFormat, projectDisplayDraft } from './displayModules.js';
-import { validMiniApps } from '../../miniApps/domain/miniApps.js';
 import { validImageModules, imageReferenceCount } from '../../imageModule/imageModule.js';
 import { validTextModules } from '../../text/domain/article.js';
 import { validShapes } from '../../shapes/shapes.js';
@@ -258,7 +257,7 @@ function validatePlacement(value, path, fail) {
 export function validateSystemWorkflowDraft(input) {
   const errors = [];
   const fail = (path, code, message) => errors.push({ path, code, message });
-  const allowedKeys = [...DRAFT_KEYS, 'workbench', 'displays', 'miniApps', 'texts', 'imageModules', 'shapes', 'keeperDocks', 'workbenchGroups', 'workbenchIndex', 'artworkLayers', 'reception', 'composition'];
+  const allowedKeys = [...DRAFT_KEYS, 'workbench', 'displays', 'texts', 'imageModules', 'shapes', 'keeperDocks', 'workbenchGroups', 'workbenchIndex', 'artworkLayers', 'reception', 'composition'];
   if (!exactKeys(input, allowedKeys.filter(key => DRAFT_KEYS.includes(key) || Object.hasOwn(input || {}, key)))) {
     const missing = DRAFT_KEYS.filter(key => !Object.hasOwn(input || {}, key));
     const unexpected = record(input) ? Object.keys(input).filter(key => !allowedKeys.includes(key)) : [];
@@ -295,9 +294,6 @@ export function validateSystemWorkflowDraft(input) {
   if (Object.hasOwn(input, 'imageModules') && !validImageModules(input.imageModules)) fail('imageModules', 'invalid_images', 'Invalid Image module');
   if (Array.isArray(input.workbench?.imageModules) && input.workbench.imageModules.some(item => !Array.isArray(input.imageModules) || !input.imageModules.some(image => image?.id === item?.id))) fail('workbench.imageModules', 'unknown_image', 'Window refers to an unavailable Image module');
   if (Array.isArray(input.workbench?.texts) && input.workbench.texts.some(item => !Array.isArray(input.texts) || !input.texts.some(text => text?.id === item?.id))) fail('workbench.texts', 'unknown_text', 'Window refers to an unavailable Text module');
-  if (Object.hasOwn(input, 'miniApps') && !validMiniApps(input.miniApps)) fail('miniApps', 'invalid_mini_apps', 'Invalid mini app configuration');
-  if (Array.isArray(input.workbench?.miniApps) && input.workbench.miniApps.some(item => !Array.isArray(input.miniApps)
-    || !input.miniApps.some(app => app?.id === item?.id))) fail('workbench.miniApps', 'unknown_mini_app', 'Window refers to an unavailable mini app');
   if (Object.hasOwn(input, 'displays')) {
     if (!Array.isArray(input.displays) || input.displays.length > MAX_DISPLAY_MODULES - 1) {
       fail('displays', 'invalid_display_count', 'At most eight Display Modules are supported');

@@ -442,11 +442,9 @@ const sum = (items) => ({
 
 function entryKey(manifest) {
   const keys = Object.keys(manifest).filter((key) => manifest[key].isEntry);
-  if (!manifest['index.html']?.isEntry || keys.some(key => !['index.html', 'mini-app-host.html'].includes(key))) {
+  if (keys.length !== 1 || keys[0] !== 'index.html') {
     throw new Error(`Unexpected Vite application entries: ${keys.join(', ')}`);
   }
-  // Host bytes remain in core/lazy totals; this entry is loaded only inside an
-  // opened mini app and is not part of the main document's initial graph.
   return 'index.html';
 }
 

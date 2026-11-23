@@ -51,7 +51,7 @@ test('the service must accept the current document format before any wallet sign
   const empty = buildGalleryRemoval(document, [FIRST_WORKBENCH_ID], 3);
   for (const snapshot of [document, empty]) {
     const challenge = uploadTestChallenge(snapshot);
-    for (const capabilities of [undefined, ['v9-gallery-placements']]) {
+    for (const capabilities of [undefined, ['v9-gallery-placements'], ['v9-studio-publication-2']]) {
       const olderService = clientFixture({ snapshot, challenge: { ...challenge, capabilities } });
       await assert.rejects(uploadProfileDocument(snapshot, olderService.options), { code: 'PUBLICATION_SERVICE_UPDATE_REQUIRED' });
       assert.equal(olderService.requests.length, 1);

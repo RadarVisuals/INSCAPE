@@ -1,6 +1,6 @@
 import { useWorkbenchArea } from './WorkbenchAreaContext.jsx';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Grid2X2, Grid3X3, Image, Info, Redo2, Settings2, RectangleHorizontal, SquarePlus, Type, Undo2, User, AppWindow, Folder } from 'lucide-react';
+import { Grid2X2, Grid3X3, Image, Info, Redo2, Settings2, RectangleHorizontal, SquarePlus, Type, Undo2, User, Folder } from 'lucide-react';
 import WorkbenchToolbar from './WorkbenchToolbar.jsx';
 import './workbenchCreation.css';
 import { useWorkbenchView } from './WorkbenchViewContext.js';
@@ -13,11 +13,11 @@ import { isShapeCommand, SHAPE_COMMAND_KINDS } from '../../shapes/shapes.js';
 import { receptionLayoutCountRange } from '../../reception/receptionLayoutGenerator.js';
 import { useEditorCells, isEditorCellSurface } from '../../reception/EditorCellsContext.jsx';
 
-const ICONS = { cell: SquarePlus, 'workbench-index': Folder, 'mini-app': AppWindow, text: Type, image: Image, shape: RectangleHorizontal, 'shape-grid': Grid2X2, keeper: Folder };
-const LABELS = { cell: 'Cell', 'workbench-index': 'Index', 'mini-app': 'Mini app', text: 'Text', image: 'Image', shape: 'Rectangle', keeper: 'Keeper dock',
+const ICONS = { cell: SquarePlus, 'workbench-index': Folder, text: Type, image: Image, shape: RectangleHorizontal, 'shape-grid': Grid2X2, keeper: Folder };
+const LABELS = { cell: 'Cell', 'workbench-index': 'Index', text: 'Text', image: 'Image', shape: 'Rectangle', keeper: 'Keeper dock',
   'shape-grid': 'Grid' };
 const isCreationTool = tool => tool === 'cell' || tool === 'text' || isShapeCommand(tool);
-const EDITING = 'input,textarea,select,[contenteditable=true],[role=textbox],[role=slider],[role=dialog],[role=menu],iframe,[data-mini-app-id],[data-immersive]';
+const EDITING = 'input,textarea,select,[contenteditable=true],[role=textbox],[role=slider],[role=dialog],[role=menu],iframe,[data-immersive]';
 const OVERLAYS = '[data-workbench-toolbar],[data-system-workflow-overlay],[data-system-workflow-panel],[data-shared-display-tools],[data-shared-text-tools],[data-context-tools],.workbench-view-controls,[data-workbench-group-tools],[data-workbench-selection-tools]';
 const CREATION_CONTROLS = `${EDITING},button,a,summary,[role=separator]`;
 

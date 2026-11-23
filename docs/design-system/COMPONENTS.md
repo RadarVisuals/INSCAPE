@@ -255,12 +255,10 @@ Selection activation comes from click or keyboard focus, not hover. Hover can re
 | Shape | Background rectangle/grid patch with authored colour, opacity and grain | Shape content; host supplies geometry |
 | Identity | Trusted identity header plus authored presentation, theme-aware bevel | Identity projection/session; host supplies window |
 | Keeper | Dock and independent tactile settings; artwork behavior remains local | Keeper |
-| Mini App | Shared host window around an isolated external application | Host connection/lifecycle; remote app content |
-| HTML artwork | Transparent isolated frame with quiet host controls | HTML document animation; host lifecycle |
 | Workbench Index | Screen-sized navigation instrument with saved destinations | Index configuration and camera controller |
 | Reception | Same public modules inside a bounded presentation stage | Reception host and shared module sessions |
 
-Authored Display/Text edges and grain are not interface chrome. Image remains free of added texture, shadows or radius. Artwork documents do not inherit control styling. Mini apps' internal interfaces cannot be standardized through parent CSS.
+Authored Display/Text edges and grain are not interface chrome. Image remains free of added texture, shadows or radius. Artwork documents do not inherit control styling.
 
 ## Workflow recipes
 

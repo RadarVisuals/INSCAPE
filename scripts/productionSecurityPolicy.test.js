@@ -22,7 +22,7 @@ test('production CSP contains the complete enforced directive set without placeh
   assert.equal(directive(policy, 'font-src'), "font-src 'self'");
   assert.equal(directive(policy, 'img-src'), "img-src 'self' https: data: blob:");
   assert.equal(directive(policy, 'worker-src'), "worker-src 'self'");
-  assert.equal(directive(policy, 'frame-src'), "frame-src 'self' https:");
+  assert.equal(directive(policy, 'frame-src'), "frame-src 'self' https://verify.walletconnect.com https://verify.walletconnect.org");
   assert.equal(directive(policy, 'frame-ancestors'), `frame-ancestors ${UNIVERSAL_PROFILE_PARENT_ORIGINS.join(' ')}`);
 });
 
@@ -86,16 +86,9 @@ test('Netlify response configuration enforces headers globally and immutable cac
 
 test('production preview uses the same enforced response policy without changing the development server', () => {
   const headers = productionResponseSecurityHeaders();
+  assert.equal(headers['Permissions-Policy'], 'camera=(), microphone=(), geolocation=(), payment=(), usb=()');
   assert.equal(headers['Referrer-Policy'], 'no-referrer');
   assert.equal(headers['X-Content-Type-Options'], 'nosniff');
   assert.match(headers['Content-Security-Policy'], /frame-ancestors 'self' https:\/\/universaleverything\.io/u);
   assert.equal(Object.hasOwn(headers, 'Content-Security-Policy-Report-Only'), false);
-});
-
-test('mini apps use HTTPS frames and per-frame microphone delegation without a deployment list', () => {
-  const headers = productionResponseSecurityHeaders();
-  assert.equal(directive(headers['Content-Security-Policy'], 'frame-src'), "frame-src 'self' https:");
-  assert.equal(headers['Permissions-Policy'], 'camera=(), geolocation=(), payment=(), usb=()');
-  assert.deepEqual(productionResponseSecurityHeaders({ VITE_MINI_APP_ORIGINS: 'https://radar725.netlify.app' }), headers);
-  assert.match(createNetlifyHeaders(), /\/mini-app-host\.html\n  Cache-Control: public, max-age=0, must-revalidate/u);
 });

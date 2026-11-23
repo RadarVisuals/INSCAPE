@@ -216,16 +216,6 @@
       "rationale": "Bestaande release-default onverkort behouden. Concrete controle: `Library Retry recovers ${mode} without losing retained cards (${width}px)`."
     },
     {
-      "name": "mini-apps",
-      "category": "release",
-      "rationale": "Bestaande release-default onverkort behouden. Concrete controle: Scoped per-instance UP Provider connection and revocation."
-    },
-    {
-      "name": "html-artwork-workbench",
-      "category": "release",
-      "rationale": "Bestaande release-default onverkort behouden. Concrete controle: HTML artwork uses authored canvas geometry through zoom, pan, edits, narrow viewports, switching and reload."
-    },
-    {
       "name": "owner-profile-routing",
       "category": "release",
       "rationale": "Bestaande release-default onverkort behouden. Concrete controle: pending implicit authority is neutral and makes no publication, owner graph, or owner storage request."
@@ -1059,19 +1049,6 @@
         "Host: runner_vite.",
         "INSCAPE_SYSTEM_WORKFLOW_ROOT={origin}",
         "Lokale fixture-/assetbestanden: browser-tests/library-images-fixture.html, browser-tests/library-images-fixture.jsx, public/assets/actors/abyssal_eye/full.webp"
-      ]
-    },
-    {
-      "name": "mini-apps.production",
-      "category": "targeted",
-      "rationale": "Gericht na build: productie-CSP/bridge/microfoonisolatie met fake media; aanvullende externe smokevarianten staan achter expliciete opt-ins.",
-      "prerequisites": [
-        "Host: suite_owned_production_server.",
-        "Lokale fixture-/assetbestanden: browser-tests/mini-app-fixture.js",
-        "Een verse, bij dezelfde bron behorende dist/; uitvoeren na build en build-budget, niet vÃ³Ã³r de build.",
-        "esbuild fixturebundel en Chromium fake-media flags voor microfoon; INSCAPE_TEST_LIVE_RADAR en INSCAPE_TEST_LIVE_P1 uit voor reproduceerbare release.",
-        "Top-level script zonder test()-scenarioâ€™s: Node --test rapporteert de file als subtest; TAP-tests tellen hier geen afzonderlijke workflows. Live opt-ins worden niet afgedwongen door de huidige runner.",
-        "Fase: post_build; huidige stap 03 krijgt geen multi-phase runner."
       ]
     },
     {

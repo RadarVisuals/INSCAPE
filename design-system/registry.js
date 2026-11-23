@@ -461,17 +461,6 @@ export const components = [
     status: 'Production',
   },
   {
-    id: 'mini-app',
-    name: 'Mini Apps and HTML artwork',
-    kind: 'Module',
-    material: 'Host / transparent',
-    source: 'src/miniApps/MiniAppsWorkbench.jsx',
-    contract:
-      'Host controls surround an isolated document. Remote content owns its interface. Transparent HTML artwork does not receive wallet privileges.',
-    evidence: 'src/miniApps/miniAppSession.test.js',
-    status: 'Production',
-  },
-  {
     id: 'reception',
     name: 'Reception',
     kind: 'Presentation',

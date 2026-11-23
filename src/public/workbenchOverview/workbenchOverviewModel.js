@@ -1,4 +1,4 @@
-import { createDefaultWorkbenchPresentation, createMiniAppPresentation, createTextPresentation, createNewDisplayPresentation } from '../../profileDocument/domain/workbenchPresentation.js';
+import { createDefaultWorkbenchPresentation, createTextPresentation, createNewDisplayPresentation } from '../../profileDocument/domain/workbenchPresentation.js';
 import { createImagePresentation } from '../../imageModule/imageModule.js';
 import { createShapePresentation } from '../../shapes/shapes.js';
 import { artworkLayers, layerIds } from '../../systemWorkflow/domain/artworkLayers.js';
@@ -16,7 +16,7 @@ export function overviewAssetIds(draft) {
 export function workbenchOverviewModel(draft, assets = new Map(), scenes = {}) {
   const composition = draft.composition;
   if (composition?.version === 2) return { composition, area: { left: 0, top: 0, width: 1440, height: composition.height }, items: [],
-    contains: `${composition.regions.length} cells`, interactive: false };
+    contains: `${composition.regions.length} cells` };
   if (composition) draft = { ...composition, grids: [] };
   const presentation = draft.workbench || createDefaultWorkbenchPresentation();
   const area = workbenchArea(presentation), items = [], artwork = new Map();
@@ -28,11 +28,6 @@ export function workbenchOverviewModel(draft, assets = new Map(), scenes = {}) {
     const grid = scenes[id] ? content.grids.find(grid => grid.id === scenes[id].gridId) : content.grids[0];
     const item = add(id, layout, grid ? { kind: 'display', grid, geometry: content.geometry, appearance: content.appearance, assets }
       : { kind: 'unavailable', name: 'Scene unavailable' }, layout.name);
-    if (item) items.push(item);
-  }
-  for (const [index, record] of (draft.miniApps || []).entries()) {
-    const layout = presentation.miniApps?.find(item => item.id === record.id) || createMiniAppPresentation(record.id, index);
-    const item = add(record.id, layout, { kind: 'interactive', name: record.name || 'Interactive artwork' });
     if (item) items.push(item);
   }
   for (const [index, record] of (draft.shapes || []).entries()) {
@@ -54,9 +49,8 @@ export function workbenchOverviewModel(draft, assets = new Map(), scenes = {}) {
   }
   items.push(...layerIds(artworkLayers(draft)).map(id => artwork.get(id)).filter(Boolean));
   const counts = [[draft.imageModules?.length, 'image', 'images'], [draft.texts?.length, 'text', 'texts'],
-    [draft.shapes?.length, 'shape', 'shapes'], [draft.miniApps?.length, 'interactive artwork', 'interactive artworks'],
+    [draft.shapes?.length, 'shape', 'shapes'],
     [displayModuleIds(draft).length, 'Display', 'Displays']];
   if (composition?.cells.length) counts.unshift([composition.cells.length, 'cell', 'cells']);
-  return { ...(composition && { composition }), area, items, contains: counts.filter(([count]) => count).map(([count, one, many]) => `${count} ${count === 1 ? one : many}`).join(' · ') || 'No content yet',
-    interactive: items.some(item => item.source.kind === 'interactive') };
+  return { ...(composition && { composition }), area, items, contains: counts.filter(([count]) => count).map(([count, one, many]) => `${count} ${count === 1 ? one : many}`).join(' · ') || 'No content yet' };
 }

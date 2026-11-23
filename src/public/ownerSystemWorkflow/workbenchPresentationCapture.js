@@ -1,5 +1,5 @@
 // @ts-check
-import { createDefaultWorkbenchPresentation, createMiniAppPresentation, createTextPresentation } from '../../profileDocument/domain/workbenchPresentation.js';
+import { createDefaultWorkbenchPresentation, createTextPresentation } from '../../profileDocument/domain/workbenchPresentation.js';
 import { PRIMARY_DISPLAY_ID } from '../../systemWorkflow/domain/displayModules.js';
 import { createImagePresentation } from '../../imageModule/imageModule.js';
 import { createShapePresentation } from '../../shapes/shapes.js';
@@ -13,7 +13,7 @@ import { createShapePresentation } from '../../shapes/shapes.js';
  */
 export function captureWorkbenchPresentation({
   layout, identityOpen, hasPrimaryDisplay = true,
-  displays, miniApps, texts, displayPresentations = {}, miniAppPresentations = {}, textPresentations = {},
+  displays, texts, displayPresentations = {}, textPresentations = {},
   imageModules, imagePresentations = {}, savedImagePresentations = [],
   shapes, shapePresentations = {}, savedShapePresentations = [],
 }) {
@@ -25,7 +25,7 @@ export function captureWorkbenchPresentation({
 
     // Optional collections are rebuilt from authored membership. Saved layouts
     // and live reports are fallbacks for those IDs only, including after Undo.
-    const { displays: savedDisplays, miniApps: savedMiniApps, texts: savedTexts, imageModules: savedImages, shapes: savedShapes, keeperDocks: savedKeepers, ...base } = layout;
+    const { displays: savedDisplays, texts: savedTexts, imageModules: savedImages, shapes: savedShapes, keeperDocks: savedKeepers, ...base } = layout;
     return { error: null, value: {
       ...base,
       ...(shapes ? { shapes: shapes.map((item, index) => shapePresentations[item.id]
@@ -36,8 +36,6 @@ export function captureWorkbenchPresentation({
         || createImagePresentation(item.id, index)) } : {}),
       ...(texts ? { texts: texts.map((text, index) => textPresentations[text.id]
         || savedTexts?.find(item => item.id === text.id) || createTextPresentation(text.id, index)) } : {}),
-      ...(miniApps ? { miniApps: miniApps.map((app, index) => miniAppPresentations[app.id]
-        || savedMiniApps?.find(item => item.id === app.id) || createMiniAppPresentation(app.id, index)) } : {}),
       ...(displays ? { displays: displays.map(({ id }) => ({ id, ...(displayPresentations[id]
         || savedDisplays?.find(item => item.id === id) || createDefaultWorkbenchPresentation().display) })) } : {}),
       display: hasPrimaryDisplay ? displayPresentations[PRIMARY_DISPLAY_ID] || layout.display

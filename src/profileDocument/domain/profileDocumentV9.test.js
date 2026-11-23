@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { createDefaultWorkbenchPresentation } from './workbenchPresentation.js';
 import { createEmptySystemWorkflowDraft } from '../../systemWorkflow/domain/systemWorkflowDraft.js';
 import { buildProfileDocumentV9, projectSystemWorkflowPublicGrids } from './profileDocumentV9Builder.js';
 import {
@@ -326,6 +327,8 @@ test('v9 validation is exact, v9-only, quantity bounded, and rejects private or 
     (value) => { value.version = 8; },
     (value) => { value.documentType = 'OS_UNDERNEATH_PROFILE'; },
     (value) => { value.lattice = {}; },
+    (value) => { value.miniApps = []; },
+    (value) => { value.workbench = { ...createDefaultWorkbenchPresentation(), miniApps: [] }; },
     (value) => { value.grids[0].coordinate = { x: 0, y: 0 }; },
     (value) => { value.grids[0].visibility = 'PRIVATE'; },
     (value) => { value.grids[0].placements[0].locked = false; },

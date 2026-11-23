@@ -25,7 +25,7 @@ const nativeContent = value => Object.fromEntries(nativeKeys.map(key => [key, va
 // host-only values, not Reception edits or history when leaving the document.
 const receptionWorkbench = (presentation, saved) => {
   const next = { ...presentation, display: saved.display };
-  for (const key of ['displays', 'miniApps', 'keeperDocks']) {
+  for (const key of ['displays', 'keeperDocks']) {
     if (Object.hasOwn(saved, key)) next[key] = saved[key]; else delete next[key];
   }
   return next;

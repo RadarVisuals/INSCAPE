@@ -44,8 +44,6 @@ const diagnostic = nomad && process.env.INSCAPE_PERF_DIAGNOSTIC === '1';
 const traceNavigation = diagnostic && process.env.INSCAPE_PERF_TRACE === '1';
 const profileNavigation = diagnostic && process.env.INSCAPE_PERF_PROFILE !== '0';
 const webp = study ? await readFile('.browser-test-runtime/svg-animation-study/media/loop.svg', 'utf8') : '';
-const panel = animated => '<!doctype html><html><style>body{margin:0;background:#273c43;color:#edd7b3;font:20px sans-serif;overflow:hidden}h1{font-size:20px;padding:24px}#shape{position:absolute;width:130px;height:130px;border-radius:50%;background:#c88863;top:120px;left:100px}</style><h1>Motion study</h1><div id="shape"></div>' +
-  (animated ? '<script>window.perfTicks=0;function tick(t){window.perfTicks++;document.getElementById("shape").style.transform="translateX("+Math.sin(t/750)*75+"px)";requestAnimationFrame(tick)}requestAnimationFrame(tick)</script>' : '');
 const types = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml',
   '.webp': 'image/webp', '.png': 'image/png', '.woff2': 'font/woff2', '.json': 'application/json' };
 const server = createServer(async (request, response) => {
@@ -76,28 +74,23 @@ const browser = await chromium.launch({ executablePath: browserExecutable, headl
   args: ['--disable-background-timer-throttling', '--disable-renderer-backgrounding'] });
 const browserCdp = await browser.newBrowserCDPSession();
 const cases = (exportStudy ? ['full', 'half', 'quarter', 'vector', 'loop'].flatMap(nomadVariant => [1, 4].map(nomadActive => ({
-  name: `export-${nomadVariant}-${nomadActive}`, size: 'filled', count: 8, htmlAnimated: 0, nomad: 1,
+  name: `export-${nomadVariant}-${nomadActive}`, size: 'filled', count: 8, nomad: 1,
   nomadVariant, nomadActive, svgFps: 60,
 }))) : nomad ? [
   { name: 'nomad-paused', nomadActive: 0 },
   ...[1, 4].flatMap(nomadActive => [0, 60, 30].map(svgFps =>
     ({ name: `nomad-${nomadActive}-${svgFps || 'uncapped'}`, nomadActive, svgFps }))),
   { name: 'nomad-4-60-native', nomadActive: 4, svgFps: 60, oversample: 1 },
-].map(item => ({ size: 'filled', count: 8, htmlAnimated: 0, nomad: 1, ...item })) : study ? [
+].map(item => ({ size: 'filled', count: 8, nomad: 1, ...item })) : study ? [
   { name: 'static', svgMode: 'static' },
-  { name: 'html-only', svgMode: 'static', htmlAnimated: 1 },
   { name: 'svg-uncapped', svgMode: 'raf' },
   { name: 'svg-60', svgMode: 'raf', svgFps: 60 },
   { name: 'svg-30', svgMode: 'raf', svgFps: 30 },
   { name: 'css-30', svgMode: 'css', svgFps: 30 },
   { name: 'webp-30', svgMode: 'webp', svgFps: 30 },
-  { name: 'mixed-uncapped', svgMode: 'raf', htmlAnimated: 1 },
-  { name: 'mixed-30', svgMode: 'raf', svgFps: 30, htmlAnimated: 1 },
-  ...(process.env.INSCAPE_PERF_CASE === 'mixed-css-30' ? [{ name: 'mixed-css-30', svgMode: 'css', svgFps: 30, htmlAnimated: 1 }] : []),
-  ...(process.env.INSCAPE_PERF_CASE === 'legacy-selector' ? [{ name: 'legacy-selector', svgMode: 'raf', htmlAnimated: 1, legacy: 1 }] : []),
+  ...(process.env.INSCAPE_PERF_CASE === 'legacy-selector' ? [{ name: 'legacy-selector', svgMode: 'raf', legacy: 1 }] : []),
   ...(process.env.INSCAPE_PERF_CASE === 'css-60' ? [{ name: 'css-60', svgMode: 'css', svgFps: 60 }] : []),
-  ...(process.env.INSCAPE_PERF_CASE === 'mixed-css-60' ? [{ name: 'mixed-css-60', svgMode: 'css', svgFps: 60, htmlAnimated: 1 }] : []),
-].map(item => ({ size: 'filled', count: 8, htmlAnimated: 0, ...item })) : [
+].map(item => ({ size: 'filled', count: 8, ...item })) : [
   { name: 'small-static-2', size: 'small', animated: 0, count: 2 },
   { name: 'filled-static-2', size: 'filled', animated: 0, count: 2 },
   { name: 'filled-animated-2', size: 'filled', animated: 1, count: 2 },
@@ -157,7 +150,6 @@ try {
     await page.route('**/*', async route => {
       const url = new URL(route.request().url());
       if (url.hostname === 'workbench-perf.invalid') {
-        if (url.pathname === '/panel.html') return route.fulfill({ contentType: 'text/html', body: panel(url.searchParams.get('animated') === '1') });
         const response = await route.fetch({ url: origin + url.pathname + url.search });
         return route.fulfill({ response, headers: { ...response.headers(), 'access-control-allow-origin': '*' } });
       }
@@ -287,7 +279,7 @@ try {
       updateRates = overviewPhase.nomads.filter(s => s.running).map(s => ({ updatesPerSecond: s.updatesPerSecond, callbacksPerSecond: s.callbacksPerSecond }));
     } else {
     assert.equal(allFramesAfter.filter(frame => frame.svg === (mode === 'webp' ? 1 : 8)).length, testCase.size === 'small' ? 1 : 4, 'all SVGs render at 30%');
-    const expectedJs = (mode === 'raf' ? 4 : 0) + ((testCase.htmlAnimated ?? testCase.animated) ? 2 : 0);
+    const expectedJs = mode === 'raf' ? 4 : 0;
     assert.equal(allFramesAfter.filter(frame => frame.ticks > 0).length, expectedJs, 'only the expected JavaScript animations execute');
     for (const state of allFramesAfter.filter(f => f.mode === 'raf' || f.mode === 'css')) {
       assert.equal(state.targets, testCase.legacy ? 14 : 7, 'corrected animation targets only the seven pivoted groups');
@@ -360,7 +352,7 @@ try {
       x: Number(node.dataset.workbenchCameraX || 0), y: Number(node.dataset.workbenchCameraY || 0),
     }));
     assert.ok(panObservation.x < -100 && panObservation.y < -50,
-      'the drag must reach the canvas, not disappear into an embedded HTML document');
+      'the drag must reach the canvas');
     assert.deepEqual(await page.evaluate(() => workbenchPerf.record()), initial.record, 'camera must not save authored content');
     await page.getByRole('button', { name: 'Fit canvas in view', exact: true }).click();
     await page.waitForTimeout(500); await zoom(page, 1); await page.waitForTimeout(500);
@@ -392,12 +384,12 @@ try {
       await selector.selectOption('workbench:main'); await page.locator('.text-window').first().waitFor(); await page.waitForTimeout(800);
     });
     const beforeReload = await page.evaluate(() => workbenchPerf.record());
-    const layoutObservation = { initiallySeeded: initial.record.workbenches[0].content.workbench.miniApps,
-      savedBeforeSwitch: saved.workbenches[0].content.workbench.miniApps,
-      savedAfterSwitch: beforeReload.workbenches[0].content.workbench.miniApps };
+    const layoutObservation = { initiallySeeded: initial.record.workbenches[0].content.workbench.imageModules,
+      savedBeforeSwitch: saved.workbenches[0].content.workbench.imageModules,
+      savedAfterSwitch: beforeReload.workbenches[0].content.workbench.imageModules };
     assert.deepEqual(layoutObservation.savedAfterSwitch, layoutObservation.initiallySeeded,
-      'HTML artwork retains its authored canvas position through camera changes and switching');
-    for (const key of ['imageModules', 'texts', 'shapes', 'miniApps'])
+      'Image artwork retains its authored canvas position through camera changes and switching');
+    for (const key of ['imageModules', 'texts', 'shapes'])
       assert.ok(JSON.stringify(beforeReload.workbenches[0].content[key]) === JSON.stringify(saved.workbenches[0].content[key]), 'switch preserves module content: ' + key);
     assert.ok(JSON.stringify(beforeReload.workbenches.slice(1)) === JSON.stringify(saved.workbenches.slice(1)), 'switch preserves inactive compositions');
     await page.reload(); await selector.waitFor(); await page.locator('.text-window').first().waitFor();

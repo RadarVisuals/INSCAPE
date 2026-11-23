@@ -789,7 +789,7 @@ test('touch grid handles a single canvas, creation, details and opening without 
     assert.deepEqual(await page.evaluate(() => window.savedDraft().workbenches[0].content), initial);
   } finally { await browser.close(); }
 });
-test('failed departure keeps the live editor and mixed-content previews never start an HTML runtime', { timeout: 60000 }, async () => {
+test('failed departure keeps the live editor and mixed-content previews preserve authored layers and text frames', { timeout: 60000 }, async () => {
   const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
   try {
     const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
@@ -813,8 +813,6 @@ test('failed departure keeps the live editor and mixed-content previews never st
       draft.workbench.shapes = [{ id: 'shape:preview', open: true, window: { left: 430, top: 30, width: 710, height: 400 } }];
       draft.imageModules = [{ id: 'image:preview', name: 'Mountain study', width: 340, height: 340, visibility: 'PRIVATE', artwork: { id: 'artwork:preview', asset, crop: null, transform: { quarterTurns: 0, mirrorX: false, mirrorY: false } } }];
       draft.workbench.imageModules = [{ id: 'image:preview', open: true, position: { left: 580, top: 40 } }];
-      draft.miniApps = [{ id: 'miniapp:preview', name: 'Orbit study', url: 'https://example.com/never-run', visibility: 'PRIVATE', surface: 'artwork' }];
-      draft.workbench.miniApps = [{ id: 'miniapp:preview', open: true, window: { left: 550, top: 470, width: 500, height: 250 } }];
       if (!store.commitCompletedOperation(draft, { expectedGeneration: store.getGeneration() })) throw Error('Fixture save failed');
     });
     await page.reload(); await editorOverview(page);
@@ -823,7 +821,6 @@ test('failed departure keeps the live editor and mixed-content previews never st
     await page.locator('.workbench-overview [data-navigator-object="shape:preview"]').waitFor();
     assert.equal(await page.locator('.workbench-overview [data-navigator-object="shape:preview"]').count(), 1);
     assert.equal(await page.locator('.workbench-overview iframe').count(), 0);
-    assert.match(await page.locator('.workbench-overview .workbench-overview-interactive').innerText(), /Orbit study/);
     await page.waitForFunction(() => {
       const bodies = [...document.querySelectorAll('.workbench-overview .text-flow-visible .text-document-body')];
       return bodies.length === 2 && bodies.every(node => node.textContent.length > 20);

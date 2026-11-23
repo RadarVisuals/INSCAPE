@@ -6,7 +6,7 @@ import { browserExecutable } from '../scripts/browserEnvironment.mjs';
 const origin = process.env.INSCAPE_TEST_ORIGIN || 'http://127.0.0.1:5173';
 const address = '0x' + '1'.repeat(40);
 
-test('one published composition keeps free layers and Bento cells in Profile, Gallery and Writing', { timeout: 60000 }, async () => {
+test('a published composition keeps its text on Profile and Gallery and out of Writing', { timeout: 60000 }, async () => {
   const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
   try {
     const page = await browser.newPage({ viewport: { width: 1440, height: 900 }, reducedMotion: 'reduce' });
@@ -41,13 +41,13 @@ test('one published composition keeps free layers and Bento cells in Profile, Ga
     await page.setViewportSize({ width: 900, height: 720 });
     await open('Writing').click();
     const writing = page.locator('.published-writing');
-    await writing.locator('summary').filter({ hasText: 'Free caption' }).click();
-    await writing.getByRole('heading', { name: 'Free caption' }).waitFor();
+    await writing.getByText('No published writing yet.').waitFor();
+    assert.equal(await writing.getByText('Free caption').count(), 0);
     assert.deepEqual(errors, []);
   } finally { await browser.close(); }
 });
 
-test('Studio opens the current published writing source or a new document on empty selection', { timeout: 45000 }, async () => {
+test('Writing opens the owner Studio without selecting a composition', { timeout: 45000 }, async () => {
   const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
   try {
     const page = await browser.newPage({ viewport: { width: 1365, height: 820 }, reducedMotion: 'reduce' });
@@ -59,8 +59,9 @@ test('Studio opens the current published writing source or a new document on emp
     await button('Create composition').waitFor();
     await page.goto(profile);
     await button('Writing').click();
-    await page.locator('.published-writing summary').filter({ hasText: 'Free caption' }).click();
+    await page.getByText('No published writing yet.').waitFor();
+    await page.evaluate(() => window.__galleryStore.switchWorkbench('workbench:main'));
     await button('Studio').click();
-    await page.locator('.editor-menu-bar[data-document="workbench:mixed"]').waitFor();
+    await page.locator('.editor-menu-bar[data-document="workbench:main"]').waitFor();
   } finally { await browser.close(); }
 });

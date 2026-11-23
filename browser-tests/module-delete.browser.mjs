@@ -73,22 +73,6 @@ try {
   await page.getByRole('menuitem',{name:'DELETE',exact:true}).click();
   await page.waitForFunction(()=>instances.getDraft().grids.length===0);
 
-  for (const [label,shortcut,key] of [['MINI APP','.mini-app-shortcut','miniApps']]) {
-    await page.mouse.click(15,15,{button:'right'});
-    await page.getByRole('menuitem',{name:'ADD',exact:true}).hover();
-    await page.getByRole('menuitem',{name:label,exact:true}).click();
-    await page.locator('[data-mini-app-id] button[aria-label^="Close "]').click();
-    await page.locator(shortcut).focus();
-    await page.keyboard.press('Shift+F10');
-    await page.screenshot({path:'output/module-delete-'+key+'-menu.png'});
-    await page.getByRole('menuitem',{name:'DELETE',exact:true}).click();
-    await page.waitForFunction(key=>instances.getDraft()[key].length===0,key);
-    await page.keyboard.press('Control+z');
-    await page.waitForFunction(key=>instances.getDraft()[key].length===1,key);
-    await page.locator('main.system-workflow').focus();
-    await page.keyboard.press('Control+Shift+z');
-    await page.waitForFunction(key=>instances.getDraft()[key].length===0,key);
-  }
   await page.setViewportSize({width:1440,height:1000});
   await page.screenshot({path:'output/module-delete-empty-wide.png'});
   await page.evaluate(async()=>{

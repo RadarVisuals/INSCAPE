@@ -3,7 +3,7 @@ import test from 'node:test';
 import { captureWorkbenchPresentation } from './workbenchPresentationCapture.js';
 import { captureDisplayPresentation, restoreDisplayPresentation } from './displayPresentation.js';
 import { isValidPlacementMedia } from '../../systemWorkflow/domain/placementMedia.js';
-import { createDefaultWorkbenchPresentation, createMiniAppPresentation, createTextPresentation, assertWorkbenchPresentation } from '../../profileDocument/domain/workbenchPresentation.js';
+import { createDefaultWorkbenchPresentation, createTextPresentation, assertWorkbenchPresentation } from '../../profileDocument/domain/workbenchPresentation.js';
 import { createProfileDocumentV9AssetResolver } from '../../profileDocument/domain/profileDocumentV9Asset.js';
 import { createSystemWorkflowDraftStore, systemWorkflowDraftKey } from '../../systemWorkflow/systemWorkflowDraftStore.js';
 import { createWorkbenchSession } from '../../systemWorkflow/workbenchSession.js';
@@ -37,7 +37,6 @@ test('capture is read-only; only explicit saving persists the layout through the
   assert.equal(result.value.identity.open, true);
   assert.equal(source.layout.display.open, true);
   assert.equal(Object.hasOwn(result.value, 'displays'), false);
-  assert.equal(Object.hasOwn(result.value, 'miniApps'), false);
   assert.equal(entries.size, 0);
   assert.deepEqual(store.getDraft(), before);
   assert.equal(createWorkbenchSession({ store }).saveWorkbench(result.value), true);
@@ -47,17 +46,13 @@ test('capture is read-only; only explicit saving persists the layout through the
 test('current modules use live presentation, then their saved layout, then existing defaults in authored order', () => {
   const layout = createDefaultWorkbenchPresentation();
   layout.displays = [display('display:saved', 'Saved'), display('display:live', 'Old')];
-  layout.miniApps = [createMiniAppPresentation('miniapp:saved', 5), createMiniAppPresentation('miniapp:live', 6)];
   const liveDisplay = { ...display('display:live', 'Live'), open: false };
-  const liveApp = { ...createMiniAppPresentation('miniapp:live', 7), open: false };
   const result = captureWorkbenchPresentation(freeze(input({ layout,
     displays: ['live', 'saved', 'new'].map(id => ({ id: `display:${id}` })),
-    miniApps: ['live', 'saved', 'new'].map(id => ({ id: `miniapp:${id}` })),
-    displayPresentations: { 'display:live': liveDisplay }, miniAppPresentations: { 'miniapp:live': liveApp },
+    displayPresentations: { 'display:live': liveDisplay },
   })));
   assert.equal(result.error, null);
   assert.deepEqual(result.value.displays, [liveDisplay, layout.displays[0], display('display:new', 'DISPLAY MODULE')]);
-  assert.deepEqual(result.value.miniApps, [liveApp, layout.miniApps[0], createMiniAppPresentation('miniapp:new', 2)]);
   assertWorkbenchPresentation(result.value);
 });
 
@@ -137,17 +132,13 @@ test('explicit publication capture accepts geometry only after save and invalida
 test('removed modules contribute neither saved layouts nor cached errors, including undo to absent collections', () => {
   const layout = createDefaultWorkbenchPresentation();
   layout.displays = [display('display:removed', 'Removed')];
-  layout.miniApps = [createMiniAppPresentation('miniapp:removed')];
-  const source = input({ layout, displayPresentations: { 'display:removed': null },
-    miniAppPresentations: { 'miniapp:removed': createMiniAppPresentation('miniapp:removed') } });
-  const empty = captureWorkbenchPresentation({ ...source, displays: [], miniApps: [] });
+  const source = input({ layout, displayPresentations: { 'display:removed': null } });
+  const empty = captureWorkbenchPresentation({ ...source, displays: [] });
   assert.equal(empty.error, null);
   assert.deepEqual(empty.value.displays, []);
-  assert.deepEqual(empty.value.miniApps, []);
   const absent = captureWorkbenchPresentation(source);
   assert.equal(absent.error, null);
   assert.equal(Object.hasOwn(absent.value, 'displays'), false);
-  assert.equal(Object.hasOwn(absent.value, 'miniApps'), false);
   const active = captureWorkbenchPresentation({ ...source, displays: [{ id: 'display:removed' }] });
   assert.equal(active.value, null);
   assert.match(active.error, /shortcut artwork.*unavailable/);

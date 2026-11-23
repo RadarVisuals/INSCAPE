@@ -1,6 +1,4 @@
 import { openWorkbenchIndex } from '../../systemWorkflow/workbenchIndexSession.js';
-import { addMiniApp } from '../../miniApps/miniAppSession.js';
-import { MAX_MINI_APPS } from '../../miniApps/domain/miniApps.js';
 import { addTextModule } from '../../text/textSession.js';
 import { interfaceTheme } from '../../interfaceTheme.js';
 import { receptionTextDefaults } from '../../reception/receptionTextDefaults.js';
@@ -53,11 +51,6 @@ export default function workbenchCommands({
   const addCommands = [
     { id: 'workbench-index', label: draft.workbenchIndex ? 'OPEN INDEX' : 'INDEX' },
     {
-      disabled: (draft.miniApps?.length || 0) >= MAX_MINI_APPS,
-      id: 'mini-app',
-      label: 'MINI APP',
-    },
-    {
       disabled: (draft.texts?.length || 0) >= MAX_TEXT_MODULES,
       id: 'text',
       label: 'TEXT',
@@ -80,14 +73,11 @@ export default function workbenchCommands({
     },
   ].filter(command => !reception || ['text', 'image', 'shape', 'shape-grid'].includes(command.id));
   const runCommand = (id, placement) => {
-    if (reception && ['workbench-index', 'mini-app', 'keeper', 'identity', 'publish'].includes(id)) return;
+    if (reception && ['workbench-index', 'keeper', 'identity', 'publish'].includes(id)) return;
     try {
       switch (id) {
         case 'workbench-index':
           openWorkbenchIndex(store, profileAddress);
-          break;
-        case 'mini-app':
-          addMiniApp(store, profileAddress);
           break;
         case 'text':
           activateArtwork(addTextModule(store, profileAddress, placement, reception

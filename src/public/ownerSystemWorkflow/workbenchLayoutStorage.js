@@ -19,10 +19,9 @@ export function loadWorkbenchLayout(profile, draft, storage, workbenchId, cells)
       texts: value.layout.texts?.filter(item => draft.texts?.some(text => text.id === item.id)),
       shapes: value.layout.shapes?.filter(item => draft.shapes?.some(shape => shape.id === item.id)),
       imageModules: value.layout.imageModules?.filter(item => draft.imageModules?.some(image => image.id === item.id)),
-      miniApps: value.layout.miniApps?.filter(item => draft.miniApps?.some(app => app.id === item.id)),
     };
     delete layout.keeperDocks;
-    for (const name of ['displays', 'texts', 'miniApps', 'imageModules', 'shapes']) if (layout[name] === undefined) delete layout[name];
+    for (const name of ['displays', 'texts', 'imageModules', 'shapes']) if (layout[name] === undefined) delete layout[name];
     const views = Object.fromEntries(Object.entries(value.views).flatMap(([id, view]) => {
       if (id === 'workbench:tools' && validSharedTools(view)) return [[id, view]];
       if (ids.has(id) && view && typeof view.gridId === 'string' && typeof view.locked === 'boolean') return [[id, {

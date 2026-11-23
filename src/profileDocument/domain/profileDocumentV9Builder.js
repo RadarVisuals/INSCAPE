@@ -18,7 +18,6 @@ import { createProfileDocumentV9AssetResolver } from './profileDocumentV9Asset.j
 import { assertValidProfileDocumentV9 } from './profileDocumentV9Validation.js';
 import { projectIdentityCard } from '../../profileIdentity/domain/identityCard.js';
 import { projectDisplayDraft } from '../../systemWorkflow/domain/displayModules.js';
-import { projectMiniApps } from '../../miniApps/domain/miniApps.js';
 import { projectImageModules, imageReferenceCount } from '../../imageModule/imageModule.js';
 import { projectShapes } from '../../shapes/shapes.js';
 import { projectKeeperDocks, keeperReferenceCount } from '../../keeper/keeper.js';
@@ -117,7 +116,6 @@ export function buildProfileDocumentV9({
     .map(module => ({ id: module.id, artboard: { ...module.artboard }, geometry: { ...module.geometry }, appearance: { ...module.appearance },
       grids: projectSystemWorkflowPublicGrids(projectDisplayDraft(draft, module.id), assetRecords) }));
   const presentation = workbench || draft.workbench;
-  const miniApps = draft.miniApps ? projectMiniApps(draft.miniApps) : undefined;
   const shapes = draft.shapes ? projectShapes(draft.shapes) : undefined;
   const keeperDocks = draft.keeperDocks ? projectKeeperDocks(draft.keeperDocks) : undefined;
   const imageModules = draft.imageModules ? projectImageModules(draft.imageModules) : undefined;
@@ -126,7 +124,6 @@ export function buildProfileDocumentV9({
   if (publicWorkbench) delete publicWorkbench.keeperDocks;
   if (publicWorkbench?.shapes) publicWorkbench.shapes = publicWorkbench.shapes.filter(item => shapes?.some(shape => shape.id === item.id));
   if (publicWorkbench?.imageModules) publicWorkbench.imageModules = publicWorkbench.imageModules.filter(item => imageModules?.some(image => image.id === item.id));
-  if (publicWorkbench?.miniApps) publicWorkbench.miniApps = publicWorkbench.miniApps.filter(item => miniApps?.some(app => app.id === item.id));
   if (publicWorkbench?.texts) publicWorkbench.texts = publicWorkbench.texts.filter(item => texts?.some(text => text.id === item.id));
   if (publicWorkbench?.displays) publicWorkbench.displays = publicWorkbench.displays.filter(module => displays?.some(content => content.id === module.id));
   const grids = projectSystemWorkflowPublicGrids(draft, assetRecords);
@@ -163,7 +160,6 @@ export function buildProfileDocumentV9({
     ...(draft.reception ? { reception: projectReception(draft.reception) } : {}),
     ...(draft.composition ? { composition: projectReception(draft.composition) } : {}),
     ...(displays ? { displays } : {}),
-    ...(miniApps?.length ? { miniApps } : {}),
     ...(shapes?.length ? { shapes } : {}),
     ...(keeperDocks?.length ? { keeperDocks } : {}),
     ...(imageModules?.length ? { imageModules } : {}),

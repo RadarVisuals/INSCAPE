@@ -33,6 +33,6 @@ export function applyDraftChanges(draft, changes, direction) {
 export function draftChangeLabel(changes) {
   const key = changes[0]?.path[0];
   return ({ texts: 'Edit · Text', imageModules: 'Edit · Image', shapes: 'Edit · Shape', keeperDocks: 'Edit · Keeper',
-    miniApps: 'Edit · Mini app', identityPresentation: 'Edit · Identity', workbench: 'Edit · Workbench',
+    identityPresentation: 'Edit · Identity', workbench: 'Edit · Workbench',
     grids: 'Edit · Display', appearance: 'Edit · Display', displays: 'Edit · Display' })[key] || 'Edit';
 }

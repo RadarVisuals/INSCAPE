@@ -8,7 +8,6 @@ await writeFile(output + '/study-media/keeper.svg', svgStudy(await readFile('bro
 // Test bundle only: resolve local media without network interception. Production
 // URL validation and the production build configuration are untouched.
 const localMedia = {name:'isolated-loopback-test-media',enforce:'pre',async load(id){
- if(id.endsWith('/src/miniApps/MiniAppsWorkbench.jsx'))return (await readFile(id,'utf8')).replaceAll('allowLocal: import.meta.env.DEV','allowLocal: true');
  if(!id.endsWith('/src/profileDocument/domain/publishedAssetUrl.js'))return;
  return (await readFile(id,'utf8')).replace("url.protocol !== 'https:'", "(url.protocol !== 'https:' && !(url.protocol === 'http:' && url.hostname === '127.0.0.1' && url.port === '29959'))");
 }};

@@ -53,7 +53,7 @@
 .canvas-presentation-popover p { margin: 12px 0; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12px; }
 .canvas-presentation-popover > dl { display: grid; gap: 12px; margin: 20px 0 0; font: 12px/1.5 var(--font-technical); }
 .canvas-presentation-popover > dl > div { display: flex; justify-content: space-between; gap: 16px; }
-.canvas-presentation-popover dt, .canvas-presentation-note { color: var(--tactile-muted); }
+.canvas-presentation-popover dt { color: var(--tactile-muted); }
 .canvas-presentation-popover dd { margin: 0; overflow-wrap: anywhere; }
 .canvas-presentation-source { display: grid; gap: 8px; margin-bottom: 16px; font-size: 12px; }
 .canvas-presentation-source select { width: 100%; min-width: 0; padding: 10px 6px; border: 1px solid var(--overview-glass-edge); border-radius: var(--control-radius); color: inherit; background: rgb(12 14 15); font: inherit; }

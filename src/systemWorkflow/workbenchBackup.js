@@ -38,7 +38,7 @@ export function summarizeWorkbenchBackup(draft) {
   return [
     ['Text', draft.texts?.length || 0], ['Images', draft.imageModules?.length || 0],
     ['Shapes', draft.shapes?.length || 0], ['Displays', (draft.grids.length ? 1 : 0) + (draft.displays?.length || 0)],
-    ['Mini apps', draft.miniApps?.length || 0], ['Keeper docks', draft.keeperDocks?.length || 0],
+    ['Keeper docks', draft.keeperDocks?.length || 0],
     ['Groups', draft.workbenchGroups?.length || 0],
     ['Bento cells', draft.reception?.cells?.length ?? draft.reception?.regions?.length ?? 0],
   ].map(([name, count]) => `${count} ${name}`).join(' · ');

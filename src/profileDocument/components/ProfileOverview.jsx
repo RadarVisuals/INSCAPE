@@ -19,25 +19,24 @@ export default function ProfileOverview({ document: publication, works, writing,
   useStartupDestinationReady();
   const identity = useProfileIdentity(publication.profile.address);
   const model = useMemo(() => createPublishedIdentityRackViewModel({ document: publication, identity }), [publication, identity]);
-  const snapshot = useMemo(() => publishedPresentationSnapshot(publication), [publication]);
+  const snapshot = useMemo(() => writing ? null : publishedPresentationSnapshot(publication), [publication, writing]);
   const [profileLayout, setProfileLayout] = useState('card');
   const [workView, setWorkView] = useState(() => ({ layout: innerWidth >= 900 ? 'list' : 'grid', wrap: true }));
   const [selectedWork, setSelectedWork] = useState(null);
   const [profileWork, setProfileWork] = useState(null);
-  const [writingSource, setWritingSource] = useState(null);
   const [cardSize, setCardSize] = useState(2);
   const [cameraMemory] = useState(() => ({ cameras: new Map() }));
   const destination = works ? 'gallery' : 'profile';
-  const entries = useMemo(() => publishedCompositionEntries(publication, destination), [publication, destination]);
+  const entries = useMemo(() => writing ? [] : publishedCompositionEntries(publication, destination), [publication, destination, writing]);
   const explicitBento = !works && !writing && reception === true && publication.reception;
   const current = writing ? 'Writing' : works ? 'Gallery' : 'Profile';
   const selectedId = works ? selectedWork : profileWork;
   const selectedEntry = entries.find(item => item.id === selectedId);
   const defaultEntry = works ? entries[0] : entries.find(item => item.id === 'reception');
-  const currentWork = writing ? writingSource : (explicitBento && 'reception') || (selectedEntry || defaultEntry)?.id;
+  const currentWork = (explicitBento && 'reception') || (selectedEntry || defaultEntry)?.id;
   const edit = id => id === 'reception' ? onEditReception?.() : onEditComposition?.(id);
   const editCurrent = onReturnToWorkbench && (currentWork && (currentWork === 'reception' ? onEditReception : onEditComposition)
-    ? () => edit(currentWork) : onNewComposition || onReturnToWorkbench);
+    ? () => edit(currentWork) : (!writing && onNewComposition) || onReturnToWorkbench);
   const destinations = editCurrent ? { ...ownerDestinations, Studio: editCurrent } : ownerDestinations;
   return <div className="visitor-publication" data-section={writing ? 'writing' : works ? 'works' : 'profile'}>
     <VisitorLightField />
@@ -46,7 +45,7 @@ export default function ProfileOverview({ document: publication, works, writing,
       onDiscover={onOpenDirectory} onConnect={onConnect} onDisconnect={onDisconnect} />
     {unavailableTarget && <p role="status" className="visitor-notice">That destination is no longer in this publication.</p>}
     <Suspense fallback={<p role="status">Opening {current}.</p>}>
-      {writing ? <PublishedWriting snapshot={snapshot} reception={publication.reception} onSelectSource={setWritingSource} /> : explicitBento
+      {writing ? <PublishedWriting /> : explicitBento
         ? <ReceptionOverview embedded snapshot={snapshot} reception={publication.reception} model={model}
             address={publication.profile.address} onOpenCanvas={onOpenCanvas} onOpenDirectory={onOpenDirectory} onCloseBento={onOpenOverview} onReturn={onReturn} />
         : <>{!works && <VisitorProfile model={model} layout={profileLayout} onLayoutChange={setProfileLayout} />}

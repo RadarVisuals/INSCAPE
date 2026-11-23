@@ -31,7 +31,6 @@ import { validateProfileDocumentV9Asset } from './profileDocumentV9Asset.js';
 import { isValidIdentityCard } from '../../profileIdentity/domain/identityCard.js';
 import { isValidWorkbenchPresentation } from './workbenchPresentation.js';
 import { DISPLAY_CONTENT_KEYS, MAX_DISPLAY_MODULES, PRIMARY_DISPLAY_ID, isDisplayFormat } from '../../systemWorkflow/domain/displayModules.js';
-import { validMiniApps } from '../../miniApps/domain/miniApps.js';
 import { validImageModules, imageReferenceCount } from '../../imageModule/imageModule.js';
 import { validShapes } from '../../shapes/shapes.js';
 import { validKeeperDocks, keeperReferenceCount } from '../../keeper/keeper.js';
@@ -167,7 +166,7 @@ function validateDocument(input, { rawSize } = {}, checkLinks) {
   // collection envelope must not consume the composition's existing depth budget.
   const depthInput = record(input) ? Object.fromEntries(Object.entries(input).filter(([key]) => key !== 'canvases')) : input;
   if (depth(depthInput) > SYSTEM_WORKFLOW_LIMITS.maxDepth) fail('$', 'excessive_depth', 'Document nesting is too deep');
-  if (!allowedKeys(input, DOCUMENT_KEYS, ['workbench', 'displays', 'miniApps', 'texts', 'imageModules', 'shapes', 'keeperDocks', 'workbenchGroups', 'workbenchIndex', 'artworkLayers', 'reception', 'receptionDestinations', 'composition', 'canvas', 'canvases'])) {
+  if (!allowedKeys(input, DOCUMENT_KEYS, ['workbench', 'displays', 'texts', 'imageModules', 'shapes', 'keeperDocks', 'workbenchGroups', 'workbenchIndex', 'artworkLayers', 'reception', 'receptionDestinations', 'composition', 'canvas', 'canvases'])) {
     fail('$', 'unexpected_fields', 'Document contains unexpected or missing fields');
     return { valid: false, errors, value: null, size: measuredSize };
   }
@@ -212,7 +211,6 @@ function validateDocument(input, { rawSize } = {}, checkLinks) {
   if (Object.hasOwn(input, 'reception') && !validReception(input.reception, true)) fail('reception', 'invalid_reception', 'Invalid published Bento layout');
   if (Object.hasOwn(input, 'keeperDocks') && !validKeeperDocks(input.keeperDocks, true)) fail('keeperDocks', 'invalid_keepers', 'Invalid published Keeper dock');
   if (Array.isArray(input.workbench?.keeperDocks) && input.workbench.keeperDocks.some(item => !Array.isArray(input.keeperDocks) || !input.keeperDocks.some(keeper => keeper?.id === item?.id))) fail('workbench.keeperDocks', 'unknown_keeper', 'Dock refers to an unavailable Keeper');
-  if (Object.hasOwn(input, 'miniApps') && !validMiniApps(input.miniApps, true)) fail('miniApps', 'invalid_mini_apps', 'Invalid published mini app');
   if (Object.hasOwn(input, 'texts') && !validTextModules(input.texts, true)) fail('texts', 'invalid_texts', 'Invalid published Text module');
   if (Object.hasOwn(input, 'shapes') && !validShapes(input.shapes, true)) fail('shapes', 'invalid_shapes', 'Invalid published Shape');
   if (Array.isArray(input.workbench?.shapes) && input.workbench.shapes.some(item => !Array.isArray(input.shapes) || !input.shapes.some(shape => shape?.id === item?.id))) fail('workbench.shapes', 'unknown_shape', 'Window refers to an unavailable Shape');
@@ -231,15 +229,13 @@ function validateDocument(input, { rawSize } = {}, checkLinks) {
       fail('texts.sceneLink', 'unknown_text_scene', 'Text passage refers to an unavailable published Grid');
   }
   if (Array.isArray(input.workbench?.texts) && input.workbench.texts.some(item => !Array.isArray(input.texts) || !input.texts.some(text => text?.id === item?.id))) fail('workbench.texts', 'unknown_text', 'Window refers to an unavailable Text module');
-  if (Array.isArray(input.workbench?.miniApps) && input.workbench.miniApps.some(item => !Array.isArray(input.miniApps)
-    || !input.miniApps.some(app => app?.id === item?.id))) fail('workbench.miniApps', 'unknown_mini_app', 'Window refers to an unavailable mini app');
   let moduleReferences = 0;
   if (Object.hasOwn(input, 'displays')) {
     if (!Array.isArray(input.displays) || input.displays.length > MAX_DISPLAY_MODULES - 1) {
       fail('displays', 'invalid_display_count', 'Invalid Display count');
     } else {
       const ids = new Set([PRIMARY_DISPLAY_ID]);
-      const { displays: _displays, workbench: _workbench, miniApps: _miniApps, texts: _texts, imageModules: _images, shapes: _shapes, keeperDocks: _keepers, workbenchGroups: _groups, workbenchIndex: _index, artworkLayers: _layers, reception: _reception, receptionDestinations: _receptionDestinations, composition: _composition, canvas: _canvas, canvases: _canvases, ...shared } = input;
+      const { displays: _displays, workbench: _workbench, texts: _texts, imageModules: _images, shapes: _shapes, keeperDocks: _keepers, workbenchGroups: _groups, workbenchIndex: _index, artworkLayers: _layers, reception: _reception, receptionDestinations: _receptionDestinations, composition: _composition, canvas: _canvas, canvases: _canvases, ...shared } = input;
       for (const module of input.displays) {
         if (!exactKeys(module, ['id', ...DISPLAY_CONTENT_KEYS]) || !/^display:[A-Za-z0-9_-]{1,80}$/u.test(module?.id) || ids.has(module.id)) {
           fail('displays', 'invalid_display', 'Invalid or duplicate Display'); continue;

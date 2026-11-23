@@ -739,7 +739,6 @@ export function WorkbenchSession({
                     openLibrary={openLibrary} libraryOpen={libraryOpen}
                     panels={panels}
                     deleteDisplay={deleteDisplay}
-                    onConnect={onConnect}
                   />
                   <OwnerSystemWorkflowPanelLayer
                     activity={activity}
