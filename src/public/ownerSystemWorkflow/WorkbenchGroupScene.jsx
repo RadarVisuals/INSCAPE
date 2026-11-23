@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { createPortal, flushSync } from 'react-dom';
 import WorkbenchGroupStack from './WorkbenchGroupStack.jsx';
 import { useWorkbenchArea } from './WorkbenchAreaContext.jsx';
@@ -30,7 +30,12 @@ export function useWorkbenchGroupScene({ view, content, navigation, sceneRef, di
   const latest = useRef(null);
   const [viewportWidth, setViewportWidth] = useState(innerWidth);
   useEffect(() => { const resize = () => setViewportWidth(innerWidth); addEventListener('resize', resize); return () => removeEventListener('resize', resize); }, []);
-  const groups = content.workbenchGroups || EMPTY_GROUPS;
+  const groups = useMemo(() => [
+    ...(content.workbenchGroups || EMPTY_GROUPS),
+    ...(content.artworkLayers || []).filter(layer => layer.stackPosition).map(layer => ({
+      id: layer.id, name: layer.name, position: layer.stackPosition, memberIds: layer.children, artwork: true,
+    })),
+  ], [content.workbenchGroups, content.artworkLayers]);
   const active = groups.find(group => group.id === openId) || null;
   const { entries, presentationTransforms, setPresentationTransforms, hiddenModuleIds, setHiddenModuleIds, selection, setSelection } = view;
   const ids = useCallback(group => workbenchGroupWindowIds(content, group).filter(id => entries.has(id)), [content, entries]);
@@ -111,16 +116,20 @@ export function useWorkbenchGroupScene({ view, content, navigation, sceneRef, di
   }, [groups, active, revision, disabled, ids, entries, hiddenModuleIds, setHiddenModuleIds, selection, setSelection]);
   const close = () => { setOpenId(null); setFocusedId(''); };
   const focusItem = id => { if (navigation.focusDestination({ replaceHistory: Boolean(focusedId), getBounds: () => latest.current.spread.rectangles[id] || null })) setFocusedId(id); };
-  return { active, open, close, bounds, authoredBounds, back: navigation.goBack, focusItem, focusedId, ids: active ? ids(active) : [] };
+  return { groups, disabled, active, open, close, bounds, authoredBounds, back: navigation.goBack, focusItem, focusedId, ids: active ? ids(active) : [] };
 }
 
-export function WorkbenchGroupStacks({ content, hostRef, scene, locked, dropTarget, onManage, onPosition }) {
+export function WorkbenchGroupStacks({ content, hostRef, scene, locked, dropTarget, onManage, onPosition, positionArtwork }) {
   const { canvasHost } = useWorkbenchArea();
-  const groups = content.workbenchGroups || [], names = workbenchGroupModules(content);
+  const groups = scene.groups, names = workbenchGroupModules(content);
   const itemIndex = scene.ids.indexOf(scene.focusedId);
   if (!hostRef.current) return null;
   return createPortal(<>
-    {createPortal(groups.filter(group => group.position && group.id !== scene.active?.id).map(group => <WorkbenchGroupStack key={group.id} {...{ group, scene, locked, dropTarget, onManage, onPosition }} previews={groupPreviews(content, group)} />), canvasHost || hostRef.current)}
+    {groups.filter(group => group.position && group.id !== scene.active?.id && !(group.artwork && scene.disabled)).map(group =>
+      createPortal(<WorkbenchGroupStack {...{ group, scene, locked, dropTarget }} onManage={group.artwork ? undefined : onManage}
+        onPosition={group.artwork ? positionArtwork : onPosition} previews={groupPreviews(content, group)} />,
+      // The editor's cell hit targets sit above the clipped canvas plane.
+      group.artwork ? hostRef.current : canvasHost || hostRef.current, group.id))}
     {groups.length > 0 && <nav className="workbench-group-browsing" data-workbench-navigation-obstacle data-workbench-group-tools aria-label="Workbench destinations">
       <div className="workbench-group-routes" aria-label="Named groups">{groups.map(group => <button key={group.id} type="button" disabled={locked || !onManage && !scene.bounds(group)}
         aria-current={scene.active?.id === group.id ? 'location' : undefined} title={group.name} onClick={() => { if (!scene.open(group)) onManage?.(group); }}>{group.name}</button>)}</div>

@@ -22,7 +22,7 @@ export function useWorkbenchLayoutSession({ profileAddress, draft, storage, work
   );
   const initialWorkbench = useRef(restoredWorkspace.layout || draft.workbench || null);
   const [workbenchLayout, setWorkbenchLayout] = useState(() => {
-    const { area, ...layout } = initialWorkbench.current || createDefaultWorkbenchPresentation();
+    const { area, lockedLayerIds, ...layout } = initialWorkbench.current || createDefaultWorkbenchPresentation();
     return layout;
   });
   const changeIdentityWindow = useCallback(
@@ -70,6 +70,7 @@ export default function useWorkbenchPresentation({
       captureWorkbenchPresentation({
         layout: {
           ...workbenchLayout,
+          ...(draft.workbench?.lockedLayerIds ? { lockedLayerIds: draft.workbench.lockedLayerIds } : {}),
           ...(draft.workbench?.area ? { area: draft.workbench.area } : {}),
         },
         hasPrimaryDisplay,
@@ -88,6 +89,7 @@ export default function useWorkbenchPresentation({
       }),
     [
       draft.workbench?.area,
+      draft.workbench?.lockedLayerIds,
       hasPrimaryDisplay,
       workbenchLayout,
       identityOpen,

@@ -1,3 +1,4 @@
+import { editArtworkLayers } from '../../systemWorkflow/artworkLayerSession.js';
 import { useWorkbenchArea } from './WorkbenchAreaContext.jsx';
 import { ArrowLeft, Scan, Hand } from 'lucide-react';
 import './workflowTactile.css';
@@ -35,7 +36,7 @@ import { WorkbenchCameraProvider, useWorkbenchCameraScale } from './WorkbenchCam
 import './workbenchView.css';
 import {
   artworkLayers,
-  artworkModuleId,
+  artworkLocked, artworkModuleId,
   artworkWindowIds,
   layerIds,
 } from '../../systemWorkflow/domain/artworkLayers.js';
@@ -395,6 +396,8 @@ export function WorkbenchViewControls({
   const [moveError, setMoveError] = useState('');
   const [groupsOpen, setGroupsOpen] = useState(false);
   const canManageGroups = view.store && !view.store.getCells;
+  const stackContent = view.store?.getCells && view.layers.some(layer => layer.stackPosition)
+    ? view.content : !view.store && view.groupContent?.workbenchGroups?.length ? view.groupContent : null;
   const groupsReturnFocus = useRef(null);
   const controlsRef = useRef(null),
     inspectionTarget = useRef(null);
@@ -627,7 +630,9 @@ export function WorkbenchViewControls({
       : {}),
     isCurrent: () => latest.current.store === current.store && latest.current.entries === current.entries,
   });
+  const lockedSelection = (current, ids) => ids.some(id => artworkLocked(current.content, artworkModuleId(current.content, id), latestCells.current?.cells));
   const moveOperation = (current, ids) => {
+    if (lockedSelection(current, ids)) return null;
     const cells = latestCells.current;
     if (cells?.cells.some(cell => ids.includes(cell.id))) return null;
     return createWorkbenchMoveOperation({
@@ -726,7 +731,7 @@ export function WorkbenchViewControls({
     if (!operation.commit()) setTransforms(operation.beforeTransforms);
   };
   const resizeOperation = (current, ids, corner) =>
-    createWorkbenchResizeOperation({
+    lockedSelection(current, ids) ? null : createWorkbenchResizeOperation({
       origin: operationOrigin(current),
       ids,
       corner,
@@ -1004,18 +1009,15 @@ export function WorkbenchViewControls({
         moduleId = module && artworkModuleId(current.content, module.dataset.workbenchViewId);
       const cellContext = latestCells.current;
       const cell = editorCellForModule(cellContext?.cells || [], moduleId);
+      if (moduleId && (!cell || cell.id === moduleId || cellContext.editingCellId === cell.id) && lockedSelection(current, [moduleId])) {
+        event.preventDefault(); event.stopPropagation(); current.selectArtwork(moduleId); return;
+      }
       if (cell && !target.closest('[role="separator"],button:not([data-workbench-selectable]),a')) {
         if (cellContext.editingCellId === cell.id && moduleId === cell.id) {
           event.preventDefault();
           event.stopPropagation();
           setSelection([]);
           host.focus({ preventScroll: true });
-          return;
-        }
-        if (cellContext.editingCellId === cell.id && cell.lockedMembers?.includes(moduleId)) {
-          event.preventDefault();
-          event.stopPropagation();
-          current.selectArtwork(moduleId);
           return;
         }
         if (cellContext.editingCellId !== cell.id || moduleId === cell.id) {
@@ -1207,11 +1209,18 @@ export function WorkbenchViewControls({
       host.removeEventListener('dblclick', doubleClick, true);
     };
   }, [hostRef, disabled, locked, cancelGesture, gestures, setSelection, entries, focusModules]);
+  const positionArtwork = view.store && !disabled && !locked && !historyBlocked ? (group, position) => {
+    try {
+      editArtworkLayers(view.store, view.profileAddress, { type: 'stack', id: group.id, position, from: group.position });
+      setMoveError('');
+    } catch (error) { setMoveError(error.message); }
+  } : undefined;
   const navigationTools = (
     <>
       {canManageGroups && (
         <Suspense fallback={null}>
           <WorkbenchGroups
+            positionArtwork={positionArtwork}
             view={view}
             open={groupsOpen}
             onOpenChange={setGroupsOpen}
@@ -1227,11 +1236,12 @@ export function WorkbenchViewControls({
           />
         </Suspense>
       )}
-      {!view.store && view.groupContent?.workbenchGroups?.length > 0 && (
+      {stackContent && (
         <Suspense fallback={null}>
           <PublishedWorkbenchGroups
+            positionArtwork={positionArtwork}
             view={view}
-            content={view.groupContent}
+            content={stackContent}
             hostRef={hostRef}
             navigation={navigation}
             sceneRef={groupScene}

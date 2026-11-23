@@ -39,7 +39,7 @@ export default function WorkbenchGroupStack({ group, previews, scene, locked, dr
   const available = Boolean(scene.bounds(group));
   const outside = position.left >= area.left + area.width || position.top >= area.top + area.height
     || position.left + WORKBENCH_GROUP_STACK_SIZE.width <= area.left || position.top + WORKBENCH_GROUP_STACK_SIZE.height <= area.top;
-  return <section className="workbench-group-stack" data-workbench-group-tools data-workbench-stack={group.id} data-workbench-group-drop={onPosition ? group.id : undefined}
+  return <section className="workbench-group-stack" data-workbench-group-tools data-workbench-stack={group.id} data-workbench-group-drop={!group.artwork && onPosition ? group.id : undefined}
     data-workbench-camera-decoration data-workbench-canvas-hidden={!showOutside && outside || undefined} data-muted={Boolean(scene.active) || undefined} data-drop-target={dropTarget === group.id || undefined} aria-label={group.name + ' group stack'}
     style={{ left: 0, top: 0, ...WORKBENCH_GROUP_STACK_SIZE,
       transform: `translate(${position.left * scale + offset.x}px, ${position.top * scale + offset.y}px) scale(${scale})` }}>

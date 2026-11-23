@@ -24,7 +24,11 @@ const windowFrame = (value, height, minimumWidth = 180, minimumHeight = 100) => 
 // The currently implemented modules only. Content remains owned by their existing
 // validated Grid/Identity envelopes; this describes their public starting layout.
 export function isValidWorkbenchPresentation(value, cells = []) {
-  if (!exact(value, ['version', 'display', 'identity'], ['area', 'displays', 'miniApps', 'texts', 'imageModules', 'shapes', 'keeperDocks']) || value.version !== 1) return false;
+  if (!exact(value, ['version', 'display', 'identity'], ['lockedLayerIds', 'area', 'displays', 'miniApps', 'texts', 'imageModules', 'shapes', 'keeperDocks']) || value.version !== 1) return false;
+  if (Object.hasOwn(value, 'lockedLayerIds') && (!Array.isArray(value.lockedLayerIds)
+    || value.lockedLayerIds.length > MAX_IMAGE_MODULES + MAX_SHAPES + MAX_TEXT_MODULES
+    || new Set(value.lockedLayerIds).size !== value.lockedLayerIds.length
+    || value.lockedLayerIds.some(id => typeof id !== 'string' || ![IMAGE_MODULE_ID, SHAPE_ID, TEXT_ID].some(pattern => pattern.test(id))))) return false;
   if (Object.hasOwn(value, 'area') && !validWorkbenchArea(value.area)) return false;
   if (Object.hasOwn(value, 'keeperDocks')) {
     if (!Array.isArray(value.keeperDocks) || value.keeperDocks.length > MAX_KEEPER_DOCKS) return false;

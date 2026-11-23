@@ -245,12 +245,59 @@ test('Reception Editor, preview and public reader preserve interleaved global la
 });
 
 
+test('Layers thumbnails and locks work for free and cell artwork after reload', async () => {
+  const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
+  try {
+    const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+    page.setDefaultTimeout(10000);
+    await page.route('**/*', route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
+    await page.route('**/abyssal_eye/full.webp', serveTransparentThumbnail);
+    await page.goto(`${origin}/browser-tests/reception-layer-order-fixture.html?session=${crypto.randomUUID()}`);
+    await page.evaluate(() => {
+      const { root } = window.receptionLayerFixture, draft = root.getDraft();
+      const frame = draft.reception.workbench.shapes.find(shape => shape.id === 'shape:overlay').window;
+      Object.assign(frame, { left: 500, top: 790 });
+      if (!root.commitCompletedOperation(draft, { expectedGeneration: root.getGeneration() })) throw Error('Could not position the test shape');
+    });
+    let layers = await openSharedTool(page, 'Layers');
+    const button = name => layers.getByRole('button', { name, exact: true });
+    const saved = () => page.evaluate(() => window.receptionLayerFixture.root.getDraft().reception);
+    const before = await saved();
+    await button('Lock White overlay').click();
+    await button('Select White overlay').click();
+    const shape = page.locator('aside[data-workbench-view-id="shape:overlay"]');
+    await shape.click();
+    await page.keyboard.press('Alt+ArrowRight');
+    const frame = await shape.boundingBox();
+    await page.mouse.move(frame.x + 2, frame.y + 2); await page.mouse.down();
+    await page.mouse.move(frame.x + 42, frame.y + 32, { steps: 5 }); await page.mouse.up();
+    assert.deepEqual((await saved()).workbench.shapes, before.workbench.shapes);
+    await button('Hide White overlay in editor').click();
+    assert.equal(await button('Unlock White overlay').getAttribute('aria-pressed'), 'true');
+    if (await button('Expand Artwork cell').count()) await button('Expand Artwork cell').click();
+    await button('Lock Layered artwork').click();
+    assert.deepEqual((await saved()).cells[0].lockedMembers, ['image:art']);
+    assert.equal(await button('Select Layered artwork').locator('img').count(), 1);
+    assert.equal((await button('Select White overlay').locator('.workbench-layer-thumb').boundingBox()).width, 24);
+    await page.reload();
+    layers = await openSharedTool(page, 'Layers');
+    await button('Unlock White overlay').click();
+    if (await button('Expand Artwork cell').count()) await button('Expand Artwork cell').click();
+    await button('Unlock Layered artwork').click();
+    assert.deepEqual((await saved()).workbench, before.workbench);
+  } finally { await browser.close(); }
+});
+
+const serveTransparentThumbnail = route => route.fulfill({ contentType: 'image/svg+xml',
+  body: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"><circle cx="8" cy="8" r="3" fill="red"/></svg>' });
+
 for (const width of [1440, 900]) test(`Layers selects and ungroups an entire composition across a Bento cell boundary at ${width}px`, { timeout: 90000 }, async () => {
   const browser = await chromium.launch({ executablePath: browserExecutable, headless: true });
   try {
     const page = await browser.newPage({ viewport: { width, height: 1000 }, reducedMotion: 'reduce' });
     page.setDefaultTimeout(15000);
     await page.route('**/*', route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
+    await page.route('**/abyssal_eye/full.webp', serveTransparentThumbnail);
     await page.goto(`${origin}/browser-tests/reception-layer-order-fixture.html?session=${crypto.randomUUID()}`);
     const layers = await openSharedTool(page, 'Layers');
     const button = name => layers.getByRole('button', { name, exact: true });
@@ -265,6 +312,59 @@ for (const width of [1440, 900]) test(`Layers selects and ungroups an entire com
     const grouped = await saved();
     const group = grouped.artworkLayers.find(layer => layer.name === 'Across the cell');
     assert.deepEqual(group.children, ['image:art', 'shape:overlay']);
+    if (width === 1440) {
+      const stack = page.locator(`[data-workbench-stack="${group.id}"]`);
+      await button('Stack Across the cell').click();
+      await stack.waitFor();
+      const imageSample = button('Select Across the cell').locator('.workbench-layer-image');
+      await imageSample.locator('img').evaluate(img => img.decode());
+      assert.equal(await imageSample.locator('svg').count(), 0, 'transparent stack artwork has no image icon behind it');
+      const folded = await saved();
+      const storedGroup = folded.artworkLayers.find(layer => layer.id === group.id);
+      assert.ok(storedGroup.stackPosition);
+      assert.deepEqual({ ...folded, artworkLayers: folded.artworkLayers.map(layer => layer.id === group.id ? group : layer) }, grouped);
+      const grip = stack.getByRole('button', { name: 'Move Across the cell group' });
+      const rect = await grip.boundingBox();
+      const x = rect.x + rect.width / 2, y = rect.y + rect.height / 2;
+      const drag = async () => {
+        await page.mouse.move(x, y); await page.mouse.down();
+        await page.mouse.move(x + 80, y + 45, { steps: 8 });
+        assert.deepEqual(await saved(), folded, 'drag preview does not write the draft');
+      };
+      await drag(); await page.keyboard.press('Escape'); await page.mouse.up();
+      assert.deepEqual(await saved(), folded);
+      await drag(); await page.mouse.up();
+      const relocated = await saved();
+      const position = relocated.artworkLayers.find(layer => layer.id === group.id).stackPosition;
+      assert.ok(position.left > storedGroup.stackPosition.left && position.top > storedGroup.stackPosition.top);
+      assert.deepEqual(relocated, { ...folded, artworkLayers: folded.artworkLayers.map(layer =>
+        layer.id === group.id ? { ...layer, stackPosition: position } : layer) });
+      await editorCommand(page, 'Edit', 'Undo');
+      assert.deepEqual(await saved(), folded);
+      await editorCommand(page, 'Edit', 'Redo');
+      assert.deepEqual(await saved(), relocated);
+      await page.reload();
+      await stack.waitFor();
+      assert.deepEqual(await saved(), relocated);
+      for (const id of group.children)
+        await page.locator(`[data-workbench-view-id="${id}"][data-workbench-group-hidden]`).waitFor({ state: 'attached' });
+      await stack.getByRole('button', { name: 'Open Across the cell group' }).click();
+      for (const id of group.children)
+        await page.locator(`[data-workbench-view-id="${id}"][data-workbench-group-presented]`).waitFor();
+      assert.equal(await page.locator('[data-workbench-view-id="image:art"]').evaluate(node => getComputedStyle(node).clipPath), 'none');
+      const openGroup = page.getByRole('group', { name: 'Open Workbench group' });
+      await openGroup.getByRole('button', { name: 'Back', exact: true }).click();
+      await stack.waitFor();
+      assert.deepEqual(await saved(), relocated);
+      await openSharedTool(page, 'Layers');
+      await button('Unstack Across the cell').click();
+      assert.deepEqual(await saved(), grouped);
+      await editorCommand(page, 'Edit', 'Undo');
+      await stack.waitFor();
+      assert.deepEqual(await saved(), relocated);
+      await editorCommand(page, 'Edit', 'Redo');
+      assert.deepEqual(await saved(), grouped);
+    }
     const selectGroup = button('Select Across the cell');
     assert.equal(await selectGroup.count(), 1);
     await button('Select Free Grid').click();

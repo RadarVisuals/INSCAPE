@@ -398,6 +398,22 @@ test('native default additions fit inside the edited cell while explicitly place
   scope.release();
 });
 
+test('a cell lock protects its frame and contents list while allowing a child lock to be toggled', () => {
+  const { scope } = fixture(), cell = rectangle(scope), child = rectangle(scope, 150);
+  scope.turnShapeIntoCell(cell); setCell(scope, cell, { members: [child] });
+  const before = scope.getReception();
+  scope.setArtworkLocks([cell, child], true);
+  const moved = scope.getDraft();
+  moved.workbench.shapes.find(shape => shape.id === cell).window.left += 24;
+  assert.equal(scope.commitCompletedOperation(moved, { expectedGeneration: scope.getGeneration() }), false);
+  assert.equal(scope.getLastCommitFailure(), 'locked');
+  scope.setArtworkLocks([child], false);
+  assert.deepEqual(scope.getReception().cells, before.cells);
+  scope.setArtworkLocks([cell], false);
+  assert.deepEqual(scope.getReception(), before);
+  scope.release();
+});
+
 test('locked children reject direct changes but travel with the whole cell and can be unlocked', () => {
   const { scope } = fixture(), cell = rectangle(scope), child = rectangle(scope, 150);
   scope.turnShapeIntoCell(cell); setCell(scope, cell, { members: [child] }); setCell(scope, cell, { lockedMembers: [child] });

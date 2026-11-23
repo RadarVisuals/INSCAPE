@@ -1,16 +1,22 @@
+import { useWorkbenchArea } from './WorkbenchAreaContext.jsx';
+import { clampWorkbenchPosition } from './workbenchSpace.js';
+import { workbenchSelectionBounds } from './workbenchViewScale.js';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { ChevronRight, ChevronDown, Eye, EyeOff, Trash2, X, Check, Group, Ungroup, Scan, Image, Type, Square, Layers, Monitor } from 'lucide-react';
+import { ChevronRight, ChevronDown, Lock, LockOpen, Eye, EyeOff, Trash2, X, Check, Group, Ungroup, Scan, Layers, Monitor } from 'lucide-react';
 import { useWorkbenchView } from './WorkbenchViewContext.js';
-import { artworkRecords, artworkModuleId, artworkWindowIds, layerMembers } from '../../systemWorkflow/domain/artworkLayers.js';
+import { artworkLocked, artworkRecords, artworkModuleId, artworkWindowIds, layerMembers } from '../../systemWorkflow/domain/artworkLayers.js';
 import { editArtworkLayers } from '../../systemWorkflow/artworkLayerSession.js';
-import { workbenchGroupModules } from '../../systemWorkflow/domain/workbenchGroups.js';
+import { workbenchGroupModules, WORKBENCH_GROUP_STACK_SIZE } from '../../systemWorkflow/domain/workbenchGroups.js';
 import { cellLayerOutline, workbenchLayerOutline } from './workbenchLayerOutline.js';
 import './workbenchLayers.css';
 import ArtworkOrderControls from '../../ui/ArtworkOrderControls.jsx';
 import { useEditorCells } from '../../reception/EditorCellsContext.jsx';
 
+import LayerThumbnail from './LayerThumbnail.jsx';
+
 export default function WorkbenchLayers({ open, hidden, onOpen, historyBlocked, hostRef }) {
   const view = useWorkbenchView(), { store, profileAddress, layers, content } = view;
+  const { bounds: areaBounds } = useWorkbenchArea();
   const cellContext = useEditorCells(), cells = cellContext?.cells || [];
   const cellsById = new Map(cells.map(cell => [cell.id, cell]));
   const cellOwners = new Map(cells.flatMap(cell => cell.members.map(id => [id, cell.id])));
@@ -63,7 +69,7 @@ export default function WorkbenchLayers({ open, hidden, onOpen, historyBlocked, 
   };
   const endDrag = () => { drag.current = null; setDrop(null); };
   const canTransfer = (ids, target) => !transferBlocked && ids.length > 0 &&
-    ids.every(id => byId.has(id) && !cellsById.has(id)) &&
+    ids.every(id => byId.has(id) && !artworkLocked(content, id, cells) && !cellsById.has(id)) &&
     ids.some(id => (cellOwners.get(id) ?? null) !== target);
   const canTransferDrag = target => cellContext && drag.current?.store === store && canTransfer(drag.current.ids, target);
   const cancel = () => {
@@ -85,15 +91,18 @@ export default function WorkbenchLayers({ open, hidden, onOpen, historyBlocked, 
   // composition and row action even when grouping did not change selected ids.
   const deletion = useRef(null);
   deletion.current = () => {
-    if (!selected.length) return false;
+    if (!selected.length || selected.some(id => artworkLocked(content, id, cells))) return false;
     const owner = cellOwners.get(selected[0]);
     const wholeRow = block?.children.every(id => groupOwners.get(id) === groupOwners.get(selected[0]));
     requestDelete(selected, wholeRow ? block.id : selected[0], wholeRow && !outline.get(owner)?.includes(block) ? null : owner);
     return true;
   };
   const select = (ids, additive = false, part = null, cellId = null) => {
-    const group = groupOwners.get(ids[0]);
-    if (group?.position && view.hiddenModuleIds.includes(ids[0])) view.groupScene.current?.open(group);
+    if (view.hiddenModuleIds.includes(ids[0])) {
+      const workspaceGroup = groupOwners.get(ids[0]);
+      const stack = workspaceGroup?.position ? workspaceGroup : layers.find(layer => layer.stackPosition && layer.children.includes(ids[0]));
+      if (stack) view.groupScene.current?.open(stack);
+    }
     cellContext?.store.setEditingCell(cellId);
     view.selectLayers(ids, additive, part);
   };
@@ -120,6 +129,13 @@ export default function WorkbenchLayers({ open, hidden, onOpen, historyBlocked, 
   if (!open || hidden) return null;
   const toggleExpanded = id => setExpanded(current => current.includes(id) ? current.filter(value => value !== id) : [...current, id]);
   const disclosure = (id, name) => <button type="button" aria-label={`${expanded.includes(id) ? 'Collapse' : 'Expand'} ${name}`} aria-expanded={expanded.includes(id)} onClick={() => toggleExpanded(id)}>{expanded.includes(id) ? <ChevronDown /> : <ChevronRight />}</button>;
+  const toggleStack = layer => {
+    if (layer.stackPosition) return run({ type: 'unstack', id: layer.id });
+    const frames = artworkWindowIds(content, layer.children).map(id => view.frames.get(id)?.current).filter(Boolean);
+    const origin = workbenchSelectionBounds(frames) || areaBounds;
+    const position = clampWorkbenchPosition(origin, WORKBENCH_GROUP_STACK_SIZE, areaBounds);
+    return run({ type: 'stack', id: layer.id, position });
+  };
   const row = (layer, parent = null, cellParent = null) => {
     const isBlock = typeof layer !== 'string', id = isBlock ? layer.id : layer;
     const cell = cellsById.get(id), children = cell ? outline.get(id) || [] : isBlock ? layer.children : null;
@@ -129,7 +145,9 @@ export default function WorkbenchLayers({ open, hidden, onOpen, historyBlocked, 
     const childCount = children ? cell ? cell.members.length : ids.length : null;
     const description = childCount === null ? undefined : `${childCount} ${childCount === 1 ? 'layer' : 'layers'} inside`;
     const visibilityIds = cell ? [id, ...cell.members] : ids;
-    const Icon = isBlock ? Group : item?.key === 'imageModules' ? Image : item?.key === 'texts' ? Type : Square;
+    const samples = (isBlock ? ids : cell ? [id, ...cell.members] : [id]).slice(0, 4);
+    const locked = ids.every(id => artworkLocked(content, id, cells));
+    const protectedRow = ids.some(id => artworkLocked(content, id, cells));
     const chosen = ids.every(id => selected.includes(id)), invisible = visibilityIds.every(id => view.editorHiddenIds.includes(id));
     const closed = ids.some(id => view.getPresentation()?.[byId.get(id)?.key]?.find(item => item.id === id)?.open === false);
     const deleting = pending?.rowId === rowKey;
@@ -151,7 +169,7 @@ export default function WorkbenchLayers({ open, hidden, onOpen, historyBlocked, 
     };
     return <div key={id}>
       <div className="workbench-layer-row" data-layer-id={id} data-layer-key={rowKey} data-selected={chosen || undefined} data-part={Boolean(parent || cellParent) || undefined}
-        data-drop={drop?.rowKey === rowKey ? drop.edge : undefined} draggable={!deleting}
+        data-drop={drop?.rowKey === rowKey ? drop.edge : undefined} draggable={!deleting && !protectedRow}
         onDragStart={event => {
           const moving = chosen ? selected : ids;
           drag.current = { ids: moving, store, generation: store.getGeneration() };
@@ -179,9 +197,12 @@ export default function WorkbenchLayers({ open, hidden, onOpen, historyBlocked, 
           : <>
             {children ? disclosure(id, name) : <span className="workbench-layer-indent" />}
             <button type="button" className="workbench-layer-name" aria-label={`Select ${name}`} aria-description={description} title={description ? `${name} · ${description}` : name} aria-pressed={chosen} onClick={event => select(ids, event.shiftKey || event.ctrlKey || event.metaKey, parent || blockOwners.get(id), owningCell)}
-              onDoubleClick={() => view.focusModulesRef.current?.(artworkWindowIds(content, ids))}><Icon /><span>{name}</span></button>
+              onDoubleClick={() => view.focusModulesRef.current?.(artworkWindowIds(content, ids))}><LayerThumbnail items={samples.map(sample => byId.get(sample))} /><span>{name}</span></button>
+            <button type="button" className="workbench-layer-lock" aria-label={`${locked ? 'Unlock' : 'Lock'} ${name}`} aria-pressed={locked} disabled={transferBlocked} title={locked ? 'Unlock layer' : 'Lock layer'} onClick={() => run({ type: 'lock', ids, lock: !locked })}>{locked ? <Lock /> : <LockOpen />}</button>
             <button type="button" className="workbench-layer-visibility" aria-label={`${invisible ? 'Show' : 'Hide'} ${name} in editor`} aria-pressed={invisible} title="Show or hide while editing; publication stays unchanged." onClick={() => toggleVisible(visibilityIds)}>{invisible ? <EyeOff /> : <Eye />}</button>
-            <button type="button" className="workbench-layer-delete" aria-label={`Delete ${name}`} title={`Delete ${name}`} onClick={() => requestDelete(chosen ? selected : ids, id, cellParent)}><Trash2 /></button>
+            {isBlock && <button type="button" className="workbench-layer-stack" disabled={transferBlocked} aria-label={`${layer.stackPosition ? 'Unstack' : 'Stack'} ${name}`}
+              title={layer.stackPosition ? 'Unstack group' : 'Stack group'} onClick={() => toggleStack(layer)}>{layer.stackPosition ? 'Unstack' : 'Stack'}</button>}
+            <button type="button" className="workbench-layer-delete" disabled={protectedRow} aria-label={`Delete ${name}`} title={`Delete ${name}`} onClick={() => requestDelete(chosen ? selected : ids, id, cellParent)}><Trash2 /></button>
           </>}
       </div>
       {closed && !deleting && <button type="button" className="workbench-layer-reopen" onClick={() => ids.forEach(view.openArtwork)}>Reopen {name}</button>}

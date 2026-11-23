@@ -1,5 +1,6 @@
 import { useEffect, useId, useState } from 'react';
-import { Eye, EyeOff, Image, Type, Square, Link2, CornerDownRight, Grid2X2, SlidersHorizontal } from 'lucide-react';
+import LayerThumbnail from '../public/ownerSystemWorkflow/LayerThumbnail.jsx';
+import { Lock, LockOpen, Eye, EyeOff, Image, Type, Link2, CornerDownRight, Grid2X2, SlidersHorizontal } from 'lucide-react';
 import { useEditorCells, editorCellStructureActions } from './EditorCellsContext.jsx';
 import { useWorkbenchView } from '../public/ownerSystemWorkflow/WorkbenchViewContext.js';
 import { OwnerSystemWorkflowSelectMenu } from '../public/ownerSystemWorkflow/OwnerSystemWorkflowWorkspaceControls.jsx';
@@ -33,8 +34,10 @@ export default function EditorCellInspector({ record, change, disabled, historyB
   };
   const selectMember = id => { context.store.setEditingCell(cell.id); view.selectLayers([id], false, null); };
   const members = <div className="workbench-inspector-members">{layerIds(view.layers).filter(id => cell.members.includes(id)).reverse().map(id => {
-    const member = records.find(item => item.id === id), hidden = view.editorHiddenIds.includes(id), Icon = member?.key === 'texts' ? Type : member?.key === 'imageModules' ? Image : Square;
-    return <div key={id}><button type="button" className="workbench-inspector-member" aria-label={`Select ${member?.name || 'Untitled'}`} onClick={() => selectMember(id)}><Icon /><span>{member?.name || 'Untitled'}</span></button>
+    const member = records.find(item => item.id === id), hidden = view.editorHiddenIds.includes(id), locked = cell.lockedMembers?.includes(id) || false;
+    return <div key={id}><button type="button" className="workbench-inspector-member" aria-label={`Select ${member?.name || 'Untitled'}`} onClick={() => selectMember(id)}><LayerThumbnail items={[member]} /><span>{member?.name || 'Untitled'}</span></button>
+      <button type="button" className="workbench-inspector-icon" disabled={blocked} aria-label={`${locked ? 'Unlock' : 'Lock'} ${member?.name || 'layer'}`} aria-pressed={locked}
+        onClick={() => { try { context.store.setArtworkLocks([id], !locked); setError(''); } catch (failure) { setError(failure.message); } }}>{locked ? <Lock /> : <LockOpen />}</button>
       <button type="button" className="workbench-inspector-icon" aria-label={`${hidden ? 'Show' : 'Hide'} ${member?.name || 'layer'} in editor`} aria-pressed={hidden}
         title="Show or hide while editing; publication stays unchanged" onClick={() => view.setEditorHiddenIds(current => hidden ? current.filter(item => item !== id) : [...current, id])}>{hidden ? <EyeOff /> : <Eye />}</button></div>;
   })}{!cell.members.length && <p className="workbench-inspector-muted">No content yet.</p>}</div>;

@@ -94,6 +94,7 @@ function BentoEditor({ context, hostRef, clusterDrag, gridSnap = true, gridSpaci
     perform(() => {
       flush();
       const origin = store.getReception(), generation = store.getGeneration();
+      if (edge !== 'draw' && origin.workbench.lockedLayerIds?.includes(cellId)) return;
       const { scale, offset } = camera.getCamera(), target = event.currentTarget, previous = view.transforms;
       const drawing = edge === 'draw';
       if (drawing) cellId = 'shape:' + crypto.randomUUID();
@@ -247,12 +248,12 @@ function BentoEditor({ context, hostRef, clusterDrag, gridSnap = true, gridSpaci
       <ReceptionInnerLines frames={lineFrames} gap={preview.current?.next.bento?.gap ?? settings.gap}
         appearance={context.paintedInnerLines} bounds={area} style={project(area)} />
     </div>
-    {!disabled && ['select', 'cell'].includes(view.interactionTool) && !navigation.moving && <div ref={snapHost} className="reception-bento-overlay" data-previewing={previewing || undefined} data-workbench-selection-tools
+    {!disabled && !Object.keys(view.presentationTransforms).length && ['select', 'cell'].includes(view.interactionTool) && !navigation.moving && <div ref={snapHost} className="reception-bento-overlay" data-previewing={previewing || undefined} data-workbench-selection-tools
       style={{ clipPath: `inset(${view.navigationTop}px 0 0 0)` }}>
       {view.interactionTool === 'select' && context.cells.filter(cell => cell.id !== context.editingCellId && !view.editorHiddenIds.includes(cell.id) && reception.workbench.shapes.find(item => item.id === cell.id)?.open).map(cell => {
         const r = view.transforms[cell.id]?.frame || receptionModuleWindow(reception, cell.id), active = selected?.id === cell.id;
         return <div key={cell.id} className="reception-bento-cell" data-selected={view.selection.includes(cell.id) || undefined} data-dragging={dragging?.id === cell.id || undefined}
-          data-editor-cell-surface={cell.id} style={{ ...project(r), borderRadius: (cell.radius || 0) * view.scale }} tabIndex={0}
+          hidden={view.hiddenModuleIds.includes(cell.id)} data-editor-cell-surface={cell.id} style={{ ...project(r), borderRadius: (cell.radius || 0) * view.scale }} tabIndex={0}
           title="Drag to snap; stops at neighbours. Hold Shift to push, Alt to invert grid snapping. Alt+Arrow moves 10 px; Alt+Shift+Arrow moves 50 px."
           role="group" aria-label={`${reception.shapes.find(item => item.id === cell.id)?.name || 'Cell'} bento cell`}
           onPointerDown={event => { if (event.target === event.currentTarget) start(event, cell.id); }}

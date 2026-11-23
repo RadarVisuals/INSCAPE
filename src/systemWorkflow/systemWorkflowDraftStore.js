@@ -2,7 +2,7 @@
 import { authoredStorage, confirmWorkspaceSaved, hydrateWorkspace, workspaceSession } from '../workspace/profileWorkspace.js';
 import { reconcileRemovedWorkbenchMembers } from './domain/workbenchGroups.js';
 import { reconcileReceptionCells } from '../reception/receptionEditorDocument.js';
-import { reconcileArtworkLayers } from './domain/artworkLayers.js';
+import { changesLockedArtwork, reconcileArtworkLayers } from './domain/artworkLayers.js';
 import { captureProfileDraftWriteAccess } from './profileEditorLease.js';
 import { canvasModuleDraft, createStudioComposition, enableStudioCells } from './domain/studioComposition.js';
 import { workbenchLayoutKey } from './workbenchLayoutKey.js';
@@ -673,6 +673,7 @@ export function createSystemWorkflowDraftStore({
       const validated = validateStoredDraft(restore ? candidate : reconcileArtworkLayers(recovered?.draft || currentDraft,
         reconcileRemovedWorkbenchMembers(recovered?.draft || currentDraft, candidate)), activeProfileAddress).value;
       if (!validated) return reject('invalid');
+      if (!restore && !acceptHistory && changesLockedArtwork(currentDraft, validated.composition || validated)) return reject('locked');
       const draft = reuseUnchanged(currentDraft, validated);
       if (!storage?.setItem) return reject('write_failed');
       try {

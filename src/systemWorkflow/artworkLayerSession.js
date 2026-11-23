@@ -1,4 +1,5 @@
-import { artworkLayers, artworkRecords, groupArtwork, reorderArtwork } from './domain/artworkLayers.js';
+import { createDefaultWorkbenchPresentation } from '../profileDocument/domain/workbenchPresentation.js';
+import { artworkLocked, withArtworkLocks, artworkLayers, artworkRecords, groupArtwork, reorderArtwork } from './domain/artworkLayers.js';
 import { reorderReceptionArtwork } from '../reception/receptionLayerOrder.js';
 
 export function editArtworkLayers(store, profile, action, expectedGeneration = store.getGeneration(), presentation) {
@@ -6,7 +7,15 @@ export function editArtworkLayers(store, profile, action, expectedGeneration = s
     throw new Error('The composition changed. Select the layers again.');
   const draft = store.getDraft(), layers = artworkLayers(draft);
   let next = { ...draft }, label = 'Order artwork';
-  if (action.type === 'order') {
+  const ids = action.ids || layers.find(layer => layer.id === action.id)?.children || [action.id];
+  if (action.type === 'lock') {
+    if (!ids.length || ids.some(id => !artworkRecords(draft).some(item => item.id === id))) throw new Error('Select an available layer.');
+    if (store.setArtworkLocks) return store.setArtworkLocks(ids, action.lock);
+    next = withArtworkLocks({ ...draft, workbench: draft.workbench || presentation || createDefaultWorkbenchPresentation() }, ids, action.lock);
+    label = action.lock ? 'Lock artwork' : 'Unlock artwork';
+  } else if (ids.some(id => artworkLocked(draft, id, store.getCells?.()))) {
+    throw new Error('Unlock this layer before changing it.');
+  } else if (action.type === 'order') {
     const cells = store.getCells?.();
     next.artworkLayers = cells?.length
       ? reorderReceptionArtwork(layers, cells, action.ids, action.direction, action.targetId, action.edge)
@@ -14,6 +23,16 @@ export function editArtworkLayers(store, profile, action, expectedGeneration = s
   }
   else if (action.type === 'group') {
     next.artworkLayers = groupArtwork(layers, action.ids, action.id, action.name); label = 'Group artwork';
+  } else if (action.type === 'stack' || action.type === 'unstack') {
+    const block = layers.find(layer => layer.id === action.id);
+    if (!block) throw new Error('This group is no longer available.');
+    if (action.from && (!block.stackPosition || block.stackPosition.left !== action.from.left || block.stackPosition.top !== action.from.top))
+      throw new Error('The stack moved or was unfolded. Try again.');
+    const updated = { ...block };
+    if (action.type === 'stack') updated.stackPosition = action.position;
+    else delete updated.stackPosition;
+    next.artworkLayers = layers.map(layer => layer === block ? updated : layer);
+    label = action.from ? 'Move artwork stack' : action.type === 'stack' ? 'Stack artwork' : 'Unstack artwork';
   } else if (action.type === 'ungroup') {
     if (!layers.some(layer => layer.id === action.id)) throw new Error('This block is no longer available.');
     next.artworkLayers = layers.flatMap(layer => layer.id === action.id ? layer.children : [layer]); label = 'Ungroup artwork';

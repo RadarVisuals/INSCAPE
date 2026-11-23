@@ -23,7 +23,10 @@ Retire the Display module, its Stage and its internal Grids. The founder has
 no Display works to migrate. Studio keeps its canvas alignment grid and cells.
 This decision supersedes the earlier decision to keep Display experimental.
 Studio and its public composition viewers no longer mount the Display Stage.
-The current implementation still has separate layer and workspace groups.
+Dragging the stack title moves its cover. Its members keep their authored
+positions and cell assignments. Layers offers Stack and Unstack on the group row. A stack is saved with its
+layer group in the editor. The public composition keeps its authored layout.
+Older workspace groups keep their existing stack controls.
 A future cell interaction may synchronize a swipe across explicitly linked
 cells. Group membership and stack presentation stay independent of those links.
 

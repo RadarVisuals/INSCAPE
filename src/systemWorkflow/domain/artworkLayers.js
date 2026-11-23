@@ -1,3 +1,5 @@
+import { validWorkbenchGroupPosition } from './workbenchGroups.js';
+
 // Back-to-front authored order. A block owns its contiguous children; there is
 // no second member-order list. Text continuation frames travel with their Text.
 export const ARTWORK_KEYS = ['shapes', 'imageModules', 'texts'];
@@ -7,6 +9,40 @@ export const artworkRecords = draft => ARTWORK_KEYS.flatMap(key => (Array.isArra
 export const layerIds = layers => layers.flatMap(layer => typeof layer === 'string' ? [layer] : layer.children);
 export const artworkLayers = draft => draft?.artworkLayers || artworkRecords(draft).map(item => item.id);
 export const layerMembers = layer => typeof layer === 'string' ? [layer] : layer.children;
+export function artworkLocked(draft, id, cells = draft?.cells || []) {
+  return draft?.workbench?.lockedLayerIds?.includes(id) || cells.some(cell => cell.lockedMembers?.includes(id));
+}
+export function withArtworkLocks(value, ids, lock) {
+  const members = new Set((value.cells || []).flatMap(cell => cell.members));
+  const update = (previous = [], targets) => lock ? [...new Set([...previous, ...targets])] : previous.filter(id => !targets.includes(id));
+  const workbench = { ...value.workbench };
+  const free = update(workbench.lockedLayerIds, ids.filter(id => !members.has(id)));
+  if (free.length) workbench.lockedLayerIds = free; else delete workbench.lockedLayerIds;
+  return { ...value, workbench, ...(value.cells && { cells: value.cells.map(cell => {
+    const targets = ids.filter(id => cell.members.includes(id));
+    if (!targets.length) return cell;
+    const changed = { ...cell }, lockedMembers = update(cell.lockedMembers, targets);
+    if (lockedMembers.length) changed.lockedMembers = lockedMembers; else delete changed.lockedMembers;
+    return changed;
+  }) }) };
+}
+export function changesLockedArtwork(before, next) {
+  const equal = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+  return (before?.workbench?.lockedLayerIds || []).some(id => {
+    const key = ARTWORK_KEYS.find(key => before[key]?.some(item => item.id === id));
+    if (!key) return false;
+    const record = value => value?.[key]?.find(item => item.id === id);
+    const cell = value => {
+      const match = value?.cells?.find(cell => cell.id === id);
+      if (!match) return undefined;
+      const { lockedMembers, ...layout } = match;
+      return layout;
+    };
+    const owner = value => value?.cells?.find(cell => cell.members.includes(id))?.id;
+    return !equal(record(before), record(next)) || !equal(record(before.workbench), record(next?.workbench))
+      || owner(before) !== owner(next) || !equal(cell(before), cell(next));
+  });
+}
 export function artworkModuleId(draft, id) {
   return draft?.workbench?.texts?.find(text => text.frames?.some(frame => frame.id === id))?.id || id;
 }
@@ -18,7 +54,8 @@ export function validArtworkLayers(layers, draft, publicOnly = false) {
   const available = new Set(artworkRecords(draft).map(item => item.id)), seen = new Set(), groups = new Set();
   for (const layer of layers) {
     if (typeof layer !== 'string') {
-      if (publicOnly || !layer || Object.keys(layer).length !== 3
+      if (publicOnly || !layer || Object.keys(layer).some(key => !['id', 'name', 'children', 'stackPosition'].includes(key))
+        || Object.hasOwn(layer, 'stackPosition') && !validWorkbenchGroupPosition(layer.stackPosition)
         || !/^composition:[A-Za-z0-9_-]{1,80}$/u.test(layer.id) || groups.has(layer.id)
         || typeof layer.name !== 'string' || !layer.name.trim() || layer.name !== layer.name.trim()
         || layer.name.length > 48 || /[\u0000-\u001f\u007f]/u.test(layer.name)

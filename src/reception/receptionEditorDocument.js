@@ -188,7 +188,9 @@ export function projectReceptionEditorDocument(value) {
   const records = { shapes: project(value.shapes, projectShapes), imageModules: project(value.imageModules, projectImageModules), texts: project(value.texts, projectTextModules) };
   const allowed = new Set(idsOf(records));
   const cells = value.cells.filter(cell => allowed.has(cell.id)).map(cell => pruneCellMembers(cell, allowed));
-  return structuredClone({ ...value, ...records, cells, workbench: filterLayout(value.workbench, allowed),
+  const workbench = filterLayout(value.workbench, allowed);
+  delete workbench.lockedLayerIds;
+  return structuredClone({ ...value, ...records, cells, workbench,
     artworkLayers: layerIds(artworkLayers(value)).filter(id => allowed.has(id)),
     ...(value.arrangement ? { arrangement: pruneReceptionArrangement(value.arrangement, cells.map(cell => cell.id)) } : {}),
     branding: { ...value.branding, logo: allowed.has(value.branding.logo) ? value.branding.logo : null },

@@ -28,6 +28,7 @@ export interface DisplayPresentation {
     iconPresentation: { labelSize: number; offsetX: number; offsetY: number; scale: number; size: number } };
 }
 export interface WorkbenchPresentation {
+  lockedLayerIds?: string[];
   version: number;
   display: DisplayPresentation;
   identity: { open: boolean; window: Position & { width: number; height?: number } };

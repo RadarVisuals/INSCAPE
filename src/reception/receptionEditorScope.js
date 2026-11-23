@@ -16,6 +16,8 @@ import { fitReceptionText, setReceptionTextFit } from './receptionTextFit.js';
 import { createReceptionEditorDocument, receptionModuleWindow, withReceptionModuleWindow, reconcileReceptionCells, receptionModuleLimits,
   RECEPTION_CELL_LIMIT } from './receptionEditorDocument.js';
 
+import { changesLockedArtwork, withArtworkLocks } from '../systemWorkflow/domain/artworkLayers.js';
+
 const lockedLayerError = () => Object.assign(new Error('Unlock this layer before changing it.'), { code: 'locked' });
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 const moduleKeys = ['imageModules', 'texts', 'shapes'];
@@ -25,7 +27,7 @@ const nativeContent = value => Object.fromEntries(nativeKeys.map(key => [key, va
 // host-only values, not Reception edits or history when leaving the document.
 const receptionWorkbench = (presentation, saved) => {
   const next = { ...presentation, display: saved.display };
-  for (const key of ['displays', 'miniApps', 'keeperDocks']) {
+  for (const key of ['displays', 'miniApps', 'keeperDocks', 'lockedLayerIds']) {
     if (Object.hasOwn(saved, key)) next[key] = saved[key]; else delete next[key];
   }
   return next;
@@ -123,6 +125,7 @@ export function createReceptionEditorScope(rootStore, options = {}) {
           next = setReceptionTextFit(next, cell.id, id, false);
       }
     }
+    if (changesLockedArtwork(before, next)) throw lockedLayerError();
     assertLockedLayersUnchanged(before, next);
     next = reconcileReceptionCells(before, next);
     return { ...rootDocument, [field]: next, identityPresentation: candidate.identityPresentation };
@@ -146,6 +149,7 @@ export function createReceptionEditorScope(rootStore, options = {}) {
     const before = presentation ? reconcileReceptionCells(original,
       { ...original, workbench: receptionWorkbench(structuredClone(presentation), original.workbench) }) : original;
     const reception = reconcileReceptionCells(before, make(before), reconciliationOptions);
+    if (changesLockedArtwork(original, reception)) throw lockedLayerError();
     if (same(reception, original)) return true;
     if (!underlying.commitCompletedOperation({ ...accepted, [field]: reception }, { expectedGeneration: generation, historyLabel: label,
       ...(presentation ? { historyReception: before } : {}) }))
@@ -207,6 +211,9 @@ export function createReceptionEditorScope(rootStore, options = {}) {
       const candidate = { ...before, texts: before.texts.map(text => text.id === id ? { ...text, article } : text) };
       const fitted = fitReceptionText(candidate, cellId, id, options.measureText);
       return receptionModuleWindow(reconcileReceptionCells(before, fitted), id);
+    },
+    setArtworkLocks(ids, lock) {
+      return mutate(value => withArtworkLocks(value, ids, lock), lock ? 'Lock artwork' : 'Unlock artwork');
     },
     getEditingCell: () => { read(); return current() ? editingCell : null; },
     setEditingCell(id) {

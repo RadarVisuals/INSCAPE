@@ -15,7 +15,7 @@ const EMPTY_GROUPS = Object.freeze([]);
 
 // This owner tool edits membership through the draft store. Selecting a saved
 // group only selects its live windows; navigation remains an explicit action.
-export default function WorkbenchGroups({ view, hostRef, locked, dropRef, historyBlocked, navigation, sceneRef, disabled, open, onOpenChange: setOpen, returnFocus, showTrigger = true }) {
+export default function WorkbenchGroups({ view, hostRef, positionArtwork, locked, dropRef, historyBlocked, navigation, sceneRef, disabled, open, onOpenChange: setOpen, returnFocus, showTrigger = true }) {
   const { bounds: areaBounds } = useWorkbenchArea();
   const { store, profileAddress, selection, setSelection, entries } = view;
   const draft = useSyncExternalStore(store.subscribe, store.getSnapshot);
@@ -100,7 +100,7 @@ export default function WorkbenchGroups({ view, hostRef, locked, dropRef, histor
     return () => { dropRef.current = null; };
   }, [locked, disabled, groups, dropRef, dropTarget, hostRef, draft, perform]);
   return <>
-    <WorkbenchGroupStacks content={draft} {...{ hostRef, scene, locked, dropTarget }} onManage={group => {
+    <WorkbenchGroupStacks content={draft} {...{ hostRef, scene, locked, dropTarget, positionArtwork }} onManage={group => {
       manageTrigger.current = document.activeElement;
       setActiveId(group.id); setManaging(true); setOpen(true);
     }} onPosition={positionGroup} />

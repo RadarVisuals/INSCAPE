@@ -153,7 +153,7 @@ export function buildProfileDocumentV9({
   const imageModules = draft.imageModules ? projectImageModules(draft.imageModules) : undefined;
   const texts = draft.texts ? projectTextModules(draft.texts, [{ id: 'display:primary', grids: draft.grids.filter(g => !isSystemWorkflowWorldCoverGrid(g)) }, ...(draft.displays || []).filter(d => d.visibility === 'PUBLIC').map(d => ({ ...d, grids: d.grids.filter(g => !isSystemWorkflowWorldCoverGrid(g)) }))]) : undefined;
   const publicWorkbench = presentation ? structuredClone(presentation) : null;
-  if (publicWorkbench) delete publicWorkbench.keeperDocks;
+  if (publicWorkbench) { delete publicWorkbench.keeperDocks; delete publicWorkbench.lockedLayerIds; }
   if (publicWorkbench?.shapes) publicWorkbench.shapes = publicWorkbench.shapes.filter(item => shapes?.some(shape => shape.id === item.id));
   if (publicWorkbench?.imageModules) publicWorkbench.imageModules = publicWorkbench.imageModules.filter(item => imageModules?.some(image => image.id === item.id));
   if (publicWorkbench?.miniApps) publicWorkbench.miniApps = publicWorkbench.miniApps.filter(item => miniApps?.some(app => app.id === item.id));
